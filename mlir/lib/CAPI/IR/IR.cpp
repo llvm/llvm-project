@@ -22,12 +22,15 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/OwningOpRef.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Parser/Parser.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/ThreadPool.h"
 
 #include <cstddef>
 #include <memory>
@@ -109,6 +112,14 @@ void mlirContextLoadAllAvailableDialects(MlirContext context) {
 void mlirContextSetThreadPool(MlirContext context,
                               MlirLlvmThreadPool threadPool) {
   unwrap(context)->setThreadPool(*unwrap(threadPool));
+}
+
+unsigned mlirContextGetNumThreads(MlirContext context) {
+  return unwrap(context)->getNumThreads();
+}
+
+MlirLlvmThreadPool mlirContextGetThreadPool(MlirContext context) {
+  return wrap(&unwrap(context)->getThreadPool());
 }
 
 //===----------------------------------------------------------------------===//
@@ -201,6 +212,11 @@ void mlirOpPrintingFlagsElideLargeElementsAttrs(MlirOpPrintingFlags flags,
   unwrap(flags)->elideLargeElementsAttrs(largeElementLimit);
 }
 
+void mlirOpPrintingFlagsElideLargeResourceString(MlirOpPrintingFlags flags,
+                                                 intptr_t largeResourceLimit) {
+  unwrap(flags)->elideLargeResourceString(largeResourceLimit);
+}
+
 void mlirOpPrintingFlagsEnableDebugInfo(MlirOpPrintingFlags flags, bool enable,
                                         bool prettyForm) {
   unwrap(flags)->enableDebugInfo(enable, /*prettyForm=*/prettyForm);
@@ -208,6 +224,10 @@ void mlirOpPrintingFlagsEnableDebugInfo(MlirOpPrintingFlags flags, bool enable,
 
 void mlirOpPrintingFlagsPrintGenericOpForm(MlirOpPrintingFlags flags) {
   unwrap(flags)->printGenericOpForm();
+}
+
+void mlirOpPrintingFlagsPrintNameLocAsPrefix(MlirOpPrintingFlags flags) {
+  unwrap(flags)->printNameLocAsPrefix();
 }
 
 void mlirOpPrintingFlagsUseLocalScope(MlirOpPrintingFlags flags) {
@@ -218,6 +238,9 @@ void mlirOpPrintingFlagsAssumeVerified(MlirOpPrintingFlags flags) {
   unwrap(flags)->assumeVerified();
 }
 
+void mlirOpPrintingFlagsSkipRegions(MlirOpPrintingFlags flags) {
+  unwrap(flags)->skipRegions();
+}
 //===----------------------------------------------------------------------===//
 // Bytecode printing flags API.
 //===----------------------------------------------------------------------===//
@@ -244,7 +267,7 @@ MlirAttribute mlirLocationGetAttribute(MlirLocation location) {
 }
 
 MlirLocation mlirLocationFromAttribute(MlirAttribute attribute) {
-  return wrap(Location(llvm::cast<LocationAttr>(unwrap(attribute))));
+  return wrap(Location(llvm::dyn_cast<LocationAttr>(unwrap(attribute))));
 }
 
 MlirLocation mlirLocationFileLineColGet(MlirContext context,
@@ -254,8 +277,71 @@ MlirLocation mlirLocationFileLineColGet(MlirContext context,
       FileLineColLoc::get(unwrap(context), unwrap(filename), line, col)));
 }
 
+MlirLocation
+mlirLocationFileLineColRangeGet(MlirContext context, MlirStringRef filename,
+                                unsigned startLine, unsigned startCol,
+                                unsigned endLine, unsigned endCol) {
+  return wrap(
+      Location(FileLineColRange::get(unwrap(context), unwrap(filename),
+                                     startLine, startCol, endLine, endCol)));
+}
+
+MlirIdentifier mlirLocationFileLineColRangeGetFilename(MlirLocation location) {
+  return wrap(llvm::dyn_cast<FileLineColRange>(unwrap(location)).getFilename());
+}
+
+int mlirLocationFileLineColRangeGetStartLine(MlirLocation location) {
+  if (auto loc = llvm::dyn_cast<FileLineColRange>(unwrap(location)))
+    return loc.getStartLine();
+  return -1;
+}
+
+int mlirLocationFileLineColRangeGetStartColumn(MlirLocation location) {
+  if (auto loc = llvm::dyn_cast<FileLineColRange>(unwrap(location)))
+    return loc.getStartColumn();
+  return -1;
+}
+
+int mlirLocationFileLineColRangeGetEndLine(MlirLocation location) {
+  if (auto loc = llvm::dyn_cast<FileLineColRange>(unwrap(location)))
+    return loc.getEndLine();
+  return -1;
+}
+
+int mlirLocationFileLineColRangeGetEndColumn(MlirLocation location) {
+  if (auto loc = llvm::dyn_cast<FileLineColRange>(unwrap(location)))
+    return loc.getEndColumn();
+  return -1;
+}
+
+MlirTypeID mlirLocationFileLineColRangeGetTypeID() {
+  return wrap(FileLineColRange::getTypeID());
+}
+
+bool mlirLocationIsAFileLineColRange(MlirLocation location) {
+  return isa<FileLineColRange>(unwrap(location));
+}
+
 MlirLocation mlirLocationCallSiteGet(MlirLocation callee, MlirLocation caller) {
   return wrap(Location(CallSiteLoc::get(unwrap(callee), unwrap(caller))));
+}
+
+MlirLocation mlirLocationCallSiteGetCallee(MlirLocation location) {
+  return wrap(
+      Location(llvm::dyn_cast<CallSiteLoc>(unwrap(location)).getCallee()));
+}
+
+MlirLocation mlirLocationCallSiteGetCaller(MlirLocation location) {
+  return wrap(
+      Location(llvm::dyn_cast<CallSiteLoc>(unwrap(location)).getCaller()));
+}
+
+MlirTypeID mlirLocationCallSiteGetTypeID() {
+  return wrap(CallSiteLoc::getTypeID());
+}
+
+bool mlirLocationIsACallSite(MlirLocation location) {
+  return isa<CallSiteLoc>(unwrap(location));
 }
 
 MlirLocation mlirLocationFusedGet(MlirContext ctx, intptr_t nLocations,
@@ -266,6 +352,30 @@ MlirLocation mlirLocationFusedGet(MlirContext ctx, intptr_t nLocations,
   return wrap(FusedLoc::get(unwrappedLocs, unwrap(metadata), unwrap(ctx)));
 }
 
+unsigned mlirLocationFusedGetNumLocations(MlirLocation location) {
+  if (auto locationsArrRef = llvm::dyn_cast<FusedLoc>(unwrap(location)))
+    return locationsArrRef.getLocations().size();
+  return 0;
+}
+
+void mlirLocationFusedGetLocations(MlirLocation location,
+                                   MlirLocation *locationsCPtr) {
+  if (auto locationsArrRef = llvm::dyn_cast<FusedLoc>(unwrap(location))) {
+    for (auto [i, location] : llvm::enumerate(locationsArrRef.getLocations()))
+      locationsCPtr[i] = wrap(location);
+  }
+}
+
+MlirAttribute mlirLocationFusedGetMetadata(MlirLocation location) {
+  return wrap(llvm::dyn_cast<FusedLoc>(unwrap(location)).getMetadata());
+}
+
+MlirTypeID mlirLocationFusedGetTypeID() { return wrap(FusedLoc::getTypeID()); }
+
+bool mlirLocationIsAFused(MlirLocation location) {
+  return isa<FusedLoc>(unwrap(location));
+}
+
 MlirLocation mlirLocationNameGet(MlirContext context, MlirStringRef name,
                                  MlirLocation childLoc) {
   if (mlirLocationIsNull(childLoc))
@@ -273,6 +383,21 @@ MlirLocation mlirLocationNameGet(MlirContext context, MlirStringRef name,
         Location(NameLoc::get(StringAttr::get(unwrap(context), unwrap(name)))));
   return wrap(Location(NameLoc::get(
       StringAttr::get(unwrap(context), unwrap(name)), unwrap(childLoc))));
+}
+
+MlirIdentifier mlirLocationNameGetName(MlirLocation location) {
+  return wrap((llvm::dyn_cast<NameLoc>(unwrap(location)).getName()));
+}
+
+MlirLocation mlirLocationNameGetChildLoc(MlirLocation location) {
+  return wrap(
+      Location(llvm::dyn_cast<NameLoc>(unwrap(location)).getChildLoc()));
+}
+
+MlirTypeID mlirLocationNameGetTypeID() { return wrap(NameLoc::getTypeID()); }
+
+bool mlirLocationIsAName(MlirLocation location) {
+  return isa<NameLoc>(unwrap(location));
 }
 
 MlirLocation mlirLocationUnknownGet(MlirContext context) {
@@ -309,6 +434,15 @@ MlirModule mlirModuleCreateParse(MlirContext context, MlirStringRef module) {
   return MlirModule{owning.release().getOperation()};
 }
 
+MlirModule mlirModuleCreateParseFromFile(MlirContext context,
+                                         MlirStringRef fileName) {
+  OwningOpRef<ModuleOp> owning =
+      parseSourceFile<ModuleOp>(unwrap(fileName), unwrap(context));
+  if (!owning)
+    return MlirModule{nullptr};
+  return MlirModule{owning.release().getOperation()};
+}
+
 MlirContext mlirModuleGetContext(MlirModule module) {
   return wrap(unwrap(module).getContext());
 }
@@ -329,6 +463,14 @@ MlirOperation mlirModuleGetOperation(MlirModule module) {
 
 MlirModule mlirModuleFromOperation(MlirOperation op) {
   return wrap(dyn_cast<ModuleOp>(unwrap(op)));
+}
+
+bool mlirModuleEqual(MlirModule lhs, MlirModule rhs) {
+  return unwrap(lhs) == unwrap(rhs);
+}
+
+size_t mlirModuleHashValue(MlirModule mod) {
+  return OperationEquivalence::computeHash(unwrap(mod).getOperation());
 }
 
 //===----------------------------------------------------------------------===//
@@ -502,12 +644,20 @@ bool mlirOperationEqual(MlirOperation op, MlirOperation other) {
   return unwrap(op) == unwrap(other);
 }
 
+size_t mlirOperationHashValue(MlirOperation op) {
+  return OperationEquivalence::computeHash(unwrap(op));
+}
+
 MlirContext mlirOperationGetContext(MlirOperation op) {
   return wrap(unwrap(op)->getContext());
 }
 
 MlirLocation mlirOperationGetLocation(MlirOperation op) {
   return wrap(unwrap(op)->getLoc());
+}
+
+void mlirOperationSetLocation(MlirOperation op, MlirLocation loc) {
+  unwrap(op)->setLoc(unwrap(loc));
 }
 
 MlirTypeID mlirOperationGetTypeID(MlirOperation op) {
@@ -613,12 +763,14 @@ void mlirOperationSetInherentAttributeByName(MlirOperation op,
 }
 
 intptr_t mlirOperationGetNumDiscardableAttributes(MlirOperation op) {
-  return static_cast<intptr_t>(unwrap(op)->getDiscardableAttrs().size());
+  return static_cast<intptr_t>(
+      llvm::range_size(unwrap(op)->getDiscardableAttrs()));
 }
 
 MlirNamedAttribute mlirOperationGetDiscardableAttribute(MlirOperation op,
                                                         intptr_t pos) {
-  NamedAttribute attr = unwrap(op)->getDiscardableAttrs()[pos];
+  NamedAttribute attr =
+      *std::next(unwrap(op)->getDiscardableAttrs().begin(), pos);
   return MlirNamedAttribute{wrap(attr.getName()), wrap(attr.getValue())};
 }
 
@@ -714,18 +866,45 @@ void mlirOperationMoveBefore(MlirOperation op, MlirOperation other) {
   return unwrap(op)->moveBefore(unwrap(other));
 }
 
+bool mlirOperationIsBeforeInBlock(MlirOperation op, MlirOperation other) {
+  return unwrap(op)->isBeforeInBlock(unwrap(other));
+}
+
+static mlir::WalkResult unwrap(MlirWalkResult result) {
+  switch (result) {
+  case MlirWalkResultAdvance:
+    return mlir::WalkResult::advance();
+
+  case MlirWalkResultInterrupt:
+    return mlir::WalkResult::interrupt();
+
+  case MlirWalkResultSkip:
+    return mlir::WalkResult::skip();
+  }
+  llvm_unreachable("unknown result in WalkResult::unwrap");
+}
+
 void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
                        void *userData, MlirWalkOrder walkOrder) {
   switch (walkOrder) {
 
   case MlirWalkPreOrder:
     unwrap(op)->walk<mlir::WalkOrder::PreOrder>(
-        [callback, userData](Operation *op) { callback(wrap(op), userData); });
+        [callback, userData](Operation *op) {
+          return unwrap(callback(wrap(op), userData));
+        });
     break;
   case MlirWalkPostOrder:
     unwrap(op)->walk<mlir::WalkOrder::PostOrder>(
-        [callback, userData](Operation *op) { callback(wrap(op), userData); });
+        [callback, userData](Operation *op) {
+          return unwrap(callback(wrap(op), userData));
+        });
   }
+}
+
+void mlirOperationReplaceUsesOfWith(MlirOperation op, MlirValue oldValue,
+                                    MlirValue newValue) {
+  unwrap(op)->replaceUsesOfWith(unwrap(oldValue), unwrap(newValue));
 }
 
 //===----------------------------------------------------------------------===//
@@ -886,6 +1065,10 @@ MlirValue mlirBlockAddArgument(MlirBlock block, MlirType type,
   return wrap(unwrap(block)->addArgument(unwrap(type), unwrap(loc)));
 }
 
+void mlirBlockEraseArgument(MlirBlock block, unsigned index) {
+  return unwrap(block)->eraseArgument(index);
+}
+
 MlirValue mlirBlockInsertArgument(MlirBlock block, intptr_t pos, MlirType type,
                                   MlirLocation loc) {
   return wrap(unwrap(block)->insertArgument(pos, unwrap(type), unwrap(loc)));
@@ -899,6 +1082,26 @@ void mlirBlockPrint(MlirBlock block, MlirStringCallback callback,
                     void *userData) {
   detail::CallbackOstream stream(callback, userData);
   unwrap(block)->print(stream);
+}
+
+intptr_t mlirBlockGetNumSuccessors(MlirBlock block) {
+  return static_cast<intptr_t>(unwrap(block)->getNumSuccessors());
+}
+
+MlirBlock mlirBlockGetSuccessor(MlirBlock block, intptr_t pos) {
+  return wrap(unwrap(block)->getSuccessor(static_cast<unsigned>(pos)));
+}
+
+intptr_t mlirBlockGetNumPredecessors(MlirBlock block) {
+  Block *b = unwrap(block);
+  return static_cast<intptr_t>(std::distance(b->pred_begin(), b->pred_end()));
+}
+
+MlirBlock mlirBlockGetPredecessor(MlirBlock block, intptr_t pos) {
+  Block *b = unwrap(block);
+  Block::pred_iterator it = b->pred_begin();
+  std::advance(it, pos);
+  return wrap(*it);
 }
 
 //===----------------------------------------------------------------------===//
@@ -918,25 +1121,31 @@ bool mlirValueIsAOpResult(MlirValue value) {
 }
 
 MlirBlock mlirBlockArgumentGetOwner(MlirValue value) {
-  return wrap(llvm::cast<BlockArgument>(unwrap(value)).getOwner());
+  return wrap(llvm::dyn_cast<BlockArgument>(unwrap(value)).getOwner());
 }
 
 intptr_t mlirBlockArgumentGetArgNumber(MlirValue value) {
   return static_cast<intptr_t>(
-      llvm::cast<BlockArgument>(unwrap(value)).getArgNumber());
+      llvm::dyn_cast<BlockArgument>(unwrap(value)).getArgNumber());
 }
 
 void mlirBlockArgumentSetType(MlirValue value, MlirType type) {
-  llvm::cast<BlockArgument>(unwrap(value)).setType(unwrap(type));
+  if (auto blockArg = llvm::dyn_cast<BlockArgument>(unwrap(value)))
+    blockArg.setType(unwrap(type));
+}
+
+void mlirBlockArgumentSetLocation(MlirValue value, MlirLocation loc) {
+  if (auto blockArg = llvm::dyn_cast<BlockArgument>(unwrap(value)))
+    blockArg.setLoc(unwrap(loc));
 }
 
 MlirOperation mlirOpResultGetOwner(MlirValue value) {
-  return wrap(llvm::cast<OpResult>(unwrap(value)).getOwner());
+  return wrap(llvm::dyn_cast<OpResult>(unwrap(value)).getOwner());
 }
 
 intptr_t mlirOpResultGetResultNumber(MlirValue value) {
   return static_cast<intptr_t>(
-      llvm::cast<OpResult>(unwrap(value)).getResultNumber());
+      llvm::dyn_cast<OpResult>(unwrap(value)).getResultNumber());
 }
 
 MlirType mlirValueGetType(MlirValue value) {
@@ -976,6 +1185,28 @@ void mlirValueReplaceAllUsesOfWith(MlirValue oldValue, MlirValue newValue) {
   unwrap(oldValue).replaceAllUsesWith(unwrap(newValue));
 }
 
+void mlirValueReplaceAllUsesExcept(MlirValue oldValue, MlirValue newValue,
+                                   intptr_t numExceptions,
+                                   MlirOperation *exceptions) {
+  Value oldValueCpp = unwrap(oldValue);
+  Value newValueCpp = unwrap(newValue);
+
+  llvm::SmallPtrSet<mlir::Operation *, 4> exceptionSet;
+  for (intptr_t i = 0; i < numExceptions; ++i) {
+    exceptionSet.insert(unwrap(exceptions[i]));
+  }
+
+  oldValueCpp.replaceAllUsesExcept(newValueCpp, exceptionSet);
+}
+
+MlirLocation mlirValueGetLocation(MlirValue v) {
+  return wrap(unwrap(v).getLoc());
+}
+
+MlirContext mlirValueGetContext(MlirValue v) {
+  return wrap(unwrap(v).getContext());
+}
+
 //===----------------------------------------------------------------------===//
 // OpOperand API.
 //===----------------------------------------------------------------------===//
@@ -984,6 +1215,10 @@ bool mlirOpOperandIsNull(MlirOpOperand opOperand) { return !opOperand.ptr; }
 
 MlirOperation mlirOpOperandGetOwner(MlirOpOperand opOperand) {
   return wrap(unwrap(opOperand)->getOwner());
+}
+
+MlirValue mlirOpOperandGetValue(MlirOpOperand opOperand) {
+  return wrap(unwrap(opOperand)->get());
 }
 
 unsigned mlirOpOperandGetOperandNumber(MlirOpOperand opOperand) {

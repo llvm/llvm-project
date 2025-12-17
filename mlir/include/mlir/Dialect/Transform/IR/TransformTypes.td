@@ -10,7 +10,7 @@
 #define MLIR_DIALECT_TRANSFORM_IR_TRANSFORMTYPES
 
 include "mlir/IR/AttrTypeBase.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 
 def Transform_AffineMapParamType : TypeDef<Transform_Dialect, "AffineMapParam",
@@ -102,5 +102,10 @@ def TransformAnyHandle : Type<
     Or<[TransformHandleTypeInterface.predicate,
         TransformValueHandleTypeInterface.predicate]>,
     "transform operation or value handle">;
+
+def TransformAnyParamTypeOrAnyHandle : Type<
+    Or<[TransformHandleTypeInterface.predicate,
+        TransformParamTypeInterface.predicate]>,
+    "transform any param type or any handle type">;
 
 #endif  // MLIR_DIALECT_TRANSFORM_IR_TRANSFORMTYPES

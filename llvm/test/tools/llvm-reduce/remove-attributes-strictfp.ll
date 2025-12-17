@@ -28,7 +28,7 @@ define float @strictfp_declaration(float %x, float %y) #0 {
 ; CHECK-LABEL: define float @strictfp_no_constrained_ops(float %x, float %y)
 ; RESULT-SAME: [[STRICTFP_ONLY]] {
 define float @strictfp_no_constrained_ops(float %x, float %y) #0 {
-  %val = call float @llvm.copysign.f32(float %x, float %y)
+  %val = call float @llvm.copysign.f32(float %x, float %y) #1
   ret float %val
 }
 
@@ -38,11 +38,10 @@ declare float @strict.extern.func(float, float) #0
 
 declare float @extern.func(float, float)
 
-declare float @llvm.copysign.f32(float, float) #1
-declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata) #2
+declare float @llvm.copysign.f32(float, float)
+declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
 
 ; RESULT: attributes [[STRICTFP_ONLY]] = { strictfp }
 
 attributes #0 = { nounwind strictfp }
-attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-attributes #2 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
+attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) strictfp }

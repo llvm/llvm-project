@@ -9,6 +9,7 @@
 #include "flang/Semantics/type.h"
 #include "check-declarations.h"
 #include "compute-offsets.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
@@ -22,8 +23,9 @@
 namespace Fortran::semantics {
 
 DerivedTypeSpec::DerivedTypeSpec(SourceName name, const Symbol &typeSymbol)
-    : name_{name}, typeSymbol_{typeSymbol} {
-  CHECK(typeSymbol.has<DerivedTypeDetails>());
+    : name_{name}, originalTypeSymbol_{typeSymbol},
+      typeSymbol_{typeSymbol.GetUltimate()} {
+  CHECK(typeSymbol_.has<DerivedTypeDetails>());
 }
 DerivedTypeSpec::DerivedTypeSpec(const DerivedTypeSpec &that) = default;
 DerivedTypeSpec::DerivedTypeSpec(DerivedTypeSpec &&that) = default;
@@ -63,7 +65,6 @@ void DerivedTypeSpec::CookParameters(evaluate::FoldingContext &foldingContext) {
   // Parameters of the most deeply nested "base class" come first when the
   // derived type is an extension.
   auto parameterNames{OrderParameterNames(typeSymbol_)};
-  auto parameterDecls{OrderParameterDeclarations(typeSymbol_)};
   auto nextNameIter{parameterNames.begin()};
   RawParameters raw{std::move(rawParameters_)};
   for (auto &[maybeKeyword, value] : raw) {
@@ -71,25 +72,25 @@ void DerivedTypeSpec::CookParameters(evaluate::FoldingContext &foldingContext) {
     common::TypeParamAttr attr{common::TypeParamAttr::Kind};
     if (maybeKeyword) {
       name = maybeKeyword->v.source;
-      auto it{std::find_if(parameterDecls.begin(), parameterDecls.end(),
+      auto it{std::find_if(parameterNames.begin(), parameterNames.end(),
           [&](const Symbol &symbol) { return symbol.name() == name; })};
-      if (it == parameterDecls.end()) {
+      if (it == parameterNames.end()) {
         messages.Say(name,
             "'%s' is not the name of a parameter for derived type '%s'"_err_en_US,
             name, typeSymbol_.name());
       } else {
         // Resolve the keyword's symbol
         maybeKeyword->v.symbol = const_cast<Symbol *>(&it->get());
-        attr = it->get().get<TypeParamDetails>().attr();
+        if (const auto *tpd{it->get().detailsIf<TypeParamDetails>()}) {
+          attr = tpd->attr().value_or(attr);
+        }
       }
     } else if (nextNameIter != parameterNames.end()) {
-      name = *nextNameIter++;
-      auto it{std::find_if(parameterDecls.begin(), parameterDecls.end(),
-          [&](const Symbol &symbol) { return symbol.name() == name; })};
-      if (it == parameterDecls.end()) {
-        break;
+      name = nextNameIter->get().name();
+      if (const auto *tpd{nextNameIter->get().detailsIf<TypeParamDetails>()}) {
+        attr = tpd->attr().value_or(attr);
       }
-      attr = it->get().get<TypeParamDetails>().attr();
+      ++nextNameIter;
     } else {
       messages.Say(name_,
           "Too many type parameters given for derived type '%s'"_err_en_US,
@@ -125,7 +126,7 @@ void DerivedTypeSpec::EvaluateParameters(SemanticsContext &context) {
         auto restorer{foldingContext.WithPDTInstance(*this)};
         auto folded{Fold(foldingContext, KindExpr{intrinType->kind()})};
         if (auto k{evaluate::ToInt64(folded)}; k &&
-            evaluate::IsValidKindOfIntrinsicType(TypeCategory::Integer, *k)) {
+            common::IsValidKindOfIntrinsicType(TypeCategory::Integer, *k)) {
           parameterKind = static_cast<int>(*k);
         } else {
           messages.Say(
@@ -160,7 +161,7 @@ void DerivedTypeSpec::EvaluateParameters(SemanticsContext &context) {
       // Default type parameter value expressions are folded within
       // the scope of the derived type being instantiated.
       const TypeParamDetails &details{symbol.get<TypeParamDetails>()};
-      if (details.init()) {
+      if (details.init() && details.attr()) {
         evaluate::DynamicType dyType{TypeCategory::Integer, parameterKind};
         if (auto converted{
                 evaluate::ConvertToType(dyType, SomeExpr{*details.init()})}) {
@@ -169,8 +170,8 @@ void DerivedTypeSpec::EvaluateParameters(SemanticsContext &context) {
               evaluate::Fold(foldingContext, std::move(*converted))};
           ok = ok || evaluate::IsActuallyConstant(folded);
           AddParamValue(name,
-              ParamValue{
-                  std::move(std::get<SomeIntExpr>(folded.u)), details.attr()});
+              ParamValue{std::move(std::get<SomeIntExpr>(folded.u)),
+                  details.attr().value()});
         } else {
           if (!context.HasError(symbol)) {
             evaluate::SayWithDeclaration(messages, symbol,
@@ -191,6 +192,13 @@ void DerivedTypeSpec::EvaluateParameters(SemanticsContext &context) {
   }
 }
 
+void DerivedTypeSpec::ReevaluateParameters(SemanticsContext &context) {
+  evaluated_ = false;
+  instantiated_ = false;
+  scope_ = nullptr;
+  EvaluateParameters(context);
+}
+
 void DerivedTypeSpec::AddParamValue(SourceName name, ParamValue &&value) {
   CHECK(cooked_);
   auto pair{parameters_.insert(std::make_pair(name, std::move(value)))};
@@ -205,14 +213,25 @@ bool DerivedTypeSpec::IsForwardReferenced() const {
   return typeSymbol_.get<DerivedTypeDetails>().isForwardReferenced();
 }
 
-bool DerivedTypeSpec::HasDefaultInitialization(
+std::optional<std::string> DerivedTypeSpec::ComponentWithDefaultInitialization(
     bool ignoreAllocatable, bool ignorePointer) const {
   DirectComponentIterator components{*this};
-  return bool{std::find_if(
-      components.begin(), components.end(), [&](const Symbol &component) {
-        return IsInitialized(component, /*ignoreDataStatements=*/true,
-            ignoreAllocatable, ignorePointer);
-      })};
+  if (auto it{std::find_if(components.begin(), components.end(),
+          [ignoreAllocatable, ignorePointer](const Symbol &component) {
+            return (!ignoreAllocatable && IsAllocatable(component)) ||
+                (!ignorePointer && IsPointer(component)) ||
+                HasDeclarationInitializer(component);
+          })}) {
+    return it.BuildResultDesignatorName();
+  } else {
+    return std::nullopt;
+  }
+}
+
+bool DerivedTypeSpec::HasDefaultInitialization(
+    bool ignoreAllocatable, bool ignorePointer) const {
+  return ComponentWithDefaultInitialization(ignoreAllocatable, ignorePointer)
+      .has_value();
 }
 
 bool DerivedTypeSpec::HasDestruction() const {
@@ -231,27 +250,36 @@ ParamValue *DerivedTypeSpec::FindParameter(SourceName target) {
       const_cast<const DerivedTypeSpec *>(this)->FindParameter(target));
 }
 
-bool DerivedTypeSpec::Match(const DerivedTypeSpec &that) const {
-  if (&typeSymbol_ != &that.typeSymbol_) {
-    return false;
-  }
-  for (const auto &pair : parameters_) {
-    const Symbol *tpSym{scope_ ? scope_->FindSymbol(pair.first) : nullptr};
-    const auto *tpDetails{
-        tpSym ? tpSym->detailsIf<TypeParamDetails>() : nullptr};
-    if (!tpDetails) {
-      return false;
-    }
-    if (tpDetails->attr() != common::TypeParamAttr::Kind) {
-      continue;
-    }
-    const ParamValue &value{pair.second};
-    auto iter{that.parameters_.find(pair.first)};
-    if (iter == that.parameters_.end() || iter->second != value) {
-      return false;
+static bool MatchKindParams(const Symbol &typeSymbol,
+    const DerivedTypeSpec &thisSpec, const DerivedTypeSpec &thatSpec) {
+  for (auto ref : typeSymbol.get<DerivedTypeDetails>().paramNameOrder()) {
+    if (ref->get<TypeParamDetails>().attr() == common::TypeParamAttr::Kind) {
+      const auto *thisValue{thisSpec.FindParameter(ref->name())};
+      const auto *thatValue{thatSpec.FindParameter(ref->name())};
+      if (!thisValue || !thatValue || *thisValue != *thatValue) {
+        return false;
+      }
     }
   }
-  return true;
+  if (const DerivedTypeSpec *
+      parent{typeSymbol.GetParentTypeSpec(typeSymbol.scope())}) {
+    return MatchKindParams(parent->typeSymbol(), thisSpec, thatSpec);
+  } else {
+    return true;
+  }
+}
+
+bool DerivedTypeSpec::MatchesOrExtends(const DerivedTypeSpec &that) const {
+  const Symbol *typeSymbol{&typeSymbol_};
+  while (typeSymbol != &that.typeSymbol_) {
+    if (const DerivedTypeSpec *
+        parent{typeSymbol->GetParentTypeSpec(typeSymbol->scope())}) {
+      typeSymbol = &parent->typeSymbol_;
+    } else {
+      return false;
+    }
+  }
+  return MatchKindParams(*typeSymbol, *this, that);
 }
 
 class InstantiateHelper {
@@ -332,9 +360,7 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
   const Scope &typeScope{DEREF(typeSymbol_.scope())};
   if (!MightBeParameterized()) {
     scope_ = &typeScope;
-    if (typeScope.derivedTypeSpec()) {
-      CHECK(*this == *typeScope.derivedTypeSpec());
-    } else {
+    if (!typeScope.derivedTypeSpec() || *this != *typeScope.derivedTypeSpec()) {
       Scope &mutableTypeScope{const_cast<Scope &>(typeScope)};
       mutableTypeScope.set_derivedTypeSpec(*this);
       InstantiateNonPDTScope(mutableTypeScope, containingScope);
@@ -360,12 +386,15 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
       // uninitialized type parameter to forestall use of any default.
       if (ParamValue * paramValue{FindParameter(name)}) {
         const TypeParamDetails &details{symbol.get<TypeParamDetails>()};
-        paramValue->set_attr(details.attr());
+        TypeParamDetails instanceDetails{};
+        if (details.attr()) {
+          paramValue->set_attr(*details.attr());
+          instanceDetails.set_attr(*details.attr());
+        }
         desc += sep;
         desc += name.ToString();
         desc += '=';
         sep = ',';
-        TypeParamDetails instanceDetails{details.attr()};
         if (MaybeIntExpr expr{paramValue->GetExplicit()}) {
           desc += expr->AsFortran();
           instanceDetails.set_init(
@@ -421,9 +450,9 @@ void InstantiateHelper::InstantiateComponents(const Scope &fromScope) {
 // Walks a parsed expression to prepare it for (re)analysis;
 // clears out the typedExpr analysis results and re-resolves
 // symbol table pointers of type parameters.
-class ComponentInitResetHelper {
+class ResetHelper {
 public:
-  explicit ComponentInitResetHelper(Scope &scope) : scope_{scope} {}
+  explicit ResetHelper(Scope &scope) : scope_{scope} {}
 
   template <typename A> bool Pre(const A &) { return true; }
 
@@ -476,7 +505,7 @@ void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
     }
     if (const auto *parsedExpr{details->unanalyzedPDTComponentInit()}) {
       // Analyze the parsed expression in this PDT instantiation context.
-      ComponentInitResetHelper resetter{scope_};
+      ResetHelper resetter{scope_};
       parser::Walk(*parsedExpr, resetter);
       auto restorer{foldingContext().messages().SetLocation(newSymbol.name())};
       details->set_init(evaluate::Fold(
@@ -542,26 +571,61 @@ static ParamValue FoldCharacterLength(evaluate::FoldingContext &foldingContext,
 // Apply type parameter values to an intrinsic type spec.
 const DeclTypeSpec &InstantiateHelper::InstantiateIntrinsicType(
     SourceName symbolName, const DeclTypeSpec &spec) {
+  const parser::Expr *originalKindExpr{nullptr};
+  if (const DerivedTypeSpec *derived{scope_.derivedTypeSpec()}) {
+    if (const auto *details{derived->originalTypeSymbol()
+                .GetUltimate()
+                .detailsIf<DerivedTypeDetails>()}) {
+      const auto &originalKindMap{details->originalKindParameterMap()};
+      if (auto iter{originalKindMap.find(symbolName)};
+          iter != originalKindMap.end()) {
+        originalKindExpr = iter->second;
+      }
+    }
+  }
   const IntrinsicTypeSpec &intrinsic{DEREF(spec.AsIntrinsic())};
-  if (spec.category() != DeclTypeSpec::Character &&
+  if (spec.category() != DeclTypeSpec::Character && !originalKindExpr &&
       evaluate::IsActuallyConstant(intrinsic.kind())) {
     return spec; // KIND is already a known constant
   }
   // The expression was not originally constant, but now it must be so
   // in the context of a parameterized derived type instantiation.
-  KindExpr copy{Fold(common::Clone(intrinsic.kind()))};
+  std::optional<KindExpr> kindExpr;
+  if (originalKindExpr) {
+    ResetHelper resetter{scope_};
+    parser::Walk(*originalKindExpr, resetter);
+    auto restorer{foldingContext().messages().DiscardMessages()};
+    if (MaybeExpr analyzed{AnalyzeExpr(scope_.context(), *originalKindExpr)}) {
+      if (auto *intExpr{evaluate::UnwrapExpr<SomeIntExpr>(*analyzed)}) {
+        kindExpr = evaluate::ConvertToType<evaluate::SubscriptInteger>(
+            std::move(*intExpr));
+      }
+    }
+  }
+  if (!kindExpr) {
+    kindExpr = KindExpr{intrinsic.kind()};
+    CHECK(kindExpr.has_value());
+  }
+  KindExpr folded{Fold(std::move(*kindExpr))};
   int kind{context().GetDefaultKind(intrinsic.category())};
-  if (auto value{evaluate::ToInt64(copy)}) {
+  if (auto value{evaluate::ToInt64(folded)}) {
     if (foldingContext().targetCharacteristics().IsTypeEnabled(
             intrinsic.category(), *value)) {
       kind = *value;
     } else {
       foldingContext().messages().Say(symbolName,
-          "KIND parameter value (%jd) of intrinsic type %s "
-          "did not resolve to a supported value"_err_en_US,
+          "KIND parameter value (%jd) of intrinsic type %s did not resolve to a supported value"_err_en_US,
           *value,
           parser::ToUpperCaseLetters(EnumToString(intrinsic.category())));
     }
+  } else {
+    std::string exprString;
+    llvm::raw_string_ostream sstream(exprString);
+    folded.AsFortran(sstream);
+    foldingContext().messages().Say(symbolName,
+        "KIND parameter expression (%s) of intrinsic type %s did not resolve to a constant value"_err_en_US,
+        exprString,
+        parser::ToUpperCaseLetters(EnumToString(intrinsic.category())));
   }
   switch (spec.category()) {
   case DeclTypeSpec::Numeric:
@@ -647,13 +711,13 @@ std::string DerivedTypeSpec::VectorTypeAsFortran() const {
   case (Fortran::semantics::DerivedTypeSpec::Category::DerivedType):
     Fortran::common::die("Vector element type not implemented");
   }
-  return ss.str();
+  return buf;
 }
 
 std::string DerivedTypeSpec::AsFortran() const {
   std::string buf;
   llvm::raw_string_ostream ss{buf};
-  ss << name_;
+  ss << originalTypeSymbol_.name();
   if (!rawParameters_.empty()) {
     CHECK(parameters_.empty());
     ss << '(';
@@ -683,7 +747,7 @@ std::string DerivedTypeSpec::AsFortran() const {
     }
     ss << ')';
   }
-  return ss.str();
+  return buf;
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const DerivedTypeSpec &x) {
@@ -760,7 +824,7 @@ std::string ParamValue::AsFortran() const {
       std::string buf;
       llvm::raw_string_ostream ss{buf};
       expr_->AsFortran(ss);
-      return ss.str();
+      return buf;
     } else {
       return "";
     }
@@ -784,7 +848,7 @@ static std::string KindAsFortran(const KindExpr &kind) {
   } else {
     kind.AsFortran(ss);
   }
-  return ss.str();
+  return buf;
 }
 
 std::string IntrinsicTypeSpec::AsFortran() const {
@@ -880,12 +944,6 @@ std::string DeclTypeSpec::AsFortran() const {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const DeclTypeSpec &x) {
   return o << x.AsFortran();
-}
-
-bool IsInteroperableIntrinsicType(
-    const DeclTypeSpec &type, const common::LanguageFeatureControl &features) {
-  auto dyType{evaluate::DynamicType::From(type)};
-  return dyType && IsInteroperableIntrinsicType(*dyType, &features);
 }
 
 } // namespace Fortran::semantics

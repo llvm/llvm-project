@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s \
-// RUN:  -test-lower-to-nvvm="cubin-chip=sm_90 cubin-features=+ptx80 opt-level=3" \
-// RUN:  | mlir-cpu-runner \
+// RUN:  -gpu-lower-to-nvvm-pipeline="cubin-chip=sm_90 cubin-features=+ptx80 opt-level=3" \
+// RUN:  | mlir-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void \
@@ -85,7 +85,7 @@ module @mymod {
       
       // Step 7. First thread does TMA load
       scf.if %10 {
-        gpu.printf "[GPU] TMA SIZE %d\0A" %c8192 : index
+        gpu.printf "[GPU] TMA SIZE %d\0A", %c8192 : index
         nvgpu.tma.async.load %3[%c0, %c0], %9[%c0] to %7 : !lhsTensorMap, !barrierType -> !shmemlhs
         nvgpu.mbarrier.arrive.expect_tx %9[%c0], %c8192 : !barrierType
       } else {
@@ -93,20 +93,21 @@ module @mymod {
       }
 
       // Step 8. Wait until TMA is done
-      nvgpu.mbarrier.try_wait.parity %9[%c0], %c0, %c10000000 : !barrierType
+      %phase_c0 = arith.constant 0 : i1
+      nvgpu.mbarrier.try_wait.parity %9[%c0], %phase_c0, %c10000000 : !barrierType
 
       // Step 9. Print loaded data in 128b swizzled
       scf.if %10 {        
-        gpu.printf "===--- Matrix A ---=== %d \0A" %c-1_i32 : i32
+        gpu.printf "===--- Matrix A ---=== %d \0A", %c-1_i32 : i32
         scf.for %arg12 = %c0 to %c128 step %c1 {
           scf.for %arg13 = %c0 to %c64 step %c1 {
             %15 = memref.load %7[%arg12, %arg13] : !shmemlhs
             %16 = arith.extf %15 : f16 to f32
-            gpu.printf "%.0f,   " %16 : f32
+            gpu.printf "%.0f,   ", %16 : f32
           }
-          gpu.printf "%d\0A" %c-1_i32 : i32
+          gpu.printf "%d\0A", %c-1_i32 : i32
         }
-        gpu.printf "===----------------=== %d \0A" %c-1_i32 : i32
+        gpu.printf "===----------------=== %d \0A", %c-1_i32 : i32
       }
       gpu.terminator
     }

@@ -108,6 +108,50 @@ for.end:
   ret void
 }
 
+define void @scalarize_phi_sub(ptr %n, ptr %inout) {
+;
+; CHECK-LABEL: @scalarize_phi_sub(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[T0:%.*]] = load volatile float, ptr [[INOUT:%.*]], align 4
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi float [ [[T0]], [[ENTRY:%.*]] ], [ [[TMP1:%.*]], [[FOR_BODY:%.*]] ]
+; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[T1:%.*]] = load i32, ptr [[N:%.*]], align 4
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[I_0]], [[T1]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.body:
+; CHECK-NEXT:    store volatile float [[TMP0]], ptr [[INOUT]], align 4
+; CHECK-NEXT:    [[TMP1]] = fsub float 0.000000e+00, [[TMP0]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_0]], 1
+; CHECK-NEXT:    br label [[FOR_COND]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %t0 = load volatile float, ptr %inout, align 4
+  %insert = insertelement <4 x float> poison, float %t0, i32 0
+  %splat = shufflevector <4 x float> %insert, <4 x float> poison, <4 x i32> zeroinitializer
+  br label %for.cond
+
+for.cond:
+  %x.0 = phi <4 x float> [ %splat, %entry ], [ %sub, %for.body ]
+  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %t1 = load i32, ptr %n, align 4
+  %cmp = icmp ne i32 %i.0, %t1
+  br i1 %cmp, label %for.body, label %for.end
+
+for.body:
+  %t2 = extractelement <4 x float> %x.0, i32 1
+  store volatile float %t2, ptr %inout, align 4
+  %sub = fsub <4 x float> zeroinitializer, %x.0
+  %inc = add nsw i32 %i.0, 1
+  br label %for.cond
+
+for.end:
+  ret void
+}
+
 define float @extract_element_binop_splat_constant_index(<4 x float> %x) {
 ;
 ; CHECK-LABEL: @extract_element_binop_splat_constant_index(
@@ -156,6 +200,34 @@ define i8 @extract_element_binop_splat_variable_index(<4 x i8> %x, i32 %y) {
   ret i8 %r
 }
 
+; We cannot move the extractelement before the sdiv here, because %z may be
+; out of range, making the divisor poison and resulting in immediate UB.
+define i8 @extract_element_binop_splat_variable_index_may_trap(<4 x i8> %x, <4 x i8> %y, i32 %z) {
+;
+; CHECK-LABEL: @extract_element_binop_splat_variable_index_may_trap(
+; CHECK-NEXT:    [[B:%.*]] = sdiv <4 x i8> splat (i8 42), [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i8> [[B]], i32 [[Z:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = sdiv <4 x i8> splat (i8 42), %y
+  %r = extractelement <4 x i8> %b, i32 %z
+  ret i8 %r
+}
+
+; Moving the extractelement first is fine here, because the index is known to
+; be valid, so we can't introduce additional poison.
+define i8 @extract_element_binop_constant_index_may_trap(<4 x i8> %x, <4 x i8> %y, i32 %z) {
+;
+; CHECK-LABEL: @extract_element_binop_constant_index_may_trap(
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i8> [[Y:%.*]], i64 3
+; CHECK-NEXT:    [[R:%.*]] = sdiv i8 42, [[TMP1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = sdiv <4 x i8> splat (i8 42), %y
+  %r = extractelement <4 x i8> %b, i32 3
+  ret i8 %r
+}
+
 define i8 @extract_element_binop_splat_with_undef_variable_index(<4 x i8> %x, i32 %y) {
 ;
 ; CHECK-LABEL: @extract_element_binop_splat_with_undef_variable_index(
@@ -184,8 +256,8 @@ define float @extract_element_load(<4 x float> %x, ptr %ptr) {
 ;
 ; CHECK-LABEL: @extract_element_load(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x float>, ptr [[PTR:%.*]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[LOAD]], i64 2
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[X:%.*]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[X:%.*]], i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[LOAD]], i64 2
 ; CHECK-NEXT:    [[R:%.*]] = fadd float [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -200,7 +272,7 @@ define float @extract_element_multi_Use_load(<4 x float> %x, ptr %ptr0, ptr %ptr
 ; CHECK-LABEL: @extract_element_multi_Use_load(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x float>, ptr [[PTR0:%.*]], align 16
 ; CHECK-NEXT:    store <4 x float> [[LOAD]], ptr [[PTR1:%.*]], align 16
-; CHECK-NEXT:    [[ADD:%.*]] = fadd <4 x float> [[LOAD]], [[X:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd <4 x float> [[X:%.*]], [[LOAD]]
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x float> [[ADD]], i64 2
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -227,7 +299,7 @@ define float @extelt_binop_insertelt(<4 x float> %A, <4 x float> %B, float %f) {
 ;
 ; CHECK-LABEL: @extelt_binop_insertelt(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
-; CHECK-NEXT:    [[E:%.*]] = fmul nnan float [[TMP1]], [[F:%.*]]
+; CHECK-NEXT:    [[E:%.*]] = fmul nnan float [[F:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret float [[E]]
 ;
   %C = insertelement <4 x float> %A, float %f, i32 0
@@ -241,7 +313,7 @@ define i32 @extelt_binop_binop_insertelt(<4 x i32> %A, <4 x i32> %B, i32 %f) {
 ;
 ; CHECK-LABEL: @extelt_binop_binop_insertelt(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[B:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], [[F:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[F:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[B]], i64 0
 ; CHECK-NEXT:    [[E:%.*]] = mul nsw i32 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[E]]
@@ -341,12 +413,23 @@ define i1 @extractelt_vector_fcmp_constrhs_dynidx(<2 x float> %arg, i32 %idx) {
   ret i1 %ext
 }
 
+define i1 @extractelt_vector_fcmp_copy_flags(<4 x float> %x) {
+; CHECK-LABEL: @extractelt_vector_fcmp_copy_flags(
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[X:%.*]], i64 2
+; CHECK-NEXT:    [[R:%.*]] = fcmp nsz arcp oeq float [[TMP1]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp = fcmp nsz arcp oeq <4 x float> %x, zeroinitializer
+  %r = extractelement <4 x i1> %cmp, i32 2
+  ret i1 %r
+}
+
 define i1 @extractelt_vector_fcmp_not_cheap_to_scalarize_multi_use(<2 x float> %arg0, <2 x float> %arg1, <2 x float> %arg2, i32 %idx) {
 ;
 ; CHECK-LABEL: @extractelt_vector_fcmp_not_cheap_to_scalarize_multi_use(
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd <2 x float> [[ARG1:%.*]], [[ARG2:%.*]]
 ; CHECK-NEXT:    store volatile <2 x float> [[ADD]], ptr undef, align 8
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <2 x float> [[ADD]], [[ARG0:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <2 x float> [[ARG0:%.*]], [[ADD]]
 ; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i1> [[CMP]], i64 0
 ; CHECK-NEXT:    ret i1 [[EXT]]
 ;

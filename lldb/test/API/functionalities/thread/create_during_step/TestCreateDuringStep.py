@@ -137,12 +137,14 @@ class CreateDuringStepTestCase(TestBase):
             current_line = frame.GetLineEntry().GetLine()
 
             # Make sure we're still where we thought we were
-            self.assertTrue(
-                current_line >= self.breakpoint,
+            self.assertGreaterEqual(
+                current_line,
+                self.breakpoint,
                 "Stepped to unexpected line, " + str(current_line),
             )
-            self.assertTrue(
-                current_line <= self.continuepoint,
+            self.assertLessEqual(
+                current_line,
+                self.continuepoint,
                 "Stepped to unexpected line, " + str(current_line),
             )
 

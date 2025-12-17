@@ -1,6 +1,6 @@
 ! Test forall lowering
 
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPtest_forall_with_ranked_dimension() {
 ! CHECK:         %[[VAL_0:.*]] = fir.alloca i32 {adapt.valuebyref, bindc_name = "i"}
@@ -68,7 +68,7 @@ subroutine test_forall_with_ranked_dimension
      integer :: arr(11)
   end type t
   type(t) :: a(10,10)
-  
+
   forall (i=1:5)
      a(i,:)%arr(i+4) = f(i)
   end forall

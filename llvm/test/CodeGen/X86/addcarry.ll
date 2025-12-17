@@ -49,7 +49,7 @@ define i256 @add256(i256 %a, i256 %b) nounwind {
 ; CHECK-LABEL: add256:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    addq {{[0-9]+}}(%rsp), %rsi
+; CHECK-NEXT:    addq %r9, %rsi
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %rdx
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %r8
@@ -1489,4 +1489,56 @@ define { i64, i64 } @addcarry_commutative_2(i64 %x0, i64 %x1, i64 %y0, i64 %y1) 
   %r0 = insertvalue { i64, i64 } poison, i64 %z1s, 0
   %r1 = insertvalue { i64, i64 } %r0, i64 %b1s, 1
   ret { i64, i64 } %r1
+}
+
+define i1 @pr84831(i64 %arg) {
+; CHECK-LABEL: pr84831:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    addb $-1, %al
+; CHECK-NEXT:    adcq $1, %rcx
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    retq
+  %a = icmp ult i64 0, %arg
+  %add1 = add i64 0, 1
+  %carryout1 = icmp ult i64 %add1, 0
+  %b = zext i1 %a to i64
+  %add2 = add i64 %add1, %b
+  %carryout2 = icmp ult i64 %add2, %add1
+  %zc1 = zext i1 %carryout1 to i63
+  %zc2 = zext i1 %carryout2 to i63
+  %or = or i63 %zc1, %zc2
+  %trunc = trunc i63 %or to i1
+  ret i1 %trunc
+}
+
+define void @pr169691(ptr %p0, i64 %implicit, i1 zeroext %carry) {
+; CHECK-LABEL: pr169691:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addb $-1, %dl
+; CHECK-NEXT:    adcq %rsi, (%rdi)
+; CHECK-NEXT:    adcq %rsi, 8(%rdi)
+; CHECK-NEXT:    retq
+  %a0 = load i64, ptr %p0, align 8
+  %uaddo0 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a0, i64 %implicit)
+  %uaddo0.1 = extractvalue { i64, i1 } %uaddo0, 1
+  %uaddo0.0 = extractvalue { i64, i1 } %uaddo0, 0
+  %zextc = zext i1 %carry to i64
+  %uaddo0b = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %uaddo0.0, i64 %zextc)
+  %uaddo0b.1 = extractvalue { i64, i1 } %uaddo0b, 1
+  %uaddo0b.0 = extractvalue { i64, i1 } %uaddo0b, 0
+  %carry0 = or i1 %uaddo0.1, %uaddo0b.1
+  store i64 %uaddo0b.0, ptr %p0, align 8
+
+  %p1 = getelementptr inbounds nuw i8, ptr %p0, i64 8
+  %a1 = load i64, ptr %p1, align 8
+  %uaddo1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a1, i64 %implicit)
+  %uaddo1.0 = extractvalue { i64, i1 } %uaddo1, 0
+  %zext0 = zext i1 %carry0 to i64
+  %uaddo1b = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %uaddo1.0, i64 %zext0)
+  %uaddo1b.0 = extractvalue { i64, i1 } %uaddo1b, 0
+  store i64 %uaddo1b.0, ptr %p1, align 8
+  ret void
 }

@@ -65,7 +65,7 @@ std::string CleanPath(StringRef PathRef) {
   llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
   // FIXME: figure out why this is necessary.
   llvm::sys::path::native(Path);
-  return std::string(Path.str());
+  return std::string(Path);
 }
 
 // Make the Path absolute using the CurrentDir if the Path is not an absolute
@@ -75,7 +75,7 @@ std::string MakeAbsolutePath(StringRef CurrentDir, StringRef Path) {
     return "";
   llvm::SmallString<128> InitialDirectory(CurrentDir);
   llvm::SmallString<128> AbsolutePath(Path);
-  llvm::sys::fs::make_absolute(InitialDirectory, AbsolutePath);
+  llvm::sys::path::make_absolute(InitialDirectory, AbsolutePath);
   return CleanPath(std::move(AbsolutePath));
 }
 
@@ -133,7 +133,8 @@ public:
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef /*File*/, StringRef SearchPath,
                           StringRef /*RelativePath*/,
-                          const Module * /*Imported*/,
+                          const Module * /*SuggestedModule*/,
+                          bool /*ModuleImported*/,
                           SrcMgr::CharacteristicKind /*FileType*/) override {
     if (auto FileEntry = SM.getFileEntryRefForID(SM.getFileID(HashLoc)))
       MoveTool->addIncludes(FileName, IsAngled, SearchPath,
@@ -463,7 +464,7 @@ getUsedDecls(const HelperDeclRefGraph *RG,
   for (const auto *D : Decls) {
     auto Result = RG->getReachableNodes(
         HelperDeclRGBuilder::getOutmostClassOrFunDecl(D));
-    Nodes.insert(Result.begin(), Result.end());
+    Nodes.insert_range(Result);
   }
   llvm::DenseSet<const Decl *> Results;
   for (const auto *Node : Nodes)

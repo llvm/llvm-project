@@ -6,7 +6,7 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t.o
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: ld.lld %t.o -o %t.exe -q
-# RUN: llvm-bolt %t.exe --relocs -o /dev/null --print-only=foo --print-disasm \
+# RUN: llvm-bolt %t.exe --relocs -o %t.null --print-only=foo --print-disasm \
 # RUN:   | FileCheck %s
 
   .text

@@ -47,6 +47,16 @@ define void @undef_constant(i32 %arg0) {
 
 ; // -----
 
+; CHECK-LABEL: @poison_constant
+define void @poison_constant(double %arg0) {
+  ; CHECK:  %[[POISON:.+]] = llvm.mlir.poison : f64
+  ; CHECK:  llvm.fadd %[[POISON]], %{{.*}} : f64
+  %1 = fadd double poison, %arg0
+  ret void
+}
+
+; // -----
+
 ; CHECK-LABEL: @null_constant
 define ptr @null_constant() {
   ; CHECK:  %[[NULL:[0-9]+]] = llvm.mlir.zero : !llvm.ptr
@@ -188,13 +198,8 @@ define i32 @function_address_after_def() {
 %nested_agg_type = type {%simple_agg_type, ptr}
 @nested_agg = global %nested_agg_type { %simple_agg_type{i32 1, i8 2, i16 3, i32 4}, ptr null }
 
-; CHECK-DAG:  %[[NULL:.+]] = llvm.mlir.zero : !llvm.ptr
-; CHECK-DAG:  %[[ROOT:.+]] = llvm.mlir.undef : !llvm.vec<2 x ptr>
-; CHECK-DAG:  %[[P0:.+]] = llvm.mlir.constant(0 : i32) : i32
-; CHECK-DAG:  %[[CHAIN0:.+]] = llvm.insertelement %[[NULL]], %[[ROOT]][%[[P0]] : i32] : !llvm.vec<2 x ptr>
-; CHECK-DAG:  %[[P1:.+]] = llvm.mlir.constant(1 : i32) : i32
-; CHECK-DAG:  %[[CHAIN1:.+]] = llvm.insertelement %[[NULL]], %[[CHAIN0]][%[[P1]] : i32] : !llvm.vec<2 x ptr>
-; CHECK-DAG:  llvm.return %[[CHAIN1]] : !llvm.vec<2 x ptr>
+; CHECK-DAG:  %[[VEC:.+]] = llvm.mlir.zero : vector<2x!llvm.ptr>
+; CHECK-DAG:  llvm.return %[[VEC]] : vector<2x!llvm.ptr>
 @vector_agg = global <2 x ptr> <ptr null, ptr null>
 
 ; // -----
@@ -226,3 +231,80 @@ define i64 @const_exprs_with_duplicate() {
 ; CHECK:  %[[VAL0:.+]] = llvm.ptrtoint %[[ADDR]]
 ; CHECK:  %[[VAL1:.+]] = llvm.add %[[VAL0]], %[[VAL0]]
 ; CHECK:  llvm.return %[[VAL1]]
+
+; // -----
+
+declare void @extern_func()
+@const = dso_local constant i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @extern_func to i64), i64 ptrtoint (ptr @const to i64)) to i32)
+
+; CHECK: llvm.mlir.global external constant @const()
+; CHECK:   %[[ADDR:.+]] = llvm.mlir.addressof @const : !llvm.ptr
+; CHECK:   llvm.ptrtoint %[[ADDR]] : !llvm.ptr to i64
+; CHECK:   llvm.dso_local_equivalent @extern_func : !llvm.ptr
+
+; // -----
+
+declare i32 @extern_func()
+
+define void @call_extern_func() {
+  call noundef i32 dso_local_equivalent @extern_func()
+  ret void
+}
+
+; CHECK-LABEL: @call_extern_func()
+; CHECK: %[[DSO_EQ:.+]] = llvm.dso_local_equivalent @extern_func : !llvm.ptr
+; CHECK: llvm.call %[[DSO_EQ]]() : !llvm.ptr, () -> (i32 {llvm.noundef})
+
+; // -----
+
+define void @aliasee_func() {
+  ret void
+}
+
+@alias_func = alias void (), ptr @aliasee_func
+define void @call_alias_func() {
+  call void dso_local_equivalent @alias_func()
+  ret void
+}
+
+; CHECK-LABEL: @call_alias_func()
+; CHECK: llvm.dso_local_equivalent @alias_func : !llvm.ptr
+
+; // -----
+
+; Test that zeroinitializer for zero-element array is correctly handled
+
+@global_zero_array = global [0 x ptr] zeroinitializer
+
+; CHECK: llvm.mlir.global external @global_zero_array() {addr_space = 0 : i32} : !llvm.array<0 x ptr> {
+; CHECK:   %[[ZERO:.+]] = llvm.mlir.zero : !llvm.array<0 x ptr>
+; CHECK:   llvm.return %[[ZERO]] : !llvm.array<0 x ptr>
+
+; CHECK-LABEL: @load_zero_array
+define [0 x ptr] @load_zero_array() {
+  ; CHECK: %[[ADDR:.+]] = llvm.mlir.addressof @global_zero_array : !llvm.ptr
+  ; CHECK: %[[VAL:.+]] = llvm.load %[[ADDR]] {{.*}}: !llvm.ptr -> !llvm.array<0 x ptr>
+  ; CHECK: llvm.return %[[VAL]] : !llvm.array<0 x ptr>
+  %val = load [0 x ptr], ptr @global_zero_array
+  ret [0 x ptr] %val
+}
+
+; // -----
+
+; Test that zeroinitializer for zero-element structs is correctly handled
+
+@global_zero_struct = global {} zeroinitializer
+
+; CHECK: llvm.mlir.global external @global_zero_struct() {addr_space = 0 : i32} : !llvm.struct<()> {
+; CHECK:   %[[ZERO:.+]] = llvm.mlir.zero : !llvm.struct<()>
+; CHECK:   llvm.return %[[ZERO]] : !llvm.struct<()>
+
+; // -----
+
+; Test that zeroinitializer for arrays with elements still works correctly.
+; Note that arrays with primitive types that can be represented as dense
+; attributes may use the attribute form directly.
+
+@global_array_with_elements = global [3 x i32] zeroinitializer
+
+; CHECK: llvm.mlir.global external @global_array_with_elements({{.*}}) {addr_space = 0 : i32} : !llvm.array<3 x i32>

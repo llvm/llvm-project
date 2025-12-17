@@ -8,7 +8,7 @@ declare void @use(i32)
 
 define i32 @cttz_zext_zero_undef(i16 %x) {
 ; CHECK-LABEL: @cttz_zext_zero_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i16 0, 17) i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    [[TZ:%.*]] = zext nneg i16 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[TZ]]
 ;
@@ -20,7 +20,7 @@ define i32 @cttz_zext_zero_undef(i16 %x) {
 define i32 @cttz_zext_zero_def(i16 %x) {
 ; CHECK-LABEL: @cttz_zext_zero_def(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[X:%.*]] to i32
-; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[Z]], i1 false), !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[Z]], i1 false)
 ; CHECK-NEXT:    ret i32 [[TZ]]
 ;
   %z = zext i16 %x to i32
@@ -32,7 +32,7 @@ define i32 @cttz_zext_zero_undef_extra_use(i16 %x) {
 ; CHECK-LABEL: @cttz_zext_zero_undef_extra_use(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[X:%.*]] to i32
 ; CHECK-NEXT:    call void @use(i32 [[Z]])
-; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[Z]], i1 true), !range [[RNG1]]
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[Z]], i1 true)
 ; CHECK-NEXT:    ret i32 [[TZ]]
 ;
   %z = zext i16 %x to i32
@@ -43,7 +43,7 @@ define i32 @cttz_zext_zero_undef_extra_use(i16 %x) {
 
 define <2 x i64> @cttz_zext_zero_undef_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @cttz_zext_zero_undef_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 true), !range [[RNG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 true)
 ; CHECK-NEXT:    [[TZ:%.*]] = zext nneg <2 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[TZ]]
 ;
@@ -55,7 +55,7 @@ define <2 x i64> @cttz_zext_zero_undef_vec(<2 x i32> %x) {
 define <2 x i64> @cttz_zext_zero_def_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @cttz_zext_zero_def_vec(
 ; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i32> [[X:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TZ:%.*]] = tail call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[Z]], i1 false), !range [[RNG2:![0-9]+]]
+; CHECK-NEXT:    [[TZ:%.*]] = tail call range(i64 0, 65) <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[Z]], i1 false)
 ; CHECK-NEXT:    ret <2 x i64> [[TZ]]
 ;
   %z = zext <2 x i32> %x to <2 x i64>
@@ -65,7 +65,7 @@ define <2 x i64> @cttz_zext_zero_def_vec(<2 x i32> %x) {
 
 define i32 @cttz_sext_zero_undef(i16 %x) {
 ; CHECK-LABEL: @cttz_sext_zero_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i16 0, 17) i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    [[TZ:%.*]] = zext nneg i16 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[TZ]]
 ;
@@ -77,7 +77,7 @@ define i32 @cttz_sext_zero_undef(i16 %x) {
 define i32 @cttz_sext_zero_def(i16 %x) {
 ; CHECK-LABEL: @cttz_sext_zero_def(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[X:%.*]] to i32
-; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[TMP1]], i1 false), !range [[RNG1]]
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[TMP1]], i1 false)
 ; CHECK-NEXT:    ret i32 [[TZ]]
 ;
   %s = sext i16 %x to i32
@@ -89,7 +89,7 @@ define i32 @cttz_sext_zero_undef_extra_use(i16 %x) {
 ; CHECK-LABEL: @cttz_sext_zero_undef_extra_use(
 ; CHECK-NEXT:    [[S:%.*]] = sext i16 [[X:%.*]] to i32
 ; CHECK-NEXT:    call void @use(i32 [[S]])
-; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[S]], i1 true), !range [[RNG1]]
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[S]], i1 true)
 ; CHECK-NEXT:    ret i32 [[TZ]]
 ;
   %s = sext i16 %x to i32
@@ -100,7 +100,7 @@ define i32 @cttz_sext_zero_undef_extra_use(i16 %x) {
 
 define <2 x i64> @cttz_sext_zero_undef_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @cttz_sext_zero_undef_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 true), !range [[RNG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 true)
 ; CHECK-NEXT:    [[TZ:%.*]] = zext nneg <2 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[TZ]]
 ;
@@ -112,7 +112,7 @@ define <2 x i64> @cttz_sext_zero_undef_vec(<2 x i32> %x) {
 define <2 x i64> @cttz_sext_zero_def_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @cttz_sext_zero_def_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[X:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TZ:%.*]] = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[TMP1]], i1 false), !range [[RNG2]]
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i64 0, 65) <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[TMP1]], i1 false)
 ; CHECK-NEXT:    ret <2 x i64> [[TZ]]
 ;
   %s = sext <2 x i32> %x to <2 x i64>
@@ -122,7 +122,7 @@ define <2 x i64> @cttz_sext_zero_def_vec(<2 x i32> %x) {
 
 define i32 @cttz_of_lowest_set_bit(i32 %x) {
 ; CHECK-LABEL: @cttz_of_lowest_set_bit(
-; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false), !range [[RNG1]]
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false)
 ; CHECK-NEXT:    ret i32 [[TZ]]
 ;
   %sub = sub i32 0, %x
@@ -134,7 +134,7 @@ define i32 @cttz_of_lowest_set_bit(i32 %x) {
 define i32 @cttz_of_lowest_set_bit_commuted(i32 %xx) {
 ; CHECK-LABEL: @cttz_of_lowest_set_bit_commuted(
 ; CHECK-NEXT:    [[X:%.*]] = udiv i32 42, [[XX:%.*]]
-; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[X]], i1 false), !range [[RNG1]]
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 false)
 ; CHECK-NEXT:    ret i32 [[TZ]]
 ;
   %x = udiv i32 42, %xx ; thwart complexity-based canonicalization
@@ -146,7 +146,7 @@ define i32 @cttz_of_lowest_set_bit_commuted(i32 %xx) {
 
 define i32 @cttz_of_lowest_set_bit_poison_flag(i32 %x) {
 ; CHECK-LABEL: @cttz_of_lowest_set_bit_poison_flag(
-; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true), !range [[RNG1]]
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    ret i32 [[TZ]]
 ;
   %sub = sub i32 0, %x
@@ -157,7 +157,7 @@ define i32 @cttz_of_lowest_set_bit_poison_flag(i32 %x) {
 
 define <2 x i64> @cttz_of_lowest_set_bit_vec(<2 x i64> %x) {
 ; CHECK-LABEL: @cttz_of_lowest_set_bit_vec(
-; CHECK-NEXT:    [[TZ:%.*]] = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[X:%.*]], i1 false), !range [[RNG2]]
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i64 0, 65) <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[X:%.*]], i1 false)
 ; CHECK-NEXT:    ret <2 x i64> [[TZ]]
 ;
   %sub = sub <2 x i64> zeroinitializer, %x
@@ -168,7 +168,7 @@ define <2 x i64> @cttz_of_lowest_set_bit_vec(<2 x i64> %x) {
 
 define <2 x i64> @cttz_of_lowest_set_bit_vec_undef(<2 x i64> %x) {
 ; CHECK-LABEL: @cttz_of_lowest_set_bit_vec_undef(
-; CHECK-NEXT:    [[TZ:%.*]] = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[X:%.*]], i1 false), !range [[RNG2]]
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i64 0, 65) <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[X:%.*]], i1 false)
 ; CHECK-NEXT:    ret <2 x i64> [[TZ]]
 ;
   %sub = sub <2 x i64> zeroinitializer, %x
@@ -181,7 +181,7 @@ define i32 @cttz_of_lowest_set_bit_wrong_const(i32 %x) {
 ; CHECK-LABEL: @cttz_of_lowest_set_bit_wrong_const(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 1, [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[X]]
-; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[AND]], i1 false), !range [[RNG3:![0-9]+]]
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 1, 33) i32 @llvm.cttz.i32(i32 [[AND]], i1 false)
 ; CHECK-NEXT:    ret i32 [[TZ]]
 ;
   %sub = sub i32 1, %x
@@ -193,8 +193,8 @@ define i32 @cttz_of_lowest_set_bit_wrong_const(i32 %x) {
 define i32 @cttz_of_lowest_set_bit_wrong_operand(i32 %x, i32 %y) {
 ; CHECK-LABEL: @cttz_of_lowest_set_bit_wrong_operand(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[Y:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[X:%.*]]
-; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[AND]], i1 false), !range [[RNG1]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[SUB]]
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[AND]], i1 false)
 ; CHECK-NEXT:    ret i32 [[TZ]]
 ;
   %sub = sub i32 0, %y
@@ -206,12 +206,187 @@ define i32 @cttz_of_lowest_set_bit_wrong_operand(i32 %x, i32 %y) {
 define i32 @cttz_of_lowest_set_bit_wrong_intrinsic(i32 %x) {
 ; CHECK-LABEL: @cttz_of_lowest_set_bit_wrong_intrinsic(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[X]]
-; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[AND]], i1 false), !range [[RNG1]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], [[SUB]]
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[AND]], i1 false)
 ; CHECK-NEXT:    ret i32 [[TZ]]
 ;
   %sub = sub i32 0, %x
   %and = and i32 %sub, %x
   %tz = call i32 @llvm.ctlz.i32(i32 %and, i1 false)
   ret i32 %tz
+}
+
+define i32 @cttz_of_power_of_two(i32 %x) {
+; CHECK-LABEL: @cttz_of_power_of_two(
+; CHECK-NEXT:    [[R:%.*]] = sub i32 32, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %lshr = lshr i32 -1, %x
+  %add = add i32 %lshr, 1
+  %r = call i32 @llvm.cttz.i32(i32 %add, i1 false)
+  ret i32 %r
+}
+
+define i32 @cttz_of_power_of_two_zero_poison(i32 %x) {
+; CHECK-LABEL: @cttz_of_power_of_two_zero_poison(
+; CHECK-NEXT:    [[R:%.*]] = sub i32 32, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %lshr = lshr i32 -1, %x
+  %add = add i32 %lshr, 1
+  %r = call i32 @llvm.cttz.i32(i32 %add, i1 true)
+  ret i32 %r
+}
+
+define i32 @cttz_of_power_of_two_wrong_intrinsic(i32 %x) {
+; CHECK-LABEL: @cttz_of_power_of_two_wrong_intrinsic(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 -1, [[X:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LSHR]], 1
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[ADD]], i1 false)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %lshr = lshr i32 -1, %x
+  %add = add i32 %lshr, 1
+  %r = call i32 @llvm.ctlz.i32(i32 %add, i1 false)
+  ret i32 %r
+}
+
+define i32 @cttz_of_power_of_two_wrong_constant_1(i32 %x) {
+; CHECK-LABEL: @cttz_of_power_of_two_wrong_constant_1(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 -2, [[X:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[LSHR]], 1
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[ADD]], i1 true)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %lshr = lshr i32 -2, %x
+  %add = add i32 %lshr, 1
+  %r = call i32 @llvm.cttz.i32(i32 %add, i1 false)
+  ret i32 %r
+}
+
+define i32 @cttz_of_power_of_two_wrong_constant_2(i32 %x) {
+; CHECK-LABEL: @cttz_of_power_of_two_wrong_constant_2(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 -1, [[X:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[LSHR]], -1
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 1, 33) i32 @llvm.cttz.i32(i32 [[ADD]], i1 false)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %lshr = lshr i32 -1, %x
+  %add = add i32 %lshr, -1
+  %r = call i32 @llvm.cttz.i32(i32 %add, i1 false)
+  ret i32 %r
+}
+
+define i16 @cttz_assume(i16 %x) {
+; CHECK-LABEL: @cttz_assume(
+; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[X:%.*]], 1
+; CHECK-NEXT:    [[COND0:%.*]] = icmp ult i16 [[ADD]], 10
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND0]])
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ne i16 [[X]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND1]])
+; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i16 0, 17) i16 @llvm.cttz.i16(i16 [[X]], i1 true)
+; CHECK-NEXT:    ret i16 [[CTTZ]]
+;
+  %add = add i16 %x, 1
+  %cond0 = icmp ult i16 %add, 10
+  call void @llvm.assume(i1 %cond0)
+
+  %cond1 = icmp ne i16 %x, 0
+  call void @llvm.assume(i1 %cond1)
+
+  %cttz = call i16 @llvm.cttz.i16(i16 %x, i1 false)
+  ret i16 %cttz
+}
+
+
+declare void @use.i8(i8)
+define i8 @fold_ctz_log2(i8 %x) {
+; CHECK-LABEL: @fold_ctz_log2(
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.umin.i8(i8 [[X:%.*]], i8 5)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %p2 = shl i8 1, %x
+  %v = call i8 @llvm.umin(i8 %p2, i8 32)
+  %r = call i8 @llvm.cttz(i8 %v, i1 false)
+  ret i8 %r
+}
+
+define i9 @fold_ctz_log2_i9_okay(i9 %x) {
+; CHECK-LABEL: @fold_ctz_log2_i9_okay(
+; CHECK-NEXT:    [[R:%.*]] = call i9 @llvm.umin.i9(i9 [[X:%.*]], i9 5)
+; CHECK-NEXT:    ret i9 [[R]]
+;
+  %p2 = shl i9 1, %x
+  %v = call i9 @llvm.umin(i9 %p2, i9 32)
+  %r = call i9 @llvm.cttz(i9 %v, i1 false)
+  ret i9 %r
+}
+
+define i8 @fold_ctz_log2_maybe_z(i8 %x, i8 %y, i1 %c) {
+; CHECK-LABEL: @fold_ctz_log2_maybe_z(
+; CHECK-NEXT:    [[V:%.*]] = shl i8 2, [[V_V:%.*]]
+; CHECK-NEXT:    [[P2_2:%.*]] = shl i8 4, [[Y:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = select i1 [[C:%.*]], i8 [[V]], i8 [[P2_2]]
+; CHECK-NEXT:    [[R:%.*]] = call range(i8 1, 9) i8 @llvm.cttz.i8(i8 [[V1]], i1 false)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %p2 = shl i8 2, %x
+  %p2_2 = shl i8 4, %y
+  %v = select i1 %c, i8 %p2, i8 %p2_2
+  %r = call i8 @llvm.cttz(i8 %v, i1 false)
+  ret i8 %r
+}
+
+define i8 @fold_ctz_log2_maybe_z_okay(i8 %x, i8 %y, i1 %c) {
+; CHECK-LABEL: @fold_ctz_log2_maybe_z_okay(
+; CHECK-NEXT:    [[X:%.*]] = add i8 [[X1:%.*]], 1
+; CHECK-NEXT:    [[Y:%.*]] = add i8 [[Y1:%.*]], 2
+; CHECK-NEXT:    [[V_V:%.*]] = select i1 [[C:%.*]], i8 [[X]], i8 [[Y]]
+; CHECK-NEXT:    ret i8 [[V_V]]
+;
+  %p2 = shl i8 2, %x
+  %p2_2 = shl i8 4, %y
+  %v = select i1 %c, i8 %p2, i8 %p2_2
+  %r = call i8 @llvm.cttz(i8 %v, i1 true)
+  ret i8 %r
+}
+
+define i8 @fold_clz_log2(i8 %x) {
+; CHECK-LABEL: @fold_clz_log2(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X:%.*]], i8 5)
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP1]], 7
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %p2 = shl i8 1, %x
+  %v = call i8 @llvm.umin(i8 %p2, i8 32)
+  %r = call i8 @llvm.ctlz(i8 %v, i1 false)
+  ret i8 %r
+}
+
+define i8 @fold_clz_log2_multiuse_fail(i8 %x) {
+; CHECK-LABEL: @fold_clz_log2_multiuse_fail(
+; CHECK-NEXT:    [[P2:%.*]] = shl nuw i8 2, [[X:%.*]]
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.umin.i8(i8 [[P2]], i8 32)
+; CHECK-NEXT:    call void @use.i8(i8 [[V]])
+; CHECK-NEXT:    [[R:%.*]] = call range(i8 2, 9) i8 @llvm.ctlz.i8(i8 [[V]], i1 true)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %p2 = shl nuw i8 2, %x
+  %v = call i8 @llvm.umin(i8 %p2, i8 32)
+  call void @use.i8(i8 %v)
+  %r = call i8 @llvm.ctlz(i8 %v, i1 true)
+  ret i8 %r
+}
+
+
+define i9 @fold_clz_log2_i9(i9 %x) {
+; CHECK-LABEL: @fold_clz_log2_i9(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i9 @llvm.umin.i9(i9 [[X:%.*]], i9 5)
+; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw i9 8, [[TMP1]]
+; CHECK-NEXT:    ret i9 [[R]]
+;
+  %p2 = shl i9 1, %x
+  %v = call i9 @llvm.umin(i9 %p2, i9 32)
+  %r = call i9 @llvm.ctlz(i9 %v, i1 true)
+  ret i9 %r
 }

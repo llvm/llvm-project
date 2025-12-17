@@ -6,17 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Hexagon.h"
 #include "HexagonISelDAGToDAG.h"
 #include "HexagonISelLowering.h"
-#include "HexagonTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -199,9 +195,9 @@ bool Coloring::color() {
     Q.insert(N);
     for (unsigned I = 0; I != Q.size(); ++I) {
       NodeSet &Ns = Edges[Q[I]];
-      Q.insert(Ns.begin(), Ns.end());
+      Q.insert_range(Ns);
     }
-    FirstQ.insert(Q.begin(), Q.end());
+    FirstQ.insert_range(Q);
   };
   for (Node N : Needed)
     Enqueue(N);
@@ -266,8 +262,7 @@ bool Coloring::color() {
 
   // Explicitly assign "None" to all uncolored nodes.
   for (unsigned I = 0; I != Order.size(); ++I)
-    if (Colors.count(I) == 0)
-      Colors[I] = ColorKind::None;
+    Colors.try_emplace(I, ColorKind::None);
 
   return true;
 }
@@ -794,7 +789,7 @@ struct ShuffleMask {
   }
 };
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const ShuffleMask &SM) {
   SM.print(OS);
   return OS;
@@ -816,8 +811,8 @@ ArrayRef<int> hi(ArrayRef<int> Vuu) { return Vuu.take_back(Vuu.size() / 2); }
 MaskT vshuffvdd(ArrayRef<int> Vu, ArrayRef<int> Vv, unsigned Rt) {
   int Len = Vu.size();
   MaskT Vdd(2 * Len);
-  std::copy(Vv.begin(), Vv.end(), Vdd.begin());
-  std::copy(Vu.begin(), Vu.end(), Vdd.begin() + Len);
+  llvm::copy(Vv, Vdd.begin());
+  llvm::copy(Vu, Vdd.begin() + Len);
 
   auto Vd0 = MutableArrayRef<int>(Vdd).take_front(Len);
   auto Vd1 = MutableArrayRef<int>(Vdd).take_back(Len);
@@ -836,8 +831,8 @@ MaskT vshuffvdd(ArrayRef<int> Vu, ArrayRef<int> Vv, unsigned Rt) {
 MaskT vdealvdd(ArrayRef<int> Vu, ArrayRef<int> Vv, unsigned Rt) {
   int Len = Vu.size();
   MaskT Vdd(2 * Len);
-  std::copy(Vv.begin(), Vv.end(), Vdd.begin());
-  std::copy(Vu.begin(), Vu.end(), Vdd.begin() + Len);
+  llvm::copy(Vv, Vdd.begin());
+  llvm::copy(Vu, Vdd.begin() + Len);
 
   auto Vd0 = MutableArrayRef<int>(Vdd).take_front(Len);
   auto Vd1 = MutableArrayRef<int>(Vdd).take_back(Len);
@@ -963,7 +958,8 @@ namespace llvm {
     void select(SDNode *ISelN);
     void materialize(const ResultStack &Results);
 
-    SDValue getConst32(int Val, const SDLoc &dl);
+    SDValue getConst32(unsigned Val, const SDLoc &dl);
+    SDValue getSignedConst32(int Val, const SDLoc &dl);
     SDValue getVectorConstant(ArrayRef<uint8_t> Data, const SDLoc &dl);
 
     enum : unsigned {
@@ -1067,8 +1063,7 @@ static SmallVector<unsigned, 4> getInputSegmentList(ShuffleMask SM,
       Segs.set(M >> Shift);
   }
 
-  for (unsigned B : Segs.set_bits())
-    SegList.push_back(B);
+  llvm::append_range(SegList, Segs.set_bits());
   return SegList;
 }
 
@@ -1275,11 +1270,11 @@ OpRef HvxSelector::packs(ShuffleMask SM, OpRef Va, OpRef Vb,
     return OpRef::fail();
 
   if (Vb.isUndef()) {
-    std::copy(SM.Mask.begin(), SM.Mask.end(), NewMask.begin());
+    llvm::copy(SM.Mask, NewMask.begin());
     return Va;
   }
   if (Va.isUndef()) {
-    std::copy(SM.Mask.begin(), SM.Mask.end(), NewMask.begin());
+    llvm::copy(SM.Mask, NewMask.begin());
     ShuffleVectorSDNode::commuteMask(NewMask);
     return Vb;
   }
@@ -1337,8 +1332,7 @@ OpRef HvxSelector::packs(ShuffleMask SM, OpRef Va, OpRef Vb,
   // segments that are used in the output.
 
   unsigned Seg0 = ~0u, Seg1 = ~0u;
-  for (int I = 0, E = SegMap.size(); I != E; ++I) {
-    unsigned X = SegMap[I];
+  for (unsigned X : SegMap) {
     if (X == ~0u)
       continue;
     if (Seg0 == ~0u)
@@ -1761,7 +1755,7 @@ void HvxSelector::select(SDNode *ISelN) {
     // Don't want to select N0 if it's shared with another node, except if
     // it's shared with other ISELs.
     auto IsISelN = [](SDNode *T) { return T->getOpcode() == HexagonISD::ISEL; };
-    if (llvm::all_of(N0->uses(), IsISelN))
+    if (llvm::all_of(N0->users(), IsISelN))
       SubNodes.insert(N0);
   }
   if (SubNodes.empty()) {
@@ -1780,7 +1774,7 @@ void HvxSelector::select(SDNode *ISelN) {
       return true;
     if (T->use_empty() || NonDom.count(T))
       return false;
-    for (SDNode *U : T->uses()) {
+    for (SDNode *U : T->users()) {
       // If T is reachable from a known non-dominated node, then T itself
       // is non-dominated.
       if (!Rec(U, Rec)) {
@@ -1819,7 +1813,7 @@ void HvxSelector::select(SDNode *ISelN) {
 
   for (unsigned I = 0; I != TmpQ.size(); ++I) {
     SDNode *S = TmpQ[I];
-    for (SDNode *U : S->uses()) {
+    for (SDNode *U : S->users()) {
       if (U == ISelN)
         continue;
       auto F = OpCount.find(U);
@@ -1990,23 +1984,20 @@ SmallVector<uint32_t, 8> HvxSelector::getPerfectCompletions(ShuffleMask SM,
   // same as in P. This implies that P == Q.
 
   // There can be a situation where there are more entries with the same
-  // bits set than there are set bits (e.g. value 9 occuring more than 2
+  // bits set than there are set bits (e.g. value 9 occurring more than 2
   // times). In such cases it will be impossible to complete this to a
   // perfect shuffle.
   SmallVector<uint32_t, 8> Sorted(Worklist);
-  llvm::sort(Sorted.begin(), Sorted.end());
+  llvm::sort(Sorted);
 
   for (unsigned I = 0, E = Sorted.size(); I != E;) {
     unsigned P = Sorted[I], Count = 1;
     while (++I != E && P == Sorted[I])
       ++Count;
     if ((unsigned)llvm::popcount(P) < Count) {
-      // Reset all occurences of P, if there are more occurrences of P
+      // Reset all occurrences of P, if there are more occurrences of P
       // than there are bits in P.
-      for (unsigned &Q : Worklist) {
-        if (Q == P)
-          Q = 0;
-      }
+      llvm::replace(Worklist, P, 0U);
     }
   }
 
@@ -2037,8 +2028,7 @@ HvxSelector::completeToPerfect(ArrayRef<uint32_t> Completions, unsigned Width) {
 #ifndef NDEBUG
   // Check that we have generated a valid completion.
   uint32_t OrAll = 0;
-  for (unsigned I = 0, E = Comps.size(); I != E; ++I) {
-    uint32_t C = Comps[I];
+  for (uint32_t C : Comps) {
     assert(isPowerOf2_32(C));
     OrAll |= C;
   }
@@ -2156,7 +2146,8 @@ OpRef HvxSelector::contracting(ShuffleMask SM, OpRef Va, OpRef Vb,
     for (int i = 0, e = std::size(Opcodes); i != e; ++i) {
       auto [Size, Odd] = Packs[i];
       if (same(SM.Mask, shuffles::mask(shuffles::vdeal, HwLen, Size, Odd))) {
-        Results.push(Hexagon::A2_tfrsi, MVT::i32, {getConst32(-2 * Size, dl)});
+        Results.push(Hexagon::A2_tfrsi, MVT::i32,
+                     {getSignedConst32(-2 * Size, dl)});
         Results.push(Hexagon::V6_vdealvdd, PairTy, {Vb, Va, OpRef::res(-1)});
         auto vdeal = OpRef::res(Results.top());
         Results.push(Opcodes[i], SingleTy,
@@ -2233,7 +2224,7 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   // V6_vdeal{b,h}
   // V6_vshuff{b,h}
 
-  // V6_vshufoe{b,h}  those are quivalent to vshuffvdd(..,{1,2})
+  // V6_vshufoe{b,h}  those are equivalent to vshuffvdd(..,{1,2})
   // V6_vshuffvdd (V6_vshuff)
   // V6_dealvdd (V6_vdeal)
 
@@ -2278,7 +2269,7 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   // For example, with the inputs as above, the result will be:
   //   0 8  2 A  4 C  6 E
   //   1 9  3 B  5 D  7 F
-  // Now, this result can be tranposed again, but with the group size of 2:
+  // Now, this result can be transposed again, but with the group size of 2:
   //   08 19  4C 5D
   //   2A 3B  6E 7F
   // If we then transpose that result, but with the group size of 4, we get:
@@ -2492,8 +2483,15 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
     }
     ++I;
 
+    // Upper bits of the vdeal/vshuff parameter that do not cover any byte in
+    // the vector are ignored. Technically, A2_tfrsi takes a signed value, which
+    // is sign-extended to 32 bit if there is no extender. The practical
+    // advantages are that signed values are smaller in common use cases and are
+    // not sensitive to the vector size.
+    int SS = SignExtend32(S, HwLog);
+
     NodeTemplate Res;
-    Results.push(Hexagon::A2_tfrsi, MVT::i32, {getConst32(S, dl)});
+    Results.push(Hexagon::A2_tfrsi, MVT::i32, {getSignedConst32(SS, dl)});
     Res.Opc = IsInc ? Hexagon::V6_vshuffvdd : Hexagon::V6_vdealvdd;
     Res.Ty = PairTy;
     Res.Ops = {OpRef::hi(Arg), OpRef::lo(Arg), OpRef::res(-1)};
@@ -2556,8 +2554,12 @@ OpRef HvxSelector::butterfly(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   return OpRef::fail();
 }
 
-SDValue HvxSelector::getConst32(int Val, const SDLoc &dl) {
+SDValue HvxSelector::getConst32(unsigned Val, const SDLoc &dl) {
   return DAG.getTargetConstant(Val, dl, MVT::i32);
+}
+
+SDValue HvxSelector::getSignedConst32(int Val, const SDLoc &dl) {
+  return DAG.getSignedTargetConstant(Val, dl, MVT::i32);
 }
 
 SDValue HvxSelector::getVectorConstant(ArrayRef<uint8_t> Data,
@@ -2575,8 +2577,7 @@ SDValue HvxSelector::getVectorConstant(ArrayRef<uint8_t> Data,
 void HvxSelector::selectExtractSubvector(SDNode *N) {
   SDValue Inp = N->getOperand(0);
   MVT ResTy = N->getValueType(0).getSimpleVT();
-  auto IdxN = cast<ConstantSDNode>(N->getOperand(1));
-  unsigned Idx = IdxN->getZExtValue();
+  unsigned Idx = N->getConstantOperandVal(1);
 
   [[maybe_unused]] MVT InpTy = Inp.getValueType().getSimpleVT();
   [[maybe_unused]] unsigned ResLen = ResTy.getVectorNumElements();
@@ -2897,7 +2898,7 @@ void HexagonDAGToDAGISel::SelectV65GatherPred(SDNode *N) {
   SDValue ImmOperand = CurDAG->getTargetConstant(0, dl, MVT::i32);
 
   unsigned Opcode;
-  unsigned IntNo = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  unsigned IntNo = N->getConstantOperandVal(1);
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected HVX gather intrinsic.");
@@ -2936,7 +2937,7 @@ void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
   SDValue ImmOperand = CurDAG->getTargetConstant(0, dl, MVT::i32);
 
   unsigned Opcode;
-  unsigned IntNo = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  unsigned IntNo = N->getConstantOperandVal(1);
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected HVX gather intrinsic.");
@@ -2952,6 +2953,10 @@ void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
   case Intrinsic::hexagon_V6_vgathermhw_128B:
     Opcode = Hexagon::V6_vgathermhw_pseudo;
     break;
+  case Intrinsic::hexagon_V6_vgather_vscattermh:
+  case Intrinsic::hexagon_V6_vgather_vscattermh_128B:
+    Opcode = Hexagon::V6_vgather_vscatter_mh_pseudo;
+    break;
   }
 
   SDVTList VTs = CurDAG->getVTList(MVT::Other);
@@ -2965,7 +2970,7 @@ void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
 }
 
 void HexagonDAGToDAGISel::SelectHVXDualOutput(SDNode *N) {
-  unsigned IID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
+  unsigned IID = N->getConstantOperandVal(0);
   SDNode *Result;
   switch (IID) {
   case Intrinsic::hexagon_V6_vaddcarry: {

@@ -12,17 +12,15 @@
 
 #include "mlir/Dialect/Transform/Transforms/TransformInterpreterUtils.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/IR/Utils.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
-#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/SourceMgr.h"
@@ -69,7 +67,7 @@ LogicalResult transform::detail::expandPathsToMLIRFiles(
         continue;
       }
 
-      if (!StringRef(fileName).endswith(".mlir")) {
+      if (!StringRef(fileName).ends_with(".mlir")) {
         LLVM_DEBUG(DBGS() << "  Skipping '" << fileName
                           << "' because it does not end with '.mlir'\n");
         continue;
@@ -109,12 +107,92 @@ LogicalResult transform::detail::parseTransformModuleFromFile(
   sourceMgr.AddNewSourceBuffer(std::move(memoryBuffer), llvm::SMLoc());
   transformModule =
       OwningOpRef<ModuleOp>(parseSourceFile<ModuleOp>(sourceMgr, context));
+  if (!transformModule) {
+    // Failed to parse the transform module.
+    // Don't need to emit an error here as the parsing should have already done
+    // that.
+    return failure();
+  }
   return mlir::verify(*transformModule);
 }
 
 ModuleOp transform::detail::getPreloadedTransformModule(MLIRContext *context) {
   return context->getOrLoadDialect<transform::TransformDialect>()
       ->getLibraryModule();
+}
+
+static transform::TransformOpInterface
+findTransformEntryPointNonRecursive(Operation *op, StringRef entryPoint) {
+  for (Region &region : op->getRegions()) {
+    for (Block &block : region.getBlocks()) {
+      for (auto namedSequenceOp : block.getOps<transform::NamedSequenceOp>()) {
+        if (namedSequenceOp.getSymName() == entryPoint) {
+          return cast<transform::TransformOpInterface>(
+              namedSequenceOp.getOperation());
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
+static transform::TransformOpInterface
+findTransformEntryPointRecursive(Operation *op, StringRef entryPoint) {
+  transform::TransformOpInterface transform = nullptr;
+  op->walk<WalkOrder::PreOrder>(
+      [&](transform::NamedSequenceOp namedSequenceOp) {
+        if (namedSequenceOp.getSymName() == entryPoint) {
+          transform = cast<transform::TransformOpInterface>(
+              namedSequenceOp.getOperation());
+          return WalkResult::interrupt();
+        }
+        return WalkResult::advance();
+      });
+  return transform;
+}
+
+// Will look for the transform's entry point favouring NamedSequenceOps
+// ops that exist within the operation without the need for nesting.
+// If no operation exists in the blocks owned by op, then it will recursively
+// walk the op in preorder and find the first NamedSequenceOp that matches
+// the entry point's name.
+//
+// This allows for the following two use cases:
+// 1. op is a module annotated with the transform.with_named_sequence attribute
+//    that has an entry point in its block. E.g.,
+//
+//    ```mlir
+//    module {transform.with_named_sequence} {
+//      transform.named_sequence @__transform_main(%arg0 : !transform.any_op) ->
+//      () {
+//        transform.yield
+//      }
+//    }
+//    ```
+//
+// 2. op is a program which contains a nested module annotated with the
+//    transform.with_named_sequence attribute. E.g.,
+//
+//    ```mlir
+//    module {
+//      func.func @foo () {
+//      }
+//
+//      module {transform.with_named_sequence} {
+//        transform.named_sequence @__transform_main(%arg0 : !transform.any_op)
+//        -> () {
+//          transform.yield
+//        }
+//      }
+//    }
+//    ```
+static transform::TransformOpInterface
+findTransformEntryPointInOp(Operation *op, StringRef entryPoint) {
+  transform::TransformOpInterface transform =
+      findTransformEntryPointNonRecursive(op, entryPoint);
+  if (!transform)
+    transform = findTransformEntryPointRecursive(op, entryPoint);
+  return transform;
 }
 
 transform::TransformOpInterface
@@ -124,16 +202,8 @@ transform::detail::findTransformEntryPoint(Operation *root, ModuleOp module,
   if (module)
     l.push_back(module);
   for (Operation *op : l) {
-    transform::TransformOpInterface transform = nullptr;
-    op->walk<WalkOrder::PreOrder>(
-        [&](transform::NamedSequenceOp namedSequenceOp) {
-          if (namedSequenceOp.getSymName() == entryPoint) {
-            transform = cast<transform::TransformOpInterface>(
-                namedSequenceOp.getOperation());
-            return WalkResult::interrupt();
-          }
-          return WalkResult::advance();
-        });
+    TransformOpInterface transform =
+        findTransformEntryPointInOp(op, entryPoint);
     if (transform)
       return transform;
   }
@@ -185,22 +255,46 @@ LogicalResult transform::detail::assembleTransformLibraryFromPaths(
 LogicalResult transform::applyTransformNamedSequence(
     Operation *payload, Operation *transformRoot, ModuleOp transformModule,
     const TransformOptions &options) {
+  RaggedArray<MappedValue> bindings;
+  bindings.push_back(ArrayRef<Operation *>{payload});
+  return applyTransformNamedSequence(bindings,
+                                     cast<TransformOpInterface>(transformRoot),
+                                     transformModule, options);
+}
+
+LogicalResult transform::applyTransformNamedSequence(
+    RaggedArray<MappedValue> bindings, TransformOpInterface transformRoot,
+    ModuleOp transformModule, const TransformOptions &options) {
+  if (bindings.empty()) {
+    return transformRoot.emitError()
+           << "expected at least one binding for the root";
+  }
+  if (bindings.at(0).size() != 1) {
+    return transformRoot.emitError()
+           << "expected one payload to be bound to the first argument, got "
+           << bindings.at(0).size();
+  }
+  auto *payloadRoot = dyn_cast<Operation *>(bindings.at(0).front());
+  if (!payloadRoot) {
+    return transformRoot->emitError() << "expected the object bound to the "
+                                         "first argument to be an operation";
+  }
+
+  bindings.removeFront();
+
   // `transformModule` may not be modified.
   if (transformModule && !transformModule->isAncestor(transformRoot)) {
     OwningOpRef<Operation *> clonedTransformModule(transformModule->clone());
     if (failed(detail::mergeSymbolsInto(
             SymbolTable::getNearestSymbolTable(transformRoot),
             std::move(clonedTransformModule)))) {
-      return payload->emitError() << "failed to merge symbols";
+      return payloadRoot->emitError() << "failed to merge symbols";
     }
   }
 
   LLVM_DEBUG(DBGS() << "Apply\n" << *transformRoot << "\n");
-  LLVM_DEBUG(DBGS() << "To\n" << *payload << "\n");
+  LLVM_DEBUG(DBGS() << "To\n" << *payloadRoot << "\n");
 
-  // Apply the transform to the IR, do not enforce top-level constraints.
-  RaggedArray<MappedValue> noExtraMappings;
-  return applyTransforms(payload, cast<TransformOpInterface>(transformRoot),
-                         noExtraMappings, options,
+  return applyTransforms(payloadRoot, transformRoot, bindings, options,
                          /*enforceToplevelTransformOp=*/false);
 }

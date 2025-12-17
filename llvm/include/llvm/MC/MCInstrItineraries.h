@@ -17,6 +17,7 @@
 
 #include "llvm/MC/MCSchedule.h"
 #include <algorithm>
+#include <optional>
 
 namespace llvm {
 
@@ -109,8 +110,8 @@ struct InstrItinerary {
 class InstrItineraryData {
 public:
   MCSchedModel SchedModel =
-      MCSchedModel::GetDefaultSchedModel(); ///< Basic machine properties.
-  const InstrStage *Stages = nullptr;       ///< Array of stages selected
+      MCSchedModel::Default;               ///< Basic machine properties.
+  const InstrStage *Stages = nullptr;      ///< Array of stages selected
   const unsigned *OperandCycles = nullptr; ///< Array of operand cycles selected
   const unsigned *Forwardings = nullptr; ///< Array of pipeline forwarding paths
   const InstrItinerary *Itineraries =
@@ -162,18 +163,19 @@ public:
     return Latency;
   }
 
-  /// Return the cycle for the given class and operand.  Return -1 if no
-  /// cycle is specified for the operand.
-  int getOperandCycle(unsigned ItinClassIndx, unsigned OperandIdx) const {
+  /// Return the cycle for the given class and operand. Return std::nullopt if
+  /// the information is not available for the operand.
+  std::optional<unsigned> getOperandCycle(unsigned ItinClassIndx,
+                                          unsigned OperandIdx) const {
     if (isEmpty())
-      return -1;
+      return std::nullopt;
 
     unsigned FirstIdx = Itineraries[ItinClassIndx].FirstOperandCycle;
     unsigned LastIdx = Itineraries[ItinClassIndx].LastOperandCycle;
     if ((FirstIdx + OperandIdx) >= LastIdx)
-      return -1;
+      return std::nullopt;
 
-    return (int)OperandCycles[FirstIdx + OperandIdx];
+    return OperandCycles[FirstIdx + OperandIdx];
   }
 
   /// Return true if there is a pipeline forwarding between instructions
@@ -201,25 +203,27 @@ public:
 
   /// Compute and return the use operand latency of a given itinerary
   /// class and operand index if the value is produced by an instruction of the
-  /// specified itinerary class and def operand index.
-  int getOperandLatency(unsigned DefClass, unsigned DefIdx,
-                        unsigned UseClass, unsigned UseIdx) const {
+  /// specified itinerary class and def operand index. Return std::nullopt if
+  /// the information is not available for the operand.
+  std::optional<unsigned> getOperandLatency(unsigned DefClass, unsigned DefIdx,
+                                            unsigned UseClass,
+                                            unsigned UseIdx) const {
     if (isEmpty())
-      return -1;
+      return std::nullopt;
 
-    int DefCycle = getOperandCycle(DefClass, DefIdx);
-    if (DefCycle == -1)
-      return -1;
+    std::optional<unsigned> DefCycle = getOperandCycle(DefClass, DefIdx);
+    std::optional<unsigned> UseCycle = getOperandCycle(UseClass, UseIdx);
+    if (!DefCycle || !UseCycle)
+      return std::nullopt;
 
-    int UseCycle = getOperandCycle(UseClass, UseIdx);
-    if (UseCycle == -1)
-      return -1;
+    if (UseCycle > *DefCycle + 1)
+      return std::nullopt;
 
-    UseCycle = DefCycle - UseCycle + 1;
-    if (UseCycle > 0 &&
+    UseCycle = *DefCycle - *UseCycle + 1;
+    if (UseCycle > 0u &&
         hasPipelineForwarding(DefClass, DefIdx, UseClass, UseIdx))
       // FIXME: This assumes one cycle benefit for every pipeline forwarding.
-      --UseCycle;
+      UseCycle = *UseCycle - 1;
     return UseCycle;
   }
 

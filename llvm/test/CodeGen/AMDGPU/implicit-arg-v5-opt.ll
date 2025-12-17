@@ -5,7 +5,7 @@
 define amdgpu_kernel void @get_local_size_x(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: @get_local_size_x(
 ; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; GCN-NEXT:    [[GEP_LOCAL_SIZE:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 12
+; GCN-NEXT:    [[GEP_LOCAL_SIZE:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 12
 ; GCN-NEXT:    [[LOCAL_SIZE:%.*]] = load i16, ptr addrspace(4) [[GEP_LOCAL_SIZE]], align 4
 ; GCN-NEXT:    store i16 [[LOCAL_SIZE]], ptr addrspace(1) [[OUT:%.*]], align 2
 ; GCN-NEXT:    ret void
@@ -25,7 +25,7 @@ define amdgpu_kernel void @get_local_size_x(ptr addrspace(1) %out) #0 {
 define amdgpu_kernel void @get_local_size_y(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: @get_local_size_y(
 ; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; GCN-NEXT:    [[GEP_LOCAL_SIZE:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 14
+; GCN-NEXT:    [[GEP_LOCAL_SIZE:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 14
 ; GCN-NEXT:    [[LOCAL_SIZE:%.*]] = load i16, ptr addrspace(4) [[GEP_LOCAL_SIZE]], align 2
 ; GCN-NEXT:    store i16 [[LOCAL_SIZE]], ptr addrspace(1) [[OUT:%.*]], align 2
 ; GCN-NEXT:    ret void
@@ -46,7 +46,7 @@ define amdgpu_kernel void @get_local_size_y(ptr addrspace(1) %out) #0 {
 define amdgpu_kernel void @get_local_size_z(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: @get_local_size_z(
 ; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; GCN-NEXT:    [[GEP_LOCAL_SIZE:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 16
+; GCN-NEXT:    [[GEP_LOCAL_SIZE:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 16
 ; GCN-NEXT:    [[LOCAL_SIZE:%.*]] = load i16, ptr addrspace(4) [[GEP_LOCAL_SIZE]], align 4
 ; GCN-NEXT:    store i16 [[LOCAL_SIZE]], ptr addrspace(1) [[OUT:%.*]], align 2
 ; GCN-NEXT:    ret void
@@ -106,7 +106,7 @@ define amdgpu_kernel void @get_remainder_z(ptr addrspace(1) %out) #0 {
 define amdgpu_kernel void @get_work_group_size_x(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: @get_work_group_size_x(
 ; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; GCN-NEXT:    [[GEP_X:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 12
+; GCN-NEXT:    [[GEP_X:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 12
 ; GCN-NEXT:    [[GROUP_SIZE_X:%.*]] = load i16, ptr addrspace(4) [[GEP_X]], align 4
 ; GCN-NEXT:    store i16 [[GROUP_SIZE_X]], ptr addrspace(1) [[OUT:%.*]], align 2
 ; GCN-NEXT:    ret void
@@ -122,7 +122,7 @@ define amdgpu_kernel void @get_work_group_size_x(ptr addrspace(1) %out) #0 {
 define amdgpu_kernel void @get_work_group_size_y(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: @get_work_group_size_y(
 ; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; GCN-NEXT:    [[GEP_Y:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 14
+; GCN-NEXT:    [[GEP_Y:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 14
 ; GCN-NEXT:    [[GROUP_SIZE_Y:%.*]] = load i16, ptr addrspace(4) [[GEP_Y]], align 2
 ; GCN-NEXT:    store i16 [[GROUP_SIZE_Y]], ptr addrspace(1) [[OUT:%.*]], align 2
 ; GCN-NEXT:    ret void
@@ -138,7 +138,7 @@ define amdgpu_kernel void @get_work_group_size_y(ptr addrspace(1) %out) #0 {
 define amdgpu_kernel void @get_work_group_size_z(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: @get_work_group_size_z(
 ; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; GCN-NEXT:    [[GEP_Z:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 16
+; GCN-NEXT:    [[GEP_Z:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 16
 ; GCN-NEXT:    [[GROUP_SIZE_Z:%.*]] = load i16, ptr addrspace(4) [[GEP_Z]], align 4
 ; GCN-NEXT:    store i16 [[GROUP_SIZE_Z]], ptr addrspace(1) [[OUT:%.*]], align 2
 ; GCN-NEXT:    ret void
@@ -200,4 +200,4 @@ declare i32 @llvm.amdgcn.workgroup.id.z() #1
 attributes #0 = { nounwind "uniform-work-group-size"="true" }
 attributes #1 = { nounwind readnone speculatable }
 !0 = !{i32 8, i32 16, i32 2}
-!1 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!1 = !{i32 1, !"amdhsa_code_object_version", i32 500}

@@ -1,6 +1,5 @@
 ! This test checks lowering of OpenACC init directive.
 
-! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
 subroutine acc_init
@@ -35,5 +34,8 @@ subroutine acc_init
 
    !$acc init device_type(nvidia)
 !CHECK: acc.init attributes {device_types = [#acc.device_type<nvidia>]}
+
+  !$acc init device_type(host) device_type(multicore)
+!CHECK: acc.init attributes {device_types = [#acc.device_type<host>, #acc.device_type<multicore>]}
 
 end subroutine acc_init

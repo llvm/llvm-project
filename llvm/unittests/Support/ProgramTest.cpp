@@ -10,6 +10,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/ExponentialBackoff.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
@@ -96,7 +97,7 @@ protected:
 
     while (*EnvP != nullptr) {
       auto S = prepareEnvVar(*EnvP);
-      if (!StringRef(S).startswith("GTEST_"))
+      if (!StringRef(S).starts_with("GTEST_"))
         EnvTable.emplace_back(S);
       ++EnvP;
     }
@@ -130,7 +131,7 @@ TEST_F(ProgramEnvTest, CreateProcessLongPath) {
   // prefix.
   sys::path::native(MyAbsExe, sys::path::Style::windows_backslash);
   std::string MyExe;
-  if (!StringRef(MyAbsExe).startswith("\\\\?\\"))
+  if (!StringRef(MyAbsExe).starts_with("\\\\?\\"))
     MyExe.append("\\\\?\\");
   MyExe.append(std::string(MyAbsExe.begin(), MyAbsExe.end()));
 
@@ -260,6 +261,96 @@ TEST_F(ProgramEnvTest, TestExecuteNoWait) {
   ASSERT_GT(LoopCount, 1u) << "LoopCount should be >1";
 }
 
+TEST_F(ProgramEnvTest, TestExecuteNoWaitDetached) {
+  using namespace llvm::sys;
+
+  if (getenv("LLVM_PROGRAM_TEST_EXECUTE_NO_WAIT_DETACHED")) {
+    sleep_for(/*seconds=*/5);
+    char *Detached = getenv("LLVM_PROGRAM_TEST_EXECUTE_NO_WAIT_DETACHED_TRUE");
+#if _WIN32
+    HANDLE StdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    if (Detached && (StdHandle == INVALID_HANDLE_VALUE || StdHandle == NULL))
+      exit(100);
+    if (!Detached && (StdHandle != INVALID_HANDLE_VALUE && StdHandle != NULL))
+      exit(200);
+#else
+    int ParentSID = std::stoi(
+        std::string(getenv("LLVM_PROGRAM_TEST_EXECUTE_NO_WAIT_DETACHED_SID")));
+
+    pid_t ChildSID = ::getsid(0);
+    if (ChildSID == -1) {
+      llvm::errs() << "Could not get process SID: " << strerror(errno) << '\n';
+      exit(1);
+    }
+
+    if (Detached && (ChildSID != ParentSID))
+      exit(100);
+    if (!Detached && (ChildSID == ParentSID))
+      exit(200);
+#endif
+    exit(0);
+  }
+
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &ProgramTestStringArg1);
+  StringRef argv[] = {
+      Executable, "--gtest_filter=ProgramEnvTest.TestExecuteNoWaitDetached"};
+  addEnvVar("LLVM_PROGRAM_TEST_EXECUTE_NO_WAIT_DETACHED=1");
+
+#if _WIN32
+  // Depending on how the test is run it may already be detached from a
+  // console. Temporarily allocate a new console. If a console already
+  // exists AllocConsole will harmlessly fail and return false
+  BOOL AllocConsoleSuccess = AllocConsole();
+
+  // Confirm existence of console
+  HANDLE StdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+  ASSERT_TRUE(StdHandle != INVALID_HANDLE_VALUE && StdHandle != NULL);
+#else
+  pid_t SID = ::getsid(0);
+  ASSERT_NE(SID, -1);
+  std::string SIDEnvVar =
+      "LLVM_PROGRAM_TEST_EXECUTE_NO_WAIT_DETACHED_SID=" + std::to_string(SID);
+  addEnvVar(SIDEnvVar);
+#endif
+
+  // DetachProcess = true
+  {
+    std::string Error;
+    bool ExecutionFailed;
+    std::vector<llvm::StringRef> Env = getEnviron();
+    Env.emplace_back("LLVM_PROGRAM_TEST_EXECUTE_NO_WAIT_DETACHED_TRUE=1");
+    ProcessInfo PI1 =
+        ExecuteNoWait(Executable, argv, Env, {}, 0, &Error, &ExecutionFailed,
+                      nullptr, /*DetachProcess=*/true);
+    ASSERT_FALSE(ExecutionFailed) << Error;
+    ASSERT_NE(PI1.Pid, ProcessInfo::InvalidPid) << "Invalid process id";
+    ProcessInfo WaitResult = Wait(PI1, std::nullopt, &Error);
+    ASSERT_EQ(WaitResult.ReturnCode, 100);
+  }
+
+  // DetachProcess = false
+  {
+    std::string Error;
+    bool ExecutionFailed;
+    ProcessInfo PI2 =
+        ExecuteNoWait(Executable, argv, getEnviron(), {}, 0, &Error,
+                      &ExecutionFailed, nullptr, /*DetachProcess=*/false);
+    ASSERT_FALSE(ExecutionFailed) << Error;
+    ASSERT_NE(PI2.Pid, ProcessInfo::InvalidPid) << "Invalid process id";
+    ProcessInfo WaitResult = Wait(PI2, std::nullopt, &Error);
+    ASSERT_EQ(WaitResult.ReturnCode, 200);
+  }
+#if _WIN32
+  // If console was allocated then free the console
+  if (AllocConsoleSuccess) {
+    BOOL FreeConsoleSuccess = FreeConsole();
+    ASSERT_NE(FreeConsoleSuccess, 0);
+  }
+#endif
+}
+
 TEST_F(ProgramEnvTest, TestExecuteAndWaitTimeout) {
   using namespace llvm::sys;
 
@@ -332,10 +423,13 @@ TEST(ProgramTest, TestExecuteNegative) {
     bool ExecutionFailed;
     int RetCode = ExecuteAndWait(Executable, argv, std::nullopt, {}, 0, 0,
                                  &Error, &ExecutionFailed);
-    ASSERT_LT(RetCode, 0) << "On error ExecuteAndWait should return 0 or "
+
+    EXPECT_LT(RetCode, 0) << "On error ExecuteAndWait should return 0 or "
                              "positive value indicating the result code";
-    ASSERT_TRUE(ExecutionFailed);
-    ASSERT_FALSE(Error.empty());
+    EXPECT_FALSE(Error.empty());
+
+    // Note ExecutionFailed may or may not be false. When using fork, the error
+    // is produced on the wait for the child, not the execution point.
   }
 
   {
@@ -343,10 +437,19 @@ TEST(ProgramTest, TestExecuteNegative) {
     bool ExecutionFailed;
     ProcessInfo PI = ExecuteNoWait(Executable, argv, std::nullopt, {}, 0,
                                    &Error, &ExecutionFailed);
-    ASSERT_EQ(PI.Pid, ProcessInfo::InvalidPid)
-        << "On error ExecuteNoWait should return an invalid ProcessInfo";
-    ASSERT_TRUE(ExecutionFailed);
-    ASSERT_FALSE(Error.empty());
+
+    if (ExecutionFailed) {
+      EXPECT_EQ(PI.Pid, ProcessInfo::InvalidPid)
+          << "On error ExecuteNoWait should return an invalid ProcessInfo";
+      EXPECT_FALSE(Error.empty());
+    } else {
+      std::string WaitErrMsg;
+      EXPECT_NE(PI.Pid, ProcessInfo::InvalidPid);
+      ProcessInfo WaitPI = Wait(PI, std::nullopt, &WaitErrMsg);
+      EXPECT_EQ(WaitPI.Pid, PI.Pid);
+      EXPECT_LT(WaitPI.ReturnCode, 0);
+      EXPECT_FALSE(WaitErrMsg.empty());
+    }
   }
 
 }
@@ -471,6 +574,88 @@ TEST_F(ProgramEnvTest, TestLockFile) {
   sys::fs::remove(LockedFile);
 }
 
+TEST_F(ProgramEnvTest, TestLockFileExclusive) {
+  using namespace llvm::sys;
+  using namespace std::chrono_literals;
+
+  if (const char *LockedFile = getenv("LLVM_PROGRAM_TEST_LOCKED_FILE")) {
+    // Child process.
+    int FD2;
+    ASSERT_NO_ERROR(fs::openFileForReadWrite(LockedFile, FD2,
+                                             fs::CD_OpenExisting, fs::OF_None));
+
+    // File should currently be non-exclusive locked by the main process, thus
+    // trying to acquire exclusive lock will fail and trying to acquire
+    // non-exclusive will succeed.
+    EXPECT_TRUE(
+        fs::tryLockFile(FD2, std::chrono::seconds(0), fs::LockKind::Exclusive));
+
+    EXPECT_FALSE(
+        fs::tryLockFile(FD2, std::chrono::seconds(0), fs::LockKind::Shared));
+
+    close(FD2);
+    // Write a file to indicate just finished.
+    std::string FinishFile = std::string(LockedFile) + "-finished";
+    int FD3;
+    ASSERT_NO_ERROR(fs::openFileForReadWrite(FinishFile, FD3, fs::CD_CreateNew,
+                                             fs::OF_None));
+    close(FD3);
+    exit(0);
+  }
+
+  // Create file that will be locked.
+  SmallString<64> LockedFile;
+  int FD1;
+  ASSERT_NO_ERROR(
+      fs::createUniqueDirectory("TestLockFileExclusive", LockedFile));
+  sys::path::append(LockedFile, "file");
+  ASSERT_NO_ERROR(
+      fs::openFileForReadWrite(LockedFile, FD1, fs::CD_CreateNew, fs::OF_None));
+
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &ProgramTestStringArg1);
+  StringRef argv[] = {Executable,
+                      "--gtest_filter=ProgramEnvTest.TestLockFileExclusive"};
+
+  // Add LLVM_PROGRAM_TEST_LOCKED_FILE to the environment of the child.
+  std::string EnvVar = "LLVM_PROGRAM_TEST_LOCKED_FILE=";
+  EnvVar += LockedFile.str();
+  addEnvVar(EnvVar);
+
+  // Lock the file.
+  ASSERT_NO_ERROR(
+      fs::tryLockFile(FD1, std::chrono::seconds(0), fs::LockKind::Exclusive));
+
+  std::string Error;
+  bool ExecutionFailed;
+  ProcessInfo PI2 = ExecuteNoWait(Executable, argv, getEnviron(), {}, 0, &Error,
+                                  &ExecutionFailed);
+  ASSERT_FALSE(ExecutionFailed) << Error;
+  ASSERT_TRUE(Error.empty());
+  ASSERT_NE(PI2.Pid, ProcessInfo::InvalidPid) << "Invalid process id";
+
+  std::string FinishFile = std::string(LockedFile) + "-finished";
+  // Wait till child process writes the file to indicate the job finished.
+  bool Finished = false;
+  ExponentialBackoff Backoff(5s); // timeout 5s.
+  do {
+    if (fs::exists(FinishFile)) {
+      Finished = true;
+      break;
+    }
+  } while (Backoff.waitForNextAttempt());
+
+  ASSERT_TRUE(Finished);
+  ASSERT_NO_ERROR(fs::unlockFile(FD1));
+  ProcessInfo WaitResult = llvm::sys::Wait(PI2, /*SecondsToWait=*/1, &Error);
+  ASSERT_TRUE(Error.empty());
+  ASSERT_EQ(0, WaitResult.ReturnCode);
+  ASSERT_EQ(WaitResult.Pid, PI2.Pid);
+  sys::fs::remove(LockedFile);
+  sys::fs::remove(FinishFile);
+  sys::fs::remove_directories(sys::path::parent_path(LockedFile));
+}
+
 TEST_F(ProgramEnvTest, TestExecuteWithNoStacktraceHandler) {
   using namespace llvm::sys;
 
@@ -493,6 +678,31 @@ TEST_F(ProgramEnvTest, TestExecuteWithNoStacktraceHandler) {
                                &ExecutionFailed);
   EXPECT_FALSE(ExecutionFailed) << Error;
   ASSERT_EQ(0, RetCode);
+}
+
+TEST_F(ProgramEnvTest, TestExecuteEmptyEnvironment) {
+  using namespace llvm::sys;
+
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &ProgramTestStringArg1);
+  StringRef argv[] = {
+      Executable,
+      "--gtest_filter=" // A null invocation to avoid infinite recursion
+  };
+
+  std::string Error;
+  bool ExecutionFailed;
+  int RetCode = ExecuteAndWait(Executable, argv, ArrayRef<StringRef>{}, {}, 0,
+                               0, &Error, &ExecutionFailed);
+  EXPECT_FALSE(ExecutionFailed) << Error;
+#ifndef __MINGW32__
+  // When running with an empty environment, the child process doesn't in herit
+  // the PATH variable. On MinGW, it is common for executables to require a
+  // shared libstdc++ or libc++ DLL, which may be in PATH but not in the
+  // directory of SupportTests.exe - leading to STATUS_DLL_NOT_FOUND errors.
+  // Therefore, waive this failure in MinGW environments.
+  ASSERT_EQ(0, RetCode);
+#endif
 }
 
 } // end anonymous namespace

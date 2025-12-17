@@ -9,6 +9,7 @@
 #ifndef LLDB_UTILITY_SDK_H
 #define LLDB_UTILITY_SDK_H
 
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
@@ -23,6 +24,7 @@ namespace lldb_private {
 /// An abstraction for Xcode-style SDKs that works like \ref ArchSpec.
 class XcodeSDK {
   std::string m_name;
+  FileSpec m_sysroot;
 
 public:
   /// Different types of Xcode SDKs.
@@ -34,7 +36,9 @@ public:
     AppleTVOS,
     WatchSimulator,
     watchOS,
-    bridgeOS,
+    XRSimulator,
+    XROS,
+    BridgeOS,
     Linux,
     unknown = -1
   };
@@ -60,6 +64,10 @@ public:
   /// directory component of a path one would pass to clang's -isysroot
   /// parameter. For example, "MacOSX.10.14.sdk".
   XcodeSDK(std::string &&name) : m_name(std::move(name)) {}
+  XcodeSDK(std::string name, FileSpec sysroot)
+      : m_name(std::move(name)), m_sysroot(std::move(sysroot)) {
+    assert(!m_sysroot || m_name == m_sysroot.GetFilename().GetStringRef());
+  }
   static XcodeSDK GetAnyMacOS() { return XcodeSDK("MacOSX.sdk"); }
 
   /// The merge function follows a strict order to maintain monotonicity:
@@ -77,12 +85,12 @@ public:
   llvm::VersionTuple GetVersion() const;
   Type GetType() const;
   llvm::StringRef GetString() const;
-  /// Whether this Xcode SDK supports Swift.
-  bool SupportsSwift() const;
+  const FileSpec &GetSysroot() const;
 
   /// Whether LLDB feels confident importing Clang modules from this SDK.
   static bool SDKSupportsModules(Type type, llvm::VersionTuple version);
   static bool SDKSupportsModules(Type desired_type, const FileSpec &sdk_path);
+
   /// Return the canonical SDK name, such as "macosx" for the macOS SDK.
   static std::string GetCanonicalName(Info info);
   /// Return the best-matching SDK type for a specific triple.

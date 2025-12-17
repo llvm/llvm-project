@@ -35,18 +35,12 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/TargetParser/Host.h"
 
-extern "C" {
-extern char **environ;
-}
-
 using namespace lldb;
 using namespace lldb_private;
 
 namespace lldb_private {
 class ProcessLaunchInfo;
 }
-
-Environment Host::GetEnvironment() { return Environment(environ); }
 
 static bool GetNetBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
                                  ProcessInstanceInfo &process_info) {
@@ -108,10 +102,11 @@ static bool GetNetBSDProcessCPUType(ProcessInstanceInfo &process_info) {
     auto buffer_sp = FileSystem::Instance().CreateDataBuffer(
         process_info.GetExecutableFile(), 0x20, 0);
     if (buffer_sp) {
-      uint8_t exe_class = llvm::object::getElfArchType(
-                              {reinterpret_cast<char *>(buffer_sp->GetBytes()),
-                               size_t(buffer_sp->GetByteSize())})
-                              .first;
+      uint8_t exe_class =
+          llvm::object::getElfArchType(
+              {reinterpret_cast<const char *>(buffer_sp->GetBytes()),
+               size_t(buffer_sp->GetByteSize())})
+              .first;
 
       switch (exe_class) {
       case llvm::ELF::ELFCLASS32:
@@ -268,5 +263,5 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
 }
 
 Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
-  return Status("unimplemented");
+  return Status::FromErrorString("unimplemented");
 }

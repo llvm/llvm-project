@@ -3,9 +3,12 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_library(clangTidyModernizeModule
+add_clang_library(clangTidyModernizeModule STATIC
   AvoidBindCheck.cpp
   AvoidCArraysCheck.cpp
+  AvoidCStyleCastCheck.cpp
+  AvoidSetjmpLongjmpCheck.cpp
+  AvoidVariadicFunctionsCheck.cpp
   ConcatNestedNamespacesCheck.cpp
   DeprecatedHeadersCheck.cpp
   DeprecatedIosBaseAliasesCheck.cpp
@@ -16,6 +19,7 @@ add_clang_library(clangTidyModernizeModule
   MakeSharedCheck.cpp
   MakeSmartPtrCheck.cpp
   MakeUniqueCheck.cpp
+  MinMaxUseInitializerListCheck.cpp
   ModernizeTidyModule.cpp
   PassByValueCheck.cpp
   RawStringLiteralCheck.cpp
@@ -31,13 +35,20 @@ add_clang_library(clangTidyModernizeModule
   UseBoolLiteralsCheck.cpp
   UseConstraintsCheck.cpp
   UseDefaultMemberInitCheck.cpp
+  UseDesignatedInitializersCheck.cpp
   UseEmplaceCheck.cpp
   UseEqualsDefaultCheck.cpp
   UseEqualsDeleteCheck.cpp
+  UseIntegerSignComparisonCheck.cpp
   UseNodiscardCheck.cpp
   UseNoexceptCheck.cpp
   UseNullptrCheck.cpp
   UseOverrideCheck.cpp
+  UseRangesCheck.cpp
+  UseScopedLockCheck.cpp
+  UseStartsEndsWithCheck.cpp
+  UseStdFormatCheck.cpp
+  UseStdNumbersCheck.cpp
   UseStdPrintCheck.cpp
   UseTrailingReturnTypeCheck.cpp
   UseTransparentFunctorsCheck.cpp

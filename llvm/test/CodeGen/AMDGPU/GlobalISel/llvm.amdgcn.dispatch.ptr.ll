@@ -1,4 +1,4 @@
-; RUN: llc -global-isel -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck -check-prefix=GCN %s
 
 ; FIXME: Error on non-HSA target
 
@@ -17,4 +17,4 @@ declare noalias ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #0
 attributes #0 = { readnone }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

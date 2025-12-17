@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -39,7 +40,7 @@ struct TestResourceBlobManagerInterface
 
 namespace {
 enum test_encoding { k_attr_params = 0, k_test_i32 = 99 };
-}
+} // namespace
 
 // Test support for interacting with the Bytecode reader/writer.
 struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
@@ -186,11 +187,24 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
         StringSwitch<std::optional<StringRef>>(strAttr.getValue())
             .Case("alias_test:dot_in_name", StringRef("test.alias"))
             .Case("alias_test:trailing_digit", StringRef("test_alias0"))
-            .Case("alias_test:prefixed_digit", StringRef("0_test_alias"))
-            .Case("alias_test:sanitize_conflict_a",
+            .Case("alias_test:trailing_digit_conflict_a",
+                  StringRef("test_alias_conflict0_1_1_1"))
+            .Case("alias_test:trailing_digit_conflict_b",
                   StringRef("test_alias_conflict0"))
-            .Case("alias_test:sanitize_conflict_b",
+            .Case("alias_test:trailing_digit_conflict_c",
+                  StringRef("test_alias_conflict0"))
+            .Case("alias_test:trailing_digit_conflict_d",
                   StringRef("test_alias_conflict0_"))
+            .Case("alias_test:trailing_digit_conflict_e",
+                  StringRef("test_alias_conflict0_1"))
+            .Case("alias_test:trailing_digit_conflict_f",
+                  StringRef("test_alias_conflict0_1"))
+            .Case("alias_test:trailing_digit_conflict_g",
+                  StringRef("test_alias_conflict0_1_"))
+            .Case("alias_test:trailing_digit_conflict_h",
+                  StringRef("test_alias_conflict0_1_1"))
+            .Case("alias_test:prefixed_digit", StringRef("0_test_alias"))
+            .Case("alias_test:prefixed_symbol", StringRef("%test"))
             .Case("alias_test:tensor_encoding", StringRef("test_encoding"))
             .Default(std::nullopt);
     if (!aliasName)
@@ -314,8 +328,7 @@ struct TestInlinerInterface : public DialectInlinerInterface {
 
   /// Handle the given inlined terminator by replacing it with a new operation
   /// as necessary.
-  void handleTerminator(Operation *op,
-                        ArrayRef<Value> valuesToRepl) const final {
+  void handleTerminator(Operation *op, ValueRange valuesToRepl) const final {
     // Only handle "test.return" here.
     auto returnOp = dyn_cast<TestReturnOp>(op);
     if (!returnOp)
@@ -341,7 +354,7 @@ struct TestInlinerInterface : public DialectInlinerInterface {
         !(input.getType().isSignlessInteger(16) ||
           input.getType().isSignlessInteger(32)))
       return nullptr;
-    return builder.create<TestCastOp>(conversionLoc, resultType, input);
+    return TestCastOp::create(builder, conversionLoc, resultType, input);
   }
 
   Value handleArgument(OpBuilder &builder, Operation *call, Operation *callable,
@@ -349,16 +362,16 @@ struct TestInlinerInterface : public DialectInlinerInterface {
                        DictionaryAttr argumentAttrs) const final {
     if (!argumentAttrs.contains("test.handle_argument"))
       return argument;
-    return builder.create<TestTypeChangerOp>(call->getLoc(), argument.getType(),
-                                             argument);
+    return TestTypeChangerOp::create(builder, call->getLoc(),
+                                     argument.getType(), argument);
   }
 
   Value handleResult(OpBuilder &builder, Operation *call, Operation *callable,
                      Value result, DictionaryAttr resultAttrs) const final {
     if (!resultAttrs.contains("test.handle_result"))
       return result;
-    return builder.create<TestTypeChangerOp>(call->getLoc(), result.getType(),
-                                             result);
+    return TestTypeChangerOp::create(builder, call->getLoc(), result.getType(),
+                                     result);
   }
 
   void processInlinedCallBlocks(

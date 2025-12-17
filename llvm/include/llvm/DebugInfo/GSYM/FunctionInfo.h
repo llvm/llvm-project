@@ -10,13 +10,15 @@
 #define LLVM_DEBUGINFO_GSYM_FUNCTIONINFO_H
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/DebugInfo/GSYM/CallSiteInfo.h"
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
+#include "llvm/DebugInfo/GSYM/MergedFunctionsInfo.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
-#include <tuple>
 
 namespace llvm {
 class raw_ostream;
@@ -63,7 +65,9 @@ class GsymReader;
 ///   enum InfoType {
 ///     EndOfList = 0u,
 ///     LineTableInfo = 1u,
-///     InlineInfo = 2u
+///     InlineInfo = 2u,
+///     MergedFunctionsInfo = 3u,
+///     CallSiteInfo = 4u
 ///   };
 ///
 /// This stream of tuples is terminated by a "InfoType" whose value is
@@ -73,7 +77,7 @@ class GsymReader;
 /// clients to still parse the format and skip over any data that they don't
 /// understand or want to parse.
 ///
-/// So the function information encoding essientially looks like:
+/// So the function information encoding essentially looks like:
 ///
 /// struct {
 ///   uint32_t Size;
@@ -91,6 +95,8 @@ struct FunctionInfo {
   uint32_t Name; ///< String table offset in the string table.
   std::optional<LineTable> OptLineTable;
   std::optional<InlineInfo> Inline;
+  std::optional<MergedFunctionsInfo> MergedFunctions;
+  std::optional<CallSiteInfoCollection> CallSites;
   /// If we encode a FunctionInfo during segmenting so we know its size, we can
   /// cache that encoding here so we don't need to re-encode it when saving the
   /// GSYM file.
@@ -106,7 +112,7 @@ struct FunctionInfo {
   /// debug info, we might end up with multiple FunctionInfo objects for the
   /// same range and we need to be able to tell which one is the better object
   /// to use.
-  bool hasRichInfo() const { return OptLineTable || Inline; }
+  bool hasRichInfo() const { return OptLineTable || Inline || CallSites; }
 
   /// Query if a FunctionInfo object is valid.
   ///
@@ -133,17 +139,25 @@ struct FunctionInfo {
   ///
   /// \returns An FunctionInfo or an error describing the issue that was
   /// encountered during decoding.
-  static llvm::Expected<FunctionInfo> decode(DataExtractor &Data,
-                                             uint64_t BaseAddr);
+  LLVM_ABI static llvm::Expected<FunctionInfo> decode(DataExtractor &Data,
+                                                      uint64_t BaseAddr);
 
   /// Encode this object into FileWriter stream.
   ///
   /// \param O The binary stream to write the data to at the current file
   /// position.
   ///
+  /// \param NoPadding Directly write the FunctionInfo data, without any padding
+  /// By default, FunctionInfo will be 4-byte aligned by padding with
+  /// 0's at the start. This is OK since the function will return the offset of
+  /// actual data in the stream. However when writing FunctionInfo's as a
+  /// stream, the padding will break the decoding of the data - since the offset
+  /// where the FunctionInfo starts is not kept in this scenario.
+  ///
   /// \returns An error object that indicates failure or the offset of the
   /// function info that was successfully written into the stream.
-  llvm::Expected<uint64_t> encode(FileWriter &O) const;
+  LLVM_ABI llvm::Expected<uint64_t> encode(FileWriter &O,
+                                           bool NoPadding = false) const;
 
   /// Encode this function info into the internal byte cache and return the size
   /// in bytes.
@@ -155,7 +169,7 @@ struct FunctionInfo {
   ///
   /// \returns The size in bytes of the FunctionInfo if it were to be encoded
   /// into a byte stream.
-  uint64_t cacheEncoding();
+  LLVM_ABI uint64_t cacheEncoding();
 
   /// Lookup an address within a FunctionInfo object's data stream.
   ///
@@ -175,13 +189,17 @@ struct FunctionInfo {
   ///
   /// \param Addr The address to lookup.
   ///
+  /// \param MergedFuncsData A pointer to an optional DataExtractor that, if
+  /// non-null, will be set to the raw data of the MergedFunctionInfo, if
+  /// present.
+  ///
   /// \returns An LookupResult or an error describing the issue that was
   /// encountered during decoding. An error should only be returned if the
   /// address is not contained in the FunctionInfo or if the data is corrupted.
-  static llvm::Expected<LookupResult> lookup(DataExtractor &Data,
-                                             const GsymReader &GR,
-                                             uint64_t FuncAddr,
-                                             uint64_t Addr);
+  LLVM_ABI static llvm::Expected<LookupResult>
+  lookup(DataExtractor &Data, const GsymReader &GR, uint64_t FuncAddr,
+         uint64_t Addr,
+         std::optional<DataExtractor> *MergedFuncsData = nullptr);
 
   uint64_t startAddress() const { return Range.start(); }
   uint64_t endAddress() const { return Range.end(); }
@@ -218,14 +236,11 @@ inline bool operator!=(const FunctionInfo &LHS, const FunctionInfo &RHS) {
 /// the GSYM file.
 inline bool operator<(const FunctionInfo &LHS, const FunctionInfo &RHS) {
   // First sort by address range
-  if (LHS.Range != RHS.Range)
-    return LHS.Range < RHS.Range;
-  if (LHS.Inline == RHS.Inline)
-    return LHS.OptLineTable < RHS.OptLineTable;
-  return LHS.Inline < RHS.Inline;
+  return std::tie(LHS.Range, LHS.Inline, LHS.OptLineTable) <
+         std::tie(RHS.Range, RHS.Inline, RHS.OptLineTable);
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const FunctionInfo &R);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const FunctionInfo &R);
 
 } // namespace gsym
 } // namespace llvm

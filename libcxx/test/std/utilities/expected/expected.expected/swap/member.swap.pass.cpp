@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -43,16 +44,16 @@ static_assert(!HasMemberSwap<NotSwappable, int>);
 // !is_swappable_v<E>
 static_assert(!HasMemberSwap<int, NotSwappable>);
 
-struct NotMoveContructible {
-  NotMoveContructible(NotMoveContructible&&) = delete;
-  friend void swap(NotMoveContructible&, NotMoveContructible&) {}
+struct NotMoveConstructible {
+  NotMoveConstructible(NotMoveConstructible&&) = delete;
+  friend void swap(NotMoveConstructible&, NotMoveConstructible&) {}
 };
 
 // !is_move_constructible_v<T>
-static_assert(!HasMemberSwap<NotMoveContructible, int>);
+static_assert(!HasMemberSwap<NotMoveConstructible, int>);
 
 // !is_move_constructible_v<E>
-static_assert(!HasMemberSwap<int, NotMoveContructible>);
+static_assert(!HasMemberSwap<int, NotMoveConstructible>);
 
 struct MoveMayThrow {
   MoveMayThrow(MoveMayThrow&&) noexcept(false);
@@ -224,6 +225,28 @@ constexpr bool test() {
       // _before_ constructing the member objects inside the `swap`.
       assert(!x.has_value());
       assert(y.has_value());
+    }
+  }
+
+  // CheckForInvalidWrites
+  {
+    {
+      CheckForInvalidWrites<true> x(std::unexpect);
+      CheckForInvalidWrites<true> y;
+
+      x.swap(y);
+
+      assert(x.check());
+      assert(y.check());
+    }
+    {
+      CheckForInvalidWrites<false> x(std::unexpect);
+      CheckForInvalidWrites<false> y;
+
+      x.swap(y);
+
+      assert(x.check());
+      assert(y.check());
     }
   }
 

@@ -1,7 +1,7 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -o - -passes=infer-address-spaces %s | FileCheck -check-prefixes=COMMON,AMDGCN %s
 ; RUN: opt -S -o - -passes=infer-address-spaces -assume-default-is-flat-addrspace %s | FileCheck -check-prefixes=COMMON,NOTTI %s
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-ni:7:8"
+target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-ni:7:8"
 
 ; COMMON-LABEL: @noop_ptrint_pair(
 ; AMDGCN-NEXT: store i32 0, ptr addrspace(1) %{{.*}}
@@ -70,7 +70,7 @@ define ptr @noop_ptrint_pair_ce2() {
 }
 
 ; COMMON-LABEL: @noop_ptrint_pair_ce2_vec(
-; AMDGCN-NEXT: ret <2 x ptr> <ptr addrspacecast (ptr addrspace(1) @g to ptr), ptr inttoptr (i64 ptrtoint (ptr addrspace(3) @l to i64) to ptr)>
+; AMDGCN-NEXT: ret <2 x ptr> <ptr inttoptr (i64 ptrtoint (ptr addrspace(1) @g to i64) to ptr), ptr inttoptr (i64 ptrtoint (ptr addrspace(3) @l to i64) to ptr)>
 ; NOTTI-NEXT: ret <2 x ptr> <ptr inttoptr (i64 ptrtoint (ptr addrspace(1) @g to i64) to ptr), ptr inttoptr (i64 ptrtoint (ptr addrspace(3) @l to i64) to ptr)>
 define <2 x ptr> @noop_ptrint_pair_ce2_vec() {
   ret <2 x ptr> <ptr inttoptr (i64 ptrtoint (ptr addrspace(1) @g to i64) to ptr), ptr inttoptr (i64 ptrtoint (ptr addrspace(3) @l to i64) to ptr)>

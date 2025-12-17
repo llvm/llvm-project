@@ -1,4 +1,4 @@
-//===--- IntegerTypesCheck.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -36,6 +36,40 @@ static Token getTokenAtLoc(SourceLocation Loc,
   return Tok;
 }
 
+namespace {
+AST_MATCHER(FunctionDecl, isUserDefineLiteral) {
+  return Node.getLiteralIdentifier() != nullptr;
+}
+
+AST_MATCHER(TypeLoc, isValidAndNotInMacro) {
+  const SourceLocation Loc = Node.getBeginLoc();
+  return Loc.isValid() && !Loc.isMacroID();
+}
+
+AST_MATCHER(TypeLoc, isBuiltinType) {
+  TypeLoc TL = Node;
+  if (auto QualLoc = Node.getAs<QualifiedTypeLoc>())
+    TL = QualLoc.getUnqualifiedLoc();
+
+  const auto BuiltinLoc = TL.getAs<BuiltinTypeLoc>();
+  if (!BuiltinLoc)
+    return false;
+
+  switch (BuiltinLoc.getTypePtr()->getKind()) {
+  case BuiltinType::Short:
+  case BuiltinType::Long:
+  case BuiltinType::LongLong:
+  case BuiltinType::UShort:
+  case BuiltinType::ULong:
+  case BuiltinType::ULongLong:
+    return true;
+  default:
+    return false;
+  }
+}
+
+} // namespace
+
 namespace tidy::google::runtime {
 
 IntegerTypesCheck::IntegerTypesCheck(StringRef Name, ClangTidyContext *Context)
@@ -53,23 +87,23 @@ void IntegerTypesCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void IntegerTypesCheck::registerMatchers(MatchFinder *Finder) {
   // Match any integer types, unless they are passed to a printf-based API:
   //
-  // http://google.github.io/styleguide/cppguide.html#64-bit_Portability
+  // https://google.github.io/styleguide/cppguide.html#64-bit_Portability
   // "Where possible, avoid passing arguments of types specified by
   // bitwidth typedefs to printf-based APIs."
-  Finder->addMatcher(typeLoc(loc(isInteger()),
-                             unless(hasAncestor(callExpr(
-                                 callee(functionDecl(hasAttr(attr::Format)))))))
-                         .bind("tl"),
-                     this);
+  Finder->addMatcher(
+      typeLoc(loc(isInteger()), isValidAndNotInMacro(), isBuiltinType(),
+              unless(hasAncestor(
+                  callExpr(callee(functionDecl(hasAttr(attr::Format)))))),
+              unless(hasParent(parmVarDecl(
+                  hasAncestor(functionDecl(isUserDefineLiteral()))))))
+          .bind("tl"),
+      this);
   IdentTable = std::make_unique<IdentifierTable>(getLangOpts());
 }
 
 void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {
   auto TL = *Result.Nodes.getNodeAs<TypeLoc>("tl");
-  SourceLocation Loc = TL.getBeginLoc();
-
-  if (Loc.isInvalid() || Loc.isMacroID())
-    return;
+  const SourceLocation Loc = TL.getBeginLoc();
 
   // Look through qualification.
   if (auto QualLoc = TL.getAs<QualifiedTypeLoc>())
@@ -79,7 +113,7 @@ void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {
   if (!BuiltinLoc)
     return;
 
-  Token Tok = getTokenAtLoc(Loc, Result, *IdentTable);
+  const Token Tok = getTokenAtLoc(Loc, Result, *IdentTable);
   // Ensure the location actually points to one of the builting integral type
   // names we're interested in. Otherwise, we might be getting this match from
   // implicit code (e.g. an implicit assignment operator of a class containing
@@ -130,7 +164,7 @@ void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {
       !isAsciiIdentifierContinue(Data[Port.size()]))
     return;
 
-  std::string Replacement =
+  const std::string Replacement =
       ((IsSigned ? SignedTypePrefix : UnsignedTypePrefix) + Twine(Width) +
        TypeSuffix)
           .str();
@@ -138,8 +172,8 @@ void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {
   // We don't add a fix-it as changing the type can easily break code,
   // e.g. when a function requires a 'long' argument on all platforms.
   // QualTypes are printed with implicit quotes.
-  diag(Loc, "consider replacing %0 with '%1'") << BuiltinLoc.getType()
-                                               << Replacement;
+  diag(Loc, "consider replacing %0 with '%1'")
+      << BuiltinLoc.getType() << Replacement;
 }
 
 } // namespace tidy::google::runtime

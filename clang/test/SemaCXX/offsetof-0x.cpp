@@ -11,7 +11,7 @@ struct P {
 };
 
 void f() {
-  int i = __builtin_offsetof(P, fieldThatPointsToANonPODType.m); // expected-warning{{offset of on non-standard-layout type 'P'}}
+  int i = __builtin_offsetof(P, fieldThatPointsToANonPODType.m); // expected-warning{{'offsetof' on non-standard-layout type 'P'}}
 }
 
 struct StandardLayout {

@@ -9,8 +9,10 @@
 #include "CommandObjectStats.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Target/Target.h"
 
 using namespace lldb;
@@ -75,6 +77,40 @@ class CommandObjectStatsDump : public CommandObjectParsed {
       case 'a':
         m_all_targets = true;
         break;
+      case 's':
+        m_stats_options.SetSummaryOnly(true);
+        break;
+      case 'f':
+        m_stats_options.SetLoadAllDebugInfo(true);
+        break;
+      case 'r':
+        if (llvm::Expected<bool> bool_or_error =
+                OptionArgParser::ToBoolean("--targets", option_arg))
+          m_stats_options.SetIncludeTargets(*bool_or_error);
+        else
+          error = Status::FromError(bool_or_error.takeError());
+        break;
+      case 'm':
+        if (llvm::Expected<bool> bool_or_error =
+                OptionArgParser::ToBoolean("--modules", option_arg))
+          m_stats_options.SetIncludeModules(*bool_or_error);
+        else
+          error = Status::FromError(bool_or_error.takeError());
+        break;
+      case 't':
+        if (llvm::Expected<bool> bool_or_error =
+                OptionArgParser::ToBoolean("--transcript", option_arg))
+          m_stats_options.SetIncludeTranscript(*bool_or_error);
+        else
+          error = Status::FromError(bool_or_error.takeError());
+        break;
+      case 'p':
+        if (llvm::Expected<bool> bool_or_error =
+                OptionArgParser::ToBoolean("--plugins", option_arg))
+          m_stats_options.SetIncludePlugins(*bool_or_error);
+        else
+          error = Status::FromError(bool_or_error.takeError());
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -83,13 +119,17 @@ class CommandObjectStatsDump : public CommandObjectParsed {
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_all_targets = false;
+      m_stats_options = StatisticsOptions();
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
       return llvm::ArrayRef(g_statistics_dump_options);
     }
 
+    const StatisticsOptions &GetStatisticsOptions() { return m_stats_options; }
+
     bool m_all_targets = false;
+    StatisticsOptions m_stats_options = StatisticsOptions();
   };
 
 public:
@@ -108,8 +148,18 @@ protected:
     if (!m_options.m_all_targets)
       target = m_exe_ctx.GetTargetPtr();
 
+    // Check if transcript is requested but transcript saving is disabled
+    const StatisticsOptions &stats_options = m_options.GetStatisticsOptions();
+    if (stats_options.GetIncludeTranscript() &&
+        !GetDebugger().GetCommandInterpreter().GetSaveTranscript()) {
+      result.AppendWarning(
+          "transcript requested but none was saved. Enable with "
+          "'settings set interpreter.save-transcript true'");
+    }
+
     result.AppendMessageWithFormatv(
-        "{0:2}", DebuggerStats::ReportStatistics(GetDebugger(), target));
+        "{0:2}",
+        DebuggerStats::ReportStatistics(GetDebugger(), target, stats_options));
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 

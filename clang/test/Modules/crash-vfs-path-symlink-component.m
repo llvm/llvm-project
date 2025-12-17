@@ -1,4 +1,6 @@
-// REQUIRES: crash-recovery, shell
+// Needs symlinks
+// UNSUPPORTED: system-windows
+// REQUIRES: crash-recovery
 
 // FIXME: This XFAIL is cargo-culted from crash-report.c. Do we need it?
 // XFAIL: target={{.*-windows-gnu}}
@@ -49,8 +51,8 @@
 // CHECKYAML-NEXT: 'contents': [
 // CHECKYAML-NEXT:   {
 // CHECKYAML-NEXT:     'type': 'file',
-// CHECKYAML-NEXT:     'name': "module.map",
-// CHECKYAML-NEXT:     'external-contents': "/[[PATH]]/i/usr/include/module.map"
+// CHECKYAML-NEXT:     'name': "module.modulemap",
+// CHECKYAML-NEXT:     'external-contents': "/[[PATH]]/i/usr/include/module.modulemap"
 // CHECKYAML-NEXT:   },
 
 // Test that by using the previous generated YAML file clang is able to find the
@@ -59,7 +61,7 @@
 // %/t/i directory containing the symlink component.
 
 // RUN: rm -rf %/t/i
-// RUN: unset FORCE_CLANG_DIAGNOSTICS_CRASH
+// RUN: env -u FORCE_CLANG_DIAGNOSTICS_CRASH \
 // RUN: %clang -E %s -I %/t/i -isysroot %/t/sysroot/ \
 // RUN:     -ivfsoverlay %t/crash-vfs-*.cache/vfs/vfs.yaml -fmodules \
 // RUN:     -fmodules-cache-path=%t/m/ 2>&1 \

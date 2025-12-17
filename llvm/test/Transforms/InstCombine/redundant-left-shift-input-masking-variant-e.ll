@@ -18,11 +18,10 @@ declare void @use32(i32)
 define i32 @t0_basic(i32 %x, i32 %nbits) {
 ; CHECK-LABEL: @t0_basic(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 [[X:%.*]], [[NBITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[T0]], [[NBITS]]
+; CHECK-NEXT:    [[T1:%.*]] = lshr exact i32 [[T0]], [[NBITS]]
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
-; CHECK-NEXT:    [[T2:%.*]] = shl i32 [[X]], [[NBITS]]
-; CHECK-NEXT:    ret i32 [[T2]]
+; CHECK-NEXT:    ret i32 [[T0]]
 ;
   %t0 = shl i32 %x, %nbits
   %t1 = lshr i32 %t0, %nbits
@@ -35,7 +34,7 @@ define i32 @t0_basic(i32 %x, i32 %nbits) {
 define i32 @t1_bigger_shift(i32 %x, i32 %nbits) {
 ; CHECK-LABEL: @t1_bigger_shift(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 [[X:%.*]], [[NBITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[T0]], [[NBITS]]
+; CHECK-NEXT:    [[T1:%.*]] = lshr exact i32 [[T0]], [[NBITS]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[NBITS]], 1
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
@@ -60,8 +59,8 @@ declare void @use3xi32(<3 x i32>)
 define <3 x i32> @t2_vec_splat(<3 x i32> %x, <3 x i32> %nbits) {
 ; CHECK-LABEL: @t2_vec_splat(
 ; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i32> [[X:%.*]], [[NBITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr <3 x i32> [[T0]], [[NBITS]]
-; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[NBITS]], <i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[T1:%.*]] = lshr exact <3 x i32> [[T0]], [[NBITS]]
+; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[NBITS]], splat (i32 1)
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T0]])
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T1]])
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T2]])
@@ -81,7 +80,7 @@ define <3 x i32> @t2_vec_splat(<3 x i32> %x, <3 x i32> %nbits) {
 define <3 x i32> @t3_vec_nonsplat(<3 x i32> %x, <3 x i32> %nbits) {
 ; CHECK-LABEL: @t3_vec_nonsplat(
 ; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i32> [[X:%.*]], [[NBITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr <3 x i32> [[T0]], [[NBITS]]
+; CHECK-NEXT:    [[T1:%.*]] = lshr exact <3 x i32> [[T0]], [[NBITS]]
 ; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[NBITS]], <i32 1, i32 0, i32 2>
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T0]])
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T1]])
@@ -102,7 +101,7 @@ define <3 x i32> @t3_vec_nonsplat(<3 x i32> %x, <3 x i32> %nbits) {
 define <3 x i32> @t4_vec_undef(<3 x i32> %x, <3 x i32> %nbits) {
 ; CHECK-LABEL: @t4_vec_undef(
 ; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i32> [[X:%.*]], [[NBITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr <3 x i32> [[T0]], [[NBITS]]
+; CHECK-NEXT:    [[T1:%.*]] = lshr exact <3 x i32> [[T0]], [[NBITS]]
 ; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[NBITS]], <i32 1, i32 undef, i32 1>
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T0]])
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T1]])
@@ -125,11 +124,10 @@ define <3 x i32> @t4_vec_undef(<3 x i32> %x, <3 x i32> %nbits) {
 define i32 @t5_nuw(i32 %x, i32 %nbits) {
 ; CHECK-LABEL: @t5_nuw(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 [[X:%.*]], [[NBITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[T0]], [[NBITS]]
+; CHECK-NEXT:    [[T1:%.*]] = lshr exact i32 [[T0]], [[NBITS]]
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
-; CHECK-NEXT:    [[T2:%.*]] = shl i32 [[X]], [[NBITS]]
-; CHECK-NEXT:    ret i32 [[T2]]
+; CHECK-NEXT:    ret i32 [[T0]]
 ;
   %t0 = shl i32 %x, %nbits
   %t1 = lshr i32 %t0, %nbits
@@ -142,11 +140,10 @@ define i32 @t5_nuw(i32 %x, i32 %nbits) {
 define i32 @t6_nsw(i32 %x, i32 %nbits) {
 ; CHECK-LABEL: @t6_nsw(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 [[X:%.*]], [[NBITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[T0]], [[NBITS]]
+; CHECK-NEXT:    [[T1:%.*]] = lshr exact i32 [[T0]], [[NBITS]]
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
-; CHECK-NEXT:    [[T2:%.*]] = shl i32 [[X]], [[NBITS]]
-; CHECK-NEXT:    ret i32 [[T2]]
+; CHECK-NEXT:    ret i32 [[T0]]
 ;
   %t0 = shl i32 %x, %nbits
   %t1 = lshr i32 %t0, %nbits
@@ -159,11 +156,10 @@ define i32 @t6_nsw(i32 %x, i32 %nbits) {
 define i32 @t7_nuw_nsw(i32 %x, i32 %nbits) {
 ; CHECK-LABEL: @t7_nuw_nsw(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 [[X:%.*]], [[NBITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[T0]], [[NBITS]]
+; CHECK-NEXT:    [[T1:%.*]] = lshr exact i32 [[T0]], [[NBITS]]
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
-; CHECK-NEXT:    [[T2:%.*]] = shl i32 [[X]], [[NBITS]]
-; CHECK-NEXT:    ret i32 [[T2]]
+; CHECK-NEXT:    ret i32 [[T0]]
 ;
   %t0 = shl i32 %x, %nbits
   %t1 = lshr i32 %t0, %nbits
@@ -183,7 +179,7 @@ define i32 @t8_assume_uge(i32 %x, i32 %masknbits, i32 %shiftnbits) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[SHIFTNBITS:%.*]], [[MASKNBITS:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 [[X:%.*]], [[MASKNBITS]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[T0]], [[MASKNBITS]]
+; CHECK-NEXT:    [[T1:%.*]] = lshr exact i32 [[T0]], [[MASKNBITS]]
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
 ; CHECK-NEXT:    [[T2:%.*]] = shl i32 [[T1]], [[SHIFTNBITS]]

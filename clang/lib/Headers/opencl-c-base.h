@@ -9,93 +9,6 @@
 #ifndef _OPENCL_BASE_H_
 #define _OPENCL_BASE_H_
 
-// Define extension macros
-
-#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
-// For SPIR and SPIR-V all extensions are supported.
-#if defined(__SPIR__) || defined(__SPIRV__)
-#define cl_khr_subgroup_extended_types 1
-#define cl_khr_subgroup_non_uniform_vote 1
-#define cl_khr_subgroup_ballot 1
-#define cl_khr_subgroup_non_uniform_arithmetic 1
-#define cl_khr_subgroup_shuffle 1
-#define cl_khr_subgroup_shuffle_relative 1
-#define cl_khr_subgroup_clustered_reduce 1
-#define cl_khr_subgroup_rotate 1
-#define cl_khr_extended_bit_ops 1
-#define cl_khr_integer_dot_product 1
-#define __opencl_c_integer_dot_product_input_4x8bit 1
-#define __opencl_c_integer_dot_product_input_4x8bit_packed 1
-#define cl_ext_float_atomics 1
-#ifdef cl_khr_fp16
-#define __opencl_c_ext_fp16_global_atomic_load_store 1
-#define __opencl_c_ext_fp16_local_atomic_load_store 1
-#define __opencl_c_ext_fp16_global_atomic_add 1
-#define __opencl_c_ext_fp16_local_atomic_add 1
-#define __opencl_c_ext_fp16_global_atomic_min_max 1
-#define __opencl_c_ext_fp16_local_atomic_min_max 1
-#endif
-#ifdef cl_khr_fp64
-#define __opencl_c_ext_fp64_global_atomic_add 1
-#define __opencl_c_ext_fp64_local_atomic_add 1
-#define __opencl_c_ext_fp64_global_atomic_min_max 1
-#define __opencl_c_ext_fp64_local_atomic_min_max 1
-#endif
-#define __opencl_c_ext_fp32_global_atomic_add 1
-#define __opencl_c_ext_fp32_local_atomic_add 1
-#define __opencl_c_ext_fp32_global_atomic_min_max 1
-#define __opencl_c_ext_fp32_local_atomic_min_max 1
-#define __opencl_c_ext_image_raw10_raw12 1
-
-#endif // defined(__SPIR__) || defined(__SPIRV__)
-#endif // (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
-
-// Define feature macros for OpenCL C 2.0
-#if (__OPENCL_CPP_VERSION__ == 100 || __OPENCL_C_VERSION__ == 200)
-#define __opencl_c_pipes 1
-#define __opencl_c_generic_address_space 1
-#define __opencl_c_work_group_collective_functions 1
-#define __opencl_c_atomic_order_acq_rel 1
-#define __opencl_c_atomic_order_seq_cst 1
-#define __opencl_c_atomic_scope_device 1
-#define __opencl_c_atomic_scope_all_devices 1
-#define __opencl_c_device_enqueue 1
-#define __opencl_c_read_write_images 1
-#define __opencl_c_program_scope_global_variables 1
-#define __opencl_c_images 1
-#endif
-
-// Define header-only feature macros for OpenCL C 3.0.
-#if (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
-// For the SPIR and SPIR-V target all features are supported.
-#if defined(__SPIR__) || defined(__SPIRV__)
-#define __opencl_c_work_group_collective_functions 1
-#define __opencl_c_atomic_order_seq_cst 1
-#define __opencl_c_atomic_scope_device 1
-#define __opencl_c_atomic_scope_all_devices 1
-#define __opencl_c_read_write_images 1
-#endif // defined(__SPIR__)
-
-// Undefine any feature macros that have been explicitly disabled using
-// an __undef_<feature> macro.
-#ifdef __undef___opencl_c_work_group_collective_functions
-#undef __opencl_c_work_group_collective_functions
-#endif
-#ifdef __undef___opencl_c_atomic_order_seq_cst
-#undef __opencl_c_atomic_order_seq_cst
-#endif
-#ifdef __undef___opencl_c_atomic_scope_device
-#undef __opencl_c_atomic_scope_device
-#endif
-#ifdef __undef___opencl_c_atomic_scope_all_devices
-#undef __opencl_c_atomic_scope_all_devices
-#endif
-#ifdef __undef___opencl_c_read_write_images
-#undef __opencl_c_read_write_images
-#endif
-
-#endif // (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
-
 #if !defined(__opencl_c_generic_address_space)
 // Internal feature macro to provide named (global, local, private) address
 // space overloads for builtin functions that take a pointer argument.
@@ -482,6 +395,17 @@ typedef enum memory_order
 #define CLK_UNSIGNED_INT_RAW10_EXT 0x10E3
 #define CLK_UNSIGNED_INT_RAW12_EXT 0x10E4
 #endif // __opencl_c_ext_image_raw10_raw12
+#ifdef __opencl_c_ext_image_unorm_int_2_101010
+#define CLK_UNORM_INT_2_101010_EXT 0x10E5
+#endif // __opencl_c_ext_image_unorm_int_2_101010
+#ifdef __opencl_c_ext_image_unsigned_10x6_12x4_14x2
+#define CLK_UNSIGNED_INT10X6_EXT 0x10E6
+#define CLK_UNSIGNED_INT12X4_EXT 0x10E7
+#define CLK_UNSIGNED_INT14X2_EXT 0x10E8
+#define CLK_UNORM_10X6_EXT 0x10E1
+#define CLK_UNORM_12X4_EXT 0x10E9
+#define CLK_UNORM_14X2_EXT 0x10EA
+#endif // __opencl_c_ext_image_unsigned_10x6_12x4_14x2
 
 // Channel order, numbering must be aligned with cl_channel_order in cl.h
 //
@@ -680,7 +604,16 @@ template <typename _Tp> struct __remove_address_space<__constant _Tp> {
 #if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
 // OpenCL v1.2 s6.12.13, v2.0 s6.13.13 - printf
 
-int printf(__constant const char* st, ...) __attribute__((format(printf, 1, 2)));
+#ifdef __OPENCL_CPP_VERSION__
+#define CLINKAGE extern "C"
+#else
+#define CLINKAGE
+#endif
+
+CLINKAGE int printf(__constant const char *st, ...)
+    __attribute__((format(printf, 1, 2)));
+
+#undef CLINKAGE
 #endif
 
 #ifdef cl_intel_device_side_avc_motion_estimation
@@ -818,64 +751,6 @@ int printf(__constant const char* st, ...) __attribute__((format(printf, 1, 2)))
 #define CLK_AVC_IME_RESULT_DUAL_REFERENCE_STREAMIN_INITIALIZE_INTEL 0x0
 
 #endif // cl_intel_device_side_avc_motion_estimation
-
-/**
- * Compute square root.
- *
- * Provide inline implementations using the builtin so that we get appropriate
- * !fpmath based on -cl-fp32-correctly-rounded-divide-sqrt, attached to
- * llvm.sqrt. The implementation should still provide an external definition.
- */
-#define __ovld __attribute__((overloadable))
-#define __cnfn __attribute__((const))
-
-inline float __ovld __cnfn sqrt(float __x) {
-  return __builtin_elementwise_sqrt(__x);
-}
-
-inline float2 __ovld __cnfn sqrt(float2 __x) {
-  return __builtin_elementwise_sqrt(__x);
-}
-
-inline float3 __ovld __cnfn sqrt(float3 __x) {
-  return __builtin_elementwise_sqrt(__x);
-}
-
-inline float4 __ovld __cnfn sqrt(float4 __x) {
-  return __builtin_elementwise_sqrt(__x);
-}
-
-inline float8 __ovld __cnfn sqrt(float8 __x) {
-  return __builtin_elementwise_sqrt(__x);
-}
-
-inline float16 __ovld __cnfn sqrt(float16 __x) {
-  return __builtin_elementwise_sqrt(__x);
-}
-
-// We only really want to define the float variants here. However
-// -fdeclare-opencl-builtins will not work if some overloads are already
- // provided in the base header, so provide all overloads here.
-
-#ifdef cl_khr_fp64
-double __ovld __cnfn sqrt(double);
-double2 __ovld __cnfn sqrt(double2);
-double3 __ovld __cnfn sqrt(double3);
-double4 __ovld __cnfn sqrt(double4);
-double8 __ovld __cnfn sqrt(double8);
-double16 __ovld __cnfn sqrt(double16);
-#endif //cl_khr_fp64
-#ifdef cl_khr_fp16
-half __ovld __cnfn sqrt(half);
-half2 __ovld __cnfn sqrt(half2);
-half3 __ovld __cnfn sqrt(half3);
-half4 __ovld __cnfn sqrt(half4);
-half8 __ovld __cnfn sqrt(half8);
-half16 __ovld __cnfn sqrt(half16);
-#endif //cl_khr_fp16
-
-#undef __cnfn
-#undef __ovld
 
 // Disable any extensions we may have enabled previously.
 #pragma OPENCL EXTENSION all : disable

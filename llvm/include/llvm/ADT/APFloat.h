@@ -18,7 +18,9 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/float128.h"
 #include <memory>
 
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
@@ -136,15 +138,21 @@ enum lostFraction { // Example of truncated bits:
 /// New operations: sqrt, IEEE remainder, C90 fmod, nexttoward.
 ///
 
+namespace detail {
+class IEEEFloat;
+class DoubleAPFloat;
+} // namespace detail
+
 // This is the common type definitions shared by APFloat and its internal
 // implementation classes. This struct should not define any non-static data
 // members.
-struct APFloatBase {
+class APFloatBase {
+public:
   typedef APInt::WordType integerPart;
   static constexpr unsigned integerPartWidth = APInt::APINT_BITS_PER_WORD;
 
   /// A signed type to represent a floating point numbers unbiased exponent.
-  typedef int32_t ExponentType;
+  using ExponentType = int32_t;
 
   /// \name Floating Point Semantics.
   /// @{
@@ -154,7 +162,41 @@ struct APFloatBase {
     S_IEEEsingle,
     S_IEEEdouble,
     S_IEEEquad,
+    // The IBM double-double semantics. Such a number consists of a pair of
+    // IEEE 64-bit doubles (Hi, Lo), where |Hi| > |Lo|, and if normal,
+    // (double)(Hi + Lo) == Hi. The numeric value it's modeling is Hi + Lo.
+    // Therefore it has two 53-bit mantissa parts that aren't necessarily
+    // adjacent to each other, and two 11-bit exponents.
+    //
+    // Note: we need to make the value different from semBogus as otherwise
+    // an unsafe optimization may collapse both values to a single address,
+    // and we heavily rely on them having distinct addresses.
     S_PPCDoubleDouble,
+    // These are legacy semantics for the fallback, inaccurate implementation
+    // of IBM double-double, if the accurate semPPCDoubleDouble doesn't handle
+    // the operation. It's equivalent to having an IEEE number with consecutive
+    // 106 bits of mantissa and 11 bits of exponent.
+    //
+    // It's not equivalent to IBM double-double. For example, a legit IBM
+    // double-double, 1 + epsilon:
+    //
+    // 1 + epsilon = 1 + (1 >> 1076)
+    //
+    // is not representable by a consecutive 106 bits of mantissa.
+    //
+    // Currently, these semantics are used in the following way:
+    //
+    //   semPPCDoubleDouble -> (IEEEdouble, IEEEdouble) ->
+    //   (64-bit APInt, 64-bit APInt) -> (128-bit APInt) ->
+    //   semPPCDoubleDoubleLegacy -> IEEE operations
+    //
+    // We use bitcastToAPInt() to get the bit representation (in APInt) of the
+    // underlying IEEEdouble, then use the APInt constructor to construct the
+    // legacy IEEE float.
+    //
+    // TODO: Implement all operations in semPPCDoubleDouble, and delete these
+    // semantics.
+    S_PPCDoubleDoubleLegacy,
     // 8-bit floating point number following IEEE-754 conventions with bit
     // layout S1E5M2 as described in https://arxiv.org/abs/2209.05433.
     S_Float8E5M2,
@@ -165,6 +207,9 @@ struct APFloatBase {
     // This format's exponent bias is 16, instead of the 15 (2 ** (5 - 1) - 1)
     // that IEEE precedent would imply.
     S_Float8E5M2FNUZ,
+    // 8-bit floating point number following IEEE-754 conventions with bit
+    // layout S1E4M3.
+    S_Float8E4M3,
     // 8-bit floating point number mostly following IEEE-754 conventions with
     // bit layout S1E4M3 as described in https://arxiv.org/abs/2209.05433.
     // Unlike IEEE-754 types, there are no infinity values, and NaN is
@@ -184,35 +229,104 @@ struct APFloatBase {
     // This format's exponent bias is 11, instead of the 7 (2 ** (4 - 1) - 1)
     // that IEEE precedent would imply.
     S_Float8E4M3B11FNUZ,
+    // 8-bit floating point number following IEEE-754 conventions with bit
+    // layout S1E3M4.
+    S_Float8E3M4,
     // Floating point number that occupies 32 bits or less of storage, providing
     // improved range compared to half (16-bit) formats, at (potentially)
     // greater throughput than single precision (32-bit) formats.
     S_FloatTF32,
-
+    // 8-bit floating point number with (all the) 8 bits for the exponent
+    // like in FP32. There are no zeroes, no infinities, and no denormal values.
+    // This format has unsigned representation only. (U -> Unsigned only).
+    // NaN is represented with all bits set to 1. Bias is 127.
+    // This format represents the scale data type in the MX specification from:
+    // https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
+    S_Float8E8M0FNU,
+    // 6-bit floating point number with bit layout S1E3M2. Unlike IEEE-754
+    // types, there are no infinity or NaN values. The format is detailed in
+    // https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
+    S_Float6E3M2FN,
+    // 6-bit floating point number with bit layout S1E2M3. Unlike IEEE-754
+    // types, there are no infinity or NaN values. The format is detailed in
+    // https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
+    S_Float6E2M3FN,
+    // 4-bit floating point number with bit layout S1E2M1. Unlike IEEE-754
+    // types, there are no infinity or NaN values. The format is detailed in
+    // https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
+    S_Float4E2M1FN,
+    // TODO: Documentation is missing.
     S_x87DoubleExtended,
     S_MaxSemantics = S_x87DoubleExtended,
   };
 
-  static const llvm::fltSemantics &EnumToSemantics(Semantics S);
-  static Semantics SemanticsToEnum(const llvm::fltSemantics &Sem);
+  LLVM_ABI static const llvm::fltSemantics &EnumToSemantics(Semantics S);
+  LLVM_ABI static Semantics SemanticsToEnum(const llvm::fltSemantics &Sem);
 
-  static const fltSemantics &IEEEhalf() LLVM_READNONE;
-  static const fltSemantics &BFloat() LLVM_READNONE;
-  static const fltSemantics &IEEEsingle() LLVM_READNONE;
-  static const fltSemantics &IEEEdouble() LLVM_READNONE;
-  static const fltSemantics &IEEEquad() LLVM_READNONE;
-  static const fltSemantics &PPCDoubleDouble() LLVM_READNONE;
-  static const fltSemantics &Float8E5M2() LLVM_READNONE;
-  static const fltSemantics &Float8E5M2FNUZ() LLVM_READNONE;
-  static const fltSemantics &Float8E4M3FN() LLVM_READNONE;
-  static const fltSemantics &Float8E4M3FNUZ() LLVM_READNONE;
-  static const fltSemantics &Float8E4M3B11FNUZ() LLVM_READNONE;
-  static const fltSemantics &FloatTF32() LLVM_READNONE;
-  static const fltSemantics &x87DoubleExtended() LLVM_READNONE;
+private:
+  LLVM_ABI static const fltSemantics semIEEEhalf;
+  LLVM_ABI static const fltSemantics semBFloat;
+  LLVM_ABI static const fltSemantics semIEEEsingle;
+  LLVM_ABI static const fltSemantics semIEEEdouble;
+  LLVM_ABI static const fltSemantics semIEEEquad;
+  LLVM_ABI static const fltSemantics semFloat8E5M2;
+  LLVM_ABI static const fltSemantics semFloat8E5M2FNUZ;
+  LLVM_ABI static const fltSemantics semFloat8E4M3;
+  LLVM_ABI static const fltSemantics semFloat8E4M3FN;
+  LLVM_ABI static const fltSemantics semFloat8E4M3FNUZ;
+  LLVM_ABI static const fltSemantics semFloat8E4M3B11FNUZ;
+  LLVM_ABI static const fltSemantics semFloat8E3M4;
+  LLVM_ABI static const fltSemantics semFloatTF32;
+  LLVM_ABI static const fltSemantics semFloat8E8M0FNU;
+  LLVM_ABI static const fltSemantics semFloat6E3M2FN;
+  LLVM_ABI static const fltSemantics semFloat6E2M3FN;
+  LLVM_ABI static const fltSemantics semFloat4E2M1FN;
+  LLVM_ABI static const fltSemantics semX87DoubleExtended;
+  LLVM_ABI static const fltSemantics semBogus;
+  LLVM_ABI static const fltSemantics semPPCDoubleDouble;
+  LLVM_ABI static const fltSemantics semPPCDoubleDoubleLegacy;
+
+  friend class detail::IEEEFloat;
+  friend class detail::DoubleAPFloat;
+  friend class APFloat;
+
+public:
+  static const fltSemantics &IEEEhalf() { return semIEEEhalf; }
+  static const fltSemantics &BFloat() { return semBFloat; }
+  static const fltSemantics &IEEEsingle() { return semIEEEsingle; }
+  static const fltSemantics &IEEEdouble() { return semIEEEdouble; }
+  static const fltSemantics &IEEEquad() { return semIEEEquad; }
+  static const fltSemantics &PPCDoubleDouble() { return semPPCDoubleDouble; }
+  static const fltSemantics &PPCDoubleDoubleLegacy() {
+    return semPPCDoubleDoubleLegacy;
+  }
+  static const fltSemantics &Float8E5M2() { return semFloat8E5M2; }
+  static const fltSemantics &Float8E5M2FNUZ() { return semFloat8E5M2FNUZ; }
+  static const fltSemantics &Float8E4M3() { return semFloat8E4M3; }
+  static const fltSemantics &Float8E4M3FN() { return semFloat8E4M3FN; }
+  static const fltSemantics &Float8E4M3FNUZ() { return semFloat8E4M3FNUZ; }
+  static const fltSemantics &Float8E4M3B11FNUZ() {
+    return semFloat8E4M3B11FNUZ;
+  }
+  static const fltSemantics &Float8E3M4() { return semFloat8E3M4; }
+  static const fltSemantics &FloatTF32() { return semFloatTF32; }
+  static const fltSemantics &Float8E8M0FNU() { return semFloat8E8M0FNU; }
+  static const fltSemantics &Float6E3M2FN() { return semFloat6E3M2FN; }
+  static const fltSemantics &Float6E2M3FN() { return semFloat6E2M3FN; }
+  static const fltSemantics &Float4E2M1FN() { return semFloat4E2M1FN; }
+  static const fltSemantics &x87DoubleExtended() {
+    return semX87DoubleExtended;
+  }
 
   /// A Pseudo fltsemantic used to construct APFloats that cannot conflict with
   /// anything real.
-  static const fltSemantics &Bogus() LLVM_READNONE;
+  static const fltSemantics &Bogus() { return semBogus; }
+
+  // Returns true if any number described by this semantics can be precisely
+  // represented by the specified semantics. Does not take into account
+  // the value of fltNonfiniteBehavior, hasZero, hasSignedRepr.
+  LLVM_ABI static bool isRepresentableBy(const fltSemantics &A,
+                                         const fltSemantics &B);
 
   /// @}
 
@@ -272,38 +386,76 @@ struct APFloatBase {
     IEK_Inf = INT_MAX
   };
 
-  static unsigned int semanticsPrecision(const fltSemantics &);
-  static ExponentType semanticsMinExponent(const fltSemantics &);
-  static ExponentType semanticsMaxExponent(const fltSemantics &);
-  static unsigned int semanticsSizeInBits(const fltSemantics &);
-  static unsigned int semanticsIntSizeInBits(const fltSemantics&, bool);
+  LLVM_ABI static unsigned int semanticsPrecision(const fltSemantics &);
+  LLVM_ABI static ExponentType semanticsMinExponent(const fltSemantics &);
+  LLVM_ABI static ExponentType semanticsMaxExponent(const fltSemantics &);
+  LLVM_ABI static unsigned int semanticsSizeInBits(const fltSemantics &);
+  LLVM_ABI static unsigned int semanticsIntSizeInBits(const fltSemantics &,
+                                                      bool);
+  LLVM_ABI static bool semanticsHasZero(const fltSemantics &);
+  LLVM_ABI static bool semanticsHasSignedRepr(const fltSemantics &);
+  LLVM_ABI static bool semanticsHasInf(const fltSemantics &);
+  LLVM_ABI static bool semanticsHasNaN(const fltSemantics &);
+  LLVM_ABI static bool isIEEELikeFP(const fltSemantics &);
+  LLVM_ABI static bool hasSignBitInMSB(const fltSemantics &);
 
   // Returns true if any number described by \p Src can be precisely represented
   // by a normal (not subnormal) value in \p Dst.
-  static bool isRepresentableAsNormalIn(const fltSemantics &Src,
-                                        const fltSemantics &Dst);
+  LLVM_ABI static bool isRepresentableAsNormalIn(const fltSemantics &Src,
+                                                 const fltSemantics &Dst);
 
   /// Returns the size of the floating point number (in bits) in the given
   /// semantics.
-  static unsigned getSizeInBits(const fltSemantics &Sem);
+  LLVM_ABI static unsigned getSizeInBits(const fltSemantics &Sem);
 };
 
 namespace detail {
 
-class IEEEFloat final : public APFloatBase {
+using integerPart = APFloatBase::integerPart;
+using uninitializedTag = APFloatBase::uninitializedTag;
+using roundingMode = APFloatBase::roundingMode;
+using opStatus = APFloatBase::opStatus;
+using cmpResult = APFloatBase::cmpResult;
+using fltCategory = APFloatBase::fltCategory;
+using ExponentType = APFloatBase::ExponentType;
+static constexpr uninitializedTag uninitialized = APFloatBase::uninitialized;
+static constexpr roundingMode rmNearestTiesToEven =
+    APFloatBase::rmNearestTiesToEven;
+static constexpr roundingMode rmNearestTiesToAway =
+    APFloatBase::rmNearestTiesToAway;
+static constexpr roundingMode rmTowardNegative = APFloatBase::rmTowardNegative;
+static constexpr roundingMode rmTowardPositive = APFloatBase::rmTowardPositive;
+static constexpr roundingMode rmTowardZero = APFloatBase::rmTowardZero;
+static constexpr unsigned integerPartWidth = APFloatBase::integerPartWidth;
+static constexpr cmpResult cmpEqual = APFloatBase::cmpEqual;
+static constexpr cmpResult cmpLessThan = APFloatBase::cmpLessThan;
+static constexpr cmpResult cmpGreaterThan = APFloatBase::cmpGreaterThan;
+static constexpr cmpResult cmpUnordered = APFloatBase::cmpUnordered;
+static constexpr opStatus opOK = APFloatBase::opOK;
+static constexpr opStatus opInvalidOp = APFloatBase::opInvalidOp;
+static constexpr opStatus opDivByZero = APFloatBase::opDivByZero;
+static constexpr opStatus opOverflow = APFloatBase::opOverflow;
+static constexpr opStatus opUnderflow = APFloatBase::opUnderflow;
+static constexpr opStatus opInexact = APFloatBase::opInexact;
+static constexpr fltCategory fcInfinity = APFloatBase::fcInfinity;
+static constexpr fltCategory fcNaN = APFloatBase::fcNaN;
+static constexpr fltCategory fcNormal = APFloatBase::fcNormal;
+static constexpr fltCategory fcZero = APFloatBase::fcZero;
+
+class IEEEFloat final {
 public:
   /// \name Constructors
   /// @{
 
-  IEEEFloat(const fltSemantics &); // Default construct to +0.0
-  IEEEFloat(const fltSemantics &, integerPart);
-  IEEEFloat(const fltSemantics &, uninitializedTag);
-  IEEEFloat(const fltSemantics &, const APInt &);
-  explicit IEEEFloat(double d);
-  explicit IEEEFloat(float f);
-  IEEEFloat(const IEEEFloat &);
-  IEEEFloat(IEEEFloat &&);
-  ~IEEEFloat();
+  LLVM_ABI IEEEFloat(const fltSemantics &); // Default construct to +0.0
+  LLVM_ABI IEEEFloat(const fltSemantics &, integerPart);
+  LLVM_ABI IEEEFloat(const fltSemantics &, uninitializedTag);
+  LLVM_ABI IEEEFloat(const fltSemantics &, const APInt &);
+  LLVM_ABI explicit IEEEFloat(double d);
+  LLVM_ABI explicit IEEEFloat(float f);
+  LLVM_ABI IEEEFloat(const IEEEFloat &);
+  LLVM_ABI IEEEFloat(IEEEFloat &&);
+  LLVM_ABI ~IEEEFloat();
 
   /// @}
 
@@ -318,43 +470,43 @@ public:
   /// \name Arithmetic
   /// @{
 
-  opStatus add(const IEEEFloat &, roundingMode);
-  opStatus subtract(const IEEEFloat &, roundingMode);
-  opStatus multiply(const IEEEFloat &, roundingMode);
-  opStatus divide(const IEEEFloat &, roundingMode);
+  LLVM_ABI opStatus add(const IEEEFloat &, roundingMode);
+  LLVM_ABI opStatus subtract(const IEEEFloat &, roundingMode);
+  LLVM_ABI opStatus multiply(const IEEEFloat &, roundingMode);
+  LLVM_ABI opStatus divide(const IEEEFloat &, roundingMode);
   /// IEEE remainder.
-  opStatus remainder(const IEEEFloat &);
+  LLVM_ABI opStatus remainder(const IEEEFloat &);
   /// C fmod, or llvm frem.
-  opStatus mod(const IEEEFloat &);
-  opStatus fusedMultiplyAdd(const IEEEFloat &, const IEEEFloat &, roundingMode);
-  opStatus roundToIntegral(roundingMode);
+  LLVM_ABI opStatus mod(const IEEEFloat &);
+  LLVM_ABI opStatus fusedMultiplyAdd(const IEEEFloat &, const IEEEFloat &,
+                                     roundingMode);
+  LLVM_ABI opStatus roundToIntegral(roundingMode);
   /// IEEE-754R 5.3.1: nextUp/nextDown.
-  opStatus next(bool nextDown);
+  LLVM_ABI opStatus next(bool nextDown);
 
   /// @}
 
   /// \name Sign operations.
   /// @{
 
-  void changeSign();
+  LLVM_ABI void changeSign();
 
   /// @}
 
   /// \name Conversions
   /// @{
 
-  opStatus convert(const fltSemantics &, roundingMode, bool *);
-  opStatus convertToInteger(MutableArrayRef<integerPart>, unsigned int, bool,
-                            roundingMode, bool *) const;
-  opStatus convertFromAPInt(const APInt &, bool, roundingMode);
-  opStatus convertFromSignExtendedInteger(const integerPart *, unsigned int,
-                                          bool, roundingMode);
-  opStatus convertFromZeroExtendedInteger(const integerPart *, unsigned int,
-                                          bool, roundingMode);
-  Expected<opStatus> convertFromString(StringRef, roundingMode);
-  APInt bitcastToAPInt() const;
-  double convertToDouble() const;
-  float convertToFloat() const;
+  LLVM_ABI opStatus convert(const fltSemantics &, roundingMode, bool *);
+  LLVM_ABI opStatus convertToInteger(MutableArrayRef<integerPart>, unsigned int,
+                                     bool, roundingMode, bool *) const;
+  LLVM_ABI opStatus convertFromAPInt(const APInt &, bool, roundingMode);
+  LLVM_ABI Expected<opStatus> convertFromString(StringRef, roundingMode);
+  LLVM_ABI APInt bitcastToAPInt() const;
+  LLVM_ABI double convertToDouble() const;
+#ifdef HAS_IEE754_FLOAT128
+  LLVM_ABI float128 convertToQuad() const;
+#endif
+  LLVM_ABI float convertToFloat() const;
 
   /// @}
 
@@ -365,16 +517,16 @@ public:
 
   /// IEEE comparison with another floating point number (NaNs compare
   /// unordered, 0==-0).
-  cmpResult compare(const IEEEFloat &) const;
+  LLVM_ABI cmpResult compare(const IEEEFloat &) const;
 
   /// Bitwise comparison for equality (QNaNs compare equal, 0!=-0).
-  bool bitwiseIsEqual(const IEEEFloat &) const;
+  LLVM_ABI bool bitwiseIsEqual(const IEEEFloat &) const;
 
   /// Write out a hexadecimal representation of the floating point value to DST,
   /// which must be of sufficient size, in the C99 form [-]0xh.hhhhp[+-]d.
   /// Return the number of characters written, excluding the terminating NUL.
-  unsigned int convertToHexString(char *dst, unsigned int hexDigits,
-                                  bool upperCase, roundingMode) const;
+  LLVM_ABI unsigned int convertToHexString(char *dst, unsigned int hexDigits,
+                                           bool upperCase, roundingMode) const;
 
   /// \name IEEE-754R 5.7.2 General operations.
   /// @{
@@ -398,11 +550,11 @@ public:
   bool isFinite() const { return !isNaN() && !isInfinity(); }
 
   /// Returns true if and only if the float is plus or minus zero.
-  bool isZero() const { return category == fcZero; }
+  bool isZero() const { return category == fltCategory::fcZero; }
 
   /// IEEE-754R isSubnormal(): Returns true if and only if the float is a
   /// denormal.
-  bool isDenormal() const;
+  LLVM_ABI bool isDenormal() const;
 
   /// IEEE-754R isInfinite(): Returns true if and only if the float is infinity.
   bool isInfinity() const { return category == fcInfinity; }
@@ -411,7 +563,7 @@ public:
   bool isNaN() const { return category == fcNaN; }
 
   /// Returns true if and only if the float is a signaling NaN.
-  bool isSignaling() const;
+  LLVM_ABI bool isSignaling() const;
 
   /// @}
 
@@ -420,30 +572,30 @@ public:
 
   fltCategory getCategory() const { return category; }
   const fltSemantics &getSemantics() const { return *semantics; }
-  bool isNonZero() const { return category != fcZero; }
+  bool isNonZero() const { return category != fltCategory::fcZero; }
   bool isFiniteNonZero() const { return isFinite() && !isZero(); }
   bool isPosZero() const { return isZero() && !isNegative(); }
   bool isNegZero() const { return isZero() && isNegative(); }
 
   /// Returns true if and only if the number has the smallest possible non-zero
   /// magnitude in the current semantics.
-  bool isSmallest() const;
+  LLVM_ABI bool isSmallest() const;
 
   /// Returns true if this is the smallest (by magnitude) normalized finite
   /// number in the given semantics.
-  bool isSmallestNormalized() const;
+  LLVM_ABI bool isSmallestNormalized() const;
 
   /// Returns true if and only if the number has the largest possible finite
   /// magnitude in the current semantics.
-  bool isLargest() const;
+  LLVM_ABI bool isLargest() const;
 
   /// Returns true if and only if the number is an exact integer.
-  bool isInteger() const;
+  LLVM_ABI bool isInteger() const;
 
   /// @}
 
-  IEEEFloat &operator=(const IEEEFloat &);
-  IEEEFloat &operator=(IEEEFloat &&);
+  LLVM_ABI IEEEFloat &operator=(const IEEEFloat &);
+  LLVM_ABI IEEEFloat &operator=(IEEEFloat &&);
 
   /// Overload to compute a hash code for an APFloat value.
   ///
@@ -454,7 +606,7 @@ public:
   /// emphasizes producing different codes for different inputs in order to
   /// be used in canonicalization and memoization. As such, equality is
   /// bitwiseIsEqual, and 0 != -0.
-  friend hash_code hash_value(const IEEEFloat &Arg);
+  LLVM_ABI friend hash_code hash_value(const IEEEFloat &Arg);
 
   /// Converts this value into a decimal string.
   ///
@@ -482,61 +634,39 @@ public:
   /// 1.01E-2              5             2       0.0101
   /// 1.01E-2              4             2       0.0101
   /// 1.01E-2              4             1       1.01E-2
-  void toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision = 0,
-                unsigned FormatMaxPadding = 3, bool TruncateZero = true) const;
+  LLVM_ABI void toString(SmallVectorImpl<char> &Str,
+                         unsigned FormatPrecision = 0,
+                         unsigned FormatMaxPadding = 3,
+                         bool TruncateZero = true) const;
 
-  /// If this value has an exact multiplicative inverse, store it in inv and
-  /// return true.
-  bool getExactInverse(APFloat *inv) const;
+  LLVM_ABI LLVM_READONLY int getExactLog2Abs() const;
 
-  // If this is an exact power of two, return the exponent while ignoring the
-  // sign bit. If it's not an exact power of 2, return INT_MIN
-  LLVM_READONLY
-  int getExactLog2Abs() const;
+  LLVM_ABI friend int ilogb(const IEEEFloat &Arg);
 
-  // If this is an exact power of two, return the exponent. If it's not an exact
-  // power of 2, return INT_MIN
-  LLVM_READONLY
-  int getExactLog2() const {
-    return isNegative() ? INT_MIN : getExactLog2Abs();
-  }
+  LLVM_ABI friend IEEEFloat scalbn(IEEEFloat X, int Exp, roundingMode);
 
-  /// Returns the exponent of the internal representation of the APFloat.
-  ///
-  /// Because the radix of APFloat is 2, this is equivalent to floor(log2(x)).
-  /// For special APFloat values, this returns special error codes:
-  ///
-  ///   NaN -> \c IEK_NaN
-  ///   0   -> \c IEK_Zero
-  ///   Inf -> \c IEK_Inf
-  ///
-  friend int ilogb(const IEEEFloat &Arg);
-
-  /// Returns: X * 2^Exp for integral exponents.
-  friend IEEEFloat scalbn(IEEEFloat X, int Exp, roundingMode);
-
-  friend IEEEFloat frexp(const IEEEFloat &X, int &Exp, roundingMode);
+  LLVM_ABI friend IEEEFloat frexp(const IEEEFloat &X, int &Exp, roundingMode);
 
   /// \name Special value setters.
   /// @{
 
-  void makeLargest(bool Neg = false);
-  void makeSmallest(bool Neg = false);
-  void makeNaN(bool SNaN = false, bool Neg = false,
-               const APInt *fill = nullptr);
-  void makeInf(bool Neg = false);
-  void makeZero(bool Neg = false);
-  void makeQuiet();
+  LLVM_ABI void makeLargest(bool Neg = false);
+  LLVM_ABI void makeSmallest(bool Neg = false);
+  LLVM_ABI void makeNaN(bool SNaN = false, bool Neg = false,
+                        const APInt *fill = nullptr);
+  LLVM_ABI void makeInf(bool Neg = false);
+  LLVM_ABI void makeZero(bool Neg = false);
+  LLVM_ABI void makeQuiet();
 
   /// Returns the smallest (by magnitude) normalized finite number in the given
   /// semantics.
   ///
   /// \param Negative - True iff the number should be negative
-  void makeSmallestNormalized(bool Negative = false);
+  LLVM_ABI void makeSmallestNormalized(bool Negative = false);
 
   /// @}
 
-  cmpResult compareAbsoluteValue(const IEEEFloat &) const;
+  LLVM_ABI cmpResult compareAbsoluteValue(const IEEEFloat &) const;
 
 private:
   /// \name Simple Queries
@@ -544,7 +674,7 @@ private:
 
   integerPart *significandParts();
   const integerPart *significandParts() const;
-  unsigned int partCount() const;
+  LLVM_ABI unsigned int partCount() const;
 
   /// @}
 
@@ -553,8 +683,11 @@ private:
 
   integerPart addSignificand(const IEEEFloat &);
   integerPart subtractSignificand(const IEEEFloat &, integerPart);
-  lostFraction addOrSubtractSignificand(const IEEEFloat &, bool subtract);
-  lostFraction multiplySignificand(const IEEEFloat &, IEEEFloat);
+  // Exported for IEEEFloatUnitTestHelper.
+  LLVM_ABI lostFraction addOrSubtractSignificand(const IEEEFloat &,
+                                                 bool subtract);
+  lostFraction multiplySignificand(const IEEEFloat &, IEEEFloat,
+                                   bool ignoreAddend = false);
   lostFraction multiplySignificand(const IEEEFloat&);
   lostFraction divideSignificand(const IEEEFloat &);
   void incrementSignificand();
@@ -564,6 +697,7 @@ private:
   unsigned int significandLSB() const;
   unsigned int significandMSB() const;
   void zeroSignificand();
+  unsigned int getNumHighBits() const;
   /// Return true if the significand excluding the integral bit is all ones.
   bool isSignificandAllOnes() const;
   bool isSignificandAllOnesExceptLSB() const;
@@ -616,13 +750,19 @@ private:
   APInt convertDoubleAPFloatToAPInt() const;
   APInt convertQuadrupleAPFloatToAPInt() const;
   APInt convertF80LongDoubleAPFloatToAPInt() const;
-  APInt convertPPCDoubleDoubleAPFloatToAPInt() const;
+  APInt convertPPCDoubleDoubleLegacyAPFloatToAPInt() const;
   APInt convertFloat8E5M2APFloatToAPInt() const;
   APInt convertFloat8E5M2FNUZAPFloatToAPInt() const;
+  APInt convertFloat8E4M3APFloatToAPInt() const;
   APInt convertFloat8E4M3FNAPFloatToAPInt() const;
   APInt convertFloat8E4M3FNUZAPFloatToAPInt() const;
   APInt convertFloat8E4M3B11FNUZAPFloatToAPInt() const;
+  APInt convertFloat8E3M4APFloatToAPInt() const;
   APInt convertFloatTF32APFloatToAPInt() const;
+  APInt convertFloat8E8M0FNUAPFloatToAPInt() const;
+  APInt convertFloat6E3M2FNAPFloatToAPInt() const;
+  APInt convertFloat6E2M3FNAPFloatToAPInt() const;
+  APInt convertFloat4E2M1FNAPFloatToAPInt() const;
   void initFromAPInt(const fltSemantics *Sem, const APInt &api);
   template <const fltSemantics &S> void initFromIEEEAPInt(const APInt &api);
   void initFromHalfAPInt(const APInt &api);
@@ -631,13 +771,19 @@ private:
   void initFromDoubleAPInt(const APInt &api);
   void initFromQuadrupleAPInt(const APInt &api);
   void initFromF80LongDoubleAPInt(const APInt &api);
-  void initFromPPCDoubleDoubleAPInt(const APInt &api);
+  void initFromPPCDoubleDoubleLegacyAPInt(const APInt &api);
   void initFromFloat8E5M2APInt(const APInt &api);
   void initFromFloat8E5M2FNUZAPInt(const APInt &api);
+  void initFromFloat8E4M3APInt(const APInt &api);
   void initFromFloat8E4M3FNAPInt(const APInt &api);
   void initFromFloat8E4M3FNUZAPInt(const APInt &api);
   void initFromFloat8E4M3B11FNUZAPInt(const APInt &api);
+  void initFromFloat8E3M4APInt(const APInt &api);
   void initFromFloatTF32APInt(const APInt &api);
+  void initFromFloat8E8M0FNUAPInt(const APInt &api);
+  void initFromFloat6E3M2FNAPInt(const APInt &api);
+  void initFromFloat6E2M3FNAPInt(const APInt &api);
+  void initFromFloat4E2M1FNAPInt(const APInt &api);
 
   void assign(const IEEEFloat &);
   void copySignificand(const IEEEFloat &);
@@ -666,38 +812,55 @@ private:
 
   /// Sign bit of the number.
   unsigned int sign : 1;
+
+  friend class IEEEFloatUnitTestHelper;
 };
 
-hash_code hash_value(const IEEEFloat &Arg);
-int ilogb(const IEEEFloat &Arg);
-IEEEFloat scalbn(IEEEFloat X, int Exp, IEEEFloat::roundingMode);
-IEEEFloat frexp(const IEEEFloat &Val, int &Exp, IEEEFloat::roundingMode RM);
+LLVM_ABI hash_code hash_value(const IEEEFloat &Arg);
+LLVM_ABI int ilogb(const IEEEFloat &Arg);
+LLVM_ABI IEEEFloat scalbn(IEEEFloat X, int Exp, roundingMode);
+LLVM_ABI IEEEFloat frexp(const IEEEFloat &Val, int &Exp, roundingMode RM);
 
 // This mode implements more precise float in terms of two APFloats.
 // The interface and layout is designed for arbitrary underlying semantics,
 // though currently only PPCDoubleDouble semantics are supported, whose
 // corresponding underlying semantics are IEEEdouble.
-class DoubleAPFloat final : public APFloatBase {
+class DoubleAPFloat final {
   // Note: this must be the first data member.
   const fltSemantics *Semantics;
-  std::unique_ptr<APFloat[]> Floats;
+  APFloat *Floats;
 
   opStatus addImpl(const APFloat &a, const APFloat &aa, const APFloat &c,
                    const APFloat &cc, roundingMode RM);
 
   opStatus addWithSpecial(const DoubleAPFloat &LHS, const DoubleAPFloat &RHS,
                           DoubleAPFloat &Out, roundingMode RM);
+  opStatus convertToSignExtendedInteger(MutableArrayRef<integerPart> Input,
+                                        unsigned int Width, bool IsSigned,
+                                        roundingMode RM, bool *IsExact) const;
+
+  // Convert an unsigned integer Src to a floating point number,
+  // rounding according to RM.  The sign of the floating point number is not
+  // modified.
+  opStatus convertFromUnsignedParts(const integerPart *Src,
+                                    unsigned int SrcCount, roundingMode RM);
+
+  // Handle overflow.  Sign is preserved.  We either become infinity or
+  // the largest finite number.
+  opStatus handleOverflow(roundingMode RM);
 
 public:
-  DoubleAPFloat(const fltSemantics &S);
-  DoubleAPFloat(const fltSemantics &S, uninitializedTag);
-  DoubleAPFloat(const fltSemantics &S, integerPart);
-  DoubleAPFloat(const fltSemantics &S, const APInt &I);
-  DoubleAPFloat(const fltSemantics &S, APFloat &&First, APFloat &&Second);
-  DoubleAPFloat(const DoubleAPFloat &RHS);
-  DoubleAPFloat(DoubleAPFloat &&RHS);
+  LLVM_ABI DoubleAPFloat(const fltSemantics &S);
+  LLVM_ABI DoubleAPFloat(const fltSemantics &S, uninitializedTag);
+  LLVM_ABI DoubleAPFloat(const fltSemantics &S, integerPart);
+  LLVM_ABI DoubleAPFloat(const fltSemantics &S, const APInt &I);
+  LLVM_ABI DoubleAPFloat(const fltSemantics &S, APFloat &&First,
+                         APFloat &&Second);
+  LLVM_ABI DoubleAPFloat(const DoubleAPFloat &RHS);
+  LLVM_ABI DoubleAPFloat(DoubleAPFloat &&RHS);
+  ~DoubleAPFloat();
 
-  DoubleAPFloat &operator=(const DoubleAPFloat &RHS);
+  LLVM_ABI DoubleAPFloat &operator=(const DoubleAPFloat &RHS);
   inline DoubleAPFloat &operator=(DoubleAPFloat &&RHS);
 
   bool needsCleanup() const { return Floats != nullptr; }
@@ -707,79 +870,76 @@ public:
   inline APFloat &getSecond();
   inline const APFloat &getSecond() const;
 
-  opStatus add(const DoubleAPFloat &RHS, roundingMode RM);
-  opStatus subtract(const DoubleAPFloat &RHS, roundingMode RM);
-  opStatus multiply(const DoubleAPFloat &RHS, roundingMode RM);
-  opStatus divide(const DoubleAPFloat &RHS, roundingMode RM);
-  opStatus remainder(const DoubleAPFloat &RHS);
-  opStatus mod(const DoubleAPFloat &RHS);
-  opStatus fusedMultiplyAdd(const DoubleAPFloat &Multiplicand,
-                            const DoubleAPFloat &Addend, roundingMode RM);
-  opStatus roundToIntegral(roundingMode RM);
-  void changeSign();
-  cmpResult compareAbsoluteValue(const DoubleAPFloat &RHS) const;
+  LLVM_ABI opStatus add(const DoubleAPFloat &RHS, roundingMode RM);
+  LLVM_ABI opStatus subtract(const DoubleAPFloat &RHS, roundingMode RM);
+  LLVM_ABI opStatus multiply(const DoubleAPFloat &RHS, roundingMode RM);
+  LLVM_ABI opStatus divide(const DoubleAPFloat &RHS, roundingMode RM);
+  LLVM_ABI opStatus remainder(const DoubleAPFloat &RHS);
+  LLVM_ABI opStatus mod(const DoubleAPFloat &RHS);
+  LLVM_ABI opStatus fusedMultiplyAdd(const DoubleAPFloat &Multiplicand,
+                                     const DoubleAPFloat &Addend,
+                                     roundingMode RM);
+  LLVM_ABI opStatus roundToIntegral(roundingMode RM);
+  LLVM_ABI void changeSign();
+  LLVM_ABI cmpResult compareAbsoluteValue(const DoubleAPFloat &RHS) const;
 
-  fltCategory getCategory() const;
-  bool isNegative() const;
+  LLVM_ABI fltCategory getCategory() const;
+  LLVM_ABI bool isNegative() const;
 
-  void makeInf(bool Neg);
-  void makeZero(bool Neg);
-  void makeLargest(bool Neg);
-  void makeSmallest(bool Neg);
-  void makeSmallestNormalized(bool Neg);
-  void makeNaN(bool SNaN, bool Neg, const APInt *fill);
+  LLVM_ABI void makeInf(bool Neg);
+  LLVM_ABI void makeZero(bool Neg);
+  LLVM_ABI void makeLargest(bool Neg);
+  LLVM_ABI void makeSmallest(bool Neg);
+  LLVM_ABI void makeSmallestNormalized(bool Neg);
+  LLVM_ABI void makeNaN(bool SNaN, bool Neg, const APInt *fill);
 
-  cmpResult compare(const DoubleAPFloat &RHS) const;
-  bool bitwiseIsEqual(const DoubleAPFloat &RHS) const;
-  APInt bitcastToAPInt() const;
-  Expected<opStatus> convertFromString(StringRef, roundingMode);
-  opStatus next(bool nextDown);
+  LLVM_ABI cmpResult compare(const DoubleAPFloat &RHS) const;
+  LLVM_ABI bool bitwiseIsEqual(const DoubleAPFloat &RHS) const;
+  LLVM_ABI APInt bitcastToAPInt() const;
+  LLVM_ABI Expected<opStatus> convertFromString(StringRef, roundingMode);
+  LLVM_ABI opStatus next(bool nextDown);
 
-  opStatus convertToInteger(MutableArrayRef<integerPart> Input,
-                            unsigned int Width, bool IsSigned, roundingMode RM,
-                            bool *IsExact) const;
-  opStatus convertFromAPInt(const APInt &Input, bool IsSigned, roundingMode RM);
-  opStatus convertFromSignExtendedInteger(const integerPart *Input,
-                                          unsigned int InputSize, bool IsSigned,
-                                          roundingMode RM);
-  opStatus convertFromZeroExtendedInteger(const integerPart *Input,
-                                          unsigned int InputSize, bool IsSigned,
-                                          roundingMode RM);
-  unsigned int convertToHexString(char *DST, unsigned int HexDigits,
-                                  bool UpperCase, roundingMode RM) const;
+  LLVM_ABI opStatus convertToInteger(MutableArrayRef<integerPart> Input,
+                                     unsigned int Width, bool IsSigned,
+                                     roundingMode RM, bool *IsExact) const;
+  LLVM_ABI opStatus convertFromAPInt(const APInt &Input, bool IsSigned,
+                                     roundingMode RM);
+  LLVM_ABI unsigned int convertToHexString(char *DST, unsigned int HexDigits,
+                                           bool UpperCase,
+                                           roundingMode RM) const;
 
-  bool isDenormal() const;
-  bool isSmallest() const;
-  bool isSmallestNormalized() const;
-  bool isLargest() const;
-  bool isInteger() const;
+  LLVM_ABI bool isDenormal() const;
+  LLVM_ABI bool isSmallest() const;
+  LLVM_ABI bool isSmallestNormalized() const;
+  LLVM_ABI bool isLargest() const;
+  LLVM_ABI bool isInteger() const;
 
-  void toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
-                unsigned FormatMaxPadding, bool TruncateZero = true) const;
+  LLVM_ABI void toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
+                         unsigned FormatMaxPadding,
+                         bool TruncateZero = true) const;
 
-  bool getExactInverse(APFloat *inv) const;
+  LLVM_ABI LLVM_READONLY int getExactLog2Abs() const;
 
-  LLVM_READONLY
-  int getExactLog2() const;
-  LLVM_READONLY
-  int getExactLog2Abs() const;
-
-  friend DoubleAPFloat scalbn(const DoubleAPFloat &X, int Exp, roundingMode);
-  friend DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp, roundingMode);
-  friend hash_code hash_value(const DoubleAPFloat &Arg);
+  LLVM_ABI friend int ilogb(const DoubleAPFloat &X);
+  LLVM_ABI friend DoubleAPFloat scalbn(const DoubleAPFloat &X, int Exp,
+                                       roundingMode);
+  LLVM_ABI friend DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp,
+                                      roundingMode);
+  LLVM_ABI friend hash_code hash_value(const DoubleAPFloat &Arg);
 };
 
-hash_code hash_value(const DoubleAPFloat &Arg);
-DoubleAPFloat scalbn(const DoubleAPFloat &Arg, int Exp, IEEEFloat::roundingMode RM);
-DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp, IEEEFloat::roundingMode);
+LLVM_ABI hash_code hash_value(const DoubleAPFloat &Arg);
+LLVM_ABI DoubleAPFloat scalbn(const DoubleAPFloat &Arg, int Exp,
+                              roundingMode RM);
+LLVM_ABI DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp, roundingMode);
 
 } // End detail namespace
 
 // This is a interface class that is currently forwarding functionalities from
 // detail::IEEEFloat.
 class APFloat : public APFloatBase {
-  typedef detail::IEEEFloat IEEEFloat;
-  typedef detail::DoubleAPFloat DoubleAPFloat;
+  using IEEEFloat = detail::IEEEFloat;
+  using DoubleAPFloat = detail::DoubleAPFloat;
 
   static_assert(std::is_standard_layout<IEEEFloat>::value);
 
@@ -788,7 +948,7 @@ class APFloat : public APFloatBase {
     IEEEFloat IEEE;
     DoubleAPFloat Double;
 
-    explicit Storage(IEEEFloat F, const fltSemantics &S);
+    LLVM_ABI explicit Storage(IEEEFloat F, const fltSemantics &S);
     explicit Storage(DoubleAPFloat F, const fltSemantics &S)
         : Double(std::move(F)) {
       assert(&S == &PPCDoubleDouble());
@@ -807,69 +967,11 @@ class APFloat : public APFloatBase {
       llvm_unreachable("Unexpected semantics");
     }
 
-    ~Storage() {
-      if (usesLayout<IEEEFloat>(*semantics)) {
-        IEEE.~IEEEFloat();
-        return;
-      }
-      if (usesLayout<DoubleAPFloat>(*semantics)) {
-        Double.~DoubleAPFloat();
-        return;
-      }
-      llvm_unreachable("Unexpected semantics");
-    }
-
-    Storage(const Storage &RHS) {
-      if (usesLayout<IEEEFloat>(*RHS.semantics)) {
-        new (this) IEEEFloat(RHS.IEEE);
-        return;
-      }
-      if (usesLayout<DoubleAPFloat>(*RHS.semantics)) {
-        new (this) DoubleAPFloat(RHS.Double);
-        return;
-      }
-      llvm_unreachable("Unexpected semantics");
-    }
-
-    Storage(Storage &&RHS) {
-      if (usesLayout<IEEEFloat>(*RHS.semantics)) {
-        new (this) IEEEFloat(std::move(RHS.IEEE));
-        return;
-      }
-      if (usesLayout<DoubleAPFloat>(*RHS.semantics)) {
-        new (this) DoubleAPFloat(std::move(RHS.Double));
-        return;
-      }
-      llvm_unreachable("Unexpected semantics");
-    }
-
-    Storage &operator=(const Storage &RHS) {
-      if (usesLayout<IEEEFloat>(*semantics) &&
-          usesLayout<IEEEFloat>(*RHS.semantics)) {
-        IEEE = RHS.IEEE;
-      } else if (usesLayout<DoubleAPFloat>(*semantics) &&
-                 usesLayout<DoubleAPFloat>(*RHS.semantics)) {
-        Double = RHS.Double;
-      } else if (this != &RHS) {
-        this->~Storage();
-        new (this) Storage(RHS);
-      }
-      return *this;
-    }
-
-    Storage &operator=(Storage &&RHS) {
-      if (usesLayout<IEEEFloat>(*semantics) &&
-          usesLayout<IEEEFloat>(*RHS.semantics)) {
-        IEEE = std::move(RHS.IEEE);
-      } else if (usesLayout<DoubleAPFloat>(*semantics) &&
-                 usesLayout<DoubleAPFloat>(*RHS.semantics)) {
-        Double = std::move(RHS.Double);
-      } else if (this != &RHS) {
-        this->~Storage();
-        new (this) Storage(std::move(RHS));
-      }
-      return *this;
-    }
+    LLVM_ABI ~Storage();
+    LLVM_ABI Storage(const Storage &RHS);
+    LLVM_ABI Storage(Storage &&RHS);
+    LLVM_ABI Storage &operator=(const Storage &RHS);
+    LLVM_ABI Storage &operator=(Storage &&RHS);
   } U;
 
   template <typename T> static bool usesLayout(const fltSemantics &Semantics) {
@@ -921,6 +1023,8 @@ class APFloat : public APFloatBase {
   explicit APFloat(DoubleAPFloat F, const fltSemantics &S)
       : U(std::move(F), S) {}
 
+  // Compares the absolute value of this APFloat with another.  Both operands
+  // must be finite non-zero.
   cmpResult compareAbsoluteValue(const APFloat &RHS) const {
     assert(&getSemantics() == &RHS.getSemantics() &&
            "Should only compare APFloats with the same semantics");
@@ -933,7 +1037,7 @@ class APFloat : public APFloatBase {
 
 public:
   APFloat(const fltSemantics &Semantics) : U(Semantics) {}
-  APFloat(const fltSemantics &Semantics, StringRef S);
+  LLVM_ABI APFloat(const fltSemantics &Semantics, StringRef S);
   APFloat(const fltSemantics &Semantics, integerPart I) : U(Semantics, I) {}
   template <typename T,
             typename = std::enable_if_t<std::is_floating_point<T>::value>>
@@ -957,6 +1061,16 @@ public:
   static APFloat getZero(const fltSemantics &Sem, bool Negative = false) {
     APFloat Val(Sem, uninitialized);
     Val.makeZero(Negative);
+    return Val;
+  }
+
+  /// Factory for Positive and Negative One.
+  ///
+  /// \param Negative True iff the number should be negative.
+  static APFloat getOne(const fltSemantics &Sem, bool Negative = false) {
+    APFloat Val(Sem, 1U);
+    if (Negative)
+      Val.changeSign();
     return Val;
   }
 
@@ -1033,11 +1147,18 @@ public:
   /// Returns a float which is bitcasted from an all one value int.
   ///
   /// \param Semantics - type float semantics
-  static APFloat getAllOnesValue(const fltSemantics &Semantics);
+  LLVM_ABI static APFloat getAllOnesValue(const fltSemantics &Semantics);
+
+  /// Returns true if the given semantics has actual significand.
+  ///
+  /// \param Sem - type float semantics
+  static bool hasSignificand(const fltSemantics &Sem) {
+    return &Sem != &Float8E8M0FNU();
+  }
 
   /// Used to insert APFloat objects, or objects that contain APFloat objects,
   /// into FoldingSets.
-  void Profile(FoldingSetNodeID &NID) const;
+  LLVM_ABI void Profile(FoldingSetNodeID &NID) const;
 
   opStatus add(const APFloat &RHS, roundingMode RM) {
     assert(&getSemantics() == &RHS.getSemantics() &&
@@ -1174,39 +1295,43 @@ public:
 
   /// Assuming this is an IEEE-754 NaN value, quiet its signaling bit.
   /// This preserves the sign and payload bits.
-  APFloat makeQuiet() const {
+  [[nodiscard]] APFloat makeQuiet() const {
     APFloat Result(*this);
     Result.getIEEE().makeQuiet();
     return Result;
   }
 
-  opStatus convert(const fltSemantics &ToSemantics, roundingMode RM,
-                   bool *losesInfo);
+  LLVM_ABI opStatus convert(const fltSemantics &ToSemantics, roundingMode RM,
+                            bool *losesInfo);
+  // Convert a floating point number to an integer according to the
+  // rounding mode.  We provide deterministic values in case of an invalid
+  // operation exception, namely zero for NaNs and the minimal or maximal value
+  // respectively for underflow or overflow.
+  // The *IsExact output tells whether the result is exact, in the sense that
+  // converting it back to the original floating point type produces the
+  // original value.  This is almost equivalent to result==opOK, except for
+  // negative zeroes.
   opStatus convertToInteger(MutableArrayRef<integerPart> Input,
                             unsigned int Width, bool IsSigned, roundingMode RM,
                             bool *IsExact) const {
     APFLOAT_DISPATCH_ON_SEMANTICS(
         convertToInteger(Input, Width, IsSigned, RM, IsExact));
   }
-  opStatus convertToInteger(APSInt &Result, roundingMode RM,
-                            bool *IsExact) const;
+  // Same as convertToInteger(integerPart*, ...), except the result is returned
+  // in an APSInt, whose initial bit-width and signed-ness are used to determine
+  // the precision of the conversion.
+  LLVM_ABI opStatus convertToInteger(APSInt &Result, roundingMode RM,
+                                     bool *IsExact) const;
+
+  // Convert a two's complement integer Input to a floating point number,
+  // rounding according to RM.  IsSigned is true if the integer is signed,
+  // in which case it must be sign-extended.
   opStatus convertFromAPInt(const APInt &Input, bool IsSigned,
                             roundingMode RM) {
     APFLOAT_DISPATCH_ON_SEMANTICS(convertFromAPInt(Input, IsSigned, RM));
   }
-  opStatus convertFromSignExtendedInteger(const integerPart *Input,
-                                          unsigned int InputSize, bool IsSigned,
-                                          roundingMode RM) {
-    APFLOAT_DISPATCH_ON_SEMANTICS(
-        convertFromSignExtendedInteger(Input, InputSize, IsSigned, RM));
-  }
-  opStatus convertFromZeroExtendedInteger(const integerPart *Input,
-                                          unsigned int InputSize, bool IsSigned,
-                                          roundingMode RM) {
-    APFLOAT_DISPATCH_ON_SEMANTICS(
-        convertFromZeroExtendedInteger(Input, InputSize, IsSigned, RM));
-  }
-  Expected<opStatus> convertFromString(StringRef, roundingMode);
+
+  LLVM_ABI Expected<opStatus> convertFromString(StringRef, roundingMode);
   APInt bitcastToAPInt() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(bitcastToAPInt());
   }
@@ -1216,14 +1341,23 @@ public:
   /// \pre The APFloat must be built using semantics, that can be represented by
   /// the host double type without loss of precision. It can be IEEEdouble and
   /// shorter semantics, like IEEEsingle and others.
-  double convertToDouble() const;
+  LLVM_ABI double convertToDouble() const;
+
+  /// Converts this APFloat to host float value.
+  ///
+  /// \pre The APFloat must be built using semantics, that can be represented by
+  /// the host float type without loss of precision. It can be IEEEquad and
+  /// shorter semantics, like IEEEdouble and others.
+#ifdef HAS_IEE754_FLOAT128
+  LLVM_ABI float128 convertToQuad() const;
+#endif
 
   /// Converts this APFloat to host float value.
   ///
   /// \pre The APFloat must be built using semantics, that can be represented by
   /// the host float type without loss of precision. It can be IEEEsingle and
   /// shorter semantics, like IEEEhalf.
-  float convertToFloat() const;
+  LLVM_ABI float convertToFloat() const;
 
   bool operator==(const APFloat &RHS) const { return compare(RHS) == cmpEqual; }
 
@@ -1247,6 +1381,8 @@ public:
     return Res == cmpGreaterThan || Res == cmpEqual;
   }
 
+  // IEEE comparison with another floating point number (NaNs compare unordered,
+  // 0==-0).
   cmpResult compare(const APFloat &RHS) const {
     assert(&getSemantics() == &RHS.getSemantics() &&
            "Should only compare APFloats with the same semantics");
@@ -1310,14 +1446,13 @@ public:
   bool isSmallest() const { APFLOAT_DISPATCH_ON_SEMANTICS(isSmallest()); }
   bool isLargest() const { APFLOAT_DISPATCH_ON_SEMANTICS(isLargest()); }
   bool isInteger() const { APFLOAT_DISPATCH_ON_SEMANTICS(isInteger()); }
-  bool isIEEE() const { return usesLayout<IEEEFloat>(getSemantics()); }
 
   bool isSmallestNormalized() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(isSmallestNormalized());
   }
 
   /// Return the FPClassTest which will return true for the value.
-  FPClassTest classify() const;
+  LLVM_ABI FPClassTest classify() const;
 
   APFloat &operator=(const APFloat &RHS) = default;
   APFloat &operator=(APFloat &&RHS) = default;
@@ -1328,36 +1463,65 @@ public:
         toString(Str, FormatPrecision, FormatMaxPadding, TruncateZero));
   }
 
-  void print(raw_ostream &) const;
-  void dump() const;
+  LLVM_ABI void print(raw_ostream &) const;
 
-  bool getExactInverse(APFloat *inv) const {
-    APFLOAT_DISPATCH_ON_SEMANTICS(getExactInverse(inv));
-  }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
+  /// If this value is normal and has an exact, normal, multiplicative inverse,
+  /// store it in inv and return true.
+  LLVM_ABI bool getExactInverse(APFloat *Inv) const;
+
+  // If this is an exact power of two, return the exponent while ignoring the
+  // sign bit. If it's not an exact power of 2, return INT_MIN
   LLVM_READONLY
   int getExactLog2Abs() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(getExactLog2Abs());
   }
 
+  // If this is an exact power of two, return the exponent. If it's not an exact
+  // power of 2, return INT_MIN
   LLVM_READONLY
   int getExactLog2() const {
-    APFLOAT_DISPATCH_ON_SEMANTICS(getExactLog2());
+    return isNegative() ? INT_MIN : getExactLog2Abs();
   }
 
-  friend hash_code hash_value(const APFloat &Arg);
-  friend int ilogb(const APFloat &Arg) { return ilogb(Arg.getIEEE()); }
+  LLVM_ABI friend hash_code hash_value(const APFloat &Arg);
+  friend int ilogb(const APFloat &Arg);
   friend APFloat scalbn(APFloat X, int Exp, roundingMode RM);
   friend APFloat frexp(const APFloat &X, int &Exp, roundingMode RM);
   friend IEEEFloat;
   friend DoubleAPFloat;
 };
 
+static_assert(sizeof(APFloat) == sizeof(detail::IEEEFloat),
+              "Empty base class optimization is not performed.");
+
 /// See friend declarations above.
 ///
 /// These additional declarations are required in order to compile LLVM with IBM
 /// xlC compiler.
-hash_code hash_value(const APFloat &Arg);
+LLVM_ABI hash_code hash_value(const APFloat &Arg);
+
+/// Returns the exponent of the internal representation of the APFloat.
+///
+/// Because the radix of APFloat is 2, this is equivalent to floor(log2(x)).
+/// For special APFloat values, this returns special error codes:
+///
+///   NaN -> \c IEK_NaN
+///   0   -> \c IEK_Zero
+///   Inf -> \c IEK_Inf
+///
+inline int ilogb(const APFloat &Arg) {
+  if (APFloat::usesLayout<detail::IEEEFloat>(Arg.getSemantics()))
+    return ilogb(Arg.U.IEEE);
+  if (APFloat::usesLayout<detail::DoubleAPFloat>(Arg.getSemantics()))
+    return ilogb(Arg.U.Double);
+  llvm_unreachable("Unexpected semantics");
+}
+
+/// Returns: X * 2^Exp for integral exponents.
 inline APFloat scalbn(APFloat X, int Exp, APFloat::roundingMode RM) {
   if (APFloat::usesLayout<detail::IEEEFloat>(X.getSemantics()))
     return APFloat(scalbn(X.U.IEEE, Exp, RM), X.getSemantics());
@@ -1389,52 +1553,101 @@ inline APFloat neg(APFloat X) {
   return X;
 }
 
-/// Implements IEEE minNum semantics. Returns the smaller of the 2 arguments if
-/// both are not NaN. If either argument is a NaN, returns the other argument.
+/// Implements IEEE-754 2008 minNum semantics. Returns the smaller of the
+/// 2 arguments if both are not NaN. If either argument is a qNaN, returns the
+/// other argument. If either argument is sNaN, return a qNaN.
+/// -0 is treated as ordered less than +0.
 LLVM_READONLY
 inline APFloat minnum(const APFloat &A, const APFloat &B) {
+  if (A.isSignaling())
+    return A.makeQuiet();
+  if (B.isSignaling())
+    return B.makeQuiet();
   if (A.isNaN())
     return B;
   if (B.isNaN())
     return A;
-  return B < A ? B : A;
-}
-
-/// Implements IEEE maxNum semantics. Returns the larger of the 2 arguments if
-/// both are not NaN. If either argument is a NaN, returns the other argument.
-LLVM_READONLY
-inline APFloat maxnum(const APFloat &A, const APFloat &B) {
-  if (A.isNaN())
-    return B;
-  if (B.isNaN())
-    return A;
-  return A < B ? B : A;
-}
-
-/// Implements IEEE 754-2018 minimum semantics. Returns the smaller of 2
-/// arguments, propagating NaNs and treating -0 as less than +0.
-LLVM_READONLY
-inline APFloat minimum(const APFloat &A, const APFloat &B) {
-  if (A.isNaN())
-    return A;
-  if (B.isNaN())
-    return B;
   if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
     return A.isNegative() ? A : B;
   return B < A ? B : A;
 }
 
-/// Implements IEEE 754-2018 maximum semantics. Returns the larger of 2
-/// arguments, propagating NaNs and treating -0 as less than +0.
+/// Implements IEEE-754 2008 maxNum semantics. Returns the larger of the
+/// 2 arguments if both are not NaN. If either argument is a qNaN, returns the
+/// other argument. If either argument is sNaN, return a qNaN.
+/// +0 is treated as ordered greater than -0.
 LLVM_READONLY
-inline APFloat maximum(const APFloat &A, const APFloat &B) {
+inline APFloat maxnum(const APFloat &A, const APFloat &B) {
+  if (A.isSignaling())
+    return A.makeQuiet();
+  if (B.isSignaling())
+    return B.makeQuiet();
   if (A.isNaN())
-    return A;
-  if (B.isNaN())
     return B;
+  if (B.isNaN())
+    return A;
   if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
     return A.isNegative() ? B : A;
   return A < B ? B : A;
+}
+
+/// Implements IEEE 754-2019 minimum semantics. Returns the smaller of 2
+/// arguments, returning a quiet NaN if an argument is a NaN and treating -0
+/// as less than +0.
+LLVM_READONLY
+inline APFloat minimum(const APFloat &A, const APFloat &B) {
+  if (A.isNaN())
+    return A.makeQuiet();
+  if (B.isNaN())
+    return B.makeQuiet();
+  if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
+    return A.isNegative() ? A : B;
+  return B < A ? B : A;
+}
+
+/// Implements IEEE 754-2019 minimumNumber semantics. Returns the smaller
+/// of 2 arguments, not propagating NaNs and treating -0 as less than +0.
+LLVM_READONLY
+inline APFloat minimumnum(const APFloat &A, const APFloat &B) {
+  if (A.isNaN())
+    return B.isNaN() ? B.makeQuiet() : B;
+  if (B.isNaN())
+    return A;
+  if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
+    return A.isNegative() ? A : B;
+  return B < A ? B : A;
+}
+
+/// Implements IEEE 754-2019 maximum semantics. Returns the larger of 2
+/// arguments, returning a quiet NaN if an argument is a NaN and treating -0
+/// as less than +0.
+LLVM_READONLY
+inline APFloat maximum(const APFloat &A, const APFloat &B) {
+  if (A.isNaN())
+    return A.makeQuiet();
+  if (B.isNaN())
+    return B.makeQuiet();
+  if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
+    return A.isNegative() ? B : A;
+  return A < B ? B : A;
+}
+
+/// Implements IEEE 754-2019 maximumNumber semantics. Returns the larger
+/// of 2 arguments, not propagating NaNs and treating -0 as less than +0.
+LLVM_READONLY
+inline APFloat maximumnum(const APFloat &A, const APFloat &B) {
+  if (A.isNaN())
+    return B.isNaN() ? B.makeQuiet() : B;
+  if (B.isNaN())
+    return A;
+  if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
+    return A.isNegative() ? B : A;
+  return A < B ? B : A;
+}
+
+inline raw_ostream &operator<<(raw_ostream &OS, const APFloat &V) {
+  V.print(OS);
+  return OS;
 }
 
 // We want the following functions to be available in the header for inlining.
@@ -1455,6 +1668,8 @@ APFloat &DoubleAPFloat::getFirst() { return Floats[0]; }
 const APFloat &DoubleAPFloat::getFirst() const { return Floats[0]; }
 APFloat &DoubleAPFloat::getSecond() { return Floats[1]; }
 const APFloat &DoubleAPFloat::getSecond() const { return Floats[1]; }
+
+inline DoubleAPFloat::~DoubleAPFloat() { delete[] Floats; }
 
 } // namespace detail
 

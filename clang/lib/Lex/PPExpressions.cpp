@@ -26,10 +26,10 @@
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -133,7 +133,9 @@ static bool EvaluateDefined(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
   Result.Val.setIsUnsigned(false); // Result is signed intmax_t.
   DT.IncludedUndefinedIds = !Macro;
 
-  PP.emitMacroExpansionWarnings(PeekTok);
+  PP.emitMacroExpansionWarnings(
+      PeekTok,
+      (II->getName() == "INFINITY" || II->getName() == "NAN") ? true : false);
 
   // If there is a macro, mark it used.
   if (Result.Val != 0 && ValueLive)
@@ -256,18 +258,20 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
         // preprocessor keywords and it wasn't macro expanded, it turns
         // into a simple 0
         if (ValueLive) {
-          PP.Diag(PeekTok, diag::warn_pp_undef_identifier) << II;
+          unsigned DiagID = II->getName() == "true"
+                                ? diag::warn_pp_undef_true_identifier
+                                : diag::warn_pp_undef_identifier;
+          PP.Diag(PeekTok, DiagID) << II;
 
           const DiagnosticsEngine &DiagEngine = PP.getDiagnostics();
           // If 'Wundef' is enabled, do not emit 'undef-prefix' diagnostics.
-          if (DiagEngine.isIgnored(diag::warn_pp_undef_identifier,
-                                   PeekTok.getLocation())) {
+          if (DiagEngine.isIgnored(DiagID, PeekTok.getLocation())) {
             const std::vector<std::string> UndefPrefixes =
                 DiagEngine.getDiagnosticOptions().UndefPrefixes;
             const StringRef IdentifierName = II->getName();
             if (llvm::any_of(UndefPrefixes,
                              [&IdentifierName](const std::string &Prefix) {
-                               return IdentifierName.startswith(Prefix);
+                               return IdentifierName.starts_with(Prefix);
                              }))
               PP.Diag(PeekTok, diag::warn_pp_undef_prefix)
                   << AddFlagValue{llvm::join(UndefPrefixes, ",")} << II;
@@ -331,20 +335,18 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
                                  : diag::ext_cxx23_size_t_suffix
                            : diag::err_cxx23_size_t_suffix);
 
-    // 'wb/uwb' literals are a C23 feature. We explicitly do not support the
-    // suffix in C++ as an extension because a library-based UDL that resolves
-    // to a library type may be more appropriate there.
+    // 'wb/uwb' literals are a C23 feature.
+    // '__wb/__uwb' are a C++ extension.
     if (Literal.isBitInt)
-      PP.Diag(PeekTok, PP.getLangOpts().C23
+      PP.Diag(PeekTok, PP.getLangOpts().CPlusPlus ? diag::ext_cxx_bitint_suffix
+                       : PP.getLangOpts().C23
                            ? diag::warn_c23_compat_bitint_suffix
                            : diag::ext_c23_bitint_suffix);
 
     // Parse the integer literal into Result.
     if (Literal.GetIntegerValue(Result.Val)) {
       // Overflow parsing integer literal.
-      if (ValueLive)
-        PP.Diag(PeekTok, diag::err_integer_literal_too_large)
-            << /* Unsigned */ 1;
+      PP.Diag(PeekTok, diag::err_integer_literal_too_large) << /* Unsigned */ 1;
       Result.Val.setIsUnsigned(true);
     } else {
       // Set the signedness of the result to match whether there was a U suffix
@@ -591,6 +593,17 @@ static bool EvaluateDirectiveSubExpr(PPValue &LHS, unsigned MinPrec,
                                      Token &PeekTok, bool ValueLive,
                                      bool &IncludedUndefinedIds,
                                      Preprocessor &PP) {
+  if ((PP.getPreprocessorOpts().SingleFileParseMode ||
+       PP.getPreprocessorOpts().SingleModuleParseMode) &&
+      IncludedUndefinedIds) {
+    // The single-{file,module}-parse mode behavior kicks in as soon as single
+    // identifier is undefined. If we've already seen one, there's no point in
+    // continuing with the rest of the expression. Besides saving work, this
+    // also prevents calling undefined function-like macros.
+    PP.DiscardUntilEndOfDirective(PeekTok);
+    return true;
+  }
+
   unsigned PeekPrec = getPrecedence(PeekTok.getKind());
   // If this token isn't valid, report the error.
   if (PeekPrec == ~0U) {
@@ -868,7 +881,9 @@ static bool EvaluateDirectiveSubExpr(PPValue &LHS, unsigned MinPrec,
 /// may occur after a #if or #elif directive.  If the expression is equivalent
 /// to "!defined(X)" return X in IfNDefMacro.
 Preprocessor::DirectiveEvalResult
-Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro) {
+Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
+                                          Token &Tok, bool &EvaluatedDefined,
+                                          bool CheckForEoD) {
   SaveAndRestore PPDir(ParsingIfOrElifDirective, true);
   // Save the current state of 'DisableMacroExpansion' and reset it to false. If
   // 'DisableMacroExpansion' is true, then we must be in a macro argument list
@@ -880,7 +895,6 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro) {
   DisableMacroExpansion = false;
 
   // Peek ahead one token.
-  Token Tok;
   LexNonComment(Tok);
 
   // C99 6.10.1p3 - All expressions are evaluated as intmax_t or uintmax_t.
@@ -891,9 +905,8 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro) {
   SourceLocation ExprStartLoc = SourceMgr.getExpansionLoc(Tok.getLocation());
   if (EvaluateValue(ResVal, Tok, DT, true, *this)) {
     // Parse error, skip the rest of the macro line.
-    SourceRange ConditionRange = ExprStartLoc;
     if (Tok.isNot(tok::eod))
-      ConditionRange = DiscardUntilEndOfDirective();
+      DiscardUntilEndOfDirective(Tok);
 
     // Restore 'DisableMacroExpansion'.
     DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
@@ -901,10 +914,13 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro) {
     // We cannot trust the source range from the value because there was a
     // parse error. Track the range manually -- the end of the directive is the
     // end of the condition range.
-    return {false,
+    return {std::nullopt,
+            false,
             DT.IncludedUndefinedIds,
-            {ExprStartLoc, ConditionRange.getEnd()}};
+            {ExprStartLoc, Tok.getLocation()}};
   }
+
+  EvaluatedDefined = DT.State != DefinedTracker::Unknown;
 
   // If we are at the end of the expression after just parsing a value, there
   // must be no (unparenthesized) binary operators involved, so we can exit
@@ -917,7 +933,10 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro) {
 
     // Restore 'DisableMacroExpansion'.
     DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
-    return {ResVal.Val != 0, DT.IncludedUndefinedIds, ResVal.getRange()};
+    bool IsNonZero = ResVal.Val != 0;
+    SourceRange ValRange = ResVal.getRange();
+    return {std::move(ResVal.Val), IsNonZero, DT.IncludedUndefinedIds,
+            ValRange};
   }
 
   // Otherwise, we must have a binary operator (e.g. "#if 1 < 2"), so parse the
@@ -926,21 +945,84 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro) {
                                Tok, true, DT.IncludedUndefinedIds, *this)) {
     // Parse error, skip the rest of the macro line.
     if (Tok.isNot(tok::eod))
-      DiscardUntilEndOfDirective();
+      DiscardUntilEndOfDirective(Tok);
 
     // Restore 'DisableMacroExpansion'.
     DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
-    return {false, DT.IncludedUndefinedIds, ResVal.getRange()};
+    return {std::nullopt,
+            false,
+            DT.IncludedUndefinedIds,
+            {ExprStartLoc, Tok.getLocation()}};
   }
 
-  // If we aren't at the tok::eod token, something bad happened, like an extra
-  // ')' token.
-  if (Tok.isNot(tok::eod)) {
-    Diag(Tok, diag::err_pp_expected_eol);
-    DiscardUntilEndOfDirective();
+  if (CheckForEoD) {
+    // If we aren't at the tok::eod token, something bad happened, like an extra
+    // ')' token.
+    if (Tok.isNot(tok::eod)) {
+      Diag(Tok, diag::err_pp_expected_eol);
+      DiscardUntilEndOfDirective(Tok);
+    }
   }
+
+  EvaluatedDefined = EvaluatedDefined || DT.State != DefinedTracker::Unknown;
 
   // Restore 'DisableMacroExpansion'.
   DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
-  return {ResVal.Val != 0, DT.IncludedUndefinedIds, ResVal.getRange()};
+  bool IsNonZero = ResVal.Val != 0;
+  SourceRange ValRange = ResVal.getRange();
+  return {std::move(ResVal.Val), IsNonZero, DT.IncludedUndefinedIds, ValRange};
+}
+
+Preprocessor::DirectiveEvalResult
+Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
+                                          bool CheckForEoD) {
+  Token Tok;
+  bool EvaluatedDefined;
+  return EvaluateDirectiveExpression(IfNDefMacro, Tok, EvaluatedDefined,
+                                     CheckForEoD);
+}
+
+static std::optional<CXXStandardLibraryVersionInfo>
+getCXXStandardLibraryVersion(Preprocessor &PP, StringRef MacroName,
+                             CXXStandardLibraryVersionInfo::Library Lib) {
+  MacroInfo *Macro = PP.getMacroInfo(PP.getIdentifierInfo(MacroName));
+  if (!Macro || Macro->getNumTokens() != 1 || !Macro->isObjectLike())
+    return std::nullopt;
+
+  const Token &RevisionDateTok = Macro->getReplacementToken(0);
+
+  bool Invalid = false;
+  llvm::SmallVector<char, 10> Buffer;
+  llvm::StringRef RevisionDate =
+      PP.getSpelling(RevisionDateTok, Buffer, &Invalid);
+  if (!Invalid) {
+    std::uint64_t Value;
+    // We don't use NumericParser to avoid diagnostics
+    if (!RevisionDate.consumeInteger(10, Value))
+      return CXXStandardLibraryVersionInfo{Lib, Value};
+  }
+  return CXXStandardLibraryVersionInfo{CXXStandardLibraryVersionInfo::Unknown,
+                                       0};
+}
+
+std::optional<uint64_t> Preprocessor::getStdLibCxxVersion() {
+  if (!CXXStandardLibraryVersion)
+    CXXStandardLibraryVersion = getCXXStandardLibraryVersion(
+        *this, "__GLIBCXX__", CXXStandardLibraryVersionInfo::LibStdCXX);
+  if (!CXXStandardLibraryVersion)
+    return std::nullopt;
+
+  if (CXXStandardLibraryVersion->Lib ==
+      CXXStandardLibraryVersionInfo::LibStdCXX)
+    return CXXStandardLibraryVersion->Version;
+  return std::nullopt;
+}
+
+bool Preprocessor::NeedsStdLibCxxWorkaroundBefore(uint64_t FixedVersion) {
+  assert(FixedVersion >= 2000'00'00 && FixedVersion <= 2100'00'00 &&
+         "invalid value for __GLIBCXX__");
+  std::optional<std::uint64_t> Ver = getStdLibCxxVersion();
+  if (!Ver)
+    return false;
+  return *Ver < FixedVersion;
 }

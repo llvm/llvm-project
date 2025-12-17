@@ -21,9 +21,10 @@ from mlir.dialects import sparse_tensor as st
 
 _SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(_SCRIPT_PATH)
-from tools import sparse_compiler
+from tools import sparsifier
 
 # ===----------------------------------------------------------------------=== #
+
 
 class TypeConverter:
     """Converter between NumPy types and MLIR types."""
@@ -193,8 +194,11 @@ def main():
     print("\nTEST: test_stress")
     with ir.Context() as ctx, ir.Location.unknown():
         sparsification_options = f"parallelization-strategy=none "
-        compiler = sparse_compiler.SparseCompiler(
-            options=sparsification_options, opt_level=0, shared_libs=[support_lib]
+        compiler = sparsifier.Sparsifier(
+            extras="",
+            options=sparsification_options,
+            opt_level=0,
+            shared_libs=[support_lib],
         )
         f64 = ir.F64Type.get()
         # Be careful about increasing this because
@@ -202,12 +206,10 @@ def main():
         shape = range(2, 3)
         rank = len(shape)
         # All combinations.
+        dense_lvl = st.EncodingAttr.build_level_type(st.LevelFormat.dense)
+        sparse_lvl = st.EncodingAttr.build_level_type(st.LevelFormat.compressed)
         levels = list(
-            itertools.product(
-                *itertools.repeat(
-                    [st.DimLevelType.dense, st.DimLevelType.compressed], rank
-                )
-            )
+            itertools.product(*itertools.repeat([dense_lvl, sparse_lvl], rank))
         )
         # All permutations.
         orderings = list(

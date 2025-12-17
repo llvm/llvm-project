@@ -1,4 +1,4 @@
-//===--- NonZeroEnumToBoolConversionCheck.cpp - clang-tidy ----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,6 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include <algorithm>
 
 using namespace clang::ast_matchers;
 
@@ -22,11 +21,10 @@ namespace {
 AST_MATCHER(EnumDecl, isCompleteAndHasNoZeroValue) {
   const EnumDecl *Definition = Node.getDefinition();
   return Definition && Node.isComplete() &&
-         std::none_of(Definition->enumerator_begin(),
-                      Definition->enumerator_end(),
-                      [](const EnumConstantDecl *Value) {
-                        return Value->getInitVal().isZero();
-                      });
+         llvm::none_of(Definition->enumerators(),
+                       [](const EnumConstantDecl *Value) {
+                         return Value->getInitVal().isZero();
+                       });
 }
 
 } // namespace
@@ -64,7 +62,7 @@ void NonZeroEnumToBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                                          EnumIgnoreList)))
                                 .bind("enum"))))),
                         unless(declRefExpr(to(enumConstantDecl()))),
-                        unless(ignoringImplicit(ExcludedOperators)))),
+                        unless(ignoringParenImpCasts(ExcludedOperators)))),
                unless(hasAncestor(staticAssertDecl())))
           .bind("cast"),
       this);

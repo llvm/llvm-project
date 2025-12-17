@@ -45,8 +45,8 @@
   entry:
     %local1 = alloca i32, align 4
     call void @llvm.dbg.value(metadata i32 %X, metadata !12, metadata !DIExpression()), !dbg !15
-    %0 = bitcast i32* %local1 to i8*, !dbg !15
-    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0), !dbg !15
+    %0 = bitcast ptr %local1 to ptr, !dbg !15
+    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %0), !dbg !15
     call void @llvm.dbg.value(metadata i32 5, metadata !14, metadata !DIExpression()), !dbg !15
     %call = tail call i32 (...) @check(), !dbg !15
     %tobool = icmp eq i32 %call, 0, !dbg !15
@@ -54,45 +54,45 @@
   
   if.then:                                          ; preds = %entry
     call void @llvm.dbg.value(metadata i32 4, metadata !13, metadata !DIExpression()), !dbg !15
-    store i32 4, i32* %local1, align 4, !dbg !15, !tbaa !16
-    call void @llvm.dbg.value(metadata i32* %local1, metadata !13, metadata !DIExpression(DW_OP_deref)), !dbg !15
-    %call1 = call i32 @init(i32* nonnull %local1), !dbg !15
+    store i32 4, ptr %local1, align 4, !dbg !15, !tbaa !16
+    call void @llvm.dbg.value(metadata ptr %local1, metadata !13, metadata !DIExpression(DW_OP_deref)), !dbg !15
+    %call1 = call i32 @init(ptr nonnull %local1), !dbg !15
     call void @llvm.dbg.value(metadata i32 undef, metadata !14, metadata !DIExpression()), !dbg !15
     br label %if.end, !dbg !15
   
   if.else:                                          ; preds = %entry
     call void @llvm.dbg.value(metadata i32 5, metadata !13, metadata !DIExpression()), !dbg !15
-    store i32 5, i32* %local1, align 4, !dbg !15, !tbaa !16
+    store i32 5, ptr %local1, align 4, !dbg !15, !tbaa !16
     br label %if.end
   
   if.end:                                           ; preds = %if.else, %if.then
-    %1 = bitcast i32* %local1 to i8*, !dbg !15
+    %1 = bitcast ptr %local1 to ptr, !dbg !15
     call void @llvm.dbg.value(metadata i32 undef, metadata !14, metadata !DIExpression()), !dbg !15
     %call2 = call i32 (...) @init2(), !dbg !15
     call void @llvm.dbg.value(metadata i32 undef, metadata !14, metadata !DIExpression()), !dbg !15
-    %2 = load i32, i32* %local1, align 4, !dbg !15, !tbaa !16
+    %2 = load i32, ptr %local1, align 4, !dbg !15, !tbaa !16
     call void @llvm.dbg.value(metadata i32 %2, metadata !13, metadata !DIExpression()), !dbg !15
-    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %1), !dbg !15
+    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %1), !dbg !15
     ret i32 %2, !dbg !15
   }
   
   ; Function Attrs: argmemonly nounwind
-  declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+  declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
   
   declare dso_local i32 @check(...) local_unnamed_addr
   
-  declare dso_local i32 @init(i32*) local_unnamed_addr
+  declare dso_local i32 @init(ptr) local_unnamed_addr
   
   declare dso_local i32 @init2(...) local_unnamed_addr
   
   ; Function Attrs: argmemonly nounwind
-  declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+  declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
   
   ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.value(metadata, metadata, metadata)
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**)
+  declare void @llvm.stackprotector(ptr, ptr)
 
   attributes #0 = { nounwind uwtable "frame-pointer"="non-leaf" }
   

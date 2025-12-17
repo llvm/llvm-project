@@ -31,12 +31,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/RegionKindInterface.h"
 #include "mlir/IR/Threading.h"
-#include "llvm/ADT/DenseMapInfoVariant.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Regex.h"
-#include <atomic>
+#include "llvm/ADT/PointerIntPair.h"
 #include <optional>
 
 using namespace mlir;
@@ -55,6 +50,7 @@ public:
 
 private:
   using WorkItem = llvm::PointerUnion<Operation *, Block *>;
+  using WorkItemEntry = llvm::PointerIntPair<WorkItem, 1, bool>;
 
   /// This verifier uses a DFS of the tree of operations/blocks. The method
   /// verifyOnEntrance is invoked when we visit a node for the first time, i.e.
@@ -183,7 +179,6 @@ LogicalResult OperationVerifier::verifyOnEntrance(Operation &op) {
   if (!numRegions)
     return success();
   auto kindInterface = dyn_cast<RegionKindInterface>(&op);
-  SmallVector<Operation *> opsWithIsolatedRegions;
   // Verify that all child regions are ok.
   MutableArrayRef<Region> regions = op.getRegions();
   for (unsigned i = 0; i < numRegions; ++i) {
@@ -224,10 +219,15 @@ LogicalResult OperationVerifier::verifyOnExit(Operation &op) {
               o.hasTrait<OpTrait::IsIsolatedFromAbove>())
             opsWithIsolatedRegions.push_back(&o);
   }
-  if (failed(failableParallelForEach(
-          op.getContext(), opsWithIsolatedRegions,
-          [&](Operation *o) { return verifyOpAndDominance(*o); })))
+
+  std::atomic<bool> opFailedVerify = false;
+  parallelForEach(op.getContext(), opsWithIsolatedRegions, [&](Operation *o) {
+    if (failed(verifyOpAndDominance(*o)))
+      opFailedVerify.store(true, std::memory_order_relaxed);
+  });
+  if (opFailedVerify.load(std::memory_order_relaxed))
     return failure();
+
   OperationName opName = op.getName();
   std::optional<RegisteredOperationName> registeredInfo =
       opName.getRegisteredInfo();
@@ -267,37 +267,39 @@ LogicalResult OperationVerifier::verifyOnExit(Operation &op) {
 /// Such ops are collected separately and verified inside
 /// verifyBlockPostChildren.
 LogicalResult OperationVerifier::verifyOperation(Operation &op) {
-  SmallVector<WorkItem> worklist{{&op}};
-  DenseSet<WorkItem> seen;
+  SmallVector<WorkItemEntry> worklist{{&op, false}};
   while (!worklist.empty()) {
-    WorkItem top = worklist.back();
+    WorkItemEntry &top = worklist.back();
 
     auto visit = [](auto &&visitor, WorkItem w) {
-      if (w.is<Operation *>())
-        return visitor(w.get<Operation *>());
-      return visitor(w.get<Block *>());
+      if (auto *o = dyn_cast<Operation *>(w))
+        return visitor(o);
+      return visitor(cast<Block *>(w));
     };
 
-    const bool isExit = !seen.insert(top).second;
+    const bool isExit = top.getInt();
+    top.setInt(true);
+    auto item = top.getPointer();
+
     // 2nd visit of this work item ("exit").
     if (isExit) {
-      worklist.pop_back();
-      if (failed(visit(
-              [this](auto *workItem) { return verifyOnExit(*workItem); }, top)))
+      if (failed(
+              visit([this](auto *workItem) { return verifyOnExit(*workItem); },
+                    item)))
         return failure();
+      worklist.pop_back();
       continue;
     }
 
     // 1st visit of this work item ("entrance").
     if (failed(visit(
             [this](auto *workItem) { return verifyOnEntrance(*workItem); },
-            top)))
+            item)))
       return failure();
 
-    if (top.is<Block *>()) {
-      Block &currentBlock = *top.get<Block *>();
+    if (Block *currentBlock = dyn_cast<Block *>(item)) {
       // Skip "isolated from above operations".
-      for (Operation &o : llvm::reverse(currentBlock)) {
+      for (Operation &o : llvm::reverse(*currentBlock)) {
         if (o.getNumRegions() == 0 ||
             !o.hasTrait<OpTrait::IsIsolatedFromAbove>())
           worklist.emplace_back(&o);
@@ -305,7 +307,7 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
       continue;
     }
 
-    Operation &currentOp = *top.get<Operation *>();
+    Operation &currentOp = *cast<Operation *>(item);
     if (verifyRecursively)
       for (Region &region : llvm::reverse(currentOp.getRegions()))
         for (Block &block : llvm::reverse(region))
@@ -378,39 +380,39 @@ static void diagnoseInvalidOperandDominance(Operation &op, unsigned operandNo) {
 LogicalResult
 OperationVerifier::verifyDominanceOfContainedRegions(Operation &op,
                                                      DominanceInfo &domInfo) {
-  for (Region &region : op.getRegions()) {
-    // Verify the dominance of each of the held operations.
-    for (Block &block : region) {
-      // Dominance is only meaningful inside reachable blocks.
-      bool isReachable = domInfo.isReachableFromEntry(&block);
+  llvm::SmallVector<Operation *, 8> worklist{&op};
+  while (!worklist.empty()) {
+    auto *op = worklist.pop_back_val();
+    for (auto &region : op->getRegions())
+      for (auto &block : region.getBlocks()) {
+        // Dominance is only meaningful inside reachable blocks.
+        bool isReachable = domInfo.isReachableFromEntry(&block);
+        for (auto &op : block) {
+          if (isReachable) {
+            // Check that operands properly dominate this use.
+            for (const auto &operand : llvm::enumerate(op.getOperands())) {
+              if (domInfo.properlyDominates(operand.value(), &op))
+                continue;
 
-      for (Operation &op : block) {
-        if (isReachable) {
-          // Check that operands properly dominate this use.
-          for (const auto &operand : llvm::enumerate(op.getOperands())) {
-            if (domInfo.properlyDominates(operand.value(), &op))
+              diagnoseInvalidOperandDominance(op, operand.index());
+              return failure();
+            }
+          }
+
+          // Recursively verify dominance within each operation in the block,
+          // even if the block itself is not reachable, or we are in a region
+          // which doesn't respect dominance.
+          if (verifyRecursively && op.getNumRegions() != 0) {
+            // If this operation is IsolatedFromAbove, then we'll handle it in
+            // the outer verification loop.
+            if (op.hasTrait<OpTrait::IsIsolatedFromAbove>())
               continue;
-
-            diagnoseInvalidOperandDominance(op, operand.index());
-            return failure();
+            worklist.push_back(&op);
           }
         }
-
-        // Recursively verify dominance within each operation in the block, even
-        // if the block itself is not reachable, or we are in a region which
-        // doesn't respect dominance.
-        if (verifyRecursively && op.getNumRegions() != 0) {
-          // If this operation is IsolatedFromAbove, then we'll handle it in the
-          // outer verification loop.
-          if (op.hasTrait<OpTrait::IsIsolatedFromAbove>())
-            continue;
-
-          if (failed(verifyDominanceOfContainedRegions(op, domInfo)))
-            return failure();
-        }
       }
-    }
   }
+
   return success();
 }
 

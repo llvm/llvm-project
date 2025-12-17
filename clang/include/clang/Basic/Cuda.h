@@ -9,6 +9,8 @@
 #ifndef LLVM_CLANG_BASIC_CUDA_H
 #define LLVM_CLANG_BASIC_CUDA_H
 
+#include "clang/Basic/OffloadArch.h"
+
 namespace llvm {
 class StringRef;
 class Twine;
@@ -39,108 +41,36 @@ enum class CudaVersion {
   CUDA_118,
   CUDA_120,
   CUDA_121,
-  FULLY_SUPPORTED = CUDA_118,
+  CUDA_122,
+  CUDA_123,
+  CUDA_124,
+  CUDA_125,
+  CUDA_126,
+  CUDA_128,
+  CUDA_129,
+  CUDA_130,
+  FULLY_SUPPORTED = CUDA_128,
   PARTIALLY_SUPPORTED =
-      CUDA_121, // Partially supported. Proceed with a warning.
+      CUDA_129, // Partially supported. Proceed with a warning.
   NEW = 10000,  // Too new. Issue a warning, but allow using it.
 };
 const char *CudaVersionToString(CudaVersion V);
 // Input is "Major.Minor"
 CudaVersion CudaStringToVersion(const llvm::Twine &S);
 
-enum class CudaArch {
-  UNUSED,
-  UNKNOWN,
-  SM_20,
-  SM_21,
-  SM_30,
-  SM_32,
-  SM_35,
-  SM_37,
-  SM_50,
-  SM_52,
-  SM_53,
-  SM_60,
-  SM_61,
-  SM_62,
-  SM_70,
-  SM_72,
-  SM_75,
-  SM_80,
-  SM_86,
-  SM_87,
-  SM_89,
-  SM_90,
-  GFX600,
-  GFX601,
-  GFX602,
-  GFX700,
-  GFX701,
-  GFX702,
-  GFX703,
-  GFX704,
-  GFX705,
-  GFX801,
-  GFX802,
-  GFX803,
-  GFX805,
-  GFX810,
-  GFX900,
-  GFX902,
-  GFX904,
-  GFX906,
-  GFX908,
-  GFX909,
-  GFX90a,
-  GFX90c,
-  GFX940,
-  GFX941,
-  GFX942,
-  GFX1010,
-  GFX1011,
-  GFX1012,
-  GFX1013,
-  GFX1030,
-  GFX1031,
-  GFX1032,
-  GFX1033,
-  GFX1034,
-  GFX1035,
-  GFX1036,
-  GFX1100,
-  GFX1101,
-  GFX1102,
-  GFX1103,
-  GFX1150,
-  GFX1151,
-  Generic, // A processor model named 'generic' if the target backend defines a
-           // public one.
-  LAST,
-
-  CudaDefault = CudaArch::SM_52,
-  HIPDefault = CudaArch::GFX803,
+enum class CUDAFunctionTarget {
+  Device,
+  Global,
+  Host,
+  HostDevice,
+  InvalidTarget
 };
 
-static inline bool IsNVIDIAGpuArch(CudaArch A) {
-  return A >= CudaArch::SM_20 && A < CudaArch::GFX600;
-}
+/// Get the earliest CudaVersion that supports the given OffloadArch.
+CudaVersion MinVersionForOffloadArch(OffloadArch A);
 
-static inline bool IsAMDGpuArch(CudaArch A) {
-  // Generic processor model is for testing only.
-  return A >= CudaArch::GFX600 && A < CudaArch::Generic;
-}
-
-const char *CudaArchToString(CudaArch A);
-const char *CudaArchToVirtualArchString(CudaArch A);
-
-// The input should have the form "sm_20".
-CudaArch StringToCudaArch(llvm::StringRef S);
-
-/// Get the earliest CudaVersion that supports the given CudaArch.
-CudaVersion MinVersionForCudaArch(CudaArch A);
-
-/// Get the latest CudaVersion that supports the given CudaArch.
-CudaVersion MaxVersionForCudaArch(CudaArch A);
+/// Get the latest CudaVersion that supports the given OffloadArch.
+CudaVersion MaxVersionForOffloadArch(OffloadArch A);
 
 //  Various SDK-dependent features that affect CUDA compilation
 enum class CudaFeature {

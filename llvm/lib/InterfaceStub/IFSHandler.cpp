@@ -167,7 +167,7 @@ template <> struct MappingTraits<IFSStubTriple> {
 bool usesTriple(StringRef Buf) {
   for (line_iterator I(MemoryBufferRef(Buf, "ELFStub")); !I.is_at_eof(); ++I) {
     StringRef Line = (*I).trim();
-    if (Line.startswith("Target:")) {
+    if (Line.starts_with("Target:")) {
       if (Line == "Target:" || Line.contains("{")) {
         return false;
       }
@@ -200,6 +200,12 @@ Expected<std::unique_ptr<IFSStub>> ifs::readIFSFromBuffer(StringRef Buf) {
           std::make_error_code(std::errc::invalid_argument),
           "IFS arch '" + *Stub->Target.ArchString + "' is unsupported");
     Stub->Target.Arch = eMachine;
+  }
+  for (const auto &Item : Stub->Symbols) {
+    if (Item.Type == IFSSymbolType::Unknown)
+      return createStringError(
+          std::make_error_code(std::errc::invalid_argument),
+          "IFS symbol type for symbol '" + Item.Name + "' is unsupported");
   }
   return std::move(Stub);
 }
@@ -298,19 +304,10 @@ Error ifs::validateIFSTarget(IFSStub &Stub, bool ParseTriple) {
 IFSTarget ifs::parseTriple(StringRef TripleStr) {
   Triple IFSTriple(TripleStr);
   IFSTarget RetTarget;
-  // TODO: Implement a Triple Arch enum to e_machine map.
-  switch (IFSTriple.getArch()) {
-  case Triple::ArchType::aarch64:
-    RetTarget.Arch = (IFSArch)ELF::EM_AARCH64;
-    break;
-  case Triple::ArchType::x86_64:
-    RetTarget.Arch = (IFSArch)ELF::EM_X86_64;
-    break;
-  case Triple::ArchType::riscv64:
-    RetTarget.Arch = (IFSArch)ELF::EM_RISCV;
-    break;
-  default:
-    RetTarget.Arch = (IFSArch)ELF::EM_NONE;
+  IFSArch TripleArch =
+      ELF::convertTripleArchTypeToEMachine(IFSTriple.getArch());
+  if (TripleArch != ELF::EM_NONE) {
+    RetTarget.Arch = TripleArch;
   }
   RetTarget.Endianness = IFSTriple.isLittleEndian() ? IFSEndiannessType::Little
                                                     : IFSEndiannessType::Big;

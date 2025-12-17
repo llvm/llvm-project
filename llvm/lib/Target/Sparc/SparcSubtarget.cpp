@@ -11,7 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "SparcSubtarget.h"
-#include "Sparc.h"
+#include "SparcSelectionDAGInfo.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -25,15 +26,25 @@ using namespace llvm;
 
 void SparcSubtarget::anchor() { }
 
-SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(StringRef CPU,
-                                                                StringRef FS) {
+SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(
+    StringRef CPU, StringRef TuneCPU, StringRef FS) {
+  const Triple &TT = getTargetTriple();
   // Determine default and user specified characteristics
   std::string CPUName = std::string(CPU);
   if (CPUName.empty())
-    CPUName = (Is64Bit) ? "v9" : "v8";
+    CPUName = TT.isSPARC64() ? "v9" : "v8";
+
+  if (TuneCPU.empty())
+    TuneCPU = CPUName;
 
   // Parse features string.
-  ParseSubtargetFeatures(CPUName, /*TuneCPU*/ CPUName, FS);
+  ParseSubtargetFeatures(CPUName, TuneCPU, FS);
+
+  if (!Is64Bit && TT.isSPARC64()) {
+    FeatureBitset Features = getFeatureBits();
+    setFeatureBits(Features.set(Sparc::Feature64Bit));
+    Is64Bit = true;
+  }
 
   // Popc is a v9-only instruction.
   if (!IsV9)
@@ -42,12 +53,60 @@ SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(StringRef CPU,
   return *this;
 }
 
-SparcSubtarget::SparcSubtarget(const Triple &TT, const std::string &CPU,
-                               const std::string &FS, const TargetMachine &TM,
-                               bool is64Bit)
-    : SparcGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), TargetTriple(TT),
-      Is64Bit(is64Bit), InstrInfo(initializeSubtargetDependencies(CPU, FS)),
-      TLInfo(TM, *this), FrameLowering(*this) {}
+SparcSubtarget::SparcSubtarget(const StringRef &CPU, const StringRef &TuneCPU,
+                               const StringRef &FS, const TargetMachine &TM)
+    : SparcGenSubtargetInfo(TM.getTargetTriple(), CPU, TuneCPU, FS),
+      ReserveRegister(TM.getMCRegisterInfo()->getNumRegs()),
+      InstrInfo(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
+      TLInfo(TM, *this), FrameLowering(*this) {
+  TSInfo = std::make_unique<SparcSelectionDAGInfo>();
+}
+
+SparcSubtarget::~SparcSubtarget() = default;
+
+const SelectionDAGTargetInfo *SparcSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
+}
+
+void SparcSubtarget::initLibcallLoweringInfo(LibcallLoweringInfo &Info) const {
+  if (hasHardQuad())
+    return;
+
+  // Setup Runtime library names.
+  if (is64Bit() && !useSoftFloat()) {
+    Info.setLibcallImpl(RTLIB::ADD_F128, RTLIB::impl__Qp_add);
+    Info.setLibcallImpl(RTLIB::SUB_F128, RTLIB::impl__Qp_sub);
+    Info.setLibcallImpl(RTLIB::MUL_F128, RTLIB::impl__Qp_mul);
+    Info.setLibcallImpl(RTLIB::DIV_F128, RTLIB::impl__Qp_div);
+    Info.setLibcallImpl(RTLIB::SQRT_F128, RTLIB::impl__Qp_sqrt);
+    Info.setLibcallImpl(RTLIB::FPTOSINT_F128_I32, RTLIB::impl__Qp_qtoi);
+    Info.setLibcallImpl(RTLIB::FPTOUINT_F128_I32, RTLIB::impl__Qp_qtoui);
+    Info.setLibcallImpl(RTLIB::SINTTOFP_I32_F128, RTLIB::impl__Qp_itoq);
+    Info.setLibcallImpl(RTLIB::UINTTOFP_I32_F128, RTLIB::impl__Qp_uitoq);
+    Info.setLibcallImpl(RTLIB::FPTOSINT_F128_I64, RTLIB::impl__Qp_qtox);
+    Info.setLibcallImpl(RTLIB::FPTOUINT_F128_I64, RTLIB::impl__Qp_qtoux);
+    Info.setLibcallImpl(RTLIB::SINTTOFP_I64_F128, RTLIB::impl__Qp_xtoq);
+    Info.setLibcallImpl(RTLIB::UINTTOFP_I64_F128, RTLIB::impl__Qp_uxtoq);
+    Info.setLibcallImpl(RTLIB::FPEXT_F32_F128, RTLIB::impl__Qp_stoq);
+    Info.setLibcallImpl(RTLIB::FPEXT_F64_F128, RTLIB::impl__Qp_dtoq);
+    Info.setLibcallImpl(RTLIB::FPROUND_F128_F32, RTLIB::impl__Qp_qtos);
+    Info.setLibcallImpl(RTLIB::FPROUND_F128_F64, RTLIB::impl__Qp_qtod);
+  } else if (!useSoftFloat()) {
+    Info.setLibcallImpl(RTLIB::ADD_F128, RTLIB::impl__Q_add);
+    Info.setLibcallImpl(RTLIB::SUB_F128, RTLIB::impl__Q_sub);
+    Info.setLibcallImpl(RTLIB::MUL_F128, RTLIB::impl__Q_mul);
+    Info.setLibcallImpl(RTLIB::DIV_F128, RTLIB::impl__Q_div);
+    Info.setLibcallImpl(RTLIB::SQRT_F128, RTLIB::impl__Q_sqrt);
+    Info.setLibcallImpl(RTLIB::FPTOSINT_F128_I32, RTLIB::impl__Q_qtoi);
+    Info.setLibcallImpl(RTLIB::FPTOUINT_F128_I32, RTLIB::impl__Q_qtou);
+    Info.setLibcallImpl(RTLIB::SINTTOFP_I32_F128, RTLIB::impl__Q_itoq);
+    Info.setLibcallImpl(RTLIB::UINTTOFP_I32_F128, RTLIB::impl__Q_utoq);
+    Info.setLibcallImpl(RTLIB::FPEXT_F32_F128, RTLIB::impl__Q_stoq);
+    Info.setLibcallImpl(RTLIB::FPEXT_F64_F128, RTLIB::impl__Q_dtoq);
+    Info.setLibcallImpl(RTLIB::FPROUND_F128_F32, RTLIB::impl__Q_qtos);
+    Info.setLibcallImpl(RTLIB::FPROUND_F128_F64, RTLIB::impl__Q_qtod);
+  }
+}
 
 int SparcSubtarget::getAdjustedFrameSize(int frameSize) const {
 

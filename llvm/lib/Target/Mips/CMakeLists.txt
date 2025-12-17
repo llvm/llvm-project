@@ -6,7 +6,8 @@ tablegen(LLVM MipsGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM MipsGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM MipsGenCallingConv.inc -gen-callingconv)
 tablegen(LLVM MipsGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM MipsGenDisassemblerTables.inc -gen-disassembler)
+tablegen(LLVM MipsGenDisassemblerTables.inc -gen-disassembler
+              -ignore-non-decodable-operands)
 tablegen(LLVM MipsGenFastISel.inc -gen-fast-isel)
 tablegen(LLVM MipsGenGlobalISel.inc -gen-global-isel)
 tablegen(LLVM MipsGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
@@ -16,6 +17,7 @@ tablegen(LLVM MipsGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM MipsGenMCPseudoLowering.inc -gen-pseudo-lowering)
 tablegen(LLVM MipsGenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM MipsGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM MipsGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM MipsGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM MipsGenExegesis.inc -gen-exegesis)
 
@@ -58,6 +60,7 @@ add_llvm_target(MipsCodeGen
   MipsSEISelDAGToDAG.cpp
   MipsSEISelLowering.cpp
   MipsSERegisterInfo.cpp
+  MipsSelectionDAGInfo.cpp
   MipsSubtarget.cpp
   MipsTargetMachine.cpp
   MipsTargetObjectFile.cpp
@@ -79,6 +82,7 @@ add_llvm_target(MipsCodeGen
   Support
   Target
   TargetParser
+  TransformUtils
 
   ADD_TO_COMPONENT
   Mips

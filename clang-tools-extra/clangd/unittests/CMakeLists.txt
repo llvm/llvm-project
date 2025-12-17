@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS
   support
   AllTargetsInfos
   FrontendOpenMP
+  TargetParser
   )
 
 if(CLANG_BUILT_STANDALONE)
@@ -28,6 +29,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/../quality/CompletionModel.cmake)
 gen_decision_forest(${CMAKE_CURRENT_SOURCE_DIR}/decision_forest_model DecisionForestRuntimeTest ::ns1::ns2::test::Example)
 
 add_custom_target(ClangdUnitTests)
+set_target_properties(ClangdUnitTests PROPERTIES FOLDER "Clang Tools Extra/Tests")
 add_unittest(ClangdUnitTests ClangdTests
   Annotations.cpp
   ASTTests.cpp
@@ -52,6 +54,7 @@ add_unittest(ClangdUnitTests ClangdTests
   DumpASTTests.cpp
   ExpectedTypeTest.cpp
   FeatureModulesTests.cpp
+  FeatureModulesRegistryTests.cpp
   FileDistanceTests.cpp
   FileIndexTests.cpp
   FindSymbolsTests.cpp
@@ -72,6 +75,7 @@ add_unittest(ClangdUnitTests ClangdTests
   LoggerTests.cpp
   LSPBinderTests.cpp
   LSPClient.cpp
+  PrerequisiteModulesTest.cpp
   ModulesTests.cpp
   ParsedASTTests.cpp
   PathMappingTests.cpp
@@ -89,6 +93,7 @@ add_unittest(ClangdUnitTests ClangdTests
   SourceCodeTests.cpp
   StdLibTests.cpp
   SymbolCollectorTests.cpp
+  SymbolDocumentationTests.cpp
   SymbolInfoTests.cpp
   SyncAPI.cpp
   TUSchedulerTests.cpp
@@ -128,12 +133,14 @@ add_unittest(ClangdUnitTests ClangdTests
   tweaks/MemberwiseConstructorTests.cpp
   tweaks/ObjCLocalizeStringLiteralTests.cpp
   tweaks/ObjCMemberwiseInitializerTests.cpp
+  tweaks/OverridePureVirtualsTests.cpp
   tweaks/PopulateSwitchTests.cpp
   tweaks/RawStringLiteralTests.cpp
   tweaks/RemoveUsingNamespaceTests.cpp
   tweaks/ScopifyEnumTests.cpp
   tweaks/ShowSelectionTreeTests.cpp
   tweaks/SpecialMembersTests.cpp
+  tweaks/SwapBinaryOperandsTests.cpp
   tweaks/SwapIfBranchesTests.cpp
   tweaks/TweakTesting.cpp
   tweaks/TweakTests.cpp
@@ -175,6 +182,7 @@ target_link_libraries(ClangdTests
   clangIncludeCleaner
   clangTesting
   clangTidy
+  clangTidyUtils
   clangdSupport
   )
 

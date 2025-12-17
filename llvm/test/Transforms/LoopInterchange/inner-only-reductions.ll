@@ -2,8 +2,11 @@
 ; RUN:     -verify-dom-info -verify-loop-info -verify-loop-lcssa 2>&1 | FileCheck -check-prefix=IR %s
 ; RUN: FileCheck --input-file=%t %s
 
-; Inner loop only reductions are not supported currently. See discussion at
-; D53027 for more information on the required checks.
+; Both tests should be rejected as interchange candidates. For now, they are
+; rejected for dependence analysis reasons, but that's because support for 'S'
+; scalar dependencies was removed. When that is properly, the inner loop only
+; reductions should still not be supported currently, see discussion at D53027
+; for more information on the required checks.
 
 @A = common global [500 x [500 x i32]] zeroinitializer
 @X = common global i32 0
@@ -18,7 +21,7 @@
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedPHI
+; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        reduction_01
 
 ; IR-LABEL: @reduction_01(

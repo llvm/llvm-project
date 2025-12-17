@@ -1,4 +1,5 @@
 # UNSUPPORTED: system-darwin, system-windows
+# REQUIRES: gcc
 
 # Make sure the artifical field `vptr.ClassName` from gcc debug info is ignored.
 # RUN: %build --compiler=gcc %S/Inputs/debug-types-expressions.cpp -o %t

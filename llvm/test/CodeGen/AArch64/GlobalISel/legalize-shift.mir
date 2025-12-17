@@ -411,13 +411,9 @@ name: test_ashr_v8s32
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_ashr_v8s32
-    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
-    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
-    ; CHECK-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
-    ; CHECK-NEXT: [[BUILD_VECTOR3:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<4 x s32>) = G_ASHR [[BUILD_VECTOR]], [[BUILD_VECTOR2]](<4 x s32>)
-    ; CHECK-NEXT: [[ASHR1:%[0-9]+]]:_(<4 x s32>) = G_ASHR [[BUILD_VECTOR1]], [[BUILD_VECTOR3]](<4 x s32>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<4 x s32>) = G_ASHR [[DEF]], [[DEF]](<4 x s32>)
+    ; CHECK-NEXT: [[ASHR1:%[0-9]+]]:_(<4 x s32>) = G_ASHR [[DEF]], [[DEF]](<4 x s32>)
     ; CHECK-NEXT: $q0 = COPY [[ASHR]](<4 x s32>)
     ; CHECK-NEXT: $q1 = COPY [[ASHR1]](<4 x s32>)
     %0:_(<8 x s32>) = G_IMPLICIT_DEF

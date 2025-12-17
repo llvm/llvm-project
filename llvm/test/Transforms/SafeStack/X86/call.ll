@@ -1,5 +1,7 @@
 ; RUN: opt -safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
 ; RUN: opt -safe-stack -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes=safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes=safe-stack -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -150,8 +152,8 @@ define void @call_lifetime(ptr %p) {
   ; CHECK: ret void
 entry:
   %q = alloca [100 x i8], align 16
-  call void @llvm.lifetime.start.p0(i64 100, ptr %q)
-  call void @llvm.lifetime.end.p0(i64 100, ptr %q)
+  call void @llvm.lifetime.start.p0(ptr %q)
+  call void @llvm.lifetime.end.p0(ptr %q)
   ret void
 }
 
@@ -165,5 +167,5 @@ declare void @readnone0(ptr nocapture readnone, ptr nocapture)
 
 declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind argmemonly
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind argmemonly
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind argmemonly
+declare void @llvm.lifetime.start.p0(ptr nocapture) nounwind argmemonly
+declare void @llvm.lifetime.end.p0(ptr nocapture) nounwind argmemonly

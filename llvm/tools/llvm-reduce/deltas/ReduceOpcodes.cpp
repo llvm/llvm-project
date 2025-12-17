@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceOpcodes.h"
-#include "Delta.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -29,8 +28,8 @@ static bool shouldIgnoreArgument(const Value *V) {
 
 static Value *replaceIntrinsic(Module &M, IntrinsicInst *II,
                                Intrinsic::ID NewIID,
-                               ArrayRef<Type *> Tys = std::nullopt) {
-  Function *NewFunc = Intrinsic::getDeclaration(&M, NewIID, Tys);
+                               ArrayRef<Type *> Tys = {}) {
+  Function *NewFunc = Intrinsic::getOrInsertDeclaration(&M, NewIID, Tys);
   II->setCalledFunction(NewFunc);
   return II;
 }
@@ -104,21 +103,12 @@ static bool callLooksLikeLoadStore(CallBase *CB, Value *&DataArg,
 
   // If we didn't find any arguments, we can fill in the pointer.
   if (!PtrArg) {
-    unsigned AS = CB->getModule()->getDataLayout().getAllocaAddrSpace();
+    unsigned AS = CB->getDataLayout().getAllocaAddrSpace();
 
-    PointerType *PtrTy =
-        PointerType::get(DataArg ? DataArg->getType()
-                                 : IntegerType::getInt32Ty(CB->getContext()),
-                         AS);
+    PointerType *PtrTy = PointerType::get(CB->getContext(), AS);
 
     PtrArg = ConstantPointerNull::get(PtrTy);
   }
-
-  // Make sure we don't emit an invalid store with typed pointers.
-  if (IsStore && DataArg->getType()->getPointerTo(
-        cast<PointerType>(PtrArg->getType())->getAddressSpace()) !=
-      PtrArg->getType())
-    return false;
 
   return true;
 }
@@ -249,7 +239,7 @@ static Value *reduceInstruction(Oracle &O, Module &M, Instruction &I) {
   return nullptr;
 }
 
-static void replaceOpcodesInModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceOpcodesDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Mod = WorkItem.getModule();
 
   for (Function &F : Mod) {
@@ -269,8 +259,4 @@ static void replaceOpcodesInModule(Oracle &O, ReducerWorkItem &WorkItem) {
         }
       }
   }
-}
-
-void llvm::reduceOpcodesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, replaceOpcodesInModule, "Reducing Opcodes");
 }

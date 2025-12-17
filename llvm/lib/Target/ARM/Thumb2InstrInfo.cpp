@@ -24,12 +24,12 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
 
@@ -46,7 +46,7 @@ PreferNoCSEL("prefer-no-csel", cl::Hidden,
              cl::init(false));
 
 Thumb2InstrInfo::Thumb2InstrInfo(const ARMSubtarget &STI)
-    : ARMBaseInstrInfo(STI) {}
+    : ARMBaseInstrInfo(STI, RI), RI(STI) {}
 
 /// Return the noop instruction to use for a noop.
 MCInst Thumb2InstrInfo::getNop() const {
@@ -149,8 +149,9 @@ Thumb2InstrInfo::optimizeSelect(MachineInstr &MI,
 
 void Thumb2InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
-                                  const DebugLoc &DL, MCRegister DestReg,
-                                  MCRegister SrcReg, bool KillSrc) const {
+                                  const DebugLoc &DL, Register DestReg,
+                                  Register SrcReg, bool KillSrc,
+                                  bool RenamableDest, bool RenamableSrc) const {
   // Handle SPR, DPR, and QPR copies.
   if (!ARM::GPRRegClass.contains(DestReg, SrcReg))
     return ARMBaseInstrInfo::copyPhysReg(MBB, I, DL, DestReg, SrcReg, KillSrc);
@@ -164,8 +165,8 @@ void Thumb2InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator I,
                                           Register SrcReg, bool isKill, int FI,
                                           const TargetRegisterClass *RC,
-                                          const TargetRegisterInfo *TRI,
-                                          Register VReg) const {
+                                          Register VReg,
+                                          MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
 
@@ -195,13 +196,13 @@ void Thumb2InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     }
 
     MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::t2STRDi8));
-    AddDReg(MIB, SrcReg, ARM::gsub_0, getKillRegState(isKill), TRI);
-    AddDReg(MIB, SrcReg, ARM::gsub_1, 0, TRI);
+    AddDReg(MIB, SrcReg, ARM::gsub_0, getKillRegState(isKill));
+    AddDReg(MIB, SrcReg, ARM::gsub_1, 0);
     MIB.addFrameIndex(FI).addImm(0).addMemOperand(MMO).add(predOps(ARMCC::AL));
     return;
   }
 
-  ARMBaseInstrInfo::storeRegToStackSlot(MBB, I, SrcReg, isKill, FI, RC, TRI,
+  ARMBaseInstrInfo::storeRegToStackSlot(MBB, I, SrcReg, isKill, FI, RC,
                                         Register());
 }
 
@@ -209,8 +210,8 @@ void Thumb2InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator I,
                                            Register DestReg, int FI,
                                            const TargetRegisterClass *RC,
-                                           const TargetRegisterInfo *TRI,
-                                           Register VReg) const {
+                                           Register VReg,
+                                           MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
@@ -238,8 +239,8 @@ void Thumb2InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     }
 
     MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::t2LDRDi8));
-    AddDReg(MIB, DestReg, ARM::gsub_0, RegState::DefineNoRead, TRI);
-    AddDReg(MIB, DestReg, ARM::gsub_1, RegState::DefineNoRead, TRI);
+    AddDReg(MIB, DestReg, ARM::gsub_0, RegState::DefineNoRead);
+    AddDReg(MIB, DestReg, ARM::gsub_1, RegState::DefineNoRead);
     MIB.addFrameIndex(FI).addImm(0).addMemOperand(MMO).add(predOps(ARMCC::AL));
 
     if (DestReg.isPhysical())
@@ -247,8 +248,7 @@ void Thumb2InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     return;
   }
 
-  ARMBaseInstrInfo::loadRegFromStackSlot(MBB, I, DestReg, FI, RC, TRI,
-                                         Register());
+  ARMBaseInstrInfo::loadRegFromStackSlot(MBB, I, DestReg, FI, RC, Register());
 }
 
 void Thumb2InstrInfo::expandLoadStackGuard(
@@ -261,12 +261,16 @@ void Thumb2InstrInfo::expandLoadStackGuard(
     return;
   }
 
-  const GlobalValue *GV =
-      cast<GlobalValue>((*MI->memoperands_begin())->getValue());
-
-  if (MF.getSubtarget<ARMSubtarget>().isGVInGOT(GV))
+  const auto *GV = cast<GlobalValue>((*MI->memoperands_begin())->getValue());
+  const ARMSubtarget &Subtarget = MF.getSubtarget<ARMSubtarget>();
+  bool IsPIC = MF.getTarget().isPositionIndependent();
+  if (Subtarget.isTargetELF() && !GV->isDSOLocal())
     expandLoadStackGuardBase(MI, ARM::t2LDRLIT_ga_pcrel, ARM::t2LDRi12);
-  else if (MF.getTarget().isPositionIndependent())
+  else if (!Subtarget.useMovt())
+    expandLoadStackGuardBase(
+        MI, IsPIC ? ARM::t2LDRLIT_ga_pcrel : ARM::tLDRLIT_ga_abs,
+        ARM::t2LDRi12);
+  else if (IsPIC)
     expandLoadStackGuardBase(MI, ARM::t2MOV_ga_pcrel, ARM::t2LDRi12);
   else
     expandLoadStackGuardBase(MI, ARM::t2MOVi32imm, ARM::t2LDRi12);
@@ -286,6 +290,25 @@ MachineInstr *Thumb2InstrInfo::commuteInstructionImpl(MachineInstr &MI,
       return nullptr;
   }
   return ARMBaseInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
+}
+
+bool Thumb2InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
+                                           const MachineBasicBlock *MBB,
+                                           const MachineFunction &MF) const {
+  // BTI clearing instructions shall not take part in scheduling regions as
+  // they must stay in their intended place. Although PAC isn't BTI clearing,
+  // it can be transformed into PACBTI after the pre-RA Machine Scheduling
+  // has taken place, so its movement must also be restricted.
+  switch (MI.getOpcode()) {
+  case ARM::t2BTI:
+  case ARM::t2PAC:
+  case ARM::t2PACBTI:
+  case ARM::t2SG:
+    return true;
+  default:
+    break;
+  }
+  return ARMBaseInstrInfo::isSchedulingBoundary(MI, MBB, MF);
 }
 
 void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,
@@ -541,8 +564,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   bool isSub = false;
 
   MachineFunction &MF = *MI.getParent()->getParent();
-  const TargetRegisterClass *RegClass =
-      TII.getRegClass(Desc, FrameRegIdx, TRI, MF);
+  const TargetRegisterClass *RegClass = TII.getRegClass(Desc, FrameRegIdx);
 
   // Memory operands in inline assembly always use AddrModeT2_i12.
   if (Opcode == ARM::INLINEASM || Opcode == ARM::INLINEASM_BR)
@@ -554,7 +576,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
 
     Register PredReg;
     if (Offset == 0 && getInstrPredicate(MI, PredReg) == ARMCC::AL &&
-        !MI.definesRegister(ARM::CPSR)) {
+        !MI.definesRegister(ARM::CPSR, /*TRI=*/nullptr)) {
       // Turn it into a move.
       MI.setDesc(TII.get(ARM::tMOVr));
       MI.getOperand(FrameRegIdx).ChangeToRegister(FrameReg, false);
@@ -779,6 +801,16 @@ int llvm::findFirstVPTPredOperandIdx(const MachineInstr &MI) {
   for (unsigned i = 0, e = MCID.getNumOperands(); i != e; ++i)
     if (ARM::isVpred(MCID.operands()[i].OperandType))
       return i;
+
+  return -1;
+}
+
+int llvm::findVPTInactiveOperandIdx(const MachineInstr &MI) {
+  const MCInstrDesc &MCID = MI.getDesc();
+
+  for (unsigned i = 0, e = MCID.getNumOperands(); i != e; ++i)
+    if (MCID.operands()[i].OperandType == ARM::OPERAND_VPRED_R)
+      return i + ARM::SUBOP_vpred_r_inactive;
 
   return -1;
 }

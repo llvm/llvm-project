@@ -45,7 +45,8 @@ TEST(AddressSanitizer, InternalSimpleDeathTest) {
   EXPECT_DEATH(exit(1), "");
 }
 
-static void MallocStress(size_t n) {
+static void *MallocStress(void *NumOfItrPtr) {
+  size_t n = *((size_t *)NumOfItrPtr);
   u32 seed = my_rand();
   BufferedStackTrace stack1;
   stack1.trace_buffer[0] = 0xa123;
@@ -70,7 +71,7 @@ static void MallocStress(size_t n) {
       void *ptr = vec[idx];
       vec[idx] = vec.back();
       vec.pop_back();
-      __asan::asan_free(ptr, &stack1, __asan::FROM_MALLOC);
+      __asan::asan_free(ptr, &stack1);
     } else {
       size_t size = my_rand_r(&seed) % 1000 + 1;
       switch ((my_rand_r(&seed) % 128)) {
@@ -79,8 +80,7 @@ static void MallocStress(size_t n) {
         case 2: size += 4096; break;
       }
       size_t alignment = 1 << (my_rand_r(&seed) % 10 + 1);
-      char *ptr = (char*)__asan::asan_memalign(alignment, size,
-                                               &stack2, __asan::FROM_MALLOC);
+      char *ptr = (char *)__asan::asan_memalign(alignment, size, &stack2);
       EXPECT_EQ(size, __asan::asan_malloc_usable_size(ptr, 0, 0));
       vec.push_back(ptr);
       ptr[0] = 0;
@@ -88,22 +88,22 @@ static void MallocStress(size_t n) {
       ptr[size/2] = 0;
     }
   }
-  for (size_t i = 0; i < vec.size(); i++)
-    __asan::asan_free(vec[i], &stack3, __asan::FROM_MALLOC);
+  for (size_t i = 0; i < vec.size(); i++) __asan::asan_free(vec[i], &stack3);
+  return nullptr;
 }
 
-
 TEST(AddressSanitizer, NoInstMallocTest) {
-  MallocStress(ASAN_LOW_MEMORY ? 300000 : 1000000);
+  const size_t kNumIterations = (ASAN_LOW_MEMORY) ? 300000 : 1000000;
+  MallocStress((void *)&kNumIterations);
 }
 
 TEST(AddressSanitizer, ThreadedMallocStressTest) {
   const int kNumThreads = 4;
-  const int kNumIterations = (ASAN_LOW_MEMORY) ? 10000 : 100000;
+  const size_t kNumIterations = (ASAN_LOW_MEMORY) ? 10000 : 100000;
   pthread_t t[kNumThreads];
   for (int i = 0; i < kNumThreads; i++) {
-    PTHREAD_CREATE(&t[i], 0, (void* (*)(void *x))MallocStress,
-        (void*)kNumIterations);
+    PTHREAD_CREATE(&t[i], 0, (void *(*)(void *x))MallocStress,
+                   (void *)&kNumIterations);
   }
   for (int i = 0; i < kNumThreads; i++) {
     PTHREAD_JOIN(t[i], 0);
@@ -135,18 +135,18 @@ TEST(AddressSanitizer, DISABLED_InternalPrintShadow) {
 }
 
 TEST(AddressSanitizer, QuarantineTest) {
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   stack.trace_buffer[0] = 0x890;
   stack.size = 1;
 
   const int size = 1024;
   void *p = __asan::asan_malloc(size, &stack);
-  __asan::asan_free(p, &stack, __asan::FROM_MALLOC);
+  __asan::asan_free(p, &stack);
   size_t i;
   size_t max_i = 1 << 30;
   for (i = 0; i < max_i; i++) {
     void *p1 = __asan::asan_malloc(size, &stack);
-    __asan::asan_free(p1, &stack, __asan::FROM_MALLOC);
+    __asan::asan_free(p1, &stack);
     if (p1 == p) break;
   }
   EXPECT_GE(i, 10000U);
@@ -157,13 +157,13 @@ TEST(AddressSanitizer, QuarantineTest) {
 void *ThreadedQuarantineTestWorker(void *unused) {
   (void)unused;
   u32 seed = my_rand();
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   stack.trace_buffer[0] = 0x890;
   stack.size = 1;
 
   for (size_t i = 0; i < 1000; i++) {
     void *p = __asan::asan_malloc(1 + (my_rand_r(&seed) % 4000), &stack);
-    __asan::asan_free(p, &stack, __asan::FROM_MALLOC);
+    __asan::asan_free(p, &stack);
   }
   return NULL;
 }
@@ -192,7 +192,7 @@ TEST(AddressSanitizer, ThreadedQuarantineTest) {
 
 void *ThreadedOneSizeMallocStress(void *unused) {
   (void)unused;
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   stack.trace_buffer[0] = 0x890;
   stack.size = 1;
   const size_t kNumMallocs = 1000;
@@ -202,7 +202,7 @@ void *ThreadedOneSizeMallocStress(void *unused) {
       p[i] = __asan::asan_malloc(32, &stack);
     }
     for (size_t i = 0; i < kNumMallocs; i++) {
-      __asan::asan_free(p[i], &stack, __asan::FROM_MALLOC);
+      __asan::asan_free(p[i], &stack);
     }
   }
   return NULL;
@@ -236,7 +236,7 @@ static void TestLoadStoreCallbacks(CB cb[2][5]) {
   uptr buggy_ptr;
 
   __asan_test_only_reported_buggy_pointer = &buggy_ptr;
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   stack.trace_buffer[0] = 0x890;
   stack.size = 1;
 
@@ -258,7 +258,7 @@ static void TestLoadStoreCallbacks(CB cb[2][5]) {
         }
       }
     }
-    __asan::asan_free(ptr, &stack, __asan::FROM_MALLOC);
+    __asan::asan_free(ptr, &stack);
   }
   __asan_test_only_reported_buggy_pointer = 0;
 }

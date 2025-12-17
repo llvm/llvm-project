@@ -14,6 +14,7 @@
 #ifndef LLVM_TEXTAPI_TEXTAPIERROR_H
 #define LLVM_TEXTAPI_TEXTAPIERROR_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm::MachO {
@@ -21,15 +22,19 @@ enum class TextAPIErrorCode {
   NoSuchArchitecture,
   EmptyResults,
   GenericFrontendError,
-  InvalidInputFormat
+  InvalidInputFormat,
+  UnsupportedTarget
 };
 
-class TextAPIError : public llvm::ErrorInfo<TextAPIError> {
+class LLVM_ABI TextAPIError : public llvm::ErrorInfo<TextAPIError> {
 public:
   static char ID;
   TextAPIErrorCode EC;
+  std::string Msg;
 
   TextAPIError(TextAPIErrorCode EC) : EC(EC) {}
+  TextAPIError(TextAPIErrorCode EC, std::string Msg)
+      : EC(EC), Msg(std::move(Msg)) {}
 
   void log(raw_ostream &OS) const override;
   std::error_code convertToErrorCode() const override;

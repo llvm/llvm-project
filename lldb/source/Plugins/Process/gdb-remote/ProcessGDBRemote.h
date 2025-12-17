@@ -41,9 +41,6 @@
 #include "llvm/ADT/StringMap.h"
 
 namespace lldb_private {
-namespace repro {
-class Loader;
-}
 namespace process_gdb_remote {
 
 class ThreadGDBRemote;
@@ -111,7 +108,9 @@ public:
   // Process Control
   Status WillResume() override;
 
-  Status DoResume() override;
+  bool SupportsReverseDirection() override;
+
+  Status DoResume(lldb::RunDirection direction) override;
 
   Status DoHalt(bool &caused_stop) override;
 
@@ -138,6 +137,22 @@ public:
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                       Status &error) override;
 
+  /// Override of ReadMemoryRanges that uses MultiMemRead to optimize this
+  /// operation.
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+  ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                   llvm::MutableArrayRef<uint8_t> buf) override;
+
+private:
+  llvm::Expected<StringExtractorGDBRemote>
+  SendMultiMemReadPacket(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges);
+
+  llvm::Error ParseMultiMemReadPacket(
+      llvm::StringRef response_str, llvm::MutableArrayRef<uint8_t> buffer,
+      unsigned expected_num_ranges,
+      llvm::SmallVectorImpl<llvm::MutableArrayRef<uint8_t>> &memory_regions);
+
+public:
   Status
   WriteObjectFile(std::vector<ObjectFile::LoadableData> entries) override;
 
@@ -158,9 +173,11 @@ public:
   Status DisableBreakpointSite(BreakpointSite *bp_site) override;
 
   // Process Watchpoints
-  Status EnableWatchpoint(Watchpoint *wp, bool notify = true) override;
+  Status EnableWatchpoint(lldb::WatchpointSP wp_sp,
+                          bool notify = true) override;
 
-  Status DisableWatchpoint(Watchpoint *wp, bool notify = true) override;
+  Status DisableWatchpoint(lldb::WatchpointSP wp_sp,
+                           bool notify = true) override;
 
   std::optional<uint32_t> GetWatchpointSlotCount() override;
 
@@ -245,6 +262,8 @@ protected:
 
   ProcessGDBRemote(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
 
+  virtual std::shared_ptr<ThreadGDBRemote> CreateThread(lldb::tid_t tid);
+
   bool SupportsMemoryTagging() override;
 
   /// Broadcaster event bits definitions.
@@ -299,7 +318,8 @@ protected:
   using FlashRange = FlashRangeVector::Entry;
   FlashRangeVector m_erased_flash_ranges;
 
-  bool m_vfork_in_progress;
+  // Number of vfork() operations being handled.
+  uint32_t m_vfork_in_progress_count;
 
   // Accessors
   bool IsRunning(lldb::StateType state) {
@@ -396,7 +416,7 @@ protected:
   void AddRemoteRegisters(std::vector<DynamicRegisterInfo::Register> &registers,
                           const ArchSpec &arch_to_use);
   // Query remote GDBServer for register information
-  bool GetGDBServerRegisterInfo(ArchSpec &arch);
+  llvm::Error GetGDBServerRegisterInfo(ArchSpec &arch);
 
   lldb::ModuleSP LoadModuleAtAddress(const FileSpec &file,
                                      lldb::addr_t link_map,
@@ -431,11 +451,18 @@ private:
                                            lldb::user_id_t break_id,
                                            lldb::user_id_t break_loc_id);
 
+  /// Remove the breakpoints associated with thread creation from the Target.
+  void RemoveNewThreadBreakpoints();
+
   // ContinueDelegate interface
   void HandleAsyncStdout(llvm::StringRef out) override;
   void HandleAsyncMisc(llvm::StringRef data) override;
   void HandleStopReply() override;
   void HandleAsyncStructuredDataPacket(llvm::StringRef data) override;
+
+  lldb::ThreadSP
+  HandleThreadAsyncInterrupt(uint8_t signo,
+                             const std::string &description) override;
 
   void SetThreadPc(const lldb::ThreadSP &thread_sp, uint64_t index);
   using ModuleCacheKey = std::pair<std::string, std::string>;
@@ -481,6 +508,11 @@ private:
   // entries are added. Which would invalidate any pointers set in the register
   // info up to that point.
   llvm::StringMap<std::unique_ptr<RegisterFlags>> m_registers_flags_types;
+
+  // Enum types are referenced by register fields. This does not store the data
+  // directly because the map may reallocate. Pointers to these are contained
+  // within instances of RegisterFlags.
+  llvm::StringMap<std::unique_ptr<FieldEnum>> m_registers_enum_types;
 };
 
 } // namespace process_gdb_remote

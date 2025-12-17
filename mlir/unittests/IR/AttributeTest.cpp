@@ -154,7 +154,7 @@ TEST(DenseSplatTest, IntAttrSplat) {
 
 TEST(DenseSplatTest, F32Splat) {
   MLIRContext context;
-  FloatType floatTy = FloatType::getF32(&context);
+  FloatType floatTy = Float32Type::get(&context);
   float value = 10.0;
 
   testSplat(floatTy, value);
@@ -162,7 +162,7 @@ TEST(DenseSplatTest, F32Splat) {
 
 TEST(DenseSplatTest, F64Splat) {
   MLIRContext context;
-  FloatType floatTy = FloatType::getF64(&context);
+  FloatType floatTy = Float64Type::get(&context);
   double value = 10.0;
 
   testSplat(floatTy, APFloat(value));
@@ -170,7 +170,7 @@ TEST(DenseSplatTest, F64Splat) {
 
 TEST(DenseSplatTest, FloatAttrSplat) {
   MLIRContext context;
-  FloatType floatTy = FloatType::getF32(&context);
+  FloatType floatTy = Float32Type::get(&context);
   Attribute value = FloatAttr::get(floatTy, 10.0);
 
   testSplat(floatTy, value);
@@ -178,7 +178,7 @@ TEST(DenseSplatTest, FloatAttrSplat) {
 
 TEST(DenseSplatTest, BF16Splat) {
   MLIRContext context;
-  FloatType floatTy = FloatType::getBF16(&context);
+  FloatType floatTy = BFloat16Type::get(&context);
   Attribute value = FloatAttr::get(floatTy, 10.0);
 
   testSplat(floatTy, value);
@@ -204,7 +204,7 @@ TEST(DenseSplatTest, StringAttrSplat) {
 
 TEST(DenseComplexTest, ComplexFloatSplat) {
   MLIRContext context;
-  ComplexType complexType = ComplexType::get(FloatType::getF32(&context));
+  ComplexType complexType = ComplexType::get(Float32Type::get(&context));
   std::complex<float> value(10.0, 15.0);
   testSplat(complexType, value);
 }
@@ -218,7 +218,7 @@ TEST(DenseComplexTest, ComplexIntSplat) {
 
 TEST(DenseComplexTest, ComplexAPFloatSplat) {
   MLIRContext context;
-  ComplexType complexType = ComplexType::get(FloatType::getF32(&context));
+  ComplexType complexType = ComplexType::get(Float32Type::get(&context));
   std::complex<APFloat> value(APFloat(10.0f), APFloat(15.0f));
   testSplat(complexType, value);
 }
@@ -351,6 +351,21 @@ TEST(DenseResourceElementsAttrTest, CheckNoCast) {
   EXPECT_FALSE(isa<DenseBoolResourceElementsAttr>(i32ResourceAttr));
 }
 
+TEST(DenseResourceElementsAttrTest, CheckNotMutableAllocateAndCopy) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  // Create a i32 attribute.
+  std::vector<int32_t> data = {10, 20, 30};
+  auto type = RankedTensorType::get(data.size(), builder.getI32Type());
+  Attribute i32ResourceAttr = DenseI32ResourceElementsAttr::get(
+      type, "resource",
+      HeapAsmResourceBlob::allocateAndCopyInferAlign<int32_t>(
+          data, /*is_mutable=*/false));
+
+  EXPECT_TRUE(isa<DenseI32ResourceElementsAttr>(i32ResourceAttr));
+}
+
 TEST(DenseResourceElementsAttrTest, CheckInvalidData) {
   MLIRContext context;
   Builder builder(&context);
@@ -394,7 +409,7 @@ TEST(SparseElementsAttrTest, GetZero) {
   context.allowUnregisteredDialects();
 
   IntegerType intTy = IntegerType::get(&context, 32);
-  FloatType floatTy = FloatType::getF32(&context);
+  FloatType floatTy = Float32Type::get(&context);
   Type stringTy = OpaqueType::get(StringAttr::get(&context, "test"), "string");
 
   ShapedType tensorI32 = RankedTensorType::get({2, 2}, intTy);
@@ -462,8 +477,9 @@ TEST(SubElementTest, Nested) {
                 {strAttr, trueAttr, falseAttr, boolArrayAttr, dictAttr}));
 }
 
-// Test how many times we call copy-ctor when building an attribute.
-TEST(CopyCountAttr, CopyCount) {
+// Test how many times we call copy-ctor when building an attribute with the
+// 'get' method.
+TEST(CopyCountAttr, CopyCountGet) {
   MLIRContext context;
   context.loadDialect<test::TestDialect>();
 
@@ -474,13 +490,51 @@ TEST(CopyCountAttr, CopyCount) {
   test::CopyCount::counter = 0;
   test::TestCopyCountAttr::get(&context, std::move(copyCount));
 #ifndef NDEBUG
-  // One verification enabled only in assert-mode requires a copy.
-  EXPECT_EQ(counter1, 1);
-  EXPECT_EQ(test::CopyCount::counter, 1);
+  // One verification enabled only in assert-mode requires two copies: one for
+  // calling 'verifyInvariants' and one for calling 'verify' inside
+  // 'verifyInvariants'.
+  EXPECT_EQ(counter1, 2);
+  EXPECT_EQ(test::CopyCount::counter, 2);
 #else
   EXPECT_EQ(counter1, 0);
   EXPECT_EQ(test::CopyCount::counter, 0);
 #endif
+}
+
+// Test how many times we call copy-ctor when building an attribute with the
+// 'getChecked' method.
+TEST(CopyCountAttr, CopyCountGetChecked) {
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+  test::CopyCount::counter = 0;
+  test::CopyCount copyCount("hello");
+  auto loc = UnknownLoc::get(&context);
+  test::TestCopyCountAttr::getChecked(loc, &context, std::move(copyCount));
+  int counter1 = test::CopyCount::counter;
+  test::CopyCount::counter = 0;
+  test::TestCopyCountAttr::getChecked(loc, &context, std::move(copyCount));
+  // The verifiers require two copies: one for calling 'verifyInvariants' and
+  // one for calling 'verify' inside 'verifyInvariants'.
+  EXPECT_EQ(counter1, 2);
+  EXPECT_EQ(test::CopyCount::counter, 2);
+}
+
+// Test stripped printing using test dialect attribute.
+TEST(CopyCountAttr, PrintStripped) {
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+  // Doesn't matter which dialect attribute is used, just chose TestCopyCount
+  // given proximity.
+  test::CopyCount::counter = 0;
+  test::CopyCount copyCount("hello");
+  Attribute res = test::TestCopyCountAttr::get(&context, std::move(copyCount));
+
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  os << "|" << res << "|";
+  res.printStripped(os << "[");
+  os << "]";
+  EXPECT_EQ(str, "|#test.copy_count<hello>|[copy_count<hello>]");
 }
 
 } // namespace

@@ -38,11 +38,12 @@
 #define LLVM_ANALYSIS_ALIASANALYSIS_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ModRef.h"
 #include <cstdint>
 #include <functional>
@@ -52,19 +53,14 @@
 
 namespace llvm {
 
-class AnalysisUsage;
 class AtomicCmpXchgInst;
 class BasicBlock;
 class CatchPadInst;
 class CatchReturnInst;
 class DominatorTree;
 class FenceInst;
-class Function;
 class LoopInfo;
-class PreservedAnalyses;
 class TargetLibraryInfo;
-class Value;
-template <typename> class SmallPtrSetImpl;
 
 /// The possible results of an alias query.
 ///
@@ -147,49 +143,57 @@ static_assert(sizeof(AliasResult) == 4,
               "AliasResult size is intended to be 4 bytes!");
 
 /// << operator for AliasResult.
-raw_ostream &operator<<(raw_ostream &OS, AliasResult AR);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, AliasResult AR);
 
-/// Virtual base class for providers of capture information.
-struct CaptureInfo {
-  virtual ~CaptureInfo() = 0;
-  virtual bool isNotCapturedBeforeOrAt(const Value *Object,
-                                       const Instruction *I) = 0;
+/// Virtual base class for providers of capture analysis.
+struct LLVM_ABI CaptureAnalysis {
+  virtual ~CaptureAnalysis() = 0;
+
+  /// Return how Object may be captured before instruction I, considering only
+  /// provenance captures. If OrAt is true, captures by instruction I itself
+  /// are also considered.
+  ///
+  /// If I is nullptr, then captures at any point will be considered.
+  virtual CaptureComponents
+  getCapturesBefore(const Value *Object, const Instruction *I, bool OrAt) = 0;
 };
 
-/// Context-free CaptureInfo provider, which computes and caches whether an
+/// Context-free CaptureAnalysis provider, which computes and caches whether an
 /// object is captured in the function at all, but does not distinguish whether
 /// it was captured before or after the context instruction.
-class SimpleCaptureInfo final : public CaptureInfo {
-  SmallDenseMap<const Value *, bool, 8> IsCapturedCache;
+class LLVM_ABI SimpleCaptureAnalysis final : public CaptureAnalysis {
+  SmallDenseMap<const Value *, CaptureComponents, 8> IsCapturedCache;
 
 public:
-  bool isNotCapturedBeforeOrAt(const Value *Object,
-                               const Instruction *I) override;
+  CaptureComponents getCapturesBefore(const Value *Object, const Instruction *I,
+                                      bool OrAt) override;
 };
 
-/// Context-sensitive CaptureInfo provider, which computes and caches the
+/// Context-sensitive CaptureAnalysis provider, which computes and caches the
 /// earliest common dominator closure of all captures. It provides a good
 /// approximation to a precise "captures before" analysis.
-class EarliestEscapeInfo final : public CaptureInfo {
+class LLVM_ABI EarliestEscapeAnalysis final : public CaptureAnalysis {
   DominatorTree &DT;
   const LoopInfo *LI;
 
   /// Map from identified local object to an instruction before which it does
-  /// not escape, or nullptr if it never escapes. The "earliest" instruction
-  /// may be a conservative approximation, e.g. the first instruction in the
-  /// function is always a legal choice.
-  DenseMap<const Value *, Instruction *> EarliestEscapes;
+  /// not escape (or nullptr if it never escapes) and the possible components
+  /// that may be captured (by any instruction, not necessarily the earliest
+  /// one). The "earliest" instruction may be a conservative approximation,
+  /// e.g. the first instruction in the function is always a legal choice.
+  DenseMap<const Value *, std::pair<Instruction *, CaptureComponents>>
+      EarliestEscapes;
 
   /// Reverse map from instruction to the objects it is the earliest escape for.
   /// This is used for cache invalidation purposes.
   DenseMap<Instruction *, TinyPtrVector<const Value *>> Inst2Obj;
 
 public:
-  EarliestEscapeInfo(DominatorTree &DT, const LoopInfo *LI = nullptr)
+  EarliestEscapeAnalysis(DominatorTree &DT, const LoopInfo *LI = nullptr)
       : DT(DT), LI(LI) {}
 
-  bool isNotCapturedBeforeOrAt(const Value *Object,
-                               const Instruction *I) override;
+  CaptureComponents getCapturesBefore(const Value *Object, const Instruction *I,
+                                      bool OrAt) override;
 
   void removeInstruction(Instruction *I);
 };
@@ -239,12 +243,23 @@ class AAQueryInfo {
 public:
   using LocPair = std::pair<AACacheLoc, AACacheLoc>;
   struct CacheEntry {
+    /// Cache entry is neither an assumption nor does it use a (non-definitive)
+    /// assumption.
+    static constexpr int Definitive = -2;
+    /// Cache entry is not an assumption itself, but may be using an assumption
+    /// from higher up the stack.
+    static constexpr int AssumptionBased = -1;
+
     AliasResult Result;
-    /// Number of times a NoAlias assumption has been used.
-    /// 0 for assumptions that have not been used, -1 for definitive results.
+    /// Number of times a NoAlias assumption has been used, 0 for assumptions
+    /// that have not been used. Can also take one of the Definitive or
+    /// AssumptionBased values documented above.
     int NumAssumptionUses;
+
     /// Whether this is a definitive (non-assumption) result.
-    bool isDefinitive() const { return NumAssumptionUses < 0; }
+    bool isDefinitive() const { return NumAssumptionUses == Definitive; }
+    /// Whether this is an assumption that has not been proven yet.
+    bool isAssumption() const { return NumAssumptionUses >= 0; }
   };
 
   // Alias analysis result aggregration using which this query is performed.
@@ -254,7 +269,7 @@ public:
   using AliasCacheT = SmallDenseMap<LocPair, CacheEntry, 8>;
   AliasCacheT AliasCache;
 
-  CaptureInfo *CI;
+  CaptureAnalysis *CA;
 
   /// Query depth used to distinguish recursive queries.
   unsigned Depth = 0;
@@ -283,15 +298,19 @@ public:
   ///   store %l, ...
   bool MayBeCrossIteration = false;
 
-  AAQueryInfo(AAResults &AAR, CaptureInfo *CI) : AAR(AAR), CI(CI) {}
+  /// Whether alias analysis is allowed to use the dominator tree, for use by
+  /// passes that lazily update the DT while performing AA queries.
+  bool UseDominatorTree = true;
+
+  AAQueryInfo(AAResults &AAR, CaptureAnalysis *CA) : AAR(AAR), CA(CA) {}
 };
 
-/// AAQueryInfo that uses SimpleCaptureInfo.
+/// AAQueryInfo that uses SimpleCaptureAnalysis.
 class SimpleAAQueryInfo : public AAQueryInfo {
-  SimpleCaptureInfo CI;
+  SimpleCaptureAnalysis CA;
 
 public:
-  SimpleAAQueryInfo(AAResults &AAR) : AAQueryInfo(AAR, &CI) {}
+  SimpleAAQueryInfo(AAResults &AAR) : AAQueryInfo(AAR, &CA) {}
 };
 
 class BatchAAResults;
@@ -300,9 +319,9 @@ class AAResults {
 public:
   // Make these results default constructable and movable. We have to spell
   // these out because MSVC won't synthesize them.
-  AAResults(const TargetLibraryInfo &TLI) : TLI(TLI) {}
-  AAResults(AAResults &&Arg);
-  ~AAResults();
+  LLVM_ABI AAResults(const TargetLibraryInfo &TLI);
+  LLVM_ABI AAResults(AAResults &&Arg);
+  LLVM_ABI ~AAResults();
 
   /// Register a specific AA result.
   template <typename AAResultT> void addAAResult(AAResultT &AAResult) {
@@ -323,8 +342,8 @@ public:
   ///
   /// The aggregation is invalidated if any of the underlying analyses is
   /// invalidated.
-  bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &Inv);
+  LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
+                           FunctionAnalysisManager::Invalidator &Inv);
 
   //===--------------------------------------------------------------------===//
   /// \name Alias Queries
@@ -334,7 +353,8 @@ public:
   /// Returns an AliasResult indicating whether the two pointers are aliased to
   /// each other. This is the interface that must be implemented by specific
   /// alias analysis implementations.
-  AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB);
+  LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
+                             const MemoryLocation &LocB);
 
   /// A convenience wrapper around the primary \c alias interface.
   AliasResult alias(const Value *V1, LocationSize V1Size, const Value *V2,
@@ -402,8 +422,8 @@ public:
   ///
   /// If IgnoreLocals is true, then this method returns NoModRef for memory
   /// that points to a local alloca.
-  ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
-                               bool IgnoreLocals = false);
+  LLVM_ABI ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
+                                        bool IgnoreLocals = false);
 
   /// A convenience wrapper around the primary \c getModRefInfoMask
   /// interface.
@@ -416,13 +436,13 @@ public:
   /// that these bits do not necessarily account for the overall behavior of
   /// the function, but rather only provide additional per-argument
   /// information.
-  ModRefInfo getArgModRefInfo(const CallBase *Call, unsigned ArgIdx);
+  LLVM_ABI ModRefInfo getArgModRefInfo(const CallBase *Call, unsigned ArgIdx);
 
   /// Return the behavior of the given call site.
-  MemoryEffects getMemoryEffects(const CallBase *Call);
+  LLVM_ABI MemoryEffects getMemoryEffects(const CallBase *Call);
 
   /// Return the behavior when calling the given function.
-  MemoryEffects getMemoryEffects(const Function *F);
+  LLVM_ABI MemoryEffects getMemoryEffects(const Function *F);
 
   /// Checks if the specified call is known to never read or write memory.
   ///
@@ -504,7 +524,12 @@ public:
 
   /// Return information about whether a call and an instruction may refer to
   /// the same memory locations.
-  ModRefInfo getModRefInfo(const Instruction *I, const CallBase *Call);
+  LLVM_ABI ModRefInfo getModRefInfo(const Instruction *I, const CallBase *Call);
+
+  /// Return information about whether two instructions may refer to the same
+  /// memory locations.
+  LLVM_ABI ModRefInfo getModRefInfo(const Instruction *I1,
+                                    const Instruction *I2);
 
   /// Return information about whether a particular call site modifies
   /// or reads the specified memory location \p MemLoc before instruction \p I
@@ -529,7 +554,8 @@ public:
 
   /// Check if it is possible for execution of the specified basic block to
   /// modify the location Loc.
-  bool canBasicBlockModify(const BasicBlock &BB, const MemoryLocation &Loc);
+  LLVM_ABI bool canBasicBlockModify(const BasicBlock &BB,
+                                    const MemoryLocation &Loc);
 
   /// A convenience wrapper synthesizing a memory location.
   bool canBasicBlockModify(const BasicBlock &BB, const Value *P,
@@ -542,9 +568,10 @@ public:
   ///
   /// The instructions to consider are all of the instructions in the range of
   /// [I1,I2] INCLUSIVE. I1 and I2 must be in the same basic block.
-  bool canInstructionRangeModRef(const Instruction &I1, const Instruction &I2,
-                                 const MemoryLocation &Loc,
-                                 const ModRefInfo Mode);
+  LLVM_ABI bool canInstructionRangeModRef(const Instruction &I1,
+                                          const Instruction &I2,
+                                          const MemoryLocation &Loc,
+                                          const ModRefInfo Mode);
 
   /// A convenience wrapper synthesizing a memory location.
   bool canInstructionRangeModRef(const Instruction &I1, const Instruction &I2,
@@ -555,42 +582,55 @@ public:
 
   // CtxI can be nullptr, in which case the query is whether or not the aliasing
   // relationship holds through the entire function.
-  AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
-                    AAQueryInfo &AAQI, const Instruction *CtxI = nullptr);
+  LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
+                             const MemoryLocation &LocB, AAQueryInfo &AAQI,
+                             const Instruction *CtxI = nullptr);
+  LLVM_ABI AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M);
 
-  bool pointsToConstantMemory(const MemoryLocation &Loc, AAQueryInfo &AAQI,
-                              bool OrLocal = false);
-  ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
-                               bool IgnoreLocals = false);
-  ModRefInfo getModRefInfo(const Instruction *I, const CallBase *Call2,
-                           AAQueryInfo &AAQIP);
-  ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
-                           AAQueryInfo &AAQI);
-  ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2,
-                           AAQueryInfo &AAQI);
-  ModRefInfo getModRefInfo(const VAArgInst *V, const MemoryLocation &Loc,
-                           AAQueryInfo &AAQI);
-  ModRefInfo getModRefInfo(const LoadInst *L, const MemoryLocation &Loc,
-                           AAQueryInfo &AAQI);
-  ModRefInfo getModRefInfo(const StoreInst *S, const MemoryLocation &Loc,
-                           AAQueryInfo &AAQI);
-  ModRefInfo getModRefInfo(const FenceInst *S, const MemoryLocation &Loc,
-                           AAQueryInfo &AAQI);
-  ModRefInfo getModRefInfo(const AtomicCmpXchgInst *CX,
-                           const MemoryLocation &Loc, AAQueryInfo &AAQI);
-  ModRefInfo getModRefInfo(const AtomicRMWInst *RMW, const MemoryLocation &Loc,
-                           AAQueryInfo &AAQI);
-  ModRefInfo getModRefInfo(const CatchPadInst *I, const MemoryLocation &Loc,
-                           AAQueryInfo &AAQI);
-  ModRefInfo getModRefInfo(const CatchReturnInst *I, const MemoryLocation &Loc,
-                           AAQueryInfo &AAQI);
-  ModRefInfo getModRefInfo(const Instruction *I,
-                           const std::optional<MemoryLocation> &OptLoc,
-                           AAQueryInfo &AAQIP);
-  ModRefInfo callCapturesBefore(const Instruction *I,
-                                const MemoryLocation &MemLoc, DominatorTree *DT,
-                                AAQueryInfo &AAQIP);
-  MemoryEffects getMemoryEffects(const CallBase *Call, AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
+                                        AAQueryInfo &AAQI,
+                                        bool IgnoreLocals = false);
+  LLVM_ABI ModRefInfo getModRefInfo(const Instruction *I, const CallBase *Call2,
+                                    AAQueryInfo &AAQIP);
+  LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call1,
+                                    const CallBase *Call2, AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const VAArgInst *V,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const LoadInst *L,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const StoreInst *S,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const FenceInst *S,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const AtomicCmpXchgInst *CX,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const AtomicRMWInst *RMW,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const CatchPadInst *I,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const CatchReturnInst *I,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const Instruction *I,
+                                    const std::optional<MemoryLocation> &OptLoc,
+                                    AAQueryInfo &AAQIP);
+  LLVM_ABI ModRefInfo getModRefInfo(const Instruction *I1,
+                                    const Instruction *I2, AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo callCapturesBefore(const Instruction *I,
+                                         const MemoryLocation &MemLoc,
+                                         DominatorTree *DT, AAQueryInfo &AAQIP);
+  LLVM_ABI MemoryEffects getMemoryEffects(const CallBase *Call,
+                                          AAQueryInfo &AAQI);
 
 private:
   class Concept;
@@ -617,17 +657,21 @@ private:
 class BatchAAResults {
   AAResults &AA;
   AAQueryInfo AAQI;
-  SimpleCaptureInfo SimpleCI;
+  SimpleCaptureAnalysis SimpleCA;
 
 public:
-  BatchAAResults(AAResults &AAR) : AA(AAR), AAQI(AAR, &SimpleCI) {}
-  BatchAAResults(AAResults &AAR, CaptureInfo *CI) : AA(AAR), AAQI(AAR, CI) {}
+  BatchAAResults(AAResults &AAR) : AA(AAR), AAQI(AAR, &SimpleCA) {}
+  BatchAAResults(AAResults &AAR, CaptureAnalysis *CA)
+      : AA(AAR), AAQI(AAR, CA) {}
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB) {
     return AA.alias(LocA, LocB, AAQI);
   }
   bool pointsToConstantMemory(const MemoryLocation &Loc, bool OrLocal = false) {
-    return AA.pointsToConstantMemory(Loc, AAQI, OrLocal);
+    return isNoModRef(AA.getModRefInfoMask(Loc, AAQI, OrLocal));
+  }
+  bool pointsToConstantMemory(const Value *P, bool OrLocal = false) {
+    return pointsToConstantMemory(MemoryLocation::getBeforeOrAfter(P), OrLocal);
   }
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
                                bool IgnoreLocals = false) {
@@ -654,6 +698,9 @@ public:
                  MemoryLocation(V2, LocationSize::precise(1))) ==
            AliasResult::MustAlias;
   }
+  bool isNoAlias(const MemoryLocation &LocA, const MemoryLocation &LocB) {
+    return alias(LocA, LocB) == AliasResult::NoAlias;
+  }
   ModRefInfo callCapturesBefore(const Instruction *I,
                                 const MemoryLocation &MemLoc,
                                 DominatorTree *DT) {
@@ -664,6 +711,9 @@ public:
   void enableCrossIterationMode() {
     AAQI.MayBeCrossIteration = true;
   }
+
+  /// Disable the use of the dominator tree during alias analysis queries.
+  void disableDominatorTree() { AAQI.UseDominatorTree = false; }
 };
 
 /// Temporary typedef for legacy code that uses a generic \c AliasAnalysis
@@ -679,7 +729,7 @@ using AliasAnalysis = AAResults;
 /// All of these methods model methods by the same name in the \c
 /// AAResults class. Only differences and specifics to how the
 /// implementations are called are documented here.
-class AAResults::Concept {
+class LLVM_ABI AAResults::Concept {
 public:
   virtual ~Concept() = 0;
 
@@ -694,6 +744,11 @@ public:
   virtual AliasResult alias(const MemoryLocation &LocA,
                             const MemoryLocation &LocB, AAQueryInfo &AAQI,
                             const Instruction *CtxI) = 0;
+
+  /// Returns an AliasResult indicating whether a specific memory location
+  /// aliases errno.
+  virtual AliasResult aliasErrno(const MemoryLocation &Loc,
+                                 const Module *M) = 0;
 
   /// @}
   //===--------------------------------------------------------------------===//
@@ -756,6 +811,10 @@ public:
     return Result.alias(LocA, LocB, AAQI, CtxI);
   }
 
+  AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M) override {
+    return Result.aliasErrno(Loc, M);
+  }
+
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
                                bool IgnoreLocals) override {
     return Result.getModRefInfoMask(Loc, AAQI, IgnoreLocals);
@@ -802,12 +861,16 @@ protected:
 
   // Provide all the copy and move constructors so that derived types aren't
   // constrained.
-  AAResultBase(const AAResultBase &Arg) {}
+  AAResultBase(const AAResultBase &Arg) = default;
   AAResultBase(AAResultBase &&Arg) {}
 
 public:
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
                     AAQueryInfo &AAQI, const Instruction *I) {
+    return AliasResult::MayAlias;
+  }
+
+  AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M) {
     return AliasResult::MayAlias;
   }
 
@@ -840,7 +903,7 @@ public:
 };
 
 /// Return true if this pointer is returned by a noalias function.
-bool isNoAliasCall(const Value *V);
+LLVM_ABI bool isNoAliasCall(const Value *V);
 
 /// Return true if this pointer refers to a distinct and identifiable object.
 /// This returns true for:
@@ -849,26 +912,33 @@ bool isNoAliasCall(const Value *V);
 ///    ByVal and NoAlias Arguments
 ///    NoAlias returns (e.g. calls to malloc)
 ///
-bool isIdentifiedObject(const Value *V);
+LLVM_ABI bool isIdentifiedObject(const Value *V);
 
 /// Return true if V is umabigously identified at the function-level.
 /// Different IdentifiedFunctionLocals can't alias.
 /// Further, an IdentifiedFunctionLocal can not alias with any function
 /// arguments other than itself, which is not necessarily true for
 /// IdentifiedObjects.
-bool isIdentifiedFunctionLocal(const Value *V);
+LLVM_ABI bool isIdentifiedFunctionLocal(const Value *V);
+
+/// Return true if we know V to the base address of the corresponding memory
+/// object.  This implies that any address less than V must be out of bounds
+/// for the underlying object.  Note that just being isIdentifiedObject() is
+/// not enough - For example, a negative offset from a noalias argument or call
+/// can be inbounds w.r.t the actual underlying object.
+LLVM_ABI bool isBaseOfObject(const Value *V);
 
 /// Returns true if the pointer is one which would have been considered an
-/// escape by isNonEscapingLocalObject.
-bool isEscapeSource(const Value *V);
+/// escape by isNotCapturedBefore.
+LLVM_ABI bool isEscapeSource(const Value *V);
 
 /// Return true if Object memory is not visible after an unwind, in the sense
 /// that program semantics cannot depend on Object containing any particular
 /// value on unwind. If the RequiresNoCaptureBeforeUnwind out parameter is set
 /// to true, then the memory is only not visible if the object has not been
 /// captured prior to the unwind. Otherwise it is not visible even if captured.
-bool isNotVisibleOnUnwind(const Value *Object,
-                          bool &RequiresNoCaptureBeforeUnwind);
+LLVM_ABI bool isNotVisibleOnUnwind(const Value *Object,
+                                   bool &RequiresNoCaptureBeforeUnwind);
 
 /// Return true if the Object is writable, in the sense that any location based
 /// on this pointer that can be loaded can also be stored to without trapping.
@@ -881,7 +951,8 @@ bool isNotVisibleOnUnwind(const Value *Object,
 /// using the dereferenceable(N) attribute. It does not necessarily hold for
 /// parts that are only known to be dereferenceable due to the presence of
 /// loads.
-bool isWritableObject(const Value *Object, bool &ExplicitlyDereferenceableOnly);
+LLVM_ABI bool isWritableObject(const Value *Object,
+                               bool &ExplicitlyDereferenceableOnly);
 
 /// A manager for alias analyses.
 ///
@@ -914,12 +985,12 @@ public:
     ResultGetters.push_back(&getModuleAAResultImpl<AnalysisT>);
   }
 
-  Result run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI Result run(Function &F, FunctionAnalysisManager &AM);
 
 private:
   friend AnalysisInfoMixin<AAManager>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
   SmallVector<void (*)(Function &F, FunctionAnalysisManager &AM,
                        AAResults &AAResults),
@@ -948,7 +1019,7 @@ private:
 
 /// A wrapper pass to provide the legacy pass manager access to a suitably
 /// prepared AAResults object.
-class AAResultsWrapperPass : public FunctionPass {
+class LLVM_ABI AAResultsWrapperPass : public FunctionPass {
   std::unique_ptr<AAResults> AAR;
 
 public:
@@ -971,11 +1042,28 @@ struct ExternalAAWrapperPass : ImmutablePass {
 
   CallbackT CB;
 
-  static char ID;
+  LLVM_ABI static char ID;
 
-  ExternalAAWrapperPass();
+  LLVM_ABI ExternalAAWrapperPass();
 
-  explicit ExternalAAWrapperPass(CallbackT CB);
+  LLVM_ABI explicit ExternalAAWrapperPass(CallbackT CB, bool RunEarly = false);
+
+  /// Flag indicating whether this external AA should run before Basic AA.
+  ///
+  /// This flag is for LegacyPassManager only. To run an external AA early
+  /// with the NewPassManager, override the registerEarlyDefaultAliasAnalyses
+  /// method on the target machine.
+  ///
+  /// By default, external AA passes are run after Basic AA. If this flag is
+  /// set to true, the external AA will be run before Basic AA during alias
+  /// analysis.
+  ///
+  /// For some targets, we prefer to run the external AA early to improve
+  /// compile time as it has more target-specific information. This is
+  /// particularly useful when the external AA can provide more precise results
+  /// than Basic AA so that Basic AA does not need to spend time recomputing
+  /// them.
+  bool RunEarly = false;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -989,7 +1077,7 @@ struct ExternalAAWrapperPass : ImmutablePass {
 /// object, and will receive a reference to the function wrapper pass, the
 /// function, and the AAResults object to populate. This should be used when
 /// setting up a custom pass pipeline to inject a hook into the AA results.
-ImmutablePass *createExternalAAWrapperPass(
+LLVM_ABI ImmutablePass *createExternalAAWrapperPass(
     std::function<void(Pass &, Function &, AAResults &)> Callback);
 
 } // end namespace llvm

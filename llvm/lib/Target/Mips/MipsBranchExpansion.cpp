@@ -74,7 +74,6 @@
 
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
-#include "MCTargetDesc/MipsMCNaCl.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "Mips.h"
 #include "MipsInstrInfo.h"
@@ -95,7 +94,6 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
@@ -136,9 +134,8 @@ class MipsBranchExpansion : public MachineFunctionPass {
 public:
   static char ID;
 
-  MipsBranchExpansion() : MachineFunctionPass(ID), ABI(MipsABIInfo::Unknown()) {
-    initializeMipsBranchExpansionPass(*PassRegistry::getPassRegistry());
-  }
+  MipsBranchExpansion()
+      : MachineFunctionPass(ID), ABI(MipsABIInfo::Unknown()) {}
 
   StringRef getPassName() const override {
     return "Mips Branch Expansion Pass";
@@ -147,8 +144,7 @@ public:
   bool runOnMachineFunction(MachineFunction &F) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
 private:
@@ -167,6 +163,9 @@ private:
   bool handleFPUDelaySlot();
   bool handleLoadDelaySlot();
   bool handlePossibleLongBranch();
+  bool handleMFLO();
+  template <typename Pred, typename Safe>
+  bool handleMFLOSlot(Pred Predicate, Safe SafeInSlot);
 
   const MipsSubtarget *STI;
   const MipsInstrInfo *TII;
@@ -299,9 +298,8 @@ void MipsBranchExpansion::initMBBInfo() {
     MachineBasicBlock *MBB = MFp->getBlockNumbered(I);
 
     // Compute size of MBB.
-    for (MachineBasicBlock::instr_iterator MI = MBB->instr_begin();
-         MI != MBB->instr_end(); ++MI)
-      MBBInfos[I].Size += TII->getInstSizeInBytes(*MI);
+    for (MachineInstr &MI : MBB->instrs())
+      MBBInfos[I].Size += TII->getInstSizeInBytes(MI);
   }
 }
 
@@ -519,27 +517,19 @@ void MipsBranchExpansion::expandToLongBranch(MBBInfo &I) {
       BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::LW), Mips::RA)
           .addReg(Mips::SP)
           .addImm(0);
-      if (STI->isTargetNaCl())
-        // Bundle-align the target of indirect branch JR.
-        TgtMBB->setAlignment(MIPS_NACL_BUNDLE_ALIGN);
 
-      // In NaCl, modifying the sp is not allowed in branch delay slot.
       // For MIPS32R6, we can skip using a delay slot branch.
       bool hasDelaySlot = buildProperJumpMI(BalTgtMBB, Pos, DL);
 
-      if (STI->isTargetNaCl() || !hasDelaySlot) {
+      if (!hasDelaySlot) {
         BuildMI(*BalTgtMBB, std::prev(Pos), DL, TII->get(Mips::ADDiu), Mips::SP)
             .addReg(Mips::SP)
             .addImm(8);
       }
       if (hasDelaySlot) {
-        if (STI->isTargetNaCl()) {
-          TII->insertNop(*BalTgtMBB, Pos, DL);
-        } else {
-          BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::ADDiu), Mips::SP)
-              .addReg(Mips::SP)
-              .addImm(8);
-        }
+        BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::ADDiu), Mips::SP)
+            .addReg(Mips::SP)
+            .addImm(8);
         BalTgtMBB->rbegin()->bundleWithPred();
       }
     } else {
@@ -743,6 +733,55 @@ static void emitGPDisp(MachineFunction &F, const MipsInstrInfo *TII) {
 }
 
 template <typename Pred, typename Safe>
+bool MipsBranchExpansion::handleMFLOSlot(Pred Predicate, Safe SafeInSlot) {
+  bool Changed = false;
+  bool hasPendingMFLO = false;
+
+  for (MachineFunction::iterator FI = MFp->begin(); FI != MFp->end(); ++FI) {
+    for (Iter I = FI->begin(); I != FI->end(); ++I) {
+
+      if (!Predicate(*I) && !hasPendingMFLO) {
+        continue;
+      }
+
+      Iter IInSlot;
+      bool LastInstInFunction =
+          std::next(I) == FI->end() && std::next(FI) == MFp->end();
+      // We need process several situations:
+      // mflo is last instruction, do not process;
+      // mflo + div, add two nop between them;
+      // mflo + none-div + none-div, do not process;
+      // mflo + none-div + div, add nop between none-div and div.
+      if (!LastInstInFunction) {
+        std::pair<Iter, bool> Res = getNextMachineInstr(std::next(I), &*FI);
+        LastInstInFunction |= Res.second;
+        IInSlot = Res.first;
+        if (LastInstInFunction)
+          continue;
+        if (!SafeInSlot(*IInSlot, *I)) {
+          Changed = true;
+          TII->insertNop(*(I->getParent()), std::next(I), I->getDebugLoc())
+              ->bundleWithPred();
+          NumInsertedNops++;
+          if (IsMFLOMFHI(I->getOpcode())) {
+            TII->insertNop(*(I->getParent()), std::next(I), I->getDebugLoc())
+                ->bundleWithPred();
+            NumInsertedNops++;
+          }
+          if (hasPendingMFLO)
+            hasPendingMFLO = false;
+        } else if (hasPendingMFLO)
+          hasPendingMFLO = false;
+        else if (IsMFLOMFHI(I->getOpcode()))
+          hasPendingMFLO = true;
+      }
+    }
+  }
+
+  return Changed;
+}
+
+template <typename Pred, typename Safe>
 bool MipsBranchExpansion::handleSlot(Pred Predicate, Safe SafeInSlot) {
   bool Changed = false;
 
@@ -776,6 +815,19 @@ bool MipsBranchExpansion::handleSlot(Pred Predicate, Safe SafeInSlot) {
   }
 
   return Changed;
+}
+
+bool MipsBranchExpansion::handleMFLO() {
+  // mips1-4 require a minimum of 2 instructions between a mflo/mfhi
+  // and the next mul/div instruction.
+  if (STI->hasMips32() || STI->hasMips5())
+    return false;
+
+  return handleMFLOSlot(
+      [this](auto &I) -> bool { return TII->IsMfloOrMfhi(I); },
+      [this](auto &IInSlot, auto &I) -> bool {
+        return TII->SafeAfterMflo(IInSlot);
+      });
 }
 
 bool MipsBranchExpansion::handleForbiddenSlot() {
@@ -838,14 +890,6 @@ bool MipsBranchExpansion::handlePossibleLongBranch() {
            (Br->isUnconditionalBranch() && IsPIC))) {
         int64_t Offset = computeOffset(&*Br);
 
-        if (STI->isTargetNaCl()) {
-          // The offset calculation does not include sandboxing instructions
-          // that will be added later in the MC layer.  Since at this point we
-          // don't know the exact amount of code that "sandboxing" will add, we
-          // conservatively estimate that code will not grow more than 100%.
-          Offset *= 2;
-        }
-
         if (ForceLongBranchFirstPass ||
             !TII->isBranchOffsetInRange(Br->getOpcode(), Offset)) {
           MBBInfos[I].Offset = Offset;
@@ -880,7 +924,7 @@ bool MipsBranchExpansion::runOnMachineFunction(MachineFunction &MF) {
   IsPIC = TM.isPositionIndependent();
   ABI = static_cast<const MipsTargetMachine &>(TM).getABI();
   STI = &MF.getSubtarget<MipsSubtarget>();
-  TII = static_cast<const MipsInstrInfo *>(STI->getInstrInfo());
+  TII = STI->getInstrInfo();
 
   if (IsPIC && ABI.IsO32() &&
       MF.getInfo<MipsFunctionInfo>()->globalBaseRegSet())
@@ -894,16 +938,19 @@ bool MipsBranchExpansion::runOnMachineFunction(MachineFunction &MF) {
   bool forbiddenSlotChanged = handleForbiddenSlot();
   bool fpuDelaySlotChanged = handleFPUDelaySlot();
   bool loadDelaySlotChanged = handleLoadDelaySlot();
+  bool MfloChanged = handleMFLO();
 
   bool Changed = longBranchChanged || forbiddenSlotChanged ||
-                 fpuDelaySlotChanged || loadDelaySlotChanged;
+                 fpuDelaySlotChanged || loadDelaySlotChanged || MfloChanged;
 
   // Then run them alternatively while there are changes.
   while (forbiddenSlotChanged) {
     longBranchChanged = handlePossibleLongBranch();
     fpuDelaySlotChanged = handleFPUDelaySlot();
     loadDelaySlotChanged = handleLoadDelaySlot();
-    if (!longBranchChanged && !fpuDelaySlotChanged && !loadDelaySlotChanged)
+    MfloChanged = handleMFLO();
+    if (!longBranchChanged && !fpuDelaySlotChanged && !loadDelaySlotChanged &&
+        !MfloChanged)
       break;
     forbiddenSlotChanged = handleForbiddenSlot();
   }

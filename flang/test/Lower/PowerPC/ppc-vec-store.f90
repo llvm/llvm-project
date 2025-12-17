@@ -89,10 +89,10 @@ subroutine vec_st_vi4i4via4(arg1, arg2, arg3, i)
 
 ! LLVMIR: %[[i:.*]] = load i32, ptr %3, align 4
 ! LLVMIR: %[[iext:.*]] = sext i32 %[[i]] to i64
-! LLVMIR: %[[iextsub:.*]] = sub i64 %[[iext]], 1
-! LLVMIR: %[[iextmul:.*]] = mul i64 %[[iextsub]], 1
-! LLVMIR: %[[iextmul2:.*]] = mul i64 %[[iextmul]], 1
-! LLVMIR: %[[iextadd:.*]] = add i64 %[[iextmul2]], 0
+! LLVMIR: %[[iextsub:.*]] = sub nsw i64 %[[iext]], 1
+! LLVMIR: %[[iextmul:.*]] = mul nsw i64 %[[iextsub]], 1
+! LLVMIR: %[[iextmul2:.*]] = mul nsw i64 %[[iextmul]], 1
+! LLVMIR: %[[iextadd:.*]] = add nsw i64 %[[iextmul2]], 0
 ! LLVMIR: %[[gep1:.*]] = getelementptr <4 x i32>, ptr %2, i64 %[[iextadd]]
 ! LLVMIR: %[[arg1:.*]] = load <4 x i32>, ptr %0, align 16
 ! LLVMIR: %[[arg2:.*]] = load i32, ptr %1, align 4
@@ -206,10 +206,10 @@ subroutine vec_ste_vi4i4ia4(arg1, arg2, arg3, i)
 
 ! LLVMIR: %[[i:.*]] = load i32, ptr %3, align 4
 ! LLVMIR: %[[iext:.*]] = sext i32 %[[i]] to i64
-! LLVMIR: %[[isub:.*]] = sub i64 %[[iext]], 1
-! LLVMIR: %[[imul1:.*]] = mul i64 %[[isub]], 1
-! LLVMIR: %[[imul2:.*]] = mul i64 %[[imul1]], 1
-! LLVMIR: %[[iadd:.*]] = add i64 %[[imul2]], 0
+! LLVMIR: %[[isub:.*]] = sub nsw i64 %[[iext]], 1
+! LLVMIR: %[[imul1:.*]] = mul nsw i64 %[[isub]], 1
+! LLVMIR: %[[imul2:.*]] = mul nsw i64 %[[imul1]], 1
+! LLVMIR: %[[iadd:.*]] = add nsw i64 %[[imul2]], 0
 ! LLVMIR: %[[gep1:.*]] = getelementptr i32, ptr %2, i64 %[[iadd]]
 ! LLVMIR: %[[arg1:.*]] = load <4 x i32>, ptr %0, align 16
 ! LLVMIR: %[[arg2:.*]] = load i32, ptr %1, align 4
@@ -244,10 +244,10 @@ subroutine vec_stxv_test_vi4i8ia4(arg1, arg2, arg3, i)
 
 ! LLVMIR: %[[i:.*]] = load i32, ptr %3, align 4
 ! LLVMIR: %[[iext:.*]] = sext i32 %[[i]] to i64
-! LLVMIR: %[[isub:.*]] = sub i64 %[[iext]], 1
-! LLVMIR: %[[imul1:.*]] = mul i64 %[[isub]], 1
-! LLVMIR: %[[imul2:.*]] = mul i64 %[[imul1]], 1
-! LLVMIR: %[[iadd:.*]] = add i64 %[[imul2]], 0
+! LLVMIR: %[[isub:.*]] = sub nsw i64 %[[iext]], 1
+! LLVMIR: %[[imul1:.*]] = mul nsw i64 %[[isub]], 1
+! LLVMIR: %[[imul2:.*]] = mul nsw i64 %[[imul1]], 1
+! LLVMIR: %[[iadd:.*]] = add nsw i64 %[[imul2]], 0
 ! LLVMIR: %[[gep1:.*]] = getelementptr i32, ptr %2, i64 %[[iadd]]
 ! LLVMIR: %[[arg1:.*]] = load <4 x i32>, ptr %0, align 16
 ! LLVMIR: %[[arg2:.*]] = load i64, ptr %1, align 8
@@ -278,10 +278,10 @@ subroutine vec_stxv_test_vi4i4vai4(arg1, arg2, arg3, i)
 
 ! LLVMIR: %[[i:.*]] = load i32, ptr %3, align 4
 ! LLVMIR: %[[iext:.*]] = sext i32 %[[i]] to i64
-! LLVMIR: %[[isub:.*]] = sub i64 %[[iext]], 1
-! LLVMIR: %[[imul1:.*]] = mul i64 %[[isub]], 1
-! LLVMIR: %[[imul2:.*]] = mul i64 %[[imul1]], 1
-! LLVMIR: %[[iadd:.*]] = add i64 %[[imul2]], 0
+! LLVMIR: %[[isub:.*]] = sub nsw i64 %[[iext]], 1
+! LLVMIR: %[[imul1:.*]] = mul nsw i64 %[[isub]], 1
+! LLVMIR: %[[imul2:.*]] = mul nsw i64 %[[imul1]], 1
+! LLVMIR: %[[iadd:.*]] = add nsw i64 %[[imul2]], 0
 ! LLVMIR: %[[gep1:.*]] = getelementptr <4 x i32>, ptr %2, i64 %[[iadd]]
 ! LLVMIR: %[[arg1:.*]] = load <4 x i32>, ptr %0, align 16
 ! LLVMIR: %[[arg2:.*]] = load i32, ptr %1, align 4
@@ -300,7 +300,7 @@ subroutine vec_xst_test_vr4i2r4(arg1, arg2, arg3)
   real(4) :: arg3
   call vec_xst(arg1, arg2, arg3)
 
-  
+
 ! LLVMIR: %[[arg1:.*]] = load <4 x float>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load i16, ptr %{{.*}}, align 2
 ! LLVMIR: %[[addr:.*]] = getelementptr i8, ptr %{{.*}}, i16 %[[arg2]]
@@ -317,10 +317,10 @@ subroutine vec_xst_test_vi4i8ia4(arg1, arg2, arg3, i)
 
 ! LLVMIR: %[[i:.*]] = load i32, ptr %3, align 4
 ! LLVMIR: %[[iext:.*]] = sext i32 %[[i]] to i64
-! LLVMIR: %[[isub:.*]] = sub i64 %[[iext]], 1
-! LLVMIR: %[[imul1:.*]] = mul i64 %[[isub]], 1
-! LLVMIR: %[[imul2:.*]] = mul i64 %[[imul1]], 1
-! LLVMIR: %[[iadd:.*]] = add i64 %[[imul2]], 0
+! LLVMIR: %[[isub:.*]] = sub nsw i64 %[[iext]], 1
+! LLVMIR: %[[imul1:.*]] = mul nsw i64 %[[isub]], 1
+! LLVMIR: %[[imul2:.*]] = mul nsw i64 %[[imul1]], 1
+! LLVMIR: %[[iadd:.*]] = add nsw i64 %[[imul2]], 0
 ! LLVMIR: %[[gep1:.*]] = getelementptr i32, ptr %2, i64 %[[iadd]]
 ! LLVMIR: %[[arg1:.*]] = load <4 x i32>, ptr %0, align 16
 ! LLVMIR: %[[arg2:.*]] = load i64, ptr %1, align 8
@@ -351,10 +351,10 @@ subroutine vec_xst_test_vi4i4vai4(arg1, arg2, arg3, i)
 
 ! LLVMIR: %[[i:.*]] = load i32, ptr %3, align 4
 ! LLVMIR: %[[iext:.*]] = sext i32 %[[i]] to i64
-! LLVMIR: %[[isub:.*]] = sub i64 %[[iext]], 1
-! LLVMIR: %[[imul1:.*]] = mul i64 %[[isub]], 1
-! LLVMIR: %[[imul2:.*]] = mul i64 %[[imul1]], 1
-! LLVMIR: %[[iadd:.*]] = add i64 %[[imul2]], 0
+! LLVMIR: %[[isub:.*]] = sub nsw i64 %[[iext]], 1
+! LLVMIR: %[[imul1:.*]] = mul nsw i64 %[[isub]], 1
+! LLVMIR: %[[imul2:.*]] = mul nsw i64 %[[imul1]], 1
+! LLVMIR: %[[iadd:.*]] = add nsw i64 %[[imul2]], 0
 ! LLVMIR: %[[gep1:.*]] = getelementptr <4 x i32>, ptr %2, i64 %[[iadd]]
 ! LLVMIR: %[[arg1:.*]] = load <4 x i32>, ptr %0, align 16
 ! LLVMIR: %[[arg2:.*]] = load i32, ptr %1, align 4
@@ -390,10 +390,10 @@ subroutine vec_xst_be_test_vi4i8ia4(arg1, arg2, arg3, i)
 
 ! LLVMIR: %[[i:.*]] = load i32, ptr %3, align 4
 ! LLVMIR: %[[iext:.*]] = sext i32 %[[i]] to i64
-! LLVMIR: %[[isub:.*]] = sub i64 %[[iext]], 1
-! LLVMIR: %[[imul1:.*]] = mul i64 %[[isub]], 1
-! LLVMIR: %[[imul2:.*]] = mul i64 %[[imul1]], 1
-! LLVMIR: %[[iadd:.*]] = add i64 %[[imul2]], 0
+! LLVMIR: %[[isub:.*]] = sub nsw i64 %[[iext]], 1
+! LLVMIR: %[[imul1:.*]] = mul nsw i64 %[[isub]], 1
+! LLVMIR: %[[imul2:.*]] = mul nsw i64 %[[imul1]], 1
+! LLVMIR: %[[iadd:.*]] = add nsw i64 %[[imul2]], 0
 ! LLVMIR: %[[gep1:.*]] = getelementptr i32, ptr %2, i64 %[[iadd]]
 ! LLVMIR: %[[arg1:.*]] = load <4 x i32>, ptr %0, align 16
 ! LLVMIR: %[[arg2:.*]] = load i64, ptr %1, align 8
@@ -426,13 +426,13 @@ subroutine vec_xst_be_test_vi4i4vai4(arg1, arg2, arg3, i)
 
 ! LLVMIR: %[[i:.*]] = load i32, ptr %3, align 4
 ! LLVMIR: %[[iext:.*]] = sext i32 %[[i]] to i64
-! LLVMIR: %[[isub:.*]] = sub i64 %[[iext]], 1
-! LLVMIR: %[[imul1:.*]] = mul i64 %[[isub]], 1
-! LLVMIR: %[[imul2:.*]] = mul i64 %[[imul1]], 1
-! LLVMIR: %[[iadd:.*]] = add i64 %[[imul2]], 0
+! LLVMIR: %[[isub:.*]] = sub nsw i64 %[[iext]], 1
+! LLVMIR: %[[imul1:.*]] = mul nsw i64 %[[isub]], 1
+! LLVMIR: %[[imul2:.*]] = mul nsw i64 %[[imul1]], 1
+! LLVMIR: %[[iadd:.*]] = add nsw i64 %[[imul2]], 0
 ! LLVMIR: %[[gep1:.*]] = getelementptr <4 x i32>, ptr %2, i64 %[[iadd]]
 ! LLVMIR: %[[arg1:.*]] = load <4 x i32>, ptr %0, align 16
-! LLVMIR: %[[arg2:.*]] = load i32, ptr %1, align 4 
+! LLVMIR: %[[arg2:.*]] = load i32, ptr %1, align 4
 ! LLVMIR: %[[gep2:.*]] = getelementptr i8, ptr %[[gep1]], i32 %[[arg2]]
 ! LLVMIR: %[[src:.*]] = shufflevector <4 x i32> %[[arg1]], <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ! LLVMIR: store <4 x i32> %[[src]], ptr %[[gep2]], align 16
@@ -449,7 +449,7 @@ subroutine vec_xstd2_test_vr4i2r4(arg1, arg2, arg3)
   real(4) :: arg3
   call vec_xstd2(arg1, arg2, arg3)
 
-  
+
 ! LLVMIR: %[[arg1:.*]] = load <4 x float>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load i16, ptr %{{.*}}, align 2
 ! LLVMIR: %[[addr:.*]] = getelementptr i8, ptr %{{.*}}, i16 %[[arg2]]
@@ -467,10 +467,10 @@ subroutine vec_xstd2_test_vi4i8ia4(arg1, arg2, arg3, i)
 
 ! LLVMIR: %[[i:.*]] = load i32, ptr %3, align 4
 ! LLVMIR: %[[iext:.*]] = sext i32 %[[i]] to i64
-! LLVMIR: %[[isub:.*]] = sub i64 %[[iext]], 1
-! LLVMIR: %[[imul1:.*]] = mul i64 %[[isub]], 1
-! LLVMIR: %[[imul2:.*]] = mul i64 %[[imul1]], 1
-! LLVMIR: %[[iadd:.*]] = add i64 %[[imul2]], 0
+! LLVMIR: %[[isub:.*]] = sub nsw i64 %[[iext]], 1
+! LLVMIR: %[[imul1:.*]] = mul nsw i64 %[[isub]], 1
+! LLVMIR: %[[imul2:.*]] = mul nsw i64 %[[imul1]], 1
+! LLVMIR: %[[iadd:.*]] = add nsw i64 %[[imul2]], 0
 ! LLVMIR: %[[gep1:.*]] = getelementptr i32, ptr %2, i64 %[[iadd]]
 ! LLVMIR: %[[arg1:.*]] = load <4 x i32>, ptr %0, align 16
 ! LLVMIR: %[[arg2:.*]] = load i64, ptr %1, align 8
@@ -503,13 +503,13 @@ subroutine vec_xstd2_test_vi4i4vai4(arg1, arg2, arg3, i)
 
 ! LLVMIR: %[[i:.*]] = load i32, ptr %3, align 4
 ! LLVMIR: %[[iext:.*]] = sext i32 %[[i]] to i64
-! LLVMIR: %[[isub:.*]] = sub i64 %[[iext]], 1
-! LLVMIR: %[[imul1:.*]] = mul i64 %[[isub]], 1
-! LLVMIR: %[[imul2:.*]] = mul i64 %[[imul1]], 1
-! LLVMIR: %[[iadd:.*]] = add i64 %[[imul2]], 0
+! LLVMIR: %[[isub:.*]] = sub nsw i64 %[[iext]], 1
+! LLVMIR: %[[imul1:.*]] = mul nsw i64 %[[isub]], 1
+! LLVMIR: %[[imul2:.*]] = mul nsw i64 %[[imul1]], 1
+! LLVMIR: %[[iadd:.*]] = add nsw i64 %[[imul2]], 0
 ! LLVMIR: %[[gep1:.*]] = getelementptr <4 x i32>, ptr %2, i64 %[[iadd]]
 ! LLVMIR: %[[arg1:.*]] = load <4 x i32>, ptr %0, align 16
-! LLVMIR: %[[arg2:.*]] = load i32, ptr %1, align 4 
+! LLVMIR: %[[arg2:.*]] = load i32, ptr %1, align 4
 ! LLVMIR: %[[gep2:.*]] = getelementptr i8, ptr %[[gep1]], i32 %[[arg2]]
 ! LLVMIR: %[[src:.*]] = bitcast <4 x i32> %[[arg1]] to <2 x i64>
 ! LLVMIR: store <2 x i64> %[[src]], ptr %[[gep2]], align 16
@@ -526,7 +526,7 @@ subroutine vec_xstw4_test_vr4i2r4(arg1, arg2, arg3)
   real(4) :: arg3
   call vec_xstw4(arg1, arg2, arg3)
 
-  
+
 ! LLVMIR: %[[arg1:.*]] = load <4 x float>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load i16, ptr %{{.*}}, align 2
 ! LLVMIR: %[[addr:.*]] = getelementptr i8, ptr %{{.*}}, i16 %[[arg2]]
@@ -543,10 +543,10 @@ subroutine vec_xstw4_test_vi4i8ia4(arg1, arg2, arg3, i)
 
 ! LLVMIR: %[[i:.*]] = load i32, ptr %3, align 4
 ! LLVMIR: %[[iext:.*]] = sext i32 %[[i]] to i64
-! LLVMIR: %[[isub:.*]] = sub i64 %[[iext]], 1
-! LLVMIR: %[[imul1:.*]] = mul i64 %[[isub]], 1
-! LLVMIR: %[[imul2:.*]] = mul i64 %[[imul1]], 1
-! LLVMIR: %[[iadd:.*]] = add i64 %[[imul2]], 0
+! LLVMIR: %[[isub:.*]] = sub nsw i64 %[[iext]], 1
+! LLVMIR: %[[imul1:.*]] = mul nsw i64 %[[isub]], 1
+! LLVMIR: %[[imul2:.*]] = mul nsw i64 %[[imul1]], 1
+! LLVMIR: %[[iadd:.*]] = add nsw i64 %[[imul2]], 0
 ! LLVMIR: %[[gep1:.*]] = getelementptr i32, ptr %2, i64 %[[iadd]]
 ! LLVMIR: %[[arg1:.*]] = load <4 x i32>, ptr %0, align 16
 ! LLVMIR: %[[arg2:.*]] = load i64, ptr %1, align 8
@@ -578,13 +578,13 @@ subroutine vec_xstw4_test_vi4i4vai4(arg1, arg2, arg3, i)
 
 ! LLVMIR: %[[i:.*]] = load i32, ptr %3, align 4
 ! LLVMIR: %[[iext:.*]] = sext i32 %[[i]] to i64
-! LLVMIR: %[[isub:.*]] = sub i64 %[[iext]], 1
-! LLVMIR: %[[imul1:.*]] = mul i64 %[[isub]], 1
-! LLVMIR: %[[imul2:.*]] = mul i64 %[[imul1]], 1
-! LLVMIR: %[[iadd:.*]] = add i64 %[[imul2]], 0
+! LLVMIR: %[[isub:.*]] = sub nsw i64 %[[iext]], 1
+! LLVMIR: %[[imul1:.*]] = mul nsw i64 %[[isub]], 1
+! LLVMIR: %[[imul2:.*]] = mul nsw i64 %[[imul1]], 1
+! LLVMIR: %[[iadd:.*]] = add nsw i64 %[[imul2]], 0
 ! LLVMIR: %[[gep1:.*]] = getelementptr <4 x i32>, ptr %2, i64 %[[iadd]]
 ! LLVMIR: %[[arg1:.*]] = load <4 x i32>, ptr %0, align 16
-! LLVMIR: %[[arg2:.*]] = load i32, ptr %1, align 4 
+! LLVMIR: %[[arg2:.*]] = load i32, ptr %1, align 4
 ! LLVMIR: %[[gep2:.*]] = getelementptr i8, ptr %[[gep1]], i32 %[[arg2]]
 ! LLVMIR: store <4 x i32> %[[arg1]], ptr %[[gep2]], align 16
 end subroutine vec_xstw4_test_vi4i4vai4

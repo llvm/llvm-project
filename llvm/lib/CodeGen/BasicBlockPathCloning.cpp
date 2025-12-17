@@ -41,6 +41,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/UniqueBBID.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -119,6 +120,23 @@ bool IsValidCloning(const MachineFunction &MF,
           return false;
         }
       }
+      if (PathBB->isMachineBlockAddressTaken()) {
+        // Avoid cloning blocks which have their address taken since we can't
+        // rewire branches to those blocks as easily.
+        WithColor::warning()
+            << "block #" << BBID
+            << " has its machine block address taken in function "
+            << MF.getName() << "\n";
+        return false;
+      }
+      if (PathBB->isInlineAsmBrIndirectTarget()) {
+        // Similarly for branches to the block within an asm goto.
+        WithColor::warning()
+            << "block #" << BBID
+            << " is a branch target of an 'asm goto' in function "
+            << MF.getName() << "\n";
+        return false;
+      }
     }
 
     if (I != ClonePath.size() - 1 && !PathBB->empty() &&
@@ -189,14 +207,12 @@ bool ApplyCloning(MachineFunction &MF,
   }
   return AnyPathsCloned;
 }
-} // end anonymous namespace
 
-namespace llvm {
 class BasicBlockPathCloning : public MachineFunctionPass {
 public:
   static char ID;
 
-  BasicBlockSectionsProfileReader *BBSectionsProfileReader = nullptr;
+  BasicBlockSectionsProfileReaderWrapperPass *BBSectionsProfileReader = nullptr;
 
   BasicBlockPathCloning() : MachineFunctionPass(ID) {
     initializeBasicBlockPathCloningPass(*PassRegistry::getPassRegistry());
@@ -211,14 +227,14 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
-} // namespace llvm
+} // namespace
 
 char BasicBlockPathCloning::ID = 0;
 INITIALIZE_PASS_BEGIN(
     BasicBlockPathCloning, "bb-path-cloning",
     "Applies path clonings for the -basic-block-sections=list option", false,
     false)
-INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReader)
+INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReaderWrapperPass)
 INITIALIZE_PASS_END(
     BasicBlockPathCloning, "bb-path-cloning",
     "Applies path clonings for the -basic-block-sections=list option", false,
@@ -230,13 +246,14 @@ bool BasicBlockPathCloning::runOnMachineFunction(MachineFunction &MF) {
   if (hasInstrProfHashMismatch(MF))
     return false;
 
-  return ApplyCloning(MF, getAnalysis<BasicBlockSectionsProfileReader>()
-                              .getClonePathsForFunction(MF.getName()));
+  return ApplyCloning(MF,
+                      getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
+                          .getClonePathsForFunction(MF.getName()));
 }
 
 void BasicBlockPathCloning::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<BasicBlockSectionsProfileReader>();
+  AU.addRequired<BasicBlockSectionsProfileReaderWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 

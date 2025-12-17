@@ -30,6 +30,7 @@
 // in the paths that are explicitly included by the user.
 
 #include "CompileCommands.h"
+#include "Config.h"
 #include "GlobalCompilationDatabase.h"
 #include "support/Logger.h"
 #include "support/Threading.h"
@@ -105,7 +106,7 @@ struct DriverArgs {
     // relative or absolute).
     if (llvm::any_of(Driver,
                      [](char C) { return llvm::sys::path::is_separator(C); })) {
-      llvm::sys::fs::make_absolute(Cmd.Directory, Driver);
+      llvm::sys::path::make_absolute(Cmd.Directory, Driver);
     }
     this->Driver = Driver.str().str();
     for (size_t I = 0, E = Cmd.CommandLine.size(); I < E; ++I) {
@@ -146,13 +147,13 @@ struct DriverArgs {
           Stdlib = Cmd.CommandLine[I + 1];
       } else if (Arg.consume_front("-stdlib=")) {
         Stdlib = Arg.str();
-      } else if (Arg.startswith("-specs=")) {
+      } else if (Arg.starts_with("-specs=")) {
         // clang requires a single token like `-specs=file` or `--specs=file`,
         // but gcc will accept two tokens like `--specs file`. Since the
         // compilation database is presumably correct, we just forward the flags
         // as-is.
         Specs.push_back(Arg.str());
-      } else if (Arg.startswith("--specs=")) {
+      } else if (Arg.starts_with("--specs=")) {
         Specs.push_back(Arg.str());
       } else if (Arg == "--specs" && I + 1 < E) {
         Specs.push_back(Arg.str());
@@ -238,8 +239,7 @@ template <> struct DenseMapInfo<DriverArgs> {
         Val.Stdlib,
     });
 
-    unsigned SpecsHash =
-        llvm::hash_combine_range(Val.Specs.begin(), Val.Specs.end());
+    unsigned SpecsHash = llvm::hash_combine_range(Val.Specs);
 
     return llvm::hash_combine(FixedFieldsHash, SpecsHash);
   }
@@ -253,10 +253,11 @@ namespace {
 bool isValidTarget(llvm::StringRef Triple) {
   std::shared_ptr<TargetOptions> TargetOpts(new TargetOptions);
   TargetOpts->Triple = Triple.str();
-  DiagnosticsEngine Diags(new DiagnosticIDs, new DiagnosticOptions,
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts,
                           new IgnoringDiagConsumer);
   llvm::IntrusiveRefCntPtr<TargetInfo> Target =
-      TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+      TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   return bool(Target);
 }
 
@@ -282,7 +283,7 @@ std::optional<DriverInfo> parseDriverOutput(llvm::StringRef Output) {
       if (!SeenIncludes && Line.trim() == SIS) {
         SeenIncludes = true;
         State = IncludesExtracting;
-      } else if (!SeenTarget && Line.trim().startswith(TS)) {
+      } else if (!SeenTarget && Line.trim().starts_with(TS)) {
         SeenTarget = true;
         llvm::StringRef TargetLine = Line.trim();
         TargetLine.consume_front(TS);
@@ -401,22 +402,30 @@ extractSystemIncludesAndTarget(const DriverArgs &InputArgs,
   if (!Info)
     return std::nullopt;
 
-  // The built-in headers are tightly coupled to parser builtins.
-  // (These are clang's "resource dir", GCC's GCC_INCLUDE_DIR.)
-  // We should keep using clangd's versions, so exclude the queried builtins.
-  // They're not specially marked in the -v output, but we can get the path
-  // with `$DRIVER -print-file-name=include`.
-  if (auto BuiltinHeaders =
-          run({Driver, "-print-file-name=include"}, /*OutputIsStderr=*/false)) {
-    auto Path = llvm::StringRef(*BuiltinHeaders).trim();
-    if (!Path.empty() && llvm::sys::path::is_absolute(Path)) {
-      auto Size = Info->SystemIncludes.size();
-      llvm::erase(Info->SystemIncludes, Path);
-      vlog("System includes extractor: builtin headers {0} {1}", Path,
-           (Info->SystemIncludes.size() != Size)
-               ? "excluded"
-               : "not found in driver's response");
+  switch (Config::current().CompileFlags.BuiltinHeaders) {
+  case Config::BuiltinHeaderPolicy::Clangd: {
+    // The built-in headers are tightly coupled to parser builtins.
+    // (These are clang's "resource dir", GCC's GCC_INCLUDE_DIR.)
+    // We should keep using clangd's versions, so exclude the queried
+    // builtins. They're not specially marked in the -v output, but we can
+    // get the path with `$DRIVER -print-file-name=include`.
+    if (auto BuiltinHeaders = run({Driver, "-print-file-name=include"},
+                                  /*OutputIsStderr=*/false)) {
+      auto Path = llvm::StringRef(*BuiltinHeaders).trim();
+      if (!Path.empty() && llvm::sys::path::is_absolute(Path)) {
+        auto Size = Info->SystemIncludes.size();
+        llvm::erase(Info->SystemIncludes, Path);
+        vlog("System includes extractor: builtin headers {0} {1}", Path,
+             (Info->SystemIncludes.size() != Size)
+                 ? "excluded"
+                 : "not found in driver's response");
+      }
     }
+    break;
+  }
+  case Config::BuiltinHeaderPolicy::QueryDriver:
+    vlog("System includes extractor: Using builtin headers from query driver.");
+    break;
   }
 
   log("System includes extractor: successfully executed {0}\n\tgot includes: "
@@ -448,7 +457,7 @@ tooling::CompileCommand &setTarget(tooling::CompileCommand &Cmd,
   if (!Target.empty()) {
     // We do not want to override existing target with extracted one.
     for (llvm::StringRef Arg : Cmd.CommandLine) {
-      if (Arg == "-target" || Arg.startswith("--target="))
+      if (Arg == "-target" || Arg.starts_with("--target="))
         return Cmd;
     }
     // Just append when `--` isn't present.
@@ -483,7 +492,6 @@ std::string convertGlobToRegex(llvm::StringRef Glob) {
     }
   }
   RegStream << '$';
-  RegStream.flush();
   return RegText;
 }
 

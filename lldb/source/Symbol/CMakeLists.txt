@@ -6,6 +6,7 @@ add_lldb_library(lldbSymbol NO_PLUGIN_DEPENDENCIES
   CompilerDecl.cpp
   CompilerDeclContext.cpp
   CompilerType.cpp
+  SaveCoreOptions.cpp
   DWARFCallFrameInfo.cpp
   DebugMacros.cpp
   DeclVendor.cpp
@@ -32,13 +33,15 @@ add_lldb_library(lldbSymbol NO_PLUGIN_DEPENDENCIES
   Variable.cpp
   VariableList.cpp
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Symbol
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbCore
     lldbExpression
     lldbHost
     lldbTarget
     lldbUtility
-
-  LINK_COMPONENTS
-    Support
+    lldbValueObject
   )

@@ -1,4 +1,3 @@
-! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
 subroutine test_unstructured1(a, b, c)
@@ -55,10 +54,11 @@ subroutine test_unstructured2(a, b, c)
 
 ! CHECK-LABEL: func.func @_QPtest_unstructured2
 ! CHECK: acc.parallel
-! CHECK: acc.loop
+! CHECK: acc.loop combined(parallel) private(%{{.*}} : !fir.ref<i32>) {
 ! CHECK: fir.call @_FortranAStopStatementText
 ! CHECK: acc.yield
 ! CHECK: acc.yield
+! CHECK: } attributes {independent = [#acc.device_type<none>], unstructured}
 ! CHECK: acc.yield
 
 end subroutine

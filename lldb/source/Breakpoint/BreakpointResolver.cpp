@@ -23,6 +23,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -41,9 +42,9 @@ const char *BreakpointResolver::g_ty_to_name[] = {"FileAndLine", "Address",
 
 const char *BreakpointResolver::g_option_names[static_cast<uint32_t>(
     BreakpointResolver::OptionNames::LastOptionName)] = {
-    "AddressOffset", "Exact",     "FileName",     "Inlines",     "Language",
-    "LineNumber",    "Column",    "ModuleName",   "NameMask",    "Offset",
-    "PythonClass",   "Regex",     "ScriptArgs",   "SectionName", "SearchDepth",
+    "AddressOffset", "Exact",      "FileName",   "Inlines",     "Language",
+    "LineNumber",    "Column",     "ModuleName", "NameMask",    "Offset",
+    "PythonClass",   "Regex",      "ScriptArgs", "SectionName", "SearchDepth",
     "SkipPrologue",  "SymbolNames"};
 
 const char *BreakpointResolver::ResolverTyToName(enum ResolverTy type) {
@@ -64,8 +65,10 @@ BreakpointResolver::NameToResolverTy(llvm::StringRef name) {
 
 BreakpointResolver::BreakpointResolver(const BreakpointSP &bkpt,
                                        const unsigned char resolverTy,
-                                       lldb::addr_t offset)
-    : m_breakpoint(bkpt), m_offset(offset), SubclassID(resolverTy) {}
+                                       lldb::addr_t offset,
+                                       bool offset_is_insn_count)
+    : m_breakpoint(bkpt), m_offset(offset),
+      m_offset_is_insn_count(offset_is_insn_count), SubclassID(resolverTy) {}
 
 BreakpointResolver::~BreakpointResolver() = default;
 
@@ -73,7 +76,8 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
     const StructuredData::Dictionary &resolver_dict, Status &error) {
   BreakpointResolverSP result_sp;
   if (!resolver_dict.IsValid()) {
-    error.SetErrorString("Can't deserialize from an invalid data object.");
+    error = Status::FromErrorString(
+        "Can't deserialize from an invalid data object.");
     return result_sp;
   }
 
@@ -83,14 +87,15 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
       GetSerializationSubclassKey(), subclass_name);
 
   if (!success) {
-    error.SetErrorString("Resolver data missing subclass resolver key");
+    error =
+        Status::FromErrorString("Resolver data missing subclass resolver key");
     return result_sp;
   }
 
   ResolverTy resolver_type = NameToResolverTy(subclass_name);
   if (resolver_type == UnknownResolver) {
-    error.SetErrorStringWithFormatv("Unknown resolver type: {0}.",
-                                    subclass_name);
+    error = Status::FromErrorStringWithFormatv("Unknown resolver type: {0}.",
+                                               subclass_name);
     return result_sp;
   }
 
@@ -98,7 +103,8 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
   success = resolver_dict.GetValueForKeyAsDictionary(
       GetSerializationSubclassOptionsKey(), subclass_options);
   if (!success || !subclass_options || !subclass_options->IsValid()) {
-    error.SetErrorString("Resolver data missing subclass options key.");
+    error =
+        Status::FromErrorString("Resolver data missing subclass options key.");
     return result_sp;
   }
 
@@ -106,33 +112,34 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
   success = subclass_options->GetValueForKeyAsInteger(
       GetKey(OptionNames::Offset), offset);
   if (!success) {
-    error.SetErrorString("Resolver data missing offset options key.");
+    error =
+        Status::FromErrorString("Resolver data missing offset options key.");
     return result_sp;
   }
 
   switch (resolver_type) {
   case FileLineResolver:
     result_sp = BreakpointResolverFileLine::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+        *subclass_options, error);
     break;
   case AddressResolver:
     result_sp = BreakpointResolverAddress::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+        *subclass_options, error);
     break;
   case NameResolver:
     result_sp = BreakpointResolverName::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+        *subclass_options, error);
     break;
   case FileRegexResolver:
     result_sp = BreakpointResolverFileRegex::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+        *subclass_options, error);
     break;
   case PythonResolver:
     result_sp = BreakpointResolverScripted::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+        *subclass_options, error);
     break;
   case ExceptionResolver:
-    error.SetErrorString("Exception resolvers are hard.");
+    error = Status::FromErrorString("Exception resolvers are hard.");
     break;
   default:
     llvm_unreachable("Should never get an unresolvable resolver type.");
@@ -202,9 +209,15 @@ bool operator<(const SourceLoc lhs, const SourceLoc rhs) {
 void BreakpointResolver::SetSCMatchesByLine(
     SearchFilter &filter, SymbolContextList &sc_list, bool skip_prologue,
     llvm::StringRef log_ident, uint32_t line, std::optional<uint16_t> column) {
-  llvm::SmallVector<SymbolContext, 16> all_scs;
-  for (uint32_t i = 0; i < sc_list.GetSize(); ++i)
-    all_scs.push_back(sc_list[i]);
+  llvm::SmallVector<SymbolContext, 16> all_scs(sc_list.begin(), sc_list.end());
+
+  // Let the language plugin filter `sc_list`. Because all symbol contexts in
+  // sc_list are assumed to belong to the same File, Line and CU, the code below
+  // assumes they have the same language.
+  if (!sc_list.IsEmpty() && Language::GetGlobalLanguageProperties()
+                                .GetEnableFilterForLineBreakpoints())
+    if (Language *lang = Language::FindPlugin(sc_list[0].GetLanguage()))
+      lang->FilterForLineBreakpoints(all_scs);
 
   while (all_scs.size()) {
     uint32_t closest_line = UINT32_MAX;
@@ -213,8 +226,10 @@ void BreakpointResolver::SetSCMatchesByLine(
     auto &match = all_scs[0];
     auto worklist_begin = std::partition(
         all_scs.begin(), all_scs.end(), [&](const SymbolContext &sc) {
-          if (sc.line_entry.file == match.line_entry.file ||
-              sc.line_entry.original_file == match.line_entry.original_file) {
+          if (sc.line_entry.GetFile() == match.line_entry.GetFile() ||
+              sc.line_entry.original_file_sp->Equal(
+                  *match.line_entry.original_file_sp,
+                  SupportFile::eEqualFileSpecAndChecksumIfSet)) {
             // When a match is found, keep track of the smallest line number.
             closest_line = std::min(closest_line, sc.line_entry.line);
             return false;
@@ -311,7 +326,7 @@ void BreakpointResolver::AddLocation(SearchFilter &filter,
   // If the line number is before the prologue end, move it there...
   bool skipped_prologue = false;
   if (skip_prologue && sc.function) {
-    Address prologue_addr(sc.function->GetAddressRange().GetBaseAddress());
+    Address prologue_addr = sc.function->GetAddress();
     if (prologue_addr.IsValid() && (line_start == prologue_addr)) {
       const uint32_t prologue_byte_size = sc.function->GetPrologueByteSize();
       if (prologue_byte_size) {
@@ -326,6 +341,21 @@ void BreakpointResolver::AddLocation(SearchFilter &filter,
   }
 
   BreakpointLocationSP bp_loc_sp(AddLocation(line_start));
+  // If the address that we resolved the location to returns a different
+  // LineEntry from the one in the incoming SC, we're probably dealing with an
+  // inlined call site, so set that as the preferred LineEntry:
+  LineEntry resolved_entry;
+  if (!skipped_prologue && bp_loc_sp &&
+      line_start.CalculateSymbolContextLineEntry(resolved_entry) &&
+      LineEntry::Compare(resolved_entry, sc.line_entry)) {
+    // FIXME: The function name will also be wrong here.  Do we need to record
+    // that as well, or can we figure that out again when we report this
+    // breakpoint location.
+    if (!bp_loc_sp->SetPreferredLineEntry(sc.line_entry)) {
+      LLDB_LOG(log, "Tried to add a preferred line entry that didn't have the "
+                    "same address as this location's address.");
+    }
+  }
   if (log && bp_loc_sp && !GetBreakpoint()->IsInternal()) {
     StreamString s;
     bp_loc_sp->GetDescription(&s, lldb::eDescriptionLevelVerbose);
@@ -336,7 +366,32 @@ void BreakpointResolver::AddLocation(SearchFilter &filter,
 
 BreakpointLocationSP BreakpointResolver::AddLocation(Address loc_addr,
                                                      bool *new_location) {
-  loc_addr.Slide(m_offset);
+  if (m_offset_is_insn_count) {
+    Target &target = GetBreakpoint()->GetTarget();
+    llvm::Expected<DisassemblerSP> expected_instructions =
+        target.ReadInstructions(loc_addr, m_offset);
+    if (!expected_instructions) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Breakpoints),
+                     expected_instructions.takeError(),
+                     "error: Unable to read instructions at address 0x{0:x}",
+                     loc_addr.GetLoadAddress(&target));
+      return BreakpointLocationSP();
+    }
+
+    const DisassemblerSP instructions = *expected_instructions;
+    if (!instructions ||
+        instructions->GetInstructionList().GetSize() != m_offset) {
+      LLDB_LOG(GetLog(LLDBLog::Breakpoints),
+               "error: Unable to read {0} instructions at address 0x{1:x}",
+               m_offset, loc_addr.GetLoadAddress(&target));
+      return BreakpointLocationSP();
+    }
+
+    loc_addr.Slide(instructions->GetInstructionList().GetTotalByteSize());
+  } else {
+    loc_addr.Slide(m_offset);
+  }
+
   return GetBreakpoint()->AddLocation(loc_addr, new_location);
 }
 

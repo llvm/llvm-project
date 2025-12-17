@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Test passing arrays to assumed shape dummy arguments
 
@@ -59,7 +59,7 @@ subroutine test_vector_subcripted_section_to_box(v, x)
     end subroutine
   end interface
   integer :: v(:)
-  real :: x(:) 
+  real :: x(:)
   call takes_box(x(v))
 ! CHECK:  %[[VAL_2:.*]] = arith.constant 1 : index
 ! CHECK:  %[[VAL_3:.*]] = arith.constant 0 : index

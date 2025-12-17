@@ -11,7 +11,7 @@ define nonnull ptr @f(i32 %n) presplitcoroutine {
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i32 24)
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[CALL]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], ptr [[TMP0]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[F_FRAME:%.*]], ptr [[TMP0]], i32 0, i32 1
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[TMP0]], i32 0, i32 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[N_ADDR]], align 4
@@ -45,7 +45,7 @@ coro_Cleanup:
   br label %coro_Suspend
 
 coro_Suspend:
-  call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  call void @llvm.coro.end(ptr null, i1 false, token none)
   ret ptr %1
 }
 
@@ -69,7 +69,7 @@ declare i32 @llvm.coro.size.i32()
 declare ptr @llvm.coro.begin(token, ptr)
 declare i8 @llvm.coro.suspend(token, i1)
 declare ptr @llvm.coro.free(token, ptr)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 declare void @llvm.coro.resume(ptr)
 declare void @llvm.coro.destroy(ptr)

@@ -6,8 +6,8 @@
   define fp128 @x(fp128 %a) {
   entry:
     %a.addr = alloca fp128, align 16
-    store fp128 %a, fp128* %a.addr, align 16
-    %0 = load fp128, fp128* %a.addr, align 16
+    store fp128 %a, ptr %a.addr, align 16
+    %0 = load fp128, ptr %a.addr, align 16
     %sub = fsub fp128 0xL00000000000000008000000000000000, %0
     ret fp128 %sub
   }

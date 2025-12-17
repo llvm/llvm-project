@@ -13,8 +13,11 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/Testing/Support/Error.h"
 
+#include <algorithm>
 #include <cmath>
 
 using namespace lldb_private;
@@ -115,11 +118,17 @@ TEST(ScalarTest, RightShiftOperator) {
   int a = 0x00001000;
   int b = 0xFFFFFFFF;
   int c = 4;
+  unsigned d = 0xFFFFFFFF;
+  unsigned short e = 0xFFFF;
   Scalar a_scalar(a);
   Scalar b_scalar(b);
   Scalar c_scalar(c);
+  Scalar d_scalar(d);
+  Scalar e_scalar(e);
   ASSERT_EQ(a >> c, a_scalar >> c_scalar);
   ASSERT_EQ(b >> c, b_scalar >> c_scalar);
+  ASSERT_EQ(d >> c, d_scalar >> c_scalar);
+  ASSERT_EQ(e >> c, e_scalar >> c_scalar);
 }
 
 TEST(ScalarTest, GetBytes) {
@@ -161,6 +170,51 @@ TEST(ScalarTest, GetBytes) {
       llvm::Succeeded());
   f_scalar.GetBytes(Storage);
   ASSERT_EQ(0, memcmp(f, Storage, sizeof(f)));
+}
+
+TEST(ScalarTest, GetData) {
+  auto get_data = [](llvm::APSInt v) {
+    DataExtractor data;
+    Scalar(v).GetData(data);
+    return data.GetData().vec();
+  };
+
+  auto vec = [](std::initializer_list<uint8_t> l) {
+    std::vector<uint8_t> v(l.begin(), l.end());
+    if (endian::InlHostByteOrder() == lldb::eByteOrderLittle)
+      std::reverse(v.begin(), v.end());
+    return v;
+  };
+
+  EXPECT_THAT(
+      get_data(llvm::APSInt::getMaxValue(/*numBits=*/1, /*Unsigned=*/true)),
+      vec({0x01}));
+
+  EXPECT_THAT(
+      get_data(llvm::APSInt::getMaxValue(/*numBits=*/8, /*Unsigned=*/true)),
+      vec({0xff}));
+
+  EXPECT_THAT(
+      get_data(llvm::APSInt::getMaxValue(/*numBits=*/9, /*Unsigned=*/true)),
+      vec({0x01, 0xff}));
+
+  auto get_data_with_size = [](llvm::APInt v, size_t size) {
+    DataExtractor data;
+    Scalar(v).GetData(data, size);
+    return data.GetData().vec();
+  };
+
+  EXPECT_THAT(get_data_with_size(llvm::APInt(16, 0x0123), 8),
+              vec({0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x23}));
+
+  EXPECT_THAT(get_data_with_size(llvm::APInt(32, 0x01234567), 4),
+              vec({0x01, 0x23, 0x45, 0x67}));
+
+  EXPECT_THAT(get_data_with_size(llvm::APInt(48, 0xABCD01234567UL), 4),
+              vec({0x01, 0x23, 0x45, 0x67}));
+
+  EXPECT_THAT(get_data_with_size(llvm::APInt(64, 0xABCDEF0123456789UL), 2),
+              vec({0x67, 0x89}));
 }
 
 TEST(ScalarTest, SetValueFromData) {
@@ -273,7 +327,7 @@ TEST(ScalarTest, GetValue) {
             ScalarGetValue(std::numeric_limits<unsigned long long>::max()));
 }
 
-TEST(ScalarTest, LongLongAssigmentOperator) {
+TEST(ScalarTest, LongLongAssignmentOperator) {
   Scalar ull;
   ull = std::numeric_limits<unsigned long long>::max();
   EXPECT_EQ(std::numeric_limits<unsigned long long>::max(), ull.ULongLong());
@@ -289,6 +343,12 @@ TEST(ScalarTest, Division) {
   Scalar r = lhs / rhs;
   EXPECT_TRUE(r.IsValid());
   EXPECT_EQ(r, Scalar(2.5));
+
+  Scalar inf = Scalar(1) / Scalar(0.0f);
+  Scalar int0 = Scalar(1) / Scalar(0);
+  Scalar ref_inf = llvm::APFloat::getInf(llvm::APFloat::IEEEsingle());
+  EXPECT_EQ(inf, ref_inf);
+  EXPECT_FALSE(int0.IsValid());
 }
 
 TEST(ScalarTest, Promotion) {
@@ -401,4 +461,62 @@ TEST(ScalarTest, TruncOrExtendTo) {
   EXPECT_EQ(S.UInt128(APInt()), APInt(24, 0x0fffffu));
   S.TruncOrExtendTo(16, false);
   EXPECT_EQ(S.UInt128(APInt()), APInt(16, 0xffffu));
+}
+
+TEST(ScalarTest, APFloatConstructor) {
+  llvm::APFloat my_single(llvm::APFloatBase::IEEEsingle(), "3.14159");
+  llvm::APFloat my_double(llvm::APFloatBase::IEEEdouble(), "3.14159");
+  Scalar S(my_single);
+  Scalar D(my_double);
+
+  EXPECT_EQ(S.GetType(), Scalar::e_float);
+  EXPECT_EQ(D.GetType(), Scalar::e_float);
+  ASSERT_TRUE(S != D);
+}
+
+TEST(ScalarTest, CreateAPFloats) {
+  llvm::APFloat ap_float(llvm::APFloatBase::IEEEsingle(), "3.14159");
+  llvm::APFloat ap_nan = llvm::APFloat::getNaN(llvm::APFloat::IEEEsingle());
+  llvm::APSInt int1("12");
+  llvm::APSInt int2("-4");
+  Scalar I1(int1);
+  Scalar I2(int2);
+  Scalar F(ap_float);
+
+  llvm::APFloat out1_float = I1.CreateAPFloatFromAPSInt(lldb::eBasicTypeFloat);
+  llvm::APFloat out1_double =
+      I1.CreateAPFloatFromAPSInt(lldb::eBasicTypeDouble);
+  llvm::APFloat out1_longdouble =
+      I1.CreateAPFloatFromAPSInt(lldb::eBasicTypeLongDouble);
+  llvm::APFloat out1_nan =
+      I1.CreateAPFloatFromAPSInt(lldb::eBasicTypeFloatComplex);
+  EXPECT_TRUE(!out1_float.isNegative());
+  EXPECT_TRUE(!out1_double.isNegative());
+  EXPECT_TRUE(out1_double.bitwiseIsEqual(out1_longdouble));
+  EXPECT_FALSE(out1_double.bitwiseIsEqual(out1_float));
+  EXPECT_TRUE(out1_nan.bitwiseIsEqual(ap_nan));
+
+  llvm::APFloat out2_float = I2.CreateAPFloatFromAPSInt(lldb::eBasicTypeFloat);
+  llvm::APFloat out2_double =
+      I2.CreateAPFloatFromAPSInt(lldb::eBasicTypeDouble);
+  llvm::APFloat out2_longdouble =
+      I2.CreateAPFloatFromAPSInt(lldb::eBasicTypeLongDouble);
+  llvm::APFloat out2_nan =
+      I2.CreateAPFloatFromAPSInt(lldb::eBasicTypeFloatComplex);
+  EXPECT_TRUE(out2_float.isNegative());
+  EXPECT_TRUE(out2_double.isNegative());
+  EXPECT_TRUE(out2_double.bitwiseIsEqual(out2_longdouble));
+  EXPECT_FALSE(out2_double.bitwiseIsEqual(out2_float));
+  EXPECT_TRUE(out2_nan.bitwiseIsEqual(ap_nan));
+
+  llvm::APFloat out3_float = F.CreateAPFloatFromAPFloat(lldb::eBasicTypeFloat);
+  llvm::APFloat out3_double =
+      F.CreateAPFloatFromAPFloat(lldb::eBasicTypeDouble);
+  llvm::APFloat out3_longdouble =
+      F.CreateAPFloatFromAPFloat(lldb::eBasicTypeLongDouble);
+  llvm::APFloat out3_nan =
+      F.CreateAPFloatFromAPFloat(lldb::eBasicTypeFloatComplex);
+  EXPECT_TRUE(out3_double.bitwiseIsEqual(out3_longdouble));
+  EXPECT_FALSE(out3_double.bitwiseIsEqual(out3_float));
+  EXPECT_TRUE(out3_nan.bitwiseIsEqual(ap_nan));
 }

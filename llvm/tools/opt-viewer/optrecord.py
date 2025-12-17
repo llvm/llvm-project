@@ -19,35 +19,18 @@ import functools
 from multiprocessing import Lock
 import os, os.path
 import subprocess
-
-try:
-    # The previously builtin function `intern()` was moved
-    # to the `sys` module in Python 3.
-    from sys import intern
-except:
-    pass
-
+from sys import intern
 import re
 
 import optpmap
 
-try:
-    dict.iteritems
-except AttributeError:
-    # Python 3
-    def itervalues(d):
-        return iter(d.values())
 
-    def iteritems(d):
-        return iter(d.items())
+def itervalues(d):
+    return iter(d.values())
 
-else:
-    # Python 2
-    def itervalues(d):
-        return d.itervalues()
 
-    def iteritems(d):
-        return d.iteritems()
+def iteritems(d):
+    return iter(d.items())
 
 
 def html_file_name(filename):
@@ -64,17 +47,19 @@ class Remark(yaml.YAMLObject):
 
     default_demangler = "c++filt -n"
     demangler_proc = None
+    demangler_lock = Lock()
 
     @classmethod
     def set_demangler(cls, demangler):
         cls.demangler_proc = subprocess.Popen(
             demangler.split(), stdin=subprocess.PIPE, stdout=subprocess.PIPE
         )
-        cls.demangler_lock = Lock()
 
     @classmethod
     def demangle(cls, name):
         with cls.demangler_lock:
+            if not cls.demangler_proc:
+                cls.set_demangler(cls.default_demangler)
             cls.demangler_proc.stdin.write((name + "\n").encode("utf-8"))
             cls.demangler_proc.stdin.flush()
             return cls.demangler_proc.stdout.readline().rstrip().decode("utf-8")
@@ -323,8 +308,6 @@ def get_remarks(input_file, filter_=None):
 def gather_results(filenames, num_jobs, should_print_progress, filter_=None):
     if should_print_progress:
         print("Reading YAML files...")
-    if not Remark.demangler_proc:
-        Remark.set_demangler(Remark.default_demangler)
     remarks = optpmap.pmap(
         get_remarks, filenames, num_jobs, should_print_progress, filter_
     )
@@ -361,6 +344,8 @@ def find_opt_files(*dirs_or_files):
                     d for d in subdirs if not os.path.ismount(os.path.join(dir, d))
                 ]
                 for file in files:
-                    if fnmatch.fnmatch(file, "*.opt.yaml*"):
+                    if fnmatch.fnmatch(file, "*.opt.yaml*") or fnmatch.fnmatch(
+                        file, "*.opt.ld.yaml*"
+                    ):
                         all.append(os.path.join(dir, file))
     return all

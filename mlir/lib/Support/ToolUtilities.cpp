@@ -12,31 +12,30 @@
 
 #include "mlir/Support/ToolUtilities.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include <string>
+#include <utility>
 
 using namespace mlir;
 
 LogicalResult
 mlir::splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer> originalBuffer,
                             ChunkBufferHandler processChunkBuffer,
-                            raw_ostream &os, bool enableSplitting,
-                            bool insertMarkerInOutput) {
+                            raw_ostream &os, llvm::StringRef inputSplitMarker,
+                            llvm::StringRef outputSplitMarker) {
+  llvm::MemoryBufferRef originalBufferRef = originalBuffer->getMemBufferRef();
   // If splitting is disabled, we process the full input buffer.
-  if (!enableSplitting)
-    return processChunkBuffer(std::move(originalBuffer), os);
+  if (inputSplitMarker.empty())
+    return processChunkBuffer(std::move(originalBuffer), originalBufferRef, os);
 
-  const char splitMarkerConst[] = "// -----";
-  StringRef splitMarker(splitMarkerConst);
-  const int splitMarkerLen = splitMarker.size();
+  const int inputSplitMarkerLen = inputSplitMarker.size();
 
-  auto *origMemBuffer = originalBuffer.get();
   SmallVector<StringRef, 8> rawSourceBuffers;
   const int checkLen = 2;
   // Split dropping the last checkLen chars to enable flagging near misses.
-  origMemBuffer->getBuffer().split(rawSourceBuffers,
-                                   splitMarker.drop_back(checkLen));
+  originalBufferRef.getBuffer().split(rawSourceBuffers,
+                                      inputSplitMarker.drop_back(checkLen));
   if (rawSourceBuffers.empty())
     return success();
 
@@ -58,8 +57,9 @@ mlir::splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer> originalBuffer,
     }
 
     // Check that suffix is as expected and doesn't have any dash post.
-    bool expectedSuffix = buffer.startswith(splitMarker.take_back(checkLen)) &&
-                          buffer.size() > checkLen && buffer[checkLen] != '0';
+    bool expectedSuffix =
+        buffer.starts_with(inputSplitMarker.take_back(checkLen)) &&
+        buffer.size() > checkLen && buffer[checkLen] != '0';
     if (expectedSuffix) {
       sourceBuffers.push_back(prev);
       prev = buffer.drop_front(checkLen);
@@ -69,8 +69,8 @@ mlir::splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer> originalBuffer,
       fileSourceMgr.PrintMessage(llvm::errs(), splitLoc,
                                  llvm::SourceMgr::DK_Warning,
                                  "near miss with file split marker");
-      prev = StringRef(prev.data(),
-                       prev.size() + splitMarkerLen - checkLen + buffer.size());
+      prev = StringRef(prev.data(), prev.size() + inputSplitMarkerLen -
+                                        checkLen + buffer.size());
     }
   }
   if (!prev.empty())
@@ -81,16 +81,35 @@ mlir::splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer> originalBuffer,
   auto interleaveFn = [&](StringRef subBuffer) {
     auto splitLoc = SMLoc::getFromPointer(subBuffer.data());
     unsigned splitLine = fileSourceMgr.getLineAndColumn(splitLoc).first;
-    auto subMemBuffer = llvm::MemoryBuffer::getMemBufferCopy(
-        subBuffer, Twine("within split at ") +
-                       origMemBuffer->getBufferIdentifier() + ":" +
-                       Twine(splitLine) + " offset ");
-    if (failed(processChunkBuffer(std::move(subMemBuffer), os)))
+    std::string name((Twine("within split at ") +
+                      originalBufferRef.getBufferIdentifier() + ":" +
+                      Twine(splitLine) + " offset ")
+                         .str());
+    // Use MemoryBufferRef to avoid copying the buffer & keep at same location
+    // relative to the original buffer.
+    auto subMemBuffer =
+        llvm::MemoryBuffer::getMemBuffer(llvm::MemoryBufferRef(subBuffer, name),
+                                         /*RequiresNullTerminator=*/false);
+    if (failed(
+            processChunkBuffer(std::move(subMemBuffer), originalBufferRef, os)))
       hadFailure = true;
   };
   llvm::interleave(sourceBuffers, os, interleaveFn,
-                   insertMarkerInOutput ? "\n// -----\n" : "");
+                   (llvm::Twine(outputSplitMarker) + "\n").str());
 
   // If any fails, then return a failure of the tool.
   return failure(hadFailure);
+}
+
+LogicalResult
+mlir::splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer> originalBuffer,
+                            NoSourceChunkBufferHandler processChunkBuffer,
+                            raw_ostream &os, llvm::StringRef inputSplitMarker,
+                            llvm::StringRef outputSplitMarker) {
+  auto process = [&](std::unique_ptr<llvm::MemoryBuffer> chunkBuffer,
+                     const llvm::MemoryBufferRef &, raw_ostream &os) {
+    return processChunkBuffer(std::move(chunkBuffer), os);
+  };
+  return splitAndProcessBuffer(std::move(originalBuffer), process, os,
+                               inputSplitMarker, outputSplitMarker);
 }

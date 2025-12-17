@@ -4,6 +4,7 @@ unittest("OrcJITTests") {
   deps = [
     "//llvm/lib/ExecutionEngine",
     "//llvm/lib/ExecutionEngine/Orc",
+    "//llvm/lib/ExecutionEngine/Orc/Debugging",
     "//llvm/lib/ExecutionEngine/Orc/Shared",
     "//llvm/lib/ExecutionEngine/RuntimeDyld",
     "//llvm/lib/IR",
@@ -14,22 +15,29 @@ unittest("OrcJITTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "CallSPSViaEPCTest.cpp",
+    "CallableTraitsHelperTest.cpp",
     "CoreAPIsTest.cpp",
     "EPCGenericJITLinkMemoryManagerTest.cpp",
     "EPCGenericMemoryAccessTest.cpp",
     "ExecutionSessionWrapperFunctionCallsTest.cpp",
     "ExecutorAddressTest.cpp",
     "IndirectionUtilsTest.cpp",
+    "JITLinkRedirectionManagerTest.cpp",
     "JITTargetMachineBuilderTest.cpp",
     "LazyCallThroughAndReexportsTest.cpp",
+    "LibraryResolverTest.cpp",
     "LookupAndRecordAddrsTest.cpp",
+    "MachOPlatformTest.cpp",
     "MapperJITLinkMemoryManagerTest.cpp",
+    "MemoryFlagsTest.cpp",
     "MemoryMapperTest.cpp",
     "ObjectFormatsTest.cpp",
     "ObjectLinkingLayerTest.cpp",
     "OrcCAPITest.cpp",
     "OrcTestCommon.cpp",
     "RTDyldObjectLinkingLayerTest.cpp",
+    "ReOptimizeLayerTest.cpp",
     "ResourceTrackerTest.cpp",
     "SharedMemoryMapperTest.cpp",
     "SimpleExecutorMemoryManagerTest.cpp",
@@ -37,6 +45,12 @@ unittest("OrcJITTests") {
     "SymbolStringPoolTest.cpp",
     "TaskDispatchTest.cpp",
     "ThreadSafeModuleTest.cpp",
+    "WaitingOnGraphTest.cpp",
     "WrapperFunctionUtilsTest.cpp",
   ]
+
+  if (host_os != "mac" && host_os != "win") {
+    # Corresponds to export_executable_symbols() in cmake.
+    ldflags = [ "-rdynamic" ]
+  }
 }

@@ -13,8 +13,10 @@
 #ifndef LLVM_ASMPARSER_LLPARSER_H
 #define LLVM_ASMPARSER_LLPARSER_H
 
-#include "LLLexer.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/AsmParser/AsmParserContext.h"
+#include "llvm/AsmParser/LLLexer.h"
+#include "llvm/AsmParser/NumberedValues.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/FMF.h"
@@ -51,15 +53,23 @@ namespace llvm {
   /// or a symbolic (%var) reference.  This is just a discriminated union.
   struct ValID {
     enum {
-      t_LocalID, t_GlobalID,           // ID in UIntVal.
-      t_LocalName, t_GlobalName,       // Name in StrVal.
-      t_APSInt, t_APFloat,             // Value in APSIntVal/APFloatVal.
-      t_Null, t_Undef, t_Zero, t_None, t_Poison, // No value.
-      t_EmptyArray,                    // No value:  []
-      t_Constant,                      // Value in ConstantVal.
-      t_InlineAsm,                     // Value in FTy/StrVal/StrVal2/UIntVal.
-      t_ConstantStruct,                // Value in ConstantStructElts.
-      t_PackedConstantStruct           // Value in ConstantStructElts.
+      t_LocalID,             // ID in UIntVal.
+      t_GlobalID,            // ID in UIntVal.
+      t_LocalName,           // Name in StrVal.
+      t_GlobalName,          // Name in StrVal.
+      t_APSInt,              // Value in APSIntVal.
+      t_APFloat,             // Value in APFloatVal.
+      t_Null,                // No value.
+      t_Undef,               // No value.
+      t_Zero,                // No value.
+      t_None,                // No value.
+      t_Poison,              // No value.
+      t_EmptyArray,          // No value:  []
+      t_Constant,            // Value in ConstantVal.
+      t_ConstantSplat,       // Value in ConstantVal.
+      t_InlineAsm,           // Value in FTy/StrVal/StrVal2/UIntVal.
+      t_ConstantStruct,      // Value in ConstantStructElts.
+      t_PackedConstantStruct // Value in ConstantStructElts.
     } Kind = t_LocalID;
 
     LLLexer::LocTy Loc;
@@ -82,12 +92,15 @@ namespace llvm {
     }
 
     bool operator<(const ValID &RHS) const {
-      assert(Kind == RHS.Kind && "Comparing ValIDs of different kinds");
+      assert((((Kind == t_LocalID || Kind == t_LocalName) &&
+               (RHS.Kind == t_LocalID || RHS.Kind == t_LocalName)) ||
+              ((Kind == t_GlobalID || Kind == t_GlobalName) &&
+               (RHS.Kind == t_GlobalID || RHS.Kind == t_GlobalName))) &&
+             "Comparing ValIDs of different kinds");
+      if (Kind != RHS.Kind)
+        return Kind < RHS.Kind;
       if (Kind == t_LocalID || Kind == t_GlobalID)
         return UIntVal < RHS.UIntVal;
-      assert((Kind == t_LocalName || Kind == t_GlobalName ||
-              Kind == t_ConstantStruct || Kind == t_PackedConstantStruct) &&
-             "Ordering not defined for this ValID kind yet");
       return StrVal < RHS.StrVal;
     }
   };
@@ -125,7 +138,7 @@ namespace llvm {
     // Global Value reference information.
     std::map<std::string, std::pair<GlobalValue*, LocTy> > ForwardRefVals;
     std::map<unsigned, std::pair<GlobalValue*, LocTy> > ForwardRefValIDs;
-    std::vector<GlobalValue*> NumberedVals;
+    NumberedValues<GlobalValue *> NumberedVals;
 
     // Comdat forward reference information.
     std::map<std::string, LocTy> ForwardRefComdats;
@@ -165,19 +178,26 @@ namespace llvm {
     // Map of module ID to path.
     std::map<unsigned, StringRef> ModuleIdMap;
 
+    /// Keeps track of source locations for Values, BasicBlocks, and Functions.
+    AsmParserContext *ParserContext;
+
     /// Only the llvm-as tool may set this to false to bypass
     /// UpgradeDebuginfo so it can generate broken bitcode.
     bool UpgradeDebugInfo;
+
+    bool SeenNewDbgInfoFormat = false;
+    bool SeenOldDbgInfoFormat = false;
 
     std::string SourceFileName;
 
   public:
     LLParser(StringRef F, SourceMgr &SM, SMDiagnostic &Err, Module *M,
              ModuleSummaryIndex *Index, LLVMContext &Context,
-             SlotMapping *Slots = nullptr)
+             SlotMapping *Slots = nullptr,
+             AsmParserContext *ParserContext = nullptr)
         : Context(Context), OPLex(F, SM, Err, Context),
           Lex(F, SM, Err, Context), M(M), Index(Index), Slots(Slots),
-          BlockAddressPFS(nullptr) {}
+          BlockAddressPFS(nullptr), ParserContext(ParserContext) {}
     bool Run(
         bool UpgradeDebugInfo,
         DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
@@ -189,11 +209,17 @@ namespace llvm {
     bool parseTypeAtBeginning(Type *&Ty, unsigned &Read,
                               const SlotMapping *Slots);
 
+    bool parseDIExpressionBodyAtBeginning(MDNode *&Result, unsigned &Read,
+                                          const SlotMapping *Slots);
+
     LLVMContext &getContext() { return Context; }
 
   private:
-    bool error(LocTy L, const Twine &Msg) const { return Lex.Error(L, Msg); }
-    bool tokError(const Twine &Msg) const { return error(Lex.getLoc(), Msg); }
+    bool error(LocTy L, const Twine &Msg) { return Lex.ParseError(L, Msg); }
+    bool tokError(const Twine &Msg) { return error(Lex.getLoc(), Msg); }
+
+    bool checkValueID(LocTy L, StringRef Kind, StringRef Prefix,
+                      unsigned NextID, unsigned ID);
 
     /// Restore the internal name and slot mappings using the mappings that
     /// were created at an earlier parsing stage.
@@ -286,10 +312,13 @@ namespace llvm {
                               bool &DSOLocal);
     void parseOptionalDSOLocal(bool &DSOLocal);
     void parseOptionalVisibility(unsigned &Res);
+    bool parseOptionalImportType(lltok::Kind Kind,
+                                 GlobalValueSummary::ImportKind &Res);
     void parseOptionalDLLStorageClass(unsigned &Res);
     bool parseOptionalCallingConv(unsigned &CC);
     bool parseOptionalAlignment(MaybeAlign &Alignment,
                                 bool AllowParens = false);
+    bool parseOptionalCodeModel(CodeModel::Model &model);
     bool parseOptionalDerefAttrBytes(lltok::Kind AttrKind, uint64_t &Bytes);
     bool parseOptionalUWTableKind(UWTableKind &Kind);
     bool parseAllocKind(AllocFnKind &Kind);
@@ -319,6 +348,7 @@ namespace llvm {
 
     // Top-Level Entities
     bool parseTopLevelEntities();
+    void dropUnknownMetadataReferences();
     bool validateEndOfModule(bool UpgradeDebugInfo);
     bool validateEndOfIndex();
     bool parseTargetDefinitions(DataLayoutCallbackTy DataLayoutCallback);
@@ -333,14 +363,15 @@ namespace llvm {
     bool parseGlobalType(bool &IsConstant);
     bool parseUnnamedGlobal();
     bool parseNamedGlobal();
-    bool parseGlobal(const std::string &Name, LocTy NameLoc, unsigned Linkage,
-                     bool HasLinkage, unsigned Visibility,
+    bool parseGlobal(const std::string &Name, unsigned NameID, LocTy NameLoc,
+                     unsigned Linkage, bool HasLinkage, unsigned Visibility,
                      unsigned DLLStorageClass, bool DSOLocal,
                      GlobalVariable::ThreadLocalMode TLM,
                      GlobalVariable::UnnamedAddr UnnamedAddr);
-    bool parseAliasOrIFunc(const std::string &Name, LocTy NameLoc, unsigned L,
-                           unsigned Visibility, unsigned DLLStorageClass,
-                           bool DSOLocal, GlobalVariable::ThreadLocalMode TLM,
+    bool parseAliasOrIFunc(const std::string &Name, unsigned NameID,
+                           LocTy NameLoc, unsigned L, unsigned Visibility,
+                           unsigned DLLStorageClass, bool DSOLocal,
+                           GlobalVariable::ThreadLocalMode TLM,
                            GlobalVariable::UnnamedAddr UnnamedAddr);
     bool parseComdat();
     bool parseStandaloneMetadata();
@@ -351,6 +382,9 @@ namespace llvm {
     bool parseFnAttributeValuePairs(AttrBuilder &B,
                                     std::vector<unsigned> &FwdRefAttrGrps,
                                     bool inAttrGrp, LocTy &BuiltinLoc);
+    bool parseRangeAttr(AttrBuilder &B);
+    bool parseInitializesAttr(AttrBuilder &B);
+    bool parseCapturesAttr(AttrBuilder &B);
     bool parseRequiredTypeAttr(AttrBuilder &B, lltok::Kind AttrToken,
                                Attribute::AttrKind AttrKind);
 
@@ -369,7 +403,7 @@ namespace llvm {
     bool parseGVFlags(GlobalValueSummary::GVFlags &GVFlags);
     bool parseGVarFlags(GlobalVarSummary::GVarFlags &GVarFlags);
     bool parseOptionalFFlags(FunctionSummary::FFlags &FFlags);
-    bool parseOptionalCalls(std::vector<FunctionSummary::EdgeTy> &Calls);
+    bool parseOptionalCalls(SmallVectorImpl<FunctionSummary::EdgeTy> &Calls);
     bool parseHotness(CalleeInfo::HotnessType &Hotness);
     bool parseOptionalTypeIdInfo(FunctionSummary::TypeIdInfo &TypeIdInfo);
     bool parseTypeTests(std::vector<GlobalValue::GUID> &TypeTests);
@@ -394,7 +428,7 @@ namespace llvm {
     bool parseParamAccessCall(FunctionSummary::ParamAccess::Call &Call,
                               IdLocListType &IdLocList);
     bool parseParamAccessOffset(ConstantRange &Range);
-    bool parseOptionalRefs(std::vector<ValueInfo> &Refs);
+    bool parseOptionalRefs(SmallVectorImpl<ValueInfo> &Refs);
     bool parseTypeIdEntry(unsigned ID);
     bool parseTypeIdSummary(TypeIdSummary &TIS);
     bool parseTypeIdCompatibleVtableEntry(unsigned ID);
@@ -406,9 +440,10 @@ namespace llvm {
         std::map<std::vector<uint64_t>, WholeProgramDevirtResolution::ByArg>
             &ResByArg);
     bool parseArgs(std::vector<uint64_t> &Args);
-    void addGlobalValueToIndex(std::string Name, GlobalValue::GUID,
+    bool addGlobalValueToIndex(std::string Name, GlobalValue::GUID,
                                GlobalValue::LinkageTypes Linkage, unsigned ID,
-                               std::unique_ptr<GlobalValueSummary> Summary);
+                               std::unique_ptr<GlobalValueSummary> Summary,
+                               LocTy Loc);
     bool parseOptionalAllocs(std::vector<AllocInfo> &Allocs);
     bool parseMemProfs(std::vector<MIBInfo> &MIBs);
     bool parseAllocType(uint8_t &AllocType);
@@ -444,13 +479,15 @@ namespace llvm {
       Function &F;
       std::map<std::string, std::pair<Value*, LocTy> > ForwardRefVals;
       std::map<unsigned, std::pair<Value*, LocTy> > ForwardRefValIDs;
-      std::vector<Value*> NumberedVals;
+      NumberedValues<Value *> NumberedVals;
 
       /// FunctionNumber - If this is an unnamed function, this is the slot
       /// number of it, otherwise it is -1.
       int FunctionNumber;
+
     public:
-      PerFunctionState(LLParser &p, Function &f, int functionNumber);
+      PerFunctionState(LLParser &p, Function &f, int functionNumber,
+                       ArrayRef<unsigned> UnnamedArgNums);
       ~PerFunctionState();
 
       Function &getFunction() const { return F; }
@@ -532,8 +569,7 @@ namespace llvm {
     bool parseExceptionArgs(SmallVectorImpl<Value *> &Args,
                             PerFunctionState &PFS);
 
-    bool resolveFunctionType(Type *RetType,
-                             const SmallVector<ParamInfo, 16> &ArgList,
+    bool resolveFunctionType(Type *RetType, ArrayRef<ParamInfo> ArgList,
                              FunctionType *&FuncTy);
 
     // Constant Parsing.
@@ -541,19 +577,20 @@ namespace llvm {
                     Type *ExpectedTy = nullptr);
     bool parseGlobalValue(Type *Ty, Constant *&C);
     bool parseGlobalTypeAndValue(Constant *&V);
-    bool parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts,
-                                std::optional<unsigned> *InRangeOp = nullptr);
+    bool parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts);
     bool parseOptionalComdat(StringRef GlobalName, Comdat *&C);
     bool parseSanitizer(GlobalVariable *GV);
     bool parseMetadataAsValue(Value *&V, PerFunctionState &PFS);
     bool parseValueAsMetadata(Metadata *&MD, const Twine &TypeMsg,
                               PerFunctionState *PFS);
+    bool parseDIArgList(Metadata *&MD, PerFunctionState *PFS);
     bool parseMetadata(Metadata *&MD, PerFunctionState *PFS);
     bool parseMDTuple(MDNode *&MD, bool IsDistinct = false);
     bool parseMDNode(MDNode *&N);
     bool parseMDNodeTail(MDNode *&N);
     bool parseMDNodeVector(SmallVectorImpl<Metadata *> &Elts);
     bool parseMetadataAttachment(unsigned &Kind, MDNode *&MD);
+    bool parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS);
     bool parseInstructionMetadata(Instruction &Inst);
     bool parseGlobalObjectMetadataAttachment(GlobalObject &GO);
     bool parseOptionalFunctionMetadata(Function &F);
@@ -565,12 +602,11 @@ namespace llvm {
     template <class ParserTy>
     bool parseMDFieldsImpl(ParserTy ParseField, LocTy &ClosingLoc);
     bool parseSpecializedMDNode(MDNode *&N, bool IsDistinct = false);
+    bool parseDIExpressionBody(MDNode *&Result, bool IsDistinct);
 
 #define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS)                                  \
   bool parse##CLASS(MDNode *&Result, bool IsDistinct);
 #include "llvm/IR/Metadata.def"
-    bool parseDIArgList(MDNode *&Result, bool IsDistinct,
-                        PerFunctionState *PFS);
 
     // Function Parsing.
     struct ArgInfo {
@@ -581,9 +617,14 @@ namespace llvm {
       ArgInfo(LocTy L, Type *ty, AttributeSet Attr, const std::string &N)
           : Loc(L), Ty(ty), Attrs(Attr), Name(N) {}
     };
-    bool parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList, bool &IsVarArg);
-    bool parseFunctionHeader(Function *&Fn, bool IsDefine);
-    bool parseFunctionBody(Function &Fn);
+    bool parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
+                           SmallVectorImpl<unsigned> &UnnamedArgNums,
+                           bool &IsVarArg);
+    bool parseFunctionHeader(Function *&Fn, bool IsDefine,
+                             unsigned &FunctionNumber,
+                             SmallVectorImpl<unsigned> &UnnamedArgNums);
+    bool parseFunctionBody(Function &Fn, unsigned FunctionNumber,
+                           ArrayRef<unsigned> UnnamedArgNums);
     bool parseBasicBlock(PerFunctionState &PFS);
 
     enum TailCallType { TCT_None, TCT_Tail, TCT_MustTail };

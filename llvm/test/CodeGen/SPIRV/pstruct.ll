@@ -1,4 +1,7 @@
-; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+
+; TODO(#60133): Requires updates following opaque pointer migration.
+; XFAIL: *
 
 %struct.ST = type { i32, i32, i32 }
 
@@ -8,9 +11,9 @@
 ; CHECK-SPIRV: %[[#struct]] = OpTypeStruct %[[#int]] %[[#int]] %[[#int]]
 ; CHECK-SPIRV: %[[#structP:]] = OpTypePointer Function %[[#struct]]
 ; CHECK-SPIRV: %[[#structPP:]] = OpTypePointer Function %[[#structP]]
-; CHECK-SPIRV: %[[#zero:]] = OpConstant %[[#int]] 0
-; CHECK-SPIRV: %[[#one:]] = OpConstant %[[#int]] 1
-; CHECK-SPIRV: %[[#two:]] = OpConstant %[[#int]] 2
+; CHECK-SPIRV: %[[#zero:]] = OpConstantNull %[[#int]]
+; CHECK-SPIRV: %[[#one:]] = OpConstant %[[#int]] 1{{$}}
+; CHECK-SPIRV: %[[#two:]] = OpConstant %[[#int]] 2{{$}}
 
 define dso_local spir_func i32 @cmp_func(i8* %p1, i8* %p2) {
 entry:

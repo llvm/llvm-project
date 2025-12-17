@@ -1,3 +1,4 @@
+
 //===-- StackFrame.h --------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -14,14 +15,16 @@
 
 #include "lldb/Utility/Flags.h"
 
-#include "lldb/Core/ValueObjectList.h"
+#include "lldb/Core/FormatEntity.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/StackID.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UserID.h"
+#include "lldb/ValueObject/ValueObjectList.h"
 
 namespace lldb_private {
 
@@ -40,6 +43,13 @@ namespace lldb_private {
 class StackFrame : public ExecutionContextScope,
                    public std::enable_shared_from_this<StackFrame> {
 public:
+  /// LLVM RTTI support.
+  /// \{
+  static char ID;
+  virtual bool isA(const void *ClassID) const { return ClassID == &ID; }
+  static bool classof(const StackFrame *obj) { return obj->isA(&ID); }
+  /// \}
+
   enum ExpressionPathOption {
     eExpressionPathOptionCheckPtrVsMember = (1u << 0),
     eExpressionPathOptionsNoFragileObjcIvar = (1u << 1),
@@ -57,10 +67,9 @@ public:
     /// local variables.
     History,
 
-    /// An artificial stack frame (e.g. a synthesized result of inferring
-    /// missing tail call frames from a backtrace) with limited support for
-    /// local variables.
-    Artificial
+    /// An synthetic stack frame (e.g. a synthesized result from script
+    /// resource) possibly without support for local variables or register.
+    Synthetic
   };
 
   /// Construct a StackFrame object without supplying a RegisterContextSP.
@@ -106,7 +115,8 @@ public:
   StackFrame(const lldb::ThreadSP &thread_sp, lldb::user_id_t frame_idx,
              lldb::user_id_t concrete_frame_idx, lldb::addr_t cfa,
              bool cfa_is_valid, lldb::addr_t pc, Kind frame_kind,
-             bool behaves_like_zeroth_frame, const SymbolContext *sc_ptr);
+             bool artificial, bool behaves_like_zeroth_frame,
+             const SymbolContext *sc_ptr);
 
   StackFrame(const lldb::ThreadSP &thread_sp, lldb::user_id_t frame_idx,
              lldb::user_id_t concrete_frame_idx,
@@ -124,7 +134,7 @@ public:
 
   lldb::ThreadSP GetThread() const { return m_thread_wp.lock(); }
 
-  StackID &GetStackID();
+  virtual StackID &GetStackID();
 
   /// Get an Address for the current pc value in this StackFrame.
   ///
@@ -132,7 +142,7 @@ public:
   ///
   /// \return
   ///   The Address object set to the current PC value.
-  const Address &GetFrameCodeAddress();
+  virtual const Address &GetFrameCodeAddress();
 
   /// Get the current code Address suitable for symbolication,
   /// may not be the same as GetFrameCodeAddress().
@@ -150,7 +160,7 @@ public:
   ///
   /// \return
   ///   The Address object set to the current PC value.
-  Address GetFrameCodeAddressForSymbolication();
+  virtual Address GetFrameCodeAddressForSymbolication();
 
   /// Change the pc value for a given thread.
   ///
@@ -162,7 +172,7 @@ public:
   /// \return
   ///     true if the pc was changed.  false if this failed -- possibly
   ///     because this frame is not a live StackFrame.
-  bool ChangePC(lldb::addr_t pc);
+  virtual bool ChangePC(lldb::addr_t pc);
 
   /// Provide a SymbolContext for this StackFrame's current pc value.
   ///
@@ -178,7 +188,8 @@ public:
   /// \return
   ///   A SymbolContext reference which includes the types of information
   ///   requested by resolve_scope, if they are available.
-  const SymbolContext &GetSymbolContext(lldb::SymbolContextItem resolve_scope);
+  virtual const SymbolContext &
+  GetSymbolContext(lldb::SymbolContextItem resolve_scope);
 
   /// Return the Canonical Frame Address (DWARF term) for this frame.
   ///
@@ -193,14 +204,10 @@ public:
   /// \param [out] value
   ///   The address of the CFA for this frame, if available.
   ///
-  /// \param [out] error_ptr
-  ///   If there is an error determining the CFA address, this may contain a
-  ///   string explaining the failure.
-  ///
   /// \return
-  ///   Returns true if the CFA value was successfully set in value.  Some
-  ///   frames may be unable to provide this value; they will return false.
-  bool GetFrameBaseValue(Scalar &value, Status *error_ptr);
+  ///   If there is an error determining the CFA address, return an error
+  ///   explaining the failure. Success otherwise.
+  virtual llvm::Error GetFrameBaseValue(Scalar &value);
 
   /// Get the DWARFExpressionList corresponding to the Canonical Frame Address.
   ///
@@ -212,7 +219,7 @@ public:
   ///
   /// \return
   ///   Returns the corresponding DWARF expression, or NULL.
-  DWARFExpressionList *GetFrameBaseExpression(Status *error_ptr);
+  virtual DWARFExpressionList *GetFrameBaseExpression(Status *error_ptr);
 
   /// Get the current lexical scope block for this StackFrame, if possible.
   ///
@@ -222,7 +229,7 @@ public:
   /// \return
   ///   A pointer to the current Block.  nullptr is returned if this can
   ///   not be provided.
-  Block *GetFrameBlock();
+  virtual Block *GetFrameBlock();
 
   /// Get the RegisterContext for this frame, if possible.
   ///
@@ -236,14 +243,15 @@ public:
   ///
   /// \return
   ///   The RegisterContext shared point for this frame.
-  lldb::RegisterContextSP GetRegisterContext();
+  virtual lldb::RegisterContextSP GetRegisterContext();
 
   const lldb::RegisterContextSP &GetRegisterContextSP() const {
     return m_reg_context_sp;
   }
 
-  /// Retrieve the list of variables that are in scope at this StackFrame's
-  /// pc.
+  /// Retrieve the list of variables whose scope either:
+  /// * contains this StackFrame's pc,
+  /// * is a child of this StackFrame's current scope.
   ///
   /// A frame that is not live may return an empty VariableList for a given
   /// pc value even though variables would be available at this point if it
@@ -261,7 +269,8 @@ public:
   ///
   /// \return
   ///     A pointer to a list of variables.
-  VariableList *GetVariableList(bool get_file_globals, Status *error_ptr);
+  virtual VariableList *GetVariableList(bool get_file_globals,
+                                        Status *error_ptr);
 
   /// Retrieve the list of variables that are in scope at this StackFrame's
   /// pc.
@@ -275,9 +284,12 @@ public:
   ///     that are visible to the entire compilation unit (e.g. file
   ///     static in C, globals that are homed in this CU).
   ///
+  /// \param[in] must_have_valid_location
+  ///     Whether to filter variables whose location is not available at this
+  ///     StackFrame's pc.
   /// \return
   ///     A pointer to a list of variables.
-  lldb::VariableListSP
+  virtual lldb::VariableListSP
   GetInScopeVariableList(bool get_file_globals,
                          bool must_have_valid_location = false);
 
@@ -306,7 +318,7 @@ public:
   ///
   /// \return
   ///     A shared pointer to the ValueObject described by var_expr.
-  lldb::ValueObjectSP GetValueForVariableExpressionPath(
+  virtual lldb::ValueObjectSP GetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
       uint32_t options, lldb::VariableSP &var_sp, Status &error);
 
@@ -315,17 +327,32 @@ public:
   /// \return
   ///    true if debug information is available for this frame (function,
   ///    compilation unit, block, etc.)
-  bool HasDebugInformation();
+  virtual bool HasDebugInformation();
 
   /// Return the disassembly for the instructions of this StackFrame's
   /// function as a single C string.
   ///
   /// \return
   ///    C string with the assembly instructions for this function.
-  const char *Disassemble();
+  virtual const char *Disassemble();
+
+  /// Print a description of this frame using the provided frame format.
+  ///
+  /// \param[out] strm
+  ///   The Stream to print the description to.
+  ///
+  /// \param[in] frame_marker
+  ///   Optional string that will be prepended to the frame output description.
+  ///
+  /// \return
+  ///   \b true if and only if dumping with the given \p format worked.
+  virtual bool DumpUsingFormat(Stream &strm,
+                               const lldb_private::FormatEntity::Entry *format,
+                               llvm::StringRef frame_marker = {});
 
   /// Print a description for this frame using the frame-format formatter
-  /// settings.
+  /// settings. If the current frame-format settings are invalid, then the
+  /// default formatter will be used (see \a StackFrame::Dump()).
   ///
   /// \param [in] strm
   ///   The Stream to print the description to.
@@ -335,8 +362,8 @@ public:
   ///
   /// \param [in] frame_marker
   ///   Optional string that will be prepended to the frame output description.
-  void DumpUsingSettingsFormat(Stream *strm, bool show_unique = false,
-                               const char *frame_marker = nullptr);
+  virtual void DumpUsingSettingsFormat(Stream *strm, bool show_unique = false,
+                                       const char *frame_marker = nullptr);
 
   /// Print a description for this frame using a default format.
   ///
@@ -348,7 +375,7 @@ public:
   ///
   /// \param [in] show_fullpaths
   ///   Whether to print the full source paths or just the file base name.
-  void Dump(Stream *strm, bool show_frame_index, bool show_fullpaths);
+  virtual void Dump(Stream *strm, bool show_frame_index, bool show_fullpaths);
 
   /// Print a description of this stack frame and/or the source
   /// context/assembly for this stack frame.
@@ -371,8 +398,9 @@ public:
   ///
   /// \return
   ///   Returns true if successful.
-  bool GetStatus(Stream &strm, bool show_frame_info, bool show_source,
-                 bool show_unique = false, const char *frame_marker = nullptr);
+  virtual bool GetStatus(Stream &strm, bool show_frame_info, bool show_source,
+                         bool show_unique = false,
+                         const char *frame_marker = nullptr);
 
   /// Query whether this frame is a concrete frame on the call stack, or if it
   /// is an inlined frame derived from the debug information and presented by
@@ -380,15 +408,40 @@ public:
   ///
   /// \return
   ///   true if this is an inlined frame.
-  bool IsInlined();
+  virtual bool IsInlined();
+
+  /// Query whether this frame is synthetic.
+  virtual bool IsSynthetic() const;
 
   /// Query whether this frame is part of a historical backtrace.
-  bool IsHistorical() const;
+  virtual bool IsHistorical() const;
 
   /// Query whether this frame is artificial (e.g a synthesized result of
   /// inferring missing tail call frames from a backtrace). Artificial frames
   /// may have limited support for inspecting variables.
-  bool IsArtificial() const;
+  virtual bool IsArtificial() const;
+
+  /// Query whether this frame should be hidden from backtraces. Frame
+  /// recognizers can customize this behavior and hide distracting
+  /// system implementation details this way.
+  virtual bool IsHidden();
+
+  /// Language plugins can use this API to report language-specific
+  /// runtime information about this compile unit, such as additional
+  /// language version details or feature flags.
+  virtual StructuredData::ObjectSP GetLanguageSpecificData();
+
+  /// Get the frame's demangled name.
+  ///
+  ///  /// \return
+  ///   A C-String containing the function demangled name. Can be null.
+  virtual const char *GetFunctionName();
+
+  /// Get the frame's demangled display name.
+  ///
+  ///  /// \return
+  ///   A C-String containing the function demangled display name. Can be null.
+  virtual const char *GetDisplayFunctionName();
 
   /// Query this frame to find what frame it is in this Thread's
   /// StackFrameList.
@@ -396,9 +449,9 @@ public:
   /// \return
   ///   StackFrame index 0 indicates the currently-executing function.  Inline
   ///   frames are included in this frame index count.
-  uint32_t GetFrameIndex() const;
+  virtual uint32_t GetFrameIndex() const;
 
-  /// Set this frame's synthetic frame index.
+  /// Set this frame's frame index.
   void SetFrameIndex(uint32_t index) { m_frame_index = index; }
 
   /// Query this frame to find what frame it is in this Thread's
@@ -409,7 +462,7 @@ public:
   ///   frames are not included in this frame index count; their concrete
   ///   frame index will be the same as the concrete frame that they are
   ///   derived from.
-  uint32_t GetConcreteFrameIndex() const { return m_concrete_frame_index; }
+  virtual uint32_t GetConcreteFrameIndex() { return m_concrete_frame_index; }
 
   /// Create a ValueObject for a given Variable in this StackFrame.
   ///
@@ -423,20 +476,19 @@ public:
   ///
   /// \return
   ///     A ValueObject for this variable.
-  lldb::ValueObjectSP
+  virtual lldb::ValueObjectSP
   GetValueObjectForFrameVariable(const lldb::VariableSP &variable_sp,
                                  lldb::DynamicValueType use_dynamic);
 
   /// Query this frame to determine what the default language should be when
   /// parsing expressions given the execution context.
   ///
-  /// \return
-  ///   The language of the frame if known, else lldb::eLanguageTypeUnknown.
-  lldb::LanguageType GetLanguage();
+  /// \return   The language of the frame if known.
+  virtual SourceLanguage GetLanguage();
 
-  // similar to GetLanguage(), but is allowed to take a potentially incorrect
-  // guess if exact information is not available
-  lldb::LanguageType GuessLanguage();
+  /// Similar to GetLanguage(), but is allowed to take a potentially incorrect
+  /// guess if exact information is not available.
+  virtual SourceLanguage GuessLanguage();
 
   /// Attempt to econstruct the ValueObject for a given raw address touched by
   /// the current instruction.  The ExpressionPath should indicate how to get
@@ -447,7 +499,7 @@ public:
   ///
   /// \return
   ///   The ValueObject if found.  If valid, it has a valid ExpressionPath.
-  lldb::ValueObjectSP GuessValueForAddress(lldb::addr_t addr);
+  virtual lldb::ValueObjectSP GuessValueForAddress(lldb::addr_t addr);
 
   /// Attempt to reconstruct the ValueObject for the address contained in a
   /// given register plus an offset.  The ExpressionPath should indicate how
@@ -461,8 +513,8 @@ public:
   ///
   /// \return
   ///   The ValueObject if found.  If valid, it has a valid ExpressionPath.
-  lldb::ValueObjectSP GuessValueForRegisterAndOffset(ConstString reg,
-                                                     int64_t offset);
+  virtual lldb::ValueObjectSP GuessValueForRegisterAndOffset(ConstString reg,
+                                                             int64_t offset);
 
   /// Attempt to reconstruct the ValueObject for a variable with a given \a name
   /// from within the current StackFrame, within the current block. The search
@@ -475,7 +527,7 @@ public:
   ///
   /// \return
   ///   The ValueObject if found.
-  lldb::ValueObjectSP FindVariable(ConstString name);
+  virtual lldb::ValueObjectSP FindVariable(ConstString name);
 
   // lldb::ExecutionContextScope pure virtual functions
   lldb::TargetSP CalculateTarget() override;
@@ -488,10 +540,25 @@ public:
 
   void CalculateExecutionContext(ExecutionContext &exe_ctx) override;
 
-  lldb::RecognizedStackFrameSP GetRecognizedFrame();
+  virtual lldb::RecognizedStackFrameSP GetRecognizedFrame();
+
+  /// Get the StackFrameList that contains this frame.
+  ///
+  /// Returns the StackFrameList that contains this frame, allowing
+  /// frames to resolve execution contexts without calling
+  /// Thread::GetStackFrameList(), which can cause circular dependencies
+  /// during frame provider initialization.
+  ///
+  /// \return
+  ///   The StackFrameList that contains this frame, or nullptr if not set.
+  virtual lldb::StackFrameListSP GetContainingStackFrameList() const {
+    return m_frame_list_wp.lock();
+  }
 
 protected:
+  friend class BorrowedStackFrame;
   friend class StackFrameList;
+  friend class SyntheticStackFrameList;
 
   void SetSymbolContextScope(SymbolContextScope *symbol_scope);
 
@@ -501,36 +568,54 @@ protected:
 
   bool HasCachedData() const;
 
-private:
-  // For StackFrame only
+  /// For StackFrame and derived classes only.
+  /// \{
   lldb::ThreadWP m_thread_wp;
   uint32_t m_frame_index;
   uint32_t m_concrete_frame_index;
   lldb::RegisterContextSP m_reg_context_sp;
   StackID m_id;
-  Address m_frame_code_addr; // The frame code address (might not be the same as
-                             // the actual PC for inlined frames) as a
-                             // section/offset address
+  /// \}
+
+  /// The frame code address (might not be the same as the actual PC
+  /// for inlined frames) as a section/offset address.
+  Address m_frame_code_addr;
   SymbolContext m_sc;
   Flags m_flags;
   Scalar m_frame_base;
   Status m_frame_base_error;
-  bool m_cfa_is_valid; // Does this frame have a CFA?  Different from CFA ==
-                       // LLDB_INVALID_ADDRESS
+  uint16_t m_frame_recognizer_generation = 0;
+  /// Does this frame have a CFA?  Different from CFA == LLDB_INVALID_ADDRESS.
+  bool m_cfa_is_valid;
   Kind m_stack_frame_kind;
+  /// Is this an artificial stack frame (e.g. a synthesized result of inferring
+  /// missing tail call frames from a backtrace) with limited support for
+  /// local variables. Orthogonal to `StackFrame::Kind`.
+  bool m_artificial;
 
-  // Whether this frame behaves like the zeroth frame, in the sense
-  // that its pc value might not immediately follow a call (and thus might
-  // be the first address of its function). True for actual frame zero as
-  // well as any other frame with the same trait.
+  /// Whether this frame behaves like the zeroth frame, in the sense
+  /// that its pc value might not immediately follow a call (and thus might
+  /// be the first address of its function). True for actual frame zero as
+  /// well as any other frame with the same trait.
   bool m_behaves_like_zeroth_frame;
   lldb::VariableListSP m_variable_list_sp;
-  ValueObjectList m_variable_list_value_objects; // Value objects for each
-                                                 // variable in
-                                                 // m_variable_list_sp
-  lldb::RecognizedStackFrameSP m_recognized_frame_sp;
+  lldb::StackFrameListWP m_frame_list_wp;
+  /// Value objects for each variable in m_variable_list_sp.
+  ValueObjectList m_variable_list_value_objects;
+  std::optional<lldb::RecognizedStackFrameSP> m_recognized_frame_sp;
   StreamString m_disassembly;
   std::recursive_mutex m_mutex;
+
+private:
+  /// Private methods, called from GetValueForVariableExpressionPath.
+  /// See that method for documentation of parameters and return value.
+  lldb::ValueObjectSP LegacyGetValueForVariableExpressionPath(
+      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+      uint32_t options, lldb::VariableSP &var_sp, Status &error);
+
+  lldb::ValueObjectSP DILGetValueForVariableExpressionPath(
+      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+      uint32_t options, lldb::VariableSP &var_sp, Status &error);
 
   StackFrame(const StackFrame &) = delete;
   const StackFrame &operator=(const StackFrame &) = delete;

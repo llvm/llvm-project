@@ -35,7 +35,6 @@ struct AffineMapStorage;
 
 class Attribute;
 class Builder;
-struct LogicalResult;
 class OpFoldResult;
 class MLIRContext;
 
@@ -81,7 +80,7 @@ public:
   static AffineMap getMinorIdentityMap(unsigned dims, unsigned results,
                                        MLIRContext *context);
 
-  /// Returns an identity affine map witn `numDims` input dimensions and
+  /// Returns an identity affine map with `numDims` input dimensions and
   /// filtered results using `keepDimFilter`. If `keepDimFilter` returns true
   /// for a dimension, the dimension is kept in the affine map results.
   /// Otherwise, the dimension is dropped from the results.
@@ -103,6 +102,8 @@ public:
   /// (i.e. `[1,1,2]` is an invalid permutation).
   static AffineMap getPermutationMap(ArrayRef<unsigned> permutation,
                                      MLIRContext *context);
+  static AffineMap getPermutationMap(ArrayRef<int64_t> permutation,
+                                     MLIRContext *context);
 
   /// Returns an affine map with `numDims` input dimensions and results
   /// specified by `targets`.
@@ -120,9 +121,11 @@ public:
   /// `exprs.size()`, as many dims as the largest dim in `exprs` and as many
   /// symbols as the largest symbol in `exprs`.
   static SmallVector<AffineMap, 4>
-  inferFromExprList(ArrayRef<ArrayRef<AffineExpr>> exprsList);
+  inferFromExprList(ArrayRef<ArrayRef<AffineExpr>> exprsList,
+                    MLIRContext *context);
   static SmallVector<AffineMap, 4>
-  inferFromExprList(ArrayRef<SmallVector<AffineExpr, 4>> exprsList);
+  inferFromExprList(ArrayRef<SmallVector<AffineExpr, 4>> exprsList,
+                    MLIRContext *context);
 
   MLIRContext *getContext() const;
 
@@ -142,6 +145,14 @@ public:
   /// Returns true if this affine map is a minor identity, i.e. an identity
   /// affine map (d0, ..., dn) -> (dp, ..., dn) on the most minor dimensions.
   bool isMinorIdentity() const;
+
+  /// Returns the list of broadcast dimensions (i.e. dims indicated by value 0
+  /// in the result).
+  /// Ex:
+  ///  * (d0, d1, d2) -> (0, d1) gives [0]
+  ///  * (d0, d1, d2) -> (d2, d1) gives []
+  ///  * (d0, d1, d2, d4) -> (d0, 0, d1, 0) gives [1, 3]
+  SmallVector<unsigned> getBroadcastDims() const;
 
   /// Returns true if this affine map is a minor identity up to broadcasted
   /// dimensions which are indicated by value 0 in the result. If
@@ -310,7 +321,8 @@ public:
   /// Folds the results of the application of an affine map on the provided
   /// operands to a constant if possible.
   LogicalResult constantFold(ArrayRef<Attribute> operandConstants,
-                             SmallVectorImpl<Attribute> &results) const;
+                             SmallVectorImpl<Attribute> &results,
+                             bool *hasPoison = nullptr) const;
 
   /// Propagates the constant operands into this affine map. Operands are
   /// allowed to be null, at which point they are treated as non-constant. This
@@ -318,9 +330,9 @@ public:
   /// which may be equal to the old map if no folding happened. If `results` is
   /// provided and if all expressions in the map were folded to constants,
   /// `results` will contain the values of these constants.
-  AffineMap
-  partialConstantFold(ArrayRef<Attribute> operandConstants,
-                      SmallVectorImpl<int64_t> *results = nullptr) const;
+  AffineMap partialConstantFold(ArrayRef<Attribute> operandConstants,
+                                SmallVectorImpl<int64_t> *results = nullptr,
+                                bool *hasPoison = nullptr) const;
 
   /// Returns the AffineMap resulting from composing `this` with `map`.
   /// The resulting AffineMap has as many AffineDimExpr as `map` and as many
@@ -341,6 +353,24 @@ public:
   /// Applies composition by the dims of `this` to the integer `values` and
   /// returns the resulting values. `this` must be symbol-less.
   SmallVector<int64_t, 4> compose(ArrayRef<int64_t> values) const;
+
+  /// Returns the number of "zero" results (constant values == 0) in this map.
+  ///
+  /// Example:
+  ///   * For `(d0, d1) -> (d0, d1, 0)` returns 1
+  ///   * For `(d0, d1, d2) -> (d0, d1)` returns 0
+  ///   * For `(d0, d1, d2) -> (d0, 0, d1, 0, d2)` returns 2
+  size_t getNumOfZeroResults() const;
+
+  /// Returns the AffineMap resulting from removing "zero" results (constant
+  /// values == 0) from this map.
+  ///
+  /// Example:
+  ///   * For `(d0, d1) -> (d0, d1, 0)` returns `(d0, d1) -> (d0, d1)`
+  ///   * For `(d0, d1, d2) -> (d0, d1)` returns `(d0, d1, d2) -> (d0, d1)`
+  ///   * For `(d0, d1, d2) -> (d0, 0, d1, 0, d2)` returns
+  ///     `(d0, d1, d2) -> (d0, d1, d2)`
+  AffineMap dropZeroResults();
 
   /// Returns true if the AffineMap represents a subset (i.e. a projection) of a
   /// symbol-less permutation map. `allowZeroInResults` allows projected
@@ -583,7 +613,7 @@ AffineMap inverseAndBroadcastProjectedPermutation(AffineMap map);
 /// ```mlir
 ///     (i, j, k) -> (i, k, k, j, i, j)
 /// ```
-AffineMap concatAffineMaps(ArrayRef<AffineMap> maps);
+AffineMap concatAffineMaps(ArrayRef<AffineMap> maps, MLIRContext *context);
 
 /// Returns the map that results from projecting out the dimensions specified in
 /// `projectedDimensions`. The projected dimensions are set to 0.
@@ -648,9 +678,9 @@ SmallVector<T> applyPermutationMap(AffineMap map, llvm::ArrayRef<T> source) {
   SmallVector<T> result;
   result.reserve(map.getNumResults());
   for (AffineExpr expr : map.getResults()) {
-    if (auto dimExpr = expr.dyn_cast<AffineDimExpr>()) {
+    if (auto dimExpr = dyn_cast<AffineDimExpr>(expr)) {
       result.push_back(source[dimExpr.getPosition()]);
-    } else if (auto constExpr = expr.dyn_cast<AffineConstantExpr>()) {
+    } else if (auto constExpr = dyn_cast<AffineConstantExpr>(expr)) {
       assert(constExpr.getValue() == 0 &&
              "Unexpected constant in projected permutation map");
       result.push_back(0);
@@ -669,9 +699,9 @@ static void getMaxDimAndSymbol(ArrayRef<AffineExprContainer> exprsList,
   for (const auto &exprs : exprsList) {
     for (auto expr : exprs) {
       expr.walk([&maxDim, &maxSym](AffineExpr e) {
-        if (auto d = e.dyn_cast<AffineDimExpr>())
+        if (auto d = dyn_cast<AffineDimExpr>(e))
           maxDim = std::max(maxDim, static_cast<int64_t>(d.getPosition()));
-        if (auto s = e.dyn_cast<AffineSymbolExpr>())
+        if (auto s = dyn_cast<AffineSymbolExpr>(e))
           maxSym = std::max(maxSym, static_cast<int64_t>(s.getPosition()));
       });
     }

@@ -14,31 +14,27 @@ target triple = "aarch64"
 define %"class.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_v2f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z1.d, #0 // =0x0
-; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    cntd x9
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    neg x9, x9
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    cntd x8
+; CHECK-NEXT:    neg x9, x8
 ; CHECK-NEXT:    mov w10, #100 // =0x64
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    and x10, x9, x10
-; CHECK-NEXT:    rdvl x11, #2
-; CHECK-NEXT:    zip2 z0.d, z1.d, z1.d
-; CHECK-NEXT:    zip1 z1.d, z1.d, z1.d
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    and x9, x9, x10
+; CHECK-NEXT:    rdvl x10, #2
 ; CHECK-NEXT:  .LBB0_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x12, x0, x8
-; CHECK-NEXT:    add x13, x1, x8
-; CHECK-NEXT:    ld1b { z2.b }, p1/z, [x0, x8]
-; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x12, #1, mul vl]
-; CHECK-NEXT:    ld1b { z4.b }, p1/z, [x1, x8]
-; CHECK-NEXT:    ld1d { z5.d }, p0/z, [x13, #1, mul vl]
-; CHECK-NEXT:    adds x10, x10, x9
-; CHECK-NEXT:    add x8, x8, x11
-; CHECK-NEXT:    fcmla z1.d, p0/m, z4.d, z2.d, #0
-; CHECK-NEXT:    fcmla z0.d, p0/m, z5.d, z3.d, #0
-; CHECK-NEXT:    fcmla z1.d, p0/m, z4.d, z2.d, #90
-; CHECK-NEXT:    fcmla z0.d, p0/m, z5.d, z3.d, #90
+; CHECK-NEXT:    ldr z2, [x0, #1, mul vl]
+; CHECK-NEXT:    ldr z3, [x0]
+; CHECK-NEXT:    subs x9, x9, x8
+; CHECK-NEXT:    ldr z4, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z5, [x1]
+; CHECK-NEXT:    add x1, x1, x10
+; CHECK-NEXT:    add x0, x0, x10
+; CHECK-NEXT:    fcmla z1.d, p0/m, z5.d, z3.d, #0
+; CHECK-NEXT:    fcmla z0.d, p0/m, z4.d, z2.d, #0
+; CHECK-NEXT:    fcmla z1.d, p0/m, z5.d, z3.d, #90
+; CHECK-NEXT:    fcmla z0.d, p0/m, z4.d, z2.d, #90
 ; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %exit.block
 ; CHECK-NEXT:    uzp1 z2.d, z1.d, z0.d
@@ -64,11 +60,11 @@ vector.body:                                      ; preds = %vector.body, %entry
   %scevgep46 = getelementptr i8, ptr %a, i64 %lsr.iv27
   %scevgep47 = getelementptr i8, ptr %b, i64 %lsr.iv27
   %wide.vec = load <vscale x 4 x double>, ptr %scevgep46, align 8
-  %3 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec)
+  %3 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec)
   %4 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %3, 0
   %5 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %3, 1
   %wide.vec30 = load <vscale x 4 x double>, ptr %scevgep47, align 8
-  %6 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec30)
+  %6 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec30)
   %7 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %6, 0
   %8 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %6, 1
   %9 = fmul fast <vscale x 2 x double> %8, %4
@@ -101,36 +97,33 @@ exit.block:                                     ; preds = %vector.body
 define %"class.std::complex" @complex_mul_nonzero_init_v2f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_nonzero_init_v2f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d, vl1
-; CHECK-NEXT:    fmov d0, #1.00000000
-; CHECK-NEXT:    mov z1.d, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    fmov d1, #1.00000000
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    fmov d2, #2.00000000
-; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    neg x9, x8
 ; CHECK-NEXT:    mov w10, #100 // =0x64
-; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    neg x9, x9
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    and x10, x9, x10
-; CHECK-NEXT:    rdvl x11, #2
-; CHECK-NEXT:    sel z3.d, p0, z0.d, z1.d
-; CHECK-NEXT:    mov z1.d, p0/m, z2.d
+; CHECK-NEXT:    and x9, x9, x10
+; CHECK-NEXT:    rdvl x10, #2
+; CHECK-NEXT:    sel z1.d, p0, z1.d, z0.d
+; CHECK-NEXT:    sel z2.d, p0, z2.d, z0.d
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    zip2 z0.d, z1.d, z3.d
-; CHECK-NEXT:    zip1 z1.d, z1.d, z3.d
+; CHECK-NEXT:    zip2 z0.d, z2.d, z1.d
+; CHECK-NEXT:    zip1 z1.d, z2.d, z1.d
 ; CHECK-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x12, x0, x8
-; CHECK-NEXT:    add x13, x1, x8
-; CHECK-NEXT:    ld1b { z2.b }, p1/z, [x0, x8]
-; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x12, #1, mul vl]
-; CHECK-NEXT:    ld1b { z4.b }, p1/z, [x1, x8]
-; CHECK-NEXT:    ld1d { z5.d }, p0/z, [x13, #1, mul vl]
-; CHECK-NEXT:    adds x10, x10, x9
-; CHECK-NEXT:    add x8, x8, x11
-; CHECK-NEXT:    fcmla z1.d, p0/m, z4.d, z2.d, #0
-; CHECK-NEXT:    fcmla z0.d, p0/m, z5.d, z3.d, #0
-; CHECK-NEXT:    fcmla z1.d, p0/m, z4.d, z2.d, #90
-; CHECK-NEXT:    fcmla z0.d, p0/m, z5.d, z3.d, #90
+; CHECK-NEXT:    ldr z2, [x0, #1, mul vl]
+; CHECK-NEXT:    ldr z3, [x0]
+; CHECK-NEXT:    subs x9, x9, x8
+; CHECK-NEXT:    ldr z4, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z5, [x1]
+; CHECK-NEXT:    add x1, x1, x10
+; CHECK-NEXT:    add x0, x0, x10
+; CHECK-NEXT:    fcmla z1.d, p0/m, z5.d, z3.d, #0
+; CHECK-NEXT:    fcmla z0.d, p0/m, z4.d, z2.d, #0
+; CHECK-NEXT:    fcmla z1.d, p0/m, z5.d, z3.d, #90
+; CHECK-NEXT:    fcmla z0.d, p0/m, z4.d, z2.d, #90
 ; CHECK-NEXT:    b.ne .LBB1_1
 ; CHECK-NEXT:  // %bb.2: // %exit.block
 ; CHECK-NEXT:    uzp1 z2.d, z1.d, z0.d
@@ -156,11 +149,11 @@ vector.body:                                      ; preds = %vector.body, %entry
   %scevgep46 = getelementptr i8, ptr %a, i64 %lsr.iv27
   %scevgep47 = getelementptr i8, ptr %b, i64 %lsr.iv27
   %wide.vec = load <vscale x 4 x double>, ptr %scevgep46, align 8
-  %3 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec)
+  %3 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec)
   %4 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %3, 0
   %5 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %3, 1
   %wide.vec30 = load <vscale x 4 x double>, ptr %scevgep47, align 8
-  %6 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec30)
+  %6 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec30)
   %7 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %6, 0
   %8 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %6, 1
   %9 = fmul fast <vscale x 2 x double> %8, %4
@@ -189,46 +182,37 @@ exit.block:                                     ; preds = %vector.body
 define %"class.std::complex" @complex_mul_v2f64_unrolled(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_v2f64_unrolled:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z1.d, #0 // =0x0
-; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    cntw x9
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    neg x9, x9
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    cntw x8
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEXT:    neg x9, x8
 ; CHECK-NEXT:    mov w10, #1000 // =0x3e8
-; CHECK-NEXT:    rdvl x12, #2
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    and x10, x9, x10
-; CHECK-NEXT:    zip2 z0.d, z1.d, z1.d
-; CHECK-NEXT:    zip1 z1.d, z1.d, z1.d
-; CHECK-NEXT:    add x11, x1, x12
-; CHECK-NEXT:    add x12, x0, x12
-; CHECK-NEXT:    rdvl x13, #4
-; CHECK-NEXT:    mov z2.d, z1.d
-; CHECK-NEXT:    mov z3.d, z0.d
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    and x9, x9, x10
+; CHECK-NEXT:    rdvl x10, #4
 ; CHECK-NEXT:  .LBB2_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x14, x0, x8
-; CHECK-NEXT:    add x15, x12, x8
-; CHECK-NEXT:    add x16, x1, x8
-; CHECK-NEXT:    add x17, x11, x8
-; CHECK-NEXT:    ld1b { z4.b }, p1/z, [x0, x8]
-; CHECK-NEXT:    ld1d { z5.d }, p0/z, [x14, #1, mul vl]
-; CHECK-NEXT:    ld1b { z6.b }, p1/z, [x12, x8]
-; CHECK-NEXT:    ld1d { z7.d }, p0/z, [x15, #1, mul vl]
-; CHECK-NEXT:    ld1b { z16.b }, p1/z, [x1, x8]
-; CHECK-NEXT:    ld1d { z17.d }, p0/z, [x16, #1, mul vl]
-; CHECK-NEXT:    ld1b { z18.b }, p1/z, [x11, x8]
-; CHECK-NEXT:    ld1d { z19.d }, p0/z, [x17, #1, mul vl]
-; CHECK-NEXT:    adds x10, x10, x9
-; CHECK-NEXT:    add x8, x8, x13
-; CHECK-NEXT:    fcmla z1.d, p0/m, z16.d, z4.d, #0
-; CHECK-NEXT:    fcmla z0.d, p0/m, z17.d, z5.d, #0
-; CHECK-NEXT:    fcmla z2.d, p0/m, z18.d, z6.d, #0
-; CHECK-NEXT:    fcmla z3.d, p0/m, z19.d, z7.d, #0
-; CHECK-NEXT:    fcmla z1.d, p0/m, z16.d, z4.d, #90
-; CHECK-NEXT:    fcmla z0.d, p0/m, z17.d, z5.d, #90
-; CHECK-NEXT:    fcmla z2.d, p0/m, z18.d, z6.d, #90
-; CHECK-NEXT:    fcmla z3.d, p0/m, z19.d, z7.d, #90
+; CHECK-NEXT:    ldr z4, [x0, #1, mul vl]
+; CHECK-NEXT:    ldr z5, [x0]
+; CHECK-NEXT:    subs x9, x9, x8
+; CHECK-NEXT:    ldr z6, [x0, #3, mul vl]
+; CHECK-NEXT:    ldr z7, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z16, [x1]
+; CHECK-NEXT:    ldr z17, [x0, #2, mul vl]
+; CHECK-NEXT:    add x0, x0, x10
+; CHECK-NEXT:    ldr z18, [x1, #3, mul vl]
+; CHECK-NEXT:    ldr z19, [x1, #2, mul vl]
+; CHECK-NEXT:    add x1, x1, x10
+; CHECK-NEXT:    fcmla z1.d, p0/m, z16.d, z5.d, #0
+; CHECK-NEXT:    fcmla z0.d, p0/m, z7.d, z4.d, #0
+; CHECK-NEXT:    fcmla z3.d, p0/m, z18.d, z6.d, #0
+; CHECK-NEXT:    fcmla z2.d, p0/m, z19.d, z17.d, #0
+; CHECK-NEXT:    fcmla z1.d, p0/m, z16.d, z5.d, #90
+; CHECK-NEXT:    fcmla z0.d, p0/m, z7.d, z4.d, #90
+; CHECK-NEXT:    fcmla z3.d, p0/m, z18.d, z6.d, #90
+; CHECK-NEXT:    fcmla z2.d, p0/m, z19.d, z17.d, #90
 ; CHECK-NEXT:    b.ne .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %exit.block
 ; CHECK-NEXT:    uzp1 z4.d, z2.d, z3.d
@@ -266,16 +250,16 @@ vector.body:                                      ; preds = %vector.body, %entry
   %scevgep62 = getelementptr i8, ptr %scevgep61, i64 %lsr.iv34
   %wide.vec = load <vscale x 4 x double>, ptr %scevgep57, align 8
   %wide.vec32 = load <vscale x 4 x double>, ptr %scevgep64, align 8
-  %4 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec)
-  %5 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec32)
+  %4 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec)
+  %5 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec32)
   %6 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %4, 0
   %7 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %5, 0
   %8 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %4, 1
   %9 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %5, 1
   %wide.vec34 = load <vscale x 4 x double>, ptr %scevgep58, align 8
   %wide.vec35 = load <vscale x 4 x double>, ptr %scevgep62, align 8
-  %10 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec34)
-  %11 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec35)
+  %10 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec34)
+  %11 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec35)
   %12 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %10, 0
   %13 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %11, 0
   %14 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %10, 1
@@ -323,38 +307,37 @@ exit.block:                                     ; preds = %vector.body
 define dso_local %"class.std::complex" @reduction_mix(ptr %a, ptr %b, ptr noalias nocapture noundef readnone %c, [2 x double] %d.coerce, ptr nocapture noundef readonly %s, ptr nocapture noundef writeonly %outs) local_unnamed_addr #0 {
 ; CHECK-LABEL: reduction_mix:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z2.d, #0 // =0x0
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    neg x10, x9
 ; CHECK-NEXT:    mov w11, #100 // =0x64
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    and x10, x10, x11
 ; CHECK-NEXT:    rdvl x11, #2
-; CHECK-NEXT:    zip2 z0.d, z2.d, z2.d
-; CHECK-NEXT:    zip1 z1.d, z2.d, z2.d
 ; CHECK-NEXT:  .LBB3_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld1w { z3.d }, p0/z, [x3, x8, lsl #2]
-; CHECK-NEXT:    ld1d { z4.d }, p0/z, [x0]
-; CHECK-NEXT:    ld1d { z5.d }, p0/z, [x0, #1, mul vl]
-; CHECK-NEXT:    add x8, x8, x9
+; CHECK-NEXT:    ldr z3, [x0]
+; CHECK-NEXT:    ldr z4, [x0, #1, mul vl]
 ; CHECK-NEXT:    add x0, x0, x11
+; CHECK-NEXT:    ld1w { z5.d }, p0/z, [x3, x8, lsl #2]
+; CHECK-NEXT:    add x8, x8, x9
 ; CHECK-NEXT:    cmp x10, x8
-; CHECK-NEXT:    fadd z0.d, z5.d, z0.d
 ; CHECK-NEXT:    fadd z1.d, z4.d, z1.d
-; CHECK-NEXT:    add z2.d, z3.d, z2.d
+; CHECK-NEXT:    fadd z0.d, z3.d, z0.d
+; CHECK-NEXT:    add z2.d, z5.d, z2.d
 ; CHECK-NEXT:    b.ne .LBB3_1
 ; CHECK-NEXT:  // %bb.2: // %middle.block
+; CHECK-NEXT:    uzp2 z3.d, z0.d, z1.d
+; CHECK-NEXT:    uzp1 z1.d, z0.d, z1.d
 ; CHECK-NEXT:    uaddv d2, p0, z2.d
-; CHECK-NEXT:    uzp2 z3.d, z1.d, z0.d
-; CHECK-NEXT:    uzp1 z1.d, z1.d, z0.d
-; CHECK-NEXT:    fmov x8, d2
 ; CHECK-NEXT:    faddv d0, p0, z3.d
 ; CHECK-NEXT:    faddv d1, p0, z1.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    str s2, [x4]
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z1
-; CHECK-NEXT:    str w8, [x4]
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.vscale.i64()
@@ -375,7 +358,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %5 = add <vscale x 2 x i32> %wide.load, %vec.phi
   %6 = getelementptr inbounds %"class.std::complex", ptr %a, i64 %index
   %wide.vec = load <vscale x 4 x double>, ptr %6, align 8
-  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec)
+  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec)
   %7 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 0
   %8 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 1
   %9 = fadd fast <vscale x 2 x double> %7, %vec.phi13
@@ -395,7 +378,117 @@ middle.block:                                     ; preds = %vector.body
 }
 
 
+; Zero initialized double reduction
+;   struct foo {
+;     complex<double> v1, v2;
+;   };
+;
+;complex<double> foo(struct foo *a, struct foo *b, int n) {
+;   complex<double> x = 0.0 + 0.0i;
+;   complex<double> y = 0.0 + 0.0i;
+;   for (int i = 0; i < n; i++) {
+;       struct foo t1 = a[i];
+;       struct foo t2 = b[i];
+;       x += t1.v1 * t2.v1;
+;       y += t1.v2 * t2.v2;
+;   }
+;   return x + y;
+;}
+%struct.foo2 = type { %"class.std::complex", %"class.std::complex" }
+
+define %"class.std::complex" @double_complex_mul_v2f64(ptr noundef readonly captures(none) %src1, ptr noundef readonly captures(none) %src2, i64 noundef %nvec) {
+; CHECK-LABEL: double_complex_mul_v2f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    cntd x8
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEXT:    rdvl x9, #4
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:  .LBB4_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld4d { z4.d - z7.d }, p0/z, [x0]
+; CHECK-NEXT:    subs x2, x2, x8
+; CHECK-NEXT:    add x0, x0, x9
+; CHECK-NEXT:    ld4d { z16.d - z19.d }, p0/z, [x1]
+; CHECK-NEXT:    add x1, x1, x9
+; CHECK-NEXT:    fmla z2.d, p0/m, z16.d, z4.d
+; CHECK-NEXT:    fmla z0.d, p0/m, z16.d, z5.d
+; CHECK-NEXT:    fmla z3.d, p0/m, z18.d, z6.d
+; CHECK-NEXT:    fmla z1.d, p0/m, z18.d, z7.d
+; CHECK-NEXT:    fmls z2.d, p0/m, z5.d, z17.d
+; CHECK-NEXT:    fmla z0.d, p0/m, z17.d, z4.d
+; CHECK-NEXT:    fmls z3.d, p0/m, z7.d, z19.d
+; CHECK-NEXT:    fmla z1.d, p0/m, z19.d, z6.d
+; CHECK-NEXT:    b.ne .LBB4_1
+; CHECK-NEXT:  // %bb.2: // %middle.block
+; CHECK-NEXT:    fadd z2.d, z2.d, z3.d
+; CHECK-NEXT:    fadd z1.d, z0.d, z1.d
+; CHECK-NEXT:    faddv d0, p0, z2.d
+; CHECK-NEXT:    faddv d1, p0, z1.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z1
+; CHECK-NEXT:    ret
+entry:
+  %vscale = tail call i64 @llvm.vscale.i64()
+  %inc = shl nuw nsw i64 %vscale, 1
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %vec.phi1 = phi <vscale x 2 x double> [ zeroinitializer, %entry ], [ %vec.phi1.next, %vector.body ]
+  %vec.phi2 = phi <vscale x 2 x double> [ zeroinitializer, %entry ], [ %vec.phi2.next, %vector.body ]
+  %vec.phi3 = phi <vscale x 2 x double> [ zeroinitializer, %entry ], [ %vec.phi3.next, %vector.body ]
+  %vec.phi4 = phi <vscale x 2 x double> [ zeroinitializer, %entry ], [ %vec.phi4.next, %vector.body ]
+  %gep1 = getelementptr inbounds nuw %struct.foo2, ptr %src1, i64 %index
+  %wide.vec = load <vscale x 8 x double>, ptr %gep1, align 8
+  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave4.nxv8f64(<vscale x 8 x double> %wide.vec)
+  %ext00 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 0
+  %ext01 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 1
+  %ext02 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 2
+  %ext03 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 3
+  %gep2 = getelementptr inbounds nuw %struct.foo2, ptr %src2, i64 %index
+  %wide.vec73 = load <vscale x 8 x double>, ptr %gep2, align 8
+  %strided.vec74 = tail call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave4.nxv8f64(<vscale x 8 x double> %wide.vec73)
+  %ext10 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec74, 0
+  %ext11 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec74, 1
+  %ext12 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec74, 2
+  %ext13 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec74, 3
+  %fmul1 = fmul fast <vscale x 2 x double> %ext10, %ext00
+  %fmul2 = fmul fast <vscale x 2 x double> %ext11, %ext00
+  %fmul3 = fmul fast <vscale x 2 x double> %ext10, %ext01
+  %fadd1 = fadd fast <vscale x 2 x double> %fmul1, %vec.phi2
+  %fmul4 = fmul fast <vscale x 2 x double> %ext01, %ext11
+  %vec.phi2.next = fsub fast <vscale x 2 x double> %fadd1, %fmul4
+  %fadd2 = fadd fast <vscale x 2 x double> %fmul3, %vec.phi1
+  %vec.phi1.next = fadd fast <vscale x 2 x double> %fadd2, %fmul2
+  %fmul5 = fmul fast <vscale x 2 x double> %ext12, %ext02
+  %fmul6 = fmul fast <vscale x 2 x double> %ext13, %ext02
+  %fmul7 = fmul fast <vscale x 2 x double> %ext12, %ext03
+  %fadd3 = fadd fast <vscale x 2 x double> %fmul5, %vec.phi4
+  %fmul8 = fmul fast <vscale x 2 x double> %ext03, %ext13
+  %vec.phi4.next = fsub fast <vscale x 2 x double> %fadd3, %fmul8
+  %fadd4 = fadd fast <vscale x 2 x double> %fmul7, %vec.phi3
+  %vec.phi3.next = fadd fast <vscale x 2 x double> %fadd4, %fmul6
+  %index.next = add nuw i64 %index, %inc
+  %cmp = icmp eq i64 %index.next, %nvec
+  br i1 %cmp, label %middle.block, label %vector.body
+
+middle.block:
+  %final1 = tail call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %vec.phi1.next)
+  %final2 = tail call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %vec.phi2.next)
+  %final3 = tail call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %vec.phi3.next)
+  %final4 = tail call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %vec.phi4.next)
+  %last_fadd1 = fadd fast double %final2, %final4
+  %last_fadd2 = fadd fast double %final1, %final3
+  %.fca.0.0.insert = insertvalue %"class.std::complex" poison, double %last_fadd1, 0, 0
+  %.fca.0.1.insert = insertvalue %"class.std::complex" %.fca.0.0.insert, double %last_fadd2, 0, 1
+  ret %"class.std::complex" %.fca.0.1.insert
+}
+
+
 declare i64 @llvm.vscale.i64()
-declare { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double>)
+declare { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double>)
 declare double @llvm.vector.reduce.fadd.nxv2f64(double, <vscale x 2 x double>)
 declare i32 @llvm.vector.reduce.add.nxv2i32(<vscale x 2 x i32>)

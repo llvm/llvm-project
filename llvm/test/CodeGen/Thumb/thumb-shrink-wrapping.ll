@@ -750,9 +750,9 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind {
 ; ENABLE-V4T-NEXT:    @ -- End function
 ; ENABLE-V4T-NEXT:    .globl _emptyFrame @ -- Begin function emptyFrame
 ; ENABLE-V4T-NEXT:    .p2align 1
-; ENABLE-V4T-NEXT:    .code 16 @ @emptyFrame
+; ENABLE-V4T-NEXT:    .code 16
 ; ENABLE-V4T-NEXT:    .thumb_func _emptyFrame
-; ENABLE-V4T-NEXT:  _emptyFrame:
+; ENABLE-V4T-NEXT:  _emptyFrame: @ @emptyFrame
 ; ENABLE-V4T-NEXT:    .cfi_startproc
 ; ENABLE-V4T-NEXT:  @ %bb.0: @ %entry
 ; ENABLE-V4T-NEXT:    movs r0, #0
@@ -787,9 +787,9 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind {
 ; ENABLE-V5T-NEXT:    @ -- End function
 ; ENABLE-V5T-NEXT:    .globl _emptyFrame @ -- Begin function emptyFrame
 ; ENABLE-V5T-NEXT:    .p2align 1
-; ENABLE-V5T-NEXT:    .code 16 @ @emptyFrame
+; ENABLE-V5T-NEXT:    .code 16
 ; ENABLE-V5T-NEXT:    .thumb_func _emptyFrame
-; ENABLE-V5T-NEXT:  _emptyFrame:
+; ENABLE-V5T-NEXT:  _emptyFrame: @ @emptyFrame
 ; ENABLE-V5T-NEXT:    .cfi_startproc
 ; ENABLE-V5T-NEXT:  @ %bb.0: @ %entry
 ; ENABLE-V5T-NEXT:    movs r0, #0
@@ -826,9 +826,9 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind {
 ; DISABLE-V4T-NEXT:    @ -- End function
 ; DISABLE-V4T-NEXT:    .globl _emptyFrame @ -- Begin function emptyFrame
 ; DISABLE-V4T-NEXT:    .p2align 1
-; DISABLE-V4T-NEXT:    .code 16 @ @emptyFrame
+; DISABLE-V4T-NEXT:    .code 16
 ; DISABLE-V4T-NEXT:    .thumb_func _emptyFrame
-; DISABLE-V4T-NEXT:  _emptyFrame:
+; DISABLE-V4T-NEXT:  _emptyFrame: @ @emptyFrame
 ; DISABLE-V4T-NEXT:    .cfi_startproc
 ; DISABLE-V4T-NEXT:  @ %bb.0: @ %entry
 ; DISABLE-V4T-NEXT:    movs r0, #0
@@ -862,9 +862,9 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind {
 ; DISABLE-V5T-NEXT:    @ -- End function
 ; DISABLE-V5T-NEXT:    .globl _emptyFrame @ -- Begin function emptyFrame
 ; DISABLE-V5T-NEXT:    .p2align 1
-; DISABLE-V5T-NEXT:    .code 16 @ @emptyFrame
+; DISABLE-V5T-NEXT:    .code 16
 ; DISABLE-V5T-NEXT:    .thumb_func _emptyFrame
-; DISABLE-V5T-NEXT:  _emptyFrame:
+; DISABLE-V5T-NEXT:  _emptyFrame: @ @emptyFrame
 ; DISABLE-V5T-NEXT:    .cfi_startproc
 ; DISABLE-V5T-NEXT:  @ %bb.0: @ %entry
 ; DISABLE-V5T-NEXT:    movs r0, #0

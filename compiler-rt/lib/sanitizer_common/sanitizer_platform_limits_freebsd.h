@@ -301,10 +301,28 @@ struct __sanitizer_sigset_t {
 
 typedef __sanitizer_sigset_t __sanitizer_kernel_sigset_t;
 
-struct __sanitizer_siginfo {
-  // The size is determined by looking at sizeof of real siginfo_t on linux.
-  u64 opaque[128 / sizeof(u64)];
+union __sanitizer_sigval {
+  int sival_int;
+  void *sival_ptr;
 };
+
+struct __sanitizer_siginfo {
+  int si_signo;
+  int si_errno;
+  int si_code;
+  pid_t si_pid;
+  u32 si_uid;
+  int si_status;
+  void *si_addr;
+  union __sanitizer_sigval si_value;
+#  if SANITIZER_WORDSIZE == 64
+  char data[40];
+#  else
+  char data[32];
+#  endif
+};
+
+typedef __sanitizer_siginfo __sanitizer_siginfo_t;
 
 using __sanitizer_sighandler_ptr = void (*)(int sig);
 using __sanitizer_sigactionhandler_ptr = void (*)(int sig,
@@ -401,12 +419,14 @@ struct __sanitizer_wordexp_t {
 
 typedef void __sanitizer_FILE;
 
-extern unsigned struct_shminfo_sz;
-extern unsigned struct_shm_info_sz;
 extern int shmctl_ipc_stat;
-extern int shmctl_ipc_info;
-extern int shmctl_shm_info;
-extern int shmctl_shm_stat;
+
+// This simplifies generic code
+#define struct_shminfo_sz -1
+#define struct_shm_info_sz -1
+#define shmctl_shm_stat -1
+#define shmctl_ipc_info -1
+#define shmctl_shm_info -1
 
 extern unsigned struct_utmpx_sz;
 
@@ -690,22 +710,6 @@ extern unsigned IOCTL_KDSKBMODE;
 extern const int si_SEGV_MAPERR;
 extern const int si_SEGV_ACCERR;
 
-extern const unsigned MD5_CTX_sz;
-extern const unsigned MD5_return_length;
-
-#define SHA2_EXTERN(LEN)                          \
-  extern const unsigned SHA##LEN##_CTX_sz;        \
-  extern const unsigned SHA##LEN##_return_length; \
-  extern const unsigned SHA##LEN##_block_length;  \
-  extern const unsigned SHA##LEN##_digest_length
-
-SHA2_EXTERN(224);
-SHA2_EXTERN(256);
-SHA2_EXTERN(384);
-SHA2_EXTERN(512);
-
-#undef SHA2_EXTERN
-
 struct __sanitizer_cap_rights {
   u64 cr_rights[2];
 };
@@ -726,6 +730,8 @@ struct __sanitizer_cpuset {
 
 typedef struct __sanitizer_cpuset __sanitizer_cpuset_t;
 extern unsigned struct_cpuset_sz;
+
+typedef unsigned long long __sanitizer_eventfd_t;
 }  // namespace __sanitizer
 
 #  define CHECK_TYPE_SIZE(TYPE) \

@@ -26,7 +26,11 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/Variable.h"
+#include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -41,6 +45,8 @@
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-private-interfaces.h"
 #include "lldb/lldb-private-types.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -56,7 +62,8 @@ using namespace lldb;
 using namespace lldb_private;
 
 DisassemblerSP Disassembler::FindPlugin(const ArchSpec &arch,
-                                        const char *flavor,
+                                        const char *flavor, const char *cpu,
+                                        const char *features,
                                         const char *plugin_name) {
   LLDB_SCOPED_TIMERF("Disassembler::FindPlugin (arch = %s, plugin_name = %s)",
                      arch.GetArchitectureName(), plugin_name);
@@ -67,7 +74,7 @@ DisassemblerSP Disassembler::FindPlugin(const ArchSpec &arch,
     create_callback =
         PluginManager::GetDisassemblerCreateCallbackForPluginName(plugin_name);
     if (create_callback) {
-      if (auto disasm_sp = create_callback(arch, flavor))
+      if (auto disasm_sp = create_callback(arch, flavor, cpu, features))
         return disasm_sp;
     }
   } else {
@@ -75,18 +82,17 @@ DisassemblerSP Disassembler::FindPlugin(const ArchSpec &arch,
          (create_callback = PluginManager::GetDisassemblerCreateCallbackAtIndex(
               idx)) != nullptr;
          ++idx) {
-      if (auto disasm_sp = create_callback(arch, flavor))
+      if (auto disasm_sp = create_callback(arch, flavor, cpu, features))
         return disasm_sp;
     }
   }
   return DisassemblerSP();
 }
 
-DisassemblerSP Disassembler::FindPluginForTarget(const Target &target,
-                                                 const ArchSpec &arch,
-                                                 const char *flavor,
-                                                 const char *plugin_name) {
-  if (flavor == nullptr) {
+DisassemblerSP Disassembler::FindPluginForTarget(
+    const Target &target, const ArchSpec &arch, const char *flavor,
+    const char *cpu, const char *features, const char *plugin_name) {
+  if (!flavor) {
     // FIXME - we don't have the mechanism in place to do per-architecture
     // settings.  But since we know that for now we only support flavors on x86
     // & x86_64,
@@ -94,7 +100,12 @@ DisassemblerSP Disassembler::FindPluginForTarget(const Target &target,
         arch.GetTriple().getArch() == llvm::Triple::x86_64)
       flavor = target.GetDisassemblyFlavor();
   }
-  return FindPlugin(arch, flavor, plugin_name);
+  if (!cpu)
+    cpu = target.GetDisassemblyCPU();
+  if (!features)
+    features = target.GetDisassemblyFeatures();
+
+  return FindPlugin(arch, flavor, cpu, features, plugin_name);
 }
 
 static Address ResolveAddress(Target &target, const Address &addr) {
@@ -102,11 +113,11 @@ static Address ResolveAddress(Target &target, const Address &addr) {
     Address resolved_addr;
     // If we weren't passed in a section offset address range, try and resolve
     // it to something
-    bool is_resolved = target.GetSectionLoadList().IsEmpty()
-                           ? target.GetImages().ResolveFileAddress(
-                                 addr.GetOffset(), resolved_addr)
-                           : target.GetSectionLoadList().ResolveLoadAddress(
-                                 addr.GetOffset(), resolved_addr);
+    bool is_resolved =
+        target.HasLoadedSections()
+            ? target.ResolveLoadAddress(addr.GetOffset(), resolved_addr)
+            : target.GetImages().ResolveFileAddress(addr.GetOffset(),
+                                                    resolved_addr);
 
     // We weren't able to resolve the address, just treat it as a raw address
     if (is_resolved && resolved_addr.IsValid())
@@ -117,22 +128,20 @@ static Address ResolveAddress(Target &target, const Address &addr) {
 
 lldb::DisassemblerSP Disassembler::DisassembleRange(
     const ArchSpec &arch, const char *plugin_name, const char *flavor,
-    Target &target, const AddressRange &range, bool force_live_memory) {
-  if (range.GetByteSize() <= 0)
-    return {};
-
-  if (!range.GetBaseAddress().IsValid())
-    return {};
-
-  lldb::DisassemblerSP disasm_sp =
-      Disassembler::FindPluginForTarget(target, arch, flavor, plugin_name);
+    const char *cpu, const char *features, Target &target,
+    llvm::ArrayRef<AddressRange> disasm_ranges, bool force_live_memory) {
+  lldb::DisassemblerSP disasm_sp = Disassembler::FindPluginForTarget(
+      target, arch, flavor, cpu, features, plugin_name);
 
   if (!disasm_sp)
     return {};
 
-  const size_t bytes_disassembled = disasm_sp->ParseInstructions(
-      target, range.GetBaseAddress(), {Limit::Bytes, range.GetByteSize()},
-      nullptr, force_live_memory);
+  size_t bytes_disassembled = 0;
+  for (const AddressRange &range : disasm_ranges) {
+    bytes_disassembled += disasm_sp->AppendInstructions(
+        target, range.GetBaseAddress(), {Limit::Bytes, range.GetByteSize()},
+        nullptr, force_live_memory);
+  }
   if (bytes_disassembled == 0)
     return {};
 
@@ -141,14 +150,15 @@ lldb::DisassemblerSP Disassembler::DisassembleRange(
 
 lldb::DisassemblerSP
 Disassembler::DisassembleBytes(const ArchSpec &arch, const char *plugin_name,
-                               const char *flavor, const Address &start,
+                               const char *flavor, const char *cpu,
+                               const char *features, const Address &start,
                                const void *src, size_t src_len,
                                uint32_t num_instructions, bool data_from_file) {
   if (!src)
     return {};
 
   lldb::DisassemblerSP disasm_sp =
-      Disassembler::FindPlugin(arch, flavor, plugin_name);
+      Disassembler::FindPlugin(arch, flavor, cpu, features, plugin_name);
 
   if (!disasm_sp)
     return {};
@@ -163,6 +173,7 @@ Disassembler::DisassembleBytes(const ArchSpec &arch, const char *plugin_name,
 
 bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
                                const char *plugin_name, const char *flavor,
+                               const char *cpu, const char *features,
                                const ExecutionContext &exe_ctx,
                                const Address &address, Limit limit,
                                bool mixed_source_and_assembly,
@@ -172,7 +183,7 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
     return false;
 
   lldb::DisassemblerSP disasm_sp(Disassembler::FindPluginForTarget(
-      exe_ctx.GetTargetRef(), arch, flavor, plugin_name));
+      exe_ctx.GetTargetRef(), arch, flavor, cpu, features, plugin_name));
   if (!disasm_sp)
     return false;
 
@@ -197,16 +208,20 @@ Disassembler::GetFunctionDeclLineEntry(const SymbolContext &sc) {
     return {};
 
   LineEntry prologue_end_line = sc.line_entry;
-  FileSpec func_decl_file;
+  SupportFileNSP func_decl_file_sp = std::make_shared<SupportFile>();
   uint32_t func_decl_line;
-  sc.function->GetStartLineSourceInfo(func_decl_file, func_decl_line);
+  sc.function->GetStartLineSourceInfo(func_decl_file_sp, func_decl_line);
 
-  if (func_decl_file != prologue_end_line.file &&
-      func_decl_file != prologue_end_line.original_file)
+  if (!func_decl_file_sp)
+    return {};
+  if (!func_decl_file_sp->Equal(*prologue_end_line.file_sp,
+                                SupportFile::eEqualFileSpecAndChecksumIfSet) &&
+      !func_decl_file_sp->Equal(*prologue_end_line.original_file_sp,
+                                SupportFile::eEqualFileSpecAndChecksumIfSet))
     return {};
 
   SourceLine decl_line;
-  decl_line.file = func_decl_file;
+  decl_line.file = func_decl_file_sp->GetSpecOnly();
   decl_line.line = func_decl_line;
   // TODO: Do we care about column on these entries?  If so, we need to plumb
   // that through GetStartLineSourceInfo.
@@ -271,6 +286,175 @@ bool Disassembler::ElideMixedSourceAndDisassemblyLine(
   return false;
 }
 
+static constexpr const llvm::StringLiteral kUndefLocation = "undef";
+static constexpr const llvm::StringLiteral kUndefLocationFormatted = "<undef>";
+static void
+AddVariableAnnotationToVector(std::vector<VariableAnnotation> &annotations,
+                              VariableAnnotation annotation_entity,
+                              const bool is_live) {
+  annotation_entity.is_live = is_live;
+  if (!is_live)
+    annotation_entity.location_description = kUndefLocation;
+  annotations.push_back(std::move(annotation_entity));
+}
+
+// For each instruction, this block attempts to resolve in-scope variables
+// and determine if the current PC falls within their
+// DWARF location entry. If so, it prints a simplified annotation using the
+// variable name and its resolved location (e.g., "var = reg; " ).
+//
+// Annotations are only included if the variable has a valid DWARF location
+// entry, and the location string is non-empty after filtering. Decoding
+// errors and DWARF opcodes are intentionally omitted to keep the output
+// concise and user-friendly.
+//
+// The goal is to give users helpful live variable hints alongside the
+// disassembled instruction stream, similar to how debug information
+// enhances source-level debugging.
+std::vector<std::string> VariableAnnotator::Annotate(Instruction &inst) {
+  std::vector<VariableAnnotation> structured_annotations =
+      AnnotateStructured(inst);
+
+  std::vector<std::string> events;
+  events.reserve(structured_annotations.size());
+
+  for (const VariableAnnotation &annotation : structured_annotations) {
+    const llvm::StringRef location =
+        (annotation.location_description == kUndefLocation
+             ? llvm::StringRef(kUndefLocationFormatted)
+             : llvm::StringRef(annotation.location_description));
+
+    events.push_back(
+        llvm::formatv("{0} = {1}", annotation.variable_name, location).str());
+  }
+
+  return events;
+}
+
+std::vector<VariableAnnotation>
+VariableAnnotator::AnnotateStructured(Instruction &inst) {
+  std::vector<VariableAnnotation> annotations;
+
+  auto module_sp = inst.GetAddress().GetModule();
+
+  // If we lost module context, mark all live variables as UndefLocation.
+  if (!module_sp) {
+    for (const auto &KV : m_live_vars)
+      AddVariableAnnotationToVector(annotations, KV.second, false);
+    m_live_vars.clear();
+    return annotations;
+  }
+
+  // Resolve function/block at this *file* address.
+  SymbolContext sc;
+  const Address &iaddr = inst.GetAddress();
+  const auto mask = eSymbolContextFunction | eSymbolContextBlock;
+  if (!module_sp->ResolveSymbolContextForAddress(iaddr, mask, sc) ||
+      !sc.function) {
+    // No function context: everything dies here.
+    for (const auto &KV : m_live_vars)
+      AddVariableAnnotationToVector(annotations, KV.second, false);
+    m_live_vars.clear();
+    return annotations;
+  }
+
+  // Collect in-scope variables for this instruction into current_vars.
+  VariableList var_list;
+  // Innermost block containing iaddr.
+  if (Block *B = sc.block) {
+    auto filter = [](Variable *v) -> bool { return v && !v->IsArtificial(); };
+    B->AppendVariables(/*can_create*/ true,
+                       /*get_parent_variables*/ true,
+                       /*stop_if_block_is_inlined_function*/ false,
+                       /*filter*/ filter,
+                       /*variable_list*/ &var_list);
+  }
+
+  const lldb::addr_t pc_file = iaddr.GetFileAddress();
+  const lldb::addr_t func_file = sc.function->GetAddress().GetFileAddress();
+
+  // ABI from Target (pretty reg names if plugin exists). Safe to be null.
+  lldb::ABISP abi_sp = ABI::FindPlugin(nullptr, module_sp->GetArchitecture());
+  ABI *abi = abi_sp.get();
+
+  llvm::DIDumpOptions opts;
+  opts.ShowAddresses = false;
+  // Prefer "register-only" output when we have an ABI.
+  opts.PrintRegisterOnly = static_cast<bool>(abi_sp);
+
+  llvm::DenseMap<lldb::user_id_t, VariableAnnotation> current_vars;
+
+  for (size_t i = 0, e = var_list.GetSize(); i != e; ++i) {
+    lldb::VariableSP v = var_list.GetVariableAtIndex(i);
+    if (!v || v->IsArtificial())
+      continue;
+
+    const char *nm = v->GetName().AsCString();
+    llvm::StringRef name = nm ? nm : "<anon>";
+
+    DWARFExpressionList &exprs = v->LocationExpressionList();
+    if (!exprs.IsValid())
+      continue;
+
+    auto entry_or_err = exprs.GetExpressionEntryAtAddress(func_file, pc_file);
+    if (!entry_or_err)
+      continue;
+
+    auto entry = *entry_or_err;
+
+    StreamString loc_ss;
+    entry.expr->DumpLocation(&loc_ss, eDescriptionLevelBrief, abi, opts);
+
+    llvm::StringRef loc = llvm::StringRef(loc_ss.GetString()).trim();
+    if (loc.empty())
+      continue;
+
+    std::optional<std::string> decl_file;
+    std::optional<uint32_t> decl_line;
+    std::optional<std::string> type_name;
+
+    const Declaration &decl = v->GetDeclaration();
+    if (decl.GetFile()) {
+      decl_file = decl.GetFile().GetFilename().AsCString();
+      if (decl.GetLine() > 0)
+        decl_line = decl.GetLine();
+    }
+
+    if (Type *type = v->GetType())
+      if (const char *type_str = type->GetName().AsCString())
+        type_name = type_str;
+
+    current_vars.try_emplace(
+        v->GetID(),
+        VariableAnnotation{std::string(name), std::string(loc), true,
+                           entry.expr->GetRegisterKind(), entry.file_range,
+                           decl_file, decl_line, type_name});
+  }
+
+  // Diff m_live_vars → current_vars.
+
+  // 1) Starts/changes: iterate current_vars and compare with m_live_vars.
+  for (const auto &KV : current_vars) {
+    auto it = m_live_vars.find(KV.first);
+    if (it == m_live_vars.end())
+      // Newly live.
+      AddVariableAnnotationToVector(annotations, KV.second, true);
+    else if (it->second.location_description != KV.second.location_description)
+      // Location changed.
+      AddVariableAnnotationToVector(annotations, KV.second, true);
+  }
+
+  // 2) Ends: anything that was live but is not in current_vars becomes
+  // UndefLocation.
+  for (const auto &KV : m_live_vars)
+    if (!current_vars.count(KV.first))
+      AddVariableAnnotationToVector(annotations, KV.second, false);
+
+  // Commit new state.
+  m_live_vars = std::move(current_vars);
+  return annotations;
+}
+
 void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                                      const ExecutionContext &exe_ctx,
                                      bool mixed_source_and_assembly,
@@ -301,8 +485,8 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
   const FormatEntity::Entry *disassembly_format = nullptr;
   FormatEntity::Entry format;
   if (exe_ctx.HasTargetScope()) {
-    disassembly_format =
-        exe_ctx.GetTargetRef().GetDebugger().GetDisassemblyFormat();
+    format = exe_ctx.GetTargetRef().GetDebugger().GetDisassemblyFormat();
+    disassembly_format = &format;
   } else {
     FormatEntity::Parse("${addr}: ", format);
     disassembly_format = &format;
@@ -354,7 +538,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
             }
             if (sc.line_entry.IsValid()) {
               SourceLine this_line;
-              this_line.file = sc.line_entry.file;
+              this_line.file = sc.line_entry.GetFile();
               this_line.line = sc.line_entry.line;
               this_line.column = sc.line_entry.column;
               if (!ElideMixedSourceAndDisassemblyLine(exe_ctx, sc, this_line))
@@ -367,6 +551,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
     }
   }
 
+  VariableAnnotator annot;
   previous_symbol = nullptr;
   SourceLine previous_line;
   for (size_t i = 0; i < num_instructions_found; ++i) {
@@ -402,19 +587,25 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                 LineEntry prologue_end_line = sc.line_entry;
                 if (!ElideMixedSourceAndDisassemblyLine(exe_ctx, sc,
                                                         prologue_end_line)) {
-                  FileSpec func_decl_file;
+                  SupportFileNSP func_decl_file_sp =
+                      std::make_shared<SupportFile>();
                   uint32_t func_decl_line;
-                  sc.function->GetStartLineSourceInfo(func_decl_file,
+                  sc.function->GetStartLineSourceInfo(func_decl_file_sp,
                                                       func_decl_line);
-                  if (func_decl_file == prologue_end_line.file ||
-                      func_decl_file == prologue_end_line.original_file) {
+                  if (func_decl_file_sp &&
+                      (func_decl_file_sp->Equal(
+                           *prologue_end_line.file_sp,
+                           SupportFile::eEqualFileSpecAndChecksumIfSet) ||
+                       func_decl_file_sp->Equal(
+                           *prologue_end_line.original_file_sp,
+                           SupportFile::eEqualFileSpecAndChecksumIfSet))) {
                     // Add all the lines between the function declaration and
                     // the first non-prologue source line to the list of lines
                     // to print.
                     for (uint32_t lineno = func_decl_line;
                          lineno <= prologue_end_line.line; lineno++) {
                       SourceLine this_line;
-                      this_line.file = func_decl_file;
+                      this_line.file = func_decl_file_sp->GetSpecOnly();
                       this_line.line = lineno;
                       source_lines_to_display.lines.push_back(this_line);
                     }
@@ -438,7 +629,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
 
               if (sc != prev_sc && sc.comp_unit && sc.line_entry.IsValid()) {
                 SourceLine this_line;
-                this_line.file = sc.line_entry.file;
+                this_line.file = sc.line_entry.GetFile();
                 this_line.line = sc.line_entry.line;
 
                 if (!ElideMixedSourceAndDisassemblyLine(exe_ctx, sc,
@@ -516,7 +707,8 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
             line_highlight = "**";
           }
           source_manager.DisplaySourceLinesWithLineNumbers(
-              ln.file, ln.line, ln.column, 0, 0, line_highlight, &strm);
+              std::make_shared<SupportFile>(ln.file), ln.line, ln.column, 0, 0,
+              line_highlight, &strm);
         }
         if (source_lines_to_display.print_source_context_end_eol)
           strm.EOL();
@@ -525,10 +717,26 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
       const bool show_bytes = (options & eOptionShowBytes) != 0;
       const bool show_control_flow_kind =
           (options & eOptionShowControlFlowKind) != 0;
-      inst->Dump(&strm, max_opcode_byte_size, true, show_bytes,
+
+      StreamString inst_line;
+
+      inst->Dump(&inst_line, max_opcode_byte_size, true, show_bytes,
                  show_control_flow_kind, &exe_ctx, &sc, &prev_sc, nullptr,
                  address_text_size);
+
+      if ((options & eOptionVariableAnnotations) && target_sp) {
+        auto annotations = annot.Annotate(*inst);
+        if (!annotations.empty()) {
+          const size_t annotation_column = 100;
+          inst_line.FillLastLineToColumn(annotation_column, ' ');
+          inst_line.PutCString("; ");
+          inst_line.PutCString(llvm::join(annotations, ", "));
+        }
+      }
+
+      strm.PutCString(inst_line.GetString());
       strm.EOL();
+
     } else {
       break;
     }
@@ -537,28 +745,46 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
 
 bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
                                StackFrame &frame, Stream &strm) {
-  AddressRange range;
+  constexpr const char *plugin_name = nullptr;
+  constexpr const char *flavor = nullptr;
+  constexpr const char *cpu = nullptr;
+  constexpr const char *features = nullptr;
+  constexpr bool mixed_source_and_assembly = false;
+  constexpr uint32_t num_mixed_context_lines = 0;
+  constexpr uint32_t options = 0;
+
   SymbolContext sc(
       frame.GetSymbolContext(eSymbolContextFunction | eSymbolContextSymbol));
   if (sc.function) {
-    range = sc.function->GetAddressRange();
-  } else if (sc.symbol && sc.symbol->ValueIsAddress()) {
+    if (DisassemblerSP disasm_sp = DisassembleRange(
+            arch, plugin_name, flavor, cpu, features, *frame.CalculateTarget(),
+            sc.function->GetAddressRanges())) {
+      disasm_sp->PrintInstructions(debugger, arch, frame,
+                                   mixed_source_and_assembly,
+                                   num_mixed_context_lines, options, strm);
+      return true;
+    }
+    return false;
+  }
+
+  AddressRange range;
+  if (sc.symbol && sc.symbol->ValueIsAddress()) {
     range.GetBaseAddress() = sc.symbol->GetAddressRef();
     range.SetByteSize(sc.symbol->GetByteSize());
   } else {
     range.GetBaseAddress() = frame.GetFrameCodeAddress();
   }
 
-    if (range.GetBaseAddress().IsValid() && range.GetByteSize() == 0)
-      range.SetByteSize(DEFAULT_DISASM_BYTE_SIZE);
+  if (range.GetBaseAddress().IsValid() && range.GetByteSize() == 0)
+    range.SetByteSize(DEFAULT_DISASM_BYTE_SIZE);
 
-    Disassembler::Limit limit = {Disassembler::Limit::Bytes,
-                                 range.GetByteSize()};
-    if (limit.value == 0)
-      limit.value = DEFAULT_DISASM_BYTE_SIZE;
+  Disassembler::Limit limit = {Disassembler::Limit::Bytes, range.GetByteSize()};
+  if (limit.value == 0)
+    limit.value = DEFAULT_DISASM_BYTE_SIZE;
 
-    return Disassemble(debugger, arch, nullptr, nullptr, frame,
-                       range.GetBaseAddress(), limit, false, 0, 0, strm);
+  return Disassemble(debugger, arch, plugin_name, flavor, cpu, features, frame,
+                     range.GetBaseAddress(), limit, mixed_source_and_assembly,
+                     num_mixed_context_lines, options, strm);
 }
 
 Instruction::Instruction(const Address &address, AddressClass addr_class)
@@ -652,9 +878,11 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
     }
   }
   const size_t opcode_pos = ss.GetSizeOfLastLine();
-  const std::string &opcode_name =
-      show_color ? m_markup_opcode_name : m_opcode_name;
+  std::string &opcode_name = show_color ? m_markup_opcode_name : m_opcode_name;
   const std::string &mnemonics = show_color ? m_markup_mnemonics : m_mnemonics;
+
+  if (opcode_name.empty())
+    opcode_name = "<unknown>";
 
   // The default opcode size of 7 characters is plenty for most architectures
   // but some like arm can pull out the occasional vqrshrun.s16.  We won't get
@@ -689,9 +917,7 @@ bool Instruction::DumpEmulation(const ArchSpec &arch) {
   return false;
 }
 
-bool Instruction::CanSetBreakpoint () {
-  return !HasDelaySlot();
-}
+bool Instruction::CanSetBreakpoint() { return !HasDelaySlot(); }
 
 bool Instruction::HasDelaySlot() {
   // Default is false.
@@ -981,6 +1207,16 @@ uint32_t InstructionList::GetMaxOpcocdeByteSize() const {
   return max_inst_size;
 }
 
+size_t InstructionList::GetTotalByteSize() const {
+  size_t total_byte_size = 0;
+  collection::const_iterator pos, end;
+  for (pos = m_instructions.begin(), end = m_instructions.end(); pos != end;
+       ++pos) {
+    total_byte_size += (*pos)->GetOpcode().GetByteSize();
+  }
+  return total_byte_size;
+}
+
 InstructionSP InstructionList::GetInstructionAtIndex(size_t idx) const {
   InstructionSP inst_sp;
   if (idx < m_instructions.size())
@@ -1004,8 +1240,8 @@ void InstructionList::Dump(Stream *s, bool show_address, bool show_bytes,
   const FormatEntity::Entry *disassembly_format = nullptr;
   FormatEntity::Entry format;
   if (exe_ctx && exe_ctx->HasTargetScope()) {
-    disassembly_format =
-        exe_ctx->GetTargetRef().GetDebugger().GetDisassemblyFormat();
+    format = exe_ctx->GetTargetRef().GetDebugger().GetDisassemblyFormat();
+    disassembly_format = &format;
   } else {
     FormatEntity::Parse("${addr}: ", format);
     disassembly_format = &format;
@@ -1028,10 +1264,8 @@ void InstructionList::Append(lldb::InstructionSP &inst_sp) {
     m_instructions.push_back(inst_sp);
 }
 
-uint32_t
-InstructionList::GetIndexOfNextBranchInstruction(uint32_t start,
-                                                 bool ignore_calls,
-                                                 bool *found_calls) const {
+uint32_t InstructionList::GetIndexOfNextBranchInstruction(
+    uint32_t start, bool ignore_calls, bool *found_calls) const {
   size_t num_instructions = m_instructions.size();
 
   uint32_t next_branch = UINT32_MAX;
@@ -1074,11 +1308,9 @@ InstructionList::GetIndexOfInstructionAtLoadAddress(lldb::addr_t load_addr,
   return GetIndexOfInstructionAtAddress(address);
 }
 
-size_t Disassembler::ParseInstructions(Target &target, Address start,
-                                       Limit limit, Stream *error_strm_ptr,
-                                       bool force_live_memory) {
-  m_instruction_list.Clear();
-
+size_t Disassembler::AppendInstructions(Target &target, Address start,
+                                        Limit limit, Stream *error_strm_ptr,
+                                        bool force_live_memory) {
   if (!start.IsValid())
     return 0;
 
@@ -1111,13 +1343,12 @@ size_t Disassembler::ParseInstructions(Target &target, Address start,
   return DecodeInstructions(start, data, 0,
                             limit.kind == Limit::Instructions ? limit.value
                                                               : UINT32_MAX,
-                            false, data_from_file);
+                            /*append=*/true, data_from_file);
 }
 
 // Disassembler copy constructor
 Disassembler::Disassembler(const ArchSpec &arch, const char *flavor)
-    : m_arch(arch), m_instruction_list(), m_base_addr(LLDB_INVALID_ADDRESS),
-      m_flavor() {
+    : m_arch(arch), m_instruction_list(), m_flavor() {
   if (flavor == nullptr)
     m_flavor.assign("default");
   else
@@ -1154,6 +1385,11 @@ PseudoInstruction::PseudoInstruction()
 PseudoInstruction::~PseudoInstruction() = default;
 
 bool PseudoInstruction::DoesBranch() {
+  // This is NOT a valid question for a pseudo instruction.
+  return false;
+}
+
+bool PseudoInstruction::IsBarrier() {
   // This is NOT a valid question for a pseudo instruction.
   return false;
 }

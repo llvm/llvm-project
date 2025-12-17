@@ -16,15 +16,18 @@
 
 #include "llvm/ADT/ilist.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
+#include <type_traits>
 
 namespace llvm {
 
 /// PrintRecyclingAllocatorStats - Helper for RecyclingAllocator for
 /// printing statistics.
 ///
-void PrintRecyclerStats(size_t Size, size_t Align, size_t FreeListSize);
+LLVM_ABI void PrintRecyclerStats(size_t Size, size_t Align,
+                                 size_t FreeListSize);
 
 /// Recycler - This class manages a linked-list of deallocated nodes
 /// and facilitates reusing deallocated memory in place of allocating
@@ -60,24 +63,28 @@ public:
     // clear() before deleting the Recycler.
     assert(!FreeList && "Non-empty recycler deleted!");
   }
+  Recycler(const Recycler &) = delete;
+  Recycler(Recycler &&Other)
+      : FreeList(std::exchange(Other.FreeList, nullptr)) {}
+  Recycler() = default;
 
   /// clear - Release all the tracked allocations to the allocator. The
   /// recycler must be free of any tracked allocations before being
   /// deleted; calling clear is one way to ensure this.
   template<class AllocatorType>
   void clear(AllocatorType &Allocator) {
-    while (FreeList) {
-      T *t = reinterpret_cast<T *>(pop_val());
-      Allocator.Deallocate(t);
+    if constexpr (std::is_same_v<std::decay_t<AllocatorType>,
+                                 BumpPtrAllocator>) {
+      // For BumpPtrAllocator, Deallocate is a no-op, so just drop the free
+      // list.
+      FreeList = nullptr;
+    } else {
+      while (FreeList) {
+        T *t = reinterpret_cast<T *>(pop_val());
+        Allocator.Deallocate(t, Size, Align);
+      }
     }
   }
-
-  /// Special case for BumpPtrAllocator which has an empty Deallocate()
-  /// function.
-  ///
-  /// There is no need to traverse the free list, pulling all the objects into
-  /// cache.
-  void clear(BumpPtrAllocator &) { FreeList = nullptr; }
 
   template<class SubClass, class AllocatorType>
   SubClass *Allocate(AllocatorType &Allocator) {
@@ -85,6 +92,8 @@ public:
                   "Recycler allocation alignment is less than object align!");
     static_assert(sizeof(SubClass) <= Size,
                   "Recycler allocation size is less than object size!");
+    static_assert(Size >= sizeof(FreeNode) &&
+                  "Recycler allocation size must be at least sizeof(FreeNode)");
     return FreeList ? reinterpret_cast<SubClass *>(pop_val())
                     : static_cast<SubClass *>(Allocator.Allocate(Size, Align));
   }

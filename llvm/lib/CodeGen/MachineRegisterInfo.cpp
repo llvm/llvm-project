@@ -41,11 +41,12 @@ static cl::opt<bool> EnableSubRegLiveness("enable-subreg-liveness", cl::Hidden,
 void MachineRegisterInfo::Delegate::anchor() {}
 
 MachineRegisterInfo::MachineRegisterInfo(MachineFunction *MF)
-    : MF(MF), TracksSubRegLiveness(MF->getSubtarget().enableSubRegLiveness() &&
-                                   EnableSubRegLiveness) {
+    : MF(MF),
+      TracksSubRegLiveness(EnableSubRegLiveness.getNumOccurrences()
+                               ? EnableSubRegLiveness
+                               : MF->getSubtarget().enableSubRegLiveness()) {
   unsigned NumRegs = getTargetRegisterInfo()->getNumRegs();
   VRegInfo.reserve(256);
-  RegAllocHints.reserve(256);
   UsedPhysRegMask.resize(NumRegs);
   PhysRegUseDefLists.reset(new MachineOperand*[NumRegs]());
   TheDelegates.clear();
@@ -82,8 +83,6 @@ constrainRegClass(MachineRegisterInfo &MRI, Register Reg,
 
 const TargetRegisterClass *MachineRegisterInfo::constrainRegClass(
     Register Reg, const TargetRegisterClass *RC, unsigned MinNumRegs) {
-  if (Reg.isPhysical())
-    return nullptr;
   return ::constrainRegClass(*this, Reg, getRegClass(Reg), RC, MinNumRegs);
 }
 
@@ -121,8 +120,8 @@ bool
 MachineRegisterInfo::recomputeRegClass(Register Reg) {
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   const TargetRegisterClass *OldRC = getRegClass(Reg);
-  const TargetRegisterClass *NewRC =
-      getTargetRegisterInfo()->getLargestLegalSuperClass(OldRC, *MF);
+  const TargetRegisterInfo *TRI = getTargetRegisterInfo();
+  const TargetRegisterClass *NewRC = TRI->getLargestLegalSuperClass(OldRC, *MF);
 
   // Stop early if there is no room to grow.
   if (NewRC == OldRC)
@@ -133,8 +132,7 @@ MachineRegisterInfo::recomputeRegClass(Register Reg) {
     // Apply the effect of the given operand to NewRC.
     MachineInstr *MI = MO.getParent();
     unsigned OpNo = &MO - &MI->getOperand(0);
-    NewRC = MI->getRegClassConstraintEffect(OpNo, NewRC, TII,
-                                            getTargetRegisterInfo());
+    NewRC = MI->getRegClassConstraintEffect(OpNo, NewRC, TII, TRI);
     if (!NewRC || NewRC == OldRC)
       return false;
   }
@@ -145,7 +143,6 @@ MachineRegisterInfo::recomputeRegClass(Register Reg) {
 Register MachineRegisterInfo::createIncompleteVirtualRegister(StringRef Name) {
   Register Reg = Register::index2VirtReg(getNumVirtRegs());
   VRegInfo.grow(Reg);
-  RegAllocHints.grow(Reg);
   insertVRegByName(Name, Reg);
   return Reg;
 }
@@ -163,6 +160,15 @@ MachineRegisterInfo::createVirtualRegister(const TargetRegisterClass *RegClass,
   // New virtual register number.
   Register Reg = createIncompleteVirtualRegister(Name);
   VRegInfo[Reg].first = RegClass;
+  noteNewVirtualRegister(Reg);
+  return Reg;
+}
+
+Register MachineRegisterInfo::createVirtualRegister(VRegAttrs RegAttr,
+                                                    StringRef Name) {
+  Register Reg = createIncompleteVirtualRegister(Name);
+  VRegInfo[Reg].first = RegAttr.RCOrRB;
+  setType(Reg, RegAttr.Ty);
   noteNewVirtualRegister(Reg);
   return Reg;
 }
@@ -398,9 +404,11 @@ void MachineRegisterInfo::replaceRegWith(Register FromReg, Register ToReg) {
 MachineInstr *MachineRegisterInfo::getVRegDef(Register Reg) const {
   // Since we are in SSA form, we can use the first definition.
   def_instr_iterator I = def_instr_begin(Reg);
-  assert((I.atEnd() || std::next(I) == def_instr_end()) &&
-         "getVRegDef assumes a single definition or no definition");
-  return !I.atEnd() ? &*I : nullptr;
+  if (I == def_instr_end())
+    return nullptr;
+  assert(std::next(I) == def_instr_end() &&
+         "getVRegDef assumes at most one definition");
+  return &*I;
 }
 
 /// getUniqueVRegDef - Return the unique machine instr that defines the
@@ -420,6 +428,16 @@ bool MachineRegisterInfo::hasOneNonDBGUse(Register RegNo) const {
 
 bool MachineRegisterInfo::hasOneNonDBGUser(Register RegNo) const {
   return hasSingleElement(use_nodbg_instructions(RegNo));
+}
+
+MachineOperand *MachineRegisterInfo::getOneNonDBGUse(Register RegNo) const {
+  auto RegNoDbgUses = use_nodbg_operands(RegNo);
+  return hasSingleElement(RegNoDbgUses) ? &*RegNoDbgUses.begin() : nullptr;
+}
+
+MachineInstr *MachineRegisterInfo::getOneNonDBGUser(Register RegNo) const {
+  auto RegNoDbgUsers = use_nodbg_instructions(RegNo);
+  return hasSingleElement(RegNoDbgUsers) ? &*RegNoDbgUsers.begin() : nullptr;
 }
 
 bool MachineRegisterInfo::hasAtMostUserInstrs(Register Reg,
@@ -508,14 +526,14 @@ LLVM_DUMP_METHOD void MachineRegisterInfo::dumpUses(Register Reg) const {
 }
 #endif
 
-void MachineRegisterInfo::freezeReservedRegs(const MachineFunction &MF) {
-  ReservedRegs = getTargetRegisterInfo()->getReservedRegs(MF);
+void MachineRegisterInfo::freezeReservedRegs() {
+  ReservedRegs = getTargetRegisterInfo()->getReservedRegs(*MF);
   assert(ReservedRegs.size() == getTargetRegisterInfo()->getNumRegs() &&
          "Invalid ReservedRegs vector from target");
 }
 
 bool MachineRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
-  assert(Register::isPhysicalRegister(PhysReg));
+  assert(PhysReg.isPhysical());
 
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   if (TRI->isConstantPhysReg(PhysReg))
@@ -573,7 +591,7 @@ static bool isNoReturnDef(const MachineOperand &MO) {
 
 bool MachineRegisterInfo::isPhysRegModified(MCRegister PhysReg,
                                             bool SkipNoReturnDef) const {
-  if (UsedPhysRegMask.test(PhysReg))
+  if (UsedPhysRegMask.test(PhysReg.id()))
     return true;
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   for (MCRegAliasIterator AI(PhysReg, TRI, true); AI.isValid(); ++AI) {
@@ -588,7 +606,7 @@ bool MachineRegisterInfo::isPhysRegModified(MCRegister PhysReg,
 
 bool MachineRegisterInfo::isPhysRegUsed(MCRegister PhysReg,
                                         bool SkipRegMaskTest) const {
-  if (!SkipRegMaskTest && UsedPhysRegMask.test(PhysReg))
+  if (!SkipRegMaskTest && UsedPhysRegMask.test(PhysReg.id()))
     return true;
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   for (MCRegAliasIterator AliasReg(PhysReg, TRI, true); AliasReg.isValid();
@@ -626,7 +644,13 @@ const MCPhysReg *MachineRegisterInfo::getCalleeSavedRegs() const {
   if (IsUpdatedCSRsInitialized)
     return UpdatedCSRs.data();
 
-  return getTargetRegisterInfo()->getCalleeSavedRegs(MF);
+  const MCPhysReg *Regs = getTargetRegisterInfo()->getCalleeSavedRegs(MF);
+
+  for (unsigned I = 0; Regs[I]; ++I)
+    if (MF->getSubtarget().isRegisterReservedByUser(Regs[I]))
+      MF->getRegInfo().disableCalleeSavedRegister(Regs[I]);
+
+  return Regs;
 }
 
 void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {
@@ -641,7 +665,7 @@ void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {
   IsUpdatedCSRsInitialized = true;
 }
 
-bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
+bool MachineRegisterInfo::isReservedRegUnit(MCRegUnit Unit) const {
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
     if (all_of(TRI->superregs_inclusive(*Root),
@@ -649,19 +673,4 @@ bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
       return true;
   }
   return false;
-}
-
-bool MachineRegisterInfo::isArgumentRegister(const MachineFunction &MF,
-                                             MCRegister Reg) const {
-  return getTargetRegisterInfo()->isArgumentRegister(MF, Reg);
-}
-
-bool MachineRegisterInfo::isFixedRegister(const MachineFunction &MF,
-                                          MCRegister Reg) const {
-  return getTargetRegisterInfo()->isFixedRegister(MF, Reg);
-}
-
-bool MachineRegisterInfo::isGeneralPurposeRegister(const MachineFunction &MF,
-                                                   MCRegister Reg) const {
-  return getTargetRegisterInfo()->isGeneralPurposeRegister(MF, Reg);
 }

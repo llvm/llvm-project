@@ -34,10 +34,9 @@ static cl::opt<bool> ImportConstantsWithRefs(
     "import-constants-with-refs", cl::init(true), cl::Hidden,
     cl::desc("Import constant global variables with references"));
 
-constexpr uint32_t FunctionSummary::ParamAccess::RangeWidth;
-
 FunctionSummary FunctionSummary::ExternalNode =
-    FunctionSummary::makeDummyFunctionSummary({});
+    FunctionSummary::makeDummyFunctionSummary(
+        SmallVector<FunctionSummary::EdgeTy, 0>());
 
 GlobalValue::VisibilityTypes ValueInfo::getELFVisibility() const {
   bool HasProtected = false;
@@ -87,16 +86,13 @@ std::pair<unsigned, unsigned> FunctionSummary::specialRefCounts() const {
   return {RORefCnt, WORefCnt};
 }
 
-constexpr uint64_t ModuleSummaryIndex::BitcodeSummaryVersion;
-
 uint64_t ModuleSummaryIndex::getFlags() const {
   uint64_t Flags = 0;
+  // Flags & 0x4 is reserved. DO NOT REUSE.
   if (withGlobalValueDeadStripping())
     Flags |= 0x1;
   if (skipModuleByDistributedBackend())
     Flags |= 0x2;
-  if (hasSyntheticEntryCounts())
-    Flags |= 0x4;
   if (enableSplitLTOUnit())
     Flags |= 0x8;
   if (partiallySplitLTOUnits())
@@ -111,11 +107,13 @@ uint64_t ModuleSummaryIndex::getFlags() const {
     Flags |= 0x100;
   if (hasUnifiedLTO())
     Flags |= 0x200;
+  if (withInternalizeAndPromote())
+    Flags |= 0x400;
   return Flags;
 }
 
 void ModuleSummaryIndex::setFlags(uint64_t Flags) {
-  assert(Flags <= 0x2ff && "Unexpected bits in flag");
+  assert(Flags <= 0x7ff && "Unexpected bits in flag");
   // 1 bit: WithGlobalValueDeadStripping flag.
   // Set on combined index only.
   if (Flags & 0x1)
@@ -124,10 +122,7 @@ void ModuleSummaryIndex::setFlags(uint64_t Flags) {
   // Set on combined index only.
   if (Flags & 0x2)
     setSkipModuleByDistributedBackend();
-  // 1 bit: HasSyntheticEntryCounts flag.
-  // Set on combined index only.
-  if (Flags & 0x4)
-    setHasSyntheticEntryCounts();
+  // Flags & 0x4 is reserved. DO NOT REUSE.
   // 1 bit: DisableSplitLTOUnit flag.
   // Set on per module indexes. It is up to the client to validate
   // the consistency of this flag across modules being linked.
@@ -157,6 +152,10 @@ void ModuleSummaryIndex::setFlags(uint64_t Flags) {
   // Set on combined index only.
   if (Flags & 0x200)
     setUnifiedLTO();
+  // 1 bit: WithInternalizeAndPromote flag.
+  // Set on combined index only.
+  if (Flags & 0x400)
+    setWithInternalizeAndPromote();
 }
 
 // Collect for the given module the list of function it defines
@@ -165,7 +164,7 @@ void ModuleSummaryIndex::collectDefinedFunctionsForModule(
     StringRef ModulePath, GVSummaryMapTy &GVSummaryMap) const {
   for (auto &GlobalList : *this) {
     auto GUID = GlobalList.first;
-    for (auto &GlobSummary : GlobalList.second.SummaryList) {
+    for (auto &GlobSummary : GlobalList.second.getSummaryList()) {
       auto *Summary = dyn_cast_or_null<FunctionSummary>(GlobSummary.get());
       if (!Summary)
         // Ignore global variable, focus on functions
@@ -266,7 +265,7 @@ void ModuleSummaryIndex::propagateAttributes(
   DenseSet<ValueInfo> MarkedNonReadWriteOnly;
   for (auto &P : *this) {
     bool IsDSOLocal = true;
-    for (auto &S : P.second.SummaryList) {
+    for (auto &S : P.second.getSummaryList()) {
       if (!isGlobalValueLive(S.get())) {
         // computeDeadSymbolsAndUpdateIndirectCalls should have marked all
         // copies live. Note that it is possible that there is a GUID collision
@@ -276,7 +275,7 @@ void ModuleSummaryIndex::propagateAttributes(
         // all copies live we can assert here that all are dead if any copy is
         // dead.
         assert(llvm::none_of(
-            P.second.SummaryList,
+            P.second.getSummaryList(),
             [&](const std::unique_ptr<GlobalValueSummary> &Summary) {
               return isGlobalValueLive(Summary.get());
             }));
@@ -311,16 +310,16 @@ void ModuleSummaryIndex::propagateAttributes(
       // Mark the flag in all summaries false so that we can do quick check
       // without going through the whole list.
       for (const std::unique_ptr<GlobalValueSummary> &Summary :
-           P.second.SummaryList)
+           P.second.getSummaryList())
         Summary->setDSOLocal(false);
   }
   setWithAttributePropagation();
   setWithDSOLocalPropagation();
   if (llvm::AreStatisticsEnabled())
     for (auto &P : *this)
-      if (P.second.SummaryList.size())
+      if (P.second.getSummaryList().size())
         if (auto *GVS = dyn_cast<GlobalVarSummary>(
-                P.second.SummaryList[0]->getBaseObject()))
+                P.second.getSummaryList()[0]->getBaseObject()))
           if (isGlobalValueLive(GVS)) {
             if (GVS->maybeReadOnly())
               ReadOnlyLiveGVars++;
@@ -331,6 +330,13 @@ void ModuleSummaryIndex::propagateAttributes(
 
 bool ModuleSummaryIndex::canImportGlobalVar(const GlobalValueSummary *S,
                                             bool AnalyzeRefs) const {
+  bool CanImportDecl;
+  return canImportGlobalVar(S, AnalyzeRefs, CanImportDecl);
+}
+
+bool ModuleSummaryIndex::canImportGlobalVar(const GlobalValueSummary *S,
+                                            bool AnalyzeRefs,
+                                            bool &CanImportDecl) const {
   auto HasRefsPreventingImport = [this](const GlobalVarSummary *GVS) {
     // We don't analyze GV references during attribute propagation, so
     // GV with non-trivial initializer can be marked either read or
@@ -351,13 +357,20 @@ bool ModuleSummaryIndex::canImportGlobalVar(const GlobalValueSummary *S,
   };
   auto *GVS = cast<GlobalVarSummary>(S->getBaseObject());
 
+  const bool nonInterposable =
+      !GlobalValue::isInterposableLinkage(S->linkage());
+  const bool eligibleToImport = !S->notEligibleToImport();
+
+  // It's correct to import a global variable only when it is not interposable
+  // and eligible to import.
+  CanImportDecl = (nonInterposable && eligibleToImport);
+
   // Global variable with non-trivial initializer can be imported
   // if it's readonly. This gives us extra opportunities for constant
   // folding and converting indirect calls to direct calls. We don't
   // analyze GV references during attribute propagation, because we
   // don't know yet if it is readonly or not.
-  return !GlobalValue::isInterposableLinkage(S->linkage()) &&
-         !S->notEligibleToImport() &&
+  return nonInterposable && eligibleToImport &&
          (!AnalyzeRefs || !HasRefsPreventingImport(GVS));
 }
 
@@ -398,7 +411,7 @@ struct Edge {
   GlobalValue::GUID Src;
   GlobalValue::GUID Dst;
 };
-}
+} // namespace
 
 void Attributes::add(const Twine &Name, const Twine &Value,
                      const Twine &Comment) {
@@ -644,6 +657,10 @@ void ModuleSummaryIndex::exportToDot(
         A.addComment("dsoLocal");
       if (Flags.CanAutoHide)
         A.addComment("canAutoHide");
+      if (Flags.ImportType == GlobalValueSummary::ImportKind::Definition)
+        A.addComment("definition");
+      else if (Flags.ImportType == GlobalValueSummary::ImportKind::Declaration)
+        A.addComment("declaration");
       if (GUIDPreservedSymbols.count(SummaryIt.first))
         A.addComment("preserved");
 

@@ -29,8 +29,13 @@ class ModuleTranslation;
 /// operations being transformed must be translatable into LLVM IR.
 class ModuleToObject {
 public:
-  ModuleToObject(Operation &module, StringRef triple, StringRef chip,
-                 StringRef features = {}, int optLevel = 3);
+  ModuleToObject(
+      Operation &module, StringRef triple, StringRef chip,
+      StringRef features = {}, int optLevel = 3,
+      function_ref<void(llvm::Module &)> initialLlvmIRCallback = {},
+      function_ref<void(llvm::Module &)> linkedLlvmIRCallback = {},
+      function_ref<void(llvm::Module &)> optimizedLlvmIRCallback = {},
+      function_ref<void(StringRef)> isaCallback = {});
   virtual ~ModuleToObject();
 
   /// Returns the operation being serialized.
@@ -38,6 +43,13 @@ public:
 
   /// Runs the serialization pipeline, returning `std::nullopt` on error.
   virtual std::optional<SmallVector<char, 0>> run();
+
+  /// Translate LLVM module to textual ISA.
+  /// TODO: switch to SmallString
+  static FailureOr<std::string>
+  translateModuleToISA(llvm::Module &llvmModule,
+                       llvm::TargetMachine &targetMachine,
+                       function_ref<InFlightDiagnostic()> emitError);
 
 protected:
   // Hooks to be implemented by derived classes.
@@ -78,7 +90,7 @@ protected:
 
   /// Loads multiple bitcode files.
   LogicalResult loadBitcodeFilesFromList(
-      llvm::LLVMContext &context, ArrayRef<std::string> fileList,
+      llvm::LLVMContext &context, ArrayRef<Attribute> librariesToLink,
       SmallVector<std::unique_ptr<llvm::Module>> &llvmModules,
       bool failureOnError = true);
 
@@ -92,11 +104,6 @@ protected:
 
   /// Optimize the module.
   virtual LogicalResult optimizeModule(llvm::Module &module, int optL);
-
-  /// Utility function for translating to ISA, returns `std::nullopt` on
-  /// failure.
-  static std::optional<std::string>
-  translateToISA(llvm::Module &llvmModule, llvm::TargetMachine &targetMachine);
 
 protected:
   /// Module to transform to a binary object.
@@ -113,6 +120,21 @@ protected:
 
   /// Optimization level.
   int optLevel;
+
+  /// Callback invoked with the initial LLVM IR for the device module.
+  function_ref<void(llvm::Module &)> initialLlvmIRCallback;
+
+  /// Callback invoked with LLVM IR for the device module after
+  /// linking the device libraries.
+  function_ref<void(llvm::Module &)> linkedLlvmIRCallback;
+
+  /// Callback invoked with LLVM IR for the device module after
+  /// LLVM optimizations but before codegen.
+  function_ref<void(llvm::Module &)> optimizedLlvmIRCallback;
+
+  /// Callback invoked with the target ISA for the device,
+  /// for example PTX assembly.
+  function_ref<void(StringRef)> isaCallback;
 
 private:
   /// The TargetMachine created for the given Triple, if available.

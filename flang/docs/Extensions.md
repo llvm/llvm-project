@@ -1,9 +1,9 @@
-<!--===- docs/Extensions.md 
-  
+<!--===- docs/Extensions.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # Fortran Extensions supported by Flang
@@ -84,7 +84,7 @@ end
   be "local identifiers" and should be distinct in the "inclusive
   scope" -- i.e., not scoped by `BLOCK` constructs.
   As most (but not all) compilers implement `BLOCK` scoping of construct
-  names, so does f18, with a portability warning.
+  names, so does Flang, with a portability warning.
 * 15.6.4 paragraph 2 prohibits an implicitly typed statement function
   from sharing the same name as a symbol in its scope's host, if it
   has one.
@@ -93,6 +93,117 @@ end
   non-global name in the same scope.  This is not conforming,
   but it is useful and unambiguous.
 * The argument to `RANDOM_NUMBER` may not be an assumed-size array.
+* `NULL()` without `MOLD=` is not allowed to be associated as an
+  actual argument corresponding to an assumed-rank dummy argument;
+  its rank in the called procedure would not be well-defined.
+* When an index variable of a `FORALL` or `DO CONCURRENT` is present
+  in the enclosing scope, and the construct does not have an explicit
+  type specification for its index variables, some weird restrictions
+  in F'2023 subclause 19.4 paragraphs 6 & 8 should apply.  Since this
+  compiler properly scopes these names, violations of these restrictions
+  elicit only portability warnings by default.
+* The standard defines the intrinsic functions `MOD` and `MODULO`
+  for real arguments using expressions in terms of `AINT` and `FLOOR`.
+  These definitions yield fairly poor results due to floating-point
+  cancellation, and every Fortran compiler (including this one)
+  uses better algorithms.
+* The rules for pairwise distinguishing the specific procedures of a
+  generic interface are inadequate, as admitted in note C.11.6 of F'2023.
+  Generic interfaces whose specific procedures can be easily proven by
+  hand to be pairwise distinct (i.e., no ambiguous reference is possible)
+  appear in real applications, but are still non-conforming under the
+  incomplete tests in F'2023 15.4.3.4.5.
+  These cases are compiled with optional portability warnings.
+* `PROCEDURE(), BIND(C) :: PROC` is not conforming, as there is no
+  procedure interface.  This compiler accepts it, since there is otherwise
+  no way to declare an interoperable dummy procedure with an arbitrary
+  interface like `void (*)()`.
+* `PURE` functions are allowed to have dummy arguments that are
+  neither `INTENT(IN)` nor `VALUE`, similar to `PURE` subroutines,
+  with a warning.
+  This enables atomic memory operations to be naturally represented
+  as `PURE` functions, which allows their use in parallel constructs
+  and `DO CONCURRENT`.
+* A non-definable actual argument, including the case of a vector
+  subscript, may be associated with an `ASYNCHRONOUS` or `VOLATILE`
+  dummy argument, F'2023 15.5.2.5 p21 notwithstanding.
+  The effects of these attributes are scoped over the lifetime of
+  the procedure reference, and they can by added by internal subprograms
+  and `BLOCK` constructs within the procedure.
+  Further, a dummy argument can acquire the `ASYNCHRONOUS` attribute
+  implicitly simply appearing in an asynchronous data transfer statement,
+  without the attribute being visible in the procedure's explicit
+  interface.
+* When the name of an extended derived type's base type is the
+  result of `USE` association with renaming, the name of the extended
+  derived type's parent component is the new name by which the base
+  is known in the scope of the extended derived type, not the original.
+  This interpretation has usability advantages and is what six other
+  Fortran compilers do, but is not conforming now that J3 approved an
+  "interp" in June 2024 to the contrary.
+* When an Arm processor raises an `ieee_overflow` or `ieee_underflow`
+  exception, the `ieee_inexact` exception is also raised. This happens
+  for a call to `ieee_set_flag` as well as for floating point expression
+  evaluation.
+* Arm has processors that allow a user to control what happens when an
+  arithmetic exception is signaled, as well as processors that do not
+  have this capability. An Arm executable will run on either type of
+  processor, so it is effectively unknown at compile time whether or
+  not this support will be available at runtime. The standard requires
+  that a call to intrinsic module procedure `ieee_support_halting` with
+  a constant argument has a compile time constant result in `constant
+  expression` and `specification expression` contexts. In compilations
+  where this information is not known at compile time, Flang generates code
+  to determine the absence or presence of this capability at runtime.
+  A call to `ieee_support_halting` in contexts that the standard requires
+  to be constant will generate a compilation error. `ieee_support_standard`
+  depends in part on `ieee_support_halting`, so this also applies to
+  `ieee_support_standard` calls.
+* F'2023 constraint C7108 prohibits the use of a structure constructor
+  that could also be interpreted as a generic function reference.
+  No other Fortran compiler enforces C7108 (to our knowledge);
+  they all resolve the ambiguity by interpreting the call as a function
+  reference.  We do the same, with a portability warning.
+* An override for an inaccessible procedure binding works only within
+  the same module; other apparent overrides of inaccessible bindings
+  are actually new bindings of the same name.
+  In the case of `DEFERRED` bindings in an `ABSTRACT` derived type,
+  however, overrides are necessary, so they are permitted for inaccessible
+  bindings with an optional warning.
+* Main program name is allowed to be the same as the other symbols used
+  in the main program, for example:
+```
+module m
+end
+program m
+use m
+end
+```
+  Note that internally the main program symbol name is all uppercase, unlike
+  the names of all other symbols, which are usually all lowercase. This
+  may make a difference in testing/debugging.
+* A `PROCEDURE()` with no interface name or type may be called as an
+  subroutine with an implicit interface, F'2023 15.4.3.6 paragraph 4 and
+  C1525 notwithstanding.
+  This is a universally portable feature, and it also applies to
+  `PROCEDURE(), POINTER, NOPASS` derived type components.
+  Such procedures may *not* be referenced as implicitly typed functions
+  without first being associated with a function pointer.
+* Some intrinsic functions (`COUNT`, `LBOUND`, `LCOBOUND`, `TRANSFER`,
+  `UBOUND`, and `UCOBOUND`) have arguments (usually `DIM=`) that are documented
+  as not allowing `OPTIONAL` dummy arguments to appear as their values.
+  This prohibition appeared on the `DIM=` arguments of more
+  intrinsic functions in earlier revisions of the ISO standard.
+  (Perhaps these are meant to avoid misunderstanding these arguments,
+  which appear in square brackets in the synopses, as if their dynamic
+  presence at runtime could affect the semantics of the intrinsic in
+  the same way as the static presence or absence of the argument does
+  at compilation time, which would not be possible.)
+  No compiler seems to enforce this requirement.
+  We interpret it
+  to mean that an `OPTIONAL` dummy argument may appear but must be present
+  during execution, just as a pointer argument must be associated or an
+  allocatable argument must be allocated.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -100,7 +211,11 @@ end
 * `<>` as synonym for `.NE.` and `/=`
 * `$` and `@` as legal characters in names
 * Initialization in type declaration statements using `/values/`
-* Saved variables without explicit or default initializers are zero initialized.
+* Saved variables without explicit or default initializers are zero initialized,
+  except for scalar variables from the main program that are not explicitly
+  initialized or marked with an explicit SAVE attribute (these variables may be
+  placed on the stack by flang and not zero initialized). It is not advised to
+  rely on this extension in new code.
 * In a saved entity of a type with a default initializer, components without default
   values are zero initialized.
 * Kind specification with `*`, e.g. `REAL*4`
@@ -148,7 +263,7 @@ end
   the length parameter of the implicit type, not the first.
 * Outside a character literal, a comment after a continuation marker (&)
   need not begin with a comment marker (!).
-* Classic C-style /*comments*/ are skipped, so multi-language header
+* Classic C-style `/*comments*/` are skipped, so multi-language header
   files are easier to write and use.
 * $ and \ edit descriptors are supported in FORMAT to suppress newline
   output on user prompts.
@@ -166,9 +281,13 @@ end
   converted.  BOZ literals are interpreted as default INTEGER only
   when they appear as the first items of array constructors with no
   explicit type.  Otherwise, they generally cannot be used if the type would
-  not be known (e.g., `IAND(X'1',X'2')`).
+  not be known (e.g., `IAND(X'1',X'2')`, or as arguments of `DIM`, `MOD`,
+  `MODULO`, and `SIGN`. Note that while other compilers may accept such usages,
+  the type resolution of such BOZ literals usages is highly non portable).
 * BOZ literals can also be used as REAL values in some contexts where the
   type is unambiguous, such as initializations of REAL parameters.
+* `TRANSFER(boz, MOLD=integer or real scalar)` is accepted as an alternate
+  spelling of `INT(boz, KIND=kind(mold))` or `REAL(boz, KIND=kind(mold))`.
 * EQUIVALENCE of numeric and character sequences (a ubiquitous extension),
   as well as of sequences of non-default kinds of numeric types
   with each other.
@@ -196,6 +315,10 @@ end
 * When a dummy argument is `POINTER` or `ALLOCATABLE` and is `INTENT(IN)`, we
   relax enforcement of some requirements on actual arguments that must otherwise
   hold true for definable arguments.
+* We allow a limited polymorphic `POINTER` or `ALLOCATABLE` actual argument
+  to be associated with a compatible monomorphic dummy argument, as
+  our implementation, like others, supports a reallocation that would
+  change the dynamic type
 * Assignment of `LOGICAL` to `INTEGER` and vice versa (but not other types) is
   allowed.  The values are normalized to canonical `.TRUE.`/`.FALSE.`.
   The values are also normalized for assignments of `LOGICAL(KIND=K1)` to
@@ -210,7 +333,10 @@ end
 * DATA statement initialization is allowed for procedure pointers outside
   structure constructors.
 * Nonstandard intrinsic functions: ISNAN, SIZEOF
-* A forward reference to a default INTEGER scalar dummy argument or
+* A forward reference to an INTEGER dummy argument is permitted to appear
+  in a specification expression, such as an array bound, in a scope with
+  IMPLICIT NONE(TYPE).
+* A forward reference to a default INTEGER scalar
   `COMMON` block variable is permitted to appear in a specification
   expression, such as an array bound, in a scope with IMPLICIT NONE(TYPE)
   if the name of the variable would have caused it to be implicitly typed
@@ -262,7 +388,7 @@ end
 * The legacy extension intrinsic functions `IZEXT` and `JZEXT`
   are supported; `ZEXT` has different behavior with various older
   compilers, so it is not supported.
-* f18 doesn't impose a limit on the number of continuation lines
+* Flang doesn't impose a limit on the number of continuation lines
   allowed for a single statement.
 * When a type-bound procedure declaration statement has neither interface
   nor attributes, the "::" before the bindings is optional, even
@@ -279,9 +405,10 @@ end
   enforce it and the constraint is not necessary for a correct
   implementation.
 * A label may follow a semicolon in fixed form source.
-* A scalar logical dummy argument to a `BIND(C)` procedure does
-  not have to have `KIND=C_BOOL` since it can be converted to/from
-  `_Bool` without loss of information.
+* A logical dummy argument to a `BIND(C)` procedure, or a logical
+  component to a `BIND(C)` derived type does not have to have
+  `KIND=C_BOOL` since it can be converted to/from `_Bool` without
+  loss of information.
 * The character length of the `SOURCE=` or `MOLD=` in `ALLOCATE`
   may be distinct from the constant character length, if any,
   of an allocated object.
@@ -290,12 +417,12 @@ end
   it's an error only if the resolution is ambiguous.
 * An entity may appear in a `DATA` statement before its explicit
   type declaration under `IMPLICIT NONE(TYPE)`.
-* INCLUDE lines can start in any column, can be preceded in
+* `INCLUDE` lines can start in any column, can be preceded in
   fixed form source by a '0' in column 6, can contain spaces
   between the letters of the word INCLUDE, and can have a
   numeric character literal kind prefix on the file name.
-* Intrinsic procedures TAND and ATAND. Constant folding is currently
-  not supported for these procedures but this is planned.
+* Intrinsic procedures SIND, COSD, TAND and ATAND. Constant folding
+  is currently not supported for these procedures but this is planned.
 * When a pair of quotation marks in a character literal are split
   by a line continuation in free form, the second quotation mark
   may appear at the beginning of the continuation line without an
@@ -305,11 +432,54 @@ end
   compilers.
 * A `NULL()` pointer is treated as an unallocated allocatable
   when associated with an `INTENT(IN)` allocatable dummy argument.
+* `READ(..., SIZE=n)` is accepted with `NML=` and `FMT=*` with
+  a portability warning.
+  The Fortran standard doesn't allow `SIZE=` with formatted input
+  modes that might require look-ahead, perhaps to ease implementations.
+* When a file included via an `INCLUDE` line or `#include` directive
+  has a continuation marker at the end of its last line in free form,
+  Fortran line continuation works.
+* A `NAMELIST` input group may omit its trailing `/` character if
+  it is followed by another `NAMELIST` input group.
+* A `NAMELIST` input group may begin with either `&` or `$`.
+* A comma (or semicolon in `DECIMAL='COMMA'` or `DC` mode) in a
+  fixed-width numeric input field terminates the field rather than
+  signaling an invalid character error.
+* Arguments to the intrinsic functions `MAX` and `MIN` are converted
+  when necessary to the type of the result.
+  An `OPTIONAL`, `POINTER`, or `ALLOCATABLE` argument after
+  the first two cannot be converted, as it may not be present.
+* A derived type that meets (most of) the requirements of an interoperable
+  derived type can be used as such where an interoperable type is
+  required, with warnings, even if it lacks the BIND(C) attribute.
+* A "mult-operand" in an expression can be preceded by a unary
+  `+` or `-` operator.
+* `BIND(C, NAME="...", CDEFINED)` signifies that the storage for an
+  interoperable variable will be allocated outside of Fortran,
+  probably by a C or C++ external definition.
+* An automatic data object may be declared in the specification part
+  of the main program.
+* A local data object may appear in a specification expression, even
+  when it is not a dummy argument or in COMMON, so long as it is
+  has the SAVE attribute and was initialized.
+* `PRINT namelistname` is accepted and interpreted as
+  `WRITE(*,NML=namelistname)`, a near-universal extension.
+* A character length specifier in a component or entity declaration
+  is accepted before an array specification (`ch*3(2)`) as well
+  as afterwards.
+* A zero field width is allowed for logical formatted output (`L0`).
+* `OPEN(..., FORM='BINARY')` is accepted as a legacy synonym for
+  the standard `OPEN(..., FORM='UNFORMATTED', ACCESS='STREAM')`.
+* A character string edit descriptor is allowed in an input format
+  with an optional compilation-time warning.  When executed, it
+  is treated as an 'nX' positioning control descriptor that skips
+  over the same number of characters, without comparison.
 
 ### Extensions supported when enabled by options
 
 * C-style backslash escape sequences in quoted CHARACTER literals
-  (but not Hollerith) [-fbackslash]
+  (but not Hollerith) [-fbackslash], including Unicode escapes
+  with `\U`.
 * Logical abbreviations `.T.`, `.F.`, `.N.`, `.A.`, `.O.`, and `.X.`
   [-flogical-abbreviations]
 * `.XOR.` as a synonym for `.NEQV.` [-fxor-operator]
@@ -330,6 +500,10 @@ end
   [-fimplicit-none-type-never]
 * Old-style `PARAMETER pi=3.14` statement without parentheses
   [-falternative-parameter-statement]
+* `UNSIGNED` type (-funsigned)
+* Default exponent of zero, e.g. `3.14159E`, on a READ from a
+  fixed-width input field.  Includes the case with only an
+  exponent letter for compatibility with other compilers.
 
 ### Extensions and legacy features deliberately not supported
 
@@ -343,7 +517,7 @@ end
 * `VIRTUAL` as synonym for `DIMENSION`
 * `ENCODE` and `DECODE` as synonyms for internal I/O
 * `IMPLICIT AUTOMATIC`, `IMPLICIT STATIC`
-* Default exponent of zero, e.g. `3.14159E`
+* Default exponent of zero, e.g. `3.14159E`, on a literal constant
 * Characters in defined operators that are neither letters nor digits
 * `B` suffix on unquoted octal constants
 * `Z` prefix on unquoted hexadecimal constants (dangerous)
@@ -393,19 +567,32 @@ end
 * We respect Fortran comments in macro actual arguments (like GNU, Intel, NAG;
   unlike PGI and XLF) on the principle that macro calls should be treated
   like function references.  Fortran's line continuation methods also work.
+* We implement the `__COUNTER__` preprocessing extension,
+  see [Non-standard Extensions](Preprocessing.md#non-standard-extensions)
 
 ## Standard features not silently accepted
 
 * Fortran explicitly ignores type declaration statements when they
   attempt to type the name of a generic intrinsic function (8.2 p3).
   One can declare `CHARACTER::COS` and still get a real result
-  from `COS(3.14159)`, for example.  f18 will complain when a
+  from `COS(3.14159)`, for example.  Flang will complain when a
   generic intrinsic function's inferred result type does not
   match an explicit declaration.  This message is a warning.
 
+* There is no restriction in the standard against assigning
+  to a whole polymorphic allocatable under control of a `WHERE`
+  construct or statement, but there is no good portable
+  behavior to implement and the standard isn't entirely clear
+  what it should mean.
+  (Other compilers allow it, but the results are never meaningful;
+  some never change the type, some change the type according to
+  the value of the last mask element, some treat these
+  assignment statements as no-ops, and the rest crash during compilation.)
+  The compiler flags this case as an error.
+
 ## Standard features that might as well not be
 
-* f18 supports designators with constant expressions, properly
+* Flang supports designators with constant expressions, properly
   constrained, as initial data targets for data pointers in
   initializers of variable and component declarations and in
   `DATA` statements; e.g., `REAL, POINTER :: P => T(1:10:2)`.
@@ -422,22 +609,27 @@ end
 * The standard doesn't explicitly require that a named constant that
   appears as part of a complex-literal-constant be a scalar, but
   most compilers emit an error when an array appears.
-  f18 supports them with a portability warning.
-* f18 does not enforce a blanket prohibition against generic
+  Flang supports them with a portability warning.
+* Flang does not enforce a blanket prohibition against generic
   interfaces containing a mixture of functions and subroutines.
-  Apart from some contexts in which the standard requires all of
-  a particular generic interface to have only all functions or
-  all subroutines as its specific procedures, we allow both to
-  appear, unlike several other Fortran compilers.
+  We allow both to appear, unlike several other Fortran compilers.
   This is especially desirable when two generics of the same
   name are combined due to USE association and the mixture may
   be inadvertent.
-* Since Fortran 90, INCLUDE lines have been allowed to have
+* Since Fortran 90, `INCLUDE` lines have been allowed to have
   a numeric kind parameter prefix on the file name.  No other
   Fortran compiler supports them that I can find.
 * A `SEQUENCE` derived type is required (F'2023 C745) to have
   at least one component.  No compiler enforces this constraint;
   this compiler emits a warning.
+* Many compilers disallow a `VALUE` assumed-length character dummy
+  argument, which has been standard since F'2008.
+  We accept this usage with an optional portability warning.
+* The `ASYNCHRONOUS` attribute can be implied by usage in data
+  transfer I/O statements.  Only one other compiler supports this
+  correctly.  This compiler does, apart from objects in asynchronous
+  NAMELIST I/O, for which an actual asynchronous runtime implementation
+  seems unlikely.
 
 ## Behavior in cases where the standard is ambiguous or indefinite
 
@@ -485,7 +677,7 @@ end
   treat them as references to implicitly typed local variables, and
   load uninitialized values.
 
-  In f18, we chose to emit an error message for this case since the standard
+  In Flang, we chose to emit an error message for this case since the standard
   is unclear, the usage is not portable, and the issue can be easily resolved
   by adding a declaration.
 
@@ -516,7 +708,7 @@ end
 
 * When a `DATA` statement in a `BLOCK` construct could be construed as
   either initializing a host-associated object or declaring a new local
-  initialized object, f18 interprets the standard's classification of
+  initialized object, Flang interprets the standard's classification of
   a `DATA` statement as being a "declaration" rather than a "specification"
   construct, and notes that the `BLOCK` construct is defined as localizing
   names that have specifications in the `BLOCK` construct.
@@ -533,7 +725,7 @@ end subroutine
   Other Fortran compilers disagree with each other in their interpretations
   of this example.
   The precedent among the most commonly used compilers
-  agrees with f18's interpretation: a `DATA` statement without any other
+  agrees with Flang's interpretation: a `DATA` statement without any other
   specification of the name refers to the host-associated object.
 
 * Many Fortran compilers allow a non-generic procedure to be `USE`-associated
@@ -559,7 +751,7 @@ module m2
 end module
 ```
 
-  This case elicits a warning from f18, as it should not be treated
+  This case elicits a warning from Flang, as it should not be treated
   any differently than the same case with the non-generic procedure of
   the same name being defined in the same scope rather than being
   `USE`-associated into it, which is explicitly non-conforming in the
@@ -577,7 +769,7 @@ end module
   symbols, much less appear in specification inquiries, and there are
   application codes that expect exterior symbols whose names match
   components to be visible in a derived-type definition's default initialization
-  expressions, and so f18 follows that precedent.
+  expressions, and so Flang follows that precedent.
 
 * 19.3.1p1 "Within its scope, a local identifier of an entity of class (1)
   or class (4) shall not be the same as a global identifier used in that scope..."
@@ -599,17 +791,17 @@ end module
   left-hand side for a pointer assignment statement, and we emit a
   portability warning when it is not.
 
-* F18 allows a `USE` statement to reference a module that is defined later
+* Flang allows a `USE` statement to reference a module that is defined later
   in the same compilation unit, so long as mutual dependencies do not form
   a cycle.
   This feature forestalls any risk of such a `USE` statement reading an
   obsolete module file from a previous compilation and then overwriting
   that file later.
 
-* F18 allows `OPTIONAL` dummy arguments to interoperable procedures
+* Flang allows `OPTIONAL` dummy arguments to interoperable procedures
   unless they are `VALUE` (C865).
 
-* F18 processes the `NAMELIST` group declarations in a scope after it
+* Flang processes the `NAMELIST` group declarations in a scope after it
   has resolved all of the names in that scope.  This means that names
   that appear before their local declarations do not resolve to host
   associated objects and do not elicit errors about improper redeclarations
@@ -631,6 +823,155 @@ module m
 end
 ```
 
+* When an intrinsic procedure appears in the specification part of a module
+  only in function references, but not an explicit `INTRINSIC` statement,
+  its name is not brought into other scopes by a `USE` statement.
+
+* The subclause on rounding in formatted I/O (13.7.2.3.8 in F'2023)
+  only discusses rounding for decimal-to/from-binary conversions,
+  omitting any mention of rounding for hexadecimal conversions.
+  As other compilers do apply rounding, so does this one.
+
+* For real `MAXVAL`, `MINVAL`, `MAXLOC`, and `MINLOC`, NaN values are
+  essentially ignored unless there are some unmasked array entries and
+  *all* of them are NaNs.
+
+* When `INDEX` is used as an unrestricted specific intrinsic function
+  in the context of an actual procedure, as the explicit interface in
+  a `PROCEDURE` declaration statement, or as the target of a procedure
+  pointer assignment, its interface has exactly two dummy arguments
+  (`STRING=` and `SUBSTRING=`), and includes neither `BACK=` nor
+  `KIND=`.
+  This is how `INDEX` as an unrestricted specific intrinsic function was
+  documented in FORTRAN '77 and Fortran '90; later revisions of the
+  standard deleted the argument information from the section on
+  unrestricted specific intrinsic functions.
+  At least one other compiler (XLF) seems to expect that the interface for
+  `INDEX` include an optional `BACK=` argument, but it doesn't actually
+  work.
+
+* Allocatable components of array and structure constructors are deallocated
+  after use without calling final subroutines.
+  The standard does not specify when and how deallocation of array and structure
+  constructors allocatable components should happen. All compilers free the
+  memory after use, but the behavior when the allocatable component is a derived
+  type with finalization differ, especially when dealing with nested array and
+  structure constructors expressions. Some compilers call final routine for the
+  allocatable components of each constructor sub-expressions, some call it only
+  for the allocatable component of the top level constructor, and some only
+  deallocate the memory. Deallocating only the memory offers the most
+  flexibility when lowering such expressions, and it is not clear finalization
+  is desirable in such context (Fortran interop 1.6.2 in F2018 standards require
+  array and structure constructors not to be finalized, so it also makes sense
+  not to finalize their allocatable components when releasing their storage).
+
+* F'2023 19.4 paragraph 5: "If integer-type-spec appears in data-implied-do or
+  ac-implied-do-control it has the specified type and type parameters; otherwise
+  it has the type and type parameters that it would have if it were the name of
+  a variable in the innermost executable construct or scoping unit that includes
+  the DATA statement or array constructor, and this type shall be integer type."
+  Reading "would have if it were" as being the subjunctive, this would mean that
+  an untyped implied DO index variable should be implicitly typed according to
+  the rules active in the enclosing scope.  But all other Fortran compilers interpret
+  the "would have if it were" as meaning "has if it is" -- i.e., if the name
+  is visible in the enclosing scope, the type of that name is used as the
+  type of the implied DO index.  So this is an error, not a simple application
+  of the default implicit typing rule:
+```
+character j
+print *, [(j,j=1,10)]
+```
+
+* The Fortran standard doesn't mention integer overflow explicitly. In many cases,
+  however, integer overflow makes programs non-conforming.
+  Flang follows other widely-used Fortran compilers. Specifically, Flang assumes
+  integer overflow never occurs in address calculations and increment of
+  do-variable unless the option `-fwrapv` is enabled.
+
+* Two new ieee_round_type values were added in Flang beyond the four values
+  defined in f03 and f08: ieee_away and ieee_other. Contemporary hardware
+  typically does not have support for these rounding modes;
+  ieee_support_rounding calls for these values return false.
+  ieee_set_rounding_mode calls that attempt to set the rounding mode to one
+  of these values in violation of the restriction in f23 clause 17.11.42 set
+  the mode to ieee_nearest.
+
+* Some compilers allow an `INTENT(OUT)` dummy argument's value to appear
+  via host association in a specification expression.  A non-host-associated
+  use is an error because an `INTENT(OUT)` dummy argument's value is not
+  defined.  The argument put forth to accept this usage in a `BLOCK` construct
+  or inner procedure is that the language in 10.1.11 (specification expressions)
+  allows any host-associated object to appear, but that's unconvincing
+  because it would also allow a host-associated `OPTIONAL` dummy argument to
+  be used in a nested scope, and that doesn't make sense.  This compiler
+  accepts an `INTENT(OUT)` non-`OPTIONAL` host-associated value to appear
+  in a specification expression via host association with a portability
+  warning since such values may have become defined by the time the nested
+  expression's value is required.
+
+* Intrinsic assignment of arrays is defined elementally, and intrinsic
+  assignment of derived type components is defined componentwise.
+  However, when intrinsic assignment takes place for an array of derived
+  type, the order of the loop nesting is not defined.
+  Some compilers will loop over the elements, assigning all of the components
+  of each element before proceeding to the next element.
+  This compiler loops over all of the components, and assigns all of
+  the elements for each component before proceeding to the next component.
+  A program using defined assignment might be able to detect the difference.
+
+* The standard forbids instances of derived types with defined unformatted
+  WRITE subroutines from appearing in the I/O list of an `INQUIRE(IOLENGTH=...)`
+  statement.  It then also says that these defined I/O procedures should be
+  ignored for that statement.  So we allow them to appear (like most
+  compilers) and don't use any defined unformatted WRITE that might have been
+  defined.
+
+* Forward references to target objects are allowed to appear
+  in the initializers of data pointer declarationss.
+  Forward references to target objects are not accepted in the default
+  initializers of derived type component declarations, however,
+  since these default values need to be available to process incomplete
+  structure constructors.
+
+* When an `ALLOCATE` or `DEALLOCATE` statement with multiple variables
+  has a `STAT=` specifier that allows the program to continue execution
+  after an error, the variables after the one with the error are left
+  deallocated (or allocated).  This interpretation allows the program to
+  identify the variable that encountered the problem while avoiding any
+  ambiguity in the case of multiple errors with distinct status codes.
+  Some compilers work differently; for maximum portability, avoid
+  `ALLOCATE` and `DEALLOCATE` statements with error recovery for
+  multiple variables.
+
+* When a "null" value is encountered in list-directed input, the
+  corresponding effective item in the data list is left unchanged,
+  even when it has a derived type with a defined `READ(FORMATTED)`
+  subroutine.  This is the most literal reading of F'2023 13.10.3.2p2
+  and the portable interpretation across the most common Fortran
+  compilers.
+
+* `NAMELIST` child input statements are allowed to advance to further
+  input records.
+  Further, advancement is allowed when the parent input statement is
+  a non-child (top level) list-directed input statement, or, recursively,
+  an intermediate child list-directed input statement that can advance.
+  This means that non-`NAMELIST` list-directed child input statements are
+  not allowed to advance when they have an ancestor formatted input statement
+  that is not list-directed and there is no intervening `NAMELIST`.
+  This design allows format-driven input with `DT` editing to retain
+  control over advancement in child input, while otherwise allowing it.
+
+* When output takes place to a file under `ACCESS="STREAM"` after
+  repositioning it to an earlier position, some compilers will
+  truncate the file; this behavior is similar to the implicit
+  `ENDFILE` that takes place under sequential output after a
+  `BACKSPACE` or `REWIND` statement.
+  Truncation of streams is not specified in the standard, however,
+  and it does not take place with all compilers.
+  In this one, truncation is optional; it occurs by default,
+  but it can be disabled via `FORT_TRUNCATE_STREAM=0` in the
+  environment at execution time.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
@@ -640,3 +981,9 @@ end
   but every Fortran compiler allows the encoding to be changed on an
   open unit.
 
+* A `NAMELIST` input item that references a scalar element of a vector
+  or contiguous array can be used as the initial element of a storage
+  sequence.  For example, "&GRP A(1)=1. 2. 3./" is treated as if had been
+  "&GRP A(1:)=1. 2. 3./".
+  This extension is necessarily disabled when the type of the array
+  has an accessible defined formatted READ subroutine.

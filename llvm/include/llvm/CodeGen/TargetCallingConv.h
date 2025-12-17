@@ -13,8 +13,8 @@
 #ifndef LLVM_CODEGEN_TARGETCALLINGCONV_H
 #define LLVM_CODEGEN_TARGETCALLINGCONV_H
 
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
@@ -28,6 +28,7 @@ namespace ISD {
   private:
     unsigned IsZExt : 1;     ///< Zero extended
     unsigned IsSExt : 1;     ///< Sign extended
+    unsigned IsNoExt : 1;    ///< No extension
     unsigned IsInReg : 1;    ///< Passed in register
     unsigned IsSRet : 1;     ///< Hidden struct-ret ptr
     unsigned IsByVal : 1;    ///< Struct passed by value
@@ -45,14 +46,16 @@ namespace ISD {
     unsigned IsHva : 1;        ///< HVA field for
     unsigned IsHvaStart : 1;   ///< HVA structure start
     unsigned IsSecArgPass : 1; ///< Second argument
-    unsigned MemAlign : 4;     ///< Log 2 of alignment when arg is passed in memory
-                               ///< (including byval/byref). The max alignment is
-                               ///< verified in IR verification.
+    unsigned MemAlign : 6; ///< Log 2 of alignment when arg is passed in memory
+                           ///< (including byval/byref). The max alignment is
+                           ///< verified in IR verification.
     unsigned OrigAlign : 5;    ///< Log 2 of original alignment
     unsigned IsInConsecutiveRegsLast : 1;
     unsigned IsInConsecutiveRegs : 1;
     unsigned IsCopyElisionCandidate : 1; ///< Argument copy elision candidate
     unsigned IsPointer : 1;
+    /// Whether this is part of a variable argument list (non-fixed).
+    unsigned IsVarArg : 1;
 
     unsigned ByValOrByRefSize = 0; ///< Byval or byref struct size
 
@@ -60,14 +63,14 @@ namespace ISD {
 
   public:
     ArgFlagsTy()
-        : IsZExt(0), IsSExt(0), IsInReg(0), IsSRet(0), IsByVal(0), IsByRef(0),
-          IsNest(0), IsReturned(0), IsSplit(0), IsInAlloca(0),
+        : IsZExt(0), IsSExt(0), IsNoExt(0), IsInReg(0), IsSRet(0), IsByVal(0),
+          IsByRef(0), IsNest(0), IsReturned(0), IsSplit(0), IsInAlloca(0),
           IsPreallocated(0), IsSplitEnd(0), IsSwiftSelf(0), IsSwiftAsync(0),
           IsSwiftError(0), IsCFGuardTarget(0), IsHva(0), IsHvaStart(0),
           IsSecArgPass(0), MemAlign(0), OrigAlign(0),
           IsInConsecutiveRegsLast(0), IsInConsecutiveRegs(0),
-          IsCopyElisionCandidate(0), IsPointer(0) {
-      static_assert(sizeof(*this) == 3 * sizeof(unsigned), "flags are too big");
+          IsCopyElisionCandidate(0), IsPointer(0), IsVarArg(0) {
+      static_assert(sizeof(*this) == 4 * sizeof(unsigned), "flags are too big");
     }
 
     bool isZExt() const { return IsZExt; }
@@ -75,6 +78,9 @@ namespace ISD {
 
     bool isSExt() const { return IsSExt; }
     void setSExt() { IsSExt = 1; }
+
+    bool isNoExt() const { return IsNoExt; }
+    void setNoExt() { IsNoExt = 1; }
 
     bool isInReg() const { return IsInReg; }
     void setInReg() { IsInReg = 1; }
@@ -141,6 +147,9 @@ namespace ISD {
     bool isPointer()  const { return IsPointer; }
     void setPointer() { IsPointer = 1; }
 
+    bool isVarArg() const { return IsVarArg; }
+    void setVarArg() { IsVarArg = 1; }
+
     Align getNonZeroMemAlign() const {
       return decodeMaybeAlign(MemAlign).valueOrOne();
     }
@@ -194,9 +203,16 @@ namespace ISD {
   ///
   struct InputArg {
     ArgFlagsTy Flags;
+    /// Legalized type of this argument part.
     MVT VT = MVT::Other;
+    /// Usually the non-legalized type of the argument, which is the EVT
+    /// corresponding to the OrigTy IR type. However, for post-legalization
+    /// libcalls, this will be a legalized type.
     EVT ArgVT;
-    bool Used = false;
+    /// Original IR type of the argument. For aggregates, this is the type of
+    /// an individual aggregate element, not the whole aggregate.
+    Type *OrigTy;
+    bool Used;
 
     /// Index original Function's argument.
     unsigned OrigArgIndex;
@@ -208,13 +224,10 @@ namespace ISD {
     /// registers, we got 4 InputArgs with PartOffsets 0, 4, 8 and 12.
     unsigned PartOffset;
 
-    InputArg() = default;
-    InputArg(ArgFlagsTy flags, EVT vt, EVT argvt, bool used,
-             unsigned origIdx, unsigned partOffs)
-      : Flags(flags), Used(used), OrigArgIndex(origIdx), PartOffset(partOffs) {
-      VT = vt.getSimpleVT();
-      ArgVT = argvt;
-    }
+    InputArg(ArgFlagsTy Flags, MVT VT, EVT ArgVT, Type *OrigTy, bool Used,
+             unsigned OrigArgIndex, unsigned PartOffset)
+        : Flags(Flags), VT(VT), ArgVT(ArgVT), OrigTy(OrigTy), Used(Used),
+          OrigArgIndex(OrigArgIndex), PartOffset(PartOffset) {}
 
     bool isOrigArg() const {
       return OrigArgIndex != NoArgIndex;
@@ -232,11 +245,14 @@ namespace ISD {
   ///
   struct OutputArg {
     ArgFlagsTy Flags;
+    // Legalized type of this argument part.
     MVT VT;
+    /// Non-legalized type of the argument. This is the EVT corresponding to
+    /// the OrigTy IR type.
     EVT ArgVT;
-
-    /// IsFixed - Is this a "fixed" value, ie not passed through a vararg "...".
-    bool IsFixed = false;
+    /// Original IR type of the argument. For aggregates, this is the type of
+    /// an individual aggregate element, not the whole aggregate.
+    Type *OrigTy;
 
     /// Index original Function's argument.
     unsigned OrigArgIndex;
@@ -246,14 +262,10 @@ namespace ISD {
     /// registers, we got 4 OutputArgs with PartOffsets 0, 4, 8 and 12.
     unsigned PartOffset;
 
-    OutputArg() = default;
-    OutputArg(ArgFlagsTy flags, MVT vt, EVT argvt, bool isfixed,
-              unsigned origIdx, unsigned partOffs)
-        : Flags(flags), IsFixed(isfixed), OrigArgIndex(origIdx),
-          PartOffset(partOffs) {
-      VT = vt;
-      ArgVT = argvt;
-    }
+    OutputArg(ArgFlagsTy Flags, MVT VT, EVT ArgVT, Type *OrigTy,
+              unsigned OrigArgIndex, unsigned PartOffset)
+        : Flags(Flags), VT(VT), ArgVT(ArgVT), OrigTy(OrigTy),
+          OrigArgIndex(OrigArgIndex), PartOffset(PartOffset) {}
   };
 
 } // end namespace ISD

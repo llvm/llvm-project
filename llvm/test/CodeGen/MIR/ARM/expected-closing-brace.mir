@@ -16,7 +16,7 @@
     ret i32 %.
 
   if.else:
-    %b = load i32, i32* @G
+    %b = load i32, ptr @G
     %c = add i32 %b, 1
     br label %foo
   }

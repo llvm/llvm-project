@@ -41,6 +41,7 @@
 
 #include "raw_ostream.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 
 #include <atomic>
 #include <condition_variable>
@@ -50,7 +51,7 @@
 
 namespace llvm {
 
-class ThreadPool;
+class ThreadPoolInterface;
 /// A function with a set of utility nodes where it is beneficial to order two
 /// functions close together if they have similar utility nodes
 class BPFunctionNode {
@@ -67,7 +68,7 @@ public:
   /// The ID of this node
   IDT Id;
 
-  void dump(raw_ostream &OS) const;
+  LLVM_ABI void dump(raw_ostream &OS) const;
 
 protected:
   /// The list of utility nodes associated with this node
@@ -99,10 +100,10 @@ struct BalancedPartitioningConfig {
 
 class BalancedPartitioning {
 public:
-  BalancedPartitioning(const BalancedPartitioningConfig &Config);
+  LLVM_ABI BalancedPartitioning(const BalancedPartitioningConfig &Config);
 
   /// Run recursive graph partitioning that optimizes a given objective.
-  void run(std::vector<BPFunctionNode> &Nodes) const;
+  LLVM_ABI void run(std::vector<BPFunctionNode> &Nodes) const;
 
 private:
   struct UtilitySignature;
@@ -115,7 +116,7 @@ private:
   /// threads, so we need to track how many active threads that could spawn more
   /// threads.
   struct BPThreadPool {
-    ThreadPool &TheThreadPool;
+    ThreadPoolInterface &TheThreadPool;
     std::mutex mtx;
     std::condition_variable cv;
     /// The number of threads that could spawn more threads
@@ -127,8 +128,9 @@ private:
     /// Blocking wait for all threads to complete. Unlike ThreadPool, it is
     /// acceptable for other threads to add more tasks while blocking on this
     /// call.
-    void wait();
-    BPThreadPool(ThreadPool &TheThreadPool) : TheThreadPool(TheThreadPool) {}
+    LLVM_ABI void wait();
+    BPThreadPool(ThreadPoolInterface &TheThreadPool)
+        : TheThreadPool(TheThreadPool) {}
   };
 
   /// Run a recursive bisection of a given list of FunctionNodes
@@ -141,9 +143,8 @@ private:
               std::optional<BPThreadPool> &TP) const;
 
   /// Run bisection iterations
-  void runIterations(const FunctionNodeRange Nodes, unsigned RecDepth,
-                     unsigned LeftBucket, unsigned RightBucket,
-                     std::mt19937 &RNG) const;
+  void runIterations(const FunctionNodeRange Nodes, unsigned LeftBucket,
+                     unsigned RightBucket, std::mt19937 &RNG) const;
 
   /// Run a bisection iteration to improve the optimization goal
   /// \returns the total number of moved FunctionNodes
@@ -192,8 +193,8 @@ private:
 
 protected:
   /// Compute the move gain for uniform log-gap cost
-  static float moveGain(const BPFunctionNode &N, bool FromLeftToRight,
-                        const SignaturesT &Signatures);
+  LLVM_ABI static float moveGain(const BPFunctionNode &N, bool FromLeftToRight,
+                                 const SignaturesT &Signatures);
   friend class BalancedPartitioningTest_MoveGain_Test;
 };
 

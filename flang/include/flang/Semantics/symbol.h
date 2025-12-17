@@ -10,17 +10,20 @@
 #define FORTRAN_SEMANTICS_SYMBOL_H_
 
 #include "type.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
+#include "flang/Semantics/module-dependences.h"
+#include "flang/Support/Fortran.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 
 #include <array>
 #include <functional>
 #include <list>
 #include <optional>
 #include <set>
+#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -28,6 +31,7 @@ class raw_ostream;
 }
 namespace Fortran::parser {
 struct Expr;
+struct OpenMPDeclarativeConstruct;
 }
 
 namespace Fortran::semantics {
@@ -47,32 +51,34 @@ using MutableSymbolVector = std::vector<MutableSymbolRef>;
 
 // Mixin for details with OpenMP declarative constructs.
 class WithOmpDeclarative {
-  using OmpAtomicOrderType = common::OmpAtomicDefaultMemOrderType;
-
 public:
-  ENUM_CLASS(RequiresFlag, ReverseOffload, UnifiedAddress, UnifiedSharedMemory,
-      DynamicAllocators);
-  using RequiresFlags = common::EnumSet<RequiresFlag, RequiresFlag_enumSize>;
+  // The set of requirements for any program unit include requirements
+  // from any module used in the program unit.
+  using RequiresClauses =
+      common::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
 
   bool has_ompRequires() const { return ompRequires_.has_value(); }
-  const RequiresFlags *ompRequires() const {
+  const RequiresClauses *ompRequires() const {
     return ompRequires_ ? &*ompRequires_ : nullptr;
   }
-  void set_ompRequires(RequiresFlags flags) { ompRequires_ = flags; }
+  void set_ompRequires(RequiresClauses clauses) { ompRequires_ = clauses; }
 
   bool has_ompAtomicDefaultMemOrder() const {
     return ompAtomicDefaultMemOrder_.has_value();
   }
-  const OmpAtomicOrderType *ompAtomicDefaultMemOrder() const {
+  const common::OmpMemoryOrderType *ompAtomicDefaultMemOrder() const {
     return ompAtomicDefaultMemOrder_ ? &*ompAtomicDefaultMemOrder_ : nullptr;
   }
-  void set_ompAtomicDefaultMemOrder(OmpAtomicOrderType flags) {
+  void set_ompAtomicDefaultMemOrder(common::OmpMemoryOrderType flags) {
     ompAtomicDefaultMemOrder_ = flags;
   }
 
+  friend llvm::raw_ostream &operator<<(
+      llvm::raw_ostream &, const WithOmpDeclarative &);
+
 private:
-  std::optional<RequiresFlags> ompRequires_;
-  std::optional<OmpAtomicOrderType> ompAtomicDefaultMemOrder_;
+  std::optional<RequiresClauses> ompRequires_;
+  std::optional<common::OmpMemoryOrderType> ompAtomicDefaultMemOrder_;
 };
 
 // A module or submodule.
@@ -86,11 +92,19 @@ public:
   void set_scope(const Scope *);
   bool isDefaultPrivate() const { return isDefaultPrivate_; }
   void set_isDefaultPrivate(bool yes = true) { isDefaultPrivate_ = yes; }
+  std::optional<ModuleCheckSumType> moduleFileHash() const {
+    return moduleFileHash_;
+  }
+  void set_moduleFileHash(ModuleCheckSumType x) { moduleFileHash_ = x; }
+  const Symbol *previous() const { return previous_; }
+  void set_previous(const Symbol *p) { previous_ = p; }
 
 private:
   bool isSubmodule_;
   bool isDefaultPrivate_{false};
   const Scope *scope_{nullptr};
+  std::optional<ModuleCheckSumType> moduleFileHash_;
+  const Symbol *previous_{nullptr}; // same name, different module file hash
 };
 
 class MainProgramDetails : public WithOmpDeclarative {
@@ -106,14 +120,21 @@ public:
   bool isExplicitBindName() const { return isExplicitBindName_; }
   void set_bindName(std::string &&name) { bindName_ = std::move(name); }
   void set_isExplicitBindName(bool yes) { isExplicitBindName_ = yes; }
+  bool isCDefined() const { return isCDefined_; }
+  void set_isCDefined(bool yes) { isCDefined_ = yes; }
 
 private:
   std::optional<std::string> bindName_;
   bool isExplicitBindName_{false};
+  bool isCDefined_{false};
 };
 
-class OpenACCRoutineInfo {
+// Device type specific OpenACC routine information
+class OpenACCRoutineDeviceTypeInfo {
 public:
+  explicit OpenACCRoutineDeviceTypeInfo(
+      Fortran::common::OpenACCDeviceType dType)
+      : deviceType_{dType} {}
   bool isSeq() const { return isSeq_; }
   void set_isSeq(bool value = true) { isSeq_ = value; }
   bool isVector() const { return isVector_; }
@@ -124,12 +145,20 @@ public:
   void set_isGang(bool value = true) { isGang_ = value; }
   unsigned gangDim() const { return gangDim_; }
   void set_gangDim(unsigned value) { gangDim_ = value; }
-  bool isNohost() const { return isNohost_; }
-  void set_isNohost(bool value = true) { isNohost_ = value; }
-  const std::string *bindName() const {
-    return bindName_ ? &*bindName_ : nullptr;
+  const std::variant<std::string, SymbolRef> *bindName() const {
+    return bindName_.has_value() ? &*bindName_ : nullptr;
   }
-  void set_bindName(std::string &&name) { bindName_ = std::move(name); }
+  const std::optional<std::variant<std::string, SymbolRef>> &
+  bindNameOpt() const {
+    return bindName_;
+  }
+  void set_bindName(std::string &&name) { bindName_.emplace(std::move(name)); }
+  void set_bindName(SymbolRef symbol) { bindName_.emplace(symbol); }
+
+  Fortran::common::OpenACCDeviceType dType() const { return deviceType_; }
+
+  friend llvm::raw_ostream &operator<<(
+      llvm::raw_ostream &, const OpenACCRoutineDeviceTypeInfo &);
 
 private:
   bool isSeq_{false};
@@ -137,8 +166,44 @@ private:
   bool isWorker_{false};
   bool isGang_{false};
   unsigned gangDim_{0};
+  // bind("name") -> std::string
+  // bind(sym) -> SymbolRef (requires namemangling in lowering)
+  std::optional<std::variant<std::string, SymbolRef>> bindName_;
+  Fortran::common::OpenACCDeviceType deviceType_{
+      Fortran::common::OpenACCDeviceType::None};
+};
+
+// OpenACC routine information. Device independent info are stored on the
+// OpenACCRoutineInfo instance while device dependent info are stored
+// in as objects in the OpenACCRoutineDeviceTypeInfo list.
+class OpenACCRoutineInfo : public OpenACCRoutineDeviceTypeInfo {
+public:
+  OpenACCRoutineInfo()
+      : OpenACCRoutineDeviceTypeInfo(Fortran::common::OpenACCDeviceType::None) {
+  }
+  bool isNohost() const { return isNohost_; }
+  void set_isNohost(bool value = true) { isNohost_ = value; }
+  const std::list<OpenACCRoutineDeviceTypeInfo> &deviceTypeInfos() const {
+    return deviceTypeInfos_;
+  }
+
+  OpenACCRoutineDeviceTypeInfo &add_deviceTypeInfo(
+      Fortran::common::OpenACCDeviceType type) {
+    return add_deviceTypeInfo(OpenACCRoutineDeviceTypeInfo(type));
+  }
+
+  OpenACCRoutineDeviceTypeInfo &add_deviceTypeInfo(
+      OpenACCRoutineDeviceTypeInfo &&info) {
+    deviceTypeInfos_.push_back(std::move(info));
+    return deviceTypeInfos_.back();
+  }
+
+  friend llvm::raw_ostream &operator<<(
+      llvm::raw_ostream &, const OpenACCRoutineInfo &);
+
+private:
+  std::list<OpenACCRoutineDeviceTypeInfo> deviceTypeInfos_;
   bool isNohost_{false};
-  std::optional<std::string> bindName_;
 };
 
 // A subroutine or function definition, or a subprogram interface defined
@@ -294,9 +359,11 @@ public:
   }
   bool IsAssumedSize() const { return rank_.value_or(0) == isAssumedSize; }
   bool IsAssumedRank() const { return rank_.value_or(0) == isAssumedRank; }
+  bool isTypeGuard() const { return isTypeGuard_; }
   void set_rank(int rank);
   void set_IsAssumedSize();
   void set_IsAssumedRank();
+  void set_isTypeGuard(bool yes = true);
 
 private:
   MaybeExpr expr_;
@@ -305,6 +372,7 @@ private:
   static constexpr int isAssumedSize{-1}; // RANK(*)
   static constexpr int isAssumedRank{-2}; // RANK DEFAULT
   std::optional<int> rank_;
+  bool isTypeGuard_{false}; // TYPE IS or CLASS IS, but not CLASS(DEFAULT)
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const AssocEntityDetails &);
 
@@ -339,11 +407,10 @@ public:
   void set_ignoreTKR(common::IgnoreTKRSet set) { ignoreTKR_ = set; }
   bool IsArray() const { return !shape_.empty(); }
   bool IsCoarray() const { return !coshape_.empty(); }
-  bool CanBeAssumedShape() const {
+  bool IsAssumedShape() const {
     return isDummy() && shape_.CanBeAssumedShape();
   }
   bool CanBeDeferredShape() const { return shape_.CanBeDeferredShape(); }
-  bool IsAssumedSize() const { return isDummy() && shape_.CanBeAssumedSize(); }
   bool IsAssumedRank() const { return isDummy() && shape_.IsAssumedRank(); }
   std::optional<common::CUDADataAttr> cudaDataAttr() const {
     return cudaDataAttr_;
@@ -389,9 +456,12 @@ public:
   ProcEntityDetails(ProcEntityDetails &&) = default;
   ProcEntityDetails &operator=(const ProcEntityDetails &) = default;
 
+  const Symbol *rawProcInterface() const { return rawProcInterface_; }
   const Symbol *procInterface() const { return procInterface_; }
-  void set_procInterface(const Symbol &sym) { procInterface_ = &sym; }
-  bool IsInterfaceSet() { return procInterface_ || type(); }
+  void set_procInterfaces(const Symbol &raw, const Symbol &resolved) {
+    rawProcInterface_ = &raw;
+    procInterface_ = &resolved;
+  }
   inline bool HasExplicitInterface() const;
 
   // Be advised: !init().has_value() => uninitialized pointer,
@@ -401,11 +471,17 @@ public:
   void set_init(std::nullptr_t) { init_ = nullptr; }
   bool isCUDAKernel() const { return isCUDAKernel_; }
   void set_isCUDAKernel(bool yes = true) { isCUDAKernel_ = yes; }
+  std::optional<SourceName> usedAsProcedureHere() const {
+    return usedAsProcedureHere_;
+  }
+  void set_usedAsProcedureHere(SourceName here) { usedAsProcedureHere_ = here; }
 
 private:
+  const Symbol *rawProcInterface_{nullptr};
   const Symbol *procInterface_{nullptr};
   std::optional<const Symbol *> init_;
   bool isCUDAKernel_{false};
+  std::optional<SourceName> usedAsProcedureHere_;
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const ProcEntityDetails &);
 };
@@ -417,15 +493,19 @@ private:
 // and specialized for each distinct set of type parameter values.
 class DerivedTypeDetails {
 public:
-  const std::list<SourceName> &paramNames() const { return paramNames_; }
-  const SymbolVector &paramDecls() const { return paramDecls_; }
+  const SymbolVector &paramNameOrder() const { return paramNameOrder_; }
+  const SymbolVector &paramDeclOrder() const { return paramDeclOrder_; }
   bool sequence() const { return sequence_; }
   bool isDECStructure() const { return isDECStructure_; }
   std::map<SourceName, SymbolRef> &finals() { return finals_; }
   const std::map<SourceName, SymbolRef> &finals() const { return finals_; }
   bool isForwardReferenced() const { return isForwardReferenced_; }
-  void add_paramName(const SourceName &name) { paramNames_.push_back(name); }
-  void add_paramDecl(const Symbol &symbol) { paramDecls_.push_back(symbol); }
+  void add_paramNameOrder(const Symbol &symbol) {
+    paramNameOrder_.push_back(symbol);
+  }
+  void add_paramDeclOrder(const Symbol &symbol) {
+    paramDeclOrder_.push_back(symbol);
+  }
   void add_component(const Symbol &);
   void set_sequence(bool x = true) { sequence_ = x; }
   void set_isDECStructure(bool x = true) { isDECStructure_ = x; }
@@ -433,6 +513,11 @@ public:
   const std::list<SourceName> &componentNames() const {
     return componentNames_;
   }
+  const std::map<SourceName, const parser::Expr *> &
+  originalKindParameterMap() const {
+    return originalKindParameterMap_;
+  }
+  void add_originalKindParameter(SourceName, const parser::Expr *);
 
   // If this derived type extends another, locate the parent component's symbol.
   const Symbol *GetParentComponent(const Scope &) const;
@@ -448,12 +533,12 @@ public:
   const Symbol *GetFinalForRank(int) const;
 
 private:
-  // These are (1) the names of the derived type parameters in the order
+  // These are (1) the symbols of the derived type parameters in the order
   // in which they appear on the type definition statement(s), and (2) the
   // symbols that correspond to those names in the order in which their
   // declarations appear in the derived type definition(s).
-  std::list<SourceName> paramNames_;
-  SymbolVector paramDecls_;
+  SymbolVector paramNameOrder_;
+  SymbolVector paramDeclOrder_;
   // These are the names of the derived type's components in component
   // order.  A parent component, if any, appears first in this list.
   std::list<SourceName> componentNames_;
@@ -461,6 +546,8 @@ private:
   bool sequence_{false};
   bool isDECStructure_{false};
   bool isForwardReferenced_{false};
+  std::map<SourceName, const parser::Expr *> originalKindParameterMap_;
+
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const DerivedTypeDetails &);
 };
@@ -493,17 +580,21 @@ private:
 
 class CommonBlockDetails : public WithBindName {
 public:
+  explicit CommonBlockDetails(SourceName location)
+      : sourceLocation_{location} {}
+  SourceName sourceLocation() const { return sourceLocation_; }
   MutableSymbolVector &objects() { return objects_; }
   const MutableSymbolVector &objects() const { return objects_; }
   void add_object(Symbol &object) { objects_.emplace_back(object); }
   void replace_object(Symbol &object, unsigned index) {
-    CHECK(index < (unsigned)objects_.size());
+    CHECK(index < objects_.size());
     objects_[index] = object;
   }
   std::size_t alignment() const { return alignment_; }
   void set_alignment(std::size_t alignment) { alignment_ = alignment; }
 
 private:
+  SourceName sourceLocation_;
   MutableSymbolVector objects_;
   std::size_t alignment_{0}; // required alignment in bytes
 };
@@ -522,18 +613,20 @@ private:
 
 class TypeParamDetails {
 public:
-  explicit TypeParamDetails(common::TypeParamAttr attr) : attr_{attr} {}
+  TypeParamDetails() = default;
   TypeParamDetails(const TypeParamDetails &) = default;
-  common::TypeParamAttr attr() const { return attr_; }
+  TypeParamDetails &operator=(const TypeParamDetails &) = default;
+  std::optional<common::TypeParamAttr> attr() const { return attr_; }
+  TypeParamDetails &set_attr(common::TypeParamAttr);
   MaybeIntExpr &init() { return init_; }
   const MaybeIntExpr &init() const { return init_; }
   void set_init(MaybeIntExpr &&expr) { init_ = std::move(expr); }
   const DeclTypeSpec *type() const { return type_; }
-  void set_type(const DeclTypeSpec &);
+  TypeParamDetails &set_type(const DeclTypeSpec &);
   void ReplaceType(const DeclTypeSpec &);
 
 private:
-  common::TypeParamAttr attr_;
+  std::optional<common::TypeParamAttr> attr_;
   MaybeIntExpr init_;
   const DeclTypeSpec *type_{nullptr};
 };
@@ -557,12 +650,12 @@ private:
 class UseErrorDetails {
 public:
   UseErrorDetails(const UseDetails &);
-  UseErrorDetails &add_occurrence(const SourceName &, const Scope &);
-  using listType = std::list<std::pair<SourceName, const Scope *>>;
-  const listType occurrences() const { return occurrences_; };
+  UseErrorDetails &add_occurrence(const SourceName &, const Symbol &);
+  using ListType = std::list<std::pair<SourceName, const Symbol *>>;
+  const ListType occurrences() const { return occurrences_; };
 
 private:
-  listType occurrences_;
+  ListType occurrences_;
 };
 
 // A symbol host-associated from an enclosing scope.
@@ -615,7 +708,9 @@ public:
   const SymbolVector &uses() const { return uses_; }
 
   // specific and derivedType indicate a specific procedure or derived type
-  // with the same name as this generic. Only one of them may be set.
+  // with the same name as this generic. Only one of them may be set in
+  // a scope that declares them, but both can be set during USE association
+  // when generics are combined.
   Symbol *specific() { return specific_; }
   const Symbol *specific() const { return specific_; }
   void set_specific(Symbol &specific);
@@ -648,6 +743,58 @@ private:
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const GenericDetails &);
 
+// Used for OpenMP DECLARE REDUCTION, it holds the information
+// needed to resolve which declaration (there could be multiple
+// with the same name) to use for a given type.
+class UserReductionDetails {
+public:
+  using TypeVector = std::vector<const DeclTypeSpec *>;
+  using DeclVector = std::vector<const parser::OpenMPDeclarativeConstruct *>;
+
+  UserReductionDetails() = default;
+
+  void AddType(const DeclTypeSpec &type) { typeList_.push_back(&type); }
+  const TypeVector &GetTypeList() const { return typeList_; }
+
+  bool SupportsType(const DeclTypeSpec &type) const {
+    // We have to compare the actual type, not the pointer, as some
+    // types are not guaranteed to be the same object.
+    for (auto t : typeList_) {
+      if (*t == type) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void AddDecl(const parser::OpenMPDeclarativeConstruct *decl) {
+    declList_.emplace_back(decl);
+  }
+  const DeclVector &GetDeclList() const { return declList_; }
+
+private:
+  TypeVector typeList_;
+  DeclVector declList_;
+};
+
+// Used for OpenMP DECLARE MAPPER, it holds the declaration constructs
+// so they can be serialized into module files and later re-parsed when
+// USE-associated.
+class MapperDetails {
+public:
+  using DeclVector = std::vector<const parser::OpenMPDeclarativeConstruct *>;
+
+  MapperDetails() = default;
+
+  void AddDecl(const parser::OpenMPDeclarativeConstruct *decl) {
+    declList_.emplace_back(decl);
+  }
+  const DeclVector &GetDeclList() const { return declList_; }
+
+private:
+  DeclVector declList_;
+};
+
 class UnknownDetails {};
 
 using Details = std::variant<UnknownDetails, MainProgramDetails, ModuleDetails,
@@ -655,7 +802,7 @@ using Details = std::variant<UnknownDetails, MainProgramDetails, ModuleDetails,
     ObjectEntityDetails, ProcEntityDetails, AssocEntityDetails,
     DerivedTypeDetails, UseDetails, UseErrorDetails, HostAssocDetails,
     GenericDetails, ProcBindingDetails, NamelistDetails, CommonBlockDetails,
-    TypeParamDetails, MiscDetails>;
+    TypeParamDetails, MiscDetails, UserReductionDetails, MapperDetails>;
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Details &);
 std::string DetailsToString(const Details &);
 
@@ -672,9 +819,11 @@ public:
       CrayPointer, CrayPointee,
       LocalityLocal, // named in LOCAL locality-spec
       LocalityLocalInit, // named in LOCAL_INIT locality-spec
+      LocalityReduce, // named in REDUCE locality-spec
       LocalityShared, // named in SHARED locality-spec
       InDataStmt, // initialized in a DATA statement, =>object, or /init/
       InNamelist, // in a Namelist group
+      InCommonBlock, // referenced in a common block
       EntryDummyArgument,
       CompilerCreated, // A compiler created symbol
       // For compiler created symbols that are constant but cannot legally have
@@ -684,7 +833,7 @@ public:
       AccPrivate, AccFirstPrivate, AccShared,
       // OpenACC data-mapping attribute
       AccCopy, AccCopyIn, AccCopyInReadOnly, AccCopyOut, AccCreate, AccDelete,
-      AccPresent, AccLink, AccDeviceResident, AccDevicePtr,
+      AccPresent, AccLink, AccDeviceResident, AccDevicePtr, AccUseDevice,
       // OpenACC declare
       AccDeclare,
       // OpenACC data-movement attribute
@@ -693,17 +842,22 @@ public:
       AccCommonBlock, AccThreadPrivate, AccReduction, AccNone, AccPreDetermined,
       // OpenMP data-sharing attribute
       OmpShared, OmpPrivate, OmpLinear, OmpFirstPrivate, OmpLastPrivate,
+      OmpGroupPrivate,
       // OpenMP data-mapping attribute
-      OmpMapTo, OmpMapFrom, OmpMapToFrom, OmpMapAlloc, OmpMapRelease,
-      OmpMapDelete, OmpUseDevicePtr, OmpUseDeviceAddr, OmpIsDevicePtr,
-      OmpHasDeviceAddr,
+      OmpMapTo, OmpMapFrom, OmpMapToFrom, OmpMapStorage, OmpMapDelete,
+      OmpUseDevicePtr, OmpUseDeviceAddr, OmpIsDevicePtr, OmpHasDeviceAddr,
       // OpenMP data-copying attribute
       OmpCopyIn, OmpCopyPrivate,
+      // OpenMP special variables
+      OmpInVar, OmpOrigVar, OmpOutVar, OmpPrivVar,
       // OpenMP miscellaneous flags
-      OmpCommonBlock, OmpReduction, OmpAligned, OmpNontemporal, OmpAllocate,
-      OmpDeclarativeAllocateDirective, OmpExecutableAllocateDirective,
-      OmpDeclareSimd, OmpDeclareTarget, OmpThreadprivate, OmpDeclareReduction,
-      OmpFlushed, OmpCriticalLock, OmpIfSpecified, OmpNone, OmpPreDetermined);
+      OmpCommonBlock, OmpReduction, OmpInReduction, OmpAligned, OmpNontemporal,
+      OmpAllocate, OmpDeclarativeAllocateDirective,
+      OmpExecutableAllocateDirective, OmpDeclareSimd, OmpDeclareTarget,
+      OmpThreadprivate, OmpDeclareReduction, OmpFlushed, OmpCriticalLock,
+      OmpIfSpecified, OmpNone, OmpPreDetermined, OmpExplicit, OmpImplicit,
+      OmpDependObject, OmpInclusiveScan, OmpExclusiveScan, OmpInScanReduction,
+      OmpUniform);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }
@@ -726,7 +880,7 @@ public:
   void set_offset(std::size_t offset) { offset_ = offset; }
   // Give the symbol a name with a different source location but same chars.
   void ReplaceName(const SourceName &);
-  std::string OmpFlagToClauseName(Flag ompFlag);
+  static std::string OmpFlagToClauseName(Flag ompFlag);
 
   // Does symbol have this type of details?
   template <typename D> bool has() const {
@@ -770,8 +924,10 @@ public:
   void SetBindName(std::string &&);
   bool GetIsExplicitBindName() const;
   void SetIsExplicitBindName(bool);
+  void SetIsCDefined(bool);
   bool IsFuncResult() const;
   bool IsObjectArray() const;
+  const ArraySpec *GetShape() const;
   bool IsSubprogram() const;
   bool IsFromModFile() const;
   bool HasExplicitInterface() const {
@@ -806,23 +962,7 @@ public:
   bool operator!=(const Symbol &that) const { return !(*this == that); }
 
   int Rank() const { return RankImpl(); }
-
-  int Corank() const {
-    return common::visit(
-        common::visitors{
-            [](const SubprogramDetails &sd) {
-              return sd.isFunction() ? sd.result().Corank() : 0;
-            },
-            [](const GenericDetails &) {
-              return 0; /*TODO*/
-            },
-            [](const UseDetails &x) { return x.symbol().Corank(); },
-            [](const HostAssocDetails &x) { return x.symbol().Corank(); },
-            [](const ObjectEntityDetails &oed) { return oed.coshape().Rank(); },
-            [](const auto &) { return 0; },
-        },
-        details_);
-  }
+  int Corank() const { return CorankImpl(); }
 
   // If there is a parent component, return a pointer to its derived type spec.
   // The Scope * argument defaults to this->scope_ but should be overridden
@@ -895,6 +1035,32 @@ private:
               } else {
                 return 0;
               }
+            },
+            [](const auto &) { return 0; },
+        },
+        details_);
+  }
+  inline int CorankImpl(int depth = startRecursionDepth) const {
+    if (depth-- == 0) {
+      return 0;
+    }
+    return common::visit(
+        common::visitors{
+            [&](const SubprogramDetails &sd) {
+              return sd.isFunction() ? sd.result().CorankImpl(depth) : 0;
+            },
+            [](const GenericDetails &) { return 0; },
+            [&](const ProcEntityDetails &ped) {
+              const Symbol *iface{ped.procInterface()};
+              return iface ? iface->CorankImpl(depth) : 0;
+            },
+            [&](const UseDetails &x) { return x.symbol().CorankImpl(depth); },
+            [&](const HostAssocDetails &x) {
+              return x.symbol().CorankImpl(depth);
+            },
+            [](const ObjectEntityDetails &oed) { return oed.coshape().Rank(); },
+            [](const AssocEntityDetails &aed) {
+              return aed.expr() ? aed.expr()->Corank() : 0;
             },
             [](const auto &) { return 0; },
         },
@@ -990,6 +1156,9 @@ inline const DeclTypeSpec *Symbol::GetTypeImpl(int depth) const {
           [&](const HostAssocDetails &x) {
             return x.symbol().GetTypeImpl(depth);
           },
+          [&](const GenericDetails &x) {
+            return x.specific() ? x.specific()->GetTypeImpl(depth) : nullptr;
+          },
           [](const auto &) -> const DeclTypeSpec * { return nullptr; },
       },
       details_);
@@ -1011,7 +1180,7 @@ struct SymbolAddressCompare {
 // Symbol comparison is usually based on the order of cooked source
 // stream creation and, when both are from the same cooked source,
 // their positions in that cooked source stream.
-// Don't use this comparator or OrderedSymbolSet to hold
+// Don't use this comparator or SourceOrderedSymbolSet to hold
 // Symbols that might be subject to ReplaceName().
 struct SymbolSourcePositionCompare {
   // These functions are implemented in Evaluate/tools.cpp to

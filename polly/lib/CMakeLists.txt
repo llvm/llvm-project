@@ -43,13 +43,11 @@ add_llvm_pass_plugin(Polly
   NO_MODULE
   SUBPROJECT Polly
   Analysis/DependenceInfo.cpp
-  Analysis/PolyhedralInfo.cpp
   Analysis/ScopDetection.cpp
   Analysis/ScopDetectionDiagnostic.cpp
   Analysis/ScopInfo.cpp
   Analysis/ScopBuilder.cpp
   Analysis/ScopGraphPrinter.cpp
-  Analysis/ScopPass.cpp
   Analysis/PruneUnprofitable.cpp
   CodeGen/BlockGenerators.cpp
   ${ISL_CODEGEN_FILES}
@@ -61,7 +59,11 @@ add_llvm_pass_plugin(Polly
   CodeGen/RuntimeDebugBuilder.cpp
   CodeGen/PerfMonitor.cpp
   Exchange/JSONExporter.cpp
+  Pass/PhaseManager.cpp
+  Pass/PollyFunctionPass.cpp
+  Pass/PollyModulePass.cpp
   Support/GICHelper.cpp
+  Support/PollyDebug.cpp
   Support/SCEVAffinator.cpp
   Support/SCEVValidator.cpp
   Support/RegisterPasses.cpp
@@ -91,8 +93,6 @@ add_llvm_pass_plugin(Polly
   LINK_COMPONENTS
   ${POLLY_COMPONENTS}
   )
-set_target_properties(obj.Polly PROPERTIES FOLDER "Polly")
-set_target_properties(Polly PROPERTIES FOLDER "Polly")
 
 if (MSVC_IDE OR XCODE)
   # Configure source groups for Polly source files. By default, in the IDE there
@@ -119,7 +119,7 @@ if (WIN32 OR CYGWIN OR NOT LLVM_ENABLE_PIC)
   # Add dummy target, either because loadable modules are not supported
   # as on Windows or because PIC code has been disabled
   add_custom_target(LLVMPolly)
-  set_target_properties(LLVMPolly PROPERTIES FOLDER "Polly")
+  set_target_properties(LLVMPolly PROPERTIES FOLDER "Polly/Loadable Modules")
 else ()
   add_polly_loadable_module(LLVMPolly
     Plugin/Polly.cpp

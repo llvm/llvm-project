@@ -21,7 +21,7 @@ public:
   ~SPIRVTargetStreamer() override;
 
   void changeSection(const MCSection *CurSection, MCSection *Section,
-                     const MCExpr *SubSection, raw_ostream &OS) override {}
+                     uint32_t SubSection, raw_ostream &OS) override {}
 };
 } // namespace llvm
 

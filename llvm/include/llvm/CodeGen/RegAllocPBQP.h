@@ -100,7 +100,7 @@ public:
 
   AllowedRegVector(const std::vector<MCRegister> &OptVec)
       : NumOpts(OptVec.size()), Opts(new MCRegister[NumOpts]) {
-    std::copy(OptVec.begin(), OptVec.end(), Opts.get());
+    llvm::copy(OptVec, Opts.get());
   }
 
   unsigned size() const { return NumOpts; }
@@ -462,10 +462,8 @@ private:
         NodeStack.push_back(NId);
         G.disconnectAllNeighborsFromNode(NId);
       } else if (!NotProvablyAllocatableNodes.empty()) {
-        NodeSet::iterator NItr =
-          std::min_element(NotProvablyAllocatableNodes.begin(),
-                           NotProvablyAllocatableNodes.end(),
-                           SpillCostComparator(G));
+        NodeSet::iterator NItr = llvm::min_element(NotProvablyAllocatableNodes,
+                                                   SpillCostComparator(G));
         NodeId NId = *NItr;
         NotProvablyAllocatableNodes.erase(NItr);
         NodeStack.push_back(NId);

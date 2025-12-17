@@ -53,7 +53,7 @@ define dso_local void @n(ptr %o, i32 %p, i32 %u) nounwind {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    jmp .LBB0_9
-; CHECK-NEXT:  .LBB0_7: # Block address taken
+; CHECK-NEXT:  .LBB0_7: # Inline asm indirect target
 ; CHECK-NEXT:    # %if.then20.critedge
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movl j(%rip), %edi

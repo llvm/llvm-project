@@ -29,11 +29,9 @@ using namespace llvm;
 using namespace llvm::xray;
 using llvm::yaml::Input;
 
-namespace {
-
-Error loadNaiveFormatLog(StringRef Data, bool IsLittleEndian,
-                         XRayFileHeader &FileHeader,
-                         std::vector<XRayRecord> &Records) {
+static Error loadNaiveFormatLog(StringRef Data, bool IsLittleEndian,
+                                XRayFileHeader &FileHeader,
+                                std::vector<XRayRecord> &Records) {
   if (Data.size() < 32)
     return make_error<StringError>(
         "Not enough bytes for an XRay log.",
@@ -50,6 +48,9 @@ Error loadNaiveFormatLog(StringRef Data, bool IsLittleEndian,
   if (!FileHeaderOrError)
     return FileHeaderOrError.takeError();
   FileHeader = std::move(FileHeaderOrError.get());
+
+  size_t NumReservations = llvm::divideCeil(Reader.size() - OffsetPtr, 32U);
+  Records.reserve(NumReservations);
 
   // Each record after the header will be 32 bytes, in the following format:
   //
@@ -262,8 +263,9 @@ Error loadNaiveFormatLog(StringRef Data, bool IsLittleEndian,
 /// what FunctionRecord instances use, and we no longer need to include the CPU
 /// id in the CustomEventRecord.
 ///
-Error loadFDRLog(StringRef Data, bool IsLittleEndian,
-                 XRayFileHeader &FileHeader, std::vector<XRayRecord> &Records) {
+static Error loadFDRLog(StringRef Data, bool IsLittleEndian,
+                        XRayFileHeader &FileHeader,
+                        std::vector<XRayRecord> &Records) {
 
   if (Data.size() < 32)
     return createStringError(std::make_error_code(std::errc::invalid_argument),
@@ -345,8 +347,8 @@ Error loadFDRLog(StringRef Data, bool IsLittleEndian,
   return Error::success();
 }
 
-Error loadYAMLLog(StringRef Data, XRayFileHeader &FileHeader,
-                  std::vector<XRayRecord> &Records) {
+static Error loadYAMLLog(StringRef Data, XRayFileHeader &FileHeader,
+                         std::vector<XRayRecord> &Records) {
   YAMLXRayTrace Trace;
   Input In(Data);
   In >> Trace;
@@ -373,7 +375,6 @@ Error loadYAMLLog(StringRef Data, XRayFileHeader &FileHeader,
                  });
   return Error::success();
 }
-} // namespace
 
 Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
   Expected<sys::fs::file_t> FdOrErr = sys::fs::openNativeFileForRead(Filename);

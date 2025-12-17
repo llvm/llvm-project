@@ -1,4 +1,5 @@
-; RUN: opt -sjljehprepare -verify < %s -S | FileCheck %s
+; RUN: opt -sjlj-eh-prepare < %s -S | FileCheck %s
+; RUN: opt -passes=sjlj-eh-prepare < %s -S | FileCheck %s
 target datalayout = "e-m:o-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
 target triple = "armv7s-apple-ios7.0"
 

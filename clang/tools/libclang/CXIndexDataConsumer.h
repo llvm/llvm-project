@@ -339,7 +339,7 @@ public:
   ASTContext &getASTContext() const { return *Ctx; }
   CXTranslationUnit getCXTU() const { return CXTU; }
 
-  void setASTContext(ASTContext &ctx);
+  void setASTContext(llvm::IntrusiveRefCntPtr<ASTContext> ctx);
   void setPreprocessor(std::shared_ptr<Preprocessor> PP) override;
 
   bool shouldSuppressRefs() const {
@@ -460,8 +460,8 @@ private:
 
   const DeclContext *getEntityContainer(const Decl *D) const;
 
-  CXIdxClientFile getIndexFile(const FileEntry *File);
-  
+  CXIdxClientFile getIndexFile(OptionalFileEntryRef File);
+
   CXIdxLoc getIndexLoc(SourceLocation Loc) const;
 
   void getEntityInfo(const NamedDecl *D,

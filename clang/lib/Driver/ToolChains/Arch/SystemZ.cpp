@@ -8,8 +8,7 @@
 
 #include "SystemZ.h"
 #include "clang/Config/config.h"
-#include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/TargetParser/Host.h"
 
@@ -26,16 +25,17 @@ systemz::FloatABI systemz::getSystemZFloatABI(const Driver &D,
     D.Diag(diag::err_drv_unsupported_opt)
       << Args.getLastArg(options::OPT_mfloat_abi_EQ)->getAsString(Args);
 
-  if (Arg *A = Args.getLastArg(clang::driver::options::OPT_msoft_float,
-                               options::OPT_mhard_float))
-    if (A->getOption().matches(clang::driver::options::OPT_msoft_float))
+  if (Arg *A =
+          Args.getLastArg(options::OPT_msoft_float, options::OPT_mhard_float))
+    if (A->getOption().matches(options::OPT_msoft_float))
       ABI = systemz::FloatABI::Soft;
 
   return ABI;
 }
 
-std::string systemz::getSystemZTargetCPU(const ArgList &Args) {
-  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ)) {
+std::string systemz::getSystemZTargetCPU(const ArgList &Args,
+                                         const llvm::Triple &T) {
+  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
     llvm::StringRef CPUName = A->getValue();
 
     if (CPUName == "native") {
@@ -48,6 +48,8 @@ std::string systemz::getSystemZTargetCPU(const ArgList &Args) {
 
     return std::string(CPUName);
   }
+  if (T.isOSzOS())
+    return "zEC12";
   return CLANG_SYSTEMZ_DEFAULT_ARCH;
 }
 
@@ -71,4 +73,12 @@ void systemz::getSystemZTargetFeatures(const Driver &D, const ArgList &Args,
   systemz::FloatABI FloatABI = systemz::getSystemZFloatABI(D, Args);
   if (FloatABI == systemz::FloatABI::Soft)
     Features.push_back("+soft-float");
+
+  if (const Arg *A = Args.getLastArg(options::OPT_munaligned_symbols,
+                                     options::OPT_mno_unaligned_symbols)) {
+    if (A->getOption().matches(options::OPT_munaligned_symbols))
+      Features.push_back("+unaligned-symbols");
+    else
+      Features.push_back("-unaligned-symbols");
+  }
 }

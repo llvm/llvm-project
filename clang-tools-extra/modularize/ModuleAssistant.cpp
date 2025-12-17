@@ -46,6 +46,8 @@ class Module {
 public:
   Module(llvm::StringRef Name, bool Problem);
   ~Module();
+  Module(const Module &other) = delete;
+  Module &operator=(const Module &other) = delete;
   bool output(llvm::raw_fd_ostream &OS, int Indent);
   Module *findSubModule(llvm::StringRef SubName);
 
@@ -127,8 +129,8 @@ Module *Module::findSubModule(llvm::StringRef SubName) {
 // Implementation functions:
 
 // Reserved keywords in module.modulemap syntax.
-// Keep in sync with keywords in module map parser in Lex/ModuleMap.cpp,
-// such as in ModuleMapParser::consumeToken().
+// Keep in sync with keywords in module map parser in Lex/ModuleMapFile.cpp,
+// such as in ModuleMapFileParser::consumeToken().
 static const char *const ReservedNames[] = {
   "config_macros", "export",   "module", "conflict", "framework",
   "requires",      "exclude",  "header", "private",  "explicit",
@@ -154,8 +156,8 @@ ensureNoCollisionWithReservedName(llvm::StringRef MightBeReservedName) {
 static std::string
 ensureVaidModuleName(llvm::StringRef MightBeInvalidName) {
   std::string SafeName(MightBeInvalidName);
-  std::replace(SafeName.begin(), SafeName.end(), '-', '_');
-  std::replace(SafeName.begin(), SafeName.end(), '.', '_');
+  llvm::replace(SafeName, '-', '_');
+  llvm::replace(SafeName, '.', '_');
   if (isdigit(SafeName[0]))
     SafeName = "_" + SafeName;
   return SafeName;
@@ -175,7 +177,7 @@ static bool addModuleDescription(Module *RootModule,
   llvm::SmallString<256> NativePath, NativePrefix;
   llvm::sys::path::native(HeaderFilePath, NativePath);
   llvm::sys::path::native(HeaderPrefix, NativePrefix);
-  if (NativePath.startswith(NativePrefix))
+  if (NativePath.starts_with(NativePrefix))
     FilePath = std::string(NativePath.substr(NativePrefix.size() + 1));
   else
     FilePath = std::string(HeaderFilePath);
@@ -190,7 +192,7 @@ static bool addModuleDescription(Module *RootModule,
     return true;
   }
   // Make canonical.
-  std::replace(FilePath.begin(), FilePath.end(), '\\', '/');
+  llvm::replace(FilePath, '\\', '/');
   // Insert module into tree, using subdirectories as submodules.
   for (llvm::sys::path::const_iterator I = llvm::sys::path::begin(FilePath),
                                        E = llvm::sys::path::end(FilePath);

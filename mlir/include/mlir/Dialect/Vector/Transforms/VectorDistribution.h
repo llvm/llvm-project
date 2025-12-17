@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_VECTOR_TRANSFORMS_VECTORDISTRIBUTION_H_
 #define MLIR_DIALECT_VECTOR_TRANSFORMS_VECTORDISTRIBUTION_H_
 
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 namespace mlir {
@@ -23,15 +24,15 @@ struct WarpExecuteOnLane0LoweringOptions {
   /// type may be VectorType or a scalar) and be availble for the current warp.
   /// If there are several warps running in parallel the allocation needs to be
   /// split so that each warp has its own allocation.
-  using WarpAllocationFn =
-      std::function<Value(Location, OpBuilder &, WarpExecuteOnLane0Op, Type)>;
+  using WarpAllocationFn = std::function<Value(
+      Location, OpBuilder &, gpu::WarpExecuteOnLane0Op, Type)>;
   WarpAllocationFn warpAllocationFn = nullptr;
 
   /// Lamdba function to let user emit operation to syncronize all the thread
   /// within a warp. After this operation all the threads can see any memory
   /// written before the operation.
   using WarpSyncronizationFn =
-      std::function<void(Location, OpBuilder &, WarpExecuteOnLane0Op)>;
+      std::function<void(Location, OpBuilder &, gpu::WarpExecuteOnLane0Op)>;
   WarpSyncronizationFn warpSyncronizationFn = nullptr;
 };
 
@@ -43,20 +44,22 @@ void populateWarpExecuteOnLane0OpToScfForPattern(
 using DistributionMapFn = std::function<AffineMap(Value)>;
 
 /// Distribute transfer_write ops based on the affine map returned by
-/// `distributionMapFn`.
+/// `distributionMapFn`. Writes of size more than `maxNumElementToExtract`
+/// will not be distributed (it should be less than the warp size).
+///
 /// Example:
 /// ```
-/// %0 = vector.warp_execute_on_lane_0(%id){
+/// %0 = gpu.warp_execute_on_lane_0(%id){
 ///   ...
 ///   vector.transfer_write %v, %A[%c0] : vector<32xf32>, memref<128xf32>
-///   vector.yield
+///   gpu.yield
 /// }
 /// ```
 /// To
 /// ```
-/// %r:3 = vector.warp_execute_on_lane_0(%id) -> (vector<1xf32>) {
+/// %r:3 = gpu.warp_execute_on_lane_0(%id) -> (vector<1xf32>) {
 ///   ...
-///   vector.yield %v : vector<32xf32>
+///   gpu.yield %v : vector<32xf32>
 /// }
 /// vector.transfer_write %v, %A[%id] : vector<1xf32>, memref<128xf32>
 ///
@@ -67,11 +70,11 @@ using DistributionMapFn = std::function<AffineMap(Value)>;
 /// distribute, meaning writes should propagate first.
 void populateDistributeTransferWriteOpPatterns(
     RewritePatternSet &patterns, const DistributionMapFn &distributionMapFn,
-    PatternBenefit benefit = 2);
+    unsigned maxNumElementsToExtract, PatternBenefit benefit = 2);
 
 /// Move scalar operations with no dependency on the warp op outside of the
 /// region.
-void moveScalarUniformCode(WarpExecuteOnLane0Op op);
+void moveScalarUniformCode(gpu::WarpExecuteOnLane0Op op);
 
 /// Lambda signature to compute a warp shuffle of a given value of a given lane
 /// within a given warp size.

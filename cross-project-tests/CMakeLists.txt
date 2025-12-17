@@ -3,6 +3,7 @@
 # The subset inside debuginfo-tests invoke clang to generate programs with
 # various types of debug info, and then run those programs under a debugger
 # such as GDB or LLDB to verify the results.
+set(LLVM_SUBPROJECT_TITLE "Cross-Project")
 
 find_package(Python3 COMPONENTS Interpreter)
 
@@ -18,11 +19,14 @@ set(CROSS_PROJECT_TEST_DEPS
   FileCheck
   check-gdb-llvm-support
   count
-  llvm-dwarfdump
+  llvm-ar
   llvm-config
+  llvm-dis
+  llvm-dwarfdump
   llvm-objdump
-  split-file
   not
+  obj2yaml
+  split-file
   )
 
 if ("clang" IN_LIST LLVM_ENABLE_PROJECTS)
@@ -93,12 +97,21 @@ add_lit_testsuite(check-cross-amdgpu "Running AMDGPU cross-project tests"
   DEPENDS clang
   )
 
+# DTLTO tests.
+add_lit_testsuite(check-cross-dtlto "Running DTLTO cross-project tests"
+  ${CMAKE_CURRENT_BINARY_DIR}/dtlto
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS ${CROSS_PROJECT_TEST_DEPS}
+  )
+
+# veclib tests.
+add_lit_testsuite(check-cross-veclib "Running veclib cross-project tests"
+  ${CMAKE_CURRENT_BINARY_DIR}/veclib
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS ${CROSS_PROJECT_TEST_DEPS}
+  )
+
 # Add check-cross-project-* targets.
 add_lit_testsuites(CROSS_PROJECT ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${CROSS_PROJECT_TEST_DEPS}
   )
-
-set_target_properties(check-cross-project PROPERTIES FOLDER "Tests")
-set_target_properties(check-debuginfo PROPERTIES FOLDER "Tests")
-set_target_properties(check-intrinsic-headers PROPERTIES FOLDER "Tests")
-set_target_properties(check-cross-amdgpu PROPERTIES FOLDER "Tests")

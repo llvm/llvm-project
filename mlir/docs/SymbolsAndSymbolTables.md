@@ -8,7 +8,7 @@ around this nesting structure; including the processing of operations within the
 [pass manager](PassManagement.md/#pass-manager). One advantage of the MLIR
 design is that it is able to process operations in parallel, utilizing multiple
 threads. This is possible due to a property of the IR known as
-[`IsolatedFromAbove`](Traits.md/#isolatedfromabove).
+[`IsolatedFromAbove`](Traits/#isolatedfromabove).
 
 Without this property, any operation could affect or mutate the use-list of
 operations defined above. Making this thread-safe requires expensive locking in
@@ -21,14 +21,14 @@ into the system.
 The `Symbol` infrastructure essentially provides a non-SSA mechanism in which to
 refer to an operation symbolically with a name. This allows for referring to
 operations defined above regions that were defined as `IsolatedFromAbove` in a
-safe way. It also allows for symbolically referencing operations define below
+safe way. It also allows for symbolically referencing operations defined below
 other regions as well.
 
 ## Symbol
 
 A `Symbol` is a named operation that resides immediately within a region that
 defines a [`SymbolTable`](#symbol-table). The name of a symbol *must* be unique
-within the parent `SymbolTable`. This name is semantically similarly to an SSA
+within the parent `SymbolTable`. This name is semantically similar to an SSA
 result value, and may be referred to by other operations to provide a symbolic
 link, or use, to the symbol. An example of a `Symbol` operation is
 [`func.func`](Dialects/Builtin.md/#func-mlirfuncop). `func.func` defines a
@@ -125,7 +125,7 @@ Using an attribute, as opposed to an SSA value, has several benefits:
 
     -   If we were to use SSA values, we would need to create some mechanism in
         which to opt-out of certain properties of it such as dominance.
-        Attributes allow for referencing the operations irregardless of the
+        Attributes allow for referencing the operations regardless of the
         order in which they were defined.
     -   Attributes simplify referencing operations within nested symbol tables,
         which are traditionally not visible outside of the parent region.

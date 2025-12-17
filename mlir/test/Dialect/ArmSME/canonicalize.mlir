@@ -1,27 +1,21 @@
-// RUN: mlir-opt -canonicalize -split-input-file -verify-diagnostics %s | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s -canonicalize | mlir-opt | FileCheck %s
 
-// -----
+// This tests that dead tile values are removed from control flow.
 
-// CHECK-LABEL: @cast_vector_to_tile__cast_tile_to_vector
-// CHECK-SAME: %[[TILE_ID:.*]]: i8
-func.func @cast_vector_to_tile__cast_tile_to_vector(%tile_id_0 : i8) -> i8 {
-  // CHECK-NOT: arm_sme.cast_tile_to_vector
-  // CHECK-NOT: arm_sme.cast_vector_to_tile
-  // CHECK-NEXT: return %[[TILE_ID]] : i8
-  %tile = arm_sme.cast_tile_to_vector %tile_id_0 : i8 to vector<[16]x[16]xi8>
-  %tile_id_1 = arm_sme.cast_vector_to_tile %tile : vector<[16]x[16]xi8> to i8
-  return %tile_id_1 : i8
-}
-
-// -----
-
-// CHECK-LABEL: @cast_tile_to_vector__cast_vector_to_tile
-// CHECK-SAME: %[[TILE:.*]]: vector<[16]x[16]xi8>
-func.func @cast_tile_to_vector__cast_vector_to_tile(%tile_0 : vector<[16]x[16]xi8>) -> vector<[16]x[16]xi8> {
-  // CHECK-NOT: arm_sme.cast_vector_to_tile
-  // CHECK-NOT: arm_sme.cast_tile_to_vector
-  // CHECK-NEXT: return %[[TILE]] : vector<[16]x[16]xi8>
-  %tile_id = arm_sme.cast_vector_to_tile %tile_0 : vector<[16]x[16]xi8> to i8
-  %tile_1 = arm_sme.cast_tile_to_vector %tile_id : i8 to vector<[16]x[16]xi8>
-  return %tile_1 : vector<[16]x[16]xi8>
+// CHECK-LABEL: @unused_ssa_tile_is_removed_from_blocks
+// CHECK-NOT: vector<[4]x[4]xf32>
+func.func @unused_ssa_tile_is_removed_from_blocks(%arg0: memref<?x?xi32>) {
+  %c10 = arith.constant 10 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %tile = arm_sme.get_tile : vector<[4]x[4]xf32>
+  cf.br ^bb1(%c0, %tile : index, vector<[4]x[4]xf32>)
+^bb1(%1: index, %2: vector<[4]x[4]xf32>):  // 2 preds: ^bb0, ^bb2
+  %3 = arith.cmpi slt, %1, %c10 : index
+  cf.cond_br %3, ^bb2, ^bb3
+^bb2:  // pred: ^bb1
+  %4 = arith.addi %1, %c1 : index
+  cf.br ^bb1(%4, %tile : index, vector<[4]x[4]xf32>)
+^bb3:  // pred: ^bb1
+  return
 }

@@ -10,7 +10,7 @@ template<typename tx>
 tx ftemplate(int n) {
   tx a = 0;
 
-  #pragma omp target teams ompx_bare
+  #pragma omp target teams ompx_bare num_teams(1) thread_limit(32)
   {
     a = 2;
   }

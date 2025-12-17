@@ -9,6 +9,8 @@
 #include <fstream>
 
 #include "clang/Basic/FileManager.h"
+#include "clang/Driver/CreateASTUnitFromArgs.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -17,6 +19,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -29,6 +32,8 @@ protected:
   int FD;
   llvm::SmallString<256> InputFileName;
   std::unique_ptr<ToolOutputFile> input_file;
+  std::shared_ptr<DiagnosticOptions> DiagOpts =
+      std::make_shared<DiagnosticOptions>();
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
   std::shared_ptr<CompilerInvocation> CInvok;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
@@ -41,22 +46,24 @@ protected:
 
     const char *Args[] = {"clang", "-xc++", InputFileName.c_str()};
 
-    Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
+    auto VFS = llvm::vfs::getRealFileSystem();
+    Diags = CompilerInstance::createDiagnostics(*VFS, *DiagOpts);
 
     CreateInvocationOptions CIOpts;
     CIOpts.Diags = Diags;
+    CIOpts.VFS = VFS;
     CInvok = createInvocation(Args, std::move(CIOpts));
 
     if (!CInvok)
       return nullptr;
 
-    FileManager *FileMgr =
-        new FileManager(FileSystemOptions(), vfs::getRealFileSystem());
+    auto FileMgr =
+        llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(), VFS);
     PCHContainerOps = std::make_shared<PCHContainerOperations>();
 
     return ASTUnit::LoadFromCompilerInvocation(
-        CInvok, PCHContainerOps, Diags, FileMgr, false, CaptureDiagsKind::None,
-        0, TU_Complete, false, false, isVolatile);
+        CInvok, PCHContainerOps, DiagOpts, Diags, FileMgr, false,
+        CaptureDiagsKind::None, 0, TU_Complete, false, false, isVolatile);
   }
 };
 
@@ -89,12 +96,12 @@ TEST_F(ASTUnitTest, SaveLoadPreservesLangOptionsInPrintingPolicy) {
   AST->Save(ASTFileName.str());
 
   EXPECT_TRUE(llvm::sys::fs::exists(ASTFileName));
-  auto HSOpts = std::make_shared<HeaderSearchOptions>();
+  HeaderSearchOptions HSOpts;
 
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
-      std::string(ASTFileName.str()), PCHContainerOps->getRawReader(),
-      ASTUnit::LoadEverything, Diags, FileSystemOptions(), HSOpts,
-      /*UseDebugInfo=*/false);
+      ASTFileName, PCHContainerOps->getRawReader(), ASTUnit::LoadEverything,
+      llvm::vfs::getRealFileSystem(), DiagOpts, Diags, FileSystemOptions(),
+      HSOpts);
 
   if (!AU)
     FAIL() << "failed to load ASTUnit";
@@ -116,8 +123,7 @@ TEST_F(ASTUnitTest, GetBufferForFileMemoryMapping) {
 }
 
 TEST_F(ASTUnitTest, ModuleTextualHeader) {
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFs =
-      new llvm::vfs::InMemoryFileSystem();
+  auto InMemoryFs = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   InMemoryFs->addFile("test.cpp", 0, llvm::MemoryBuffer::getMemBuffer(R"cpp(
       #include "Textual.h"
       void foo() {}
@@ -135,18 +141,19 @@ TEST_F(ASTUnitTest, ModuleTextualHeader) {
 
   const char *Args[] = {"clang", "test.cpp", "-fmodule-map-file=m.modulemap",
                         "-fmodule-name=M"};
-  Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
+  Diags = CompilerInstance::createDiagnostics(*InMemoryFs, *DiagOpts);
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;
   CInvok = createInvocation(Args, std::move(CIOpts));
   ASSERT_TRUE(CInvok);
 
-  FileManager *FileMgr = new FileManager(FileSystemOptions(), InMemoryFs);
+  auto FileMgr =
+      llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(), InMemoryFs);
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
 
   auto AU = ASTUnit::LoadFromCompilerInvocation(
-      CInvok, PCHContainerOps, Diags, FileMgr, false, CaptureDiagsKind::None, 1,
-      TU_Complete, false, false, false);
+      CInvok, PCHContainerOps, DiagOpts, Diags, FileMgr, false,
+      CaptureDiagsKind::None, 1, TU_Complete, false, false, false);
   ASSERT_TRUE(AU);
   auto File = AU->getFileManager().getFileRef("Textual.h", false, false);
   ASSERT_TRUE(bool(File));
@@ -163,13 +170,14 @@ TEST_F(ASTUnitTest, LoadFromCommandLineEarlyError) {
 
   const char *Args[] = {"clang", "-target", "foobar", InputFileName.c_str()};
 
-  auto Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
+  auto Diags = CompilerInstance::createDiagnostics(
+      *llvm::vfs::getRealFileSystem(), *DiagOpts);
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
   std::unique_ptr<clang::ASTUnit> ErrUnit;
 
-  std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCommandLine(
-      &Args[0], &Args[4], PCHContainerOps, Diags, "", false, "", false,
-      CaptureDiagsKind::All, std::nullopt, true, 0, TU_Complete, false, false,
+  std::unique_ptr<ASTUnit> AST = CreateASTUnitFromCommandLine(
+      &Args[0], &Args[4], PCHContainerOps, DiagOpts, Diags, "", false, "",
+      false, CaptureDiagsKind::All, {}, true, 0, TU_Complete, false, false,
       false, SkipFunctionBodiesScope::None, false, true, false, false,
       std::nullopt, &ErrUnit, nullptr);
 
@@ -190,13 +198,14 @@ TEST_F(ASTUnitTest, LoadFromCommandLineWorkingDirectory) {
   const char *Args[] = {"clang", "-working-directory", WorkingDir.c_str(),
                         InputFileName.c_str()};
 
-  auto Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
+  auto Diags = CompilerInstance::createDiagnostics(
+      *llvm::vfs::getRealFileSystem(), *DiagOpts);
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
   std::unique_ptr<clang::ASTUnit> ErrUnit;
 
-  std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCommandLine(
-      &Args[0], &Args[4], PCHContainerOps, Diags, "", false, "", false,
-      CaptureDiagsKind::All, std::nullopt, true, 0, TU_Complete, false, false,
+  std::unique_ptr<ASTUnit> AST = CreateASTUnitFromCommandLine(
+      &Args[0], &Args[4], PCHContainerOps, DiagOpts, Diags, "", false, "",
+      false, CaptureDiagsKind::All, {}, true, 0, TU_Complete, false, false,
       false, SkipFunctionBodiesScope::None, false, true, false, false,
       std::nullopt, &ErrUnit, nullptr);
 

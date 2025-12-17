@@ -48,7 +48,6 @@
 #include "EhFrame.h"
 #include "ExportTrie.h"
 #include "InputSection.h"
-#include "MachOStructs.h"
 #include "ObjC.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
@@ -65,7 +64,6 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
@@ -219,7 +217,8 @@ std::optional<MemoryBufferRef> macho::readFile(StringRef path) {
   if (entry != cachedReads.end())
     return entry->second;
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> mbOrErr = MemoryBuffer::getFile(path);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> mbOrErr =
+      MemoryBuffer::getFile(path, false, /*RequiresNullTerminator=*/false);
   if (std::error_code ec = mbOrErr.getError()) {
     error("cannot open " + path + ": " + ec.message());
     return std::nullopt;
@@ -518,12 +517,8 @@ static bool validateRelocationInfo(InputFile *file, const SectionHeader &sec,
   if (isThreadLocalVariables(sec.flags) &&
       !relocAttrs.hasAttr(RelocAttrBits::UNSIGNED))
     error(message("not allowed in thread-local section, must be UNSIGNED"));
-  if (rel.r_length < 2 || rel.r_length > 3 ||
-      !relocAttrs.hasAttr(static_cast<RelocAttrBits>(1 << rel.r_length))) {
-    static SmallVector<StringRef, 4> widths{"0", "4", "8", "4 or 8"};
-    error(message("has width " + std::to_string(1 << rel.r_length) +
-                  " bytes, but must be " +
-                  widths[(static_cast<int>(relocAttrs.bits) >> 2) & 3] +
+  if (!relocAttrs.hasAttr(static_cast<RelocAttrBits>(1 << rel.r_length))) {
+    error(message("has invalid width of " + std::to_string(1 << rel.r_length) +
                   " bytes"));
   }
   return valid;
@@ -600,8 +595,8 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
         // FIXME This logic was written around x86_64 behavior -- ARM64 doesn't
         // have pcrel section relocations. We may want to factor this out into
         // the arch-specific .cpp file.
-        assert(target->hasAttr(r.type, RelocAttrBits::BYTE4));
-        referentOffset = sec.addr + relInfo.r_address + 4 + totalAddend -
+        referentOffset = sec.addr + relInfo.r_address +
+                         (1ull << relInfo.r_length) + totalAddend -
                          referentSecHead.addr;
       } else {
         // The addend for a non-pcrel relocation is its absolute address.
@@ -814,6 +809,17 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       continue;
 
     if ((sym.n_type & N_TYPE) == N_SECT) {
+      if (sym.n_sect == 0) {
+        fatal("section symbol " + StringRef(strtab + sym.n_strx) + " in " +
+              toString(this) + " has an invalid section index [0]");
+      }
+      if (sym.n_sect > sections.size()) {
+        fatal("section symbol " + StringRef(strtab + sym.n_strx) + " in " +
+              toString(this) + " has an invalid section index [" +
+              Twine(static_cast<unsigned>(sym.n_sect)) +
+              "] greater than the total number of sections [" +
+              Twine(sections.size()) + "]");
+      }
       Subsections &subsections = sections[sym.n_sect - 1]->subsections;
       // parseSections() may have chosen not to parse this section.
       if (subsections.empty())
@@ -1170,7 +1176,7 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
           continue;
         }
         add += sym->value;
-        referentIsec = cast<ConcatInputSection>(sym->isec);
+        referentIsec = cast<ConcatInputSection>(sym->isec());
       } else {
         referentIsec =
             cast<ConcatInputSection>(r.referent.dyn_cast<InputSection *>());
@@ -1191,7 +1197,7 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
         ++it;
         continue;
       }
-      d->unwindEntry = isec;
+      d->originalUnwindEntry = isec;
       // Now that the symbol points to the unwind entry, we can remove the reloc
       // that points from the unwind entry back to the symbol.
       //
@@ -1291,7 +1297,7 @@ static CIE parseCIE(const InputSection *isec, const EhReader &reader,
     const auto *personalityReloc = isec->getRelocAt(personalityAddrOff);
     if (!personalityReloc)
       reader.failOn(off, "Failed to locate relocation for personality symbol");
-    cie.personalitySymbol = personalityReloc->referent.get<macho::Symbol *>();
+    cie.personalitySymbol = cast<macho::Symbol *>(personalityReloc->referent);
   }
   return cie;
 }
@@ -1338,17 +1344,17 @@ targetSymFromCanonicalSubtractor(const InputSection *isec,
   assert(target->hasAttr(minuend.type, RelocAttrBits::UNSIGNED));
   // Note: pcSym may *not* be exactly at the PC; there's usually a non-zero
   // addend.
-  auto *pcSym = cast<Defined>(subtrahend.referent.get<macho::Symbol *>());
+  auto *pcSym = cast<Defined>(cast<macho::Symbol *>(subtrahend.referent));
   Defined *target =
       cast_or_null<Defined>(minuend.referent.dyn_cast<macho::Symbol *>());
   if (!pcSym) {
     auto *targetIsec =
-        cast<ConcatInputSection>(minuend.referent.get<InputSection *>());
+        cast<ConcatInputSection>(cast<InputSection *>(minuend.referent));
     target = findSymbolAtOffset(targetIsec, minuend.addend);
   }
   if (Invert)
     std::swap(pcSym, target);
-  if (pcSym->isec == isec) {
+  if (pcSym->isec() == isec) {
     if (pcSym->value - (Invert ? -1 : 1) * minuend.addend != subtrahend.offset)
       fatal("invalid FDE relocation in __eh_frame");
   } else {
@@ -1420,7 +1426,7 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
       // We already have an explicit relocation for the CIE offset.
       cieIsec =
           targetSymFromCanonicalSubtractor</*Invert=*/true>(isec, cieOffRelocIt)
-              ->isec;
+              ->isec();
       dataOff += sizeof(uint32_t);
     } else {
       // If we haven't found a relocation, then the CIE offset is most likely
@@ -1480,15 +1486,15 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
       // to register the unwind entry under same symbol.
       // This is not particularly efficient, but we should run into this case
       // infrequently (only when handling the output of `ld -r`).
-      if (funcSym->isec)
-        funcSym = findSymbolAtOffset(cast<ConcatInputSection>(funcSym->isec),
+      if (funcSym->isec())
+        funcSym = findSymbolAtOffset(cast<ConcatInputSection>(funcSym->isec()),
                                      funcSym->value);
     } else {
       funcSym = findSymbolAtAddress(sections, funcAddr);
       ehRelocator.makePcRel(funcAddrOff, funcSym, target->p2WordSize);
     }
     // The symbol has been coalesced, or already has a compact unwind entry.
-    if (!funcSym || funcSym->getFile() != this || funcSym->unwindEntry) {
+    if (!funcSym || funcSym->getFile() != this || funcSym->unwindEntry()) {
       // We must prune unused FDEs for correctness, so we cannot rely on
       // -dead_strip being enabled.
       isec->live = false;
@@ -1497,7 +1503,8 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
 
     InputSection *lsdaIsec = nullptr;
     if (lsdaAddrRelocIt != isec->relocs.end()) {
-      lsdaIsec = targetSymFromCanonicalSubtractor(isec, lsdaAddrRelocIt)->isec;
+      lsdaIsec =
+          targetSymFromCanonicalSubtractor(isec, lsdaAddrRelocIt)->isec();
     } else if (lsdaAddrOpt) {
       uint64_t lsdaAddr = *lsdaAddrOpt;
       Section *sec = findContainingSection(sections, &lsdaAddr);
@@ -1507,7 +1514,7 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
     }
 
     fdes[isec] = {funcLength, cie.personalitySymbol, lsdaIsec};
-    funcSym->unwindEntry = isec;
+    funcSym->originalUnwindEntry = isec;
     ehRelocator.commit();
   }
 
@@ -1535,7 +1542,7 @@ std::string ObjFile::sourceFile() const {
   StringRef sep = sys::path::get_separator();
   // We don't use `path::append` here because we want an empty `dir` to result
   // in an absolute path. `append` would give us a relative path for that case.
-  if (!dir.endswith(sep))
+  if (!dir.ends_with(sep))
     dir += sep;
   return (dir + unitName).str();
 }
@@ -1579,14 +1586,19 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
   // Search order:
   // 1. Install name basename in -F / -L directories.
   {
+    // Framework names can be in multiple formats:
+    // - Foo.framework/Foo
+    // - Foo.framework/Versions/A/Foo
     StringRef stem = path::stem(path);
-    SmallString<128> frameworkName;
-    path::append(frameworkName, path::Style::posix, stem + ".framework", stem);
-    bool isFramework = path.ends_with(frameworkName);
-    if (isFramework) {
+    SmallString<128> frameworkName("/");
+    frameworkName += stem;
+    frameworkName += ".framework/";
+    size_t i = path.rfind(frameworkName);
+    if (i != StringRef::npos) {
+      StringRef frameworkPath = path.substr(i + 1);
       for (StringRef dir : config->frameworkSearchPaths) {
         SmallString<128> candidate = dir;
-        path::append(candidate, frameworkName);
+        path::append(candidate, frameworkPath);
         if (std::optional<StringRef> dylibPath =
                 resolveDylibPath(candidate.str()))
           return loadDylib(*dylibPath, umbrella);
@@ -1623,6 +1635,17 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
     path = newPath;
   } else if (path.starts_with("@rpath/")) {
     for (StringRef rpath : umbrella->rpaths) {
+      newPath.clear();
+      if (rpath.consume_front("@loader_path/")) {
+        fs::real_path(umbrella->getName(), newPath);
+        path::remove_filename(newPath);
+      }
+      path::append(newPath, rpath, path.drop_front(strlen("@rpath/")));
+      if (std::optional<StringRef> dylibPath = resolveDylibPath(newPath.str()))
+        return loadDylib(*dylibPath, umbrella);
+    }
+    // If not found in umbrella, try the rpaths specified via -rpath too.
+    for (StringRef rpath : config->runtimePaths) {
       newPath.clear();
       if (rpath.consume_front("@loader_path/")) {
         fs::real_path(umbrella->getName(), newPath);
@@ -1677,9 +1700,16 @@ static bool isImplicitlyLinked(StringRef path) {
 void DylibFile::loadReexport(StringRef path, DylibFile *umbrella,
                          const InterfaceFile *currentTopLevelTapi) {
   DylibFile *reexport = findDylib(path, umbrella, currentTopLevelTapi);
-  if (!reexport)
-    error(toString(this) + ": unable to locate re-export with install name " +
-          path);
+  if (!reexport) {
+    // If not found in umbrella, retry since some rpaths might have been
+    // defined in "this" dylib (which contains the LC_REEXPORT_DYLIB cmd) and
+    // not in the umbrella.
+    DylibFile *reexport2 = findDylib(path, this, currentTopLevelTapi);
+    if (!reexport2) {
+      error(toString(this) + ": unable to locate re-export with install name " +
+            path);
+    }
+  }
 }
 
 DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
@@ -1724,7 +1754,18 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
   }
 
   // Initialize symbols.
-  exportingFile = isImplicitlyLinked(installName) ? this : this->umbrella;
+  bool canBeImplicitlyLinked = findCommand(hdr, LC_SUB_CLIENT) == nullptr;
+  exportingFile = (canBeImplicitlyLinked && isImplicitlyLinked(installName))
+                      ? this
+                      : this->umbrella;
+
+  if (!canBeImplicitlyLinked) {
+    for (auto *cmd : findCommands<sub_client_command>(hdr, LC_SUB_CLIENT)) {
+      StringRef allowableClient{reinterpret_cast<const char *>(cmd) +
+                                cmd->client};
+      allowableClients.push_back(allowableClient);
+    }
+  }
 
   const auto *dyldInfo = findCommand<dyld_info_command>(hdr, LC_DYLD_INFO_ONLY);
   const auto *exportsTrie =
@@ -1756,12 +1797,13 @@ void DylibFile::parseExportedSymbols(uint32_t offset, uint32_t size) {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   std::vector<TrieEntry> entries;
   // Find all the $ld$* symbols to process first.
-  parseTrie(buf + offset, size, [&](const Twine &name, uint64_t flags) {
-    StringRef savedName = saver().save(name);
-    if (handleLDSymbol(savedName))
-      return;
-    entries.push_back({savedName, flags});
-  });
+  parseTrie(toString(this), buf + offset, size,
+            [&](const Twine &name, uint64_t flags) {
+              StringRef savedName = saver().save(name);
+              if (handleLDSymbol(savedName))
+                return;
+              entries.push_back({savedName, flags});
+            });
 
   // Process the "normal" symbols.
   for (TrieEntry &entry : entries) {
@@ -1867,6 +1909,9 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   installName = saver().save(interface.getInstallName());
   compatibilityVersion = interface.getCompatibilityVersion().rawValue();
   currentVersion = interface.getCurrentVersion().rawValue();
+  for (const auto &rpath : interface.rpaths())
+    if (rpath.first == config->platformInfo.target)
+      rpaths.push_back(saver().save(rpath.second));
 
   if (config->printEachFile)
     message(toString(this));
@@ -1883,7 +1928,16 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
 
   checkAppExtensionSafety(interface.isApplicationExtensionSafe());
 
-  exportingFile = isImplicitlyLinked(installName) ? this : umbrella;
+  bool canBeImplicitlyLinked = interface.allowableClients().size() == 0;
+  exportingFile = (canBeImplicitlyLinked && isImplicitlyLinked(installName))
+                      ? this
+                      : umbrella;
+
+  if (!canBeImplicitlyLinked)
+    for (const auto &allowableClient : interface.allowableClients())
+      allowableClients.push_back(
+          *make<std::string>(allowableClient.getInstallName().data()));
+
   auto addSymbol = [&](const llvm::MachO::Symbol &symbol,
                        const Twine &name) -> void {
     StringRef savedName = saver().save(name);
@@ -1904,31 +1958,34 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
       continue;
 
     switch (symbol->getKind()) {
-    case SymbolKind::GlobalSymbol:
-    case SymbolKind::ObjectiveCClass:
-    case SymbolKind::ObjectiveCClassEHType:
-    case SymbolKind::ObjectiveCInstanceVariable:
+    case EncodeKind::GlobalSymbol:
+    case EncodeKind::ObjectiveCClass:
+    case EncodeKind::ObjectiveCClassEHType:
+    case EncodeKind::ObjectiveCInstanceVariable:
       normalSymbols.push_back(symbol);
     }
   }
+  // interface.symbols() order is non-deterministic.
+  llvm::sort(normalSymbols,
+             [](auto *l, auto *r) { return l->getName() < r->getName(); });
 
   // TODO(compnerd) filter out symbols based on the target platform
   for (const auto *symbol : normalSymbols) {
     switch (symbol->getKind()) {
-    case SymbolKind::GlobalSymbol:
+    case EncodeKind::GlobalSymbol:
       addSymbol(*symbol, symbol->getName());
       break;
-    case SymbolKind::ObjectiveCClass:
+    case EncodeKind::ObjectiveCClass:
       // XXX ld64 only creates these symbols when -ObjC is passed in. We may
       // want to emulate that.
-      addSymbol(*symbol, objc::klass + symbol->getName());
-      addSymbol(*symbol, objc::metaclass + symbol->getName());
+      addSymbol(*symbol, objc::symbol_names::klass + symbol->getName());
+      addSymbol(*symbol, objc::symbol_names::metaclass + symbol->getName());
       break;
-    case SymbolKind::ObjectiveCClassEHType:
-      addSymbol(*symbol, objc::ehtype + symbol->getName());
+    case EncodeKind::ObjectiveCClassEHType:
+      addSymbol(*symbol, objc::symbol_names::ehtype + symbol->getName());
       break;
-    case SymbolKind::ObjectiveCInstanceVariable:
-      addSymbol(*symbol, objc::ivar + symbol->getName());
+    case EncodeKind::ObjectiveCInstanceVariable:
+      addSymbol(*symbol, objc::symbol_names::ivar + symbol->getName());
       break;
     }
   }
@@ -2132,8 +2189,30 @@ ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f, bool forceHidden)
 void ArchiveFile::addLazySymbols() {
   // Avoid calling getMemoryBufferRef() on zero-symbol archive
   // since that crashes.
-  if (file->isEmpty() || file->getNumberOfSymbols() == 0)
+  if (file->isEmpty() ||
+      (file->hasSymbolTable() && file->getNumberOfSymbols() == 0))
     return;
+
+  if (!file->hasSymbolTable()) {
+    // No index, treat each child as a lazy object file.
+    Error e = Error::success();
+    for (const object::Archive::Child &c : file->children(e)) {
+      // Check `seen` but don't insert so a future eager load can still happen.
+      if (seen.contains(c.getChildOffset()))
+        continue;
+      if (!seenLazy.insert(c.getChildOffset()).second)
+        continue;
+      auto file = childToObjectFile(c, /*lazy=*/true);
+      if (!file)
+        error(toString(this) +
+              ": couldn't process child: " + toString(file.takeError()));
+      inputFiles.insert(*file);
+    }
+    if (e)
+      error(toString(this) +
+            ": Archive::children failed: " + toString(std::move(e)));
+    return;
+  }
 
   Error err = Error::success();
   auto child = file->child_begin(err);
@@ -2164,16 +2243,17 @@ void ArchiveFile::addLazySymbols() {
 
 static Expected<InputFile *>
 loadArchiveMember(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
-                  uint64_t offsetInArchive, bool forceHidden, bool compatArch) {
+                  uint64_t offsetInArchive, bool forceHidden, bool compatArch,
+                  bool lazy) {
   if (config->zeroModTime)
     modTime = 0;
 
   switch (identify_magic(mb.getBuffer())) {
   case file_magic::macho_object:
-    return make<ObjFile>(mb, modTime, archiveName, /*lazy=*/false, forceHidden,
+    return make<ObjFile>(mb, modTime, archiveName, lazy, forceHidden,
                          compatArch);
   case file_magic::bitcode:
-    return make<BitcodeFile>(mb, archiveName, offsetInArchive, /*lazy=*/false,
+    return make<BitcodeFile>(mb, archiveName, offsetInArchive, lazy,
                              forceHidden, compatArch);
   default:
     return createStringError(inconvertibleErrorCode(),
@@ -2185,23 +2265,7 @@ loadArchiveMember(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
 Error ArchiveFile::fetch(const object::Archive::Child &c, StringRef reason) {
   if (!seen.insert(c.getChildOffset()).second)
     return Error::success();
-
-  Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
-  if (!mb)
-    return mb.takeError();
-
-  // Thin archives refer to .o files, so --reproduce needs the .o files too.
-  if (tar && c.getParent()->isThin())
-    tar->append(relativeToRoot(CHECK(c.getFullName(), this)), mb->getBuffer());
-
-  Expected<TimePoint<std::chrono::seconds>> modTime = c.getLastModified();
-  if (!modTime)
-    return modTime.takeError();
-
-  Expected<InputFile *> file =
-      loadArchiveMember(*mb, toTimeT(*modTime), getName(), c.getChildOffset(),
-                        forceHidden, compatArch);
-
+  auto file = childToObjectFile(c, /*lazy=*/false);
   if (!file)
     return file.takeError();
 
@@ -2226,6 +2290,21 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
   if (Error e = fetch(c, symCopy.getName()))
     error(toString(this) + ": could not get the member defining symbol " +
           toMachOString(symCopy) + ": " + toString(std::move(e)));
+}
+
+Expected<InputFile *>
+ArchiveFile::childToObjectFile(const llvm::object::Archive::Child &c,
+                               bool lazy) {
+  Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
+  if (!mb)
+    return mb.takeError();
+
+  Expected<TimePoint<std::chrono::seconds>> modTime = c.getLastModified();
+  if (!modTime)
+    return modTime.takeError();
+
+  return loadArchiveMember(*mb, toTimeT(*modTime), getName(),
+                           c.getChildOffset(), forceHidden, compatArch, lazy);
 }
 
 static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,

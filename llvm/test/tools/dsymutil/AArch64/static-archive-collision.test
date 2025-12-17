@@ -1,0 +1,26 @@
+$ cat f.c
+int f() {
+  volatile int i;
+  return i;
+}
+$ cat g.c
+int g() {
+  volatile int i;
+  return i;
+}
+$ cat main.c
+int f();
+int g();
+
+int main() {
+  return f() + g();
+}
+$ clang -g f.c -c -o f/foo.o
+$ clang -g g.c -c -o g/foo.o
+$ libtool -static f/foo.o g/foo.o -o foo.a
+$ clang main.o foo.a -o main.out
+
+RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/collision/main.out --dump-debug-map 2>&1 | FileCheck %s
+CHECK: skipping debug map object with duplicate name and timestamp: {{.*}} /private/tmp/collision/foo.a(foo.o)
+CHECK-NOT: could not find symbol '_g'
+CHECK-NOT: could not find symbol '_f'

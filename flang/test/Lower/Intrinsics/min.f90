@@ -18,17 +18,17 @@ end function
 ! CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<f32>
 ! CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<f32>
 ! CHECK:           %[[VAL_10:.*]] = fir.is_present %[[VAL_5]]#0 : (!fir.ref<f32>) -> i1
-! CHECK:           %[[VAL_11:.*]] = arith.cmpf olt, %[[VAL_8]], %[[VAL_9]] : f32
+! CHECK:           %[[VAL_11:.*]] = arith.cmpf olt, %[[VAL_8]], %[[VAL_9]] {{.*}} : f32
 ! CHECK:           %[[VAL_12:.*]] = arith.select %[[VAL_11]], %[[VAL_8]], %[[VAL_9]] : f32
 ! CHECK:           %[[VAL_13:.*]] = fir.if %[[VAL_10]] -> (f32) {
 ! CHECK:             %[[VAL_14:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<f32>
-! CHECK:             %[[VAL_15:.*]] = arith.cmpf olt, %[[VAL_12]], %[[VAL_14]] : f32
+! CHECK:             %[[VAL_15:.*]] = arith.cmpf olt, %[[VAL_12]], %[[VAL_14]] {{.*}} : f32
 ! CHECK:             %[[VAL_16:.*]] = arith.select %[[VAL_15]], %[[VAL_12]], %[[VAL_14]] : f32
 ! CHECK:             fir.result %[[VAL_16]] : f32
 ! CHECK:           } else {
 ! CHECK:             fir.result %[[VAL_12]] : f32
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_13]] to %[[VAL_7]]#0 : f32, !fir.ref<f32>
-! CHECK:           %[[VAL_17:.*]] = fir.load %[[VAL_7]]#1 : !fir.ref<f32>
+! CHECK:           %[[VAL_17:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<f32>
 ! CHECK:           return %[[VAL_17]] : f32
 ! CHECK:         }

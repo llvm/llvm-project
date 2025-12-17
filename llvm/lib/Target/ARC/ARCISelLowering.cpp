@@ -13,6 +13,7 @@
 #include "ARCISelLowering.h"
 #include "ARC.h"
 #include "ARCMachineFunctionInfo.h"
+#include "ARCSelectionDAGInfo.h"
 #include "ARCSubtarget.h"
 #include "ARCTargetMachine.h"
 #include "MCTargetDesc/ARCInfo.h"
@@ -95,7 +96,7 @@ void ARCTargetLowering::ReplaceNodeResults(SDNode *N,
 
 ARCTargetLowering::ARCTargetLowering(const TargetMachine &TM,
                                      const ARCSubtarget &Subtarget)
-    : TargetLowering(TM), Subtarget(Subtarget) {
+    : TargetLowering(TM, Subtarget), Subtarget(Subtarget) {
   // Set up the register classes.
   addRegisterClass(MVT::i32, &ARC::GPR32RegClass);
 
@@ -174,24 +175,8 @@ ARCTargetLowering::ARCTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i32, Legal);
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64,
                      isTypeLegal(MVT::i64) ? Legal : Custom);
-}
 
-const char *ARCTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch (Opcode) {
-  case ARCISD::BL:
-    return "ARCISD::BL";
-  case ARCISD::CMOV:
-    return "ARCISD::CMOV";
-  case ARCISD::CMP:
-    return "ARCISD::CMP";
-  case ARCISD::BRcc:
-    return "ARCISD::BRcc";
-  case ARCISD::RET:
-    return "ARCISD::RET";
-  case ARCISD::GAWRAPPER:
-    return "ARCISD::GAWRAPPER";
-  }
-  return nullptr;
+  setMaxAtomicSizeInBitsSupported(0);
 }
 
 //===----------------------------------------------------------------------===//
@@ -606,7 +591,7 @@ SDValue ARCTargetLowering::LowerCallArguments(
       InVals.push_back(FIN);
       MemOps.push_back(DAG.getMemcpy(
           Chain, dl, FIN, ArgDI.SDV, DAG.getConstant(Size, dl, MVT::i32),
-          Alignment, false, false, false, MachinePointerInfo(),
+          Alignment, false, false, /*CI=*/nullptr, false, MachinePointerInfo(),
           MachinePointerInfo()));
     } else {
       InVals.push_back(ArgDI.SDV);
@@ -628,7 +613,8 @@ SDValue ARCTargetLowering::LowerCallArguments(
 
 bool ARCTargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
   if (!CCInfo.CheckReturn(Outs, RetCC_ARC))
@@ -751,7 +737,7 @@ SDValue ARCTargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
-  assert(cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() == 0 &&
+  assert(Op.getConstantOperandVal(0) == 0 &&
          "Only support lowering frame addr of current frame.");
   Register FrameReg = ARI.getFrameRegister(MF);
   return DAG.getCopyFromReg(DAG.getEntryNode(), dl, FrameReg, VT);

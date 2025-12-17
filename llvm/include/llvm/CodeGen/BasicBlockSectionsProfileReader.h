@@ -19,19 +19,20 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
-using namespace llvm;
+#include "llvm/Support/UniqueBBID.h"
+#include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 
 // This struct represents the cluster information for a machine basic block,
-// which is specifed by a unique ID (`MachineBasicBlock::BBID`).
+// which is specifed by a unique basic block ID.
 struct BBClusterInfo {
   // Basic block ID.
   UniqueBBID BBID;
@@ -49,69 +50,45 @@ struct FunctionPathAndClusterInfo {
   // the edge a -> b (a is not cloned). The index of the path in this vector
   // determines the `UniqueBBID::CloneID` of the cloned blocks in that path.
   SmallVector<SmallVector<unsigned>> ClonePaths;
+  // Node counts for each basic block.
+  DenseMap<UniqueBBID, uint64_t> NodeCounts;
+  // Edge counts for each edge, stored as a nested map.
+  DenseMap<UniqueBBID, DenseMap<UniqueBBID, uint64_t>> EdgeCounts;
+  // Hash for each basic block. The Hashes are stored for every original block
+  // (not cloned blocks), hence the map key being unsigned instead of
+  // UniqueBBID.
+  DenseMap<unsigned, uint64_t> BBHashes;
 };
 
-// Provides DenseMapInfo for UniqueBBID.
-template <> struct DenseMapInfo<UniqueBBID> {
-  static inline UniqueBBID getEmptyKey() {
-    unsigned EmptyKey = DenseMapInfo<unsigned>::getEmptyKey();
-    return UniqueBBID{EmptyKey, EmptyKey};
-  }
-  static inline UniqueBBID getTombstoneKey() {
-    unsigned TombstoneKey = DenseMapInfo<unsigned>::getTombstoneKey();
-    return UniqueBBID{TombstoneKey, TombstoneKey};
-  }
-  static unsigned getHashValue(const UniqueBBID &Val) {
-    std::pair<unsigned, unsigned> PairVal =
-        std::make_pair(Val.BaseID, Val.CloneID);
-    return DenseMapInfo<std::pair<unsigned, unsigned>>::getHashValue(PairVal);
-  }
-  static bool isEqual(const UniqueBBID &LHS, const UniqueBBID &RHS) {
-    return DenseMapInfo<unsigned>::isEqual(LHS.BaseID, RHS.BaseID) &&
-           DenseMapInfo<unsigned>::isEqual(LHS.CloneID, RHS.CloneID);
-  }
-};
-
-class BasicBlockSectionsProfileReader : public ImmutablePass {
+class BasicBlockSectionsProfileReader {
 public:
-  static char ID;
-
+  friend class BasicBlockSectionsProfileReaderWrapperPass;
   BasicBlockSectionsProfileReader(const MemoryBuffer *Buf)
-      : ImmutablePass(ID), MBuf(Buf),
-        LineIt(*Buf, /*SkipBlanks=*/true, /*CommentMarker=*/'#') {
-    initializeBasicBlockSectionsProfileReaderPass(
-        *PassRegistry::getPassRegistry());
-  };
+      : MBuf(Buf), LineIt(*Buf, /*SkipBlanks=*/true, /*CommentMarker=*/'#'){};
 
-  BasicBlockSectionsProfileReader() : ImmutablePass(ID) {
-    initializeBasicBlockSectionsProfileReaderPass(
-        *PassRegistry::getPassRegistry());
-  }
+  BasicBlockSectionsProfileReader() = default;
 
-  StringRef getPassName() const override {
-    return "Basic Block Sections Profile Reader";
-  }
-
-  // Returns true if basic block sections profile exist for function \p
-  // FuncName.
+  // Returns true if function \p FuncName is hot based on the basic block
+  // section profile.
   bool isFunctionHot(StringRef FuncName) const;
 
-  // Returns a pair with first element representing whether basic block sections
-  // profile exist for the function \p FuncName, and the second element
-  // representing the basic block sections profile (cluster info) for this
-  // function. If the first element is true and the second element is empty, it
-  // means unique basic block sections are desired for all basic blocks of the
-  // function.
-  std::pair<bool, SmallVector<BBClusterInfo>>
+  // Returns the cluster info for the function \p FuncName. Returns an empty
+  // vector if function has no cluster info.
+  SmallVector<BBClusterInfo>
   getClusterInfoForFunction(StringRef FuncName) const;
 
   // Returns the path clonings for the given function.
   SmallVector<SmallVector<unsigned>>
   getClonePathsForFunction(StringRef FuncName) const;
 
-  // Initializes the FunctionNameToDIFilename map for the current module and
-  // then reads the profile for the matching functions.
-  bool doInitialization(Module &M) override;
+  // Returns the profile count for the edge from `SrcBBID` to `SinkBBID` in
+  // function `FuncName` or zero if it does not exist.
+  uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
+                        const UniqueBBID &SinkBBID) const;
+
+  // Return the complete function path and cluster info for the given function.
+  std::pair<bool, FunctionPathAndClusterInfo>
+  getFunctionPathAndClusterInfo(StringRef FuncName) const;
 
 private:
   StringRef getAliasName(StringRef FuncName) const {
@@ -170,7 +147,67 @@ private:
 // sections profile. \p Buf is a memory buffer that contains the list of
 // functions and basic block ids to selectively enable basic block sections.
 ImmutablePass *
-createBasicBlockSectionsProfileReaderPass(const MemoryBuffer *Buf);
+createBasicBlockSectionsProfileReaderWrapperPass(const MemoryBuffer *Buf);
+
+/// Analysis pass providing the \c BasicBlockSectionsProfileReader.
+///
+/// Note that this pass's result cannot be invalidated, it is immutable for the
+/// life of the module.
+class BasicBlockSectionsProfileReaderAnalysis
+    : public AnalysisInfoMixin<BasicBlockSectionsProfileReaderAnalysis> {
+
+public:
+  static AnalysisKey Key;
+  typedef BasicBlockSectionsProfileReader Result;
+  BasicBlockSectionsProfileReaderAnalysis(const TargetMachine &TM) : TM(&TM) {}
+
+  Result run(Function &F, FunctionAnalysisManager &AM);
+
+private:
+  const TargetMachine *TM;
+};
+
+class BasicBlockSectionsProfileReaderWrapperPass : public ImmutablePass {
+public:
+  static char ID;
+  BasicBlockSectionsProfileReader BBSPR;
+
+  BasicBlockSectionsProfileReaderWrapperPass(const MemoryBuffer *Buf)
+      : ImmutablePass(ID), BBSPR(BasicBlockSectionsProfileReader(Buf)) {
+    initializeBasicBlockSectionsProfileReaderWrapperPassPass(
+        *PassRegistry::getPassRegistry());
+  };
+
+  BasicBlockSectionsProfileReaderWrapperPass()
+      : ImmutablePass(ID), BBSPR(BasicBlockSectionsProfileReader()) {
+    initializeBasicBlockSectionsProfileReaderWrapperPassPass(
+        *PassRegistry::getPassRegistry());
+  }
+
+  StringRef getPassName() const override {
+    return "Basic Block Sections Profile Reader";
+  }
+
+  bool isFunctionHot(StringRef FuncName) const;
+
+  SmallVector<BBClusterInfo>
+  getClusterInfoForFunction(StringRef FuncName) const;
+
+  SmallVector<SmallVector<unsigned>>
+  getClonePathsForFunction(StringRef FuncName) const;
+
+  uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
+                        const UniqueBBID &DestBBID) const;
+
+  std::pair<bool, FunctionPathAndClusterInfo>
+  getFunctionPathAndClusterInfo(StringRef FuncName) const;
+
+  // Initializes the FunctionNameToDIFilename map for the current module and
+  // then reads the profile for the matching functions.
+  bool doInitialization(Module &M) override;
+
+  BasicBlockSectionsProfileReader &getBBSPR();
+};
 
 } // namespace llvm
 #endif // LLVM_CODEGEN_BASICBLOCKSECTIONSPROFILEREADER_H

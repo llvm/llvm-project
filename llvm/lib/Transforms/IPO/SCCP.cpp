@@ -76,10 +76,8 @@ static void findReturnsToZap(Function &F,
                if (!isa<CallBase>(U))
                  return true;
                if (U->getType()->isStructTy()) {
-                 return all_of(Solver.getStructLatticeValueFor(U),
-                               [](const ValueLatticeElement &LV) {
-                                 return !SCCPSolver::isOverdefined(LV);
-                               });
+                 return none_of(Solver.getStructLatticeValueFor(U),
+                                SCCPSolver::isOverdefined);
                }
 
                // We don't consider assume-like intrinsics to be actual address
@@ -144,9 +142,8 @@ static bool runIPSCCP(
     // Assume the function is called.
     Solver.markBlockExecutable(&F.front());
 
-    // Assume nothing about the incoming arguments.
     for (Argument &AI : F.args())
-      Solver.markOverdefined(&AI);
+      Solver.trackValueOfArgument(&AI);
   }
 
   // Determine if we can track any of the module's global variables. If so, add
@@ -172,6 +169,13 @@ static bool runIPSCCP(
   for (Function &F : M) {
     if (F.isDeclaration())
       continue;
+    // Skip the dead functions marked by FunctionSpecializer, avoiding removing
+    // blocks in dead functions. Set MadeChanges if there is any dead function
+    // that will be removed later.
+    if (IsFuncSpecEnabled && Specializer.isDeadFunction(&F)) {
+      MadeChanges = true;
+      continue;
+    }
 
     SmallVector<BasicBlock *, 512> BlocksToErase;
 
@@ -192,8 +196,10 @@ static bool runIPSCCP(
           if (ME == MemoryEffects::unknown())
             return AL;
 
-          ME |= MemoryEffects(IRMemLocation::Other,
-                              ME.getModRef(IRMemLocation::ArgMem));
+          ModRefInfo ArgMemMR = ME.getModRef(IRMemLocation::ArgMem);
+          ME |= MemoryEffects(IRMemLocation::ErrnoMem, ArgMemMR);
+          ME |= MemoryEffects(IRMemLocation::Other, ArgMemMR);
+
           return AL.addFnAttribute(
               F.getContext(),
               Attribute::getWithMemoryEffects(F.getContext(), ME));
@@ -236,11 +242,11 @@ static bool runIPSCCP(
     // nodes in executable blocks we found values for. The function's entry
     // block is not part of BlocksToErase, so we have to handle it separately.
     for (BasicBlock *BB : BlocksToErase) {
-      NumInstRemoved += changeToUnreachable(BB->getFirstNonPHI(),
+      NumInstRemoved += changeToUnreachable(&*BB->getFirstNonPHIOrDbg(),
                                             /*PreserveLCSSA=*/false, &DTU);
     }
     if (!Solver.isBlockExecutable(&F.front()))
-      NumInstRemoved += changeToUnreachable(F.front().getFirstNonPHI(),
+      NumInstRemoved += changeToUnreachable(&*F.front().getFirstNonPHIOrDbg(),
                                             /*PreserveLCSSA=*/false, &DTU);
 
     BasicBlock *NewUnreachableBB = nullptr;
@@ -251,19 +257,7 @@ static bool runIPSCCP(
       if (!DeadBB->hasAddressTaken())
         DTU.deleteBB(DeadBB);
 
-    for (BasicBlock &BB : F) {
-      for (Instruction &Inst : llvm::make_early_inc_range(BB)) {
-        if (Solver.getPredicateInfoFor(&Inst)) {
-          if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
-            if (II->getIntrinsicID() == Intrinsic::ssa_copy) {
-              Value *Op = II->getOperand(0);
-              Inst.replaceAllUsesWith(Op);
-              Inst.eraseFromParent();
-            }
-          }
-        }
-      }
-    }
+    Solver.removeSSACopies(F);
   }
 
   // If we inferred constant or undef return values for a function, we replaced
@@ -278,40 +272,11 @@ static bool runIPSCCP(
   // whether other functions are optimizable.
   SmallVector<ReturnInst*, 8> ReturnsToZap;
 
-  for (const auto &I : Solver.getTrackedRetVals()) {
-    Function *F = I.first;
-    const ValueLatticeElement &ReturnValue = I.second;
-
-    // If there is a known constant range for the return value, add !range
-    // metadata to the function's call sites.
-    if (ReturnValue.isConstantRange() &&
-        !ReturnValue.getConstantRange().isSingleElement()) {
-      // Do not add range metadata if the return value may include undef.
-      if (ReturnValue.isConstantRangeIncludingUndef())
-        continue;
-
-      auto &CR = ReturnValue.getConstantRange();
-      for (User *User : F->users()) {
-        auto *CB = dyn_cast<CallBase>(User);
-        if (!CB || CB->getCalledFunction() != F)
-          continue;
-
-        // Do not touch existing metadata for now.
-        // TODO: We should be able to take the intersection of the existing
-        // metadata and the inferred range.
-        if (CB->getMetadata(LLVMContext::MD_range))
-          continue;
-
-        LLVMContext &Context = CB->getParent()->getContext();
-        Metadata *RangeMD[] = {
-            ConstantAsMetadata::get(ConstantInt::get(Context, CR.getLower())),
-            ConstantAsMetadata::get(ConstantInt::get(Context, CR.getUpper()))};
-        CB->setMetadata(LLVMContext::MD_range, MDNode::get(Context, RangeMD));
-      }
-      continue;
-    }
-    if (F->getReturnType()->isVoidTy())
-      continue;
+  Solver.inferReturnAttributes();
+  Solver.inferArgAttributes();
+  for (const auto &[F, ReturnValue] : Solver.getTrackedRetVals()) {
+    assert(!F->getReturnType()->isVoidTy() &&
+           "should not track void functions");
     if (SCCPSolver::isConstant(ReturnValue) || ReturnValue.isUnknownOrUndef())
       findReturnsToZap(*F, ReturnsToZap, Solver);
   }
@@ -328,7 +293,7 @@ static bool runIPSCCP(
   SmallSetVector<Function *, 8> FuncZappedReturn;
   for (ReturnInst *RI : ReturnsToZap) {
     Function *F = RI->getParent()->getParent();
-    RI->setOperand(0, UndefValue::get(F->getReturnType()));
+    RI->setOperand(0, PoisonValue::get(F->getReturnType()));
     // Record all functions that are zapped.
     FuncZappedReturn.insert(F);
   }
@@ -346,11 +311,10 @@ static bool runIPSCCP(
     for (Use &U : F->uses()) {
       CallBase *CB = dyn_cast<CallBase>(U.getUser());
       if (!CB) {
-        assert(isa<BlockAddress>(U.getUser()) ||
-               (isa<Constant>(U.getUser()) &&
-                all_of(U.getUser()->users(), [](const User *UserUser) {
-                  return cast<IntrinsicInst>(UserUser)->isAssumeLikeIntrinsic();
-                })));
+        assert(isa<Constant>(U.getUser()) &&
+               all_of(U.getUser()->users(), [](const User *UserUser) {
+                 return cast<IntrinsicInst>(UserUser)->isAssumeLikeIntrinsic();
+               }));
         continue;
       }
 
@@ -368,9 +332,16 @@ static bool runIPSCCP(
       continue;
     LLVM_DEBUG(dbgs() << "Found that GV '" << GV->getName()
                       << "' is constant!\n");
-    while (!GV->use_empty()) {
-      StoreInst *SI = cast<StoreInst>(GV->user_back());
-      SI->eraseFromParent();
+    for (User *U : make_early_inc_range(GV->users())) {
+      // We can remove LoadInst here. The LoadInsts in dead functions marked by
+      // FuncSpec are not simplified to constants, thus poison them.
+      assert((isa<StoreInst>(U) || isa<LoadInst>(U)) &&
+             "Only Store|Load Instruction can be user of GlobalVariable at "
+             "reaching here.");
+      Instruction *I = cast<Instruction>(U);
+      if (isa<LoadInst>(I))
+        I->replaceAllUsesWith(PoisonValue::get(I->getType()));
+      I->eraseFromParent();
     }
 
     // Try to create a debug constant expression for the global variable

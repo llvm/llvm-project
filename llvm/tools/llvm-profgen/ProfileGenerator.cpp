@@ -8,6 +8,7 @@
 #include "ProfileGenerator.h"
 #include "ErrorHandling.h"
 #include "MissingFrameInferrer.h"
+#include "Options.h"
 #include "PerfReader.h"
 #include "ProfiledBinary.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
@@ -17,20 +18,24 @@
 #include <unordered_set>
 #include <utility>
 
+namespace llvm {
+
 cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
                                     cl::Required,
-                                    cl::desc("Output profile file"));
+                                    cl::desc("Output profile file"),
+                                    cl::cat(ProfGenCategory));
 static cl::alias OutputA("o", cl::desc("Alias for --output"),
                          cl::aliasopt(OutputFilename));
 
 static cl::opt<SampleProfileFormat> OutputFormat(
     "format", cl::desc("Format of output profile"), cl::init(SPF_Ext_Binary),
-    cl::values(
-        clEnumValN(SPF_Binary, "binary", "Binary encoding (default)"),
-        clEnumValN(SPF_Ext_Binary, "extbinary", "Extensible binary encoding"),
-        clEnumValN(SPF_Text, "text", "Text encoding"),
-        clEnumValN(SPF_GCC, "gcc",
-                   "GCC encoding (only meaningful for -sample)")));
+    cl::values(clEnumValN(SPF_Binary, "binary", "Binary encoding (default)"),
+               clEnumValN(SPF_Ext_Binary, "extbinary",
+                          "Extensible binary encoding"),
+               clEnumValN(SPF_Text, "text", "Text encoding"),
+               clEnumValN(SPF_GCC, "gcc",
+                          "GCC encoding (only meaningful for -sample)")),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<bool> UseMD5(
     "use-md5", cl::Hidden,
@@ -56,56 +61,63 @@ static cl::opt<int32_t, true> RecursionCompression(
 static cl::opt<bool>
     TrimColdProfile("trim-cold-profile",
                     cl::desc("If the total count of the profile is smaller "
-                             "than threshold, it will be trimmed."));
+                             "than threshold, it will be trimmed."),
+                    cl::cat(ProfGenCategory));
+
+static cl::opt<bool> MarkAllContextPreinlined(
+    "mark-all-context-preinlined",
+    cl::desc("Mark all function samples as preinlined(set "
+             "ContextShouldBeInlined attribute)."),
+    cl::init(false));
 
 static cl::opt<bool> CSProfMergeColdContext(
     "csprof-merge-cold-context", cl::init(true),
     cl::desc("If the total count of context profile is smaller than "
              "the threshold, it will be merged into context-less base "
-             "profile."));
+             "profile."),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<uint32_t> CSProfMaxColdContextDepth(
     "csprof-max-cold-context-depth", cl::init(1),
     cl::desc("Keep the last K contexts while merging cold profile. 1 means the "
-             "context-less base profile"));
+             "context-less base profile"),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<int, true> CSProfMaxContextDepth(
     "csprof-max-context-depth",
     cl::desc("Keep the last K contexts while merging profile. -1 means no "
              "depth limit."),
-    cl::location(llvm::sampleprof::CSProfileGenerator::MaxContextDepth));
+    cl::location(llvm::sampleprof::CSProfileGenerator::MaxContextDepth),
+    cl::cat(ProfGenCategory));
 
-static cl::opt<double> HotFunctionDensityThreshold(
-    "hot-function-density-threshold", llvm::cl::init(1000),
-    llvm::cl::desc(
-        "specify density threshold for hot functions (default: 1000)"),
-    llvm::cl::Optional);
-static cl::opt<bool> ShowDensity("show-density", llvm::cl::init(false),
-                                 llvm::cl::desc("show profile density details"),
-                                 llvm::cl::Optional);
+static cl::opt<double> ProfileDensityThreshold(
+    "profile-density-threshold", cl::init(50),
+    cl::desc("If the profile density is below the given threshold, it "
+             "will be suggested to increase the sampling rate."),
+    cl::Optional, cl::cat(ProfGenCategory));
+static cl::opt<bool> ShowDensity("show-density", cl::init(false),
+                                 cl::desc("show profile density details"),
+                                 cl::Optional, cl::cat(ProfGenCategory));
+static cl::opt<int> ProfileDensityCutOffHot(
+    "profile-density-cutoff-hot", cl::init(990000),
+    cl::desc("Total samples cutoff for functions used to calculate "
+             "profile density."),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<bool> UpdateTotalSamples(
-    "update-total-samples", llvm::cl::init(false),
-    llvm::cl::desc(
-        "Update total samples by accumulating all its body samples."),
-    llvm::cl::Optional);
+    "update-total-samples", cl::init(false),
+    cl::desc("Update total samples by accumulating all its body samples."),
+    cl::Optional, cl::cat(ProfGenCategory));
 
 static cl::opt<bool> GenCSNestedProfile(
     "gen-cs-nested-profile", cl::Hidden, cl::init(true),
     cl::desc("Generate nested function profiles for CSSPGO"));
 
 cl::opt<bool> InferMissingFrames(
-    "infer-missing-frames", llvm::cl::init(true),
-    llvm::cl::desc(
+    "infer-missing-frames", cl::init(true),
+    cl::desc(
         "Infer missing call frames due to compiler tail call elimination."),
-    llvm::cl::Optional);
-
-using namespace llvm;
-using namespace sampleprof;
-
-namespace llvm {
-extern cl::opt<int> ProfileSummaryCutoffHot;
-extern cl::opt<bool> UseContextLessSummary;
+    cl::Optional, cl::cat(ProfGenCategory));
 
 namespace sampleprof {
 
@@ -179,47 +191,64 @@ void ProfileGeneratorBase::write() {
 
 void ProfileGeneratorBase::showDensitySuggestion(double Density) {
   if (Density == 0.0)
-    WithColor::warning() << "The --profile-summary-cutoff-hot option may be "
+    WithColor::warning() << "The output profile is empty or the "
+                            "--profile-density-cutoff-hot option is "
                             "set too low. Please check your command.\n";
-  else if (Density < HotFunctionDensityThreshold)
+  else if (Density < ProfileDensityThreshold)
     WithColor::warning()
         << "Sample PGO is estimated to optimize better with "
-        << format("%.1f", HotFunctionDensityThreshold / Density)
+        << format("%.1f", ProfileDensityThreshold / Density)
         << "x more samples. Please consider increasing sampling rate or "
            "profiling for longer duration to get more samples.\n";
 
   if (ShowDensity)
-    outs() << "Minimum profile density for hot functions with top "
+    outs() << "Functions with density >= " << format("%.1f", Density)
+           << " account for "
            << format("%.2f",
-                     static_cast<double>(ProfileSummaryCutoffHot.getValue()) /
-                         10000)
-           << "% total samples: " << format("%.1f", Density) << "\n";
+                     static_cast<double>(ProfileDensityCutOffHot) / 10000)
+           << "% total sample counts.\n";
 }
 
-double ProfileGeneratorBase::calculateDensity(const SampleProfileMap &Profiles,
-                                              uint64_t HotCntThreshold) {
-  double Density = DBL_MAX;
-  std::vector<const FunctionSamples *> HotFuncs;
-  for (auto &I : Profiles) {
-    auto &FuncSamples = I.second;
-    if (FuncSamples.getTotalSamples() < HotCntThreshold)
-      continue;
-    HotFuncs.emplace_back(&FuncSamples);
+bool ProfileGeneratorBase::filterAmbiguousProfile(FunctionSamples &FS) {
+  for (const auto &Prefix : FuncPrefixsToFilter) {
+    if (FS.getFuncName().starts_with(Prefix))
+      return true;
   }
 
-  for (auto *FuncSamples : HotFuncs) {
-    auto *Func = Binary->getBinaryFunction(FuncSamples->getFunction());
-    if (!Func)
-      continue;
-    uint64_t FuncSize = Func->getFuncSize();
-    if (FuncSize == 0)
-      continue;
-    Density =
-        std::min(Density, static_cast<double>(FuncSamples->getTotalSamples()) /
-                              FuncSize);
+  // Filter the function profiles for the inlinees. It's useful for fuzzy
+  // profile matching which flattens the profile and inlinees' samples are
+  // merged into top-level function.
+  for (auto &Callees :
+       const_cast<CallsiteSampleMap &>(FS.getCallsiteSamples())) {
+    auto &CalleesMap = Callees.second;
+    for (auto I = CalleesMap.begin(); I != CalleesMap.end();) {
+      auto FS = I++;
+      if (filterAmbiguousProfile(FS->second))
+        CalleesMap.erase(FS);
+    }
   }
+  return false;
+}
 
-  return Density == DBL_MAX ? 0.0 : Density;
+// For built-in local initialization function such as __cxx_global_var_init,
+// __tls_init prefix function, there could be multiple versions of the functions
+// in the final binary. However, in the profile generation, we call
+// getCanonicalFnName to canonicalize the names which strips the suffixes.
+// Therefore, samples from different functions queries the same profile and the
+// samples are merged. As the functions are essentially different, entries of
+// the merged profile are ambiguous. In sample loader, the IR from one version
+// would be attributed towards a merged entries, which is inaccurate. Especially
+// for fuzzy profile matching, it gets multiple callsites(from different
+// function) but used to match one callsite, which misleads the matching and
+// causes a lot of false positives report. Hence, we want to filter them out
+// from the profile map during the profile generation time. The profiles are all
+// cold functions, it won't have perf impact.
+void ProfileGeneratorBase::filterAmbiguousProfile(SampleProfileMap &Profiles) {
+  for (auto I = ProfileMap.begin(); I != ProfileMap.end();) {
+    auto FS = I++;
+    if (filterAmbiguousProfile(FS->second))
+      ProfileMap.erase(FS);
+  }
 }
 
 void ProfileGeneratorBase::findDisjointRanges(RangeSample &DisjointRanges,
@@ -468,14 +497,17 @@ bool CSProfileGenerator::collectFunctionsFromLLVMProfile(
 FunctionSamples &
 ProfileGenerator::getTopLevelFunctionProfile(FunctionId FuncName) {
   SampleContext Context(FuncName);
-  return ProfileMap.Create(Context);
+  return ProfileMap.create(Context);
 }
 
 void ProfileGenerator::generateProfile() {
   collectProfiledFunctions();
 
-  if (Binary->usePseudoProbes())
+  if (Binary->usePseudoProbes()) {
     Binary->decodePseudoProbe();
+    if (LoadFunctionFromSymbol)
+      Binary->loadSymbolsFromPseudoProbe();
+  }
 
   if (SampleCounters) {
     if (Binary->usePseudoProbes()) {
@@ -488,9 +520,19 @@ void ProfileGenerator::generateProfile() {
   postProcessProfiles();
 }
 
+void ProfileGeneratorBase::markAllContextPreinlined(
+    SampleProfileMap &ProfileMap) {
+  for (auto &I : ProfileMap)
+    I.second.setContextAttribute(ContextShouldBeInlined);
+  FunctionSamples::ProfileIsPreInlined = true;
+}
+
 void ProfileGenerator::postProcessProfiles() {
   computeSummaryAndThreshold(ProfileMap);
   trimColdProfiles(ProfileMap, ColdCountThreshold);
+  filterAmbiguousProfile(ProfileMap);
+  if (MarkAllContextPreinlined)
+    markAllContextPreinlined(ProfileMap);
   calculateAndShowDensity(ProfileMap);
 }
 
@@ -519,6 +561,7 @@ void ProfileGenerator::generateLineNumBasedProfile() {
   populateBodySamplesForAllFunctions(SC.RangeCounter);
   // Fill in boundary sample counts as well as call site samples for calls
   populateBoundarySamplesForAllFunctions(SC.BranchCounter);
+  populateTypeSamplesForAllFunctions(SC.DataAccessCounter);
 
   updateFunctionSamples();
 }
@@ -585,8 +628,8 @@ void ProfileGenerator::populateBoundarySamplesWithProbesForAllFunctions(
           getLeafProfileAndAddTotalSamples(FrameVec, 0);
       FunctionProfile.addCalledTargetSamples(
           FrameVec.back().Location.LineOffset,
-          FrameVec.back().Location.Discriminator,
-          FunctionId(CalleeName), Count);
+          FrameVec.back().Location.Discriminator, FunctionId(CalleeName),
+          Count);
     }
   }
 }
@@ -609,8 +652,7 @@ FunctionSamples &ProfileGenerator::getLeafProfileAndAddTotalSamples(
         getBaseDiscriminator(FrameVec[I - 1].Location.Discriminator));
     FunctionSamplesMap &SamplesMap =
         FunctionProfile->functionSamplesAt(Callsite);
-    auto Ret =
-        SamplesMap.emplace(FrameVec[I].Func, FunctionSamples());
+    auto Ret = SamplesMap.emplace(FrameVec[I].Func, FunctionSamples());
     if (Ret.second) {
       SampleContext Context(FrameVec[I].Func);
       Ret.first->second.setContext(Context);
@@ -693,6 +735,14 @@ ProfileGeneratorBase::getCalleeNameForAddress(uint64_t TargetAddress) {
   if (!FRange || !FRange->IsFuncEntry)
     return StringRef();
 
+  // DWARF and symbol table may have mismatching function names. Instead, we'll
+  // try to use its pseudo probe name first.
+  if (Binary->usePseudoProbes()) {
+    auto FuncName = Binary->findPseudoProbeName(FRange->Func);
+    if (FuncName.size())
+      return FunctionSamples::getCanonicalFnName(FuncName);
+  }
+
   return FunctionSamples::getCanonicalFnName(FRange->getFuncName());
 }
 
@@ -725,9 +775,115 @@ void ProfileGenerator::populateBoundarySamplesForAllFunctions(
   }
 }
 
+void ProfileGenerator::populateTypeSamplesForAllFunctions(
+    const DataAccessSample &DataAccessSamples) {
+  // For each instruction with vtable accesses, get its symbolized inline
+  // stack, and add the vtable counters to the function samples.
+  for (const auto &[IpData, Count] : DataAccessSamples) {
+    uint64_t InstAddr = IpData.first;
+    const SampleContextFrameVector &FrameVec =
+        Binary->getCachedFrameLocationStack(InstAddr,
+                                            /* UseProbeDiscriminator= */ false);
+    if (!FrameVec.empty()) {
+      FunctionSamples &FunctionProfile =
+          getLeafProfileAndAddTotalSamples(FrameVec, /* Count= */ 0);
+      LineLocation Loc(
+          FrameVec.back().Location.LineOffset,
+          getBaseDiscriminator(FrameVec.back().Location.Discriminator));
+      FunctionProfile.addTypeSamplesAt(Loc, FunctionId(IpData.second), Count);
+    }
+  }
+}
+
+void ProfileGeneratorBase::calculateBodySamplesAndSize(
+    const FunctionSamples &FSamples, uint64_t &TotalBodySamples,
+    uint64_t &FuncBodySize) {
+  // Note that ideally the size should be the number of function instruction.
+  // However, for probe-based profile, we don't have the accurate instruction
+  // count for each probe, instead, the probe sample is the samples count for
+  // the block, which is equivelant to
+  // total_instruction_samples/num_of_instruction in one block. Hence, we use
+  // the number of probe as a proxy for the function's size.
+  FuncBodySize += FSamples.getBodySamples().size();
+
+  // The accumulated body samples re-calculated here could be different from the
+  // TotalSamples(getTotalSamples) field of FunctionSamples for line-number
+  // based profile. The reason is that TotalSamples is the sum of all the
+  // samples of the machine instruction in one source-code line, however, the
+  // entry of Bodysamples is the only max number of them, so the TotalSamples is
+  // usually much bigger than the accumulated body samples as one souce-code
+  // line can emit many machine instructions. We observed a regression when we
+  // switched to use the accumulated body samples(by using
+  // -update-total-samples). Hence, it's safer to re-calculate here to avoid
+  // such discrepancy. There is no problem for probe-based profile, as the
+  // TotalSamples is exactly the same as the accumulated body samples.
+  for (const auto &I : FSamples.getBodySamples())
+    TotalBodySamples += I.second.getSamples();
+
+  for (const auto &CallsiteSamples : FSamples.getCallsiteSamples())
+    for (const auto &Callee : CallsiteSamples.second) {
+      // For binary-level density, the inlinees' samples and size should be
+      // included in the calculation.
+      calculateBodySamplesAndSize(Callee.second, TotalBodySamples,
+                                  FuncBodySize);
+    }
+}
+
+// Calculate Profile-density:
+// Calculate the density for each function and sort them in descending order,
+// keep accumulating their total samples unitl it exceeds the
+// percentage_threshold(cut-off) of total profile samples, the profile-density
+// is the last(minimum) function-density of the processed functions, which means
+// all the functions hot to perf are on good density if the profile-density is
+// good. The percentage_threshold(--profile-density-cutoff-hot) is configurable
+// depending on how much regression the system want to tolerate.
+double
+ProfileGeneratorBase::calculateDensity(const SampleProfileMap &Profiles) {
+  double ProfileDensity = 0.0;
+
+  uint64_t TotalProfileSamples = 0;
+  // A list of the function profile density and its total samples.
+  std::vector<std::pair<double, uint64_t>> FuncDensityList;
+  for (const auto &I : Profiles) {
+    uint64_t TotalBodySamples = 0;
+    uint64_t FuncBodySize = 0;
+    calculateBodySamplesAndSize(I.second, TotalBodySamples, FuncBodySize);
+
+    if (FuncBodySize == 0)
+      continue;
+
+    double FuncDensity = static_cast<double>(TotalBodySamples) / FuncBodySize;
+    TotalProfileSamples += TotalBodySamples;
+    FuncDensityList.emplace_back(FuncDensity, TotalBodySamples);
+  }
+
+  // Sorted by the density in descending order.
+  llvm::stable_sort(FuncDensityList, [&](const std::pair<double, uint64_t> &A,
+                                         const std::pair<double, uint64_t> &B) {
+    if (A.first != B.first)
+      return A.first > B.first;
+    return A.second < B.second;
+  });
+
+  uint64_t AccumulatedSamples = 0;
+  uint32_t I = 0;
+  assert(ProfileDensityCutOffHot <= 1000000 &&
+         "The cutoff value is greater than 1000000(100%)");
+  while (AccumulatedSamples < TotalProfileSamples *
+                                  static_cast<float>(ProfileDensityCutOffHot) /
+                                  1000000 &&
+         I < FuncDensityList.size()) {
+    AccumulatedSamples += FuncDensityList[I].second;
+    ProfileDensity = FuncDensityList[I].first;
+    I++;
+  }
+
+  return ProfileDensity;
+}
+
 void ProfileGeneratorBase::calculateAndShowDensity(
     const SampleProfileMap &Profiles) {
-  double Density = calculateDensity(Profiles, HotCountThreshold);
+  double Density = calculateDensity(Profiles);
   showDensitySuggestion(Density);
 }
 
@@ -774,6 +930,8 @@ void CSProfileGenerator::generateProfile() {
     Binary->decodePseudoProbe();
     if (InferMissingFrames)
       initializeMissingFrameInferrer();
+    if (LoadFunctionFromSymbol)
+      Binary->loadSymbolsFromPseudoProbe();
   }
 
   if (SampleCounters) {
@@ -1014,16 +1172,15 @@ void CSProfileGenerator::postProcessProfiles() {
             CSProfMaxColdContextDepth, EnableCSPreInliner);
   }
 
-  // Merge function samples of CS profile to calculate profile density.
-  sampleprof::SampleProfileMap ContextLessProfiles;
-  ProfileConverter::flattenProfile(ProfileMap, ContextLessProfiles, true);
-
-  calculateAndShowDensity(ContextLessProfiles);
   if (GenCSNestedProfile) {
     ProfileConverter CSConverter(ProfileMap);
     CSConverter.convertCSProfiles();
     FunctionSamples::ProfileIsCS = false;
   }
+  filterAmbiguousProfile(ProfileMap);
+  if (MarkAllContextPreinlined)
+    markAllContextPreinlined(ProfileMap);
+  ProfileGeneratorBase::calculateAndShowDensity(ProfileMap);
 }
 
 void ProfileGeneratorBase::computeSummaryAndThreshold(
@@ -1078,11 +1235,9 @@ void ProfileGeneratorBase::extractProbesFromRange(
     do {
       const AddressProbesMap &Address2ProbesMap =
           Binary->getAddress2ProbesMap();
-      auto It = Address2ProbesMap.find(IP.Address);
-      if (It != Address2ProbesMap.end()) {
-        for (const auto &Probe : It->second) {
-          ProbeCounter[&Probe] += Count;
-        }
+      for (const MCDecodedPseudoProbe &Probe :
+           Address2ProbesMap.find(IP.Address)) {
+        ProbeCounter[&Probe] += Count;
       }
     } while (IP.advance() && IP.Address <= RangeEnd);
   }
@@ -1188,9 +1343,9 @@ void CSProfileGenerator::populateBodySamplesWithProbes(
   // and will be inferred by the compiler.
   for (auto &I : FrameSamples) {
     for (auto *FunctionProfile : I.second) {
-      for (auto *Probe : I.first->getProbes()) {
-        FunctionProfile->addBodySamples(Probe->getIndex(),
-                                        Probe->getDiscriminator(), 0);
+      for (const MCDecodedPseudoProbe &Probe : I.first->getProbes()) {
+        FunctionProfile->addBodySamples(Probe.getIndex(),
+                                        Probe.getDiscriminator(), 0);
       }
     }
   }

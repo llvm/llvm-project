@@ -17,11 +17,19 @@
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
-#include <complex>
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/ccomplex>
+#else
+#  include <complex>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
+
+#  if _LIBCPP_STD_VER >= 17 && !__building_module(std) && _LIBCPP_DIAGNOSE_DEPRECATED_HEADERS
+#    warning <ccomplex> is deprecated in C++17 and removed in C++20. Include <complex> instead.
+#  endif
+
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_CCOMPLEX

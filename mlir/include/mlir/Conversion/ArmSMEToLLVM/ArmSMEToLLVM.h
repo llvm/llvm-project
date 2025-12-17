@@ -1,0 +1,38 @@
+//===- ArmSMEToLLVM.h - Convert ArmSME to LLVM dialect ----------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef MLIR_CONVERSION_ARMSMETOLLVM_ARMSMETOLLVM_H_
+#define MLIR_CONVERSION_ARMSMETOLLVM_ARMSMETOLLVM_H_
+
+#include <memory>
+
+#include "mlir/Dialect/ArmSME/Transforms/Passes.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
+
+namespace mlir {
+class Pass;
+class RewritePatternSet;
+
+#define GEN_PASS_DECL_CONVERTARMSMETOLLVM
+#include "mlir/Conversion/Passes.h.inc"
+
+/// Create a pass to convert from the ArmSME dialect to LLVM intrinsics.
+std::unique_ptr<Pass>
+createConvertArmSMEToLLVMPass(bool dumpTileLiveRanges = false);
+
+/// Configure target to convert from the ArmSME dialect to LLVM intrinsics.
+void configureArmSMEToLLVMConversionLegality(ConversionTarget &target);
+
+/// Populate the given list with patterns that convert from the ArmSME dialect
+/// to LLVM intrinsics.
+void populateArmSMEToLLVMConversionPatterns(LLVMTypeConverter &converter,
+                                            RewritePatternSet &patterns);
+
+} // namespace mlir
+
+#endif // MLIR_CONVERSION_ARMSMETOLLVM_ARMSMETOLLVM_H_

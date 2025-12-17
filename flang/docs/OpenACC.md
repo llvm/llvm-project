@@ -25,3 +25,15 @@ local:
   logical expression.
 * `!$acc routine` directive can be placed at the top level. 
 * `!$acc cache` directive accepts scalar variable.
+* The `!$acc declare` directive accepts assumed size array arguments for 
+  `deviceptr` and `present` clauses.
+* The OpenACC specification disallows a variable appearing multiple times in
+  clauses of `!$acc declare` directives for a function, subroutine, program,
+  or module, but it is allowed with a warning when same clause is used.
+
+## Remarks about incompatibilities with other implementations
+* Array element references in the data clauses are equivalent to array sections
+  consisting of this single element, i.e. `copyin(a(n))` is equivalent to
+  `copyin(a(n:n))`.  Some other implementations have treated it as
+  `copyin(a(:n))`, which does not correspond to OpenACC spec – Flang does not
+  support this interpretation of an array element reference.

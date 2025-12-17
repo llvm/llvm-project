@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/RegReAssign.h"
+#include "bolt/Core/BinaryFunctionCallGraph.h"
 #include "bolt/Core/MCPlus.h"
-#include "bolt/Passes/BinaryFunctionCallGraph.h"
 #include "bolt/Passes/DataflowAnalysis.h"
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Utils/Utils.h"
@@ -145,7 +145,7 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
       const bool CannotUseREX = BC.MIB->cannotUseREX(Inst);
       const MCInstrDesc &Desc = BC.MII->get(Inst.getOpcode());
 
-      // Disallow substituitions involving regs in implicit uses lists
+      // Disallow substitutions involving regs in implicit uses lists
       for (MCPhysReg ImplicitUse : Desc.implicit_uses()) {
         const size_t RegEC =
             BC.MIB->getAliases(ImplicitUse, false).find_first();
@@ -153,7 +153,7 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
             std::numeric_limits<decltype(RegScore)::value_type>::min();
       }
 
-      // Disallow substituitions involving regs in implicit defs lists
+      // Disallow substitutions involving regs in implicit defs lists
       for (MCPhysReg ImplicitDef : Desc.implicit_defs()) {
         const size_t RegEC =
             BC.MIB->getAliases(ImplicitDef, false).find_first();
@@ -174,7 +174,7 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
         if (RegEC == 0)
           continue;
 
-        // Disallow substituitions involving regs in instrs that cannot use REX
+        // Disallow substitutions involving regs in instrs that cannot use REX
         // The relationship of X86 registers is shown in the diagram. BL and BH
         // do not have a direct alias relationship. However, if the BH register
         // cannot be swapped, then the BX/EBX/RBX registers cannot be swapped as
@@ -452,7 +452,7 @@ void RegReAssign::setupConservativePass(
   });
 }
 
-void RegReAssign::runOnFunctions(BinaryContext &BC) {
+Error RegReAssign::runOnFunctions(BinaryContext &BC) {
   RegScore = std::vector<int64_t>(BC.MRI->getNumRegs(), 0);
   RankedRegs = std::vector<size_t>(BC.MRI->getNumRegs(), 0);
 
@@ -480,18 +480,20 @@ void RegReAssign::runOnFunctions(BinaryContext &BC) {
   }
 
   if (FuncsChanged.empty()) {
-    outs() << "BOLT-INFO: Reg Reassignment Pass: no changes were made.\n";
-    return;
+    BC.outs() << "BOLT-INFO: Reg Reassignment Pass: no changes were made.\n";
+    return Error::success();
   }
   if (opts::UpdateDebugSections)
-    outs() << "BOLT-WARNING: You used -reg-reassign and -update-debug-sections."
-           << " Some registers were changed but associated AT_LOCATION for "
-           << "impacted variables were NOT updated! This operation is "
-           << "currently unsupported by BOLT.\n";
-  outs() << "BOLT-INFO: Reg Reassignment Pass Stats:\n";
-  outs() << "\t   " << FuncsChanged.size() << " functions affected.\n";
-  outs() << "\t   " << StaticBytesSaved << " static bytes saved.\n";
-  outs() << "\t   " << DynBytesSaved << " dynamic bytes saved.\n";
+    BC.outs()
+        << "BOLT-WARNING: You used -reg-reassign and -update-debug-sections."
+        << " Some registers were changed but associated AT_LOCATION for "
+        << "impacted variables were NOT updated! This operation is "
+        << "currently unsupported by BOLT.\n";
+  BC.outs() << "BOLT-INFO: Reg Reassignment Pass Stats:\n";
+  BC.outs() << "\t   " << FuncsChanged.size() << " functions affected.\n";
+  BC.outs() << "\t   " << StaticBytesSaved << " static bytes saved.\n";
+  BC.outs() << "\t   " << DynBytesSaved << " dynamic bytes saved.\n";
+  return Error::success();
 }
 
 } // namespace bolt

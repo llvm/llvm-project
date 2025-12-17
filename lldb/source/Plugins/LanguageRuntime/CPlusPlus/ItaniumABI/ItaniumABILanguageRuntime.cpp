@@ -13,8 +13,6 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
@@ -35,6 +33,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
 
 #include <vector>
 
@@ -69,9 +69,8 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfo(
       LLDB_LOGF(log,
                 "0x%16.16" PRIx64
                 ": static-type = '%s' has vtable symbol '%s'\n",
-                in_value.GetPointerValue(),
-                in_value.GetTypeName().GetCString(),
-                symbol_name.str().c_str());
+                in_value.GetPointerValue().address,
+                in_value.GetTypeName().GetCString(), symbol_name.str().c_str());
       // We are a C++ class, that's good.  Get the class name and look it
       // up:
       llvm::StringRef class_name = symbol_name;
@@ -82,29 +81,36 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfo(
       lookup_name.append(class_name.data(), class_name.size());
 
       type_info.SetName(class_name);
-      const bool exact_match = true;
+      ConstString const_lookup_name(lookup_name);
       TypeList class_types;
-
+      ModuleSP module_sp = vtable_info.symbol->CalculateSymbolContextModule();
       // First look in the module that the vtable symbol came from and
       // look for a single exact match.
-      llvm::DenseSet<SymbolFile *> searched_symbol_files;
-      ModuleSP module_sp = vtable_info.symbol->CalculateSymbolContextModule();
-      if (module_sp)
-        module_sp->FindTypes(ConstString(lookup_name), exact_match, 1,
-                              searched_symbol_files, class_types);
+      TypeResults results;
+      TypeQuery query(const_lookup_name.GetStringRef(),
+                      TypeQueryOptions::e_exact_match |
+                          TypeQueryOptions::e_strict_namespaces |
+                          TypeQueryOptions::e_find_one);
+      if (module_sp) {
+        module_sp->FindTypes(query, results);
+        TypeSP type_sp = results.GetFirstType();
+        if (type_sp)
+          class_types.Insert(type_sp);
+      }
 
       // If we didn't find a symbol, then move on to the entire module
       // list in the target and get as many unique matches as possible
-      Target &target = m_process->GetTarget();
-      if (class_types.Empty())
-        target.GetImages().FindTypes(nullptr, ConstString(lookup_name),
-                                      exact_match, UINT32_MAX,
-                                      searched_symbol_files, class_types);
+      if (class_types.Empty()) {
+        query.SetFindOne(false);
+        m_process->GetTarget().GetImages().FindTypes(nullptr, query, results);
+        for (const auto &type_sp : results.GetTypeMap().Types())
+          class_types.Insert(type_sp);
+      }
 
       lldb::TypeSP type_sp;
       if (class_types.Empty()) {
         LLDB_LOGF(log, "0x%16.16" PRIx64 ": is not dynamic\n",
-                  in_value.GetPointerValue());
+                  in_value.GetPointerValue().address);
         return TypeAndOrName();
       }
       if (class_types.GetSize() == 1) {
@@ -112,13 +118,13 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfo(
         if (type_sp) {
           if (TypeSystemClang::IsCXXClassType(
                   type_sp->GetForwardCompilerType())) {
-            LLDB_LOGF(
-                log,
-                "0x%16.16" PRIx64
-                ": static-type = '%s' has dynamic type: uid={0x%" PRIx64
-                "}, type-name='%s'\n",
-                in_value.GetPointerValue(), in_value.GetTypeName().AsCString(),
-                type_sp->GetID(), type_sp->GetName().GetCString());
+            LLDB_LOGF(log,
+                      "0x%16.16" PRIx64
+                      ": static-type = '%s' has dynamic type: uid={0x%" PRIx64
+                      "}, type-name='%s'\n",
+                      in_value.GetPointerValue().address,
+                      in_value.GetTypeName().AsCString(), type_sp->GetID(),
+                      type_sp->GetName().GetCString());
             type_info.SetTypeSP(type_sp);
           }
         }
@@ -128,14 +134,13 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfo(
           for (i = 0; i < class_types.GetSize(); i++) {
             type_sp = class_types.GetTypeAtIndex(i);
             if (type_sp) {
-              LLDB_LOGF(
-                  log,
-                  "0x%16.16" PRIx64
-                  ": static-type = '%s' has multiple matching dynamic "
-                  "types: uid={0x%" PRIx64 "}, type-name='%s'\n",
-                  in_value.GetPointerValue(),
-                  in_value.GetTypeName().AsCString(),
-                  type_sp->GetID(), type_sp->GetName().GetCString());
+              LLDB_LOGF(log,
+                        "0x%16.16" PRIx64
+                        ": static-type = '%s' has multiple matching dynamic "
+                        "types: uid={0x%" PRIx64 "}, type-name='%s'\n",
+                        in_value.GetPointerValue().address,
+                        in_value.GetTypeName().AsCString(), type_sp->GetID(),
+                        type_sp->GetName().GetCString());
             }
           }
         }
@@ -145,14 +150,13 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfo(
           if (type_sp) {
             if (TypeSystemClang::IsCXXClassType(
                     type_sp->GetForwardCompilerType())) {
-              LLDB_LOGF(
-                  log,
-                  "0x%16.16" PRIx64 ": static-type = '%s' has multiple "
-                  "matching dynamic types, picking "
-                  "this one: uid={0x%" PRIx64 "}, type-name='%s'\n",
-                  in_value.GetPointerValue(),
-                  in_value.GetTypeName().AsCString(),
-                  type_sp->GetID(), type_sp->GetName().GetCString());
+              LLDB_LOGF(log,
+                        "0x%16.16" PRIx64 ": static-type = '%s' has multiple "
+                        "matching dynamic types, picking "
+                        "this one: uid={0x%" PRIx64 "}, type-name='%s'\n",
+                        in_value.GetPointerValue().address,
+                        in_value.GetTypeName().AsCString(), type_sp->GetID(),
+                        type_sp->GetName().GetCString());
               type_info.SetTypeSP(type_sp);
             }
           }
@@ -163,7 +167,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfo(
                     "0x%16.16" PRIx64
                     ": static-type = '%s' has multiple matching dynamic "
                     "types, didn't find a C++ match\n",
-                    in_value.GetPointerValue(),
+                    in_value.GetPointerValue().address,
                     in_value.GetTypeName().AsCString());
         }
       }
@@ -223,13 +227,10 @@ llvm::Expected<LanguageRuntime::VTableInfo>
     return llvm::createStringError(std::errc::invalid_argument,
                                    "invalid process");
 
-  AddressType address_type;
-  lldb::addr_t original_ptr = LLDB_INVALID_ADDRESS;
-  if (type.IsPointerOrReferenceType())
-    original_ptr = in_value.GetPointerValue(&address_type);
-  else
-    original_ptr = in_value.GetAddressOf(/*scalar_is_load_address=*/true,
-                                         &address_type);
+  auto [original_ptr, address_type] =
+      type.IsPointerOrReferenceType()
+          ? in_value.GetPointerValue()
+          : in_value.GetAddressOf(/*scalar_is_load_address=*/true);
   if (original_ptr == LLDB_INVALID_ADDRESS || address_type != eAddressTypeLoad)
     return llvm::createStringError(std::errc::invalid_argument,
                                    "failed to get the address of the value");
@@ -268,7 +269,7 @@ llvm::Expected<LanguageRuntime::VTableInfo>
                                    "no symbol found for 0x%" PRIx64,
                                    vtable_load_addr);
   llvm::StringRef name = symbol->GetMangled().GetDemangledName().GetStringRef();
-  if (name.startswith(vtable_demangled_prefix)) {
+  if (name.starts_with(vtable_demangled_prefix)) {
     VTableInfo info = {vtable_addr, symbol};
     std::lock_guard<std::mutex> locker(m_mutex);
     auto pos = m_vtable_info_map[vtable_addr] = info;
@@ -282,7 +283,7 @@ llvm::Expected<LanguageRuntime::VTableInfo>
 bool ItaniumABILanguageRuntime::GetDynamicTypeAndAddress(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     TypeAndOrName &class_type_or_name, Address &dynamic_address,
-    Value::ValueType &value_type) {
+    Value::ValueType &value_type, llvm::ArrayRef<uint8_t> &local_buffer) {
   // For Itanium, if the type has a vtable pointer in the object, it will be at
   // offset 0 in the object.  That will point to the "address point" within the
   // vtable (not the beginning of the vtable.)  We can then look up the symbol
@@ -343,14 +344,15 @@ bool ItaniumABILanguageRuntime::GetDynamicTypeAndAddress(
   if (offset_to_top_location >= vtable_load_addr)
     return false;
   Status error;
-  const int64_t offset_to_top = m_process->ReadSignedIntegerFromMemory(
+  const int64_t offset_to_top = target.ReadSignedIntegerFromMemory(
       offset_to_top_location, addr_byte_size, INT64_MIN, error);
 
   if (offset_to_top == INT64_MIN)
     return false;
   // So the dynamic type is a value that starts at offset_to_top above
   // the original address.
-  lldb::addr_t dynamic_addr = in_value.GetPointerValue() + offset_to_top;
+  lldb::addr_t dynamic_addr =
+      in_value.GetPointerValue().address + offset_to_top;
   if (!m_process->GetTarget().ResolveLoadAddress(
           dynamic_addr, dynamic_address)) {
     dynamic_address.SetRawAddress(dynamic_addr);
@@ -413,19 +415,7 @@ public:
       : CommandObjectParsed(
             interpreter, "demangle", "Demangle a C++ mangled name.",
             "language cplusplus demangle [<mangled-name> ...]") {
-    CommandArgumentEntry arg;
-    CommandArgumentData index_arg;
-
-    // Define the first (and only) variant of this arg.
-    index_arg.arg_type = eArgTypeSymbol;
-    index_arg.arg_repetition = eArgRepeatPlus;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(index_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeSymbol, eArgRepeatPlus);
   }
 
   ~CommandObjectMultiwordItaniumABI_Demangle() override = default;
@@ -444,7 +434,7 @@ protected:
       // on behalf of the user.   This is the moral equivalent of the -_/-n
       // options to c++filt
       auto name = entry.ref();
-      if (name.startswith("__Z"))
+      if (name.starts_with("__Z"))
         name = name.drop_front();
 
       Mangled mangled(name);
@@ -607,7 +597,7 @@ bool ItaniumABILanguageRuntime::ExceptionBreakpointsExplainStop(
     return false;
 
   uint64_t break_site_id = stop_reason->GetValue();
-  return m_process->GetBreakpointSiteList().BreakpointSiteContainsBreakpoint(
+  return m_process->GetBreakpointSiteList().StopPointSiteContainsBreakpoint(
       break_site_id, m_cxx_exception_bp_sp->GetID());
 }
 

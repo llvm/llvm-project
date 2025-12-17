@@ -39,8 +39,8 @@ Status CommandObjectThreadTraceExportCTF::CommandOptions::SetOptionValue(
     int64_t thread_index;
     if (option_arg.empty() || option_arg.getAsInteger(0, thread_index) ||
         thread_index < 0)
-      error.SetErrorStringWithFormat("invalid integer value for option '%s'",
-                                     option_arg.str().c_str());
+      error = Status::FromErrorStringWithFormatv(
+          "invalid integer value for option '{0}'", option_arg);
     else
       m_thread_index = thread_index;
     break;

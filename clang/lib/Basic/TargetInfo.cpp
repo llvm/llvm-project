@@ -18,6 +18,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <cstdlib>
@@ -47,6 +48,10 @@ static const LangASMap FakeAddrSpaceMap = {
     11, // ptr32_uptr
     12, // ptr64
     13, // hlsl_groupshared
+    14, // hlsl_constant
+    15, // hlsl_private
+    16, // hlsl_device
+    17, // hlsl_input
     20, // wasm_funcref
 };
 
@@ -54,11 +59,12 @@ static const LangASMap FakeAddrSpaceMap = {
 TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   // Set defaults.  Defaults are set for a 32-bit RISC platform, like PPC or
   // SPARC.  These should be overridden by concrete targets as needed.
+  HasMustTail = true;
   BigEndian = !T.isLittleEndian();
   TLSSupported = true;
   VLASupported = true;
   NoAsmVariants = false;
-  HasLegalHalfType = false;
+  HasFastHalfType = false;
   HalfArgsAndReturns = false;
   HasFloat128 = false;
   HasIbm128 = false;
@@ -70,6 +76,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   HasStrictFP = false;
   PointerWidth = PointerAlign = 32;
   BoolWidth = BoolAlign = 8;
+  ShortWidth = ShortAlign = 16;
   IntWidth = IntAlign = 32;
   LongWidth = LongAlign = 32;
   LongLongWidth = LongLongAlign = 64;
@@ -140,6 +147,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   UseLeadingZeroLengthBitfield = true;
   UseExplicitBitFieldAlignment = true;
   ZeroLengthBitfieldBoundary = 0;
+  LargestOverSizedBitfieldContainer = 64;
   MaxAlignedAttribute = 0;
   HalfFormat = &llvm::APFloat::IEEEhalf();
   FloatFormat = &llvm::APFloat::IEEEsingle();
@@ -148,15 +156,15 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   Float128Format = &llvm::APFloat::IEEEquad();
   Ibm128Format = &llvm::APFloat::PPCDoubleDouble();
   MCountName = "mcount";
-  UserLabelPrefix = "_";
+  UserLabelPrefix = Triple.isOSBinFormatMachO() ? "_" : "";
   RegParmMax = 0;
   SSERegParmMax = 0;
   HasAlignMac68kSupport = false;
   HasBuiltinMSVaList = false;
-  IsRenderScriptTarget = false;
-  HasAArch64SVETypes = false;
+  HasAArch64ACLETypes = false;
   HasRISCVVTypes = false;
   AllowAMDGPUUnsafeFPAtomics = false;
+  HasUnalignedAccess = false;
   ARMCDECoprocMask = 0;
 
   // Default to no types using fpret.
@@ -166,9 +174,11 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   ComplexLongDoubleUsesFP2Ret = false;
 
   // Set the C++ ABI based on the triple.
-  TheCXXABI.set(Triple.isKnownWindowsMSVCEnvironment()
+  TheCXXABI.set(Triple.isKnownWindowsMSVCEnvironment() || Triple.isUEFI()
                     ? TargetCXXABI::Microsoft
                     : TargetCXXABI::GenericItanium);
+
+  HasMicrosoftRecordLayout = TheCXXABI.isMicrosoft();
 
   // Default to an empty address space map.
   AddrSpaceMap = &DefaultAddrSpaceMap;
@@ -186,14 +196,31 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
 // Out of line virtual dtor for TargetInfo.
 TargetInfo::~TargetInfo() {}
 
-void TargetInfo::resetDataLayout(StringRef DL, const char *ULP) {
-  DataLayoutString = DL.str();
-  UserLabelPrefix = ULP;
+void TargetInfo::resetDataLayout(StringRef DL) { DataLayoutString = DL.str(); }
+
+void TargetInfo::resetDataLayout() {
+  DataLayoutString = Triple.computeDataLayout(getABI());
 }
 
 bool
 TargetInfo::checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const {
   Diags.Report(diag::err_opt_not_valid_on_target) << "cf-protection=branch";
+  return false;
+}
+
+CFBranchLabelSchemeKind TargetInfo::getDefaultCFBranchLabelScheme() const {
+  // if this hook is called, the target should override it to return a
+  // non-default scheme
+  llvm::report_fatal_error("not implemented");
+}
+
+bool TargetInfo::checkCFBranchLabelSchemeSupported(
+    const CFBranchLabelSchemeKind Scheme, DiagnosticsEngine &Diags) const {
+  if (Scheme != CFBranchLabelSchemeKind::Default)
+    Diags.Report(diag::err_opt_not_valid_on_target)
+        << (Twine("mcf-branch-label-scheme=") +
+            getCFBranchLabelSchemeFlagVal(Scheme))
+               .str();
   return false;
 }
 
@@ -388,7 +415,8 @@ bool TargetInfo::isTypeSigned(IntType T) {
 /// Apply changes to the target information with respect to certain
 /// language options which change the target configuration and adjust
 /// the language based on the target options where applicable.
-void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
+void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+                        const TargetInfo *Aux) {
   if (Opts.NoBitFieldTypeAlign)
     UseBitFieldTypeAlignment = false;
 
@@ -405,11 +433,23 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
     LongDoubleAlign = 64;
   }
 
+  // HLSL explicitly defines the sizes and formats of some data types, and we
+  // need to conform to those regardless of what architecture you are targeting.
+  if (Opts.HLSL) {
+    BoolWidth = BoolAlign = 32;
+    LongWidth = LongAlign = 64;
+    if (!Opts.NativeHalfType) {
+      HalfFormat = &llvm::APFloat::IEEEsingle();
+      HalfWidth = HalfAlign = 32;
+    }
+  }
+
   if (Opts.OpenCL) {
     // OpenCL C requires specific widths for types, irrespective of
     // what these normally are for the target.
     // We also define long long and long double here, although the
     // OpenCL standard only mentions these as "reserved".
+    ShortWidth = ShortAlign = 16;
     IntWidth = IntAlign = 32;
     LongWidth = LongAlign = 64;
     LongLongWidth = LongLongAlign = 128;
@@ -516,13 +556,16 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
 
   if (Opts.FakeAddressSpaceMap)
     AddrSpaceMap = &FakeAddrSpaceMap;
+
+  // Check if it's CUDA device compilation; ensure layout consistency with host.
+  if (Opts.CUDA && Opts.CUDAIsDevice && Aux && !HasMicrosoftRecordLayout)
+    HasMicrosoftRecordLayout = Aux->getCXXABI().isMicrosoft();
 }
 
 bool TargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeatureVec) const {
-  for (const auto &F : FeatureVec) {
-    StringRef Name = F;
+  for (StringRef Name : FeatureVec) {
     if (Name.empty())
       continue;
     // Apply the feature via the target.
@@ -551,26 +594,26 @@ ParsedTargetAttr TargetInfo::parseTargetAttr(StringRef Features) const {
     // TODO: Support the fpmath option. It will require checking
     // overall feature validity for the function with the rest of the
     // attributes on the function.
-    if (Feature.startswith("fpmath="))
+    if (Feature.starts_with("fpmath="))
       continue;
 
-    if (Feature.startswith("branch-protection=")) {
+    if (Feature.starts_with("branch-protection=")) {
       Ret.BranchProtection = Feature.split('=').second.trim();
       continue;
     }
 
     // While we're here iterating check for a different target cpu.
-    if (Feature.startswith("arch=")) {
+    if (Feature.starts_with("arch=")) {
       if (!Ret.CPU.empty())
         Ret.Duplicate = "arch=";
       else
         Ret.CPU = Feature.split("=").second.trim();
-    } else if (Feature.startswith("tune=")) {
+    } else if (Feature.starts_with("tune=")) {
       if (!Ret.Tune.empty())
         Ret.Duplicate = "tune=";
       else
         Ret.Tune = Feature.split("=").second.trim();
-    } else if (Feature.startswith("no-"))
+    } else if (Feature.starts_with("no-"))
       Ret.Features.push_back("-" + Feature.split("-").second.str());
     else
       Ret.Features.push_back("+" + Feature.str());
@@ -586,8 +629,34 @@ TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
   return CCK_Default;
 }
 
+bool TargetInfo::callGlobalDeleteInDeletingDtor(
+    const LangOptions &LangOpts) const {
+  if (getCXXABI() == TargetCXXABI::Microsoft &&
+      LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver21)
+    return true;
+  return false;
+}
+
+bool TargetInfo::emitVectorDeletingDtors(const LangOptions &LangOpts) const {
+  if (getCXXABI() == TargetCXXABI::Microsoft &&
+      LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver21)
+    return true;
+  return false;
+}
+
 bool TargetInfo::areDefaultedSMFStillPOD(const LangOptions &LangOpts) const {
   return LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver15;
+}
+
+void TargetInfo::setDependentOpenCLOpts() {
+  auto &Opts = getSupportedOpenCLOpts();
+  if (!hasFeatureEnabled(Opts, "cl_khr_fp64") ||
+      !hasFeatureEnabled(Opts, "__opencl_c_fp64")) {
+    setFeatureEnabled(Opts, "__opencl_c_ext_fp64_global_atomic_add", false);
+    setFeatureEnabled(Opts, "__opencl_c_ext_fp64_local_atomic_add", false);
+    setFeatureEnabled(Opts, "__opencl_c_ext_fp64_global_atomic_min_max", false);
+    setFeatureEnabled(Opts, "__opencl_c_ext_fp64_local_atomic_min_max", false);
+  }
 }
 
 LangAS TargetInfo::getOpenCLTypeAddrSpace(OpenCLTypeKind TK) const {
@@ -925,6 +994,10 @@ bool TargetInfo::validateInputConstraint(
   return true;
 }
 
+bool TargetInfo::validatePointerAuthKey(const llvm::APSInt &value) const {
+  return false;
+}
+
 void TargetInfo::CheckFixedPointBits() const {
   // Check that the number of fractional and integral bits (and maybe sign) can
   // fit into the bits given for a fixed point type.
@@ -989,4 +1062,52 @@ void TargetInfo::copyAuxTarget(const TargetInfo *Aux) {
   auto *Target = static_cast<TransferrableTargetInfo*>(this);
   auto *Src = static_cast<const TransferrableTargetInfo*>(Aux);
   *Target = *Src;
+}
+
+std::string
+TargetInfo::simplifyConstraint(StringRef Constraint,
+                               SmallVectorImpl<ConstraintInfo> *OutCons) const {
+  std::string Result;
+
+  for (const char *I = Constraint.begin(), *E = Constraint.end(); I < E; I++) {
+    switch (*I) {
+    default:
+      Result += convertConstraint(I);
+      break;
+    // Ignore these
+    case '*':
+    case '?':
+    case '!':
+    case '=': // Will see this and the following in mult-alt constraints.
+    case '+':
+      break;
+    case '#': // Ignore the rest of the constraint alternative.
+      while (I + 1 != E && I[1] != ',')
+        I++;
+      break;
+    case '&':
+    case '%':
+      Result += *I;
+      while (I + 1 != E && I[1] == *I)
+        I++;
+      break;
+    case ',':
+      Result += "|";
+      break;
+    case 'g':
+      Result += "imr";
+      break;
+    case '[': {
+      assert(OutCons &&
+             "Must pass output names to constraints with a symbolic name");
+      unsigned Index;
+      bool ResolveResult = resolveSymbolicName(I, *OutCons, Index);
+      assert(ResolveResult && "Could not resolve symbolic name");
+      (void)ResolveResult;
+      Result += llvm::utostr(Index);
+      break;
+    }
+    }
+  }
+  return Result;
 }

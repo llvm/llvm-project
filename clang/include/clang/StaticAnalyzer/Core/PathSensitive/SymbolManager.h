@@ -18,12 +18,14 @@
 #include "clang/AST/Type.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/APSIntPtr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include <cassert>
@@ -42,18 +44,19 @@ class StoreManager;
 class SymbolRegionValue : public SymbolData {
   const TypedValueRegion *R;
 
-public:
+  friend class SymExprAllocator;
   SymbolRegionValue(SymbolID sym, const TypedValueRegion *r)
-      : SymbolData(SymbolRegionValueKind, sym), R(r) {
+      : SymbolData(ClassKind, sym), R(r) {
     assert(r);
     assert(isValidTypeForSymbol(r->getValueType()));
   }
 
+public:
   LLVM_ATTRIBUTE_RETURNS_NONNULL
-  const TypedValueRegion* getRegion() const { return R; }
+  const TypedValueRegion *getRegion() const { return R; }
 
   static void Profile(llvm::FoldingSetNodeID& profile, const TypedValueRegion* R) {
-    profile.AddInteger((unsigned) SymbolRegionValueKind);
+    profile.AddInteger((unsigned)ClassKind);
     profile.AddPointer(R);
   }
 
@@ -69,36 +72,36 @@ public:
   QualType getType() const override;
 
   // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) {
-    return SE->getKind() == SymbolRegionValueKind;
-  }
+  static constexpr Kind ClassKind = SymbolRegionValueKind;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) { return K == ClassKind; }
 };
 
 /// A symbol representing the result of an expression in the case when we do
 /// not know anything about what the expression is.
 class SymbolConjured : public SymbolData {
-  const Stmt *S;
+  ConstCFGElementRef Elem;
   QualType T;
   unsigned Count;
   const LocationContext *LCtx;
   const void *SymbolTag;
 
-public:
-  SymbolConjured(SymbolID sym, const Stmt *s, const LocationContext *lctx,
-                 QualType t, unsigned count, const void *symbolTag)
-      : SymbolData(SymbolConjuredKind, sym), S(s), T(t), Count(count),
-        LCtx(lctx), SymbolTag(symbolTag) {
-    // FIXME: 's' might be a nullptr if we're conducting invalidation
-    // that was caused by a destructor call on a temporary object,
-    // which has no statement associated with it.
-    // Due to this, we might be creating the same invalidation symbol for
-    // two different invalidation passes (for two different temporaries).
+  friend class SymExprAllocator;
+  SymbolConjured(SymbolID sym, ConstCFGElementRef elem,
+                 const LocationContext *lctx, QualType t, unsigned count,
+                 const void *symbolTag)
+      : SymbolData(ClassKind, sym), Elem(elem), T(t), Count(count), LCtx(lctx),
+        SymbolTag(symbolTag) {
     assert(lctx);
     assert(isValidTypeForSymbol(t));
   }
 
-  /// It might return null.
-  const Stmt *getStmt() const { return S; }
+public:
+  ConstCFGElementRef getCFGElementRef() const { return Elem; }
+
+  // It might return null.
+  const Stmt *getStmt() const;
+
   unsigned getCount() const { return Count; }
   /// It might return null.
   const void *getTag() const { return SymbolTag; }
@@ -109,11 +112,11 @@ public:
 
   void dumpToStream(raw_ostream &os) const override;
 
-  static void Profile(llvm::FoldingSetNodeID& profile, const Stmt *S,
-                      QualType T, unsigned Count, const LocationContext *LCtx,
+  static void Profile(llvm::FoldingSetNodeID &profile, ConstCFGElementRef Elem,
+                      const LocationContext *LCtx, QualType T, unsigned Count,
                       const void *SymbolTag) {
-    profile.AddInteger((unsigned) SymbolConjuredKind);
-    profile.AddPointer(S);
+    profile.AddInteger((unsigned)ClassKind);
+    profile.Add(Elem);
     profile.AddPointer(LCtx);
     profile.Add(T);
     profile.AddInteger(Count);
@@ -121,13 +124,13 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID& profile) override {
-    Profile(profile, S, T, Count, LCtx, SymbolTag);
+    Profile(profile, Elem, LCtx, T, Count, SymbolTag);
   }
 
   // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) {
-    return SE->getKind() == SymbolConjuredKind;
-  }
+  static constexpr Kind ClassKind = SymbolConjuredKind;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) { return K == ClassKind; }
 };
 
 /// A symbol representing the value of a MemRegion whose parent region has
@@ -136,14 +139,15 @@ class SymbolDerived : public SymbolData {
   SymbolRef parentSymbol;
   const TypedValueRegion *R;
 
-public:
+  friend class SymExprAllocator;
   SymbolDerived(SymbolID sym, SymbolRef parent, const TypedValueRegion *r)
-      : SymbolData(SymbolDerivedKind, sym), parentSymbol(parent), R(r) {
+      : SymbolData(ClassKind, sym), parentSymbol(parent), R(r) {
     assert(parent);
     assert(r);
     assert(isValidTypeForSymbol(r->getValueType()));
   }
 
+public:
   LLVM_ATTRIBUTE_RETURNS_NONNULL
   SymbolRef getParentSymbol() const { return parentSymbol; }
   LLVM_ATTRIBUTE_RETURNS_NONNULL
@@ -158,7 +162,7 @@ public:
 
   static void Profile(llvm::FoldingSetNodeID& profile, SymbolRef parent,
                       const TypedValueRegion *r) {
-    profile.AddInteger((unsigned) SymbolDerivedKind);
+    profile.AddInteger((unsigned)ClassKind);
     profile.AddPointer(r);
     profile.AddPointer(parent);
   }
@@ -168,9 +172,9 @@ public:
   }
 
   // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) {
-    return SE->getKind() == SymbolDerivedKind;
-  }
+  static constexpr Kind ClassKind = SymbolDerivedKind;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) { return K == ClassKind; }
 };
 
 /// SymbolExtent - Represents the extent (size in bytes) of a bounded region.
@@ -179,12 +183,13 @@ public:
 class SymbolExtent : public SymbolData {
   const SubRegion *R;
 
-public:
+  friend class SymExprAllocator;
   SymbolExtent(SymbolID sym, const SubRegion *r)
-      : SymbolData(SymbolExtentKind, sym), R(r) {
+      : SymbolData(ClassKind, sym), R(r) {
     assert(r);
   }
 
+public:
   LLVM_ATTRIBUTE_RETURNS_NONNULL
   const SubRegion *getRegion() const { return R; }
 
@@ -195,7 +200,7 @@ public:
   void dumpToStream(raw_ostream &os) const override;
 
   static void Profile(llvm::FoldingSetNodeID& profile, const SubRegion *R) {
-    profile.AddInteger((unsigned) SymbolExtentKind);
+    profile.AddInteger((unsigned)ClassKind);
     profile.AddPointer(R);
   }
 
@@ -204,9 +209,9 @@ public:
   }
 
   // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) {
-    return SE->getKind() == SymbolExtentKind;
-  }
+  static constexpr Kind ClassKind = SymbolExtentKind;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) { return K == ClassKind; }
 };
 
 /// SymbolMetadata - Represents path-dependent metadata about a specific region.
@@ -218,21 +223,24 @@ class SymbolMetadata : public SymbolData {
   const Stmt *S;
   QualType T;
   const LocationContext *LCtx;
+  /// Count can be used to differentiate regions corresponding to
+  /// different loop iterations, thus, making the symbol path-dependent.
   unsigned Count;
   const void *Tag;
 
-public:
-  SymbolMetadata(SymbolID sym, const MemRegion* r, const Stmt *s, QualType t,
+  friend class SymExprAllocator;
+  SymbolMetadata(SymbolID sym, const MemRegion *r, const Stmt *s, QualType t,
                  const LocationContext *LCtx, unsigned count, const void *tag)
-      : SymbolData(SymbolMetadataKind, sym), R(r), S(s), T(t), LCtx(LCtx),
-        Count(count), Tag(tag) {
-      assert(r);
-      assert(s);
-      assert(isValidTypeForSymbol(t));
-      assert(LCtx);
-      assert(tag);
-    }
+      : SymbolData(ClassKind, sym), R(r), S(s), T(t), LCtx(LCtx), Count(count),
+        Tag(tag) {
+    assert(r);
+    assert(s);
+    assert(isValidTypeForSymbol(t));
+    assert(LCtx);
+    assert(tag);
+  }
 
+  public:
     LLVM_ATTRIBUTE_RETURNS_NONNULL
     const MemRegion *getRegion() const { return R; }
 
@@ -256,7 +264,7 @@ public:
     static void Profile(llvm::FoldingSetNodeID &profile, const MemRegion *R,
                         const Stmt *S, QualType T, const LocationContext *LCtx,
                         unsigned Count, const void *Tag) {
-      profile.AddInteger((unsigned)SymbolMetadataKind);
+      profile.AddInteger((unsigned)ClassKind);
       profile.AddPointer(R);
       profile.AddPointer(S);
       profile.Add(T);
@@ -270,9 +278,9 @@ public:
   }
 
   // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) {
-    return SE->getKind() == SymbolMetadataKind;
-  }
+  static constexpr Kind ClassKind = SymbolMetadataKind;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) { return K == ClassKind; }
 };
 
 /// Represents a cast expression.
@@ -285,15 +293,16 @@ class SymbolCast : public SymExpr {
   /// The type of the result.
   QualType ToTy;
 
-public:
-  SymbolCast(const SymExpr *In, QualType From, QualType To)
-      : SymExpr(SymbolCastKind), Operand(In), FromTy(From), ToTy(To) {
+  friend class SymExprAllocator;
+  SymbolCast(SymbolID Sym, const SymExpr *In, QualType From, QualType To)
+      : SymExpr(ClassKind, Sym), Operand(In), FromTy(From), ToTy(To) {
     assert(In);
     assert(isValidTypeForSymbol(From));
     // FIXME: GenericTaintChecker creates symbols of void type.
     // Otherwise, 'To' should also be a valid type.
   }
 
+public:
   unsigned computeComplexity() const override {
     if (Complexity == 0)
       Complexity = 1 + Operand->computeComplexity();
@@ -309,7 +318,7 @@ public:
 
   static void Profile(llvm::FoldingSetNodeID& ID,
                       const SymExpr *In, QualType From, QualType To) {
-    ID.AddInteger((unsigned) SymbolCastKind);
+    ID.AddInteger((unsigned)ClassKind);
     ID.AddPointer(In);
     ID.Add(From);
     ID.Add(To);
@@ -320,9 +329,9 @@ public:
   }
 
   // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) {
-    return SE->getKind() == SymbolCastKind;
-  }
+  static constexpr Kind ClassKind = SymbolCastKind;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) { return K == ClassKind; }
 };
 
 /// Represents a symbolic expression involving a unary operator.
@@ -331,9 +340,10 @@ class UnarySymExpr : public SymExpr {
   UnaryOperator::Opcode Op;
   QualType T;
 
-public:
-  UnarySymExpr(const SymExpr *In, UnaryOperator::Opcode Op, QualType T)
-      : SymExpr(UnarySymExprKind), Operand(In), Op(Op), T(T) {
+  friend class SymExprAllocator;
+  UnarySymExpr(SymbolID Sym, const SymExpr *In, UnaryOperator::Opcode Op,
+               QualType T)
+      : SymExpr(ClassKind, Sym), Operand(In), Op(Op), T(T) {
     // Note, some unary operators are modeled as a binary operator. E.g. ++x is
     // modeled as x + 1.
     assert((Op == UO_Minus || Op == UO_Not) && "non-supported unary expression");
@@ -344,6 +354,7 @@ public:
     assert(!Loc::isLocType(T) && "unary symbol should be nonloc");
   }
 
+public:
   unsigned computeComplexity() const override {
     if (Complexity == 0)
       Complexity = 1 + Operand->computeComplexity();
@@ -358,7 +369,7 @@ public:
 
   static void Profile(llvm::FoldingSetNodeID &ID, const SymExpr *In,
                       UnaryOperator::Opcode Op, QualType T) {
-    ID.AddInteger((unsigned)UnarySymExprKind);
+    ID.AddInteger((unsigned)ClassKind);
     ID.AddPointer(In);
     ID.AddInteger(Op);
     ID.Add(T);
@@ -369,9 +380,9 @@ public:
   }
 
   // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) {
-    return SE->getKind() == UnarySymExprKind;
-  }
+  static constexpr Kind ClassKind = UnarySymExprKind;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) { return K == ClassKind; }
 };
 
 /// Represents a symbolic expression involving a binary operator
@@ -380,8 +391,8 @@ class BinarySymExpr : public SymExpr {
   QualType T;
 
 protected:
-  BinarySymExpr(Kind k, BinaryOperator::Opcode op, QualType t)
-      : SymExpr(k), Op(op), T(t) {
+  BinarySymExpr(SymbolID Sym, Kind k, BinaryOperator::Opcode op, QualType t)
+      : SymExpr(k, Sym), Op(op), T(t) {
     assert(classof(this));
     // Binary expressions are results of arithmetic. Pointer arithmetic is not
     // handled by binary expressions, but it is instead handled by applying
@@ -397,9 +408,9 @@ public:
   BinaryOperator::Opcode getOpcode() const { return Op; }
 
   // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) {
-    Kind k = SE->getKind();
-    return k >= BEGIN_BINARYSYMEXPRS && k <= END_BINARYSYMEXPRS;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) {
+    return K >= BEGIN_BINARYSYMEXPRS && K <= END_BINARYSYMEXPRS;
   }
 
 protected:
@@ -410,9 +421,7 @@ protected:
     return 1;
   }
 
-  static const llvm::APSInt *getPointer(const llvm::APSInt &Value) {
-    return &Value;
-  }
+  static const llvm::APSInt *getPointer(APSIntPtr Value) { return Value.get(); }
   static const SymExpr *getPointer(const SymExpr *Value) { return Value; }
 
   static void dumpToStreamImpl(raw_ostream &os, const SymExpr *Value);
@@ -421,19 +430,20 @@ protected:
 };
 
 /// Template implementation for all binary symbolic expressions
-template <class LHSTYPE, class RHSTYPE, SymExpr::Kind ClassKind>
+template <class LHSTYPE, class RHSTYPE, SymExpr::Kind ClassK>
 class BinarySymExprImpl : public BinarySymExpr {
   LHSTYPE LHS;
   RHSTYPE RHS;
 
-public:
-  BinarySymExprImpl(LHSTYPE lhs, BinaryOperator::Opcode op, RHSTYPE rhs,
-                    QualType t)
-      : BinarySymExpr(ClassKind, op, t), LHS(lhs), RHS(rhs) {
+  friend class SymExprAllocator;
+  BinarySymExprImpl(SymbolID Sym, LHSTYPE lhs, BinaryOperator::Opcode op,
+                    RHSTYPE rhs, QualType t)
+      : BinarySymExpr(Sym, ClassKind, op, t), LHS(lhs), RHS(rhs) {
     assert(getPointer(lhs));
     assert(getPointer(rhs));
   }
 
+public:
   void dumpToStream(raw_ostream &os) const override {
     dumpToStreamImpl(os, LHS);
     dumpToStreamImpl(os, getOpcode());
@@ -464,20 +474,37 @@ public:
   }
 
   // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) { return SE->getKind() == ClassKind; }
+  static constexpr Kind ClassKind = ClassK;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) { return K == ClassKind; }
 };
 
 /// Represents a symbolic expression like 'x' + 3.
-using SymIntExpr = BinarySymExprImpl<const SymExpr *, const llvm::APSInt &,
+using SymIntExpr = BinarySymExprImpl<const SymExpr *, APSIntPtr,
                                      SymExpr::Kind::SymIntExprKind>;
 
 /// Represents a symbolic expression like 3 - 'x'.
-using IntSymExpr = BinarySymExprImpl<const llvm::APSInt &, const SymExpr *,
+using IntSymExpr = BinarySymExprImpl<APSIntPtr, const SymExpr *,
                                      SymExpr::Kind::IntSymExprKind>;
 
 /// Represents a symbolic expression like 'x' + 'y'.
 using SymSymExpr = BinarySymExprImpl<const SymExpr *, const SymExpr *,
                                      SymExpr::Kind::SymSymExprKind>;
+
+class SymExprAllocator {
+  SymbolID NextSymbolID = 0;
+  llvm::BumpPtrAllocator &Alloc;
+
+public:
+  explicit SymExprAllocator(llvm::BumpPtrAllocator &Alloc) : Alloc(Alloc) {}
+
+  template <class SymT, typename... ArgsT> SymT *make(ArgsT &&...Args) {
+    return new (Alloc) SymT(nextID(), std::forward<ArgsT>(Args)...);
+  }
+
+private:
+  SymbolID nextID() { return NextSymbolID++; }
+};
 
 class SymbolManager {
   using DataSetTy = llvm::FoldingSet<SymExpr>;
@@ -490,69 +517,30 @@ class SymbolManager {
   /// alive as long as the key is live.
   SymbolDependTy SymbolDependencies;
 
-  unsigned SymbolCounter = 0;
-  llvm::BumpPtrAllocator& BPAlloc;
+  SymExprAllocator Alloc;
   BasicValueFactory &BV;
   ASTContext &Ctx;
 
 public:
   SymbolManager(ASTContext &ctx, BasicValueFactory &bv,
-                llvm::BumpPtrAllocator& bpalloc)
-      : SymbolDependencies(16), BPAlloc(bpalloc), BV(bv), Ctx(ctx) {}
+                llvm::BumpPtrAllocator &bpalloc)
+      : SymbolDependencies(16), Alloc(bpalloc), BV(bv), Ctx(ctx) {}
 
   static bool canSymbolicate(QualType T);
 
-  /// Make a unique symbol for MemRegion R according to its kind.
-  const SymbolRegionValue* getRegionValueSymbol(const TypedValueRegion* R);
+  /// Create or retrieve a SymExpr of type \p SymExprT for the given arguments.
+  /// Use the arguments to check for an existing SymExpr and return it,
+  /// otherwise, create a new one and keep a pointer to it to avoid duplicates.
+  template <typename SymExprT, typename... Args>
+  const SymExprT *acquire(Args &&...args);
 
-  const SymbolConjured* conjureSymbol(const Stmt *E,
-                                      const LocationContext *LCtx,
-                                      QualType T,
-                                      unsigned VisitCount,
-                                      const void *SymbolTag = nullptr);
-
-  const SymbolConjured* conjureSymbol(const Expr *E,
-                                      const LocationContext *LCtx,
+  const SymbolConjured *conjureSymbol(ConstCFGElementRef Elem,
+                                      const LocationContext *LCtx, QualType T,
                                       unsigned VisitCount,
                                       const void *SymbolTag = nullptr) {
-    return conjureSymbol(E, LCtx, E->getType(), VisitCount, SymbolTag);
+
+    return acquire<SymbolConjured>(Elem, LCtx, T, VisitCount, SymbolTag);
   }
-
-  const SymbolDerived *getDerivedSymbol(SymbolRef parentSymbol,
-                                        const TypedValueRegion *R);
-
-  const SymbolExtent *getExtentSymbol(const SubRegion *R);
-
-  /// Creates a metadata symbol associated with a specific region.
-  ///
-  /// VisitCount can be used to differentiate regions corresponding to
-  /// different loop iterations, thus, making the symbol path-dependent.
-  const SymbolMetadata *getMetadataSymbol(const MemRegion *R, const Stmt *S,
-                                          QualType T,
-                                          const LocationContext *LCtx,
-                                          unsigned VisitCount,
-                                          const void *SymbolTag = nullptr);
-
-  const SymbolCast* getCastSymbol(const SymExpr *Operand,
-                                  QualType From, QualType To);
-
-  const SymIntExpr *getSymIntExpr(const SymExpr *lhs, BinaryOperator::Opcode op,
-                                  const llvm::APSInt& rhs, QualType t);
-
-  const SymIntExpr *getSymIntExpr(const SymExpr &lhs, BinaryOperator::Opcode op,
-                                  const llvm::APSInt& rhs, QualType t) {
-    return getSymIntExpr(&lhs, op, rhs, t);
-  }
-
-  const IntSymExpr *getIntSymExpr(const llvm::APSInt& lhs,
-                                  BinaryOperator::Opcode op,
-                                  const SymExpr *rhs, QualType t);
-
-  const SymSymExpr *getSymSymExpr(const SymExpr *lhs, BinaryOperator::Opcode op,
-                                  const SymExpr *rhs, QualType t);
-
-  const UnarySymExpr *getUnarySymExpr(const SymExpr *operand,
-                                      UnaryOperator::Opcode op, QualType t);
 
   QualType getType(const SymExpr *SE) const {
     return SE->getType();
@@ -685,8 +673,53 @@ public:
   virtual bool VisitMemRegion(const MemRegion *) { return true; }
 };
 
+template <typename T, typename... Args>
+const T *SymbolManager::acquire(Args &&...args) {
+  llvm::FoldingSetNodeID profile;
+  T::Profile(profile, args...);
+  void *InsertPos;
+  SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
+  if (!SD) {
+    SD = Alloc.make<T>(std::forward<Args>(args)...);
+    DataSet.InsertNode(SD, InsertPos);
+  }
+  return cast<T>(SD);
+}
+
 } // namespace ento
 
 } // namespace clang
+
+// Override the default definition that would use pointer values of SymbolRefs
+// to order them, which is unstable due to ASLR.
+// Use the SymbolID instead which reflect the order in which the symbols were
+// allocated. This is usually stable across runs leading to the stability of
+// ConstraintMap and other containers using SymbolRef as keys.
+template <>
+struct llvm::ImutContainerInfo<clang::ento::SymbolRef>
+    : public ImutProfileInfo<clang::ento::SymbolRef> {
+  using value_type = clang::ento::SymbolRef;
+  using value_type_ref = clang::ento::SymbolRef;
+  using key_type = value_type;
+  using key_type_ref = value_type_ref;
+  using data_type = bool;
+  using data_type_ref = bool;
+
+  static key_type_ref KeyOfValue(value_type_ref D) { return D; }
+  static data_type_ref DataOfValue(value_type_ref) { return true; }
+
+  static bool isEqual(clang::ento::SymbolRef LHS, clang::ento::SymbolRef RHS) {
+    return LHS->getSymbolID() == RHS->getSymbolID();
+  }
+
+  static bool isLess(clang::ento::SymbolRef LHS, clang::ento::SymbolRef RHS) {
+    return LHS->getSymbolID() < RHS->getSymbolID();
+  }
+
+  // This might seem redundant, but it is required because of the way
+  // ImmutableSet is implemented through AVLTree:
+  // same as ImmutableMap, but with a non-informative "data".
+  static bool isDataEqual(data_type_ref, data_type_ref) { return true; }
+};
 
 #endif // LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SYMBOLMANAGER_H

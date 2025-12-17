@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
-#include "ToolChains/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Option/ArgList.h"
@@ -23,7 +21,7 @@ using namespace llvm::opt;
 
 std::string x86::getX86TargetCPU(const Driver &D, const ArgList &Args,
                                  const llvm::Triple &Triple) {
-  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
     StringRef CPU = A->getValue();
     if (CPU != "native")
       return std::string(CPU);
@@ -44,6 +42,8 @@ std::string x86::getX86TargetCPU(const Driver &D, const ArgList &Args,
         {"AVX2", "haswell"},
         {"AVX512F", "knl"},
         {"AVX512", "skylake-avx512"},
+        {"AVX10.1", "sapphirerapids"},
+        {"AVX10.2", "diamondrapids"},
     });
     if (Triple.getArch() == llvm::Triple::x86) {
       // 32-bit-only /arch: flags.
@@ -121,21 +121,20 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                std::vector<StringRef> &Features) {
   // Claim and report unsupported -mabi=. Note: we don't support "sysv_abi" or
   // "ms_abi" as default function attributes.
-  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mabi_EQ)) {
-    StringRef DefaultAbi = Triple.isOSWindows() ? "ms" : "sysv";
+  if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
+    StringRef DefaultAbi =
+        (Triple.isOSWindows() || Triple.isUEFI()) ? "ms" : "sysv";
     if (A->getValue() != DefaultAbi)
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getSpelling() << Triple.getTriple();
   }
 
   // If -march=native, autodetect the feature list.
-  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
     if (StringRef(A->getValue()) == "native") {
-      llvm::StringMap<bool> HostFeatures;
-      if (llvm::sys::getHostCPUFeatures(HostFeatures))
-        for (auto &F : HostFeatures)
-          Features.push_back(
-              Args.MakeArgString((F.second ? "+" : "-") + F.first()));
+      for (auto &F : llvm::sys::getHostCPUFeatures())
+        Features.push_back(
+            Args.MakeArgString((F.second ? "+" : "-") + F.first()));
     }
   }
 
@@ -166,7 +165,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
   // flags). This is a bit hacky but keeps existing usages working. We should
   // consider deprecating this and instead warn if the user requests external
   // retpoline thunks and *doesn't* request some form of retpolines.
-  auto SpectreOpt = clang::driver::options::ID::OPT_INVALID;
+  auto SpectreOpt = options::ID::OPT_INVALID;
   if (Args.hasArgNoClaim(options::OPT_mretpoline, options::OPT_mno_retpoline,
                          options::OPT_mspeculative_load_hardening,
                          options::OPT_mno_speculative_load_hardening)) {
@@ -192,7 +191,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     SpectreOpt = options::OPT_mretpoline_external_thunk;
   }
 
-  auto LVIOpt = clang::driver::options::ID::OPT_INVALID;
+  auto LVIOpt = options::ID::OPT_INVALID;
   if (Args.hasFlag(options::OPT_mlvi_hardening, options::OPT_mno_lvi_hardening,
                    false)) {
     Features.push_back("+lvi-load-hardening");
@@ -210,7 +209,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
           << D.getOpts().getOptionName(options::OPT_mlvi_hardening)
           << D.getOpts().getOptionName(options::OPT_m_seses);
 
-    if (SpectreOpt != clang::driver::options::ID::OPT_INVALID)
+    if (SpectreOpt != options::ID::OPT_INVALID)
       D.Diag(diag::err_drv_argument_not_allowed_with)
           << D.getOpts().getOptionName(SpectreOpt)
           << D.getOpts().getOptionName(options::OPT_m_seses);
@@ -222,34 +221,11 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     }
   }
 
-  if (SpectreOpt != clang::driver::options::ID::OPT_INVALID &&
-      LVIOpt != clang::driver::options::ID::OPT_INVALID) {
+  if (SpectreOpt != options::ID::OPT_INVALID &&
+      LVIOpt != options::ID::OPT_INVALID) {
     D.Diag(diag::err_drv_argument_not_allowed_with)
         << D.getOpts().getOptionName(SpectreOpt)
         << D.getOpts().getOptionName(LVIOpt);
-  }
-
-  for (const Arg *A : Args.filtered(options::OPT_m_x86_AVX10_Features_Group)) {
-    StringRef Name = A->getOption().getName();
-    A->claim();
-
-    // Skip over "-m".
-    assert(Name.startswith("m") && "Invalid feature name.");
-    Name = Name.substr(1);
-
-    bool IsNegative = Name.startswith("no-");
-    if (IsNegative)
-      Name = Name.substr(3);
-
-#ifndef NDEBUG
-    assert(Name.startswith("avx10.") && "Invalid AVX10 feature name.");
-    StringRef Version, Width;
-    std::tie(Version, Width) = Name.substr(6).split('-');
-    assert(Version == "1" && "Invalid AVX10 feature name.");
-    assert((Width == "256" || Width == "512") && "Invalid AVX10 feature name.");
-#endif
-
-    Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
   }
 
   // Now add any that the user explicitly requested on the command line,
@@ -260,7 +236,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     A->claim();
 
     // Skip over "-m".
-    assert(Name.startswith("m") && "Invalid feature name.");
+    assert(Name.starts_with("m") && "Invalid feature name.");
     Name = Name.substr(1);
 
     // Replace -mgeneral-regs-only with -x87, -mmx, -sse
@@ -269,7 +245,33 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
       continue;
     }
 
-    bool IsNegative = Name.startswith("no-");
+    bool IsNegative = Name.starts_with("no-");
+
+    bool Not64Bit = ArchType != llvm::Triple::x86_64;
+    if (Not64Bit && Name == "uintr")
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << Triple.getTriple();
+
+    if (A->getOption().matches(options::OPT_mapx_features_EQ) ||
+        A->getOption().matches(options::OPT_mno_apx_features_EQ)) {
+
+      if (Not64Bit && !IsNegative)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << StringRef(A->getSpelling().str() + "|-mapxf")
+            << Triple.getTriple();
+
+      for (StringRef Value : A->getValues()) {
+        if (Value != "egpr" && Value != "push2pop2" && Value != "ppx" &&
+            Value != "ndd" && Value != "ccmp" && Value != "nf" &&
+            Value != "cf" && Value != "zu")
+          D.Diag(clang::diag::err_drv_unsupported_option_argument)
+              << A->getSpelling() << Value;
+
+        Features.push_back(
+            Args.MakeArgString((IsNegative ? "-" : "+") + Value));
+      }
+      continue;
+    }
     if (IsNegative)
       Name = Name.substr(3);
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
@@ -296,4 +298,19 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("+prefer-no-gather");
   if (Args.hasArg(options::OPT_mno_scatter))
     Features.push_back("+prefer-no-scatter");
+  if (Args.hasArg(options::OPT_mapx_inline_asm_use_gpr32))
+    Features.push_back("+inline-asm-use-gpr32");
+
+  // Warn for removed 3dnow support
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_m3dnowa, options::OPT_mno_3dnowa,
+                          options::OPT_mno_3dnow)) {
+    if (A->getOption().matches(options::OPT_m3dnowa))
+      D.Diag(diag::warn_drv_clang_unsupported) << A->getAsString(Args);
+  }
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_m3dnow, options::OPT_mno_3dnow)) {
+    if (A->getOption().matches(options::OPT_m3dnow))
+      D.Diag(diag::warn_drv_clang_unsupported) << A->getAsString(Args);
+  }
 }

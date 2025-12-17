@@ -1,5 +1,5 @@
 // RUN: rm -rf %t.cache
-// RUN: %clang --target=x86_64-apple-macosx -g -gmodules -Wno-objc-root-class \
+// RUN: %clangxx --target=x86_64-apple-macosx -g -gmodules -Wno-objc-root-class \
 // RUN:    -fmodules -fmodules-cache-path=%t.cache \
 // RUN:    -c -o %t.o %s -I%S/Inputs
 // RUN: lldb-test symbols -dump-clang-ast %t.o | FileCheck --check-prefix CHECK-ANON-S1 %s
@@ -17,7 +17,7 @@ Typedef t1;
 
 TopLevelStruct s1;
 // RUN: lldb-test symbols -dump-clang-ast -find type --language=ObjC++ \
-// RUN:   -compiler-context 'Module:A,Struct:TopLevelStruct' %t.o \
+// RUN:   -compiler-context 'Module:A,ClassOrStruct:TopLevelStruct' %t.o \
 // RUN:   | FileCheck %s --check-prefix=CHECK-TOPLEVELSTRUCT
 // CHECK-TOPLEVELSTRUCT: CXXRecordDecl {{.*}} imported in A struct TopLevelStruct
 // CHECK-TOPLEVELSTRUCT: -FieldDecl {{.*}} in A a 'int'
@@ -45,7 +45,7 @@ Enum e1;
 
 SomeClass *obj1;
 // RUN: lldb-test symbols -dump-clang-ast -find type --language=ObjC++ \
-// RUN:   -compiler-context 'Module:A,Struct:SomeClass' %t.o \
+// RUN:   -compiler-context 'Module:A,ClassOrStruct:SomeClass' %t.o \
 // RUN:   | FileCheck %s --check-prefix=CHECK-OBJC
 // CHECK-OBJC: ObjCInterfaceDecl {{.*}} imported in A <undeserialized declarations> SomeClass
 // CHECK-OBJC-NEXT: |-ObjCIvarDecl

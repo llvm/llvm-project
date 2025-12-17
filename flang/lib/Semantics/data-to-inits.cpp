@@ -118,9 +118,10 @@ private:
   bool Scan(const parser::DataIDoObject &);
 
   // Initializes all elements of a designator, which can be an array or section.
-  bool InitDesignator(const SomeExpr &);
+  bool InitDesignator(const SomeExpr &, const Scope &);
   // Initializes a single scalar object.
-  bool InitElement(const evaluate::OffsetSymbol &, const SomeExpr &designator);
+  bool InitElement(const evaluate::OffsetSymbol &, const SomeExpr &designator,
+      const Scope &);
   // If the returned flag is true, emit a warning about CHARACTER misusage.
   std::optional<std::pair<SomeExpr, bool>> ConvertElement(
       const SomeExpr &, const evaluate::DynamicType &);
@@ -128,7 +129,6 @@ private:
   DataInitializations &inits_;
   evaluate::ExpressionAnalyzer &exprAnalyzer_;
   ValueListIterator<DSV> values_;
-  const Scope *scope_{nullptr};
 };
 
 template <typename DSV>
@@ -149,8 +149,7 @@ bool DataInitializationCompiler<DSV>::Scan(const parser::Variable &var) {
   if (const auto *expr{GetExpr(exprAnalyzer_.context(), var)}) {
     parser::CharBlock at{var.GetSource()};
     exprAnalyzer_.GetFoldingContext().messages().SetLocation(at);
-    scope_ = &exprAnalyzer_.context().FindScope(at);
-    if (InitDesignator(*expr)) {
+    if (InitDesignator(*expr, exprAnalyzer_.context().FindScope(at))) {
       return true;
     }
   }
@@ -170,8 +169,7 @@ bool DataInitializationCompiler<DSV>::Scan(
   if (expr) {
     parser::CharBlock at{parser::FindSourceLocation(designator)};
     exprAnalyzer_.GetFoldingContext().messages().SetLocation(at);
-    scope_ = &exprAnalyzer_.context().FindScope(at);
-    if (InitDesignator(*expr)) {
+    if (InitDesignator(*expr, exprAnalyzer_.context().FindScope(at))) {
       return true;
     }
   }
@@ -181,13 +179,14 @@ bool DataInitializationCompiler<DSV>::Scan(
 template <typename DSV>
 bool DataInitializationCompiler<DSV>::Scan(const parser::DataImpliedDo &ido) {
   const auto &bounds{std::get<parser::DataImpliedDo::Bounds>(ido.t)};
-  auto name{bounds.name.thing.thing};
-  const auto *lowerExpr{
-      GetExpr(exprAnalyzer_.context(), bounds.lower.thing.thing)};
-  const auto *upperExpr{
-      GetExpr(exprAnalyzer_.context(), bounds.upper.thing.thing)};
+  const auto &name{parser::UnwrapRef<parser::Name>(bounds.name)};
+  const auto *lowerExpr{GetExpr(
+      exprAnalyzer_.context(), parser::UnwrapRef<parser::Expr>(bounds.lower))};
+  const auto *upperExpr{GetExpr(
+      exprAnalyzer_.context(), parser::UnwrapRef<parser::Expr>(bounds.upper))};
   const auto *stepExpr{bounds.step
-          ? GetExpr(exprAnalyzer_.context(), bounds.step->thing.thing)
+          ? GetExpr(exprAnalyzer_.context(),
+                parser::UnwrapRef<parser::Expr>(bounds.step))
           : nullptr};
   if (lowerExpr && upperExpr) {
     // Fold the bounds expressions (again) in case any of them depend
@@ -242,7 +241,9 @@ bool DataInitializationCompiler<DSV>::Scan(
   return common::visit(
       common::visitors{
           [&](const parser::Scalar<common::Indirection<parser::Designator>>
-                  &var) { return Scan(var.thing.value()); },
+                  &var) {
+            return Scan(parser::UnwrapRef<parser::Designator>(var));
+          },
           [&](const common::Indirection<parser::DataImpliedDo> &ido) {
             return Scan(ido.value());
           },
@@ -254,12 +255,12 @@ template <typename DSV>
 bool DataInitializationCompiler<DSV>::Scan(const Symbol &symbol) {
   auto designator{exprAnalyzer_.Designate(evaluate::DataRef{symbol})};
   CHECK(designator.has_value());
-  return InitDesignator(*designator);
+  return InitDesignator(*designator, symbol.owner());
 }
 
 template <typename DSV>
 bool DataInitializationCompiler<DSV>::InitDesignator(
-    const SomeExpr &designator) {
+    const SomeExpr &designator, const Scope &scope) {
   evaluate::FoldingContext &context{exprAnalyzer_.GetFoldingContext()};
   evaluate::DesignatorFolder folder{context};
   while (auto offsetSymbol{folder.FoldDesignator(designator)}) {
@@ -274,7 +275,7 @@ bool DataInitializationCompiler<DSV>::InitDesignator(
             designator.AsFortran());
       }
       return false;
-    } else if (!InitElement(*offsetSymbol, designator)) {
+    } else if (!InitElement(*offsetSymbol, designator, scope)) {
       return false;
     } else {
       ++values_;
@@ -287,25 +288,24 @@ template <typename DSV>
 std::optional<std::pair<SomeExpr, bool>>
 DataInitializationCompiler<DSV>::ConvertElement(
     const SomeExpr &expr, const evaluate::DynamicType &type) {
+  evaluate::FoldingContext &foldingContext{exprAnalyzer_.GetFoldingContext()};
+  evaluate::CheckRealWidening(expr, type, foldingContext);
   if (auto converted{evaluate::ConvertToType(type, SomeExpr{expr})}) {
     return {std::make_pair(std::move(*converted), false)};
   }
   // Allow DATA initialization with Hollerith and kind=1 CHARACTER like
   // (most) other Fortran compilers do.
-  if (auto converted{evaluate::HollerithToBOZ(
-          exprAnalyzer_.GetFoldingContext(), expr, type)}) {
+  if (auto converted{evaluate::HollerithToBOZ(foldingContext, expr, type)}) {
     return {std::make_pair(std::move(*converted), true)};
   }
   SemanticsContext &context{exprAnalyzer_.context()};
   if (context.IsEnabled(common::LanguageFeature::LogicalIntegerAssignment)) {
     if (MaybeExpr converted{evaluate::DataConstantConversionExtension(
-            exprAnalyzer_.GetFoldingContext(), type, expr)}) {
-      if (context.ShouldWarn(
-              common::LanguageFeature::LogicalIntegerAssignment)) {
-        context.Say(
-            "nonstandard usage: initialization of %s with %s"_port_en_US,
-            type.AsFortran(), expr.GetType().value().AsFortran());
-      }
+            foldingContext, type, expr)}) {
+      context.Warn(common::LanguageFeature::LogicalIntegerAssignment,
+          foldingContext.messages().at(),
+          "nonstandard usage: initialization of %s with %s"_port_en_US,
+          type.AsFortran(), expr.GetType().value().AsFortran());
       return {std::make_pair(std::move(*converted), false)};
     }
   }
@@ -314,7 +314,8 @@ DataInitializationCompiler<DSV>::ConvertElement(
 
 template <typename DSV>
 bool DataInitializationCompiler<DSV>::InitElement(
-    const evaluate::OffsetSymbol &offsetSymbol, const SomeExpr &designator) {
+    const evaluate::OffsetSymbol &offsetSymbol, const SomeExpr &designator,
+    const Scope &scope) {
   const Symbol &symbol{offsetSymbol.symbol()};
   const Symbol *lastSymbol{GetLastSymbol(designator)};
   bool isPointer{lastSymbol && IsPointer(*lastSymbol)};
@@ -384,13 +385,13 @@ bool DataInitializationCompiler<DSV>::InitElement(
     if (static_cast<std::size_t>(offsetSymbol.offset() + offsetSymbol.size()) >
         symbol.size()) {
       OutOfRangeError();
-    } else if (evaluate::IsNullPointer(*expr)) {
+    } else if (evaluate::IsNullPointer(expr)) {
       // nothing to do; rely on zero initialization
       return true;
     } else if (isProcPointer) {
-      if (evaluate::IsProcedure(*expr)) {
+      if (evaluate::IsProcedureDesignator(*expr)) {
         if (CheckPointerAssignment(exprAnalyzer_.context(), designator, *expr,
-                DEREF(scope_),
+                scope,
                 /*isBoundsRemapping=*/false, /*isAssumedRank=*/false)) {
           if (lastSymbol->has<ProcEntityDetails>()) {
             GetImage().AddPointer(offsetSymbol.offset(), *expr);
@@ -413,14 +414,14 @@ bool DataInitializationCompiler<DSV>::InitElement(
           "Procedure '%s' may not be used to initialize '%s', which is not a procedure pointer"_err_en_US,
           expr->AsFortran(), DescribeElement());
     } else if (CheckInitialDataPointerTarget(
-                   exprAnalyzer_.context(), designator, *expr, DEREF(scope_))) {
+                   exprAnalyzer_.context(), designator, *expr, scope)) {
       GetImage().AddPointer(offsetSymbol.offset(), *expr);
       return true;
     }
-  } else if (evaluate::IsNullPointer(*expr)) {
+  } else if (evaluate::IsNullPointer(expr)) {
     exprAnalyzer_.Say("Initializer for '%s' must not be a pointer"_err_en_US,
         DescribeElement());
-  } else if (evaluate::IsProcedure(*expr)) {
+  } else if (evaluate::IsProcedureDesignator(*expr)) {
     exprAnalyzer_.Say("Initializer for '%s' must not be a procedure"_err_en_US,
         DescribeElement());
   } else if (auto designatorType{designator.GetType()}) {
@@ -435,11 +436,11 @@ bool DataInitializationCompiler<DSV>::InitElement(
       // value non-pointer initialization
       if (IsBOZLiteral(*expr) &&
           designatorType->category() != TypeCategory::Integer) { // 8.6.7(11)
-        exprAnalyzer_.Say(
+        exprAnalyzer_.Warn(common::LanguageFeature::DataStmtExtensions,
             "BOZ literal should appear in a DATA statement only as a value for an integer object, but '%s' is '%s'"_port_en_US,
             DescribeElement(), designatorType->AsFortran());
       } else if (converted->second) {
-        exprAnalyzer_.context().Say(
+        exprAnalyzer_.Warn(common::LanguageFeature::DataStmtExtensions,
             "DATA statement value initializes '%s' of type '%s' with CHARACTER"_port_en_US,
             DescribeElement(), designatorType->AsFortran());
       }
@@ -458,7 +459,7 @@ bool DataInitializationCompiler<DSV>::InitElement(
       } else if (status == evaluate::InitialImage::OutOfRange) {
         OutOfRangeError();
       } else if (status == evaluate::InitialImage::LengthMismatch) {
-        exprAnalyzer_.Say(
+        exprAnalyzer_.Warn(common::UsageWarning::DataLength,
             "DATA statement value '%s' for '%s' has the wrong length"_warn_en_US,
             folded.AsFortran(), DescribeElement());
         return true;
@@ -515,11 +516,10 @@ static const DerivedTypeSpec *HasDefaultInitialization(const Symbol &symbol) {
     } else if (!object->isDummy() && object->type()) {
       if (const DerivedTypeSpec * derived{object->type()->AsDerived()}) {
         DirectComponentIterator directs{*derived};
-        if (std::find_if(
-                directs.begin(), directs.end(), [](const Symbol &component) {
-                  return !IsAllocatable(component) &&
-                      HasDeclarationInitializer(component);
-                })) {
+        if (llvm::any_of(directs, [](const Symbol &component) {
+              return !IsAllocatable(component) &&
+                  HasDeclarationInitializer(component);
+            })) {
           return derived;
         }
       }
@@ -863,6 +863,14 @@ static bool ProcessScopes(const Scope &scope,
       if (std::find_if(associated.begin(), associated.end(), [](SymbolRef ref) {
             return IsInitialized(*ref);
           }) != associated.end()) {
+        // If a symbol whose size has not been computed it is possible to get an
+        // assertion failure when trying to contruct the initializer. The lack
+        // of a size is assumed to be because there was an error reported that
+        // blocked computing the size. As of writing this comment, this is only
+        // called after all of semantics analysis has run without errors. If
+        // this needs to be called earlier, then we need to skip equivalence
+        // checking if there are any sizeless symbols and assert that there is
+        // an error reported.
         result &=
             CombineEquivalencedInitialization(associated, exprAnalyzer, inits);
       }
@@ -896,9 +904,15 @@ void ConstructInitializer(const Symbol &symbol,
       if (const auto *procDesignator{
               std::get_if<evaluate::ProcedureDesignator>(&expr->u)}) {
         CHECK(!procDesignator->GetComponent());
-        mutableProc.set_init(DEREF(procDesignator->GetSymbol()));
+        if (const auto *intrin{procDesignator->GetSpecificIntrinsic()}) {
+          const Symbol *intrinSymbol{
+              symbol.owner().FindSymbol(SourceName{intrin->name})};
+          mutableProc.set_init(DEREF(intrinSymbol));
+        } else {
+          mutableProc.set_init(DEREF(procDesignator->GetSymbol()));
+        }
       } else {
-        CHECK(evaluate::IsNullProcedurePointer(*expr));
+        CHECK(evaluate::IsNullProcedurePointer(&*expr));
         mutableProc.set_init(nullptr);
       }
     } else {
@@ -938,12 +952,22 @@ void ConstructInitializer(const Symbol &symbol,
   }
 }
 
-void ConvertToInitializers(
-    DataInitializations &inits, evaluate::ExpressionAnalyzer &exprAnalyzer) {
-  if (ProcessScopes(
+void ConvertToInitializers(DataInitializations &inits,
+    evaluate::ExpressionAnalyzer &exprAnalyzer, bool forDerivedTypesOnly) {
+  // Process DATA-style component /initializers/ now, so that they appear as
+  // default values in time for EQUIVALENCE processing in ProcessScopes.
+  for (auto &[symbolPtr, initialization] : inits) {
+    if (symbolPtr->owner().IsDerivedType()) {
+      ConstructInitializer(*symbolPtr, initialization, exprAnalyzer);
+    }
+  }
+  if (!forDerivedTypesOnly &&
+      ProcessScopes(
           exprAnalyzer.context().globalScope(), exprAnalyzer, inits)) {
     for (auto &[symbolPtr, initialization] : inits) {
-      ConstructInitializer(*symbolPtr, initialization, exprAnalyzer);
+      if (!symbolPtr->owner().IsDerivedType()) {
+        ConstructInitializer(*symbolPtr, initialization, exprAnalyzer);
+      }
     }
   }
 }

@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "asan_errors.h"
+
 #include "asan_descriptions.h"
 #include "asan_mapping.h"
+#include "asan_poisoning.h"
 #include "asan_report.h"
 #include "asan_stack.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -327,9 +329,6 @@ void ErrorBadParamsToAnnotateContiguousContainer::Print() {
       "      old_mid : %p\n"
       "      new_mid : %p\n",
       (void *)beg, (void *)end, (void *)old_mid, (void *)new_mid);
-  uptr granularity = ASAN_SHADOW_GRANULARITY;
-  if (!IsAligned(beg, granularity))
-    Report("ERROR: beg is not aligned by %zu\n", granularity);
   stack->Print();
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
@@ -347,9 +346,20 @@ void ErrorBadParamsToAnnotateDoubleEndedContiguousContainer::Print() {
       (void *)storage_beg, (void *)storage_end, (void *)old_container_beg,
       (void *)old_container_end, (void *)new_container_beg,
       (void *)new_container_end);
-  uptr granularity = ASAN_SHADOW_GRANULARITY;
-  if (!IsAligned(storage_beg, granularity))
-    Report("ERROR: storage_beg is not aligned by %zu\n", granularity);
+  stack->Print();
+  ReportErrorSummary(scariness.GetDescription(), stack);
+}
+
+void ErrorBadParamsToCopyContiguousContainerAnnotations::Print() {
+  Report(
+      "ERROR: AddressSanitizer: bad parameters to "
+      "__sanitizer_copy_contiguous_container_annotations:\n"
+      "      src_storage_beg : %p\n"
+      "      src_storage_end : %p\n"
+      "      dst_storage_beg : %p\n"
+      "      new_storage_end : %p\n",
+      (void *)old_storage_beg, (void *)old_storage_end, (void *)new_storage_beg,
+      (void *)new_storage_end);
   stack->Print();
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
@@ -362,8 +372,8 @@ void ErrorODRViolation::Print() {
   Printf("%s", d.Default());
   InternalScopedString g1_loc;
   InternalScopedString g2_loc;
-  PrintGlobalLocation(&g1_loc, global1);
-  PrintGlobalLocation(&g2_loc, global2);
+  PrintGlobalLocation(&g1_loc, global1, /*print_module_name=*/true);
+  PrintGlobalLocation(&g2_loc, global2, /*print_module_name=*/true);
   Printf("  [1] size=%zd '%s' %s\n", global1.size,
          MaybeDemangleGlobalName(global1.name), g1_loc.data());
   Printf("  [2] size=%zd '%s' %s\n", global2.size,
@@ -504,11 +514,15 @@ ErrorGeneric::ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
 }
 
 static void PrintContainerOverflowHint() {
-  Printf("HINT: if you don't care about these errors you may set "
-         "ASAN_OPTIONS=detect_container_overflow=0.\n"
-         "If you suspect a false positive see also: "
-         "https://github.com/google/sanitizers/wiki/"
-         "AddressSanitizerContainerOverflow.\n");
+  Printf(
+      "HINT: if you don't care about these errors you may set "
+      "ASAN_OPTIONS=detect_container_overflow=0.\n"
+      "Or if supported by the container library, pass "
+      "-D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__ to the compiler to disable "
+      " instrumentation.\n"
+      "If you suspect a false positive see also: "
+      "https://github.com/google/sanitizers/wiki/"
+      "AddressSanitizerContainerOverflow.\n");
 }
 
 static void PrintShadowByte(InternalScopedString *str, const char *before,
@@ -592,6 +606,44 @@ static void PrintShadowMemoryForAddress(uptr addr) {
   Printf("%s", str.data());
 }
 
+static void CheckPoisonRecords(uptr addr) {
+  if (!AddrIsInMem(addr))
+    return;
+
+  u8 *shadow_addr = (u8 *)MemToShadow(addr);
+  // If we are in the partial right redzone, look at the next shadow byte.
+  if (*shadow_addr > 0 && *shadow_addr < 128)
+    shadow_addr++;
+  u8 shadow_val = *shadow_addr;
+
+  if (shadow_val != kAsanUserPoisonedMemoryMagic)
+    return;
+
+  Printf("\n");
+
+  if (flags()->poison_history_size <= 0) {
+    Printf(
+        "NOTE: the stack trace above identifies the code that *accessed* "
+        "the poisoned memory.\n");
+    Printf(
+        "To identify the code that *poisoned* the memory, try the "
+        "experimental setting ASAN_OPTIONS=poison_history_size=<size>.\n");
+    return;
+  }
+
+  PoisonRecord record;
+  if (FindPoisonRecord(addr, record)) {
+    StackTrace poison_stack = StackDepotGet(record.stack_id);
+    if (poison_stack.size > 0) {
+      Printf("Memory was manually poisoned by thread T%u:\n", record.thread_id);
+      poison_stack.Print();
+    }
+  } else {
+    Printf("ERROR: no matching poison tracking record found.\n");
+    Printf("Try a larger value for ASAN_OPTIONS=poison_history_size=<size>.\n");
+  }
+}
+
 void ErrorGeneric::Print() {
   Decorator d;
   Printf("%s", d.Error());
@@ -615,6 +667,9 @@ void ErrorGeneric::Print() {
     PrintContainerOverflowHint();
   ReportErrorSummary(bug_descr, &stack);
   PrintShadowMemoryForAddress(addr);
+
+  // This is an experimental flag, hence we don't make a special handler.
+  CheckPoisonRecords(addr);
 }
 
 }  // namespace __asan

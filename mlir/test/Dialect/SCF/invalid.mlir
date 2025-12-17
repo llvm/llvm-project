@@ -32,18 +32,6 @@ func.func @loop_for_mismatch(%arg0: i32, %arg1: index) {
 
 // -----
 
-func.func @loop_for_step_positive(%arg0: index) {
-  // expected-error@+2 {{constant step operand must be positive}}
-  %c0 = arith.constant 0 : index
-  "scf.for"(%arg0, %arg0, %c0) ({
-    ^bb0(%arg1: index):
-      scf.yield
-  }) : (index, index, index) -> ()
-  return
-}
-
-// -----
-
 func.func @loop_for_one_region(%arg0: index) {
   // expected-error@+1 {{requires one region}}
   "scf.for"(%arg0, %arg0, %arg0) (
@@ -235,7 +223,7 @@ func.func @parallel_fewer_results_than_reduces(
   // expected-error@+1 {{expects number of results: 0 to be the same as number of reductions: 1}}
   scf.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
     %c0 = arith.constant 1.0 : f32
-    scf.reduce(%c0) : f32 {
+    scf.reduce(%c0 : f32) {
       ^bb0(%lhs: f32, %rhs: f32):
         scf.reduce.return %lhs : f32
     }
@@ -259,9 +247,9 @@ func.func @parallel_more_results_than_reduces(
 
 func.func @parallel_more_results_than_initial_values(
     %arg0 : index, %arg1: index, %arg2: index) {
-  // expected-error@+1 {{'scf.parallel' 0 operands present, but expected 1}}
+  // expected-error@+1 {{'scf.parallel' number of operands and types do not match: got 0 operands and 1 types}}
   %res = scf.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) -> f32 {
-    scf.reduce(%arg0) : index {
+    scf.reduce(%arg0 : index) {
       ^bb0(%lhs: index, %rhs: index):
         scf.reduce.return %lhs : index
     }
@@ -275,9 +263,40 @@ func.func @parallel_different_types_of_results_and_reduces(
   %zero = arith.constant 0.0 : f32
   %res = scf.parallel (%i0) = (%arg0) to (%arg1)
                                        step (%arg2) init (%zero) -> f32 {
-    // expected-error@+1 {{expects type of reduce: 'index' to be the same as result type: 'f32'}}
-    scf.reduce(%arg0) : index {
+    // expected-error@+1 {{expects type of 0-th reduction operand: 'index' to be the same as the 0-th result type: 'f32'}}
+    scf.reduce(%arg0 : index) {
       ^bb0(%lhs: index, %rhs: index):
+        scf.reduce.return %lhs : index
+    }
+  }
+  return
+}
+
+// -----
+
+// The scf.parallel operation requires the number of operands in the terminator
+// (scf.reduce) to match the number of initial values provided to the loop.
+func.func @invalid_reduce_too_few_regions() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.parallel (%arg1) = (%c0) to (%c1) step (%c1) {
+    // expected-error @+1 {{expects number of reduction regions: 0 to be the same as number of reduction operands: 1}}
+    scf.reduce(%c1 : index)
+  }
+  return
+}
+
+// -----
+
+// The scf.parallel operation requires the number of operands in the terminator
+// (scf.reduce) to match the number of initial values provided to the loop.
+func.func @invalid_reduce_too_many_regions() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = scf.parallel (%i0) = (%c0) to (%c1) step (%c1) init (%c0) -> (index) {
+    // expected-error @+1 {{expects number of reduction regions: 1 to be the same as number of reduction operands: 0}}
+    scf.reduce {
+      ^bb0(%lhs : index, %rhs : index):
         scf.reduce.return %lhs : index
     }
   }
@@ -288,7 +307,7 @@ func.func @parallel_different_types_of_results_and_reduces(
 
 func.func @top_level_reduce(%arg0 : f32) {
   // expected-error@+1 {{expects parent op 'scf.parallel'}}
-  scf.reduce(%arg0) : f32 {
+  scf.reduce(%arg0 : f32) {
     ^bb0(%lhs : f32, %rhs : f32):
       scf.reduce.return %lhs : f32
   }
@@ -302,7 +321,7 @@ func.func @reduce_empty_block(%arg0 : index, %arg1 : f32) {
   %res = scf.parallel (%i0) = (%arg0) to (%arg0)
                                        step (%arg0) init (%zero) -> f32 {
     // expected-error@+1 {{empty block: expect at least a terminator}}
-    scf.reduce(%arg1) : f32 {
+    scf.reduce(%arg1 : f32) {
       ^bb0(%lhs : f32, %rhs : f32):
     }
   }
@@ -315,8 +334,8 @@ func.func @reduce_too_many_args(%arg0 : index, %arg1 : f32) {
   %zero = arith.constant 0.0 : f32
   %res = scf.parallel (%i0) = (%arg0) to (%arg0)
                                        step (%arg0) init (%zero) -> f32 {
-    // expected-error@+1 {{expects two arguments to reduce block of type 'f32'}}
-    scf.reduce(%arg1) : f32 {
+    // expected-error@+1 {{expected two block arguments with type 'f32' in the 0-th reduction region}}
+    scf.reduce(%arg1 : f32) {
       ^bb0(%lhs : f32, %rhs : f32, %other : f32):
         scf.reduce.return %lhs : f32
     }
@@ -330,8 +349,8 @@ func.func @reduce_wrong_args(%arg0 : index, %arg1 : f32) {
   %zero = arith.constant 0.0 : f32
   %res = scf.parallel (%i0) = (%arg0) to (%arg0)
                                        step (%arg0) init (%zero) -> f32 {
-    // expected-error@+1 {{expects two arguments to reduce block of type 'f32'}}
-    scf.reduce(%arg1) : f32 {
+    // expected-error@+1 {{expected two block arguments with type 'f32' in the 0-th reduction region}}
+    scf.reduce(%arg1 : f32) {
       ^bb0(%lhs : f32, %rhs : i32):
         scf.reduce.return %lhs : f32
     }
@@ -346,8 +365,8 @@ func.func @reduce_wrong_terminator(%arg0 : index, %arg1 : f32) {
   %zero = arith.constant 0.0 : f32
   %res = scf.parallel (%i0) = (%arg0) to (%arg0)
                                        step (%arg0) init (%zero) -> f32 {
-    // expected-error@+1 {{the block inside reduce should be terminated with a 'scf.reduce.return' op}}
-    scf.reduce(%arg1) : f32 {
+    // expected-error@+1 {{reduction bodies must be terminated with an 'scf.reduce.return' op}}
+    scf.reduce(%arg1 : f32) {
       ^bb0(%lhs : f32, %rhs : f32):
         "test.finish" () : () -> ()
     }
@@ -361,10 +380,10 @@ func.func @reduceReturn_wrong_type(%arg0 : index, %arg1: f32) {
   %zero = arith.constant 0.0 : f32
   %res = scf.parallel (%i0) = (%arg0) to (%arg0)
                                        step (%arg0) init (%zero) -> f32 {
-    scf.reduce(%arg1) : f32 {
+    scf.reduce(%arg1 : f32) {
       ^bb0(%lhs : f32, %rhs : f32):
         %c0 = arith.constant 1 : index
-        // expected-error@+1 {{needs to have type 'f32' (the type of the enclosing ReduceOp)}}
+        // expected-error@+1 {{must have type 'f32' (the type of the reduction inputs)}}
         scf.reduce.return %c0 : index
     }
   }
@@ -385,7 +404,7 @@ func.func @reduceReturn_not_inside_reduce(%arg0 : f32) {
 
 func.func @std_if_incorrect_yield(%arg0: i1, %arg1: f32)
 {
-  // expected-error@+1 {{region control flow edge from Region #0 to parent results: source has 1 operands, but target successor needs 2}}
+  // expected-error@+1 {{region control flow edge from Operation scf.yield to parent results: source has 1 operands, but target successor <to parent> needs 2}}
   %x, %y = scf.if %arg0 -> (f32, f32) {
     %0 = arith.addf %arg1, %arg1 : f32
     scf.yield %0 : f32
@@ -475,9 +494,10 @@ func.func @std_for_operands_mismatch_4(%arg0 : index, %arg1 : index, %arg2 : ind
 
 func.func @parallel_invalid_yield(
     %arg0: index, %arg1: index, %arg2: index) {
+  // expected-error@below {{expects body to terminate with 'scf.reduce'}}
   scf.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
     %c0 = arith.constant 1.0 : f32
-    // expected-error@+1 {{'scf.yield' op not allowed to have operands inside 'scf.parallel'}}
+    // expected-note@below {{terminator here}}
     scf.yield %c0 : f32
   }
   return
@@ -487,7 +507,7 @@ func.func @parallel_invalid_yield(
 
 func.func @yield_invalid_parent_op() {
   "my.op"() ({
-   // expected-error@+1 {{'scf.yield' op expects parent op to be one of 'scf.execute_region, scf.for, scf.if, scf.index_switch, scf.parallel, scf.while'}}
+   // expected-error@+1 {{'scf.yield' op expects parent op to be one of 'scf.execute_region, scf.for, scf.if, scf.index_switch, scf.while'}}
    scf.yield
   }) : () -> ()
   return
@@ -555,7 +575,7 @@ func.func @while_invalid_terminator() {
 
 func.func @while_cross_region_type_mismatch() {
   %true = arith.constant true
-  // expected-error@+1 {{'scf.while' op  region control flow edge from Region #0 to Region #1: source has 0 operands, but target successor needs 1}}
+  // expected-error@+1 {{region control flow edge from Operation scf.condition to Region #1: source has 0 operands, but target successor <to region #1 with 1 inputs> needs 1}}
   scf.while : () -> () {
     scf.condition(%true)
   } do {
@@ -568,7 +588,7 @@ func.func @while_cross_region_type_mismatch() {
 
 func.func @while_cross_region_type_mismatch() {
   %true = arith.constant true
-  // expected-error@+1 {{'scf.while' op  along control flow edge from Region #0 to Region #1: source type #0 'i1' should match input type #0 'i32'}}
+  // expected-error@+1 {{along control flow edge from Operation scf.condition to Region #1: source type #0 'i1' should match input type #0 'i32'}}
   %0 = scf.while : () -> (i1) {
     scf.condition(%true) %true : i1
   } do {
@@ -581,7 +601,7 @@ func.func @while_cross_region_type_mismatch() {
 
 func.func @while_result_type_mismatch() {
   %true = arith.constant true
-  // expected-error@+1 {{'scf.while' op  region control flow edge from Region #0 to parent results: source has 1 operands, but target successor needs 0}}
+  // expected-error@+1 {{region control flow edge from Operation scf.condition to parent results: source has 1 operands, but target successor <to parent> needs 0}}
   scf.while : () -> () {
     scf.condition(%true) %true : i1
   } do {
@@ -620,7 +640,7 @@ func.func @wrong_num_results(%in: tensor<100xf32>, %out: tensor<100xf32>) {
   %c1 = arith.constant 1 : index
   %num_threads = arith.constant 100 : index
 
-  // expected-error @+1 {{1 operands present, but expected 2}}
+  // expected-error@+1 {{number of operands and types do not match: got 1 operands and 2 types}}
   %result:2 = scf.forall (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> (tensor<100xf32>, tensor<100xf32>) {
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
       scf.forall.in_parallel {
@@ -656,7 +676,7 @@ func.func @wrong_terminator_op(%in: tensor<100xf32>, %out: tensor<100xf32>) {
 
   %result = scf.forall (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> (tensor<100xf32>) {
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
-      // expected-error @+1 {{expected only tensor.parallel_insert_slice ops}}
+      // expected-error @+1 {{expected only ParallelCombiningOpInterface ops}}
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %1 into %o[%thread_idx][1][1] :
           tensor<1xf32> into tensor<100xf32>
@@ -679,6 +699,36 @@ func.func @mismatched_mapping(%x: memref<2 x 32 x f32>, %y: memref<2 x 32 x f32>
       memref.store %6, %y[%i, %j] : memref<2 x 32 x f32>
   }  { mapping = [#gpu.block<x>, #gpu.block<y>, #gpu.block<z>] }
   return %y : memref<2 x 32 x f32>
+}
+
+// -----
+
+func.func @forall_wrong_terminator_op() -> () {
+  %c100 = arith.constant 100 : index
+  // expected-error @+2 {{'scf.forall' op expects regions to end with 'scf.forall.in_parallel', found 'llvm.return'}}
+  // expected-note @below {{in custom textual format, the absence of terminator implies 'scf.forall.in_parallel'}}
+  scf.forall (%arg0) in (%c100) {
+    llvm.return
+  }
+  return
+}
+
+// -----
+
+func.func @at_most_one_masking_attribute(%in: tensor<100xf32>, %out: tensor<100xf32>) {
+  %c1 = arith.constant 1 : index
+  %num_threads = arith.constant 100 : index
+
+  // expected-error @below {{"mapping" supports at most one device masking attribute}}
+  %result = scf.forall (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> (tensor<100xf32>) {
+      %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
+      scf.forall.in_parallel {
+        tensor.parallel_insert_slice %1 into %o[%thread_idx][1][1] :
+          tensor<1xf32> into tensor<100xf32>
+      }
+  }  { mapping = [#gpu.thread<x>, #gpu.mask<0x1>, #gpu.mask<0x2>] }
+
+  return
 }
 
 // -----
@@ -749,7 +799,7 @@ func.func @switch_missing_terminator(%arg0: index, %arg1: i32) {
 // -----
 
 func.func @parallel_missing_terminator(%0 : index) {
-  // expected-error @below {{'scf.parallel' op expects body to terminate with 'scf.yield'}}
+  // expected-error @below {{expects body to terminate with 'scf.reduce'}}
   "scf.parallel"(%0, %0, %0) ({
   ^bb0(%arg1: index):
     // expected-note @below {{terminator here}}
@@ -758,3 +808,13 @@ func.func @parallel_missing_terminator(%0 : index) {
   return
 }
 
+// -----
+
+func.func @invalid_reference(%a: index) {
+  // expected-error @below{{use of undeclared SSA value name}}
+  scf.for %x = %a to %a step %a iter_args(%var = %foo) -> tensor<?xf32> {
+    %foo = "test.inner"() : () -> (tensor<?xf32>)
+    scf.yield %foo : tensor<?xf32>
+  }
+  return
+}

@@ -32,17 +32,17 @@ sha256rnds2 (%rax), %xmm2
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  2      2     0.50                        sha1msg1	%xmm0, %xmm2
-# CHECK-NEXT:  2      6     0.50    *                   sha1msg1	(%rax), %xmm2
+# CHECK-NEXT:  2      9     0.50    *                   sha1msg1	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        sha1msg2	%xmm0, %xmm2
-# CHECK-NEXT:  1      5     0.50    *                   sha1msg2	(%rax), %xmm2
+# CHECK-NEXT:  1      8     0.50    *                   sha1msg2	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        sha1nexte	%xmm0, %xmm2
-# CHECK-NEXT:  1      5     0.50    *                   sha1nexte	(%rax), %xmm2
+# CHECK-NEXT:  1      8     0.50    *                   sha1nexte	(%rax), %xmm2
 # CHECK-NEXT:  1      6     2.00                        sha1rnds4	$3, %xmm0, %xmm2
 # CHECK-NEXT:  1      10    0.50    *                   sha1rnds4	$3, (%rax), %xmm2
 # CHECK-NEXT:  2      2     0.75                        sha256msg1	%xmm0, %xmm2
-# CHECK-NEXT:  2      6     0.75    *                   sha256msg1	(%rax), %xmm2
+# CHECK-NEXT:  2      9     0.75    *                   sha256msg1	(%rax), %xmm2
 # CHECK-NEXT:  4      3     2.00                        sha256msg2	%xmm0, %xmm2
-# CHECK-NEXT:  5      7     2.00    *                   sha256msg2	(%rax), %xmm2
+# CHECK-NEXT:  5      10    2.00    *                   sha256msg2	(%rax), %xmm2
 # CHECK-NEXT:  1      4     2.00                        sha256rnds2	%xmm0, %xmm0, %xmm2
 # CHECK-NEXT:  1      10    0.50    *                   sha256rnds2	%xmm0, (%rax), %xmm2
 
@@ -55,12 +55,12 @@ sha256rnds2 (%rax), %xmm2
 # CHECK-NEXT: [5]   - Zn3ALU2
 # CHECK-NEXT: [6]   - Zn3ALU3
 # CHECK-NEXT: [7]   - Zn3BRU1
-# CHECK-NEXT: [8]   - Zn3FPP0
-# CHECK-NEXT: [9]   - Zn3FPP1
-# CHECK-NEXT: [10]  - Zn3FPP2
-# CHECK-NEXT: [11]  - Zn3FPP3
-# CHECK-NEXT: [12.0] - Zn3FPP45
-# CHECK-NEXT: [12.1] - Zn3FPP45
+# CHECK-NEXT: [8]   - Zn3FP0
+# CHECK-NEXT: [9]   - Zn3FP1
+# CHECK-NEXT: [10]  - Zn3FP2
+# CHECK-NEXT: [11]  - Zn3FP3
+# CHECK-NEXT: [12.0] - Zn3FP45
+# CHECK-NEXT: [12.1] - Zn3FP45
 # CHECK-NEXT: [13]  - Zn3FPSt
 # CHECK-NEXT: [14.0] - Zn3LSU
 # CHECK-NEXT: [14.1] - Zn3LSU

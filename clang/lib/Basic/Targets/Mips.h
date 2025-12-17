@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_BASIC_TARGETS_MIPS_H
 #define LLVM_CLANG_LIB_BASIC_TARGETS_MIPS_H
 
+#include "OSTargets.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/Support/Compiler.h"
@@ -22,24 +23,6 @@ namespace clang {
 namespace targets {
 
 class LLVM_LIBRARY_VISIBILITY MipsTargetInfo : public TargetInfo {
-  void setDataLayout() {
-    StringRef Layout;
-
-    if (ABI == "o32")
-      Layout = "m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64";
-    else if (ABI == "n32")
-      Layout = "m:e-p:32:32-i8:8:32-i16:16:32-i64:64-n32:64-S128";
-    else if (ABI == "n64")
-      Layout = "m:e-i8:8:32-i16:16:32-i64:64-n32:64-S128";
-    else
-      llvm_unreachable("Invalid ABI");
-
-    if (BigEndian)
-      resetDataLayout(("E-" + Layout).str());
-    else
-      resetDataLayout(("e-" + Layout).str());
-  }
-
   std::string CPU;
   bool IsMips16;
   bool IsMicromips;
@@ -70,7 +53,7 @@ public:
 
     if (Triple.isMIPS32())
       setABI("o32");
-    else if (Triple.getEnvironment() == llvm::Triple::GNUABIN32)
+    else if (Triple.isABIN32())
       setABI("n32");
     else
       setABI("n64");
@@ -82,11 +65,17 @@ public:
   }
 
   bool isIEEE754_2008Default() const {
-    return CPU == "mips32r6" || CPU == "mips64r6";
+    return CPU == "mips32r6" || CPU == "mips64r6" || CPU == "i6400" ||
+           CPU == "i6500";
   }
 
-  bool isFP64Default() const {
-    return CPU == "mips32r6" || ABI == "n32" || ABI == "n64" || ABI == "64";
+  enum FPModeEnum getDefaultFPMode() const {
+    if (CPU == "mips32r6" || ABI == "n32" || ABI == "n64" || ABI == "64")
+      return FP64;
+    else if (CPU == "mips1")
+      return FP32;
+    else
+      return FPXX;
   }
 
   bool isNan2008() const override { return IsNan2008; }
@@ -123,7 +112,7 @@ public:
     LongWidth = LongAlign = 32;
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 32;
     PointerWidth = PointerAlign = 32;
-    PtrDiffType = SignedInt;
+    PtrDiffType = IntPtrType = SignedInt;
     SizeType = UnsignedInt;
     SuitableAlign = 64;
   }
@@ -149,7 +138,7 @@ public:
     IntMaxType = Int64Type;
     LongWidth = LongAlign = 64;
     PointerWidth = PointerAlign = 64;
-    PtrDiffType = SignedLong;
+    PtrDiffType = IntPtrType = SignedLong;
     SizeType = UnsignedLong;
   }
 
@@ -159,7 +148,7 @@ public:
     IntMaxType = Int64Type;
     LongWidth = LongAlign = 32;
     PointerWidth = PointerAlign = 32;
-    PtrDiffType = SignedInt;
+    PtrDiffType = IntPtrType = SignedInt;
     SizeType = UnsignedInt;
   }
 
@@ -192,7 +181,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool hasFeature(StringRef Feature) const override;
 
@@ -237,12 +226,14 @@ public:
     case 'r': // CPU registers.
     case 'd': // Equivalent to "r" unless generating MIPS16 code.
     case 'y': // Equivalent to "r", backward compatibility only.
-    case 'f': // floating-point registers.
     case 'c': // $25 for indirect jumps
     case 'l': // lo register
     case 'x': // hilo register pair
       Info.setAllowsRegister();
       return true;
+    case 'f': // floating-point registers.
+      Info.setAllowsRegister();
+      return FloatABI != SoftFloat;
     case 'I': // Signed 16-bit constant
     case 'J': // Integer 0
     case 'K': // Unsigned 16-bit constant
@@ -313,9 +304,11 @@ public:
     IsSingleFloat = false;
     FloatABI = HardFloat;
     DspRev = NoDSP;
-    FPMode = isFP64Default() ? FP64 : FPXX;
     NoOddSpreg = false;
+    FPMode = getDefaultFPMode();
     bool OddSpregGiven = false;
+    bool StrictAlign = false;
+    bool FpGiven = false;
 
     for (const auto &Feature : Features) {
       if (Feature == "+single-float")
@@ -326,6 +319,12 @@ public:
         IsMips16 = true;
       else if (Feature == "+micromips")
         IsMicromips = true;
+      else if (Feature == "+mips32r6" || Feature == "+mips64r6")
+        HasUnalignedAccess = true;
+      // We cannot be sure that the order of strict-align vs mips32r6.
+      // Thus we need an extra variable here.
+      else if (Feature == "+strict-align")
+        StrictAlign = true;
       else if (Feature == "+dsp")
         DspRev = std::max(DspRev, DSP1);
       else if (Feature == "+dspr2")
@@ -334,13 +333,16 @@ public:
         HasMSA = true;
       else if (Feature == "+nomadd4")
         DisableMadd4 = true;
-      else if (Feature == "+fp64")
+      else if (Feature == "+fp64") {
         FPMode = FP64;
-      else if (Feature == "-fp64")
+        FpGiven = true;
+      } else if (Feature == "-fp64") {
         FPMode = FP32;
-      else if (Feature == "+fpxx")
+        FpGiven = true;
+      } else if (Feature == "+fpxx") {
         FPMode = FPXX;
-      else if (Feature == "+nan2008")
+        FpGiven = true;
+      } else if (Feature == "+nan2008")
         IsNan2008 = true;
       else if (Feature == "-nan2008")
         IsNan2008 = false;
@@ -364,7 +366,15 @@ public:
     if (FPMode == FPXX && !OddSpregGiven)
       NoOddSpreg = true;
 
-    setDataLayout();
+    if (StrictAlign)
+      HasUnalignedAccess = false;
+
+    if (HasMSA && !FpGiven) {
+      FPMode = FP64;
+      Features.push_back("+fp64");
+    }
+
+    resetDataLayout();
 
     return true;
   }
@@ -419,6 +429,46 @@ public:
 
   bool validateTarget(DiagnosticsEngine &Diags) const override;
   bool hasBitIntType() const override { return true; }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(32, 32);
+  }
+};
+
+class LLVM_LIBRARY_VISIBILITY WindowsMipsTargetInfo
+    : public WindowsTargetInfo<MipsTargetInfo> {
+  const llvm::Triple Triple;
+
+public:
+  WindowsMipsTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
+
+  void getVisualStudioDefines(const LangOptions &Opts,
+                              MacroBuilder &Builder) const;
+
+  BuiltinVaListKind getBuiltinVaListKind() const override;
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
+};
+
+// Windows MIPS, MS (C++) ABI
+class LLVM_LIBRARY_VISIBILITY MicrosoftMipsTargetInfo
+    : public WindowsMipsTargetInfo {
+public:
+  MicrosoftMipsTargetInfo(const llvm::Triple &Triple,
+                          const TargetOptions &Opts);
+
+  void getTargetDefines(const LangOptions &Opts,
+                        MacroBuilder &Builder) const override;
+};
+
+// MIPS MinGW target
+class LLVM_LIBRARY_VISIBILITY MinGWMipsTargetInfo
+    : public WindowsMipsTargetInfo {
+public:
+  MinGWMipsTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
+
+  void getTargetDefines(const LangOptions &Opts,
+                        MacroBuilder &Builder) const override;
 };
 } // namespace targets
 } // namespace clang

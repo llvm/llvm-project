@@ -48,6 +48,7 @@ namespace clang {
 
 class FileManager;
 class LangOptions;
+class ModuleMap;
 class TargetInfo;
 
 /// Describes the name of a module.
@@ -62,6 +63,11 @@ struct ASTFileSignature : std::array<uint8_t, 20> {
   ASTFileSignature(BaseT S = {{0}}) : BaseT(std::move(S)) {}
 
   explicit operator bool() const { return *this != BaseT({{0}}); }
+
+  // Support implicit cast to ArrayRef.  Note that ASTFileSignature::size
+  // prevents implicit cast to ArrayRef because one of the implicit constructors
+  // of ArrayRef requires access to BaseT::size.
+  operator ArrayRef<uint8_t>() const { return ArrayRef<uint8_t>(data(), size); }
 
   /// Returns the value truncated to the size of an uint64_t.
   uint64_t truncatedValue() const {
@@ -99,6 +105,39 @@ struct ASTFileSignature : std::array<uint8_t, 20> {
   }
 };
 
+/// The set of attributes that can be attached to a module.
+struct ModuleAttributes {
+  /// Whether this is a system module.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsSystem : 1;
+
+  /// Whether this is an extern "C" module.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsExternC : 1;
+
+  /// Whether this is an exhaustive set of configuration macros.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsExhaustive : 1;
+
+  /// Whether files in this module can only include non-modular headers
+  /// and headers from used modules.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned NoUndeclaredIncludes : 1;
+
+  ModuleAttributes()
+      : IsSystem(false), IsExternC(false), IsExhaustive(false),
+        NoUndeclaredIncludes(false) {}
+};
+
+/// Required to construct a Module.
+///
+/// This tag type is only constructible by ModuleMap, guaranteeing it ownership
+/// of all Module instances.
+class ModuleConstructorTag {
+  explicit ModuleConstructorTag() = default;
+  friend ModuleMap;
+};
+
 /// Describes a module or submodule.
 ///
 /// Aligned to 8 bytes to allow for llvm::PointerIntPair<Module *, 3>.
@@ -118,7 +157,7 @@ public:
     /// of header files.
     ModuleMapModule,
 
-    /// This is a C++ 20 header unit.
+    /// This is a C++20 header unit.
     ModuleHeaderUnit,
 
     /// This is a C++20 module interface unit.
@@ -127,10 +166,10 @@ public:
     /// This is a C++20 module implementation unit.
     ModuleImplementationUnit,
 
-    /// This is a C++ 20 module partition interface.
+    /// This is a C++20 module partition interface.
     ModulePartitionInterface,
 
-    /// This is a C++ 20 module partition implementation.
+    /// This is a C++20 module partition implementation.
     ModulePartitionImplementation,
 
     /// This is the explicit Global Module Fragment of a modular TU.
@@ -156,7 +195,7 @@ public:
   /// The build directory of this module. This is the directory in
   /// which the module is notionally built, and relative to which its headers
   /// are found.
-  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr Directory;
+  OptionalDirectoryEntryRef Directory;
 
   /// The presumed file name for the module map defining this module.
   /// Only non-empty when building from preprocessed source.
@@ -177,6 +216,9 @@ public:
   /// The module through which entities defined in this module will
   /// eventually be exposed, for use in "private" modules.
   std::string ExportAsModule;
+
+  /// For the debug info, the path to this module's .apinotes file, if any.
+  std::string APINotesFile;
 
   /// Does this Module is a named module of a standard named module?
   bool isNamedModule() const {
@@ -214,7 +256,7 @@ private:
 
   /// A mapping from the submodule name to the index into the
   /// \c SubModules vector at which that submodule resides.
-  llvm::StringMap<unsigned> SubModuleIndex;
+  mutable llvm::StringMap<unsigned> SubModuleIndex;
 
   /// The AST file if this is a top-level module which has a
   /// corresponding serialized AST file, or null otherwise.
@@ -240,8 +282,6 @@ public:
     HK_PrivateTextual,
     HK_Excluded
   };
-  static const int NumHeaderKinds = HK_Excluded + 1;
-
   /// Information about a header directive as found in the module map
   /// file.
   struct Header {
@@ -250,16 +290,35 @@ public:
     FileEntryRef Entry;
   };
 
-  /// Information about a directory name as found in the module map
-  /// file.
+private:
+  static const int NumHeaderKinds = HK_Excluded + 1;
+  // The begin index for a HeaderKind also acts the end index of HeaderKind - 1.
+  // The extra element at the end acts as the end index of the last HeaderKind.
+  unsigned HeaderKindBeginIndex[NumHeaderKinds + 1] = {};
+  SmallVector<Header, 2> HeadersStorage;
+
+public:
+  ArrayRef<Header> getAllHeaders() const { return HeadersStorage; }
+  ArrayRef<Header> getHeaders(HeaderKind HK) const {
+    assert(HK < NumHeaderKinds && "Invalid Module::HeaderKind");
+    auto BeginIt = HeadersStorage.begin() + HeaderKindBeginIndex[HK];
+    auto EndIt = HeadersStorage.begin() + HeaderKindBeginIndex[HK + 1];
+    return {BeginIt, EndIt};
+  }
+  void addHeader(HeaderKind HK, Header H) {
+    assert(HK < NumHeaderKinds && "Invalid Module::HeaderKind");
+    auto EndIt = HeadersStorage.begin() + HeaderKindBeginIndex[HK + 1];
+    HeadersStorage.insert(EndIt, std::move(H));
+    for (unsigned HKI = HK + 1; HKI != NumHeaderKinds + 1; ++HKI)
+      ++HeaderKindBeginIndex[HKI];
+  }
+
+  /// Information about a directory name as found in the module map file.
   struct DirectoryName {
     std::string NameAsWritten;
     std::string PathRelativeToRootModuleDirectory;
     DirectoryEntryRef Entry;
   };
-
-  /// The headers that are part of this module.
-  SmallVector<Header, 2> Headers[5];
 
   /// Stored information about a header directive that was found in the
   /// module map file but has not been resolved to a file.
@@ -281,9 +340,10 @@ public:
   /// found on the file system.
   SmallVector<UnresolvedHeaderDirective, 1> MissingHeaders;
 
-  /// An individual requirement: a feature name and a flag indicating
-  /// the required state of that feature.
-  using Requirement = std::pair<std::string, bool>;
+  struct Requirement {
+    std::string FeatureName;
+    bool RequiredState;
+  };
 
   /// The set of language features required to use this module.
   ///
@@ -493,8 +553,9 @@ public:
   std::vector<Conflict> Conflicts;
 
   /// Construct a new module or submodule.
-  Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
-         bool IsFramework, bool IsExplicit, unsigned VisibilityID);
+  Module(ModuleConstructorTag, StringRef Name, SourceLocation DefinitionLoc,
+         Module *Parent, bool IsFramework, bool IsExplicit,
+         unsigned VisibilityID);
 
   ~Module();
 
@@ -580,7 +641,6 @@ public:
   void setParent(Module *M) {
     assert(!Parent);
     Parent = M;
-    Parent->SubModuleIndex[Name] = Parent->SubModules.size();
     Parent->SubModules.push_back(this);
   }
 
@@ -593,6 +653,11 @@ public:
   bool isModulePartition() const {
     return Kind == ModulePartitionInterface ||
            Kind == ModulePartitionImplementation;
+  }
+
+  /// Is this a module partition implementation unit.
+  bool isModulePartitionImplementation() const {
+    return Kind == ModulePartitionImplementation;
   }
 
   /// Is this a module implementation.
@@ -669,7 +734,7 @@ public:
   }
 
   /// The serialized AST file for this module, if one was created.
-  OptionalFileEntryRefDegradesToFileEntryPtr getASTFile() const {
+  OptionalFileEntryRef getASTFile() const {
     return getTopLevelModule()->ASTFile;
   }
 
@@ -740,7 +805,6 @@ public:
   ///
   /// \returns The submodule if found, or NULL otherwise.
   Module *findSubmodule(StringRef Name) const;
-  Module *findOrInferSubmodule(StringRef Name);
 
   /// Get the Global Module Fragment (sub-module) for this module, it there is
   /// one.
@@ -829,7 +893,7 @@ public:
 
   /// Get the location at which the import of a module was triggered.
   SourceLocation getImportLoc(const Module *M) const {
-    return M->getVisibilityID() < ImportLocs.size()
+    return M && M->getVisibilityID() < ImportLocs.size()
                ? ImportLocs[M->getVisibilityID()]
                : SourceLocation();
   }
@@ -846,14 +910,9 @@ public:
                          StringRef Message)>;
 
   /// Make a specific module visible.
-  void setVisible(Module *M, SourceLocation Loc,
-                  VisibleCallback Vis = [](Module *) {},
-                  ConflictCallback Cb = [](ArrayRef<Module *>, Module *,
-                                           StringRef) {});
-
-  /// Make transitive imports visible for [module.import]/7.
-  void makeTransitiveImportsVisible(
-      Module *M, SourceLocation Loc, VisibleCallback Vis = [](Module *) {},
+  void setVisible(
+      Module *M, SourceLocation Loc, bool IncludeExports = true,
+      VisibleCallback Vis = [](Module *) {},
       ConflictCallback Cb = [](ArrayRef<Module *>, Module *, StringRef) {});
 
 private:
@@ -864,32 +923,6 @@ private:
   /// Visibility generation, bumped every time the visibility state changes.
   unsigned Generation = 0;
 };
-
-/// Abstracts clang modules and precompiled header files and holds
-/// everything needed to generate debug info for an imported module
-/// or PCH.
-class ASTSourceDescriptor {
-  StringRef PCHModuleName;
-  StringRef Path;
-  StringRef ASTFile;
-  ASTFileSignature Signature;
-  Module *ClangModule = nullptr;
-
-public:
-  ASTSourceDescriptor() = default;
-  ASTSourceDescriptor(StringRef Name, StringRef Path, StringRef ASTFile,
-                      ASTFileSignature Signature)
-      : PCHModuleName(std::move(Name)), Path(std::move(Path)),
-        ASTFile(std::move(ASTFile)), Signature(Signature) {}
-  ASTSourceDescriptor(Module &M);
-
-  std::string getModuleName() const;
-  StringRef getPath() const { return Path; }
-  StringRef getASTFile() const { return ASTFile; }
-  ASTFileSignature getSignature() const { return Signature; }
-  Module *getModuleOrNull() const { return ClangModule; }
-};
-
 
 } // namespace clang
 

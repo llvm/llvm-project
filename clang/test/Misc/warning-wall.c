@@ -44,6 +44,7 @@ CHECK-NEXT:      -Wreorder-ctor
 CHECK-NEXT:      -Wreorder-init-list
 CHECK-NEXT:    -Wreturn-type
 CHECK-NEXT:      -Wreturn-type-c-linkage
+CHECK-NEXT:      -Wreturn-mismatch
 CHECK-NEXT:    -Wself-assign
 CHECK-NEXT:      -Wself-assign-overloaded
 CHECK-NEXT:      -Wself-assign-field
@@ -65,6 +66,7 @@ CHECK-NEXT:    -Wuninitialized
 CHECK-NEXT:      -Wsometimes-uninitialized
 CHECK-NEXT:      -Wstatic-self-init
 CHECK-NEXT:      -Wuninitialized-const-reference
+CHECK-NEXT:      -Wuninitialized-const-pointer
 CHECK-NEXT:    -Wunknown-pragmas
 CHECK-NEXT:    -Wunused
 CHECK-NEXT:      -Wunused-argument

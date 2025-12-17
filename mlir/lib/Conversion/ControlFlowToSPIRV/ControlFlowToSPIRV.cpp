@@ -11,17 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ControlFlowToSPIRV/ControlFlowToSPIRV.h"
-#include "../SPIRVCommon/Pattern.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "cf-to-spirv-pattern"
@@ -34,7 +30,7 @@ static LogicalResult legalizeBlockArguments(Block &block, Operation *op,
                                             const TypeConverter &converter) {
   auto builder = OpBuilder::atBlockBegin(&block);
   for (unsigned i = 0; i < block.getNumArguments(); ++i) {
-    const auto arg = block.getArgument(i);
+    BlockArgument arg = block.getArgument(i);
     if (converter.isLegal(arg.getType()))
       continue;
     Type ty = arg.getType();
@@ -66,7 +62,7 @@ static LogicalResult legalizeBlockArguments(Block &block, Operation *op,
 namespace {
 /// Converts cf.br to spirv.Branch.
 struct BranchOpPattern final : OpConversionPattern<cf::BranchOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(cf::BranchOp op, OpAdaptor adaptor,
@@ -83,7 +79,7 @@ struct BranchOpPattern final : OpConversionPattern<cf::BranchOp> {
 
 /// Converts cf.cond_br to spirv.BranchConditional.
 struct CondBranchOpPattern final : OpConversionPattern<cf::CondBranchOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(cf::CondBranchOp op, OpAdaptor adaptor,
@@ -110,7 +106,7 @@ struct CondBranchOpPattern final : OpConversionPattern<cf::CondBranchOp> {
 //===----------------------------------------------------------------------===//
 
 void mlir::cf::populateControlFlowToSPIRVPatterns(
-    SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
+    const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
 
   patterns.add<BranchOpPattern, CondBranchOpPattern>(typeConverter, context);

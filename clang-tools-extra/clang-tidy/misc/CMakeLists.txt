@@ -15,8 +15,9 @@ add_custom_command(
     DEPENDS ${clang_tidy_confusable_chars_gen_target} ConfusableTable/confusables.txt)
 
 add_custom_target(genconfusable DEPENDS Confusables.inc)
+set_target_properties(genconfusable PROPERTIES FOLDER "Clang Tools Extra/Sourcegenning")
 
-add_clang_library(clangTidyMiscModule
+add_clang_library(clangTidyMiscModule STATIC
   ConstCorrectnessCheck.cpp
   CoroutineHostileRAIICheck.cpp
   DefinitionsInHeadersCheck.cpp
@@ -24,13 +25,16 @@ add_clang_library(clangTidyMiscModule
   HeaderIncludeCycleCheck.cpp
   IncludeCleanerCheck.cpp
   MiscTidyModule.cpp
-  MisleadingBidirectional.cpp
-  MisleadingIdentifier.cpp
+  MisleadingBidirectionalCheck.cpp
+  MisleadingIdentifierCheck.cpp
   MisplacedConstCheck.cpp
+  MultipleInheritanceCheck.cpp
   NewDeleteOverloadsCheck.cpp
   NoRecursionCheck.cpp
-  NonCopyableObjects.cpp
+  NonCopyableObjectsCheck.cpp
   NonPrivateMemberVariablesInClassesCheck.cpp
+  OverrideWithDifferentVisibilityCheck.cpp
+  PredictableRandCheck.cpp
   RedundantExpressionCheck.cpp
   StaticAssertCheck.cpp
   ThrowByValueCatchByReferenceCheck.cpp
@@ -40,9 +44,9 @@ add_clang_library(clangTidyMiscModule
   UnusedParametersCheck.cpp
   UnusedUsingDeclsCheck.cpp
   UseAnonymousNamespaceCheck.cpp
+  UseInternalLinkageCheck.cpp
 
   LINK_LIBS
-  clangAnalysis
   clangTidy
   clangTidyUtils
 

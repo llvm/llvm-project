@@ -4,11 +4,18 @@
 // Verify the generic form can be parsed.
 // RUN: mlir-opt -allow-unregistered-dialect -mlir-print-op-generic %s | mlir-opt -allow-unregistered-dialect | FileCheck %s
 
-// CHECK-LABEL: func @ext_packed_fp8
-// CHECK: amdgpu.ext_packed_fp8
-func.func @ext_packed_fp8(%v: vector<4xf8E4M3FNUZ>) -> f32 {
+// CHECK-LABEL: func @ext_packed_fp8_s
+// CHECK: amdgpu.ext_packed_fp8 {{.*}} vector<4xf8E4M3FNUZ> to f32
+func.func @ext_packed_fp8_s(%v: vector<4xf8E4M3FNUZ>) -> f32 {
   %ret = amdgpu.ext_packed_fp8 %v[0] : vector<4xf8E4M3FNUZ> to f32
   func.return %ret : f32
+}
+
+// CHECK-LABEL: func @ext_packed_fp8_v
+// CHECK: amdgpu.ext_packed_fp8 {{.*}} vector<4xf8E4M3FNUZ> to vector<2xf32
+func.func @ext_packed_fp8_v(%v: vector<4xf8E4M3FNUZ>) -> vector<2xf32> {
+  %ret = amdgpu.ext_packed_fp8 %v[0] : vector<4xf8E4M3FNUZ> to vector<2xf32>
+  func.return %ret : vector<2xf32>
 }
 
 // CHECK-LABEL: func @packed_trunc_2xfp8
@@ -23,6 +30,439 @@ func.func @packed_trunc_2xfp8(%v1: f32, %v2: f32, %others: vector<4xf8E5M2FNUZ>,
 func.func @packed_stoch_round_fp8(%v1: f32, %stoch: i32, %others: vector<4xf8E5M2FNUZ>) -> vector<4xf8E5M2FNUZ> {
   %ret = amdgpu.packed_stoch_round_fp8 %v1 + %stoch into %others[2] : f32 to vector<4xf8E5M2FNUZ> into vector<4xf8E5M2FNUZ>
   func.return %ret : vector<4xf8E5M2FNUZ>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_full_f8e4m3_f32
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_full_f8e4m3_f32(%v: vector<4xf8E4M3FN>, %scale: f32) -> vector<2xf32> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<4xf8E4M3FN> to vector<2xf32>
+  func.return %ret : vector<2xf32>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_full_f8e4m3_f16
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_full_f8e4m3_f16(%v: vector<4xf8E4M3FN>, %scale: f32) -> vector<2xf16> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<4xf8E4M3FN> to vector<2xf16>
+  func.return %ret : vector<2xf16>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_full_f8e4m3_bf16
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_full_f8e4m3_bf16(%v: vector<4xf8E4M3FN>, %scale: f32) -> vector<2xbf16> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<4xf8E4M3FN> to vector<2xbf16>
+  func.return %ret : vector<2xbf16>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_half_f8e4m3_f32
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_half_f8e4m3_f32(%v: vector<2xf8E4M3FN>, %scale: f32) -> vector<2xf32> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<2xf8E4M3FN> to vector<2xf32>
+  func.return %ret : vector<2xf32>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_half_f8e4m3_f16
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_half_f8e4m3_f16(%v: vector<2xf8E4M3FN>, %scale: f32) -> vector<2xf16> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<2xf8E4M3FN> to vector<2xf16>
+  func.return %ret : vector<2xf16>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_half_f8e4m3_bf16
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_half_f8e4m3_bf16(%v: vector<2xf8E4M3FN>, %scale: f32) -> vector<2xbf16> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<2xf8E4M3FN> to vector<2xbf16>
+  func.return %ret : vector<2xbf16>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_scalar_f8e4m3_f32
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_scalar_f8e4m3_f32(%v: vector<2xf8E4M3FN>, %scale: f32) -> vector<2xf32> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<2xf8E4M3FN> to vector<2xf32>
+  func.return %ret : vector<2xf32>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_scalar_f8e4m3_f16
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_scalar_f8e4m3_f16(%v: vector<2xf8E4M3FN>, %scale: f32) -> vector<2xf16> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<2xf8E4M3FN> to vector<2xf16>
+  func.return %ret : vector<2xf16>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_scalar_f8e4m3_bf16
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_scalar_f8e4m3_bf16(%v: vector<2xf8E4M3FN>, %scale: f32) -> vector<2xbf16> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<2xf8E4M3FN> to vector<2xbf16>
+  func.return %ret : vector<2xbf16>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_full_f8e5m2_f32
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_full_f8e5m2_f32(%v: vector<4xf8E5M2>, %scale: f32) -> vector<2xf32> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<4xf8E5M2> to vector<2xf32>
+  func.return %ret : vector<2xf32>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_full_f8e5m2_f16
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_full_f8e5m2_f16(%v: vector<4xf8E5M2>, %scale: f32) -> vector<2xf16> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<4xf8E5M2> to vector<2xf16>
+  func.return %ret : vector<2xf16>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_full_f8e5m2_bf16
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_full_f8e5m2_bf16(%v: vector<4xf8E5M2>, %scale: f32) -> vector<2xbf16> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<4xf8E5M2> to vector<2xbf16>
+  func.return %ret : vector<2xbf16>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_half_f8e5m2_f32
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_half_f8e5m2_f32(%v: vector<2xf8E5M2>, %scale: f32) -> vector<2xf32> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<2xf8E5M2> to vector<2xf32>
+  func.return %ret : vector<2xf32>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_half_f8e5m2_f16
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_half_f8e5m2_f16(%v: vector<2xf8E5M2>, %scale: f32) -> vector<2xf16> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<2xf8E5M2> to vector<2xf16>
+  func.return %ret : vector<2xf16>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_half_f8e5m2_bf16
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_half_f8e5m2_bf16(%v: vector<2xf8E5M2>, %scale: f32) -> vector<2xbf16> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<2xf8E5M2> to vector<2xbf16>
+  func.return %ret : vector<2xbf16>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_scalar_f8e5m2_f32
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_scalar_f8e5m2_f32(%v: vector<2xf8E5M2>, %scale: f32) -> vector<2xf32> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<2xf8E5M2> to vector<2xf32>
+  func.return %ret : vector<2xf32>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_scalar_f8e5m2_f16
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_scalar_f8e5m2_f16(%v: vector<2xf8E5M2>, %scale: f32) -> vector<2xf16> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<2xf8E5M2> to vector<2xf16>
+  func.return %ret : vector<2xf16>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_scalar_f8e5m2_bf16
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_scalar_f8e5m2_bf16(%v: vector<2xf8E5M2>, %scale: f32) -> vector<2xbf16> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<2xf8E5M2> to vector<2xbf16>
+  func.return %ret : vector<2xbf16>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_full_f4e2m1_f32
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_full_f4e2m1_f32(%v: vector<8xf4E2M1FN>, %scale: f32) -> vector<2xf32> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<8xf4E2M1FN> to vector<2xf32>
+  func.return %ret : vector<2xf32>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_full_f4e2m1_f16
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_full_f4e2m1_f16(%v: vector<8xf4E2M1FN>, %scale: f32) -> vector<2xf16> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<8xf4E2M1FN> to vector<2xf16>
+  func.return %ret : vector<2xf16>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_full_f4e2m1_bf16
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_full_f4e2m1_bf16(%v: vector<8xf4E2M1FN>, %scale: f32) -> vector<2xbf16> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<8xf4E2M1FN> to vector<2xbf16>
+  func.return %ret : vector<2xbf16>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_half_f4e2m1_f32
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_half_f4e2m1_f32(%v: vector<8xf4E2M1FN>, %scale: f32) -> vector<2xf32> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<8xf4E2M1FN> to vector<2xf32>
+  func.return %ret : vector<2xf32>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_half_f4e2m1_f16
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_half_f4e2m1_f16(%v: vector<4xf4E2M1FN>, %scale: f32) -> vector<2xf16> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<4xf4E2M1FN> to vector<2xf16>
+  func.return %ret : vector<2xf16>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_half_f4e2m1_bf16
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_half_f4e2m1_bf16(%v: vector<4xf4E2M1FN>, %scale: f32) -> vector<2xbf16> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<4xf4E2M1FN> to vector<2xbf16>
+  func.return %ret : vector<2xbf16>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_scalar_f4e2m1_f32
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_scalar_f4e2m1_f32(%v: vector<2xf4E2M1FN>, %scale: f32) -> vector<2xf32> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<2xf4E2M1FN> to vector<2xf32>
+  func.return %ret : vector<2xf32>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_scalar_f4e2m1_f16
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_scalar_f4e2m1_f16(%v: vector<2xf4E2M1FN>, %scale: f32) -> vector<2xf16> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<2xf4E2M1FN> to vector<2xf16>
+  func.return %ret : vector<2xf16>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_scalar_f4e2m1_bf16
+// CHECK: amdgpu.scaled_ext_packed
+func.func @scaled_ext_scalar_f4e2m1_bf16(%v: vector<2xf4E2M1FN>, %scale: f32) -> vector<2xbf16> {
+  %ret = amdgpu.scaled_ext_packed %v[0], %scale : vector<2xf4E2M1FN> to vector<2xbf16>
+  func.return %ret : vector<2xbf16>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_packed_matrix_fp4
+func.func @scaled_ext_packed_matrix_fp4(%v: vector<8xf4E2M1FN>, %scale: vector<4xf8E8M0FNU>) -> (vector<8xf16>, vector<8xbf16>, vector<8xf32>) {
+  // CHECK: amdgpu.scaled_ext_packed_matrix
+  %ret0 = amdgpu.scaled_ext_packed_matrix %v scale(%scale) blockSize(32) firstScaleLane(0) firstScaleByte(0) : vector<8xf4E2M1FN>, vector<4xf8E8M0FNU> -> vector<8xf16>
+  // CHECK: amdgpu.scaled_ext_packed_matrix
+  %ret1 = amdgpu.scaled_ext_packed_matrix %v scale(%scale) blockSize(32) firstScaleLane(0) firstScaleByte(0) : vector<8xf4E2M1FN>, vector<4xf8E8M0FNU> -> vector<8xbf16>
+  // CHECK: amdgpu.scaled_ext_packed_matrix
+  %ret2 = amdgpu.scaled_ext_packed_matrix %v scale(%scale) blockSize(32) firstScaleLane(0) firstScaleByte(0) : vector<8xf4E2M1FN>, vector<4xf8E8M0FNU> -> vector<8xf32>
+  func.return %ret0, %ret1, %ret2 : vector<8xf16>, vector<8xbf16>, vector<8xf32>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_packed_matrix_fp8
+func.func @scaled_ext_packed_matrix_fp8(%v: vector<8xf8E4M3FN>, %scale: vector<4xf8E8M0FNU>) -> (vector<8xf16>, vector<8xbf16>, vector<8xf32>) {
+  // CHECK: amdgpu.scaled_ext_packed_matrix
+  %ret0 = amdgpu.scaled_ext_packed_matrix %v scale(%scale) blockSize(32) firstScaleLane(0) firstScaleByte(0) : vector<8xf8E4M3FN>, vector<4xf8E8M0FNU> -> vector<8xf16>
+  // CHECK: amdgpu.scaled_ext_packed_matrix
+  %ret1 = amdgpu.scaled_ext_packed_matrix %v scale(%scale) blockSize(32) firstScaleLane(0) firstScaleByte(0) : vector<8xf8E4M3FN>, vector<4xf8E8M0FNU> -> vector<8xbf16>
+  // CHECK: amdgpu.scaled_ext_packed_matrix
+  %ret2 = amdgpu.scaled_ext_packed_matrix %v scale(%scale) blockSize(32) firstScaleLane(0) firstScaleByte(0) : vector<8xf8E4M3FN>, vector<4xf8E8M0FNU> -> vector<8xf32>
+  func.return %ret0, %ret1, %ret2 : vector<8xf16>, vector<8xbf16>, vector<8xf32>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_packed_matrix_bf8
+func.func @scaled_ext_packed_matrix_bf8(%v: vector<8xf8E5M2>, %scale: vector<4xf8E8M0FNU>) -> (vector<8xf16>, vector<8xbf16>, vector<8xf32>) {
+  // CHECK: amdgpu.scaled_ext_packed_matrix
+  %ret0 = amdgpu.scaled_ext_packed_matrix %v scale(%scale) blockSize(32) firstScaleLane(0) firstScaleByte(0) : vector<8xf8E5M2>, vector<4xf8E8M0FNU> -> vector<8xf16>
+  // CHECK: amdgpu.scaled_ext_packed_matrix
+  %ret1 = amdgpu.scaled_ext_packed_matrix %v scale(%scale) blockSize(32) firstScaleLane(0) firstScaleByte(0) : vector<8xf8E5M2>, vector<4xf8E8M0FNU> -> vector<8xbf16>
+  // CHECK: amdgpu.scaled_ext_packed_matrix
+  %ret2 = amdgpu.scaled_ext_packed_matrix %v scale(%scale) blockSize(32) firstScaleLane(0) firstScaleByte(0) : vector<8xf8E5M2>, vector<4xf8E8M0FNU> -> vector<8xf32>
+  func.return %ret0, %ret1, %ret2 : vector<8xf16>, vector<8xbf16>, vector<8xf32>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_packed_matrix_fp6
+func.func @scaled_ext_packed_matrix_fp6(%v: vector<16xf6E2M3FN>, %scale: vector<4xf8E8M0FNU>) -> (vector<16xf16>, vector<16xbf16>, vector<16xf32>) {
+  // CHECK: amdgpu.scaled_ext_packed_matrix
+  %ret0 = amdgpu.scaled_ext_packed_matrix %v scale(%scale) blockSize(32) firstScaleLane(0) firstScaleByte(0) : vector<16xf6E2M3FN>, vector<4xf8E8M0FNU> -> vector<16xf16>
+  // CHECK: amdgpu.scaled_ext_packed_matrix
+  %ret1 = amdgpu.scaled_ext_packed_matrix %v scale(%scale) blockSize(32) firstScaleLane(0) firstScaleByte(0) : vector<16xf6E2M3FN>, vector<4xf8E8M0FNU> -> vector<16xbf16>
+  // CHECK: amdgpu.scaled_ext_packed_matrix
+  %ret2 = amdgpu.scaled_ext_packed_matrix %v scale(%scale) blockSize(32) firstScaleLane(0) firstScaleByte(0) : vector<16xf6E2M3FN>, vector<4xf8E8M0FNU> -> vector<16xf32>
+  func.return %ret0, %ret1, %ret2 : vector<16xf16>, vector<16xbf16>, vector<16xf32>
+}
+
+// CHECK-LABEL: func.func @scaled_ext_packed_matrix_bf6
+func.func @scaled_ext_packed_matrix_bf6(%v: vector<16xf6E3M2FN>, %scale: vector<4xf8E8M0FNU>) -> (vector<16xf16>, vector<16xbf16>, vector<16xf32>) {
+  // CHECK: amdgpu.scaled_ext_packed_matrix
+  %ret0 = amdgpu.scaled_ext_packed_matrix %v scale(%scale) blockSize(32) firstScaleLane(0) firstScaleByte(0) : vector<16xf6E3M2FN>, vector<4xf8E8M0FNU> -> vector<16xf16>
+  // CHECK: amdgpu.scaled_ext_packed_matrix
+  %ret1 = amdgpu.scaled_ext_packed_matrix %v scale(%scale) blockSize(32) firstScaleLane(0) firstScaleByte(0) : vector<16xf6E3M2FN>, vector<4xf8E8M0FNU> -> vector<16xbf16>
+  // CHECK: amdgpu.scaled_ext_packed_matrix
+  %ret2 = amdgpu.scaled_ext_packed_matrix %v scale(%scale) blockSize(32) firstScaleLane(0) firstScaleByte(0) : vector<16xf6E3M2FN>, vector<4xf8E8M0FNU> -> vector<16xf32>
+  func.return %ret0, %ret1, %ret2 : vector<16xf16>, vector<16xbf16>, vector<16xf32>
+}
+
+// CHECK-LABEL: func.func @packed_scaled_trunc_f8e4m3_f32
+// CHECK: amdgpu.packed_scaled_trunc
+func.func @packed_scaled_trunc_f8e4m3_f32(%v: vector<2xf32>, %scale: f32) -> vector<4xf8E4M3FN> {
+  %ret = amdgpu.packed_scaled_trunc %v into undef[0], %scale : vector<2xf32> to vector<4xf8E4M3FN>
+  func.return %ret : vector<4xf8E4M3FN>
+}
+
+// CHECK-LABEL: func.func @packed_scaled_trunc_into_f8e4m3_f32
+// CHECK: amdgpu.packed_scaled_trunc
+func.func @packed_scaled_trunc_into_f8e4m3_f32(%v: vector<2xf32>, %existing: vector<4xf8E4M3FN>, %scale: f32) -> vector<4xf8E4M3FN> {
+  %ret = amdgpu.packed_scaled_trunc %v into %existing[0], %scale : vector<2xf32> to vector<4xf8E4M3FN> into vector<4xf8E4M3FN>
+  func.return %ret : vector<4xf8E4M3FN>
+}
+
+// CHECK-LABEL: func.func @packed_scaled_trunc_f8e4m3_f16
+// CHECK: amdgpu.packed_scaled_trunc
+func.func @packed_scaled_trunc_f8e4m3_f16(%v: vector<2xf16>, %scale: f32) -> vector<4xf8E4M3FN> {
+  %ret = amdgpu.packed_scaled_trunc %v into undef[0], %scale : vector<2xf16> to vector<4xf8E4M3FN>
+  func.return %ret : vector<4xf8E4M3FN>
+}
+
+// CHECK-LABEL: func.func @packed_scaled_trunc_into_f8e4m3_f16
+// CHECK: amdgpu.packed_scaled_trunc
+func.func @packed_scaled_trunc_into_f8e4m3_f16(%v: vector<2xf16>, %existing: vector<4xf8E4M3FN>, %scale: f32) -> vector<4xf8E4M3FN> {
+  %ret = amdgpu.packed_scaled_trunc %v into %existing[0], %scale : vector<2xf16> to vector<4xf8E4M3FN> into vector<4xf8E4M3FN>
+  func.return %ret : vector<4xf8E4M3FN>
+}
+
+// CHECK-LABEL: func.func @packed_scaled_trunc_f8e4m3_bf16
+// CHECK: amdgpu.packed_scaled_trunc
+func.func @packed_scaled_trunc_f8e4m3_bf16(%v: vector<2xbf16>, %scale: f32) -> vector<4xf8E4M3FN> {
+  %ret = amdgpu.packed_scaled_trunc %v into undef[0], %scale : vector<2xbf16> to vector<4xf8E4M3FN>
+  func.return %ret : vector<4xf8E4M3FN>
+}
+
+// CHECK-LABEL: func.func @packed_scaled_trunc_into_f8e4m3_bf16
+// CHECK: amdgpu.packed_scaled_trunc
+func.func @packed_scaled_trunc_into_f8e4m3_bf16(%v: vector<2xbf16>, %existing: vector<4xf8E4M3FN>, %scale: f32) -> vector<4xf8E4M3FN> {
+  %ret = amdgpu.packed_scaled_trunc %v into %existing[0], %scale : vector<2xbf16> to vector<4xf8E4M3FN> into vector<4xf8E4M3FN>
+  func.return %ret : vector<4xf8E4M3FN>
+}
+
+// CHECK-LABEL: func.func @packed_scaled_trunc_f8e5m2_f32
+// CHECK: amdgpu.packed_scaled_trunc
+func.func @packed_scaled_trunc_f8e5m2_f32(%v: vector<2xf32>, %scale: f32) -> vector<4xf8E5M2> {
+  %ret = amdgpu.packed_scaled_trunc %v into undef[0], %scale : vector<2xf32> to vector<4xf8E5M2>
+  func.return %ret : vector<4xf8E5M2>
+}
+
+// CHECK-LABEL: func.func @packed_scaled_trunc_into_f8e5m2_f32
+// CHECK: amdgpu.packed_scaled_trunc
+func.func @packed_scaled_trunc_into_f8e5m2_f32(%v: vector<2xf32>, %existing: vector<4xf8E5M2>, %scale: f32) -> vector<4xf8E5M2> {
+  %ret = amdgpu.packed_scaled_trunc %v into %existing[0], %scale : vector<2xf32> to vector<4xf8E5M2> into vector<4xf8E5M2>
+  func.return %ret : vector<4xf8E5M2>
+}
+
+// CHECK-LABEL: func.func @packed_scaled_trunc_f8e5m2_f16
+// CHECK: amdgpu.packed_scaled_trunc
+func.func @packed_scaled_trunc_f8e5m2_f16(%v: vector<2xf16>, %scale: f32) -> vector<4xf8E5M2> {
+  %ret = amdgpu.packed_scaled_trunc %v into undef[0], %scale : vector<2xf16> to vector<4xf8E5M2>
+  func.return %ret : vector<4xf8E5M2>
+}
+
+// CHECK-LABEL: func.func @packed_scaled_trunc_into_f8e5m2_f16
+// CHECK: amdgpu.packed_scaled_trunc
+func.func @packed_scaled_trunc_into_f8e5m2_f16(%v: vector<2xf16>, %existing: vector<4xf8E5M2>, %scale: f32) -> vector<4xf8E5M2> {
+  %ret = amdgpu.packed_scaled_trunc %v into %existing[0], %scale : vector<2xf16> to vector<4xf8E5M2> into vector<4xf8E5M2>
+  func.return %ret : vector<4xf8E5M2>
+}
+
+// CHECK-LABEL: func.func @packed_scaled_trunc_f8e5m2_bf16
+// CHECK: amdgpu.packed_scaled_trunc
+func.func @packed_scaled_trunc_f8e5m2_bf16(%v: vector<2xbf16>, %scale: f32) -> vector<4xf8E5M2> {
+  %ret = amdgpu.packed_scaled_trunc %v into undef[0], %scale : vector<2xbf16> to vector<4xf8E5M2>
+  func.return %ret : vector<4xf8E5M2>
+}
+
+// CHECK-LABEL: func.func @packed_scaled_trunc_into_f8e5m2_bf16
+// CHECK: amdgpu.packed_scaled_trunc
+func.func @packed_scaled_trunc_into_f8e5m2_bf16(%v: vector<2xbf16>, %existing: vector<4xf8E5M2>, %scale: f32) -> vector<4xf8E5M2> {
+  %ret = amdgpu.packed_scaled_trunc %v into %existing[0], %scale : vector<2xbf16> to vector<4xf8E5M2> into vector<4xf8E5M2>
+  func.return %ret : vector<4xf8E5M2>
+}
+
+// CHECK-LABEL: func.func @packed_scaled_trunc_f4e2m1_f32
+// CHECK: amdgpu.packed_scaled_trunc
+func.func @packed_scaled_trunc_f4e2m1_f32(%v: vector<2xf32>, %scale: f32) -> vector<8xf4E2M1FN> {
+  %ret = amdgpu.packed_scaled_trunc %v into undef[0], %scale : vector<2xf32> to vector<8xf4E2M1FN>
+  func.return %ret : vector<8xf4E2M1FN>
+}
+
+// CHECK-LABEL: func.func @packed_scaled_trunc_into_f4e2m1_f32
+// CHECK: amdgpu.packed_scaled_trunc
+func.func @packed_scaled_trunc_into_f4e2m1_f32(%v: vector<2xf32>, %existing: vector<8xf4E2M1FN>, %scale: f32) -> vector<8xf4E2M1FN> {
+  %ret = amdgpu.packed_scaled_trunc %v into %existing[0], %scale : vector<2xf32> to vector<8xf4E2M1FN> into vector<8xf4E2M1FN>
+  func.return %ret : vector<8xf4E2M1FN>
+}
+
+// CHECK-LABEL: func.func @packed_scaled_trunc_f4e2m1_f16
+// CHECK: amdgpu.packed_scaled_trunc
+func.func @packed_scaled_trunc_f4e2m1_f16(%v: vector<2xf16>, %scale: f32) -> vector<8xf4E2M1FN> {
+  %ret = amdgpu.packed_scaled_trunc %v into undef[0], %scale : vector<2xf16> to vector<8xf4E2M1FN>
+  func.return %ret : vector<8xf4E2M1FN>
+}
+
+// CHECK-LABEL: func.func @packed_scaled_trunc_into_f4e2m1_f16
+// CHECK: amdgpu.packed_scaled_trunc
+func.func @packed_scaled_trunc_into_f4e2m1_f16(%v: vector<2xf16>, %existing: vector<8xf4E2M1FN>, %scale: f32) -> vector<8xf4E2M1FN> {
+  %ret = amdgpu.packed_scaled_trunc %v into %existing[0], %scale : vector<2xf16> to vector<8xf4E2M1FN> into vector<8xf4E2M1FN>
+  func.return %ret : vector<8xf4E2M1FN>
+}
+
+// CHECK-LABEL: func.func @packed_scaled_trunc_f4e2m1_bf16
+// CHECK: amdgpu.packed_scaled_trunc
+func.func @packed_scaled_trunc_f4e2m1_bf16(%v: vector<2xbf16>, %scale: f32) -> vector<8xf4E2M1FN> {
+  %ret = amdgpu.packed_scaled_trunc %v into undef[0], %scale : vector<2xbf16> to vector<8xf4E2M1FN>
+  func.return %ret : vector<8xf4E2M1FN>
+}
+
+// CHECK-LABEL: func.func @packed_scaled_trunc_into_f4e2m1_bf16
+// CHECK: amdgpu.packed_scaled_trunc
+func.func @packed_scaled_trunc_into_f4e2m1_bf16(%v: vector<2xbf16>, %existing: vector<8xf4E2M1FN>, %scale: f32) -> vector<8xf4E2M1FN> {
+  %ret = amdgpu.packed_scaled_trunc %v into %existing[0], %scale : vector<2xbf16> to vector<8xf4E2M1FN> into vector<8xf4E2M1FN>
+  func.return %ret : vector<8xf4E2M1FN>
+}
+
+// CHECK-LABEL: func @fat_raw_buffer_cast_easy
+// CHECK: amdgpu.fat_raw_buffer_cast
+func.func @fat_raw_buffer_cast_easy(%m: memref<8xi32>) -> memref<8xi32, #amdgpu.address_space<fat_raw_buffer>> {
+  %ret = amdgpu.fat_raw_buffer_cast %m : memref<8xi32> to memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
+  func.return %ret : memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
+}
+
+// CHECK-LABEL: func @fat_raw_buffer_cast
+// CHECK: amdgpu.fat_raw_buffer_cast
+// CHECK-SAME: validBytes(%{{[^)]*}})
+// CHECK-SAME: cacheSwizzleStride(%{{[^)]*}})
+// CHECK-SAME: boundsCheck(false)
+// CHECK-SAME: resetOffset
+func.func @fat_raw_buffer_cast(%m: memref<8xi32, strided<[1], offset: ?>>, %validBytes: i64, %cacheSwizzle: i14) -> memref<8xi32, #amdgpu.address_space<fat_raw_buffer>> {
+  %ret = amdgpu.fat_raw_buffer_cast %m validBytes(%validBytes) cacheSwizzleStride(%cacheSwizzle) boundsCheck(false) resetOffset
+    : memref<8xi32, strided<[1], offset: ?>> to memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
+  func.return %ret : memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
+}
+
+// CHECK-LABEL: func @fat_raw_buffer_cast_dynamic_1d_reset_offset
+// CHECK: amdgpu.fat_raw_buffer_cast
+func.func @fat_raw_buffer_cast_dynamic_1d_reset_offset(%m: memref<?xi32, strided<[1], offset: ?>>) -> memref<?xi32, #amdgpu.address_space<fat_raw_buffer>> {
+  %ret = amdgpu.fat_raw_buffer_cast %m resetOffset
+    : memref<?xi32, strided<[1], offset: ?>> to memref<?xi32, #amdgpu.address_space<fat_raw_buffer>>
+  func.return %ret : memref<?xi32, #amdgpu.address_space<fat_raw_buffer>>
+}
+
+// CHECK-LABEL: func @fat_raw_buffer_cast_dynamic_0d_reset_offset
+// CHECK: %[[ret:.+]] = amdgpu.fat_raw_buffer_cast
+// CHECK: return %[[ret]]
+func.func @fat_raw_buffer_cast_dynamic_0d_reset_offset(%m: memref<i32, strided<[], offset: ?>>) -> memref<i32, #amdgpu.address_space<fat_raw_buffer>> {
+  %ret = amdgpu.fat_raw_buffer_cast %m resetOffset
+    : memref<i32, strided<[], offset: ?>> to memref<i32, #amdgpu.address_space<fat_raw_buffer>>
+  func.return %ret : memref<i32, #amdgpu.address_space<fat_raw_buffer>>
+}
+
+// CHECK-LABEL: func @fat_raw_buffer_cast_static_shape_2d_reset_offset
+// CHECK: %[[ret:.+]] = amdgpu.fat_raw_buffer_cast
+// CHECK: return %[[ret]]
+func.func @fat_raw_buffer_cast_static_shape_2d_reset_offset(%m: memref<4x4xi32, strided<[4, 1], offset: ?>>) -> memref<4x4xi32, #amdgpu.address_space<fat_raw_buffer>> {
+  %ret = amdgpu.fat_raw_buffer_cast %m resetOffset
+    : memref<4x4xi32, strided<[4, 1], offset: ?>> to memref<4x4xi32, #amdgpu.address_space<fat_raw_buffer>>
+  func.return %ret : memref<4x4xi32, #amdgpu.address_space<fat_raw_buffer>>
+}
+
+// CHECK-LABEL: func @fat_raw_buffer_cast_dynamic_2d_reset_offset
+// CHECK: %[[ret:.+]] = amdgpu.fat_raw_buffer_cast
+// CHECK: return %[[ret]]
+func.func @fat_raw_buffer_cast_dynamic_2d_reset_offset(%m: memref<?x?xi32, strided<[?, 1], offset: ?>>) -> memref<?x?xi32, strided<[?, 1]>, #amdgpu.address_space<fat_raw_buffer>> {
+  %ret = amdgpu.fat_raw_buffer_cast %m resetOffset
+    : memref<?x?xi32, strided<[?, 1], offset: ?>> to memref<?x?xi32, strided<[?, 1]>, #amdgpu.address_space<fat_raw_buffer>>
+  func.return %ret : memref<?x?xi32, strided<[?, 1]>, #amdgpu.address_space<fat_raw_buffer>>
+}
+
+// CHECK-LABEL: func @fat_raw_buffer_cast_noncontiguous_2d_reset_offset
+// CHECK: %[[ret:.+]] = amdgpu.fat_raw_buffer_cast
+// CHECK: return %[[ret]]
+func.func @fat_raw_buffer_cast_noncontiguous_2d_reset_offset(%m: memref<4x4xi32, strided<[8, 1], offset: ?>>) -> memref<4x4xi32, strided<[8, 1]>, #amdgpu.address_space<fat_raw_buffer>> {
+  %ret = amdgpu.fat_raw_buffer_cast %m resetOffset
+    : memref<4x4xi32, strided<[8, 1], offset: ?>> to memref<4x4xi32, strided<[8, 1]>, #amdgpu.address_space<fat_raw_buffer>>
+  func.return %ret : memref<4x4xi32, strided<[8, 1]>, #amdgpu.address_space<fat_raw_buffer>>
 }
 
 // CHECK-LABEL: func @raw_buffer_load_f32_from_rank_1
@@ -109,16 +549,248 @@ func.func @lds_barrier() {
   func.return
 }
 
+// CHECK-LABEL: func @sched_barrier
+func.func @sched_barrier() {
+  // CHECK: amdgpu.sched_barrier allow = <none>
+  amdgpu.sched_barrier allow = <none>
+  // CHECK: amdgpu.sched_barrier allow = <valu|all_vmem>
+  amdgpu.sched_barrier allow = <valu|all_vmem>
+  func.return
+}
+
 // CHECK-LABEL: func @mfma
-func.func @mfma(%arg0 : f32, %arg1 : vector<32xf32>) -> vector<32xf32> {
-  // CHECK: amdgpu.mfma
-  %0 = amdgpu.mfma %arg0 * %arg0 + %arg1 { abid = 1 : i32, cbsz = 1 : i32, k = 1 : i32, m = 32 : i32, n = 32 : i32, blocks = 2 : i32 } blgp = bcast_second_32 : f32, f32, vector<32xf32>
+func.func @mfma(%arg0 : vector<4xf16>, %arg1 : vector<4xf32>) -> vector<4xf32> {
+  // CHECK: amdgpu.mfma 16x16x16
+  %0 = amdgpu.mfma 16x16x16 %arg0 * %arg0 + %arg1 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<4xf16>, vector<4xf16>, vector<4xf32>
+  func.return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: func @mfma_with_blocks
+func.func @mfma_with_blocks(%arg0 : f32, %arg1 : vector<32xf32>) -> vector<32xf32> {
+  // CHECK: amdgpu.mfma 32x32x1
+  %0 = amdgpu.mfma 32x32x1 %arg0 * %arg0 + %arg1 { abid = 1 : i32, cbsz = 1 : i32, blocks = 2 : i32 } blgp = bcast_second_32 : f32, f32, vector<32xf32>
   func.return %0 : vector<32xf32>
 }
 
-// CHECK-LABEL: func @wmma
-func.func @wmma(%arg0 : vector<16xf16>, %arg1 : vector<8xf16>) -> vector<8xf16> {
-  // CHECK: amdgpu.wmma
-  %0 = amdgpu.wmma %arg0 * %arg0 + %arg1 : vector<16xf16>, vector<16xf16>, vector<8xf16>
+// CHECK-LABEL: func @wmma_f16_16x16x16_f16
+func.func @wmma_f16_16x16x16_f16(%arg0 : vector<16xf16>, %arg1 : vector<8xf16>) -> vector<8xf16> {
+  // CHECK: amdgpu.wmma 16x16x16
+  %0 = amdgpu.wmma 16x16x16 %arg0 * %arg0 + %arg1 : vector<16xf16>, vector<16xf16>, vector<8xf16>
   func.return %0 : vector<8xf16>
+}
+
+// CHECK-LABEL: func @wmma_i32_16x16x32_i4
+func.func @wmma_i32_16x16x32_i4(%arg0 : vector<16xi4>, %arg1 : vector<8xi32>) -> vector<8xi32> {
+  // CHECK: amdgpu.wmma 16x16x32
+  %0 = amdgpu.wmma 16x16x32 %arg0 * %arg0 + %arg1 : vector<16xi4>, vector<16xi4>, vector<8xi32>
+  func.return %0 : vector<8xi32>
+}
+
+// CHECK-LABEL: func @wmma_f32_16x16x4_f32
+func.func @wmma_f32_16x16x4_f32(%arg0 : vector<2xf32>, %arg1 : vector<8xf32>) -> vector<8xf32> {
+  // CHECK: amdgpu.wmma 16x16x4
+  %0 = amdgpu.wmma 16x16x4 %arg0 * %arg0 + %arg1 : vector<2xf32>, vector<2xf32>, vector<8xf32>
+  func.return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @wmma_f32_16x16x64_f8
+func.func @wmma_f32_16x16x64_f8(%arg0 : vector<32xf8E4M3FN>, %arg1 : vector<8xf32>) -> vector<8xf32> {
+  // CHECK: amdgpu.wmma 16x16x64
+  %0 = amdgpu.wmma 16x16x64 %arg0 * %arg0 + %arg1 : vector<32xf8E4M3FN>, vector<32xf8E4M3FN>, vector<8xf32>
+  func.return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @wmma_f32_16x16x64_bf8
+func.func @wmma_f32_16x16x64_bf8(%arg0 : vector<32xf8E5M2>, %arg1 : vector<8xf32>) -> vector<8xf32> {
+  // CHECK: amdgpu.wmma 16x16x64
+  %0 = amdgpu.wmma 16x16x64 %arg0 * %arg0 + %arg1 : vector<32xf8E5M2>, vector<32xf8E5M2>, vector<8xf32>
+  func.return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @wmma_f16_16x16x64_bf8
+func.func @wmma_f16_16x16x64_bf8(%arg0 : vector<32xf8E5M2>, %arg1 : vector<8xf16>) -> vector<8xf16> {
+  // CHECK: amdgpu.wmma 16x16x64
+  %0 = amdgpu.wmma 16x16x64 %arg0 * %arg0 + %arg1 : vector<32xf8E5M2>, vector<32xf8E5M2>, vector<8xf16>
+  func.return %0 : vector<8xf16>
+}
+
+// CHECK-LABEL: func @wmma_f16_16x16x64_f8
+func.func @wmma_f16_16x16x64_f8(%arg0 : vector<32xf8E4M3FN>, %arg1 : vector<8xf16>) -> vector<8xf16> {
+  // CHECK: amdgpu.wmma 16x16x64
+  %0 = amdgpu.wmma 16x16x64 %arg0 * %arg0 + %arg1 : vector<32xf8E4M3FN>, vector<32xf8E4M3FN>, vector<8xf16>
+  func.return %0 : vector<8xf16>
+}
+
+// CHECK-LABEL: func @swizzle_bitmode
+func.func @swizzle_bitmode(%arg0 : f32) -> f32 {
+  // CHECK: amdgpu.swizzle_bitmode
+  %0 = amdgpu.swizzle_bitmode %arg0 1 2 4 : f32
+  func.return %0 : f32
+}
+
+// CHECK-LABEL: func @permlane16_swap
+func.func @permlane16_swap(%arg0 : f32) -> f32 {
+  // CHECK: amdgpu.permlane_swap
+  %0 = amdgpu.permlane_swap %arg0 16 : f32
+  func.return %0 : f32
+}
+
+// CHECK-LABEL: func @permlane32_swap
+func.func @permlane32_swap(%arg0 : f32) -> f32 {
+  // CHECK: amdgpu.permlane_swap
+  %0 = amdgpu.permlane_swap %arg0 32 : f32
+  func.return %0 : f32
+}
+
+// CHECK-LABEL: func @scaled_mfma
+func.func @scaled_mfma(%arg0 : f8E8M0FNU, %arg1 : vector<32xf6E2M3FN>, %arg2 : vector<16xf32>) -> vector<16xf32> {
+  // CHECK: amdgpu.scaled_mfma 32x32x64
+  %0 = amdgpu.scaled_mfma 32x32x64 (%arg0[0] * %arg1) * (%arg0[1] * %arg1) + %arg2 : f8E8M0FNU, vector<32xf6E2M3FN>, f8E8M0FNU, vector<32xf6E2M3FN>, vector<16xf32>
+  func.return %0 : vector<16xf32>
+}
+
+// CHECK-LABEL: func @transpose_load
+func.func @transpose_load(%idx1 : index, %idx2 : index, %mem : memref<128x32xf16, 3>) -> vector<4xf16> {
+  // CHECK: amdgpu.transpose_load
+  %0 = amdgpu.transpose_load %mem[%idx1, %idx2] : memref<128x32xf16, 3> -> vector<4xf16>
+  func.return %0 : vector<4xf16>
+}
+
+// CHECK-LABEL: func @gather_to_lds
+func.func @gather_to_lds(%idx1 : index, %idx2 : index, %mem1 : memref<32xf16>, %mem2 : memref<32x32xf16>, %smem1 : memref<32xf16, #gpu.address_space<workgroup>>, %smem2 : memref<32x32xf16, #gpu.address_space<workgroup>>, %smem3 : memref<?x?xf16, strided<[?, 1]>, #gpu.address_space<workgroup>>) {
+  // CHECK: amdgpu.gather_to_lds %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}[%{{.*}}, %{{.*}}]
+  // CHECK: amdgpu.gather_to_lds %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}[%{{.*}}]
+  // CHECK: amdgpu.gather_to_lds %{{.*}}[%{{.*}}],          %{{.*}}[%{{.*}}, %{{.*}}]
+  // CHECK: amdgpu.gather_to_lds %{{.*}}[%{{.*}}],          %{{.*}}[%{{.*}}, %{{.*}}]
+  amdgpu.gather_to_lds %mem2[%idx1, %idx2], %smem2[%idx1, %idx2] : vector<2xf16>, memref<32x32xf16>, memref<32x32xf16, #gpu.address_space<workgroup>>
+  amdgpu.gather_to_lds %mem2[%idx1, %idx2], %smem1[%idx1]        : vector<2xf16>, memref<32x32xf16>, memref<32xf16,    #gpu.address_space<workgroup>>
+  amdgpu.gather_to_lds %mem1[%idx1],        %smem2[%idx1, %idx2] : vector<2xf16>, memref<32xf16>,    memref<32x32xf16, #gpu.address_space<workgroup>>
+  amdgpu.gather_to_lds %mem1[%idx1],        %smem3[%idx1, %idx2] : vector<2xf16>, memref<32xf16>,   memref<?x?xf16, strided<[?, 1]>, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// CHECK-LABEL: func @memory_counter_wait
+func.func @memory_counter_wait() {
+  // CHECK: amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4) tensor(5)
+  // CHECK: amdgpu.memory_counter_wait load(4) store(2) ds(3) exp(1) tensor(0)
+  // CHECK: amdgpu.memory_counter_wait load(1)
+  // CHECK: amdgpu.memory_counter_wait store(2)
+  // CHECK: amdgpu.memory_counter_wait ds(3)
+  // CHECK: amdgpu.memory_counter_wait exp(4)
+  // CHECK: amdgpu.memory_counter_wait tensor(5)
+  amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4) tensor(5)
+  amdgpu.memory_counter_wait tensor(0) exp(1) store(2) ds(3) load(4)
+  amdgpu.memory_counter_wait load(1)
+  amdgpu.memory_counter_wait store(2)
+  amdgpu.memory_counter_wait ds(3)
+  amdgpu.memory_counter_wait exp(4)
+  amdgpu.memory_counter_wait tensor(5)
+  func.return
+}
+
+// CHECK-LABEL: func @make_dma_base
+// CHECK-SAME: (%[[IDX:.+]]: index, %[[MEM:.+]]: memref<8xi32>, %[[SMEM:.+]]: memref<8xi32, #gpu.address_space<workgroup>>)
+func.func @make_dma_base(%idx: index, %mem: memref<8xi32>, %smem: memref<8xi32, #gpu.address_space<workgroup>>) {
+  // CHECK: amdgpu.make_dma_base %[[MEM]][%[[IDX]]], %[[SMEM]][%[[IDX]]] : memref<8xi32>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+  amdgpu.make_dma_base %mem[%idx], %smem[%idx] : memref<8xi32>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+  func.return
+}
+
+// CHECK-LABEL: func @make_dma_descriptor
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[WG_MASK:.+]]: vector<16xi1>, %[[TIMEOUT:.+]]: i1, %[[BARRIER:.+]]: memref<8xi32, #gpu.address_space<workgroup>>, %[[IDX:.+]]: index, %[[I32:.+]]: i32)
+func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %wg_mask: vector<16xi1>, %timeout: i1, %barrier: memref<8xi32, #gpu.address_space<workgroup>>, %idx: index, %i32: i32) {
+
+  // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
+  amdgpu.make_dma_descriptor %base
+        // CHECK-SAME: globalSize [64, 64]
+        globalSize [64, 64]
+        // CHECK-SAME: globalStride [64, 1]
+        globalStride [64, 1]
+        // CHECK-SAME: sharedSize [64, 64] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+        sharedSize [64, 64] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+
+  // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
+  amdgpu.make_dma_descriptor %base
+        // CHECK-SAME: globalSize [64, 64]
+        globalSize [64, 64]
+        // CHECK-SAME: globalStride [64, 1]
+        globalStride [64, 1]
+        // CHECK-SAME: sharedSize [64, 64]
+        sharedSize [64, 64]
+        // CHECK-SAME: padShared(%[[I32]] every %[[I32]])
+        padShared(%i32 every %i32)
+        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+
+  // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
+  amdgpu.make_dma_descriptor %base
+        // CHECK-SAME: globalSize [64, 64]
+        globalSize [64, 64]
+        // CHECK-SAME: globalStride [64, 1]
+        globalStride [64, 1]
+        // CHECK-SAME: sharedSize [64, 64]
+        sharedSize [64, 64]
+        // CHECK-SAME: workgroupMask %[[WG_MASK]]
+        workgroupMask %wg_mask
+        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+
+  // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
+  amdgpu.make_dma_descriptor %base
+        // CHECK-SAME: globalSize [64, 64]
+        globalSize [64, 64]
+        // CHECK-SAME: globalStride [64, 1]
+        globalStride [64, 1]
+        // CHECK-SAME: sharedSize [64, 64]
+        sharedSize [64, 64]
+        // CHECK-SAME: workgroupMask %[[WG_MASK]]
+        workgroupMask %wg_mask
+        // CHECK-SAME: earlyTimeout %[[TIMEOUT]]
+        earlyTimeout %timeout
+        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+
+  // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
+  amdgpu.make_dma_descriptor %base
+        // CHECK-SAME: globalSize [64, 64]
+        globalSize [64, 64]
+        // CHECK-SAME: globalStride [64, 1]
+        globalStride [64, 1]
+        // CHECK-SAME: sharedSize [64, 64]
+        sharedSize [64, 64]
+        // CHECK-SAME: atomicBarrier(%[[BARRIER]][%[[IDX]]] : memref<8xi32, #gpu.address_space<workgroup>>)
+        atomicBarrier(%barrier[%idx] : memref<8xi32, #gpu.address_space<workgroup>>)
+        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+
+  // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
+  amdgpu.make_dma_descriptor %base
+        // CHECK-SAME: globalSize [64, 64]
+        globalSize [64, 64]
+        // CHECK-SAME: globalStride [64, 1]
+        globalStride [64, 1]
+        // CHECK-SAME: sharedSize [64, 64]
+        sharedSize [64, 64]
+        // CHECK-SAME: iterate %[[IDX]], %[[I32]], %[[IDX]]
+        iterate %idx, %i32, %idx
+        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  func.return
+}
+
+// CHECK-LABEL: func @wmma_scale
+func.func @wmma_scale(%fp8_src: vector<64xf8E4M3FN>, %fp6_alt_src: vector<64xf6E3M2FN>,
+                      %fp6_src: vector<64xf6E2M3FN>, %fp4_src_a: vector<128xf4E2M1FN>,
+                      %fp4_src_b: vector<64xf4E2M1FN>,
+                      %dst0: vector<8xf32>, %dst1: vector<16xf32>,
+                      %scale_vec4: vector<4xf8E8M0FNU>, %scale_vec8: vector<8xf8E8M0FNU>,
+                      %scale_vec4_e4m3: vector<4xf8E4M3FN>) {
+  // CHECK: amdgpu.scaled_wmma 16x16x128 ({{.*}} * {{.*}}) * ({{.*}} * {{.*}}) + {{.*}} {a_first_scale_lane = 0 : i32, b_first_scale_lane = 0 : i32} : vector<4xf8E8M0FNU>, vector<64xf8E4M3FN>, vector<4xf8E8M0FNU>, vector<64xf8E4M3FN>, vector<8xf32>
+  %0 = amdgpu.scaled_wmma 16x16x128 (%scale_vec4 * %fp8_src) * (%scale_vec4 * %fp8_src) + %dst0 {a_first_scale_lane = 0 : i32, b_first_scale_lane = 0 : i32} : vector<4xf8E8M0FNU>, vector<64xf8E4M3FN>, vector<4xf8E8M0FNU>, vector<64xf8E4M3FN>, vector<8xf32>
+  // CHECK: amdgpu.scaled_wmma 16x16x128 ({{.*}} * {{.*}}) * ({{.*}} * {{.*}}) + {{.*}} {a_first_scale_lane = 0 : i32, b_first_scale_lane = 0 : i32} : vector<4xf8E8M0FNU>, vector<64xf6E3M2FN>, vector<4xf8E8M0FNU>, vector<64xf6E3M2FN>, vector<8xf32>
+  %1 = amdgpu.scaled_wmma 16x16x128 (%scale_vec4 * %fp6_alt_src) * (%scale_vec4 * %fp6_alt_src) + %dst0 {a_first_scale_lane = 0 : i32, b_first_scale_lane = 0 : i32} : vector<4xf8E8M0FNU>, vector<64xf6E3M2FN>, vector<4xf8E8M0FNU>, vector<64xf6E3M2FN>, vector<8xf32>
+  // CHECK: amdgpu.scaled_wmma 16x16x128 ({{.*}} * {{.*}}) * ({{.*}} * {{.*}}) + {{.*}} {a_first_scale_lane = 0 : i32, b_first_scale_lane = 0 : i32} : vector<4xf8E8M0FNU>, vector<64xf6E2M3FN>, vector<4xf8E8M0FNU>, vector<64xf6E2M3FN>, vector<8xf32>
+  %2 = amdgpu.scaled_wmma 16x16x128 (%scale_vec4 * %fp6_src) * (%scale_vec4 * %fp6_src) + %dst0 {a_first_scale_lane = 0 : i32, b_first_scale_lane = 0 : i32} : vector<4xf8E8M0FNU>, vector<64xf6E2M3FN>, vector<4xf8E8M0FNU>, vector<64xf6E2M3FN>, vector<8xf32>
+  // CHECK: amdgpu.scaled_wmma 16x16x128 ({{.*}} * {{.*}}) * ({{.*}} * {{.*}}) + {{.*}} {a_first_scale_lane = 0 : i32, b_first_scale_lane = 0 : i32} : vector<4xf8E4M3FN>, vector<64xf4E2M1FN>, vector<4xf8E8M0FNU>, vector<64xf6E2M3FN>, vector<8xf32>
+  %3 = amdgpu.scaled_wmma 16x16x128 (%scale_vec4_e4m3 * %fp4_src_b) * (%scale_vec4 * %fp6_src) + %dst0 {a_first_scale_lane = 0 : i32, b_first_scale_lane = 0 : i32} : vector<4xf8E4M3FN>, vector<64xf4E2M1FN>, vector<4xf8E8M0FNU>, vector<64xf6E2M3FN>, vector<8xf32>
+  // CHECK: amdgpu.scaled_wmma 16x16x128 ({{.*}} * {{.*}}) * ({{.*}} * {{.*}}) + {{.*}} {a_first_scale_lane = 0 : i32, b_first_scale_lane = 0 : i32} : vector<8xf8E8M0FNU>, vector<64xf8E4M3FN>, vector<8xf8E8M0FNU>, vector<64xf8E4M3FN>, vector<8xf32>
+  %4 = amdgpu.scaled_wmma 16x16x128 (%scale_vec8 * %fp8_src) * (%scale_vec8 * %fp8_src) + %dst0 {a_first_scale_lane = 0 : i32, b_first_scale_lane = 0 : i32} : vector<8xf8E8M0FNU>, vector<64xf8E4M3FN>, vector<8xf8E8M0FNU>, vector<64xf8E4M3FN>, vector<8xf32>
+  // CHECK: amdgpu.scaled_wmma 32x16x128 ({{.*}} * {{.*}}) * ({{.*}} * {{.*}}) + {{.*}} {a_first_scale_lane = 0 : i32, b_first_scale_lane = 0 : i32} : vector<4xf8E4M3FN>, vector<128xf4E2M1FN>, vector<4xf8E4M3FN>, vector<64xf4E2M1FN>, vector<16xf32>
+  %5 = amdgpu.scaled_wmma 32x16x128 (%scale_vec4_e4m3 * %fp4_src_a) * (%scale_vec4_e4m3 * %fp4_src_b) + %dst1 {a_first_scale_lane = 0 : i32, b_first_scale_lane = 0 : i32} : vector<4xf8E4M3FN>, vector<128xf4E2M1FN>, vector<4xf8E4M3FN>, vector<64xf4E2M1FN>, vector<16xf32>
+  func.return
 }

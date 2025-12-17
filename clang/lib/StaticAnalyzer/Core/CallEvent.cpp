@@ -33,11 +33,11 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicTypeInfo.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
@@ -54,7 +54,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -90,7 +89,7 @@ static bool isCallback(QualType T) {
     T = T->getPointeeType();
 
   if (const RecordType *RT = T->getAsStructureType()) {
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
     for (const auto *I : RD->fields()) {
       QualType FieldT = I->getType();
       if (FieldT->isBlockPointerType() || FieldT->isFunctionPointerType())
@@ -231,13 +230,11 @@ static void findPtrToConstParams(llvm::SmallSet<unsigned, 4> &PreserveArgs,
 }
 
 ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
-                                             ProgramStateRef Orig) const {
-  ProgramStateRef Result = (Orig ? Orig : getState());
-
+                                             ProgramStateRef State) const {
   // Don't invalidate anything if the callee is marked pure/const.
-  if (const Decl *callee = getDecl())
-    if (callee->hasAttr<PureAttr>() || callee->hasAttr<ConstAttr>())
-      return Result;
+  if (const Decl *Callee = getDecl())
+    if (Callee->hasAttr<PureAttr>() || Callee->hasAttr<ConstAttr>())
+      return State;
 
   SmallVector<SVal, 8> ValuesToInvalidate;
   RegionAndSymbolInvalidationTraits ETraits;
@@ -279,10 +276,10 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
   // Invalidate designated regions using the batch invalidation API.
   // NOTE: Even if RegionsToInvalidate is empty, we may still invalidate
   //  global variables.
-  return Result->invalidateRegions(ValuesToInvalidate, getOriginExpr(),
-                                   BlockCount, getLocationContext(),
-                                   /*CausedByPointerEscape*/ true,
-                                   /*Symbols=*/nullptr, this, &ETraits);
+  return State->invalidateRegions(ValuesToInvalidate, getCFGElementRef(),
+                                  BlockCount, getLocationContext(),
+                                  /*CausedByPointerEscape*/ true,
+                                  /*Symbols=*/nullptr, this, &ETraits);
 }
 
 ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,
@@ -392,7 +389,8 @@ bool CallEvent::isVariadic(const Decl *D) {
 
 static bool isTransparentUnion(QualType T) {
   const RecordType *UT = T->getAsUnionType();
-  return UT && UT->getDecl()->hasAttr<TransparentUnionAttr>();
+  return UT &&
+         UT->getDecl()->getMostRecentDecl()->hasAttr<TransparentUnionAttr>();
 }
 
 // In some cases, symbolic cases should be transformed before we associate
@@ -434,27 +432,27 @@ static SVal processArgument(SVal Value, const Expr *ArgumentExpr,
 /// runtime definition don't match in terms of argument and parameter count.
 static SVal castArgToParamTypeIfNeeded(const CallEvent &Call, unsigned ArgIdx,
                                        SVal ArgVal, SValBuilder &SVB) {
-  const FunctionDecl *RTDecl =
-      Call.getRuntimeDefinition().getDecl()->getAsFunction();
   const auto *CallExprDecl = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
-
-  if (!RTDecl || !CallExprDecl)
+  if (!CallExprDecl)
     return ArgVal;
+
+  const FunctionDecl *Definition = CallExprDecl;
+  Definition->hasBody(Definition);
 
   // The function decl of the Call (in the AST) will not have any parameter
   // declarations, if it was 'only' declared without a prototype. However, the
   // engine will find the appropriate runtime definition - basically a
   // redeclaration, which has a function body (and a function prototype).
-  if (CallExprDecl->hasPrototype() || !RTDecl->hasPrototype())
+  if (CallExprDecl->hasPrototype() || !Definition->hasPrototype())
     return ArgVal;
 
   // Only do this cast if the number arguments at the callsite matches with
   // the parameters at the runtime definition.
-  if (Call.getNumArgs() != RTDecl->getNumParams())
+  if (Call.getNumArgs() != Definition->getNumParams())
     return UnknownVal();
 
   const Expr *ArgExpr = Call.getArgExpr(ArgIdx);
-  const ParmVarDecl *Param = RTDecl->getParamDecl(ArgIdx);
+  const ParmVarDecl *Param = Definition->getParamDecl(ArgIdx);
   return SVB.evalCast(ArgVal, Param->getType(), ArgExpr->getType());
 }
 
@@ -517,6 +515,26 @@ const ConstructionContext *CallEvent::getConstructionContext() const {
   return nullptr;
 }
 
+const CallEventRef<> CallEvent::getCaller() const {
+  const auto *CallLocationContext = this->getLocationContext();
+  if (!CallLocationContext || CallLocationContext->inTopFrame())
+    return nullptr;
+
+  const auto *CallStackFrameContext = CallLocationContext->getStackFrame();
+  if (!CallStackFrameContext)
+    return nullptr;
+
+  CallEventManager &CEMgr = State->getStateManager().getCallEventManager();
+  return CEMgr.getCaller(CallStackFrameContext, State);
+}
+
+bool CallEvent::isCalledFromSystemHeader() const {
+  if (const CallEventRef<> Caller = getCaller())
+    return Caller->isInSystemHeader();
+
+  return false;
+}
+
 std::optional<SVal> CallEvent::getReturnValueUnderConstruction() const {
   const auto *CC = getConstructionContext();
   if (!CC)
@@ -533,7 +551,7 @@ std::optional<SVal> CallEvent::getReturnValueUnderConstruction() const {
 ArrayRef<ParmVarDecl*> AnyFunctionCall::parameters() const {
   const FunctionDecl *D = getDecl();
   if (!D)
-    return std::nullopt;
+    return {};
   return D->parameters();
 }
 
@@ -639,17 +657,17 @@ bool AnyFunctionCall::argumentsMayEscape() const {
 
   // - CoreFoundation functions that end with "NoCopy" can free a passed-in
   //   buffer even if it is const.
-  if (FName.endswith("NoCopy"))
+  if (FName.ends_with("NoCopy"))
     return true;
 
   // - NSXXInsertXX, for example NSMapInsertIfAbsent, since they can
   //   be deallocated by NSMapRemove.
-  if (FName.startswith("NS") && FName.contains("Insert"))
+  if (FName.starts_with("NS") && FName.contains("Insert"))
     return true;
 
   // - Many CF containers allow objects to escape through custom
   //   allocators/deallocators upon container construction. (PR12101)
-  if (FName.startswith("CF") || FName.startswith("CG")) {
+  if (FName.starts_with("CF") || FName.starts_with("CG")) {
     return StrInStrNoCase(FName, "InsertValue")  != StringRef::npos ||
            StrInStrNoCase(FName, "AddValue")     != StringRef::npos ||
            StrInStrNoCase(FName, "SetValue")     != StringRef::npos ||
@@ -667,6 +685,18 @@ const FunctionDecl *SimpleFunctionCall::getDecl() const {
     return D;
 
   return getSVal(getOriginExpr()->getCallee()).getAsFunctionDecl();
+}
+
+RuntimeDefinition SimpleFunctionCall::getRuntimeDefinition() const {
+  // Clang converts lambdas to function pointers using an implicit conversion
+  // operator, which returns the lambda's '__invoke' method. However, Sema
+  // leaves the body of '__invoke' empty (it is generated later in CodeGen), so
+  // we need to skip '__invoke' and access the lambda's operator() directly.
+  if (const auto *CMD = dyn_cast_if_present<CXXMethodDecl>(getDecl());
+      CMD && CMD->isLambdaStaticInvoker())
+    return RuntimeDefinition{CMD->getParent()->getLambdaCallOperator()};
+
+  return AnyFunctionCall::getRuntimeDefinition();
 }
 
 const FunctionDecl *CXXInstanceCall::getDecl() const {
@@ -690,18 +720,17 @@ void CXXInstanceCall::getExtraInvalidatedValues(
   if (const auto *D = cast_or_null<CXXMethodDecl>(getDecl())) {
     if (!D->isConst())
       return;
-    // Get the record decl for the class of 'This'. D->getParent() may return a
-    // base class decl, rather than the class of the instance which needs to be
-    // checked for mutable fields.
-    // TODO: We might as well look at the dynamic type of the object.
-    const Expr *Ex = getCXXThisExpr()->IgnoreParenBaseCasts();
-    QualType T = Ex->getType();
-    if (T->isPointerType()) // Arrow or implicit-this syntax?
-      T = T->getPointeeType();
-    const CXXRecordDecl *ParentRecord = T->getAsCXXRecordDecl();
-    assert(ParentRecord);
+
+    // Get the record decl for the class of 'This'. D->getParent() may return
+    // a base class decl, rather than the class of the instance which needs to
+    // be checked for mutable fields.
+    const CXXRecordDecl *ParentRecord = getDeclForDynamicType().first;
+    if (!ParentRecord || !ParentRecord->hasDefinition())
+      return;
+
     if (ParentRecord->hasMutableFields())
       return;
+
     // Preserve CXXThis.
     const MemRegion *ThisRegion = ThisVal.getAsRegion();
     if (!ThisRegion)
@@ -727,6 +756,21 @@ SVal CXXInstanceCall::getCXXThisVal() const {
   return ThisVal;
 }
 
+std::pair<const CXXRecordDecl *, bool>
+CXXInstanceCall::getDeclForDynamicType() const {
+  const MemRegion *R = getCXXThisVal().getAsRegion();
+  if (!R)
+    return {};
+
+  DynamicTypeInfo DynType = getDynamicTypeInfo(getState(), R);
+  if (!DynType.isValid())
+    return {};
+
+  assert(!DynType.getType()->getPointeeType().isNull());
+  return {DynType.getType()->getPointeeCXXRecordDecl(),
+          DynType.canBeASubClass()};
+}
+
 RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
   // Do we have a decl at all?
   const Decl *D = getDecl();
@@ -738,21 +782,7 @@ RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
   if (!MD->isVirtual())
     return AnyFunctionCall::getRuntimeDefinition();
 
-  // Do we know the implicit 'this' object being called?
-  const MemRegion *R = getCXXThisVal().getAsRegion();
-  if (!R)
-    return {};
-
-  // Do we know anything about the type of 'this'?
-  DynamicTypeInfo DynType = getDynamicTypeInfo(getState(), R);
-  if (!DynType.isValid())
-    return {};
-
-  // Is the type a C++ class? (This is mostly a defensive check.)
-  QualType RegionType = DynType.getType()->getPointeeType();
-  assert(!RegionType.isNull() && "DynamicTypeInfo should always be a pointer.");
-
-  const CXXRecordDecl *RD = RegionType->getAsCXXRecordDecl();
+  auto [RD, CanBeSubClass] = getDeclForDynamicType();
   if (!RD || !RD->hasDefinition())
     return {};
 
@@ -779,7 +809,7 @@ RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
   // Does the decl that we found have an implementation?
   const FunctionDecl *Definition;
   if (!Result->hasBody(Definition)) {
-    if (!DynType.canBeASubClass())
+    if (!CanBeSubClass)
       return AnyFunctionCall::getRuntimeDefinition();
     return {};
   }
@@ -787,8 +817,9 @@ RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
   // We found a definition. If we're not sure that this devirtualization is
   // actually what will happen at runtime, make sure to provide the region so
   // that ExprEngine can decide what to do with it.
-  if (DynType.canBeASubClass())
-    return RuntimeDefinition(Definition, R->StripCasts());
+  if (CanBeSubClass)
+    return RuntimeDefinition(Definition,
+                             getCXXThisVal().getAsRegion()->StripCasts());
   return RuntimeDefinition(Definition, /*DispatchRegion=*/nullptr);
 }
 
@@ -811,7 +842,7 @@ void CXXInstanceCall::getInitialStackFrameContents(
     if (MD->getCanonicalDecl() != getDecl()->getCanonicalDecl()) {
       ASTContext &Ctx = SVB.getContext();
       const CXXRecordDecl *Class = MD->getParent();
-      QualType Ty = Ctx.getPointerType(Ctx.getRecordType(Class));
+      CanQualType Ty = Ctx.getPointerType(Ctx.getCanonicalTagType(Class));
 
       // FIXME: CallEvent maybe shouldn't be directly accessing StoreManager.
       std::optional<SVal> V =
@@ -822,7 +853,8 @@ void CXXInstanceCall::getInitialStackFrameContents(
         // Fall back to a generic pointer cast for this-value.
         const CXXMethodDecl *StaticMD = cast<CXXMethodDecl>(getDecl());
         const CXXRecordDecl *StaticClass = StaticMD->getParent();
-        QualType StaticTy = Ctx.getPointerType(Ctx.getRecordType(StaticClass));
+        CanQualType StaticTy =
+            Ctx.getPointerType(Ctx.getCanonicalTagType(StaticClass));
         ThisVal = SVB.evalCast(ThisVal, Ty, StaticTy);
       } else
         ThisVal = *V;
@@ -863,7 +895,7 @@ const BlockDataRegion *BlockCall::getBlockRegion() const {
 ArrayRef<ParmVarDecl*> BlockCall::parameters() const {
   const BlockDecl *D = getDecl();
   if (!D)
-    return std::nullopt;
+    return {};
   return D->parameters();
 }
 
@@ -909,6 +941,14 @@ void AnyCXXConstructorCall::getExtraInvalidatedValues(ValueList &Values,
   if (SymbolRef Sym = V.getAsSymbol(true))
     ETraits->setTrait(Sym,
                       RegionAndSymbolInvalidationTraits::TK_SuppressEscape);
+
+  // Standard classes don't reinterpret-cast and modify super regions.
+  const bool IsStdClassCtor = isWithinStdNamespace(getDecl());
+  if (const MemRegion *Obj = V.getAsRegion(); Obj && IsStdClassCtor) {
+    ETraits->setTrait(
+        Obj, RegionAndSymbolInvalidationTraits::TK_DoNotInvalidateSuperRegion);
+  }
+
   Values.push_back(V);
 }
 
@@ -952,7 +992,7 @@ RuntimeDefinition CXXDestructorCall::getRuntimeDefinition() const {
 ArrayRef<ParmVarDecl*> ObjCMethodCall::parameters() const {
   const ObjCMethodDecl *D = getDecl();
   if (!D)
-    return std::nullopt;
+    return {};
   return D->parameters();
 }
 
@@ -1211,6 +1251,15 @@ template <> struct DenseMapInfo<PrivateMethodKey> {
 };
 } // end namespace llvm
 
+// NOTE: This cache is a "global" variable, and it is cleared by
+// CallEventManager's constructor so we do not keep old entries when
+// loading/unloading ASTs. If we are worried about concurrency, we may  need to
+// revisit this someday. In terms of memory, this table stays around until clang
+// quits, which also may be bad if we need to release memory.
+using PrivateMethodCacheTy =
+    llvm::DenseMap<PrivateMethodKey, std::optional<const ObjCMethodDecl *>>;
+static PrivateMethodCacheTy PrivateMethodCache;
+
 static const ObjCMethodDecl *
 lookupRuntimeDefinition(const ObjCInterfaceDecl *Interface,
                         Selector LookupSelector, bool InstanceMethod) {
@@ -1219,21 +1268,8 @@ lookupRuntimeDefinition(const ObjCInterfaceDecl *Interface,
   // that repeated queries on the same ObjCIntefaceDecl and Selector
   // don't incur the same cost.  On some test cases, we can see the
   // same query being issued thousands of times.
-  //
-  // NOTE: This cache is essentially a "global" variable, but it
-  // only gets lazily created when we get here.  The value of the
-  // cache probably comes from it being global across ExprEngines,
-  // where the same queries may get issued.  If we are worried about
-  // concurrency, or possibly loading/unloading ASTs, etc., we may
-  // need to revisit this someday.  In terms of memory, this table
-  // stays around until clang quits, which also may be bad if we
-  // need to release memory.
-  using PrivateMethodCache =
-      llvm::DenseMap<PrivateMethodKey, std::optional<const ObjCMethodDecl *>>;
-
-  static PrivateMethodCache PMC;
   std::optional<const ObjCMethodDecl *> &Val =
-      PMC[{Interface, LookupSelector, InstanceMethod}];
+      PrivateMethodCache[{Interface, LookupSelector, InstanceMethod}];
 
   // Query lookupPrivateMethod() if the cache does not hit.
   if (!Val) {
@@ -1379,6 +1415,13 @@ void ObjCMethodCall::getInitialStackFrameContents(
   }
 }
 
+CallEventManager::CallEventManager(llvm::BumpPtrAllocator &alloc)
+    : Alloc(alloc) {
+  // Clear the method cache to avoid hits when multiple AST are loaded/unloaded
+  // within a single process. This can happen with unit tests, for instance.
+  PrivateMethodCache.clear();
+}
+
 CallEventRef<>
 CallEventManager::getSimpleCall(const CallExpr *CE, ProgramStateRef State,
                                 const LocationContext *LCtx,
@@ -1388,9 +1431,12 @@ CallEventManager::getSimpleCall(const CallExpr *CE, ProgramStateRef State,
 
   if (const auto *OpCE = dyn_cast<CXXOperatorCallExpr>(CE)) {
     const FunctionDecl *DirectCallee = OpCE->getDirectCallee();
-    if (const auto *MD = dyn_cast<CXXMethodDecl>(DirectCallee))
-      if (MD->isInstance())
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(DirectCallee)) {
+      if (MD->isImplicitObjectMemberFunction())
         return create<CXXMemberOperatorCall>(OpCE, State, LCtx, ElemRef);
+      if (MD->isStatic())
+        return create<CXXStaticOperatorCall>(OpCE, State, LCtx, ElemRef);
+    }
 
   } else if (CE->getCallee()->getType()->isBlockPointerType()) {
     return create<BlockCall>(CE, State, LCtx, ElemRef);

@@ -31,6 +31,14 @@ protected:
   _verifyIncompleteFormat(__FILE__, __LINE__, __VA_ARGS__)
 #define verifyFormat(...) _verifyFormat(__FILE__, __LINE__, __VA_ARGS__)
 
+TEST(FormatTestObjCStyle, DetectsObjCInStdin) {
+  auto Style = getStyle("LLVM", "<stdin>", "none",
+                        "@interface\n"
+                        "- (id)init;");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
+}
+
 TEST(FormatTestObjCStyle, DetectsObjCInHeaders) {
   auto Style = getStyle("LLVM", "a.h", "none",
                         "@interface\n"
@@ -369,7 +377,7 @@ TEST_F(FormatTestObjC, FormatObjCInterface) {
                "    ddddddddddddd> {\n"
                "}");
 
-  Style.BinPackParameters = false;
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   Style.ObjCBinPackProtocolList = FormatStyle::BPS_Auto;
   verifyFormat("@interface eeeeeeeeeeeee () <\n"
                "    eeeeeeeeeeeee,\n"
@@ -403,7 +411,7 @@ TEST_F(FormatTestObjC, FormatObjCInterface) {
                "+ (id)init;\n"
                "@end");
   Style.ColumnLimit = 40;
-  // BinPackParameters should be true by default.
+  // BinPackParameters should be BPPS_BinPack by default.
   verifyFormat("void eeeeeeee(int eeeee, int eeeee,\n"
                "              int eeeee, int eeeee);");
   // ObjCBinPackProtocolList should be BPS_Never by default.
@@ -559,6 +567,13 @@ TEST_F(FormatTestObjC, FormatObjCMethodDeclarations) {
                "                error:(NSError **)theError {\n"
                "}");
   verifyFormat("+ (instancetype)new;");
+
+  verifyFormat("/*\n"
+               " */\n"
+               "- (void)foo;",
+               "/*\n"
+               " */- (void)foo;");
+
   Style.ColumnLimit = 60;
   verifyFormat("- (instancetype)initXxxxxx:(id<x>)x\n"
                "                         y:(id<yyyyyyyyyyyyyyyyyyyy>)y\n"
@@ -748,6 +763,15 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
       "                  backing:NSBackingStoreBuffered\n"
       "                    defer:NO]);\n"
       "}");
+  Style.ColumnLimit = 63;
+  verifyFormat(
+      "- (void)test {\n"
+      "  if ([object\n"
+      "          respondsToSelector:@selector(\n"
+      "                                 selectorName:param1:param2:)])\n"
+      "    return;\n"
+      "}");
+  Style.ColumnLimit = PreviousColumnLimit;
   verifyFormat("[contentsContainer replaceSubview:[subviews objectAtIndex:0]\n"
                "                             with:contentsNativeView];");
 
@@ -852,6 +876,32 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
   verifyFormat("aaaaaa = [aa aa:aa\n"
                "             aa:aa];");
 
+  Style.AlignConsecutiveAssignments.Enabled = true;
+  // When the method name and parameters are on their own lines, their positions
+  // only depend on the continuation indentation configuration, not where the
+  // square bracket is. Thus they should not move with the square bracket in the
+  // alignment step.
+  verifyFormat("aaaaaa = [aa aa:aa\n"
+               "             aa:aa];\n"
+               "a      = [a //\n"
+               "    aaaaaaa:aa];");
+  verifyFormat("aaaaaa = [aa aa:aa\n"
+               "             aa:aa];\n"
+               "aaaaa  = [a //\n"
+               "          a:aa\n"
+               "    aaaaaaa:aa];");
+  // When the method name is on the same line as the square bracket, the
+  // positions of the parameters depend on where the square bracket is. Thus
+  // they should move with the square bracket in the alignment step.
+  verifyFormat("aaaaa  = [a aa:aa\n"
+               "            aa:aa];\n"
+               "aaaaaa = [aa aa:aa\n"
+               "             aa:aa];\n"
+               "aaaaa  = [a aa:aa\n"
+               "    aaaaaaaaaa:aa];");
+
+  Style.AlignConsecutiveAssignments.Enabled = false;
+
   // Message receiver taking multiple lines.
   // Non-corner case.
   verifyFormat("[[object block:^{\n"
@@ -925,6 +975,12 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
       "[aaaaaaaaaaaaaaaaaaaaaaaaa\n"
       "    aaaaaaaaaaaaaaaaa:aaaaaaaa\n"
       "                  aaa:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa];");
+  verifyFormat("[objectName\n"
+               "    respondsToSelector:\n"
+               "        @selector(\n"
+               "            somelonglonglonglongnameeeeeeee:\n"
+               "            loooooooooanotherlonglonglonglongnametopush:\n"
+               "            otherlongnameforlimit:)];");
 
   Style = getChromiumStyle(FormatStyle::LK_ObjC);
   Style.ColumnLimit = 80;

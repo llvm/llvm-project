@@ -49,6 +49,42 @@ class BreakpointSerialization(TestBase):
         self.setup_targets_and_cleanup()
         self.do_check_extra_args()
 
+    def test_resolver_serialization(self):
+        """Test that breakpoint resolvers contain the expected information"""
+        self.build()
+        self.setup_targets_and_cleanup()
+
+        exe_path = self.getBuildArtifact("a.out")
+        exe_module = self.orig_target.module["a.out"]
+        self.assertTrue(
+            exe_module.IsValid(), "Failed to find the executable module in target"
+        )
+        sym_ctx_list = exe_module.FindFunctions("main")
+        self.assertEqual(sym_ctx_list.GetSize(), 1, "Unable to find function 'main'")
+        sym_ctx = sym_ctx_list.GetContextAtIndex(0)
+        self.assertTrue(
+            sym_ctx.IsValid(), "SBSymbolContext representing function 'main' is invalid"
+        )
+        main_func = sym_ctx.GetFunction()
+        self.assertTrue(
+            main_func.IsValid(), "SBFunction representing 'main' is invalid"
+        )
+        main_addr = main_func.GetStartAddress()
+
+        bkpt = self.orig_target.BreakpointCreateBySBAddress(main_addr)
+        self.assertTrue(
+            bkpt.IsValid(), "Could not place breakpoint on 'main' by address"
+        )
+        stream = lldb.SBStream()
+        sd = bkpt.SerializeToStructuredData()
+        sd.GetAsJSON(stream)
+        serialized_data = json.loads(stream.GetData())
+
+        self.assertIn(
+            exe_path,
+            serialized_data["Breakpoint"]["BKPTResolver"]["Options"]["ModuleName"],
+        )
+
     def test_structured_data_serialization(self):
         target = self.dbg.GetDummyTarget()
         self.assertTrue(target.IsValid(), VALID_TARGET)
@@ -173,6 +209,11 @@ class BreakpointSerialization(TestBase):
                 copy_text,
                 "Source and dest breakpoints are not identical: \nsource: %s\ndest: %s"
                 % (source_text, copy_text),
+            )
+            self.assertEqual(
+                source_bp.GetNumLocations(),
+                copy_bp.GetNumLocations(),
+                "Source and dest num locations are not the same",
             )
 
     def do_check_resolvers(self):
@@ -350,7 +391,7 @@ class BreakpointSerialization(TestBase):
         source_bps.Clear()
 
         bkpt = self.orig_target.BreakpointCreateByName(
-            "blubby", lldb.eFunctionNameTypeAuto, empty_module_list, empty_cu_list
+            "main", lldb.eFunctionNameTypeAuto, empty_module_list, empty_cu_list
         )
         bkpt.SetIgnoreCount(10)
         bkpt.SetThreadName("grubby")
@@ -358,7 +399,7 @@ class BreakpointSerialization(TestBase):
         all_bps.Append(bkpt)
 
         bkpt = self.orig_target.BreakpointCreateByName(
-            "blubby", lldb.eFunctionNameTypeFull, empty_module_list, empty_cu_list
+            "main", lldb.eFunctionNameTypeFull, empty_module_list, empty_cu_list
         )
         bkpt.SetCondition("something != something_else")
         bkpt.SetQueueName("grubby")

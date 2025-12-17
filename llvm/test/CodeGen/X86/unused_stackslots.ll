@@ -42,9 +42,9 @@ for.body:                                         ; preds = %for.inc73, %entry
   %shl1 = shl nsw i32 %rem, 3
   %tmp9 = sext i32 %shl1 to i64
   %tmp10 = sext i32 %shl to i64
-  %tmp11 = or i32 %shl1, 4
+  %tmp11 = or disjoint i32 %shl1, 4
   %tmp12 = sext i32 %tmp11 to i64
-  %tmp13 = or i32 %shl, 4
+  %tmp13 = or disjoint i32 %shl, 4
   %tmp14 = sext i32 %tmp13 to i64
   br label %for.body4
 
@@ -59,14 +59,14 @@ for.body4:                                        ; preds = %for.inc48, %for.bod
   %tmp18 = sub nuw nsw i64 %indvars.iv148, %tmp10
   %tmp19 = sext i32 %add5 to i64
   %tmp20 = add nsw i64 %tmp19, 1
-  %tmp21 = or i64 %indvars.iv148, 1
-  %tmp22 = or i64 %tmp18, 1
+  %tmp21 = or disjoint i64 %indvars.iv148, 1
+  %tmp22 = or disjoint i64 %tmp18, 1
   %tmp23 = add nsw i64 %tmp19, 2
-  %tmp24 = or i64 %indvars.iv148, 2
-  %tmp25 = or i64 %tmp18, 2
+  %tmp24 = or disjoint i64 %indvars.iv148, 2
+  %tmp25 = or disjoint i64 %tmp18, 2
   %tmp26 = add nsw i64 %tmp19, 3
-  %tmp27 = or i64 %indvars.iv148, 3
-  %tmp28 = or i64 %tmp18, 3
+  %tmp27 = or disjoint i64 %indvars.iv148, 3
+  %tmp28 = or disjoint i64 %tmp18, 3
   br label %for.body9
 
 for.body9:                                        ; preds = %for.inc45.for.body9_crit_edge, %for.body4
@@ -215,8 +215,8 @@ declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind }
-attributes #2 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "use-soft-float"="false" }
 attributes #3 = { nounwind }
 

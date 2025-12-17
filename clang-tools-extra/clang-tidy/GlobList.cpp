@@ -1,4 +1,4 @@
-//===--- tools/extra/clang-tidy/GlobList.cpp ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,22 +16,24 @@ namespace clang::tidy {
 // from the GlobList.
 static bool consumeNegativeIndicator(StringRef &GlobList) {
   GlobList = GlobList.trim();
-  if (GlobList.startswith("-")) {
-    GlobList = GlobList.substr(1);
-    return true;
-  }
-  return false;
+  return GlobList.consume_front("-");
 }
 
-// Converts first glob from the comma-separated list of globs to Regex and
-// removes it and the trailing comma from the GlobList.
-static llvm::Regex consumeGlob(StringRef &GlobList) {
-  StringRef UntrimmedGlob = GlobList.substr(0, GlobList.find_first_of(",\n"));
-  StringRef Glob = UntrimmedGlob.trim();
+// Extracts the first glob from the comma-separated list of globs,
+// removes it and the trailing comma from the GlobList and
+// returns the extracted glob.
+static llvm::StringRef extractNextGlob(StringRef &GlobList) {
+  const StringRef UntrimmedGlob =
+      GlobList.substr(0, GlobList.find_first_of(",\n"));
+  const StringRef Glob = UntrimmedGlob.trim();
   GlobList = GlobList.substr(UntrimmedGlob.size() + 1);
-  SmallString<128> RegexText("^");
-  StringRef MetaChars("()^$|*+?.[]\\{}");
-  for (char C : Glob) {
+  return Glob;
+}
+
+static llvm::Regex createRegexFromGlob(StringRef &Glob) {
+  llvm::SmallString<128> RegexText("^");
+  const StringRef MetaChars("()^$|*+?.[]\\{}");
+  for (const char C : Glob) {
     if (C == '*')
       RegexText.push_back('.');
     else if (MetaChars.contains(C))
@@ -47,7 +49,8 @@ GlobList::GlobList(StringRef Globs, bool KeepNegativeGlobs /* =true */) {
   do {
     GlobListItem Item;
     Item.IsPositive = !consumeNegativeIndicator(Globs);
-    Item.Regex = consumeGlob(Globs);
+    Item.Text = extractNextGlob(Globs);
+    Item.Regex = createRegexFromGlob(Item.Text);
     if (Item.IsPositive || KeepNegativeGlobs)
       Items.push_back(std::move(Item));
   } while (!Globs.empty());

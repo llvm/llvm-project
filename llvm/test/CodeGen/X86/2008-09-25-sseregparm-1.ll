@@ -5,7 +5,7 @@
 define inreg double @foo1()  nounwind {
 ; CHECK-LABEL: foo1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
 ; CHECK-NEXT:    retl
   ret double 1.0
 }
@@ -13,7 +13,7 @@ define inreg double @foo1()  nounwind {
 define inreg float @foo2()  nounwind {
 ; CHECK-LABEL: foo2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    retl
   ret float 1.0
 }

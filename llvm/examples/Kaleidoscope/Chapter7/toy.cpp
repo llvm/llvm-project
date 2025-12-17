@@ -1,13 +1,6 @@
 #include "../include/KaleidoscopeJIT.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/MemoryDependenceAnalysis.h"
-#include "llvm/Analysis/MemorySSA.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -28,7 +21,7 @@
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
-#include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/Mem2Reg.h"
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -718,7 +711,9 @@ static std::unique_ptr<IRBuilder<>> Builder;
 static std::map<std::string, AllocaInst *> NamedValues;
 static std::unique_ptr<KaleidoscopeJIT> TheJIT;
 static std::unique_ptr<FunctionPassManager> TheFPM;
+static std::unique_ptr<LoopAnalysisManager> TheLAM;
 static std::unique_ptr<FunctionAnalysisManager> TheFAM;
+static std::unique_ptr<CGSCCAnalysisManager> TheCGAM;
 static std::unique_ptr<ModuleAnalysisManager> TheMAM;
 static std::unique_ptr<PassInstrumentationCallbacks> ThePIC;
 static std::unique_ptr<StandardInstrumentations> TheSI;
@@ -1137,7 +1132,9 @@ static void InitializeModuleAndManagers() {
 
   // Create new pass and analysis managers.
   TheFPM = std::make_unique<FunctionPassManager>();
+  TheLAM = std::make_unique<LoopAnalysisManager>();
   TheFAM = std::make_unique<FunctionAnalysisManager>();
+  TheCGAM = std::make_unique<CGSCCAnalysisManager>();
   TheMAM = std::make_unique<ModuleAnalysisManager>();
   ThePIC = std::make_unique<PassInstrumentationCallbacks>();
   TheSI = std::make_unique<StandardInstrumentations>(*TheContext,
@@ -1145,6 +1142,8 @@ static void InitializeModuleAndManagers() {
   TheSI->registerCallbacks(*ThePIC, TheMAM.get());
 
   // Add transform passes.
+  // Promote allocas to registers.
+  TheFPM->addPass(PromotePass());
   // Do simple "peephole" optimizations and bit-twiddling optzns.
   TheFPM->addPass(InstCombinePass());
   // Reassociate expressions.
@@ -1155,22 +1154,10 @@ static void InitializeModuleAndManagers() {
   TheFPM->addPass(SimplifyCFGPass());
 
   // Register analysis passes used in these transform passes.
-  TheFAM->registerPass([&] { return AAManager(); });
-  TheFAM->registerPass([&] { return AssumptionAnalysis(); });
-  TheFAM->registerPass([&] { return DominatorTreeAnalysis(); });
-  TheFAM->registerPass([&] { return LoopAnalysis(); });
-  TheFAM->registerPass([&] { return MemoryDependenceAnalysis(); });
-  TheFAM->registerPass([&] { return MemorySSAAnalysis(); });
-  TheFAM->registerPass([&] { return OptimizationRemarkEmitterAnalysis(); });
-  TheFAM->registerPass([&] {
-    return OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>(*TheMAM);
-  });
-  TheFAM->registerPass(
-      [&] { return PassInstrumentationAnalysis(ThePIC.get()); });
-  TheFAM->registerPass([&] { return TargetIRAnalysis(); });
-  TheFAM->registerPass([&] { return TargetLibraryAnalysis(); });
-
-  TheMAM->registerPass([&] { return ProfileSummaryAnalysis(); });
+  PassBuilder PB;
+  PB.registerModuleAnalyses(*TheMAM);
+  PB.registerFunctionAnalyses(*TheFAM);
+  PB.crossRegisterProxies(*TheLAM, *TheFAM, *TheCGAM, *TheMAM);
 }
 
 static void HandleDefinition() {
@@ -1220,7 +1207,7 @@ static void HandleTopLevelExpression() {
 
       // Get the symbol's address and cast it to the right type (takes no
       // arguments, returns a double) so we can call it as a native function.
-      double (*FP)() = ExprSymbol.getAddress().toPtr<double (*)()>();
+      double (*FP)() = ExprSymbol.toPtr<double (*)()>();
       fprintf(stderr, "Evaluated to %f\n", FP());
 
       // Delete the anonymous expression module from the JIT.

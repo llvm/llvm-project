@@ -1,4 +1,3 @@
-; REQUIRES: x86-registered-target
 ; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 %class.Arr = type <{ [160 x %class.Derived], i32, [4 x i8] }>
@@ -12,7 +11,7 @@
 
 define internal fastcc void @foo() unnamed_addr {
 entry:
-  store <8 x ptr> <ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV7Derived, i64 0, inrange i32 0, i64 2), ptr null, ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV7Derived, i64 0, inrange i32 0, i64 2), ptr null, ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV7Derived, i64 0, inrange i32 0, i64 2), ptr null, ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV7Derived, i64 0, inrange i32 0, i64 2), ptr null>, ptr @array, align 32
+  store <8 x ptr> <ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV7Derived, i64 0, i32 0, i64 2), ptr null, ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV7Derived, i64 0, i32 0, i64 2), ptr null, ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV7Derived, i64 0, i32 0, i64 2), ptr null, ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV7Derived, i64 0, i32 0, i64 2), ptr null>, ptr @array, align 32
   ret void
 }
 

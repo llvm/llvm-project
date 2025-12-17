@@ -50,6 +50,15 @@ STRING_EXTENSION_OUTSIDE(SBBreakpoint)
         enabled = property(IsEnabled, SetEnabled, doc='''A read/write property that configures whether this breakpoint is enabled or not.''')
         one_shot = property(IsOneShot, SetOneShot, doc='''A read/write property that configures whether this breakpoint is one-shot (deleted when hit) or not.''')
         num_locations = property(GetNumLocations, None, doc='''A read only property that returns the count of locations of this breakpoint.''')
+        auto_continue = property(GetAutoContinue, SetAutoContinue, doc='A read/write property that configures the auto-continue property of this breakpoint.')
+        condition = property(GetCondition, SetCondition, doc='A read/write property that configures the condition of this breakpoint.')
+        hit_count = property(GetHitCount, doc='A read only property that returns the hit count of this breakpoint.')
+        ignore_count = property(GetIgnoreCount, SetIgnoreCount, doc='A read/write property that configures the ignore count of this breakpoint.')
+        queue_name = property(GetQueueName, SetQueueName, doc='A read/write property that configures the queue name criteria of this breakpoint.')
+        target = property(GetTarget, doc='A read only property that returns the target of this breakpoint.')
+        thread_id = property(GetThreadID, SetThreadID, doc='A read/write property that configures the thread id criteria of this breakpoint.')
+        thread_index = property(GetThreadIndex, SetThreadIndex, doc='A read/write property that configures the thread index criteria of this breakpoint.')
+        thread_name = property(GetThreadName, SetThreadName, doc='A read/write property that configures the thread name criteria of this breakpoint.')
     %}
 #endif
 }

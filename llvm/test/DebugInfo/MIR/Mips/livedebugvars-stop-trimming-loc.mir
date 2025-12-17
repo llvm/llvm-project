@@ -3,11 +3,13 @@
 ## This tests that LiveDebugVariables does not trim non-inlined variable
 ## location.
 
+# CHECK: ![[VARA:.*]] = !DILocalVariable(name: "a"
 # CHECK: ![[VARB:.*]] = !DILocalVariable(name: "b"
 # CHECK: ![[VARC:.*]] = !DILocalVariable(name: "c"
 # CHECK: $at = COPY $a2
 # CHECK-NEXT: DBG_VALUE $at, $noreg, ![[VARC]], !DIExpression(), debug-location
 # CHECK: $s0 = COPY $a1
+# CHECK-NEXT: DBG_VALUE $a0, $noreg, ![[VARA]], !DIExpression(), debug-location
 # CHECK-NEXT: DBG_VALUE $s0, $noreg, ![[VARB]], !DIExpression(), debug-location
 
 --- |
@@ -72,6 +74,8 @@
 name:            fn2
 alignment:       4
 tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
 registers:
   - { id: 0, class: gpr32, preferred-register: '' }
   - { id: 1, class: gpr32, preferred-register: '' }

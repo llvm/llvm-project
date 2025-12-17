@@ -19,7 +19,7 @@ entry:
   %c = alloca i32, align 4
   store i32 2, ptr %a, align 4
   store i32 3, ptr %b, align 4
-  call void @llvm.dbg.value(metadata i64 0, metadata !14, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.value(metadata i64 0, metadata !14, metadata !DIExpression()), !dbg !15
   store i32 4, ptr %c, align 4
   %al = load i32, ptr %a
   %bl = load i32, ptr %b
@@ -51,14 +51,7 @@ entry:
   ret void
 }
 
-; CHECK: define internal void @outlined_ir_func_0(ptr [[ARG0:%.*]], ptr [[ARG1:%.*]], ptr [[ARG2:%.*]]) #1 {
 ; CHECK: entry_to_outline:
-; CHECK-NEXT:    store i32 2, ptr [[ARG0]], align 4
-; CHECK-NEXT:    store i32 3, ptr [[ARG1]], align 4
-; CHECK-NEXT:    store i32 4, ptr [[ARG2]], align 4
-; CHECK-NEXT:    [[AL:%.*]] = load i32, ptr [[ARG0]], align 4
-; CHECK-NEXT:    [[BL:%.*]] = load i32, ptr [[ARG1]], align 4
-; CHECK-NEXT:    [[CL:%.*]] = load i32, ptr [[ARG2]], align 4
 
 !0 = !DIFile(filename: "foo.c", directory: "/tmp")
 !1 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
@@ -69,3 +62,4 @@ entry:
 !12 = !DISubroutineType(types: !13)
 !13 = !{}
 !14 = !DILocalVariable(name: "p_6", arg: 1, scope: !11, line: 117, type: !1)
+!15 = !DILocation(line: 1, scope: !11)

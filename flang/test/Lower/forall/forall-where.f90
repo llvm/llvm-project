@@ -1,12 +1,12 @@
 ! Test forall lowering
 
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 !*** Test a FORALL construct with a nested WHERE construct.
 !    This has both an explicit and implicit iteration space. The WHERE construct
 !    makes the assignments conditional and the where mask evaluation must happen
 !    prior to evaluating the array assignment statement.
-subroutine test_nested_forall_where(a,b)  
+subroutine test_nested_forall_where(a,b)
   type t
      real data(100)
   end type t
@@ -137,8 +137,7 @@ end subroutine test_nested_forall_where
 ! CHECK:             %[[VAL_109:.*]] = arith.constant 1 : i64
 ! CHECK:             %[[VAL_110:.*]] = arith.subi %[[VAL_108]], %[[VAL_109]] : i64
 ! CHECK:             %[[VAL_111:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_106]], %[[VAL_110]] : (!fir.box<!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>>, i64, i64) -> !fir.ref<!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>
-! CHECK:             %[[VAL_112:.*]] = fir.field_index data, !fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>
-! CHECK:             %[[VAL_113:.*]] = fir.coordinate_of %[[VAL_111]], %[[VAL_112]] : (!fir.ref<!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>, !fir.field) -> !fir.ref<!fir.array<100xf32>>
+! CHECK:             %[[VAL_113:.*]] = fir.coordinate_of %[[VAL_111]], data : (!fir.ref<!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>) -> !fir.ref<!fir.array<100xf32>>
 ! CHECK:             %[[VAL_114:.*]] = arith.constant 100 : index
 ! CHECK:             %[[VAL_115:.*]] = fir.shape %[[VAL_114]] : (index) -> !fir.shape<1>
 ! CHECK:             %[[VAL_116:.*]] = fir.array_load %[[VAL_113]](%[[VAL_115]]) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
@@ -172,7 +171,7 @@ end subroutine test_nested_forall_where
 ! CHECK:             %[[VAL_141:.*]] = arith.subi %[[VAL_114]], %[[VAL_139]] : index
 ! CHECK:             %[[VAL_142:.*]] = fir.do_loop %[[VAL_143:.*]] = %[[VAL_140]] to %[[VAL_141]] step %[[VAL_139]] unordered iter_args(%[[VAL_144:.*]] = %[[VAL_122]]) -> (!fir.array<?xi8>) {
 ! CHECK:               %[[VAL_145:.*]] = fir.array_fetch %[[VAL_116]], %[[VAL_143]] : (!fir.array<100xf32>, index) -> f32
-! CHECK:               %[[VAL_146:.*]] = arith.cmpf ogt, %[[VAL_145]], %[[VAL_117]] : f32
+! CHECK:               %[[VAL_146:.*]] = arith.cmpf ogt, %[[VAL_145]], %[[VAL_117]] {{.*}} : f32
 ! CHECK:               %[[VAL_147:.*]] = arith.constant 1 : i32
 ! CHECK:               %[[VAL_148:.*]] = fir.coordinate_of %[[VAL_102]], %[[VAL_147]] : (!fir.ref<tuple<i64, !fir.heap<!fir.array<?xi8>>, !fir.heap<!fir.array<?xi64>>>>, i32) -> !fir.ref<!fir.heap<!fir.array<?xi8>>>
 ! CHECK:               %[[VAL_149:.*]] = fir.load %[[VAL_148]] : !fir.ref<!fir.heap<!fir.array<?xi8>>>
@@ -380,6 +379,6 @@ end subroutine test_nested_forall_where
 ! CHECK:         }
 ! CHECK:         fir.array_merge_store %[[VAL_248]], %[[VAL_340:.*]] to %[[VAL_0]] : !fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>, !fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>, !fir.box<!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>>
 ! CHECK:         %[[VAL_341:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<tuple<i64, !fir.heap<!fir.array<?xi8>>, !fir.heap<!fir.array<?xi64>>>>) -> !fir.llvm_ptr<i8>
-! CHECK:         %[[VAL_342:.*]] = fir.call @_FortranARaggedArrayDeallocate(%[[VAL_341]]) {{.*}}: (!fir.llvm_ptr<i8>) -> none
+! CHECK:         fir.call @_FortranARaggedArrayDeallocate(%[[VAL_341]]) {{.*}}: (!fir.llvm_ptr<i8>) -> ()
 ! CHECK:         return
 ! CHECK:       }

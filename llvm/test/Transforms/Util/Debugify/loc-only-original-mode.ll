@@ -14,7 +14,6 @@
 ; RUN:     -verify-each-debuginfo-preserve \
 ; RUN:     -debugify-func-limit=2 -S 2>&1 | FileCheck %s --check-prefix=CHECK-DROP
 
-
 ; CHECK-NOT: drops dbg.value()/dbg.declare()
 ; CHECK-DROP: drops dbg.value()/dbg.declare()
 
@@ -22,10 +21,10 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define dso_local i32 @fn2(i32 %l, i32 %k) !dbg !7 {
 entry:
-  call void @llvm.dbg.value(metadata i32 %l, metadata !12, metadata !DIExpression()), !dbg !15
-  call void @llvm.dbg.value(metadata i32 %k, metadata !13, metadata !DIExpression()), !dbg !15
+  tail call void @llvm.dbg.value(metadata i32 %l, metadata !12, metadata !DIExpression()), !dbg !15
+  tail call void @llvm.dbg.value(metadata i32 %k, metadata !13, metadata !DIExpression()), !dbg !15
   %call = call i32 (...) @fn3(), !dbg !16
-  call void @llvm.dbg.value(metadata i32 %call, metadata !14, metadata !DIExpression()), !dbg !15
+  tail call void @llvm.dbg.value(metadata i32 %call, metadata !14, metadata !DIExpression()), !dbg !15
   ret i32 %call, !dbg !17
 }
 
@@ -33,10 +32,10 @@ declare !dbg !18 dso_local i32 @fn3(...)
 
 define dso_local i32 @fn(i32 %x, i32 %y) !dbg !22 {
 entry:
-  call void @llvm.dbg.value(metadata i32 %x, metadata !24, metadata !DIExpression()), !dbg !27
-  call void @llvm.dbg.value(metadata i32 %y, metadata !25, metadata !DIExpression()), !dbg !27
+  tail call void @llvm.dbg.value(metadata i32 %x, metadata !24, metadata !DIExpression()), !dbg !27
+  tail call void @llvm.dbg.value(metadata i32 %y, metadata !25, metadata !DIExpression()), !dbg !27
   %call = call i32 @fn2(i32 %x, i32 %y), !dbg !27
-  call void @llvm.dbg.value(metadata i32 %call, metadata !26, metadata !DIExpression()), !dbg !27
+  tail call void @llvm.dbg.value(metadata i32 %call, metadata !26, metadata !DIExpression()), !dbg !27
   %add = add nsw i32 %call, %x, !dbg !27
   %add1 = add nsw i32 %add, %y, !dbg !27
   ret i32 %add1, !dbg !27

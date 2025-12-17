@@ -58,7 +58,104 @@ llvm.func @nvvm_special_regs() -> i32 {
   %27 = nvvm.read.ptx.sreg.cluster.ctarank : i32
   // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.cluster.nctarank
   %28 = nvvm.read.ptx.sreg.cluster.nctarank : i32
-  
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.clock
+  %29 = nvvm.read.ptx.sreg.clock : i32
+  // CHECK: call i64 @llvm.nvvm.read.ptx.sreg.clock64
+  %30 = nvvm.read.ptx.sreg.clock64 : i64
+  // CHECK: call i64 @llvm.nvvm.read.ptx.sreg.globaltimer
+  %31 = nvvm.read.ptx.sreg.globaltimer : i64
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.globaltimer.lo()
+  %32 = nvvm.read.ptx.sreg.globaltimer.lo : i32
+  // CHECK: %33 = call range(i32 0, 64) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  %33 = nvvm.read.ptx.sreg.tid.x range <i32, 0, 64> : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.warpid
+  %34 = nvvm.read.ptx.sreg.warpid : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.nwarpid
+  %35 = nvvm.read.ptx.sreg.nwarpid : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.smid
+  %36 = nvvm.read.ptx.sreg.smid : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.nsmid
+  %37 = nvvm.read.ptx.sreg.nsmid : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.gridid
+  %38 = nvvm.read.ptx.sreg.gridid : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg0
+  %39 = nvvm.read.ptx.sreg.envreg0 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg1
+  %40 = nvvm.read.ptx.sreg.envreg1 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg2
+  %41 = nvvm.read.ptx.sreg.envreg2 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg3
+  %42 = nvvm.read.ptx.sreg.envreg3 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg4
+  %43 = nvvm.read.ptx.sreg.envreg4 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg5
+  %44 = nvvm.read.ptx.sreg.envreg5 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg6
+  %45 = nvvm.read.ptx.sreg.envreg6 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg7
+  %46 = nvvm.read.ptx.sreg.envreg7 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg8
+  %47 = nvvm.read.ptx.sreg.envreg8 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg9
+  %48 = nvvm.read.ptx.sreg.envreg9 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg10
+  %49 = nvvm.read.ptx.sreg.envreg10 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg11
+  %50 = nvvm.read.ptx.sreg.envreg11 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg12
+  %51 = nvvm.read.ptx.sreg.envreg12 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg13
+  %52 = nvvm.read.ptx.sreg.envreg13 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg14
+  %53 = nvvm.read.ptx.sreg.envreg14 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg15
+  %54 = nvvm.read.ptx.sreg.envreg15 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg16
+  %55 = nvvm.read.ptx.sreg.envreg16 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg17
+  %56 = nvvm.read.ptx.sreg.envreg17 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg18
+  %57 = nvvm.read.ptx.sreg.envreg18 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg19
+  %58 = nvvm.read.ptx.sreg.envreg19 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg20
+  %59 = nvvm.read.ptx.sreg.envreg20 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg21
+  %60 = nvvm.read.ptx.sreg.envreg21 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg22
+  %61 = nvvm.read.ptx.sreg.envreg22 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg23
+  %62 = nvvm.read.ptx.sreg.envreg23 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg24
+  %63 = nvvm.read.ptx.sreg.envreg24 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg25
+  %64 = nvvm.read.ptx.sreg.envreg25 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg26
+  %65 = nvvm.read.ptx.sreg.envreg26 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg27
+  %66 = nvvm.read.ptx.sreg.envreg27 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg28
+  %67 = nvvm.read.ptx.sreg.envreg28 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg29
+  %68 = nvvm.read.ptx.sreg.envreg29 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg30
+  %69 = nvvm.read.ptx.sreg.envreg30 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg31
+  %70 = nvvm.read.ptx.sreg.envreg31 : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.eq
+  %71 = nvvm.read.ptx.sreg.lanemask.eq : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.le
+  %72 = nvvm.read.ptx.sreg.lanemask.le : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.lt
+  %73 = nvvm.read.ptx.sreg.lanemask.lt : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.ge
+  %74 = nvvm.read.ptx.sreg.lanemask.ge : i32
+  //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.gt
+  %75 = nvvm.read.ptx.sreg.lanemask.gt : i32
+  // CHECK: %76 = call range(i32 0, 0) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  %76 = nvvm.read.ptx.sreg.tid.x range <i32, 0, 0> : i32
+  // CHECK: %77 = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  %77 = nvvm.read.ptx.sreg.tid.x range <i32, 4294967295, 4294967295> : i32
   llvm.return %1 : i32
 }
 
@@ -69,10 +166,30 @@ llvm.func @nvvm_rcp(%0: f32) -> f32 {
   llvm.return %1 : f32
 }
 
-// CHECK-LABEL: @llvm_nvvm_barrier0
-llvm.func @llvm_nvvm_barrier0() {
-  // CHECK: call void @llvm.nvvm.barrier0()
-  nvvm.barrier0
+// CHECK-LABEL: @llvm_nvvm_cluster_arrive
+llvm.func @llvm_nvvm_cluster_arrive() {
+  // CHECK: call void @llvm.nvvm.barrier.cluster.arrive()
+  nvvm.cluster.arrive
+  // CHECK: call void @llvm.nvvm.barrier.cluster.arrive.aligned()
+  nvvm.cluster.arrive {aligned}
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_cluster_arrive_relaxed
+llvm.func @llvm_nvvm_cluster_arrive_relaxed() {
+  // CHECK: call void @llvm.nvvm.barrier.cluster.arrive.relaxed()
+  nvvm.cluster.arrive.relaxed
+  // CHECK: call void @llvm.nvvm.barrier.cluster.arrive.relaxed.aligned()
+  nvvm.cluster.arrive.relaxed {aligned}
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_cluster_wait
+llvm.func @llvm_nvvm_cluster_wait() {
+  // CHECK: call void @llvm.nvvm.barrier.cluster.wait()
+  nvvm.cluster.wait
+  // CHECK: call void @llvm.nvvm.barrier.cluster.wait.aligned()
+  nvvm.cluster.wait {aligned}
   llvm.return
 }
 
@@ -125,7 +242,13 @@ llvm.func @nvvm_shfl_pred(
 // CHECK-LABEL: @nvvm_vote
 llvm.func @nvvm_vote(%0 : i32, %1 : i1) -> i32 {
   // CHECK: call i32 @llvm.nvvm.vote.ballot.sync(i32 %{{.*}}, i1 %{{.*}})
-  %3 = nvvm.vote.ballot.sync %0, %1 : i32
+  %3 = nvvm.vote.sync ballot %0, %1 -> i32
+  // CHECK: call i1 @llvm.nvvm.vote.all.sync(i32 %{{.*}}, i1 %{{.*}})
+  %4 = nvvm.vote.sync all %0, %1 -> i1
+  // CHECK: call i1 @llvm.nvvm.vote.any.sync(i32 %{{.*}}, i1 %{{.*}})
+  %5 = nvvm.vote.sync any %0, %1 -> i1
+  // CHECK: call i1 @llvm.nvvm.vote.uni.sync(i32 %{{.*}}, i1 %{{.*}})
+  %6 = nvvm.vote.sync uni %0, %1 -> i1
   llvm.return %3 : i32
 }
 
@@ -152,30 +275,16 @@ llvm.func @nvvm_mma_m16n8k16_f16_f16(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
   llvm.return %0 : !llvm.struct<(vector<2xf16>, vector<2xf16>)>
 }
 
-// f32 return type, f16 accumulate type
-// CHECK-LABEL: @nvvm_mma_m16n8k16_f32_f16
-llvm.func @nvvm_mma_m16n8k16_f32_f16(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
-                                %a2 : vector<2xf16>, %a3 : vector<2xf16>,
-                                %b0 : vector<2xf16>, %b1 : vector<2xf16>,
-                                %c0 : vector<2xf16>, %c1 : vector<2xf16>) -> !llvm.struct<(f32, f32, f32, f32)> {
-  // CHECK: call { float, float, float, float } @llvm.nvvm.mma.m16n8k16.row.col.f32.f16
-  %0 = nvvm.mma.sync A[%a0, %a1, %a2, %a3] B[%b0, %b1] C[%c0, %c1]
-    {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
-     shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (vector<2xf16>, vector<2xf16>, vector<2xf16>) -> !llvm.struct<(f32, f32, f32, f32)>
-  llvm.return %0 : !llvm.struct<(f32, f32, f32, f32)>
-}
-
-// f16 return type, f32 accumulate type
-// CHECK-LABEL: @nvvm_mma_m16n8k16_f16_f32
-llvm.func @nvvm_mma_m16n8k16_f16_f32(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
-                                %a2 : vector<2xf16>, %a3 : vector<2xf16>,
-                                %b0 : vector<2xf16>, %b1 : vector<2xf16>,
-                                %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)> {
-  // CHECK: call { <2 x half>, <2 x half> } @llvm.nvvm.mma.m16n8k16.row.col.f16.f32
+// CHECK-LABEL: @nvvm_mma_m16n8k16_bf16_bf16
+llvm.func @nvvm_mma_m16n8k16_bf16_bf16(%a0 : i32, %a1 : i32, %a2 : i32, %a3 : i32,
+                              %b0 : i32, %b1 : i32,
+                              %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32) -> !llvm.struct<(f32, f32, f32, f32)> {
+  // CHECK: call { float, float, float, float } @llvm.nvvm.mma.m16n8k16.row.col.bf16
   %0 = nvvm.mma.sync A[%a0, %a1, %a2, %a3] B[%b0, %b1] C[%c0, %c1, %c2, %c3]
     {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
-     shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (vector<2xf16>, vector<2xf16>, f32) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
-  llvm.return %0 : !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+     multiplicandAPtxType = #nvvm.mma_type<bf16>, multiplicandBPtxType = #nvvm.mma_type<bf16>,
+     shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (i32, i32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+  llvm.return %0 : !llvm.struct<(f32, f32, f32, f32)>
 }
 
 // f32 return type, f32 accumulate type
@@ -335,37 +444,170 @@ llvm.func @nvvm_wmma_mma(%0 : i32, %1 : i32, %2 : i32, %3 : i32, %4 : i32, %5 : 
   llvm.return
 }
 
+// CHECK-LABEL: @nvvm_wmma_load_a_f64
+llvm.func @nvvm_wmma_load_a_f64(%arg0: !llvm.ptr, %arg1 : i32) {
+  // CHECK: call double @llvm.nvvm.wmma.m8n8k4.load.a.row.stride.f64.p0(ptr %{{.*}}, i32 %{{.*}})
+  %0 = nvvm.wmma.load %arg0, %arg1
+    {eltype = #nvvm.mma_type<f64>, frag = #nvvm.mma_frag<a>, k = 4 : i32, layout = #nvvm.mma_layout<row>, m = 8 : i32, n = 8 : i32}
+    : (!llvm.ptr) -> f64
+  llvm.return
+}
+
+// CHECK-LABEL: @nvvm_wmma_load_c_f64
+llvm.func @nvvm_wmma_load_c_f64(%arg0: !llvm.ptr, %arg1 : i32) {
+  // CHECK: call { double, double } @llvm.nvvm.wmma.m8n8k4.load.c.row.stride.f64.p0(ptr %{{.*}}, i32 %{{.*}})
+  %0 = nvvm.wmma.load %arg0, %arg1
+    {eltype = #nvvm.mma_type<f64>, frag = #nvvm.mma_frag<c>, k = 4 : i32, layout = #nvvm.mma_layout<row>, m = 8 : i32, n = 8 : i32}
+    : (!llvm.ptr) -> !llvm.struct<(f64, f64)>
+  llvm.return
+}
+
+// CHECK-LABEL: @nvvm_wmma_mma_f64
+llvm.func @nvvm_wmma_mma_f64(%0 : f64, %1 : f64, %2 : f64, %3 : f64) {
+  // CHECK: { double, double } @llvm.nvvm.wmma.m8n8k4.mma.row.col.f64(double %{{.*}}, double %{{.*}}, double %{{.*}}, double %{{.*}})
+  %r = nvvm.wmma.mma %0, %1, %2, %3
+    {eltypeA = #nvvm.mma_type<f64>, eltypeB = #nvvm.mma_type<f64>, k = 4 : i32, layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>, m = 8 : i32, n = 8 : i32}
+    : (f64, f64, f64, f64)
+    -> !llvm.struct<(f64, f64)>
+  llvm.return
+}
+
+// CHECK-LABEL: @nvvm_wmma_store_d_f64
+llvm.func @nvvm_wmma_store_d_f64(%arg0: !llvm.ptr, %arg1 : i32, %arg2 : f64, %arg3 : f64) {
+  // CHECK: call void @llvm.nvvm.wmma.m8n8k4.store.d.row.stride.f64.p0(ptr %{{.*}}, double %{{.*}}, double %{{.*}}, i32 %{{.*}})
+  nvvm.wmma.store %arg0, %arg1, %arg2, %arg3
+    {eltype = #nvvm.mma_type<f64>, k = 4 : i32, layout = #nvvm.mma_layout<row>, m = 8 : i32, n = 8 : i32}
+    : !llvm.ptr, f64, f64
+  llvm.return
+}
+
 // CHECK-LABEL: @cp_async
 llvm.func @cp_async(%arg0: !llvm.ptr<3>, %arg1: !llvm.ptr<1>) {
-// CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.4(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
+  // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.4(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
   nvvm.cp.async.shared.global %arg0, %arg1, 4, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
-// CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.8(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
+  // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.8(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
   nvvm.cp.async.shared.global %arg0, %arg1, 8, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
-// CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.16(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
+  // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.16(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
   nvvm.cp.async.shared.global %arg0, %arg1, 16, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
-// CHECK: call void @llvm.nvvm.cp.async.cg.shared.global.16(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
+  // CHECK: call void @llvm.nvvm.cp.async.cg.shared.global.16(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
   nvvm.cp.async.shared.global %arg0, %arg1, 16, cache =  cg : !llvm.ptr<3>, !llvm.ptr<1>
-// CHECK: call void @llvm.nvvm.cp.async.commit.group()
+
+  // CHECK: call void @llvm.nvvm.cp.async.commit.group()
   nvvm.cp.async.commit.group
-// CHECK: call void @llvm.nvvm.cp.async.wait.group(i32 0)
+  // CHECK: call void @llvm.nvvm.cp.async.wait.group(i32 0)
   nvvm.cp.async.wait.group 0
+  llvm.return
+}
+
+// CHECK-LABEL: @async_cp_zfill
+llvm.func @async_cp_zfill(%dst: !llvm.ptr<3>, %src: !llvm.ptr<1>, %cpSize: i32) {
+  // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.4.s(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}}, i32 %{{.*}})
+  nvvm.cp.async.shared.global %dst, %src, 4, cache =  ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.8.s(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}}, i32 %{{.*}})
+  nvvm.cp.async.shared.global %dst, %src, 8, cache =  ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.16.s(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}}, i32 %{{.*}})
+  nvvm.cp.async.shared.global %dst, %src, 16, cache =  ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  // CHECK: call void @llvm.nvvm.cp.async.cg.shared.global.16.s(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}}, i32 %{{.*}})
+  nvvm.cp.async.shared.global %dst, %src, 16, cache =  cg, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_setmaxregister
+llvm.func @llvm_nvvm_setmaxregister() {
+  // CHECK: call void @llvm.nvvm.setmaxnreg.inc.sync.aligned.u32(i32 256)
+  nvvm.setmaxregister increase 256
+  // CHECK: call void @llvm.nvvm.setmaxnreg.dec.sync.aligned.u32(i32 24)
+  nvvm.setmaxregister decrease 24
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_cp_async_bulk_commit_group
+llvm.func @llvm_nvvm_cp_async_bulk_commit_group() {
+  // CHECK: call void @llvm.nvvm.cp.async.bulk.commit.group()
+  nvvm.cp.async.bulk.commit.group
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_cp_async_bulk_wait_group
+llvm.func @llvm_nvvm_cp_async_bulk_wait_group() {
+  // CHECK: call void @llvm.nvvm.cp.async.bulk.wait.group(i32 0)
+  nvvm.cp.async.bulk.wait_group 0
+  // CHECK: call void @llvm.nvvm.cp.async.bulk.wait.group(i32 3)
+  nvvm.cp.async.bulk.wait_group 3
+  // CHECK: call void @llvm.nvvm.cp.async.bulk.wait.group.read(i32 0)
+  nvvm.cp.async.bulk.wait_group 0 {read}
+  // CHECK: call void @llvm.nvvm.cp.async.bulk.wait.group.read(i32 3)
+  nvvm.cp.async.bulk.wait_group 3 {read}
   llvm.return
 }
 
 // CHECK-LABEL: @ld_matrix
 llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
   // CHECK: call i32 @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x1.b16.p3(ptr addrspace(3) %{{.*}})
-  %l1 = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> i32
+  %l1 = nvvm.ldmatrix %arg0 {num = 1: i32, layout = #nvvm.mma_layout<row>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>, eltType = #nvvm.ld_st_matrix_elt_type<b16>} : (!llvm.ptr<3>) -> i32
   // CHECK: call { i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x2.b16.p3(ptr addrspace(3) %{{.*}})
-  %l2 = nvvm.ldmatrix %arg0 {num = 2 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
+  %l2 = nvvm.ldmatrix %arg0 {num = 2 : i32, layout = #nvvm.mma_layout<row>, shape =#nvvm.ld_st_matrix_shape<m = 8, n = 8>, eltType = #nvvm.ld_st_matrix_elt_type<b16>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
   // CHECK: call { i32, i32, i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x4.b16.p3(ptr addrspace(3) %{{.*}})
-  %l4 = nvvm.ldmatrix %arg0 {num = 4 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
-   // CHECK: call i32 @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x1.trans.b16.p3(ptr addrspace(3) %{{.*}})
-  %l1t = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<col>} : (!llvm.ptr<3>) -> i32
+  %l4 = nvvm.ldmatrix %arg0 {num = 4 : i32, layout = #nvvm.mma_layout<row>, shape =#nvvm.ld_st_matrix_shape<m = 8, n = 8>, eltType = #nvvm.ld_st_matrix_elt_type<b16>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
+
+  // CHECK: call i32 @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x1.trans.b16.p3(ptr addrspace(3) %{{.*}})
+  %l1t = nvvm.ldmatrix %arg0 {num = 1: i32, layout = #nvvm.mma_layout<col>, shape =#nvvm.ld_st_matrix_shape<m = 8, n = 8>, eltType = #nvvm.ld_st_matrix_elt_type<b16>} : (!llvm.ptr<3>) -> i32
   // CHECK: call { i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x2.trans.b16.p3(ptr addrspace(3) %{{.*}})
-  %l2t = nvvm.ldmatrix %arg0 {num = 2 : i32, layout = #nvvm.mma_layout<col>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
+  %l2t = nvvm.ldmatrix %arg0 {num = 2 : i32, layout = #nvvm.mma_layout<col>, shape =#nvvm.ld_st_matrix_shape<m = 8, n = 8>, eltType = #nvvm.ld_st_matrix_elt_type<b16>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
   // CHECK: call { i32, i32, i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x4.trans.b16.p3(ptr addrspace(3) %{{.*}})
-  %l4t = nvvm.ldmatrix %arg0 {num = 4 : i32, layout = #nvvm.mma_layout<col>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
+  %l4t = nvvm.ldmatrix %arg0 {num = 4 : i32, layout = #nvvm.mma_layout<col>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>, eltType = #nvvm.ld_st_matrix_elt_type<b16>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
+
+  // CHECK: call i32 @llvm.nvvm.ldmatrix.sync.aligned.m8n16.x1.b8x16.b6x16_p32.p3(ptr addrspace(3) %{{.*}})
+  %m8n16_b6_l1 = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>, shape =#nvvm.ld_st_matrix_shape<m = 8, n = 16>, eltType = #nvvm.ld_st_matrix_elt_type<b8x16.b6x16_p32>} : (!llvm.ptr<3>) -> i32
+  // CHECK: call { i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n16.x2.b8x16.b6x16_p32.p3(ptr addrspace(3) %{{.*}})
+  %m8n16_b6_l2 = nvvm.ldmatrix %arg0 {num = 2: i32, layout = #nvvm.mma_layout<row>, shape =#nvvm.ld_st_matrix_shape<m = 8, n = 16>, eltType = #nvvm.ld_st_matrix_elt_type<b8x16.b6x16_p32>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
+  // CHECK: call { i32, i32, i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n16.x4.b8x16.b6x16_p32.p3(ptr addrspace(3) %{{.*}})
+  %m8n16_b6_l4 = nvvm.ldmatrix %arg0{num = 4 : i32, layout = #nvvm.mma_layout<row>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 16>,eltType =#nvvm.ld_st_matrix_elt_type<b8x16.b6x16_p32>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
+
+  // CHECK: call i32 @llvm.nvvm.ldmatrix.sync.aligned.m8n16.x1.b8x16.b4x16_p64.p3(ptr addrspace(3) %{{.*}})
+  %m8n16_b4_l1 = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>, shape =#nvvm.ld_st_matrix_shape<m = 8, n = 16>, eltType = #nvvm.ld_st_matrix_elt_type<b8x16.b4x16_p64>} : (!llvm.ptr<3>) -> i32
+  // CHECK: call { i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n16.x2.b8x16.b4x16_p64.p3(ptr addrspace(3) %{{.*}})
+  %m8n16_b4_l2 = nvvm.ldmatrix %arg0 {num = 2 : i32, layout = #nvvm.mma_layout<row>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 16>, eltType = #nvvm.ld_st_matrix_elt_type<b8x16.b4x16_p64>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
+  // CHECK: call { i32, i32, i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n16.x4.b8x16.b4x16_p64.p3(ptr addrspace(3) %{{.*}})
+  %m8n16_b4_l4 = nvvm.ldmatrix %arg0 {num = 4 : i32, layout = #nvvm.mma_layout<row>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 16>, eltType = #nvvm.ld_st_matrix_elt_type<b8x16.b4x16_p64>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
+
+  // CHECK: call { i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m16n16.x1.trans.b8.p3(ptr addrspace(3) %{{.*}})
+  %m16n16_l1t = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<col>, shape =#nvvm.ld_st_matrix_shape<m = 16, n = 16>, eltType = #nvvm.ld_st_matrix_elt_type<b8>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
+  // CHECK: call { i32, i32, i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m16n16.x2.trans.b8.p3(ptr addrspace(3) %{{.*}})
+  %m16n16_l2t = nvvm.ldmatrix %arg0{num = 2 : i32, layout = #nvvm.mma_layout<col>, shape = #nvvm.ld_st_matrix_shape<m = 16, n = 16>,eltType =#nvvm.ld_st_matrix_elt_type<b8>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
+
+  // CHECK: call { i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m16n16.x1.trans.b8x16.b6x16_p32.p3(ptr addrspace(3) %{{.*}})
+  %m16n16_b6_l1t = nvvm.ldmatrix %arg0 {num = 1: i32, layout = #nvvm.mma_layout<col>, shape =#nvvm.ld_st_matrix_shape<m = 16, n = 16>, eltType = #nvvm.ld_st_matrix_elt_type<b8x16.b6x16_p32>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
+  // CHECK: call { i32, i32, i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m16n16.x2.trans.b8x16.b6x16_p32.p3(ptr addrspace(3) %{{.*}})
+  %m16n16_b6_l2t = nvvm.ldmatrix %arg0 {num = 2 : i32, layout = #nvvm.mma_layout<col>, shape =#nvvm.ld_st_matrix_shape<m = 16, n = 16>, eltType = #nvvm.ld_st_matrix_elt_type<b8x16.b6x16_p32>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
+
+  // CHECK: call { i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m16n16.x1.trans.b8x16.b4x16_p64.p3(ptr addrspace(3) %{{.*}})
+  %m16n16_b4_l1t = nvvm.ldmatrix %arg0 {num = 1: i32, layout = #nvvm.mma_layout<col>, shape =#nvvm.ld_st_matrix_shape<m = 16, n = 16>, eltType = #nvvm.ld_st_matrix_elt_type<b8x16.b4x16_p64>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
+  // CHECK: call { i32, i32, i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m16n16.x2.trans.b8x16.b4x16_p64.p3(ptr addrspace(3) %{{.*}})
+  %m16n16_b4_l2t = nvvm.ldmatrix %arg0 {num = 2 : i32, layout = #nvvm.mma_layout<col>, shape = #nvvm.ld_st_matrix_shape<m = 16, n = 16>,eltType =#nvvm.ld_st_matrix_elt_type<b8x16.b4x16_p64>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
+  llvm.return
+}
+
+// CHECK-LABEL: @st_matrix
+llvm.func @st_matrix(%arg0: !llvm.ptr<3>, %r1: i32, %r2: i32, %r3: i32, %r4: i32) {
+  // CHECK: call void @llvm.nvvm.stmatrix.sync.aligned.m8n8.x1.b16.p3(ptr addrspace(3) %{{.*}}, i32 %{{.*}})
+  nvvm.stmatrix %arg0, %r1 {layout = #nvvm.mma_layout<row>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>, eltType = #nvvm.ld_st_matrix_elt_type<b16>} : !llvm.ptr<3>, i32
+  // CHECK: call void @llvm.nvvm.stmatrix.sync.aligned.m8n8.x1.trans.b16.p3(ptr addrspace(3) %{{.*}}, i32 %{{.*}})
+  nvvm.stmatrix %arg0, %r1 {layout = #nvvm.mma_layout<col>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>, eltType = #nvvm.ld_st_matrix_elt_type<b16>} : !llvm.ptr<3>, i32
+  // CHECK: call void @llvm.nvvm.stmatrix.sync.aligned.m16n8.x1.trans.b8.p3(ptr addrspace(3) %{{.*}}, i32 %{{.*}})
+  nvvm.stmatrix %arg0, %r1 {layout = #nvvm.mma_layout<col>, shape = #nvvm.ld_st_matrix_shape<m = 16, n = 8>, eltType = #nvvm.ld_st_matrix_elt_type<b8>} : !llvm.ptr<3>, i32
+  // CHECK: call void @llvm.nvvm.stmatrix.sync.aligned.m8n8.x2.b16.p3(ptr addrspace(3) %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  nvvm.stmatrix %arg0, %r1, %r2 {layout = #nvvm.mma_layout<row>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>, eltType = #nvvm.ld_st_matrix_elt_type<b16>} : !llvm.ptr<3>, i32, i32
+  // CHECK: call void @llvm.nvvm.stmatrix.sync.aligned.m8n8.x2.trans.b16.p3(ptr addrspace(3) %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  nvvm.stmatrix %arg0, %r1, %r2 {layout = #nvvm.mma_layout<col>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>, eltType = #nvvm.ld_st_matrix_elt_type<b16>} : !llvm.ptr<3>, i32, i32
+  // CHECK: call void @llvm.nvvm.stmatrix.sync.aligned.m16n8.x2.trans.b8.p3(ptr addrspace(3) %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  nvvm.stmatrix %arg0, %r1, %r2 {layout = #nvvm.mma_layout<col>, shape = #nvvm.ld_st_matrix_shape<m = 16, n = 8>, eltType = #nvvm.ld_st_matrix_elt_type<b8>} : !llvm.ptr<3>, i32, i32
+  // CHECK: call void @llvm.nvvm.stmatrix.sync.aligned.m8n8.x4.b16.p3(ptr addrspace(3) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  nvvm.stmatrix %arg0, %r1, %r2, %r3, %r4 {layout = #nvvm.mma_layout<row>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>, eltType = #nvvm.ld_st_matrix_elt_type<b16>} : !llvm.ptr<3>, i32, i32, i32, i32
+  // CHECK: call void @llvm.nvvm.stmatrix.sync.aligned.m8n8.x4.trans.b16.p3(ptr addrspace(3) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  nvvm.stmatrix %arg0, %r1, %r2, %r3, %r4 {layout = #nvvm.mma_layout<col>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>, eltType = #nvvm.ld_st_matrix_elt_type<b16>} : !llvm.ptr<3>, i32, i32, i32, i32
+  // CHECK: call void @llvm.nvvm.stmatrix.sync.aligned.m16n8.x4.trans.b8.p3(ptr addrspace(3) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  nvvm.stmatrix %arg0, %r1, %r2, %r3, %r4 {layout = #nvvm.mma_layout<col>, shape = #nvvm.ld_st_matrix_shape<m = 16, n = 8>, eltType = #nvvm.ld_st_matrix_elt_type<b8>} : !llvm.ptr<3>, i32, i32, i32, i32
   llvm.return
 }
 
@@ -375,93 +617,295 @@ llvm.func @kernel_func() attributes {nvvm.kernel} {
   llvm.return
 }
 
-// CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
+// CHECK: ptx_kernel void @kernel_func
 
 // -----
 
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [1,23,32]} {
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 23, 32>} {
   llvm.return
 }
 
-// CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"maxntidx", i32 1}
-// CHECK:     {ptr @kernel_func, !"maxntidy", i32 23}
-// CHECK:     {ptr @kernel_func, !"maxntidz", i32 32}
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.maxntid"="1,23,32" }
 // -----
 
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = [1,23,32]} {
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = array<i32: 1, 23, 32>} {
   llvm.return
 }
 
-// CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"reqntidx", i32 1}
-// CHECK:     {ptr @kernel_func, !"reqntidy", i32 23}
-// CHECK:     {ptr @kernel_func, !"reqntidz", i32 32}
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.reqntid"="1,23,32" }
+// -----
+
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.cluster_dim = array<i32: 3, 5, 7>} {
+  llvm.return
+}
+
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.cluster_dim"="3,5,7" }
+// -----
+
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.cluster_max_blocks = 8} {
+  llvm.return
+}
+
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.maxclusterrank"="8" }
+
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.minctasm = 16} {
   llvm.return
 }
 
-// CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.minctasm"="16" }
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxnreg = 16} {
   llvm.return
 }
 
-// CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"maxnreg", i32 16}
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.maxnreg"="16" }
 // -----
 
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [1,23,32],
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 23, 32>,
                                      nvvm.minctasm = 16, nvvm.maxnreg = 32} {
   llvm.return
 }
 
-// CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"maxnreg", i32 32}
-// CHECK:     {ptr @kernel_func, !"maxntidx", i32 1}
-// CHECK:     {ptr @kernel_func, !"maxntidy", i32 23}
-// CHECK:     {ptr @kernel_func, !"maxntidz", i32 32}
-// CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
-
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.maxnreg"="32" "nvvm.maxntid"="1,23,32" "nvvm.minctasm"="16" }
 // -----
-// expected-error @below {{'"nvvm.minctasm"' attribute must be integer constant}}
-llvm.func @kernel_func() attributes {nvvm.kernel,
-nvvm.minctasm = "foo"} {
+
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.blocksareclusters,
+                                     nvvm.reqntid = array<i32: 1, 23, 32>,
+                                     nvvm.cluster_dim = array<i32: 3, 5, 7>} {
   llvm.return
 }
 
-
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.blocksareclusters" "nvvm.cluster_dim"="3,5,7" "nvvm.reqntid"="1,23,32" }
 // -----
-// expected-error @below {{'"nvvm.maxnreg"' attribute must be integer constant}}
-llvm.func @kernel_func() attributes {nvvm.kernel,
-nvvm.maxnreg = "boo"} {
-  llvm.return
-}
-// -----
-// expected-error @below {{'"nvvm.reqntid"' attribute must be integer array with maximum 3 index}}
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = [3,4,5,6]} {
+// CHECK: define ptx_kernel void @kernel_func(ptr byval(i32) "nvvm.grid_constant" %0)
+llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}) attributes {nvvm.kernel} {
   llvm.return
 }
 
 // -----
-// expected-error @below {{'"nvvm.maxntid"' attribute must be integer array with maximum 3 index}}
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [3,4,5,6]} {
+// CHECK: define ptx_kernel void @kernel_func(ptr byval(i32) "nvvm.grid_constant" %0, float %1, ptr byval(float) "nvvm.grid_constant" %2)
+llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}, %arg1: f32, %arg2: !llvm.ptr {llvm.byval = f32, nvvm.grid_constant}) attributes {nvvm.kernel} {
   llvm.return
 }
 
+// -----
+
+// CHECK-LABEL: @nvvm_exit
+llvm.func @nvvm_exit() {
+  // CHECK: call void @llvm.nvvm.exit()
+  nvvm.exit
+  llvm.return
+}
+
+
+
+// -----
+// CHECK-LABEL: @nvvm_breakpoint
+llvm.func @nvvm_breakpoint() {
+  // CHECK: call void @llvm.debugtrap()
+  nvvm.breakpoint
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_wgmma_fence_aligned
+llvm.func @nvvm_wgmma_fence_aligned() {
+  // CHECK: call void @llvm.nvvm.wgmma.fence.sync.aligned()
+  nvvm.wgmma.fence.aligned
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_wgmma_commit_group_aligned
+llvm.func @nvvm_wgmma_commit_group_aligned() {
+  // CHECK: call void @llvm.nvvm.wgmma.commit_group.sync.aligned()
+  nvvm.wgmma.commit.group.sync.aligned
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_wgmma_wait_group_aligned
+llvm.func @nvvm_wgmma_wait_group_aligned() {
+  // CHECK: call void @llvm.nvvm.wgmma.wait_group.sync.aligned(i64 0)
+  nvvm.wgmma.wait.group.sync.aligned 0
+  // CHECK: call void @llvm.nvvm.wgmma.wait_group.sync.aligned(i64 20)
+  nvvm.wgmma.wait.group.sync.aligned 20
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_griddepcontrol_wait
+llvm.func @nvvm_griddepcontrol_wait() {
+  // CHECK: call void @llvm.nvvm.griddepcontrol.wait()
+  nvvm.griddepcontrol wait
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_griddepcontrol_launch_dependents
+llvm.func @nvvm_griddepcontrol_launch_dependents() {
+  // CHECK: call void @llvm.nvvm.griddepcontrol.launch.dependents()
+  nvvm.griddepcontrol launch_dependents
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_mapa
+llvm.func @nvvm_mapa(%a: !llvm.ptr, %a_shared: !llvm.ptr<3>, %b : i32) {
+  // CHECK-LLVM: call ptr @llvm.nvvm.mapa(ptr %{{.*}}, i32 %{{.*}})
+  %0 = nvvm.mapa %a, %b: !llvm.ptr -> !llvm.ptr
+  // CHECK-LLVM: call ptr addrspace(7) @llvm.nvvm.mapa.shared.cluster(ptr addrspace(3) %{{.*}}, i32 %{{.*}})
+  %1 = nvvm.mapa %a_shared, %b: !llvm.ptr<3> -> !llvm.ptr<7>
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_redux_sync
+llvm.func @nvvm_redux_sync(%value: i32, %offset: i32) {
+  // CHECK: call i32 @llvm.nvvm.redux.sync.add(i32 %{{.*}}, i32 %{{.*}})
+  %0 = nvvm.redux.sync add %value, %offset: i32 -> i32
+  // CHECK: call i32 @llvm.nvvm.redux.sync.umax(i32 %{{.*}}, i32 %{{.*}})
+  %1 = nvvm.redux.sync umax %value, %offset: i32 -> i32
+  // CHECK: call i32 @llvm.nvvm.redux.sync.umin(i32 %{{.*}}, i32 %{{.*}})
+  %2 = nvvm.redux.sync umin %value, %offset: i32 -> i32
+  // CHECK: call i32 @llvm.nvvm.redux.sync.and(i32 %{{.*}}, i32 %{{.*}})
+  %3 = nvvm.redux.sync and %value, %offset: i32 -> i32
+  // CHECK: call i32 @llvm.nvvm.redux.sync.or(i32 %{{.*}}, i32 %{{.*}})
+  %4 = nvvm.redux.sync or %value, %offset: i32 -> i32
+  // CHECK: call i32 @llvm.nvvm.redux.sync.xor(i32 %{{.*}}, i32 %{{.*}})
+  %5 = nvvm.redux.sync xor %value, %offset: i32 -> i32
+  // CHECK: call i32 @llvm.nvvm.redux.sync.max(i32 %{{.*}}, i32 %{{.*}})
+  %6 = nvvm.redux.sync max %value, %offset: i32 -> i32
+  // CHECK: call i32 @llvm.nvvm.redux.sync.min(i32 %{{.*}}, i32 %{{.*}})
+  %7 = nvvm.redux.sync min %value, %offset: i32 -> i32
+  llvm.return
+}
+
+// CHECK-LABEL: @nvvm_redux_sync_f32
+llvm.func @nvvm_redux_sync_f32(%value: f32, %offset: i32) {
+  // CHECK: call float @llvm.nvvm.redux.sync.fmin(float %{{.*}}, i32 %{{.*}})
+  %0 = nvvm.redux.sync fmin %value, %offset: f32 -> f32
+  // CHECK: call float @llvm.nvvm.redux.sync.fmin.abs(float %{{.*}}, i32 %{{.*}})
+  %1 = nvvm.redux.sync fmin %value, %offset {abs = true}: f32 -> f32
+  // CHECK: call float @llvm.nvvm.redux.sync.fmin.NaN(float %{{.*}}, i32 %{{.*}})
+  %2 = nvvm.redux.sync fmin %value, %offset {nan = true}: f32 -> f32
+  // CHECK: call float @llvm.nvvm.redux.sync.fmin.abs.NaN(float %{{.*}}, i32 %{{.*}})
+  %3 = nvvm.redux.sync fmin %value, %offset {abs = true, nan = true}: f32 -> f32
+  // CHECK: call float @llvm.nvvm.redux.sync.fmax(float %{{.*}}, i32 %{{.*}})
+  %4 = nvvm.redux.sync fmax %value, %offset: f32 -> f32
+  // CHECK: call float @llvm.nvvm.redux.sync.fmax.abs(float %{{.*}}, i32 %{{.*}})
+  %5 = nvvm.redux.sync fmax %value, %offset {abs = true}: f32 -> f32
+  // CHECK: call float @llvm.nvvm.redux.sync.fmax.NaN(float %{{.*}}, i32 %{{.*}})
+  %6 = nvvm.redux.sync fmax %value, %offset {nan = true}: f32 -> f32
+  // CHECK: call float @llvm.nvvm.redux.sync.fmax.abs.NaN(float %{{.*}}, i32 %{{.*}})
+  %7 = nvvm.redux.sync fmax %value, %offset {abs = true, nan = true}: f32 -> f32
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_match_sync
+llvm.func @nvvm_match_sync(%mask: i32, %val32: i32, %val64: i64) {
+  // CHECK: call i32 @llvm.nvvm.match.any.sync.i32(i32 %{{.*}}, i32 %{{.*}})
+  %0 = nvvm.match.sync any %mask, %val32 : i32 -> i32
+  // CHECK: call { i32, i1 } @llvm.nvvm.match.all.sync.i32p(i32 %{{.*}}, i32 %{{.*}})
+  %1 = nvvm.match.sync all %mask, %val32 : i32 -> !llvm.struct<(i32, i1)>
+  // CHECK: call i32 @llvm.nvvm.match.any.sync.i64(i32 %{{.*}}, i64 %{{.*}})
+  %2 = nvvm.match.sync any %mask, %val64 : i64 -> i32
+  // CHECK: call { i32, i1 } @llvm.nvvm.match.all.sync.i64p(i32 %{{.*}}, i64 %{{.*}})
+  %3 = nvvm.match.sync all %mask, %val64 : i64 -> !llvm.struct<(i32, i1)>
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_st_bulk
+llvm.func @nvvm_st_bulk(%addr_gen: !llvm.ptr, %addr_shared: !llvm.ptr<3>, %size: i64) {
+  // CHECK: call void @llvm.nvvm.st.bulk(ptr %{{.*}}, i64 %{{.*}}, i64 0)
+  nvvm.st.bulk %addr_gen, size = %size : !llvm.ptr
+  // CHECK: call void @llvm.nvvm.st.bulk.shared.cta(ptr addrspace(3) %{{.*}}, i64 %{{.*}}, i64 0)
+  nvvm.st.bulk %addr_shared, size = %size: !llvm.ptr<3>
+  // CHECK: call void @llvm.nvvm.st.bulk(ptr %{{.*}}, i64 %{{.*}}, i64 0)
+  nvvm.st.bulk %addr_gen, size = %size, init = 0 : !llvm.ptr
+  // CHECK: call void @llvm.nvvm.st.bulk.shared.cta(ptr addrspace(3) %{{.*}}, i64 %{{.*}}, i64 0)
+  nvvm.st.bulk %addr_shared, size = %size, init = 0: !llvm.ptr<3>
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_dot_accumulate_4way
+llvm.func @nvvm_dot_accumulate_4way(%a: vector<4xi8>, %b: vector<4xi8>, %c: i32) {
+  // CHECK: %[[a_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: call i32 @llvm.nvvm.idp4a.u.u(i32 %[[a_cast]], i32 %[[b_cast]], i32 %{{.*}})
+  %0 = nvvm.dot.accumulate.4way %a <unsigned>, %b <unsigned>, %c: vector<4xi8>, vector<4xi8>
+  // CHECK: %[[a_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: call i32 @llvm.nvvm.idp4a.s.u(i32 %[[a_cast]], i32 %[[b_cast]], i32 %{{.*}})
+  %1 = nvvm.dot.accumulate.4way %a <signed>, %b <unsigned>, %c: vector<4xi8>, vector<4xi8>
+  // CHECK: %[[a_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: call i32 @llvm.nvvm.idp4a.u.s(i32 %[[a_cast]], i32 %[[b_cast]], i32 %{{.*}})
+  %2 = nvvm.dot.accumulate.4way %a <unsigned>, %b <signed>, %c: vector<4xi8>, vector<4xi8>
+  // CHECK: %[[a_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: call i32 @llvm.nvvm.idp4a.s.s(i32 %[[a_cast]], i32 %[[b_cast]], i32 %{{.*}})
+  %3 = nvvm.dot.accumulate.4way %a <signed>, %b <signed>, %c: vector<4xi8>, vector<4xi8>
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_dot_accumulate_2way
+llvm.func @nvvm_dot_accumulate_2way(%a: vector<2xi16>, %b: vector<4xi8>, %c: i32) {
+  // CHECK: %[[a_cast:.*]] = bitcast <2 x i16> %{{.*}} to i32
+  // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: call i32 @llvm.nvvm.idp2a.u.u(i32 %[[a_cast]], i32 %[[b_cast]], i1 false, i32 %{{.*}})
+  %0 = nvvm.dot.accumulate.2way %a <unsigned>, %b <unsigned>, %c {b_hi = false} : vector<2xi16>, vector<4xi8>
+  // CHECK: %[[a_cast:.*]] = bitcast <2 x i16> %{{.*}} to i32
+  // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: call i32 @llvm.nvvm.idp2a.u.u(i32 %[[a_cast]], i32 %[[b_cast]], i1 true, i32 %{{.*}})
+  %1 = nvvm.dot.accumulate.2way %a <unsigned>, %b <unsigned>, %c {b_hi = true}: vector<2xi16>, vector<4xi8>
+  // CHECK: %[[a_cast:.*]] = bitcast <2 x i16> %{{.*}} to i32
+  // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: call i32 @llvm.nvvm.idp2a.s.u(i32 %[[a_cast]], i32 %[[b_cast]], i1 false, i32 %{{.*}})
+  %2 = nvvm.dot.accumulate.2way %a <signed>, %b <unsigned>, %c {b_hi = false}: vector<2xi16>, vector<4xi8>
+  // CHECK: %[[a_cast:.*]] = bitcast <2 x i16> %{{.*}} to i32
+  // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: call i32 @llvm.nvvm.idp2a.s.u(i32 %[[a_cast]], i32 %[[b_cast]], i1 true, i32 %{{.*}})
+  %3 = nvvm.dot.accumulate.2way %a <signed>, %b <unsigned>, %c {b_hi = true}: vector<2xi16>, vector<4xi8>
+  // CHECK: %[[a_cast:.*]] = bitcast <2 x i16> %{{.*}} to i32
+  // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: call i32 @llvm.nvvm.idp2a.u.s(i32 %[[a_cast]], i32 %[[b_cast]], i1 false, i32 %{{.*}})
+  %4 = nvvm.dot.accumulate.2way %a <unsigned>, %b <signed>, %c {b_hi = false}: vector<2xi16>, vector<4xi8>
+  // CHECK: %[[a_cast:.*]] = bitcast <2 x i16> %{{.*}} to i32
+  // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: call i32 @llvm.nvvm.idp2a.u.s(i32 %[[a_cast]], i32 %[[b_cast]], i1 true, i32 %{{.*}})
+  %5 = nvvm.dot.accumulate.2way %a <unsigned>, %b <signed>, %c {b_hi = true}: vector<2xi16>, vector<4xi8>
+  // CHECK: %[[a_cast:.*]] = bitcast <2 x i16> %{{.*}} to i32
+  // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: call i32 @llvm.nvvm.idp2a.s.s(i32 %[[a_cast]], i32 %[[b_cast]], i1 false, i32 %{{.*}})
+  %6 = nvvm.dot.accumulate.2way %a <signed>, %b <signed>, %c {b_hi = false}: vector<2xi16>, vector<4xi8>
+  // CHECK: %[[a_cast:.*]] = bitcast <2 x i16> %{{.*}} to i32
+  // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: call i32 @llvm.nvvm.idp2a.s.s(i32 %[[a_cast]], i32 %[[b_cast]], i1 true, i32 %{{.*}})
+  %7 = nvvm.dot.accumulate.2way %a <signed>, %b <signed>, %c {b_hi = true}: vector<2xi16>, vector<4xi8>
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @nanosleep
+llvm.func @nanosleep(%duration: i32) {
+  // CHECK: call void @llvm.nvvm.nanosleep(i32 %{{.*}})
+  nvvm.nanosleep %duration
+  llvm.return
+}

@@ -126,22 +126,28 @@ void DebugMap::dump() const { print(errs()); }
 namespace {
 
 struct YAMLContext {
+  YAMLContext(BinaryHolder &BinHolder, StringRef PrependPath)
+      : BinHolder(BinHolder), PrependPath(PrependPath) {}
+  BinaryHolder &BinHolder;
   StringRef PrependPath;
   Triple BinaryTriple;
 };
 
 } // end anonymous namespace
 
+DebugMap::DebugMap(const Triple &BinaryTriple, StringRef BinaryPath,
+                   ArrayRef<uint8_t> BinaryUUID)
+    : BinaryTriple(BinaryTriple), BinaryPath(std::string(BinaryPath)),
+      BinaryUUID(BinaryUUID.begin(), BinaryUUID.end()) {}
+
 ErrorOr<std::vector<std::unique_ptr<DebugMap>>>
-DebugMap::parseYAMLDebugMap(StringRef InputFile, StringRef PrependPath,
-                            bool Verbose) {
+DebugMap::parseYAMLDebugMap(BinaryHolder &BinHolder, StringRef InputFile,
+                            StringRef PrependPath, bool Verbose) {
   auto ErrOrFile = MemoryBuffer::getFileOrSTDIN(InputFile);
   if (auto Err = ErrOrFile.getError())
     return Err;
 
-  YAMLContext Ctxt;
-
-  Ctxt.PrependPath = PrependPath;
+  YAMLContext Ctxt(BinHolder, PrependPath);
 
   std::unique_ptr<DebugMap> Res;
   yaml::Input yin((*ErrOrFile)->getBuffer(), &Ctxt);
@@ -160,12 +166,13 @@ namespace yaml {
 
 // Normalize/Denormalize between YAML and a DebugMapObject.
 struct MappingTraits<dsymutil::DebugMapObject>::YamlDMO {
-  YamlDMO(IO &io) { Timestamp = 0; }
+  YamlDMO(IO &io) {}
   YamlDMO(IO &io, dsymutil::DebugMapObject &Obj);
   dsymutil::DebugMapObject denormalize(IO &IO);
 
   std::string Filename;
-  int64_t Timestamp;
+  int64_t Timestamp = 0;
+  uint8_t Type = MachO::N_OSO;
   std::vector<dsymutil::DebugMapObject::YAMLSymbolMapping> Entries;
 };
 
@@ -182,6 +189,7 @@ void MappingTraits<dsymutil::DebugMapObject>::mapping(
   MappingNormalization<YamlDMO, dsymutil::DebugMapObject> Norm(io, DMO);
   io.mapRequired("filename", Norm->Filename);
   io.mapOptional("timestamp", Norm->Timestamp);
+  io.mapOptional("type", Norm->Type);
   io.mapRequired("symbols", Norm->Entries);
 }
 
@@ -235,6 +243,7 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::YamlDMO(
     IO &io, dsymutil::DebugMapObject &Obj) {
   Filename = Obj.Filename;
   Timestamp = sys::toTimeT(Obj.getTimestamp());
+  Type = Obj.getType();
   Entries.reserve(Obj.Symbols.size());
   for (auto &Entry : Obj.Symbols)
     Entries.push_back(
@@ -244,14 +253,13 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::YamlDMO(
 
 dsymutil::DebugMapObject
 MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
-  BinaryHolder BinHolder(vfs::getRealFileSystem(), /* Verbose =*/false);
   const auto &Ctxt = *reinterpret_cast<YAMLContext *>(IO.getContext());
   SmallString<80> Path(Ctxt.PrependPath);
   StringMap<uint64_t> SymbolAddresses;
 
   sys::path::append(Path, Filename);
 
-  auto ObjectEntry = BinHolder.getObjectEntry(Path);
+  auto ObjectEntry = Ctxt.BinHolder.getObjectEntry(Path);
   if (!ObjectEntry) {
     auto Err = ObjectEntry.takeError();
     WithColor::warning() << "Unable to open " << Path << " "
@@ -286,8 +294,7 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
     }
   }
 
-  uint8_t Type = MachO::N_OSO;
-  if (Path.endswith(".dylib")) {
+  if (Path.ends_with(".dylib")) {
     // FIXME: find a more resilient way
     Type = MachO::N_LIB;
   }

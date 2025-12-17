@@ -60,6 +60,8 @@ class AsanThread;
 using __sanitizer::StackTrace;
 
 void AsanInitFromRtl();
+bool TryAsanInitFromRtl();
+void ApplyFlags();
 
 // asan_win.cpp
 void InitializePlatformExceptionHandlers();
@@ -79,9 +81,9 @@ void ReplaceSystemMalloc();
 
 // asan_linux.cpp / asan_mac.cpp / asan_win.cpp
 uptr FindDynamicShadowStart();
-void *AsanDoesNotSupportStaticLinkage();
 void AsanCheckDynamicRTPrereqs();
 void AsanCheckIncompatibleRT();
+void TryReExecWithoutASLR();
 
 // Unpoisons platform-specific stacks.
 // Returns true if all stacks have been unpoisoned.
@@ -125,13 +127,13 @@ void *AsanDlSymNext(const char *sym);
 bool HandleDlopenInit();
 
 void InstallAtExitCheckLeaks();
+void InstallAtForkHandler();
 
 #define ASAN_ON_ERROR() \
   if (&__asan_on_error) \
   __asan_on_error()
 
 bool AsanInited();
-bool AsanInitIsRunning();  // Used to avoid infinite recursion in __asan_init().
 extern bool replace_intrin_cached;
 extern void (*death_callback)(void);
 // These magic values are written to shadow for better error

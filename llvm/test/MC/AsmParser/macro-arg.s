@@ -17,13 +17,11 @@ escape 3
 
 # CHECK:      .long -1
 # CHECK-NEXT: .long -1
-# CHECK-EMPTY:
 double
-# CHECK:      .long -1
 # CHECK-NEXT: .long -1
-# CHECK-EMPTY:
+# CHECK-NEXT: .long -1
 double ,
-# CHECK:      .long 1
+# CHECK-NEXT: .long 1
 # CHECK-NEXT: .long -1
 double 1
 # CHECK:      .long 2

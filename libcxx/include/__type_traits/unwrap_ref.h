@@ -10,6 +10,7 @@
 #define _LIBCPP___TYPE_TRAITS_UNWRAP_REF_H
 
 #include <__config>
+#include <__fwd/functional.h>
 #include <__type_traits/decay.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -20,43 +21,30 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 struct __unwrap_reference {
-  typedef _LIBCPP_NODEBUG _Tp type;
+  using type _LIBCPP_NODEBUG = _Tp;
 };
-
-template <class _Tp>
-class reference_wrapper;
 
 template <class _Tp>
 struct __unwrap_reference<reference_wrapper<_Tp> > {
-  typedef _LIBCPP_NODEBUG _Tp& type;
+  using type _LIBCPP_NODEBUG = _Tp&;
 };
 
 template <class _Tp>
-struct decay;
+using __unwrap_ref_decay_t _LIBCPP_NODEBUG = typename __unwrap_reference<__decay_t<_Tp> >::type;
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>
-struct unwrap_reference : __unwrap_reference<_Tp> {};
+struct _LIBCPP_NO_SPECIALIZATIONS unwrap_reference : __unwrap_reference<_Tp> {};
 
 template <class _Tp>
 using unwrap_reference_t = typename unwrap_reference<_Tp>::type;
 
 template <class _Tp>
-struct unwrap_ref_decay : unwrap_reference<__decay_t<_Tp> > {};
+struct _LIBCPP_NO_SPECIALIZATIONS unwrap_ref_decay : unwrap_reference<__decay_t<_Tp> > {};
 
 template <class _Tp>
-using unwrap_ref_decay_t = typename unwrap_ref_decay<_Tp>::type;
+using unwrap_ref_decay_t = __unwrap_ref_decay_t<_Tp>;
 #endif // _LIBCPP_STD_VER >= 20
-
-template <class _Tp>
-struct __unwrap_ref_decay
-#if _LIBCPP_STD_VER >= 20
-    : unwrap_ref_decay<_Tp>
-#else
-    : __unwrap_reference<__decay_t<_Tp> >
-#endif
-{
-};
 
 _LIBCPP_END_NAMESPACE_STD
 

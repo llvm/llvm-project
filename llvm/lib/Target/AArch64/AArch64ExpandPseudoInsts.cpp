@@ -19,7 +19,6 @@
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -33,14 +32,11 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
-#include <limits>
-#include <utility>
 
 using namespace llvm;
 
@@ -54,9 +50,7 @@ public:
 
   static char ID;
 
-  AArch64ExpandPseudo() : MachineFunctionPass(ID) {
-    initializeAArch64ExpandPseudoPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64ExpandPseudo() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
@@ -71,6 +65,10 @@ private:
                             TargetRegisterClass ContiguousClass,
                             TargetRegisterClass StridedClass,
                             unsigned ContiguousOpc, unsigned StridedOpc);
+  bool expandFormTuplePseudo(MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator MBBI,
+                             MachineBasicBlock::iterator &NextMBBI,
+                             unsigned Size);
   bool expandMOVImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                     unsigned BitSize);
 
@@ -94,8 +92,18 @@ private:
   bool expandCALL_BTI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool expandStoreSwiftAsyncContext(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator MBBI);
-  MachineBasicBlock *expandRestoreZA(MachineBasicBlock &MBB,
-                                     MachineBasicBlock::iterator MBBI);
+  struct ConditionalBlocks {
+    MachineBasicBlock &CondBB;
+    MachineBasicBlock &EndBB;
+  };
+  ConditionalBlocks expandConditionalPseudo(MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator MBBI,
+                                            DebugLoc DL,
+                                            MachineInstrBuilder &Branch);
+  MachineBasicBlock *expandRestoreZASave(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MBBI);
+  MachineBasicBlock *expandCommitZASave(MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator MBBI);
   MachineBasicBlock *expandCondSMToggle(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI);
 };
@@ -170,6 +178,21 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
                 .addImm(I->Op2));
       }
       break;
+    case AArch64::EONXrs:
+    case AArch64::EORXrs:
+    case AArch64::ORRWrs:
+    case AArch64::ORRXrs: {
+      Register DstReg = MI.getOperand(0).getReg();
+      bool DstIsDead = MI.getOperand(0).isDead();
+      MIBS.push_back(
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
+              .addReg(DstReg, RegState::Define |
+                                  getDeadRegState(DstIsDead && LastItem) |
+                                  RenamableState)
+              .addReg(DstReg)
+              .addReg(DstReg)
+              .addImm(I->Op2));
+    } break;
     case AArch64::ANDXri:
     case AArch64::EORXri:
       if (I->Op1 == 0) {
@@ -517,6 +540,11 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
       UseRev = true;
     }
     break;
+  case AArch64::Destructive2xRegImmUnpred:
+    // EXT_ZZI_CONSTRUCTIVE Zd, Zs, Imm
+    //      ==> MOVPRFX Zd Zs; EXT_ZZI Zd, Zd, Zs, Imm
+    std::tie(DOPIdx, SrcIdx, Src2Idx) = std::make_tuple(1, 1, 2);
+    break;
   default:
     llvm_unreachable("Unsupported Destructive Operand type");
   }
@@ -537,6 +565,7 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     break;
   case AArch64::DestructiveUnaryPassthru:
   case AArch64::DestructiveBinaryImm:
+  case AArch64::Destructive2xRegImmUnpred:
     DOPRegIsUnique = true;
     break;
   case AArch64::DestructiveTernaryCommWithRev:
@@ -587,6 +616,9 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     llvm_unreachable("Unsupported ElementSize");
   }
 
+  // Preserve undef state until DOP's reg is defined.
+  unsigned DOPRegState = MI.getOperand(DOPIdx).isUndef() ? RegState::Undef : 0;
+
   //
   // Create the destructive operation (if required)
   //
@@ -605,10 +637,11 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     PRFX = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(MovPrfxZero))
                .addReg(DstReg, RegState::Define)
                .addReg(MI.getOperand(PredIdx).getReg())
-               .addReg(MI.getOperand(DOPIdx).getReg());
+               .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState);
 
     // After the movprfx, the destructive operand is same as Dst
     DOPIdx = 0;
+    DOPRegState = 0;
 
     // Create the additional LSL to zero the lanes when the DstReg is not
     // unique. Zeros the lanes in z0 that aren't active in p0 with sequence
@@ -627,8 +660,9 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     assert(DOPRegIsUnique && "The destructive operand should be unique");
     PRFX = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(MovPrfx))
                .addReg(DstReg, RegState::Define)
-               .addReg(MI.getOperand(DOPIdx).getReg());
+               .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState);
     DOPIdx = 0;
+    DOPRegState = 0;
   }
 
   //
@@ -636,10 +670,11 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   //
   DOP = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opcode))
     .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead));
+  DOPRegState = DOPRegState | RegState::Kill;
 
   switch (DType) {
   case AArch64::DestructiveUnaryPassthru:
-    DOP.addReg(MI.getOperand(DOPIdx).getReg(), RegState::Kill)
+    DOP.addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState)
         .add(MI.getOperand(PredIdx))
         .add(MI.getOperand(SrcIdx));
     break;
@@ -648,20 +683,25 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   case AArch64::DestructiveBinaryComm:
   case AArch64::DestructiveBinaryCommWithRev:
     DOP.add(MI.getOperand(PredIdx))
-       .addReg(MI.getOperand(DOPIdx).getReg(), RegState::Kill)
-       .add(MI.getOperand(SrcIdx));
+        .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState)
+        .add(MI.getOperand(SrcIdx));
     break;
   case AArch64::DestructiveTernaryCommWithRev:
     DOP.add(MI.getOperand(PredIdx))
-        .addReg(MI.getOperand(DOPIdx).getReg(), RegState::Kill)
+        .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState)
+        .add(MI.getOperand(SrcIdx))
+        .add(MI.getOperand(Src2Idx));
+    break;
+  case AArch64::Destructive2xRegImmUnpred:
+    DOP.addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState)
         .add(MI.getOperand(SrcIdx))
         .add(MI.getOperand(Src2Idx));
     break;
   }
 
   if (PRFX) {
-    finalizeBundle(MBB, PRFX->getIterator(), MBBI->getIterator());
     transferImpOps(MI, PRFX, DOP);
+    finalizeBundle(MBB, PRFX->getIterator(), MBBI->getIterator());
   } else
     transferImpOps(MI, DOP, DOP);
 
@@ -749,6 +789,15 @@ bool AArch64ExpandPseudo::expandSetTagLoop(
 bool AArch64ExpandPseudo::expandSVESpillFill(MachineBasicBlock &MBB,
                                              MachineBasicBlock::iterator MBBI,
                                              unsigned Opc, unsigned N) {
+  assert((Opc == AArch64::LDR_ZXI || Opc == AArch64::STR_ZXI ||
+          Opc == AArch64::LDR_PXI || Opc == AArch64::STR_PXI) &&
+         "Unexpected opcode");
+  unsigned RState = (Opc == AArch64::LDR_ZXI || Opc == AArch64::LDR_PXI)
+                        ? RegState::Define
+                        : 0;
+  unsigned sub0 = (Opc == AArch64::LDR_ZXI || Opc == AArch64::STR_ZXI)
+                      ? AArch64::zsub0
+                      : AArch64::psub0;
   const TargetRegisterInfo *TRI =
       MBB.getParent()->getSubtarget().getRegisterInfo();
   MachineInstr &MI = *MBBI;
@@ -758,9 +807,8 @@ bool AArch64ExpandPseudo::expandSVESpillFill(MachineBasicBlock &MBB,
     assert(ImmOffset >= -256 && ImmOffset < 256 &&
            "Immediate spill offset out of range");
     BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc))
-        .addReg(
-            TRI->getSubReg(MI.getOperand(0).getReg(), AArch64::zsub0 + Offset),
-            Opc == AArch64::LDR_ZXI ? RegState::Define : 0)
+        .addReg(TRI->getSubReg(MI.getOperand(0).getReg(), sub0 + Offset),
+                RState)
         .addReg(MI.getOperand(1).getReg(), getKillRegState(Kill))
         .addImm(ImmOffset);
   }
@@ -768,52 +816,100 @@ bool AArch64ExpandPseudo::expandSVESpillFill(MachineBasicBlock &MBB,
   return true;
 }
 
-bool AArch64ExpandPseudo::expandCALL_RVMARKER(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
-  // Expand CALL_RVMARKER pseudo to:
-  // - a branch to the call target, followed by
-  // - the special `mov x29, x29` marker, and
-  // - another branch, to the runtime function
-  // Mark the sequence as bundle, to avoid passes moving other code in between.
-  MachineInstr &MI = *MBBI;
+// Create a call with the passed opcode and explicit operands, copying over all
+// the implicit operands from *MBBI, starting at the regmask.
+static MachineInstr *createCallWithOps(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator MBBI,
+                                       const AArch64InstrInfo *TII,
+                                       unsigned Opcode,
+                                       ArrayRef<MachineOperand> ExplicitOps,
+                                       unsigned RegMaskStartIdx) {
+  // Build the MI, with explicit operands first (including the call target).
+  MachineInstr *Call = BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(Opcode))
+                           .add(ExplicitOps)
+                           .getInstr();
 
-  MachineInstr *OriginalCall;
-  MachineOperand &RVTarget = MI.getOperand(0);
-  MachineOperand &CallTarget = MI.getOperand(1);
-  assert((CallTarget.isGlobal() || CallTarget.isReg()) &&
-         "invalid operand for regular call");
-  assert(RVTarget.isGlobal() && "invalid operand for attached call");
-  unsigned Opc = CallTarget.isGlobal() ? AArch64::BL : AArch64::BLR;
-  OriginalCall = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
-  OriginalCall->addOperand(CallTarget);
-
-  unsigned RegMaskStartIdx = 2;
-  // Skip register arguments. Those are added during ISel, but are not
-  // needed for the concrete branch.
-  while (!MI.getOperand(RegMaskStartIdx).isRegMask()) {
-    auto MOP = MI.getOperand(RegMaskStartIdx);
+  // Register arguments are added during ISel, but cannot be added as explicit
+  // operands of the branch as it expects to be B <target> which is only one
+  // operand. Instead they are implicit operands used by the branch.
+  while (!MBBI->getOperand(RegMaskStartIdx).isRegMask()) {
+    const MachineOperand &MOP = MBBI->getOperand(RegMaskStartIdx);
     assert(MOP.isReg() && "can only add register operands");
-    OriginalCall->addOperand(MachineOperand::CreateReg(
+    Call->addOperand(MachineOperand::CreateReg(
         MOP.getReg(), /*Def=*/false, /*Implicit=*/true, /*isKill=*/false,
         /*isDead=*/false, /*isUndef=*/MOP.isUndef()));
     RegMaskStartIdx++;
   }
   for (const MachineOperand &MO :
-       llvm::drop_begin(MI.operands(), RegMaskStartIdx))
-    OriginalCall->addOperand(MO);
+       llvm::drop_begin(MBBI->operands(), RegMaskStartIdx))
+    Call->addOperand(MO);
 
-  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
-                     .addReg(AArch64::FP, RegState::Define)
-                     .addReg(AArch64::XZR)
-                     .addReg(AArch64::FP)
-                     .addImm(0);
+  return Call;
+}
+
+// Create a call to CallTarget, copying over all the operands from *MBBI,
+// starting at the regmask.
+static MachineInstr *createCall(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MBBI,
+                                const AArch64InstrInfo *TII,
+                                MachineOperand &CallTarget,
+                                unsigned RegMaskStartIdx) {
+  unsigned Opc = CallTarget.isGlobal() ? AArch64::BL : AArch64::BLR;
+
+  assert((CallTarget.isGlobal() || CallTarget.isReg()) &&
+         "invalid operand for regular call");
+  return createCallWithOps(MBB, MBBI, TII, Opc, CallTarget, RegMaskStartIdx);
+}
+
+bool AArch64ExpandPseudo::expandCALL_RVMARKER(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+  // Expand CALL_RVMARKER pseudo to:
+  // - a branch to the call target, followed by
+  // - the special `mov x29, x29` marker, if necessary, and
+  // - another branch, to the runtime function
+  // Mark the sequence as bundle, to avoid passes moving other code in between.
+  MachineInstr &MI = *MBBI;
+  MachineOperand &RVTarget = MI.getOperand(0);
+  bool DoEmitMarker = MI.getOperand(1).getImm();
+  assert(RVTarget.isGlobal() && "invalid operand for attached call");
+
+  MachineInstr *OriginalCall = nullptr;
+
+  if (MI.getOpcode() == AArch64::BLRA_RVMARKER) {
+    // ptrauth call.
+    const MachineOperand &CallTarget = MI.getOperand(2);
+    const MachineOperand &Key = MI.getOperand(3);
+    const MachineOperand &IntDisc = MI.getOperand(4);
+    const MachineOperand &AddrDisc = MI.getOperand(5);
+
+    assert((Key.getImm() == AArch64PACKey::IA ||
+            Key.getImm() == AArch64PACKey::IB) &&
+           "Invalid auth call key");
+
+    MachineOperand Ops[] = {CallTarget, Key, IntDisc, AddrDisc};
+
+    OriginalCall = createCallWithOps(MBB, MBBI, TII, AArch64::BLRA, Ops,
+                                     /*RegMaskStartIdx=*/6);
+  } else {
+    assert(MI.getOpcode() == AArch64::BLR_RVMARKER && "unknown rvmarker MI");
+    OriginalCall = createCall(MBB, MBBI, TII, MI.getOperand(2),
+                              // Regmask starts after the RV and call targets.
+                              /*RegMaskStartIdx=*/3);
+  }
+
+  if (DoEmitMarker)
+    BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
+        .addReg(AArch64::FP, RegState::Define)
+        .addReg(AArch64::XZR)
+        .addReg(AArch64::FP)
+        .addImm(0);
 
   auto *RVCall = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::BL))
                      .add(RVTarget)
                      .getInstr();
 
-  if (MI.shouldUpdateCallSiteInfo())
-    MBB.getParent()->moveCallSiteInfo(&MI, OriginalCall);
+  if (MI.shouldUpdateAdditionalCallInfo())
+    MBB.getParent()->moveAdditionalCallInfo(&MI, OriginalCall);
 
   MI.eraseFromParent();
   finalizeBundle(MBB, OriginalCall->getIterator(),
@@ -828,15 +924,11 @@ bool AArch64ExpandPseudo::expandCALL_BTI(MachineBasicBlock &MBB,
   // - a BTI instruction
   // Mark the sequence as a bundle, to avoid passes moving other code in
   // between.
-
   MachineInstr &MI = *MBBI;
-  MachineOperand &CallTarget = MI.getOperand(0);
-  assert((CallTarget.isGlobal() || CallTarget.isReg()) &&
-         "invalid operand for regular call");
-  unsigned Opc = CallTarget.isGlobal() ? AArch64::BL : AArch64::BLR;
-  MachineInstr *Call =
-      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
-  Call->addOperand(CallTarget);
+  MachineInstr *Call = createCall(MBB, MBBI, TII, MI.getOperand(0),
+                                  // Regmask starts after the call target.
+                                  /*RegMaskStartIdx=*/1);
+
   Call->setCFIType(*MBB.getParent(), MI.getCFIType());
 
   MachineInstr *BTI =
@@ -845,8 +937,8 @@ bool AArch64ExpandPseudo::expandCALL_BTI(MachineBasicBlock &MBB,
           .addImm(36)
           .getInstr();
 
-  if (MI.shouldUpdateCallSiteInfo())
-    MBB.getParent()->moveCallSiteInfo(&MI, Call);
+  if (MI.shouldUpdateAdditionalCallInfo())
+    MBB.getParent()->moveAdditionalCallInfo(&MI, Call);
 
   MI.eraseFromParent();
   finalizeBundle(MBB, Call->getIterator(), std::next(BTI->getIterator()));
@@ -910,46 +1002,102 @@ bool AArch64ExpandPseudo::expandStoreSwiftAsyncContext(
   return true;
 }
 
-MachineBasicBlock *
-AArch64ExpandPseudo::expandRestoreZA(MachineBasicBlock &MBB,
-                                     MachineBasicBlock::iterator MBBI) {
-  MachineInstr &MI = *MBBI;
+AArch64ExpandPseudo::ConditionalBlocks
+AArch64ExpandPseudo::expandConditionalPseudo(MachineBasicBlock &MBB,
+                                             MachineBasicBlock::iterator MBBI,
+                                             DebugLoc DL,
+                                             MachineInstrBuilder &Branch) {
   assert((std::next(MBBI) != MBB.end() ||
-          MI.getParent()->successors().begin() !=
-              MI.getParent()->successors().end()) &&
-         "Unexpected unreachable in block that restores ZA");
-
-  // Compare TPIDR2_EL0 value against 0.
-  DebugLoc DL = MI.getDebugLoc();
-  MachineInstrBuilder Cbz = BuildMI(MBB, MBBI, DL, TII->get(AArch64::CBZX))
-                                .add(MI.getOperand(0));
+          MBB.successors().begin() != MBB.successors().end()) &&
+         "Unexpected unreachable in block");
 
   // Split MBB and create two new blocks:
-  //  - MBB now contains all instructions before RestoreZAPseudo.
-  //  - SMBB contains the RestoreZAPseudo instruction only.
-  //  - EndBB contains all instructions after RestoreZAPseudo.
+  //  - MBB now contains all instructions before the conditional pseudo.
+  //  - CondBB contains the conditional pseudo instruction only.
+  //  - EndBB contains all instructions after the conditional pseudo.
   MachineInstr &PrevMI = *std::prev(MBBI);
-  MachineBasicBlock *SMBB = MBB.splitAt(PrevMI, /*UpdateLiveIns*/ true);
-  MachineBasicBlock *EndBB = std::next(MI.getIterator()) == SMBB->end()
-                                 ? *SMBB->successors().begin()
-                                 : SMBB->splitAt(MI, /*UpdateLiveIns*/ true);
+  MachineBasicBlock *CondBB = MBB.splitAt(PrevMI, /*UpdateLiveIns*/ true);
+  MachineBasicBlock *EndBB =
+      std::next(MBBI) == CondBB->end()
+          ? *CondBB->successors().begin()
+          : CondBB->splitAt(*MBBI, /*UpdateLiveIns*/ true);
 
-  // Add the SMBB label to the TB[N]Z instruction & create a branch to EndBB.
-  Cbz.addMBB(SMBB);
+  // Add the SMBB label to the branch instruction & create a branch to EndBB.
+  Branch.addMBB(CondBB);
   BuildMI(&MBB, DL, TII->get(AArch64::B))
       .addMBB(EndBB);
   MBB.addSuccessor(EndBB);
 
+  // Create branch from CondBB to EndBB. Users of this helper should insert new
+  // instructions at CondBB.back() -- i.e. before the branch.
+  BuildMI(CondBB, DL, TII->get(AArch64::B)).addMBB(EndBB);
+  return {*CondBB, *EndBB};
+}
+
+MachineBasicBlock *
+AArch64ExpandPseudo::expandRestoreZASave(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MBBI) {
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+
+  // Compare TPIDR2_EL0 against 0. Restore ZA if TPIDR2_EL0 is zero.
+  MachineInstrBuilder Branch =
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::CBZX)).add(MI.getOperand(0));
+
+  auto [CondBB, EndBB] = expandConditionalPseudo(MBB, MBBI, DL, Branch);
   // Replace the pseudo with a call (BL).
   MachineInstrBuilder MIB =
-      BuildMI(*SMBB, SMBB->end(), DL, TII->get(AArch64::BL));
-  MIB.addReg(MI.getOperand(1).getReg(), RegState::Implicit);
+      BuildMI(CondBB, CondBB.back(), DL, TII->get(AArch64::BL));
+  // Copy operands (mainly the regmask) from the pseudo.
   for (unsigned I = 2; I < MI.getNumOperands(); ++I)
     MIB.add(MI.getOperand(I));
-  BuildMI(SMBB, DL, TII->get(AArch64::B)).addMBB(EndBB);
+  // Mark the TPIDR2 block pointer (X0) as an implicit use.
+  MIB.addReg(MI.getOperand(1).getReg(), RegState::Implicit);
 
   MI.eraseFromParent();
-  return EndBB;
+  return &EndBB;
+}
+
+static constexpr unsigned ZERO_ALL_ZA_MASK = 0b11111111;
+
+MachineBasicBlock *
+AArch64ExpandPseudo::expandCommitZASave(MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator MBBI) {
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+  [[maybe_unused]] auto *RI = MBB.getParent()->getSubtarget().getRegisterInfo();
+
+  // Compare TPIDR2_EL0 against 0. Commit ZA if TPIDR2_EL0 is non-zero.
+  MachineInstrBuilder Branch =
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::CBNZX)).add(MI.getOperand(0));
+
+  auto [CondBB, EndBB] = expandConditionalPseudo(MBB, MBBI, DL, Branch);
+  // Replace the pseudo with a call (BL).
+  MachineInstrBuilder MIB =
+      BuildMI(CondBB, CondBB.back(), DL, TII->get(AArch64::BL));
+  // Copy operands (mainly the regmask) from the pseudo.
+  for (unsigned I = 3; I < MI.getNumOperands(); ++I)
+    MIB.add(MI.getOperand(I));
+  // Clear TPIDR2_EL0.
+  BuildMI(CondBB, CondBB.back(), DL, TII->get(AArch64::MSR))
+      .addImm(AArch64SysReg::TPIDR2_EL0)
+      .addReg(AArch64::XZR);
+  bool ZeroZA = MI.getOperand(1).getImm() != 0;
+  bool ZeroZT0 = MI.getOperand(2).getImm() != 0;
+  if (ZeroZA) {
+    assert(MI.definesRegister(AArch64::ZAB0, RI) && "should define ZA!");
+    BuildMI(CondBB, CondBB.back(), DL, TII->get(AArch64::ZERO_M))
+        .addImm(ZERO_ALL_ZA_MASK)
+        .addDef(AArch64::ZAB0, RegState::ImplicitDefine);
+  }
+  if (ZeroZT0) {
+    assert(MI.definesRegister(AArch64::ZT0, RI) && "should define ZT0!");
+    BuildMI(CondBB, CondBB.back(), DL, TII->get(AArch64::ZERO_T))
+        .addDef(AArch64::ZT0);
+  }
+
+  MI.eraseFromParent();
+  return &EndBB;
 }
 
 MachineBasicBlock *
@@ -971,7 +1119,7 @@ AArch64ExpandPseudo::expandCondSMToggle(MachineBasicBlock &MBB,
   // Expand the pseudo into smstart or smstop instruction. The pseudo has the
   // following operands:
   //
-  //   MSRpstatePseudo <za|sm|both>, <0|1>, pstate.sm, expectedval, <regmask>
+  //   MSRpstatePseudo <za|sm|both>, <0|1>, condition[, pstate.sm], <regmask>
   //
   // The pseudo is expanded into a conditional smstart/smstop, with a
   // check if pstate.sm (register) equals the expected value, and if not,
@@ -981,9 +1129,9 @@ AArch64ExpandPseudo::expandCondSMToggle(MachineBasicBlock &MBB,
   // streaming-compatible function:
   //
   // OrigBB:
-  //   MSRpstatePseudo 3, 0, %0, 0, <regmask>             <- Conditional SMSTOP
+  //   MSRpstatePseudo 3, 0, IfCallerIsStreaming, %0, <regmask>  <- Cond SMSTOP
   //   bl @normal_callee
-  //   MSRpstatePseudo 3, 1, %0, 0, <regmask>             <- Conditional SMSTART
+  //   MSRpstatePseudo 3, 1, IfCallerIsStreaming, %0, <regmask>  <- Cond SMSTART
   //
   // ...which will be transformed into:
   //
@@ -1006,32 +1154,26 @@ AArch64ExpandPseudo::expandCondSMToggle(MachineBasicBlock &MBB,
   // We test the live value of pstate.sm and toggle pstate.sm if this is not the
   // expected value for the callee (0 for a normal callee and 1 for a streaming
   // callee).
-  auto PStateSM = MI.getOperand(2).getReg();
+  unsigned Opc;
+  switch (MI.getOperand(2).getImm()) {
+  case AArch64SME::Always:
+    llvm_unreachable("Should have matched to instruction directly");
+  case AArch64SME::IfCallerIsStreaming:
+    Opc = AArch64::TBNZW;
+    break;
+  case AArch64SME::IfCallerIsNonStreaming:
+    Opc = AArch64::TBZW;
+    break;
+  }
+  auto PStateSM = MI.getOperand(3).getReg();
   auto TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
   unsigned SMReg32 = TRI->getSubReg(PStateSM, AArch64::sub_32);
-  bool IsStreamingCallee = MI.getOperand(3).getImm();
-  unsigned Opc = IsStreamingCallee ? AArch64::TBZW : AArch64::TBNZW;
   MachineInstrBuilder Tbx =
       BuildMI(MBB, MBBI, DL, TII->get(Opc)).addReg(SMReg32).addImm(0);
 
-  // Split MBB and create two new blocks:
-  //  - MBB now contains all instructions before MSRcond_pstatesvcrImm1.
-  //  - SMBB contains the MSRcond_pstatesvcrImm1 instruction only.
-  //  - EndBB contains all instructions after MSRcond_pstatesvcrImm1.
-  MachineInstr &PrevMI = *std::prev(MBBI);
-  MachineBasicBlock *SMBB = MBB.splitAt(PrevMI, /*UpdateLiveIns*/ true);
-  MachineBasicBlock *EndBB = std::next(MI.getIterator()) == SMBB->end()
-                                 ? *SMBB->successors().begin()
-                                 : SMBB->splitAt(MI, /*UpdateLiveIns*/ true);
-
-  // Add the SMBB label to the TB[N]Z instruction & create a branch to EndBB.
-  Tbx.addMBB(SMBB);
-  BuildMI(&MBB, DL, TII->get(AArch64::B))
-      .addMBB(EndBB);
-  MBB.addSuccessor(EndBB);
-
+  auto [CondBB, EndBB] = expandConditionalPseudo(MBB, MBBI, DL, Tbx);
   // Create the SMSTART/SMSTOP (MSRpstatesvcrImm1) instruction in SMBB.
-  MachineInstrBuilder MIB = BuildMI(*SMBB, SMBB->begin(), MI.getDebugLoc(),
+  MachineInstrBuilder MIB = BuildMI(CondBB, CondBB.back(), MI.getDebugLoc(),
                                     TII->get(AArch64::MSRpstatesvcrImm1));
   // Copy all but the second and third operands of MSRcond_pstatesvcrImm1 (as
   // these contain the CopyFromReg for the first argument and the flag to
@@ -1041,10 +1183,8 @@ AArch64ExpandPseudo::expandCondSMToggle(MachineBasicBlock &MBB,
   for (unsigned i = 4; i < MI.getNumOperands(); ++i)
     MIB.add(MI.getOperand(i));
 
-  BuildMI(SMBB, DL, TII->get(AArch64::B)).addMBB(EndBB);
-
   MI.eraseFromParent();
-  return EndBB;
+  return &EndBB;
 }
 
 bool AArch64ExpandPseudo::expandMultiVecPseudo(
@@ -1070,6 +1210,32 @@ bool AArch64ExpandPseudo::expandMultiVecPseudo(
                                 .add(MI.getOperand(2))
                                 .add(MI.getOperand(3));
   transferImpOps(MI, MIB, MIB);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AArch64ExpandPseudo::expandFormTuplePseudo(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI, unsigned Size) {
+  assert((Size == 2 || Size == 4) && "Invalid Tuple Size");
+  MachineInstr &MI = *MBBI;
+  Register ReturnTuple = MI.getOperand(0).getReg();
+
+  const TargetRegisterInfo *TRI =
+      MBB.getParent()->getSubtarget().getRegisterInfo();
+  for (unsigned I = 0; I < Size; ++I) {
+    Register FormTupleOpReg = MI.getOperand(I + 1).getReg();
+    Register ReturnTupleSubReg =
+        TRI->getSubReg(ReturnTuple, AArch64::zsub0 + I);
+    // Add copies to ensure the subregisters remain in the correct order
+    // for any contigious operation they are used by.
+    if (FormTupleOpReg != ReturnTupleSubReg)
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORR_ZZZ))
+          .addReg(ReturnTupleSubReg, RegState::Define)
+          .addReg(FormTupleOpReg)
+          .addReg(FormTupleOpReg);
+  }
+
   MI.eraseFromParent();
   return true;
 }
@@ -1101,50 +1267,62 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     Register DstReg = MI.getOperand(0).getReg();
     if (DstReg == MI.getOperand(3).getReg()) {
       // Expand to BIT
-      BuildMI(MBB, MBBI, MI.getDebugLoc(),
-              TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BITv8i8
-                                                  : AArch64::BITv16i8))
-          .add(MI.getOperand(0))
-          .add(MI.getOperand(3))
-          .add(MI.getOperand(2))
-          .add(MI.getOperand(1));
+      auto I = BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                       TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BITv8i8
+                                                           : AArch64::BITv16i8))
+                   .add(MI.getOperand(0))
+                   .add(MI.getOperand(3))
+                   .add(MI.getOperand(2))
+                   .add(MI.getOperand(1));
+      transferImpOps(MI, I, I);
     } else if (DstReg == MI.getOperand(2).getReg()) {
       // Expand to BIF
-      BuildMI(MBB, MBBI, MI.getDebugLoc(),
-              TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BIFv8i8
-                                                  : AArch64::BIFv16i8))
-          .add(MI.getOperand(0))
-          .add(MI.getOperand(2))
-          .add(MI.getOperand(3))
-          .add(MI.getOperand(1));
+      auto I = BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                       TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BIFv8i8
+                                                           : AArch64::BIFv16i8))
+                   .add(MI.getOperand(0))
+                   .add(MI.getOperand(2))
+                   .add(MI.getOperand(3))
+                   .add(MI.getOperand(1));
+      transferImpOps(MI, I, I);
     } else {
       // Expand to BSL, use additional move if required
       if (DstReg == MI.getOperand(1).getReg()) {
-        BuildMI(MBB, MBBI, MI.getDebugLoc(),
-                TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BSLv8i8
-                                                    : AArch64::BSLv16i8))
-            .add(MI.getOperand(0))
-            .add(MI.getOperand(1))
-            .add(MI.getOperand(2))
-            .add(MI.getOperand(3));
+        auto I =
+            BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                    TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BSLv8i8
+                                                        : AArch64::BSLv16i8))
+                .add(MI.getOperand(0))
+                .add(MI.getOperand(1))
+                .add(MI.getOperand(2))
+                .add(MI.getOperand(3));
+        transferImpOps(MI, I, I);
       } else {
+        unsigned RegState =
+            getRenamableRegState(MI.getOperand(1).isRenamable()) |
+            getKillRegState(
+                MI.getOperand(1).isKill() &&
+                MI.getOperand(1).getReg() != MI.getOperand(2).getReg() &&
+                MI.getOperand(1).getReg() != MI.getOperand(3).getReg());
         BuildMI(MBB, MBBI, MI.getDebugLoc(),
                 TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::ORRv8i8
                                                     : AArch64::ORRv16i8))
             .addReg(DstReg,
                     RegState::Define |
                         getRenamableRegState(MI.getOperand(0).isRenamable()))
-            .add(MI.getOperand(1))
-            .add(MI.getOperand(1));
-        BuildMI(MBB, MBBI, MI.getDebugLoc(),
-                TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BSLv8i8
-                                                    : AArch64::BSLv16i8))
-            .add(MI.getOperand(0))
-            .addReg(DstReg,
-                    RegState::Kill |
-                        getRenamableRegState(MI.getOperand(0).isRenamable()))
-            .add(MI.getOperand(2))
-            .add(MI.getOperand(3));
+            .addReg(MI.getOperand(1).getReg(), RegState)
+            .addReg(MI.getOperand(1).getReg(), RegState);
+        auto I2 =
+            BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                    TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BSLv8i8
+                                                        : AArch64::BSLv16i8))
+                .add(MI.getOperand(0))
+                .addReg(DstReg,
+                        RegState::Kill | getRenamableRegState(
+                                             MI.getOperand(0).isRenamable()))
+                .add(MI.getOperand(2))
+                .add(MI.getOperand(3));
+        transferImpOps(MI, I2, I2);
       }
     }
     MI.eraseFromParent();
@@ -1284,6 +1462,11 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
                                       AArch64II::MO_NC);
       }
 
+      // If the LOADgot instruction has a debug-instr-number, annotate the
+      // LDRWui instruction that it is expanded to with the same
+      // debug-instr-number to preserve debug information.
+      if (MI.peekDebugInstrNum() != 0)
+        MIB2->setDebugInstrNum(MI.peekDebugInstrNum());
       transferImpOps(MI, MIB1, MIB2);
     }
     MI.eraseFromParent();
@@ -1451,7 +1634,8 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      int BaseOffset = -AFI->getTaggedBasePointerOffset();
      Register FrameReg;
      StackOffset FrameRegOffset = TFI->resolveFrameOffsetReference(
-         MF, BaseOffset, false /*isFixed*/, false /*isSVE*/, FrameReg,
+         MF, BaseOffset, false /*isFixed*/, TargetStackID::Default /*StackID*/,
+         FrameReg,
          /*PreferFP=*/false,
          /*ForSimm=*/true);
      Register SrcReg = FrameReg;
@@ -1488,35 +1672,61 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
          "Non-writeback variants of STGloop / STZGloop should not "
          "survive past PrologEpilogInserter.");
    case AArch64::STR_ZZZZXI:
+   case AArch64::STR_ZZZZXI_STRIDED_CONTIGUOUS:
      return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 4);
    case AArch64::STR_ZZZXI:
      return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 3);
    case AArch64::STR_ZZXI:
+   case AArch64::STR_ZZXI_STRIDED_CONTIGUOUS:
      return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 2);
+   case AArch64::STR_PPXI:
+     return expandSVESpillFill(MBB, MBBI, AArch64::STR_PXI, 2);
    case AArch64::LDR_ZZZZXI:
+   case AArch64::LDR_ZZZZXI_STRIDED_CONTIGUOUS:
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 4);
    case AArch64::LDR_ZZZXI:
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 3);
    case AArch64::LDR_ZZXI:
+   case AArch64::LDR_ZZXI_STRIDED_CONTIGUOUS:
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 2);
+   case AArch64::LDR_PPXI:
+     return expandSVESpillFill(MBB, MBBI, AArch64::LDR_PXI, 2);
    case AArch64::BLR_RVMARKER:
+   case AArch64::BLRA_RVMARKER:
      return expandCALL_RVMARKER(MBB, MBBI);
    case AArch64::BLR_BTI:
      return expandCALL_BTI(MBB, MBBI);
    case AArch64::StoreSwiftAsyncContext:
      return expandStoreSwiftAsyncContext(MBB, MBBI);
-   case AArch64::RestoreZAPseudo: {
-     auto *NewMBB = expandRestoreZA(MBB, MBBI);
-     if (NewMBB != &MBB)
-       NextMBBI = MBB.end(); // The NextMBBI iterator is invalidated.
-     return true;
-   }
+   case AArch64::RestoreZAPseudo:
+   case AArch64::CommitZASavePseudo:
    case AArch64::MSRpstatePseudo: {
-     auto *NewMBB = expandCondSMToggle(MBB, MBBI);
+     auto *NewMBB = [&] {
+       switch (Opcode) {
+       case AArch64::RestoreZAPseudo:
+         return expandRestoreZASave(MBB, MBBI);
+       case AArch64::CommitZASavePseudo:
+         return expandCommitZASave(MBB, MBBI);
+       case AArch64::MSRpstatePseudo:
+         return expandCondSMToggle(MBB, MBBI);
+       default:
+         llvm_unreachable("Unexpected conditional pseudo!");
+       }
+     }();
      if (NewMBB != &MBB)
        NextMBBI = MBB.end(); // The NextMBBI iterator is invalidated.
      return true;
    }
+   case AArch64::InOutZAUsePseudo:
+   case AArch64::RequiresZASavePseudo:
+   case AArch64::RequiresZT0SavePseudo:
+   case AArch64::SMEStateAllocPseudo:
+   case AArch64::COALESCER_BARRIER_FPR16:
+   case AArch64::COALESCER_BARRIER_FPR32:
+   case AArch64::COALESCER_BARRIER_FPR64:
+   case AArch64::COALESCER_BARRIER_FPR128:
+     MI.eraseFromParent();
+     return true;
    case AArch64::LD1B_2Z_IMM_PSEUDO:
      return expandMultiVecPseudo(
          MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
@@ -1645,6 +1855,10 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      return expandMultiVecPseudo(
          MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
          AArch64::LDNT1D_4Z, AArch64::LDNT1D_4Z_STRIDED);
+   case AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO:
+     return expandFormTuplePseudo(MBB, MBBI, NextMBBI, 2);
+   case AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO:
+     return expandFormTuplePseudo(MBB, MBBI, NextMBBI, 4);
   }
   return false;
 }
@@ -1665,7 +1879,7 @@ bool AArch64ExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
 }
 
 bool AArch64ExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
-  TII = static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
+  TII = MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
 
   bool Modified = false;
   for (auto &MBB : MF)

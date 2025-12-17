@@ -7,16 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInstrAnalysis.h"
-#include "llvm/Support/Format.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Cloning.h"
-#include <sstream>
 
 #define DEBUG_TYPE "orc"
 
@@ -43,7 +41,7 @@ private:
     Result[Name] = {Compile(), JITSymbolFlags::Exported};
     // No dependencies, so these calls cannot fail.
     cantFail(R->notifyResolved(Result));
-    cantFail(R->notifyEmitted());
+    cantFail(R->notifyEmitted({}));
   }
 
   void discard(const JITDylib &JD, const SymbolStringPtr &Name) override {
@@ -111,6 +109,38 @@ JITCompileCallbackManager::executeCompileCallback(ExecutorAddr TrampolineAddr) {
     // and return the ErrorHandlerAddress;
     ES.reportError(Sym.takeError());
     return ErrorHandlerAddress;
+  }
+}
+
+Error IndirectStubsManager::redirect(JITDylib &JD, const SymbolMap &NewDests) {
+  for (auto &[Name, Dest] : NewDests)
+    if (auto Err = updatePointer(*Name, Dest.getAddress()))
+      return Err;
+  return Error::success();
+}
+
+void IndirectStubsManager::emitRedirectableSymbols(
+    std::unique_ptr<MaterializationResponsibility> MR, SymbolMap InitialDests) {
+  StubInitsMap StubInits;
+  for (auto &[Name, Dest] : InitialDests)
+    StubInits[*Name] = {Dest.getAddress(), Dest.getFlags()};
+  if (auto Err = createStubs(StubInits)) {
+    MR->getExecutionSession().reportError(std::move(Err));
+    return MR->failMaterialization();
+  }
+  SymbolMap Stubs;
+  for (auto &[Name, Dest] : InitialDests) {
+    auto StubSym = findStub(*Name, false);
+    assert(StubSym.getAddress() && "Stub symbol should be present");
+    Stubs[Name] = StubSym;
+  }
+  if (auto Err = MR->notifyResolved(Stubs)) {
+    MR->getExecutionSession().reportError(std::move(Err));
+    return MR->failMaterialization();
+  }
+  if (auto Err = MR->notifyEmitted({})) {
+    MR->getExecutionSession().reportError(std::move(Err));
+    return MR->failMaterialization();
   }
 }
 
@@ -243,8 +273,8 @@ createLocalIndirectStubsManagerBuilder(const Triple &T) {
 Constant* createIRTypedAddress(FunctionType &FT, ExecutorAddr Addr) {
   Constant *AddrIntVal =
     ConstantInt::get(Type::getInt64Ty(FT.getContext()), Addr.getValue());
-  Constant *AddrPtrVal =
-    ConstantExpr::getIntToPtr(AddrIntVal, PointerType::get(&FT, 0));
+  Constant *AddrPtrVal = ConstantExpr::getIntToPtr(
+      AddrIntVal, PointerType::get(FT.getContext(), 0));
   return AddrPtrVal;
 }
 
@@ -285,7 +315,7 @@ std::vector<GlobalValue *> SymbolLinkagePromoter::operator()(Module &M) {
     // Rename if necessary.
     if (!GV.hasName())
       GV.setName("__orc_anon." + Twine(NextId++));
-    else if (GV.getName().startswith("\01L"))
+    else if (GV.getName().starts_with("\01L"))
       GV.setName("__" + GV.getName().substr(1) + "." + Twine(NextId++));
     else if (GV.hasLocalLinkage())
       GV.setName("__orc_lcl." + GV.getName() + "." + Twine(NextId++));

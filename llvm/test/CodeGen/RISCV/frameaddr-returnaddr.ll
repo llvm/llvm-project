@@ -5,8 +5,6 @@
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 
 declare void @notdead(ptr)
-declare ptr @llvm.frameaddress(i32)
-declare ptr @llvm.returnaddress(i32)
 
 define ptr @test_frameaddress_0() nounwind {
 ; RV32I-LABEL: test_frameaddress_0:
@@ -74,7 +72,7 @@ define ptr @test_frameaddress_3_alloca() nounwind {
 ; RV32I-NEXT:    sw s0, 104(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    addi s0, sp, 112
 ; RV32I-NEXT:    addi a0, s0, -108
-; RV32I-NEXT:    call notdead@plt
+; RV32I-NEXT:    call notdead
 ; RV32I-NEXT:    lw a0, -8(s0)
 ; RV32I-NEXT:    lw a0, -8(a0)
 ; RV32I-NEXT:    lw a0, -8(a0)
@@ -90,7 +88,7 @@ define ptr @test_frameaddress_3_alloca() nounwind {
 ; RV64I-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    addi s0, sp, 128
 ; RV64I-NEXT:    addi a0, s0, -116
-; RV64I-NEXT:    call notdead@plt
+; RV64I-NEXT:    call notdead
 ; RV64I-NEXT:    ld a0, -16(s0)
 ; RV64I-NEXT:    ld a0, -16(a0)
 ; RV64I-NEXT:    ld a0, -16(a0)

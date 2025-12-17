@@ -14,19 +14,28 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
+#include <optional>
 
 using namespace clang;
 using namespace clang::targets;
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, ALL_LANGUAGES},
+static constexpr int NumBuiltins =
+    clang::PPC::LastTSBuiltin - Builtin::FirstTSBuiltin;
+
+static constexpr llvm::StringTable BuiltinStrings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsPPC.def"
-};
+    ;
+
+static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
+#include "clang/Basic/BuiltinsPPC.def"
+});
 
 /// handleTargetFeatures - Perform initialization based on the user
 /// configured set of features.
@@ -38,57 +47,39 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAltivec = true;
     } else if (Feature == "+vsx") {
       HasVSX = true;
-    } else if (Feature == "+crbits") {
-      UseCRBits = true;
-    } else if (Feature == "+bpermd") {
-      HasBPERMD = true;
-    } else if (Feature == "+extdiv") {
-      HasExtDiv = true;
     } else if (Feature == "+power8-vector") {
       HasP8Vector = true;
     } else if (Feature == "+crypto") {
       HasP8Crypto = true;
-    } else if (Feature == "+direct-move") {
-      HasDirectMove = true;
     } else if (Feature == "+htm") {
       HasHTM = true;
     } else if (Feature == "+float128") {
-      HasFloat128 = true;
+      HasFloat128 = !getTriple().isOSAIX();
     } else if (Feature == "+power9-vector") {
       HasP9Vector = true;
     } else if (Feature == "+power10-vector") {
       HasP10Vector = true;
     } else if (Feature == "+pcrelative-memops") {
       HasPCRelativeMemops = true;
-    } else if (Feature == "+prefix-instrs") {
-      HasPrefixInstrs = true;
     } else if (Feature == "+spe" || Feature == "+efpu2") {
       HasStrictFP = false;
       HasSPE = true;
       LongDoubleWidth = LongDoubleAlign = 64;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+    } else if (Feature == "+frsqrte") {
+      HasFrsqrte = true;
+    } else if (Feature == "+frsqrtes") {
+      HasFrsqrtes = true;
     } else if (Feature == "-hard-float") {
       FloatABI = SoftFloat;
-    } else if (Feature == "+paired-vector-memops") {
-      PairedVectorMemops = true;
     } else if (Feature == "+mma") {
       HasMMA = true;
     } else if (Feature == "+rop-protect") {
       HasROPProtect = true;
-    } else if (Feature == "+privileged") {
-      HasPrivileged = true;
-    } else if (Feature == "+aix-small-local-exec-tls") {
-      HasAIXSmallLocalExecTLS = true;
-    } else if (Feature == "+isa-v206-instructions") {
-      IsISA2_06 = true;
-    } else if (Feature == "+isa-v207-instructions") {
-      IsISA2_07 = true;
-    } else if (Feature == "+isa-v30-instructions") {
-      IsISA3_0 = true;
-    } else if (Feature == "+isa-v31-instructions") {
-      IsISA3_1 = true;
     } else if (Feature == "+quadword-atomics") {
       HasQuadwordAtomics = true;
+    } else if (Feature == "+longcall") {
+      UseLongCalls = true;
     }
     // TODO: Finish this list and add an assert that we've handled them
     // all.
@@ -98,6 +89,17 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 }
 
 static void defineXLCompatMacros(MacroBuilder &Builder) {
+  Builder.defineMacro("__builtin_bcdcopysign", "__builtin_ppc_bcdcopysign");
+  Builder.defineMacro("__builtin_bcdsetsign", "__builtin_ppc_bcdsetsign");
+  Builder.defineMacro("__builtin_national2packed",
+                      "__builtin_ppc_national2packed");
+  Builder.defineMacro("__builtin_packed2national",
+                      "__builtin_ppc_packed2national");
+  Builder.defineMacro("__builtin_packed2zoned", "__builtin_ppc_packed2zoned");
+  Builder.defineMacro("__builtin_zoned2packed", "__builtin_ppc_zoned2packed");
+  Builder.defineMacro("__cdtbcd", "__builtin_ppc_cdtbcd");
+  Builder.defineMacro("__cbcdtd", "__builtin_ppc_cbcdtd");
+  Builder.defineMacro("__addg6s", "__builtin_ppc_addg6s");
   Builder.defineMacro("__popcntb", "__builtin_ppc_popcntb");
   Builder.defineMacro("__poppar4", "__builtin_ppc_poppar4");
   Builder.defineMacro("__poppar8", "__builtin_ppc_poppar8");
@@ -212,6 +214,7 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__darn_32", "__builtin_darn_32");
   Builder.defineMacro("__darn_raw", "__builtin_darn_raw");
   Builder.defineMacro("__dcbf", "__builtin_dcbf");
+  Builder.defineMacro("__fence", "__builtin_ppc_fence");
   Builder.defineMacro("__fmadd", "__builtin_fma");
   Builder.defineMacro("__fmadds", "__builtin_fmaf");
   Builder.defineMacro("__abs", "__builtin_abs");
@@ -378,6 +381,8 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("_ARCH_PWR9");
   if (ArchDefs & ArchDefinePwr10)
     Builder.defineMacro("_ARCH_PWR10");
+  if (ArchDefs & ArchDefinePwr11)
+    Builder.defineMacro("_ARCH_PWR11");
   if (ArchDefs & ArchDefineA2)
     Builder.defineMacro("_ARCH_A2");
   if (ArchDefs & ArchDefineE500)
@@ -389,9 +394,18 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__VEC__", "10206");
     Builder.defineMacro("__ALTIVEC__");
   }
-  if (HasSPE) {
+  if (HasSPE)
     Builder.defineMacro("__SPE__");
+  if (HasSPE || FloatABI == SoftFloat)
     Builder.defineMacro("__NO_FPRS__");
+  if (FloatABI == SoftFloat) {
+    Builder.defineMacro("_SOFT_FLOAT");
+    Builder.defineMacro("_SOFT_DOUBLE");
+  } else {
+    if (HasFrsqrte)
+      Builder.defineMacro("__RSQRTE__");
+    if (HasFrsqrtes)
+      Builder.defineMacro("__RSQRTEF__");
   }
   if (HasVSX)
     Builder.defineMacro("__VSX__");
@@ -426,14 +440,10 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
   // FIXME: The following are not yet generated here by Clang, but are
   //        generated by GCC:
   //
-  //   _SOFT_FLOAT_
   //   __RECIP_PRECISION__
   //   __APPLE_ALTIVEC__
   //   __RECIP__
   //   __RECIPF__
-  //   __RSQRTE__
-  //   __RSQRTEF__
-  //   _SOFT_DOUBLE_
   //   __NO_LWSYNC__
   //   __CMODEL_MEDIUM__
   //   __CMODEL_LARGE__
@@ -441,39 +451,72 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
   //   _CALL_DARWIN
 }
 
-// Handle explicit options being passed to the compiler here: if we've
-// explicitly turned off vsx and turned on any of:
-// - power8-vector
-// - direct-move
-// - float128
-// - power9-vector
-// - paired-vector-memops
-// - mma
-// - power10-vector
+// Handle explicit options being passed to the compiler here:
+// - if we've explicitly turned off vsx and turned on any of:
+//   - power8-vector
+//   - direct-move
+//   - float128
+//   - power9-vector
+//   - paired-vector-memops
+//   - mma
+//   - power10-vector
+// - if we've explicitly turned on vsx and turned off altivec.
+// - if we've explicitly turned off hard-float and turned on altivec.
 // then go ahead and error since the customer has expressed an incompatible
 // set of options.
 static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
                                  const std::vector<std::string> &FeaturesVec) {
-
-  // vsx was not explicitly turned off.
-  if (!llvm::is_contained(FeaturesVec, "-vsx"))
-    return true;
-
-  auto FindVSXSubfeature = [&](StringRef Feature, StringRef Option) {
+  auto FindVSXSubfeature = [&](StringRef Feature, StringRef SubOption,
+                               StringRef Option) {
     if (llvm::is_contained(FeaturesVec, Feature)) {
-      Diags.Report(diag::err_opt_not_valid_with_opt) << Option << "-mno-vsx";
+      Diags.Report(diag::err_opt_not_valid_with_opt) << SubOption << Option;
       return true;
     }
     return false;
   };
 
-  bool Found = FindVSXSubfeature("+power8-vector", "-mpower8-vector");
-  Found |= FindVSXSubfeature("+direct-move", "-mdirect-move");
-  Found |= FindVSXSubfeature("+float128", "-mfloat128");
-  Found |= FindVSXSubfeature("+power9-vector", "-mpower9-vector");
-  Found |= FindVSXSubfeature("+paired-vector-memops", "-mpaired-vector-memops");
-  Found |= FindVSXSubfeature("+mma", "-mmma");
-  Found |= FindVSXSubfeature("+power10-vector", "-mpower10-vector");
+  // Cannot allow soft-float with VSX, Altivec, or any
+  // VSX subfeatures.
+  bool Found = false;
+  if (llvm::is_contained(FeaturesVec, "-hard-float")) {
+    Found |= FindVSXSubfeature("+vsx", "-mvsx", "-msoft-float");
+    Found |= FindVSXSubfeature("+altivec", "-maltivec", "-msoft-float");
+    Found |=
+        FindVSXSubfeature("+power8-vector", "-mpower8-vector", "-msoft-float");
+    Found |= FindVSXSubfeature("+direct-move", "-mdirect-move", "-msoft-float");
+    Found |= FindVSXSubfeature("+float128", "-mfloat128", "-msoft-float");
+    Found |=
+        FindVSXSubfeature("+power9-vector", "-mpower9-vector", "-msoft-float");
+    Found |= FindVSXSubfeature("+paired-vector-memops",
+                               "-mpaired-vector-memops", "-msoft-float");
+    Found |= FindVSXSubfeature("+mma", "-mmma", "-msoft-float");
+    Found |= FindVSXSubfeature("+crypto", "-mcrypto", "-msoft-float");
+    Found |= FindVSXSubfeature("+power10-vector", "-mpower10-vector",
+                               "-msoft-float");
+  }
+  if (Found)
+    return false;
+
+  // Cannot allow VSX with no Altivec.
+  if (llvm::is_contained(FeaturesVec, "+vsx") &&
+      llvm::is_contained(FeaturesVec, "-altivec")) {
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mvsx"
+                                                   << "-mno-altivec";
+    return false;
+  }
+
+  // vsx was not explicitly turned off.
+  if (!llvm::is_contained(FeaturesVec, "-vsx"))
+    return true;
+
+  Found = FindVSXSubfeature("+power8-vector", "-mpower8-vector", "-mno-vsx");
+  Found |= FindVSXSubfeature("+direct-move", "-mdirect-move", "-mno-vsx");
+  Found |= FindVSXSubfeature("+float128", "-mfloat128", "-mno-vsx");
+  Found |= FindVSXSubfeature("+power9-vector", "-mpower9-vector", "-mno-vsx");
+  Found |= FindVSXSubfeature("+paired-vector-memops", "-mpaired-vector-memops",
+                             "-mno-vsx");
+  Found |= FindVSXSubfeature("+mma", "-mmma", "-mno-vsx");
+  Found |= FindVSXSubfeature("+power10-vector", "-mpower10-vector", "-mno-vsx");
 
   // Return false if any vsx subfeatures was found.
   return !Found;
@@ -482,116 +525,14 @@ static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
 bool PPCTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {
-  Features["altivec"] = llvm::StringSwitch<bool>(CPU)
-                            .Case("7400", true)
-                            .Case("g4", true)
-                            .Case("7450", true)
-                            .Case("g4+", true)
-                            .Case("970", true)
-                            .Case("g5", true)
-                            .Case("pwr6", true)
-                            .Case("pwr7", true)
-                            .Case("pwr8", true)
-                            .Case("pwr9", true)
-                            .Case("ppc64", true)
-                            .Case("ppc64le", true)
-                            .Default(false);
 
-  Features["power9-vector"] = (CPU == "pwr9");
-  Features["crypto"] = llvm::StringSwitch<bool>(CPU)
-                           .Case("ppc64le", true)
-                           .Case("pwr9", true)
-                           .Case("pwr8", true)
-                           .Default(false);
-  Features["power8-vector"] = llvm::StringSwitch<bool>(CPU)
-                                  .Case("ppc64le", true)
-                                  .Case("pwr9", true)
-                                  .Case("pwr8", true)
-                                  .Default(false);
-  Features["bpermd"] = llvm::StringSwitch<bool>(CPU)
-                           .Case("ppc64le", true)
-                           .Case("pwr9", true)
-                           .Case("pwr8", true)
-                           .Case("pwr7", true)
-                           .Default(false);
-  Features["extdiv"] = llvm::StringSwitch<bool>(CPU)
-                           .Case("ppc64le", true)
-                           .Case("pwr9", true)
-                           .Case("pwr8", true)
-                           .Case("pwr7", true)
-                           .Default(false);
-  Features["direct-move"] = llvm::StringSwitch<bool>(CPU)
-                                .Case("ppc64le", true)
-                                .Case("pwr9", true)
-                                .Case("pwr8", true)
-                                .Default(false);
-  Features["crbits"] = llvm::StringSwitch<bool>(CPU)
-                                .Case("ppc64le", true)
-                                .Case("pwr9", true)
-                                .Case("pwr8", true)
-                                .Default(false);
-  Features["vsx"] = llvm::StringSwitch<bool>(CPU)
-                        .Case("ppc64le", true)
-                        .Case("pwr9", true)
-                        .Case("pwr8", true)
-                        .Case("pwr7", true)
-                        .Default(false);
-  Features["htm"] = llvm::StringSwitch<bool>(CPU)
-                        .Case("ppc64le", true)
-                        .Case("pwr9", true)
-                        .Case("pwr8", true)
-                        .Default(false);
+  const llvm::Triple &TheTriple = getTriple();
 
-  // ROP Protect is off by default.
-  Features["rop-protect"] = false;
-  // Privileged instructions are off by default.
-  Features["privileged"] = false;
-
-  // The code generated by the -maix-small-local-exec-tls option is turned
-  // off by default.
-  Features["aix-small-local-exec-tls"] = false;
-
-  Features["spe"] = llvm::StringSwitch<bool>(CPU)
-                        .Case("8548", true)
-                        .Case("e500", true)
-                        .Default(false);
-
-  Features["isa-v206-instructions"] = llvm::StringSwitch<bool>(CPU)
-                                          .Case("ppc64le", true)
-                                          .Case("pwr9", true)
-                                          .Case("pwr8", true)
-                                          .Case("pwr7", true)
-                                          .Case("a2", true)
-                                          .Default(false);
-
-  Features["isa-v207-instructions"] = llvm::StringSwitch<bool>(CPU)
-                                          .Case("ppc64le", true)
-                                          .Case("pwr9", true)
-                                          .Case("pwr8", true)
-                                          .Default(false);
-
-  Features["isa-v30-instructions"] =
-      llvm::StringSwitch<bool>(CPU).Case("pwr9", true).Default(false);
-
-  Features["quadword-atomics"] =
-      getTriple().isArch64Bit() && llvm::StringSwitch<bool>(CPU)
-                                       .Case("pwr9", true)
-                                       .Case("pwr8", true)
-                                       .Default(false);
-
-  // Power10 includes all the same features as Power9 plus any features specific
-  // to the Power10 core.
-  if (CPU == "pwr10" || CPU == "power10") {
-    initFeatureMap(Features, Diags, "pwr9", FeaturesVec);
-    addP10SpecificFeatures(Features);
-  }
-
-  // Future CPU should include all of the features of Power 10 as well as any
-  // additional features (yet to be determined) specific to it.
-  if (CPU == "future") {
-    initFeatureMap(Features, Diags, "pwr10", FeaturesVec);
-    addFutureSpecificFeatures(Features);
-  }
+  std::optional<llvm::StringMap<bool>> FeaturesOpt =
+      llvm::PPC::getPPCDefaultTargetFeatures(TheTriple,
+                                             llvm::PPC::normalizeCPUName(CPU));
+  if (FeaturesOpt)
+    Features = FeaturesOpt.value();
 
   if (!ppcUserFeaturesCheck(Diags, FeaturesVec))
     return false;
@@ -632,11 +573,17 @@ bool PPCTargetInfo::initFeatureMap(
     }
   }
 
-  if (!(ArchDefs & ArchDefinePwr8) &&
-      llvm::is_contained(FeaturesVec, "+rop-protect")) {
-    // We can turn on ROP Protect on Power 8 and above.
-    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mrop-protect" << CPU;
-    return false;
+  if (llvm::is_contained(FeaturesVec, "+rop-protect")) {
+    if (PointerWidth == 32) {
+      Diags.Report(diag::err_opt_not_valid_on_target) << "-mrop-protect";
+      return false;
+    }
+
+    if (!(ArchDefs & ArchDefinePwr8)) {
+      // We can turn on ROP Protect on Power 8 and above.
+      Diags.Report(diag::err_opt_not_valid_with_opt) << "-mrop-protect" << CPU;
+      return false;
+    }
   }
 
   if (!(ArchDefs & ArchDefinePwr8) &&
@@ -644,62 +591,26 @@ bool PPCTargetInfo::initFeatureMap(
     Diags.Report(diag::err_opt_not_valid_with_opt) << "-mprivileged" << CPU;
     return false;
   }
-
-  if (llvm::is_contained(FeaturesVec, "+aix-small-local-exec-tls")) {
-    if (!getTriple().isOSAIX() || !getTriple().isArch64Bit()) {
-      Diags.Report(diag::err_opt_not_valid_on_target)
-         << "-maix-small-local-exec-tls";
-      return false;
-    }
-  }
-
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
 }
-
-// Add any Power10 specific features.
-void PPCTargetInfo::addP10SpecificFeatures(
-    llvm::StringMap<bool> &Features) const {
-  Features["htm"] = false; // HTM was removed for P10.
-  Features["paired-vector-memops"] = true;
-  Features["mma"] = true;
-  Features["power10-vector"] = true;
-  Features["pcrelative-memops"] = true;
-  Features["prefix-instrs"] = true;
-  Features["isa-v31-instructions"] = true;
-}
-
-// Add features specific to the "Future" CPU.
-void PPCTargetInfo::addFutureSpecificFeatures(
-    llvm::StringMap<bool> &Features) const {}
 
 bool PPCTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("powerpc", true)
       .Case("altivec", HasAltivec)
       .Case("vsx", HasVSX)
-      .Case("crbits", UseCRBits)
       .Case("power8-vector", HasP8Vector)
       .Case("crypto", HasP8Crypto)
-      .Case("direct-move", HasDirectMove)
       .Case("htm", HasHTM)
-      .Case("bpermd", HasBPERMD)
-      .Case("extdiv", HasExtDiv)
       .Case("float128", HasFloat128)
       .Case("power9-vector", HasP9Vector)
-      .Case("paired-vector-memops", PairedVectorMemops)
       .Case("power10-vector", HasP10Vector)
       .Case("pcrelative-memops", HasPCRelativeMemops)
-      .Case("prefix-instrs", HasPrefixInstrs)
       .Case("spe", HasSPE)
       .Case("mma", HasMMA)
       .Case("rop-protect", HasROPProtect)
-      .Case("privileged", HasPrivileged)
-      .Case("aix-small-local-exec-tls", HasAIXSmallLocalExecTLS)
-      .Case("isa-v206-instructions", IsISA2_06)
-      .Case("isa-v207-instructions", IsISA2_07)
-      .Case("isa-v30-instructions", IsISA3_0)
-      .Case("isa-v31-instructions", IsISA3_1)
       .Case("quadword-atomics", HasQuadwordAtomics)
+      .Case("longcall", UseLongCalls)
       .Default(false);
 }
 
@@ -735,13 +646,16 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
   } else {
     if (Name == "spe")
       Features["efpu2"] = false;
-    // If we're disabling altivec or vsx go ahead and disable all of the vsx
-    // features.
-    if ((Name == "altivec") || (Name == "vsx"))
+    // If we're disabling altivec, hard-float, or vsx go ahead and disable all
+    // of the vsx features.
+    if ((Name == "altivec") || (Name == "vsx") || (Name == "hard-float")) {
+      if (Name != "vsx")
+        Features["altivec"] = Features["crypto"] = false;
       Features["vsx"] = Features["direct-move"] = Features["power8-vector"] =
           Features["float128"] = Features["power9-vector"] =
               Features["paired-vector-memops"] = Features["mma"] =
                   Features["power10-vector"] = false;
+    }
     if (Name == "power8-vector")
       Features["power9-vector"] = Features["paired-vector-memops"] =
           Features["mma"] = Features["power10-vector"] = false;
@@ -838,31 +752,19 @@ ArrayRef<TargetInfo::AddlRegName> PPCTargetInfo::getGCCAddlRegNames() const {
   return llvm::ArrayRef(GCCAddlRegNames);
 }
 
-static constexpr llvm::StringLiteral ValidCPUNames[] = {
-    {"generic"},     {"440"},     {"450"},    {"601"},       {"602"},
-    {"603"},         {"603e"},    {"603ev"},  {"604"},       {"604e"},
-    {"620"},         {"630"},     {"g3"},     {"7400"},      {"g4"},
-    {"7450"},        {"g4+"},     {"750"},    {"8548"},      {"970"},
-    {"g5"},          {"a2"},      {"e500"},   {"e500mc"},    {"e5500"},
-    {"power3"},      {"pwr3"},    {"power4"}, {"pwr4"},      {"power5"},
-    {"pwr5"},        {"power5x"}, {"pwr5x"},  {"power6"},    {"pwr6"},
-    {"power6x"},     {"pwr6x"},   {"power7"}, {"pwr7"},      {"power8"},
-    {"pwr8"},        {"power9"},  {"pwr9"},   {"power10"},   {"pwr10"},
-    {"powerpc"},     {"ppc"},     {"ppc32"},  {"powerpc64"}, {"ppc64"},
-    {"powerpc64le"}, {"ppc64le"}, {"future"}};
-
 bool PPCTargetInfo::isValidCPUName(StringRef Name) const {
-  return llvm::is_contained(ValidCPUNames, Name);
+  return llvm::PPC::isValidCPU(Name);
 }
 
 void PPCTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
-  Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
+  llvm::PPC::fillValidCPUList(Values);
 }
 
-void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
+void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+                           const TargetInfo *Aux) {
   if (HasAltivec)
     Opts.AltiVec = 1;
-  TargetInfo::adjust(Diags, Opts);
+  TargetInfo::adjust(Diags, Opts, Aux);
   if (LongDoubleFormat != &llvm::APFloat::IEEEdouble())
     LongDoubleFormat = Opts.PPCIEEELongDouble
                            ? &llvm::APFloat::IEEEquad()
@@ -873,7 +775,45 @@ void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
     MaxAtomicInlineWidth = 128;
 }
 
-ArrayRef<Builtin::Info> PPCTargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo,
-                        clang::PPC::LastTSBuiltin - Builtin::FirstTSBuiltin);
+llvm::SmallVector<Builtin::InfosShard>
+PPCTargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos}};
+}
+
+bool PPCTargetInfo::validateCpuSupports(StringRef FeatureStr) const {
+  llvm::Triple Triple = getTriple();
+  if (Triple.isOSAIX()) {
+#define PPC_AIX_FEATURE(NAME, DESC, SUPPORT_METHOD, INDEX, MASK, COMP_OP,      \
+                        VALUE)                                                 \
+  .Case(NAME, true)
+    return llvm::StringSwitch<bool>(FeatureStr)
+#include "llvm/TargetParser/PPCTargetParser.def"
+        .Default(false);
+  }
+
+  assert(Triple.isOSLinux() &&
+         "__builtin_cpu_supports() is only supported for AIX and Linux.");
+
+#define PPC_LNX_FEATURE(NAME, DESC, ENUMNAME, ENUMVAL, HWCAPN) .Case(NAME, true)
+  return llvm::StringSwitch<bool>(FeatureStr)
+#include "llvm/TargetParser/PPCTargetParser.def"
+      .Default(false);
+}
+
+bool PPCTargetInfo::validateCpuIs(StringRef CPUName) const {
+  llvm::Triple Triple = getTriple();
+  assert((Triple.isOSAIX() || Triple.isOSLinux()) &&
+         "__builtin_cpu_is() is only supported for AIX and Linux.");
+
+#define PPC_CPU(NAME, Linux_SUPPORT_METHOD, LinuxID, AIX_SUPPORT_METHOD,       \
+                AIXID)                                                         \
+  .Case(NAME, {Linux_SUPPORT_METHOD, AIX_SUPPORT_METHOD})
+
+  std::pair<unsigned, unsigned> SuppportMethod =
+      llvm::StringSwitch<std::pair<unsigned, unsigned>>(CPUName)
+#include "llvm/TargetParser/PPCTargetParser.def"
+          .Default({BUILTIN_PPC_UNSUPPORTED, BUILTIN_PPC_UNSUPPORTED});
+  return Triple.isOSLinux()
+             ? (SuppportMethod.first != BUILTIN_PPC_UNSUPPORTED)
+             : (SuppportMethod.second != BUILTIN_PPC_UNSUPPORTED);
 }

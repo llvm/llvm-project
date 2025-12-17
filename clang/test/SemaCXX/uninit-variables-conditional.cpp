@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wconditional-uninitialized -fsyntax-only %s -verify
+// RUN: %clang_cc1 -Wconditional-uninitialized -fsyntax-only %s -verify
 
 class Foo {
 public:

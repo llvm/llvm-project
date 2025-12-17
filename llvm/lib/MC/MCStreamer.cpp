@@ -56,13 +56,11 @@ void MCTargetStreamer::finish() {}
 
 void MCTargetStreamer::emitConstantPools() {}
 
-void MCTargetStreamer::changeSection(const MCSection *CurSection,
-                                     MCSection *Section,
-                                     const MCExpr *Subsection,
-                                     raw_ostream &OS) {
-  Section->printSwitchToSection(*Streamer.getContext().getAsmInfo(),
-                                Streamer.getContext().getTargetTriple(), OS,
-                                Subsection);
+void MCTargetStreamer::changeSection(const MCSection *, MCSection *Sec,
+                                     uint32_t Subsection, raw_ostream &OS) {
+  auto &MAI = *Streamer.getContext().getAsmInfo();
+  MAI.printSwitchToSection(*Sec, Subsection,
+                           Streamer.getContext().getTargetTriple(), OS);
 }
 
 void MCTargetStreamer::emitDwarfFileDirective(StringRef Directive) {
@@ -73,7 +71,7 @@ void MCTargetStreamer::emitValue(const MCExpr *Value) {
   SmallString<128> Str;
   raw_svector_ostream OS(Str);
 
-  Value->print(OS, Streamer.getContext().getAsmInfo());
+  Streamer.getContext().getAsmInfo()->printExpr(OS, *Value);
   Streamer.emitRawText(OS.str());
 }
 
@@ -93,7 +91,7 @@ void MCTargetStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {}
 
 MCStreamer::MCStreamer(MCContext &Ctx)
     : Context(Ctx), CurrentWinFrameInfo(nullptr),
-      CurrentProcWinFrameInfoStartIndex(0), UseAssemblerInfoForParsing(false) {
+      CurrentProcWinFrameInfoStartIndex(0) {
   SectionStack.push_back(std::pair<MCSectionSubPair, MCSectionSubPair>());
 }
 
@@ -103,9 +101,9 @@ void MCStreamer::reset() {
   DwarfFrameInfos.clear();
   CurrentWinFrameInfo = nullptr;
   WinFrameInfos.clear();
-  SymbolOrdering.clear();
   SectionStack.clear();
   SectionStack.push_back(std::pair<MCSectionSubPair, MCSectionSubPair>());
+  CurFrag = nullptr;
 }
 
 raw_ostream &MCStreamer::getCommentOS() {
@@ -141,7 +139,7 @@ void MCStreamer::emitIntValue(uint64_t Value, unsigned Size) {
   unsigned Index = IsLittleEndian ? 0 : 8 - Size;
   emitBytes(StringRef(reinterpret_cast<char *>(&Swapped) + Index, Size));
 }
-void MCStreamer::emitIntValue(APInt Value) {
+void MCStreamer::emitIntValue(const APInt &Value) {
   if (Value.getNumWords() == 1) {
     emitIntValue(Value.getLimitedValue(), Value.getBitWidth() / 8);
     return;
@@ -192,30 +190,6 @@ void MCStreamer::emitSymbolValue(const MCSymbol *Sym, unsigned Size,
     emitCOFFSecRel32(Sym, /*Offset=*/0);
 }
 
-void MCStreamer::emitDTPRel64Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
-void MCStreamer::emitDTPRel32Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
-void MCStreamer::emitTPRel64Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
-void MCStreamer::emitTPRel32Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
-void MCStreamer::emitGPRel64Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
-void MCStreamer::emitGPRel32Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
 /// Emit NumBytes bytes worth of the value specified by FillValue.
 /// This implements directives such as '.space'.
 void MCStreamer::emitFill(uint64_t NumBytes, uint8_t FillValue) {
@@ -263,9 +237,15 @@ void MCStreamer::emitCFIMTETaggedFrame() {
 void MCStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                        unsigned Column, unsigned Flags,
                                        unsigned Isa, unsigned Discriminator,
-                                       StringRef FileName) {
+                                       StringRef FileName, StringRef Comment) {
   getContext().setCurrentDwarfLoc(FileNo, Line, Column, Flags, Isa,
                                   Discriminator);
+}
+
+void MCStreamer::emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) {
+  getContext()
+      .getMCDwarfLineTable(getContext().getDwarfCompileUnitID())
+      .endCurrentSeqAndEmitLineStreamLabel(this, Loc, Name);
 }
 
 MCSymbol *MCStreamer::getDwarfLineTableSymbol(unsigned CUID) {
@@ -409,16 +389,7 @@ void MCStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
 }
 
 void MCStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
-  switchSection(getContext().getObjectFileInfo()->getTextSection());
-}
-
-void MCStreamer::assignFragment(MCSymbol *Symbol, MCFragment *Fragment) {
-  assert(Fragment);
-  Symbol->setFragment(Fragment);
-
-  // As we emit symbols into a section, track the order so that they can
-  // be sorted upon later. Zero is reserved to mean 'unemitted'.
-  SymbolOrdering[Symbol] = 1 + SymbolOrdering.size();
+  switchSectionNoPrint(getContext().getObjectFileInfo()->getTextSection());
 }
 
 void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
@@ -443,7 +414,7 @@ void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 void MCStreamer::emitConditionalAssignment(MCSymbol *Symbol,
                                            const MCExpr *Value) {}
 
-void MCStreamer::emitCFISections(bool EH, bool Debug) {}
+void MCStreamer::emitCFISections(bool EH, bool Debug, bool SFrame) {}
 
 void MCStreamer::emitCFIStartProc(bool IsSimple, SMLoc Loc) {
   if (!FrameInfoStack.empty() &&
@@ -467,7 +438,7 @@ void MCStreamer::emitCFIStartProc(bool IsSimple, SMLoc Loc) {
   }
 
   FrameInfoStack.emplace_back(DwarfFrameInfos.size(), getCurrentSectionOnly());
-  DwarfFrameInfos.push_back(Frame);
+  DwarfFrameInfos.push_back(std::move(Frame));
 }
 
 void MCStreamer::emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
@@ -487,6 +458,20 @@ void MCStreamer::emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
   Frame.End = (MCSymbol *)1;
 }
 
+MCSymbol *MCStreamer::emitLineTableLabel() {
+  // Create a label and insert it into the line table and return this label
+  const MCDwarfLoc &DwarfLoc = getContext().getCurrentDwarfLoc();
+
+  MCSymbol *LineStreamLabel = getContext().createTempSymbol();
+  MCDwarfLineEntry LabelLineEntry(nullptr, DwarfLoc, LineStreamLabel);
+  getContext()
+      .getMCDwarfLineTable(getContext().getDwarfCompileUnitID())
+      .getMCLineSections()
+      .addLineEntry(LabelLineEntry, getCurrentSectionOnly() /*Section*/);
+
+  return LineStreamLabel;
+}
+
 MCSymbol *MCStreamer::emitCFILabel() {
   // Return a dummy non-null value so that label fields appear filled in when
   // generating textual assembly.
@@ -500,7 +485,7 @@ void MCStreamer::emitCFIDefCfa(int64_t Register, int64_t Offset, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(Instruction);
+  CurFrame->Instructions.push_back(std::move(Instruction));
   CurFrame->CurrentCfaRegister = static_cast<unsigned>(Register);
 }
 
@@ -511,7 +496,7 @@ void MCStreamer::emitCFIDefCfaOffset(int64_t Offset, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(Instruction);
+  CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
 void MCStreamer::emitCFIAdjustCfaOffset(int64_t Adjustment, SMLoc Loc) {
@@ -521,7 +506,7 @@ void MCStreamer::emitCFIAdjustCfaOffset(int64_t Adjustment, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(Instruction);
+  CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
 void MCStreamer::emitCFIDefCfaRegister(int64_t Register, SMLoc Loc) {
@@ -531,7 +516,7 @@ void MCStreamer::emitCFIDefCfaRegister(int64_t Register, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(Instruction);
+  CurFrame->Instructions.push_back(std::move(Instruction));
   CurFrame->CurrentCfaRegister = static_cast<unsigned>(Register);
 }
 
@@ -543,7 +528,7 @@ void MCStreamer::emitCFILLVMDefAspaceCfa(int64_t Register, int64_t Offset,
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(Instruction);
+  CurFrame->Instructions.push_back(std::move(Instruction));
   CurFrame->CurrentCfaRegister = static_cast<unsigned>(Register);
 }
 
@@ -554,7 +539,7 @@ void MCStreamer::emitCFIOffset(int64_t Register, int64_t Offset, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(Instruction);
+  CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
 void MCStreamer::emitCFIRelOffset(int64_t Register, int64_t Offset, SMLoc Loc) {
@@ -564,7 +549,7 @@ void MCStreamer::emitCFIRelOffset(int64_t Register, int64_t Offset, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(Instruction);
+  CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
 void MCStreamer::emitCFIPersonality(const MCSymbol *Sym,
@@ -591,7 +576,7 @@ void MCStreamer::emitCFIRememberState(SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(Instruction);
+  CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
 void MCStreamer::emitCFIRestoreState(SMLoc Loc) {
@@ -602,7 +587,7 @@ void MCStreamer::emitCFIRestoreState(SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(Instruction);
+  CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
 void MCStreamer::emitCFISameValue(int64_t Register, SMLoc Loc) {
@@ -612,7 +597,7 @@ void MCStreamer::emitCFISameValue(int64_t Register, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(Instruction);
+  CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
 void MCStreamer::emitCFIRestore(int64_t Register, SMLoc Loc) {
@@ -622,7 +607,7 @@ void MCStreamer::emitCFIRestore(int64_t Register, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(Instruction);
+  CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
 void MCStreamer::emitCFIEscape(StringRef Values, SMLoc Loc) {
@@ -632,7 +617,7 @@ void MCStreamer::emitCFIEscape(StringRef Values, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(Instruction);
+  CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
 void MCStreamer::emitCFIGnuArgsSize(int64_t Size, SMLoc Loc) {
@@ -642,7 +627,7 @@ void MCStreamer::emitCFIGnuArgsSize(int64_t Size, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(Instruction);
+  CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
 void MCStreamer::emitCFISignalFrame() {
@@ -659,7 +644,7 @@ void MCStreamer::emitCFIUndefined(int64_t Register, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(Instruction);
+  CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
 void MCStreamer::emitCFIRegister(int64_t Register1, int64_t Register2,
@@ -670,7 +655,7 @@ void MCStreamer::emitCFIRegister(int64_t Register1, int64_t Register2,
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(Instruction);
+  CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
 void MCStreamer::emitCFIWindowSave(SMLoc Loc) {
@@ -679,7 +664,7 @@ void MCStreamer::emitCFIWindowSave(SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(Instruction);
+  CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
 void MCStreamer::emitCFINegateRAState(SMLoc Loc) {
@@ -689,7 +674,17 @@ void MCStreamer::emitCFINegateRAState(SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(Instruction);
+  CurFrame->Instructions.push_back(std::move(Instruction));
+}
+
+void MCStreamer::emitCFINegateRAStateWithPC(SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction =
+      MCCFIInstruction::createNegateRAStateWithPC(Label, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
 void MCStreamer::emitCFIReturnColumn(int64_t Register) {
@@ -697,6 +692,23 @@ void MCStreamer::emitCFIReturnColumn(int64_t Register) {
   if (!CurFrame)
     return;
   CurFrame->RAReg = Register;
+}
+
+void MCStreamer::emitCFILabelDirective(SMLoc Loc, StringRef Name) {
+  MCSymbol *Label = emitCFILabel();
+  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+  if (MCDwarfFrameInfo *F = getCurrentDwarfFrameInfo())
+    F->Instructions.push_back(MCCFIInstruction::createLabel(Label, Sym, Loc));
+}
+
+void MCStreamer::emitCFIValOffset(int64_t Register, int64_t Offset, SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction =
+      MCCFIInstruction::createValOffset(Label, Register, Offset, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
 WinEH::FrameInfo *MCStreamer::EnsureValidWinFrameInfo(SMLoc Loc) {
@@ -730,6 +742,7 @@ void MCStreamer::emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) {
       std::make_unique<WinEH::FrameInfo>(Symbol, StartProc));
   CurrentWinFrameInfo = WinFrameInfos.back().get();
   CurrentWinFrameInfo->TextSection = getCurrentSectionOnly();
+  CurrentWinFrameInfo->FunctionLoc = Loc;
 }
 
 void MCStreamer::emitWinCFIEndProc(SMLoc Loc) {
@@ -824,8 +837,8 @@ static MCSection *getWinCFISection(MCContext &Context, unsigned *NextWinCFIID,
   if (TextSec == Context.getObjectFileInfo()->getTextSection())
     return MainCFISec;
 
-  const auto *TextSecCOFF = cast<MCSectionCOFF>(TextSec);
-  auto *MainCFISecCOFF = cast<MCSectionCOFF>(MainCFISec);
+  const auto *TextSecCOFF = static_cast<const MCSectionCOFF *>(TextSec);
+  auto *MainCFISecCOFF = static_cast<MCSectionCOFF *>(MainCFISec);
   unsigned UniqueID = TextSecCOFF->getOrAssignWinCFISectionID(NextWinCFIID);
 
   // If this section is COMDAT, this unwind section should be COMDAT associative
@@ -841,10 +854,10 @@ static MCSection *getWinCFISection(MCContext &Context, unsigned *NextWinCFIID,
       std::string SectionName = (MainCFISecCOFF->getName() + "$" +
                                  TextSecCOFF->getName().split('$').second)
                                     .str();
-      return Context.getCOFFSection(
-          SectionName,
-          MainCFISecCOFF->getCharacteristics() | COFF::IMAGE_SCN_LNK_COMDAT,
-          MainCFISecCOFF->getKind(), "", COFF::IMAGE_COMDAT_SELECT_ANY);
+      return Context.getCOFFSection(SectionName,
+                                    MainCFISecCOFF->getCharacteristics() |
+                                        COFF::IMAGE_SCN_LNK_COMDAT,
+                                    "", COFF::IMAGE_COMDAT_SELECT_ANY);
     }
   }
 
@@ -976,6 +989,76 @@ void MCStreamer::emitWinCFIEndProlog(SMLoc Loc) {
   CurFrame->PrologEnd = Label;
 }
 
+void MCStreamer::emitWinCFIBeginEpilogue(SMLoc Loc) {
+  WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
+  if (!CurFrame)
+    return;
+
+  if (!CurFrame->PrologEnd)
+    return getContext().reportError(
+        Loc, "starting epilogue (.seh_startepilogue) before prologue has ended "
+             "(.seh_endprologue) in " +
+                 CurFrame->Function->getName());
+
+  MCSymbol *Label = emitCFILabel();
+  CurrentWinEpilog =
+      &CurFrame->EpilogMap.insert_or_assign(Label, WinEH::FrameInfo::Epilog())
+           .first->second;
+  CurrentWinEpilog->Start = Label;
+  CurrentWinEpilog->Loc = Loc;
+}
+
+void MCStreamer::emitWinCFIEndEpilogue(SMLoc Loc) {
+  WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
+  if (!CurFrame)
+    return;
+
+  if (!CurrentWinEpilog)
+    return getContext().reportError(Loc, "Stray .seh_endepilogue in " +
+                                             CurFrame->Function->getName());
+
+  if ((CurFrame->Version >= 2) && !CurrentWinEpilog->UnwindV2Start)
+    return getContext().reportError(Loc, "Missing .seh_unwindv2start in " +
+                                             CurFrame->Function->getName());
+
+  CurrentWinEpilog->End = emitCFILabel();
+  CurrentWinEpilog = nullptr;
+}
+
+void MCStreamer::emitWinCFIUnwindV2Start(SMLoc Loc) {
+  WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
+  if (!CurFrame)
+    return;
+
+  if (!CurrentWinEpilog)
+    return getContext().reportError(Loc, "Stray .seh_unwindv2start in " +
+                                             CurFrame->Function->getName());
+
+  if (CurrentWinEpilog->UnwindV2Start)
+    return getContext().reportError(Loc, "Duplicate .seh_unwindv2start in " +
+                                             CurFrame->Function->getName());
+
+  MCSymbol *Label = emitCFILabel();
+  CurrentWinEpilog->UnwindV2Start = Label;
+}
+
+void MCStreamer::emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc) {
+  WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
+  if (!CurFrame)
+    return;
+
+  if (CurFrame->Version != WinEH::FrameInfo::DefaultVersion)
+    return getContext().reportError(Loc, "Duplicate .seh_unwindversion in " +
+                                             CurFrame->Function->getName());
+
+  if (Version != 2)
+    return getContext().reportError(
+        Loc, "Unsupported version specified in .seh_unwindversion in " +
+                 CurFrame->Function->getName());
+
+  CurFrame->Version = Version;
+}
+
 void MCStreamer::emitCOFFSafeSEH(MCSymbol const *Symbol) {}
 
 void MCStreamer::emitCOFFSymbolIndex(MCSymbol const *Symbol) {}
@@ -985,6 +1068,10 @@ void MCStreamer::emitCOFFSectionIndex(MCSymbol const *Symbol) {}
 void MCStreamer::emitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset) {}
 
 void MCStreamer::emitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) {}
+
+void MCStreamer::emitCOFFSecNumber(MCSymbol const *Symbol) {}
+
+void MCStreamer::emitCOFFSecOffset(MCSymbol const *Symbol) {}
 
 /// EmitRawText - If this file is backed by an assembly streamer, this dumps
 /// the specified string in the output .s file.  This capability is
@@ -1098,6 +1185,10 @@ void MCStreamer::visitUsedExpr(const MCExpr &Expr) {
   case MCExpr::Unary:
     visitUsedExpr(*cast<MCUnaryExpr>(Expr).getSubExpr());
     break;
+
+  case MCExpr::Specifier:
+    visitUsedExpr(*cast<MCSpecifierExpr>(Expr).getSubExpr());
+    break;
   }
 }
 
@@ -1157,8 +1248,10 @@ void MCStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
   emitULEB128Value(Diff);
 }
 
-void MCStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {}
-void MCStreamer::emitThumbFunc(MCSymbol *Func) {}
+void MCStreamer::emitSubsectionsViaSymbols() {
+  llvm_unreachable(
+      "emitSubsectionsViaSymbols only supported on Mach-O targets");
+}
 void MCStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {}
 void MCStreamer::beginCOFFSymbolDef(const MCSymbol *Symbol) {
   llvm_unreachable("this directive only supported on COFF targets");
@@ -1167,7 +1260,8 @@ void MCStreamer::endCOFFSymbolDef() {
   llvm_unreachable("this directive only supported on COFF targets");
 }
 void MCStreamer::emitFileDirective(StringRef Filename) {}
-void MCStreamer::emitFileDirective(StringRef Filename, StringRef CompilerVerion,
+void MCStreamer::emitFileDirective(StringRef Filename,
+                                   StringRef CompilerVersion,
                                    StringRef TimeStamp, StringRef Description) {
 }
 void MCStreamer::emitCOFFSymbolStorageClass(int StorageClass) {
@@ -1190,10 +1284,7 @@ void MCStreamer::emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
 }
 
 void MCStreamer::emitXCOFFRenameDirective(const MCSymbol *Name,
-                                          StringRef Rename) {
-  llvm_unreachable("emitXCOFFRenameDirective is only supported on "
-                   "XCOFF targets");
-}
+                                          StringRef Rename) {}
 
 void MCStreamer::emitXCOFFRefDirective(const MCSymbol *Symbol) {
   llvm_unreachable("emitXCOFFRefDirective is only supported on XCOFF targets");
@@ -1218,9 +1309,24 @@ void MCStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
                                         StringRef Name, bool KeepOriginalSym) {}
 void MCStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        Align ByteAlignment) {}
+void MCStreamer::emitZerofill(MCSection *, MCSymbol *, uint64_t, Align, SMLoc) {
+}
 void MCStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                 uint64_t Size, Align ByteAlignment) {}
-void MCStreamer::changeSection(MCSection *, const MCExpr *) {}
+
+void MCStreamer::changeSection(MCSection *Sec, uint32_t) {
+  CurFrag = &Sec->getDummyFragment();
+  auto *Sym = Sec->getBeginSymbol();
+  if (!Sym || !Sym->isUndefined())
+    return;
+  // In Mach-O, DWARF sections use Begin as a temporary label, requiring a label
+  // definition, unlike section symbols in other file formats.
+  if (getContext().getObjectFileType() == MCContext::IsMachO)
+    emitLabel(Sym);
+  else
+    Sym->setFragment(CurFrag);
+}
+
 void MCStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {}
 void MCStreamer::emitBytes(StringRef Data) {}
 void MCStreamer::emitBinaryData(StringRef Data) { emitBytes(Data); }
@@ -1232,19 +1338,29 @@ void MCStreamer::emitSLEB128Value(const MCExpr *Value) {}
 void MCStreamer::emitFill(const MCExpr &NumBytes, uint64_t Value, SMLoc Loc) {}
 void MCStreamer::emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                           SMLoc Loc) {}
-void MCStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
-                                      unsigned ValueSize,
-                                      unsigned MaxBytesToEmit) {}
+void MCStreamer::emitValueToAlignment(Align, int64_t, uint8_t, unsigned) {}
 void MCStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                    unsigned MaxBytesToEmit) {}
 void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                                    SMLoc Loc) {}
-void MCStreamer::emitBundleAlignMode(Align Alignment) {}
-void MCStreamer::emitBundleLock(bool AlignToEnd) {}
 void MCStreamer::finishImpl() {}
-void MCStreamer::emitBundleUnlock() {}
 
-void MCStreamer::switchSection(MCSection *Section, const MCExpr *Subsection) {
+bool MCStreamer::popSection() {
+  if (SectionStack.size() <= 1)
+    return false;
+  auto I = SectionStack.end();
+  --I;
+  MCSectionSubPair OldSec = I->first;
+  --I;
+  MCSectionSubPair NewSec = I->first;
+
+  if (NewSec.first && OldSec != NewSec)
+    changeSection(NewSec.first, NewSec.second);
+  SectionStack.pop_back();
+  return true;
+}
+
+void MCStreamer::switchSection(MCSection *Section, uint32_t Subsection) {
   assert(Section && "Cannot switch to a null section!");
   MCSectionSubPair curSection = SectionStack.back().first;
   SectionStack.back().second = curSection;
@@ -1252,10 +1368,32 @@ void MCStreamer::switchSection(MCSection *Section, const MCExpr *Subsection) {
     changeSection(Section, Subsection);
     SectionStack.back().first = MCSectionSubPair(Section, Subsection);
     assert(!Section->hasEnded() && "Section already ended");
-    MCSymbol *Sym = Section->getBeginSymbol();
-    if (Sym && !Sym->isInSection())
-      emitLabel(Sym);
   }
+}
+
+bool MCStreamer::switchSection(MCSection *Section, const MCExpr *SubsecExpr) {
+  int64_t Subsec = 0;
+  if (SubsecExpr) {
+    if (!SubsecExpr->evaluateAsAbsolute(Subsec, getAssemblerPtr())) {
+      getContext().reportError(SubsecExpr->getLoc(),
+                               "cannot evaluate subsection number");
+      return true;
+    }
+    if (!isUInt<31>(Subsec)) {
+      getContext().reportError(SubsecExpr->getLoc(),
+                               "subsection number " + Twine(Subsec) +
+                                   " is not within [0,2147483647]");
+      return true;
+    }
+  }
+  switchSection(Section, Subsec);
+  return false;
+}
+
+void MCStreamer::switchSectionNoPrint(MCSection *Section) {
+  SectionStack.back().second = SectionStack.back().first;
+  SectionStack.back().first = MCSectionSubPair(Section, 0);
+  changeSection(Section, 0);
 }
 
 MCSymbol *MCStreamer::endSection(MCSection *Section) {
@@ -1268,6 +1406,15 @@ MCSymbol *MCStreamer::endSection(MCSection *Section) {
   switchSection(Section);
   emitLabel(Sym);
   return Sym;
+}
+
+void MCStreamer::addFragment(MCFragment *F) {
+  auto *Sec = CurFrag->getParent();
+  F->setParent(Sec);
+  F->setLayoutOrder(CurFrag->getLayoutOrder() + 1);
+  CurFrag->Next = F;
+  CurFrag = F;
+  Sec->curFragList()->Tail = F;
 }
 
 static VersionTuple
@@ -1314,7 +1461,9 @@ static VersionTuple getMachoBuildVersionSupportedOS(const Triple &Target) {
   case Triple::WatchOS:
     return VersionTuple(5);
   case Triple::DriverKit:
-    // DriverKit always uses the build version load command.
+  case Triple::BridgeOS:
+  case Triple::XROS:
+    // DriverKit/BridgeOS/XROS always use the build version load command.
     return VersionTuple();
   default:
     break;
@@ -1342,6 +1491,11 @@ getMachoBuildVersionPlatformType(const Triple &Target) {
                                            : MachO::PLATFORM_WATCHOS;
   case Triple::DriverKit:
     return MachO::PLATFORM_DRIVERKIT;
+  case Triple::XROS:
+    return Target.isSimulatorEnvironment() ? MachO::PLATFORM_XROS_SIMULATOR
+                                           : MachO::PLATFORM_XROS;
+  case Triple::BridgeOS:
+    return MachO::PLATFORM_BRIDGEOS;
   default:
     break;
   }
@@ -1373,6 +1527,10 @@ void MCStreamer::emitVersionForTarget(
     break;
   case Triple::DriverKit:
     Version = Target.getDriverKitVersion();
+    break;
+  case Triple::XROS:
+  case Triple::BridgeOS:
+    Version = Target.getOSVersion();
     break;
   default:
     llvm_unreachable("unexpected OS type");

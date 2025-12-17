@@ -21,17 +21,16 @@
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 
 using namespace llvm;
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
 // See PassManagers.h for Pass Manager infrastructure overview.
 
 //===----------------------------------------------------------------------===//
@@ -104,15 +103,13 @@ void PMDataManager::emitInstrCountChangedRemark(
       [&FunctionToInstrCount](Function &MaybeChangedFn) {
         // Update the total module count.
         unsigned FnSize = MaybeChangedFn.getInstructionCount();
-        auto It = FunctionToInstrCount.find(MaybeChangedFn.getName());
 
         // If we created a new function, then we need to add it to the map and
         // say that it changed from 0 instructions to FnSize.
-        if (It == FunctionToInstrCount.end()) {
-          FunctionToInstrCount[MaybeChangedFn.getName()] =
-              std::pair<unsigned, unsigned>(0, FnSize);
+        auto [It, Inserted] = FunctionToInstrCount.try_emplace(
+            MaybeChangedFn.getName(), 0, FnSize);
+        if (Inserted)
           return;
-        }
         // Insert the new function size into the second member of the pair. This
         // tells us whether or not this function changed in size.
         It->second.second = FnSize;
@@ -122,7 +119,7 @@ void PMDataManager::emitInstrCountChangedRemark(
   // If no function was passed in, then we're either a module pass or an
   // CGSCC pass.
   if (!CouldOnlyImpactOneFunction)
-    std::for_each(M.begin(), M.end(), UpdateFunctionChanges);
+    llvm::for_each(M, UpdateFunctionChanges);
   else
     UpdateFunctionChanges(*F);
 
@@ -199,9 +196,7 @@ void PMDataManager::emitInstrCountChangedRemark(
   // Are we looking at more than one function? If so, emit remarks for all of
   // the functions in the module. Otherwise, only emit one remark.
   if (!CouldOnlyImpactOneFunction)
-    std::for_each(FunctionToInstrCount.keys().begin(),
-                  FunctionToInstrCount.keys().end(),
-                  EmitFunctionSizeChangedRemark);
+    llvm::for_each(FunctionToInstrCount.keys(), EmitFunctionSizeChangedRemark);
   else
     EmitFunctionSizeChangedRemark(F->getName().str());
 }
@@ -528,11 +523,6 @@ bool PassManagerImpl::run(Module &M) {
   dumpArguments();
   dumpPasses();
 
-  // RemoveDIs: if a command line flag is given, convert to the DPValue
-  // representation of debug-info for the duration of these passes.
-  if (UseNewDbgInfoFormat)
-    M.convertToNewDbgValues();
-
   for (ImmutablePass *ImPass : getImmutablePasses())
     Changed |= ImPass->doInitialization(M);
 
@@ -544,8 +534,6 @@ bool PassManagerImpl::run(Module &M) {
 
   for (ImmutablePass *ImPass : getImmutablePasses())
     Changed |= ImPass->doFinalization(M);
-
-  M.convertFromNewDbgValues();
 
   return Changed;
 }
@@ -610,7 +598,7 @@ PMTopLevelManager::setLastUser(ArrayRef<Pass*> AnalysisPasses, Pass *P) {
     auto &LastUsedByAP = InversedLastUser[AP];
     for (Pass *L : LastUsedByAP)
       LastUser[L] = P;
-    InversedLastUser[P].insert(LastUsedByAP.begin(), LastUsedByAP.end());
+    InversedLastUser[P].insert_range(LastUsedByAP);
     LastUsedByAP.clear();
   }
 }
@@ -809,13 +797,6 @@ void PMTopLevelManager::addImmutablePass(ImmutablePass *P) {
   // doing lookups.
   AnalysisID AID = P->getPassID();
   ImmutablePassMap[AID] = P;
-
-  // Also add any interfaces implemented by the immutable pass to the map for
-  // fast lookup.
-  const PassInfo *PassInf = findAnalysisPassInfo(AID);
-  assert(PassInf && "Expected all immutable passes to be initialized");
-  for (const PassInfo *ImmPI : PassInf->getInterfacesImplemented())
-    ImmutablePassMap[ImmPI->getTypeInfo()] = P;
 }
 
 // Print passes managed by this top level manager.
@@ -825,9 +806,8 @@ void PMTopLevelManager::dumpPasses() const {
     return;
 
   // Print out the immutable passes
-  for (unsigned i = 0, e = ImmutablePasses.size(); i != e; ++i) {
-    ImmutablePasses[i]->dumpPassStructure(0);
-  }
+  for (ImmutablePass *Pass : ImmutablePasses)
+    Pass->dumpPassStructure(0);
 
   // Every class that derives from PMDataManager also derives from Pass
   // (sometimes indirectly), but there's no inheritance relationship
@@ -846,8 +826,7 @@ void PMTopLevelManager::dumpArguments() const {
   for (ImmutablePass *P : ImmutablePasses)
     if (const PassInfo *PI = findAnalysisPassInfo(P->getPassID())) {
       assert(PI && "Expected all immutable passes to be initialized");
-      if (!PI->isAnalysisGroup())
-        dbgs() << " -" << PI->getPassArgument();
+      dbgs() << " -" << PI->getPassArgument();
     }
   for (PMDataManager *PM : PassManagers)
     PM->dumpPassArguments();
@@ -880,15 +859,6 @@ void PMDataManager::recordAvailableAnalysis(Pass *P) {
   AnalysisID PI = P->getPassID();
 
   AvailableAnalysis[PI] = P;
-
-  assert(!AvailableAnalysis.empty());
-
-  // This pass is the current implementation of all of the interfaces it
-  // implements as well.
-  const PassInfo *PInf = TPM->findAnalysisPassInfo(PI);
-  if (!PInf) return;
-  for (const PassInfo *PI : PInf->getInterfacesImplemented())
-    AvailableAnalysis[PI->getTypeInfo()] = P;
 }
 
 // Return true if P preserves high level analysis used by other
@@ -1006,20 +976,8 @@ void PMDataManager::freePass(Pass *P, StringRef Msg,
     P->releaseMemory();
   }
 
-  AnalysisID PI = P->getPassID();
-  if (const PassInfo *PInf = TPM->findAnalysisPassInfo(PI)) {
-    // Remove the pass itself (if it is not already removed).
-    AvailableAnalysis.erase(PI);
-
-    // Remove all interfaces this pass implements, for which it is also
-    // listed as the available implementation.
-    for (const PassInfo *PI : PInf->getInterfacesImplemented()) {
-      DenseMap<AnalysisID, Pass *>::iterator Pos =
-          AvailableAnalysis.find(PI->getTypeInfo());
-      if (Pos != AvailableAnalysis.end() && Pos->second == P)
-        AvailableAnalysis.erase(Pos);
-    }
-  }
+  // Remove the pass itself (if it is not already removed).
+  AvailableAnalysis.erase(P->getPassID());
 }
 
 /// Add pass P into the PassVector. Update
@@ -1175,11 +1133,8 @@ void PMDataManager::dumpPassArguments() const {
   for (Pass *P : PassVector) {
     if (PMDataManager *PMD = P->getAsPMDataManager())
       PMD->dumpPassArguments();
-    else
-      if (const PassInfo *PI =
-            TPM->findAnalysisPassInfo(P->getPassID()))
-        if (!PI->isAnalysisGroup())
-          dbgs() << " -" << PI->getPassArgument();
+    else if (const PassInfo *PI = TPM->findAnalysisPassInfo(P->getPassID()))
+      dbgs() << " -" << PI->getPassArgument();
   }
 }
 

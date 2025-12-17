@@ -5,7 +5,8 @@
 from ._pdl_ops_gen import *
 from ._pdl_ops_gen import _Dialect
 from .._mlir_libs._mlirDialectsPDL import *
-
+from .._mlir_libs._mlirDialectsPDL import OperationType
+from ..extras.meta import region_op
 
 try:
     from ..ir import *
@@ -13,7 +14,7 @@ try:
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
-from typing import Union, Optional, Sequence, Mapping
+from typing import Union, Optional, Sequence, Mapping, NewType
 from ._ods_common import (
     get_op_result_or_value as _get_value,
     get_op_results_or_values as _get_values,
@@ -126,6 +127,9 @@ class PatternOp(PatternOp):
         return self.regions[0].blocks[0]
 
 
+pattern = region_op(PatternOp.__base__)
+
+
 @_ods_cext.register_operation(_Dialect, replace=True)
 class ReplaceOp(ReplaceOp):
     """Specialization for PDL replace op class."""
@@ -194,6 +198,9 @@ class RewriteOp(RewriteOp):
         return self.regions[0].blocks[0]
 
 
+rewrite = region_op(RewriteOp)
+
+
 @_ods_cext.register_operation(_Dialect, replace=True)
 class TypeOp(TypeOp):
     """Specialization for PDL type op class."""
@@ -220,3 +227,10 @@ class TypesOp(TypesOp):
             constantTypes = []
         result = pdl.RangeType.get(pdl.TypeType.get())
         super().__init__(result, constantTypes=constantTypes, loc=loc, ip=ip)
+
+
+OperationTypeT = NewType("OperationType", OperationType)
+
+
+def op_t() -> OperationTypeT:
+    return OperationTypeT(OperationType.get())

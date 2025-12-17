@@ -20,10 +20,12 @@
 #include <cassert>
 #include <iterator>
 #include <memory>
+#include <vector>
 
 #include "MoveOnly.h"
 #include "test_iterators.h"
 #include "test_macros.h"
+#include "type_algorithms.h"
 
 class PaddedBase {
 public:
@@ -45,15 +47,15 @@ struct Test {
   template <class OutIter>
   TEST_CONSTEXPR_CXX20 void operator()() {
     const unsigned N = 1000;
-    int ia[N] = {};
+    int ia[N]        = {};
     for (unsigned i = 0; i < N; ++i)
-        ia[i] = i;
+      ia[i] = i;
     int ib[N] = {0};
 
-    OutIter r = std::move(InIter(ia), InIter(ia+N), OutIter(ib));
-    assert(base(r) == ib+N);
+    OutIter r = std::move(InIter(ia), InIter(ia + N), OutIter(ib));
+    assert(base(r) == ib + N);
     for (unsigned i = 0; i < N; ++i)
-        assert(ia[i] == ib[i]);
+      assert(ia[i] == ib[i]);
   }
 };
 
@@ -73,13 +75,13 @@ struct Test1 {
     const unsigned N = 100;
     std::unique_ptr<int> ia[N];
     for (unsigned i = 0; i < N; ++i)
-        ia[i].reset(new int(i));
+      ia[i].reset(new int(i));
     std::unique_ptr<int> ib[N];
 
-    OutIter r = std::move(InIter(ia), InIter(ia+N), OutIter(ib));
-    assert(base(r) == ib+N);
+    OutIter r = std::move(InIter(ia), InIter(ia + N), OutIter(ib));
+    assert(base(r) == ib + N);
     for (unsigned i = 0; i < N; ++i)
-        assert(*ib[i] == static_cast<int>(i));
+      assert(*ib[i] == static_cast<int>(i));
   }
 };
 
@@ -92,11 +94,32 @@ struct Test1OutIters {
   }
 };
 
+TEST_CONSTEXPR_CXX20 bool test_vector_bool(std::size_t N) {
+  std::vector<bool> v(N, false);
+  for (std::size_t i = 0; i < N; i += 2)
+    v[i] = true;
+
+  { // Test move with aligned bytes
+    std::vector<bool> in(v);
+    std::vector<bool> out(N);
+    std::move(in.begin(), in.end(), out.begin());
+    assert(out == v);
+  }
+  { // Test move with unaligned bytes
+    std::vector<bool> in(v);
+    std::vector<bool> out(N);
+    std::move(in.begin() + 4, in.end(), out.begin());
+    for (std::size_t i = 0; i < N - 4; ++i)
+      assert(v[i + 4] == out[i]);
+  }
+
+  return true;
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::cpp17_input_iterator_list<int*>(), TestOutIters());
-  if (TEST_STD_VER >= 23 || !TEST_IS_CONSTANT_EVALUATED)
+  if (TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED)
     types::for_each(types::cpp17_input_iterator_list<std::unique_ptr<int>*>(), Test1OutIters());
-
   { // Make sure that padding bits aren't copied
     Derived src(1, 2, 3);
     Derived dst(4, 5, 6);
@@ -105,20 +128,17 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(dst.b_ == 2);
     assert(dst.c_ == 6);
   }
-
   { // Make sure that overlapping ranges can be copied
     int a[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     std::move(a + 3, a + 10, a);
     int expected[] = {4, 5, 6, 7, 8, 9, 10, 8, 9, 10};
     assert(std::equal(a, a + 10, expected));
   }
-
-  // Make sure that the algorithm works with move-only types
-  {
+  { // Make sure that the algorithm works with move-only types
     // When non-trivial
     {
       MoveOnly from[3] = {1, 2, 3};
-      MoveOnly to[3] = {};
+      MoveOnly to[3]   = {};
       std::move(std::begin(from), std::end(from), std::begin(to));
       assert(to[0] == MoveOnly(1));
       assert(to[1] == MoveOnly(2));
@@ -127,12 +147,22 @@ TEST_CONSTEXPR_CXX20 bool test() {
     // When trivial
     {
       TrivialMoveOnly from[3] = {1, 2, 3};
-      TrivialMoveOnly to[3] = {};
+      TrivialMoveOnly to[3]   = {};
       std::move(std::begin(from), std::end(from), std::begin(to));
       assert(to[0] == TrivialMoveOnly(1));
       assert(to[1] == TrivialMoveOnly(2));
       assert(to[2] == TrivialMoveOnly(3));
     }
+  }
+
+  { // Test vector<bool>::iterator optimization
+    assert(test_vector_bool(8));
+    assert(test_vector_bool(19));
+    assert(test_vector_bool(32));
+    assert(test_vector_bool(49));
+    assert(test_vector_bool(64));
+    assert(test_vector_bool(199));
+    assert(test_vector_bool(256));
   }
 
   return true;

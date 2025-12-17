@@ -12,20 +12,34 @@
 
 #include "bolt/Core/MCPlusBuilder.h"
 #include "bolt/Core/MCPlus.h"
+#include "bolt/Utils/CommandLineOpts.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <cstdint>
-#include <queue>
 
 #define DEBUG_TYPE "mcplus"
 
 using namespace llvm;
 using namespace bolt;
 using namespace MCPlus;
+
+namespace opts {
+cl::opt<bool>
+    TerminalHLT("terminal-x86-hlt",
+                cl::desc("Assume that execution stops at x86 HLT instruction"),
+                cl::init(true), cl::Hidden, cl::cat(BoltCategory));
+
+cl::opt<bool>
+    TerminalTrap("terminal-trap",
+                 cl::desc("Assume that execution stops at trap instruction"),
+                 cl::init(true), cl::Hidden, cl::cat(BoltCategory));
+}
 
 bool MCPlusBuilder::equals(const MCInst &A, const MCInst &B,
                            CompFuncTy Comp) const {
@@ -105,19 +119,31 @@ bool MCPlusBuilder::equals(const MCExpr &A, const MCExpr &B,
            equals(*BinaryA.getRHS(), *BinaryB.getRHS(), Comp);
   }
 
-  case MCExpr::Target: {
-    const auto &TargetExprA = cast<MCTargetExpr>(A);
-    const auto &TargetExprB = cast<MCTargetExpr>(B);
+  case MCExpr::Specifier: {
+    const auto &TargetExprA = cast<MCSpecifierExpr>(A);
+    const auto &TargetExprB = cast<MCSpecifierExpr>(B);
     return equals(TargetExprA, TargetExprB, Comp);
   }
+  case MCExpr::Target:
+    llvm_unreachable("Not implemented");
   }
 
   llvm_unreachable("Invalid expression kind!");
 }
 
-bool MCPlusBuilder::equals(const MCTargetExpr &A, const MCTargetExpr &B,
+bool MCPlusBuilder::equals(const MCSpecifierExpr &A, const MCSpecifierExpr &B,
                            CompFuncTy Comp) const {
   llvm_unreachable("target-specific expressions are unsupported");
+}
+
+bool MCPlusBuilder::isTerminator(const MCInst &Inst) const {
+  if (isX86HLT(Inst))
+    return opts::TerminalHLT;
+
+  if (Info->get(Inst.getOpcode()).isTrap())
+    return opts::TerminalTrap;
+
+  return Analysis->isTerminator(Inst);
 }
 
 void MCPlusBuilder::setTailCall(MCInst &Inst) const {
@@ -131,6 +157,50 @@ bool MCPlusBuilder::isTailCall(const MCInst &Inst) const {
   if (getConditionalTailCall(Inst))
     return true;
   return false;
+}
+
+void MCPlusBuilder::setNegateRAState(MCInst &Inst) const {
+  assert(!hasAnnotation(Inst, MCAnnotation::kNegateState));
+  setAnnotationOpValue(Inst, MCAnnotation::kNegateState, true);
+}
+
+bool MCPlusBuilder::hasNegateRAState(const MCInst &Inst) const {
+  return hasAnnotation(Inst, MCAnnotation::kNegateState);
+}
+
+void MCPlusBuilder::setRememberState(MCInst &Inst) const {
+  assert(!hasAnnotation(Inst, MCAnnotation::kRememberState));
+  setAnnotationOpValue(Inst, MCAnnotation::kRememberState, true);
+}
+
+bool MCPlusBuilder::hasRememberState(const MCInst &Inst) const {
+  return hasAnnotation(Inst, MCAnnotation::kRememberState);
+}
+
+void MCPlusBuilder::setRestoreState(MCInst &Inst) const {
+  assert(!hasAnnotation(Inst, MCAnnotation::kRestoreState));
+  setAnnotationOpValue(Inst, MCAnnotation::kRestoreState, true);
+}
+
+bool MCPlusBuilder::hasRestoreState(const MCInst &Inst) const {
+  return hasAnnotation(Inst, MCAnnotation::kRestoreState);
+}
+
+void MCPlusBuilder::setRAState(MCInst &Inst, bool State) const {
+  assert(!hasAnnotation(Inst, MCAnnotation::kRASigned));
+  assert(!hasAnnotation(Inst, MCAnnotation::kRAUnsigned));
+  if (State)
+    setAnnotationOpValue(Inst, MCAnnotation::kRASigned, true);
+  else
+    setAnnotationOpValue(Inst, MCAnnotation::kRAUnsigned, true);
+}
+
+std::optional<bool> MCPlusBuilder::getRAState(const MCInst &Inst) const {
+  if (hasAnnotation(Inst, MCAnnotation::kRASigned))
+    return true;
+  if (hasAnnotation(Inst, MCAnnotation::kRAUnsigned))
+    return false;
+  return std::nullopt;
 }
 
 std::optional<MCLandingPad> MCPlusBuilder::getEHInfo(const MCInst &Inst) const {
@@ -266,17 +336,62 @@ bool MCPlusBuilder::clearOffset(MCInst &Inst) const {
   return true;
 }
 
-MCSymbol *MCPlusBuilder::getLabel(const MCInst &Inst) const {
+MCSymbol *MCPlusBuilder::getInstLabel(const MCInst &Inst) const {
   if (std::optional<int64_t> Label =
           getAnnotationOpValue(Inst, MCAnnotation::kLabel))
     return reinterpret_cast<MCSymbol *>(*Label);
   return nullptr;
 }
 
-bool MCPlusBuilder::setLabel(MCInst &Inst, MCSymbol *Label) const {
+MCSymbol *MCPlusBuilder::getOrCreateInstLabel(MCInst &Inst, const Twine &Name,
+                                              MCContext *Ctx) const {
+  MCSymbol *Label = getInstLabel(Inst);
+  if (Label)
+    return Label;
+
+  Label = Ctx->createNamedTempSymbol(Name);
   setAnnotationOpValue(Inst, MCAnnotation::kLabel,
                        reinterpret_cast<int64_t>(Label));
+  return Label;
+}
+
+void MCPlusBuilder::setInstLabel(MCInst &Inst, MCSymbol *Label) const {
+  assert(!getInstLabel(Inst) && "Instruction already has assigned label.");
+  setAnnotationOpValue(Inst, MCAnnotation::kLabel,
+                       reinterpret_cast<int64_t>(Label));
+}
+
+std::optional<uint32_t> MCPlusBuilder::getSize(const MCInst &Inst) const {
+  if (std::optional<int64_t> Value =
+          getAnnotationOpValue(Inst, MCAnnotation::kSize))
+    return static_cast<uint32_t>(*Value);
+  return std::nullopt;
+}
+
+void MCPlusBuilder::setSize(MCInst &Inst, uint32_t Size) const {
+  setAnnotationOpValue(Inst, MCAnnotation::kSize, Size);
+}
+
+bool MCPlusBuilder::isDynamicBranch(const MCInst &Inst) const {
+  if (!hasAnnotation(Inst, MCAnnotation::kDynamicBranch))
+    return false;
+  assert(isBranch(Inst) && "Branch expected.");
   return true;
+}
+
+std::optional<uint32_t>
+MCPlusBuilder::getDynamicBranchID(const MCInst &Inst) const {
+  if (std::optional<int64_t> Value =
+          getAnnotationOpValue(Inst, MCAnnotation::kDynamicBranch)) {
+    assert(isBranch(Inst) && "Branch expected.");
+    return static_cast<uint32_t>(*Value);
+  }
+  return std::nullopt;
+}
+
+void MCPlusBuilder::setDynamicBranch(MCInst &Inst, uint32_t ID) const {
+  assert(isBranch(Inst) && "Branch expected.");
+  setAnnotationOpValue(Inst, MCAnnotation::kDynamicBranch, ID);
 }
 
 bool MCPlusBuilder::hasAnnotation(const MCInst &Inst, unsigned Index) const {
@@ -307,8 +422,8 @@ void MCPlusBuilder::stripAnnotations(MCInst &Inst, bool KeepTC) const {
     setTailCall(Inst);
 }
 
-void MCPlusBuilder::printAnnotations(const MCInst &Inst,
-                                     raw_ostream &OS) const {
+void MCPlusBuilder::printAnnotations(const MCInst &Inst, raw_ostream &OS,
+                                     bool PrintMemData) const {
   std::optional<unsigned> FirstAnnotationOp = getFirstAnnotationOpIndex(Inst);
   if (!FirstAnnotationOp)
     return;
@@ -319,7 +434,11 @@ void MCPlusBuilder::printAnnotations(const MCInst &Inst,
     const int64_t Value = extractAnnotationValue(Imm);
     const auto *Annotation = reinterpret_cast<const MCAnnotation *>(Value);
     if (Index >= MCAnnotation::kGeneric) {
-      OS << " # " << AnnotationNames[Index - MCAnnotation::kGeneric] << ": ";
+      std::string AnnotationName =
+          AnnotationNames[Index - MCAnnotation::kGeneric];
+      if (!PrintMemData && AnnotationName == "MemoryAccessProfile")
+        continue;
+      OS << " # " << AnnotationName << ": ";
       Annotation->print(OS);
     }
   }
@@ -383,10 +502,10 @@ void MCPlusBuilder::getUsedRegs(const MCInst &Inst, BitVector &Regs) const {
   for (MCPhysReg ImplicitUse : InstInfo.implicit_uses())
     Regs |= getAliases(ImplicitUse, /*OnlySmaller=*/true);
 
-  for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
-    if (!Inst.getOperand(I).isReg())
+  for (const MCOperand &Operand : useOperands(Inst)) {
+    if (!Operand.isReg())
       continue;
-    Regs |= getAliases(Inst.getOperand(I).getReg(), /*OnlySmaller=*/true);
+    Regs |= getAliases(Operand.getReg(), /*OnlySmaller=*/true);
   }
 }
 
@@ -492,7 +611,7 @@ void MCPlusBuilder::initSizeMap() {
 bool MCPlusBuilder::setOperandToSymbolRef(MCInst &Inst, int OpNum,
                                           const MCSymbol *Symbol,
                                           int64_t Addend, MCContext *Ctx,
-                                          uint64_t RelType) const {
+                                          uint32_t RelType) const {
   MCOperand Operand;
   if (!Addend) {
     Operand = MCOperand::createExpr(getTargetExprFor(

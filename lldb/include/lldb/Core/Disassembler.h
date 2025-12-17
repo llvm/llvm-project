@@ -167,9 +167,11 @@ public:
 
   virtual bool IsLoad() = 0;
 
+  virtual bool IsBarrier() = 0;
+
   virtual bool IsAuthenticated() = 0;
 
-  bool CanSetBreakpoint ();
+  bool CanSetBreakpoint();
 
   virtual size_t Decode(const Disassembler &disassembler,
                         const DataExtractor &data,
@@ -282,7 +284,7 @@ std::function<bool(const Instruction::Operand &)> FetchImmOp(int64_t &imm);
 
 std::function<bool(const Instruction::Operand &)>
 MatchOpType(Instruction::Operand::Type type);
-}
+} // namespace OperandMatchers
 
 class InstructionList {
 public:
@@ -291,9 +293,15 @@ public:
 
   size_t GetSize() const;
 
+  size_t GetTotalByteSize() const;
+
   uint32_t GetMaxOpcocdeByteSize() const;
 
   lldb::InstructionSP GetInstructionAtIndex(size_t idx) const;
+
+  llvm::ArrayRef<lldb::InstructionSP> Instructions() const {
+    return m_instructions;
+  }
 
   /// Get the instruction at the given address.
   ///
@@ -314,20 +322,19 @@ public:
   /// @param[in] ignore_calls
   ///     It true, then fine the first branch instruction that isn't
   ///     a function call (a branch that calls and returns to the next
-  ///     instruction). If false, find the instruction index of any 
+  ///     instruction). If false, find the instruction index of any
   ///     branch in the list.
-  ///     
+  ///
   /// @param[out] found_calls
-  ///     If non-null, this will be set to true if any calls were found in 
+  ///     If non-null, this will be set to true if any calls were found in
   ///     extending the range.
-  ///    
+  ///
   /// @return
   ///     The instruction index of the first branch that is at or past
-  ///     \a start. Returns UINT32_MAX if no matching branches are 
+  ///     \a start. Returns UINT32_MAX if no matching branches are
   ///     found.
   //------------------------------------------------------------------
-  uint32_t GetIndexOfNextBranchInstruction(uint32_t start,
-                                           bool ignore_calls,
+  uint32_t GetIndexOfNextBranchInstruction(uint32_t start, bool ignore_calls,
                                            bool *found_calls) const;
 
   uint32_t GetIndexOfInstructionAtLoadAddress(lldb::addr_t load_addr,
@@ -361,6 +368,8 @@ public:
   bool HasDelaySlot() override;
 
   bool IsLoad() override;
+
+  bool IsBarrier() override;
 
   bool IsAuthenticated() override;
 
@@ -397,6 +406,7 @@ public:
     eOptionMarkPCAddress =
         (1u << 3), // Mark the disassembly line the contains the PC
     eOptionShowControlFlowKind = (1u << 4),
+    eOptionVariableAnnotations = (1u << 5),
   };
 
   enum HexImmediateStyle {
@@ -409,35 +419,37 @@ public:
   // flavor string gets set wrong. Instead, if you get a flavor string you
   // don't understand, use the default.  Folks who care to check can use the
   // FlavorValidForArchSpec method on the disassembler they got back.
-  static lldb::DisassemblerSP
-  FindPlugin(const ArchSpec &arch, const char *flavor, const char *plugin_name);
+  static lldb::DisassemblerSP FindPlugin(const ArchSpec &arch,
+                                         const char *flavor, const char *cpu,
+                                         const char *features,
+                                         const char *plugin_name);
 
   // This version will use the value in the Target settings if flavor is NULL;
-  static lldb::DisassemblerSP FindPluginForTarget(const Target &target,
-                                                  const ArchSpec &arch,
-                                                  const char *flavor,
-                                                  const char *plugin_name);
+  static lldb::DisassemblerSP
+  FindPluginForTarget(const Target &target, const ArchSpec &arch,
+                      const char *flavor, const char *cpu, const char *features,
+                      const char *plugin_name);
 
   struct Limit {
     enum { Bytes, Instructions } kind;
     lldb::addr_t value;
   };
 
-  static lldb::DisassemblerSP DisassembleRange(const ArchSpec &arch,
-                                               const char *plugin_name,
-                                               const char *flavor,
-                                               Target &target,
-                                               const AddressRange &disasm_range,
-                                               bool force_live_memory = false);
+  static lldb::DisassemblerSP
+  DisassembleRange(const ArchSpec &arch, const char *plugin_name,
+                   const char *flavor, const char *cpu, const char *features,
+                   Target &target, llvm::ArrayRef<AddressRange> disasm_ranges,
+                   bool force_live_memory = false);
 
   static lldb::DisassemblerSP
   DisassembleBytes(const ArchSpec &arch, const char *plugin_name,
-                   const char *flavor, const Address &start, const void *bytes,
-                   size_t length, uint32_t max_num_instructions,
-                   bool data_from_file);
+                   const char *flavor, const char *cpu, const char *features,
+                   const Address &start, const void *bytes, size_t length,
+                   uint32_t max_num_instructions, bool data_from_file);
 
   static bool Disassemble(Debugger &debugger, const ArchSpec &arch,
                           const char *plugin_name, const char *flavor,
+                          const char *cpu, const char *features,
                           const ExecutionContext &exe_ctx, const Address &start,
                           Limit limit, bool mixed_source_and_assembly,
                           uint32_t num_mixed_context_lines, uint32_t options,
@@ -458,7 +470,11 @@ public:
 
   size_t ParseInstructions(Target &target, Address address, Limit limit,
                            Stream *error_strm_ptr,
-                           bool force_live_memory = false);
+                           bool force_live_memory = false) {
+    m_instruction_list.Clear();
+    return AppendInstructions(target, address, limit, error_strm_ptr,
+                              force_live_memory);
+  }
 
   virtual size_t DecodeInstructions(const Address &base_addr,
                                     const DataExtractor &data,
@@ -478,6 +494,9 @@ public:
                                       const char *flavor) = 0;
 
 protected:
+  size_t AppendInstructions(Target &target, Address address, Limit limit,
+                            Stream *error_strm_ptr, bool force_live_memory);
+
   // SourceLine and SourceLinesToDisplay structures are only used in the mixed
   // source and assembly display methods internal to this class.
 
@@ -538,7 +557,7 @@ protected:
   ElideMixedSourceAndDisassemblyLine(const ExecutionContext &exe_ctx,
                                      const SymbolContext &sc, LineEntry &line) {
     SourceLine sl;
-    sl.file = line.file;
+    sl.file = line.GetFile();
     sl.line = line.line;
     sl.column = line.column;
     return ElideMixedSourceAndDisassemblyLine(exe_ctx, sc, sl);
@@ -547,13 +566,48 @@ protected:
   // Classes that inherit from Disassembler can see and modify these
   ArchSpec m_arch;
   InstructionList m_instruction_list;
-  lldb::addr_t m_base_addr;
   std::string m_flavor;
 
 private:
   // For Disassembler only
   Disassembler(const Disassembler &) = delete;
   const Disassembler &operator=(const Disassembler &) = delete;
+};
+
+/// Structured data for a single variable annotation.
+struct VariableAnnotation {
+  std::string variable_name;
+  /// Location description (e.g., "r15", "undef", "const_0").
+  std::string location_description;
+  /// Whether variable is live at this instruction.
+  bool is_live;
+  /// Register numbering scheme for location interpretation.
+  lldb::RegisterKind register_kind;
+  /// Where this annotation is valid.
+  std::optional<lldb_private::AddressRange> address_range;
+  /// Source file where variable was declared.
+  std::optional<std::string> decl_file;
+  /// Line number where variable was declared.
+  std::optional<uint32_t> decl_line;
+  /// Variable's type name.
+  std::optional<std::string> type_name;
+};
+
+/// Tracks live variable annotations across instructions and produces
+/// per-instruction "events" like `name = RDI` or `name = <undef>`.
+class VariableAnnotator {
+
+  // Live state from the previous instruction, keyed by Variable::GetID().
+  llvm::DenseMap<lldb::user_id_t, VariableAnnotation> m_live_vars;
+
+public:
+  /// Compute annotation strings for a single instruction and update
+  /// `m_live_vars`. Returns only the events that should be printed *at this
+  /// instruction*.
+  std::vector<std::string> Annotate(Instruction &inst);
+
+  /// Returns structured data for all variables relevant at this instruction.
+  std::vector<VariableAnnotation> AnnotateStructured(Instruction &inst);
 };
 
 } // namespace lldb_private

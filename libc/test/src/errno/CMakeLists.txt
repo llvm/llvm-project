@@ -1,4 +1,4 @@
-if(NOT LLVM_LIBC_FULL_BUILD OR LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(NOT LLVM_LIBC_FULL_BUILD OR LIBC_TARGET_OS_IS_GPU)
   return()
 endif()
 
@@ -12,4 +12,5 @@ add_libc_unittest(
     errno_test.cpp
   DEPENDS
     libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
 )

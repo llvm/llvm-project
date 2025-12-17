@@ -19,7 +19,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Printable.h"
 #include <cassert>
 
 namespace llvm {
@@ -42,17 +45,22 @@ class ReturnInst;
 class TargetLibraryInfo;
 class Value;
 
+/// Check if the given basic block contains any loop or entry convergent
+/// intrinsic instructions.
+LLVM_ABI bool HasLoopOrEntryConvergenceToken(const BasicBlock *BB);
+
 /// Replace contents of every block in \p BBs with single unreachable
 /// instruction. If \p Updates is specified, collect all necessary DT updates
 /// into this vector. If \p KeepOneInputPHIs is true, one-input Phis in
 /// successors of blocks being deleted will be preserved.
-void detachDeadBlocks(ArrayRef <BasicBlock *> BBs,
-                      SmallVectorImpl<DominatorTree::UpdateType> *Updates,
-                      bool KeepOneInputPHIs = false);
+LLVM_ABI void
+detachDeadBlocks(ArrayRef<BasicBlock *> BBs,
+                 SmallVectorImpl<DominatorTree::UpdateType> *Updates,
+                 bool KeepOneInputPHIs = false);
 
 /// Delete the specified block, which must have no predecessors.
-void DeleteDeadBlock(BasicBlock *BB, DomTreeUpdater *DTU = nullptr,
-                     bool KeepOneInputPHIs = false);
+LLVM_ABI void DeleteDeadBlock(BasicBlock *BB, DomTreeUpdater *DTU = nullptr,
+                              bool KeepOneInputPHIs = false);
 
 /// Delete the specified blocks from \p BB. The set of deleted blocks must have
 /// no predecessors that are not being deleted themselves. \p BBs must have no
@@ -60,29 +68,32 @@ void DeleteDeadBlock(BasicBlock *BB, DomTreeUpdater *DTU = nullptr,
 /// relevant loop info updates should be done before this function is called.
 /// If \p KeepOneInputPHIs is true, one-input Phis in successors of blocks
 /// being deleted will be preserved.
-void DeleteDeadBlocks(ArrayRef <BasicBlock *> BBs,
-                      DomTreeUpdater *DTU = nullptr,
-                      bool KeepOneInputPHIs = false);
+LLVM_ABI void DeleteDeadBlocks(ArrayRef<BasicBlock *> BBs,
+                               DomTreeUpdater *DTU = nullptr,
+                               bool KeepOneInputPHIs = false);
 
 /// Delete all basic blocks from \p F that are not reachable from its entry
 /// node. If \p KeepOneInputPHIs is true, one-input Phis in successors of
 /// blocks being deleted will be preserved.
-bool EliminateUnreachableBlocks(Function &F, DomTreeUpdater *DTU = nullptr,
-                                bool KeepOneInputPHIs = false);
+LLVM_ABI bool EliminateUnreachableBlocks(Function &F,
+                                         DomTreeUpdater *DTU = nullptr,
+                                         bool KeepOneInputPHIs = false);
 
 /// We know that BB has one predecessor. If there are any single-entry PHI nodes
 /// in it, fold them away. This handles the case when all entries to the PHI
 /// nodes in a block are guaranteed equal, such as when the block has exactly
 /// one predecessor.
-bool FoldSingleEntryPHINodes(BasicBlock *BB,
-                             MemoryDependenceResults *MemDep = nullptr);
+LLVM_ABI bool
+FoldSingleEntryPHINodes(BasicBlock *BB,
+                        MemoryDependenceResults *MemDep = nullptr);
 
 /// Examine each PHI in the given block and delete it if it is dead. Also
 /// recursively delete any operands that become dead as a result. This includes
 /// tracing the def-use list from the PHI to see if it is ultimately unused or
 /// if it reaches an unused cycle. Return true if any PHIs were deleted.
-bool DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI = nullptr,
-                    MemorySSAUpdater *MSSAU = nullptr);
+LLVM_ABI bool DeleteDeadPHIs(BasicBlock *BB,
+                             const TargetLibraryInfo *TLI = nullptr,
+                             MemorySSAUpdater *MSSAU = nullptr);
 
 /// Attempts to merge a block into its predecessor, if possible. The return
 /// value indicates success or failure.
@@ -93,12 +104,11 @@ bool DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI = nullptr,
 /// BB, and BB will still be merged into its predecessor and removed.
 /// If \p DT is not nullptr, update it directly; in that case, DTU must be
 /// nullptr.
-bool MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU = nullptr,
-                               LoopInfo *LI = nullptr,
-                               MemorySSAUpdater *MSSAU = nullptr,
-                               MemoryDependenceResults *MemDep = nullptr,
-                               bool PredecessorWithTwoSuccessors = false,
-                               DominatorTree *DT = nullptr);
+LLVM_ABI bool MergeBlockIntoPredecessor(
+    BasicBlock *BB, DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
+    MemorySSAUpdater *MSSAU = nullptr,
+    MemoryDependenceResults *MemDep = nullptr,
+    bool PredecessorWithTwoSuccessors = false, DominatorTree *DT = nullptr);
 
 /// Merge block(s) sucessors, if possible. Return true if at least two
 /// of the blocks were merged together.
@@ -107,36 +117,36 @@ bool MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU = nullptr,
 /// must be in L. In addition, This utility calls on another utility:
 /// MergeBlockIntoPredecessor. Blocks are successfully merged when the call to
 /// MergeBlockIntoPredecessor returns true.
-bool MergeBlockSuccessorsIntoGivenBlocks(
+LLVM_ABI bool MergeBlockSuccessorsIntoGivenBlocks(
     SmallPtrSetImpl<BasicBlock *> &MergeBlocks, Loop *L = nullptr,
     DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr);
 
 /// Try to remove redundant dbg.value instructions from given basic block.
 /// Returns true if at least one instruction was removed. Remove redundant
 /// pseudo ops when RemovePseudoOp is true.
-bool RemoveRedundantDbgInstrs(BasicBlock *BB);
+LLVM_ABI bool RemoveRedundantDbgInstrs(BasicBlock *BB);
 
 /// Replace all uses of an instruction (specified by BI) with a value, then
 /// remove and delete the original instruction.
-void ReplaceInstWithValue(BasicBlock::iterator &BI, Value *V);
+LLVM_ABI void ReplaceInstWithValue(BasicBlock::iterator &BI, Value *V);
 
 /// Replace the instruction specified by BI with the instruction specified by I.
 /// Copies DebugLoc from BI to I, if I doesn't already have a DebugLoc. The
 /// original instruction is deleted and BI is updated to point to the new
 /// instruction.
-void ReplaceInstWithInst(BasicBlock *BB, BasicBlock::iterator &BI,
-                         Instruction *I);
+LLVM_ABI void ReplaceInstWithInst(BasicBlock *BB, BasicBlock::iterator &BI,
+                                  Instruction *I);
 
 /// Replace the instruction specified by From with the instruction specified by
 /// To. Copies DebugLoc from BI to I, if I doesn't already have a DebugLoc.
-void ReplaceInstWithInst(Instruction *From, Instruction *To);
+LLVM_ABI void ReplaceInstWithInst(Instruction *From, Instruction *To);
 
 /// Check if we can prove that all paths starting from this block converge
 /// to a block that either has a @llvm.experimental.deoptimize call
 /// prior to its terminating return instruction or is terminated by unreachable.
 /// All blocks in the traversed sequence must have an unique successor, maybe
 /// except for the last one.
-bool IsBlockFollowedByDeoptOrUnreachable(const BasicBlock *BB);
+LLVM_ABI bool IsBlockFollowedByDeoptOrUnreachable(const BasicBlock *BB);
 
 /// Option class for critical edge splitting.
 ///
@@ -192,8 +202,9 @@ struct CriticalEdgeSplittingOptions {
 /// exit block. This function inserts the new PHIs, as needed. Preds is a list
 /// of preds inside the loop, SplitBB is the new loop exit block, and DestBB is
 /// the old loop exit, now the successor of SplitBB.
-void createPHIsForSplitLoopExit(ArrayRef<BasicBlock *> Preds,
-                                BasicBlock *SplitBB, BasicBlock *DestBB);
+LLVM_ABI void createPHIsForSplitLoopExit(ArrayRef<BasicBlock *> Preds,
+                                         BasicBlock *SplitBB,
+                                         BasicBlock *DestBB);
 
 /// If this edge is a critical edge, insert a new node to split the critical
 /// edge. This will update the analyses passed in through the option struct.
@@ -211,17 +222,19 @@ void createPHIsForSplitLoopExit(ArrayRef<BasicBlock *> Preds,
 /// IndirectBrInst.  Splitting these edges will almost always create an invalid
 /// program because the address of the new block won't be the one that is jumped
 /// to.
-BasicBlock *SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
-                              const CriticalEdgeSplittingOptions &Options =
-                                  CriticalEdgeSplittingOptions(),
-                              const Twine &BBName = "");
+LLVM_ABI BasicBlock *
+SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
+                  const CriticalEdgeSplittingOptions &Options =
+                      CriticalEdgeSplittingOptions(),
+                  const Twine &BBName = "");
 
 /// If it is known that an edge is critical, SplitKnownCriticalEdge can be
 /// called directly, rather than calling SplitCriticalEdge first.
-BasicBlock *SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
-                                   const CriticalEdgeSplittingOptions &Options =
-                                       CriticalEdgeSplittingOptions(),
-                                   const Twine &BBName = "");
+LLVM_ABI BasicBlock *
+SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
+                       const CriticalEdgeSplittingOptions &Options =
+                           CriticalEdgeSplittingOptions(),
+                       const Twine &BBName = "");
 
 /// If an edge from Src to Dst is critical, split the edge and return true,
 /// otherwise return false. This method requires that there be an edge between
@@ -242,33 +255,63 @@ SplitCriticalEdge(BasicBlock *Src, BasicBlock *Dst,
 
 /// Loop over all of the edges in the CFG, breaking critical edges as they are
 /// found. Returns the number of broken edges.
-unsigned SplitAllCriticalEdges(Function &F,
-                               const CriticalEdgeSplittingOptions &Options =
-                                   CriticalEdgeSplittingOptions());
+LLVM_ABI unsigned
+SplitAllCriticalEdges(Function &F, const CriticalEdgeSplittingOptions &Options =
+                                       CriticalEdgeSplittingOptions());
 
 /// Split the edge connecting the specified blocks, and return the newly created
 /// basic block between \p From and \p To.
-BasicBlock *SplitEdge(BasicBlock *From, BasicBlock *To,
-                      DominatorTree *DT = nullptr, LoopInfo *LI = nullptr,
-                      MemorySSAUpdater *MSSAU = nullptr,
-                      const Twine &BBName = "");
+LLVM_ABI BasicBlock *SplitEdge(BasicBlock *From, BasicBlock *To,
+                               DominatorTree *DT = nullptr,
+                               LoopInfo *LI = nullptr,
+                               MemorySSAUpdater *MSSAU = nullptr,
+                               const Twine &BBName = "");
+
+/// \brief Create a new intermediate target block for a callbr edge.
+///
+/// Create a new basic block between a callbr instruction and one of its
+/// successors. The new block replaces the original successor in the callbr
+/// instruction and unconditionally branches to the original successor. This
+/// is useful for normalizing control flow, e.g., when transforming
+/// irreducible loops.
+///
+/// \param CallBrBlock    block containing the callbr instruction
+/// \param Succ           original successor block
+/// \param SuccIdx        index of the original successor in the callbr
+///                       instruction
+/// \param DTU            optional \p DomTreeUpdater for updating the
+///                       dominator tree
+/// \param CI             optional \p CycleInfo for updating cycle membership
+/// \param LI             optional \p LoopInfo for updating loop membership
+/// \param UpdatedLI      optional output flag indicating if \p LoopInfo has
+///                       been updated
+///
+/// \returns newly created intermediate target block
+///
+/// \note This function updates PHI nodes, dominator tree, loop info, and
+/// cycle info as needed.
+LLVM_ABI BasicBlock *
+SplitCallBrEdge(BasicBlock *CallBrBlock, BasicBlock *Succ, unsigned SuccIdx,
+                DomTreeUpdater *DTU = nullptr, CycleInfo *CI = nullptr,
+                LoopInfo *LI = nullptr, bool *UpdatedLI = nullptr);
 
 /// Sets the unwind edge of an instruction to a particular successor.
-void setUnwindEdgeTo(Instruction *TI, BasicBlock *Succ);
+LLVM_ABI void setUnwindEdgeTo(Instruction *TI, BasicBlock *Succ);
 
 /// Replaces all uses of OldPred with the NewPred block in all PHINodes in a
 /// block.
-void updatePhiNodes(BasicBlock *DestBB, BasicBlock *OldPred,
-                    BasicBlock *NewPred, PHINode *Until = nullptr);
+LLVM_ABI void updatePhiNodes(BasicBlock *DestBB, BasicBlock *OldPred,
+                             BasicBlock *NewPred, PHINode *Until = nullptr);
 
 /// Split the edge connect the specficed blocks in the case that \p Succ is an
 /// Exception Handling Block
-BasicBlock *ehAwareSplitEdge(BasicBlock *BB, BasicBlock *Succ,
-                             LandingPadInst *OriginalPad = nullptr,
-                             PHINode *LandingPadReplacement = nullptr,
-                             const CriticalEdgeSplittingOptions &Options =
-                                 CriticalEdgeSplittingOptions(),
-                             const Twine &BBName = "");
+LLVM_ABI BasicBlock *
+ehAwareSplitEdge(BasicBlock *BB, BasicBlock *Succ,
+                 LandingPadInst *OriginalPad = nullptr,
+                 PHINode *LandingPadReplacement = nullptr,
+                 const CriticalEdgeSplittingOptions &Options =
+                     CriticalEdgeSplittingOptions(),
+                 const Twine &BBName = "");
 
 /// Split the specified block at the specified instruction.
 ///
@@ -280,10 +323,10 @@ BasicBlock *ehAwareSplitEdge(BasicBlock *BB, BasicBlock *Succ,
 /// branch. The new block with name \p BBName is returned.
 ///
 /// FIXME: deprecated, switch to the DomTreeUpdater-based one.
-BasicBlock *SplitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt, DominatorTree *DT,
-                       LoopInfo *LI = nullptr,
-                       MemorySSAUpdater *MSSAU = nullptr,
-                       const Twine &BBName = "", bool Before = false);
+LLVM_ABI BasicBlock *SplitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt,
+                                DominatorTree *DT, LoopInfo *LI = nullptr,
+                                MemorySSAUpdater *MSSAU = nullptr,
+                                const Twine &BBName = "", bool Before = false);
 inline BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt, DominatorTree *DT,
                        LoopInfo *LI = nullptr,
                        MemorySSAUpdater *MSSAU = nullptr,
@@ -299,10 +342,11 @@ inline BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt, DominatorTr
 /// Everything before \p SplitPt stays in \p Old and everything starting with \p
 /// SplitPt moves to a new block. The two blocks are joined by an unconditional
 /// branch. The new block with name \p BBName is returned.
-BasicBlock *SplitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt,
-                       DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
-                       MemorySSAUpdater *MSSAU = nullptr,
-                       const Twine &BBName = "", bool Before = false);
+LLVM_ABI BasicBlock *SplitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt,
+                                DomTreeUpdater *DTU = nullptr,
+                                LoopInfo *LI = nullptr,
+                                MemorySSAUpdater *MSSAU = nullptr,
+                                const Twine &BBName = "", bool Before = false);
 inline BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt,
                        DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
                        MemorySSAUpdater *MSSAU = nullptr,
@@ -315,9 +359,11 @@ inline BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt,
 /// instructions after \p SplitPt stay in the old block. The new block and the
 /// old block are joined by inserting an unconditional branch to the end of the
 /// new block. The new block with name \p BBName is returned.
-BasicBlock *splitBlockBefore(BasicBlock *Old, BasicBlock::iterator SplitPt,
-                             DomTreeUpdater *DTU, LoopInfo *LI,
-                             MemorySSAUpdater *MSSAU, const Twine &BBName = "");
+LLVM_ABI BasicBlock *splitBlockBefore(BasicBlock *Old,
+                                      BasicBlock::iterator SplitPt,
+                                      DomTreeUpdater *DTU, LoopInfo *LI,
+                                      MemorySSAUpdater *MSSAU,
+                                      const Twine &BBName = "");
 inline BasicBlock *splitBlockBefore(BasicBlock *Old, Instruction *SplitPt,
                              DomTreeUpdater *DTU, LoopInfo *LI,
                              MemorySSAUpdater *MSSAU, const Twine &BBName = "") {
@@ -340,11 +386,10 @@ inline BasicBlock *splitBlockBefore(BasicBlock *Old, Instruction *SplitPt,
 /// split is an exit of a loop with other exits).
 ///
 /// FIXME: deprecated, switch to the DomTreeUpdater-based one.
-BasicBlock *SplitBlockPredecessors(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
-                                   const char *Suffix, DominatorTree *DT,
-                                   LoopInfo *LI = nullptr,
-                                   MemorySSAUpdater *MSSAU = nullptr,
-                                   bool PreserveLCSSA = false);
+LLVM_ABI BasicBlock *SplitBlockPredecessors(
+    BasicBlock *BB, ArrayRef<BasicBlock *> Preds, const char *Suffix,
+    DominatorTree *DT, LoopInfo *LI = nullptr,
+    MemorySSAUpdater *MSSAU = nullptr, bool PreserveLCSSA = false);
 
 /// This method introduces at least one new basic block into the function and
 /// moves some of the predecessors of BB to be predecessors of the new block.
@@ -360,12 +405,10 @@ BasicBlock *SplitBlockPredecessors(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
 /// no other analyses. In particular, it does not preserve LoopSimplify
 /// (because it's complicated to handle the case where one of the edges being
 /// split is an exit of a loop with other exits).
-BasicBlock *SplitBlockPredecessors(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
-                                   const char *Suffix,
-                                   DomTreeUpdater *DTU = nullptr,
-                                   LoopInfo *LI = nullptr,
-                                   MemorySSAUpdater *MSSAU = nullptr,
-                                   bool PreserveLCSSA = false);
+LLVM_ABI BasicBlock *SplitBlockPredecessors(
+    BasicBlock *BB, ArrayRef<BasicBlock *> Preds, const char *Suffix,
+    DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
+    MemorySSAUpdater *MSSAU = nullptr, bool PreserveLCSSA = false);
 
 /// This method transforms the landing pad, OrigBB, by introducing two new basic
 /// blocks into the function. One of those new basic blocks gets the
@@ -378,28 +421,7 @@ BasicBlock *SplitBlockPredecessors(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
 /// no other analyses. In particular, it does not preserve LoopSimplify
 /// (because it's complicated to handle the case where one of the edges being
 /// split is an exit of a loop with other exits).
-///
-/// FIXME: deprecated, switch to the DomTreeUpdater-based one.
-void SplitLandingPadPredecessors(BasicBlock *OrigBB,
-                                 ArrayRef<BasicBlock *> Preds,
-                                 const char *Suffix, const char *Suffix2,
-                                 SmallVectorImpl<BasicBlock *> &NewBBs,
-                                 DominatorTree *DT, LoopInfo *LI = nullptr,
-                                 MemorySSAUpdater *MSSAU = nullptr,
-                                 bool PreserveLCSSA = false);
-
-/// This method transforms the landing pad, OrigBB, by introducing two new basic
-/// blocks into the function. One of those new basic blocks gets the
-/// predecessors listed in Preds. The other basic block gets the remaining
-/// predecessors of OrigBB. The landingpad instruction OrigBB is clone into both
-/// of the new basic blocks. The new blocks are given the suffixes 'Suffix1' and
-/// 'Suffix2', and are returned in the NewBBs vector.
-///
-/// This currently updates the LLVM IR, DominatorTree, LoopInfo, and LCCSA but
-/// no other analyses. In particular, it does not preserve LoopSimplify
-/// (because it's complicated to handle the case where one of the edges being
-/// split is an exit of a loop with other exits).
-void SplitLandingPadPredecessors(
+LLVM_ABI void SplitLandingPadPredecessors(
     BasicBlock *OrigBB, ArrayRef<BasicBlock *> Preds, const char *Suffix,
     const char *Suffix2, SmallVectorImpl<BasicBlock *> &NewBBs,
     DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
@@ -409,9 +431,9 @@ void SplitLandingPadPredecessors(
 /// which ends in an unconditional branch. If the return instruction returns a
 /// value defined by a PHI, propagate the right value into the return. It
 /// returns the new return instruction in the predecessor.
-ReturnInst *FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
-                                       BasicBlock *Pred,
-                                       DomTreeUpdater *DTU = nullptr);
+LLVM_ABI ReturnInst *FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
+                                                BasicBlock *Pred,
+                                                DomTreeUpdater *DTU = nullptr);
 
 /// Split the containing block at the specified instruction - everything before
 /// SplitBefore stays in the old basic block, and the rest of the instructions
@@ -434,12 +456,11 @@ ReturnInst *FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
 /// Returns the NewBasicBlock's terminator.
 ///
 /// Updates DTU and LI if given.
-Instruction *SplitBlockAndInsertIfThen(Value *Cond, BasicBlock::iterator SplitBefore,
-                                       bool Unreachable,
-                                       MDNode *BranchWeights = nullptr,
-                                       DomTreeUpdater *DTU = nullptr,
-                                       LoopInfo *LI = nullptr,
-                                       BasicBlock *ThenBlock = nullptr);
+LLVM_ABI Instruction *
+SplitBlockAndInsertIfThen(Value *Cond, BasicBlock::iterator SplitBefore,
+                          bool Unreachable, MDNode *BranchWeights = nullptr,
+                          DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
+                          BasicBlock *ThenBlock = nullptr);
 
 inline Instruction *SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
                                        bool Unreachable,
@@ -454,12 +475,11 @@ inline Instruction *SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBef
 
 /// Similar to SplitBlockAndInsertIfThen, but the inserted block is on the false
 /// path of the branch.
-Instruction *SplitBlockAndInsertIfElse(Value *Cond, BasicBlock::iterator SplitBefore,
-                                       bool Unreachable,
-                                       MDNode *BranchWeights = nullptr,
-                                       DomTreeUpdater *DTU = nullptr,
-                                       LoopInfo *LI = nullptr,
-                                       BasicBlock *ElseBlock = nullptr);
+LLVM_ABI Instruction *
+SplitBlockAndInsertIfElse(Value *Cond, BasicBlock::iterator SplitBefore,
+                          bool Unreachable, MDNode *BranchWeights = nullptr,
+                          DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
+                          BasicBlock *ElseBlock = nullptr);
 
 inline Instruction *SplitBlockAndInsertIfElse(Value *Cond, Instruction *SplitBefore,
                                        bool Unreachable,
@@ -488,13 +508,10 @@ inline Instruction *SplitBlockAndInsertIfElse(Value *Cond, Instruction *SplitBef
 ///   Tail
 ///
 /// Updates DT if given.
-void SplitBlockAndInsertIfThenElse(Value *Cond,
-                                   BasicBlock::iterator SplitBefore,
-                                   Instruction **ThenTerm,
-                                   Instruction **ElseTerm,
-                                   MDNode *BranchWeights = nullptr,
-                                   DomTreeUpdater *DTU = nullptr,
-                                   LoopInfo *LI = nullptr);
+LLVM_ABI void SplitBlockAndInsertIfThenElse(
+    Value *Cond, BasicBlock::iterator SplitBefore, Instruction **ThenTerm,
+    Instruction **ElseTerm, MDNode *BranchWeights = nullptr,
+    DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr);
 
 inline void SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
                                    Instruction **ThenTerm,
@@ -534,15 +551,11 @@ inline void SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
 /// caller must ensure that Tail is reachable from Head.
 /// Returns the newly created blocks in \p ThenBlock and \p ElseBlock.
 /// Updates DTU and LI if given.
-void SplitBlockAndInsertIfThenElse(Value *Cond,
-                                   BasicBlock::iterator SplitBefore,
-                                   BasicBlock **ThenBlock,
-                                   BasicBlock **ElseBlock,
-                                   bool UnreachableThen = false,
-                                   bool UnreachableElse = false,
-                                   MDNode *BranchWeights = nullptr,
-                                   DomTreeUpdater *DTU = nullptr,
-                                   LoopInfo *LI = nullptr);
+LLVM_ABI void SplitBlockAndInsertIfThenElse(
+    Value *Cond, BasicBlock::iterator SplitBefore, BasicBlock **ThenBlock,
+    BasicBlock **ElseBlock, bool UnreachableThen = false,
+    bool UnreachableElse = false, MDNode *BranchWeights = nullptr,
+    DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr);
 
 inline void SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
                                    BasicBlock **ThenBlock,
@@ -560,8 +573,8 @@ inline void SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
 /// that \p End is assumed > 0, and thus not checked on entry) at \p
 /// SplitBefore.  Returns the first insert point in the loop body, and the
 /// PHINode for the induction variable (i.e. "i" above).
-std::pair<Instruction*, Value*>
-SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore);
+LLVM_ABI std::pair<Instruction *, Value *>
+SplitBlockAndInsertSimpleForLoop(Value *End, BasicBlock::iterator SplitBefore);
 
 /// Utility function for performing a given action on each lane of a vector
 /// with \p EC elements.  To simplify porting legacy code, this defaults to
@@ -571,9 +584,9 @@ SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore);
 /// IRBuilder whose insert point is correctly set for instantiating the
 /// given index, and a value which is (at runtime) the index to access.
 /// This index *may* be a constant.
-void SplitBlockAndInsertForEachLane(ElementCount EC, Type *IndexTy,
-    Instruction *InsertBefore,
-    std::function<void(IRBuilderBase&, Value*)> Func);
+LLVM_ABI void SplitBlockAndInsertForEachLane(
+    ElementCount EC, Type *IndexTy, BasicBlock::iterator InsertBefore,
+    std::function<void(IRBuilderBase &, Value *)> Func);
 
 /// Utility function for performing a given action on each lane of a vector
 /// with \p EVL effective length. EVL is assumed > 0. To simplify porting legacy
@@ -583,8 +596,8 @@ void SplitBlockAndInsertForEachLane(ElementCount EC, Type *IndexTy,
 /// arguments an IRBuilder whose insert point is correctly set for instantiating
 /// the given index, and a value which is (at runtime) the index to access. This
 /// index *may* be a constant.
-void SplitBlockAndInsertForEachLane(
-    Value *End, Instruction *InsertBefore,
+LLVM_ABI void SplitBlockAndInsertForEachLane(
+    Value *End, BasicBlock::iterator InsertBefore,
     std::function<void(IRBuilderBase &, Value *)> Func);
 
 /// Check whether BB is the merge point of a if-region.
@@ -595,8 +608,8 @@ void SplitBlockAndInsertForEachLane(
 ///
 /// This does no checking to see if the true/false blocks have large or unsavory
 /// instructions in them.
-BranchInst *GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
-                           BasicBlock *&IfFalse);
+LLVM_ABI BranchInst *GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
+                                    BasicBlock *&IfFalse);
 
 // Split critical edges where the source of the edge is an indirectbr
 // instruction. This isn't always possible, but we can handle some easy cases.
@@ -619,92 +632,23 @@ BranchInst *GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
 // If BPI and BFI aren't non-null, BPI/BFI will be updated accordingly.
 // When `IgnoreBlocksWithoutPHI` is set to `true` critical edges leading to a
 // block without phi-instructions will not be split.
-bool SplitIndirectBrCriticalEdges(Function &F, bool IgnoreBlocksWithoutPHI,
-                                  BranchProbabilityInfo *BPI = nullptr,
-                                  BlockFrequencyInfo *BFI = nullptr);
-
-/// Given a set of incoming and outgoing blocks, create a "hub" such that every
-/// edge from an incoming block InBB to an outgoing block OutBB is now split
-/// into two edges, one from InBB to the hub and another from the hub to
-/// OutBB. The hub consists of a series of guard blocks, one for each outgoing
-/// block. Each guard block conditionally branches to the corresponding outgoing
-/// block, or the next guard block in the chain. These guard blocks are returned
-/// in the argument vector.
-///
-/// Since the control flow edges from InBB to OutBB have now been replaced, the
-/// function also updates any PHINodes in OutBB. For each such PHINode, the
-/// operands corresponding to incoming blocks are moved to a new PHINode in the
-/// hub, and the hub is made an operand of the original PHINode.
-///
-/// Input CFG:
-/// ----------
-///
-///                    Def
-///                     |
-///                     v
-///           In1      In2
-///            |        |
-///            |        |
-///            v        v
-///  Foo ---> Out1     Out2
-///                     |
-///                     v
-///                    Use
-///
-///
-/// Create hub: Incoming = {In1, In2}, Outgoing = {Out1, Out2}
-/// ----------------------------------------------------------
-///
-///             Def
-///              |
-///              v
-///  In1        In2          Foo
-///   |    Hub   |            |
-///   |    + - - | - - +      |
-///   |    '     v     '      V
-///   +------> Guard1 -----> Out1
-///        '     |     '
-///        '     v     '
-///        '   Guard2 -----> Out2
-///        '           '      |
-///        + - - - - - +      |
-///                           v
-///                          Use
-///
-/// Limitations:
-/// -----------
-/// 1. This assumes that all terminators in the CFG are direct branches (the
-///    "br" instruction). The presence of any other control flow such as
-///    indirectbr, switch or callbr will cause an assert.
-///
-/// 2. The updates to the PHINodes are not sufficient to restore SSA
-///    form. Consider a definition Def, its use Use, incoming block In2 and
-///    outgoing block Out2, such that:
-///    a. In2 is reachable from D or contains D.
-///    b. U is reachable from Out2 or is contained in Out2.
-///    c. U is not a PHINode if U is contained in Out2.
-///
-///    Clearly, Def dominates Out2 since the program is valid SSA. But when the
-///    hub is introduced, there is a new path through the hub along which Use is
-///    reachable from entry without passing through Def, and SSA is no longer
-///    valid. To fix this, we need to look at all the blocks post-dominated by
-///    the hub on the one hand, and dominated by Out2 on the other. This is left
-///    for the caller to accomplish, since each specific use of this function
-///    may have additional information which simplifies this fixup. For example,
-///    see restoreSSA() in the UnifyLoopExits pass.
-BasicBlock *CreateControlFlowHub(
-    DomTreeUpdater *DTU, SmallVectorImpl<BasicBlock *> &GuardBlocks,
-    const SetVector<BasicBlock *> &Predecessors,
-    const SetVector<BasicBlock *> &Successors, const StringRef Prefix,
-    std::optional<unsigned> MaxControlFlowBooleans = std::nullopt);
+LLVM_ABI bool SplitIndirectBrCriticalEdges(Function &F,
+                                           bool IgnoreBlocksWithoutPHI,
+                                           BranchProbabilityInfo *BPI = nullptr,
+                                           BlockFrequencyInfo *BFI = nullptr);
 
 // Utility function for inverting branch condition and for swapping its
 // successors
-void InvertBranch(BranchInst *PBI, IRBuilderBase &Builder);
+LLVM_ABI void InvertBranch(BranchInst *PBI, IRBuilderBase &Builder);
 
 // Check whether the function only has simple terminator:
 // br/brcond/unreachable/ret
-bool hasOnlySimpleTerminator(const Function &F);
+LLVM_ABI bool hasOnlySimpleTerminator(const Function &F);
+
+/// Print BasicBlock \p BB as an operand or print "<nullptr>" if \p BB is a
+/// nullptr.
+LLVM_ABI Printable printBasicBlock(const BasicBlock *BB);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_BASICBLOCKUTILS_H

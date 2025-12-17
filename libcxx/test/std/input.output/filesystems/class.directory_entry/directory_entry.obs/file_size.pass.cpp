@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: can-create-symlinks
+// UNSUPPORTED: c++03, c++11, c++14
 
 // The string reported on errors changed, which makes those tests fail when run
-// against already-released libc++'s.
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.15|11.0}}
+// against a built library that doesn't contain 0aa637b2037d.
+// XFAIL: using-built-library-before-llvm-13
 
 // Starting in Android N (API 24), SELinux policy prevents the shell user from
 // creating a FIFO file.
@@ -23,14 +24,14 @@
 // uintmax_t file_size() const;
 // uintmax_t file_size(error_code const&) const noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
 #include "assert_macros.h"
 #include "filesystem_test_helper.h"
-
 #include "test_macros.h"
+namespace fs = std::filesystem;
 
 static void signatures() {
   using namespace fs;

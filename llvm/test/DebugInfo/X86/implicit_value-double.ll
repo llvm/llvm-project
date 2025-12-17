@@ -2,6 +2,7 @@
 ;; for double type.
 
 ; RUN: llc -O0 -debugger-tune=gdb -filetype=obj %s -o -  | llvm-dwarfdump - | FileCheck %s --check-prefixes=CHECK,BOTH
+
 ; RUN: llc -O0 -debugger-tune=lldb -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s --check-prefixes=CHECK,BOTH
 
 ; CHECK: .debug_info contents:

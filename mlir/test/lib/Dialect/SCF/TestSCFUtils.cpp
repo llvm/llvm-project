@@ -41,7 +41,20 @@ struct TestSCFForUtilsPass
 
   void runOnOperation() override {
     func::FuncOp func = getOperation();
-    SmallVector<scf::ForOp, 4> toErase;
+
+    // Annotate every loop-like operation with the static trip count.
+    func.walk([&](LoopLikeOpInterface loopOp) {
+      std::optional<APInt> tripCount = loopOp.getStaticTripCount();
+      if (tripCount.has_value())
+        loopOp->setDiscardableAttr(
+            "test.trip-count",
+            IntegerAttr::get(IntegerType::get(&getContext(),
+                                              tripCount.value().getBitWidth()),
+                             tripCount.value().getSExtValue()));
+      else
+        loopOp->setDiscardableAttr("test.trip-count",
+                                   StringAttr::get(&getContext(), "none"));
+    });
 
     if (testReplaceWithNewYields) {
       func.walk([&](scf::ForOp forOp) {
@@ -57,7 +70,7 @@ struct TestSCFForUtilsPass
           SmallVector<Value> newYieldValues;
           for (auto yieldVal : oldYieldValues) {
             newYieldValues.push_back(
-                b.create<arith::AddFOp>(loc, yieldVal, yieldVal));
+                arith::AddFOp::create(b, loc, yieldVal, yieldVal));
           }
           return newYieldValues;
         };
@@ -78,6 +91,10 @@ struct TestSCFIfUtilsPass
   StringRef getArgument() const final { return "test-scf-if-utils"; }
   StringRef getDescription() const final { return "test scf.if utils"; }
   explicit TestSCFIfUtilsPass() = default;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<func::FuncDialect>();
+  }
 
   void runOnOperation() override {
     int count = 0;
@@ -157,13 +174,13 @@ struct TestSCFPipeliningPass
                                 Value pred) {
     Location loc = op->getLoc();
     auto ifOp =
-        rewriter.create<scf::IfOp>(loc, op->getResultTypes(), pred, true);
+        scf::IfOp::create(rewriter, loc, op->getResultTypes(), pred, true);
     // True branch.
-    op->moveBefore(&ifOp.getThenRegion().front(),
-                   ifOp.getThenRegion().front().begin());
+    rewriter.moveOpBefore(op, &ifOp.getThenRegion().front(),
+                          ifOp.getThenRegion().front().begin());
     rewriter.setInsertionPointAfter(op);
     if (op->getNumResults() > 0)
-      rewriter.create<scf::YieldOp>(loc, op->getResults());
+      scf::YieldOp::create(rewriter, loc, op->getResults());
     // False branch.
     rewriter.setInsertionPointToStart(&ifOp.getElseRegion().front());
     SmallVector<Value> elseYieldOperands;
@@ -178,12 +195,12 @@ struct TestSCFPipeliningPass
     } else {
       // Default to assuming constant numeric values.
       for (Type type : op->getResultTypes()) {
-        elseYieldOperands.push_back(rewriter.create<arith::ConstantOp>(
-            loc, rewriter.getZeroAttr(type)));
+        elseYieldOperands.push_back(arith::ConstantOp::create(
+            rewriter, loc, rewriter.getZeroAttr(type)));
       }
     }
     if (op->getNumResults() > 0)
-      rewriter.create<scf::YieldOp>(loc, elseYieldOperands);
+      scf::YieldOp::create(rewriter, loc, elseYieldOperands);
     return ifOp.getOperation();
   }
 
@@ -214,14 +231,15 @@ struct TestSCFPipeliningPass
     RewritePatternSet patterns(&getContext());
     mlir::scf::PipeliningOption options;
     options.getScheduleFn = getSchedule;
+    options.supportDynamicLoops = true;
+    options.predicateFn = predicateOp;
     if (annotatePipeline)
       options.annotateFn = annotate;
     if (noEpiloguePeeling) {
       options.peelEpilogue = false;
-      options.predicateFn = predicateOp;
     }
     scf::populateSCFLoopPipeliningPatterns(patterns, options);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
     getOperation().walk([](Operation *op) {
       // Clean up the markers.
       op->removeAttr(kTestPipeliningStageMarker);

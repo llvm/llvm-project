@@ -15,7 +15,6 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/Support/SHA1.h"
 #include <numeric>
 #include <optional>
@@ -60,11 +59,6 @@ DictionaryAttr NamedAttrList::getDictionary(MLIRContext *context) const {
   if (!dictionarySorted.getPointer())
     dictionarySorted.setPointer(DictionaryAttr::getWithSorted(context, attrs));
   return llvm::cast<DictionaryAttr>(dictionarySorted.getPointer());
-}
-
-/// Add an attribute with the specified name.
-void NamedAttrList::append(StringRef name, Attribute attr) {
-  append(StringAttr::get(attr.getContext(), name), attr);
 }
 
 /// Replaces the attributes with new list of attributes.
@@ -388,6 +382,7 @@ MutableArrayRef<OpOperand> detail::OperandStorage::resize(Operation *owner,
 
 //===----------------------------------------------------------------------===//
 // OperandRange
+//===----------------------------------------------------------------------===//
 
 unsigned OperandRange::getBeginOperandIndex() const {
   assert(!empty() && "range must not be empty");
@@ -400,6 +395,7 @@ OperandRangeRange OperandRange::split(DenseI32ArrayAttr segmentSizes) const {
 
 //===----------------------------------------------------------------------===//
 // OperandRangeRange
+//===----------------------------------------------------------------------===//
 
 OperandRangeRange::OperandRangeRange(OperandRange operands,
                                      Attribute operandSegments)
@@ -410,20 +406,19 @@ OperandRangeRange::OperandRangeRange(OperandRange operands,
 OperandRange OperandRangeRange::join() const {
   const OwnerT &owner = getBase();
   ArrayRef<int32_t> sizeData = llvm::cast<DenseI32ArrayAttr>(owner.second);
-  return OperandRange(owner.first,
-                      std::accumulate(sizeData.begin(), sizeData.end(), 0));
+  return OperandRange(owner.first, llvm::sum_of(sizeData));
 }
 
 OperandRange OperandRangeRange::dereference(const OwnerT &object,
                                             ptrdiff_t index) {
   ArrayRef<int32_t> sizeData = llvm::cast<DenseI32ArrayAttr>(object.second);
-  uint32_t startIndex =
-      std::accumulate(sizeData.begin(), sizeData.begin() + index, 0);
+  uint32_t startIndex = llvm::sum_of(sizeData.take_front(index));
   return OperandRange(object.first + startIndex, *(sizeData.begin() + index));
 }
 
 //===----------------------------------------------------------------------===//
 // MutableOperandRange
+//===----------------------------------------------------------------------===//
 
 /// Construct a new mutable range from the given operand, operand start index,
 /// and range length.
@@ -431,7 +426,7 @@ MutableOperandRange::MutableOperandRange(
     Operation *owner, unsigned start, unsigned length,
     ArrayRef<OperandSegment> operandSegments)
     : owner(owner), start(start), length(length),
-      operandSegments(operandSegments.begin(), operandSegments.end()) {
+      operandSegments(operandSegments) {
   assert((start + length) <= owner->getNumOperands() && "invalid range");
 }
 MutableOperandRange::MutableOperandRange(Operation *owner)
@@ -497,9 +492,14 @@ void MutableOperandRange::clear() {
   }
 }
 
+/// Explicit conversion to an OperandRange.
+OperandRange MutableOperandRange::getAsOperandRange() const {
+  return owner->getOperands().slice(start, length);
+}
+
 /// Allow implicit conversion to an OperandRange.
 MutableOperandRange::operator OperandRange() const {
-  return owner->getOperands().slice(start, length);
+  return getAsOperandRange();
 }
 
 MutableOperandRange::operator MutableArrayRef<OpOperand>() const {
@@ -542,6 +542,7 @@ MutableArrayRef<OpOperand>::iterator MutableOperandRange::end() const {
 
 //===----------------------------------------------------------------------===//
 // MutableOperandRangeRange
+//===----------------------------------------------------------------------===//
 
 MutableOperandRangeRange::MutableOperandRangeRange(
     const MutableOperandRange &operands, NamedAttribute operandSegmentAttr)
@@ -562,8 +563,7 @@ MutableOperandRange MutableOperandRangeRange::dereference(const OwnerT &object,
                                                           ptrdiff_t index) {
   ArrayRef<int32_t> sizeData =
       llvm::cast<DenseI32ArrayAttr>(object.second.getValue());
-  uint32_t startIndex =
-      std::accumulate(sizeData.begin(), sizeData.begin() + index, 0);
+  uint32_t startIndex = llvm::sum_of(sizeData.take_front(index));
   return object.first.slice(
       startIndex, *(sizeData.begin() + index),
       MutableOperandRange::OperandSegment(index, object.second));
@@ -571,6 +571,7 @@ MutableOperandRange MutableOperandRangeRange::dereference(const OwnerT &object,
 
 //===----------------------------------------------------------------------===//
 // ResultRange
+//===----------------------------------------------------------------------===//
 
 ResultRange::ResultRange(OpResult result)
     : ResultRange(static_cast<detail::OpResultImpl *>(Value(result).getImpl()),
@@ -637,6 +638,7 @@ void ResultRange::replaceUsesWithIf(
 
 //===----------------------------------------------------------------------===//
 // ValueRange
+//===----------------------------------------------------------------------===//
 
 ValueRange::ValueRange(ArrayRef<Value> values)
     : ValueRange(values.data(), values.size()) {}
@@ -652,7 +654,7 @@ ValueRange::OwnerT ValueRange::offset_base(const OwnerT &owner,
     return {value + index};
   if (auto *operand = llvm::dyn_cast_if_present<OpOperand *>(owner))
     return {operand + index};
-  return owner.get<detail::OpResultImpl *>()->getNextResultAtOffset(index);
+  return cast<detail::OpResultImpl *>(owner)->getNextResultAtOffset(index);
 }
 /// See `llvm::detail::indexed_accessor_range_base` for details.
 Value ValueRange::dereference_iterator(const OwnerT &owner, ptrdiff_t index) {
@@ -660,7 +662,7 @@ Value ValueRange::dereference_iterator(const OwnerT &owner, ptrdiff_t index) {
     return value[index];
   if (auto *operand = llvm::dyn_cast_if_present<OpOperand *>(owner))
     return operand[index].get();
-  return owner.get<detail::OpResultImpl *>()->getNextResultAtOffset(index);
+  return cast<detail::OpResultImpl *>(owner)->getNextResultAtOffset(index);
 }
 
 //===----------------------------------------------------------------------===//
@@ -674,17 +676,29 @@ llvm::hash_code OperationEquivalence::computeHash(
   //   - Operation Name
   //   - Attributes
   //   - Result Types
+  DictionaryAttr dictAttrs;
+  if (!(flags & Flags::IgnoreDiscardableAttrs))
+    dictAttrs = op->getRawDictionaryAttrs();
   llvm::hash_code hash =
-      llvm::hash_combine(op->getName(), op->getDiscardableAttrDictionary(),
-                         op->getResultTypes(), op->hashProperties());
+      llvm::hash_combine(op->getName(), dictAttrs, op->getResultTypes());
+  if (!(flags & Flags::IgnoreProperties))
+    hash = llvm::hash_combine(hash, op->hashProperties());
 
   //   - Location if required
   if (!(flags & Flags::IgnoreLocations))
     hash = llvm::hash_combine(hash, op->getLoc());
 
   //   - Operands
-  for (Value operand : op->getOperands())
-    hash = llvm::hash_combine(hash, hashOperands(operand));
+  if (op->hasTrait<mlir::OpTrait::IsCommutative>() &&
+      op->getNumOperands() > 0) {
+    size_t operandHash = hashOperands(op->getOperand(0));
+    for (auto operand : op->getOperands().drop_front())
+      operandHash += hashOperands(operand);
+    hash = llvm::hash_combine(hash, operandHash);
+  } else {
+    for (Value operand : op->getOperands())
+      hash = llvm::hash_combine(hash, hashOperands(operand));
+  }
 
   //   - Results
   for (Value result : op->getResults())
@@ -696,7 +710,9 @@ llvm::hash_code OperationEquivalence::computeHash(
     Region *lhs, Region *rhs,
     function_ref<LogicalResult(Value, Value)> checkEquivalent,
     function_ref<void(Value, Value)> markEquivalent,
-    OperationEquivalence::Flags flags) {
+    OperationEquivalence::Flags flags,
+    function_ref<LogicalResult(ValueRange, ValueRange)>
+        checkCommutativeEquivalent) {
   DenseMap<Block *, Block *> blocksMap;
   auto blocksEquivalent = [&](Block &lBlock, Block &rBlock) {
     // Check block arguments.
@@ -725,7 +741,8 @@ llvm::hash_code OperationEquivalence::computeHash(
     auto opsEquivalent = [&](Operation &lOp, Operation &rOp) {
       // Check for op equality (recursively).
       if (!OperationEquivalence::isEquivalentTo(&lOp, &rOp, checkEquivalent,
-                                                markEquivalent, flags))
+                                                markEquivalent, flags,
+                                                checkCommutativeEquivalent))
         return false;
       // Check successor mapping.
       for (auto successorsPair :
@@ -751,6 +768,36 @@ struct ValueEquivalenceCache {
     return success(lhsValue == rhsValue ||
                    equivalentValues.lookup(lhsValue) == rhsValue);
   }
+  LogicalResult checkCommutativeEquivalent(ValueRange lhsRange,
+                                           ValueRange rhsRange) {
+    // Handle simple case where sizes mismatch.
+    if (lhsRange.size() != rhsRange.size())
+      return failure();
+
+    // Handle where operands in order are equivalent.
+    auto lhsIt = lhsRange.begin();
+    auto rhsIt = rhsRange.begin();
+    for (; lhsIt != lhsRange.end(); ++lhsIt, ++rhsIt) {
+      if (failed(checkEquivalent(*lhsIt, *rhsIt)))
+        break;
+    }
+    if (lhsIt == lhsRange.end())
+      return success();
+
+    // Handle another simple case where operands are just a permutation.
+    // Note: This is not sufficient, this handles simple cases relatively
+    // cheaply.
+    auto sortValues = [](ValueRange values) {
+      SmallVector<Value> sortedValues = llvm::to_vector(values);
+      llvm::sort(sortedValues, [](Value a, Value b) {
+        return a.getAsOpaquePointer() < b.getAsOpaquePointer();
+      });
+      return sortedValues;
+    };
+    auto lhsSorted = sortValues({lhsIt, lhsRange.end()});
+    auto rhsSorted = sortValues({rhsIt, rhsRange.end()});
+    return success(lhsSorted == rhsSorted);
+  }
   void markEquivalent(Value lhsResult, Value rhsResult) {
     auto insertion = equivalentValues.insert({lhsResult, rhsResult});
     // Make sure that the value was not already marked equivalent to some other
@@ -773,40 +820,58 @@ OperationEquivalence::isRegionEquivalentTo(Region *lhs, Region *rhs,
       [&](Value lhsResult, Value rhsResult) {
         cache.markEquivalent(lhsResult, rhsResult);
       },
-      flags);
+      flags,
+      [&](ValueRange lhs, ValueRange rhs) -> LogicalResult {
+        return cache.checkCommutativeEquivalent(lhs, rhs);
+      });
 }
 
 /*static*/ bool OperationEquivalence::isEquivalentTo(
     Operation *lhs, Operation *rhs,
     function_ref<LogicalResult(Value, Value)> checkEquivalent,
-    function_ref<void(Value, Value)> markEquivalent, Flags flags) {
+    function_ref<void(Value, Value)> markEquivalent, Flags flags,
+    function_ref<LogicalResult(ValueRange, ValueRange)>
+        checkCommutativeEquivalent) {
   if (lhs == rhs)
     return true;
 
   // 1. Compare the operation properties.
+  if (!(flags & IgnoreDiscardableAttrs) &&
+      lhs->getRawDictionaryAttrs() != rhs->getRawDictionaryAttrs())
+    return false;
+
   if (lhs->getName() != rhs->getName() ||
-      lhs->getDiscardableAttrDictionary() !=
-          rhs->getDiscardableAttrDictionary() ||
       lhs->getNumRegions() != rhs->getNumRegions() ||
       lhs->getNumSuccessors() != rhs->getNumSuccessors() ||
       lhs->getNumOperands() != rhs->getNumOperands() ||
-      lhs->getNumResults() != rhs->getNumResults() ||
-      !lhs->getName().compareOpProperties(lhs->getPropertiesStorage(),
-                                        rhs->getPropertiesStorage()))
+      lhs->getNumResults() != rhs->getNumResults())
+    return false;
+  if (!(flags & IgnoreProperties) &&
+      !(lhs->getName().compareOpProperties(lhs->getPropertiesStorage(),
+                                           rhs->getPropertiesStorage())))
     return false;
   if (!(flags & IgnoreLocations) && lhs->getLoc() != rhs->getLoc())
     return false;
 
   // 2. Compare operands.
-  for (auto operandPair : llvm::zip(lhs->getOperands(), rhs->getOperands())) {
-    Value curArg = std::get<0>(operandPair);
-    Value otherArg = std::get<1>(operandPair);
-    if (curArg == otherArg)
-      continue;
-    if (curArg.getType() != otherArg.getType())
+  if (checkCommutativeEquivalent &&
+      lhs->hasTrait<mlir::OpTrait::IsCommutative>()) {
+    auto lhsRange = lhs->getOperands();
+    auto rhsRange = rhs->getOperands();
+    if (failed(checkCommutativeEquivalent(lhsRange, rhsRange)))
       return false;
-    if (failed(checkEquivalent(curArg, otherArg)))
-      return false;
+  } else {
+    // Check pair wise for equivalence.
+    for (auto operandPair : llvm::zip(lhs->getOperands(), rhs->getOperands())) {
+      Value curArg = std::get<0>(operandPair);
+      Value otherArg = std::get<1>(operandPair);
+      if (curArg == otherArg)
+        continue;
+      if (curArg.getType() != otherArg.getType())
+        return false;
+      if (failed(checkEquivalent(curArg, otherArg)))
+        return false;
+    }
   }
 
   // 3. Compare result types and mark results as equivalent.
@@ -841,7 +906,10 @@ OperationEquivalence::isRegionEquivalentTo(Region *lhs, Region *rhs,
       [&](Value lhsResult, Value rhsResult) {
         cache.markEquivalent(lhsResult, rhsResult);
       },
-      flags);
+      flags,
+      [&](ValueRange lhs, ValueRange rhs) -> LogicalResult {
+        return cache.checkCommutativeEquivalent(lhs, rhs);
+      });
 }
 
 //===----------------------------------------------------------------------===//
@@ -854,18 +922,19 @@ static void addDataToHash(llvm::SHA1 &hasher, const T &data) {
       ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&data), sizeof(T)));
 }
 
-OperationFingerPrint::OperationFingerPrint(Operation *topOp) {
+OperationFingerPrint::OperationFingerPrint(Operation *topOp,
+                                           bool includeNested) {
   llvm::SHA1 hasher;
 
-  // Hash each of the operations based upon their mutable bits:
-  topOp->walk([&](Operation *op) {
+  // Helper function that hashes an operation based on its mutable bits:
+  auto addOperationToHash = [&](Operation *op) {
     //   - Operation pointer
     addDataToHash(hasher, op);
     //   - Parent operation pointer (to take into account the nesting structure)
     if (op != topOp)
       addDataToHash(hasher, op->getParentOp());
     //   - Attributes
-    addDataToHash(hasher, op->getDiscardableAttrDictionary());
+    addDataToHash(hasher, op->getRawDictionaryAttrs());
     //   - Properties
     addDataToHash(hasher, op->hashProperties());
     //   - Blocks in Regions
@@ -887,6 +956,12 @@ OperationFingerPrint::OperationFingerPrint(Operation *topOp) {
     //   - Result types
     for (Type t : op->getResultTypes())
       addDataToHash(hasher, t);
-  });
+  };
+
+  if (includeNested)
+    topOp->walk(addOperationToHash);
+  else
+    addOperationToHash(topOp);
+
   hash = hasher.result();
 }

@@ -17,7 +17,7 @@ void noescapeFunc4(__attribute__((noescape)) int &);
 void noescapeFunc2(int *); // expected-error {{conflicting types for 'noescapeFunc2'}}
 
 template <class T>
-void noescapeFunc5(__attribute__((noescape)) T); // expected-warning {{'noescape' attribute only applies to pointer arguments}}
+void noescapeFunc5(__attribute__((noescape)) T);
 template <class T>
 void noescapeFunc6(__attribute__((noescape)) const T &);
 template <class T>
@@ -77,12 +77,11 @@ void func0(int *);
 void (*fnptr0)(int *);
 void (*fnptr1)(__attribute__((noescape)) int *);
 template<void (*fn)(int*)> struct S4 {};
-template<void (*fn)(int* __attribute__((noescape)))> struct S5 {};
-
 #if __cplusplus < 201406
-  // expected-note@-4 {{template parameter is declared here}}
-  // expected-note@-4 {{template parameter is declared here}}
+// expected-note@-2 {{template parameter is declared here}}
 #endif
+template<void (*fn)(int* __attribute__((noescape)))> struct S5 {};
+// expected-note@-1 {{template parameter is declared here}}
 
 void test0() {
   fnptr0 = &func0;
@@ -144,7 +143,7 @@ __attribute__((objc_root_class))
 
 struct S6 {
   S6();
-  S6(const S6 &) = delete; // expected-note 12 {{'S6' has been explicitly marked deleted here}}
+  S6(const S6 &) = delete; // expected-note 11 {{'S6' has been explicitly marked deleted here}}
   int f;
 };
 
@@ -161,7 +160,7 @@ void test1(C0 *c0) {
   __block S6 b6; // expected-error {{call to deleted constructor of 'S6'}}
   __block S6 b7; // expected-error {{call to deleted constructor of 'S6'}}
   __block S6 b8; // expected-error {{call to deleted constructor of 'S6'}}
-  __block S6 b9; // expected-error {{call to deleted constructor of 'S6'}}
+  __block S6 b9;
   __block S6 b10; // expected-error {{call to deleted constructor of 'S6'}}
   __block S6 b11; // expected-error {{call to deleted constructor of 'S6'}}
   __block S6 b12;
@@ -199,7 +198,6 @@ void test1(C0 *c0) {
     (void)b8;
   });
 
-  // FIXME: clang shouldn't reject this.
   noescapeFunc5(^{
     (void)b9;
   });

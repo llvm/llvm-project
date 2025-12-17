@@ -15,6 +15,7 @@
 #define LLVM_CLANG_BASIC_OPENMPKINDS_H
 
 #include "clang/Basic/LangOptions.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
@@ -106,6 +107,13 @@ enum OpenMPDistScheduleClauseKind {
   OMPC_DIST_SCHEDULE_unknown
 };
 
+/// OpenMP variable-category for 'default' clause.
+enum OpenMPDefaultClauseVariableCategory {
+#define OPENMP_DEFAULT_VARIABLE_CATEGORY(Name) OMPC_DEFAULT_VC_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DEFAULT_VC_unknown
+};
+
 /// OpenMP attributes for 'defaultmap' clause.
 enum OpenMPDefaultmapClauseKind {
 #define OPENMP_DEFAULTMAP_KIND(Name) \
@@ -189,11 +197,25 @@ enum OpenMPReductionClauseModifier {
   OMPC_REDUCTION_unknown,
 };
 
+/// OpenMP 6.0 original sharing modifiers
+enum OpenMPOriginalSharingModifier {
+#define OPENMP_ORIGINAL_SHARING_MODIFIER(Name) OMPC_ORIGINAL_SHARING_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_ORIGINAL_SHARING_unknown,
+};
+
 /// OpenMP adjust-op kinds for 'adjust_args' clause.
 enum OpenMPAdjustArgsOpKind {
 #define OPENMP_ADJUST_ARGS_KIND(Name) OMPC_ADJUST_ARGS_##Name,
 #include "clang/Basic/OpenMPKinds.def"
   OMPC_ADJUST_ARGS_unknown,
+};
+
+/// OpenMP 6.1 need_device modifier
+enum OpenMPNeedDevicePtrModifier {
+#define OPENMP_NEED_DEVICE_PTR_KIND(Name) OMPC_NEED_DEVICE_PTR_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_NEED_DEVICE_PTR_unknown,
 };
 
 /// OpenMP bindings for the 'bind' clause.
@@ -209,10 +231,30 @@ enum OpenMPGrainsizeClauseModifier {
   OMPC_GRAINSIZE_unknown
 };
 
+enum OpenMPDynGroupprivateClauseModifier {
+#define OPENMP_DYN_GROUPPRIVATE_MODIFIER(Name) OMPC_DYN_GROUPPRIVATE_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DYN_GROUPPRIVATE_unknown
+};
+
+enum OpenMPDynGroupprivateClauseFallbackModifier {
+  OMPC_DYN_GROUPPRIVATE_FALLBACK_unknown = OMPC_DYN_GROUPPRIVATE_unknown,
+#define OPENMP_DYN_GROUPPRIVATE_FALLBACK_MODIFIER(Name)                        \
+  OMPC_DYN_GROUPPRIVATE_FALLBACK_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DYN_GROUPPRIVATE_FALLBACK_last
+};
+
 enum OpenMPNumTasksClauseModifier {
 #define OPENMP_NUMTASKS_MODIFIER(Name) OMPC_NUMTASKS_##Name,
 #include "clang/Basic/OpenMPKinds.def"
   OMPC_NUMTASKS_unknown
+};
+
+enum OpenMPNumThreadsClauseModifier {
+#define OPENMP_NUMTHREADS_MODIFIER(Name) OMPC_NUMTHREADS_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_NUMTHREADS_unknown
 };
 
 /// OpenMP dependence types for 'doacross' clause.
@@ -221,6 +263,24 @@ enum OpenMPDoacrossClauseModifier {
 #include "clang/Basic/OpenMPKinds.def"
   OMPC_DOACROSS_unknown
 };
+
+/// OpenMP modifiers for 'allocate' clause.
+enum OpenMPAllocateClauseModifier {
+#define OPENMP_ALLOCATE_MODIFIER(Name) OMPC_ALLOCATE_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_ALLOCATE_unknown
+};
+
+/// OpenMP modifiers for 'threadset' clause.
+enum OpenMPThreadsetKind {
+#define OPENMP_THREADSET_KIND(Name) OMPC_THREADSET_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_THREADSET_unknown
+};
+
+/// Number of allowed allocate-modifiers.
+static constexpr unsigned NumberOfOMPAllocateClauseModifiers =
+    OMPC_ALLOCATE_unknown;
 
 /// Contains 'interop' data for 'append_args' and 'init' clauses.
 class Expr;
@@ -231,6 +291,10 @@ struct OMPInteropInfo final {
   bool IsTargetSync;
   llvm::SmallVector<Expr *, 4> PreferTypes;
 };
+
+OpenMPDefaultClauseVariableCategory
+getOpenMPDefaultVariableCategory(StringRef Str, const LangOptions &LangOpts);
+const char *getOpenMPDefaultVariableCategoryName(unsigned VC);
 
 unsigned getOpenMPSimpleClauseType(OpenMPClauseKind Kind, llvm::StringRef Str,
                                    const LangOptions &LangOpts);
@@ -275,6 +339,14 @@ bool isOpenMPTargetExecutionDirective(OpenMPDirectiveKind DKind);
 /// 'omp target exit data'
 /// otherwise - false.
 bool isOpenMPTargetDataManagementDirective(OpenMPDirectiveKind DKind);
+
+/// Checks if the specified directive is a map-entering target directive.
+/// \param DKind Specified directive.
+/// \return true - the directive is a map-entering target directive like
+/// 'omp target', 'omp target data', 'omp target enter data',
+/// 'omp target parallel', etc. (excludes 'omp target exit data', 'omp target
+/// update') otherwise - false.
+bool isOpenMPTargetMapEnteringDirective(OpenMPDirectiveKind DKind);
 
 /// Checks if the specified composite/combined directive constitutes a teams
 /// directive in the outermost nest.  For example
@@ -340,6 +412,20 @@ bool isOpenMPTaskingDirective(OpenMPDirectiveKind Kind);
 /// functions
 bool isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind);
 
+/// Checks if the specified directive is a loop transformation directive that
+/// applies to a canonical loop nest.
+/// \param DKind Specified directive.
+/// \return True iff the directive is a loop transformation.
+bool isOpenMPCanonicalLoopNestTransformationDirective(
+    OpenMPDirectiveKind DKind);
+
+/// Checks if the specified directive is a loop transformation directive that
+/// applies to a canonical loop sequence.
+/// \param DKind Specified directive.
+/// \return True iff the directive is a loop transformation.
+bool isOpenMPCanonicalLoopSequenceTransformationDirective(
+    OpenMPDirectiveKind DKind);
+
 /// Checks if the specified directive is a loop transformation directive.
 /// \param DKind Specified directive.
 /// \return True iff the directive is a loop transformation.
@@ -363,7 +449,45 @@ bool isOpenMPCombinedParallelADirective(OpenMPDirectiveKind DKind);
 /// \return true - if the above condition is met for this directive
 /// otherwise - false.
 bool needsTaskBasedThreadLimit(OpenMPDirectiveKind DKind);
+
+/// Checks if the parameter to the fail clause in "#pragma atomic compare fail"
+/// is restricted only to memory order clauses of "OMPC_acquire",
+/// "OMPC_relaxed" and "OMPC_seq_cst".
+bool checkFailClauseParameter(OpenMPClauseKind FailClauseParameter);
+
+/// Checks if the specified directive is considered as "executable". This
+/// combines the OpenMP categories of "executable" and "subsidiary", plus
+/// any other directives that should be treated as executable.
+/// \param DKind Specified directive.
+/// \return true - if the above condition is met for this directive
+/// otherwise - false.
+bool isOpenMPExecutableDirective(OpenMPDirectiveKind DKind);
+
+/// Checks if the specified directive is considered as "informational".
+/// \param DKind Specified directive.
+/// \return true if it is an informational directive, false otherwise.
+bool isOpenMPInformationalDirective(OpenMPDirectiveKind DKind);
+
+/// Checks if the specified directive can capture variables.
+/// \param DKind Specified directive.
+/// \return true - if the above condition is met for this directive
+/// otherwise - false.
+bool isOpenMPCapturingDirective(OpenMPDirectiveKind DKind);
+
+/// Checks if the specified directive is an order concurrent nestable
+/// directive that can be nested within region corresponding to construct
+/// on which order clause was specified with concurrent as ordering argument.
+/// \param DKind Specified directive.
+/// \param LangOpts Used for getting the OpenMP version.
+/// \return true - if the above condition is met for this directive
+/// otherwise - false.
+bool isOpenMPOrderConcurrentNestableDirective(OpenMPDirectiveKind DKind,
+                                              const LangOptions &LangOpts);
 }
 
+template <>
+struct llvm::enum_iteration_traits<clang::OpenMPDefaultmapClauseKind> {
+  static constexpr bool is_iterable = true;
+};
 #endif
 

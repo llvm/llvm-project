@@ -42,53 +42,103 @@ template <class>
 struct OperandTraits;
 
 class User : public Value {
-  template <unsigned>
   friend struct HungoffOperandTraits;
+  template <class ConstantClass> friend struct ConstantAggrKeyType;
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE static void *
   allocateFixedOperandUser(size_t, unsigned, unsigned);
 
 protected:
+  // Disable the default operator new, as all subclasses must use one of the
+  // custom operators below depending on how they store their operands.
+  void *operator new(size_t Size) = delete;
+
+  /// Indicates this User has operands "hung off" in another allocation.
+  struct HungOffOperandsAllocMarker {};
+
+  /// Indicates this User has operands co-allocated.
+  struct IntrusiveOperandsAllocMarker {
+    /// The number of operands for this User.
+    const unsigned NumOps;
+  };
+
+  /// Indicates this User has operands and a descriptor co-allocated .
+  struct IntrusiveOperandsAndDescriptorAllocMarker {
+    /// The number of operands for this User.
+    const unsigned NumOps;
+    /// The number of bytes to allocate for the descriptor. Must be divisible by
+    /// `sizeof(void *)`.
+    const unsigned DescBytes;
+  };
+
+  /// Information about how a User object was allocated, to be passed into the
+  /// User constructor.
+  ///
+  /// DO NOT USE DIRECTLY. Use one of the `AllocMarker` structs instead, they
+  /// call all be implicitly converted to `AllocInfo`.
+  struct AllocInfo {
+  public:
+    const unsigned NumOps : NumUserOperandsBits;
+    LLVM_PREFERRED_TYPE(bool)
+    const unsigned HasHungOffUses : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    const unsigned HasDescriptor : 1;
+
+    AllocInfo() = delete;
+
+    constexpr AllocInfo(const HungOffOperandsAllocMarker)
+        : NumOps(0), HasHungOffUses(true), HasDescriptor(false) {}
+
+    constexpr AllocInfo(const IntrusiveOperandsAllocMarker Alloc)
+        : NumOps(Alloc.NumOps), HasHungOffUses(false), HasDescriptor(false) {}
+
+    constexpr AllocInfo(const IntrusiveOperandsAndDescriptorAllocMarker Alloc)
+        : NumOps(Alloc.NumOps), HasHungOffUses(false),
+          HasDescriptor(Alloc.DescBytes != 0) {}
+  };
+
   /// Allocate a User with an operand pointer co-allocated.
   ///
   /// This is used for subclasses which need to allocate a variable number
   /// of operands, ie, 'hung off uses'.
-  void *operator new(size_t Size);
+  LLVM_ABI void *operator new(size_t Size, HungOffOperandsAllocMarker);
 
   /// Allocate a User with the operands co-allocated.
   ///
   /// This is used for subclasses which have a fixed number of operands.
-  void *operator new(size_t Size, unsigned Us);
+  LLVM_ABI void *operator new(size_t Size,
+                              IntrusiveOperandsAllocMarker allocTrait);
 
   /// Allocate a User with the operands co-allocated.  If DescBytes is non-zero
   /// then allocate an additional DescBytes bytes before the operands. These
   /// bytes can be accessed by calling getDescriptor.
-  ///
-  /// DescBytes needs to be divisible by sizeof(void *).  The allocated
-  /// descriptor, if any, is aligned to sizeof(void *) bytes.
-  ///
-  /// This is used for subclasses which have a fixed number of operands.
-  void *operator new(size_t Size, unsigned Us, unsigned DescBytes);
+  LLVM_ABI void *
+  operator new(size_t Size,
+               IntrusiveOperandsAndDescriptorAllocMarker allocTrait);
 
-  User(Type *ty, unsigned vty, Use *, unsigned NumOps)
-      : Value(ty, vty) {
-    assert(NumOps < (1u << NumUserOperandsBits) && "Too many operands");
-    NumUserOperands = NumOps;
+  User(Type *ty, unsigned vty, AllocInfo AllocInfo) : Value(ty, vty) {
+    assert(AllocInfo.NumOps < (1u << NumUserOperandsBits) &&
+           "Too many operands");
+    NumUserOperands = AllocInfo.NumOps;
+    assert((!AllocInfo.HasDescriptor || !AllocInfo.HasHungOffUses) &&
+           "Cannot have both hung off uses and a descriptor");
+    HasHungOffUses = AllocInfo.HasHungOffUses;
+    HasDescriptor = AllocInfo.HasDescriptor;
     // If we have hung off uses, then the operand list should initially be
     // null.
-    assert((!HasHungOffUses || !getOperandList()) &&
+    assert((!AllocInfo.HasHungOffUses || !getOperandList()) &&
            "Error in initializing hung off uses for User");
   }
 
   /// Allocate the array of Uses, followed by a pointer
   /// (with bottom bit set) to the User.
-  /// \param IsPhi identifies callers which are phi nodes and which need
-  /// N BasicBlock* allocated along with N
-  void allocHungoffUses(unsigned N, bool IsPhi = false);
+  /// \param WithExtraValues identifies callers which need N Value* allocated
+  /// along the N operands.
+  LLVM_ABI void allocHungoffUses(unsigned N, bool WithExtraValues = false);
 
   /// Grow the number of hung off uses.  Note that allocHungoffUses
   /// should be called if there are no uses.
-  void growHungoffUses(unsigned N, bool IsPhi = false);
+  LLVM_ABI void growHungoffUses(unsigned N, bool WithExtraValues = false);
 
 protected:
   ~User() = default; // Use deleteValue() to delete a generic Instruction.
@@ -97,9 +147,22 @@ public:
   User(const User &) = delete;
 
   /// Free memory allocated for User and Use objects.
-  void operator delete(void *Usr);
+  LLVM_ABI void operator delete(void *Usr);
   /// Placement delete - required by std, called if the ctor throws.
-  void operator delete(void *Usr, unsigned) {
+  void operator delete(void *Usr, HungOffOperandsAllocMarker) {
+    // Note: If a subclass manipulates the information which is required to
+    // calculate the Usr memory pointer, e.g. NumUserOperands, the operator
+    // delete of that subclass has to restore the changed information to the
+    // original value, since the dtor of that class is not called if the ctor
+    // fails.
+    User::operator delete(Usr);
+
+#ifndef LLVM_ENABLE_EXCEPTIONS
+    llvm_unreachable("Constructor throws?");
+#endif
+  }
+  /// Placement delete - required by std, called if the ctor throws.
+  void operator delete(void *Usr, IntrusiveOperandsAllocMarker) {
     // Note: If a subclass manipulates the information which is required to calculate the
     // Usr memory pointer, e.g. NumUserOperands, the operator delete of that subclass has
     // to restore the changed information to the original value, since the dtor of that class
@@ -111,7 +174,7 @@ public:
 #endif
   }
   /// Placement delete - required by std, called if the ctor throws.
-  void operator delete(void *Usr, unsigned, unsigned) {
+  void operator delete(void *Usr, IntrusiveOperandsAndDescriptorAllocMarker) {
     // Note: If a subclass manipulates the information which is required to calculate the
     // Usr memory pointer, e.g. NumUserOperands, the operator delete of that subclass has
     // to restore the changed information to the original value, since the dtor of that class
@@ -191,23 +254,10 @@ public:
   unsigned getNumOperands() const { return NumUserOperands; }
 
   /// Returns the descriptor co-allocated with this User instance.
-  ArrayRef<const uint8_t> getDescriptor() const;
+  LLVM_ABI ArrayRef<const uint8_t> getDescriptor() const;
 
   /// Returns the descriptor co-allocated with this User instance.
-  MutableArrayRef<uint8_t> getDescriptor();
-
-  /// Set the number of operands on a GlobalVariable.
-  ///
-  /// GlobalVariable always allocates space for a single operands, but
-  /// doesn't always use it.
-  ///
-  /// FIXME: As that the number of operands is used to find the start of
-  /// the allocated memory in operator delete, we need to always think we have
-  /// 1 operand before delete.
-  void setGlobalVariableNumOperands(unsigned NumOps) {
-    assert(NumOps <= 1 && "GlobalVariable can only have 0 or 1 operands");
-    NumUserOperands = NumOps;
-  }
+  LLVM_ABI MutableArrayRef<uint8_t> getDescriptor();
 
   /// Subclasses with hung off uses need to manage the operand count
   /// themselves.  In these instances, the operand count isn't used to find the
@@ -221,7 +271,7 @@ public:
   /// A droppable user is a user for which uses can be dropped without affecting
   /// correctness and should be dropped rather than preventing a transformation
   /// from happening.
-  bool isDroppable() const;
+  LLVM_ABI bool isDroppable() const;
 
   // ---------------------------------------------------------------------------
   // Operand Iterator interface...
@@ -305,7 +355,7 @@ public:
   ///
   /// Replaces all references to the "From" definition with references to the
   /// "To" definition. Returns whether any uses were replaced.
-  bool replaceUsesOfWith(Value *From, Value *To);
+  LLVM_ABI bool replaceUsesOfWith(Value *From, Value *To);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {

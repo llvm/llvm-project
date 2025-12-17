@@ -14,8 +14,8 @@
 
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "RecordStreamer.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
@@ -41,7 +41,6 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -68,26 +67,30 @@ void ModuleSymbolTable::addModule(Module *M) {
 static void
 initializeRecordStreamer(const Module &M,
                          function_ref<void(RecordStreamer &)> Init) {
+  // This function may be called twice, once for ModuleSummaryIndexAnalysis and
+  // the other when writing the IR symbol table. If parsing inline assembly has
+  // caused errors in the first run, suppress the second run.
+  if (M.getContext().getDiagHandlerPtr()->HasErrors)
+    return;
   StringRef InlineAsm = M.getModuleInlineAsm();
   if (InlineAsm.empty())
     return;
 
   std::string Err;
   const Triple TT(M.getTargetTriple());
-  const Target *T = TargetRegistry::lookupTarget(TT.str(), Err);
+  const Target *T = TargetRegistry::lookupTarget(TT, Err);
   assert(T && T->hasMCAsmParser());
 
-  std::unique_ptr<MCRegisterInfo> MRI(T->createMCRegInfo(TT.str()));
+  std::unique_ptr<MCRegisterInfo> MRI(T->createMCRegInfo(TT));
   if (!MRI)
     return;
 
   MCTargetOptions MCOptions;
-  std::unique_ptr<MCAsmInfo> MAI(T->createMCAsmInfo(*MRI, TT.str(), MCOptions));
+  std::unique_ptr<MCAsmInfo> MAI(T->createMCAsmInfo(*MRI, TT, MCOptions));
   if (!MAI)
     return;
 
-  std::unique_ptr<MCSubtargetInfo> STI(
-      T->createMCSubtargetInfo(TT.str(), "", ""));
+  std::unique_ptr<MCSubtargetInfo> STI(T->createMCSubtargetInfo(TT, "", ""));
   if (!STI)
     return;
 
@@ -95,14 +98,14 @@ initializeRecordStreamer(const Module &M,
   if (!MCII)
     return;
 
-  std::unique_ptr<MemoryBuffer> Buffer(MemoryBuffer::getMemBuffer(InlineAsm));
+  std::unique_ptr<MemoryBuffer> Buffer(
+      MemoryBuffer::getMemBuffer(InlineAsm, "<inline asm>"));
   SourceMgr SrcMgr;
   SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
 
   MCContext MCCtx(TT, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> MOFI(
       T->createMCObjectFileInfo(MCCtx, /*PIC=*/false));
-  MOFI->setSDKVersion(M.getSDKVersion());
   MCCtx.setObjectFileInfo(MOFI.get());
   RecordStreamer Streamer(MCCtx, M);
   T->createNullTargetStreamer(Streamer);
@@ -114,6 +117,13 @@ initializeRecordStreamer(const Module &M,
       T->createMCAsmParser(*STI, *Parser, *MCII, MCOptions));
   if (!TAP)
     return;
+
+  MCCtx.setDiagnosticHandler([&](const SMDiagnostic &SMD, bool IsInlineAsm,
+                                 const SourceMgr &SrcMgr,
+                                 std::vector<const MDNode *> &LocInfos) {
+    M.getContext().diagnose(
+        DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, /*LocCookie=*/0));
+  });
 
   // Module-level inline asm is assumed to use At&t syntax (see
   // AsmPrinter::doInitialization()).
@@ -161,6 +171,20 @@ void ModuleSymbolTable::CollectAsmSymbols(
       AsmSymbol(Key, BasicSymbolRef::Flags(Res));
     }
   });
+
+  // In ELF, object code generated for x86-32 and some code models of x86-64 may
+  // reference the special symbol _GLOBAL_OFFSET_TABLE_ that is not used in the
+  // IR. Record it like inline asm symbols.
+  Triple TT(M.getTargetTriple());
+  if (!TT.isOSBinFormatELF() || !TT.isX86())
+    return;
+  auto CM = M.getCodeModel();
+  if (TT.getArch() == Triple::x86 || CM == CodeModel::Medium ||
+      CM == CodeModel::Large) {
+    AsmSymbol("_GLOBAL_OFFSET_TABLE_",
+              BasicSymbolRef::Flags(BasicSymbolRef::SF_Undefined |
+                                    BasicSymbolRef::SF_Global));
+  }
 }
 
 void ModuleSymbolTable::CollectAsmSymvers(
@@ -215,7 +239,7 @@ uint32_t ModuleSymbolTable::getSymbolFlags(Symbol S) const {
       GV->hasExternalWeakLinkage())
     Res |= BasicSymbolRef::SF_Weak;
 
-  if (GV->getName().startswith("llvm."))
+  if (GV->getName().starts_with("llvm."))
     Res |= BasicSymbolRef::SF_FormatSpecific;
   else if (auto *Var = dyn_cast<GlobalVariable>(GV)) {
     if (Var->getSection() == "llvm.metadata")

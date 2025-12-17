@@ -119,12 +119,6 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
 
     // First come the expressions that are always lvalues, unconditionally.
   case Expr::ObjCIsaExprClass:
-    // C++ [expr.prim.general]p1: A string literal is an lvalue.
-  case Expr::StringLiteralClass:
-    // @encode is equivalent to its string
-  case Expr::ObjCEncodeExprClass:
-    // __func__ and friends are too.
-  case Expr::PredefinedExprClass:
     // Property references are lvalues
   case Expr::ObjCSubscriptRefExprClass:
   case Expr::ObjCPropertyRefExprClass:
@@ -135,7 +129,6 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
     // FIXME: Is this wise? Should they get their own kind?
   case Expr::UnresolvedLookupExprClass:
   case Expr::UnresolvedMemberExprClass:
-  case Expr::TypoExprClass:
   case Expr::DependentCoawaitExprClass:
   case Expr::CXXDependentScopeMemberExprClass:
   case Expr::DependentScopeDeclRefExprClass:
@@ -145,10 +138,31 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::FunctionParmPackExprClass:
   case Expr::MSPropertyRefExprClass:
   case Expr::MSPropertySubscriptExprClass:
-  case Expr::OMPArraySectionExprClass:
+  case Expr::ArraySectionExprClass:
   case Expr::OMPArrayShapingExprClass:
   case Expr::OMPIteratorExprClass:
+  case Expr::HLSLOutArgExprClass:
     return Cl::CL_LValue;
+
+    // C++ [expr.prim.general]p1: A string literal is an lvalue.
+  case Expr::StringLiteralClass:
+    // @encode is equivalent to its string
+  case Expr::ObjCEncodeExprClass:
+    // Except we special case them as prvalues when they are used to
+    // initialize a char array.
+    return E->isLValue() ? Cl::CL_LValue : Cl::CL_PRValue;
+
+    // __func__ and friends are too.
+    // The char array initialization special case also applies
+    // when they are transparent.
+  case Expr::PredefinedExprClass: {
+    auto *PE = cast<PredefinedExpr>(E);
+    const StringLiteral *SL = PE->getFunctionName();
+    if (PE->isTransparent())
+      return SL ? ClassifyInternal(Ctx, SL) : Cl::CL_LValue;
+    assert(!SL || SL->isLValue());
+    return Cl::CL_LValue;
+  }
 
     // C99 6.5.2.5p5 says that compound literals are lvalues.
     // In C++, they're prvalue temporaries, except for file-scope arrays.
@@ -204,6 +218,11 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::RequiresExprClass:
     return Cl::CL_PRValue;
 
+  case Expr::EmbedExprClass:
+    // Nominally, this just goes through as a PRValue until we actually expand
+    // it and check it.
+    return Cl::CL_PRValue;
+
   // Make HLSL this reference-like
   case Expr::CXXThisExprClass:
     return Lang.HLSL ? Cl::CL_LValue : Cl::CL_PRValue;
@@ -215,6 +234,14 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::SubstNonTypeTemplateParmExprClass:
     return ClassifyInternal(Ctx,
                  cast<SubstNonTypeTemplateParmExpr>(E)->getReplacement());
+
+  case Expr::PackIndexingExprClass: {
+    // A pack-index-expression always expands to an id-expression.
+    // Consider it as an LValue expression.
+    if (cast<PackIndexingExpr>(E)->isInstantiationDependent())
+      return Cl::CL_LValue;
+    return ClassifyInternal(Ctx, cast<PackIndexingExpr>(E)->getSelectedExpr());
+  }
 
     // C, C++98 [expr.sub]p1: The result is an lvalue of type "T".
     // C++11 (DR1213): in the case of an array operand, the result is an lvalue
@@ -443,6 +470,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::CoyieldExprClass:
     return ClassifyInternal(Ctx, cast<CoroutineSuspendExpr>(E)->getResumeExpr());
   case Expr::SYCLUniqueStableNameExprClass:
+  case Expr::OpenACCAsteriskSizeExprClass:
     return Cl::CL_PRValue;
     break;
 
@@ -458,12 +486,13 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
 /// ClassifyDecl - Return the classification of an expression referencing the
 /// given declaration.
 static Cl::Kinds ClassifyDecl(ASTContext &Ctx, const Decl *D) {
-  // C++ [expr.prim.general]p6: The result is an lvalue if the entity is a
-  //   function, variable, or data member and a prvalue otherwise.
+  // C++ [expr.prim.id.unqual]p3: The result is an lvalue if the entity is a
+  // function, variable, or data member, or a template parameter object and a
+  // prvalue otherwise.
   // In C, functions are not lvalues.
   // In addition, NonTypeTemplateParmDecl derives from VarDecl but isn't an
-  // lvalue unless it's a reference type (C++ [temp.param]p6), so we need to
-  // special-case this.
+  // lvalue unless it's a reference type or a class type (C++ [temp.param]p8),
+  // so we need to special-case this.
 
   if (const auto *M = dyn_cast<CXXMethodDecl>(D)) {
     if (M->isImplicitObjectMemberFunction())
@@ -572,6 +601,13 @@ static Cl::Kinds ClassifyMemberExpr(ASTContext &Ctx, const MemberExpr *E) {
 static Cl::Kinds ClassifyBinaryOp(ASTContext &Ctx, const BinaryOperator *E) {
   assert(Ctx.getLangOpts().CPlusPlus &&
          "This is only relevant for C++.");
+
+  // For binary operators which are unknown due to type dependence, the
+  // convention is to classify them as a prvalue. This does not matter much, but
+  // it needs to agree with how they are created.
+  if (E->getType() == Ctx.DependentTy)
+    return Cl::CL_PRValue;
+
   // C++ [expr.ass]p1: All [...] return an lvalue referring to the left operand.
   // Except we override this for writes to ObjC properties.
   if (E->isAssignmentOp())
@@ -675,7 +711,8 @@ static Cl::ModifiableType IsModifiable(ASTContext &Ctx, const Expr *E,
     return Cl::CM_ConstAddrSpace;
 
   // Arrays are not modifiable, only their elements are.
-  if (CT->isArrayType())
+  if (CT->isArrayType() &&
+      !(Ctx.getLangOpts().HLSL && CT->isConstantArrayType()))
     return Cl::CM_ArrayType;
   // Incomplete types are not modifiable.
   if (CT->isIncompleteType())

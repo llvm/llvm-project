@@ -146,7 +146,7 @@ CallGraphNode *CallGraph::lookupNode(Region *region) const {
 CallGraphNode *
 CallGraph::resolveCallable(CallOpInterface call,
                            SymbolTableCollection &symbolTable) const {
-  Operation *callable = call.resolveCallable(&symbolTable);
+  Operation *callable = call.resolveCallableInTable(&symbolTable);
   if (auto callableOp = dyn_cast_or_null<CallableOpInterface>(callable))
     if (auto *node = lookupNode(callableOp.getCallableRegion()))
       return node;
@@ -173,6 +173,7 @@ void CallGraph::eraseNode(CallGraphNode *node) {
 
 //===----------------------------------------------------------------------===//
 // Printing
+//===----------------------------------------------------------------------===//
 
 /// Dump the graph in a human readable format.
 void CallGraph::dump() const { print(llvm::errs()); }

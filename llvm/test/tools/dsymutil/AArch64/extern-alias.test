@@ -1,0 +1,46 @@
+$ cat private_extern.c
+__attribute__((visibility("hidden")))
+int* foo() {
+  int i = 10;
+  volatile int* j = &i;
+  return j;
+}
+
+int* bar() {
+  return foo();
+}
+
+$ cat extern.c
+__attribute__((visibility("hidden")))
+int* foo() {
+  int i = 10;
+  volatile int* j = &i;
+  return j;
+}
+
+int* bar() {
+  return foo();
+}
+
+$ cat main.c
+int* bar();
+int main() {
+  return *bar();
+}
+
+$ cat alias_list
+_foo _baz
+
+$ xcrun --sdk iphoneos clang -g private_extern.c -c -o private_extern.o -target arm64-apple-ios14.0
+$ xcrun --sdk iphoneos clang -g main.c -c -o main.o -target arm64-apple-ios14.0
+$ xcrun --sdk iphoneos clang private_extern.o main.o -target arm64-apple-ios14.0 -o private_extern.out -Xlinker -alias_list -Xlinker alias_list
+
+RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/private_extern/private_extern.out -o %t.dSYM --verbose | FileCheck %s
+RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/extern/extern.out -o %t.dSYM --verbose | FileCheck %s
+
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/private_extern/private_extern.out -o %t.dSYM --verbose | FileCheck %s
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/extern/extern.out -o %t.dSYM --verbose | FileCheck %s
+
+CHECK-NOT: could not find symbol '_baz'
+CHECK: { sym: _baz, objAddr: 0x0, binAddr: 0x100007F58, size: 0x0 }
+CHECK: { sym: _foo, objAddr: 0x0, binAddr: 0x100007F58, size: 0x20 }

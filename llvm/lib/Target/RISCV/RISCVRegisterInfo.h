@@ -14,11 +14,52 @@
 #define LLVM_LIB_TARGET_RISCV_RISCVREGISTERINFO_H
 
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 
 #define GET_REGINFO_HEADER
 #include "RISCVGenRegisterInfo.inc"
 
 namespace llvm {
+
+namespace RISCVRI {
+enum : uint8_t {
+  // The IsVRegClass value of this RegisterClass.
+  IsVRegClassShift = 0,
+  IsVRegClassShiftMask = 0b1 << IsVRegClassShift,
+  // The VLMul value of this RegisterClass. This value is valid iff IsVRegClass
+  // is true.
+  VLMulShift = IsVRegClassShift + 1,
+  VLMulShiftMask = 0b11 << VLMulShift,
+
+  // The NF value of this RegisterClass. This value is valid iff IsVRegClass is
+  // true.
+  NFShift = VLMulShift + 2,
+  NFShiftMask = 0b111 << NFShift,
+};
+
+/// Register allocation hints for Zilsd register pairs
+enum {
+  // Used for Zilsd LD/SD register pairs
+  RegPairOdd = 1,
+  RegPairEven = 2,
+};
+
+/// \returns the IsVRegClass for the register class.
+static inline bool isVRegClass(uint8_t TSFlags) {
+  return (TSFlags & IsVRegClassShiftMask) >> IsVRegClassShift;
+}
+
+/// \returns the LMUL for the register class.
+static inline RISCVVType::VLMUL getLMul(uint8_t TSFlags) {
+  return static_cast<RISCVVType::VLMUL>((TSFlags & VLMulShiftMask) >>
+                                        VLMulShift);
+}
+
+/// \returns the NF for the register class.
+static inline unsigned getNF(uint8_t TSFlags) {
+  return static_cast<unsigned>((TSFlags & NFShiftMask) >> NFShift) + 1;
+}
+} // namespace RISCVRI
 
 struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
@@ -27,16 +68,22 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const override;
 
+  unsigned getCSRFirstUseCost() const override {
+    // The cost will be compared against BlockFrequency where entry has the
+    // value of 1 << 14. A value of 5 will choose to spill or split cold
+    // path instead of using a callee-saved register.
+    return 5;
+  }
+
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
+
+  const MCPhysReg *getIPRACSRegs(const MachineFunction *MF) const override;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   bool isAsmClobberable(const MachineFunction &MF,
                         MCRegister PhysReg) const override;
 
   const uint32_t *getNoPreservedMask() const override;
-
-  bool hasReservedSpillSlot(const MachineFunction &MF, Register Reg,
-                            int &FrameIdx) const override;
 
   // Update DestReg to have the value SrcReg plus an offset.  This is
   // used during frame layout, and we may need to ensure that if we
@@ -67,10 +114,12 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   int64_t getFrameIndexInstrOffset(const MachineInstr *MI,
                                    int Idx) const override;
 
-  void lowerVSPILL(MachineBasicBlock::iterator II) const;
-  void lowerVRELOAD(MachineBasicBlock::iterator II) const;
+  void lowerSegmentSpillReload(MachineBasicBlock::iterator II,
+                               bool IsSpill) const;
 
   Register getFrameRegister(const MachineFunction &MF) const override;
+
+  StringRef getRegAsmName(MCRegister Reg) const override;
 
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
     return true;
@@ -81,8 +130,7 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   }
 
   const TargetRegisterClass *
-  getPointerRegClass(const MachineFunction &MF,
-                     unsigned Kind = 0) const override {
+  getPointerRegClass(unsigned Kind = 0) const override {
     return &RISCV::GPRRegClass;
   }
 
@@ -95,11 +143,32 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   unsigned getRegisterCostTableIndex(const MachineFunction &MF) const override;
 
+  float getSpillWeightScaleFactor(const TargetRegisterClass *RC) const override;
+
   bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
                              SmallVectorImpl<MCPhysReg> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
+
+  void updateRegAllocHint(Register Reg, Register NewReg,
+                          MachineFunction &MF) const override;
+
+  Register findVRegWithEncoding(const TargetRegisterClass &RegClass,
+                                uint16_t Encoding) const;
+
+  static bool isVRRegClass(const TargetRegisterClass *RC) {
+    return RISCVRI::isVRegClass(RC->TSFlags) &&
+           RISCVRI::getNF(RC->TSFlags) == 1;
+  }
+
+  static bool isVRNRegClass(const TargetRegisterClass *RC) {
+    return RISCVRI::isVRegClass(RC->TSFlags) && RISCVRI::getNF(RC->TSFlags) > 1;
+  }
+
+  static bool isRVVRegClass(const TargetRegisterClass *RC) {
+    return RISCVRI::isVRegClass(RC->TSFlags);
+  }
 };
-}
+} // namespace llvm
 
 #endif

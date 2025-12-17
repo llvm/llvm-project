@@ -6,16 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/AsmParser/AsmParserContext.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/AsmParser/SlotMapping.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
+
+#define DEBUG_TYPE "unittest-asm-parser-tests"
 
 using namespace llvm;
 
@@ -57,8 +64,8 @@ TEST(AsmParserTest, SlotMappingTest) {
   EXPECT_TRUE(Mod != nullptr);
   EXPECT_TRUE(Error.getMessage().empty());
 
-  ASSERT_EQ(Mapping.GlobalValues.size(), 1u);
-  EXPECT_TRUE(isa<GlobalVariable>(Mapping.GlobalValues[0]));
+  ASSERT_EQ(Mapping.GlobalValues.getNext(), 1u);
+  EXPECT_TRUE(isa<GlobalVariable>(Mapping.GlobalValues.get(0)));
 
   EXPECT_EQ(Mapping.MetadataNodes.size(), 2u);
   EXPECT_EQ(Mapping.MetadataNodes.count(0), 1u);
@@ -92,6 +99,22 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
   EXPECT_TRUE(V->getType()->isVectorTy());
   ASSERT_TRUE(isa<ConstantDataVector>(V));
 
+  V = parseConstantValue("<4 x i32> splat (i32 -2)", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isVectorTy());
+  ASSERT_TRUE(isa<ConstantDataVector>(V));
+
+  V = parseConstantValue("<4 x i32> zeroinitializer", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isVectorTy());
+  ASSERT_TRUE(isa<Constant>(V));
+  EXPECT_TRUE(cast<Constant>(V)->isNullValue());
+
+  V = parseConstantValue("<4 x i32> poison", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isVectorTy());
+  ASSERT_TRUE(isa<PoisonValue>(V));
+
   V = parseConstantValue("i32 add (i32 1, i32 2)", Error, M);
   ASSERT_TRUE(V);
   ASSERT_TRUE(isa<ConstantInt>(V));
@@ -103,6 +126,10 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
   V = parseConstantValue("ptr undef", Error, M);
   ASSERT_TRUE(V);
   ASSERT_TRUE(isa<UndefValue>(V));
+
+  V = parseConstantValue("ptr poison", Error, M);
+  ASSERT_TRUE(V);
+  ASSERT_TRUE(isa<PoisonValue>(V));
 
   EXPECT_FALSE(parseConstantValue("duble 3.25", Error, M));
   EXPECT_EQ(Error.getMessage(), "expected type");
@@ -409,6 +436,102 @@ TEST(AsmParserTest, InvalidDataLayoutStringCallback) {
       });
   ASSERT_TRUE(Mod2 != nullptr);
   EXPECT_EQ(Mod2->getDataLayout(), FixedDL);
+}
+
+TEST(AsmParserTest, DIExpressionBodyAtBeginningWithSlotMappingParsing) {
+  LLVMContext Ctx;
+  SMDiagnostic Error;
+  StringRef Source = "";
+  SlotMapping Mapping;
+  auto Mod = parseAssemblyString(Source, Error, Ctx, &Mapping);
+  ASSERT_TRUE(Mod != nullptr);
+  auto &M = *Mod;
+  unsigned Read;
+
+  ASSERT_EQ(Mapping.MetadataNodes.size(), 0u);
+
+  DIExpression *Expr;
+
+  Expr = parseDIExpressionBodyAtBeginning("()", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Expr);
+  ASSERT_EQ(Expr->getNumElements(), 0u);
+
+  Expr = parseDIExpressionBodyAtBeginning("(0)", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Expr);
+  ASSERT_EQ(Expr->getNumElements(), 1u);
+
+  Expr = parseDIExpressionBodyAtBeginning("(DW_OP_LLVM_fragment, 0, 1)", Read,
+                                          Error, M, &Mapping);
+  ASSERT_TRUE(Expr);
+  ASSERT_EQ(Expr->getNumElements(), 3u);
+
+  Expr = parseDIExpressionBodyAtBeginning(
+      "(DW_OP_LLVM_fragment, 0, 1)  trailing source", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Expr);
+  ASSERT_EQ(Expr->getNumElements(), 3u);
+  ASSERT_EQ(Read, StringRef("(DW_OP_LLVM_fragment, 0, 1)  ").size());
+
+  Error = {};
+  Expr = parseDIExpressionBodyAtBeginning("i32", Read, Error, M, &Mapping);
+  ASSERT_FALSE(Expr);
+  ASSERT_EQ(Error.getMessage(), "expected '(' here");
+
+  Error = {};
+  Expr = parseDIExpressionBodyAtBeginning(
+      "!DIExpression(DW_OP_LLVM_fragment, 0, 1)", Read, Error, M, &Mapping);
+  ASSERT_FALSE(Expr);
+  ASSERT_EQ(Error.getMessage(), "expected '(' here");
+
+  ASSERT_EQ(Mapping.MetadataNodes.size(), 0u);
+}
+
+#define ASSERT_EQ_LOC(Loc1, Loc2)                                              \
+  do {                                                                         \
+    EXPECT_TRUE(Loc1.contains(Loc2) && Loc2.contains(Loc1))                    \
+        << #Loc1 " location: " << Loc1.Start.Line << ":" << Loc1.Start.Col     \
+        << " - " << Loc1.End.Line << ":" << Loc1.End.Col << "\n"               \
+        << #Loc2 " location: " << Loc2.Start.Line << ":" << Loc2.Start.Col     \
+        << " - " << Loc2.End.Line << ":" << Loc2.End.Col << "\n";              \
+  } while (false)
+
+TEST(AsmParserTest, ParserObjectLocations) {
+  StringRef Source = "define i32 @main() {\n"
+                     "entry:\n"
+                     "    %a = add i32 1, 2\n"
+                     "    ret i32 %a\n"
+                     "}\n";
+  LLVMContext Ctx;
+  SMDiagnostic Error;
+  SlotMapping Mapping;
+  AsmParserContext ParserContext;
+  auto Mod = parseAssemblyString(Source, Error, Ctx, &Mapping, &ParserContext);
+
+  auto *MainFn = Mod->getFunction("main");
+  ASSERT_TRUE(MainFn != nullptr);
+
+  auto MaybeMainLoc = ParserContext.getFunctionLocation(MainFn);
+  EXPECT_TRUE(MaybeMainLoc.has_value());
+  auto MainLoc = MaybeMainLoc.value();
+  auto ExpectedMainLoc = FileLocRange(FileLoc{0, 0}, FileLoc{4, 1});
+  ASSERT_EQ_LOC(MainLoc, ExpectedMainLoc);
+
+  auto &EntryBB = MainFn->getEntryBlock();
+  auto MaybeEntryBBLoc = ParserContext.getBlockLocation(&EntryBB);
+  ASSERT_TRUE(MaybeEntryBBLoc.has_value());
+  auto EntryBBLoc = MaybeEntryBBLoc.value();
+  auto ExpectedEntryBBLoc = FileLocRange(FileLoc{1, 0}, FileLoc{3, 14});
+  ASSERT_EQ_LOC(EntryBBLoc, ExpectedEntryBBLoc);
+
+  SmallVector<FileLocRange> InstructionLocations = {
+      FileLocRange(FileLoc{2, 4}, FileLoc{2, 21}),
+      FileLocRange(FileLoc{3, 4}, FileLoc{3, 14})};
+
+  for (const auto &[Inst, ExpectedLoc] : zip(EntryBB, InstructionLocations)) {
+    auto MaybeInstLoc = ParserContext.getInstructionLocation(&Inst);
+    ASSERT_TRUE(MaybeMainLoc.has_value());
+    auto InstLoc = MaybeInstLoc.value();
+    ASSERT_EQ_LOC(InstLoc, ExpectedLoc);
+  }
 }
 
 } // end anonymous namespace

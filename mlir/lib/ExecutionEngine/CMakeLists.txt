@@ -2,6 +2,9 @@
 # is a big dependency which most don't need.
 
 set(LLVM_OPTIONAL_SOURCES
+  APFloatWrappers.cpp
+  ArmRunnerUtils.cpp
+  ArmSMEStubs.cpp
   AsyncRuntime.cpp
   CRunnerUtils.cpp
   CudaRuntimeWrappers.cpp
@@ -12,7 +15,12 @@ set(LLVM_OPTIONAL_SOURCES
   RunnerUtils.cpp
   OptUtils.cpp
   JitRunner.cpp
+  LevelZeroRuntimeWrappers.cpp
+  SpirvCpuRuntimeWrappers.cpp
   SyclRuntimeWrappers.cpp
+  VulkanRuntimeWrappers.cpp
+  VulkanRuntime.cpp
+  VulkanRuntime.h
   )
 
 # Use a separate library for OptUtils, to avoid pulling in the entire JIT and
@@ -85,8 +93,9 @@ add_mlir_library(MLIRExecutionEngine
   IPO
   Passes
   ${LLVM_JIT_LISTENER_LIB}
+  )
 
-  LINK_LIBS PUBLIC
+mlir_target_link_libraries(MLIRExecutionEngine PUBLIC
   MLIRBuiltinToLLVMIRTranslation
   MLIRExecutionEngineUtils
   MLIRLLVMDialect
@@ -94,6 +103,29 @@ add_mlir_library(MLIRExecutionEngine
   MLIROpenMPToLLVMIRTranslation
   MLIRTargetLLVMIRExport
   )
+
+if(LLVM_BUILD_LLVM_DYLIB AND NOT (WIN32 OR MINGW OR CYGWIN)) # Does not build on windows currently, see #106859
+  # Build a shared library for the execution engine. Some downstream projects
+  # use this library to build their own CPU runners while preserving dynamic
+  # linkage.
+  add_mlir_library(MLIRExecutionEngineShared
+    ExecutionEngine.cpp
+    SHARED
+
+    EXCLUDE_FROM_LIBMLIR
+
+    ADDITIONAL_HEADER_DIRS
+    ${MLIR_MAIN_INCLUDE_DIR}/mlir/ExecutionEngine
+
+    # Ensures that all necessary dependencies are resolved.
+    DEPENDS
+    MLIRExecutionEngine
+
+    LINK_LIBS PUBLIC
+    LLVM
+    MLIR
+    )
+endif()
 
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 add_mlir_library(MLIRJitRunner
@@ -110,8 +142,10 @@ add_mlir_library(MLIRJitRunner
   JITLink
 
   LINK_LIBS PUBLIC
-  ${dialect_libs}
   MLIRExecutionEngine
+)
+mlir_target_link_libraries(MLIRJitRunner PUBLIC
+  ${dialect_libs}
   MLIRFuncDialect
   MLIRFuncToLLVM
   MLIRIR
@@ -134,6 +168,26 @@ if(LLVM_ENABLE_PIC)
   set_property(TARGET mlir_float16_utils PROPERTY CXX_STANDARD 17)
   target_compile_definitions(mlir_float16_utils PRIVATE mlir_float16_utils_EXPORTS)
 
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    # TODO: This support library is only used on Linux and Mac builds until we figure
+    # out how to hide LLVM symbols in a way that works for all platforms.
+    add_mlir_library(mlir_apfloat_wrappers
+      SHARED
+      APFloatWrappers.cpp
+
+      EXCLUDE_FROM_LIBMLIR
+      )
+    set_target_properties(
+      mlir_apfloat_wrappers
+      PROPERTIES CXX_STANDARD 17
+                CXX_VISIBILITY_PRESET hidden
+                VISIBILITY_INLINES_HIDDEN ON
+    )
+    target_compile_definitions(mlir_apfloat_wrappers PRIVATE mlir_apfloat_wrappers_EXPORTS)
+    # Hide LLVM symbols to avoid ODR violations.
+    target_link_options(mlir_apfloat_wrappers PRIVATE $<$<PLATFORM_ID:Linux>:LINKER:--exclude-libs,ALL>)
+  endif()
+
   add_subdirectory(SparseTensor)
 
   add_mlir_library(mlir_c_runner_utils
@@ -151,13 +205,26 @@ if(LLVM_ENABLE_PIC)
   set_property(TARGET mlir_c_runner_utils PROPERTY CXX_STANDARD 17)
   target_compile_definitions(mlir_c_runner_utils PRIVATE mlir_c_runner_utils_EXPORTS)
 
+  # Conditionally link apfloat wrappers only on Linux and Mac.
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    target_link_libraries(mlir_c_runner_utils PUBLIC mlir_apfloat_wrappers)
+  endif()
+
   add_mlir_library(mlir_runner_utils
     SHARED
     RunnerUtils.cpp
 
     EXCLUDE_FROM_LIBMLIR
+
+    LINK_LIBS PUBLIC
+    mlir_float16_utils
   )
   target_compile_definitions(mlir_runner_utils PRIVATE mlir_runner_utils_EXPORTS)
+
+    # Conditionally link apfloat wrappers only on Linux.
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(mlir_runner_utils PUBLIC mlir_apfloat_wrappers)
+  endif()
 
   add_mlir_library(mlir_async_runtime
     SHARED
@@ -176,6 +243,15 @@ if(LLVM_ENABLE_PIC)
     # FIXME: Add a similar fix for Windows.
     target_link_options(mlir_async_runtime PRIVATE "-Wl,-exclude-libs,ALL")
   endif()
+
+  add_mlir_library(mlir_arm_sme_abi_stubs
+    SHARED
+    ArmSMEStubs.cpp)
+  target_compile_definitions(mlir_arm_sme_abi_stubs PRIVATE mlir_arm_sme_abi_stubs_EXPORTS)
+
+  add_mlir_library(mlir_arm_runner_utils
+    SHARED
+    ArmRunnerUtils.cpp)
 
   if(MLIR_ENABLE_CUDA_RUNNER)
     # Configure CUDA support. Using check_language first allows us to give a
@@ -278,7 +354,6 @@ if(LLVM_ENABLE_PIC)
       endif()
       string(STRIP AGENTS_STRING ${AGENTS_STRING})
       string(REPLACE "\n" ";" AGENTS_LIST ${AGENTS_STRING})
-      list(FILTER AGENTS_LIST EXCLUDE REGEX "gfx000")
       if (AGENTS_LIST STREQUAL "")
         message(SEND_ERROR "No non-CPU ROCm agents found on the system, and ROCM_TEST_CHIPSET is not defined")
       else()
@@ -330,17 +405,20 @@ if(LLVM_ENABLE_PIC)
     )
   endif()
 
+  if(MLIR_ENABLE_SYCL_RUNNER OR MLIR_ENABLE_LEVELZERO_RUNNER)
+    # Both runtimes require LevelZero, so we can find it once.
+    find_package(LevelZeroRuntime)
+
+    if(NOT LevelZeroRuntime_FOUND)
+      message(FATAL_ERROR "LevelZero not found. Please set LEVEL_ZERO_DIR.")
+    endif()
+  endif()
+
   if(MLIR_ENABLE_SYCL_RUNNER)
     find_package(SyclRuntime)
 
     if(NOT SyclRuntime_FOUND)
       message(FATAL_ERROR "syclRuntime not found. Please set check oneapi installation and run setvars.sh.")
-    endif()
-
-    find_package(LevelZero)
-
-    if(NOT LevelZero_FOUND)
-      message(FATAL_ERROR "LevelZero not found. Please set LEVEL_ZERO_DIR.")
     endif()
 
     add_mlir_library(mlir_sycl_runtime
@@ -360,8 +438,82 @@ if(LLVM_ENABLE_PIC)
       ${MLIR_INCLUDE_DIRS}
     )
 
-    target_link_libraries(mlir_sycl_runtime PRIVATE LevelZero::LevelZero SyclRuntime::SyclRuntime)
+    target_link_libraries(mlir_sycl_runtime PRIVATE LevelZeroRuntime::LevelZeroRuntime SyclRuntime::SyclRuntime)
 
-    set_property(TARGET mlir_sycl_runtime APPEND PROPERTY BUILD_RPATH "${LevelZero_LIBRARIES_DIR}" "${SyclRuntime_LIBRARIES_DIR}")
+    set_property(TARGET mlir_sycl_runtime APPEND PROPERTY BUILD_RPATH "${LevelZeroRuntime_LIBRARIES_DIR}" "${SyclRuntime_LIBRARIES_DIR}")
+  endif()
+
+  if(MLIR_ENABLE_LEVELZERO_RUNNER)
+    add_mlir_library(mlir_levelzero_runtime
+      SHARED
+      LevelZeroRuntimeWrappers.cpp
+
+      EXCLUDE_FROM_LIBMLIR
+    )
+
+    target_compile_options(mlir_levelzero_runtime PUBLIC -fexceptions -frtti)
+
+    target_include_directories(mlir_levelzero_runtime PRIVATE
+      ${MLIR_INCLUDE_DIRS}
+    )
+
+    target_link_libraries(mlir_levelzero_runtime PRIVATE LevelZeroRuntime::LevelZeroRuntime)
+
+    set_property(TARGET mlir_levelzero_runtime APPEND PROPERTY BUILD_RPATH "${LevelZeroRuntime_LIBRARIES_DIR}")
+  endif()
+
+  if(MLIR_ENABLE_SPIRV_CPU_RUNNER)
+    add_mlir_library(mlir_spirv_cpu_runtime
+      SHARED
+      SpirvCpuRuntimeWrappers.cpp
+
+      EXCLUDE_FROM_LIBMLIR
+    )
+
+    target_compile_definitions(mlir_spirv_cpu_runtime
+      PRIVATE
+      mlir_spirv_cpu_runtime_EXPORTS)
+  endif()
+
+  if (MLIR_ENABLE_VULKAN_RUNNER)
+    find_package(Vulkan)
+
+    # If Vulkan is not found try a path specified by VULKAN_SDK.
+    if (NOT Vulkan_FOUND)
+      if ("$ENV{VULKAN_SDK}" STREQUAL "")
+        message(FATAL_ERROR "Vulkan not found through CMake; please provide "
+                            "VULKAN_SDK path as an environment variable")
+      endif()
+
+      find_library(Vulkan_LIBRARY vulkan HINTS "$ENV{VULKAN_SDK}/lib" REQUIRED)
+      if (Vulkan_LIBRARY)
+        set(Vulkan_FOUND ON)
+        set(Vulkan_INCLUDE_DIR "$ENV{VULKAN_SDK}/include")
+        message(STATUS "Found Vulkan: " ${Vulkan_LIBRARY})
+      endif()
+    endif()
+
+    if (NOT Vulkan_FOUND)
+      message(FATAL_ERROR "Cannot find Vulkan library")
+    endif()
+
+    add_llvm_library(mlir_vulkan_runtime SHARED
+      VulkanRuntimeWrappers.cpp
+      VulkanRuntime.cpp
+    )
+
+    target_include_directories(mlir_vulkan_runtime
+      PUBLIC
+      ${Vulkan_INCLUDE_DIR}
+    )
+
+    # *IMPORTANT*: This library cannot depend on LLVM libraries. Otherwise,
+    # it may cause LLVM version conflict when used together with other shared
+    # libraries depending on LLVM. Notably, Mesa, who implements Vulkan
+    # drivers on Linux, depends on the system libLLVM.so.
+    target_link_libraries(mlir_vulkan_runtime
+      PUBLIC
+      ${Vulkan_LIBRARY}
+    )
   endif()
 endif()

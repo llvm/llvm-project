@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
 
 ! Test that allocatable or pointer item from namelist are retrieved correctly
 ! if they are part of a common block as well.
@@ -8,7 +8,7 @@ program nml_common
   real, pointer :: p(:)
   namelist /t/i,p
   common /c/i,p
-  
+
   allocate(p(2))
   call print_t()
 contains

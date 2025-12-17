@@ -6,55 +6,61 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
-#define LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
+#ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTOINTEGERTEST_H
+#define LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTOINTEGERTEST_H
 
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/libc_errno.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
-#include <math.h>
+#include "hdr/math_macros.h"
 
 static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
                                           FE_TONEAREST};
 
-template <typename F, typename I, bool TestModes = false>
-class RoundToIntegerTestTemplate : public LIBC_NAMESPACE::testing::Test {
+template <typename FloatType, typename IntType, bool TestModes = false>
+class RoundToIntegerTestTemplate
+    : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
-  typedef I (*RoundToIntegerFunc)(F);
+  typedef IntType (*RoundToIntegerFunc)(FloatType);
 
 private:
-  using FPBits = LIBC_NAMESPACE::fputil::FPBits<F>;
-  using UIntType = typename FPBits::UIntType;
+  DECLARE_SPECIAL_CONSTANTS(FloatType)
 
-  const F zero = F(LIBC_NAMESPACE::fputil::FPBits<F>::zero());
-  const F neg_zero = F(LIBC_NAMESPACE::fputil::FPBits<F>::neg_zero());
-  const F inf = F(LIBC_NAMESPACE::fputil::FPBits<F>::inf());
-  const F neg_inf = F(LIBC_NAMESPACE::fputil::FPBits<F>::neg_inf());
-  const F nan = F(LIBC_NAMESPACE::fputil::FPBits<F>::build_quiet_nan(1));
-  static constexpr I INTEGER_MIN = I(1) << (sizeof(I) * 8 - 1);
-  static constexpr I INTEGER_MAX = -(INTEGER_MIN + 1);
+  static constexpr StorageType MAX_SUBNORMAL =
+      FPBits::max_subnormal().uintval();
+  static constexpr StorageType MIN_SUBNORMAL =
+      FPBits::min_subnormal().uintval();
 
-  void test_one_input(RoundToIntegerFunc func, F input, I expected,
-                      bool expectError) {
+  static constexpr IntType INTEGER_MIN = IntType(1)
+                                         << (sizeof(IntType) * 8 - 1);
+  static constexpr IntType INTEGER_MAX = -(INTEGER_MIN + 1);
+
+  void test_one_input(RoundToIntegerFunc func, FloatType input,
+                      IntType expected, bool expectError) {
     libc_errno = 0;
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
 
     ASSERT_EQ(func(input), expected);
 
+    // TODO: Handle the !expectError case. It used to expect
+    // 0 for errno and exceptions, but this doesn't hold for
+    // all math functions using RoundToInteger test:
+    // https://github.com/llvm/llvm-project/pull/88816
     if (expectError) {
       ASSERT_FP_EXCEPTION(FE_INVALID);
       ASSERT_MATH_ERRNO(EDOM);
-    } else {
-      ASSERT_FP_EXCEPTION(0);
-      ASSERT_MATH_ERRNO(0);
     }
   }
 
 public:
   void SetUp() override {
+    LIBC_NAMESPACE::testing::FEnvSafeTest::SetUp();
+
     if (math_errhandling & MATH_ERREXCEPT) {
       // We will disable all exceptions so that the test will not
       // crash with SIGFPE. We can still use fetestexcept to check
@@ -71,7 +77,7 @@ public:
     // libc/CMakeLists.txt is not forwarded to C++.
 #if LIBC_COPT_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR
     // Result is not well-defined, we always returns INTEGER_MAX
-    test_one_input(func, nan, INTEGER_MAX, true);
+    test_one_input(func, aNaN, INTEGER_MAX, true);
 #endif // LIBC_COPT_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR
   }
 
@@ -87,14 +93,14 @@ public:
   }
 
   void do_round_numbers_test(RoundToIntegerFunc func) {
-    test_one_input(func, zero, I(0), false);
-    test_one_input(func, neg_zero, I(0), false);
-    test_one_input(func, F(1.0), I(1), false);
-    test_one_input(func, F(-1.0), I(-1), false);
-    test_one_input(func, F(10.0), I(10), false);
-    test_one_input(func, F(-10.0), I(-10), false);
-    test_one_input(func, F(1234.0), I(1234), false);
-    test_one_input(func, F(-1234.0), I(-1234), false);
+    test_one_input(func, zero, IntType(0), false);
+    test_one_input(func, neg_zero, IntType(0), false);
+    test_one_input(func, FloatType(1.0), IntType(1), false);
+    test_one_input(func, FloatType(-1.0), IntType(-1), false);
+    test_one_input(func, FloatType(10.0), IntType(10), false);
+    test_one_input(func, FloatType(-10.0), IntType(-10), false);
+    test_one_input(func, FloatType(1232.0), IntType(1232), false);
+    test_one_input(func, FloatType(-1232.0), IntType(-1232), false);
   }
 
   void testRoundNumbers(RoundToIntegerFunc func) {
@@ -109,35 +115,35 @@ public:
   }
 
   void testSubnormalRange(RoundToIntegerFunc func) {
-    constexpr UIntType COUNT = 1'000'001;
-    constexpr UIntType STEP =
-        (UIntType(FPBits::MAX_SUBNORMAL) - UIntType(FPBits::MIN_SUBNORMAL)) /
-        COUNT;
-    for (UIntType i = FPBits::MIN_SUBNORMAL; i <= FPBits::MAX_SUBNORMAL;
-         i += STEP) {
-      F x = F(FPBits(i));
-      if (x == F(0.0))
+    // Arbitrary, trades off completeness with testing time (esp. on failure)
+    constexpr int COUNT = 1'000;
+    constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
+        static_cast<StorageType>((MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT),
+        StorageType(1));
+    for (StorageType i = MIN_SUBNORMAL; i <= MAX_SUBNORMAL; i += STEP) {
+      FloatType x = FPBits(i).get_val();
+      if (x == FloatType(0.0))
         continue;
       // All subnormal numbers should round to zero.
       if (TestModes) {
-        if (x > 0) {
+        if (x > zero) {
           LIBC_NAMESPACE::fputil::set_round(FE_UPWARD);
-          test_one_input(func, x, I(1), false);
+          test_one_input(func, x, IntType(1), false);
           LIBC_NAMESPACE::fputil::set_round(FE_DOWNWARD);
-          test_one_input(func, x, I(0), false);
+          test_one_input(func, x, IntType(0), false);
           LIBC_NAMESPACE::fputil::set_round(FE_TOWARDZERO);
-          test_one_input(func, x, I(0), false);
+          test_one_input(func, x, IntType(0), false);
           LIBC_NAMESPACE::fputil::set_round(FE_TONEAREST);
-          test_one_input(func, x, I(0), false);
+          test_one_input(func, x, IntType(0), false);
         } else {
           LIBC_NAMESPACE::fputil::set_round(FE_UPWARD);
-          test_one_input(func, x, I(0), false);
+          test_one_input(func, x, IntType(0), false);
           LIBC_NAMESPACE::fputil::set_round(FE_DOWNWARD);
-          test_one_input(func, x, I(-1), false);
+          test_one_input(func, x, IntType(-1), false);
           LIBC_NAMESPACE::fputil::set_round(FE_TOWARDZERO);
-          test_one_input(func, x, I(0), false);
+          test_one_input(func, x, IntType(0), false);
           LIBC_NAMESPACE::fputil::set_round(FE_TONEAREST);
-          test_one_input(func, x, I(0), false);
+          test_one_input(func, x, IntType(0), false);
         }
       } else {
         test_one_input(func, x, 0L, false);
@@ -146,9 +152,10 @@ public:
   }
 };
 
-#define LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, TestModes)              \
+#define LIST_ROUND_TO_INTEGER_TESTS_HELPER(FloatType, IntType, func,           \
+                                           TestModes)                          \
   using LlvmLibcRoundToIntegerTest =                                           \
-      RoundToIntegerTestTemplate<F, I, TestModes>;                             \
+      RoundToIntegerTestTemplate<FloatType, IntType, TestModes>;               \
   TEST_F(LlvmLibcRoundToIntegerTest, InfinityAndNaN) {                         \
     testInfinityAndNaN(&func);                                                 \
   }                                                                            \
@@ -159,10 +166,16 @@ public:
     testSubnormalRange(&func);                                                 \
   }
 
-#define LIST_ROUND_TO_INTEGER_TESTS(F, I, func)                                \
-  LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, false)
+#define LIST_ROUND_TO_INTEGER_TESTS(FloatType, IntType, func)                  \
+  LIST_ROUND_TO_INTEGER_TESTS_HELPER(FloatType, IntType, func, false)
 
-#define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(F, I, func)                     \
-  LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, true)
+// The GPU target does not support different rounding modes.
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+#define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(FloatType, IntType, func)       \
+  LIST_ROUND_TO_INTEGER_TESTS_HELPER(FloatType, IntType, func, false)
+#else
+#define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(FloatType, IntType, func)       \
+  LIST_ROUND_TO_INTEGER_TESTS_HELPER(FloatType, IntType, func, true)
+#endif
 
-#endif // LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
+#endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTOINTEGERTEST_H

@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -start-before=greedy,0 -stop-after=virtregrewriter,1 -verify-machineinstrs -o - %s | FileCheck --check-prefixes=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -start-before=greedy,0 -stop-after=virtregrewriter,2 -verify-machineinstrs -o - %s | FileCheck --check-prefixes=GCN %s
 
 --- |
   define amdgpu_ps void @e32() #0 {

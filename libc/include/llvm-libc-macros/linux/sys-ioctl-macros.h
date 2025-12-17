@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_LINUX_SYS_IOCTL_MACROS_H
-#define __LLVM_LIBC_MACROS_LINUX_SYS_IOCTL_MACROS_H
+#ifndef LLVM_LIBC_MACROS_LINUX_SYS_IOCTL_MACROS_H
+#define LLVM_LIBC_MACROS_LINUX_SYS_IOCTL_MACROS_H
 
 // TODO (michaelrj): Finish defining these macros.
 // Just defining this macro for the moment since it's all that we need right
@@ -15,5 +15,6 @@
 // around the definitions of macros like _IO, _IOR, _IOW, and _IOWR that I don't
 // think is worth digging into right now.
 #define TIOCGETD 0x5424
+#define FIONREAD 0x541B
 
-#endif // __LLVM_LIBC_MACROS_LINUX_SYS_IOCTL_MACROS_H
+#endif // LLVM_LIBC_MACROS_LINUX_SYS_IOCTL_MACROS_H

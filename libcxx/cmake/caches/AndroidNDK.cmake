@@ -22,6 +22,9 @@ set(LIBCXX_ENABLE_ABI_LINKER_SCRIPT OFF CACHE BOOL "")
 set(LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY ON CACHE BOOL "")
 set(LIBCXXABI_ENABLE_SHARED OFF CACHE BOOL "")
 
+# Android uses its own unwinder library
+set(LIBCXXABI_USE_LLVM_UNWINDER OFF CACHE BOOL "")
+
 # Clang links libc++ by default, but it doesn't exist yet. The libc++ CMake
 # files specify -nostdlib++ to avoid this problem, but CMake's default "compiler
 # works" testing doesn't pass that flag, so force those tests to pass.
@@ -30,9 +33,5 @@ set(CMAKE_CXX_COMPILER_WORKS ON CACHE BOOL "")
 
 # Use adb to push tests to a locally-connected device (e.g. emulator) and run
 # them.
-set(LIBCXX_TEST_CONFIG "llvm-libc++-android-ndk.cfg.in" CACHE STRING "")
-set(LIBCXXABI_TEST_CONFIG "llvm-libc++abi-android-ndk.cfg.in" CACHE STRING "")
-
-# CMAKE_SOURCE_DIR refers to the "<monorepo>/runtimes" directory.
-set(LIBCXX_EXECUTOR "${CMAKE_SOURCE_DIR}/../libcxx/utils/adb_run.py" CACHE STRING "")
-set(LIBCXXABI_EXECUTOR "${LIBCXX_EXECUTOR}" CACHE STRING "")
+set(LIBCXX_TEST_CONFIG "llvm-libc++-android.cfg.in" CACHE STRING "")
+set(LIBCXXABI_TEST_CONFIG "llvm-libc++abi-android.cfg.in" CACHE STRING "")

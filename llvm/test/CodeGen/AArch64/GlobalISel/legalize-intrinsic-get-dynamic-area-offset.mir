@@ -13,8 +13,8 @@ body:             |
     liveins:
     ; CHECK-LABEL: name: test_64
     ; CHECK: %v:_(s64) = G_CONSTANT i64 0
-    ; CHECK: $x0 = COPY %v(s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: $x0 = COPY %v(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %v:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.get.dynamic.area.offset)
     $x0 = COPY %v(s64)
     RET_ReallyLR implicit $x0
@@ -30,8 +30,8 @@ body:             |
     liveins:
     ; CHECK-LABEL: name: test_32
     ; CHECK: %v:_(s32) = G_CONSTANT i32 0
-    ; CHECK: $w0 = COPY %v(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: $w0 = COPY %v(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %v:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.get.dynamic.area.offset)
     $w0 = COPY %v(s32)
     RET_ReallyLR implicit $w0

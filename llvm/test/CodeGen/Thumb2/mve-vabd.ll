@@ -72,6 +72,7 @@ define arm_aapcs_vfpcc void @vabd_v8f16(<8 x half> %x, <8 x half> %y, ptr %z) {
 ; CHECK-MVE-NEXT:    bl __aeabi_h2f
 ; CHECK-MVE-NEXT:    mov r1, r5
 ; CHECK-MVE-NEXT:    bl __aeabi_fsub
+; CHECK-MVE-NEXT:    bl __aeabi_f2h
 ; CHECK-MVE-NEXT:    mov r5, r0
 ; CHECK-MVE-NEXT:    vmov.u16 r0, q5[0]
 ; CHECK-MVE-NEXT:    bl __aeabi_h2f
@@ -80,21 +81,20 @@ define arm_aapcs_vfpcc void @vabd_v8f16(<8 x half> %x, <8 x half> %y, ptr %z) {
 ; CHECK-MVE-NEXT:    bl __aeabi_h2f
 ; CHECK-MVE-NEXT:    mov r1, r6
 ; CHECK-MVE-NEXT:    bl __aeabi_fsub
-; CHECK-MVE-NEXT:    bic r0, r0, #-2147483648
 ; CHECK-MVE-NEXT:    bl __aeabi_f2h
+; CHECK-MVE-NEXT:    bfc r0, #15, #17
+; CHECK-MVE-NEXT:    bfc r5, #15, #17
 ; CHECK-MVE-NEXT:    vmov.16 q6[0], r0
-; CHECK-MVE-NEXT:    bic r0, r5, #-2147483648
-; CHECK-MVE-NEXT:    bl __aeabi_f2h
-; CHECK-MVE-NEXT:    vmov.16 q6[1], r0
 ; CHECK-MVE-NEXT:    vmov.u16 r0, q5[2]
+; CHECK-MVE-NEXT:    vmov.16 q6[1], r5
 ; CHECK-MVE-NEXT:    bl __aeabi_h2f
 ; CHECK-MVE-NEXT:    mov r5, r0
 ; CHECK-MVE-NEXT:    vmov.u16 r0, q4[2]
 ; CHECK-MVE-NEXT:    bl __aeabi_h2f
 ; CHECK-MVE-NEXT:    mov r1, r5
 ; CHECK-MVE-NEXT:    bl __aeabi_fsub
-; CHECK-MVE-NEXT:    bic r0, r0, #-2147483648
 ; CHECK-MVE-NEXT:    bl __aeabi_f2h
+; CHECK-MVE-NEXT:    bfc r0, #15, #17
 ; CHECK-MVE-NEXT:    vmov.16 q6[2], r0
 ; CHECK-MVE-NEXT:    vmov.u16 r0, q5[3]
 ; CHECK-MVE-NEXT:    bl __aeabi_h2f
@@ -103,8 +103,8 @@ define arm_aapcs_vfpcc void @vabd_v8f16(<8 x half> %x, <8 x half> %y, ptr %z) {
 ; CHECK-MVE-NEXT:    bl __aeabi_h2f
 ; CHECK-MVE-NEXT:    mov r1, r5
 ; CHECK-MVE-NEXT:    bl __aeabi_fsub
-; CHECK-MVE-NEXT:    bic r0, r0, #-2147483648
 ; CHECK-MVE-NEXT:    bl __aeabi_f2h
+; CHECK-MVE-NEXT:    bfc r0, #15, #17
 ; CHECK-MVE-NEXT:    vmov.16 q6[3], r0
 ; CHECK-MVE-NEXT:    vmov.u16 r0, q5[4]
 ; CHECK-MVE-NEXT:    bl __aeabi_h2f
@@ -113,8 +113,8 @@ define arm_aapcs_vfpcc void @vabd_v8f16(<8 x half> %x, <8 x half> %y, ptr %z) {
 ; CHECK-MVE-NEXT:    bl __aeabi_h2f
 ; CHECK-MVE-NEXT:    mov r1, r5
 ; CHECK-MVE-NEXT:    bl __aeabi_fsub
-; CHECK-MVE-NEXT:    bic r0, r0, #-2147483648
 ; CHECK-MVE-NEXT:    bl __aeabi_f2h
+; CHECK-MVE-NEXT:    bfc r0, #15, #17
 ; CHECK-MVE-NEXT:    vmov.16 q6[4], r0
 ; CHECK-MVE-NEXT:    vmov.u16 r0, q5[5]
 ; CHECK-MVE-NEXT:    bl __aeabi_h2f
@@ -123,8 +123,8 @@ define arm_aapcs_vfpcc void @vabd_v8f16(<8 x half> %x, <8 x half> %y, ptr %z) {
 ; CHECK-MVE-NEXT:    bl __aeabi_h2f
 ; CHECK-MVE-NEXT:    mov r1, r5
 ; CHECK-MVE-NEXT:    bl __aeabi_fsub
-; CHECK-MVE-NEXT:    bic r0, r0, #-2147483648
 ; CHECK-MVE-NEXT:    bl __aeabi_f2h
+; CHECK-MVE-NEXT:    bfc r0, #15, #17
 ; CHECK-MVE-NEXT:    vmov.16 q6[5], r0
 ; CHECK-MVE-NEXT:    vmov.u16 r0, q5[6]
 ; CHECK-MVE-NEXT:    bl __aeabi_h2f
@@ -133,8 +133,8 @@ define arm_aapcs_vfpcc void @vabd_v8f16(<8 x half> %x, <8 x half> %y, ptr %z) {
 ; CHECK-MVE-NEXT:    bl __aeabi_h2f
 ; CHECK-MVE-NEXT:    mov r1, r5
 ; CHECK-MVE-NEXT:    bl __aeabi_fsub
-; CHECK-MVE-NEXT:    bic r0, r0, #-2147483648
 ; CHECK-MVE-NEXT:    bl __aeabi_f2h
+; CHECK-MVE-NEXT:    bfc r0, #15, #17
 ; CHECK-MVE-NEXT:    vmov.16 q6[6], r0
 ; CHECK-MVE-NEXT:    vmov.u16 r0, q5[7]
 ; CHECK-MVE-NEXT:    bl __aeabi_h2f
@@ -143,8 +143,8 @@ define arm_aapcs_vfpcc void @vabd_v8f16(<8 x half> %x, <8 x half> %y, ptr %z) {
 ; CHECK-MVE-NEXT:    bl __aeabi_h2f
 ; CHECK-MVE-NEXT:    mov r1, r5
 ; CHECK-MVE-NEXT:    bl __aeabi_fsub
-; CHECK-MVE-NEXT:    bic r0, r0, #-2147483648
 ; CHECK-MVE-NEXT:    bl __aeabi_f2h
+; CHECK-MVE-NEXT:    bfc r0, #15, #17
 ; CHECK-MVE-NEXT:    vmov.16 q6[7], r0
 ; CHECK-MVE-NEXT:    vstrw.32 q6, [r4]
 ; CHECK-MVE-NEXT:    vpop {d8, d9, d10, d11, d12, d13}

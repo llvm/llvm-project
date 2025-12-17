@@ -38,9 +38,8 @@ struct X86_64 : TargetInfo {
                             uint64_t entryAddr) const override;
 
   void writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
-                            uint64_t stubOffset, uint64_t selrefsVA,
-                            uint64_t selectorIndex, uint64_t gotAddr,
-                            uint64_t msgSendIndex) const override;
+                            uint64_t &stubOffset, uint64_t selrefVA,
+                            Symbol *objcMsgSend) const override;
 
   void relaxGotLoad(uint8_t *loc, uint8_t type) const override;
   uint64_t getPageSize() const override { return 4 * 1024; }
@@ -52,10 +51,11 @@ struct X86_64 : TargetInfo {
 
 static constexpr std::array<RelocAttrs, 10> relocAttrsArray{{
 #define B(x) RelocAttrBits::x
-    {"UNSIGNED",
-     B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) | B(BYTE4) | B(BYTE8)},
+    {"UNSIGNED", B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) | B(BYTE1) |
+                     B(BYTE4) | B(BYTE8)},
     {"SIGNED", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
-    {"BRANCH", B(PCREL) | B(EXTERN) | B(BRANCH) | B(BYTE4)},
+    {"BRANCH",
+     B(PCREL) | B(EXTERN) | B(LOCAL) | B(BRANCH) | B(BYTE1) | B(BYTE4)},
     {"GOT_LOAD", B(PCREL) | B(EXTERN) | B(GOT) | B(LOAD) | B(BYTE4)},
     {"GOT", B(PCREL) | B(EXTERN) | B(GOT) | B(POINTER) | B(BYTE4)},
     {"SUBTRACTOR", B(SUBTRAHEND) | B(EXTERN) | B(BYTE4) | B(BYTE8)},
@@ -83,25 +83,40 @@ int64_t X86_64::getEmbeddedAddend(MemoryBufferRef mb, uint64_t offset,
                                   relocation_info rel) const {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   const uint8_t *loc = buf + offset + rel.r_address;
+  int64_t addend;
 
   switch (rel.r_length) {
+  case 0:
+    addend = static_cast<int8_t>(*loc);
+    break;
   case 2:
-    return static_cast<int32_t>(read32le(loc)) + pcrelOffset(rel.r_type);
+    addend = static_cast<int32_t>(read32le(loc));
+    break;
   case 3:
-    return read64le(loc) + pcrelOffset(rel.r_type);
+    addend = read64le(loc);
+    break;
   default:
     llvm_unreachable("invalid r_length");
   }
+
+  return addend + pcrelOffset(rel.r_type);
 }
 
 void X86_64::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
                          uint64_t relocVA) const {
   if (r.pcrel) {
-    uint64_t pc = relocVA + 4 + pcrelOffset(r.type);
+    uint64_t pc = relocVA + (1ull << r.length) + pcrelOffset(r.type);
     value -= pc;
   }
 
   switch (r.length) {
+  case 0:
+    if (r.type == X86_64_RELOC_UNSIGNED)
+      checkUInt(loc, r, value, 8);
+    else
+      checkInt(loc, r, value, 8);
+    *loc = value;
+    break;
   case 2:
     if (r.type == X86_64_RELOC_UNSIGNED)
       checkUInt(loc, r, value, 32);
@@ -182,16 +197,18 @@ static constexpr uint8_t objcStubsFastCode[] = {
 };
 
 void X86_64::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
-                                  uint64_t stubOffset, uint64_t selrefsVA,
-                                  uint64_t selectorIndex, uint64_t gotAddr,
-                                  uint64_t msgSendIndex) const {
+                                  uint64_t &stubOffset, uint64_t selrefVA,
+                                  Symbol *objcMsgSend) const {
+  uint64_t objcMsgSendAddr = in.got->addr;
+  uint64_t objcMsgSendIndex = objcMsgSend->gotIndex;
+
   memcpy(buf, objcStubsFastCode, sizeof(objcStubsFastCode));
   SymbolDiagnostic d = {sym, sym->getName()};
   uint64_t stubAddr = stubsAddr + stubOffset;
-  writeRipRelative(d, buf, stubAddr, 7,
-                   selrefsVA + selectorIndex * LP64::wordSize);
+  writeRipRelative(d, buf, stubAddr, 7, selrefVA);
   writeRipRelative(d, buf, stubAddr, 0xd,
-                   gotAddr + msgSendIndex * LP64::wordSize);
+                   objcMsgSendAddr + objcMsgSendIndex * LP64::wordSize);
+  stubOffset += target->objcStubsFastSize;
 }
 
 void X86_64::relaxGotLoad(uint8_t *loc, uint8_t type) const {
@@ -214,7 +231,7 @@ X86_64::X86_64() : TargetInfo(LP64()) {
   stubHelperEntrySize = sizeof(stubHelperEntry);
 
   objcStubsFastSize = sizeof(objcStubsFastCode);
-  objcStubsAlignment = 1;
+  objcStubsFastAlignment = 1;
 
   relocAttrs = {relocAttrsArray.data(), relocAttrsArray.size()};
 }

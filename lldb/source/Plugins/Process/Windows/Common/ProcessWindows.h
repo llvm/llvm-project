@@ -52,7 +52,7 @@ public:
   Status DoAttachToProcessWithID(
       lldb::pid_t pid,
       const lldb_private::ProcessAttachInfo &attach_info) override;
-  Status DoResume() override;
+  Status DoResume(lldb::RunDirection direction) override;
   Status DoDestroy() override;
   Status DoHalt(bool &caused_stop) override;
 
@@ -96,8 +96,10 @@ public:
   void OnDebuggerError(const Status &error, uint32_t type) override;
 
   std::optional<uint32_t> GetWatchpointSlotCount() override;
-  Status EnableWatchpoint(Watchpoint *wp, bool notify = true) override;
-  Status DisableWatchpoint(Watchpoint *wp, bool notify = true) override;
+  Status EnableWatchpoint(lldb::WatchpointSP wp_sp,
+                          bool notify = true) override;
+  Status DisableWatchpoint(lldb::WatchpointSP wp_sp,
+                           bool notify = true) override;
 
 protected:
   ProcessWindows(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);

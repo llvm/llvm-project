@@ -4,6 +4,76 @@
 # RUN: not llvm-mc -triple powerpc64le-unknown-unknown < %s 2> %t
 # RUN: FileCheck < %t %s
 
+# From ISAFuture
+
+# CHECK: error: invalid operand for instruction
+paddis 10, 5, 1000000000, 1
+
+# From ISA31
+
+# CHECK: error: invalid operand for instruction
+paddi 1, 1, 32, 1
+
+# CHECK: error: invalid operand for instruction
+pld 1, 32(1), 1
+
+# CHECK: error: invalid operand for instruction
+plbz 1, 32(1), 1
+
+# CHECK: error: invalid operand for instruction
+plfd 1, 32(1), 1
+
+# CHECK: error: invalid operand for instruction
+plfs 1, 32(1), 1
+
+# CHECK: error: invalid operand for instruction
+plha 1, 32(1), 1
+
+# CHECK: error: invalid operand for instruction
+plhz 1, 32(1), 1
+
+# CHECK: error: invalid operand for instruction
+plwa 1, 32(1), 1
+
+# CHECK: error: invalid operand for instruction
+plwz 1, 32(1), 1
+
+# CHECK: error: invalid operand for instruction
+plxsd 1, 32(1), 1
+
+# CHECK: error: invalid operand for instruction
+plxssp 1, 32(1), 1
+
+# CHECK: error: invalid operand for instruction
+plxv 1, 32(1), 1
+
+# CHECK: error: invalid operand for instruction
+pstb 1, 32(1), 1
+
+# CHECK: error: invalid operand for instruction
+pstd 1, 32(1), 1
+
+# CHECK: error: invalid operand for instruction
+pstfd 1, 32(1), 1
+
+# CHECK: error: invalid operand for instruction
+pstfs 1, 32(1), 1
+
+# CHECK: error: invalid operand for instruction
+psth 1, 32(1), 1
+
+# CHECK: error: invalid operand for instruction
+pstw 1, 32(1), 1
+
+# CHECK: error: invalid operand for instruction
+pstxsd 1, 32(1), 1
+
+# CHECK: error: invalid operand for instruction
+pstxssp 1, 32(1), 1
+
+# CHECK: error: invalid operand for instruction
+pstxv 1, 32(1), 1
+
 # Register operands
 
 # CHECK: error: invalid operand for instruction
@@ -53,8 +123,8 @@
               wait 4
 
 # CHECK: error: invalid operand for instruction
-# CHECK-NEXT: sync 4
-              sync 4
+# CHECK-NEXT: sync 8
+              sync 8
 
 # Unsigned 3-bit immediate operands
 
@@ -143,3 +213,18 @@
 # CHECK: error: invalid operand for instruction
 # CHECK-NEXT: lwarx 1, 2, 3, a
               lwarx 1, 2, 3, a
+
+# Instruction requires memory operand
+# CHECK: error: invalid operand for instruction
+# CHECK-NEXT: la 3, 3, 10
+              la 3, 3, 10
+
+# Instruction doesn't support memory operands
+# CHECK: error: invalid operand for instruction
+# CHECK-NEXT: addi 3, 10(3)
+              addi 3, 10(3)
+
+# Invalid memory operand position
+# CHECK: error: invalid operand for instruction
+# CHECK-NEXT: la 0(3), 3
+              la 0(3), 3

@@ -9,7 +9,7 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_MIN_H
 #define _LIBCPP___ALGORITHM_RANGES_MIN_H
 
-#include <__algorithm/ranges_min_element.h>
+#include <__algorithm/min_element.h>
 #include <__assert>
 #include <__concepts/copyable.h>
 #include <__config>
@@ -35,12 +35,11 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __min {
-struct __fn {
+struct __min {
   template <class _Tp,
             class _Proj                                                    = identity,
             indirect_strict_weak_order<projected<const _Tp*, _Proj>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&
   operator()(_LIBCPP_LIFETIMEBOUND const _Tp& __a,
              _LIBCPP_LIFETIMEBOUND const _Tp& __b,
              _Comp __comp = {},
@@ -51,23 +50,24 @@ struct __fn {
   template <copyable _Tp,
             class _Proj                                                    = identity,
             indirect_strict_weak_order<projected<const _Tp*, _Proj>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _Tp
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp
   operator()(initializer_list<_Tp> __il, _Comp __comp = {}, _Proj __proj = {}) const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__il.begin() != __il.end(), "initializer_list must contain at least one element");
-    return *ranges::__min_element_impl(__il.begin(), __il.end(), __comp, __proj);
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __il.begin() != __il.end(), "initializer_list must contain at least one element");
+    return *std::__min_element(__il.begin(), __il.end(), __comp, __proj);
   }
 
   template <input_range _Rp,
             class _Proj                                                         = identity,
             indirect_strict_weak_order<projected<iterator_t<_Rp>, _Proj>> _Comp = ranges::less>
     requires indirectly_copyable_storable<iterator_t<_Rp>, range_value_t<_Rp>*>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr range_value_t<_Rp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr range_value_t<_Rp>
   operator()(_Rp&& __r, _Comp __comp = {}, _Proj __proj = {}) const {
     auto __first = ranges::begin(__r);
     auto __last  = ranges::end(__r);
-    _LIBCPP_ASSERT_UNCATEGORIZED(__first != __last, "range must contain at least one element");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__first != __last, "range must contain at least one element");
     if constexpr (forward_range<_Rp> && !__is_cheap_to_copy<range_value_t<_Rp>>) {
-      return *ranges::__min_element_impl(__first, __last, __comp, __proj);
+      return *std::__min_element(__first, __last, __comp, __proj);
     } else {
       range_value_t<_Rp> __result = *__first;
       while (++__first != __last) {
@@ -78,10 +78,9 @@ struct __fn {
     }
   }
 };
-} // namespace __min
 
 inline namespace __cpo {
-inline constexpr auto min = __min::__fn{};
+inline constexpr auto min = __min{};
 } // namespace __cpo
 } // namespace ranges
 
@@ -89,6 +88,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_STD_VER >= 20 &&
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___ALGORITHM_RANGES_MIN_H

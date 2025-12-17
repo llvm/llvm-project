@@ -28,7 +28,8 @@ namespace {
 class DebugIteratorModeling
   : public Checker<eval::Call> {
 
-  std::unique_ptr<BugType> DebugMsgBugType;
+  const BugType DebugMsgBugType{this, "Checking analyzer assumptions", "debug",
+                                /*SuppressOnSink=*/true};
 
   template <typename Getter>
   void analyzerIteratorDataField(const CallExpr *CE, CheckerContext &C,
@@ -42,27 +43,19 @@ class DebugIteratorModeling
                                                  CheckerContext &) const;
 
   CallDescriptionMap<FnCheck> Callbacks = {
-      {{{"clang_analyzer_iterator_position"}, 1},
+      {{CDM::SimpleFunc, {"clang_analyzer_iterator_position"}, 1},
        &DebugIteratorModeling::analyzerIteratorPosition},
-      {{{"clang_analyzer_iterator_container"}, 1},
+      {{CDM::SimpleFunc, {"clang_analyzer_iterator_container"}, 1},
        &DebugIteratorModeling::analyzerIteratorContainer},
-      {{{"clang_analyzer_iterator_validity"}, 1},
+      {{CDM::SimpleFunc, {"clang_analyzer_iterator_validity"}, 1},
        &DebugIteratorModeling::analyzerIteratorValidity},
   };
 
 public:
-  DebugIteratorModeling();
-
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
 };
 
-} //namespace
-
-DebugIteratorModeling::DebugIteratorModeling() {
-  DebugMsgBugType.reset(
-      new BugType(this, "Checking analyzer assumptions", "debug",
-                  /*SuppressOnSink=*/true));
-}
+} // namespace
 
 bool DebugIteratorModeling::evalCall(const CallEvent &Call,
                                      CheckerContext &C) const {
@@ -131,8 +124,8 @@ ExplodedNode *DebugIteratorModeling::reportDebugMsg(llvm::StringRef Msg,
     return nullptr;
 
   auto &BR = C.getBugReporter();
-  BR.emitReport(std::make_unique<PathSensitiveBugReport>(*DebugMsgBugType,
-                                                         Msg, N));
+  BR.emitReport(
+      std::make_unique<PathSensitiveBugReport>(DebugMsgBugType, Msg, N));
   return N;
 }
 

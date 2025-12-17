@@ -3,13 +3,13 @@
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete
 //
-// RUN: %clang_analyze_cc1 -DLEAKS -std=c++11 -fblocks %s \
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks %s \
 // RUN:   -verify=expected,newdelete,leak \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
 //
-// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -verify %s \
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks %s \
 // RUN:   -verify=expected,leak \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
@@ -19,16 +19,17 @@
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete
 //
-// RUN: %clang_analyze_cc1 -DLEAKS -std=c++17 -fblocks %s \
+// RUN: %clang_analyze_cc1 -std=c++17 -fblocks %s \
 // RUN:   -verify=expected,newdelete,leak \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
 //
-// RUN: %clang_analyze_cc1 -std=c++17 -fblocks -verify %s \
-// RUN:   -verify=expected,leak \
+// RUN: %clang_analyze_cc1 -std=c++17 -fblocks %s \
+// RUN:   -verify=expected,leak,inspection \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
+// RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks \
+// RUN:   -analyzer-checker=debug.ExprInspection
 
 #include "Inputs/system-header-simulator-cxx.h"
 
@@ -36,10 +37,6 @@ typedef __typeof__(sizeof(int)) size_t;
 extern "C" void *malloc(size_t);
 extern "C" void free (void* ptr);
 int *global;
-
-//------------------
-// check for leaks
-//------------------
 
 //----- Standard non-placement operators
 void testGlobalOpNew() {
@@ -70,14 +67,34 @@ void testGlobalNoThrowPlacementExprNewBeforeOverload() {
 //----- Standard pointer placement operators
 void testGlobalPointerPlacementNew() {
   int i;
+  void *p1 = operator new(0, &i); // no leak: placement new never allocates
+  void *p2 = operator new[](0, &i); // no leak
+  int *p3 = new(&i) int; // no leak
+  int *p4 = new(&i) int[0]; // no leak
+}
 
-  void *p1 = operator new(0, &i); // no warn
+template<typename T>
+void clang_analyzer_dump(T x);
 
-  void *p2 = operator new[](0, &i); // no warn
+void testPlacementNewBufValue() {
+  int i = 10;
+  int *p = new(&i) int;
+  clang_analyzer_dump(p); // inspection-warning{{&i}}
+  clang_analyzer_dump(*p); // inspection-warning{{10}}
+}
 
-  int *p3 = new(&i) int; // no warn
+void testPlacementNewBufValueExplicitOp() {
+  int i = 10;
+  int *p = (int*)operator new(sizeof(int), &i);
+  clang_analyzer_dump(p); // inspection-warning{{&i}}
+  clang_analyzer_dump(*p); // inspection-warning{{10}}
+}
 
-  int *p4 = new(&i) int[0]; // no warn
+void testPlacementArrNewBufValueExplicitArrOp() {
+  int i = 10;
+  int *p = (int*)operator new[](sizeof(int), &i);
+  clang_analyzer_dump(p); // inspection-warning{{&i}}
+  clang_analyzer_dump(*p); // inspection-warning{{10}}
 }
 
 //----- Other cases
@@ -138,52 +155,52 @@ void g(SomeClass &c, ...);
 void testUseFirstArgAfterDelete() {
   int *p = new int;
   delete p;
-  f(p); // newdelete-warning{{Use of memory after it is freed}}
+  f(p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseMiddleArgAfterDelete(int *p) {
   delete p;
-  f(0, p); // newdelete-warning{{Use of memory after it is freed}}
+  f(0, p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseLastArgAfterDelete(int *p) {
   delete p;
-  f(0, 0, p); // newdelete-warning{{Use of memory after it is freed}}
+  f(0, 0, p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseSeveralArgsAfterDelete(int *p) {
   delete p;
-  f(p, p, p); // newdelete-warning{{Use of memory after it is freed}}
+  f(p, p, p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseRefArgAfterDelete(SomeClass &c) {
   delete &c;
-  g(c); // newdelete-warning{{Use of memory after it is freed}}
+  g(c); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testVariadicArgAfterDelete() {
   SomeClass c;
   int *p = new int;
   delete p;
-  g(c, 0, p); // newdelete-warning{{Use of memory after it is freed}}
+  g(c, 0, p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseMethodArgAfterDelete(int *p) {
   SomeClass *c = new SomeClass;
   delete p;
-  c->f(p); // newdelete-warning{{Use of memory after it is freed}}
+  c->f(p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseThisAfterDelete() {
   SomeClass *c = new SomeClass;
   delete c;
-  c->f(0); // newdelete-warning{{Use of memory after it is freed}}
+  c->f(0); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testDoubleDelete() {
   int *p = new int;
   delete p;
-  delete p; // newdelete-warning{{Attempt to free released memory}}
+  delete p; // newdelete-warning{{Attempt to release already released memory}}
 }
 
 void testExprDeleteArg() {
@@ -395,7 +412,7 @@ public:
 void testDoubleDeleteClassInstance() {
   DerefClass *foo = new DerefClass();
   delete foo;
-  delete foo; // newdelete-warning {{Attempt to delete released memory}}
+  delete foo; // newdelete-warning {{Attempt to release already released memory}}
 }
 
 class EmptyClass{
@@ -407,7 +424,7 @@ public:
 void testDoubleDeleteEmptyClass() {
   EmptyClass *foo = new EmptyClass();
   delete foo;
-  delete foo; // newdelete-warning {{Attempt to delete released memory}}
+  delete foo; // newdelete-warning {{Attempt to release already released memory}}
 }
 
 struct Base {
@@ -458,3 +475,103 @@ void testLeakBecauseNTTPIsNotDeallocation() {
   void* p = ::operator new(10);
   deallocate_via_nttp<not_free>(p);
 }  // leak-warning{{Potential leak of memory pointed to by 'p'}}
+
+namespace optional_union {
+  template <typename T>
+  class unique_ptr {
+    T *q;
+  public:
+    unique_ptr() : q(new T) {}
+    ~unique_ptr() {
+      delete q;
+    }
+  };
+
+  union custom_union_t {
+    unique_ptr<int> present;
+    char notpresent;
+    custom_union_t() : present(unique_ptr<int>()) {}
+    ~custom_union_t() {}
+  };
+
+  void testUnionCorrect() {
+    custom_union_t a;
+    a.present.~unique_ptr<int>();
+  }
+
+  void testUnionLeak() {
+    custom_union_t a;
+  } // leak-warning{{Potential leak of memory pointed to by 'a.present.q'}}
+}
+
+namespace gh153782 {
+
+// Ensure we do not regress on the following use case.
+
+namespace mutually_exclusive_test_case_1 {
+struct StorageWrapper {
+  // Imagine the destructor and copy constructor both call a reset() function (among other things).
+  ~StorageWrapper() { delete parts; }
+  StorageWrapper(StorageWrapper const&) = default;
+
+  // Mind that there is no `parts = other.parts` assignment -- this is the bug we would like to find.
+  void operator=(StorageWrapper&& other) { delete parts; } // newdelete-warning{{Attempt to release already released memory}}
+
+  // Not provided, typically would do `parts = new long`.
+  StorageWrapper();
+
+  long* parts;
+};
+
+void test_non_trivial_struct_assignment() {
+  StorageWrapper* object = new StorageWrapper[]{StorageWrapper()};
+  object[0] = StorageWrapper(); // This assignment leads to the double-free.
+}
+} // mutually_exclusive_test_case_1
+
+namespace mutually_exclusive_test_case_2 {
+struct StorageWrapper {
+  // Imagine the destructor and copy constructor both call a reset() function (among other things).
+  ~StorageWrapper() { delete parts; }
+  StorageWrapper(StorageWrapper const&) = default;
+
+  // Mind that there is no `parts = other.parts` assignment -- this is the bug we would like to find.
+  void operator=(StorageWrapper&& other) { delete parts; }
+
+  // Not provided, typically would do `parts = new long`.
+  StorageWrapper();
+
+  long* parts;
+};
+
+void test_non_trivial_struct_assignment() {
+  StorageWrapper* object = new StorageWrapper[]{StorageWrapper()};
+  // object[0] = StorageWrapper(); // Remove the source of double free to make the potential leak appear.
+} // leak-warning{{Potential leak of memory pointed to by 'object'}}
+} // mutually_exclusive_test_case_2
+
+namespace mutually_exclusive_test_case_3 {
+struct StorageWrapper {
+  // Imagine the destructor and copy constructor both call a reset() function (among other things).
+  ~StorageWrapper() { delete parts; }
+  StorageWrapper(StorageWrapper const&) = default;
+
+  // Mind that there is no `parts = other.parts` assignment -- this is the bug we would like to find.
+  void operator=(StorageWrapper&& other) { delete parts; } // newdelete-warning{{Attempt to release already released memory}}
+
+  // Not provided, typically would do `parts = new long`.
+  StorageWrapper();
+
+  long* parts;
+};
+
+struct TestDoubleFreeWithInitializerList {
+  StorageWrapper* Object;
+  TestDoubleFreeWithInitializerList()
+  : Object(new StorageWrapper[]{StorageWrapper()}) {
+    Object[0] = StorageWrapper(); // This assignment leads to the double-free.
+  }
+};
+} // mutually_exclusive_test_case_3
+
+} // namespace gh153782

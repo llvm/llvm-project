@@ -13,8 +13,10 @@
 #ifndef LLVM_MC_MCOBJECTFILEINFO_H
 #define LLVM_MC_MCOBJECTFILEINFO_H
 
+#include "llvm/BinaryFormat/SFrame.h"
 #include "llvm/BinaryFormat/Swift.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -25,12 +27,8 @@ namespace llvm {
 class MCContext;
 class MCSection;
 
-class MCObjectFileInfo {
+class LLVM_ABI MCObjectFileInfo {
 protected:
-  /// True if target object file supports a weak_definition of constant 0 for an
-  /// omitted EH frame.
-  bool SupportsWeakOmittedEHFrame = false;
-
   /// True if the target object file supports emitting a compact unwind section
   /// without an associated EH frame section.
   bool SupportsCompactUnwindWithoutEHFrame = false;
@@ -48,6 +46,9 @@ protected:
 
   /// Compact unwind encoding indicating that we should emit only an EH frame.
   unsigned CompactUnwindDwarfEHFrameOnly = 0;
+
+  /// SFrame ABI architecture byte.
+  std::optional<sframe::ABI> SFrameABIArch = {};
 
   /// Section directive for standard text.
   MCSection *TextSection = nullptr;
@@ -68,10 +69,17 @@ protected:
   /// Language Specific Data Area information is emitted to.
   MCSection *LSDASection = nullptr;
 
+  /// Section containing call graph metadata.
+  MCSection *CallGraphSection = nullptr;
+
   /// If exception handling is supported by the target and the target can
   /// support a compact representation of the CIE and FDE, this is the section
   /// to emit them into.
   MCSection *CompactUnwindSection = nullptr;
+
+  /// If import call optimization is supported by the target, this is the
+  /// section to emit import call data to.
+  MCSection *ImportCallSection = nullptr;
 
   // Dwarf sections for debug info.  If a target supports debug info, these must
   // be set.
@@ -169,6 +177,9 @@ protected:
   /// It is initialized on demand so it can be overwritten (with uniquing).
   MCSection *EHFrameSection = nullptr;
 
+  /// SFrame section.
+  MCSection *SFrameSection = nullptr;
+
   /// Section containing metadata on function stack sizes.
   MCSection *StackSizesSection = nullptr;
 
@@ -226,8 +237,9 @@ protected:
   MCSection *GLJMPSection = nullptr;
 
   // GOFF specific sections.
-  MCSection *PPA1Section = nullptr;
+  MCSection *PPA2ListSection = nullptr;
   MCSection *ADASection = nullptr;
+  MCSection *IDRLSection = nullptr;
 
   // XCOFF specific sections
   MCSection *TOCBaseSection = nullptr;
@@ -244,9 +256,6 @@ public:
   virtual ~MCObjectFileInfo();
   MCContext &getContext() const { return *Ctx; }
 
-  bool getSupportsWeakOmittedEHFrame() const {
-    return SupportsWeakOmittedEHFrame;
-  }
   bool getSupportsCompactUnwindWithoutEHFrame() const {
     return SupportsCompactUnwindWithoutEHFrame;
   }
@@ -260,12 +269,14 @@ public:
     return CompactUnwindDwarfEHFrameOnly;
   }
 
+  std::optional<sframe::ABI> getSFrameABIArch() const { return SFrameABIArch; }
   virtual unsigned getTextSectionAlignment() const { return 4; }
   MCSection *getTextSection() const { return TextSection; }
   MCSection *getDataSection() const { return DataSection; }
   MCSection *getBSSSection() const { return BSSSection; }
   MCSection *getReadOnlySection() const { return ReadOnlySection; }
   MCSection *getLSDASection() const { return LSDASection; }
+  MCSection *getImportCallSection() const { return ImportCallSection; }
   MCSection *getCompactUnwindSection() const { return CompactUnwindSection; }
   MCSection *getDwarfAbbrevSection() const { return DwarfAbbrevSection; }
   MCSection *getDwarfInfoSection() const { return DwarfInfoSection; }
@@ -352,6 +363,8 @@ public:
   MCSection *getFaultMapSection() const { return FaultMapSection; }
   MCSection *getRemarksSection() const { return RemarksSection; }
 
+  MCSection *getCallGraphSection(const MCSection &TextSec) const;
+
   MCSection *getStackSizesSection(const MCSection &TextSec) const;
 
   MCSection *getBBAddrMapSection(const MCSection &TextSec) const;
@@ -430,13 +443,15 @@ public:
   MCSection *getGLJMPSection() const { return GLJMPSection; }
 
   // GOFF specific sections.
-  MCSection *getPPA1Section() const { return PPA1Section; }
+  MCSection *getPPA2ListSection() const { return PPA2ListSection; }
   MCSection *getADASection() const { return ADASection; }
+  MCSection *getIDRLSection() const { return IDRLSection; }
 
   // XCOFF specific sections
   MCSection *getTOCBaseSection() const { return TOCBaseSection; }
 
   MCSection *getEHFrameSection() const { return EHFrameSection; }
+  MCSection *getSFrameSection() const { return SFrameSection; }
 
   bool isPositionIndependent() const { return PositionIndependent; }
 
@@ -452,9 +467,6 @@ public:
 private:
   bool PositionIndependent = false;
   MCContext *Ctx = nullptr;
-  VersionTuple SDKVersion;
-  std::optional<Triple> DarwinTargetVariantTriple;
-  VersionTuple DarwinTargetVariantSDKVersion;
 
   void initMachOMCObjectFileInfo(const Triple &T);
   void initELFMCObjectFileInfo(const Triple &T, bool Large);
@@ -465,29 +477,6 @@ private:
   void initXCOFFMCObjectFileInfo(const Triple &T);
   void initDXContainerObjectFileInfo(const Triple &T);
   MCSection *getDwarfComdatSection(const char *Name, uint64_t Hash) const;
-
-public:
-  void setSDKVersion(const VersionTuple &TheSDKVersion) {
-    SDKVersion = TheSDKVersion;
-  }
-
-  const VersionTuple &getSDKVersion() const { return SDKVersion; }
-
-  void setDarwinTargetVariantTriple(const Triple &T) {
-    DarwinTargetVariantTriple = T;
-  }
-
-  const Triple *getDarwinTargetVariantTriple() const {
-    return DarwinTargetVariantTriple ? &*DarwinTargetVariantTriple : nullptr;
-  }
-
-  void setDarwinTargetVariantSDKVersion(const VersionTuple &TheSDKVersion) {
-    DarwinTargetVariantSDKVersion = TheSDKVersion;
-  }
-
-  const VersionTuple &getDarwinTargetVariantSDKVersion() const {
-    return DarwinTargetVariantSDKVersion;
-  }
 };
 
 } // end namespace llvm

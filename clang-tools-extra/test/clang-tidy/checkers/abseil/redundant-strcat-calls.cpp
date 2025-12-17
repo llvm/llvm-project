@@ -1,8 +1,6 @@
 // RUN: %check_clang_tidy %s abseil-redundant-strcat-calls %t -- -- -isystem %clang_tidy_headers
 #include <string>
 
-int strlen(const char *);
-
 namespace absl {
 
 class string_view {
@@ -71,7 +69,7 @@ using absl::StrCat;
 void Positives() {
   std::string S = StrCat(1, StrCat("A", StrCat(1.1)));
   // CHECK-MESSAGES: [[@LINE-1]]:19: warning: multiple calls to 'absl::StrCat' can be flattened into a single call
-  // CHECK-FIXES: string S = StrCat(1, "A", 1.1);
+  // CHECK-FIXES: std::string S = StrCat(1, "A", 1.1);
 
   S = StrCat(StrCat(StrCat(StrCat(StrCat(1)))));
   // CHECK-MESSAGES: [[@LINE-1]]:7: warning: multiple calls to 'absl::StrCat' can be flattened into a single call

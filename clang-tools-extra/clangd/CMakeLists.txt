@@ -6,7 +6,7 @@ add_subdirectory(support)
 
 # Configure the Features.inc file.
 if (NOT DEFINED CLANGD_BUILD_XPC)
-  if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
     set(CLANGD_BUILD_XPC_DEFAULT ON)
   else ()
     set(CLANGD_BUILD_XPC_DEFAULT OFF)
@@ -61,7 +61,7 @@ endif()
 include_directories(BEFORE "${CMAKE_CURRENT_BINARY_DIR}/../clang-tidy")
 include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/../include-cleaner/include")
 
-add_clang_library(clangDaemon
+add_clang_library(clangDaemon STATIC
   AST.cpp
   ASTSignals.cpp
   ClangdLSPServer.cpp
@@ -91,22 +91,24 @@ add_clang_library(clangDaemon
   GlobalCompilationDatabase.cpp
   Headers.cpp
   HeaderSourceSwitch.cpp
-  HeuristicResolver.cpp
   Hover.cpp
   IncludeCleaner.cpp
   IncludeFixer.cpp
   InlayHints.cpp
   JSONTransport.cpp
+  ModulesBuilder.cpp
   PathMapping.cpp
   Protocol.cpp
   Quality.cpp
   ParsedAST.cpp
   Preamble.cpp
   RIFF.cpp
+  ScanningProjectModules.cpp
   Selection.cpp
   SemanticHighlighting.cpp
   SemanticSelection.cpp
   SourceCode.cpp
+  SymbolDocumentation.cpp
   SystemIncludeExtractor.cpp
   TidyProvider.cpp
   TUScheduler.cpp
@@ -161,7 +163,9 @@ clang_target_link_libraries(clangDaemon
   clangAST
   clangASTMatchers
   clangBasic
+  clangDependencyScanning
   clangDriver
+  clangOptions
   clangFormat
   clangFrontend
   clangIndex
@@ -180,8 +184,8 @@ target_link_libraries(clangDaemon
   ${LLVM_PTHREAD_LIB}
 
   clangIncludeCleaner
-  clangPseudo
   clangTidy
+  clangTidyUtils
 
   clangdSupport
   )
@@ -190,7 +194,7 @@ if(CLANGD_TIDY_CHECKS)
 endif()
 
 add_subdirectory(refactor/tweaks)
-if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
   # FIXME: Make fuzzer not use linux-specific APIs, build it everywhere.
   add_subdirectory(fuzzer)
 endif()
@@ -208,6 +212,9 @@ if (CLANGD_ENABLE_REMOTE)
   include(AddGRPC)
 endif()
 
+option(CLANGD_BUILD_DEXP "Build the dexp tool as part of Clangd" ON)
+llvm_canonicalize_cmake_booleans(CLANGD_BUILD_DEXP)
+
 if(CLANG_INCLUDE_TESTS)
   add_subdirectory(test)
   add_subdirectory(unittests)
@@ -218,4 +225,7 @@ option(CLANGD_ENABLE_REMOTE "Use gRPC library to enable remote index support for
 set(GRPC_INSTALL_PATH "" CACHE PATH "Path to gRPC library manual installation.")
 
 add_subdirectory(index/remote)
-add_subdirectory(index/dex/dexp)
+
+if(CLANGD_BUILD_DEXP)
+  add_subdirectory(index/dex/dexp)
+endif()

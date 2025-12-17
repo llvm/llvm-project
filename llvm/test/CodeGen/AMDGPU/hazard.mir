@@ -1,6 +1,6 @@
-# RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GCN -check-prefix=VI %s
-# RUN: llc -march=amdgcn -mcpu=gfx803 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GCN -check-prefix=GFX8 %s
-# RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
+# RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GCN -check-prefix=VI %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx803 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GCN -check-prefix=GFX8 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
 
 # GCN-LABEL: name: hazard_implicit_def
 # GCN:    bb.0.entry:

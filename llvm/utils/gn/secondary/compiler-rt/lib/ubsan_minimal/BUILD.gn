@@ -15,4 +15,5 @@ static_library("ubsan_minimal") {
   ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
   sources = [ "ubsan_minimal_handlers.cpp" ]
+  defines = [ "SANITIZER_COMMON_NO_REDEFINE_BUILTINS" ]
 }

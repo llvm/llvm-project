@@ -15,18 +15,8 @@
 #ifndef LLVM_CLANG_LIB_FORMAT_UNWRAPPEDLINEPARSER_H
 #define LLVM_CLANG_LIB_FORMAT_UNWRAPPEDLINEPARSER_H
 
-#include "Encoding.h"
-#include "FormatToken.h"
 #include "Macros.h"
-#include "clang/Basic/IdentifierTable.h"
-#include "clang/Format/Format.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/Support/Regex.h"
-#include <list>
 #include <stack>
-#include <vector>
 
 namespace clang {
 namespace format {
@@ -58,6 +48,9 @@ struct UnwrappedLine {
   bool InPragmaDirective = false;
   /// Whether it is part of a macro body.
   bool InMacroBody = false;
+
+  /// Nesting level of unbraced body of a control statement.
+  unsigned UnbracedBodyLevel = 0;
 
   bool MustBeDeclaration = false;
 
@@ -151,9 +144,9 @@ private:
                               bool *HasDoWhile = nullptr,
                               bool *HasLabel = nullptr);
   bool tryToParseBracedList();
-  bool parseBracedList(bool ContinueOnSemicolons = false, bool IsEnum = false,
-                       tok::TokenKind ClosingBraceKind = tok::r_brace);
-  bool parseParens(TokenType AmpAmpTokenType = TT_Unknown);
+  bool parseBracedList(bool IsAngleBracket = false, bool IsEnum = false);
+  bool parseParens(TokenType AmpAmpTokenType = TT_Unknown,
+                   bool InMacroCall = false);
   void parseSquare(bool LambdaIntroducer = false);
   void keepAncestorBraces();
   void parseUnbracedBody(bool CheckEOF = false);
@@ -168,22 +161,24 @@ private:
   void parseDoWhile();
   void parseLabel(bool LeftAlignLabel = false);
   void parseCaseLabel();
-  void parseSwitch();
+  void parseSwitch(bool IsExpr);
   void parseNamespace();
   bool parseModuleImport();
   void parseNew();
   void parseAccessSpecifier();
   bool parseEnum();
   bool parseStructLike();
-  bool parseRequires();
-  void parseRequiresClause(FormatToken *RequiresToken);
-  void parseRequiresExpression(FormatToken *RequiresToken);
+  bool parseRequires(bool SeenEqual);
+  void parseRequiresClause();
+  void parseRequiresExpression();
   void parseConstraintExpression();
+  void parseCppExportBlock();
+  void parseNamespaceOrExportBlock(unsigned AddLevels);
   void parseJavaEnumBody();
   // Parses a record (aka class) as a top level element. If ParseAsExpr is true,
   // parses the record as a child block, i.e. if the class declaration is an
   // expression.
-  void parseRecord(bool ParseAsExpr = false);
+  void parseRecord(bool ParseAsExpr = false, bool IsJavaRecord = false);
   void parseObjCLightweightGenerics();
   void parseObjCMethod();
   void parseObjCProtocolList();
@@ -210,6 +205,8 @@ private:
   unsigned parseVerilogHierarchyHeader();
   void parseVerilogTable();
   void parseVerilogCaseLabel();
+  // For import, export, and extern.
+  void parseVerilogExtern();
   std::optional<llvm::SmallVector<llvm::SmallVector<FormatToken *, 8>, 1>>
   parseMacroCall();
 
@@ -236,7 +233,7 @@ private:
   // NextTok specifies the next token. A null pointer NextTok is supported, and
   // signifies either the absence of a next token, or that the next token
   // shouldn't be taken into account for the analysis.
-  void distributeComments(const SmallVectorImpl<FormatToken *> &Comments,
+  void distributeComments(const ArrayRef<FormatToken *> &Comments,
                           const FormatToken *NextTok);
 
   // Adds the comment preceding the next token to unwrapped lines.
@@ -304,8 +301,11 @@ private:
   // Since the next token might already be in a new unwrapped line, we need to
   // store the comments belonging to that token.
   SmallVector<FormatToken *, 1> CommentsBeforeNextToken;
+
   FormatToken *FormatTok = nullptr;
-  bool MustBreakBeforeNextToken;
+
+  // Has just finished parsing a preprocessor line.
+  bool AtEndOfPPLine;
 
   // The parsed lines. Only added to through \c CurrentLines.
   SmallVector<UnwrappedLine, 8> Lines;
@@ -326,6 +326,8 @@ private:
   llvm::BitVector DeclarationScopeStack;
 
   const FormatStyle &Style;
+  bool IsCpp;
+  LangOptions LangOpts;
   const AdditionalKeywords &Keywords;
 
   llvm::Regex CommentPragmasRegex;
@@ -397,6 +399,13 @@ private:
   // Current state of include guard search.
   IncludeGuardState IncludeGuard;
 
+  IncludeGuardState
+  getIncludeGuardState(FormatStyle::PPDirectiveIndentStyle Style) const {
+    return Style == FormatStyle::PPDIS_None || Style == FormatStyle::PPDIS_Leave
+               ? IG_Rejected
+               : IG_Inited;
+  }
+
   // Points to the #ifndef condition for a potential include guard. Null unless
   // IncludeGuardState == IG_IfNdefed.
   FormatToken *IncludeGuardToken;
@@ -416,11 +425,13 @@ struct UnwrappedLineNode {
   UnwrappedLineNode() : Tok(nullptr) {}
   UnwrappedLineNode(FormatToken *Tok,
                     llvm::ArrayRef<UnwrappedLine> Children = {})
-      : Tok(Tok), Children(Children.begin(), Children.end()) {}
+      : Tok(Tok), Children(Children) {}
 
   FormatToken *Tok;
   SmallVector<UnwrappedLine, 0> Children;
 };
+
+std::ostream &operator<<(std::ostream &Stream, const UnwrappedLine &Line);
 
 } // end namespace format
 } // end namespace clang

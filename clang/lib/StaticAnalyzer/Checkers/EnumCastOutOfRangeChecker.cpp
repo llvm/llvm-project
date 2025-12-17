@@ -19,13 +19,16 @@
 //   enumeration value
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/Attr.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <optional>
 
 using namespace clang;
 using namespace ento;
+using llvm::formatv;
 
 namespace {
 // This evaluator checks two SVals for equality. The first SVal is provided via
@@ -58,7 +61,7 @@ public:
 // Being conservative, it does not warn if there is slight possibility the
 // value can be matching.
 class EnumCastOutOfRangeChecker : public Checker<check::PreStmt<CastExpr>> {
-  mutable std::unique_ptr<BugType> EnumValueCastOutOfRange;
+  const BugType EnumValueCastOutOfRange{this, "Enum cast out of range"};
   void reportWarning(CheckerContext &C, const CastExpr *CE,
                      const EnumDecl *E) const;
 
@@ -83,22 +86,23 @@ void EnumCastOutOfRangeChecker::reportWarning(CheckerContext &C,
                                               const EnumDecl *E) const {
   assert(E && "valid EnumDecl* is expected");
   if (const ExplodedNode *N = C.generateNonFatalErrorNode()) {
-    if (!EnumValueCastOutOfRange)
-      EnumValueCastOutOfRange.reset(
-          new BugType(this, "Enum cast out of range"));
+    std::string ValueStr = "", NameStr = "the enum";
 
-    llvm::SmallString<128> Msg{"The value provided to the cast expression is "
-                               "not in the valid range of values for "};
-    StringRef EnumName{E->getName()};
-    if (EnumName.empty()) {
-      Msg += "the enum";
-    } else {
-      Msg += '\'';
-      Msg += EnumName;
-      Msg += '\'';
+    // Try to add details to the message:
+    const auto ConcreteValue =
+        C.getSVal(CE->getSubExpr()).getAs<nonloc::ConcreteInt>();
+    if (ConcreteValue) {
+      ValueStr = formatv(" '{0}'", ConcreteValue->getValue());
+    }
+    if (StringRef EnumName{E->getName()}; !EnumName.empty()) {
+      NameStr = formatv("'{0}'", EnumName);
     }
 
-    auto BR = std::make_unique<PathSensitiveBugReport>(*EnumValueCastOutOfRange,
+    std::string Msg = formatv("The value{0} provided to the cast expression is "
+                              "not in the valid range of values for {1}",
+                              ValueStr, NameStr);
+
+    auto BR = std::make_unique<PathSensitiveBugReport>(EnumValueCastOutOfRange,
                                                        Msg, N);
     bugreporter::trackExpressionValue(N, CE->getSubExpr(), *BR);
     BR->addNote("enum declared here",
@@ -135,16 +139,14 @@ void EnumCastOutOfRangeChecker::checkPreStmt(const CastExpr *CE,
   if (!ValueToCast)
     return;
 
-  const QualType T = CE->getType();
   // Check whether the cast type is an enum.
-  if (!T->isEnumeralType())
+  const auto *ED = CE->getType()->getAsEnumDecl();
+  if (!ED)
     return;
 
-  // If the cast is an enum, get its declaration.
-  // If the isEnumeralType() returned true, then the declaration must exist
-  // even if it is a stub declaration. It is up to the getDeclValuesForEnum()
-  // function to handle this.
-  const EnumDecl *ED = T->castAs<EnumType>()->getDecl();
+  // [[clang::flag_enum]] annotated enums are by definition should be ignored.
+  if (ED->hasAttr<FlagEnumAttr>())
+    return;
 
   EnumValueVector DeclValues = getDeclValuesForEnum(ED);
 
@@ -152,6 +154,9 @@ void EnumCastOutOfRangeChecker::checkPreStmt(const CastExpr *CE,
   // Every initialization an enum with a fixed underlying type but without any
   // enumerators would produce a warning if we were to continue at this point.
   // The most notable example is std::byte in the C++17 standard library.
+  // TODO: Create heuristics to bail out when the enum type is intended to be
+  // used to store combinations of flag values (to mitigate the limitation
+  // described in the docs).
   if (DeclValues.size() == 0)
     return;
 

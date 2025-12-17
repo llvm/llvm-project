@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Test that we are passing the correct length when using character array as
 ! Format (Fortran 2018 12.6.2.2 point 3)
@@ -15,8 +15,8 @@ subroutine test_array_format
   ! CHECK: %[[fmtArg:.*]] = fir.zero_bits !fir.ref<i8>
   ! CHECK: %[[fmtLenArg:.*]] = fir.zero_bits i64
   ! CHECK: %[[fmtDesc:.*]] = fir.convert %[[fmtBox]] : (!fir.box<!fir.array<2x!fir.char<1,10>>>) -> !fir.box<none>
-  ! CHECK: fir.call @_FortranAioBeginExternalFormattedOutput(%[[fmtArg]], %[[fmtLenArg]], %[[fmtDesc]], {{.*}}) 
-  write(*, array) 
+  ! CHECK: fir.call @_FortranAioBeginExternalFormattedOutput(%[[fmtArg]], %[[fmtLenArg]], %[[fmtDesc]], {{.*}})
+  write(*, array)
 end subroutine
 
 ! A test to check the buffer and it's length.

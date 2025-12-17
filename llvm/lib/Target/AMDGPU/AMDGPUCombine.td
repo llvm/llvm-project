@@ -15,9 +15,10 @@ def fmin_fmax_legacy_matchdata : GIDefMatchData<"FMinFMaxLegacyInfo">;
 let Predicates = [HasFminFmaxLegacy] in
 def fcmp_select_to_fmin_fmax_legacy : GICombineRule<
   (defs root:$select, fmin_fmax_legacy_matchdata:$matchinfo),
-  (match (wip_match_opcode G_SELECT):$select,
-         [{ return matchFMinFMaxLegacy(*${select}, ${matchinfo}); }]),
-  (apply [{ applySelectFCmpToFMinToFMaxLegacy(*${select}, ${matchinfo}); }])>;
+  (match (G_FCMP $cond, $pred, $lhs, $rhs):$fcmp,
+         (G_SELECT f32:$dst, $cond, $true, $false):$select,
+         [{ return matchFMinFMaxLegacy(*${select}, *${fcmp}, ${matchinfo}); }]),
+  (apply [{ applySelectFCmpToFMinFMaxLegacy(*${select}, ${matchinfo}); }])>;
 
 
 def uchar_to_float : GICombineRule<
@@ -33,6 +34,12 @@ def rcp_sqrt_to_rsq : GICombineRule<
          [{ return matchRcpSqrtToRsq(*${rcp}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${rcp}, ${matchinfo}); }])>;
 
+def fdiv_by_sqrt_to_rsq_f16 : GICombineRule<
+  (defs root:$root),
+  (match (G_FSQRT f16:$sqrt, $x, (MIFlags FmContract)),
+         (G_FDIV f16:$dst, $y, $sqrt, (MIFlags FmContract)):$root,
+         [{ return matchFDivSqrtToRsqF16(*${root}); }]),
+  (apply [{ applyFDivSqrtToRsqF16(*${root}, ${x}.getReg()); }])>;
 
 def cvt_f32_ubyteN_matchdata : GIDefMatchData<"CvtF32UByteMatchInfo">;
 
@@ -64,6 +71,12 @@ def int_minmax_to_med3 : GICombineRule<
          [{ return matchIntMinMaxToMed3(*${min_or_max}, ${matchinfo}); }]),
   (apply [{ applyMed3(*${min_or_max}, ${matchinfo}); }])>;
 
+let Predicates = [Predicate<"Subtarget->d16PreservesUnusedBits()">] in
+def d16_load : GICombineRule<
+  (defs root:$bitcast),
+  (combine (G_BITCAST $dst, $src):$bitcast,
+           [{ return combineD16Load(*${bitcast} ); }])>;
+
 def fp_minmax_to_med3 : GICombineRule<
   (defs root:$min_or_max, med3_matchdata:$matchinfo),
   (match (wip_match_opcode G_FMAXNUM,
@@ -88,10 +101,8 @@ def fmed3_intrinsic_to_clamp : GICombineRule<
          [{ return matchFPMed3ToClamp(*${fmed3}, ${matchinfo}); }]),
   (apply [{ applyClamp(*${fmed3}, ${matchinfo}); }])>;
 
-def remove_fcanonicalize_matchinfo : GIDefMatchData<"Register">;
-
 def remove_fcanonicalize : GICombineRule<
-  (defs root:$fcanonicalize, remove_fcanonicalize_matchinfo:$matchinfo),
+  (defs root:$fcanonicalize, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_FCANONICALIZE):$fcanonicalize,
          [{ return matchRemoveFcanonicalize(*${fcanonicalize}, ${matchinfo}); }]),
   (apply [{ Helper.replaceSingleDefInstWithReg(*${fcanonicalize}, ${matchinfo}); }])>;
@@ -104,7 +115,14 @@ def foldable_fneg : GICombineRule<
          [{ return Helper.matchFoldableFneg(*${ffn}, ${matchinfo}); }]),
   (apply [{ Helper.applyFoldableFneg(*${ffn}, ${matchinfo}); }])>;
 
-def sign_exension_in_reg_matchdata : GIDefMatchData<"MachineInstr *">;
+// Detects s_mul_u64 instructions whose higher bits are zero/sign extended.
+def smulu64 : GICombineRule<
+  (defs root:$smul, unsigned_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_MUL):$smul,
+         [{ return matchCombine_s_mul_u64(*${smul}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceOpcodeWith(*${smul}, ${matchinfo}); }])>;
+
+def sign_exension_in_reg_matchdata : GIDefMatchData<"std::pair<MachineInstr *, unsigned>">;
 
 def sign_extension_in_reg : GICombineRule<
   (defs root:$sign_inreg, sign_exension_in_reg_matchdata:$matchinfo),
@@ -112,6 +130,64 @@ def sign_extension_in_reg : GICombineRule<
          [{ return matchCombineSignExtendInReg(*${sign_inreg}, ${matchinfo}); }]),
   (apply [{ applyCombineSignExtendInReg(*${sign_inreg}, ${matchinfo}); }])>;
 
+// Do the following combines :
+// fmul x, select(y, A, B)   -> fldexp (x, select i32 (y, a, b))
+// fmul x, select(y, -A, -B) -> fldexp ((fneg x), select i32 (y, a, b))
+def combine_fmul_with_select_to_fldexp : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match  (G_FMUL $dst, $x, $select):$root,
+          (G_SELECT $select, $y, $A, $B):$sel,
+          [{ return Helper.matchCombineFmulWithSelectToFldexp(*${root}, *${sel}, ${matchinfo}); }]),
+  (apply  [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+// (shift x, (zext amt)) -> (shift x, (and (anyext amt), mask)
+//
+// The pattern is longer, but is better for matching during ISel.
+class canonicalize_zext_shift_amt<Instruction opc> : GICombineRule<
+  (defs root:$dst),
+  (match  (G_ZEXT $amt, $amtsrc):$zext,
+          (opc $dst, $src, $amt):$shift),
+  (apply  [{ applyCanonicalizeZextShiftAmt(*${shift}, *${zext}); }])>;
+
+def canonicalize_zext_lshr : canonicalize_zext_shift_amt<G_LSHR>;
+def canonicalize_zext_ashr : canonicalize_zext_shift_amt<G_ASHR>;
+def canonicalize_zext_shl : canonicalize_zext_shift_amt<G_SHL>;
+
+def zext_of_shift_amount_combines : GICombineGroup<[
+  canonicalize_zext_lshr, canonicalize_zext_ashr, canonicalize_zext_shl
+]>;
+
+// (and/or i64:x, i64:y) -> i64:(merge (and/or lo_32(x), lo_32(y)), (and/or hi_32(x), hi_32(y)))
+// when either x or y is all ones in low or high parts
+class combine_binop_s64_with_s32_mask<Instruction opcode> : GICombineRule<
+  (defs root:$dst),
+  (match (opcode $dst, i64:$x, i64:$y):$dst,
+         [{ return Helper.matchConstantIs32BitMask(${x}.getReg()) ||
+                   Helper.matchConstantIs32BitMask(${y}.getReg()); }]),
+  (apply (G_UNMERGE_VALUES i32:$x_lo, i32:$x_hi, $x),
+         (G_UNMERGE_VALUES i32:$y_lo, i32:$y_hi, $y),
+         (opcode i32:$lo, $x_lo, $y_lo),
+         (opcode i32:$hi, $x_hi, $y_hi),
+         (G_MERGE_VALUES $dst, $lo, $hi))>;
+
+def combine_or_s64_with_s32_mask : combine_binop_s64_with_s32_mask<G_OR>;
+def combine_and_s64_with_s32_mask : combine_binop_s64_with_s32_mask<G_AND>;
+def binop_s64_with_s32_mask_combines : GICombineGroup<[
+  combine_or_s64_with_s32_mask, combine_and_s64_with_s32_mask
+]>;
+
+// (or i64:x, (zext i32:y)) -> i64:(merge (or lo_32(x), i32:y), hi_32(x))
+// (or (zext i32:y), i64:x) -> i64:(merge (or lo_32(x), i32:y), hi_32(x))
+def or_s64_zext_s32_frag : GICombinePatFrag<(outs root:$dst), (ins $src_s64, $src_s32),
+  [(pattern (G_OR $dst, i64:$src_s64, i64:$zext_val), (G_ZEXT i64:$zext_val, i32:$src_s32)),
+   (pattern (G_OR $dst, i64:$zext_val, i64:$src_s64), (G_ZEXT i64:$zext_val, i32:$src_s32))]>;
+
+def combine_or_s64_s32 : GICombineRule<
+  (defs root:$dst),
+  (match (or_s64_zext_s32_frag $dst, i64:$x, i32:$y):$dst),
+  (apply (G_UNMERGE_VALUES $x_lo, $x_hi, $x),
+         (G_OR $or, $x_lo, $y),
+         (G_MERGE_VALUES $dst, $or, $x_hi))>;
 
 let Predicates = [Has16BitInsts, NotHasMed3_16] in {
 // For gfx8, expand f16-fmed3-as-f32 into a min/max f16 sequence. This
@@ -141,15 +217,18 @@ def gfx8_combines : GICombineGroup<[expand_promoted_fmed3]>;
 
 def AMDGPUPreLegalizerCombiner: GICombiner<
   "AMDGPUPreLegalizerCombinerImpl",
-  [all_combines, clamp_i64_to_i16, foldable_fneg]> {
+  [all_combines, combine_fmul_with_select_to_fldexp, clamp_i64_to_i16,
+   foldable_fneg, combine_shuffle_vector_to_build_vector,
+   binop_s64_with_s32_mask_combines, combine_or_s64_s32]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
 def AMDGPUPostLegalizerCombiner: GICombiner<
   "AMDGPUPostLegalizerCombinerImpl",
-  [all_combines, gfx6gfx7_combines, gfx8_combines,
+  [all_combines, gfx6gfx7_combines, gfx8_combines, combine_fmul_with_select_to_fldexp,
    uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
-   rcp_sqrt_to_rsq, sign_extension_in_reg]> {
+   rcp_sqrt_to_rsq, fdiv_by_sqrt_to_rsq_f16, sign_extension_in_reg, smulu64,
+   binop_s64_with_s32_mask_combines, combine_or_s64_s32]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -157,5 +236,8 @@ def AMDGPURegBankCombiner : GICombiner<
   "AMDGPURegBankCombinerImpl",
   [unmerge_merge, unmerge_cst, unmerge_undef,
    zext_trunc_fold, int_minmax_to_med3, ptr_add_immed_chain,
-   fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp]> {
+   fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp,
+   identity_combines, redundant_and, constant_fold_cast_op,
+   cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines,
+   d16_load]> {
 }

@@ -1,4 +1,4 @@
-//===--- UseNodiscardCheck.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,7 @@ static bool doesNoDiscardMacroExist(ASTContext &Context,
                                     const llvm::StringRef &MacroId) {
   // Don't check for the Macro existence if we are using an attribute
   // either a C++17 standard attribute or pre C++17 syntax
-  if (MacroId.startswith("[[") || MacroId.startswith("__attribute__"))
+  if (MacroId.starts_with("[[") || MacroId.starts_with("__attribute__"))
     return true;
 
   // Otherwise look up the macro name in the context to see if its defined.
@@ -110,11 +110,11 @@ void UseNodiscardCheck::registerMatchers(MatchFinder *Finder) {
 void UseNodiscardCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<CXXMethodDecl>("no_discard");
   // Don't make replacements if the location is invalid or in a macro.
-  SourceLocation Loc = MatchedDecl->getLocation();
+  const SourceLocation Loc = MatchedDecl->getLocation();
   if (Loc.isInvalid() || Loc.isMacroID())
     return;
 
-  SourceLocation RetLoc = MatchedDecl->getInnerLocStart();
+  const SourceLocation RetLoc = MatchedDecl->getInnerLocStart();
 
   ASTContext &Context = *Result.Context;
 

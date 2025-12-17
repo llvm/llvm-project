@@ -29,6 +29,7 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
@@ -41,6 +42,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Timer.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
@@ -52,6 +54,10 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+#define OPTTABLE_STR_TABLE_CODE
+#include "clang/Options/Options.inc"
+#undef OPTTABLE_STR_TABLE_CODE
 
 static Status ExceptionMaskValidator(const char *string, void *unused) {
   Status error;
@@ -65,8 +71,8 @@ static Status ExceptionMaskValidator(const char *string, void *unused) {
           || candidate == "EXC_RESOURCE"
           || candidate == "EXC_GUARD"
           || candidate == "EXC_SYSCALL")) {
-      error.SetErrorStringWithFormat("invalid exception type: '%s'",
-          candidate.str().c_str());
+      error = Status::FromErrorStringWithFormat("invalid exception type: '%s'",
+                                                candidate.str().c_str());
       return error;
     }
   }
@@ -231,12 +237,9 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
               // ScriptInterpreter. For now, we just replace dots with
               // underscores, but if we ever support anything other than
               // Python we will need to rework this
-              std::replace(module_basename.begin(), module_basename.end(), '.',
-                           '_');
-              std::replace(module_basename.begin(), module_basename.end(), ' ',
-                           '_');
-              std::replace(module_basename.begin(), module_basename.end(), '-',
-                           '_');
+              llvm::replace(module_basename, '.', '_');
+              llvm::replace(module_basename, ' ', '_');
+              llvm::replace(module_basename, '-', '_');
               ScriptInterpreter *script_interpreter =
                   target->GetDebugger().GetScriptInterpreter();
               if (script_interpreter &&
@@ -328,7 +331,6 @@ Status PlatformDarwin::ResolveSymbolFile(Target &target,
 
 Status PlatformDarwin::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr,
     llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
   Status error;
   module_sp.reset();
@@ -338,19 +340,22 @@ Status PlatformDarwin::GetSharedModule(
     // module first.
     if (m_remote_platform_sp) {
       error = m_remote_platform_sp->GetSharedModule(
-          module_spec, process, module_sp, module_search_paths_ptr, old_modules,
-          did_create_ptr);
+          module_spec, process, module_sp, old_modules, did_create_ptr);
     }
   }
 
   if (!module_sp) {
     // Fall back to the local platform and find the file locally
     error = Platform::GetSharedModule(module_spec, process, module_sp,
-                                      module_search_paths_ptr, old_modules,
-                                      did_create_ptr);
+                                      old_modules, did_create_ptr);
 
     const FileSpec &platform_file = module_spec.GetFileSpec();
-    if (!module_sp && module_search_paths_ptr && platform_file) {
+    // Get module search paths from the target if available.
+    TargetSP target_sp = module_spec.GetTargetSP();
+    FileSpecList module_search_paths;
+    if (target_sp)
+      module_search_paths = target_sp->GetExecutableSearchPaths();
+    if (!module_sp && !module_search_paths.IsEmpty() && platform_file) {
       // We can try to pull off part of the file path up to the bundle
       // directory level and try any module search paths...
       FileSpec bundle_directory;
@@ -359,9 +364,9 @@ Status PlatformDarwin::GetSharedModule(
           ModuleSpec new_module_spec(module_spec);
           new_module_spec.GetFileSpec() = bundle_directory;
           if (Host::ResolveExecutableInBundle(new_module_spec.GetFileSpec())) {
-            Status new_error(Platform::GetSharedModule(
-                new_module_spec, process, module_sp, nullptr, old_modules,
-                did_create_ptr));
+            Status new_error(Platform::GetSharedModule(new_module_spec, process,
+                                                       module_sp, old_modules,
+                                                       did_create_ptr));
 
             if (module_sp)
               return new_error;
@@ -373,10 +378,10 @@ Status PlatformDarwin::GetSharedModule(
           const size_t bundle_directory_len =
               bundle_directory.GetPath(bundle_dir, sizeof(bundle_dir));
           char new_path[PATH_MAX];
-          size_t num_module_search_paths = module_search_paths_ptr->GetSize();
+          size_t num_module_search_paths = module_search_paths.GetSize();
           for (size_t i = 0; i < num_module_search_paths; ++i) {
             const size_t search_path_len =
-                module_search_paths_ptr->GetFileSpecAtIndex(i).GetPath(
+                module_search_paths.GetFileSpecAtIndex(i).GetPath(
                     new_path, sizeof(new_path));
             if (search_path_len < sizeof(new_path)) {
               snprintf(new_path + search_path_len,
@@ -387,7 +392,7 @@ Status PlatformDarwin::GetSharedModule(
                 ModuleSpec new_module_spec(module_spec);
                 new_module_spec.GetFileSpec() = new_file_spec;
                 Status new_error(Platform::GetSharedModule(
-                    new_module_spec, process, module_sp, nullptr, old_modules,
+                    new_module_spec, process, module_sp, old_modules,
                     did_create_ptr));
 
                 if (module_sp) {
@@ -432,7 +437,7 @@ PlatformDarwin::GetSoftwareBreakpointTrapOpcode(Target &target,
 
     // Auto detect arm/thumb if it wasn't explicitly specified
     if (!bp_is_thumb) {
-      lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetOwnerAtIndex(0));
+      lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetConstituentAtIndex(0));
       if (bp_loc_sp)
         bp_is_thumb = bp_loc_sp->GetAddress().GetAddressClass() ==
                       AddressClass::eCodeAlternateISA;
@@ -645,8 +650,8 @@ BreakpointSP PlatformDarwin::SetThreadCreationBreakpoint(Target &target) {
       "start_wqthread", "_pthread_wqthread", "_pthread_start",
   };
 
-  static const char *g_bp_modules[] = {"libsystem_c.dylib",
-                                       "libSystem.B.dylib"};
+  static const char *g_bp_modules[] = {"libsystem_c.dylib", "libSystem.B.dylib",
+                                       "libsystem_pthread.dylib"};
 
   FileSpecList bp_modules;
   for (size_t i = 0; i < std::size(g_bp_modules); i++) {
@@ -713,7 +718,8 @@ lldb::ProcessSP PlatformDarwin::DebugProcess(ProcessLaunchInfo &launch_info,
       process_sp = m_remote_platform_sp->DebugProcess(launch_info, debugger,
                                                       target, error);
     else
-      error.SetErrorString("the platform is not currently connected");
+      error =
+          Status::FromErrorString("the platform is not currently connected");
   }
   return process_sp;
 }
@@ -796,6 +802,9 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(XcodeSDK::Type sdk_type) {
   case XcodeSDK::Type::AppleTVSimulator:
     sdks_spec.AppendPathComponent("AppleTVSimulator.platform");
     break;
+  case XcodeSDK::Type::XRSimulator:
+    sdks_spec.AppendPathComponent("XRSimulator.platform");
+    break;
   default:
     llvm_unreachable("unsupported sdk");
   }
@@ -854,20 +863,37 @@ PlatformDarwin::ParseVersionBuildDir(llvm::StringRef dir) {
 
 llvm::Expected<StructuredData::DictionarySP>
 PlatformDarwin::FetchExtendedCrashInformation(Process &process) {
-  StructuredData::DictionarySP extended_crash_info =
-      std::make_shared<StructuredData::Dictionary>();
+  static constexpr llvm::StringLiteral crash_info_key("Crash-Info Annotations");
+  static constexpr llvm::StringLiteral asi_info_key(
+      "Application Specific Information");
 
-  StructuredData::ArraySP annotations = ExtractCrashInfoAnnotations(process);
-  if (annotations && annotations->GetSize())
-    extended_crash_info->AddItem("Crash-Info Annotations", annotations);
+  // We cache the information we find in the process extended info dict:
+  StructuredData::DictionarySP process_dict_sp =
+      process.GetExtendedCrashInfoDict();
+  StructuredData::Array *annotations = nullptr;
+  StructuredData::ArraySP new_annotations_sp;
+  if (!process_dict_sp->GetValueForKeyAsArray(crash_info_key, annotations)) {
+    new_annotations_sp = ExtractCrashInfoAnnotations(process);
+    if (new_annotations_sp && new_annotations_sp->GetSize()) {
+      process_dict_sp->AddItem(crash_info_key, new_annotations_sp);
+      annotations = new_annotations_sp.get();
+    }
+  }
 
-  StructuredData::DictionarySP app_specific_info =
-      ExtractAppSpecificInfo(process);
-  if (app_specific_info && app_specific_info->GetSize())
-    extended_crash_info->AddItem("Application Specific Information",
-                                 app_specific_info);
+  StructuredData::Dictionary *app_specific_info;
+  StructuredData::DictionarySP new_app_specific_info_sp;
+  if (!process_dict_sp->GetValueForKeyAsDictionary(asi_info_key,
+                                                   app_specific_info)) {
+    new_app_specific_info_sp = ExtractAppSpecificInfo(process);
+    if (new_app_specific_info_sp && new_app_specific_info_sp->GetSize()) {
+      process_dict_sp->AddItem(asi_info_key, new_app_specific_info_sp);
+      app_specific_info = new_app_specific_info_sp.get();
+    }
+  }
 
-  return extended_crash_info->GetSize() ? extended_crash_info : nullptr;
+  // Now get anything else that was in the process info dict, and add it to the
+  // return here:
+  return process_dict_sp->GetSize() ? process_dict_sp : nullptr;
 }
 
 StructuredData::ArraySP
@@ -1006,6 +1032,45 @@ PlatformDarwin::ExtractAppSpecificInfo(Process &process) {
   return dict_sp;
 }
 
+static llvm::Expected<lldb_private::FileSpec>
+ResolveSDKPathFromDebugInfo(lldb_private::Target *target) {
+
+  ModuleSP exe_module_sp = target->GetExecutableModule();
+  if (!exe_module_sp)
+    return llvm::createStringError("Failed to get module from target");
+
+  SymbolFile *sym_file = exe_module_sp->GetSymbolFile();
+  if (!sym_file)
+    return llvm::createStringError("Failed to get symbol file from executable");
+
+  if (sym_file->GetNumCompileUnits() == 0)
+    return llvm::createStringError(
+        "Failed to resolve SDK for target: executable's symbol file has no "
+        "compile units");
+
+  XcodeSDK merged_sdk;
+  for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i) {
+    if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i)) {
+      auto cu_sdk = sym_file->ParseXcodeSDK(*cu_sp);
+      merged_sdk.Merge(cu_sdk);
+    }
+  }
+
+  // TODO: The result of this loop is almost equivalent to deriving the SDK
+  // from the target triple, which would be a lot cheaper.
+  FileSpec sdk_path = merged_sdk.GetSysroot();
+  if (FileSystem::Instance().Exists(sdk_path)) {
+    return sdk_path;
+  }
+  auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{merged_sdk});
+  if (!path_or_err)
+    return llvm::createStringError(
+        llvm::formatv("Failed to resolve SDK path: {0}",
+                      llvm::toString(path_or_err.takeError())));
+
+  return FileSpec(*path_or_err);
+}
+
 void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     Target *target, std::vector<std::string> &options, XcodeSDK::Type sdk_type) {
   const std::vector<std::string> apple_arguments = {
@@ -1032,6 +1097,9 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   case XcodeSDK::Type::watchOS:
     use_current_os_version = get_host_os() == llvm::Triple::WatchOS;
     break;
+  case XcodeSDK::Type::XROS:
+    use_current_os_version = get_host_os() == llvm::Triple::XROS;
+    break;
   default:
     break;
   }
@@ -1049,12 +1117,14 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
         version = object_file->GetMinimumOSVersion();
     }
   }
-  // Only add the version-min options if we got a version from somewhere
-  if (!version.empty() && sdk_type != XcodeSDK::Type::Linux) {
-#define OPTION(PREFIX, NAME, VAR, ...)                                         \
-  llvm::StringRef opt_##VAR = NAME;                                            \
+  // Only add the version-min options if we got a version from somewhere.
+  // clang has no version-min clang flag for XROS.
+  if (!version.empty() && sdk_type != XcodeSDK::Type::Linux &&
+      sdk_type != XcodeSDK::Type::XROS) {
+#define OPTION(PREFIX_OFFSET, NAME_OFFSET, VAR, ...)                           \
+  llvm::StringRef opt_##VAR = OptionStrTable[NAME_OFFSET];                     \
   (void)opt_##VAR;
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef OPTION
     minimum_version_option << '-';
     switch (sdk_type) {
@@ -1079,7 +1149,10 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     case XcodeSDK::Type::watchOS:
       minimum_version_option << opt_mwatchos_version_min_EQ;
       break;
-    case XcodeSDK::Type::bridgeOS:
+    case XcodeSDK::Type::XRSimulator:
+    case XcodeSDK::Type::XROS:
+      // FIXME: Pass the right argument once it exists.
+    case XcodeSDK::Type::BridgeOS:
     case XcodeSDK::Type::Linux:
     case XcodeSDK::Type::unknown:
       if (Log *log = GetLog(LLDBLog::Host)) {
@@ -1097,15 +1170,13 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   FileSpec sysroot_spec;
 
   if (target) {
-    if (ModuleSP exe_module_sp = target->GetExecutableModule()) {
-      auto path_or_err = ResolveSDKPathFromDebugInfo(*exe_module_sp);
-      if (path_or_err) {
-        sysroot_spec = FileSpec(*path_or_err);
-      } else {
-        LLDB_LOG_ERROR(GetLog(LLDBLog::Types | LLDBLog::Host),
-                       path_or_err.takeError(),
-                       "Failed to resolve SDK path: {0}");
-      }
+    auto sysroot_spec_or_err = ::ResolveSDKPathFromDebugInfo(target);
+    if (!sysroot_spec_or_err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types | LLDBLog::Host),
+                     sysroot_spec_or_err.takeError(),
+                     "Failed to resolve sysroot: {0}");
+    } else {
+      sysroot_spec = *sysroot_spec_or_err;
     }
   }
 
@@ -1234,12 +1305,15 @@ PlatformDarwin::LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) {
 
 lldb_private::Status PlatformDarwin::FindBundleBinaryInExecSearchPaths(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr,
     llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
   const FileSpec &platform_file = module_spec.GetFileSpec();
-  // See if the file is present in any of the module_search_paths_ptr
+  TargetSP target_sp = module_spec.GetTargetSP();
+  FileSpecList module_search_paths;
+  if (target_sp)
+    module_search_paths = target_sp->GetExecutableSearchPaths();
+  // See if the file is present in any of the module_search_paths
   // directories.
-  if (!module_sp && module_search_paths_ptr && platform_file) {
+  if (!module_sp && !module_search_paths.IsEmpty() && platform_file) {
     // create a vector of all the file / directory names in platform_file e.g.
     // this might be
     // /System/Library/PrivateFrameworks/UIFoundation.framework/UIFoundation
@@ -1253,21 +1327,21 @@ lldb_private::Status PlatformDarwin::FindBundleBinaryInExecSearchPaths(
     std::reverse(path_parts.begin(), path_parts.end());
     const size_t path_parts_size = path_parts.size();
 
-    size_t num_module_search_paths = module_search_paths_ptr->GetSize();
+    size_t num_module_search_paths = module_search_paths.GetSize();
     for (size_t i = 0; i < num_module_search_paths; ++i) {
       Log *log_verbose = GetLog(LLDBLog::Host);
       LLDB_LOGF(
           log_verbose,
           "PlatformRemoteDarwinDevice::GetSharedModule searching for binary in "
           "search-path %s",
-          module_search_paths_ptr->GetFileSpecAtIndex(i).GetPath().c_str());
+          module_search_paths.GetFileSpecAtIndex(i).GetPath().c_str());
       // Create a new FileSpec with this module_search_paths_ptr plus just the
       // filename ("UIFoundation"), then the parent dir plus filename
       // ("UIFoundation.framework/UIFoundation") etc - up to four names (to
       // handle "Foo.framework/Contents/MacOS/Foo")
 
       for (size_t j = 0; j < 4 && j < path_parts_size - 1; ++j) {
-        FileSpec path_to_try(module_search_paths_ptr->GetFileSpecAtIndex(i));
+        FileSpec path_to_try(module_search_paths.GetFileSpecAtIndex(i));
 
         // Add the components backwards.  For
         // .../PrivateFrameworks/UIFoundation.framework/UIFoundation path_parts
@@ -1287,9 +1361,9 @@ lldb_private::Status PlatformDarwin::FindBundleBinaryInExecSearchPaths(
         if (FileSystem::Instance().Exists(path_to_try)) {
           ModuleSpec new_module_spec(module_spec);
           new_module_spec.GetFileSpec() = path_to_try;
-          Status new_error(
-              Platform::GetSharedModule(new_module_spec, process, module_sp,
-                                        nullptr, old_modules, did_create_ptr));
+          Status new_error(Platform::GetSharedModule(new_module_spec, process,
+                                                     module_sp, old_modules,
+                                                     did_create_ptr));
 
           if (module_sp) {
             module_sp->SetPlatformFileSpec(path_to_try);
@@ -1300,33 +1374,6 @@ lldb_private::Status PlatformDarwin::FindBundleBinaryInExecSearchPaths(
     }
   }
   return Status();
-}
-
-std::string PlatformDarwin::FindComponentInPath(llvm::StringRef path,
-                                                llvm::StringRef component) {
-  auto begin = llvm::sys::path::begin(path);
-  auto end = llvm::sys::path::end(path);
-  for (auto it = begin; it != end; ++it) {
-    if (it->contains(component)) {
-      llvm::SmallString<128> buffer;
-      llvm::sys::path::append(buffer, begin, ++it,
-                              llvm::sys::path::Style::posix);
-      return buffer.str().str();
-    }
-  }
-  return {};
-}
-
-FileSpec PlatformDarwin::GetCurrentToolchainDirectory() {
-  if (FileSpec fspec = HostInfo::GetShlibDir())
-    return FileSpec(FindComponentInPath(fspec.GetPath(), ".xctoolchain"));
-  return {};
-}
-
-FileSpec PlatformDarwin::GetCurrentCommandLineToolsDirectory() {
-  if (FileSpec fspec = HostInfo::GetShlibDir())
-    return FileSpec(FindComponentInPath(fspec.GetPath(), "CommandLineTools"));
-  return {};
 }
 
 llvm::Triple::OSType PlatformDarwin::GetHostOSType() {
@@ -1343,6 +1390,8 @@ llvm::Triple::OSType PlatformDarwin::GetHostOSType() {
   return llvm::Triple::TvOS;
 #elif TARGET_OS_BRIDGE
   return llvm::Triple::BridgeOS;
+#elif TARGET_OS_XR
+  return llvm::Triple::XROS;
 #else
 #error "LLDB being compiled for an unrecognized Darwin OS"
 #endif
@@ -1357,6 +1406,12 @@ PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
         llvm::inconvertibleErrorCode(),
         llvm::formatv("No symbol file available for module '{0}'",
                       module.GetFileSpec().GetFilename().AsCString("")));
+
+  if (sym_file->GetNumCompileUnits() == 0)
+    return llvm::createStringError(
+        llvm::formatv("Could not resolve SDK for module '{0}'. Symbol file has "
+                      "no compile units.",
+                      module.GetFileSpec()));
 
   bool found_public_sdk = false;
   bool found_internal_sdk = false;
@@ -1387,6 +1442,45 @@ PlatformDarwin::ResolveSDKPathFromDebugInfo(Module &module) {
                       llvm::toString(sdk_or_err.takeError())));
 
   auto [sdk, _] = std::move(*sdk_or_err);
+
+  if (FileSystem::Instance().Exists(sdk.GetSysroot()))
+    return sdk.GetSysroot().GetPath();
+
+  auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
+  if (!path_or_err)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        llvm::formatv("Error while searching for SDK (XcodeSDK '{0}'): {1}",
+                      sdk.GetString(),
+                      llvm::toString(path_or_err.takeError())));
+
+  return path_or_err->str();
+}
+
+llvm::Expected<XcodeSDK>
+PlatformDarwin::GetSDKPathFromDebugInfo(CompileUnit &unit) {
+  ModuleSP module_sp = unit.CalculateSymbolContextModule();
+  if (!module_sp)
+    return llvm::createStringError("compile unit has no module");
+  SymbolFile *sym_file = module_sp->GetSymbolFile();
+  if (!sym_file)
+    return llvm::createStringError(
+        llvm::formatv("No symbol file available for module '{0}'",
+                      module_sp->GetFileSpec().GetFilename()));
+
+  return sym_file->ParseXcodeSDK(unit);
+}
+
+llvm::Expected<std::string>
+PlatformDarwin::ResolveSDKPathFromDebugInfo(CompileUnit &unit) {
+  auto sdk_or_err = GetSDKPathFromDebugInfo(unit);
+  if (!sdk_or_err)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        llvm::formatv("Failed to parse SDK path from debug-info: {0}",
+                      llvm::toString(sdk_or_err.takeError())));
+
+  auto sdk = std::move(*sdk_or_err);
 
   auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
   if (!path_or_err)

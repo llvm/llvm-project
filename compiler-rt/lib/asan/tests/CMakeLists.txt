@@ -104,10 +104,12 @@ set(ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS
 set(ASAN_UNITTEST_INSTRUMENTED_LIBS)
 
 set(ASAN_UNITTEST_NOINST_LINK_FLAGS ${ASAN_UNITTEST_COMMON_LINK_FLAGS})
+append_list_if(MSVC -Wl,-nodefaultlib:msvcrt ASAN_UNITTEST_NOINST_LINK_FLAGS)
 if(NOT APPLE)
   append_list_if(COMPILER_RT_HAS_LIBM -lm ASAN_UNITTEST_NOINST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBDL -ldl ASAN_UNITTEST_NOINST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBRT -lrt ASAN_UNITTEST_NOINST_LINK_FLAGS)
+  append_list_if(HAIKU -lbsd ASAN_UNITTEST_NOINST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread ASAN_UNITTEST_NOINST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS)
 endif()
@@ -118,15 +120,15 @@ append_list_if(COMPILER_RT_HAS_LIBLOG log ASAN_UNITTEST_NOINST_LIBS)
 
 # Main AddressSanitizer unit tests.
 add_custom_target(AsanUnitTests)
-set_target_properties(AsanUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
+set_target_properties(AsanUnitTests PROPERTIES FOLDER "Compiler-RT/Tests")
 
 # AddressSanitizer unit tests with dynamic runtime (on platforms where it's
 # not the default).
 add_custom_target(AsanDynamicUnitTests)
-set_target_properties(AsanDynamicUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
+set_target_properties(AsanDynamicUnitTests PROPERTIES FOLDER "Compiler-RT/Tests")
 # ASan benchmarks (not actively used now).
 add_custom_target(AsanBenchmarks)
-set_target_properties(AsanBenchmarks PROPERTIES FOLDER "Compiler-RT Tests")
+set_target_properties(AsanBenchmarks PROPERTIES FOLDER "Compiler-RT/Tests")
 
 set(ASAN_NOINST_TEST_SOURCES
   ${COMPILER_RT_GTEST_SOURCE}
@@ -168,11 +170,21 @@ function(add_asan_tests arch test_runtime)
   set(CONFIG_NAME ${ARCH_UPPER_CASE}${OS_NAME}Config)
   set(CONFIG_NAME_DYNAMIC ${ARCH_UPPER_CASE}${OS_NAME}DynamicConfig)
 
+  # On some platforms, unit tests can be run against the runtime that shipped
+  # with the host compiler with COMPILER_RT_TEST_STANDALONE_BUILD_LIBS=OFF.
+  # COMPILER_RT_ASAN_UNIT_TESTS_USE_HOST_RUNTIME=ON removes the dependency
+  # on `asan`, allowing the tests to be run independently without
+  # a newly built asan runtime.
+  set(ASAN_UNIT_TEST_DEPS asan)
+  if(COMPILER_RT_ASAN_UNIT_TESTS_USE_HOST_RUNTIME)
+    set(ASAN_UNIT_TEST_DEPS)
+  endif()
+
   # Closure to keep the values.
   function(generate_asan_tests test_objects test_suite testname)
     generate_compiler_rt_tests(${test_objects} ${test_suite} ${testname} ${arch}
       COMPILE_DEPS ${ASAN_UNITTEST_HEADERS} ${ASAN_IGNORELIST_FILE}
-      DEPS llvm_gtest asan
+      DEPS ${ASAN_UNIT_TEST_DEPS}
       KIND ${TEST_KIND}
       ${ARGN}
       )
@@ -203,16 +215,18 @@ function(add_asan_tests arch test_runtime)
         CFLAGS ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS} -D_MT -D_DLL
         SOURCES ${ASAN_INST_TEST_SOURCES}
         LINK_FLAGS ${ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS}
-          -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames
+          -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames
         )
     else()
+      set(DYNAMIC_LINK_FLAGS)
+      get_dynamic_link_flags_for_arch(${arch} DYNAMIC_LINK_FLAGS)
 
       # Otherwise, reuse ASAN_INST_TEST_OBJECTS.
       add_compiler_rt_test(AsanDynamicUnitTests "${dynamic_test_name}" "${arch}"
         SUBDIR "${CONFIG_NAME_DYNAMIC}"
         OBJECTS ${ASAN_INST_TEST_OBJECTS}
-        DEPS asan ${ASAN_INST_TEST_OBJECTS}
-        LINK_FLAGS ${ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS} ${TARGET_LINK_FLAGS}
+        DEPS ${ASAN_UNIT_TEST_DEPS} ${ASAN_INST_TEST_OBJECTS}
+        LINK_FLAGS ${ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS} ${TARGET_LINK_FLAGS} ${DYNAMIC_LINK_FLAGS}
         )
     endif()
   endif()
@@ -241,7 +255,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)
   if(APPLE)
     darwin_filter_host_archs(ASAN_SUPPORTED_ARCH ASAN_TEST_ARCH)
   endif()
-  list(REMOVE_ITEM ASAN_TEST_ARCH sparc sparcv9)
+  list(REMOVE_ITEM ASAN_TEST_ARCH sparcv9)
   if(OS_NAME MATCHES "SunOS")
     list(REMOVE_ITEM ASAN_TEST_ARCH x86_64)
   endif()
@@ -272,13 +286,12 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)
         $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
         $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>
         $<TARGET_OBJECTS:RTLSanCommon.${arch}>
-        $<TARGET_OBJECTS:RTUbsan.${arch}>
-        $<TARGET_OBJECTS:RTUbsan_cxx.${arch}>)
+        $<TARGET_OBJECTS:RTUbsan.${arch}>)
     endif()
     add_library(${ASAN_TEST_RUNTIME} STATIC ${ASAN_TEST_RUNTIME_OBJECTS})
     set_target_properties(${ASAN_TEST_RUNTIME} PROPERTIES
       ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-      FOLDER "Compiler-RT Runtime tests")
+      FOLDER "Compiler-RT/Tests/Runtime")
 
     add_asan_tests(${arch} ${ASAN_TEST_RUNTIME} KIND "-inline")
     add_asan_tests(${arch} ${ASAN_TEST_RUNTIME} KIND "-calls"
@@ -300,7 +313,6 @@ if(ANDROID)
       $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>
       $<TARGET_OBJECTS:RTLSanCommon.${arch}>
       $<TARGET_OBJECTS:RTUbsan.${arch}>
-      $<TARGET_OBJECTS:RTUbsan_cxx.${arch}>
       ${COMPILER_RT_GTEST_SOURCE}
       ${ASAN_NOINST_TEST_SOURCES})
     set_target_compile_flags(AsanNoinstTest ${ASAN_UNITTEST_COMMON_CFLAGS})

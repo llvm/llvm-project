@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjCopy/CommonConfig.h"
+#include "llvm/Support/Errc.h"
 
-namespace llvm {
-namespace objcopy {
+using namespace llvm;
+using namespace llvm::objcopy;
 
 Expected<NameOrPattern>
 NameOrPattern::create(StringRef Pattern, MatchStyle MS,
@@ -18,12 +19,7 @@ NameOrPattern::create(StringRef Pattern, MatchStyle MS,
   case MatchStyle::Literal:
     return NameOrPattern(Pattern);
   case MatchStyle::Wildcard: {
-    SmallVector<char, 32> Data;
-    bool IsPositiveMatch = true;
-    if (Pattern[0] == '!') {
-      IsPositiveMatch = false;
-      Pattern = Pattern.drop_front();
-    }
+    bool IsPositiveMatch = !Pattern.consume_front("!");
     Expected<GlobPattern> GlobOrErr = GlobPattern::create(Pattern);
 
     // If we couldn't create it as a glob, report the error, but try again
@@ -38,6 +34,12 @@ NameOrPattern::create(StringRef Pattern, MatchStyle MS,
                          IsPositiveMatch);
   }
   case MatchStyle::Regex: {
+    Regex RegEx(Pattern);
+    std::string Err;
+    if (!RegEx.isValid(Err))
+      return createStringError(errc::invalid_argument,
+                               "cannot compile regular expression \'" +
+                                   Pattern + "\': " + Err);
     SmallVector<char, 32> Data;
     return NameOrPattern(std::make_shared<Regex>(
         ("^" + Pattern.ltrim('^').rtrim('$') + "$").toStringRef(Data)));
@@ -45,6 +47,3 @@ NameOrPattern::create(StringRef Pattern, MatchStyle MS,
   }
   llvm_unreachable("Unhandled llvm.objcopy.MatchStyle enum");
 }
-
-} // end namespace objcopy
-} // end namespace llvm

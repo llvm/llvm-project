@@ -10,8 +10,14 @@
 #define FORTRAN_RUNTIME_COMMAND_H_
 
 #include "flang/Runtime/entry-names.h"
-
 #include <cstdint>
+
+#ifdef _MSC_VER
+// On Windows* OS GetCurrentProcessId returns DWORD aka uint32_t
+typedef std::uint32_t pid_t;
+#else
+#include "sys/types.h" //pid_t
+#endif
 
 namespace Fortran::runtime {
 class Descriptor;
@@ -22,6 +28,9 @@ extern "C" {
 // Lowering may need to cast the result to match the precision of the default
 // integer kind.
 std::int32_t RTNAME(ArgumentCount)();
+
+// Calls getpid()
+pid_t RTNAME(GetPID)();
 
 // 16.9.82 GET_COMMAND
 // Try to get the value of the whole command. All of the parameters are
@@ -46,7 +55,24 @@ std::int32_t RTNAME(GetEnvVariable)(const Descriptor &name,
     const Descriptor *value = nullptr, const Descriptor *length = nullptr,
     bool trim_name = true, const Descriptor *errmsg = nullptr,
     const char *sourceFile = nullptr, int line = 0);
-}
+
+// Calls getcwd()
+std::int32_t RTNAME(GetCwd)(
+    const Descriptor &cwd, const char *sourceFile, int line);
+
+// Calls hostnm()
+std::int32_t RTNAME(Hostnm)(
+    const Descriptor &res, const char *sourceFile, int line);
+
+std::int32_t RTNAME(PutEnv)(
+    const char *str, size_t str_length, const char *sourceFile, int line);
+
+// Calls unlink()
+std::int32_t RTNAME(Unlink)(
+    const char *path, size_t pathLength, const char *sourceFile, int line);
+
+} // extern "C"
+
 } // namespace Fortran::runtime
 
 #endif // FORTRAN_RUNTIME_COMMAND_H_

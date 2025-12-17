@@ -7,16 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "IRModule.h"
-#include "Globals.h"
-#include "PybindUtils.h"
-
-#include "mlir-c/Bindings/Python/Interop.h"
-#include "mlir-c/Support.h"
 
 #include <optional>
 #include <vector>
 
-namespace py = pybind11;
+#include "Globals.h"
+#include "NanobindUtils.h"
+#include "mlir-c/Bindings/Python/Interop.h"
+#include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/Nanobind.h"
+
+namespace nb = nanobind;
 using namespace mlir;
 using namespace mlir::python;
 
@@ -37,18 +38,21 @@ PyGlobals::PyGlobals() {
 PyGlobals::~PyGlobals() { instance = nullptr; }
 
 bool PyGlobals::loadDialectModule(llvm::StringRef dialectNamespace) {
-  if (loadedDialectModules.contains(dialectNamespace))
-    return true;
+  {
+    nb::ft_lock_guard lock(mutex);
+    if (loadedDialectModules.contains(dialectNamespace))
+      return true;
+  }
   // Since re-entrancy is possible, make a copy of the search prefixes.
   std::vector<std::string> localSearchPrefixes = dialectSearchPrefixes;
-  py::object loaded = py::none();
+  nb::object loaded = nb::none();
   for (std::string moduleName : localSearchPrefixes) {
     moduleName.push_back('.');
     moduleName.append(dialectNamespace.data(), dialectNamespace.size());
 
     try {
-      loaded = py::module::import(moduleName.c_str());
-    } catch (py::error_already_set &e) {
+      loaded = nb::module_::import_(moduleName.c_str());
+    } catch (nb::python_error &e) {
       if (e.matches(PyExc_ModuleNotFoundError)) {
         continue;
       }
@@ -61,46 +65,49 @@ bool PyGlobals::loadDialectModule(llvm::StringRef dialectNamespace) {
     return false;
   // Note: Iterator cannot be shared from prior to loading, since re-entrancy
   // may have occurred, which may do anything.
+  nb::ft_lock_guard lock(mutex);
   loadedDialectModules.insert(dialectNamespace);
   return true;
 }
 
 void PyGlobals::registerAttributeBuilder(const std::string &attributeKind,
-                                         py::function pyFunc, bool replace) {
-  py::object &found = attributeBuilderMap[attributeKind];
+                                         nb::callable pyFunc, bool replace) {
+  nb::ft_lock_guard lock(mutex);
+  nb::object &found = attributeBuilderMap[attributeKind];
   if (found && !replace) {
     throw std::runtime_error((llvm::Twine("Attribute builder for '") +
                               attributeKind +
                               "' is already registered with func: " +
-                              py::str(found).operator std::string())
+                              nb::cast<std::string>(nb::str(found)))
                                  .str());
   }
   found = std::move(pyFunc);
 }
 
 void PyGlobals::registerTypeCaster(MlirTypeID mlirTypeID,
-                                   pybind11::function typeCaster,
-                                   bool replace) {
-  pybind11::object &found = typeCasterMap[mlirTypeID];
+                                   nb::callable typeCaster, bool replace) {
+  nb::ft_lock_guard lock(mutex);
+  nb::object &found = typeCasterMap[mlirTypeID];
   if (found && !replace)
     throw std::runtime_error("Type caster is already registered with caster: " +
-                             py::str(found).operator std::string());
+                             nb::cast<std::string>(nb::str(found)));
   found = std::move(typeCaster);
 }
 
 void PyGlobals::registerValueCaster(MlirTypeID mlirTypeID,
-                                    pybind11::function valueCaster,
-                                    bool replace) {
-  pybind11::object &found = valueCasterMap[mlirTypeID];
+                                    nb::callable valueCaster, bool replace) {
+  nb::ft_lock_guard lock(mutex);
+  nb::object &found = valueCasterMap[mlirTypeID];
   if (found && !replace)
     throw std::runtime_error("Value caster is already registered: " +
-                             py::repr(found).cast<std::string>());
+                             nb::cast<std::string>(nb::repr(found)));
   found = std::move(valueCaster);
 }
 
 void PyGlobals::registerDialectImpl(const std::string &dialectNamespace,
-                                    py::object pyClass) {
-  py::object &found = dialectClassMap[dialectNamespace];
+                                    nb::object pyClass) {
+  nb::ft_lock_guard lock(mutex);
+  nb::object &found = dialectClassMap[dialectNamespace];
   if (found) {
     throw std::runtime_error((llvm::Twine("Dialect namespace '") +
                               dialectNamespace + "' is already registered.")
@@ -110,8 +117,9 @@ void PyGlobals::registerDialectImpl(const std::string &dialectNamespace,
 }
 
 void PyGlobals::registerOperationImpl(const std::string &operationName,
-                                      py::object pyClass, bool replace) {
-  py::object &found = operationClassMap[operationName];
+                                      nb::object pyClass, bool replace) {
+  nb::ft_lock_guard lock(mutex);
+  nb::object &found = operationClassMap[operationName];
   if (found && !replace) {
     throw std::runtime_error((llvm::Twine("Operation '") + operationName +
                               "' is already registered.")
@@ -120,8 +128,9 @@ void PyGlobals::registerOperationImpl(const std::string &operationName,
   found = std::move(pyClass);
 }
 
-std::optional<py::function>
+std::optional<nb::callable>
 PyGlobals::lookupAttributeBuilder(const std::string &attributeKind) {
+  nb::ft_lock_guard lock(mutex);
   const auto foundIt = attributeBuilderMap.find(attributeKind);
   if (foundIt != attributeBuilderMap.end()) {
     assert(foundIt->second && "attribute builder is defined");
@@ -130,12 +139,11 @@ PyGlobals::lookupAttributeBuilder(const std::string &attributeKind) {
   return std::nullopt;
 }
 
-std::optional<py::function> PyGlobals::lookupTypeCaster(MlirTypeID mlirTypeID,
+std::optional<nb::callable> PyGlobals::lookupTypeCaster(MlirTypeID mlirTypeID,
                                                         MlirDialect dialect) {
-  // Make sure dialect module is loaded.
-  if (!loadDialectModule(unwrap(mlirDialectGetNamespace(dialect))))
-    return std::nullopt;
-
+  // Try to load dialect module.
+  (void)loadDialectModule(unwrap(mlirDialectGetNamespace(dialect)));
+  nb::ft_lock_guard lock(mutex);
   const auto foundIt = typeCasterMap.find(mlirTypeID);
   if (foundIt != typeCasterMap.end()) {
     assert(foundIt->second && "type caster is defined");
@@ -144,9 +152,11 @@ std::optional<py::function> PyGlobals::lookupTypeCaster(MlirTypeID mlirTypeID,
   return std::nullopt;
 }
 
-std::optional<py::function> PyGlobals::lookupValueCaster(MlirTypeID mlirTypeID,
+std::optional<nb::callable> PyGlobals::lookupValueCaster(MlirTypeID mlirTypeID,
                                                          MlirDialect dialect) {
-  loadDialectModule(unwrap(mlirDialectGetNamespace(dialect)));
+  // Try to load dialect module.
+  (void)loadDialectModule(unwrap(mlirDialectGetNamespace(dialect)));
+  nb::ft_lock_guard lock(mutex);
   const auto foundIt = valueCasterMap.find(mlirTypeID);
   if (foundIt != valueCasterMap.end()) {
     assert(foundIt->second && "value caster is defined");
@@ -155,11 +165,12 @@ std::optional<py::function> PyGlobals::lookupValueCaster(MlirTypeID mlirTypeID,
   return std::nullopt;
 }
 
-std::optional<py::object>
+std::optional<nb::object>
 PyGlobals::lookupDialectClass(const std::string &dialectNamespace) {
   // Make sure dialect module is loaded.
   if (!loadDialectModule(dialectNamespace))
     return std::nullopt;
+  nb::ft_lock_guard lock(mutex);
   const auto foundIt = dialectClassMap.find(dialectNamespace);
   if (foundIt != dialectClassMap.end()) {
     assert(foundIt->second && "dialect class is defined");
@@ -169,7 +180,7 @@ PyGlobals::lookupDialectClass(const std::string &dialectNamespace) {
   return std::nullopt;
 }
 
-std::optional<pybind11::object>
+std::optional<nb::object>
 PyGlobals::lookupOperationClass(llvm::StringRef operationName) {
   // Make sure dialect module is loaded.
   auto split = operationName.split('.');
@@ -177,6 +188,7 @@ PyGlobals::lookupOperationClass(llvm::StringRef operationName) {
   if (!loadDialectModule(dialectNamespace))
     return std::nullopt;
 
+  nb::ft_lock_guard lock(mutex);
   auto foundIt = operationClassMap.find(operationName);
   if (foundIt != operationClassMap.end()) {
     assert(foundIt->second && "OpView is defined");
@@ -184,4 +196,72 @@ PyGlobals::lookupOperationClass(llvm::StringRef operationName) {
   }
   // Not found and loading did not yield a registration.
   return std::nullopt;
+}
+
+bool PyGlobals::TracebackLoc::locTracebacksEnabled() {
+  nanobind::ft_lock_guard lock(mutex);
+  return locTracebackEnabled_;
+}
+
+void PyGlobals::TracebackLoc::setLocTracebacksEnabled(bool value) {
+  nanobind::ft_lock_guard lock(mutex);
+  locTracebackEnabled_ = value;
+}
+
+size_t PyGlobals::TracebackLoc::locTracebackFramesLimit() {
+  nanobind::ft_lock_guard lock(mutex);
+  return locTracebackFramesLimit_;
+}
+
+void PyGlobals::TracebackLoc::setLocTracebackFramesLimit(size_t value) {
+  nanobind::ft_lock_guard lock(mutex);
+  locTracebackFramesLimit_ = std::min(value, kMaxFrames);
+}
+
+void PyGlobals::TracebackLoc::registerTracebackFileInclusion(
+    const std::string &file) {
+  nanobind::ft_lock_guard lock(mutex);
+  auto reg = "^" + llvm::Regex::escape(file);
+  if (userTracebackIncludeFiles.insert(reg).second)
+    rebuildUserTracebackIncludeRegex = true;
+  if (userTracebackExcludeFiles.count(reg)) {
+    if (userTracebackExcludeFiles.erase(reg))
+      rebuildUserTracebackExcludeRegex = true;
+  }
+}
+
+void PyGlobals::TracebackLoc::registerTracebackFileExclusion(
+    const std::string &file) {
+  nanobind::ft_lock_guard lock(mutex);
+  auto reg = "^" + llvm::Regex::escape(file);
+  if (userTracebackExcludeFiles.insert(reg).second)
+    rebuildUserTracebackExcludeRegex = true;
+  if (userTracebackIncludeFiles.count(reg)) {
+    if (userTracebackIncludeFiles.erase(reg))
+      rebuildUserTracebackIncludeRegex = true;
+  }
+}
+
+bool PyGlobals::TracebackLoc::isUserTracebackFilename(
+    const llvm::StringRef file) {
+  nanobind::ft_lock_guard lock(mutex);
+  if (rebuildUserTracebackIncludeRegex) {
+    userTracebackIncludeRegex.assign(
+        llvm::join(userTracebackIncludeFiles, "|"));
+    rebuildUserTracebackIncludeRegex = false;
+    isUserTracebackFilenameCache.clear();
+  }
+  if (rebuildUserTracebackExcludeRegex) {
+    userTracebackExcludeRegex.assign(
+        llvm::join(userTracebackExcludeFiles, "|"));
+    rebuildUserTracebackExcludeRegex = false;
+    isUserTracebackFilenameCache.clear();
+  }
+  if (!isUserTracebackFilenameCache.contains(file)) {
+    std::string fileStr = file.str();
+    bool include = std::regex_search(fileStr, userTracebackIncludeRegex);
+    bool exclude = std::regex_search(fileStr, userTracebackExcludeRegex);
+    isUserTracebackFilenameCache[file] = include || !exclude;
+  }
+  return isUserTracebackFilenameCache[file];
 }

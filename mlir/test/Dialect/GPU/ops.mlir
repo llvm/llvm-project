@@ -17,6 +17,18 @@ module attributes {gpu.container_module} {
     return
   }
 
+  // CHECK-LABEL:func @launch_with_module_func_attr(%{{.*}}: index)
+  func.func @launch_with_module_func_attr(%sz : index) {
+    // CHECK: gpu.launch blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) module(@test_module) function(@test_kernel_func)
+    gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %sz, %grid_y = %sz, %grid_z = %sz)
+               threads(%tx, %ty, %tz) in (%block_x = %sz, %block_y = %sz, %block_z = %sz)
+               module(@test_module) function(@test_kernel_func) {
+      // CHECK: gpu.terminator
+      gpu.terminator
+    }
+    return
+  }
+
   // CHECK-LABEL:func @args(%{{.*}}: index, %{{.*}}: index, %{{.*}}: f32, %{{.*}}: memref<?xf32, 1>) {
   func.func @args(%blk : index, %thrd : index, %float : f32, %data : memref<?xf32,1>) {
     // CHECK: gpu.launch blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}})
@@ -56,33 +68,75 @@ module attributes {gpu.container_module} {
     return
   }
 
+  // CHECK-LABEL: func @launch_with_attributions(
+  func.func @launch_with_attributions(%blk : index, %thrd : index, %float : f32, %data : memref<?xf32,1>) {
+    // CHECK: gpu.launch
+    gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %blk, %grid_y = %blk, %grid_z = %blk)
+               threads(%tx, %ty, %tz) in (%block_x = %thrd, %block_y = %thrd, %block_z = %thrd)
+    // CHECK-SAME: workgroup(%[[WGROUP1:.*]] : memref<42xf32, 3>, %[[WGROUP2:.*]] : memref<2xf32, 3>)
+        workgroup(%arg1: memref<42xf32, 3>, %arg2: memref<2xf32, 3>)
+    // CHECK-SAME: private(%[[PRIVATE1:.*]] : memref<2xf32, 5>, %[[PRIVATE2:.*]] : memref<1xf32, 5>)
+        private(%arg3: memref<2xf32, 5>, %arg4: memref<1xf32, 5>)
+                {
+      "use"(%float) : (f32) -> ()
+      "use"(%data) : (memref<?xf32,1>) -> ()
+      // CHECK: "use"(%[[WGROUP1]], %[[WGROUP2]])
+      "use"(%arg1, %arg2) : (memref<42xf32, 3>, memref<2xf32, 3>) -> ()
+      // CHECK: "use"(%[[PRIVATE1]])
+      "use"(%arg3) : (memref<2xf32, 5>) -> ()
+      // CHECK: "use"(%[[PRIVATE2]])
+      "use"(%arg4) : (memref<1xf32, 5>) -> ()
+      // CHECK: gpu.terminator
+      gpu.terminator
+    }
+    return
+  }
+
+
   gpu.module @kernels {
     gpu.func @kernel_1(%arg0 : f32, %arg1 : memref<?xf32, 1>) kernel {
       %tIdX = gpu.thread_id x
+      // CHECK:      thread_id_x
       %tIdY = gpu.thread_id y
+      // CHECK-NEXT: thread_id_y
       %tIdZ = gpu.thread_id z
+      // CHECK-NEXT: thread_id_z
 
       %bDimX = gpu.block_dim x
+      // CHECK-NEXT: block_dim_x
       %bDimY = gpu.block_dim y
+      // CHECK-NEXT: block_dim_y
       %bDimZ = gpu.block_dim z
+      // CHECK-NEXT: block_dim_z
 
       %bIdX = gpu.block_id x
+      // CHECK-NEXT: block_id_x
       %bIdY = gpu.block_id y
+      // CHECK-NEXT: block_id_y
       %bIdZ = gpu.block_id z
+      // CHECK-NEXT: block_id_z
 
       %gDimX = gpu.grid_dim x
+      // CHECK-NEXT: grid_dim_x
       %gDimY = gpu.grid_dim y
+      // CHECK-NEXT: grid_dim_y
       %gDimZ = gpu.grid_dim z
+      // CHECK-NEXT: grid_dim_z
 
       %gIdX = gpu.global_id x
+      // CHECK-NEXT: global_id_x
       %gIdY = gpu.global_id y
+      // CHECK-NEXT: global_id_y
       %gIdZ = gpu.global_id z
+      // CHECK-NEXT: global_id_z
 
       %sgId = gpu.subgroup_id : index
       %numSg = gpu.num_subgroups : index
       %SgSi = gpu.subgroup_size : index
 
       %one = arith.constant 1.0 : f32
+
+      %vec = vector.broadcast %arg0 : f32 to vector<4xf32>
 
       // CHECK: %{{.*}} = gpu.all_reduce add %{{.*}} {
       // CHECK-NEXT: } : (f32) -> f32
@@ -92,11 +146,25 @@ module attributes {gpu.container_module} {
       // CHECK-NEXT: } : (f32) -> f32
       %sum1 = gpu.all_reduce add %one uniform {} : (f32) -> f32
 
+      // CHECK: %{{.*}} = gpu.all_reduce %{{.*}} {
+      // CHECK-NEXT: ^{{.*}}(%{{.*}}: f32, %{{.*}}: f32):
+      // CHECK-NEXT: %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
+      // CHECK-NEXT: gpu.yield %{{.*}} : f32
+      // CHECK-NEXT: } : (f32) -> f32
+      %sum2 = gpu.all_reduce %one {
+      ^bb(%lhs : f32, %rhs : f32):
+        %tmp = arith.addf %lhs, %rhs : f32
+        gpu.yield %tmp : f32
+      } : (f32) -> (f32)
+
       // CHECK: %{{.*}} = gpu.subgroup_reduce add %{{.*}} : (f32) -> f32
       %sum_subgroup = gpu.subgroup_reduce add %one : (f32) -> f32
 
       // CHECK: %{{.*}} = gpu.subgroup_reduce add %{{.*}} uniform : (f32) -> f32
       %sum_subgroup1 = gpu.subgroup_reduce add %one uniform : (f32) -> f32
+
+      // CHECK: %{{.*}} = gpu.subgroup_reduce add %{{.*}} : (vector<4xf32>) -> vector<4xf32>
+      %sum_subgroup2 = gpu.subgroup_reduce add %vec : (vector<4xf32>) -> vector<4xf32>
 
       %width = arith.constant 7 : i32
       %offset = arith.constant 3 : i32
@@ -108,6 +176,9 @@ module attributes {gpu.container_module} {
       %shfl2, %pred2 = gpu.shuffle down %arg0, %offset, %width : f32
       // CHECK: gpu.shuffle idx %{{.*}}, %{{.*}}, %{{.*}} : f32
       %shfl3, %pred3 = gpu.shuffle idx %arg0, %offset, %width : f32
+
+      // CHECK: gpu.rotate %{{.*}}, 3, 16 : f32
+      %rotate, %pred4 = gpu.rotate %arg0, 3, 16 : f32
 
       "gpu.barrier"() : () -> ()
 
@@ -152,6 +223,9 @@ module attributes {gpu.container_module} {
     // CHECK: gpu.launch_func @kernels::@kernel_1 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}}) args(%{{.*}} : f32, %{{.*}} : memref<?xf32, 1>)
     gpu.launch_func @kernels::@kernel_1 blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst) args(%0 : f32, %1 : memref<?xf32, 1>)
 
+    // CHECK: gpu.launch_func @kernels::@kernel_1 clusters in (%{{.*}}, %{{.*}}, %{{.*}}) blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}}) args(%{{.*}} : f32, %{{.*}} : memref<?xf32, 1>)
+    gpu.launch_func @kernels::@kernel_1 clusters in (%cst, %cst, %cst) blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst) args(%0 : f32, %1 : memref<?xf32, 1>)
+
     gpu.launch_func @kernels::@kernel_1 blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst) dynamic_shared_memory_size %c0 args(%0 : f32, %1 : memref<?xf32, 1>)
 
     // CHECK: gpu.launch_func @kernels::@kernel_2 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}})
@@ -179,25 +253,41 @@ module attributes {gpu.container_module} {
 
   gpu.module @gpu_funcs {
     // CHECK-LABEL: gpu.func @kernel_1({{.*}}: f32)
-    // CHECK:       workgroup
-    // CHECK:       private
-    // CHECK:       attributes
     gpu.func @kernel_1(%arg0: f32)
-        workgroup(%arg1: memref<42xf32, 3>)
-        private(%arg2: memref<2xf32, 5>, %arg3: memref<1xf32, 5>)
+    // CHECK:       workgroup(%[[WGROUP1:.*]] : memref<42xf32, 3>, %[[WGROUP2:.*]] : memref<2xf32, 3>)
+        workgroup(%arg1: memref<42xf32, 3>, %arg2: memref<2xf32, 3>)
+    // CHECK:       private(%[[PRIVATE1:.*]] : memref<2xf32, 5>, %[[PRIVATE2:.*]] : memref<1xf32, 5>)
+        private(%arg3: memref<2xf32, 5>, %arg4: memref<1xf32, 5>)
         kernel
-        attributes {foo="bar"} {
-      "use"(%arg1) : (memref<42xf32, 3>) -> ()
-      "use"(%arg2) : (memref<2xf32, 5>) -> ()
-      "use"(%arg3) : (memref<1xf32, 5>) -> ()
+    // CHECK:       attributes {foo = "bar"}
+        attributes {foo = "bar"} {
+      // CHECK: "use"(%[[WGROUP1]], %[[WGROUP2]])
+      "use"(%arg1, %arg2) : (memref<42xf32, 3>, memref<2xf32, 3>) -> ()
+      // CHECK: "use"(%[[PRIVATE1]])
+      "use"(%arg3) : (memref<2xf32, 5>) -> ()
+      // CHECK: "use"(%[[PRIVATE2]])
+      "use"(%arg4) : (memref<1xf32, 5>) -> ()
       gpu.return
     }
 
-    // CHECK-LABEL gpu.func @printf_test
+    // CHECK-LABEL: gpu.func @printf_test
     // CHECK: (%[[ARG0:.*]]: i32)
-    // CHECK: gpu.printf "Value: %d" %[[ARG0]] : i32
+    // CHECK: gpu.printf "Value: %d", %[[ARG0]] : i32
     gpu.func @printf_test(%arg0 : i32) {
-      gpu.printf "Value: %d" %arg0 : i32
+      gpu.printf "Value: %d", %arg0 : i32
+      gpu.return
+    }
+
+    // CHECK-LABEL: gpu.func @printf_empty
+    // CHECK: gpu.printf  "]"
+    // CHECK: scf.if
+    // CHECK: gpu.printf ", "
+    gpu.func @printf_empty(%arg0 : i32) {
+      gpu.printf "]"
+      %1 = arith.cmpi slt, %arg0, %arg0 : i32
+      scf.if %1 {
+        gpu.printf ", "
+      }
       gpu.return
     }
 
@@ -383,6 +473,20 @@ module attributes {gpu.container_module} {
     gpu.wait [%token16]
     return
   }
+
+  // CHECK-LABEL: func @extract_insert_mma
+  func.func @extract_insert_mma(%src : !gpu.mma_matrix<16x16xf32, "COp">,
+                                %ptr: memref<16x16xf32>) {
+    %zero = arith.constant 0.0 : f32
+    %c0 = arith.constant 0 : index
+    // CHECK: gpu.subgroup_mma_extract_thread_local
+    %val = gpu.subgroup_mma_extract_thread_local %src[%c0] : !gpu.mma_matrix<16x16xf32, "COp"> -> f32
+    %m = gpu.subgroup_mma_constant_matrix %zero : !gpu.mma_matrix<16x16xf32, "COp">
+    // CHECK: gpu.subgroup_mma_insert_thread_local
+    %s0 = gpu.subgroup_mma_insert_thread_local %val, %m[%c0] : f32, !gpu.mma_matrix<16x16xf32, "COp"> -> !gpu.mma_matrix<16x16xf32, "COp">
+    gpu.subgroup_mma_store_matrix %s0, %ptr[%c0, %c0] {leadDimension = 16 : index} : !gpu.mma_matrix<16x16xf32, "COp">, memref<16x16xf32>
+    return
+  }
 }
 
 // Just check that this doesn't crash.
@@ -403,4 +507,76 @@ gpu.module @module_with_two_target [#nvvm.target, #rocdl.target<chip = "gfx90a">
   gpu.func @kernel(%arg0 : f32) kernel {
     gpu.return
   }
+}
+
+gpu.module @module_with_offload_handler <#gpu.select_object<0>> [#nvvm.target] {
+}
+
+// Test kernel attributes
+gpu.binary @kernel_attrs_1 [
+    #gpu.object<#rocdl.target<chip = "gfx900">,
+      kernels = #gpu.kernel_table<[
+        #gpu.kernel_metadata<"kernel0", (i32, f32) -> (), metadata = {sgpr_count = 255}>,
+        #gpu.kernel_metadata<"kernel1", (i32) -> (), arg_attrs = [{llvm.read_only}]>
+      ]>,
+      bin = "BLOB">
+  ]
+
+// Verify the kernels are sorted
+// CHECK-LABEL: gpu.binary @kernel_attrs_2
+gpu.binary @kernel_attrs_2 [
+    // CHECK: [#gpu.kernel_metadata<"a_kernel", () -> ()>, #gpu.kernel_metadata<"m_kernel", () -> ()>, #gpu.kernel_metadata<"z_kernel", () -> ()>]
+    #gpu.object<#rocdl.target<chip = "gfx900">,
+      kernels = #gpu.kernel_table<[
+        #gpu.kernel_metadata<"z_kernel", () -> ()>,
+        #gpu.kernel_metadata<"m_kernel", () -> ()>,
+        #gpu.kernel_metadata<"a_kernel", () -> ()>
+      ]>,
+      bin = "BLOB">
+  ]
+
+// CHECK-LABEL:   func @warp_execute_on_lane_0(
+func.func @warp_execute_on_lane_0(%laneid: index) {
+//  CHECK-NEXT:     gpu.warp_execute_on_lane_0(%{{.*}})[32] {
+  gpu.warp_execute_on_lane_0(%laneid)[32] {
+//  CHECK-NEXT:     }
+  }
+//  CHECK-NEXT:     return
+  return
+}
+
+// CHECK-LABEL: func.func @warp_execute_on_lane_0_2d
+func.func @warp_execute_on_lane_0_2d(%laneid: index) {
+  //  CHECK: gpu.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<1x4xi32>)
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<1x4xi32>) {
+    %0 = arith.constant dense<2>: vector<4x32xi32>
+    // CHECK: gpu.yield %{{.+}} : vector<4x32xi32>
+    gpu.yield %0 : vector<4x32xi32>
+  }
+  return
+}
+
+// CHECK-LABEL:   func @warp_operand_result(
+func.func @warp_operand_result(%laneid: index, %v0 : vector<4xi32>) -> (vector<4xi32>) {
+//  CHECK-NEXT:     %{{.*}} = gpu.warp_execute_on_lane_0(%{{.*}})[32] args(%{{.*}} : vector<4xi32>) -> (vector<4xi32>) {
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[32]
+  args(%v0 : vector<4xi32>) -> (vector<4xi32>) {
+   ^bb0(%arg0 : vector<128xi32>) :
+    %0 = arith.constant dense<2>: vector<128xi32>
+    %1 = arith.addi %arg0, %0 : vector<128xi32>
+//       CHECK:       gpu.yield %{{.*}} : vector<128xi32>
+    gpu.yield %1 : vector<128xi32>
+//  CHECK-NEXT:     }
+  }
+  return %2 : vector<4xi32>
+}
+
+// CHECK-LABEL: func @subgroup_broadcast
+//  CHECK-SAME: (%[[ARG:.*]]: f32, %[[IDX:.*]]: i32)
+func.func @subgroup_broadcast(%arg0 : f32, %arg1 : i32) -> (f32, f32) {
+  // CHECK: gpu.subgroup_broadcast %[[ARG]], first_active_lane : f32
+  %0 = gpu.subgroup_broadcast %arg0, first_active_lane : f32
+  // CHECK: gpu.subgroup_broadcast %[[ARG]], specific_lane %[[IDX]] : f32
+  %1 = gpu.subgroup_broadcast %arg0, specific_lane %arg1 : f32
+  func.return %0, %1 : f32, f32
 }

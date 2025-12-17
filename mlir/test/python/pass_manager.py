@@ -1,6 +1,6 @@
 # RUN: %PYTHON %s 2>&1 | FileCheck %s
 
-import gc, sys
+import gc, os, sys, tempfile
 from mlir.ir import *
 from mlir.passmanager import *
 from mlir.dialects.func import FuncOp
@@ -130,7 +130,7 @@ def testInvalidNesting():
         try:
             pm = PassManager.parse("func.func(normalize-memrefs)")
         except ValueError as e:
-            # CHECK: ValueError exception: Can't add pass 'NormalizeMemRefs' restricted to 'builtin.module' on a PassManager intended to run on 'func.func', did you intend to nest?
+            # CHECK: ValueError exception: Can't add pass 'NormalizeMemRefsPass' restricted to 'builtin.module' on a PassManager intended to run on 'func.func', did you intend to nest?
             log("ValueError exception:", e)
         else:
             log("Exception not produced")
@@ -176,14 +176,6 @@ def testRunPipelineError():
 @run
 def testPostPassOpInvalidation():
     with Context() as ctx:
-        log_op_count = lambda: log("live ops:", ctx._get_live_operation_count())
-
-        # CHECK: invalidate_ops=False
-        log("invalidate_ops=False")
-
-        # CHECK: live ops: 0
-        log_op_count()
-
         module = ModuleOp.parse(
             """
           module {
@@ -195,9 +187,6 @@ def testPostPassOpInvalidation():
           }
         """
         )
-
-        # CHECK: live ops: 1
-        log_op_count()
 
         outer_const_op = module.body.operations[0]
         # CHECK: %[[VAL0:.*]] = arith.constant 10 : i64
@@ -214,12 +203,7 @@ def testPostPassOpInvalidation():
         # CHECK: %[[VAL1]] = arith.constant 10 : i64
         log(inner_const_op)
 
-        # CHECK: live ops: 4
-        log_op_count()
-
-        PassManager.parse("builtin.module(canonicalize)").run(
-            module, invalidate_ops=False
-        )
+        PassManager.parse("builtin.module(canonicalize)").run(module)
         # CHECK: func.func @foo() {
         # CHECK:   return
         # CHECK: }
@@ -233,9 +217,6 @@ def testPostPassOpInvalidation():
         # CHECK: invalidate_ops=True
         log("invalidate_ops=True")
 
-        # CHECK: live ops: 4
-        log_op_count()
-
         module = ModuleOp.parse(
             """
           module {
@@ -247,30 +228,24 @@ def testPostPassOpInvalidation():
           }
         """
         )
-        outer_const_op = module.body.operations[0]
-        func_op = module.body.operations[1]
-        inner_const_op = func_op.body.blocks[0].operations[0]
-
-        # CHECK: live ops: 4
-        log_op_count()
 
         PassManager.parse("builtin.module(canonicalize)").run(module)
 
-        # CHECK: live ops: 1
-        log_op_count()
-
+        func_op._set_invalid()
         try:
             log(func_op)
         except RuntimeError as e:
             # CHECK: the operation has been invalidated
             log(e)
 
+        outer_const_op._set_invalid()
         try:
             log(outer_const_op)
         except RuntimeError as e:
             # CHECK: the operation has been invalidated
             log(e)
 
+        inner_const_op._set_invalid()
         try:
             log(inner_const_op)
         except RuntimeError as e:
@@ -281,3 +256,202 @@ def testPostPassOpInvalidation():
         # CHECK:   return
         # CHECK: }
         log(module)
+
+
+# CHECK-LABEL: TEST: testPrintIrAfterAll
+@run
+def testPrintIrAfterAll():
+    with Context() as ctx:
+        module = ModuleOp.parse(
+            """
+          module {
+            func.func @main() {
+              %0 = arith.constant 10
+              return
+            }
+          }
+        """
+        )
+        pm = PassManager.parse("builtin.module(canonicalize)")
+        ctx.enable_multithreading(False)
+        pm.enable_ir_printing()
+        # CHECK: // -----// IR Dump After Canonicalizer (canonicalize) //----- //
+        # CHECK: module {
+        # CHECK:   func.func @main() {
+        # CHECK:     return
+        # CHECK:   }
+        # CHECK: }
+        pm.run(module)
+
+
+# CHECK-LABEL: TEST: testPrintIrBeforeAndAfterAll
+@run
+def testPrintIrBeforeAndAfterAll():
+    with Context() as ctx:
+        module = ModuleOp.parse(
+            """
+          module {
+            func.func @main() {
+              %0 = arith.constant 10
+              return
+            }
+          }
+        """
+        )
+        pm = PassManager.parse("builtin.module(canonicalize)")
+        ctx.enable_multithreading(False)
+        pm.enable_ir_printing(print_before_all=True, print_after_all=True)
+        # CHECK: // -----// IR Dump Before Canonicalizer (canonicalize) //----- //
+        # CHECK: module {
+        # CHECK:   func.func @main() {
+        # CHECK:     %[[C10:.*]] = arith.constant 10 : i64
+        # CHECK:     return
+        # CHECK:   }
+        # CHECK: }
+        # CHECK: // -----// IR Dump After Canonicalizer (canonicalize) //----- //
+        # CHECK: module {
+        # CHECK:   func.func @main() {
+        # CHECK:     return
+        # CHECK:   }
+        # CHECK: }
+        pm.run(module)
+
+
+# CHECK-LABEL: TEST: testPrintIrLargeLimitElements
+@run
+def testPrintIrLargeLimitElements():
+    with Context() as ctx:
+        module = ModuleOp.parse(
+            """
+          module {
+            func.func @main() -> tensor<3xi64> {
+              %0 = arith.constant dense<[1, 2, 3]> : tensor<3xi64>
+              return %0 : tensor<3xi64>
+            }
+          }
+        """
+        )
+        pm = PassManager.parse("builtin.module(canonicalize)")
+        ctx.enable_multithreading(False)
+        pm.enable_ir_printing(large_elements_limit=2)
+        # CHECK:     %[[CST:.*]] = arith.constant dense_resource<__elided__> : tensor<3xi64>
+        pm.run(module)
+
+
+# CHECK-LABEL: TEST: testPrintIrLargeResourceLimit
+@run
+def testPrintIrLargeResourceLimit():
+    with Context() as ctx:
+        module = ModuleOp.parse(
+            """
+          module {
+            func.func @main() -> tensor<3xi64> {
+              %0 = arith.constant dense_resource<blob1> : tensor<3xi64>
+              return %0 : tensor<3xi64>
+            }
+          }
+          {-#
+            dialect_resources: {
+              builtin: {
+                blob1: "0x010000000000000002000000000000000300000000000000"
+              }
+            }
+          #-}
+        """
+        )
+        pm = PassManager.parse("builtin.module(canonicalize)")
+        ctx.enable_multithreading(False)
+        pm.enable_ir_printing(large_resource_limit=4)
+        # CHECK-NOT: blob1: "0x01
+        pm.run(module)
+
+
+# CHECK-LABEL: TEST: testPrintIrLargeResourceLimitVsElementsLimit
+@run
+def testPrintIrLargeResourceLimitVsElementsLimit():
+    """Test that large_elements_limit does not affect the printing of resources."""
+    with Context() as ctx:
+        module = ModuleOp.parse(
+            """
+          module {
+            func.func @main() -> tensor<3xi64> {
+              %0 = arith.constant dense_resource<blob1> : tensor<3xi64>
+              return %0 : tensor<3xi64>
+            }
+          }
+          {-#
+            dialect_resources: {
+              builtin: {
+                blob1: "0x010000000000000002000000000000000300000000000000"
+              }
+            }
+          #-}
+        """
+        )
+        pm = PassManager.parse("builtin.module(canonicalize)")
+        ctx.enable_multithreading(False)
+        pm.enable_ir_printing(large_elements_limit=1)
+        # CHECK-NOT: blob1: "0x01
+        pm.run(module)
+
+
+# CHECK-LABEL: TEST: testPrintIrTree
+@run
+def testPrintIrTree():
+    with Context() as ctx:
+        module = ModuleOp.parse(
+            """
+          module {
+            func.func @main() {
+              %0 = arith.constant 10
+              return
+            }
+          }
+        """
+        )
+        pm = PassManager.parse("builtin.module(canonicalize)")
+        ctx.enable_multithreading(False)
+        pm.enable_ir_printing()
+        # CHECK-LABEL: // Tree printing begin
+        # CHECK: \-- builtin_module_no-symbol-name
+        # CHECK:     \-- 0_canonicalize.mlir
+        # CHECK-LABEL: // Tree printing end
+        pm.run(module)
+        log("// Tree printing begin")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            pm.enable_ir_printing(tree_printing_dir_path=temp_dir)
+            pm.run(module)
+
+            def print_file_tree(directory, prefix=""):
+                entries = sorted(os.listdir(directory))
+                for i, entry in enumerate(entries):
+                    path = os.path.join(directory, entry)
+                    connector = "\-- " if i == len(entries) - 1 else "|-- "
+                    log(f"{prefix}{connector}{entry}")
+                    if os.path.isdir(path):
+                        print_file_tree(
+                            path, prefix + ("    " if i == len(entries) - 1 else "│   ")
+                        )
+
+            print_file_tree(temp_dir)
+        log("// Tree printing end")
+
+
+# CHECK-LABEL: TEST: testEnableStatistics
+@run
+def testEnableStatistics():
+    with Context() as ctx:
+        module = ModuleOp.parse(
+            """
+          module {
+            func.func @main() {
+              %0 = arith.constant 10
+              return
+            }
+          }
+        """
+        )
+        pm = PassManager.parse("builtin.module(canonicalize)")
+        pm.enable_statistics()
+        # CHECK: Pass statistics report
+        pm.run(module)

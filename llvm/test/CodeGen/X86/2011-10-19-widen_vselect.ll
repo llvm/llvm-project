@@ -50,13 +50,12 @@ define void @zero_test() {
 ; X86-LABEL: zero_test:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    xorps %xmm0, %xmm0
-; X86-NEXT:    movlps %xmm0, (%eax)
+; X86-NEXT:    movsd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: zero_test:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    xorps %xmm0, %xmm0
-; X64-NEXT:    movlps %xmm0, (%rax)
+; X64-NEXT:    movq $0, (%rax)
 ; X64-NEXT:    retq
 entry:
   %0 = select <2 x i1> undef, <2 x float> undef, <2 x float> zeroinitializer
@@ -74,7 +73,7 @@ define void @full_test() {
 ; X86-NEXT:    cvtdq2ps %xmm0, %xmm1
 ; X86-NEXT:    xorps %xmm0, %xmm0
 ; X86-NEXT:    cmpltps %xmm2, %xmm0
-; X86-NEXT:    movaps {{.*#+}} xmm3 = <1.0E+0,1.0E+0,u,u>
+; X86-NEXT:    movaps {{.*#+}} xmm3 = [1.0E+0,1.0E+0,u,u]
 ; X86-NEXT:    addps %xmm1, %xmm3
 ; X86-NEXT:    movaps %xmm1, %xmm4
 ; X86-NEXT:    blendvps %xmm0, %xmm3, %xmm4
@@ -94,7 +93,7 @@ define void @full_test() {
 ; X64-NEXT:    cvtdq2ps %xmm0, %xmm1
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    cmpltps %xmm2, %xmm0
-; X64-NEXT:    movaps {{.*#+}} xmm3 = <1.0E+0,1.0E+0,u,u>
+; X64-NEXT:    movaps {{.*#+}} xmm3 = [1.0E+0,1.0E+0,u,u]
 ; X64-NEXT:    addps %xmm1, %xmm3
 ; X64-NEXT:    movaps %xmm1, %xmm4
 ; X64-NEXT:    blendvps %xmm0, %xmm3, %xmm4

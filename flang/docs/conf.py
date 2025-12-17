@@ -10,6 +10,7 @@
 # serve to show the default.
 
 from datetime import date
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -22,16 +23,37 @@ from datetime import date
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
-    "myst_parser",
     "sphinx.ext.todo",
     "sphinx.ext.mathjax",
     "sphinx.ext.intersphinx",
     "sphinx.ext.autodoc",
 ]
 
+try:
+    import myst_parser
+
+    extensions.append("myst_parser")
+except ImportError:
+    raise ImportError(
+        "myst_parser is required to build documentation, including man pages."
+    )
+
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
 myst_heading_anchors = 6
+
+# Enable myst's substitution extension since markdown files cannot use the
+# |version| and |release| substitutions available to .rst files.
+myst_enable_extensions = ["substitution"]
+
+# The substitutions to use in markdown files. This contains unconditional
+# substitutions, but more may be added once the configuration is obtained.
+myst_substitutions = {"in_progress": "(In-Progress) " if tags.has("PreRelease") else ""}
 
 import sphinx
 
@@ -68,7 +90,7 @@ copyright = "2017-%d, The Flang Team" % date.today().year
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["_build", "analyzer"]
+exclude_patterns = ["_build", "analyzer", "FIR/*"]
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 # default_role = None
@@ -95,15 +117,12 @@ pygments_style = "friendly"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = "llvm-theme"
+html_theme = "haiku"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {"nosidebar": False}
-
-# Add any paths that contain custom themes here, relative to this directory.
-html_theme_path = ["_themes"]
+# html_theme_options = {}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
@@ -127,11 +146,7 @@ html_title = "The Flang Compiler"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
-
-html_context = {
-    "css_files": ["_static/llvm.css"],
-}
+# html_static_path = []
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
@@ -142,13 +157,7 @@ html_last_updated_fmt = "%b %d, %Y"
 # html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-html_sidebars = {
-    "**": [
-        "indexsidebar.html",
-        "searchbox.html",
-    ]
-}
-
+# html_sidebars = {}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
@@ -229,7 +238,15 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = []
+man_pages = [
+    (
+        "index",
+        "flang",
+        "flang - the Flang Fortran compiler",
+        ["Flang Contributors"],
+        1,
+    )
+]
 
 # If true, show URL addresses after external links.
 # man_show_urls = False
@@ -260,3 +277,22 @@ texinfo_documents = [
 
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 # texinfo_show_urls = 'footnote'
+
+
+# This can be treated as its own sphinx extension. setup() will be called by
+# sphinx. In it, register a function to be called when the configuration has
+# been initialized. The configuration will contain the values of the -D options
+# passed to sphinx-build on the command line.
+#
+# See llvm/cmake/modules/AddSphinxTarget.cmake for details on how sphinx-build
+# is invoked.
+def setup(app):
+    app.connect("config-inited", myst_substitutions_update)
+
+
+# Override the myst_parser substitutions map after the configuration has been
+# initialized.
+def myst_substitutions_update(app, config):
+    config.myst_substitutions.update(
+        {"release": config.release, "version": config.version}
+    )

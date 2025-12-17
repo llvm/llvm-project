@@ -11,85 +11,8 @@
 
 include "mlir/Pass/PassBase.td"
 
-def BufferDeallocation : Pass<"buffer-deallocation", "func::FuncOp"> {
-  let summary = "Adds all required dealloc operations for all allocations in "
-                "the input program";
-  let description = [{
-    This pass implements an algorithm to automatically introduce all required
-    deallocation operations for all buffers in the input program. This ensures
-    that the resulting program does not have any memory leaks.
-
-
-    Input
-
-    ```mlir
-    #map0 = affine_map<(d0) -> (d0)>
-    module {
-      func.func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
-        cf.cond_br %arg0, ^bb1, ^bb2
-      ^bb1:
-        cf.br ^bb3(%arg1 : memref<2xf32>)
-      ^bb2:
-        %0 = memref.alloc() : memref<2xf32>
-        linalg.generic {
-          args_in = 1 : i64,
-          args_out = 1 : i64,
-          indexing_maps = [#map0, #map0],
-          iterator_types = ["parallel"]} %arg1, %0 {
-        ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
-          %tmp1 = exp %gen1_arg0 : f32
-          linalg.yield %tmp1 : f32
-        }: memref<2xf32>, memref<2xf32>
-        cf.br ^bb3(%0 : memref<2xf32>)
-      ^bb3(%1: memref<2xf32>):
-        "memref.copy"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
-        return
-      }
-    }
-
-    ```
-
-    Output
-
-    ```mlir
-    #map0 = affine_map<(d0) -> (d0)>
-    module {
-      func.func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
-        cf.cond_br %arg0, ^bb1, ^bb2
-      ^bb1:  // pred: ^bb0
-        %0 = memref.alloc() : memref<2xf32>
-        memref.copy(%arg1, %0) : memref<2xf32>, memref<2xf32>
-        cf.br ^bb3(%0 : memref<2xf32>)
-      ^bb2:  // pred: ^bb0
-        %1 = memref.alloc() : memref<2xf32>
-        linalg.generic {
-          args_in = 1 : i64,
-          args_out = 1 : i64,
-          indexing_maps = [#map0, #map0],
-          iterator_types = ["parallel"]} %arg1, %1 {
-        ^bb0(%arg3: f32, %arg4: f32):
-          %4 = exp %arg3 : f32
-          linalg.yield %4 : f32
-        }: memref<2xf32>, memref<2xf32>
-        %2 = memref.alloc() : memref<2xf32>
-        memref.copy(%1, %2) : memref<2xf32>, memref<2xf32>
-        dealloc %1 : memref<2xf32>
-        cf.br ^bb3(%2 : memref<2xf32>)
-      ^bb3(%3: memref<2xf32>):  // 2 preds: ^bb1, ^bb2
-        memref.copy(%3, %arg2) : memref<2xf32>, memref<2xf32>
-        dealloc %3 : memref<2xf32>
-        return
-      }
-
-    }
-    ```
-
-  }];
-  let constructor = "mlir::bufferization::createBufferDeallocationPass()";
-}
-
-def OwnershipBasedBufferDeallocation : Pass<
-    "ownership-based-buffer-deallocation"> {
+def OwnershipBasedBufferDeallocationPass
+    : Pass<"ownership-based-buffer-deallocation"> {
   let summary = "Adds all required dealloc operations for all allocations in "
                 "the input program";
   let description = [{
@@ -124,7 +47,7 @@ def OwnershipBasedBufferDeallocation : Pass<
     Otherwise, the pass that bufferizes the remaining tensors is responsible to
     add the corresponding deallocation operations. Note that this pass does not
     consider any values of tensor type and assumes that MemRef values defined by
-    `bufferization.to_memref` do not return ownership and do not have to be
+    `bufferization.to_buffer` do not return ownership and do not have to be
     deallocated. `bufferization.to_tensor` operations are handled similarly to
     `bufferization.clone` operations with the exception that the result value is
     not handled because it's a tensor (not a MemRef).
@@ -143,8 +66,6 @@ def OwnershipBasedBufferDeallocation : Pass<
       ^bb2:
         %0 = memref.alloc() : memref<2xf32>
         linalg.generic {
-          args_in = 1 : i64,
-          args_out = 1 : i64,
           indexing_maps = [#map0, #map0],
           iterator_types = ["parallel"]}
         outs(%arg1, %0 : memref<2xf32>, memref<2xf32>) {
@@ -179,7 +100,6 @@ def OwnershipBasedBufferDeallocation : Pass<
           indexing_maps = [#map, #map],
           iterator_types = ["parallel"]}
         outs(%arg1, %alloc : memref<2xf32>, memref<2xf32>)
-        attrs =  {args_in = 1 : i64, args_out = 1 : i64} {
         ^bb0(%out: f32, %out_0: f32):
           %2 = math.exp %out : f32
           linalg.yield %2, %out_0 : f32, f32
@@ -217,14 +137,14 @@ def OwnershipBasedBufferDeallocation : Pass<
     argument (which would otherwise be forbidden according to the function
     boundary ABI).
   }];
-  let options = [
-    Option<"privateFuncDynamicOwnership", "private-function-dynamic-ownership",
+  let options =
+      [Option<
+           "privateFuncDynamicOwnership", "private-function-dynamic-ownership",
            "bool", /*default=*/"false",
            "Allows to add additional arguments to private functions to "
            "dynamically pass ownership of memrefs to callees. This can enable "
            "earlier deallocations.">,
   ];
-  let constructor = "mlir::bufferization::createOwnershipBasedBufferDeallocationPass()";
 
   let dependentDialects = [
     "mlir::bufferization::BufferizationDialect", "mlir::arith::ArithDialect",
@@ -232,8 +152,8 @@ def OwnershipBasedBufferDeallocation : Pass<
   ];
 }
 
-def BufferDeallocationSimplification :
-    Pass<"buffer-deallocation-simplification"> {
+def BufferDeallocationSimplificationPass
+    : Pass<"buffer-deallocation-simplification"> {
   let summary = "Optimizes `bufferization.dealloc` operation for more "
                 "efficient codegen";
   let description = [{
@@ -243,16 +163,28 @@ def BufferDeallocationSimplification :
     some memref isn't deallocated twice (double free).
   }];
 
-  let constructor =
-    "mlir::bufferization::createBufferDeallocationSimplificationPass()";
-
   let dependentDialects = [
     "mlir::bufferization::BufferizationDialect", "mlir::arith::ArithDialect",
     "mlir::memref::MemRefDialect"
   ];
 }
 
-def LowerDeallocations : Pass<"bufferization-lower-deallocations"> {
+def OptimizeAllocationLivenessPass
+    : Pass<"optimize-allocation-liveness", "func::FuncOp"> {
+  let summary = "This pass optimizes the liveness of temp allocations in the "
+                "input function";
+  let description = [{
+      This pass will find all operations that have a memory allocation effect.
+      It will search for the corresponding deallocation and move it right after
+      the last user of the allocation.
+      This will optimize the liveness of the allocations.
+
+      The pass is expected to run after the deallocation pipeline.
+  }];
+  let dependentDialects = ["mlir::memref::MemRefDialect"];
+}
+
+def LowerDeallocationsPass : Pass<"bufferization-lower-deallocations"> {
   let summary = "Lowers `bufferization.dealloc` operations to `memref.dealloc`"
                 "operations";
   let description = [{
@@ -266,36 +198,32 @@ def LowerDeallocations : Pass<"bufferization-lower-deallocations"> {
     library functions to avoid code-size blow-up.
   }];
 
-  let constructor =
-    "mlir::bufferization::createLowerDeallocationsPass()";
-
   let dependentDialects = [
     "arith::ArithDialect", "memref::MemRefDialect", "scf::SCFDialect",
     "func::FuncDialect"
   ];
 }
 
-def BufferHoisting : Pass<"buffer-hoisting", "func::FuncOp"> {
+def BufferHoistingPass : Pass<"buffer-hoisting", "func::FuncOp"> {
   let summary = "Optimizes placement of allocation operations by moving them "
                 "into common dominators and out of nested regions";
   let description = [{
     This pass implements an approach to aggressively move allocations upwards
     into common dominators and out of nested regions.
   }];
-  let constructor = "mlir::bufferization::createBufferHoistingPass()";
 }
 
-def BufferLoopHoisting : Pass<"buffer-loop-hoisting", "func::FuncOp"> {
+def BufferLoopHoistingPass : Pass<"buffer-loop-hoisting", "func::FuncOp"> {
   let summary = "Optimizes placement of allocation operations by moving them "
                 "out of loop nests";
   let description = [{
     This pass implements an approach to aggressively move allocations upwards
     out of loop nests. It does not move allocations into common dominators.
   }];
-  let constructor = "mlir::bufferization::createBufferLoopHoistingPass()";
 }
 
-def BufferResultsToOutParams : Pass<"buffer-results-to-out-params", "ModuleOp">  {
+def BufferResultsToOutParamsPass
+    : Pass<"buffer-results-to-out-params", "ModuleOp"> {
   let summary = "Converts memref-typed function results to out-params";
   let description = [{
     Some calling conventions prefer to pass output memrefs as "out params". The
@@ -315,33 +243,30 @@ def BufferResultsToOutParams : Pass<"buffer-results-to-out-params", "ModuleOp"> 
     The main issue with this pass (and the out-param calling convention) is that
     buffers for results need to be allocated in the caller. This currently only
     works for static shaped memrefs.
+
+    If the hoist-static-allocs option is on, the pass tries to eliminate the
+    allocation for the returned memref and avoid the memory-copy if possible.
+    This optimization applies on the returned memref which has static shape and
+    is allocated by memref.alloc in the function. It will use the memref given
+    in function argument to replace the allocated memref.
   }];
-  let constructor = "mlir::bufferization::createBufferResultsToOutParamsPass()";
+  let options =
+      [Option<"addResultAttribute", "add-result-attr", "bool",
+              /*default=*/"false",
+              "Add the attribute 'bufferize.result' to all output parameters.">,
+       Option<"hoistStaticAllocs", "hoist-static-allocs", "bool",
+              /*default=*/"false", "Hoist static allocations to call sites.">,
+       Option<"hoistDynamicAllocs", "hoist-dynamic-allocs", "bool",
+              /*default=*/"false", "Hoist dynamic allocations to call sites.">,
+       Option<"modifyPublicFunctions", "modify-public-functions", "bool",
+              /*default=*/"false", "Modify function signatures of public "
+              "functions.">,
+  ];
   let dependentDialects = ["memref::MemRefDialect"];
 }
 
-def FinalizingBufferize : Pass<"finalizing-bufferize", "func::FuncOp"> {
-  let summary = "Finalize a partial bufferization";
-  let description = [{
-    A bufferize pass that finalizes a partial bufferization by removing
-    remaining `bufferization.to_tensor` and `bufferization.to_buffer` operations.
-
-    The removal of those operations is only possible if the operations only
-    exist in pairs, i.e., all uses of `bufferization.to_tensor` operations are
-    `bufferization.to_buffer` operations.
-
-    This pass will fail if not all operations can be removed or if any operation
-    with tensor typed operands remains.
-  }];
-  let constructor = "mlir::bufferization::createFinalizingBufferizePass()";
-}
-
-def BufferizationBufferize : Pass<"bufferization-bufferize", "func::FuncOp"> {
-  let summary = "Bufferize the `bufferization` dialect";
-  let constructor = "mlir::bufferization::createBufferizationBufferizePass()";
-}
-
-def DropEquivalentBufferResults : Pass<"drop-equivalent-buffer-results", "ModuleOp">  {
+def DropEquivalentBufferResultsPass
+    : Pass<"drop-equivalent-buffer-results", "ModuleOp"> {
   let summary = "Remove MemRef return values that are equivalent to a bbArg";
   let description = [{
     This pass removes MemRef return values from functions if they are equivalent
@@ -351,22 +276,29 @@ def DropEquivalentBufferResults : Pass<"drop-equivalent-buffer-results", "Module
     Note: If a bbArg buffer is not returned directly but casted to beforehand,
     the buffer is still considered equivalent.
   }];
-  let constructor = "mlir::bufferization::createDropEquivalentBufferResultsPass()";
   let dependentDialects = ["memref::MemRefDialect"];
 }
 
-def EmptyTensorToAllocTensor : Pass<"empty-tensor-to-alloc-tensor"> {
+def EmptyTensorToAllocTensorPass : Pass<"empty-tensor-to-alloc-tensor"> {
   let summary = "Replace all empty ops by alloc_tensor ops.";
   let description = [{
     tensor.empty ops return a tensor of unspecified contents who's only purpose
     is to carry the tensor shape. This pass converts such ops to
     bufferization.alloc_tensor ops, which bufferize to buffer allocations.
   }];
-  let constructor = "mlir::bufferization::createEmptyTensorToAllocTensorPass()";
   let dependentDialects = ["tensor::TensorDialect"];
 }
 
-def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
+def layoutMapClValues {
+  string values = [{
+  ::llvm::cl::values(
+    clEnumValN(LayoutMapOption::InferLayoutMap, "infer-layout-map", ""),
+    clEnumValN(LayoutMapOption::IdentityLayoutMap, "identity-layout-map", ""),
+    clEnumValN(LayoutMapOption::FullyDynamicLayoutMap, "fully-dynamic-layout-map", "")
+    )}];
+}
+
+def OneShotBufferizePass : Pass<"one-shot-bufferize", "ModuleOp"> {
   let summary = "One-Shot Bufferize";
   let description = [{
     This pass bufferizes all ops that implement `BufferizableOpInterface`. It
@@ -388,12 +320,13 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     results in a new buffer allocation.
 
     One-Shot Bufferize does not deallocate any buffers that it allocates. The
-    `-buffer-deallocation` pass should be run after One-Shot Bufferize to insert
-    the deallocation operations necessary to eliminate memory leaks.
+    `-buffer-deallocation-pipeline` pipeline should be run after One-Shot
+    Bufferize to insert the deallocation operations necessary to eliminate
+    memory leaks.
 
     One-Shot Bufferize will by default reject IR that contains non-bufferizable
     op, i.e., ops that do not implemement BufferizableOpInterface. Such IR can
-    be allowed with `allow-unknown-ops=1`. In that case, to_memref and to_tensor
+    be allowed with `allow-unknown-ops=1`. In that case, to_buffer and to_tensor
     ops will be generated at the bufferization boundary. This is useful for
     compatibility with existing partial bufferization passes: These can
     bufferize the remaining IR after running One-Shot Bufferize.
@@ -413,7 +346,7 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
 
     One-Shot Bufferize will by default assume memref types with fully dynamic
     layout maps when a precise layout cannot be inferred. E.g., this is the case
-    when wrapping a non-bufferizable op in to_memref/to_tensor ops. This
+    when wrapping a non-bufferizable op in to_buffer/to_tensor ops. This
     behavior can be overridden with `unknown-type-conversion`. Valid values are
     `fully-dynamic-layout-map` and `identity-layout-map`.
 
@@ -454,52 +387,86 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     argument is read/written and which returned values are aliasing/equivalent.
     For debugging purposes, such information can be printed with
     `test-analysis-only`.
+
+    The order in which ops are analyzed is important. The analysis is greedy and
+    ops that are analyzed earlier are more likely to bufferize in-place. The
+    heuristic can be set with `analysis-heuristic`. At the moment, the following
+    heuristics are available:
+
+    * `bottom-up` (default): Analyze ops from bottom to top.
+    * `top-down`: Analyze ops from top to bottom.
+    * `fuzzer`: Randomize the ordering of ops with `analysis-fuzzer-seed`.
+    * `bottom-up-from-terminators`: Traverse the reverse use-def chains of
+      tensor IR, starting from region branch terminators (bottom-up). Nested
+      regions are traversed before enclosing regions. Analyze the traversed ops
+      first, then analyze the remaining ops bottom-up. This heuristic is useful
+      for bufferizing loop constructs. One-Shot Bufferize currently supports
+      only such IR where yielded tensor values bufferize to equivalent region
+      iter_args, and first analyzing all ops on the path from the "yielding" op
+      to the beginning of the loop body makes it more likely for the region
+      iter_args and yielded values to bufferize to equivalent buffers.
   }];
-  let options = [
-    Option<"allowReturnAllocsFromLoops", "allow-return-allocs-from-loops",
-           "bool", /*default=*/"false",
-           "Allows returning/yielding new allocations from a loop.">,
-    Option<"allowUnknownOps", "allow-unknown-ops", "bool",
-           /*default=*/"false",
-           "Allows unknown (not bufferizable) ops in the input IR.">,
-    Option<"analysisFuzzerSeed", "analysis-fuzzer-seed", "unsigned",
+  let options =
+      [Option<"allowReturnAllocsFromLoops", "allow-return-allocs-from-loops",
+              "bool", /*default=*/"false",
+              "Allows returning/yielding new allocations from a loop.">,
+       Option<"allowUnknownOps", "allow-unknown-ops", "bool",
+              /*default=*/"false",
+              "Allows unknown (not bufferizable) ops in the input IR.">,
+       Option<
+           "analysisFuzzerSeed", "analysis-fuzzer-seed", "unsigned",
            /*default=*/"0",
            "Test only: Analyze ops in random order with a given seed (fuzzer)">,
-    Option<"analysisHeuristic", "analysis-heuristic", "std::string",
-           /*default=*/"\"bottom-up\"",
-           "Heuristic that control the IR traversal during analysis">,
-    Option<"bufferizeFunctionBoundaries", "bufferize-function-boundaries",
-           "bool", /*default=*/"0",
-           "Bufferize function boundaries (experimental).">,
-    Option<"copyBeforeWrite", "copy-before-write", "bool", /*default=*/"false",
-           "Skip the analysis. Make a buffer copy on every write.">,
-    ListOption<"dialectFilter", "dialect-filter", "std::string",
-               "Restrict bufferization to ops from these dialects.">,
-    Option<"dumpAliasSets", "dump-alias-sets", "bool", /*default=*/"false",
-           "Test only: Annotate tensor IR with alias sets">,
-    ListOption<"noAnalysisFuncFilter", "no-analysis-func-filter", "std::string",
-               "Skip analysis of functions with these symbol names."
-               "Set copyBeforeWrite to true when bufferizing them.">,
-    Option<"functionBoundaryTypeConversion",
-           "function-boundary-type-conversion", "std::string",
-           /*default=*/"\"infer-layout-map\"",
-           "Controls layout maps when bufferizing function signatures.">,
-    Option<"mustInferMemorySpace", "must-infer-memory-space", "bool",
-           /*default=*/"false",
-           "The memory space of an memref types must always be inferred. If "
-           "unset, a default memory space of 0 is used otherwise.">,
-    Option<"testAnalysisOnly", "test-analysis-only", "bool",
-            /*default=*/"false",
-           "Test only: Only run inplaceability analysis and annotate IR">,
-    Option<"printConflicts", "print-conflicts", "bool",
-            /*default=*/"false",
-           "Test only: Annotate IR with RaW conflicts. Requires "
-           "test-analysis-only.">,
-    Option<"unknownTypeConversion", "unknown-type-conversion", "std::string",
-           /*default=*/"\"fully-dynamic-layout-map\"",
-           "Controls layout maps for non-inferrable memref types.">,
+       Option<"analysisHeuristic", "analysis-heuristic", "std::string",
+              /*default=*/"\"bottom-up\"",
+              "Heuristic that control the IR traversal during analysis">,
+       Option<"bufferizeFunctionBoundaries", "bufferize-function-boundaries",
+              "bool", /*default=*/"0",
+              "Bufferize function boundaries (experimental).">,
+       Option<"checkParallelRegions", "check-parallel-regions", "bool",
+              /*default=*/"true",
+              "Account for parallel regions in RaW analysis.">,
+       Option<"copyBeforeWrite", "copy-before-write", "bool",
+              /*default=*/"false",
+              "Skip the analysis. Make a buffer copy on every write.">,
+       ListOption<"dialectFilter", "dialect-filter", "std::string",
+                  "Restrict bufferization to ops from these dialects.">,
+       Option<"dumpAliasSets", "dump-alias-sets", "bool", /*default=*/"false",
+              "Test only: Annotate tensor IR with alias sets">,
+       ListOption<"noAnalysisFuncFilter", "no-analysis-func-filter",
+                  "std::string",
+                  "Skip analysis of functions with these symbol names."
+                  "Set copyBeforeWrite to true when bufferizing them.">,
+       Option<"functionBoundaryTypeConversion",
+              "function-boundary-type-conversion", "LayoutMapOption",
+              /*default=*/"LayoutMapOption::InferLayoutMap",
+              "Controls layout maps when bufferizing function signatures.",
+              layoutMapClValues.values>,
+       Option<"mustInferMemorySpace", "must-infer-memory-space", "bool",
+              /*default=*/"false",
+              "The memory space of an memref types must always be inferred. If "
+              "unset, a default memory space of 0 is used otherwise.">,
+       Option<"useEncodingForMemorySpace", "use-encoding-for-memory-space",
+              "bool",
+              /*default=*/"false",
+              "Use the Tensor encoding attribute for the memory space. "
+              "Exclusive to"
+              " the 'must-infer-memory-space' option">,
+       Option<"testAnalysisOnly", "test-analysis-only", "bool",
+              /*default=*/"false",
+              "Test only: Only run inplaceability analysis and annotate IR">,
+       Option<"printConflicts", "print-conflicts", "bool",
+              /*default=*/"false",
+              "Test only: Annotate IR with RaW conflicts. Requires "
+              "test-analysis-only.">,
+       Option<"unknownTypeConversion", "unknown-type-conversion", "LayoutMapOption",
+              /*default=*/"LayoutMapOption::FullyDynamicLayoutMap",
+              "Controls layout maps for non-inferrable memref types.",
+              layoutMapClValues.values>,
+       Option<"bufferAlignment", "buffer-alignment", "uint64_t",
+              /*default=*/"64",
+              "Sets the alignment of newly allocated buffers.">,
   ];
-  let constructor = "mlir::bufferization::createOneShotBufferizePass()";
 
   let statistics = [
     Statistic<"numBufferAlloc", "num-buffer-alloc",
@@ -509,9 +476,14 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     Statistic<"numTensorOutOfPlace", "num-tensor-out-of-place",
               "Number of out-of-place tensor OpOperands">,
   ];
+
+  let dependentDialects = [
+    "bufferization::BufferizationDialect", "memref::MemRefDialect"
+  ];
 }
 
-def PromoteBuffersToStack : Pass<"promote-buffers-to-stack", "func::FuncOp"> {
+def PromoteBuffersToStackPass
+    : Pass<"promote-buffers-to-stack", "func::FuncOp"> {
   let summary = "Promotes heap-based allocations to automatically managed "
                 "stack-based allocations";
   let description = [{
@@ -521,7 +493,6 @@ def PromoteBuffersToStack : Pass<"promote-buffers-to-stack", "func::FuncOp"> {
     shaped buffers that are limited by the rank of the tensor can be
     converted. They are only transformed if they are considered to be small.
   }];
-  let constructor = "mlir::bufferization::createPromoteBuffersToStackPass()";
   let options = [
     Option<"maxAllocSizeInBytes", "max-alloc-size-in-bytes", "unsigned",
            /*default=*/"1024",
@@ -532,7 +503,7 @@ def PromoteBuffersToStack : Pass<"promote-buffers-to-stack", "func::FuncOp"> {
   ];
 }
 
-def EmptyTensorElimination : Pass<"eliminate-empty-tensors"> {
+def EmptyTensorEliminationPass : Pass<"eliminate-empty-tensors"> {
   let summary = "Try to eliminate all tensor.empty ops.";
   let description = [{
     Try to eliminate "tensor.empty" ops inside `op`. This transformation looks
@@ -544,7 +515,7 @@ def EmptyTensorElimination : Pass<"eliminate-empty-tensors"> {
     ```
     %0 = tensor.empty() : tensor<10xf32>
     %1 = linalg.fill ... outs(%0 : tensor<10xf32>)
-    %2 = tensor.insert_slice %0 into %t ...
+    %2 = tensor.insert_slice %1 into %t ...
     ```
 
     In the above example, the subset op is "tensor.insert_slice". When tracing
@@ -552,7 +523,6 @@ def EmptyTensorElimination : Pass<"eliminate-empty-tensors"> {
     "tensor.empty" op. The "tensor.empty" op is replaced with a
     "tensor.extract_slice" op.
   }];
-  let constructor = "mlir::bufferization::createEmptyTensorEliminationPass()";
 }
 
 #endif // MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_PASSES

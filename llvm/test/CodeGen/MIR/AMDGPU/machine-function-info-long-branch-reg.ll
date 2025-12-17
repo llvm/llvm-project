@@ -17,6 +17,8 @@
 ; CHECK-NEXT: waveLimiter: false
 ; CHECK-NEXT: hasSpilledSGPRs: false
 ; CHECK-NEXT: hasSpilledVGPRs: false
+; CHECK-NEXT: numWaveDispatchSGPRs: 0
+; CHECK-NEXT: numWaveDispatchVGPRs: 0
 ; CHECK-NEXT: scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
 ; CHECK-NEXT: frameOffsetReg:  '$fp_reg'
 ; CHECK-NEXT: stackPtrOffsetReg: '$sgpr32'
@@ -30,6 +32,7 @@
 ; CHECK-NEXT: workItemIDX:     { reg: '$vgpr0' }
 ; CHECK-NEXT: psInputAddr:     0
 ; CHECK-NEXT: psInputEnable:   0
+; CHECK-NEXT: maxMemoryClusterDWords:   8
 ; CHECK-NEXT: mode:
 ; CHECK-NEXT: ieee:            true
 ; CHECK-NEXT: dx10-clamp:      true
@@ -38,18 +41,23 @@
 ; CHECK-NEXT: fp64-fp16-input-denormals: true
 ; CHECK-NEXT: fp64-fp16-output-denormals: true
 ; CHECK-NEXT: BitsOf32BitAddress: 0
-; CHECK-NEXT: occupancy:       8
+; CHECK-NEXT: occupancy:       10
 ; CHECK-NEXT: vgprForAGPRCopy: ''
 ; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT: longBranchReservedReg: '$sgpr2_sgpr3'
+; CHECK-NEXT: hasInitWholeWave: false
+; CHECK-NEXT: dynamicVGPRBlockSize: 0
+; CHECK-NEXT: scratchReservedForDynamicVGPRs: 0
+; CHECK-NEXT: numKernargPreloadSGPRs: 0
+; CHECK-NEXT: isWholeWaveFunction: false
 ; CHECK-NEXT: body:
-define amdgpu_kernel void @uniform_long_forward_branch(ptr addrspace(1) %arg, i32 %arg1) {
+define amdgpu_kernel void @uniform_long_forward_branch(ptr addrspace(1) %arg, i32 %arg1) #0 {
 bb0:
   %tmp = icmp ne i32 %arg1, 0
   br i1 %tmp, label %bb2, label %bb3
 
 bb2:
-  store volatile i32 17, ptr addrspace(1) undef
+  store volatile i32 17, ptr addrspace(1) poison
   br label %bb4
 
 bb3:
@@ -66,5 +74,5 @@ bb4:
   ret void
 }
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 attributes #1 = { nounwind readnone }

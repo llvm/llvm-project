@@ -158,15 +158,15 @@ constexpr bool test() {
 
   auto unscoped = check_unqualified_lookup::unscoped_enum::a;
   assert(std::ranges::iter_move(unscoped) == check_unqualified_lookup::unscoped_enum::a);
-  assert(!noexcept(std::ranges::iter_move(unscoped)));
+  static_assert(!noexcept(std::ranges::iter_move(unscoped)));
 
   auto scoped = check_unqualified_lookup::scoped_enum::a;
   assert(std::ranges::iter_move(scoped) == nullptr);
-  assert(noexcept(std::ranges::iter_move(scoped)));
+  static_assert(noexcept(std::ranges::iter_move(scoped)));
 
   auto some_union = check_unqualified_lookup::some_union{0};
   assert(std::ranges::iter_move(some_union) == 0);
-  assert(!noexcept(std::ranges::iter_move(some_union)));
+  static_assert(!noexcept(std::ranges::iter_move(some_union)));
 
   // Check noexcept-correctness
   static_assert(noexcept(std::ranges::iter_move(std::declval<WithADL<true>>())));

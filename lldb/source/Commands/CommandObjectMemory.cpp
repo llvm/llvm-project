@@ -10,7 +10,6 @@
 #include "CommandObjectMemoryTag.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
@@ -36,6 +35,7 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
 #include "llvm/Support/MathExtras.h"
 #include <cinttypes>
 #include <memory>
@@ -68,7 +68,7 @@ public:
     case 'l':
       error = m_num_per_line.SetValueFromString(option_value);
       if (m_num_per_line.GetCurrentValue() == 0)
-        error.SetErrorStringWithFormat(
+        error = Status::FromErrorStringWithFormat(
             "invalid value for --num-per-line option '%s'",
             option_value.str().c_str());
       break;
@@ -156,6 +156,7 @@ public:
 
     case eFormatBinary:
     case eFormatFloat:
+    case eFormatFloat128:
     case eFormatOctal:
     case eFormatDecimal:
     case eFormatEnum:
@@ -176,7 +177,7 @@ public:
     case eFormatBytesWithASCII:
       if (byte_size_option_set) {
         if (byte_size_value > 1)
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "display format (bytes/bytes with ASCII) conflicts with the "
               "specified byte size %" PRIu64 "\n"
               "\tconsider using a different display format or don't specify "
@@ -364,6 +365,8 @@ protected:
       return;
     }
 
+    ExecutionContextScope *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
+
     CompilerType compiler_type;
     Status error;
 
@@ -372,8 +375,6 @@ protected:
     if (view_as_type_cstr && view_as_type_cstr[0]) {
       // We are viewing memory as a type
 
-      const bool exact_match = false;
-      TypeList type_list;
       uint32_t reference_count = 0;
       uint32_t pointer_count = 0;
       size_t idx;
@@ -452,18 +453,18 @@ protected:
         }
       }
 
-      llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
       ConstString lookup_type_name(type_str.c_str());
       StackFrame *frame = m_exe_ctx.GetFramePtr();
       ModuleSP search_first;
-      if (frame) {
+      if (frame)
         search_first = frame->GetSymbolContext(eSymbolContextModule).module_sp;
-      }
-      target->GetImages().FindTypes(search_first.get(), lookup_type_name,
-                                    exact_match, 1, searched_symbol_files,
-                                    type_list);
+      TypeQuery query(lookup_type_name.GetStringRef(),
+                      TypeQueryOptions::e_find_one);
+      TypeResults results;
+      target->GetImages().FindTypes(search_first.get(), query, results);
+      TypeSP type_sp = results.GetFirstType();
 
-      if (type_list.GetSize() == 0 && lookup_type_name.GetCString()) {
+      if (!type_sp && lookup_type_name.GetCString()) {
         LanguageType language_for_type =
             m_memory_options.m_language_for_type.GetCurrentValue();
         std::set<LanguageType> languages_to_check;
@@ -499,15 +500,14 @@ protected:
       }
 
       if (!compiler_type.IsValid()) {
-        if (type_list.GetSize() == 0) {
+        if (type_sp) {
+          compiler_type = type_sp->GetFullCompilerType();
+        } else {
           result.AppendErrorWithFormat("unable to find any types that match "
                                        "the raw type '%s' for full type '%s'\n",
                                        lookup_type_name.GetCString(),
                                        view_as_type_cstr);
           return;
-        } else {
-          TypeSP type_sp(type_list.GetTypeAtIndex(0));
-          compiler_type = type_sp->GetFullCompilerType();
         }
       }
 
@@ -522,14 +522,14 @@ protected:
         --pointer_count;
       }
 
-      std::optional<uint64_t> size = compiler_type.GetByteSize(nullptr);
-      if (!size) {
+      auto size_or_err = compiler_type.GetByteSize(exe_scope);
+      if (!size_or_err) {
         result.AppendErrorWithFormat(
-            "unable to get the byte size of the type '%s'\n",
-            view_as_type_cstr);
+            "unable to get the byte size of the type '%s'\n%s",
+            view_as_type_cstr, llvm::toString(size_or_err.takeError()).c_str());
         return;
       }
-      m_format_options.GetByteSizeValue() = *size;
+      m_format_options.GetByteSizeValue() = *size_or_err;
 
       if (!m_format_options.GetCountValue().OptionWasSet())
         m_format_options.GetCountValue() = 1;
@@ -642,15 +642,16 @@ protected:
       if (!m_format_options.GetFormatValue().OptionWasSet())
         m_format_options.GetFormatValue().SetCurrentValue(eFormatDefault);
 
-      std::optional<uint64_t> size = compiler_type.GetByteSize(nullptr);
-      if (!size) {
-        result.AppendError("can't get size of type");
+      auto size_or_err = compiler_type.GetByteSize(exe_scope);
+      if (!size_or_err) {
+        result.AppendError(llvm::toString(size_or_err.takeError()));
         return;
       }
-      bytes_read = *size * m_format_options.GetCountValue().GetCurrentValue();
+      auto size = *size_or_err;
+      bytes_read = size * m_format_options.GetCountValue().GetCurrentValue();
 
       if (argc > 0)
-        addr = addr + (*size * m_memory_options.m_offset.GetCurrentValue());
+        addr = addr + (size * m_memory_options.m_offset.GetCurrentValue());
     } else if (m_format_options.GetFormatValue().GetCurrentValue() !=
                eFormatCString) {
       data_sp = std::make_shared<DataBufferHeap>(total_byte_size, '\0');
@@ -801,7 +802,6 @@ protected:
       output_stream_p = &result.GetOutputStream();
     }
 
-    ExecutionContextScope *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
     if (compiler_type.GetOpaqueQualType()) {
       for (uint32_t i = 0; i < item_count; ++i) {
         addr_t item_addr = addr + (i * item_byte_size);
@@ -818,7 +818,10 @@ protected:
           DumpValueObjectOptions options(m_varobj_options.GetAsDumpOptions(
               eLanguageRuntimeDescriptionDisplayVerbosityFull, format));
 
-          valobj_sp->Dump(*output_stream_p, options);
+          if (llvm::Error error = valobj_sp->Dump(*output_stream_p, options)) {
+            result.AppendError(toString(std::move(error)));
+            return;
+          }
         } else {
           result.AppendErrorWithFormat(
               "failed to create a value object for: (%s) %s\n",
@@ -884,6 +887,61 @@ protected:
 #define LLDB_OPTIONS_memory_find
 #include "CommandOptions.inc"
 
+static llvm::Error CopyExpressionResult(ValueObject &result,
+                                        DataBufferHeap &buffer,
+                                        ExecutionContextScope *scope) {
+  uint64_t value = result.GetValueAsUnsigned(0);
+  auto size_or_err = result.GetCompilerType().GetByteSize(scope);
+  if (!size_or_err)
+    return size_or_err.takeError();
+
+  switch (*size_or_err) {
+  case 1: {
+    uint8_t byte = (uint8_t)value;
+    buffer.CopyData(&byte, 1);
+  } break;
+  case 2: {
+    uint16_t word = (uint16_t)value;
+    buffer.CopyData(&word, 2);
+  } break;
+  case 4: {
+    uint32_t lword = (uint32_t)value;
+    buffer.CopyData(&lword, 4);
+  } break;
+  case 8: {
+    buffer.CopyData(&value, 8);
+  } break;
+  default:
+    return llvm::createStringError(
+        "Only expressions resulting in 1, 2, 4, or 8-byte-sized values are "
+        "supported. For other pattern sizes the --string (-s) option may be "
+        "used.");
+  }
+
+  return llvm::Error::success();
+}
+
+static llvm::Expected<ValueObjectSP>
+EvaluateExpression(llvm::StringRef expression, StackFrame &frame,
+                   Process &process) {
+  ValueObjectSP result_sp;
+  auto status =
+      process.GetTarget().EvaluateExpression(expression, &frame, result_sp);
+  if (!result_sp)
+    return llvm::createStringError(
+        "No result returned from expression. Exit status: %d", status);
+
+  if (status != eExpressionCompleted)
+    return result_sp->GetError().ToError();
+
+  result_sp = result_sp->GetQualifiedRepresentationIfAvailable(
+      result_sp->GetDynamicValueType(), /*synthValue=*/true);
+  if (!result_sp)
+    return llvm::createStringError("failed to get dynamic result type");
+
+  return result_sp;
+}
+
 // Find the specified data in memory
 class CommandObjectMemoryFind : public CommandObjectParsed {
 public:
@@ -913,12 +971,12 @@ public:
 
       case 'c':
         if (m_count.SetValueFromString(option_value).Fail())
-          error.SetErrorString("unrecognized value for count");
+          error = Status::FromErrorString("unrecognized value for count");
         break;
 
       case 'o':
         if (m_offset.SetValueFromString(option_value).Fail())
-          error.SetErrorString("unrecognized value for dump-offset");
+          error = Status::FromErrorString("unrecognized value for dump-offset");
         break;
 
       default:
@@ -980,35 +1038,6 @@ public:
   Options *GetOptions() override { return &m_option_group; }
 
 protected:
-  class ProcessMemoryIterator {
-  public:
-    ProcessMemoryIterator(ProcessSP process_sp, lldb::addr_t base)
-        : m_process_sp(process_sp), m_base_addr(base) {
-      lldbassert(process_sp.get() != nullptr);
-    }
-
-    bool IsValid() { return m_is_valid; }
-
-    uint8_t operator[](lldb::addr_t offset) {
-      if (!IsValid())
-        return 0;
-
-      uint8_t retval = 0;
-      Status error;
-      if (0 ==
-          m_process_sp->ReadMemory(m_base_addr + offset, &retval, 1, error)) {
-        m_is_valid = false;
-        return 0;
-      }
-
-      return retval;
-    }
-
-  private:
-    ProcessSP m_process_sp;
-    lldb::addr_t m_base_addr;
-    bool m_is_valid = true;
-  };
   void DoExecute(Args &command, CommandReturnObject &result) override {
     // No need to check "process" for validity as eCommandRequiresProcess
     // ensures it is valid
@@ -1054,49 +1083,20 @@ protected:
       }
       buffer.CopyData(str);
     } else if (m_memory_options.m_expr.OptionWasSet()) {
-      StackFrame *frame = m_exe_ctx.GetFramePtr();
-      ValueObjectSP result_sp;
-      if ((eExpressionCompleted ==
-           process->GetTarget().EvaluateExpression(
-               m_memory_options.m_expr.GetValueAs<llvm::StringRef>().value_or(
-                   ""),
-               frame, result_sp)) &&
-          result_sp) {
-        uint64_t value = result_sp->GetValueAsUnsigned(0);
-        std::optional<uint64_t> size =
-            result_sp->GetCompilerType().GetByteSize(nullptr);
-        if (!size)
-          return;
-        switch (*size) {
-        case 1: {
-          uint8_t byte = (uint8_t)value;
-          buffer.CopyData(&byte, 1);
-        } break;
-        case 2: {
-          uint16_t word = (uint16_t)value;
-          buffer.CopyData(&word, 2);
-        } break;
-        case 4: {
-          uint32_t lword = (uint32_t)value;
-          buffer.CopyData(&lword, 4);
-        } break;
-        case 8: {
-          buffer.CopyData(&value, 8);
-        } break;
-        case 3:
-        case 5:
-        case 6:
-        case 7:
-          result.AppendError("unknown type. pass a string instead");
-          return;
-        default:
-          result.AppendError(
-              "result size larger than 8 bytes. pass a string instead");
-          return;
-        }
-      } else {
-        result.AppendError(
-            "expression evaluation failed. pass a string instead");
+      auto result_or_err = EvaluateExpression(
+          m_memory_options.m_expr.GetValueAs<llvm::StringRef>().value_or(""),
+          m_exe_ctx.GetFrameRef(), *process);
+      if (!result_or_err) {
+        result.AppendError("Expression evaluation failed: ");
+        result.AppendError(llvm::toString(result_or_err.takeError()));
+        return;
+      }
+
+      ValueObjectSP result_sp = *result_or_err;
+
+      if (auto err = CopyExpressionResult(*result_sp, buffer,
+                                          m_exe_ctx.GetFramePtr())) {
+        result.AppendError(llvm::toString(std::move(err)));
         return;
       }
     } else {
@@ -1109,8 +1109,8 @@ protected:
     found_location = low_addr;
     bool ever_found = false;
     while (count) {
-      found_location = FastSearch(found_location, high_addr, buffer.GetBytes(),
-                                  buffer.GetByteSize());
+      found_location = process->FindInMemory(
+          found_location, high_addr, buffer.GetBytes(), buffer.GetByteSize());
       if (found_location == LLDB_INVALID_ADDRESS) {
         if (!ever_found) {
           result.AppendMessage("data not found within the range.\n");
@@ -1147,34 +1147,6 @@ protected:
     result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
   }
 
-  lldb::addr_t FastSearch(lldb::addr_t low, lldb::addr_t high, uint8_t *buffer,
-                          size_t buffer_size) {
-    const size_t region_size = high - low;
-
-    if (region_size < buffer_size)
-      return LLDB_INVALID_ADDRESS;
-
-    std::vector<size_t> bad_char_heuristic(256, buffer_size);
-    ProcessSP process_sp = m_exe_ctx.GetProcessSP();
-    ProcessMemoryIterator iterator(process_sp, low);
-
-    for (size_t idx = 0; idx < buffer_size - 1; idx++) {
-      decltype(bad_char_heuristic)::size_type bcu_idx = buffer[idx];
-      bad_char_heuristic[bcu_idx] = buffer_size - idx - 1;
-    }
-    for (size_t s = 0; s <= (region_size - buffer_size);) {
-      int64_t j = buffer_size - 1;
-      while (j >= 0 && buffer[j] == iterator[s + j])
-        j--;
-      if (j < 0)
-        return low + s;
-      else
-        s += bad_char_heuristic[iterator[s + buffer_size - 1]];
-    }
-
-    return LLDB_INVALID_ADDRESS;
-  }
-
   OptionGroupOptions m_option_group;
   OptionGroupFindMemory m_memory_options;
   OptionGroupMemoryTag m_memory_tag_options;
@@ -1207,16 +1179,16 @@ public:
         FileSystem::Instance().Resolve(m_infile);
         if (!FileSystem::Instance().Exists(m_infile)) {
           m_infile.Clear();
-          error.SetErrorStringWithFormat("input file does not exist: '%s'",
-                                         option_value.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "input file does not exist: '%s'", option_value.str().c_str());
         }
         break;
 
       case 'o': {
         if (option_value.getAsInteger(0, m_infile_offset)) {
           m_infile_offset = 0;
-          error.SetErrorStringWithFormat("invalid offset string '%s'",
-                                         option_value.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid offset string '%s'", option_value.str().c_str());
         }
       } break;
 
@@ -1386,6 +1358,7 @@ protected:
       switch (m_format_options.GetFormat()) {
       case kNumFormats:
       case eFormatFloat: // TODO: add support for floats soon
+      case eFormatFloat128:
       case eFormatCharPrintable:
       case eFormatBytesWithASCII:
       case eFormatComplex:
@@ -1424,7 +1397,7 @@ protected:
         // Be careful, getAsInteger with a radix of 16 rejects "0xab" so we
         // have to special case that:
         bool success = false;
-        if (entry.ref().startswith("0x"))
+        if (entry.ref().starts_with("0x"))
           success = !entry.ref().getAsInteger(0, uval64);
         if (!success)
           success = !entry.ref().getAsInteger(16, uval64);
@@ -1627,7 +1600,8 @@ protected:
 
     const bool stop_format = false;
     for (auto thread : thread_list) {
-      thread->GetStatus(*output_stream, 0, UINT32_MAX, 0, stop_format);
+      thread->GetStatus(*output_stream, 0, UINT32_MAX, 0, stop_format,
+                        /*should_filter*/ false);
     }
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -1720,6 +1694,9 @@ protected:
     MemoryRegionInfo::OptionalBool memory_tagged = range_info.GetMemoryTagged();
     if (memory_tagged == MemoryRegionInfo::OptionalBool::eYes)
       result.AppendMessage("memory tagging: enabled");
+    MemoryRegionInfo::OptionalBool is_shadow_stack = range_info.IsShadowStack();
+    if (is_shadow_stack == MemoryRegionInfo::OptionalBool::eYes)
+      result.AppendMessage("shadow stack: yes");
 
     const std::optional<std::vector<addr_t>> &dirty_page_list =
         range_info.GetDirtyPageList();
@@ -1793,7 +1770,7 @@ protected:
 
     // It is important that we track the address used to request the region as
     // this will give the correct section name in the case that regions overlap.
-    // On Windows we get mutliple regions that start at the same place but are
+    // On Windows we get multiple regions that start at the same place but are
     // different sizes and refer to different sections.
     std::vector<std::pair<lldb_private::MemoryRegionInfo, lldb::addr_t>>
         region_list;

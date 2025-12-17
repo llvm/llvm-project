@@ -117,7 +117,7 @@ class MiniDumpNewTestCase(TestBase):
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
         self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonSignal)
-        stop_description = thread.GetStopDescription(256)
+        stop_description = thread.stop_description
         self.assertIn("SIGSEGV", stop_description)
 
     @skipIfLLVMTargetMissing("X86")
@@ -153,7 +153,7 @@ class MiniDumpNewTestCase(TestBase):
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
         self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonNone)
-        stop_description = thread.GetStopDescription(256)
+        stop_description = thread.stop_description
         self.assertEqual(stop_description, "")
 
     def test_snapshot_minidump_null_exn_code(self):
@@ -164,7 +164,7 @@ class MiniDumpNewTestCase(TestBase):
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
         self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonNone)
-        stop_description = thread.GetStopDescription(256)
+        stop_description = thread.stop_description
         self.assertEqual(stop_description, "")
 
     def check_register_unsigned(self, set, name, expected):
@@ -198,7 +198,7 @@ class MiniDumpNewTestCase(TestBase):
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
         self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonNone)
-        stop_description = thread.GetStopDescription(256)
+        stop_description = thread.stop_description
         self.assertEqual(stop_description, "")
         registers = thread.GetFrameAtIndex(0).GetRegisters()
         # Verify the GPR registers are all correct
@@ -261,7 +261,7 @@ class MiniDumpNewTestCase(TestBase):
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
         self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonNone)
-        stop_description = thread.GetStopDescription(256)
+        stop_description = thread.stop_description
         self.assertEqual(stop_description, "")
         registers = thread.GetFrameAtIndex(0).GetRegisters()
         # Verify the GPR registers are all correct
@@ -491,3 +491,56 @@ class MiniDumpNewTestCase(TestBase):
         spec_dir_norm = os.path.normcase(module.GetFileSpec().GetDirectory())
         exe_dir_norm = os.path.normcase(exe_dir)
         self.assertEqual(spec_dir_norm, exe_dir_norm)
+
+    def test_minidump_memory64list(self):
+        """Test that lldb can read from the memory64list in a minidump."""
+        self.process_from_yaml("linux-x86_64_mem64.yaml")
+
+        region_count = 3
+        region_info_list = self.process.GetMemoryRegions()
+        self.assertEqual(region_info_list.GetSize(), region_count)
+
+        region = lldb.SBMemoryRegionInfo()
+        self.assertTrue(region_info_list.GetMemoryRegionAtIndex(0, region))
+        self.assertEqual(region.GetRegionBase(), 0x7FFF12A84030)
+        self.assertTrue(region.GetRegionEnd(), 0x7FFF12A84030 + 0x2FD0)
+        self.assertTrue(region_info_list.GetMemoryRegionAtIndex(1, region))
+        self.assertEqual(region.GetRegionBase(), 0x00007FFF12A87000)
+        self.assertTrue(region.GetRegionEnd(), 0x00007FFF12A87000 + 0x00000018)
+        self.assertTrue(region_info_list.GetMemoryRegionAtIndex(2, region))
+        self.assertEqual(region.GetRegionBase(), 0x00007FFF12A87018)
+        self.assertTrue(region.GetRegionEnd(), 0x00007FFF12A87018 + 0x00000400)
+
+    def test_multiple_exceptions_or_signals(self):
+        """Test that lldb can read the exception information from the Minidump."""
+        print("Starting to read multiple-sigsev.yaml")
+        self.process_from_yaml("multiple-sigsev.yaml")
+        print("Done reading multiple-sigsev.yaml")
+        self.check_state()
+        # This process crashed due to a segmentation fault in both it's threads.
+        self.assertEqual(self.process.GetNumThreads(), 2)
+        for i in range(2):
+            thread = self.process.GetThreadAtIndex(i)
+            self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonSignal)
+            stop_description = thread.stop_description
+            self.assertIn("SIGSEGV", stop_description)
+
+    def test_breakpoint_on_minidump(self):
+        """
+        Test that LLDB breakpoints are recorded in Minidumps
+        """
+        yaml = "linux-x86_64-exceptiondescription.yaml"
+        core = self.getBuildArtifact("breakpoint.core.dmp")
+        self.yaml2obj(yaml, core)
+        try:
+            # Create a target with the object file we just created from YAML
+            target = self.dbg.CreateTarget(None)
+            self.assertTrue(target, VALID_TARGET)
+            process = target.LoadCore(core)
+            self.assertTrue(process, VALID_PROCESS)
+            thread = process.GetThreadAtIndex(0)
+            stop_reason = thread.stop_description
+            self.assertIn("breakpoint 1.1", stop_reason)
+        finally:
+            if os.path.isfile(core):
+                os.unlink(core)

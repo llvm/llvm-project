@@ -1,4 +1,4 @@
-//===--- FormatStringConverter.cpp - clang-tidy----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,6 +18,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/FixIt.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
@@ -195,21 +196,30 @@ static bool castMismatchedIntegerTypes(const CallExpr *Call, bool StrictMode) {
   return false;
 }
 
-FormatStringConverter::FormatStringConverter(ASTContext *ContextIn,
-                                             const CallExpr *Call,
-                                             unsigned FormatArgOffset,
-                                             bool StrictMode,
-                                             const LangOptions &LO)
-    : Context(ContextIn),
-      CastMismatchedIntegerTypes(castMismatchedIntegerTypes(Call, StrictMode)),
+FormatStringConverter::FormatStringConverter(
+    ASTContext *ContextIn, const CallExpr *Call, unsigned FormatArgOffset,
+    const Configuration ConfigIn, const LangOptions &LO, SourceManager &SM,
+    Preprocessor &PP)
+    : Context(ContextIn), Config(ConfigIn),
+      CastMismatchedIntegerTypes(
+          castMismatchedIntegerTypes(Call, ConfigIn.StrictMode)),
       Args(Call->getArgs()), NumArgs(Call->getNumArgs()),
       ArgsOffset(FormatArgOffset + 1), LangOpts(LO) {
   assert(ArgsOffset <= NumArgs);
   FormatExpr = llvm::dyn_cast<StringLiteral>(
-      Args[FormatArgOffset]->IgnoreImplicitAsWritten());
-  assert(FormatExpr);
-  if (!FormatExpr->isOrdinary())
-    return; // No wide string support yet
+      Args[FormatArgOffset]->IgnoreUnlessSpelledInSource());
+
+  assert(FormatExpr && FormatExpr->isOrdinary());
+
+  if (const std::optional<StringRef> MaybeMacroName =
+          formatStringContainsUnreplaceableMacro(Call, FormatExpr, SM, PP);
+      MaybeMacroName) {
+    conversionNotPossible(
+        ("format string contains unreplaceable macro '" + *MaybeMacroName + "'")
+            .str());
+    return;
+  }
+
   PrintfFormatString = FormatExpr->getString();
 
   // Assume that the output will be approximately the same size as the input,
@@ -227,9 +237,54 @@ FormatStringConverter::FormatStringConverter(ASTContext *ContextIn,
   finalizeFormatText();
 }
 
+std::optional<StringRef>
+FormatStringConverter::formatStringContainsUnreplaceableMacro(
+    const CallExpr *Call, const StringLiteral *FormatExpr, SourceManager &SM,
+    Preprocessor &PP) {
+  // If a macro invocation surrounds the entire call then we don't want that to
+  // inhibit conversion. The whole format string will appear to come from that
+  // macro, as will the function call.
+  std::optional<StringRef> MaybeSurroundingMacroName;
+  if (const SourceLocation BeginCallLoc = Call->getBeginLoc();
+      BeginCallLoc.isMacroID())
+    MaybeSurroundingMacroName =
+        Lexer::getImmediateMacroName(BeginCallLoc, SM, PP.getLangOpts());
+
+  for (auto I = FormatExpr->tokloc_begin(), E = FormatExpr->tokloc_end();
+       I != E; ++I) {
+    const SourceLocation &TokenLoc = *I;
+    if (TokenLoc.isMacroID()) {
+      const StringRef MacroName =
+          Lexer::getImmediateMacroName(TokenLoc, SM, PP.getLangOpts());
+
+      if (MaybeSurroundingMacroName != MacroName) {
+        // glibc uses __PRI64_PREFIX and __PRIPTR_PREFIX to define the prefixes
+        // for types that change size so we must look for multiple prefixes.
+        if (!MacroName.starts_with("PRI") && !MacroName.starts_with("__PRI"))
+          return MacroName;
+
+        const SourceLocation TokenSpellingLoc = SM.getSpellingLoc(TokenLoc);
+        const OptionalFileEntryRef MaybeFileEntry =
+            SM.getFileEntryRefForID(SM.getFileID(TokenSpellingLoc));
+        if (!MaybeFileEntry)
+          return MacroName;
+
+        HeaderSearch &HS = PP.getHeaderSearchInfo();
+        // Check if the file is a system header
+        if (!isSystem(HS.getFileDirFlavor(*MaybeFileEntry)) ||
+            llvm::sys::path::filename(MaybeFileEntry->getName()) !=
+                "inttypes.h")
+          return MacroName;
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 void FormatStringConverter::emitAlignment(const PrintfSpecifier &FS,
                                           std::string &FormatSpec) {
-  ConversionSpecifier::Kind ArgKind = FS.getConversionSpecifier().getKind();
+  const ConversionSpecifier::Kind ArgKind =
+      FS.getConversionSpecifier().getKind();
 
   // We only care about alignment if a field width is specified
   if (FS.getFieldWidth().getHowSpecified() != OptionalAmount::NotSpecified) {
@@ -406,9 +461,9 @@ bool FormatStringConverter::emitIntegerArgument(
     // be passed as its underlying type. However, printf will have forced
     // the signedness based on the format string, so we need to do the
     // same.
-    if (const auto *ET = ArgType->getAs<EnumType>()) {
+    if (const auto *ED = ArgType->getAsEnumDecl()) {
       if (const std::optional<std::string> MaybeCastType =
-              castTypeForArgument(ArgKind, ET->getDecl()->getIntegerType()))
+              castTypeForArgument(ArgKind, ED->getIntegerType()))
         ArgFixes.emplace_back(
             ArgIndex, (Twine("static_cast<") + *MaybeCastType + ">(").str());
       else
@@ -445,7 +500,8 @@ bool FormatStringConverter::emitIntegerArgument(
 /// @returns true on success, false on failure
 bool FormatStringConverter::emitType(const PrintfSpecifier &FS, const Expr *Arg,
                                      std::string &FormatSpec) {
-  ConversionSpecifier::Kind ArgKind = FS.getConversionSpecifier().getKind();
+  const ConversionSpecifier::Kind ArgKind =
+      FS.getConversionSpecifier().getKind();
   switch (ArgKind) {
   case ConversionSpecifier::Kind::sArg:
     emitStringArgument(FS.getArgIndex() + ArgsOffset, Arg);
@@ -568,7 +624,6 @@ bool FormatStringConverter::HandlePrintfSpecifier(const PrintfSpecifier &FS,
                                                   const char *StartSpecifier,
                                                   unsigned SpecifierLen,
                                                   const TargetInfo &Target) {
-
   const size_t StartSpecifierPos = StartSpecifier - PrintfFormatString.data();
   assert(StartSpecifierPos + SpecifierLen <= PrintfFormatString.size());
 
@@ -627,9 +682,12 @@ void FormatStringConverter::finalizeFormatText() {
 
   // It's clearer to convert printf("Hello\r\n"); to std::print("Hello\r\n")
   // than to std::println("Hello\r");
-  if (StringRef(StandardFormatString).ends_with("\\n") &&
-      !StringRef(StandardFormatString).ends_with("\\\\n") &&
-      !StringRef(StandardFormatString).ends_with("\\r\\n")) {
+  // Use StringRef until C++20 std::string::ends_with() is available.
+  const auto StandardFormatStringRef = StringRef(StandardFormatString);
+  if (Config.AllowTrailingNewlineRemoval &&
+      StandardFormatStringRef.ends_with("\\n") &&
+      !StandardFormatStringRef.ends_with("\\\\n") &&
+      !StandardFormatStringRef.ends_with("\\r\\n")) {
     UsePrintNewlineFunction = true;
     FormatStringNeededRewriting = true;
     StandardFormatString.erase(StandardFormatString.end() - 2,
@@ -642,6 +700,7 @@ void FormatStringConverter::finalizeFormatText() {
 /// Append literal parts of the format text, reinstating escapes as required.
 void FormatStringConverter::appendFormatText(const StringRef Text) {
   for (const char Ch : Text) {
+    const auto UCh = static_cast<unsigned char>(Ch);
     if (Ch == '\a')
       StandardFormatString += "\\a";
     else if (Ch == '\b')
@@ -666,10 +725,10 @@ void FormatStringConverter::appendFormatText(const StringRef Text) {
     } else if (Ch == '}') {
       StandardFormatString += "}}";
       FormatStringNeededRewriting = true;
-    } else if (Ch < 32) {
+    } else if (UCh < 32) {
       StandardFormatString += "\\x";
-      StandardFormatString += llvm::hexdigit(Ch >> 4, true);
-      StandardFormatString += llvm::hexdigit(Ch & 0xf, true);
+      StandardFormatString += llvm::hexdigit(UCh >> 4, true);
+      StandardFormatString += llvm::hexdigit(UCh & 0xf, true);
     } else
       StandardFormatString += Ch;
   }
@@ -741,7 +800,7 @@ void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
   }
 
   for (const auto &[ArgIndex, Replacement] : ArgFixes) {
-    SourceLocation AfterOtherSide =
+    const SourceLocation AfterOtherSide =
         Lexer::findNextToken(Args[ArgIndex]->getEndLoc(), SM, LangOpts)
             ->getLocation();
 

@@ -1,10 +1,15 @@
 // RUN: mlir-translate -no-implicit-module -split-input-file -test-spirv-roundtrip %s | FileCheck %s
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
+spirv.module Physical64 Vulkan requires #spirv.vce<v1.3, [Shader, Linkage, CooperativeMatrixKHR, VulkanMemoryModel, Float16, Addresses], [SPV_KHR_cooperative_matrix, SPV_KHR_vulkan_memory_model]> {
   // CHECK-LABEL: @matrix_access_chain
   spirv.func @matrix_access_chain(%arg0 : !spirv.ptr<!spirv.matrix<3 x vector<3xf32>>, Function>, %arg1 : i32) -> !spirv.ptr<vector<3xf32>, Function> "None" {
     // CHECK: {{%.*}} = spirv.AccessChain {{%.*}}[{{%.*}}] : !spirv.ptr<!spirv.matrix<3 x vector<3xf32>>, Function>
-    %0 = spirv.AccessChain %arg0[%arg1] : !spirv.ptr<!spirv.matrix<3 x vector<3xf32>>,Function>, i32
+    %0 = spirv.AccessChain %arg0[%arg1] : !spirv.ptr<!spirv.matrix<3 x vector<3xf32>>, Function>, i32 -> !spirv.ptr<vector<3xf32>, Function>
     spirv.ReturnValue %0 : !spirv.ptr<vector<3xf32>, Function>
   }
 
@@ -23,10 +28,10 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
   }
 
   // CHECK-LABEL: @matrix_times_scalar_3
-  spirv.func @matrix_times_scalar_3(%arg0 : !spirv.NV.coopmatrix<16x16xf16, Subgroup>, %arg1 : f16) -> !spirv.NV.coopmatrix<16x16xf16, Subgroup> "None" {
-    // CHECK: {{%.*}} = spirv.MatrixTimesScalar {{%.*}}, {{%.*}} : !spirv.NV.coopmatrix<16x16xf16, Subgroup>, f16
-    %result = spirv.MatrixTimesScalar %arg0, %arg1 : !spirv.NV.coopmatrix<16x16xf16, Subgroup>, f16
-    spirv.ReturnValue %result : !spirv.NV.coopmatrix<16x16xf16, Subgroup>
+  spirv.func @matrix_times_scalar_3(%arg0 : !spirv.coopmatrix<16x16xf16, Subgroup, MatrixAcc>, %arg1 : f16) -> !spirv.coopmatrix<16x16xf16, Subgroup, MatrixAcc> "None" {
+    // CHECK: {{%.*}} = spirv.MatrixTimesScalar {{%.*}}, {{%.*}} : !spirv.coopmatrix<16x16xf16, Subgroup, MatrixAcc>, f16
+    %result = spirv.MatrixTimesScalar %arg0, %arg1 : !spirv.coopmatrix<16x16xf16, Subgroup, MatrixAcc>, f16
+    spirv.ReturnValue %result : !spirv.coopmatrix<16x16xf16, Subgroup, MatrixAcc>
   }
 
   // CHECK-LABEL: @matrix_transpose_1
@@ -36,6 +41,20 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     spirv.ReturnValue %result : !spirv.matrix<2 x vector<3xf32>>
   }
 
+  // CHECK-LABEL: @matrix_times_vector_1
+  spirv.func @matrix_times_vector_1(%arg0: !spirv.matrix<3 x vector<4xf32>>, %arg1: vector<3xf32>) -> vector<4xf32> "None" {
+    // CHECK: {{%.*}} = spirv.MatrixTimesVector {{%.*}}, {{%.*}} : !spirv.matrix<3 x vector<4xf32>>, vector<3xf32> -> vector<4xf32>
+    %result = spirv.MatrixTimesVector %arg0, %arg1 : !spirv.matrix<3 x vector<4xf32>>, vector<3xf32> -> vector<4xf32>
+    spirv.ReturnValue %result : vector<4xf32>
+  }
+
+  // CHECK-LABEL: @vector_times_matrix_1
+  spirv.func @vector_times_matrix_1(%arg0: vector<3xf32>, %arg1: !spirv.matrix<4 x vector<3xf32>>) -> vector<4xf32> "None" {
+    // CHECK: {{%.*}} = spirv.VectorTimesMatrix {{%.*}}, {{%.*}} : vector<3xf32>, !spirv.matrix<4 x vector<3xf32>> -> vector<4xf32>
+    %result = spirv.VectorTimesMatrix %arg0, %arg1 : vector<3xf32>, !spirv.matrix<4 x vector<3xf32>> -> vector<4xf32>
+    spirv.ReturnValue %result : vector<4xf32>
+  }
+  
   // CHECK-LABEL: @matrix_times_matrix_1
   spirv.func @matrix_times_matrix_1(%arg0: !spirv.matrix<3 x vector<3xf32>>, %arg1: !spirv.matrix<3 x vector<3xf32>>) -> !spirv.matrix<3 x vector<3xf32>> "None"{
     // CHECK: {{%.*}} = spirv.MatrixTimesMatrix {{%.*}}, {{%.*}} : !spirv.matrix<3 x vector<3xf32>>, !spirv.matrix<3 x vector<3xf32>> -> !spirv.matrix<3 x vector<3xf32>>
@@ -53,7 +72,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
 
 // -----
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, Float16], [SPV_KHR_storage_buffer_storage_class]> {
   // CHECK: spirv.GlobalVariable {{@.*}} : !spirv.ptr<!spirv.matrix<3 x vector<3xf32>>, StorageBuffer>
   spirv.GlobalVariable @var0 : !spirv.ptr<!spirv.matrix<3 x vector<3xf32>>, StorageBuffer>
 

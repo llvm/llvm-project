@@ -281,7 +281,7 @@ TEST(VETest, VLIndex) {
   LLVMInitializeVETarget();
   LLVMInitializeVETargetMC();
 
-  auto TT(Triple::normalize("ve-unknown-linux-gnu"));
+  Triple TT("ve-unknown-linux-gnu");
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
@@ -290,10 +290,9 @@ TEST(VETest, VLIndex) {
   }
 
   TargetOptions Options;
-  auto TM = std::unique_ptr<LLVMTargetMachine>(
-    static_cast<LLVMTargetMachine*>(
+  auto TM = std::unique_ptr<TargetMachine>(
       T->createTargetMachine(TT, "", "", Options, std::nullopt, std::nullopt,
-                             CodeGenOptLevel::Default)));
+                             CodeGenOptLevel::Default));
   VESubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                  std::string(TM->getTargetFeatureString()),
                  *static_cast<const VETargetMachine *>(TM.get()));

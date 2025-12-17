@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "RunIRPasses.h"
-#include "Delta.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -16,14 +15,15 @@ using namespace llvm;
 
 extern cl::OptionCategory LLVMReduceOptions;
 
-static cl::opt<std::string> PassPipeline(
-    "ir-passes",
-    cl::desc("A textual description of the pass pipeline, same as "
-             "what's passed to `opt -passes`."),
-    cl::init("function(sroa,instcombine,gvn,simplifycfg,infer-address-spaces)"),
-    cl::cat(LLVMReduceOptions));
+static cl::opt<std::string>
+    PassPipeline("ir-passes",
+                 cl::desc("A textual description of the pass pipeline, same as "
+                          "what's passed to `opt -passes`."),
+                 cl::init("function(sroa,instcombine<no-verify-fixpoint>,gvn,"
+                          "simplifycfg,infer-address-spaces)"),
+                 cl::cat(LLVMReduceOptions));
 
-static void runPasses(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::runIRPassesDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
@@ -42,13 +42,7 @@ static void runPasses(Oracle &O, ReducerWorkItem &WorkItem) {
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
   ModulePassManager MPM;
-  if (auto Err = PB.parsePassPipeline(MPM, PassPipeline)) {
-    errs() << toString(std::move(Err)) << "\n";
-    report_fatal_error("Error constructing pass pipeline");
-  }
+  if (auto Err = PB.parsePassPipeline(MPM, PassPipeline))
+    report_fatal_error(std::move(Err), false);
   MPM.run(Program, MAM);
-}
-
-void llvm::runIRPassesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, runPasses, "Running passes");
 }

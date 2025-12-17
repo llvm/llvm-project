@@ -16,14 +16,19 @@ def DoStmt : StmtNode<Stmt>;
 def ForStmt : StmtNode<Stmt>;
 def GotoStmt : StmtNode<Stmt>;
 def IndirectGotoStmt : StmtNode<Stmt>;
-def ContinueStmt : StmtNode<Stmt>;
-def BreakStmt : StmtNode<Stmt>;
 def ReturnStmt : StmtNode<Stmt>;
+def DeferStmt : StmtNode<Stmt>;
 def DeclStmt  : StmtNode<Stmt>;
 def SwitchCase : StmtNode<Stmt, 1>;
 def CaseStmt : StmtNode<SwitchCase>;
 def DefaultStmt : StmtNode<SwitchCase>;
 def CapturedStmt : StmtNode<Stmt>;
+def SYCLKernelCallStmt : StmtNode<Stmt>;
+
+// Break/continue.
+def LoopControlStmt : StmtNode<Stmt, 1>;
+def ContinueStmt : StmtNode<LoopControlStmt>;
+def BreakStmt : StmtNode<LoopControlStmt>;
 
 // Statements that might produce a value (for example, as the last non-null
 // statement in a GNU statement-expression).
@@ -71,7 +76,7 @@ def OffsetOfExpr : StmtNode<Expr>;
 def UnaryExprOrTypeTraitExpr : StmtNode<Expr>;
 def ArraySubscriptExpr : StmtNode<Expr>;
 def MatrixSubscriptExpr : StmtNode<Expr>;
-def OMPArraySectionExpr : StmtNode<Expr>;
+def ArraySectionExpr : StmtNode<Expr>;
 def OMPIteratorExpr : StmtNode<Expr>;
 def CallExpr : StmtNode<Expr>;
 def MemberExpr : StmtNode<Expr>;
@@ -154,6 +159,7 @@ def UnresolvedMemberExpr : StmtNode<OverloadExpr>;
 def CXXNoexceptExpr : StmtNode<Expr>;
 def PackExpansionExpr : StmtNode<Expr>;
 def SizeOfPackExpr : StmtNode<Expr>;
+def PackIndexingExpr : StmtNode<Expr>;
 def SubstNonTypeTemplateParmExpr : StmtNode<Expr>;
 def SubstNonTypeTemplateParmPackExpr : StmtNode<Expr>;
 def FunctionParmPackExpr : StmtNode<Expr>;
@@ -200,9 +206,9 @@ def ShuffleVectorExpr : StmtNode<Expr>;
 def ConvertVectorExpr : StmtNode<Expr>;
 def BlockExpr : StmtNode<Expr>;
 def OpaqueValueExpr : StmtNode<Expr>;
-def TypoExpr : StmtNode<Expr>;
 def RecoveryExpr : StmtNode<Expr>;
 def BuiltinBitCastExpr : StmtNode<ExplicitCastExpr>;
+def EmbedExpr : StmtNode<Expr>;
 
 // Microsoft Extensions.
 def MSPropertyRefExpr : StmtNode<Expr>;
@@ -225,9 +231,18 @@ def OMPLoopBasedDirective : StmtNode<OMPExecutableDirective, 1>;
 def OMPLoopDirective : StmtNode<OMPLoopBasedDirective, 1>;
 def OMPParallelDirective : StmtNode<OMPExecutableDirective>;
 def OMPSimdDirective : StmtNode<OMPLoopDirective>;
-def OMPLoopTransformationDirective : StmtNode<OMPLoopBasedDirective, 1>;
-def OMPTileDirective : StmtNode<OMPLoopTransformationDirective>;
-def OMPUnrollDirective : StmtNode<OMPLoopTransformationDirective>;
+def OMPCanonicalLoopNestTransformationDirective
+    : StmtNode<OMPLoopBasedDirective, 1>;
+def OMPTileDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
+def OMPStripeDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
+def OMPUnrollDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
+def OMPReverseDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
+def OMPInterchangeDirective
+    : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
+def OMPCanonicalLoopSequenceTransformationDirective
+    : StmtNode<OMPExecutableDirective, 1>;
+def OMPFuseDirective
+    : StmtNode<OMPCanonicalLoopSequenceTransformationDirective>;
 def OMPForDirective : StmtNode<OMPLoopDirective>;
 def OMPForSimdDirective : StmtNode<OMPLoopDirective>;
 def OMPSectionsDirective : StmtNode<OMPExecutableDirective>;
@@ -294,4 +309,30 @@ def OMPTeamsGenericLoopDirective : StmtNode<OMPLoopDirective>;
 def OMPTargetTeamsGenericLoopDirective : StmtNode<OMPLoopDirective>;
 def OMPParallelGenericLoopDirective : StmtNode<OMPLoopDirective>;
 def OMPTargetParallelGenericLoopDirective : StmtNode<OMPLoopDirective>;
+def OMPAssumeDirective : StmtNode<OMPExecutableDirective>;
 def OMPErrorDirective : StmtNode<OMPExecutableDirective>;
+
+// OpenACC Constructs.
+def OpenACCConstructStmt : StmtNode<Stmt, /*abstract=*/1>;
+def OpenACCAssociatedStmtConstruct
+    : StmtNode<OpenACCConstructStmt, /*abstract=*/1>;
+def OpenACCComputeConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
+def OpenACCLoopConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
+def OpenACCCombinedConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
+def OpenACCDataConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
+def OpenACCEnterDataConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCExitDataConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCHostDataConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
+def OpenACCWaitConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCInitConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCShutdownConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCSetConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCUpdateConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCAtomicConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
+def OpenACCCacheConstruct : StmtNode<OpenACCConstructStmt>;
+
+// OpenACC Additional Expressions.
+def OpenACCAsteriskSizeExpr : StmtNode<Expr>;
+
+// HLSL Constructs.
+def HLSLOutArgExpr : StmtNode<Expr>;

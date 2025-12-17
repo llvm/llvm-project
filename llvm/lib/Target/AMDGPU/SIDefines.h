@@ -44,6 +44,8 @@ enum {
   GFX90A = 8,
   GFX940 = 9,
   GFX11 = 10,
+  GFX12 = 11,
+  GFX1250 = 12,
 };
 }
 
@@ -80,19 +82,23 @@ enum : uint64_t {
   MTBUF = 1 << 18,
   SMRD = 1 << 19,
   MIMG = 1 << 20,
-  EXP = 1 << 21,
-  FLAT = 1 << 22,
-  DS = 1 << 23,
+  VIMAGE = 1 << 21,
+  VSAMPLE = 1 << 22,
+  EXP = 1 << 23,
+  FLAT = 1 << 24,
+  DS = 1 << 25,
 
-  // Pseudo instruction formats.
-  VGPRSpill = 1 << 24,
-  SGPRSpill = 1 << 25,
+  // Combined SGPR/VGPR Spill bit
+  // Logic to separate them out is done in isSGPRSpill and isVGPRSpill
+  Spill = 1 << 26,
 
   // LDSDIR instruction format.
-  LDSDIR = 1 << 26,
+  LDSDIR = 1 << 28,
 
   // VINTERP instruction format.
-  VINTERP = 1 << 27,
+  VINTERP = 1 << 29,
+
+  VOPD3 = 1 << 30,
 
   // High bits - other information.
   VM_CNT = UINT64_C(1) << 32,
@@ -102,10 +108,14 @@ enum : uint64_t {
   WQM = UINT64_C(1) << 35,
   DisableWQM = UINT64_C(1) << 36,
   Gather4 = UINT64_C(1) << 37,
-  SOPK_ZEXT = UINT64_C(1) << 38,
+
+  TENSOR_CNT = UINT64_C(1) << 38,
+
   SCALAR_STORE = UINT64_C(1) << 39,
   FIXED_SIZE = UINT64_C(1) << 40,
-  VOPAsmPrefer32Bit = UINT64_C(1) << 41,
+
+  ASYNC_CNT = UINT64_C(1) << 41,
+
   VOP3_OPSEL = UINT64_C(1) << 42,
   maybeAtomic = UINT64_C(1) << 43,
   renamedInGFX9 = UINT64_C(1) << 44,
@@ -164,6 +174,9 @@ enum : uint64_t {
 
   // ds_gws_* instructions.
   GWS = UINT64_C(1) << 62,
+
+  // Is a SWMMAC instruction.
+  IsSWMMAC = UINT64_C(1) << 63,
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.
@@ -184,17 +197,18 @@ enum ClassFlags : unsigned {
 
 namespace AMDGPU {
 enum OperandType : unsigned {
-  /// Operands with register or 32-bit immediate
+  /// Operands with register, 32-bit, or 64-bit immediate
   OPERAND_REG_IMM_INT32 = MCOI::OPERAND_FIRST_TARGET,
   OPERAND_REG_IMM_INT64,
   OPERAND_REG_IMM_INT16,
   OPERAND_REG_IMM_FP32,
   OPERAND_REG_IMM_FP64,
+  OPERAND_REG_IMM_BF16,
   OPERAND_REG_IMM_FP16,
-  OPERAND_REG_IMM_FP16_DEFERRED,
-  OPERAND_REG_IMM_FP32_DEFERRED,
+  OPERAND_REG_IMM_V2BF16,
   OPERAND_REG_IMM_V2FP16,
   OPERAND_REG_IMM_V2INT16,
+  OPERAND_REG_IMM_NOINLINE_V2FP16,
   OPERAND_REG_IMM_V2INT32,
   OPERAND_REG_IMM_V2FP32,
 
@@ -202,28 +216,30 @@ enum OperandType : unsigned {
   OPERAND_REG_INLINE_C_INT16,
   OPERAND_REG_INLINE_C_INT32,
   OPERAND_REG_INLINE_C_INT64,
+  OPERAND_REG_INLINE_C_BF16,
   OPERAND_REG_INLINE_C_FP16,
   OPERAND_REG_INLINE_C_FP32,
   OPERAND_REG_INLINE_C_FP64,
   OPERAND_REG_INLINE_C_V2INT16,
+  OPERAND_REG_INLINE_C_V2BF16,
   OPERAND_REG_INLINE_C_V2FP16,
-  OPERAND_REG_INLINE_C_V2INT32,
-  OPERAND_REG_INLINE_C_V2FP32,
+
+  // Operand for split barrier inline constant
+  OPERAND_INLINE_SPLIT_BARRIER_INT32,
 
   /// Operand with 32-bit immediate that uses the constant bus.
   OPERAND_KIMM32,
   OPERAND_KIMM16,
+  OPERAND_KIMM64,
 
   /// Operands with an AccVGPR register or inline constant
-  OPERAND_REG_INLINE_AC_INT16,
   OPERAND_REG_INLINE_AC_INT32,
-  OPERAND_REG_INLINE_AC_FP16,
   OPERAND_REG_INLINE_AC_FP32,
   OPERAND_REG_INLINE_AC_FP64,
-  OPERAND_REG_INLINE_AC_V2INT16,
-  OPERAND_REG_INLINE_AC_V2FP16,
-  OPERAND_REG_INLINE_AC_V2INT32,
-  OPERAND_REG_INLINE_AC_V2FP32,
+
+  // Operand for AV_MOV_B64_IMM_PSEUDO, which is a pair of 32-bit inline
+  // constants. Does not accept registers.
+  OPERAND_INLINE_C_AV64_PSEUDO,
 
   // Operand for source modifiers for VOP instructions
   OPERAND_INPUT_MODS,
@@ -235,16 +251,16 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_V2FP32,
 
   OPERAND_REG_INLINE_C_FIRST = OPERAND_REG_INLINE_C_INT16,
-  OPERAND_REG_INLINE_C_LAST = OPERAND_REG_INLINE_AC_V2FP32,
+  OPERAND_REG_INLINE_C_LAST = OPERAND_REG_INLINE_AC_FP64,
 
-  OPERAND_REG_INLINE_AC_FIRST = OPERAND_REG_INLINE_AC_INT16,
-  OPERAND_REG_INLINE_AC_LAST = OPERAND_REG_INLINE_AC_V2FP32,
+  OPERAND_REG_INLINE_AC_FIRST = OPERAND_REG_INLINE_AC_INT32,
+  OPERAND_REG_INLINE_AC_LAST = OPERAND_INLINE_C_AV64_PSEUDO,
 
   OPERAND_SRC_FIRST = OPERAND_REG_IMM_INT32,
   OPERAND_SRC_LAST = OPERAND_REG_INLINE_C_LAST,
 
   OPERAND_KIMM_FIRST = OPERAND_KIMM32,
-  OPERAND_KIMM_LAST = OPERAND_KIMM16
+  OPERAND_KIMM_LAST = OPERAND_KIMM64
 
 };
 }
@@ -252,16 +268,16 @@ enum OperandType : unsigned {
 // Input operand modifiers bit-masks
 // NEG and SEXT share same bit-mask because they can't be set simultaneously.
 namespace SISrcMods {
-  enum : unsigned {
-   NONE = 0,
-   NEG = 1 << 0,   // Floating-point negate modifier
-   ABS = 1 << 1,   // Floating-point absolute modifier
-   SEXT = 1 << 0,  // Integer sign-extend modifier
-   NEG_HI = ABS,   // Floating-point negate high packed component modifier.
-   OP_SEL_0 = 1 << 2,
-   OP_SEL_1 = 1 << 3,
-   DST_OP_SEL = 1 << 3 // VOP3 dst op_sel (share mask with OP_SEL_1)
-  };
+enum : unsigned {
+  NONE = 0,
+  NEG = 1 << 0,  // Floating-point negate modifier
+  ABS = 1 << 1,  // Floating-point absolute modifier
+  SEXT = 1 << 4, // Integer sign-extend modifier
+  NEG_HI = ABS,  // Floating-point negate high packed component modifier.
+  OP_SEL_0 = 1 << 2,
+  OP_SEL_1 = 1 << 3,
+  DST_OP_SEL = 1 << 3 // VOP3 dst op_sel (share mask with OP_SEL_1)
+};
 }
 
 namespace SIOutMods {
@@ -326,6 +342,7 @@ enum : unsigned {
   INLINE_INTEGER_C_MAX = 208,
   INLINE_FLOATING_C_MIN = 240,
   INLINE_FLOATING_C_MAX = 248,
+  LITERAL64_CONST = 254,
   LITERAL_CONST = 255,
   VGPR_MIN = 256,
   VGPR_MAX = 511,
@@ -337,9 +354,11 @@ enum : unsigned {
 // Register codes as defined in the TableGen's HWEncoding field.
 namespace HWEncoding {
 enum : unsigned {
-  REG_IDX_MASK = 0xff,
-  IS_VGPR_OR_AGPR = 1 << 8,
-  IS_HI = 1 << 9, // High 16-bit register.
+  REG_IDX_MASK = 0x3ff,
+  LO256_REG_IDX_MASK = 0xff,
+  IS_VGPR = 1 << 10,
+  IS_AGPR = 1 << 11,
+  IS_HI16 = 1 << 12,
 };
 } // namespace HWEncoding
 
@@ -353,7 +372,60 @@ enum CPol {
   SC0 = GLC,
   SC1 = SCC,
   NT = SLC,
-  ALL = GLC | SLC | DLC | SCC
+  ALL_pregfx12 = GLC | SLC | DLC | SCC,
+  SWZ_pregfx12 = 8,
+
+  // Below are GFX12+ cache policy bits
+
+  // Temporal hint
+  TH = 0x7,      // All TH bits
+  TH_RT = 0,     // regular
+  TH_NT = 1,     // non-temporal
+  TH_HT = 2,     // high-temporal
+  TH_LU = 3,     // last use
+  TH_WB = 3,     // regular (CU, SE), high-temporal with write-back (MALL)
+  TH_NT_RT = 4,  // non-temporal (CU, SE), regular (MALL)
+  TH_RT_NT = 5,  // regular (CU, SE), non-temporal (MALL)
+  TH_NT_HT = 6,  // non-temporal (CU, SE), high-temporal (MALL)
+  TH_NT_WB = 7,  // non-temporal (CU, SE), high-temporal with write-back (MALL)
+  TH_BYPASS = 3, // only to be used with scope = 3
+
+  TH_RESERVED = 7, // unused value for load insts
+
+  // Bits of TH for atomics
+  TH_ATOMIC_RETURN = GLC, // Returning vs non-returning
+  TH_ATOMIC_NT = SLC,     // Non-temporal vs regular
+  TH_ATOMIC_CASCADE = 4,  // Cascading vs regular
+
+  // Scope
+  SCOPE_SHIFT = 3,
+  SCOPE_MASK = 0x3,
+  SCOPE = SCOPE_MASK << SCOPE_SHIFT, // All Scope bits
+  SCOPE_CU = 0 << SCOPE_SHIFT,
+  SCOPE_SE = 1 << SCOPE_SHIFT,
+  SCOPE_DEV = 2 << SCOPE_SHIFT,
+  SCOPE_SYS = 3 << SCOPE_SHIFT,
+
+  NV = 1 << 5, // Non-volatile bit
+
+  SWZ = 1 << 6, // Swizzle bit
+
+  SCAL = 1 << 11, // Scale offset bit
+
+  ALL = TH | SCOPE | NV,
+
+  // Helper bits
+  TH_TYPE_LOAD = 1 << 7,    // TH_LOAD policy
+  TH_TYPE_STORE = 1 << 8,   // TH_STORE policy
+  TH_TYPE_ATOMIC = 1 << 9,  // TH_ATOMIC policy
+  TH_REAL_BYPASS = 1 << 10, // is TH=3 bypass policy or not
+
+  // Volatile (used to preserve/signal operation volatility for buffer
+  // operations not a real instruction bit)
+  VOLATILE = 1 << 31,
+  // The set of "cache policy" bits used for compiler features that
+  // do not correspond to handware features.
+  VIRTUAL_BITS = VOLATILE,
 };
 
 } // namespace CPol
@@ -370,12 +442,13 @@ enum Id { // Message ID, width(4) [3:0].
   ID_DEALLOC_VGPRS_GFX11Plus = 3, // reused in GFX11
 
   ID_SAVEWAVE = 4,           // added in GFX8, removed in GFX11
-  ID_STALL_WAVE_GEN = 5,     // added in GFX9
-  ID_HALT_WAVES = 6,         // added in GFX9
+  ID_STALL_WAVE_GEN = 5,     // added in GFX9, removed in GFX12
+  ID_HALT_WAVES = 6,         // added in GFX9, removed in GFX12
   ID_ORDERED_PS_DONE = 7,    // added in GFX9, removed in GFX11
   ID_EARLY_PRIM_DEALLOC = 8, // added in GFX9, removed in GFX10
   ID_GS_ALLOC_REQ = 9,       // added in GFX9
   ID_GET_DOORBELL = 10,      // added in GFX9, removed in GFX11
+  ID_SAVEWAVE_HAS_TDM = 10,  // added in GFX1250
   ID_GET_DDID = 11,          // added in GFX10, removed in GFX11
   ID_SYSMSG = 15,
 
@@ -385,13 +458,16 @@ enum Id { // Message ID, width(4) [3:0].
   ID_RTN_GET_REALTIME = 131,
   ID_RTN_SAVE_WAVE = 132,
   ID_RTN_GET_TBA = 133,
+  ID_RTN_GET_TBA_TO_PC = 134,
+  ID_RTN_GET_SE_AID_ID = 135,
+
+  ID_RTN_GET_CLUSTER_BARRIER_STATE = 136, // added in GFX1250
 
   ID_MASK_PreGFX11_ = 0xF,
   ID_MASK_GFX11Plus_ = 0xFF
 };
 
 enum Op { // Both GS and SYS operation IDs.
-  OP_UNKNOWN_ = -1,
   OP_SHIFT_ = 4,
   OP_NONE_ = 0,
   // Bits used for operation encoding
@@ -402,14 +478,12 @@ enum Op { // Both GS and SYS operation IDs.
   OP_GS_CUT = 1,
   OP_GS_EMIT = 2,
   OP_GS_EMIT_CUT = 3,
-  OP_GS_LAST_,
   OP_GS_FIRST_ = OP_GS_NOP,
   // SYS operations are encoded in bits 6:4
   OP_SYS_ECC_ERR_INTERRUPT = 1,
   OP_SYS_REG_RD = 2,
   OP_SYS_HOST_TRAP_ACK = 3,
   OP_SYS_TTRACE_PC = 4,
-  OP_SYS_LAST_,
   OP_SYS_FIRST_ = OP_SYS_ECC_ERR_INTERRUPT,
 };
 
@@ -435,6 +509,9 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_GPR_ALLOC = 5,
   ID_LDS_ALLOC = 6,
   ID_IB_STS = 7,
+  ID_PERF_SNAPSHOT_DATA_gfx12 = 10,
+  ID_PERF_SNAPSHOT_PC_LO_gfx12 = 11,
+  ID_PERF_SNAPSHOT_PC_HI_gfx12 = 12,
   ID_MEM_BASES = 15,
   ID_TBA_LO = 16,
   ID_TBA_HI = 17,
@@ -446,44 +523,41 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_HW_ID1 = 23,
   ID_HW_ID2 = 24,
   ID_POPS_PACKER = 25,
-  ID_PERF_SNAPSHOT_DATA = 27,
+  ID_SCHED_MODE = 26,
+  ID_PERF_SNAPSHOT_DATA_gfx11 = 27,
+  ID_IB_STS2 = 28,
   ID_SHADER_CYCLES = 29,
+  ID_SHADER_CYCLES_HI = 30,
+  ID_DVGPR_ALLOC_LO = 31,
+  ID_DVGPR_ALLOC_HI = 32,
 
-  // Register numbers reused in GFX11+
-  ID_PERF_SNAPSHOT_PC_LO = 18,
-  ID_PERF_SNAPSHOT_PC_HI = 19,
+  // Register numbers reused in GFX11
+  ID_PERF_SNAPSHOT_PC_LO_gfx11 = 18,
+  ID_PERF_SNAPSHOT_PC_HI_gfx11 = 19,
 
-  // GFX940 specific registers
+  // Register numbers reused in GFX12+
+  ID_STATE_PRIV = 4,
+  ID_PERF_SNAPSHOT_DATA1 = 15,
+  ID_PERF_SNAPSHOT_DATA2 = 16,
+  ID_EXCP_FLAG_PRIV = 17,
+  ID_EXCP_FLAG_USER = 18,
+  ID_TRAP_CTRL = 19,
+
+  // GFX94* specific registers
   ID_XCC_ID = 20,
   ID_SQ_PERF_SNAPSHOT_DATA = 21,
   ID_SQ_PERF_SNAPSHOT_DATA1 = 22,
   ID_SQ_PERF_SNAPSHOT_PC_LO = 23,
   ID_SQ_PERF_SNAPSHOT_PC_HI = 24,
 
-  ID_SHIFT_ = 0,
-  ID_WIDTH_ = 6,
-  ID_MASK_ = (((1 << ID_WIDTH_) - 1) << ID_SHIFT_)
+  // GFX1250
+  ID_XNACK_STATE_PRIV = 33,
+  ID_XNACK_MASK_gfx1250 = 34,
 };
 
 enum Offset : unsigned { // Offset, (5) [10:6]
-  OFFSET_DEFAULT_ = 0,
-  OFFSET_SHIFT_ = 6,
-  OFFSET_WIDTH_ = 5,
-  OFFSET_MASK_ = (((1 << OFFSET_WIDTH_) - 1) << OFFSET_SHIFT_),
-
   OFFSET_MEM_VIOL = 8,
-};
-
-enum WidthMinusOne : unsigned { // WidthMinusOne, (5) [15:11]
-  WIDTH_M1_DEFAULT_ = 31,
-  WIDTH_M1_SHIFT_ = 11,
-  WIDTH_M1_WIDTH_ = 5,
-  WIDTH_M1_MASK_ = (((1 << WIDTH_M1_WIDTH_) - 1) << WIDTH_M1_SHIFT_),
-};
-
-// Some values from WidthMinusOne mapped into Width domain.
-enum Width : unsigned {
-  WIDTH_DEFAULT_ = WIDTH_M1_DEFAULT_ + 1,
+  OFFSET_ME_ID = 8, // in HW_ID2
 };
 
 enum ModeRegisterMasks : uint32_t {
@@ -505,7 +579,17 @@ enum ModeRegisterMasks : uint32_t {
 
   GPR_IDX_EN_MASK = 1 << 27,
   VSKIP_MASK = 1 << 28,
-  CSP_MASK = 0x7u << 29 // Bits 29..31
+  CSP_MASK = 0x7u << 29, // Bits 29..31
+
+  // GFX1250
+  DST_VGPR_MSB = 1 << 12,
+  SRC0_VGPR_MSB = 1 << 13,
+  SRC1_VGPR_MSB = 1 << 14,
+  SRC2_VGPR_MSB = 1 << 15,
+  VGPR_MSB_MASK = 0xf << 12, // Bits 12..15
+
+  REPLAY_MODE = 1 << 25,
+  FLAT_SCRATCH_IS_NV = 1 << 26,
 };
 
 } // namespace Hwreg
@@ -773,9 +857,12 @@ enum Id : unsigned { // id of symbolic names
   ID_BITMASK_PERM,
   ID_SWAP,
   ID_REVERSE,
-  ID_BROADCAST
+  ID_BROADCAST,
+  ID_FFT,
+  ID_ROTATE
 };
 
+// clang-format off
 enum EncBits : unsigned {
 
   // swizzle mode encodings
@@ -785,6 +872,14 @@ enum EncBits : unsigned {
 
   BITMASK_PERM_ENC      = 0x0000,
   BITMASK_PERM_ENC_MASK = 0x8000,
+
+  FFT_MODE_ENC          = 0xE000,
+
+  ROTATE_MODE_ENC       = 0xC000,
+  FFT_ROTATE_MODE_MASK  = 0xF000,
+
+  ROTATE_MODE_LO        = 0xC000,
+  FFT_MODE_LO           = 0xE000,
 
   // QUAD_PERM encodings
 
@@ -801,8 +896,21 @@ enum EncBits : unsigned {
 
   BITMASK_AND_SHIFT     = 0,
   BITMASK_OR_SHIFT      = 5,
-  BITMASK_XOR_SHIFT     = 10
+  BITMASK_XOR_SHIFT     = 10,
+
+  // FFT encodings
+
+  FFT_SWIZZLE_MASK      = 0x1F,
+  FFT_SWIZZLE_MAX       = 0x1F,
+
+  // ROTATE encodings
+  ROTATE_MAX_SIZE       = 0x1F,
+  ROTATE_DIR_SHIFT      = 10, // bit position of rotate direction
+  ROTATE_DIR_MASK       = 0x1,
+  ROTATE_SIZE_SHIFT     = 5, // bit position of rotate size
+  ROTATE_SIZE_MASK      = ROTATE_MAX_SIZE,
 };
+// clang-format on
 
 } // namespace Swizzle
 
@@ -929,6 +1037,27 @@ enum Target : unsigned {
 
 } // namespace Exp
 
+namespace WMMA {
+enum MatrixFMT : unsigned {
+  MATRIX_FMT_FP8 = 0,
+  MATRIX_FMT_BF8 = 1,
+  MATRIX_FMT_FP6 = 2,
+  MATRIX_FMT_BF6 = 3,
+  MATRIX_FMT_FP4 = 4
+};
+
+enum MatrixScale : unsigned {
+  MATRIX_SCALE_ROW0 = 0,
+  MATRIX_SCALE_ROW1 = 1,
+};
+
+enum MatrixScaleFmt : unsigned {
+  MATRIX_SCALE_FMT_E8 = 0,
+  MATRIX_SCALE_FMT_E5M3 = 1,
+  MATRIX_SCALE_FMT_E4M3 = 2
+};
+} // namespace WMMA
+
 namespace VOP3PEncoding {
 
 enum OpSel : uint64_t {
@@ -956,6 +1085,18 @@ enum Offset_COV5 : unsigned {
 
 } // namespace ImplicitArg
 
+namespace MFMAScaleFormats {
+// Enum value used in cbsz/blgp for F8F6F4 MFMA operations to select the matrix
+// format.
+enum MFMAScaleFormats {
+  FP8_E4M3 = 0,
+  FP8_E5M2 = 1,
+  FP6_E2M3 = 2,
+  FP6_E3M2 = 3,
+  FP4_E2M1 = 4
+};
+} // namespace MFMAScaleFormats
+
 namespace VirtRegFlag {
 // Virtual register flags used for various target specific handlings during
 // codegen.
@@ -967,6 +1108,27 @@ enum Register_Flag : uint8_t {
 } // namespace VirtRegFlag
 
 } // namespace AMDGPU
+
+namespace AMDGPU {
+namespace Barrier {
+
+enum Type {
+  CLUSTER_TRAP = -4,
+  CLUSTER = -3,
+  TRAP = -2,
+  WORKGROUP = -1,
+  NAMED_BARRIER_FIRST = 1,
+  NAMED_BARRIER_LAST = 16,
+};
+
+enum {
+  BARRIER_SCOPE_WORKGROUP = 0,
+};
+
+} // namespace Barrier
+} // namespace AMDGPU
+
+// clang-format off
 
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028
 #define   S_00B028_VGPRS(x)                                           (((x) & 0x3F) << 0)
@@ -1036,7 +1198,7 @@ enum Register_Flag : uint8_t {
 #define   C_00B84C_LDS_SIZE                                           0xFF007FFF
 #define   S_00B84C_EXCP_EN(x)                                         (((x) & 0x7F) << 24)
 #define   G_00B84C_EXCP_EN(x)                                         (((x) >> 24) & 0x7F)
-#define   C_00B84C_EXCP_EN
+#define   C_00B84C_EXCP_EN                                            0x80FFFFFF
 
 #define R_0286CC_SPI_PS_INPUT_ENA                                       0x0286CC
 #define R_0286D0_SPI_PS_INPUT_ADDR                                      0x0286D0
@@ -1060,6 +1222,9 @@ enum Register_Flag : uint8_t {
 #define   S_00B848_DX10_CLAMP(x)                                      (((x) & 0x1) << 21)
 #define   G_00B848_DX10_CLAMP(x)                                      (((x) >> 21) & 0x1)
 #define   C_00B848_DX10_CLAMP                                         0xFFDFFFFF
+#define   S_00B848_RR_WG_MODE(x)                                      (((x) & 0x1) << 21)
+#define   G_00B848_RR_WG_MODE(x)                                      (((x) >> 21) & 0x1)
+#define   C_00B848_RR_WG_MODE                                         0xFFDFFFFF
 #define   S_00B848_DEBUG_MODE(x)                                      (((x) & 0x1) << 22)
 #define   G_00B848_DEBUG_MODE(x)                                      (((x) >> 22) & 0x1)
 #define   C_00B848_DEBUG_MODE                                         0xFFBFFFFF
@@ -1075,7 +1240,6 @@ enum Register_Flag : uint8_t {
 #define   S_00B848_FWD_PROGRESS(x)                                    (((x) & 0x1) << 31)
 #define   G_00B848_FWD_PROGRESS(x)                                    (((x) >> 31) & 0x1)
 #define   C_00B848_FWD_PROGRESS                                       0x7FFFFFFF
-
 
 // Helpers for setting FLOAT_MODE
 #define FP_ROUND_ROUND_TO_NEAREST 0
@@ -1101,11 +1265,13 @@ enum Register_Flag : uint8_t {
 
 #define R_00B860_COMPUTE_TMPRING_SIZE                                   0x00B860
 #define   S_00B860_WAVESIZE_PreGFX11(x)                               (((x) & 0x1FFF) << 12)
-#define   S_00B860_WAVESIZE_GFX11Plus(x)                              (((x) & 0x7FFF) << 12)
+#define   S_00B860_WAVESIZE_GFX11(x)                                  (((x) & 0x7FFF) << 12)
+#define   S_00B860_WAVESIZE_GFX12Plus(x)                              (((x) & 0x3FFFF) << 12)
 
 #define R_0286E8_SPI_TMPRING_SIZE                                       0x0286E8
 #define   S_0286E8_WAVESIZE_PreGFX11(x)                               (((x) & 0x1FFF) << 12)
-#define   S_0286E8_WAVESIZE_GFX11Plus(x)                              (((x) & 0x7FFF) << 12)
+#define   S_0286E8_WAVESIZE_GFX11(x)                                  (((x) & 0x7FFF) << 12)
+#define   S_0286E8_WAVESIZE_GFX12Plus(x)                              (((x) & 0x3FFFF) << 12)
 
 #define R_028B54_VGT_SHADER_STAGES_EN                                 0x028B54
 #define   S_028B54_HS_W32_EN(x)                                       (((x) & 0x1) << 21)
@@ -1118,6 +1284,9 @@ enum Register_Flag : uint8_t {
 
 #define R_SPILLED_SGPRS         0x4
 #define R_SPILLED_VGPRS         0x8
+
+// clang-format on
+
 } // End namespace llvm
 
 #endif

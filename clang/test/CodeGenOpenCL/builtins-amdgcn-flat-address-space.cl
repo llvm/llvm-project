@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu tahiti -S -emit-llvm -disable-llvm-passes -o - %s | FileCheck -enable-var-scope %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu tahiti -emit-llvm -disable-llvm-passes -o - %s | FileCheck -enable-var-scope %s
 
 // SI did not actually support flat addressing, but we can codegen the address
 // space test builtins. The target specfic part is a load from the implicit

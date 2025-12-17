@@ -1,4 +1,4 @@
-//===------- HICPPTidyModule.cpp - clang-tidy -----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,6 @@
 #include "../cppcoreguidelines/ProTypeMemberInitCheck.h"
 #include "../cppcoreguidelines/ProTypeVarargCheck.h"
 #include "../cppcoreguidelines/SpecialMemberFunctionsCheck.h"
-#include "../google/DefaultArgumentsCheck.h"
 #include "../google/ExplicitConstructorCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
 #include "../misc/StaticAssertCheck.h"
@@ -37,6 +36,7 @@
 #include "../readability/NamedParameterCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
 #include "ExceptionBaseclassCheck.h"
+#include "IgnoredRemoveResultCheck.h"
 #include "MultiwayPathsCoveredCheck.h"
 #include "NoAssemblerCheck.h"
 #include "SignedBitwiseCheck.h"
@@ -57,6 +57,8 @@ public:
         "hicpp-deprecated-headers");
     CheckFactories.registerCheck<ExceptionBaseclassCheck>(
         "hicpp-exception-baseclass");
+    CheckFactories.registerCheck<IgnoredRemoveResultCheck>(
+        "hicpp-ignored-remove-result");
     CheckFactories.registerCheck<MultiwayPathsCoveredCheck>(
         "hicpp-multiway-paths-covered");
     CheckFactories.registerCheck<SignedBitwiseCheck>("hicpp-signed-bitwise");
@@ -117,6 +119,6 @@ static ClangTidyModuleRegistry::Add<HICPPModule>
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the HICPPModule.
-volatile int HICPPModuleAnchorSource = 0;
+volatile int HICPPModuleAnchorSource = 0; // NOLINT(misc-use-internal-linkage)
 
 } // namespace clang::tidy

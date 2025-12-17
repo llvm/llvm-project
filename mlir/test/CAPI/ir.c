@@ -340,9 +340,9 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   // function.
   MlirRegion region = mlirOperationGetRegion(operation, 0);
   MlirBlock block = mlirRegionGetFirstBlock(region);
-  operation = mlirBlockGetFirstOperation(block);
-  region = mlirOperationGetRegion(operation, 0);
-  MlirOperation parentOperation = operation;
+  MlirOperation function = mlirBlockGetFirstOperation(block);
+  region = mlirOperationGetRegion(function, 0);
+  MlirOperation parentOperation = function;
   block = mlirRegionGetFirstBlock(region);
   operation = mlirBlockGetFirstOperation(block);
   assert(mlirModuleIsNull(mlirModuleFromOperation(operation)));
@@ -488,6 +488,18 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   fprintf(stderr, "\n");
   // clang-format off
   // CHECK: Op print with all flags: %{{.*}} = "arith.constant"() <{value = 0 : index}> {elts = dense_resource<__elided__> : tensor<4xi32>} : () -> index loc(unknown)
+  // clang-format on
+
+  mlirOpPrintingFlagsDestroy(flags);
+  flags = mlirOpPrintingFlagsCreate();
+  mlirOpPrintingFlagsSkipRegions(flags);
+  fprintf(stderr, "Op print with skip regions flag: ");
+  mlirOperationPrintWithFlags(function, flags, printToStderr, NULL);
+  fprintf(stderr, "\n");
+  // clang-format off
+  // CHECK: Op print with skip regions flag: func.func @add(%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: memref<?xf32>)
+  // CHECK-NOT: constant
+  // CHECK-NOT: return
   // clang-format on
 
   fprintf(stderr, "With state: |");
@@ -1482,6 +1494,10 @@ int printAffineMap(MlirContext ctx) {
   // CHECK: (d0, d1, d2) -> (d0)
   // CHECK: (d0, d1, d2) -> (d2)
 
+  // CHECK: distinct[0]<"foo">
+  mlirAttributeDump(mlirDisctinctAttrCreate(
+      mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("foo"))));
+
   return 0;
 }
 
@@ -1970,6 +1986,15 @@ int testOperands(void) {
   fprintf(stderr, "\n");
   // CHECK: Second replacement use owner: "dummy.op2"
 
+  MlirOpOperand use5 = mlirValueGetFirstUse(constTwoValue);
+  MlirOpOperand use6 = mlirOpOperandGetNextUse(use5);
+  if (!mlirValueEqual(mlirOpOperandGetValue(use5),
+                      mlirOpOperandGetValue(use6))) {
+    fprintf(stderr,
+            "ERROR: First and second operand should share the same value\n");
+    return 5;
+  }
+
   mlirOperationDestroy(op);
   mlirOperationDestroy(op2);
   mlirOperationDestroy(constZero);
@@ -2231,9 +2256,22 @@ typedef struct {
   const char *x;
 } callBackData;
 
-void walkCallBack(MlirOperation op, void *rootOpVoid) {
+MlirWalkResult walkCallBack(MlirOperation op, void *rootOpVoid) {
   fprintf(stderr, "%s: %s\n", ((callBackData *)(rootOpVoid))->x,
           mlirIdentifierStr(mlirOperationGetName(op)).data);
+  return MlirWalkResultAdvance;
+}
+
+MlirWalkResult walkCallBackTestWalkResult(MlirOperation op, void *rootOpVoid) {
+  fprintf(stderr, "%s: %s\n", ((callBackData *)(rootOpVoid))->x,
+          mlirIdentifierStr(mlirOperationGetName(op)).data);
+  if (strcmp(mlirIdentifierStr(mlirOperationGetName(op)).data, "func.func") ==
+      0)
+    return MlirWalkResultSkip;
+  if (strcmp(mlirIdentifierStr(mlirOperationGetName(op)).data, "arith.addi") ==
+      0)
+    return MlirWalkResultInterrupt;
+  return MlirWalkResultAdvance;
 }
 
 int testOperationWalk(MlirContext ctx) {
@@ -2246,6 +2284,9 @@ int testOperationWalk(MlirContext ctx) {
                              "    arith.addi %1, %1: i32\n"
                              "    return\n"
                              "  }\n"
+                             "  func.func @bar() {\n"
+                             "    return\n"
+                             "  }\n"
                              "}";
   MlirModule module =
       mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
@@ -2253,22 +2294,42 @@ int testOperationWalk(MlirContext ctx) {
   callBackData data;
   data.x = "i love you";
 
-  // CHECK: i love you: arith.constant
-  // CHECK: i love you: arith.addi
-  // CHECK: i love you: func.return
-  // CHECK: i love you: func.func
-  // CHECK: i love you: builtin.module
+  // CHECK-NEXT: i love you: arith.constant
+  // CHECK-NEXT: i love you: arith.addi
+  // CHECK-NEXT: i love you: func.return
+  // CHECK-NEXT: i love you: func.func
+  // CHECK-NEXT: i love you: func.return
+  // CHECK-NEXT: i love you: func.func
+  // CHECK-NEXT: i love you: builtin.module
   mlirOperationWalk(mlirModuleGetOperation(module), walkCallBack,
                     (void *)(&data), MlirWalkPostOrder);
 
   data.x = "i don't love you";
-  // CHECK: i don't love you: builtin.module
-  // CHECK: i don't love you: func.func
-  // CHECK: i don't love you: arith.constant
-  // CHECK: i don't love you: arith.addi
-  // CHECK: i don't love you: func.return
+  // CHECK-NEXT: i don't love you: builtin.module
+  // CHECK-NEXT: i don't love you: func.func
+  // CHECK-NEXT: i don't love you: arith.constant
+  // CHECK-NEXT: i don't love you: arith.addi
+  // CHECK-NEXT: i don't love you: func.return
+  // CHECK-NEXT: i don't love you: func.func
+  // CHECK-NEXT: i don't love you: func.return
   mlirOperationWalk(mlirModuleGetOperation(module), walkCallBack,
                     (void *)(&data), MlirWalkPreOrder);
+
+  data.x = "interrupt";
+  // Interrupted at `arith.addi`
+  // CHECK-NEXT: interrupt: arith.constant
+  // CHECK-NEXT: interrupt: arith.addi
+  mlirOperationWalk(mlirModuleGetOperation(module), walkCallBackTestWalkResult,
+                    (void *)(&data), MlirWalkPostOrder);
+
+  data.x = "skip";
+  // Skip at `func.func`
+  // CHECK-NEXT: skip: builtin.module
+  // CHECK-NEXT: skip: func.func
+  // CHECK-NEXT: skip: func.func
+  mlirOperationWalk(mlirModuleGetOperation(module), walkCallBackTestWalkResult,
+                    (void *)(&data), MlirWalkPreOrder);
+
   mlirModuleDestroy(module);
   return 0;
 }
@@ -2328,6 +2389,9 @@ void testDiagnostics(void) {
   MlirLocation fileLineColLoc = mlirLocationFileLineColGet(
       ctx, mlirStringRefCreateFromCString("file.c"), 1, 2);
   mlirEmitError(fileLineColLoc, "test diagnostics");
+  MlirLocation fileLineColRange = mlirLocationFileLineColRangeGet(
+      ctx, mlirStringRefCreateFromCString("other-file.c"), 1, 2, 3, 4);
+  mlirEmitError(fileLineColRange, "test diagnostics");
   MlirLocation callSiteLoc = mlirLocationCallSiteGet(
       mlirLocationFileLineColGet(
           ctx, mlirStringRefCreateFromCString("other-file.c"), 2, 3),
@@ -2357,6 +2421,10 @@ void testDiagnostics(void) {
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
   // CHECK:   test diagnostics
+  // CHECK:   loc("other-file.c":1:2 to 3:4)
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   test diagnostics
   // CHECK:   loc(callsite("other-file.c":2:3 at "file.c":1:2))
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
@@ -2370,6 +2438,74 @@ void testDiagnostics(void) {
   // CHECK-NOT: processing diagnostic
   // CHECK:     more test diagnostics
   mlirContextDestroy(ctx);
+}
+
+int testBlockPredecessorsSuccessors(MlirContext ctx) {
+  // CHECK-LABEL: @testBlockPredecessorsSuccessors
+  fprintf(stderr, "@testBlockPredecessorsSuccessors\n");
+
+  const char *moduleString = "module {\n"
+                             "  func.func @test(%arg0: i32, %arg1: i16) {\n"
+                             "    cf.br ^bb1(%arg1 : i16)\n"
+                             "  ^bb1(%0: i16):  // pred: ^bb0\n"
+                             "    cf.br ^bb2(%arg0 : i32)\n"
+                             "  ^bb2(%1: i32):  // pred: ^bb1\n"
+                             "    return\n"
+                             "  }\n"
+                             "}\n";
+
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
+
+  MlirOperation moduleOp = mlirModuleGetOperation(module);
+  MlirRegion moduleRegion = mlirOperationGetRegion(moduleOp, 0);
+  MlirBlock moduleBlock = mlirRegionGetFirstBlock(moduleRegion);
+  MlirOperation function = mlirBlockGetFirstOperation(moduleBlock);
+  MlirRegion funcRegion = mlirOperationGetRegion(function, 0);
+  MlirBlock entryBlock = mlirRegionGetFirstBlock(funcRegion);
+  MlirBlock middleBlock = mlirBlockGetNextInRegion(entryBlock);
+  MlirBlock successorBlock = mlirBlockGetNextInRegion(middleBlock);
+
+#define FPRINTF_OP(OP, FMT) fprintf(stderr, #OP ": " FMT "\n", OP)
+
+  // CHECK: mlirBlockGetNumPredecessors(entryBlock): 0
+  FPRINTF_OP(mlirBlockGetNumPredecessors(entryBlock), "%ld");
+
+  // CHECK: mlirBlockGetNumSuccessors(entryBlock): 1
+  FPRINTF_OP(mlirBlockGetNumSuccessors(entryBlock), "%ld");
+  // CHECK: mlirBlockEqual(middleBlock, mlirBlockGetSuccessor(entryBlock, 0)): 1
+  FPRINTF_OP(mlirBlockEqual(middleBlock, mlirBlockGetSuccessor(entryBlock, 0)),
+             "%d");
+  // CHECK: mlirBlockGetNumPredecessors(middleBlock): 1
+  FPRINTF_OP(mlirBlockGetNumPredecessors(middleBlock), "%ld");
+  // CHECK: mlirBlockEqual(entryBlock, mlirBlockGetPredecessor(middleBlock, 0))
+  FPRINTF_OP(
+      mlirBlockEqual(entryBlock, mlirBlockGetPredecessor(middleBlock, 0)),
+      "%d");
+
+  // CHECK: mlirBlockGetNumSuccessors(middleBlock): 1
+  FPRINTF_OP(mlirBlockGetNumSuccessors(middleBlock), "%ld");
+  // CHECK: BlockEqual(successorBlock, mlirBlockGetSuccessor(middleBlock, 0)): 1
+  fprintf(
+      stderr,
+      "BlockEqual(successorBlock, mlirBlockGetSuccessor(middleBlock, 0)): %d\n",
+      mlirBlockEqual(successorBlock, mlirBlockGetSuccessor(middleBlock, 0)));
+  // CHECK: mlirBlockGetNumPredecessors(successorBlock): 1
+  FPRINTF_OP(mlirBlockGetNumPredecessors(successorBlock), "%ld");
+  // CHECK: Equal(middleBlock, mlirBlockGetPredecessor(successorBlock, 0)): 1
+  fprintf(
+      stderr,
+      "Equal(middleBlock, mlirBlockGetPredecessor(successorBlock, 0)): %d\n",
+      mlirBlockEqual(middleBlock, mlirBlockGetPredecessor(successorBlock, 0)));
+
+  // CHECK: mlirBlockGetNumSuccessors(successorBlock): 0
+  FPRINTF_OP(mlirBlockGetNumSuccessors(successorBlock), "%ld");
+
+#undef FPRINTF_OP
+
+  mlirModuleDestroy(module);
+
+  return 0;
 }
 
 int main(void) {
@@ -2417,6 +2553,9 @@ int main(void) {
 
   testExplicitThreadPools();
   testDiagnostics();
+
+  if (testBlockPredecessorsSuccessors(ctx))
+    return 17;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob

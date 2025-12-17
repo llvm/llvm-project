@@ -24,7 +24,6 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
@@ -36,6 +35,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -125,9 +125,9 @@ static cl::opt<int> MaxReorderWindow(
   cl::desc("Number of instructions to allow ahead of the critical path "
            "in sched=list-ilp"));
 
-static cl::opt<unsigned> AvgIPC(
-  "sched-avg-ipc", cl::Hidden, cl::init(1),
-  cl::desc("Average inst/cycle whan no target itinerary exists."));
+static cl::opt<unsigned>
+    AvgIPC("sched-avg-ipc", cl::Hidden, cl::init(1),
+           cl::desc("Average inst/cycle when no target itinerary exists."));
 
 namespace {
 
@@ -183,7 +183,7 @@ private:
 
   // Hack to keep track of the inverse of FindCallSeqStart without more crazy
   // DAG crawling.
-  DenseMap<SUnit*, SUnit*> CallSeqEndForStart;
+  SmallDenseMap<SUnit *, SUnit *, 16> CallSeqEndForStart;
 
 public:
   ScheduleDAGRRList(MachineFunction &mf, bool needlatency,
@@ -331,7 +331,7 @@ static void GetCostForDef(const ScheduleDAGSDNodes::RegDefIter &RegDefPos,
 
     unsigned Opcode = Node->getMachineOpcode();
     if (Opcode == TargetOpcode::REG_SEQUENCE) {
-      unsigned DstRCIdx = cast<ConstantSDNode>(Node->getOperand(0))->getZExtValue();
+      unsigned DstRCIdx = Node->getConstantOperandVal(0);
       const TargetRegisterClass *RC = TRI->getRegClass(DstRCIdx);
       RegClass = RC->getID();
       Cost = RegSequenceCost;
@@ -340,7 +340,7 @@ static void GetCostForDef(const ScheduleDAGSDNodes::RegDefIter &RegDefPos,
 
     unsigned Idx = RegDefPos.GetIdx();
     const MCInstrDesc &Desc = TII->get(Opcode);
-    const TargetRegisterClass *RC = TII->getRegClass(Desc, Idx, TRI, MF);
+    const TargetRegisterClass *RC = TII->getRegClass(Desc, Idx);
     assert(RC && "Not a valid register class");
     RegClass = RC->getID();
     // FIXME: Cost arbitrarily set to 1 because there doesn't seem to be a
@@ -370,7 +370,7 @@ void ScheduleDAGRRList::Schedule() {
   assert(Interferences.empty() && LRegsMap.empty() && "stale Interferences");
 
   // Build the scheduling graph.
-  BuildSchedGraph(nullptr);
+  BuildSchedGraph();
 
   LLVM_DEBUG(dump());
   Topo.MarkDirty();
@@ -1292,7 +1292,7 @@ static MVT getPhysicalRegisterVT(SDNode *N, unsigned Reg,
 
 /// CheckForLiveRegDef - Return true and update live register vector if the
 /// specified register def of the specified SUnit clobbers any "live" registers.
-static void CheckForLiveRegDef(SUnit *SU, unsigned Reg, SUnit **LiveRegDefs,
+static void CheckForLiveRegDef(SUnit *SU, MCRegister Reg, SUnit **LiveRegDefs,
                                SmallSet<unsigned, 4> &RegAdded,
                                SmallVectorImpl<unsigned> &LRegs,
                                const TargetRegisterInfo *TRI,
@@ -1369,8 +1369,7 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
         --NumOps;  // Ignore the glue operand.
 
       for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
-        unsigned Flags =
-          cast<ConstantSDNode>(Node->getOperand(i))->getZExtValue();
+        unsigned Flags = Node->getConstantOperandVal(i);
         const InlineAsm::Flag F(Flags);
         unsigned NumVals = F.getNumOperandRegisters();
 
@@ -1770,8 +1769,8 @@ public:
       unsigned NumRC = TRI->getNumRegClasses();
       RegLimit.resize(NumRC);
       RegPressure.resize(NumRC);
-      std::fill(RegLimit.begin(), RegLimit.end(), 0);
-      std::fill(RegPressure.begin(), RegPressure.end(), 0);
+      llvm::fill(RegLimit, 0);
+      llvm::fill(RegPressure, 0);
       for (const TargetRegisterClass *RC : TRI->regclasses())
         RegLimit[RC->getID()] = tri->getRegPressureLimit(RC, MF);
     }
@@ -1794,7 +1793,7 @@ public:
   void releaseState() override {
     SUnits = nullptr;
     SethiUllmanNumbers.clear();
-    std::fill(RegPressure.begin(), RegPressure.end(), 0);
+    llvm::fill(RegPressure, 0);
   }
 
   unsigned getNodePriority(const SUnit *SU) const;
@@ -2298,8 +2297,7 @@ void RegReductionPQBase::unscheduledNode(SUnit *SU) {
       continue;
     }
     if (POpc == TargetOpcode::REG_SEQUENCE) {
-      unsigned DstRCIdx =
-          cast<ConstantSDNode>(PN->getOperand(0))->getZExtValue();
+      unsigned DstRCIdx = PN->getConstantOperandVal(0);
       const TargetRegisterClass *RC = TRI->getRegClass(DstRCIdx);
       unsigned RCId = RC->getID();
       // REG_SEQUENCE is untyped, so getRepRegClassCostFor could not be used

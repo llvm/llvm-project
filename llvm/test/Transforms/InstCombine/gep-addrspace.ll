@@ -24,10 +24,10 @@ define void @func(ptr addrspace(1) nocapture %p) nounwind {
 
 define void @keep_necessary_addrspacecast(i64 %i, ptr %out0, ptr %out1) {
 ; CHECK-LABEL: @keep_necessary_addrspacecast(
-; CHECK-NEXT:    [[T0:%.*]] = getelementptr [256 x float], ptr addrspacecast (ptr addrspace(3) @array to ptr), i64 0, i64 [[I:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = getelementptr [0 x float], ptr addrspacecast (ptr addrspace(3) @scalar to ptr), i64 0, i64 [[I]]
-; CHECK-NEXT:    store ptr [[T0]], ptr [[OUT0:%.*]], align 4
+; CHECK-NEXT:    [[T1:%.*]] = getelementptr float, ptr addrspacecast (ptr addrspace(3) @array to ptr), i64 [[I:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = getelementptr float, ptr addrspacecast (ptr addrspace(3) @scalar to ptr), i64 [[I]]
 ; CHECK-NEXT:    store ptr [[T1]], ptr [[OUT1:%.*]], align 4
+; CHECK-NEXT:    store ptr [[T2]], ptr [[OUT2:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %t0 = getelementptr [256 x float], ptr addrspacecast (ptr addrspace(3) @array to ptr), i64 0, i64 %i
@@ -45,7 +45,7 @@ define { i8, i8 } @inbounds_after_addrspacecast() {
 ; CHECK-NEXT:    [[T0:%.*]] = alloca i16, align 2
 ; CHECK-NEXT:    call void @escape_alloca(ptr nonnull [[T0]])
 ; CHECK-NEXT:    [[T1:%.*]] = addrspacecast ptr [[T0]] to ptr addrspace(11)
-; CHECK-NEXT:    [[T2:%.*]] = getelementptr inbounds [2 x i8], ptr addrspace(11) [[T1]], i64 0, i64 1
+; CHECK-NEXT:    [[T2:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(11) [[T1]], i64 1
 ; CHECK-NEXT:    [[T3:%.*]] = load i8, ptr addrspace(11) [[T2]], align 1
 ; CHECK-NEXT:    [[INSERT:%.*]] = insertvalue { i8, i8 } zeroinitializer, i8 [[T3]], 1
 ; CHECK-NEXT:    ret { i8, i8 } [[INSERT]]

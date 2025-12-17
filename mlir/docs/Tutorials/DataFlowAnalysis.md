@@ -114,10 +114,10 @@ struct MetadataLatticeValue {
     // only keep information that is the same. This means that we only keep
     // facts that are true in both.
     MetadataLatticeValue result;
-    for (const auto &lhsIt : lhs) {
+    for (const auto &lhsIt : lhs.metadata) {
       // As noted above, we only merge if the values are the same.
       auto it = rhs.metadata.find(lhsIt.first);
-      if (it == rhs.metadata.end() || it->second != lhsIt.second)
+      if (it == rhs.metadata.end() || it.second != lhsIt.second)
         continue;
       result.insert(lhsIt);
     }
@@ -129,10 +129,13 @@ struct MetadataLatticeValue {
   bool operator==(const MetadataLatticeValue &rhs) const {
     if (metadata.size() != rhs.metadata.size())
       return false;
-    // Check that the 'rhs' contains the same metadata.
-    return llvm::all_of(metadata, [&](auto &it) {
-      return rhs.metadata.count(it.second);
-    });
+    // Check that `rhs` contains the same metadata.
+    for (const auto &it : metadata) {
+      auto rhsIt = rhs.metadata.find(it.first);
+      if (rhsIt == rhs.metadata.end() || it.second != rhsIt.second)
+        return false;
+    }
+    return true;
   }
 
   /// Our value represents the combined metadata, which is originally a

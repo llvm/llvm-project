@@ -1,4 +1,4 @@
-//===--- UnusedUsingDeclsCheck.h - clang-tidy--------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNUSED_USING_DECLS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNUSED_USING_DECLS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNUSEDUSINGDECLSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNUSEDUSINGDECLSCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "../utils/FileExtensionsUtils.h"
@@ -19,13 +19,16 @@ namespace clang::tidy::misc {
 /// Finds unused using declarations.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc/unused-using-decls.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/unused-using-decls.html
 class UnusedUsingDeclsCheck : public ClangTidyCheck {
 public:
   UnusedUsingDeclsCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void onEndOfTranslationUnit() override;
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus;
+  }
 
 private:
   void removeFromFoundDecls(const Decl *D);
@@ -46,11 +49,11 @@ private:
   };
 
   std::vector<UsingDeclContext> Contexts;
+  llvm::SmallPtrSet<const Decl *, 32> UsingTargetDeclsCache;
 
-  StringRef RawStringHeaderFileExtensions;
   FileExtensionsSet HeaderFileExtensions;
 };
 
 } // namespace clang::tidy::misc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNUSED_USING_DECLS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNUSEDUSINGDECLSCHECK_H

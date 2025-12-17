@@ -8,21 +8,21 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-  using std::clock_t;
-  using std::size_t;
-  using std::time_t;
+  using std::clock_t _LIBCPP_USING_IF_EXISTS;
+  using std::size_t _LIBCPP_USING_IF_EXISTS;
+  using std::time_t _LIBCPP_USING_IF_EXISTS;
 
-  using std::timespec;
-  using std::tm;
+  using std::timespec _LIBCPP_USING_IF_EXISTS;
+  using std::tm _LIBCPP_USING_IF_EXISTS;
 
-  using std::asctime;
-  using std::clock;
-  using std::ctime;
-  using std::difftime;
-  using std::gmtime;
-  using std::localtime;
-  using std::mktime;
-  using std::strftime;
-  using std::time;
-  using std::timespec_get;
+  using std::asctime _LIBCPP_USING_IF_EXISTS;
+  using std::clock _LIBCPP_USING_IF_EXISTS;
+  using std::ctime _LIBCPP_USING_IF_EXISTS;
+  using std::difftime _LIBCPP_USING_IF_EXISTS;
+  using std::gmtime _LIBCPP_USING_IF_EXISTS;
+  using std::localtime _LIBCPP_USING_IF_EXISTS;
+  using std::mktime _LIBCPP_USING_IF_EXISTS;
+  using std::strftime _LIBCPP_USING_IF_EXISTS;
+  using std::time _LIBCPP_USING_IF_EXISTS;
+  using std::timespec_get _LIBCPP_USING_IF_EXISTS;
 } // namespace std

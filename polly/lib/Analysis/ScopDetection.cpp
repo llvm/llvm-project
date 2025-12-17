@@ -44,7 +44,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/ScopDetection.h"
-#include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/ScopDetectionDiagnostic.h"
 #include "polly/Support/SCEVValidator.h"
@@ -73,10 +72,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
@@ -91,6 +87,7 @@
 using namespace llvm;
 using namespace polly;
 
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-detect"
 
 // This option is set to a very high value, as analyzing such loops increases
@@ -365,7 +362,7 @@ void ScopDetection::detect(Function &F) {
 
   // Prune non-profitable regions.
   for (auto &DIt : DetectionContextMap) {
-    DetectionContext &DC = *DIt.getSecond().get();
+    DetectionContext &DC = *DIt.getSecond();
     if (DC.Log.hasErrors())
       continue;
     if (!ValidRegions.count(&DC.CurRegion))
@@ -406,8 +403,8 @@ inline bool ScopDetection::invalid(DetectionContext &Context, bool Assert,
     // canUseISLTripCount().
     Log.report(RejectReason);
 
-    LLVM_DEBUG(dbgs() << RejectReason->getMessage());
-    LLVM_DEBUG(dbgs() << "\n");
+    POLLY_DEBUG(dbgs() << RejectReason->getMessage());
+    POLLY_DEBUG(dbgs() << "\n");
   } else {
     assert(!Assert && "Verification of detected scop failed");
   }
@@ -430,7 +427,7 @@ bool ScopDetection::isMaxRegionInScop(const Region &R, bool Verify) {
     Entry = std::make_unique<DetectionContext>(const_cast<Region &>(R), AA,
                                                /*Verifying=*/false);
 
-    return isValidRegion(*Entry.get());
+    return isValidRegion(*Entry);
   }
 
   return true;
@@ -489,7 +486,8 @@ bool ScopDetection::onlyValidRequiredInvariantLoads(
 
     for (auto NonAffineRegion : Context.NonAffineSubRegionSet) {
       if (isSafeToLoadUnconditionally(Load->getPointerOperand(),
-                                      Load->getType(), Load->getAlign(), DL))
+                                      Load->getType(), Load->getAlign(), DL,
+                                      nullptr))
         continue;
 
       if (NonAffineRegion->contains(Load) &&
@@ -498,7 +496,7 @@ bool ScopDetection::onlyValidRequiredInvariantLoads(
     }
   }
 
-  Context.RequiredILS.insert(RequiredILS.begin(), RequiredILS.end());
+  Context.RequiredILS.insert_range(RequiredILS);
 
   return true;
 }
@@ -518,7 +516,7 @@ bool ScopDetection::involvesMultiplePtrs(const SCEV *S0, const SCEV *S1,
     if (!V->getType()->isPointerTy())
       continue;
 
-    auto *PtrSCEV = SE.getSCEVAtScope(V, Scope);
+    const SCEV *PtrSCEV = SE.getSCEVAtScope(V, Scope);
     if (isa<SCEVConstant>(PtrSCEV))
       continue;
 
@@ -526,7 +524,7 @@ bool ScopDetection::involvesMultiplePtrs(const SCEV *S0, const SCEV *S1,
     if (!BasePtr)
       return true;
 
-    auto *BasePtrVal = BasePtr->getValue();
+    Value *BasePtrVal = BasePtr->getValue();
     if (PtrVals.insert(BasePtrVal).second) {
       for (auto *PtrVal : PtrVals)
         if (PtrVal != BasePtrVal && !AA.isNoAlias(PtrVal, BasePtrVal))
@@ -704,8 +702,8 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
     return false;
 
   if (isDebugCall(&CI)) {
-    LLVM_DEBUG(dbgs() << "Allow call to debug function: "
-                      << CalledFunction->getName() << '\n');
+    POLLY_DEBUG(dbgs() << "Allow call to debug function: "
+                       << CalledFunction->getName() << '\n');
     return true;
   }
 
@@ -718,7 +716,8 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
 
         // Bail if a pointer argument has a base address not known to
         // ScalarEvolution. Note that a zero pointer is acceptable.
-        auto *ArgSCEV = SE.getSCEVAtScope(Arg, LI.getLoopFor(CI.getParent()));
+        const SCEV *ArgSCEV =
+            SE.getSCEVAtScope(Arg, LI.getLoopFor(CI.getParent()));
         if (ArgSCEV->isZero())
           continue;
 
@@ -889,7 +888,7 @@ ScopDetection::getDelinearizationTerms(DetectionContext &Context,
         if (auto *AF2 = dyn_cast<SCEVMulExpr>(Op)) {
           SmallVector<const SCEV *, 0> Operands;
 
-          for (auto *MulOp : AF2->operands()) {
+          for (const SCEV *MulOp : AF2->operands()) {
             if (auto *Const = dyn_cast<SCEVConstant>(MulOp))
               Operands.push_back(Const);
             if (auto *Unknown = dyn_cast<SCEVUnknown>(MulOp)) {
@@ -1149,6 +1148,8 @@ bool ScopDetection::isValidAccess(Instruction *Inst, const SCEV *AF,
       // sure the base pointer is not an instruction defined inside the scop.
       // However, we can ignore loads that will be hoisted.
 
+      auto ASPointers = AS.getPointers();
+
       InvariantLoadsSetTy VariantLS, InvariantLS;
       // In order to detect loads which are dependent on other invariant loads
       // as invariant, we use fixed-point iteration method here i.e we iterate
@@ -1158,8 +1159,8 @@ bool ScopDetection::isValidAccess(Instruction *Inst, const SCEV *AF,
         const unsigned int VariantSize = VariantLS.size(),
                            InvariantSize = InvariantLS.size();
 
-        for (const auto &Ptr : AS) {
-          Instruction *Inst = dyn_cast<Instruction>(Ptr.getValue());
+        for (const Value *Ptr : ASPointers) {
+          Instruction *Inst = dyn_cast<Instruction>(const_cast<Value *>(Ptr));
           if (Inst && Context.CurRegion.contains(Inst)) {
             auto *Load = dyn_cast<LoadInst>(Inst);
             if (Load && InvariantLS.count(Load))
@@ -1362,7 +1363,7 @@ bool ScopDetection::isValidLoop(Loop *L, DetectionContext &Context) {
 ScopDetection::LoopStats
 ScopDetection::countBeneficialSubLoops(Loop *L, ScalarEvolution &SE,
                                        unsigned MinProfitableTrips) {
-  auto *TripCount = SE.getBackedgeTakenCount(L);
+  const SCEV *TripCount = SE.getBackedgeTakenCount(L);
 
   int NumLoops = 1;
   int MaxLoopDepth = 1;
@@ -1484,16 +1485,17 @@ Region *ScopDetection::expandRegion(Region &R) {
   std::unique_ptr<Region> LastValidRegion;
   auto ExpandedRegion = std::unique_ptr<Region>(R.getExpandedRegion());
 
-  LLVM_DEBUG(dbgs() << "\tExpanding " << R.getNameStr() << "\n");
+  POLLY_DEBUG(dbgs() << "\tExpanding " << R.getNameStr() << "\n");
 
   while (ExpandedRegion) {
     BBPair P = getBBPairForRegion(ExpandedRegion.get());
     std::unique_ptr<DetectionContext> &Entry = DetectionContextMap[P];
     Entry = std::make_unique<DetectionContext>(*ExpandedRegion, AA,
                                                /*Verifying=*/false);
-    DetectionContext &Context = *Entry.get();
+    DetectionContext &Context = *Entry;
 
-    LLVM_DEBUG(dbgs() << "\t\tTrying " << ExpandedRegion->getNameStr() << "\n");
+    POLLY_DEBUG(dbgs() << "\t\tTrying " << ExpandedRegion->getNameStr()
+                       << "\n");
     // Only expand when we did not collect errors.
 
     if (!Context.Log.hasErrors()) {
@@ -1527,7 +1529,7 @@ Region *ScopDetection::expandRegion(Region &R) {
     }
   }
 
-  LLVM_DEBUG({
+  POLLY_DEBUG({
     if (LastValidRegion)
       dbgs() << "\tto " << LastValidRegion->getNameStr() << "\n";
     else
@@ -1548,7 +1550,7 @@ static bool regionWithoutLoops(Region &R, LoopInfo &LI) {
 void ScopDetection::removeCachedResultsRecursively(const Region &R) {
   for (auto &SubRegion : R) {
     if (ValidRegions.count(SubRegion.get())) {
-      removeCachedResults(*SubRegion.get());
+      removeCachedResults(*SubRegion);
     } else
       removeCachedResultsRecursively(*SubRegion);
   }
@@ -1562,7 +1564,7 @@ void ScopDetection::findScops(Region &R) {
   std::unique_ptr<DetectionContext> &Entry =
       DetectionContextMap[getBBPairForRegion(&R)];
   Entry = std::make_unique<DetectionContext>(R, AA, /*Verifying=*/false);
-  DetectionContext &Context = *Entry.get();
+  DetectionContext &Context = *Entry;
 
   bool DidBailout = true;
   if (!PollyProcessUnprofitable && regionWithoutLoops(R, LI))
@@ -1693,6 +1695,8 @@ bool ScopDetection::hasPossiblyDistributableLoop(
     DetectionContext &Context) const {
   for (auto *BB : Context.CurRegion.blocks()) {
     auto *L = LI.getLoopFor(BB);
+    if (!L)
+      continue;
     if (!Context.CurRegion.contains(L))
       continue;
     if (Context.BoxedLoopsSet.count(L))
@@ -1748,10 +1752,11 @@ bool ScopDetection::isProfitableRegion(DetectionContext &Context) const {
 bool ScopDetection::isValidRegion(DetectionContext &Context) {
   Region &CurRegion = Context.CurRegion;
 
-  LLVM_DEBUG(dbgs() << "Checking region: " << CurRegion.getNameStr() << "\n\t");
+  POLLY_DEBUG(dbgs() << "Checking region: " << CurRegion.getNameStr()
+                     << "\n\t");
 
   if (!PollyAllowFullFunction && CurRegion.isTopLevelRegion()) {
-    LLVM_DEBUG(dbgs() << "Top level region is invalid\n");
+    POLLY_DEBUG(dbgs() << "Top level region is invalid\n");
     Context.IsInvalid = true;
     return false;
   }
@@ -1759,14 +1764,14 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) {
   DebugLoc DbgLoc;
   if (CurRegion.getExit() &&
       isa<UnreachableInst>(CurRegion.getExit()->getTerminator())) {
-    LLVM_DEBUG(dbgs() << "Unreachable in exit\n");
+    POLLY_DEBUG(dbgs() << "Unreachable in exit\n");
     return invalid<ReportUnreachableInExit>(Context, /*Assert=*/true,
                                             CurRegion.getExit(), DbgLoc);
   }
 
   if (!OnlyRegion.empty() &&
       !CurRegion.getEntry()->getName().count(OnlyRegion)) {
-    LLVM_DEBUG({
+    POLLY_DEBUG({
       dbgs() << "Region entry does not match -polly-only-region";
       dbgs() << "\n";
     });
@@ -1800,7 +1805,7 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) {
     return invalid<ReportIrreducibleRegion>(Context, /*Assert=*/true,
                                             &CurRegion, DbgLoc);
 
-  LLVM_DEBUG(dbgs() << "OK\n");
+  POLLY_DEBUG(dbgs() << "OK\n");
   return true;
 }
 
@@ -1825,7 +1830,7 @@ void ScopDetection::printLocations(Function &F) {
 
 void ScopDetection::emitMissedRemarks(const Function &F) {
   for (auto &DIt : DetectionContextMap) {
-    DetectionContext &DC = *DIt.getSecond().get();
+    DetectionContext &DC = *DIt.getSecond();
     if (DC.Log.hasErrors())
       emitRejectionRemarks(DIt.getFirst(), DC.Log, ORE);
   }
@@ -1974,52 +1979,11 @@ void ScopDetection::verifyAnalysis() {
     verifyRegion(*R);
 }
 
-bool ScopDetectionWrapperPass::runOnFunction(Function &F) {
-  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  auto &RI = getAnalysis<RegionInfoPass>().getRegionInfo();
-  auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-  auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-
-  Result = std::make_unique<ScopDetection>(DT, SE, LI, RI, AA, ORE);
-  Result->detect(F);
-  return false;
-}
-
-void ScopDetectionWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<LoopInfoWrapperPass>();
-  AU.addRequiredTransitive<ScalarEvolutionWrapperPass>();
-  AU.addRequired<DominatorTreeWrapperPass>();
-  AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-  // We also need AA and RegionInfo when we are verifying analysis.
-  AU.addRequiredTransitive<AAResultsWrapperPass>();
-  AU.addRequiredTransitive<RegionInfoPass>();
-  AU.setPreservesAll();
-}
-
-void ScopDetectionWrapperPass::print(raw_ostream &OS, const Module *) const {
-  for (const Region *R : Result->ValidRegions)
-    OS << "Valid Region for Scop: " << R->getNameStr() << '\n';
-
-  OS << "\n";
-}
-
-ScopDetectionWrapperPass::ScopDetectionWrapperPass() : FunctionPass(ID) {
-  // Disable runtime alias checks if we ignore aliasing all together.
-  if (IgnoreAliasing)
-    PollyUseRuntimeAliasChecks = false;
-}
-
 ScopAnalysis::ScopAnalysis() {
   // Disable runtime alias checks if we ignore aliasing all together.
   if (IgnoreAliasing)
     PollyUseRuntimeAliasChecks = false;
 }
-
-void ScopDetectionWrapperPass::releaseMemory() { Result.reset(); }
-
-char ScopDetectionWrapperPass::ID;
 
 AnalysisKey ScopAnalysis::Key;
 
@@ -2046,66 +2010,3 @@ PreservedAnalyses ScopAnalysisPrinterPass::run(Function &F,
   OS << "\n";
   return PreservedAnalyses::all();
 }
-
-Pass *polly::createScopDetectionWrapperPassPass() {
-  return new ScopDetectionWrapperPass();
-}
-
-INITIALIZE_PASS_BEGIN(ScopDetectionWrapperPass, "polly-detect",
-                      "Polly - Detect static control parts (SCoPs)", false,
-                      false);
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(RegionInfoPass);
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass);
-INITIALIZE_PASS_END(ScopDetectionWrapperPass, "polly-detect",
-                    "Polly - Detect static control parts (SCoPs)", false, false)
-
-//===----------------------------------------------------------------------===//
-
-namespace {
-/// Print result from ScopDetectionWrapperPass.
-class ScopDetectionPrinterLegacyPass final : public FunctionPass {
-public:
-  static char ID;
-
-  ScopDetectionPrinterLegacyPass() : ScopDetectionPrinterLegacyPass(outs()) {}
-
-  explicit ScopDetectionPrinterLegacyPass(llvm::raw_ostream &OS)
-      : FunctionPass(ID), OS(OS) {}
-
-  bool runOnFunction(Function &F) override {
-    ScopDetectionWrapperPass &P = getAnalysis<ScopDetectionWrapperPass>();
-
-    OS << "Printing analysis '" << P.getPassName() << "' for function '"
-       << F.getName() << "':\n";
-    P.print(OS);
-
-    return false;
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    FunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<ScopDetectionWrapperPass>();
-    AU.setPreservesAll();
-  }
-
-private:
-  llvm::raw_ostream &OS;
-};
-
-char ScopDetectionPrinterLegacyPass::ID = 0;
-} // namespace
-
-Pass *polly::createScopDetectionPrinterLegacyPass(raw_ostream &OS) {
-  return new ScopDetectionPrinterLegacyPass(OS);
-}
-
-INITIALIZE_PASS_BEGIN(ScopDetectionPrinterLegacyPass, "polly-print-detect",
-                      "Polly - Print static control parts (SCoPs)", false,
-                      false);
-INITIALIZE_PASS_DEPENDENCY(ScopDetectionWrapperPass);
-INITIALIZE_PASS_END(ScopDetectionPrinterLegacyPass, "polly-print-detect",
-                    "Polly - Print static control parts (SCoPs)", false, false)

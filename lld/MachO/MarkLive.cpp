@@ -16,8 +16,6 @@
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Support/TimeProfiler.h"
 
-#include "mach-o/compact_unwind_encoding.h"
-
 namespace lld::macho {
 
 using namespace llvm;
@@ -110,10 +108,10 @@ void MarkLiveImpl<RecordWhyLive>::addSym(
     if (!config->whyLive.empty() && config->whyLive.match(s->getName()))
       printWhyLive(s, prev);
   if (auto *d = dyn_cast<Defined>(s)) {
-    if (d->isec)
-      enqueue(d->isec, d->value, prev);
-    if (d->unwindEntry)
-      enqueue(d->unwindEntry, 0, prev);
+    if (d->isec())
+      enqueue(d->isec(), d->value, prev);
+    if (d->unwindEntry())
+      enqueue(d->unwindEntry(), 0, prev);
   }
 }
 
@@ -160,7 +158,7 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
         if (auto *s = r.referent.dyn_cast<Symbol *>())
           addSym(s, entry);
         else
-          enqueue(r.referent.get<InputSection *>(), r.addend, entry);
+          enqueue(cast<InputSection *>(r.referent), r.addend, entry);
       }
       for (Defined *d : getInputSection(entry)->symbols)
         addSym(d, entry);
@@ -179,11 +177,11 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
           if (s->isLive()) {
             InputSection *referentIsec = nullptr;
             if (auto *d = dyn_cast<Defined>(s))
-              referentIsec = d->isec;
+              referentIsec = d->isec();
             enqueue(isec, 0, makeEntry(referentIsec, nullptr));
           }
         } else {
-          auto *referentIsec = r.referent.get<InputSection *>();
+          auto *referentIsec = cast<InputSection *>(r.referent);
           if (referentIsec->isLive(r.addend))
             enqueue(isec, 0, makeEntry(referentIsec, nullptr));
         }

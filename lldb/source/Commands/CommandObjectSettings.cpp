@@ -237,48 +237,62 @@ private:
 };
 
 // CommandObjectSettingsShow -- Show current values
+#define LLDB_OPTIONS_settings_show
+#include "CommandOptions.inc"
 
 class CommandObjectSettingsShow : public CommandObjectParsed {
 public:
   CommandObjectSettingsShow(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "settings show",
                             "Show matching debugger settings and their current "
-                            "values.  Defaults to showing all settings.",
-                            nullptr) {
-    CommandArgumentEntry arg1;
-    CommandArgumentData var_name_arg;
-
-    // Define the first (and only) variant of this arg.
-    var_name_arg.arg_type = eArgTypeSettingVariableName;
-    var_name_arg.arg_repetition = eArgRepeatOptional;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg1.push_back(var_name_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg1);
+                            "values.  Defaults to showing all settings.") {
+    AddSimpleArgumentList(eArgTypeSettingVariableName, eArgRepeatOptional);
   }
 
   ~CommandObjectSettingsShow() override = default;
 
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eSettingsNameCompletion, request,
-        nullptr);
-  }
+  Options *GetOptions() override { return &m_options; }
+
+  class CommandOptions : public Options {
+  public:
+    ~CommandOptions() override = default;
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      const int short_option = m_getopt_table[option_idx].val;
+      switch (short_option) {
+      case 'd':
+        m_include_defaults = true;
+        break;
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+      return {};
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_include_defaults = false;
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return g_settings_show_options;
+    }
+
+    bool m_include_defaults = false;
+  };
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     result.SetStatus(eReturnStatusSuccessFinishResult);
 
+    uint32_t dump_mask = OptionValue::eDumpGroupValue;
+    if (m_options.m_include_defaults)
+      dump_mask |= OptionValue::eDumpOptionDefaultValue;
+
     if (!args.empty()) {
       for (const auto &arg : args) {
         Status error(GetDebugger().DumpPropertyValue(
-            &m_exe_ctx, result.GetOutputStream(), arg.ref(),
-            OptionValue::eDumpGroupValue));
+            &m_exe_ctx, result.GetOutputStream(), arg.ref(), dump_mask));
         if (error.Success()) {
           result.GetOutputStream().EOL();
         } else {
@@ -287,9 +301,12 @@ protected:
       }
     } else {
       GetDebugger().DumpAllPropertyValues(&m_exe_ctx, result.GetOutputStream(),
-                                          OptionValue::eDumpGroupValue);
+                                          dump_mask);
     }
   }
+
+private:
+  CommandOptions m_options;
 };
 
 // CommandObjectSettingsWrite -- Write settings to file
@@ -305,19 +322,7 @@ public:
             "current values to a file that can be read in with "
             "\"settings read\". Defaults to writing all settings.",
             nullptr) {
-    CommandArgumentEntry arg1;
-    CommandArgumentData var_name_arg;
-
-    // Define the first (and only) variant of this arg.
-    var_name_arg.arg_type = eArgTypeSettingVariableName;
-    var_name_arg.arg_repetition = eArgRepeatOptional;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg1.push_back(var_name_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeSettingVariableName, eArgRepeatOptional);
   }
 
   ~CommandObjectSettingsWrite() override = default;
@@ -1005,19 +1010,7 @@ public:
             interpreter, "settings clear",
             "Clear a debugger setting array, dictionary, or string. "
             "If '-a' option is specified, it clears all settings.", nullptr) {
-    CommandArgumentEntry arg;
-    CommandArgumentData var_name_arg;
-
-    // Define the first (and only) variant of this arg.
-    var_name_arg.arg_type = eArgTypeSettingVariableName;
-    var_name_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(var_name_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeSettingVariableName);
   }
 
   ~CommandObjectSettingsClear() override = default;

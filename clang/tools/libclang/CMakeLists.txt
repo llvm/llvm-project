@@ -20,7 +20,6 @@ endif()
 #       to clean up previous inconsistencies.
 
 set(SOURCES
-  ARCMigrate.cpp
   BuildSystem.cpp
   CIndex.cpp
   CIndexCXX.cpp
@@ -43,6 +42,7 @@ set(SOURCES
   Indexing.cpp
   FatalErrorHandler.cpp
   Rewrite.cpp
+  Obsolete.cpp
 
   ADDITIONAL_HEADERS
   CIndexDiagnostic.h
@@ -65,15 +65,12 @@ set(LIBS
   clangFrontend
   clangIndex
   clangLex
+  clangOptions
   clangRewrite
   clangSema
   clangSerialization
   clangTooling
 )
-
-if (CLANG_ENABLE_ARCMT)
-  list(APPEND LIBS clangARCMigrate)
-endif ()
 
 if (HAVE_LIBDL)
   list(APPEND LIBS ${CMAKE_DL_LIBS})
@@ -97,7 +94,7 @@ if(MSVC)
   set(LLVM_EXPORTED_SYMBOL_FILE)
 endif()
 
-if (UNIX AND NOT APPLE)
+if (UNIX AND NOT APPLE AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "AIX" AND NOT CYGWIN)
   set(LLVM_EXPORTED_SYMBOL_FILE)
   set(USE_VERSION_SCRIPT ${LLVM_HAVE_LINK_VERSION_SCRIPT})
 endif()
@@ -111,7 +108,7 @@ if (LLVM_EXPORTED_SYMBOL_FILE)
                      DEPENDS ${LIBCLANG_VERSION_SCRIPT_FILE})
 endif()
 
-if(LLVM_ENABLE_PIC OR (WIN32 AND NOT LIBCLANG_BUILD_STATIC))
+if(LLVM_ENABLE_PIC OR ((WIN32 OR CYGWIN) AND NOT LIBCLANG_BUILD_STATIC))
   set(ENABLE_SHARED SHARED)
 endif()
 
@@ -129,8 +126,9 @@ else()
   set(output_name "clang")
 endif()
 
-# libclang requires headers which need _ALL_SOURCE to build on AIX
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+    set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
+    # libclang requires headers which need _ALL_SOURCE to build on AIX
     remove_definitions("-D_XOPEN_SOURCE=700")
 endif()
 
@@ -166,6 +164,10 @@ if(ENABLE_SHARED)
       PROPERTIES
       VERSION ${LIBCLANG_LIBRARY_VERSION}
       DEFINE_SYMBOL _CINDEX_LIB_)
+      # Avoid declaring clang c++ symbols that are statically linked into libclang as dllimport'ed.
+      # If llvm/libclang-cpp dll is also being built for windows clang c++ symbols will still be
+      # implicitly be exported from libclang.
+      target_compile_definitions(libclang PRIVATE CLANG_BUILD_STATIC)
   elseif(APPLE)
     set(LIBCLANG_LINK_FLAGS " -Wl,-compatibility_version -Wl,1")
     set(LIBCLANG_LINK_FLAGS "${LIBCLANG_LINK_FLAGS} -Wl,-current_version -Wl,${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
@@ -185,16 +187,24 @@ if(ENABLE_SHARED)
     endif()
   endif()
   if (USE_VERSION_SCRIPT)
-    target_link_options(libclang PRIVATE "-Wl,--version-script,${CMAKE_CURRENT_SOURCE_DIR}/libclang.map")
-    # The Solaris 11.4 linker supports a subset of GNU ld version scripts,
-    # but requires a special option to enable it.
-    if (${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
-      target_link_options(libclang PRIVATE "-Wl,-z,gnu-version-script-compat")
+    if ("${CMAKE_SYSTEM_NAME}" MATCHES "SunOS")
+      include(CheckLinkerFlag)
+      # The Solaris 11.4 linker supports a subset of GNU ld version scripts,
+      # but requires a special option to enable it.
+      check_linker_flag(CXX "-Wl,-z,gnu-version-script-compat"
+                        LINKER_SUPPORTS_Z_GNU_VERSION_SCRIPT_COMPAT)
+      # Older Solaris (and illumos) linker does not support GNU ld version scripts
+      # and does not support GNU version script compat.
+      if (LINKER_SUPPORTS_Z_GNU_VERSION_SCRIPT_COMPAT)
+        target_link_options(libclang PRIVATE "-Wl,--version-script,${CMAKE_CURRENT_SOURCE_DIR}/libclang.map")
+        target_link_options(libclang PRIVATE "-Wl,-z,gnu-version-script-compat")
+      else()
+        target_link_options(libclang PRIVATE "-Wl,-M,${CMAKE_CURRENT_SOURCE_DIR}/libclang.map")
+      endif()
+    else()
+      target_link_options(libclang PRIVATE "-Wl,--version-script,${CMAKE_CURRENT_SOURCE_DIR}/libclang.map")
     endif()
     # Ensure that libclang.so gets rebuilt when the linker script changes.
-    set_property(SOURCE ARCMigrate.cpp APPEND PROPERTY
-                 OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libclang.map)
-
     set_target_properties(libclang PROPERTIES
                           VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX}
                           ${LIBCLANG_SOVERSION_ARG})
@@ -218,7 +228,7 @@ install(DIRECTORY ../../include/clang-c
 # component and an install-component target, so add a dummy libclang-headers
 # target to allow using it in LLVM_DISTRIBUTION_COMPONENTS.
 add_custom_target(libclang-headers)
-set_target_properties(libclang-headers PROPERTIES FOLDER "Misc")
+set_target_properties(libclang-headers PROPERTIES FOLDER "Clang/Resources")
 
 if (NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-libclang-headers

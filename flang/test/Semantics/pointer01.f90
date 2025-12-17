@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 module m
   real mobj
  contains
@@ -7,7 +7,6 @@ module m
 end module
 program main
   use m
-  !PORTABILITY: Name 'main' declared in a main program should not have the same name as the main program
   pointer main
   !ERROR: Cannot change POINTER attribute on use-associated 'mobj'
   pointer mobj

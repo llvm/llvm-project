@@ -6,31 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/types/fenv_t.h"
 #include "src/fenv/feholdexcept.h"
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/macros/properties/architectures.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPExceptMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <fenv.h>
+#include "excepts.h"
 
-TEST(LlvmLibcFEnvTest, RaiseAndCrash) {
-#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) ||                                    \
-    defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
-  // Few Arm HW implementations do not trap exceptions. We skip this test
-  // completely on such HW.
-  //
-  // Whether HW supports trapping exceptions or not is deduced by enabling an
-  // exception and reading back to see if the exception got enabled. If the
-  // exception did not get enabled, then it means that the HW does not support
-  // trapping exceptions.
-  LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);
-  LIBC_NAMESPACE::fputil::enable_except(FE_DIVBYZERO);
-  if (LIBC_NAMESPACE::fputil::get_except() == 0)
-    return;
-#endif // Architectures where exception trapping is not supported
+using LlvmLibcFEnvTest = LIBC_NAMESPACE::testing::FEnvSafeTest;
 
+TEST_F(LlvmLibcFEnvTest, RaiseAndCrash) {
   int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
                    FE_UNDERFLOW};
 
@@ -44,6 +33,7 @@ TEST(LlvmLibcFEnvTest, RaiseAndCrash) {
     // should not crash/invoke the exception handler.
     ASSERT_EQ(LIBC_NAMESPACE::fputil::raise_except(e), 0);
 
+#if defined(LIBC_TRAP_ON_RAISE_FP_EXCEPT) && defined(__SSE__)
     ASSERT_RAISES_FP_EXCEPT([=] {
       // When we put back the saved env, which has the exception enabled, it
       // should crash with SIGFPE. Note that we set the old environment
@@ -55,6 +45,7 @@ TEST(LlvmLibcFEnvTest, RaiseAndCrash) {
       LIBC_NAMESPACE::fputil::set_env(&env);
       LIBC_NAMESPACE::fputil::raise_except(e);
     });
+#endif // LIBC_TRAP_ON_RAISE_FP_EXCEPT
 
     // Cleanup
     LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);

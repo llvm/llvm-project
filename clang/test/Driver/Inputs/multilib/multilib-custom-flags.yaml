@@ -1,0 +1,13 @@
+MultilibVersion: 1.0
+
+Variants:
+
+Mappings:
+
+Flags:
+- Name: flag
+  Values:
+  - Name: foo
+  - Name: bar
+  Default: foo
+...

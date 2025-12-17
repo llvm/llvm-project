@@ -7,10 +7,9 @@
 # to receive an approval from a "code owner" in particular -- any LLVM project
 # member can approve pull requests.
 #
-# Note that GitHub's concept of "code owner" is independent from LLVM's own
-# "code owner" concept, they merely happen to share terminology. See
-# https://llvm.org/docs/DeveloperPolicy.html#code-owners, as well as the
-# CODE_OWNERS.txt files in the respective subproject directories.
+# This is independent of LLVM's own "maintainer" concept.
+# See https://llvm.org/docs/DeveloperPolicy.html#maintainers as well as the
+# Maintainers.* files in the the respective subproject directories.
 
 /libcxx/ @llvm/reviewers-libcxx
 /libcxxabi/ @llvm/reviewers-libcxxabi
@@ -18,17 +17,174 @@
 /runtimes/ @llvm/reviewers-libcxx
 
 /llvm/lib/Analysis/BasicAliasAnalysis.cpp @nikic
+/llvm/lib/Analysis/HashRecognize.cpp @artagnon @pfusik
 /llvm/lib/Analysis/InstructionSimplify.cpp @nikic
 /llvm/lib/Analysis/LazyValueInfo.cpp @nikic
 /llvm/lib/Analysis/ScalarEvolution.cpp @nikic
 /llvm/lib/Analysis/ValueTracking.cpp @nikic
 /llvm/lib/IR/ConstantRange.cpp @nikic
+/llvm/lib/IR/Core.cpp @nikic
 /llvm/lib/Transforms/Scalar/CorrelatedValuePropagation.cpp @nikic
 /llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
 /llvm/lib/Transforms/InstCombine/ @nikic
+
+# AMDGPU buffer pointer lowerings
+/llvm/lib/Target/AMDGPU/AMDGPULowerBufferFatPointers.cpp @krzysz00
 
 /clang/test/CXX/drs/ @Endilll
 /clang/www/cxx_dr_status.html @Endilll
 /clang/www/make_cxx_dr_status @Endilll
 
+/clang/include/clang/CIR @lanza @bcardosolopes @xlauko @andykaylor
+/clang/lib/CIR @lanza @bcardosolopes @xlauko @andykaylor
+/clang/tools/cir-* @lanza @bcardosolopes @xlauko @andykaylor
+
 /lldb/ @JDevlieghere
+
+# MLIR Interfaces.
+/mlir/include/mlir/Interfaces/TilingInterface.* @MaheshRavishankar @nicolasvasilache
+/mlir/lib/Interfaces/TilingInterface.* @MaheshRavishankar @nicolasvasilache
+/mlir/include/mlir/Interfaces/ValueBoundsOpInterface.* @matthias-springer
+/mlir/lib/Interfaces/ValueBoundsOpInterface.* @matthias-springer
+/mlir/**/ValueBoundsOpInterfaceImpl.* @matthias-springer
+/mlir/include/mlir/Interfaces/RuntimeVerifiableOpInterface.* @matthias-springer
+/mlir/lib/Interfaces/RuntimeVerifiableOpInterface.* @matthias-springer
+/mlir/**/RuntimeVerifiableOpInterfaceImpl.* @matthias-springer
+/mlir/include/mlir/Interfaces/SubsetOpInterface.* @matthias-springer
+/mlir/lib/Interfaces/SubsetOpInterface.* @matthias-springer
+/mlir/**/SubsetOpInterfaceImpl.* @matthias-springer
+/mlir/include/mlir/Interfaces/DestinationStyleOpInterface.* @matthias-springer
+/mlir/lib/Interfaces/DestinationStyleOpInterface.* @matthias-springer
+
+# AMDGPU and ROCDL dialects in MLIR.
+/mlir/include/mlir/Dialect/AMDGPU @krzysz00 @kuhar
+/mlir/lib/Dialect/AMDGPU @krzysz00 @kuhar
+/mlir/lib/Conversion/*AMDGPU* @krzysz00 @kuhar
+/mlir/lib/Conversion/*ToROCDL @krzysz00 @kuhar
+/mlir/include/mlir/Dialect/LLVMIR/ROCDL* @krzysz00 @kuhar
+
+# Arith dialect in MLIR.
+/mlir/include/mlir/Dialect/Arith @kuhar
+/mlir/lib/Dialect/Arith @kuhar
+/mlir/lib/Conversion/ArithTo* @kuhar
+
+# XeGPU and XeVM dialects in MLIR.
+/mlir/include/mlir/Dialect/XeGPU @charithaintc @Jianhui-Li
+/mlir/lib/Dialect/XeGPU @charithaintc @Jianhui-Li
+/mlir/lib/Conversion/*XeGPU* @charithaintc @Jianhui-Li
+/mlir/include/mlir/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li
+/mlir/lib/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li
+/mlir/include/mlir/Dialect/XeGPU/TransformOps @charithaintc @Jianhui-Li @tkarna
+/mlir/lib/Dialect/XeGPU/TransformOps @charithaintc @Jianhui-Li @tkarna
+/mlir/include/mlir/Dialect/LLVMIR/XeVM* @silee2
+/mlir/lib/Dialect/LLVMIR/IR/XeVM @silee2
+/mlir/lib/Conversion/*XeVM* @silee2
+
+# Bufferization Dialect in MLIR.
+/mlir/include/mlir/Dialect/Bufferization @matthias-springer
+/mlir/lib/Dialect/Bufferization @matthias-springer
+/mlir/**/BufferizableOpInterfaceImpl.* @matthias-springer
+/mlir/Dialect/*/Transforms/Bufferize.cpp @matthias-springer
+
+# DLTI Dialect in MLIR
+/mlir/**/Dialect/DLTI @rolfmorel
+/mlir/**/DataLayoutInterfaces.* @rolfmorel
+
+# Linalg Dialect in MLIR.
+/mlir/include/mlir/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
+/mlir/lib/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
+/mlir/lib/Dialect/Linalg/Transforms/DecomposeLinalgOps.cpp @MaheshRavishankar @nicolasvasilache
+/mlir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @dcaballe @MaheshRavishankar @nicolasvasilache
+/mlir/lib/Dialect/Linalg/Transforms/ElementwiseOpFusion.cpp @MaheshRavishankar @nicolasvasilache
+/mlir/lib/Dialect/Linalg/Transforms/DataLayoutPropagation.cpp @nicolasvasilache
+/mlir/lib/Dialect/Linalg/Transforms/Transforms.cpp @dcaballe @nicolasvasilache
+/mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp @banach-space @dcaballe @nicolasvasilache @Groverkss
+
+# MemRef Dialect in MLIR.
+/mlir/lib/Dialect/MemRef/Transforms/EmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
+
+# Vector Dialect in MLIR.
+/mlir/**/*AMX* @aartbik @dcaballe
+/mlir/**/*Neon* @banach-space @dcaballe @nicolasvasilache
+/mlir/**/*SME* @banach-space @dcaballe @nicolasvasilache
+/mlir/**/*SVE* @banach-space @dcaballe @nicolasvasilache
+/mlir/**/*VectorInterfaces* @dcaballe @nicolasvasilache
+/mlir/**/*VectorToSCF* @banach-space @dcaballe @matthias-springer @nicolasvasilache
+/mlir/**/*VectorToLLVM* @banach-space @dcaballe @nicolasvasilache
+/mlir/**/*X86Vector* @aartbik @dcaballe @nicolasvasilache
+/mlir/include/mlir/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
+/mlir/include/mlir/Dialect/Vector/IR @kuhar
+/mlir/lib/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
+/mlir/lib/Dialect/Vector/Transforms/* @banach-space @dcaballe @nicolasvasilache
+/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @banach-space @dcaballe @MaheshRavishankar @nicolasvasilache
+/mlir/**/*EmulateNarrowType* @dcaballe
+
+# Presburger library in MLIR
+/mlir/**/*Presburger* @Groverkss @Superty
+
+# Tensor Dialect in MLIR.
+/mlir/lib/Dialect/Tensor/IR/TensorTilingInterfaceImpl.cpp @nicolasvasilache
+/mlir/lib/Dialect/Tensor/Transforms/* @nicolasvasilache
+
+# Transform Dialect in MLIR.
+/mlir/include/mlir/Dialect/Transform/* @ftynse @nicolasvasilache @rolfmorel
+/mlir/lib/Dialect/Transform/* @ftynse @nicolasvasilache @rolfmorel
+/mlir/**/*TransformOps* @ftynse @nicolasvasilache @rolfmorel
+
+# SPIR-V Dialect in MLIR.
+/mlir/**/SPIRV/ @antiagainst @kuhar
+/mlir/**/SPIRVTo*/ @antiagainst @kuhar
+/mlir/**/*ToSPIRV/ @antiagainst @kuhar
+/mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp @antiagainst @kuhar
+
+# MLIR Sparsifier.
+/mlir/**/*SparseTensor*/ @aartbik @PeimingLiu @yinying-lisa-li @matthias-springer
+
+# MLIR NVGPU Dialect
+/mlir/**/NVGPU*/ @grypp
+/mlir/test/**/CUDA/ @grypp
+
+# MLIR GPU Dialect
+/mlir/**/GPU*/ @fabianmcg
+
+# MLIR NVVM Dialect in MLIR
+/mlir/**/LLVMIR/**/BasicPtxBuilderInterface* @grypp
+/mlir/**/NVVM* @grypp
+
+# MLIR Index Dialect
+/mlir/**/Index* @mogball
+
+# MLIR Python Bindings
+/mlir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel
+/mlir/python/ @ftynse @makslevental @stellaraccident @rolfmorel
+/mlir/lib/Bindings/Python @makslevental @rolfmorel
+/mlir/include/Bindings/Python @makslevental @rolfmorel
+
+# MLIR Mem2Reg/SROA
+/mlir/**/Transforms/Mem2Reg.* @moxinilian
+/mlir/**/Transforms/SROA.* @moxinilian
+
+# MLIR IRDL-related
+/mlir/**/*IRDL* @moxinilian
+
+# BOLT
+/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @yota9 @paschalis-mpeis @yozhu
+
+# Bazel build system.
+/utils/bazel/ @rupprecht @keith @aaronmondal
+
+# InstallAPI and TextAPI
+/llvm/**/TextAPI/ @cyndyishida
+/clang/**/InstallAPI/ @cyndyishida
+/clang/tools/clang-installapi/ @cyndyishida
+
+# ExtractAPI
+/clang/**/ExtractAPI @QuietMisdreavus @snprajwal
+
+# DWARFLinker, dwarfutil, dsymutil
+/llvm/**/DWARFLinker/ @JDevlieghere
+/llvm/**/dsymutil/ @JDevlieghere
+/llvm/**/llvm-dwarfutil/ @JDevlieghere
+
+# libclang/Python bindings
+/clang/bindings/python @DeinAlptraum

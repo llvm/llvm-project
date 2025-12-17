@@ -13,6 +13,7 @@
 #include "MCTargetDesc/PPCInstPrinter.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
+#include "PPCMCAsmInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -47,7 +48,7 @@ FullRegNamesWithPercent("ppc-reg-with-percent-prefix", cl::Hidden,
 #define PRINT_ALIAS_INSTR
 #include "PPCGenAsmWriter.inc"
 
-void PPCInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void PPCInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   const char *RegName = getRegisterName(Reg);
   OS << RegName;
 }
@@ -81,7 +82,7 @@ void PPCInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   }
 
   // Check if the last operand is an expression with the variant kind
-  // VK_PPC_PCREL_OPT. If this is the case then this is a linker optimization
+  // VK_PCREL_OPT. If this is the case then this is a linker optimization
   // relocation and the .reloc directive needs to be added.
   unsigned LastOp = MI->getNumOperands() - 1;
   if (MI->getNumOperands() > 1) {
@@ -91,7 +92,7 @@ void PPCInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       const MCSymbolRefExpr *SymExpr =
           static_cast<const MCSymbolRefExpr *>(Expr);
 
-      if (SymExpr && SymExpr->getKind() == MCSymbolRefExpr::VK_PPC_PCREL_OPT) {
+      if (SymExpr && getSpecifier(SymExpr) == PPC::S_PCREL_OPT) {
         const MCSymbol &Symbol = SymExpr->getSymbol();
         if (MI->getOpcode() == PPC::PLDpc) {
           printInstruction(MI, Address, STI, O);
@@ -217,11 +218,10 @@ void PPCInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 
 void PPCInstPrinter::printPredicateOperand(const MCInst *MI, unsigned OpNo,
                                            const MCSubtargetInfo &STI,
-                                           raw_ostream &O,
-                                           const char *Modifier) {
+                                           raw_ostream &O, StringRef Modifier) {
   unsigned Code = MI->getOperand(OpNo).getImm();
 
-  if (StringRef(Modifier) == "cc") {
+  if (Modifier == "cc") {
     switch ((PPC::Predicate)Code) {
     case PPC::PRED_LT_MINUS:
     case PPC::PRED_LT_PLUS:
@@ -270,7 +270,7 @@ void PPCInstPrinter::printPredicateOperand(const MCInst *MI, unsigned OpNo,
     llvm_unreachable("Invalid predicate code");
   }
 
-  if (StringRef(Modifier) == "pm") {
+  if (Modifier == "pm") {
     switch ((PPC::Predicate)Code) {
     case PPC::PRED_LT:
     case PPC::PRED_LE:
@@ -308,7 +308,7 @@ void PPCInstPrinter::printPredicateOperand(const MCInst *MI, unsigned OpNo,
     llvm_unreachable("Invalid predicate code");
   }
 
-  assert(StringRef(Modifier) == "reg" &&
+  assert(Modifier == "reg" &&
          "Need to specify 'cc', 'pm' or 'reg' as predicate op modifier!");
   printOperand(MI, OpNo + 1, STI, O);
 }
@@ -430,6 +430,17 @@ void PPCInstPrinter::printS16ImmOperand(const MCInst *MI, unsigned OpNo,
     printOperand(MI, OpNo, STI, O);
 }
 
+void PPCInstPrinter::printS32ImmOperand(const MCInst *MI, unsigned OpNo,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  if (MI->getOperand(OpNo).isImm()) {
+    long long Value = MI->getOperand(OpNo).getImm();
+    assert(isInt<32>(Value) && "Invalid s32imm argument!");
+    O << (long long)Value;
+  } else
+    printOperand(MI, OpNo, STI, O);
+}
+
 void PPCInstPrinter::printS34ImmOperand(const MCInst *MI, unsigned OpNo,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
@@ -484,14 +495,17 @@ void PPCInstPrinter::printAbsBranchOperand(const MCInst *MI, unsigned OpNo,
   if (!MI->getOperand(OpNo).isImm())
     return printOperand(MI, OpNo, STI, O);
 
-  O << SignExtend32<32>((unsigned)MI->getOperand(OpNo).getImm() << 2);
+  uint64_t Imm = static_cast<uint64_t>(MI->getOperand(OpNo).getImm()) << 2;
+  if (!TT.isPPC64())
+    Imm = static_cast<uint32_t>(Imm);
+  O << formatHex(Imm);
 }
 
 void PPCInstPrinter::printcrbitm(const MCInst *MI, unsigned OpNo,
                                  const MCSubtargetInfo &STI, raw_ostream &O) {
-  unsigned CCReg = MI->getOperand(OpNo).getReg();
+  MCRegister CCReg = MI->getOperand(OpNo).getReg();
   unsigned RegNo;
-  switch (CCReg) {
+  switch (CCReg.id()) {
   default: llvm_unreachable("Unknown CR register");
   case PPC::CR0: RegNo = 0; break;
   case PPC::CR1: RegNo = 1; break;
@@ -572,22 +586,22 @@ void PPCInstPrinter::printTLSCall(const MCInst *MI, unsigned OpNo,
     RefExp = cast<MCSymbolRefExpr>(Op.getExpr());
 
   O << RefExp->getSymbol().getName();
-  // The variant kind VK_PPC_NOTOC needs to be handled as a special case
+  // The variant kind VK_NOTOC needs to be handled as a special case
   // because we do not want the assembly to print out the @notoc at the
   // end like __tls_get_addr(x@tlsgd)@notoc. Instead we want it to look
   // like __tls_get_addr@notoc(x@tlsgd).
-  if (RefExp->getKind() == MCSymbolRefExpr::VK_PPC_NOTOC)
-    O << '@' << MCSymbolRefExpr::getVariantKindName(RefExp->getKind());
+  if (getSpecifier(RefExp) == PPC::S_NOTOC)
+    O << '@' << MAI.getSpecifierName(RefExp->getKind());
   O << '(';
   printOperand(MI, OpNo + 1, STI, O);
   O << ')';
-  if (RefExp->getKind() != MCSymbolRefExpr::VK_None &&
-      RefExp->getKind() != MCSymbolRefExpr::VK_PPC_NOTOC)
-    O << '@' << MCSymbolRefExpr::getVariantKindName(RefExp->getKind());
+  if (getSpecifier(RefExp) != PPC::S_None &&
+      getSpecifier(RefExp) != PPC::S_NOTOC)
+    O << '@' << MAI.getSpecifierName(RefExp->getKind());
   if (Rhs) {
     SmallString<0> Buf;
     raw_svector_ostream Tmp(Buf);
-    Rhs->print(Tmp, &MAI);
+    MAI.printExpr(Tmp, *Rhs);
     if (isdigit(Buf[0]))
       O << '+';
     O << Buf;
@@ -616,11 +630,11 @@ bool PPCInstPrinter::showRegistersWithPercentPrefix(const char *RegName) const {
 /// getVerboseConditionalRegName - This method expands the condition register
 /// when requested explicitly or targetting Darwin.
 const char *
-PPCInstPrinter::getVerboseConditionRegName(unsigned RegNum,
+PPCInstPrinter::getVerboseConditionRegName(MCRegister Reg,
                                            unsigned RegEncoding) const {
   if (!FullRegNames && !MAI.useFullRegisterNames())
     return nullptr;
-  if (RegNum < PPC::CR0EQ || RegNum > PPC::CR7UN)
+  if (Reg < PPC::CR0EQ || Reg > PPC::CR7UN)
     return nullptr;
   const char *CRBits[] = {
     "lt", "gt", "eq", "un",
@@ -645,7 +659,7 @@ void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     if (!ShowVSRNumsAsVR)
       Reg = PPC::getRegNumForOperand(MII.get(MI->getOpcode()), Reg, OpNo);
 
@@ -668,5 +682,5 @@ void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   assert(Op.isExpr() && "unknown operand kind in printOperand");
-  Op.getExpr()->print(O, &MAI);
+  MAI.printExpr(O, *Op.getExpr());
 }

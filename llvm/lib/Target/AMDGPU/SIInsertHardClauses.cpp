@@ -36,20 +36,22 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "si-insert-hard-clauses"
 
+static cl::opt<unsigned>
+    HardClauseLengthLimit("amdgpu-hard-clause-length-limit",
+                          cl::desc("Maximum number of memory instructions to "
+                                   "place in the same hard clause"),
+                          cl::Hidden);
+
 namespace {
 
-// A clause length of 64 instructions could be encoded in the s_clause
-// instruction, but the hardware documentation (at least for GFX11) says that
-// 63 is the maximum allowed.
-constexpr unsigned MaxInstructionsInClause = 63;
-
 enum HardClauseType {
-  // For GFX10:
+  // For GFX10 and GFX1250:
 
   // Texture, buffer, global or scratch memory instructions.
   HARDCLAUSE_VMEM,
@@ -94,22 +96,16 @@ enum HardClauseType {
   HARDCLAUSE_ILLEGAL,
 };
 
-class SIInsertHardClauses : public MachineFunctionPass {
+class SIInsertHardClauses {
 public:
-  static char ID;
   const GCNSubtarget *ST = nullptr;
-
-  SIInsertHardClauses() : MachineFunctionPass(ID) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
 
   HardClauseType getHardClauseType(const MachineInstr &MI) {
     if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
-      if (ST->getGeneration() == AMDGPUSubtarget::GFX10) {
-        if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
+      if (ST->getGeneration() == AMDGPUSubtarget::GFX10 ||
+          ST->hasGFX1250Insts()) {
+        if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
+            SIInstrInfo::isSegmentSpecificFLAT(MI)) {
           if (ST->hasNSAClauseBug()) {
             const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
             if (Info && Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA)
@@ -120,20 +116,20 @@ public:
         if (SIInstrInfo::isFLAT(MI))
           return HARDCLAUSE_FLAT;
       } else {
-        assert(ST->getGeneration() >= AMDGPUSubtarget::GFX11);
         if (SIInstrInfo::isMIMG(MI)) {
           const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
           const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
               AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
           if (BaseInfo->BVH)
             return HARDCLAUSE_BVH;
-          if (BaseInfo->Sampler)
+          if (BaseInfo->Sampler || BaseInfo->MSAA)
             return HARDCLAUSE_MIMG_SAMPLE;
           return MI.mayLoad() ? MI.mayStore() ? HARDCLAUSE_MIMG_ATOMIC
                                               : HARDCLAUSE_MIMG_LOAD
                               : HARDCLAUSE_MIMG_STORE;
         }
-        if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
+        if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
+            SIInstrInfo::isSegmentSpecificFLAT(MI)) {
           return MI.mayLoad() ? MI.mayStore() ? HARDCLAUSE_VMEM_ATOMIC
                                               : HARDCLAUSE_VMEM_LOAD
                               : HARDCLAUSE_VMEM_STORE;
@@ -182,7 +178,8 @@ public:
   bool emitClause(const ClauseInfo &CI, const SIInstrInfo *SII) {
     if (CI.First == CI.Last)
       return false;
-    assert(CI.Length <= MaxInstructionsInClause && "Hard clause is too long!");
+    assert(CI.Length <= ST->maxHardClauseLength() &&
+           "Hard clause is too long!");
 
     auto &MBB = *CI.First->getParent();
     auto ClauseMI =
@@ -193,12 +190,17 @@ public:
     return true;
   }
 
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    if (skipFunction(MF.getFunction()))
-      return false;
-
+  bool run(MachineFunction &MF) {
     ST = &MF.getSubtarget<GCNSubtarget>();
     if (!ST->hasHardClauses())
+      return false;
+
+    unsigned MaxClauseLength = MF.getFunction().getFnAttributeAsParsedInteger(
+        "amdgpu-hard-clause-length-limit", 255);
+    if (HardClauseLengthLimit.getNumOccurrences())
+      MaxClauseLength = HardClauseLengthLimit;
+    MaxClauseLength = std::min(MaxClauseLength, ST->maxHardClauseLength());
+    if (MaxClauseLength <= 1)
       return false;
 
     const SIInstrInfo *SII = ST->getInstrInfo();
@@ -212,7 +214,7 @@ public:
 
         int64_t Dummy1;
         bool Dummy2;
-        unsigned Dummy3;
+        LocationSize Dummy3 = LocationSize::precise(0);
         SmallVector<const MachineOperand *, 4> BaseOps;
         if (Type <= LAST_REAL_HARDCLAUSE_TYPE) {
           if (!SII->getMemOperandsWithOffsetWidth(MI, BaseOps, Dummy1, Dummy2,
@@ -223,7 +225,7 @@ public:
           }
         }
 
-        if (CI.Length == MaxInstructionsInClause ||
+        if (CI.Length == MaxClauseLength ||
             (CI.Length && Type != HARDCLAUSE_INTERNAL &&
              Type != HARDCLAUSE_IGNORE &&
              (Type != CI.Type ||
@@ -232,7 +234,10 @@ public:
               // scheduler it limits the size of the cluster to avoid increasing
               // register pressure too much, but this pass runs after register
               // allocation so there is no need for that kind of limit.
-              !SII->shouldClusterMemOps(CI.BaseOps, BaseOps, 2, 2)))) {
+              // We also lie about the Offset and OffsetIsScalable parameters,
+              // as they aren't used in the SIInstrInfo implementation.
+              !SII->shouldClusterMemOps(CI.BaseOps, 0, false, BaseOps, 0, false,
+                                        2, 2)))) {
           // Finish the current clause.
           Changed |= emitClause(CI, SII);
           CI = ClauseInfo();
@@ -266,11 +271,40 @@ public:
   }
 };
 
+class SIInsertHardClausesLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  SIInsertHardClausesLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
+
+    return SIInsertHardClauses().run(MF);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+
 } // namespace
 
-char SIInsertHardClauses::ID = 0;
+PreservedAnalyses
+llvm::SIInsertHardClausesPass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  if (!SIInsertHardClauses().run(MF))
+    return PreservedAnalyses::all();
 
-char &llvm::SIInsertHardClausesID = SIInsertHardClauses::ID;
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
 
-INITIALIZE_PASS(SIInsertHardClauses, DEBUG_TYPE, "SI Insert Hard Clauses",
+char SIInsertHardClausesLegacy::ID = 0;
+
+char &llvm::SIInsertHardClausesID = SIInsertHardClausesLegacy::ID;
+
+INITIALIZE_PASS(SIInsertHardClausesLegacy, DEBUG_TYPE, "SI Insert Hard Clauses",
                 false, false)

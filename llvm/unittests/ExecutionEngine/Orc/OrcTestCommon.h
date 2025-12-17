@@ -17,6 +17,7 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/InProcessMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -46,14 +47,26 @@ namespace orc {
 // (5) V -- A JITDylib associated with ES.
 class CoreAPIsBasedStandardTest : public testing::Test {
 public:
-  ~CoreAPIsBasedStandardTest() {
+  ~CoreAPIsBasedStandardTest() override {
     if (auto Err = ES.endSession())
       ES.reportError(std::move(Err));
   }
 
 protected:
+  class OverridableDispatcher : public InPlaceTaskDispatcher {
+  public:
+    OverridableDispatcher(CoreAPIsBasedStandardTest &Parent) : Parent(Parent) {}
+    void dispatch(std::unique_ptr<Task> T) override;
+
+  private:
+    CoreAPIsBasedStandardTest &Parent;
+  };
+
+  std::unique_ptr<llvm::orc::ExecutorProcessControl>
+  makeEPC(std::shared_ptr<SymbolStringPool> SSP);
+
   std::shared_ptr<SymbolStringPool> SSP = std::make_shared<SymbolStringPool>();
-  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>(SSP)};
+  ExecutionSession ES{makeEPC(SSP)};
   JITDylib &JD = ES.createBareJITDylib("JD");
   SymbolStringPtr Foo = ES.intern("foo");
   SymbolStringPtr Bar = ES.intern("bar");
@@ -67,6 +80,48 @@ protected:
   ExecutorSymbolDef BarSym{BarAddr, JITSymbolFlags::Exported};
   ExecutorSymbolDef BazSym{BazAddr, JITSymbolFlags::Exported};
   ExecutorSymbolDef QuxSym{QuxAddr, JITSymbolFlags::Exported};
+  unique_function<void(std::unique_ptr<Task>)> DispatchOverride;
+};
+
+/// A ExecutorProcessControl instance that asserts if any of its methods are
+/// used. Suitable for use is unit tests, and by ORC clients who haven't moved
+/// to ExecutorProcessControl-based APIs yet.
+class UnsupportedExecutorProcessControl : public ExecutorProcessControl,
+                                          private InProcessMemoryAccess {
+public:
+  UnsupportedExecutorProcessControl(
+      std::shared_ptr<SymbolStringPool> SSP = nullptr,
+      std::unique_ptr<TaskDispatcher> D = nullptr, const std::string &TT = "",
+      unsigned PageSize = 0)
+      : ExecutorProcessControl(
+            SSP ? std::move(SSP) : std::make_shared<SymbolStringPool>(),
+            D ? std::move(D) : std::make_unique<InPlaceTaskDispatcher>()),
+        InProcessMemoryAccess(Triple(TT).isArch64Bit()) {
+    this->TargetTriple = Triple(TT);
+    this->PageSize = PageSize;
+    this->MemAccess = this;
+  }
+
+  Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
+                              ArrayRef<std::string> Args) override {
+    llvm_unreachable("Unsupported");
+  }
+
+  Expected<int32_t> runAsVoidFunction(ExecutorAddr VoidFnAddr) override {
+    llvm_unreachable("Unsupported");
+  }
+
+  Expected<int32_t> runAsIntFunction(ExecutorAddr IntFnAddr, int Arg) override {
+    llvm_unreachable("Unsupported");
+  }
+
+  void callWrapperAsync(ExecutorAddr WrapperFnAddr,
+                        IncomingWFRHandler OnComplete,
+                        ArrayRef<char> ArgBuffer) override {
+    llvm_unreachable("Unsupported");
+  }
+
+  Error disconnect() override { return Error::success(); }
 };
 
 } // end namespace orc

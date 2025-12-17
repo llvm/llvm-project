@@ -2,9 +2,8 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from typing import List
 
-from mlir.ir import Type
+from mlir.ir import DenseElementsAttr, Type
 
 __all__ = [
   "QuantizedType",
@@ -94,15 +93,15 @@ class UniformQuantizedPerAxisType(QuantizedType):
 
   @classmethod
   def get(cls, flags: int, storage_type: Type, expressed_type: Type,
-          scales: List[float], zero_points: List[int], quantized_dimension: int,
+          scales: list[float], zero_points: list[int], quantized_dimension: int,
           storage_type_min: int, storage_type_max: int):
     ...
 
   @property
-  def scales(self) -> List[float]: ...
+  def scales(self) -> list[float]: ...
 
   @property
-  def zero_points(self) -> List[float]: ...
+  def zero_points(self) -> list[int]: ...
 
   @property
   def quantized_dimension(self) -> int: ...
@@ -110,6 +109,26 @@ class UniformQuantizedPerAxisType(QuantizedType):
   @property
   def is_fixed_point(self) -> bool: ...
 
+class UniformQuantizedSubChannelType(QuantizedType):
+
+  @classmethod
+  def get(cls, flags: int, storage_type: Type, expressed_type: Type,
+          scales: DenseElementsAttr, zero_points: DenseElementsAttr,
+          quantized_dimensions: list[int], block_sizes: list[int],
+          storage_type_min: int, storage_type_max: int):
+    ...
+
+  @property
+  def quantized_dimensions(self) -> list[int]: ...
+
+  @property
+  def block_sizes(self) -> list[int]: ...
+
+  @property
+  def scales(self) -> DenseElementsAttr: ...
+
+  @property
+  def zero_points(self) -> DenseElementsAttr: ...
 
 def CalibratedQuantizedType(QuantizedType):
 

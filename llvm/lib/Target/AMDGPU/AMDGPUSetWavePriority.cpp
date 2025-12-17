@@ -19,8 +19,7 @@
 #include "SIInstrInfo.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Support/Allocator.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 
 using namespace llvm;
 
@@ -42,15 +41,9 @@ struct MBBInfo {
 
 using MBBInfoSet = DenseMap<const MachineBasicBlock *, MBBInfo>;
 
-class AMDGPUSetWavePriority : public MachineFunctionPass {
+class AMDGPUSetWavePriority {
 public:
-  static char ID;
-
-  AMDGPUSetWavePriority() : MachineFunctionPass(ID) {}
-
-  StringRef getPassName() const override { return "Set wave priority"; }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool run(MachineFunction &MF);
 
 private:
   MachineInstr *BuildSetprioMI(MachineBasicBlock &MBB,
@@ -60,15 +53,31 @@ private:
   const SIInstrInfo *TII;
 };
 
+class AMDGPUSetWavePriorityLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  AMDGPUSetWavePriorityLegacy() : MachineFunctionPass(ID) {}
+
+  StringRef getPassName() const override { return "Set wave priority"; }
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
+
+    return AMDGPUSetWavePriority().run(MF);
+  }
+};
+
 } // End anonymous namespace.
 
-INITIALIZE_PASS(AMDGPUSetWavePriority, DEBUG_TYPE, "Set wave priority", false,
-                false)
+INITIALIZE_PASS(AMDGPUSetWavePriorityLegacy, DEBUG_TYPE, "Set wave priority",
+                false, false)
 
-char AMDGPUSetWavePriority::ID = 0;
+char AMDGPUSetWavePriorityLegacy::ID = 0;
 
 FunctionPass *llvm::createAMDGPUSetWavePriorityPass() {
-  return new AMDGPUSetWavePriority();
+  return new AMDGPUSetWavePriorityLegacy();
 }
 
 MachineInstr *
@@ -98,12 +107,21 @@ static bool isVMEMLoad(const MachineInstr &MI) {
   return SIInstrInfo::isVMEM(MI) && MI.mayLoad();
 }
 
-bool AMDGPUSetWavePriority::runOnMachineFunction(MachineFunction &MF) {
+PreservedAnalyses
+llvm::AMDGPUSetWavePriorityPass::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  if (!AMDGPUSetWavePriority().run(MF))
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses();
+}
+
+bool AMDGPUSetWavePriority::run(MachineFunction &MF) {
   const unsigned HighPriority = 3;
   const unsigned LowPriority = 0;
 
   Function &F = MF.getFunction();
-  if (skipFunction(F) || !AMDGPU::isEntryFunctionCC(F.getCallingConv()))
+  if (!AMDGPU::isEntryFunctionCC(F.getCallingConv()))
     return false;
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
@@ -148,9 +166,10 @@ bool AMDGPUSetWavePriority::runOnMachineFunction(MachineFunction &MF) {
     bool SuccsMayReachVMEMLoad = false;
     unsigned NumFollowingVALUInsts = 0;
     for (const MachineBasicBlock *Succ : MBB->successors()) {
-      SuccsMayReachVMEMLoad |= MBBInfos[Succ].MayReachVMEMLoad;
+      const MBBInfo &SuccInfo = MBBInfos[Succ];
+      SuccsMayReachVMEMLoad |= SuccInfo.MayReachVMEMLoad;
       NumFollowingVALUInsts =
-          std::max(NumFollowingVALUInsts, MBBInfos[Succ].NumVALUInstsAtStart);
+          std::max(NumFollowingVALUInsts, SuccInfo.NumVALUInstsAtStart);
     }
     MBBInfo &Info = MBBInfos[MBB];
     if (AtStart)
@@ -176,7 +195,7 @@ bool AMDGPUSetWavePriority::runOnMachineFunction(MachineFunction &MF) {
 
   // Lower the priority on edges where control leaves blocks from which
   // the VMEM loads are reachable.
-  SmallSet<MachineBasicBlock *, 16> PriorityLoweringBlocks;
+  SmallPtrSet<MachineBasicBlock *, 16> PriorityLoweringBlocks;
   for (MachineBasicBlock &MBB : MF) {
     if (MBBInfos[&MBB].MayReachVMEMLoad) {
       if (MBB.succ_empty())
@@ -202,12 +221,12 @@ bool AMDGPUSetWavePriority::runOnMachineFunction(MachineFunction &MF) {
   }
 
   for (MachineBasicBlock *MBB : PriorityLoweringBlocks) {
-    BuildSetprioMI(
-        *MBB,
-        MBBInfos[MBB].LastVMEMLoad
-            ? std::next(MachineBasicBlock::iterator(MBBInfos[MBB].LastVMEMLoad))
-            : MBB->begin(),
-        LowPriority);
+    MachineInstr *LastVMEMLoad = MBBInfos[MBB].LastVMEMLoad;
+    BuildSetprioMI(*MBB,
+                   LastVMEMLoad
+                       ? std::next(MachineBasicBlock::iterator(LastVMEMLoad))
+                       : MBB->begin(),
+                   LowPriority);
   }
 
   return true;

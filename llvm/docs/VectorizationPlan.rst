@@ -19,6 +19,49 @@ candidates. It serves for both optimizing candidates including estimating their
 cost reliably, and for performing their final translation into IR. This
 facilitates dealing with multiple vectorization candidates.
 
+Current Status
+==============
+VPlan is currently used to drive code-generation in LoopVectorize. VPlans are
+constructed after all cost-based and most legality-related decisions have been
+taken. As def-use chains between recipes are now fully modeled in VPlan,
+VPlan-based analyses and transformations are used to simplify and modularize
+the vectorization process [10]_. Those include transformations to
+
+1. Legalize the initial VPlan, e.g. by introducing specialized recipes for
+   reductions and interleave groups.
+
+2. Optimize the legalized VPlan, e.g. by removing redundant recipes or
+   introducing active-lane-masks.
+
+3. Apply unroll- and vectorization-factor specific optimizations, e.g. removing
+   the backedge to reiterate the vector loop based on VF & UF.
+
+Refer to :numref:`fig-vplan-transform-pipeline` for an overview of the current
+transformation pipeline.
+
+Note that some legality checks are already done in VPlan, including checking if
+all users of a fixed-order recurrence can be re-ordered. This is implemented as
+a VPlan-to-VPlan transformation that either applies a valid re-ordering or
+bails out marking the VPlan as invalid.
+
+.. _fig-vplan-transform-pipeline:
+.. figure:: ./vplan-transform-pipeline.png
+   :width: 800 px
+
+   VPlan Transformation Pipeline in 2024
+
+
+VPlan currently models the complete vector loop, as well as additional parts of
+the vectorization skeleton. Refer to :numref:`fig-vplan-scope` for an overview
+of the scope covered by VPlan.
+
+.. _fig-vplan-scope:
+.. figure:: ./vplan-scope.png
+   :width: 800 px
+
+   Scope modeled in VPlan in 2024
+
+
 High-level Design
 =================
 
@@ -160,13 +203,10 @@ The low-level design of VPlan comprises of the following classes.
   VPValues.
 
 :VPInstruction:
-  A VPInstruction is both a VPRecipe and a VPUser. It models a single
-  VPlan-level instruction to be generated if the VPlan is executed, including
-  its opcode and possibly additional characteristics. It is the basis for
-  writing instruction-level analyses and optimizations in VPlan as creating,
-  replacing or moving VPInstructions record both def-use and scheduling
-  decisions. VPInstructions also extend LLVM IR's opcodes with idiomatic
-  operations that enrich the Vectorizer's semantics.
+  A VPInstruction is a recipe characterized by a single opcode and optional
+  flags, free of ingredients or other meta-data. VPInstructions also extend
+  LLVM IR's opcodes with idiomatic operations that enrich the Vectorizer's
+  semantics.
 
 :VPTransformState:
   Stores information used for generating output IR, passed from
@@ -177,9 +217,9 @@ The Planning Process and VPlan Roadmap
 ======================================
 
 Transforming the Loop Vectorizer to use VPlan follows a staged approach. First,
-VPlan is used to record the final vectorization decisions, and to execute them:
-the Hierarchical CFG models the planned control-flow, and Recipes capture
-decisions taken inside basic-blocks. Next, VPlan will be used also as the basis
+VPlan was only used to record the final vectorization decisions, and to execute
+them: the Hierarchical CFG models the planned control-flow, and Recipes capture
+decisions taken inside basic-blocks. Currently, VPlan is used also as the basis
 for taking these decisions, effectively turning them into a series of
 VPlan-to-VPlan algorithms. Finally, VPlan will support the planning process
 itself including cost-based analyses for making these decisions, to fully
@@ -248,3 +288,6 @@ References
 
 .. [9] "Extending LoopVectorizer: OpenMP4.5 SIMD and Outer Loop
     Auto-Vectorization", Intel Vectorizer Team, LLVM Developers' Meeting 2016.
+
+.. [10] "VPlan: Status Update and Future Roadmap", Ayal Zaks and Florian Hahn,
+    LLVM Developers' Meeting 2023, https://www.youtube.com/watch?v=SzGP4PgMuLE

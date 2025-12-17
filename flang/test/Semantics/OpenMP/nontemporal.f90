@@ -1,5 +1,4 @@
-! RUN: %python %S/../test_errors.py %s  %flang -fopenmp
-! REQUIRES: shell
+! RUN: %python %S/../test_errors.py %s  %flang -fopenmp -fopenmp-version=50
 ! Check OpenMP clause validity for NONTEMPORAL clause
 
 program omp_simd

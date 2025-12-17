@@ -80,7 +80,6 @@
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -93,10 +92,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -109,7 +106,6 @@
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <cassert>
 #include <cmath>
-#include <iterator>
 #include <utility>
 
 #define DEBUG_TYPE "ppc-loop-instr-form-prep"
@@ -223,13 +219,7 @@ namespace {
   public:
     static char ID; // Pass ID, replacement for typeid
 
-    PPCLoopInstrFormPrep() : FunctionPass(ID) {
-      initializePPCLoopInstrFormPrepPass(*PassRegistry::getPassRegistry());
-    }
-
-    PPCLoopInstrFormPrep(PPCTargetMachine &TM) : FunctionPass(ID), TM(&TM) {
-      initializePPCLoopInstrFormPrepPass(*PassRegistry::getPassRegistry());
-    }
+    PPCLoopInstrFormPrep(PPCTargetMachine &TM) : FunctionPass(ID), TM(&TM) {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addPreserved<DominatorTreeWrapperPass>();
@@ -273,9 +263,8 @@ namespace {
     bool prepareBasesForCommoningChains(Bucket &BucketChain);
 
     /// Rewrite load/store according to the common chains.
-    bool
-    rewriteLoadStoresForCommoningChains(Loop *L, Bucket &Bucket,
-                                        SmallSet<BasicBlock *, 16> &BBChanged);
+    bool rewriteLoadStoresForCommoningChains(
+        Loop *L, Bucket &Bucket, SmallPtrSet<BasicBlock *, 16> &BBChanged);
 
     /// Collect condition matched(\p isValidCandidate() returns true)
     /// candidates in Loop \p L.
@@ -318,7 +307,7 @@ namespace {
     /// Rewrite load/store instructions in \p BucketChain according to
     /// preparation.
     bool rewriteLoadStores(Loop *L, Bucket &BucketChain,
-                           SmallSet<BasicBlock *, 16> &BBChanged,
+                           SmallPtrSet<BasicBlock *, 16> &BBChanged,
                            PrepForm Form);
 
     /// Rewrite for the base load/store of a chain.
@@ -532,7 +521,7 @@ bool PPCLoopInstrFormPrep::chainCommoning(Loop *L,
   if (Buckets.empty())
     return MadeChange;
 
-  SmallSet<BasicBlock *, 16> BBChanged;
+  SmallPtrSet<BasicBlock *, 16> BBChanged;
 
   for (auto &Bucket : Buckets) {
     if (prepareBasesForCommoningChains(Bucket))
@@ -546,7 +535,7 @@ bool PPCLoopInstrFormPrep::chainCommoning(Loop *L,
 }
 
 bool PPCLoopInstrFormPrep::rewriteLoadStoresForCommoningChains(
-    Loop *L, Bucket &Bucket, SmallSet<BasicBlock *, 16> &BBChanged) {
+    Loop *L, Bucket &Bucket, SmallPtrSet<BasicBlock *, 16> &BBChanged) {
   bool MadeChange = false;
 
   assert(Bucket.Elements.size() ==
@@ -554,11 +543,9 @@ bool PPCLoopInstrFormPrep::rewriteLoadStoresForCommoningChains(
          "invalid bucket for chain commoning!\n");
   SmallPtrSet<Value *, 16> DeletedPtrs;
 
-  BasicBlock *Header = L->getHeader();
   BasicBlock *LoopPredecessor = L->getLoopPredecessor();
 
-  SCEVExpander SCEVE(*SE, Header->getModule()->getDataLayout(),
-                     "loopprepare-chaincommon");
+  SCEVExpander SCEVE(*SE, "loopprepare-chaincommon");
 
   for (unsigned ChainIdx = 0; ChainIdx < Bucket.ChainBases.size(); ++ChainIdx) {
     unsigned BaseElemIdx = Bucket.ChainSize * ChainIdx;
@@ -725,7 +712,7 @@ PPCLoopInstrFormPrep::rewriteForBase(Loop *L, const SCEVAddRecExpr *BasePtrSCEV,
   Instruction *PtrInc = nullptr;
   Instruction *NewBasePtr = nullptr;
   if (CanPreInc) {
-    Instruction *InsPoint = &*Header->getFirstInsertionPt();
+    BasicBlock::iterator InsPoint = Header->getFirstInsertionPt();
     PtrInc = GetElementPtrInst::Create(
         I8Ty, NewPHI, IncNode, getInstrName(BaseMemI, GEPNodeIncNameSuffix),
         InsPoint);
@@ -752,7 +739,7 @@ PPCLoopInstrFormPrep::rewriteForBase(Loop *L, const SCEVAddRecExpr *BasePtrSCEV,
       // For the latch predecessor, we need to insert a GEP just before the
       // terminator to increase the address.
       BasicBlock *BB = PI;
-      Instruction *InsPoint = BB->getTerminator();
+      BasicBlock::iterator InsPoint = BB->getTerminator()->getIterator();
       PtrInc = GetElementPtrInst::Create(
           I8Ty, NewPHI, IncNode, getInstrName(BaseMemI, GEPNodeIncNameSuffix),
           InsPoint);
@@ -764,7 +751,7 @@ PPCLoopInstrFormPrep::rewriteForBase(Loop *L, const SCEVAddRecExpr *BasePtrSCEV,
     if (NewPHI->getType() != BasePtr->getType())
       NewBasePtr = new BitCastInst(NewPHI, BasePtr->getType(),
                                    getInstrName(NewPHI, CastNodeNameSuffix),
-                                   &*Header->getFirstInsertionPt());
+                                   Header->getFirstInsertionPt());
     else
       NewBasePtr = NewPHI;
   }
@@ -794,20 +781,25 @@ Instruction *PPCLoopInstrFormPrep::rewriteForBucketElement(
        cast<SCEVConstant>(Element.Offset)->getValue()->isZero())) {
     RealNewPtr = NewBasePtr;
   } else {
-    Instruction *PtrIP = dyn_cast<Instruction>(Ptr);
+    std::optional<BasicBlock::iterator> PtrIP = std::nullopt;
+    if (Instruction *I = dyn_cast<Instruction>(Ptr))
+      PtrIP = I->getIterator();
+
     if (PtrIP && isa<Instruction>(NewBasePtr) &&
-        cast<Instruction>(NewBasePtr)->getParent() == PtrIP->getParent())
-      PtrIP = nullptr;
-    else if (PtrIP && isa<PHINode>(PtrIP))
-      PtrIP = &*PtrIP->getParent()->getFirstInsertionPt();
+        cast<Instruction>(NewBasePtr)->getParent() == (*PtrIP)->getParent())
+      PtrIP = std::nullopt;
+    else if (PtrIP && isa<PHINode>(*PtrIP))
+      PtrIP = (*PtrIP)->getParent()->getFirstInsertionPt();
     else if (!PtrIP)
-      PtrIP = Element.Instr;
+      PtrIP = Element.Instr->getIterator();
 
     assert(OffToBase && "There should be an offset for non base element!\n");
     GetElementPtrInst *NewPtr = GetElementPtrInst::Create(
         I8Ty, PtrInc, OffToBase,
-        getInstrName(Element.Instr, GEPNodeOffNameSuffix), PtrIP);
-    if (!PtrIP)
+        getInstrName(Element.Instr, GEPNodeOffNameSuffix));
+    if (PtrIP)
+      NewPtr->insertBefore(*(*PtrIP)->getParent(), *PtrIP);
+    else
       NewPtr->insertAfter(cast<Instruction>(PtrInc));
     NewPtr->setIsInBounds(IsPtrInBounds(Ptr));
     RealNewPtr = NewPtr;
@@ -933,9 +925,9 @@ bool PPCLoopInstrFormPrep::prepareBaseForDispFormChain(Bucket &BucketChain,
   // 1 X form.
   unsigned MaxCountRemainder = 0;
   for (unsigned j = 0; j < (unsigned)Form; j++)
-    if ((RemainderOffsetInfo.contains(j)) &&
-        RemainderOffsetInfo[j].second >
-            RemainderOffsetInfo[MaxCountRemainder].second)
+    if (auto It = RemainderOffsetInfo.find(j);
+        It != RemainderOffsetInfo.end() &&
+        It->second.second > RemainderOffsetInfo[MaxCountRemainder].second)
       MaxCountRemainder = j;
 
   // Abort when there are too few insts with common base.
@@ -1010,7 +1002,7 @@ bool PPCLoopInstrFormPrep::prepareBaseForUpdateFormChain(Bucket &BucketChain) {
 }
 
 bool PPCLoopInstrFormPrep::rewriteLoadStores(
-    Loop *L, Bucket &BucketChain, SmallSet<BasicBlock *, 16> &BBChanged,
+    Loop *L, Bucket &BucketChain, SmallPtrSet<BasicBlock *, 16> &BBChanged,
     PrepForm Form) {
   bool MadeChange = false;
 
@@ -1019,9 +1011,7 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(
   if (!BasePtrSCEV->isAffine())
     return MadeChange;
 
-  BasicBlock *Header = L->getHeader();
-  SCEVExpander SCEVE(*SE, Header->getModule()->getDataLayout(),
-                     "loopprepare-formrewrite");
+  SCEVExpander SCEVE(*SE, "loopprepare-formrewrite");
   if (!SCEVE.isSafeToExpand(BasePtrSCEV->getStart()))
     return MadeChange;
 
@@ -1093,7 +1083,7 @@ bool PPCLoopInstrFormPrep::updateFormPrep(Loop *L,
   bool MadeChange = false;
   if (Buckets.empty())
     return MadeChange;
-  SmallSet<BasicBlock *, 16> BBChanged;
+  SmallPtrSet<BasicBlock *, 16> BBChanged;
   for (auto &Bucket : Buckets)
     // The base address of each bucket is transformed into a phi and the others
     // are rewritten based on new base.
@@ -1114,7 +1104,7 @@ bool PPCLoopInstrFormPrep::dispFormPrep(Loop *L,
   if (Buckets.empty())
     return MadeChange;
 
-  SmallSet<BasicBlock *, 16> BBChanged;
+  SmallPtrSet<BasicBlock *, 16> BBChanged;
   for (auto &Bucket : Buckets) {
     if (Bucket.Elements.size() < DispFormPrepMinThreshold)
       continue;
@@ -1322,7 +1312,7 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
     // useless and possible to break some original well-form addressing mode
     // to make this pre-inc prep for it.
     if (PointerElementType->isIntegerTy(64)) {
-      const SCEV *LSCEV = SE->getSCEVAtScope(const_cast<Value *>(PtrValue), L);
+      const SCEV *LSCEV = SE->getSCEVAtScope(PtrValue, L);
       const SCEVAddRecExpr *LARSCEV = dyn_cast<SCEVAddRecExpr>(LSCEV);
       if (!LARSCEV || LARSCEV->getLoop() != L)
         return false;

@@ -7,6 +7,7 @@ set(LLDB_INCLUDE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 set(LLDB_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(LLDB_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+set(LLDB_OBJ_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
   message(FATAL_ERROR
@@ -50,17 +51,23 @@ macro(add_optional_dependency variable description package found)
   message(STATUS "${description}: ${${variable}}")
 endmacro()
 
+set(LLDB_LIBXML2_VERSION "2.8" CACHE STRING
+  "Specify the version of libxml 2 to use with LLDB. This is only meant to be overridden for local
+  static builds of libxml 2. Use at your own risk.")
+mark_as_advanced(LLDB_LIBXML2_VERSION)
+
 add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 4)
 add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit LibEdit_FOUND)
 add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
 add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support in LLDB" LibLZMA LIBLZMA_FOUND)
 add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" LuaAndSwig LUAANDSWIG_FOUND)
 add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in LLDB" PythonAndSwig PYTHONANDSWIG_FOUND)
-add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 LIBXML2_FOUND VERSION 2.8)
+add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 LIBXML2_FOUND VERSION ${LLDB_LIBXML2_VERSION})
 add_optional_dependency(LLDB_ENABLE_FBSDVMCORE "Enable libfbsdvmcore support in LLDB" FBSDVMCore FBSDVMCore_FOUND QUIET)
 
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
 option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
+option(LLDB_ENABLE_PROTOCOL_SERVERS "Enable protocol servers (e.g. MCP) in LLDB" ON)
 option(LLDB_NO_INSTALL_DEFAULT_RPATH "Disable default RPATH settings in binaries" OFF)
 option(LLDB_USE_SYSTEM_DEBUGSERVER "Use the system's debugserver for testing (Darwin only)." OFF)
 option(LLDB_SKIP_STRIP "Whether to skip stripping of binaries when installing lldb." OFF)
@@ -166,10 +173,54 @@ if (LLDB_ENABLE_PYTHON)
     ${default_embed_python_home})
 
   include_directories(${Python3_INCLUDE_DIRS})
+
   if (LLDB_EMBED_PYTHON_HOME)
     get_filename_component(PYTHON_HOME "${Python3_EXECUTABLE}" DIRECTORY)
     set(LLDB_PYTHON_HOME "${PYTHON_HOME}" CACHE STRING
       "Path to use as PYTHONHOME in lldb. If a relative path is specified, it will be resolved at runtime relative to liblldb directory.")
+  endif()
+
+  # Enable targeting the Python Limited C API.
+  set(PYTHON_LIMITED_API_MIN_SWIG_VERSION "4.2")
+  if (SWIG_VERSION VERSION_EQUAL "4.4.0" AND Python3_VERSION VERSION_GREATER_EQUAL "3.13")
+    set(AFFECTED_BY_SWIG_BUG TRUE)
+  else()
+    set(AFFECTED_BY_SWIG_BUG FALSE)
+  endif()
+
+  if (SWIG_VERSION VERSION_GREATER_EQUAL PYTHON_LIMITED_API_MIN_SWIG_VERSION
+      AND NOT LLDB_EMBED_PYTHON_HOME AND NOT AFFECTED_BY_SWIG_BUG)
+    set(default_enable_python_limited_api ON)
+  else()
+    set(default_enable_python_limited_api OFF)
+  endif()
+
+  option(LLDB_ENABLE_PYTHON_LIMITED_API "Force LLDB to only use the Python Limited API (requires SWIG 4.2 or later)"
+    ${default_enable_python_limited_api})
+
+  # Diagnose unsupported configurations.
+  if (LLDB_ENABLE_PYTHON_LIMITED_API AND AFFECTED_BY_SWIG_BUG)
+    message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API is not compatible with SWIG 4.4.0 and Python >= 3.13 due to a bug in SWIG: https://github.com/swig/swig/issues/3283")
+  endif()
+  if (LLDB_ENABLE_PYTHON_LIMITED_API AND LLDB_EMBED_PYTHON_HOME)
+    message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API is not compatible with LLDB_EMBED_PYTHON_HOME")
+  endif()
+  if (LLDB_ENABLE_PYTHON_LIMITED_API AND SWIG_VERSION VERSION_LESS PYTHON_LIMITED_API_MIN_SWIG_VERSION)
+    message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API is not compatible with SWIG ${SWIG_VERSION} (requires SWIG ${PYTHON_LIMITED_API_MIN_SWIG_VERSION})")
+  endif()
+
+else()
+  # Even if Python scripting is disabled, we still need a Python interpreter to
+  # build, for example to generate SBLanguages.h.
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+  # Remove lldb-python-scripts from distribution components.
+  # LLVM_DISTRIBUTION_COMPONENTS is set in a cache where LLDB_ENABLE_PYTHON does
+  # not yet have a value. We have to touch up LLVM_DISTRIBUTION_COMPONENTS after
+  # the fact.
+  if(LLVM_DISTRIBUTION_COMPONENTS)
+    list(REMOVE_ITEM LLVM_DISTRIBUTION_COMPONENTS lldb-python-scripts)
+    set(LLVM_DISTRIBUTION_COMPONENTS ${LLVM_DISTRIBUTION_COMPONENTS} CACHE STRING "" FORCE)
   endif()
 endif()
 
@@ -180,30 +231,35 @@ else ()
 endif ()
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/../clang/include")
 
+if(LLDB_BUILT_STANDALONE)
+  if (TARGET clang-resource-headers)
+    get_target_property(CLANG_RESOURCE_DIR clang-resource-headers INTERFACE_INCLUDE_DIRECTORIES)
+    set(CLANG_RESOURCE_DIR "${CLANG_RESOURCE_DIR}/..")
+  else()
+    set(CLANG_RESOURCE_DIR "${LLDB_EXTERNAL_CLANG_RESOURCE_DIR}")
+  endif()
+else()
+  get_clang_resource_dir(CLANG_RESOURCE_DIR PREFIX "${CMAKE_BINARY_DIR}")
+endif()
+
 # GCC silently accepts any -Wno-<foo> option, but warns about those options
 # being unrecognized only if the compilation triggers other warnings to be
 # printed. Therefore, check for whether the compiler supports options in the
 # form -W<foo>, and if supported, add the corresponding -Wno-<foo> option.
 
-# Disable GCC warnings
-check_cxx_compiler_flag("-Wdeprecated-declarations" CXX_SUPPORTS_DEPRECATED_DECLARATIONS)
-append_if(CXX_SUPPORTS_DEPRECATED_DECLARATIONS "-Wno-deprecated-declarations" CMAKE_CXX_FLAGS)
+if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
+  # Disable GCC warnings
+  append("-Wno-unknown-pragmas" CMAKE_CXX_FLAGS)
+  append("-Wno-strict-aliasing" CMAKE_CXX_FLAGS)
 
-check_cxx_compiler_flag("-Wunknown-pragmas" CXX_SUPPORTS_UNKNOWN_PRAGMAS)
-append_if(CXX_SUPPORTS_UNKNOWN_PRAGMAS "-Wno-unknown-pragmas" CMAKE_CXX_FLAGS)
-
-check_cxx_compiler_flag("-Wstrict-aliasing" CXX_SUPPORTS_STRICT_ALIASING)
-append_if(CXX_SUPPORTS_STRICT_ALIASING "-Wno-strict-aliasing" CMAKE_CXX_FLAGS)
-
-check_cxx_compiler_flag("-Wstringop-truncation" CXX_SUPPORTS_STRINGOP_TRUNCATION)
-append_if(CXX_SUPPORTS_STRINGOP_TRUNCATION "-Wno-stringop-truncation" CMAKE_CXX_FLAGS)
+  check_cxx_compiler_flag("-Wstringop-truncation" CXX_SUPPORTS_STRINGOP_TRUNCATION)
+  append_if(CXX_SUPPORTS_STRINGOP_TRUNCATION "-Wno-stringop-truncation" CMAKE_CXX_FLAGS)
+endif()
 
 # Disable Clang warnings
-check_cxx_compiler_flag("-Wdeprecated-register" CXX_SUPPORTS_DEPRECATED_REGISTER)
-append_if(CXX_SUPPORTS_DEPRECATED_REGISTER "-Wno-deprecated-register" CMAKE_CXX_FLAGS)
-
-check_cxx_compiler_flag("-Wvla-extension" CXX_SUPPORTS_VLA_EXTENSION)
-append_if(CXX_SUPPORTS_VLA_EXTENSION "-Wno-vla-extension" CMAKE_CXX_FLAGS)
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  append("-Wno-vla-extension" CMAKE_CXX_FLAGS)
+endif()
 
 # Disable MSVC warnings
 if( MSVC )
@@ -215,6 +271,7 @@ if( MSVC )
     -wd4251 # Suppress 'warning C4251: T must have dll-interface to be used by clients of class U.'
     -wd4521 # Suppress 'warning C4521: 'type' : multiple copy constructors specified'
     -wd4530 # Suppress 'warning C4530: C++ exception handler used, but unwind semantics are not enabled.'
+    -wd4589 # Suppress 'warning C4589: Constructor of abstract class 'lldb_private::NativeRegisterContextDBReg_x86' ignores initializer for virtual base class 'lldb_private::NativeRegisterContextRegisterInfo''
   )
 endif()
 
@@ -243,10 +300,6 @@ if (LLDB_ENABLE_LZMA)
   include_directories(${LIBLZMA_INCLUDE_DIRS})
 endif()
 
-if (LLDB_ENABLE_LIBXML2)
-  include_directories(${LIBXML2_INCLUDE_DIR})
-endif()
-
 include_directories(BEFORE
   ${CMAKE_CURRENT_BINARY_DIR}/include
   ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -270,7 +323,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     )
 
   add_custom_target(lldb-headers)
-  set_target_properties(lldb-headers PROPERTIES FOLDER "lldb misc")
+  set_target_properties(lldb-headers PROPERTIES FOLDER "LLDB/Resources")
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
     add_llvm_install_targets(install-lldb-headers
@@ -287,7 +340,6 @@ if (APPLE)
   find_library(FOUNDATION_LIBRARY Foundation)
   find_library(CORE_FOUNDATION_LIBRARY CoreFoundation)
   find_library(SECURITY_LIBRARY Security)
-  include_directories(${LIBXML2_INCLUDE_DIR})
 endif()
 
 if( WIN32 AND NOT CYGWIN )
@@ -301,7 +353,7 @@ endif()
 
 # Figure out if lldb could use lldb-server.  If so, then we'll
 # ensure we build lldb-server when an lldb target is being built.
-if (CMAKE_SYSTEM_NAME MATCHES "Android|Darwin|FreeBSD|Linux|NetBSD|Windows")
+if (CMAKE_SYSTEM_NAME MATCHES "AIX|Android|Darwin|FreeBSD|Linux|NetBSD|OpenBSD|Windows")
   set(LLDB_CAN_USE_LLDB_SERVER ON)
 else()
   set(LLDB_CAN_USE_LLDB_SERVER OFF)
@@ -315,9 +367,30 @@ else()
     set(LLDB_CAN_USE_DEBUGSERVER OFF)
 endif()
 
-if ((CMAKE_SYSTEM_NAME MATCHES "Android") AND LLVM_BUILD_STATIC AND
-    ((ANDROID_ABI MATCHES "armeabi") OR (ANDROID_ABI MATCHES "mips")))
-  add_definitions(-DANDROID_USE_ACCEPT_WORKAROUND)
+# In a cross-compile build, we need to skip building the generated
+# lldb-rpc sources in the first phase of host build so that they can
+# get built using the just-built Clang toolchain in the second phase.
+if (NOT DEFINED LLDB_CAN_USE_LLDB_RPC_SERVER)
+  set(LLDB_CAN_USE_LLDB_RPC_SERVER OFF)
+else()
+  if ((CMAKE_CROSSCOMPILING OR LLVM_HOST_TRIPLE MATCHES "${LLVM_DEFAULT_TARGET_TRIPLE}") AND
+      CMAKE_SYSTEM_NAME MATCHES "AIX|Android|Darwin|FreeBSD|Linux|NetBSD|OpenBSD|Windows")
+    set(LLDB_CAN_USE_LLDB_RPC_SERVER ON)
+  else()
+    set(LLDB_CAN_USE_LLDB_RPC_SERVER OFF)
+  endif()
+endif()
+
+
+if (NOT DEFINED LLDB_BUILD_LLDBRPC)
+  set(LLDB_BUILD_LLDBRPC OFF)
+else()
+  if (CMAKE_CROSSCOMPILING)
+    set(LLDB_BUILD_LLDBRPC OFF CACHE BOOL "")
+    get_host_tool_path(lldb-rpc-gen LLDB_RPC_GEN_EXE lldb_rpc_gen_exe lldb_rpc_gen_target)
+  else()
+    set(LLDB_BUILD_LLDBRPC ON CACHE BOOL "")
+  endif()
 endif()
 
 include(LLDBGenerateConfig)

@@ -2,8 +2,6 @@ set(LLVM_OPTIONAL_SOURCES
   null.cpp
 )
 
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
 set(LLVM_LINK_COMPONENTS
   Core
   Support
@@ -21,38 +19,32 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestIR
     MLIRTestPass
     MLIRTestReducer
-    MLIRTestRewrite
-    MLIRTestTransformDialect
-    MLIRTestTransforms
     )
+  set(test_libs
+    ${test_libs}
+    MLIRTestTransformDialect
+    MLIRTestTransforms)
+
+  if (MLIR_ENABLE_PDL_IN_PATTERNMATCH)
+    set(test_libs
+      ${test_libs}
+      MLIRTestRewrite)
+  endif()
 endif()
 
 set(LIBS
-  ${conversion_libs}
-  ${dialect_libs}
-  ${extension_libs}
-  ${test_libs}
-
-  MLIRAffineAnalysis
-  MLIRAnalysis
-  MLIRDialect
-  MLIRFuncAllExtensions
   MLIRLspServerLib
-  MLIRParser
-  MLIRPass
-  MLIRTransforms
-  MLIRTransformUtils
-  MLIRSupport
-  MLIRIR
+
+  MLIRRegisterAllDialects
+  MLIRRegisterAllExtensions
+  MLIRRegisterAllPasses
   )
 
 add_mlir_tool(mlir-lsp-server
   mlir-lsp-server.cpp
-
-  DEPENDS
-  ${LIBS}
   )
-target_link_libraries(mlir-lsp-server PRIVATE ${LIBS})
+mlir_target_link_libraries(mlir-lsp-server PRIVATE ${LIBS})
+target_link_libraries(mlir-lsp-server PRIVATE ${test_libs})
 llvm_update_compile_flags(mlir-lsp-server)
 
 mlir_check_all_link_libraries(mlir-lsp-server)

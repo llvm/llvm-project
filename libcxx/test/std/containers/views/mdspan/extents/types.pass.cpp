@@ -22,10 +22,11 @@
 //  ...
 //  }
 
+#include <cassert>
+#include <concepts>
+#include <cstddef>
 #include <mdspan>
 #include <type_traits>
-#include <concepts>
-#include <cassert>
 
 #include "test_macros.h"
 
@@ -78,7 +79,7 @@ void test() {
 int main(int, char**) {
   test<int>();
   test<unsigned>();
-  test<char>();
+  test<signed char>();
   test<long long>();
   test<size_t>();
   return 0;

@@ -17,6 +17,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -31,11 +32,9 @@ PrintModulePass::PrintModulePass(raw_ostream &OS, const std::string &Banner,
       EmitSummaryIndex(EmitSummaryIndex) {}
 
 PreservedAnalyses PrintModulePass::run(Module &M, ModuleAnalysisManager &AM) {
-  // RemoveDIs: there's no textual representation of the DPValue debug-info,
-  // convert to dbg.values before writing out.
-  bool ShouldConvert = M.IsNewDbgInfoFormat;
-  if (ShouldConvert)
-    M.convertFromNewDbgValues();
+  // Remove intrinsic declarations when printing in the new format.
+  // TODO: consider removing this now that debug intrinsics are gone.
+  M.removeDebugIntrinsicDeclarations();
 
   if (llvm::isFunctionInPrintList("*")) {
     if (!Banner.empty())
@@ -63,9 +62,6 @@ PreservedAnalyses PrintModulePass::run(Module &M, ModuleAnalysisManager &AM) {
     Index->print(OS);
   }
 
-  if (ShouldConvert)
-    M.convertToNewDbgValues();
-
   return PreservedAnalyses::all();
 }
 
@@ -75,21 +71,12 @@ PrintFunctionPass::PrintFunctionPass(raw_ostream &OS, const std::string &Banner)
 
 PreservedAnalyses PrintFunctionPass::run(Function &F,
                                          FunctionAnalysisManager &) {
-  // RemoveDIs: there's no textual representation of the DPValue debug-info,
-  // convert to dbg.values before writing out.
-  bool ShouldConvert = F.IsNewDbgInfoFormat;
-  if (ShouldConvert)
-    F.convertFromNewDbgValues();
-
   if (isFunctionInPrintList(F.getName())) {
     if (forcePrintModuleIR())
       OS << Banner << " (function: " << F.getName() << ")\n" << *F.getParent();
     else
       OS << Banner << '\n' << static_cast<Value &>(F);
   }
-
-  if (ShouldConvert)
-    F.convertToNewDbgValues();
 
   return PreservedAnalyses::all();
 }

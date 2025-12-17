@@ -20,8 +20,10 @@
 #include "clang/Testing/CommandLineArgs.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "clang/Tooling/JSONCompilationDatabase.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/Host.h"
@@ -152,6 +154,20 @@ TEST(buildASTFromCode, ReportsErrors) {
   EXPECT_EQ(1u, Consumer.NumDiagnosticsSeen);
 }
 
+TEST(buildASTFromCode, FileSystem) {
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  InMemoryFileSystem->addFile("included_file.h", 0,
+                              llvm::MemoryBuffer::getMemBufferCopy("class X;"));
+  std::unique_ptr<ASTUnit> AST = buildASTFromCodeWithArgs(
+      R"(#include "included_file.h")", {}, "input.cc", "clang-tool",
+      std::make_shared<PCHContainerOperations>(),
+      getClangStripDependencyFileAdjuster(), FileContentMappings(), nullptr,
+      InMemoryFileSystem);
+  ASSERT_TRUE(AST.get());
+  EXPECT_TRUE(FindClassDeclX(AST.get()));
+}
+
 TEST(newFrontendActionFactory, CreatesFrontendActionFactoryFromType) {
   std::unique_ptr<FrontendActionFactory> Factory(
       newFrontendActionFactory<SyntaxOnlyAction>());
@@ -174,13 +190,14 @@ TEST(newFrontendActionFactory, CreatesFrontendActionFactoryFromFactoryType) {
 }
 
 TEST(ToolInvocation, TestMapVirtualFile) {
-  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
-      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto OverlayFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+          llvm::vfs::getRealFileSystem());
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
   Args.push_back("-Idef");
@@ -197,16 +214,17 @@ TEST(ToolInvocation, TestMapVirtualFile) {
 
 TEST(ToolInvocation, TestVirtualModulesCompilation) {
   // FIXME: Currently, this only tests that we don't exit with an error if a
-  // mapped module.map is found on the include path. In the future, expand this
-  // test to run a full modules enabled compilation, so we make sure we can
+  // mapped module.modulemap is found on the include path. In the future, expand
+  // this test to run a full modules enabled compilation, so we make sure we can
   // rerun modules compilations with a virtual file system.
-  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
-      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto OverlayFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+          llvm::vfs::getRealFileSystem());
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
   Args.push_back("-Idef");
@@ -218,21 +236,22 @@ TEST(ToolInvocation, TestVirtualModulesCompilation) {
       "test.cpp", 0, llvm::MemoryBuffer::getMemBuffer("#include <abc>\n"));
   InMemoryFileSystem->addFile("def/abc", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
-  // Add a module.map file in the include directory of our header, so we trigger
-  // the module.map header search logic.
-  InMemoryFileSystem->addFile("def/module.map", 0,
+  // Add a module.modulemap file in the include directory of our header, so we
+  // trigger the module.modulemap header search logic.
+  InMemoryFileSystem->addFile("def/module.modulemap", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
   EXPECT_TRUE(Invocation.run());
 }
 
 TEST(ToolInvocation, DiagnosticsEngineProperlyInitializedForCC1Construction) {
-  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
-      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto OverlayFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+          llvm::vfs::getRealFileSystem());
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
 
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
@@ -255,13 +274,14 @@ TEST(ToolInvocation, DiagnosticsEngineProperlyInitializedForCC1Construction) {
 }
 
 TEST(ToolInvocation, CustomDiagnosticOptionsOverwriteParsedOnes) {
-  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
-      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto OverlayFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+          llvm::vfs::getRealFileSystem());
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
 
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
@@ -280,8 +300,8 @@ TEST(ToolInvocation, CustomDiagnosticOptionsOverwriteParsedOnes) {
   Invocation.setDiagnosticConsumer(&Consumer);
 
   // Inject custom `DiagnosticOptions` for command-line parsing.
-  auto DiagOpts = llvm::makeIntrusiveRefCnt<DiagnosticOptions>();
-  Invocation.setDiagnosticOptions(&*DiagOpts);
+  DiagnosticOptions DiagOpts;
+  Invocation.setDiagnosticOptions(&DiagOpts);
 
   EXPECT_TRUE(Invocation.run());
   // Check that the warning was issued during command-line parsing due to the
@@ -301,13 +321,14 @@ struct DiagnosticConsumerExpectingSourceManager : public DiagnosticConsumer {
 };
 
 TEST(ToolInvocation, DiagConsumerExpectingSourceManager) {
-  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
-      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto OverlayFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+          llvm::vfs::getRealFileSystem());
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
   // Note: intentional error; user probably meant -ferror-limit=0.
@@ -327,13 +348,14 @@ TEST(ToolInvocation, DiagConsumerExpectingSourceManager) {
 }
 
 TEST(ToolInvocation, CC1Args) {
-  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
-      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto OverlayFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+          llvm::vfs::getRealFileSystem());
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
   Args.push_back("-cc1");
@@ -347,13 +369,14 @@ TEST(ToolInvocation, CC1Args) {
 }
 
 TEST(ToolInvocation, CC1ArgsInvalid) {
-  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
-      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto OverlayFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+          llvm::vfs::getRealFileSystem());
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
   Args.push_back("-cc1");
@@ -378,13 +401,14 @@ overlayRealFS(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
 
 struct CommandLineExtractorTest : public ::testing::Test {
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFS;
+  DiagnosticOptions DiagOpts;
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
   driver::Driver Driver;
 
 public:
   CommandLineExtractorTest()
-      : InMemoryFS(new llvm::vfs::InMemoryFileSystem),
-        Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions)),
+      : InMemoryFS(llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>()),
+        Diags(CompilerInstance::createDiagnostics(*InMemoryFS, DiagOpts)),
         Driver("clang", llvm::sys::getDefaultTargetTriple(), *Diags,
                "clang LLVM compiler", overlayRealFS(InMemoryFS)) {}
 
@@ -586,6 +610,11 @@ TEST(runToolOnCode, TestSkipFunctionBody) {
   EXPECT_FALSE(runToolOnCodeWithArgs(
       std::make_unique<SkipBodyAction>(),
       "template<typename T> int skipMeNot() { an_error_here }", Args2));
+
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      std::make_unique<SkipBodyAction>(),
+      "__inline __attribute__((__gnu_inline__)) void skipMe() {}",
+      {"--cuda-host-only", "-nocudainc", "-xcuda"}));
 }
 
 TEST(runToolOnCodeWithArgs, TestNoDepFile) {
@@ -735,10 +764,11 @@ TEST(ClangToolTest, NoOutputCommands) {
 
 TEST(ClangToolTest, BaseVirtualFileSystemUsage) {
   FixedCompilationDatabase Compilations("/", std::vector<std::string>());
-  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
-      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto OverlayFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+          llvm::vfs::getRealFileSystem());
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
 
   InMemoryFileSystem->addFile(
@@ -773,7 +803,7 @@ TEST(ClangToolTest, StripDependencyFileAdjuster) {
   Tool.run(Action.get());
 
   auto HasFlag = [&FinalArgs](const std::string &Flag) {
-    return llvm::find(FinalArgs, Flag) != FinalArgs.end();
+    return llvm::is_contained(FinalArgs, Flag);
   };
   EXPECT_FALSE(HasFlag("-MD"));
   EXPECT_FALSE(HasFlag("-MMD"));
@@ -805,7 +835,7 @@ TEST(ClangToolTest, StripDependencyFileAdjusterShowIncludes) {
   Tool.run(Action.get());
 
   auto HasFlag = [&FinalArgs](const std::string &Flag) {
-    return llvm::find(FinalArgs, Flag) != FinalArgs.end();
+    return llvm::is_contained(FinalArgs, Flag);
   };
   EXPECT_FALSE(HasFlag("/showIncludes"));
   EXPECT_FALSE(HasFlag("/showIncludes:user"));
@@ -838,7 +868,7 @@ TEST(ClangToolTest, StripDependencyFileAdjusterMsvc) {
   Tool.run(Action.get());
 
   auto HasFlag = [&FinalArgs](const std::string &Flag) {
-    return llvm::find(FinalArgs, Flag) != FinalArgs.end();
+    return llvm::is_contained(FinalArgs, Flag);
   };
   EXPECT_TRUE(HasFlag("-MD"));
   EXPECT_TRUE(HasFlag("-MDd"));
@@ -871,7 +901,7 @@ TEST(ClangToolTest, StripPluginsAdjuster) {
   Tool.run(Action.get());
 
   auto HasFlag = [&FinalArgs](const std::string &Flag) {
-    return llvm::find(FinalArgs, Flag) != FinalArgs.end();
+    return llvm::is_contained(FinalArgs, Flag);
   };
   EXPECT_FALSE(HasFlag("-Xclang"));
   EXPECT_FALSE(HasFlag("-add-plugin"));
@@ -1004,6 +1034,137 @@ TEST(runToolOnCode, TestResetDiagnostics) {
       runToolOnCode(std::make_unique<ResetDiagnosticAction>(),
                     "struct Foo { Foo(int); ~Foo(); struct Fwd _fwd; };"
                     "void func() { long x; Foo f(x); }"));
+}
+
+namespace {
+struct TestCommand {
+  llvm::StringRef File;
+  llvm::StringRef Command;
+};
+
+std::string runToolWithProgress(llvm::ArrayRef<TestCommand> Commands,
+                                llvm::StringRef BaseDir) {
+  std::string ErrorMessage;
+
+  llvm::json::Array Entries;
+  for (const auto &Cmd : Commands) {
+    Entries.push_back(llvm::json::Object{
+        {"directory", BaseDir}, {"command", Cmd.Command}, {"file", Cmd.File}});
+  }
+  std::string DatabaseContent;
+  llvm::raw_string_ostream OS(DatabaseContent);
+  OS << llvm::json::Value(std::move(Entries));
+
+  std::unique_ptr<CompilationDatabase> Database(
+      JSONCompilationDatabase::loadFromBuffer(DatabaseContent, ErrorMessage,
+                                              JSONCommandLineSyntax::Gnu));
+  if (!Database) {
+    ADD_FAILURE() << "Failed to load compilation database: " << ErrorMessage;
+    return "";
+  }
+
+  std::vector<std::string> AbsoluteFiles;
+  for (const auto &Cmd : Commands) {
+    SmallString<32> NativeFile(BaseDir);
+    llvm::sys::path::append(NativeFile, Cmd.File);
+    llvm::sys::path::native(NativeFile);
+    std::string AbsPath = std::string(NativeFile);
+    if (AbsoluteFiles.empty() || AbsoluteFiles.back() != AbsPath) {
+      AbsoluteFiles.push_back(AbsPath);
+    }
+  }
+
+  ClangTool Tool(*Database, AbsoluteFiles);
+  for (const auto &F : AbsoluteFiles) {
+    Tool.mapVirtualFile(F, "int x;");
+  }
+
+  testing::internal::CaptureStderr();
+  Tool.run(newFrontendActionFactory<SyntaxOnlyAction>().get());
+  return testing::internal::GetCapturedStderr();
+}
+} // namespace
+
+TEST(ClangToolTest, ProgressReportSingleFile) {
+  SmallString<32> BaseDir;
+  llvm::sys::path::system_temp_directory(false, BaseDir);
+  llvm::sys::path::native(BaseDir, llvm::sys::path::Style::posix);
+
+  EXPECT_TRUE(
+      runToolWithProgress({{"test.cpp", "clang++ -c test.cpp"}}, BaseDir)
+          .empty());
+}
+
+TEST(ClangToolTest, ProgressReportMultipleFiles) {
+  SmallString<32> BaseDir;
+  llvm::sys::path::system_temp_directory(false, BaseDir);
+  llvm::sys::path::native(BaseDir, llvm::sys::path::Style::posix);
+
+  std::string Output =
+      runToolWithProgress({{"test1.cpp", "clang++ -c test1.cpp"},
+                           {"test2.cpp", "clang++ -c test2.cpp"}},
+                          BaseDir);
+
+  SmallString<32> NativeFile1(BaseDir);
+  llvm::sys::path::append(NativeFile1, "test1.cpp");
+  llvm::sys::path::native(NativeFile1);
+  SmallString<32> NativeFile2(BaseDir);
+  llvm::sys::path::append(NativeFile2, "test2.cpp");
+  llvm::sys::path::native(NativeFile2);
+
+  std::string Expected = "[1/2] Processing file " + std::string(NativeFile1) +
+                         ".\n" + "[2/2] Processing file " +
+                         std::string(NativeFile2) + ".\n";
+  EXPECT_EQ(Output, Expected);
+}
+
+TEST(ClangToolTest, ProgressReportMultipleCommands) {
+  SmallString<32> BaseDir;
+  llvm::sys::path::system_temp_directory(false, BaseDir);
+  llvm::sys::path::native(BaseDir, llvm::sys::path::Style::posix);
+
+  std::string Output =
+      runToolWithProgress({{"test.cpp", "clang++ -c test.cpp -DCMD1"},
+                           {"test.cpp", "clang++ -c test.cpp -DCMD2"}},
+                          BaseDir);
+
+  SmallString<32> NativeFile(BaseDir);
+  llvm::sys::path::append(NativeFile, "test.cpp");
+  llvm::sys::path::native(NativeFile);
+  std::string Expected =
+      "[1/1] (1/2) Processing file " + std::string(NativeFile) + ".\n" +
+      "[1/1] (2/2) Processing file " + std::string(NativeFile) + ".\n";
+  EXPECT_EQ(Output, Expected);
+}
+
+TEST(ClangToolTest, ProgressReportMixed) {
+  SmallString<32> BaseDir;
+  llvm::sys::path::system_temp_directory(false, BaseDir);
+  llvm::sys::path::native(BaseDir, llvm::sys::path::Style::posix);
+
+  std::string Output =
+      runToolWithProgress({{"test1.cpp", "clang++ -c test1.cpp"},
+                           {"test2.cpp", "clang++ -c test2.cpp -DCMD1"},
+                           {"test2.cpp", "clang++ -c test2.cpp -DCMD2"},
+                           {"test3.cpp", "clang++ -c test3.cpp"}},
+                          BaseDir);
+
+  SmallString<32> NativeFile1(BaseDir);
+  llvm::sys::path::append(NativeFile1, "test1.cpp");
+  llvm::sys::path::native(NativeFile1);
+  SmallString<32> NativeFile2(BaseDir);
+  llvm::sys::path::append(NativeFile2, "test2.cpp");
+  llvm::sys::path::native(NativeFile2);
+  SmallString<32> NativeFile3(BaseDir);
+  llvm::sys::path::append(NativeFile3, "test3.cpp");
+  llvm::sys::path::native(NativeFile3);
+
+  std::string Expected =
+      "[1/3] Processing file " + std::string(NativeFile1) + ".\n" +
+      "[2/3] (1/2) Processing file " + std::string(NativeFile2) + ".\n" +
+      "[2/3] (2/2) Processing file " + std::string(NativeFile2) + ".\n" +
+      "[3/3] Processing file " + std::string(NativeFile3) + ".\n";
+  EXPECT_EQ(Output, Expected);
 }
 
 } // end namespace tooling

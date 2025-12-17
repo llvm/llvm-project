@@ -43,18 +43,18 @@ spirv.func @composite_insert_vector(%arg0: vector<3xf32>, %arg1: f32) "None" {
 //===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: @select_scalar
-spirv.func @select_scalar(%arg0: i1, %arg1: vector<3xi32>, %arg2: f32) "None" {
+spirv.func @select_scalar(%arg0: i1, %arg1: vector<3xi32>, %arg2: vector<3xi32>, %arg3: f32, %arg4: f32) "None" {
   // CHECK: llvm.select %{{.*}}, %{{.*}}, %{{.*}} : i1, vector<3xi32>
-  %0 = spirv.Select %arg0, %arg1, %arg1 : i1, vector<3xi32>
+  %0 = spirv.Select %arg0, %arg1, %arg2 : i1, vector<3xi32>
   // CHECK: llvm.select %{{.*}}, %{{.*}}, %{{.*}} : i1, f32
-  %1 = spirv.Select %arg0, %arg2, %arg2 : i1, f32
+  %1 = spirv.Select %arg0, %arg3, %arg4 : i1, f32
   spirv.Return
 }
 
 // CHECK-LABEL: @select_vector
-spirv.func @select_vector(%arg0: vector<2xi1>, %arg1: vector<2xi32>) "None" {
+spirv.func @select_vector(%arg0: vector<2xi1>, %arg1: vector<2xi32>, %arg2: vector<2xi32>) "None" {
   // CHECK: llvm.select %{{.*}}, %{{.*}}, %{{.*}} : vector<2xi1>, vector<2xi32>
-  %0 = spirv.Select %arg0, %arg1, %arg1 : vector<2xi1>, vector<2xi32>
+  %0 = spirv.Select %arg0, %arg1, %arg2 : vector<2xi1>, vector<2xi32>
   spirv.Return
 }
 
@@ -65,12 +65,12 @@ spirv.func @select_vector(%arg0: vector<2xi1>, %arg1: vector<2xi32>) "None" {
 spirv.func @vector_shuffle_same_size(%vector1: vector<2xf32>, %vector2: vector<2xf32>) -> vector<3xf32> "None" {
   //      CHECK: %[[res:.*]] = llvm.shufflevector {{.*}} [0, 2, -1] : vector<2xf32>
   // CHECK-NEXT: return %[[res]] : vector<3xf32>
-  %0 = spirv.VectorShuffle [0: i32, 2: i32, 0xffffffff: i32] %vector1: vector<2xf32>, %vector2: vector<2xf32> -> vector<3xf32>
+  %0 = spirv.VectorShuffle [0: i32, 2: i32, 0xffffffff: i32] %vector1, %vector2 : vector<2xf32>, vector<2xf32> -> vector<3xf32>
   spirv.ReturnValue %0: vector<3xf32>
 }
 
 spirv.func @vector_shuffle_different_size(%vector1: vector<3xf32>, %vector2: vector<2xf32>) -> vector<3xf32> "None" {
-  //      CHECK: %[[UNDEF:.*]] = llvm.mlir.undef : vector<3xf32>
+  //      CHECK: %[[UNDEF:.*]] = llvm.mlir.poison : vector<3xf32>
   // CHECK-NEXT: %[[C0_0:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK-NEXT: %[[C0_1:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK-NEXT: %[[EXT0:.*]] = llvm.extractelement %arg0[%[[C0_1]] : i32] : vector<3xf32>
@@ -80,7 +80,7 @@ spirv.func @vector_shuffle_different_size(%vector1: vector<3xf32>, %vector2: vec
   // CHECK-NEXT: %[[EXT1:.*]] = llvm.extractelement {{.*}}[%[[C1_1]] : i32] : vector<2xf32>
   // CHECK-NEXT: %[[RES:.*]] = llvm.insertelement %[[EXT1]], %[[INSERT0]][%[[C1_0]] : i32] : vector<3xf32>
   // CHECK-NEXT: llvm.return %[[RES]] : vector<3xf32>
-  %0 = spirv.VectorShuffle [0: i32, 4: i32, 0xffffffff: i32] %vector1: vector<3xf32>, %vector2: vector<2xf32> -> vector<3xf32>
+  %0 = spirv.VectorShuffle [0: i32, 4: i32, 0xffffffff: i32] %vector1, %vector2 : vector<3xf32>, vector<2xf32> -> vector<3xf32>
   spirv.ReturnValue %0: vector<3xf32>
 }
 
@@ -90,7 +90,7 @@ spirv.func @vector_shuffle_different_size(%vector1: vector<3xf32>, %vector2: vec
 
 //      CHECK: module {
 // CHECK-NEXT:   llvm.mlir.global external constant @{{.*}}() {addr_space = 0 : i32} : !llvm.struct<(i32)> {
-// CHECK-NEXT:     %[[UNDEF:.*]] = llvm.mlir.undef : !llvm.struct<(i32)>
+// CHECK-NEXT:     %[[UNDEF:.*]] = llvm.mlir.poison : !llvm.struct<(i32)>
 // CHECK-NEXT:     %[[VAL:.*]] = llvm.mlir.constant(31 : i32) : i32
 // CHECK-NEXT:     %[[RET:.*]] = llvm.insertvalue %[[VAL]], %[[UNDEF]][0] : !llvm.struct<(i32)>
 // CHECK-NEXT:     llvm.return %[[RET]] : !llvm.struct<(i32)>
@@ -109,7 +109,7 @@ spirv.module Logical OpenCL {
 
 //      CHECK: module {
 // CHECK-NEXT:   llvm.mlir.global external constant @{{.*}}() {addr_space = 0 : i32} : !llvm.struct<(i32, array<3 x i32>)> {
-// CHECK-NEXT:     %[[UNDEF:.*]] = llvm.mlir.undef : !llvm.struct<(i32, array<3 x i32>)>
+// CHECK-NEXT:     %[[UNDEF:.*]] = llvm.mlir.poison : !llvm.struct<(i32, array<3 x i32>)>
 // CHECK-NEXT:     %[[EM:.*]] = llvm.mlir.constant(18 : i32) : i32
 // CHECK-NEXT:     %[[T0:.*]] = llvm.insertvalue %[[EM]], %[[UNDEF]][0] : !llvm.struct<(i32, array<3 x i32>)>
 // CHECK-NEXT:     %[[C0:.*]] = llvm.mlir.constant(32 : i32) : i32

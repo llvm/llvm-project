@@ -1,0 +1,11 @@
+[tool.black]
+extend-exclude = '''
+(
+  third-party/
+)
+'''
+
+[tool.pyright]
+executionEnvironments = [
+  { root = "lldb/packages/Python", pythonVersion = "3.8" }
+]

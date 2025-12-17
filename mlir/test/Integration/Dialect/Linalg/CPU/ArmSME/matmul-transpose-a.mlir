@@ -1,20 +1,20 @@
 // RUN: mlir-opt %s \
 // RUN:   -transform-interpreter -test-transform-dialect-erase-schedule \
-// RUN:   -one-shot-bufferize="bufferize-function-boundaries" -canonicalize \
-// RUN:   -enable-arm-streaming="mode=locally enable-za" \
-// RUN:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
-// RUN:   -convert-vector-to-scf -cse -arm-sve-legalize-vector-storage \
-// RUN:   -convert-vector-to-llvm=enable-arm-sme \
-// RUN:   -convert-vector-to-llvm=enable-arm-sve \
-// RUN:   -cse -canonicalize -allocate-arm-sme-tiles -test-lower-to-llvm | \
+// RUN:   -one-shot-bufferize="bufferize-function-boundaries" \
+// RUN:   -test-lower-to-arm-sme -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:   -e=main -entry-point-result=void \
 // RUN:   -march=aarch64 -mattr="+sve,+sme" \
-// RUN:   -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils | \
+// RUN:   -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib | \
 // RUN: FileCheck %s
 
 func.func @matmul_transpose_a(%A : tensor<?x?xf32>, %B : tensor<?x?xf32>, %C : tensor<?x?xf32>) {
-  %res = linalg.matmul_transpose_a ins(%A, %B: tensor<?x?xf32>, tensor<?x?xf32>)
+  %res = linalg.matmul
+            indexing_maps = [
+                    affine_map<(d0, d1, d2) -> (d2, d0)>,
+                    affine_map<(d0, d1, d2) -> (d2, d1)>,
+                    affine_map<(d0, d1, d2) -> (d0, d1)>]
+            ins(%A, %B: tensor<?x?xf32>, tensor<?x?xf32>)
                                    outs(%C: tensor<?x?xf32>) -> tensor<?x?xf32>
   %xf = tensor.cast %res : tensor<?x?xf32> to tensor<*xf32>
   call @printMemrefF32(%xf) : (tensor<*xf32>) -> ()
@@ -22,7 +22,7 @@ func.func @matmul_transpose_a(%A : tensor<?x?xf32>, %B : tensor<?x?xf32>, %C : t
 }
 
 func.func @main() {
-  %c0 = arith.constant 0 : i32
+  %c0 = arith.constant 0.0 : f32
   %c7 = arith.constant 7 : index
 
   %A = arith.constant dense<[
@@ -44,7 +44,7 @@ func.func @main() {
   %A_dyn = tensor.cast %A : tensor<13x7xf32> to tensor<?x?xf32>
 
   %C_init = bufferization.alloc_tensor(%c7, %c7) : tensor<?x?xf32>
-  %C = linalg.fill ins(%c0 : i32) outs(%C_init : tensor<?x?xf32>) -> tensor<?x?xf32>
+  %C = linalg.fill ins(%c0 : f32) outs(%C_init : tensor<?x?xf32>) -> tensor<?x?xf32>
 
   // CHECK: Unranked Memref {{.*}} rank = 2 offset = 0 sizes = [7, 7] strides = [7, 1] data =
   // CHECK: [32955, 33514, 34073, 34632, 35191, 35750, 36309]
@@ -61,12 +61,12 @@ func.func @main() {
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module : !transform.any_op {transform.readonly}) {
-    %matmul_transpose_a = transform.structured.match ops{["linalg.matmul_transpose_a"]} in %module
+    %matmul_transpose_a = transform.structured.match ops{["linalg.matmul"]} in %module
       : (!transform.any_op) -> !transform.any_op
 
     // Step 1: Tile for size [4] x [4], which corresponds to SVLs x SVLs, where
     //         SVLs is the number of 32-bit elements in a vector of SVL bits.
-    %tiled_linalg_op, %loops:3 = transform.structured.tile_using_for %matmul_transpose_a[[4], [4], 1]
+    %tiled_linalg_op, %loops:3 = transform.structured.tile_using_for %matmul_transpose_a tile_sizes [[4], [4], 1]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
 
     // Step 2: Vectorize.
@@ -87,8 +87,16 @@ module attributes {transform.with_named_sequence} {
     transform.apply_patterns to %func {
       transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
       transform.apply_patterns.vector.lower_masks
+      transform.apply_patterns.canonicalization
     } : !transform.any_op
 
+    // Step 5 (optional optimization): Hoist accumulator load/store.
+    %func_h = transform.structured.hoist_redundant_vector_transfers %func
+        : (!transform.any_op) -> !transform.any_op
+    %all_loops = transform.structured.match interface{LoopLikeInterface} in %module
+      : (!transform.any_op) -> !transform.any_op
+    transform.apply_licm to %all_loops : !transform.any_op
+    transform.loop.hoist_loop_invariant_subsets %all_loops : !transform.any_op
     transform.yield
   }
 }

@@ -17,12 +17,13 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/LegacyLegalizerInfo.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <tuple>
@@ -30,11 +31,12 @@
 
 namespace llvm {
 
-extern cl::opt<bool> DisableGISelLegalityCheck;
+LLVM_ABI extern cl::opt<bool> DisableGISelLegalityCheck;
 
 class MachineFunction;
 class raw_ostream;
 class LegalizerHelper;
+class LostDebugLocObserver;
 class MachineInstr;
 class MachineRegisterInfo;
 class MCInstrInfo;
@@ -97,7 +99,8 @@ enum LegalizeAction : std::uint8_t {
   UseLegacyRules,
 };
 } // end namespace LegalizeActions
-raw_ostream &operator<<(raw_ostream &OS, LegalizeActions::LegalizeAction Action);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 LegalizeActions::LegalizeAction Action);
 
 using LegalizeActions::LegalizeAction;
 
@@ -112,28 +115,28 @@ struct LegalityQuery {
   struct MemDesc {
     LLT MemoryTy;
     uint64_t AlignInBits;
-    AtomicOrdering Ordering;
+    AtomicOrdering Ordering; //< For cmpxchg this is the success ordering.
+    AtomicOrdering FailureOrdering; //< For cmpxchg, otherwise NotAtomic.
 
     MemDesc() = default;
-    MemDesc(LLT MemoryTy, uint64_t AlignInBits, AtomicOrdering Ordering)
-        : MemoryTy(MemoryTy), AlignInBits(AlignInBits), Ordering(Ordering) {}
+    MemDesc(LLT MemoryTy, uint64_t AlignInBits, AtomicOrdering Ordering,
+            AtomicOrdering FailureOrdering)
+        : MemoryTy(MemoryTy), AlignInBits(AlignInBits), Ordering(Ordering),
+          FailureOrdering(FailureOrdering) {}
     MemDesc(const MachineMemOperand &MMO)
-        : MemoryTy(MMO.getMemoryType()),
-          AlignInBits(MMO.getAlign().value() * 8),
-          Ordering(MMO.getSuccessOrdering()) {}
+        : MemDesc(MMO.getMemoryType(), MMO.getAlign().value() * 8,
+                  MMO.getSuccessOrdering(), MMO.getFailureOrdering()) {}
   };
 
   /// Operations which require memory can use this to place requirements on the
   /// memory type for each MMO.
   ArrayRef<MemDesc> MMODescrs;
 
-  constexpr LegalityQuery(unsigned Opcode, const ArrayRef<LLT> Types,
-                          const ArrayRef<MemDesc> MMODescrs)
+  constexpr LegalityQuery(unsigned Opcode, ArrayRef<LLT> Types,
+                          ArrayRef<MemDesc> MMODescrs = {})
       : Opcode(Opcode), Types(Types), MMODescrs(MMODescrs) {}
-  constexpr LegalityQuery(unsigned Opcode, const ArrayRef<LLT> Types)
-      : LegalityQuery(Opcode, Types, {}) {}
 
-  raw_ostream &print(raw_ostream &OS) const;
+  LLVM_ABI raw_ostream &print(raw_ostream &OS) const;
 };
 
 /// The result of a query. It either indicates a final answer of Legal or
@@ -223,6 +226,11 @@ struct TypePairAndMemDesc {
   }
 };
 
+/// True iff P is false.
+template <typename Predicate> Predicate predNot(Predicate P) {
+  return [=](const LegalityQuery &Query) { return !P(Query); };
+}
+
 /// True iff P0 and P1 are true.
 template<typename Predicate>
 Predicate all(Predicate P0, Predicate P1) {
@@ -250,10 +258,10 @@ Predicate any(Predicate P0, Predicate P1, Args... args) {
 }
 
 /// True iff the given type index is the specified type.
-LegalityPredicate typeIs(unsigned TypeIdx, LLT TypesInit);
+LLVM_ABI LegalityPredicate typeIs(unsigned TypeIdx, LLT TypesInit);
 /// True iff the given type index is one of the specified types.
-LegalityPredicate typeInSet(unsigned TypeIdx,
-                            std::initializer_list<LLT> TypesInit);
+LLVM_ABI LegalityPredicate typeInSet(unsigned TypeIdx,
+                                     std::initializer_list<LLT> TypesInit);
 
 /// True iff the given type index is not the specified type.
 inline LegalityPredicate typeIsNot(unsigned TypeIdx, LLT Type) {
@@ -264,126 +272,152 @@ inline LegalityPredicate typeIsNot(unsigned TypeIdx, LLT Type) {
 
 /// True iff the given types for the given pair of type indexes is one of the
 /// specified type pairs.
-LegalityPredicate
+LLVM_ABI LegalityPredicate
 typePairInSet(unsigned TypeIdx0, unsigned TypeIdx1,
               std::initializer_list<std::pair<LLT, LLT>> TypesInit);
+/// True iff the given types for the given tuple of type indexes is one of the
+/// specified type tuple.
+LLVM_ABI LegalityPredicate
+typeTupleInSet(unsigned TypeIdx0, unsigned TypeIdx1, unsigned Type2,
+               std::initializer_list<std::tuple<LLT, LLT, LLT>> TypesInit);
 /// True iff the given types for the given pair of type indexes is one of the
 /// specified type pairs.
-LegalityPredicate typePairAndMemDescInSet(
+LLVM_ABI LegalityPredicate typePairAndMemDescInSet(
     unsigned TypeIdx0, unsigned TypeIdx1, unsigned MMOIdx,
     std::initializer_list<TypePairAndMemDesc> TypesAndMemDescInit);
 /// True iff the specified type index is a scalar.
-LegalityPredicate isScalar(unsigned TypeIdx);
+LLVM_ABI LegalityPredicate isScalar(unsigned TypeIdx);
 /// True iff the specified type index is a vector.
-LegalityPredicate isVector(unsigned TypeIdx);
+LLVM_ABI LegalityPredicate isVector(unsigned TypeIdx);
 /// True iff the specified type index is a pointer (with any address space).
-LegalityPredicate isPointer(unsigned TypeIdx);
+LLVM_ABI LegalityPredicate isPointer(unsigned TypeIdx);
 /// True iff the specified type index is a pointer with the specified address
 /// space.
-LegalityPredicate isPointer(unsigned TypeIdx, unsigned AddrSpace);
+LLVM_ABI LegalityPredicate isPointer(unsigned TypeIdx, unsigned AddrSpace);
+/// True iff the specified type index is a vector of pointers (with any address
+/// space).
+LLVM_ABI LegalityPredicate isPointerVector(unsigned TypeIdx);
 
 /// True if the type index is a vector with element type \p EltTy
-LegalityPredicate elementTypeIs(unsigned TypeIdx, LLT EltTy);
+LLVM_ABI LegalityPredicate elementTypeIs(unsigned TypeIdx, LLT EltTy);
 
 /// True iff the specified type index is a scalar that's narrower than the given
 /// size.
-LegalityPredicate scalarNarrowerThan(unsigned TypeIdx, unsigned Size);
+LLVM_ABI LegalityPredicate scalarNarrowerThan(unsigned TypeIdx, unsigned Size);
 
 /// True iff the specified type index is a scalar that's wider than the given
 /// size.
-LegalityPredicate scalarWiderThan(unsigned TypeIdx, unsigned Size);
+LLVM_ABI LegalityPredicate scalarWiderThan(unsigned TypeIdx, unsigned Size);
 
 /// True iff the specified type index is a scalar or vector with an element type
 /// that's narrower than the given size.
-LegalityPredicate scalarOrEltNarrowerThan(unsigned TypeIdx, unsigned Size);
+LLVM_ABI LegalityPredicate scalarOrEltNarrowerThan(unsigned TypeIdx,
+                                                   unsigned Size);
+
+/// True iff the specified type index is a vector with a number of elements
+/// that's greater than the given size.
+LLVM_ABI LegalityPredicate vectorElementCountIsGreaterThan(unsigned TypeIdx,
+                                                           unsigned Size);
+
+/// True iff the specified type index is a vector with a number of elements
+/// that's less than or equal to the given size.
+LLVM_ABI LegalityPredicate
+vectorElementCountIsLessThanOrEqualTo(unsigned TypeIdx, unsigned Size);
 
 /// True iff the specified type index is a scalar or a vector with an element
 /// type that's wider than the given size.
-LegalityPredicate scalarOrEltWiderThan(unsigned TypeIdx, unsigned Size);
+LLVM_ABI LegalityPredicate scalarOrEltWiderThan(unsigned TypeIdx,
+                                                unsigned Size);
 
 /// True iff the specified type index is a scalar whose size is not a multiple
 /// of Size.
-LegalityPredicate sizeNotMultipleOf(unsigned TypeIdx, unsigned Size);
+LLVM_ABI LegalityPredicate sizeNotMultipleOf(unsigned TypeIdx, unsigned Size);
 
 /// True iff the specified type index is a scalar whose size is not a power of
 /// 2.
-LegalityPredicate sizeNotPow2(unsigned TypeIdx);
+LLVM_ABI LegalityPredicate sizeNotPow2(unsigned TypeIdx);
 
 /// True iff the specified type index is a scalar or vector whose element size
 /// is not a power of 2.
-LegalityPredicate scalarOrEltSizeNotPow2(unsigned TypeIdx);
+LLVM_ABI LegalityPredicate scalarOrEltSizeNotPow2(unsigned TypeIdx);
 
 /// True if the total bitwidth of the specified type index is \p Size bits.
-LegalityPredicate sizeIs(unsigned TypeIdx, unsigned Size);
+LLVM_ABI LegalityPredicate sizeIs(unsigned TypeIdx, unsigned Size);
 
 /// True iff the specified type indices are both the same bit size.
-LegalityPredicate sameSize(unsigned TypeIdx0, unsigned TypeIdx1);
+LLVM_ABI LegalityPredicate sameSize(unsigned TypeIdx0, unsigned TypeIdx1);
 
 /// True iff the first type index has a larger total bit size than second type
 /// index.
-LegalityPredicate largerThan(unsigned TypeIdx0, unsigned TypeIdx1);
+LLVM_ABI LegalityPredicate largerThan(unsigned TypeIdx0, unsigned TypeIdx1);
 
 /// True iff the first type index has a smaller total bit size than second type
 /// index.
-LegalityPredicate smallerThan(unsigned TypeIdx0, unsigned TypeIdx1);
+LLVM_ABI LegalityPredicate smallerThan(unsigned TypeIdx0, unsigned TypeIdx1);
 
 /// True iff the specified MMO index has a size (rounded to bytes) that is not a
 /// power of 2.
-LegalityPredicate memSizeInBytesNotPow2(unsigned MMOIdx);
+LLVM_ABI LegalityPredicate memSizeInBytesNotPow2(unsigned MMOIdx);
 
 /// True iff the specified MMO index has a size that is not an even byte size,
 /// or that even byte size is not a power of 2.
-LegalityPredicate memSizeNotByteSizePow2(unsigned MMOIdx);
+LLVM_ABI LegalityPredicate memSizeNotByteSizePow2(unsigned MMOIdx);
 
 /// True iff the specified type index is a vector whose element count is not a
 /// power of 2.
-LegalityPredicate numElementsNotPow2(unsigned TypeIdx);
+LLVM_ABI LegalityPredicate numElementsNotPow2(unsigned TypeIdx);
 /// True iff the specified MMO index has at an atomic ordering of at Ordering or
 /// stronger.
-LegalityPredicate atomicOrderingAtLeastOrStrongerThan(unsigned MMOIdx,
-                                                      AtomicOrdering Ordering);
+LLVM_ABI LegalityPredicate
+atomicOrderingAtLeastOrStrongerThan(unsigned MMOIdx, AtomicOrdering Ordering);
 } // end namespace LegalityPredicates
 
 namespace LegalizeMutations {
 /// Select this specific type for the given type index.
-LegalizeMutation changeTo(unsigned TypeIdx, LLT Ty);
+LLVM_ABI LegalizeMutation changeTo(unsigned TypeIdx, LLT Ty);
 
 /// Keep the same type as the given type index.
-LegalizeMutation changeTo(unsigned TypeIdx, unsigned FromTypeIdx);
+LLVM_ABI LegalizeMutation changeTo(unsigned TypeIdx, unsigned FromTypeIdx);
 
 /// Keep the same scalar or element type as the given type index.
-LegalizeMutation changeElementTo(unsigned TypeIdx, unsigned FromTypeIdx);
+LLVM_ABI LegalizeMutation changeElementTo(unsigned TypeIdx,
+                                          unsigned FromTypeIdx);
 
 /// Keep the same scalar or element type as the given type.
-LegalizeMutation changeElementTo(unsigned TypeIdx, LLT Ty);
+LLVM_ABI LegalizeMutation changeElementTo(unsigned TypeIdx, LLT Ty);
 
 /// Keep the same scalar or element type as \p TypeIdx, but take the number of
 /// elements from \p FromTypeIdx.
-LegalizeMutation changeElementCountTo(unsigned TypeIdx, unsigned FromTypeIdx);
+LLVM_ABI LegalizeMutation changeElementCountTo(unsigned TypeIdx,
+                                               unsigned FromTypeIdx);
 
 /// Keep the same scalar or element type as \p TypeIdx, but take the number of
 /// elements from \p Ty.
-LegalizeMutation changeElementCountTo(unsigned TypeIdx, LLT Ty);
+LLVM_ABI LegalizeMutation changeElementCountTo(unsigned TypeIdx,
+                                               ElementCount EC);
 
 /// Change the scalar size or element size to have the same scalar size as type
 /// index \p FromIndex. Unlike changeElementTo, this discards pointer types and
 /// only changes the size.
-LegalizeMutation changeElementSizeTo(unsigned TypeIdx, unsigned FromTypeIdx);
+LLVM_ABI LegalizeMutation changeElementSizeTo(unsigned TypeIdx,
+                                              unsigned FromTypeIdx);
 
 /// Widen the scalar type or vector element type for the given type index to the
 /// next power of 2.
-LegalizeMutation widenScalarOrEltToNextPow2(unsigned TypeIdx, unsigned Min = 0);
+LLVM_ABI LegalizeMutation widenScalarOrEltToNextPow2(unsigned TypeIdx,
+                                                     unsigned Min = 0);
 
 /// Widen the scalar type or vector element type for the given type index to
 /// next multiple of \p Size.
-LegalizeMutation widenScalarOrEltToNextMultipleOf(unsigned TypeIdx,
-                                                  unsigned Size);
+LLVM_ABI LegalizeMutation widenScalarOrEltToNextMultipleOf(unsigned TypeIdx,
+                                                           unsigned Size);
 
 /// Add more elements to the type for the given type index to the next power of
 /// 2.
-LegalizeMutation moreElementsToNextPow2(unsigned TypeIdx, unsigned Min = 0);
+LLVM_ABI LegalizeMutation moreElementsToNextPow2(unsigned TypeIdx,
+                                                 unsigned Min = 0);
 /// Break up the vector type for the given type index into the element type.
-LegalizeMutation scalarize(unsigned TypeIdx);
+LLVM_ABI LegalizeMutation scalarize(unsigned TypeIdx);
 } // end namespace LegalizeMutations
 
 /// A single rule in a legalizer info ruleset.
@@ -498,6 +532,15 @@ class LegalizeRuleSet {
     using namespace LegalityPredicates;
     return actionIf(Action, typePairInSet(typeIdx(0), typeIdx(1), Types));
   }
+
+  LegalizeRuleSet &
+  actionFor(LegalizeAction Action,
+            std::initializer_list<std::tuple<LLT, LLT, LLT>> Types) {
+    using namespace LegalityPredicates;
+    return actionIf(Action,
+                    typeTupleInSet(typeIdx(0), typeIdx(1), typeIdx(2), Types));
+  }
+
   /// Use the given action when type indexes 0 and 1 is any type pair in the
   /// given list.
   /// Action should be an action that requires mutation.
@@ -593,9 +636,26 @@ public:
   LegalizeRuleSet &legalFor(std::initializer_list<LLT> Types) {
     return actionFor(LegalizeAction::Legal, Types);
   }
+  LegalizeRuleSet &legalFor(bool Pred, std::initializer_list<LLT> Types) {
+    if (!Pred)
+      return *this;
+    return actionFor(LegalizeAction::Legal, Types);
+  }
   /// The instruction is legal when type indexes 0 and 1 is any type pair in the
   /// given list.
   LegalizeRuleSet &legalFor(std::initializer_list<std::pair<LLT, LLT>> Types) {
+    return actionFor(LegalizeAction::Legal, Types);
+  }
+  LegalizeRuleSet &legalFor(bool Pred,
+                            std::initializer_list<std::pair<LLT, LLT>> Types) {
+    if (!Pred)
+      return *this;
+    return actionFor(LegalizeAction::Legal, Types);
+  }
+  LegalizeRuleSet &
+  legalFor(bool Pred, std::initializer_list<std::tuple<LLT, LLT, LLT>> Types) {
+    if (!Pred)
+      return *this;
     return actionFor(LegalizeAction::Legal, Types);
   }
   /// The instruction is legal when type index 0 is any type in the given list
@@ -738,8 +798,19 @@ public:
   LegalizeRuleSet &libcallFor(std::initializer_list<LLT> Types) {
     return actionFor(LegalizeAction::Libcall, Types);
   }
+  LegalizeRuleSet &libcallFor(bool Pred, std::initializer_list<LLT> Types) {
+    if (!Pred)
+      return *this;
+    return actionFor(LegalizeAction::Libcall, Types);
+  }
   LegalizeRuleSet &
   libcallFor(std::initializer_list<std::pair<LLT, LLT>> Types) {
+    return actionFor(LegalizeAction::Libcall, Types);
+  }
+  LegalizeRuleSet &
+  libcallFor(bool Pred, std::initializer_list<std::pair<LLT, LLT>> Types) {
+    if (!Pred)
+      return *this;
     return actionFor(LegalizeAction::Libcall, Types);
   }
   LegalizeRuleSet &
@@ -840,10 +911,21 @@ public:
   LegalizeRuleSet &customFor(std::initializer_list<LLT> Types) {
     return actionFor(LegalizeAction::Custom, Types);
   }
+  LegalizeRuleSet &customFor(bool Pred, std::initializer_list<LLT> Types) {
+    if (!Pred)
+      return *this;
+    return actionFor(LegalizeAction::Custom, Types);
+  }
 
-  /// The instruction is custom when type indexes 0 and 1 is any type pair in the
-  /// given list.
+  /// The instruction is custom when type indexes 0 and 1 is any type pair in
+  /// the given list.
   LegalizeRuleSet &customFor(std::initializer_list<std::pair<LLT, LLT>> Types) {
+    return actionFor(LegalizeAction::Custom, Types);
+  }
+  LegalizeRuleSet &customFor(bool Pred,
+                             std::initializer_list<std::pair<LLT, LLT>> Types) {
+    if (!Pred)
+      return *this;
     return actionFor(LegalizeAction::Custom, Types);
   }
 
@@ -867,13 +949,24 @@ public:
                                      Types2);
   }
 
+  /// The instruction is custom when the predicate is true and type indexes 0
+  /// and 1 are all in their respective lists.
+  LegalizeRuleSet &
+  customForCartesianProduct(bool Pred, std::initializer_list<LLT> Types0,
+                            std::initializer_list<LLT> Types1) {
+    if (!Pred)
+      return *this;
+    return actionForCartesianProduct(LegalizeAction::Custom, Types0, Types1);
+  }
+
   /// Unconditionally custom lower.
   LegalizeRuleSet &custom() {
     return customIf(always);
   }
 
   /// Widen the scalar to the next power of two that is at least MinSize.
-  /// No effect if the type is not a scalar or is a power of two.
+  /// No effect if the type is a power of two, except if the type is smaller
+  /// than MinSize, or if the type is a vector type.
   LegalizeRuleSet &widenScalarToNextPow2(unsigned TypeIdx,
                                          unsigned MinSize = 0) {
     using namespace LegalityPredicates;
@@ -899,6 +992,18 @@ public:
     using namespace LegalityPredicates;
     return actionIf(
         LegalizeAction::WidenScalar, scalarOrEltSizeNotPow2(typeIdx(TypeIdx)),
+        LegalizeMutations::widenScalarOrEltToNextPow2(TypeIdx, MinSize));
+  }
+
+  /// Widen the scalar or vector element type to the next power of two that is
+  /// at least MinSize.  No effect if the scalar size is a power of two.
+  LegalizeRuleSet &widenScalarOrEltToNextPow2OrMinSize(unsigned TypeIdx,
+                                                       unsigned MinSize = 0) {
+    using namespace LegalityPredicates;
+    return actionIf(
+        LegalizeAction::WidenScalar,
+        any(scalarOrEltNarrowerThan(TypeIdx, MinSize),
+            scalarOrEltSizeNotPow2(typeIdx(TypeIdx))),
         LegalizeMutations::widenScalarOrEltToNextPow2(TypeIdx, MinSize));
   }
 
@@ -951,8 +1056,7 @@ public:
         LegalizeAction::WidenScalar,
         [=](const LegalityQuery &Query) {
           const LLT VecTy = Query.Types[TypeIdx];
-          return VecTy.isVector() && !VecTy.isScalable() &&
-                 VecTy.getSizeInBits() < VectorSize;
+          return VecTy.isFixedVector() && VecTy.getSizeInBits() < VectorSize;
         },
         [=](const LegalityQuery &Query) {
           const LLT VecTy = Query.Types[TypeIdx];
@@ -970,6 +1074,11 @@ public:
     return actionIf(LegalizeAction::WidenScalar,
                     scalarNarrowerThan(TypeIdx, Ty.getSizeInBits()),
                     changeTo(typeIdx(TypeIdx), Ty));
+  }
+  LegalizeRuleSet &minScalar(bool Pred, unsigned TypeIdx, const LLT Ty) {
+    if (!Pred)
+      return *this;
+    return minScalar(TypeIdx, Ty);
   }
 
   /// Ensure the scalar is at least as wide as Ty if condition is met.
@@ -1031,6 +1140,13 @@ public:
     return minScalar(TypeIdx, MinTy).maxScalar(TypeIdx, MaxTy);
   }
 
+  LegalizeRuleSet &clampScalar(bool Pred, unsigned TypeIdx, const LLT MinTy,
+                               const LLT MaxTy) {
+    if (!Pred)
+      return *this;
+    return clampScalar(TypeIdx, MinTy, MaxTy);
+  }
+
   /// Limit the range of scalar sizes to MinTy and MaxTy.
   LegalizeRuleSet &clampScalarOrElt(unsigned TypeIdx, const LLT MinTy,
                                     const LLT MaxTy) {
@@ -1040,7 +1156,8 @@ public:
   /// Widen the scalar to match the size of another.
   LegalizeRuleSet &minScalarSameAs(unsigned TypeIdx, unsigned LargeTypeIdx) {
     typeIdx(TypeIdx);
-    return widenScalarIf(
+    return actionIf(
+        LegalizeAction::WidenScalar,
         [=](const LegalityQuery &Query) {
           return Query.Types[LargeTypeIdx].getScalarSizeInBits() >
                  Query.Types[TypeIdx].getSizeInBits();
@@ -1051,7 +1168,8 @@ public:
   /// Narrow the scalar to match the size of another.
   LegalizeRuleSet &maxScalarSameAs(unsigned TypeIdx, unsigned NarrowTypeIdx) {
     typeIdx(TypeIdx);
-    return narrowScalarIf(
+    return actionIf(
+        LegalizeAction::NarrowScalar,
         [=](const LegalityQuery &Query) {
           return Query.Types[NarrowTypeIdx].getScalarSizeInBits() <
                  Query.Types[TypeIdx].getSizeInBits();
@@ -1078,7 +1196,7 @@ public:
         },
         [=](const LegalityQuery &Query) {
           LLT T = Query.Types[LargeTypeIdx];
-          if (T.isVector() && T.getElementType().isPointer())
+          if (T.isPointerVector())
             T = T.changeElementType(LLT::scalar(T.getScalarSizeInBits()));
           return std::make_pair(TypeIdx, T);
         });
@@ -1120,7 +1238,7 @@ public:
         LegalizeAction::MoreElements,
         [=](const LegalityQuery &Query) {
           LLT VecTy = Query.Types[TypeIdx];
-          return VecTy.isVector() && VecTy.getElementType() == EltTy &&
+          return VecTy.isFixedVector() && VecTy.getElementType() == EltTy &&
                  VecTy.getNumElements() < MinElements;
         },
         [=](const LegalityQuery &Query) {
@@ -1138,7 +1256,7 @@ public:
         LegalizeAction::MoreElements,
         [=](const LegalityQuery &Query) {
           LLT VecTy = Query.Types[TypeIdx];
-          return VecTy.isVector() && VecTy.getElementType() == EltTy &&
+          return VecTy.isFixedVector() && VecTy.getElementType() == EltTy &&
                  (VecTy.getNumElements() % NumElts != 0);
         },
         [=](const LegalityQuery &Query) {
@@ -1158,7 +1276,7 @@ public:
         LegalizeAction::FewerElements,
         [=](const LegalityQuery &Query) {
           LLT VecTy = Query.Types[TypeIdx];
-          return VecTy.isVector() && VecTy.getElementType() == EltTy &&
+          return VecTy.isFixedVector() && VecTy.getElementType() == EltTy &&
                  VecTy.getNumElements() > MaxElements;
         },
         [=](const LegalityQuery &Query) {
@@ -1178,6 +1296,9 @@ public:
                                     const LLT MaxTy) {
     assert(MinTy.getElementType() == MaxTy.getElementType() &&
            "Expected element types to agree");
+
+    assert((!MinTy.isScalableVector() && !MaxTy.isScalableVector()) &&
+           "Unexpected scalable vectors");
 
     const LLT EltTy = MinTy.getElementType();
     return clampMinNumElements(TypeIdx, EltTy, MinTy.getNumElements())
@@ -1207,17 +1328,17 @@ public:
   /// Check if there is no type index which is obviously not handled by the
   /// LegalizeRuleSet in any way at all.
   /// \pre Type indices of the opcode form a dense [0, \p NumTypeIdxs) set.
-  bool verifyTypeIdxsCoverage(unsigned NumTypeIdxs) const;
+  LLVM_ABI bool verifyTypeIdxsCoverage(unsigned NumTypeIdxs) const;
   /// Check if there is no imm index which is obviously not handled by the
   /// LegalizeRuleSet in any way at all.
   /// \pre Type indices of the opcode form a dense [0, \p NumTypeIdxs) set.
-  bool verifyImmIdxsCoverage(unsigned NumImmIdxs) const;
+  LLVM_ABI bool verifyImmIdxsCoverage(unsigned NumImmIdxs) const;
 
   /// Apply the ruleset to the given LegalityQuery.
-  LegalizeActionStep apply(const LegalityQuery &Query) const;
+  LLVM_ABI LegalizeActionStep apply(const LegalityQuery &Query) const;
 };
 
-class LegalizerInfo {
+class LLVM_ABI LegalizerInfo {
 public:
   virtual ~LegalizerInfo() = default;
 
@@ -1288,8 +1409,8 @@ public:
                        const MachineRegisterInfo &MRI) const;
 
   /// Called for instructions with the Custom LegalizationAction.
-  virtual bool legalizeCustom(LegalizerHelper &Helper,
-                              MachineInstr &MI) const {
+  virtual bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
+                              LostDebugLocObserver &LocObserver) const {
     llvm_unreachable("must implement this if custom action is used");
   }
 

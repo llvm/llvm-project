@@ -1,4 +1,4 @@
-//===--- SuspiciousCallArgumentCheck.cpp - clang-tidy ---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,6 @@
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <optional>
-#include <sstream>
 
 using namespace clang::ast_matchers;
 namespace optutils = clang::tidy::utils::options;
@@ -138,11 +137,11 @@ static bool applyAbbreviationHeuristic(
     const llvm::StringMap<std::string> &AbbreviationDictionary, StringRef Arg,
     StringRef Param) {
   if (AbbreviationDictionary.contains(Arg) &&
-      Param.equals(AbbreviationDictionary.lookup(Arg)))
+      Param == AbbreviationDictionary.lookup(Arg))
     return true;
 
   if (AbbreviationDictionary.contains(Param) &&
-      Arg.equals(AbbreviationDictionary.lookup(Param)))
+      Arg == AbbreviationDictionary.lookup(Param))
     return true;
 
   return false;
@@ -151,8 +150,8 @@ static bool applyAbbreviationHeuristic(
 /// Check whether the shorter String is a prefix of the longer String.
 static bool applyPrefixHeuristic(StringRef Arg, StringRef Param,
                                  int8_t Threshold) {
-  StringRef Shorter = Arg.size() < Param.size() ? Arg : Param;
-  StringRef Longer = Arg.size() >= Param.size() ? Arg : Param;
+  const StringRef Shorter = Arg.size() < Param.size() ? Arg : Param;
+  const StringRef Longer = Arg.size() >= Param.size() ? Arg : Param;
 
   if (Longer.starts_with_insensitive(Shorter))
     return percentage(Shorter.size(), Longer.size()) > Threshold;
@@ -163,8 +162,8 @@ static bool applyPrefixHeuristic(StringRef Arg, StringRef Param,
 /// Check whether the shorter String is a suffix of the longer String.
 static bool applySuffixHeuristic(StringRef Arg, StringRef Param,
                                  int8_t Threshold) {
-  StringRef Shorter = Arg.size() < Param.size() ? Arg : Param;
-  StringRef Longer = Arg.size() >= Param.size() ? Arg : Param;
+  const StringRef Shorter = Arg.size() < Param.size() ? Arg : Param;
+  const StringRef Longer = Arg.size() >= Param.size() ? Arg : Param;
 
   if (Longer.ends_with_insensitive(Shorter))
     return percentage(Shorter.size(), Longer.size()) > Threshold;
@@ -174,7 +173,6 @@ static bool applySuffixHeuristic(StringRef Arg, StringRef Param,
 
 static bool applySubstringHeuristic(StringRef Arg, StringRef Param,
                                     int8_t Threshold) {
-
   std::size_t MaxLength = 0;
   SmallVector<std::size_t, SmallVectorSize> Current(Param.size());
   SmallVector<std::size_t, SmallVectorSize> Previous(Param.size());
@@ -197,28 +195,28 @@ static bool applySubstringHeuristic(StringRef Arg, StringRef Param,
     Current.swap(Previous);
   }
 
-  size_t LongerLength = std::max(Arg.size(), Param.size());
+  const size_t LongerLength = std::max(Arg.size(), Param.size());
   return percentage(MaxLength, LongerLength) > Threshold;
 }
 
 static bool applyLevenshteinHeuristic(StringRef Arg, StringRef Param,
                                       int8_t Threshold) {
-  std::size_t LongerLength = std::max(Arg.size(), Param.size());
+  const std::size_t LongerLength = std::max(Arg.size(), Param.size());
   double Dist = Arg.edit_distance(Param);
   Dist = (1.0 - Dist / LongerLength) * 100.0;
   return Dist > Threshold;
 }
 
-// Based on http://en.wikipedia.org/wiki/Jaro–Winkler_distance.
+// Based on https://en.wikipedia.org/wiki/Jaro–Winkler_distance.
 static bool applyJaroWinklerHeuristic(StringRef Arg, StringRef Param,
                                       int8_t Threshold) {
   std::size_t Match = 0, Transpos = 0;
-  std::ptrdiff_t ArgLen = Arg.size();
-  std::ptrdiff_t ParamLen = Param.size();
+  const std::ptrdiff_t ArgLen = Arg.size();
+  const std::ptrdiff_t ParamLen = Param.size();
   SmallVector<int, SmallVectorSize> ArgFlags(ArgLen);
   SmallVector<int, SmallVectorSize> ParamFlags(ParamLen);
-  std::ptrdiff_t Range =
-      std::max(std::ptrdiff_t{0}, std::max(ArgLen, ParamLen) / 2 - 1);
+  const std::ptrdiff_t Range =
+      std::max(std::ptrdiff_t{0}, (std::max(ArgLen, ParamLen) / 2) - 1);
 
   // Calculate matching characters.
   for (std::ptrdiff_t I = 0; I < ParamLen; ++I)
@@ -253,7 +251,7 @@ static bool applyJaroWinklerHeuristic(StringRef Arg, StringRef Param,
   Transpos /= 2;
 
   // Jaro distance.
-  double MatchD = Match;
+  const double MatchD = Match;
   double Dist = ((MatchD / ArgLen) + (MatchD / ParamLen) +
                  ((MatchD - Transpos) / Match)) /
                 3.0;
@@ -261,7 +259,7 @@ static bool applyJaroWinklerHeuristic(StringRef Arg, StringRef Param,
   // Calculate common string prefix up to 4 chars.
   L = 0;
   for (std::ptrdiff_t I = 0;
-       I < std::min(std::min(ArgLen, ParamLen), std::ptrdiff_t{4}); ++I)
+       I < std::min({ArgLen, ParamLen, std::ptrdiff_t{4}}); ++I)
     if (tolower(Arg[I]) == tolower(Param[I]))
       ++L;
 
@@ -270,7 +268,7 @@ static bool applyJaroWinklerHeuristic(StringRef Arg, StringRef Param,
   return Dist > Threshold;
 }
 
-// Based on http://en.wikipedia.org/wiki/Sørensen–Dice_coefficient
+// Based on https://en.wikipedia.org/wiki/Sørensen–Dice_coefficient
 static bool applyDiceHeuristic(StringRef Arg, StringRef Param,
                                int8_t Threshold) {
   llvm::StringSet<> ArgBigrams;
@@ -289,8 +287,8 @@ static bool applyDiceHeuristic(StringRef Arg, StringRef Param,
   std::size_t Intersection = 0;
 
   // Find the intersection between the two sets.
-  for (auto IT = ParamBigrams.begin(); IT != ParamBigrams.end(); ++IT)
-    Intersection += ArgBigrams.count((IT->getKey()));
+  for (const auto &[Key, _] : ParamBigrams)
+    Intersection += ArgBigrams.count(Key);
 
   // Calculate Dice coefficient.
   return percentage(Intersection * 2.0,
@@ -299,10 +297,11 @@ static bool applyDiceHeuristic(StringRef Arg, StringRef Param,
 
 /// Checks if ArgType binds to ParamType regarding reference-ness and
 /// cv-qualifiers.
-static bool areRefAndQualCompatible(QualType ArgType, QualType ParamType) {
+static bool areRefAndQualCompatible(QualType ArgType, QualType ParamType,
+                                    const ASTContext &Ctx) {
   return !ParamType->isReferenceType() ||
          ParamType.getNonReferenceType().isAtLeastAsQualifiedAs(
-             ArgType.getNonReferenceType());
+             ArgType.getNonReferenceType(), Ctx);
 }
 
 static bool isPointerOrArray(QualType TypeToCheck) {
@@ -311,12 +310,12 @@ static bool isPointerOrArray(QualType TypeToCheck) {
 
 /// Checks whether ArgType is an array type identical to ParamType's array type.
 /// Enforces array elements' qualifier compatibility as well.
-static bool isCompatibleWithArrayReference(QualType ArgType,
-                                           QualType ParamType) {
+static bool isCompatibleWithArrayReference(QualType ArgType, QualType ParamType,
+                                           const ASTContext &Ctx) {
   if (!ArgType->isArrayType())
     return false;
   // Here, qualifiers belong to the elements of the arrays.
-  if (!ParamType.isAtLeastAsQualifiedAs(ArgType))
+  if (!ParamType.isAtLeastAsQualifiedAs(ArgType, Ctx))
     return false;
 
   return ParamType.getUnqualifiedType() == ArgType.getUnqualifiedType();
@@ -342,12 +341,13 @@ static QualType convertToPointeeOrArrayElementQualType(QualType TypeToConvert) {
 /// every * in ParamType to the right of that cv-qualifier, except the last
 /// one, must also be const-qualified.
 static bool arePointersStillQualCompatible(QualType ArgType, QualType ParamType,
-                                           bool &IsParamContinuouslyConst) {
+                                           bool &IsParamContinuouslyConst,
+                                           const ASTContext &Ctx) {
   // The types are compatible, if the parameter is at least as qualified as the
   // argument, and if it is more qualified, it has to be const on upper pointer
   // levels.
-  bool AreTypesQualCompatible =
-      ParamType.isAtLeastAsQualifiedAs(ArgType) &&
+  const bool AreTypesQualCompatible =
+      ParamType.isAtLeastAsQualifiedAs(ArgType, Ctx) &&
       (!ParamType.hasQualifiers() || IsParamContinuouslyConst);
   // Check whether the parameter's constness continues at the current pointer
   // level.
@@ -359,9 +359,10 @@ static bool arePointersStillQualCompatible(QualType ArgType, QualType ParamType,
 /// Checks whether multilevel pointers are compatible in terms of levels,
 /// qualifiers and pointee type.
 static bool arePointerTypesCompatible(QualType ArgType, QualType ParamType,
-                                      bool IsParamContinuouslyConst) {
+                                      bool IsParamContinuouslyConst,
+                                      const ASTContext &Ctx) {
   if (!arePointersStillQualCompatible(ArgType, ParamType,
-                                      IsParamContinuouslyConst))
+                                      IsParamContinuouslyConst, Ctx))
     return false;
 
   do {
@@ -372,7 +373,7 @@ static bool arePointerTypesCompatible(QualType ArgType, QualType ParamType,
     // Check whether cv-qualifiers permit compatibility on
     // current level.
     if (!arePointersStillQualCompatible(ArgType, ParamType,
-                                        IsParamContinuouslyConst))
+                                        IsParamContinuouslyConst, Ctx))
       return false;
 
     if (ParamType.getUnqualifiedType() == ArgType.getUnqualifiedType())
@@ -396,10 +397,10 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
     return true;
 
   // Check for constness and reference compatibility.
-  if (!areRefAndQualCompatible(ArgType, ParamType))
+  if (!areRefAndQualCompatible(ArgType, ParamType, Ctx))
     return false;
 
-  bool IsParamReference = ParamType->isReferenceType();
+  const bool IsParamReference = ParamType->isReferenceType();
 
   // Reference-ness has already been checked and should be removed
   // before further checking.
@@ -412,9 +413,9 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
   // Arithmetic types are interconvertible, except scoped enums.
   if (ParamType->isArithmeticType() && ArgType->isArithmeticType()) {
     if ((ParamType->isEnumeralType() &&
-         ParamType->castAs<EnumType>()->getDecl()->isScoped()) ||
+         ParamType->castAsCanonical<EnumType>()->getDecl()->isScoped()) ||
         (ArgType->isEnumeralType() &&
-         ArgType->castAs<EnumType>()->getDecl()->isScoped()))
+         ArgType->castAsCanonical<EnumType>()->getDecl()->isScoped()))
       return false;
 
     return true;
@@ -434,9 +435,9 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
   // When ParamType is an array reference, ArgType has to be of the same-sized
   // array-type with cv-compatible element type.
   if (IsParamReference && ParamType->isArrayType())
-    return isCompatibleWithArrayReference(ArgType, ParamType);
+    return isCompatibleWithArrayReference(ArgType, ParamType, Ctx);
 
-  bool IsParamContinuouslyConst =
+  const bool IsParamContinuouslyConst =
       !IsParamReference || ParamType.getNonReferenceType().isConstQualified();
 
   // Remove the first level of indirection.
@@ -444,7 +445,7 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
   ParamType = convertToPointeeOrArrayElementQualType(ParamType);
 
   // Check qualifier compatibility on the next level.
-  if (!ParamType.isAtLeastAsQualifiedAs(ArgType))
+  if (!ParamType.isAtLeastAsQualifiedAs(ArgType, Ctx))
     return false;
 
   if (ParamType.getUnqualifiedType() == ArgType.getUnqualifiedType())
@@ -472,8 +473,8 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
   if (!(ParamType->isAnyPointerType() && ArgType->isAnyPointerType()))
     return false;
 
-  return arePointerTypesCompatible(ArgType, ParamType,
-                                   IsParamContinuouslyConst);
+  return arePointerTypesCompatible(ArgType, ParamType, IsParamContinuouslyConst,
+                                   Ctx);
 }
 
 static bool isOverloadedUnaryOrBinarySymbolOperator(const FunctionDecl *FD) {
@@ -511,9 +512,9 @@ SuspiciousCallArgumentCheck::SuspiciousCallArgumentCheck(
     SmallString<32> Key = HeuristicToString[Idx];
     Key.append(BK == BoundKind::DissimilarBelow ? "DissimilarBelow"
                                                 : "SimilarAbove");
-    int8_t Default = BK == BoundKind::DissimilarBelow
-                         ? Defaults[Idx].DissimilarBelow
-                         : Defaults[Idx].SimilarAbove;
+    const int8_t Default = BK == BoundKind::DissimilarBelow
+                               ? Defaults[Idx].DissimilarBelow
+                               : Defaults[Idx].SimilarAbove;
     return Options.get(Key, Default);
   };
   for (std::size_t Idx = 0; Idx < HeuristicCount; ++Idx) {
@@ -525,7 +526,7 @@ SuspiciousCallArgumentCheck::SuspiciousCallArgumentCheck(
                        GetBoundOpt(H, BoundKind::SimilarAbove)));
   }
 
-  for (StringRef Abbreviation : optutils::parseStringList(
+  for (const StringRef Abbreviation : optutils::parseStringList(
            Options.get("Abbreviations", DefaultAbbreviations))) {
     auto KeyAndValue = Abbreviation.split("=");
     assert(!KeyAndValue.first.empty() && !KeyAndValue.second.empty());
@@ -650,7 +651,7 @@ void SuspiciousCallArgumentCheck::check(
   if (ArgNames.empty())
     return;
 
-  std::size_t ParamCount = ParamNames.size();
+  const std::size_t ParamCount = ParamNames.size();
 
   // Check similarity.
   for (std::size_t I = 0; I < ParamCount; ++I) {
@@ -671,9 +672,9 @@ void SuspiciousCallArgumentCheck::check(
           << MatchedCallExpr->getArg(J)->getSourceRange();
 
       // Note at the functions declaration.
-      SourceLocation IParNameLoc =
+      const SourceLocation IParNameLoc =
           CalleeFuncDecl->getParamDecl(I)->getLocation();
-      SourceLocation JParNameLoc =
+      const SourceLocation JParNameLoc =
           CalleeFuncDecl->getParamDecl(J)->getLocation();
 
       diag(CalleeFuncDecl->getLocation(), "in the call to %0, declared here",
@@ -695,7 +696,7 @@ void SuspiciousCallArgumentCheck::setParamNamesAndTypes(
   for (const ParmVarDecl *Param : CalleeFuncDecl->parameters()) {
     ParamTypes.push_back(Param->getType());
 
-    if (IdentifierInfo *II = Param->getIdentifier())
+    if (const IdentifierInfo *II = Param->getIdentifier())
       ParamNames.push_back(II->getName());
     else
       ParamNames.push_back(StringRef());
@@ -757,24 +758,22 @@ bool SuspiciousCallArgumentCheck::areParamAndArgComparable(
 
 bool SuspiciousCallArgumentCheck::areArgsSwapped(std::size_t Position1,
                                                  std::size_t Position2) const {
-  for (Heuristic H : AppliedHeuristics) {
-    bool A1ToP2Similar = areNamesSimilar(
+  return llvm::any_of(AppliedHeuristics, [&](Heuristic H) {
+    const bool A1ToP2Similar = areNamesSimilar(
         ArgNames[Position2], ParamNames[Position1], H, BoundKind::SimilarAbove);
-    bool A2ToP1Similar = areNamesSimilar(
+    const bool A2ToP1Similar = areNamesSimilar(
         ArgNames[Position1], ParamNames[Position2], H, BoundKind::SimilarAbove);
 
-    bool A1ToP1Dissimilar =
+    const bool A1ToP1Dissimilar =
         !areNamesSimilar(ArgNames[Position1], ParamNames[Position1], H,
                          BoundKind::DissimilarBelow);
-    bool A2ToP2Dissimilar =
+    const bool A2ToP2Dissimilar =
         !areNamesSimilar(ArgNames[Position2], ParamNames[Position2], H,
                          BoundKind::DissimilarBelow);
 
-    if ((A1ToP2Similar || A2ToP1Similar) && A1ToP1Dissimilar &&
-        A2ToP2Dissimilar)
-      return true;
-  }
-  return false;
+    return (A1ToP2Similar || A2ToP1Similar) && A1ToP1Dissimilar &&
+           A2ToP2Dissimilar;
+  });
 }
 
 bool SuspiciousCallArgumentCheck::areNamesSimilar(StringRef Arg,

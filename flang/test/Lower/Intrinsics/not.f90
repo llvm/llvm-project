@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 subroutine not_test
     integer :: source
@@ -13,4 +13,3 @@ subroutine not_test
     ! CHECK: return
     destination = not(source)
   end subroutine
-  

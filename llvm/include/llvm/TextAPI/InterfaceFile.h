@@ -14,15 +14,16 @@
 #ifndef LLVM_TEXTAPI_INTERFACEFILE_H
 #define LLVM_TEXTAPI_INTERFACEFILE_H
 
-#include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TextAPI/ArchitectureSet.h"
+#include "llvm/TextAPI/FileTypes.h"
 #include "llvm/TextAPI/PackedVersion.h"
 #include "llvm/TextAPI/Platform.h"
+#include "llvm/TextAPI/RecordsSlice.h"
 #include "llvm/TextAPI/Symbol.h"
 #include "llvm/TextAPI/SymbolSet.h"
 #include "llvm/TextAPI/Target.h"
@@ -48,44 +49,6 @@ enum class ObjCConstraintType : unsigned {
   GC = 4,
 };
 
-// clang-format off
-
-/// Defines the file type this file represents.
-enum FileType : unsigned {
-  /// Invalid file type.
-  Invalid = 0U,
-
-  /// \brief MachO Dynamic Library file.
-  MachO_DynamicLibrary      = 1U <<  0,
-
-  /// \brief MachO Dynamic Library Stub file.
-  MachO_DynamicLibrary_Stub = 1U <<  1,
-
-  /// \brief MachO Bundle file.
-  MachO_Bundle              = 1U <<  2,
-
-  /// Text-based stub file (.tbd) version 1.0
-  TBD_V1                    = 1U <<  3,
-
-  /// Text-based stub file (.tbd) version 2.0
-  TBD_V2                    = 1U <<  4,
-
-  /// Text-based stub file (.tbd) version 3.0
-  TBD_V3                    = 1U <<  5,
-
-  /// Text-based stub file (.tbd) version 4.0
-  TBD_V4                    = 1U <<  6,
-
-  /// Text-based stub file (.tbd) version 5.0
-  TBD_V5                    = 1U <<  7,
-
-  All                       = ~0U,
-
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/All),
-};
-
-// clang-format on
-
 /// Reference to an interface file.
 class InterfaceFileRef {
 public:
@@ -98,7 +61,7 @@ public:
 
   StringRef getInstallName() const { return InstallName; };
 
-  void addTarget(const Target &Target);
+  LLVM_ABI void addTarget(const Target &Target);
   template <typename RangeT> void addTargets(RangeT &&Targets) {
     for (const auto &Target : Targets)
       addTarget(Target(Target));
@@ -184,7 +147,7 @@ public:
   /// Set and add target.
   ///
   /// \param Target the target to add into.
-  void addTarget(const Target &Target);
+  LLVM_ABI void addTarget(const Target &Target);
 
   /// Determine if target triple slice exists in file.
   ///
@@ -212,7 +175,7 @@ public:
                             std::function<bool(const Target &)>>;
   using const_filtered_target_range =
       llvm::iterator_range<const_filtered_target_iterator>;
-  const_filtered_target_range targets(ArchitectureSet Archs) const;
+  LLVM_ABI const_filtered_target_range targets(ArchitectureSet Archs) const;
 
   /// Set the install name of the library.
   void setInstallName(StringRef InstallName_) {
@@ -279,7 +242,7 @@ public:
   /// Set the parent umbrella frameworks.
   /// \param Target_ The target applicable to Parent
   /// \param Parent  The name of Parent
-  void addParentUmbrella(const Target &Target_, StringRef Parent);
+  LLVM_ABI void addParentUmbrella(const Target &Target_, StringRef Parent);
 
   /// Get the list of Parent Umbrella frameworks.
   ///
@@ -299,7 +262,7 @@ public:
   /// \param InstallName The name of the client that is allowed to link this
   /// library.
   /// \param Target The target triple for which this applies.
-  void addAllowableClient(StringRef InstallName, const Target &Target);
+  LLVM_ABI void addAllowableClient(StringRef InstallName, const Target &Target);
 
   /// Get the list of allowable clients.
   ///
@@ -312,7 +275,8 @@ public:
   ///
   /// \param InstallName The name of the library to re-export.
   /// \param Target The target triple for which this applies.
-  void addReexportedLibrary(StringRef InstallName, const Target &Target);
+  LLVM_ABI void addReexportedLibrary(StringRef InstallName,
+                                     const Target &Target);
 
   /// Get the list of re-exported libraries.
   ///
@@ -324,7 +288,7 @@ public:
   /// Add a library for inlining to top level library.
   ///
   ///\param Document The library to inline with top level library.
-  void addDocument(std::shared_ptr<InterfaceFile> &&Document);
+  LLVM_ABI void addDocument(std::shared_ptr<InterfaceFile> &&Document);
 
   /// Returns the pointer to parent document if exists or nullptr otherwise.
   InterfaceFile *getParent() const { return Parent; }
@@ -337,9 +301,9 @@ public:
   }
 
   /// Set the runpath search paths.
-  /// \param InputTarget The target applicable to runpath search path.
   /// \param RPath The name of runpath.
-  void addRPath(const Target &InputTarget, StringRef RPath);
+  /// \param InputTarget The target applicable to runpath search path.
+  LLVM_ABI void addRPath(StringRef RPath, const Target &InputTarget);
 
   /// Get the list of runpath search paths.
   ///
@@ -352,9 +316,11 @@ public:
   ///
   /// \param Kind The kind of global symbol to record.
   /// \param Name The name of the symbol.
-  std::optional<const Symbol *> getSymbol(SymbolKind Kind,
-                                          StringRef Name) const {
-    if (auto *Sym = SymbolsSet->findSymbol(Kind, Name))
+  /// \param ObjCIF The ObjCInterface symbol type, if applicable.
+  std::optional<const Symbol *>
+  getSymbol(EncodeKind Kind, StringRef Name,
+            ObjCIFSymbolKind ObjCIF = ObjCIFSymbolKind::None) const {
+    if (auto *Sym = SymbolsSet->findSymbol(Kind, Name, ObjCIF))
       return Sym;
     return std::nullopt;
   }
@@ -362,7 +328,7 @@ public:
   /// Add a symbol to the symbols list or extend an existing one.
   template <typename RangeT, typename ElT = std::remove_reference_t<
                                  decltype(*std::begin(std::declval<RangeT>()))>>
-  void addSymbol(SymbolKind Kind, StringRef Name, RangeT &&Targets,
+  void addSymbol(EncodeKind Kind, StringRef Name, RangeT &&Targets,
                  SymbolFlags Flags = SymbolFlags::None) {
     SymbolsSet->addGlobal(Kind, Name, Flags, Targets);
   }
@@ -373,7 +339,7 @@ public:
   /// \param Name The name of the symbol.
   /// \param Targets The list of targets the symbol is defined in.
   /// \param Flags The properties the symbol holds.
-  void addSymbol(SymbolKind Kind, StringRef Name, TargetList &&Targets,
+  void addSymbol(EncodeKind Kind, StringRef Name, TargetList &&Targets,
                  SymbolFlags Flags = SymbolFlags::None) {
     SymbolsSet->addGlobal(Kind, Name, Flags, Targets);
   }
@@ -384,7 +350,7 @@ public:
   /// \param Name The name of the symbol.
   /// \param Target The target the symbol is defined in.
   /// \param Flags The properties the symbol holds.
-  void addSymbol(SymbolKind Kind, StringRef Name, Target &Target,
+  void addSymbol(EncodeKind Kind, StringRef Name, Target &Target,
                  SymbolFlags Flags = SymbolFlags::None) {
     SymbolsSet->addGlobal(Kind, Name, Flags, Target);
   }
@@ -409,14 +375,14 @@ public:
   ///
   /// \param Arch architecture to extract from.
   /// \return New InterfaceFile with extracted architecture slice.
-  llvm::Expected<std::unique_ptr<InterfaceFile>>
+  LLVM_ABI llvm::Expected<std::unique_ptr<InterfaceFile>>
   extract(Architecture Arch) const;
 
   /// Remove architecture slice from Interface.
   ///
   /// \param Arch architecture to remove.
   /// \return New Interface File with removed architecture slice.
-  llvm::Expected<std::unique_ptr<InterfaceFile>>
+  LLVM_ABI llvm::Expected<std::unique_ptr<InterfaceFile>>
   remove(Architecture Arch) const;
 
   /// Merge Interfaces for the same library. The following library attributes
@@ -426,21 +392,29 @@ public:
   ///
   /// \param O The Interface to merge.
   /// \return New Interface File that was merged.
-  llvm::Expected<std::unique_ptr<InterfaceFile>>
+  LLVM_ABI llvm::Expected<std::unique_ptr<InterfaceFile>>
   merge(const InterfaceFile *O) const;
 
   /// Inline reexported library into Interface.
   ///
   /// \param Library Interface of reexported library.
   /// \param Overwrite Whether to overwrite preexisting inlined library.
-  void inlineLibrary(std::shared_ptr<InterfaceFile> Library,
-                     bool Overwrite = false);
+  LLVM_ABI void inlineLibrary(std::shared_ptr<InterfaceFile> Library,
+                              bool Overwrite = false);
+
+  /// Set InterfaceFile properties from pre-gathered binary attributes,
+  /// if they are not set already.
+  ///
+  /// \param BA Attributes typically represented in load commands.
+  /// \param Targ MachO Target slice to add attributes to.
+  LLVM_ABI void setFromBinaryAttrs(const RecordsSlice::BinaryAttrs &BA,
+                                   const Target &Targ);
 
   /// The equality is determined by attributes that impact linking
   /// compatibilities. Path, & FileKind are irrelevant since these by
   /// itself should not impact linking.
   /// This is an expensive operation.
-  bool operator==(const InterfaceFile &O) const;
+  LLVM_ABI bool operator==(const InterfaceFile &O) const;
 
   bool operator!=(const InterfaceFile &O) const { return !(*this == O); }
 

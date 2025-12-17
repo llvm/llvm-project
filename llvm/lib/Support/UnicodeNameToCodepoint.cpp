@@ -251,10 +251,10 @@ constexpr const char *const HangulSyllables[][3] = {
 
 // Unicode 15.0
 // 3.12 Conjoining Jamo Behavior Common constants
-constexpr const char32_t SBase = 0xAC00;
-constexpr const uint32_t LCount = 19;
-constexpr const uint32_t VCount = 21;
-constexpr const uint32_t TCount = 28;
+constexpr char32_t SBase = 0xAC00;
+constexpr uint32_t LCount = 19;
+constexpr uint32_t VCount = 21;
+constexpr uint32_t TCount = 28;
 
 static std::size_t findSyllable(StringRef Name, bool Strict,
                                 char &PreviousInName, int &Pos, int Column) {
@@ -320,7 +320,7 @@ struct GeneratedNamesData {
   uint32_t End;
 };
 
-// Unicode 15.0 Table 4-8. Name Derivation Rule Prefix Strings
+// Unicode 15.1 Table 4-8. Name Derivation Rule Prefix Strings
 static const GeneratedNamesData GeneratedNamesDataTable[] = {
     {"CJK UNIFIED IDEOGRAPH-", 0x3400, 0x4DBF},
     {"CJK UNIFIED IDEOGRAPH-", 0x4E00, 0x9FFF},
@@ -329,6 +329,7 @@ static const GeneratedNamesData GeneratedNamesDataTable[] = {
     {"CJK UNIFIED IDEOGRAPH-", 0x2B740, 0x2B81D},
     {"CJK UNIFIED IDEOGRAPH-", 0x2B820, 0x2CEA1},
     {"CJK UNIFIED IDEOGRAPH-", 0x2CEB0, 0x2EBE0},
+    {"CJK UNIFIED IDEOGRAPH-", 0x2EBF0, 0x2EE5D},
     {"CJK UNIFIED IDEOGRAPH-", 0x30000, 0x3134A},
     {"CJK UNIFIED IDEOGRAPH-", 0x31350, 0x323AF},
     {"TANGUT IDEOGRAPH-", 0x17000, 0x187F7},
@@ -475,7 +476,7 @@ nearestMatchesForCodepointName(StringRef Pattern, std::size_t MaxMatchesCount) {
       std::min(NormalizedName.size(), UnicodeNameToCodepointLargestNameSize) +
       1;
 
-  LLVM_ATTRIBUTE_UNUSED static std::size_t Rows =
+  [[maybe_unused]] static std::size_t Rows =
       UnicodeNameToCodepointLargestNameSize + 1;
 
   std::vector<char> Distances(

@@ -48,8 +48,8 @@ bool ComparisonCategoryInfo::ValueInfo::hasValidIntValue() const {
 
   // Before we attempt to get the value of the first field, ensure that we
   // actually have one (and only one) field.
-  auto *Record = VD->getType()->getAsCXXRecordDecl();
-  if (std::distance(Record->field_begin(), Record->field_end()) != 1 ||
+  const auto *Record = VD->getType()->getAsCXXRecordDecl();
+  if (!Record || Record->getNumFields() != 1 ||
       !Record->field_begin()->getType()->isIntegralOrEnumerationType())
     return false;
 
@@ -83,7 +83,15 @@ ComparisonCategoryInfo::ValueInfo *ComparisonCategoryInfo::lookupValueInfo(
       &Ctx.Idents.get(ComparisonCategories::getResultString(ValueKind)));
   if (Lookup.empty() || !isa<VarDecl>(Lookup.front()))
     return nullptr;
-  Objects.emplace_back(ValueKind, cast<VarDecl>(Lookup.front()));
+  // The static member must have the same type as the comparison category class
+  // itself (e.g., std::partial_ordering::less must be of type
+  // partial_ordering).
+  VarDecl *VD = cast<VarDecl>(Lookup.front());
+  const CXXRecordDecl *VDRecord = VD->getType()->getAsCXXRecordDecl();
+  if (!VDRecord || VDRecord->getCanonicalDecl() != Record->getCanonicalDecl())
+    return nullptr;
+
+  Objects.emplace_back(ValueKind, VD);
   return &Objects.back();
 }
 
@@ -98,13 +106,13 @@ static const NamespaceDecl *lookupStdNamespace(const ASTContext &Ctx,
   return StdNS;
 }
 
-static CXXRecordDecl *lookupCXXRecordDecl(const ASTContext &Ctx,
-                                          const NamespaceDecl *StdNS,
-                                          ComparisonCategoryType Kind) {
+static const CXXRecordDecl *lookupCXXRecordDecl(const ASTContext &Ctx,
+                                                const NamespaceDecl *StdNS,
+                                                ComparisonCategoryType Kind) {
   StringRef Name = ComparisonCategories::getCategoryString(Kind);
   DeclContextLookupResult Lookup = StdNS->lookup(&Ctx.Idents.get(Name));
   if (!Lookup.empty())
-    if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Lookup.front()))
+    if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Lookup.front()))
       return RD;
   return nullptr;
 }
@@ -116,7 +124,7 @@ ComparisonCategories::lookupInfo(ComparisonCategoryType Kind) const {
     return &It->second;
 
   if (const NamespaceDecl *NS = lookupStdNamespace(Ctx, StdNS))
-    if (CXXRecordDecl *RD = lookupCXXRecordDecl(Ctx, NS, Kind))
+    if (const CXXRecordDecl *RD = lookupCXXRecordDecl(Ctx, NS, Kind))
       return &Data.try_emplace((char)Kind, Ctx, RD, Kind).first->second;
 
   return nullptr;
@@ -126,13 +134,13 @@ const ComparisonCategoryInfo *
 ComparisonCategories::lookupInfoForType(QualType Ty) const {
   assert(!Ty.isNull() && "type must be non-null");
   using CCT = ComparisonCategoryType;
-  auto *RD = Ty->getAsCXXRecordDecl();
+  const auto *RD = Ty->getAsCXXRecordDecl();
   if (!RD)
     return nullptr;
 
   // Check to see if we have information for the specified type cached.
   const auto *CanonRD = RD->getCanonicalDecl();
-  for (auto &KV : Data) {
+  for (const auto &KV : Data) {
     const ComparisonCategoryInfo &Info = KV.second;
     if (CanonRD == Info.Record->getCanonicalDecl())
       return &Info;
@@ -166,7 +174,7 @@ const ComparisonCategoryInfo &ComparisonCategories::getInfoForType(QualType Ty) 
 
 QualType ComparisonCategoryInfo::getType() const {
   assert(Record);
-  return QualType(Record->getTypeForDecl(), 0);
+  return Record->getASTContext().getCanonicalTagType(Record);
 }
 
 StringRef ComparisonCategories::getCategoryString(ComparisonCategoryType Kind) {

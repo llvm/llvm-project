@@ -1,10 +1,10 @@
 // NOTE: this test requires gpu-sm80
 //
 // DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   --sparse-compiler="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
+// DEFINE:   --sparsifier="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
 // DEFINE: %{run} = \
 // DEFINE:   env TENSOR0="%mlir_src_dir/test/Integration/data/block.mtx" \
-// DEFINE:   mlir-cpu-runner \
+// DEFINE:   mlir-runner \
 // DEFINE:   --shared-libs=%mlir_cuda_runtime \
 // DEFINE:   --shared-libs=%mlir_c_runner_utils \
 // DEFINE:   --e main --entry-point-result=void \
@@ -16,8 +16,7 @@
 //
 // without RT lib:
 //
-// TODO: make this work
-// R_U_N: %{compile} enable-runtime-library=false" | %{run}
+// RUN: %{compile} enable-runtime-library=false" | %{run}
 
 !Filename = !llvm.ptr
 
@@ -85,32 +84,30 @@ module {
   // A kernel that computes a BSR sampled dense matrix matrix multiplication
   // using a "spy" function and in-place update of the sampling sparse matrix.
   //
-  // TODO: re-enable the following test.
-  //
-  // func.func @SDDMM_block(%args: tensor<?x?xf32, #BSR>,
-  //                        %arga: tensor<?x?xf32>,
-  //                        %argb: tensor<?x?xf32>) -> tensor<?x?xf32, #BSR> {
-  //   %result = linalg.generic #trait_SDDMM
-  //     ins(%arga, %argb: tensor<?x?xf32>, tensor<?x?xf32>)
-  //     outs(%args: tensor<?x?xf32, #BSR>) {
-  //       ^bb(%a: f32, %b: f32, %s: f32):
-  //          %f0 = arith.constant 0.0 : f32
-  //          %u = sparse_tensor.unary %s : f32 to f32
-  //            present={
-  //               ^bb0(%p: f32):
-  //                 %mul = arith.mulf %a, %b : f32
-  //                 sparse_tensor.yield %mul : f32
-  //            }
-  //            absent={}
-  //          %r = sparse_tensor.reduce %s, %u, %f0 : f32 {
-  //             ^bb0(%p: f32, %q: f32):
-  //               %add = arith.addf %p, %q : f32
-  //               sparse_tensor.yield %add : f32
-  //           }
-  //          linalg.yield %r : f32
-  //     } -> tensor<?x?xf32, #BSR>
-  //   return %result : tensor<?x?xf32, #BSR>
-  // }
+  func.func @SDDMM_block(%args: tensor<?x?xf32, #BSR>,
+                         %arga: tensor<?x?xf32>,
+                         %argb: tensor<?x?xf32>) -> tensor<?x?xf32, #BSR> {
+    %result = linalg.generic #trait_SDDMM
+      ins(%arga, %argb: tensor<?x?xf32>, tensor<?x?xf32>)
+      outs(%args: tensor<?x?xf32, #BSR>) {
+        ^bb(%a: f32, %b: f32, %s: f32):
+           %f0 = arith.constant 0.0 : f32
+           %u = sparse_tensor.unary %s : f32 to f32
+             present={
+                ^bb0(%p: f32):
+                  %mul = arith.mulf %a, %b : f32
+                  sparse_tensor.yield %mul : f32
+             }
+             absent={}
+           %r = sparse_tensor.reduce %s, %u, %f0 : f32 {
+              ^bb0(%p: f32, %q: f32):
+                %add = arith.addf %p, %q : f32
+                sparse_tensor.yield %add : f32
+            }
+           linalg.yield %r : f32
+      } -> tensor<?x?xf32, #BSR>
+    return %result : tensor<?x?xf32, #BSR>
+  }
 
   func.func private @getTensorFilename(index) -> (!Filename)
 
@@ -153,15 +150,15 @@ module {
     //
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
     %m_csr = sparse_tensor.new %fileName : !Filename to tensor<?x?xf32, #CSR>
-    // %m_bsr = sparse_tensor.new %fileName : !Filename to tensor<?x?xf32, #BSR>
+    %m_bsr = sparse_tensor.new %fileName : !Filename to tensor<?x?xf32, #BSR>
 
     // Call the kernel.
     %0 = call @SDDMM(%m_csr, %a, %b)
        : (tensor<?x?xf32, #CSR>,
           tensor<?x?xf32>, tensor<?x?xf32>) -> tensor<?x?xf32, #CSR>
-    // %1 = call @SDDMM_block(%m_bsr, %a, %b)
-    //    : (tensor<?x?xf32, #BSR>,
-    //       tensor<?x?xf32>, tensor<?x?xf32>) -> tensor<?x?xf32, #BSR>
+    %1 = call @SDDMM_block(%m_bsr, %a, %b)
+       : (tensor<?x?xf32, #BSR>,
+          tensor<?x?xf32>, tensor<?x?xf32>) -> tensor<?x?xf32, #BSR>
 
     //
     // Print the result for verification. Note that the "spy" determines what
@@ -169,19 +166,30 @@ module {
     // the result (which is why the block sparse version has actual results
     // in the original zero positions).
     //
-    // CHECK:      ( 5, 10, 24, 19, 53, 42, 55, 56 )
-    // C_HECK-NEXT: ( 5, 10, 8, 19, 24, 24, 40, 53, 42, 55, 56, 64 )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 8
+    // CHECK-NEXT: dim = ( 4, 6 )
+    // CHECK-NEXT: lvl = ( 4, 6 )
+    // CHECK-NEXT: pos[1] : ( 0, 3, 5, 7, 8 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 4, 1, 5, 2, 3, 2 )
+    // CHECK-NEXT: values : ( 5, 10, 24, 19, 53, 42, 55, 56 )
+    // CHECK-NEXT: ----
     //
-    %v0 = sparse_tensor.values %0 : tensor<?x?xf32, #CSR> to memref<?xf32>
-    %vv0 = vector.transfer_read %v0[%c0], %d0 : memref<?xf32>, vector<8xf32>
-    vector.print %vv0 : vector<8xf32>
-    // %v1 = sparse_tensor.values %1 : tensor<?x?xf32, #BSR> to memref<?xf32>
-    // %vv1 = vector.transfer_read %v1[%c0], %d0 : memref<?xf32>, vector<12xf32>
-    // vector.print %vv1 : vector<12xf32>
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 12
+    // CHECK-NEXT: dim = ( 4, 6 )
+    // CHECK-NEXT: lvl = ( 2, 3, 2, 2 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 2, 1 )
+    // CHECK-NEXT: values : ( 5, 10, 8, 19, 24, 24, 40, 53, 42, 55, 56, 64 )
+    // CHECK-NEXT: ----
+    //
+    sparse_tensor.print %0 : tensor<?x?xf32, #CSR>
+    sparse_tensor.print %1 : tensor<?x?xf32, #BSR>
 
     // Release the resources.
     bufferization.dealloc_tensor %0 : tensor<?x?xf32, #CSR>
-    // bufferization.dealloc_tensor %1 : tensor<?x?xf32, #BSR>
+    bufferization.dealloc_tensor %1 : tensor<?x?xf32, #BSR>
 
     llvm.call @mgpuDestroySparseEnv() : () -> ()
     return

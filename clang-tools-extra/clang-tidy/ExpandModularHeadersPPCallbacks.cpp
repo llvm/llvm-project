@@ -1,4 +1,4 @@
-//===- ExpandModularHeadersPPCallbacks.h - clang-tidy -----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,10 +23,10 @@ public:
   /// Records that a given file entry is needed for replaying callbacks.
   void addNecessaryFile(FileEntryRef File) {
     // Don't record modulemap files because it breaks same file detection.
-    if (!(File.getName().endswith("module.modulemap") ||
-          File.getName().endswith("module.private.modulemap") ||
-          File.getName().endswith("module.map") ||
-          File.getName().endswith("module_private.map")))
+    if (!(File.getName().ends_with("module.modulemap") ||
+          File.getName().ends_with("module.private.modulemap") ||
+          File.getName().ends_with("module.map") ||
+          File.getName().ends_with("module_private.map")))
       FilesToRecord.insert(File);
   }
 
@@ -35,7 +35,7 @@ public:
                          const SrcMgr::ContentCache &ContentCache,
                          llvm::vfs::InMemoryFileSystem &InMemoryFs) {
     // Return if we are not interested in the contents of this file.
-    if (!FilesToRecord.count(File))
+    if (!FilesToRecord.contains(File))
       return;
 
     // FIXME: Why is this happening? We might be losing contents here.
@@ -49,8 +49,8 @@ public:
     FilesToRecord.erase(File);
   }
 
-  /// Makes sure we have contents for all the files we were interested in. Ideally
-  /// `FilesToRecord` should be empty.
+  /// Makes sure we have contents for all the files we were interested in.
+  /// Ideally `FilesToRecord` should be empty.
   void checkAllFilesRecorded() {
     LLVM_DEBUG({
       for (auto FileEntry : FilesToRecord)
@@ -65,43 +65,39 @@ private:
 };
 
 ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
-    CompilerInstance *CI,
-    IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS)
+    CompilerInstance *CI, llvm::vfs::OverlayFileSystem &OverlayFS)
     : Recorder(std::make_unique<FileRecorder>()), Compiler(*CI),
       InMemoryFs(new llvm::vfs::InMemoryFileSystem),
       Sources(Compiler.getSourceManager()),
       // Forward the new diagnostics to the original DiagnosticConsumer.
-      Diags(new DiagnosticIDs, new DiagnosticOptions,
+      Diags(DiagnosticIDs::create(), DiagOpts,
             new ForwardingDiagnosticConsumer(Compiler.getDiagnosticClient())),
-      LangOpts(Compiler.getLangOpts()) {
+      LangOpts(Compiler.getLangOpts()), HSOpts(Compiler.getHeaderSearchOpts()) {
   // Add a FileSystem containing the extra files needed in place of modular
   // headers.
-  OverlayFS->pushOverlay(InMemoryFs);
+  OverlayFS.pushOverlay(InMemoryFs);
 
   Diags.setSourceManager(&Sources);
   // FIXME: Investigate whatever is there better way to initialize DiagEngine
   // or whatever DiagEngine can be shared by multiple preprocessors
-  ProcessWarningOptions(Diags, Compiler.getDiagnosticOpts());
+  ProcessWarningOptions(Diags, Compiler.getDiagnosticOpts(),
+                        Compiler.getVirtualFileSystem());
 
   LangOpts.Modules = false;
 
-  auto HSO = std::make_shared<HeaderSearchOptions>();
-  *HSO = Compiler.getHeaderSearchOpts();
+  HeaderInfo = std::make_unique<HeaderSearch>(HSOpts, Sources, Diags, LangOpts,
+                                              &Compiler.getTarget());
 
-  HeaderInfo = std::make_unique<HeaderSearch>(HSO, Sources, Diags, LangOpts,
-                                               &Compiler.getTarget());
-
-  auto PO = std::make_shared<PreprocessorOptions>();
-  *PO = Compiler.getPreprocessorOpts();
-
-  PP = std::make_unique<clang::Preprocessor>(PO, Diags, LangOpts, Sources,
-                                              *HeaderInfo, ModuleLoader,
-                                              /*IILookup=*/nullptr,
-                                              /*OwnsHeaderSearch=*/false);
+  PP = std::make_unique<clang::Preprocessor>(Compiler.getPreprocessorOpts(),
+                                             Diags, LangOpts, Sources,
+                                             *HeaderInfo, ModuleLoader,
+                                             /*IILookup=*/nullptr,
+                                             /*OwnsHeaderSearch=*/false);
   PP->Initialize(Compiler.getTarget(), Compiler.getAuxTarget());
-  InitializePreprocessor(*PP, *PO, Compiler.getPCHContainerReader(),
-                         Compiler.getFrontendOpts());
-  ApplyHeaderSearchOptions(*HeaderInfo, *HSO, LangOpts,
+  InitializePreprocessor(*PP, Compiler.getPreprocessorOpts(),
+                         Compiler.getPCHContainerReader(),
+                         Compiler.getFrontendOpts(), Compiler.getCodeGenOpts());
+  ApplyHeaderSearchOptions(*HeaderInfo, HSOpts, LangOpts,
                            Compiler.getTarget().getTriple());
 }
 
@@ -116,9 +112,8 @@ void ExpandModularHeadersPPCallbacks::handleModuleFile(
   if (!MF)
     return;
   // Avoid processing a ModuleFile more than once.
-  if (VisitedModules.count(MF))
+  if (!VisitedModules.insert(MF).second)
     return;
-  VisitedModules.insert(MF);
 
   // Visit all the input files of this module and mark them to record their
   // contents later.
@@ -166,12 +161,12 @@ void ExpandModularHeadersPPCallbacks::InclusionDirective(
     SourceLocation DirectiveLoc, const Token &IncludeToken,
     StringRef IncludedFilename, bool IsAngled, CharSourceRange FilenameRange,
     OptionalFileEntryRef IncludedFile, StringRef SearchPath,
-    StringRef RelativePath, const Module *Imported,
+    StringRef RelativePath, const Module *SuggestedModule, bool ModuleImported,
     SrcMgr::CharacteristicKind FileType) {
-  if (Imported) {
+  if (ModuleImported) {
     serialization::ModuleFile *MF =
         Compiler.getASTReader()->getModuleManager().lookup(
-            Imported->getASTFile());
+            *SuggestedModule->getASTFile());
     handleModuleFile(MF);
   }
   parseToLocation(DirectiveLoc);

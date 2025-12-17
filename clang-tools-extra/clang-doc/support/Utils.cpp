@@ -1,0 +1,76 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "Utils.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+
+using namespace llvm;
+
+SmallString<128> appendPathNative(StringRef Base, StringRef Path) {
+  SmallString<128> Default;
+  sys::path::native(Base, Default);
+  sys::path::append(Default, Path);
+  return Default;
+}
+
+SmallString<128> appendPathPosix(StringRef Base, StringRef Path) {
+  SmallString<128> Default;
+  sys::path::native(Base, Default, sys::path::Style::posix);
+  sys::path::append(Default, Path);
+  return Default;
+}
+
+void getHtmlFiles(StringRef AssetsPath, clang::doc::ClangDocContext &CDCtx) {
+  assert(!AssetsPath.empty());
+  assert(sys::fs::is_directory(AssetsPath));
+
+  // TODO: Allow users to override default templates with their own. We would
+  // similarly have to check if a template file already exists in CDCtx.
+  if (CDCtx.UserStylesheets.empty()) {
+    SmallString<128> DefaultStylesheet =
+        appendPathPosix(AssetsPath, "clang-doc-mustache.css");
+    CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
+                                 DefaultStylesheet.c_str());
+  }
+
+  if (CDCtx.JsScripts.empty()) {
+    SmallString<128> IndexJS = appendPathPosix(AssetsPath, "mustache-index.js");
+    CDCtx.JsScripts.insert(CDCtx.JsScripts.begin(), IndexJS.c_str());
+  }
+
+  SmallString<128> NamespaceTemplate =
+      appendPathPosix(AssetsPath, "namespace-template.mustache");
+  SmallString<128> ClassTemplate =
+      appendPathPosix(AssetsPath, "class-template.mustache");
+  SmallString<128> EnumTemplate =
+      appendPathPosix(AssetsPath, "enum-template.mustache");
+  SmallString<128> FunctionTemplate =
+      appendPathPosix(AssetsPath, "function-template.mustache");
+  SmallString<128> CommentTemplate =
+      appendPathPosix(AssetsPath, "comment-template.mustache");
+  SmallString<128> HeadTemplate =
+      appendPathPosix(AssetsPath, "head-template.mustache");
+  SmallString<128> NavbarTemplate =
+      appendPathPosix(AssetsPath, "navbar-template.mustache");
+  SmallString<128> IndexTemplate =
+      appendPathPosix(AssetsPath, "index-template.mustache");
+
+  CDCtx.MustacheTemplates.insert(
+      {"namespace-template", NamespaceTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert({"class-template", ClassTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert({"enum-template", EnumTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert(
+      {"function-template", FunctionTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert({"comment-template", CommentTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert({"head-template", HeadTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert({"navbar-template", NavbarTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert({"index-template", IndexTemplate.c_str()});
+}

@@ -2,9 +2,48 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+from __future__ import annotations
+
+from collections.abc import Iterable
+from contextlib import contextmanager
+
 from ._mlir_libs._mlir.ir import *
 from ._mlir_libs._mlir.ir import _GlobalDebug
-from ._mlir_libs._mlir import register_type_caster, register_value_caster
+from ._mlir_libs._mlir import (
+    register_type_caster,
+    register_value_caster,
+    globals as _globals,
+)
+from ._mlir_libs import (
+    get_dialect_registry,
+    append_load_on_create_dialect,
+    get_load_on_create_dialects,
+)
+
+
+@contextmanager
+def loc_tracebacks(*, max_depth: int | None = None) -> Iterable[None]:
+    """Enables automatic traceback-based locations for MLIR operations.
+
+    Operations created within this context will have their location
+    automatically set based on the Python call stack.
+
+    Args:
+      max_depth: Maximum number of frames to include in the location.
+        If None, the default limit is used.
+    """
+    old_enabled = _globals.loc_tracebacks_enabled()
+    old_limit = _globals.loc_tracebacks_frame_limit()
+    max_depth = old_limit if max_depth is None else max_depth
+    try:
+        _globals.set_loc_tracebacks_frame_limit(max_depth)
+        if not old_enabled:
+            _globals.set_loc_tracebacks_enabled(True)
+        yield
+    finally:
+        if not old_enabled:
+            _globals.set_loc_tracebacks_enabled(False)
+        _globals.set_loc_tracebacks_frame_limit(old_limit)
 
 
 # Convenience decorator for registering user-friendly Attribute builders.
@@ -19,6 +58,11 @@ def register_attribute_builder(kind, replace=False):
 @register_attribute_builder("AffineMapAttr")
 def _affineMapAttr(x, context):
     return AffineMapAttr.get(x)
+
+
+@register_attribute_builder("IntegerSetAttr")
+def _integerSetAttr(x, context):
+    return IntegerSetAttr.get(x)
 
 
 @register_attribute_builder("BoolAttr")
@@ -67,7 +111,7 @@ def _si1Attr(x, context):
 
 
 @register_attribute_builder("SI8Attr")
-def _i8Attr(x, context):
+def _si8Attr(x, context):
     return IntegerAttr.get(IntegerType.get_signed(8, context=context), x)
 
 
@@ -92,7 +136,7 @@ def _ui1Attr(x, context):
 
 
 @register_attribute_builder("UI8Attr")
-def _i8Attr(x, context):
+def _ui8Attr(x, context):
     return IntegerAttr.get(IntegerType.get_unsigned(8, context=context), x)
 
 
@@ -262,13 +306,18 @@ def _typeArrayAttr(x, context):
     return _arrayAttr([TypeAttr.get(t, context=context) for t in x], context)
 
 
+@register_attribute_builder("MemRefTypeAttr")
+def _memref_type_attr(x, context):
+    return _typeAttr(x, context)
+
+
 try:
     import numpy as np
 
     @register_attribute_builder("F64ElementsAttr")
     def _f64ElementsAttr(x, context):
         return DenseElementsAttr.get(
-            np.array(x, dtype=np.int64),
+            np.array(x, dtype=np.float64),
             type=F64Type.get(context=context),
             context=context,
         )

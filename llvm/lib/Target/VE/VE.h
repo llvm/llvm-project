@@ -29,7 +29,8 @@ class VETargetMachine;
 
 FunctionPass *createVEISelDag(VETargetMachine &TM);
 FunctionPass *createLVLGenPass();
-void initializeVEDAGToDAGISelPass(PassRegistry &);
+void initializeVEAsmPrinterPass(PassRegistry &);
+void initializeVEDAGToDAGISelLegacyPass(PassRegistry &);
 
 void LowerVEMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                  AsmPrinter &AP);

@@ -13,12 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -68,7 +65,7 @@ struct BubbleUpExtractSliceOpPattern
                                          "expected single output of linalg op");
     }
 
-    if (!linalgOp.hasTensorSemantics()) {
+    if (!linalgOp.hasPureTensorSemantics()) {
       return rewriter.notifyMatchFailure(sliceOp,
                                          "expected tensor of linalg op");
     }
@@ -107,7 +104,7 @@ struct BubbleUpExtractSliceOpPattern
                                           rewriter.getIndexAttr(0));
     SmallVector<OpFoldResult> tileSizes = sizeBounds;
     for (auto const &result : enumerate(indexingMap.getResults())) {
-      unsigned position = result.value().cast<AffineDimExpr>().getPosition();
+      unsigned position = cast<AffineDimExpr>(result.value()).getPosition();
       tileOffsets[position] = sliceOp.getMixedOffsets()[result.index()];
       tileSizes[position] = sliceOp.getMixedSizes()[result.index()];
     }

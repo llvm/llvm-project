@@ -1,4 +1,4 @@
-; RUN: opt -march=hexagon -passes=loop-vectorize -hexagon-autohvx -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple=hexagon -passes=loop-vectorize -hexagon-autohvx -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Check that TTI::getMinimumVF works. The calculated MaxVF was based on the
@@ -6,20 +6,19 @@
 ; CHECK: LV: Overriding calculated MaxVF({{[0-9]+}}) with target's minimum: 64
 
 target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
-target triple = "hexagon"
 
 %s.0 = type { ptr, i32, i32, i32, i32 }
 
 @g0 = external dso_local local_unnamed_addr global ptr, align 4
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #0
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #0
+declare void @llvm.lifetime.start.p0(ptr nocapture) #0
+declare void @llvm.lifetime.end.p0(ptr nocapture) #0
 
 ; Function Attrs: nounwind
 define hidden fastcc void @f0(ptr nocapture %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i8 zeroext %a5) unnamed_addr #1 {
 b0:
   %v0 = alloca [4 x [9 x i16]], align 8
-  call void @llvm.lifetime.start.p0(i64 72, ptr nonnull %v0) #2
+  call void @llvm.lifetime.start.p0(ptr nonnull %v0) #2
   %v2 = add i32 %a1, -2
   %v3 = add i32 %a3, -9
   %v4 = icmp ugt i32 %v2, %v3
@@ -148,7 +147,7 @@ b1:                                               ; preds = %b1, %b0
   br i1 %v120, label %b2, label %b1
 
 b2:                                               ; preds = %b1, %b0
-  call void @llvm.lifetime.end.p0(i64 72, ptr nonnull %v0) #2
+  call void @llvm.lifetime.end.p0(ptr nonnull %v0) #2
   ret void
 }
 

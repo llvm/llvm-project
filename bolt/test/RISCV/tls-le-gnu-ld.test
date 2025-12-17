@@ -7,5 +7,5 @@
 // RUN:   | FileCheck %s
 
 // CHECK: Binary Function "_start" after building cfg {
-// CHECK:      lw t0, 0(tp)
-// CHECK-NEXT: sw t0, 0(tp)
+// CHECK:      lw t0, 0x0(tp)
+// CHECK-NEXT: sw t0, 0x0(tp)

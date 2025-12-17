@@ -48,12 +48,11 @@ StructuredData::DictionarySP ScriptInterpreter::GetInterpreterInfo() {
   return nullptr;
 }
 
-bool ScriptInterpreter::LoadScriptingModule(const char *filename,
-                                            const LoadScriptOptions &options,
-                                            lldb_private::Status &error,
-                                            StructuredData::ObjectSP *module_sp,
-                                            FileSpec extra_search_dir) {
-  error.SetErrorString(
+bool ScriptInterpreter::LoadScriptingModule(
+    const char *filename, const LoadScriptOptions &options,
+    lldb_private::Status &error, StructuredData::ObjectSP *module_sp,
+    FileSpec extra_search_dir, lldb::TargetSP loaded_into_target_sp) {
+  error = Status::FromErrorString(
       "This script interpreter does not support importing modules.");
   return false;
 }
@@ -82,6 +81,12 @@ lldb::BreakpointSP ScriptInterpreter::GetOpaqueTypeFromSBBreakpoint(
   return breakpoint.m_opaque_wp.lock();
 }
 
+lldb::BreakpointLocationSP
+ScriptInterpreter::GetOpaqueTypeFromSBBreakpointLocation(
+    const lldb::SBBreakpointLocation &break_loc) const {
+  return break_loc.m_opaque_wp.lock();
+}
+
 lldb::ProcessAttachInfoSP ScriptInterpreter::GetOpaqueTypeFromSBAttachInfo(
     const lldb::SBAttachInfo &attach_info) const {
   return attach_info.m_opaque_sp;
@@ -96,17 +101,65 @@ lldb::ProcessLaunchInfoSP ScriptInterpreter::GetOpaqueTypeFromSBLaunchInfo(
 Status
 ScriptInterpreter::GetStatusFromSBError(const lldb::SBError &error) const {
   if (error.m_opaque_up)
-    return *error.m_opaque_up;
+    return error.m_opaque_up->Clone();
 
   return Status();
 }
 
-std::optional<MemoryRegionInfo>
+lldb::ThreadSP ScriptInterpreter::GetOpaqueTypeFromSBThread(
+    const lldb::SBThread &thread) const {
+  if (thread.m_opaque_sp)
+    return thread.m_opaque_sp->GetThreadSP();
+  return nullptr;
+}
+
+lldb::StackFrameSP
+ScriptInterpreter::GetOpaqueTypeFromSBFrame(const lldb::SBFrame &frame) const {
+  if (frame.m_opaque_sp)
+    return frame.m_opaque_sp->GetFrameSP();
+  return nullptr;
+}
+
+Event *
+ScriptInterpreter::GetOpaqueTypeFromSBEvent(const lldb::SBEvent &event) const {
+  return event.m_opaque_ptr;
+}
+
+lldb::StreamSP ScriptInterpreter::GetOpaqueTypeFromSBStream(
+    const lldb::SBStream &stream) const {
+  if (stream.m_opaque_up) {
+    lldb::StreamSP s = std::make_shared<lldb_private::StreamString>();
+    *s << reinterpret_cast<StreamString *>(stream.m_opaque_up.get())->m_packet;
+    return s;
+  }
+
+  return nullptr;
+}
+
+SymbolContext ScriptInterpreter::GetOpaqueTypeFromSBSymbolContext(
+    const lldb::SBSymbolContext &sb_sym_ctx) const {
+  if (sb_sym_ctx.m_opaque_up)
+    return *sb_sym_ctx.m_opaque_up;
+  return {};
+}
+
+std::optional<lldb_private::MemoryRegionInfo>
 ScriptInterpreter::GetOpaqueTypeFromSBMemoryRegionInfo(
     const lldb::SBMemoryRegionInfo &mem_region) const {
   if (!mem_region.m_opaque_up)
     return std::nullopt;
   return *mem_region.m_opaque_up.get();
+}
+
+lldb::ExecutionContextRefSP
+ScriptInterpreter::GetOpaqueTypeFromSBExecutionContext(
+    const lldb::SBExecutionContext &exe_ctx) const {
+  return exe_ctx.m_exe_ctx_sp;
+}
+
+lldb::StackFrameListSP ScriptInterpreter::GetOpaqueTypeFromSBFrameList(
+    const lldb::SBFrameList &frame_list) const {
+  return frame_list.m_opaque_sp;
 }
 
 lldb::ScriptLanguage
@@ -184,7 +237,8 @@ ScriptInterpreterIORedirect::Create(bool enable_io, Debugger &debugger,
 ScriptInterpreterIORedirect::ScriptInterpreterIORedirect(
     std::unique_ptr<File> input, std::unique_ptr<File> output)
     : m_input_file_sp(std::move(input)),
-      m_output_file_sp(std::make_shared<StreamFile>(std::move(output))),
+      m_output_file_sp(std::make_shared<LockableStreamFile>(std::move(output),
+                                                            m_output_mutex)),
       m_error_file_sp(m_output_file_sp),
       m_communication("lldb.ScriptInterpreterIORedirect.comm"),
       m_disconnect(false) {}
@@ -198,7 +252,7 @@ ScriptInterpreterIORedirect::ScriptInterpreterIORedirect(
     m_input_file_sp = debugger.GetInputFileSP();
 
     Pipe pipe;
-    Status pipe_result = pipe.CreateNew(false);
+    Status pipe_result = pipe.CreateNew();
 #if defined(_WIN32)
     lldb::file_t read_file = pipe.GetReadNativeHandle();
     pipe.ReleaseReadFileDescriptor();
@@ -218,13 +272,15 @@ ScriptInterpreterIORedirect::ScriptInterpreterIORedirect(
       m_disconnect = true;
 
       FILE *outfile_handle = fdopen(pipe.ReleaseWriteFileDescriptor(), "w");
-      m_output_file_sp = std::make_shared<StreamFile>(outfile_handle, true);
+      m_output_file_sp = std::make_shared<LockableStreamFile>(
+          std::make_shared<StreamFile>(outfile_handle, NativeFile::Owned),
+          m_output_mutex);
       m_error_file_sp = m_output_file_sp;
       if (outfile_handle)
         ::setbuf(outfile_handle, nullptr);
 
-      result->SetImmediateOutputFile(debugger.GetOutputStream().GetFileSP());
-      result->SetImmediateErrorFile(debugger.GetErrorStream().GetFileSP());
+      result->SetImmediateOutputFile(debugger.GetOutputFileSP());
+      result->SetImmediateErrorFile(debugger.GetErrorFileSP());
     }
   }
 
@@ -235,9 +291,9 @@ ScriptInterpreterIORedirect::ScriptInterpreterIORedirect(
 
 void ScriptInterpreterIORedirect::Flush() {
   if (m_output_file_sp)
-    m_output_file_sp->Flush();
+    m_output_file_sp->Lock().Flush();
   if (m_error_file_sp)
-    m_error_file_sp->Flush();
+    m_error_file_sp->Lock().Flush();
 }
 
 ScriptInterpreterIORedirect::~ScriptInterpreterIORedirect() {
@@ -251,7 +307,7 @@ ScriptInterpreterIORedirect::~ScriptInterpreterIORedirect() {
   // Close the write end of the pipe since we are done with our one line
   // script. This should cause the read thread that output_comm is using to
   // exit.
-  m_output_file_sp->GetFile().Close();
+  m_output_file_sp->GetUnlockedFile().Close();
   // The close above should cause this thread to exit when it gets to the end
   // of file, so let it get all its data.
   m_communication.JoinReadThread();

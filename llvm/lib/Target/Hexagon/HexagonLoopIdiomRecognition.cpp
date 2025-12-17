@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonLoopIdiomRecognition.h"
+#include "Hexagon.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -37,12 +37,12 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -105,17 +105,6 @@ static cl::opt<bool> HexagonVolatileMemcpy(
 static cl::opt<unsigned> SimplifyLimit("hlir-simplify-limit", cl::init(10000),
   cl::Hidden, cl::desc("Maximum number of simplification steps in HLIR"));
 
-static const char *HexagonVolatileMemcpyName
-  = "hexagon_memcpy_forward_vp4cp4n2";
-
-
-namespace llvm {
-
-void initializeHexagonLoopIdiomRecognizeLegacyPassPass(PassRegistry &);
-Pass *createHexagonLoopIdiomPass();
-
-} // end namespace llvm
-
 namespace {
 
 class HexagonLoopIdiomRecognize {
@@ -151,10 +140,7 @@ class HexagonLoopIdiomRecognizeLegacyPass : public LoopPass {
 public:
   static char ID;
 
-  explicit HexagonLoopIdiomRecognizeLegacyPass() : LoopPass(ID) {
-    initializeHexagonLoopIdiomRecognizeLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
+  explicit HexagonLoopIdiomRecognizeLegacyPass() : LoopPass(ID) {}
 
   StringRef getPassName() const override {
     return "Recognize Hexagon-specific loop idioms";
@@ -695,7 +681,7 @@ bool PolynomialMultiplyRecognize::matchLeftShift(SelectInst *SelI,
 
   using namespace PatternMatch;
 
-  CmpInst::Predicate P;
+  CmpPredicate P;
   Value *A = nullptr, *B = nullptr, *C = nullptr;
 
   if (!match(CondV, m_ICmp(P, m_And(m_Value(A), m_Value(B)), m_Value(C))) &&
@@ -770,8 +756,7 @@ bool PolynomialMultiplyRecognize::matchLeftShift(SelectInst *SelI,
     //          select +++ ? T : 0
 
     Value *U = *SelI->user_begin();
-    if (!match(U, m_Xor(m_Specific(SelI), m_Value(R))) &&
-        !match(U, m_Xor(m_Value(R), m_Specific(SelI))))
+    if (!match(U, m_c_Xor(m_Specific(SelI), m_Value(R))))
       return false;
     // Matched: xor (select +++ ? 0 : T), R
     //          xor (select +++ ? T : 0), R
@@ -811,18 +796,16 @@ bool PolynomialMultiplyRecognize::matchRightShift(SelectInst *SelI,
   using namespace PatternMatch;
 
   Value *C = nullptr;
-  CmpInst::Predicate P;
+  CmpPredicate P;
   bool TrueIfZero;
 
-  if (match(CondV, m_ICmp(P, m_Value(C), m_Zero())) ||
-      match(CondV, m_ICmp(P, m_Zero(), m_Value(C)))) {
+  if (match(CondV, m_c_ICmp(P, m_Value(C), m_Zero()))) {
     if (P != CmpInst::ICMP_EQ && P != CmpInst::ICMP_NE)
       return false;
     // Matched: select C == 0 ? ... : ...
     //          select C != 0 ? ... : ...
     TrueIfZero = (P == CmpInst::ICMP_EQ);
-  } else if (match(CondV, m_ICmp(P, m_Value(C), m_One())) ||
-             match(CondV, m_ICmp(P, m_One(), m_Value(C)))) {
+  } else if (match(CondV, m_c_ICmp(P, m_Value(C), m_One()))) {
     if (P != CmpInst::ICMP_EQ && P != CmpInst::ICMP_NE)
       return false;
     // Matched: select C == 1 ? ... : ...
@@ -832,8 +815,7 @@ bool PolynomialMultiplyRecognize::matchRightShift(SelectInst *SelI,
     return false;
 
   Value *X = nullptr;
-  if (!match(C, m_And(m_Value(X), m_One())) &&
-      !match(C, m_And(m_One(), m_Value(X))))
+  if (!match(C, m_And(m_Value(X), m_One())))
     return false;
   // Matched: select (X & 1) == +++ ? ... : ...
   //          select (X & 1) != +++ ? ... : ...
@@ -845,8 +827,7 @@ bool PolynomialMultiplyRecognize::matchRightShift(SelectInst *SelI,
     if (!match(TrueV, m_LShr(m_Value(R), m_One())))
       return false;
     // Matched: select +++ ? (R >> 1) : ...
-    if (!match(FalseV, m_Xor(m_Specific(TrueV), m_Value(Q))) &&
-        !match(FalseV, m_Xor(m_Value(Q), m_Specific(TrueV))))
+    if (!match(FalseV, m_c_Xor(m_Specific(TrueV), m_Value(Q))))
       return false;
     // Matched: select +++ ? (R >> 1) : (R >> 1) ^ Q
     // with commuting ^.
@@ -856,8 +837,7 @@ bool PolynomialMultiplyRecognize::matchRightShift(SelectInst *SelI,
     if (!match(FalseV, m_LShr(m_Value(R), m_One())))
       return false;
     // Matched: select +++ ? ... : (R >> 1)
-    if (!match(TrueV, m_Xor(m_Specific(FalseV), m_Value(Q))) &&
-        !match(TrueV, m_Xor(m_Value(Q), m_Specific(FalseV))))
+    if (!match(TrueV, m_c_Xor(m_Specific(FalseV), m_Value(Q))))
       return false;
     // Matched: select +++ ? (R >> 1) ^ Q : (R >> 1)
     // with commuting ^.
@@ -1062,7 +1042,7 @@ void PolynomialMultiplyRecognize::promoteTo(Instruction *In,
   // Promote immediates.
   for (unsigned i = 0, n = In->getNumOperands(); i != n; ++i) {
     if (ConstantInt *CI = dyn_cast<ConstantInt>(In->getOperand(i)))
-      if (CI->getType()->getBitWidth() < DestBW)
+      if (CI->getBitWidth() < DestBW)
         In->setOperand(i, ConstantInt::get(DestTy, CI->getZExtValue()));
   }
 }
@@ -1095,16 +1075,13 @@ bool PolynomialMultiplyRecognize::promoteTypes(BasicBlock *LoopB,
       return false;
 
   // Perform the promotion.
-  std::vector<Instruction*> LoopIns;
-  std::transform(LoopB->begin(), LoopB->end(), std::back_inserter(LoopIns),
-                 [](Instruction &In) { return &In; });
+  SmallVector<Instruction *> LoopIns(llvm::make_pointer_range(*LoopB));
   for (Instruction *In : LoopIns)
     if (!In->isTerminator())
       promoteTo(In, DestTy, LoopB);
 
   // Fix up the PHI nodes in the exit block.
-  Instruction *EndI = ExitB->getFirstNonPHI();
-  BasicBlock::iterator End = EndI ? EndI->getIterator() : ExitB->end();
+  BasicBlock::iterator End = ExitB->getFirstNonPHIIt();
   for (auto I = ExitB->begin(); I != End; ++I) {
     PHINode *P = dyn_cast<PHINode>(I);
     if (!P)
@@ -1332,13 +1309,13 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
     // Found a cycle.
     C.insert(&I);
     classifyCycle(&I, C, Early, Late);
-    Cycled.insert(C.begin(), C.end());
+    Cycled.insert_range(C);
     RShifts.insert(&I);
   }
 
   // Find the set of all values affected by the shift cycles, i.e. all
   // cycled values, and (recursively) all their users.
-  ValueSeq Users(Cycled.begin(), Cycled.end());
+  ValueSeq Users(llvm::from_range, Cycled);
   for (unsigned i = 0; i < Users.size(); ++i) {
     Value *V = Users[i];
     if (!isa<IntegerType>(V->getType()))
@@ -1366,7 +1343,7 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
     return false;
 
   // Verify that high bits remain zero.
-  ValueSeq Internal(Users.begin(), Users.end());
+  ValueSeq Internal(llvm::from_range, Users);
   ValueSeq Inputs;
   for (unsigned i = 0; i < Internal.size(); ++i) {
     auto *R = dyn_cast<Instruction>(Internal[i]);
@@ -1395,14 +1372,12 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
 
   CastMapType CastMap;
 
-  auto upcast = [] (CastMapType &CM, IRBuilder<> &IRB, Value *V,
-        IntegerType *Ty) -> Value* {
-    auto H = CM.find(std::make_pair(V, Ty));
-    if (H != CM.end())
-      return H->second;
-    Value *CV = IRB.CreateIntCast(V, Ty, false);
-    CM.insert(std::make_pair(std::make_pair(V, Ty), CV));
-    return CV;
+  auto upcast = [](CastMapType &CM, IRBuilder<> &IRB, Value *V,
+                   IntegerType *Ty) -> Value * {
+    auto [H, Inserted] = CM.try_emplace(std::make_pair(V, Ty));
+    if (Inserted)
+      H->second = IRB.CreateIntCast(V, Ty, false);
+    return H->second;
   };
 
   for (auto I = LoopB->begin(), E = LoopB->end(); I != E; ++I) {
@@ -1538,7 +1513,8 @@ Value *PolynomialMultiplyRecognize::generate(BasicBlock::iterator At,
       ParsedValues &PV) {
   IRBuilder<> B(&*At);
   Module *M = At->getParent()->getParent()->getParent();
-  Function *PMF = Intrinsic::getDeclaration(M, Intrinsic::hexagon_M4_pmpyw);
+  Function *PMF =
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::hexagon_M4_pmpyw);
 
   Value *P = PV.P, *Q = PV.Q, *P0 = P;
   unsigned IC = PV.IterCount;
@@ -1577,7 +1553,7 @@ Value *PolynomialMultiplyRecognize::generate(BasicBlock::iterator At,
 
 static bool hasZeroSignBit(const Value *V) {
   if (const auto *CI = dyn_cast<const ConstantInt>(V))
-    return (CI->getType()->getSignBit() & CI->getSExtValue()) == 0;
+    return CI->getValue().isNonNegative();
   const Instruction *I = dyn_cast<const Instruction>(V);
   if (!I)
     return false;
@@ -1688,7 +1664,7 @@ void PolynomialMultiplyRecognize::setupPreSimplifier(Simplifier &S) {
       if (I->getOpcode() != Instruction::Or)
         return nullptr;
       ConstantInt *Msb = dyn_cast<ConstantInt>(I->getOperand(1));
-      if (!Msb || Msb->getZExtValue() != Msb->getType()->getSignBit())
+      if (!Msb || !Msb->getValue().isSignMask())
         return nullptr;
       if (!hasZeroSignBit(I->getOperand(0)))
         return nullptr;
@@ -1801,6 +1777,8 @@ bool PolynomialMultiplyRecognize::recognize() {
     IterCount = CV->getValue()->getZExtValue() + 1;
 
   Value *CIV = getCountIV(LoopB);
+  if (CIV == nullptr)
+    return false;
   ParsedValues PV;
   Simplifier PreSimp;
   PV.IterCount = IterCount;
@@ -2043,7 +2021,7 @@ bool HexagonLoopIdiomRecognize::processCopyingStore(Loop *CurLoop,
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
   Instruction *ExpPt = Preheader->getTerminator();
   IRBuilder<> Builder(ExpPt);
-  SCEVExpander Expander(*SE, *DL, "hexagon-loop-idiom");
+  SCEVExpander Expander(*SE, "hexagon-loop-idiom");
 
   Type *IntPtrTy = Builder.getIntPtrTy(*DL, SI->getPointerAddressSpace());
 
@@ -2266,6 +2244,11 @@ CleanupAndExit:
       Type *PtrTy = PointerType::get(Ctx, 0);
       Type *VoidTy = Type::getVoidTy(Ctx);
       Module *M = Func->getParent();
+
+      // FIXME: This should check if the call is supported
+      StringRef HexagonVolatileMemcpyName =
+          RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+              RTLIB::impl_hexagon_memcpy_forward_vp4cp4n2);
       FunctionCallee Fn = M->getOrInsertFunction(
           HexagonVolatileMemcpyName, VoidTy, PtrTy, PtrTy, Int32Ty);
 
@@ -2308,11 +2291,10 @@ CleanupAndExit:
 // the instructions in Insts are removed.
 bool HexagonLoopIdiomRecognize::coverLoop(Loop *L,
       SmallVectorImpl<Instruction*> &Insts) const {
-  SmallSet<BasicBlock*,8> LoopBlocks;
-  for (auto *B : L->blocks())
-    LoopBlocks.insert(B);
+  SmallPtrSet<BasicBlock *, 8> LoopBlocks;
+  LoopBlocks.insert_range(L->blocks());
 
-  SetVector<Instruction*> Worklist(Insts.begin(), Insts.end());
+  SetVector<Instruction *> Worklist(llvm::from_range, Insts);
 
   // Collect all instructions from the loop that the instructions in Insts
   // depend on (plus their dependencies, etc.).  These instructions will
@@ -2337,7 +2319,7 @@ bool HexagonLoopIdiomRecognize::coverLoop(Loop *L,
   // instructions in it that are not involved in the original set Insts.
   for (auto *B : L->blocks()) {
     for (auto &In : *B) {
-      if (isa<BranchInst>(In) || isa<DbgInfoIntrinsic>(In))
+      if (isa<BranchInst>(In))
         continue;
       if (!Worklist.count(&In) && In.mayHaveSideEffects())
         return false;
@@ -2412,7 +2394,7 @@ bool HexagonLoopIdiomRecognize::runOnCountableLoop(Loop *L) {
 
 bool HexagonLoopIdiomRecognize::run(Loop *L) {
   const Module &M = *L->getHeader()->getParent()->getParent();
-  if (Triple(M.getTargetTriple()).getArch() != Triple::hexagon)
+  if (M.getTargetTriple().getArch() != Triple::hexagon)
     return false;
 
   // If the loop could not be converted to canonical form, it must have an
@@ -2425,7 +2407,7 @@ bool HexagonLoopIdiomRecognize::run(Loop *L) {
   if (Name == "memset" || Name == "memcpy" || Name == "memmove")
     return false;
 
-  DL = &L->getHeader()->getModule()->getDataLayout();
+  DL = &L->getHeader()->getDataLayout();
 
   HasMemcpy = TLI->has(LibFunc_memcpy);
   HasMemmove = TLI->has(LibFunc_memmove);

@@ -39,6 +39,7 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   DataExtractor.cpp
   Diagnostics.cpp
   Environment.cpp
+  ErrorMessages.cpp
   Event.cpp
   FileSpec.cpp
   FileSpecList.cpp
@@ -50,6 +51,7 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   Log.cpp
   NameMatches.cpp
   ProcessInfo.cpp
+  RealpathPrefixes.cpp
   RegisterValue.cpp
   RegularExpression.cpp
   Instrumentation.cpp
@@ -75,15 +77,17 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   UserIDResolver.cpp
   VASprintf.cpp
   VMRange.cpp
+  VirtualDataExtractor.cpp
   XcodeSDK.cpp
   ZipFile.cpp
 
-  LINK_LIBS
-    ${LLDB_SYSTEM_LIBS}
-    # lldbUtility does not depend on other LLDB libraries
-
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Utility
   LINK_COMPONENTS
     BinaryFormat
     Support
     TargetParser
+  LINK_LIBS
+    ${LLDB_SYSTEM_LIBS}
+    # lldbUtility does not depend on other LLDB libraries
   )

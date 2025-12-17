@@ -8,7 +8,7 @@
 //
 // TableGen is a tool which can be used to build up a description of something,
 // then invoke one or more "tablegen backends" to emit information about the
-// description in some predefined format.  In practice, this is used by the LLVM
+// description in some predefined format. In practice, this is used by the LLVM
 // code generators to automate generation of a code generator through a
 // high-level description of the target.
 //
@@ -23,18 +23,20 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <memory>
 #include <string>
 #include <system_error>
 #include <utility>
-#include <vector>
 using namespace llvm;
 
 static cl::opt<std::string>
@@ -63,6 +65,13 @@ WriteIfChanged("write-if-changed", cl::desc("Only write output if it changed"));
 
 static cl::opt<bool>
 TimePhases("time-phases", cl::desc("Time phases of parser and backend"));
+
+cl::opt<bool> llvm::EmitLongStrLiterals(
+    "long-string-literals",
+    cl::desc("when emitting large string tables, prefer string literals over "
+             "comma-separated char literals. This can be a readability and "
+             "compile-time performance win, but upsets some compilers"),
+    cl::Hidden, cl::init(true));
 
 static cl::opt<bool> NoWarnOnUnusedTemplateArgs(
     "no-warn-on-unused-template-args",
@@ -96,16 +105,38 @@ static int createDependencyFile(const TGParser &Parser, const char *argv0) {
   return 0;
 }
 
-int llvm::TableGenMain(const char *argv0,
-                       std::function<TableGenMainFn> MainFn) {
+static int WriteOutput(const TGParser &Parser, const char *argv0,
+                       StringRef Filename, StringRef Content) {
+  if (WriteIfChanged) {
+    // Only updates the real output file if there are any differences.
+    // This prevents recompilation of all the files depending on it if there
+    // aren't any.
+    if (auto ExistingOrErr = MemoryBuffer::getFile(Filename, /*IsText=*/true))
+      if (std::move(ExistingOrErr.get())->getBuffer() == Content)
+        return 0;
+  }
+  std::error_code EC;
+  ToolOutputFile OutFile(Filename, EC, sys::fs::OF_Text);
+  if (EC)
+    return reportError(argv0, "error opening " + Filename + ": " +
+                                  EC.message() + "\n");
+  OutFile.os() << Content;
+  if (ErrorsPrinted == 0)
+    OutFile.keep();
+
+  return 0;
+}
+
+int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
   RecordKeeper Records;
+  TGTimer &Timer = Records.getTimer();
 
   if (TimePhases)
-    Records.startPhaseTiming();
+    Timer.startPhaseTiming();
 
   // Parse the input file.
 
-  Records.startTimer("Parse, build records");
+  Timer.startTimer("Parse, build records");
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
       MemoryBuffer::getFileOrSTDIN(InputFilename, /*IsText=*/true);
   if (std::error_code EC = FileOrErr.getError())
@@ -120,31 +151,34 @@ int llvm::TableGenMain(const char *argv0,
   // Record the location of the include directory so that the lexer can find
   // it later.
   SrcMgr.setIncludeDirs(IncludeDirs);
+  SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
 
   TGParser Parser(SrcMgr, MacroNames, Records, NoWarnOnUnusedTemplateArgs);
 
   if (Parser.ParseFile())
     return 1;
-  Records.stopTimer();
+  Timer.stopTimer();
+
+  // Return early if any other errors were generated during parsing
+  // (e.g., assert failures).
+  if (ErrorsPrinted > 0)
+    return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
 
   // Write output to memory.
-  Records.startBackendTimer("Backend overall");
-  std::string OutString;
-  raw_string_ostream Out(OutString);
+  Timer.startBackendTimer("Backend overall");
+  TableGenOutputFiles OutFiles;
   unsigned status = 0;
-  TableGen::Emitter::FnT ActionFn = TableGen::Emitter::Action->getValue();
-  if (ActionFn)
-    ActionFn(Records, Out);
-  else if (MainFn)
-    status = MainFn(Out, Records);
-  else
-    return 1;
-  Records.stopBackendTimer();
+  // ApplyCallback will return true if it did not apply any callback. In that
+  // case, attempt to apply the MainFn.
+  StringRef FilenamePrefix(sys::path::stem(OutputFilename));
+  if (TableGen::Emitter::ApplyCallback(Records, OutFiles, FilenamePrefix))
+    status = MainFn ? MainFn(OutFiles, Records) : 1;
+  Timer.stopBackendTimer();
   if (status)
     return 1;
 
   // Always write the depfile, even if the main output hasn't changed.
-  // If it's missing, Ninja considers the output dirty.  If this was below
+  // If it's missing, Ninja considers the output dirty. If this was below
   // the early exit below and someone deleted the .inc.d file but not the .inc
   // file, tablegen would never write the depfile.
   if (!DependFilename.empty()) {
@@ -152,32 +186,35 @@ int llvm::TableGenMain(const char *argv0,
       return Ret;
   }
 
-  Records.startTimer("Write output");
-  bool WriteFile = true;
-  if (WriteIfChanged) {
-    // Only updates the real output file if there are any differences.
-    // This prevents recompilation of all the files depending on it if there
-    // aren't any.
-    if (auto ExistingOrErr =
-            MemoryBuffer::getFile(OutputFilename, /*IsText=*/true))
-      if (std::move(ExistingOrErr.get())->getBuffer() == Out.str())
-        WriteFile = false;
+  Timer.startTimer("Write output");
+  if (int Ret = WriteOutput(Parser, argv0, OutputFilename, OutFiles.MainFile))
+    return Ret;
+  for (auto [Suffix, Content] : OutFiles.AdditionalFiles) {
+    SmallString<128> Filename(OutputFilename);
+    // TODO: Format using the split-file convention when writing to stdout?
+    if (Filename != "-") {
+      sys::path::replace_extension(Filename, "");
+      Filename.append(Suffix);
+    }
+    if (int Ret = WriteOutput(Parser, argv0, Filename, Content))
+      return Ret;
   }
-  if (WriteFile) {
-    std::error_code EC;
-    ToolOutputFile OutFile(OutputFilename, EC, sys::fs::OF_Text);
-    if (EC)
-      return reportError(argv0, "error opening " + OutputFilename + ": " +
-                                    EC.message() + "\n");
-    OutFile.os() << Out.str();
-    if (ErrorsPrinted == 0)
-      OutFile.keep();
-  }
-  
-  Records.stopTimer();
-  Records.stopPhaseTiming();
+
+  Timer.stopTimer();
+  Timer.stopPhaseTiming();
 
   if (ErrorsPrinted > 0)
     return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
   return 0;
+}
+
+int llvm::TableGenMain(const char *argv0, TableGenMainFn MainFn) {
+  return TableGenMain(argv0, [&MainFn](TableGenOutputFiles &OutFiles,
+                                       const RecordKeeper &Records) {
+    std::string S;
+    raw_string_ostream OS(S);
+    int Res = MainFn(OS, Records);
+    OutFiles = {S, {}};
+    return Res;
+  });
 }

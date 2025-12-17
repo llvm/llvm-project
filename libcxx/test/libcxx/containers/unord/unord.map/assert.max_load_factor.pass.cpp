@@ -18,7 +18,7 @@
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03
 // REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-// XFAIL: availability-verbose_abort-missing
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <unordered_map>
 #include <string>
@@ -26,9 +26,9 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-    typedef std::unordered_map<int, std::string> C;
-    C c;
-    TEST_LIBCPP_ASSERT_FAILURE(c.max_load_factor(0), "unordered container::max_load_factor(lf) called with lf <= 0");
+  typedef std::unordered_map<int, std::string> C;
+  C c;
+  TEST_LIBCPP_ASSERT_FAILURE(c.max_load_factor(0), "unordered container::max_load_factor(lf) called with lf <= 0");
 
-    return 0;
+  return 0;
 }

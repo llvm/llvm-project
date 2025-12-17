@@ -23,9 +23,9 @@ protected:
   std::string insert(llvm::StringRef Code, llvm::StringRef Header,
                      IncludeDirective Directive = IncludeDirective::Include) {
     HeaderIncludes Includes(FileName, Code, Style);
-    assert(Header.startswith("\"") || Header.startswith("<"));
-    auto R =
-        Includes.insert(Header.trim("\"<>"), Header.startswith("<"), Directive);
+    assert(Header.starts_with("\"") || Header.starts_with("<"));
+    auto R = Includes.insert(Header.trim("\"<>"), Header.starts_with("<"),
+                             Directive);
     if (!R)
       return std::string(Code);
     auto Result = applyAllReplacements(Code, Replacements(*R));
@@ -35,8 +35,9 @@ protected:
 
   std::string remove(llvm::StringRef Code, llvm::StringRef Header) {
     HeaderIncludes Includes(FileName, Code, Style);
-    assert(Header.startswith("\"") || Header.startswith("<"));
-    auto Replaces = Includes.remove(Header.trim("\"<>"), Header.startswith("<"));
+    assert(Header.starts_with("\"") || Header.starts_with("<"));
+    auto Replaces =
+        Includes.remove(Header.trim("\"<>"), Header.starts_with("<"));
     auto Result = applyAllReplacements(Code, Replaces);
     EXPECT_TRUE(static_cast<bool>(Result));
     return *Result;
@@ -591,6 +592,148 @@ TEST_F(HeaderIncludesTest, CanDeleteAfterCode) {
   std::string Expected = "#include \"a.h\"\n"
                          "void f() {}\n";
   EXPECT_EQ(Expected, remove(Code, "\"b.h\""));
+}
+
+TEST_F(HeaderIncludesTest, InsertInGlobalModuleFragment) {
+  // Ensure header insertions go only in the global module fragment
+  std::string Code = R"cpp(// comments
+
+// more comments
+
+module;
+export module foo;
+
+int main() {
+    std::vector<int> ints {};
+})cpp";
+  std::string Expected = R"cpp(// comments
+
+// more comments
+
+module;
+#include <vector>
+export module foo;
+
+int main() {
+    std::vector<int> ints {};
+})cpp";
+
+  auto InsertedCode = insert(Code, "<vector>");
+  EXPECT_EQ(Expected, insert(Code, "<vector>"));
+}
+
+TEST_F(HeaderIncludesTest, InsertInGlobalModuleFragmentWithPP) {
+  // Ensure header insertions go only in the global module fragment
+  std::string Code = R"cpp(// comments
+
+// more comments
+
+// some more comments
+
+module;
+
+#ifndef MACRO_NAME
+#define MACRO_NAME
+#endif
+
+// comment
+
+#ifndef MACRO_NAME
+#define MACRO_NAME
+#endif
+
+// more comment
+
+int main() {
+    std::vector<int> ints {};
+})cpp";
+  std::string Expected = R"cpp(// comments
+
+// more comments
+
+// some more comments
+
+module;
+
+#include <vector>
+#ifndef MACRO_NAME
+#define MACRO_NAME
+#endif
+
+// comment
+
+#ifndef MACRO_NAME
+#define MACRO_NAME
+#endif
+
+// more comment
+
+int main() {
+    std::vector<int> ints {};
+})cpp";
+
+  EXPECT_EQ(Expected, insert(Code, "<vector>"));
+}
+
+TEST_F(HeaderIncludesTest, InsertInGlobalModuleFragmentWithPPIncludes) {
+  // Ensure header insertions go only in the global module fragment
+  std::string Code = R"cpp(// comments
+
+// more comments
+
+// some more comments
+
+module;
+
+#include "header.h"
+
+#include <string>
+
+#ifndef MACRO_NAME
+#define MACRO_NAME
+#endif
+
+// comment
+
+#ifndef MACRO_NAME
+#define MACRO_NAME
+#endif
+
+// more comment
+
+int main() {
+    std::vector<int> ints {};
+})cpp";
+  std::string Expected = R"cpp(// comments
+
+// more comments
+
+// some more comments
+
+module;
+
+#include "header.h"
+
+#include <string>
+#include <vector>
+
+#ifndef MACRO_NAME
+#define MACRO_NAME
+#endif
+
+// comment
+
+#ifndef MACRO_NAME
+#define MACRO_NAME
+#endif
+
+// more comment
+
+int main() {
+    std::vector<int> ints {};
+})cpp";
+
+  EXPECT_EQ(Expected, insert(Code, "<vector>"));
 }
 
 } // namespace

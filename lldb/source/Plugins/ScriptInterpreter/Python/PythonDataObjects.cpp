@@ -20,6 +20,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errno.h"
@@ -61,7 +62,7 @@ Expected<std::string> python::As<std::string>(Expected<PythonObject> &&obj) {
   if (!obj)
     return obj.takeError();
   PyObject *str_obj = PyObject_Str(obj.get().get());
-  if (!obj)
+  if (!str_obj)
     return llvm::make_error<PythonException>();
   auto str = Take<PythonString>(str_obj);
   auto utf8 = str.AsUTF8();
@@ -70,26 +71,11 @@ Expected<std::string> python::As<std::string>(Expected<PythonObject> &&obj) {
   return std::string(utf8.get());
 }
 
-static bool python_is_finalizing() {
-#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 13) || (PY_MAJOR_VERSION > 3)
-  return Py_IsFinalizing();
-#elif PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 7
-  return _Py_Finalizing != nullptr;
-#else
-  return _Py_IsFinalizing();
-#endif
-}
-
 void PythonObject::Reset() {
   if (m_py_obj && Py_IsInitialized()) {
-    if (python_is_finalizing()) {
-      // Leak m_py_obj rather than crashing the process.
-      // https://docs.python.org/3/c-api/init.html#c.PyGILState_Ensure
-    } else {
-      PyGILState_STATE state = PyGILState_Ensure();
-      Py_DECREF(m_py_obj);
-      PyGILState_Release(state);
-    }
+    PyGILState_STATE state = PyGILState_Ensure();
+    Py_DECREF(m_py_obj);
+    PyGILState_Release(state);
   }
   m_py_obj = nullptr;
 }
@@ -133,23 +119,30 @@ void StructuredPythonObject::Serialize(llvm::json::OStream &s) const {
 // PythonObject
 
 void PythonObject::Dump(Stream &strm) const {
-  if (m_py_obj) {
-    FILE *file = llvm::sys::RetryAfterSignal(nullptr, ::tmpfile);
-    if (file) {
-      ::PyObject_Print(m_py_obj, file, 0);
-      const long length = ftell(file);
-      if (length) {
-        ::rewind(file);
-        std::vector<char> file_contents(length, '\0');
-        const size_t length_read =
-            ::fread(file_contents.data(), 1, file_contents.size(), file);
-        if (length_read > 0)
-          strm.Write(file_contents.data(), length_read);
-      }
-      ::fclose(file);
-    }
-  } else
-    strm.PutCString("NULL");
+  if (!m_py_obj) {
+    strm << "NULL";
+    return;
+  }
+
+  PyObject *py_str = PyObject_Repr(m_py_obj);
+  if (!py_str)
+    return;
+
+  auto release_py_str = llvm::make_scope_exit([py_str] { Py_DECREF(py_str); });
+
+  PyObject *py_bytes = PyUnicode_AsEncodedString(py_str, "utf-8", "replace");
+  if (!py_bytes)
+    return;
+
+  auto release_py_bytes =
+      llvm::make_scope_exit([py_bytes] { Py_DECREF(py_bytes); });
+
+  char *buffer = nullptr;
+  Py_ssize_t length = 0;
+  if (PyBytes_AsStringAndSize(py_bytes, &buffer, &length) == -1)
+    return;
+
+  strm << llvm::StringRef(buffer, length);
 }
 
 PyObjectType PythonObject::GetObjectType() const {
@@ -263,7 +256,6 @@ PythonObject PythonObject::GetAttributeValue(llvm::StringRef attr) const {
 }
 
 StructuredData::ObjectSP PythonObject::CreateStructuredObject() const {
-  assert(PyGILState_Check());
   switch (GetObjectType()) {
   case PyObjectType::Dictionary:
     return PythonDictionary(PyRefType::Borrowed, m_py_obj)
@@ -413,25 +405,38 @@ Expected<llvm::StringRef> PythonString::AsUTF8() const {
   if (!IsValid())
     return nullDeref();
 
-  Py_ssize_t size;
-  const char *data;
+  // PyUnicode_AsUTF8AndSize caches the UTF-8 representation of the string in
+  // the Unicode object, which makes it more efficient and ties the lifetime of
+  // the data to the Python string. However, it was only added to the Stable API
+  // in Python 3.10. Older versions that want to use the Stable API must use
+  // PyUnicode_AsUTF8String in combination with ConstString.
+#if defined(Py_LIMITED_API) && (Py_LIMITED_API < 0x030a0000)
+  PyObject *py_bytes = PyUnicode_AsUTF8String(m_py_obj);
+  if (!py_bytes)
+    return exception();
+  auto release_py_str =
+      llvm::make_scope_exit([py_bytes] { Py_DECREF(py_bytes); });
+  Py_ssize_t size = PyBytes_Size(py_bytes);
+  const char *str = PyBytes_AsString(py_bytes);
 
-  data = PyUnicode_AsUTF8AndSize(m_py_obj, &size);
-
-  if (!data)
+  if (!str)
     return exception();
 
-  return llvm::StringRef(data, size);
+  return ConstString(str, size).GetStringRef();
+#else
+  Py_ssize_t size;
+  const char *str = PyUnicode_AsUTF8AndSize(m_py_obj, &size);
+
+  if (!str)
+    return exception();
+
+  return llvm::StringRef(str, size);
+#endif
 }
 
 size_t PythonString::GetSize() const {
-  if (IsValid()) {
-#if PY_MINOR_VERSION >= 3
+  if (IsValid())
     return PyUnicode_GetLength(m_py_obj);
-#else
-    return PyUnicode_GetSize(m_py_obj);
-#endif
-  }
   return 0;
 }
 
@@ -500,9 +505,7 @@ PythonInteger::CreateStructuredSignedInteger() const {
 
 // PythonBoolean
 
-PythonBoolean::PythonBoolean(bool value) {
-  SetValue(value);
-}
+PythonBoolean::PythonBoolean(bool value) { SetValue(value); }
 
 bool PythonBoolean::Check(PyObject *py_obj) {
   return py_obj ? PyBool_Check(py_obj) : false;
@@ -541,7 +544,7 @@ bool PythonList::Check(PyObject *py_obj) {
 
 uint32_t PythonList::GetSize() const {
   if (IsValid())
-    return PyList_GET_SIZE(m_py_obj);
+    return PyList_Size(m_py_obj);
   return 0;
 }
 
@@ -620,7 +623,7 @@ bool PythonTuple::Check(PyObject *py_obj) {
 
 uint32_t PythonTuple::GetSize() const {
   if (IsValid())
-    return PyTuple_GET_SIZE(m_py_obj);
+    return PyTuple_Size(m_py_obj);
   return 0;
 }
 
@@ -807,10 +810,20 @@ bool PythonCallable::Check(PyObject *py_obj) {
   if (!py_obj)
     return false;
 
+  PythonObject python_obj(PyRefType::Borrowed, py_obj);
+
+  // Handle staticmethod/classmethod descriptors by extracting the
+  // `__func__` attribute.
+  if (python_obj.HasAttribute("__func__")) {
+    PythonObject function_obj = python_obj.GetAttributeValue("__func__");
+    if (!function_obj.IsAllocated())
+      return false;
+    return PyCallable_Check(function_obj.release());
+  }
+
   return PyCallable_Check(py_obj);
 }
 
-#if PY_MAJOR_VERSION >= 3 && PY_MINOR_VERSION >= 3
 static const char get_arg_info_script[] = R"(
 from inspect import signature, Parameter, ismethod
 from collections import namedtuple
@@ -832,14 +845,11 @@ def main(f):
             raise Exception(f'unknown parameter kind: {kind}')
     return ArgInfo(count, varargs)
 )";
-#endif
 
 Expected<PythonCallable::ArgInfo> PythonCallable::GetArgInfo() const {
   ArgInfo result = {};
   if (!IsValid())
     return nullDeref();
-
-#if PY_MAJOR_VERSION >= 3 && PY_MINOR_VERSION >= 3
 
   // no need to synchronize access to this global, we already have the GIL
   static PythonScript get_arg_info(get_arg_info_script);
@@ -852,57 +862,6 @@ Expected<PythonCallable::ArgInfo> PythonCallable::GetArgInfo() const {
       cantFail(As<bool>(pyarginfo.get().GetAttribute("has_varargs")));
   result.max_positional_args = has_varargs ? ArgInfo::UNBOUNDED : count;
 
-#else
-  PyObject *py_func_obj;
-  bool is_bound_method = false;
-  bool is_class = false;
-
-  if (PyType_Check(m_py_obj) || PyClass_Check(m_py_obj)) {
-    auto init = GetAttribute("__init__");
-    if (!init)
-      return init.takeError();
-    py_func_obj = init.get().get();
-    is_class = true;
-  } else {
-    py_func_obj = m_py_obj;
-  }
-
-  if (PyMethod_Check(py_func_obj)) {
-    py_func_obj = PyMethod_GET_FUNCTION(py_func_obj);
-    PythonObject im_self = GetAttributeValue("im_self");
-    if (im_self.IsValid() && !im_self.IsNone())
-      is_bound_method = true;
-  } else {
-    // see if this is a callable object with an __call__ method
-    if (!PyFunction_Check(py_func_obj)) {
-      PythonObject __call__ = GetAttributeValue("__call__");
-      if (__call__.IsValid()) {
-        auto __callable__ = __call__.AsType<PythonCallable>();
-        if (__callable__.IsValid()) {
-          py_func_obj = PyMethod_GET_FUNCTION(__callable__.get());
-          PythonObject im_self = __callable__.GetAttributeValue("im_self");
-          if (im_self.IsValid() && !im_self.IsNone())
-            is_bound_method = true;
-        }
-      }
-    }
-  }
-
-  if (!py_func_obj)
-    return result;
-
-  PyCodeObject *code = (PyCodeObject *)PyFunction_GET_CODE(py_func_obj);
-  if (!code)
-    return result;
-
-  auto count = code->co_argcount;
-  bool has_varargs = !!(code->co_flags & CO_VARARGS);
-  result.max_positional_args =
-      has_varargs ? ArgInfo::UNBOUNDED
-                  : (count - (int)is_bound_method) - (int)is_class;
-
-#endif
-
   return result;
 }
 
@@ -913,15 +872,15 @@ PythonObject PythonCallable::operator()() {
   return PythonObject(PyRefType::Owned, PyObject_CallObject(m_py_obj, nullptr));
 }
 
-PythonObject PythonCallable::
-operator()(std::initializer_list<PyObject *> args) {
+PythonObject
+PythonCallable::operator()(std::initializer_list<PyObject *> args) {
   PythonTuple arg_tuple(args);
   return PythonObject(PyRefType::Owned,
                       PyObject_CallObject(m_py_obj, arg_tuple.get()));
 }
 
-PythonObject PythonCallable::
-operator()(std::initializer_list<PythonObject> args) {
+PythonObject
+PythonCallable::operator()(std::initializer_list<PythonObject> args) {
   PythonTuple arg_tuple(args);
   return PythonObject(PyRefType::Owned,
                       PyObject_CallObject(m_py_obj, arg_tuple.get()));
@@ -956,7 +915,7 @@ bool PythonFile::Check(PyObject *py_obj) {
 const char *PythonException::toCString() const {
   if (!m_repr_bytes)
     return "unknown exception";
-  return PyBytes_AS_STRING(m_repr_bytes);
+  return PyBytes_AsString(m_repr_bytes);
 }
 
 PythonException::PythonException(const char *caller) {
@@ -1105,12 +1064,13 @@ public:
     if (!m_borrowed) {
       auto r = m_py_obj.CallMethod("close");
       if (!r)
-        py_error = Status(r.takeError());
+        py_error = Status::FromError(r.takeError());
     }
     base_error = Base::Close();
+    // Cloning since the wrapped exception may still reference the PyThread.
     if (py_error.Fail())
-      return py_error;
-    return base_error;
+      return py_error.Clone();
+    return base_error.Clone();
   };
 
   PyObject *GetPythonObject() const {
@@ -1144,40 +1104,6 @@ public:
 char SimplePythonFile::ID = 0;
 } // namespace
 
-namespace {
-class PythonBuffer {
-public:
-  PythonBuffer &operator=(const PythonBuffer &) = delete;
-  PythonBuffer(const PythonBuffer &) = delete;
-
-  static Expected<PythonBuffer> Create(PythonObject &obj,
-                                       int flags = PyBUF_SIMPLE) {
-    Py_buffer py_buffer = {};
-    PyObject_GetBuffer(obj.get(), &py_buffer, flags);
-    if (!py_buffer.obj)
-      return llvm::make_error<PythonException>();
-    return PythonBuffer(py_buffer);
-  }
-
-  PythonBuffer(PythonBuffer &&other) {
-    m_buffer = other.m_buffer;
-    other.m_buffer.obj = nullptr;
-  }
-
-  ~PythonBuffer() {
-    if (m_buffer.obj)
-      PyBuffer_Release(&m_buffer);
-  }
-
-  Py_buffer &get() { return m_buffer; }
-
-private:
-  // takes ownership of the buffer.
-  PythonBuffer(const Py_buffer &py_buffer) : m_buffer(py_buffer) {}
-  Py_buffer m_buffer;
-};
-} // namespace
-
 // Shared methods between TextPythonFile and BinaryPythonFile
 namespace {
 class PythonIOFile : public OwnedPythonFile<File> {
@@ -1196,7 +1122,8 @@ public:
       return Flush();
     auto r = m_py_obj.CallMethod("close");
     if (!r)
-      return Status(r.takeError());
+      // Cloning since the wrapped exception may still reference the PyThread.
+      return Status::FromError(r.takeError()).Clone();
     return Status();
   }
 
@@ -1204,7 +1131,8 @@ public:
     GIL takeGIL;
     auto r = m_py_obj.CallMethod("flush");
     if (!r)
-      return Status(r.takeError());
+      // Cloning since the wrapped exception may still reference the PyThread.
+      return Status::FromError(r.takeError()).Clone();
     return Status();
   }
 
@@ -1240,14 +1168,16 @@ public:
     PyObject *pybuffer_p = PyMemoryView_FromMemory(
         const_cast<char *>((const char *)buf), num_bytes, PyBUF_READ);
     if (!pybuffer_p)
-      return Status(llvm::make_error<PythonException>());
+      // Cloning since the wrapped exception may still reference the PyThread.
+      return Status::FromError(llvm::make_error<PythonException>()).Clone();
     auto pybuffer = Take<PythonObject>(pybuffer_p);
     num_bytes = 0;
     auto bytes_written = As<long long>(m_py_obj.CallMethod("write", pybuffer));
     if (!bytes_written)
-      return Status(bytes_written.takeError());
+      return Status::FromError(bytes_written.takeError());
     if (bytes_written.get() < 0)
-      return Status(".write() method returned a negative number!");
+      return Status::FromErrorString(
+          ".write() method returned a negative number!");
     static_assert(sizeof(long long) >= sizeof(size_t), "overflow");
     num_bytes = bytes_written.get();
     return Status();
@@ -1259,18 +1189,20 @@ public:
     auto pybuffer_obj =
         m_py_obj.CallMethod("read", (unsigned long long)num_bytes);
     if (!pybuffer_obj)
-      return Status(pybuffer_obj.takeError());
+      // Cloning since the wrapped exception may still reference the PyThread.
+      return Status::FromError(pybuffer_obj.takeError()).Clone();
     num_bytes = 0;
     if (pybuffer_obj.get().IsNone()) {
       // EOF
       num_bytes = 0;
       return Status();
     }
-    auto pybuffer = PythonBuffer::Create(pybuffer_obj.get());
-    if (!pybuffer)
-      return Status(pybuffer.takeError());
-    memcpy(buf, pybuffer.get().get().buf, pybuffer.get().get().len);
-    num_bytes = pybuffer.get().get().len;
+    PythonBytes pybytes(PyRefType::Borrowed, pybuffer_obj->get());
+    if (!pybytes)
+      return Status::FromError(llvm::make_error<PythonException>());
+    llvm::ArrayRef<uint8_t> bytes = pybytes.GetBytes();
+    memcpy(buf, bytes.begin(), bytes.size());
+    num_bytes = bytes.size();
     return Status();
   }
 };
@@ -1294,14 +1226,16 @@ public:
     auto pystring =
         PythonString::FromUTF8(llvm::StringRef((const char *)buf, num_bytes));
     if (!pystring)
-      return Status(pystring.takeError());
+      return Status::FromError(pystring.takeError());
     num_bytes = 0;
     auto bytes_written =
         As<long long>(m_py_obj.CallMethod("write", pystring.get()));
     if (!bytes_written)
-      return Status(bytes_written.takeError());
+      // Cloning since the wrapped exception may still reference the PyThread.
+      return Status::FromError(bytes_written.takeError()).Clone();
     if (bytes_written.get() < 0)
-      return Status(".write() method returned a negative number!");
+      return Status::FromErrorString(
+          ".write() method returned a negative number!");
     static_assert(sizeof(long long) >= sizeof(size_t), "overflow");
     num_bytes = bytes_written.get();
     return Status();
@@ -1313,19 +1247,22 @@ public:
     size_t orig_num_bytes = num_bytes;
     num_bytes = 0;
     if (orig_num_bytes < 6) {
-      return Status("can't read less than 6 bytes from a utf8 text stream");
+      return Status::FromErrorString(
+          "can't read less than 6 bytes from a utf8 text stream");
     }
     auto pystring = As<PythonString>(
         m_py_obj.CallMethod("read", (unsigned long long)num_chars));
     if (!pystring)
-      return Status(pystring.takeError());
+      // Cloning since the wrapped exception may still reference the PyThread.
+      return Status::FromError(pystring.takeError()).Clone();
     if (pystring.get().IsNone()) {
       // EOF
       return Status();
     }
     auto stringref = pystring.get().AsUTF8();
     if (!stringref)
-      return Status(stringref.takeError());
+      // Cloning since the wrapped exception may still reference the PyThread.
+      return Status::FromError(stringref.takeError()).Clone();
     num_bytes = stringref.get().size();
     memcpy(buf, stringref.get().begin(), num_bytes);
     return Status();
@@ -1469,8 +1406,7 @@ Error PythonScript::Init() {
   auto builtins = PythonModule::BuiltinsModule();
   if (Error error = globals.SetItem("__builtins__", builtins))
     return error;
-  PyObject *o =
-      PyRun_String(script, Py_file_input, globals.get(), globals.get());
+  PyObject *o = RunString(script, Py_file_input, globals.get(), globals.get());
   if (!o)
     return exception();
   Take<PythonObject>(o);
@@ -1514,11 +1450,44 @@ python::runStringMultiLine(const llvm::Twine &string,
                            const PythonDictionary &locals) {
   if (!globals.IsValid() || !locals.IsValid())
     return nullDeref();
-  PyObject *result = PyRun_String(NullTerminated(string), Py_file_input,
-                                  globals.get(), locals.get());
+  PyObject *result = RunString(NullTerminated(string), Py_file_input,
+                               globals.get(), locals.get());
   if (!result)
     return exception();
   return Take<PythonObject>(result);
 }
 
+PyObject *lldb_private::python::RunString(const char *str, int start,
+                                          PyObject *globals, PyObject *locals) {
+  const char *filename = "<string>";
+
+  // Compile the string into a code object.
+  PyObject *code = Py_CompileString(str, filename, start);
+  if (!code)
+    return nullptr;
+
+  // Execute the code object.
+  PyObject *result = PyEval_EvalCode(code, globals, locals);
+
+  // Clean up the code object.
+  Py_DECREF(code);
+
+  return result;
+}
+
+int lldb_private::python::RunSimpleString(const char *str) {
+  PyObject *main_module = PyImport_AddModule("__main__");
+  if (!main_module)
+    return -1;
+
+  PyObject *globals = PyModule_GetDict(main_module);
+  if (!globals)
+    return -1;
+
+  PyObject *result = RunString(str, Py_file_input, globals, globals);
+  if (!result)
+    return -1;
+
+  return 0;
+}
 #endif

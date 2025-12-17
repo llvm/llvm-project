@@ -84,6 +84,31 @@ void test_macro_expansion4() {
 #undef MY_NULL
 }
 
+template <typename T> struct pear {
+  // If you say __null (or NULL), we assume that T will always be a pointer
+  // type, so we suggest replacing it with nullptr. (We only check __null here,
+  // because in this test NULL is defined as 0, but real library implementations
+  // it is often defined as __null and the check will catch it.)
+  void f() { x = __null; }
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: use nullptr [modernize-use-nullptr]
+  // CHECK-FIXES: void f() { x = nullptr; }
+
+  // But if you say 0, we allow the possibility that T can be used with integral
+  // and pointer types, and "0" is an acceptable initializer (even if "{}" might
+  // be even better).
+  void g() { y = 0; }
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]] warning: use nullptr
+
+  T x;
+  T y;
+};
+void test_templated() {
+  pear<int*> p;
+  p.f();
+  p.g();
+  dummy(p.x);
+}
+
 #define IS_EQ(x, y) if (x != y) return;
 void test_macro_args() {
   int i = 0;
@@ -93,11 +118,13 @@ void test_macro_args() {
   // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: use nullptr
   // CHECK-FIXES: IS_EQ(static_cast<int*>(nullptr), Ptr);
 
-  IS_EQ(0, Ptr);    // literal
+  // literal
+  IS_EQ(0, Ptr);
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use nullptr
   // CHECK-FIXES: IS_EQ(nullptr, Ptr);
 
-  IS_EQ(NULL, Ptr); // macro
+  // macro
+  IS_EQ(NULL, Ptr);
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use nullptr
   // CHECK-FIXES: IS_EQ(nullptr, Ptr);
 
@@ -180,7 +207,7 @@ void test_macro_args() {
   } a[2] = {ENTRY(0), {0}};
   // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: use nullptr
   // CHECK-MESSAGES: :[[@LINE-2]]:24: warning: use nullptr
-  // CHECK-FIXES: a[2] = {ENTRY(nullptr), {nullptr}};
+  // CHECK-FIXES: } a[2] = {ENTRY(nullptr), {nullptr}};
 #undef ENTRY
 
 #define assert1(expr) (expr) ? 0 : 1

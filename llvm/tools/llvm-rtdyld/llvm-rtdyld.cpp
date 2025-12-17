@@ -649,9 +649,9 @@ void applySpecificSectionMappings(RuntimeDyld &Dyld,
                                   const FileToSectionIDMap &FileToSecIDMap) {
 
   for (StringRef Mapping : SpecificSectionMappings) {
-    size_t EqualsIdx = Mapping.find_first_of("=");
+    size_t EqualsIdx = Mapping.find_first_of('=');
     std::string SectionIDStr = std::string(Mapping.substr(0, EqualsIdx));
-    size_t ComaIdx = Mapping.find_first_of(",");
+    size_t ComaIdx = Mapping.find_first_of(',');
 
     if (ComaIdx == StringRef::npos)
       report_fatal_error("Invalid section specification '" + Mapping +
@@ -793,21 +793,21 @@ static int linkAndVerify() {
   TripleName = TheTriple.getTriple();
 
   std::unique_ptr<MCSubtargetInfo> STI(
-    TheTarget->createMCSubtargetInfo(TripleName, MCPU, ""));
+      TheTarget->createMCSubtargetInfo(TheTriple, MCPU, ""));
   if (!STI)
     ErrorAndExit("Unable to create subtarget info!");
 
-  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
+  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TheTriple));
   if (!MRI)
     ErrorAndExit("Unable to create target register info!");
 
   MCTargetOptions MCOptions;
   std::unique_ptr<MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!MAI)
     ErrorAndExit("Unable to create target asm info!");
 
-  MCContext Ctx(Triple(TripleName), MAI.get(), MRI.get(), STI.get());
+  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get());
 
   std::unique_ptr<MCDisassembler> Disassembler(
     TheTarget->createMCDisassembler(*STI, Ctx));
@@ -819,7 +819,7 @@ static int linkAndVerify() {
     ErrorAndExit("Unable to create target instruction info!");
 
   std::unique_ptr<MCInstPrinter> InstPrinter(
-      TheTarget->createMCInstPrinter(Triple(TripleName), 0, *MAI, *MII, *MRI));
+      TheTarget->createMCInstPrinter(TheTriple, 0, *MAI, *MII, *MRI));
 
   // Load any dylibs requested on the command line.
   loadDylibs();
@@ -921,30 +921,37 @@ static int linkAndVerify() {
     RuntimeDyldChecker::MemoryRegionInfo SecInfo;
     SecInfo.setTargetAddress(Dyld.getSectionLoadAddress(*SectionID));
     StringRef SecContent = Dyld.getSectionContent(*SectionID);
-    SecInfo.setContent(ArrayRef<char>(SecContent.data(), SecContent.size()));
+    SecInfo.setContent(ArrayRef<char>(SecContent));
     return SecInfo;
   };
 
   auto GetStubInfo = [&Dyld, &StubMap](StringRef StubContainer,
-                                       StringRef SymbolName)
+                                       StringRef SymbolName,
+                                       StringRef KindNameFilter)
       -> Expected<RuntimeDyldChecker::MemoryRegionInfo> {
-    if (!StubMap.count(StubContainer))
+    auto SMIt = StubMap.find(StubContainer);
+    if (SMIt == StubMap.end())
       return make_error<StringError>("Stub container not found: " +
                                          StubContainer,
                                      inconvertibleErrorCode());
-    if (!StubMap[StubContainer].count(SymbolName))
+    auto It = SMIt->second.find(SymbolName);
+    if (It == SMIt->second.end())
       return make_error<StringError>("Symbol name " + SymbolName +
                                          " in stub container " + StubContainer,
                                      inconvertibleErrorCode());
-    auto &SI = StubMap[StubContainer][SymbolName];
+    auto &SI = It->second;
     RuntimeDyldChecker::MemoryRegionInfo StubMemInfo;
     StubMemInfo.setTargetAddress(Dyld.getSectionLoadAddress(SI.SectionID) +
                                  SI.Offset);
     StringRef SecContent =
         Dyld.getSectionContent(SI.SectionID).substr(SI.Offset);
-    StubMemInfo.setContent(
-        ArrayRef<char>(SecContent.data(), SecContent.size()));
+    StubMemInfo.setContent(ArrayRef<char>(SecContent));
     return StubMemInfo;
+  };
+
+  auto GetGOTInfo = [&GetStubInfo](StringRef StubContainer,
+                                   StringRef SymbolName) {
+    return GetStubInfo(StubContainer, SymbolName, "");
   };
 
   // We will initialize this below once we have the first object file and can
@@ -977,8 +984,7 @@ static int linkAndVerify() {
 
     if (!Checker)
       Checker = std::make_unique<RuntimeDyldChecker>(
-          IsSymbolValid, GetSymbolInfo, GetSectionInfo, GetStubInfo,
-          GetStubInfo,
+          IsSymbolValid, GetSymbolInfo, GetSectionInfo, GetStubInfo, GetGOTInfo,
           Obj.isLittleEndian() ? llvm::endianness::little
                                : llvm::endianness::big,
           TheTriple, MCPU, SubtargetFeatures(), dbgs());

@@ -1,6 +1,8 @@
-; RUN: llc -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 define void @main() {
 entry:
@@ -35,39 +37,51 @@ entry:
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_short]] Function
   %int16_t_Val = alloca i16, align 2
+  store i16 0, ptr %int16_t_Val, align 2
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_int]] Function
   %int_Val = alloca i32, align 4
+  store i32 0, ptr %int_Val, align 4
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_long]] Function
   %int64_t_Val = alloca i64, align 8
+  store i64 0, ptr %int64_t_Val, align 8
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v2short]] Function
   %int16_t2_Val = alloca <2 x i16>, align 4
+  store <2 x i16> zeroinitializer, ptr %int16_t2_Val, align 4
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v3short]] Function
   %int16_t3_Val = alloca <3 x i16>, align 8
+  store <3 x i16> zeroinitializer, ptr %int16_t3_Val, align 8
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v4short]] Function
   %int16_t4_Val = alloca <4 x i16>, align 8
+  store <4 x i16> zeroinitializer, ptr %int16_t4_Val, align 8
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v2int]] Function
   %int2_Val = alloca <2 x i32>, align 8
+  store <2 x i32> zeroinitializer, ptr %int2_Val, align 8
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v3int]] Function
   %int3_Val = alloca <3 x i32>, align 16
+  store <3 x i32> zeroinitializer, ptr %int3_Val, align 16
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v4int]] Function
   %int4_Val = alloca <4 x i32>, align 16
+  store <4 x i32> zeroinitializer, ptr %int4_Val, align 16
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v2long]] Function
   %int64_t2_Val = alloca <2 x i64>, align 16
+  store <2 x i64> zeroinitializer, ptr %int64_t2_Val, align 16
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v3long]] Function
   %int64_t3_Val = alloca <3 x i64>, align 32
+  store <3 x i64> zeroinitializer, ptr %int64_t3_Val, align 32
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v4long]] Function
   %int64_t4_Val = alloca <4 x i64>, align 32
+  store <4 x i64> zeroinitializer, ptr %int64_t4_Val, align 32
 
   ret void
 }

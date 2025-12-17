@@ -29,8 +29,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/CanonicalizeFreezeInLoops.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -65,19 +66,6 @@ class CanonicalizeFreezeInLoopsImpl {
   ScalarEvolution &SE;
   DominatorTree &DT;
 
-  struct FrozenIndPHIInfo {
-    // A freeze instruction that uses an induction phi
-    FreezeInst *FI = nullptr;
-    // The induction phi, step instruction, the operand idx of StepInst which is
-    // a step value
-    PHINode *PHI;
-    BinaryOperator *StepInst;
-    unsigned StepValIdx = 0;
-
-    FrozenIndPHIInfo(PHINode *PHI, BinaryOperator *StepInst)
-        : PHI(PHI), StepInst(StepInst) {}
-  };
-
   // Can freeze instruction be pushed into operands of I?
   // In order to do this, I should not create a poison after I's flags are
   // stripped.
@@ -96,7 +84,43 @@ public:
   bool run();
 };
 
-} // anonymous namespace
+struct FrozenIndPHIInfo {
+  // A freeze instruction that uses an induction phi
+  FreezeInst *FI = nullptr;
+  // The induction phi, step instruction, the operand idx of StepInst which is
+  // a step value
+  PHINode *PHI;
+  BinaryOperator *StepInst;
+  unsigned StepValIdx = 0;
+
+  FrozenIndPHIInfo(PHINode *PHI, BinaryOperator *StepInst)
+      : PHI(PHI), StepInst(StepInst) {}
+
+  bool operator==(const FrozenIndPHIInfo &Other) { return FI == Other.FI; }
+};
+
+} // namespace
+
+template <> struct llvm::DenseMapInfo<FrozenIndPHIInfo> {
+  static inline FrozenIndPHIInfo getEmptyKey() {
+    return FrozenIndPHIInfo(DenseMapInfo<PHINode *>::getEmptyKey(),
+                            DenseMapInfo<BinaryOperator *>::getEmptyKey());
+  }
+
+  static inline FrozenIndPHIInfo getTombstoneKey() {
+    return FrozenIndPHIInfo(DenseMapInfo<PHINode *>::getTombstoneKey(),
+                            DenseMapInfo<BinaryOperator *>::getTombstoneKey());
+  }
+
+  static unsigned getHashValue(const FrozenIndPHIInfo &Val) {
+    return DenseMapInfo<FreezeInst *>::getHashValue(Val.FI);
+  };
+
+  static bool isEqual(const FrozenIndPHIInfo &LHS,
+                      const FrozenIndPHIInfo &RHS) {
+    return LHS.FI == RHS.FI;
+  };
+};
 
 // Given U = (value, user), replace value with freeze(value), and let
 // SCEV forget user. The inserted freeze is placed in the preheader.
@@ -115,7 +139,7 @@ void CanonicalizeFreezeInLoopsImpl::InsertFreezeAndForgetFromSCEV(Use &U) {
   LLVM_DEBUG(dbgs() << "\tOperand: " << *U.get() << "\n");
 
   U.set(new FreezeInst(ValueToFr, ValueToFr->getName() + ".frozen",
-                       PH->getTerminator()));
+                       PH->getTerminator()->getIterator()));
 
   SE.forgetValue(UserI);
 }
@@ -125,7 +149,7 @@ bool CanonicalizeFreezeInLoopsImpl::run() {
   if (!L->isLoopSimplifyForm())
     return false;
 
-  SmallVector<FrozenIndPHIInfo, 4> Candidates;
+  SmallSetVector<FrozenIndPHIInfo, 4> Candidates;
 
   for (auto &PHI : L->getHeader()->phis()) {
     InductionDescriptor ID;
@@ -154,7 +178,7 @@ bool CanonicalizeFreezeInLoopsImpl::run() {
       if (auto *FI = dyn_cast<FreezeInst>(U)) {
         LLVM_DEBUG(dbgs() << "canonfr: found: " << *FI << "\n");
         Info.FI = FI;
-        Candidates.push_back(Info);
+        Candidates.insert(Info);
       }
     };
     for_each(PHI.users(), Visit);
@@ -164,7 +188,7 @@ bool CanonicalizeFreezeInLoopsImpl::run() {
   if (Candidates.empty())
     return false;
 
-  SmallSet<PHINode *, 8> ProcessedPHIs;
+  SmallPtrSet<PHINode *, 8> ProcessedPHIs;
   for (const auto &Info : Candidates) {
     PHINode *PHI = Info.PHI;
     if (!ProcessedPHIs.insert(Info.PHI).second)

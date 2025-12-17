@@ -31,7 +31,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -64,10 +64,17 @@ static ISD::NodeType getPreferredExtendForValue(const Instruction *I) {
   // can be exposed.
   ISD::NodeType ExtendKind = ISD::ANY_EXTEND;
   unsigned NumOfSigned = 0, NumOfUnsigned = 0;
-  for (const User *U : I->users()) {
-    if (const auto *CI = dyn_cast<CmpInst>(U)) {
+  for (const Use &U : I->uses()) {
+    if (const auto *CI = dyn_cast<CmpInst>(U.getUser())) {
       NumOfSigned += CI->isSigned();
       NumOfUnsigned += CI->isUnsigned();
+    }
+    if (const auto *CallI = dyn_cast<CallBase>(U.getUser())) {
+      if (!CallI->isArgOperand(&U))
+        continue;
+      unsigned ArgNo = CallI->getArgOperandNo(&U);
+      NumOfUnsigned += CallI->paramHasAttr(ArgNo, Attribute::ZExt);
+      NumOfSigned += CallI->paramHasAttr(ArgNo, Attribute::SExt);
     }
   }
   if (NumOfSigned > NumOfUnsigned)
@@ -92,7 +99,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   GetReturnInfo(CC, Fn->getReturnType(), Fn->getAttributes(), Outs, *TLI,
                 mf.getDataLayout());
   CanLowerReturn =
-      TLI->CanLowerReturn(CC, *MF, Fn->isVarArg(), Outs, Fn->getContext());
+      TLI->CanLowerReturn(CC, *MF, Fn->isVarArg(), Outs, Fn->getContext(), Fn->getReturnType());
 
   // If this personality uses funclets, we need to do a bit more work.
   DenseMap<const AllocaInst *, TinyPtrVector<int *>> CatchObjects;
@@ -112,8 +119,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     for (WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
       for (WinEHHandlerType &H : TBME.HandlerArray) {
         if (const AllocaInst *AI = H.CatchObj.Alloca)
-          CatchObjects.insert({AI, {}}).first->second.push_back(
-              &H.CatchObj.FrameIndex);
+          CatchObjects[AI].push_back(&H.CatchObj.FrameIndex);
         else
           H.CatchObj.FrameIndex = INT_MAX;
       }
@@ -179,7 +185,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           Register SP = TLI->getStackPointerRegisterToSaveRestore();
           const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
           std::vector<TargetLowering::AsmOperandInfo> Ops =
-              TLI->ParseConstraints(Fn->getParent()->getDataLayout(), TRI,
+              TLI->ParseConstraints(Fn->getDataLayout(), TRI,
                                     *Call);
           for (TargetLowering::AsmOperandInfo &Op : Ops) {
             if (Op.Type == InlineAsm::isClobber) {
@@ -193,12 +199,22 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
             }
           }
         }
-        // Look for calls to the @llvm.va_start intrinsic. We can omit some
-        // prologue boilerplate for variadic functions that don't examine their
-        // arguments.
         if (const auto *II = dyn_cast<IntrinsicInst>(&I)) {
-          if (II->getIntrinsicID() == Intrinsic::vastart)
+          switch (II->getIntrinsicID()) {
+          case Intrinsic::vastart:
+            // Look for calls to the @llvm.va_start intrinsic. We can omit
+            // some prologue boilerplate for variadic functions that don't
+            // examine their arguments.
             MF->getFrameInfo().setHasVAStart(true);
+            break;
+          case Intrinsic::fake_use:
+            // Look for llvm.fake.uses, so that we can remove loads into fake
+            // uses later if necessary.
+            MF->setHasFakeUses(true);
+            break;
+          default:
+            break;
+          }
         }
 
         // If we have a musttail call in a variadic function, we need to ensure
@@ -207,6 +223,10 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           if (CI->isMustTailCall() && Fn->isVarArg())
             MF->getFrameInfo().setHasMustTailInVarArgFunc(true);
         }
+
+        // Determine if there is a call to setjmp in the machine function.
+        if (Call->hasFnAttr(Attribute::ReturnsTwice))
+          MF->setExposesReturnsTwice(true);
       }
 
       // Mark values used outside their block as exported, by allocating
@@ -215,19 +235,22 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         if (!isa<AllocaInst>(I) || !StaticAllocaMap.count(cast<AllocaInst>(&I)))
           InitializeRegForValue(&I);
 
-      // Decide the preferred extend type for a value.
-      PreferredExtendType[&I] = getPreferredExtendForValue(&I);
+      // Decide the preferred extend type for a value. This iterates over all
+      // users and therefore isn't cheap, so don't do this at O0.
+      if (DAG->getOptLevel() != CodeGenOptLevel::None)
+        PreferredExtendType[&I] = getPreferredExtendForValue(&I);
     }
   }
 
   // Create an initial MachineBasicBlock for each LLVM BasicBlock in F.  This
   // also creates the initial PHI MachineInstrs, though none of the input
   // operands are populated.
+  MBBMap.resize(Fn->getMaxBlockNumber());
   for (const BasicBlock &BB : *Fn) {
     // Don't create MachineBasicBlocks for imaginary EH pad blocks. These blocks
     // are really data, and no instructions can live here.
     if (BB.isEHPad()) {
-      const Instruction *PadInst = BB.getFirstNonPHI();
+      BasicBlock::const_iterator PadInst = BB.getFirstNonPHIIt();
       // If this is a non-landingpad EH pad, mark this function as using
       // funclets.
       // FIXME: SEH catchpads do not create EH scope/funclets, so we could avoid
@@ -238,16 +261,17 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         MF->getFrameInfo().setHasOpaqueSPAdjustment(true);
       }
       if (isa<CatchSwitchInst>(PadInst)) {
-        assert(&*BB.begin() == PadInst &&
+        assert(BB.begin() == PadInst &&
                "WinEHPrepare failed to remove PHIs from imaginary BBs");
         continue;
       }
-      if (isa<FuncletPadInst>(PadInst))
-        assert(&*BB.begin() == PadInst && "WinEHPrepare failed to demote PHIs");
+      if (isa<FuncletPadInst>(PadInst) &&
+          Personality != EHPersonality::Wasm_CXX)
+        assert(BB.begin() == PadInst && "WinEHPrepare failed to demote PHIs");
     }
 
     MachineBasicBlock *MBB = mf.CreateMachineBasicBlock(&BB);
-    MBBMap[&BB] = MBB;
+    MBBMap[BB.getNumber()] = MBB;
     MF->push_back(MBB);
 
     // Transfer the address-taken flag. This is necessary because there could
@@ -271,7 +295,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         continue;
 
       DebugLoc DL = PN.getDebugLoc();
-      unsigned PHIReg = ValueMap[&PN];
+      Register PHIReg = ValueMap[&PN];
       assert(PHIReg && "PHI node does not have an assigned virtual register!");
 
       SmallVector<EVT, 4> ValueVTs;
@@ -293,20 +317,16 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     for (WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
       for (WinEHHandlerType &H : TBME.HandlerArray) {
         if (H.Handler)
-          H.Handler = MBBMap[cast<const BasicBlock *>(H.Handler)];
+          H.Handler = getMBB(cast<const BasicBlock *>(H.Handler));
       }
     }
     for (CxxUnwindMapEntry &UME : EHInfo.CxxUnwindMap)
       if (UME.Cleanup)
-        UME.Cleanup = MBBMap[cast<const BasicBlock *>(UME.Cleanup)];
-    for (SEHUnwindMapEntry &UME : EHInfo.SEHUnwindMap) {
-      const auto *BB = cast<const BasicBlock *>(UME.Handler);
-      UME.Handler = MBBMap[BB];
-    }
-    for (ClrEHUnwindMapEntry &CME : EHInfo.ClrEHUnwindMap) {
-      const auto *BB = cast<const BasicBlock *>(CME.Handler);
-      CME.Handler = MBBMap[BB];
-    }
+        UME.Cleanup = getMBB(cast<const BasicBlock *>(UME.Cleanup));
+    for (SEHUnwindMapEntry &UME : EHInfo.SEHUnwindMap)
+      UME.Handler = getMBB(cast<const BasicBlock *>(UME.Handler));
+    for (ClrEHUnwindMapEntry &CME : EHInfo.ClrEHUnwindMap)
+      CME.Handler = getMBB(cast<const BasicBlock *>(CME.Handler));
   } else if (Personality == EHPersonality::Wasm_CXX) {
     WasmEHFuncInfo &EHInfo = *MF->getWasmEHFuncInfo();
     calculateWasmEHInfo(&fn, EHInfo);
@@ -316,16 +336,16 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     for (auto &KV : EHInfo.SrcToUnwindDest) {
       const auto *Src = cast<const BasicBlock *>(KV.first);
       const auto *Dest = cast<const BasicBlock *>(KV.second);
-      SrcToUnwindDest[MBBMap[Src]] = MBBMap[Dest];
+      SrcToUnwindDest[getMBB(Src)] = getMBB(Dest);
     }
     EHInfo.SrcToUnwindDest = std::move(SrcToUnwindDest);
     DenseMap<BBOrMBB, SmallPtrSet<BBOrMBB, 4>> UnwindDestToSrcs;
     for (auto &KV : EHInfo.UnwindDestToSrcs) {
       const auto *Dest = cast<const BasicBlock *>(KV.first);
-      UnwindDestToSrcs[MBBMap[Dest]] = SmallPtrSet<BBOrMBB, 4>();
+      MachineBasicBlock *DestMBB = getMBB(Dest);
+      auto &Srcs = UnwindDestToSrcs[DestMBB];
       for (const auto P : KV.second)
-        UnwindDestToSrcs[MBBMap[Dest]].insert(
-            MBBMap[cast<const BasicBlock *>(P)]);
+        Srcs.insert(getMBB(cast<const BasicBlock *>(P)));
     }
     EHInfo.UnwindDestToSrcs = std::move(UnwindDestToSrcs);
   }
@@ -349,7 +369,7 @@ void FunctionLoweringInfo::clear() {
   StatepointStackSlots.clear();
   StatepointRelocationMaps.clear();
   PreferredExtendType.clear();
-  PreprocessedDbgDeclares.clear();
+  PreprocessedDVRDeclares.clear();
 }
 
 /// CreateReg - Allocate a single virtual register for the given type.
@@ -369,8 +389,7 @@ Register FunctionLoweringInfo::CreateRegs(Type *Ty, bool isDivergent) {
   ComputeValueVTs(*TLI, MF->getDataLayout(), Ty, ValueVTs);
 
   Register FirstReg;
-  for (unsigned Value = 0, e = ValueVTs.size(); Value != e; ++Value) {
-    EVT ValueVT = ValueVTs[Value];
+  for (EVT ValueVT : ValueVTs) {
     MVT RegisterVT = TLI->getRegisterType(Ty->getContext(), ValueVT);
 
     unsigned NumRegs = TLI->getNumRegisters(Ty->getContext(), ValueVT);
@@ -385,6 +404,16 @@ Register FunctionLoweringInfo::CreateRegs(Type *Ty, bool isDivergent) {
 Register FunctionLoweringInfo::CreateRegs(const Value *V) {
   return CreateRegs(V->getType(), UA && UA->isDivergent(V) &&
                                       !TLI->requiresUniformRegister(*MF, V));
+}
+
+Register FunctionLoweringInfo::InitializeRegForValue(const Value *V) {
+  // Tokens live in vregs only when used for convergence control.
+  if (V->getType()->isTokenTy() && !isa<ConvergenceControlInst>(V))
+    return 0;
+  Register &R = ValueMap[V];
+  assert(R == Register() && "Already initialized this value register!");
+  assert(VirtReg2Value.empty());
+  return R = CreateRegs(V);
 }
 
 /// GetLiveOutRegInfo - Gets LiveOutInfo for a register, returning NULL if the
@@ -413,7 +442,7 @@ FunctionLoweringInfo::GetLiveOutRegInfo(Register Reg, unsigned BitWidth) {
 /// register based on the LiveOutInfo of its operands.
 void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
   Type *Ty = PN->getType();
-  if (!Ty->isIntegerTy() || Ty->isVectorTy())
+  if (!Ty->isIntegerTy())
     return;
 
   SmallVector<EVT, 1> ValueVTs;
@@ -422,91 +451,106 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
          "PHIs with non-vector integer types should have a single VT.");
   EVT IntVT = ValueVTs[0];
 
-  if (TLI->getNumRegisters(PN->getContext(), IntVT) != 1)
+  unsigned NumRegisters = TLI->getNumRegisters(PN->getContext(), IntVT);
+  // FIXME: Support multiple registers for big endian targets.
+  if (NumRegisters != 1 && MF->getDataLayout().isBigEndian())
     return;
-  IntVT = TLI->getTypeToTransformTo(PN->getContext(), IntVT);
+  IntVT = TLI->getRegisterType(PN->getContext(), IntVT);
   unsigned BitWidth = IntVT.getSizeInBits();
 
   auto It = ValueMap.find(PN);
   if (It == ValueMap.end())
     return;
 
-  Register DestReg = It->second;
-  if (DestReg == 0)
+  Register BaseReg = It->second;
+  if (!BaseReg)
     return;
-  assert(DestReg.isVirtual() && "Expected a virtual reg");
-  LiveOutRegInfo.grow(DestReg);
-  LiveOutInfo &DestLOI = LiveOutRegInfo[DestReg];
+  assert(BaseReg.isVirtual() && "Expected a virtual reg");
 
-  Value *V = PN->getIncomingValue(0);
-  if (isa<UndefValue>(V) || isa<ConstantExpr>(V)) {
-    DestLOI.NumSignBits = 1;
-    DestLOI.Known = KnownBits(BitWidth);
-    return;
-  }
+  for (unsigned RegIdx = 0; RegIdx < NumRegisters; ++RegIdx) {
+    // Split registers are assigned sequentially.
+    Register DestReg = BaseReg.id() + RegIdx;
+    LiveOutRegInfo.grow(DestReg);
+    LiveOutInfo &DestLOI = LiveOutRegInfo[DestReg];
 
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
-    APInt Val;
-    if (TLI->signExtendConstant(CI))
-      Val = CI->getValue().sext(BitWidth);
-    else
-      Val = CI->getValue().zext(BitWidth);
-    DestLOI.NumSignBits = Val.getNumSignBits();
-    DestLOI.Known = KnownBits::makeConstant(Val);
-  } else {
-    assert(ValueMap.count(V) && "V should have been placed in ValueMap when its"
-                                "CopyToReg node was created.");
-    Register SrcReg = ValueMap[V];
-    if (!SrcReg.isVirtual()) {
-      DestLOI.IsValid = false;
-      return;
-    }
-    const LiveOutInfo *SrcLOI = GetLiveOutRegInfo(SrcReg, BitWidth);
-    if (!SrcLOI) {
-      DestLOI.IsValid = false;
-      return;
-    }
-    DestLOI = *SrcLOI;
-  }
-
-  assert(DestLOI.Known.Zero.getBitWidth() == BitWidth &&
-         DestLOI.Known.One.getBitWidth() == BitWidth &&
-         "Masks should have the same bit width as the type.");
-
-  for (unsigned i = 1, e = PN->getNumIncomingValues(); i != e; ++i) {
-    Value *V = PN->getIncomingValue(i);
+    Value *V = PN->getIncomingValue(0);
     if (isa<UndefValue>(V) || isa<ConstantExpr>(V)) {
       DestLOI.NumSignBits = 1;
       DestLOI.Known = KnownBits(BitWidth);
-      return;
+      continue;
     }
 
     if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
       APInt Val;
       if (TLI->signExtendConstant(CI))
-        Val = CI->getValue().sext(BitWidth);
+        Val = CI->getValue().sext(BitWidth * NumRegisters);
       else
-        Val = CI->getValue().zext(BitWidth);
-      DestLOI.NumSignBits = std::min(DestLOI.NumSignBits, Val.getNumSignBits());
-      DestLOI.Known.Zero &= ~Val;
-      DestLOI.Known.One &= Val;
-      continue;
+        Val = CI->getValue().zext(BitWidth * NumRegisters);
+      APInt Extracted = Val.extractBits(BitWidth, BitWidth * RegIdx);
+      DestLOI.NumSignBits = Extracted.getNumSignBits();
+      DestLOI.Known = KnownBits::makeConstant(Extracted);
+    } else {
+      assert(ValueMap.count(V) &&
+             "V should have been placed in ValueMap when its"
+             "CopyToReg node was created.");
+      Register SrcReg = ValueMap[V];
+      if (!SrcReg.isVirtual()) {
+        DestLOI.IsValid = false;
+        continue;
+      }
+      // Split registers are assigned sequentially.
+      SrcReg = SrcReg.id() + RegIdx;
+      const LiveOutInfo *SrcLOI = GetLiveOutRegInfo(SrcReg, BitWidth);
+      if (!SrcLOI) {
+        DestLOI.IsValid = false;
+        continue;
+      }
+      DestLOI = *SrcLOI;
     }
 
-    assert(ValueMap.count(V) && "V should have been placed in ValueMap when "
-                                "its CopyToReg node was created.");
-    Register SrcReg = ValueMap[V];
-    if (!SrcReg.isVirtual()) {
-      DestLOI.IsValid = false;
-      return;
+    assert(DestLOI.Known.Zero.getBitWidth() == BitWidth &&
+           DestLOI.Known.One.getBitWidth() == BitWidth &&
+           "Masks should have the same bit width as the type.");
+
+    for (unsigned i = 1, e = PN->getNumIncomingValues(); i != e; ++i) {
+      Value *V = PN->getIncomingValue(i);
+      if (isa<UndefValue>(V) || isa<ConstantExpr>(V)) {
+        DestLOI.NumSignBits = 1;
+        DestLOI.Known = KnownBits(BitWidth);
+        break;
+      }
+
+      if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
+        APInt Val;
+        if (TLI->signExtendConstant(CI))
+          Val = CI->getValue().sext(BitWidth * NumRegisters);
+        else
+          Val = CI->getValue().zext(BitWidth * NumRegisters);
+        APInt Extracted = Val.extractBits(BitWidth, BitWidth * RegIdx);
+        DestLOI.NumSignBits =
+            std::min(DestLOI.NumSignBits, Extracted.getNumSignBits());
+        DestLOI.Known =
+            DestLOI.Known.intersectWith(KnownBits::makeConstant(Extracted));
+        continue;
+      }
+
+      assert(ValueMap.count(V) && "V should have been placed in ValueMap when "
+                                  "its CopyToReg node was created.");
+      Register SrcReg = ValueMap[V];
+      if (!SrcReg.isVirtual()) {
+        DestLOI.IsValid = false;
+        break;
+      }
+      // Split registers are assigned sequentially.
+      SrcReg = SrcReg.id() + RegIdx;
+      const LiveOutInfo *SrcLOI = GetLiveOutRegInfo(SrcReg, BitWidth);
+      if (!SrcLOI) {
+        DestLOI.IsValid = false;
+        break;
+      }
+      DestLOI.NumSignBits = std::min(DestLOI.NumSignBits, SrcLOI->NumSignBits);
+      DestLOI.Known = DestLOI.Known.intersectWith(SrcLOI->Known);
     }
-    const LiveOutInfo *SrcLOI = GetLiveOutRegInfo(SrcReg, BitWidth);
-    if (!SrcLOI) {
-      DestLOI.IsValid = false;
-      return;
-    }
-    DestLOI.NumSignBits = std::min(DestLOI.NumSignBits, SrcLOI->NumSignBits);
-    DestLOI.Known = DestLOI.Known.intersectWith(SrcLOI->Known);
   }
 }
 
@@ -546,9 +590,9 @@ FunctionLoweringInfo::getValueFromVirtualReg(Register Vreg) {
     SmallVector<EVT, 4> ValueVTs;
     for (auto &P : ValueMap) {
       ValueVTs.clear();
-      ComputeValueVTs(*TLI, Fn->getParent()->getDataLayout(),
+      ComputeValueVTs(*TLI, Fn->getDataLayout(),
                       P.first->getType(), ValueVTs);
-      unsigned Reg = P.second;
+      Register Reg = P.second;
       for (EVT VT : ValueVTs) {
         unsigned NumRegisters = TLI->getNumRegisters(Fn->getContext(), VT);
         for (unsigned i = 0, e = NumRegisters; i != e; ++i)

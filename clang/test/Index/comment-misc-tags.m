@@ -91,18 +91,16 @@ struct S {
   
 struct Test {int filler;};
 
-// CHECK:       (CXComment_BlockCommand CommandName=[par]
+// CHECK:       (CXComment_BlockCommand CommandName=[par] Arg[0]=User defined paragraph:
 // CHECK-NEXT:     (CXComment_Paragraph
-// CHECK-NEXT:        (CXComment_Text Text=[ User defined paragraph:] HasTrailingNewline)
 // CHECK-NEXT:        (CXComment_Text Text=[ Contents of the paragraph.])))
 // CHECK:       (CXComment_BlockCommand CommandName=[par]
 // CHECK-NEXT:     (CXComment_Paragraph
-// CHECK-NEXT:        (CXComment_Text Text=[ New paragraph under the same heading.])))
+// CHECK-NEXT:        (CXComment_Text Text=[New paragraph under the same heading.])))
 // CHECK:       (CXComment_BlockCommand CommandName=[note]
 // CHECK-NEXT:     (CXComment_Paragraph
 // CHECK-NEXT:        (CXComment_Text Text=[ This note consists of two paragraphs.] HasTrailingNewline)
 // CHECK-NEXT:        (CXComment_Text Text=[ This is the first paragraph.])))
 // CHECK:       (CXComment_BlockCommand CommandName=[par]
 // CHECK-NEXT:     (CXComment_Paragraph
-// CHECK-NEXT:     (CXComment_Text Text=[ And this is the second paragraph.])))
-
+// CHECK-NEXT:     (CXComment_Text Text=[And this is the second paragraph.])))

@@ -10,6 +10,7 @@ tablegen(LLVM WebAssemblyGenFastISel.inc -gen-fast-isel)
 tablegen(LLVM WebAssemblyGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM WebAssemblyGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM WebAssemblyGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM WebAssemblyGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM WebAssemblyGenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(WebAssemblyCommonTableGen)
@@ -19,6 +20,7 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyArgumentMove.cpp
   WebAssemblyAsmPrinter.cpp
   WebAssemblyCFGStackify.cpp
+  WebAssemblyCleanCodeAfterTrap.cpp
   WebAssemblyCFGSort.cpp
   WebAssemblyDebugFixup.cpp
   WebAssemblyDebugValueManager.cpp
@@ -43,6 +45,7 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyOptimizeLiveIntervals.cpp
   WebAssemblyOptimizeReturned.cpp
   WebAssemblyPeephole.cpp
+  WebAssemblyRefTypeMem2Local.cpp
   WebAssemblyRegisterInfo.cpp
   WebAssemblyRegColoring.cpp
   WebAssemblyRegNumbering.cpp

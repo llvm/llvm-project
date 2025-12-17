@@ -116,8 +116,6 @@ define float @loadfpimm13() {
   ret float 0xb810000000000000
 }
 
-declare float @llvm.minimum.f32(float, float)
-
 define float @fminm_s(float %a, float %b) nounwind {
 ; CHECK-LABEL: fminm_s:
 ; CHECK:       # %bb.0:
@@ -126,8 +124,6 @@ define float @fminm_s(float %a, float %b) nounwind {
   %1 = call float @llvm.minimum.f32(float %a, float %b)
   ret float %1
 }
-
-declare float @llvm.maximum.f32(float, float)
 
 define float @fmaxm_s(float %a, float %b) nounwind {
 ; CHECK-LABEL: fmaxm_s:
@@ -138,79 +134,78 @@ define float @fmaxm_s(float %a, float %b) nounwind {
   ret float %1
 }
 
-
 define float @fround_s_1(float %a) nounwind {
 ; CHECK-LABEL: fround_s_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fround.s fa0, fa0, rmm
 ; CHECK-NEXT:    ret
-  %call = tail call float @roundf(float %a) nounwind readnone
+  %call = tail call float @llvm.round.f32(float %a) nounwind readnone
   ret float %call
 }
 
-declare float @roundf(float) nounwind readnone
-
+declare float @llvm.round.f32(float) nounwind readnone
 
 define float @fround_s_2(float %a) nounwind {
 ; CHECK-LABEL: fround_s_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fround.s fa0, fa0, rdn
 ; CHECK-NEXT:    ret
-  %call = tail call float @floorf(float %a) nounwind readnone
+  %call = tail call float @llvm.floor.f32(float %a) nounwind readnone
   ret float %call
 }
 
-declare float @floorf(float) nounwind readnone
-
+declare float @llvm.floor.f32(float) nounwind readnone
 
 define float @fround_s_3(float %a) nounwind {
 ; CHECK-LABEL: fround_s_3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fround.s fa0, fa0, rup
 ; CHECK-NEXT:    ret
-  %call = tail call float @ceilf(float %a) nounwind readnone
+  %call = tail call float @llvm.ceil.f32(float %a) nounwind readnone
   ret float %call
 }
 
-declare float @ceilf(float) nounwind readnone
-
+declare float @llvm.ceil.f32(float) nounwind readnone
 
 define float @fround_s_4(float %a) nounwind {
 ; CHECK-LABEL: fround_s_4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fround.s fa0, fa0, rtz
 ; CHECK-NEXT:    ret
-  %call = tail call float @truncf(float %a) nounwind readnone
+  %call = tail call float @llvm.trunc.f32(float %a) nounwind readnone
   ret float %call
 }
 
-declare float @truncf(float) nounwind readnone
-
+declare float @llvm.trunc.f32(float) nounwind readnone
 
 define float @fround_s_5(float %a) nounwind {
 ; CHECK-LABEL: fround_s_5:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fround.s fa0, fa0
 ; CHECK-NEXT:    ret
-  %call = tail call float @nearbyintf(float %a) nounwind readnone
+  %call = tail call float @llvm.nearbyint.f32(float %a) nounwind readnone
   ret float %call
 }
 
-declare float @nearbyintf(float) nounwind readnone
-
+define float @fround_s_6(float %a) nounwind {
+; CHECK-LABEL: fround_s_6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fround.s fa0, fa0, rne
+; CHECK-NEXT:    ret
+  %call = tail call float @llvm.roundeven.f32(float %a) nounwind readnone
+  ret float %call
+}
 
 define float @froundnx_s(float %a) nounwind {
 ; CHECK-LABEL: froundnx_s:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    froundnx.s fa0, fa0
 ; CHECK-NEXT:    ret
-  %call = tail call float @rintf(float %a) nounwind readnone
+  %call = tail call float @llvm.rint.f32(float %a) nounwind readnone
   ret float %call
 }
 
-declare float @rintf(float) nounwind readnone
-
-declare i1 @llvm.experimental.constrained.fcmp.f32(float, float, metadata, metadata)
+declare float @llvm.rint.f32(float) nounwind readnone
 
 define i32 @fcmp_olt_q(float %a, float %b) nounwind strictfp {
 ; CHECK-LABEL: fcmp_olt_q:
@@ -265,7 +260,65 @@ define void @fli_remat() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fli.s fa0, 1.0
 ; CHECK-NEXT:    fli.s fa1, 1.0
-; CHECK-NEXT:    tail foo@plt
+; CHECK-NEXT:    tail foo
   tail call void @foo(float 1.000000e+00, float 1.000000e+00)
   ret void
+}
+
+define float @fadd_neg_0p5(float %x) {
+; CHECK-LABEL: fadd_neg_0p5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa5, 0.5
+; CHECK-NEXT:    fsub.s fa0, fa0, fa5
+; CHECK-NEXT:    ret
+  %a = fadd float %x, -0.5
+  ret float %a
+}
+
+define float @fma_neg_addend(float %x, float %y) nounwind {
+; CHECK-LABEL: fma_neg_addend:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa5, 0.5
+; CHECK-NEXT:    fmsub.s fa0, fa0, fa1, fa5
+; CHECK-NEXT:    ret
+  %a = call float @llvm.fma.f32(float %x, float %y, float -0.5)
+  ret float %a
+}
+
+define float @fma_neg_multiplicand(float %x, float %y) nounwind {
+; CHECK-LABEL: fma_neg_multiplicand:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa5, 0.125
+; CHECK-NEXT:    fnmsub.s fa0, fa5, fa0, fa1
+; CHECK-NEXT:    ret
+  %a = call float @llvm.fma.f32(float %x, float -0.125, float %y)
+  ret float %a
+}
+
+define float @fma_neg_addend_multiplicand(float %x) nounwind {
+; CHECK-LABEL: fma_neg_addend_multiplicand:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa5, 0.25
+; CHECK-NEXT:    fli.s fa4, 0.5
+; CHECK-NEXT:    fnmadd.s fa0, fa4, fa0, fa5
+; CHECK-NEXT:    ret
+  %a = call float @llvm.fma.f32(float %x, float -0.5, float -0.25)
+  ret float %a
+}
+
+define float @select_loadfpimm(float %x) nounwind {
+; CHECK-LABEL: select_loadfpimm:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    fmv.w.x fa5, zero
+; CHECK-NEXT:    fle.s a0, fa5, fa0
+; CHECK-NEXT:    fli.s fa0, 0.5
+; CHECK-NEXT:    bnez a0, .LBB31_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    fneg.s fa0, fa0
+; CHECK-NEXT:  .LBB31_2: # %entry
+; CHECK-NEXT:    ret
+entry:
+  %cmp = fcmp ult float %x, 0.000000e+00
+  %sel = select i1 %cmp, float -5.000000e-01, float 5.000000e-01
+  ret float %sel
 }

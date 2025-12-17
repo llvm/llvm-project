@@ -11,11 +11,11 @@
 // notify_all_at_thread_exit(...) requires move semantics to transfer the unique_lock.
 // UNSUPPORTED: c++03
 
-// The fix of LWG3343 is done in the dylib. That means Apple backdeployment
-// targets remain broken. Due to the nature of the test, testing on a broken
-// system does not guarantee that the test fails, so the test can't use XFAIL.
-// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{.+}}
-// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx11.{{.+}}
+// This test requires the fix for LWG3343 (64fc3cd), which is done in the dylib
+// and landed in LLVM 16. Due to the nature of the test, testing on a broken
+// system does not guarantee that the test fails, so we use UNSUPPORTED instead
+// of XFAIL.
+// UNSUPPORTED: using-built-library-before-llvm-16
 
 // This is a regression test for LWG3343.
 //
@@ -35,12 +35,18 @@
 
 int condition_variable_lock_skipped_counter = 0;
 
+TEST_DIAGNOSTIC_PUSH
+// MSVC warning C4583: 'X::cv_': destructor is not implicitly called
+TEST_MSVC_DIAGNOSTIC_IGNORED(4583)
+
 union X {
     X() : cv_() {}
     ~X() {}
     std::condition_variable cv_;
     unsigned char bytes_[sizeof(std::condition_variable)];
 };
+
+TEST_DIAGNOSTIC_POP
 
 void test()
 {

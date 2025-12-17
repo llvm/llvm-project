@@ -37,7 +37,7 @@ define i32 @shrink_xor(i64 %a) {
 define <2 x i32> @shrink_xor_vec(<2 x i64> %a) {
 ; CHECK-LABEL: @shrink_xor_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[TRUNC:%.*]] = xor <2 x i32> [[TMP1]], <i32 2, i32 2>
+; CHECK-NEXT:    [[TRUNC:%.*]] = xor <2 x i32> [[TMP1]], splat (i32 2)
 ; CHECK-NEXT:    ret <2 x i32> [[TRUNC]]
 ;
   %xor = xor <2 x i64> %a, <i64 2, i64 2>
@@ -76,7 +76,7 @@ define <2 x i8> @shrink_or_vec(<2 x i16> %a) {
 define i31 @shrink_and(i64 %a) {
 ; CHECK-LABEL: @shrink_and(
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[A:%.*]], 42
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[AND]] to i31
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i64 [[AND]] to i31
 ; CHECK-NEXT:    ret i31 [[TRUNC]]
 ;
   %and = and i64 %a, 42

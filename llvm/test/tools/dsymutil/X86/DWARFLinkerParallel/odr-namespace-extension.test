@@ -1,0 +1,157 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: echo '---' > %t2.map
+# RUN: echo "triple:          'x86_64-apple-darwin'" >> %t2.map
+# RUN: echo 'objects:'  >> %t2.map
+# RUN: echo " -  filename: '%t.o'" >> %t2.map
+# RUN: echo '    symbols:' >> %t2.map
+# RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }' >> %t2.map
+# RUN: echo '...' >> %t2.map
+# RUN: dsymutil --linker=parallel -y %t2.map -f -o %t1.out
+# RUN: llvm-dwarfdump -a %t1.out | FileCheck %s
+
+## This test checks that DW_TAG_namespace with DW_AT_extension
+## attribute is joined with referenced namespace.
+
+# CHECK: file format Mach-O 64-bit x86-64
+# CHECK: 0x0000000b: DW_TAG_compile_unit
+# CHECK: DW_TAG_namespace
+# CHECK: DW_AT_name{{.*}}"parent_namespace"
+# CHECK-NOT: DW_TAG_namespace
+# CHECK: 0x[[INT:[0-9a-f]*]]: DW_TAG_base_type
+# CHECK: DW_AT_name{{.*}}"int"
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_type      (0x00000000[[INT]]
+
+--- !mach-o
+FileHeader:
+  magic:      0xFEEDFACF
+  cputype:    0x01000007
+  cpusubtype: 0x00000003
+  filetype:   0x00000001
+  ncmds:      2
+  sizeofcmds: 376
+  flags:      0x00002000
+  reserved:   0x00000000
+LoadCommands:
+  - cmd:      LC_SEGMENT_64
+    cmdsize:  232
+    segname:  ''
+    vmaddr:   0x00
+    vmsize:   0x300
+    fileoff:  0x300
+    filesize: 0x300
+    maxprot:  7
+    initprot: 7
+    nsects:   2
+    flags:    0
+    Sections:
+      - sectname:  __debug_abbrev
+        segname:   __DWARF
+        addr:      0x000000000000000F
+        size:      0x2A
+        offset:    0x00000380
+        align:     0
+        reloff:    0x00000000
+        nreloc:    0
+        flags:     0x02000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+      - sectname:  __debug_info
+        segname:   __DWARF
+        addr:      0x000000000000100
+        size:      0x42
+        offset:    0x000003AA
+        align:     0
+        reloff:    0x00000600
+        nreloc:    1
+        flags:     0x02000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+        relocations:
+          - address:         0x000001FC
+            symbolnum:       1
+            pcrel:           true
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          0x700
+    nsyms:           1
+    stroff:          0x710
+    strsize:         10
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - '__Z3foov'
+    - ''
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_extension
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_const_value
+            Form:      DW_FORM_data4
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+  debug_info:
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+        - AbbrCode: 2
+          Values:
+            - CStr: parent_namespace
+        - AbbrCode: 3
+          Values:
+            - Value:  0x00000016
+        - AbbrCode: 4
+          Values:
+            - CStr: int
+        - AbbrCode: 0
+        - AbbrCode: 0
+        - AbbrCode: 5
+          Values:
+            - CStr: var
+            - Value:  0x000000FF
+            - Value:  0x0000002d
+        - AbbrCode: 0
+...

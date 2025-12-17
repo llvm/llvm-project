@@ -28,8 +28,8 @@ b11:
   call void @llvm.pseudoprobe(i64 7682762345278052905, i64 1, i32 0, i64 -1)
   %cmp = icmp ne i32 %0, 0
   br i1 %cmp, label %b12, label %b13
-; CHECK:  edge b11 -> b12 probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK:  edge b11 -> b13 probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK:  edge %b11 -> %b12 probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK:  edge %b11 -> %b13 probability is 0x40000000 / 0x80000000 = 50.00%
 ; CHECK2: - b11: float = {{.*}}, int = {{.*}}, count = 1000
 
 b12:
@@ -73,8 +73,8 @@ b21:
   call void @llvm.pseudoprobe(i64 2494702099028631698, i64 1, i32 0, i64 -1)
   %cmp = icmp ne i32 %0, 0
   br i1 %cmp, label %b22, label %b23
-; CHECK:  edge b21 -> b22 probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK:  edge b21 -> b23 probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK:  edge %b21 -> %b22 probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK:  edge %b21 -> %b23 probability is 0x40000000 / 0x80000000 = 50.00%
 ; CHECK2: - b21: float = {{.*}}, int = {{.*}}, count = 1000
 
 b22:
@@ -130,15 +130,15 @@ b31:
 b32:
   call void @llvm.pseudoprobe(i64 -7908226060800700466, i64 2, i32 0, i64 -1)
   br i1 %cmp, label %b33, label %b34
-; CHECK:  edge b32 -> b33 probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK:  edge b32 -> b34 probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK:  edge %b32 -> %b33 probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK:  edge %b32 -> %b34 probability is 0x40000000 / 0x80000000 = 50.00%
 ; CHECK2: - b32: float = {{.*}}, int = {{.*}}, count = 1000
 
 b33:
   call void @llvm.pseudoprobe(i64 -7908226060800700466, i64 3, i32 0, i64 -1)
   br i1 %cmp, label %b35, label %b34
-; CHECK:  edge b33 -> b35 probability is 0x00000000 / 0x80000000 = 0.00%
-; CHECK:  edge b33 -> b34 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK:  edge %b33 -> %b35 probability is 0x00000000 / 0x80000000 = 0.00%
+; CHECK:  edge %b33 -> %b34 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ; CHECK2: - b33: float = {{.*}}, int = {{.*}}, count = 500
 
 b34:

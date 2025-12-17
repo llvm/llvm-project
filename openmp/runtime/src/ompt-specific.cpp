@@ -266,6 +266,8 @@ void __ompt_lw_taskteam_init(ompt_lw_taskteam_t *lwt, kmp_info_t *thr, int gtid,
   lwt->ompt_task_info.task_data.value = 0;
   lwt->ompt_task_info.frame.enter_frame = ompt_data_none;
   lwt->ompt_task_info.frame.exit_frame = ompt_data_none;
+  lwt->ompt_task_info.frame.enter_frame_flags = OMPT_FRAME_FLAGS_RUNTIME;
+  lwt->ompt_task_info.frame.exit_frame_flags = OMPT_FRAME_FLAGS_RUNTIME;
   lwt->ompt_task_info.scheduling_parent = NULL;
   lwt->heap = 0;
   lwt->parent = 0;
@@ -421,9 +423,7 @@ int __ompt_get_task_info_internal(int ancestor_level, int *type,
       team_info = &team->t.ompt_team_info;
       if (type) {
         if (taskdata->td_parent) {
-          *type = (taskdata->td_flags.tasktype ? ompt_task_explicit
-                                               : ompt_task_implicit) |
-                  TASK_TYPE_DETAILS_FORMAT(taskdata);
+          *type = TASK_TYPE_DETAILS_FORMAT(taskdata);
         } else {
           *type = ompt_task_initial;
         }
@@ -505,14 +505,15 @@ static uint64_t __ompt_get_unique_id_internal() {
 
 ompt_sync_region_t __ompt_get_barrier_kind(enum barrier_type bt,
                                            kmp_info_t *thr) {
-  if (bt == bs_forkjoin_barrier)
-    return ompt_sync_region_barrier_implicit;
+  if (bt == bs_forkjoin_barrier) {
+    if (thr->th.ompt_thread_info.parallel_flags & ompt_parallel_league)
+      return ompt_sync_region_barrier_teams;
+    else
+      return ompt_sync_region_barrier_implicit_parallel;
+  }
 
-  if (bt != bs_plain_barrier)
+  if (bt != bs_plain_barrier || !thr->th.th_ident)
     return ompt_sync_region_barrier_implementation;
-
-  if (!thr->th.th_ident)
-    return ompt_sync_region_barrier;
 
   kmp_int32 flags = thr->th.th_ident->flags;
 
@@ -520,7 +521,7 @@ ompt_sync_region_t __ompt_get_barrier_kind(enum barrier_type bt,
     return ompt_sync_region_barrier_explicit;
 
   if ((flags & KMP_IDENT_BARRIER_IMPL) != 0)
-    return ompt_sync_region_barrier_implicit;
+    return ompt_sync_region_barrier_implicit_workshare;
 
   return ompt_sync_region_barrier_implementation;
 }

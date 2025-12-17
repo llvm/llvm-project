@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -36,15 +37,15 @@ concept CanEmplace = requires(T t, Args&&... args) { t.emplace(std::forward<Args
 static_assert(CanEmplace<std::expected<int, int>, int>);
 
 template <bool Noexcept>
-struct CtorFromInitalizerList {
-  CtorFromInitalizerList(std::initializer_list<int>&) noexcept(Noexcept);
-  CtorFromInitalizerList(std::initializer_list<int>&, int) noexcept(Noexcept);
+struct CtorFromInitializerList {
+  CtorFromInitializerList(std::initializer_list<int>&) noexcept(Noexcept);
+  CtorFromInitializerList(std::initializer_list<int>&, int) noexcept(Noexcept);
 };
 
-static_assert(CanEmplace<std::expected<CtorFromInitalizerList<true>, int>, std::initializer_list<int>&>);
-static_assert(!CanEmplace<std::expected<CtorFromInitalizerList<false>, int>, std::initializer_list<int>&>);
-static_assert(CanEmplace<std::expected<CtorFromInitalizerList<true>, int>, std::initializer_list<int>&, int>);
-static_assert(!CanEmplace<std::expected<CtorFromInitalizerList<false>, int>, std::initializer_list<int>&, int>);
+static_assert(CanEmplace<std::expected<CtorFromInitializerList<true>, int>, std::initializer_list<int>&>);
+static_assert(!CanEmplace<std::expected<CtorFromInitializerList<false>, int>, std::initializer_list<int>&>);
+static_assert(CanEmplace<std::expected<CtorFromInitializerList<true>, int>, std::initializer_list<int>&, int>);
+static_assert(!CanEmplace<std::expected<CtorFromInitializerList<false>, int>, std::initializer_list<int>&, int>);
 
 struct Data {
   std::initializer_list<int> il;

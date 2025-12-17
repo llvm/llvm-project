@@ -26,8 +26,9 @@ enum class Language : uint8_t {
   /// Assembly: we accept this only so that we can preprocess it.
   Asm,
 
-  /// LLVM IR: we accept this so that we can run the optimizer on it,
-  /// and compile it to assembly or object code.
+  /// LLVM IR & CIR: we accept these so that we can run the optimizer on them,
+  /// and compile them to assembly or object code (or LLVM for CIR).
+  CIR,
   LLVM_IR,
 
   ///@{ Languages that the frontend can parse and compile.
@@ -38,7 +39,6 @@ enum class Language : uint8_t {
   OpenCL,
   OpenCLCXX,
   CUDA,
-  RenderScript,
   HIP,
   HLSL,
   ///@}
@@ -51,26 +51,26 @@ enum LangFeatures {
   C11 = (1 << 2),
   C17 = (1 << 3),
   C23 = (1 << 4),
-  CPlusPlus = (1 << 5),
-  CPlusPlus11 = (1 << 6),
-  CPlusPlus14 = (1 << 7),
-  CPlusPlus17 = (1 << 8),
-  CPlusPlus20 = (1 << 9),
-  CPlusPlus23 = (1 << 10),
-  CPlusPlus26 = (1 << 11),
-  Digraphs = (1 << 12),
-  GNUMode = (1 << 13),
-  HexFloat = (1 << 14),
-  OpenCL = (1 << 15),
-  HLSL = (1 << 16)
+  C2y = (1 << 5),
+  CPlusPlus = (1 << 6),
+  CPlusPlus11 = (1 << 7),
+  CPlusPlus14 = (1 << 8),
+  CPlusPlus17 = (1 << 9),
+  CPlusPlus20 = (1 << 10),
+  CPlusPlus23 = (1 << 11),
+  CPlusPlus26 = (1 << 12),
+  Digraphs = (1 << 13),
+  GNUMode = (1 << 14),
+  HexFloat = (1 << 15),
+  OpenCL = (1 << 16),
+  HLSL = (1 << 17)
 };
 
 /// LangStandard - Information about the properties of a particular language
 /// standard.
 struct LangStandard {
   enum Kind {
-#define LANGSTANDARD(id, name, lang, desc, features) \
-    lang_##id,
+#define LANGSTANDARD(id, name, lang, desc, features, version) lang_##id,
 #include "clang/Basic/LangStandards.def"
     lang_unspecified
   };
@@ -79,6 +79,7 @@ struct LangStandard {
   const char *Description;
   unsigned Flags;
   clang::Language Language;
+  std::optional<uint32_t> Version;
 
 public:
   /// getName - Get the name of this standard.
@@ -89,6 +90,9 @@ public:
 
   /// Get the language that this standard describes.
   clang::Language getLanguage() const { return Language; }
+
+  /// Get the version code for this language standard.
+  std::optional<uint32_t> getVersion() const { return Version; }
 
   /// Language supports '//' comments.
   bool hasLineComments() const { return Flags & LineComment; }
@@ -104,6 +108,9 @@ public:
 
   /// isC23 - Language is a superset of C23.
   bool isC23() const { return Flags & C23; }
+
+  /// isC2y - Language is a superset of C2y.
+  bool isC2y() const { return Flags & C2y; }
 
   /// isCPlusPlus - Language is a C++ variant.
   bool isCPlusPlus() const { return Flags & CPlusPlus; }
@@ -129,6 +136,13 @@ public:
   /// hasDigraphs - Language supports digraphs.
   bool hasDigraphs() const { return Flags & Digraphs; }
 
+  /// hasRawStringLiterals - Language supports R"()" raw string literals.
+  bool hasRawStringLiterals() const {
+    // GCC supports raw string literals in C99 and later, but not in C++
+    // before C++11.
+    return isCPlusPlus11() || (!isCPlusPlus() && isC99() && isGNUMode());
+  }
+
   /// isGNUMode - Language includes GNU extensions.
   bool isGNUMode() const { return Flags & GNUMode; }
 
@@ -139,6 +153,7 @@ public:
   bool isOpenCL() const { return Flags & OpenCL; }
 
   static Kind getLangKind(StringRef Name);
+  static Kind getHLSLLangKind(StringRef Name);
   static const LangStandard &getLangStandardForKind(Kind K);
   static const LangStandard *getLangStandardForName(StringRef Name);
 };

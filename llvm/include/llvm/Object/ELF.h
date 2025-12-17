@@ -21,11 +21,14 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -38,10 +41,10 @@ struct VerdAux {
 
 struct VerDef {
   unsigned Offset;
-  unsigned Version;
-  unsigned Flags;
-  unsigned Ndx;
-  unsigned Cnt;
+  uint16_t Version;
+  uint16_t Flags;
+  uint16_t Ndx;
+  uint16_t Cnt;
   unsigned Hash;
   std::string Name;
   std::vector<VerdAux> AuxV;
@@ -68,9 +71,11 @@ struct VersionEntry {
   bool IsVerDef;
 };
 
-StringRef getELFRelocationTypeName(uint32_t Machine, uint32_t Type);
-uint32_t getELFRelativeRelocationType(uint32_t Machine);
-StringRef getELFSectionTypeName(uint32_t Machine, uint32_t Type);
+LLVM_ABI StringRef getELFRelocationTypeName(uint32_t Machine, uint32_t Type);
+LLVM_ABI StringRef getRISCVVendorRelocationTypeName(uint32_t Type,
+                                                    StringRef Vendor);
+LLVM_ABI uint32_t getELFRelativeRelocationType(uint32_t Machine);
+LLVM_ABI StringRef getELFSectionTypeName(uint32_t Machine, uint32_t Type);
 
 // Subclasses of ELFFile may need this for template instantiation
 inline std::pair<unsigned char, unsigned char>
@@ -125,8 +130,8 @@ template <class T> struct DataRegion {
 };
 
 template <class ELFT>
-std::string getSecIndexForError(const ELFFile<ELFT> &Obj,
-                                const typename ELFT::Shdr &Sec) {
+static std::string getSecIndexForError(const ELFFile<ELFT> &Obj,
+                                       const typename ELFT::Shdr &Sec) {
   auto TableOrErr = Obj.sections();
   if (TableOrErr)
     return "[index " + std::to_string(&Sec - &TableOrErr->front()) + "]";
@@ -149,8 +154,8 @@ static std::string describe(const ELFFile<ELFT> &Obj,
 }
 
 template <class ELFT>
-std::string getPhdrIndexForError(const ELFFile<ELFT> &Obj,
-                                 const typename ELFT::Phdr &Phdr) {
+static std::string getPhdrIndexForError(const ELFFile<ELFT> &Obj,
+                                        const typename ELFT::Phdr &Phdr) {
   auto Headers = Obj.program_headers();
   if (Headers)
     return ("[index " + Twine(&Phdr - &Headers->front()) + "]").str();
@@ -164,9 +169,101 @@ static inline Error defaultWarningHandler(const Twine &Msg) {
 }
 
 template <class ELFT>
+static bool checkSectionOffsets(const typename ELFT::Phdr &Phdr,
+                                const typename ELFT::Shdr &Sec) {
+  // SHT_NOBITS sections don't need to have an offset inside the segment.
+  if (Sec.sh_type == ELF::SHT_NOBITS)
+    return true;
+
+  if (Sec.sh_offset < Phdr.p_offset)
+    return false;
+
+  // Only non-empty sections can be at the end of a segment.
+  if (Sec.sh_size == 0)
+    return (Sec.sh_offset + 1 <= Phdr.p_offset + Phdr.p_filesz);
+  return Sec.sh_offset + Sec.sh_size <= Phdr.p_offset + Phdr.p_filesz;
+}
+
+// Check that an allocatable section belongs to a virtual address
+// space of a segment.
+template <class ELFT>
+static bool checkSectionVMA(const typename ELFT::Phdr &Phdr,
+                            const typename ELFT::Shdr &Sec) {
+  if (!(Sec.sh_flags & ELF::SHF_ALLOC))
+    return true;
+
+  if (Sec.sh_addr < Phdr.p_vaddr)
+    return false;
+
+  bool IsTbss =
+      (Sec.sh_type == ELF::SHT_NOBITS) && ((Sec.sh_flags & ELF::SHF_TLS) != 0);
+  // .tbss is special, it only has memory in PT_TLS and has NOBITS properties.
+  bool IsTbssInNonTLS = IsTbss && Phdr.p_type != ELF::PT_TLS;
+  // Only non-empty sections can be at the end of a segment.
+  if (Sec.sh_size == 0 || IsTbssInNonTLS)
+    return Sec.sh_addr + 1 <= Phdr.p_vaddr + Phdr.p_memsz;
+  return Sec.sh_addr + Sec.sh_size <= Phdr.p_vaddr + Phdr.p_memsz;
+}
+
+template <class ELFT>
+static bool isSectionInSegment(const typename ELFT::Phdr &Phdr,
+                               const typename ELFT::Shdr &Sec) {
+  return checkSectionOffsets<ELFT>(Phdr, Sec) &&
+         checkSectionVMA<ELFT>(Phdr, Sec);
+}
+
+// HdrHandler is called once with the number of relocations and whether the
+// relocations have addends. EntryHandler is called once per decoded relocation.
+template <bool Is64>
+static Error decodeCrel(
+    ArrayRef<uint8_t> Content,
+    function_ref<void(uint64_t /*relocation count*/, bool /*explicit addends*/)>
+        HdrHandler,
+    function_ref<void(Elf_Crel_Impl<Is64>)> EntryHandler) {
+  DataExtractor Data(Content, true, 8); // endian and address size are unused
+  DataExtractor::Cursor Cur(0);
+  const uint64_t Hdr = Data.getULEB128(Cur);
+  size_t Count = Hdr / 8;
+  const size_t FlagBits = Hdr & ELF::CREL_HDR_ADDEND ? 3 : 2;
+  const size_t Shift = Hdr % ELF::CREL_HDR_ADDEND;
+  using uint = typename Elf_Crel_Impl<Is64>::uint;
+  uint Offset = 0, Addend = 0;
+  HdrHandler(Count, Hdr & ELF::CREL_HDR_ADDEND);
+  uint32_t SymIdx = 0, Type = 0;
+  for (; Count; --Count) {
+    // The delta offset and flags member may be larger than uint64_t. Special
+    // case the first byte (2 or 3 flag bits; the rest are offset bits). Other
+    // ULEB128 bytes encode the remaining delta offset bits.
+    const uint8_t B = Data.getU8(Cur);
+    Offset += B >> FlagBits;
+    if (B >= 0x80)
+      Offset += (Data.getULEB128(Cur) << (7 - FlagBits)) - (0x80 >> FlagBits);
+    // Delta symidx/type/addend members (SLEB128).
+    if (B & 1)
+      SymIdx += Data.getSLEB128(Cur);
+    if (B & 2)
+      Type += Data.getSLEB128(Cur);
+    if (B & 4 & Hdr)
+      Addend += Data.getSLEB128(Cur);
+    if (!Cur)
+      break;
+    EntryHandler(
+        {Offset << Shift, SymIdx, Type, std::make_signed_t<uint>(Addend)});
+  }
+  return Cur.takeError();
+}
+
+template <class ELFT>
 class ELFFile {
 public:
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
+
+  // Default ctor and copy assignment operator required to instantiate the
+  // template for DLL export.
+  ELFFile(const ELFFile &) = default;
+  ELFFile &operator=(const ELFFile &) = default;
+
+  ELFFile(ELFFile &&) = default;
 
   // This is a callback that can be passed to a number of functions.
   // It can be used to ignore non-critical errors (warnings), which is
@@ -185,9 +282,46 @@ private:
   std::vector<Elf_Shdr> FakeSections;
   SmallString<0> FakeSectionStrings;
 
+  // When the number of program headers is >= PN_XNUM, the actual number is
+  // contained in the sh_info field of the section header at index 0.
+  std::optional<uint32_t> RealPhNum;
+  // When the number of section headers is >= SHN_LORESERVE, the actual number
+  // is contained in the sh_size field of the section header at index 0.
+  std::optional<uint64_t> RealShNum;
+  // When the section index of the section name table is >= SHN_LORESERVE, the
+  // actual number is contained in the sh_link field of the section header at
+  // index 0.
+  std::optional<uint32_t> RealShStrNdx;
+
   ELFFile(StringRef Object);
 
+  Error readShdrZero();
+
 public:
+  Expected<uint32_t> getPhNum() const {
+    if (!RealPhNum) {
+      if (Error E = const_cast<ELFFile<ELFT> *>(this)->readShdrZero())
+        return std::move(E);
+    }
+    return *RealPhNum;
+  }
+
+  Expected<uint64_t> getShNum() const {
+    if (!RealShNum) {
+      if (Error E = const_cast<ELFFile<ELFT> *>(this)->readShdrZero())
+        return std::move(E);
+    }
+    return *RealShNum;
+  }
+
+  Expected<uint32_t> getShStrNdx() const {
+    if (!RealShStrNdx) {
+      if (Error E = const_cast<ELFFile<ELFT> *>(this)->readShdrZero())
+        return std::move(E);
+    }
+    return *RealShStrNdx;
+  }
+
   const Elf_Ehdr &getHeader() const {
     return *reinterpret_cast<const Elf_Ehdr *>(base());
   }
@@ -277,26 +411,35 @@ public:
 
   std::vector<Elf_Rel> decode_relrs(Elf_Relr_Range relrs) const;
 
+  Expected<uint64_t> getCrelHeader(ArrayRef<uint8_t> Content) const;
+  using RelsOrRelas = std::pair<std::vector<Elf_Rel>, std::vector<Elf_Rela>>;
+  Expected<RelsOrRelas> decodeCrel(ArrayRef<uint8_t> Content) const;
+  Expected<RelsOrRelas> crels(const Elf_Shdr &Sec) const;
+
   Expected<std::vector<Elf_Rela>> android_relas(const Elf_Shdr &Sec) const;
 
   /// Iterate over program header table.
   Expected<Elf_Phdr_Range> program_headers() const {
-    if (getHeader().e_phnum && getHeader().e_phentsize != sizeof(Elf_Phdr))
+    uint32_t NumPh;
+    if (Expected<uint32_t> PhNumOrErr = getPhNum())
+      NumPh = *PhNumOrErr;
+    else
+      return PhNumOrErr.takeError();
+    if (NumPh && getHeader().e_phentsize != sizeof(Elf_Phdr))
       return createError("invalid e_phentsize: " +
                          Twine(getHeader().e_phentsize));
 
-    uint64_t HeadersSize =
-        (uint64_t)getHeader().e_phnum * getHeader().e_phentsize;
+    uint64_t HeadersSize = (uint64_t)NumPh * getHeader().e_phentsize;
     uint64_t PhOff = getHeader().e_phoff;
     if (PhOff + HeadersSize < PhOff || PhOff + HeadersSize > getBufSize())
       return createError("program headers are longer than binary of size " +
                          Twine(getBufSize()) + ": e_phoff = 0x" +
                          Twine::utohexstr(getHeader().e_phoff) +
-                         ", e_phnum = " + Twine(getHeader().e_phnum) +
+                         ", e_phnum = " + Twine(NumPh) +
                          ", e_phentsize = " + Twine(getHeader().e_phentsize));
 
     auto *Begin = reinterpret_cast<const Elf_Phdr *>(base() + PhOff);
-    return ArrayRef(Begin, Begin + getHeader().e_phnum);
+    return ArrayRef(Begin, Begin + NumPh);
   }
 
   /// Get an iterator over notes in a program header.
@@ -308,8 +451,9 @@ public:
   ///  be checked after iteration ends.
   Elf_Note_Iterator notes_begin(const Elf_Phdr &Phdr, Error &Err) const {
     assert(Phdr.p_type == ELF::PT_NOTE && "Phdr is not of type PT_NOTE");
-    ErrorAsOutParameter ErrAsOutParam(&Err);
-    if (Phdr.p_offset + Phdr.p_filesz > getBufSize()) {
+    ErrorAsOutParameter ErrAsOutParam(Err);
+    if (Phdr.p_offset + Phdr.p_filesz > getBufSize() ||
+        Phdr.p_offset + Phdr.p_filesz < Phdr.p_offset) {
       Err =
           createError("invalid offset (0x" + Twine::utohexstr(Phdr.p_offset) +
                       ") or size (0x" + Twine::utohexstr(Phdr.p_filesz) + ")");
@@ -336,8 +480,9 @@ public:
   ///  be checked after iteration ends.
   Elf_Note_Iterator notes_begin(const Elf_Shdr &Shdr, Error &Err) const {
     assert(Shdr.sh_type == ELF::SHT_NOTE && "Shdr is not of type SHT_NOTE");
-    ErrorAsOutParameter ErrAsOutParam(&Err);
-    if (Shdr.sh_offset + Shdr.sh_size > getBufSize()) {
+    ErrorAsOutParameter ErrAsOutParam(Err);
+    if (Shdr.sh_offset + Shdr.sh_size > getBufSize() ||
+        Shdr.sh_offset + Shdr.sh_size < Shdr.sh_offset) {
       Err =
           createError("invalid offset (0x" + Twine::utohexstr(Shdr.sh_offset) +
                       ") or size (0x" + Twine::utohexstr(Shdr.sh_size) + ")");
@@ -413,8 +558,12 @@ public:
   /// within the text section that the SHT_LLVM_BB_ADDR_MAP section \p Sec
   /// is associated with. If the current ELFFile is relocatable, a corresponding
   /// \p RelaSec must be passed in as an argument.
+  /// Optional out variable to collect all PGO Analyses. New elements are only
+  /// added if no error occurs. If not provided, the PGO Analyses are decoded
+  /// then ignored.
   Expected<std::vector<BBAddrMap>>
-  decodeBBAddrMap(const Elf_Shdr &Sec, const Elf_Shdr *RelaSec = nullptr) const;
+  decodeBBAddrMap(const Elf_Shdr &Sec, const Elf_Shdr *RelaSec = nullptr,
+                  std::vector<PGOAnalysisMap> *PGOAnalyses = nullptr) const;
 
   /// Returns a map from every section matching \p IsMatch to its relocation
   /// section, or \p nullptr if it has no relocation section. This function
@@ -668,19 +817,15 @@ template <class ELFT>
 Expected<StringRef>
 ELFFile<ELFT>::getSectionStringTable(Elf_Shdr_Range Sections,
                                      WarningHandler WarnHandler) const {
-  uint32_t Index = getHeader().e_shstrndx;
-  if (Index == ELF::SHN_XINDEX) {
-    // If the section name string table section index is greater than
-    // or equal to SHN_LORESERVE, then the actual index of the section name
-    // string table section is contained in the sh_link field of the section
-    // header at index 0.
-    if (Sections.empty())
-      return createError(
-          "e_shstrndx == SHN_XINDEX, but the section header table is empty");
+  Expected<uint32_t> ShStrNdxOrErr = getShStrNdx();
+  if (!ShStrNdxOrErr)
+    return ShStrNdxOrErr.takeError();
 
-    Index = Sections[0].sh_link;
-  }
+  if (*ShStrNdxOrErr == ELF::SHN_XINDEX && Sections.empty())
+    return createError(
+        "e_shstrndx == SHN_XINDEX, but the section header table is empty");
 
+  uint32_t Index = *ShStrNdxOrErr;
   // There is no section name string table. Return FakeSectionStrings which
   // is non-empty if we have created fake sections.
   if (!Index)
@@ -787,6 +932,35 @@ Expected<uint64_t> ELFFile<ELFT>::getDynSymtabSize() const {
 
 template <class ELFT> ELFFile<ELFT>::ELFFile(StringRef Object) : Buf(Object) {}
 
+template <class ELFT> Error ELFFile<ELFT>::readShdrZero() {
+  const Elf_Ehdr &Header = getHeader();
+
+  if ((Header.e_phnum == ELF::PN_XNUM || Header.e_shnum == 0 ||
+       Header.e_shstrndx == ELF::SHN_XINDEX) &&
+      Header.e_shoff != 0) {
+    // Pretend we have section 0 or sections() would call getShNum and thus
+    // become an infinite recursion.
+    RealShNum = 1;
+    auto SecOrErr = getSection(0);
+    if (!SecOrErr) {
+      RealShNum = std::nullopt;
+      return SecOrErr.takeError();
+    }
+
+    RealPhNum =
+        Header.e_phnum == ELF::PN_XNUM ? (*SecOrErr)->sh_info : Header.e_phnum;
+    RealShNum = Header.e_shnum == 0 ? (*SecOrErr)->sh_size : Header.e_shnum;
+    RealShStrNdx = Header.e_shstrndx == ELF::SHN_XINDEX ? (*SecOrErr)->sh_link
+                                                        : Header.e_shstrndx;
+  } else {
+    RealPhNum = Header.e_phnum;
+    RealShNum = Header.e_shnum;
+    RealShStrNdx = Header.e_shstrndx;
+  }
+
+  return Error::success();
+}
+
 template <class ELFT>
 Expected<ELFFile<ELFT>> ELFFile<ELFT>::create(StringRef Object) {
   if (sizeof(Elf_Ehdr) > Object.size())
@@ -829,7 +1003,7 @@ Expected<typename ELFT::ShdrRange> ELFFile<ELFT>::sections() const {
   const uintX_t SectionTableOffset = getHeader().e_shoff;
   if (SectionTableOffset == 0) {
     if (!FakeSections.empty())
-      return ArrayRef(FakeSections.data(), FakeSections.size());
+      return ArrayRef(FakeSections);
     return ArrayRef<Elf_Shdr>();
   }
 
@@ -852,9 +1026,11 @@ Expected<typename ELFT::ShdrRange> ELFFile<ELFT>::sections() const {
   const Elf_Shdr *First =
       reinterpret_cast<const Elf_Shdr *>(base() + SectionTableOffset);
 
-  uintX_t NumSections = getHeader().e_shnum;
-  if (NumSections == 0)
-    NumSections = First->sh_size;
+  uintX_t NumSections = 0;
+  if (Expected<uint64_t> ShNumOrErr = getShNum())
+    NumSections = *ShNumOrErr;
+  else
+    return ShNumOrErr.takeError();
 
   if (NumSections > UINT64_MAX / sizeof(Elf_Shdr))
     return createError("invalid number of sections specified in the NULL "
@@ -960,8 +1136,8 @@ ELFFile<ELFT>::getVersionDefinitions(const Elf_Shdr &Sec) const {
 
     VerdAux Aux;
     Aux.Offset = VerdauxBuf - Start;
-    if (Verdaux->vda_name <= StrTabOrErr->size())
-      Aux.Name = std::string(StrTabOrErr->drop_front(Verdaux->vda_name));
+    if (Verdaux->vda_name < StrTabOrErr->size())
+      Aux.Name = std::string(StrTabOrErr->drop_front(Verdaux->vda_name).data());
     else
       Aux.Name = ("<invalid vda_name: " + Twine(Verdaux->vda_name) + ">").str();
     return Aux;
@@ -1270,6 +1446,11 @@ inline uint32_t hashGnu(StringRef Name) {
     H = (H << 5) + H + C;
   return H;
 }
+
+extern template class LLVM_TEMPLATE_ABI llvm::object::ELFFile<ELF32LE>;
+extern template class LLVM_TEMPLATE_ABI llvm::object::ELFFile<ELF32BE>;
+extern template class LLVM_TEMPLATE_ABI llvm::object::ELFFile<ELF64LE>;
+extern template class LLVM_TEMPLATE_ABI llvm::object::ELFFile<ELF64BE>;
 
 } // end namespace object
 } // end namespace llvm

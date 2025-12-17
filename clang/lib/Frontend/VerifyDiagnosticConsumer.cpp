@@ -13,13 +13,12 @@
 #include "clang/Frontend/VerifyDiagnosticConsumer.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Lexer.h"
@@ -89,9 +88,10 @@ namespace {
 class StandardDirective : public Directive {
 public:
   StandardDirective(SourceLocation DirectiveLoc, SourceLocation DiagnosticLoc,
-                    bool MatchAnyFileAndLine, bool MatchAnyLine, StringRef Text,
-                    unsigned Min, unsigned Max)
-      : Directive(DirectiveLoc, DiagnosticLoc, MatchAnyFileAndLine,
+                    StringRef Spelling, bool MatchAnyFileAndLine,
+                    bool MatchAnyLine, StringRef Text, unsigned Min,
+                    unsigned Max)
+      : Directive(DirectiveLoc, DiagnosticLoc, Spelling, MatchAnyFileAndLine,
                   MatchAnyLine, Text, Min, Max) {}
 
   bool isValid(std::string &Error) override {
@@ -106,9 +106,10 @@ public:
 class RegexDirective : public Directive {
 public:
   RegexDirective(SourceLocation DirectiveLoc, SourceLocation DiagnosticLoc,
-                 bool MatchAnyFileAndLine, bool MatchAnyLine, StringRef Text,
-                 unsigned Min, unsigned Max, StringRef RegexStr)
-      : Directive(DirectiveLoc, DiagnosticLoc, MatchAnyFileAndLine,
+                 StringRef Spelling, bool MatchAnyFileAndLine,
+                 bool MatchAnyLine, StringRef Text, unsigned Min, unsigned Max,
+                 StringRef RegexStr)
+      : Directive(DirectiveLoc, DiagnosticLoc, Spelling, MatchAnyFileAndLine,
                   MatchAnyLine, Text, Min, Max),
         Regex(RegexStr) {}
 
@@ -226,10 +227,10 @@ public:
     P = C;
     while (P < End) {
       StringRef S(P, End - P);
-      if (S.startswith(OpenBrace)) {
+      if (S.starts_with(OpenBrace)) {
         ++Depth;
         P += OpenBrace.size();
-      } else if (S.startswith(CloseBrace)) {
+      } else if (S.starts_with(CloseBrace)) {
         --Depth;
         if (Depth == 0) {
           PEnd = P + CloseBrace.size();
@@ -285,6 +286,7 @@ private:
 // The information necessary to create a directive.
 struct UnattachedDirective {
   DirectiveList *DL = nullptr;
+  std::string Spelling;
   bool RegexKind = false;
   SourceLocation DirectivePos, ContentBegin;
   std::string Text;
@@ -299,8 +301,8 @@ void attachDirective(DiagnosticsEngine &Diags, const UnattachedDirective &UD,
                      bool MatchAnyLine = false) {
   // Construct new directive.
   std::unique_ptr<Directive> D = Directive::create(
-      UD.RegexKind, UD.DirectivePos, ExpectedLoc, MatchAnyFileAndLine,
-      MatchAnyLine, UD.Text, UD.Min, UD.Max);
+      UD.RegexKind, UD.DirectivePos, ExpectedLoc, UD.Spelling,
+      MatchAnyFileAndLine, MatchAnyLine, UD.Text, UD.Min, UD.Max);
 
   std::string Error;
   if (!D->isValid(Error)) {
@@ -396,13 +398,19 @@ public:
   }
 };
 
+static std::string DetailedErrorString(const DiagnosticsEngine &Diags) {
+  if (Diags.getDiagnosticOptions().VerifyPrefixes.empty())
+    return "expected";
+  return *Diags.getDiagnosticOptions().VerifyPrefixes.begin();
+}
+
 /// ParseDirective - Go through the comment and see if it indicates expected
 /// diagnostics. If so, then put them in the appropriate directive list.
 ///
 /// Returns true if any valid directives were found.
 static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
                            Preprocessor *PP, SourceLocation Pos,
-                           VerifyDiagnosticConsumer::DirectiveStatus &Status,
+                           VerifyDiagnosticConsumer::ParsingState &State,
                            VerifyDiagnosticConsumer::MarkerTracker &Markers) {
   DiagnosticsEngine &Diags = PP ? PP->getDiagnostics() : SM.getDiagnostics();
 
@@ -434,8 +442,9 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
     StringRef DToken = PH.Match();
     PH.Advance();
 
-    // Default directive kind.
     UnattachedDirective D;
+    D.Spelling = DToken;
+    // Default directive kind.
     const char *KindStr = "string";
 
     // Parse the initial directive token in reverse so we can easily determine
@@ -445,52 +454,55 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
     // others.
 
     // Regex in initial directive token: -re
-    if (DToken.endswith("-re")) {
+    if (DToken.consume_back("-re")) {
       D.RegexKind = true;
       KindStr = "regex";
-      DToken = DToken.substr(0, DToken.size()-3);
     }
 
     // Type in initial directive token: -{error|warning|note|no-diagnostics}
     bool NoDiag = false;
     StringRef DType;
-    if (DToken.endswith(DType="-error"))
+    if (DToken.ends_with(DType = "-error"))
       D.DL = ED ? &ED->Errors : nullptr;
-    else if (DToken.endswith(DType="-warning"))
+    else if (DToken.ends_with(DType = "-warning"))
       D.DL = ED ? &ED->Warnings : nullptr;
-    else if (DToken.endswith(DType="-remark"))
+    else if (DToken.ends_with(DType = "-remark"))
       D.DL = ED ? &ED->Remarks : nullptr;
-    else if (DToken.endswith(DType="-note"))
+    else if (DToken.ends_with(DType = "-note"))
       D.DL = ED ? &ED->Notes : nullptr;
-    else if (DToken.endswith(DType="-no-diagnostics")) {
+    else if (DToken.ends_with(DType = "-no-diagnostics")) {
       NoDiag = true;
       if (D.RegexKind)
         continue;
-    }
-    else
+    } else
       continue;
     DToken = DToken.substr(0, DToken.size()-DType.size());
 
     // What's left in DToken is the actual prefix.  That might not be a -verify
     // prefix even if there is only one -verify prefix (for example, the full
     // DToken is foo-bar-warning, but foo is the only -verify prefix).
-    if (!std::binary_search(Prefixes.begin(), Prefixes.end(), DToken))
+    if (!llvm::binary_search(Prefixes, DToken))
       continue;
 
     if (NoDiag) {
-      if (Status == VerifyDiagnosticConsumer::HasOtherExpectedDirectives)
+      if (State.Status ==
+          VerifyDiagnosticConsumer::HasOtherExpectedDirectives) {
         Diags.Report(Pos, diag::err_verify_invalid_no_diags)
-          << /*IsExpectedNoDiagnostics=*/true;
-      else
-        Status = VerifyDiagnosticConsumer::HasExpectedNoDiagnostics;
+            << D.Spelling << /*IsExpectedNoDiagnostics=*/true;
+      } else if (State.Status !=
+                 VerifyDiagnosticConsumer::HasExpectedNoDiagnostics) {
+        State.Status = VerifyDiagnosticConsumer::HasExpectedNoDiagnostics;
+        State.FirstNoDiagnosticsDirective = D.Spelling;
+      }
       continue;
     }
-    if (Status == VerifyDiagnosticConsumer::HasExpectedNoDiagnostics) {
+    if (State.Status == VerifyDiagnosticConsumer::HasExpectedNoDiagnostics) {
       Diags.Report(Pos, diag::err_verify_invalid_no_diags)
-        << /*IsExpectedNoDiagnostics=*/false;
+          << D.Spelling << /*IsExpectedNoDiagnostics=*/false
+          << State.FirstNoDiagnosticsDirective;
       continue;
     }
-    Status = VerifyDiagnosticConsumer::HasOtherExpectedDirectives;
+    State.Status = VerifyDiagnosticConsumer::HasOtherExpectedDirectives;
 
     // If a directive has been found but we're not interested
     // in storing the directive information, return now.
@@ -612,12 +624,19 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
                    diag::err_verify_missing_start) << KindStr;
       continue;
     }
+    llvm::SmallString<8> CloseBrace("}}");
+    const char *const DelimBegin = PH.C;
     PH.Advance();
+    // Count the number of opening braces for `string` kinds
+    for (; !D.RegexKind && PH.Next("{"); PH.Advance())
+      CloseBrace += '}';
     const char* const ContentBegin = PH.C; // mark content begin
-    // Search for token: }}
-    if (!PH.SearchClosingBrace("{{", "}}")) {
-      Diags.Report(Pos.getLocWithOffset(PH.C-PH.Begin),
-                   diag::err_verify_missing_end) << KindStr;
+    // Search for closing brace
+    StringRef OpenBrace(DelimBegin, ContentBegin - DelimBegin);
+    if (!PH.SearchClosingBrace(OpenBrace, CloseBrace)) {
+      Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
+                   diag::err_verify_missing_end)
+          << KindStr << CloseBrace;
       continue;
     }
     const char* const ContentEnd = PH.P; // mark content end
@@ -659,7 +678,7 @@ VerifyDiagnosticConsumer::VerifyDiagnosticConsumer(DiagnosticsEngine &Diags_)
     : Diags(Diags_), PrimaryClient(Diags.getClient()),
       PrimaryClientOwner(Diags.takeClient()),
       Buffer(new TextDiagnosticBuffer()), Markers(new MarkerTracker(Diags)),
-      Status(HasNoDirectives) {
+      State{HasNoDirectives, {}} {
   if (Diags.hasSourceManager())
     setSourceManager(Diags.getSourceManager());
 }
@@ -777,7 +796,7 @@ bool VerifyDiagnosticConsumer::HandleComment(Preprocessor &PP,
   // Fold any "\<EOL>" sequences
   size_t loc = C.find('\\');
   if (loc == StringRef::npos) {
-    ParseDirective(C, &ED, SM, &PP, CommentBegin, Status, *Markers);
+    ParseDirective(C, &ED, SM, &PP, CommentBegin, State, *Markers);
     return false;
   }
 
@@ -792,7 +811,7 @@ bool VerifyDiagnosticConsumer::HandleComment(Preprocessor &PP,
     C2 += C.substr(last, loc-last);
     last = loc + 1;
 
-    if (C[last] == '\n' || C[last] == '\r') {
+    if (last < C.size() && (C[last] == '\n' || C[last] == '\r')) {
       ++last;
 
       // Escape \r\n  or \n\r, but not \n\n.
@@ -807,7 +826,7 @@ bool VerifyDiagnosticConsumer::HandleComment(Preprocessor &PP,
   }
 
   if (!C2.empty())
-    ParseDirective(C2, &ED, SM, &PP, CommentBegin, Status, *Markers);
+    ParseDirective(C2, &ED, SM, &PP, CommentBegin, State, *Markers);
   return false;
 }
 
@@ -832,8 +851,8 @@ static bool findDirectives(SourceManager &SM, FileID FID,
 
   Token Tok;
   Tok.setKind(tok::comment);
-  VerifyDiagnosticConsumer::DirectiveStatus Status =
-    VerifyDiagnosticConsumer::HasNoDirectives;
+  VerifyDiagnosticConsumer::ParsingState State = {
+      VerifyDiagnosticConsumer::HasNoDirectives, {}};
   while (Tok.isNot(tok::eof)) {
     RawLex.LexFromRawLexer(Tok);
     if (!Tok.is(tok::comment)) continue;
@@ -845,8 +864,8 @@ static bool findDirectives(SourceManager &SM, FileID FID,
     VerifyDiagnosticConsumer::MarkerTracker Markers(SM.getDiagnostics());
 
     // Find first directive.
-    if (ParseDirective(Comment, nullptr, SM, nullptr, Tok.getLocation(),
-                       Status, Markers))
+    if (ParseDirective(Comment, nullptr, SM, nullptr, Tok.getLocation(), State,
+                       Markers))
       return true;
   }
   return false;
@@ -876,10 +895,11 @@ static unsigned PrintUnexpected(DiagnosticsEngine &Diags, SourceManager *SourceM
     OS << ": " << I->second;
   }
 
+  const bool IsSinglePrefix =
+      Diags.getDiagnosticOptions().VerifyPrefixes.size() == 1;
   std::string Prefix = *Diags.getDiagnosticOptions().VerifyPrefixes.begin();
-  std::string KindStr = Prefix + "-" + Kind;
   Diags.Report(diag::err_verify_inconsistent_diags).setForceEmit()
-      << KindStr << /*Unexpected=*/true << OS.str();
+      << IsSinglePrefix << Prefix << Kind << /*Unexpected=*/true << OS.str();
   return std::distance(diag_begin, diag_end);
 }
 
@@ -890,6 +910,9 @@ static unsigned PrintExpected(DiagnosticsEngine &Diags,
                               std::vector<Directive *> &DL, const char *Kind) {
   if (DL.empty())
     return 0;
+
+  const bool IsSinglePrefix =
+      Diags.getDiagnosticOptions().VerifyPrefixes.size() == 1;
 
   SmallString<256> Fmt;
   llvm::raw_svector_ostream OS(Fmt);
@@ -906,13 +929,14 @@ static unsigned PrintExpected(DiagnosticsEngine &Diags,
       OS << " (directive at "
          << SourceMgr.getFilename(D->DirectiveLoc) << ':'
          << SourceMgr.getPresumedLineNumber(D->DirectiveLoc) << ')';
+    if (!IsSinglePrefix)
+      OS << " \'" << D->Spelling << '\'';
     OS << ": " << D->Text;
   }
 
   std::string Prefix = *Diags.getDiagnosticOptions().VerifyPrefixes.begin();
-  std::string KindStr = Prefix + "-" + Kind;
   Diags.Report(diag::err_verify_inconsistent_diags).setForceEmit()
-      << KindStr << /*Unexpected=*/false << OS.str();
+      << IsSinglePrefix << Prefix << Kind << /*Unexpected=*/false << OS.str();
   return DL.size();
 }
 
@@ -1098,10 +1122,11 @@ void VerifyDiagnosticConsumer::CheckDiagnostics() {
   if (SrcManager) {
     // Produce an error if no expected-* directives could be found in the
     // source file(s) processed.
-    if (Status == HasNoDirectives) {
-      Diags.Report(diag::err_verify_no_directives).setForceEmit();
+    if (State.Status == HasNoDirectives) {
+      Diags.Report(diag::err_verify_no_directives).setForceEmit()
+          << DetailedErrorString(Diags);
       ++NumErrors;
-      Status = HasNoDirectivesReported;
+      State.Status = HasNoDirectivesReported;
     }
 
     // Check that the expected diagnostics occurred.
@@ -1130,23 +1155,21 @@ void VerifyDiagnosticConsumer::CheckDiagnostics() {
   ED.Reset();
 }
 
-std::unique_ptr<Directive> Directive::create(bool RegexKind,
-                                             SourceLocation DirectiveLoc,
-                                             SourceLocation DiagnosticLoc,
-                                             bool MatchAnyFileAndLine,
-                                             bool MatchAnyLine, StringRef Text,
-                                             unsigned Min, unsigned Max) {
+std::unique_ptr<Directive>
+Directive::create(bool RegexKind, SourceLocation DirectiveLoc,
+                  SourceLocation DiagnosticLoc, StringRef Spelling,
+                  bool MatchAnyFileAndLine, bool MatchAnyLine, StringRef Text,
+                  unsigned Min, unsigned Max) {
   if (!RegexKind)
     return std::make_unique<StandardDirective>(DirectiveLoc, DiagnosticLoc,
-                                               MatchAnyFileAndLine,
+                                               Spelling, MatchAnyFileAndLine,
                                                MatchAnyLine, Text, Min, Max);
 
   // Parse the directive into a regular expression.
   std::string RegexStr;
   StringRef S = Text;
   while (!S.empty()) {
-    if (S.startswith("{{")) {
-      S = S.drop_front(2);
+    if (S.consume_front("{{")) {
       size_t RegexMatchLength = S.find("}}");
       assert(RegexMatchLength != StringRef::npos);
       // Append the regex, enclosed in parentheses.
@@ -1164,7 +1187,7 @@ std::unique_ptr<Directive> Directive::create(bool RegexKind,
     }
   }
 
-  return std::make_unique<RegexDirective>(DirectiveLoc, DiagnosticLoc,
+  return std::make_unique<RegexDirective>(DirectiveLoc, DiagnosticLoc, Spelling,
                                           MatchAnyFileAndLine, MatchAnyLine,
                                           Text, Min, Max, RegexStr);
 }

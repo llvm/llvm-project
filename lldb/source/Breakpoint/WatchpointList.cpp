@@ -23,10 +23,12 @@ lldb::watch_id_t WatchpointList::Add(const WatchpointSP &wp_sp, bool notify) {
   m_watchpoints.push_back(wp_sp);
   if (notify) {
     if (wp_sp->GetTarget().EventTypeHasListeners(
-            Target::eBroadcastBitWatchpointChanged))
+            Target::eBroadcastBitWatchpointChanged)) {
+      auto data_sp = std::make_shared<Watchpoint::WatchpointEventData>(
+          eWatchpointEventTypeAdded, wp_sp);
       wp_sp->GetTarget().BroadcastEvent(Target::eBroadcastBitWatchpointChanged,
-                                        new Watchpoint::WatchpointEventData(
-                                            eWatchpointEventTypeAdded, wp_sp));
+                                        data_sp);
+    }
   }
   return wp_sp->GetID();
 }
@@ -96,16 +98,14 @@ private:
 
 WatchpointList::wp_collection::iterator
 WatchpointList::GetIDIterator(lldb::watch_id_t watch_id) {
-  return std::find_if(m_watchpoints.begin(),
-                      m_watchpoints.end(),            // Search full range
-                      WatchpointIDMatches(watch_id)); // Predicate
+  return llvm::find_if(m_watchpoints,                  // Search full range
+                       WatchpointIDMatches(watch_id)); // Predicate
 }
 
 WatchpointList::wp_collection::const_iterator
 WatchpointList::GetIDConstIterator(lldb::watch_id_t watch_id) const {
-  return std::find_if(m_watchpoints.begin(),
-                      m_watchpoints.end(),            // Search full range
-                      WatchpointIDMatches(watch_id)); // Predicate
+  return llvm::find_if(m_watchpoints,                  // Search full range
+                       WatchpointIDMatches(watch_id)); // Predicate
 }
 
 WatchpointSP WatchpointList::FindByID(lldb::watch_id_t watch_id) const {
@@ -171,11 +171,12 @@ bool WatchpointList::Remove(lldb::watch_id_t watch_id, bool notify) {
     WatchpointSP wp_sp = *pos;
     if (notify) {
       if (wp_sp->GetTarget().EventTypeHasListeners(
-              Target::eBroadcastBitWatchpointChanged))
+              Target::eBroadcastBitWatchpointChanged)) {
+        auto data_sp = std::make_shared<Watchpoint::WatchpointEventData>(
+            eWatchpointEventTypeRemoved, wp_sp);
         wp_sp->GetTarget().BroadcastEvent(
-            Target::eBroadcastBitWatchpointChanged,
-            new Watchpoint::WatchpointEventData(eWatchpointEventTypeRemoved,
-                                                wp_sp));
+            Target::eBroadcastBitWatchpointChanged, data_sp);
+      }
     }
     m_watchpoints.erase(pos);
     return true;
@@ -233,11 +234,11 @@ void WatchpointList::RemoveAll(bool notify) {
       wp_collection::iterator pos, end = m_watchpoints.end();
       for (pos = m_watchpoints.begin(); pos != end; ++pos) {
         if ((*pos)->GetTarget().EventTypeHasListeners(
-                Target::eBroadcastBitBreakpointChanged)) {
+                Target::eBroadcastBitWatchpointChanged)) {
+          auto data_sp = std::make_shared<Watchpoint::WatchpointEventData>(
+              eWatchpointEventTypeRemoved, *pos);
           (*pos)->GetTarget().BroadcastEvent(
-              Target::eBroadcastBitWatchpointChanged,
-              new Watchpoint::WatchpointEventData(eWatchpointEventTypeRemoved,
-                                                  *pos));
+              Target::eBroadcastBitWatchpointChanged, data_sp);
         }
       }
     }

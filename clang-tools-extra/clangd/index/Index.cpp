@@ -66,10 +66,21 @@ bool SwapIndex::refs(const RefsRequest &R,
                      llvm::function_ref<void(const Ref &)> CB) const {
   return snapshot()->refs(R, CB);
 }
+bool SwapIndex::containedRefs(
+    const ContainedRefsRequest &R,
+    llvm::function_ref<void(const ContainedRefsResult &)> CB) const {
+  return snapshot()->containedRefs(R, CB);
+}
 void SwapIndex::relations(
     const RelationsRequest &R,
     llvm::function_ref<void(const SymbolID &, const Symbol &)> CB) const {
   return snapshot()->relations(R, CB);
+}
+
+void SwapIndex::reverseRelations(
+    const RelationsRequest &R,
+    llvm::function_ref<void(const SymbolID &, const Symbol &)> CB) const {
+  return snapshot()->reverseRelations(R, CB);
 }
 
 llvm::unique_function<IndexContents(llvm::StringRef) const>

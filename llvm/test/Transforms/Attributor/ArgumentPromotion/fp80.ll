@@ -14,8 +14,8 @@ target triple = "x86_64-unknown-linux-gnu"
 @a = internal global %struct.Foo { i32 1, i64 2 }, align 8
 
 ;.
-; CHECK: @[[B:[a-zA-Z0-9_$"\\.-]+]] = internal global [[STRUCT_S:%.*]] { double 3.140000e+00, i16 9439, i8 25, [5 x i8] undef }, align 16
-; CHECK: @[[A:[a-zA-Z0-9_$"\\.-]+]] = internal global [[STRUCT_FOO:%.*]] { i32 1, i64 2 }, align 8
+; CHECK: @b = internal global %struct.s { double 3.140000e+00, i16 9439, i8 25, [5 x i8] undef }, align 16
+; CHECK: @a = internal global %struct.Foo { i32 1, i64 2 }, align 8
 ;.
 define void @run() {
 ;
@@ -82,8 +82,8 @@ define internal i64 @CaptureAStruct(ptr byval(%struct.Foo) %a) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
 ; CGSCC-NEXT:    store i32 [[TMP0]], ptr [[A_PRIV]], align 4
-; CGSCC-NEXT:    [[A_PRIV_0_1:%.*]] = getelementptr [[STRUCT_FOO]], ptr [[A_PRIV]], i64 0, i32 1
-; CGSCC-NEXT:    store i64 [[TMP1]], ptr [[A_PRIV_0_1]], align 8
+; CGSCC-NEXT:    [[A_PRIV_B8:%.*]] = getelementptr i8, ptr [[A_PRIV]], i64 8
+; CGSCC-NEXT:    store i64 [[TMP1]], ptr [[A_PRIV_B8]], align 8
 ; CGSCC-NEXT:    [[A_PTR:%.*]] = alloca ptr, align 8
 ; CGSCC-NEXT:    br label [[LOOP:%.*]]
 ; CGSCC:       loop:

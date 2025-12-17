@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -O0 -o - %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -O0 -o - %s | FileCheck %s
 
 ; CHECK-LABEL: non_uniform_loop
 ; CHECK: s_endpgm

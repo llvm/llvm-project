@@ -14,13 +14,13 @@
 
 ; Use constant from different kernels
 ;.
-; CHECK: @llvm.amdgcn.kernel.k0.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k0.lds.t poison, align 2
-; CHECK: @llvm.amdgcn.kernel.k1.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k1.lds.t poison, align 2
-; CHECK: @llvm.amdgcn.kernel.k2.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k2.lds.t poison, align 4
-; CHECK: @llvm.amdgcn.kernel.k3.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k3.lds.t poison, align 16
-; CHECK: @llvm.amdgcn.kernel.k4.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k4.lds.t poison, align 2
-; CHECK: @llvm.amdgcn.kernel.k5.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k5.lds.t poison, align 16
-; CHECK: @llvm.amdgcn.kernel.k6.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k6.lds.t poison, align 16
+; CHECK: @llvm.amdgcn.kernel.k0.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k0.lds.t poison, align 2, !absolute_symbol !0
+; CHECK: @llvm.amdgcn.kernel.k1.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k1.lds.t poison, align 2, !absolute_symbol !0
+; CHECK: @llvm.amdgcn.kernel.k2.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k2.lds.t poison, align 4, !absolute_symbol !0
+; CHECK: @llvm.amdgcn.kernel.k3.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k3.lds.t poison, align 16, !absolute_symbol !0
+; CHECK: @llvm.amdgcn.kernel.k4.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k4.lds.t poison, align 2, !absolute_symbol !0
+; CHECK: @llvm.amdgcn.kernel.k5.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k5.lds.t poison, align 16, !absolute_symbol !0
+; CHECK: @llvm.amdgcn.kernel.k6.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k6.lds.t poison, align 16, !absolute_symbol !0
 ;.
 define amdgpu_kernel void @k0(i64 %x) {
 ; CHECK-LABEL: @k0(
@@ -67,7 +67,7 @@ define amdgpu_kernel void @k3(i64 %x) {
 ; CHECK-LABEL: @k3(
 ; CHECK-NEXT:    %1 = getelementptr inbounds [32 x i8], ptr addrspace(3) @llvm.amdgcn.kernel.k3.lds, i32 0, i32 16
 ; CHECK-NEXT:    %ptr1 = addrspacecast ptr addrspace(3) %1 to ptr
-; CHECK-NEXT:    store i64 1, ptr %ptr1, align 1
+; CHECK-NEXT:    store i64 1, ptr %ptr1, align 16
 ; CHECK-NEXT:    %2 = getelementptr inbounds [32 x i8], ptr addrspace(3) @llvm.amdgcn.kernel.k3.lds, i32 0, i32 24
 ; CHECK-NEXT:    %ptr2 = addrspacecast ptr addrspace(3) %2 to ptr
 ; CHECK-NEXT:    store i64 2, ptr %ptr2, align 8
@@ -98,9 +98,9 @@ define amdgpu_kernel void @k4(i64 %x) {
 ; Multiple constexpr use in a same instruction.
 define amdgpu_kernel void @k5() {
 ; CHECK-LABEL: @k5(
-; CHECK-NEXT:  %1 = addrspacecast ptr addrspace(3) @llvm.amdgcn.kernel.k5.lds to ptr
-; CHECK-NEXT:  %2 = addrspacecast ptr addrspace(3) @llvm.amdgcn.kernel.k5.lds to ptr
-; CHECK-NEXT:  call void poison(ptr %1, ptr %2)
+; CHECK-NEXT:    %1 = addrspacecast ptr addrspace(3) @llvm.amdgcn.kernel.k5.lds to ptr
+; CHECK-NEXT:    call void poison(ptr %1, ptr %1)
+; CHECK-NEXT:    ret void
 ;
   call void poison(ptr addrspacecast (ptr addrspace(3) @lds.4 to ptr), ptr addrspacecast (ptr addrspace(3) @lds.4 to ptr))
   ret void
@@ -113,13 +113,22 @@ define amdgpu_kernel void @k5() {
 ; expression operands of store should be replaced by equivalent instruction sequences.
 define amdgpu_kernel void @k6() {
 ; CHECK-LABEL: @k6(
-
-; CHECK-NEXT:  %1 = getelementptr inbounds [4 x i32], ptr addrspace(3) @llvm.amdgcn.kernel.k6.lds, i32 0, i32 2
-; CHECK-NEXT:  %2 = ptrtoint ptr addrspace(3) %1 to i32
-; CHECK-NEXT:  %3 = getelementptr inbounds [4 x i32], ptr addrspace(3) @llvm.amdgcn.kernel.k6.lds, i32 0, i32 2
-; CHECK-NEXT:  store i32 %2, ptr addrspace(3) %3, align 8
-; CHECK-NEXT:  ret void
+; CHECK-NEXT:    %1 = getelementptr inbounds [4 x i32], ptr addrspace(3) @llvm.amdgcn.kernel.k6.lds, i32 0, i32 2
+; CHECK-NEXT:    %2 = ptrtoint ptr addrspace(3) %1 to i32
+; CHECK-NEXT:    %3 = getelementptr inbounds [4 x i32], ptr addrspace(3) @llvm.amdgcn.kernel.k6.lds, i32 0, i32 2
+; CHECK-NEXT:    store i32 %2, ptr addrspace(3) %3, align 8
+; CHECK-NEXT:    ret void
 ;
+
   store i32 ptrtoint (ptr addrspace(3) getelementptr inbounds ([4 x i32], ptr addrspace(3) @lds.5, i32 0, i32 2) to i32), ptr addrspace(3) getelementptr inbounds ([4 x i32], ptr addrspace(3) @lds.5, i32 0, i32 2)
   ret void
 }
+;.
+; CHECK: attributes #0 = { "amdgpu-lds-size"="2" }
+; CHECK: attributes #1 = { "amdgpu-lds-size"="4" }
+; CHECK: attributes #2 = { "amdgpu-lds-size"="32" }
+; CHECK: attributes #3 = { "amdgpu-lds-size"="2020" }
+; CHECK: attributes #4 = { "amdgpu-lds-size"="16" }
+;.
+; CHECK: !0 = !{i32 0, i32 1}
+;.

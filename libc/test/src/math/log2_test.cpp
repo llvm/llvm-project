@@ -6,16 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
 #include "src/math/log2.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
-#include <errno.h>
-#include <stdint.h>
+#include "hdr/stdint_proxy.h"
 
 using LlvmLibcLog2Test = LIBC_NAMESPACE::testing::FPTest<double>;
 
@@ -64,7 +62,7 @@ TEST_F(LlvmLibcLog2Test, TrickyInputs) {
       0x3fefbfdaa448ed98,
   };
   for (int i = 0; i < N; ++i) {
-    double x = double(FPBits(INPUTS[i]));
+    double x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log2, x,
                                    LIBC_NAMESPACE::log2(x), 0.5);
   }
@@ -99,12 +97,11 @@ TEST_F(LlvmLibcLog2Test, InDoubleRange) {
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
       double x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x) || x < 0.0)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x < 0.0)
         continue;
-      libc_errno = 0;
       double result = LIBC_NAMESPACE::log2(x);
       ++cc;
-      if (isnan(result) || isinf(result))
+      if (FPBits(result).is_nan() || FPBits(result).is_inf())
         continue;
 
       ++count;
@@ -120,10 +117,10 @@ TEST_F(LlvmLibcLog2Test, InDoubleRange) {
         }
       }
     }
-    tlog << " Log2 failed: " << fails << "/" << count << "/" << cc
-         << " tests.\n";
-    tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
     if (fails) {
+      tlog << " Log2 failed: " << fails << "/" << count << "/" << cc
+           << " tests.\n";
+      tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
       EXPECT_MPFR_MATCH(mpfr::Operation::Log2, mx, mr, 0.5, rounding_mode);
     }
   };

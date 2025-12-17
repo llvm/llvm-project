@@ -11,16 +11,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -68,7 +65,7 @@ struct COFFParser {
       StringRef Name = Sec.Name;
 
       if (Name.size() <= COFF::NameSize) {
-        std::copy(Name.begin(), Name.end(), Sec.Header.Name);
+        llvm::copy(Name, Sec.Header.Name);
       } else {
         // Add string to the string table and format the index for output.
         unsigned Index = getStringIndex(Name);
@@ -78,7 +75,7 @@ struct COFFParser {
           return false;
         }
         Sec.Header.Name[0] = '/';
-        std::copy(str.begin(), str.end(), Sec.Header.Name + 1);
+        llvm::copy(str, Sec.Header.Name + 1);
       }
 
       if (Sec.Alignment) {
@@ -102,7 +99,7 @@ struct COFFParser {
       // store it in the string table.
       StringRef Name = Sym.Name;
       if (Name.size() <= COFF::NameSize) {
-        std::copy(Name.begin(), Name.end(), Sym.Header.Name);
+        llvm::copy(Name, Sym.Header.Name);
       } else {
         // Add string to the string table and format the index for output.
         unsigned Index = getStringIndex(Name);
@@ -125,15 +122,12 @@ struct COFFParser {
   }
 
   unsigned getStringIndex(StringRef Str) {
-    StringMap<unsigned>::iterator i = StringTableMap.find(Str);
-    if (i == StringTableMap.end()) {
-      unsigned Index = StringTable.size();
+    auto [It, Inserted] = StringTableMap.try_emplace(Str, StringTable.size());
+    if (Inserted) {
       StringTable.append(Str.begin(), Str.end());
       StringTable.push_back(0);
-      StringTableMap[Str] = Index;
-      return Index;
     }
-    return i->second;
+    return It->second;
   }
 
   COFFYAML::Object &Obj;
@@ -359,9 +353,9 @@ static uint32_t initializeOptionalHeader(COFFParser &CP, uint16_t Magic,
       SizeOfInitializedData += S.Header.SizeOfRawData;
     if (S.Header.Characteristics & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA)
       SizeOfUninitializedData += S.Header.SizeOfRawData;
-    if (S.Name.equals(".text"))
+    if (S.Name == ".text")
       Header->BaseOfCode = S.Header.VirtualAddress; // RVA
-    else if (S.Name.equals(".data"))
+    else if (S.Name == ".data")
       BaseOfData = S.Header.VirtualAddress; // RVA
     if (S.Header.VirtualAddress)
       SizeOfImage += alignTo(S.Header.VirtualSize, Header->SectionAlignment);

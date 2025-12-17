@@ -6,7 +6,7 @@
 define amdgpu_kernel void @test_call_undef() #0 {
   %val = call i32 undef(i32 1)
   %op = add i32 %val, 1
-  store volatile i32 %op, ptr addrspace(1) undef
+  store volatile i32 %op, ptr addrspace(1) poison
   ret void
 }
 

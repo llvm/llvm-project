@@ -28,7 +28,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
@@ -47,8 +46,7 @@ using namespace llvm::PatternMatch;
 #define DEBUG_TYPE "demanded-bits"
 
 static bool isAlwaysLive(Instruction *I) {
-  return I->isTerminator() || isa<DbgInfoIntrinsic>(I) || I->isEHPad() ||
-         I->mayHaveSideEffects();
+  return I->isTerminator() || I->isEHPad() || I->mayHaveSideEffects();
 }
 
 void DemandedBits::determineLiveOperandBits(
@@ -69,15 +67,35 @@ void DemandedBits::determineLiveOperandBits(
           return;
         KnownBitsComputed = true;
 
-        const DataLayout &DL = UserI->getModule()->getDataLayout();
+        const DataLayout &DL = UserI->getDataLayout();
         Known = KnownBits(BitWidth);
-        computeKnownBits(V1, Known, DL, 0, &AC, UserI, &DT);
+        computeKnownBits(V1, Known, DL, &AC, UserI, &DT);
 
         if (V2) {
           Known2 = KnownBits(BitWidth);
-          computeKnownBits(V2, Known2, DL, 0, &AC, UserI, &DT);
+          computeKnownBits(V2, Known2, DL, &AC, UserI, &DT);
         }
       };
+  auto GetShiftedRange = [&](uint64_t Min, uint64_t Max, bool ShiftLeft) {
+    auto ShiftF = [ShiftLeft](const APInt &Mask, unsigned ShiftAmnt) {
+      return ShiftLeft ? Mask.shl(ShiftAmnt) : Mask.lshr(ShiftAmnt);
+    };
+    AB = APInt::getZero(BitWidth);
+    uint64_t LoopRange = Max - Min;
+    APInt Mask = AOut;
+    APInt Shifted = AOut; // AOut | (AOut << 1) | ... | (AOut << (ShiftAmnt - 1)
+    for (unsigned ShiftAmnt = 1; ShiftAmnt <= LoopRange; ShiftAmnt <<= 1) {
+      if (LoopRange & ShiftAmnt) {
+        // Account for (LoopRange - ShiftAmnt, LoopRange]
+        Mask |= ShiftF(Shifted, LoopRange - ShiftAmnt + 1);
+        // Clears the low bit.
+        LoopRange -= ShiftAmnt;
+      }
+      // [0, ShiftAmnt) -> [0, ShiftAmnt * 2)
+      Shifted |= ShiftF(Shifted, ShiftAmnt);
+    }
+    AB = ShiftF(Mask, Min);
+  };
 
   switch (UserI->getOpcode()) {
   default: break;
@@ -185,6 +203,17 @@ void DemandedBits::determineLiveOperandBits(
           AB |= APInt::getHighBitsSet(BitWidth, ShiftAmt+1);
         else if (S->hasNoUnsignedWrap())
           AB |= APInt::getHighBitsSet(BitWidth, ShiftAmt);
+      } else {
+        ComputeKnownBits(BitWidth, UserI->getOperand(1), nullptr);
+        uint64_t Min = Known.getMinValue().getLimitedValue(BitWidth - 1);
+        uint64_t Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
+        // similar to Lshr case
+        GetShiftedRange(Min, Max, /*ShiftLeft=*/false);
+        const auto *S = cast<ShlOperator>(UserI);
+        if (S->hasNoSignedWrap())
+          AB |= APInt::getHighBitsSet(BitWidth, Max + 1);
+        else if (S->hasNoUnsignedWrap())
+          AB |= APInt::getHighBitsSet(BitWidth, Max);
       }
     }
     break;
@@ -199,6 +228,24 @@ void DemandedBits::determineLiveOperandBits(
         // (they must be zero).
         if (cast<LShrOperator>(UserI)->isExact())
           AB |= APInt::getLowBitsSet(BitWidth, ShiftAmt);
+      } else {
+        ComputeKnownBits(BitWidth, UserI->getOperand(1), nullptr);
+        uint64_t Min = Known.getMinValue().getLimitedValue(BitWidth - 1);
+        uint64_t Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
+        // Suppose AOut == 0b0000 0001
+        // [min, max] = [1, 3]
+        // iteration 1 shift by 1 mask is 0b0000 0011
+        // iteration 2 shift by 2 mask is 0b0000 1111
+        // iteration 3, shiftAmnt = 4 > max - min, we stop.
+        //
+        // After the iterations we need one more shift by min,
+        // to move from 0b0000 1111 to --> 0b0001 1110.
+        // The loop populates the mask relative to (0,...,max-min),
+        // but we need coverage from (min, max).
+        // This is why the shift by min is needed.
+        GetShiftedRange(Min, Max, /*ShiftLeft=*/true);
+        if (cast<LShrOperator>(UserI)->isExact())
+          AB |= APInt::getLowBitsSet(BitWidth, Max);
       }
     }
     break;
@@ -219,6 +266,26 @@ void DemandedBits::determineLiveOperandBits(
         // (they must be zero).
         if (cast<AShrOperator>(UserI)->isExact())
           AB |= APInt::getLowBitsSet(BitWidth, ShiftAmt);
+      } else {
+        ComputeKnownBits(BitWidth, UserI->getOperand(1), nullptr);
+        uint64_t Min = Known.getMinValue().getLimitedValue(BitWidth - 1);
+        uint64_t Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
+        GetShiftedRange(Min, Max, /*ShiftLeft=*/true);
+        if (Max &&
+            (AOut & APInt::getHighBitsSet(BitWidth, Max)).getBoolValue()) {
+          // Suppose AOut = 0011 1100
+          // [min, max] = [1, 3]
+          // ShiftAmount = 1 : Mask is 1000 0000
+          // ShiftAmount = 2 : Mask is 1100 0000
+          // ShiftAmount = 3 : Mask is 1110 0000
+          // The Mask with Max covers every case in [min, max],
+          // so we are done
+          AB.setSignBit();
+        }
+        // If the shift is exact, then the low bits are not dead
+        // (they must be zero).
+        if (cast<AShrOperator>(UserI)->isExact())
+          AB |= APInt::getLowBitsSet(BitWidth, Max);
       }
     }
     break;
@@ -404,14 +471,14 @@ APInt DemandedBits::getDemandedBits(Instruction *I) {
   if (Found != AliveBits.end())
     return Found->second;
 
-  const DataLayout &DL = I->getModule()->getDataLayout();
+  const DataLayout &DL = I->getDataLayout();
   return APInt::getAllOnes(DL.getTypeSizeInBits(I->getType()->getScalarType()));
 }
 
 APInt DemandedBits::getDemandedBits(Use *U) {
   Type *T = (*U)->getType();
   auto *UserI = cast<Instruction>(U->getUser());
-  const DataLayout &DL = UserI->getModule()->getDataLayout();
+  const DataLayout &DL = UserI->getDataLayout();
   unsigned BitWidth = DL.getTypeSizeInBits(T->getScalarType());
 
   // We only track integer uses, everything else produces a mask with all bits

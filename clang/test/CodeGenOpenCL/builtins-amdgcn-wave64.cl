@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-feature +wavefrontsize64 -S -emit-llvm -o - %s | FileCheck -enable-var-scope %s
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx900 -S -emit-llvm -o - %s | FileCheck -enable-var-scope %s
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx900 -target-feature +wavefrontsize64 -S -emit-llvm -o - %s | FileCheck -enable-var-scope %s
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -target-feature +wavefrontsize64 -S -emit-llvm -o - %s | FileCheck -enable-var-scope %s
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx1100 -target-feature +wavefrontsize64 -S -emit-llvm -o - %s | FileCheck -enable-var-scope %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-feature +wavefrontsize64 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx900 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx900 -target-feature +wavefrontsize64 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -target-feature +wavefrontsize64 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx1100 -target-feature +wavefrontsize64 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
 
 typedef unsigned long ulong;
 
@@ -21,6 +21,13 @@ __attribute__((target("wavefrontsize64")))
 void test_ballot_wave64_target_attr(global ulong* out, int a, int b)
 {
   *out = __builtin_amdgcn_ballot_w64(a == b);
+}
+
+// CHECK-LABEL: @test_inverse_ballot_wave64(
+// CHECK: call i1 @llvm.amdgcn.inverse.ballot.i64(i64 %{{.+}})
+void test_inverse_ballot_wave64(global bool* out, ulong a)
+{
+  *out = __builtin_amdgcn_inverse_ballot_w64(a);
 }
 
 // CHECK-LABEL: @test_read_exec(
@@ -43,7 +50,3 @@ void test_read_exec_lo(global ulong* out) {
 void test_read_exec_hi(global ulong* out) {
   *out = __builtin_amdgcn_read_exec_hi();
 }
-
-#if __AMDGCN_WAVEFRONT_SIZE != 64
-#error Wrong wavesize detected
-#endif

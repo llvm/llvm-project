@@ -26,6 +26,7 @@ module m
     real :: x(:)[*]
     real, intent(in) :: c3(:)[*]
     real, contiguous, intent(in) :: c4(:)[*]
+    character(2) :: coarr(2)[*] = [ "ab", "cd" ]
     call s01(c1) ! ok
     call s02(c2) ! ok
     call s03(c4) ! ok
@@ -44,5 +45,6 @@ module m
     call s04(c3)
     !ERROR: Actual argument associated with coarray dummy argument 'x=' (not assumed shape or rank) must be simply contiguous
     call s04(x)
+    print *, ichar(coarr(:)(1:1)) ! ok, ensure no bogus contiguity error
   end subroutine
 end module

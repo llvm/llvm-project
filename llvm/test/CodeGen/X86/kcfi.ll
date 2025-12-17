@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=finalize-isel < %s | FileCheck %s --check-prefixes=MIR,ISEL
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI
 
-; ASM:       .p2align 4, 0x90
+; ASM:       .p2align 4
 ; ASM:       .type __cfi_f1,@function
 ; ASM-LABEL: __cfi_f1:
 ; ASM-NEXT:    nop
@@ -136,6 +136,29 @@ define void @f8() {
   %1 = load ptr, ptr @g, align 8
   call void %1() [ "kcfi"(i32 12345678) ]
   ret void
+}
+
+declare i32 @__gxx_personality_v0(...)
+
+define void @f9() personality ptr @__gxx_personality_v0 {
+; MIR-LABEL: name: f9
+; MIR: body:
+; ISEL: CALL64m killed %0, 1, $noreg, 0, $noreg, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, cfi-type 12345678
+; KCFI: $r11 = MOV64rm killed renamable $rax, 1, $noreg, 0, $noreg
+; KCFI-NEXT:  BUNDLE{{.*}} {
+; KCFI-NEXT:    KCFI_CHECK $r11, 12345678, implicit-def $r10, implicit-def $r11, implicit-def $eflags
+; KCFI-NEXT:    CALL64r internal $r11, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
+; KCFI-NEXT:  }
+  %1 = load ptr, ptr @g, align 8
+  invoke void %1() [ "kcfi"(i32 12345678) ]
+    to label %cont
+    unwind label %err
+cont:
+  ret void
+err:
+  %exn = landingpad { i8*, i32 }
+          catch i8* null
+  resume { i8*, i32 } %exn
 }
 
 attributes #0 = { "target-features"="+retpoline-indirect-branches,+retpoline-indirect-calls" }

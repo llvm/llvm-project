@@ -6,15 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/erff.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
-#include <errno.h>
-#include <stdint.h>
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcErffTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
@@ -36,11 +41,11 @@ TEST_F(LlvmLibcErffTest, TrickyInputs) {
       0x4004'1e6aU, // |x| = 0x1.083cd4p+1f
   };
   for (int i = 0; i < N; ++i) {
-    float x = float(FPBits(INPUTS[i]));
+    float x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Erf, x,
-                                   LIBC_NAMESPACE::erff(x), 0.5);
+                                   LIBC_NAMESPACE::erff(x), TOLERANCE + 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Erf, -x,
-                                   LIBC_NAMESPACE::erff(-x), 0.5);
+                                   LIBC_NAMESPACE::erff(-x), TOLERANCE + 0.5);
   }
 }
 
@@ -64,12 +69,12 @@ TEST_F(LlvmLibcErffTest, InFloatRange) {
 
     for (uint32_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
       float x = FPBits(v).get_val();
-      if (isnan(x))
+      if (FPBits(v).is_nan())
         continue;
 
       float result = LIBC_NAMESPACE::erff(x);
       ++cc;
-      if (isnan(result))
+      if (FPBits(result).is_nan())
         continue;
 
       ++count;
@@ -84,10 +89,10 @@ TEST_F(LlvmLibcErffTest, InFloatRange) {
         }
       }
     }
-    tlog << " Log failed: " << fails << "/" << count << "/" << cc
-         << " tests.\n";
-    tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
     if (fails) {
+      tlog << " Log failed: " << fails << "/" << count << "/" << cc
+           << " tests.\n";
+      tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
       EXPECT_MPFR_MATCH(mpfr::Operation::Erf, mx, mr, 0.5, rounding_mode);
     }
   };

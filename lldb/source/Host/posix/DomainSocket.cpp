@@ -7,24 +7,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/posix/DomainSocket.h"
+#include "lldb/Utility/LLDBLog.h"
+#ifdef __linux__
+#include <lldb/Host/linux/AbstractSocket.h>
+#endif
 
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 
 #include <cstddef>
+#include <fcntl.h>
+#include <memory>
 #include <sys/socket.h>
 #include <sys/un.h>
 
 using namespace lldb;
 using namespace lldb_private;
-
-#ifdef __ANDROID__
-// Android does not have SUN_LEN
-#ifndef SUN_LEN
-#define SUN_LEN(ptr)                                                           \
-  (offsetof(struct sockaddr_un, sun_path) + strlen((ptr)->sun_path))
-#endif
-#endif // #ifdef __ANDROID__
 
 static const int kDomain = AF_UNIX;
 static const int kType = SOCK_STREAM;
@@ -48,39 +47,75 @@ static bool SetSockAddr(llvm::StringRef name, const size_t name_offset,
     saddr_un_len =
         offsetof(struct sockaddr_un, sun_path) + name_offset + name.size();
 
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) ||       \
+    defined(__OpenBSD__)
   saddr_un->sun_len = saddr_un_len;
 #endif
 
   return true;
 }
 
-DomainSocket::DomainSocket(bool should_close, bool child_processes_inherit)
-    : Socket(ProtocolUnixDomain, should_close, child_processes_inherit) {}
+DomainSocket::DomainSocket(bool should_close)
+    : DomainSocket(kInvalidSocketValue, should_close) {}
 
-DomainSocket::DomainSocket(SocketProtocol protocol,
-                           bool child_processes_inherit)
-    : Socket(protocol, true, child_processes_inherit) {}
+DomainSocket::DomainSocket(NativeSocket socket, bool should_close)
+    : Socket(ProtocolUnixDomain, should_close) {
+  m_socket = socket;
+}
+
+DomainSocket::DomainSocket(SocketProtocol protocol)
+    : Socket(protocol, /*should_close=*/true) {}
 
 DomainSocket::DomainSocket(NativeSocket socket,
                            const DomainSocket &listen_socket)
-    : Socket(ProtocolUnixDomain, listen_socket.m_should_close_fd,
-             listen_socket.m_child_processes_inherit) {
+    : Socket(ProtocolUnixDomain, listen_socket.m_should_close_fd) {
   m_socket = socket;
+}
+
+DomainSocket::DomainSocket(SocketProtocol protocol, NativeSocket socket,
+                           bool should_close)
+    : Socket(protocol, should_close) {
+  m_socket = socket;
+}
+
+llvm::Expected<DomainSocket::Pair> DomainSocket::CreatePair() {
+  int sockets[2];
+  int type = SOCK_STREAM;
+#ifdef SOCK_CLOEXEC
+  type |= SOCK_CLOEXEC;
+#endif
+  if (socketpair(AF_UNIX, type, 0, sockets) == -1)
+    return llvm::errorCodeToError(llvm::errnoAsErrorCode());
+
+#ifndef SOCK_CLOEXEC
+  for (int s : sockets) {
+    int r = fcntl(s, F_SETFD, FD_CLOEXEC | fcntl(s, F_GETFD));
+    assert(r == 0);
+    (void)r;
+  }
+#endif
+
+  return Pair(std::unique_ptr<DomainSocket>(
+                  new DomainSocket(ProtocolUnixDomain, sockets[0],
+                                   /*should_close=*/true)),
+              std::unique_ptr<DomainSocket>(
+                  new DomainSocket(ProtocolUnixDomain, sockets[1],
+                                   /*should_close=*/true)));
 }
 
 Status DomainSocket::Connect(llvm::StringRef name) {
   sockaddr_un saddr_un;
   socklen_t saddr_un_len;
   if (!SetSockAddr(name, GetNameOffset(), &saddr_un, saddr_un_len))
-    return Status("Failed to set socket address");
+    return Status::FromErrorString("Failed to set socket address");
 
   Status error;
-  m_socket = CreateSocket(kDomain, kType, 0, m_child_processes_inherit, error);
+  m_socket = CreateSocket(kDomain, kType, 0, error);
   if (error.Fail())
     return error;
   if (llvm::sys::RetryAfterSignal(-1, ::connect, GetNativeSocket(),
-        (struct sockaddr *)&saddr_un, saddr_un_len) < 0)
+                                  (struct sockaddr *)&saddr_un,
+                                  saddr_un_len) < 0)
     SetLastError(error);
 
   return error;
@@ -90,12 +125,12 @@ Status DomainSocket::Listen(llvm::StringRef name, int backlog) {
   sockaddr_un saddr_un;
   socklen_t saddr_un_len;
   if (!SetSockAddr(name, GetNameOffset(), &saddr_un, saddr_un_len))
-    return Status("Failed to set socket address");
+    return Status::FromErrorString("Failed to set socket address");
 
   DeleteSocketFile(name);
 
   Status error;
-  m_socket = CreateSocket(kDomain, kType, 0, m_child_processes_inherit, error);
+  m_socket = CreateSocket(kDomain, kType, 0, error);
   if (error.Fail())
     return error;
   if (::bind(GetNativeSocket(), (struct sockaddr *)&saddr_un, saddr_un_len) ==
@@ -107,14 +142,29 @@ Status DomainSocket::Listen(llvm::StringRef name, int backlog) {
   return error;
 }
 
-Status DomainSocket::Accept(Socket *&socket) {
-  Status error;
-  auto conn_fd = AcceptSocket(GetNativeSocket(), nullptr, nullptr,
-                              m_child_processes_inherit, error);
-  if (error.Success())
-    socket = new DomainSocket(conn_fd, *this);
+llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> DomainSocket::Accept(
+    MainLoopBase &loop,
+    std::function<void(std::unique_ptr<Socket> socket)> sock_cb) {
+  // TODO: Refactor MainLoop to avoid the shared_ptr requirement.
+  auto io_sp = std::make_shared<DomainSocket>(GetNativeSocket(), false);
+  auto cb = [this, sock_cb](MainLoopBase &loop) {
+    Log *log = GetLog(LLDBLog::Host);
+    Status error;
+    auto conn_fd = AcceptSocket(GetNativeSocket(), nullptr, nullptr, error);
+    if (error.Fail()) {
+      LLDB_LOG(log, "AcceptSocket({0}): {1}", GetNativeSocket(), error);
+      return;
+    }
+    std::unique_ptr<DomainSocket> sock_up(new DomainSocket(conn_fd, *this));
+    sock_cb(std::move(sock_up));
+  };
 
-  return error;
+  Status error;
+  std::vector<MainLoopBase::ReadHandleUP> handles;
+  handles.emplace_back(loop.RegisterReadObject(io_sp, cb, error));
+  if (error.Fail())
+    return error.ToError();
+  return handles;
 }
 
 size_t DomainSocket::GetNameOffset() const { return 0; }
@@ -153,4 +203,35 @@ std::string DomainSocket::GetRemoteConnectionURI() const {
   return llvm::formatv(
       "{0}://{1}",
       GetNameOffset() == 0 ? "unix-connect" : "unix-abstract-connect", name);
+}
+
+std::vector<std::string> DomainSocket::GetListeningConnectionURI() const {
+  if (m_socket == kInvalidSocketValue)
+    return {};
+
+  struct sockaddr_un addr;
+  memset(&addr, 0, sizeof(struct sockaddr_un));
+  addr.sun_family = AF_UNIX;
+  socklen_t addr_len = sizeof(struct sockaddr_un);
+  if (::getsockname(m_socket, (struct sockaddr *)&addr, &addr_len) != 0)
+    return {};
+
+  return {llvm::formatv("unix-connect://{0}", addr.sun_path)};
+}
+
+llvm::Expected<std::unique_ptr<DomainSocket>>
+DomainSocket::FromBoundNativeSocket(NativeSocket sockfd, bool should_close) {
+  // Check if fd represents domain socket or abstract socket.
+  struct sockaddr_un addr;
+  socklen_t addr_len = sizeof(addr);
+  if (getsockname(sockfd, (struct sockaddr *)&addr, &addr_len) == -1)
+    return llvm::createStringError("not a socket or error occurred");
+  if (addr.sun_family != AF_UNIX)
+    return llvm::createStringError("Bad socket type");
+#ifdef __linux__
+  if (addr_len > offsetof(struct sockaddr_un, sun_path) &&
+      addr.sun_path[0] == '\0')
+    return std::make_unique<AbstractSocket>(sockfd, should_close);
+#endif
+  return std::make_unique<DomainSocket>(sockfd, should_close);
 }

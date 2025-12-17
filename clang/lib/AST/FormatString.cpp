@@ -320,6 +320,70 @@ bool clang::analyze_format_string::ParseUTF8InvalidSpecifier(
 // Methods on ArgType.
 //===----------------------------------------------------------------------===//
 
+static bool namedTypeToLengthModifierKind(ASTContext &Ctx, QualType QT,
+                                          LengthModifier::Kind &K) {
+  if (!Ctx.getLangOpts().C99 && !Ctx.getLangOpts().CPlusPlus)
+    return false;
+  for (/**/; const auto *TT = QT->getAs<TypedefType>(); QT = TT->desugar()) {
+    const auto *TD = TT->getDecl();
+    const auto *DC = TT->getDecl()->getDeclContext();
+    if (DC->isTranslationUnit() || DC->isStdNamespace()) {
+      StringRef Name = TD->getIdentifier()->getName();
+      if (Name == "size_t") {
+        K = LengthModifier::AsSizeT;
+        return true;
+      } else if (Name == "ssize_t" /*Not C99, but common in Unix.*/) {
+        K = LengthModifier::AsSizeT;
+        return true;
+      } else if (Name == "ptrdiff_t") {
+        K = LengthModifier::AsPtrDiff;
+        return true;
+      } else if (Name == "intmax_t") {
+        K = LengthModifier::AsIntMax;
+        return true;
+      } else if (Name == "uintmax_t") {
+        K = LengthModifier::AsIntMax;
+        return true;
+      }
+    }
+  }
+  if (const auto *PST = QT->getAs<PredefinedSugarType>()) {
+    using Kind = PredefinedSugarType::Kind;
+    switch (PST->getKind()) {
+    case Kind::SizeT:
+    case Kind::SignedSizeT:
+      K = LengthModifier::AsSizeT;
+      return true;
+    case Kind::PtrdiffT:
+      K = LengthModifier::AsPtrDiff;
+      return true;
+    }
+    llvm_unreachable("unexpected kind");
+  }
+  return false;
+}
+
+// Check whether T and E are compatible size_t/ptrdiff_t types. E must be
+// consistent with LE.
+// T is the type of the actual expression in the code to be checked, and E is
+// the expected type parsed from the format string.
+static clang::analyze_format_string::ArgType::MatchKind
+matchesSizeTPtrdiffT(ASTContext &C, QualType T, QualType E) {
+  using MatchKind = clang::analyze_format_string::ArgType::MatchKind;
+
+  if (!T->isIntegerType())
+    return MatchKind::NoMatch;
+
+  if (C.hasSameType(T, E))
+    return MatchKind::Match;
+
+  if (C.getCorrespondingSignedType(T.getCanonicalType()) !=
+      C.getCorrespondingSignedType(E.getCanonicalType()))
+    return MatchKind::NoMatch;
+
+  return MatchKind::NoMatchSignedness;
+}
+
 clang::analyze_format_string::ArgType::MatchKind
 ArgType::matchesType(ASTContext &C, QualType argTy) const {
   // When using the format attribute in C++, you can receive a function or an
@@ -349,14 +413,14 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
       return Match;
 
     case AnyCharTy: {
-      if (const auto *ETy = argTy->getAs<EnumType>()) {
+      if (const auto *ED = argTy->getAsEnumDecl()) {
         // If the enum is incomplete we know nothing about the underlying type.
         // Assume that it's 'int'. Do not use the underlying type for a scoped
         // enumeration.
-        if (!ETy->getDecl()->isComplete())
+        if (!ED->isComplete())
           return NoMatch;
-        if (ETy->isUnscopedEnumerationType())
-          argTy = ETy->getDecl()->getIntegerType();
+        if (!ED->isScoped())
+          argTy = ED->getIntegerType();
       }
 
       if (const auto *BT = argTy->getAs<BuiltinType>()) {
@@ -394,22 +458,30 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
     }
 
     case SpecificTy: {
-      if (const EnumType *ETy = argTy->getAs<EnumType>()) {
+      if (TK != TypeKind::DontCare) {
+        return matchesSizeTPtrdiffT(C, argTy, T);
+      }
+
+      if (const auto *ED = argTy->getAsEnumDecl()) {
         // If the enum is incomplete we know nothing about the underlying type.
         // Assume that it's 'int'. Do not use the underlying type for a scoped
         // enumeration as that needs an exact match.
-        if (!ETy->getDecl()->isComplete())
+        if (!ED->isComplete())
           argTy = C.IntTy;
-        else if (ETy->isUnscopedEnumerationType())
-          argTy = ETy->getDecl()->getIntegerType();
+        else if (!ED->isScoped())
+          argTy = ED->getIntegerType();
       }
+
+      if (argTy->isSaturatedFixedPointType())
+        argTy = C.getCorrespondingUnsaturatedType(argTy);
+
       argTy = C.getCanonicalType(argTy).getUnqualifiedType();
 
       if (T == argTy)
         return Match;
       if (const auto *BT = argTy->getAs<BuiltinType>()) {
         // Check if the only difference between them is signed vs unsigned
-        // if true, we consider they are compatible.
+        // if true, return match signedness.
         switch (BT->getKind()) {
           default:
             break;
@@ -419,44 +491,53 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
             [[fallthrough]];
           case BuiltinType::Char_S:
           case BuiltinType::SChar:
+            if (T == C.UnsignedShortTy || T == C.ShortTy)
+              return NoMatchTypeConfusion;
+            if (T == C.UnsignedCharTy)
+              return NoMatchSignedness;
+            if (T == C.SignedCharTy)
+              return Match;
+            break;
           case BuiltinType::Char_U:
           case BuiltinType::UChar:
             if (T == C.UnsignedShortTy || T == C.ShortTy)
               return NoMatchTypeConfusion;
-            if (T == C.UnsignedCharTy || T == C.SignedCharTy)
+            if (T == C.UnsignedCharTy)
               return Match;
+            if (T == C.SignedCharTy)
+              return NoMatchSignedness;
             break;
           case BuiltinType::Short:
             if (T == C.UnsignedShortTy)
-              return Match;
+              return NoMatchSignedness;
             break;
           case BuiltinType::UShort:
             if (T == C.ShortTy)
-              return Match;
+              return NoMatchSignedness;
             break;
           case BuiltinType::Int:
             if (T == C.UnsignedIntTy)
-              return Match;
+              return NoMatchSignedness;
             break;
           case BuiltinType::UInt:
             if (T == C.IntTy)
-              return Match;
+              return NoMatchSignedness;
             break;
           case BuiltinType::Long:
             if (T == C.UnsignedLongTy)
-              return Match;
+              return NoMatchSignedness;
             break;
           case BuiltinType::ULong:
             if (T == C.LongTy)
-              return Match;
+              return NoMatchSignedness;
             break;
           case BuiltinType::LongLong:
             if (T == C.UnsignedLongLongTy)
-              return Match;
+              return NoMatchSignedness;
             break;
           case BuiltinType::ULongLong:
             if (T == C.LongLongTy)
-              return Match;
+              return NoMatchSignedness;
             break;
           }
           // "Partially matched" because of promotions?
@@ -488,7 +569,6 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
                 return NoMatchPromotionTypeConfusion;
               break;
             case BuiltinType::Half:
-            case BuiltinType::Float16:
             case BuiltinType::Float:
               if (T == C.DoubleTy)
                 return MatchPromotion;
@@ -508,33 +588,18 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
       return NoMatch;
     }
 
-    case CStrTy: {
-      const PointerType *PT = argTy->getAs<PointerType>();
-      if (!PT)
-        return NoMatch;
-      QualType pointeeTy = PT->getPointeeType();
-      if (const BuiltinType *BT = pointeeTy->getAs<BuiltinType>())
-        switch (BT->getKind()) {
-          case BuiltinType::Char_U:
-          case BuiltinType::UChar:
-          case BuiltinType::Char_S:
-          case BuiltinType::SChar:
-            return Match;
-          default:
-            break;
-        }
-
+    case CStrTy:
+      if (const auto *PT = argTy->getAs<PointerType>();
+          PT && PT->getPointeeType()->isCharType())
+        return Match;
       return NoMatch;
-    }
 
-    case WCStrTy: {
-      const PointerType *PT = argTy->getAs<PointerType>();
-      if (!PT)
-        return NoMatch;
-      QualType pointeeTy =
-        C.getCanonicalType(PT->getPointeeType()).getUnqualifiedType();
-      return pointeeTy == C.getWideCharType() ? Match : NoMatch;
-    }
+    case WCStrTy:
+      if (const auto *PT = argTy->getAs<PointerType>();
+          PT &&
+          C.hasSameUnqualifiedType(PT->getPointeeType(), C.getWideCharType()))
+        return Match;
+      return NoMatch;
 
     case WIntTy: {
       QualType WInt = C.getCanonicalType(C.getWIntType()).getUnqualifiedType();
@@ -557,14 +622,24 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
     }
 
     case CPointerTy:
-      if (argTy->isVoidPointerType()) {
-        return Match;
-      } if (argTy->isPointerType() || argTy->isObjCObjectPointerType() ||
-            argTy->isBlockPointerType() || argTy->isNullPtrType()) {
+      if (const auto *PT = argTy->getAs<PointerType>()) {
+        QualType PointeeTy = PT->getPointeeType();
+        if (PointeeTy->isVoidType() || (!Ptr && PointeeTy->isCharType()))
+          return Match;
         return NoMatchPedantic;
-      } else {
-        return NoMatch;
       }
+
+      // nullptr_t* is not a double pointer, so reject when something like
+      // void** is expected.
+      // In C++, nullptr is promoted to void*. In C23, va_arg(ap, void*) is not
+      // undefined when the next argument is of type nullptr_t.
+      if (!Ptr && argTy->isNullPtrType())
+        return C.getLangOpts().CPlusPlus ? MatchPromotion : Match;
+
+      if (argTy->isObjCObjectPointerType() || argTy->isBlockPointerType())
+        return NoMatchPedantic;
+
+      return NoMatch;
 
     case ObjCPointerTy: {
       if (argTy->getAs<ObjCObjectPointerType>() ||
@@ -578,7 +653,7 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
         // to Objective-C objects.  Since the compiler doesn't know which
         // structs can be toll-free bridged, we just accept them all.
         QualType pointee = PT->getPointeeType();
-        if (pointee->getAsStructureType() || pointee->isVoidType())
+        if (pointee->isStructureType() || pointee->isVoidType())
           return Match;
       }
       return NoMatch;
@@ -586,6 +661,103 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
   }
 
   llvm_unreachable("Invalid ArgType Kind!");
+}
+
+static analyze_format_string::ArgType::MatchKind
+integerTypeMatch(ASTContext &C, QualType A, QualType B, bool CheckSign) {
+  using MK = analyze_format_string::ArgType::MatchKind;
+
+  uint64_t IntSize = C.getTypeSize(C.IntTy);
+  uint64_t ASize = C.getTypeSize(A);
+  uint64_t BSize = C.getTypeSize(B);
+  if (std::max(ASize, IntSize) != std::max(BSize, IntSize))
+    return MK::NoMatch;
+  if (CheckSign && A->isSignedIntegerType() != B->isSignedIntegerType())
+    return MK::NoMatchSignedness;
+  if (ASize != BSize)
+    return MK::MatchPromotion;
+  return MK::Match;
+}
+
+analyze_format_string::ArgType::MatchKind
+ArgType::matchesArgType(ASTContext &C, const ArgType &Other) const {
+  using AK = analyze_format_string::ArgType::Kind;
+
+  // Per matchesType.
+  if (K == AK::InvalidTy || Other.K == AK::InvalidTy)
+    return NoMatch;
+  if (K == AK::UnknownTy || Other.K == AK::UnknownTy)
+    return Match;
+
+  // Handle whether either (or both, or neither) sides has Ptr set,
+  // in addition to whether either (or both, or neither) sides is a SpecificTy
+  // that is a pointer.
+  ArgType Left = *this;
+  bool LeftWasPointer = false;
+  ArgType Right = Other;
+  bool RightWasPointer = false;
+  if (Left.Ptr) {
+    Left.Ptr = false;
+    LeftWasPointer = true;
+  } else if (Left.K == AK::SpecificTy && Left.T->isPointerType()) {
+    Left.T = Left.T->getPointeeType();
+    LeftWasPointer = true;
+  }
+  if (Right.Ptr) {
+    Right.Ptr = false;
+    RightWasPointer = true;
+  } else if (Right.K == AK::SpecificTy && Right.T->isPointerType()) {
+    Right.T = Right.T->getPointeeType();
+    RightWasPointer = true;
+  }
+
+  if (LeftWasPointer != RightWasPointer)
+    return NoMatch;
+
+  // Ensure that if at least one side is a SpecificTy, then Left is a
+  // SpecificTy.
+  if (Right.K == AK::SpecificTy)
+    std::swap(Left, Right);
+
+  if (Left.K == AK::SpecificTy) {
+    if (Right.K == AK::SpecificTy) {
+      if (Left.TK != TypeKind::DontCare) {
+        return matchesSizeTPtrdiffT(C, Right.T, Left.T);
+      } else if (Right.TK != TypeKind::DontCare) {
+        return matchesSizeTPtrdiffT(C, Left.T, Right.T);
+      }
+
+      auto Canon1 = C.getCanonicalType(Left.T);
+      auto Canon2 = C.getCanonicalType(Right.T);
+      if (Canon1 == Canon2)
+        return Match;
+
+      auto *BT1 = QualType(Canon1)->getAs<BuiltinType>();
+      auto *BT2 = QualType(Canon2)->getAs<BuiltinType>();
+      if (BT1 == nullptr || BT2 == nullptr)
+        return NoMatch;
+      if (BT1 == BT2)
+        return Match;
+
+      if (!LeftWasPointer && BT1->isInteger() && BT2->isInteger())
+        return integerTypeMatch(C, Canon1, Canon2, true);
+      return NoMatch;
+    } else if (Right.K == AK::AnyCharTy) {
+      if (!LeftWasPointer && Left.T->isIntegerType())
+        return integerTypeMatch(C, Left.T, C.CharTy, false);
+      return NoMatch;
+    } else if (Right.K == AK::WIntTy) {
+      if (!LeftWasPointer && Left.T->isIntegerType())
+        return integerTypeMatch(C, Left.T, C.WIntTy, true);
+      return NoMatch;
+    }
+    // It's hypothetically possible to create an AK::SpecificTy ArgType
+    // that matches another kind of ArgType, but in practice Clang doesn't
+    // do that, so ignore that case.
+    return NoMatch;
+  }
+
+  return Left.K == Right.K ? Match : NoMatch;
 }
 
 ArgType ArgType::makeVectorType(ASTContext &C, unsigned NumElts) const {
@@ -608,7 +780,11 @@ QualType ArgType::getRepresentativeType(ASTContext &C) const {
       Res = C.CharTy;
       break;
     case SpecificTy:
-      Res = T;
+      if (TK == TypeKind::PtrdiffT || TK == TypeKind::SizeT)
+        // Using Name as name, so no need to show the uglified name.
+        Res = T->getCanonicalTypeInternal();
+      else
+        Res = T;
       break;
     case CStrTy:
       Res = C.getPointerType(C.CharTy);
@@ -635,7 +811,6 @@ QualType ArgType::getRepresentativeType(ASTContext &C) const {
 
 std::string ArgType::getRepresentativeTypeName(ASTContext &C) const {
   std::string S = getRepresentativeType(C).getAsString(C.getPrintingPolicy());
-
   std::string Alias;
   if (Name) {
     // Use a specific name for this type, e.g. "size_t".
@@ -762,6 +937,16 @@ const char *ConversionSpecifier::toString() const {
 
   // MS specific specifiers.
   case ZArg: return "Z";
+
+  // ISO/IEC TR 18037 (fixed-point) specific specifiers.
+  case rArg:
+    return "r";
+  case RArg:
+    return "R";
+  case kArg:
+    return "k";
+  case KArg:
+    return "K";
   }
   return nullptr;
 }
@@ -826,6 +1011,9 @@ bool FormatSpecifier::hasValidLengthModifier(const TargetInfo &Target,
       if (LO.OpenCL && CS.isDoubleArg())
         return !VectorNumElts.isInvalid();
 
+      if (CS.isFixedPointArg())
+        return true;
+
       if (Target.getTriple().isOSMSVCRT()) {
         switch (CS.getKind()) {
           case ConversionSpecifier::cArg:
@@ -877,6 +1065,9 @@ bool FormatSpecifier::hasValidLengthModifier(const TargetInfo &Target,
           return false;
         return true;
       }
+
+      if (CS.isFixedPointArg())
+        return true;
 
       switch (CS.getKind()) {
         case ConversionSpecifier::bArg:
@@ -1044,6 +1235,11 @@ bool FormatSpecifier::hasStandardConversionSpecifier(
     case ConversionSpecifier::UArg:
     case ConversionSpecifier::ZArg:
       return false;
+    case ConversionSpecifier::rArg:
+    case ConversionSpecifier::RArg:
+    case ConversionSpecifier::kArg:
+    case ConversionSpecifier::KArg:
+      return LangOpt.FixedPoint;
   }
   llvm_unreachable("Invalid ConversionSpecifier Kind!");
 }
@@ -1079,29 +1275,12 @@ FormatSpecifier::getCorrectedLengthModifier() const {
   return std::nullopt;
 }
 
-bool FormatSpecifier::namedTypeToLengthModifier(QualType QT,
+bool FormatSpecifier::namedTypeToLengthModifier(ASTContext &Ctx, QualType QT,
                                                 LengthModifier &LM) {
-  for (/**/; const auto *TT = QT->getAs<TypedefType>();
-       QT = TT->getDecl()->getUnderlyingType()) {
-    const TypedefNameDecl *Typedef = TT->getDecl();
-    const IdentifierInfo *Identifier = Typedef->getIdentifier();
-    if (Identifier->getName() == "size_t") {
-      LM.setKind(LengthModifier::AsSizeT);
-      return true;
-    } else if (Identifier->getName() == "ssize_t") {
-      // Not C99, but common in Unix.
-      LM.setKind(LengthModifier::AsSizeT);
-      return true;
-    } else if (Identifier->getName() == "intmax_t") {
-      LM.setKind(LengthModifier::AsIntMax);
-      return true;
-    } else if (Identifier->getName() == "uintmax_t") {
-      LM.setKind(LengthModifier::AsIntMax);
-      return true;
-    } else if (Identifier->getName() == "ptrdiff_t") {
-      LM.setKind(LengthModifier::AsPtrDiff);
-      return true;
-    }
+  if (LengthModifier::Kind Out = LengthModifier::Kind::None;
+      namedTypeToLengthModifierKind(Ctx, QT, Out)) {
+    LM.setKind(Out);
+    return true;
   }
   return false;
 }

@@ -37,7 +37,7 @@ else()
 endif()
 
 if (LIBCXXABI_ENABLE_THREADS AND (UNIX OR FUCHSIA) AND NOT (APPLE OR CYGWIN)
-    AND NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX"))
+    AND NOT ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX"))
   list(APPEND LIBCXXABI_SOURCES
     cxa_thread_atexit.cpp
   )
@@ -73,6 +73,12 @@ if (NOT APPLE) # On Apple platforms, we always use -nostdlib++ so we don't need 
   endif()
 
   add_library_flags_if(LIBCXXABI_HAS_C_LIB c)
+endif()
+
+if (FUCHSIA)
+    # TODO: Use CMAKE_LINK_LIBRARY_USING_FEATURE once our minimum CMake is at least 3.24
+    # https://cmake.org/cmake/help/latest/variable/CMAKE_LINK_LIBRARY_USING_FEATURE.html
+    add_link_flags("-Wl,--push-state,--as-needed,-lzircon,--pop-state")
 endif()
 
 if (NOT LIBCXXABI_USE_COMPILER_RT)
@@ -166,76 +172,92 @@ if (LIBCXXABI_USE_LLVM_UNWINDER)
     target_link_libraries(cxxabi_shared_objects PUBLIC unwind_shared)
   endif()
 endif()
-target_link_libraries(cxxabi_shared_objects PRIVATE cxx-headers ${LIBCXXABI_BUILTINS_LIBRARY} ${LIBCXXABI_LIBRARIES})
-target_link_libraries(cxxabi_shared_objects PUBLIC cxxabi-headers)
+target_link_libraries(cxxabi_shared_objects
+  PUBLIC cxxabi-headers
+  PRIVATE cxx-headers runtimes-libc-headers ${LIBCXXABI_LIBRARIES})
+if (NOT CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+  target_link_libraries(cxxabi_shared_objects PRIVATE ${LIBCXXABI_BUILTINS_LIBRARY})
+endif()
 set_target_properties(cxxabi_shared_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
     CXX_STANDARD 23
-    CXX_STANDARD_REQUIRED OFF
+    CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
     COMPILE_FLAGS "${LIBCXXABI_COMPILE_FLAGS}"
     DEFINE_SYMBOL ""
 )
 if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CODE)
   set_target_properties(cxxabi_shared_objects PROPERTIES POSITION_INDEPENDENT_CODE ON) # must set manually because it's an object library
 endif()
+target_compile_options(cxxabi_shared_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
 
-if (LIBCXXABI_ENABLE_SHARED)
-  add_library(cxxabi_shared SHARED)
-  set_target_properties(cxxabi_shared
-    PROPERTIES
-      LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
-      OUTPUT_NAME "${LIBCXXABI_SHARED_OUTPUT_NAME}"
-      SOVERSION "1"
-      VERSION "${LIBCXXABI_LIBRARY_VERSION}"
+# Build with -fsized-deallocation, which is default in recent versions of Clang.
+# TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
+target_add_compile_flags_if_supported(cxxabi_shared_objects PRIVATE -fsized-deallocation)
+
+add_library(cxxabi_shared SHARED)
+set_target_properties(cxxabi_shared
+  PROPERTIES
+    EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBCXXABI_ENABLE_SHARED}>,FALSE,TRUE>"
+    LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
+    OUTPUT_NAME "${LIBCXXABI_SHARED_OUTPUT_NAME}"
+    SOVERSION "1"
+    VERSION "${LIBCXXABI_LIBRARY_VERSION}"
+)
+
+if (ZOS)
+  add_custom_command(TARGET cxxabi_shared POST_BUILD
+    COMMAND
+      ${LIBCXXABI_LIBCXX_PATH}/utils/zos_rename_dll_side_deck.sh
+      $<TARGET_LINKER_FILE_NAME:cxxabi_shared> $<TARGET_FILE_NAME:cxxabi_shared> "${LIBCXXABI_DLL_NAME}"
+    COMMENT "Rename dll name inside the side deck file"
+    WORKING_DIRECTORY $<TARGET_FILE_DIR:cxxabi_shared>
   )
+endif ()
 
-  if (ZOS)
-    add_custom_command(TARGET cxxabi_shared POST_BUILD
-      COMMAND
-        ${LIBCXXABI_LIBCXX_PATH}/utils/zos_rename_dll_side_deck.sh
-        $<TARGET_LINKER_FILE_NAME:cxxabi_shared> $<TARGET_FILE_NAME:cxxabi_shared> "${LIBCXXABI_DLL_NAME}"
-      COMMENT "Rename dll name inside the side deck file"
-      WORKING_DIRECTORY $<TARGET_FILE_DIR:cxxabi_shared>
-    )
-  endif ()
+target_link_libraries(cxxabi_shared
+  PUBLIC cxxabi_shared_objects runtimes-libc-shared
+  PRIVATE ${LIBCXXABI_LIBRARIES})
 
-  target_link_libraries(cxxabi_shared
-    PUBLIC cxxabi_shared_objects
-    PRIVATE ${LIBCXXABI_LIBRARIES})
-
-  list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_shared")
-  if (LIBCXXABI_INSTALL_SHARED_LIBRARY)
-    list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_shared")
-  endif()
-
-  add_library(cxxabi-reexports INTERFACE)
-
+# TODO: Move this to libc++'s HandleLibCXXABI.cmake since this is effectively trying to control
+#       what libc++ re-exports.
+add_library(cxxabi-reexports INTERFACE)
+function(export_symbols file)
   # -exported_symbols_list is only available on Apple platforms
   if (APPLE)
-    function(export_symbols file)
-      target_link_libraries(cxxabi_shared PRIVATE "-Wl,-exported_symbols_list,${file}")
-    endfunction()
-    function(reexport_symbols file)
-      export_symbols("${file}")
-      target_link_libraries(cxxabi-reexports INTERFACE "-Wl,-reexported_symbols_list,${file}")
-    endfunction()
+    target_link_libraries(cxxabi_shared PRIVATE "-Wl,-exported_symbols_list,${file}")
+  endif()
+endfunction()
 
-    export_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-base.exp")
+function(reexport_symbols file)
+  export_symbols("${file}")
+  # -reexported_symbols_list is only available on Apple platforms
+  if (APPLE)
+    target_link_libraries(cxxabi-reexports INTERFACE "-Wl,-reexported_symbols_list,${file}")
+  endif()
+endfunction()
 
-    if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
-      reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/new-delete.exp")
-    endif()
+export_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/symbols-not-reexported.exp")
+reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/cxxabiv1.exp")
+reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/fundamental-types.exp")
+reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-base.exp")
+reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/std-misc.exp")
 
-    if (LIBCXXABI_ENABLE_EXCEPTIONS)
-      reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/exceptions.exp")
+if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
+  reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/new-delete.exp")
+endif()
 
-      if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")
-        reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-sjlj.exp")
-      else()
-        reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-v0.exp")
-      endif()
-    endif()
+# Note that std:: exception types are always defined by the library regardless of
+# whether the exception runtime machinery is provided.
+reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/std-exceptions.exp")
+
+if (LIBCXXABI_ENABLE_EXCEPTIONS)
+  reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-exceptions.exp")
+
+  if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")
+    reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-sjlj.exp")
+  else()
+    reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-v0.exp")
   endif()
 endif()
 
@@ -246,15 +268,21 @@ if (LIBCXXABI_USE_LLVM_UNWINDER AND LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC
   target_link_libraries(cxxabi_static_objects PUBLIC unwind_static_objects) # propagate usage requirements
   target_sources(cxxabi_static_objects PUBLIC $<TARGET_OBJECTS:unwind_static_objects>)
 endif()
-target_link_libraries(cxxabi_static_objects PRIVATE cxx-headers ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
-target_link_libraries(cxxabi_static_objects PUBLIC cxxabi-headers)
+target_link_libraries(cxxabi_static_objects
+  PUBLIC cxxabi-headers
+  PRIVATE cxx-headers runtimes-libc-headers ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
 set_target_properties(cxxabi_static_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
     CXX_STANDARD 23
-    CXX_STANDARD_REQUIRED OFF
+    CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
     COMPILE_FLAGS "${LIBCXXABI_COMPILE_FLAGS}"
 )
+target_compile_options(cxxabi_static_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
+
+# Build with -fsized-deallocation, which is default in recent versions of Clang.
+# TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
+target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fsized-deallocation)
 
 if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
   target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility=hidden)
@@ -262,7 +290,10 @@ if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
   # then its code shouldn't declare them with hidden visibility.  They might
   # actually be provided by a shared library at link time.
   if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
-    target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility-global-new-delete-hidden)
+    target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility-global-new-delete=force-hidden)
+    if (NOT CXX_SUPPORTS_FVISIBILITY_GLOBAL_NEW_DELETE_EQ_FORCE_HIDDEN_FLAG)
+      target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility-global-new-delete-hidden)
+    endif()
   endif()
   # _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS can be defined in libcxx's
   # __config_site too. Define it in the same way here, to avoid redefinition
@@ -273,47 +304,56 @@ if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
       _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
 endif()
 
-if (LIBCXXABI_ENABLE_STATIC)
-  add_library(cxxabi_static STATIC)
-  if (LIBCXXABI_USE_LLVM_UNWINDER AND NOT LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY)
-    target_link_libraries(cxxabi_static PUBLIC unwind_static)
-  endif()
-  set_target_properties(cxxabi_static
-    PROPERTIES
-      LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
-      OUTPUT_NAME "${LIBCXXABI_STATIC_OUTPUT_NAME}"
-    )
-  target_link_libraries(cxxabi_static
-    PUBLIC cxxabi_static_objects
-    PRIVATE ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
-
-  list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_static")
-  if (LIBCXXABI_INSTALL_STATIC_LIBRARY)
-    list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_static")
-  endif()
+add_library(cxxabi_static STATIC)
+if (LIBCXXABI_USE_LLVM_UNWINDER AND NOT LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY)
+  target_link_libraries(cxxabi_static PUBLIC unwind_static runtimes-libc-static)
 endif()
+set_target_properties(cxxabi_static
+  PROPERTIES
+    EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBCXXABI_ENABLE_STATIC}>,FALSE,TRUE>"
+    LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
+    OUTPUT_NAME "${LIBCXXABI_STATIC_OUTPUT_NAME}"
+  )
+target_link_libraries(cxxabi_static
+  PUBLIC cxxabi_static_objects
+  PRIVATE ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
 
 # Add a meta-target for both libraries.
-add_custom_target(cxxabi DEPENDS ${LIBCXXABI_BUILD_TARGETS})
-
-if (LIBCXXABI_INSTALL_LIBRARY)
-  install(TARGETS ${LIBCXXABI_INSTALL_TARGETS}
-    LIBRARY DESTINATION ${LIBCXXABI_INSTALL_LIBRARY_DIR} COMPONENT cxxabi
-    ARCHIVE DESTINATION ${LIBCXXABI_INSTALL_LIBRARY_DIR} COMPONENT cxxabi
-    RUNTIME DESTINATION ${LIBCXXABI_INSTALL_RUNTIME_DIR} COMPONENT cxxabi
-    )
+add_custom_target(cxxabi)
+if (LIBCXXABI_ENABLE_SHARED)
+  add_dependencies(cxxabi cxxabi_shared)
+endif()
+if (LIBCXXABI_ENABLE_STATIC)
+  add_dependencies(cxxabi cxxabi_static)
 endif()
 
-if (NOT CMAKE_CONFIGURATION_TYPES AND LIBCXXABI_INSTALL_LIBRARY)
+if (LIBCXXABI_INSTALL_SHARED_LIBRARY)
+  install(TARGETS cxxabi_shared
+    ARCHIVE DESTINATION ${LIBCXXABI_INSTALL_LIBRARY_DIR} COMPONENT cxxabi
+    LIBRARY DESTINATION ${LIBCXXABI_INSTALL_LIBRARY_DIR} COMPONENT cxxabi
+    RUNTIME DESTINATION ${LIBCXXABI_INSTALL_RUNTIME_DIR} COMPONENT cxxabi)
+endif()
+
+if (LIBCXXABI_INSTALL_STATIC_LIBRARY)
+  install(TARGETS cxxabi_static
+    ARCHIVE DESTINATION ${LIBCXXABI_INSTALL_LIBRARY_DIR} COMPONENT cxxabi
+    LIBRARY DESTINATION ${LIBCXXABI_INSTALL_LIBRARY_DIR} COMPONENT cxxabi
+    RUNTIME DESTINATION ${LIBCXXABI_INSTALL_RUNTIME_DIR} COMPONENT cxxabi)
+endif()
+
+if (NOT CMAKE_CONFIGURATION_TYPES)
   add_custom_target(install-cxxabi
-    DEPENDS cxxabi install-cxxabi-headers
-    COMMAND "${CMAKE_COMMAND}"
-            -DCMAKE_INSTALL_COMPONENT=cxxabi
-            -P "${LIBCXXABI_BINARY_DIR}/cmake_install.cmake")
+    COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component cxxabi)
   add_custom_target(install-cxxabi-stripped
-    DEPENDS cxxabi
-    COMMAND "${CMAKE_COMMAND}"
-            -DCMAKE_INSTALL_COMPONENT=cxxabi
-            -DCMAKE_INSTALL_DO_STRIP=1
-            -P "${LIBCXXABI_BINARY_DIR}/cmake_install.cmake")
+    COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component cxxabi --strip)
+
+  if (LIBCXXABI_INSTALL_LIBRARY)
+    add_dependencies(install-cxxabi cxxabi)
+    add_dependencies(install-cxxabi-stripped cxxabi)
+  endif()
+
+  if(LIBCXXABI_INSTALL_HEADERS)
+    add_dependencies(install-cxxabi install-cxxabi-headers)
+    add_dependencies(install-cxxabi-stripped install-cxxabi-headers-stripped)
+  endif()
 endif()

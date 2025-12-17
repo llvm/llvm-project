@@ -1,5 +1,4 @@
-; RUN: opt < %s -msan-check-access-address=0 -S 2>&1 -passes=msan | FileCheck  \
-; RUN: %s
+; RUN: opt < %s -msan-check-access-address=0 -S 2>&1 -passes=msan | FileCheck %s
 
 ; Test that MSan doesn't generate code overflowing __msan_va_arg_tls when too many arguments are
 ; passed to a variadic function.
@@ -27,8 +26,8 @@ entry:
   ret i64 %ret
 }
 
-; If the size of __msan_va_arg_tls changes the second argument of `add` must also be changed.
+; If the size of __msan_va_arg_tls changes the second argument of `getelementptr` must also be changed.
 ; CHECK-LABEL: @many_args
-; CHECK: i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 792)
-; CHECK-NOT: i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 800)
+; CHECK: getelementptr (i8, ptr @__msan_va_arg_tls, i64 792)
+; CHECK-NOT: getelementptr (i8, ptr @__msan_va_arg_tls, i64 800)
 declare i64 @sum(i64 %n, ...)

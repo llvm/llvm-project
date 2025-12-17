@@ -18,10 +18,10 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
@@ -51,11 +51,25 @@ extern cl::OptionCategory LLVMReduceOptions;
 static cl::opt<std::string> TargetTriple("mtriple",
                                          cl::desc("Set the target triple"),
                                          cl::cat(LLVMReduceOptions));
+static cl::opt<bool> PrintInvalidMachineReductions(
+    "print-invalid-reduction-machine-verifier-errors",
+    cl::desc(
+        "Print machine verifier errors on invalid reduction attempts triple"),
+    cl::cat(LLVMReduceOptions));
 
 static cl::opt<bool> TmpFilesAsBitcode(
     "write-tmp-files-as-bitcode",
     cl::desc("Always write temporary files as bitcode instead of textual IR"),
     cl::init(false), cl::cat(LLVMReduceOptions));
+
+static SaveRestorePoints constructSaveRestorePoints(
+    const SaveRestorePoints &SRPoints,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &BBMap) {
+  SaveRestorePoints Pts{};
+  for (auto &Src : SRPoints)
+    Pts.insert({BBMap.find(Src.first)->second, Src.second});
+  return Pts;
+}
 
 static void cloneFrameInfo(
     MachineFrameInfo &DstMFI, const MachineFrameInfo &SrcMFI,
@@ -87,11 +101,17 @@ static void cloneFrameInfo(
   DstMFI.setCVBytesOfCalleeSavedRegisters(
       SrcMFI.getCVBytesOfCalleeSavedRegisters());
 
-  if (MachineBasicBlock *SavePt = SrcMFI.getSavePoint())
-    DstMFI.setSavePoint(Src2DstMBB.find(SavePt)->second);
-  if (MachineBasicBlock *RestorePt = SrcMFI.getRestorePoint())
-    DstMFI.setRestorePoint(Src2DstMBB.find(RestorePt)->second);
+  assert(SrcMFI.getSavePoints().size() < 2 &&
+         "Multiple restore points not yet supported!");
 
+  DstMFI.setSavePoints(
+      constructSaveRestorePoints(SrcMFI.getSavePoints(), Src2DstMBB));
+
+  assert(SrcMFI.getRestorePoints().size() < 2 &&
+         "Multiple restore points not yet supported!");
+
+  DstMFI.setRestorePoints(
+      constructSaveRestorePoints(SrcMFI.getRestorePoints(), Src2DstMBB));
 
   auto CopyObjectProperties = [](MachineFrameInfo &DstMFI,
                                  const MachineFrameInfo &SrcMFI, int FI) {
@@ -231,7 +251,7 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
                                                 MachineModuleInfo &DestMMI) {
   auto DstMF = std::make_unique<MachineFunction>(
       SrcMF->getFunction(), SrcMF->getTarget(), SrcMF->getSubtarget(),
-      SrcMF->getFunctionNumber(), DestMMI);
+      SrcMF->getContext(), SrcMF->getFunctionNumber());
   DenseMap<MachineBasicBlock *, MachineBasicBlock *> Src2DstMBB;
 
   auto *SrcMRI = &SrcMF->getRegInfo();
@@ -261,7 +281,7 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
 
     DstMBB->setIsEHPad(SrcMBB.isEHPad());
     DstMBB->setIsEHScopeEntry(SrcMBB.isEHScopeEntry());
-    DstMBB->setIsEHCatchretTarget(SrcMBB.isEHCatchretTarget());
+    DstMBB->setIsEHContTarget(SrcMBB.isEHContTarget());
     DstMBB->setIsEHFuncletEntry(SrcMBB.isEHFuncletEntry());
 
     // FIXME: These are not serialized
@@ -305,9 +325,10 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
       DstMRI->setType(NewReg, RegTy);
 
     // Copy register allocation hints.
-    const auto &Hints = SrcMRI->getRegAllocationHints(Reg);
-    for (Register PrefReg : Hints.second)
-      DstMRI->addRegAllocationHint(NewReg, PrefReg);
+    const auto *Hints = SrcMRI->getRegAllocationHints(Reg);
+    if (Hints)
+      for (Register PrefReg : Hints->second)
+        DstMRI->addRegAllocationHint(NewReg, PrefReg);
   }
 
   const TargetSubtargetInfo &STI = DstMF->getSubtarget();
@@ -336,11 +357,9 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
     }
   }
 
-  DenseSet<const uint32_t *> ConstRegisterMasks;
-
   // Track predefined/named regmasks which we ignore.
-  for (const uint32_t *Mask : TRI->getRegMasks())
-    ConstRegisterMasks.insert(Mask);
+  DenseSet<const uint32_t *> ConstRegisterMasks(llvm::from_range,
+                                                TRI->getRegMasks());
 
   // Clone instructions.
   for (auto &SrcMBB : *SrcMF) {
@@ -387,15 +406,15 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
   DstMF->getProperties().reset().set(SrcMF->getProperties());
 
   if (!SrcMF->getFrameInstructions().empty() ||
-      !SrcMF->getLongjmpTargets().empty() ||
-      !SrcMF->getCatchretTargets().empty())
+      !SrcMF->getLongjmpTargets().empty() || !SrcMF->getEHContTargets().empty())
     report_fatal_error("cloning not implemented for machine function property");
 
   DstMF->setCallsEHReturn(SrcMF->callsEHReturn());
   DstMF->setCallsUnwindInit(SrcMF->callsUnwindInit());
-  DstMF->setHasEHCatchret(SrcMF->hasEHCatchret());
+  DstMF->setHasEHContTarget(SrcMF->hasEHContTarget());
   DstMF->setHasEHScopes(SrcMF->hasEHScopes());
   DstMF->setHasEHFunclets(SrcMF->hasEHFunclets());
+  DstMF->setHasFakeUses(SrcMF->hasFakeUses());
   DstMF->setIsOutlined(SrcMF->isOutlined());
 
   if (!SrcMF->getLandingPads().empty() ||
@@ -413,9 +432,9 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
   if (!DstMF->cloneInfoFrom(*SrcMF, Src2DstMBB))
     report_fatal_error("target does not implement MachineFunctionInfo cloning");
 
-  DstMRI->freezeReservedRegs(*DstMF);
+  DstMRI->freezeReservedRegs();
 
-  DstMF->verify(nullptr, "", /*AbortOnError=*/true);
+  DstMF->verify(nullptr, "", &errs(), /*AbortOnError=*/true);
   return DstMF;
 }
 
@@ -431,7 +450,7 @@ void ReducerWorkItem::print(raw_ostream &ROS, void *p) const {
     printMIR(ROS, *M);
     for (Function &F : *M) {
       if (auto *MF = MMI->getMachineFunction(F))
-        printMIR(ROS, *MF);
+        printMIR(ROS, *MMI, *MF);
     }
   } else {
     M->print(ROS, /*AssemblyAnnotationWriter=*/nullptr,
@@ -448,8 +467,21 @@ bool ReducerWorkItem::verify(raw_fd_ostream *OS) const {
 
   for (const Function &F : getModule()) {
     if (const MachineFunction *MF = MMI->getMachineFunction(F)) {
-      if (!MF->verify(nullptr, "", /*AbortOnError=*/false))
+      // With the current state of quality, most reduction attempts fail the
+      // machine verifier. Avoid spamming large function dumps on nearly every
+      // attempt until the situation is better.
+      if (!MF->verify(nullptr, "",
+                      /*OS=*/PrintInvalidMachineReductions ? &errs() : nullptr,
+                      /*AbortOnError=*/false)) {
+
+        if (!PrintInvalidMachineReductions) {
+          WithColor::warning(errs())
+              << "reduction attempt on function '" << MF->getName()
+              << "' failed machine verifier (debug with "
+                 "-print-invalid-reduction-machine-verifier-errors)\n";
+        }
         return true;
+      }
     }
   }
 
@@ -500,9 +532,7 @@ ReducerWorkItem::clone(const TargetMachine *TM) const {
     // MachineModuleInfo contains a lot of other state used during codegen which
     // we won't be using here, but we should be able to ignore it (although this
     // is pretty ugly).
-    const LLVMTargetMachine *LLVMTM =
-        static_cast<const LLVMTargetMachine *>(TM);
-    CloneMMM->MMI = std::make_unique<MachineModuleInfo>(LLVMTM);
+    CloneMMM->MMI = std::make_unique<MachineModuleInfo>(TM);
 
     for (const Function &F : getModule()) {
       if (auto *MF = MMI->getMachineFunction(F))
@@ -529,7 +559,8 @@ static uint64_t computeMIRComplexityScoreImpl(const MachineFunction &MF) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     Register Reg = Register::index2VirtReg(I);
-    Score += MRI.getRegAllocationHints(Reg).second.size();
+    if (const auto *Hints = MRI.getRegAllocationHints(Reg))
+      Score += Hints->second.size();
   }
 
   for (const MachineBasicBlock &MBB : MF) {
@@ -640,11 +671,26 @@ static uint64_t computeIRComplexityScoreImpl(const Function &F) {
           ++Score;
         if (OverflowOp->hasNoSignedWrap())
           ++Score;
-      } else if (const auto *GEP = dyn_cast<GEPOperator>(&I)) {
-        if (GEP->isInBounds())
+      } else if (const auto *Trunc = dyn_cast<TruncInst>(&I)) {
+        if (Trunc->hasNoSignedWrap())
+          ++Score;
+        if (Trunc->hasNoUnsignedWrap())
           ++Score;
       } else if (const auto *ExactOp = dyn_cast<PossiblyExactOperator>(&I)) {
         if (ExactOp->isExact())
+          ++Score;
+      } else if (const auto *NNI = dyn_cast<PossiblyNonNegInst>(&I)) {
+        if (NNI->hasNonNeg())
+          ++Score;
+      } else if (const auto *PDI = dyn_cast<PossiblyDisjointInst>(&I)) {
+        if (PDI->isDisjoint())
+          ++Score;
+      } else if (const auto *GEP = dyn_cast<GEPOperator>(&I)) {
+        if (GEP->isInBounds())
+          ++Score;
+        if (GEP->hasNoUnsignedSignedWrap())
+          ++Score;
+        if (GEP->hasNoUnsignedWrap())
           ++Score;
       } else if (const auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
         FastMathFlags FMF = FPOp->getFastMathFlags();
@@ -725,18 +771,27 @@ void ReducerWorkItem::readBitcode(MemoryBufferRef Data, LLVMContext &Ctx,
     WithColor::error(errs(), ToolName) << IF.takeError();
     exit(1);
   }
+
   BitcodeModule BM = IF->Mods[0];
   Expected<BitcodeLTOInfo> LI = BM.getLTOInfo();
-  Expected<std::unique_ptr<Module>> MOrErr = BM.parseModule(Ctx);
-  if (!LI || !MOrErr) {
-    WithColor::error(errs(), ToolName) << IF.takeError();
+  if (!LI) {
+    WithColor::error(errs(), ToolName) << LI.takeError();
     exit(1);
   }
+
+  Expected<std::unique_ptr<Module>> MOrErr = BM.parseModule(Ctx);
+  if (!MOrErr) {
+    WithColor::error(errs(), ToolName) << MOrErr.takeError();
+    exit(1);
+  }
+
   LTOInfo = std::make_unique<BitcodeLTOInfo>(*LI);
   M = std::move(MOrErr.get());
 }
 
 void ReducerWorkItem::writeBitcode(raw_ostream &OutStream) const {
+  const bool ShouldPreserveUseListOrder = true;
+
   if (LTOInfo && LTOInfo->IsThinLTO && LTOInfo->EnableSplitLTOUnit) {
     PassBuilder PB;
     LoopAnalysisManager LAM;
@@ -749,7 +804,8 @@ void ReducerWorkItem::writeBitcode(raw_ostream &OutStream) const {
     PB.registerLoopAnalyses(LAM);
     PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
     ModulePassManager MPM;
-    MPM.addPass(ThinLTOBitcodeWriterPass(OutStream, nullptr));
+    MPM.addPass(ThinLTOBitcodeWriterPass(OutStream, nullptr,
+                                         ShouldPreserveUseListOrder));
     MPM.run(*M, MAM);
   } else {
     std::unique_ptr<ModuleSummaryIndex> Index;
@@ -758,8 +814,8 @@ void ReducerWorkItem::writeBitcode(raw_ostream &OutStream) const {
       Index = std::make_unique<ModuleSummaryIndex>(
           buildModuleSummaryIndex(*M, nullptr, &PSI));
     }
-    WriteBitcodeToFile(getModule(), OutStream,
-                       /*ShouldPreserveUseListOrder=*/true, Index.get());
+    WriteBitcodeToFile(getModule(), OutStream, ShouldPreserveUseListOrder,
+                       Index.get());
   }
 }
 
@@ -802,9 +858,8 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
     };
 
     std::unique_ptr<Module> M = MParser->parseIRModule(SetDataLayout);
-    LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
 
-    MMM->MMI = std::make_unique<MachineModuleInfo>(LLVMTM);
+    MMM->MMI = std::make_unique<MachineModuleInfo>(TM.get());
     MParser->parseMachineFunctions(*M, *MMM->MMI);
     MMM->M = std::move(M);
   } else {

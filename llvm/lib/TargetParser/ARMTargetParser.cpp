@@ -32,7 +32,7 @@ ARM::ArchKind ARM::parseArch(StringRef Arch) {
   Arch = getCanonicalArchName(Arch);
   StringRef Syn = getArchSynonym(Arch);
   for (const auto &A : ARMArchNames) {
-    if (A.Name.endswith(Syn))
+    if (A.Name.ends_with(Syn))
       return A.ID;
   }
   return ArchKind::INVALID;
@@ -86,6 +86,9 @@ unsigned ARM::parseArchVersion(StringRef Arch) {
   case ArchKind::ARMV9_2A:
   case ArchKind::ARMV9_3A:
   case ArchKind::ARMV9_4A:
+  case ArchKind::ARMV9_5A:
+  case ArchKind::ARMV9_6A:
+  case ArchKind::ARMV9_7A:
     return 9;
   case ArchKind::INVALID:
     return 0;
@@ -123,6 +126,9 @@ static ARM::ProfileKind getProfileKind(ARM::ArchKind AK) {
   case ARM::ArchKind::ARMV9_2A:
   case ARM::ArchKind::ARMV9_3A:
   case ARM::ArchKind::ARMV9_4A:
+  case ARM::ArchKind::ARMV9_5A:
+  case ARM::ArchKind::ARMV9_6A:
+  case ARM::ArchKind::ARMV9_7A:
     return ARM::ProfileKind::A;
   case ARM::ArchKind::ARMV4:
   case ARM::ArchKind::ARMV4T:
@@ -231,16 +237,16 @@ ARM::NeonSupportLevel ARM::getFPUNeonSupportLevel(ARM::FPUKind FPUKind) {
 
 StringRef ARM::getFPUSynonym(StringRef FPU) {
   return StringSwitch<StringRef>(FPU)
-      .Cases("fpa", "fpe2", "fpe3", "maverick", "invalid") // Unsupported
+      .Cases({"fpa", "fpe2", "fpe3", "maverick"}, "invalid") // Unsupported
       .Case("vfp2", "vfpv2")
       .Case("vfp3", "vfpv3")
       .Case("vfp4", "vfpv4")
       .Case("vfp3-d16", "vfpv3-d16")
       .Case("vfp4-d16", "vfpv4-d16")
-      .Cases("fp4-sp-d16", "vfpv4-sp-d16", "fpv4-sp-d16")
-      .Cases("fp4-dp-d16", "fpv4-dp-d16", "vfpv4-d16")
+      .Cases({"fp4-sp-d16", "vfpv4-sp-d16"}, "fpv4-sp-d16")
+      .Cases({"fp4-dp-d16", "fpv4-dp-d16"}, "vfpv4-d16")
       .Case("fp5-sp-d16", "fpv5-sp-d16")
-      .Cases("fp5-dp-d16", "fpv5-dp-d16", "fpv5-d16")
+      .Cases({"fp5-dp-d16", "fpv5-dp-d16"}, "fpv5-d16")
       // FIXME: Clang uses it, but it's bogus, since neon defaults to vfpv3.
       .Case("neon-vfpv3", "neon")
       .Default(FPU);
@@ -348,11 +354,7 @@ StringRef ARM::getArchExtName(uint64_t ArchExtKind) {
 }
 
 static bool stripNegationPrefix(StringRef &Name) {
-  if (Name.startswith("no")) {
-    Name = Name.substr(2);
-    return true;
-  }
-  return false;
+  return Name.consume_front("no");
 }
 
 StringRef ARM::getArchExtFeature(StringRef ArchExt) {
@@ -403,13 +405,12 @@ static ARM::FPUKind findSinglePrecisionFPU(ARM::FPUKind InputFPUKind) {
   if (!ARM::isDoublePrecision(InputFPU.Restriction))
     return InputFPUKind;
 
-  // Otherwise, look for an FPU entry with all the same fields, except
-  // that it does not support double precision.
+  // Otherwise, look for an FPU entry that has the same FPUVer
+  // and is not Double Precision. We want to allow for changing of
+  // NEON Support and Restrictions so CPU's such as Cortex-R52 can
+  // select between SP Only and Full DP modes.
   for (const ARM::FPUName &CandidateFPU : ARM::FPUNames) {
     if (CandidateFPU.FPUVer == InputFPU.FPUVer &&
-        CandidateFPU.NeonSupport == InputFPU.NeonSupport &&
-        ARM::has32Regs(CandidateFPU.Restriction) ==
-            ARM::has32Regs(InputFPU.Restriction) &&
         !ARM::isDoublePrecision(CandidateFPU.Restriction)) {
       return CandidateFPU.ID;
     }
@@ -536,9 +537,8 @@ void ARM::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
   }
 }
 
-StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
-  StringRef ArchName =
-      CPU.empty() ? TT.getArchName() : getArchName(parseCPUArch(CPU));
+StringRef ARM::computeDefaultTargetABI(const Triple &TT) {
+  StringRef ArchName = TT.getArchName();
 
   if (TT.isOSBinFormatMachO()) {
     if (TT.getEnvironment() == Triple::EABI ||
@@ -556,7 +556,9 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
   switch (TT.getEnvironment()) {
   case Triple::Android:
   case Triple::GNUEABI:
+  case Triple::GNUEABIT64:
   case Triple::GNUEABIHF:
+  case Triple::GNUEABIHFT64:
   case Triple::MuslEABI:
   case Triple::MuslEABIHF:
   case Triple::OpenHOS:
@@ -567,11 +569,27 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
   default:
     if (TT.isOSNetBSD())
       return "apcs-gnu";
-    if (TT.isOSFreeBSD() || TT.isOSOpenBSD() || TT.isOSHaiku() ||
-        TT.isOHOSFamily())
+    if (TT.isOSFreeBSD() || TT.isOSFuchsia() || TT.isOSOpenBSD() ||
+        TT.isOSHaiku() || TT.isOHOSFamily())
       return "aapcs-linux";
     return "aapcs";
   }
+}
+
+ARM::ARMABI ARM::computeTargetABI(const Triple &TT, StringRef ABIName) {
+  if (ABIName.empty())
+    ABIName = ARM::computeDefaultTargetABI(TT);
+
+  if (ABIName == "aapcs16")
+    return ARM_ABI_AAPCS16;
+
+  if (ABIName.starts_with("aapcs"))
+    return ARM_ABI_AAPCS;
+
+  if (ABIName.starts_with("apcs"))
+    return ARM_ABI_APCS;
+
+  return ARM_ABI_UNKNOWN;
 }
 
 StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
@@ -600,6 +618,7 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   case llvm::Triple::TvOS:
   case llvm::Triple::WatchOS:
   case llvm::Triple::DriverKit:
+  case llvm::Triple::XROS:
     if (MArch == "v7k")
       return "cortex-a7";
     break;
@@ -611,7 +630,7 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
     return StringRef();
 
   StringRef CPU = llvm::ARM::getDefaultCPU(MArch);
-  if (!CPU.empty() && !CPU.equals("invalid"))
+  if (!CPU.empty() && CPU != "invalid")
     return CPU;
 
   // If no specific architecture version is requested, return the minimum CPU
@@ -629,13 +648,15 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
     default:
       return "strongarm";
     }
-  case llvm::Triple::NaCl:
   case llvm::Triple::OpenBSD:
     return "cortex-a8";
+  case llvm::Triple::Fuchsia:
+    return "cortex-a53";
   default:
     switch (Triple.getEnvironment()) {
     case llvm::Triple::EABIHF:
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::GNUEABIHFT64:
     case llvm::Triple::MuslEABIHF:
       return "arm1176jzf-s";
     default:
@@ -654,6 +675,10 @@ void ARM::PrintSupportedExtensions(StringMap<StringRef> DescMap) {
     // Extensions without a feature cannot be used with -march.
     if (!Ext.Feature.empty()) {
       std::string Description = DescMap[Ext.Name].str();
+      // With SIMD, this links to the NEON feature, so the description should be
+      // taken from here, as SIMD does not exist in TableGen.
+      if (Ext.Name == "simd")
+        Description = DescMap["neon"].str();
       outs() << "    "
              << format(Description.empty() ? "%s\n" : "%-20s%s\n",
                        Ext.Name.str().c_str(), Description.c_str());

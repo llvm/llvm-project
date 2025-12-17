@@ -1,8 +1,3 @@
-if( WIN32 AND NOT CYGWIN )
-  # We consider Cygwin as another Unix
-  set(PURE_WINDOWS 1)
-endif()
-
 include(CheckIncludeFile)
 include(CheckLibraryExists)
 include(CheckSymbolExists)
@@ -17,6 +12,51 @@ include(CheckCompilerVersion)
 include(CheckProblematicConfigurations)
 include(HandleLLVMStdlib)
 
+if (ANDROID OR CYGWIN OR CMAKE_SYSTEM_NAME MATCHES "AIX|DragonFly|FreeBSD|Haiku|Linux|NetBSD|OpenBSD|SunOS")
+  set(HAVE_MACH_MACH_H 0)
+  set(HAVE_MALLOC_MALLOC_H 0)
+  set(HAVE_PTHREAD_H 1)
+  set(HAVE_SYS_MMAN_H 1)
+  set(HAVE_SYSEXITS_H 1)
+  set(HAVE_UNISTD_H 1)
+  set(HAVE_SYS_IOCTL_H 1)
+elseif (APPLE)
+  set(HAVE_MACH_MACH_H 1)
+  set(HAVE_MALLOC_MALLOC_H 1)
+  set(HAVE_PTHREAD_H 1)
+  set(HAVE_SYS_MMAN_H 1)
+  set(HAVE_SYSEXITS_H 1)
+  set(HAVE_UNISTD_H 1)
+  set(HAVE_SYS_IOCTL_H 1)
+elseif (WIN32)
+  set(HAVE_MACH_MACH_H 0)
+  set(HAVE_MALLOC_MALLOC_H 0)
+  set(HAVE_PTHREAD_H 0)
+  set(HAVE_SYS_MMAN_H 0)
+  set(HAVE_SYSEXITS_H 0)
+  set(HAVE_UNISTD_H 0)
+  set(HAVE_SYS_IOCTL_H 0)
+elseif (ZOS)
+  # Confirmed in
+  # https://github.com/llvm/llvm-project/pull/104706#issuecomment-2297109613
+  set(HAVE_MACH_MACH_H 0)
+  set(HAVE_MALLOC_MALLOC_H 0)
+  set(HAVE_PTHREAD_H 1)
+  set(HAVE_SYS_MMAN_H 1)
+  set(HAVE_SYSEXITS_H 0)
+  set(HAVE_UNISTD_H 1)
+  set(HAVE_SYS_IOCTL_H 1)
+else()
+  # Other platforms that we don't promise support for.
+  check_include_file(mach/mach.h HAVE_MACH_MACH_H)
+  check_include_file(malloc/malloc.h HAVE_MALLOC_MALLOC_H)
+  check_include_file(pthread.h HAVE_PTHREAD_H)
+  check_include_file(sys/mman.h HAVE_SYS_MMAN_H)
+  check_include_file(sysexits.h HAVE_SYSEXITS_H)
+  check_include_file(unistd.h HAVE_UNISTD_H)
+  check_include_file(sys/ioctl.h HAVE_SYS_IOCTL_H)
+endif()
+
 if( UNIX AND NOT (APPLE OR BEOS OR HAIKU) )
   # Used by check_symbol_exists:
   list(APPEND CMAKE_REQUIRED_LIBRARIES "m")
@@ -29,39 +69,36 @@ endif()
 
 # Do checks with _XOPEN_SOURCE and large-file API on AIX, because we will build
 # with those too.
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
           list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_XOPEN_SOURCE=700")
           list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_LARGE_FILE_API")
 endif()
 
 # Do checks with _FILE_OFFSET_BITS=64 on Solaris, because we will build
 # with those too.
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "SunOS")
           list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_FILE_OFFSET_BITS=64")
 endif()
 
-# include checks
-check_include_file(dlfcn.h HAVE_DLFCN_H)
-check_include_file(errno.h HAVE_ERRNO_H)
-check_include_file(fcntl.h HAVE_FCNTL_H)
-check_include_file(link.h HAVE_LINK_H)
-check_include_file(malloc/malloc.h HAVE_MALLOC_MALLOC_H)
-if( NOT PURE_WINDOWS )
-  check_include_file(pthread.h HAVE_PTHREAD_H)
+# Newer POSIX functions aren't available without the appropriate defines.
+# Usually those are set by the use of -std=gnuXX, but one can also use the
+# newer functions with -std=c(++)XX, i.e. without the GNU language extensions.
+# Keep this at the top to make sure we don't add _GNU_SOURCE dependent checks
+# before adding it.
+check_symbol_exists(__GLIBC__ stdio.h LLVM_USING_GLIBC)
+if(LLVM_USING_GLIBC OR CYGWIN)
+  add_compile_definitions(_GNU_SOURCE)
+  list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")
 endif()
-check_include_file(signal.h HAVE_SIGNAL_H)
-check_include_file(sys/ioctl.h HAVE_SYS_IOCTL_H)
-check_include_file(sys/mman.h HAVE_SYS_MMAN_H)
-check_include_file(sys/param.h HAVE_SYS_PARAM_H)
-check_include_file(sys/resource.h HAVE_SYS_RESOURCE_H)
-check_include_file(sys/stat.h HAVE_SYS_STAT_H)
-check_include_file(sys/time.h HAVE_SYS_TIME_H)
-check_include_file(sys/types.h HAVE_SYS_TYPES_H)
-check_include_file(sysexits.h HAVE_SYSEXITS_H)
-check_include_file(termios.h HAVE_TERMIOS_H)
-check_include_file(unistd.h HAVE_UNISTD_H)
+
+# enable 64bit off_t on 32bit systems using glibc
+if(LLVM_USING_GLIBC AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+  add_compile_definitions(_FILE_OFFSET_BITS=64)
+  list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_FILE_OFFSET_BITS=64")
+endif()
+
+# include checks
 check_include_file(valgrind/valgrind.h HAVE_VALGRIND_VALGRIND_H)
-check_include_file(fenv.h HAVE_FENV_H)
 check_symbol_exists(FE_ALL_EXCEPT "fenv.h" HAVE_DECL_FE_ALL_EXCEPT)
 check_symbol_exists(FE_INEXACT "fenv.h" HAVE_DECL_FE_INEXACT)
 check_c_source_compiles("
@@ -76,7 +113,6 @@ check_c_source_compiles("
         int main(void) { return 0; }"
         HAVE_BUILTIN_THREAD_POINTER)
 
-check_include_file(mach/mach.h HAVE_MACH_MACH_H)
 check_include_file(CrashReporterClient.h HAVE_CRASHREPORTERCLIENT_H)
 if(APPLE)
   check_c_source_compiles("
@@ -86,7 +122,7 @@ if(APPLE)
     HAVE_CRASHREPORTER_INFO)
 endif()
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
   check_include_file(linux/magic.h HAVE_LINUX_MAGIC_H)
   if(NOT HAVE_LINUX_MAGIC_H)
     # older kernels use split files
@@ -96,7 +132,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 endif()
 
 # library checks
-if( NOT PURE_WINDOWS )
+if(NOT WIN32)
   check_library_exists(pthread pthread_create "" HAVE_LIBPTHREAD)
   if (HAVE_LIBPTHREAD)
     check_library_exists(pthread pthread_rwlock_init "" HAVE_PTHREAD_RWLOCK_INIT)
@@ -110,7 +146,7 @@ if( NOT PURE_WINDOWS )
     endif()
   endif()
   check_library_exists(dl dlopen "" HAVE_LIBDL)
-  check_library_exists(rt clock_gettime "" HAVE_LIBRT)
+  check_library_exists(rt shm_open "" HAVE_LIBRT)
 endif()
 
 # Check for libpfm.
@@ -159,8 +195,19 @@ if(LLVM_ENABLE_ZSTD)
   elseif(NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
     find_package(zstd QUIET)
   endif()
+
+  # If LLVM_USE_STATIC_ZSTD is specified, make sure we enable zstd only if static
+  # libraries are found.
+  if(LLVM_USE_STATIC_ZSTD AND NOT TARGET zstd::libzstd_static)
+    # Fail if LLVM_ENABLE_ZSTD is FORCE_ON.
+    if(LLVM_ENABLE_ZSTD STREQUAL FORCE_ON)
+        message(FATAL_ERROR "Failed to find static zstd libraries, but LLVM_USE_STATIC_ZSTD=ON and LLVM_ENABLE_ZSTD=FORCE_ON.")
+    endif()
+    set(LLVM_ENABLE_ZSTD OFF)
+  else()
+    set(LLVM_ENABLE_ZSTD ${zstd_FOUND})
+  endif()
 endif()
-set(LLVM_ENABLE_ZSTD ${zstd_FOUND})
 
 if(LLVM_ENABLE_LIBXML2)
   if(LLVM_ENABLE_LIBXML2 STREQUAL FORCE_ON)
@@ -228,7 +275,7 @@ endif()
 # party code may call MSan interceptors like strlen, leading to false positives.
 if(NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
   # Don't look for these libraries on Windows.
-  if (NOT PURE_WINDOWS)
+  if (NOT WIN32)
     # Skip libedit if using ASan as it contains memory leaks.
     if (LLVM_ENABLE_LIBEDIT AND NOT LLVM_USE_SANITIZER MATCHES ".*Address.*")
       if(LLVM_ENABLE_LIBEDIT STREQUAL FORCE_ON)
@@ -240,21 +287,57 @@ if(NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
     else()
       set(HAVE_LIBEDIT 0)
     endif()
-    if(LLVM_ENABLE_TERMINFO)
-      if(LLVM_ENABLE_TERMINFO STREQUAL FORCE_ON)
-        find_package(Terminfo REQUIRED)
-      else()
-        find_package(Terminfo)
-      endif()
-      set(LLVM_ENABLE_TERMINFO "${Terminfo_FOUND}")
-    endif()
   else()
     set(HAVE_LIBEDIT 0)
-    set(LLVM_ENABLE_TERMINFO 0)
   endif()
 else()
   set(HAVE_LIBEDIT 0)
-  set(LLVM_ENABLE_TERMINFO 0)
+endif()
+
+if(LLVM_HAS_LOGF128)
+  include(CheckCXXSymbolExists)
+  check_cxx_symbol_exists(logf128 math.h HAS_LOGF128)
+
+  if(LLVM_HAS_LOGF128 STREQUAL FORCE_ON AND NOT HAS_LOGF128)
+    message(FATAL_ERROR "Failed to configure logf128")
+  endif()
+
+  set(LLVM_HAS_LOGF128 "${HAS_LOGF128}")
+endif()
+
+if (LLVM_ENABLE_ICU STREQUAL FORCE_ON AND LLVM_ENABLE_ICONV STREQUAL FORCE_ON)
+  message(FATAL_ERROR "LLVM_ENABLE_ICU and LLVM_ENABLE_ICONV should not both be FORCE_ON")
+endif()
+
+# Check for ICU. Only allow an optional, dynamic link for ICU so we don't impact LLVM's licensing.
+if(LLVM_ENABLE_ICU AND NOT(LLVM_ENABLE_ICONV STREQUAL FORCE_ON))
+  set(LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  if (LLVM_ENABLE_ICU STREQUAL FORCE_ON)
+    find_package(ICU REQUIRED COMPONENTS uc i18n)
+    if (NOT ICU_FOUND)
+      message(FATAL_ERROR "Failed to configure ICU, but LLVM_ENABLE_ICU is FORCE_ON")
+    endif()
+  else()
+    find_package(ICU COMPONENTS uc i18n)
+  endif()
+  set(HAVE_ICU ${ICU_FOUND})
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ${LIBRARY_SUFFIXES})
+endif()
+
+# Check only for builtin iconv to avoid licensing issues.
+if(LLVM_ENABLE_ICONV AND NOT HAVE_ICU)
+  if (LLVM_ENABLE_ICONV STREQUAL FORCE_ON)
+    find_package(Iconv REQUIRED)
+    if (NOT Iconv_FOUND OR NOT Iconv_IS_BUILT_IN)
+      message(FATAL_ERROR "Failed to configure iconv, but LLVM_ENABLE_ICONV is FORCE_ON")
+    endif()
+  else()
+    find_package(Iconv)
+  endif()
+  if(Iconv_FOUND AND Iconv_IS_BUILT_IN)
+    set(HAVE_ICONV 1)
+  endif()
 endif()
 
 # function checks
@@ -279,15 +362,15 @@ check_symbol_exists(_Unwind_Backtrace "unwind.h" HAVE__UNWIND_BACKTRACE)
 check_symbol_exists(getpagesize unistd.h HAVE_GETPAGESIZE)
 check_symbol_exists(sysconf unistd.h HAVE_SYSCONF)
 check_symbol_exists(getrusage sys/resource.h HAVE_GETRUSAGE)
-check_symbol_exists(setrlimit sys/resource.h HAVE_SETRLIMIT)
 check_symbol_exists(isatty unistd.h HAVE_ISATTY)
 check_symbol_exists(futimens sys/stat.h HAVE_FUTIMENS)
 check_symbol_exists(futimes sys/time.h HAVE_FUTIMES)
+check_symbol_exists(getauxval sys/auxv.h HAVE_GETAUXVAL)
 # AddressSanitizer conflicts with lib/Support/Unix/Signals.inc
 # Avoid sigaltstack on Apple platforms, where backtrace() cannot handle it
 # (rdar://7089625) and _Unwind_Backtrace is unusable because it cannot unwind
 # past the signal handler after an assertion failure (rdar://29866587).
-if( HAVE_SIGNAL_H AND NOT LLVM_USE_SANITIZER MATCHES ".*Address.*" AND NOT APPLE )
+if( NOT LLVM_USE_SANITIZER MATCHES ".*Address.*" AND NOT APPLE )
   check_symbol_exists(sigaltstack signal.h HAVE_SIGALTSTACK)
 endif()
 check_symbol_exists(mallctl malloc_np.h HAVE_MALLCTL)
@@ -295,14 +378,13 @@ check_symbol_exists(mallinfo malloc.h HAVE_MALLINFO)
 check_symbol_exists(mallinfo2 malloc.h HAVE_MALLINFO2)
 check_symbol_exists(malloc_zone_statistics malloc/malloc.h
                     HAVE_MALLOC_ZONE_STATISTICS)
-check_symbol_exists(getrlimit "sys/types.h;sys/time.h;sys/resource.h" HAVE_GETRLIMIT)
 check_symbol_exists(posix_spawn spawn.h HAVE_POSIX_SPAWN)
 check_symbol_exists(pread unistd.h HAVE_PREAD)
 check_symbol_exists(sbrk unistd.h HAVE_SBRK)
 check_symbol_exists(strerror_r string.h HAVE_STRERROR_R)
 check_symbol_exists(strerror_s string.h HAVE_DECL_STRERROR_S)
 check_symbol_exists(setenv stdlib.h HAVE_SETENV)
-if( PURE_WINDOWS )
+if(WIN32)
   check_symbol_exists(_chsize_s io.h HAVE__CHSIZE_S)
 
   check_function_exists(_alloca HAVE__ALLOCA)
@@ -329,7 +411,7 @@ endif()
 
 CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtimespec.tv_nsec
     "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC)
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
 # The st_mtim.tv_nsec member of a `stat` structure is not reliable on some AIX
 # environments.
   set(HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC 0)
@@ -338,36 +420,29 @@ else()
       "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC)
 endif()
 
-check_symbol_exists(__GLIBC__ stdio.h LLVM_USING_GLIBC)
-if( LLVM_USING_GLIBC )
-  add_compile_definitions(_GNU_SOURCE)
-  list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")
-# enable 64bit off_t on 32bit systems using glibc
-  if (CMAKE_SIZEOF_VOID_P EQUAL 4)
-    add_compile_definitions(_FILE_OFFSET_BITS=64)
-    list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_FILE_OFFSET_BITS=64")
-  endif()
-endif()
-
-# This check requires _GNU_SOURCE.
-if (NOT PURE_WINDOWS)
+if (NOT WIN32)
   if (LLVM_PTHREAD_LIB)
     list(APPEND CMAKE_REQUIRED_LIBRARIES ${LLVM_PTHREAD_LIB})
   endif()
   check_symbol_exists(pthread_getname_np pthread.h HAVE_PTHREAD_GETNAME_NP)
   check_symbol_exists(pthread_setname_np pthread.h HAVE_PTHREAD_SETNAME_NP)
+  check_symbol_exists(pthread_get_name_np "pthread.h;pthread_np.h" HAVE_PTHREAD_GET_NAME_NP)
+  check_symbol_exists(pthread_set_name_np "pthread.h;pthread_np.h" HAVE_PTHREAD_SET_NAME_NP)
   if (LLVM_PTHREAD_LIB)
     list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES ${LLVM_PTHREAD_LIB})
   endif()
-endif()
 
-# This check requires _GNU_SOURCE.
-if( HAVE_DLFCN_H )
   if( HAVE_LIBDL )
     list(APPEND CMAKE_REQUIRED_LIBRARIES dl)
   endif()
+  # Add the _XOPEN_SOURCE macro on z/OS, as certain test(s) use dlopen
+  if (ZOS)
+    list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_XOPEN_SOURCE=600")
+  endif()
   check_symbol_exists(dlopen dlfcn.h HAVE_DLOPEN)
-  check_symbol_exists(dladdr dlfcn.h HAVE_DLADDR)
+  if (ZOS)
+    list(REMOVE_ITEM CMAKE_REQUIRED_DEFINITIONS "-D_XOPEN_SOURCE=600")
+  endif()
   if( HAVE_LIBDL )
     list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES dl)
   endif()
@@ -415,15 +490,18 @@ if( LLVM_ENABLE_PIC )
   set(ENABLE_PIC 1)
 else()
   set(ENABLE_PIC 0)
-  check_cxx_compiler_flag("-fno-pie" SUPPORTS_NO_PIE_FLAG)
-  if(SUPPORTS_NO_PIE_FLAG)
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fno-pie")
-  endif()
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fno-pie")
 endif()
 
-check_cxx_compiler_flag("-Wvariadic-macros" SUPPORTS_VARIADIC_MACROS_FLAG)
-check_cxx_compiler_flag("-Wgnu-zero-variadic-macro-arguments"
-                        SUPPORTS_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS_FLAG)
+set(SUPPORTS_VARIADIC_MACROS_FLAG 0)
+if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
+  set(SUPPORTS_VARIADIC_MACROS_FLAG 1)
+endif()
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  set(SUPPORTS_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS_FLAG 1)
+else()
+  set(SUPPORTS_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS_FLAG 0)
+endif()
 
 set(USE_NO_MAYBE_UNINITIALIZED 0)
 set(USE_NO_UNINITIALIZED 0)
@@ -431,15 +509,11 @@ set(USE_NO_UNINITIALIZED 0)
 # Disable gcc's potentially uninitialized use analysis as it presents lots of
 # false positives.
 if (CMAKE_COMPILER_IS_GNUCXX)
-  check_cxx_compiler_flag("-Wmaybe-uninitialized" HAS_MAYBE_UNINITIALIZED)
-  if (HAS_MAYBE_UNINITIALIZED)
-    set(USE_NO_MAYBE_UNINITIALIZED 1)
+  # Disable all -Wuninitialized warning for old GCC versions.
+  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 15.0)
+    set(USE_NO_UNINITIALIZED 1)
   else()
-    # Only recent versions of gcc make the distinction between -Wuninitialized
-    # and -Wmaybe-uninitialized. If -Wmaybe-uninitialized isn't supported, just
-    # turn off all uninitialized use warnings.
-    check_cxx_compiler_flag("-Wuninitialized" HAS_UNINITIALIZED)
-    set(USE_NO_UNINITIALIZED ${HAS_UNINITIALIZED})
+    set(USE_NO_MAYBE_UNINITIALIZED 1)
   endif()
 endif()
 
@@ -641,12 +715,25 @@ if(CMAKE_HOST_APPLE AND APPLE)
     if(NOT CMAKE_XCRUN)
       find_program(CMAKE_XCRUN NAMES xcrun)
     endif()
+
+    # First, check if there's ld-classic, which is ld64 in newer SDKs.
     if(CMAKE_XCRUN)
-      execute_process(COMMAND ${CMAKE_XCRUN} -find ld
+      execute_process(COMMAND ${CMAKE_XCRUN} -find ld-classic
         OUTPUT_VARIABLE LD64_EXECUTABLE
         OUTPUT_STRIP_TRAILING_WHITESPACE)
     else()
-      find_program(LD64_EXECUTABLE NAMES ld DOC "The ld64 linker")
+      find_program(LD64_EXECUTABLE NAMES ld-classic DOC "The ld64 linker")
+    endif()
+
+    # Otherwise look for ld directly.
+    if(NOT LD64_EXECUTABLE)
+        if(CMAKE_XCRUN)
+          execute_process(COMMAND ${CMAKE_XCRUN} -find ld
+            OUTPUT_VARIABLE LD64_EXECUTABLE
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+        else()
+          find_program(LD64_EXECUTABLE NAMES ld DOC "The ld64 linker")
+        endif()
     endif()
   endif()
 

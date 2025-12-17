@@ -10,15 +10,18 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
 
+#include "hdr/types/pid_t.h"
+#include "hdr/types/struct_timespec.h"
 #include <sys/syscall.h> // For syscall numbers.
 
 #ifdef SYS_sched_rr_get_interval_time64
 #include <linux/time_types.h> // For __kernel_timespec.
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, sched_rr_get_interval,
                    (pid_t tid, struct timespec *tp)) {
@@ -36,7 +39,7 @@ LLVM_LIBC_FUNCTION(int, sched_rr_get_interval,
                                             tid, &ts32);
     if (ret == 0) {
       tp->tv_sec = ts32.tv_sec;
-      tp->tv_nsec = ts32.tv_nsec;
+      tp->tv_nsec = static_cast<long int>(ts32.tv_nsec);
     }
   } else
     // When tp is a nullptr, we still do the syscall to set ret and errno
@@ -53,4 +56,4 @@ LLVM_LIBC_FUNCTION(int, sched_rr_get_interval,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

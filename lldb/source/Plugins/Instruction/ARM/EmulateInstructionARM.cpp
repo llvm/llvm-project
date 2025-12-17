@@ -830,7 +830,8 @@ uint32_t EmulateInstructionARM::GetFramePointerRegisterNumber() const {
   case llvm::Triple::IOS:
   case llvm::Triple::TvOS:
   case llvm::Triple::WatchOS:
-  // NEED_BRIDGEOS_TRIPLE case llvm::Triple::BridgeOS:
+  case llvm::Triple::XROS:
+  case llvm::Triple::BridgeOS:
     is_apple = true;
     break;
   default:
@@ -14134,7 +14135,13 @@ EmulateInstructionARM::AddWithCarry(uint32_t x, uint32_t y, uint8_t carry_in) {
   uint8_t overflow;
 
   uint64_t unsigned_sum = x + y + carry_in;
-  int64_t signed_sum = (int32_t)x + (int32_t)y + (int32_t)carry_in;
+  int64_t signed_sum = 0;
+  int32_t signed_sum32;
+  if (llvm::AddOverflow((int32_t)x, (int32_t)y, signed_sum32))
+    signed_sum++;
+  signed_sum += signed_sum32;
+
+  signed_sum += (int32_t)carry_in;
 
   result = UnsignedBits(unsigned_sum, 31, 0);
   //    carry_out = (result == unsigned_sum ? 0 : 1);
@@ -14457,16 +14464,29 @@ bool EmulateInstructionARM::CreateFunctionEntryUnwind(UnwindPlan &unwind_plan) {
   unwind_plan.Clear();
   unwind_plan.SetRegisterKind(eRegisterKindDWARF);
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Our previous Call Frame Address is the stack pointer
-  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_sp, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_sp, 0);
 
-  unwind_plan.AppendRow(row);
+  unwind_plan.AppendRow(std::move(row));
   unwind_plan.SetSourceName("EmulateInstructionARM");
   unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
   unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);
   unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
   unwind_plan.SetReturnAddressRegister(dwarf_lr);
   return true;
+}
+
+llvm::Expected<unsigned>
+ARMSingleStepBreakpointLocationsPredictor::GetBreakpointSize(
+    lldb::addr_t bp_addr) {
+  auto flags = m_emulator_up->ReadRegisterUnsigned(
+      eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FLAGS, LLDB_INVALID_ADDRESS,
+      nullptr);
+  if (flags == LLDB_INVALID_ADDRESS)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Reading flags failed!");
+
+  return (flags & 0x20) ? /* Thumb mode */ 2 : /* Arm mode */ 4;
 }

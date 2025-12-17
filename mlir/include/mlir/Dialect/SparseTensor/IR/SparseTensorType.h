@@ -23,7 +23,7 @@ namespace sparse_tensor {
 ///
 /// (1) To provide a uniform API for querying aspects of sparse-tensor
 /// types; in particular, to make the "dimension" vs "level" distinction
-/// overt (i.e., explicit everywhere).  Thus, throughout the sparse-compiler
+/// overt (i.e., explicit everywhere).  Thus, throughout the sparsifier
 /// this class should be preferred over using `RankedTensorType` or
 /// `ShapedType` directly, since the methods of the latter do not make
 /// the "dimension" vs "level" distinction overt.
@@ -34,7 +34,7 @@ namespace sparse_tensor {
 /// That is, we want to manipulate dense-tensor types using the same API
 /// that we use for manipulating sparse-tensor types; both to keep the
 /// "dimension" vs "level" distinction overt, and to avoid needing to
-/// handle certain cases specially in the sparse-compiler.
+/// handle certain cases specially in the sparsifier.
 ///
 /// (3) To provide uniform handling of "defaults".  In particular
 /// this means that dense-tensors should always return the same answers
@@ -64,18 +64,14 @@ public:
   SparseTensorType(const SparseTensorType &) = default;
 
   //
-  // Factory methods.
+  // Factory methods to construct a new `SparseTensorType`
+  // with the same dimension-shape and element type.
   //
 
-  /// Constructs a new `SparseTensorType` with the same dimension-shape
-  /// and element type, but with the encoding replaced by the given encoding.
   SparseTensorType withEncoding(SparseTensorEncodingAttr newEnc) const {
     return SparseTensorType(rtp, newEnc);
   }
 
-  /// Constructs a new `SparseTensorType` with the same dimension-shape
-  /// and element type, but with the encoding replaced by
-  /// `getEncoding().withDimToLvl(dimToLvl)`.
   SparseTensorType withDimToLvl(AffineMap dimToLvl) const {
     return withEncoding(enc.withDimToLvl(dimToLvl));
   }
@@ -88,25 +84,32 @@ public:
     return withDimToLvl(dimToLvlSTT.getEncoding());
   }
 
-  /// Constructs a new `SparseTensorType` with the same dimension-shape
-  /// and element type, but with the encoding replaced by
-  /// `getEncoding().withoutDimToLvl()`.
   SparseTensorType withoutDimToLvl() const {
     return withEncoding(enc.withoutDimToLvl());
   }
 
-  /// Constructs a new `SparseTensorType` with the same dimension-shape
-  /// and element type, but with the encoding replaced by
-  /// `getEncoding().withBitWidths(posWidth, crdWidth)`.
   SparseTensorType withBitWidths(unsigned posWidth, unsigned crdWidth) const {
     return withEncoding(enc.withBitWidths(posWidth, crdWidth));
   }
 
-  /// Constructs a new `SparseTensorType` with the same dimension-shape
-  /// and element type, but with the encoding replaced by
-  /// `getEncoding().withoutBitWidths()`.
   SparseTensorType withoutBitWidths() const {
     return withEncoding(enc.withoutBitWidths());
+  }
+
+  SparseTensorType withExplicitVal(Attribute explicitVal) const {
+    return withEncoding(enc.withExplicitVal(explicitVal));
+  }
+
+  SparseTensorType withoutExplicitVal() const {
+    return withEncoding(enc.withoutExplicitVal());
+  }
+
+  SparseTensorType withImplicitVal(Attribute implicitVal) const {
+    return withEncoding(enc.withImplicitVal(implicitVal));
+  }
+
+  SparseTensorType withoutImplicitVal() const {
+    return withEncoding(enc.withoutImplicitVal());
   }
 
   SparseTensorType
@@ -118,10 +121,6 @@ public:
     return withEncoding(enc.withoutDimSlices());
   }
 
-  //
-  // Other methods.
-  //
-
   /// Allow implicit conversion to `RankedTensorType`, `ShapedType`,
   /// and `Type`.  These are implicit to help alleviate the impedance
   /// mismatch for code that has not been converted to use `SparseTensorType`
@@ -132,7 +131,7 @@ public:
   /// ambiguity whenever passing a `SparseTensorType` directly to a
   /// function which is overloaded to accept either `Type` or `TypeRange`.
   /// In particular, this includes `RewriterBase::replaceOpWithNewOp<OpTy>`
-  /// and `OpBuilder::create<OpTy>` whenever the `OpTy::build` is overloaded
+  /// and `OpTy::create` whenever the `OpTy::build` is overloaded
   /// thus.  This happens because the `TypeRange<T>(T&&)` ctor is implicit
   /// as well, and there's no SFINAE we can add to this method that would
   /// block subsequent application of that ctor.  The only way to fix the
@@ -170,7 +169,6 @@ public:
 
   Type getElementType() const { return rtp.getElementType(); }
 
-  /// Returns the encoding (or the null-attribute for dense-tensors).
   SparseTensorEncodingAttr getEncoding() const { return enc; }
 
   //
@@ -203,6 +201,10 @@ public:
   /// Returns true if the dimToLvl mapping is the identity.
   /// (This is always true for dense-tensors.)
   bool isIdentity() const { return enc.isIdentity(); }
+
+  //
+  // Other methods.
+  //
 
   /// Returns the dimToLvl mapping (or the null-map for the identity).
   /// If you intend to compare the results of this method for equality,
@@ -242,15 +244,26 @@ public:
   /// Returns the dimension-shape.
   ArrayRef<Size> getDimShape() const { return rtp.getShape(); }
 
-  /// Returns the Level-shape.
+  /// Returns the level-shape.
   SmallVector<Size> getLvlShape() const {
-    return getEncoding().tranlateShape(getDimShape(),
-                                       CrdTransDirectionKind::dim2lvl);
+    return getEncoding().translateShape(getDimShape(),
+                                        CrdTransDirectionKind::dim2lvl);
   }
 
+  /// Returns the batched level-rank.
+  unsigned getBatchLvlRank() const { return getEncoding().getBatchLvlRank(); }
+
+  /// Returns the batched level-shape.
+  SmallVector<Size> getBatchLvlShape() const {
+    auto lvlShape = getEncoding().translateShape(
+        getDimShape(), CrdTransDirectionKind::dim2lvl);
+    lvlShape.truncate(getEncoding().getBatchLvlRank());
+    return lvlShape;
+  }
+
+  /// Returns the type with an identity mapping.
   RankedTensorType getDemappedType() const {
-    auto lvlShape = getLvlShape();
-    return RankedTensorType::get(lvlShape, rtp.getElementType(),
+    return RankedTensorType::get(getLvlShape(), getElementType(),
                                  enc.withoutDimToLvl());
   }
 
@@ -280,10 +293,10 @@ public:
   /// Returns the number of dimensions which have dynamic sizes.
   /// The return type is `int64_t` to maintain consistency with
   /// `ShapedType::Trait<T>::getNumDynamicDims`.
-  int64_t getNumDynamicDims() const { return rtp.getNumDynamicDims(); }
+  size_t getNumDynamicDims() const { return rtp.getNumDynamicDims(); }
 
-  ArrayRef<DimLevelType> getLvlTypes() const { return enc.getLvlTypes(); }
-  DimLevelType getLvlType(Level l) const {
+  ArrayRef<LevelType> getLvlTypes() const { return enc.getLvlTypes(); }
+  LevelType getLvlType(Level l) const {
     // This OOB check is for dense-tensors, since this class knows
     // their lvlRank (whereas STEA::getLvlType will/can only check
     // OOB for sparse-tensors).
@@ -293,11 +306,17 @@ public:
 
   // We can't just delegate these, since we want to use this class's
   // `getLvlType` method instead of STEA's.
-  bool isDenseLvl(Level l) const { return isDenseDLT(getLvlType(l)); }
-  bool isCompressedLvl(Level l) const { return isCompressedDLT(getLvlType(l)); }
-  bool isSingletonLvl(Level l) const { return isSingletonDLT(getLvlType(l)); }
-  bool isOrderedLvl(Level l) const { return isOrderedDLT(getLvlType(l)); }
-  bool isUniqueLvl(Level l) const { return isUniqueDLT(getLvlType(l)); }
+  bool isDenseLvl(Level l) const { return isDenseLT(getLvlType(l)); }
+  bool isCompressedLvl(Level l) const { return isCompressedLT(getLvlType(l)); }
+  bool isLooseCompressedLvl(Level l) const {
+    return isLooseCompressedLT(getLvlType(l));
+  }
+  bool isSingletonLvl(Level l) const { return isSingletonLT(getLvlType(l)); }
+  bool isNOutOfMLvl(Level l) const { return isNOutOfMLT(getLvlType(l)); }
+  bool isOrderedLvl(Level l) const { return isOrderedLT(getLvlType(l)); }
+  bool isUniqueLvl(Level l) const { return isUniqueLT(getLvlType(l)); }
+  bool isWithPos(Level l) const { return isWithPosLT(getLvlType(l)); }
+  bool isWithCrd(Level l) const { return isWithCrdLT(getLvlType(l)); }
 
   /// Returns the coordinate-overhead bitwidth, defaulting to zero.
   unsigned getCrdWidth() const { return enc ? enc.getCrdWidth() : 0; }
@@ -305,18 +324,40 @@ public:
   /// Returns the position-overhead bitwidth, defaulting to zero.
   unsigned getPosWidth() const { return enc ? enc.getPosWidth() : 0; }
 
-  /// Returns the coordinate-overhead MLIR type, defaulting to `IndexType`.
-  Type getCrdType() const {
-    if (getCrdWidth())
-      return IntegerType::get(getContext(), getCrdWidth());
-    return IndexType::get(getContext());
+  /// Returns the explicit value, defaulting to null Attribute for unset.
+  Attribute getExplicitVal() const {
+    return enc ? enc.getExplicitVal() : nullptr;
   }
 
+  /// Returns the implicit value, defaulting to null Attribute for 0.
+  Attribute getImplicitVal() const {
+    return enc ? enc.getImplicitVal() : nullptr;
+  }
+
+  /// Returns the coordinate-overhead MLIR type, defaulting to `IndexType`.
+  Type getCrdType() const { return enc.getCrdElemType(); }
+
   /// Returns the position-overhead MLIR type, defaulting to `IndexType`.
-  Type getPosType() const {
-    if (getPosWidth())
-      return IntegerType::get(getContext(), getPosWidth());
-    return IndexType::get(getContext());
+  Type getPosType() const { return enc.getPosElemType(); }
+
+  /// Returns true iff this sparse tensor type has a trailing
+  /// COO region starting at the given level. By default, it
+  /// tests for a unique COO type at top level.
+  bool isCOOType(Level startLvl = 0, bool isUnique = true) const;
+
+  /// Returns the starting level of this sparse tensor type for a
+  /// trailing COO region that spans **at least** two levels. If
+  /// no such COO region is found, then returns the level-rank.
+  ///
+  /// DEPRECATED: use getCOOSegment instead;
+  Level getAoSCOOStart() const { return getEncoding().getAoSCOOStart(); };
+
+  /// Returns [un]ordered COO type for this sparse tensor type.
+  RankedTensorType getCOOType(bool ordered) const;
+
+  /// Returns a list of COO segments in the sparse tensor types.
+  SmallVector<COOSegment> getCOOSegments() const {
+    return getEncoding().getCOOSegments();
   }
 
 private:

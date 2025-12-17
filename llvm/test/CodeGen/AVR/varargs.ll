@@ -1,10 +1,10 @@
-; RUN: llc -mattr=sram,movw,addsubiw < %s -march=avr | FileCheck %s
+; RUN: llc -mattr=sram,movw,addsubiw < %s -mtriple=avr | FileCheck %s
 
-declare void @llvm.va_start(i8*)
-declare i16 @vsprintf(i8* nocapture, i8* nocapture, i8*)
-declare void @llvm.va_end(i8*)
+declare void @llvm.va_start(ptr)
+declare i16 @vsprintf(ptr nocapture, ptr nocapture, ptr)
+declare void @llvm.va_end(ptr)
 
-define i16 @varargs1(i8* nocapture %x, ...) {
+define i16 @varargs1(ptr nocapture %x, ...) {
 ; CHECK-LABEL: varargs1:
 ; CHECK: movw r20, r28
 ; CHECK: subi r20, 215
@@ -15,25 +15,25 @@ define i16 @varargs1(i8* nocapture %x, ...) {
 ; CHECK: ldd r23, Y+40
 ; CHECK: call
   %buffer = alloca [32 x i8]
-  %ap = alloca i8*
-  %ap1 = bitcast i8** %ap to i8*
-  call void @llvm.va_start(i8* %ap1)
-  %arraydecay = getelementptr inbounds [32 x i8], [32 x i8]* %buffer, i16 0, i16 0
-  %1 = load i8*, i8** %ap
-  %call = call i16 @vsprintf(i8* %arraydecay, i8* %x, i8* %1)
-  call void @llvm.va_end(i8* %ap1)
+  %ap = alloca ptr
+  %ap1 = bitcast ptr %ap to ptr
+  call void @llvm.va_start(ptr %ap1)
+  %arraydecay = getelementptr inbounds [32 x i8], ptr %buffer, i16 0, i16 0
+  %1 = load ptr, ptr %ap
+  %call = call i16 @vsprintf(ptr %arraydecay, ptr %x, ptr %1)
+  call void @llvm.va_end(ptr %ap1)
   ret i16 0
 }
 
-define i16 @varargs2(i8* nocapture %x, ...) {
+define i16 @varargs2(ptr nocapture %x, ...) {
 ; CHECK-LABEL: varargs2:
 ; CHECK: ldd r24, [[REG:X|Y|Z]]+{{[0-9]+}}
 ; CHECK: ldd r25, [[REG]]+{{[0-9]+}}
-  %ap = alloca i8*
-  %ap1 = bitcast i8** %ap to i8*
-  call void @llvm.va_start(i8* %ap1)
-  %1 = va_arg i8** %ap, i16
-  call void @llvm.va_end(i8* %ap1)
+  %ap = alloca ptr
+  %ap1 = bitcast ptr %ap to ptr
+  call void @llvm.va_start(ptr %ap1)
+  %1 = va_arg ptr %ap, i16
+  call void @llvm.va_end(ptr %ap1)
   ret i16 %1
 }
 

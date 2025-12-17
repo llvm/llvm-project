@@ -20,7 +20,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -64,7 +63,6 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -236,7 +234,7 @@ static ArrayRef<Use> GetDeoptBundleOperands(const CallBase *Call) {
   if (!DeoptBundle) {
     assert(AllowStatepointWithNoDeoptInfo &&
            "Found non-leaf call without deopt info!");
-    return std::nullopt;
+    return {};
   }
 
   return DeoptBundle->Inputs;
@@ -578,8 +576,15 @@ static Value *findBaseDefiningValue(Value *I, DefiningValueMapTy &Cache,
     return I;
   }
 
-  assert(!isa<AtomicRMWInst>(I) && "Xchg handled above, all others are "
-                                   "binary ops which don't apply to pointers");
+  if (isa<AtomicRMWInst>(I)) {
+    assert(cast<AtomicRMWInst>(I)->getOperation() == AtomicRMWInst::Xchg &&
+           "Only Xchg is allowed for pointer values");
+    // A RMW Xchg is a combined atomic load and store, so we can treat the
+    // loaded value as a base pointer.
+    Cache[I] = I;
+    setKnownBase(I, /* IsKnownBase */ true, KnownBases);
+    return I;
+  }
 
   // The aggregate ops.  Aggregates can either be in the heap or on the
   // stack, but in either case, this is simply a field load.  As a result,
@@ -967,51 +972,6 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
     return BDVState(BaseValue, BDVState::Base, BaseValue);
   };
 
-  bool Progress = true;
-  while (Progress) {
-#ifndef NDEBUG
-    const size_t OldSize = States.size();
-#endif
-    Progress = false;
-    // We're only changing values in this loop, thus safe to keep iterators.
-    // Since this is computing a fixed point, the order of visit does not
-    // effect the result.  TODO: We could use a worklist here and make this run
-    // much faster.
-    for (auto Pair : States) {
-      Value *BDV = Pair.first;
-      // Only values that do not have known bases or those that have differing
-      // type (scalar versus vector) from a possible known base should be in the
-      // lattice.
-      assert((!isKnownBase(BDV, KnownBases) ||
-             !areBothVectorOrScalar(BDV, Pair.second.getBaseValue())) &&
-                 "why did it get added?");
-
-      BDVState NewState(BDV);
-      visitBDVOperands(BDV, [&](Value *Op) {
-        Value *BDV = findBaseOrBDV(Op, Cache, KnownBases);
-        auto OpState = GetStateForBDV(BDV, Op);
-        NewState.meet(OpState);
-      });
-
-      BDVState OldState = Pair.second;
-      if (OldState != NewState) {
-        Progress = true;
-        States[BDV] = NewState;
-      }
-    }
-
-    assert(OldSize == States.size() &&
-           "fixed point shouldn't be adding any new nodes to state");
-  }
-
-#ifndef NDEBUG
-  VerifyStates();
-  LLVM_DEBUG(dbgs() << "States after meet iteration:\n");
-  for (const auto &Pair : States) {
-    LLVM_DEBUG(dbgs() << " " << Pair.second << " for " << *Pair.first << "\n");
-  }
-#endif
-
   // Even though we have identified a concrete base (or a conflict) for all live
   // pointers at this point, there are cases where the base is of an
   // incompatible type compared to the original instruction. We conservatively
@@ -1023,7 +983,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
   // the BDVs.
   // TODO: in many cases the instructions emited for the conflicting states
   // will be identical to the I itself (if the I's operate on their BDVs
-  // themselves). We should expoit this, but can't do it here since it would
+  // themselves). We should exploit this, but can't do it here since it would
   // break the invariant about the BDVs not being known to be a base.
   // TODO: the code also does not handle constants at all - the algorithm relies
   // on all constants having the same BDV and therefore constant-only insns
@@ -1050,6 +1010,60 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
     return false;
   };
 
+  bool Progress = true;
+  while (Progress) {
+#ifndef NDEBUG
+    const size_t OldSize = States.size();
+#endif
+    Progress = false;
+    // We're only changing values in this loop, thus safe to keep iterators.
+    // Since this is computing a fixed point, the order of visit does not
+    // effect the result.  TODO: We could use a worklist here and make this run
+    // much faster.
+    for (auto Pair : States) {
+      Value *BDV = Pair.first;
+      // Only values that do not have known bases or those that have differing
+      // type (scalar versus vector) from a possible known base should be in the
+      // lattice.
+      assert((!isKnownBase(BDV, KnownBases) ||
+             !areBothVectorOrScalar(BDV, Pair.second.getBaseValue())) &&
+                 "why did it get added?");
+
+      BDVState NewState(BDV);
+      visitBDVOperands(BDV, [&](Value *Op) {
+        Value *BDV = findBaseOrBDV(Op, Cache, KnownBases);
+        auto OpState = GetStateForBDV(BDV, Op);
+        NewState.meet(OpState);
+      });
+
+      // if the instruction has known base, but should in fact be marked as
+      // conflict because of incompatible in/out types, we mark it as such
+      // ensuring that it will propagate through the fixpoint iteration
+      auto I = cast<Instruction>(BDV);
+      auto BV = NewState.getBaseValue();
+      if (BV && MarkConflict(I, BV))
+        NewState = BDVState(I, BDVState::Conflict);
+
+      BDVState OldState = Pair.second;
+      if (OldState != NewState) {
+        Progress = true;
+        States[BDV] = NewState;
+      }
+    }
+
+    assert(OldSize == States.size() &&
+           "fixed point shouldn't be adding any new nodes to state");
+  }
+
+#ifndef NDEBUG
+  VerifyStates();
+  LLVM_DEBUG(dbgs() << "States after meet iteration:\n");
+  for (const auto &Pair : States) {
+    LLVM_DEBUG(dbgs() << " " << Pair.second << " for " << *Pair.first << "\n");
+  }
+
+  // since we do the conflict marking as part of the fixpoint iteration this
+  // loop only asserts that invariants are met
   for (auto Pair : States) {
     Instruction *I = cast<Instruction>(Pair.first);
     BDVState State = Pair.second;
@@ -1061,18 +1075,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
         (!isKnownBase(I, KnownBases) || !areBothVectorOrScalar(I, BaseValue)) &&
         "why did it get added?");
     assert(!State.isUnknown() && "Optimistic algorithm didn't complete!");
-
-    // since we only mark vec-scalar insns as conflicts in the pass, our work is
-    // done if the instruction already conflicts
-    if (State.isConflict())
-      continue;
-
-    if (MarkConflict(I, BaseValue))
-      States[I] = BDVState(I, BDVState::Conflict);
   }
-
-#ifndef NDEBUG
-  VerifyStates();
 #endif
 
   // Insert Phis for all conflicts
@@ -1111,7 +1114,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
     };
 
     Instruction *BaseInst = I->clone();
-    BaseInst->insertBefore(I);
+    BaseInst->insertBefore(I->getIterator());
     BaseInst->setName(getMangledName(I));
     // Add metadata marking this as a base value
     BaseInst->setMetadata("is_base_value", MDNode::get(I->getContext(), {}));
@@ -1134,18 +1137,18 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
   auto getBaseForInput = [&](Value *Input, Instruction *InsertPt) {
     Value *BDV = findBaseOrBDV(Input, Cache, KnownBases);
     Value *Base = nullptr;
-    if (!States.count(BDV)) {
+    if (auto It = States.find(BDV); It == States.end()) {
       assert(areBothVectorOrScalar(BDV, Input));
       Base = BDV;
     } else {
       // Either conflict or base.
-      assert(States.count(BDV));
-      Base = States[BDV].getBaseValue();
+      Base = It->second.getBaseValue();
     }
     assert(Base && "Can't be null");
     // The cast is needed since base traversal may strip away bitcasts
     if (Base->getType() != Input->getType() && InsertPt)
-      Base = new BitCastInst(Base, Input->getType(), "cast", InsertPt);
+      Base = new BitCastInst(Base, Input->getType(), "cast",
+                             InsertPt->getIterator());
     return Base;
   };
 
@@ -1178,11 +1181,12 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
       for (unsigned i = 0; i < NumPHIValues; i++) {
         Value *InVal = PN->getIncomingValue(i);
         BasicBlock *InBB = PN->getIncomingBlock(i);
-        if (!BlockToValue.count(InBB))
-          BlockToValue[InBB] = getBaseForInput(InVal, InBB->getTerminator());
+        auto [It, Inserted] = BlockToValue.try_emplace(InBB);
+        if (Inserted)
+          It->second = getBaseForInput(InVal, InBB->getTerminator());
         else {
 #ifndef NDEBUG
-          Value *OldBase = BlockToValue[InBB];
+          Value *OldBase = It->second;
           Value *Base = getBaseForInput(InVal, nullptr);
 
           // We can't use `stripPointerCasts` instead of this function because
@@ -1202,7 +1206,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
                  "findBaseOrBDV should be pure!");
 #endif
         }
-        Value *Base = BlockToValue[InBB];
+        Value *Base = It->second;
         BasePHI->setIncomingValue(i, Base);
       }
     } else if (SelectInst *BaseSI =
@@ -1251,6 +1255,9 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
   VerifyStates();
 #endif
 
+  // get the data layout to compare the sizes of base/derived pointer values
+  [[maybe_unused]] auto &DL =
+      cast<llvm::Instruction>(Def)->getDataLayout();
   // Cache all of our results so we can cheaply reuse them
   // NOTE: This is actually two caches: one of the base defining value
   // relation and one of the base pointer relation!  FIXME
@@ -1258,6 +1265,11 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
     auto *BDV = Pair.first;
     Value *Base = Pair.second.getBaseValue();
     assert(BDV && Base);
+    // Whenever we have a derived ptr(s), their base
+    // ptr(s) must be of the same size, not necessarily the same type
+    assert(DL.getTypeAllocSize(BDV->getType()) ==
+               DL.getTypeAllocSize(Base->getType()) &&
+           "Derived and base values should have same size");
     // Only values that do not have known bases or those that have differing
     // type (scalar versus vector) from a possible known base should be in the
     // lattice.
@@ -1316,7 +1328,7 @@ static void findBasePointers(DominatorTree &DT, DefiningValueMapTy &DVCache,
                              IsKnownBaseMapTy &KnownBases) {
   StatepointLiveSetTy PotentiallyDerivedPointers = result.LiveSet;
   // We assume that all pointers passed to deopt are base pointers; as an
-  // optimization, we can use this to avoid seperately materializing the base
+  // optimization, we can use this to avoid separately materializing the base
   // pointer graph.  This is only relevant since we're very conservative about
   // generating new conflict nodes during base pointer insertion.  If we were
   // smarter there, this would be irrelevant.
@@ -1358,14 +1370,13 @@ static void recomputeLiveInValues(
 // and inserts them before "InsertBefore". Returns rematerialized value
 // which should be used after statepoint.
 static Instruction *rematerializeChain(ArrayRef<Instruction *> ChainToBase,
-                                       Instruction *InsertBefore,
+                                       BasicBlock::iterator InsertBefore,
                                        Value *RootOfChain,
                                        Value *AlternateLiveBase) {
   Instruction *LastClonedValue = nullptr;
   Instruction *LastValue = nullptr;
   // Walk backwards to visit top-most instructions first.
-  for (Instruction *Instr :
-       make_range(ChainToBase.rbegin(), ChainToBase.rend())) {
+  for (Instruction *Instr : reverse(ChainToBase)) {
     // Only GEP's and casts are supported as we need to be careful to not
     // introduce any new uses of pointers not in the liveset.
     // Note that it's fine to introduce new uses of pointers which were
@@ -1518,8 +1529,8 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
     if (auto *VT = dyn_cast<VectorType>(Ty))
       NewTy = FixedVectorType::get(NewTy,
                                    cast<FixedVectorType>(VT)->getNumElements());
-    return Intrinsic::getDeclaration(M, Intrinsic::experimental_gc_relocate,
-                                     {NewTy});
+    return Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::experimental_gc_relocate, {NewTy});
   };
 
   // Lazily populated map from input types to the canonicalized form mentioned
@@ -1533,9 +1544,10 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
     Value *LiveIdx = Builder.getInt32(i);
 
     Type *Ty = LiveVariables[i]->getType();
-    if (!TypeToDeclMap.count(Ty))
-      TypeToDeclMap[Ty] = getGCRelocateDecl(Ty);
-    Function *GCRelocateDecl = TypeToDeclMap[Ty];
+    auto [It, Inserted] = TypeToDeclMap.try_emplace(Ty);
+    if (Inserted)
+      It->second = getGCRelocateDecl(Ty);
+    Function *GCRelocateDecl = It->second;
 
     // only specify a debug name if we can give a useful one
     CallInst *Reloc = Builder.CreateCall(
@@ -1606,7 +1618,7 @@ public:
       // Note: we've inserted instructions, so the call to llvm.deoptimize may
       // not necessarily be followed by the matching return.
       auto *RI = cast<ReturnInst>(OldI->getParent()->getTerminator());
-      new UnreachableInst(RI->getContext(), RI);
+      new UnreachableInst(RI->getContext(), RI->getIterator());
       RI->eraseFromParent();
     }
 
@@ -1647,7 +1659,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
   // be replacing a terminator.
   IRBuilder<> Builder(Call);
 
-  ArrayRef<Value *> GCArgs(LiveVariables);
+  ArrayRef<Value *> GCLive(LiveVariables);
   uint64_t StatepointID = StatepointDirectives::DefaultStatepointID;
   uint32_t NumPatchBytes = 0;
   uint32_t Flags = uint32_t(StatepointFlags::None);
@@ -1678,10 +1690,10 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
 
   // Pass through the requested lowering if any.  The default is live-through.
   StringRef DeoptLowering = getDeoptLowering(Call);
-  if (DeoptLowering.equals("live-in"))
+  if (DeoptLowering == "live-in")
     Flags |= uint32_t(StatepointFlags::DeoptLiveIn);
   else {
-    assert(DeoptLowering.equals("live-through") && "Unsupported value!");
+    assert(DeoptLowering == "live-through" && "Unsupported value!");
   }
 
   FunctionCallee CallTarget(Call->getFunctionType(), Call->getCalledOperand());
@@ -1727,7 +1739,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
       //   memcpy(dest_derived, source_derived, ...) =>
       //   memcpy(dest_base, dest_offset, source_base, source_offset, ...)
       auto &Context = Call->getContext();
-      auto &DL = Call->getModule()->getDataLayout();
+      auto &DL = Call->getDataLayout();
       auto GetBaseAndOffset = [&](Value *Derived) {
         Value *Base = nullptr;
         // Optimizations in unreachable code might substitute the real pointer
@@ -1820,7 +1832,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
   if (auto *CI = dyn_cast<CallInst>(Call)) {
     CallInst *SPCall = Builder.CreateGCStatepointCall(
         StatepointID, NumPatchBytes, CallTarget, Flags, CallArgs,
-        TransitionArgs, DeoptArgs, GCArgs, "safepoint_token");
+        TransitionArgs, DeoptArgs, GCLive, "safepoint_token");
 
     SPCall->setTailCallKind(CI->getTailCallKind());
     SPCall->setCallingConv(CI->getCallingConv());
@@ -1845,8 +1857,8 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
     // original block.
     InvokeInst *SPInvoke = Builder.CreateGCStatepointInvoke(
         StatepointID, NumPatchBytes, CallTarget, II->getNormalDest(),
-        II->getUnwindDest(), Flags, CallArgs, TransitionArgs, DeoptArgs, GCArgs,
-        "statepoint_token");
+        II->getUnwindDest(), Flags, CallArgs, TransitionArgs, DeoptArgs,
+        GCLive, "statepoint_token");
 
     SPInvoke->setCallingConv(II->getCallingConv());
 
@@ -1967,19 +1979,10 @@ insertRelocationStores(iterator_range<Value::user_iterator> GCRelocs,
     assert(AllocaMap.count(OriginalValue));
     Value *Alloca = AllocaMap[OriginalValue];
 
-    // Emit store into the related alloca
-    // All gc_relocates are i8 addrspace(1)* typed, and it must be bitcasted to
-    // the correct type according to alloca.
+    // Emit store into the related alloca.
     assert(Relocate->getNextNode() &&
            "Should always have one since it's not a terminator");
-    IRBuilder<> Builder(Relocate->getNextNode());
-    Value *CastedRelocatedValue =
-      Builder.CreateBitCast(Relocate,
-                            cast<AllocaInst>(Alloca)->getAllocatedType(),
-                            suffixed_name_or(Relocate, ".casted", ""));
-
-    new StoreInst(CastedRelocatedValue, Alloca,
-                  cast<Instruction>(CastedRelocatedValue)->getNextNode());
+    new StoreInst(Relocate, Alloca, std::next(Relocate->getIterator()));
 
 #ifndef NDEBUG
     VisitedLiveValues.insert(OriginalValue);
@@ -2002,7 +2005,7 @@ static void insertRematerializationStores(
     Value *Alloca = AllocaMap[OriginalValue];
 
     new StoreInst(RematerializedValue, Alloca,
-                  RematerializedValue->getNextNode());
+                  std::next(RematerializedValue->getIterator()));
 
 #ifndef NDEBUG
     VisitedLiveValues.insert(OriginalValue);
@@ -2032,11 +2035,11 @@ static void relocationViaAlloca(
 
   // Emit alloca for "LiveValue" and record it in "allocaMap" and
   // "PromotableAllocas"
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   auto emitAllocaFor = [&](Value *LiveValue) {
-    AllocaInst *Alloca = new AllocaInst(LiveValue->getType(),
-                                        DL.getAllocaAddrSpace(), "",
-                                        F.getEntryBlock().getFirstNonPHI());
+    AllocaInst *Alloca =
+        new AllocaInst(LiveValue->getType(), DL.getAllocaAddrSpace(), "",
+                       F.getEntryBlock().getFirstNonPHIIt());
     AllocaMap[LiveValue] = Alloca;
     PromotableAllocas.push_back(Alloca);
   };
@@ -2049,7 +2052,7 @@ static void relocationViaAlloca(
   for (const auto &Info : Records)
     for (auto RematerializedValuePair : Info.RematerializedValues) {
       Value *OriginalValue = RematerializedValuePair.second;
-      if (AllocaMap.count(OriginalValue) != 0)
+      if (AllocaMap.contains(OriginalValue))
         continue;
 
       emitAllocaFor(OriginalValue);
@@ -2103,7 +2106,7 @@ static void relocationViaAlloca(
         ToClobber.push_back(Alloca);
       }
 
-      auto InsertClobbersAt = [&](Instruction *IP) {
+      auto InsertClobbersAt = [&](BasicBlock::iterator IP) {
         for (auto *AI : ToClobber) {
           auto AT = AI->getAllocatedType();
           Constant *CPN;
@@ -2118,10 +2121,11 @@ static void relocationViaAlloca(
       // Insert the clobbering stores.  These may get intermixed with the
       // gc.results and gc.relocates, but that's fine.
       if (auto II = dyn_cast<InvokeInst>(Statepoint)) {
-        InsertClobbersAt(&*II->getNormalDest()->getFirstInsertionPt());
-        InsertClobbersAt(&*II->getUnwindDest()->getFirstInsertionPt());
+        InsertClobbersAt(II->getNormalDest()->getFirstInsertionPt());
+        InsertClobbersAt(II->getUnwindDest()->getFirstInsertionPt());
       } else {
-        InsertClobbersAt(cast<Instruction>(Statepoint)->getNextNode());
+        InsertClobbersAt(
+            std::next(cast<Instruction>(Statepoint)->getIterator()));
       }
     }
   }
@@ -2149,7 +2153,7 @@ static void relocationViaAlloca(
     }
 
     llvm::sort(Uses);
-    auto Last = std::unique(Uses.begin(), Uses.end());
+    auto Last = llvm::unique(Uses);
     Uses.erase(Last, Uses.end());
 
     for (Instruction *Use : Uses) {
@@ -2157,15 +2161,15 @@ static void relocationViaAlloca(
         PHINode *Phi = cast<PHINode>(Use);
         for (unsigned i = 0; i < Phi->getNumIncomingValues(); i++) {
           if (Def == Phi->getIncomingValue(i)) {
-            LoadInst *Load =
-                new LoadInst(Alloca->getAllocatedType(), Alloca, "",
-                             Phi->getIncomingBlock(i)->getTerminator());
+            LoadInst *Load = new LoadInst(
+                Alloca->getAllocatedType(), Alloca, "",
+                Phi->getIncomingBlock(i)->getTerminator()->getIterator());
             Phi->setIncomingValue(i, Load);
           }
         }
       } else {
-        LoadInst *Load =
-            new LoadInst(Alloca->getAllocatedType(), Alloca, "", Use);
+        LoadInst *Load = new LoadInst(Alloca->getAllocatedType(), Alloca, "",
+                                      Use->getIterator());
         Use->replaceUsesOfWith(Def, Load);
       }
     }
@@ -2180,16 +2184,16 @@ static void relocationViaAlloca(
         // InvokeInst is a terminator so the store need to be inserted into its
         // normal destination block.
         BasicBlock *NormalDest = Invoke->getNormalDest();
-        Store->insertBefore(NormalDest->getFirstNonPHI());
+        Store->insertBefore(NormalDest->getFirstNonPHIIt());
       } else {
         assert(!Inst->isTerminator() &&
                "The only terminator that can produce a value is "
                "InvokeInst which is handled above.");
-        Store->insertAfter(Inst);
+        Store->insertAfter(Inst->getIterator());
       }
     } else {
       assert(isa<Argument>(Def));
-      Store->insertAfter(cast<Instruction>(Alloca));
+      Store->insertAfter(cast<Instruction>(Alloca)->getIterator());
     }
   }
 
@@ -2209,14 +2213,6 @@ static void relocationViaAlloca(
 #endif
 }
 
-/// Implement a unique function which doesn't require we sort the input
-/// vector.  Doing so has the effect of changing the output of a couple of
-/// tests in ways which make them less useful in testing fused safepoints.
-template <typename T> static void unique_unsorted(SmallVectorImpl<T> &Vec) {
-  SmallSet<T, 8> Seen;
-  erase_if(Vec, [&](const T &V) { return !Seen.insert(V).second; });
-}
-
 /// Insert holders so that each Value is obviously live through the entire
 /// lifetime of the call.
 static void insertUseHolderAfter(CallBase *Call, const ArrayRef<Value *> Values,
@@ -2232,16 +2228,16 @@ static void insertUseHolderAfter(CallBase *Call, const ArrayRef<Value *> Values,
   if (isa<CallInst>(Call)) {
     // For call safepoints insert dummy calls right after safepoint
     Holders.push_back(
-        CallInst::Create(Func, Values, "", &*++Call->getIterator()));
+        CallInst::Create(Func, Values, "", std::next(Call->getIterator())));
     return;
   }
   // For invoke safepooints insert dummy calls both in normal and
   // exceptional destination blocks
   auto *II = cast<InvokeInst>(Call);
   Holders.push_back(CallInst::Create(
-      Func, Values, "", &*II->getNormalDest()->getFirstInsertionPt()));
+      Func, Values, "", II->getNormalDest()->getFirstInsertionPt()));
   Holders.push_back(CallInst::Create(
-      Func, Values, "", &*II->getUnwindDest()->getFirstInsertionPt()));
+      Func, Values, "", II->getUnwindDest()->getFirstInsertionPt()));
 }
 
 static void findLiveReferences(
@@ -2272,7 +2268,7 @@ static Value* findRematerializableChainToBasePointer(
   }
 
   if (CastInst *CI = dyn_cast<CastInst>(CurrentValue)) {
-    if (!CI->isNoopCast(CI->getModule()->getDataLayout()))
+    if (!CI->isNoopCast(CI->getDataLayout()))
       return CI;
 
     ChainToBase.push_back(CI);
@@ -2294,7 +2290,7 @@ chainToBasePointerCost(SmallVectorImpl<Instruction *> &Chain,
 
   for (Instruction *Instr : Chain) {
     if (CastInst *CI = dyn_cast<CastInst>(Instr)) {
-      assert(CI->isNoopCast(CI->getModule()->getDataLayout()) &&
+      assert(CI->isNoopCast(CI->getDataLayout()) &&
              "non noop cast is found during rematerialization");
 
       Type *SrcTy = CI->getOperand(0)->getType();
@@ -2304,8 +2300,9 @@ chainToBasePointerCost(SmallVectorImpl<Instruction *> &Chain,
 
     } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Instr)) {
       // Cost of the address calculation
-      Type *ValTy = GEP->getSourceElementType();
-      Cost += TTI.getAddressComputationCost(ValTy);
+      Cost += TTI.getAddressComputationCost(
+          GEP->getType(), nullptr, nullptr,
+          TargetTransformInfo::TCK_SizeAndLatency);
 
       // And cost of the GEP itself
       // TODO: Use TTI->getGEPCost here (it exists, but appears to be not
@@ -2374,9 +2371,9 @@ findRematerializationCandidates(PointerToBaseTy PointerToBase,
 
     // Handle the scenario where the RootOfChain is not equal to the
     // Base Value, but they are essentially the same phi values.
-    if (RootOfChain != PointerToBase[Derived]) {
+    if (Value *BaseVal = PointerToBase[Derived]; RootOfChain != BaseVal) {
       PHINode *OrigRootPhi = dyn_cast<PHINode>(RootOfChain);
-      PHINode *AlternateRootPhi = dyn_cast<PHINode>(PointerToBase[Derived]);
+      PHINode *AlternateRootPhi = dyn_cast<PHINode>(BaseVal);
       if (!OrigRootPhi || !AlternateRootPhi)
         continue;
       // PHI nodes that have the same incoming values, and belonging to the same
@@ -2494,8 +2491,9 @@ static void rematerializeLiveValuesAtUses(
     //   statepoint between uses in the block.
     while (!Cand->user_empty()) {
       Instruction *UserI = cast<Instruction>(*Cand->user_begin());
-      Instruction *RematChain = rematerializeChain(
-          Record.ChainToBase, UserI, Record.RootOfChain, PointerToBase[Cand]);
+      Instruction *RematChain =
+          rematerializeChain(Record.ChainToBase, UserI->getIterator(),
+                             Record.RootOfChain, PointerToBase[Cand]);
       UserI->replaceUsesOfWith(Cand, RematChain);
       PointerToBase[RematChain] = PointerToBase[Cand];
     }
@@ -2568,16 +2566,16 @@ static void rematerializeLiveValues(CallBase *Call,
       Instruction *InsertBefore = Call->getNextNode();
       assert(InsertBefore);
       Instruction *RematerializedValue =
-          rematerializeChain(Record.ChainToBase, InsertBefore,
+          rematerializeChain(Record.ChainToBase, InsertBefore->getIterator(),
                              Record.RootOfChain, PointerToBase[LiveValue]);
       Info.RematerializedValues[RematerializedValue] = LiveValue;
     } else {
       auto *Invoke = cast<InvokeInst>(Call);
 
-      Instruction *NormalInsertBefore =
-          &*Invoke->getNormalDest()->getFirstInsertionPt();
-      Instruction *UnwindInsertBefore =
-          &*Invoke->getUnwindDest()->getFirstInsertionPt();
+      BasicBlock::iterator NormalInsertBefore =
+          Invoke->getNormalDest()->getFirstInsertionPt();
+      BasicBlock::iterator UnwindInsertBefore =
+          Invoke->getUnwindDest()->getFirstInsertionPt();
 
       Instruction *NormalRematerializedValue =
           rematerializeChain(Record.ChainToBase, NormalInsertBefore,
@@ -2602,7 +2600,7 @@ static bool inlineGetBaseAndOffset(Function &F,
                                    DefiningValueMapTy &DVCache,
                                    IsKnownBaseMapTy &KnownBases) {
   auto &Context = F.getContext();
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   bool Changed = false;
 
   for (auto *Callsite : Intrinsics)
@@ -2612,13 +2610,9 @@ static bool inlineGetBaseAndOffset(Function &F,
       Value *Base =
           findBasePointer(Callsite->getOperand(0), DVCache, KnownBases);
       assert(!DVCache.count(Callsite));
-      auto *BaseBC = IRBuilder<>(Callsite).CreateBitCast(
-          Base, Callsite->getType(), suffixed_name_or(Base, ".cast", ""));
-      if (BaseBC != Base)
-        DVCache[BaseBC] = Base;
-      Callsite->replaceAllUsesWith(BaseBC);
-      if (!BaseBC->hasName())
-        BaseBC->takeName(Callsite);
+      Callsite->replaceAllUsesWith(Base);
+      if (!Base->hasName())
+        Base->takeName(Callsite);
       Callsite->eraseFromParent();
       break;
     }
@@ -2836,15 +2830,17 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   }
   PointerToBase.clear();
 
-  // Do all the fixups of the original live variables to their relocated selves
-  SmallVector<Value *, 128> Live;
+  // Do all the fixups of the original live variables to their relocated selves.
+  // A SmallSetVector is used to collect live variables while retaining the
+  // order in which we add them, which is important for reproducible tests.
+  SmallSetVector<Value *, 16> Live;
   for (const PartiallyConstructedSafepointRecord &Info : Records) {
     // We can't simply save the live set from the original insertion.  One of
     // the live values might be the result of a call which needs a safepoint.
     // That Value* no longer exists and we need to use the new gc_result.
     // Thankfully, the live set is embedded in the statepoint (and updated), so
     // we just grab that.
-    llvm::append_range(Live, Info.StatepointToken->gc_args());
+    Live.insert_range(Info.StatepointToken->gc_live());
 #ifndef NDEBUG
     // Do some basic validation checking on our liveness results before
     // performing relocation.  Relocation can and will turn mistakes in liveness
@@ -2852,7 +2848,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
     // TODO: It would be nice to test consistency as well
     assert(DT.isReachableFromEntry(Info.StatepointToken->getParent()) &&
            "statepoint must be reachable or liveness is meaningless");
-    for (Value *V : Info.StatepointToken->gc_args()) {
+    for (Value *V : Info.StatepointToken->gc_live()) {
       if (!isa<Instruction>(V))
         // Non-instruction values trivial dominate all possible uses
         continue;
@@ -2864,7 +2860,6 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
     }
 #endif
   }
-  unique_unsorted(Live);
 
 #ifndef NDEBUG
   // Validation check
@@ -2873,7 +2868,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
            "must be a gc pointer type");
 #endif
 
-  relocationViaAlloca(F, DT, Live, Records);
+  relocationViaAlloca(F, DT, Live.getArrayRef(), Records);
   return !Records.empty();
 }
 
@@ -2901,7 +2896,7 @@ static void stripNonValidAttributesFromPrototype(Function &F) {
   // assumes that the attributes defined in Intrinsic.td are conservatively
   // correct for both physical and abstract model.
   if (Intrinsic::ID id = F.getIntrinsicID()) {
-    F.setAttributes(Intrinsic::getAttributes(Ctx, id));
+    F.setAttributes(Intrinsic::getAttributes(Ctx, id, F.getFunctionType()));
     return;
   }
 
@@ -3051,9 +3046,9 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
       // which doesn't know how to produce a proper deopt state. So if we see a
       // non-leaf memcpy/memmove without deopt state just treat it as a leaf
       // copy and don't produce a statepoint.
-      if (!AllowStatepointWithNoDeoptInfo &&
-          !Call->getOperandBundle(LLVMContext::OB_deopt)) {
-        assert((isa<AtomicMemCpyInst>(Call) || isa<AtomicMemMoveInst>(Call)) &&
+      if (!AllowStatepointWithNoDeoptInfo && !Call->hasDeoptState()) {
+        assert(isa<AnyMemTransferInst>(Call) &&
+               cast<AnyMemTransferInst>(Call)->isAtomic() &&
                "Don't expect any other calls here!");
         return false;
       }
@@ -3131,7 +3126,7 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
       // most instructions without side effects or memory access.
       if (isa<ICmpInst>(Cond) && Cond->hasOneUse()) {
         MadeChange = true;
-        Cond->moveBefore(TI);
+        Cond->moveBefore(TI->getIterator());
       }
   }
 
@@ -3286,21 +3281,22 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
   // Seed the liveness for each individual block
   for (BasicBlock &BB : F) {
     Data.KillSet[&BB] = computeKillSet(&BB, GC);
-    Data.LiveSet[&BB].clear();
-    computeLiveInValues(BB.rbegin(), BB.rend(), Data.LiveSet[&BB], GC);
+    auto &LiveSet = Data.LiveSet[&BB];
+    LiveSet.clear();
+    computeLiveInValues(BB.rbegin(), BB.rend(), LiveSet, GC);
 
 #ifndef NDEBUG
     for (Value *Kill : Data.KillSet[&BB])
       assert(!Data.LiveSet[&BB].count(Kill) && "live set contains kill");
 #endif
 
-    Data.LiveOut[&BB] = SetVector<Value *>();
-    computeLiveOutSeed(&BB, Data.LiveOut[&BB], GC);
-    Data.LiveIn[&BB] = Data.LiveSet[&BB];
-    Data.LiveIn[&BB].set_union(Data.LiveOut[&BB]);
-    Data.LiveIn[&BB].set_subtract(Data.KillSet[&BB]);
-    if (!Data.LiveIn[&BB].empty())
-      Worklist.insert(pred_begin(&BB), pred_end(&BB));
+    auto &Out = Data.LiveOut[&BB] = SetVector<Value *>();
+    computeLiveOutSeed(&BB, Out, GC);
+    auto &In = Data.LiveIn[&BB] = Data.LiveSet[&BB];
+    In.set_union(Out);
+    In.set_subtract(Data.KillSet[&BB]);
+    if (!In.empty())
+      Worklist.insert_range(predecessors(&BB));
   }
 
   // Propagate that liveness until stable
@@ -3309,7 +3305,7 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
 
     // Compute our new liveout set, then exit early if it hasn't changed despite
     // the contribution of our successor.
-    SetVector<Value *> LiveOut = Data.LiveOut[BB];
+    SetVector<Value *> &LiveOut = Data.LiveOut[BB];
     const auto OldLiveOutSize = LiveOut.size();
     for (BasicBlock *Succ : successors(BB)) {
       assert(Data.LiveIn.count(Succ));
@@ -3322,7 +3318,6 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
       // hasn't changed.
       continue;
     }
-    Data.LiveOut[BB] = LiveOut;
 
     // Apply the effects of this basic block
     SetVector<Value *> LiveTmp = LiveOut;
@@ -3330,11 +3325,11 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
     LiveTmp.set_subtract(Data.KillSet[BB]);
 
     assert(Data.LiveIn.count(BB));
-    const SetVector<Value *> &OldLiveIn = Data.LiveIn[BB];
-    // assert: OldLiveIn is a subset of LiveTmp
-    if (OldLiveIn.size() != LiveTmp.size()) {
-      Data.LiveIn[BB] = LiveTmp;
-      Worklist.insert(pred_begin(BB), pred_end(BB));
+    SetVector<Value *> &LiveIn = Data.LiveIn[BB];
+    // assert: LiveIn is a subset of LiveTmp
+    if (LiveIn.size() != LiveTmp.size()) {
+      LiveIn = std::move(LiveTmp);
+      Worklist.insert_range(predecessors(BB));
     }
   } // while (!Worklist.empty())
 
@@ -3361,7 +3356,7 @@ static void findLiveSetAtInst(Instruction *Inst, GCPtrLivenessData &Data,
   computeLiveInValues(BB->rbegin(), ++Inst->getIterator().getReverse(), LiveOut,
                       GC);
   LiveOut.remove(Inst);
-  Out.insert(LiveOut.begin(), LiveOut.end());
+  Out.insert_range(LiveOut);
 }
 
 static void recomputeLiveInValues(GCPtrLivenessData &RevisedLivenessData,

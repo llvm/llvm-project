@@ -24,8 +24,8 @@ define void @a() #0 {
   store i32 4, ptr %4, align 4
   store i32 5, ptr %5, align 4
   store i32 6, ptr %6, align 4
+; CHECK-NOT:              auti{{[a,b]}}sp
 ; CHECK:                  retab
-; CHECK-NOT:              auti[a,b]sp
   ret void
 }
 
@@ -48,8 +48,8 @@ define void @b() #0 {
   store i32 4, ptr %4, align 4
   store i32 5, ptr %5, align 4
   store i32 6, ptr %6, align 4
+; CHECK-NOT:              auti{{[a,b]}}sp
 ; CHECK:                  retab
-; CHECK-NOT:              auti[a,b]sp
   ret void
 }
 

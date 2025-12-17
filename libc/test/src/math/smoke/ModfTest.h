@@ -6,14 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
+#include "hdr/math_macros.h"
 
-template <typename T> class ModfTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class ModfTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -73,24 +76,34 @@ public:
     EXPECT_FP_EQ(T(-0.75), func(T(-10.75), &integral));
     EXPECT_FP_EQ(integral, T(-10.0));
 
-    EXPECT_FP_EQ(T(0.125), func(T(100.125), &integral));
+    EXPECT_FP_EQ(T(0.125), func(T(31.125), &integral));
+    EXPECT_FP_EQ(integral, T(31.0));
+
+    EXPECT_FP_EQ(T(-0.125), func(T(-31.125), &integral));
+    EXPECT_FP_EQ(integral, T(-31.0));
+
+    EXPECT_FP_EQ(T(0.5), func(T(100.5), &integral));
     EXPECT_FP_EQ(integral, T(100.0));
 
-    EXPECT_FP_EQ(T(-0.125), func(T(-100.125), &integral));
+    EXPECT_FP_EQ(T(-0.5), func(T(-100.5), &integral));
     EXPECT_FP_EQ(integral, T(-100.0));
   }
 
   void testRange(ModfFunc func) {
-    constexpr UIntType COUNT = 100'000;
-    constexpr UIntType STEP = UIntType(-1) / COUNT;
-    for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-      T x = T(FPBits(v));
-      if (isnan(x) || isinf(x) || x == T(0.0))
+    constexpr int COUNT = 100'000;
+    constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
+        static_cast<StorageType>(STORAGE_MAX / COUNT), StorageType(1));
+    StorageType v = 0;
+    for (int i = 0; i <= COUNT; ++i, v += STEP) {
+      FPBits x_bits(v);
+      if (x_bits.is_zero() || x_bits.is_inf_or_nan())
         continue;
+
+      T x = x_bits.get_val();
 
       T integral;
       T frac = func(x, &integral);
-      ASSERT_TRUE(LIBC_NAMESPACE::fputil::abs(frac) < 1.0l);
+      ASSERT_TRUE(LIBC_NAMESPACE::fputil::abs(frac) < T(1.0));
       ASSERT_TRUE(LIBC_NAMESPACE::fputil::trunc(x) == integral);
       ASSERT_TRUE(integral + frac == x);
     }

@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ZOS.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 
@@ -36,6 +35,16 @@ void ZOS::addClangTargetOptions(const ArgList &DriverArgs,
   if (!DriverArgs.hasArgNoClaim(options::OPT_faligned_allocation,
                                 options::OPT_fno_aligned_allocation))
     CC1Args.push_back("-faligned-alloc-unavailable");
+
+  if (DriverArgs.hasFlag(options::OPT_fxl_pragma_pack,
+                         options::OPT_fno_xl_pragma_pack, true))
+    CC1Args.push_back("-fxl-pragma-pack");
+
+  // Pass "-fno-sized-deallocation" only when the user hasn't manually enabled
+  // or disabled sized deallocations.
+  if (!DriverArgs.hasArgNoClaim(options::OPT_fsized_deallocation,
+                                options::OPT_fno_sized_deallocation))
+    CC1Args.push_back("-fno-sized-deallocation");
 }
 
 void zos::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
@@ -66,7 +75,7 @@ void zos::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 
   const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("as"));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         Exec, CmdArgs, Inputs));
+                                         Exec, CmdArgs, Inputs, Output));
 }
 
 static std::string getLEHLQ(const ArgList &Args) {
@@ -143,11 +152,10 @@ void zos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     StringRef OutputName = Output.getFilename();
     // Strip away the last file suffix in presence from output name and add
     // a new .x suffix.
-    size_t Suffix = OutputName.find_last_of(".");
-    const char *SideDeckName =
-        Args.MakeArgString(OutputName.substr(0, Suffix) + ".x");
+    SmallString<128> SideDeckName = OutputName;
+    llvm::sys::path::replace_extension(SideDeckName, "x");
     CmdArgs.push_back("-x");
-    CmdArgs.push_back(SideDeckName);
+    CmdArgs.push_back(Args.MakeArgString(SideDeckName));
   } else {
     // We need to direct side file to /dev/null to suppress linker warning when
     // the object file contains exported symbols, and -shared or
@@ -205,7 +213,7 @@ void zos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         Exec, CmdArgs, Inputs));
+                                         Exec, CmdArgs, Inputs, Output));
 }
 
 ToolChain::RuntimeLibType ZOS::GetDefaultRuntimeLibType() const {
@@ -325,8 +333,7 @@ void ZOS::AddClangCXXStdlibIncludeArgs(
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx: {
     // <install>/bin/../include/c++/v1
-    llvm::SmallString<128> InstallBin =
-        llvm::StringRef(getDriver().getInstalledDir());
+    llvm::SmallString<128> InstallBin(getDriver().Dir);
     llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
     TryAddIncludeFromPath(InstallBin, DriverArgs, CC1Args);
     break;

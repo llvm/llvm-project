@@ -89,7 +89,7 @@ define <vscale x 4 x float> @insertelement_sequene_may_not_be_splat(float %x) {
 define void @ossfuzz_27416(i32 %v, ptr %p) {
 ; CHECK-LABEL: @ossfuzz_27416(
 ; CHECK-NEXT:    [[IN:%.*]] = insertelement <vscale x 4 x i32> undef, i32 [[V:%.*]], i64 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[IN]], <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[IN]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[I1:%.*]] = insertelement <vscale x 4 x i32> [[SPLAT]], i32 undef, i64 128
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[I1]], ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret void

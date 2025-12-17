@@ -1,12 +1,10 @@
 """
-Test lldb-dap setBreakpoints request
+Test lldb-dap variables request
 """
 
 import os
 
 import lldbdap_testcase
-import dap_server
-from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
@@ -39,7 +37,18 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 startswith = actual_value.startswith(verify_value)
                 self.assertTrue(
                     startswith,
-                    ('"%s" value "%s" doesn\'t start with' ' "%s")')
+                    ('"%s" value "%s" doesn\'t start with "%s")')
+                    % (key, actual_value, verify_value),
+                )
+        if "matches" in verify_dict:
+            verify = verify_dict["matches"]
+            for key in verify:
+                verify_value = verify[key]
+                actual_value = actual[key]
+                self.assertRegex(
+                    actual_value,
+                    verify_value,
+                    ('"%s" value "%s" doesn\'t match pattern "%s")')
                     % (key, actual_value, verify_value),
                 )
         if "contains" in verify_dict:
@@ -47,15 +56,20 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             for key in verify:
                 contains_array = verify[key]
                 actual_value = actual[key]
-                self.assertTrue(isinstance(contains_array, list))
+                self.assertIsInstance(contains_array, list)
                 for verify_value in contains_array:
                     self.assertIn(verify_value, actual_value)
         if "missing" in verify_dict:
             missing = verify_dict["missing"]
             for key in missing:
-                self.assertTrue(
-                    key not in actual, 'key "%s" is not expected in %s' % (key, actual)
+                self.assertNotIn(
+                    key, actual, 'key "%s" is not expected in %s' % (key, actual)
                 )
+        isReadOnly = verify_dict.get("readOnly", False)
+        attributes = actual.get("presentationHint", {}).get("attributes", [])
+        self.assertEqual(
+            isReadOnly, "readOnly" in attributes, "%s %s" % (verify_dict, actual)
+        )
         hasVariablesReference = "variablesReference" in actual
         varRef = None
         if hasVariablesReference:
@@ -87,10 +101,11 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
     def verify_variables(self, verify_dict, variables, varref_dict=None):
         for variable in variables:
             name = variable["name"]
-            self.assertIn(
-                name, verify_dict, 'variable "%s" in verify dictionary' % (name)
-            )
-            self.verify_values(verify_dict[name], variable, varref_dict)
+            if not name.startswith("std::"):
+                self.assertIn(
+                    name, verify_dict, 'variable "%s" in verify dictionary' % (name)
+                )
+                self.verify_values(verify_dict[name], variable, varref_dict)
 
     def darwin_dwarf_missing_obj(self, initCommands):
         self.build(debug_info="dwarf")
@@ -101,14 +116,14 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         # error when we run to main and try to get variables
         os.unlink(main_obj)
 
-        self.create_debug_adaptor()
+        self.create_debug_adapter()
         self.assertTrue(os.path.exists(program), "executable must exist")
 
-        self.launch(program=program, initCommands=initCommands)
+        self.launch(program, initCommands=initCommands)
 
         functions = ["main"]
         breakpoint_ids = self.set_function_breakpoints(functions)
-        self.assertEquals(len(breakpoint_ids), len(functions), "expect one breakpoint")
+        self.assertEqual(len(breakpoint_ids), len(functions), "expect one breakpoint")
         self.continue_to_breakpoints(breakpoint_ids)
 
         locals = self.dap_server.get_local_variables()
@@ -131,8 +146,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self, enableAutoVariableSummaries: bool
     ):
         """
-        Tests the "scopes", "variables", "setVariable", and "evaluate"
-        packets.
+        Tests the "scopes", "variables", "setVariable", and "evaluate" packets.
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(
@@ -149,30 +163,46 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
         locals = self.dap_server.get_local_variables()
         globals = self.dap_server.get_global_variables()
-        buffer_children = make_buffer_verify_dict(0, 32)
+        buffer_children = make_buffer_verify_dict(0, 16)
         verify_locals = {
-            "argc": {"equals": {"type": "int", "value": "1"}},
+            "argc": {
+                "equals": {
+                    "type": "int",
+                    "value": "1",
+                },
+            },
             "argv": {
                 "equals": {"type": "const char **"},
                 "startswith": {"value": "0x"},
                 "hasVariablesReference": True,
             },
             "pt": {
-                "equals": {"type": "PointType"},
+                "equals": {
+                    "type": "PointType",
+                },
                 "hasVariablesReference": True,
                 "children": {
                     "x": {"equals": {"type": "int", "value": "11"}},
                     "y": {"equals": {"type": "int", "value": "22"}},
-                    "buffer": {"children": buffer_children},
+                    "buffer": {"children": buffer_children, "readOnly": True},
                 },
+                "readOnly": True,
             },
             "x": {"equals": {"type": "int"}},
         }
+
         verify_globals = {
             "s_local": {"equals": {"type": "float", "value": "2.25"}},
-            "::g_global": {"equals": {"type": "int", "value": "123"}},
-            "s_global": {"equals": {"type": "int", "value": "234"}},
         }
+        s_global = {"equals": {"type": "int", "value": "234"}}
+        g_global = {"equals": {"type": "int", "value": "123"}}
+        if lldbplatformutil.getHostPlatform() == "windows":
+            verify_globals["::s_global"] = s_global
+            verify_globals["g_global"] = g_global
+        else:
+            verify_globals["s_global"] = s_global
+            verify_globals["::g_global"] = g_global
+
         varref_dict = {}
         self.verify_variables(verify_locals, locals, varref_dict)
         self.verify_variables(verify_globals, globals, varref_dict)
@@ -222,18 +252,22 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             "pt": {
                 "equals": {"type": "PointType"},
                 "startswith": {
-                    "result": "{x:11, y:22}"
-                    if enableAutoVariableSummaries
-                    else "PointType @ 0x"
+                    "result": (
+                        "{x:11, y:22, buffer:{...}}"
+                        if enableAutoVariableSummaries
+                        else "PointType @ 0x"
+                    )
                 },
                 "hasVariablesReference": True,
             },
             "pt.buffer": {
-                "equals": {"type": "int[32]"},
+                "equals": {"type": "int[16]"},
                 "startswith": {
-                    "result": "{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...}"
-                    if enableAutoVariableSummaries
-                    else "int[32] @ 0x"
+                    "result": (
+                        "{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...}"
+                        if enableAutoVariableSummaries
+                        else "int[16] @ 0x"
+                    )
                 },
                 "hasVariablesReference": True,
             },
@@ -269,16 +303,25 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         # Set a variable value whose name is synthetic, like a variable index
         # and verify the value by reading it
-        self.dap_server.request_setVariable(varRef, "[0]", 100)
+        variable_value = 100
+        response = self.set_variable(varRef, "[0]", variable_value)
+        # Verify dap sent the correct response
+        verify_response = {
+            "type": "int",
+            "value": str(variable_value),
+        }
+        for key, value in verify_response.items():
+            self.assertEqual(value, response["body"][key])
+
         response = self.dap_server.request_variables(varRef, start=0, count=1)
         self.verify_variables(
-            make_buffer_verify_dict(0, 1, 100), response["body"]["variables"]
+            make_buffer_verify_dict(0, 1, variable_value), response["body"]["variables"]
         )
 
         # Set a variable value whose name is a real child value, like "pt.x"
         # and verify the value by reading it
         varRef = varref_dict["pt"]
-        self.dap_server.request_setVariable(varRef, "x", 111)
+        self.set_variable(varRef, "x", 111)
         response = self.dap_server.request_variables(varRef, start=0, count=1)
         value = response["body"]["variables"][0]["value"]
         self.assertEqual(
@@ -297,44 +340,32 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         verify_locals["argc"]["equals"]["value"] = "123"
         verify_locals["pt"]["children"]["x"]["equals"]["value"] = "111"
-        verify_locals["x @ main.cpp:17"] = {"equals": {"type": "int", "value": "89"}}
-        verify_locals["x @ main.cpp:19"] = {"equals": {"type": "int", "value": "42"}}
-        verify_locals["x @ main.cpp:21"] = {"equals": {"type": "int", "value": "72"}}
+        verify_locals["x @ main.cpp:19"] = {"equals": {"type": "int", "value": "89"}}
+        verify_locals["x @ main.cpp:21"] = {"equals": {"type": "int", "value": "42"}}
+        verify_locals["x @ main.cpp:23"] = {"equals": {"type": "int", "value": "72"}}
 
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
         # Now we verify that we correctly change the name of a variable with and without differentiator suffix
-        self.assertFalse(self.dap_server.request_setVariable(1, "x2", 9)["success"])
-        self.assertFalse(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:0", 9)["success"]
-        )
+        self.assertFalse(self.set_local("x2", 9)["success"])
+        self.assertFalse(self.set_local("x @ main.cpp:0", 9)["success"])
 
-        self.assertTrue(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:17", 17)["success"]
-        )
-        self.assertTrue(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:19", 19)["success"]
-        )
-        self.assertTrue(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:21", 21)["success"]
-        )
+        self.assertTrue(self.set_local("x @ main.cpp:19", 19)["success"])
+        self.assertTrue(self.set_local("x @ main.cpp:21", 21)["success"])
+        self.assertTrue(self.set_local("x @ main.cpp:23", 23)["success"])
 
         # The following should have no effect
-        self.assertFalse(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:21", "invalid")[
-                "success"
-            ]
-        )
+        self.assertFalse(self.set_local("x @ main.cpp:23", "invalid")["success"])
 
-        verify_locals["x @ main.cpp:17"]["equals"]["value"] = "17"
         verify_locals["x @ main.cpp:19"]["equals"]["value"] = "19"
         verify_locals["x @ main.cpp:21"]["equals"]["value"] = "21"
+        verify_locals["x @ main.cpp:23"]["equals"]["value"] = "23"
 
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
         # The plain x variable shold refer to the innermost x
-        self.assertTrue(self.dap_server.request_setVariable(1, "x", 22)["success"])
-        verify_locals["x @ main.cpp:21"]["equals"]["value"] = "22"
+        self.assertTrue(self.set_local("x", 22)["success"])
+        verify_locals["x @ main.cpp:23"]["equals"]["value"] = "22"
 
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
@@ -350,27 +381,26 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         locals = self.dap_server.get_local_variables()
         names = [var["name"] for var in locals]
         # The first shadowed x shouldn't have a suffix anymore
-        verify_locals["x"] = {"equals": {"type": "int", "value": "17"}}
-        self.assertNotIn("x @ main.cpp:17", names)
+        verify_locals["x"] = {"equals": {"type": "int", "value": "19"}}
         self.assertNotIn("x @ main.cpp:19", names)
         self.assertNotIn("x @ main.cpp:21", names)
+        self.assertNotIn("x @ main.cpp:23", names)
 
         self.verify_variables(verify_locals, locals)
 
     @skipIfWindows
-    @skipIfRemote
     def test_scopes_variables_setVariable_evaluate(self):
         self.do_test_scopes_variables_setVariable_evaluate(
             enableAutoVariableSummaries=False
         )
 
     @skipIfWindows
-    @skipIfRemote
     def test_scopes_variables_setVariable_evaluate_with_descriptive_summaries(self):
         self.do_test_scopes_variables_setVariable_evaluate(
             enableAutoVariableSummaries=True
         )
 
+    @skipIfWindows
     def do_test_scopes_and_evaluate_expansion(self, enableAutoVariableSummaries: bool):
         """
         Tests the evaluated expression expands successfully after "scopes" packets
@@ -419,9 +449,11 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                     },
                     "buffer": {
                         "children": buffer_children,
-                        "equals": {"indexedVariables": 32},
+                        "equals": {"indexedVariables": 16},
+                        "readOnly": True,
                     },
                 },
+                "readOnly": True,
             },
             "x": {
                 "equals": {"type": "int"},
@@ -434,44 +466,95 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         # the other temporary (from other UI).
         expandable_expression = {
             "name": "pt",
-            "response": {
-                "equals": {"type": "PointType"},
-                "startswith": {
-                    "result": "{x:11, y:22}"
-                    if enableAutoVariableSummaries
-                    else "PointType @ 0x"
+            "context": {
+                "repl": {
+                    "equals": {"type": "PointType"},
+                    "equals": {
+                        "result": """(PointType) $0 = {
+  x = 11
+  y = 22
+  buffer = {
+    [0] = 0
+    [1] = 1
+    [2] = 2
+    [3] = 3
+    [4] = 4
+    [5] = 5
+    [6] = 6
+    [7] = 7
+    [8] = 8
+    [9] = 9
+    [10] = 10
+    [11] = 11
+    [12] = 12
+    [13] = 13
+    [14] = 14
+    [15] = 15
+  }
+}"""
+                    },
+                    "missing": ["indexedVariables"],
+                    "hasVariablesReference": True,
                 },
-                "missing": ["indexedVariables"],
-                "hasVariablesReference": True,
+                "hover": {
+                    "equals": {"type": "PointType"},
+                    "startswith": {
+                        "result": (
+                            "{x:11, y:22, buffer:{...}}"
+                            if enableAutoVariableSummaries
+                            else "PointType @ 0x"
+                        )
+                    },
+                    "missing": ["indexedVariables"],
+                    "hasVariablesReference": True,
+                },
+                "watch": {
+                    "equals": {"type": "PointType"},
+                    "startswith": {
+                        "result": (
+                            "{x:11, y:22, buffer:{...}}"
+                            if enableAutoVariableSummaries
+                            else "PointType @ 0x"
+                        )
+                    },
+                    "missing": ["indexedVariables"],
+                    "hasVariablesReference": True,
+                },
+                "variables": {
+                    "equals": {"type": "PointType"},
+                    "startswith": {
+                        "result": (
+                            "{x:11, y:22, buffer:{...}}"
+                            if enableAutoVariableSummaries
+                            else "PointType @ 0x"
+                        )
+                    },
+                    "missing": ["indexedVariables"],
+                    "hasVariablesReference": True,
+                },
             },
             "children": {
                 "x": {"equals": {"type": "int", "value": "11"}},
                 "y": {"equals": {"type": "int", "value": "22"}},
-                "buffer": {"children": buffer_children},
+                "buffer": {"children": buffer_children, "readOnly": True},
             },
         }
 
-        # Evaluate from permanent UI.
-        permanent_expr_varref_dict = {}
-        response = self.dap_server.request_evaluate(
-            expandable_expression["name"], frameIndex=0, threadId=None, context="repl"
-        )
-        self.verify_values(
-            expandable_expression["response"],
-            response["body"],
-            permanent_expr_varref_dict,
-            expandable_expression["name"],
-        )
-
-        # Evaluate from temporary UI.
-        temporary_expr_varref_dict = {}
-        response = self.dap_server.request_evaluate(expandable_expression["name"])
-        self.verify_values(
-            expandable_expression["response"],
-            response["body"],
-            temporary_expr_varref_dict,
-            expandable_expression["name"],
-        )
+        # Evaluate from known contexts.
+        expr_varref_dict = {}
+        for context, verify_dict in expandable_expression["context"].items():
+            response = self.dap_server.request_evaluate(
+                expandable_expression["name"],
+                frameIndex=0,
+                threadId=None,
+                context=context,
+            )
+            self.verify_values(
+                verify_dict,
+                response["body"],
+                expr_varref_dict,
+                expandable_expression["name"],
+            )
 
         # Evaluate locals again.
         locals = self.dap_server.get_local_variables()
@@ -479,7 +562,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         # Verify the evaluated expressions before second locals evaluation
         # can be expanded.
-        var_ref = temporary_expr_varref_dict[expandable_expression["name"]]
+        var_ref = expr_varref_dict[expandable_expression["name"]]
         response = self.dap_server.request_variables(var_ref)
         self.verify_variables(
             expandable_expression["children"], response["body"]["variables"]
@@ -495,7 +578,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         )
         self.continue_to_breakpoints(breakpoint_ids)
 
-        var_ref = permanent_expr_varref_dict[expandable_expression["name"]]
+        var_ref = expr_varref_dict[expandable_expression["name"]]
         response = self.dap_server.request_variables(var_ref)
         self.verify_variables(
             expandable_expression["children"], response["body"]["variables"]
@@ -511,17 +594,13 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         for scope in scopes:
             if scope["name"] == "Locals":
-                self.assertEquals(scope.get("presentationHint"), "locals")
+                self.assertEqual(scope.get("presentationHint"), "locals")
             if scope["name"] == "Registers":
-                self.assertEquals(scope.get("presentationHint"), "registers")
+                self.assertEqual(scope.get("presentationHint"), "registers")
 
-    @skipIfWindows
-    @skipIfRemote
     def test_scopes_and_evaluate_expansion(self):
         self.do_test_scopes_and_evaluate_expansion(enableAutoVariableSummaries=False)
 
-    @skipIfWindows
-    @skipIfRemote
     def test_scopes_and_evaluate_expansion_with_descriptive_summaries(self):
         self.do_test_scopes_and_evaluate_expansion(enableAutoVariableSummaries=True)
 
@@ -551,11 +630,17 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         # "[raw]" child.
         raw_child_count = 1 if enableSyntheticChildDebugging else 0
         verify_locals = {
-            "small_array": {"equals": {"indexedVariables": 5}},
-            "large_array": {"equals": {"indexedVariables": 200}},
-            "small_vector": {"equals": {"indexedVariables": 5 + raw_child_count}},
-            "large_vector": {"equals": {"indexedVariables": 200 + raw_child_count}},
-            "pt": {"missing": ["indexedVariables"]},
+            "small_array": {"equals": {"indexedVariables": 5}, "readOnly": True},
+            "large_array": {"equals": {"indexedVariables": 200}, "readOnly": True},
+            "small_vector": {
+                "equals": {"indexedVariables": 5 + raw_child_count},
+                "readOnly": True,
+            },
+            "large_vector": {
+                "equals": {"indexedVariables": 200 + raw_child_count},
+                "readOnly": True,
+            },
+            "pt": {"missing": ["indexedVariables"], "readOnly": True},
         }
         self.verify_variables(verify_locals, locals)
 
@@ -569,7 +654,10 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             "[4]": {"equals": {"type": "int", "value": "0"}},
         }
         if enableSyntheticChildDebugging:
-            verify_children["[raw]"] = ({"contains": {"type": ["vector"]}},)
+            verify_children["[raw]"] = {
+                "contains": {"type": ["vector"]},
+                "readOnly": True,
+            }
 
         children = self.dap_server.request_variables(locals[2]["variablesReference"])[
             "body"
@@ -577,17 +665,66 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.verify_variables(verify_children, children)
 
     @skipIfWindows
-    @skipIfRemote
+    def test_return_variables(self):
+        """
+        Test the stepping out of a function with return value show the variable correctly.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+
+        return_name = "(Return Value)"
+        verify_locals = {
+            return_name: {"equals": {"type": "int", "value": "300"}},
+            "argc": {},
+            "argv": {},
+            "pt": {"readOnly": True},
+            "x": {},
+            "return_result": {"equals": {"type": "int"}},
+        }
+
+        function_name = "test_return_variable"
+        breakpoint_ids = self.set_function_breakpoints([function_name])
+
+        self.assertEqual(len(breakpoint_ids), 1)
+        self.continue_to_breakpoints(breakpoint_ids)
+
+        threads = self.dap_server.get_threads()
+        for thread in threads:
+            if thread.get("reason") == "breakpoint":
+                thread_id = thread["id"]
+
+                self.stepOut(threadId=thread_id)
+
+                local_variables = self.dap_server.get_local_variables()
+                varref_dict = {}
+
+                # `verify_variable` function only checks if the local variables
+                # are in the `verify_dict` passed  this will cause this test to pass
+                # even if there is no return value.
+                local_variable_names = [
+                    variable["name"] for variable in local_variables
+                ]
+                self.assertIn(
+                    return_name,
+                    local_variable_names,
+                    "return variable is not in local variables",
+                )
+
+                self.verify_variables(verify_locals, local_variables, varref_dict)
+                break
+
+        self.assertFalse(self.set_local("(Return Value)", 20)["success"])
+
+    @skipIfWindows
     def test_indexedVariables(self):
         self.do_test_indexedVariables(enableSyntheticChildDebugging=False)
 
     @skipIfWindows
-    @skipIfRemote
     def test_indexedVariables_with_raw_child_for_synthetics(self):
         self.do_test_indexedVariables(enableSyntheticChildDebugging=True)
 
     @skipIfWindows
-    @skipIfRemote
+    @skipIfAsan  # FIXME this fails with a non-asan issue on green dragon.
     def test_registers(self):
         """
         Test that registers whose byte size is the size of a pointer on
@@ -631,8 +768,8 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                     if reg["name"] == pc_name:
                         value = reg["value"]
                         self.assertTrue(value.startswith("0x"))
-                        self.assertTrue("a.out`main + " in value)
-                        self.assertTrue("at main.cpp:" in value)
+                        self.assertIn("a.out`main + ", value)
+                        self.assertIn("at main.cpp:", value)
 
     @no_debug_info_test
     @skipUnlessDarwin
@@ -658,3 +795,42 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         """
         initCommands = ["settings set symbols.load-on-demand true"]
         self.darwin_dwarf_missing_obj(initCommands)
+
+    @no_debug_info_test
+    @skipIfWindows
+    def test_value_format(self):
+        """
+        Test that toggle variables value format between decimal and hexical works.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.cpp"
+        breakpoint1_line = line_number(source, "// breakpoint 1")
+        lines = [breakpoint1_line]
+
+        breakpoint_ids = self.set_source_breakpoints(source, lines)
+        self.assertEqual(
+            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
+        )
+        self.continue_to_breakpoints(breakpoint_ids)
+
+        # Verify locals value format decimal
+        is_hex = False
+        var_pt_x = self.dap_server.get_local_variable_child("pt", "x", is_hex=is_hex)
+        self.assertEqual(var_pt_x["value"], "11")
+        var_pt_y = self.dap_server.get_local_variable_child("pt", "y", is_hex=is_hex)
+        self.assertEqual(var_pt_y["value"], "22")
+
+        # Verify locals value format hexical
+        is_hex = True
+        var_pt_x = self.dap_server.get_local_variable_child("pt", "x", is_hex=is_hex)
+        self.assertEqual(var_pt_x["value"], "0x0000000b")
+        var_pt_y = self.dap_server.get_local_variable_child("pt", "y", is_hex=is_hex)
+        self.assertEqual(var_pt_y["value"], "0x00000016")
+
+        # Toggle and verify locals value format decimal again
+        is_hex = False
+        var_pt_x = self.dap_server.get_local_variable_child("pt", "x", is_hex=is_hex)
+        self.assertEqual(var_pt_x["value"], "11")
+        var_pt_y = self.dap_server.get_local_variable_child("pt", "y", is_hex=is_hex)
+        self.assertEqual(var_pt_y["value"], "22")

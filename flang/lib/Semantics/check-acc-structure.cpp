@@ -6,9 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 #include "check-acc-structure.h"
+#include "resolve-names-utils.h"
 #include "flang/Common/enum-set.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
+#include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Semantics/type.h"
+#include "flang/Support/Fortran.h"
+#include "llvm/Support/AtomicOrdering.h"
+
+#include <optional>
 
 #define CHECK_SIMPLE_CLAUSE(X, Y) \
   void AccStructureChecker::Enter(const parser::AccClause::X &) { \
@@ -22,33 +31,33 @@
   }
 
 using ReductionOpsSet =
-    Fortran::common::EnumSet<Fortran::parser::AccReductionOperator::Operator,
-        Fortran::parser::AccReductionOperator::Operator_enumSize>;
+    Fortran::common::EnumSet<Fortran::parser::ReductionOperator::Operator,
+        Fortran::parser::ReductionOperator::Operator_enumSize>;
 
 static ReductionOpsSet reductionIntegerSet{
-    Fortran::parser::AccReductionOperator::Operator::Plus,
-    Fortran::parser::AccReductionOperator::Operator::Multiply,
-    Fortran::parser::AccReductionOperator::Operator::Max,
-    Fortran::parser::AccReductionOperator::Operator::Min,
-    Fortran::parser::AccReductionOperator::Operator::Iand,
-    Fortran::parser::AccReductionOperator::Operator::Ior,
-    Fortran::parser::AccReductionOperator::Operator::Ieor};
+    Fortran::parser::ReductionOperator::Operator::Plus,
+    Fortran::parser::ReductionOperator::Operator::Multiply,
+    Fortran::parser::ReductionOperator::Operator::Max,
+    Fortran::parser::ReductionOperator::Operator::Min,
+    Fortran::parser::ReductionOperator::Operator::Iand,
+    Fortran::parser::ReductionOperator::Operator::Ior,
+    Fortran::parser::ReductionOperator::Operator::Ieor};
 
 static ReductionOpsSet reductionRealSet{
-    Fortran::parser::AccReductionOperator::Operator::Plus,
-    Fortran::parser::AccReductionOperator::Operator::Multiply,
-    Fortran::parser::AccReductionOperator::Operator::Max,
-    Fortran::parser::AccReductionOperator::Operator::Min};
+    Fortran::parser::ReductionOperator::Operator::Plus,
+    Fortran::parser::ReductionOperator::Operator::Multiply,
+    Fortran::parser::ReductionOperator::Operator::Max,
+    Fortran::parser::ReductionOperator::Operator::Min};
 
 static ReductionOpsSet reductionComplexSet{
-    Fortran::parser::AccReductionOperator::Operator::Plus,
-    Fortran::parser::AccReductionOperator::Operator::Multiply};
+    Fortran::parser::ReductionOperator::Operator::Plus,
+    Fortran::parser::ReductionOperator::Operator::Multiply};
 
 static ReductionOpsSet reductionLogicalSet{
-    Fortran::parser::AccReductionOperator::Operator::And,
-    Fortran::parser::AccReductionOperator::Operator::Or,
-    Fortran::parser::AccReductionOperator::Operator::Eqv,
-    Fortran::parser::AccReductionOperator::Operator::Neqv};
+    Fortran::parser::ReductionOperator::Operator::And,
+    Fortran::parser::ReductionOperator::Operator::Or,
+    Fortran::parser::ReductionOperator::Operator::Eqv,
+    Fortran::parser::ReductionOperator::Operator::Neqv};
 
 namespace Fortran::semantics {
 
@@ -69,7 +78,12 @@ static constexpr inline AccClauseSet updateOnlyAllowedAfterDeviceTypeClauses{
 
 static constexpr inline AccClauseSet routineOnlyAllowedAfterDeviceTypeClauses{
     llvm::acc::Clause::ACCC_bind, llvm::acc::Clause::ACCC_gang,
-    llvm::acc::Clause::ACCC_vector, llvm::acc::Clause::ACCC_worker};
+    llvm::acc::Clause::ACCC_vector, llvm::acc::Clause::ACCC_worker,
+    llvm::acc::Clause::ACCC_seq};
+
+static constexpr inline AccClauseSet routineMutuallyExclusiveClauses{
+    llvm::acc::Clause::ACCC_gang, llvm::acc::Clause::ACCC_worker,
+    llvm::acc::Clause::ACCC_vector, llvm::acc::Clause::ACCC_seq};
 
 bool AccStructureChecker::CheckAllowedModifier(llvm::acc::Clause clause) {
   if (GetContext().directive == llvm::acc::ACCD_enter_data ||
@@ -94,18 +108,25 @@ bool AccStructureChecker::IsComputeConstruct(
       directive == llvm::acc::ACCD_kernels_loop;
 }
 
-bool AccStructureChecker::IsInsideComputeConstruct() const {
-  if (dirContext_.size() <= 1) {
-    return false;
-  }
+bool AccStructureChecker::IsLoopConstruct(
+    llvm::acc::Directive directive) const {
+  return directive == llvm::acc::Directive::ACCD_loop ||
+      directive == llvm::acc::ACCD_parallel_loop ||
+      directive == llvm::acc::ACCD_serial_loop ||
+      directive == llvm::acc::ACCD_kernels_loop;
+}
 
+std::optional<llvm::acc::Directive>
+AccStructureChecker::getParentComputeConstruct() const {
   // Check all nested context skipping the first one.
-  for (std::size_t i = dirContext_.size() - 1; i > 0; --i) {
-    if (IsComputeConstruct(dirContext_[i - 1].directive)) {
-      return true;
-    }
-  }
-  return false;
+  for (std::size_t i = dirContext_.size() - 1; i > 0; --i)
+    if (IsComputeConstruct(dirContext_[i - 1].directive))
+      return dirContext_[i - 1].directive;
+  return std::nullopt;
+}
+
+bool AccStructureChecker::IsInsideComputeConstruct() const {
+  return getParentComputeConstruct().has_value();
 }
 
 void AccStructureChecker::CheckNotInComputeConstruct() {
@@ -114,6 +135,14 @@ void AccStructureChecker::CheckNotInComputeConstruct() {
         "Directive %s may not be called within a compute region"_err_en_US,
         ContextDirectiveAsFortran());
   }
+}
+
+bool AccStructureChecker::IsInsideKernelsConstruct() const {
+  if (auto directive = getParentComputeConstruct())
+    if (*directive == llvm::acc::ACCD_kernels ||
+        *directive == llvm::acc::ACCD_kernels_loop)
+      return true;
+  return false;
 }
 
 void AccStructureChecker::Enter(const parser::AccClause &x) {
@@ -218,18 +247,104 @@ void AccStructureChecker::Leave(const parser::OpenACCCombinedConstruct &x) {
   const auto &beginBlockDir{std::get<parser::AccBeginCombinedDirective>(x.t)};
   const auto &combinedDir{
       std::get<parser::AccCombinedDirective>(beginBlockDir.t)};
+  auto &doCons{std::get<std::optional<parser::DoConstruct>>(x.t)};
   switch (combinedDir.v) {
   case llvm::acc::Directive::ACCD_kernels_loop:
   case llvm::acc::Directive::ACCD_parallel_loop:
   case llvm::acc::Directive::ACCD_serial_loop:
     // Restriction - line 1004-1005
     CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
-        computeConstructOnlyAllowedAfterDeviceTypeClauses);
+        computeConstructOnlyAllowedAfterDeviceTypeClauses |
+            loopOnlyAllowedAfterDeviceTypeClauses);
+    if (doCons) {
+      const parser::Block &block{std::get<parser::Block>(doCons->t)};
+      CheckNoBranching(block, GetContext().directive, beginBlockDir.source);
+    }
     break;
   default:
     break;
   }
   dirContext_.pop_back();
+}
+
+std::optional<std::int64_t> AccStructureChecker::getGangDimensionSize(
+    DirectiveContext &dirContext) {
+  for (auto it : dirContext.clauseInfo) {
+    const auto *clause{it.second};
+    if (const auto *gangClause{
+            std::get_if<parser::AccClause::Gang>(&clause->u)})
+      if (gangClause->v) {
+        const Fortran::parser::AccGangArgList &x{*gangClause->v};
+        for (const Fortran::parser::AccGangArg &gangArg : x.v)
+          if (const auto *dim{
+                  std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u)})
+            if (const auto v{EvaluateInt64(context_, dim->v)})
+              return *v;
+      }
+  }
+  return std::nullopt;
+}
+
+void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
+  for (std::size_t i = dirContext_.size() - 1; i > 0; --i) {
+    auto &parent{dirContext_[i - 1]};
+    if (IsLoopConstruct(parent.directive)) {
+      for (auto parentClause : parent.actualClauses) {
+        for (auto cl : GetContext().actualClauses) {
+          bool invalid{false};
+          if (parentClause == llvm::acc::Clause::ACCC_gang &&
+              cl == llvm::acc::Clause::ACCC_gang) {
+            if (IsInsideKernelsConstruct()) {
+              context_.Say(GetContext().clauseSource,
+                  "Nested GANG loops are not allowed in the region of a KERNELS construct"_err_en_US);
+            } else {
+              auto parentDim = getGangDimensionSize(parent);
+              auto currentDim = getGangDimensionSize(GetContext());
+              std::int64_t parentDimNum = 1, currentDimNum = 1;
+              if (parentDim)
+                parentDimNum = *parentDim;
+              if (currentDim)
+                currentDimNum = *currentDim;
+              if (parentDimNum <= currentDimNum) {
+                std::string parentDimStr, currentDimStr;
+                if (parentDim)
+                  parentDimStr = "(dim:" + std::to_string(parentDimNum) + ")";
+                if (currentDim)
+                  currentDimStr = "(dim:" + std::to_string(currentDimNum) + ")";
+                context_.Say(GetContext().clauseSource,
+                    "%s%s clause is not allowed in the region of a loop with the %s%s clause"_err_en_US,
+                    parser::ToUpperCaseLetters(
+                        llvm::acc::getOpenACCClauseName(cl).str()),
+                    currentDimStr,
+                    parser::ToUpperCaseLetters(
+                        llvm::acc::getOpenACCClauseName(parentClause).str()),
+                    parentDimStr);
+                continue;
+              }
+            }
+          } else if (parentClause == llvm::acc::Clause::ACCC_worker &&
+              (cl == llvm::acc::Clause::ACCC_gang ||
+                  cl == llvm::acc::Clause::ACCC_worker)) {
+            invalid = true;
+          } else if (parentClause == llvm::acc::Clause::ACCC_vector &&
+              (cl == llvm::acc::Clause::ACCC_gang ||
+                  cl == llvm::acc::Clause::ACCC_worker ||
+                  cl == llvm::acc::Clause::ACCC_vector)) {
+            invalid = true;
+          }
+          if (invalid)
+            context_.Say(GetContext().clauseSource,
+                "%s clause is not allowed in the region of a loop with the %s clause"_err_en_US,
+                parser::ToUpperCaseLetters(
+                    llvm::acc::getOpenACCClauseName(cl).str()),
+                parser::ToUpperCaseLetters(
+                    llvm::acc::getOpenACCClauseName(parentClause).str()));
+        }
+      }
+    }
+    if (IsComputeConstruct(parent.directive))
+      break;
+  }
 }
 
 void AccStructureChecker::Enter(const parser::OpenACCLoopConstruct &x) {
@@ -249,6 +364,8 @@ void AccStructureChecker::Leave(const parser::OpenACCLoopConstruct &x) {
     CheckNotAllowedIfClause(llvm::acc::Clause::ACCC_seq,
         {llvm::acc::Clause::ACCC_gang, llvm::acc::Clause::ACCC_vector,
             llvm::acc::Clause::ACCC_worker});
+    // Restriction - 2.9.2, 2.9.3, 2.9.4
+    CheckNotInSameOrSubLevelLoopConstruct();
   }
   dirContext_.pop_back();
 }
@@ -331,20 +448,219 @@ void AccStructureChecker::Leave(const parser::OpenACCAtomicConstruct &x) {
   dirContext_.pop_back();
 }
 
-void AccStructureChecker::Enter(const parser::AccAtomicUpdate &x) {
-  const parser::AssignmentStmt &assignment{
-      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement};
-  const auto &var{std::get<parser::Variable>(assignment.t)};
-  const auto &expr{std::get<parser::Expr>(assignment.t)};
+void AccStructureChecker::CheckAtomicStmt(
+    const parser::AssignmentStmt &assign, const std::string &construct) {
+  const auto &var{std::get<parser::Variable>(assign.t)};
+  const auto &expr{std::get<parser::Expr>(assign.t)};
   const auto *rhs{GetExpr(context_, expr)};
   const auto *lhs{GetExpr(context_, var)};
-  if (lhs && rhs) {
-    if (lhs->Rank() != 0)
+
+  if (lhs) {
+    if (lhs->Rank() != 0) {
       context_.Say(expr.source,
-          "LHS of atomic update statement must be scalar"_err_en_US);
-    if (rhs->Rank() != 0)
+          "LHS of atomic %s statement must be scalar"_err_en_US, construct);
+    }
+    // TODO: Check if lhs is intrinsic type.
+  }
+  if (rhs) {
+    if (rhs->Rank() != 0) {
       context_.Say(var.GetSource(),
-          "RHS of atomic update statement must be scalar"_err_en_US);
+          "RHS of atomic %s statement must be scalar"_err_en_US, construct);
+    }
+    // TODO: Check if rhs is intrinsic type.
+  }
+}
+
+static constexpr evaluate::operation::OperatorSet validAccAtomicUpdateOperators{
+    evaluate::operation::Operator::Add, evaluate::operation::Operator::Mul,
+    evaluate::operation::Operator::Sub, evaluate::operation::Operator::Div,
+    evaluate::operation::Operator::And, evaluate::operation::Operator::Or,
+    evaluate::operation::Operator::Eqv, evaluate::operation::Operator::Neqv,
+    evaluate::operation::Operator::Max, evaluate::operation::Operator::Min};
+
+static bool IsValidAtomicUpdateOperation(
+    const evaluate::operation::Operator &op) {
+  return validAccAtomicUpdateOperators.test(op);
+}
+
+// Couldn't reproduce this behavior with evaluate::UnwrapConvertedExpr which
+// is similar but only works within a single type category.
+static SomeExpr GetExprModuloConversion(const SomeExpr &expr) {
+  const auto [op, args]{evaluate::GetTopLevelOperation(expr)};
+  // Check: if it is a conversion then it must have at least one argument.
+  CHECK(((op != evaluate::operation::Operator::Convert &&
+             op != evaluate::operation::Operator::Resize) ||
+            args.size() >= 1) &&
+      "Invalid conversion operation");
+  if ((op == evaluate::operation::Operator::Convert ||
+          op == evaluate::operation::Operator::Resize) &&
+      args.size() >= 1) {
+    return args[0];
+  }
+  return expr;
+}
+
+void AccStructureChecker::CheckAtomicUpdateStmt(
+    const parser::AssignmentStmt &assign, const SomeExpr &updateVar,
+    const SomeExpr *captureVar) {
+  CheckAtomicStmt(assign, "update");
+  const auto &expr{std::get<parser::Expr>(assign.t)};
+  const auto *rhs{GetExpr(context_, expr)};
+  if (rhs) {
+    const auto [op, args]{
+        evaluate::GetTopLevelOperation(GetExprModuloConversion(*rhs))};
+    if (!IsValidAtomicUpdateOperation(op)) {
+      context_.Say(expr.source,
+          "Invalid atomic update operation, can only use: *, +, -, *, /, and, or, eqv, neqv, max, min, iand, ior, ieor"_err_en_US);
+    } else {
+      bool foundUpdateVar{false};
+      for (const auto &arg : args) {
+        if (updateVar == GetExprModuloConversion(arg)) {
+          if (foundUpdateVar) {
+            context_.Say(expr.source,
+                "The updated variable, %s, cannot appear more than once in the atomic update operation"_err_en_US,
+                updateVar.AsFortran());
+          } else {
+            foundUpdateVar = true;
+          }
+        } else if (evaluate::IsVarSubexpressionOf(updateVar, arg)) {
+          // TODO: Get the source location of arg and point to the individual
+          // argument.
+          context_.Say(expr.source,
+              "Arguments to the atomic update operation cannot reference the updated variable, %s, as a subexpression"_err_en_US,
+              updateVar.AsFortran());
+        }
+      }
+      if (!foundUpdateVar) {
+        context_.Say(expr.source,
+            "The RHS of this atomic update statement must reference the updated variable: %s"_err_en_US,
+            updateVar.AsFortran());
+      }
+    }
+  }
+}
+
+void AccStructureChecker::CheckAtomicWriteStmt(
+    const parser::AssignmentStmt &assign, const SomeExpr &updateVar,
+    const SomeExpr *captureVar) {
+  CheckAtomicStmt(assign, "write");
+  const auto &expr{std::get<parser::Expr>(assign.t)};
+  const auto *rhs{GetExpr(context_, expr)};
+  if (rhs) {
+    if (evaluate::IsVarSubexpressionOf(updateVar, *rhs)) {
+      context_.Say(expr.source,
+          "The RHS of this atomic write statement cannot reference the atomic variable: %s"_err_en_US,
+          updateVar.AsFortran());
+    }
+  }
+}
+
+void AccStructureChecker::CheckAtomicCaptureStmt(
+    const parser::AssignmentStmt &assign, const SomeExpr *updateVar,
+    const SomeExpr &captureVar) {
+  CheckAtomicStmt(assign, "capture");
+}
+
+void AccStructureChecker::Enter(const parser::AccAtomicCapture &capture) {
+  const Fortran::parser::AssignmentStmt &stmt1{
+      std::get<Fortran::parser::AccAtomicCapture::Stmt1>(capture.t)
+          .v.statement};
+  const Fortran::parser::AssignmentStmt &stmt2{
+      std::get<Fortran::parser::AccAtomicCapture::Stmt2>(capture.t)
+          .v.statement};
+  const auto &var1{std::get<parser::Variable>(stmt1.t)};
+  const auto &var2{std::get<parser::Variable>(stmt2.t)};
+  const auto *lhs1{GetExpr(context_, var1)};
+  const auto *lhs2{GetExpr(context_, var2)};
+  if (!lhs1 || !lhs2) {
+    // Not enough information to check.
+    return;
+  }
+  if (*lhs1 == *lhs2) {
+    context_.Say(std::get<parser::Verbatim>(capture.t).source,
+        "The variables assigned in this atomic capture construct must be distinct"_err_en_US);
+    return;
+  }
+  const auto &expr1{std::get<parser::Expr>(stmt1.t)};
+  const auto &expr2{std::get<parser::Expr>(stmt2.t)};
+  const auto *rhs1{GetExpr(context_, expr1)};
+  const auto *rhs2{GetExpr(context_, expr2)};
+  if (!rhs1 || !rhs2) {
+    return;
+  }
+  bool stmt1CapturesLhs2{*lhs2 == GetExprModuloConversion(*rhs1)};
+  bool stmt2CapturesLhs1{*lhs1 == GetExprModuloConversion(*rhs2)};
+  if (stmt1CapturesLhs2 && !stmt2CapturesLhs1) {
+    if (*lhs2 == GetExprModuloConversion(*rhs2)) {
+      // a = b; b = b: Doesn't fit the spec.
+      context_.Say(std::get<parser::Verbatim>(capture.t).source,
+          "The assignments in this atomic capture construct do not update a variable and capture either its initial or final value"_err_en_US);
+      // TODO: Add attatchment that a = b seems to be a capture,
+      // but b = b is not a valid update or write.
+    } else if (evaluate::IsVarSubexpressionOf(*lhs2, *rhs2)) {
+      // Take v = x; x = <expr w/ x> as capture; update
+      const auto &updateVar{*lhs2};
+      const auto &captureVar{*lhs1};
+      CheckAtomicCaptureStmt(stmt1, &updateVar, captureVar);
+      CheckAtomicUpdateStmt(stmt2, updateVar, &captureVar);
+    } else {
+      // Take v = x; x = <expr w/o x> as capture; write
+      const auto &updateVar{*lhs2};
+      const auto &captureVar{*lhs1};
+      CheckAtomicCaptureStmt(stmt1, &updateVar, captureVar);
+      CheckAtomicWriteStmt(stmt2, updateVar, &captureVar);
+    }
+  } else if (stmt2CapturesLhs1 && !stmt1CapturesLhs2) {
+    if (*lhs1 == GetExprModuloConversion(*rhs1)) {
+      // Error a = a; b = a;
+      context_.Say(var1.GetSource(),
+          "The first assignment in this atomic capture construct doesn't perform a valid update"_err_en_US);
+      // Add attatchment that a = a is not considered an update,
+      // but b = a seems to be a capture.
+    } else {
+      // Take x = <expr>; v = x: as update; capture
+      const auto &updateVar{*lhs1};
+      const auto &captureVar{*lhs2};
+      CheckAtomicUpdateStmt(stmt1, updateVar, &captureVar);
+      CheckAtomicCaptureStmt(stmt2, &updateVar, captureVar);
+    }
+  } else if (stmt1CapturesLhs2 && stmt2CapturesLhs1) {
+    // x1 = x2; x2 = x1; Doesn't fit the spec.
+    context_.Say(std::get<parser::Verbatim>(capture.t).source,
+        "The assignments in this atomic capture construct do not update a variable and capture either its initial or final value"_err_en_US);
+    // TODO: Add attatchment that both assignments seem to be captures.
+  } else { // !stmt1CapturesLhs2 && !stmt2CapturesLhs1
+    // a = <expr != b>; b = <expr != a>; Doesn't fit the spec
+    context_.Say(std::get<parser::Verbatim>(capture.t).source,
+        "The assignments in this atomic capture construct do not update a variable and capture either its initial or final value"_err_en_US);
+    // TODO: Add attatchment that neither assignment seems to be a capture.
+  }
+}
+
+void AccStructureChecker::Enter(const parser::AccAtomicUpdate &x) {
+  const auto &assign{
+      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement};
+  const auto &var{std::get<parser::Variable>(assign.t)};
+  if (const auto *updateVar{GetExpr(context_, var)}) {
+    CheckAtomicUpdateStmt(assign, *updateVar, /*captureVar=*/nullptr);
+  }
+}
+
+void AccStructureChecker::Enter(const parser::AccAtomicWrite &x) {
+  const auto &assign{
+      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement};
+  const auto &var{std::get<parser::Variable>(assign.t)};
+  if (const auto *updateVar{GetExpr(context_, var)}) {
+    CheckAtomicWriteStmt(assign, *updateVar, /*captureVar=*/nullptr);
+  }
+}
+
+void AccStructureChecker::Enter(const parser::AccAtomicRead &x) {
+  const auto &assign{
+      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement};
+  const auto &var{std::get<parser::Variable>(assign.t)};
+  if (const auto *captureVar{GetExpr(context_, var)}) {
+    CheckAtomicCaptureStmt(assign, /*updateVar=*/nullptr, *captureVar);
   }
 }
 
@@ -363,7 +679,6 @@ void AccStructureChecker::Leave(const parser::OpenACCCacheConstruct &x) {
 
 // Clause checkers
 CHECK_SIMPLE_CLAUSE(Auto, ACCC_auto)
-CHECK_SIMPLE_CLAUSE(Async, ACCC_async)
 CHECK_SIMPLE_CLAUSE(Attach, ACCC_attach)
 CHECK_SIMPLE_CLAUSE(Bind, ACCC_bind)
 CHECK_SIMPLE_CLAUSE(Capture, ACCC_capture)
@@ -382,12 +697,8 @@ CHECK_SIMPLE_CLAUSE(NoCreate, ACCC_no_create)
 CHECK_SIMPLE_CLAUSE(Nohost, ACCC_nohost)
 CHECK_SIMPLE_CLAUSE(Private, ACCC_private)
 CHECK_SIMPLE_CLAUSE(Read, ACCC_read)
-CHECK_SIMPLE_CLAUSE(Seq, ACCC_seq)
-CHECK_SIMPLE_CLAUSE(Tile, ACCC_tile)
 CHECK_SIMPLE_CLAUSE(UseDevice, ACCC_use_device)
-CHECK_SIMPLE_CLAUSE(Vector, ACCC_vector)
 CHECK_SIMPLE_CLAUSE(Wait, ACCC_wait)
-CHECK_SIMPLE_CLAUSE(Worker, ACCC_worker)
 CHECK_SIMPLE_CLAUSE(Write, ACCC_write)
 CHECK_SIMPLE_CLAUSE(Unknown, ACCC_unknown)
 
@@ -396,15 +707,16 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
   if (GetContext().directive != llvm::acc::Directive::ACCD_declare)
     return;
   for (const auto &object : list.v) {
-    std::visit(
-        Fortran::common::visitors{
-            [&](const Fortran::parser::Designator &designator) {
-              if (const auto *name = getDesignatorNameIfDataRef(designator)) {
+    common::visit(
+        common::visitors{
+            [&](const parser::Designator &designator) {
+              if (const auto *name =
+                      parser::GetDesignatorNameIfDataRef(designator)) {
                 if (declareSymbols.contains(&name->symbol->GetUltimate())) {
                   if (declareSymbols[&name->symbol->GetUltimate()] == clause) {
-                    context_.Say(GetContext().clauseSource,
-                        "'%s' in the %s clause is already present in the same "
-                        "clause in this module"_warn_en_US,
+                    context_.Warn(common::UsageWarning::OpenAccUsage,
+                        GetContext().clauseSource,
+                        "'%s' in the %s clause is already present in the same clause in this module"_warn_en_US,
                         name->symbol->name(),
                         parser::ToUpperCaseLetters(
                             llvm::acc::getOpenACCClauseName(clause).str()));
@@ -424,7 +736,7 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
                 declareSymbols.insert({&name->symbol->GetUltimate(), clause});
               }
             },
-            [&](const Fortran::parser::Name &name) {
+            [&](const parser::Name &name) {
               // TODO: check common block
             }},
         object.u);
@@ -435,6 +747,12 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
     const parser::AccObjectListWithModifier &list, llvm::acc::Clause clause) {
   const auto &objectList = std::get<Fortran::parser::AccObjectList>(list.t);
   CheckMultipleOccurrenceInDeclare(objectList, clause);
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::Async &c) {
+  llvm::acc::Clause crtClause = llvm::acc::Clause::ACCC_async;
+  CheckAllowed(crtClause);
+  CheckAllowedOncePerGroup(crtClause, llvm::acc::Clause::ACCC_device_type);
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::Create &c) {
@@ -529,25 +847,88 @@ void AccStructureChecker::Enter(const parser::AccClause::DeviceType &d) {
                 .str()),
         ContextDirectiveAsFortran());
   }
+  ResetCrtGroup();
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::Seq &g) {
+  llvm::acc::Clause crtClause = llvm::acc::Clause::ACCC_seq;
+  if (GetContext().directive == llvm::acc::Directive::ACCD_routine) {
+    CheckMutuallyExclusivePerGroup(crtClause,
+        llvm::acc::Clause::ACCC_device_type, routineMutuallyExclusiveClauses);
+  }
+  CheckAllowed(crtClause);
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::Vector &g) {
+  llvm::acc::Clause crtClause = llvm::acc::Clause::ACCC_vector;
+  if (GetContext().directive == llvm::acc::Directive::ACCD_routine) {
+    CheckMutuallyExclusivePerGroup(crtClause,
+        llvm::acc::Clause::ACCC_device_type, routineMutuallyExclusiveClauses);
+  }
+  CheckAllowed(crtClause);
+  if (GetContext().directive != llvm::acc::Directive::ACCD_routine) {
+    CheckAllowedOncePerGroup(crtClause, llvm::acc::Clause::ACCC_device_type);
+  }
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::Worker &g) {
+  llvm::acc::Clause crtClause = llvm::acc::Clause::ACCC_worker;
+  if (GetContext().directive == llvm::acc::Directive::ACCD_routine) {
+    CheckMutuallyExclusivePerGroup(crtClause,
+        llvm::acc::Clause::ACCC_device_type, routineMutuallyExclusiveClauses);
+  }
+  CheckAllowed(crtClause);
+  if (GetContext().directive != llvm::acc::Directive::ACCD_routine) {
+    CheckAllowedOncePerGroup(crtClause, llvm::acc::Clause::ACCC_device_type);
+  }
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::Tile &g) {
+  CheckAllowed(llvm::acc::Clause::ACCC_tile);
+  CheckAllowedOncePerGroup(
+      llvm::acc::Clause::ACCC_tile, llvm::acc::Clause::ACCC_device_type);
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::Gang &g) {
-  CheckAllowed(llvm::acc::Clause::ACCC_gang);
+  llvm::acc::Clause crtClause = llvm::acc::Clause::ACCC_gang;
+  if (GetContext().directive == llvm::acc::Directive::ACCD_routine) {
+    CheckMutuallyExclusivePerGroup(crtClause,
+        llvm::acc::Clause::ACCC_device_type, routineMutuallyExclusiveClauses);
+  }
+  CheckAllowed(crtClause);
+  if (GetContext().directive != llvm::acc::Directive::ACCD_routine) {
+    CheckAllowedOncePerGroup(crtClause, llvm::acc::Clause::ACCC_device_type);
+  }
 
   if (g.v) {
     bool hasNum = false;
     bool hasDim = false;
+    bool hasStatic = false;
     const Fortran::parser::AccGangArgList &x = *g.v;
     for (const Fortran::parser::AccGangArg &gangArg : x.v) {
-      if (std::get_if<Fortran::parser::AccGangArg::Num>(&gangArg.u))
+      if (std::get_if<Fortran::parser::AccGangArg::Num>(&gangArg.u)) {
         hasNum = true;
-      else if (std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u))
+      } else if (std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u)) {
         hasDim = true;
+      } else if (std::get_if<Fortran::parser::AccGangArg::Static>(&gangArg.u)) {
+        hasStatic = true;
+      }
     }
 
-    if (hasDim && hasNum)
+    if (GetContext().directive == llvm::acc::Directive::ACCD_routine &&
+        (hasStatic || hasNum)) {
+      context_.Say(GetContext().clauseSource,
+          "Only the dim argument is allowed on the %s clause on the %s directive"_err_en_US,
+          parser::ToUpperCaseLetters(
+              llvm::acc::getOpenACCClauseName(llvm::acc::Clause::ACCC_gang)
+                  .str()),
+          ContextDirectiveAsFortran());
+    }
+
+    if (hasDim && hasNum) {
       context_.Say(GetContext().clauseSource,
           "The num argument is not allowed when dim is specified"_err_en_US);
+    }
   }
 }
 
@@ -556,6 +937,8 @@ void AccStructureChecker::Enter(const parser::AccClause::NumGangs &n) {
       /*warnInsteadOfError=*/GetContext().directive ==
               llvm::acc::Directive::ACCD_serial ||
           GetContext().directive == llvm::acc::Directive::ACCD_serial_loop);
+  CheckAllowedOncePerGroup(
+      llvm::acc::Clause::ACCC_num_gangs, llvm::acc::Clause::ACCC_device_type);
 
   if (n.v.size() > 3)
     context_.Say(GetContext().clauseSource,
@@ -567,6 +950,8 @@ void AccStructureChecker::Enter(const parser::AccClause::NumWorkers &n) {
       /*warnInsteadOfError=*/GetContext().directive ==
               llvm::acc::Directive::ACCD_serial ||
           GetContext().directive == llvm::acc::Directive::ACCD_serial_loop);
+  CheckAllowedOncePerGroup(
+      llvm::acc::Clause::ACCC_num_workers, llvm::acc::Clause::ACCC_device_type);
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::VectorLength &n) {
@@ -574,6 +959,8 @@ void AccStructureChecker::Enter(const parser::AccClause::VectorLength &n) {
       /*warnInsteadOfError=*/GetContext().directive ==
               llvm::acc::Directive::ACCD_serial ||
           GetContext().directive == llvm::acc::Directive::ACCD_serial_loop);
+  CheckAllowedOncePerGroup(llvm::acc::Clause::ACCC_vector_length,
+      llvm::acc::Clause::ACCC_device_type);
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::Reduction &reduction) {
@@ -590,34 +977,39 @@ void AccStructureChecker::Enter(const parser::AccClause::Reduction &reduction) {
   // The following check that the reduction operator is supported with the given
   // type.
   const parser::AccObjectListWithReduction &list{reduction.v};
-  const auto &op{std::get<parser::AccReductionOperator>(list.t)};
+  const auto &op{std::get<parser::ReductionOperator>(list.t)};
   const auto &objects{std::get<parser::AccObjectList>(list.t)};
 
   for (const auto &object : objects.v) {
-    std::visit(
-        Fortran::common::visitors{
-            [&](const Fortran::parser::Designator &designator) {
-              if (const auto *name = getDesignatorNameIfDataRef(designator)) {
-                const auto *type{name->symbol->GetType()};
-                if (type->IsNumeric(TypeCategory::Integer) &&
-                    !reductionIntegerSet.test(op.v)) {
-                  context_.Say(GetContext().clauseSource,
-                      "reduction operator not supported for integer type"_err_en_US);
-                } else if (type->IsNumeric(TypeCategory::Real) &&
-                    !reductionRealSet.test(op.v)) {
-                  context_.Say(GetContext().clauseSource,
-                      "reduction operator not supported for real type"_err_en_US);
-                } else if (type->IsNumeric(TypeCategory::Complex) &&
-                    !reductionComplexSet.test(op.v)) {
-                  context_.Say(GetContext().clauseSource,
-                      "reduction operator not supported for complex type"_err_en_US);
-                } else if (type->category() ==
-                        Fortran::semantics::DeclTypeSpec::Category::Logical &&
-                    !reductionLogicalSet.test(op.v)) {
-                  context_.Say(GetContext().clauseSource,
-                      "reduction operator not supported for logical type"_err_en_US);
+    common::visit(
+        common::visitors{
+            [&](const parser::Designator &designator) {
+              if (const auto *name =
+                      parser::GetDesignatorNameIfDataRef(designator)) {
+                if (name->symbol) {
+                  if (const auto *type{name->symbol->GetType()}) {
+                    if (type->IsNumeric(TypeCategory::Integer) &&
+                        !reductionIntegerSet.test(op.v)) {
+                      context_.Say(GetContext().clauseSource,
+                          "reduction operator not supported for integer type"_err_en_US);
+                    } else if (type->IsNumeric(TypeCategory::Real) &&
+                        !reductionRealSet.test(op.v)) {
+                      context_.Say(GetContext().clauseSource,
+                          "reduction operator not supported for real type"_err_en_US);
+                    } else if (type->IsNumeric(TypeCategory::Complex) &&
+                        !reductionComplexSet.test(op.v)) {
+                      context_.Say(GetContext().clauseSource,
+                          "reduction operator not supported for complex type"_err_en_US);
+                    } else if (type->category() ==
+                            Fortran::semantics::DeclTypeSpec::Category::
+                                Logical &&
+                        !reductionLogicalSet.test(op.v)) {
+                      context_.Say(GetContext().clauseSource,
+                          "reduction operator not supported for logical type"_err_en_US);
+                    }
+                  }
+                  // TODO: check composite type.
                 }
-                // TODO: check composite type.
               }
             },
             [&](const Fortran::parser::Name &name) {
@@ -654,6 +1046,8 @@ void AccStructureChecker::Enter(const parser::AccClause::Self &x) {
 
 void AccStructureChecker::Enter(const parser::AccClause::Collapse &x) {
   CheckAllowed(llvm::acc::Clause::ACCC_collapse);
+  CheckAllowedOncePerGroup(
+      llvm::acc::Clause::ACCC_collapse, llvm::acc::Clause::ACCC_device_type);
   const parser::AccCollapseArg &accCollapseArg = x.v;
   const auto &collapseValue{
       std::get<parser::ScalarIntConstantExpr>(accCollapseArg.t)};
@@ -687,6 +1081,13 @@ void AccStructureChecker::Enter(const parser::AccClause::Link &x) {
   CheckMultipleOccurrenceInDeclare(x.v, llvm::acc::Clause::ACCC_link);
 }
 
+void AccStructureChecker::Enter(const parser::AccClause::Shortloop &x) {
+  if (CheckAllowed(llvm::acc::Clause::ACCC_shortloop)) {
+    context_.Warn(common::UsageWarning::OpenAccUsage, GetContext().clauseSource,
+        "Non-standard shortloop clause ignored"_warn_en_US);
+  }
+}
+
 void AccStructureChecker::Enter(const parser::AccClause::If &x) {
   CheckAllowed(llvm::acc::Clause::ACCC_if);
   if (const auto *expr{GetExpr(x.v)}) {
@@ -702,7 +1103,8 @@ void AccStructureChecker::Enter(const parser::AccClause::If &x) {
 }
 
 void AccStructureChecker::Enter(const parser::OpenACCEndConstruct &x) {
-  context_.Say(x.source, "Misplaced OpenACC end directive"_warn_en_US);
+  context_.Warn(common::UsageWarning::OpenAccUsage, x.source,
+      "Misplaced OpenACC end directive"_warn_en_US);
 }
 
 void AccStructureChecker::Enter(const parser::Module &) {

@@ -8,21 +8,33 @@
 
 #include <__config>
 
+#include <cstdlib>
+#include <print>
+
+#include <__system_error/system_error.h>
+
+#include "filesystem/error.h"
+
 #if defined(_LIBCPP_WIN32API)
-
-#  include <cstdlib>
-#  include <print>
-
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <io.h>
 #  include <windows.h>
-
-#  include <__system_error/system_error.h>
-
-#  include "filesystem/error.h"
+#elif __has_include(<unistd.h>)
+#  include <unistd.h>
+#  if defined(_NEWLIB_VERSION)
+#    if defined(_POSIX_C_SOURCE) && __has_include(<stdio.h>)
+#      include <stdio.h>
+#      define HAS_FILENO_AND_ISATTY
+#    endif
+#  else
+#    define HAS_FILENO_AND_ISATTY
+#  endif
+#endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+#if defined(_LIBCPP_WIN32API)
 
 _LIBCPP_EXPORTED_FROM_ABI bool __is_windows_terminal(FILE* __stream) {
   // Note the Standard does this in one call, but it's unclear whether
@@ -38,7 +50,7 @@ _LIBCPP_EXPORTED_FROM_ABI bool __is_windows_terminal(FILE* __stream) {
   return GetConsoleMode(reinterpret_cast<void*>(__handle), &__mode);
 }
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 _LIBCPP_EXPORTED_FROM_ABI void
 __write_to_windows_console([[maybe_unused]] FILE* __stream, [[maybe_unused]] wstring_view __view) {
   // https://learn.microsoft.com/en-us/windows/console/writeconsole
@@ -47,11 +59,14 @@ __write_to_windows_console([[maybe_unused]] FILE* __stream, [[maybe_unused]] wst
                     __view.size(),
                     nullptr,
                     nullptr) == 0) {
-    __throw_system_error(filesystem::detail::make_windows_error(GetLastError()), "failed to write formatted output");
+    std::__throw_system_error(filesystem::detail::get_last_error(), "failed to write formatted output");
   }
 }
-#  endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
+
+#elif defined(HAS_FILENO_AND_ISATTY) // !_LIBCPP_WIN32API
+
+_LIBCPP_EXPORTED_FROM_ABI bool __is_posix_terminal(FILE* __stream) { return isatty(fileno(__stream)); }
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
-
-#endif // !_LIBCPP_WIN32API

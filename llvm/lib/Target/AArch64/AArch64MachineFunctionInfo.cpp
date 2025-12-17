@@ -16,6 +16,7 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -23,9 +24,28 @@
 
 using namespace llvm;
 
+static std::optional<uint64_t>
+getSVEStackSize(const AArch64FunctionInfo &MFI,
+                uint64_t (AArch64FunctionInfo::*GetStackSize)() const) {
+  if (!MFI.hasCalculatedStackSizeSVE())
+    return std::nullopt;
+  return (MFI.*GetStackSize)();
+}
+
 yaml::AArch64FunctionInfo::AArch64FunctionInfo(
     const llvm::AArch64FunctionInfo &MFI)
-    : HasRedZone(MFI.hasRedZone()) {}
+    : HasRedZone(MFI.hasRedZone()),
+      StackSizeZPR(
+          getSVEStackSize(MFI, &llvm::AArch64FunctionInfo::getStackSizeZPR)),
+      StackSizePPR(
+          getSVEStackSize(MFI, &llvm::AArch64FunctionInfo::getStackSizePPR)),
+      HasStackFrame(MFI.hasStackFrame()
+                        ? std::optional<bool>(MFI.hasStackFrame())
+                        : std::nullopt),
+      HasStreamingModeChanges(
+          MFI.hasStreamingModeChanges()
+              ? std::optional<bool>(MFI.hasStreamingModeChanges())
+              : std::nullopt) {}
 
 void yaml::AArch64FunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<AArch64FunctionInfo>::mapping(YamlIO, *this);
@@ -35,42 +55,36 @@ void AArch64FunctionInfo::initializeBaseYamlFields(
     const yaml::AArch64FunctionInfo &YamlMFI) {
   if (YamlMFI.HasRedZone)
     HasRedZone = YamlMFI.HasRedZone;
+  if (YamlMFI.StackSizeZPR || YamlMFI.StackSizePPR)
+    setStackSizeSVE(YamlMFI.StackSizeZPR.value_or(0),
+                    YamlMFI.StackSizePPR.value_or(0));
+  if (YamlMFI.HasStackFrame)
+    setHasStackFrame(*YamlMFI.HasStackFrame);
+  if (YamlMFI.HasStreamingModeChanges)
+    setHasStreamingModeChanges(*YamlMFI.HasStreamingModeChanges);
 }
 
-static std::pair<bool, bool> GetSignReturnAddress(const Function &F) {
+static SignReturnAddress GetSignReturnAddress(const Function &F) {
+  if (F.hasFnAttribute("ptrauth-returns"))
+    return SignReturnAddress::NonLeaf;
+
   // The function should be signed in the following situations:
   // - sign-return-address=all
   // - sign-return-address=non-leaf and the functions spills the LR
-  if (!F.hasFnAttribute("sign-return-address")) {
-    const Module &M = *F.getParent();
-    if (const auto *Sign = mdconst::extract_or_null<ConstantInt>(
-            M.getModuleFlag("sign-return-address"))) {
-      if (Sign->getZExtValue()) {
-        if (const auto *All = mdconst::extract_or_null<ConstantInt>(
-                M.getModuleFlag("sign-return-address-all")))
-          return {true, All->getZExtValue()};
-        return {true, false};
-      }
-    }
-    return {false, false};
-  }
+  if (!F.hasFnAttribute("sign-return-address"))
+    return SignReturnAddress::None;
 
   StringRef Scope = F.getFnAttribute("sign-return-address").getValueAsString();
-  if (Scope.equals("none"))
-    return {false, false};
-
-  if (Scope.equals("all"))
-    return {true, true};
-
-  assert(Scope.equals("non-leaf"));
-  return {true, false};
+  return StringSwitch<SignReturnAddress>(Scope)
+      .Case("none", SignReturnAddress::None)
+      .Case("non-leaf", SignReturnAddress::NonLeaf)
+      .Case("all", SignReturnAddress::All);
 }
 
 static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
+  if (F.hasFnAttribute("ptrauth-returns"))
+    return true;
   if (!F.hasFnAttribute("sign-return-address-key")) {
-    if (const auto *BKey = mdconst::extract_or_null<ConstantInt>(
-            F.getParent()->getModuleFlag("sign-return-address-with-bkey")))
-      return BKey->getZExtValue();
     if (STI.getTargetTriple().isOSWindows())
       return true;
     return false;
@@ -78,8 +92,20 @@ static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
 
   const StringRef Key =
       F.getFnAttribute("sign-return-address-key").getValueAsString();
-  assert(Key.equals_insensitive("a_key") || Key.equals_insensitive("b_key"));
-  return Key.equals_insensitive("b_key");
+  assert(Key == "a_key" || Key == "b_key");
+  return Key == "b_key";
+}
+
+static bool hasELFSignedGOTHelper(const Function &F,
+                                  const AArch64Subtarget *STI) {
+  if (!STI->getTargetTriple().isOSBinFormatELF())
+    return false;
+  const Module *M = F.getParent();
+  const auto *Flag = mdconst::extract_or_null<ConstantInt>(
+      M->getModuleFlag("ptrauth-elf-got"));
+  if (Flag && Flag->getZExtValue() == 1)
+    return true;
+  return false;
 }
 
 AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
@@ -88,23 +114,50 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
   // HasRedZone here.
   if (F.hasFnAttribute(Attribute::NoRedZone))
     HasRedZone = false;
-  std::tie(SignReturnAddress, SignReturnAddressAll) = GetSignReturnAddress(F);
+  SignCondition = GetSignReturnAddress(F);
   SignWithBKey = ShouldSignWithBKey(F, *STI);
+  HasELFSignedGOT = hasELFSignedGOTHelper(F, STI);
   // TODO: skip functions that have no instrumented allocas for optimization
   IsMTETagged = F.hasFnAttribute(Attribute::SanitizeMemTag);
 
-  if (!F.hasFnAttribute("branch-target-enforcement")) {
-    if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
-            F.getParent()->getModuleFlag("branch-target-enforcement")))
-      BranchTargetEnforcement = BTE->getZExtValue();
-    return;
-  }
+  // BTI/PAuthLR are set on the function attribute.
+  BranchTargetEnforcement = F.hasFnAttribute("branch-target-enforcement");
+  BranchProtectionPAuthLR = F.hasFnAttribute("branch-protection-pauth-lr");
 
-  const StringRef BTIEnable =
-      F.getFnAttribute("branch-target-enforcement").getValueAsString();
-  assert(BTIEnable.equals_insensitive("true") ||
-         BTIEnable.equals_insensitive("false"));
-  BranchTargetEnforcement = BTIEnable.equals_insensitive("true");
+  // Parse the SME function attributes.
+  SMEFnAttrs = SMEAttrs(F);
+
+  // The default stack probe size is 4096 if the function has no
+  // stack-probe-size attribute. This is a safe default because it is the
+  // smallest possible guard page size.
+  uint64_t ProbeSize = 4096;
+  if (F.hasFnAttribute("stack-probe-size"))
+    ProbeSize = F.getFnAttributeAsParsedInteger("stack-probe-size");
+  else if (const auto *PS = mdconst::extract_or_null<ConstantInt>(
+               F.getParent()->getModuleFlag("stack-probe-size")))
+    ProbeSize = PS->getZExtValue();
+  assert(int64_t(ProbeSize) > 0 && "Invalid stack probe size");
+
+  if (STI->isTargetWindows()) {
+    if (!F.hasFnAttribute("no-stack-arg-probe"))
+      StackProbeSize = ProbeSize;
+  } else {
+    // Round down to the stack alignment.
+    uint64_t StackAlign =
+        STI->getFrameLowering()->getTransientStackAlign().value();
+    ProbeSize = std::max(StackAlign, ProbeSize & ~(StackAlign - 1U));
+    StringRef ProbeKind;
+    if (F.hasFnAttribute("probe-stack"))
+      ProbeKind = F.getFnAttribute("probe-stack").getValueAsString();
+    else if (const auto *PS = dyn_cast_or_null<MDString>(
+                 F.getParent()->getModuleFlag("probe-stack")))
+      ProbeKind = PS->getString();
+    if (ProbeKind.size()) {
+      if (ProbeKind != "inline-asm")
+        report_fatal_error("Unsupported stack probing method");
+      StackProbeSize = ProbeSize;
+    }
+  }
 }
 
 MachineFunctionInfo *AArch64FunctionInfo::clone(
@@ -114,23 +167,28 @@ MachineFunctionInfo *AArch64FunctionInfo::clone(
   return DestMF.cloneInfo<AArch64FunctionInfo>(*this);
 }
 
-bool AArch64FunctionInfo::shouldSignReturnAddress(bool SpillsLR) const {
-  if (!SignReturnAddress)
-    return false;
-  if (SignReturnAddressAll)
-    return true;
-  return SpillsLR;
-}
-
 static bool isLRSpilled(const MachineFunction &MF) {
   return llvm::any_of(
       MF.getFrameInfo().getCalleeSavedInfo(),
       [](const auto &Info) { return Info.getReg() == AArch64::LR; });
 }
 
+bool AArch64FunctionInfo::shouldSignReturnAddress(SignReturnAddress Condition,
+                                                  bool IsLRSpilled) {
+  switch (Condition) {
+  case SignReturnAddress::None:
+    return false;
+  case SignReturnAddress::NonLeaf:
+    return IsLRSpilled;
+  case SignReturnAddress::All:
+    return true;
+  }
+  llvm_unreachable("Unknown SignReturnAddress enum");
+}
+
 bool AArch64FunctionInfo::shouldSignReturnAddress(
     const MachineFunction &MF) const {
-  return shouldSignReturnAddress(isLRSpilled(MF));
+  return shouldSignReturnAddress(SignCondition, isLRSpilled(MF));
 }
 
 bool AArch64FunctionInfo::needsShadowCallStackPrologueEpilogue(
@@ -158,12 +216,14 @@ bool AArch64FunctionInfo::needsAsyncDwarfUnwindInfo(
     const MachineFunction &MF) const {
   if (!NeedsAsyncDwarfUnwindInfo) {
     const Function &F = MF.getFunction();
+    const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     //  The check got "minsize" is because epilogue unwind info is not emitted
     //  (yet) for homogeneous epilogues, outlined functions, and functions
     //  outlined from.
-    NeedsAsyncDwarfUnwindInfo = needsDwarfUnwindInfo(MF) &&
-                                F.getUWTableKind() == UWTableKind::Async &&
-                                !F.hasMinSize();
+    NeedsAsyncDwarfUnwindInfo =
+        needsDwarfUnwindInfo(MF) &&
+        ((F.getUWTableKind() == UWTableKind::Async && !F.hasMinSize()) ||
+         AFI->hasStreamingModeChanges());
   }
   return *NeedsAsyncDwarfUnwindInfo;
 }

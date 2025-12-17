@@ -12,10 +12,8 @@
 
 #include "mlir/Conversion/SCFToSPIRV/SCFToSPIRV.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -73,12 +71,12 @@ void replaceSCFOutputValue(ScfOp scfOp, OpTy newOp,
     auto pointerType =
         spirv::PointerType::get(convertedType, spirv::StorageClass::Function);
     rewriter.setInsertionPoint(newOp);
-    auto alloc = rewriter.create<spirv::VariableOp>(
-        loc, pointerType, spirv::StorageClass::Function,
-        /*initializer=*/nullptr);
+    auto alloc = spirv::VariableOp::create(rewriter, loc, pointerType,
+                                           spirv::StorageClass::Function,
+                                           /*initializer=*/nullptr);
     allocas.push_back(alloc);
     rewriter.setInsertionPointAfter(newOp);
-    Value loadResult = rewriter.create<spirv::LoadOp>(loc, alloc);
+    Value loadResult = spirv::LoadOp::create(rewriter, loc, alloc);
     resultValue.push_back(loadResult);
   }
   rewriter.replaceOp(scfOp, resultValue);
@@ -96,8 +94,8 @@ Region::iterator getBlockIt(Region &region, unsigned index) {
 template <typename OpTy>
 class SCFToSPIRVPattern : public OpConversionPattern<OpTy> {
 public:
-  SCFToSPIRVPattern<OpTy>(MLIRContext *context, SPIRVTypeConverter &converter,
-                          ScfToSPIRVContextImpl *scfToSPIRVContext)
+  SCFToSPIRVPattern(MLIRContext *context, const SPIRVTypeConverter &converter,
+                    ScfToSPIRVContextImpl *scfToSPIRVContext)
       : OpConversionPattern<OpTy>::OpConversionPattern(converter, context),
         scfToSPIRVContext(scfToSPIRVContext), typeConverter(converter) {}
 
@@ -117,7 +115,7 @@ protected:
   // conversion. There isn't a straightforward way to do that yet, as when
   // converting types, ops aren't taken into consideration. Therefore, we just
   // bypass the framework's type conversion for now.
-  SPIRVTypeConverter &typeConverter;
+  const SPIRVTypeConverter &typeConverter;
 };
 
 //===----------------------------------------------------------------------===//
@@ -137,15 +135,15 @@ struct ForOpConversion final : SCFToSPIRVPattern<scf::ForOp> {
     // a single back edge from the continue to header block, and a single exit
     // from header to merge.
     auto loc = forOp.getLoc();
-    auto loopOp = rewriter.create<spirv::LoopOp>(loc, spirv::LoopControl::None);
-    loopOp.addEntryAndMergeBlock();
+    auto loopOp =
+        spirv::LoopOp::create(rewriter, loc, spirv::LoopControl::None);
+    loopOp.addEntryAndMergeBlock(rewriter);
 
     OpBuilder::InsertionGuard guard(rewriter);
     // Create the block for the header.
-    auto *header = new Block();
-    // Insert the header.
-    loopOp.getBody().getBlocks().insert(getBlockIt(loopOp.getBody(), 1),
-                                        header);
+    Block *header = rewriter.createBlock(&loopOp.getBody(),
+                                         getBlockIt(loopOp.getBody(), 1));
+    rewriter.setInsertionPointAfter(loopOp);
 
     // Create the new induction variable to use.
     Value adapLowerBound = adaptor.getLowerBound();
@@ -163,7 +161,7 @@ struct ForOpConversion final : SCFToSPIRVPattern<scf::ForOp> {
     signatureConverter.remapInput(0, newIndVar);
     for (unsigned i = 1, e = body->getNumArguments(); i < e; i++)
       signatureConverter.remapInput(i, header->getArgument(i));
-    body = rewriter.applySignatureConversion(&forOp.getRegion(),
+    body = rewriter.applySignatureConversion(&forOp.getRegion().front(),
                                              signatureConverter);
 
     // Move the blocks from the forOp into the loopOp. This is the body of the
@@ -175,16 +173,23 @@ struct ForOpConversion final : SCFToSPIRVPattern<scf::ForOp> {
     args.append(adaptor.getInitArgs().begin(), adaptor.getInitArgs().end());
     // Branch into it from the entry.
     rewriter.setInsertionPointToEnd(&(loopOp.getBody().front()));
-    rewriter.create<spirv::BranchOp>(loc, header, args);
+    spirv::BranchOp::create(rewriter, loc, header, args);
 
     // Generate the rest of the loop header.
     rewriter.setInsertionPointToEnd(header);
     auto *mergeBlock = loopOp.getMergeBlock();
-    auto cmpOp = rewriter.create<spirv::SLessThanOp>(
-        loc, rewriter.getI1Type(), newIndVar, adaptor.getUpperBound());
+    Value cmpOp;
+    if (forOp.getUnsignedCmp()) {
+      cmpOp = spirv::ULessThanOp::create(rewriter, loc, rewriter.getI1Type(),
+                                         newIndVar, adaptor.getUpperBound());
+    } else {
+      cmpOp = spirv::SLessThanOp::create(rewriter, loc, rewriter.getI1Type(),
+                                         newIndVar, adaptor.getUpperBound());
+    }
 
-    rewriter.create<spirv::BranchConditionalOp>(
-        loc, cmpOp, body, ArrayRef<Value>(), mergeBlock, ArrayRef<Value>());
+    spirv::BranchConditionalOp::create(rewriter, loc, cmpOp, body,
+                                       ArrayRef<Value>(), mergeBlock,
+                                       ArrayRef<Value>());
 
     // Generate instructions to increment the step of the induction variable and
     // branch to the header.
@@ -192,9 +197,9 @@ struct ForOpConversion final : SCFToSPIRVPattern<scf::ForOp> {
     rewriter.setInsertionPointToEnd(continueBlock);
 
     // Add the step to the induction variable and branch to the header.
-    Value updatedIndVar = rewriter.create<spirv::IAddOp>(
-        loc, newIndVar.getType(), newIndVar, adaptor.getStep());
-    rewriter.create<spirv::BranchOp>(loc, header, updatedIndVar);
+    Value updatedIndVar = spirv::IAddOp::create(
+        rewriter, loc, newIndVar.getType(), newIndVar, adaptor.getStep());
+    spirv::BranchOp::create(rewriter, loc, header, updatedIndVar);
 
     // Infer the return types from the init operands. Vector type may get
     // converted to CooperativeMatrix or to Vector type, to avoid having complex
@@ -226,42 +231,7 @@ struct IfOpConversion : SCFToSPIRVPattern<scf::IfOp> {
     // subsequently converges.
     auto loc = ifOp.getLoc();
 
-    // Create `spirv.selection` operation, selection header block and merge
-    // block.
-    auto selectionOp =
-        rewriter.create<spirv::SelectionOp>(loc, spirv::SelectionControl::None);
-    auto *mergeBlock = rewriter.createBlock(&selectionOp.getBody(),
-                                            selectionOp.getBody().end());
-    rewriter.create<spirv::MergeOp>(loc);
-
-    OpBuilder::InsertionGuard guard(rewriter);
-    auto *selectionHeaderBlock =
-        rewriter.createBlock(&selectionOp.getBody().front());
-
-    // Inline `then` region before the merge block and branch to it.
-    auto &thenRegion = ifOp.getThenRegion();
-    auto *thenBlock = &thenRegion.front();
-    rewriter.setInsertionPointToEnd(&thenRegion.back());
-    rewriter.create<spirv::BranchOp>(loc, mergeBlock);
-    rewriter.inlineRegionBefore(thenRegion, mergeBlock);
-
-    auto *elseBlock = mergeBlock;
-    // If `else` region is not empty, inline that region before the merge block
-    // and branch to it.
-    if (!ifOp.getElseRegion().empty()) {
-      auto &elseRegion = ifOp.getElseRegion();
-      elseBlock = &elseRegion.front();
-      rewriter.setInsertionPointToEnd(&elseRegion.back());
-      rewriter.create<spirv::BranchOp>(loc, mergeBlock);
-      rewriter.inlineRegionBefore(elseRegion, mergeBlock);
-    }
-
-    // Create a `spirv.BranchConditional` operation for selection header block.
-    rewriter.setInsertionPointToEnd(selectionHeaderBlock);
-    rewriter.create<spirv::BranchConditionalOp>(loc, adaptor.getCondition(),
-                                                thenBlock, ArrayRef<Value>(),
-                                                elseBlock, ArrayRef<Value>());
-
+    // Compute return types.
     SmallVector<Type, 8> returnTypes;
     for (auto result : ifOp.getResults()) {
       auto convertedType = typeConverter.convertType(result.getType());
@@ -272,6 +242,43 @@ struct IfOpConversion : SCFToSPIRVPattern<scf::IfOp> {
 
       returnTypes.push_back(convertedType);
     }
+
+    // Create `spirv.selection` operation, selection header block and merge
+    // block.
+    auto selectionOp = spirv::SelectionOp::create(
+        rewriter, loc, spirv::SelectionControl::None);
+    auto *mergeBlock = rewriter.createBlock(&selectionOp.getBody(),
+                                            selectionOp.getBody().end());
+    spirv::MergeOp::create(rewriter, loc);
+
+    OpBuilder::InsertionGuard guard(rewriter);
+    auto *selectionHeaderBlock =
+        rewriter.createBlock(&selectionOp.getBody().front());
+
+    // Inline `then` region before the merge block and branch to it.
+    auto &thenRegion = ifOp.getThenRegion();
+    auto *thenBlock = &thenRegion.front();
+    rewriter.setInsertionPointToEnd(&thenRegion.back());
+    spirv::BranchOp::create(rewriter, loc, mergeBlock);
+    rewriter.inlineRegionBefore(thenRegion, mergeBlock);
+
+    auto *elseBlock = mergeBlock;
+    // If `else` region is not empty, inline that region before the merge block
+    // and branch to it.
+    if (!ifOp.getElseRegion().empty()) {
+      auto &elseRegion = ifOp.getElseRegion();
+      elseBlock = &elseRegion.front();
+      rewriter.setInsertionPointToEnd(&elseRegion.back());
+      spirv::BranchOp::create(rewriter, loc, mergeBlock);
+      rewriter.inlineRegionBefore(elseRegion, mergeBlock);
+    }
+
+    // Create a `spirv.BranchConditional` operation for selection header block.
+    rewriter.setInsertionPointToEnd(selectionHeaderBlock);
+    spirv::BranchConditionalOp::create(rewriter, loc, adaptor.getCondition(),
+                                       thenBlock, ArrayRef<Value>(), elseBlock,
+                                       ArrayRef<Value>());
+
     replaceSCFOutputValue(ifOp, selectionOp, rewriter, scfToSPIRVContext,
                           returnTypes);
     return success();
@@ -311,7 +318,7 @@ public:
 
       auto loc = terminatorOp.getLoc();
       for (unsigned i = 0, e = operands.size(); i < e; i++)
-        rewriter.create<spirv::StoreOp>(loc, allocas[i], operands[i]);
+        spirv::StoreOp::create(rewriter, loc, allocas[i], operands[i]);
       if (isa<spirv::LoopOp>(parent)) {
         // For loops we also need to update the branch jumping back to the
         // header.
@@ -320,8 +327,8 @@ public:
         SmallVector<Value, 8> args(br.getBlockArguments());
         args.append(operands.begin(), operands.end());
         rewriter.setInsertionPoint(br);
-        rewriter.create<spirv::BranchOp>(terminatorOp.getLoc(), br.getTarget(),
-                                         args);
+        spirv::BranchOp::create(rewriter, terminatorOp.getLoc(), br.getTarget(),
+                                args);
         rewriter.eraseOp(br);
       }
     }
@@ -341,8 +348,9 @@ struct WhileOpConversion final : SCFToSPIRVPattern<scf::WhileOp> {
   matchAndRewrite(scf::WhileOp whileOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = whileOp.getLoc();
-    auto loopOp = rewriter.create<spirv::LoopOp>(loc, spirv::LoopControl::None);
-    loopOp.addEntryAndMergeBlock();
+    auto loopOp =
+        spirv::LoopOp::create(rewriter, loc, spirv::LoopControl::None);
+    loopOp.addEntryAndMergeBlock(rewriter);
 
     Region &beforeRegion = whileOp.getBefore();
     Region &afterRegion = whileOp.getAfter();
@@ -383,7 +391,7 @@ struct WhileOpConversion final : SCFToSPIRVPattern<scf::WhileOp> {
 
     // Jump from the loop entry block to the loop header block.
     rewriter.setInsertionPointToEnd(&entryBlock);
-    rewriter.create<spirv::BranchOp>(loc, &beforeBlock, adaptor.getInits());
+    spirv::BranchOp::create(rewriter, loc, &beforeBlock, adaptor.getInits());
 
     auto condLoc = cond.getLoc();
 
@@ -404,23 +412,23 @@ struct WhileOpConversion final : SCFToSPIRVPattern<scf::WhileOp> {
 
       // Create local variables before the scf.while op.
       rewriter.setInsertionPoint(loopOp);
-      auto alloc = rewriter.create<spirv::VariableOp>(
-          condLoc, pointerType, spirv::StorageClass::Function,
-          /*initializer=*/nullptr);
+      auto alloc = spirv::VariableOp::create(rewriter, condLoc, pointerType,
+                                             spirv::StorageClass::Function,
+                                             /*initializer=*/nullptr);
 
       // Load the final result values after the scf.while op.
       rewriter.setInsertionPointAfter(loopOp);
-      auto loadResult = rewriter.create<spirv::LoadOp>(condLoc, alloc);
+      auto loadResult = spirv::LoadOp::create(rewriter, condLoc, alloc);
       resultValues[i] = loadResult;
 
       // Store the current iteration's result value.
       rewriter.setInsertionPointToEnd(&beforeBlock);
-      rewriter.create<spirv::StoreOp>(condLoc, alloc, res);
+      spirv::StoreOp::create(rewriter, condLoc, alloc, res);
     }
 
     rewriter.setInsertionPointToEnd(&beforeBlock);
     rewriter.replaceOpWithNewOp<spirv::BranchConditionalOp>(
-        cond, conditionVal, &afterBlock, condArgs, &mergeBlock, std::nullopt);
+        cond, conditionVal, &afterBlock, condArgs, &mergeBlock, ValueRange());
 
     // Convert the scf.yield op to a branch back to the header block.
     rewriter.setInsertionPointToEnd(&afterBlock);
@@ -437,7 +445,7 @@ struct WhileOpConversion final : SCFToSPIRVPattern<scf::WhileOp> {
 // Public API
 //===----------------------------------------------------------------------===//
 
-void mlir::populateSCFToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void mlir::populateSCFToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                       ScfToSPIRVContext &scfToSPIRVContext,
                                       RewritePatternSet &patterns) {
   patterns.add<ForOpConversion, IfOpConversion, TerminatorOpConversion,

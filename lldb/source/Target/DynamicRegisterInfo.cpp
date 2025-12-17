@@ -231,20 +231,20 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
   //        InvalidateNameMap;
   //        InvalidateNameMap invalidate_map;
   for (uint32_t i = 0; i < num_regs; ++i) {
-    StructuredData::Dictionary *reg_info_dict = nullptr;
-    if (!regs->GetItemAtIndexAsDictionary(i, reg_info_dict)) {
+    std::optional<StructuredData::Dictionary *> maybe_reg_info_dict =
+        regs->GetItemAtIndexAsDictionary(i);
+    if (!maybe_reg_info_dict) {
       Clear();
       printf("error: items in the 'registers' array must be dictionaries\n");
       regs->DumpToStdout();
       return 0;
     }
+    StructuredData::Dictionary *reg_info_dict = *maybe_reg_info_dict;
 
     // { 'name':'rcx'       , 'bitsize' :  64, 'offset' :  16,
     // 'encoding':'uint' , 'format':'hex'         , 'set': 0, 'ehframe' : 2,
     // 'dwarf' : 2, 'generic':'arg4', 'alt-name':'arg4', },
     RegisterInfo reg_info;
-    std::vector<uint32_t> value_regs;
-    std::vector<uint32_t> invalidate_regs;
     memset(&reg_info, 0, sizeof(reg_info));
 
     llvm::StringRef name_val;
@@ -347,10 +347,8 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
       const size_t num_regs = invalidate_reg_list->GetSize();
       if (num_regs > 0) {
         for (uint32_t idx = 0; idx < num_regs; ++idx) {
-          uint64_t invalidate_reg_num;
-          std::optional<llvm::StringRef> maybe_invalidate_reg_name =
-              invalidate_reg_list->GetItemAtIndexAsString(idx);
-          if (maybe_invalidate_reg_name) {
+          if (auto maybe_invalidate_reg_name =
+                  invalidate_reg_list->GetItemAtIndexAsString(idx)) {
             const RegisterInfo *invalidate_reg_info =
                 GetRegisterInfo(*maybe_invalidate_reg_name);
             if (invalidate_reg_info) {
@@ -363,10 +361,11 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
                      "\"%s\" while parsing register \"%s\"\n",
                      maybe_invalidate_reg_name->str().c_str(), reg_info.name);
             }
-          } else if (invalidate_reg_list->GetItemAtIndexAsInteger(
-                         idx, invalidate_reg_num)) {
-            if (invalidate_reg_num != UINT64_MAX)
-              m_invalidate_regs_map[i].push_back(invalidate_reg_num);
+          } else if (auto maybe_invalidate_reg_num =
+                         invalidate_reg_list->GetItemAtIndexAsInteger<uint64_t>(
+                             idx)) {
+            if (*maybe_invalidate_reg_num != UINT64_MAX)
+              m_invalidate_regs_map[i].push_back(*maybe_invalidate_reg_num);
             else
               printf("error: 'invalidate-regs' list value wasn't a valid "
                      "integer\n");
@@ -459,8 +458,8 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
   // Now update all value_regs with each register info as needed
   const size_t num_regs = m_regs.size();
   for (size_t i = 0; i < num_regs; ++i) {
-    if (m_value_regs_map.find(i) != m_value_regs_map.end())
-      m_regs[i].value_regs = m_value_regs_map[i].data();
+    if (auto it = m_value_regs_map.find(i); it != m_value_regs_map.end())
+      m_regs[i].value_regs = it->second.data();
     else
       m_regs[i].value_regs = nullptr;
   }
@@ -496,10 +495,7 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
        pos != end; ++pos) {
     if (pos->second.size() > 1) {
       llvm::sort(pos->second);
-      reg_num_collection::iterator unique_end =
-          std::unique(pos->second.begin(), pos->second.end());
-      if (unique_end != pos->second.end())
-        pos->second.erase(unique_end, pos->second.end());
+      pos->second.erase(llvm::unique(pos->second), pos->second.end());
     }
     assert(!pos->second.empty());
     if (pos->second.back() != LLDB_INVALID_REGNUM)
@@ -508,8 +504,9 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
 
   // Now update all invalidate_regs with each register info as needed
   for (size_t i = 0; i < num_regs; ++i) {
-    if (m_invalidate_regs_map.find(i) != m_invalidate_regs_map.end())
-      m_regs[i].invalidate_regs = m_invalidate_regs_map[i].data();
+    if (auto it = m_invalidate_regs_map.find(i);
+        it != m_invalidate_regs_map.end())
+      m_regs[i].invalidate_regs = it->second.data();
     else
       m_regs[i].invalidate_regs = nullptr;
   }

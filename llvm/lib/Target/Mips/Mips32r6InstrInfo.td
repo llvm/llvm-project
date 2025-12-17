@@ -22,6 +22,7 @@ def SDT_MipsFSelect : SDTypeProfile<1, 3, [SDTCisFP<1>,
                                            SDTCisSameAs<0,2>,
                                            SDTCisSameAs<2,3>]>;
 
+// Floating point select
 def MipsFSelect : SDNode<"MipsISD::FSELECT", SDT_MipsFSelect>;
 
 //===----------------------------------------------------------------------===//
@@ -73,6 +74,7 @@ class AUI_ENC    : AUI_FM;
 class AUIPC_ENC  : PCREL16_FM<OPCODE5_AUIPC>;
 
 class BAL_ENC   : BAL_FM;
+class NAL_ENC   : NAL_FM;
 class BALC_ENC  : BRANCH_OFF26_FM<0b111010>;
 class BC_ENC    : BRANCH_OFF26_FM<0b110010>;
 class BEQC_ENC  : CMP_BRANCH_2R_OFF16_FM<OPGROUP_ADDI>,
@@ -152,15 +154,15 @@ class SELNEZ_ENC : SPECIAL_3R_FM<0b00000, 0b110111>;
 
 class LWPC_ENC   : PCREL19_FM<OPCODE2_LWPC>;
 
-class MAX_S_ENC : COP1_3R_FM<0b011101, FIELD_FMT_S>;
-class MAX_D_ENC : COP1_3R_FM<0b011101, FIELD_FMT_D>;
+class MAX_S_ENC : COP1_3R_FM<0b011110, FIELD_FMT_S>;
+class MAX_D_ENC : COP1_3R_FM<0b011110, FIELD_FMT_D>;
 class MIN_S_ENC : COP1_3R_FM<0b011100, FIELD_FMT_S>;
 class MIN_D_ENC : COP1_3R_FM<0b011100, FIELD_FMT_D>;
 
 class MAXA_S_ENC : COP1_3R_FM<0b011111, FIELD_FMT_S>;
 class MAXA_D_ENC : COP1_3R_FM<0b011111, FIELD_FMT_D>;
-class MINA_S_ENC : COP1_3R_FM<0b011110, FIELD_FMT_S>;
-class MINA_D_ENC : COP1_3R_FM<0b011110, FIELD_FMT_D>;
+class MINA_S_ENC : COP1_3R_FM<0b011101, FIELD_FMT_S>;
+class MINA_D_ENC : COP1_3R_FM<0b011101, FIELD_FMT_D>;
 
 class SELEQZ_S_ENC : COP1_3R_FM<0b010100, FIELD_FMT_S>;
 class SELEQZ_D_ENC : COP1_3R_FM<0b010100, FIELD_FMT_D>;
@@ -381,6 +383,12 @@ class BC_DESC_BASE<string instr_asm, DAGOperand opnd> : BRANCH_DESC_BASE,
   bit isCTI = 1;
 }
 
+class NAL_DESC_BASE<string instr_asm> : BRANCH_DESC_BASE,
+    MipsR6Arch<instr_asm> {
+  string AsmString = instr_asm;
+  bit isCTI = 1;
+}
+
 class CMP_BC_DESC_BASE<string instr_asm, DAGOperand opnd,
                        RegisterOperand GPROpnd> : BRANCH_DESC_BASE,
                                                   MipsR6Arch<instr_asm> {
@@ -419,6 +427,12 @@ class CMP_CBR_RT_Z_DESC_BASE<string instr_asm, DAGOperand opnd,
 
 class BAL_DESC : BC_DESC_BASE<"bal", brtarget> {
   bit isCall = 1;
+  bit hasDelaySlot = 1;
+  list<Register> Defs = [RA];
+  bit isCTI = 1;
+}
+
+class NAL_DESC : NAL_DESC_BASE<"nal"> {
   bit hasDelaySlot = 1;
   list<Register> Defs = [RA];
   bit isCTI = 1;
@@ -868,6 +882,8 @@ def AUI : R6MMR6Rel, AUI_ENC, AUI_DESC, ISA_MIPS32R6;
 def AUIPC : R6MMR6Rel, AUIPC_ENC, AUIPC_DESC, ISA_MIPS32R6;
 def BAL : BAL_ENC, BAL_DESC, ISA_MIPS32R6;
 def BALC : R6MMR6Rel, BALC_ENC, BALC_DESC, ISA_MIPS32R6;
+def NAL : NAL_ENC, NAL_DESC, ISA_MIPS32R6;
+
 let AdditionalPredicates = [NotInMicroMips] in {
   def BC1EQZ : BC1EQZ_ENC, BC1EQZ_DESC, ISA_MIPS32R6, HARDFLOAT;
   def BC1NEZ : BC1NEZ_ENC, BC1NEZ_DESC, ISA_MIPS32R6, HARDFLOAT;
@@ -948,7 +964,6 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def MUL_R6 : R6MMR6Rel, MUL_R6_ENC, MUL_R6_DESC, ISA_MIPS32R6;
   def MULU   : R6MMR6Rel, MULU_ENC, MULU_DESC, ISA_MIPS32R6;
 }
-def NAL; // BAL with rd=0
 let AdditionalPredicates = [NotInMicroMips] in {
   def PREF_R6 : R6MMR6Rel, PREF_ENC, PREF_DESC, ISA_MIPS32R6;
   def RINT_D : RINT_D_ENC, RINT_D_DESC, ISA_MIPS32R6, HARDFLOAT;
@@ -1103,6 +1118,77 @@ def : MipsPat<(select i32:$cond, immz, i32:$f),
               ISA_MIPS32R6;
 }
 
+// llvm.fmin/fmax operations.
+let AdditionalPredicates = [NotInMicroMips] in {
+  def : MipsPat<(fmaxnum_ieee f32:$lhs, f32:$rhs),
+                (MAX_S   f32:$lhs, f32:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(fmaxnum f32:$lhs, f32:$rhs),
+                (MAX_S   f32:$lhs, f32:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(fmaxnum_ieee f64:$lhs, f64:$rhs),
+                (MAX_D   f64:$lhs, f64:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(fmaxnum f64:$lhs, f64:$rhs),
+                (MAX_D   f64:$lhs, f64:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(fminnum_ieee f32:$lhs, f32:$rhs),
+                (MIN_S   f32:$lhs, f32:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(fminnum f32:$lhs, f32:$rhs),
+                (MIN_S   f32:$lhs, f32:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(fminnum_ieee f64:$lhs, f64:$rhs),
+                (MIN_D   f64:$lhs, f64:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(fminnum f64:$lhs, f64:$rhs),
+                (MIN_D   f64:$lhs, f64:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(f32 (fcanonicalize f32:$src)),
+                (MIN_S   f32:$src, f32:$src)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(f64 (fcanonicalize f64:$src)),
+                (MIN_D   f64:$src, f64:$src)>,
+                ISA_MIPS32R6;
+}
+
+// llvm.is_fpclass operations.
+def to_fclass_mask: SDNodeXForm<imm, [{
+  unsigned Check = N->getZExtValue();
+  unsigned Mask = 0;
+  if (Check & fcSNan)
+    Mask |= Mips::FClassMaskSignalingNaN;
+  if (Check & fcQNan)
+    Mask |= Mips::FClassMaskQuietNaN;
+  if (Check & fcPosInf)
+    Mask |= Mips::FClassMaskPositiveInfinity;
+  if (Check & fcNegInf)
+    Mask |= Mips::FClassMaskNegativeInfinity;
+  if (Check & fcPosNormal)
+    Mask |= Mips::FClassMaskPositiveNormal;
+  if (Check & fcNegNormal)
+    Mask |= Mips::FClassMaskNegativeNormal;
+  if (Check & fcPosSubnormal)
+    Mask |= Mips::FClassMaskPositiveSubnormal;
+  if (Check & fcNegSubnormal)
+    Mask |= Mips::FClassMaskNegativeSubnormal;
+  if (Check & fcPosZero)
+    Mask |= Mips::FClassMaskPositiveZero;
+  if (Check & fcNegZero)
+    Mask |= Mips::FClassMaskNegativeZero;
+  return CurDAG->getTargetConstant(Mask, SDLoc(N), MVT::i32);
+}]>;
+let AdditionalPredicates = [NotInMicroMips] in {
+  def : MipsPat<(is_fpclass f32:$lhs, i32:$imm),
+                (SLTu ZERO, (ANDi (MFC1 (CLASS_S f32:$lhs)),
+                          (to_fclass_mask imm:$imm)))>,
+                ISA_MIPS32R6;
+  def : MipsPat<(is_fpclass f64:$lhs, i32:$imm),
+                (SLTu ZERO, (ANDi (MFC1_D64 (CLASS_D f64:$lhs)),
+                          (to_fclass_mask imm:$imm)))>,
+                ISA_MIPS32R6;
+}
+
 // Pseudo instructions
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1,
     hasExtraSrcRegAllocReq = 1, isCTI = 1, Defs = [AT], hasPostISelHook = 1 in {
@@ -1141,3 +1227,40 @@ let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
                                     ISA_MIPS32R6;
 }
 
+// Combining branch and set instructions into one compact branch instruction
+let AdditionalPredicates = [NotInMicroMips, UseCompactBranches] in {
+  def : MipsPat<(brcond (i32 (setlt i32:$rs, 0)), bb:$offset),
+                (BLTZC GPR32Opnd:$rs, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setlt i32:$rs, 1)), bb:$offset),
+                (BLEZC GPR32Opnd:$rs, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setge i32:$rs, 0)), bb:$offset),
+                (BGEZC GPR32Opnd:$rs, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setge i32:$rs, 1)), bb:$offset),
+                (BGTZC GPR32Opnd:$rs, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setgt i32:$rs, 0)), bb:$offset),
+                (BGTZC GPR32Opnd:$rs, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setgt i32:$rs, -1)), bb:$offset),
+                (BGEZC GPR32Opnd:$rs, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setle i32:$rs, 0)), bb:$offset),
+                (BLEZC GPR32Opnd:$rs, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setle i32:$rs, -1)), bb:$offset),
+                (BLTZC GPR32Opnd:$rs, bb:$offset)>, ISA_MIPS32R6;
+
+  def : MipsPat<(brcond (i32 (setlt GPR32:$rs, GPR32:$rt)), bb:$offset),
+                (BLTC GPR32:$rs, GPR32:$rt, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setge GPR32:$rs, GPR32:$rt)), bb:$offset),
+                (BGEC GPR32:$rs, GPR32:$rt, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setgt GPR32:$rs, GPR32:$rt)), bb:$offset),
+                (BLTC GPR32:$rt, GPR32:$rs, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setle GPR32:$rs, GPR32:$rt)), bb:$offset),
+                (BGEC GPR32:$rt, GPR32:$rs, bb:$offset)>, ISA_MIPS32R6;
+
+  def : MipsPat<(brcond (i32 (setult GPR32:$rs, GPR32:$rt)), bb:$offset),
+                (BLTUC GPR32:$rs, GPR32:$rt, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setuge GPR32:$rs, GPR32:$rt)), bb:$offset),
+                (BGEUC GPR32:$rs, GPR32:$rt, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setugt GPR32:$rs, GPR32:$rt)), bb:$offset),
+                (BLTUC GPR32:$rt, GPR32:$rs, bb:$offset)>, ISA_MIPS32R6;
+  def : MipsPat<(brcond (i32 (setule GPR32:$rs, GPR32:$rt)), bb:$offset),
+                (BGEUC GPR32:$rt, GPR32:$rs, bb:$offset)>, ISA_MIPS32R6;
+}
