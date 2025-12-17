@@ -974,6 +974,7 @@ public:
     return false;
   }
 
+  void populateUnwindResumeBlock(bool isCleanup, cir::TryOp tryOp);
   void populateEHCatchRegions(EHScopeStack::stable_iterator scope,
                               cir::TryOp tryOp);
 

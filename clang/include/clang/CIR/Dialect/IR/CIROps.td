@@ -3032,6 +3032,8 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
   let results = (outs Optional<CIR_AnyType>:$result);
   let arguments = commonArgs;
 
+  let skipDefaultBuilders = 1;
+
   let builders = [
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee, "mlir::Type":$resType,
                    "mlir::ValueRange":$operands), [{
