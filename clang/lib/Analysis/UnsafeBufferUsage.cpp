@@ -1759,6 +1759,7 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
     unsigned FmtArgIdx;
     const Expr *&UnsafeArg;
     ASTContext &Ctx;
+    bool UnsafeArgSet;
 
     // Returns an `Expr` representing the precision if specified, null
     // otherwise.
@@ -1799,7 +1800,8 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
   public:
     StringFormatStringHandler(const CallExpr *Call, unsigned FmtArgIdx,
                               const Expr *&UnsafeArg, ASTContext &Ctx)
-        : Call(Call), FmtArgIdx(FmtArgIdx), UnsafeArg(UnsafeArg), Ctx(Ctx) {}
+        : Call(Call), FmtArgIdx(FmtArgIdx), UnsafeArg(UnsafeArg), Ctx(Ctx),
+          UnsafeArgSet(false) {}
 
     bool HandlePrintfSpecifier(const analyze_printf::PrintfSpecifier &FS,
                                const char *startSpecifier,
@@ -1837,8 +1839,11 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
           return true;
       // Handle unsafe case:
       UnsafeArg = Call->getArg(ArgIdx); // output
+      UnsafeArgSet = true;
       return false; // returning false stops parsing immediately
     }
+
+    bool isUnsafeArgSet() { return UnsafeArgSet; }
   };
 
   const Expr *Fmt = Call->getArg(FmtArgIdx);
@@ -1849,15 +1854,17 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
       StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg, Ctx);
 
       return analyze_format_string::ParsePrintfString(
-          Handler, FmtStr.begin(), FmtStr.end(), Ctx.getLangOpts(),
-          Ctx.getTargetInfo(), isKprintf);
+                 Handler, FmtStr.begin(), FmtStr.end(), Ctx.getLangOpts(),
+                 Ctx.getTargetInfo(), isKprintf) &&
+             Handler.isUnsafeArgSet();
     }
 
     if (auto FmtStr = SL->tryEvaluateString(Ctx)) {
       StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg, Ctx);
       return analyze_format_string::ParsePrintfString(
-          Handler, FmtStr->data(), FmtStr->data() + FmtStr->size(),
-          Ctx.getLangOpts(), Ctx.getTargetInfo(), isKprintf);
+                 Handler, FmtStr->data(), FmtStr->data() + FmtStr->size(),
+                 Ctx.getLangOpts(), Ctx.getTargetInfo(), isKprintf) &&
+             Handler.isUnsafeArgSet();
     }
   }
   // If format is not a string literal, we cannot analyze the format string.
