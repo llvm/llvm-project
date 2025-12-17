@@ -25,7 +25,88 @@ def ROCDL_Dialect : Dialect {
   let name = "rocdl";
   let cppNamespace = "::mlir::ROCDL";
   let dependentDialects = ["LLVM::LLVMDialect"];
+  let summary = "Dialect for wrapping LLVM AMDGPU backend intrinsics and attributes";
   let hasOperationAttrVerify = 1;
+
+  let description = [{
+    The ROCDL dialect, like the other platform-specific LLVM dialects, serves
+    as the location of wrappers around the AMD-specific intrinsics and attributes
+    in LLVM. (Why the dialect is named ROCDL and not, say, AMDGPU, is unknown.)
+
+    This dialect, like other GPU lowering targets, also contains the infrastructure
+    used by the built-in compilation/offloading framework to compile AMD-specific
+    LLVM IR into binaries.
+
+    # Dialect inclusion criteria and guidelines
+
+    The operations in this dialect are 1:1 wrappers around their corresponding
+    LLVM intrinsics. Operations that do not correspond to intrinsics should not
+    be placed in this dialect.
+
+    The definition of a ROCDL op should match its LLVM counterpart. If the
+    argument and result types are fixed, they should be specified as type
+    constraints, including by overriding the default variadic type on LLVM
+    intrinsics by doing a `let results` in the operation definition.
+
+    LLVM attributes do not need to be replicated exactly if it wouldn't be
+    easy to do so, but pure operations and ones that read/write memory should
+    be annotated as such.
+
+    While LLVM intrinsics currently don't allow constraining the values an
+    `any_type` can take, it is acceptable (but not required) to impose such
+    constraints if they are known.
+
+    When an LLVM intrinsic uses an `immarg`, this corresponds to an attribute
+    in MLIR.
+
+    Human-readable assembly formats (those that, for example, explicitly indicate
+    parameter names) may be used, and are encouraged for intrinsics that have
+    complex argument schemes and don't have any higher-level wrapper (such as
+    in the `amdgpu` dialect).
+
+    While not all existing operations follow this convention, new operations should
+    generally provide argument and result types except in cases where they are
+    clearly redundant (such as with operations like `rocdl.fmed3`, which doesn't
+    need to reiterate the single type at issue multiple times). This convention
+    enhances the readability of low-level IR and prevents programmers from needing
+    to find non-local type information.
+
+    Dialect-defined discardable attributes (any attribute starting with `rocdl.`
+    that has special handling) need to correspond to AMD-specific attributes, metadata,
+    or other entities (such as calling conventions) in LLVM, or be needed for
+    GPU compilation management. Outside of the compilation infrastructure,
+    dialect-specific enums or attributes are extmelely unlikely to be needed
+    and should be avoided.
+
+    Operation documentation should specify when the operation was introduced
+    (if relevant) and include usage examples. Operations should have
+    parser/printer tests in `mlir/test/Dialect/LLVMIR/rocdl.mlir` and
+    lowering tests in `mlir/test/Target/LLVMIR/rocdl.mlir`.
+    
+    # General documentation (What does this op do?)
+
+    While rocdl ops sometimes carry their own documentation, there is no
+    expectation that such documentation will exist (or be kept up to date).
+
+    Since ROCDL operations correspond to LLVM intrinsics, the semantics and
+    behavior of these operations can be determined by investigating the
+    documentation for the corresponding intrinsic. This documentation
+    can be found in
+    - `llvm/docs/AMDGPUUsage.rst` and
+    - The comments of `llvm/include/llvm/IR/IntrinsicsAMDGPU.td`, which
+      is where details of the meaning of certain bitfields or of how an
+      intrinsic corresponds to hardware instructions are most likely to
+      be found.
+
+    Since many intrinsics are themselves minimal wrappers around hardware
+    instructions, these documentation sources often do not repeat hardware
+    documentation. If an intrinsic appears undocumented, information about
+    its behavior will often be available in published ISA descriptions or
+    (sometimes known as shader programming guides).
+
+    If an operation doesn't provide usage examples, it is likely that they
+    can be found in `mlir/test/Dialect/LLVMIR/rocdl.td`.
+  }];
 
   let extraClassDeclaration = [{
     /// Get the name of the attribute used to annotate external kernel
@@ -130,6 +211,7 @@ class ROCDL_SpecialIdRegisterOp<string mnemonic> :
   ];
 }
 
+// TODO(krzysz00): This should be a lowering pattern, not an op.
 class ROCDL_DimGetterFunctionOp<string mnemonic, string device_function,
                              int parameter, list<Trait> traits = []> :
   ROCDL_Op<mnemonic, !listconcat(traits, [Pure])>,
@@ -321,6 +403,12 @@ def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
     createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_s_barrier);
     builder.CreateFence(llvm::AtomicOrdering::Acquire,
                         llvmContext.getOrInsertSyncScopeID("workgroup"));
+  }];
+  let description = [{
+    An operation with the same expansion as HIP's __synchthreads();
+
+    **DEPRECATION NOTICE**: Use `gpu.barrier`, which will expand to these
+    operations, instead.
   }];
   let assemblyFormat = "attr-dict";
 }
