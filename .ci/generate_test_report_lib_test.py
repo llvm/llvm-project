@@ -191,19 +191,23 @@ class TestReports(unittest.TestCase):
     def test_title_only(self):
         self.assertEqual(
             generate_test_report_lib.generate_report("Foo", 0, [], []),
-            dedent(
-                """\
+            (
+                dedent(
+                    """\
                 # Foo
 
                 :white_check_mark: The build succeeded and no tests ran. This is expected in some build configurations."""
+                ),
+                True,
             ),
         )
 
     def test_title_only_failure(self):
         self.assertEqual(
             generate_test_report_lib.generate_report("Foo", 1, [], []),
-            dedent(
-                """\
+            (
+                dedent(
+                    """\
             # Foo
 
             The build failed before running any tests. Detailed information about the build failure could not be automatically obtained.
@@ -211,6 +215,8 @@ class TestReports(unittest.TestCase):
             Download the build's log file to see the details.
 
             If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+                ),
+                False,
             ),
         )
 
@@ -233,8 +239,9 @@ class TestReports(unittest.TestCase):
                     ]
                 ],
             ),
-            dedent(
-                """\
+            (
+                dedent(
+                    """\
             # Foo
 
             The build failed before running any tests. Click on a failure below to see the details.
@@ -250,6 +257,8 @@ class TestReports(unittest.TestCase):
             </details>
             
             If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+                ),
+                False,
             ),
         )
 
@@ -272,8 +281,9 @@ class TestReports(unittest.TestCase):
                 ],
                 [],
             ),
-            dedent(
-                """\
+            (
+                dedent(
+                    """\
                 # Foo
 
                 The build failed before running any tests. Detailed information about the build failure could not be automatically obtained.
@@ -281,6 +291,8 @@ class TestReports(unittest.TestCase):
                 Download the build's log file to see the details.
 
                 If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+                ),
+                False,
             ),
         )
 
@@ -312,7 +324,8 @@ class TestReports(unittest.TestCase):
               * 1 test passed
               
               :white_check_mark: The build succeeded and all tests passed."""
-                )
+                ),
+                True,
             ),
         )
 
@@ -348,7 +361,8 @@ class TestReports(unittest.TestCase):
               Download the build's log file to see the details.
               
               If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
-                )
+                ),
+                False,
             ),
         )
 
@@ -403,7 +417,8 @@ class TestReports(unittest.TestCase):
                     </details>
 
                     If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
-                )
+                ),
+                False,
             ),
         )
 
@@ -466,7 +481,8 @@ class TestReports(unittest.TestCase):
                     </details>
 
                     If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
-                )
+                ),
+                False,
             ),
         )
 
@@ -528,7 +544,8 @@ class TestReports(unittest.TestCase):
           </details>
           
           If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
-                )
+                ),
+                False,
             ),
         )
 
@@ -595,7 +612,7 @@ class TestReports(unittest.TestCase):
                 ],
                 [],
             ),
-            self.MULTI_SUITE_OUTPUT,
+            (self.MULTI_SUITE_OUTPUT, False),
         )
 
     def test_report_multiple_files_multiple_testsuites(self):
@@ -637,7 +654,7 @@ class TestReports(unittest.TestCase):
                 ],
                 [],
             ),
-            self.MULTI_SUITE_OUTPUT,
+            (self.MULTI_SUITE_OUTPUT, False),
         )
 
     def test_report_dont_list_failures(self):
@@ -673,7 +690,8 @@ class TestReports(unittest.TestCase):
           Failed tests and their output was too large to report. Download the build's log file to see the details.
           
           If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
-                )
+                ),
+                False,
             ),
         )
 
@@ -710,7 +728,8 @@ class TestReports(unittest.TestCase):
           Failed tests and their output was too large to report. Download the build's log file to see the details.
           
           If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
-                )
+                ),
+                False,
             ),
         )
 
@@ -750,7 +769,8 @@ class TestReports(unittest.TestCase):
           Failed tests and their output was too large to report. Download the build's log file to see the details.
           
           If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
-                )
+                ),
+                False,
             ),
         )
 
@@ -780,8 +800,9 @@ class TestReports(unittest.TestCase):
                     }
                 ],
             ),
-            dedent(
-                """\
+            (
+                dedent(
+                    """\
             # Foo
 
             The build failed before running any tests. Click on a failure below to see the details.
@@ -798,6 +819,8 @@ class TestReports(unittest.TestCase):
             </details>
             
             If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+                ),
+                True,
             ),
         )
 
@@ -851,7 +874,8 @@ class TestReports(unittest.TestCase):
           </details>
 
           If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
-                )
+                ),
+                True,
             ),
         )
 
@@ -904,7 +928,8 @@ class TestReports(unittest.TestCase):
           </details>
 
           If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
-                )
+                ),
+                False,
             ),
         )
 
@@ -942,8 +967,9 @@ class TestReports(unittest.TestCase):
                 generate_test_report_lib.generate_report_from_files(
                     "Foo", 1, [junit_xml_file, ninja_log_file]
                 ),
-                dedent(
-                    """\
+                (
+                    dedent(
+                        """\
                     # Foo
 
                     * 1 test passed
@@ -961,5 +987,7 @@ class TestReports(unittest.TestCase):
                     </details>
 
                     If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+                    ),
+                    False,
                 ),
             )
