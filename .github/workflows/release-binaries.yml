@@ -209,17 +209,19 @@ jobs:
       digest: ${{ steps.digest.outputs.digest }}
       artifact-id: ${{ steps.artifact-upload.outputs.artifact-id }}
     steps:
-    # It's good practice to use setup-python, but this is also required on macos-14
-    # due to https://github.com/actions/runner-images/issues/10385
+    # We need to hard code the python library path for Windows, so in order
+    # to do that we need to specify a specific python version.  It's also
+    # good practice to do this on other OSes so the version of python doesn't
+    # get changed unexpectedly.
     - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
       with:
-        python-version: '3.9'
+        python-version: '3.13'
 
     # For some reason this is needed on Windows or else the build system can't find python3.lib.
     - name: Setup Python library path
       if: runner.os == 'Windows'
       run: |
-        echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.9.13\x64\libs" >> $env:GITHUB_ENV
+        echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.13.10\x64\libs" >> $env:GITHUB_ENV
 
     - name: Setup crlf
       if: runner.os == 'Windows'
