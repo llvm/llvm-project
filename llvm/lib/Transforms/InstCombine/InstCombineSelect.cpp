@@ -4515,7 +4515,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       // We choose this as normal form to enable folding on the And and
       // shortening paths for the values (this helps getUnderlyingObjects() for
       // example).
-      if (TrueSI->getFalseValue() == FalseVal && TrueSI->hasOneUse()) {
+      // Don't perform the transform if the select is already a logical and.
+      if (TrueSI->getFalseValue() == FalseVal && TrueSI->hasOneUse() &&
+          !match(&SI, m_LogicalAnd())) {
         Value *And = Builder.CreateLogicalAnd(CondVal, TrueSI->getCondition());
         replaceOperand(SI, 0, And);
         replaceOperand(SI, 1, TrueSI->getTrueValue());
@@ -4532,7 +4534,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         return replaceOperand(SI, 2, V);
 
       // select(C0, a, select(C1, a, b)) -> select(C0|C1, a, b)
-      if (FalseSI->getTrueValue() == TrueVal && FalseSI->hasOneUse()) {
+      if (FalseSI->getTrueValue() == TrueVal && FalseSI->hasOneUse() &&
+          !match(&SI, m_LogicalOr())) {
         Value *Or = Builder.CreateLogicalOr(CondVal, FalseSI->getCondition());
         replaceOperand(SI, 0, Or);
         replaceOperand(SI, 2, FalseSI->getFalseValue());

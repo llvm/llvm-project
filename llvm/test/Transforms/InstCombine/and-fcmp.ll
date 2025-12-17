@@ -107,9 +107,9 @@ define i1 @PR41069_commute(i1 %z, float %c, float %d) {
 define i1 @PR41069_commute_logical(i1 %z, float %c, float %d) {
 ; CHECK-LABEL: @PR41069_commute_logical(
 ; CHECK-NEXT:    [[ORD1:%.*]] = fcmp ninf ord float [[C:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[ORD2:%.*]] = fcmp reassoc ninf ord float [[D:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[ORD2]], i1 [[ORD1]], i1 false
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i1 [[Z:%.*]], i1 false
+; CHECK-NEXT:    [[Z:%.*]] = select i1 [[ORD1]], i1 [[Z1:%.*]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp reassoc ninf ord float [[D:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i1 [[Z]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %ord1 = fcmp ninf ord float %c, 0.0

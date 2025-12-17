@@ -177,8 +177,8 @@ define i1 @test4_logical(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @test4_logical(
 ; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[LHS:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
-; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[LHS]], [[WC]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[TMP1]], i1 [[C:%.*]], i1 false
+; CHECK-NEXT:    [[RHS:%.*]] = select i1 [[WC]], i1 [[C:%.*]], i1 false
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[LHS]], i1 [[RHS]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %wc = call i1 @llvm.experimental.widenable.condition()

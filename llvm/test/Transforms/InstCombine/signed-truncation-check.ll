@@ -155,9 +155,12 @@ define i1 @positive_with_extra_and(i32 %arg, i1 %z) {
 
 define i1 @positive_with_extra_and_logical(i32 %arg, i1 %z) {
 ; CHECK-LABEL: @positive_with_extra_and_logical(
-; CHECK-NEXT:    [[DOTSIMPLIFIED:%.*]] = icmp ult i32 [[ARG:%.*]], 128
+; CHECK-NEXT:    [[DOTSIMPLIFIED:%.*]] = icmp sgt i32 [[ARG:%.*]], -1
+; CHECK-NEXT:    [[T2:%.*]] = add i32 [[ARG]], 128
+; CHECK-NEXT:    [[T3:%.*]] = icmp ult i32 [[T2]], 256
 ; CHECK-NEXT:    [[T5:%.*]] = select i1 [[DOTSIMPLIFIED]], i1 [[Z:%.*]], i1 false
-; CHECK-NEXT:    ret i1 [[T5]]
+; CHECK-NEXT:    [[T6:%.*]] = select i1 [[T3]], i1 [[T5]], i1 false
+; CHECK-NEXT:    ret i1 [[T6]]
 ;
   %t1 = icmp sgt i32 %arg, -1
   %t2 = add i32 %arg, 128
