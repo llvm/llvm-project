@@ -1,0 +1,29 @@
+# RUN: not --crash llc -mtriple=arm64 -global-isel -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+---
+name: test_minmax
+body: |
+  bb.0:
+    ; Pointer operands
+    %0:_(p0) = G_CONSTANT i64 0
+    ; CHECK: Bad machine code: Generic smin/smax/umin/umax does not support pointer operands
+    %1:_(p0) = G_SMIN %0, %0
+    ; CHECK: Bad machine code: Generic smin/smax/umin/umax does not support pointer operands
+    %2:_(p0) = G_SMAX %0, %0
+    ; CHECK: Bad machine code: Generic smin/smax/umin/umax does not support pointer operands
+    %2:_(p0) = G_UMIN %0, %0
+    ; CHECK: Bad machine code: Generic smin/smax/umin/umax does not support pointer operands
+    %4:_(p0) = G_UMAX %0, %0
+
+    ; Pointer vector operands
+    %5:_(<4 x p0>) = G_IMPLICIT_DEF
+    ; CHECK: Bad machine code: Generic smin/smax/umin/umax does not support pointer operands
+    %6:_(<4 x p0>) = G_SMIN %5, %5
+    ; CHECK: Bad machine code: Generic smin/smax/umin/umax does not support pointer operands
+    %6:_(<4 x p0>) = G_SMIN %5, %5
+    ; CHECK: Bad machine code: Generic smin/smax/umin/umax does not support pointer operands
+    %6:_(<4 x p0>) = G_SMIN %5, %5
+    ; CHECK: Bad machine code: Generic smin/smax/umin/umax does not support pointer operands
+    %6:_(<4 x p0>) = G_SMIN %5, %5
+...
