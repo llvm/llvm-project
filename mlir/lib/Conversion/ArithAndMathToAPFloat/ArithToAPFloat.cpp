@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/ArithToAPFloat/ArithToAPFloat.h"
 #include "Utils.h"
 
+#include "mlir/Conversion/ArithAndMathToAPFloat/ArithToAPFloat.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
