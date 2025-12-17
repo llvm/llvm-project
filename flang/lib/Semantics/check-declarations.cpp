@@ -3481,11 +3481,11 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
             "Symbol has a BIND(C) name with leading dot that may have special meaning to the toolchain"_err_en_US);
         context_.SetError(symbol);
       }
-      bool visible_ascii{true};
+      bool visibleAscii{true};
       for (char ch : *bindName) {
-        visible_ascii &= parser::IsPrintable(ch);
+        visibleAscii &= parser::IsPrintable(ch);
       }
-      if (!visible_ascii) {
+      if (!visibleAscii) {
         messages_.Say(symbol.name(),
             "Symbol has a BIND(C) name containing non-visible ASCII character(s)"_err_en_US);
         context_.SetError(symbol);
