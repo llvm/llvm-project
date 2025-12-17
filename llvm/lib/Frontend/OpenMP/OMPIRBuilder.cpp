@@ -403,18 +403,19 @@ Value *createFakeIntVal(IRBuilderBase &Builder,
                         OpenMPIRBuilder::InsertPointTy OuterAllocaIP,
                         llvm::SmallVectorImpl<Instruction *> &ToBeDeleted,
                         OpenMPIRBuilder::InsertPointTy InnerAllocaIP,
-                        const Twine &Name = "", bool AsPtr = true) {
+                        const Twine &Name = "", bool AsPtr = true,
+                        bool Is64Bit = false) {
   Builder.restoreIP(OuterAllocaIP);
+  IntegerType *IntTy = Is64Bit ? Builder.getInt64Ty() : Builder.getInt32Ty();
   Instruction *FakeVal;
   AllocaInst *FakeValAddr =
-      Builder.CreateAlloca(Builder.getInt32Ty(), nullptr, Name + ".addr");
+      Builder.CreateAlloca(IntTy, nullptr, Name + ".addr");
   ToBeDeleted.push_back(FakeValAddr);
 
   if (AsPtr) {
     FakeVal = FakeValAddr;
   } else {
-    FakeVal =
-        Builder.CreateLoad(Builder.getInt32Ty(), FakeValAddr, Name + ".val");
+    FakeVal = Builder.CreateLoad(IntTy, FakeValAddr, Name + ".val");
     ToBeDeleted.push_back(FakeVal);
   }
 
@@ -422,11 +423,10 @@ Value *createFakeIntVal(IRBuilderBase &Builder,
   Builder.restoreIP(InnerAllocaIP);
   Instruction *UseFakeVal;
   if (AsPtr) {
-    UseFakeVal =
-        Builder.CreateLoad(Builder.getInt32Ty(), FakeVal, Name + ".use");
+    UseFakeVal = Builder.CreateLoad(IntTy, FakeVal, Name + ".use");
   } else {
-    UseFakeVal =
-        cast<BinaryOperator>(Builder.CreateAdd(FakeVal, Builder.getInt32(10)));
+    UseFakeVal = cast<BinaryOperator>(Builder.CreateAdd(
+        FakeVal, Is64Bit ? Builder.getInt64(10) : Builder.getInt32(10)));
   }
   ToBeDeleted.push_back(UseFakeVal);
   return FakeVal;
@@ -830,7 +830,8 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
     for (auto *V : OI.ExcludeArgsFromAggregate)
       Extractor.excludeArgFromAggregate(V);
 
-    Function *OutlinedFn = Extractor.extractCodeRegion(CEAC);
+    Function *OutlinedFn =
+        Extractor.extractCodeRegion(CEAC, OI.Inputs, OI.Outputs);
 
     // Forward target-cpu, target-features attributes to the outlined function.
     auto TargetCpuAttr = OuterFn->getFnAttribute("target-cpu");
@@ -2069,20 +2070,38 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
   // dummy instruction to be used as a fake argument
   OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
       Builder, AllocaIP, ToBeDeleted, TaskloopAllocaIP, "global.tid", false));
-  createFakeIntVal(Builder, AllocaIP, ToBeDeleted, TaskloopAllocaIP,
-                   "global.lb", false);
-  createFakeIntVal(Builder, AllocaIP, ToBeDeleted, TaskloopAllocaIP,
-                   "global.ub", false);
-  createFakeIntVal(Builder, AllocaIP, ToBeDeleted, TaskloopAllocaIP,
-                   "global.step", false);
+  Value *FakeLB = createFakeIntVal(Builder, AllocaIP, ToBeDeleted,
+                                   TaskloopAllocaIP, "lb", false, true);
+  Value *FakeUB = createFakeIntVal(Builder, AllocaIP, ToBeDeleted,
+                                   TaskloopAllocaIP, "ub", false, true);
+  Value *FakeStep = createFakeIntVal(Builder, AllocaIP, ToBeDeleted,
+                                     TaskloopAllocaIP, "step", false, true);
+  /* For Taskloop, we want to force the bounds being the first 3 inputs in the
+   * aggregate struct*/
+  OI.Inputs.insert(FakeLB);
+  OI.Inputs.insert(FakeUB);
+  OI.Inputs.insert(FakeStep);
 
   OI.PostOutlineCB = [this, Ident, LBVal, UBVal, StepVal, Tied,
-                      TaskloopAllocaBB, CLI, Loc,
-                      ToBeDeleted](Function &OutlinedFn) mutable {
+                      TaskloopAllocaBB, CLI, Loc, ToBeDeleted, FakeLB, FakeUB,
+                      FakeStep](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
     CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
+
+    /* Create the casting for the Bounds Values that can be used when outlining
+     * to replace the uses of the fakes with real values */
+    BasicBlock *CodeReplBB = StaleCI->getParent();
+    IRBuilderBase::InsertPoint CurrentIp = Builder.saveIP();
+    Builder.SetInsertPoint(CodeReplBB->getFirstInsertionPt());
+    Value *CastedLBVal =
+        Builder.CreateIntCast(LBVal, Builder.getInt64Ty(), true, "lb64");
+    Value *CastedUBVal =
+        Builder.CreateIntCast(UBVal, Builder.getInt64Ty(), true, "ub64");
+    Value *CastedStepVal =
+        Builder.CreateIntCast(StepVal, Builder.getInt64Ty(), true, "step64");
+    Builder.restoreIP(CurrentIp);
 
     Builder.SetInsertPoint(StaleCI);
 
@@ -2132,16 +2151,13 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     // Get the pointer to loop lb, ub, step from task ptr
     // and set up the lowerbound,upperbound and step values
     llvm::Value *Lb = Builder.CreateStructGEP(ArgStructType, TaskShareds, 0);
-    Value *LbValExt = Builder.CreateSExt(LBVal, Builder.getInt64Ty());
-    Builder.CreateStore(LbValExt, Lb);
+    Builder.CreateStore(CastedLBVal, Lb);
 
     llvm::Value *Ub = Builder.CreateStructGEP(ArgStructType, TaskShareds, 1);
-    Value *UbValExt = Builder.CreateSExt(UBVal, Builder.getInt64Ty());
-    Builder.CreateStore(UbValExt, Ub);
+    Builder.CreateStore(CastedUBVal, Ub);
 
     llvm::Value *Step = Builder.CreateStructGEP(ArgStructType, TaskShareds, 2);
-    Value *StepExt = Builder.CreateSExt(StepVal, Builder.getInt64Ty());
-    Builder.CreateStore(StepExt, Step);
+    Builder.CreateStore(CastedStepVal, Step);
     llvm::Value *Loadstep = Builder.CreateLoad(Builder.getInt64Ty(), Step);
 
     // set up the arguments for emitting kmpc_taskloop runtime call
@@ -2179,7 +2195,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
 
     Value *IV = CLI->getIndVar();
     Type *IVTy = IV->getType();
-    Constant *One = ConstantInt::get(IVTy, 1);
+    Constant *One = ConstantInt::get(Builder.getInt64Ty(), 1);
 
     // When outlining, CodeExtractor will create GEP's to the LowerBound and
     // UpperBound. These GEP's can be reused for loading the tasks respective
@@ -2219,8 +2235,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     assert(LoadTaskUB != nullptr && "Expected value for LoadTaskUB");
     Value *TripCountMinusOne = Builder.CreateSub(LoadTaskUB, LoadTaskLB);
     Value *TripCount = Builder.CreateAdd(TripCountMinusOne, One, "trip_cnt");
+    Value *CastedTripCount = Builder.CreateIntCast(TripCount, IVTy, true);
+    Value *CastedTaskLB = Builder.CreateIntCast(LoadTaskLB, IVTy, true);
     // set the trip count in the CLI
-    CLI->setTripCount(TripCount);
+    CLI->setTripCount(CastedTripCount);
 
     Builder.SetInsertPoint(CLI->getBody(),
                            CLI->getBody()->getFirstInsertionPt());
@@ -2231,16 +2249,16 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
         if (Add->getOpcode() == llvm::Instruction::Add) {
           if (llvm::isa<llvm::BinaryOperator>(Add->getOperand(0))) {
             // update the starting index of the loop
-            Add->setOperand(1, LoadTaskLB);
+            Add->setOperand(1, CastedTaskLB);
           }
         }
       }
     }
 
+    FakeLB->replaceAllUsesWith(CastedLBVal);
+    FakeUB->replaceAllUsesWith(CastedUBVal);
+    FakeStep->replaceAllUsesWith(CastedStepVal);
     for (Instruction *I : llvm::reverse(ToBeDeleted)) {
-      while (!I->use_empty()) {
-        I->user_back()->eraseFromParent();
-      }
       I->eraseFromParent();
     }
   };
