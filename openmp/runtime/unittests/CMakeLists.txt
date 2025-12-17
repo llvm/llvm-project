@@ -19,7 +19,9 @@ set_property(TARGET omp_testing PROPERTY FOLDER "OpenMP/Libraries")
 target_link_libraries(omp_testing PUBLIC default_gtest)
 target_link_libraries(omp_testing PUBLIC ${LIBOMP_TEST_LIBFLAGS} ${LIBOMP_DL_LIBS})
 set_target_properties(omp_testing PROPERTIES
-  PREFIX "" SUFFIX "" OUTPUT_NAME "libomp_testing${LIBOMP_LIBRARY_SUFFIX}"
+  PREFIX ""
+  SUFFIX ""
+  OUTPUT_NAME "libomp_testing${LIBOMP_LIBRARY_SUFFIX}"
   LINK_FLAGS "${LIBOMP_TEST_LDFLAGS}"
   LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
   EXCLUDE_FROM_ALL TRUE  # Don't build by default, only when tests need it

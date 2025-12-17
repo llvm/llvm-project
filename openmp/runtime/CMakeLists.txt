@@ -120,7 +120,7 @@ endif()
 
 # Remove any cmake-automatic linking of the standard C++ library.
 # We neither need (nor want) the standard C++ library dependency even though we compile C++ files.
-if(NOT ${LIBOMP_USE_STDCPPLIB})
+if(NOT LIBOMP_USE_STDCPPLIB)
   set(LIBOMP_LINKER_LANGUAGE C)
   set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES)
 else()
