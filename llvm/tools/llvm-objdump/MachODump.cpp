@@ -7013,7 +7013,8 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
     // If this is arm64 and the reference is an adrp instruction save the
     // instruction, passed in ReferenceValue and the address of the instruction
     // for use later if we see and add immediate instruction.
-  } else if (info->O->getArch() == Triple::aarch64 &&
+  } else if ((info->O->getArch() == Triple::aarch64 ||
+              info->O->getArch() == Triple::aarch64_32) &&
              *ReferenceType == LLVMDisassembler_ReferenceType_In_ARM64_ADRP) {
     info->adrp_inst = ReferenceValue;
     info->adrp_addr = ReferencePC;
@@ -7027,7 +7028,8 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
     // this add's Xn register reconstruct the value being referenced and look to
     // see if it is a literal pointer.  Note the add immediate instruction is
     // passed in ReferenceValue.
-  } else if (info->O->getArch() == Triple::aarch64 &&
+  } else if ((info->O->getArch() == Triple::aarch64 ||
+              info->O->getArch() == Triple::aarch64_32) &&
              *ReferenceType == LLVMDisassembler_ReferenceType_In_ARM64_ADDXri &&
              ReferencePC - 4 == info->adrp_addr &&
              (info->adrp_inst & 0x9f000000) == 0x90000000 &&
@@ -7057,7 +7059,8 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
     // matches this add's Xn register reconstruct the value being referenced and
     // look to see if it is a literal pointer.  Note the load register
     // instruction is passed in ReferenceValue.
-  } else if (info->O->getArch() == Triple::aarch64 &&
+  } else if ((info->O->getArch() == Triple::aarch64 ||
+              info->O->getArch() == Triple::aarch64_32) &&
              *ReferenceType == LLVMDisassembler_ReferenceType_In_ARM64_LDRXui &&
              ReferencePC - 4 == info->adrp_addr &&
              (info->adrp_inst & 0x9f000000) == 0x90000000 &&
@@ -7073,8 +7076,10 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
     ldrxui_inst = ReferenceValue;
     ldrxui_imm = (ldrxui_inst >> 10) & 0xfff;
 
+    // The size field (bits [31:30]) determines the scaling.
+    unsigned Scale = (ldrxui_inst >> 30) & 0x3;
     ReferenceValue = (info->adrp_addr & 0xfffffffffffff000LL) +
-                     (adrp_imm << 12) + (ldrxui_imm << 3);
+                     (adrp_imm << 12) + (ldrxui_imm << Scale);
 
     *ReferenceName =
         GuessLiteralPointer(ReferenceValue, ReferencePC, ReferenceType, info);
@@ -7083,7 +7088,8 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
   }
   // If this arm64 and is an load register (PC-relative) instruction the
   // ReferenceValue is the PC plus the immediate value.
-  else if (info->O->getArch() == Triple::aarch64 &&
+  else if ((info->O->getArch() == Triple::aarch64 ||
+            info->O->getArch() == Triple::aarch64_32) &&
            (*ReferenceType == LLVMDisassembler_ReferenceType_In_ARM64_LDRXl ||
             *ReferenceType == LLVMDisassembler_ReferenceType_In_ARM64_ADR)) {
     *ReferenceName =
@@ -7098,8 +7104,7 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
       *ReferenceName = info->demangled_name;
       *ReferenceType = LLVMDisassembler_ReferenceType_DeMangled_Name;
     }
-  }
-  else {
+  } else {
     *ReferenceName = nullptr;
     *ReferenceType = LLVMDisassembler_ReferenceType_InOut_None;
   }
