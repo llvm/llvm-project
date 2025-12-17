@@ -102,8 +102,9 @@ public:
     if (ops.numThreads)
       vars.push_back(ops.numThreads);
 
-    if (ops.threadLimit)
-      vars.push_back(ops.threadLimit);
+    // Old spec: single value in threadLimitDimsValues
+    for (mlir::Value val : ops.threadLimitDimsValues)
+      vars.push_back(val);
   }
 
   /// Update \c ops, replacing all values with the corresponding block argument
@@ -116,7 +117,7 @@ public:
                ops.loopLowerBounds.size() + ops.loopUpperBounds.size() +
                    ops.loopSteps.size() + (ops.numTeamsLower ? 1 : 0) +
                    (ops.numTeamsUpper ? 1 : 0) + (ops.numThreads ? 1 : 0) +
-                   (ops.threadLimit ? 1 : 0) &&
+                   ops.threadLimitDimsValues.size() &&
            "invalid block argument list");
     int argIndex = 0;
     for (size_t i = 0; i < ops.loopLowerBounds.size(); ++i)
@@ -137,8 +138,8 @@ public:
     if (ops.numThreads)
       ops.numThreads = args[argIndex++];
 
-    if (ops.threadLimit)
-      ops.threadLimit = args[argIndex++];
+    for (size_t i = 0; i < ops.threadLimitDimsValues.size(); ++i)
+      ops.threadLimitDimsValues[i] = args[argIndex++];
   }
 
   /// Update \p clauseOps and \p ivOut with the corresponding host-evaluated
@@ -185,12 +186,13 @@ public:
   /// \returns whether an update was performed. If not, these clauses were not
   ///          evaluated in the host device.
   bool apply(mlir::omp::TeamsOperands &clauseOps) {
-    if (!ops.numTeamsLower && !ops.numTeamsUpper && !ops.threadLimit)
+    if (!ops.numTeamsLower && !ops.numTeamsUpper &&
+        ops.threadLimitDimsValues.empty())
       return false;
 
     clauseOps.numTeamsLower = ops.numTeamsLower;
     clauseOps.numTeamsUpper = ops.numTeamsUpper;
-    clauseOps.threadLimit = ops.threadLimit;
+    clauseOps.threadLimitDimsValues = ops.threadLimitDimsValues;
     return true;
   }
 

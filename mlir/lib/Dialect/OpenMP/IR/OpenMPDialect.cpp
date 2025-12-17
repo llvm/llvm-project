@@ -2245,7 +2245,7 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
                   clauses.mapVars, clauses.nowait, clauses.privateVars,
                   makeArrayAttr(ctx, clauses.privateSyms),
                   clauses.privateNeedsBarrier, clauses.threadLimitNumDims,
-                  clauses.threadLimitDimsValues, clauses.threadLimit,
+                  clauses.threadLimitDimsValues,
                   /*private_maps=*/nullptr);
 }
 
@@ -2253,15 +2253,7 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
 static LogicalResult
 verifyThreadLimitClause(Operation *op,
                         std::optional<IntegerAttr> threadLimitNumDims,
-                        OperandRange threadLimitDimsValues, Value threadLimit) {
-  bool hasDimsModifier =
-      threadLimitNumDims.has_value() && threadLimitNumDims.value();
-
-  if (hasDimsModifier && threadLimit) {
-    return op->emitError("thread_limit with dims modifier cannot be used "
-                         "together with number of threads");
-  }
-
+                        OperandRange threadLimitDimsValues) {
   if (failed(verifyDimsModifier(op, threadLimitNumDims, threadLimitDimsValues)))
     return failure();
 
@@ -2280,8 +2272,7 @@ LogicalResult TargetOp::verify() {
     return failure();
 
   if (failed(verifyThreadLimitClause(*this, getThreadLimitNumDimsAttr(),
-                                     getThreadLimitDimsValues(),
-                                     getThreadLimit())))
+                                     getThreadLimitDimsValues())))
     return failure();
 
   return verifyPrivateVarsMapping(*this);
@@ -2299,10 +2290,9 @@ LogicalResult TargetOp::verifyRegions() {
        cast<BlockArgOpenMPOpInterface>(getOperation()).getHostEvalBlockArgs()) {
     for (Operation *user : hostEvalArg.getUsers()) {
       if (auto teamsOp = dyn_cast<TeamsOp>(user)) {
-        if (llvm::is_contained({teamsOp.getNumTeamsLower(),
-                                teamsOp.getNumTeamsUpper(),
-                                teamsOp.getThreadLimit()},
-                               hostEvalArg))
+        if (teamsOp.getNumTeamsLower() == hostEvalArg ||
+            teamsOp.getNumTeamsUpper() == hostEvalArg ||
+            llvm::is_contained(teamsOp.getThreadLimitDimsValues(), hostEvalArg))
           continue;
 
         return emitOpError() << "host_eval argument only legal as 'num_teams' "
@@ -2683,16 +2673,16 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
                     const TeamsOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
-  TeamsOp::build(
-      builder, state, clauses.allocateVars, clauses.allocatorVars,
-      clauses.ifExpr, clauses.numTeamsNumDims, clauses.numTeamsDimsValues,
-      clauses.numTeamsLower, clauses.numTeamsUpper,
-      /*private_vars=*/{}, /*private_syms=*/nullptr,
-      /*private_needs_barrier=*/nullptr, clauses.reductionMod,
-      clauses.reductionVars,
-      makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-      makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadLimitNumDims,
-      clauses.threadLimitDimsValues, clauses.threadLimit);
+  TeamsOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
+                 clauses.ifExpr, clauses.numTeamsNumDims,
+                 clauses.numTeamsDimsValues, clauses.numTeamsLower,
+                 clauses.numTeamsUpper,
+                 /*private_vars=*/{}, /*private_syms=*/nullptr,
+                 /*private_needs_barrier=*/nullptr, clauses.reductionMod,
+                 clauses.reductionVars,
+                 makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
+                 makeArrayAttr(ctx, clauses.reductionSyms),
+                 clauses.threadLimitNumDims, clauses.threadLimitDimsValues);
 }
 
 // Helper: Verify num_teams clause
@@ -2754,8 +2744,7 @@ LogicalResult TeamsOp::verify() {
 
   // Check for thread_limit clause restrictions
   if (failed(verifyThreadLimitClause(*this, getThreadLimitNumDimsAttr(),
-                                     getThreadLimitDimsValues(),
-                                     getThreadLimit())))
+                                     getThreadLimitDimsValues())))
     return failure();
 
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
@@ -4697,34 +4686,29 @@ static void printNumTeamsClause(OpAsmPrinter &p, Operation *op,
 static ParseResult
 parseThreadLimitClause(OpAsmParser &parser, IntegerAttr &dimsAttr,
                        SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-                       SmallVectorImpl<Type> &types,
-                       std::optional<OpAsmParser::UnresolvedOperand> &bounds,
-                       Type &boundsType) {
+                       SmallVectorImpl<Type> &types) {
+  // Try parsing with dims modifier: dims(N): values : type
   if (succeeded(parseDimsModifierWithValues(parser, dimsAttr, values, types))) {
     return success();
   }
 
-  OpAsmParser::UnresolvedOperand boundsOperand;
-  if (parser.parseOperand(boundsOperand) || parser.parseColon() ||
-      parser.parseType(boundsType)) {
+  // Without dims modifier: value : type
+  OpAsmParser::UnresolvedOperand singleValue;
+  Type singleType;
+  if (parser.parseOperand(singleValue) || parser.parseColon() ||
+      parser.parseType(singleType)) {
     return failure();
   }
-  bounds = boundsOperand;
+  values.push_back(singleValue);
+  types.push_back(singleType);
   return success();
 }
 
 static void printThreadLimitClause(OpAsmPrinter &p, Operation *op,
                                    IntegerAttr dimsAttr, OperandRange values,
-                                   TypeRange types, Value bounds,
-                                   Type boundsType) {
-  if (!values.empty()) {
-    // Multidimensional: dims(N): values : type
-    printDimsModifierWithValues(p, dimsAttr, values, types);
-  } else if (bounds) {
-    // Both bounds: bounds : type
-    p.printOperand(bounds);
-    p << " : " << boundsType;
-  }
+                                   TypeRange types) {
+  // Multidimensional: dims(N): values : type
+  printDimsModifierWithValues(p, dimsAttr, values, types);
 }
 
 #define GET_ATTRDEF_CLASSES

@@ -668,8 +668,9 @@ bool ClauseProcessor::processThreadLimit(
     lower::StatementContext &stmtCtx,
     mlir::omp::ThreadLimitClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::ThreadLimit>()) {
-    result.threadLimit =
+    mlir::Value threadLimitVal =
         fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    result.threadLimitDimsValues.push_back(threadLimitVal);
     return true;
   }
   return false;
