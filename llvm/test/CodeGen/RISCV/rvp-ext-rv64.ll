@@ -1252,6 +1252,26 @@ define void @test_pmulhrsu_h(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
   ret void
 }
 
+define void @test_pmulhrsu_h_commuted(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_pmulhrsu_h_commuted:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    ld a2, 0(a2)
+; CHECK-NEXT:    pmulhrsu.h a1, a2, a1
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i16>, ptr %a_ptr
+  %b = load <4 x i16>, ptr %b_ptr
+  %a_ext = zext <4 x i16> %a to <4 x i32>
+  %b_ext = sext <4 x i16> %b to <4 x i32>
+  %mul = mul <4 x i32> %a_ext, %b_ext
+  %add = add <4 x i32> %mul, <i32 32768, i32 32768, i32 32768, i32 32768>
+  %shift = lshr <4 x i32> %add, <i32 16, i32 16, i32 16, i32 16>
+  %res = trunc <4 x i32> %shift to <4 x i16>
+  store <4 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
 define void @test_pmulhrsu_w(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-LABEL: test_pmulhrsu_w:
 ; CHECK:       # %bb.0:
@@ -1264,6 +1284,26 @@ define void @test_pmulhrsu_w(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
   %b = load <2 x i32>, ptr %b_ptr
   %a_ext = sext <2 x i32> %a to <2 x i64>
   %b_ext = zext <2 x i32> %b to <2 x i64>
+  %mul = mul <2 x i64> %a_ext, %b_ext
+  %add = add <2 x i64> %mul, <i64 2147483648, i64 2147483648>
+  %shift = lshr <2 x i64> %add, <i64 32, i64 32>
+  %res = trunc <2 x i64> %shift to <2 x i32>
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_pmulhrsu_w_commuted(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_pmulhrsu_w_commuted:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    ld a2, 0(a2)
+; CHECK-NEXT:    pmulhrsu.w a1, a2, a1
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %b = load <2 x i32>, ptr %b_ptr
+  %a_ext = zext <2 x i32> %a to <2 x i64>
+  %b_ext = sext <2 x i32> %b to <2 x i64>
   %mul = mul <2 x i64> %a_ext, %b_ext
   %add = add <2 x i64> %mul, <i64 2147483648, i64 2147483648>
   %shift = lshr <2 x i64> %add, <i64 32, i64 32>

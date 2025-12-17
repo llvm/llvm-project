@@ -16487,18 +16487,25 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
     if (ShAmtVal != EltBits || (EltBits != 16 && EltBits != 32))
       return SDValue();
     if (IsRounding) {
-      if (LHSIsSExt && RHSIsSExt)
+      if (LHSIsSExt && RHSIsSExt) {
         Opc = RISCVISD::PMULHR;
-      else if (LHSIsZExt && RHSIsZExt)
+      } else if (LHSIsZExt && RHSIsZExt) {
         Opc = RISCVISD::PMULHRU;
-      else if (LHSIsSExt && RHSIsZExt)
+      } else if ((LHSIsSExt && RHSIsZExt) || (LHSIsZExt && RHSIsSExt)) {
         Opc = RISCVISD::PMULHRSU;
-      else
+        // commuted case
+        if (LHSIsZExt && RHSIsSExt)
+          std::swap(A, B);
+      } else {
         return SDValue();
+      }
     } else {
-      if (LHSIsSExt && RHSIsZExt)
+      if ((LHSIsSExt && RHSIsZExt) || (LHSIsZExt && RHSIsSExt)) {
         Opc = RISCVISD::PMULHSU;
-      else
+        // commuted case
+        if (LHSIsZExt && RHSIsSExt)
+          std::swap(A, B);
+      } else
         return SDValue();
     }
     break;
