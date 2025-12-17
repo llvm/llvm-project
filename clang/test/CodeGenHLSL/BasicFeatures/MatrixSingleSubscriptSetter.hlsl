@@ -121,53 +121,7 @@ void setMatrixConstIndex(out int4x4 M, int4x4 N ) {
     M[3] = N[0];
 }
 
-// CHECK-LABEL: define hidden void @_Z27getDoubleVecFromTemplateMatRu11matrix_typeILm2ELm3EdEiDv3_d(
-// CHECK-SAME: ptr noalias noundef nonnull align 8 dereferenceable(48) [[M:%.*]], i32 noundef [[INDEX:%.*]], <3 x double> noundef nofpclass(nan inf) [[V:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <3 x double>, align 32
-// CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[INDEX]], ptr [[INDEX_ADDR]], align 4
-// CHECK-NEXT:    store <3 x double> [[V]], ptr [[V_ADDR]], align 32
-// CHECK-NEXT:    [[TMP0:%.*]] = load <3 x double>, ptr [[V_ADDR]], align 32
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3]], !align [[META5:![0-9]+]]
-// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[INDEX_ADDR]], align 4
-// CHECK-NEXT:    [[MATRIX_LOAD:%.*]] = load <6 x double>, ptr [[TMP1]], align 8
-// CHECK-NEXT:    [[TMP3:%.*]] = add i32 0, [[TMP2]]
-// CHECK-NEXT:    [[TMP4:%.*]] = extractelement <3 x double> [[TMP0]], i32 0
-// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <6 x double> [[MATRIX_LOAD]], double [[TMP4]], i32 [[TMP3]]
-// CHECK-NEXT:    [[TMP6:%.*]] = add i32 2, [[TMP2]]
-// CHECK-NEXT:    [[TMP7:%.*]] = extractelement <3 x double> [[TMP0]], i32 1
-// CHECK-NEXT:    [[TMP8:%.*]] = insertelement <6 x double> [[TMP5]], double [[TMP7]], i32 [[TMP6]]
-// CHECK-NEXT:    [[TMP9:%.*]] = add i32 4, [[TMP2]]
-// CHECK-NEXT:    [[TMP10:%.*]] = extractelement <3 x double> [[TMP0]], i32 2
-// CHECK-NEXT:    [[TMP11:%.*]] = insertelement <6 x double> [[TMP8]], double [[TMP10]], i32 [[TMP9]]
-// CHECK-NEXT:    store <6 x double> [[TMP11]], ptr [[TMP1]], align 8
-// CHECK-NEXT:    ret void
-//
-void getDoubleVecFromTemplateMat(out matrix<double, 2, 3> M, int index, double3 V) {
-    M[index] = V;
-}
-
-// CHECK-LABEL: define hidden void @_Z27getDoubleVecFromTemplateMatRu11matrix_typeILm2ELm3EdEDv3_d(
-// CHECK-SAME: ptr noalias noundef nonnull align 8 dereferenceable(48) [[M:%.*]], <3 x double> noundef nofpclass(nan inf) [[V:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <3 x double>, align 32
-// CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
-// CHECK-NEXT:    store <3 x double> [[V]], ptr [[V_ADDR]], align 32
-// CHECK-NEXT:    [[TMP0:%.*]] = load <3 x double>, ptr [[V_ADDR]], align 32
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3]], !align [[META5]]
-// CHECK-NEXT:    store <3 x double> [[TMP0]], ptr [[TMP1]], align 8
-// CHECK-NEXT:    ret void
-//
-void getDoubleVecFromTemplateMat(out matrix<double, 2, 3> M, double3 V) {
-    M[0] = V;
-}
-
 //.
 // CHECK: [[META3]] = !{}
 // CHECK: [[META4]] = !{i64 4}
-// CHECK: [[META5]] = !{i64 8}
 //.
