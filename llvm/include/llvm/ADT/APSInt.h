@@ -42,7 +42,7 @@ public:
   /// constructed APSInt is determined automatically.
   ///
   /// \param Str the string to be interpreted.
-  LLVM_ABI explicit APSInt(StringRef Str);
+  explicit APSInt(StringRef Str);
 
   /// Determine sign of this APSInt.
   ///
@@ -352,7 +352,7 @@ public:
 
   /// Used to insert APSInt objects, or objects that contain APSInt objects,
   /// into FoldingSets.
-  LLVM_ABI void Profile(FoldingSetNodeID &ID) const;
+  void Profile(FoldingSetNodeID &ID) const;
 };
 
 inline bool operator==(int64_t V1, const APSInt &V2) { return V2 == V1; }
