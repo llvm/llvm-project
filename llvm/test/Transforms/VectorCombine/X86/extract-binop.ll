@@ -456,7 +456,7 @@ define <4 x float> @PR34724(<4 x float> %a, <4 x float> %b) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[B]], [[SHIFT1]]
 ; CHECK-NEXT:    [[SHIFT2:%.*]] = shufflevector <4 x float> [[B]], <4 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 2>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x float> [[SHIFT2]], [[B]]
-; CHECK-NEXT:    [[V1:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> undef, <4 x i32> <i32 4, i32 2, i32 6, i32 7>
+; CHECK-NEXT:    [[V1:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> <float undef, float undef, float undef, float poison>, <4 x i32> <i32 4, i32 2, i32 5, i32 6>
 ; CHECK-NEXT:    [[V2:%.*]] = shufflevector <4 x float> [[V1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 4, i32 3>
 ; CHECK-NEXT:    [[V3:%.*]] = shufflevector <4 x float> [[V2]], <4 x float> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; CHECK-NEXT:    ret <4 x float> [[V3]]

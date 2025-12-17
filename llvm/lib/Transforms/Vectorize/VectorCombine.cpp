@@ -145,6 +145,7 @@ private:
   bool foldShufflesOfLengthChangingShuffles(Instruction &I);
   bool foldShuffleOfIntrinsics(Instruction &I);
   bool foldShuffleToIdentity(Instruction &I);
+  bool compactShuffleOperands(Instruction &I);
   bool foldShuffleFromReductions(Instruction &I);
   bool foldShuffleChainsToReduce(Instruction &I);
   bool foldCastFromReductions(Instruction &I);
@@ -2900,6 +2901,241 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
 
   Worklist.pushValue(Shuf);
   replaceValue(I, *Cast);
+  return true;
+}
+
+/// Describes whether and how a shuffle operand can be compacted.
+struct ShuffleOperandCompaction {
+  /// The cost difference between compacted and original operand. Used to avoid
+  /// compactions that increase cost. Zero if compaction cannot be applied, but
+  /// note that valid compactions may also have zero cost.
+  InstructionCost Cost;
+  /// The minimal width required for the compacted vector.
+  unsigned CompactedWidth;
+  /// Function to create the compacted operand, or nullptr if no compaction can
+  /// be applied.
+  std::function<Value *(unsigned, IRBuilder<InstSimplifyFolder> &)> Apply;
+};
+
+/// Attempt to narrow/compact a constant vector used in a shuffle by removing
+/// elements that are not referenced by the shuffle mask.
+static ShuffleOperandCompaction
+compactShuffleOperand(Constant *ShuffleInput,
+                      MutableArrayRef<int> UserShuffleMask, int IndexStart) {
+  auto *VecTy = cast<FixedVectorType>(ShuffleInput->getType());
+  unsigned Width = VecTy->getNumElements();
+
+  // Collect only the constant elements that are actually used.
+  SmallVector<Constant *, 16> CompactedElts;
+  // Map from original element index to compacted index.
+  SmallVector<int, 16> IndexRemap(Width, -1);
+
+  // Track whether used elements are already compacted at the front. Even if
+  // true, we may still shrink this operand by not re-adding trailing poison.
+  bool AlreadyCompacted = true;
+
+  // This modifies UserShuffleMask, so we cannot back out of transforming the
+  // operand while proceeding with compactShuffleOperands on the instruction.
+  for (int &MaskElt : UserShuffleMask) {
+    if (MaskElt >= IndexStart && MaskElt < IndexStart + (int)Width) {
+      int RelMaskElt = MaskElt - IndexStart;
+      if (IndexRemap[RelMaskElt] < 0) {
+        IndexRemap[RelMaskElt] = CompactedElts.size() + IndexStart;
+        CompactedElts.push_back(ShuffleInput->getAggregateElement(RelMaskElt));
+      }
+      if (IndexRemap[RelMaskElt] != MaskElt) {
+        AlreadyCompacted = false;
+        MaskElt = IndexRemap[RelMaskElt];
+      }
+    }
+  }
+
+  unsigned CompactedWidth = CompactedElts.size();
+
+  // To determine the eventual width (between CompactedWidth and Width), we have
+  // to consider the other operand. Hence, we return a functor here to delay.
+  return {0, CompactedWidth,
+          [ShuffleInput, AlreadyCompacted, Width, VecTy,
+           CompactedElts = std::move(CompactedElts)](
+              unsigned PaddedWidth,
+              IRBuilder<InstSimplifyFolder> &Builder) -> Value * {
+
+            // Return the original if unchanged to guarantee fixpoint termination.
+            if (AlreadyCompacted && Width == PaddedWidth)
+              return ShuffleInput;
+
+            // Pad with poison to reach the requested width.
+            SmallVector<Constant *, 16> PaddedElts(CompactedElts);
+            while (PaddedElts.size() < PaddedWidth)
+              PaddedElts.push_back(PoisonValue::get(VecTy->getElementType()));
+
+            return ConstantVector::get(PaddedElts);
+          }};
+}
+
+/// Attempt to narrow/compact a shuffle instruction used in a shuffle by
+/// removing elements that are not referenced by the shuffle mask.
+static ShuffleOperandCompaction
+compactShuffleOperand(ShuffleVectorInst *ShuffleInput,
+                      MutableArrayRef<int> UserShuffleMask, int IndexStart,
+                      const TargetTransformInfo &TTI,
+                      TTI::TargetCostKind CostKind) {
+  auto *VecTy = cast<FixedVectorType>(ShuffleInput->getType());
+  unsigned Width = VecTy->getNumElements();
+
+  // Collect only the shuffle mask elements that are actually used.
+  SmallVector<int, 16> CompactedMask;
+  // Map from original element index to compacted index.
+  SmallVector<int, 16> IndexRemap(Width, -1);
+
+  // Track whether used elements are already compacted at the front. Even if
+  // true, we may still shrink this operand by not re-adding trailing poison.
+  bool AlreadyCompacted = true;
+
+  // This modifies UserShuffleMask, so we cannot back out of transforming the
+  // operand while proceeding with compactShuffleOperands on the instruction.
+  for (int &MaskElt : UserShuffleMask) {
+    if (MaskElt >= IndexStart && MaskElt < IndexStart + (int)Width) {
+      int RelMaskElt = MaskElt - IndexStart;
+      if (IndexRemap[RelMaskElt] < 0) {
+        IndexRemap[RelMaskElt] = CompactedMask.size() + IndexStart;
+        CompactedMask.push_back(ShuffleInput->getMaskValue(RelMaskElt));
+      }
+      if (IndexRemap[RelMaskElt] != MaskElt) {
+        AlreadyCompacted = false;
+        MaskElt = IndexRemap[RelMaskElt];
+      }
+    }
+  }
+
+  unsigned CompactedWidth = CompactedMask.size();
+
+  // Check if the compacted shuffle would be more expensive than the original.
+  InstructionCost CompactionCost(0);
+  if (!AlreadyCompacted) {
+    ArrayRef<int> OriginalMask = ShuffleInput->getShuffleMask();
+    auto *OriginalSrcTy =
+        cast<FixedVectorType>(ShuffleInput->getOperand(0)->getType());
+
+    InstructionCost OriginalCost =
+        TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, VecTy,
+                           OriginalSrcTy, OriginalMask, CostKind);
+
+    // Create a type for the compacted shuffle result.
+    auto *CompactedDstTy =
+        FixedVectorType::get(VecTy->getElementType(), CompactedWidth);
+
+    InstructionCost CompactedCost = TTI.getShuffleCost(
+        TargetTransformInfo::SK_PermuteTwoSrc, CompactedDstTy, OriginalSrcTy,
+        CompactedMask, CostKind);
+
+    CompactionCost = CompactedCost - OriginalCost;
+  }
+
+  // To determine the eventual width (between CompactedWidth and Width), we have
+  // to consider the other operand. Hence, we return a functor here to delay.
+  return {CompactionCost, CompactedWidth,
+          [ShuffleInput, AlreadyCompacted, Width,
+           CompactedMask = std::move(CompactedMask)](
+              unsigned PaddedWidth,
+              IRBuilder<InstSimplifyFolder> &Builder) -> Value * {
+
+            // Return the original if unchanged to guarantee fixpoint termination.
+            if (AlreadyCompacted && Width == PaddedWidth)
+              return ShuffleInput;
+
+            // Pad with poison mask elements to reach the requested width.
+            SmallVector<int, 16> PaddedMask(CompactedMask);
+            while (PaddedMask.size() < PaddedWidth)
+              PaddedMask.push_back(PoisonMaskElem);
+
+            return Builder.CreateShuffleVector(ShuffleInput->getOperand(0),
+                                               ShuffleInput->getOperand(1),
+                                               PaddedMask);
+          }};
+}
+
+/// Try to narrow/compact a shuffle operand by eliminating elements that are
+/// not used by the shuffle mask. This updates the shuffle mask in-place to
+/// reflect the compaction. Returns information about whether compaction is
+/// possible and a lambda to apply the compaction if beneficial.
+static ShuffleOperandCompaction
+compactShuffleOperand(Value *ShuffleInput, MutableArrayRef<int> ShuffleMask,
+                      int IndexStart, const TargetTransformInfo &TTI,
+                      TTI::TargetCostKind CostKind) {
+  auto *VecTy = cast<FixedVectorType>(ShuffleInput->getType());
+  unsigned Width = VecTy->getNumElements();
+  if (ShuffleInput->getNumUses() > 1)
+    return {0, Width, nullptr};
+
+  if (auto *C = dyn_cast<Constant>(ShuffleInput))
+    return compactShuffleOperand(C, ShuffleMask, IndexStart);
+  if (auto *Shuf = dyn_cast<ShuffleVectorInst>(ShuffleInput))
+    return compactShuffleOperand(Shuf, ShuffleMask, IndexStart, TTI, CostKind);
+
+  return {0, Width, nullptr};
+}
+
+/// Try to narrow the shuffle by eliminating unused elements from the operands.
+bool VectorCombine::compactShuffleOperands(Instruction &I) {
+  Value *LHS, *RHS;
+  ArrayRef<int> Mask;
+  if (!match(&I, m_Shuffle(m_Value(LHS), m_Value(RHS), m_Mask(Mask))))
+    return false;
+
+  // Require at least one constant operand to ensure profitability.
+  if (!isa<Constant>(LHS) && !isa<Constant>(RHS))
+    return false;
+
+  auto *LHSTy = dyn_cast<FixedVectorType>(LHS->getType());
+  if (!LHSTy)
+    return false;
+
+  // Analyze both operands. This updates NewMask in-place to reflect compaction.
+  unsigned LHSWidth = LHSTy->getNumElements();
+  SmallVector<int, 16> NewMask(Mask.begin(), Mask.end());
+  ShuffleOperandCompaction LHSCompact =
+      compactShuffleOperand(LHS, NewMask, 0, TTI, CostKind);
+  ShuffleOperandCompaction RHSCompact =
+      compactShuffleOperand(RHS, NewMask, LHSWidth, TTI, CostKind);
+
+  unsigned CompactedWidth =
+      std::max(LHSCompact.CompactedWidth, RHSCompact.CompactedWidth);
+
+  // Check total cost: compacting operands + change to outer shuffle.
+  if (LHSCompact.Apply || RHSCompact.Apply) {
+    auto *ShuffleDstTy = cast<FixedVectorType>(I.getType());
+    InstructionCost CostBefore =
+        TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, ShuffleDstTy,
+                           LHSTy, Mask, CostKind, 0, nullptr, {LHS, RHS}, &I);
+
+    InstructionCost CostAfter =
+        TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, ShuffleDstTy,
+                           LHSTy, NewMask, CostKind);
+
+    InstructionCost OuterCost = CostAfter - CostBefore;
+
+    if (OuterCost + LHSCompact.Cost + RHSCompact.Cost > 0)
+      return false;
+  } else if (CompactedWidth == LHSWidth)
+    return false;
+
+  Value *NewLHS =
+      LHSCompact.Apply ? LHSCompact.Apply(CompactedWidth, Builder) : LHS;
+  Value *NewRHS =
+      RHSCompact.Apply ? RHSCompact.Apply(CompactedWidth, Builder) : RHS;
+
+  // Ensure we terminate from the optimization fixpoint loop eventually.
+  if (LHS == NewLHS && RHS == NewRHS)
+    return false;
+
+  // Adjust RHS indices in the mask to account for the new LHS width.
+  for (int &MaskElt : NewMask)
+    if (MaskElt >= (int)LHSWidth)
+      MaskElt = MaskElt - LHSWidth + CompactedWidth;
+
+  Value *NewShuf = Builder.CreateShuffleVector(NewLHS, NewRHS, NewMask);
+  replaceValue(I, *NewShuf);
   return true;
 }
 
@@ -5704,6 +5940,8 @@ bool VectorCombine::run() {
         if (foldSelectShuffle(I))
           return true;
         if (foldShuffleToIdentity(I))
+          return true;
+        if (compactShuffleOperands(I))
           return true;
         break;
       case Instruction::Load:
