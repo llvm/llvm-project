@@ -4311,7 +4311,7 @@ cc_library(
         ":AMDGPUToROCDL",
         ":AffineToStandard",
         ":ArithToAMDGPU",
-        ":ArithToAPFloat",
+        ":ArithAndMathToAPFloat",
         ":ArithToArmSME",
         ":ArithToEmitC",
         ":ArithToLLVM",
@@ -8520,8 +8520,8 @@ cc_library(
 )
 
 cc_library(
-    name = "ArithToAPFloat",
-    srcs = glob(["lib/Conversion/ArithToAPFloat/*.cpp"]),
+    name = "ArithAndMathToAPFloat",
+    srcs = glob(["lib/Conversion/ArithAndMathToAPFloat/*.cpp"]),
     hdrs = glob(["include/mlir/Conversion/ArithToAPFloat/*.h"]),
     includes = ["include"],
     deps = [
