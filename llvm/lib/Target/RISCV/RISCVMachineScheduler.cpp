@@ -7,13 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVMachineScheduler.h"
-#include "MCTargetDesc/RISCVBaseInfo.h"
-#include "RISCVSubtarget.h"
-#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
-#include "llvm/MC/MCInstrDesc.h"
-#include "llvm/Support/Debug.h"
-#include <limits>
 
 using namespace llvm;
 
@@ -24,28 +18,19 @@ static cl::opt<bool> EnableVTypeSchedHeuristic(
     cl::desc("Enable scheduling RVV instructions based on vtype heuristic "
              "(pick instruction with compatible vtype first)"));
 
-static VTypeInfo getVTypeInfo(GenericSchedulerBase::SchedCandidate &Cand) {
-  MachineInstr *CandMI = Cand.SU->getInstr();
-  const MCInstrDesc &Desc = CandMI->getDesc();
-  if (RISCVII::hasSEWOp(Desc.TSFlags)) {
-    unsigned CurVSEW = CandMI->getOperand(RISCVII::getSEWOpNum(Desc)).getImm();
-    RISCVVType::VLMUL CurVLMUL = RISCVII::getLMul(Desc.TSFlags);
-    // FIXME: We should consider vl and policy here.
-    return {CurVLMUL, CurVSEW};
-  }
-  return {RISCVVType::LMUL_RESERVED, std::numeric_limits<unsigned>::max()};
+RISCV::VSETVLIInfo
+RISCVPreRAMachineSchedStrategy::getVSETVLIInfo(const MachineInstr *MI) const {
+  unsigned TSFlags = MI->getDesc().TSFlags;
+  if (!RISCVII::hasSEWOp(TSFlags))
+    return RISCV::VSETVLIInfo();
+  return VIA.computeInfoForInstr(*MI);
 }
 
-static bool isValidVTypeInfo(VTypeInfo Info) {
-  return Info.first != RISCVVType::LMUL_RESERVED &&
-         Info.second != std::numeric_limits<unsigned>::max();
-}
-
-bool RISCVPreRAMachineSchedStrategy::tryVType(
-    VTypeInfo TryVType, VTypeInfo CandVtype,
-    GenericSchedulerBase::SchedCandidate &TryCand,
-    GenericSchedulerBase::SchedCandidate &Cand,
-    GenericSchedulerBase::CandReason Reason) const {
+bool RISCVPreRAMachineSchedStrategy::tryVType(RISCV::VSETVLIInfo TryVType,
+                                              RISCV::VSETVLIInfo CandVtype,
+                                              SchedCandidate &TryCand,
+                                              SchedCandidate &Cand,
+                                              CandReason Reason) const {
   // Do not compare the vtype changes between top and bottom
   // boundary.
   if (Cand.AtTop != TryCand.AtTop)
@@ -54,25 +39,25 @@ bool RISCVPreRAMachineSchedStrategy::tryVType(
   // Try Cand first.
   // We prefer the top node as it is straightforward from the perspective of
   // vtype dataflow.
-  if (isValidVTypeInfo(CandVtype) && isValidVTypeInfo(TopVType) && Cand.AtTop &&
+  if (CandVtype.isValid() && TopVType.isValid() && Cand.AtTop &&
       CandVtype == TopVType) {
     return true;
   }
 
-  if (isValidVTypeInfo(CandVtype) && isValidVTypeInfo(BottomVType) &&
-      !Cand.AtTop && CandVtype == BottomVType) {
+  if (CandVtype.isValid() && BottomVType.isValid() && !Cand.AtTop &&
+      CandVtype == BottomVType) {
     return true;
   }
 
   // Then try TryCand.
-  if (isValidVTypeInfo(TryVType) && isValidVTypeInfo(TopVType) &&
-      TryCand.AtTop && TryVType == TopVType) {
+  if (TryVType.isValid() && TopVType.isValid() && TryCand.AtTop &&
+      TryVType == TopVType) {
     TryCand.Reason = Reason;
     return true;
   }
 
-  if (isValidVTypeInfo(TryVType) && isValidVTypeInfo(BottomVType) &&
-      !TryCand.AtTop && TryVType == BottomVType) {
+  if (TryVType.isValid() && BottomVType.isValid() && !TryCand.AtTop &&
+      TryVType == BottomVType) {
     TryCand.Reason = Reason;
     return true;
   }
@@ -181,7 +166,6 @@ bool RISCVPreRAMachineSchedStrategy::tryCandidate(SchedCandidate &Cand,
     if ((Zone->isTop() && TryCand.SU->NodeNum < Cand.SU->NodeNum) ||
         (!Zone->isTop() && TryCand.SU->NodeNum > Cand.SU->NodeNum)) {
       TryCand.Reason = NodeOrder;
-      return true;
     }
   }
 
@@ -189,47 +173,50 @@ bool RISCVPreRAMachineSchedStrategy::tryCandidate(SchedCandidate &Cand,
   // Below is RISC-V specific scheduling heuristics.
   //-------------------------------------------------------------------------//
 
+  // Add RISC-V specific heuristic only when TryCand isn't selected or
+  // selected as node order.
+  if (TryCand.Reason != NodeOrder && TryCand.Reason != NoCand)
+    return true;
+
   // TODO: We should not use `CandReason::Cluster` here, but is there a
   // mechanism to extend this enum?
   if (EnableVTypeSchedHeuristic &&
-      tryVType(getVTypeInfo(TryCand), getVTypeInfo(Cand), TryCand, Cand,
-               Cluster))
+      tryVType(getVSETVLIInfo(TryCand.SU->getInstr()),
+               getVSETVLIInfo(Cand.SU->getInstr()), TryCand, Cand, Cluster))
     return TryCand.Reason != NoCand;
 
-  return false;
+  return TryCand.Reason != NoCand;
 }
 
 void RISCVPreRAMachineSchedStrategy::enterMBB(MachineBasicBlock *MBB) {
-  TopVType = {RISCVVType::LMUL_RESERVED, std::numeric_limits<unsigned>::max()};
-  BottomVType = {RISCVVType::LMUL_RESERVED,
-                 std::numeric_limits<unsigned>::max()};
+  TopVType = RISCV::VSETVLIInfo();
+  BottomVType = RISCV::VSETVLIInfo();
 }
 
 void RISCVPreRAMachineSchedStrategy::leaveMBB() {
-  TopVType = {RISCVVType::LMUL_RESERVED, std::numeric_limits<unsigned>::max()};
-  BottomVType = {RISCVVType::LMUL_RESERVED,
-                 std::numeric_limits<unsigned>::max()};
+  TopVType = RISCV::VSETVLIInfo();
+  BottomVType = RISCV::VSETVLIInfo();
 }
 
 void RISCVPreRAMachineSchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
   GenericScheduler::schedNode(SU, IsTopNode);
-  MachineInstr *MI = SU->getInstr();
-  const MCInstrDesc &Desc = MI->getDesc();
-  if (RISCVII::hasSEWOp(Desc.TSFlags)) {
-    unsigned VSEW = MI->getOperand(RISCVII::getSEWOpNum(Desc)).getImm();
-    RISCVVType::VLMUL VLMUL = RISCVII::getLMul(Desc.TSFlags);
-    if (IsTopNode)
-      TopVType = {VLMUL, VSEW};
-    else
-      BottomVType = {VLMUL, VSEW};
-    LLVM_DEBUG({
-      dbgs() << "Previous scheduled Unit: \n";
-      dbgs() << "  IsTop: " << IsTopNode << "\n";
-      dbgs() << "  SU(" << SU->NodeNum << ") - ";
-      SU->getInstr()->dump();
-      dbgs() << " VSEW : " << (1 << VSEW) << "\n";
-      auto LMUL = RISCVVType::decodeVLMUL(VLMUL);
-      dbgs() << " VLMUL: m" << (LMUL.second ? "f" : "") << LMUL.first << "\n";
-    });
+  if (EnableVTypeSchedHeuristic) {
+    MachineInstr *MI = SU->getInstr();
+    const RISCV::VSETVLIInfo &Info = getVSETVLIInfo(MI);
+    if (Info.isValid()) {
+      if (IsTopNode)
+        TopVType = Info;
+      else
+        BottomVType = Info;
+      LLVM_DEBUG({
+        dbgs() << "Previous scheduled Unit: \n";
+        dbgs() << "  IsTop: " << IsTopNode << "\n";
+        dbgs() << "  SU(" << SU->NodeNum << ") - ";
+        MI->dump();
+        dbgs() << "  \n";
+        Info.dump();
+        dbgs() << "  \n";
+      });
+    }
   }
 }

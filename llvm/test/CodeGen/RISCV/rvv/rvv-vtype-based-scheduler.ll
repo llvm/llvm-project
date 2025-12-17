@@ -16,15 +16,13 @@ define void @test(i16 %0, i16 %1, i16 %2, i16 %3, i16 %4, i16 %5, i16 %6, ptr %7
 ; DEFAULT:       # %bb.0: # %entry
 ; DEFAULT-NEXT:    ld a6, 0(sp)
 ; DEFAULT-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; DEFAULT-NEXT:    vle8.v v8, (a7)
-; DEFAULT-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; DEFAULT-NEXT:    vslidedown.vi v9, v8, 1
+; DEFAULT-NEXT:    vle8.v v9, (a7)
 ; DEFAULT-NEXT:    ld a7, 8(sp)
-; DEFAULT-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; DEFAULT-NEXT:    vle8.v v10, (a6)
+; DEFAULT-NEXT:    vle8.v v8, (a6)
 ; DEFAULT-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; DEFAULT-NEXT:    vslidedown.vi v11, v10, 1
+; DEFAULT-NEXT:    vslidedown.vi v10, v9, 1
 ; DEFAULT-NEXT:    ld a6, 16(sp)
+; DEFAULT-NEXT:    vslidedown.vi v11, v8, 1
 ; DEFAULT-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; DEFAULT-NEXT:    vle8.v v12, (a7)
 ; DEFAULT-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
@@ -33,233 +31,235 @@ define void @test(i16 %0, i16 %1, i16 %2, i16 %3, i16 %4, i16 %5, i16 %6, ptr %7
 ; DEFAULT-NEXT:    vle8.v v14, (a6)
 ; DEFAULT-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; DEFAULT-NEXT:    vslidedown.vi v15, v14, 1
-; DEFAULT-NEXT:    vslidedown.vi v16, v8, 2
-; DEFAULT-NEXT:    vslidedown.vi v17, v10, 2
+; DEFAULT-NEXT:    vslidedown.vi v16, v9, 2
+; DEFAULT-NEXT:    vslidedown.vi v17, v8, 2
 ; DEFAULT-NEXT:    vslidedown.vi v18, v12, 2
 ; DEFAULT-NEXT:    vslidedown.vi v19, v14, 2
-; DEFAULT-NEXT:    vslidedown.vi v20, v8, 3
-; DEFAULT-NEXT:    vslidedown.vi v21, v10, 3
+; DEFAULT-NEXT:    vslidedown.vi v20, v9, 3
+; DEFAULT-NEXT:    vslidedown.vi v21, v8, 3
 ; DEFAULT-NEXT:    vslidedown.vi v22, v12, 3
 ; DEFAULT-NEXT:    vslidedown.vi v23, v14, 3
-; DEFAULT-NEXT:    vslidedown.vi v24, v8, 4
-; DEFAULT-NEXT:    vslidedown.vi v25, v10, 4
+; DEFAULT-NEXT:    vslidedown.vi v24, v9, 4
+; DEFAULT-NEXT:    vslidedown.vi v25, v8, 4
 ; DEFAULT-NEXT:    vslidedown.vi v26, v12, 4
 ; DEFAULT-NEXT:    vslidedown.vi v27, v14, 4
-; DEFAULT-NEXT:    vslidedown.vi v28, v8, 5
-; DEFAULT-NEXT:    vslidedown.vi v29, v10, 5
+; DEFAULT-NEXT:    vslidedown.vi v28, v9, 5
+; DEFAULT-NEXT:    vslidedown.vi v29, v8, 5
 ; DEFAULT-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; DEFAULT-NEXT:    vmv.v.i v30, 0
 ; DEFAULT-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; DEFAULT-NEXT:    vslidedown.vi v31, v12, 5
 ; DEFAULT-NEXT:    vmv1r.v v7, v30
 ; DEFAULT-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; DEFAULT-NEXT:    vwmaccsu.vx v7, a0, v8
+; DEFAULT-NEXT:    vwmaccsu.vx v7, a0, v9
 ; DEFAULT-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; DEFAULT-NEXT:    vslidedown.vi v8, v14, 5
+; DEFAULT-NEXT:    vslidedown.vi v9, v14, 5
 ; DEFAULT-NEXT:    vmv1r.v v6, v30
 ; DEFAULT-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; DEFAULT-NEXT:    vwmaccsu.vx v6, a0, v10
-; DEFAULT-NEXT:    vwmaccsu.vx v7, a1, v9
-; DEFAULT-NEXT:    vmv1r.v v9, v30
-; DEFAULT-NEXT:    vwmaccsu.vx v9, a0, v12
-; DEFAULT-NEXT:    vwmaccsu.vx v30, a0, v14
+; DEFAULT-NEXT:    vwmaccsu.vx v6, a0, v8
+; DEFAULT-NEXT:    vwmaccsu.vx v7, a1, v10
+; DEFAULT-NEXT:    vmv1r.v v8, v30
+; DEFAULT-NEXT:    vwmaccsu.vx v8, a0, v12
 ; DEFAULT-NEXT:    vwmaccsu.vx v6, a1, v11
 ; DEFAULT-NEXT:    vwmaccsu.vx v7, a2, v16
-; DEFAULT-NEXT:    vwmaccsu.vx v9, a1, v13
-; DEFAULT-NEXT:    vwmaccsu.vx v30, a1, v15
+; DEFAULT-NEXT:    vwmaccsu.vx v30, a0, v14
+; DEFAULT-NEXT:    vwmaccsu.vx v8, a1, v13
 ; DEFAULT-NEXT:    vwmaccsu.vx v6, a2, v17
 ; DEFAULT-NEXT:    vwmaccsu.vx v7, a3, v20
-; DEFAULT-NEXT:    vwmaccsu.vx v9, a2, v18
-; DEFAULT-NEXT:    vwmaccsu.vx v30, a2, v19
+; DEFAULT-NEXT:    vwmaccsu.vx v30, a1, v15
+; DEFAULT-NEXT:    vwmaccsu.vx v8, a2, v18
 ; DEFAULT-NEXT:    vwmaccsu.vx v6, a3, v21
 ; DEFAULT-NEXT:    vwmaccsu.vx v7, a4, v24
-; DEFAULT-NEXT:    vwmaccsu.vx v9, a3, v22
-; DEFAULT-NEXT:    vwmaccsu.vx v30, a3, v23
+; DEFAULT-NEXT:    vwmaccsu.vx v30, a2, v19
+; DEFAULT-NEXT:    vwmaccsu.vx v8, a3, v22
 ; DEFAULT-NEXT:    vwmaccsu.vx v6, a4, v25
 ; DEFAULT-NEXT:    vwmaccsu.vx v7, a5, v28
-; DEFAULT-NEXT:    vwmaccsu.vx v9, a4, v26
-; DEFAULT-NEXT:    vwmaccsu.vx v30, a4, v27
+; DEFAULT-NEXT:    vwmaccsu.vx v30, a3, v23
+; DEFAULT-NEXT:    vwmaccsu.vx v8, a4, v26
 ; DEFAULT-NEXT:    vwmaccsu.vx v6, a5, v29
 ; DEFAULT-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; DEFAULT-NEXT:    vmax.vx v10, v7, zero
 ; DEFAULT-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; DEFAULT-NEXT:    vwmaccsu.vx v9, a5, v31
-; DEFAULT-NEXT:    vwmaccsu.vx v30, a5, v8
+; DEFAULT-NEXT:    vwmaccsu.vx v30, a4, v27
+; DEFAULT-NEXT:    vwmaccsu.vx v8, a5, v31
 ; DEFAULT-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; DEFAULT-NEXT:    vmax.vx v8, v6, zero
+; DEFAULT-NEXT:    vmax.vx v11, v6, zero
 ; DEFAULT-NEXT:    csrwi vxrm, 0
 ; DEFAULT-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; DEFAULT-NEXT:    vnclipu.wi v10, v10, 6
-; DEFAULT-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; DEFAULT-NEXT:    vmax.vx v9, v9, zero
+; DEFAULT-NEXT:    vwmaccsu.vx v30, a5, v9
 ; DEFAULT-NEXT:    ld a0, 24(sp)
-; DEFAULT-NEXT:    vmax.vx v11, v30, zero
+; DEFAULT-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; DEFAULT-NEXT:    vmax.vx v8, v8, zero
 ; DEFAULT-NEXT:    lw a1, 32(sp)
 ; DEFAULT-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; DEFAULT-NEXT:    vnclipu.wi v8, v8, 6
-; DEFAULT-NEXT:    vnclipu.wi v9, v9, 6
+; DEFAULT-NEXT:    vnclipu.wi v9, v11, 6
+; DEFAULT-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; DEFAULT-NEXT:    vmax.vx v11, v30, zero
 ; DEFAULT-NEXT:    vse8.v v10, (a0)
 ; DEFAULT-NEXT:    add a2, a0, a1
-; DEFAULT-NEXT:    vnclipu.wi v10, v11, 6
-; DEFAULT-NEXT:    sh1add a3, a1, a0
+; DEFAULT-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
+; DEFAULT-NEXT:    vnclipu.wi v8, v8, 6
+; DEFAULT-NEXT:    vse8.v v9, (a2)
+; DEFAULT-NEXT:    sh1add a2, a1, a0
+; DEFAULT-NEXT:    vnclipu.wi v9, v11, 6
 ; DEFAULT-NEXT:    sh1add a1, a1, a1
 ; DEFAULT-NEXT:    vse8.v v8, (a2)
-; DEFAULT-NEXT:    vse8.v v9, (a3)
 ; DEFAULT-NEXT:    add a0, a0, a1
-; DEFAULT-NEXT:    vse8.v v10, (a0)
+; DEFAULT-NEXT:    vse8.v v9, (a0)
 ; DEFAULT-NEXT:    ret
 ;
 ; VTYPE-SCHED-BOTTOMUP-LABEL: test:
 ; VTYPE-SCHED-BOTTOMUP:       # %bb.0: # %entry
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    ld a6, 0(sp)
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vle8.v v8, (a7)
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vle8.v v9, (a7)
+; VTYPE-SCHED-BOTTOMUP-NEXT:    ld a7, 8(sp)
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vle8.v v8, (a6)
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v10, v9, 1
+; VTYPE-SCHED-BOTTOMUP-NEXT:    ld a6, 16(sp)
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vle8.v v11, (a7)
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v12, v8, 1
-; VTYPE-SCHED-BOTTOMUP-NEXT:    ld a7, 8(sp)
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vle8.v v13, (a6)
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v9, v13, 1
-; VTYPE-SCHED-BOTTOMUP-NEXT:    ld a6, 16(sp)
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vle8.v v14, (a7)
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v10, v14, 1
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vle8.v v15, (a6)
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v11, v15, 1
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v16, v8, 2
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v17, v13, 2
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v18, v14, 2
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v19, v15, 2
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v20, v8, 3
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v21, v13, 3
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v22, v14, 3
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v23, v15, 3
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v24, v8, 4
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v25, v13, 4
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v26, v14, 4
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v27, v15, 4
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v28, v8, 5
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v14, v11, 1
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v15, v13, 1
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v16, v9, 2
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v17, v8, 2
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v18, v11, 2
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v19, v13, 2
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v20, v9, 3
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v21, v8, 3
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v22, v11, 3
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v23, v13, 3
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v24, v9, 4
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v25, v8, 4
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v26, v11, 4
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v27, v13, 4
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v28, v9, 5
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v29, v8, 5
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v30, v11, 5
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vmv.v.i v29, 0
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vmv.v.i v31, 0
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v30, v13, 5
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vmv1r.v v31, v29
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v7, v13, 5
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vmv1r.v v6, v31
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v31, a0, v8
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v8, v14, 5
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v31, a1, v12
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vslidedown.vi v12, v15, 5
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vmv1r.v v7, v29
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v7, a0, v13
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v31, a2, v16
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vmv1r.v v13, v29
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v13, a0, v14
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v29, a0, v15
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v7, a1, v9
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v31, a3, v20
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v13, a1, v10
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v29, a1, v11
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v7, a2, v17
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v31, a4, v24
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v13, a2, v18
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v29, a2, v19
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v7, a3, v21
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v31, a5, v28
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v13, a3, v22
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v29, a3, v23
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v7, a4, v25
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v6, a0, v9
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vmv1r.v v9, v31
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v9, a0, v8
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v6, a1, v10
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vmv1r.v v8, v31
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v8, a0, v11
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v31, a0, v13
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v9, a1, v12
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v6, a2, v16
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v8, a1, v14
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v31, a1, v15
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v9, a2, v17
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v6, a3, v20
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v8, a2, v18
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v31, a2, v19
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v9, a3, v21
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v6, a4, v24
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v8, a3, v22
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v31, a3, v23
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v9, a4, v25
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v6, a5, v28
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v8, a4, v26
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v31, a4, v27
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v9, a5, v29
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vmax.vx v9, v31, zero
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vmax.vx v10, v6, zero
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v13, a4, v26
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v29, a4, v27
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v7, a5, v30
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v8, a5, v30
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v31, a5, v7
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vmax.vx v9, v9, zero
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    csrwi vxrm, 0
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vnclipu.wi v9, v9, 6
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v13, a5, v8
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vwmaccsu.vx v29, a5, v12
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vmax.vx v8, v7, zero
-; VTYPE-SCHED-BOTTOMUP-NEXT:    lw a0, 32(sp)
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vmax.vx v10, v13, zero
-; VTYPE-SCHED-BOTTOMUP-NEXT:    ld a1, 24(sp)
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vmax.vx v11, v29, zero
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vnclipu.wi v8, v8, 6
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vnclipu.wi v10, v10, 6
-; VTYPE-SCHED-BOTTOMUP-NEXT:    add a2, a1, a0
-; VTYPE-SCHED-BOTTOMUP-NEXT:    sh1add a3, a0, a0
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vnclipu.wi v11, v11, 6
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vse8.v v9, (a1)
-; VTYPE-SCHED-BOTTOMUP-NEXT:    sh1add a0, a0, a1
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vse8.v v8, (a2)
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vmax.vx v8, v8, zero
+; VTYPE-SCHED-BOTTOMUP-NEXT:    ld a0, 24(sp)
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vmax.vx v11, v31, zero
+; VTYPE-SCHED-BOTTOMUP-NEXT:    lw a1, 32(sp)
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vnclipu.wi v9, v9, 6
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vnclipu.wi v8, v8, 6
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vse8.v v10, (a0)
-; VTYPE-SCHED-BOTTOMUP-NEXT:    add a1, a1, a3
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vse8.v v11, (a1)
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vnclipu.wi v10, v11, 6
+; VTYPE-SCHED-BOTTOMUP-NEXT:    add a2, a0, a1
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vse8.v v9, (a2)
+; VTYPE-SCHED-BOTTOMUP-NEXT:    sh1add a2, a1, a0
+; VTYPE-SCHED-BOTTOMUP-NEXT:    sh1add a1, a1, a1
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vse8.v v8, (a2)
+; VTYPE-SCHED-BOTTOMUP-NEXT:    add a0, a0, a1
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vse8.v v10, (a0)
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    ret
 ;
 ; VTYPE-SCHED-TOPDOWN-LABEL: test:
 ; VTYPE-SCHED-TOPDOWN:       # %bb.0: # %entry
-; VTYPE-SCHED-TOPDOWN-NEXT:    lw t0, 32(sp)
+; VTYPE-SCHED-TOPDOWN-NEXT:    lw t1, 32(sp)
 ; VTYPE-SCHED-TOPDOWN-NEXT:    ld a6, 24(sp)
-; VTYPE-SCHED-TOPDOWN-NEXT:    ld t1, 16(sp)
-; VTYPE-SCHED-TOPDOWN-NEXT:    ld t2, 8(sp)
-; VTYPE-SCHED-TOPDOWN-NEXT:    ld t3, 0(sp)
+; VTYPE-SCHED-TOPDOWN-NEXT:    ld t2, 16(sp)
+; VTYPE-SCHED-TOPDOWN-NEXT:    ld t3, 8(sp)
+; VTYPE-SCHED-TOPDOWN-NEXT:    ld t4, 0(sp)
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vle8.v v12, (a7)
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vmv.v.i v8, 0
 ; VTYPE-SCHED-TOPDOWN-NEXT:    csrwi vxrm, 0
-; VTYPE-SCHED-TOPDOWN-NEXT:    sh1add t4, t0, t0
+; VTYPE-SCHED-TOPDOWN-NEXT:    sh1add t5, t1, t1
+; VTYPE-SCHED-TOPDOWN-NEXT:    add t0, a6, t1
+; VTYPE-SCHED-TOPDOWN-NEXT:    sh1add a7, t1, a6
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; VTYPE-SCHED-TOPDOWN-NEXT:    vle8.v v13, (t1)
+; VTYPE-SCHED-TOPDOWN-NEXT:    vle8.v v13, (t4)
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v16, v12, 1
-; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; VTYPE-SCHED-TOPDOWN-NEXT:    vle8.v v14, (t3)
-; VTYPE-SCHED-TOPDOWN-NEXT:    add a7, a6, t0
-; VTYPE-SCHED-TOPDOWN-NEXT:    vle8.v v15, (t2)
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vmv1r.v v9, v8
-; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v17, v14, 1
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vmv1r.v v10, v8
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vmv1r.v v11, v8
-; VTYPE-SCHED-TOPDOWN-NEXT:    sh1add t1, t0, a6
-; VTYPE-SCHED-TOPDOWN-NEXT:    add t0, a6, t4
-; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v18, v15, 1
-; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v19, v13, 1
+; VTYPE-SCHED-TOPDOWN-NEXT:    add t1, a6, t5
+; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; VTYPE-SCHED-TOPDOWN-NEXT:    vle8.v v14, (t2)
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v9, a0, v12
-; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v10, a0, v14
+; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v10, a0, v13
+; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
+; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v17, v13, 1
+; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; VTYPE-SCHED-TOPDOWN-NEXT:    vle8.v v15, (t3)
+; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v8, a0, v14
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v11, a0, v15
-; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v8, a0, v13
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v9, a1, v16
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v10, a1, v17
-; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v11, a1, v18
-; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v8, a1, v19
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v16, v12, 2
-; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v17, v14, 2
-; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v18, v15, 2
-; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v19, v13, 2
+; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v16, v15, 1
+; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v17, v14, 1
+; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v18, v12, 2
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v9, a2, v16
-; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v10, a2, v17
-; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v11, a2, v18
+; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v11, a1, v16
+; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v8, a1, v17
+; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
+; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v16, v13, 2
+; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v17, v15, 2
+; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v19, v14, 2
+; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v9, a2, v18
+; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v10, a2, v16
+; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v11, a2, v17
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v8, a2, v19
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v16, v12, 3
-; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v17, v14, 3
+; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v17, v13, 3
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v18, v15, 3
-; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v19, v13, 3
+; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v19, v14, 3
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v9, a3, v16
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v10, a3, v17
@@ -267,9 +267,9 @@ define void @test(i16 %0, i16 %1, i16 %2, i16 %3, i16 %4, i16 %5, i16 %6, ptr %7
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v8, a3, v19
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v16, v12, 4
-; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v17, v14, 4
+; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v17, v13, 4
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v18, v15, 4
-; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v19, v13, 4
+; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v19, v14, 4
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v10, a4, v17
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v9, a4, v16
@@ -277,14 +277,14 @@ define void @test(i16 %0, i16 %1, i16 %2, i16 %3, i16 %4, i16 %5, i16 %6, ptr %7
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v8, a4, v19
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v12, v12, 5
-; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v14, v14, 5
-; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v15, v15, 5
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v13, v13, 5
+; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v15, v15, 5
+; VTYPE-SCHED-TOPDOWN-NEXT:    vslidedown.vi v14, v14, 5
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v9, a5, v12
-; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v10, a5, v14
+; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v10, a5, v13
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v11, a5, v15
-; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v8, a5, v13
+; VTYPE-SCHED-TOPDOWN-NEXT:    vwmaccsu.vx v8, a5, v14
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vmax.vx v9, v9, zero
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vmax.vx v10, v10, zero
@@ -296,9 +296,9 @@ define void @test(i16 %0, i16 %1, i16 %2, i16 %3, i16 %4, i16 %5, i16 %6, ptr %7
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vnclipu.wi v11, v11, 6
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vse8.v v9, (a6)
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vnclipu.wi v8, v8, 6
-; VTYPE-SCHED-TOPDOWN-NEXT:    vse8.v v10, (a7)
-; VTYPE-SCHED-TOPDOWN-NEXT:    vse8.v v11, (t1)
-; VTYPE-SCHED-TOPDOWN-NEXT:    vse8.v v8, (t0)
+; VTYPE-SCHED-TOPDOWN-NEXT:    vse8.v v10, (t0)
+; VTYPE-SCHED-TOPDOWN-NEXT:    vse8.v v11, (a7)
+; VTYPE-SCHED-TOPDOWN-NEXT:    vse8.v v8, (t1)
 ; VTYPE-SCHED-TOPDOWN-NEXT:    ret
 ;
 ; VTYPE-SCHED-BIDIRECTIONAL-LABEL: test:
@@ -306,14 +306,12 @@ define void @test(i16 %0, i16 %1, i16 %2, i16 %3, i16 %4, i16 %5, i16 %6, ptr %7
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    ld a6, 0(sp)
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vle8.v v8, (a7)
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v9, v8, 1
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    ld a7, 8(sp)
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vle8.v v10, (a6)
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vle8.v v9, (a6)
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v11, v10, 1
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v10, v8, 1
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    ld a6, 16(sp)
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v11, v9, 1
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vle8.v v12, (a7)
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
@@ -323,79 +321,77 @@ define void @test(i16 %0, i16 %1, i16 %2, i16 %3, i16 %4, i16 %5, i16 %6, ptr %7
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v15, v14, 1
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v16, v8, 2
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v17, v10, 2
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v17, v9, 2
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v18, v12, 2
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v19, v14, 2
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v20, v8, 3
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v21, v10, 3
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v21, v9, 3
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v22, v12, 3
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v23, v14, 3
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v24, v8, 4
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v25, v10, 4
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v25, v9, 4
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v26, v12, 4
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v27, v14, 4
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v28, v8, 5
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v29, v9, 5
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v30, v12, 5
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vmv.v.i v29, 0
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vmv.v.i v31, 0
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v30, v10, 5
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vmv1r.v v31, v29
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v7, v14, 5
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vmv1r.v v6, v31
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v31, a0, v8
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v8, v12, 5
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v31, a1, v9
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vslidedown.vi v9, v14, 5
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vmv1r.v v7, v29
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v7, a0, v10
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v31, a2, v16
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vmv1r.v v10, v29
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v10, a0, v12
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v29, a0, v14
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v7, a1, v11
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v31, a3, v20
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v10, a1, v13
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v29, a1, v15
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v7, a2, v17
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v31, a4, v24
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v10, a2, v18
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v29, a2, v19
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v7, a3, v21
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v31, a5, v28
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v10, a3, v22
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v29, a3, v23
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v7, a4, v25
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v6, a0, v8
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vmv1r.v v8, v31
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v8, a0, v9
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v6, a1, v10
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vmv1r.v v9, v31
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v9, a0, v12
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v31, a0, v14
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v8, a1, v11
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v6, a2, v16
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v9, a1, v13
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v31, a1, v15
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v8, a2, v17
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v6, a3, v20
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v9, a2, v18
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v31, a2, v19
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v8, a3, v21
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v6, a4, v24
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v9, a3, v22
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v31, a3, v23
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v8, a4, v25
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v6, a5, v28
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v9, a4, v26
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v31, a4, v27
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v8, a5, v29
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vmax.vx v10, v6, zero
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v9, a5, v30
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v31, a5, v7
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vmax.vx v8, v8, zero
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    csrwi vxrm, 0
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vnclipu.wi v10, v10, 6
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    ld a0, 24(sp)
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vmax.vx v9, v9, zero
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    lw a1, 32(sp)
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vmax.vx v11, v31, zero
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v10, a4, v26
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v29, a4, v27
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v7, a5, v30
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    csrwi vxrm, 0
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vnclipu.wi v11, v11, 6
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v10, a5, v8
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vwmaccsu.vx v29, a5, v9
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vmax.vx v8, v7, zero
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    lw a0, 32(sp)
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vmax.vx v9, v10, zero
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    ld a1, 24(sp)
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vmax.vx v10, v29, zero
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vnclipu.wi v8, v8, 6
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vse8.v v10, (a0)
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vnclipu.wi v9, v9, 6
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    add a2, a1, a0
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    sh1add a3, a0, a0
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vnclipu.wi v10, v10, 6
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vse8.v v11, (a1)
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    sh1add a0, a0, a1
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    add a2, a0, a1
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    sh1add a3, a1, a0
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vse8.v v8, (a2)
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vse8.v v9, (a0)
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    add a1, a1, a3
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vse8.v v10, (a1)
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vnclipu.wi v8, v11, 6
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    sh1add a1, a1, a1
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vse8.v v9, (a3)
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    add a0, a0, a1
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vse8.v v8, (a0)
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    ret
 entry:
   %14 = tail call <vscale x 8 x i8> @llvm.riscv.vle.nxv8i8.p0.i64(<vscale x 8 x i8> poison, ptr %7, i64 16)
@@ -510,10 +506,10 @@ define void @foo(ptr %0, ptr %1, ptr %2, ptr %3, ptr %4) {
 ; DEFAULT-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; DEFAULT-NEXT:    vmv.x.s a1, v12
 ; DEFAULT-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; DEFAULT-NEXT:    vmseq.vv v12, v8, v10
-; DEFAULT-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; DEFAULT-NEXT:    vmv.x.s a2, v12
+; DEFAULT-NEXT:    vmseq.vv v14, v8, v10
 ; DEFAULT-NEXT:    vle64.v v12, (a3)
+; DEFAULT-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; DEFAULT-NEXT:    vmv.x.s a2, v14
 ; DEFAULT-NEXT:    vle64.v v14, (a4)
 ; DEFAULT-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; DEFAULT-NEXT:    vmsltu.vv v16, v12, v14
@@ -546,9 +542,9 @@ define void @foo(ptr %0, ptr %1, ptr %2, ptr %3, ptr %4) {
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetivli zero, 8, e64, m2, ta, ma
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vle64.v v12, (a1)
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vle64.v v14, (a2)
-; VTYPE-SCHED-BOTTOMUP-NEXT:    vmsltu.vv v16, v12, v14
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vle64.v v8, (a3)
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vle64.v v10, (a4)
+; VTYPE-SCHED-BOTTOMUP-NEXT:    vmsltu.vv v16, v12, v14
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vmsltu.vv v17, v8, v10
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; VTYPE-SCHED-BOTTOMUP-NEXT:    vmv.x.s a1, v16
@@ -581,12 +577,12 @@ define void @foo(ptr %0, ptr %1, ptr %2, ptr %3, ptr %4) {
 ; VTYPE-SCHED-TOPDOWN:       # %bb.0: # %entry
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vsetivli zero, 8, e64, m2, ta, ma
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vle64.v v10, (a1)
-; VTYPE-SCHED-TOPDOWN-NEXT:    vle64.v v12, (a2)
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vmv.v.i v8, 0
+; VTYPE-SCHED-TOPDOWN-NEXT:    vle64.v v12, (a2)
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vle64.v v14, (a3)
-; VTYPE-SCHED-TOPDOWN-NEXT:    vle64.v v16, (a4)
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vmsltu.vv v18, v10, v12
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vmseq.vv v19, v10, v12
+; VTYPE-SCHED-TOPDOWN-NEXT:    vle64.v v16, (a4)
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vsub.vv v10, v10, v12
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; VTYPE-SCHED-TOPDOWN-NEXT:    vmv.x.s a1, v18
@@ -618,8 +614,8 @@ define void @foo(ptr %0, ptr %1, ptr %2, ptr %3, ptr %4) {
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetivli zero, 8, e64, m2, ta, ma
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vle64.v v12, (a1)
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vle64.v v14, (a2)
-; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vmsltu.vv v16, v12, v14
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vle64.v v8, (a3)
+; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vmsltu.vv v16, v12, v14
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vle64.v v10, (a4)
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vmsltu.vv v17, v8, v10
 ; VTYPE-SCHED-BIDIRECTIONAL-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma

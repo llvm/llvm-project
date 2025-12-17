@@ -13,29 +13,28 @@
 #ifndef LLVM_LIB_TARGET_RISCV_RISCVMACHINESCHEDULER_H
 #define LLVM_LIB_TARGET_RISCV_RISCVMACHINESCHEDULER_H
 
+#include "RISCVSubtarget.h"
+#include "RISCVVSETVLIInfoAnalysis.h"
 #include "llvm/CodeGen/MachineScheduler.h"
-#include "llvm/TargetParser/RISCVTargetParser.h"
 
 namespace llvm {
-
-// TODO: We should use the infrastructure in RISCV/RISCVInsertVSETVLI.cpp.
-// TODO: We should take vl into consideration.
-using VTypeInfo = std::pair<RISCVVType::VLMUL, unsigned>;
 
 /// A GenericScheduler implementation for RISCV pre RA scheduling.
 class RISCVPreRAMachineSchedStrategy : public GenericScheduler {
 private:
-  VTypeInfo TopVType;
-  VTypeInfo BottomVType;
+  RISCV::RISCVVSETVLIInfoAnalysis VIA;
+  RISCV::VSETVLIInfo TopVType;
+  RISCV::VSETVLIInfo BottomVType;
 
-  bool tryVType(VTypeInfo TryVType, VTypeInfo CandVtype,
-                GenericSchedulerBase::SchedCandidate &TryCand,
-                GenericSchedulerBase::SchedCandidate &Cand,
-                GenericSchedulerBase::CandReason Reason) const;
+  RISCV::VSETVLIInfo getVSETVLIInfo(const MachineInstr *MI) const;
+  bool tryVType(RISCV::VSETVLIInfo TryVType, RISCV::VSETVLIInfo CandVtype,
+                SchedCandidate &TryCand, SchedCandidate &Cand,
+                CandReason Reason) const;
 
 public:
   RISCVPreRAMachineSchedStrategy(const MachineSchedContext *C)
-      : GenericScheduler(C) {}
+      : GenericScheduler(C),
+        VIA(&C->MF->getSubtarget<RISCVSubtarget>(), C->LIS) {}
 
 protected:
   bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
