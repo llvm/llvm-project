@@ -3241,13 +3241,19 @@ mlir::NVVM::IDArgPair MBarrierArriveOp::getIntrinsicIDAndArgs(
   if (needCast)
     mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
 
+  // We have the most basic mbarrier.arrive supported on sm_80.
+  // It supports: Space=cta, scope=cta, No relaxed, No explicit count.
+  // So, only for this combination use the legacy intrinsic.
+  bool hasCount = static_cast<bool>(thisOp.getCount());
+  if (!hasCount &&
+      (id == llvm::Intrinsic::nvvm_mbarrier_arrive_scope_cta_space_cta))
+    return {llvm::Intrinsic::nvvm_mbarrier_arrive_shared, {mbar}};
+
   // When count is not explicitly specified, the default is 1.
   llvm::LLVMContext &ctx = mt.getLLVMContext();
-  bool hasCount = static_cast<bool>(thisOp.getCount());
   llvm::Value *count =
       hasCount ? mt.lookupValue(thisOp.getCount())
                : llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), 1);
-
   return {id, {mbar, count}};
 }
 
