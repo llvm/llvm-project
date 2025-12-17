@@ -156,7 +156,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   Float128Format = &llvm::APFloat::IEEEquad();
   Ibm128Format = &llvm::APFloat::PPCDoubleDouble();
   MCountName = "mcount";
-  UserLabelPrefix = "_";
+  UserLabelPrefix = Triple.isOSBinFormatMachO() ? "_" : "";
   RegParmMax = 0;
   SSERegParmMax = 0;
   HasAlignMac68kSupport = false;
@@ -196,9 +196,10 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
 // Out of line virtual dtor for TargetInfo.
 TargetInfo::~TargetInfo() {}
 
-void TargetInfo::resetDataLayout(StringRef DL, const char *ULP) {
-  DataLayoutString = DL.str();
-  UserLabelPrefix = ULP;
+void TargetInfo::resetDataLayout(StringRef DL) { DataLayoutString = DL.str(); }
+
+void TargetInfo::resetDataLayout() {
+  DataLayoutString = Triple.computeDataLayout(getABI());
 }
 
 bool
@@ -630,6 +631,13 @@ TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
 
 bool TargetInfo::callGlobalDeleteInDeletingDtor(
     const LangOptions &LangOpts) const {
+  if (getCXXABI() == TargetCXXABI::Microsoft &&
+      LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver21)
+    return true;
+  return false;
+}
+
+bool TargetInfo::emitVectorDeletingDtors(const LangOptions &LangOpts) const {
   if (getCXXABI() == TargetCXXABI::Microsoft &&
       LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver21)
     return true;

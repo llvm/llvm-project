@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Utils/Utils.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
@@ -41,15 +42,17 @@ static FuncOp createFnDecl(OpBuilder &b, SymbolOpInterface symTable,
 }
 
 /// Helper function to look up or create the symbol for a runtime library
-/// function with the given parameter types. Always returns an int64_t.
+/// function with the given parameter types. Returns an int64_t, unless a
+/// different result type is specified.
 static FailureOr<FuncOp>
 lookupOrCreateApFloatFn(OpBuilder &b, SymbolOpInterface symTable,
                         StringRef name, TypeRange paramTypes,
-                        SymbolTableCollection *symbolTables = nullptr) {
-  auto i64Type = IntegerType::get(symTable->getContext(), 64);
-
+                        SymbolTableCollection *symbolTables = nullptr,
+                        Type resultType = {}) {
+  if (!resultType)
+    resultType = IntegerType::get(symTable->getContext(), 64);
   std::string funcName = (llvm::Twine("_mlir_apfloat_") + name).str();
-  auto funcT = FunctionType::get(b.getContext(), paramTypes, {i64Type});
+  auto funcT = FunctionType::get(b.getContext(), paramTypes, {resultType});
   FailureOr<FuncOp> func =
       lookupFnDecl(symTable, funcName, funcT, symbolTables);
   // Failed due to type mismatch.
@@ -88,6 +91,73 @@ static Value getSemanticsValue(OpBuilder &b, Location loc, FloatType floatTy) {
                                    b.getIntegerAttr(b.getI32Type(), sem));
 }
 
+/// Given two operands of vector type and vector result type (with the same
+/// shape), call the given function for each pair of scalar operands and
+/// package the result into a vector. If the given operands and result type are
+/// not vectors, call the function directly. The second operand is optional.
+template <typename Fn, typename... Values>
+static Value forEachScalarValue(RewriterBase &rewriter, Location loc,
+                                Value operand1, Value operand2, Type resultType,
+                                Fn fn) {
+  auto vecTy1 = dyn_cast<VectorType>(operand1.getType());
+  if (operand2) {
+    // Sanity check: Operand types must match.
+    assert(vecTy1 == dyn_cast<VectorType>(operand2.getType()) &&
+           "expected same vector types");
+  }
+  if (!vecTy1) {
+    // Not a vector. Call the function directly.
+    return fn(operand1, operand2, resultType);
+  }
+
+  // Prepare scalar operands.
+  ResultRange sclars1 =
+      vector::ToElementsOp::create(rewriter, loc, operand1)->getResults();
+  SmallVector<Value> scalars2;
+  if (!operand2) {
+    // No second operand. Create a vector of empty values.
+    scalars2.assign(vecTy1.getNumElements(), Value());
+  } else {
+    llvm::append_range(
+        scalars2,
+        vector::ToElementsOp::create(rewriter, loc, operand2)->getResults());
+  }
+
+  // Call the function for each pair of scalar operands.
+  auto resultVecType = cast<VectorType>(resultType);
+  SmallVector<Value> results;
+  for (auto [scalar1, scalar2] : llvm::zip_equal(sclars1, scalars2)) {
+    Value result = fn(scalar1, scalar2, resultVecType.getElementType());
+    results.push_back(result);
+  }
+
+  // Package the results into a vector.
+  return vector::FromElementsOp::create(
+      rewriter, loc,
+      vecTy1.cloneWith(/*shape=*/std::nullopt, results.front().getType()),
+      results);
+}
+
+/// Check preconditions for the conversion:
+/// 1. All operands / results must be integers or floats (or vectors thereof).
+/// 2. The bitwidth of the operands / results must be <= 64.
+static LogicalResult checkPreconditions(RewriterBase &rewriter, Operation *op) {
+  for (Value value : llvm::concat<Value>(op->getOperands(), op->getResults())) {
+    Type type = value.getType();
+    if (auto vecTy = dyn_cast<VectorType>(type)) {
+      type = vecTy.getElementType();
+    }
+    if (!type.isIntOrFloat()) {
+      return rewriter.notifyMatchFailure(
+          op, "only integers and floats (or vectors thereof) are supported");
+    }
+    if (type.getIntOrFloatBitWidth() > 64)
+      return rewriter.notifyMatchFailure(op,
+                                         "bitwidth > 64 bits is not supported");
+  }
+  return success();
+}
+
 /// Rewrite a binary arithmetic operation to an APFloat function call.
 template <typename OpTy>
 struct BinaryArithOpToAPFloatConversion final : OpRewritePattern<OpTy> {
@@ -100,37 +170,46 @@ struct BinaryArithOpToAPFloatConversion final : OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
+    if (failed(checkPreconditions(rewriter, op)))
+      return failure();
+
     // Get APFloat function from runtime library.
     FailureOr<FuncOp> fn =
         lookupOrCreateBinaryFn(rewriter, symTable, APFloatName);
     if (failed(fn))
       return fn;
 
-    rewriter.setInsertionPoint(op);
-    // Cast operands to 64-bit integers.
+    // Scalarize and convert to APFloat runtime calls.
     Location loc = op.getLoc();
-    auto floatTy = cast<FloatType>(op.getType());
-    auto intWType = rewriter.getIntegerType(floatTy.getWidth());
-    auto int64Type = rewriter.getI64Type();
-    Value lhsBits = arith::ExtUIOp::create(
-        rewriter, loc, int64Type,
-        arith::BitcastOp::create(rewriter, loc, intWType, op.getLhs()));
-    Value rhsBits = arith::ExtUIOp::create(
-        rewriter, loc, int64Type,
-        arith::BitcastOp::create(rewriter, loc, intWType, op.getRhs()));
+    rewriter.setInsertionPoint(op);
+    Value repl = forEachScalarValue(
+        rewriter, loc, op.getLhs(), op.getRhs(), op.getType(),
+        [&](Value lhs, Value rhs, Type resultType) {
+          // Cast operands to 64-bit integers.
+          auto floatTy = cast<FloatType>(resultType);
+          auto intWType = rewriter.getIntegerType(floatTy.getWidth());
+          auto int64Type = rewriter.getI64Type();
+          Value lhsBits = arith::ExtUIOp::create(
+              rewriter, loc, int64Type,
+              arith::BitcastOp::create(rewriter, loc, intWType, lhs));
+          Value rhsBits = arith::ExtUIOp::create(
+              rewriter, loc, int64Type,
+              arith::BitcastOp::create(rewriter, loc, intWType, rhs));
 
-    // Call APFloat function.
-    Value semValue = getSemanticsValue(rewriter, loc, floatTy);
-    SmallVector<Value> params = {semValue, lhsBits, rhsBits};
-    auto resultOp =
-        func::CallOp::create(rewriter, loc, TypeRange(rewriter.getI64Type()),
-                             SymbolRefAttr::get(*fn), params);
+          // Call APFloat function.
+          Value semValue = getSemanticsValue(rewriter, loc, floatTy);
+          SmallVector<Value> params = {semValue, lhsBits, rhsBits};
+          auto resultOp = func::CallOp::create(rewriter, loc,
+                                               TypeRange(rewriter.getI64Type()),
+                                               SymbolRefAttr::get(*fn), params);
 
-    // Truncate result to the original width.
-    Value truncatedBits = arith::TruncIOp::create(rewriter, loc, intWType,
-                                                  resultOp->getResult(0));
-    rewriter.replaceOp(
-        op, arith::BitcastOp::create(rewriter, loc, floatTy, truncatedBits));
+          // Truncate result to the original width.
+          Value truncatedBits = arith::TruncIOp::create(rewriter, loc, intWType,
+                                                        resultOp->getResult(0));
+          return arith::BitcastOp::create(rewriter, loc, floatTy,
+                                          truncatedBits);
+        });
+    rewriter.replaceOp(op, repl);
     return success();
   }
 
@@ -146,6 +225,9 @@ struct FpToFpConversion final : OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
+    if (failed(checkPreconditions(rewriter, op)))
+      return failure();
+
     // Get APFloat function from runtime library.
     auto i32Type = IntegerType::get(symTable->getContext(), 32);
     auto i64Type = IntegerType::get(symTable->getContext(), 64);
@@ -154,30 +236,36 @@ struct FpToFpConversion final : OpRewritePattern<OpTy> {
     if (failed(fn))
       return fn;
 
-    rewriter.setInsertionPoint(op);
-    // Cast operands to 64-bit integers.
+    // Scalarize and convert to APFloat runtime calls.
     Location loc = op.getLoc();
-    auto inFloatTy = cast<FloatType>(op.getOperand().getType());
-    auto inIntWType = rewriter.getIntegerType(inFloatTy.getWidth());
-    Value operandBits = arith::ExtUIOp::create(
-        rewriter, loc, i64Type,
-        arith::BitcastOp::create(rewriter, loc, inIntWType, op.getOperand()));
+    rewriter.setInsertionPoint(op);
+    Value repl = forEachScalarValue(
+        rewriter, loc, op.getOperand(), /*operand2=*/Value(), op.getType(),
+        [&](Value operand1, Value operand2, Type resultType) {
+          // Cast operands to 64-bit integers.
+          auto inFloatTy = cast<FloatType>(operand1.getType());
+          auto inIntWType = rewriter.getIntegerType(inFloatTy.getWidth());
+          Value operandBits = arith::ExtUIOp::create(
+              rewriter, loc, i64Type,
+              arith::BitcastOp::create(rewriter, loc, inIntWType, operand1));
 
-    // Call APFloat function.
-    Value inSemValue = getSemanticsValue(rewriter, loc, inFloatTy);
-    auto outFloatTy = cast<FloatType>(op.getType());
-    Value outSemValue = getSemanticsValue(rewriter, loc, outFloatTy);
-    std::array<Value, 3> params = {inSemValue, outSemValue, operandBits};
-    auto resultOp =
-        func::CallOp::create(rewriter, loc, TypeRange(rewriter.getI64Type()),
-                             SymbolRefAttr::get(*fn), params);
+          // Call APFloat function.
+          Value inSemValue = getSemanticsValue(rewriter, loc, inFloatTy);
+          auto outFloatTy = cast<FloatType>(resultType);
+          Value outSemValue = getSemanticsValue(rewriter, loc, outFloatTy);
+          std::array<Value, 3> params = {inSemValue, outSemValue, operandBits};
+          auto resultOp = func::CallOp::create(rewriter, loc,
+                                               TypeRange(rewriter.getI64Type()),
+                                               SymbolRefAttr::get(*fn), params);
 
-    // Truncate result to the original width.
-    auto outIntWType = rewriter.getIntegerType(outFloatTy.getWidth());
-    Value truncatedBits = arith::TruncIOp::create(rewriter, loc, outIntWType,
-                                                  resultOp->getResult(0));
-    rewriter.replaceOp(
-        op, arith::BitcastOp::create(rewriter, loc, outFloatTy, truncatedBits));
+          // Truncate result to the original width.
+          auto outIntWType = rewriter.getIntegerType(outFloatTy.getWidth());
+          Value truncatedBits = arith::TruncIOp::create(
+              rewriter, loc, outIntWType, resultOp->getResult(0));
+          return arith::BitcastOp::create(rewriter, loc, outFloatTy,
+                                          truncatedBits);
+        });
+    rewriter.replaceOp(op, repl);
     return success();
   }
 
@@ -193,9 +281,8 @@ struct FpToIntConversion final : OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
-    if (op.getType().getIntOrFloatBitWidth() > 64)
-      return rewriter.notifyMatchFailure(
-          op, "result type > 64 bits is not supported");
+    if (failed(checkPreconditions(rewriter, op)))
+      return failure();
 
     // Get APFloat function from runtime library.
     auto i1Type = IntegerType::get(symTable->getContext(), 1);
@@ -207,33 +294,39 @@ struct FpToIntConversion final : OpRewritePattern<OpTy> {
     if (failed(fn))
       return fn;
 
-    rewriter.setInsertionPoint(op);
-    // Cast operands to 64-bit integers.
+    // Scalarize and convert to APFloat runtime calls.
     Location loc = op.getLoc();
-    auto inFloatTy = cast<FloatType>(op.getOperand().getType());
-    auto inIntWType = rewriter.getIntegerType(inFloatTy.getWidth());
-    Value operandBits = arith::ExtUIOp::create(
-        rewriter, loc, i64Type,
-        arith::BitcastOp::create(rewriter, loc, inIntWType, op.getOperand()));
+    rewriter.setInsertionPoint(op);
+    Value repl = forEachScalarValue(
+        rewriter, loc, op.getOperand(), /*operand2=*/Value(), op.getType(),
+        [&](Value operand1, Value operand2, Type resultType) {
+          // Cast operands to 64-bit integers.
+          auto inFloatTy = cast<FloatType>(operand1.getType());
+          auto inIntWType = rewriter.getIntegerType(inFloatTy.getWidth());
+          Value operandBits = arith::ExtUIOp::create(
+              rewriter, loc, i64Type,
+              arith::BitcastOp::create(rewriter, loc, inIntWType, operand1));
 
-    // Call APFloat function.
-    Value inSemValue = getSemanticsValue(rewriter, loc, inFloatTy);
-    auto outIntTy = cast<IntegerType>(op.getType());
-    Value outWidthValue = arith::ConstantOp::create(
-        rewriter, loc, i32Type,
-        rewriter.getIntegerAttr(i32Type, outIntTy.getWidth()));
-    Value isUnsignedValue = arith::ConstantOp::create(
-        rewriter, loc, i1Type, rewriter.getIntegerAttr(i1Type, isUnsigned));
-    SmallVector<Value> params = {inSemValue, outWidthValue, isUnsignedValue,
-                                 operandBits};
-    auto resultOp =
-        func::CallOp::create(rewriter, loc, TypeRange(rewriter.getI64Type()),
-                             SymbolRefAttr::get(*fn), params);
+          // Call APFloat function.
+          Value inSemValue = getSemanticsValue(rewriter, loc, inFloatTy);
+          auto outIntTy = cast<IntegerType>(resultType);
+          Value outWidthValue = arith::ConstantOp::create(
+              rewriter, loc, i32Type,
+              rewriter.getIntegerAttr(i32Type, outIntTy.getWidth()));
+          Value isUnsignedValue = arith::ConstantOp::create(
+              rewriter, loc, i1Type,
+              rewriter.getIntegerAttr(i1Type, isUnsigned));
+          SmallVector<Value> params = {inSemValue, outWidthValue,
+                                       isUnsignedValue, operandBits};
+          auto resultOp = func::CallOp::create(rewriter, loc,
+                                               TypeRange(rewriter.getI64Type()),
+                                               SymbolRefAttr::get(*fn), params);
 
-    // Truncate result to the original width.
-    Value truncatedBits = arith::TruncIOp::create(rewriter, loc, outIntTy,
-                                                  resultOp->getResult(0));
-    rewriter.replaceOp(op, truncatedBits);
+          // Truncate result to the original width.
+          return arith::TruncIOp::create(rewriter, loc, outIntTy,
+                                         resultOp->getResult(0));
+        });
+    rewriter.replaceOp(op, repl);
     return success();
   }
 
@@ -250,11 +343,8 @@ struct IntToFpConversion final : OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
-    Location loc = op.getLoc();
-    if (op.getIn().getType().getIntOrFloatBitWidth() > 64) {
-      return rewriter.notifyMatchFailure(
-          loc, "integer bitwidth > 64 is not supported");
-    }
+    if (failed(checkPreconditions(rewriter, op)))
+      return failure();
 
     // Get APFloat function from runtime library.
     auto i1Type = IntegerType::get(symTable->getContext(), 1);
@@ -266,46 +356,256 @@ struct IntToFpConversion final : OpRewritePattern<OpTy> {
     if (failed(fn))
       return fn;
 
+    // Scalarize and convert to APFloat runtime calls.
+    Location loc = op.getLoc();
     rewriter.setInsertionPoint(op);
-    // Cast operands to 64-bit integers.
-    auto inIntTy = cast<IntegerType>(op.getOperand().getType());
-    Value operandBits = op.getOperand();
-    if (operandBits.getType().getIntOrFloatBitWidth() < 64) {
-      if (isUnsigned) {
-        operandBits =
-            arith::ExtUIOp::create(rewriter, loc, i64Type, operandBits);
-      } else {
-        operandBits =
-            arith::ExtSIOp::create(rewriter, loc, i64Type, operandBits);
-      }
-    }
+    Value repl = forEachScalarValue(
+        rewriter, loc, op.getOperand(), /*operand2=*/Value(), op.getType(),
+        [&](Value operand1, Value operand2, Type resultType) {
+          // Cast operands to 64-bit integers.
+          auto inIntTy = cast<IntegerType>(operand1.getType());
+          Value operandBits = operand1;
+          if (operandBits.getType().getIntOrFloatBitWidth() < 64) {
+            if (isUnsigned) {
+              operandBits =
+                  arith::ExtUIOp::create(rewriter, loc, i64Type, operandBits);
+            } else {
+              operandBits =
+                  arith::ExtSIOp::create(rewriter, loc, i64Type, operandBits);
+            }
+          }
 
-    // Call APFloat function.
-    auto outFloatTy = cast<FloatType>(op.getType());
-    Value outSemValue = getSemanticsValue(rewriter, loc, outFloatTy);
-    Value inWidthValue = arith::ConstantOp::create(
-        rewriter, loc, i32Type,
-        rewriter.getIntegerAttr(i32Type, inIntTy.getWidth()));
-    Value isUnsignedValue = arith::ConstantOp::create(
-        rewriter, loc, i1Type, rewriter.getIntegerAttr(i1Type, isUnsigned));
-    SmallVector<Value> params = {outSemValue, inWidthValue, isUnsignedValue,
-                                 operandBits};
-    auto resultOp =
-        func::CallOp::create(rewriter, loc, TypeRange(rewriter.getI64Type()),
-                             SymbolRefAttr::get(*fn), params);
+          // Call APFloat function.
+          auto outFloatTy = cast<FloatType>(resultType);
+          Value outSemValue = getSemanticsValue(rewriter, loc, outFloatTy);
+          Value inWidthValue = arith::ConstantOp::create(
+              rewriter, loc, i32Type,
+              rewriter.getIntegerAttr(i32Type, inIntTy.getWidth()));
+          Value isUnsignedValue = arith::ConstantOp::create(
+              rewriter, loc, i1Type,
+              rewriter.getIntegerAttr(i1Type, isUnsigned));
+          SmallVector<Value> params = {outSemValue, inWidthValue,
+                                       isUnsignedValue, operandBits};
+          auto resultOp = func::CallOp::create(rewriter, loc,
+                                               TypeRange(rewriter.getI64Type()),
+                                               SymbolRefAttr::get(*fn), params);
 
-    // Truncate result to the original width.
-    auto outIntWType = rewriter.getIntegerType(outFloatTy.getWidth());
-    Value truncatedBits = arith::TruncIOp::create(rewriter, loc, outIntWType,
-                                                  resultOp->getResult(0));
-    Value result =
-        arith::BitcastOp::create(rewriter, loc, outFloatTy, truncatedBits);
-    rewriter.replaceOp(op, result);
+          // Truncate result to the original width.
+          auto outIntWType = rewriter.getIntegerType(outFloatTy.getWidth());
+          Value truncatedBits = arith::TruncIOp::create(
+              rewriter, loc, outIntWType, resultOp->getResult(0));
+          return arith::BitcastOp::create(rewriter, loc, outFloatTy,
+                                          truncatedBits);
+        });
+    rewriter.replaceOp(op, repl);
     return success();
   }
 
   SymbolOpInterface symTable;
   bool isUnsigned;
+};
+
+struct CmpFOpToAPFloatConversion final : OpRewritePattern<arith::CmpFOp> {
+  CmpFOpToAPFloatConversion(MLIRContext *context, SymbolOpInterface symTable,
+                            PatternBenefit benefit = 1)
+      : OpRewritePattern<arith::CmpFOp>(context, benefit), symTable(symTable) {}
+
+  LogicalResult matchAndRewrite(arith::CmpFOp op,
+                                PatternRewriter &rewriter) const override {
+    if (failed(checkPreconditions(rewriter, op)))
+      return failure();
+
+    // Get APFloat function from runtime library.
+    auto i1Type = IntegerType::get(symTable->getContext(), 1);
+    auto i8Type = IntegerType::get(symTable->getContext(), 8);
+    auto i32Type = IntegerType::get(symTable->getContext(), 32);
+    auto i64Type = IntegerType::get(symTable->getContext(), 64);
+    FailureOr<FuncOp> fn =
+        lookupOrCreateApFloatFn(rewriter, symTable, "compare",
+                                {i32Type, i64Type, i64Type}, nullptr, i8Type);
+    if (failed(fn))
+      return fn;
+
+    // Scalarize and convert to APFloat runtime calls.
+    Location loc = op.getLoc();
+    rewriter.setInsertionPoint(op);
+    Value repl = forEachScalarValue(
+        rewriter, loc, op.getLhs(), op.getRhs(), op.getType(),
+        [&](Value lhs, Value rhs, Type resultType) {
+          // Cast operands to 64-bit integers.
+          auto floatTy = cast<FloatType>(lhs.getType());
+          auto intWType = rewriter.getIntegerType(floatTy.getWidth());
+          Value lhsBits = arith::ExtUIOp::create(
+              rewriter, loc, i64Type,
+              arith::BitcastOp::create(rewriter, loc, intWType, lhs));
+          Value rhsBits = arith::ExtUIOp::create(
+              rewriter, loc, i64Type,
+              arith::BitcastOp::create(rewriter, loc, intWType, rhs));
+
+          // Call APFloat function.
+          Value semValue = getSemanticsValue(rewriter, loc, floatTy);
+          SmallVector<Value> params = {semValue, lhsBits, rhsBits};
+          Value comparisonResult =
+              func::CallOp::create(rewriter, loc, TypeRange(i8Type),
+                                   SymbolRefAttr::get(*fn), params)
+                  ->getResult(0);
+
+          // Generate an i1 SSA value that is "true" if the comparison result
+          // matches the given `val`.
+          auto checkResult = [&](llvm::APFloat::cmpResult val) {
+            return arith::CmpIOp::create(
+                rewriter, loc, arith::CmpIPredicate::eq, comparisonResult,
+                arith::ConstantOp::create(
+                    rewriter, loc, i8Type,
+                    rewriter.getIntegerAttr(i8Type, static_cast<int8_t>(val)))
+                    .getResult());
+          };
+          // Generate an i1 SSA value that is "true" if the comparison result
+          // matches any of the given `vals`.
+          std::function<Value(ArrayRef<llvm::APFloat::cmpResult>)>
+              checkResults = [&](ArrayRef<llvm::APFloat::cmpResult> vals) {
+                Value first = checkResult(vals.front());
+                if (vals.size() == 1)
+                  return first;
+                Value rest = checkResults(vals.drop_front());
+                return arith::OrIOp::create(rewriter, loc, first, rest)
+                    .getResult();
+              };
+
+          // This switch-case statement was taken from arith::applyCmpPredicate.
+          Value result;
+          switch (op.getPredicate()) {
+          case arith::CmpFPredicate::AlwaysFalse:
+            result =
+                arith::ConstantOp::create(rewriter, loc, i1Type,
+                                          rewriter.getIntegerAttr(i1Type, 0))
+                    .getResult();
+            break;
+          case arith::CmpFPredicate::OEQ:
+            result = checkResult(llvm::APFloat::cmpEqual);
+            break;
+          case arith::CmpFPredicate::OGT:
+            result = checkResult(llvm::APFloat::cmpGreaterThan);
+            break;
+          case arith::CmpFPredicate::OGE:
+            result = checkResults(
+                {llvm::APFloat::cmpGreaterThan, llvm::APFloat::cmpEqual});
+            break;
+          case arith::CmpFPredicate::OLT:
+            result = checkResult(llvm::APFloat::cmpLessThan);
+            break;
+          case arith::CmpFPredicate::OLE:
+            result = checkResults(
+                {llvm::APFloat::cmpLessThan, llvm::APFloat::cmpEqual});
+            break;
+          case arith::CmpFPredicate::ONE:
+            // Not cmpUnordered and not cmpUnordered.
+            result = checkResults(
+                {llvm::APFloat::cmpLessThan, llvm::APFloat::cmpGreaterThan});
+            break;
+          case arith::CmpFPredicate::ORD:
+            // Not cmpUnordered.
+            result = checkResults({llvm::APFloat::cmpLessThan,
+                                   llvm::APFloat::cmpGreaterThan,
+                                   llvm::APFloat::cmpEqual});
+            break;
+          case arith::CmpFPredicate::UEQ:
+            result = checkResults(
+                {llvm::APFloat::cmpUnordered, llvm::APFloat::cmpEqual});
+            break;
+          case arith::CmpFPredicate::UGT:
+            result = checkResults(
+                {llvm::APFloat::cmpUnordered, llvm::APFloat::cmpGreaterThan});
+            break;
+          case arith::CmpFPredicate::UGE:
+            result = checkResults({llvm::APFloat::cmpUnordered,
+                                   llvm::APFloat::cmpGreaterThan,
+                                   llvm::APFloat::cmpEqual});
+            break;
+          case arith::CmpFPredicate::ULT:
+            result = checkResults(
+                {llvm::APFloat::cmpUnordered, llvm::APFloat::cmpLessThan});
+            break;
+          case arith::CmpFPredicate::ULE:
+            result = checkResults({llvm::APFloat::cmpUnordered,
+                                   llvm::APFloat::cmpLessThan,
+                                   llvm::APFloat::cmpEqual});
+            break;
+          case arith::CmpFPredicate::UNE:
+            // Not cmpEqual.
+            result = checkResults({llvm::APFloat::cmpLessThan,
+                                   llvm::APFloat::cmpGreaterThan,
+                                   llvm::APFloat::cmpUnordered});
+            break;
+          case arith::CmpFPredicate::UNO:
+            result = checkResult(llvm::APFloat::cmpUnordered);
+            break;
+          case arith::CmpFPredicate::AlwaysTrue:
+            result =
+                arith::ConstantOp::create(rewriter, loc, i1Type,
+                                          rewriter.getIntegerAttr(i1Type, 1))
+                    .getResult();
+            break;
+          }
+          return result;
+        });
+    rewriter.replaceOp(op, repl);
+    return success();
+  }
+
+  SymbolOpInterface symTable;
+};
+
+struct NegFOpToAPFloatConversion final : OpRewritePattern<arith::NegFOp> {
+  NegFOpToAPFloatConversion(MLIRContext *context, SymbolOpInterface symTable,
+                            PatternBenefit benefit = 1)
+      : OpRewritePattern<arith::NegFOp>(context, benefit), symTable(symTable) {}
+
+  LogicalResult matchAndRewrite(arith::NegFOp op,
+                                PatternRewriter &rewriter) const override {
+    if (failed(checkPreconditions(rewriter, op)))
+      return failure();
+
+    // Get APFloat function from runtime library.
+    auto i32Type = IntegerType::get(symTable->getContext(), 32);
+    auto i64Type = IntegerType::get(symTable->getContext(), 64);
+    FailureOr<FuncOp> fn =
+        lookupOrCreateApFloatFn(rewriter, symTable, "neg", {i32Type, i64Type});
+    if (failed(fn))
+      return fn;
+
+    // Scalarize and convert to APFloat runtime calls.
+    Location loc = op.getLoc();
+    rewriter.setInsertionPoint(op);
+    Value repl = forEachScalarValue(
+        rewriter, loc, op.getOperand(), /*operand2=*/Value(), op.getType(),
+        [&](Value operand1, Value operand2, Type resultType) {
+          // Cast operands to 64-bit integers.
+          auto floatTy = cast<FloatType>(operand1.getType());
+          auto intWType = rewriter.getIntegerType(floatTy.getWidth());
+          Value operandBits = arith::ExtUIOp::create(
+              rewriter, loc, i64Type,
+              arith::BitcastOp::create(rewriter, loc, intWType, operand1));
+
+          // Call APFloat function.
+          Value semValue = getSemanticsValue(rewriter, loc, floatTy);
+          SmallVector<Value> params = {semValue, operandBits};
+          Value negatedBits =
+              func::CallOp::create(rewriter, loc, TypeRange(i64Type),
+                                   SymbolRefAttr::get(*fn), params)
+                  ->getResult(0);
+
+          // Truncate result to the original width.
+          Value truncatedBits =
+              arith::TruncIOp::create(rewriter, loc, intWType, negatedBits);
+          return arith::BitcastOp::create(rewriter, loc, floatTy,
+                                          truncatedBits);
+        });
+    rewriter.replaceOp(op, repl);
+    return success();
+  }
+
+  SymbolOpInterface symTable;
 };
 
 namespace {
@@ -329,8 +629,17 @@ void ArithToAPFloatConversionPass::runOnOperation() {
       context, "divide", getOperation());
   patterns.add<BinaryArithOpToAPFloatConversion<arith::RemFOp>>(
       context, "remainder", getOperation());
+  patterns.add<BinaryArithOpToAPFloatConversion<arith::MinNumFOp>>(
+      context, "minnum", getOperation());
+  patterns.add<BinaryArithOpToAPFloatConversion<arith::MaxNumFOp>>(
+      context, "maxnum", getOperation());
+  patterns.add<BinaryArithOpToAPFloatConversion<arith::MinimumFOp>>(
+      context, "minimum", getOperation());
+  patterns.add<BinaryArithOpToAPFloatConversion<arith::MaximumFOp>>(
+      context, "maximum", getOperation());
   patterns
-      .add<FpToFpConversion<arith::ExtFOp>, FpToFpConversion<arith::TruncFOp>>(
+      .add<FpToFpConversion<arith::ExtFOp>, FpToFpConversion<arith::TruncFOp>,
+           CmpFOpToAPFloatConversion, NegFOpToAPFloatConversion>(
           context, getOperation());
   patterns.add<FpToIntConversion<arith::FPToSIOp>>(context, getOperation(),
                                                    /*isUnsigned=*/false);

@@ -34,9 +34,6 @@ static bool validateVectorContractOperands(Value prodOp) {
   if (!defOp)
     return false;
 
-  // Verify that the transfer_read operation satisfies the following conditions:
-  // (1) It has no out-of-bounds dimensions.
-  // (2) The permutation map is non-identity.
   if (auto readOp = prodOp.getDefiningOp<mlir::vector::TransferReadOp>()) {
     if (readOp.hasOutOfBoundsDim())
       return false;
@@ -62,7 +59,9 @@ static bool validateVectorContractOperands(Value prodOp) {
   if (!llvm::isa<MemRefType>(srcType))
     return false;
 
-  // Return false, if the innermost stride of the memref is not 1.
+  // Return false if the two innermost strides of the memref are not contiguous.
+  // The x86vector.avx.cvt.packed.even/odd.indexed_to_f32 operations require
+  // an eight-element tuple of bf16 values to be contiguous.
   if (!llvm::cast<mlir::MemRefType>(srcType).areTrailingDimsContiguous(2))
     return false;
 
