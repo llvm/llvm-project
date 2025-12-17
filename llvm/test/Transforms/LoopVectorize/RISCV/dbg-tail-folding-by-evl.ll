@@ -7,17 +7,17 @@ define void @reverse_store(ptr %a, i64 %n) !dbg !4 {
 ; CHECK-LABEL: define void @reverse_store(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] !dbg [[DBG4:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1, !dbg [[DBG15:![0-9]+]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[N]], i64 1), !dbg [[DBG15]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[UMIN]], !dbg [[DBG15]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]], !dbg [[DBG15]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[N]], i64 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[UMIN]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[N]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw <vscale x 4 x i64> [[TMP2]], splat (i64 -1)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add nsw <vscale x 4 x i64> [[BROADCAST_SPLAT]], [[TMP3]]
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]], !dbg [[DBG15]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP1]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -26,41 +26,41 @@ define void @reverse_store(ptr %a, i64 %n) !dbg !4 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul nsw i64 -1, [[TMP5]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP6]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <vscale x 4 x i64> [[VEC_IND]], splat (i64 -1), !dbg [[DBG16:![0-9]+]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <vscale x 4 x i64> [[VEC_IND]], splat (i64 -1), !dbg [[DBG11:![0-9]+]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 4 x i64> [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[TMP8]], !dbg [[DBG17:![0-9]+]]
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc nuw nsw <vscale x 4 x i64> [[TMP7]] to <vscale x 4 x i32>, !dbg [[DBG19:![0-9]+]]
-; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP4]] to i64, !dbg [[DBG19]]
-; CHECK-NEXT:    [[TMP12:%.*]] = mul i64 0, [[TMP11]], !dbg [[DBG19]]
-; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP11]], 1, !dbg [[DBG19]]
-; CHECK-NEXT:    [[TMP14:%.*]] = mul i64 -1, [[TMP13]], !dbg [[DBG19]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[TMP9]], i64 [[TMP12]], !dbg [[DBG19]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[TMP15]], i64 [[TMP14]], !dbg [[DBG19]]
-; CHECK-NEXT:    [[VP_REVERSE:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[TMP10]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP4]]), !dbg [[DBG19]]
-; CHECK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[VP_REVERSE]], ptr align 4 [[TMP16]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP4]]), !dbg [[DBG19]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[TMP8]], !dbg [[DBG12:![0-9]+]]
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc nuw nsw <vscale x 4 x i64> [[TMP7]] to <vscale x 4 x i32>, !dbg [[DBG13:![0-9]+]]
+; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP4]] to i64, !dbg [[DBG13]]
+; CHECK-NEXT:    [[TMP12:%.*]] = mul i64 0, [[TMP11]], !dbg [[DBG13]]
+; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP11]], 1, !dbg [[DBG13]]
+; CHECK-NEXT:    [[TMP14:%.*]] = mul i64 -1, [[TMP13]], !dbg [[DBG13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[TMP9]], i64 [[TMP12]], !dbg [[DBG13]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[TMP15]], i64 [[TMP14]], !dbg [[DBG13]]
+; CHECK-NEXT:    [[VP_REVERSE:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[TMP10]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP4]]), !dbg [[DBG13]]
+; CHECK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[VP_REVERSE]], ptr align 4 [[TMP16]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP4]]), !dbg [[DBG13]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP5]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
-; CHECK-NEXT:    ret void, !dbg [[DBG23:![0-9]+]]
+; CHECK-NEXT:    ret void
 ;
 entry:
-  br label %for.body, !dbg !15
+  br label %for.body
 
 for.cond.cleanup:                                 ; preds = %for.body
-  ret void, !dbg !16
+  ret void
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %n, %entry ], [ %indvars.iv.next, %for.body ]
-  %indvars.iv.next = add nsw i64 %indvars.iv, -1, !dbg !18
-  %arrayidx = getelementptr inbounds nuw i32, ptr %a, i64 %indvars.iv.next, !dbg !19
-  %1 = trunc nuw nsw i64 %indvars.iv.next to i32, !dbg !20
-  store i32 %1, ptr %arrayidx, align 4, !dbg !20
-  %cmp = icmp samesign ugt i64 %indvars.iv, 1, !dbg !21
-  br i1 %cmp, label %for.body, label %for.cond.cleanup, !dbg !22, !llvm.loop !23
+  %indvars.iv.next = add nsw i64 %indvars.iv, -1, !dbg !11
+  %arrayidx = getelementptr inbounds nuw i32, ptr %a, i64 %indvars.iv.next, !dbg !12
+  %1 = trunc nuw nsw i64 %indvars.iv.next to i32, !dbg !13
+  store i32 %1, ptr %arrayidx, align 4, !dbg !13
+  %cmp = icmp samesign ugt i64 %indvars.iv, 1, !dbg !14
+  br i1 %cmp, label %for.body, label %for.cond.cleanup, !dbg !15, !llvm.loop !16
 }
 
 !llvm.dbg.cu = !{!0}
@@ -76,22 +76,14 @@ for.body:                                         ; preds = %entry, %for.body
 !7 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !9, size: 64)
 !8 = !DIBasicType(name: "long", size: 64, encoding: DW_ATE_signed)
 !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!10 = !{!11, !12, !13}
-!11 = !DILocalVariable(name: "a", arg: 1, scope: !4, file: !1, line: 1, type: !7)
-!12 = !DILocalVariable(name: "n", arg: 2, scope: !4, file: !1, line: 1, type: !8)
-!13 = !DILocalVariable(name: "i", scope: !14, file: !1, line: 2, type: !9)
-!14 = distinct !DILexicalBlock(scope: !4, file: !1, line: 2, column: 5)
-!15 = !DILocation(line: 2, column: 5, scope: !14)
-!16 = !DILocation(line: 4, column: 1, scope: !4)
-!17 = distinct !DILexicalBlock(scope: !14, file: !1, line: 2, column: 5)
-!18 = !DILocation(line: 2, scope: !14)
-!19 = !DILocation(line: 3, column: 7, scope: !17)
-!20 = !DILocation(line: 3, column: 12, scope: !17)
-!21 = !DILocation(line: 2, column: 27, scope: !17)
-!22 = !DILocation(line: 2, column: 5, scope: !14)
-!23 = distinct !{!23, !15, !24, !25}
-!24 = !DILocation(line: 3, column: 14, scope: !14)
-!25 = !{!"llvm.loop.vectorize.enable", i1 true}
+!10 = !{}
+!11 = !DILocation(line: 2, scope: !4)
+!12 = !DILocation(line: 3, column: 7, scope: !4)
+!13 = !DILocation(line: 3, column: 12, scope: !4)
+!14 = !DILocation(line: 2, column: 27, scope: !4)
+!15 = !DILocation(line: 2, column: 5, scope: !4)
+!16 = distinct !{!16, !17}
+!17 = !{!"llvm.loop.vectorize.enable", i1 true}
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META1:![0-9]+]], producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 ; CHECK: [[META1]] = !DIFile(filename: "{{.*}}dbg-tail-folding-by-evl.cpp", directory: {{.*}})
@@ -101,18 +93,11 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: [[META7]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META8:![0-9]+]], size: 64)
 ; CHECK: [[META8]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 ; CHECK: [[META9]] = !DIBasicType(name: "long", size: 64, encoding: DW_ATE_signed)
-; CHECK: [[META10]] = !{[[META11:![0-9]+]], [[META12:![0-9]+]], [[META13:![0-9]+]]}
-; CHECK: [[META11]] = !DILocalVariable(name: "a", arg: 1, scope: [[DBG4]], file: [[META1]], line: 1, type: [[META7]])
-; CHECK: [[META12]] = !DILocalVariable(name: "n", arg: 2, scope: [[DBG4]], file: [[META1]], line: 1, type: [[META9]])
-; CHECK: [[META13]] = !DILocalVariable(name: "i", scope: [[META14:![0-9]+]], file: [[META1]], line: 2, type: [[META8]])
-; CHECK: [[META14]] = distinct !DILexicalBlock(scope: [[DBG4]], file: [[META1]], line: 2, column: 5)
-; CHECK: [[DBG15]] = !DILocation(line: 2, column: 5, scope: [[META14]])
-; CHECK: [[DBG16]] = !DILocation(line: 2, scope: [[META14]])
-; CHECK: [[DBG17]] = !DILocation(line: 3, column: 7, scope: [[META18:![0-9]+]])
-; CHECK: [[META18]] = distinct !DILexicalBlock(scope: [[META14]], file: [[META1]], line: 2, column: 5)
-; CHECK: [[DBG19]] = !DILocation(line: 3, column: 12, scope: [[META18]])
-; CHECK: [[LOOP20]] = distinct !{[[LOOP20]], [[META21:![0-9]+]], [[META22:![0-9]+]]}
-; CHECK: [[META21]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META22]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[DBG23]] = !DILocation(line: 4, column: 1, scope: [[DBG4]])
+; CHECK: [[META10]] = !{}
+; CHECK: [[DBG11]] = !DILocation(line: 2, scope: [[DBG4]])
+; CHECK: [[DBG12]] = !DILocation(line: 3, column: 7, scope: [[DBG4]])
+; CHECK: [[DBG13]] = !DILocation(line: 3, column: 12, scope: [[DBG4]])
+; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META15:![0-9]+]], [[META16:![0-9]+]]}
+; CHECK: [[META15]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META16]] = !{!"llvm.loop.unroll.runtime.disable"}
 ;.
