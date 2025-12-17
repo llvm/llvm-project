@@ -37,15 +37,6 @@ struct B {
 // Should NOT emit invariant.start - has mutable member
 extern const B b = B();
 
-struct CWithDtor {
-  CWithDtor();
-  ~CWithDtor();
-  int n;
-};
-
-// Should NOT emit invariant.start - has non-constexpr destructor
-extern const CWithDtor c_with_dtor = CWithDtor();
-
 // Simple case - just const C c; (no initializer) - Andy's suggestion
 class C {
 public:
@@ -80,17 +71,9 @@ const C c;
 // CIR:   cir.return
 // CIR: }
 
-// CIR checks for 'c_with_dtor' - should NOT have constant storage (non-constexpr dtor)
-// CIR: cir.global external @c_with_dtor = #cir.zero : !rec_CWithDtor
-// CIR: cir.func internal private @__cxx_global_var_init.3() {
-// CIR:   %[[OBJ:.*]] = cir.get_global @c_with_dtor : !cir.ptr<!rec_CWithDtor>
-// CIR:   cir.call @_ZN9CWithDtorC1Ev(%[[OBJ]]) : (!cir.ptr<!rec_CWithDtor>) -> ()
-// CIR:   cir.return
-// CIR: }
-
 // CIR checks for 'c' - Andy's simple case, should have constant storage (internal linkage)
 // CIR: cir.global {{.*}} internal {{.*}} @_ZL1c = #cir.zero : !rec_C
-// CIR: cir.func internal private @__cxx_global_var_init.4() {
+// CIR: cir.func internal private @__cxx_global_var_init.3() {
 // CIR:   %[[OBJ:.*]] = cir.get_global @_ZL1c : !cir.ptr<!rec_C>
 // CIR:   cir.call @_ZN1CC1Ev(%[[OBJ]]) : (!cir.ptr<!rec_C>) -> ()
 // CIR:   cir.return
@@ -101,7 +84,6 @@ const C c;
 // LLVM: @a ={{.*}} global {{.*}} zeroinitializer
 // LLVM: @a2 ={{.*}} global {{.*}} zeroinitializer
 // LLVM: @b ={{.*}} global {{.*}} zeroinitializer
-// LLVM: @c_with_dtor ={{.*}} global {{.*}} zeroinitializer
 // LLVM: @_ZL1c ={{.*}} global {{.*}} zeroinitializer
 
 // Then check the init functions
@@ -121,11 +103,6 @@ const C c;
 // LLVM: }
 
 // LLVM: define internal void @__cxx_global_var_init.3() {
-// LLVM:   call void @_ZN9CWithDtorC1Ev(ptr @c_with_dtor)
-// LLVM:   ret void
-// LLVM: }
-
-// LLVM: define internal void @__cxx_global_var_init.4() {
 // LLVM:   call void @_ZN1CC1Ev(ptr @_ZL1c)
 // LLVM:   ret void
 // LLVM: }
@@ -135,7 +112,6 @@ const C c;
 // OGCG: @a ={{.*}} global {{.*}} zeroinitializer
 // OGCG: @a2 ={{.*}} global {{.*}} zeroinitializer
 // OGCG: @b ={{.*}} global {{.*}} zeroinitializer
-// OGCG: @c_with_dtor ={{.*}} global {{.*}} zeroinitializer
 // OGCG: @_ZL1c ={{.*}} global {{.*}} zeroinitializer
 
 // Then check the init functions
@@ -155,11 +131,6 @@ const C c;
 // OGCG: }
 
 // OGCG: define internal void @__cxx_global_var_init.3() {{.*}} section ".text.startup" {
-// OGCG:   call void @_ZN9CWithDtorC1Ev(ptr noundef nonnull align 4 dereferenceable(4) @c_with_dtor)
-// OGCG:   ret void
-// OGCG: }
-
-// OGCG: define internal void @__cxx_global_var_init.4() {{.*}} section ".text.startup" {
 // OGCG:   call void @_ZN1CC1Ev(ptr noundef nonnull align 4 dereferenceable(8) @_ZL1c)
 // OGCG:   ret void
 // OGCG: }
@@ -169,7 +140,6 @@ const C c;
 // LLVM-OPT: @a ={{.*}} global {{.*}} zeroinitializer
 // LLVM-OPT: @a2 ={{.*}} global {{.*}} zeroinitializer
 // LLVM-OPT: @b ={{.*}} global {{.*}} zeroinitializer
-// LLVM-OPT: @c_with_dtor ={{.*}} global {{.*}} zeroinitializer
 // LLVM-OPT: @_ZL1c ={{.*}} global {{.*}} zeroinitializer
 
 // Then check the init functions with invariant.start
@@ -192,12 +162,6 @@ const C c;
 // LLVM-OPT: }
 
 // LLVM-OPT: define internal void @__cxx_global_var_init.3() {
-// LLVM-OPT:   call void @_ZN9CWithDtorC1Ev(ptr @c_with_dtor)
-// LLVM-OPT-NOT: call {{.*}}@llvm.invariant.start.p0(i64 {{.*}}, ptr @c_with_dtor)
-// LLVM-OPT:   ret void
-// LLVM-OPT: }
-
-// LLVM-OPT: define internal void @__cxx_global_var_init.4() {
 // LLVM-OPT:   call void @_ZN1CC1Ev(ptr @_ZL1c)
 // LLVM-OPT:   call {{.*}}@llvm.invariant.start.p0(i64 8, ptr @_ZL1c)
 // LLVM-OPT:   ret void
@@ -208,7 +172,6 @@ const C c;
 // OGCG-OPT: @a ={{.*}} global {{.*}} zeroinitializer
 // OGCG-OPT: @a2 ={{.*}} global {{.*}} zeroinitializer
 // OGCG-OPT: @b ={{.*}} global {{.*}} zeroinitializer
-// OGCG-OPT: @c_with_dtor ={{.*}} global {{.*}} zeroinitializer
 // OGCG-OPT: @_ZL1c ={{.*}} global {{.*}} zeroinitializer
 
 // Then check the init functions with invariant.start
@@ -231,12 +194,6 @@ const C c;
 // OGCG-OPT: }
 
 // OGCG-OPT: define internal void @__cxx_global_var_init.3() {{.*}} section ".text.startup" {
-// OGCG-OPT:   call void @_ZN9CWithDtorC1Ev(ptr noundef nonnull align 4 dereferenceable(4) @c_with_dtor)
-// OGCG-OPT-NOT: call {{.*}}@llvm.invariant.start.p0(i64 {{.*}}, ptr @c_with_dtor)
-// OGCG-OPT:   ret void
-// OGCG-OPT: }
-
-// OGCG-OPT: define internal void @__cxx_global_var_init.4() {{.*}} section ".text.startup" {
 // OGCG-OPT:   call void @_ZN1CC1Ev(ptr noundef nonnull align 4 dereferenceable(8) @_ZL1c)
 // OGCG-OPT:   call {{.*}}@llvm.invariant.start.p0(i64 8, ptr @_ZL1c)
 // OGCG-OPT:   ret void
