@@ -597,7 +597,7 @@ public:
     IntType integralTy =
         getSIntNTy(getCIRIntOrFloatBitWidth(vecCast.getElementType()));
     VectorType integralVecTy =
-        VectorType::get(context, integralTy, vecCast.getSize());
+        cir::VectorType::get(integralTy, vecCast.getSize());
     return cir::VecCmpOp::create(*this, loc, integralVecTy, kind, lhs, rhs);
   }
 

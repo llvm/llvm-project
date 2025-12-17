@@ -47,7 +47,7 @@ using namespace mlir::sparse_tensor;
 // Support hashing LevelType such that SparseTensorEncodingAttr can be hashed as
 // well.
 namespace mlir::sparse_tensor {
-llvm::hash_code hash_value(LevelType lt) {
+static llvm::hash_code hash_value(LevelType lt) {
   return llvm::hash_value(static_cast<uint64_t>(lt));
 }
 } // namespace mlir::sparse_tensor
