@@ -26,28 +26,39 @@ using namespace mlir;
 using namespace mlir::vector;
 using namespace mlir::x86vector;
 
-static bool validateVectorProdOp(Value prodOp) {
+// Verifies that the LHS and RHS operands of a vector.contract are load or
+// vector.transfer_read operations on a memref source buffer, and checks
+// their bounds, dimensions, offsets, and strides.
+static bool validateVectorContractOperands(Value prodOp) {
   Operation *defOp = prodOp.getDefiningOp();
   if (!defOp)
     return false;
 
-  // If the LHS/RHS op is transfer_read return false if:
-  // (1) - It has false in-bounds
-  // (2) - The permutation map is not identical
+  // Verify that the transfer_read operation satisfies the following conditions:
+  // (1) It has no out-of-bounds dimensions.
+  // (2) The permutation map is non-identity.
   if (auto readOp = prodOp.getDefiningOp<mlir::vector::TransferReadOp>()) {
-    ArrayAttr inBoundsAttr = readOp.getInBoundsAttr();
-    if (inBoundsAttr) {
-
-      for (Attribute attr : inBoundsAttr) {
-        auto boolAttr = llvm::dyn_cast<BoolAttr>(attr);
-        if (!boolAttr || !boolAttr.getValue()) {
-          return false;
-        }
-      }
-    }
-
-    if (!readOp.getPermutationMap().isIdentity())
+    if (readOp.hasOutOfBoundsDim())
       return false;
+
+    AffineMap map = readOp.getPermutationMap();
+
+    // Must be a projected permutation (no skewing, no sums).
+    if (!map.isProjectedPermutation())
+      return false;
+
+    // The minor (vector) dimensions must be identity.
+    int64_t vectorRank = readOp.getVectorType().getRank();
+    int64_t numResults = map.getNumResults();
+
+    // The last `vectorRank` results must be (d0, d1, ..., d{vectorRank-1})
+    for (int64_t i = 0; i < vectorRank; ++i) {
+      AffineExpr expr = map.getResult(numResults - vectorRank + i);
+
+      auto dimExpr = llvm::dyn_cast<AffineDimExpr>(expr);
+      if (!dimExpr || dimExpr.getPosition() != i)
+        return false;
+    }
   }
 
   Value srcBuff;
@@ -68,13 +79,8 @@ static bool validateVectorProdOp(Value prodOp) {
     return false;
 
   // Return false, if the innermost stride of the memref is not 1.
-  auto [strides, offset] =
-      llvm::cast<mlir::MemRefType>(srcType).getStridesAndOffset();
-  if (!strides.empty()) {
-    int64_t s = strides.back();
-    if (s != mlir::ShapedType::kDynamic && s != 1)
-      return false;
-  }
+  if (!llvm::cast<mlir::MemRefType>(srcType).areTrailingDimsContiguous(2))
+    return false;
 
   // Return false if the vnni offset of load or transfer_read is not zero.
   if (getConstantIntValue(indexVals.back()) != 0)
@@ -265,19 +271,15 @@ struct VectorContractBF16ToFMA
           contractOp, "BF16 packed load operation expects non-unit (LHR or "
                       "RHS) dim and acc dim of size 4/8.");
 
-    if (!validateVectorProdOp(contractOp.getLhs()))
+    if (!validateVectorContractOperands(contractOp.getLhs()) ||
+        !validateVectorContractOperands(contractOp.getRhs())) {
       return rewriter.notifyMatchFailure(
-          contractOp,
-          "The LHS is in invalid format. Either it has false inbound or "
-          "non-identical permuation map or the vnni offset is not zero or src "
-          "is not MemRef type or has non-unit vnni stride");
-
-    if (!validateVectorProdOp(contractOp.getRhs()))
-      return rewriter.notifyMatchFailure(
-          contractOp,
-          "The LHS is in invalid format. Either it has false inbound or "
-          "non-identical permuation map or the vnni offset is not zero or src "
-          "is not MemRef type or has non-unit vnni stride");
+          contractOp, "The LHS or RHS is in an invalid format. Either it has "
+                      "false in-bounds, "
+                      "a non-identity permutation map, a non-zero VNNI offset, "
+                      "a non-memref "
+                      "source, or a non-unit VNNI stride");
+    }
 
     // Lower vector.contract to FMAs with help of BF16 packed ops.
     auto loc = contractOp.getLoc();

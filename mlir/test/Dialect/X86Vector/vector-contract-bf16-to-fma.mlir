@@ -27,12 +27,15 @@ func.func @brgemm_to_fma(
 }
 
 // CHECK-LABEL: @brgemm_to_fma
-// CHECK: x86vector.avx.bcst_to_f32.packed
-// CHECK: x86vector.avx.cvt.packed.odd.indexed_to_f32
-// CHECK: vector.fma
-// CHECK: x86vector.avx.bcst_to_f32.packed
-// CHECK: x86vector.avx.cvt.packed.even.indexed_to_f32
-// CHECK: vector.fma
+// CHECK: memref.subview %arg0[%c0, %c0, %c0, 1] {{.*}} : memref<1x4x1x2xbf16> to memref<1x1x1x1xbf16, {{.*}}>
+// CHECK: memref.subview %arg0[%c0, %c0, %c0, 0] {{.*}} : memref<1x4x1x2xbf16> to memref<1x1x1x1xbf16, {{.*}}>
+// CHECK: memref.subview %arg1[%c0, %c0, %c0, %c0] {{.*}} : memref<1x1x32x2xbf16> to memref<1x1x8x2xbf16, {{.*}}>
+// CHECK: x86vector.avx.bcst_to_f32.packed {{.*}} : memref<1x1x1x1xbf16, strided<[8, 2, 2, 1], offset: ?>>
+// CHECK: x86vector.avx.cvt.packed.odd.indexed_to_f32 {{.*}} : memref<1x1x8x2xbf16, strided<[64, 64, 2, 1], offset: ?>>
+// CHECK: vector.fma {{.*}} : vector<8xf32>
+// CHECK: x86vector.avx.bcst_to_f32.packed {{.*}} : memref<1x1x1x1xbf16, strided<[8, 2, 2, 1], offset: ?>>
+// CHECK: x86vector.avx.cvt.packed.even.indexed_to_f32 {{.*}} : memref<1x1x8x2xbf16, strided<[64, 64, 2, 1], offset: ?>>
+// CHECK: vector.fma {{.*}} : vector<8xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -452,7 +455,7 @@ module attributes {transform.with_named_sequence} {
 #map = affine_map<(d4, d1, d2, d3) -> (d1, d3, d4)>
 #map1 = affine_map<(d4, d1, d2, d3) -> (d3, d2, d4)>
 #map2 = affine_map<(d4, d1, d2, d3) -> (d1, d2)>
-func.func @negative_vnni_offset_1(
+func.func @negative_non_zero_vnni_offset(
   %arg0: !memrefA, %arg1: !memrefB, %arg2: !vecC) -> !vecC
 {
   %c0 = arith.constant 0 : index
@@ -471,7 +474,7 @@ func.func @negative_vnni_offset_1(
   return %3 : !vecC
 }
 
-// CHECK-LABEL: @negative_vnni_offset_1
+// CHECK-LABEL: @negative_non_zero_vnni_offset
 // CHECK: vector.contract
 // CHECK-NOT: vector.fma
 
@@ -496,7 +499,7 @@ module attributes {transform.with_named_sequence} {
 #map1 = affine_map<(d4, d1, d2, d3) -> (d3, d2, d4)>
 #map2 = affine_map<(d4, d1, d2, d3) -> (d1, d2)>
 #perm0 = affine_map<(d1, d2, d3) -> (d2, d1, d3)>
-func.func @negative_perm_map_not_identical(
+func.func @negative_perm_map_not_identity(
   %arg0: !memrefA, %arg1: !memrefB, %arg2: !vecC) -> !vecC
 {
   %c0 = arith.constant 0 : index
@@ -514,7 +517,7 @@ func.func @negative_perm_map_not_identical(
   return %3 : !vecC
 }
 
-// CHECK-LABEL: @negative_perm_map_not_identical
+// CHECK-LABEL: @negative_perm_map_not_identity
 // CHECK: vector.contract
 // CHECK-NOT: vector.fma
 
@@ -585,7 +588,7 @@ module attributes {transform.with_named_sequence} {
 #map = affine_map<(d4, d1, d2, d3) -> (d1, d3, d4)>
 #map1 = affine_map<(d4, d1, d2, d3) -> (d3, d2, d4)>
 #map2 = affine_map<(d4, d1, d2, d3) -> (d1, d2)>
-func.func @negative_false_bound(
+func.func @negative_out_of_bound(
   %arg0: !memrefA, %arg1: !memrefB, %arg2: !vecC, %arg3: index) -> !vecC
 {
   %c0 = arith.constant 0 : index
@@ -604,7 +607,7 @@ func.func @negative_false_bound(
   return %3 : !vecC
 }
 
-// CHECK-LABEL: @negative_false_bound
+// CHECK-LABEL: @negative_out_of_bound
 // CHECK: vector.contract
 // CHECK-NOT: vector.fma
 
