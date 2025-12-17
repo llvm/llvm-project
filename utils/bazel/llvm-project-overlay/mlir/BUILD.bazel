@@ -2666,6 +2666,7 @@ cc_library(
         ":IR",
         ":LinalgDialect",
         ":LinalgInterfaces",
+        ":MemRefDialect",
         ":Support",
         ":VectorDialect",
         "//llvm:Support",
