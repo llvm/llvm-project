@@ -2,6 +2,7 @@
 // RUN: split-file %s %t
 // RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -Wexperimental-lifetime-safety-suggestions  -Wexperimental-lifetime-safety -I%t -verify %t/test_source.cpp
 
+View definition_before_header(View a);
 
 //--- test_header.h
 #ifndef TEST_HEADER_H
@@ -18,6 +19,8 @@ struct [[gsl::Pointer()]] View {
   View();
   void use() const;
 };
+
+View definition_before_header(View a); // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
 
 View return_view_directly(View a); // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
 
@@ -44,6 +47,10 @@ inline View redeclared_in_header(View a) {  // expected-warning {{parameter in i
 //--- test_source.cpp
 
 #include "test_header.h"
+
+View definition_before_header(View a) {
+  return a;                               // expected-note {{param returned here}}
+}
 
 View return_view_directly(View a) {
   return a;                             // expected-note {{param returned here}}

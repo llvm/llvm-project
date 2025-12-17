@@ -170,10 +170,11 @@ public:
       return nullptr;
     if (!FD->isExternallyVisible())
       return nullptr;
-    const FunctionDecl *CanonicalDecl = FD->getCanonicalDecl();
-    if (CanonicalDecl != FD && SM.getFileID(FD->getLocation()) !=
-                                   SM.getFileID(CanonicalDecl->getLocation()))
-      return CanonicalDecl;
+    const FileID DefinitionFile = SM.getFileID(FD->getLocation());
+    for (const FunctionDecl *Redecl : FD->redecls())
+      if (SM.getFileID(Redecl->getLocation()) != DefinitionFile)
+        return Redecl;
+
     return nullptr;
   }
 
