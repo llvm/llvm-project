@@ -86,7 +86,7 @@ the industry.  We therefore automatically post a greeting comment to pull
 requests from new contributors and encourage maintainers to spend their time to
 help new contributors learn.
 
-[commit-access]: http://localhost:8000/DeveloperPolicy.html#obtaining-commit-access
+[commit-access]: https://llvm.org/docs/DeveloperPolicy.html#obtaining-commit-access
 
 ## Handling Violations
 
