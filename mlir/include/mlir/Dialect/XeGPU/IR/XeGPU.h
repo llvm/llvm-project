@@ -34,6 +34,7 @@ class SliceAttr;
 #include <mlir/Dialect/XeGPU/IR/XeGPUEnums.h.inc>
 #include <mlir/Dialect/XeGPU/IR/XeGPUAttrInterface.h.inc>
 #include <mlir/Dialect/XeGPU/IR/XeGPUDialect.h.inc>
+#include <mlir/Dialect/XeGPU/IR/XeGPUOpInterface.h.inc>
 // clang-format on
 
 #define GET_ATTRDEF_CLASSES

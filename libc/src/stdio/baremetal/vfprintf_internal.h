@@ -30,7 +30,7 @@ LIBC_INLINE int write_hook(cpp::string_view str_view, void *cookie) {
   auto result =
       __llvm_libc_stdio_write(cookie, str_view.data(), str_view.size());
   if (result <= 0)
-    return result;
+    return static_cast<int>(result);
   if (static_cast<size_t>(result) != str_view.size())
     return printf_core::FILE_WRITE_ERROR;
   return printf_core::WRITE_OK;

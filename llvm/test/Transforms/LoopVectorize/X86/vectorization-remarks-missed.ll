@@ -44,7 +44,7 @@
 ; CHECK: remark: source.cpp:29:7: loop not vectorized: Control flow cannot be substituted for a select
 ; CHECK: remark: source.cpp:27:3: loop not vectorized
 
-; CHECK: loop not vectorized: cannot prove it is safe to reorder memory operations
+; CHECK: loop not vectorized: too many memory checks needed
 
 ; YAML:       --- !Analysis
 ; YAML-NEXT: Pass:            loop-vectorize
@@ -172,10 +172,10 @@
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !AnalysisAliasing
 ; YAML-NEXT: Pass:            loop-vectorize
-; YAML-NEXT: Name:            CantReorderMemOps
+; YAML-NEXT: Name:            TooManyMemoryRuntimeChecks
 ; YAML-NEXT: Function:        test_runtime_checks_threshold
 ; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          'loop not vectorized: cannot prove it is safe to reorder memory operations'
+; YAML-NEXT:   - String:          'loop not vectorized: too many memory checks needed'
 ; YAML-NEXT: ...
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

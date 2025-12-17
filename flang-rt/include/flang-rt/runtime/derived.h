@@ -12,7 +12,6 @@
 #define FLANG_RT_RUNTIME_DERIVED_H_
 
 #include "flang/Common/api-attrs.h"
-#include "flang/Runtime/freestanding-tools.h"
 
 namespace Fortran::runtime::typeInfo {
 class DerivedType;
@@ -25,8 +24,7 @@ class Terminator;
 // Perform default component initialization, allocate automatic components.
 // Returns a STAT= code (0 when all's well).
 RT_API_ATTRS int Initialize(const Descriptor &, const typeInfo::DerivedType &,
-    Terminator &, bool hasStat = false, const Descriptor *errMsg = nullptr,
-    MemmoveFct memmoveFct = nullptr);
+    Terminator &, bool hasStat = false, const Descriptor *errMsg = nullptr);
 
 // Initializes an object clone from the original object.
 // Each allocatable member of the clone is allocated with the same bounds as

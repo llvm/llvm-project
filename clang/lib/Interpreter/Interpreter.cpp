@@ -112,10 +112,6 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
 
   // Create the actual diagnostics engine.
   Clang->createDiagnostics();
-  if (!Clang->hasDiagnostics())
-    return llvm::createStringError(llvm::errc::not_supported,
-                                   "Initialization failed. "
-                                   "Unable to create diagnostics engine");
 
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
   if (!Success)

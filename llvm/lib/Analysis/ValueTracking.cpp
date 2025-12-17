@@ -5374,8 +5374,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     }
     case Intrinsic::exp:
     case Intrinsic::exp2:
-    case Intrinsic::exp10: {
+    case Intrinsic::exp10:
+    case Intrinsic::amdgcn_exp2: {
       Known.knownNot(fcNegative);
+
+      Type *EltTy = II->getType()->getScalarType();
+      if (IID == Intrinsic::amdgcn_exp2 && EltTy->isFloatTy())
+        Known.knownNot(fcSubnormal);
+
       if ((InterestedClasses & fcNan) == fcNone)
         break;
 
@@ -5399,7 +5405,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::log2:
     case Intrinsic::experimental_constrained_log:
     case Intrinsic::experimental_constrained_log10:
-    case Intrinsic::experimental_constrained_log2: {
+    case Intrinsic::experimental_constrained_log2:
+    case Intrinsic::amdgcn_log: {
+      Type *EltTy = II->getType()->getScalarType();
+      if (IID == Intrinsic::amdgcn_log && EltTy->isFloatTy())
+        Known.knownNot(fcSubnormal);
+
       // log(+inf) -> +inf
       // log([+-]0.0) -> -inf
       // log(-inf) -> nan
@@ -5424,12 +5435,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known.knownNot(fcNan);
 
       const Function *F = II->getFunction();
-
       if (!F)
         break;
 
-      const fltSemantics &FltSem =
-          II->getType()->getScalarType()->getFltSemantics();
+      const fltSemantics &FltSem = EltTy->getFltSemantics();
       DenormalMode Mode = F->getDenormalMode(FltSem);
 
       if (KnownSrc.isKnownNeverLogicalZero(Mode))

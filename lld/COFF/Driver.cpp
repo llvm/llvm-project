@@ -1489,6 +1489,14 @@ getVFS(COFFLinkerContext &ctx, const opt::InputArgList &args) {
   return nullptr;
 }
 
+static StringRef DllDefaultEntryPoint(MachineTypes machine, bool mingw) {
+  if (mingw) {
+    return (machine == I386) ? "_DllMainCRTStartup@12" : "DllMainCRTStartup";
+  } else {
+    return (machine == I386) ? "__DllMainCRTStartup@12" : "_DllMainCRTStartup";
+  }
+}
+
 constexpr const char *lldsaveTempsValues[] = {
     "resolution", "preopt",     "promote", "internalize",  "import",
     "opt",        "precodegen", "prelink", "combinedindex"};
@@ -2408,8 +2416,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       symtab.entry = symtab.addGCRoot(symtab.mangle(arg->getValue()), true);
     } else if (!symtab.entry && !config->noEntry) {
       if (args.hasArg(OPT_dll)) {
-        StringRef s = (config->machine == I386) ? "__DllMainCRTStartup@12"
-                                                : "_DllMainCRTStartup";
+        StringRef s = DllDefaultEntryPoint(config->machine, config->mingw);
         symtab.entry = symtab.addGCRoot(s, true);
       } else if (config->driverWdm) {
         // /driver:wdm implies /entry:_NtProcessStartup

@@ -8,39 +8,39 @@
 ; RUN: %if aarch64-registered-target     %{ llc %s -o - -mtriple=arm64ec-pc-windows-msvc         | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if amdgpu-registered-target      %{ llc %s -o - -mtriple=amdgcn-amd-amdhsa               | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if arc-registered-target         %{ llc %s -o - -mtriple=arc-elf                         | FileCheck %s --check-prefixes=ALL,BAD-NEG-ABS,BAD-COPYSIGN,BAD-FMA %}
-; RUN: %if arm-registered-target         %{ llc %s -o - -mtriple=arm-unknown-linux-gnueabi       | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,BAD-FMA %}
-; RUN: %if arm-registered-target         %{ llc %s -o - -mtriple=thumbv7em-none-eabi             | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,BAD-FMA %}
-; RUN: %if avr-registered-target         %{ llc %s -o - -mtriple=avr-none                        | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,BAD-FMA %}
+; RUN: %if arm-registered-target         %{ llc %s -o - -mtriple=arm-unknown-linux-gnueabi       | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN %}
+; RUN: %if arm-registered-target         %{ llc %s -o - -mtriple=thumbv7em-none-eabi             | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
+; RUN: %if avr-registered-target         %{ llc %s -o - -mtriple=avr-none                        | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; FIXME: BPF has a compiler error
 ; RUN: %if csky-registered-target        %{ llc %s -o - -mtriple=csky-unknown-linux-gnuabiv2     | FileCheck %s --check-prefixes=ALL,BAD-NEG-ABS,BAD-COPYSIGN,BAD-FMA %}
 ; RUN: %if csky-registered-target        %{ llc %s -o - -mtriple=csky-unknown-linux-gnuabiv2 -mcpu=ck860fv -mattr=+hard-float | FileCheck %s --check-prefixes=ALL,BAD-NEG-ABS,BAD-COPYSIGN,BAD-FMA %}
 ; FIXME: directx has a compiler error
-; RUN: %if hexagon-registered-target     %{ llc %s -o - -mtriple=hexagon-unknown-linux-musl      | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,BAD-FMA %}
+; RUN: %if hexagon-registered-target     %{ llc %s -o - -mtriple=hexagon-unknown-linux-musl      | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if lanai-registered-target       %{ llc %s -o - -mtriple=lanai-unknown-unknown           | FileCheck %s --check-prefixes=ALL,BAD-NEG-ABS,BAD-COPYSIGN,BAD-FMA %}
-; RUN: %if loongarch-registered-target   %{ llc %s -o - -mtriple=loongarch32-unknown-linux-gnu   | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,BAD-FMA %}
-; RUN: %if loongarch-registered-target   %{ llc %s -o - -mtriple=loongarch64-unknown-linux-gnu   | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,BAD-FMA %}
-; RUN: %if loongarch-registered-target   %{ llc %s -o - -mtriple=loongarch64-unknown-linux-gnu -mattr=+f | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,BAD-FMA %}
+; RUN: %if loongarch-registered-target   %{ llc %s -o - -mtriple=loongarch32-unknown-linux-gnu   | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
+; RUN: %if loongarch-registered-target   %{ llc %s -o - -mtriple=loongarch64-unknown-linux-gnu   | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
+; RUN: %if loongarch-registered-target   %{ llc %s -o - -mtriple=loongarch64-unknown-linux-gnu -mattr=+f | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if m68k-registered-target        %{ llc %s -o - -mtriple=m68k-unknown-linux-gnu          | FileCheck %s --check-prefixes=ALL,BAD-NEG-ABS,BAD-COPYSIGN,BAD-FMA %}
-; RUN: %if mips-registered-target        %{ llc %s -o - -mtriple=mips-unknown-linux-gnu          | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,BAD-FMA %}
-; RUN: %if mips-registered-target        %{ llc %s -o - -mtriple=mips64-unknown-linux-gnuabi64   | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,BAD-FMA %}
-; RUN: %if mips-registered-target        %{ llc %s -o - -mtriple=mips64el-unknown-linux-gnuabi64 | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,BAD-FMA %}
-; RUN: %if mips-registered-target        %{ llc %s -o - -mtriple=mipsel-unknown-linux-gnu        | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,BAD-FMA %}
+; RUN: %if mips-registered-target        %{ llc %s -o - -mtriple=mips-unknown-linux-gnu          | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
+; RUN: %if mips-registered-target        %{ llc %s -o - -mtriple=mips64-unknown-linux-gnuabi64   | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
+; RUN: %if mips-registered-target        %{ llc %s -o - -mtriple=mips64el-unknown-linux-gnuabi64 | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
+; RUN: %if mips-registered-target        %{ llc %s -o - -mtriple=mipsel-unknown-linux-gnu        | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if msp430-registered-target      %{ llc %s -o - -mtriple=msp430-none-elf                 | FileCheck %s --check-prefixes=ALL,BAD-NEG-ABS,BAD-COPYSIGN,BAD-FMA %}
 ; RUN: %if nvptx-registered-target       %{ llc %s -o - -mtriple=nvptx64-nvidia-cuda             | FileCheck %s --check-prefixes=NOCRASH %}
 ; RUN: %if powerpc-registered-target     %{ llc %s -o - -mtriple=powerpc-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,BAD-NEG-ABS,BAD-COPYSIGN,BAD-FMA %}
 ; RUN: %if powerpc-registered-target     %{ llc %s -o - -mtriple=powerpc64-unknown-linux-gnu     | FileCheck %s --check-prefixes=ALL,BAD-NEG-ABS,BAD-COPYSIGN,BAD-FMA %}
 ; RUN: %if powerpc-registered-target     %{ llc %s -o - -mtriple=powerpc64le-unknown-linux-gnu   | FileCheck %s --check-prefixes=ALL,BAD-NEG-ABS,BAD-COPYSIGN,BAD-FMA %}
-; RUN: %if riscv-registered-target       %{ llc %s -o - -mtriple=riscv32-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,BAD-FMA %}
-; RUN: %if riscv-registered-target       %{ llc %s -o - -mtriple=riscv64-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,BAD-FMA %}
-; RUN: %if sparc-registered-target       %{ llc %s -o - -mtriple=sparc-unknown-linux-gnu         | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,BAD-FMA %}
-; RUN: %if sparc-registered-target       %{ llc %s -o - -mtriple=sparc64-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,BAD-FMA %}
+; RUN: %if riscv-registered-target       %{ llc %s -o - -mtriple=riscv32-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
+; RUN: %if riscv-registered-target       %{ llc %s -o - -mtriple=riscv64-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
+; RUN: %if sparc-registered-target       %{ llc %s -o - -mtriple=sparc-unknown-linux-gnu         | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
+; RUN: %if sparc-registered-target       %{ llc %s -o - -mtriple=sparc64-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if spirv-registered-target       %{ llc %s -o - -mtriple=spirv-unknown-unknown           | FileCheck %s --check-prefixes=NOCRASH %}
-; RUN: %if systemz-registered-target     %{ llc %s -o - -mtriple=s390x-unknown-linux-gnu         | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,BAD-FMA %}
+; RUN: %if systemz-registered-target     %{ llc %s -o - -mtriple=s390x-unknown-linux-gnu         | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if ve-registered-target          %{ llc %s -o - -mtriple=ve-unknown-unknown              | FileCheck %s --check-prefixes=ALL,BAD-NEG-ABS,BAD-COPYSIGN,BAD-FMA %}
 ; RUN: %if webassembly-registered-target %{ llc %s -o - -mtriple=wasm32-unknown-unknown          | FileCheck %s --check-prefixes=ALL,BAD-NEG-ABS,BAD-COPYSIGN,BAD-FMA %}
-; RUN: %if x86-registered-target         %{ llc %s -o - -mtriple=i686-unknown-linux-gnu          | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,BAD-FMA %}
-; RUN: %if x86-registered-target         %{ llc %s -o - -mtriple=x86_64-pc-windows-msvc          | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,BAD-FMA %}
-; RUN: %if x86-registered-target         %{ llc %s -o - -mtriple=x86_64-unknown-linux-gnu        | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,BAD-FMA %}
+; RUN: %if x86-registered-target         %{ llc %s -o - -mtriple=i686-unknown-linux-gnu          | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
+; RUN: %if x86-registered-target         %{ llc %s -o - -mtriple=x86_64-pc-windows-msvc          | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
+; RUN: %if x86-registered-target         %{ llc %s -o - -mtriple=x86_64-unknown-linux-gnu        | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if xcore-registered-target       %{ llc %s -o - -mtriple=xcore-unknown-unknown           | FileCheck %s --check-prefixes=ALL,BAD-NEG-ABS,BAD-COPYSIGN,BAD-FMA %}
 ; RUN: %if xtensa-registered-target      %{ llc %s -o - -mtriple=xtensa-none-elf                 | FileCheck %s --check-prefixes=ALL,BAD-NEG-ABS,BAD-COPYSIGN,CHECK-FMA %}
 
