@@ -1347,11 +1347,11 @@ def PseudoCCQC_E_LI : SFBQC_E_LI;
 }
 
 let Predicates = [HasShortForwardBranchIQCLoad] in {
-def PseudoCCQCLB : SFBQCLoad;
-def PseudoCCQCLH : SFBQCLoad;
-def PseudoCCQCLW : SFBQCLoad;
-def PseudoCCQCLHU : SFBQCLoad;
-def PseudoCCQCLBU : SFBQCLoad;
+def PseudoCCQC_E_LB : SFBQCLoad;
+def PseudoCCQC_E_LH : SFBQCLoad;
+def PseudoCCQC_E_LW : SFBQCLoad;
+def PseudoCCQC_E_LHU : SFBQCLoad;
+def PseudoCCQC_E_LBU : SFBQCLoad;
 }
 
 //===----------------------------------------------------------------------===//

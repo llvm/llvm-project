@@ -133,11 +133,18 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case RISCV::PseudoCCMINU:
   case RISCV::PseudoCCMUL:
   case RISCV::PseudoCCLUI:
-  case RISCV::PseudoCCQCLB:
-  case RISCV::PseudoCCQCLH:
-  case RISCV::PseudoCCQCLW:
-  case RISCV::PseudoCCQCLHU:
-  case RISCV::PseudoCCQCLBU:
+  case RISCV::PseudoCCQC_E_LB:
+  case RISCV::PseudoCCQC_E_LH:
+  case RISCV::PseudoCCQC_E_LW:
+  case RISCV::PseudoCCQC_E_LHU:
+  case RISCV::PseudoCCQC_E_LBU:
+  case RISCV::PseudoCCLB:
+  case RISCV::PseudoCCLH:
+  case RISCV::PseudoCCLW:
+  case RISCV::PseudoCCLHU:
+  case RISCV::PseudoCCLBU:
+  case RISCV::PseudoCCLWU:
+  case RISCV::PseudoCCLD:
   case RISCV::PseudoCCQC_LI:
   case RISCV::PseudoCCQC_E_LI:
   case RISCV::PseudoCCADDW:
@@ -248,11 +255,18 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
     case RISCV::PseudoCCMINU:  NewOpc = RISCV::MINU;  break;
     case RISCV::PseudoCCMUL:   NewOpc = RISCV::MUL;   break;
     case RISCV::PseudoCCLUI:   NewOpc = RISCV::LUI;   break;
-    case RISCV::PseudoCCQCLB:  NewOpc = RISCV::QC_E_LB;    break;
-    case RISCV::PseudoCCQCLH:  NewOpc = RISCV::QC_E_LH;    break;
-    case RISCV::PseudoCCQCLW:  NewOpc = RISCV::QC_E_LW;    break;
-    case RISCV::PseudoCCQCLHU: NewOpc = RISCV::QC_E_LHU;   break;
-    case RISCV::PseudoCCQCLBU: NewOpc = RISCV::QC_E_LBU;   break;
+    case RISCV::PseudoCCQC_E_LB:  NewOpc = RISCV::QC_E_LB;    break;
+    case RISCV::PseudoCCQC_E_LH:  NewOpc = RISCV::QC_E_LH;    break;
+    case RISCV::PseudoCCQC_E_LW:  NewOpc = RISCV::QC_E_LW;    break;
+    case RISCV::PseudoCCQC_E_LHU: NewOpc = RISCV::QC_E_LHU;   break;
+    case RISCV::PseudoCCQC_E_LBU: NewOpc = RISCV::QC_E_LBU;   break;
+    case RISCV::PseudoCCLB:    NewOpc = RISCV::LB;    break;
+    case RISCV::PseudoCCLH:    NewOpc = RISCV::LH;    break;
+    case RISCV::PseudoCCLW:    NewOpc = RISCV::LW;    break;
+    case RISCV::PseudoCCLHU:   NewOpc = RISCV::LHU;   break;
+    case RISCV::PseudoCCLBU:   NewOpc = RISCV::LBU;   break;
+    case RISCV::PseudoCCLWU:   NewOpc = RISCV::LWU;   break;
+    case RISCV::PseudoCCLD:    NewOpc = RISCV::LD;    break;
     case RISCV::PseudoCCQC_LI:  NewOpc = RISCV::QC_LI;   break;
     case RISCV::PseudoCCQC_E_LI: NewOpc = RISCV::QC_E_LI;   break;
     case RISCV::PseudoCCADDI:  NewOpc = RISCV::ADDI;  break;
