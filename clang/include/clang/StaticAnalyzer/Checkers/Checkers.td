@@ -179,6 +179,12 @@ def CallAndMessageChecker
                "Check whether the reciever in the message expression is "
                "undefined",
                "true", Released>,
+           CmdLineOption<
+               Boolean, "ArgPointeeInitializednessComplete",
+               "If set to true, treat a struct as initialized when all of its "
+               "members are initialized, otherwise when it has any initialized "
+               "member (used only at ArgPointeeInitializedness)",
+               "false", Released>,
 ]>,
       Documentation<HasDocumentation>;
 
