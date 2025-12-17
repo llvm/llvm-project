@@ -270,3 +270,4 @@ entry:
         store <16 x i8> %tmp2, ptr %A
         ret void
 }
+
