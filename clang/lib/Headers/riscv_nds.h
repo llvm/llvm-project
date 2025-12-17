@@ -22,48 +22,48 @@ extern "C" {
 
 #if __riscv_xlen == 32
 
-static __inline__ int32_t __DEFAULT_FN_ATTRS __riscv_nds_ffb_32(uint32_t a,
-                                                                uint32_t b) {
-  return __builtin_riscv_nds_ffb_32(a, b);
+static __inline__ int32_t __DEFAULT_FN_ATTRS __riscv_nds_ffb_32(uint32_t __a,
+                                                                uint32_t __b) {
+  return __builtin_riscv_nds_ffb_32(__a, __b);
 }
 
-static __inline__ int32_t __DEFAULT_FN_ATTRS __riscv_nds_ffzmism_32(uint32_t a,
-                                                                    uint32_t b) {
-  return __builtin_riscv_nds_ffzmism_32(a, b);
+static __inline__ int32_t __DEFAULT_FN_ATTRS __riscv_nds_ffzmism_32(uint32_t __a,
+                                                                    uint32_t __b) {
+  return __builtin_riscv_nds_ffzmism_32(__a, __b);
 }
 
-static __inline__ int32_t __DEFAULT_FN_ATTRS __riscv_nds_ffmism_32(uint32_t a,
-                                                                   uint32_t b) {
-  return __builtin_riscv_nds_ffmism_32(a, b);
+static __inline__ int32_t __DEFAULT_FN_ATTRS __riscv_nds_ffmism_32(uint32_t __a,
+                                                                   uint32_t __b) {
+  return __builtin_riscv_nds_ffmism_32(__a, __b);
 }
 
-static __inline__ int32_t __DEFAULT_FN_ATTRS __riscv_nds_flmism_32(uint32_t a,
-                                                                   uint32_t b) {
-  return __builtin_riscv_nds_flmism_32(a, b);
+static __inline__ int32_t __DEFAULT_FN_ATTRS __riscv_nds_flmism_32(uint32_t __a,
+                                                                   uint32_t __b) {
+  return __builtin_riscv_nds_flmism_32(__a, __b);
 }
 
 #endif
 
 #if __riscv_xlen == 64
 
-static __inline__ int64_t __DEFAULT_FN_ATTRS __riscv_nds_ffb_64(uint64_t a,
-                                                                uint64_t b) {
-  return __builtin_riscv_nds_ffb_64(a, b);
+static __inline__ int64_t __DEFAULT_FN_ATTRS __riscv_nds_ffb_64(uint64_t __a,
+                                                                uint64_t __b) {
+  return __builtin_riscv_nds_ffb_64(__a, __b);
 }
 
-static __inline__ int64_t __DEFAULT_FN_ATTRS __riscv_nds_ffzmism_64(uint64_t a,
-                                                                    uint64_t b) {
-  return __builtin_riscv_nds_ffzmism_64(a, b);
+static __inline__ int64_t __DEFAULT_FN_ATTRS __riscv_nds_ffzmism_64(uint64_t __a,
+                                                                    uint64_t __b) {
+  return __builtin_riscv_nds_ffzmism_64(__a, __b);
 }
 
-static __inline__ int64_t __DEFAULT_FN_ATTRS __riscv_nds_ffmism_64(uint64_t a,
-                                                                   uint64_t b) {
-  return __builtin_riscv_nds_ffmism_64(a, b);
+static __inline__ int64_t __DEFAULT_FN_ATTRS __riscv_nds_ffmism_64(uint64_t __a,
+                                                                   uint64_t __b) {
+  return __builtin_riscv_nds_ffmism_64(__a, __b);
 }
 
-static __inline__ int64_t __DEFAULT_FN_ATTRS __riscv_nds_flmism_64(uint64_t a,
-                                                                   uint64_t b) {
-  return __builtin_riscv_nds_flmism_64(a, b);
+static __inline__ int64_t __DEFAULT_FN_ATTRS __riscv_nds_flmism_64(uint64_t __a,
+                                                                   uint64_t __b) {
+  return __builtin_riscv_nds_flmism_64(__a, __b);
 }
 
 #endif
