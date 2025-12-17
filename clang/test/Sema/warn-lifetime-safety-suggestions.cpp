@@ -1,9 +1,13 @@
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -Wexperimental-lifetime-safety-suggestions -Wexperimental-lifetime-safety -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -Wexperimental-lifetime-safety-suggestions -Wexperimental-lifetime-safety -Wno-dangling -verify %s
 
-struct MyObj {
+struct View;
+
+struct [[gsl::Owner]] MyObj {
   int id;
   ~MyObj() {}  // Non-trivial destructor
   MyObj operator+(MyObj);
+
+  View getView() const [[clang::lifetimebound]];
 };
 
 struct [[gsl::Pointer()]] View {
@@ -16,7 +20,7 @@ View return_view_directly (View a) {    // expected-warning {{param should be ma
   return a;                             // expected-note {{param returned here}}
 }
 
-View conditional_return_view (
+View conditional_return_view(
     View a,         // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
     View b,         // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
     bool c) {
@@ -28,17 +32,46 @@ View conditional_return_view (
   return res;  // expected-note 2 {{param returned here}} 
 }
 
-// FIXME: Fails to generate lifetime suggestion for reference types as these are not handled currently.
-MyObj& return_reference (MyObj& a, MyObj& b, bool c) {
+MyObj& return_reference(MyObj& a, // expected-warning {{param should be marked [[clang::lifetimebound]]}}
+                        MyObj& b, // expected-warning {{param should be marked [[clang::lifetimebound]]}}
+                        bool c) {
   if(c) {
-    return a;   
+    return a; // expected-note {{param returned here}}
   }
-  return b;     
+  return b;   // expected-note {{param returned here}}   
 }
 
-// FIXME: Fails to generate lifetime suggestion for reference types as these are not handled currently.
-View return_view_from_reference (MyObj& p) {
-  return p; 
+const MyObj& return_reference_const(const MyObj& a) { // expected-warning {{param should be marked [[clang::lifetimebound]]}}
+  return a; // expected-note {{param returned here}}
+}
+
+MyObj* return_ptr_to_ref(MyObj& a) { // expected-warning {{param should be marked [[clang::lifetimebound]]}}
+  return &a; // expected-note {{param returned here}}
+}
+
+// FIXME: Dereference does not propagate loans.
+MyObj& return_ref_to_ptr(MyObj* a) {
+  return *a;
+}
+
+View return_view_from_reference(MyObj& p) {  // expected-warning {{param should be marked [[clang::lifetimebound]]}}
+  return p;  // expected-note {{param returned here}}
+}
+
+struct Container {  
+  MyObj data;
+  const MyObj& getData() [[clang::lifetimebound]] { return data; }
+};
+// FIXME: c.data does not forward loans
+View return_struct_field(const Container& c) {
+  return c.data;
+}
+View return_struct_lifetimebound_getter(Container& c) {  // expected-warning {{param should be marked [[clang::lifetimebound]]}}
+  return c.getData().getView();  // expected-note {{param returned here}}
+}
+
+View return_view_from_reference_lifetimebound_member(MyObj& p) {  // expected-warning {{param should be marked [[clang::lifetimebound]]}}
+  return p.getView();  // expected-note {{param returned here}}
 }
 
 int* return_pointer_directly (int* a) {    // expected-warning {{param should be marked [[clang::lifetimebound]]}}.

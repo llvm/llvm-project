@@ -80,13 +80,13 @@ public:
     return *LoanPropagation;
   }
   LiveOriginsAnalysis &getLiveOrigins() const { return *LiveOrigins; }
-  FactManager &getFactManager() { return FactMgr; }
+  FactManager &getFactManager() { return *FactMgr; }
 
 private:
   AnalysisDeclContext &AC;
   LifetimeSafetyReporter *Reporter;
   LifetimeFactory Factory;
-  FactManager FactMgr;
+  std::unique_ptr<FactManager> FactMgr;
   std::unique_ptr<LiveOriginsAnalysis> LiveOrigins;
   std::unique_ptr<LoanPropagationAnalysis> LoanPropagation;
 };
