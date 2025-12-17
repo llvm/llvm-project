@@ -31,6 +31,7 @@
 // CHECK-NEXT: core.BitwiseShift:Pedantic = false
 // CHECK-NEXT: core.CallAndMessage:ArgInitializedness = true
 // CHECK-NEXT: core.CallAndMessage:ArgPointeeInitializedness = false
+// CHECK-NEXT: core.CallAndMessage:ArgPointeeInitializednessComplete = false
 // CHECK-NEXT: core.CallAndMessage:CXXDeallocationArg = true
 // CHECK-NEXT: core.CallAndMessage:CXXThisMethodCall = true
 // CHECK-NEXT: core.CallAndMessage:FunctionPointer = true
