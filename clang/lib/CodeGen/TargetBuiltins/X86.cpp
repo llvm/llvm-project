@@ -76,13 +76,10 @@ static Value *getMaskVecValue(CodeGenFunction &CGF, Value *Mask,
 }
 
 // Emit rounding for the value X according to the rounding RoundingControl.
-static Value *emitX86Round(CodeGenFunction &CGF, Value *X,
+static Value *emitX86RoundImmediate(CodeGenFunction &CGF, Value *X,
                            unsigned RoundingControl) {
   unsigned RoundingMask = 0b11;
-  unsigned UseMXCSRBit = 0b1000;
-
   unsigned RoundingMode = RoundingControl & RoundingMask;
-  bool UseMXCSR = RoundingControl & UseMXCSRBit;
 
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
   LLVMContext &Ctx = CGF.CGM.getLLVMContext();
@@ -90,16 +87,6 @@ static Value *emitX86Round(CodeGenFunction &CGF, Value *X,
 
     Value *ExceptMode =
         MetadataAsValue::get(Ctx, MDString::get(Ctx, "fpexcept.ignore"));
-
-    if (UseMXCSR) {
-      ID = Intrinsic::experimental_constrained_nearbyint;
-
-      Value *RoundingMode =
-          MetadataAsValue::get(Ctx, MDString::get(Ctx, "round.dynamic"));
-
-      Function *F = CGF.CGM.getIntrinsic(ID, X->getType());
-      return CGF.Builder.CreateCall(F, {X, RoundingMode, ExceptMode});
-    }
 
     switch (RoundingMode) {
     case 0b00:
@@ -913,15 +900,50 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_roundps256:
   case X86::BI__builtin_ia32_roundpd256: {
     unsigned M = cast<ConstantInt>(Ops[1])->getZExtValue();
-    return emitX86Round(*this, Ops[0], M);
+    unsigned MXCSRMask = 0b100;
+    unsigned UseMXCSR = MXCSRMask & M;
+
+    if (UseMXCSR) {
+      
+      Intrinsic::ID ID = Intrinsic::not_intrinsic;
+
+      switch (BuiltinID) {
+        case X86::BI__builtin_ia32_roundps:     ID = Intrinsic::x86_sse41_round_ps; break;
+        case X86::BI__builtin_ia32_roundps256:  ID = Intrinsic::x86_avx_round_ps_256; break;
+        case X86::BI__builtin_ia32_roundpd:     ID = Intrinsic::x86_sse41_round_pd; break;
+        case X86::BI__builtin_ia32_roundpd256:  ID = Intrinsic::x86_avx_round_pd_256; break;
+        default: llvm_unreachable("must return from switch");
+      }
+
+      Function *F = CGM.getIntrinsic(ID);
+      return Builder.CreateCall(F, Ops);
+    }
+
+    return emitX86RoundImmediate(*this, Ops[0], M);
   }
   case X86::BI__builtin_ia32_roundss:
   case X86::BI__builtin_ia32_roundsd: {
     unsigned M = cast<ConstantInt>(Ops[2])->getZExtValue();
+    unsigned MXCSRMask = 0b100;
+    unsigned UseMXCSR = MXCSRMask & M;
+
+    if (UseMXCSR) {
+
+      Intrinsic::ID ID = Intrinsic::not_intrinsic;
+
+      switch (BuiltinID) {
+        case X86::BI__builtin_ia32_roundss:    ID = Intrinsic::x86_sse41_round_ss; break;
+        case X86::BI__builtin_ia32_roundsd:    ID = Intrinsic::x86_sse41_round_sd; break;
+        default: llvm_unreachable("must return from switch");
+      }
+
+      Function *F = CGM.getIntrinsic(ID);
+      return Builder.CreateCall(F, Ops);
+    }
 
     Value *Idx = Builder.getInt32(0);
     Value *ValAt0 = Builder.CreateExtractElement(Ops[1], Idx);
-    Value *RoundedAt0 = emitX86Round(*this, ValAt0, M);
+    Value *RoundedAt0 = emitX86RoundImmediate(*this, ValAt0, M);
 
     return Builder.CreateInsertElement(Ops[0], RoundedAt0, Idx);
   }
