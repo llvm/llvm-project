@@ -64,6 +64,9 @@ jobs:
       test-runs-on: ${{ steps.vars.outputs.build-runs-on }}
 
     steps:
+    - shell: bash
+      run: |
+        find /c/hostedtoolcache/windows/Python -iname '*.lib'
     # It's good practice to use setup-python, but this is also required on macos-14
     # due to https://github.com/actions/runner-images/issues/10385
     - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
