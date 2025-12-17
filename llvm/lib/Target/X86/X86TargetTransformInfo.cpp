@@ -7199,7 +7199,7 @@ bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
   using namespace llvm::PatternMatch;
 
   if (I->getOpcode() == Instruction::And &&
-      (I->getType()->isVectorTy() ? ST->hasSSE2() : ST->hasBMI())) {
+      (ST->hasBMI() || (I->getType()->isVectorTy() && ST->hasSSE2()))) {
     for (auto &Op : I->operands()) {
       // (and X, (not Y)) -> (andn X, Y)
       if (match(Op.get(), m_Not(m_Value()))) {
