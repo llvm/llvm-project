@@ -52,8 +52,7 @@ class AMDGPUNextUseAnalysis {
     return InstrToId.find(MI)->second;
   }
   /// [FromMBB, ToMBB] to shortest distance map.
-  DenseMap<std::pair<MachineBasicBlock *, MachineBasicBlock *>,
-           std::pair<SmallVector<MachineBasicBlock *>, double>>
+  DenseMap<std::pair<MachineBasicBlock *, MachineBasicBlock *>, double>
       ShortestPathTable;
   /// We assume an approximate trip count of 1000 for all loops.
   static constexpr const double LoopWeight = 1000.0;
@@ -63,19 +62,10 @@ class AMDGPUNextUseAnalysis {
                                       MachineBasicBlock *ToMBB) const {
     auto It = ShortestPathTable.find({FromMBB, ToMBB});
     assert(It != ShortestPathTable.end() && "Not found in table!");
-    return It->second.second;
-  }
-  /// Returns the shortest path from ShortestPathTable.
-  iterator_range<SmallVector<MachineBasicBlock *>::iterator>
-  getShortestPathFromTable(MachineBasicBlock *FromMBB,
-                           MachineBasicBlock *ToMBB) {
-    auto It = ShortestPathTable.find({FromMBB, ToMBB});
-    assert(It != ShortestPathTable.end() && "Not found in table!");
-    return make_range(It->second.first.begin(), It->second.first.end());
+    return It->second;
   }
   bool isBackedge(MachineBasicBlock *From, MachineBasicBlock *To) const;
-  std::pair<SmallVector<MachineBasicBlock *>, double>
-  getShortestPath(MachineBasicBlock *From, MachineBasicBlock *To);
+  double getShortestPath(MachineBasicBlock *From, MachineBasicBlock *To);
   /// Goes over all MBB pairs in \p MF, calculates the shortest path between
   /// them and fills in \p ShortestPathTable.
   void calculateShortestPaths(MachineFunction &MF);
@@ -143,7 +133,7 @@ public:
     auto It = ShortestPathTable.find({FromMBB, ToMBB});
     if (It == ShortestPathTable.end())
       return std::numeric_limits<double>::max();
-    return It->second.second;
+    return It->second;
   }
 };
 
