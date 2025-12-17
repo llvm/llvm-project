@@ -59632,6 +59632,10 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case ISD::ADD:
     case ISD::SUB:
     case ISD::MUL:
+    case ISD::SMIN:
+    case ISD::SMAX:
+    case ISD::UMIN:
+    case ISD::UMAX:
       // TODO: Add more integer binops?
       if (!IsSplat && ((VT.is256BitVector() && Subtarget.hasInt256()) ||
                        (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
