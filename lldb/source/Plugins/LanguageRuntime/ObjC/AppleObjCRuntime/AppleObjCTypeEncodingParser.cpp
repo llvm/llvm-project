@@ -309,9 +309,8 @@ clang::QualType AppleObjCTypeEncodingParser::BuildType(
 
   // Save a copy for potential rollback.
   llvm::StringRef backup = type;
-  type = type.drop_front();
 
-  switch (type.front()) {
+  switch (popChar(type)) {
   default:
     type = backup;
     return clang::QualType();
