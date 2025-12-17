@@ -1162,6 +1162,144 @@ spec_bcast_ftypes();
 
 #endif // defined(__cplusplus)
 
+/* _____________________________ Block stacking ______________________________*/
+
+#define __ripple_stack_any_int(Type, UI, BS, Val, ...)                         \
+  ((Type)(sizeof(Type) == 1                                                    \
+              ? __builtin_ripple_stack_##UI##8(BS, Val, __VA_ARGS__)           \
+              : (sizeof(Type) == 2                                             \
+                     ? __builtin_ripple_stack_##UI##16(BS, Val, __VA_ARGS__)   \
+                     : (sizeof(Type) == 4 ? __builtin_ripple_stack_##UI##32(   \
+                                                BS, Val, __VA_ARGS__)          \
+                                          : __builtin_ripple_stack_##UI##64(   \
+                                                BS, Val, __VA_ARGS__)))))
+
+#ifndef __cplusplus
+
+#if __has_bf16__
+#if __has_soft_bf16__
+#define __extra_bf16_ripple_stack(BS, Val, ...)                                \
+  , __bf16 : (__bf16)__builtin_ripple_stack_f32((BS), (float)(Val), __VA_ARGS__)
+#else // !__has_soft_bf16__
+#define __extra_bf16_ripple_stack(BS, Val, ...)                                \
+  , __bf16 : __builtin_ripple_stack_bf16((BS), (Val), __VA_ARGS__)
+#endif // __has_soft_bf16__
+#else
+#define __extra_bf16_ripple_stack(BS, Val, ...)
+#endif
+
+#if __has_Float16__
+#define __extra_f16_ripple_stack(BS, Val, ...)                                 \
+  , _Float16 : __builtin_ripple_stack_f16((BS), (Val), __VA_ARGS__)
+#else
+#define __extra_f16_ripple_stack(BS, Val, ...)
+#endif
+
+#define ripple_stack(BS, Val, ...)                                             \
+  RIPPLE_DISABLE_GENERIC_WARNING                                               \
+  _Generic((Val),                                                              \
+      char: (__ripple_char_is_signed                                           \
+                 ? __ripple_stack_any_int(char, i, (BS), (Val), __VA_ARGS__)   \
+                 : __ripple_stack_any_int(char, u, (BS), (Val), __VA_ARGS__)), \
+      signed char: __ripple_stack_any_int(signed char, i, (BS), (Val),         \
+                                          __VA_ARGS__),                        \
+      unsigned char: __ripple_stack_any_int(unsigned char, u, (BS), (Val),     \
+                                            __VA_ARGS__),                      \
+      signed short: __ripple_stack_any_int(signed short, i, (BS), (Val),       \
+                                           __VA_ARGS__),                       \
+      unsigned short: __ripple_stack_any_int(unsigned short, u, (BS), (Val),   \
+                                             __VA_ARGS__),                     \
+      signed int: __ripple_stack_any_int(signed int, i, (BS), (Val),           \
+                                         __VA_ARGS__),                         \
+      unsigned int: __ripple_stack_any_int(unsigned int, u, (BS), (Val),       \
+                                           __VA_ARGS__),                       \
+      signed long: __ripple_stack_any_int(signed long, i, (BS), (Val),         \
+                                          __VA_ARGS__),                        \
+      unsigned long: __ripple_stack_any_int(unsigned long, u, (BS), (Val),     \
+                                            __VA_ARGS__),                      \
+      signed long long: __ripple_stack_any_int(signed long long, i, (BS),      \
+                                               (Val), __VA_ARGS__),            \
+      unsigned long long: __ripple_stack_any_int(unsigned long long, u, (BS),  \
+                                                 (Val), __VA_ARGS__),          \
+      float: __builtin_ripple_stack_f32((BS), (Val), __VA_ARGS__),             \
+      double: __builtin_ripple_stack_f64((BS), (Val), __VA_ARGS__)             \
+          __extra_f16_ripple_stack((BS), (Val), __VA_ARGS__)                   \
+              __extra_bf16_ripple_stack((BS), (Val), __VA_ARGS__))             \
+      RIPPLE_REENABLE_GENERIC_WARNING
+
+#else // defined(__cplusplus)
+
+#define spec_stack(CT, T)                                                      \
+  template <typename... VArgs>                                                 \
+  __attribute__((always_inline)) static CT ripple_stack(                       \
+      ripple_block_t BS, CT Val, VArgs... vargs) {                             \
+    return __builtin_ripple_stack_##T((BS), (Val), static_cast<CT>(vargs)...); \
+  }
+
+#define spec_stack_int(CT, UI)                                                 \
+  template <typename... VArgs>                                                 \
+  __attribute__((always_inline)) static CT ripple_stack(                       \
+      ripple_block_t BS, CT Val, VArgs... vargs) {                             \
+    return __ripple_stack_any_int(CT, UI, (BS), (Val),                         \
+                                  static_cast<CT>(vargs)...);                  \
+  }
+
+#if __has_bf16__
+#if __has_soft_bf16__
+template <typename... VArgs>
+__attribute__((always_inline)) static __bf16 ripple_stack(
+    ripple_block_t BS, __bf16 Val, VArgs... vargs) {
+  return __builtin_ripple_stack_f32((BS), (float)(Val),
+                                    static_cast<float>(vargs)...);
+}
+#else
+template <typename... VArgs>
+__attribute__((always_inline)) static __bf16 ripple_stack(
+    ripple_block_t BS, __bf16 Val, VArgs... vargs) {
+  return __builtin_ripple_stack_bf16((BS), (Val), vargs...);
+}
+#endif
+#endif
+
+#if __has_Float16__
+template <typename... VArgs>
+__attribute__((always_inline)) static _Float16 ripple_stack(
+    ripple_block_t BS, _Float16 Val, VArgs... vargs) {
+  return __builtin_ripple_stack_f16((BS), (Val), vargs...);
+}
+#endif
+
+#define spec_stack_ftypes()                                                    \
+  spec_stack(float, f32);                                                      \
+  spec_stack(double, f64);
+
+#define spec_stack_itypes()                                                    \
+  spec_stack_int(signed char, i);                                              \
+  spec_stack_int(unsigned char, u);                                            \
+  spec_stack_int(signed short, i);                                             \
+  spec_stack_int(unsigned short, u);                                           \
+  spec_stack_int(signed int, i);                                               \
+  spec_stack_int(unsigned int, u);                                             \
+  spec_stack_int(signed long, i);                                              \
+  spec_stack_int(unsigned long, u);                                            \
+  spec_stack_int(signed long long, i);                                         \
+  spec_stack_int(unsigned long long, u);
+
+spec_stack_ftypes();
+spec_stack_itypes();
+
+template <class... VArgs>
+__attribute__((always_inline)) static char
+ripple_stack(ripple_block_t BS, char Val, VArgs... args) {
+  return __ripple_char_is_signed
+             ? __ripple_stack_any_int(char, i, BS, Val, args...)
+             : __ripple_stack_any_int(char, u, BS, Val, args...);
+}
+
+#define ripple_stack(BS, Val, ...) ripple_stack((BS), (Val), ##__VA_ARGS__)
+
+#endif // defined(__cplusplus)
+
 /* _____________________________ Block slicing _______________________________*/
 
 #define __ripple_slice_any_int(Type, UI, Val, ...)                             \

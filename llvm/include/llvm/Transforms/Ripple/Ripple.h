@@ -1637,6 +1637,14 @@ private:
     return rippleBlockIntrinsics(const_cast<Instruction *>(I));
   }
 
+  /// @brief Returns all intrinsics that are Ripple stack instructions
+  /// @param I an instruction
+  /// @return a pointer if I is a Ripple stack, nullptr otherwise
+  static IntrinsicInst *rippleStackIntrinsics(Instruction *I);
+  static const IntrinsicInst *rippleStackIntrinsics(const Instruction *I) {
+    return rippleStackIntrinsics(const_cast<Instruction *>(I));
+  }
+
   /// @brief Returns all intrinsics that are Ripple reductions
   /// @param I an instruction
   /// @return a pointer if I is a Ripple reduction, nullptr otherwise
@@ -1900,6 +1908,9 @@ private:
 
   /// @brief Checks the given ripple block intrinsics for issues
   Error checkRippleBlockIntrinsics(IntrinsicInst *I);
+
+  /// @brief Checks the given ripple block intrinsics for issues
+  Error checkRippleStackIntrinsics(IntrinsicInst *I);
 
   /// @brief Checks the given reduction intrinsics for issues
   Error checkRippleReductionIntrinsics(IntrinsicInst *I);

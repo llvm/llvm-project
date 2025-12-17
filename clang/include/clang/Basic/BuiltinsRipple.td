@@ -195,3 +195,9 @@ def RippleSlice : Builtin, RippleAllTypesAndPtrTemplate {
   let Attributes = [NoThrow];
   let Prototype = "T(T, ...)";
 }
+
+def RippleStack : Builtin, RippleAllTypesTemplate {
+  let Spellings = ["__builtin_ripple_stack_"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "T(void*, T, ...)";
+}

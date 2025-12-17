@@ -446,6 +446,36 @@ RValue CodeGenFunction::emitRippleBuiltin(const CallExpr *E,
   }
   /// Broadcast-specific Builtins End
   /// --------------------------------------------------------------------------------------------
+  /// Stack-specific Builtins Begin
+
+    CASE_RIPPLE_ALL_INT_FLOAT_BUILTIN(stack) {
+      Value *BlockShape = EmitScalarExpr(E->getArg(0));
+      Value *StackBase = EmitScalarExpr(E->getArg(1));
+      auto *BaseTy = StackBase->getType();
+
+      SmallVector<Value *, 10> Args;
+      Args.push_back(BlockShape);
+
+      for (int i = 1, n = E->getNumArgs(); i < n; ++i) {
+        // assert all elements have the same type;
+        auto Arg = EmitScalarExpr(E->getArg(i));
+        if (BaseTy != (Arg->getType())) {
+          CGM.Error(Loc, "All arguments to ripple.stack must have the same type");
+          return RValue::get(llvm::PoisonValue::get(intrinsicsReturnType()));
+        }
+
+        Args.push_back(Arg);
+      }
+
+      llvm::Function *F =
+          CGM.getIntrinsic(llvm::Intrinsic::ripple_stack, BaseTy);
+
+      llvm::Value *Result = Builder.CreateCall(F, Args);
+      return RValue::get(Result);
+    }
+
+  /// Stack-specific Builtins End
+  /// --------------------------------------------------------------------------------------------
   /// Slicing-specific Builtins Begin
 
 #define RIPPLE_SLICE_MAX_ARGS 11

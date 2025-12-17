@@ -29,6 +29,10 @@ def int_ripple_block_setshape : DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_anyin
                                     LLVMMatchType<0>],
                                     [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<0>>]>;
 
+def int_ripple_stack : DefaultAttrsIntrinsic<[llvm_any_ty], [llvm_ptr_ty, LLVMMatchType<0>, llvm_vararg_ty],
+                              [IntrNoMem, IntrWillReturn]>;
+
+
 // RIpple tensor reduction operator;
 // The first argument is a bitset to represent which dimensions are being
 // reduced, e.g., 0x1 is a reduction on dimension 0, 0x2 dimension 1, 0x3 on

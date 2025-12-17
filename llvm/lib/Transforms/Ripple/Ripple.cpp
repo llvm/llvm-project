@@ -1548,6 +1548,10 @@ IntrinsicInst *Ripple::rippleBlockIntrinsics(Instruction *I) {
                              Intrinsic::ripple_block_setshape});
 }
 
+IntrinsicInst *Ripple::rippleStackIntrinsics(Instruction *I) {
+  return intrinsicWithId(I, {Intrinsic::ripple_stack});
+}
+
 IntrinsicInst *Ripple::rippleReduceIntrinsics(Instruction *I) {
   return intrinsicWithId(
       I, {Intrinsic::ripple_reduce_add, Intrinsic::ripple_reduce_mul,
@@ -1574,6 +1578,7 @@ IntrinsicInst *Ripple::rippleSliceIntrinsic(Instruction *I) {
 
 IntrinsicInst *Ripple::rippleIntrinsicsWithBlockShapeOperand(Instruction *I) {
   return intrinsicWithId(I, {Intrinsic::ripple_broadcast,
+                             Intrinsic::ripple_stack,
                              Intrinsic::ripple_block_getsize,
                              Intrinsic::ripple_block_index});
 }
@@ -3023,6 +3028,66 @@ void Ripple::genVectorInstructions() {
     setReplacementFor(RippleSlice, SliceInst, ToShape);
   };
 
+  auto processRippleStack = [&](IntrinsicInst *rippleStack,
+                                const TensorShape &toShape) -> void {
+    irBuilder.SetInsertPoint(rippleStack);
+
+    auto *VecShape =
+        VectorType::get(rippleStack->getType(), toShape.flatShape(), false);
+    Value *EmptyStack = PoisonValue::get(VecShape);
+    auto NumArgs = toShape.getShape()[toShape.rank() - 1];
+
+    // second check: all non-BlockShape tensor args to stack must have
+    // the same shape that BlockShape[:-1] has
+    auto *ShapeII = getBlockShapeIntrinsic(rippleStack->getArgOperandUse(0));
+    assert(ShapeII);
+
+    auto StackingShape = setShapeToTensorShape(ShapeII);
+
+    auto BaseShape = StackingShape.getShape();
+    if (!BaseShape.empty()) {
+      BaseShape.pop_back();
+    }
+
+    BaseShape.push_back(1); // we now fix the "missing" last dimension
+
+    for (size_t i = 1; i < NumArgs + 1; i++) {
+      auto ArgShape =
+          getTensorUse(rippleStack->getArgOperandUse(i)).second->getShape();
+
+      if (ArgShape != BaseShape) {
+        std::string ErrMsg;
+        {
+          raw_string_ostream RSO(ErrMsg);
+          RSO << "argument " << i << " to ripple_stack does not match "
+              << "provided block shape. ";
+        }
+        DiagnosticInfoRippleWithLoc DI(
+            DS_Warning, F, sanitizeRippleLocation(rippleStack), ErrMsg);
+        F.getContext().diagnose(DI);
+      }
+    }
+
+    auto *NewVectorI = irBuilder.CreateInsertVector(
+        VecShape, EmptyStack,
+        getTensorUse(rippleStack->getArgOperandUse(1)).first, (uint64_t)0);
+    setRippleShape(NewVectorI, toShape);
+
+    // keep repeating this for x1 .. xn
+    for (unsigned int Idx = 2; Idx < NumArgs + 1; Idx++) {
+      NewVectorI = irBuilder.CreateInsertVector(
+          VecShape, NewVectorI,
+          getTensorUse(rippleStack->getArgOperandUse(Idx)).first,
+          (Idx - 1) *
+              (toShape.flatShape() / toShape.getShape()[toShape.rank() - 1]));
+      // this is actually the flat shape up to this point
+      // so a multidim stack of two [8][8] vectors would be stacked
+      // in 64-elem blocks
+      setRippleShape(NewVectorI, toShape);
+    }
+    setReplacementFor(rippleStack, NewVectorI, toShape);
+  };
+
   auto processRippleReductions = [&](IntrinsicInst *rippleReduction,
                                      const TensorShape &toShape) -> void {
     auto rippleToVPReduce = [](Intrinsic::ID rippleReduction) -> Intrinsic::ID {
@@ -3869,6 +3934,8 @@ void Ripple::genVectorInstructions() {
     } else if (IntrinsicInst *RippleBroadcast =
                    rippleBroadcastIntrinsic(call)) {
       processRippleBroadcast(RippleBroadcast, toShape);
+    } else if (IntrinsicInst *rippleStack = rippleStackIntrinsics(call)) {
+      processRippleStack(rippleStack, toShape);
     } else if (IntrinsicInst *rippleReduction = rippleReduceIntrinsics(call)) {
       processRippleReductions(rippleReduction, toShape);
     } else if (IntrinsicInst *rippleSlice = rippleSliceIntrinsic(call)) {
@@ -6609,6 +6676,12 @@ Ripple::inferShapeFromOperands(const Instruction *I, bool AllowPartialPhi,
     return computeRippleShapeForBitsetIntrinsic(
         RippleBroadcast,
         getRippleShape(BroadcastingValue, /* ShapePropagation */ true));
+  } else if (const IntrinsicInst *RippleStack = rippleStackIntrinsics(I)) {
+    auto *ShapeII = getBlockShapeIntrinsic(RippleStack->getArgOperandUse(0));
+    assert(ShapeII);
+
+    auto IndexShape = setShapeToTensorShape(ShapeII);
+    return IndexShape;
   } else if (const IntrinsicInst *RippleRed = rippleReduceIntrinsics(I)) {
     Value *ReducedValue = RippleRed->getArgOperand(1);
     return computeRippleShapeForBitsetIntrinsic(
@@ -7130,6 +7203,38 @@ Error Ripple::checkRippleBlockIntrinsics(IntrinsicInst *I) {
 
   // TODO: when adding support for other vector "kinds" (e.g., SVE, SME) we will
   // have to check that the tensor shapes with vector.
+  return Error::success();
+}
+
+Error Ripple::checkRippleStackIntrinsics(IntrinsicInst *I) {
+  if (I->getIntrinsicID() == Intrinsic::ripple_stack) {
+    // check that the number of arguments to stack are at least the number of
+    // outermost dimensions to the provided ripple_block_t
+
+    unsigned ArgCount = I->arg_size() - 1; // exclude BlockShape
+
+    auto *ShapeII = getBlockShapeIntrinsic(I->getArgOperandUse(0));
+    assert(ShapeII);
+
+    auto StackingShape = setShapeToTensorShape(ShapeII);
+    auto StackingDimCount = StackingShape.getShape()[StackingShape.rank() - 1];
+
+    if (ArgCount < StackingDimCount) {
+      std::string ErrMsg;
+      {
+        raw_string_ostream RSO(ErrMsg);
+        RSO << "the provided stacking dimension (" << StackingDimCount
+            << ") exceeds the number of tensors provided to be stacked ("
+            << ArgCount << ")";
+      }
+      DiagnosticInfoRippleWithLoc DI(DS_Error, F, sanitizeRippleLocation(I),
+                                     ErrMsg);
+      F.getContext().diagnose(DI);
+      return createStringError(inconvertibleErrorCode(),
+                               "Ripple stack mismatched argument count");
+    }
+  }
+
   return Error::success();
 }
 
@@ -7685,6 +7790,9 @@ Error Ripple::checkRippleSemantics() {
       AllErrors = llvm::joinErrors(std::move(AllErrors),
                                    checkRippleBlockIntrinsics(RippleBlockI));
 
+    } else if (IntrinsicInst *RippleStackI = rippleStackIntrinsics(&I)) {
+      AllErrors = llvm::joinErrors(std::move(AllErrors),
+                                   checkRippleStackIntrinsics(RippleStackI));
     } else if (IntrinsicInst *RippleRedI = rippleReduceIntrinsics(&I)) {
       AllErrors = llvm::joinErrors(std::move(AllErrors),
                                    checkRippleReductionIntrinsics(RippleRedI));
