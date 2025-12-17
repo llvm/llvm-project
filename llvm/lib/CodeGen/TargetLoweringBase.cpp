@@ -95,6 +95,36 @@ static cl::opt<unsigned> MinimumBitTestCmpsOverride(
     cl::desc("Set minimum of largest number of comparisons "
              "to use bit test for switch."));
 
+static cl::opt<unsigned>
+    MaxStoresPerMemsetOverride("max-stores-per-memset", cl::init(0), cl::Hidden,
+                               cl::desc("Override target's MaxStoresPerMemset. "
+                                        "Set to 0 to use the target default."));
+
+static cl::opt<unsigned> MaxStoresPerMemsetOptSizeOverride(
+    "max-stores-per-memset-optsize", cl::init(0), cl::Hidden,
+    cl::desc("Override target's MaxStoresPerMemsetOptSize. "
+             "Set to 0 to use the target default."));
+
+static cl::opt<unsigned>
+    MaxStoresPerMemcpyOverride("max-stores-per-memcpy", cl::init(0), cl::Hidden,
+                               cl::desc("Override target's MaxStoresPerMemcpy. "
+                                        "Set to 0 to use the target default."));
+
+static cl::opt<unsigned> MaxStoresPerMemcpyOptSizeOverride(
+    "max-stores-per-memcpy-optsize", cl::init(0), cl::Hidden,
+    cl::desc("Override target's MaxStoresPerMemcpyOptSize. "
+             "Set to 0 to use the target default."));
+
+static cl::opt<unsigned> MaxStoresPerMemmoveOverride(
+    "max-stores-per-memmove", cl::init(0), cl::Hidden,
+    cl::desc("Override target's MaxStoresPerMemmove. "
+             "Set to 0 to use the target default."));
+
+static cl::opt<unsigned> MaxStoresPerMemmoveOptSizeOverride(
+    "max-stores-per-memmove-optsize", cl::init(0), cl::Hidden,
+    cl::desc("Override target's MaxStoresPerMemmoveOptSize. "
+             "Set to 0 to use the target default."));
+
 // FIXME: This option is only to test if the strict fp operation processed
 // correctly by preventing mutating strict fp operation to normal fp operation
 // during development. When the backend supports strict float operation, this
@@ -2104,6 +2134,33 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
   EVT VT = getApproximateEVTForLLT(Ty, Context);
   return allowsMemoryAccess(Context, DL, VT, MMO.getAddrSpace(), MMO.getAlign(),
                             MMO.getFlags(), Fast);
+}
+
+unsigned TargetLoweringBase::getMaxStoresPerMemset(bool OptSize) const {
+  if (OptSize && MaxStoresPerMemsetOptSizeOverride > 0)
+    return MaxStoresPerMemsetOptSizeOverride;
+  if (!OptSize && MaxStoresPerMemsetOverride > 0)
+    return MaxStoresPerMemsetOverride;
+
+  return OptSize ? MaxStoresPerMemsetOptSize : MaxStoresPerMemset;
+}
+
+unsigned TargetLoweringBase::getMaxStoresPerMemcpy(bool OptSize) const {
+  if (OptSize && MaxStoresPerMemcpyOptSizeOverride > 0)
+    return MaxStoresPerMemcpyOptSizeOverride;
+  if (!OptSize && MaxStoresPerMemcpyOverride > 0)
+    return MaxStoresPerMemcpyOverride;
+
+  return OptSize ? MaxStoresPerMemcpyOptSize : MaxStoresPerMemcpy;
+}
+
+unsigned TargetLoweringBase::getMaxStoresPerMemmove(bool OptSize) const {
+  if (OptSize && MaxStoresPerMemmoveOptSizeOverride > 0)
+    return MaxStoresPerMemmoveOptSizeOverride;
+  if (!OptSize && MaxStoresPerMemmoveOverride > 0)
+    return MaxStoresPerMemmoveOverride;
+
+  return OptSize ? MaxStoresPerMemmoveOptSize : MaxStoresPerMemmove;
 }
 
 //===----------------------------------------------------------------------===//
