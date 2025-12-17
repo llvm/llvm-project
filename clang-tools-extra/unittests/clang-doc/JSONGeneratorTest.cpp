@@ -135,7 +135,6 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
     {
       "End": true,
       "Name": "F",
-      "Path": "",
       "QualName": "",
       "USR": "0000000000000000000000000000000000000000"
     }
@@ -247,6 +246,7 @@ TEST_F(JSONGeneratorTest, emitNamespaceJSON) {
   ],
   "HasEnums": true,
   "HasFunctions": true,
+  "HasNamespaces": true,
   "HasRecords": true,
   "InfoType": "namespace",
   "Name": "Global Namespace",

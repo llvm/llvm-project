@@ -95,7 +95,6 @@ private:
 // CHECK-NEXT:        ],
 // CHECK-NEXT:        "Reference": {
 // CHECK-NEXT:          "Name": "friendFunction",
-// CHECK-NEXT:          "Path": "",
 // CHECK-NEXT:          "QualName": "friendFunction",
 // CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:        },
