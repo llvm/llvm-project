@@ -2762,13 +2762,14 @@ bool X86TargetLowering::useLoadStackGuardNode(const Module &M) const {
   return Subtarget.isTargetMachO() && Subtarget.is64Bit();
 }
 
-bool X86TargetLowering::useStackGuardXorFP() const {
+bool X86TargetLowering::useStackGuardMixCookie() const {
   // Currently only MSVC CRTs XOR the frame pointer into the stack guard value.
   return Subtarget.getTargetTriple().isOSMSVCRT() && !Subtarget.isTargetMachO();
 }
 
-SDValue X86TargetLowering::emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
-                                               const SDLoc &DL) const {
+SDValue X86TargetLowering::emitStackGuardMixCookie(SelectionDAG &DAG,
+                                                   SDValue Val, const SDLoc &DL,
+                                                   bool FailureBB) const {
   EVT PtrTy = getPointerTy(DAG.getDataLayout());
   unsigned XorOp = Subtarget.is64Bit() ? X86::XOR64_FP : X86::XOR32_FP;
   MachineSDNode *Node = DAG.getMachineNode(XorOp, DL, PtrTy, Val);
