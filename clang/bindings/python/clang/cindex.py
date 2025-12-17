@@ -3885,7 +3885,7 @@ class CompilationDatabase(ClangObject):
                     os.fspath(buildDir), byref(errorCode)
                 )
             )
-        except CompilationDatabaseError as e:
+        except CompilationDatabaseError:
             raise CompilationDatabaseError(
                 int(errorCode.value), "CompilationDatabase loading failed"
             )
