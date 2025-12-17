@@ -1,15 +1,15 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
 void test_builtin_allow_sanitize_check() {
-  // Test with non-string literal argument
+  // Test with non-string literal argument.
   char str[] = "address";
   (void)__builtin_allow_sanitize_check(str); // expected-error {{expression is not a string literal}}
   (void)__builtin_allow_sanitize_check(123); // expected-error {{expression is not a string literal}}
 
-  // Test with unsupported sanitizer name
+  // Test with unsupported sanitizer name.
   (void)__builtin_allow_sanitize_check("unsupported"); // expected-error {{invalid argument 'unsupported' to __builtin_allow_sanitize_check}}
 
-  // Test with supported sanitizer names
+  // Test with supported sanitizer names.
   (void)__builtin_allow_sanitize_check("address");
   (void)__builtin_allow_sanitize_check("thread");
   (void)__builtin_allow_sanitize_check("memory");

@@ -3551,25 +3551,28 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_allow_sanitize_check: {
     Intrinsic::ID IntrID = Intrinsic::not_intrinsic;
-    StringRef SanitizerName =
+    StringRef Name =
         cast<StringLiteral>(E->getArg(0)->IgnoreParenCasts())->getString();
 
-    if (SanitizerName == "address" || SanitizerName == "kernel-address") {
-      if (CGM.getLangOpts().Sanitize.hasOneOf(SanitizerKind::Address |
-                                              SanitizerKind::KernelAddress))
-        IntrID = Intrinsic::allow_sanitize_address;
-    } else if (SanitizerName == "thread") {
-      if (CGM.getLangOpts().Sanitize.has(SanitizerKind::Thread))
-        IntrID = Intrinsic::allow_sanitize_thread;
-    } else if (SanitizerName == "memory" || SanitizerName == "kernel-memory") {
-      if (CGM.getLangOpts().Sanitize.hasOneOf(SanitizerKind::Memory |
-                                              SanitizerKind::KernelMemory))
-        IntrID = Intrinsic::allow_sanitize_memory;
-    } else if (SanitizerName == "hwaddress" ||
-               SanitizerName == "kernel-hwaddress") {
-      if (CGM.getLangOpts().Sanitize.hasOneOf(SanitizerKind::HWAddress |
-                                              SanitizerKind::KernelHWAddress))
-        IntrID = Intrinsic::allow_sanitize_hwaddress;
+    // We deliberately allow the use of kernel- and non-kernel names
+    // interchangably, even when one or the other is enabled. This is consistent
+    // with the no_sanitize-attribute, which allows either kernel- or non-kernel
+    // name to disable instrumentation (see CodeGenFunction::StartFunction).
+    if (getLangOpts().Sanitize.hasOneOf(SanitizerKind::Address |
+                                        SanitizerKind::KernelAddress) &&
+        (Name == "address" || Name == "kernel-address")) {
+      IntrID = Intrinsic::allow_sanitize_address;
+    } else if (getLangOpts().Sanitize.has(SanitizerKind::Thread) &&
+               Name == "thread") {
+      IntrID = Intrinsic::allow_sanitize_thread;
+    } else if (getLangOpts().Sanitize.hasOneOf(SanitizerKind::Memory |
+                                               SanitizerKind::KernelMemory) &&
+               (Name == "memory" || Name == "kernel-memory")) {
+      IntrID = Intrinsic::allow_sanitize_memory;
+    } else if (getLangOpts().Sanitize.hasOneOf(
+                   SanitizerKind::HWAddress | SanitizerKind::KernelHWAddress) &&
+               (Name == "hwaddress" || Name == "kernel-hwaddress")) {
+      IntrID = Intrinsic::allow_sanitize_hwaddress;
     }
 
     if (IntrID != Intrinsic::not_intrinsic) {
