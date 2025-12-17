@@ -5,13 +5,13 @@ gpu.module @test_1_1_assignment {
   // CHECK-SAME: %[[ARG_0:.*]]: memref<256x128xf32>
   gpu.func @create_nd_tdesc(%src: memref<256x128xf32>) {
     // CHECK-DAG: %[[SGID:.*]] = gpu.subgroup_id : index
-    // CHECK-DAG: %[[REMUX:.*]] = index.remu %[[SGID]], %[[C4:.*]]
-    // CHECK-DAG: %[[DIVU:.*]] = index.divu %[[SGID]], %[[C4:.*]]
-    // CHECK-DAG: %[[REMUY:.*]] = index.remu %[[DIVU]], %[[C8:.*]]
-    // CHECK-DAG: %[[MULY:.*]] = index.mul %[[REMUY]], %[[C32:.*]]
-    // CHECK-DAG: %[[MULX:.*]] = index.mul %[[REMUX]], %[[C32:.*]]
-    // CHECK-DAG: %[[MODY:.*]] = index.remu %[[MULY]], %[[C256:.*]]
-    // CHECK-DAG: %[[MODX:.*]] = index.remu %[[MULX]], %[[C128:.*]]
+    // CHECK-DAG: %[[REMUX:.*]] = arith.remui %[[SGID]], %[[C4:.*]]
+    // CHECK-DAG: %[[DIVU:.*]] = arith.divui %[[SGID]], %[[C4:.*]]
+    // CHECK-DAG: %[[REMUY:.*]] = arith.remui %[[DIVU]], %[[C8:.*]]
+    // CHECK-DAG: %[[MULY:.*]] = arith.muli %[[REMUY]], %[[C32:.*]]
+    // CHECK-DAG: %[[MULX:.*]] = arith.muli %[[REMUX]], %[[C32:.*]]
+    // CHECK-DAG: %[[MODY:.*]] = arith.remui %[[MULY]], %[[C256:.*]]
+    // CHECK-DAG: %[[MODX:.*]] = arith.remui %[[MULX]], %[[C128:.*]]
     // CHECK-DAG: %[[TDESC:.*]] = xegpu.create_nd_tdesc %[[ARG_0]][%[[MODY]], %[[MODX]]] : memref<256x128xf32> -> !xegpu.tensor_desc<32x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
     %tdesc = xegpu.create_nd_tdesc %src[0, 0] : memref<256x128xf32>
       -> !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>>
@@ -22,13 +22,13 @@ gpu.module @test_1_1_assignment {
   // CHECK-SAME: %[[ARG_0:.*]]: memref<3x256x128xf32>
   gpu.func @create_nd_tdesc_from_higher_rank_memref(%src: memref<3x256x128xf32>) {
     // CHECK-DAG: %[[SGID:.*]] = gpu.subgroup_id : index
-    // CHECK-DAG: %[[REMUX:.*]] = index.remu %[[SGID]], %[[C4:.*]]
-    // CHECK-DAG: %[[DIVU:.*]] = index.divu %[[SGID]], %[[C4:.*]]
-    // CHECK-DAG: %[[REMUY:.*]] = index.remu %[[DIVU]], %[[C8:.*]]
-    // CHECK-DAG: %[[MULY:.*]] = index.mul %[[REMUY]], %[[C32:.*]]
-    // CHECK-DAG: %[[MULX:.*]] = index.mul %[[REMUX]], %[[C32:.*]]
-    // CHECK-DAG: %[[MODY:.*]] = index.remu %[[MULY]], %[[C256:.*]]
-    // CHECK-DAG: %[[MODX:.*]] = index.remu %[[MULX]], %[[C128:.*]]
+    // CHECK-DAG: %[[REMUX:.*]] = arith.remui %[[SGID]], %[[C4:.*]]
+    // CHECK-DAG: %[[DIVU:.*]] = arith.divui %[[SGID]], %[[C4:.*]]
+    // CHECK-DAG: %[[REMUY:.*]] = arith.remui %[[DIVU]], %[[C8:.*]]
+    // CHECK-DAG: %[[MULY:.*]] = arith.muli %[[REMUY]], %[[C32:.*]]
+    // CHECK-DAG: %[[MULX:.*]] = arith.muli %[[REMUX]], %[[C32:.*]]
+    // CHECK-DAG: %[[MODY:.*]] = arith.remui %[[MULY]], %[[C256:.*]]
+    // CHECK-DAG: %[[MODX:.*]] = arith.remui %[[MULX]], %[[C128:.*]]
     // CHECK-DAG: %[[TDESC:.*]] = xegpu.create_nd_tdesc %[[ARG_0]][1, %[[MODY]], %[[MODX]]] : memref<3x256x128xf32> -> !xegpu.tensor_desc<32x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
     %tdesc = xegpu.create_nd_tdesc %src[1, 0, 0] : memref<3x256x128xf32>
       -> !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>>

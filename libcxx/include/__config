@@ -657,18 +657,10 @@ typedef __char32_t char32_t;
 #    endif // _LIBCPP_HAS_THREAD_API
 #  endif   // _LIBCPP_HAS_THREADS
 
-#  if _LIBCPP_HAS_THREAD_API_PTHREAD
-#    if defined(__ANDROID__) && __ANDROID_API__ >= 30
-#      define _LIBCPP_HAS_COND_CLOCKWAIT 1
-#    elif defined(_LIBCPP_GLIBC_PREREQ)
-#      if _LIBCPP_GLIBC_PREREQ(2, 30)
-#        define _LIBCPP_HAS_COND_CLOCKWAIT 1
-#      else
-#        define _LIBCPP_HAS_COND_CLOCKWAIT 0
-#      endif
-#    else
-#      define _LIBCPP_HAS_COND_CLOCKWAIT 0
-#    endif
+#  if !_LIBCPP_HAS_THREAD_API_PTHREAD
+#    define _LIBCPP_HAS_COND_CLOCKWAIT 0
+#  elif (defined(__ANDROID__) && __ANDROID_API__ >= 30) || _LIBCPP_GLIBC_PREREQ(2, 30)
+#    define _LIBCPP_HAS_COND_CLOCKWAIT 1
 #  else
 #    define _LIBCPP_HAS_COND_CLOCKWAIT 0
 #  endif
@@ -747,8 +739,8 @@ typedef __char32_t char32_t;
 #    endif
 #  endif
 
-#  if __has_attribute(__no_thread_safety_analysis__)
-#    define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS __attribute__((__no_thread_safety_analysis__))
+#  if __has_cpp_attribute(_Clang::__no_thread_safety_analysis__)
+#    define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS [[_Clang::__no_thread_safety_analysis__]]
 #  else
 #    define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
 #  endif
@@ -834,12 +826,8 @@ typedef __char32_t char32_t;
 // the latter depends on internal GNU libc details that are not appropriate
 // to depend on here, so any declarations present when __cpp_char8_t is not
 // defined are ignored.
-#  if defined(_LIBCPP_GLIBC_PREREQ)
-#    if _LIBCPP_GLIBC_PREREQ(2, 36) && defined(__cpp_char8_t)
-#      define _LIBCPP_HAS_C8RTOMB_MBRTOC8 1
-#    else
-#      define _LIBCPP_HAS_C8RTOMB_MBRTOC8 0
-#    endif
+#  if _LIBCPP_GLIBC_PREREQ(2, 36) && defined(__cpp_char8_t)
+#    define _LIBCPP_HAS_C8RTOMB_MBRTOC8 1
 #  else
 #    define _LIBCPP_HAS_C8RTOMB_MBRTOC8 0
 #  endif

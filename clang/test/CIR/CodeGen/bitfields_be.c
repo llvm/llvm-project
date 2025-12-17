@@ -21,7 +21,7 @@ int init(S* s) {
   return s->c;
 }
 
-//CIR: cir.func dso_local @init
+//CIR: cir.func {{.*}} @init
 //CIR:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["s", init] {alignment = 8 : i64}
 //CIR:   [[TMP1:%.*]] = cir.load align(8) [[TMP0]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
 //CIR:   [[TMP2:%.*]] = cir.get_member [[TMP1]][0] {name = "c"} : !cir.ptr<!rec_S> -> !cir.ptr<!u32i>
@@ -51,7 +51,7 @@ void load(S* s) {
 }
 
 // field 'a'
-// CIR: cir.func dso_local @load
+// CIR: cir.func {{.*}} @load
 // CIR:    %[[PTR0:.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["s", init] {alignment = 8 : i64} loc(#loc35)
 // CIR:    %[[CONST1:.*]] = cir.const #cir.int<4> : !s32i
 // CIR:    %[[MIN1:.*]] = cir.unary(minus, %[[CONST1]]) nsw : !s32i, !s32i

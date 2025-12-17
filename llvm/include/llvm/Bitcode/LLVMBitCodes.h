@@ -437,6 +437,8 @@ enum ConstantsCodes {
   CST_CODE_CE_GEP_WITH_INRANGE = 31,  // [opty, flags, range, n x operands]
   CST_CODE_CE_GEP = 32,               // [opty, flags, n x operands]
   CST_CODE_PTRAUTH = 33,              // [ptr, key, disc, addrdisc]
+  CST_CODE_PTRAUTH2 = 34,             // [ptr, key, disc, addrdisc,
+                                      //  deactivation_symbol]
 };
 
 /// CastOpcodes - These are values used in the bitcode files to encode which
@@ -639,25 +641,25 @@ enum FunctionCodes {
   FUNC_CODE_INST_CALL = 34, // CALL:    [attr, cc, fnty, fnid, args...]
 
   FUNC_CODE_DEBUG_LOC = 35,          // DEBUG_LOC:  [Line,Col,ScopeVal, IAVal]
-  FUNC_CODE_INST_FENCE = 36,         // FENCE: [ordering, synchscope]
+  FUNC_CODE_INST_FENCE = 36,         // FENCE: [ordering, syncscope]
   FUNC_CODE_INST_CMPXCHG_OLD = 37,   // CMPXCHG: [ptrty, ptr, cmp, val, vol,
-                                     //            ordering, synchscope,
+                                     //            ordering, syncscope,
                                      //            failure_ordering?, weak?]
   FUNC_CODE_INST_ATOMICRMW_OLD = 38, // ATOMICRMW: [ptrty,ptr,val, operation,
                                      //             align, vol,
-                                     //             ordering, synchscope]
+                                     //             ordering, syncscope]
   FUNC_CODE_INST_RESUME = 39,        // RESUME:     [opval]
   FUNC_CODE_INST_LANDINGPAD_OLD =
       40,                         // LANDINGPAD: [ty,val,val,num,id0,val0...]
   FUNC_CODE_INST_LOADATOMIC = 41, // LOAD: [opty, op, align, vol,
-                                  //        ordering, synchscope]
+                                  //        ordering, syncscope]
   FUNC_CODE_INST_STOREATOMIC_OLD = 42, // STORE: [ptrty,ptr,val, align, vol
-                                       //         ordering, synchscope]
+                                       //         ordering, syncscope]
   FUNC_CODE_INST_GEP = 43,             // GEP:  [inbounds, n x operands]
   FUNC_CODE_INST_STORE = 44,       // STORE: [ptrty,ptr,valty,val, align, vol]
   FUNC_CODE_INST_STOREATOMIC = 45, // STORE: [ptrty,ptr,val, align, vol
   FUNC_CODE_INST_CMPXCHG = 46,     // CMPXCHG: [ptrty, ptr, cmp, val, vol,
-                                   //           success_ordering, synchscope,
+                                   //           success_ordering, syncscope,
                                    //           failure_ordering, weak]
   FUNC_CODE_INST_LANDINGPAD = 47,  // LANDINGPAD: [ty,val,num,id0,val0...]
   FUNC_CODE_INST_CLEANUPRET = 48,  // CLEANUPRET: [val] or [val,bb#]
@@ -675,7 +677,7 @@ enum FunctionCodes {
   FUNC_CODE_INST_FREEZE = 58,     // FREEZE: [opty, opval]
   FUNC_CODE_INST_ATOMICRMW = 59,  // ATOMICRMW: [ptrty, ptr, valty, val,
                                   //             operation, align, vol,
-                                  //             ordering, synchscope]
+                                  //             ordering, syncscope]
   FUNC_CODE_BLOCKADDR_USERS = 60, // BLOCKADDR_USERS: [value...]
 
   FUNC_CODE_DEBUG_RECORD_VALUE =

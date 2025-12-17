@@ -32,6 +32,9 @@ struct clang::CIRGen::CGCoroData {
 
   // Stores the result of __builtin_coro_begin call.
   mlir::Value coroBegin = nullptr;
+
+  // The promise type's 'unhandled_exception' handler, if it defines one.
+  Stmt *exceptionHandler = nullptr;
 };
 
 // Defining these here allows to keep CGCoroData private to this file.
@@ -97,6 +100,15 @@ struct ParamReferenceReplacerRAII {
   }
 };
 } // namespace
+
+RValue CIRGenFunction::emitCoroutineFrame() {
+  if (curCoro.data && curCoro.data->coroBegin) {
+    return RValue::get(curCoro.data->coroBegin);
+  }
+  cgm.errorNYI("NYI");
+  return RValue();
+}
+
 static void createCoroData(CIRGenFunction &cgf,
                            CIRGenFunction::CGCoroInfo &curCoro,
                            cir::CallOp coroId) {
@@ -263,6 +275,17 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   }
   return mlir::success();
 }
+
+static bool memberCallExpressionCanThrow(const Expr *e) {
+  if (const auto *ce = dyn_cast<CXXMemberCallExpr>(e))
+    if (const auto *proto =
+            ce->getMethodDecl()->getType()->getAs<FunctionProtoType>())
+      if (isNoexceptExceptionSpec(proto->getExceptionSpecType()) &&
+          proto->canThrow() == CT_Cannot)
+        return false;
+  return true;
+}
+
 // Given a suspend expression which roughly looks like:
 //
 //   auto && x = CommonExpr();
@@ -302,15 +325,53 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
       builder, cgf.getLoc(s.getSourceRange()), kind,
       /*readyBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        builder.createCondition(
-            cgf.createDummyValue(loc, cgf.getContext().BoolTy));
+        Expr *condExpr = s.getReadyExpr()->IgnoreParens();
+        builder.createCondition(cgf.evaluateExprAsBool(condExpr));
       },
       /*suspendBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
+        // Note that differently from LLVM codegen we do not emit coro.save
+        // and coro.suspend here, that should be done as part of lowering this
+        // to LLVM dialect (or some other MLIR dialect)
+
+        // A invalid suspendRet indicates "void returning await_suspend"
+        mlir::Value suspendRet = cgf.emitScalarExpr(s.getSuspendExpr());
+
+        // Veto suspension if requested by bool returning await_suspend.
+        if (suspendRet) {
+          cgf.cgm.errorNYI("Veto await_suspend");
+        }
+
+        // Signals the parent that execution flows to next region.
         cir::YieldOp::create(builder, loc);
       },
       /*resumeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
+        // Exception handling requires additional IR. If the 'await_resume'
+        // function is marked as 'noexcept', we avoid generating this additional
+        // IR.
+        CXXTryStmt *tryStmt = nullptr;
+        if (coro.exceptionHandler && kind == cir::AwaitKind::Init &&
+            memberCallExpressionCanThrow(s.getResumeExpr()))
+          cgf.cgm.errorNYI("Coro resume Exception");
+
+        // FIXME(cir): the alloca for the resume expr should be placed in the
+        // enclosing cir.scope instead.
+        if (forLValue) {
+          assert(!cir::MissingFeatures::coroCoYield());
+        } else {
+          awaitRes.rv =
+              cgf.emitAnyExpr(s.getResumeExpr(), aggSlot, ignoreResult);
+          if (!awaitRes.rv.isIgnored())
+            // Create the alloca in the block before the scope wrapping
+            // cir.await.
+            assert(!cir::MissingFeatures::coroCoReturn());
+        }
+
+        if (tryStmt)
+          cgf.cgm.errorNYI("Coro tryStmt");
+
+        // Returns control back to parent.
         cir::YieldOp::create(builder, loc);
       });
 

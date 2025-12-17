@@ -751,6 +751,26 @@ BoolType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 }
 
 //===----------------------------------------------------------------------===//
+//  DataMemberType Definitions
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize
+DataMemberType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
+                                  ::mlir::DataLayoutEntryListRef params) const {
+  // FIXME: consider size differences under different ABIs
+  assert(!MissingFeatures::cxxABI());
+  return llvm::TypeSize::getFixed(64);
+}
+
+uint64_t
+DataMemberType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                                ::mlir::DataLayoutEntryListRef params) const {
+  // FIXME: consider alignment differences under different ABIs
+  assert(!MissingFeatures::cxxABI());
+  return 8;
+}
+
+//===----------------------------------------------------------------------===//
 //  VPtrType Definitions
 //===----------------------------------------------------------------------===//
 
@@ -802,7 +822,7 @@ cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 
 mlir::LogicalResult cir::VectorType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    mlir::Type elementType, uint64_t size) {
+    mlir::Type elementType, uint64_t size, bool scalable) {
   if (size == 0)
     return emitError() << "the number of vector elements must be non-zero";
   return success();

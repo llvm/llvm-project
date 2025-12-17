@@ -401,19 +401,8 @@ struct ConvertNVGPUToNVVMPass
     RewritePatternSet patterns(&getContext());
     LLVMTypeConverter converter(&getContext(), options);
     IRRewriter rewriter(&getContext());
-    populateGpuMemorySpaceAttributeConversions(
-        converter, [](gpu::AddressSpace space) -> unsigned {
-          switch (space) {
-          case gpu::AddressSpace::Global:
-            return static_cast<unsigned>(NVVM::NVVMMemorySpace::Global);
-          case gpu::AddressSpace::Workgroup:
-            return static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared);
-          case gpu::AddressSpace::Private:
-            return 0;
-          }
-          llvm_unreachable("unknown address space enum value");
-          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Generic);
-        });
+    nvgpu::populateCommonGPUTypeAndAttributeConversions(converter);
+
     /// device-side async tokens cannot be materialized in nvvm. We just
     /// convert them to a dummy i32 type in order to easily drop them during
     /// conversion.
@@ -923,7 +912,11 @@ struct NVGPUMBarrierArriveExpectTxLowering
                        adaptor.getMbarId(), rewriter);
     Value txcount = truncToI32(b, adaptor.getTxcount());
     rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveExpectTxOp>(
-        op, barrier, txcount, adaptor.getPredicate());
+        op, Type{},       // return-value is optional and is void by default
+        barrier, txcount, // barrier and txcount
+        NVVM::MemScopeKind::CTA, // default scope is CTA
+        false,                   // relaxed-semantics is false
+        adaptor.getPredicate());
     return success();
   }
 };
@@ -1714,6 +1707,26 @@ struct NVGPURcpOpLowering : public ConvertOpToLLVMPattern<nvgpu::RcpOp> {
   }
 };
 } // namespace
+
+void mlir::nvgpu::populateCommonGPUTypeAndAttributeConversions(
+    TypeConverter &typeConverter) {
+  // NVVM uses alloca in the default address space to represent private
+  // memory allocations, so drop private annotations. NVVM uses address
+  // space 3 for shared memory. NVVM uses the default address space to
+  // represent global memory.
+  populateGpuMemorySpaceAttributeConversions(
+      typeConverter, [](gpu::AddressSpace space) -> unsigned {
+        switch (space) {
+        case gpu::AddressSpace::Global:
+          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Global);
+        case gpu::AddressSpace::Workgroup:
+          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared);
+        case gpu::AddressSpace::Private:
+          return 0;
+        }
+        llvm_unreachable("unknown address space enum value");
+      });
+}
 
 void mlir::populateNVGPUToNVVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns) {

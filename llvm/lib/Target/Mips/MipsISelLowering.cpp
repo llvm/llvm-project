@@ -72,6 +72,8 @@
 #include <cstdint>
 #include <deque>
 #include <iterator>
+#include <regex>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -169,128 +171,6 @@ SDValue MipsTargetLowering::getTargetNode(ConstantPoolSDNode *N, EVT Ty,
                                           unsigned Flag) const {
   return DAG.getTargetConstantPool(N->getConstVal(), Ty, N->getAlign(),
                                    N->getOffset(), Flag);
-}
-
-const char *MipsTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch ((MipsISD::NodeType)Opcode) {
-  case MipsISD::FIRST_NUMBER:      break;
-  case MipsISD::JmpLink:           return "MipsISD::JmpLink";
-  case MipsISD::TailCall:          return "MipsISD::TailCall";
-  case MipsISD::Highest:           return "MipsISD::Highest";
-  case MipsISD::Higher:            return "MipsISD::Higher";
-  case MipsISD::Hi:                return "MipsISD::Hi";
-  case MipsISD::Lo:                return "MipsISD::Lo";
-  case MipsISD::GotHi:             return "MipsISD::GotHi";
-  case MipsISD::TlsHi:             return "MipsISD::TlsHi";
-  case MipsISD::GPRel:             return "MipsISD::GPRel";
-  case MipsISD::ThreadPointer:     return "MipsISD::ThreadPointer";
-  case MipsISD::Ret:               return "MipsISD::Ret";
-  case MipsISD::ERet:              return "MipsISD::ERet";
-  case MipsISD::EH_RETURN:         return "MipsISD::EH_RETURN";
-  case MipsISD::FAbs:              return "MipsISD::FAbs";
-  case MipsISD::FMS:               return "MipsISD::FMS";
-  case MipsISD::FPBrcond:          return "MipsISD::FPBrcond";
-  case MipsISD::FPCmp:             return "MipsISD::FPCmp";
-  case MipsISD::FSELECT:           return "MipsISD::FSELECT";
-  case MipsISD::MTC1_D64:          return "MipsISD::MTC1_D64";
-  case MipsISD::CMovFP_T:          return "MipsISD::CMovFP_T";
-  case MipsISD::CMovFP_F:          return "MipsISD::CMovFP_F";
-  case MipsISD::TruncIntFP:        return "MipsISD::TruncIntFP";
-  case MipsISD::MFHI:              return "MipsISD::MFHI";
-  case MipsISD::MFLO:              return "MipsISD::MFLO";
-  case MipsISD::MTLOHI:            return "MipsISD::MTLOHI";
-  case MipsISD::Mult:              return "MipsISD::Mult";
-  case MipsISD::Multu:             return "MipsISD::Multu";
-  case MipsISD::MAdd:              return "MipsISD::MAdd";
-  case MipsISD::MAddu:             return "MipsISD::MAddu";
-  case MipsISD::MSub:              return "MipsISD::MSub";
-  case MipsISD::MSubu:             return "MipsISD::MSubu";
-  case MipsISD::DivRem:            return "MipsISD::DivRem";
-  case MipsISD::DivRemU:           return "MipsISD::DivRemU";
-  case MipsISD::DivRem16:          return "MipsISD::DivRem16";
-  case MipsISD::DivRemU16:         return "MipsISD::DivRemU16";
-  case MipsISD::BuildPairF64:      return "MipsISD::BuildPairF64";
-  case MipsISD::ExtractElementF64: return "MipsISD::ExtractElementF64";
-  case MipsISD::Wrapper:           return "MipsISD::Wrapper";
-  case MipsISD::DynAlloc:          return "MipsISD::DynAlloc";
-  case MipsISD::Sync:              return "MipsISD::Sync";
-  case MipsISD::Ext:               return "MipsISD::Ext";
-  case MipsISD::Ins:               return "MipsISD::Ins";
-  case MipsISD::CIns:              return "MipsISD::CIns";
-  case MipsISD::LWL:               return "MipsISD::LWL";
-  case MipsISD::LWR:               return "MipsISD::LWR";
-  case MipsISD::SWL:               return "MipsISD::SWL";
-  case MipsISD::SWR:               return "MipsISD::SWR";
-  case MipsISD::LDL:               return "MipsISD::LDL";
-  case MipsISD::LDR:               return "MipsISD::LDR";
-  case MipsISD::SDL:               return "MipsISD::SDL";
-  case MipsISD::SDR:               return "MipsISD::SDR";
-  case MipsISD::EXTP:              return "MipsISD::EXTP";
-  case MipsISD::EXTPDP:            return "MipsISD::EXTPDP";
-  case MipsISD::EXTR_S_H:          return "MipsISD::EXTR_S_H";
-  case MipsISD::EXTR_W:            return "MipsISD::EXTR_W";
-  case MipsISD::EXTR_R_W:          return "MipsISD::EXTR_R_W";
-  case MipsISD::EXTR_RS_W:         return "MipsISD::EXTR_RS_W";
-  case MipsISD::SHILO:             return "MipsISD::SHILO";
-  case MipsISD::MTHLIP:            return "MipsISD::MTHLIP";
-  case MipsISD::MULSAQ_S_W_PH:     return "MipsISD::MULSAQ_S_W_PH";
-  case MipsISD::MAQ_S_W_PHL:       return "MipsISD::MAQ_S_W_PHL";
-  case MipsISD::MAQ_S_W_PHR:       return "MipsISD::MAQ_S_W_PHR";
-  case MipsISD::MAQ_SA_W_PHL:      return "MipsISD::MAQ_SA_W_PHL";
-  case MipsISD::MAQ_SA_W_PHR:      return "MipsISD::MAQ_SA_W_PHR";
-  case MipsISD::DOUBLE_SELECT_I:   return "MipsISD::DOUBLE_SELECT_I";
-  case MipsISD::DOUBLE_SELECT_I64: return "MipsISD::DOUBLE_SELECT_I64";
-  case MipsISD::DPAU_H_QBL:        return "MipsISD::DPAU_H_QBL";
-  case MipsISD::DPAU_H_QBR:        return "MipsISD::DPAU_H_QBR";
-  case MipsISD::DPSU_H_QBL:        return "MipsISD::DPSU_H_QBL";
-  case MipsISD::DPSU_H_QBR:        return "MipsISD::DPSU_H_QBR";
-  case MipsISD::DPAQ_S_W_PH:       return "MipsISD::DPAQ_S_W_PH";
-  case MipsISD::DPSQ_S_W_PH:       return "MipsISD::DPSQ_S_W_PH";
-  case MipsISD::DPAQ_SA_L_W:       return "MipsISD::DPAQ_SA_L_W";
-  case MipsISD::DPSQ_SA_L_W:       return "MipsISD::DPSQ_SA_L_W";
-  case MipsISD::DPA_W_PH:          return "MipsISD::DPA_W_PH";
-  case MipsISD::DPS_W_PH:          return "MipsISD::DPS_W_PH";
-  case MipsISD::DPAQX_S_W_PH:      return "MipsISD::DPAQX_S_W_PH";
-  case MipsISD::DPAQX_SA_W_PH:     return "MipsISD::DPAQX_SA_W_PH";
-  case MipsISD::DPAX_W_PH:         return "MipsISD::DPAX_W_PH";
-  case MipsISD::DPSX_W_PH:         return "MipsISD::DPSX_W_PH";
-  case MipsISD::DPSQX_S_W_PH:      return "MipsISD::DPSQX_S_W_PH";
-  case MipsISD::DPSQX_SA_W_PH:     return "MipsISD::DPSQX_SA_W_PH";
-  case MipsISD::MULSA_W_PH:        return "MipsISD::MULSA_W_PH";
-  case MipsISD::MULT:              return "MipsISD::MULT";
-  case MipsISD::MULTU:             return "MipsISD::MULTU";
-  case MipsISD::MADD_DSP:          return "MipsISD::MADD_DSP";
-  case MipsISD::MADDU_DSP:         return "MipsISD::MADDU_DSP";
-  case MipsISD::MSUB_DSP:          return "MipsISD::MSUB_DSP";
-  case MipsISD::MSUBU_DSP:         return "MipsISD::MSUBU_DSP";
-  case MipsISD::SHLL_DSP:          return "MipsISD::SHLL_DSP";
-  case MipsISD::SHRA_DSP:          return "MipsISD::SHRA_DSP";
-  case MipsISD::SHRL_DSP:          return "MipsISD::SHRL_DSP";
-  case MipsISD::SETCC_DSP:         return "MipsISD::SETCC_DSP";
-  case MipsISD::SELECT_CC_DSP:     return "MipsISD::SELECT_CC_DSP";
-  case MipsISD::VALL_ZERO:         return "MipsISD::VALL_ZERO";
-  case MipsISD::VANY_ZERO:         return "MipsISD::VANY_ZERO";
-  case MipsISD::VALL_NONZERO:      return "MipsISD::VALL_NONZERO";
-  case MipsISD::VANY_NONZERO:      return "MipsISD::VANY_NONZERO";
-  case MipsISD::VCEQ:              return "MipsISD::VCEQ";
-  case MipsISD::VCLE_S:            return "MipsISD::VCLE_S";
-  case MipsISD::VCLE_U:            return "MipsISD::VCLE_U";
-  case MipsISD::VCLT_S:            return "MipsISD::VCLT_S";
-  case MipsISD::VCLT_U:            return "MipsISD::VCLT_U";
-  case MipsISD::VEXTRACT_SEXT_ELT: return "MipsISD::VEXTRACT_SEXT_ELT";
-  case MipsISD::VEXTRACT_ZEXT_ELT: return "MipsISD::VEXTRACT_ZEXT_ELT";
-  case MipsISD::VNOR:              return "MipsISD::VNOR";
-  case MipsISD::VSHF:              return "MipsISD::VSHF";
-  case MipsISD::SHF:               return "MipsISD::SHF";
-  case MipsISD::ILVEV:             return "MipsISD::ILVEV";
-  case MipsISD::ILVOD:             return "MipsISD::ILVOD";
-  case MipsISD::ILVL:              return "MipsISD::ILVL";
-  case MipsISD::ILVR:              return "MipsISD::ILVR";
-  case MipsISD::PCKEV:             return "MipsISD::PCKEV";
-  case MipsISD::PCKOD:             return "MipsISD::PCKOD";
-  case MipsISD::INSVE:             return "MipsISD::INSVE";
-  }
-  return nullptr;
 }
 
 MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
@@ -477,8 +357,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::FEXP,              MVT::f32,   Expand);
   setOperationAction(ISD::FMA,               MVT::f32,   Expand);
   setOperationAction(ISD::FMA,               MVT::f64,   Expand);
-  setOperationAction(ISD::FREM,              MVT::f32,   Expand);
-  setOperationAction(ISD::FREM,              MVT::f64,   Expand);
+  setOperationAction(ISD::FREM, MVT::f32, LibCall);
+  setOperationAction(ISD::FREM, MVT::f64, LibCall);
 
   // Lower f16 conversion operations into library calls
   setOperationAction(ISD::FP16_TO_FP,        MVT::f32,   Expand);
@@ -4987,25 +4867,101 @@ MipsTargetLowering::emitPseudoD_SELECT(MachineInstr &MI,
   return BB;
 }
 
+// Copies the function MipsAsmParser::matchCPURegisterName.
+int MipsTargetLowering::getCPURegisterIndex(StringRef Name) const {
+  int CC;
+
+  CC = StringSwitch<unsigned>(Name)
+           .Case("zero", 0)
+           .Case("at", 1)
+           .Case("AT", 1)
+           .Case("a0", 4)
+           .Case("a1", 5)
+           .Case("a2", 6)
+           .Case("a3", 7)
+           .Case("v0", 2)
+           .Case("v1", 3)
+           .Case("s0", 16)
+           .Case("s1", 17)
+           .Case("s2", 18)
+           .Case("s3", 19)
+           .Case("s4", 20)
+           .Case("s5", 21)
+           .Case("s6", 22)
+           .Case("s7", 23)
+           .Case("k0", 26)
+           .Case("k1", 27)
+           .Case("gp", 28)
+           .Case("sp", 29)
+           .Case("fp", 30)
+           .Case("s8", 30)
+           .Case("ra", 31)
+           .Case("t0", 8)
+           .Case("t1", 9)
+           .Case("t2", 10)
+           .Case("t3", 11)
+           .Case("t4", 12)
+           .Case("t5", 13)
+           .Case("t6", 14)
+           .Case("t7", 15)
+           .Case("t8", 24)
+           .Case("t9", 25)
+           .Default(-1);
+
+  if (!(ABI.IsN32() || ABI.IsN64()))
+    return CC;
+
+  // Although SGI documentation just cuts out t0-t3 for n32/n64,
+  // GNU pushes the values of t0-t3 to override the o32/o64 values for t4-t7
+  // We are supporting both cases, so for t0-t3 we'll just push them to t4-t7.
+  if (8 <= CC && CC <= 11)
+    CC += 4;
+
+  if (CC == -1)
+    CC = StringSwitch<unsigned>(Name)
+             .Case("a4", 8)
+             .Case("a5", 9)
+             .Case("a6", 10)
+             .Case("a7", 11)
+             .Case("kt0", 26)
+             .Case("kt1", 27)
+             .Default(-1);
+
+  return CC;
+}
+
 // FIXME? Maybe this could be a TableGen attribute on some registers and
 // this table could be generated automatically from RegInfo.
 Register
 MipsTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                       const MachineFunction &MF) const {
-  // The Linux kernel uses $28 and sp.
-  if (Subtarget.isGP64bit()) {
-    Register Reg = StringSwitch<Register>(RegName)
-                       .Case("$28", Mips::GP_64)
-                       .Case("sp", Mips::SP_64)
-                       .Default(Register());
-    return Reg;
+  // 1. Delete symbol '$'.
+  std::string newRegName = RegName;
+  if (StringRef(RegName).starts_with("$"))
+    newRegName = StringRef(RegName).substr(1);
+
+  // 2. Get register index value.
+  std::smatch matchResult;
+  int regIdx;
+  static const std::regex matchStr("^[0-9]*$");
+  if (std::regex_match(newRegName, matchResult, matchStr))
+    regIdx = std::stoi(newRegName);
+  else {
+    newRegName = StringRef(newRegName).lower();
+    regIdx = getCPURegisterIndex(StringRef(newRegName));
   }
 
-  Register Reg = StringSwitch<Register>(RegName)
-                     .Case("$28", Mips::GP)
-                     .Case("sp", Mips::SP)
-                     .Default(Register());
-  return Reg;
+  // 3. Get register.
+  if (regIdx >= 0 && regIdx < 32) {
+    const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
+    const MCRegisterClass &RC = Subtarget.isGP64bit()
+                                    ? MRI->getRegClass(Mips::GPR64RegClassID)
+                                    : MRI->getRegClass(Mips::GPR32RegClassID);
+    return RC.getRegister(regIdx);
+  }
+
+  report_fatal_error(
+      Twine("Invalid register name \"" + StringRef(RegName) + "\"."));
 }
 
 MachineBasicBlock *MipsTargetLowering::emitLDR_W(MachineInstr &MI,

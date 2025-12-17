@@ -42,7 +42,7 @@ define amdgpu_kernel void @private_last_use_load_1(ptr addrspace(5) %in, ptr add
 ; GFX12-NEXT:    s_mov_b32 s3, 0x3ff
 ; GFX12-NEXT:    v_and_b32_e64 v1, v1, s3
 ; GFX12-NEXT:    s_mov_b32 s3, 2
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_lshlrev_b32_e64 v1, s3, v1
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    scratch_load_b32 v1, v1, s2 th:TH_LOAD_LU
