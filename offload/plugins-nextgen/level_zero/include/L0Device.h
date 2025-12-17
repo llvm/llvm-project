@@ -416,7 +416,7 @@ public:
   uint32_t getMainCopyEngine() const { return CopyOrdinal.first; }
 
   bool deviceRequiresImmCmdList() const {
-    constexpr uint32_t BMGIP = 0x05003000;
+    constexpr uint32_t BMGIP = 0x05004000;
     return isDeviceIPorNewer(BMGIP);
   }
   bool asyncEnabled() const { return IsAsyncEnabled; }
