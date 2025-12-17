@@ -303,15 +303,20 @@ void Filler::insertCallDefsUses(MachineBasicBlock::iterator MI,
                                 SmallSet<unsigned, 32>& RegDefs,
                                 SmallSet<unsigned, 32>& RegUses)
 {
-  // Call defines o7, which is visible to the instruction in delay slot.
-  RegDefs.insert(SP::O7);
-
+  // Regular calls define o7, which is visible to the instruction in delay slot.
+  // On the other hand, tail calls preserve it.
   switch(MI->getOpcode()) {
   default: llvm_unreachable("Unknown opcode.");
   case SP::CALL:
+    RegDefs.insert(SP::O7);
+    break;
+  case SP::TAIL_CALL:
     break;
   case SP::CALLrr:
   case SP::CALLri:
+    RegDefs.insert(SP::O7);
+    [[fallthrough]];
+  case SP::TAIL_CALLri:
     assert(MI->getNumOperands() >= 2);
     const MachineOperand &Reg = MI->getOperand(0);
     assert(Reg.isReg() && "CALL first operand is not a register.");
@@ -406,10 +411,7 @@ static bool combineRestoreADD(MachineBasicBlock &MBB,
   // Check whether it uses %o7 as its source and the corresponding branch
   // instruction is a call.
   MachineBasicBlock::iterator LastInst = MBB.getFirstTerminator();
-  unsigned CallOpc = LastInst->getOpcode();
-  bool IsCall = LastInst != MBB.end() &&
-                (LastInst->isCall() || CallOpc == SP::TAIL_CALL ||
-                 CallOpc == SP::TAIL_CALLri);
+  bool IsCall = LastInst != MBB.end() && LastInst->isCall();
 
   if (IsCall && AddMI->getOpcode() == SP::ADDrr &&
       (AddMI->getOperand(1).getReg() == SP::O7 ||
@@ -462,10 +464,7 @@ static bool combineRestoreOR(MachineBasicBlock &MBB,
   // Check whether it uses %o7 as its source and the corresponding branch
   // instruction is a call.
   MachineBasicBlock::iterator LastInst = MBB.getFirstTerminator();
-  unsigned CallOpc = LastInst->getOpcode();
-  bool IsCall = LastInst != MBB.end() &&
-                (LastInst->isCall() || CallOpc == SP::TAIL_CALL ||
-                 CallOpc == SP::TAIL_CALLri);
+  bool IsCall = LastInst != MBB.end() && LastInst->isCall();
 
   if (IsCall && OrMI->getOpcode() == SP::ORrr &&
       (OrMI->getOperand(1).getReg() == SP::O7 ||
