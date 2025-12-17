@@ -751,7 +751,7 @@ class QCIRVInstEIBase<bits<3> funct3, bits<2> funct2, dag outs,
   let Inst{6-0} = 0b0011111;
 }
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, canFoldAsLoad = 1 in
 class QCIRVInstEILoad<bits<3> funct3, bits<2> funct2, string opcodestr>
     : QCIRVInstEIBase<funct3, funct2, (outs GPR:$rd),
                       (ins GPRMem:$rs1, simm26:$imm), opcodestr,
@@ -834,6 +834,17 @@ class SFBQC_E_LI
                   bare_simm32:$imm), []> {
   let hasSideEffects = 0;
   let mayLoad = 0;
+  let mayStore = 0;
+  let Size = 10;
+  let Constraints = "$dst = $falsev";
+}
+
+class SFBQCLoad
+    : Pseudo<(outs GPR:$dst),
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
+                  simm26:$imm), []> {
+  let hasSideEffects = 0;
+  let mayLoad = 1;
   let mayStore = 0;
   let Size = 10;
   let Constraints = "$dst = $falsev";
@@ -1333,6 +1344,14 @@ def PseudoQC_E_SW : PseudoStore<"qc.e.sw">;
 let Predicates = [HasShortForwardBranchIALU] in {
 def PseudoCCQC_LI : SFBQC_LI;
 def PseudoCCQC_E_LI : SFBQC_E_LI;
+}
+
+let Predicates = [HasShortForwardBranchIQCLoad] in {
+def PseudoCCQCLB : SFBQCLoad;
+def PseudoCCQCLH : SFBQCLoad;
+def PseudoCCQCLW : SFBQCLoad;
+def PseudoCCQCLHU : SFBQCLoad;
+def PseudoCCQCLBU : SFBQCLoad;
 }
 
 //===----------------------------------------------------------------------===//

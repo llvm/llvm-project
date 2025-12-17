@@ -1908,6 +1908,13 @@ def TuneShortForwardBranchIMul
                        [TuneShortForwardBranchIALU]>;
 def HasShortForwardBranchIMul : Predicate<"Subtarget->hasShortForwardBranchIMul()">;
 
+def TuneShortForwardBranchIQCLoad
+    : SubtargetFeature<"short-forward-branch-iqcload", "HasShortForwardBranchIQCLoad",
+                       "true", "Enable short forward branch optimization for QC load instructions",
+                       [TuneShortForwardBranchIALU]>;
+def HasShortForwardBranchIQCLoad : Predicate<"Subtarget->hasShortForwardBranchIQCLoad()">;
+
+
 
 // Some subtargets require a S2V transfer buffer to move scalars into vectors.
 // FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.

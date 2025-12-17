@@ -897,6 +897,71 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
       .addImm(0);
 }
 
+static unsigned getQCLoadPredicatedOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  case RISCV::QC_E_LB:
+    return RISCV::PseudoCCQCLB;
+  case RISCV::QC_E_LBU:
+    return RISCV::PseudoCCQCLBU;
+  case RISCV::QC_E_LH:
+    return RISCV::PseudoCCQCLH;
+  case RISCV::QC_E_LHU:
+    return RISCV::PseudoCCQCLHU;
+  case RISCV::QC_E_LW:
+    return RISCV::PseudoCCQCLW;
+  default:
+    return 0;
+  }
+}
+
+MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
+    MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
+    MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
+    LiveIntervals *LIS) const {
+  // For now, only handle RISCV::PseudoCCMOVGPR.
+  if (MI.getOpcode() != RISCV::PseudoCCMOVGPR)
+    return nullptr;
+
+  unsigned PredOpc = getQCLoadPredicatedOpcode(LoadMI.getOpcode());
+
+  if (!STI.hasShortForwardBranchIQCLoad() || !PredOpc)
+    return nullptr;
+
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  if (Ops.size() != 1 || (Ops[0] != 4 && Ops[0] != 5))
+    return nullptr;
+
+  bool Invert = Ops[0] == 5;
+  const MachineOperand &FalseReg = MI.getOperand(!Invert ? 5 : 4);
+  Register DestReg = MI.getOperand(0).getReg();
+  const TargetRegisterClass *PreviousClass = MRI.getRegClass(FalseReg.getReg());
+  if (!MRI.constrainRegClass(DestReg, PreviousClass))
+    return nullptr;
+
+  // Create a new predicated version of DefMI.
+  MachineInstrBuilder NewMI = BuildMI(*MI.getParent(), InsertPt,
+                                      MI.getDebugLoc(), get(PredOpc), DestReg)
+                                  .add({MI.getOperand(1), MI.getOperand(2)});
+
+  // Add condition code, inverting if necessary.
+  auto CC = static_cast<RISCVCC::CondCode>(MI.getOperand(3).getImm());
+  if (!Invert)
+    CC = RISCVCC::getInverseBranchCondition(CC);
+  NewMI.addImm(CC);
+
+  // Copy the false register.
+  NewMI.add(FalseReg);
+
+  // Copy all the DefMI operands.
+  const MCInstrDesc &DefDesc = LoadMI.getDesc();
+  for (unsigned i = 1, e = DefDesc.getNumOperands(); i != e; ++i)
+    NewMI.add(LoadMI.getOperand(i));
+
+  NewMI.cloneMemRefs(LoadMI);
+  return NewMI;
+}
+
+
 void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI,
                             const DebugLoc &DL, Register DstReg, uint64_t Val,
