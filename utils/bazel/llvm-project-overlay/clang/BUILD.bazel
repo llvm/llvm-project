@@ -1019,7 +1019,6 @@ cc_library(
         ":format",
         ":lex",
         ":support",
-        ":tooling_core",
         "//llvm:Support",
     ],
 )
