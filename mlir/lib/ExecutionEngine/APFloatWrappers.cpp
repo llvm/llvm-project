@@ -20,6 +20,7 @@
 // APFloatBase::Semantics enum value.
 //
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APSInt.h"
 
 #ifdef _WIN32
 #ifndef MLIR_APFLOAT_WRAPPERS_EXPORT
@@ -51,7 +52,7 @@
 
 /// Binary operations with rounding mode.
 #define APFLOAT_BINARY_OP_ROUNDING_MODE(OP, ROUNDING_MODE)                     \
-  MLIR_APFLOAT_WRAPPERS_EXPORT int64_t _mlir_apfloat_##OP(                     \
+  MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t _mlir_apfloat_##OP(                    \
       int32_t semantics, uint64_t a, uint64_t b) {                             \
     const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(        \
         static_cast<llvm::APFloatBase::Semantics>(semantics));                 \
@@ -86,4 +87,88 @@ MLIR_APFLOAT_WRAPPERS_EXPORT void printApFloat(int32_t semantics, uint64_t a) {
   double d = x.convertToDouble();
   fprintf(stdout, "%lg", d);
 }
+
+MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t
+_mlir_apfloat_convert(int32_t inSemantics, int32_t outSemantics, uint64_t a) {
+  const llvm::fltSemantics &inSem = llvm::APFloatBase::EnumToSemantics(
+      static_cast<llvm::APFloatBase::Semantics>(inSemantics));
+  const llvm::fltSemantics &outSem = llvm::APFloatBase::EnumToSemantics(
+      static_cast<llvm::APFloatBase::Semantics>(outSemantics));
+  unsigned bitWidthIn = llvm::APFloatBase::semanticsSizeInBits(inSem);
+  llvm::APFloat val(inSem, llvm::APInt(bitWidthIn, a));
+  // TODO: Custom rounding modes are not supported yet.
+  bool losesInfo;
+  val.convert(outSem, llvm::RoundingMode::NearestTiesToEven, &losesInfo);
+  llvm::APInt result = val.bitcastToAPInt();
+  return result.getZExtValue();
+}
+
+MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t _mlir_apfloat_convert_to_int(
+    int32_t semantics, int32_t resultWidth, bool isUnsigned, uint64_t a) {
+  const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(
+      static_cast<llvm::APFloatBase::Semantics>(semantics));
+  unsigned inputWidth = llvm::APFloatBase::semanticsSizeInBits(sem);
+  llvm::APFloat val(sem, llvm::APInt(inputWidth, a));
+  llvm::APSInt result(resultWidth, isUnsigned);
+  bool isExact;
+  // TODO: Custom rounding modes are not supported yet.
+  val.convertToInteger(result, llvm::RoundingMode::NearestTiesToEven, &isExact);
+  // This function always returns uint64_t, regardless of the desired result
+  // width. It does not matter whether we zero-extend or sign-extend the APSInt
+  // to 64 bits because the generated IR in arith-to-apfloat will truncate the
+  // result to the desired result width.
+  return result.getZExtValue();
+}
+
+MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t _mlir_apfloat_convert_from_int(
+    int32_t semantics, int32_t inputWidth, bool isUnsigned, uint64_t a) {
+  llvm::APInt val(inputWidth, a, /*isSigned=*/!isUnsigned);
+  const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(
+      static_cast<llvm::APFloatBase::Semantics>(semantics));
+  llvm::APFloat result(sem);
+  // TODO: Custom rounding modes are not supported yet.
+  result.convertFromAPInt(val, /*IsSigned=*/!isUnsigned,
+                          llvm::RoundingMode::NearestTiesToEven);
+  return result.bitcastToAPInt().getZExtValue();
+}
+
+MLIR_APFLOAT_WRAPPERS_EXPORT int8_t _mlir_apfloat_compare(int32_t semantics,
+                                                          uint64_t a,
+                                                          uint64_t b) {
+  const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(
+      static_cast<llvm::APFloatBase::Semantics>(semantics));
+  unsigned bitWidth = llvm::APFloatBase::semanticsSizeInBits(sem);
+  llvm::APFloat x(sem, llvm::APInt(bitWidth, a));
+  llvm::APFloat y(sem, llvm::APInt(bitWidth, b));
+  return static_cast<int8_t>(x.compare(y));
+}
+
+MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t _mlir_apfloat_neg(int32_t semantics, uint64_t a) {
+  const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(
+      static_cast<llvm::APFloatBase::Semantics>(semantics));
+  unsigned bitWidth = llvm::APFloatBase::semanticsSizeInBits(sem);
+  llvm::APFloat x(sem, llvm::APInt(bitWidth, a));
+  x.changeSign();
+  return x.bitcastToAPInt().getZExtValue();
+}
+
+/// Min/max operations.
+#define APFLOAT_MIN_MAX_OP(OP)                                                 \
+  MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t _mlir_apfloat_##OP(                    \
+      int32_t semantics, uint64_t a, uint64_t b) {                             \
+    const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(        \
+        static_cast<llvm::APFloatBase::Semantics>(semantics));                 \
+    unsigned bitWidth = llvm::APFloatBase::semanticsSizeInBits(sem);           \
+    llvm::APFloat lhs(sem, llvm::APInt(bitWidth, a));                          \
+    llvm::APFloat rhs(sem, llvm::APInt(bitWidth, b));                          \
+    llvm::APFloat result = llvm::OP(lhs, rhs);                                 \
+    return result.bitcastToAPInt().getZExtValue();                             \
+  }
+
+APFLOAT_MIN_MAX_OP(minimum)
+APFLOAT_MIN_MAX_OP(maximum)
+APFLOAT_MIN_MAX_OP(minnum)
+APFLOAT_MIN_MAX_OP(maxnum)
+
+#undef APFLOAT_MIN_MAX_OP
 }

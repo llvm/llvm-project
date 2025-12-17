@@ -1672,13 +1672,21 @@ multiclass FMA_INST {
     FMA_TUPLE<"_rp_f64", int_nvvm_fma_rp_d, B64>,
 
     FMA_TUPLE<"_rn_ftz_f32", int_nvvm_fma_rn_ftz_f, B32>,
+    FMA_TUPLE<"_rn_ftz_sat_f32", int_nvvm_fma_rn_ftz_sat_f, B32>,
     FMA_TUPLE<"_rn_f32", int_nvvm_fma_rn_f, B32>,
+    FMA_TUPLE<"_rn_sat_f32", int_nvvm_fma_rn_sat_f, B32>,
     FMA_TUPLE<"_rz_ftz_f32", int_nvvm_fma_rz_ftz_f, B32>,
+    FMA_TUPLE<"_rz_ftz_sat_f32", int_nvvm_fma_rz_ftz_sat_f, B32>,
     FMA_TUPLE<"_rz_f32", int_nvvm_fma_rz_f, B32>,
+    FMA_TUPLE<"_rz_sat_f32", int_nvvm_fma_rz_sat_f, B32>,
     FMA_TUPLE<"_rm_f32", int_nvvm_fma_rm_f, B32>,
+    FMA_TUPLE<"_rm_sat_f32", int_nvvm_fma_rm_sat_f, B32>,
     FMA_TUPLE<"_rm_ftz_f32", int_nvvm_fma_rm_ftz_f, B32>,
+    FMA_TUPLE<"_rm_ftz_sat_f32", int_nvvm_fma_rm_ftz_sat_f, B32>,
     FMA_TUPLE<"_rp_f32", int_nvvm_fma_rp_f, B32>,
+    FMA_TUPLE<"_rp_sat_f32", int_nvvm_fma_rp_sat_f, B32>,
     FMA_TUPLE<"_rp_ftz_f32", int_nvvm_fma_rp_ftz_f, B32>,
+    FMA_TUPLE<"_rp_ftz_sat_f32", int_nvvm_fma_rp_ftz_sat_f, B32>,
 
     FMA_TUPLE<"_rn_f16", int_nvvm_fma_rn_f16, B16, [hasPTX<42>, hasSM<53>]>,
     FMA_TUPLE<"_rn_ftz_f16", int_nvvm_fma_rn_ftz_f16, B16,
@@ -1728,6 +1736,32 @@ multiclass FMA_INST {
 }
 
 defm INT_NVVM_FMA : FMA_INST;
+
+foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
+  foreach sat = ["", "_sat"] in {
+    foreach type = [f16, bf16] in {
+      def INT_NVVM_MIXED_FMA # rnd # sat # _f32_ # type : 
+        BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B16:$b, B32:$c),
+          !subst("_", ".", "fma" # rnd # sat # "_f32_" # type),
+          [(set f32:$dst, 
+           (!cast<Intrinsic>("int_nvvm_fma" # rnd # sat # "_f") 
+             (f32 (fpextend type:$a)),
+             (f32 (fpextend type:$b)),
+             f32:$c))]>,
+        Requires<[hasSM<100>, hasPTX<86>]>;
+    }
+  }
+}
+
+// Pattern for llvm.fma.f32 intrinsic when there is no FTZ flag
+let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
+  def : Pat<(f32 (fma (f32 (fpextend f16:$a)),
+                      (f32 (fpextend f16:$b)), f32:$c)),
+            (INT_NVVM_MIXED_FMA_rn_f32_f16 B16:$a, B16:$b, B32:$c)>;
+  def : Pat<(f32 (fma (f32 (fpextend bf16:$a)), 
+                      (f32 (fpextend bf16:$b)), f32:$c)),
+            (INT_NVVM_MIXED_FMA_rn_f32_bf16 B16:$a, B16:$b, B32:$c)>;
+}
 
 //
 // Rcp
@@ -1828,18 +1862,94 @@ let Predicates = [doRsqrtOpt] in {
 //
 
 def INT_NVVM_ADD_RN_FTZ_F : F_MATH_2<"add.rn.ftz.f32", B32, B32, B32, int_nvvm_add_rn_ftz_f>;
+def INT_NVVM_ADD_RN_SAT_FTZ_F : F_MATH_2<"add.rn.sat.ftz.f32", B32, B32, B32, int_nvvm_add_rn_ftz_sat_f>;
 def INT_NVVM_ADD_RN_F : F_MATH_2<"add.rn.f32", B32, B32, B32, int_nvvm_add_rn_f>;
+def INT_NVVM_ADD_RN_SAT_F : F_MATH_2<"add.rn.sat.f32", B32, B32, B32, int_nvvm_add_rn_sat_f>;
 def INT_NVVM_ADD_RZ_FTZ_F : F_MATH_2<"add.rz.ftz.f32", B32, B32, B32, int_nvvm_add_rz_ftz_f>;
+def INT_NVVM_ADD_RZ_SAT_FTZ_F : F_MATH_2<"add.rz.sat.ftz.f32", B32, B32, B32, int_nvvm_add_rz_ftz_sat_f>;
 def INT_NVVM_ADD_RZ_F : F_MATH_2<"add.rz.f32", B32, B32, B32, int_nvvm_add_rz_f>;
+def INT_NVVM_ADD_RZ_SAT_F : F_MATH_2<"add.rz.sat.f32", B32, B32, B32, int_nvvm_add_rz_sat_f>;
 def INT_NVVM_ADD_RM_FTZ_F : F_MATH_2<"add.rm.ftz.f32", B32, B32, B32, int_nvvm_add_rm_ftz_f>;
+def INT_NVVM_ADD_RM_SAT_FTZ_F : F_MATH_2<"add.rm.sat.ftz.f32", B32, B32, B32, int_nvvm_add_rm_ftz_sat_f>;
 def INT_NVVM_ADD_RM_F : F_MATH_2<"add.rm.f32", B32, B32, B32, int_nvvm_add_rm_f>;
+def INT_NVVM_ADD_RM_SAT_F : F_MATH_2<"add.rm.sat.f32", B32, B32, B32, int_nvvm_add_rm_sat_f>;
 def INT_NVVM_ADD_RP_FTZ_F : F_MATH_2<"add.rp.ftz.f32", B32, B32, B32, int_nvvm_add_rp_ftz_f>;
+def INT_NVVM_ADD_RP_SAT_FTZ_F : F_MATH_2<"add.rp.sat.ftz.f32", B32, B32, B32, int_nvvm_add_rp_ftz_sat_f>;
 def INT_NVVM_ADD_RP_F : F_MATH_2<"add.rp.f32", B32, B32, B32, int_nvvm_add_rp_f>;
+def INT_NVVM_ADD_RP_SAT_F : F_MATH_2<"add.rp.sat.f32", B32, B32, B32, int_nvvm_add_rp_sat_f>;
 
 def INT_NVVM_ADD_RN_D : F_MATH_2<"add.rn.f64", B64, B64, B64, int_nvvm_add_rn_d>;
 def INT_NVVM_ADD_RZ_D : F_MATH_2<"add.rz.f64", B64, B64, B64, int_nvvm_add_rz_d>;
 def INT_NVVM_ADD_RM_D : F_MATH_2<"add.rm.f64", B64, B64, B64, int_nvvm_add_rm_d>;
 def INT_NVVM_ADD_RP_D : F_MATH_2<"add.rp.f64", B64, B64, B64, int_nvvm_add_rp_d>;
+
+foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
+  foreach sat = ["", "_sat"] in {
+    foreach type = [f16, bf16] in {
+      def INT_NVVM_MIXED_ADD # rnd # sat # _f32_ # type : 
+        BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B32:$b),
+          !subst("_", ".", "add" # rnd # sat # "_f32_" # type),
+          [(set f32:$dst, 
+           (!cast<Intrinsic>("int_nvvm_add" # rnd # sat # "_f") 
+             (f32 (fpextend type:$a)),
+             f32:$b))]>,
+        Requires<[hasSM<100>, hasPTX<86>]>;
+    }
+  }
+}
+
+// Pattern for fadd when there is no FTZ flag
+let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
+  def : Pat<(f32 (fadd (f32 (fpextend f16:$a)), f32:$b)),
+            (INT_NVVM_MIXED_ADD_rn_f32_f16 B16:$a, B32:$b)>;
+  def : Pat<(f32 (fadd (f32 (fpextend bf16:$a)), f32:$b)),
+            (INT_NVVM_MIXED_ADD_rn_f32_bf16 B16:$a, B32:$b)>;
+}
+
+//
+// Sub
+//
+
+foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
+  foreach ftz = ["", "_ftz"] in {
+    foreach sat = ["", "_sat"] in {
+      defvar add_intrin = !cast<Intrinsic>("int_nvvm_add" # rnd # ftz # sat # "_f");
+      def INT_NVVM_SUB # rnd # ftz # sat # _F : 
+        BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
+          !subst("_", ".", "sub" # rnd # sat # ftz # "_f32"),
+          [(set f32:$dst, (add_intrin f32:$a, (f32 (fneg f32:$b))))]>;
+    }
+  }
+  
+  defvar add_intrin = !cast<Intrinsic>("int_nvvm_add" # rnd # "_d");
+  def INT_NVVM_SUB # rnd # _D : 
+    BasicNVPTXInst<(outs B64:$dst), (ins B64:$a, B64:$b),
+      !subst("_", ".", "sub" # rnd # "_f64"),
+      [(set f64:$dst, (add_intrin f64:$a, (f64 (fneg f64:$b))))]>;
+}
+
+foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
+  foreach sat = ["", "_sat"] in {
+    foreach type = [f16, bf16] in {
+      def INT_NVVM_MIXED_SUB # rnd # sat # _f32_ # type : 
+        BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B32:$b),
+          !subst("_", ".", "sub" # rnd # sat # "_f32_" # type),
+          [(set f32:$dst, 
+           (!cast<Intrinsic>("int_nvvm_add" # rnd # sat # "_f") 
+             (f32 (fpextend type:$a)),
+             (f32 (fneg f32:$b))))]>,
+        Requires<[hasSM<100>, hasPTX<86>]>;
+    }
+  }
+}
+
+// Pattern for fsub when there is no FTZ flag
+let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
+  def : Pat<(f32 (fsub (f32 (fpextend f16:$a)), f32:$b)),
+            (INT_NVVM_MIXED_SUB_rn_f32_f16 B16:$a, B32:$b)>;
+  def : Pat<(f32 (fsub (f32 (fpextend bf16:$a)), f32:$b)),
+            (INT_NVVM_MIXED_SUB_rn_f32_bf16 B16:$a, B32:$b)>;
+}
 
 //
 // BFIND
@@ -2552,7 +2662,10 @@ def LDU_GLOBAL_v4i32 : VLDU_G_ELE_V4<B32>;
 // during the lifetime of the kernel.
 
 class LDG_G<NVPTXRegClass regclass>
-  : NVPTXInst<(outs regclass:$result), (ins AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$src),
+  : NVPTXInst<(outs regclass:$result),
+              (ins AtomicCode:$Sign, i32imm:$fromWidth,
+                   UsedBytesMask:$usedBytes, ADDR:$src),
+               "${usedBytes}"
                "ld.global.nc.${Sign:sign}$fromWidth \t$result, [$src];">;
 
 def LD_GLOBAL_NC_i16 : LDG_G<B16>;
@@ -2564,19 +2677,25 @@ def LD_GLOBAL_NC_i64 : LDG_G<B64>;
 // Elementized vector ldg
 class VLDG_G_ELE_V2<NVPTXRegClass regclass> :
   NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-            (ins AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$src),
+            (ins AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
+             ADDR:$src),
+            "${usedBytes}"
             "ld.global.nc.v2.${Sign:sign}$fromWidth \t{{$dst1, $dst2}}, [$src];">;
 
 
 class VLDG_G_ELE_V4<NVPTXRegClass regclass> :
   NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4), 
-            (ins AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$src),
+            (ins AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
+             ADDR:$src),
+            "${usedBytes}"
             "ld.global.nc.v4.${Sign:sign}$fromWidth \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];">;
 
 class VLDG_G_ELE_V8<NVPTXRegClass regclass> :
   NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4,
                   regclass:$dst5, regclass:$dst6, regclass:$dst7, regclass:$dst8),
-             (ins AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$src),
+            (ins AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
+             ADDR:$src),
+            "${usedBytes}"
              "ld.global.nc.v8.${Sign:sign}$fromWidth \t{{$dst1, $dst2, $dst3, $dst4, $dst5, $dst6, $dst7, $dst8}}, [$src];">;
 
 // FIXME: 8-bit LDG should be fixed once LDG/LDU nodes are made into proper loads.
@@ -6113,3 +6232,4 @@ foreach sp = [0, 1] in {
     }
   }
 }
+

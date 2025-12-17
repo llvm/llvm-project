@@ -29,7 +29,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -74,11 +73,38 @@ class FRemExpander {
   /// Constant 1 of type \p ExTy.
   Value *One;
 
+  /// The frem argument/return types that can be expanded by this class.
+  // TODO: The expansion could work for other floating point types
+  // as well, but this would require additional testing.
+  static constexpr std::array<MVT, 3> ExpandableTypes{MVT::f16, MVT::f32,
+                                                      MVT::f64};
+
 public:
   static bool canExpandType(Type *Ty) {
-    // TODO The expansion should work for other floating point types
-    // as well, but this would require additional testing.
-    return Ty->isIEEELikeFPTy() && !Ty->isBFloatTy() && !Ty->isFP128Ty();
+    EVT VT = EVT::getEVT(Ty);
+    assert(VT.isSimple() && "Can expand only simple types");
+
+    return is_contained(ExpandableTypes, VT.getSimpleVT());
+  }
+
+  static bool shouldExpandFremType(const TargetLowering &TLI, EVT VT) {
+    assert(!VT.isVector() && "Cannot handle vector type; must scalarize first");
+    return TLI.getOperationAction(ISD::FREM, VT) ==
+           TargetLowering::LegalizeAction::Expand;
+  }
+
+  static bool shouldExpandFremType(const TargetLowering &TLI, Type *Ty) {
+    // Consider scalar type for simplicity.  It seems unlikely that a
+    // vector type can be legalized without expansion if the scalar
+    // type cannot.
+    return shouldExpandFremType(TLI, EVT::getEVT(Ty->getScalarType()));
+  }
+
+  /// Return true if the pass should expand frem instructions of any type
+  /// for the target represented by \p TLI.
+  static bool shouldExpandAnyFremType(const TargetLowering &TLI) {
+    return any_of(ExpandableTypes,
+                  [&](MVT V) { return shouldExpandFremType(TLI, EVT(V)); });
   }
 
   static FRemExpander create(IRBuilder<> &B, Type *Ty) {
@@ -811,7 +837,7 @@ static void expandIToFP(Instruction *IToFP) {
   Value *Sub24 = Builder.CreateAdd(
       FloatWidth == 128 ? Call : Cast,
       ConstantInt::getSigned(Builder.getIntNTy(BitWidthNew),
-                             -(BitWidth - FPMantissaWidth - 1)));
+                             -(int)(BitWidth - FPMantissaWidth - 1)));
   Value *ShProm25 = Builder.CreateZExt(Sub24, IntTy);
   Value *Shl26 = Builder.CreateShl(IsSigned ? Sub : IntVal,
                                    FloatWidth == 128 ? Sub24 : ShProm25);
@@ -853,7 +879,7 @@ static void expandIToFP(Instruction *IToFP) {
   } else {
     Value *Conv28 = Builder.CreateTrunc(Shr, Builder.getInt32Ty());
     And29 = Builder.CreateAnd(
-        Conv28, ConstantInt::getSigned(Builder.getInt32Ty(), 0x80000000));
+        Conv28, ConstantInt::get(Builder.getContext(), APInt::getSignMask(32)));
   }
   unsigned TempMod = FPMantissaWidth % 32;
   Value *And34 = nullptr;
@@ -952,36 +978,6 @@ static void scalarize(Instruction *I,
   I->eraseFromParent();
 }
 
-// This covers all floating point types; more than we need here.
-// TODO Move somewhere else for general use?
-/// Return the Libcall for a frem instruction of
-/// type \p Ty.
-static RTLIB::Libcall fremToLibcall(Type *Ty) {
-  assert(Ty->isFloatingPointTy());
-  if (Ty->isFloatTy() || Ty->is16bitFPTy())
-    return RTLIB::REM_F32;
-  if (Ty->isDoubleTy())
-    return RTLIB::REM_F64;
-  if (Ty->isFP128Ty())
-    return RTLIB::REM_F128;
-  if (Ty->isX86_FP80Ty())
-    return RTLIB::REM_F80;
-  if (Ty->isPPC_FP128Ty())
-    return RTLIB::REM_PPCF128;
-
-  llvm_unreachable("Unknown floating point type");
-}
-
-/* Return true if, according to \p LibInfo, the target either directly
-   supports the frem instruction for the \p Ty, has a custom lowering,
-   or uses a libcall. */
-static bool targetSupportsFrem(const TargetLowering &TLI, Type *Ty) {
-  if (!TLI.isOperationExpand(ISD::FREM, EVT::getEVT(Ty)))
-    return true;
-
-  return TLI.getLibcallName(fremToLibcall(Ty->getScalarType()));
-}
-
 static void addToWorklist(Instruction &I,
                           SmallVector<Instruction *, 4> &Worklist) {
   if (I.getOperand(0)->getType()->isVectorTy())
@@ -991,7 +987,7 @@ static void addToWorklist(Instruction &I,
 }
 
 static bool runImpl(Function &F, const TargetLowering &TLI,
-                    AssumptionCache *AC) {
+                    const LibcallLoweringInfo &Libcalls, AssumptionCache *AC) {
   SmallVector<Instruction *, 4> Worklist;
 
   unsigned MaxLegalFpConvertBitWidth =
@@ -999,7 +995,11 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
   if (ExpandFpConvertBits != llvm::IntegerType::MAX_INT_BITS)
     MaxLegalFpConvertBitWidth = ExpandFpConvertBits;
 
-  if (MaxLegalFpConvertBitWidth >= llvm::IntegerType::MAX_INT_BITS)
+  bool DisableExpandLargeFp =
+      MaxLegalFpConvertBitWidth >= llvm::IntegerType::MAX_INT_BITS;
+  bool DisableFrem = !FRemExpander::shouldExpandAnyFremType(TLI);
+
+  if (DisableExpandLargeFp && DisableFrem)
     return false;
 
   auto ShouldHandleInst = [&](Instruction &I) {
@@ -1010,21 +1010,17 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
 
     switch (I.getOpcode()) {
     case Instruction::FRem:
-      return !targetSupportsFrem(TLI, Ty) &&
-             FRemExpander::canExpandType(Ty->getScalarType());
-
+      return !DisableFrem && FRemExpander::shouldExpandFremType(TLI, Ty);
     case Instruction::FPToUI:
-    case Instruction::FPToSI: {
-      auto *IntTy = cast<IntegerType>(Ty->getScalarType());
-      return IntTy->getIntegerBitWidth() > MaxLegalFpConvertBitWidth;
-    }
-
+    case Instruction::FPToSI:
+      return !DisableExpandLargeFp &&
+             cast<IntegerType>(Ty->getScalarType())->getIntegerBitWidth() >
+                 MaxLegalFpConvertBitWidth;
     case Instruction::UIToFP:
-    case Instruction::SIToFP: {
-      auto *IntTy =
-          cast<IntegerType>(I.getOperand(0)->getType()->getScalarType());
-      return IntTy->getIntegerBitWidth() > MaxLegalFpConvertBitWidth;
-    }
+    case Instruction::SIToFP:
+      return !DisableExpandLargeFp &&
+             cast<IntegerType>(I.getOperand(0)->getType()->getScalarType())
+                     ->getIntegerBitWidth() > MaxLegalFpConvertBitWidth;
     }
 
     return false;
@@ -1090,20 +1086,27 @@ public:
 
   bool runOnFunction(Function &F) override {
     auto *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-    auto *TLI = TM->getSubtargetImpl(F)->getTargetLowering();
+    const TargetSubtargetInfo *Subtarget = TM->getSubtargetImpl(F);
+    auto *TLI = Subtarget->getTargetLowering();
     AssumptionCache *AC = nullptr;
+
+    const LibcallLoweringInfo &Libcalls =
+        getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
+            *Subtarget);
 
     if (OptLevel != CodeGenOptLevel::None && !F.hasOptNone())
       AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    return runImpl(F, *TLI, AC);
+    return runImpl(F, *TLI, Libcalls, AC);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<LibcallLoweringInfoWrapper>();
     AU.addRequired<TargetPassConfig>();
     if (OptLevel != CodeGenOptLevel::None)
       AU.addRequired<AssumptionCacheTracker>();
     AU.addPreserved<AAResultsWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
+    AU.addRequired<LibcallLoweringInfoWrapper>();
   }
 };
 } // namespace
@@ -1126,13 +1129,29 @@ PreservedAnalyses ExpandFpPass::run(Function &F, FunctionAnalysisManager &FAM) {
   AssumptionCache *AC = nullptr;
   if (OptLevel != CodeGenOptLevel::None)
     AC = &FAM.getResult<AssumptionAnalysis>(F);
-  return runImpl(F, TLI, AC) ? PreservedAnalyses::none()
-                             : PreservedAnalyses::all();
+
+  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+
+  const LibcallLoweringModuleAnalysisResult *LibcallLowering =
+      MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(*F.getParent());
+
+  if (!LibcallLowering) {
+    F.getContext().emitError("'" + LibcallLoweringModuleAnalysis::name() +
+                             "' analysis required");
+    return PreservedAnalyses::all();
+  }
+
+  const LibcallLoweringInfo &Libcalls =
+      LibcallLowering->getLibcallLowering(*STI);
+
+  return runImpl(F, TLI, Libcalls, AC) ? PreservedAnalyses::none()
+                                       : PreservedAnalyses::all();
 }
 
 char ExpandFpLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ExpandFpLegacyPass, "expand-fp",
                       "Expand certain fp instructions", false, false)
+INITIALIZE_PASS_DEPENDENCY(LibcallLoweringInfoWrapper)
 INITIALIZE_PASS_END(ExpandFpLegacyPass, "expand-fp", "Expand fp", false, false)
 
 FunctionPass *llvm::createExpandFpPass(CodeGenOptLevel OptLevel) {

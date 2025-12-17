@@ -452,13 +452,6 @@ Expected<DataRecordHandle> DataRecordHandle::createWithError(
     return Mem.takeError();
 }
 
-DataRecordHandle
-DataRecordHandle::create(function_ref<char *(size_t Size)> Alloc,
-                         const Input &I) {
-  Layout L(I);
-  return constructImpl(Alloc(L.getTotalSize()), I, L);
-}
-
 ObjectHandle ObjectHandle::fromFileOffset(FileOffset Offset) {
   // Store the file offset as it is.
   assert(!(Offset.get() & 0x1));
@@ -619,10 +612,6 @@ bool TrieRecord::compare_exchange_strong(Data &Existing, Data New) {
     return true;
   Existing = unpack(ExistingPacked);
   return false;
-}
-
-DataRecordHandle DataRecordHandle::construct(char *Mem, const Input &I) {
-  return constructImpl(Mem, I, Layout(I));
 }
 
 Expected<DataRecordHandle>
@@ -1120,10 +1109,11 @@ ObjectID OnDiskGraphDB::getExternalReference(const IndexProxy &I) {
 }
 
 std::optional<ObjectID>
-OnDiskGraphDB::getExistingReference(ArrayRef<uint8_t> Digest) {
+OnDiskGraphDB::getExistingReference(ArrayRef<uint8_t> Digest,
+                                    bool CheckUpstream) {
   auto tryUpstream =
       [&](std::optional<IndexProxy> I) -> std::optional<ObjectID> {
-    if (!UpstreamDB)
+    if (!CheckUpstream || !UpstreamDB)
       return std::nullopt;
     std::optional<ObjectID> UpstreamID =
         UpstreamDB->getExistingReference(Digest);

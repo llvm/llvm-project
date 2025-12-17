@@ -235,3 +235,13 @@ void testRedundantDependentNTTPCasting() {
   // CHECK-MESSAGES: :[[@LINE-4]]:25: note: source type originates from referencing this non-type template parameter
   // CHECK-FIXES: T a = V;
 }
+
+namespace gh170476 {
+int f(void);
+int g1() {
+  int (*fp)() = (int(*)(void))&f;
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: redundant explicit casting to the same type 'int (*)()' as the sub-expression, remove this casting [readability-redundant-casting]
+  // CHECK-FIXES: int (*fp)() = (&f);
+  return fp();
+}
+} // namespace gh170476

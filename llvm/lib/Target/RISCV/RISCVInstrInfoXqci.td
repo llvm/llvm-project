@@ -62,7 +62,7 @@ def UImm5Plus1AsmOperand : AsmOperandClass {
 }
 
 def uimm5_plus1 : RISCVOp, ImmLeaf<XLenVT,
-  [{return (isUInt<5>(Imm) && (Imm != 0)) || (Imm == 32);}]> {
+  [{return Imm >= 1 && Imm <= 32;}]> {
   let ParserMatchClass = UImm5Plus1AsmOperand;
   let EncoderMethod = "getImmOpValueMinus1";
   let DecoderMethod = "decodeUImmPlus1Operand<5>";
@@ -71,12 +71,12 @@ def uimm5_plus1 : RISCVOp, ImmLeaf<XLenVT,
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
-    return (isUInt<5>(Imm) && (Imm != 0)) || (Imm == 32);
+    return Imm >= 1 && Imm <= 32;
   }];
 }
 
 def uimm5ge6_plus1 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
-  [{return (Imm >= 6) && (isUInt<5>(Imm) || (Imm == 32));}]> {
+  [{return Imm >= 6 && Imm <= 32;}]> {
   let ParserMatchClass = UImmAsmOperand<5, "GE6Plus1">;
   let EncoderMethod = "getImmOpValueMinus1";
   let DecoderMethod = "decodeUImmPlus1OperandGE<5,6>";
@@ -85,7 +85,7 @@ def uimm5ge6_plus1 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
-    return (Imm >= 6) && (isUInt<5>(Imm) || (Imm == 32));
+    return Imm >= 6 && Imm <= 32;
   }];
 }
 
@@ -1330,7 +1330,7 @@ def PseudoQC_E_SH : PseudoStore<"qc.e.sh">;
 def PseudoQC_E_SW : PseudoStore<"qc.e.sw">;
 } // Predicates = [HasVendorXqcilo, IsRV32]
 
-let Predicates = [HasShortForwardBranchOpt] in {
+let Predicates = [HasShortForwardBranchIALU] in {
 def PseudoCCQC_LI : SFBQC_LI;
 def PseudoCCQC_E_LI : SFBQC_E_LI;
 }
@@ -1571,7 +1571,7 @@ def: Pat<(i32 (ctlz (not (i32 GPR:$rs1)))), (QC_CLO GPR:$rs1)>;
 let Predicates = [HasVendorXqciint, IsRV32] in
 def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;
 
-let Predicates = [HasVendorXqcicm, NoShortForwardBranchOpt, IsRV32] in {
+let Predicates = [HasVendorXqcicm, NoShortForwardBranch, IsRV32] in {
 def : QCIMVCCPat<SETEQ,  QC_MVEQ>;
 def : QCIMVCCPat<SETNE,  QC_MVNE>;
 def : QCIMVCCPat<SETLT,  QC_MVLT>;

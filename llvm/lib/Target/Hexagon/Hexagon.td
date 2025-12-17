@@ -413,6 +413,8 @@ include "HexagonPatternsV65.td"
 include "HexagonDepMappings.td"
 include "HexagonIntrinsics.td"
 
+defm : RemapAllTargetPseudoPointerOperands<IntRegs>;
+
 def HexagonInstrInfo : InstrInfo;
 
 //===----------------------------------------------------------------------===//

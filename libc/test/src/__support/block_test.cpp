@@ -22,14 +22,14 @@ using LIBC_NAMESPACE::cpp::span;
 
 TEST(LlvmLibcBlockTest, CanCreateSingleAlignedBlock) {
   constexpr size_t kN = 1024;
-  alignas(max_align_t) array<byte, kN> bytes;
+  alignas(Block::MIN_ALIGN) array<byte, kN> bytes;
 
   auto result = Block::init(bytes);
   ASSERT_TRUE(result.has_value());
   Block *block = *result;
 
   EXPECT_EQ(reinterpret_cast<uintptr_t>(block) % alignof(Block), size_t{0});
-  EXPECT_TRUE(block->is_usable_space_aligned(alignof(max_align_t)));
+  EXPECT_TRUE(block->is_usable_space_aligned(Block::MIN_ALIGN));
 
   Block *last = block->next();
   ASSERT_NE(last, static_cast<Block *>(nullptr));
@@ -52,7 +52,7 @@ TEST(LlvmLibcBlockTest, CanCreateUnalignedSingleBlock) {
   constexpr size_t kN = 1024;
 
   // Force alignment, so we can un-force it below
-  alignas(max_align_t) array<byte, kN> bytes;
+  alignas(Block::MIN_ALIGN) array<byte, kN> bytes;
   span<byte> aligned(bytes);
 
   auto result = Block::init(aligned.subspan(1));
@@ -60,7 +60,7 @@ TEST(LlvmLibcBlockTest, CanCreateUnalignedSingleBlock) {
 
   Block *block = *result;
   EXPECT_EQ(reinterpret_cast<uintptr_t>(block) % alignof(Block), size_t{0});
-  EXPECT_TRUE(block->is_usable_space_aligned(alignof(max_align_t)));
+  EXPECT_TRUE(block->is_usable_space_aligned(Block::MIN_ALIGN));
 
   Block *last = block->next();
   ASSERT_NE(last, static_cast<Block *>(nullptr));
@@ -98,7 +98,7 @@ TEST(LlvmLibcBlockTest, CanSplitBlock) {
   EXPECT_EQ(block2->outer_size(), orig_size - block1->outer_size());
   EXPECT_FALSE(block2->used());
   EXPECT_EQ(reinterpret_cast<uintptr_t>(block2) % alignof(Block), size_t{0});
-  EXPECT_TRUE(block2->is_usable_space_aligned(alignof(max_align_t)));
+  EXPECT_TRUE(block2->is_usable_space_aligned(Block::MIN_ALIGN));
 
   EXPECT_EQ(block1->next(), block2);
   EXPECT_EQ(block2->prev_free(), block1);
@@ -124,7 +124,7 @@ TEST(LlvmLibcBlockTest, CanSplitBlockUnaligned) {
   EXPECT_EQ(block2->outer_size(), orig_size - block1->outer_size());
   EXPECT_FALSE(block2->used());
   EXPECT_EQ(reinterpret_cast<uintptr_t>(block2) % alignof(Block), size_t{0});
-  EXPECT_TRUE(block2->is_usable_space_aligned(alignof(max_align_t)));
+  EXPECT_TRUE(block2->is_usable_space_aligned(Block::MIN_ALIGN));
 
   EXPECT_EQ(block1->next(), block2);
   EXPECT_EQ(block2->prev_free(), block1);
@@ -211,7 +211,7 @@ TEST(LlvmLibcBlockTest, CanMakeMinimalSizeFirstBlock) {
 
   result = block->split(0);
   ASSERT_TRUE(result.has_value());
-  EXPECT_LE(block->outer_size(), sizeof(Block) + alignof(max_align_t));
+  EXPECT_LE(block->outer_size(), sizeof(Block) + Block::MIN_ALIGN);
 }
 
 TEST(LlvmLibcBlockTest, CanMakeMinimalSizeSecondBlock) {
@@ -228,7 +228,7 @@ TEST(LlvmLibcBlockTest, CanMakeMinimalSizeSecondBlock) {
                          reinterpret_cast<uintptr_t>(block1->usable_space()) +
                          Block::PREV_FIELD_SIZE);
   ASSERT_TRUE(result.has_value());
-  EXPECT_LE((*result)->outer_size(), sizeof(Block) + alignof(max_align_t));
+  EXPECT_LE((*result)->outer_size(), sizeof(Block) + Block::MIN_ALIGN);
 }
 
 TEST(LlvmLibcBlockTest, CanMarkBlockUsed) {
@@ -361,18 +361,18 @@ TEST(LlvmLibcBlockTest, Allocate) {
     if (i > block->inner_size())
       continue;
 
-    auto info = Block::allocate(block, alignof(max_align_t), i);
+    auto info = Block::allocate(block, Block::MIN_ALIGN, i);
     EXPECT_NE(info.block, static_cast<Block *>(nullptr));
   }
 
   // Ensure we can allocate a byte at every guaranteeable alignment.
-  for (size_t i = 1; i < kN / alignof(max_align_t); ++i) {
+  for (size_t i = 1; i < kN / Block::MIN_ALIGN; ++i) {
     array<byte, kN> bytes;
     auto result = Block::init(bytes);
     ASSERT_TRUE(result.has_value());
     Block *block = *result;
 
-    size_t alignment = i * alignof(max_align_t);
+    size_t alignment = i * Block::MIN_ALIGN;
     if (Block::min_size_for_allocation(alignment, 1) > block->inner_size())
       continue;
 
@@ -393,14 +393,14 @@ TEST(LlvmLibcBlockTest, AllocateAlreadyAligned) {
   constexpr size_t SIZE = Block::PREV_FIELD_SIZE + 1;
 
   auto [aligned_block, prev, next] =
-      Block::allocate(block, alignof(max_align_t), SIZE);
+      Block::allocate(block, Block::MIN_ALIGN, SIZE);
 
   // Since this is already aligned, there should be no previous block.
   EXPECT_EQ(prev, static_cast<Block *>(nullptr));
 
   // Ensure we the block is aligned and large enough.
   EXPECT_NE(aligned_block, static_cast<Block *>(nullptr));
-  EXPECT_TRUE(aligned_block->is_usable_space_aligned(alignof(max_align_t)));
+  EXPECT_TRUE(aligned_block->is_usable_space_aligned(Block::MIN_ALIGN));
   EXPECT_GE(aligned_block->inner_size(), SIZE);
 
   // Check the next block.
@@ -422,9 +422,9 @@ TEST(LlvmLibcBlockTest, AllocateNeedsAlignment) {
   // Now pick an alignment such that the usable space is not already aligned to
   // it. We want to explicitly test that the block will split into one before
   // it.
-  size_t alignment = alignof(max_align_t);
+  size_t alignment = Block::MIN_ALIGN;
   while (block->is_usable_space_aligned(alignment))
-    alignment += alignof(max_align_t);
+    alignment += Block::MIN_ALIGN;
 
   auto [aligned_block, prev, next] = Block::allocate(block, alignment, 10);
 
@@ -464,9 +464,9 @@ TEST(LlvmLibcBlockTest, PreviousBlockMergedIfNotFirst) {
   // Now pick an alignment such that the usable space is not already aligned to
   // it. We want to explicitly test that the block will split into one before
   // it.
-  size_t alignment = alignof(max_align_t);
+  size_t alignment = Block::MIN_ALIGN;
   while (newblock->is_usable_space_aligned(alignment))
-    alignment += alignof(max_align_t);
+    alignment += Block::MIN_ALIGN;
 
   // Ensure we can allocate in the new block.
   auto [aligned_block, prev, next] = Block::allocate(newblock, alignment, 1);
@@ -501,9 +501,9 @@ TEST(LlvmLibcBlockTest, CanRemergeBlockAllocations) {
   // Now pick an alignment such that the usable space is not already aligned to
   // it. We want to explicitly test that the block will split into one before
   // it.
-  size_t alignment = alignof(max_align_t);
+  size_t alignment = Block::MIN_ALIGN;
   while (block->is_usable_space_aligned(alignment))
-    alignment += alignof(max_align_t);
+    alignment += Block::MIN_ALIGN;
 
   auto [aligned_block, prev, next] = Block::allocate(block, alignment, 1);
 

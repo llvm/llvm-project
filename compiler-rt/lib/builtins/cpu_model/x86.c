@@ -135,13 +135,9 @@ enum ProcessorFeatures {
   FEATURE_AVX512BW,
   FEATURE_AVX512DQ,
   FEATURE_AVX512CD,
-  FEATURE_AVX512ER,
-  FEATURE_AVX512PF,
-  FEATURE_AVX512VBMI,
+  FEATURE_AVX512VBMI = 26,
   FEATURE_AVX512IFMA,
-  FEATURE_AVX5124VNNIW,
-  FEATURE_AVX5124FMAPS,
-  FEATURE_AVX512VPOPCNTDQ,
+  FEATURE_AVX512VPOPCNTDQ = 30,
   FEATURE_AVX512VBMI2,
   FEATURE_GFNI,
   FEATURE_VPCLMULQDQ,
@@ -181,8 +177,7 @@ enum ProcessorFeatures {
   // FEATURE_OSXSAVE,
   FEATURE_PCONFIG = 63,
   FEATURE_PKU,
-  FEATURE_PREFETCHWT1,
-  FEATURE_PRFCHW,
+  FEATURE_PRFCHW = 66,
   FEATURE_PTWRITE,
   FEATURE_RDPID,
   FEATURE_RDRND,
@@ -231,7 +226,11 @@ enum ProcessorFeatures {
   FEATURE_USERMSR,
   FEATURE_AVX10_1 = 114,
   FEATURE_AVX10_2 = 116,
+  FEATURE_AMX_AVX512,
+  FEATURE_AMX_TF32,
+  FEATURE_AMX_FP8 = 120,
   FEATURE_MOVRS,
+  FEATURE_AMX_MOVRS,
   CPU_FEATURE_MAX
 };
 
@@ -959,12 +958,10 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_ADX);
   if (HasLeaf7 && ((EBX >> 21) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512IFMA);
+  if (HasLeaf7 && ((EBX >> 23) & 1))
+    setFeature(FEATURE_CLFLUSHOPT);
   if (HasLeaf7 && ((EBX >> 24) & 1))
     setFeature(FEATURE_CLWB);
-  if (HasLeaf7 && ((EBX >> 26) & 1) && HasAVX512Save)
-    setFeature(FEATURE_AVX512PF);
-  if (HasLeaf7 && ((EBX >> 27) & 1) && HasAVX512Save)
-    setFeature(FEATURE_AVX512ER);
   if (HasLeaf7 && ((EBX >> 28) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512CD);
   if (HasLeaf7 && ((EBX >> 29) & 1))
@@ -974,8 +971,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   if (HasLeaf7 && ((EBX >> 31) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512VL);
 
-  if (HasLeaf7 && ((ECX >> 0) & 1))
-    setFeature(FEATURE_PREFETCHWT1);
   if (HasLeaf7 && ((ECX >> 1) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512VBMI);
   if (HasLeaf7 && ((ECX >> 4) & 1))
@@ -1011,10 +1006,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   if (HasLeaf7 && ((ECX >> 29) & 1))
     setFeature(FEATURE_ENQCMD);
 
-  if (HasLeaf7 && ((EDX >> 2) & 1) && HasAVX512Save)
-    setFeature(FEATURE_AVX5124VNNIW);
-  if (HasLeaf7 && ((EDX >> 3) & 1) && HasAVX512Save)
-    setFeature(FEATURE_AVX5124FMAPS);
   if (HasLeaf7 && ((EDX >> 5) & 1))
     setFeature(FEATURE_UINTR);
   if (HasLeaf7 && ((EDX >> 8) & 1) && HasAVX512Save)
@@ -1088,8 +1079,19 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   if (HasLeafD && ((EAX >> 3) & 1) && HasAVXSave)
     setFeature(FEATURE_XSAVES);
 
-  bool HasLeaf24 =
-      MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
+  bool HasLeaf1E = MaxLevel >= 0x1e &&
+                   !getX86CpuIDAndInfoEx(0x1e, 0x1, &EAX, &EBX, &ECX, &EDX);
+  if (HasLeaf1E && (EAX & 0x10))
+    setFeature(FEATURE_AMX_FP8);
+  if (HasLeaf1E && (EAX & 0x40))
+    setFeature(FEATURE_AMX_TF32);
+  if (HasLeaf1E && (EAX & 0x80))
+    setFeature(FEATURE_AMX_AVX512);
+  if (HasLeaf1E && (EAX & 0x100))
+    setFeature(FEATURE_AMX_MOVRS);
+
+  bool HasLeaf24 = MaxLevel >= 0x24 &&
+                   !getX86CpuIDAndInfoEx(0x24, 0x0, &EAX, &EBX, &ECX, &EDX);
   if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1) && HasLeaf24) {
     int AVX10Ver = EBX & 0xff;
     if (AVX10Ver >= 1)
