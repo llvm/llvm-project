@@ -2632,6 +2632,22 @@ cc_library(
 )
 
 cc_library(
+    name = "X86VectorUtils",
+    srcs = glob(["lib/Dialect/X86Vector/Utils/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/X86Vector/Utils/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":LinalgDialect",
+        ":LinalgInterfaces",
+        ":Support",
+        ":VectorDialect",
+        ":X86VectorDialect",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "X86VectorTransforms",
     srcs = glob(["lib/Dialect/X86Vector/Transforms/*.cpp"]),
     hdrs = ["include/mlir/Dialect/X86Vector/Transforms.h"],
@@ -2651,25 +2667,6 @@ cc_library(
         ":VectorUtils",
         ":X86VectorDialect",
         ":X86VectorUtils",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "X86VectorUtils",
-    srcs = glob(["lib/Dialect/X86Vector/Utils/*.cpp"]),
-    hdrs = glob(["include/mlir/Dialect/X86Vector/Utils/*.h"]),
-    includes = ["include"],
-    deps = [
-        ":AffineDialect",
-        ":DialectUtils",
-        ":FuncDialect",
-        ":IR",
-        ":LinalgDialect",
-        ":LinalgInterfaces",
-        ":MemRefDialect",
-        ":Support",
-        ":VectorDialect",
         "//llvm:Support",
     ],
 )
