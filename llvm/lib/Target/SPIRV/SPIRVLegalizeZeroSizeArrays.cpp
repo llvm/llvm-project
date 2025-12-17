@@ -47,6 +47,8 @@ bool hasZeroSizeArray(const Type *Ty) {
 }
 
 bool shouldLegalizeInstType(const Type *Ty) {
+  // This recursive function will always terminate because we only look inside
+  // array types, and those can't be recursive.
   if (const ArrayType *ArrTy = dyn_cast_if_present<ArrayType>(Ty)) {
     return ArrTy->getNumElements() == 0 ||
            shouldLegalizeInstType(ArrTy->getElementType());
@@ -99,6 +101,25 @@ private:
   const SPIRVTargetMachine *TM;
 };
 
+// clang-format off
+
+// Legalize a type. There are only two cases we need to care about:
+// arrays and structs.
+//
+// For arrays, if it is not a nested array ([0 x i32] or if it is nested with a
+// zero element count ([0 x [0 x i32]]), we just replace the entire array type
+// with a ptr.
+//
+// If it is nested with a non-zero element count( [5 x [0 x i32]]),
+// we replace the element type with a legalized element type and maintain the
+// existing element count.
+// For the example type we would replace with [5 x ptr]).
+//
+// For structs, we create a new type with any members containing nested
+// arrays legalized.
+
+// clang-format on
+
 Type *SPIRVLegalizeZeroSizeArraysImpl::legalizeType(Type *Ty) {
   auto It = TypeMap.find(Ty);
   if (It != TypeMap.end())
@@ -111,9 +132,11 @@ Type *SPIRVLegalizeZeroSizeArraysImpl::legalizeType(Type *Ty) {
       LegalizedTy = PointerType::get(
           Ty->getContext(),
           storageClassToAddressSpace(SPIRV::StorageClass::Generic));
-    } else if (Type *ElemTy = legalizeType(ArrTy->getElementType());
-               ElemTy != ArrTy->getElementType()) {
-      LegalizedTy = ArrayType::get(ElemTy, ArrTy->getNumElements());
+    } else {
+      Type *ElemTy = ArrTy->getElementType();
+      Type *LegalElemTy = legalizeType(ElemTy);
+      if (LegalElemTy != ElemTy)
+        LegalizedTy = ArrayType::get(LegalElemTy, ArrTy->getNumElements());
     }
   } else if (StructType *StructTy = dyn_cast<StructType>(Ty)) {
     SmallVector<Type *, 8> ElemTypes;
@@ -153,7 +176,6 @@ Constant *SPIRVLegalizeZeroSizeArraysImpl::legalizeConstant(Constant *C) {
     return PoisonValue::get(NewTy);
   if (isa<ConstantAggregateZero>(C))
     return Constant::getNullValue(NewTy);
-
   if (ConstantArray *CA = dyn_cast<ConstantArray>(C)) {
     SmallVector<Constant *, 8> Elems;
     for (Use &U : CA->operands())
@@ -285,8 +307,8 @@ bool SPIRVLegalizeZeroSizeArraysImpl::runOnModule(Module &M) {
   if (TM && TM->getSubtargetImpl()->isShader())
     return false;
 
-  // First pass: create new globals and track mapping (don't erase old ones
-  // yet).
+  // First pass: create new globals (legalizing the initializer as needed) and
+  // track mapping (don't erase old ones yet).
   SmallVector<GlobalVariable *, 8> OldGlobals;
   for (GlobalVariable &GV : M.globals()) {
     if (!hasZeroSizeArray(GV.getValueType()))
@@ -297,10 +319,12 @@ bool SPIRVLegalizeZeroSizeArraysImpl::runOnModule(Module &M) {
       continue;
 
     Type *NewTy = legalizeType(GV.getValueType());
-    // Use an empty name and initializer for now, we will update them in the
-    // following steps.
+    Constant *LegalizedInitializer = legalizeConstant(GV.getInitializer());
+
+    // Use an empty name for now, we will update it in the
+    // following step.
     GlobalVariable *NewGV = new GlobalVariable(
-        M, NewTy, GV.isConstant(), GV.getLinkage(), /*Initializer=*/nullptr,
+        M, NewTy, GV.isConstant(), GV.getLinkage(), LegalizedInitializer,
         /*Name=*/"", &GV, GV.getThreadLocalMode(), GV.getAddressSpace(),
         GV.isExternallyInitialized());
     NewGV->copyAttributesFrom(&GV);
@@ -312,14 +336,7 @@ bool SPIRVLegalizeZeroSizeArraysImpl::runOnModule(Module &M) {
     Modified = true;
   }
 
-  // Second pass: set initializers now that all globals are mapped.
-  for (GlobalVariable *GV : OldGlobals) {
-    GlobalVariable *NewGV = cast<GlobalVariable>(GlobalMap[GV]);
-    if (GV->hasInitializer())
-      NewGV->setInitializer(legalizeConstant(GV->getInitializer()));
-  }
-
-  // Third pass: replace uses, transfer names, and erase old globals.
+  // Second pass: replace uses, transfer names, and erase old globals.
   for (GlobalVariable *GV : OldGlobals) {
     GlobalVariable *NewGV = GlobalMap[GV];
     GV->replaceAllUsesWith(ConstantExpr::getBitCast(NewGV, GV->getType()));
