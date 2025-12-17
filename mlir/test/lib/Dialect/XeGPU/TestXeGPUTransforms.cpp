@@ -44,8 +44,7 @@ struct TestXeGPUUnrollingPatterns
   }
 
   TestXeGPUUnrollingPatterns() = default;
-  TestXeGPUUnrollingPatterns(const TestXeGPUUnrollingPatterns &pass)
-      : PassWrapper(pass) {}
+  TestXeGPUUnrollingPatterns(const TestXeGPUUnrollingPatterns &pass) = default;
 
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
@@ -298,8 +297,7 @@ struct TestXeGPULayoutInterface
   }
 
   TestXeGPULayoutInterface() = default;
-  TestXeGPULayoutInterface(const TestXeGPULayoutInterface &pass)
-      : PassWrapper(pass) {}
+  TestXeGPULayoutInterface(const TestXeGPULayoutInterface &pass) = default;
 
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();

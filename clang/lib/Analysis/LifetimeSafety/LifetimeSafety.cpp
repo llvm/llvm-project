@@ -31,6 +31,7 @@
 namespace clang::lifetimes {
 namespace internal {
 
+#ifndef NDEBUG
 static void DebugOnlyFunction(AnalysisDeclContext &AC, const CFG &Cfg,
                               FactManager &FactMgr) {
   std::string Name;
@@ -43,6 +44,7 @@ static void DebugOnlyFunction(AnalysisDeclContext &AC, const CFG &Cfg,
                                          /*ShowColors=*/true));
   DEBUG_WITH_TYPE(Name.c_str(), FactMgr.dump(Cfg, AC));
 }
+#endif
 
 LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                                LifetimeSafetyReporter *Reporter)
