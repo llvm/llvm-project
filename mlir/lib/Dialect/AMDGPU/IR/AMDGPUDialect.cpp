@@ -456,6 +456,103 @@ LogicalResult WMMAOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ScaledWMMAOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ScaledWMMAOp::verify() {
+  // Helper functions for type classification.
+  auto isF8 = llvm::IsaPred<Float8E4M3FNType, Float8E5M2Type>;
+  auto isF6 = llvm::IsaPred<Float6E2M3FNType, Float6E3M2FNType>;
+  auto isF4 = llvm::IsaPred<Float4E2M1FNType>;
+  auto isScaleF8 = llvm::IsaPred<Float8E8M0FNUType, Float8E4M3FNType>;
+  auto isE8M0 = llvm::IsaPred<Float8E8M0FNUType>;
+  auto isE4M3 = llvm::IsaPred<Float8E4M3FNType>;
+
+  auto sourceAType = cast<VectorType>(getSourceA().getType());
+  auto sourceBType = cast<VectorType>(getSourceB().getType());
+  auto destType = cast<VectorType>(getDestC().getType());
+
+  // Validate source element types are small floats (fp4/fp6/fp8).
+  Type aElemType = sourceAType.getElementType();
+  Type bElemType = sourceBType.getElementType();
+
+  // Validate vector lengths based on dimensions.
+  int64_t m = getM();
+  int64_t aLen = sourceAType.getNumElements();
+  int64_t bLen = sourceBType.getNumElements();
+  int64_t expectedOutLen = (m == 16) ? 8 : 16;
+
+  if (destType.getNumElements() != expectedOutLen)
+    return emitOpError("expected output vector of length ")
+           << expectedOutLen << " but got " << destType.getNumElements();
+
+  if (m == 16) {
+    // For 16×16×128: both A and B must be 64 elements.
+    if (aLen != 64)
+      return emitOpError(
+                 "for 16x16x128, sourceA must have 64 elements but got ")
+             << aLen;
+    if (bLen != 64)
+      return emitOpError(
+                 "for 16x16x128, sourceB must have 64 elements but got ")
+             << bLen;
+  } else { // m == 32
+    // For 32×16×128: only fp4 is supported, A is 128, B is 64.
+    if (!isF4(aElemType) && !isF4(bElemType))
+      return emitOpError("32x16x128 only supports fp4 element types");
+
+    if (aLen != 128)
+      return emitOpError(
+                 "for 32x16x128, sourceA must have 128 elements but got ")
+             << aLen;
+    if (bLen != 64)
+      return emitOpError(
+                 "for 32x16x128, sourceB must have 64 elements but got ")
+             << bLen;
+
+    // For 32x16x128, matrix A uses all 32 lanes so a_first_scale_lane must be
+    // 0.
+    if (getAFirstScaleLane() != 0)
+      return emitOpError("for 32x16x128, a_first_scale_lane must be 0");
+  }
+
+  // Validate scale types and their compatibility with matrix element types.
+  auto scaleAType = cast<VectorType>(getScaleA().getType());
+  auto scaleBType = cast<VectorType>(getScaleB().getType());
+  Type scaleAElemType = scaleAType.getElementType();
+  Type scaleBElemType = scaleBType.getElementType();
+
+  // Validate scale element types are valid scale f8 types (E8M0FNU or E4M3FN).
+  if (!isScaleF8(scaleAElemType) || !isScaleF8(scaleBElemType))
+    return emitOpError(
+        "scale operands must have f8 element types (E8M0FNU or E4M3FN)");
+
+  // Any matrices A/B (fp8|fp6|fp4) with E8M0 scales for matrix A/B are valid.
+  if (isE8M0(scaleAElemType) && isE8M0(scaleBElemType))
+    return success();
+
+  // Matrix A (F8|F6) x Matrix B (F4) with Scale A (E8M0), Scale B (E5M3|E4M3).
+  if ((isF8(aElemType) || isF6(aElemType)) && isE8M0(scaleAElemType) &&
+      isF4(bElemType) && isE4M3(scaleBElemType))
+    return success();
+
+  // Matrix A (F4) x Matrix B (F8|F6) with Scale A (E5M3|E4M3), Scale B (E8M0).
+  if (isF4(aElemType) && isE4M3(scaleAElemType) &&
+      (isF8(bElemType) || isF6(bElemType)) && isE8M0(scaleBElemType))
+    return success();
+
+  // Matrix A (F4) x Matrix B (F4) with Scale A (E4M3), Scale B (E4M3).
+  if (isF4(aElemType) && isF4(bElemType) && isE4M3(scaleAElemType) &&
+      isE4M3(scaleBElemType))
+    return success();
+
+  // No valid combination matched.
+  return emitOpError("invalid combination of matrix and scale types: ")
+         << "sourceA=" << aElemType << ", scaleA=" << scaleAElemType
+         << ", sourceB=" << bElemType << ", scaleB=" << scaleBElemType;
+}
+
+//===----------------------------------------------------------------------===//
 // MFMAOp
 //===----------------------------------------------------------------------===//
 LogicalResult MFMAOp::verify() {
@@ -818,50 +915,52 @@ LogicalResult MakeGatherDmaBaseOp::verify() { return verifyBase(*this); }
 // MakeDmaDescriptorOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult MakeDmaDescriptorOp::verify() {
-  ArrayRef<int64_t> globalStaticStrides = getGlobalStaticStrides();
+template <typename DescriptorOp>
+static LogicalResult verifyDescriptorOp(DescriptorOp op) {
+  ArrayRef<int64_t> globalStaticStrides = op.getGlobalStaticStrides();
 
   if (globalStaticStrides.empty())
-    return emitOpError("strides must not be empty.");
+    return op.emitOpError("strides must not be empty.");
   if (globalStaticStrides.back() != 1)
-    return emitOpError("strides for the innermost dimension must be 1.");
+    return op.emitOpError("strides for the innermost dimension must be 1.");
 
-  ArrayRef<int64_t> globalStaticSizes = getGlobalStaticSizes();
+  ArrayRef<int64_t> globalStaticSizes = op.getGlobalStaticSizes();
   size_t rank = globalStaticSizes.size();
   if (rank > 5)
-    return emitOpError("tensor and tile must be at most of rank 5.");
+    return op.emitOpError("tensor and tile must be at most of rank 5.");
   if (rank != globalStaticStrides.size())
-    return emitOpError("strides and sizes must have same rank.");
+    return op.emitOpError("strides and sizes must have same rank.");
 
-  ArrayRef<int64_t> sharedStaticSizes = getSharedStaticSizes();
+  ArrayRef<int64_t> sharedStaticSizes = op.getSharedStaticSizes();
   if (rank != sharedStaticSizes.size())
-    return emitOpError("tensor must have same rank as tile.");
+    return op.emitOpError("tensor must have same rank as tile.");
 
-  unsigned elementTypeWidth = getElementTypeWidth();
+  unsigned elementTypeWidth = op.getElementTypeWidth();
   if (!llvm::is_contained({8u, 16u, 32u, 64u}, elementTypeWidth))
-    return emitOpError(
+    return op.emitOpError(
                "element type width must be 1, 2, 4 or 8 bytes, but was ")
            << elementTypeWidth << " bits long";
 
-  if (Value atomicBarrierAddress = getAtomicBarrierAddress()) {
+  if (Value atomicBarrierAddress = op.getAtomicBarrierAddress()) {
     auto atomicBarrierAddressType =
         cast<MemRefType>(atomicBarrierAddress.getType());
     bool barrierInLDS =
         hasWorkgroupMemorySpace(atomicBarrierAddressType.getMemorySpace());
     if (!barrierInLDS)
-      return emitOpError("atomic barrier address must be in LDS.");
+      return op.emitOpError("atomic barrier address must be in LDS.");
   }
 
-  if (getEarlyTimeout() && !getWorkgroupMask())
-    return emitOpError(
+  if (op.getEarlyTimeout() && !op.getWorkgroupMask())
+    return op.emitOpError(
         "early timeout does not apply when workgroup_mask is not set.");
   return success();
 }
 
-OpFoldResult MakeDmaDescriptorOp::fold(FoldAdaptor adaptor) {
-  SmallVector<OpFoldResult> mixedGlobalSizes(getMixedGlobalSizes());
-  SmallVector<OpFoldResult> mixedGlobalStrides(getMixedGlobalStrides());
-  SmallVector<OpFoldResult> mixedSharedSizes(getMixedSharedSizes());
+template <typename DescriptorOp, typename FoldAdaptor>
+static OpFoldResult foldDescriptorOp(DescriptorOp op, FoldAdaptor adaptor) {
+  SmallVector<OpFoldResult> mixedGlobalSizes(op.getMixedGlobalSizes());
+  SmallVector<OpFoldResult> mixedGlobalStrides(op.getMixedGlobalStrides());
+  SmallVector<OpFoldResult> mixedSharedSizes(op.getMixedSharedSizes());
 
   if (failed(foldDynamicIndexList(mixedGlobalSizes, /*onlyNonNegative=*/true,
                                   /*onlyNonZero=*/true)) &&
@@ -878,19 +977,49 @@ OpFoldResult MakeDmaDescriptorOp::fold(FoldAdaptor adaptor) {
 
   dispatchIndexOpFoldResults(mixedGlobalSizes, dynamicGlobalSizes,
                              staticGlobalSizes);
-  setGlobalStaticSizes(staticGlobalSizes);
-  getGlobalDynamicSizesMutable().assign(dynamicGlobalSizes);
+  op.setGlobalStaticSizes(staticGlobalSizes);
+  op.getGlobalDynamicSizesMutable().assign(dynamicGlobalSizes);
 
   dispatchIndexOpFoldResults(mixedGlobalStrides, dynamicGlobalStrides,
                              staticGlobalStrides);
-  setGlobalStaticStrides(staticGlobalStrides);
-  getGlobalDynamicStridesMutable().assign(dynamicGlobalStrides);
+  op.setGlobalStaticStrides(staticGlobalStrides);
+  op.getGlobalDynamicStridesMutable().assign(dynamicGlobalStrides);
 
   dispatchIndexOpFoldResults(mixedSharedSizes, dynamicSharedSizes,
                              staticSharedSizes);
-  setSharedStaticSizes(staticSharedSizes);
-  getSharedDynamicSizesMutable().assign(dynamicSharedSizes);
-  return getResult();
+  op.setSharedStaticSizes(staticSharedSizes);
+  op.getSharedDynamicSizesMutable().assign(dynamicSharedSizes);
+  return op.getResult();
+}
+
+LogicalResult MakeDmaDescriptorOp::verify() {
+  return verifyDescriptorOp(*this);
+}
+
+OpFoldResult MakeDmaDescriptorOp::fold(FoldAdaptor adaptor) {
+  return foldDescriptorOp(*this, adaptor);
+}
+
+//===----------------------------------------------------------------------===//
+// MakeGatherDmaDescriptorOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MakeGatherDmaDescriptorOp::verify() {
+  ArrayRef<int64_t> globalStaticSizes = getGlobalStaticSizes();
+  size_t rank = globalStaticSizes.size();
+  if (rank > 2)
+    return emitOpError(
+        "tensor and tile must be at most of rank two in gather mode.");
+  Value indices = getIndices();
+  Type elementType = cast<VectorType>(indices.getType()).getElementType();
+  if (elementType != getBase().getType().getIndexType())
+    return emitOpError("indices' element type must match base's element type.");
+
+  return verifyDescriptorOp(*this);
+}
+
+OpFoldResult MakeGatherDmaDescriptorOp::fold(FoldAdaptor adaptor) {
+  return foldDescriptorOp(*this, adaptor);
 }
 
 //===----------------------------------------------------------------------===//

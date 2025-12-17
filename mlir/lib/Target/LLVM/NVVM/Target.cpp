@@ -697,18 +697,19 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
     return std::nullopt;
   }
   moduleToObjectTimer.startTimer();
-  std::optional<std::string> serializedISA =
-      translateToISA(llvmModule, **targetMachine);
+  FailureOr<std::string> serializedISA =
+      translateModuleToISA(llvmModule, **targetMachine,
+                           [&]() { return getOperation().emitError(); });
   moduleToObjectTimer.stopTimer();
   llvmToISATimeInMs = moduleToObjectTimer.getTotalTime().getWallTime() * 1000;
   moduleToObjectTimer.clear();
-  if (!serializedISA) {
+  if (failed(serializedISA)) {
     getOperation().emitError() << "Failed translating the module to ISA.";
     return std::nullopt;
   }
 
   if (isaCallback)
-    isaCallback(serializedISA.value());
+    isaCallback(*serializedISA);
 
 #define DEBUG_TYPE "serialize-to-isa"
   LDBG() << "PTX for module: " << getOperation().getNameAttr() << "\n"
