@@ -17364,6 +17364,12 @@ When used with the ``nsz`` flag, this intrinsics follows the semantics of
 The ``llvm.minnum`` intrinsic can be refined into ``llvm.minimumnum``, as the
 latter exhibits a subset of behaviors of the former.
 
+.. warning::
+
+  If the intrinsic is used without nsz, not all backends currently respect the
+  specified signed zero ordering. Do not rely on it until this warning has
+  been removed.
+
 .. _i_maxnum:
 
 '``llvm.maxnum.*``' Intrinsic
@@ -17422,6 +17428,12 @@ When used with the ``nsz`` flag, this intrinsics follows the semantics of
 
 The ``llvm.maxnum`` intrinsic can be refined into ``llvm.maximumnum``, as the
 latter exhibits a subset of behaviors of the former.
+
+.. warning::
+
+  If the intrinsic is used without nsz, not all backends currently respect the
+  specified signed zero ordering. Do not rely on it until this warning has
+  been removed.
 
 .. _i_minimum:
 
