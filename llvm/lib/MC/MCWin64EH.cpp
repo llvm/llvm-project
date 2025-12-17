@@ -887,7 +887,11 @@ static void simplifyARM64Opcodes(std::vector<WinEH::Instruction> &Instructions,
   unsigned PrevOffset = -1;
   unsigned PrevRegister = -1;
 
-  auto VisitInstruction = [&](WinEH::Instruction &Inst) {
+  // Iterate over instructions in a forward order (for prologues),
+  // backwards for epilogues (i.e. always reverse compared to how the
+  // opcodes are stored).
+  for (WinEH::Instruction &Inst :
+       llvm::reverse_conditionally(Instructions, Reverse)) {
     // Convert 2-byte opcodes into equivalent 1-byte ones.
     if (Inst.Operation == Win64EH::UOP_SaveRegP && Inst.Register == 29) {
       Inst.Operation = Win64EH::UOP_SaveFPLR;
@@ -930,17 +934,6 @@ static void simplifyARM64Opcodes(std::vector<WinEH::Instruction> &Instructions,
       PrevRegister = -1;
       PrevOffset = -1;
     }
-  };
-
-  // Iterate over instructions in a forward order (for prologues),
-  // backwards for epilogues (i.e. always reverse compared to how the
-  // opcodes are stored).
-  if (Reverse) {
-    for (auto It = Instructions.rbegin(); It != Instructions.rend(); It++)
-      VisitInstruction(*It);
-  } else {
-    for (WinEH::Instruction &Inst : Instructions)
-      VisitInstruction(Inst);
   }
 }
 
@@ -1051,7 +1044,9 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
   // the order - that would work fine when unwinding from within
   // functions, but not be exactly right if unwinding happens within
   // prologs/epilogs.
-  for (const WinEH::Instruction &Inst : info->Instructions) {
+  for (auto It = info->Instructions.begin(), EndIt = info->Instructions.end();
+       It != EndIt; It++) {
+    const WinEH::Instruction &Inst = *It;
     switch (Inst.Operation) {
     case Win64EH::UOP_End:
       if (Location != Start)
@@ -1169,6 +1164,28 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
           Location != FloatRegs && Location != InputArgs &&
           Location != StackAdjust)
         return false;
+      // Becuase there's no save_lrpair_x opcode, the case of CR=01,
+      // RegI=1 is handled as a special case with a pair of instructions; an
+      // alloc followed by a regular save_lrpair. So when encountering an
+      // alloc here, check if this is the start of such an instruction pair.
+      if (Location == Start2) { // Can't have this at Start3, after PACSignLR
+        auto NextIt = It + 1;
+        if (NextIt != EndIt) {
+          const WinEH::Instruction &NextInst = *NextIt;
+          if (NextInst.Operation == Win64EH::UOP_SaveLRPair &&
+              NextInst.Offset == 0 && NextInst.Register == 19) {
+            assert(Predecrement == 0);
+            assert(RegI == 0);
+            assert(!StandaloneLR);
+            Predecrement = Inst.Offset;
+            RegI = 1;
+            StandaloneLR = true;
+            Location = FloatRegs;
+            It++; // Consume both the Alloc and the SaveLRPair
+            continue;
+          }
+        }
+      }
       // Can have either a single decrement, or a pair of decrements with
       // 4080 and another decrement.
       if (StackOffset == 0)
@@ -1268,6 +1285,15 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
   // implementation would be fixed to match for the asymmetrical form
   // according to the documentation.
   if (H)
+    return false;
+  // Older versions of Windows (at least in 10.0.22000.2176) incorrectly
+  // unwind packed unwind info with CR=01, RegI=1, RegF>0, see
+  // https://github.com/llvm/llvm-project/issues/169588#issuecomment-3584907886.
+  // This issue only exists in older versions; current versions
+  // (10.0.26100.6899) do handle it correctly. As long as we can't be sure
+  // that we won't run on older versions, avoid producing the packed form
+  // here.
+  if (StandaloneLR && RegI == 1 && RegF > 0)
     return false;
   int IntSZ = 8 * RegI;
   if (StandaloneLR)
