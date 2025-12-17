@@ -913,7 +913,7 @@ static unsigned getQCLoadPredicatedOpcode(unsigned Opcode) {
     return 0;
   }
 }
- 
+
 static unsigned getLoadPredicatedOpcode(unsigned Opcode) {
   switch (Opcode) {
   case RISCV::LB:
@@ -949,10 +949,10 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     return nullptr;
 
   if (!PredOpc) {
-	  PredOpc = getLoadPredicatedOpcode(LoadMI.getOpcode());
+    PredOpc = getLoadPredicatedOpcode(LoadMI.getOpcode());
 
-	  if (!STI.hasShortForwardBranchILoad() || !PredOpc)
-	    return nullptr;
+    if (!STI.hasShortForwardBranchILoad() || !PredOpc)
+      return nullptr;
   }
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
