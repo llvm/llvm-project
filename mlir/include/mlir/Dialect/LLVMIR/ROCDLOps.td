@@ -31,7 +31,7 @@ def ROCDL_Dialect : Dialect {
   let description = [{
     The ROCDL dialect, like the other platform-specific LLVM dialects, serves
     as the location of wrappers around the AMD-specific intrinsics and attributes
-    in LLVM. (Why the dialect is named ROCDL and not, say, AMDGPU, is unknown.)
+    in LLVM.
 
     This dialect, like other GPU lowering targets, also contains the infrastructure
     used by the built-in compilation/offloading framework to compile AMD-specific
