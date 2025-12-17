@@ -2,16 +2,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr="+wavefrontsize32" < %s | FileCheck -check-prefixes=GCN,GFX11,SDAG-GFX11 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr="+wavefrontsize32" < %s | FileCheck -check-prefixes=GCN,GFX10,SDAG-GFX10 %s
 
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1100 -mattr="+wavefrontsize32" < %s 2>%t | FileCheck -check-prefixes=GCN,GFX11,GISEL-GFX11 %s
-; RUN: FileCheck --check-prefix=ERR %s < %t
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1010 -mattr="+wavefrontsize32" < %s 2>%t | FileCheck -check-prefixes=GCN,GFX10,GISEL-GFX10 %s
-; RUN: FileCheck --check-prefix=ERR %s < %t
-
-; Note: GlobalISel abort is disabled so we don't crash on i1 inputs.
-;  They are allowed in DAGISel but we (intentionally) don't support them
-;  in GlobalISel.
-
-; ERR: warning: Instruction selection used fallback path for v_icmp_i1_ne0
+; RUN: llc -global-isel=1 -new-reg-bank-select -global-isel-abort=0 -mtriple=amdgcn -mcpu=gfx1100 -mattr="+wavefrontsize32" < %s | FileCheck -check-prefixes=GCN,GFX11,GISEL-GFX11 %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -global-isel-abort=0 -mtriple=amdgcn -mcpu=gfx1010 -mattr="+wavefrontsize32" < %s | FileCheck -check-prefixes=GCN,GFX10,GISEL-GFX10 %s
 
 declare i32 @llvm.amdgcn.icmp.i32(i32, i32, i32) #0
 declare i32 @llvm.amdgcn.icmp.i64(i64, i64, i32) #0
