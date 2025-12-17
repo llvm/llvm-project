@@ -5367,6 +5367,48 @@ def CIR_CatchParamOp : CIR_Op<"catch_param", [HasParent<"cir::TryOp">]> {
 }
 
 //===----------------------------------------------------------------------===//
+// CatchParamFlatOp
+//===----------------------------------------------------------------------===//
+
+def CIR_FlatCatchParamKind  : CIR_I32EnumAttr<
+  "FlatCatchParamKind", "Designate limits for begin/end of catch param handling", [
+    I32EnumAttrCase<"Begin", 0, "begin">,
+    I32EnumAttrCase<"End",  1, "end">
+]>;
+
+def CIR_CatchParamFlatOp : CIR_Op<"catch_param.flat"> {
+ let summary = "A flattened version of `cir.catch_param`";
+ let description = [{
+    The `cir.catch_param.flat` operation is a region-less and simplified
+    version of the `cir.catch_param`.
+
+    Its representation is closer to LLVM IR dialect
+    than the C/C++ language feature.
+
+    This operation is used only after the CFG flatterning pass.
+
+    Examples:
+    ```mlir
+    cir.catch_param.flat begin %exception_ptr -> !cir.ptr<!s32i>
+    cir.catch_param.flat end
+    ```
+  }];
+
+  let arguments = (ins
+    Optional<CIR_VoidPtrType>:$exception_ptr,
+    CIR_FlatCatchParamKind:$kind
+  );
+
+  let results = (outs Optional<CIR_AnyType>:$param);
+  let assemblyFormat = [{
+    $kind
+    ($exception_ptr^)?
+    (`->` qualified(type($param))^)?
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Exception related: EhInflightOp
 //===----------------------------------------------------------------------===//
 

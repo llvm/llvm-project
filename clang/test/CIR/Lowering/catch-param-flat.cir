@@ -1,0 +1,25 @@
+// RUN: cir-opt %s -cir-to-llvm -o %t.cir
+
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+module {
+
+cir.func dso_local @catch_param_flat() personality(@__gxx_personality_v0) {
+  %exception_ptr, %type_id = cir.eh.inflight_exception
+  %exception = cir.catch_param.flat begin %exception_ptr -> !cir.ptr<!s32i>
+  cir.catch_param.flat end
+  cir.return
+}
+
+// CHECK: llvm.func @catch_param_flat() attributes {dso_local, personality = @__gxx_personality_v0} {
+// CHECK:   %[[CONST_0:.*]] = llvm.mlir.zero : !llvm.ptr
+// CHECK:   %[[LANDING_PAD:.*]] = llvm.landingpad (catch %[[CONST_0]] : !llvm.ptr) : !llvm.struct<(ptr, i32)>
+// CHECK:   %[[EXCEPTION_PTR:.*]] = llvm.extractvalue %[[LANDING_PAD]][0] : !llvm.struct<(ptr, i32)>
+// CHECK:   %[[TYPE_ID:.*]] = llvm.extractvalue %[[LANDING_PAD]][1] : !llvm.struct<(ptr, i32)>
+// CHECK:   %[[EXCEPTION:.*]] = llvm.call @__cxa_begin_catch(%[[EXCEPTION_PTR]]) : (!llvm.ptr) -> !llvm.ptr
+// CHECK:   llvm.call @__cxa_end_catch() : () -> ()
+// CHECK:   llvm.return
+// CHECK: }
+
+}
