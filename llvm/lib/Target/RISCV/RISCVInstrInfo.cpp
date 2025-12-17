@@ -5191,8 +5191,7 @@ bool RISCVInstrInfo::isHighLatencyDef(int Opc) const {
   }
 }
 
-bool RISCVInstrInfo::isVRegCopy(const MachineInstr *MI, unsigned LMul,
-                                bool Fractional) const {
+bool RISCVInstrInfo::isVRegCopy(const MachineInstr *MI, unsigned LMul) const {
   if (MI->getOpcode() != TargetOpcode::COPY)
     return false;
   const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
@@ -5213,5 +5212,5 @@ bool RISCVInstrInfo::isVRegCopy(const MachineInstr *MI, unsigned LMul,
   // in the future.
   auto [RCLMul, RCFractional] =
       RISCVVType::decodeVLMUL(RISCVRI::getLMul(RC->TSFlags));
-  return RCLMul == LMul && RCFractional == Fractional;
+  return (!RCFractional && LMul == RCLMul) || (RCFractional && LMul == 1);
 }
