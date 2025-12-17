@@ -311,8 +311,8 @@ public:
 
   InstructionUniformity getInstructionUniformity(const Value *V) const override;
 
-  bool isUniform(const Instruction *I,
-                 const SmallBitVector &UniformArgs) const override;
+  bool isDivergent(const Instruction *I,
+                   const SmallBitVector &DivergentArgs) const override;
 };
 
 } // end namespace llvm

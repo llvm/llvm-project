@@ -1152,11 +1152,11 @@ public:
   virtual bool allowVectorElementIndexingUsingGEP() const { return true; }
 
   // Custom uniformity check for instructions marked as Custom
-  // Override this to provide complex uniformity rules based on which operands
-  // are uniform
-  virtual bool isUniform(const Instruction *I,
-                         const SmallBitVector &UniformArgs) const {
-    return false; // Conservative: assume divergent
+  // Override this to provide complex divergence rules based on which operands
+  // are divergent
+  virtual bool isDivergent(const Instruction *I,
+                           const SmallBitVector &DivergentArgs) const {
+    return false; // Conservative: can't prove divergent
   }
 
 protected:

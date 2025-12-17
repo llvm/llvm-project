@@ -1678,21 +1678,21 @@ GCNTTIImpl::getInstructionUniformity(const Value *V) const {
   return InstructionUniformity::Default;
 }
 
-bool GCNTTIImpl::isUniform(const Instruction *I,
-                           const SmallBitVector &UniformArgs) const {
-  // Custom uniformity check for permlane16/permlanex16
+bool GCNTTIImpl::isDivergent(const Instruction *I,
+                             const SmallBitVector &DivergentArgs) const {
+  // Custom divergence check for permlane16/permlanex16
   if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(I)) {
     switch (Intrinsic->getIntrinsicID()) {
     case Intrinsic::amdgcn_permlane16:
     case Intrinsic::amdgcn_permlanex16:
       // For permlane16/permlanex16:
-      // Operand 0: old value (ignored for uniformity)
+      // Operand 0: old value (ignored for divergence)
       // Operand 1: src0 (source value to permute)
       // Operand 2: src1 (lane select within 16-lane group)
       // Operand 3: src2 (which 16-lane group)
-      // Result is uniform if either src0 (op 1) or src1 (op 2) is uniform
-      if (UniformArgs.size() > 2) {
-        return UniformArgs[1] || UniformArgs[2];
+      // Result is divergent if both src0 (op 1) and src1 (op 2) are divergent
+      if (DivergentArgs.size() > 2) {
+        return DivergentArgs[1] && DivergentArgs[2];
       }
       return false;
     default:

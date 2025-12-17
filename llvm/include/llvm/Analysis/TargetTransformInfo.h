@@ -2003,17 +2003,16 @@ public:
   /// target.
   LLVM_ABI bool allowVectorElementIndexingUsingGEP() const;
 
-  /// Determine if an instruction with some operands uniform can be proven
-  /// uniform. This is used for custom uniformity analysis where the target
-  /// can define complex rules that depend on which specific operands are
-  /// uniform.
+  /// Determine if an instruction can be proven divergent based on which
+  /// operands are divergent.
   ///
   /// \param I The instruction to check.
-  /// \param UniformArgs A bitvector indicating which operands are known to be
-  ///                    uniform (bit N corresponds to operand N).
-  /// \returns true if the instruction result can be proven uniform given the
-  ///          uniform operands, false otherwise.
-  bool isUniform(const Instruction *I, const SmallBitVector &UniformArgs) const;
+  /// \param DivergentArgs A bitvector indicating which operands are known to be
+  ///                      divergent (bit N corresponds to operand N).
+  /// \returns true if the instruction result can be proven divergent given the
+  ///          divergent operands, false otherwise.
+  LLVM_ABI bool isDivergent(const Instruction *I,
+                            const SmallBitVector &DivergentArgs) const;
 
 private:
   std::unique_ptr<const TargetTransformInfoImplBase> TTIImpl;

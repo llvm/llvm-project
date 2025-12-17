@@ -10712,18 +10712,18 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
 
   return InstructionUniformity::Default;
 }
-bool SIInstrInfo::isUniform(const MachineInstr &MI,
-                            const SmallBitVector &UniformArgs) const {
+bool SIInstrInfo::isDivergent(const MachineInstr &MI,
+                              const SmallBitVector &DivergentArgs) const {
   unsigned opcode = MI.getOpcode();
 
-  // Custom uniformity check for permlane16/permlanex16
+  // Custom divergence check for permlane16/permlanex16
   if (opcode == AMDGPU::V_PERMLANE16_B32_e64 ||
       opcode == AMDGPU::V_PERMLANEX16_B32_e64) {
-    // Result is uniform if either src0 or src1 is uniform
-    // UniformArgs[0] = src0 (source value)
-    // UniformArgs[1] = src1 (lane select)
-    if (UniformArgs.size() >= 2) {
-      return UniformArgs[0] || UniformArgs[1];
+    // Result is divergent if both src0 and src1 are divergent
+    // DivergentArgs[0] = src0 (source value)
+    // DivergentArgs[1] = src1 (lane select)
+    if (DivergentArgs.size() >= 2) {
+      return DivergentArgs[0] && DivergentArgs[1];
     }
   }
 

@@ -2359,20 +2359,17 @@ public:
     return InstructionUniformity::Default;
   }
 
-  /// Determine if a machine instruction with some operands uniform can be
-  /// proven uniform. This is used for custom uniformity analysis where the
-  /// target can define complex rules that depend on which specific operands
-  /// are uniform.
+  /// Determine if a machine instruction can be proven divergent based on which
+  /// operands are divergent.
   ///
   /// \param MI The machine instruction to check.
-  /// \param UniformArgs A bitvector indicating which register operands are
-  ///                    known to be uniform (bit N corresponds to the Nth
-  ///                    register use operand).
-  /// \returns true if the instruction result can be proven uniform given the
-  ///          uniform operands, false otherwise.
-  virtual bool isUniform(const MachineInstr &MI,
-                         const SmallBitVector &UniformArgs) const {
-    return false; // Conservative: assume divergent
+  /// \param DivergentArgs A bitvector indicating which operands are known to be
+  ///                      divergent (bit N corresponds to operand N).
+  /// \returns true if the instruction result can be proven divergent given the
+  ///          divergent operands, false otherwise.
+  virtual bool isDivergent(const MachineInstr &MI,
+                           const SmallBitVector &DivergentArgs) const {
+    return false; // Conservative: can't prove divergent
   }
 
   /// Returns true if the given \p MI defines a TargetIndex operand that can be
