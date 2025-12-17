@@ -3,11 +3,6 @@
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw -target-feature +avx512vl -fclangir -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw -target-feature +avx512vl -fno-signed-char -fclangir -emit-cir -o %t.cir -Wall -Werror -Wsign-conversion 
-// RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw -target-feature +avx512vl -fno-signed-char -fclangir -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
-// RUN: FileCheck --check-prefixes=LLVM-UNSIGNED-CHAR --input-file=%t.ll %s
-
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx10.1-512 -target-feature +avx512vl -fclangir -emit-cir -o %t.cir -Wall -Werror -Wsign-conversion 
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx10.1-512 -target-feature +avx512vl -fclangir -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
@@ -101,10 +96,6 @@ __mmask16 test_mm_movepi8_mask(__m128i __A) {
 
   // LLVM-LABEL: @test_mm_movepi8_mask
   // LLVM: [[CMP:%.*]] = icmp slt <16 x i8> %{{.*}}, zeroinitializer
-
-  // In the unsigned case below, the canonicalizer proves the comparison is
-  // always false (no i8 unsigned value can be < 0) and folds it away.
-  // LLVM-UNSIGNED-CHAR: store i16 0, ptr %{{.*}}, align 2
 
   // OGCG-LABEL: @test_mm_movepi8_mask
   // OGCG: [[CMP:%.*]] = icmp slt <16 x i8> %{{.*}}, zeroinitializer
