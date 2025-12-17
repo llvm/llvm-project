@@ -5389,7 +5389,7 @@ def CIR_CatchParamFlatOp : CIR_Op<"catch_param.flat"> {
 
     Examples:
     ```mlir
-    cir.catch_param.flat begin %exception_ptr -> !cir.ptr<!s32i>
+    %exception = cir.catch_param.flat begin %exception_ptr -> !cir.ptr<!s32i>
     cir.catch_param.flat end
     ```
   }];
