@@ -73,8 +73,6 @@ void nvvm::printTensormapElemType(raw_ostream &OS, const Constant *ImmArgVal) {
       return;
     }
   }
-  llvm_unreachable("printTensormapElemType called with invalid value for "
-                   "immediate argument");
 }
 
 void nvvm::printTensormapInterleaveLayout(raw_ostream &OS,
@@ -93,9 +91,6 @@ void nvvm::printTensormapInterleaveLayout(raw_ostream &OS,
       return;
     }
   }
-  llvm_unreachable(
-      "printTensormapInterleaveLayout called with invalid value for "
-      "immediate argument");
 }
 
 void nvvm::printTensormapSwizzleMode(raw_ostream &OS,
@@ -120,8 +115,6 @@ void nvvm::printTensormapSwizzleMode(raw_ostream &OS,
       return;
     }
   }
-  llvm_unreachable("printTensormapSwizzleMode called with invalid value for "
-                   "immediate argument");
 }
 
 void nvvm::printTensormapSwizzleAtomicity(raw_ostream &OS,
@@ -143,9 +136,6 @@ void nvvm::printTensormapSwizzleAtomicity(raw_ostream &OS,
       return;
     }
   }
-  llvm_unreachable(
-      "printTensormapSwizzleAtomicity called with invalid value for "
-      "immediate argument");
 }
 
 void nvvm::printTensormapFillMode(raw_ostream &OS, const Constant *ImmArgVal) {
@@ -159,6 +149,4 @@ void nvvm::printTensormapFillMode(raw_ostream &OS, const Constant *ImmArgVal) {
       return;
     }
   }
-  llvm_unreachable("printTensormapFillMode called with invalid value for "
-                   "immediate argument");
 }
