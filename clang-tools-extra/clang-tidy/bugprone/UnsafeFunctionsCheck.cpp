@@ -169,13 +169,12 @@ static std::string serializeCheckedFunctions(
   std::vector<std::string> Result;
   Result.reserve(Functions.size());
 
-  for (const auto &Entry : Functions) {
+  for (const auto &Entry : Functions)
     if (Entry.Reason.empty())
       Result.push_back(Entry.Name + "," + Entry.Replacement);
     else
       Result.push_back(Entry.Name + "," + Entry.Replacement + "," +
                        Entry.Reason);
-  }
 
   return llvm::join(Result, ";");
 }
