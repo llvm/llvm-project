@@ -21,10 +21,30 @@ namespace MyNamespace {
 // CHECK-GLOBAL-NEXT:                <div class="sidebar">
 // CHECK-GLOBAL-NEXT:                    <h2>Global Namespace</h2>
 // CHECK-GLOBAL-NEXT:                    <ul>
+// CHECK-GLOBAL-NEXT:                        <li class="sidebar-section">
+// CHECK-GLOBAL-NEXT:                            <a class="sidebar-item" href="#Namespaces">Namespaces</a>
+// CHECK-GLOBAL-NEXT:                        </li>
+// CHECK-GLOBAL-NEXT:                        <li>
+// CHECK-GLOBAL-NEXT:                            <ul>
+// CHECK-GLOBAL-NEXT:                                <li class="sidebar-item-container">
+// CHECK-GLOBAL-NEXT:                                    <a class="sidebar-item" href="#{{[0-9A-F]*}}">MyNamespace</a>
+// CHECK-GLOBAL-NEXT:                                </li>
+// CHECK-GLOBAL-NEXT:                            </ul>
+// CHECK-GLOBAL-NEXT:                        </li>
 // CHECK-GLOBAL-NEXT:                    </ul>
 // CHECK-GLOBAL-NEXT:                </div>
 // CHECK-GLOBAL-NEXT:                <div class="resizer" id="resizer"></div>
 // CHECK-GLOBAL-NEXT:                <div class="content">
+// CHECK-GLOBAL-NEXT:                    <section id="Namespaces" class="section-container">
+// CHECK-GLOBAL-NEXT:                        <h2>Namespaces</h2>
+// CHECK-GLOBAL-NEXT:                        <ul class="class-container">
+// CHECK-GLOBAL-NEXT:                            <li id="{{[0-9A-F]*}}">
+// CHECK-GLOBAL-NEXT:                                <a href="../MyNamespace/index.html">
+// CHECK-GLOBAL-NEXT:                                    <pre><code class="language-cpp code-clang-doc">namespace MyNamespace</code></pre>
+// CHECK-GLOBAL-NEXT:                                </a>
+// CHECK-GLOBAL-NEXT:                            </li>
+// CHECK-GLOBAL-NEXT:                        </ul>
+// CHECK-GLOBAL-NEXT:                    </section>
 // CHECK-GLOBAL-NEXT:                </div>
 // CHECK-GLOBAL-NEXT:            </div>
 // CHECK-GLOBAL-NEXT:        </main>
