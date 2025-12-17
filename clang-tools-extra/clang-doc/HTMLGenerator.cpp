@@ -120,6 +120,13 @@ Error HTMLGenerator::setupTemplateResources(const ClangDocContext &CDCtx,
     SCA->emplace_back(JsPath);
   }
   V.getAsObject()->insert({"Scripts", ScriptArr});
+  if (RelativeRootPath.empty()) {
+    RelativeRootPath = "";
+  } else {
+    sys::path::append(RelativeRootPath, "/index.html");
+    sys::path::native(RelativeRootPath, sys::path::Style::posix);
+  }
+  V.getAsObject()->insert({"Homepage", RelativeRootPath});
   return Error::success();
 }
 
