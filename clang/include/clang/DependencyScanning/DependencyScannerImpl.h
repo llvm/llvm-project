@@ -111,7 +111,7 @@ initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
                          ArrayRef<std::string> CommandLine,
                          StringRef WorkingDirectory, StringRef ModuleName);
 
-bool initializeScanCompilerInstance(
+void initializeScanCompilerInstance(
     CompilerInstance &ScanInstance,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,

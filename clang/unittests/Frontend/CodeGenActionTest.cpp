@@ -54,7 +54,6 @@ TEST(CodeGenTest, TestNullCodeGen) {
   CompilerInstance Compiler(std::move(Invocation));
   Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
   Compiler.createDiagnostics();
-  EXPECT_TRUE(Compiler.hasDiagnostics());
 
   std::unique_ptr<FrontendAction> Act(new NullCodeGenAction);
   bool Success = Compiler.ExecuteAction(*Act);
@@ -72,7 +71,6 @@ TEST(CodeGenTest, CodeGenFromIRMemBuffer) {
   CompilerInstance Compiler(std::move(Invocation));
   Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
   Compiler.createDiagnostics();
-  EXPECT_TRUE(Compiler.hasDiagnostics());
 
   EmitLLVMOnlyAction Action;
   bool Success = Compiler.ExecuteAction(Action);

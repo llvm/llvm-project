@@ -1216,7 +1216,7 @@ static LogicalResult updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
     }
     // If the result is a vector type, add a temporary layout attribute to the
     // op.
-    xegpu::setDistributeLayoutAttr(result, layout, /*respectPermLayout*/ true);
+    xegpu::setDistributeLayoutAttr(result, layout);
   }
   return success();
 }
