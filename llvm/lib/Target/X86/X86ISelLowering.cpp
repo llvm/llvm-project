@@ -48149,6 +48149,45 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   bool CondConstantVector = ISD::isBuildVectorOfConstantSDNodes(Cond.getNode());
   unsigned EltBitWidth = VT.getScalarSizeInBits();
 
+  // select in presence of fp_to_sint can be replaced with just fp_to_sint
+  // fold (SELECT (SETCC (FABS X), MAXFLOAT), (FP_TO_SINT X), INT_MIN)
+  // -> (FP_TO_SINT X)
+  if (Cond.getOpcode() == ISD::SETCC &&
+      Cond.getOperand(0).getOpcode() == ISD::FABS &&
+      Cond.getOperand(1).getOpcode() == ISD::ConstantFP) {
+
+    SDValue FpToInt = LHS;
+    SDValue ConstNode = RHS;
+    if (FpToInt.getOpcode() != ISD::FP_TO_SINT) {
+      std::swap(FpToInt, ConstNode);
+    }
+
+    if (FpToInt.getOpcode() != ISD::FP_TO_SINT) {
+      return SDValue();
+    }
+
+    if (!DAG.isConstantValueOfAnyType(ConstNode)) {
+      return SDValue();
+    }
+
+    SDValue T = Cond.getOperand(0).getOperand(0);
+    if (T != FpToInt.getOperand(0)) {
+      return SDValue();
+    }
+
+    EVT IntVT = FpToInt.getValueType();
+    APInt IntMin = APInt::getSignedMinValue(IntVT.getSizeInBits());
+
+    auto *C = cast<ConstantSDNode>(ConstNode);
+    if (C->getAPIntValue() != IntMin) {
+      return SDValue();
+    }
+
+    // check if the Maxfloat value is matching the value of CmpConst
+    return DAG.getNode(ISD::FP_TO_SINT, DL, FpToInt.getValueType(),
+                       FpToInt.getOperand(0));
+  }
+
   // Attempt to combine (select M, (sub 0, X), X) -> (sub (xor X, M), M).
   // Limit this to cases of non-constant masks that createShuffleMaskFromVSELECT
   // can't catch, plus vXi8 cases where we'd likely end up with BLENDV.
