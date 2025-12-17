@@ -113,12 +113,13 @@ compound=true
   N0 -> N2 [ label="F"]
   N1 [label =
     "scalar.ph:\l" +
+    "  EMIT-SCALAR vp\<%6\> = phi [ ir\<%indvars.iv\>, middle.block ], [ ir\<0\>, ir-bb\<entry\> ]\l" +
     "Successor(s): ir-bb\<for.body\>\l"
   ]
   N1 -> N3 [ label=""]
   N3 [label =
     "ir-bb\<for.body\>:\l" +
-    "  IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]\l" +
+    "  IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ] (extra operand: vp\<%6\> from scalar.ph)\l" +
     "  IR   %arr.idx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv\l" +
     "  IR   %l1 = load i32, ptr %arr.idx, align 4\l" +
     "  IR   %res = add i32 %l1, 10\l" +
@@ -139,12 +140,12 @@ compound=true
       "vector.body:\l" +
       "  EMIT vp\<%2\> = CANONICAL-INDUCTION ir\<0\>, vp\<%index.next\>\l" +
       "  EMIT-SCALAR ir\<%indvars.iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%indvars.iv.next\>, vector.body ]\l" +
-      "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\>, ir\<%indvars.iv\>\l" +
+      "  EMIT ir\<%arr.idx\> = getelementptr inbounds ir\<%A\>, ir\<%indvars.iv\>\l" +
       "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
       "  EMIT ir\<%res\> = add ir\<%l1\>, ir\<10\>\l" +
       "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
       "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\>, ir\<1\>\l" +
-      "  EMIT ir\<%exitcond\> = icmp ir\<%indvars.iv.next\>, ir\<%N\>\l" +
+      "  EMIT ir\<%exitcond\> = icmp ne ir\<%indvars.iv.next\>, ir\<%N\>\l" +
       "  EMIT vp\<%3\> = not ir\<%exitcond\>\l" +
       "  EMIT vp\<%index.next\> = add nuw vp\<%2\>, vp\<%0\>\l" +
       "  EMIT branch-on-count vp\<%index.next\>, vp\<%1\>\l" +
@@ -282,12 +283,13 @@ compound=true
   N0 -> N2 [ label="F"]
   N1 [label =
     "scalar.ph:\l" +
+    "  EMIT-SCALAR vp\<%6\> = phi [ ir\<%iv\>, middle.block ], [ ir\<0\>, ir-bb\<entry\> ]\l" +
     "Successor(s): ir-bb\<loop.header\>\l"
   ]
   N1 -> N3 [ label=""]
   N3 [label =
     "ir-bb\<loop.header\>:\l" +
-    "  IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]\l" +
+    "  IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ] (extra operand: vp\<%6\> from scalar.ph)\l" +
     "  IR   %arr.idx = getelementptr inbounds i32, ptr %A, i64 %iv\l" +
     "  IR   %l1 = load i32, ptr %arr.idx, align 4\l" +
     "  IR   %c = icmp eq i32 %l1, 0\l" +
@@ -305,9 +307,9 @@ compound=true
       "vector.body:\l" +
       "  EMIT vp\<%2\> = CANONICAL-INDUCTION ir\<0\>, vp\<%index.next\>\l" +
       "  EMIT-SCALAR ir\<%iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%iv.next\>, loop.latch ]\l" +
-      "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\>, ir\<%iv\>\l" +
+      "  EMIT ir\<%arr.idx\> = getelementptr inbounds ir\<%A\>, ir\<%iv\>\l" +
       "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
-      "  EMIT ir\<%c\> = icmp ir\<%l1\>, ir\<0\>\l" +
+      "  EMIT ir\<%c\> = icmp eq ir\<%l1\>, ir\<0\>\l" +
       "Successor(s): loop.latch\l"
     ]
     N4 -> N6 [ label=""]
@@ -316,7 +318,7 @@ compound=true
       "  EMIT ir\<%res\> = add ir\<%l1\>, ir\<10\>\l" +
       "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
       "  EMIT ir\<%iv.next\> = add ir\<%iv\>, ir\<1\>\l" +
-      "  EMIT ir\<%exitcond\> = icmp ir\<%iv.next\>, ir\<%N\>\l" +
+      "  EMIT ir\<%exitcond\> = icmp ne ir\<%iv.next\>, ir\<%N\>\l" +
       "  EMIT vp\<%3\> = not ir\<%exitcond\>\l" +
       "  EMIT vp\<%index.next\> = add nuw vp\<%2\>, vp\<%0\>\l" +
       "  EMIT branch-on-count vp\<%index.next\>, vp\<%1\>\l" +

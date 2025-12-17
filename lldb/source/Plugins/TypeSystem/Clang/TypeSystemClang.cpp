@@ -1000,6 +1000,8 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
 
   case DW_ATE_signed:
     if (!type_name.empty()) {
+      if (type_name.starts_with("_BitInt"))
+        return GetType(ast.getBitIntType(/*Unsigned=*/false, bit_size));
       if (type_name == "wchar_t" &&
           QualTypeMatchesBitSize(bit_size, ast, ast.WCharTy) &&
           (getTargetInfo() &&
@@ -1056,6 +1058,8 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
 
   case DW_ATE_unsigned:
     if (!type_name.empty()) {
+      if (type_name.starts_with("unsigned _BitInt"))
+        return GetType(ast.getBitIntType(/*Unsigned=*/true, bit_size));
       if (type_name == "wchar_t") {
         if (QualTypeMatchesBitSize(bit_size, ast, ast.WCharTy)) {
           if (!(getTargetInfo() &&
@@ -2145,7 +2149,8 @@ PrintingPolicy TypeSystemClang::GetTypePrintingPolicy() {
   printing_policy.SuppressTagKeyword = true;
   // Inline namespaces are important for some type formatters (e.g., libc++
   // and libstdc++ are differentiated by their inline namespaces).
-  printing_policy.SuppressInlineNamespace = false;
+  printing_policy.SuppressInlineNamespace =
+      llvm::to_underlying(PrintingPolicy::SuppressInlineNamespaceMode::None);
   printing_policy.SuppressUnwrittenScope = false;
   // Default arguments are also always important for type formatters. Otherwise
   // we would need to always specify two type names for the setups where we do
@@ -3488,7 +3493,7 @@ bool TypeSystemClang::IsReferenceType(lldb::opaque_compiler_type_t type,
 }
 
 bool TypeSystemClang::IsFloatingPointType(lldb::opaque_compiler_type_t type,
-                                          uint32_t &count, bool &is_complex) {
+                                          bool &is_complex) {
   if (type) {
     clang::QualType qual_type(GetCanonicalQualType(type));
 
@@ -3497,30 +3502,26 @@ bool TypeSystemClang::IsFloatingPointType(lldb::opaque_compiler_type_t type,
       clang::BuiltinType::Kind kind = BT->getKind();
       if (kind >= clang::BuiltinType::Float &&
           kind <= clang::BuiltinType::LongDouble) {
-        count = 1;
         is_complex = false;
         return true;
       }
     } else if (const clang::ComplexType *CT =
                    llvm::dyn_cast<clang::ComplexType>(
                        qual_type->getCanonicalTypeInternal())) {
-      if (IsFloatingPointType(CT->getElementType().getAsOpaquePtr(), count,
+      if (IsFloatingPointType(CT->getElementType().getAsOpaquePtr(),
                               is_complex)) {
-        count = 2;
         is_complex = true;
         return true;
       }
     } else if (const clang::VectorType *VT = llvm::dyn_cast<clang::VectorType>(
                    qual_type->getCanonicalTypeInternal())) {
-      if (IsFloatingPointType(VT->getElementType().getAsOpaquePtr(), count,
+      if (IsFloatingPointType(VT->getElementType().getAsOpaquePtr(),
                               is_complex)) {
-        count = VT->getNumElements();
         is_complex = false;
         return true;
       }
     }
   }
-  count = 0;
   is_complex = false;
   return false;
 }
@@ -3870,7 +3871,8 @@ TypeSystemClang::GetDisplayTypeName(lldb::opaque_compiler_type_t type) {
   printing_policy.SuppressTagKeyword = true;
   printing_policy.SuppressScope = false;
   printing_policy.SuppressUnwrittenScope = true;
-  printing_policy.SuppressInlineNamespace = true;
+  printing_policy.SuppressInlineNamespace =
+      llvm::to_underlying(PrintingPolicy::SuppressInlineNamespaceMode::All);
   return ConstString(qual_type.getAsString(printing_policy));
 }
 
@@ -3893,6 +3895,13 @@ TypeSystemClang::GetTypeInfo(lldb::opaque_compiler_type_t type,
                            ->getModifiedType()
                            .getAsOpaquePtr(),
                        pointee_or_element_clang_type);
+  case clang::Type::BitInt: {
+    uint32_t type_flags = eTypeIsScalar | eTypeIsInteger | eTypeHasValue;
+    if (qual_type->isSignedIntegerType())
+      type_flags |= eTypeIsSigned;
+
+    return type_flags;
+  }
   case clang::Type::Builtin: {
     const clang::BuiltinType *builtin_type =
         llvm::cast<clang::BuiltinType>(qual_type->getCanonicalTypeInternal());
@@ -3965,9 +3974,9 @@ TypeSystemClang::GetTypeInfo(lldb::opaque_compiler_type_t type,
     if (complex_type) {
       clang::QualType complex_element_type(complex_type->getElementType());
       if (complex_element_type->isIntegerType())
-        complex_type_flags |= eTypeIsFloat;
-      else if (complex_element_type->isFloatingType())
         complex_type_flags |= eTypeIsInteger;
+      else if (complex_element_type->isFloatingType())
+        complex_type_flags |= eTypeIsFloat;
     }
     return complex_type_flags;
   } break;
@@ -4062,12 +4071,17 @@ TypeSystemClang::GetTypeInfo(lldb::opaque_compiler_type_t type,
     uint32_t vector_type_flags = eTypeHasChildren | eTypeIsVector;
     const clang::VectorType *vector_type = llvm::dyn_cast<clang::VectorType>(
         qual_type->getCanonicalTypeInternal());
-    if (vector_type) {
-      if (vector_type->isIntegerType())
-        vector_type_flags |= eTypeIsFloat;
-      else if (vector_type->isFloatingType())
-        vector_type_flags |= eTypeIsInteger;
-    }
+    if (!vector_type)
+      return 0;
+
+    QualType element_type = vector_type->getElementType();
+    if (element_type.isNull())
+      return 0;
+
+    if (element_type->isIntegerType())
+      vector_type_flags |= eTypeIsInteger;
+    else if (element_type->isFloatingType())
+      vector_type_flags |= eTypeIsFloat;
     return vector_type_flags;
   }
   default:
@@ -4864,12 +4878,10 @@ TypeSystemClang::GetTypeBitAlign(lldb::opaque_compiler_type_t type,
   return {};
 }
 
-lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
-                                            uint64_t &count) {
+lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
   if (!type)
     return lldb::eEncodingInvalid;
 
-  count = 1;
   clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
 
   switch (qual_type->getTypeClass()) {
@@ -4903,7 +4915,6 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::DependentVector:
   case clang::Type::ExtVector:
   case clang::Type::Vector:
-    // TODO: Set this to more than one???
     break;
 
   case clang::Type::BitInt:
@@ -5104,11 +5115,10 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
       const clang::ComplexType *complex_type =
           qual_type->getAsComplexIntegerType();
       if (complex_type)
-        encoding = GetType(complex_type->getElementType()).GetEncoding(count);
+        encoding = GetType(complex_type->getElementType()).GetEncoding();
       else
         encoding = lldb::eEncodingSint;
     }
-    count = 2;
     return encoding;
   }
 
@@ -5165,7 +5175,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::SubstBuiltinTemplatePack:
     break;
   }
-  count = 0;
+
   return lldb::eEncodingInvalid;
 }
 
@@ -7336,6 +7346,102 @@ CompilerType TypeSystemClang::GetTypeForFormatters(void *type) {
   if (type)
     return ClangUtil::RemoveFastQualifiers(CompilerType(weak_from_this(), type));
   return CompilerType();
+}
+
+bool TypeSystemClang::IsPromotableIntegerType(
+    lldb::opaque_compiler_type_t type) {
+  // Unscoped enums are always considered as promotable, even if their
+  // underlying type does not need to be promoted (e.g. "int").
+  bool is_signed = false;
+  bool isUnscopedEnumerationType =
+      IsEnumerationType(type, is_signed) && !IsScopedEnumerationType(type);
+  if (isUnscopedEnumerationType)
+    return true;
+
+  switch (GetBasicTypeEnumeration(type)) {
+  case lldb::eBasicTypeBool:
+  case lldb::eBasicTypeChar:
+  case lldb::eBasicTypeSignedChar:
+  case lldb::eBasicTypeUnsignedChar:
+  case lldb::eBasicTypeShort:
+  case lldb::eBasicTypeUnsignedShort:
+  case lldb::eBasicTypeWChar:
+  case lldb::eBasicTypeSignedWChar:
+  case lldb::eBasicTypeUnsignedWChar:
+  case lldb::eBasicTypeChar16:
+  case lldb::eBasicTypeChar32:
+    return true;
+
+  default:
+    return false;
+  }
+
+  llvm_unreachable("All cases handled above.");
+}
+
+llvm::Expected<CompilerType>
+TypeSystemClang::DoIntegralPromotion(CompilerType from,
+                                     ExecutionContextScope *exe_scope) {
+  if (!from.IsInteger() && !from.IsUnscopedEnumerationType())
+    return from;
+
+  if (!from.IsPromotableIntegerType())
+    return from;
+
+  if (from.IsUnscopedEnumerationType()) {
+    EnumDecl *enum_decl = GetAsEnumDecl(from);
+    CompilerType promotion_type = GetType(enum_decl->getPromotionType());
+    return DoIntegralPromotion(promotion_type, exe_scope);
+  }
+
+  lldb::BasicType builtin_type =
+      from.GetCanonicalType().GetBasicTypeEnumeration();
+  uint64_t from_size = 0;
+  if (builtin_type == lldb::eBasicTypeWChar ||
+      builtin_type == lldb::eBasicTypeSignedWChar ||
+      builtin_type == lldb::eBasicTypeUnsignedWChar ||
+      builtin_type == lldb::eBasicTypeChar16 ||
+      builtin_type == lldb::eBasicTypeChar32) {
+    // Find the type that can hold the entire range of values for our type.
+    bool is_signed = from.IsSigned();
+    llvm::Expected<uint64_t> from_size = from.GetByteSize(exe_scope);
+    if (!from_size)
+      return from_size.takeError();
+    CompilerType promote_types[] = {
+        GetBasicTypeFromAST(lldb::eBasicTypeInt),
+        GetBasicTypeFromAST(lldb::eBasicTypeUnsignedInt),
+        GetBasicTypeFromAST(lldb::eBasicTypeLong),
+        GetBasicTypeFromAST(lldb::eBasicTypeUnsignedLong),
+        GetBasicTypeFromAST(lldb::eBasicTypeLongLong),
+        GetBasicTypeFromAST(lldb::eBasicTypeUnsignedLongLong),
+    };
+    for (CompilerType &type : promote_types) {
+      llvm::Expected<uint64_t> byte_size = type.GetByteSize(exe_scope);
+      if (!byte_size)
+        return byte_size.takeError();
+      if (*from_size < *byte_size ||
+          (*from_size == *byte_size && is_signed == type.IsSigned())) {
+        return type;
+      }
+    }
+    llvm_unreachable("char type should fit into long long");
+  }
+
+  // Here we can promote only to "int" or "unsigned int".
+  CompilerType int_type = GetBasicTypeFromAST(lldb::eBasicTypeInt);
+  llvm::Expected<uint64_t> int_byte_size = int_type.GetByteSize(exe_scope);
+  if (!int_byte_size)
+    return int_byte_size.takeError();
+
+  // Signed integer types can be safely promoted to "int".
+  if (from.IsSigned()) {
+    return int_type;
+  }
+  // Unsigned integer types are promoted to "unsigned int" if "int" cannot hold
+  // their entire value range.
+  return (from_size == *int_byte_size)
+             ? GetBasicTypeFromAST(lldb::eBasicTypeUnsignedInt)
+             : int_type;
 }
 
 clang::EnumDecl *TypeSystemClang::GetAsEnumDecl(const CompilerType &type) {

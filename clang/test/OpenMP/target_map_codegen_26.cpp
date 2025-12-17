@@ -52,7 +52,7 @@
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK27: [[SIZE05:@.+]] = private {{.*}}constant [1 x i64] zeroinitializer
-// CK27: [[MTYPE05:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
+// CK27: [[MTYPE05:@.+]] = private {{.*}}constant [1 x i64] [i64 288]
 
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0

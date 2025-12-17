@@ -34,6 +34,8 @@ Origin &OriginManager::addOrigin(OriginID ID, const clang::Expr &E) {
 
 // TODO: Mark this method as const once we remove the call to getOrCreate.
 OriginID OriginManager::get(const Expr &E) {
+  if (auto *ParenIgnored = E.IgnoreParens(); ParenIgnored != &E)
+    return get(*ParenIgnored);
   auto It = ExprToOriginID.find(&E);
   if (It != ExprToOriginID.end())
     return It->second;

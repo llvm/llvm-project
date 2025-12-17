@@ -1,6 +1,6 @@
 import os
 import time
-from typing import Optional, Callable, Any, List, Union
+from typing import Optional, Callable, Any, List, Union, Final
 import uuid
 
 import dap_server
@@ -18,7 +18,7 @@ import base64
 class DAPTestCaseBase(TestBase):
     # set timeout based on whether ASAN was enabled or not. Increase
     # timeout by a factor of 10 if ASAN is enabled.
-    DEFAULT_TIMEOUT = dap_server.DEFAULT_TIMEOUT
+    DEFAULT_TIMEOUT: Final[float] = dap_server.DEFAULT_TIMEOUT
     NO_DEBUG_INFO_TESTCASE = True
 
     def create_debug_adapter(
@@ -39,6 +39,7 @@ class DAPTestCaseBase(TestBase):
             log_file=log_file_path,
             env=lldbDAPEnv,
             additional_args=additional_args or [],
+            spawn_helper=self.spawnSubprocess,
         )
 
     def build_and_create_debug_adapter(
@@ -168,6 +169,7 @@ class DAPTestCaseBase(TestBase):
                 if (
                     body["reason"] != "breakpoint"
                     and body["reason"] != "instruction breakpoint"
+                    and body["reason"] != "data breakpoint"
                 ):
                     continue
                 if "hitBreakpointIds" not in body:
@@ -222,6 +224,16 @@ class DAPTestCaseBase(TestBase):
                 if expected_description == description:
                     return True
         return False
+
+    def verify_stop_on_entry(self) -> None:
+        """Waits for the process to be stopped and then verifies at least one
+        thread has the stop reason 'entry'."""
+        self.dap_server.wait_for_stopped()
+        self.assertIn(
+            "entry",
+            (t["reason"] for t in self.dap_server.thread_stop_reasons.values()),
+            "Expected at least one thread to report stop reason 'entry' in {self.dap_server.thread_stop_reasons}",
+        )
 
     def verify_commands(self, flavor: str, output: str, commands: list[str]):
         self.assertTrue(output and len(output) > 0, "expect console output")

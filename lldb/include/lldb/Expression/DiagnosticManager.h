@@ -12,7 +12,7 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 
-#include "lldb/Utility/DiagnosticsRendering.h"
+#include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 

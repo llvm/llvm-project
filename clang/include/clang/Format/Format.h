@@ -62,49 +62,28 @@ struct FormatStyle {
   /// \version 3.3
   int AccessModifierOffset;
 
-  /// Different styles for aligning after open brackets.
-  enum BracketAlignmentStyle : int8_t {
-    /// Align parameters on the open bracket, e.g.:
-    /// \code
-    ///   someLongFunction(argument1,
-    ///                    argument2);
-    /// \endcode
-    BAS_Align,
-    /// Don't align, instead use ``ContinuationIndentWidth``, e.g.:
-    /// \code
-    ///   someLongFunction(argument1,
-    ///       argument2);
-    /// \endcode
-    BAS_DontAlign,
-    /// Always break after an open bracket, if the parameters don't fit
-    /// on a single line, e.g.:
-    /// \code
-    ///   someLongFunction(
-    ///       argument1, argument2);
-    /// \endcode
-    BAS_AlwaysBreak,
-    /// Always break after an open bracket, if the parameters don't fit
-    /// on a single line. Closing brackets will be placed on a new line.
-    /// E.g.:
-    /// \code
-    ///   someLongFunction(
-    ///       argument1, argument2
-    ///   )
-    /// \endcode
-    ///
-    /// \note
-    ///  This currently only applies to braced initializer lists (when
-    ///  ``Cpp11BracedListStyle`` is not ``Block``) and parentheses.
-    /// \endnote
-    BAS_BlockIndent,
-  };
-
   /// If ``true``, horizontally aligns arguments after an open bracket.
+  ///
+  /// \code
+  ///   true:                         vs.   false
+  ///   someLongFunction(argument1,         someLongFunction(argument1,
+  ///                    argument2);            argument2);
+  /// \endcode
+  ///
+  /// \note
+  ///   As of clang-format 22 this option is a bool with the previous
+  ///   option of ``Align`` replaced with ``true``, ``DontAlign`` replaced
+  ///   with ``false``, and the options of ``AlwaysBreak`` and ``BlockIndent``
+  ///   replaced with ``true`` and with setting of new style options using
+  ///   ``BreakAfterOpenBracketBracedList``, ``BreakAfterOpenBracketFunction``,
+  ///   ``BreakAfterOpenBracketIf``, ``BreakBeforeCloseBracketBracedList``,
+  ///   ``BreakBeforeCloseBracketFunction``, and ``BreakBeforeCloseBracketIf``.
+  /// \endnote
   ///
   /// This applies to round brackets (parentheses), angle brackets and square
   /// brackets.
   /// \version 3.8
-  BracketAlignmentStyle AlignAfterOpenBracket;
+  bool AlignAfterOpenBracket;
 
   /// Different style for aligning array initializers.
   enum ArrayInitializerAlignmentStyle : int8_t {
@@ -622,9 +601,19 @@ struct FormatStyle {
     ///   int abcdef; // but this isn't
     /// \endcode
     unsigned OverEmptyLines;
+    /// If comments following preprocessor directive should be aligned with
+    /// comments that don't.
+    /// \code
+    ///   true:                               false:
+    ///   #define A  // Comment   vs.         #define A  // Comment
+    ///   #define AB // Aligned               #define AB // Aligned
+    ///   int i;     // Aligned               int i; // Not aligned
+    /// \endcode
+    bool AlignPPAndNotPP;
 
     bool operator==(const TrailingCommentsAlignmentStyle &R) const {
-      return Kind == R.Kind && OverEmptyLines == R.OverEmptyLines;
+      return Kind == R.Kind && OverEmptyLines == R.OverEmptyLines &&
+             AlignPPAndNotPP == R.AlignPPAndNotPP;
     }
     bool operator!=(const TrailingCommentsAlignmentStyle &R) const {
       return !(*this == R);
@@ -1708,6 +1697,57 @@ struct FormatStyle {
   /// \version 16
   AttributeBreakingStyle BreakAfterAttributes;
 
+  /// Force break after the left bracket of a braced initializer list (when
+  /// ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
+  /// limit.
+  /// \code
+  ///   true:                             false:
+  ///   vector<int> x {         vs.       vector<int> x {1,
+  ///      1, 2, 3}                            2, 3}
+  /// \endcode
+  /// \version 22
+  bool BreakAfterOpenBracketBracedList;
+
+  /// Force break after the left parenthesis of a function (declaration,
+  /// definition, call) when the parameters exceed the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   foo (                   vs.       foo (a,
+  ///      a , b)                              b)
+  /// \endcode
+  /// \version 22
+  bool BreakAfterOpenBracketFunction;
+
+  /// Force break after the left parenthesis of an if control statement
+  /// when the expression exceeds the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   if constexpr (          vs.       if constexpr (a ||
+  ///      a || b)                                      b)
+  /// \endcode
+  /// \version 22
+  bool BreakAfterOpenBracketIf;
+
+  /// Force break after the left parenthesis of a loop control statement
+  /// when the expression exceeds the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   while (                  vs.      while (a &&
+  ///      a && b) {                             b) {
+  /// \endcode
+  /// \version 22
+  bool BreakAfterOpenBracketLoop;
+
+  /// Force break after the left parenthesis of a switch control statement
+  /// when the expression exceeds the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   switch (                 vs.      switch (a +
+  ///      a + b) {                               b) {
+  /// \endcode
+  /// \version 22
+  bool BreakAfterOpenBracketSwitch;
+
   /// The function declaration return type breaking style to use.
   /// \version 19
   ReturnTypeBreakingStyle BreakAfterReturnType;
@@ -2220,6 +2260,69 @@ struct FormatStyle {
   /// The brace breaking style to use.
   /// \version 3.7
   BraceBreakingStyle BreakBeforeBraces;
+
+  /// Force break before the right bracket of a braced initializer list (when
+  /// ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
+  /// limit. The break before the right bracket is only made if there is a
+  /// break after the opening bracket.
+  /// \code
+  ///   true:                             false:
+  ///   vector<int> x {         vs.       vector<int> x {
+  ///      1, 2, 3                           1, 2, 3}
+  ///   }
+  /// \endcode
+  /// \version 22
+  bool BreakBeforeCloseBracketBracedList;
+
+  /// Force break before the right parenthesis of a function (declaration,
+  /// definition, call) when the parameters exceed the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   foo (                   vs.       foo (
+  ///      a , b                             a , b)
+  ///   )
+  /// \endcode
+  /// \version 22
+  bool BreakBeforeCloseBracketFunction;
+
+  /// Force break before the right parenthesis of an if control statement
+  /// when the expression exceeds the column limit. The break before the
+  /// closing parenthesis is only made if there is a break after the opening
+  /// parenthesis.
+  /// \code
+  ///   true:                             false:
+  ///   if constexpr (          vs.       if constexpr (
+  ///      a || b                            a || b )
+  ///   )
+  /// \endcode
+  /// \version 22
+  bool BreakBeforeCloseBracketIf;
+
+  /// Force break before the right parenthesis of a loop control statement
+  /// when the expression exceeds the column limit. The break before the
+  /// closing parenthesis is only made if there is a break after the opening
+  /// parenthesis.
+  /// \code
+  ///   true:                             false:
+  ///   while (                  vs.      while (
+  ///      a && b                            a && b) {
+  ///   ) {
+  /// \endcode
+  /// \version 22
+  bool BreakBeforeCloseBracketLoop;
+
+  /// Force break before the right parenthesis of a switch control statement
+  /// when the expression exceeds the column limit. The break before the
+  /// closing parenthesis is only made if there is a break after the opening
+  /// parenthesis.
+  /// \code
+  ///   true:                             false:
+  ///   switch (                 vs.      switch (
+  ///      a + b                             a + b) {
+  ///   ) {
+  /// \endcode
+  /// \version 22
+  bool BreakBeforeCloseBracketSwitch;
 
   /// Different ways to break before concept declarations.
   enum BreakBeforeConceptDeclarationsStyle : int8_t {
@@ -3172,9 +3275,20 @@ struct FormatStyle {
   ///     Hex: -1
   /// \endcode
   ///
-  /// You can also specify a minimum number of digits (``BinaryMinDigits``,
-  /// ``DecimalMinDigits``, and ``HexMinDigits``) the integer literal must
-  /// have in order for the separators to be inserted.
+  /// You can also specify a minimum number of digits
+  /// (``BinaryMinDigitsInsert``, ``DecimalMinDigitsInsert``, and
+  /// ``HexMinDigitsInsert``) the integer literal must have in order for the
+  /// separators to be inserted, and a maximum number of digits
+  /// (``BinaryMaxDigitsRemove``, ``DecimalMaxDigitsRemove``, and
+  /// ``HexMaxDigitsRemove``) until the separators are removed. This divides the
+  /// literals in 3 regions, always without separator (up until including
+  /// ``xxxMaxDigitsRemove``), maybe with, or without separators (up until
+  /// excluding ``xxxMinDigitsInsert``), and finally always with separators.
+  /// \note
+  ///  ``BinaryMinDigits``, ``DecimalMinDigits``, and ``HexMinDigits`` are
+  ///  deprecated and renamed to ``BinaryMinDigitsInsert``,
+  ///  ``DecimalMinDigitsInsert``, and ``HexMinDigitsInsert``, respectively.
+  /// \endnote
   struct IntegerLiteralSeparatorStyle {
     /// Format separators in binary literals.
     /// \code{.text}
@@ -3187,11 +3301,23 @@ struct FormatStyle {
     /// Format separators in binary literals with a minimum number of digits.
     /// \code{.text}
     ///   // Binary: 3
-    ///   // BinaryMinDigits: 7
+    ///   // BinaryMinDigitsInsert: 7
     ///   b1 = 0b101101;
     ///   b2 = 0b1'101'101;
     /// \endcode
-    int8_t BinaryMinDigits;
+    int8_t BinaryMinDigitsInsert;
+    /// Remove separators in binary literals with a maximum number of digits.
+    /// \code{.text}
+    ///   // Binary: 3
+    ///   // BinaryMinDigitsInsert: 7
+    ///   // BinaryMaxDigitsRemove: 4
+    ///   b0 = 0b1011; // Always removed.
+    ///   b1 = 0b101101; // Not added.
+    ///   b2 = 0b1'01'101; // Not removed, not corrected.
+    ///   b3 = 0b1'101'101; // Always added.
+    ///   b4 = 0b10'1101; // Corrected to 0b101'101.
+    /// \endcode
+    int8_t BinaryMaxDigitsRemove;
     /// Format separators in decimal literals.
     /// \code{.text}
     ///   /* -1: */ d = 18446744073709550592ull;
@@ -3202,11 +3328,23 @@ struct FormatStyle {
     /// Format separators in decimal literals with a minimum number of digits.
     /// \code{.text}
     ///   // Decimal: 3
-    ///   // DecimalMinDigits: 5
+    ///   // DecimalMinDigitsInsert: 5
     ///   d1 = 2023;
     ///   d2 = 10'000;
     /// \endcode
-    int8_t DecimalMinDigits;
+    int8_t DecimalMinDigitsInsert;
+    /// Remove separators in decimal literals with a maximum number of digits.
+    /// \code{.text}
+    ///   // Decimal: 3
+    ///   // DecimalMinDigitsInsert: 7
+    ///   // DecimalMaxDigitsRemove: 4
+    ///   d0 = 2023; // Always removed.
+    ///   d1 = 123456; // Not added.
+    ///   d2 = 1'23'456; // Not removed, not corrected.
+    ///   d3 = 5'000'000; // Always added.
+    ///   d4 = 1'23'45; // Corrected to 12'345.
+    /// \endcode
+    int8_t DecimalMaxDigitsRemove;
     /// Format separators in hexadecimal literals.
     /// \code{.text}
     ///   /* -1: */ h = 0xDEADBEEFDEADBEEFuz;
@@ -3218,15 +3356,36 @@ struct FormatStyle {
     /// digits.
     /// \code{.text}
     ///   // Hex: 2
-    ///   // HexMinDigits: 6
+    ///   // HexMinDigitsInsert: 6
     ///   h1 = 0xABCDE;
     ///   h2 = 0xAB'CD'EF;
     /// \endcode
-    int8_t HexMinDigits;
+    int8_t HexMinDigitsInsert;
+    /// Remove separators in hexadecimal literals with a maximum number of
+    /// digits.
+    /// \code{.text}
+    ///   // Hex: 2
+    ///   // HexMinDigitsInsert: 6
+    ///   // HexMaxDigitsRemove: 4
+    ///   h0 = 0xAFFE; // Always removed.
+    ///   h1 = 0xABCDE; // Not added.
+    ///   h2 = 0xABC'DE; // Not removed, not corrected.
+    ///   h3 = 0xAB'CD'EF; // Always added.
+    ///   h4 = 0xABCD'E; // Corrected to 0xA'BC'DE.
+    /// \endcode
+    int8_t HexMaxDigitsRemove;
     bool operator==(const IntegerLiteralSeparatorStyle &R) const {
-      return Binary == R.Binary && BinaryMinDigits == R.BinaryMinDigits &&
-             Decimal == R.Decimal && DecimalMinDigits == R.DecimalMinDigits &&
-             Hex == R.Hex && HexMinDigits == R.HexMinDigits;
+      return Binary == R.Binary &&
+             BinaryMinDigitsInsert == R.BinaryMinDigitsInsert &&
+             BinaryMaxDigitsRemove == R.BinaryMaxDigitsRemove &&
+             Decimal == R.Decimal &&
+             DecimalMinDigitsInsert == R.DecimalMinDigitsInsert &&
+             DecimalMaxDigitsRemove == R.DecimalMaxDigitsRemove &&
+             Hex == R.Hex && HexMinDigitsInsert == R.HexMinDigitsInsert &&
+             HexMaxDigitsRemove == R.HexMaxDigitsRemove;
+    }
+    bool operator!=(const IntegerLiteralSeparatorStyle &R) const {
+      return !operator==(R);
     }
   };
 
@@ -5530,10 +5689,23 @@ struct FormatStyle {
            BreakAdjacentStringLiterals == R.BreakAdjacentStringLiterals &&
            BreakAfterAttributes == R.BreakAfterAttributes &&
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
+           BreakAfterOpenBracketBracedList ==
+               R.BreakAfterOpenBracketBracedList &&
+           BreakAfterOpenBracketFunction == R.BreakAfterOpenBracketFunction &&
+           BreakAfterOpenBracketIf == R.BreakAfterOpenBracketIf &&
+           BreakAfterOpenBracketLoop == R.BreakAfterOpenBracketLoop &&
+           BreakAfterOpenBracketSwitch == R.BreakAfterOpenBracketSwitch &&
            BreakAfterReturnType == R.BreakAfterReturnType &&
            BreakArrays == R.BreakArrays &&
            BreakBeforeBinaryOperators == R.BreakBeforeBinaryOperators &&
            BreakBeforeBraces == R.BreakBeforeBraces &&
+           BreakBeforeCloseBracketBracedList ==
+               R.BreakBeforeCloseBracketBracedList &&
+           BreakBeforeCloseBracketFunction ==
+               R.BreakBeforeCloseBracketFunction &&
+           BreakBeforeCloseBracketIf == R.BreakBeforeCloseBracketIf &&
+           BreakBeforeCloseBracketLoop == R.BreakBeforeCloseBracketLoop &&
+           BreakBeforeCloseBracketSwitch == R.BreakBeforeCloseBracketSwitch &&
            BreakBeforeConceptDeclarations == R.BreakBeforeConceptDeclarations &&
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
            BreakBeforeTemplateCloser == R.BreakBeforeTemplateCloser &&

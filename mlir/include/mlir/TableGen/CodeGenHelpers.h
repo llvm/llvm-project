@@ -52,6 +52,15 @@ private:
   std::optional<llvm::NamespaceEmitter> nsEmitter;
 };
 
+/// This class represents how an error stream string being constructed will be
+/// consumed.
+enum class ErrorStreamType {
+  // Inside a string that's streamed into an InflightDiagnostic.
+  InString,
+  // Inside a string inside an OpError.
+  InsideOpError,
+};
+
 /// This class deduplicates shared operation verification code by emitting
 /// static functions alongside the op definitions. These methods are local to
 /// the definition file, and are invoked within the operation verify methods.
@@ -192,7 +201,8 @@ private:
 
   /// A generic function to emit constraints
   void emitConstraints(const ConstraintMap &constraints, StringRef selfName,
-                       const char *codeTemplate);
+                       const char *codeTemplate,
+                       ErrorStreamType errorStreamType);
 
   /// Assign a unique name to a unique constraint.
   std::string getUniqueName(StringRef kind, unsigned index);
@@ -242,6 +252,18 @@ std::string stringify(T &&t) {
   return detail::stringifier<std::remove_reference_t<std::remove_const_t<T>>>::
       apply(std::forward<T>(t));
 }
+
+/// Helper to generate a C++ streaming error message from a given message.
+/// Message can contain '{{...}}' placeholders that are substituted with
+/// C-expressions via tgfmt. It would effectively convert:
+///   "failed to verify {{foo}}"
+/// into:
+///   "failed to verify " << bar
+/// where bar is the result of evaluating 'tgfmt("foo", &ctx)' at compile
+/// time.
+std::string buildErrorStreamingString(
+    StringRef message, const FmtContext &ctx,
+    ErrorStreamType errorStreamType = ErrorStreamType::InString);
 
 } // namespace tblgen
 } // namespace mlir

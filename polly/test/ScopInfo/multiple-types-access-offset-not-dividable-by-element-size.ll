@@ -1,6 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=print<polly-function-scops>' -pass-remarks-analysis="polly-scops" \
-; RUN:     -polly-allow-differing-element-types \
-; RUN:     -disable-output < %s  2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<scops>' -polly-print-scops -pass-remarks-analysis=polly-scops -polly-allow-differing-element-types -disable-output < %s 2>&1 | FileCheck %s
 ;
 ;    // For the following accesses the offset expression from the base pointer
 ;    // is not always a multiple of the type size.

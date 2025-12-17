@@ -123,6 +123,8 @@ def OMPC_Collapse : Clause<[Spelling<"collapse">]> {
   let clangClass = "OMPCollapseClause";
   let flangClass = "ScalarIntConstantExpr";
 }
+def OMPC_Collector : Clause<[Spelling<"collector">]> {
+}
 def OMPC_Compare : Clause<[Spelling<"compare">]> {
   let clangClass = "OMPCompareClause";
 }
@@ -185,6 +187,7 @@ def OMPC_DynamicAllocators : Clause<[Spelling<"dynamic_allocators">]> {
   let isValueOptional = true;
 }
 def OMPC_DynGroupprivate : Clause<[Spelling<"dyn_groupprivate">]> {
+  let clangClass = "OMPDynGroupprivateClause";
   let flangClass = "OmpDynGroupprivateClause";
 }
 def OMPC_Enter : Clause<[Spelling<"enter">]> {
@@ -264,6 +267,8 @@ def OMPC_Inclusive : Clause<[Spelling<"inclusive">]> {
 def OMPC_Indirect : Clause<[Spelling<"indirect">]> {
   let flangClass = "OmpIndirectClause";
 }
+def OMPC_Inductor : Clause<[Spelling<"inductor">]> {
+}
 def OMPC_Init : Clause<[Spelling<"init">]> {
   let clangClass = "OMPInitClause";
   let flangClass = "OmpInitClause";
@@ -292,7 +297,7 @@ def OMPC_Link : Clause<[Spelling<"link">]> {
 }
 def OMPC_LoopRange : Clause<[Spelling<"looprange">]> {
   let clangClass = "OMPLoopRangeClause";
-  let flangClass = "OmpLoopRangeClause";
+  let flangClass = "OmpLooprangeClause";
 }
 def OMPC_Map : Clause<[Spelling<"map">]> {
   let clangClass = "OMPMapClause";
@@ -374,13 +379,13 @@ def OMPC_NumTasks : Clause<[Spelling<"num_tasks">]> {
 }
 def OMPC_NumTeams : Clause<[Spelling<"num_teams">]> {
   let clangClass = "OMPNumTeamsClause";
-  let flangClass = "ScalarIntExpr";
+  let flangClass = "OmpNumTeamsClause";
 }
 def OMP_NUMTHREADS_Strict : EnumVal<"strict", 1, 1> {}
 def OMP_NUMTHREADS_Unknown : EnumVal<"unknown", 2, 0> { let isDefault = 1; }
 def OMPC_NumThreads : Clause<[Spelling<"num_threads">]> {
   let clangClass = "OMPNumThreadsClause";
-  let flangClass = "ScalarIntExpr";
+  let flangClass = "OmpNumThreadsClause";
   let enumClauseValue = "NumThreadsType";
   let allowedClauseValues = [
     OMP_NUMTHREADS_Strict,
@@ -485,7 +490,8 @@ def OMP_SCHEDULE_Dynamic : EnumVal<"dynamic", 3, 1> {}
 def OMP_SCHEDULE_Guided : EnumVal<"guided", 4, 1> {}
 def OMP_SCHEDULE_Auto : EnumVal<"auto", 5, 1> {}
 def OMP_SCHEDULE_Runtime : EnumVal<"runtime", 6, 1> {}
-def OMP_SCHEDULE_Default : EnumVal<"default", 7, 0> { let isDefault = 1; }
+def OMP_SCHEDULE_Distribute : EnumVal<"distribute", 7, 1> {}
+def OMP_SCHEDULE_Default : EnumVal<"default", 8, 0> { let isDefault = 1; }
 def OMPC_Schedule : Clause<[Spelling<"schedule">]> {
   let clangClass = "OMPScheduleClause";
   let flangClass = "OmpScheduleClause";
@@ -496,6 +502,7 @@ def OMPC_Schedule : Clause<[Spelling<"schedule">]> {
     OMP_SCHEDULE_Guided,
     OMP_SCHEDULE_Auto,
     OMP_SCHEDULE_Runtime,
+    OMP_SCHEDULE_Distribute,
     OMP_SCHEDULE_Default
   ];
 }
@@ -528,7 +535,7 @@ def OMPC_TaskReduction : Clause<[Spelling<"task_reduction">]> {
 }
 def OMPC_ThreadLimit : Clause<[Spelling<"thread_limit">]> {
   let clangClass = "OMPThreadLimitClause";
-  let flangClass = "ScalarIntExpr";
+  let flangClass = "OmpThreadLimitClause";
 }
 def OMPC_ThreadPrivate : Clause<[Spelling<"threadprivate">]> {
   let isImplicit = true;
@@ -538,6 +545,10 @@ def OMPC_GroupPrivate : Clause<[Spelling<"groupprivate">]> {
 }
 def OMPC_Threads : Clause<[Spelling<"threads">]> {
   let clangClass = "OMPThreadsClause";
+}
+def OMPC_Threadset : Clause<[Spelling<"threadset">]> {
+  let clangClass = "OMPThreadsetClause";
+  let flangClass = "OmpThreadsetClause";
 }
 def OMPC_To : Clause<[Spelling<"to">]> {
   let clangClass = "OMPToClause";
@@ -745,6 +756,14 @@ def OMP_Critical : Directive<[Spelling<"critical">]> {
   let association = AS_Block;
   let category = CA_Executable;
 }
+def OMP_DeclareInduction : Directive<[Spelling<"declare_induction">]> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Collector, 60>,
+    VersionedClause<OMPC_Inductor, 60>,
+  ];
+  let association = AS_None;
+  let category = CA_Declarative;
+}
 def OMP_DeclareMapper : Directive<[Spelling<"declare mapper", 1, 52>,
                                    Spelling<"declare_mapper", 60>]> {
   let requiredClauses = [
@@ -842,7 +861,7 @@ def OMP_Distribute : Directive<[Spelling<"distribute">]> {
     VersionedClause<OMPC_DistSchedule>,
     VersionedClause<OMPC_Order, 50>,
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
 }
 def OMP_Do : Directive<[Spelling<"do">]> {
@@ -860,7 +879,7 @@ def OMP_Do : Directive<[Spelling<"do">]> {
     VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_Schedule>,
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
   let languages = [L_Fortran];
 }
@@ -909,7 +928,7 @@ def OMP_For : Directive<[Spelling<"for">]> {
     VersionedClause<OMPC_Reduction>,
     VersionedClause<OMPC_Schedule>,
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
   let languages = [L_C];
 }
@@ -923,14 +942,14 @@ def OMP_Groupprivate : Directive<[Spelling<"groupprivate">]> {
 }
 def OMP_Fuse : Directive<[Spelling<"fuse">]> {
   let allowedOnceClauses = [VersionedClause<OMPC_LoopRange, 60>];
-  let association = AS_Block;
+  let association = AS_LoopSeq;
   let category = CA_Executable;
 }
 def OMP_Interchange : Directive<[Spelling<"interchange">]> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_Permutation>,
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
 }
 def OMP_interop : Directive<[Spelling<"interop">]> {
@@ -956,7 +975,7 @@ def OMP_loop : Directive<[Spelling<"loop">]> {
     VersionedClause<OMPC_Collapse>,
     VersionedClause<OMPC_Order, 50>,
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
 }
 def OMP_masked : Directive<[Spelling<"masked">]> {
@@ -1039,7 +1058,7 @@ def OMP_Requires : Directive<[Spelling<"requires">]> {
   let category = CA_Informational;
 }
 def OMP_Reverse : Directive<[Spelling<"reverse">]> {
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
 }
 def OMP_Scan : Directive<[Spelling<"scan">]> {
@@ -1114,7 +1133,7 @@ def OMP_Simd : Directive<[Spelling<"simd">]> {
     VersionedClause<OMPC_SafeLen>,
     VersionedClause<OMPC_SimdLen>,
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
 }
 def OMP_Single : Directive<[Spelling<"single">]> {
@@ -1254,6 +1273,7 @@ def OMP_Task : Directive<[Spelling<"task">]> {
     VersionedClause<OMPC_Final>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_Priority>,
+    VersionedClause<OMPC_Threadset, 60>,
     VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_Transparent, 60>,
   ];
@@ -1297,6 +1317,7 @@ def OMP_TaskLoop : Directive<[Spelling<"taskloop">]> {
     VersionedClause<OMPC_Final>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_Priority>,
+    VersionedClause<OMPC_Threadset, 60>,
     VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_Transparent, 60>,
   ];
@@ -1304,7 +1325,7 @@ def OMP_TaskLoop : Directive<[Spelling<"taskloop">]> {
     VersionedClause<OMPC_GrainSize>,
     VersionedClause<OMPC_NumTasks>,
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
 }
 def OMP_TaskWait : Directive<[Spelling<"taskwait">]> {
@@ -1352,14 +1373,14 @@ def OMP_Tile : Directive<[Spelling<"tile">]> {
   let requiredClauses = [
     VersionedClause<OMPC_Sizes, 51>,
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
 }
 def OMP_Stripe : Directive<[Spelling<"stripe">]> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_Sizes, 60>,
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
 }
 def OMP_Unknown : Directive<[Spelling<"unknown">]> {
@@ -1372,7 +1393,7 @@ def OMP_Unroll : Directive<[Spelling<"unroll">]> {
     VersionedClause<OMPC_Full, 51>,
     VersionedClause<OMPC_Partial, 51>,
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
 }
 def OMP_Workshare : Directive<[Spelling<"workshare">]> {

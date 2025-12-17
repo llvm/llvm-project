@@ -11,29 +11,425 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRGenBuilder.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
+#include "mlir/IR/Location.h"
+#include "mlir/IR/ValueRange.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 
-mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
-                                               const CallExpr *e) {
+template <typename... Operands>
+static mlir::Value emitIntrinsicCallOp(CIRGenBuilderTy &builder,
+                                       mlir::Location loc, const StringRef str,
+                                       const mlir::Type &resTy,
+                                       Operands &&...op) {
+  return cir::LLVMIntrinsicCallOp::create(builder, loc,
+                                          builder.getStringAttr(str), resTy,
+                                          std::forward<Operands>(op)...)
+      .getResult();
+}
+
+// OG has unordered comparison as a form of optimization in addition to
+// ordered comparison, while CIR doesn't.
+//
+// This means that we can't encode the comparison code of UGT (unordered
+// greater than), at least not at the CIR level.
+//
+// The boolean shouldInvert compensates for this.
+// For example: to get to the comparison code UGT, we pass in
+// emitVectorFCmp (OLE, shouldInvert = true) since OLE is the inverse of UGT.
+
+// There are several ways to support this otherwise:
+// - register extra CmpOpKind for unordered comparison types and build the
+// translation code for
+//    to go from CIR -> LLVM dialect. Notice we get this naturally with
+//    shouldInvert, benefiting from existing infrastructure, albeit having to
+//    generate an extra `not` at CIR).
+// - Just add extra comparison code to a new VecCmpOpKind instead of
+// cluttering CmpOpKind.
+// - Add a boolean in VecCmpOp to indicate if it's doing unordered or ordered
+// comparison
+// - Just emit the intrinsics call instead of calling this helper, see how the
+// LLVM lowering handles this.
+static mlir::Value emitVectorFCmp(CIRGenBuilderTy &builder,
+                                  llvm::SmallVector<mlir::Value> &ops,
+                                  mlir::Location loc, cir::CmpOpKind pred,
+                                  bool shouldInvert) {
+  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+  // TODO(cir): Add isSignaling boolean once emitConstrainedFPCall implemented
+  assert(!cir::MissingFeatures::emitConstrainedFPCall());
+  mlir::Value cmp = builder.createVecCompare(loc, pred, ops[0], ops[1]);
+  mlir::Value bitCast = builder.createBitcast(
+      shouldInvert ? builder.createNot(cmp) : cmp, ops[0].getType());
+  return bitCast;
+}
+
+static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Location loc,
+                                   mlir::Value mask, unsigned numElems) {
+  auto maskTy = cir::VectorType::get(
+      builder.getUIntNTy(1), cast<cir::IntType>(mask.getType()).getWidth());
+  mlir::Value maskVec = builder.createBitcast(mask, maskTy);
+
+  // If we have less than 8 elements, then the starting mask was an i8 and
+  // we need to extract down to the right number of elements.
+  if (numElems < 8) {
+    SmallVector<mlir::Attribute, 4> indices;
+    mlir::Type i32Ty = builder.getSInt32Ty();
+    for (auto i : llvm::seq<unsigned>(0, numElems))
+      indices.push_back(cir::IntAttr::get(i32Ty, i));
+
+    maskVec = builder.createVecShuffle(loc, maskVec, maskVec, indices);
+  }
+  return maskVec;
+}
+
+// Builds the VecShuffleOp for pshuflw and pshufhw x86 builtins.
+//
+// The vector is split into lanes of 8 word elements (16 bits). The lower or
+// upper half of each lane, controlled by `isLow`, is shuffled in the following
+// way: The immediate is truncated to 8 bits, separated into 4 2-bit fields. The
+// i-th field's value represents the resulting index of the i-th element in the
+// half lane after shuffling. The other half of the lane remains unchanged.
+static cir::VecShuffleOp emitPshufWord(CIRGenBuilderTy &builder,
+                                       const mlir::Value vec,
+                                       const mlir::Value immediate,
+                                       const mlir::Location loc,
+                                       const bool isLow) {
+  uint32_t imm = CIRGenFunction::getZExtIntValueFromConstOp(immediate);
+
+  auto vecTy = cast<cir::VectorType>(vec.getType());
+  unsigned numElts = vecTy.getSize();
+
+  unsigned firstHalfStart = isLow ? 0 : 4;
+  unsigned secondHalfStart = 4 - firstHalfStart;
+
+  // Splat the 8-bits of immediate 4 times to help the loop wrap around.
+  imm = (imm & 0xff) * 0x01010101;
+
+  int64_t indices[32];
+  for (unsigned l = 0; l != numElts; l += 8) {
+    for (unsigned i = firstHalfStart; i != firstHalfStart + 4; ++i) {
+      indices[l + i] = l + (imm & 3) + firstHalfStart;
+      imm >>= 2;
+    }
+    for (unsigned i = secondHalfStart; i != secondHalfStart + 4; ++i)
+      indices[l + i] = l + i;
+  }
+
+  return builder.createVecShuffle(loc, vec, ArrayRef(indices, numElts));
+}
+
+// Builds the shuffle mask for pshufd and shufpd/shufps x86 builtins.
+// The shuffle mask is written to outIndices.
+static void
+computeFullLaneShuffleMask(CIRGenFunction &cgf, const mlir::Value vec,
+                           uint32_t imm, const bool isShufP,
+                           llvm::SmallVectorImpl<int64_t> &outIndices) {
+  auto vecTy = cast<cir::VectorType>(vec.getType());
+  unsigned numElts = vecTy.getSize();
+  unsigned numLanes = cgf.cgm.getDataLayout().getTypeSizeInBits(vecTy) / 128;
+  unsigned numLaneElts = numElts / numLanes;
+
+  // Splat the 8-bits of immediate 4 times to help the loop wrap around.
+  imm = (imm & 0xff) * 0x01010101;
+
+  for (unsigned l = 0; l != numElts; l += numLaneElts) {
+    for (unsigned i = 0; i != numLaneElts; ++i) {
+      uint32_t idx = imm % numLaneElts;
+      imm /= numLaneElts;
+      if (isShufP && i >= (numLaneElts / 2))
+        idx += numElts;
+      outIndices[l + i] = l + idx;
+    }
+  }
+
+  outIndices.resize(numElts);
+}
+static mlir::Value emitX86CompressExpand(CIRGenBuilderTy &builder,
+                                         mlir::Location loc, mlir::Value source,
+                                         mlir::Value mask,
+                                         mlir::Value inputVector,
+                                         const std::string &id) {
+  auto resultTy = cast<cir::VectorType>(mask.getType());
+  mlir::Value maskValue = getMaskVecValue(
+      builder, loc, inputVector, cast<cir::VectorType>(resultTy).getSize());
+  return emitIntrinsicCallOp(builder, loc, id, resultTy,
+                             mlir::ValueRange{source, mask, maskValue});
+}
+
+static mlir::Value getBoolMaskVecValue(CIRGenBuilderTy &builder,
+                                       mlir::Location loc, mlir::Value mask,
+                                       unsigned numElems) {
+
+  cir::BoolType boolTy = builder.getBoolTy();
+  auto maskTy = cir::VectorType::get(
+      boolTy, cast<cir::IntType>(mask.getType()).getWidth());
+  mlir::Value maskVec = builder.createBitcast(mask, maskTy);
+
+  if (numElems < 8) {
+    SmallVector<mlir::Attribute> indices;
+    indices.reserve(numElems);
+    mlir::Type i32Ty = builder.getSInt32Ty();
+    for (auto i : llvm::seq<unsigned>(0, numElems))
+      indices.push_back(cir::IntAttr::get(i32Ty, i));
+
+    maskVec = builder.createVecShuffle(loc, maskVec, maskVec, indices);
+  }
+  return maskVec;
+}
+
+static mlir::Value emitX86Select(CIRGenBuilderTy &builder, mlir::Location loc,
+                                 mlir::Value mask, mlir::Value op0,
+                                 mlir::Value op1) {
+  auto constOp = mlir::dyn_cast_or_null<cir::ConstantOp>(mask.getDefiningOp());
+  // If the mask is all ones just return first argument.
+  if (constOp && constOp.isAllOnesValue())
+    return op0;
+
+  mask = getBoolMaskVecValue(builder, loc, mask,
+                             cast<cir::VectorType>(op0.getType()).getSize());
+
+  return builder.createSelect(loc, mask, op0, op1);
+}
+
+static mlir::Value emitX86MaskAddLogic(CIRGenBuilderTy &builder,
+                                       mlir::Location loc,
+                                       const std::string &intrinsicName,
+                                       SmallVectorImpl<mlir::Value> &ops) {
+
+  auto intTy = cast<cir::IntType>(ops[0].getType());
+  unsigned numElts = intTy.getWidth();
+  mlir::Value lhsVec = getMaskVecValue(builder, loc, ops[0], numElts);
+  mlir::Value rhsVec = getMaskVecValue(builder, loc, ops[1], numElts);
+  mlir::Type vecTy = lhsVec.getType();
+  mlir::Value resVec = emitIntrinsicCallOp(builder, loc, intrinsicName, vecTy,
+                                           mlir::ValueRange{lhsVec, rhsVec});
+  return builder.createBitcast(resVec, ops[0].getType());
+}
+
+static mlir::Value emitX86MaskUnpack(CIRGenBuilderTy &builder,
+                                     mlir::Location loc,
+                                     const std::string &intrinsicName,
+                                     SmallVectorImpl<mlir::Value> &ops) {
+  unsigned numElems = cast<cir::IntType>(ops[0].getType()).getWidth();
+
+  // Convert both operands to mask vectors.
+  mlir::Value lhs = getMaskVecValue(builder, loc, ops[0], numElems);
+  mlir::Value rhs = getMaskVecValue(builder, loc, ops[1], numElems);
+
+  mlir::Type i32Ty = builder.getSInt32Ty();
+
+  // Create indices for extracting the first half of each vector.
+  SmallVector<mlir::Attribute, 32> halfIndices;
+  for (auto i : llvm::seq<unsigned>(0, numElems / 2))
+    halfIndices.push_back(cir::IntAttr::get(i32Ty, i));
+
+  // Extract first half of each vector. This gives better codegen than
+  // doing it in a single shuffle.
+  mlir::Value lhsHalf = builder.createVecShuffle(loc, lhs, lhs, halfIndices);
+  mlir::Value rhsHalf = builder.createVecShuffle(loc, rhs, rhs, halfIndices);
+
+  // Create indices for concatenating the vectors.
+  // NOTE: Operands are swapped to match the intrinsic definition.
+  // After the half extraction, both vectors have numElems/2 elements.
+  // In createVecShuffle(rhsHalf, lhsHalf, indices), indices [0..numElems/2-1]
+  // select from rhsHalf, and indices [numElems/2..numElems-1] select from
+  // lhsHalf.
+  SmallVector<mlir::Attribute, 64> concatIndices;
+  for (auto i : llvm::seq<unsigned>(0, numElems))
+    concatIndices.push_back(cir::IntAttr::get(i32Ty, i));
+
+  // Concat the vectors (RHS first, then LHS).
+  mlir::Value res =
+      builder.createVecShuffle(loc, rhsHalf, lhsHalf, concatIndices);
+  return builder.createBitcast(res, ops[0].getType());
+}
+
+static mlir::Value emitX86MaskLogic(CIRGenBuilderTy &builder,
+                                    mlir::Location loc,
+                                    cir::BinOpKind binOpKind,
+                                    SmallVectorImpl<mlir::Value> &ops,
+                                    bool invertLHS = false) {
+  unsigned numElts = cast<cir::IntType>(ops[0].getType()).getWidth();
+  mlir::Value lhs = getMaskVecValue(builder, loc, ops[0], numElts);
+  mlir::Value rhs = getMaskVecValue(builder, loc, ops[1], numElts);
+
+  if (invertLHS)
+    lhs = builder.createNot(lhs);
+  return builder.createBitcast(builder.createBinop(loc, lhs, binOpKind, rhs),
+                               ops[0].getType());
+}
+
+static mlir::Value emitX86MaskTest(CIRGenBuilderTy &builder, mlir::Location loc,
+                                   const std::string &intrinsicName,
+                                   SmallVectorImpl<mlir::Value> &ops) {
+  auto intTy = cast<cir::IntType>(ops[0].getType());
+  unsigned numElts = intTy.getWidth();
+  mlir::Value lhsVec = getMaskVecValue(builder, loc, ops[0], numElts);
+  mlir::Value rhsVec = getMaskVecValue(builder, loc, ops[1], numElts);
+  mlir::Type resTy = builder.getSInt32Ty();
+  return emitIntrinsicCallOp(builder, loc, intrinsicName, resTy,
+                             mlir::ValueRange{lhsVec, rhsVec});
+}
+
+static mlir::Value emitVecInsert(CIRGenBuilderTy &builder, mlir::Location loc,
+                                 mlir::Value vec, mlir::Value value,
+                                 mlir::Value indexOp) {
+  unsigned numElts = cast<cir::VectorType>(vec.getType()).getSize();
+
+  uint64_t index =
+      indexOp.getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue();
+
+  index &= numElts - 1;
+
+  cir::ConstantOp indexVal = builder.getUInt64(index, loc);
+
+  return cir::VecInsertOp::create(builder, loc, vec, value, indexVal);
+}
+
+static mlir::Value emitX86FunnelShift(CIRGenBuilderTy &builder,
+                                      mlir::Location location, mlir::Value &op0,
+                                      mlir::Value &op1, mlir::Value &amt,
+                                      bool isRight) {
+  mlir::Type op0Ty = op0.getType();
+
+  // Amount may be scalar immediate, in which case create a splat vector.
+  // Funnel shifts amounts are treated as modulo and types are all power-of-2
+  // so we only care about the lowest log2 bits anyway.
+  if (amt.getType() != op0Ty) {
+    auto vecTy = mlir::cast<cir::VectorType>(op0Ty);
+    uint64_t numElems = vecTy.getSize();
+
+    auto amtTy = mlir::cast<cir::IntType>(amt.getType());
+    auto vecElemTy = mlir::cast<cir::IntType>(vecTy.getElementType());
+
+    // If signed, cast to the same width but unsigned first to
+    // ensure zero-extension when casting to a bigger unsigned `vecElemeTy`.
+    if (amtTy.isSigned()) {
+      cir::IntType unsignedAmtTy = builder.getUIntNTy(amtTy.getWidth());
+      amt = builder.createIntCast(amt, unsignedAmtTy);
+    }
+    cir::IntType unsignedVecElemType = builder.getUIntNTy(vecElemTy.getWidth());
+    amt = builder.createIntCast(amt, unsignedVecElemType);
+    amt = cir::VecSplatOp::create(
+        builder, location, cir::VectorType::get(unsignedVecElemType, numElems),
+        amt);
+  }
+
+  const StringRef intrinsicName = isRight ? "fshr" : "fshl";
+  return emitIntrinsicCallOp(builder, location, intrinsicName, op0Ty,
+                             mlir::ValueRange{op0, op1, amt});
+}
+
+static mlir::Value emitX86Muldq(CIRGenBuilderTy &builder, mlir::Location loc,
+                                bool isSigned,
+                                SmallVectorImpl<mlir::Value> &ops,
+                                unsigned opTypePrimitiveSizeInBits) {
+  mlir::Type ty = cir::VectorType::get(builder.getSInt64Ty(),
+                                       opTypePrimitiveSizeInBits / 64);
+  mlir::Value lhs = builder.createBitcast(loc, ops[0], ty);
+  mlir::Value rhs = builder.createBitcast(loc, ops[1], ty);
+  if (isSigned) {
+    cir::ConstantOp shiftAmt =
+        builder.getConstant(loc, cir::IntAttr::get(builder.getSInt64Ty(), 32));
+    cir::VecSplatOp shiftSplatVecOp =
+        cir::VecSplatOp::create(builder, loc, ty, shiftAmt.getResult());
+    mlir::Value shiftSplatValue = shiftSplatVecOp.getResult();
+    // In CIR, right-shift operations are automatically lowered to either an
+    // arithmetic or logical shift depending on the operand type. The purpose
+    // of the shifts here is to propagate the sign bit of the 32-bit input
+    // into the upper bits of each vector lane.
+    lhs = builder.createShift(loc, lhs, shiftSplatValue, true);
+    lhs = builder.createShift(loc, lhs, shiftSplatValue, false);
+    rhs = builder.createShift(loc, rhs, shiftSplatValue, true);
+    rhs = builder.createShift(loc, rhs, shiftSplatValue, false);
+  } else {
+    cir::ConstantOp maskScalar = builder.getConstant(
+        loc, cir::IntAttr::get(builder.getSInt64Ty(), 0xffffffff));
+    cir::VecSplatOp mask =
+        cir::VecSplatOp::create(builder, loc, ty, maskScalar.getResult());
+    // Clear the upper bits
+    lhs = builder.createAnd(loc, lhs, mask);
+    rhs = builder.createAnd(loc, rhs, mask);
+  }
+  return builder.createMul(loc, lhs, rhs);
+}
+
+static mlir::Value emitX86vpcom(CIRGenBuilderTy &builder, mlir::Location loc,
+                                llvm::SmallVector<mlir::Value> ops,
+                                bool isSigned) {
+  mlir::Value op0 = ops[0];
+  mlir::Value op1 = ops[1];
+
+  cir::VectorType ty = cast<cir::VectorType>(op0.getType());
+  cir::IntType elementTy = cast<cir::IntType>(ty.getElementType());
+
+  uint64_t imm = CIRGenFunction::getZExtIntValueFromConstOp(ops[2]) & 0x7;
+
+  cir::CmpOpKind pred;
+  switch (imm) {
+  case 0x0:
+    pred = cir::CmpOpKind::lt;
+    break;
+  case 0x1:
+    pred = cir::CmpOpKind::le;
+    break;
+  case 0x2:
+    pred = cir::CmpOpKind::gt;
+    break;
+  case 0x3:
+    pred = cir::CmpOpKind::ge;
+    break;
+  case 0x4:
+    pred = cir::CmpOpKind::eq;
+    break;
+  case 0x5:
+    pred = cir::CmpOpKind::ne;
+    break;
+  case 0x6:
+    return builder.getNullValue(ty, loc); // FALSE
+  case 0x7: {
+    llvm::APInt allOnes = llvm::APInt::getAllOnes(elementTy.getWidth());
+    return cir::VecSplatOp::create(
+        builder, loc, ty,
+        builder.getConstAPInt(loc, elementTy, allOnes)); // TRUE
+  }
+  default:
+    llvm_unreachable("Unexpected XOP vpcom/vpcomu predicate");
+  }
+
+  if ((!isSigned && elementTy.isSigned()) ||
+      (isSigned && elementTy.isUnsigned())) {
+    elementTy = elementTy.isSigned() ? builder.getUIntNTy(elementTy.getWidth())
+                                     : builder.getSIntNTy(elementTy.getWidth());
+    ty = cir::VectorType::get(elementTy, ty.getSize());
+    op0 = builder.createBitcast(op0, ty);
+    op1 = builder.createBitcast(op1, ty);
+  }
+
+  return builder.createVecCompare(loc, pred, op0, op1);
+}
+
+std::optional<mlir::Value>
+CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   if (builtinID == Builtin::BI__builtin_cpu_is) {
-    cgm.errorNYI(e->getSourceRange(), "__builtin_cpu_is");
-    return {};
+    cgm.errorNYI(expr->getSourceRange(), "__builtin_cpu_is");
+    return mlir::Value{};
   }
   if (builtinID == Builtin::BI__builtin_cpu_supports) {
-    cgm.errorNYI(e->getSourceRange(), "__builtin_cpu_supports");
-    return {};
+    cgm.errorNYI(expr->getSourceRange(), "__builtin_cpu_supports");
+    return mlir::Value{};
   }
   if (builtinID == Builtin::BI__builtin_cpu_init) {
-    cgm.errorNYI(e->getSourceRange(), "__builtin_cpu_init");
-    return {};
+    cgm.errorNYI(expr->getSourceRange(), "__builtin_cpu_init");
+    return mlir::Value{};
   }
 
   // Handle MSVC intrinsics before argument evaluation to prevent double
@@ -43,26 +439,74 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   // Find out if any arguments are required to be integer constant expressions.
   assert(!cir::MissingFeatures::handleBuiltinICEArguments());
 
+  // The operands of the builtin call
+  llvm::SmallVector<mlir::Value> ops;
+
+  // `ICEArguments` is a bitmap indicating whether the argument at the i-th bit
+  // is required to be a constant integer expression.
+  unsigned iceArguments = 0;
+  ASTContext::GetBuiltinTypeError error;
+  getContext().GetBuiltinType(builtinID, error, &iceArguments);
+  assert(error == ASTContext::GE_None && "Error while getting builtin type.");
+
+  for (auto [idx, arg] : llvm::enumerate(expr->arguments()))
+    ops.push_back(emitScalarOrConstFoldImmArg(iceArguments, idx, arg));
+
+  CIRGenBuilderTy &builder = getBuilder();
+  mlir::Type voidTy = builder.getVoidTy();
+
   switch (builtinID) {
   default:
-    return {};
-  case X86::BI_mm_prefetch:
+    return std::nullopt;
   case X86::BI_mm_clflush:
+    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
+                               "x86.sse2.clflush", voidTy, ops[0]);
   case X86::BI_mm_lfence:
+    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
+                               "x86.sse2.lfence", voidTy);
   case X86::BI_mm_pause:
+    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
+                               "x86.sse2.pause", voidTy);
   case X86::BI_mm_mfence:
+    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
+                               "x86.sse2.mfence", voidTy);
   case X86::BI_mm_sfence:
+    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
+                               "x86.sse.sfence", voidTy);
+  case X86::BI_mm_prefetch:
   case X86::BI__rdtsc:
-  case X86::BI__builtin_ia32_rdtscp:
+  case X86::BI__builtin_ia32_rdtscp: {
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  }
   case X86::BI__builtin_ia32_lzcnt_u16:
   case X86::BI__builtin_ia32_lzcnt_u32:
-  case X86::BI__builtin_ia32_lzcnt_u64:
+  case X86::BI__builtin_ia32_lzcnt_u64: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    mlir::Value isZeroPoison = builder.getFalse(loc);
+    return emitIntrinsicCallOp(builder, loc, "ctlz", ops[0].getType(),
+                               mlir::ValueRange{ops[0], isZeroPoison});
+  }
   case X86::BI__builtin_ia32_tzcnt_u16:
   case X86::BI__builtin_ia32_tzcnt_u32:
-  case X86::BI__builtin_ia32_tzcnt_u64:
+  case X86::BI__builtin_ia32_tzcnt_u64: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    mlir::Value isZeroPoison = builder.getFalse(loc);
+    return emitIntrinsicCallOp(builder, loc, "cttz", ops[0].getType(),
+                               mlir::ValueRange{ops[0], isZeroPoison});
+  }
   case X86::BI__builtin_ia32_undef128:
   case X86::BI__builtin_ia32_undef256:
   case X86::BI__builtin_ia32_undef512:
+    // The x86 definition of "undef" is not the same as the LLVM definition
+    // (PR32176). We leave optimizing away an unnecessary zero constant to the
+    // IR optimizer and backend.
+    // TODO: If we had a "freeze" IR instruction to generate a fixed undef
+    //  value, we should use that here instead of a zero.
+    return builder.getNullValue(convertType(expr->getType()),
+                                getLoc(expr->getExprLoc()));
   case X86::BI__builtin_ia32_vec_ext_v4hi:
   case X86::BI__builtin_ia32_vec_ext_v16qi:
   case X86::BI__builtin_ia32_vec_ext_v8hi:
@@ -72,7 +516,20 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vec_ext_v32qi:
   case X86::BI__builtin_ia32_vec_ext_v16hi:
   case X86::BI__builtin_ia32_vec_ext_v8si:
-  case X86::BI__builtin_ia32_vec_ext_v4di:
+  case X86::BI__builtin_ia32_vec_ext_v4di: {
+    unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getSize();
+
+    uint64_t index = getZExtIntValueFromConstOp(ops[1]);
+    index &= numElts - 1;
+
+    cir::ConstantOp indexVal =
+        builder.getUInt64(index, getLoc(expr->getExprLoc()));
+
+    // These builtins exist so we can ensure the index is an ICE and in range.
+    // Otherwise we could just do this in the header file.
+    return cir::VecExtractOp::create(builder, getLoc(expr->getExprLoc()),
+                                     ops[0], indexVal);
+  }
   case X86::BI__builtin_ia32_vec_set_v4hi:
   case X86::BI__builtin_ia32_vec_set_v16qi:
   case X86::BI__builtin_ia32_vec_set_v8hi:
@@ -81,11 +538,35 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vec_set_v32qi:
   case X86::BI__builtin_ia32_vec_set_v16hi:
   case X86::BI__builtin_ia32_vec_set_v8si:
-  case X86::BI__builtin_ia32_vec_set_v4di:
+  case X86::BI__builtin_ia32_vec_set_v4di: {
+    return emitVecInsert(builder, getLoc(expr->getExprLoc()), ops[0], ops[1],
+                         ops[2]);
+  }
+  case X86::BI__builtin_ia32_kunpckhi:
+    return emitX86MaskUnpack(builder, getLoc(expr->getExprLoc()),
+                             "x86.avx512.kunpackb", ops);
+  case X86::BI__builtin_ia32_kunpcksi:
+    return emitX86MaskUnpack(builder, getLoc(expr->getExprLoc()),
+                             "x86.avx512.kunpackw", ops);
+  case X86::BI__builtin_ia32_kunpckdi:
+    return emitX86MaskUnpack(builder, getLoc(expr->getExprLoc()),
+                             "x86.avx512.kunpackd", ops);
   case X86::BI_mm_setcsr:
-  case X86::BI__builtin_ia32_ldmxcsr:
+  case X86::BI__builtin_ia32_ldmxcsr: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    Address tmp = createMemTemp(expr->getArg(0)->getType(), loc);
+    builder.createStore(loc, ops[0], tmp);
+    return emitIntrinsicCallOp(builder, loc, "x86.sse.ldmxcsr",
+                               builder.getVoidTy(), tmp.getPointer());
+  }
   case X86::BI_mm_getcsr:
-  case X86::BI__builtin_ia32_stmxcsr:
+  case X86::BI__builtin_ia32_stmxcsr: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    Address tmp = createMemTemp(expr->getType(), loc);
+    emitIntrinsicCallOp(builder, loc, "x86.sse.stmxcsr", builder.getVoidTy(),
+                        tmp.getPointer());
+    return builder.createLoad(loc, tmp);
+  }
   case X86::BI__builtin_ia32_xsave:
   case X86::BI__builtin_ia32_xsave64:
   case X86::BI__builtin_ia32_xrstor:
@@ -99,9 +580,78 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_xsaves:
   case X86::BI__builtin_ia32_xsaves64:
   case X86::BI__builtin_ia32_xsetbv:
-  case X86::BI_xsetbv:
+  case X86::BI_xsetbv: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    StringRef intrinsicName;
+    switch (builtinID) {
+    default:
+      llvm_unreachable("Unexpected builtin");
+    case X86::BI__builtin_ia32_xsave:
+      intrinsicName = "x86.xsave";
+      break;
+    case X86::BI__builtin_ia32_xsave64:
+      intrinsicName = "x86.xsave64";
+      break;
+    case X86::BI__builtin_ia32_xrstor:
+      intrinsicName = "x86.xrstor";
+      break;
+    case X86::BI__builtin_ia32_xrstor64:
+      intrinsicName = "x86.xrstor64";
+      break;
+    case X86::BI__builtin_ia32_xsaveopt:
+      intrinsicName = "x86.xsaveopt";
+      break;
+    case X86::BI__builtin_ia32_xsaveopt64:
+      intrinsicName = "x86.xsaveopt64";
+      break;
+    case X86::BI__builtin_ia32_xrstors:
+      intrinsicName = "x86.xrstors";
+      break;
+    case X86::BI__builtin_ia32_xrstors64:
+      intrinsicName = "x86.xrstors64";
+      break;
+    case X86::BI__builtin_ia32_xsavec:
+      intrinsicName = "x86.xsavec";
+      break;
+    case X86::BI__builtin_ia32_xsavec64:
+      intrinsicName = "x86.xsavec64";
+      break;
+    case X86::BI__builtin_ia32_xsaves:
+      intrinsicName = "x86.xsaves";
+      break;
+    case X86::BI__builtin_ia32_xsaves64:
+      intrinsicName = "x86.xsaves64";
+      break;
+    case X86::BI__builtin_ia32_xsetbv:
+    case X86::BI_xsetbv:
+      intrinsicName = "x86.xsetbv";
+      break;
+    }
+
+    // The xsave family of instructions take a 64-bit mask that specifies
+    // which processor state components to save/restore. The hardware expects
+    // this mask split into two 32-bit registers: EDX (high 32 bits) and
+    // EAX (low 32 bits).
+    mlir::Type i32Ty = builder.getSInt32Ty();
+
+    // Mhi = (uint32_t)(ops[1] >> 32) - extract high 32 bits via right shift
+    cir::ConstantOp shift32 = builder.getSInt64(32, loc);
+    mlir::Value mhi = builder.createShift(loc, ops[1], shift32.getResult(),
+                                          /*isShiftLeft=*/false);
+    mhi = builder.createIntCast(mhi, i32Ty);
+
+    // Mlo = (uint32_t)ops[1] - extract low 32 bits by truncation
+    mlir::Value mlo = builder.createIntCast(ops[1], i32Ty);
+
+    return emitIntrinsicCallOp(builder, loc, intrinsicName, voidTy,
+                               mlir::ValueRange{ops[0], mhi, mlo});
+  }
   case X86::BI__builtin_ia32_xgetbv:
   case X86::BI_xgetbv:
+    // xgetbv reads the extended control register specified by ops[0] (ECX)
+    // and returns the 64-bit value
+    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
+                               "x86.xgetbv", builder.getUInt64Ty(), ops[0]);
   case X86::BI__builtin_ia32_storedqudi128_mask:
   case X86::BI__builtin_ia32_storedqusi128_mask:
   case X86::BI__builtin_ia32_storedquhi128_mask:
@@ -160,13 +710,9 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vcvtuw2ph512_mask:
   case X86::BI__builtin_ia32_vcvtudq2ph512_mask:
   case X86::BI__builtin_ia32_vcvtuqq2ph512_mask:
-  case X86::BI__builtin_ia32_vfmaddss3:
-  case X86::BI__builtin_ia32_vfmaddsd3:
   case X86::BI__builtin_ia32_vfmaddsh3_mask:
   case X86::BI__builtin_ia32_vfmaddss3_mask:
   case X86::BI__builtin_ia32_vfmaddsd3_mask:
-  case X86::BI__builtin_ia32_vfmaddss:
-  case X86::BI__builtin_ia32_vfmaddsd:
   case X86::BI__builtin_ia32_vfmaddsh3_maskz:
   case X86::BI__builtin_ia32_vfmaddss3_maskz:
   case X86::BI__builtin_ia32_vfmaddsd3_maskz:
@@ -282,6 +828,10 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_compressstoreqi128_mask:
   case X86::BI__builtin_ia32_compressstoreqi256_mask:
   case X86::BI__builtin_ia32_compressstoreqi512_mask:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case X86::BI__builtin_ia32_expanddf128_mask:
   case X86::BI__builtin_ia32_expanddf256_mask:
   case X86::BI__builtin_ia32_expanddf512_mask:
@@ -299,7 +849,11 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_expandhi512_mask:
   case X86::BI__builtin_ia32_expandqi128_mask:
   case X86::BI__builtin_ia32_expandqi256_mask:
-  case X86::BI__builtin_ia32_expandqi512_mask:
+  case X86::BI__builtin_ia32_expandqi512_mask: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    return emitX86CompressExpand(builder, loc, ops[0], ops[1], ops[2],
+                                 "x86.avx512.mask.expand");
+  }
   case X86::BI__builtin_ia32_compressdf128_mask:
   case X86::BI__builtin_ia32_compressdf256_mask:
   case X86::BI__builtin_ia32_compressdf512_mask:
@@ -317,7 +871,11 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_compresshi512_mask:
   case X86::BI__builtin_ia32_compressqi128_mask:
   case X86::BI__builtin_ia32_compressqi256_mask:
-  case X86::BI__builtin_ia32_compressqi512_mask:
+  case X86::BI__builtin_ia32_compressqi512_mask: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    return emitX86CompressExpand(builder, loc, ops[0], ops[1], ops[2],
+                                 "x86.avx512.mask.compress");
+  }
   case X86::BI__builtin_ia32_gather3div2df:
   case X86::BI__builtin_ia32_gather3div2di:
   case X86::BI__builtin_ia32_gather3div4df:
@@ -341,7 +899,93 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_gathersiv8di:
   case X86::BI__builtin_ia32_gathersiv16si:
   case X86::BI__builtin_ia32_gatherdiv8di:
-  case X86::BI__builtin_ia32_gatherdiv16si:
+  case X86::BI__builtin_ia32_gatherdiv16si: {
+    StringRef intrinsicName;
+    switch (builtinID) {
+    default:
+      llvm_unreachable("Unexpected builtin");
+    case X86::BI__builtin_ia32_gather3div2df:
+      intrinsicName = "x86.avx512.mask.gather3div2.df";
+      break;
+    case X86::BI__builtin_ia32_gather3div2di:
+      intrinsicName = "x86.avx512.mask.gather3div2.di";
+      break;
+    case X86::BI__builtin_ia32_gather3div4df:
+      intrinsicName = "x86.avx512.mask.gather3div4.df";
+      break;
+    case X86::BI__builtin_ia32_gather3div4di:
+      intrinsicName = "x86.avx512.mask.gather3div4.di";
+      break;
+    case X86::BI__builtin_ia32_gather3div4sf:
+      intrinsicName = "x86.avx512.mask.gather3div4.sf";
+      break;
+    case X86::BI__builtin_ia32_gather3div4si:
+      intrinsicName = "x86.avx512.mask.gather3div4.si";
+      break;
+    case X86::BI__builtin_ia32_gather3div8sf:
+      intrinsicName = "x86.avx512.mask.gather3div8.sf";
+      break;
+    case X86::BI__builtin_ia32_gather3div8si:
+      intrinsicName = "x86.avx512.mask.gather3div8.si";
+      break;
+    case X86::BI__builtin_ia32_gather3siv2df:
+      intrinsicName = "x86.avx512.mask.gather3siv2.df";
+      break;
+    case X86::BI__builtin_ia32_gather3siv2di:
+      intrinsicName = "x86.avx512.mask.gather3siv2.di";
+      break;
+    case X86::BI__builtin_ia32_gather3siv4df:
+      intrinsicName = "x86.avx512.mask.gather3siv4.df";
+      break;
+    case X86::BI__builtin_ia32_gather3siv4di:
+      intrinsicName = "x86.avx512.mask.gather3siv4.di";
+      break;
+    case X86::BI__builtin_ia32_gather3siv4sf:
+      intrinsicName = "x86.avx512.mask.gather3siv4.sf";
+      break;
+    case X86::BI__builtin_ia32_gather3siv4si:
+      intrinsicName = "x86.avx512.mask.gather3siv4.si";
+      break;
+    case X86::BI__builtin_ia32_gather3siv8sf:
+      intrinsicName = "x86.avx512.mask.gather3siv8.sf";
+      break;
+    case X86::BI__builtin_ia32_gather3siv8si:
+      intrinsicName = "x86.avx512.mask.gather3siv8.si";
+      break;
+    case X86::BI__builtin_ia32_gathersiv8df:
+      intrinsicName = "x86.avx512.mask.gather.dpd.512";
+      break;
+    case X86::BI__builtin_ia32_gathersiv16sf:
+      intrinsicName = "x86.avx512.mask.gather.dps.512";
+      break;
+    case X86::BI__builtin_ia32_gatherdiv8df:
+      intrinsicName = "x86.avx512.mask.gather.qpd.512";
+      break;
+    case X86::BI__builtin_ia32_gatherdiv16sf:
+      intrinsicName = "x86.avx512.mask.gather.qps.512";
+      break;
+    case X86::BI__builtin_ia32_gathersiv8di:
+      intrinsicName = "x86.avx512.mask.gather.dpq.512";
+      break;
+    case X86::BI__builtin_ia32_gathersiv16si:
+      intrinsicName = "x86.avx512.mask.gather.dpi.512";
+      break;
+    case X86::BI__builtin_ia32_gatherdiv8di:
+      intrinsicName = "x86.avx512.mask.gather.qpq.512";
+      break;
+    case X86::BI__builtin_ia32_gatherdiv16si:
+      intrinsicName = "x86.avx512.mask.gather.qpi.512";
+      break;
+    }
+
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    unsigned minElts =
+        std::min(cast<cir::VectorType>(ops[0].getType()).getSize(),
+                 cast<cir::VectorType>(ops[2].getType()).getSize());
+    ops[3] = getMaskVecValue(builder, loc, ops[3], minElts);
+    return emitIntrinsicCallOp(builder, loc, intrinsicName,
+                               convertType(expr->getType()), ops);
+  }
   case X86::BI__builtin_ia32_scattersiv8df:
   case X86::BI__builtin_ia32_scattersiv16sf:
   case X86::BI__builtin_ia32_scatterdiv8df:
@@ -365,7 +1009,94 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_scattersiv4sf:
   case X86::BI__builtin_ia32_scattersiv4si:
   case X86::BI__builtin_ia32_scattersiv8sf:
-  case X86::BI__builtin_ia32_scattersiv8si:
+  case X86::BI__builtin_ia32_scattersiv8si: {
+    llvm::StringRef intrinsicName;
+    switch (builtinID) {
+    default:
+      llvm_unreachable("Unexpected builtin");
+    case X86::BI__builtin_ia32_scattersiv8df:
+      intrinsicName = "x86.avx512.mask.scatter.dpd.512";
+      break;
+    case X86::BI__builtin_ia32_scattersiv16sf:
+      intrinsicName = "x86.avx512.mask.scatter.dps.512";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv8df:
+      intrinsicName = "x86.avx512.mask.scatter.qpd.512";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv16sf:
+      intrinsicName = "x86.avx512.mask.scatter.qps.512";
+      break;
+    case X86::BI__builtin_ia32_scattersiv8di:
+      intrinsicName = "x86.avx512.mask.scatter.dpq.512";
+      break;
+    case X86::BI__builtin_ia32_scattersiv16si:
+      intrinsicName = "x86.avx512.mask.scatter.dpi.512";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv8di:
+      intrinsicName = "x86.avx512.mask.scatter.qpq.512";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv16si:
+      intrinsicName = "x86.avx512.mask.scatter.qpi.512";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv2df:
+      intrinsicName = "x86.avx512.mask.scatterdiv2.df";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv2di:
+      intrinsicName = "x86.avx512.mask.scatterdiv2.di";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv4df:
+      intrinsicName = "x86.avx512.mask.scatterdiv4.df";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv4di:
+      intrinsicName = "x86.avx512.mask.scatterdiv4.di";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv4sf:
+      intrinsicName = "x86.avx512.mask.scatterdiv4.sf";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv4si:
+      intrinsicName = "x86.avx512.mask.scatterdiv4.si";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv8sf:
+      intrinsicName = "x86.avx512.mask.scatterdiv8.sf";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv8si:
+      intrinsicName = "x86.avx512.mask.scatterdiv8.si";
+      break;
+    case X86::BI__builtin_ia32_scattersiv2df:
+      intrinsicName = "x86.avx512.mask.scattersiv2.df";
+      break;
+    case X86::BI__builtin_ia32_scattersiv2di:
+      intrinsicName = "x86.avx512.mask.scattersiv2.di";
+      break;
+    case X86::BI__builtin_ia32_scattersiv4df:
+      intrinsicName = "x86.avx512.mask.scattersiv4.df";
+      break;
+    case X86::BI__builtin_ia32_scattersiv4di:
+      intrinsicName = "x86.avx512.mask.scattersiv4.di";
+      break;
+    case X86::BI__builtin_ia32_scattersiv4sf:
+      intrinsicName = "x86.avx512.mask.scattersiv4.sf";
+      break;
+    case X86::BI__builtin_ia32_scattersiv4si:
+      intrinsicName = "x86.avx512.mask.scattersiv4.si";
+      break;
+    case X86::BI__builtin_ia32_scattersiv8sf:
+      intrinsicName = "x86.avx512.mask.scattersiv8.sf";
+      break;
+    case X86::BI__builtin_ia32_scattersiv8si:
+      intrinsicName = "x86.avx512.mask.scattersiv8.si";
+      break;
+    }
+
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    unsigned minElts =
+        std::min(cast<cir::VectorType>(ops[2].getType()).getSize(),
+                 cast<cir::VectorType>(ops[3].getType()).getSize());
+    ops[1] = getMaskVecValue(builder, loc, ops[1], minElts);
+
+    return emitIntrinsicCallOp(builder, loc, intrinsicName,
+                               convertType(expr->getType()), ops);
+  }
   case X86::BI__builtin_ia32_vextractf128_pd256:
   case X86::BI__builtin_ia32_vextractf128_ps256:
   case X86::BI__builtin_ia32_vextractf128_si256:
@@ -381,7 +1112,31 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_extractf64x2_256_mask:
   case X86::BI__builtin_ia32_extracti64x2_256_mask:
   case X86::BI__builtin_ia32_extractf64x2_512_mask:
-  case X86::BI__builtin_ia32_extracti64x2_512_mask:
+  case X86::BI__builtin_ia32_extracti64x2_512_mask: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    cir::VectorType dstTy = cast<cir::VectorType>(convertType(expr->getType()));
+    unsigned numElts = dstTy.getSize();
+    unsigned srcNumElts = cast<cir::VectorType>(ops[0].getType()).getSize();
+    unsigned subVectors = srcNumElts / numElts;
+    assert(llvm::isPowerOf2_32(subVectors) && "Expected power of 2 subvectors");
+    unsigned index =
+        ops[1].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue();
+
+    index &= subVectors - 1; // Remove any extra bits.
+    index *= numElts;
+
+    int64_t indices[16];
+    std::iota(indices, indices + numElts, index);
+
+    mlir::Value poison =
+        builder.getConstant(loc, cir::PoisonAttr::get(ops[0].getType()));
+    mlir::Value res = builder.createVecShuffle(loc, ops[0], poison,
+                                               ArrayRef(indices, numElts));
+    if (ops.size() == 4)
+      res = emitX86Select(builder, loc, ops[3], res, ops[2]);
+
+    return res;
+  }
   case X86::BI__builtin_ia32_vinsertf128_pd256:
   case X86::BI__builtin_ia32_vinsertf128_ps256:
   case X86::BI__builtin_ia32_vinsertf128_si256:
@@ -408,12 +1163,20 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_pblendw256:
   case X86::BI__builtin_ia32_pblendd128:
   case X86::BI__builtin_ia32_pblendd256:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case X86::BI__builtin_ia32_pshuflw:
   case X86::BI__builtin_ia32_pshuflw256:
   case X86::BI__builtin_ia32_pshuflw512:
+    return emitPshufWord(builder, ops[0], ops[1], getLoc(expr->getExprLoc()),
+                         true);
   case X86::BI__builtin_ia32_pshufhw:
   case X86::BI__builtin_ia32_pshufhw256:
   case X86::BI__builtin_ia32_pshufhw512:
+    return emitPshufWord(builder, ops[0], ops[1], getLoc(expr->getExprLoc()),
+                         false);
   case X86::BI__builtin_ia32_pshufd:
   case X86::BI__builtin_ia32_pshufd256:
   case X86::BI__builtin_ia32_pshufd512:
@@ -422,13 +1185,28 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vpermilpd256:
   case X86::BI__builtin_ia32_vpermilps256:
   case X86::BI__builtin_ia32_vpermilpd512:
-  case X86::BI__builtin_ia32_vpermilps512:
+  case X86::BI__builtin_ia32_vpermilps512: {
+    const uint32_t imm = getSExtIntValueFromConstOp(ops[1]);
+
+    llvm::SmallVector<int64_t, 16> mask(16);
+    computeFullLaneShuffleMask(*this, ops[0], imm, false, mask);
+
+    return builder.createVecShuffle(getLoc(expr->getExprLoc()), ops[0], mask);
+  }
   case X86::BI__builtin_ia32_shufpd:
   case X86::BI__builtin_ia32_shufpd256:
   case X86::BI__builtin_ia32_shufpd512:
   case X86::BI__builtin_ia32_shufps:
   case X86::BI__builtin_ia32_shufps256:
-  case X86::BI__builtin_ia32_shufps512:
+  case X86::BI__builtin_ia32_shufps512: {
+    const uint32_t imm = getZExtIntValueFromConstOp(ops[2]);
+
+    llvm::SmallVector<int64_t, 16> mask(16);
+    computeFullLaneShuffleMask(*this, ops[0], imm, true, mask);
+
+    return builder.createVecShuffle(getLoc(expr->getExprLoc()), ops[0], ops[1],
+                                    mask);
+  }
   case X86::BI__builtin_ia32_permdi256:
   case X86::BI__builtin_ia32_permdf256:
   case X86::BI__builtin_ia32_permdi512:
@@ -460,14 +1238,58 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_psrldqi128_byteshift:
   case X86::BI__builtin_ia32_psrldqi256_byteshift:
   case X86::BI__builtin_ia32_psrldqi512_byteshift:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case X86::BI__builtin_ia32_kshiftliqi:
   case X86::BI__builtin_ia32_kshiftlihi:
   case X86::BI__builtin_ia32_kshiftlisi:
-  case X86::BI__builtin_ia32_kshiftlidi:
+  case X86::BI__builtin_ia32_kshiftlidi: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    unsigned shiftVal =
+        ops[1].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue() &
+        0xff;
+    unsigned numElems = cast<cir::IntType>(ops[0].getType()).getWidth();
+
+    if (shiftVal >= numElems)
+      return builder.getNullValue(ops[0].getType(), loc);
+
+    mlir::Value in = getMaskVecValue(builder, loc, ops[0], numElems);
+
+    SmallVector<mlir::Attribute, 64> indices;
+    mlir::Type i32Ty = builder.getSInt32Ty();
+    for (auto i : llvm::seq<unsigned>(0, numElems))
+      indices.push_back(cir::IntAttr::get(i32Ty, numElems + i - shiftVal));
+
+    mlir::Value zero = builder.getNullValue(in.getType(), loc);
+    mlir::Value sv = builder.createVecShuffle(loc, zero, in, indices);
+    return builder.createBitcast(sv, ops[0].getType());
+  }
   case X86::BI__builtin_ia32_kshiftriqi:
   case X86::BI__builtin_ia32_kshiftrihi:
   case X86::BI__builtin_ia32_kshiftrisi:
-  case X86::BI__builtin_ia32_kshiftridi:
+  case X86::BI__builtin_ia32_kshiftridi: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    unsigned shiftVal =
+        ops[1].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue() &
+        0xff;
+    unsigned numElems = cast<cir::IntType>(ops[0].getType()).getWidth();
+
+    if (shiftVal >= numElems)
+      return builder.getNullValue(ops[0].getType(), loc);
+
+    mlir::Value in = getMaskVecValue(builder, loc, ops[0], numElems);
+
+    SmallVector<mlir::Attribute, 64> indices;
+    mlir::Type i32Ty = builder.getSInt32Ty();
+    for (auto i : llvm::seq<unsigned>(0, numElems))
+      indices.push_back(cir::IntAttr::get(i32Ty, i + shiftVal));
+
+    mlir::Value zero = builder.getNullValue(in.getType(), loc);
+    mlir::Value sv = builder.createVecShuffle(loc, in, zero, indices);
+    return builder.createBitcast(sv, ops[0].getType());
+  }
   case X86::BI__builtin_ia32_vprotbi:
   case X86::BI__builtin_ia32_vprotwi:
   case X86::BI__builtin_ia32_vprotdi:
@@ -478,12 +1300,16 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_prolq128:
   case X86::BI__builtin_ia32_prolq256:
   case X86::BI__builtin_ia32_prolq512:
+    return emitX86FunnelShift(builder, getLoc(expr->getExprLoc()), ops[0],
+                              ops[0], ops[1], false);
   case X86::BI__builtin_ia32_prord128:
   case X86::BI__builtin_ia32_prord256:
   case X86::BI__builtin_ia32_prord512:
   case X86::BI__builtin_ia32_prorq128:
   case X86::BI__builtin_ia32_prorq256:
   case X86::BI__builtin_ia32_prorq512:
+    return emitX86FunnelShift(builder, getLoc(expr->getExprLoc()), ops[0],
+                              ops[0], ops[1], true);
   case X86::BI__builtin_ia32_selectb_128:
   case X86::BI__builtin_ia32_selectb_256:
   case X86::BI__builtin_ia32_selectb_512:
@@ -536,86 +1362,166 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_ucmpq128_mask:
   case X86::BI__builtin_ia32_ucmpq256_mask:
   case X86::BI__builtin_ia32_ucmpq512_mask:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case X86::BI__builtin_ia32_vpcomb:
   case X86::BI__builtin_ia32_vpcomw:
   case X86::BI__builtin_ia32_vpcomd:
   case X86::BI__builtin_ia32_vpcomq:
+    return emitX86vpcom(builder, getLoc(expr->getExprLoc()), ops, true);
   case X86::BI__builtin_ia32_vpcomub:
   case X86::BI__builtin_ia32_vpcomuw:
   case X86::BI__builtin_ia32_vpcomud:
   case X86::BI__builtin_ia32_vpcomuq:
+    return emitX86vpcom(builder, getLoc(expr->getExprLoc()), ops, false);
   case X86::BI__builtin_ia32_kortestcqi:
   case X86::BI__builtin_ia32_kortestchi:
   case X86::BI__builtin_ia32_kortestcsi:
-  case X86::BI__builtin_ia32_kortestcdi:
+  case X86::BI__builtin_ia32_kortestcdi: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    cir::IntType ty = cast<cir::IntType>(ops[0].getType());
+    mlir::Value allOnesOp =
+        builder.getConstAPInt(loc, ty, APInt::getAllOnes(ty.getWidth()));
+    mlir::Value orOp = emitX86MaskLogic(builder, loc, cir::BinOpKind::Or, ops);
+    mlir::Value cmp =
+        cir::CmpOp::create(builder, loc, cir::CmpOpKind::eq, orOp, allOnesOp);
+    return builder.createCast(cir::CastKind::bool_to_int, cmp,
+                              cgm.convertType(expr->getType()));
+  }
   case X86::BI__builtin_ia32_kortestzqi:
   case X86::BI__builtin_ia32_kortestzhi:
   case X86::BI__builtin_ia32_kortestzsi:
-  case X86::BI__builtin_ia32_kortestzdi:
+  case X86::BI__builtin_ia32_kortestzdi: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    cir::IntType ty = cast<cir::IntType>(ops[0].getType());
+    mlir::Value allZerosOp = builder.getNullValue(ty, loc).getResult();
+    mlir::Value orOp = emitX86MaskLogic(builder, loc, cir::BinOpKind::Or, ops);
+    mlir::Value cmp =
+        cir::CmpOp::create(builder, loc, cir::CmpOpKind::eq, orOp, allZerosOp);
+    return builder.createCast(cir::CastKind::bool_to_int, cmp,
+                              cgm.convertType(expr->getType()));
+  }
   case X86::BI__builtin_ia32_ktestcqi:
+    return emitX86MaskTest(builder, getLoc(expr->getExprLoc()),
+                           "x86.avx512.ktestc.b", ops);
   case X86::BI__builtin_ia32_ktestzqi:
+    return emitX86MaskTest(builder, getLoc(expr->getExprLoc()),
+                           "x86.avx512.ktestz.b", ops);
   case X86::BI__builtin_ia32_ktestchi:
+    return emitX86MaskTest(builder, getLoc(expr->getExprLoc()),
+                           "x86.avx512.ktestc.w", ops);
   case X86::BI__builtin_ia32_ktestzhi:
+    return emitX86MaskTest(builder, getLoc(expr->getExprLoc()),
+                           "x86.avx512.ktestz.w", ops);
   case X86::BI__builtin_ia32_ktestcsi:
+    return emitX86MaskTest(builder, getLoc(expr->getExprLoc()),
+                           "x86.avx512.ktestc.d", ops);
   case X86::BI__builtin_ia32_ktestzsi:
+    return emitX86MaskTest(builder, getLoc(expr->getExprLoc()),
+                           "x86.avx512.ktestz.d", ops);
   case X86::BI__builtin_ia32_ktestcdi:
+    return emitX86MaskTest(builder, getLoc(expr->getExprLoc()),
+                           "x86.avx512.ktestc.q", ops);
   case X86::BI__builtin_ia32_ktestzdi:
+    return emitX86MaskTest(builder, getLoc(expr->getExprLoc()),
+                           "x86.avx512.ktestz.q", ops);
   case X86::BI__builtin_ia32_kaddqi:
+    return emitX86MaskAddLogic(builder, getLoc(expr->getExprLoc()),
+                               "x86.avx512.kadd.b", ops);
   case X86::BI__builtin_ia32_kaddhi:
+    return emitX86MaskAddLogic(builder, getLoc(expr->getExprLoc()),
+                               "x86.avx512.kadd.w", ops);
   case X86::BI__builtin_ia32_kaddsi:
+    return emitX86MaskAddLogic(builder, getLoc(expr->getExprLoc()),
+                               "x86.avx512.kadd.d", ops);
   case X86::BI__builtin_ia32_kadddi:
+    return emitX86MaskAddLogic(builder, getLoc(expr->getExprLoc()),
+                               "x86.avx512.kadd.q", ops);
   case X86::BI__builtin_ia32_kandqi:
   case X86::BI__builtin_ia32_kandhi:
   case X86::BI__builtin_ia32_kandsi:
   case X86::BI__builtin_ia32_kanddi:
+    return emitX86MaskLogic(builder, getLoc(expr->getExprLoc()),
+                            cir::BinOpKind::And, ops);
   case X86::BI__builtin_ia32_kandnqi:
   case X86::BI__builtin_ia32_kandnhi:
   case X86::BI__builtin_ia32_kandnsi:
   case X86::BI__builtin_ia32_kandndi:
+    return emitX86MaskLogic(builder, getLoc(expr->getExprLoc()),
+                            cir::BinOpKind::And, ops, true);
   case X86::BI__builtin_ia32_korqi:
   case X86::BI__builtin_ia32_korhi:
   case X86::BI__builtin_ia32_korsi:
   case X86::BI__builtin_ia32_kordi:
+    return emitX86MaskLogic(builder, getLoc(expr->getExprLoc()),
+                            cir::BinOpKind::Or, ops);
   case X86::BI__builtin_ia32_kxnorqi:
   case X86::BI__builtin_ia32_kxnorhi:
   case X86::BI__builtin_ia32_kxnorsi:
   case X86::BI__builtin_ia32_kxnordi:
+    return emitX86MaskLogic(builder, getLoc(expr->getExprLoc()),
+                            cir::BinOpKind::Xor, ops, true);
   case X86::BI__builtin_ia32_kxorqi:
   case X86::BI__builtin_ia32_kxorhi:
   case X86::BI__builtin_ia32_kxorsi:
   case X86::BI__builtin_ia32_kxordi:
+    return emitX86MaskLogic(builder, getLoc(expr->getExprLoc()),
+                            cir::BinOpKind::Xor, ops);
   case X86::BI__builtin_ia32_knotqi:
   case X86::BI__builtin_ia32_knothi:
   case X86::BI__builtin_ia32_knotsi:
-  case X86::BI__builtin_ia32_knotdi:
+  case X86::BI__builtin_ia32_knotdi: {
+    cir::IntType intTy = cast<cir::IntType>(ops[0].getType());
+    unsigned numElts = intTy.getWidth();
+    mlir::Value resVec =
+        getMaskVecValue(builder, getLoc(expr->getExprLoc()), ops[0], numElts);
+    return builder.createBitcast(builder.createNot(resVec), ops[0].getType());
+  }
   case X86::BI__builtin_ia32_kmovb:
   case X86::BI__builtin_ia32_kmovw:
   case X86::BI__builtin_ia32_kmovd:
-  case X86::BI__builtin_ia32_kmovq:
-  case X86::BI__builtin_ia32_kunpckdi:
-  case X86::BI__builtin_ia32_kunpcksi:
-  case X86::BI__builtin_ia32_kunpckhi:
+  case X86::BI__builtin_ia32_kmovq: {
+    // Bitcast to vXi1 type and then back to integer. This gets the mask
+    // register type into the IR, but might be optimized out depending on
+    // what's around it.
+    cir::IntType intTy = cast<cir::IntType>(ops[0].getType());
+    unsigned numElts = intTy.getWidth();
+    mlir::Value resVec =
+        getMaskVecValue(builder, getLoc(expr->getExprLoc()), ops[0], numElts);
+    return builder.createBitcast(resVec, ops[0].getType());
+  }
   case X86::BI__builtin_ia32_sqrtsh_round_mask:
   case X86::BI__builtin_ia32_sqrtsd_round_mask:
   case X86::BI__builtin_ia32_sqrtss_round_mask:
-  case X86::BI__builtin_ia32_sqrtpd256:
-  case X86::BI__builtin_ia32_sqrtpd:
-  case X86::BI__builtin_ia32_sqrtps256:
-  case X86::BI__builtin_ia32_sqrtps:
-  case X86::BI__builtin_ia32_sqrtph256:
-  case X86::BI__builtin_ia32_sqrtph:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case X86::BI__builtin_ia32_sqrtph512:
-  case X86::BI__builtin_ia32_vsqrtbf16256:
-  case X86::BI__builtin_ia32_vsqrtbf16:
-  case X86::BI__builtin_ia32_vsqrtbf16512:
   case X86::BI__builtin_ia32_sqrtps512:
-  case X86::BI__builtin_ia32_sqrtpd512:
+  case X86::BI__builtin_ia32_sqrtpd512: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    mlir::Value arg = ops[0];
+    return cir::SqrtOp::create(builder, loc, arg.getType(), arg).getResult();
+  }
   case X86::BI__builtin_ia32_pmuludq128:
   case X86::BI__builtin_ia32_pmuludq256:
-  case X86::BI__builtin_ia32_pmuludq512:
+  case X86::BI__builtin_ia32_pmuludq512: {
+    unsigned opTypePrimitiveSizeInBits =
+        cgm.getDataLayout().getTypeSizeInBits(ops[0].getType());
+    return emitX86Muldq(builder, getLoc(expr->getExprLoc()), /*isSigned*/ false,
+                        ops, opTypePrimitiveSizeInBits);
+  }
   case X86::BI__builtin_ia32_pmuldq128:
   case X86::BI__builtin_ia32_pmuldq256:
-  case X86::BI__builtin_ia32_pmuldq512:
+  case X86::BI__builtin_ia32_pmuldq512: {
+    unsigned opTypePrimitiveSizeInBits =
+        cgm.getDataLayout().getTypeSizeInBits(ops[0].getType());
+    return emitX86Muldq(builder, getLoc(expr->getExprLoc()), /*isSigned*/ true,
+                        ops, opTypePrimitiveSizeInBits);
+  }
   case X86::BI__builtin_ia32_pternlogd512_mask:
   case X86::BI__builtin_ia32_pternlogq512_mask:
   case X86::BI__builtin_ia32_pternlogd128_mask:
@@ -646,26 +1552,52 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vpshrdw128:
   case X86::BI__builtin_ia32_vpshrdw256:
   case X86::BI__builtin_ia32_vpshrdw512:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI__builtin_ia32_reduce_fadd_pd512:
   case X86::BI__builtin_ia32_reduce_fadd_ps512:
   case X86::BI__builtin_ia32_reduce_fadd_ph512:
   case X86::BI__builtin_ia32_reduce_fadd_ph256:
-  case X86::BI__builtin_ia32_reduce_fadd_ph128:
+  case X86::BI__builtin_ia32_reduce_fadd_ph128: {
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
+                               "vector.reduce.fadd", ops[0].getType(),
+                               mlir::ValueRange{ops[0], ops[1]});
+  }
   case X86::BI__builtin_ia32_reduce_fmul_pd512:
   case X86::BI__builtin_ia32_reduce_fmul_ps512:
   case X86::BI__builtin_ia32_reduce_fmul_ph512:
   case X86::BI__builtin_ia32_reduce_fmul_ph256:
-  case X86::BI__builtin_ia32_reduce_fmul_ph128:
+  case X86::BI__builtin_ia32_reduce_fmul_ph128: {
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
+                               "vector.reduce.fmul", ops[0].getType(),
+                               mlir::ValueRange{ops[0], ops[1]});
+  }
   case X86::BI__builtin_ia32_reduce_fmax_pd512:
   case X86::BI__builtin_ia32_reduce_fmax_ps512:
   case X86::BI__builtin_ia32_reduce_fmax_ph512:
   case X86::BI__builtin_ia32_reduce_fmax_ph256:
-  case X86::BI__builtin_ia32_reduce_fmax_ph128:
+  case X86::BI__builtin_ia32_reduce_fmax_ph128: {
+    assert(!cir::MissingFeatures::fastMathFlags());
+    cir::VectorType vecTy = cast<cir::VectorType>(ops[0].getType());
+    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
+                               "vector.reduce.fmax", vecTy.getElementType(),
+                               mlir::ValueRange{ops[0]});
+  }
   case X86::BI__builtin_ia32_reduce_fmin_pd512:
   case X86::BI__builtin_ia32_reduce_fmin_ps512:
   case X86::BI__builtin_ia32_reduce_fmin_ph512:
   case X86::BI__builtin_ia32_reduce_fmin_ph256:
-  case X86::BI__builtin_ia32_reduce_fmin_ph128:
+  case X86::BI__builtin_ia32_reduce_fmin_ph128: {
+    assert(!cir::MissingFeatures::fastMathFlags());
+    cir::VectorType vecTy = cast<cir::VectorType>(ops[0].getType());
+    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
+                               "vector.reduce.fmin", vecTy.getElementType(),
+                               mlir::ValueRange{ops[0]});
+  }
   case X86::BI__builtin_ia32_rdrand16_step:
   case X86::BI__builtin_ia32_rdrand32_step:
   case X86::BI__builtin_ia32_rdrand64_step:
@@ -710,10 +1642,18 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_cmpunordpd:
   case X86::BI__builtin_ia32_cmpneqps:
   case X86::BI__builtin_ia32_cmpneqpd:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case X86::BI__builtin_ia32_cmpnltps:
   case X86::BI__builtin_ia32_cmpnltpd:
+    return emitVectorFCmp(builder, ops, getLoc(expr->getExprLoc()),
+                          cir::CmpOpKind::lt, /*shouldInvert=*/true);
   case X86::BI__builtin_ia32_cmpnleps:
   case X86::BI__builtin_ia32_cmpnlepd:
+    return emitVectorFCmp(builder, ops, getLoc(expr->getExprLoc()),
+                          cir::CmpOpKind::le, /*shouldInvert=*/true);
   case X86::BI__builtin_ia32_cmpordps:
   case X86::BI__builtin_ia32_cmpordpd:
   case X86::BI__builtin_ia32_cmpph128_mask:
@@ -752,7 +1692,6 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vcvtph2ps256_mask:
   case X86::BI__builtin_ia32_vcvtph2ps512_mask:
   case X86::BI__builtin_ia32_cvtneps2bf16_128_mask:
-  case X86::BI__builtin_ia32_cvtsbf162ss_32:
   case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:
   case X86::BI__builtin_ia32_cvtneps2bf16_512_mask:
   case X86::BI__cpuid:
@@ -762,23 +1701,39 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__mulh:
   case X86::BI__umulh:
   case X86::BI_mul128:
-  case X86::BI_umul128:
-  case X86::BI__faststorefence:
+  case X86::BI_umul128: {
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  }
+  case X86::BI__faststorefence: {
+    cir::AtomicFenceOp::create(
+        builder, getLoc(expr->getExprLoc()),
+        cir::MemOrder::SequentiallyConsistent,
+        cir::SyncScopeKindAttr::get(&getMLIRContext(),
+                                    cir::SyncScopeKind::System));
+    return mlir::Value{};
+  }
   case X86::BI__shiftleft128:
-  case X86::BI__shiftright128:
+  case X86::BI__shiftright128: {
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  }
   case X86::BI_ReadWriteBarrier:
   case X86::BI_ReadBarrier:
-  case X86::BI_WriteBarrier:
+  case X86::BI_WriteBarrier: {
+    cir::AtomicFenceOp::create(
+        builder, getLoc(expr->getExprLoc()),
+        cir::MemOrder::SequentiallyConsistent,
+        cir::SyncScopeKindAttr::get(&getMLIRContext(),
+                                    cir::SyncScopeKind::SingleThread));
+    return mlir::Value{};
+  }
   case X86::BI_AddressOfReturnAddress:
   case X86::BI__stosb:
-  case X86::BI__builtin_ia32_t2rpntlvwz0_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz0rs_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz0t1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz0rst1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1rs_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1t1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1rst1_internal:
   case X86::BI__ud2:
   case X86::BI__int2c:
   case X86::BI__readfsbyte:
@@ -806,9 +1761,9 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vfcmaddcsh_round_mask3:
   case X86::BI__builtin_ia32_vfmaddcsh_round_mask3:
   case X86::BI__builtin_ia32_prefetchi:
-    cgm.errorNYI(e->getSourceRange(),
+    cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented X86 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 }

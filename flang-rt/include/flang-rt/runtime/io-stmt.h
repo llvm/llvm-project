@@ -730,8 +730,7 @@ public:
   RT_API_ATTRS bool AdvanceRecord(int = 1);
   RT_API_ATTRS int EndIoStatement();
   RT_API_ATTRS bool CanAdvance() {
-    return DIR == Direction::Input &&
-        (canAdvance_ || this->mutableModes().inNamelist);
+    return canAdvance_ || this->mutableModes().inNamelist;
   }
 
 private:

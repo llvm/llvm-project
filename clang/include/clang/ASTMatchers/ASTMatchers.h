@@ -2478,6 +2478,21 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, NullStmt> nullStmt;
 ///   matches '__asm("mov al, 2")'
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, AsmStmt> asmStmt;
 
+/// Matches top level asm declarations.
+///
+/// Given
+/// \code
+///    __asm("nop");
+///    void f() {
+///      __asm("mov al, 2");
+///    }
+/// \endcode
+/// fileScopeAsmDecl()
+///   matches '__asm("nop")',
+///   but not '__asm("mov al, 2")'.
+extern const internal::VariadicDynCastAllOfMatcher<Decl, FileScopeAsmDecl>
+    fileScopeAsmDecl;
+
 /// Matches bool literals.
 ///
 /// Example matches true
@@ -6987,6 +7002,19 @@ AST_MATCHER_P(ReferenceTypeLoc, hasReferentLoc, internal::Matcher<TypeLoc>,
               ReferentMatcher) {
   return ReferentMatcher.matches(Node.getPointeeLoc(), Finder, Builder);
 }
+
+/// Matches `ArrayTypeLoc`s.
+///
+/// Given
+/// \code
+///   int a[] = {1, 2};
+///   int b[3];
+///   void f() { int c[a[0]]; }
+/// \endcode
+/// arrayTypeLoc()
+///   matches "int a[]", "int b[3]" and "int c[a[0]]".
+extern const internal::VariadicDynCastAllOfMatcher<TypeLoc, ArrayTypeLoc>
+    arrayTypeLoc;
 
 /// Matches template specialization `TypeLoc`s.
 ///

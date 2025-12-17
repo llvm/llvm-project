@@ -1,6 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --extra-arg -std=c++20 --output=%t --format=json --executor=standalone %s
-// RUN: FileCheck %s < %t/json/index.json
+// RUN: FileCheck %s < %t/json/GlobalNamespace/index.json
 
 template<typename T>
 concept Incrementable = requires(T x) {
@@ -43,7 +43,10 @@ template<Incrementable T> Incrementable auto incrementTwo(T t);
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ],
 // CHECK-NEXT:        "Parameters": [
-// CHECK-NEXT:          "typename T"
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "End": true,
+// CHECK-NEXT:            "Param": "typename T"
+// CHECK-NEXT:          }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "USR": "{{[0-9A-F]*}}" 
@@ -79,7 +82,10 @@ template<Incrementable T> Incrementable auto incrementTwo(T t);
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ],
 // CHECK-NEXT:        "Parameters": [
-// CHECK-NEXT:          "Incrementable T"
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "End": true,
+// CHECK-NEXT:            "Param": "Incrementable T"
+// CHECK-NEXT:          }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "USR": "{{[0-9A-F]*}}"

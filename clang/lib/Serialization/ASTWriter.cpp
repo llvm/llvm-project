@@ -2691,7 +2691,7 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
         Record.push_back(VisMD->isPublic());
       }
       ModuleMacroRecord.push_back(getSubmoduleID(WritingModule));
-      ModuleMacroRecord.push_back(getMacroRef(MD->getMacroInfo(), Name));
+      AddMacroRef(MD->getMacroInfo(), Name, ModuleMacroRecord);
       Stream.EmitRecord(PP_MODULE_MACRO, ModuleMacroRecord);
       ModuleMacroRecord.clear();
       EmittedModuleMacros = true;
@@ -2720,7 +2720,7 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
 
         // Emit a record indicating this submodule exports this macro.
         ModuleMacroRecord.push_back(getSubmoduleID(Macro->getOwningModule()));
-        ModuleMacroRecord.push_back(getMacroRef(Macro->getMacroInfo(), Name));
+        AddMacroRef(Macro->getMacroInfo(), Name, ModuleMacroRecord);
         for (auto *M : Macro->overrides())
           ModuleMacroRecord.push_back(getSubmoduleID(M->getOwningModule()));
 
@@ -2819,14 +2819,12 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
   auto Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(MACRO_OFFSET));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // # of macros
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // first ID
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 32));   // base offset
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
 
   unsigned MacroOffsetAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
   {
     RecordData::value_type Record[] = {MACRO_OFFSET, MacroOffsets.size(),
-                                       FirstMacroID - NUM_PREDEF_MACRO_IDS,
                                        MacroOffsetsBase - ASTBlockStartOffset};
     Stream.EmitRecordWithBlob(MacroOffsetAbbrev, Record, bytes(MacroOffsets));
   }
@@ -2859,9 +2857,7 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
     InclusionAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
   }
 
-  unsigned FirstPreprocessorEntityID
-    = (Chain ? PPRec.getNumLoadedPreprocessedEntities() : 0)
-    + NUM_PREDEF_PP_ENTITY_IDS;
+  unsigned FirstPreprocessorEntityID = NUM_PREDEF_PP_ENTITY_IDS;
   unsigned NextPreprocessorEntityID = FirstPreprocessorEntityID;
   RecordData Record;
   for (PreprocessingRecord::iterator E = PPRec.local_begin(),
@@ -2925,13 +2921,10 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
 
     auto Abbrev = std::make_shared<BitCodeAbbrev>();
     Abbrev->Add(BitCodeAbbrevOp(PPD_ENTITIES_OFFSETS));
-    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // first pp entity
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
     unsigned PPEOffsetAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
 
-    RecordData::value_type Record[] = {PPD_ENTITIES_OFFSETS,
-                                       FirstPreprocessorEntityID -
-                                           NUM_PREDEF_PP_ENTITY_IDS};
+    RecordData::value_type Record[] = {PPD_ENTITIES_OFFSETS};
     Stream.EmitRecordWithBlob(PPEOffsetAbbrev, Record,
                               bytes(PreprocessedEntityOffsets));
   }
@@ -3247,7 +3240,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
 
     // Emit the reachable initializers.
     // The initializer may only be unreachable in reduced BMI.
-    if (Context) {
+    if (Context && !GeneratingReducedBMI) {
       RecordData Inits;
       for (Decl *D : Context->getModuleInitializers(Mod))
         if (wasDeclEmitted(D))
@@ -4374,8 +4367,7 @@ private:
     // parent of parent. We DON'T remove the enum constant from its parent. So
     // we don't need to care about merging problems here.
     if (auto *ECD = dyn_cast<EnumConstantDecl>(D);
-        ECD && DC.isFileContext() && ECD->getOwningModule() &&
-        ECD->getTopLevelOwningNamedModule()->isNamedModule()) {
+        ECD && DC.isFileContext() && ECD->getTopLevelOwningNamedModule()) {
       if (llvm::all_of(
               DC.noload_lookup(
                   cast<EnumDecl>(ECD->getDeclContext())->getDeclName()),
@@ -5714,8 +5706,13 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
     GetDeclRef(SemaRef.getStdAlignValT());
   }
 
-  if (Context.getcudaConfigureCallDecl())
+  if (Context.getcudaConfigureCallDecl() ||
+      Context.getcudaGetParameterBufferDecl() ||
+      Context.getcudaLaunchDeviceDecl()) {
     GetDeclRef(Context.getcudaConfigureCallDecl());
+    GetDeclRef(Context.getcudaGetParameterBufferDecl());
+    GetDeclRef(Context.getcudaLaunchDeviceDecl());
+  }
 
   // Writing all of the known namespaces.
   for (const auto &I : SemaRef.KnownNamespaces)
@@ -5828,31 +5825,33 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
     Stream.EmitRecord(UNUSED_LOCAL_TYPEDEF_NAME_CANDIDATES,
                       UnusedLocalTypedefNameCandidates);
 
-  // Write the record containing pending implicit instantiations.
-  RecordData PendingInstantiations;
-  for (const auto &I : SemaRef.PendingInstantiations) {
-    if (!wasDeclEmitted(I.first))
-      continue;
+  if (!GeneratingReducedBMI) {
+    // Write the record containing pending implicit instantiations.
+    RecordData PendingInstantiations;
+    for (const auto &I : SemaRef.PendingInstantiations) {
+      if (!wasDeclEmitted(I.first))
+        continue;
 
-    AddDeclRef(I.first, PendingInstantiations);
-    AddSourceLocation(I.second, PendingInstantiations);
+      AddDeclRef(I.first, PendingInstantiations);
+      AddSourceLocation(I.second, PendingInstantiations);
+    }
+    if (!PendingInstantiations.empty())
+      Stream.EmitRecord(PENDING_IMPLICIT_INSTANTIATIONS, PendingInstantiations);
   }
-  if (!PendingInstantiations.empty())
-    Stream.EmitRecord(PENDING_IMPLICIT_INSTANTIATIONS, PendingInstantiations);
+
+  auto AddEmittedDeclRefOrZero = [this](RecordData &Refs, Decl *D) {
+    if (!D || !wasDeclEmitted(D))
+      Refs.push_back(0);
+    else
+      AddDeclRef(D, Refs);
+  };
 
   // Write the record containing declaration references of Sema.
   RecordData SemaDeclRefs;
   if (SemaRef.StdNamespace || SemaRef.StdBadAlloc || SemaRef.StdAlignValT) {
-    auto AddEmittedDeclRefOrZero = [this, &SemaDeclRefs](Decl *D) {
-      if (!D || !wasDeclEmitted(D))
-        SemaDeclRefs.push_back(0);
-      else
-        AddDeclRef(D, SemaDeclRefs);
-    };
-
-    AddEmittedDeclRefOrZero(SemaRef.getStdNamespace());
-    AddEmittedDeclRefOrZero(SemaRef.getStdBadAlloc());
-    AddEmittedDeclRefOrZero(SemaRef.getStdAlignValT());
+    AddEmittedDeclRefOrZero(SemaDeclRefs, SemaRef.getStdNamespace());
+    AddEmittedDeclRefOrZero(SemaDeclRefs, SemaRef.getStdBadAlloc());
+    AddEmittedDeclRefOrZero(SemaDeclRefs, SemaRef.getStdAlignValT());
   }
   if (!SemaDeclRefs.empty())
     Stream.EmitRecord(SEMA_DECL_REFS, SemaDeclRefs);
@@ -5868,9 +5867,13 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
 
   // Write the record containing CUDA-specific declaration references.
   RecordData CUDASpecialDeclRefs;
-  if (auto *CudaCallDecl = Context.getcudaConfigureCallDecl();
-      CudaCallDecl && wasDeclEmitted(CudaCallDecl)) {
-    AddDeclRef(CudaCallDecl, CUDASpecialDeclRefs);
+  if (auto *CudaCallDecl = Context.getcudaConfigureCallDecl(),
+      *CudaGetParamDecl = Context.getcudaGetParameterBufferDecl(),
+      *CudaLaunchDecl = Context.getcudaLaunchDeviceDecl();
+      CudaCallDecl || CudaGetParamDecl || CudaLaunchDecl) {
+    AddEmittedDeclRefOrZero(CUDASpecialDeclRefs, CudaCallDecl);
+    AddEmittedDeclRefOrZero(CUDASpecialDeclRefs, CudaGetParamDecl);
+    AddEmittedDeclRefOrZero(CUDASpecialDeclRefs, CudaLaunchDecl);
     Stream.EmitRecord(CUDA_SPECIAL_DECL_REFS, CUDASpecialDeclRefs);
   }
 
@@ -6099,9 +6102,6 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
 
         // These values should be unique within a chain, since they will be read
         // as keys into ContinuousRangeMaps.
-        writeBaseIDOrNone(M.BaseMacroID, M.LocalNumMacros);
-        writeBaseIDOrNone(M.BasePreprocessedEntityID,
-                          M.NumPreprocessedEntities);
         writeBaseIDOrNone(M.BaseSubmoduleID, M.LocalNumSubmodules);
         writeBaseIDOrNone(M.BaseSelectorID, M.LocalNumSelectors);
       }
@@ -6540,6 +6540,14 @@ void ASTWriter::WriteDeclUpdatesBlocks(ASTContext &Context,
         Record.AddDeclRef(Update.getDecl());
         break;
 
+      case DeclUpdateKind::CXXResolvedDtorArrayDelete:
+        Record.AddDeclRef(Update.getDecl());
+        break;
+
+      case DeclUpdateKind::CXXResolvedDtorGlobArrayDelete:
+        Record.AddDeclRef(Update.getDecl());
+        break;
+
       case DeclUpdateKind::CXXResolvedExceptionSpec: {
         auto prototype =
           cast<FunctionDecl>(D)->getType()->castAs<FunctionProtoType>();
@@ -6900,6 +6908,13 @@ void ASTWriter::AddLookupOffsets(const LookupBlockOffsets &Offsets,
   Record.push_back(Offsets.VisibleOffset);
   Record.push_back(Offsets.ModuleLocalOffset);
   Record.push_back(Offsets.TULocalOffset);
+}
+
+void ASTWriter::AddMacroRef(MacroInfo *MI, const IdentifierInfo *Name,
+                            RecordDataImpl &Record) {
+  MacroID MacroRef = getMacroRef(MI, Name);
+  Record.push_back(MacroRef >> 32);
+  Record.push_back(MacroRef & llvm::maskTrailingOnes<MacroID>(32));
 }
 
 void ASTWriter::AddEmittedDeclRef(const Decl *D, RecordDataImpl &Record) {
@@ -7382,12 +7397,8 @@ void ASTWriter::ReaderInitialized(ASTReader *Reader) {
 
   Chain = Reader;
 
-  // Note, this will get called multiple times, once one the reader starts up
-  // and again each time it's done reading a PCH or module.
-  FirstMacroID = NUM_PREDEF_MACRO_IDS + Chain->getTotalNumMacros();
   FirstSubmoduleID = NUM_PREDEF_SUBMODULE_IDS + Chain->getTotalNumSubmodules();
   FirstSelectorID = NUM_PREDEF_SELECTOR_IDS + Chain->getTotalNumSelectors();
-  NextMacroID = FirstMacroID;
   NextSelectorID = FirstSelectorID;
   NextSubmoduleID = FirstSubmoduleID;
 }
@@ -7415,6 +7426,14 @@ void ASTWriter::IdentifierRead(IdentifierID ID, IdentifierInfo *II) {
 void ASTWriter::MacroRead(serialization::MacroID ID, MacroInfo *MI) {
   // Always keep the highest ID. See \p TypeRead() for more information.
   MacroID &StoredID = MacroIDs[MI];
+  unsigned OriginalModuleFileIndex = StoredID >> 32;
+
+  // Always keep the local macro ID. See \p TypeRead() for more information.
+  if (OriginalModuleFileIndex == 0 && StoredID)
+    return;
+
+  // Otherwise, keep the highest ID since the module file comes later has
+  // higher module file indexes.
   if (ID > StoredID)
     StoredID = ID;
 }
@@ -7599,6 +7618,34 @@ void ASTWriter::ResolvedOperatorGlobDelete(const CXXDestructorDecl *DD,
   Chain->forEachImportedKeyDecl(DD, [&](const Decl *D) {
     DeclUpdates[D].push_back(
         DeclUpdate(DeclUpdateKind::CXXResolvedDtorGlobDelete, GlobDelete));
+  });
+}
+
+void ASTWriter::ResolvedOperatorArrayDelete(const CXXDestructorDecl *DD,
+                                            const FunctionDecl *ArrayDelete) {
+  if (Chain && Chain->isProcessingUpdateRecords())
+    return;
+  assert(!WritingAST && "Already writing the AST!");
+  assert(ArrayDelete && "Not given an operator delete");
+  if (!Chain)
+    return;
+  Chain->forEachImportedKeyDecl(DD, [&](const Decl *D) {
+    DeclUpdates[D].push_back(
+        DeclUpdate(DeclUpdateKind::CXXResolvedDtorArrayDelete, ArrayDelete));
+  });
+}
+
+void ASTWriter::ResolvedOperatorGlobArrayDelete(
+    const CXXDestructorDecl *DD, const FunctionDecl *GlobArrayDelete) {
+  if (Chain && Chain->isProcessingUpdateRecords())
+    return;
+  assert(!WritingAST && "Already writing the AST!");
+  assert(GlobArrayDelete && "Not given an operator delete");
+  if (!Chain)
+    return;
+  Chain->forEachImportedKeyDecl(DD, [&](const Decl *D) {
+    DeclUpdates[D].push_back(DeclUpdate(
+        DeclUpdateKind::CXXResolvedDtorGlobArrayDelete, GlobArrayDelete));
   });
 }
 
@@ -7911,6 +7958,12 @@ void OMPClauseWriter::VisitOMPDefaultClause(OMPDefaultClause *C) {
   Record.AddSourceLocation(C->getDefaultKindKwLoc());
   Record.push_back(unsigned(C->getDefaultVC()));
   Record.AddSourceLocation(C->getDefaultVCLoc());
+}
+
+void OMPClauseWriter::VisitOMPThreadsetClause(OMPThreadsetClause *C) {
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getThreadsetKindLoc());
+  Record.writeEnum(C->getThreadsetKind());
 }
 
 void OMPClauseWriter::VisitOMPProcBindClause(OMPProcBindClause *C) {
@@ -8409,6 +8462,8 @@ void OMPClauseWriter::VisitOMPToClause(OMPToClause *C) {
   for (unsigned I = 0; I < NumberOfOMPMotionModifiers; ++I) {
     Record.push_back(C->getMotionModifier(I));
     Record.AddSourceLocation(C->getMotionModifierLoc(I));
+    if (C->getMotionModifier(I) == OMPC_MOTION_MODIFIER_iterator)
+      Record.AddStmt(C->getIteratorModifier());
   }
   Record.AddNestedNameSpecifierLoc(C->getMapperQualifierLoc());
   Record.AddDeclarationNameInfo(C->getMapperIdInfo());
@@ -8439,6 +8494,8 @@ void OMPClauseWriter::VisitOMPFromClause(OMPFromClause *C) {
   for (unsigned I = 0; I < NumberOfOMPMotionModifiers; ++I) {
     Record.push_back(C->getMotionModifier(I));
     Record.AddSourceLocation(C->getMotionModifierLoc(I));
+    if (C->getMotionModifier(I) == OMPC_MOTION_MODIFIER_iterator)
+      Record.AddStmt(C->getIteratorModifier());
   }
   Record.AddNestedNameSpecifierLoc(C->getMapperQualifierLoc());
   Record.AddDeclarationNameInfo(C->getMapperIdInfo());
@@ -8644,6 +8701,17 @@ void OMPClauseWriter::VisitOMPXDynCGroupMemClause(OMPXDynCGroupMemClause *C) {
   VisitOMPClauseWithPreInit(C);
   Record.AddStmt(C->getSize());
   Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPDynGroupprivateClause(
+    OMPDynGroupprivateClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  Record.push_back(C->getDynGroupprivateModifier());
+  Record.push_back(C->getDynGroupprivateFallbackModifier());
+  Record.AddStmt(C->getSize());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getDynGroupprivateModifierLoc());
+  Record.AddSourceLocation(C->getDynGroupprivateFallbackModifierLoc());
 }
 
 void OMPClauseWriter::VisitOMPDoacrossClause(OMPDoacrossClause *C) {

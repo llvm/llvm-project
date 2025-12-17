@@ -11,7 +11,7 @@ integer :: x, y
 integer, allocatable :: a, b, m, n, t, z
 !$omp allocate(x, y)
 !$omp allocate(x, y) allocator(omp_default_mem_alloc)
-
+    continue
 !$omp allocate(a, b)
     allocate ( a, b )
 

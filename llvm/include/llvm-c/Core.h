@@ -531,6 +531,13 @@ enum {
  */
 typedef unsigned LLVMGEPNoWrapFlags;
 
+typedef enum {
+  LLVMDbgRecordLabel,
+  LLVMDbgRecordDeclare,
+  LLVMDbgRecordValue,
+  LLVMDbgRecordAssign,
+} LLVMDbgRecordKind;
+
 /**
  * @}
  */
@@ -582,7 +589,10 @@ LLVM_C_ABI LLVMContextRef LLVMContextCreate(void);
 /**
  * Obtain the global context instance.
  */
-LLVM_C_ABI LLVMContextRef LLVMGetGlobalContext(void);
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMContextRef LLVMGetGlobalContext(void),
+                            "Use of the global context is deprecated, create "
+                            "one using LLVMContextCreate instead");
 
 /**
  * Set the diagnostic handler for this context.
@@ -655,7 +665,10 @@ LLVMGetDiagInfoSeverity(LLVMDiagnosticInfoRef DI);
 
 LLVM_C_ABI unsigned LLVMGetMDKindIDInContext(LLVMContextRef C, const char *Name,
                                              unsigned SLen);
-LLVM_C_ABI unsigned LLVMGetMDKindID(const char *Name, unsigned SLen);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    unsigned LLVMGetMDKindID(const char *Name, unsigned SLen),
+    "Use of the global context is deprecated, use LLVMGetMDKindIDInContext "
+    "instead");
 
 /**
  * Maps a synchronization scope name to a ID unique within this context.
@@ -774,7 +787,10 @@ LLVM_C_ABI LLVMTypeRef LLVMGetTypeByName2(LLVMContextRef C, const char *Name);
  * Every invocation should be paired with LLVMDisposeModule() or memory
  * will be leaked.
  */
-LLVM_C_ABI LLVMModuleRef LLVMModuleCreateWithName(const char *ModuleID);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMModuleRef LLVMModuleCreateWithName(const char *ModuleID),
+    "Use of the global context is deprecated, use "
+    "LLVMModuleCreateWithNameInContext instead");
 
 /**
  * Create a new, empty module in a specific context.
@@ -1369,13 +1385,35 @@ LLVM_C_ABI LLVMTypeRef LLVMIntTypeInContext(LLVMContextRef C, unsigned NumBits);
  * Obtain an integer type from the global context with a specified bit
  * width.
  */
-LLVM_C_ABI LLVMTypeRef LLVMInt1Type(void);
-LLVM_C_ABI LLVMTypeRef LLVMInt8Type(void);
-LLVM_C_ABI LLVMTypeRef LLVMInt16Type(void);
-LLVM_C_ABI LLVMTypeRef LLVMInt32Type(void);
-LLVM_C_ABI LLVMTypeRef LLVMInt64Type(void);
-LLVM_C_ABI LLVMTypeRef LLVMInt128Type(void);
-LLVM_C_ABI LLVMTypeRef LLVMIntType(unsigned NumBits);
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMInt1Type(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMInt1TypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMInt8Type(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMInt8TypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMInt16Type(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMInt16TypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMInt32Type(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMInt32TypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMInt64Type(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMInt64TypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMInt128Type(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMInt128TypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMIntType(unsigned NumBits),
+                            "Use of the global context is deprecated, use "
+                            "LLVMIntTypeInContext instead");
+
 LLVM_C_ABI unsigned LLVMGetIntTypeWidth(LLVMTypeRef IntegerTy);
 
 /**
@@ -1429,13 +1467,34 @@ LLVM_C_ABI LLVMTypeRef LLVMPPCFP128TypeInContext(LLVMContextRef C);
  *
  * These map to the functions in this group of the same name.
  */
-LLVM_C_ABI LLVMTypeRef LLVMHalfType(void);
-LLVM_C_ABI LLVMTypeRef LLVMBFloatType(void);
-LLVM_C_ABI LLVMTypeRef LLVMFloatType(void);
-LLVM_C_ABI LLVMTypeRef LLVMDoubleType(void);
-LLVM_C_ABI LLVMTypeRef LLVMX86FP80Type(void);
-LLVM_C_ABI LLVMTypeRef LLVMFP128Type(void);
-LLVM_C_ABI LLVMTypeRef LLVMPPCFP128Type(void);
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMHalfType(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMHalfTypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMBFloatType(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMBFloatTypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMFloatType(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMFloatTypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMDoubleType(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMDoubleTypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMX86FP80Type(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMX86FP80TypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMFP128Type(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMFP128TypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMPPCFP128Type(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMPPCFP128TypeInContext instead");
 
 /**
  * @}
@@ -1517,8 +1576,11 @@ LLVM_C_ABI LLVMTypeRef LLVMStructTypeInContext(LLVMContextRef C,
  *
  * @see llvm::StructType::create()
  */
-LLVM_C_ABI LLVMTypeRef LLVMStructType(LLVMTypeRef *ElementTypes,
-                                      unsigned ElementCount, LLVMBool Packed);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMTypeRef LLVMStructType(LLVMTypeRef *ElementTypes, unsigned ElementCount,
+                               LLVMBool Packed),
+    "Use of the global context is deprecated, use LLVMStructTypeInContext "
+    "instead");
 
 /**
  * Create an empty structure in a context having a specified name.
@@ -1811,9 +1873,18 @@ LLVM_C_ABI LLVMTypeRef LLVMMetadataTypeInContext(LLVMContextRef C);
  * These are similar to the above functions except they operate on the
  * global context.
  */
-LLVM_C_ABI LLVMTypeRef LLVMVoidType(void);
-LLVM_C_ABI LLVMTypeRef LLVMLabelType(void);
-LLVM_C_ABI LLVMTypeRef LLVMX86AMXType(void);
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMVoidType(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMVoidTypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMLabelType(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMLabelTypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMX86AMXType(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMX86AMXTypeInContext instead");
 
 /**
  * Create a target extension type in LLVM context.
@@ -2340,6 +2411,14 @@ LLVM_C_ABI LLVMValueRef LLVMConstRealOfStringAndSize(LLVMTypeRef RealTy,
                                                      unsigned SLen);
 
 /**
+ * Obtain a constant for a floating point value from array of 64 bit values.
+ * The length of the array N must be ceildiv(bits, 64), where bits is the
+ * scalar size in bits of the floating-point type.
+ */
+
+LLVM_C_ABI LLVMValueRef LLVMConstFPFromBits(LLVMTypeRef Ty, const uint64_t N[]);
+
+/**
  * Obtain the zero extended value for an integer constant value.
  *
  * @see llvm::ConstantInt::getZExtValue()
@@ -2406,8 +2485,11 @@ LLVM_C_ABI LLVMValueRef LLVMConstStringInContext2(LLVMContextRef C,
  * @see LLVMConstStringInContext()
  * @see llvm::ConstantDataArray::getString()
  */
-LLVM_C_ABI LLVMValueRef LLVMConstString(const char *Str, unsigned Length,
-                                        LLVMBool DontNullTerminate);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMConstString(const char *Str, unsigned Length,
+                                 LLVMBool DontNullTerminate),
+    "Use of the global context is deprecated, use LLVMConstStringInContext2 "
+    "instead");
 
 /**
  * Returns true if the specified constant is an array of i8.
@@ -2452,8 +2534,11 @@ LLVM_C_ABI LLVMValueRef LLVMConstStructInContext(LLVMContextRef C,
  *
  * @see LLVMConstStructInContext()
  */
-LLVM_C_ABI LLVMValueRef LLVMConstStruct(LLVMValueRef *ConstantVals,
-                                        unsigned Count, LLVMBool Packed);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMConstStruct(LLVMValueRef *ConstantVals, unsigned Count,
+                                 LLVMBool Packed),
+    "Use of the global context is deprecated, use LLVMConstStructInContext "
+    "instead");
 
 /**
  * Create a ConstantArray from values.
@@ -3390,12 +3475,18 @@ LLVM_C_ABI void LLVMReplaceMDNodeOperandWith(LLVMValueRef V, unsigned Index,
 LLVM_C_ABI LLVMValueRef LLVMMDStringInContext(LLVMContextRef C, const char *Str,
                                               unsigned SLen);
 /** Deprecated: Use LLVMMDStringInContext2 instead. */
-LLVM_C_ABI LLVMValueRef LLVMMDString(const char *Str, unsigned SLen);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMMDString(const char *Str, unsigned SLen),
+    "Use of the global context is deprecated, use LLVMMDStringInContext2 "
+    "instead");
 /** Deprecated: Use LLVMMDNodeInContext2 instead. */
 LLVM_C_ABI LLVMValueRef LLVMMDNodeInContext(LLVMContextRef C,
                                             LLVMValueRef *Vals, unsigned Count);
 /** Deprecated: Use LLVMMDNodeInContext2 instead. */
-LLVM_C_ABI LLVMValueRef LLVMMDNode(LLVMValueRef *Vals, unsigned Count);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMMDNode(LLVMValueRef *Vals, unsigned Count),
+    "Use of the global context is deprecated, use LLVMMDNodeInContext2 "
+    "instead");
 
 /**
  * @}
@@ -3622,8 +3713,10 @@ LLVM_C_ABI LLVMBasicBlockRef LLVMAppendBasicBlockInContext(LLVMContextRef C,
  *
  * @see llvm::BasicBlock::Create()
  */
-LLVM_C_ABI LLVMBasicBlockRef LLVMAppendBasicBlock(LLVMValueRef Fn,
-                                                  const char *Name);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMBasicBlockRef LLVMAppendBasicBlock(LLVMValueRef Fn, const char *Name),
+    "Use of the global context is deprecated, use "
+    "LLVMAppendBasicBlockInContext instead");
 
 /**
  * Insert a basic block in a function before another basic block.
@@ -3642,8 +3735,11 @@ LLVM_C_ABI LLVMBasicBlockRef LLVMInsertBasicBlockInContext(LLVMContextRef C,
  *
  * @see llvm::BasicBlock::Create()
  */
-LLVM_C_ABI LLVMBasicBlockRef
-LLVMInsertBasicBlock(LLVMBasicBlockRef InsertBeforeBB, const char *Name);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMBasicBlockRef LLVMInsertBasicBlock(LLVMBasicBlockRef InsertBeforeBB,
+                                           const char *Name),
+    "Use of the global context is deprecated, use "
+    "LLVMInsertBasicBlockInContext instead");
 
 /**
  * Remove a basic block from a function and delete it.
@@ -3895,6 +3991,39 @@ LLVM_C_ABI LLVMDbgRecordRef LLVMGetNextDbgRecord(LLVMDbgRecordRef DbgRecord);
  */
 LLVM_C_ABI LLVMDbgRecordRef
 LLVMGetPreviousDbgRecord(LLVMDbgRecordRef DbgRecord);
+
+/**
+ * Get the debug location attached to the debug record.
+ *
+ * @see llvm::DbgRecord::getDebugLoc()
+ */
+LLVM_C_ABI LLVMMetadataRef LLVMDbgRecordGetDebugLoc(LLVMDbgRecordRef Rec);
+
+LLVM_C_ABI LLVMDbgRecordKind LLVMDbgRecordGetKind(LLVMDbgRecordRef Rec);
+
+/**
+ * Get the value of the DbgVariableRecord.
+ *
+ * @see llvm::DbgVariableRecord::getValue()
+ */
+LLVM_C_ABI LLVMValueRef LLVMDbgVariableRecordGetValue(LLVMDbgRecordRef Rec,
+                                                      unsigned OpIdx);
+
+/**
+ * Get the debug info variable of the DbgVariableRecord.
+ *
+ * @see llvm::DbgVariableRecord::getVariable()
+ */
+LLVM_C_ABI LLVMMetadataRef
+LLVMDbgVariableRecordGetVariable(LLVMDbgRecordRef Rec);
+
+/**
+ * Get the debug info expression of the DbgVariableRecord.
+ *
+ * @see llvm::DbgVariableRecord::getExpression()
+ */
+LLVM_C_ABI LLVMMetadataRef
+LLVMDbgVariableRecordGetExpression(LLVMDbgRecordRef Rec);
 
 /**
  * @defgroup LLVMCCoreValueInstructionCall Call Sites and Invocations
@@ -4168,6 +4297,30 @@ LLVM_C_ABI void LLVMSetCondition(LLVMValueRef Branch, LLVMValueRef Cond);
 LLVM_C_ABI LLVMBasicBlockRef LLVMGetSwitchDefaultDest(LLVMValueRef SwitchInstr);
 
 /**
+ * Obtain the case value for a successor of a switch instruction. i corresponds
+ * to the successor index. The first successor is the default destination, so i
+ * must be greater than zero.
+ *
+ * This only works on llvm::SwitchInst instructions.
+ *
+ * @see llvm::SwitchInst::CaseHandle::getCaseValue()
+ */
+LLVM_C_ABI LLVMValueRef LLVMGetSwitchCaseValue(LLVMValueRef SwitchInstr,
+                                               unsigned i);
+
+/**
+ * Set the case value for a successor of a switch instruction. i corresponds to
+ * the successor index. The first successor is the default destination, so i
+ * must be greater than zero.
+ *
+ * This only works on llvm::SwitchInst instructions.
+ *
+ * @see llvm::SwitchInst::CaseHandle::setValue()
+ */
+LLVM_C_ABI void LLVMSetSwitchCaseValue(LLVMValueRef SwitchInstr, unsigned i,
+                                       LLVMValueRef CaseValue);
+
+/**
  * @}
  */
 
@@ -4313,7 +4466,10 @@ LLVM_C_ABI const unsigned *LLVMGetIndices(LLVMValueRef Inst);
  */
 
 LLVM_C_ABI LLVMBuilderRef LLVMCreateBuilderInContext(LLVMContextRef C);
-LLVM_C_ABI LLVMBuilderRef LLVMCreateBuilder(void);
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMBuilderRef LLVMCreateBuilder(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMCreateBuilderInContext instead");
 /**
  * Set the builder position before Instr but after any attached debug records,
  * or if Instr is null set the position to the end of Block.

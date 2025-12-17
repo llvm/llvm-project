@@ -1897,26 +1897,29 @@ void InitListChecker::CheckMatrixType(const InitializedEntity &Entity,
     return;
 
   const ConstantMatrixType *MT = DeclType->castAs<ConstantMatrixType>();
-  QualType ElemTy = MT->getElementType();
-  const unsigned MaxElts = MT->getNumElementsFlattened();
 
-  unsigned NumEltsInit = 0;
+  // For HLSL, the error reporting for this case is handled in SemaHLSL's
+  // initializer list diagnostics. That means the execution should require
+  // getNumElementsFlattened to equal getNumInits. In other words the execution
+  // should never reach this point if this condition is not true".
+  assert(IList->getNumInits() == MT->getNumElementsFlattened() &&
+         "Inits must equal Matrix element count");
+
+  QualType ElemTy = MT->getElementType();
+
+  Index = 0;
   InitializedEntity ElemEnt =
       InitializedEntity::InitializeElement(SemaRef.Context, 0, Entity);
 
-  while (NumEltsInit < MaxElts && Index < IList->getNumInits()) {
+  while (Index < IList->getNumInits()) {
     // Not a sublist: just consume directly.
-    ElemEnt.setElementIndex(Index);
-    CheckSubElementType(ElemEnt, IList, ElemTy, Index, StructuredList,
+    unsigned ColMajorIndex = (Index % MT->getNumRows()) * MT->getNumColumns() +
+                             (Index / MT->getNumRows());
+    ElemEnt.setElementIndex(ColMajorIndex);
+    CheckSubElementType(ElemEnt, IList, ElemTy, ColMajorIndex, StructuredList,
                         StructuredIndex);
-    ++NumEltsInit;
+    ++Index;
   }
-
-  // For HLSL The error for this case is handled in SemaHLSL's initializer
-  // list diagnostics, That means the execution should require NumEltsInit
-  // to equal Max initializers. In other words  execution should never
-  // reach this point if this condition is not true".
-  assert(NumEltsInit == MaxElts && "NumEltsInit must equal MaxElts");
 }
 
 void InitListChecker::CheckVectorType(const InitializedEntity &Entity,

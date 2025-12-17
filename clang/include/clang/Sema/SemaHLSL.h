@@ -20,7 +20,9 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/TargetParser/Triple.h"
 #include <initializer_list>
 
@@ -132,9 +134,6 @@ public:
   void CheckEntryPoint(FunctionDecl *FD);
   bool CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr, Expr *RHSExpr,
                           SourceLocation Loc);
-  void DiagnoseAttrStageMismatch(
-      const Attr *A, llvm::Triple::EnvironmentType Stage,
-      std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages);
 
   QualType handleVectorBinOpConversion(ExprResult &LHS, ExprResult &RHS,
                                        QualType LHSType, QualType RHSType,
@@ -169,6 +168,7 @@ public:
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleVkConstantIdAttr(Decl *D, const ParsedAttr &AL);
   void handleVkBindingAttr(Decl *D, const ParsedAttr &AL);
+  void handleVkLocationAttr(Decl *D, const ParsedAttr &AL);
   void handlePackOffsetAttr(Decl *D, const ParsedAttr &AL);
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
@@ -176,18 +176,11 @@ public:
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
 
   template <typename T>
-  T *createSemanticAttr(const AttributeCommonInfo &ACI, NamedDecl *TargetDecl,
+  T *createSemanticAttr(const AttributeCommonInfo &ACI,
                         std::optional<unsigned> Location) {
-    T *Attr =
-        ::new (getASTContext()) T(getASTContext(), ACI, TargetDecl,
-                                  Location.value_or(0), Location.has_value());
-
-    if (!Attr->isSemanticIndexable() && Location.has_value()) {
-      Diag(Attr->getLocation(), diag::err_hlsl_semantic_indexing_not_supported)
-          << Attr->getAttrName()->getName();
-      return nullptr;
-    }
-    return Attr;
+    return ::new (getASTContext())
+        T(getASTContext(), ACI, ACI.getAttrName()->getName(),
+          Location.value_or(0));
   }
 
   void diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
@@ -244,9 +237,36 @@ private:
 
   IdentifierInfo *RootSigOverrideIdent = nullptr;
 
+  // Information about the current subtree being flattened.
   struct SemanticInfo {
-    HLSLSemanticAttr *Semantic;
-    std::optional<uint32_t> Index;
+    HLSLParsedSemanticAttr *Semantic;
+    std::optional<uint32_t> Index = std::nullopt;
+  };
+
+  // Bitmask used to recall if the current semantic subtree is
+  // input, output or inout.
+  enum IOType {
+    In = 0b01,
+    Out = 0b10,
+    InOut = 0b11,
+  };
+
+  // The context shared by all semantics with the same IOType during
+  // flattening.
+  struct SemanticContext {
+    // Present if any semantic sharing the same IO type has an explicit or
+    // implicit SPIR-V location index assigned.
+    std::optional<bool> UsesExplicitVkLocations = std::nullopt;
+    // The set of semantics found to be active during flattening. Used to detect
+    // index collisions.
+    llvm::StringSet<> ActiveSemantics = {};
+    // The IOType of this semantic set.
+    IOType CurrentIOType;
+  };
+
+  struct SemanticStageInfo {
+    llvm::Triple::EnvironmentType Stage;
+    IOType AllowedIOTypesMask;
   };
 
 private:
@@ -255,17 +275,30 @@ private:
                                                const RecordType *RT);
 
   void checkSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
-                               const HLSLSemanticAttr *SemanticAttr);
-  HLSLSemanticAttr *createSemantic(const SemanticInfo &Semantic,
-                                   DeclaratorDecl *TargetDecl);
-  bool determineActiveSemanticOnScalar(FunctionDecl *FD, DeclaratorDecl *D,
-                                       SemanticInfo &ActiveSemantic);
-  bool determineActiveSemantic(FunctionDecl *FD, DeclaratorDecl *D,
-                               SemanticInfo &ActiveSemantic);
+                               const HLSLAppliedSemanticAttr *SemanticAttr,
+                               const SemanticContext &SC);
+
+  bool determineActiveSemanticOnScalar(FunctionDecl *FD,
+                                       DeclaratorDecl *OutputDecl,
+                                       DeclaratorDecl *D,
+                                       SemanticInfo &ActiveSemantic,
+                                       SemanticContext &SC);
+
+  bool determineActiveSemantic(FunctionDecl *FD, DeclaratorDecl *OutputDecl,
+                               DeclaratorDecl *D, SemanticInfo &ActiveSemantic,
+                               SemanticContext &SC);
 
   void processExplicitBindingsOnDecl(VarDecl *D);
 
   void diagnoseAvailabilityViolations(TranslationUnitDecl *TU);
+
+  void diagnoseAttrStageMismatch(
+      const Attr *A, llvm::Triple::EnvironmentType Stage,
+      std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages);
+
+  void diagnoseSemanticStageMismatch(
+      const Attr *A, llvm::Triple::EnvironmentType Stage, IOType CurrentIOType,
+      std::initializer_list<SemanticStageInfo> AllowedStages);
 
   uint32_t getNextImplicitBindingOrderID() {
     return ImplicitBindingNextOrderID++;

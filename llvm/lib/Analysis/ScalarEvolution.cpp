@@ -2424,10 +2424,10 @@ ScalarEvolution::getStrengthenedNoWrapFlagsFromBinOp(
 // We're trying to construct a SCEV of type `Type' with `Ops' as operands and
 // `OldFlags' as can't-wrap behavior.  Infer a more aggressive set of
 // can't-overflow flags for the operation if possible.
-static SCEV::NoWrapFlags
-StrengthenNoWrapFlags(ScalarEvolution *SE, SCEVTypes Type,
-                      const ArrayRef<const SCEV *> Ops,
-                      SCEV::NoWrapFlags Flags) {
+static SCEV::NoWrapFlags StrengthenNoWrapFlags(ScalarEvolution *SE,
+                                               SCEVTypes Type,
+                                               ArrayRef<const SCEV *> Ops,
+                                               SCEV::NoWrapFlags Flags) {
   using namespace std::placeholders;
 
   using OBO = OverflowingBinaryOperator;
@@ -2540,7 +2540,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
   unsigned Idx = isa<SCEVConstant>(Ops[0]) ? 1 : 0;
 
   // Delay expensive flag strengthening until necessary.
-  auto ComputeFlags = [this, OrigFlags](const ArrayRef<const SCEV *> Ops) {
+  auto ComputeFlags = [this, OrigFlags](ArrayRef<const SCEV *> Ops) {
     return StrengthenNoWrapFlags(this, scAddExpr, Ops, OrigFlags);
   };
 
@@ -3125,7 +3125,7 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
     return Folded;
 
   // Delay expensive flag strengthening until necessary.
-  auto ComputeFlags = [this, OrigFlags](const ArrayRef<const SCEV *> Ops) {
+  auto ComputeFlags = [this, OrigFlags](ArrayRef<const SCEV *> Ops) {
     return StrengthenNoWrapFlags(this, scMulExpr, Ops, OrigFlags);
   };
 
@@ -3490,19 +3490,30 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
           }
           /// Get a canonical UDivExpr for a recurrence.
           /// {X,+,N}/C => {Y,+,N}/C where Y=X-(X%N). Safe when C%N=0.
-          // We can currently only fold X%N if X is constant.
-          const SCEVConstant *StartC = dyn_cast<SCEVConstant>(AR->getStart());
-          if (StartC && !DivInt.urem(StepInt) &&
-              getZeroExtendExpr(AR, ExtTy) ==
-              getAddRecExpr(getZeroExtendExpr(AR->getStart(), ExtTy),
-                            getZeroExtendExpr(Step, ExtTy),
-                            AR->getLoop(), SCEV::FlagAnyWrap)) {
-            const APInt &StartInt = StartC->getAPInt();
-            const APInt &StartRem = StartInt.urem(StepInt);
-            if (StartRem != 0) {
+          const APInt *StartRem;
+          if (!DivInt.urem(StepInt) && match(getURemExpr(AR->getStart(), Step),
+                                             m_scev_APInt(StartRem))) {
+            bool NoWrap =
+                getZeroExtendExpr(AR, ExtTy) ==
+                getAddRecExpr(getZeroExtendExpr(AR->getStart(), ExtTy),
+                              getZeroExtendExpr(Step, ExtTy), AR->getLoop(),
+                              SCEV::FlagAnyWrap);
+
+            // With N <= C and both N, C as powers-of-2, the transformation
+            // {X,+,N}/C => {(X - X%N),+,N}/C preserves division results even
+            // if wrapping occurs, as the division results remain equivalent for
+            // all offsets in [[(X - X%N), X).
+            bool CanFoldWithWrap = StepInt.ule(DivInt) && // N <= C
+                                   StepInt.isPowerOf2() && DivInt.isPowerOf2();
+            // Only fold if the subtraction can be folded in the start
+            // expression.
+            const SCEV *NewStart =
+                getMinusSCEV(AR->getStart(), getConstant(*StartRem));
+            if (*StartRem != 0 && (NoWrap || CanFoldWithWrap) &&
+                !isa<SCEVAddExpr>(NewStart)) {
               const SCEV *NewLHS =
-                  getAddRecExpr(getConstant(StartInt - StartRem), Step,
-                                AR->getLoop(), SCEV::FlagNW);
+                  getAddRecExpr(NewStart, Step, AR->getLoop(),
+                                NoWrap ? SCEV::FlagNW : SCEV::FlagAnyWrap);
               if (LHS != NewLHS) {
                 LHS = NewLHS;
 
@@ -11107,6 +11118,11 @@ bool ScalarEvolution::isKnownMultipleOf(
   return true;
 }
 
+bool ScalarEvolution::haveSameSign(const SCEV *S1, const SCEV *S2) {
+  return ((isKnownNonNegative(S1) && isKnownNonNegative(S2)) ||
+          (isKnownNegative(S1) && isKnownNegative(S2)));
+}
+
 std::pair<const SCEV *, const SCEV *>
 ScalarEvolution::SplitIntoInitAndPostInc(const Loop *L, const SCEV *S) {
   // Compute SCEV on entry of loop L.
@@ -12026,8 +12042,7 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
   if (IsSignFlippedPredicate(Pred, FoundPred)) {
     // Unsigned comparison is the same as signed comparison when both the
     // operands are non-negative or negative.
-    if ((isKnownNonNegative(FoundLHS) && isKnownNonNegative(FoundRHS)) ||
-        (isKnownNegative(FoundLHS) && isKnownNegative(FoundRHS)))
+    if (haveSameSign(FoundLHS, FoundRHS))
       return isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI);
     // Create local copies that we can freely swap and canonicalize our
     // conditions to "le/lt".
@@ -13680,11 +13695,8 @@ SCEVAddRecExpr::getPostIncExpr(ScalarEvolution &SE) const {
 
 // Return true when S contains at least an undef value.
 bool ScalarEvolution::containsUndefs(const SCEV *S) const {
-  return SCEVExprContains(S, [](const SCEV *S) {
-    if (const auto *SU = dyn_cast<SCEVUnknown>(S))
-      return isa<UndefValue>(SU->getValue());
-    return false;
-  });
+  return SCEVExprContains(
+      S, [](const SCEV *S) { return match(S, m_scev_UndefOrPoison()); });
 }
 
 // Return true when S contains a value that is a nullptr.
@@ -13990,7 +14002,15 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
 }
 
 namespace llvm {
-raw_ostream &operator<<(raw_ostream &OS, ScalarEvolution::LoopDisposition LD) {
+// Note: these overloaded operators need to be in the llvm namespace for them
+// to be resolved correctly. If we put them outside the llvm namespace, the
+//
+// OS << ": " << SE.getLoopDisposition(SV, InnerL);
+//
+// code below "breaks" and start printing raw enum values as opposed to the
+// string values.
+static raw_ostream &operator<<(raw_ostream &OS,
+                               ScalarEvolution::LoopDisposition LD) {
   switch (LD) {
   case ScalarEvolution::LoopVariant:
     OS << "Variant";
@@ -14005,7 +14025,8 @@ raw_ostream &operator<<(raw_ostream &OS, ScalarEvolution::LoopDisposition LD) {
   return OS;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, ScalarEvolution::BlockDisposition BD) {
+static raw_ostream &operator<<(raw_ostream &OS,
+                               llvm::ScalarEvolution::BlockDisposition BD) {
   switch (BD) {
   case ScalarEvolution::DoesNotDominateBlock:
     OS << "DoesNotDominate";
@@ -15510,6 +15531,78 @@ static const SCEV *getNextSCEVDivisibleByDivisor(const SCEV *Expr,
   return SE.getConstant(*ExprVal + DivisorVal - Rem);
 }
 
+static bool collectDivisibilityInformation(
+    ICmpInst::Predicate Predicate, const SCEV *LHS, const SCEV *RHS,
+    DenseMap<const SCEV *, const SCEV *> &DivInfo,
+    DenseMap<const SCEV *, APInt> &Multiples, ScalarEvolution &SE) {
+  // If we have LHS == 0, check if LHS is computing a property of some unknown
+  // SCEV %v which we can rewrite %v to express explicitly.
+  if (Predicate != CmpInst::ICMP_EQ || !match(RHS, m_scev_Zero()))
+    return false;
+  // If LHS is A % B, i.e. A % B == 0, rewrite A to (A /u B) * B to
+  // explicitly express that.
+  const SCEVUnknown *URemLHS = nullptr;
+  const SCEV *URemRHS = nullptr;
+  if (!match(LHS, m_scev_URem(m_SCEVUnknown(URemLHS), m_SCEV(URemRHS), SE)))
+    return false;
+
+  const SCEV *Multiple =
+      SE.getMulExpr(SE.getUDivExpr(URemLHS, URemRHS), URemRHS);
+  DivInfo[URemLHS] = Multiple;
+  if (auto *C = dyn_cast<SCEVConstant>(URemRHS))
+    Multiples[URemLHS] = C->getAPInt();
+  return true;
+}
+
+// Check if the condition is a divisibility guard (A % B == 0).
+static bool isDivisibilityGuard(const SCEV *LHS, const SCEV *RHS,
+                                ScalarEvolution &SE) {
+  const SCEV *X, *Y;
+  return match(LHS, m_scev_URem(m_SCEV(X), m_SCEV(Y), SE)) && RHS->isZero();
+}
+
+// Apply divisibility by \p Divisor on MinMaxExpr with constant values,
+// recursively. This is done by aligning up/down the constant value to the
+// Divisor.
+static const SCEV *applyDivisibilityOnMinMaxExpr(const SCEV *MinMaxExpr,
+                                                 APInt Divisor,
+                                                 ScalarEvolution &SE) {
+  // Return true if \p Expr is a MinMax SCEV expression with a non-negative
+  // constant operand. If so, return in \p SCTy the SCEV type and in \p RHS
+  // the non-constant operand and in \p LHS the constant operand.
+  auto IsMinMaxSCEVWithNonNegativeConstant =
+      [&](const SCEV *Expr, SCEVTypes &SCTy, const SCEV *&LHS,
+          const SCEV *&RHS) {
+        if (auto *MinMax = dyn_cast<SCEVMinMaxExpr>(Expr)) {
+          if (MinMax->getNumOperands() != 2)
+            return false;
+          if (auto *C = dyn_cast<SCEVConstant>(MinMax->getOperand(0))) {
+            if (C->getAPInt().isNegative())
+              return false;
+            SCTy = MinMax->getSCEVType();
+            LHS = MinMax->getOperand(0);
+            RHS = MinMax->getOperand(1);
+            return true;
+          }
+        }
+        return false;
+      };
+
+  const SCEV *MinMaxLHS = nullptr, *MinMaxRHS = nullptr;
+  SCEVTypes SCTy;
+  if (!IsMinMaxSCEVWithNonNegativeConstant(MinMaxExpr, SCTy, MinMaxLHS,
+                                           MinMaxRHS))
+    return MinMaxExpr;
+  auto IsMin = isa<SCEVSMinExpr>(MinMaxExpr) || isa<SCEVUMinExpr>(MinMaxExpr);
+  assert(SE.isKnownNonNegative(MinMaxLHS) && "Expected non-negative operand!");
+  auto *DivisibleExpr =
+      IsMin ? getPreviousSCEVDivisibleByDivisor(MinMaxLHS, Divisor, SE)
+            : getNextSCEVDivisibleByDivisor(MinMaxLHS, Divisor, SE);
+  SmallVector<const SCEV *> Ops = {
+      applyDivisibilityOnMinMaxExpr(MinMaxRHS, Divisor, SE), DivisibleExpr};
+  return SE.getMinMaxExpr(SCTy, Ops);
+}
+
 void ScalarEvolution::LoopGuards::collectFromBlock(
     ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
     const BasicBlock *Block, const BasicBlock *Pred,
@@ -15520,18 +15613,12 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
   SmallVector<const SCEV *> ExprsToRewrite;
   auto CollectCondition = [&](ICmpInst::Predicate Predicate, const SCEV *LHS,
                               const SCEV *RHS,
-                              DenseMap<const SCEV *, const SCEV *>
-                                  &RewriteMap) {
+                              DenseMap<const SCEV *, const SCEV *> &RewriteMap,
+                              const LoopGuards &DivGuards) {
     // WARNING: It is generally unsound to apply any wrap flags to the proposed
     // replacement SCEV which isn't directly implied by the structure of that
     // SCEV.  In particular, using contextual facts to imply flags is *NOT*
     // legal.  See the scoping rules for flags in the header to understand why.
-
-    // If LHS is a constant, apply information to the other expression.
-    if (isa<SCEVConstant>(LHS)) {
-      std::swap(LHS, RHS);
-      Predicate = CmpInst::getSwappedPredicate(Predicate);
-    }
 
     // Check for a condition of the form (-C1 + X < C2).  InstCombine will
     // create this form when combining two checks of the form (X u< C2 + C1) and
@@ -15565,67 +15652,6 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     if (MatchRangeCheckIdiom())
       return;
 
-    // Return true if \p Expr is a MinMax SCEV expression with a non-negative
-    // constant operand. If so, return in \p SCTy the SCEV type and in \p RHS
-    // the non-constant operand and in \p LHS the constant operand.
-    auto IsMinMaxSCEVWithNonNegativeConstant =
-        [&](const SCEV *Expr, SCEVTypes &SCTy, const SCEV *&LHS,
-            const SCEV *&RHS) {
-          const APInt *C;
-          SCTy = Expr->getSCEVType();
-          return match(Expr, m_scev_MinMax(m_SCEV(LHS), m_SCEV(RHS))) &&
-                 match(LHS, m_scev_APInt(C)) && C->isNonNegative();
-        };
-
-    // Apply divisibilty by \p Divisor on MinMaxExpr with constant values,
-    // recursively. This is done by aligning up/down the constant value to the
-    // Divisor.
-    std::function<const SCEV *(const SCEV *, const SCEV *)>
-        ApplyDivisibiltyOnMinMaxExpr = [&](const SCEV *MinMaxExpr,
-                                           const SCEV *Divisor) {
-          auto *ConstDivisor = dyn_cast<SCEVConstant>(Divisor);
-          if (!ConstDivisor)
-            return MinMaxExpr;
-          const APInt &DivisorVal = ConstDivisor->getAPInt();
-
-          const SCEV *MinMaxLHS = nullptr, *MinMaxRHS = nullptr;
-          SCEVTypes SCTy;
-          if (!IsMinMaxSCEVWithNonNegativeConstant(MinMaxExpr, SCTy, MinMaxLHS,
-                                                   MinMaxRHS))
-            return MinMaxExpr;
-          auto IsMin =
-              isa<SCEVSMinExpr>(MinMaxExpr) || isa<SCEVUMinExpr>(MinMaxExpr);
-          assert(SE.isKnownNonNegative(MinMaxLHS) &&
-                 "Expected non-negative operand!");
-          auto *DivisibleExpr =
-              IsMin
-                  ? getPreviousSCEVDivisibleByDivisor(MinMaxLHS, DivisorVal, SE)
-                  : getNextSCEVDivisibleByDivisor(MinMaxLHS, DivisorVal, SE);
-          SmallVector<const SCEV *> Ops = {
-              ApplyDivisibiltyOnMinMaxExpr(MinMaxRHS, Divisor), DivisibleExpr};
-          return SE.getMinMaxExpr(SCTy, Ops);
-        };
-
-    // If we have LHS == 0, check if LHS is computing a property of some unknown
-    // SCEV %v which we can rewrite %v to express explicitly.
-    if (Predicate == CmpInst::ICMP_EQ && match(RHS, m_scev_Zero())) {
-      // If LHS is A % B, i.e. A % B == 0, rewrite A to (A /u B) * B to
-      // explicitly express that.
-      const SCEVUnknown *URemLHS = nullptr;
-      const SCEV *URemRHS = nullptr;
-      if (match(LHS,
-                m_scev_URem(m_SCEVUnknown(URemLHS), m_SCEV(URemRHS), SE))) {
-        auto I = RewriteMap.find(URemLHS);
-        const SCEV *RewrittenLHS = I != RewriteMap.end() ? I->second : URemLHS;
-        RewrittenLHS = ApplyDivisibiltyOnMinMaxExpr(RewrittenLHS, URemRHS);
-        const auto *Multiple =
-            SE.getMulExpr(SE.getUDivExpr(RewrittenLHS, URemRHS), URemRHS);
-        RewriteMap[URemLHS] = Multiple;
-        ExprsToRewrite.push_back(URemLHS);
-        return;
-      }
-    }
-
     // Do not apply information for constants or if RHS contains an AddRec.
     if (isa<SCEVConstant>(LHS) || SE.containsAddRecurrence(RHS))
       return;
@@ -15655,7 +15681,9 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     };
 
     const SCEV *RewrittenLHS = GetMaybeRewritten(LHS);
-    const APInt &DividesBy = SE.getConstantMultiple(RewrittenLHS);
+    // Apply divisibility information when computing the constant multiple.
+    const APInt &DividesBy =
+        SE.getConstantMultiple(DivGuards.rewrite(RewrittenLHS));
 
     // Collect rewrites for LHS and its transitive operands based on the
     // condition.
@@ -15670,31 +15698,31 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     // predicate.
     const SCEV *One = SE.getOne(RHS->getType());
     switch (Predicate) {
-      case CmpInst::ICMP_ULT:
-        if (RHS->getType()->isPointerTy())
-          return;
-        RHS = SE.getUMaxExpr(RHS, One);
-        [[fallthrough]];
-      case CmpInst::ICMP_SLT: {
-        RHS = SE.getMinusSCEV(RHS, One);
-        RHS = getPreviousSCEVDivisibleByDivisor(RHS, DividesBy, SE);
-        break;
-      }
-      case CmpInst::ICMP_UGT:
-      case CmpInst::ICMP_SGT:
-        RHS = SE.getAddExpr(RHS, One);
-        RHS = getNextSCEVDivisibleByDivisor(RHS, DividesBy, SE);
-        break;
-      case CmpInst::ICMP_ULE:
-      case CmpInst::ICMP_SLE:
-        RHS = getPreviousSCEVDivisibleByDivisor(RHS, DividesBy, SE);
-        break;
-      case CmpInst::ICMP_UGE:
-      case CmpInst::ICMP_SGE:
-        RHS = getNextSCEVDivisibleByDivisor(RHS, DividesBy, SE);
-        break;
-      default:
-        break;
+    case CmpInst::ICMP_ULT:
+      if (RHS->getType()->isPointerTy())
+        return;
+      RHS = SE.getUMaxExpr(RHS, One);
+      [[fallthrough]];
+    case CmpInst::ICMP_SLT: {
+      RHS = SE.getMinusSCEV(RHS, One);
+      RHS = getPreviousSCEVDivisibleByDivisor(RHS, DividesBy, SE);
+      break;
+    }
+    case CmpInst::ICMP_UGT:
+    case CmpInst::ICMP_SGT:
+      RHS = SE.getAddExpr(RHS, One);
+      RHS = getNextSCEVDivisibleByDivisor(RHS, DividesBy, SE);
+      break;
+    case CmpInst::ICMP_ULE:
+    case CmpInst::ICMP_SLE:
+      RHS = getPreviousSCEVDivisibleByDivisor(RHS, DividesBy, SE);
+      break;
+    case CmpInst::ICMP_UGE:
+    case CmpInst::ICMP_SGE:
+      RHS = getNextSCEVDivisibleByDivisor(RHS, DividesBy, SE);
+      break;
+    default:
+      break;
     }
 
     SmallVector<const SCEV *, 16> Worklist(1, LHS);
@@ -15840,8 +15868,11 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
 
   // Now apply the information from the collected conditions to
   // Guards.RewriteMap. Conditions are processed in reverse order, so the
-  // earliest conditions is processed first. This ensures the SCEVs with the
+  // earliest conditions is processed first, except guards with divisibility
+  // information, which are moved to the back. This ensures the SCEVs with the
   // shortest dependency chains are constructed first.
+  SmallVector<std::tuple<CmpInst::Predicate, const SCEV *, const SCEV *>>
+      GuardsToProcess;
   for (auto [Term, EnterIfTrue] : reverse(Terms)) {
     SmallVector<Value *, 8> Worklist;
     SmallPtrSet<Value *, 8> Visited;
@@ -15856,7 +15887,14 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
             EnterIfTrue ? Cmp->getPredicate() : Cmp->getInversePredicate();
         const auto *LHS = SE.getSCEV(Cmp->getOperand(0));
         const auto *RHS = SE.getSCEV(Cmp->getOperand(1));
-        CollectCondition(Predicate, LHS, RHS, Guards.RewriteMap);
+        // If LHS is a constant, apply information to the other expression.
+        // TODO: If LHS is not a constant, check if using CompareSCEVComplexity
+        // can improve results.
+        if (isa<SCEVConstant>(LHS)) {
+          std::swap(LHS, RHS);
+          Predicate = CmpInst::getSwappedPredicate(Predicate);
+        }
+        GuardsToProcess.emplace_back(Predicate, LHS, RHS);
         continue;
       }
 
@@ -15867,6 +15905,31 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
         Worklist.push_back(R);
       }
     }
+  }
+
+  // Process divisibility guards in reverse order to populate DivGuards early.
+  DenseMap<const SCEV *, APInt> Multiples;
+  LoopGuards DivGuards(SE);
+  for (const auto &[Predicate, LHS, RHS] : GuardsToProcess) {
+    if (!isDivisibilityGuard(LHS, RHS, SE))
+      continue;
+    collectDivisibilityInformation(Predicate, LHS, RHS, DivGuards.RewriteMap,
+                                   Multiples, SE);
+  }
+
+  for (const auto &[Predicate, LHS, RHS] : GuardsToProcess)
+    CollectCondition(Predicate, LHS, RHS, Guards.RewriteMap, DivGuards);
+
+  // Apply divisibility information last. This ensures it is applied to the
+  // outermost expression after other rewrites for the given value.
+  for (const auto &[K, Divisor] : Multiples) {
+    const SCEV *DivisorSCEV = SE.getConstant(Divisor);
+    Guards.RewriteMap[K] =
+        SE.getMulExpr(SE.getUDivExpr(applyDivisibilityOnMinMaxExpr(
+                                         Guards.rewrite(K), Divisor, SE),
+                                     DivisorSCEV),
+                      DivisorSCEV);
+    ExprsToRewrite.push_back(K);
   }
 
   // Let the rewriter preserve NUW/NSW flags if the unsigned/signed ranges of

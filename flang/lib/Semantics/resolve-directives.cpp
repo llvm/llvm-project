@@ -415,6 +415,18 @@ public:
     return true;
   }
 
+  bool Pre(const parser::SpecificationPart &) {
+    partStack_.push_back(PartKind::SpecificationPart);
+    return true;
+  }
+  void Post(const parser::SpecificationPart &) { partStack_.pop_back(); }
+
+  bool Pre(const parser::ExecutionPart &) {
+    partStack_.push_back(PartKind::ExecutionPart);
+    return true;
+  }
+  void Post(const parser::ExecutionPart &) { partStack_.pop_back(); }
+
   bool Pre(const parser::InternalSubprogram &) {
     // Clear the labels being tracked in the previous scope
     ClearLabels();
@@ -513,10 +525,16 @@ public:
   void Post(const parser::OpenMPSimpleStandaloneConstruct &) { PopContext(); }
 
   bool Pre(const parser::OpenMPLoopConstruct &);
-  void Post(const parser::OpenMPLoopConstruct &) { PopContext(); }
+  void Post(const parser::OpenMPLoopConstruct &) {
+    ordCollapseLevel++;
+    PopContext();
+  }
   void Post(const parser::OmpBeginLoopDirective &) {
     GetContext().withinConstruct = true;
   }
+  bool Pre(const parser::OpenMPMisplacedEndDirective &x) { return false; }
+  bool Pre(const parser::OpenMPInvalidDirective &x) { return false; }
+
   bool Pre(const parser::DoConstruct &);
 
   bool Pre(const parser::OpenMPSectionsConstruct &);
@@ -639,8 +657,7 @@ public:
   bool Pre(const parser::OpenMPThreadprivate &);
   void Post(const parser::OpenMPThreadprivate &) { PopContext(); }
 
-  bool Pre(const parser::OpenMPDeclarativeAllocate &);
-  void Post(const parser::OpenMPDeclarativeAllocate &) { PopContext(); }
+  bool Pre(const parser::OmpAllocateDirective &);
 
   bool Pre(const parser::OpenMPAssumeConstruct &);
   void Post(const parser::OpenMPAssumeConstruct &) { PopContext(); }
@@ -650,9 +667,6 @@ public:
 
   bool Pre(const parser::OpenMPDispatchConstruct &);
   void Post(const parser::OpenMPDispatchConstruct &) { PopContext(); }
-
-  bool Pre(const parser::OpenMPExecutableAllocate &);
-  void Post(const parser::OpenMPExecutableAllocate &);
 
   bool Pre(const parser::OpenMPAllocatorsConstruct &);
   void Post(const parser::OpenMPAllocatorsConstruct &);
@@ -703,8 +717,8 @@ public:
     return false;
   }
   bool Pre(const parser::OmpAllocateClause &x) {
-    const auto &objectList{std::get<parser::OmpObjectList>(x.t)};
-    ResolveOmpObjectList(objectList, Symbol::Flag::OmpAllocate);
+    ResolveOmpObjectList(
+        *parser::omp::GetOmpObjectList(x), Symbol::Flag::OmpAllocate);
     return false;
   }
   bool Pre(const parser::OmpClause::Firstprivate &x) {
@@ -712,8 +726,8 @@ public:
     return false;
   }
   bool Pre(const parser::OmpClause::Lastprivate &x) {
-    const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
-    ResolveOmpObjectList(objList, Symbol::Flag::OmpLastPrivate);
+    ResolveOmpObjectList(
+        *parser::omp::GetOmpObjectList(x), Symbol::Flag::OmpLastPrivate);
     return false;
   }
   bool Pre(const parser::OmpClause::Copyin &x) {
@@ -725,8 +739,8 @@ public:
     return false;
   }
   bool Pre(const parser::OmpLinearClause &x) {
-    auto &objects{std::get<parser::OmpObjectList>(x.t)};
-    ResolveOmpObjectList(objects, Symbol::Flag::OmpLinear);
+    ResolveOmpObjectList(
+        *parser::omp::GetOmpObjectList(x), Symbol::Flag::OmpLinear);
     return false;
   }
 
@@ -736,13 +750,13 @@ public:
   }
 
   bool Pre(const parser::OmpInReductionClause &x) {
-    auto &objects{std::get<parser::OmpObjectList>(x.t)};
-    ResolveOmpObjectList(objects, Symbol::Flag::OmpInReduction);
+    ResolveOmpObjectList(
+        *parser::omp::GetOmpObjectList(x), Symbol::Flag::OmpInReduction);
     return false;
   }
 
   bool Pre(const parser::OmpClause::Reduction &x) {
-    const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
+    const auto &objList{*parser::omp::GetOmpObjectList(x)};
     ResolveOmpObjectList(objList, Symbol::Flag::OmpReduction);
 
     if (auto &modifiers{OmpGetModifiers(x.v)}) {
@@ -792,8 +806,8 @@ public:
   }
 
   bool Pre(const parser::OmpAlignedClause &x) {
-    const auto &alignedNameList{std::get<parser::OmpObjectList>(x.t)};
-    ResolveOmpObjectList(alignedNameList, Symbol::Flag::OmpAligned);
+    ResolveOmpObjectList(
+        *parser::omp::GetOmpObjectList(x), Symbol::Flag::OmpAligned);
     return false;
   }
 
@@ -906,7 +920,7 @@ public:
       }
     }
 
-    const auto &ompObjList{std::get<parser::OmpObjectList>(x.t)};
+    const auto &ompObjList{*parser::omp::GetOmpObjectList(x)};
     for (const auto &ompObj : ompObjList.v) {
       common::visit(
           common::visitors{
@@ -997,6 +1011,14 @@ private:
       std::pair<parser::CharBlock, std::optional<DirContext>>>
       targetLabels_;
   parser::CharBlock currentStatementSource_;
+
+  enum class PartKind : int {
+    // There are also other "parts", such as internal-subprogram-part, etc,
+    // but we're keeping track of these two for now.
+    SpecificationPart,
+    ExecutionPart,
+  };
+  std::vector<PartKind> partStack_;
 
   void AddAllocateName(const parser::Name *&object) {
     allocateNames_.push_back(object);
@@ -2012,6 +2034,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   case llvm::omp::Directive::OMPD_teams_distribute_parallel_do_simd:
   case llvm::omp::Directive::OMPD_teams_distribute_simd:
   case llvm::omp::Directive::OMPD_teams_loop:
+  case llvm::omp::Directive::OMPD_fuse:
   case llvm::omp::Directive::OMPD_tile:
   case llvm::omp::Directive::OMPD_unroll:
     PushContext(beginName.source, beginName.v);
@@ -2022,8 +2045,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   if (beginName.v == llvm::omp::OMPD_master_taskloop ||
       beginName.v == llvm::omp::OMPD_master_taskloop_simd ||
       beginName.v == llvm::omp::OMPD_parallel_master_taskloop ||
-      beginName.v == llvm::omp::OMPD_parallel_master_taskloop_simd ||
-      beginName.v == llvm::omp::Directive::OMPD_target_loop) {
+      beginName.v == llvm::omp::OMPD_parallel_master_taskloop_simd) {
     unsigned version{context_.langOptions().OpenMPVersion};
     IssueNonConformanceWarning(beginName.v, beginName.source, version);
   }
@@ -2031,13 +2053,9 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   SetContextAssociatedLoopLevel(GetNumAffectedLoopsFromLoopConstruct(x));
 
   if (beginName.v == llvm::omp::Directive::OMPD_do) {
-    auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
-    if (optLoopCons.has_value()) {
-      if (const auto &doConstruct{
-              std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
-        if (doConstruct->IsDoWhile()) {
-          return true;
-        }
+    if (const parser::DoConstruct *doConstruct{x.GetNestedLoop()}) {
+      if (doConstruct->IsDoWhile()) {
+        return true;
       }
     }
   }
@@ -2194,18 +2212,11 @@ void OmpAttributeVisitor::CollectNumAffectedLoopsFromInnerLoopContruct(
     const parser::OpenMPLoopConstruct &x,
     llvm::SmallVector<std::int64_t> &levels,
     llvm::SmallVector<const parser::OmpClause *> &clauses) {
-
-  const auto &nestedOptional =
-      std::get<std::optional<parser::NestedConstruct>>(x.t);
-  assert(nestedOptional.has_value() &&
-      "Expected a DoConstruct or OpenMPLoopConstruct");
-  const auto *innerConstruct =
-      std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
-          &(nestedOptional.value()));
-
-  if (innerConstruct) {
-    CollectNumAffectedLoopsFromLoopConstruct(
-        innerConstruct->value(), levels, clauses);
+  for (auto &construct : std::get<parser::Block>(x.t)) {
+    if (auto *innerConstruct{parser::omp::GetOmpLoop(construct)}) {
+      CollectNumAffectedLoopsFromLoopConstruct(
+          *innerConstruct, levels, clauses);
+    }
   }
 }
 
@@ -2270,86 +2281,74 @@ void OmpAttributeVisitor::CheckPerfectNestAndRectangularLoop(
 
   // Find the associated region by skipping nested loop-associated constructs
   // such as loop transformations
-  const parser::NestedConstruct *innermostAssocRegion{nullptr};
-  const parser::OpenMPLoopConstruct *innermostConstruct{&x};
-  while (const auto &innerAssocStmt{
-      std::get<std::optional<parser::NestedConstruct>>(
-          innermostConstruct->t)}) {
-    innermostAssocRegion = &(innerAssocStmt.value());
-    if (const auto *innerConstruct{
-            std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
-                innermostAssocRegion)}) {
-      innermostConstruct = &innerConstruct->value();
-    } else {
-      break;
+  for (auto &construct : std::get<parser::Block>(x.t)) {
+    if (const auto *innermostConstruct{parser::omp::GetOmpLoop(construct)}) {
+      CheckPerfectNestAndRectangularLoop(*innermostConstruct);
+    } else if (const auto *doConstruct{
+                   parser::omp::GetDoConstruct(construct)}) {
+
+      llvm::SmallVector<Symbol *> ivs;
+      int curLevel{0};
+      const auto *loop{doConstruct};
+      while (true) {
+        auto [iv, lb, ub, step] = GetLoopBounds(*loop);
+
+        if (lb)
+          checkExprHasSymbols(ivs, lb);
+        if (ub)
+          checkExprHasSymbols(ivs, ub);
+        if (step)
+          checkExprHasSymbols(ivs, step);
+        if (iv) {
+          if (auto *symbol{currScope().FindSymbol(iv->source)})
+            ivs.push_back(symbol);
+        }
+
+        // Stop after processing all affected loops
+        if (curLevel + 1 >= dirDepth)
+          break;
+
+        // Recurse into nested loop
+        const auto &block{std::get<parser::Block>(loop->t)};
+        if (block.empty()) {
+          // Insufficient number of nested loops already reported by
+          // CheckAssocLoopLevel()
+          break;
+        }
+
+        loop = GetDoConstructIf(block.front());
+        if (!loop) {
+          // Insufficient number of nested loops already reported by
+          // CheckAssocLoopLevel()
+          break;
+        }
+
+        auto checkPerfectNest = [&, this]() {
+          if (block.empty())
+            return;
+          auto last = block.end();
+          --last;
+
+          // A trailing CONTINUE is not considered part of the loop body
+          if (parser::Unwrap<parser::ContinueStmt>(*last))
+            --last;
+
+          // In a perfectly nested loop, the nested loop must be the only
+          // statement
+          if (last == block.begin())
+            return;
+
+          // Non-perfectly nested loop
+          // TODO: Point to non-DO statement, directiveSource as a note
+          context_.Say(dirContext.directiveSource,
+              "Canonical loop nest must be perfectly nested."_err_en_US);
+        };
+
+        checkPerfectNest();
+
+        ++curLevel;
+      }
     }
-  }
-
-  if (!innermostAssocRegion)
-    return;
-  const auto &outer{std::get_if<parser::DoConstruct>(innermostAssocRegion)};
-  if (!outer)
-    return;
-
-  llvm::SmallVector<Symbol *> ivs;
-  int curLevel{0};
-  const parser::DoConstruct *loop{outer};
-  while (true) {
-    auto [iv, lb, ub, step] = GetLoopBounds(*loop);
-
-    if (lb)
-      checkExprHasSymbols(ivs, lb);
-    if (ub)
-      checkExprHasSymbols(ivs, ub);
-    if (step)
-      checkExprHasSymbols(ivs, step);
-    if (iv) {
-      if (auto *symbol{currScope().FindSymbol(iv->source)})
-        ivs.push_back(symbol);
-    }
-
-    // Stop after processing all affected loops
-    if (curLevel + 1 >= dirDepth)
-      break;
-
-    // Recurse into nested loop
-    const auto &block{std::get<parser::Block>(loop->t)};
-    if (block.empty()) {
-      // Insufficient number of nested loops already reported by
-      // CheckAssocLoopLevel()
-      break;
-    }
-
-    loop = GetDoConstructIf(block.front());
-    if (!loop) {
-      // Insufficient number of nested loops already reported by
-      // CheckAssocLoopLevel()
-      break;
-    }
-
-    auto checkPerfectNest = [&, this]() {
-      if (block.empty())
-        return;
-      auto last = block.end();
-      --last;
-
-      // A trailing CONTINUE is not considered part of the loop body
-      if (parser::Unwrap<parser::ContinueStmt>(*last))
-        --last;
-
-      // In a perfectly nested loop, the nested loop must be the only statement
-      if (last == block.begin())
-        return;
-
-      // Non-perfectly nested loop
-      // TODO: Point to non-DO statement, directiveSource as a note
-      context_.Say(dirContext.directiveSource,
-          "Canonical loop nest must be perfectly nested."_err_en_US);
-    };
-
-    checkPerfectNest();
-
-    ++curLevel;
   }
 }
 
@@ -2363,7 +2362,6 @@ void OmpAttributeVisitor::CheckPerfectNestAndRectangularLoop(
 //     construct with multiple associated do-loops are lastprivate.
 void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     const parser::OpenMPLoopConstruct &x) {
-  unsigned version{context_.langOptions().OpenMPVersion};
   std::int64_t level{GetContext().associatedLoopLevel};
   if (level <= 0) {
     return;
@@ -2382,22 +2380,13 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
   const parser::OmpClause *clause{GetAssociatedClause()};
   bool hasCollapseClause{
       clause ? (clause->Id() == llvm::omp::OMPC_collapse) : false};
-  const parser::OpenMPLoopConstruct *innerMostLoop = &x;
-  const parser::NestedConstruct *innerMostNest = nullptr;
-  while (auto &optLoopCons{
-      std::get<std::optional<parser::NestedConstruct>>(innerMostLoop->t)}) {
-    innerMostNest = &(optLoopCons.value());
-    if (const auto *innerLoop{
-            std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
-                innerMostNest)}) {
-      innerMostLoop = &(innerLoop->value());
-    } else
-      break;
-  }
 
-  if (innerMostNest) {
-    if (const auto &outer{std::get_if<parser::DoConstruct>(innerMostNest)}) {
-      for (const parser::DoConstruct *loop{&*outer}; loop && level > 0;
+  for (auto &construct : std::get<parser::Block>(x.t)) {
+    if (const auto *innermostConstruct{parser::omp::GetOmpLoop(construct)}) {
+      PrivatizeAssociatedLoopIndexAndCheckLoopLevel(*innermostConstruct);
+    } else if (const auto *doConstruct{
+                   parser::omp::GetDoConstruct(construct)}) {
+      for (const parser::DoConstruct *loop{&*doConstruct}; loop && level > 0;
           --level) {
         if (loop->IsDoConcurrent()) {
           // DO CONCURRENT is explicitly allowed for the LOOP construct so long
@@ -2430,28 +2419,6 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
         }
       }
       CheckAssocLoopLevel(level, GetAssociatedClause());
-    } else if (const auto *loop{std::get_if<
-                   common::Indirection<parser::OpenMPLoopConstruct>>(
-                   innerMostNest)}) {
-      const parser::OmpDirectiveSpecification &beginSpec{
-          loop->value().BeginDir()};
-      const parser::OmpDirectiveName &beginName{beginSpec.DirName()};
-      if (beginName.v != llvm::omp::Directive::OMPD_unroll &&
-          beginName.v != llvm::omp::Directive::OMPD_tile) {
-        context_.Say(GetContext().directiveSource,
-            "Only UNROLL or TILE constructs are allowed between an OpenMP Loop Construct and a DO construct"_err_en_US,
-            parser::ToUpperCaseLetters(llvm::omp::getOpenMPDirectiveName(
-                GetContext().directive, version)
-                    .str()));
-      } else {
-        PrivatizeAssociatedLoopIndexAndCheckLoopLevel(loop->value());
-      }
-    } else {
-      context_.Say(GetContext().directiveSource,
-          "A DO loop must follow the %s directive"_err_en_US,
-          parser::ToUpperCaseLetters(
-              llvm::omp::getOpenMPDirectiveName(GetContext().directive, version)
-                  .str()));
     }
   }
 }
@@ -2510,7 +2477,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionConstruct &x) {
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPCriticalConstruct &x) {
   const parser::OmpBeginDirective &beginSpec{x.BeginDir()};
-  PushContext(beginSpec.DirName().source, beginSpec.DirName().v);
+  PushContext(beginSpec.DirName().source, beginSpec.DirId());
   GetContext().withinConstruct = true;
   return true;
 }
@@ -2558,10 +2525,24 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPThreadprivate &x) {
   return true;
 }
 
-bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclarativeAllocate &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpAllocateDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_allocate);
-  const auto &list{std::get<parser::OmpObjectList>(x.t)};
-  ResolveOmpObjectList(list, Symbol::Flag::OmpDeclarativeAllocateDirective);
+  assert(!partStack_.empty() && "Misplaced directive");
+
+  auto ompFlag{partStack_.back() == PartKind::SpecificationPart
+          ? Symbol::Flag::OmpDeclarativeAllocateDirective
+          : Symbol::Flag::OmpExecutableAllocateDirective};
+
+  parser::omp::OmpAllocateInfo info{parser::omp::SplitOmpAllocate(x)};
+  for (const parser::OmpAllocateDirective *ad : info.dirs) {
+    for (const parser::OmpArgument &arg : ad->BeginDir().Arguments().v) {
+      if (auto *object{omp::GetArgumentObject(arg)}) {
+        ResolveOmpObject(*object, ompFlag);
+      }
+    }
+  }
+
+  PopContext();
   return false;
 }
 
@@ -2580,23 +2561,13 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDispatchConstruct &x) {
   return true;
 }
 
-bool OmpAttributeVisitor::Pre(const parser::OpenMPExecutableAllocate &x) {
-  PushContext(x.source, llvm::omp::Directive::OMPD_allocate);
-  const auto &list{std::get<std::optional<parser::OmpObjectList>>(x.t)};
-  if (list) {
-    ResolveOmpObjectList(*list, Symbol::Flag::OmpExecutableAllocateDirective);
-  }
-  return true;
-}
-
 bool OmpAttributeVisitor::Pre(const parser::OpenMPAllocatorsConstruct &x) {
   const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
   PushContext(x.source, dirSpec.DirId());
 
   for (const auto &clause : dirSpec.Clauses().v) {
-    if (const auto *allocClause{
-            std::get_if<parser::OmpClause::Allocate>(&clause.u)}) {
-      ResolveOmpObjectList(std::get<parser::OmpObjectList>(allocClause->v.t),
+    if (std::get_if<parser::OmpClause::Allocate>(&clause.u)) {
+      ResolveOmpObjectList(*parser::omp::GetOmpObjectList(clause),
           Symbol::Flag::OmpExecutableAllocateDirective);
     }
   }
@@ -2658,10 +2629,6 @@ bool OmpAttributeVisitor::IsNestedInDirective(llvm::omp::Directive directive) {
     }
   }
   return false;
-}
-
-void OmpAttributeVisitor::Post(const parser::OpenMPExecutableAllocate &x) {
-  PopContext();
 }
 
 void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
@@ -2948,6 +2915,67 @@ void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
   }
 }
 
+static bool IsOpenMPPointer(const Symbol &symbol) {
+  if (IsPointer(symbol) || IsBuiltinCPtr(symbol))
+    return true;
+  return false;
+}
+
+static bool IsOpenMPAggregate(const Symbol &symbol) {
+  if (IsAllocatable(symbol) || IsOpenMPPointer(symbol))
+    return false;
+
+  const auto *type{symbol.GetType()};
+  // OpenMP categorizes Fortran characters as aggregates.
+  if (type->category() == Fortran::semantics::DeclTypeSpec::Category::Character)
+    return true;
+
+  if (const auto *det{symbol.GetUltimate()
+              .detailsIf<Fortran::semantics::ObjectEntityDetails>()})
+    if (det->IsArray())
+      return true;
+
+  if (type->AsDerived())
+    return true;
+
+  if (IsDeferredShape(symbol) || IsAssumedRank(symbol) ||
+      IsAssumedShape(symbol))
+    return true;
+  return false;
+}
+
+static bool IsOpenMPScalar(const Symbol &symbol) {
+  if (IsOpenMPAggregate(symbol) || IsOpenMPPointer(symbol) ||
+      IsAllocatable(symbol))
+    return false;
+  const auto *type{symbol.GetType()};
+  if ((!symbol.GetShape() || symbol.GetShape()->empty()) &&
+      (type->category() ==
+              Fortran::semantics::DeclTypeSpec::Category::Numeric ||
+          type->category() ==
+              Fortran::semantics::DeclTypeSpec::Category::Logical))
+    return true;
+  return false;
+}
+
+static bool DefaultMapCategoryMatchesSymbol(
+    parser::OmpVariableCategory::Value category, const Symbol &symbol) {
+  using VarCat = parser::OmpVariableCategory::Value;
+  switch (category) {
+  case VarCat::Scalar:
+    return IsOpenMPScalar(symbol);
+  case VarCat::Allocatable:
+    return IsAllocatable(symbol);
+  case VarCat::Aggregate:
+    return IsOpenMPAggregate(symbol);
+  case VarCat::Pointer:
+    return IsOpenMPPointer(symbol);
+  case VarCat::All:
+    return true;
+  }
+  return false;
+}
+
 // For OpenMP constructs, check all the data-refs within the constructs
 // and adjust the symbol for each Name if necessary
 void OmpAttributeVisitor::Post(const parser::Name &name) {
@@ -2978,6 +3006,41 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
             context_.Say(name.source,
                 "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-sharing attribute clause"_err_en_US,
                 symbol->name());
+          }
+        }
+      }
+    }
+
+    // TODO: handle case where default and defaultmap are present on the same
+    // construct and conflict, defaultmap should supersede default if they
+    // conflict.
+    if (!GetContext().defaultMap.empty()) {
+      // Checked before implicit data sharing attributes as this rule ignores
+      // them and expects explicit predetermined/specified attributes to be in
+      // place for the types specified.
+      if (Symbol * found{currScope().FindSymbol(name.source)}) {
+        // If the variable has declare target applied to it (enter or link) it
+        // is exempt from defaultmap(none) restrictions.
+        // We also exempt procedures and named constants from defaultmap(none)
+        // checking.
+        if (!symbol->GetUltimate().test(Symbol::Flag::OmpDeclareTarget) &&
+            !(IsProcedure(*symbol) &&
+                !semantics::IsProcedurePointer(*symbol)) &&
+            !IsNamedConstant(*symbol)) {
+          auto &dMap = GetContext().defaultMap;
+          for (auto defaults : dMap) {
+            if (defaults.second ==
+                parser::OmpDefaultmapClause::ImplicitBehavior::None) {
+              if (DefaultMapCategoryMatchesSymbol(defaults.first, *found)) {
+                if (!IsObjectWithDSA(*symbol)) {
+                  context_.Say(name.source,
+                      "The DEFAULTMAP(NONE) clause requires that '%s' must be "
+                      "listed in a "
+                      "data-sharing attribute, data-mapping attribute, or is_device_ptr clause"_err_en_US,
+                      symbol->name());
+                }
+              }
+            }
           }
         }
       }
@@ -3561,8 +3624,8 @@ void OmpAttributeVisitor::IssueNonConformanceWarning(llvm::omp::Directive D,
   case llvm::omp::OMPD_allocate:
     setAlternativeStr("ALLOCATORS");
     break;
-  case llvm::omp::OMPD_target_loop:
-  default:;
+  default:
+    break;
   }
   context_.Warn(common::UsageWarning::OpenMPUsage, source, "%s"_warn_en_US,
       warnStrOS.str());
