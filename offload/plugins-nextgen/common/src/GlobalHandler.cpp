@@ -27,6 +27,7 @@ using namespace omp;
 using namespace target;
 using namespace plugin;
 using namespace error;
+using namespace debug;
 
 Expected<std::unique_ptr<ObjectFile>>
 GenericGlobalHandlerTy::getELFObjectFile(DeviceImageTy &Image) {
@@ -75,12 +76,13 @@ Error GenericGlobalHandlerTy::moveGlobalBetweenDeviceAndHost(
       return Err;
   }
 
-  DP("Successfully %s %u bytes associated with global symbol '%s' %s the "
-     "device "
-     "(%p -> %p).\n",
-     Device2Host ? "read" : "write", HostGlobal.getSize(),
-     HostGlobal.getName().data(), Device2Host ? "from" : "to",
-     DeviceGlobal.getPtr(), HostGlobal.getPtr());
+  ODBG(ODT_DataTransfer) << "Successfully " << (Device2Host ? "read" : "write")
+                         << " " << HostGlobal.getSize()
+                         << " bytes associated with global symbol '"
+                         << HostGlobal.getName() << "' "
+                         << (Device2Host ? "from" : "to") << " the device ("
+                         << DeviceGlobal.getPtr() << " -> "
+                         << HostGlobal.getPtr() << ").";
 
   return Plugin::success();
 }
@@ -157,10 +159,11 @@ Error GenericGlobalHandlerTy::readGlobalFromImage(GenericDeviceTy &Device,
                          HostGlobal.getName().data(), ImageGlobal.getSize(),
                          HostGlobal.getSize());
 
-  DP("Global symbol '%s' was found in the ELF image and %u bytes will copied "
-     "from %p to %p.\n",
-     HostGlobal.getName().data(), HostGlobal.getSize(), ImageGlobal.getPtr(),
-     HostGlobal.getPtr());
+  ODBG(ODT_DataTransfer) << "Global symbol '" << HostGlobal.getName()
+                         << "' was found in the ELF image and "
+                         << HostGlobal.getSize() << " bytes will copied from "
+                         << ImageGlobal.getPtr() << " to "
+                         << HostGlobal.getPtr() << ".";
 
   assert(Image.getStart() <= ImageGlobal.getPtr() &&
          utils::advancePtr(ImageGlobal.getPtr(), ImageGlobal.getSize()) <
