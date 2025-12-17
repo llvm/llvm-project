@@ -3729,6 +3729,24 @@ bool RISCVDAGToDAGISel::selectSHXADDOp(SDValue N, unsigned ShAmt,
   if (N.getOpcode() == ISD::AND && isa<ConstantSDNode>(N.getOperand(1))) {
     SDValue N0 = N.getOperand(0);
 
+    // Transform (and (shl x, c1), c2) -> (shl (and x, c2 >> c1), c1) as long
+    // as the shifted mask fits into a 12-bit immediate.
+    if (N0.getOpcode() == ISD::SHL && isa<ConstantSDNode>(N0.getOperand(1)) &&
+        N0.getConstantOperandVal(1) == ShAmt) {
+      uint64_t Mask = N.getConstantOperandVal(1);
+      uint64_t PreShiftMask = Mask >> ShAmt;
+
+      if (isInt<12>(PreShiftMask)) {
+        SDLoc DL(N);
+        EVT VT = N.getValueType();
+        Val = SDValue(CurDAG->getMachineNode(
+                          RISCV::ANDI, DL, VT, N0.getOperand(0),
+                          CurDAG->getTargetConstant(PreShiftMask, DL, VT)),
+                      0);
+        return true;
+      }
+    }
+
     if (bool LeftShift = N0.getOpcode() == ISD::SHL;
         (LeftShift || N0.getOpcode() == ISD::SRL) &&
         isa<ConstantSDNode>(N0.getOperand(1))) {

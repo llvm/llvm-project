@@ -5092,7 +5092,6 @@ define i64 @exactashr1mul36(i64 %a) {
 ;    (add (and (shl x, c1), c2), y)
 ; -> (shXadd (and x, c2 >> c1), y)
 ; i.e. shift left and then mask, so that shxadd can be selected.
-; TODO: This is not currently implemented.
 
 define i64 @sh1add_masked(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: sh1add_masked:
@@ -5104,15 +5103,14 @@ define i64 @sh1add_masked(i64 %a, i64 %b) nounwind {
 ;
 ; RV64ZBA-LABEL: sh1add_masked:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    slli a0, a0, 56
-; RV64ZBA-NEXT:    srli a0, a0, 55
-; RV64ZBA-NEXT:    add a0, a0, a1
+; RV64ZBA-NEXT:    zext.b a0, a0
+; RV64ZBA-NEXT:    sh1add a0, a0, a1
 ; RV64ZBA-NEXT:    ret
 ;
 ; RV64XANDESPERF-LABEL: sh1add_masked:
 ; RV64XANDESPERF:       # %bb.0:
-; RV64XANDESPERF-NEXT:    nds.bfoz a0, a0, 1, 8
-; RV64XANDESPERF-NEXT:    add a0, a0, a1
+; RV64XANDESPERF-NEXT:    zext.b a0, a0
+; RV64XANDESPERF-NEXT:    nds.lea.h a0, a1, a0
 ; RV64XANDESPERF-NEXT:    ret
   %shl = shl i64 %a, 1
   %and = and i64 %shl, 510
@@ -5130,15 +5128,14 @@ define i64 @sh2add_masked(i64 %a, i64 %b) nounwind {
 ;
 ; RV64ZBA-LABEL: sh2add_masked:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    slli a0, a0, 54
-; RV64ZBA-NEXT:    srli a0, a0, 52
-; RV64ZBA-NEXT:    add a0, a0, a1
+; RV64ZBA-NEXT:    andi a0, a0, 1023
+; RV64ZBA-NEXT:    sh2add a0, a0, a1
 ; RV64ZBA-NEXT:    ret
 ;
 ; RV64XANDESPERF-LABEL: sh2add_masked:
 ; RV64XANDESPERF:       # %bb.0:
-; RV64XANDESPERF-NEXT:    nds.bfoz a0, a0, 2, 11
-; RV64XANDESPERF-NEXT:    add a0, a0, a1
+; RV64XANDESPERF-NEXT:    andi a0, a0, 1023
+; RV64XANDESPERF-NEXT:    nds.lea.w a0, a1, a0
 ; RV64XANDESPERF-NEXT:    ret
   %shl = shl i64 %a, 2
   %and = and i64 %shl, 4092
@@ -5147,12 +5144,24 @@ define i64 @sh2add_masked(i64 %a, i64 %b) nounwind {
 }
 
 define i64 @sh3add_masked(i64 %a, i64 %b) nounwind {
-; CHECK-LABEL: sh3add_masked:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi a0, a0, 768
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: sh3add_masked:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    andi a0, a0, 768
+; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: sh3add_masked:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    andi a0, a0, 768
+; RV64ZBA-NEXT:    sh3add a0, a0, a1
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: sh3add_masked:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    andi a0, a0, 768
+; RV64XANDESPERF-NEXT:    nds.lea.d a0, a1, a0
+; RV64XANDESPERF-NEXT:    ret
   %shl = shl i64 %a, 3
   %and = and i64 %shl, 6144
   %add = add i64 %and, %b
