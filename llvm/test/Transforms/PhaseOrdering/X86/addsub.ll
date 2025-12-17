@@ -334,8 +334,8 @@ define <4 x float> @test_addsub_v4f32_partial_23(<4 x float> %A, <4 x float> %B)
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[B:%.*]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x float> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x float> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP4]], <4 x i32> <i32 0, i32 3, i32 poison, i32 poison>
-; CHECK-NEXT:    [[VECINSERT21:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> <float undef, float undef, float poison, float poison>, <4 x i32> <i32 4, i32 5, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP4]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[VECINSERT21:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> undef, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
 ; CHECK-NEXT:    ret <4 x float> [[VECINSERT21]]
 ;
   %1 = extractelement <4 x float> %A, i32 2
@@ -374,8 +374,8 @@ define <4 x float> @test_addsub_v4f32_partial_12(<4 x float> %A, <4 x float> %B)
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[B:%.*]], <4 x float> poison, <2 x i32> <i32 1, i32 2>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x float> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP4]], <4 x i32> <i32 0, i32 3, i32 poison, i32 poison>
-; CHECK-NEXT:    [[VECINSERT21:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> <float undef, float poison, float poison, float undef>, <4 x i32> <i32 4, i32 0, i32 1, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP4]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[VECINSERT21:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> undef, <4 x i32> <i32 2, i32 0, i32 1, i32 3>
 ; CHECK-NEXT:    ret <4 x float> [[VECINSERT21]]
 ;
   %1 = extractelement <4 x float> %A, i32 2

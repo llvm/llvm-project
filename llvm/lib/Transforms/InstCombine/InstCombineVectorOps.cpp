@@ -2893,6 +2893,145 @@ Instruction *InstCombinerImpl::simplifyBinOpSplats(ShuffleVectorInst &SVI) {
   return new ShuffleVectorInst(NewBO, SVI.getShuffleMask());
 }
 
+/// Describes whether and how a shuffle operand can be compacted.
+struct ShuffleOperandCompaction {
+  /// Whether this operand can be compacted (has a single use and is either
+  /// a constant or another shuffle instruction).
+  bool CanCompact;
+  /// Conservative heuristic: whether this operand's compaction justifies
+  /// the overall transformation (true for constants; false for shuffles).
+  bool ShouldCompact;
+  /// The minimal width required for the compacted vector.
+  unsigned CompactedWidth;
+  /// Function to create the compacted operand if the transformation applies.
+  std::function<Value *(unsigned, InstCombiner::BuilderTy &)> Apply;
+};
+
+/// Attempt to narrow/compact a constant vector used in a shuffle by removing
+/// elements that are not referenced by the shuffle mask.
+static ShuffleOperandCompaction
+compactShuffleOperand(Constant *ShuffleInput,
+                      MutableArrayRef<int> UserShuffleMask, int IndexStart) {
+  auto *VecTy = cast<FixedVectorType>(ShuffleInput->getType());
+  unsigned Width = VecTy->getNumElements();
+
+  // Collect only the constant elements that are actually used.
+  SmallVector<Constant *, 16> CompactedElts;
+  // Map from original element index to compacted index.
+  SmallVector<int, 16> IndexRemap(Width, -1);
+
+  for (int &MaskElt : UserShuffleMask) {
+    if (MaskElt >= IndexStart && MaskElt < IndexStart + (int)Width) {
+      int RelMaskElt = MaskElt - IndexStart;
+      if (IndexRemap[RelMaskElt] < 0) {
+        IndexRemap[RelMaskElt] = CompactedElts.size() + IndexStart;
+        CompactedElts.push_back(ShuffleInput->getAggregateElement(RelMaskElt));
+      }
+      MaskElt = IndexRemap[RelMaskElt];
+    }
+  }
+
+  return {true, true, static_cast<unsigned>(CompactedElts.size()),
+          [CompactedElts = std::move(CompactedElts),
+           VecTy](unsigned PaddedWidth,
+                  InstCombiner::BuilderTy &Builder) -> Value * {
+            // Pad with poison to reach the requested width.
+            SmallVector<Constant *, 16> PaddedElts(CompactedElts);
+            while (PaddedElts.size() < PaddedWidth)
+              PaddedElts.push_back(PoisonValue::get(VecTy->getElementType()));
+
+            return ConstantVector::get(PaddedElts);
+          }};
+}
+
+/// Attempt to narrow/compact a shuffle instruction used in a shuffle by
+/// removing elements that are not referenced by the shuffle mask.
+static ShuffleOperandCompaction
+compactShuffleOperand(ShuffleVectorInst *ShuffleInput,
+                      MutableArrayRef<int> UserShuffleMask, int IndexStart) {
+  auto *VecTy = cast<FixedVectorType>(ShuffleInput->getType());
+  unsigned Width = VecTy->getNumElements();
+
+  // Collect only the shuffle mask elements that are actually used.
+  SmallVector<int, 16> CompactedMask;
+  // Map from original element index to compacted index.
+  SmallVector<int, 16> IndexRemap(Width, -1);
+
+  for (int &MaskElt : UserShuffleMask) {
+    if (MaskElt >= IndexStart && MaskElt < IndexStart + (int)Width) {
+      int RelMaskElt = MaskElt - IndexStart;
+      if (IndexRemap[RelMaskElt] < 0) {
+        IndexRemap[RelMaskElt] = CompactedMask.size() + IndexStart;
+        CompactedMask.push_back(ShuffleInput->getMaskValue(RelMaskElt));
+      }
+      MaskElt = IndexRemap[RelMaskElt];
+    }
+  }
+
+  return {true, false, static_cast<unsigned>(CompactedMask.size()),
+          [CompactedMask = std::move(CompactedMask),
+           ShuffleInput](unsigned PaddedWidth,
+                         InstCombiner::BuilderTy &Builder) -> Value * {
+            // Pad with poison mask elements to reach the requested width.
+            SmallVector<int, 16> PaddedMask(CompactedMask);
+            while (PaddedMask.size() < PaddedWidth)
+              PaddedMask.push_back(PoisonMaskElem);
+
+            return Builder.CreateShuffleVector(ShuffleInput->getOperand(0),
+                                               ShuffleInput->getOperand(1),
+                                               PaddedMask);
+          }};
+}
+
+/// Try to narrow/compact a shuffle operand by eliminating elements that are
+/// not used by the shuffle mask. This updates the shuffle mask in-place to
+/// reflect the compaction. Returns information about whether compaction is
+/// possible and a lambda to apply the compaction if beneficial.
+static ShuffleOperandCompaction
+compactShuffleOperand(Value *ShuffleInput, MutableArrayRef<int> ShuffleMask,
+                      int IndexStart) {
+  if (ShuffleInput->getNumUses() > 1)
+    return {false, false, 0, nullptr};
+
+  if (auto *C = dyn_cast<Constant>(ShuffleInput))
+    return compactShuffleOperand(C, ShuffleMask, IndexStart);
+  if (auto *Shuf = dyn_cast<ShuffleVectorInst>(ShuffleInput))
+    return compactShuffleOperand(Shuf, ShuffleMask, IndexStart);
+
+  return {false, false, 0, nullptr};
+}
+
+/// Try to narrow the shuffle by eliminating unused elements from the operands.
+static Instruction *tryCompactShuffleOperands(ShuffleVectorInst &SVI,
+                                              InstCombinerImpl &IC) {
+  Value *LHS = SVI.getOperand(0);
+  Value *RHS = SVI.getOperand(1);
+  ArrayRef<int> Mask = SVI.getShuffleMask();
+  unsigned LHSWidth = cast<FixedVectorType>(LHS->getType())->getNumElements();
+
+  SmallVector<int, 16> NewMask(Mask.begin(), Mask.end());
+  ShuffleOperandCompaction LHSCompact = compactShuffleOperand(LHS, NewMask, 0);
+  ShuffleOperandCompaction RHSCompact =
+      compactShuffleOperand(RHS, NewMask, LHSWidth);
+  if (LHSCompact.CanCompact && RHSCompact.CanCompact &&
+      (LHSCompact.ShouldCompact || RHSCompact.ShouldCompact)) {
+    unsigned CompactWidth =
+        std::max(LHSCompact.CompactedWidth, RHSCompact.CompactedWidth);
+    if (CompactWidth < LHSWidth) {
+      IC.replaceOperand(SVI, 0, LHSCompact.Apply(CompactWidth, IC.Builder));
+      IC.replaceOperand(SVI, 1, RHSCompact.Apply(CompactWidth, IC.Builder));
+      // Adjust RHS indices in the mask to account for the new LHS width.
+      for (int &MaskElt : NewMask)
+        if (MaskElt >= (int)LHSWidth)
+          MaskElt = MaskElt - LHSWidth + CompactWidth;
+      SVI.setShuffleMask(NewMask);
+      return &SVI;
+    }
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   Value *LHS = SVI.getOperand(0);
   Value *RHS = SVI.getOperand(1);
@@ -3172,7 +3311,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     if (!match(RHSShuffle->getOperand(1), m_Poison()))
       RHSShuffle = nullptr;
   if (!LHSShuffle && !RHSShuffle)
-    return MadeChange ? &SVI : nullptr;
+    return MadeChange ? &SVI : tryCompactShuffleOperands(SVI, *this);
 
   Value* LHSOp0 = nullptr;
   Value* LHSOp1 = nullptr;
@@ -3212,7 +3351,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   }
 
   if (newLHS == LHS && newRHS == RHS)
-    return MadeChange ? &SVI : nullptr;
+    return MadeChange ? &SVI : tryCompactShuffleOperands(SVI, *this);
 
   ArrayRef<int> LHSMask;
   ArrayRef<int> RHSMask;
@@ -3294,5 +3433,5 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     return new ShuffleVectorInst(newLHS, newRHS, newMask);
   }
 
-  return MadeChange ? &SVI : nullptr;
+  return MadeChange ? &SVI : tryCompactShuffleOperands(SVI, *this);
 }

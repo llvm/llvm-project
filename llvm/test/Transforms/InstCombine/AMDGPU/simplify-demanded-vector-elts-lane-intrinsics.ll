@@ -115,8 +115,7 @@ define <2 x i16> @extract_elt32_v4i16_readfirstlane(<4 x i16> %src) {
 ; CHECK-SAME: <4 x i16> [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[SRC]], <4 x i16> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i16> @llvm.amdgcn.readfirstlane.v2i16(<2 x i16> [[TMP1]])
-; CHECK-NEXT:    [[VEC:%.*]] = shufflevector <2 x i16> [[TMP2]], <2 x i16> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 1>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i16> [[VEC]], <4 x i16> poison, <2 x i32> <i32 3, i32 2>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[TMP2]], <2 x i16> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    ret <2 x i16> [[SHUFFLE]]
 ;
   %vec = call <4 x i16> @llvm.amdgcn.readfirstlane.v4i16(<4 x i16> %src)
@@ -287,8 +286,7 @@ define <2 x i32> @extract_elt13_v4i32_readfirstlane(<4 x i32> %src) {
 ; CHECK-SAME: <4 x i32> [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[SRC]], <4 x i32> poison, <3 x i32> <i32 1, i32 poison, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <3 x i32> @llvm.amdgcn.readfirstlane.v3i32(<3 x i32> [[TMP1]])
-; CHECK-NEXT:    [[VEC:%.*]] = shufflevector <3 x i32> [[TMP2]], <3 x i32> poison, <4 x i32> <i32 poison, i32 0, i32 poison, i32 2>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[VEC]], <4 x i32> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <3 x i32> [[TMP2]], <3 x i32> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    ret <2 x i32> [[SHUFFLE]]
 ;
   %vec = call <4 x i32> @llvm.amdgcn.readfirstlane.v4i32(<4 x i32> %src)
@@ -328,8 +326,7 @@ define < 2 x i32> @extract_elt13_v4i32_readfirstlane_source_simplify1(i32 %src0,
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[SRC0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <3 x i32> <i32 0, i32 poison, i32 0>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <3 x i32> @llvm.amdgcn.readfirstlane.v3i32(<3 x i32> [[TMP2]])
-; CHECK-NEXT:    [[VEC:%.*]] = shufflevector <3 x i32> [[TMP3]], <3 x i32> poison, <4 x i32> <i32 poison, i32 0, i32 poison, i32 2>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[VEC]], <4 x i32> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <3 x i32> [[TMP3]], <3 x i32> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    ret <2 x i32> [[SHUFFLE]]
 ;
   %ins.0 = insertelement <4 x i32> poison, i32 %src0, i32 1
@@ -372,8 +369,7 @@ define < 2 x i32> @extract_elt13_v4i32_readfirstlane_source_simplify1_convergenc
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[SRC0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <3 x i32> <i32 0, i32 poison, i32 0>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <3 x i32> @llvm.amdgcn.readfirstlane.v3i32(<3 x i32> [[TMP2]]) [ "convergencectrl"(token [[T]]) ]
-; CHECK-NEXT:    [[VEC:%.*]] = shufflevector <3 x i32> [[TMP3]], <3 x i32> poison, <4 x i32> <i32 poison, i32 0, i32 poison, i32 2>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[VEC]], <4 x i32> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <3 x i32> [[TMP3]], <3 x i32> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    ret <2 x i32> [[SHUFFLE]]
 ;
   %t = call token @llvm.experimental.convergence.entry()
@@ -413,8 +409,7 @@ define <2 x i32> @extract_elt13_v8i32_readfirstlane(<8 x i32> %src) {
 ; CHECK-SAME: <8 x i32> [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[SRC]], <8 x i32> poison, <3 x i32> <i32 1, i32 poison, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <3 x i32> @llvm.amdgcn.readfirstlane.v3i32(<3 x i32> [[TMP1]])
-; CHECK-NEXT:    [[VEC:%.*]] = shufflevector <3 x i32> [[TMP2]], <3 x i32> poison, <8 x i32> <i32 poison, i32 0, i32 poison, i32 2, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[VEC]], <8 x i32> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <3 x i32> [[TMP2]], <3 x i32> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    ret <2 x i32> [[SHUFFLE]]
 ;
   %vec = call <8 x i32> @llvm.amdgcn.readfirstlane.v8i32(<8 x i32> %src)
@@ -439,8 +434,7 @@ define <3 x i32> @extract_elt124_v8i32_readfirstlane(<8 x i32> %src) {
 ; CHECK-SAME: <8 x i32> [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[SRC]], <8 x i32> poison, <4 x i32> <i32 1, i32 2, i32 poison, i32 4>
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.amdgcn.readfirstlane.v4i32(<4 x i32> [[TMP1]])
-; CHECK-NEXT:    [[VEC:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <8 x i32> <i32 poison, i32 0, i32 1, i32 poison, i32 3, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[VEC]], <8 x i32> poison, <3 x i32> <i32 1, i32 2, i32 4>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 3>
 ; CHECK-NEXT:    ret <3 x i32> [[SHUFFLE]]
 ;
   %vec = call <8 x i32> @llvm.amdgcn.readfirstlane.v8i32(<8 x i32> %src)

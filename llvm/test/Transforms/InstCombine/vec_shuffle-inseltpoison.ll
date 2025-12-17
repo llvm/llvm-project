@@ -132,8 +132,8 @@ define <4 x i8> @test9(<16 x i8> %t6) {
 
 define <4 x i8> @test9a(<16 x i8> %t6) {
 ; CHECK-LABEL: @test9a(
-; CHECK-NEXT:    [[T7:%.*]] = shufflevector <16 x i8> [[T6:%.*]], <16 x i8> poison, <4 x i32> <i32 poison, i32 9, i32 4, i32 8>
-; CHECK-NEXT:    [[T9:%.*]] = shufflevector <4 x i8> [[T7]], <4 x i8> poison, <4 x i32> <i32 3, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    [[T7:%.*]] = shufflevector <16 x i8> [[T6:%.*]], <16 x i8> poison, <3 x i32> <i32 8, i32 9, i32 4>
+; CHECK-NEXT:    [[T9:%.*]] = shufflevector <3 x i8> [[T7]], <3 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    ret <4 x i8> [[T9]]
 ;
   %t7 = shufflevector <16 x i8> %t6, <16 x i8> poison, <4 x i32> < i32 undef, i32 9, i32 4, i32 8 >
