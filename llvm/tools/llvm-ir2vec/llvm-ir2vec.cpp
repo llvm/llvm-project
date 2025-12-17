@@ -55,7 +55,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/IR2Vec.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -336,7 +338,16 @@ Error processModule(Module &M, raw_ostream &OS) {
 
     if (!FunctionName.empty()) {
       // Process single function
-      if (const Function *F = M.getFunction(FunctionName))
+      const Function *F = [&]() -> const Function * {
+        if (auto *ExactMatch = M.getFunction(FunctionName)) return ExactMatch;
+        const auto Demangled = llvm::demangle(FunctionName);
+        auto It = llvm::find_if(M, [&](const Function &Func) {
+          return llvm::demangle(Func.getName().str()) == Demangled;
+        });
+
+        return (It != M.end()) ? &*It : nullptr;
+      }();
+      if (F)
         Tool.generateEmbeddings(*F, OS);
       else
         return createStringError(errc::invalid_argument,
@@ -727,7 +738,17 @@ int main(int argc, char **argv) {
     } else if (EmbeddingsSubCmd) {
       if (!FunctionName.empty()) {
         // Process single function
-        Function *F = M->getFunction(FunctionName);
+        const Function *F = [&]() -> const Function * {
+          if (auto *ExactMatch = M->getFunction(FunctionName)) return ExactMatch;
+
+          const auto Demangled = llvm::demangle(FunctionName);
+          auto It = llvm::find_if(*M, [&](const Function &Func) {
+            return llvm::demangle(Func.getName().str()) == Demangled;
+          });
+
+          return (It != M->end()) ? &*It : nullptr;  // Change M.end() to M->end()
+        }();
+
         if (!F) {
           WithColor::error(errs(), ToolName)
               << "Function '" << FunctionName << "' not found\n";
