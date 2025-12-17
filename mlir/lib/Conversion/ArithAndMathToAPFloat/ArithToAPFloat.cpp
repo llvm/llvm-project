@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ArithToAPFloat/ArithToAPFloat.h"
+#include "Utils.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
@@ -25,47 +26,6 @@ namespace mlir {
 using namespace mlir;
 using namespace mlir::func;
 
-static FuncOp createFnDecl(OpBuilder &b, SymbolOpInterface symTable,
-                           StringRef name, FunctionType funcT, bool setPrivate,
-                           SymbolTableCollection *symbolTables = nullptr) {
-  OpBuilder::InsertionGuard g(b);
-  assert(!symTable->getRegion(0).empty() && "expected non-empty region");
-  b.setInsertionPointToStart(&symTable->getRegion(0).front());
-  FuncOp funcOp = FuncOp::create(b, symTable->getLoc(), name, funcT);
-  if (setPrivate)
-    funcOp.setPrivate();
-  if (symbolTables) {
-    SymbolTable &symbolTable = symbolTables->getSymbolTable(symTable);
-    symbolTable.insert(funcOp, symTable->getRegion(0).front().begin());
-  }
-  return funcOp;
-}
-
-/// Helper function to look up or create the symbol for a runtime library
-/// function with the given parameter types. Returns an int64_t, unless a
-/// different result type is specified.
-static FailureOr<FuncOp>
-lookupOrCreateApFloatFn(OpBuilder &b, SymbolOpInterface symTable,
-                        StringRef name, TypeRange paramTypes,
-                        SymbolTableCollection *symbolTables = nullptr,
-                        Type resultType = {}) {
-  if (!resultType)
-    resultType = IntegerType::get(symTable->getContext(), 64);
-  std::string funcName = (llvm::Twine("_mlir_apfloat_") + name).str();
-  auto funcT = FunctionType::get(b.getContext(), paramTypes, {resultType});
-  FailureOr<FuncOp> func =
-      lookupFnDecl(symTable, funcName, funcT, symbolTables);
-  // Failed due to type mismatch.
-  if (failed(func))
-    return func;
-  // Successfully matched existing decl.
-  if (*func)
-    return *func;
-
-  return createFnDecl(b, symTable, funcName, funcT,
-                      /*setPrivate=*/true, symbolTables);
-}
-
 /// Helper function to look up or create the symbol for a runtime library
 /// function for a binary arithmetic operation.
 ///
@@ -81,14 +41,9 @@ lookupOrCreateBinaryFn(OpBuilder &b, SymbolOpInterface symTable, StringRef name,
                        SymbolTableCollection *symbolTables = nullptr) {
   auto i32Type = IntegerType::get(symTable->getContext(), 32);
   auto i64Type = IntegerType::get(symTable->getContext(), 64);
-  return lookupOrCreateApFloatFn(b, symTable, name, {i32Type, i64Type, i64Type},
-                                 symbolTables);
-}
-
-static Value getSemanticsValue(OpBuilder &b, Location loc, FloatType floatTy) {
-  int32_t sem = llvm::APFloatBase::SemanticsToEnum(floatTy.getFloatSemantics());
-  return arith::ConstantOp::create(b, loc, b.getI32Type(),
-                                   b.getIntegerAttr(b.getI32Type(), sem));
+  std::string funcName = (llvm::Twine("_mlir_apfloat_") + name).str();
+  return lookupOrCreateFnDecl(b, symTable, funcName,
+                              {i32Type, i64Type, i64Type}, symbolTables);
 }
 
 /// Given two operands of vector type and vector result type (with the same
@@ -197,7 +152,7 @@ struct BinaryArithOpToAPFloatConversion final : OpRewritePattern<OpTy> {
               arith::BitcastOp::create(rewriter, loc, intWType, rhs));
 
           // Call APFloat function.
-          Value semValue = getSemanticsValue(rewriter, loc, floatTy);
+          Value semValue = getAPFloatSemanticsValue(rewriter, loc, floatTy);
           SmallVector<Value> params = {semValue, lhsBits, rhsBits};
           auto resultOp = func::CallOp::create(rewriter, loc,
                                                TypeRange(rewriter.getI64Type()),
@@ -231,8 +186,9 @@ struct FpToFpConversion final : OpRewritePattern<OpTy> {
     // Get APFloat function from runtime library.
     auto i32Type = IntegerType::get(symTable->getContext(), 32);
     auto i64Type = IntegerType::get(symTable->getContext(), 64);
-    FailureOr<FuncOp> fn = lookupOrCreateApFloatFn(
-        rewriter, symTable, "convert", {i32Type, i32Type, i64Type});
+    FailureOr<FuncOp> fn =
+        lookupOrCreateFnDecl(rewriter, symTable, "_mlir_apfloat_convert",
+                             {i32Type, i32Type, i64Type});
     if (failed(fn))
       return fn;
 
@@ -250,9 +206,10 @@ struct FpToFpConversion final : OpRewritePattern<OpTy> {
               arith::BitcastOp::create(rewriter, loc, inIntWType, operand1));
 
           // Call APFloat function.
-          Value inSemValue = getSemanticsValue(rewriter, loc, inFloatTy);
+          Value inSemValue = getAPFloatSemanticsValue(rewriter, loc, inFloatTy);
           auto outFloatTy = cast<FloatType>(resultType);
-          Value outSemValue = getSemanticsValue(rewriter, loc, outFloatTy);
+          Value outSemValue =
+              getAPFloatSemanticsValue(rewriter, loc, outFloatTy);
           std::array<Value, 3> params = {inSemValue, outSemValue, operandBits};
           auto resultOp = func::CallOp::create(rewriter, loc,
                                                TypeRange(rewriter.getI64Type()),
@@ -289,8 +246,8 @@ struct FpToIntConversion final : OpRewritePattern<OpTy> {
     auto i32Type = IntegerType::get(symTable->getContext(), 32);
     auto i64Type = IntegerType::get(symTable->getContext(), 64);
     FailureOr<FuncOp> fn =
-        lookupOrCreateApFloatFn(rewriter, symTable, "convert_to_int",
-                                {i32Type, i32Type, i1Type, i64Type});
+        lookupOrCreateFnDecl(rewriter, symTable, "_mlir_apfloat_convert_to_int",
+                             {i32Type, i32Type, i1Type, i64Type});
     if (failed(fn))
       return fn;
 
@@ -308,7 +265,7 @@ struct FpToIntConversion final : OpRewritePattern<OpTy> {
               arith::BitcastOp::create(rewriter, loc, inIntWType, operand1));
 
           // Call APFloat function.
-          Value inSemValue = getSemanticsValue(rewriter, loc, inFloatTy);
+          Value inSemValue = getAPFloatSemanticsValue(rewriter, loc, inFloatTy);
           auto outIntTy = cast<IntegerType>(resultType);
           Value outWidthValue = arith::ConstantOp::create(
               rewriter, loc, i32Type,
@@ -350,9 +307,9 @@ struct IntToFpConversion final : OpRewritePattern<OpTy> {
     auto i1Type = IntegerType::get(symTable->getContext(), 1);
     auto i32Type = IntegerType::get(symTable->getContext(), 32);
     auto i64Type = IntegerType::get(symTable->getContext(), 64);
-    FailureOr<FuncOp> fn =
-        lookupOrCreateApFloatFn(rewriter, symTable, "convert_from_int",
-                                {i32Type, i32Type, i1Type, i64Type});
+    FailureOr<FuncOp> fn = lookupOrCreateFnDecl(
+        rewriter, symTable, "_mlir_apfloat_convert_from_int",
+        {i32Type, i32Type, i1Type, i64Type});
     if (failed(fn))
       return fn;
 
@@ -377,7 +334,8 @@ struct IntToFpConversion final : OpRewritePattern<OpTy> {
 
           // Call APFloat function.
           auto outFloatTy = cast<FloatType>(resultType);
-          Value outSemValue = getSemanticsValue(rewriter, loc, outFloatTy);
+          Value outSemValue =
+              getAPFloatSemanticsValue(rewriter, loc, outFloatTy);
           Value inWidthValue = arith::ConstantOp::create(
               rewriter, loc, i32Type,
               rewriter.getIntegerAttr(i32Type, inIntTy.getWidth()));
@@ -421,8 +379,8 @@ struct CmpFOpToAPFloatConversion final : OpRewritePattern<arith::CmpFOp> {
     auto i32Type = IntegerType::get(symTable->getContext(), 32);
     auto i64Type = IntegerType::get(symTable->getContext(), 64);
     FailureOr<FuncOp> fn =
-        lookupOrCreateApFloatFn(rewriter, symTable, "compare",
-                                {i32Type, i64Type, i64Type}, nullptr, i8Type);
+        lookupOrCreateFnDecl(rewriter, symTable, "_mlir_apfloat_compare",
+                             {i32Type, i64Type, i64Type}, nullptr, i8Type);
     if (failed(fn))
       return fn;
 
@@ -443,7 +401,7 @@ struct CmpFOpToAPFloatConversion final : OpRewritePattern<arith::CmpFOp> {
               arith::BitcastOp::create(rewriter, loc, intWType, rhs));
 
           // Call APFloat function.
-          Value semValue = getSemanticsValue(rewriter, loc, floatTy);
+          Value semValue = getAPFloatSemanticsValue(rewriter, loc, floatTy);
           SmallVector<Value> params = {semValue, lhsBits, rhsBits};
           Value comparisonResult =
               func::CallOp::create(rewriter, loc, TypeRange(i8Type),
@@ -569,8 +527,8 @@ struct NegFOpToAPFloatConversion final : OpRewritePattern<arith::NegFOp> {
     // Get APFloat function from runtime library.
     auto i32Type = IntegerType::get(symTable->getContext(), 32);
     auto i64Type = IntegerType::get(symTable->getContext(), 64);
-    FailureOr<FuncOp> fn =
-        lookupOrCreateApFloatFn(rewriter, symTable, "neg", {i32Type, i64Type});
+    FailureOr<FuncOp> fn = lookupOrCreateFnDecl(
+        rewriter, symTable, "_mlir_apfloat_neg", {i32Type, i64Type});
     if (failed(fn))
       return fn;
 
@@ -588,7 +546,7 @@ struct NegFOpToAPFloatConversion final : OpRewritePattern<arith::NegFOp> {
               arith::BitcastOp::create(rewriter, loc, intWType, operand1));
 
           // Call APFloat function.
-          Value semValue = getSemanticsValue(rewriter, loc, floatTy);
+          Value semValue = getAPFloatSemanticsValue(rewriter, loc, floatTy);
           SmallVector<Value> params = {semValue, operandBits};
           Value negatedBits =
               func::CallOp::create(rewriter, loc, TypeRange(i64Type),
