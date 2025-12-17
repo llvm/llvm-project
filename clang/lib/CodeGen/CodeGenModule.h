@@ -720,6 +720,9 @@ public:
   /// Check if a direct method should use precondition thunks (exposed symbols).
   /// This applies to ALL direct methods (including variadic).
   /// Returns false if OMD is null or not a direct method.
+  ///
+  /// Also checks the runtime family, as the attribute objc_direct is only
+  /// respected in the NeXT runtime right now.
   bool usePreconditionThunk(const ObjCMethodDecl *OMD) const {
     return OMD && OMD->isDirectMethod() &&
            getLangOpts().ObjCRuntime.isNeXTFamily() &&
