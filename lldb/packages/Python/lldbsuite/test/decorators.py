@@ -797,7 +797,10 @@ def skipIfWindows(func=None, major=None, build=None):
                 if platform.system() != "Windows":
                     return False
                 win_version = sys.getwindowsversion()
-                return win_version.major >= check_major and win_version.build >= check_build
+                return (
+                    win_version.major >= check_major
+                    and win_version.build >= check_build
+                )
 
             return unittest.skipIf(
                 version_check(),
