@@ -86,7 +86,7 @@ DataAccessProfiles:
       - FileName:      file2.h
         Line:          123
       - FileName:      file3.cpp
-        Line:          456 
+        Line:          456
     - Hash:            101010
       AccessCount:     200
       Locations:
