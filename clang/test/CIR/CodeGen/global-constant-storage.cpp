@@ -57,7 +57,7 @@ public:
 const C c;
 
 // CIR checks for 'a' - should have constant storage
-// CIR: cir.global constant external @a = #cir.zero : !rec_A
+// CIR: cir.global external @a = #cir.zero : !rec_A
 // CIR: cir.func internal private @__cxx_global_var_init() {
 // CIR:   %[[OBJ:.*]] = cir.get_global @a : !cir.ptr<!rec_A>
 // CIR:   cir.call @_ZN1AC1Ev(%[[OBJ]]) : (!cir.ptr<!rec_A>) -> ()
@@ -65,7 +65,7 @@ const C c;
 // CIR: }
 
 // CIR checks for 'a2' - should have constant storage (constexpr dtor)
-// CIR: cir.global constant external @a2 = #cir.zero : !rec_A2
+// CIR: cir.global external @a2 = #cir.zero : !rec_A2
 // CIR: cir.func internal private @__cxx_global_var_init.1() {
 // CIR:   %[[OBJ:.*]] = cir.get_global @a2 : !cir.ptr<!rec_A2>
 // CIR:   cir.call @_ZN2A2C1Ev(%[[OBJ]]) : (!cir.ptr<!rec_A2>) -> ()
@@ -89,7 +89,7 @@ const C c;
 // CIR: }
 
 // CIR checks for 'c' - Andy's simple case, should have constant storage (internal linkage)
-// CIR: cir.global {{.*}} constant internal {{.*}} @_ZL1c = #cir.zero : !rec_C
+// CIR: cir.global {{.*}} internal {{.*}} @_ZL1c = #cir.zero : !rec_C
 // CIR: cir.func internal private @__cxx_global_var_init.4() {
 // CIR:   %[[OBJ:.*]] = cir.get_global @_ZL1c : !cir.ptr<!rec_C>
 // CIR:   cir.call @_ZN1CC1Ev(%[[OBJ]]) : (!cir.ptr<!rec_C>) -> ()
@@ -98,11 +98,11 @@ const C c;
 
 // LLVM checks (no optimization)
 // Check all globals first (they appear at the top)
-// LLVM: @a ={{.*}} constant {{.*}} zeroinitializer
-// LLVM: @a2 ={{.*}} constant {{.*}} zeroinitializer
+// LLVM: @a ={{.*}} global {{.*}} zeroinitializer
+// LLVM: @a2 ={{.*}} global {{.*}} zeroinitializer
 // LLVM: @b ={{.*}} global {{.*}} zeroinitializer
 // LLVM: @c_with_dtor ={{.*}} global {{.*}} zeroinitializer
-// LLVM: @_ZL1c ={{.*}} constant {{.*}} zeroinitializer
+// LLVM: @_ZL1c ={{.*}} global {{.*}} zeroinitializer
 
 // Then check the init functions
 // LLVM: define internal void @__cxx_global_var_init() {
@@ -166,11 +166,11 @@ const C c;
 
 // With optimization enabled, should emit invariant.start intrinsic for constant storage cases
 // Check all globals first (they appear at the top)
-// LLVM-OPT: @a ={{.*}} constant {{.*}} zeroinitializer
-// LLVM-OPT: @a2 ={{.*}} constant {{.*}} zeroinitializer
+// LLVM-OPT: @a ={{.*}} global {{.*}} zeroinitializer
+// LLVM-OPT: @a2 ={{.*}} global {{.*}} zeroinitializer
 // LLVM-OPT: @b ={{.*}} global {{.*}} zeroinitializer
 // LLVM-OPT: @c_with_dtor ={{.*}} global {{.*}} zeroinitializer
-// LLVM-OPT: @_ZL1c ={{.*}} constant {{.*}} zeroinitializer
+// LLVM-OPT: @_ZL1c ={{.*}} global {{.*}} zeroinitializer
 
 // Then check the init functions with invariant.start
 // LLVM-OPT: define internal void @__cxx_global_var_init() {

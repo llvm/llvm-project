@@ -877,14 +877,12 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     emitter->finalize(gv);
 
   // If it is safe to mark the global 'constant', do so now.
-  // Use the same logic as emitCXXGlobalVarDeclInit to determine constant
-  // storage.
-  bool needsDtor =
-      vd->needsDestruction(astContext) == QualType::DK_cxx_destructor;
+  // Use the same logic as classic codegen EmitGlobalVarDefinition.
   gv.setConstant((vd->hasAttr<CUDAConstantAttr>() && langOpts.CUDAIsDevice) ||
-                 vd->getType().isConstantStorage(astContext,
-                                                 /*ExcludeCtor=*/true,
-                                                 /*ExcludeDtor=*/!needsDtor));
+                 (!needsGlobalCtor && !needsGlobalDtor &&
+                  vd->getType().isConstantStorage(astContext,
+                                                  /*ExcludeCtor=*/true,
+                                                  /*ExcludeDtor=*/true)));
   assert(!cir::MissingFeatures::opGlobalSection());
 
   // Set CIR's linkage type as appropriate.
