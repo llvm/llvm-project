@@ -132,17 +132,17 @@ bool tryToFindPtrOrigin(
         }
       }
 
-      if (call->isCallToStdMove() && call->getNumArgs() == 1) {
-        E = call->getArg(0)->IgnoreParenCasts();
-        continue;
-      }
-
       if (auto *callee = call->getDirectCallee()) {
         if (isCtorOfSafePtr(callee)) {
           if (StopAtFirstRefCountedObj)
             return callback(E, true);
 
           E = call->getArg(0);
+          continue;
+        }
+
+        if (isStdOrWTFMove(callee) && call->getNumArgs() == 1) {
+          E = call->getArg(0)->IgnoreParenCasts();
           continue;
         }
 

@@ -713,7 +713,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                        Custom);
   }
 
-  setOperationAction(ISD::BR_JT, MVT::Other, Custom);
+  setOperationAction(ISD::BR_JT, MVT::Other, STI.hasBrx() ? Legal : Expand);
   setOperationAction(ISD::BRIND, MVT::Other, Expand);
 
   // We want to legalize constant related memmove and memcopy
@@ -3281,8 +3281,6 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerFP_ROUND(Op, DAG);
   case ISD::FP_EXTEND:
     return LowerFP_EXTEND(Op, DAG);
-  case ISD::BR_JT:
-    return LowerBR_JT(Op, DAG);
   case ISD::VAARG:
     return LowerVAARG(Op, DAG);
   case ISD::VASTART:
@@ -3328,36 +3326,6 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   default:
     llvm_unreachable("Custom lowering not defined for operation");
   }
-}
-
-SDValue NVPTXTargetLowering::LowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
-  SDLoc DL(Op);
-  SDValue Chain = Op.getOperand(0);
-  const auto *JT = cast<JumpTableSDNode>(Op.getOperand(1));
-  SDValue Index = Op.getOperand(2);
-
-  unsigned JId = JT->getIndex();
-  MachineJumpTableInfo *MJTI = DAG.getMachineFunction().getJumpTableInfo();
-  ArrayRef<MachineBasicBlock *> MBBs = MJTI->getJumpTables()[JId].MBBs;
-
-  SDValue IdV = DAG.getConstant(JId, DL, MVT::i32);
-
-  // Generate BrxStart node
-  SDVTList VTs = DAG.getVTList(MVT::Other, MVT::Glue);
-  Chain = DAG.getNode(NVPTXISD::BrxStart, DL, VTs, Chain, IdV);
-
-  // Generate BrxItem nodes
-  assert(!MBBs.empty());
-  for (MachineBasicBlock *MBB : MBBs.drop_back())
-    Chain = DAG.getNode(NVPTXISD::BrxItem, DL, VTs, Chain.getValue(0),
-                        DAG.getBasicBlock(MBB), Chain.getValue(1));
-
-  // Generate BrxEnd nodes
-  SDValue EndOps[] = {Chain.getValue(0), DAG.getBasicBlock(MBBs.back()), Index,
-                      IdV, Chain.getValue(1)};
-  SDValue BrxEnd = DAG.getNode(NVPTXISD::BrxEnd, DL, MVT::Other, EndOps);
-
-  return BrxEnd;
 }
 
 // This will prevent AsmPrinter from trying to print the jump tables itself.

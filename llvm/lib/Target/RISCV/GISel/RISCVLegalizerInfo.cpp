@@ -639,6 +639,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .libcallFor({{s32, s32}, {s64, s32}})
       .libcallFor(ST.is64Bit(), {s128, s32});
 
+  getActionDefinitionsBuilder(G_FCANONICALIZE)
+      .legalFor(ST.hasStdExtF(), {s32})
+      .legalFor(ST.hasStdExtD(), {s64})
+      .legalFor(ST.hasStdExtZfh(), {s16});
+
   getActionDefinitionsBuilder(G_VASTART).customFor({p0});
 
   // va_list must be a pointer, but most sized types are pretty easy to handle

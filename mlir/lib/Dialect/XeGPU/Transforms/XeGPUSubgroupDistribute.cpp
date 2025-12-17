@@ -1530,12 +1530,12 @@ struct VectorBroadcastDistribution : public gpu::WarpDistributionPattern {
       if (rankDiff == 0) {
         SetVector<int64_t> broadcastUnitDims =
             broadcastOp.computeBroadcastedUnitDims();
-        resultLayout = resultLayout.setUnitDimData(broadcastUnitDims);
         bool isEqualTo = sourceLayout.isEqualTo(resultLayout);
         if (!isEqualTo)
           return rewriter.notifyMatchFailure(
               warpOp, "For same-rank broadcast, source must be identical to "
                       "adjusted result layouts with unit dims.");
+        resultLayout = resultLayout.setUnitDimData(broadcastUnitDims);
         sourceLayout = sourceLayout.setUnitDimLayout(broadcastUnitDims);
       }
 
@@ -1673,6 +1673,19 @@ struct VectorExtractStridedSliceDistribution
         extractOp.getSizes(), [](Attribute attr) { return attr; });
     SmallVector<Attribute> updatedOffsets = llvm::map_to_vector(
         extractOp.getOffsets(), [](Attribute attr) { return attr; });
+    SmallVector<Attribute> updatedStrides = llvm::map_to_vector(
+        extractOp.getStrides(), [](Attribute attr) { return attr; });
+    // If the provided sizes, offsets, strides are less than the rank, pad them
+    // with full sizes, zero offsets, and unit strides. This makes it easier to
+    // adjust them later.
+    int64_t sourceRank = extractOp.getSourceVectorType().getRank();
+    for (int64_t i = extractOp.getSizes().size(); i < sourceRank; ++i) {
+      updatedSizes.push_back(rewriter.getI64IntegerAttr(
+          extractOp.getSourceVectorType().getDimSize(i)));
+      updatedOffsets.push_back(rewriter.getI64IntegerAttr(0));
+      updatedStrides.push_back(
+          rewriter.getI64IntegerAttr(1)); // stride is always 1.
+    }
     // If the result is distributed, it must be distributed in exactly one
     // dimension. In this case, we adjust the sourceDistType, distributedSizes
     // and distributedOffsets accordingly.
@@ -1708,7 +1721,7 @@ struct VectorExtractStridedSliceDistribution
       // The offsets in the distributed dimention must be a multiple of subgroup
       // size.
       int64_t distrDimOffset =
-          cast<IntegerAttr>(extractOp.getOffsets()[distributedDim]).getInt();
+          cast<IntegerAttr>(updatedOffsets[distributedDim]).getInt();
       if (distrDimOffset % subgroupSize != 0)
         return rewriter.notifyMatchFailure(
             warpOp, "Offset along distributed dimension "
@@ -1737,7 +1750,7 @@ struct VectorExtractStridedSliceDistribution
         rewriter, extractOp.getLoc(), distributedType, source,
         ArrayAttr::get(rewriter.getContext(), updatedOffsets),
         ArrayAttr::get(rewriter.getContext(), updatedSizes),
-        extractOp.getStrides());
+        ArrayAttr::get(rewriter.getContext(), updatedStrides));
     rewriter.replaceAllUsesWith(newWarpOp.getResult(operandIdx), newExtractOp);
     return success();
   }
