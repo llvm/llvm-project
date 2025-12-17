@@ -503,6 +503,16 @@ bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
 }
 
 //===----------------------------------------------------------------------===//
+// DidSaveTextDocumentParams
+//===----------------------------------------------------------------------===//
+
+bool llvm::lsp::fromJSON(const llvm::json::Value &Params,
+                         DidSaveTextDocumentParams &R, llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("textDocument", R.textDocument);
+}
+
+//===----------------------------------------------------------------------===//
 // DidChangeTextDocumentParams
 //===----------------------------------------------------------------------===//
 

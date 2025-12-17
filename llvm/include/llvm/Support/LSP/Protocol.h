@@ -495,6 +495,17 @@ LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
                                 llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
+// DidSaveTextDocumentParams
+//===----------------------------------------------------------------------===//
+
+struct DidSaveTextDocumentParams {
+  /// The document that was saved.
+  TextDocumentIdentifier textDocument;
+};
+bool fromJSON(const llvm::json::Value &, DidSaveTextDocumentParams &,
+              llvm::json::Path);
+
+//===----------------------------------------------------------------------===//
 // DidChangeTextDocumentParams
 //===----------------------------------------------------------------------===//
 
