@@ -3604,7 +3604,8 @@ class TranslationUnit(ClangObject):
             )
         )
         if result != 0:
-            raise TranslationUnitLoadError("Error reparsing translation unit.")
+            msg = "Error reparsing translation unit: \n" + str(e)
+            raise TranslationUnitLoadError(msg)
 
     def save(self, filename):
         """Saves the TranslationUnit to a file.
