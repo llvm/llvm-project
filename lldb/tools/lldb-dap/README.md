@@ -421,4 +421,4 @@ The source code is part of the [LLVM repository](https://github.com/llvm/llvm-pr
 We use Github's [issue tracker](https://github.com/llvm/llvm-project/issues?q=label%3Alldb-dap) and patches can be submitted via [pull requests](https://github.com/llvm/llvm-project/pulls?q=label%3Alldb-dap).
 Furthermore, there is a [LLDB category](https://discourse.llvm.org/c/subprojects/lldb/8) on the LLVM discourse forum.
 
-For instructions on how to get started with development on lldb-dap, see the "[Contributing to lldb-dap](https://lldb.llvm.org/resources/lldbdap.html)" guide.
+For instructions on how to get started with development on lldb-dap, see the "[Contributing to lldb-dap](https://lldb.llvm.org/resources/lldbdap-contributing.html)" guide.

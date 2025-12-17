@@ -1,195 +1,135 @@
-# Contributing to LLDB-DAP
+# Getting started with `lldb-dap`
 
-This guide describes how to extend and contribute to lldb-dap.
-For documentation on how to use lldb-dap, see [lldb-dap's README](https://github.com/llvm/llvm-project/blob/main/lldb/tools/lldb-dap/README.md).
+Welcome to the `llb-dap` documentation!
 
-lldb-dap and LLDB are developed under the umbrella of the
-[LLVM project](https://llvm.org/). As such, the
-"[Getting Started with the LLVM System](https://llvm.org/docs/GettingStarted.html)",
-"[Contributing to LLVM](https://llvm.org/docs/Contributing.html)" and
-"[LLVM coding standard](https://llvm.org/docs/CodingStandards.html)"
-guides might also be relevant, if you are a first-time contributor to the LLVM
-project.
+`lldb-dap` brings the power of `lldb` into any editor or IDE that supports the [Debug Adapter Protocol (DAP)](https://microsoft.github.io/debug-adapter-protocol/).
 
-lldb-dap's source code is [part of the LLVM
-repository](https://github.com/llvm/llvm-project/tree/main/lldb/tools/lldb-dap)
-on Github. We use Github's [issue
-tracker](https://github.com/llvm/llvm-project/tree/main/lldb/tools/lldb-dap)
-and patches can be submitted via [pull
-requests](https://github.com/llvm/llvm-project/pulls).
+## Prerequisites
 
-## Building `lldb-dap` from soruce
+In order to begin debugging with `lldb-dap`, you may first need to acquire the
+`lldb-dap` binary from an LLVM distribution. For general LLVM releases visit
+https://releases.llvm.org/ or check your systems preferred package manager for
+the `lldb` package.
 
-To build lldb-dap from source, first need to [setup a LLDB build](https://lldb.llvm.org/resources/build.html).
-After doing so, run `ninja lldb-dap`. To use your freshly built `lldb-dap`
-binary, install the VS Code extension and point it to lldb-dap by setting the
-`lldb-dap.executable-path` setting.
+In some cases, a language specific build of `lldb` / `lldb-dap` may also be
+available as part of the languages toolchain. For example the
+[swift language](https://www.swift.org/) toolchain includes additional language integrations in `lldb` and the toolchain builds provider both the `lldb` driver binary and `lldb-dap` binary.
 
-## Responsibilities of LLDB, lldb-dap and the Visual Studio Code Extension
+## IDE Integration
 
-Under the hood, the UI-based debugging experience is fueled by three separate
-components:
+In addition to the `lldb-dap` binary, some IDEs have additional extensions to
+support debugging.
 
-* LLDB provides general, IDE-indepedent debugging features, such as:
-  loading binaries / core dumps, interpreting debug info, setting breakpoints,
-  pretty-printing variables, etc. The `lldb` binary exposes this functionality
-  via a command line interface.
-* `lldb-dap` exposes LLDB's functionality via the
-  "[Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/)",
-  i.e. a protocol through which various IDEs (VS Code, Emacs, vim, neovim, ...)
-  can interact with a wide range of debuggers (`lldb-dap` and many others).
-* The VS Code extension exposes the lldb-dap binary within VS Code. It acts
-  as a thin wrapper around the lldb-dap binary, and adds VS-Code-specific UI
-  integration on top of lldb-dap, such as autocompletion for `launch.json`
-  configuration files.
+- Visual Studio Code -
+[LLDB DAP Extension](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.lldb-dap)
+<!-- Add other IDE integrations. -->
 
-Since lldb-dap builds on top of LLDB, all of LLDB's extensibility mechanisms
-such as [Variable Pretty-Printing](https://lldb.llvm.org/use/variable.html),
-[Frame recognizers](https://lldb.llvm.org/use/python-reference.html#writing-lldb-frame-recognizers-in-python)
-and [Python Scripting](https://lldb.llvm.org/use/python.html) are available
-also in lldb-dap.
+## Launching a program
 
-When adding new functionality, you generally want to add it on the lowest
-applicable level. I.e., quite frequently you actually want to add functionality
-to LLDB's core in order to improve your debugging experience in VS Code.
+To launch an executable for debugging, first define a launch configuration tells `lldb-dap` how to launch the binary.
 
-### The Debug Adapter Protocol
+A simple launch configuration may look like
 
-The most relevant resources for the Debug Adapter Protocol are:
-* [The overview](https://microsoft.github.io/debug-adapter-protocol/overview)
-  which provides a high-level introduction,
-* the [human-readable specification](https://microsoft.github.io/debug-adapter-protocol/specification), and
-* the [JSON-schema specification](https://github.com/microsoft/debug-adapter-protocol/blob/main/debugAdapterProtocol.json).
-
-lldb-dap adds some additional non-standard extensions to the protocol. To take
-advantage of those extensions, IDE-specific support code is needed, usually
-inside the VS Code extension. When adding a new extension, please first look
-through the [issue tracker of the Debug Adapter
-Protocol](https://github.com/microsoft/debug-adapter-protocol/issues) to check
-if there already is a proposal serving your use case. If so, try to take
-inspiration from it. If not, consider opening an upstream issue.
-
-To avoid naming collisions with potential future extensions of the Debug
-Adapter protocol, all non-standard extensions should use the prefix
-`$__lldb_extension` in their JSON property names.
-
-### Debugging the Debug Adapter Protocol
-
-To debug the Debug Adapter Protocol, point the `LLDBDAP_LOG` environment
-variable to a file on your disk. lldb-dap will log all communication received
-from / sent to the IDE to the provided path. In the VS Code extension, you
-can also set the log path through the `lldb-dap.log-path` VS Code setting.
-
-## Building the VS Code extension from source
-
-Installing the plug-in is very straightforward and involves just a few steps.
-
-In most cases, installing the VS Code extension from the [VS Code
-Marketplace](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.lldb-dap)
-and pointing it to a locally built lldb-dap binary is sufficient. Building
-the VS Code extension from source is only necessary if the TypeScript code is
-changed.
-
-### Pre-requisites
-
-- Install a modern version of node (e.g. `v20.0.0`).
-- On VS Code, execute the command `Install 'code' command in PATH`. You need to
-  do it only once. This enables the command `code` in the PATH.
-
-### Packaging and installation
-
-```bash
-cd /path/to/lldb/tools/lldb-dap
-npm install
-npm run package # This also compiles the extension.
-npm run vscode-install
+```json
+{
+  "type": "lldb-dap",
+  "request": "launch",
+  "name": "Debug a.out",
+  "program": "a.out"
+}
 ```
 
-On VS Code, set the setting `lldb-dap.executable-path` to the path of your local
-build of `lldb-dap`.
+See the [Configuration Settings Reference](#configuration-settings-reference) for more information.
 
-And then you are ready!
+# Supported Features
 
-### Updating the extension
+`lldb-dap` supports many features of the DAP spec.
 
-Updating the extension is pretty much the same process as installing it from
-scratch. However, VS Code expects the version number of the upgraded extension
-to be greater than the previous one, otherwise the installation step might have
-no effect.
+* Breakpoints
+  * Source breakpoints
+  * Function breakpoint
+  * Exception breakpoints
+* Call Stacks
+* Variables
+* Watch points
+* Expression Evaluation
+* And more...
 
-```bash
-# Bump version in package.json
-cd /path/to/lldb/tools/lldb-dap
-npm install
-npm run package
-npm run vscode-install
-```
+For more information, visit
+[Visual Studio Code's Debugging User Documentation](https://code.visualstudio.com/docs/debugtest/debugging)
 
-Another way upgrade without bumping the extension version is to first uninstall
-the extension, then reload VS Code, and then install it again. This is
-an unfortunate limitation of the editor.
+## Debug Console
 
-```bash
-cd /path/to/lldb/tools/lldb-dap
-npm run vscode-uninstall
-# Then reload VS Code: reopen the IDE or execute the `Developer: Reload Window`
-# command.
-npm run package
-npm run vscode-install
-```
+The Debug Console allows printing variables / expressions and executing lldb
+commands. By default, `lldb-dap` tries to auto-detect whether a provided command
+is a variable name / expression whose values will be printed to the Debug
+Console or a LLDB command. To side-step this auto-detection and execute a LLDB
+command, prefix it with the `commandEscapePrefix`.
 
-### Deploying for Visual Studio Code
+The auto-detection mode can ba adjusted using the `lldb-dap repl-mode` command in the Debug Console or by adjusting the `--repl-mode [mode]` argument to `lldb-dap`. The supported modes are `variable`, `command` and `auto`.
 
-The easiest way to deploy the extension for execution on other machines requires
-copying `lldb-dap` and its dependencies into a`./bin` subfolder and then create a
-standalone VSIX package.
+# Configuration Settings Reference
 
-```bash
-cd /path/to/lldb/tools/lldb-dap
-mkdir -p ./bin
-cp /path/to/a/built/lldb-dap ./bin/
-cp /path/to/a/built/liblldb.so ./bin/
-npm run package
-```
+## Common configurations
 
-This will produce the file `./out/lldb-dap.vsix` that can be distributed. In
-this type of installation, users don't need to manually set the path to
-`lldb-dap`. The extension will automatically look for it in the `./bin`
-subfolder.
+For both launch and attach configurations, lldb-dap accepts the following
+`lldb-dap` specific key/value pairs:
 
-*Note: It's not possible to use symlinks to `lldb-dap`, as the packaging tool
-forcefully performs a deep copy of all symlinks.*
+| Parameter                         | Type        | Req |                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --------------------------------- | ----------- | :-: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **name**                          | string      |  Y  | A configuration name that will be displayed in the IDE.                                                                                                                                                                                                                                                                                                                                                                                                    |
+| **type**                          | string      |  Y  | Must be "lldb-dap".                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **request**                       | string      |  Y  | Must be "launch" or "attach".                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| **program**                       | string      |  Y  | Path to the executable to launch.                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **sourcePath**                    | string      |     | Specify a source path to remap \"./\" to allow full paths to be used when setting breakpoints in binaries that have relative source paths.                                                                                                                                                                                                                                                                                                                 |
+| **sourceMap**                     | [string[2]] |     | Specify an array of path re-mappings. Each element in the array must be a two element array containing a source and destination pathname. Overrides sourcePath.                                                                                                                                                                                                                                                                                            |
+| **debuggerRoot**                  | string      |     | Specify a working directory to use when launching lldb-dap. If the debug information in your executable contains relative paths, this option can be used so that `lldb-dap` can find source files and object files that have relative paths.                                                                                                                                                                                                               |
+| **commandEscapePrefix**           | string      |     | The escape prefix to use for executing regular LLDB commands in the Debug Console, instead of printing variables. Defaults to a backtick. If it's an empty string, then all expression in the Debug Console are treated as regular LLDB commands.                                                                                                                                                                                                          |
+| **customFrameFormat**             | string      |     | If non-empty, stack frames will have descriptions generated based on the provided format. See https://lldb.llvm.org/use/formatting.html for an explanation on format strings for frames. If the format string contains errors, an error message will be displayed on the Debug Console and the default frame names will be used. This might come with a performance cost because debug information might need to be processed to generate the description. |
+| **customThreadFormat**            | string      |     | Same as `customFrameFormat`, but for threads instead of stack frames.                                                                                                                                                                                                                                                                                                                                                                                      |
+| **displayExtendedBacktrace**      | bool        |     | Enable language specific extended backtraces.                                                                                                                                                                                                                                                                                                                                                                                                              |
+| **enableAutoVariableSummaries**   | bool        |     | Enable auto generated summaries for variables when no summaries exist for a given type. This feature can cause performance delays in large projects when viewing variables.                                                                                                                                                                                                                                                                                |
+| **enableSyntheticChildDebugging** | bool        |     | If a variable is displayed using a synthetic children, also display the actual contents of the variable at the end under a [raw] entry. This is useful when creating synthetic child plug-ins as it lets you see the actual contents of the variable.                                                                                                                                                                                                      |
+| **initCommands**                  | [string]    |     | LLDB commands executed upon debugger startup prior to creating the LLDB target.                                                                                                                                                                                                                                                                                                                                                                            |
+| **preRunCommands**                | [string]    |     | LLDB commands executed just before launching/attaching, after the LLDB target has been created.                                                                                                                                                                                                                                                                                                                                                            |
+| **stopCommands**                  | [string]    |     | LLDB commands executed just after each stop.                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **exitCommands**                  | [string]    |     | LLDB commands executed when the program exits.                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **terminateCommands**             | [string]    |     | LLDB commands executed when the debugging session ends.                                                                                                                                                                                                                                                                                                                                                                                                    |
 
-*Note: It's possible to use this kind flow for local installations, but it's
-not recommended because updating `lldb-dap` requires rebuilding the extension.*
+All commands and command outputs will be sent to the debugger console when they
+are executed. Commands can be prefixed with `?` or `!` to modify their behavior:
 
-## Formatting the Typescript code
+- Commands prefixed with `?` are quiet on success, i.e. nothing is written to
+  stdout if the command succeeds.
+- Prefixing a command with `!` enables error checking: If a command prefixed
+  with `!` fails, subsequent commands will not be run. This is useful if one of
+  the commands depends on another, as it will stop the chain of commands.
 
-This is also very simple, just run:
+## Launch configurations
 
-```bash
-npm run format
-```
+For JSON configurations of `"type": "launch"`, the JSON configuration can
+additionally contain the following key/value pairs:
 
-## Working with the VS Code extension from another extension
+| Parameter                      | Type       | Req |                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------ | ---------- | :-: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **program**                    | string     |  Y  | Path to the executable to launch.                                                                                                                                                                                                                                                                                                                                                                                                |
+| **args**                       | [string]   |     | An array of command line argument strings to be passed to the program being launched.                                                                                                                                                                                                                                                                                                                                            |
+| **cwd**                        | string     |     | The program working directory.                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **env**                        | dictionary |     | Environment variables to set when launching the program. The format of each environment variable string is "VAR=VALUE" for environment variables with values or just "VAR" for environment variables with no values.                                                                                                                                                                                                             |
+| **stopOnEntry**                | boolean    |     | Whether to stop program immediately after launching.                                                                                                                                                                                                                                                                                                                                                                             |
+| **runInTerminal** (deprecated) | boolean    |     | Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs.                                                                                                                                                                                                                                                                                                             |
+| **console**                    | string     |     | Specify where to launch the program: internal console (`internalConsole`), integrated terminal (`integratedTerminal`) or external terminal (`externalTerminal`). Supported from lldb-dap 21.0 version.                                                                                                                                                                                                                           |
+| **stdio**                      | [string]   |     | The stdio property specifies the redirection targets for the debuggee's stdio streams. A null value redirects a stream to the default debug terminal. String can be a path to file, named pipe or TTY device. If less than three values are provided, the list will be padded with the last value. Specifying more than three values will create additional file descriptors (4, 5, etc.). Supported from lldb-dap 22.0 version. |
+| **launchCommands**             | [string]   |     | LLDB commands executed to launch the program.                                                                                                                                                                                                                                                                                                                                                                                    |
 
-The VS Code extension exposes the following [VS Code
-commands](https://code.visualstudio.com/api/extension-guides/command),
-which can be invoked by other debugger extensions to leverage this extension's
-settings and logic. The commands help resolve configuration, create adapter
-descriptor, and get the lldb-dap process for state tracking, additional
-interaction, and telemetry.
+## Attach configurations
 
-```
-// Resolve debug configuration
-const resolvedConfiguration = await vscode.commands.executeCommand("lldb-dap.resolveDebugConfiguration", folder, configuration, token);
+For JSON configurations of `"type": "attach"`, the JSON configuration can
+contain the following `lldb-dap` specific key/value pairs:
 
-// Resolve debug configuration with substituted variables
-const resolvedConfigurationWithSubstitutedVariables = await vscode.commands.executeCommand("lldb-dap.resolveDebugConfigurationWithSubstitutedVariables", folder, configuration, token);
-
-// Create debug adapter descriptor
-const adapterDescriptor = await vscode.commands.executeCommand("lldb-dap.createDebugAdapterDescriptor", session, executable);
-
-// Get DAP server process
-const process = await vscode.commands.executeCommand("lldb-dap.getServerProcess");
-```
+| Parameter          | Type     | Req |                                                                                                                                                                                                                                                                                                                                              |
+| ------------------ | -------- | :-: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **program**        | string   |     | Path to the executable to attach to. This value is optional but can help to resolve breakpoints prior the attaching to the program.                                                                                                                                                                                                          |
+| **pid**            | number   |     | The process id of the process you wish to attach to. If **pid** is omitted, the debugger will attempt to attach to the program by finding a process whose file name matches the file name from **program**. Setting this value to `${command:pickMyProcess}` will allow interactive process selection in the IDE.                            |
+| **waitFor**        | boolean  |     | Wait for the process to launch.                                                                                                                                                                                                                                                                                                              |
+| **attachCommands** | [string] |     | LLDB commands that will be executed after **preRunCommands** which take place of the code that normally does the attach. The commands can create a new target and attach or launch it however desired. This allows custom launch and attach configurations. Core files can use `target create --core /path/to/core` to attach to core files. |

@@ -172,6 +172,7 @@ interesting areas to contribute to lldb.
    resources/caveats
    resources/projects
    resources/lldbdap
+   resources/lldbdap-contributing
    resources/addinglanguagesupport
    Public C++ API <https://lldb.llvm.org/cpp_reference/namespacelldb.html>
    Private C++ API <https://lldb.llvm.org/cpp_reference/index.html>
