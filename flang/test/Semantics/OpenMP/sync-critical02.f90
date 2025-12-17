@@ -43,7 +43,7 @@ program sample
    !$omp critical (foo) hint(omp_lock_hint_uncontended)
    i = i - 1
    !$omp end critical (foo)
- 
+
    !$omp critical hint(omp_sync_hint_none)
    j = j + 1
    !$omp end critical

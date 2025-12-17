@@ -81,7 +81,6 @@ protected:
   BreakpointResolverName(const BreakpointResolverName &rhs);
 
   std::vector<Module::LookupInfo> m_lookups;
-  ConstString m_class_name;
   RegularExpression m_regex;
   Breakpoint::MatchType m_match_type;
   lldb::LanguageType m_language;
