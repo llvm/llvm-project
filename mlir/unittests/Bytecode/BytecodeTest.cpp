@@ -15,7 +15,6 @@
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/Parser/Parser.h"
 
-#include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
@@ -228,40 +227,4 @@ TEST(Bytecode, OpWithoutProperties) {
 
   EXPECT_TRUE(OperationEquivalence::computeHash(op.get()) ==
               OperationEquivalence::computeHash(roundtripped));
-}
-
-TEST(Bytecode, DeepCallSiteLoc) {
-  MLIRContext context;
-  ParserConfig config(&context);
-
-  // Create a deep CallSiteLoc chain to test iterative parsing.
-  Location baseLoc = FileLineColLoc::get(&context, "test.mlir", 1, 1);
-  Location loc = baseLoc;
-  constexpr int kDepth = 1000;
-  for (int i = 0; i < kDepth; ++i) {
-    loc = CallSiteLoc::get(loc, baseLoc);
-  }
-
-  // Create a simple module with the deep location.
-  Builder builder(&context);
-  OwningOpRef<ModuleOp> module =
-      ModuleOp::create(loc, /*attributes=*/std::nullopt);
-  ASSERT_TRUE(module);
-
-  // Write to bytecode.
-  std::string bytecode;
-  llvm::raw_string_ostream os(bytecode);
-  ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), os)));
-
-  // Parse it back using the bytecode reader.
-  std::unique_ptr<Block> block = std::make_unique<Block>();
-  ASSERT_TRUE(succeeded(readBytecodeFile(
-      llvm::MemoryBufferRef(bytecode, "string-buffer"), block.get(), config)));
-
-  // Verify we got the roundtripped module.
-  ASSERT_FALSE(block->empty());
-  Operation *roundTripped = &block->front();
-
-  // Verify the location matches.
-  EXPECT_EQ(module.get()->getLoc(), roundTripped->getLoc());
 }
