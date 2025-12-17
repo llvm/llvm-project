@@ -482,12 +482,6 @@ public:
   /// True if the method is tagged as objc_direct
   bool isDirectMethod() const;
 
-  /// Check if this direct method can move precondition-check to thunk.
-  /// Variadic functions cannot use thunks (musttail incompatible with va_arg)
-  bool canHavePreconditionThunk() const {
-    return isDirectMethod() && !isVariadic();
-  }
-
   /// True if the method has a parameter that's destroyed in the callee.
   bool hasParamDestroyedInCallee() const;
 

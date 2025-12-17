@@ -731,19 +731,18 @@ public:
 
   /// Check if a direct method should use precondition thunks at call sites.
   /// This applies only to non-variadic direct methods.
-  /// Returns false if OMD is null or not eligible for thunks (e.g. variadic
+  /// Returns false if OMD is null or not eligible for thunks (variadic
   /// methods).
   bool shouldHavePreconditionThunk(const ObjCMethodDecl *OMD) const {
-    return OMD && usePreconditionThunk(OMD) && OMD->canHavePreconditionThunk();
+    return OMD && usePreconditionThunk(OMD) && !OMD->isVariadic();
   }
 
   /// Check if a direct method should have inline precondition checks at call
-  /// sites. This applies to direct methods that cannot use thunks (e.g.,
-  /// variadic methods). These methods get exposed symbols but need inline
-  /// precondition checks instead of thunks.
-  /// Returns false if OMD is null or not eligible.
+  /// sites. This applies to direct methods that cannot use thunks (variadic
+  /// methods). These methods get exposed symbols but need inline precondition
+  /// checks instead of thunks. Returns false if OMD is null or not eligible.
   bool shouldHavePreconditionInline(const ObjCMethodDecl *OMD) const {
-    return OMD && usePreconditionThunk(OMD) && !OMD->canHavePreconditionThunk();
+    return OMD && usePreconditionThunk(OMD) && OMD->isVariadic();
   }
 
   const std::string &getModuleNameHash() const { return ModuleNameHash; }
