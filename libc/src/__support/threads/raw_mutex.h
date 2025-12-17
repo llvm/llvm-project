@@ -1,28 +1,36 @@
-//===--- Implementation of a Linux RawMutex class ---------------*- C++ -*-===//
+//===--- Implementation of the RawMutex class -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_RAW_MUTEX_H
-#define LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_RAW_MUTEX_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_RAW_MUTEX_H
+#define LLVM_LIBC_SRC___SUPPORT_THREADS_RAW_MUTEX_H
 
+#include "hdr/errno_macros.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
-#include "src/__support/threads/linux/futex_utils.h"
-#include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/threads/sleep.h"
 #include "src/__support/time/abs_timeout.h"
+
+#include <stdio.h>
+
+#if defined(__linux__)
+#include "src/__support/threads/linux/futex_utils.h"
+#elif defined(__APPLE__)
+#include "src/__support/threads/darwin/futex_utils.h"
+#endif
 
 #ifndef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
 #define LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY 1
 #endif
 
+// TODO(bojle): check this for darwin impl
 #if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
 #include "src/__support/time/monotonicity.h"
 #endif
@@ -93,7 +101,9 @@ private:
   LIBC_INLINE void wake(bool is_pshared) { futex.notify_one(is_pshared); }
 
 public:
-  LIBC_INLINE static void init(RawMutex *mutex) { mutex->futex = UNLOCKED; }
+  LIBC_INLINE static void init(RawMutex *mutex) {
+    mutex->futex.store(UNLOCKED);
+  }
   LIBC_INLINE constexpr RawMutex() : futex(UNLOCKED) {}
   [[nodiscard]] LIBC_INLINE bool try_lock() {
     FutexWordType expected = UNLOCKED;
@@ -122,8 +132,8 @@ public:
     LIBC_ASSERT(lock->futex == UNLOCKED && "Mutex destroyed while used.");
   }
   LIBC_INLINE Futex &get_raw_futex() { return futex; }
-  LIBC_INLINE void reset() { futex = UNLOCKED; }
+  LIBC_INLINE void reset() { futex.store(UNLOCKED); }
 };
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_RAW_MUTEX_H
+#endif // LLVM_LIBC_SRC___SUPPORT_THREADS_RAW_MUTEX_H
