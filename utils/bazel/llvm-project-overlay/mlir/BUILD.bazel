@@ -6055,10 +6055,12 @@ gentbl_cc_library(
 cc_library(
     name = "GPUToROCDLTransforms",
     srcs = [
-        "include/mlir/Conversion/GPUToROCDL/Runtimes.h",
         "lib/Conversion/GPUToROCDL/LowerGpuOpsToROCDLOps.cpp",
     ],
-    hdrs = ["include/mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"],
+    hdrs = [
+        "include/mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h",
+        "include/mlir/Conversion/GPUToROCDL/Runtimes.h",
+    ],
     includes = ["include"],
     deps = [
         ":AMDGPUDialect",

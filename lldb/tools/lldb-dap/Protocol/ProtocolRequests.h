@@ -1230,6 +1230,31 @@ struct LocationsResponseBody {
 };
 llvm::json::Value toJSON(const LocationsResponseBody &);
 
+/// Arguments for `compileUnits` request.
+struct CompileUnitsArguments {
+  /// The ID of the module.
+  std::string moduleId;
+};
+bool fromJSON(const llvm::json::Value &, CompileUnitsArguments &,
+              llvm::json::Path);
+
+/// Response to `compileUnits` request.
+struct CompileUnitsResponseBody {
+  /// Array of compile units.
+  std::vector<CompileUnit> compileUnits;
+};
+llvm::json::Value toJSON(const CompileUnitsResponseBody &);
+
+/// Arguments for `testGetTargetBreakpoints` request.
+using TestGetTargetBreakpointsArguments = EmptyArguments;
+
+/// Response to `testGetTargetBreakpoints` request.
+struct TestGetTargetBreakpointsResponseBody {
+  /// Array of all breakpoints that are currently set in the target.
+  std::vector<Breakpoint> breakpoints;
+};
+llvm::json::Value toJSON(const TestGetTargetBreakpointsResponseBody &);
+
 } // namespace lldb_dap::protocol
 
 #endif
