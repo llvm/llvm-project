@@ -3,8 +3,6 @@
 ; RUN: -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck %s
 
-target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
-
 define void @reverse_store(ptr %a, i64 %n) !dbg !4 {
 ; CHECK-LABEL: define void @reverse_store(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] !dbg [[DBG4:![0-9]+]] {
