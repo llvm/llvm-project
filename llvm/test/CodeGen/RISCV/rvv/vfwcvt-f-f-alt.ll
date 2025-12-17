@@ -18,7 +18,7 @@ define <vscale x 1 x bfloat> @intrinsic_vfwcvt_f.f.v.alt_nxv1bf16_nxv1i8(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x bfloat> @llvm.riscv.vfwcvt.f.f.v.alt.nxv1.nxv1i8(
-    <vscale x 1 x bfloat> undef,
+    <vscale x 1 x bfloat> poison,
     <vscale x 1 x i8> %0,
     iXLen %1)
 
@@ -55,7 +55,7 @@ define <vscale x 2 x bfloat> @intrinsic_vfwcvt_f.f.v.alt_nxv2bf16_nxv2i8(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x bfloat> @llvm.riscv.vfwcvt.f.f.v.alt.nxv2.nxv2i8(
-    <vscale x 2 x bfloat> undef,
+    <vscale x 2 x bfloat> poison,
     <vscale x 2 x i8> %0,
     iXLen %1)
 
@@ -92,7 +92,7 @@ define <vscale x 4 x bfloat> @intrinsic_vfwcvt_f.f.v.alt_nxv4bf16_nxv4i8(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x bfloat> @llvm.riscv.vfwcvt.f.f.v.alt.nxv4.nxv4i8(
-    <vscale x 4 x bfloat> undef,
+    <vscale x 4 x bfloat> poison,
     <vscale x 4 x i8> %0,
     iXLen %1)
 
@@ -129,7 +129,7 @@ define <vscale x 8 x bfloat> @intrinsic_vfwcvt_f.f.v.alt_nxv8bf16_nxv8i8(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x bfloat> @llvm.riscv.vfwcvt.f.f.v.alt.nxv8.nxv8i8(
-    <vscale x 8 x bfloat> undef,
+    <vscale x 8 x bfloat> poison,
     <vscale x 8 x i8> %0,
     iXLen %1)
 
@@ -166,7 +166,7 @@ define <vscale x 16 x bfloat> @intrinsic_vfwcvt_f.f.v.alt_nxv16bf16_nxv16i8(<vsc
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x bfloat> @llvm.riscv.vfwcvt.f.f.v.alt.nxv16.nxv16i8(
-    <vscale x 16 x bfloat> undef,
+    <vscale x 16 x bfloat> poison,
     <vscale x 16 x i8> %0,
     iXLen %1)
 
@@ -203,7 +203,7 @@ define <vscale x 32 x bfloat> @intrinsic_vfwcvt_f.f.v.alt_nxv32bf16_nxv32i8(<vsc
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x bfloat> @llvm.riscv.vfwcvt.f.f.v.alt.nxv32.nxv32i8(
-    <vscale x 32 x bfloat> undef,
+    <vscale x 32 x bfloat> poison,
     <vscale x 32 x i8> %0,
     iXLen %1)
 
