@@ -5374,11 +5374,9 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
     }
     CGInfo.FunctionTypeId = TypeId;
     if (IsIndirectTarget && TypeId == 0)
-      UnknownCount++;
+      ++UnknownCount;
 
-    bool HasDirectCallees =
-        (CGFlags & callgraph::HasDirectCallees) != callgraph::None;
-    if (HasDirectCallees) {
+    if (CGFlags & callgraph::HasDirectCallees) {
       // Read number of direct call sites for this function.
       uint64_t NumDirectCallees = Data.getULEB128(C);
       if (!C) {
@@ -5403,9 +5401,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
       }
     }
 
-    bool HasIndirectTypeIds =
-        (CGFlags & callgraph::HasIndirectCallees) != callgraph::None;
-    if (HasIndirectTypeIds) {
+    if (CGFlags & callgraph::HasIndirectCallees) {
       uint64_t NumIndirectTargetTypeIDs = Data.getULEB128(C);
       if (!C) {
         reportWarning(
@@ -8273,11 +8269,10 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
   // Call graph section is of type SHT_LLVM_CALL_GRAPH. Typically named
   // ".llvm.callgraph". First fetch the section by its type.
   using Elf_Shdr = typename ELFT::Shdr;
-  auto IsMatch = [](const Elf_Shdr &Sec) -> bool {
-    return Sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH;
-  };
   Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> MapOrErr =
-      this->Obj.getSectionAndRelocations(IsMatch);
+      this->Obj.getSectionAndRelocations([](const Elf_Shdr &Sec) {
+        return Sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH;
+      });
   if (!MapOrErr || MapOrErr->empty()) {
     reportWarning(createError("no SHT_LLVM_CALL_GRAPH section found " +
                               toString(MapOrErr.takeError())),
