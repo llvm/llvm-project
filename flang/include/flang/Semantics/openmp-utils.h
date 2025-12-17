@@ -76,6 +76,8 @@ bool IsTypeParamInquiry(const Symbol &sym);
 bool IsStructureComponent(const Symbol &sym);
 bool IsVarOrFunctionRef(const MaybeExpr &expr);
 
+bool IsWholeAssumedSizeArray(const parser::OmpObject &object);
+
 bool IsMapEnteringType(parser::OmpMapType::Value type);
 bool IsMapExitingType(parser::OmpMapType::Value type);
 
