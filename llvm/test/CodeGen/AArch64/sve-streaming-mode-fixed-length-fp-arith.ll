@@ -1043,38 +1043,38 @@ define <2 x half> @fma_v2f16(<2 x half> %op1, <2 x half> %op2, <2 x half> %op3) 
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #22]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #14]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #6]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #12]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #4]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #30]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #20]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #10]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #2]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #28]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #18]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #26]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #16]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #32
@@ -1103,38 +1103,38 @@ define <4 x half> @fma_v4f16(<4 x half> %op1, <4 x half> %op2, <4 x half> %op3) 
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #22]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #14]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #6]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #12]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #4]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #30]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #20]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #10]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #2]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #28]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #18]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #26]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #16]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #32
@@ -1163,74 +1163,74 @@ define <8 x half> @fma_v8f16(<8 x half> %op1, <8 x half> %op2, <8 x half> %op3) 
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #46]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #30]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #14]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #28]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #12]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #44]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #26]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #10]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #60]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #42]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #24]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #8]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #58]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #40]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #22]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #6]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #56]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #38]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #20]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #4]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #54]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #36]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #18]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #2]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #52]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #34]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #50]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #32]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #48]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #48]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
@@ -1264,146 +1264,146 @@ define void @fma_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    stp q1, q5, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #78]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #62]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #76]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #60]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #126]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #92]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #74]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #58]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #124]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #90]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #72]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #56]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #122]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #88]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #70]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #54]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #120]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #86]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #68]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #52]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #118]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #84]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #66]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #50]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #116]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #82]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #64]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #48]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #114]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #80]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #30]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #14]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #112]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #46]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #28]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #12]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #110]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #44]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #26]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #10]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #108]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #42]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #24]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #8]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #106]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #40]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #22]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #6]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #104]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #38]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #20]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #4]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #102]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #36]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #18]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #2]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #100]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #34]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d1, h1
+; NONEON-NOSVE-NEXT:    fcvt d2, h2
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #98]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #32]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fmadd s0, s2, s1, s0
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt d0, h0
+; NONEON-NOSVE-NEXT:    fmadd d0, d2, d1, d0
+; NONEON-NOSVE-NEXT:    fcvt h0, d0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #96]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #96]
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]
