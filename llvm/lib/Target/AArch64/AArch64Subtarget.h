@@ -178,6 +178,7 @@ public:
     case AppleA16:
     case AppleA17:
     case AppleM4:
+    case AppleM5:
       return true;
     default:
       return false;
@@ -308,6 +309,7 @@ public:
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
   bool isTargetFuchsia() const { return TargetTriple.isOSFuchsia(); }
   bool isWindowsArm64EC() const { return TargetTriple.isWindowsArm64EC(); }
+  bool isLFI() const { return TargetTriple.isLFI(); }
 
   bool isTargetCOFF() const { return TargetTriple.isOSBinFormatCOFF(); }
   bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
@@ -484,6 +486,8 @@ public:
   /// a function.
   std::optional<uint16_t>
   getPtrAuthBlockAddressDiscriminatorIfEnabled(const Function &ParentFn) const;
+
+  bool enableAggressiveInterleaving() const { return AggressiveInterleaving; }
 };
 } // End llvm namespace
 

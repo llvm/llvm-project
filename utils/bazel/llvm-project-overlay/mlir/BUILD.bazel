@@ -85,6 +85,8 @@ exports_files(glob(["include/**/*.td"]))
         tbl_outs = {
             "include/mlir/IR/" + name + ".h.inc": ["-gen-op-interface-decls"],
             "include/mlir/IR/" + name + ".cpp.inc": ["-gen-op-interface-defs"],
+            "include/mlir/IR/" + name + "AttrInterface.h.inc": ["-gen-attr-interface-decls"],
+            "include/mlir/IR/" + name + "AttrInterface.cpp.inc": ["-gen-attr-interface-defs"],
         },
         tblgen = ":mlir-tblgen",
         td_file = "include/mlir/IR/" + name + ".td",
@@ -1728,6 +1730,7 @@ cc_library(
         ":IR",
         ":InferTypeOpInterface",
         ":InliningUtils",
+        ":MemRefDialect",
         ":MemRefUtils",
         ":ROCDLDialect",
         ":SideEffectInterfaces",
@@ -2629,6 +2632,22 @@ cc_library(
 )
 
 cc_library(
+    name = "X86VectorUtils",
+    srcs = glob(["lib/Dialect/X86Vector/Utils/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/X86Vector/Utils/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":LinalgDialect",
+        ":LinalgInterfaces",
+        ":Support",
+        ":VectorDialect",
+        ":X86VectorDialect",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "X86VectorTransforms",
     srcs = glob(["lib/Dialect/X86Vector/Transforms/*.cpp"]),
     hdrs = ["include/mlir/Dialect/X86Vector/Transforms.h"],
@@ -2640,11 +2659,14 @@ cc_library(
         ":LLVMDialect",
         ":LinalgDialect",
         ":LinalgInterfaces",
+        ":MemRefDialect",
+        ":MemRefUtils",
         ":Pass",
         ":TransformUtils",
         ":VectorDialect",
         ":VectorUtils",
         ":X86VectorDialect",
+        ":X86VectorUtils",
         "//llvm:Support",
     ],
 )
@@ -5427,7 +5449,10 @@ gentbl_cc_library(
     ]},
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/Transforms/Passes.td",
-    deps = [":PassBaseTdFiles"],
+    deps = [
+        ":LLVMOpsTdFiles",
+        ":PassBaseTdFiles",
+    ],
 )
 
 cc_library(
@@ -5806,6 +5831,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AMDGPUDialect",
+        ":AMDGPUToROCDL",
         ":AMDGPUUtils",
         ":AffineDialect",
         ":ArithDialect",
@@ -5821,6 +5847,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":MemRefDialect",
         ":NVGPUDialect",
+        ":NVGPUToNVVM",
         ":NVVMDialect",
         ":ROCDLDialect",
         ":SCFDialect",
@@ -5951,6 +5978,7 @@ cc_library(
         ":MathDialect",
         ":MemRefDialect",
         ":NVGPUDialect",
+        ":NVGPUToNVVM",
         ":NVVMDialect",
         ":TransformUtils",
         ":VectorTransforms",
@@ -5970,6 +5998,7 @@ cc_library(
         ":AMDGPUDialect",
         ":AMDGPUUtils",
         ":ConversionPassIncGen",
+        ":GPUToGPURuntimeTransforms",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -6045,10 +6074,12 @@ gentbl_cc_library(
 cc_library(
     name = "GPUToROCDLTransforms",
     srcs = [
-        "include/mlir/Conversion/GPUToROCDL/Runtimes.h",
         "lib/Conversion/GPUToROCDL/LowerGpuOpsToROCDLOps.cpp",
     ],
-    hdrs = ["include/mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"],
+    hdrs = [
+        "include/mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h",
+        "include/mlir/Conversion/GPUToROCDL/Runtimes.h",
+    ],
     includes = ["include"],
     deps = [
         ":AMDGPUDialect",
@@ -10381,6 +10412,7 @@ cc_library(
         ":OpenACCDialect",
         ":OpenACCUtils",
         ":Pass",
+        "//llvm:Support",
     ],
 )
 
@@ -10393,6 +10425,9 @@ cc_library(
     ),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
+        ":ArithUtils",
+        ":DialectUtils",
         ":FunctionInterfaces",
         ":IR",
         ":OpenACCDialect",
@@ -10400,6 +10435,7 @@ cc_library(
         ":OpenACCPassIncGen",
         ":OpenACCTypeInterfacesIncGen",
         ":Support",
+        ":TransformUtils",
         ":ViewLikeInterface",
         "//llvm:Support",
         "//llvm:ir_headers",

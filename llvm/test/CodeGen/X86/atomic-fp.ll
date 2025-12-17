@@ -80,23 +80,17 @@ define dso_local void @fadd_64r(ptr %loc, double %val) nounwind {
 ; X86-NOSSE-NEXT:    pushl %ebp
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $32, %esp
+; X86-NOSSE-NEXT:    subl $24, %esp
 ; X86-NOSSE-NEXT:    movl 8(%ebp), %eax
 ; X86-NOSSE-NEXT:    fildll (%eax)
 ; X86-NOSSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    faddl 12(%ebp)
-; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NOSSE-NEXT:    movl %ecx, (%esp)
-; X86-NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fildll (%esp)
-; X86-NOSSE-NEXT:    fistpll (%eax)
+; X86-NOSSE-NEXT:    fldl (%esp)
+; X86-NOSSE-NEXT:    faddl 12(%ebp)
+; X86-NOSSE-NEXT:    fstpl (%eax)
 ; X86-NOSSE-NEXT:    movl %ebp, %esp
 ; X86-NOSSE-NEXT:    popl %ebp
 ; X86-NOSSE-NEXT:    retl
@@ -109,16 +103,13 @@ define dso_local void @fadd_64r(ptr %loc, double %val) nounwind {
 ; X86-SSE1-NEXT:    subl $16, %esp
 ; X86-SSE1-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fldl (%esp)
 ; X86-SSE1-NEXT:    faddl 12(%ebp)
-; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, (%eax)
+; X86-SSE1-NEXT:    fstpl (%eax)
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -132,9 +123,7 @@ define dso_local void @fadd_64r(ptr %loc, double %val) nounwind {
 ; X86-SSE2-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    addsd 12(%ebp), %xmm0
-; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-NEXT:    movlps %xmm0, (%eax)
+; X86-SSE2-NEXT:    movsd %xmm0, (%eax)
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -148,9 +137,7 @@ define dso_local void @fadd_64r(ptr %loc, double %val) nounwind {
 ; X86-AVX-NEXT:    movl 8(%ebp), %eax
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vaddsd 12(%ebp), %xmm0, %xmm0
-; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vmovlps %xmm0, (%eax)
+; X86-AVX-NEXT:    vmovsd %xmm0, (%eax)
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
@@ -246,22 +233,16 @@ define dso_local void @fadd_64g() nounwind {
 ; X86-NOSSE-NEXT:    pushl %ebp
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $32, %esp
+; X86-NOSSE-NEXT:    subl $24, %esp
 ; X86-NOSSE-NEXT:    fildll glob64
 ; X86-NOSSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fld1
-; X86-NOSSE-NEXT:    faddl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %eax, (%esp)
-; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fildll (%esp)
-; X86-NOSSE-NEXT:    fistpll glob64
+; X86-NOSSE-NEXT:    fld1
+; X86-NOSSE-NEXT:    faddl (%esp)
+; X86-NOSSE-NEXT:    fstpl glob64
 ; X86-NOSSE-NEXT:    movl %ebp, %esp
 ; X86-NOSSE-NEXT:    popl %ebp
 ; X86-NOSSE-NEXT:    retl
@@ -273,16 +254,13 @@ define dso_local void @fadd_64g() nounwind {
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $16, %esp
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fld1
 ; X86-SSE1-NEXT:    faddl (%esp)
-; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, glob64
+; X86-SSE1-NEXT:    fstpl glob64
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -295,9 +273,7 @@ define dso_local void @fadd_64g() nounwind {
 ; X86-SSE2-NEXT:    subl $8, %esp
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    addsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-NEXT:    movlps %xmm0, glob64
+; X86-SSE2-NEXT:    movsd %xmm0, glob64
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -310,9 +286,7 @@ define dso_local void @fadd_64g() nounwind {
 ; X86-AVX-NEXT:    subl $8, %esp
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vaddsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vmovlps %xmm0, glob64
+; X86-AVX-NEXT:    vmovsd %xmm0, glob64
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
@@ -409,22 +383,16 @@ define dso_local void @fadd_64imm() nounwind {
 ; X86-NOSSE-NEXT:    pushl %ebp
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $32, %esp
+; X86-NOSSE-NEXT:    subl $24, %esp
 ; X86-NOSSE-NEXT:    fildll -559038737
 ; X86-NOSSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fld1
-; X86-NOSSE-NEXT:    faddl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %eax, (%esp)
-; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fildll (%esp)
-; X86-NOSSE-NEXT:    fistpll -559038737
+; X86-NOSSE-NEXT:    fld1
+; X86-NOSSE-NEXT:    faddl (%esp)
+; X86-NOSSE-NEXT:    fstpl -559038737
 ; X86-NOSSE-NEXT:    movl %ebp, %esp
 ; X86-NOSSE-NEXT:    popl %ebp
 ; X86-NOSSE-NEXT:    retl
@@ -436,16 +404,13 @@ define dso_local void @fadd_64imm() nounwind {
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $16, %esp
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fld1
 ; X86-SSE1-NEXT:    faddl (%esp)
-; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, -559038737
+; X86-SSE1-NEXT:    fstpl -559038737
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -458,9 +423,7 @@ define dso_local void @fadd_64imm() nounwind {
 ; X86-SSE2-NEXT:    subl $8, %esp
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    addsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-NEXT:    movlps %xmm0, -559038737
+; X86-SSE2-NEXT:    movsd %xmm0, -559038737
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -473,9 +436,7 @@ define dso_local void @fadd_64imm() nounwind {
 ; X86-AVX-NEXT:    subl $8, %esp
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vaddsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vmovlps %xmm0, -559038737
+; X86-AVX-NEXT:    vmovsd %xmm0, -559038737
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
@@ -577,22 +538,16 @@ define dso_local void @fadd_64stack() nounwind {
 ; X86-NOSSE-NEXT:    pushl %ebp
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $40, %esp
+; X86-NOSSE-NEXT:    subl $32, %esp
 ; X86-NOSSE-NEXT:    fildll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fld1
-; X86-NOSSE-NEXT:    faddl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %eax, (%esp)
-; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fildll (%esp)
-; X86-NOSSE-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    fld1
+; X86-NOSSE-NEXT:    faddl (%esp)
+; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    movl %ebp, %esp
 ; X86-NOSSE-NEXT:    popl %ebp
 ; X86-NOSSE-NEXT:    retl
@@ -604,16 +559,13 @@ define dso_local void @fadd_64stack() nounwind {
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $24, %esp
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fld1
 ; X86-SSE1-NEXT:    faddl (%esp)
 ; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -627,8 +579,6 @@ define dso_local void @fadd_64stack() nounwind {
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    addsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -642,8 +592,6 @@ define dso_local void @fadd_64stack() nounwind {
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vaddsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
@@ -677,7 +625,7 @@ define dso_local void @fadd_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    pushl %esi
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $40, %esp
+; X86-NOSSE-NEXT:    subl $32, %esp
 ; X86-NOSSE-NEXT:    movl 20(%ebp), %eax
 ; X86-NOSSE-NEXT:    movl 8(%ebp), %ecx
 ; X86-NOSSE-NEXT:    fildll (%ecx,%eax,8)
@@ -685,16 +633,10 @@ define dso_local void @fadd_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NOSSE-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    faddl 12(%ebp)
-; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NOSSE-NEXT:    movl %edx, (%esp)
-; X86-NOSSE-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fildll (%esp)
-; X86-NOSSE-NEXT:    fistpll (%ecx,%eax,8)
+; X86-NOSSE-NEXT:    fldl (%esp)
+; X86-NOSSE-NEXT:    faddl 12(%ebp)
+; X86-NOSSE-NEXT:    fstpl (%ecx,%eax,8)
 ; X86-NOSSE-NEXT:    leal -4(%ebp), %esp
 ; X86-NOSSE-NEXT:    popl %esi
 ; X86-NOSSE-NEXT:    popl %ebp
@@ -709,16 +651,13 @@ define dso_local void @fadd_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-SSE1-NEXT:    movl 20(%ebp), %eax
 ; X86-SSE1-NEXT:    movl 8(%ebp), %ecx
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fldl (%esp)
 ; X86-SSE1-NEXT:    faddl 12(%ebp)
-; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, (%ecx,%eax,8)
+; X86-SSE1-NEXT:    fstpl (%ecx,%eax,8)
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -733,9 +672,7 @@ define dso_local void @fadd_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-SSE2-NEXT:    movl 8(%ebp), %ecx
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    addsd 12(%ebp), %xmm0
-; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-NEXT:    movlps %xmm0, (%ecx,%eax,8)
+; X86-SSE2-NEXT:    movsd %xmm0, (%ecx,%eax,8)
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -750,9 +687,7 @@ define dso_local void @fadd_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-AVX-NEXT:    movl 8(%ebp), %ecx
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vaddsd 12(%ebp), %xmm0, %xmm0
-; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vmovlps %xmm0, (%ecx,%eax,8)
+; X86-AVX-NEXT:    vmovsd %xmm0, (%ecx,%eax,8)
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
@@ -852,23 +787,17 @@ define dso_local void @fsub_64r(ptr %loc, double %val) nounwind {
 ; X86-NOSSE-NEXT:    pushl %ebp
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $32, %esp
+; X86-NOSSE-NEXT:    subl $24, %esp
 ; X86-NOSSE-NEXT:    movl 8(%ebp), %eax
 ; X86-NOSSE-NEXT:    fildll (%eax)
 ; X86-NOSSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fsubl 12(%ebp)
-; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NOSSE-NEXT:    movl %ecx, (%esp)
-; X86-NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fildll (%esp)
-; X86-NOSSE-NEXT:    fistpll (%eax)
+; X86-NOSSE-NEXT:    fldl (%esp)
+; X86-NOSSE-NEXT:    fsubl 12(%ebp)
+; X86-NOSSE-NEXT:    fstpl (%eax)
 ; X86-NOSSE-NEXT:    movl %ebp, %esp
 ; X86-NOSSE-NEXT:    popl %ebp
 ; X86-NOSSE-NEXT:    retl
@@ -881,16 +810,13 @@ define dso_local void @fsub_64r(ptr %loc, double %val) nounwind {
 ; X86-SSE1-NEXT:    subl $16, %esp
 ; X86-SSE1-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fldl (%esp)
 ; X86-SSE1-NEXT:    fsubl 12(%ebp)
-; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, (%eax)
+; X86-SSE1-NEXT:    fstpl (%eax)
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -904,9 +830,7 @@ define dso_local void @fsub_64r(ptr %loc, double %val) nounwind {
 ; X86-SSE2-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    subsd 12(%ebp), %xmm0
-; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-NEXT:    movlps %xmm0, (%eax)
+; X86-SSE2-NEXT:    movsd %xmm0, (%eax)
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -920,9 +844,7 @@ define dso_local void @fsub_64r(ptr %loc, double %val) nounwind {
 ; X86-AVX-NEXT:    movl 8(%ebp), %eax
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vsubsd 12(%ebp), %xmm0, %xmm0
-; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vmovlps %xmm0, (%eax)
+; X86-AVX-NEXT:    vmovsd %xmm0, (%eax)
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
@@ -1018,23 +940,17 @@ define dso_local void @fsub_64g() nounwind {
 ; X86-NOSSE-NEXT:    pushl %ebp
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $32, %esp
+; X86-NOSSE-NEXT:    subl $24, %esp
 ; X86-NOSSE-NEXT:    fildll glob64
 ; X86-NOSSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    movl %eax, (%esp)
 ; X86-NOSSE-NEXT:    fld1
 ; X86-NOSSE-NEXT:    fchs
-; X86-NOSSE-NEXT:    faddl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOSSE-NEXT:    movl %eax, (%esp)
-; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fildll (%esp)
-; X86-NOSSE-NEXT:    fistpll glob64
+; X86-NOSSE-NEXT:    faddl (%esp)
+; X86-NOSSE-NEXT:    fstpl glob64
 ; X86-NOSSE-NEXT:    movl %ebp, %esp
 ; X86-NOSSE-NEXT:    popl %ebp
 ; X86-NOSSE-NEXT:    retl
@@ -1046,17 +962,14 @@ define dso_local void @fsub_64g() nounwind {
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $16, %esp
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fld1
 ; X86-SSE1-NEXT:    fchs
 ; X86-SSE1-NEXT:    faddl (%esp)
-; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, glob64
+; X86-SSE1-NEXT:    fstpl glob64
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -1069,9 +982,7 @@ define dso_local void @fsub_64g() nounwind {
 ; X86-SSE2-NEXT:    subl $8, %esp
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    addsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-NEXT:    movlps %xmm0, glob64
+; X86-SSE2-NEXT:    movsd %xmm0, glob64
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -1084,9 +995,7 @@ define dso_local void @fsub_64g() nounwind {
 ; X86-AVX-NEXT:    subl $8, %esp
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vaddsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vmovlps %xmm0, glob64
+; X86-AVX-NEXT:    vmovsd %xmm0, glob64
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
@@ -1184,23 +1093,17 @@ define dso_local void @fsub_64imm() nounwind {
 ; X86-NOSSE-NEXT:    pushl %ebp
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $32, %esp
+; X86-NOSSE-NEXT:    subl $24, %esp
 ; X86-NOSSE-NEXT:    fildll -559038737
 ; X86-NOSSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    movl %eax, (%esp)
 ; X86-NOSSE-NEXT:    fld1
 ; X86-NOSSE-NEXT:    fchs
-; X86-NOSSE-NEXT:    faddl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOSSE-NEXT:    movl %eax, (%esp)
-; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fildll (%esp)
-; X86-NOSSE-NEXT:    fistpll -559038737
+; X86-NOSSE-NEXT:    faddl (%esp)
+; X86-NOSSE-NEXT:    fstpl -559038737
 ; X86-NOSSE-NEXT:    movl %ebp, %esp
 ; X86-NOSSE-NEXT:    popl %ebp
 ; X86-NOSSE-NEXT:    retl
@@ -1212,17 +1115,14 @@ define dso_local void @fsub_64imm() nounwind {
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $16, %esp
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fld1
 ; X86-SSE1-NEXT:    fchs
 ; X86-SSE1-NEXT:    faddl (%esp)
-; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, -559038737
+; X86-SSE1-NEXT:    fstpl -559038737
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -1235,9 +1135,7 @@ define dso_local void @fsub_64imm() nounwind {
 ; X86-SSE2-NEXT:    subl $8, %esp
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    addsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-NEXT:    movlps %xmm0, -559038737
+; X86-SSE2-NEXT:    movsd %xmm0, -559038737
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -1250,9 +1148,7 @@ define dso_local void @fsub_64imm() nounwind {
 ; X86-AVX-NEXT:    subl $8, %esp
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vaddsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vmovlps %xmm0, -559038737
+; X86-AVX-NEXT:    vmovsd %xmm0, -559038737
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
@@ -1354,22 +1250,16 @@ define dso_local void @fsub_64stack() nounwind {
 ; X86-NOSSE-NEXT:    pushl %ebp
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $40, %esp
+; X86-NOSSE-NEXT:    subl $32, %esp
 ; X86-NOSSE-NEXT:    fildll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fld1
-; X86-NOSSE-NEXT:    fsubl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %eax, (%esp)
-; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fildll (%esp)
-; X86-NOSSE-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    fld1
+; X86-NOSSE-NEXT:    fsubl (%esp)
+; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    movl %ebp, %esp
 ; X86-NOSSE-NEXT:    popl %ebp
 ; X86-NOSSE-NEXT:    retl
@@ -1381,16 +1271,13 @@ define dso_local void @fsub_64stack() nounwind {
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $24, %esp
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fld1
 ; X86-SSE1-NEXT:    fsubl (%esp)
 ; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -1405,8 +1292,6 @@ define dso_local void @fsub_64stack() nounwind {
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm1 = [1.0E+0,0.0E+0]
 ; X86-SSE2-NEXT:    subsd %xmm0, %xmm1
 ; X86-SSE2-NEXT:    movsd %xmm1, (%esp)
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -1421,8 +1306,6 @@ define dso_local void @fsub_64stack() nounwind {
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [1.0E+0,0.0E+0]
 ; X86-AVX-NEXT:    vsubsd %xmm0, %xmm1, %xmm0
 ; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
@@ -1456,7 +1339,7 @@ define dso_local void @fsub_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    pushl %esi
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $40, %esp
+; X86-NOSSE-NEXT:    subl $32, %esp
 ; X86-NOSSE-NEXT:    movl 20(%ebp), %eax
 ; X86-NOSSE-NEXT:    movl 8(%ebp), %ecx
 ; X86-NOSSE-NEXT:    fildll (%ecx,%eax,8)
@@ -1464,16 +1347,10 @@ define dso_local void @fsub_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NOSSE-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fsubl 12(%ebp)
-; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NOSSE-NEXT:    movl %edx, (%esp)
-; X86-NOSSE-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fildll (%esp)
-; X86-NOSSE-NEXT:    fistpll (%ecx,%eax,8)
+; X86-NOSSE-NEXT:    fldl (%esp)
+; X86-NOSSE-NEXT:    fsubl 12(%ebp)
+; X86-NOSSE-NEXT:    fstpl (%ecx,%eax,8)
 ; X86-NOSSE-NEXT:    leal -4(%ebp), %esp
 ; X86-NOSSE-NEXT:    popl %esi
 ; X86-NOSSE-NEXT:    popl %ebp
@@ -1488,16 +1365,13 @@ define dso_local void @fsub_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-SSE1-NEXT:    movl 20(%ebp), %eax
 ; X86-SSE1-NEXT:    movl 8(%ebp), %ecx
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fldl (%esp)
 ; X86-SSE1-NEXT:    fsubl 12(%ebp)
-; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, (%ecx,%eax,8)
+; X86-SSE1-NEXT:    fstpl (%ecx,%eax,8)
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -1512,9 +1386,7 @@ define dso_local void @fsub_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-SSE2-NEXT:    movl 8(%ebp), %ecx
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    subsd 12(%ebp), %xmm0
-; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-NEXT:    movlps %xmm0, (%ecx,%eax,8)
+; X86-SSE2-NEXT:    movsd %xmm0, (%ecx,%eax,8)
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -1529,9 +1401,7 @@ define dso_local void @fsub_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-AVX-NEXT:    movl 8(%ebp), %ecx
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vsubsd 12(%ebp), %xmm0, %xmm0
-; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vmovlps %xmm0, (%ecx,%eax,8)
+; X86-AVX-NEXT:    vmovsd %xmm0, (%ecx,%eax,8)
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
@@ -1631,23 +1501,17 @@ define dso_local void @fmul_64r(ptr %loc, double %val) nounwind {
 ; X86-NOSSE-NEXT:    pushl %ebp
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $32, %esp
+; X86-NOSSE-NEXT:    subl $24, %esp
 ; X86-NOSSE-NEXT:    movl 8(%ebp), %eax
 ; X86-NOSSE-NEXT:    fildll (%eax)
 ; X86-NOSSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fmull 12(%ebp)
-; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NOSSE-NEXT:    movl %ecx, (%esp)
-; X86-NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fildll (%esp)
-; X86-NOSSE-NEXT:    fistpll (%eax)
+; X86-NOSSE-NEXT:    fldl (%esp)
+; X86-NOSSE-NEXT:    fmull 12(%ebp)
+; X86-NOSSE-NEXT:    fstpl (%eax)
 ; X86-NOSSE-NEXT:    movl %ebp, %esp
 ; X86-NOSSE-NEXT:    popl %ebp
 ; X86-NOSSE-NEXT:    retl
@@ -1660,16 +1524,13 @@ define dso_local void @fmul_64r(ptr %loc, double %val) nounwind {
 ; X86-SSE1-NEXT:    subl $16, %esp
 ; X86-SSE1-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fldl (%esp)
 ; X86-SSE1-NEXT:    fmull 12(%ebp)
-; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, (%eax)
+; X86-SSE1-NEXT:    fstpl (%eax)
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -1683,9 +1544,7 @@ define dso_local void @fmul_64r(ptr %loc, double %val) nounwind {
 ; X86-SSE2-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    mulsd 12(%ebp), %xmm0
-; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-NEXT:    movlps %xmm0, (%eax)
+; X86-SSE2-NEXT:    movsd %xmm0, (%eax)
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -1699,9 +1558,7 @@ define dso_local void @fmul_64r(ptr %loc, double %val) nounwind {
 ; X86-AVX-NEXT:    movl 8(%ebp), %eax
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vmulsd 12(%ebp), %xmm0, %xmm0
-; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vmovlps %xmm0, (%eax)
+; X86-AVX-NEXT:    vmovsd %xmm0, (%eax)
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
@@ -1794,22 +1651,16 @@ define dso_local void @fmul_64g() nounwind {
 ; X86-NOSSE-NEXT:    pushl %ebp
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $32, %esp
+; X86-NOSSE-NEXT:    subl $24, %esp
 ; X86-NOSSE-NEXT:    fildll glob64
 ; X86-NOSSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
-; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %eax, (%esp)
-; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fildll (%esp)
-; X86-NOSSE-NEXT:    fistpll glob64
+; X86-NOSSE-NEXT:    fldl (%esp)
+; X86-NOSSE-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-NOSSE-NEXT:    fstpl glob64
 ; X86-NOSSE-NEXT:    movl %ebp, %esp
 ; X86-NOSSE-NEXT:    popl %ebp
 ; X86-NOSSE-NEXT:    retl
@@ -1821,16 +1672,13 @@ define dso_local void @fmul_64g() nounwind {
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $16, %esp
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fldl (%esp)
 ; X86-SSE1-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
-; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, glob64
+; X86-SSE1-NEXT:    fstpl glob64
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -1843,9 +1691,7 @@ define dso_local void @fmul_64g() nounwind {
 ; X86-SSE2-NEXT:    subl $8, %esp
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-NEXT:    movlps %xmm0, glob64
+; X86-SSE2-NEXT:    movsd %xmm0, glob64
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -1858,9 +1704,7 @@ define dso_local void @fmul_64g() nounwind {
 ; X86-AVX-NEXT:    subl $8, %esp
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vmovlps %xmm0, glob64
+; X86-AVX-NEXT:    vmovsd %xmm0, glob64
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
@@ -1957,22 +1801,16 @@ define dso_local void @fmul_64imm() nounwind {
 ; X86-NOSSE-NEXT:    pushl %ebp
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $32, %esp
+; X86-NOSSE-NEXT:    subl $24, %esp
 ; X86-NOSSE-NEXT:    fildll -559038737
 ; X86-NOSSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
-; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %eax, (%esp)
-; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fildll (%esp)
-; X86-NOSSE-NEXT:    fistpll -559038737
+; X86-NOSSE-NEXT:    fldl (%esp)
+; X86-NOSSE-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-NOSSE-NEXT:    fstpl -559038737
 ; X86-NOSSE-NEXT:    movl %ebp, %esp
 ; X86-NOSSE-NEXT:    popl %ebp
 ; X86-NOSSE-NEXT:    retl
@@ -1984,16 +1822,13 @@ define dso_local void @fmul_64imm() nounwind {
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $16, %esp
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fldl (%esp)
 ; X86-SSE1-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
-; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, -559038737
+; X86-SSE1-NEXT:    fstpl -559038737
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -2006,9 +1841,7 @@ define dso_local void @fmul_64imm() nounwind {
 ; X86-SSE2-NEXT:    subl $8, %esp
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-NEXT:    movlps %xmm0, -559038737
+; X86-SSE2-NEXT:    movsd %xmm0, -559038737
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -2021,9 +1854,7 @@ define dso_local void @fmul_64imm() nounwind {
 ; X86-AVX-NEXT:    subl $8, %esp
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vmovlps %xmm0, -559038737
+; X86-AVX-NEXT:    vmovsd %xmm0, -559038737
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
@@ -2125,22 +1956,16 @@ define dso_local void @fmul_64stack() nounwind {
 ; X86-NOSSE-NEXT:    pushl %ebp
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $40, %esp
+; X86-NOSSE-NEXT:    subl $32, %esp
 ; X86-NOSSE-NEXT:    fildll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    movl %eax, (%esp)
+; X86-NOSSE-NEXT:    fldl (%esp)
 ; X86-NOSSE-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOSSE-NEXT:    movl %eax, (%esp)
-; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fildll (%esp)
-; X86-NOSSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    movl %ebp, %esp
 ; X86-NOSSE-NEXT:    popl %ebp
 ; X86-NOSSE-NEXT:    retl
@@ -2152,16 +1977,13 @@ define dso_local void @fmul_64stack() nounwind {
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $24, %esp
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fldl (%esp)
 ; X86-SSE1-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -2175,8 +1997,6 @@ define dso_local void @fmul_64stack() nounwind {
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -2190,8 +2010,6 @@ define dso_local void @fmul_64stack() nounwind {
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
@@ -2225,7 +2043,7 @@ define dso_local void @fmul_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    pushl %esi
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $40, %esp
+; X86-NOSSE-NEXT:    subl $32, %esp
 ; X86-NOSSE-NEXT:    movl 20(%ebp), %eax
 ; X86-NOSSE-NEXT:    movl 8(%ebp), %ecx
 ; X86-NOSSE-NEXT:    fildll (%ecx,%eax,8)
@@ -2233,16 +2051,10 @@ define dso_local void @fmul_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NOSSE-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fmull 12(%ebp)
-; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NOSSE-NEXT:    movl %edx, (%esp)
-; X86-NOSSE-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fildll (%esp)
-; X86-NOSSE-NEXT:    fistpll (%ecx,%eax,8)
+; X86-NOSSE-NEXT:    fldl (%esp)
+; X86-NOSSE-NEXT:    fmull 12(%ebp)
+; X86-NOSSE-NEXT:    fstpl (%ecx,%eax,8)
 ; X86-NOSSE-NEXT:    leal -4(%ebp), %esp
 ; X86-NOSSE-NEXT:    popl %esi
 ; X86-NOSSE-NEXT:    popl %ebp
@@ -2257,16 +2069,13 @@ define dso_local void @fmul_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-SSE1-NEXT:    movl 20(%ebp), %eax
 ; X86-SSE1-NEXT:    movl 8(%ebp), %ecx
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fldl (%esp)
 ; X86-SSE1-NEXT:    fmull 12(%ebp)
-; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, (%ecx,%eax,8)
+; X86-SSE1-NEXT:    fstpl (%ecx,%eax,8)
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -2281,9 +2090,7 @@ define dso_local void @fmul_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-SSE2-NEXT:    movl 8(%ebp), %ecx
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    mulsd 12(%ebp), %xmm0
-; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-NEXT:    movlps %xmm0, (%ecx,%eax,8)
+; X86-SSE2-NEXT:    movsd %xmm0, (%ecx,%eax,8)
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -2298,9 +2105,7 @@ define dso_local void @fmul_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-AVX-NEXT:    movl 8(%ebp), %ecx
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vmulsd 12(%ebp), %xmm0, %xmm0
-; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vmovlps %xmm0, (%ecx,%eax,8)
+; X86-AVX-NEXT:    vmovsd %xmm0, (%ecx,%eax,8)
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
@@ -2400,23 +2205,17 @@ define dso_local void @fdiv_64r(ptr %loc, double %val) nounwind {
 ; X86-NOSSE-NEXT:    pushl %ebp
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $32, %esp
+; X86-NOSSE-NEXT:    subl $24, %esp
 ; X86-NOSSE-NEXT:    movl 8(%ebp), %eax
 ; X86-NOSSE-NEXT:    fildll (%eax)
 ; X86-NOSSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fdivl 12(%ebp)
-; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NOSSE-NEXT:    movl %ecx, (%esp)
-; X86-NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fildll (%esp)
-; X86-NOSSE-NEXT:    fistpll (%eax)
+; X86-NOSSE-NEXT:    fldl (%esp)
+; X86-NOSSE-NEXT:    fdivl 12(%ebp)
+; X86-NOSSE-NEXT:    fstpl (%eax)
 ; X86-NOSSE-NEXT:    movl %ebp, %esp
 ; X86-NOSSE-NEXT:    popl %ebp
 ; X86-NOSSE-NEXT:    retl
@@ -2429,16 +2228,13 @@ define dso_local void @fdiv_64r(ptr %loc, double %val) nounwind {
 ; X86-SSE1-NEXT:    subl $16, %esp
 ; X86-SSE1-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fldl (%esp)
 ; X86-SSE1-NEXT:    fdivl 12(%ebp)
-; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, (%eax)
+; X86-SSE1-NEXT:    fstpl (%eax)
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -2452,9 +2248,7 @@ define dso_local void @fdiv_64r(ptr %loc, double %val) nounwind {
 ; X86-SSE2-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    divsd 12(%ebp), %xmm0
-; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-NEXT:    movlps %xmm0, (%eax)
+; X86-SSE2-NEXT:    movsd %xmm0, (%eax)
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -2468,9 +2262,7 @@ define dso_local void @fdiv_64r(ptr %loc, double %val) nounwind {
 ; X86-AVX-NEXT:    movl 8(%ebp), %eax
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vdivsd 12(%ebp), %xmm0, %xmm0
-; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vmovlps %xmm0, (%eax)
+; X86-AVX-NEXT:    vmovsd %xmm0, (%eax)
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
@@ -2565,22 +2357,16 @@ define dso_local void @fdiv_64g() nounwind {
 ; X86-NOSSE-NEXT:    pushl %ebp
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $32, %esp
+; X86-NOSSE-NEXT:    subl $24, %esp
 ; X86-NOSSE-NEXT:    fildll glob64
 ; X86-NOSSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fdivs {{\.?LCPI[0-9]+_[0-9]+}}
-; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %eax, (%esp)
-; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fildll (%esp)
-; X86-NOSSE-NEXT:    fistpll glob64
+; X86-NOSSE-NEXT:    fldl (%esp)
+; X86-NOSSE-NEXT:    fdivs {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-NOSSE-NEXT:    fstpl glob64
 ; X86-NOSSE-NEXT:    movl %ebp, %esp
 ; X86-NOSSE-NEXT:    popl %ebp
 ; X86-NOSSE-NEXT:    retl
@@ -2592,16 +2378,13 @@ define dso_local void @fdiv_64g() nounwind {
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $16, %esp
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fldl (%esp)
 ; X86-SSE1-NEXT:    fdivs {{\.?LCPI[0-9]+_[0-9]+}}
-; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, glob64
+; X86-SSE1-NEXT:    fstpl glob64
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -2614,9 +2397,7 @@ define dso_local void @fdiv_64g() nounwind {
 ; X86-SSE2-NEXT:    subl $8, %esp
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    divsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-NEXT:    movlps %xmm0, glob64
+; X86-SSE2-NEXT:    movsd %xmm0, glob64
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -2629,9 +2410,7 @@ define dso_local void @fdiv_64g() nounwind {
 ; X86-AVX-NEXT:    subl $8, %esp
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vdivsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vmovlps %xmm0, glob64
+; X86-AVX-NEXT:    vmovsd %xmm0, glob64
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
@@ -2728,22 +2507,16 @@ define dso_local void @fdiv_64imm() nounwind {
 ; X86-NOSSE-NEXT:    pushl %ebp
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $32, %esp
+; X86-NOSSE-NEXT:    subl $24, %esp
 ; X86-NOSSE-NEXT:    fildll -559038737
 ; X86-NOSSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fdivs {{\.?LCPI[0-9]+_[0-9]+}}
-; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %eax, (%esp)
-; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fildll (%esp)
-; X86-NOSSE-NEXT:    fistpll -559038737
+; X86-NOSSE-NEXT:    fldl (%esp)
+; X86-NOSSE-NEXT:    fdivs {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-NOSSE-NEXT:    fstpl -559038737
 ; X86-NOSSE-NEXT:    movl %ebp, %esp
 ; X86-NOSSE-NEXT:    popl %ebp
 ; X86-NOSSE-NEXT:    retl
@@ -2755,16 +2528,13 @@ define dso_local void @fdiv_64imm() nounwind {
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $16, %esp
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fldl (%esp)
 ; X86-SSE1-NEXT:    fdivs {{\.?LCPI[0-9]+_[0-9]+}}
-; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, -559038737
+; X86-SSE1-NEXT:    fstpl -559038737
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -2777,9 +2547,7 @@ define dso_local void @fdiv_64imm() nounwind {
 ; X86-SSE2-NEXT:    subl $8, %esp
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    divsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-NEXT:    movlps %xmm0, -559038737
+; X86-SSE2-NEXT:    movsd %xmm0, -559038737
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -2792,9 +2560,7 @@ define dso_local void @fdiv_64imm() nounwind {
 ; X86-AVX-NEXT:    subl $8, %esp
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vdivsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vmovlps %xmm0, -559038737
+; X86-AVX-NEXT:    vmovsd %xmm0, -559038737
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
@@ -2896,22 +2662,16 @@ define dso_local void @fdiv_64stack() nounwind {
 ; X86-NOSSE-NEXT:    pushl %ebp
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $40, %esp
+; X86-NOSSE-NEXT:    subl $32, %esp
 ; X86-NOSSE-NEXT:    fildll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fld1
-; X86-NOSSE-NEXT:    fdivl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl %eax, (%esp)
-; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fildll (%esp)
-; X86-NOSSE-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    fld1
+; X86-NOSSE-NEXT:    fdivl (%esp)
+; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; X86-NOSSE-NEXT:    movl %ebp, %esp
 ; X86-NOSSE-NEXT:    popl %ebp
 ; X86-NOSSE-NEXT:    retl
@@ -2923,16 +2683,13 @@ define dso_local void @fdiv_64stack() nounwind {
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $24, %esp
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fld1
 ; X86-SSE1-NEXT:    fdivl (%esp)
 ; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -2947,8 +2704,6 @@ define dso_local void @fdiv_64stack() nounwind {
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm1 = [1.0E+0,0.0E+0]
 ; X86-SSE2-NEXT:    divsd %xmm0, %xmm1
 ; X86-SSE2-NEXT:    movsd %xmm1, (%esp)
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -2963,8 +2718,6 @@ define dso_local void @fdiv_64stack() nounwind {
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [1.0E+0,0.0E+0]
 ; X86-AVX-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
 ; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
@@ -2998,7 +2751,7 @@ define dso_local void @fdiv_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    pushl %esi
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $40, %esp
+; X86-NOSSE-NEXT:    subl $32, %esp
 ; X86-NOSSE-NEXT:    movl 20(%ebp), %eax
 ; X86-NOSSE-NEXT:    movl 8(%ebp), %ecx
 ; X86-NOSSE-NEXT:    fildll (%ecx,%eax,8)
@@ -3006,16 +2759,10 @@ define dso_local void @fdiv_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NOSSE-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fdivl 12(%ebp)
-; X86-NOSSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NOSSE-NEXT:    movl %edx, (%esp)
-; X86-NOSSE-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fildll (%esp)
-; X86-NOSSE-NEXT:    fistpll (%ecx,%eax,8)
+; X86-NOSSE-NEXT:    fldl (%esp)
+; X86-NOSSE-NEXT:    fdivl 12(%ebp)
+; X86-NOSSE-NEXT:    fstpl (%ecx,%eax,8)
 ; X86-NOSSE-NEXT:    leal -4(%ebp), %esp
 ; X86-NOSSE-NEXT:    popl %esi
 ; X86-NOSSE-NEXT:    popl %ebp
@@ -3030,16 +2777,13 @@ define dso_local void @fdiv_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-SSE1-NEXT:    movl 20(%ebp), %eax
 ; X86-SSE1-NEXT:    movl 8(%ebp), %ecx
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fldl (%esp)
 ; X86-SSE1-NEXT:    fdivl 12(%ebp)
-; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, (%ecx,%eax,8)
+; X86-SSE1-NEXT:    fstpl (%ecx,%eax,8)
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -3054,9 +2798,7 @@ define dso_local void @fdiv_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-SSE2-NEXT:    movl 8(%ebp), %ecx
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    divsd 12(%ebp), %xmm0
-; X86-SSE2-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE2-NEXT:    movlps %xmm0, (%ecx,%eax,8)
+; X86-SSE2-NEXT:    movsd %xmm0, (%ecx,%eax,8)
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -3071,9 +2813,7 @@ define dso_local void @fdiv_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-AVX-NEXT:    movl 8(%ebp), %ecx
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vdivsd 12(%ebp), %xmm0, %xmm0
-; X86-AVX-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vmovlps %xmm0, (%ecx,%eax,8)
+; X86-AVX-NEXT:    vmovsd %xmm0, (%ecx,%eax,8)
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
 ; X86-AVX-NEXT:    retl
