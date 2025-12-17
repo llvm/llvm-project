@@ -146,7 +146,6 @@ public:
   }
 
   bool enableMachineScheduler() const override { return true; }
-  bool enableTerminalRule() const override { return true; }
 
   bool enablePostRAScheduler() const override { return UsePostRAScheduler; }
 
@@ -187,7 +186,7 @@ public:
   }
 
   bool hasCLZLike() const {
-    return HasStdExtZbb || HasStdExtP || HasVendorXTHeadBb ||
+    return HasStdExtZbb || HasVendorXTHeadBb ||
            (HasVendorXCVbitmanip && !IsRV64);
   }
   bool hasCTZLike() const {
@@ -197,7 +196,7 @@ public:
     return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
   }
   bool hasREV8Like() const {
-    return HasStdExtZbb || HasStdExtZbkb || HasStdExtP || HasVendorXTHeadBb;
+    return HasStdExtZbb || HasStdExtZbkb || HasVendorXTHeadBb;
   }
 
   bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
@@ -209,7 +208,7 @@ public:
   bool hasConditionalMoveFusion() const {
     // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
     return (hasConditionalCompressedMoveFusion() && hasStdExtZca()) ||
-           hasShortForwardBranchOpt();
+           hasShortForwardBranchIALU();
   }
 
   bool hasShlAdd(int64_t ShAmt) const {
@@ -238,6 +237,13 @@ public:
 
     return 0;
   }
+
+  Align getZilsdAlign() const {
+    return Align(enableUnalignedScalarMem() ? 1
+                 : allowZilsd4ByteAlign()   ? 4
+                                            : 8);
+  }
+
   unsigned getELen() const {
     assert(hasVInstructions() && "Expected V extension");
     return hasVInstructionsI64() ? 64 : 32;

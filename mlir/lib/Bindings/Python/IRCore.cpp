@@ -18,6 +18,7 @@
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "nanobind/nanobind.h"
+#include "nanobind/typing.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -1410,9 +1411,10 @@ nb::object PyOperation::create(std::string_view name,
   }
 
   // Construct the operation.
+  PyMlirContext::ErrorCapture errors(location.getContext());
   MlirOperation operation = mlirOperationCreate(&state);
   if (!operation.ptr)
-    throw nb::value_error("Operation creation failed");
+    throw MLIRError("Operation creation failed", errors.take());
   PyOperationRef created =
       PyOperation::createDetached(location.getContext(), operation);
   maybeInsertOperation(created, maybeIp);
@@ -1482,7 +1484,11 @@ public:
 
   /// Binds the Python module objects to functions of this class.
   static void bind(nb::module_ &m) {
-    auto cls = ClassTy(m, DerivedTy::pyClassName);
+    auto cls = ClassTy(
+        m, DerivedTy::pyClassName, nb::is_generic(),
+        nb::sig((Twine("class ") + DerivedTy::pyClassName + "(Value[_T])")
+                    .str()
+                    .c_str()));
     cls.def(nb::init<PyValue &>(), nb::keep_alive<0, 1>(), nb::arg("value"));
     cls.def_static(
         "isinstance",
@@ -1513,12 +1519,12 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_prop_ro(
         "owner",
-        [](PyOpResult &self) -> nb::typed<nb::object, PyOperation> {
+        [](PyOpResult &self) -> nb::typed<nb::object, PyOpView> {
           assert(mlirOperationEqual(self.getParentOperation()->get(),
                                     mlirOpResultGetOwner(self.get())) &&
                  "expected the owner of the value in Python to match that in "
                  "the IR");
-          return self.getParentOperation().getObject();
+          return self.getParentOperation()->createOpView();
         },
         "Returns the operation that produces this result.");
     c.def_prop_ro(
@@ -2342,6 +2348,12 @@ public:
           return mlirBlockArgumentSetType(self.get(), type);
         },
         nb::arg("type"), "Sets the type of this block argument.");
+    c.def(
+        "set_location",
+        [](PyBlockArgument &self, PyLocation loc) {
+          return mlirBlockArgumentSetLocation(self.get(), loc);
+        },
+        nb::arg("loc"), "Sets the location of this block argument.");
   }
 };
 
@@ -3927,6 +3939,14 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             return PyOpSuccessors(self.getOperation().getRef());
           },
           "Returns the list of Operation successors.")
+      .def(
+          "replace_uses_of_with",
+          [](PyOperation &self, PyValue &of, PyValue &with) {
+            mlirOperationReplaceUsesOfWith(self.get(), of.get(), with.get());
+          },
+          "of"_a, "with_"_a,
+          "Replaces uses of the 'of' value with the 'with' value inside the "
+          "operation.")
       .def("_set_invalid", &PyOperation::setInvalid,
            "Invalidate the operation.");
 
@@ -4605,7 +4625,10 @@ void mlir::python::populateIRCore(nb::module_ &m) {
   //----------------------------------------------------------------------------
   // Mapping of Value.
   //----------------------------------------------------------------------------
-  nb::class_<PyValue>(m, "Value")
+  m.attr("_T") = nb::type_var("_T", nb::arg("bound") = m.attr("Type"));
+
+  nb::class_<PyValue>(m, "Value", nb::is_generic(),
+                      nb::sig("class Value(Generic[_T])"))
       .def(nb::init<PyValue &>(), nb::keep_alive<0, 1>(), nb::arg("value"),
            "Creates a Value reference from another `Value`.")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyValue::getCapsule,
@@ -4623,7 +4646,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           kDumpDocstring)
       .def_prop_ro(
           "owner",
-          [](PyValue &self) -> nb::object {
+          [](PyValue &self) -> nb::typed<nb::object, PyOpView> {
             MlirValue v = self.get();
             if (mlirValueIsAOpResult(v)) {
               assert(mlirOperationEqual(self.getParentOperation()->get(),
@@ -4631,7 +4654,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                      "expected the owner of the value in Python to match "
                      "that in "
                      "the IR");
-              return self.getParentOperation().getObject();
+              return self.getParentOperation()->createOpView();
             }
 
             if (mlirValueIsABlockArgument(v)) {
@@ -4737,7 +4760,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           [](PyValue &self, const PyType &type) {
             mlirValueSetType(self.get(), type);
           },
-          nb::arg("type"), "Sets the type of the value.")
+          nb::arg("type"), "Sets the type of the value.",
+          nb::sig("def set_type(self, type: _T)"))
       .def(
           "replace_all_uses_with",
           [](PyValue &self, PyValue &with) {

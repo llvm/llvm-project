@@ -1455,8 +1455,7 @@ bool GetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobalUnchecked(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Block *B = S.P.getGlobal(I);
-  const auto &Desc =
-      *reinterpret_cast<const GlobalInlineDescriptor *>(B->rawData());
+  const auto &Desc = B->getBlockDesc<GlobalInlineDescriptor>();
   if (Desc.InitState != GlobalInitState::Initialized)
     return DiagnoseUninitialized(S, OpPC, B->isExtern(), B->getDescriptor(),
                                  AK_Read);
@@ -2317,13 +2316,11 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool AddOffset(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
-  Pointer Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.isBlockPointer())
-    Ptr = Ptr.expand();
+  const Pointer &Ptr = S.Stk.pop<Pointer>().expand();
 
   if (std::optional<Pointer> Result = OffsetHelper<T, ArithOp::Add>(
           S, OpPC, Offset, Ptr, /*IsPointerArith=*/true)) {
-    S.Stk.push<Pointer>(*Result);
+    S.Stk.push<Pointer>(Result->narrow());
     return true;
   }
   return false;
@@ -2332,11 +2329,11 @@ bool AddOffset(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool SubOffset(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  const Pointer &Ptr = S.Stk.pop<Pointer>().expand();
 
   if (std::optional<Pointer> Result = OffsetHelper<T, ArithOp::Sub>(
           S, OpPC, Offset, Ptr, /*IsPointerArith=*/true)) {
-    S.Stk.push<Pointer>(*Result);
+    S.Stk.push<Pointer>(Result->narrow());
     return true;
   }
   return false;
@@ -2362,7 +2359,7 @@ static inline bool IncDecPtrHelper(InterpState &S, CodePtr OpPC,
   if (std::optional<Pointer> Result =
           OffsetHelper<OneT, Op>(S, OpPC, One, P, /*IsPointerArith=*/true)) {
     // Store the new value.
-    Ptr.deref<Pointer>() = *Result;
+    Ptr.deref<Pointer>() = Result->narrow();
     return true;
   }
   return false;
@@ -2390,9 +2387,9 @@ static inline bool DecPtr(InterpState &S, CodePtr OpPC) {
 /// 2) Pops another Pointer from the stack.
 /// 3) Pushes the difference of the indices of the two pointers on the stack.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-inline bool SubPtr(InterpState &S, CodePtr OpPC) {
-  const Pointer &LHS = S.Stk.pop<Pointer>();
-  const Pointer &RHS = S.Stk.pop<Pointer>();
+inline bool SubPtr(InterpState &S, CodePtr OpPC, bool ElemSizeIsZero) {
+  const Pointer &LHS = S.Stk.pop<Pointer>().expand();
+  const Pointer &RHS = S.Stk.pop<Pointer>().expand();
 
   if (!Pointer::hasSameBase(LHS, RHS) && S.getLangOpts().CPlusPlus) {
     S.FFDiag(S.Current->getSource(OpPC),
@@ -2402,25 +2399,23 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
     return false;
   }
 
+  if (ElemSizeIsZero) {
+    QualType PtrT = LHS.getType();
+    while (auto *AT = dyn_cast<ArrayType>(PtrT))
+      PtrT = AT->getElementType();
+
+    QualType ArrayTy = S.getASTContext().getConstantArrayType(
+        PtrT, APInt::getZero(1), nullptr, ArraySizeModifier::Normal, 0);
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_pointer_subtraction_zero_size)
+        << ArrayTy;
+
+    return false;
+  }
+
   if (LHS == RHS) {
     S.Stk.push<T>();
     return true;
-  }
-
-  for (const Pointer &P : {LHS, RHS}) {
-    if (P.isZeroSizeArray()) {
-      QualType PtrT = P.getType();
-      while (auto *AT = dyn_cast<ArrayType>(PtrT))
-        PtrT = AT->getElementType();
-
-      QualType ArrayTy = S.getASTContext().getConstantArrayType(
-          PtrT, APInt::getZero(1), nullptr, ArraySizeModifier::Normal, 0);
-      S.FFDiag(S.Current->getSource(OpPC),
-               diag::note_constexpr_pointer_subtraction_zero_size)
-          << ArrayTy;
-
-      return false;
-    }
   }
 
   int64_t A64 =
@@ -2475,6 +2470,18 @@ inline bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 inline bool InitScope(InterpState &S, CodePtr OpPC, uint32_t I) {
   S.Current->initScope(I);
+  return true;
+}
+
+inline bool EnableLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
+  assert(!S.Current->isLocalEnabled(I));
+  S.Current->enableLocal(I);
+  return true;
+}
+
+inline bool GetLocalEnabled(InterpState &S, CodePtr OpPC, uint32_t I) {
+  assert(S.Current);
+  S.Stk.push<bool>(S.Current->isLocalEnabled(I));
   return true;
 }
 
@@ -2637,10 +2644,6 @@ bool CastPointerIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth);
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
-      << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
-      << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
 
   if (!CheckPointerToIntegralCast(S, OpPC, Ptr, T::bitWidth()))
     return Invalid(S, OpPC);
@@ -3085,7 +3088,7 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
       S.Stk.push<Pointer>(Ptr.atIndex(0).narrow());
       return true;
     }
-    S.Stk.push<Pointer>(Ptr);
+    S.Stk.push<Pointer>(Ptr.narrow());
     return true;
   }
 
@@ -3116,7 +3119,7 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
       S.Stk.push<Pointer>(Ptr.atIndex(0).narrow());
       return true;
     }
-    S.Stk.push<Pointer>(Ptr);
+    S.Stk.push<Pointer>(Ptr.narrow());
     return true;
   }
 
@@ -3191,7 +3194,7 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
   }
 
   if (Ptr.isRoot() || !Ptr.isUnknownSizeArray()) {
-    S.Stk.push<Pointer>(Ptr.atIndex(0));
+    S.Stk.push<Pointer>(Ptr.atIndex(0).narrow());
     return true;
   }
 

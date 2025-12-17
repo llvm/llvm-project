@@ -4,7 +4,7 @@
 # ALLOW_RETRIES: 2
 
 # UNSUPPORTED: system-windows
-# RUN: env LIT_USE_INTERNAL_SHELL=0 not %{lit} -a -v %{inputs}/shtest-readfile | FileCheck -match-full-lines -DTEMP_PATH=%S/Inputs/shtest-readfile/Output %s
+# RUN: env LIT_USE_INTERNAL_SHELL=0 not %{lit} -v %{inputs}/shtest-readfile | FileCheck -match-full-lines -DTEMP_PATH=%S/Inputs/shtest-readfile/Output %s
 
 # CHECK: -- Testing: 5 tests{{.*}}
 

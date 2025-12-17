@@ -81,4 +81,26 @@ cir.func dso_local @empty_try_block_with_catch_ist() {
 // CHECK:   cir.return
 // CHECK: }
 
+cir.func @empty_try_block_with_catch_unwind_contains_resume() {
+  cir.scope {
+    cir.try {
+      cir.yield
+    } unwind {
+      cir.resume
+    }
+  }
+  cir.return
+}
+
+// CHECK: cir.func @empty_try_block_with_catch_unwind_contains_resume() {
+// CHECK:   cir.scope {
+// CHECK:     cir.try {
+// CHECK:       cir.yield
+// CHECK:     } unwind {
+// CHECK:       cir.resume
+// CHECK:     }
+// CHECK:   }
+// CHECK:   cir.return
+// CHECK: }
+
 }

@@ -17,8 +17,7 @@
 
 #include "VPlan.h"
 
-namespace llvm {
-namespace VPlanPatternMatch {
+namespace llvm::VPlanPatternMatch {
 
 template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return P.match(V);
@@ -27,6 +26,10 @@ template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
 template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
   auto *R = dyn_cast<VPRecipeBase>(U);
   return R && match(R, P);
+}
+
+template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
+  return P.match(static_cast<const VPRecipeBase *>(R));
 }
 
 template <typename Val, typename Pattern> struct VPMatchFunctor {
@@ -384,9 +387,9 @@ m_EVL(const Op0_t &Op0) {
 }
 
 template <typename Op0_t>
-inline VPInstruction_match<VPInstruction::ExtractLastElement, Op0_t>
-m_ExtractLastElement(const Op0_t &Op0) {
-  return m_VPInstruction<VPInstruction::ExtractLastElement>(Op0);
+inline VPInstruction_match<VPInstruction::ExtractLastLane, Op0_t>
+m_ExtractLastLane(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::ExtractLastLane>(Op0);
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -402,9 +405,17 @@ m_ExtractLane(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t>
-inline VPInstruction_match<VPInstruction::ExtractLastLanePerPart, Op0_t>
-m_ExtractLastLanePerPart(const Op0_t &Op0) {
-  return m_VPInstruction<VPInstruction::ExtractLastLanePerPart>(Op0);
+inline VPInstruction_match<VPInstruction::ExtractLastPart, Op0_t>
+m_ExtractLastPart(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::ExtractLastPart>(Op0);
+}
+
+template <typename Op0_t>
+inline VPInstruction_match<
+    VPInstruction::ExtractLastLane,
+    VPInstruction_match<VPInstruction::ExtractLastPart, Op0_t>>
+m_ExtractLastLaneOfLastPart(const Op0_t &Op0) {
+  return m_ExtractLastLane(m_ExtractLastPart(Op0));
 }
 
 template <typename Op0_t>
@@ -427,6 +438,10 @@ template <typename Op0_t, typename Op1_t>
 inline VPInstruction_match<VPInstruction::BranchOnCount, Op0_t, Op1_t>
 m_BranchOnCount(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<VPInstruction::BranchOnCount>(Op0, Op1);
+}
+
+inline VPInstruction_match<VPInstruction::AnyOf> m_AnyOf() {
+  return m_VPInstruction<VPInstruction::AnyOf>();
 }
 
 template <typename Op0_t>
@@ -462,6 +477,12 @@ inline AllRecipe_match<Instruction::Trunc, Op0_t> m_Trunc(const Op0_t &Op0) {
 }
 
 template <typename Op0_t>
+inline match_combine_or<AllRecipe_match<Instruction::Trunc, Op0_t>, Op0_t>
+m_TruncOrSelf(const Op0_t &Op0) {
+  return m_CombineOr(m_Trunc(Op0), Op0);
+}
+
+template <typename Op0_t>
 inline AllRecipe_match<Instruction::ZExt, Op0_t> m_ZExt(const Op0_t &Op0) {
   return m_Unary<Instruction::ZExt, Op0_t>(Op0);
 }
@@ -494,6 +515,12 @@ template <unsigned Opcode, typename Op0_t, typename Op1_t>
 inline AllRecipe_commutative_match<Opcode, Op0_t, Op1_t>
 m_c_Binary(const Op0_t &Op0, const Op1_t &Op1) {
   return AllRecipe_commutative_match<Opcode, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::Add, Op0_t, Op1_t> m_Add(const Op0_t &Op0,
+                                                             const Op1_t &Op1) {
+  return m_Binary<Instruction::Add, Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -843,6 +870,11 @@ template <Intrinsic::ID IntrID> inline IntrinsicID_match m_Intrinsic() {
   return IntrinsicID_match(IntrID);
 }
 
+/// Match intrinsic calls with a runtime intrinsic ID.
+inline IntrinsicID_match m_Intrinsic(Intrinsic::ID IntrID) {
+  return IntrinsicID_match(IntrID);
+}
+
 template <Intrinsic::ID IntrID, typename T0>
 inline typename m_Intrinsic_Ty<T0>::Ty m_Intrinsic(const T0 &Op0) {
   return m_CombineAnd(m_Intrinsic<IntrID>(), m_Argument<0>(Op0));
@@ -890,7 +922,6 @@ template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
   return SubPattern;
 }
 
-} // namespace VPlanPatternMatch
-} // namespace llvm
+} // namespace llvm::VPlanPatternMatch
 
 #endif

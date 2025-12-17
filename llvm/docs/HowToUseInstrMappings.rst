@@ -67,7 +67,7 @@ depending on some input flag, ``inPredSense``. The first step in the process is
 to define a relationship model that relates predicated instructions to their
 non-predicated form by assigning appropriate values to the ``InstrMapping``
 fields. For this relationship, non-predicated instructions are treated as key
-instruction since they are the one used to query the interface function.
+instruction since they are the ones used to query the interface function.
 
 .. code-block:: text
 

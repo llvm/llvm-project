@@ -49,7 +49,6 @@ define void @bitreverse_v8i16(ptr %x, ptr %y) {
   store <8 x i16> %c, ptr %x
   ret void
 }
-declare <8 x i16> @llvm.bitreverse.v8i16(<8 x i16>)
 
 define void @bitreverse_v4i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: bitreverse_v4i32:
@@ -104,7 +103,6 @@ define void @bitreverse_v4i32(ptr %x, ptr %y) {
   store <4 x i32> %c, ptr %x
   ret void
 }
-declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>)
 
 define void @bitreverse_v2i64(ptr %x, ptr %y) {
 ; RV32-LABEL: bitreverse_v2i64:
@@ -254,7 +252,6 @@ define void @bitreverse_v2i64(ptr %x, ptr %y) {
   store <2 x i64> %c, ptr %x
   ret void
 }
-declare <2 x i64> @llvm.bitreverse.v2i64(<2 x i64>)
 
 define void @bitreverse_v16i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: bitreverse_v16i16:
@@ -301,7 +298,6 @@ define void @bitreverse_v16i16(ptr %x, ptr %y) {
   store <16 x i16> %c, ptr %x
   ret void
 }
-declare <16 x i16> @llvm.bitreverse.v16i16(<16 x i16>)
 
 define void @bitreverse_v8i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: bitreverse_v8i32:
@@ -356,7 +352,6 @@ define void @bitreverse_v8i32(ptr %x, ptr %y) {
   store <8 x i32> %c, ptr %x
   ret void
 }
-declare <8 x i32> @llvm.bitreverse.v8i32(<8 x i32>)
 
 define void @bitreverse_v4i64(ptr %x, ptr %y) {
 ; RV32-LABEL: bitreverse_v4i64:
@@ -506,4 +501,3 @@ define void @bitreverse_v4i64(ptr %x, ptr %y) {
   store <4 x i64> %c, ptr %x
   ret void
 }
-declare <4 x i64> @llvm.bitreverse.v4i64(<4 x i64>)

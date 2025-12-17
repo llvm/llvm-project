@@ -50,6 +50,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
+using namespace llvm::omp::target::debug;
+
 namespace llvm {
 namespace omp {
 namespace target {
@@ -712,8 +714,8 @@ public:
       IgnoreLockMappedFailures = false;
     } else {
       // Disable by default.
-      DP("Invalid value LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS=%s\n",
-         OMPX_LockMappedBuffers.get().data());
+      ODBG(ODT_Alloc) << "Invalid value LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS="
+                      << OMPX_LockMappedBuffers.get();
       LockMappedBuffers = false;
     }
   }
@@ -793,6 +795,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Get the unique identifier of the device.
   const char *getDeviceUid() const { return DeviceUid.c_str(); }
+
+  /// Get the total shared memory per block (in bytes) that can be used in any
+  /// kernel.
+  size_t getMaxBlockSharedMemSize() const { return MaxBlockSharedMemSize; }
 
   /// Set the context of the device if needed, before calling device-specific
   /// functions. Plugins may implement this function as a no-op if not needed.
@@ -1251,6 +1257,9 @@ protected:
   /// Internal representation for OMPT device (initialize & finalize)
   std::atomic<bool> OmptInitialized;
 #endif
+
+  /// The total per-block native shared memory that a kernel may use.
+  size_t MaxBlockSharedMemSize = 0;
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin
@@ -1632,7 +1641,8 @@ public:
   /// must be called before the destructor.
   virtual Error deinit() {
     if (NextAvailable)
-      DP("Missing %d resources to be returned\n", NextAvailable);
+      ODBG(ODT_Deinit) << "Missing " << NextAvailable
+                       << " resources to be returned";
 
     // TODO: This prevents a bug on libomptarget to make the plugins fail. There
     // may be some resources not returned. Do not destroy these ones.

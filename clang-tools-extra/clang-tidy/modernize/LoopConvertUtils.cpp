@@ -89,13 +89,11 @@ bool DependencyFinderASTVisitor::VisitVarDecl(VarDecl *V) {
 
   // Next, check if the variable was removed from existence by an earlier
   // iteration.
-  for (const auto &I : *ReplacedVars) {
-    if (I.second == V) {
-      DependsOnInsideVariable = true;
-      return false;
-    }
-  }
-  return true;
+  if (llvm::none_of(*ReplacedVars,
+                    [&](const auto &I) { return I.second == V; }))
+    return true;
+  DependsOnInsideVariable = true;
+  return false;
 }
 
 /// If we already created a variable for TheLoop, check to make sure
@@ -234,11 +232,8 @@ static bool containsExpr(ASTContext *Context, const ContainerT *Container,
                          const Expr *E) {
   llvm::FoldingSetNodeID ID;
   E->Profile(ID, *Context, true);
-  for (const auto &I : *Container) {
-    if (ID == I.second)
-      return true;
-  }
-  return false;
+  return llvm::any_of(*Container,
+                      [&](const auto &I) { return ID == I.second; });
 }
 
 /// Returns true when the index expression is a declaration reference to

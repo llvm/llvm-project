@@ -17,6 +17,8 @@
 #include "flang/Evaluate/common.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -50,6 +52,8 @@ static const char __ldlu_i8x2[] = "__ldlu_i8x2_";
 static const char __ldlu_r2x2[] = "__ldlu_r2x2_";
 static const char __ldlu_r4x4[] = "__ldlu_r4x4_";
 static const char __ldlu_r8x2[] = "__ldlu_r8x2_";
+
+static constexpr unsigned kTMAAlignment = 16;
 
 // CUDA specific intrinsic handlers.
 static constexpr IntrinsicHandler cudaHandlers[]{
@@ -195,7 +199,7 @@ static constexpr IntrinsicHandler cudaHandlers[]{
      false},
     {"atomicadd_r4x4",
      static_cast<CUDAIntrinsicLibrary::ExtendedGenerator>(
-         &CI::genAtomicAddVector<4>),
+         &CI::genAtomicAddVector4x4),
      {{{"a", asAddr}, {"v", asAddr}}},
      false},
     {"atomicaddd",
@@ -368,6 +372,16 @@ static constexpr IntrinsicHandler cudaHandlers[]{
          &CI::genNVVMTime<mlir::NVVM::Clock64Op>),
      {},
      /*isElemental=*/false},
+    {"cluster_block_index",
+     static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(
+         &CI::genClusterBlockIndex),
+     {},
+     /*isElemental=*/false},
+    {"cluster_dim_blocks",
+     static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(
+         &CI::genClusterDimBlocks),
+     {},
+     /*isElemental=*/false},
     {"fence_proxy_async",
      static_cast<CUDAIntrinsicLibrary::SubroutineGenerator>(
          &CI::genFenceProxyAsync),
@@ -455,6 +469,10 @@ static constexpr IntrinsicHandler cudaHandlers[]{
      /*isElemental=*/false},
     {"syncwarp",
      static_cast<CUDAIntrinsicLibrary::SubroutineGenerator>(&CI::genSyncWarp),
+     {},
+     /*isElemental=*/false},
+    {"this_cluster",
+     static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(&CI::genThisCluster),
      {},
      /*isElemental=*/false},
     {"this_grid",
@@ -744,6 +762,56 @@ fir::ExtendedValue CUDAIntrinsicLibrary::genAtomicAddVector(
   return fir::ArrayBoxValue(res, {ext});
 }
 
+// ATOMICADDVECTOR4x4
+fir::ExtendedValue CUDAIntrinsicLibrary::genAtomicAddVector4x4(
+    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  mlir::Value a = fir::getBase(args[0]);
+  if (mlir::isa<fir::BaseBoxType>(a.getType()))
+    a = fir::BoxAddrOp::create(builder, loc, a);
+
+  const unsigned extent = 4;
+  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+  mlir::Value ptr = builder.createConvert(loc, llvmPtrTy, a);
+  mlir::Type f32Ty = builder.getF32Type();
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Type refTy = fir::ReferenceType::get(f32Ty);
+  llvm::SmallVector<mlir::Value> values;
+  for (unsigned i = 0; i < extent; ++i) {
+    mlir::Value pos = builder.createIntegerConstant(loc, idxTy, i);
+    mlir::Value coord = fir::CoordinateOp::create(builder, loc, refTy,
+                                                  fir::getBase(args[1]), pos);
+    mlir::Value value = fir::LoadOp::create(builder, loc, coord);
+    values.push_back(value);
+  }
+
+  auto inlinePtx = mlir::NVVM::InlinePtxOp::create(
+      builder, loc, {f32Ty, f32Ty, f32Ty, f32Ty},
+      {ptr, values[0], values[1], values[2], values[3]}, {},
+      "atom.add.v4.f32 {%0, %1, %2, %3}, [%4], {%5, %6, %7, %8};", {});
+
+  llvm::SmallVector<mlir::Value> results;
+  results.push_back(inlinePtx.getResult(0));
+  results.push_back(inlinePtx.getResult(1));
+  results.push_back(inlinePtx.getResult(2));
+  results.push_back(inlinePtx.getResult(3));
+
+  mlir::Type vecF32Ty = mlir::VectorType::get({extent}, f32Ty);
+  mlir::Value undef = mlir::LLVM::UndefOp::create(builder, loc, vecF32Ty);
+  mlir::Type i32Ty = builder.getI32Type();
+  for (unsigned i = 0; i < extent; ++i)
+    undef = mlir::LLVM::InsertElementOp::create(
+        builder, loc, undef, results[i],
+        builder.createIntegerConstant(loc, i32Ty, i));
+
+  auto i128Ty = builder.getIntegerType(128);
+  auto i128VecTy = mlir::VectorType::get({1}, i128Ty);
+  mlir::Value vec128 =
+      mlir::vector::BitCastOp::create(builder, loc, i128VecTy, undef);
+  return mlir::vector::ExtractOp::create(builder, loc, vec128,
+                                         mlir::ArrayRef<int64_t>{0});
+}
+
 mlir::Value
 CUDAIntrinsicLibrary::genAtomicAnd(mlir::Type resultType,
                                    llvm::ArrayRef<mlir::Value> args) {
@@ -892,7 +960,7 @@ CUDAIntrinsicLibrary::genBarrierArrive(mlir::Type resultType,
   mlir::Value barrier = convertPtrToNVVMSpace(
       builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
   return mlir::NVVM::MBarrierArriveOp::create(builder, loc, resultType, barrier)
-      .getResult();
+      .getResult(0);
 }
 
 // BARRIER_ARRIBVE_CNT
@@ -942,7 +1010,7 @@ CUDAIntrinsicLibrary::genBarrierTryWait(mlir::Type resultType,
   mlir::Value beforeArg = beforeBlock->addArgument(resultType, loc);
   builder.setInsertionPointToStart(beforeBlock);
   mlir::Value condition = mlir::arith::CmpIOp::create(
-      builder, loc, mlir::arith::CmpIPredicate::ne, beforeArg, zero);
+      builder, loc, mlir::arith::CmpIPredicate::eq, beforeArg, zero);
   mlir::scf::ConditionOp::create(builder, loc, condition, beforeArg);
   mlir::Block *afterBlock = builder.createBlock(&whileOp.getAfter());
   afterBlock->addArgument(resultType, loc);
@@ -979,6 +1047,60 @@ CUDAIntrinsicLibrary::genBarrierTryWaitSleep(mlir::Type resultType,
              "}",
              {})
       .getResult(0);
+}
+
+static void insertValueAtPos(fir::FirOpBuilder &builder, mlir::Location loc,
+                             fir::RecordType recTy, mlir::Value base,
+                             mlir::Value dim, unsigned fieldPos) {
+  auto fieldName = recTy.getTypeList()[fieldPos].first;
+  mlir::Type fieldTy = recTy.getTypeList()[fieldPos].second;
+  mlir::Type fieldIndexType = fir::FieldType::get(base.getContext());
+  mlir::Value fieldIndex =
+      fir::FieldIndexOp::create(builder, loc, fieldIndexType, fieldName, recTy,
+                                /*typeParams=*/mlir::ValueRange{});
+  mlir::Value coord = fir::CoordinateOp::create(
+      builder, loc, builder.getRefType(fieldTy), base, fieldIndex);
+  fir::StoreOp::create(builder, loc, dim, coord);
+}
+
+// CLUSTER_BLOCK_INDEX
+mlir::Value
+CUDAIntrinsicLibrary::genClusterBlockIndex(mlir::Type resultType,
+                                           llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0);
+  auto recTy = mlir::cast<fir::RecordType>(resultType);
+  assert(recTy && "RecordType expepected");
+  mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
+  mlir::Type i32Ty = builder.getI32Type();
+  mlir::Value x = mlir::NVVM::BlockInClusterIdXOp::create(builder, loc, i32Ty);
+  mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
+  x = mlir::arith::AddIOp::create(builder, loc, x, one);
+  insertValueAtPos(builder, loc, recTy, res, x, 0);
+  mlir::Value y = mlir::NVVM::BlockInClusterIdYOp::create(builder, loc, i32Ty);
+  y = mlir::arith::AddIOp::create(builder, loc, y, one);
+  insertValueAtPos(builder, loc, recTy, res, y, 1);
+  mlir::Value z = mlir::NVVM::BlockInClusterIdZOp::create(builder, loc, i32Ty);
+  z = mlir::arith::AddIOp::create(builder, loc, z, one);
+  insertValueAtPos(builder, loc, recTy, res, z, 2);
+  return res;
+}
+
+// CLUSTER_DIM_BLOCKS
+mlir::Value
+CUDAIntrinsicLibrary::genClusterDimBlocks(mlir::Type resultType,
+                                          llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0);
+  auto recTy = mlir::cast<fir::RecordType>(resultType);
+  assert(recTy && "RecordType expepected");
+  mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
+  mlir::Type i32Ty = builder.getI32Type();
+  mlir::Value x = mlir::NVVM::ClusterDimBlocksXOp::create(builder, loc, i32Ty);
+  insertValueAtPos(builder, loc, recTy, res, x, 0);
+  mlir::Value y = mlir::NVVM::ClusterDimBlocksYOp::create(builder, loc, i32Ty);
+  insertValueAtPos(builder, loc, recTy, res, y, 1);
+  mlir::Value z = mlir::NVVM::ClusterDimBlocksZOp::create(builder, loc, i32Ty);
+  insertValueAtPos(builder, loc, recTy, res, z, 2);
+  return res;
 }
 
 // FENCE_PROXY_ASYNC
@@ -1080,42 +1202,39 @@ void CUDAIntrinsicLibrary::genSyncThreads(
 mlir::Value
 CUDAIntrinsicLibrary::genSyncThreadsAnd(mlir::Type resultType,
                                         llvm::ArrayRef<mlir::Value> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.and";
-  mlir::MLIRContext *context = builder.getContext();
-  mlir::Type i32 = builder.getI32Type();
-  mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {resultType}, {i32});
-  auto funcOp = builder.createFunction(loc, funcName, ftype);
-  mlir::Value arg = builder.createConvert(loc, i32, args[0]);
-  return fir::CallOp::create(builder, loc, funcOp, {arg}).getResult(0);
+  mlir::Value arg = builder.createConvert(loc, builder.getI32Type(), args[0]);
+  return mlir::NVVM::BarrierOp::create(
+             builder, loc, resultType, {}, {},
+             mlir::NVVM::BarrierReductionAttr::get(
+                 builder.getContext(), mlir::NVVM::BarrierReduction::AND),
+             arg)
+      .getResult(0);
 }
 
 // SYNCTHREADS_COUNT
 mlir::Value
 CUDAIntrinsicLibrary::genSyncThreadsCount(mlir::Type resultType,
                                           llvm::ArrayRef<mlir::Value> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.popc";
-  mlir::MLIRContext *context = builder.getContext();
-  mlir::Type i32 = builder.getI32Type();
-  mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {resultType}, {i32});
-  auto funcOp = builder.createFunction(loc, funcName, ftype);
-  mlir::Value arg = builder.createConvert(loc, i32, args[0]);
-  return fir::CallOp::create(builder, loc, funcOp, {arg}).getResult(0);
+  mlir::Value arg = builder.createConvert(loc, builder.getI32Type(), args[0]);
+  return mlir::NVVM::BarrierOp::create(
+             builder, loc, resultType, {}, {},
+             mlir::NVVM::BarrierReductionAttr::get(
+                 builder.getContext(), mlir::NVVM::BarrierReduction::POPC),
+             arg)
+      .getResult(0);
 }
 
 // SYNCTHREADS_OR
 mlir::Value
 CUDAIntrinsicLibrary::genSyncThreadsOr(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.or";
-  mlir::MLIRContext *context = builder.getContext();
-  mlir::Type i32 = builder.getI32Type();
-  mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {resultType}, {i32});
-  auto funcOp = builder.createFunction(loc, funcName, ftype);
-  mlir::Value arg = builder.createConvert(loc, i32, args[0]);
-  return fir::CallOp::create(builder, loc, funcOp, {arg}).getResult(0);
+  mlir::Value arg = builder.createConvert(loc, builder.getI32Type(), args[0]);
+  return mlir::NVVM::BarrierOp::create(
+             builder, loc, resultType, {}, {},
+             mlir::NVVM::BarrierReductionAttr::get(
+                 builder.getContext(), mlir::NVVM::BarrierReduction::OR),
+             arg)
+      .getResult(0);
 }
 
 // SYNCWARP
@@ -1123,6 +1242,44 @@ void CUDAIntrinsicLibrary::genSyncWarp(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
   mlir::NVVM::SyncWarpOp::create(builder, loc, fir::getBase(args[0]));
+}
+
+// THIS_CLUSTER
+mlir::Value
+CUDAIntrinsicLibrary::genThisCluster(mlir::Type resultType,
+                                     llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0);
+  auto recTy = mlir::cast<fir::RecordType>(resultType);
+  assert(recTy && "RecordType expepected");
+  mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
+  mlir::Type i32Ty = builder.getI32Type();
+
+  // SIZE
+  mlir::Value size = mlir::NVVM::ClusterDim::create(builder, loc, i32Ty);
+  auto sizeFieldName = recTy.getTypeList()[1].first;
+  mlir::Type sizeFieldTy = recTy.getTypeList()[1].second;
+  mlir::Type fieldIndexType = fir::FieldType::get(resultType.getContext());
+  mlir::Value sizeFieldIndex = fir::FieldIndexOp::create(
+      builder, loc, fieldIndexType, sizeFieldName, recTy,
+      /*typeParams=*/mlir::ValueRange{});
+  mlir::Value sizeCoord = fir::CoordinateOp::create(
+      builder, loc, builder.getRefType(sizeFieldTy), res, sizeFieldIndex);
+  fir::StoreOp::create(builder, loc, size, sizeCoord);
+
+  // RANK
+  mlir::Value rank = mlir::NVVM::ClusterId::create(builder, loc, i32Ty);
+  mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
+  rank = mlir::arith::AddIOp::create(builder, loc, rank, one);
+  auto rankFieldName = recTy.getTypeList()[2].first;
+  mlir::Type rankFieldTy = recTy.getTypeList()[2].second;
+  mlir::Value rankFieldIndex = fir::FieldIndexOp::create(
+      builder, loc, fieldIndexType, rankFieldName, recTy,
+      /*typeParams=*/mlir::ValueRange{});
+  mlir::Value rankCoord = fir::CoordinateOp::create(
+      builder, loc, builder.getRefType(rankFieldTy), res, rankFieldIndex);
+  fir::StoreOp::create(builder, loc, rank, rankCoord);
+
+  return res;
 }
 
 // THIS_GRID
@@ -1336,6 +1493,13 @@ void CUDAIntrinsicLibrary::genTMABulkG2S(
       builder, loc, dst, src, barrier, fir::getBase(args[3]), {}, {});
 }
 
+static void setAlignment(mlir::Value ptr, unsigned alignment) {
+  if (auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(ptr.getDefiningOp()))
+    if (auto sharedOp = mlir::dyn_cast<cuf::SharedMemoryOp>(
+            declareOp.getMemref().getDefiningOp()))
+      sharedOp.setAlignment(alignment);
+}
+
 static void genTMABulkLoad(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value barrier, mlir::Value src,
                            mlir::Value dst, mlir::Value nelem,
@@ -1343,6 +1507,7 @@ static void genTMABulkLoad(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Value size = mlir::arith::MulIOp::create(builder, loc, nelem, eleSize);
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
   barrier = builder.createConvert(loc, llvmPtrTy, barrier);
+  setAlignment(dst, kTMAAlignment);
   dst = builder.createConvert(loc, llvmPtrTy, dst);
   src = builder.createConvert(loc, llvmPtrTy, src);
   mlir::NVVM::InlinePtxOp::create(
@@ -1446,6 +1611,7 @@ static void genTMABulkStore(fir::FirOpBuilder &builder, mlir::Location loc,
                             mlir::Value src, mlir::Value dst, mlir::Value count,
                             mlir::Value eleSize) {
   mlir::Value size = mlir::arith::MulIOp::create(builder, loc, eleSize, count);
+  setAlignment(src, kTMAAlignment);
   src = convertPtrToNVVMSpace(builder, loc, src,
                               mlir::NVVM::NVVMMemorySpace::Shared);
   dst = convertPtrToNVVMSpace(builder, loc, dst,
