@@ -644,7 +644,7 @@ private:
       // Check if there is even a line after the inner result.
       if (auto Distance = std::distance(I, E);
           static_cast<decltype(N)>(Distance) <= N) {
-         return 0;
+        return 0;
       }
       // Check that the line after the inner result starts with a closing brace
       // which we are permitted to merge into one line.
