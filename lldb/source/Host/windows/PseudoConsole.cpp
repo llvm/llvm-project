@@ -10,7 +10,9 @@
 
 #include <mutex>
 
+#include "lldb/Host/windows/PipeWindows.h"
 #include "lldb/Host/windows/windows.h"
+#include "lldb/Utility/LLDBLog.h"
 
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Errno.h"
@@ -26,6 +28,13 @@ typedef VOID(WINAPI *ClosePseudoConsole_t)(HPCON hPC);
 struct Kernel32 {
   Kernel32() {
     hModule = LoadLibraryW(L"kernel32.dll");
+    if (!hModule) {
+      llvm::Error err = llvm::errorCodeToError(
+          std::error_code(GetLastError(), std::system_category()));
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Host), std::move(err),
+                     "Could not load kernel32: {0}");
+      return;
+    }
     CreatePseudoConsole_ =
         (CreatePseudoConsole_t)GetProcAddress(hModule, "CreatePseudoConsole");
     ClosePseudoConsole_ =
@@ -35,12 +44,16 @@ struct Kernel32 {
 
   HRESULT CreatePseudoConsole(COORD size, HANDLE hInput, HANDLE hOutput,
                               DWORD dwFlags, HPCON *phPC) {
+    assert(CreatePseudoConsole_ && "CreatePseudoConsole is not available!");
     return CreatePseudoConsole_(size, hInput, hOutput, dwFlags, phPC);
   }
 
-  VOID ClosePseudoConsole(HPCON hPC) { return ClosePseudoConsole_(hPC); }
+  VOID ClosePseudoConsole(HPCON hPC) {
+    assert(ClosePseudoConsole_ && "ClosePseudoConsole is not available!");
+    return ClosePseudoConsole_(hPC);
+  }
 
-  bool IsAvailable() { return isAvailable; }
+  bool IsConPTYAvailable() { return isAvailable; }
 
 private:
   HMODULE hModule;
@@ -52,7 +65,7 @@ private:
 static Kernel32 kernel32;
 
 llvm::Error PseudoConsole::OpenPseudoConsole() {
-  if (!kernel32.IsAvailable())
+  if (!kernel32.IsConPTYAvailable())
     return llvm::make_error<llvm::StringError>("ConPTY is not available",
                                                llvm::errc::io_error);
   HRESULT hr;
