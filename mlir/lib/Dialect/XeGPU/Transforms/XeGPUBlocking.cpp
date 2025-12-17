@@ -413,14 +413,14 @@ void XeGPUBlockingPass::runOnOperation() {
     // Remove the layout attributes cached per operands.
     for (OpOperand &opr : op->getOpOperands()) {
       std::string name = xegpu::getLayoutName(opr);
-      if (op->hasAttrOfType<xegpu::LayoutAttr>(name))
+      if (op->hasAttrOfType<xegpu::DistributeLayoutAttr>(name))
         op->removeAttr(name);
     }
 
     // Update the layout attributes per result.
     for (OpResult result : op->getOpResults()) {
       std::string name = xegpu::getLayoutName(result);
-      if (auto layout = op->getAttrOfType<xegpu::LayoutAttr>(name)) {
+      if (auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(name)) {
         op->removeAttr(name);
         if (!isa<LoopLikeOpInterface>(op))
           xegpu::setDistributeLayoutAttr(result, layout.dropInstData());
