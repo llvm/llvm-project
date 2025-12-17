@@ -36,8 +36,8 @@ As another example, using an LLM to generate documentation, which a contributor
 manually reviews for correctness, edits, and then posts as a PR, is an approved
 use of tools under this policy.
 
-This policy extends beyond code contributions and includes, but is not limited
-to, the following kinds of contributions:
+This policy includes, but is not limited to, the following kinds of
+contributions:
 
 - Code, usually in the form of a pull request
 - RFCs or design proposals
@@ -90,10 +90,10 @@ help new contributors learn.
 
 ## Handling Violations
 
-If a maintainer judges that a contribution is *extractive* (i.e. it is
-generated with tool-assistance or simply requires significant revision), they
-should copy-paste the following response, add the `extractive` label if
-applicable, and refrain from further engagement:
+If a maintainer judges that a contribution is *extractive* (i.e. it doesn't
+comply with this policy), they should copy-paste the following response to
+request changes, add the `extractive` label if applicable, and refrain from
+further engagement:
 
     This PR appears to be extractive, and requires additional justification for
     why it is valuable enough to the project for us to review it. Please see
