@@ -7325,6 +7325,15 @@ void testBasicPointerAlias(Foo *f) {
   ptr->mu.Unlock();       // unlock through alias
 }
 
+void testCastPointerAlias(Foo *f) {
+  // Cast to void* from unsigned long to test non-pointer cast indirection.
+  void *priv = (void *)(__UINTPTR_TYPE__)(&f->mu);
+  f->mu.Lock();
+  f->data = 42;
+  auto *mu = (Mutex *)priv;
+  mu->Unlock();
+}
+
 void testBasicPointerAliasNoInit(Foo *f) {
   Foo *ptr;
 

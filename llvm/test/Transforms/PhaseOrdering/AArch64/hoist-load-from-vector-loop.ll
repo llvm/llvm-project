@@ -59,7 +59,7 @@ define void @hoist_invariant_load(ptr %invariant_ptr, i64 %num_elements, ptr %ar
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label %[[LOOP_LATCH_PREHEADER6]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[LOOP_LATCH_PREHEADER6]]:
-; CHECK-NEXT:    [[I2_PH:%.*]] = phi i64 [ 0, %[[VECTOR_MEMCHECK]] ], [ 0, %[[LOOP_LATCH_PREHEADER]] ], [ [[N_VEC]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[I2_PH:%.*]] = phi i64 [ 0, %[[LOOP_LATCH_PREHEADER]] ], [ 0, %[[VECTOR_MEMCHECK]] ], [ [[N_VEC]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_LATCH:.*]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[I3:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP_LATCH]] ], [ [[I2_PH]], %[[LOOP_LATCH_PREHEADER6]] ]

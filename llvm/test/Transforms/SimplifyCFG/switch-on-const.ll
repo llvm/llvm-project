@@ -17,7 +17,7 @@ define i32 @foo(i64 %x, i64 %y) nounwind {
 ; CHECK-NEXT:    tail call void @bees.a() #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       b:
-; CHECK-NEXT:    [[RETVAL]] = phi i32 [ 0, [[SWITCH]] ], [ 2, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RETVAL]] = phi i32 [ 2, [[ENTRY:%.*]] ], [ 0, [[SWITCH]] ]
 ; CHECK-NEXT:    tail call void @bees.b() #[[ATTR0]]
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;

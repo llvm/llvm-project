@@ -29,7 +29,7 @@ catch.dispatch:                                   ; preds = %if.else, %if.then
 ; added a cleanuppad spill cleanupret unwinding into the catchswitch.
 
 ; CHECK: catch.dispatch:
-; CHECK:  %val = phi i32 [ 2, %if.else ], [ 1, %if.then ]
+; CHECK:  %val = phi i32 [ 1, %if.then ], [ 2, %if.else ]
 ; CHECK:  %[[Pad:.+]] = cleanuppad within none []
 ; CHECK:  %val.spill.addr = getelementptr inbounds %f.Frame, ptr %hdl, i32 0, i32 2
 ; CHECK:  store i32 %val, ptr %val.spill.addr
