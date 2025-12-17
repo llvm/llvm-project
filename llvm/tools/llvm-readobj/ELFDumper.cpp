@@ -454,17 +454,6 @@ protected:
 
 private:
   mutable SmallVector<std::optional<VersionEntry>, 0> VersionMap;
-
-protected:
-  SmallVector<std::string> getFunctionNames(uint64_t FuncAddr) {
-    SmallVector<uint32_t> FuncSymIndexes =
-        this->getSymbolIndexesForFunctionAddress(FuncAddr, std::nullopt);
-    SmallVector<std::string> FuncSymNames;
-    FuncSymNames.reserve(FuncSymIndexes.size());
-    for (uint32_t Index : FuncSymIndexes)
-      FuncSymNames.push_back(this->getStaticSymbolName(Index));
-    return FuncSymNames;
-  }
 };
 
 template <class ELFT>
@@ -8297,8 +8286,18 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     }
   }
 
+  auto GetFunctionNames = [&](uint64_t FuncAddr) {
+    SmallVector<uint32_t> FuncSymIndexes =
+        this->getSymbolIndexesForFunctionAddress(FuncAddr, std::nullopt);
+    SmallVector<std::string> FuncSymNames;
+    FuncSymNames.reserve(FuncSymIndexes.size());
+    for (uint32_t Index : FuncSymIndexes)
+      FuncSymNames.push_back(this->getStaticSymbolName(Index));
+    return FuncSymNames;
+  };
+
   auto PrintNonRelocatableFuncSymbol = [&](uint64_t FuncEntryPC) {
-    SmallVector<std::string> FuncSymNames = this->getFunctionNames(FuncEntryPC);
+    SmallVector<std::string> FuncSymNames = GetFunctionNames(FuncEntryPC);
     if (!FuncSymNames.empty())
       W.printList("Names", FuncSymNames);
     W.printHex("Address", FuncEntryPC);
