@@ -489,7 +489,7 @@ llvm::Value *CodeGenFunction::EmitFP8NeonFMLACall(
 Value *CodeGenFunction::EmitNeonShiftVector(Value *V, llvm::Type *Ty,
                                             bool neg) {
   int SV = cast<ConstantInt>(V)->getSExtValue();
-  return ConstantInt::get(Ty, neg ? -SV : SV);
+  return ConstantInt::getSigned(Ty, neg ? -SV : SV);
 }
 
 Value *CodeGenFunction::EmitFP8NeonCvtCall(unsigned IID, llvm::Type *Ty0,
