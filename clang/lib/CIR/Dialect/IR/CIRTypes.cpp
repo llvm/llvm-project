@@ -841,9 +841,8 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
     return {};
 
   // Parse literal '[', if present, and set the scalability flag accordingly
-  if (odsParser.parseOptionalLSquare().succeeded()) {
+  if (odsParser.parseOptionalLSquare().succeeded())
     isScalabe = true;
-  }
 
   // Parse variable 'size'
   size = mlir::FieldParser<uint64_t>::parse(odsParser);
