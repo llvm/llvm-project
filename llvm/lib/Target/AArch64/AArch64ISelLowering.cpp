@@ -528,8 +528,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SRA_PARTS, MVT::i64, Custom);
   setOperationAction(ISD::SRL_PARTS, MVT::i64, Custom);
 
-  setOperationAction(ISD::FREM, MVT::f32, Expand);
-  setOperationAction(ISD::FREM, MVT::f64, Expand);
+  setOperationAction(ISD::FREM, MVT::f32, LibCall);
+  setOperationAction(ISD::FREM, MVT::f64, LibCall);
 
   setOperationAction(ISD::BUILD_PAIR, MVT::i64, Expand);
 
@@ -552,7 +552,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FMUL, MVT::f128, LibCall);
   setOperationAction(ISD::FNEG, MVT::f128, Expand);
   setOperationAction(ISD::FPOW, MVT::f128, Expand);
-  setOperationAction(ISD::FREM, MVT::f128, Expand);
+  setOperationAction(ISD::FREM, MVT::f128, LibCall);
   setOperationAction(ISD::FRINT, MVT::f128, Expand);
   setOperationAction(ISD::FSIN, MVT::f128, Expand);
   setOperationAction(ISD::FSINCOS, MVT::f128, Expand);
@@ -727,8 +727,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SSUBO_CARRY, MVT::i32, Custom);
   setOperationAction(ISD::SSUBO_CARRY, MVT::i64, Custom);
 
-  setOperationAction(ISD::FSIN, MVT::f32, Expand);
   setOperationAction(ISD::FSIN, MVT::f64, Expand);
+  setOperationAction(ISD::FSIN, MVT::f32, Expand);
   setOperationAction(ISD::FCOS, MVT::f32, Expand);
   setOperationAction(ISD::FCOS, MVT::f64, Expand);
   setOperationAction(ISD::FPOW, MVT::f32, Expand);
