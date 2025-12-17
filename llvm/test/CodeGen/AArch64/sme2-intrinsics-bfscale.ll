@@ -54,3 +54,15 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <v
   %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>  } @llvm.aarch64.sve.fscale.x4.nxv8bf16(<vscale x 8 x bfloat> %zdn1, <vscale x 8 x bfloat> %zdn2, <vscale x 8 x bfloat> %zdn3, <vscale x 8 x bfloat> %zdn4, <vscale x 8 x i16> %zm1, <vscale x 8 x i16> %zm2, <vscale x 8 x i16> %zm3, <vscale x 8 x i16> %zm4)
   ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>  } %res
 }
+
+define <vscale x 8 x bfloat> @bfscale_h(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: bfscale_h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bfscale z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.fscale.nxv8bf16(<vscale x 8 x i1> %pg,
+                                                                      <vscale x 8 x bfloat> %a,
+                                                                      <vscale x 8 x i16> %b)
+  ret <vscale x 8 x bfloat> %out
+}
+

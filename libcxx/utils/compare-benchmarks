@@ -112,13 +112,6 @@ def produce_kpis(data, noise, extrema, series, series_names, meta_candidate, tit
     baseline = series[0]
     for (i, candidate) in enumerate(series[1:], start=1):
         kpis = compute_kpis(baseline, candidate)
-        if i > 1: # after the first series, also generate a relative difference
-            previous_kpis = columns[-1]
-            rel_deltas = [(kpis[k] - previous_kpis[k]) / previous_kpis[k] for k in range(len(kpis))]
-            headers.append('rel Δ')
-            columns.append(rel_deltas)
-            fmt.append('+.2%')
-
         headers.append(series_names[i])
         columns.append(kpis)
         fmt.append('.2%')

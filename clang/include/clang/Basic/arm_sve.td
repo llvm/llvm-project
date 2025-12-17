@@ -796,6 +796,16 @@ def SVSCALE_N_M : SInst<"svscale[_n_{d}]", "dPdK", "hfd", MergeOp1,  "aarch64_sv
 def SVSCALE_N_X : SInst<"svscale[_n_{d}]", "dPdK", "hfd", MergeAny,  "aarch64_sve_fscale", [VerifyRuntimeMode]>;
 def SVSCALE_N_Z : SInst<"svscale[_n_{d}]", "dPdK", "hfd", MergeZero, "aarch64_sve_fscale", [VerifyRuntimeMode]>;
 
+let SVETargetGuard = "sve-bfscale", SMETargetGuard = "sve-bfscale,sme2" in {
+  def SVBFSCALE_M : SInst<"svscale[_{d}]",   "dPdx", "b", MergeOp1,  "aarch64_sve_fscale", [VerifyRuntimeMode]>;
+  def SVBFSCALE_X : SInst<"svscale[_{d}]",   "dPdx", "b", MergeAny,  "aarch64_sve_fscale", [VerifyRuntimeMode]>;
+  def SVBFSCALE_Z : SInst<"svscale[_{d}]",   "dPdx", "b", MergeZero, "aarch64_sve_fscale", [VerifyRuntimeMode]>;
+
+  def SVBFSCALE_N_M : SInst<"svscale[_n_{d}]", "dPdK", "b", MergeOp1,  "aarch64_sve_fscale", [VerifyRuntimeMode]>;
+  def SVBFSCALE_N_X : SInst<"svscale[_n_{d}]", "dPdK", "b", MergeAny,  "aarch64_sve_fscale", [VerifyRuntimeMode]>;
+  def SVBFSCALE_N_Z : SInst<"svscale[_n_{d}]", "dPdK", "b", MergeZero, "aarch64_sve_fscale", [VerifyRuntimeMode]>;
+}
+
 defm SVMAD_F  : SInstZPZZZ<"svmad",  "hfd", "aarch64_sve_fmad",  "aarch64_sve_fmla_u",  [VerifyRuntimeMode, ReverseMergeAnyAccOp]>;
 defm SVMLA_F  : SInstZPZZZ<"svmla",  "hfd", "aarch64_sve_fmla",  "aarch64_sve_fmla_u", [VerifyRuntimeMode]>;
 defm SVMLS_F  : SInstZPZZZ<"svmls",  "hfd", "aarch64_sve_fmls",  "aarch64_sve_fmls_u", [VerifyRuntimeMode]>;
