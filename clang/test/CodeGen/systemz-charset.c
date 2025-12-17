@@ -57,3 +57,18 @@ const char *Unicode = "ÿ";
 // RUN: not %clang_cc1 -fexec-charset invalid %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 // CHECK-ERROR: error: failed to set fexec-charset to 'invalid'
 
+void test1() {
+  printf(__FUNCTION__);
+}
+//CHECK: @__FUNCTION__.test1 = private unnamed_addr constant [6 x i8] c"\A3\85\A2\A3\F1\00"
+
+#define HELLO "Hello "
+#define WORLD "World!"
+#define HELLO_WORLD HELLO WORLD
+const char* hello_macro = HELLO;
+//CHECK: c"\C8\85\93\93\96@\00"
+//CHECK-UTF8 = c"Hello\00"
+
+const char* preprocessor_concatenation = HELLO_WORLD;
+//CHECK: c"\C8\85\93\93\96@\E6\96\99\93\84Z\00"
+//CHECK-UTF8: c"Hello World!\00"
