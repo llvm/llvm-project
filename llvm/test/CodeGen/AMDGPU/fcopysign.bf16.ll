@@ -8051,4 +8051,877 @@ define <4 x bfloat> @v_copysign_out_v4bf16_mag_v4bf16_sign_v4f64(<4 x bfloat> %m
   ret <4 x bfloat> %out
 }
 
+define amdgpu_ps i32 @s_copysign_bf16_0_bf16(bfloat inreg %sign) {
+; GCN-LABEL: s_copysign_bf16_0_bf16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_mul_f32_e64 v0, 1.0, s0
+; GCN-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 0x8000, v0
+; GCN-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN-NEXT:    ; return to shader part epilog
+;
+; GFX7-LABEL: s_copysign_bf16_0_bf16:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    v_mul_f32_e64 v0, 1.0, s0
+; GFX7-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX7-NEXT:    v_and_b32_e32 v0, 0x8000, v0
+; GFX7-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: s_copysign_bf16_0_bf16:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_and_b32 s0, s0, 0x8000
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: s_copysign_bf16_0_bf16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_and_b32 s0, s0, 0x8000
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_copysign_bf16_0_bf16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_and_b32 s0, s0, 0x8000
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_copysign_bf16_0_bf16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_and_b32 s0, s0, 0x8000
+; GFX11-NEXT:    ; return to shader part epilog
+  %op = call bfloat @llvm.copysign.bf16(bfloat 0.0, bfloat %sign)
+  %cast = bitcast bfloat %op to i16
+  %zext = zext i16 %cast to i32
+  ret i32 %zext
+}
+
+define bfloat @v_copysign_bf16_0_bf16(bfloat %sign) {
+; GCN-LABEL: v_copysign_bf16_0_bf16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: v_copysign_bf16_0_bf16:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_copysign_bf16_0_bf16:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    s_movk_i32 s4, 0x7fff
+; GFX8-NEXT:    v_bfi_b32 v0, s4, 0, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_copysign_bf16_0_bf16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_movk_i32 s4, 0x7fff
+; GFX9-NEXT:    v_bfi_b32 v0, s4, 0, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_copysign_bf16_0_bf16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_bfi_b32 v0, 0x7fff, 0, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11TRUE16-LABEL: v_copysign_bf16_0_bf16:
+; GFX11TRUE16:       ; %bb.0:
+; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11TRUE16-NEXT:    v_mov_b16_e32 v1.l, 0
+; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11TRUE16-NEXT:    v_bfi_b32 v0, 0x7fff, v1, v0
+; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11FAKE16-LABEL: v_copysign_bf16_0_bf16:
+; GFX11FAKE16:       ; %bb.0:
+; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11FAKE16-NEXT:    v_bfi_b32 v0, 0x7fff, 0, v0
+; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+  %op = call bfloat @llvm.copysign.bf16(bfloat 0.0, bfloat %sign)
+  ret bfloat %op
+}
+
+define amdgpu_ps i32 @s_copysign_bf16_0_f32(float inreg %sign) {
+; GCN-LABEL: s_copysign_bf16_0_f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_mul_f32_e64 v0, 1.0, s0
+; GCN-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 0x8000, v0
+; GCN-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN-NEXT:    ; return to shader part epilog
+;
+; GFX7-LABEL: s_copysign_bf16_0_f32:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    v_mul_f32_e64 v0, 1.0, s0
+; GFX7-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX7-NEXT:    v_and_b32_e32 v0, 0x8000, v0
+; GFX7-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: s_copysign_bf16_0_f32:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_bfe_u32 s1, s0, 0x10010
+; GFX8-NEXT:    s_add_i32 s1, s1, s0
+; GFX8-NEXT:    s_addk_i32 s1, 0x7fff
+; GFX8-NEXT:    v_cmp_u_f32_e64 s[2:3], s0, s0
+; GFX8-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GFX8-NEXT:    s_cselect_b32 s0, s0, s1
+; GFX8-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX8-NEXT:    s_and_b32 s0, s0, 0x8000
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: s_copysign_bf16_0_f32:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_bfe_u32 s1, s0, 0x10010
+; GFX9-NEXT:    s_add_i32 s1, s1, s0
+; GFX9-NEXT:    s_addk_i32 s1, 0x7fff
+; GFX9-NEXT:    v_cmp_u_f32_e64 s[2:3], s0, s0
+; GFX9-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GFX9-NEXT:    s_cselect_b32 s0, s0, s1
+; GFX9-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX9-NEXT:    s_and_b32 s0, s0, 0x8000
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_copysign_bf16_0_f32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_bfe_u32 s1, s0, 0x10010
+; GFX10-NEXT:    v_cmp_u_f32_e64 s2, s0, s0
+; GFX10-NEXT:    s_add_i32 s1, s1, s0
+; GFX10-NEXT:    s_addk_i32 s1, 0x7fff
+; GFX10-NEXT:    s_and_b32 s2, s2, exec_lo
+; GFX10-NEXT:    s_cselect_b32 s0, s0, s1
+; GFX10-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX10-NEXT:    s_and_b32 s0, s0, 0x8000
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_copysign_bf16_0_f32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_bfe_u32 s1, s0, 0x10010
+; GFX11-NEXT:    v_cmp_u_f32_e64 s2, s0, s0
+; GFX11-NEXT:    s_add_i32 s1, s1, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_addk_i32 s1, 0x7fff
+; GFX11-NEXT:    s_and_b32 s2, s2, exec_lo
+; GFX11-NEXT:    s_cselect_b32 s0, s0, s1
+; GFX11-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_and_b32 s0, s0, 0x8000
+; GFX11-NEXT:    ; return to shader part epilog
+  %sign.trunc = fptrunc float %sign to bfloat
+  %op = call bfloat @llvm.copysign.bf16(bfloat 0.0, bfloat %sign.trunc)
+  %cast = bitcast bfloat %op to i16
+  %zext = zext i16 %cast to i32
+  ret i32 %zext
+}
+
+define bfloat @v_copysign_bf16_0_f32(float %sign) {
+; GCN-LABEL: v_copysign_bf16_0_f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: v_copysign_bf16_0_f32:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_copysign_bf16_0_f32:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX8-NEXT:    s_movk_i32 s4, 0x7fff
+; GFX8-NEXT:    v_bfi_b32 v0, s4, 0, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_copysign_bf16_0_f32:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    s_movk_i32 s4, 0x7fff
+; GFX9-NEXT:    v_bfi_b32 v0, s4, 0, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_copysign_bf16_0_f32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX10-NEXT:    v_bfi_b32 v0, 0x7fff, 0, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11TRUE16-LABEL: v_copysign_bf16_0_f32:
+; GFX11TRUE16:       ; %bb.0:
+; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11TRUE16-NEXT:    v_mov_b16_e32 v1.l, 0
+; GFX11TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11TRUE16-NEXT:    v_bfi_b32 v0, 0x7fff, v1, v0
+; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11FAKE16-LABEL: v_copysign_bf16_0_f32:
+; GFX11FAKE16:       ; %bb.0:
+; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11FAKE16-NEXT:    v_bfi_b32 v0, 0x7fff, 0, v0
+; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+  %sign.trunc = fptrunc float %sign to bfloat
+  %op = call bfloat @llvm.copysign.bf16(bfloat 0.0, bfloat %sign.trunc)
+  ret bfloat %op
+}
+
+define amdgpu_ps i32 @s_copysign_bf16_0_f64(double inreg %sign) {
+; GCN-LABEL: s_copysign_bf16_0_f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_cvt_f32_f64_e32 v0, s[0:1]
+; GCN-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 0x8000, v0
+; GCN-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN-NEXT:    ; return to shader part epilog
+;
+; GFX7-LABEL: s_copysign_bf16_0_f64:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    v_cvt_f32_f64_e32 v0, s[0:1]
+; GFX7-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX7-NEXT:    v_and_b32_e32 v0, 0x8000, v0
+; GFX7-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: s_copysign_bf16_0_f64:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_cvt_f32_f64_e32 v2, s[0:1]
+; GFX8-NEXT:    v_cvt_f64_f32_e32 v[0:1], v2
+; GFX8-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX8-NEXT:    s_bitcmp1_b32 s6, 0
+; GFX8-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; GFX8-NEXT:    v_cmp_nlg_f64_e32 vcc, s[0:1], v[0:1]
+; GFX8-NEXT:    v_cmp_gt_f64_e64 s[2:3], |s[0:1]|, |v[0:1]|
+; GFX8-NEXT:    v_cmp_u_f64_e64 s[0:1], s[0:1], s[0:1]
+; GFX8-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX8-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GFX8-NEXT:    s_cselect_b32 s2, 1, -1
+; GFX8-NEXT:    s_add_i32 s7, s6, s2
+; GFX8-NEXT:    s_and_b64 s[2:3], s[4:5], exec
+; GFX8-NEXT:    s_cselect_b32 s2, s6, s7
+; GFX8-NEXT:    s_bfe_u32 s3, s2, 0x10010
+; GFX8-NEXT:    s_add_i32 s3, s3, s2
+; GFX8-NEXT:    s_addk_i32 s3, 0x7fff
+; GFX8-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GFX8-NEXT:    s_cselect_b32 s0, s2, s3
+; GFX8-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX8-NEXT:    s_and_b32 s0, s0, 0x8000
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: s_copysign_bf16_0_f64:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_cvt_f32_f64_e32 v2, s[0:1]
+; GFX9-NEXT:    v_cvt_f64_f32_e32 v[0:1], v2
+; GFX9-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 0
+; GFX9-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; GFX9-NEXT:    v_cmp_nlg_f64_e32 vcc, s[0:1], v[0:1]
+; GFX9-NEXT:    v_cmp_gt_f64_e64 s[2:3], |s[0:1]|, |v[0:1]|
+; GFX9-NEXT:    v_cmp_u_f64_e64 s[0:1], s[0:1], s[0:1]
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GFX9-NEXT:    s_cselect_b32 s2, 1, -1
+; GFX9-NEXT:    s_add_i32 s7, s6, s2
+; GFX9-NEXT:    s_and_b64 s[2:3], s[4:5], exec
+; GFX9-NEXT:    s_cselect_b32 s2, s6, s7
+; GFX9-NEXT:    s_bfe_u32 s3, s2, 0x10010
+; GFX9-NEXT:    s_add_i32 s3, s3, s2
+; GFX9-NEXT:    s_addk_i32 s3, 0x7fff
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GFX9-NEXT:    s_cselect_b32 s0, s2, s3
+; GFX9-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX9-NEXT:    s_and_b32 s0, s0, 0x8000
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_copysign_bf16_0_f64:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_cvt_f32_f64_e32 v2, s[0:1]
+; GFX10-NEXT:    v_cvt_f64_f32_e32 v[0:1], v2
+; GFX10-NEXT:    v_readfirstlane_b32 s3, v2
+; GFX10-NEXT:    s_bitcmp1_b32 s3, 0
+; GFX10-NEXT:    v_cmp_nlg_f64_e32 vcc_lo, s[0:1], v[0:1]
+; GFX10-NEXT:    v_cmp_gt_f64_e64 s2, |s[0:1]|, |v[0:1]|
+; GFX10-NEXT:    v_cmp_u_f64_e64 s0, s[0:1], s[0:1]
+; GFX10-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX10-NEXT:    s_or_b32 s1, vcc_lo, s1
+; GFX10-NEXT:    s_and_b32 s2, s2, exec_lo
+; GFX10-NEXT:    s_cselect_b32 s2, 1, -1
+; GFX10-NEXT:    s_add_i32 s2, s3, s2
+; GFX10-NEXT:    s_and_b32 s1, s1, exec_lo
+; GFX10-NEXT:    s_cselect_b32 s1, s3, s2
+; GFX10-NEXT:    s_bfe_u32 s2, s1, 0x10010
+; GFX10-NEXT:    s_add_i32 s2, s2, s1
+; GFX10-NEXT:    s_addk_i32 s2, 0x7fff
+; GFX10-NEXT:    s_and_b32 s0, s0, exec_lo
+; GFX10-NEXT:    s_cselect_b32 s0, s1, s2
+; GFX10-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX10-NEXT:    s_and_b32 s0, s0, 0x8000
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_copysign_bf16_0_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_cvt_f32_f64_e32 v2, s[0:1]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_cvt_f64_f32_e32 v[0:1], v2
+; GFX11-NEXT:    v_cmp_nlg_f64_e32 vcc_lo, s[0:1], v[0:1]
+; GFX11-NEXT:    v_cmp_gt_f64_e64 s2, |s[0:1]|, |v[0:1]|
+; GFX11-NEXT:    v_cmp_u_f64_e64 s0, s[0:1], s[0:1]
+; GFX11-NEXT:    v_readfirstlane_b32 s1, v2
+; GFX11-NEXT:    s_bitcmp1_b32 s1, 0
+; GFX11-NEXT:    s_cselect_b32 s3, -1, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_or_b32 s3, vcc_lo, s3
+; GFX11-NEXT:    s_and_b32 s2, s2, exec_lo
+; GFX11-NEXT:    s_cselect_b32 s2, 1, -1
+; GFX11-NEXT:    s_add_i32 s2, s1, s2
+; GFX11-NEXT:    s_and_b32 s3, s3, exec_lo
+; GFX11-NEXT:    s_cselect_b32 s1, s1, s2
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_bfe_u32 s2, s1, 0x10010
+; GFX11-NEXT:    s_add_i32 s2, s2, s1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_addk_i32 s2, 0x7fff
+; GFX11-NEXT:    s_and_b32 s0, s0, exec_lo
+; GFX11-NEXT:    s_cselect_b32 s0, s1, s2
+; GFX11-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_and_b32 s0, s0, 0x8000
+; GFX11-NEXT:    ; return to shader part epilog
+  %sign.trunc = fptrunc double %sign to bfloat
+  %op = call bfloat @llvm.copysign.bf16(bfloat 0.0, bfloat %sign.trunc)
+  %cast = bitcast bfloat %op to i16
+  %zext = zext i16 %cast to i32
+  ret i32 %zext
+}
+
+define bfloat @v_copysign_bf16_0_f64(double %sign) {
+; GCN-LABEL: v_copysign_bf16_0_f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 0x80000000, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: v_copysign_bf16_0_f64:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_and_b32_e32 v0, 0x80000000, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_copysign_bf16_0_f64:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
+; GFX8-NEXT:    s_movk_i32 s4, 0x7fff
+; GFX8-NEXT:    v_bfi_b32 v0, s4, 0, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_copysign_bf16_0_f64:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
+; GFX9-NEXT:    s_movk_i32 s4, 0x7fff
+; GFX9-NEXT:    v_bfi_b32 v0, s4, 0, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_copysign_bf16_0_f64:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
+; GFX10-NEXT:    v_bfi_b32 v0, 0x7fff, 0, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11TRUE16-LABEL: v_copysign_bf16_0_f64:
+; GFX11TRUE16:       ; %bb.0:
+; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0
+; GFX11TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11TRUE16-NEXT:    v_bfi_b32 v0, 0x7fff, v0, v1
+; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11FAKE16-LABEL: v_copysign_bf16_0_f64:
+; GFX11FAKE16:       ; %bb.0:
+; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
+; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11FAKE16-NEXT:    v_bfi_b32 v0, 0x7fff, 0, v0
+; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+  %sign.trunc = fptrunc double %sign to bfloat
+  %op = call bfloat @llvm.copysign.bf16(bfloat 0.0, bfloat %sign.trunc)
+  ret bfloat %op
+}
+
+define amdgpu_ps i32 @s_copysign_v2bf16_0_v2bf16(<2 x bfloat> inreg %sign) {
+; GCN-LABEL: s_copysign_v2bf16_0_v2bf16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_mul_f32_e64 v0, 1.0, s1
+; GCN-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GCN-NEXT:    v_mul_f32_e64 v0, 1.0, s0
+; GCN-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
+; GCN-NEXT:    v_and_b32_e32 v0, 0x80008000, v0
+; GCN-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN-NEXT:    ; return to shader part epilog
+;
+; GFX7-LABEL: s_copysign_v2bf16_0_v2bf16:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    v_mul_f32_e64 v0, 1.0, s1
+; GFX7-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX7-NEXT:    v_mul_f32_e64 v0, 1.0, s0
+; GFX7-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
+; GFX7-NEXT:    v_and_b32_e32 v0, 0x80008000, v0
+; GFX7-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: s_copysign_v2bf16_0_v2bf16:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_mov_b32 s1, 0x7fff7fff
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
+; GFX8-NEXT:    v_bfi_b32 v0, s1, 0, v0
+; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: s_copysign_v2bf16_0_v2bf16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b32 s1, 0x7fff7fff
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_bfi_b32 v0, s1, 0, v0
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_copysign_v2bf16_0_v2bf16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_bfi_b32 v0, 0x7fff7fff, 0, s0
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_copysign_v2bf16_0_v2bf16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff7fff, 0, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    ; return to shader part epilog
+  %op = call <2 x bfloat> @llvm.copysign.v2bf16(<2 x bfloat> zeroinitializer, <2 x bfloat> %sign)
+  %cast = bitcast <2 x bfloat> %op to i32
+  ret i32 %cast
+}
+
+define <2 x bfloat> @v_copysign_v2bf16_0_v2bf16(<2 x bfloat> %sign) {
+; GCN-LABEL: v_copysign_v2bf16_0_v2bf16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    v_and_b32_e32 v1, 0x80000000, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: v_copysign_v2bf16_0_v2bf16:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; GFX7-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GFX7-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; GFX7-NEXT:    v_and_b32_e32 v1, 0x80000000, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_copysign_v2bf16_0_v2bf16:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    s_mov_b32 s4, 0x7fff7fff
+; GFX8-NEXT:    v_bfi_b32 v0, s4, 0, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_copysign_v2bf16_0_v2bf16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b32 s4, 0x7fff7fff
+; GFX9-NEXT:    v_bfi_b32 v0, s4, 0, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_copysign_v2bf16_0_v2bf16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_bfi_b32 v0, 0x7fff7fff, 0, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_copysign_v2bf16_0_v2bf16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff7fff, 0, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %op = call <2 x bfloat> @llvm.copysign.v2bf16(<2 x bfloat> zeroinitializer, <2 x bfloat> %sign)
+  ret <2 x bfloat> %op
+}
+
+define amdgpu_ps i32 @s_copysign_v2bf16_0_v2f32(<2 x float> inreg %sign) {
+; GCN-LABEL: s_copysign_v2bf16_0_v2f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_mul_f32_e64 v0, 1.0, s1
+; GCN-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GCN-NEXT:    v_mul_f32_e64 v0, 1.0, s0
+; GCN-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
+; GCN-NEXT:    v_and_b32_e32 v0, 0x80008000, v0
+; GCN-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN-NEXT:    ; return to shader part epilog
+;
+; GFX7-LABEL: s_copysign_v2bf16_0_v2f32:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    v_mul_f32_e64 v0, 1.0, s1
+; GFX7-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX7-NEXT:    v_mul_f32_e64 v0, 1.0, s0
+; GFX7-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
+; GFX7-NEXT:    v_and_b32_e32 v0, 0x80008000, v0
+; GFX7-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: s_copysign_v2bf16_0_v2f32:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_bfe_u32 s2, s0, 0x10010
+; GFX8-NEXT:    s_add_i32 s2, s2, s0
+; GFX8-NEXT:    s_add_i32 s4, s2, 0x7fff
+; GFX8-NEXT:    v_cmp_u_f32_e64 s[2:3], s0, s0
+; GFX8-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GFX8-NEXT:    s_cselect_b32 s0, s0, s4
+; GFX8-NEXT:    s_bfe_u32 s2, s1, 0x10010
+; GFX8-NEXT:    s_add_i32 s2, s2, s1
+; GFX8-NEXT:    s_add_i32 s4, s2, 0x7fff
+; GFX8-NEXT:    v_cmp_u_f32_e64 s[2:3], s1, s1
+; GFX8-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GFX8-NEXT:    s_cselect_b32 s1, s1, s4
+; GFX8-NEXT:    s_lshr_b32 s1, s1, 16
+; GFX8-NEXT:    s_lshr_b64 s[0:1], s[0:1], 16
+; GFX8-NEXT:    s_mov_b32 s1, 0x7fff7fff
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
+; GFX8-NEXT:    v_bfi_b32 v0, s1, 0, v0
+; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: s_copysign_v2bf16_0_v2f32:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_bfe_u32 s2, s1, 0x10010
+; GFX9-NEXT:    s_add_i32 s2, s2, s1
+; GFX9-NEXT:    s_or_b32 s4, s1, 0x400000
+; GFX9-NEXT:    s_add_i32 s5, s2, 0x7fff
+; GFX9-NEXT:    v_cmp_u_f32_e64 s[2:3], s1, s1
+; GFX9-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GFX9-NEXT:    s_cselect_b32 s1, s4, s5
+; GFX9-NEXT:    s_lshr_b32 s2, s1, 16
+; GFX9-NEXT:    s_bfe_u32 s1, s0, 0x10010
+; GFX9-NEXT:    s_add_i32 s1, s1, s0
+; GFX9-NEXT:    s_or_b32 s3, s0, 0x400000
+; GFX9-NEXT:    s_add_i32 s4, s1, 0x7fff
+; GFX9-NEXT:    v_cmp_u_f32_e64 s[0:1], s0, s0
+; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GFX9-NEXT:    s_cselect_b32 s0, s3, s4
+; GFX9-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX9-NEXT:    s_pack_ll_b32_b16 s0, s0, s2
+; GFX9-NEXT:    s_mov_b32 s1, 0x7fff7fff
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_bfi_b32 v0, s1, 0, v0
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_copysign_v2bf16_0_v2f32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_bfe_u32 s2, s1, 0x10010
+; GFX10-NEXT:    v_cmp_u_f32_e64 s3, s1, s1
+; GFX10-NEXT:    s_add_i32 s2, s2, s1
+; GFX10-NEXT:    s_bitset1_b32 s1, 22
+; GFX10-NEXT:    s_addk_i32 s2, 0x7fff
+; GFX10-NEXT:    s_and_b32 s3, s3, exec_lo
+; GFX10-NEXT:    s_cselect_b32 s1, s1, s2
+; GFX10-NEXT:    s_bfe_u32 s2, s0, 0x10010
+; GFX10-NEXT:    v_cmp_u_f32_e64 s3, s0, s0
+; GFX10-NEXT:    s_add_i32 s2, s2, s0
+; GFX10-NEXT:    s_lshr_b32 s1, s1, 16
+; GFX10-NEXT:    s_bitset1_b32 s0, 22
+; GFX10-NEXT:    s_addk_i32 s2, 0x7fff
+; GFX10-NEXT:    s_and_b32 s3, s3, exec_lo
+; GFX10-NEXT:    s_cselect_b32 s0, s0, s2
+; GFX10-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX10-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
+; GFX10-NEXT:    v_bfi_b32 v0, 0x7fff7fff, 0, s0
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_copysign_v2bf16_0_v2f32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_bfe_u32 s2, s1, 0x10010
+; GFX11-NEXT:    v_cmp_u_f32_e64 s3, s1, s1
+; GFX11-NEXT:    s_add_i32 s2, s2, s1
+; GFX11-NEXT:    s_bitset1_b32 s1, 22
+; GFX11-NEXT:    s_addk_i32 s2, 0x7fff
+; GFX11-NEXT:    s_and_b32 s3, s3, exec_lo
+; GFX11-NEXT:    s_cselect_b32 s1, s1, s2
+; GFX11-NEXT:    s_bfe_u32 s2, s0, 0x10010
+; GFX11-NEXT:    v_cmp_u_f32_e64 s3, s0, s0
+; GFX11-NEXT:    s_add_i32 s2, s2, s0
+; GFX11-NEXT:    s_lshr_b32 s1, s1, 16
+; GFX11-NEXT:    s_bitset1_b32 s0, 22
+; GFX11-NEXT:    s_addk_i32 s2, 0x7fff
+; GFX11-NEXT:    s_and_b32 s3, s3, exec_lo
+; GFX11-NEXT:    s_cselect_b32 s0, s0, s2
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff7fff, 0, s0
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    ; return to shader part epilog
+  %sign.trunc = fptrunc <2 x float> %sign to <2 x bfloat>
+  %op = call <2 x bfloat> @llvm.copysign.v2bf16(<2 x bfloat> zeroinitializer, <2 x bfloat> %sign.trunc)
+  %cast = bitcast <2 x bfloat> %op to i32
+  ret i32 %cast
+}
+
+define <2 x bfloat> @v_copysign_v2bf16_0_v2bf32(<2 x float> %sign) {
+; GCN-LABEL: v_copysign_v2bf16_0_v2bf32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    v_and_b32_e32 v1, 0x80000000, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: v_copysign_v2bf16_0_v2bf32:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; GFX7-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GFX7-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; GFX7-NEXT:    v_and_b32_e32 v1, 0x80000000, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_copysign_v2bf16_0_v2bf32:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_bfe_u32 v2, v0, 16, 1
+; GFX8-NEXT:    v_add_u32_e32 v2, vcc, v2, v0
+; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 0x7fff, v2
+; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GFX8-NEXT:    v_bfe_u32 v2, v1, 16, 1
+; GFX8-NEXT:    v_add_u32_e32 v2, vcc, v2, v1
+; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 0x7fff, v2
+; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
+; GFX8-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX8-NEXT:    v_alignbit_b32 v0, v1, v0, 16
+; GFX8-NEXT:    s_mov_b32 s4, 0x7fff7fff
+; GFX8-NEXT:    v_bfi_b32 v0, s4, 0, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_copysign_v2bf16_0_v2bf32:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_bfe_u32 v2, v0, 16, 1
+; GFX9-NEXT:    s_movk_i32 s4, 0x7fff
+; GFX9-NEXT:    v_add3_u32 v2, v2, v0, s4
+; GFX9-NEXT:    v_or_b32_e32 v3, 0x400000, v0
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
+; GFX9-NEXT:    v_bfe_u32 v2, v1, 16, 1
+; GFX9-NEXT:    v_add3_u32 v2, v2, v1, s4
+; GFX9-NEXT:    v_or_b32_e32 v3, 0x400000, v1
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
+; GFX9-NEXT:    s_mov_b32 s4, 0x7060302
+; GFX9-NEXT:    v_perm_b32 v0, v1, v0, s4
+; GFX9-NEXT:    s_mov_b32 s4, 0x7fff7fff
+; GFX9-NEXT:    v_bfi_b32 v0, s4, 0, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_copysign_v2bf16_0_v2bf32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_bfe_u32 v2, v0, 16, 1
+; GFX10-NEXT:    v_bfe_u32 v3, v1, 16, 1
+; GFX10-NEXT:    v_or_b32_e32 v4, 0x400000, v0
+; GFX10-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
+; GFX10-NEXT:    v_or_b32_e32 v5, 0x400000, v1
+; GFX10-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
+; GFX10-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc_lo
+; GFX10-NEXT:    v_cmp_u_f32_e32 vcc_lo, v1, v1
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, v3, v5, vcc_lo
+; GFX10-NEXT:    v_perm_b32 v0, v1, v0, 0x7060302
+; GFX10-NEXT:    v_bfi_b32 v0, 0x7fff7fff, 0, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11TRUE16-LABEL: v_copysign_v2bf16_0_v2bf32:
+; GFX11TRUE16:       ; %bb.0:
+; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11TRUE16-NEXT:    v_bfe_u32 v2, v0, 16, 1
+; GFX11TRUE16-NEXT:    v_bfe_u32 v3, v1, 16, 1
+; GFX11TRUE16-NEXT:    v_or_b32_e32 v4, 0x400000, v0
+; GFX11TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
+; GFX11TRUE16-NEXT:    v_or_b32_e32 v5, 0x400000, v1
+; GFX11TRUE16-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
+; GFX11TRUE16-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
+; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11TRUE16-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc_lo
+; GFX11TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v1, v1
+; GFX11TRUE16-NEXT:    v_cndmask_b32_e32 v1, v3, v5, vcc_lo
+; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
+; GFX11TRUE16-NEXT:    v_bfi_b32 v0, 0x7fff7fff, 0, v1
+; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11FAKE16-LABEL: v_copysign_v2bf16_0_v2bf32:
+; GFX11FAKE16:       ; %bb.0:
+; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11FAKE16-NEXT:    v_bfe_u32 v2, v0, 16, 1
+; GFX11FAKE16-NEXT:    v_bfe_u32 v3, v1, 16, 1
+; GFX11FAKE16-NEXT:    v_or_b32_e32 v4, 0x400000, v0
+; GFX11FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
+; GFX11FAKE16-NEXT:    v_or_b32_e32 v5, 0x400000, v1
+; GFX11FAKE16-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
+; GFX11FAKE16-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
+; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11FAKE16-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc_lo
+; GFX11FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v1, v1
+; GFX11FAKE16-NEXT:    v_cndmask_b32_e32 v1, v3, v5, vcc_lo
+; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x7060302
+; GFX11FAKE16-NEXT:    v_bfi_b32 v0, 0x7fff7fff, 0, v0
+; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+  %sign.trunc = fptrunc <2 x float> %sign to <2 x bfloat>
+  %op = call <2 x bfloat> @llvm.copysign.v2bf16(<2 x bfloat> zeroinitializer, <2 x bfloat> %sign.trunc)
+  ret <2 x bfloat> %op
+}
+
+define amdgpu_ps i32 @s_copysign_v2bf16_0_v2f64(<2 x double> inreg %sign) {
+; GCN-LABEL: s_copysign_v2bf16_0_v2f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_and_b32 s0, s1, 0x80000000
+; GCN-NEXT:    s_and_b32 s1, s3, 0x80000000
+; GCN-NEXT:    s_lshr_b32 s1, s1, 16
+; GCN-NEXT:    s_lshr_b64 s[0:1], s[0:1], 16
+; GCN-NEXT:    ; return to shader part epilog
+;
+; GFX7-LABEL: s_copysign_v2bf16_0_v2f64:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_and_b32 s0, s1, 0x80000000
+; GFX7-NEXT:    s_and_b32 s1, s3, 0x80000000
+; GFX7-NEXT:    s_lshr_b32 s1, s1, 16
+; GFX7-NEXT:    s_lshr_b64 s[0:1], s[0:1], 16
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: s_copysign_v2bf16_0_v2f64:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_lshl_b32 s0, s3, 16
+; GFX8-NEXT:    s_and_b32 s1, s1, 0x8000
+; GFX8-NEXT:    s_or_b32 s0, s1, s0
+; GFX8-NEXT:    s_mov_b32 s1, 0x7fff7fff
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
+; GFX8-NEXT:    v_bfi_b32 v0, s1, 0, v0
+; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: s_copysign_v2bf16_0_v2f64:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_pack_ll_b32_b16 s0, s1, s3
+; GFX9-NEXT:    s_mov_b32 s1, 0x7fff7fff
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_bfi_b32 v0, s1, 0, v0
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_copysign_v2bf16_0_v2f64:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_pack_ll_b32_b16 s0, s1, s3
+; GFX10-NEXT:    v_bfi_b32 v0, 0x7fff7fff, 0, s0
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_copysign_v2bf16_0_v2f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s1, s3
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff7fff, 0, s0
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    ; return to shader part epilog
+  %sign.trunc = fptrunc <2 x double> %sign to <2 x bfloat>
+  %op = call <2 x bfloat> @llvm.copysign.v2bf16(<2 x bfloat> zeroinitializer, <2 x bfloat> %sign.trunc)
+  %cast = bitcast <2 x bfloat> %op to i32
+  ret i32 %cast
+}
+
+define <2 x bfloat> @v_copysign_v2bf16_0_v2bf64(<2 x double> %sign) {
+; GCN-LABEL: v_copysign_v2bf16_0_v2bf64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 0x80000000, v1
+; GCN-NEXT:    v_and_b32_e32 v1, 0x80000000, v3
+; GCN-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GCN-NEXT:    v_alignbit_b32 v1, v1, v0, 16
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 16, v1
+; GCN-NEXT:    v_and_b32_e32 v1, 0x80000000, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: v_copysign_v2bf16_0_v2bf64:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_and_b32_e32 v0, 0x80000000, v1
+; GFX7-NEXT:    v_and_b32_e32 v1, 0x80000000, v3
+; GFX7-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX7-NEXT:    v_alignbit_b32 v1, v1, v0, 16
+; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v1
+; GFX7-NEXT:    v_and_b32_e32 v1, 0x80000000, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_copysign_v2bf16_0_v2bf64:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v3
+; GFX8-NEXT:    v_and_b32_e32 v1, 0x8000, v1
+; GFX8-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX8-NEXT:    s_mov_b32 s4, 0x7fff7fff
+; GFX8-NEXT:    v_bfi_b32 v0, s4, 0, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_copysign_v2bf16_0_v2bf64:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-NEXT:    v_perm_b32 v0, v3, v1, s4
+; GFX9-NEXT:    s_mov_b32 s4, 0x7fff7fff
+; GFX9-NEXT:    v_bfi_b32 v0, s4, 0, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_copysign_v2bf16_0_v2bf64:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_perm_b32 v0, v3, v1, 0x5040100
+; GFX10-NEXT:    v_bfi_b32 v0, 0x7fff7fff, 0, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11TRUE16-LABEL: v_copysign_v2bf16_0_v2bf64:
+; GFX11TRUE16:       ; %bb.0:
+; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11TRUE16-NEXT:    v_mov_b16_e32 v1.h, v3.l
+; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11TRUE16-NEXT:    v_bfi_b32 v0, 0x7fff7fff, 0, v1
+; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11FAKE16-LABEL: v_copysign_v2bf16_0_v2bf64:
+; GFX11FAKE16:       ; %bb.0:
+; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11FAKE16-NEXT:    v_perm_b32 v0, v3, v1, 0x5040100
+; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11FAKE16-NEXT:    v_bfi_b32 v0, 0x7fff7fff, 0, v0
+; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+  %sign.trunc = fptrunc <2 x double> %sign to <2 x bfloat>
+  %op = call <2 x bfloat> @llvm.copysign.v2bf16(<2 x bfloat> zeroinitializer, <2 x bfloat> %sign.trunc)
+  ret <2 x bfloat> %op
+}
+
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
