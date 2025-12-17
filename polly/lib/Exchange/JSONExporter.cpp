@@ -722,6 +722,9 @@ void polly::runImportJSON(Scop &S, DependenceAnalysis::Result &DA) {
   if (!importScop(S, D, DL, &NewAccessStrings))
     report_fatal_error("Tried to import a malformed jscop file.");
 
+  // Dependences must be recomputed for the new access functions
+  DA.abandonDependences();
+
   if (PollyPrintImportJscop) {
     outs()
         << "Printing analysis 'Polly - Print Scop import result' for region: '"
