@@ -432,7 +432,7 @@ define i32 @test9(i1 %cond, i2 %val) {
 ; CHECK-NEXT:    [[RES1:%.*]] = call i32 @case1()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       case.D:
-; CHECK-NEXT:    [[DELTA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 20, [[LEAFBLOCK]] ]
+; CHECK-NEXT:    [[DELTA:%.*]] = phi i32 [ 20, [[LEAFBLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[RESD_TMP:%.*]] = call i32 @caseD()
 ; CHECK-NEXT:    [[RESD:%.*]] = add i32 [[RESD_TMP]], [[DELTA]]
 ; CHECK-NEXT:    br label [[EXIT]]
