@@ -721,10 +721,11 @@ public:
   /// This applies to ALL direct methods (including variadic).
   /// Returns false if OMD is null or not a direct method.
   ///
-  /// Also checks the runtime family, as the attribute objc_direct is only
-  /// respected in the NeXT runtime right now.
+  /// Also checks the runtime family, currently we only support NeXT.
+  /// TODO: Add support for GNUStep as well.
   bool usePreconditionThunk(const ObjCMethodDecl *OMD) const {
     return OMD && OMD->isDirectMethod() &&
+           getLangOpts().ObjCRuntime.allowsDirectDispatch() &&
            getLangOpts().ObjCRuntime.isNeXTFamily() &&
            getCodeGenOpts().ObjCDirectPreconditionThunk;
   }

@@ -4099,10 +4099,16 @@ static void RenderObjCOptions(const ToolChain &TC, const Driver &D,
   // Forward -fobjc-direct-precondition-thunk to cc1
   // Defaults to false and needs explict turn on for now
   // TODO: switch to default true and needs explict turn off in the future.
+  // TODO: add support for other runtimes
   if (Args.hasFlag(options::OPT_fobjc_direct_precondition_thunk,
-                   options::OPT_fno_objc_direct_precondition_thunk, false))
-    CmdArgs.push_back("-fobjc-direct-precondition-thunk");
-
+                   options::OPT_fno_objc_direct_precondition_thunk, false)) {
+    if (Runtime.isNeXTFamily()) {
+      CmdArgs.push_back("-fobjc-direct-precondition-thunk");
+    } else {
+      D.Diag(diag::warn_drv_unsupported_option_for_runtime)
+          << "-fobjc-direct-precondition-thunk" << Runtime.getAsString();
+    }
+  }
   // When ObjectiveC legacy runtime is in effect on MacOSX, turn on the option
   // to do Array/Dictionary subscripting by default.
   if (Arch == llvm::Triple::x86 && T.isMacOSX() &&

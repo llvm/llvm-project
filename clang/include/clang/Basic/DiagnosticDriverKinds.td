@@ -155,6 +155,9 @@ def warn_drv_unsupported_diag_option_for_flang : Warning<
 def warn_drv_unsupported_option_for_processor : Warning<
   "ignoring '%0' option as it is not currently supported for processor '%1'">,
   InGroup<OptionIgnored>;
+def warn_drv_unsupported_option_for_runtime : Warning<
+  "ignoring '%0' option as it is not currently supported for runtime '%1'">,
+  InGroup<OptionIgnored>;
 def warn_drv_unsupported_openmp_library : Warning<
   "the library '%0=%1' is not supported, OpenMP will not be enabled">,
   InGroup<OptionIgnored>;

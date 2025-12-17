@@ -607,6 +607,15 @@
 // CHECK_DIRECT_PRECONDITION_THUNK: "-fobjc-direct-precondition-thunk"
 // CHECK_NO_DIRECT_PRECONDITION_THUNK-NOT: -fobjc-direct-precondition-thunk
 
+// Test that -fobjc-direct-precondition-thunk emits a warning when used with GNU runtime
+// and that the flag is not passed to cc1.
+// RUN: %clang --target=x86_64-linux-gnu -fobjc-runtime=gnustep-2.0 -fobjc-direct-precondition-thunk -### -c -xobjective-c %s 2>&1 | FileCheck -check-prefix=CHECK_GNUSTEP_WARN %s
+// CHECK_GNUSTEP_WARN: warning: ignoring '-fobjc-direct-precondition-thunk' option as it is not currently supported for runtime 'gnustep-2.0' [-Woption-ignored]
+// CHECK_GNUSTEP_WARN-NOT: "-fobjc-direct-precondition-thunk"
+// RUN: %clang --target=x86_64-linux-gnu -fobjc-runtime=gcc -fobjc-direct-precondition-thunk -### -c -xobjective-c %s 2>&1 | FileCheck -check-prefix=CHECK_GCC_WARN %s
+// CHECK_GCC_WARN: warning: ignoring '-fobjc-direct-precondition-thunk' option as it is not currently supported for runtime 'gcc' [-Woption-ignored]
+// CHECK_GCC_WARN-NOT: "-fobjc-direct-precondition-thunk"
+
 // RUN: %clang -### -S -fjmc --target=x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefixes=CHECK_JMC_WARN,CHECK_NOJMC %s
 // RUN: %clang -### -S -fjmc --target=x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefixes=CHECK_JMC_WARN,CHECK_NOJMC %s
 // RUN: %clang -### -S -fjmc -g --target=x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK_JMC %s
