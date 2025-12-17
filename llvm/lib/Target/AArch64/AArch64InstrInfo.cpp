@@ -2544,6 +2544,18 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           .addMemOperand(*MI.memoperands_begin());
     }
   }
+  // To match MSVC. Unlike x86_64 which uses xor instruction to mix the cookie,
+  // we use sub instruction to mix the cookie on aarch64 for keeping the
+  // existing inlining logic intact.
+  if (Subtarget.getTargetTriple().isOSMSVCRT() &&
+      !Subtarget.getTargetLowering()
+           ->getTargetMachine()
+           .Options.EnableGlobalISel) {
+    BuildMI(MBB, MI, DL, get(AArch64::SUBXrx64), Reg)
+        .addReg(AArch64::SP)
+        .addReg(Reg, RegState::Kill)
+        .addImm(AArch64_AM::getArithExtendImm(AArch64_AM::UXTX, 0));
+  }
 
   MBB.erase(MI);
 
