@@ -1662,19 +1662,20 @@ SDValue DAGCombiner::PromoteIntShiftOp(SDValue Op) {
     SDNodeFlags TruncFlags;
     bool Replace = false;
     SDValue N0 = Op.getOperand(0);
-    if (Opc == ISD::SRA)
+    if (Opc == ISD::SRA) {
       N0 = SExtPromoteOperand(N0, PVT);
-    else if (Opc == ISD::SRL)
+    } else if (Opc == ISD::SRL) {
       N0 = ZExtPromoteOperand(N0, PVT);
-    else {
+    } else {
       if (Op->getFlags().hasNoUnsignedWrap()) {
         N0 = ZExtPromoteOperand(N0, PVT);
         TruncFlags = SDNodeFlags::NoUnsignedWrap;
       } else if (Op->getFlags().hasNoSignedWrap()) {
         N0 = SExtPromoteOperand(N0, PVT);
         TruncFlags = SDNodeFlags::NoSignedWrap;
-      } else
+      } else {
         N0 = PromoteOperand(N0, PVT, Replace);
+      }
     }
 
     if (!N0.getNode())
