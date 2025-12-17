@@ -1,11 +1,13 @@
 // RUN: %check_clang_tidy -std=c++11 -check-suffixes=,CXX11 %s bugprone-use-after-move %t -- \
 // RUN:   -config='{CheckOptions: { \
-// RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection" \
+// RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection", \
+// RUN:     bugprone-use-after-move.ReinitializationFunctions: "::custom_reinitialization::Database<>::Reset" \
 // RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- \
 // RUN:   -config='{CheckOptions: { \
-// RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection" \
+// RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection", \
+// RUN:     bugprone-use-after-move.ReinitializationFunctions: "::custom_reinitialization::Database<>::Reset" \
 // RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 
@@ -1703,3 +1705,29 @@ void Run() {
 }
 
 } // namespace custom_invalidation
+
+namespace custom_reinitialization {
+
+template <class T = int>
+struct Database {
+  void Reset(T = T()) {}
+  void Query(T = T()) {}
+};
+
+void Run() {
+  using DB = Database<>;
+
+  DB db1;
+  std::move(db1);
+  db1.Reset();
+  db1.Query();
+
+  DB db2;
+  std::move(db2);
+  db2.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db2' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
+  db2.Reset();
+}
+
+} // namespace custom_reinitialization

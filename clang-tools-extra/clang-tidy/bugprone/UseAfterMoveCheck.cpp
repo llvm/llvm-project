@@ -50,7 +50,8 @@ struct UseAfterMove {
 class UseAfterMoveFinder {
 public:
   UseAfterMoveFinder(ASTContext *TheContext,
-                     llvm::ArrayRef<StringRef> InvalidationFunctions);
+                     llvm::ArrayRef<StringRef> InvalidationFunctions,
+                     llvm::ArrayRef<StringRef> ReinitializationFunctions);
 
   // Within the given code block, finds the first use of 'MovedVariable' that
   // occurs after 'MovingCall' (the expression that performs the move). If a
@@ -74,6 +75,7 @@ private:
 
   ASTContext *Context;
   llvm::ArrayRef<StringRef> InvalidationFunctions;
+  llvm::ArrayRef<StringRef> ReinitializationFunctions;
   std::unique_ptr<ExprSequence> Sequence;
   std::unique_ptr<StmtToBlockMap> BlockMap;
   llvm::SmallPtrSet<const CFGBlock *, 8> Visited;
@@ -101,8 +103,10 @@ static StatementMatcher inDecltypeOrTemplateArg() {
 }
 
 UseAfterMoveFinder::UseAfterMoveFinder(
-    ASTContext *TheContext, llvm::ArrayRef<StringRef> InvalidationFunctions)
-    : Context(TheContext), InvalidationFunctions(InvalidationFunctions) {}
+    ASTContext *TheContext, llvm::ArrayRef<StringRef> InvalidationFunctions,
+    llvm::ArrayRef<StringRef> ReinitializationFunctions)
+    : Context(TheContext), InvalidationFunctions(InvalidationFunctions),
+      ReinitializationFunctions(ReinitializationFunctions) {}
 
 std::optional<UseAfterMove>
 UseAfterMoveFinder::find(Stmt *CodeBlock, const Expr *MovingCall,
@@ -356,6 +360,11 @@ void UseAfterMoveFinder::getReinits(
                cxxMemberCallExpr(
                    on(DeclRefMatcher),
                    callee(cxxMethodDecl(hasAttr(clang::attr::Reinitializes)))),
+               // Methods that are specified in ReinitializationFunctions option.
+               cxxMemberCallExpr(
+                   on(DeclRefMatcher),
+                   callee(cxxMethodDecl(
+                       matchers::matchesAnyListedName(ReinitializationFunctions)))),
                // Passing variable to a function as a non-const pointer.
                callExpr(forEachArgumentWithParam(
                    unaryOperator(hasOperatorName("&"),
@@ -445,11 +454,15 @@ static void emitDiagnostic(const Expr *MovingCall, const DeclRefExpr *MoveArg,
 UseAfterMoveCheck::UseAfterMoveCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       InvalidationFunctions(utils::options::parseStringList(
-          Options.get("InvalidationFunctions", ""))) {}
+          Options.get("InvalidationFunctions", ""))),
+      ReinitializationFunctions(utils::options::parseStringList(
+          Options.get("ReinitializationFunctions", ""))) {}
 
 void UseAfterMoveCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "InvalidationFunctions",
                 utils::options::serializeStringList(InvalidationFunctions));
+  Options.store(Opts, "ReinitializationFunctions",
+                utils::options::serializeStringList(ReinitializationFunctions));
 }
 
 void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
@@ -545,7 +558,8 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   for (Stmt *CodeBlock : CodeBlocks) {
-    UseAfterMoveFinder Finder(Result.Context, InvalidationFunctions);
+    UseAfterMoveFinder Finder(Result.Context, InvalidationFunctions,
+                              ReinitializationFunctions);
     if (auto Use = Finder.find(CodeBlock, MovingCall, Arg))
       emitDiagnostic(MovingCall, Arg, *Use, this, Result.Context,
                      determineMoveType(MoveDecl));

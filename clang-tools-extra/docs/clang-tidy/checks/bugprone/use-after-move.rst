@@ -263,3 +263,9 @@ Options
   arguments to be invalidated (e.g., closing a handle).
   For member functions, the first argument is considered to be the implicit
   object argument (``this``). Default value is an empty string.
+
+.. option:: ReinitializationFunctions
+
+  A semicolon-separated list of names of functions that reinitialize the
+  object. For member functions, the implicit object argument (``this``) is
+  considered to be reinitialized. Default value is an empty string.
