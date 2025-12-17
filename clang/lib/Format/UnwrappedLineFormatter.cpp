@@ -642,9 +642,7 @@ private:
         return 0;
       const auto N = MergedLines + LinesToBeMerged;
       // Check if there is even a line after the inner result.
-      auto Distance = std::distance(I, E);
-      assert(Distance >= 0);
-      if (static_cast<decltype(N)>(Distance) <= N)
+      if (auto Distance = std::distance(I, E); static_cast<decltype(N)>(Distance) <= N)
         return 0;
       // Check that the line after the inner result starts with a closing brace
       // which we are permitted to merge into one line.
