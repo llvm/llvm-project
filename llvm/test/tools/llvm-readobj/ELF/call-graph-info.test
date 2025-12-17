@@ -1,160 +1,162 @@
 ## Tests how --call-graph-info prints the call graph information.
-# RUN: yaml2obj --docnum=1 %s -o %t
-# RUN: llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines --allow-empty -DFILE=%t
-# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines --check-prefix=LLVM -DFILE=%t
-# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines --check-prefix=JSON -DFILE=%t
+
+## Check non-relocatable object file handling.
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readelf --call-graph-info %t1 2>&1 | FileCheck %s --match-full-lines --allow-empty --check-prefix=GNU_NONRELOC -DFILE=%t1
+# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t1 2>&1 | FileCheck %s --match-full-lines --check-prefix=LLVM_NONRELOC -DFILE=%t1
+# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t1 2>&1 | FileCheck %s --match-full-lines --check-prefix=JSON_NONRELOC -DFILE=%t1
 
 ## We do not support GNU format console output for --call-graph-info as it is an LLVM only info.
-# CHECK-NOT: .
+# GNU_NONRELOC-NOT: .
 
-# LLVM:      CallGraph [
-# LLVM-NEXT:     Function {
-# LLVM-NEXT:       Names: [foo]
-# LLVM-NEXT:       Address: 0x1790
-# LLVM-NEXT:       Version: 0
-# LLVM-NEXT:       IsIndirectTarget: Yes
-# LLVM-NEXT:       TypeId: 0x3ECBEEF531F74424
-# LLVM-NEXT:       NumDirectCallees: 0
-# LLVM-NEXT:       DirectCallees [
-# LLVM-NEXT:       ]
-# LLVM-NEXT:       NumIndirectTargetTypeIDs: 0
-# LLVM-NEXT:       IndirectTypeIDs: []
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Function {
-# LLVM-NEXT:       Names: [bar]
-# LLVM-NEXT:       Address: 0x17A0
-# LLVM-NEXT:       Version: 0
-# LLVM-NEXT:       IsIndirectTarget: Yes
-# LLVM-NEXT:       TypeId: 0x3ECBEEF531F74424
-# LLVM-NEXT:       NumDirectCallees: 0
-# LLVM-NEXT:       DirectCallees [
-# LLVM-NEXT:       ]
-# LLVM-NEXT:       NumIndirectTargetTypeIDs: 0
-# LLVM-NEXT:       IndirectTypeIDs: []
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Function {
-# LLVM-NEXT:       Names: [baz]
-# LLVM-NEXT:       Address: 0x17B0
-# LLVM-NEXT:       Version: 0
-# LLVM-NEXT:       IsIndirectTarget: Yes
-# LLVM-NEXT:       TypeId: 0x308E4B8159BC8654
-# LLVM-NEXT:       NumDirectCallees: 0
-# LLVM-NEXT:       DirectCallees [
-# LLVM-NEXT:       ]
-# LLVM-NEXT:       NumIndirectTargetTypeIDs: 0
-# LLVM-NEXT:       IndirectTypeIDs: []
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Function {
-# LLVM-NEXT:       Names: [main]
-# LLVM-NEXT:       Address: 0x17C0
-# LLVM-NEXT:       Version: 0
-# LLVM-NEXT:       IsIndirectTarget: Yes
-# LLVM-NEXT:       TypeId: 0xFA6809609A76AFCA
-# LLVM-NEXT:       NumDirectCallees: 3
-# LLVM-NEXT:       DirectCallees [
-# LLVM-NEXT:         {
-# LLVM-NEXT:           Names: [foo]
-# LLVM-NEXT:           Address: 0x1790
-# LLVM-NEXT:         }
-# LLVM-NEXT:         {
-# LLVM-NEXT:           Names: [bar]
-# LLVM-NEXT:           Address: 0x17A0
-# LLVM-NEXT:         }
-# LLVM-NEXT:         {
-# LLVM-NEXT:           Names: [baz]
-# LLVM-NEXT:           Address: 0x17B0
-# LLVM-NEXT:         }
-# LLVM-NEXT:       ]
-# LLVM-NEXT:       NumIndirectTargetTypeIDs: 2
-# LLVM-NEXT:       IndirectTypeIDs: [0x3ECBEEF531F74424, 0x308E4B8159BC8654]
-# LLVM-NEXT:     }
-# LLVM-NEXT:   ]
+# LLVM_NONRELOC:      CallGraph [
+# LLVM_NONRELOC-NEXT:     Function {
+# LLVM_NONRELOC-NEXT:       Names: [foo]
+# LLVM_NONRELOC-NEXT:       Address: 0x1790
+# LLVM_NONRELOC-NEXT:       Version: 0
+# LLVM_NONRELOC-NEXT:       IsIndirectTarget: Yes
+# LLVM_NONRELOC-NEXT:       TypeId: 0x3ECBEEF531F74424
+# LLVM_NONRELOC-NEXT:       NumDirectCallees: 0
+# LLVM_NONRELOC-NEXT:       DirectCallees [
+# LLVM_NONRELOC-NEXT:       ]
+# LLVM_NONRELOC-NEXT:       NumIndirectTargetTypeIDs: 0
+# LLVM_NONRELOC-NEXT:       IndirectTypeIDs: []
+# LLVM_NONRELOC-NEXT:     }
+# LLVM_NONRELOC-NEXT:     Function {
+# LLVM_NONRELOC-NEXT:       Names: [bar]
+# LLVM_NONRELOC-NEXT:       Address: 0x17A0
+# LLVM_NONRELOC-NEXT:       Version: 0
+# LLVM_NONRELOC-NEXT:       IsIndirectTarget: Yes
+# LLVM_NONRELOC-NEXT:       TypeId: 0x3ECBEEF531F74424
+# LLVM_NONRELOC-NEXT:       NumDirectCallees: 0
+# LLVM_NONRELOC-NEXT:       DirectCallees [
+# LLVM_NONRELOC-NEXT:       ]
+# LLVM_NONRELOC-NEXT:       NumIndirectTargetTypeIDs: 0
+# LLVM_NONRELOC-NEXT:       IndirectTypeIDs: []
+# LLVM_NONRELOC-NEXT:     }
+# LLVM_NONRELOC-NEXT:     Function {
+# LLVM_NONRELOC-NEXT:       Names: [baz]
+# LLVM_NONRELOC-NEXT:       Address: 0x17B0
+# LLVM_NONRELOC-NEXT:       Version: 0
+# LLVM_NONRELOC-NEXT:       IsIndirectTarget: Yes
+# LLVM_NONRELOC-NEXT:       TypeId: 0x308E4B8159BC8654
+# LLVM_NONRELOC-NEXT:       NumDirectCallees: 0
+# LLVM_NONRELOC-NEXT:       DirectCallees [
+# LLVM_NONRELOC-NEXT:       ]
+# LLVM_NONRELOC-NEXT:       NumIndirectTargetTypeIDs: 0
+# LLVM_NONRELOC-NEXT:       IndirectTypeIDs: []
+# LLVM_NONRELOC-NEXT:     }
+# LLVM_NONRELOC-NEXT:     Function {
+# LLVM_NONRELOC-NEXT:       Names: [main]
+# LLVM_NONRELOC-NEXT:       Address: 0x17C0
+# LLVM_NONRELOC-NEXT:       Version: 0
+# LLVM_NONRELOC-NEXT:       IsIndirectTarget: Yes
+# LLVM_NONRELOC-NEXT:       TypeId: 0xFA6809609A76AFCA
+# LLVM_NONRELOC-NEXT:       NumDirectCallees: 3
+# LLVM_NONRELOC-NEXT:       DirectCallees [
+# LLVM_NONRELOC-NEXT:         {
+# LLVM_NONRELOC-NEXT:           Names: [foo]
+# LLVM_NONRELOC-NEXT:           Address: 0x1790
+# LLVM_NONRELOC-NEXT:         }
+# LLVM_NONRELOC-NEXT:         {
+# LLVM_NONRELOC-NEXT:           Names: [bar]
+# LLVM_NONRELOC-NEXT:           Address: 0x17A0
+# LLVM_NONRELOC-NEXT:         }
+# LLVM_NONRELOC-NEXT:         {
+# LLVM_NONRELOC-NEXT:           Names: [baz]
+# LLVM_NONRELOC-NEXT:           Address: 0x17B0
+# LLVM_NONRELOC-NEXT:         }
+# LLVM_NONRELOC-NEXT:       ]
+# LLVM_NONRELOC-NEXT:       NumIndirectTargetTypeIDs: 2
+# LLVM_NONRELOC-NEXT:       IndirectTypeIDs: [0x3ECBEEF531F74424, 0x308E4B8159BC8654]
+# LLVM_NONRELOC-NEXT:     }
+# LLVM_NONRELOC-NEXT:   ]
 
 
-# JSON:     "CallGraph": [
-# JSON-NEXT:      {
-# JSON-NEXT:        "Function": {
-# JSON-NEXT:          "Names": [
-# JSON-NEXT:            "foo"
-# JSON-NEXT:          ],
-# JSON-NEXT:          "Address": 6032,
-# JSON-NEXT:          "Version": 0,
-# JSON-NEXT:          "IsIndirectTarget": true,
-# JSON-NEXT:          "TypeId": 4524972987496481828,
-# JSON-NEXT:          "NumDirectCallees": 0,
-# JSON-NEXT:          "DirectCallees": [],
-# JSON-NEXT:          "NumIndirectTargetTypeIDs": 0,
-# JSON-NEXT:          "IndirectTypeIDs": []
-# JSON-NEXT:        }
-# JSON-NEXT:      },
-# JSON-NEXT:      {
-# JSON-NEXT:        "Function": {
-# JSON-NEXT:          "Names": [
-# JSON-NEXT:            "bar"
-# JSON-NEXT:          ],
-# JSON-NEXT:          "Address": 6048,
-# JSON-NEXT:          "Version": 0,
-# JSON-NEXT:          "IsIndirectTarget": true,
-# JSON-NEXT:          "TypeId": 4524972987496481828,
-# JSON-NEXT:          "NumDirectCallees": 0,
-# JSON-NEXT:          "DirectCallees": [],
-# JSON-NEXT:          "NumIndirectTargetTypeIDs": 0,
-# JSON-NEXT:          "IndirectTypeIDs": []
-# JSON-NEXT:        }
-# JSON-NEXT:      },
-# JSON-NEXT:      {
-# JSON-NEXT:        "Function": {
-# JSON-NEXT:          "Names": [
-# JSON-NEXT:            "baz"
-# JSON-NEXT:          ],
-# JSON-NEXT:          "Address": 6064,
-# JSON-NEXT:          "Version": 0,
-# JSON-NEXT:          "IsIndirectTarget": true,
-# JSON-NEXT:          "TypeId": 3498816979441845844,
-# JSON-NEXT:          "NumDirectCallees": 0,
-# JSON-NEXT:          "DirectCallees": [],
-# JSON-NEXT:          "NumIndirectTargetTypeIDs": 0,
-# JSON-NEXT:          "IndirectTypeIDs": []
-# JSON-NEXT:        }
-# JSON-NEXT:      },
-# JSON-NEXT:      {
-# JSON-NEXT:        "Function": {
-# JSON-NEXT:          "Names": [
-# JSON-NEXT:            "main"
-# JSON-NEXT:          ],
-# JSON-NEXT:          "Address": 6080,
-# JSON-NEXT:          "Version": 0,
-# JSON-NEXT:          "IsIndirectTarget": true,
-# JSON-NEXT:          "TypeId": 18043682217572872138,
-# JSON-NEXT:          "NumDirectCallees": 3,
-# JSON-NEXT:          "DirectCallees": [
-# JSON-NEXT:            {
-# JSON-NEXT:              "Names": [
-# JSON-NEXT:                "foo"
-# JSON-NEXT:              ],
-# JSON-NEXT:              "Address": 6032
-# JSON-NEXT:            },
-# JSON-NEXT:            {
-# JSON-NEXT:              "Names": [
-# JSON-NEXT:                "bar"
-# JSON-NEXT:              ],
-# JSON-NEXT:              "Address": 6048
-# JSON-NEXT:            },
-# JSON-NEXT:            {
-# JSON-NEXT:              "Names": [
-# JSON-NEXT:                "baz"
-# JSON-NEXT:              ],
-# JSON-NEXT:              "Address": 6064
-# JSON-NEXT:            }
-# JSON-NEXT:          ],
-# JSON-NEXT:          "NumIndirectTargetTypeIDs": 2,
-# JSON-NEXT:          "IndirectTypeIDs": [
-# JSON-NEXT:            4524972987496481828,
-# JSON-NEXT:            3498816979441845844
-# JSON-NEXT:          ]
-# JSON-NEXT:        }
-# JSON-NEXT:      }
-# JSON-NEXT:    ]
+# JSON_NONRELOC:     "CallGraph": [
+# JSON_NONRELOC-NEXT:      {
+# JSON_NONRELOC-NEXT:        "Function": {
+# JSON_NONRELOC-NEXT:          "Names": [
+# JSON_NONRELOC-NEXT:            "foo"
+# JSON_NONRELOC-NEXT:          ],
+# JSON_NONRELOC-NEXT:          "Address": 6032,
+# JSON_NONRELOC-NEXT:          "Version": 0,
+# JSON_NONRELOC-NEXT:          "IsIndirectTarget": true,
+# JSON_NONRELOC-NEXT:          "TypeId": 4524972987496481828,
+# JSON_NONRELOC-NEXT:          "NumDirectCallees": 0,
+# JSON_NONRELOC-NEXT:          "DirectCallees": [],
+# JSON_NONRELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
+# JSON_NONRELOC-NEXT:          "IndirectTypeIDs": []
+# JSON_NONRELOC-NEXT:        }
+# JSON_NONRELOC-NEXT:      },
+# JSON_NONRELOC-NEXT:      {
+# JSON_NONRELOC-NEXT:        "Function": {
+# JSON_NONRELOC-NEXT:          "Names": [
+# JSON_NONRELOC-NEXT:            "bar"
+# JSON_NONRELOC-NEXT:          ],
+# JSON_NONRELOC-NEXT:          "Address": 6048,
+# JSON_NONRELOC-NEXT:          "Version": 0,
+# JSON_NONRELOC-NEXT:          "IsIndirectTarget": true,
+# JSON_NONRELOC-NEXT:          "TypeId": 4524972987496481828,
+# JSON_NONRELOC-NEXT:          "NumDirectCallees": 0,
+# JSON_NONRELOC-NEXT:          "DirectCallees": [],
+# JSON_NONRELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
+# JSON_NONRELOC-NEXT:          "IndirectTypeIDs": []
+# JSON_NONRELOC-NEXT:        }
+# JSON_NONRELOC-NEXT:      },
+# JSON_NONRELOC-NEXT:      {
+# JSON_NONRELOC-NEXT:        "Function": {
+# JSON_NONRELOC-NEXT:          "Names": [
+# JSON_NONRELOC-NEXT:            "baz"
+# JSON_NONRELOC-NEXT:          ],
+# JSON_NONRELOC-NEXT:          "Address": 6064,
+# JSON_NONRELOC-NEXT:          "Version": 0,
+# JSON_NONRELOC-NEXT:          "IsIndirectTarget": true,
+# JSON_NONRELOC-NEXT:          "TypeId": 3498816979441845844,
+# JSON_NONRELOC-NEXT:          "NumDirectCallees": 0,
+# JSON_NONRELOC-NEXT:          "DirectCallees": [],
+# JSON_NONRELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
+# JSON_NONRELOC-NEXT:          "IndirectTypeIDs": []
+# JSON_NONRELOC-NEXT:        }
+# JSON_NONRELOC-NEXT:      },
+# JSON_NONRELOC-NEXT:      {
+# JSON_NONRELOC-NEXT:        "Function": {
+# JSON_NONRELOC-NEXT:          "Names": [
+# JSON_NONRELOC-NEXT:            "main"
+# JSON_NONRELOC-NEXT:          ],
+# JSON_NONRELOC-NEXT:          "Address": 6080,
+# JSON_NONRELOC-NEXT:          "Version": 0,
+# JSON_NONRELOC-NEXT:          "IsIndirectTarget": true,
+# JSON_NONRELOC-NEXT:          "TypeId": 18043682217572872138,
+# JSON_NONRELOC-NEXT:          "NumDirectCallees": 3,
+# JSON_NONRELOC-NEXT:          "DirectCallees": [
+# JSON_NONRELOC-NEXT:            {
+# JSON_NONRELOC-NEXT:              "Names": [
+# JSON_NONRELOC-NEXT:                "foo"
+# JSON_NONRELOC-NEXT:              ],
+# JSON_NONRELOC-NEXT:              "Address": 6032
+# JSON_NONRELOC-NEXT:            },
+# JSON_NONRELOC-NEXT:            {
+# JSON_NONRELOC-NEXT:              "Names": [
+# JSON_NONRELOC-NEXT:                "bar"
+# JSON_NONRELOC-NEXT:              ],
+# JSON_NONRELOC-NEXT:              "Address": 6048
+# JSON_NONRELOC-NEXT:            },
+# JSON_NONRELOC-NEXT:            {
+# JSON_NONRELOC-NEXT:              "Names": [
+# JSON_NONRELOC-NEXT:                "baz"
+# JSON_NONRELOC-NEXT:              ],
+# JSON_NONRELOC-NEXT:              "Address": 6064
+# JSON_NONRELOC-NEXT:            }
+# JSON_NONRELOC-NEXT:          ],
+# JSON_NONRELOC-NEXT:          "NumIndirectTargetTypeIDs": 2,
+# JSON_NONRELOC-NEXT:          "IndirectTypeIDs": [
+# JSON_NONRELOC-NEXT:            4524972987496481828,
+# JSON_NONRELOC-NEXT:            3498816979441845844
+# JSON_NONRELOC-NEXT:          ]
+# JSON_NONRELOC-NEXT:        }
+# JSON_NONRELOC-NEXT:      }
+# JSON_NONRELOC-NEXT:    ]
 
 --- !ELF
 FileHeader:
