@@ -121,15 +121,16 @@ struct GPUBarrierConversion final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
         lookupOrCreateSPIRVFn(moduleOp, funcName, flagTy, voidTy,
                               /*isMemNone=*/false, /*isConvergent=*/true);
 
-    // Values used by SPIR-V backend to represent a combination of 
+    // Values used by SPIR-V backend to represent a combination of
     // `CLK_LOCAL_MEM_FENCE` and `CLK_GLOBAL_MEM_FENCE`.
     // See `llvm/lib/Target/SPIRV/SPIRVBuiltins.td`.
     constexpr int64_t localMemFenceFlag = 1;
     constexpr int64_t globalMemFenceFlag = 2;
-    constexpr int64_t localGlobalMemFenceFlag = localMemFenceFlag | globalMemFenceFlag;
+    constexpr int64_t localGlobalMemFenceFlag =
+        localMemFenceFlag | globalMemFenceFlag;
     Location loc = op->getLoc();
-    Value flag =
-        LLVM::ConstantOp::create(rewriter, loc, flagTy, localGlobalMemFenceFlag);
+    Value flag = LLVM::ConstantOp::create(rewriter, loc, flagTy,
+                                          localGlobalMemFenceFlag);
     rewriter.replaceOp(op, createSPIRVBuiltinCall(loc, rewriter, func, flag));
     return success();
   }
