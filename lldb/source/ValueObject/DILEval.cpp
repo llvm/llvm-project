@@ -947,9 +947,9 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode *node) {
   }
   case CastKind::ePointer: {
     uint64_t addr = op_type.IsArrayType()
-                    ? operand->GetLoadAddress()
-                    : (op_type.IsSigned() ? operand->GetValueAsSigned(0)
-                                          : operand->GetValueAsUnsigned(0));
+                        ? operand->GetLoadAddress()
+                        : (op_type.IsSigned() ? operand->GetValueAsSigned(0)
+                                              : operand->GetValueAsUnsigned(0));
     llvm::StringRef name = "result";
     ExecutionContext exe_ctx(m_target.get(), false);
     return ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
