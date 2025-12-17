@@ -342,6 +342,20 @@ function (add_flangrt_library name)
     # directory. Otherwise it is part of testing and is not installed at all.
     # TODO: Consider multi-configuration builds (MSVC_IDE, "Ninja Multi-Config")
     if (ARG_INSTALL_WITH_TOOLCHAIN)
+      # FIXME: RUNTIMES_OUTPUT_RESOURCE_LIB_DIR is not a good location for
+      #        shared libraries because it is not a ld.so default search path.
+      #        Also, the machine where the executable is eventually executed may
+      #        not be one where the compiler is installed, so even RPATH/RUNPATH
+      #        will not help. The most appropriate location for shared libraries
+      #        is /usr/lib/<triple>/lib<name>.so, like e.g. libgcc_s.so.
+      #        Flang-RT also would require a library versioning scheme so
+      #        executables compiled with different versions of Flang either use
+      #        matching versions of Flang-RT, or use a newer backward-compatble
+      #        versions. Currently, Flang-RT has no ABI backwards-compatibility
+      #        policy.
+      #        Currently, we just emit it into RUNTIMES_OUTPUT_RESOURCE_LIB_DIR
+      #        like the static library, which is already in the driver's and
+      #        linker's search path.
       set_target_properties(${tgtname}
         PROPERTIES
           ARCHIVE_OUTPUT_DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_LIB_DIR}"
