@@ -620,8 +620,8 @@ struct SchedBarrierOpLowering : public ConvertOpToLLVMPattern<SchedBarrierOp> {
 
 } // namespace
 
-/// Converts a MFMA vector operand from MLIR AMDGPU dialect convention to ROCDL
-/// and LLVM AMDGPU intrinsics convention.
+/// Pack small float vector operands (fp4/fp6/fp8/bf16) into the format
+/// expected by scaled matrix multiply intrinsics (MFMA/WMMA).
 ///
 /// Specifically:
 /// 1. If the element type is bfloat16, bitcast it to i16 unless rocdl intrinsic
@@ -635,9 +635,9 @@ struct SchedBarrierOpLowering : public ConvertOpToLLVMPattern<SchedBarrierOp> {
 /// Note that the type of `input` has already been LLVM type converted:
 /// therefore 8-bit and smaller floats are represented as their corresponding
 /// `iN` integers.
-static Value convertMFMAVectorOperand(ConversionPatternRewriter &rewriter,
-                                      Location loc, Value input,
-                                      bool allowBf16 = true) {
+static Value packSmallFloatVectorOperand(ConversionPatternRewriter &rewriter,
+                                         Location loc, Value input,
+                                         bool allowBf16 = true) {
   Type inputType = input.getType();
   if (auto vectorType = dyn_cast<VectorType>(inputType)) {
     if (vectorType.getElementType().isBF16() && !allowBf16)
@@ -661,23 +661,58 @@ static Value convertMFMAVectorOperand(ConversionPatternRewriter &rewriter,
   return input;
 }
 
-/// Converts the scaled MFMA operands, `scalesA` and `scalesB`, from MLIR AMDGPU
-/// dialect convention to ROCDL and LLVM AMDGPU intrinsics convention.
+/// Converts the scaled MFMA/WMMA operands, `scalesA` and `scalesB`, from MLIR
+/// AMDGPU dialect convention to ROCDL and LLVM AMDGPU intrinsics convention.
 ///
 /// Specifically:
 /// 1. If `input` is a i8 value, zero extend it to i32
-/// 2. If `input` is a vector of length 4 and type i8, cast it to i32
+/// 2. If `input` is a vector of length 4 or 8 and type i8, cast it to i32
 ///
 /// Note that the type of `input` has already been LLVM type converted:
 /// therefore 8-bit and smaller floats are represented as their corresponding
 /// `iN` integers.
-static Value castMFMAScaleOperand(ConversionPatternRewriter &rewriter,
-                                  Location loc, Value input) {
-  Type inputType = input.getType();
-  Type outputType = rewriter.getI32Type();
-  if (auto intType = dyn_cast<IntegerType>(inputType))
-    return LLVM::ZExtOp::create(rewriter, loc, outputType, input);
-  return LLVM::BitcastOp::create(rewriter, loc, outputType, input);
+static Value castScaleOperand(ConversionPatternRewriter &rewriter, Location loc,
+                              Value input) {
+  return TypeSwitch<Type, Value>(input.getType())
+      .Case([&](IntegerType) {
+        // Handle scalar i8: zero extend to i32.
+        return LLVM::ZExtOp::create(rewriter, loc, rewriter.getI32Type(),
+                                    input);
+      })
+      .Case([&](VectorType vectorType) {
+        // Handle vector<4xi8> -> i32 or vector<8xi8> -> i64.
+        int64_t numElements = vectorType.getNumElements();
+        assert((numElements == 4 || numElements == 8) &&
+               "scale operand must be a vector of length 4 or 8");
+        IntegerType outputType =
+            (numElements == 4) ? rewriter.getI32Type() : rewriter.getI64Type();
+        return LLVM::BitcastOp::create(rewriter, loc, outputType, input);
+      })
+      .DefaultUnreachable("unexpected input type for scale operand");
+}
+
+/// Maps f8 scale element types to WMMA scale format codes.
+static std::optional<uint32_t> getWmmaScaleFormat(Type elemType) {
+  return TypeSwitch<Type, std::optional<uint32_t>>(elemType)
+      .Case([](Float8E8M0FNUType) { return 0; })
+      .Case([](Float8E4M3FNType) { return 2; })
+      .Default(std::nullopt);
+}
+
+/// Determines the ROCDL intrinsic name for scaled WMMA based on dimensions
+/// and scale block size (16 or 32).
+static std::optional<StringRef>
+getScaledWmmaIntrinsicName(int64_t m, int64_t n, int64_t k, bool isScale16) {
+  if (m == 16 && n == 16 && k == 128)
+    return isScale16
+               ? ROCDL::wmma_scale16_f32_16x16x128_f8f6f4::getOperationName()
+               : ROCDL::wmma_scale_f32_16x16x128_f8f6f4::getOperationName();
+
+  if (m == 32 && n == 16 && k == 128)
+    return isScale16 ? ROCDL::wmma_scale16_f32_32x16x128_f4::getOperationName()
+                     : ROCDL::wmma_scale_f32_32x16x128_f4::getOperationName();
+
+  return std::nullopt;
 }
 
 /// Push an input operand. If it is a float type, nothing to do. If it is
@@ -926,7 +961,7 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
   return std::nullopt;
 }
 
-static std::optional<uint32_t> mfmaTypeSelectCode(Type mlirElemType) {
+static std::optional<uint32_t> smallFloatTypeToFormatCode(Type mlirElemType) {
   return llvm::TypeSwitch<Type, std::optional<uint32_t>>(mlirElemType)
       .Case([](Float8E4M3FNType) { return 0u; })
       .Case([](Float8E5M2Type) { return 1u; })
@@ -955,8 +990,8 @@ mfmaOpToScaledIntrinsic(Type aType, Type bType, Type destType, uint32_t m,
   if (!isa<Float32Type>(destType))
     return std::nullopt;
 
-  std::optional<uint32_t> aTypeCode = mfmaTypeSelectCode(aType);
-  std::optional<uint32_t> bTypeCode = mfmaTypeSelectCode(bType);
+  std::optional<uint32_t> aTypeCode = smallFloatTypeToFormatCode(aType);
+  std::optional<uint32_t> bTypeCode = smallFloatTypeToFormatCode(bType);
   if (!aTypeCode || !bTypeCode)
     return std::nullopt;
 
@@ -1220,9 +1255,9 @@ struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
     }();
     OperationState loweredOp(loc, intrinsicName);
     loweredOp.addTypes(intrinsicOutType);
-    loweredOp.addOperands({convertMFMAVectorOperand(
+    loweredOp.addOperands({packSmallFloatVectorOperand(
                                rewriter, loc, adaptor.getSourceA(), allowBf16),
-                           convertMFMAVectorOperand(
+                           packSmallFloatVectorOperand(
                                rewriter, loc, adaptor.getSourceB(), allowBf16),
                            adaptor.getDestC()});
     if (isScaled) {
@@ -1269,8 +1304,8 @@ struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
     OperationState loweredOp(loc, intrinsicName);
     loweredOp.addTypes(intrinsicOutType);
     loweredOp.addOperands(
-        {convertMFMAVectorOperand(rewriter, loc, adaptor.getSourceA()),
-         convertMFMAVectorOperand(rewriter, loc, adaptor.getSourceB()),
+        {packSmallFloatVectorOperand(rewriter, loc, adaptor.getSourceA()),
+         packSmallFloatVectorOperand(rewriter, loc, adaptor.getSourceB()),
          adaptor.getDestC()});
     Value scalesIdxA =
         createI32Constant(rewriter, loc, adaptor.getScalesIdxA());
@@ -1281,10 +1316,10 @@ struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
          createI32Constant(rewriter, loc, bTypeCode),
          /*scales idx A=*/scalesIdxA,
          /*scales A*/
-         castMFMAScaleOperand(rewriter, loc, adaptor.getScalesA()),
+         castScaleOperand(rewriter, loc, adaptor.getScalesA()),
          /*scales idx B=*/scalesIdxB,
          /*scales B*/
-         castMFMAScaleOperand(rewriter, loc, adaptor.getScalesB())});
+         castScaleOperand(rewriter, loc, adaptor.getScalesB())});
     Value lowered = rewriter.create(loweredOp)->getResult(0);
     rewriter.replaceOp(op, lowered);
     return success();
@@ -1366,6 +1401,111 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
       maybeCastBack = LLVM::BitcastOp::create(rewriter, loc, outType,
                                               lowered->getResult(0));
     rewriter.replaceOp(op, maybeCastBack->getResults());
+
+    return success();
+  }
+};
+
+struct ScaledWMMAOpLowering : public ConvertOpToLLVMPattern<ScaledWMMAOp> {
+  ScaledWMMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<ScaledWMMAOp>(converter), chipset(chipset) {}
+
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(ScaledWMMAOp op, ScaledWMMAOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    auto outType =
+        typeConverter->convertType<VectorType>(op.getDestD().getType());
+    if (!outType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    if (chipset < kGfx1250)
+      return op->emitOpError("WMMA scale only supported on gfx1250+");
+
+    int64_t m = op.getM();
+    int64_t n = op.getN();
+    int64_t k = op.getK();
+
+    Type aElemType = getElementTypeOrSelf(op.getSourceA().getType());
+    Type bElemType = getElementTypeOrSelf(op.getSourceB().getType());
+
+    std::optional<uint32_t> aFmtCode = smallFloatTypeToFormatCode(aElemType);
+    std::optional<uint32_t> bFmtCode = smallFloatTypeToFormatCode(bElemType);
+
+    if (!aFmtCode || !bFmtCode)
+      return op.emitOpError("unsupported element types for scaled_wmma");
+
+    // Get scale vector types and determine variant (scale vs scale16).
+    auto scaleAVecType = cast<VectorType>(op.getScaleA().getType());
+    auto scaleBVecType = cast<VectorType>(op.getScaleB().getType());
+
+    if (scaleAVecType.getNumElements() != scaleBVecType.getNumElements())
+      return op.emitOpError("scaleA and scaleB must have equal vector length");
+
+    // Extract scale format from element types.
+    Type scaleAElemType = scaleAVecType.getElementType();
+    Type scaleBElemType = scaleBVecType.getElementType();
+
+    std::optional<uint32_t> scaleAFmt = getWmmaScaleFormat(scaleAElemType);
+    std::optional<uint32_t> scaleBFmt = getWmmaScaleFormat(scaleBElemType);
+
+    if (!scaleAFmt || !scaleBFmt)
+      return op.emitOpError("unsupported scale element types");
+
+    // Determine which intrinsic to use based on dimensions.
+    bool isScale16 = (scaleAVecType.getNumElements() == 8);
+    std::optional<StringRef> intrinsicName =
+        getScaledWmmaIntrinsicName(m, n, k, isScale16);
+    if (!intrinsicName)
+      return op.emitOpError("unsupported scaled_wmma dimensions: ")
+             << m << "x" << n << "x" << k;
+
+    SmallVector<NamedAttribute, 8> attrs;
+
+    // The f4 variant does not have fmtA and fmtB attributes.
+    bool is32x16 = (m == 32 && n == 16 && k == 128);
+    if (!is32x16) {
+      attrs.emplace_back("fmtA", rewriter.getI32IntegerAttr(*aFmtCode));
+      attrs.emplace_back("fmtB", rewriter.getI32IntegerAttr(*bFmtCode));
+    }
+
+    // modC uses default value of 0.
+    attrs.emplace_back("modC", rewriter.getI16IntegerAttr(0));
+
+    // Scale attributes. Convert user-facing firstScaleLane (0 or 16) to the
+    // half of the wave that is being selected (0 or 1).
+    attrs.emplace_back(
+        "scaleAType", rewriter.getI32IntegerAttr(op.getAFirstScaleLane() / 16));
+    attrs.emplace_back("fmtScaleA", rewriter.getI32IntegerAttr(*scaleAFmt));
+    attrs.emplace_back(
+        "scaleBType", rewriter.getI32IntegerAttr(op.getBFirstScaleLane() / 16));
+    attrs.emplace_back("fmtScaleB", rewriter.getI32IntegerAttr(*scaleBFmt));
+
+    // Reuse flags use default value of false.
+    attrs.emplace_back("reuseA", rewriter.getBoolAttr(false));
+    attrs.emplace_back("reuseB", rewriter.getBoolAttr(false));
+
+    // Convert typed float vectors to packed format.
+    Value sourceA =
+        packSmallFloatVectorOperand(rewriter, loc, adaptor.getSourceA());
+    Value sourceB =
+        packSmallFloatVectorOperand(rewriter, loc, adaptor.getSourceB());
+
+    // Pack scale vectors into i32/i64.
+    Value packedScaleA = castScaleOperand(rewriter, loc, adaptor.getScaleA());
+    Value packedScaleB = castScaleOperand(rewriter, loc, adaptor.getScaleB());
+
+    // Create the intrinsic call.
+    OperationState loweredOp(loc, *intrinsicName);
+    loweredOp.addTypes(outType);
+    loweredOp.addOperands(
+        {sourceA, sourceB, adaptor.getDestC(), packedScaleA, packedScaleB});
+    loweredOp.addAttributes(attrs);
+
+    Operation *lowered = rewriter.create(loweredOp);
+    rewriter.replaceOp(op, lowered->getResults());
 
     return success();
   }
@@ -2109,31 +2249,31 @@ struct AMDGPUDPPLowering : public ConvertOpToLLVMPattern<DPPOp> {
 
     switch (kind) {
 
-    case DPPPerm::quad_perm:
-      if (auto quadPermAttr = cast<ArrayAttr>(*permArgument)) {
-        int32_t i = 0;
-        for (auto elem : quadPermAttr.getAsRange<IntegerAttr>()) {
-          uint32_t num = elem.getInt();
-          DppCtrl |= num << (i * 2);
-          i++;
-        }
+    case DPPPerm::quad_perm: {
+      auto quadPermAttr = cast<ArrayAttr>(*permArgument);
+      int32_t i = 0;
+      for (auto elem : quadPermAttr.getAsRange<IntegerAttr>()) {
+        uint32_t num = elem.getInt();
+        DppCtrl |= num << (i * 2);
+        i++;
       }
       break;
-    case DPPPerm::row_shl:
-      if (auto intAttr = cast<IntegerAttr>(*permArgument)) {
-        DppCtrl = intAttr.getInt() + DppCtrl::ROW_SHL0;
-      }
+    }
+    case DPPPerm::row_shl: {
+      auto intAttr = cast<IntegerAttr>(*permArgument);
+      DppCtrl = intAttr.getInt() + DppCtrl::ROW_SHL0;
       break;
-    case DPPPerm::row_shr:
-      if (auto intAttr = cast<IntegerAttr>(*permArgument)) {
-        DppCtrl = intAttr.getInt() + DppCtrl::ROW_SHR0;
-      }
+    }
+    case DPPPerm::row_shr: {
+      auto intAttr = cast<IntegerAttr>(*permArgument);
+      DppCtrl = intAttr.getInt() + DppCtrl::ROW_SHR0;
       break;
-    case DPPPerm::row_ror:
-      if (auto intAttr = cast<IntegerAttr>(*permArgument)) {
-        DppCtrl = intAttr.getInt() + DppCtrl::ROW_ROR0;
-      }
+    }
+    case DPPPerm::row_ror: {
+      auto intAttr = cast<IntegerAttr>(*permArgument);
+      DppCtrl = intAttr.getInt() + DppCtrl::ROW_ROR0;
       break;
+    }
     case DPPPerm::wave_shl:
       DppCtrl = DppCtrl::WAVE_SHL1;
       break;
@@ -3172,29 +3312,31 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                                    RewritePatternSet &patterns,
                                                    Chipset chipset) {
   populateAMDGPUTypeAndAttributeConversions(converter);
-  patterns.add<
-      FatRawBufferCastLowering,
-      RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawPtrBufferLoadOp>,
-      RawBufferOpLowering<RawBufferStoreOp, ROCDL::RawPtrBufferStoreOp>,
-      RawBufferOpLowering<RawBufferAtomicFaddOp,
-                          ROCDL::RawPtrBufferAtomicFaddOp>,
-      RawBufferOpLowering<RawBufferAtomicFmaxOp,
-                          ROCDL::RawPtrBufferAtomicFmaxOp>,
-      RawBufferOpLowering<RawBufferAtomicSmaxOp,
-                          ROCDL::RawPtrBufferAtomicSmaxOp>,
-      RawBufferOpLowering<RawBufferAtomicUminOp,
-                          ROCDL::RawPtrBufferAtomicUminOp>,
-      RawBufferOpLowering<RawBufferAtomicCmpswapOp,
-                          ROCDL::RawPtrBufferAtomicCmpSwap>,
-      AMDGPUDPPLowering, MemoryCounterWaitOpLowering, LDSBarrierOpLowering,
-      SchedBarrierOpLowering, MFMAOpLowering, ScaledMFMAOpLowering,
-      WMMAOpLowering, ExtPackedFp8OpLowering, ScaledExtPackedMatrixOpLowering,
-      ScaledExtPackedOpLowering, PackedScaledTruncOpLowering,
-      PackedTrunc2xFp8OpLowering, PackedStochRoundFp8OpLowering,
-      GatherToLDSOpLowering, TransposeLoadOpLowering, AMDGPUPermlaneLowering,
-      AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
-      AMDGPUMakeDmaBaseLowering<MakeGatherDmaBaseOp>,
-      AMDGPULowerDescriptor<MakeDmaDescriptorOp>,
-      AMDGPULowerDescriptor<MakeGatherDmaDescriptorOp>>(converter, chipset);
+  patterns
+      .add<FatRawBufferCastLowering,
+           RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawPtrBufferLoadOp>,
+           RawBufferOpLowering<RawBufferStoreOp, ROCDL::RawPtrBufferStoreOp>,
+           RawBufferOpLowering<RawBufferAtomicFaddOp,
+                               ROCDL::RawPtrBufferAtomicFaddOp>,
+           RawBufferOpLowering<RawBufferAtomicFmaxOp,
+                               ROCDL::RawPtrBufferAtomicFmaxOp>,
+           RawBufferOpLowering<RawBufferAtomicSmaxOp,
+                               ROCDL::RawPtrBufferAtomicSmaxOp>,
+           RawBufferOpLowering<RawBufferAtomicUminOp,
+                               ROCDL::RawPtrBufferAtomicUminOp>,
+           RawBufferOpLowering<RawBufferAtomicCmpswapOp,
+                               ROCDL::RawPtrBufferAtomicCmpSwap>,
+           AMDGPUDPPLowering, MemoryCounterWaitOpLowering, LDSBarrierOpLowering,
+           SchedBarrierOpLowering, MFMAOpLowering, ScaledMFMAOpLowering,
+           WMMAOpLowering, ScaledWMMAOpLowering, ExtPackedFp8OpLowering,
+           ScaledExtPackedMatrixOpLowering, ScaledExtPackedOpLowering,
+           PackedScaledTruncOpLowering, PackedTrunc2xFp8OpLowering,
+           PackedStochRoundFp8OpLowering, GatherToLDSOpLowering,
+           TransposeLoadOpLowering, AMDGPUPermlaneLowering,
+           AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
+           AMDGPUMakeDmaBaseLowering<MakeGatherDmaBaseOp>,
+           AMDGPULowerDescriptor<MakeDmaDescriptorOp>,
+           AMDGPULowerDescriptor<MakeGatherDmaDescriptorOp>>(converter,
+                                                             chipset);
   patterns.add<AMDGPUSwizzleBitModeLowering>(converter);
 }
