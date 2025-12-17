@@ -192,7 +192,6 @@ static mlir::Value genRuntimeAllocate(fir::FirOpBuilder &builder,
   args.push_back(errorManager.errMsgAddr);
   args.push_back(errorManager.sourceFile);
   args.push_back(errorManager.sourceLine);
-  args.push_back(builder.createBool(loc, false));
   const auto convertedArgs = fir::runtime::createArguments(
       builder, loc, callee.getFunctionType(), args);
   return fir::CallOp::create(builder, loc, callee, convertedArgs).getResult(0);
@@ -773,6 +772,15 @@ private:
                               const fir::MutableBoxValue &box,
                               ErrorManager &errorManager,
                               const Fortran::semantics::Symbol &sym) {
+
+    if (const Fortran::semantics::DeclTypeSpec *declTypeSpec = sym.GetType())
+      if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
+              declTypeSpec->AsDerived())
+        if (derivedTypeSpec->HasDefaultInitialization(
+                /*ignoreAllocatable=*/true, /*ignorePointer=*/true))
+          TODO(loc,
+               "CUDA Fortran: allocate on device with default initialization");
+
     Fortran::lower::StatementContext stmtCtx;
     cuf::DataAttributeAttr cudaAttr =
         Fortran::lower::translateSymbolCUFDataAttribute(builder.getContext(),

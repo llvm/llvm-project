@@ -73,7 +73,7 @@ static void appendJITDebugDescriptor(const char *ObjAddr, size_t Size) {
   __jit_debug_descriptor.action_flag = JIT_REGISTER_FN;
 }
 
-extern "C" orc::shared::CWrapperFunctionResult
+extern "C" orc::shared::CWrapperFunctionBuffer
 llvm_orc_registerJITLoaderGDBAllocAction(const char *ArgData, size_t ArgSize) {
   using namespace orc::shared;
   return WrapperFunction<SPSError(SPSExecutorAddrRange, bool)>::handle(

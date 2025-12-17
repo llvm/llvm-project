@@ -116,7 +116,7 @@ void SimpleRemoteEPC::callWrapperAsync(ExecutorAddr WrapperFnAddr,
     }
 
     if (H)
-      H(shared::WrapperFunctionResult::createOutOfBandError("disconnecting"));
+      H(shared::WrapperFunctionBuffer::createOutOfBandError("disconnecting"));
 
     getExecutionSession().reportError(std::move(Err));
   }
@@ -202,7 +202,7 @@ void SimpleRemoteEPC::handleDisconnect(Error Err) {
 
   for (auto &KV : TmpPending)
     KV.second(
-        shared::WrapperFunctionResult::createOutOfBandError("disconnecting"));
+        shared::WrapperFunctionBuffer::createOutOfBandError("disconnecting"));
 
   std::lock_guard<std::mutex> Lock(SimpleRemoteEPCMutex);
   DisconnectErr = joinErrors(std::move(DisconnectErr), std::move(Err));
@@ -300,7 +300,7 @@ Error SimpleRemoteEPC::handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
   PendingCallWrapperResults.erase(I);
 
   auto WFR =
-      shared::WrapperFunctionResult::copyFrom(ArgBytes.data(), ArgBytes.size());
+      shared::WrapperFunctionBuffer::copyFrom(ArgBytes.data(), ArgBytes.size());
   SetupMsgHandler(std::move(WFR));
   return Error::success();
 }
@@ -314,7 +314,7 @@ Error SimpleRemoteEPC::setup(Setup S) {
   // Prepare a handler for the setup packet.
   PendingCallWrapperResults[0] =
     RunInPlace()(
-      [&](shared::WrapperFunctionResult SetupMsgBytes) {
+      [&](shared::WrapperFunctionBuffer SetupMsgBytes) {
         if (const char *ErrMsg = SetupMsgBytes.getOutOfBandError()) {
           EIP.set_value(
               make_error<StringError>(ErrMsg, inconvertibleErrorCode()));
@@ -419,7 +419,7 @@ Error SimpleRemoteEPC::handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
   }
 
   auto WFR =
-      shared::WrapperFunctionResult::copyFrom(ArgBytes.data(), ArgBytes.size());
+      shared::WrapperFunctionBuffer::copyFrom(ArgBytes.data(), ArgBytes.size());
   SendResult(std::move(WFR));
   return Error::success();
 }
@@ -431,7 +431,7 @@ void SimpleRemoteEPC::handleCallWrapper(
   D->dispatch(makeGenericNamedTask(
       [this, RemoteSeqNo, TagAddr, ArgBytes = std::move(ArgBytes)]() {
         ES->runJITDispatchHandler(
-            [this, RemoteSeqNo](shared::WrapperFunctionResult WFR) {
+            [this, RemoteSeqNo](shared::WrapperFunctionBuffer WFR) {
               if (auto Err =
                       sendMessage(SimpleRemoteEPCOpcode::Result, RemoteSeqNo,
                                   ExecutorAddr(), {WFR.data(), WFR.size()}))
@@ -444,7 +444,7 @@ void SimpleRemoteEPC::handleCallWrapper(
 
 Error SimpleRemoteEPC::handleHangup(SimpleRemoteEPCArgBytesVector ArgBytes) {
   using namespace llvm::orc::shared;
-  auto WFR = WrapperFunctionResult::copyFrom(ArgBytes.data(), ArgBytes.size());
+  auto WFR = WrapperFunctionBuffer::copyFrom(ArgBytes.data(), ArgBytes.size());
   if (const char *ErrMsg = WFR.getOutOfBandError())
     return make_error<StringError>(ErrMsg, inconvertibleErrorCode());
 

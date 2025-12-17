@@ -2760,6 +2760,11 @@ def : Pat<(AArch64sub_flag GPR64:$Rn, neg_addsub_shifted_imm64:$imm),
           (ADDSXri GPR64:$Rn, neg_addsub_shifted_imm64:$imm)>;
 }
 
+let AddedComplexity = 1 in {
+def : Pat<(add copyFromSP:$R2, (add_uxtx GPR64:$R3, arith_extendlsl64:$imm)),
+          (ADDXrx64 GPR64sp:$R2, GPR64:$R3, arith_extendlsl64:$imm)>;
+}
+
 
 def trunc_isWorthFoldingALU : PatFrag<(ops node:$src), (trunc $src)> {
   let PredicateCode = [{ return isWorthFoldingALU(SDValue(N, 0)); }];

@@ -54,7 +54,7 @@ public:
   Error disconnect() override;
 
 private:
-  static shared::CWrapperFunctionResult
+  static shared::CWrapperFunctionBuffer
   jitDispatchViaWrapperFunctionManager(void *Ctx, const void *FnTag,
                                        const char *Data, size_t Size);
 

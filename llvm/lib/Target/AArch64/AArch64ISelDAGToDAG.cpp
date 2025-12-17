@@ -74,6 +74,8 @@ public:
   template <signed Low, signed High>
   bool SelectRDSVLShiftImm(SDValue N, SDValue &Imm);
 
+  bool SelectAddUXTXRegister(SDValue N, SDValue &Reg, SDValue &Shift);
+
   bool SelectArithExtendedRegister(SDValue N, SDValue &Reg, SDValue &Shift);
   bool SelectArithUXTXRegister(SDValue N, SDValue &Reg, SDValue &Shift);
   bool SelectArithImmed(SDValue N, SDValue &Val, SDValue &Shift);
@@ -957,6 +959,19 @@ bool AArch64DAGToDAGISel::SelectRDSVLShiftImm(SDValue N, SDValue &Imm) {
   }
 
   return false;
+}
+
+/// SelectAddUXTXRegister - Select a "UXTX register" operand. This
+/// operand is referred by the instructions have SP operand
+bool AArch64DAGToDAGISel::SelectAddUXTXRegister(SDValue N, SDValue &Reg,
+                                                SDValue &Shift) {
+  // TODO: Relax condition to apply to more scenarios
+  if (N.getOpcode() != ISD::LOAD)
+    return false;
+  Reg = N;
+  Shift = CurDAG->getTargetConstant(getArithExtendImm(AArch64_AM::UXTX, 0),
+                                    SDLoc(N), MVT::i32);
+  return true;
 }
 
 /// SelectArithExtendedRegister - Select a "extended register" operand.  This

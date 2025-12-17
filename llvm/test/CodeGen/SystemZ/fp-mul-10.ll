@@ -25,11 +25,11 @@ define double @f2(double %f1, double %f2, double %acc) {
 
 define half @f3_half(half %f1, half %f2, half %acc) {
 ; CHECK-LABEL: f3_half:
-; CHECK: brasl %r14, __extendhfsf2@PLT
-; CHECK: brasl %r14, __extendhfsf2@PLT
-; CHECK: brasl %r14, __extendhfsf2@PLT
-; CHECK: wfmasb %f0, %f0, %f8, %f10
-; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: brasl %r14, __extendhfdf2@PLT
+; CHECK: brasl %r14, __extendhfdf2@PLT
+; CHECK: brasl %r14, __extendhfdf2@PLT
+; CHECK: wfmadb %f0, %f0, %f8, %f10
+; CHECK: brasl %r14, __truncdfhf2@PLT
 ; CHECK-NOT: brasl
 ; CHECK:      lcdfr %f0, %f0
 ; CHECK-NEXT: lmg
@@ -52,11 +52,11 @@ define half @f4_half(half %f1, half %f2, half %acc) {
 ; CHECK-LABEL: f4_half:
 ; CHECK-NOT: brasl
 ; CHECK: lcdfr %f0, %f4
-; CHECK: brasl %r14, __extendhfsf2@PLT
-; CHECK: brasl %r14, __extendhfsf2@PLT
-; CHECK: brasl %r14, __extendhfsf2@PLT
-; CHECK: wfmasb %f0, %f0, %f8, %f10
-; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: brasl %r14, __extendhfdf2@PLT
+; CHECK: brasl %r14, __extendhfdf2@PLT
+; CHECK: brasl %r14, __extendhfdf2@PLT
+; CHECK: wfmadb %f0, %f0, %f8, %f10
+; CHECK: brasl %r14, __truncdfhf2@PLT
 ; CHECK-NOT: brasl
 ; CHECK:      lcdfr %f0, %f0
 ; CHECK-NEXT: lmg
