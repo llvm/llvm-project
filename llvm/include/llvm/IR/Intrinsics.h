@@ -180,7 +180,8 @@ namespace Intrinsic {
       AMX,
       PPCQuad,
       AArch64Svcount,
-      ArgumentTypeConstraint,  // For AnyTypeOf - marks constrained argument types.
+      ArgumentTypeConstraint, // For AnyTypeOf - marks constrained argument
+                              // types.
     } Kind;
 
     union {
