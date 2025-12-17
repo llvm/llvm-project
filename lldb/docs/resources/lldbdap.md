@@ -2,7 +2,8 @@
 
 Welcome to the `llb-dap` documentation!
 
-`lldb-dap` brings the power of `lldb` into any editor or IDE that supports the [Debug Adapter Protocol (DAP)](https://microsoft.github.io/debug-adapter-protocol/).
+`lldb-dap` brings the power of `lldb` into any editor or IDE that supports the
+[Debug Adapter Protocol (DAP)](https://microsoft.github.io/debug-adapter-protocol/).
 
 ## Prerequisites
 
@@ -13,7 +14,9 @@ the `lldb` package.
 
 In some cases, a language specific build of `lldb` / `lldb-dap` may also be
 available as part of the languages toolchain. For example the
-[swift language](https://www.swift.org/) toolchain includes additional language integrations in `lldb` and the toolchain builds provider both the `lldb` driver binary and `lldb-dap` binary.
+[swift language](https://www.swift.org/) toolchain includes additional language
+integrations in `lldb` and the toolchain builds provider both the `lldb` driver
+binary and `lldb-dap` binary.
 
 ## IDE Integration
 
@@ -26,7 +29,8 @@ support debugging.
 
 ## Launching a program
 
-To launch an executable for debugging, first define a launch configuration tells `lldb-dap` how to launch the binary.
+To launch an executable for debugging, first define a launch configuration tells
+`lldb-dap` how to launch the binary.
 
 A simple launch configuration may look like
 
@@ -39,21 +43,22 @@ A simple launch configuration may look like
 }
 ```
 
-See the [Configuration Settings Reference](#configuration-settings-reference) for more information.
+See the [Configuration Settings Reference](#configuration-settings-reference)
+for more information.
 
 # Supported Features
 
 `lldb-dap` supports many features of the DAP spec.
 
-* Breakpoints
-  * Source breakpoints
-  * Function breakpoint
-  * Exception breakpoints
-* Call Stacks
-* Variables
-* Watch points
-* Expression Evaluation
-* And more...
+- Breakpoints
+  - Source breakpoints
+  - Function breakpoint
+  - Exception breakpoints
+- Call Stacks
+- Variables
+- Watch points
+- Expression Evaluation
+- And more...
 
 For more information, visit
 [Visual Studio Code's Debugging User Documentation](https://code.visualstudio.com/docs/debugtest/debugging)
@@ -66,7 +71,9 @@ is a variable name / expression whose values will be printed to the Debug
 Console or a LLDB command. To side-step this auto-detection and execute a LLDB
 command, prefix it with the `commandEscapePrefix`.
 
-The auto-detection mode can ba adjusted using the `lldb-dap repl-mode` command in the Debug Console or by adjusting the `--repl-mode [mode]` argument to `lldb-dap`. The supported modes are `variable`, `command` and `auto`.
+The auto-detection mode can ba adjusted using the `lldb-dap repl-mode` command
+in the Debug Console or by adjusting the `--repl-mode [mode]` argument to
+`lldb-dap`. The supported modes are `variable`, `command` and `auto`.
 
 # Configuration Settings Reference
 
@@ -80,7 +87,7 @@ For both launch and attach configurations, lldb-dap accepts the following
 | **name**                          | string      |  Y  | A configuration name that will be displayed in the IDE.                                                                                                                                                                                                                                                                                                                                                                                                    |
 | **type**                          | string      |  Y  | Must be "lldb-dap".                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | **request**                       | string      |  Y  | Must be "launch" or "attach".                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| **program**                       | string      |  Y  | Path to the executable to launch.                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **program**                       | string      |     | Path to the executable to launch.                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | **sourcePath**                    | string      |     | Specify a source path to remap \"./\" to allow full paths to be used when setting breakpoints in binaries that have relative source paths.                                                                                                                                                                                                                                                                                                                 |
 | **sourceMap**                     | [string[2]] |     | Specify an array of path re-mappings. Each element in the array must be a two element array containing a source and destination pathname. Overrides sourcePath.                                                                                                                                                                                                                                                                                            |
 | **debuggerRoot**                  | string      |     | Specify a working directory to use when launching lldb-dap. If the debug information in your executable contains relative paths, this option can be used so that `lldb-dap` can find source files and object files that have relative paths.                                                                                                                                                                                                               |
@@ -107,22 +114,27 @@ are executed. Commands can be prefixed with `?` or `!` to modify their behavior:
 
 ## Launch configurations
 
+_NOTE:_ Either `program` or `launchCommands` must be specified.
+
 For JSON configurations of `"type": "launch"`, the JSON configuration can
 additionally contain the following key/value pairs:
 
-| Parameter                      | Type       | Req |                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| ------------------------------ | ---------- | :-: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **program**                    | string     |  Y  | Path to the executable to launch.                                                                                                                                                                                                                                                                                                                                                                                                |
-| **args**                       | [string]   |     | An array of command line argument strings to be passed to the program being launched.                                                                                                                                                                                                                                                                                                                                            |
-| **cwd**                        | string     |     | The program working directory.                                                                                                                                                                                                                                                                                                                                                                                                   |
-| **env**                        | dictionary |     | Environment variables to set when launching the program. The format of each environment variable string is "VAR=VALUE" for environment variables with values or just "VAR" for environment variables with no values.                                                                                                                                                                                                             |
-| **stopOnEntry**                | boolean    |     | Whether to stop program immediately after launching.                                                                                                                                                                                                                                                                                                                                                                             |
-| **runInTerminal** (deprecated) | boolean    |     | Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs.                                                                                                                                                                                                                                                                                                             |
-| **console**                    | string     |     | Specify where to launch the program: internal console (`internalConsole`), integrated terminal (`integratedTerminal`) or external terminal (`externalTerminal`). Supported from lldb-dap 21.0 version.                                                                                                                                                                                                                           |
-| **stdio**                      | [string]   |     | The stdio property specifies the redirection targets for the debuggee's stdio streams. A null value redirects a stream to the default debug terminal. String can be a path to file, named pipe or TTY device. If less than three values are provided, the list will be padded with the last value. Specifying more than three values will create additional file descriptors (4, 5, etc.). Supported from lldb-dap 22.0 version. |
-| **launchCommands**             | [string]   |     | LLDB commands executed to launch the program.                                                                                                                                                                                                                                                                                                                                                                                    |
+| Parameter                      | Type                   | Req |                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------ | ---------------------- | :-: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **program**                    | string                 |     | Path to the executable to launch.                                                                                                                                                                                                                                                                                                                                                                                                |
+| **args**                       | [string]               |     | An array of command line argument strings to be passed to the program being launched.                                                                                                                                                                                                                                                                                                                                            |
+| **cwd**                        | string                 |     | The program working directory.                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **env**                        | dictionary or [string] |     | Environment variables to set when launching the program. The string format of each environment variable string is "VAR=VALUE" for environment variables with values or just "VAR" for environment variables with no values.                                                                                                                                                                                                      |
+| **stopOnEntry**                | boolean                |     | Whether to stop program immediately after launching.                                                                                                                                                                                                                                                                                                                                                                             |
+| **runInTerminal** (deprecated) | boolean                |     | Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs.                                                                                                                                                                                                                                                                                                             |
+| **console**                    | string                 |     | Specify where to launch the program: internal console (`internalConsole`), integrated terminal (`integratedTerminal`) or external terminal (`externalTerminal`). Supported from lldb-dap 21.0 version.                                                                                                                                                                                                                           |
+| **stdio**                      | [string]               |     | The stdio property specifies the redirection targets for the debuggee's stdio streams. A null value redirects a stream to the default debug terminal. String can be a path to file, named pipe or TTY device. If less than three values are provided, the list will be padded with the last value. Specifying more than three values will create additional file descriptors (4, 5, etc.). Supported from lldb-dap 22.0 version. |
+| **launchCommands**             | [string]               |     | LLDB commands executed to launch the program.                                                                                                                                                                                                                                                                                                                                                                                    |
 
 ## Attach configurations
+
+_NOTE:_ Either `pid`, `program`, `coreFile`, `attachCommands`
+or`gdb-remote-port` must be specified.
 
 For JSON configurations of `"type": "attach"`, the JSON configuration can
 contain the following `lldb-dap` specific key/value pairs:
