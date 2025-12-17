@@ -30,7 +30,7 @@ static char popChar(llvm::StringRef &str) {
 }
 
 static bool consumeChar(llvm::StringRef &str, char c) {
-  if (!str.starts_with('c'))
+  if (!str.starts_with(c))
     return false;
 
   str = str.drop_front();
