@@ -48126,6 +48126,7 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
 static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI,
                              const X86Subtarget &Subtarget) {
+
   SDLoc DL(N);
   SDValue Cond = N->getOperand(0);
   SDValue LHS = N->getOperand(1);
@@ -48152,10 +48153,13 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // select in presence of fp_to_sint can be replaced with just fp_to_sint
   // fold (SELECT (SETCC (FABS X), MAXFLOAT), (FP_TO_SINT X), INT_MIN)
   // -> (FP_TO_SINT X)
-  if (Cond.getOpcode() == ISD::SETCC &&
-      Cond.getOperand(0).getOpcode() == ISD::FABS &&
-      Cond.getOperand(1).getOpcode() == ISD::ConstantFP) {
-
+  using namespace SDPatternMatch;
+  SDValue T;
+  SDValue FloatConst;
+  if (sd_match(Cond, m_SetCC(m_FAbs(m_Value(T)), m_Value(FloatConst),
+                             m_SpecificCondCode(ISD::SETOLT)))) {
+    if (FloatConst.getOpcode() != ISD::ConstantFP)
+      return SDValue();
     SDValue FpToInt = LHS;
     SDValue ConstNode = RHS;
     if (FpToInt.getOpcode() != ISD::FP_TO_SINT) {
@@ -48170,7 +48174,6 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       return SDValue();
     }
 
-    SDValue T = Cond.getOperand(0).getOperand(0);
     if (T != FpToInt.getOperand(0)) {
       return SDValue();
     }
