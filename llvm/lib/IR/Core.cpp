@@ -97,11 +97,15 @@ static LLVMContext &getGlobalContext() {
   return GlobalContext;
 }
 
+LLVMContextRef llvm::getGlobalContextForCAPI() {
+  return wrap(&getGlobalContext());
+}
+
 LLVMContextRef LLVMContextCreate() {
   return wrap(new LLVMContext());
 }
 
-LLVMContextRef LLVMGetGlobalContext() { return wrap(&getGlobalContext()); }
+LLVMContextRef LLVMGetGlobalContext() { return getGlobalContextForCAPI(); }
 
 void LLVMContextSetDiagnosticHandler(LLVMContextRef C,
                                      LLVMDiagnosticHandler Handler,
@@ -146,7 +150,7 @@ unsigned LLVMGetMDKindIDInContext(LLVMContextRef C, const char *Name,
 }
 
 unsigned LLVMGetMDKindID(const char *Name, unsigned SLen) {
-  return LLVMGetMDKindIDInContext(LLVMGetGlobalContext(), Name, SLen);
+  return LLVMGetMDKindIDInContext(getGlobalContextForCAPI(), Name, SLen);
 }
 
 unsigned LLVMGetSyncScopeID(LLVMContextRef C, const char *Name, size_t SLen) {
@@ -681,25 +685,25 @@ LLVMTypeRef LLVMIntTypeInContext(LLVMContextRef C, unsigned NumBits) {
 }
 
 LLVMTypeRef LLVMInt1Type(void)  {
-  return LLVMInt1TypeInContext(LLVMGetGlobalContext());
+  return LLVMInt1TypeInContext(getGlobalContextForCAPI());
 }
 LLVMTypeRef LLVMInt8Type(void)  {
-  return LLVMInt8TypeInContext(LLVMGetGlobalContext());
+  return LLVMInt8TypeInContext(getGlobalContextForCAPI());
 }
 LLVMTypeRef LLVMInt16Type(void) {
-  return LLVMInt16TypeInContext(LLVMGetGlobalContext());
+  return LLVMInt16TypeInContext(getGlobalContextForCAPI());
 }
 LLVMTypeRef LLVMInt32Type(void) {
-  return LLVMInt32TypeInContext(LLVMGetGlobalContext());
+  return LLVMInt32TypeInContext(getGlobalContextForCAPI());
 }
 LLVMTypeRef LLVMInt64Type(void) {
-  return LLVMInt64TypeInContext(LLVMGetGlobalContext());
+  return LLVMInt64TypeInContext(getGlobalContextForCAPI());
 }
 LLVMTypeRef LLVMInt128Type(void) {
-  return LLVMInt128TypeInContext(LLVMGetGlobalContext());
+  return LLVMInt128TypeInContext(getGlobalContextForCAPI());
 }
 LLVMTypeRef LLVMIntType(unsigned NumBits) {
-  return LLVMIntTypeInContext(LLVMGetGlobalContext(), NumBits);
+  return LLVMIntTypeInContext(getGlobalContextForCAPI(), NumBits);
 }
 
 unsigned LLVMGetIntTypeWidth(LLVMTypeRef IntegerTy) {
@@ -734,28 +738,28 @@ LLVMTypeRef LLVMX86AMXTypeInContext(LLVMContextRef C) {
 }
 
 LLVMTypeRef LLVMHalfType(void) {
-  return LLVMHalfTypeInContext(LLVMGetGlobalContext());
+  return LLVMHalfTypeInContext(getGlobalContextForCAPI());
 }
 LLVMTypeRef LLVMBFloatType(void) {
-  return LLVMBFloatTypeInContext(LLVMGetGlobalContext());
+  return LLVMBFloatTypeInContext(getGlobalContextForCAPI());
 }
 LLVMTypeRef LLVMFloatType(void) {
-  return LLVMFloatTypeInContext(LLVMGetGlobalContext());
+  return LLVMFloatTypeInContext(getGlobalContextForCAPI());
 }
 LLVMTypeRef LLVMDoubleType(void) {
-  return LLVMDoubleTypeInContext(LLVMGetGlobalContext());
+  return LLVMDoubleTypeInContext(getGlobalContextForCAPI());
 }
 LLVMTypeRef LLVMX86FP80Type(void) {
-  return LLVMX86FP80TypeInContext(LLVMGetGlobalContext());
+  return LLVMX86FP80TypeInContext(getGlobalContextForCAPI());
 }
 LLVMTypeRef LLVMFP128Type(void) {
-  return LLVMFP128TypeInContext(LLVMGetGlobalContext());
+  return LLVMFP128TypeInContext(getGlobalContextForCAPI());
 }
 LLVMTypeRef LLVMPPCFP128Type(void) {
-  return LLVMPPCFP128TypeInContext(LLVMGetGlobalContext());
+  return LLVMPPCFP128TypeInContext(getGlobalContextForCAPI());
 }
 LLVMTypeRef LLVMX86AMXType(void) {
-  return LLVMX86AMXTypeInContext(LLVMGetGlobalContext());
+  return LLVMX86AMXTypeInContext(getGlobalContextForCAPI());
 }
 
 /*--.. Operations on function types ........................................--*/
@@ -795,7 +799,7 @@ LLVMTypeRef LLVMStructTypeInContext(LLVMContextRef C, LLVMTypeRef *ElementTypes,
 
 LLVMTypeRef LLVMStructType(LLVMTypeRef *ElementTypes,
                            unsigned ElementCount, LLVMBool Packed) {
-  return LLVMStructTypeInContext(LLVMGetGlobalContext(), ElementTypes,
+  return LLVMStructTypeInContext(getGlobalContextForCAPI(), ElementTypes,
                                  ElementCount, Packed);
 }
 
@@ -952,10 +956,10 @@ LLVMTypeRef LLVMMetadataTypeInContext(LLVMContextRef C) {
 }
 
 LLVMTypeRef LLVMVoidType(void)  {
-  return LLVMVoidTypeInContext(LLVMGetGlobalContext());
+  return LLVMVoidTypeInContext(getGlobalContextForCAPI());
 }
 LLVMTypeRef LLVMLabelType(void) {
-  return LLVMLabelTypeInContext(LLVMGetGlobalContext());
+  return LLVMLabelTypeInContext(getGlobalContextForCAPI());
 }
 
 LLVMTypeRef LLVMTargetExtTypeInContext(LLVMContextRef C, const char *Name,
@@ -1296,7 +1300,7 @@ LLVMValueRef LLVMMDStringInContext(LLVMContextRef C, const char *Str,
 }
 
 LLVMValueRef LLVMMDString(const char *Str, unsigned SLen) {
-  return LLVMMDStringInContext(LLVMGetGlobalContext(), Str, SLen);
+  return LLVMMDStringInContext(getGlobalContextForCAPI(), Str, SLen);
 }
 
 LLVMValueRef LLVMMDNodeInContext(LLVMContextRef C, LLVMValueRef *Vals,
@@ -1327,7 +1331,7 @@ LLVMValueRef LLVMMDNodeInContext(LLVMContextRef C, LLVMValueRef *Vals,
 }
 
 LLVMValueRef LLVMMDNode(LLVMValueRef *Vals, unsigned Count) {
-  return LLVMMDNodeInContext(LLVMGetGlobalContext(), Vals, Count);
+  return LLVMMDNodeInContext(getGlobalContextForCAPI(), Vals, Count);
 }
 
 LLVMValueRef LLVMMetadataAsValue(LLVMContextRef C, LLVMMetadataRef MD) {
@@ -1628,7 +1632,7 @@ LLVMValueRef LLVMConstStringInContext2(LLVMContextRef C, const char *Str,
 
 LLVMValueRef LLVMConstString(const char *Str, unsigned Length,
                              LLVMBool DontNullTerminate) {
-  return LLVMConstStringInContext(LLVMGetGlobalContext(), Str, Length,
+  return LLVMConstStringInContext(getGlobalContextForCAPI(), Str, Length,
                                   DontNullTerminate);
 }
 
@@ -1685,8 +1689,8 @@ LLVMValueRef LLVMConstStructInContext(LLVMContextRef C,
 
 LLVMValueRef LLVMConstStruct(LLVMValueRef *ConstantVals, unsigned Count,
                              LLVMBool Packed) {
-  return LLVMConstStructInContext(LLVMGetGlobalContext(), ConstantVals, Count,
-                                  Packed);
+  return LLVMConstStructInContext(getGlobalContextForCAPI(), ConstantVals,
+                                  Count, Packed);
 }
 
 LLVMValueRef LLVMConstNamedStruct(LLVMTypeRef StructTy,
@@ -2892,7 +2896,7 @@ LLVMBasicBlockRef LLVMAppendBasicBlockInContext(LLVMContextRef C,
 }
 
 LLVMBasicBlockRef LLVMAppendBasicBlock(LLVMValueRef FnRef, const char *Name) {
-  return LLVMAppendBasicBlockInContext(LLVMGetGlobalContext(), FnRef, Name);
+  return LLVMAppendBasicBlockInContext(getGlobalContextForCAPI(), FnRef, Name);
 }
 
 LLVMBasicBlockRef LLVMInsertBasicBlockInContext(LLVMContextRef C,
@@ -2904,7 +2908,7 @@ LLVMBasicBlockRef LLVMInsertBasicBlockInContext(LLVMContextRef C,
 
 LLVMBasicBlockRef LLVMInsertBasicBlock(LLVMBasicBlockRef BBRef,
                                        const char *Name) {
-  return LLVMInsertBasicBlockInContext(LLVMGetGlobalContext(), BBRef, Name);
+  return LLVMInsertBasicBlockInContext(getGlobalContextForCAPI(), BBRef, Name);
 }
 
 void LLVMDeleteBasicBlock(LLVMBasicBlockRef BBRef) {
@@ -3353,7 +3357,7 @@ LLVMBuilderRef LLVMCreateBuilderInContext(LLVMContextRef C) {
 }
 
 LLVMBuilderRef LLVMCreateBuilder(void) {
-  return LLVMCreateBuilderInContext(LLVMGetGlobalContext());
+  return LLVMCreateBuilderInContext(getGlobalContextForCAPI());
 }
 
 static void LLVMPositionBuilderImpl(IRBuilder<> *Builder, BasicBlock *Block,

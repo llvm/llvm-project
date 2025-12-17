@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/atomic/clc_atomic_load.h>
-#include <clc/opencl/atomic/atomic_load.h>
 #include <clc/opencl/utils.h>
 
 #define __CLC_FUNCTION atomic_load

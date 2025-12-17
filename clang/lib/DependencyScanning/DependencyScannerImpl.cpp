@@ -367,7 +367,7 @@ dependencies::createDiagOptions(ArrayRef<std::string> CommandLine) {
   return DiagOpts;
 }
 
-DignosticsEngineWithDiagOpts::DignosticsEngineWithDiagOpts(
+DiagnosticsEngineWithDiagOpts::DiagnosticsEngineWithDiagOpts(
     ArrayRef<std::string> CommandLine,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS, DiagnosticConsumer &DC) {
   std::vector<const char *> CCommandLine(CommandLine.size(), nullptr);
@@ -430,7 +430,8 @@ dependencies::createCompilerInvocation(ArrayRef<std::string> CommandLine,
   return Invocation;
 }
 
-std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
+std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
+          std::vector<std::string>>
 dependencies::initVFSForTUBufferScanning(
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
     ArrayRef<std::string> CommandLine, StringRef WorkingDirectory,
@@ -438,7 +439,6 @@ dependencies::initVFSForTUBufferScanning(
   // Reset what might have been modified in the previous worker invocation.
   BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
 
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> ModifiedFS;
   auto OverlayFS =
       llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
   auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
@@ -449,11 +449,10 @@ dependencies::initVFSForTUBufferScanning(
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
 
   OverlayFS->pushOverlay(InMemoryOverlay);
-  ModifiedFS = OverlayFS;
   std::vector<std::string> ModifiedCommandLine(CommandLine);
   ModifiedCommandLine.emplace_back(InputPath);
 
-  return std::make_pair(ModifiedFS, ModifiedCommandLine);
+  return std::make_pair(OverlayFS, ModifiedCommandLine);
 }
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
@@ -486,7 +485,7 @@ dependencies::initVFSForByNameScanning(
   return std::make_pair(OverlayFS, ModifiedCommandLine);
 }
 
-bool dependencies::initializeScanCompilerInstance(
+void dependencies::initializeScanCompilerInstance(
     CompilerInstance &ScanInstance,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,
@@ -498,8 +497,6 @@ bool dependencies::initializeScanCompilerInstance(
   // Create the compiler's actual diagnostics engine.
   sanitizeDiagOpts(ScanInstance.getDiagnosticOpts());
   ScanInstance.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
-  if (!ScanInstance.hasDiagnostics())
-    return false;
 
   ScanInstance.getPreprocessorOpts().AllowPCHWithDifferentModulesCachePath =
       true;
@@ -554,8 +551,6 @@ bool dependencies::initializeScanCompilerInstance(
 
   // Avoid some checks and module map parsing when loading PCM files.
   ScanInstance.getPreprocessorOpts().ModulesCheckRelocated = false;
-
-  return true;
 }
 
 llvm::SmallVector<StringRef>
@@ -671,9 +666,8 @@ bool DependencyScanningAction::runInvocation(
   CompilerInstance &ScanInstance = *ScanInstanceStorage;
 
   assert(!DiagConsumerFinished && "attempt to reuse finished consumer");
-  if (!initializeScanCompilerInstance(ScanInstance, FS, DiagConsumer, Service,
-                                      DepFS))
-    return false;
+  initializeScanCompilerInstance(ScanInstance, FS, DiagConsumer, Service,
+                                 DepFS);
 
   llvm::SmallVector<StringRef> StableDirs = getInitialStableDirs(ScanInstance);
   auto MaybePrebuiltModulesASTMap =
@@ -713,38 +707,25 @@ bool DependencyScanningAction::runInvocation(
   return Result;
 }
 
-bool CompilerInstanceWithContext::initialize(DiagnosticConsumer *DC) {
-  if (DC) {
-    DiagConsumer = DC;
-  } else {
-    DiagPrinterWithOS =
-        std::make_unique<TextDiagnosticsPrinterWithOutput>(CommandLine);
-    DiagConsumer = &DiagPrinterWithOS->DiagPrinter;
-  }
+bool CompilerInstanceWithContext::initialize(
+    std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithDiagOpts,
+    IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
+  assert(DiagEngineWithDiagOpts && "Valid diagnostics engine required!");
+  DiagEngineWithCmdAndOpts = std::move(DiagEngineWithDiagOpts);
+  DiagConsumer = DiagEngineWithCmdAndOpts->DiagEngine->getClient();
 
-  std::tie(OverlayFS, CommandLine) = initVFSForByNameScanning(
-      Worker.DepFS, CommandLine, CWD, "ScanningByName");
+#ifndef NDEBUG
+  assert(OverlayFS && "OverlayFS required!");
+  bool SawDepFS = false;
+  OverlayFS->visit([&](llvm::vfs::FileSystem &VFS) {
+    SawDepFS |= &VFS == Worker.DepFS.get();
+  });
+  assert(SawDepFS && "OverlayFS not based on DepFS");
+#endif
 
-  DiagEngineWithCmdAndOpts = std::make_unique<DignosticsEngineWithDiagOpts>(
-      CommandLine, OverlayFS, *DiagConsumer);
-
-  std::tie(Driver, Compilation) = buildCompilation(
-      CommandLine, *DiagEngineWithCmdAndOpts->DiagEngine, OverlayFS, Alloc);
-
-  if (!Compilation)
-    return false;
-
-  assert(Compilation->getJobs().size() &&
-         "Must have a job list of non-zero size");
-  const driver::Command &Command = *(Compilation->getJobs().begin());
-  const auto &CommandArgs = Command.getArguments();
-  assert(!CommandArgs.empty() && "Cannot have a command with 0 args");
-  assert(StringRef(CommandArgs[0]) == "-cc1" && "Requires a cc1 job.");
-  OriginalInvocation = std::make_unique<CompilerInvocation>();
-
-  if (!CompilerInvocation::CreateFromArgs(*OriginalInvocation, CommandArgs,
-                                          *DiagEngineWithCmdAndOpts->DiagEngine,
-                                          Command.getExecutable())) {
+  OriginalInvocation = createCompilerInvocation(
+      CommandLine, *DiagEngineWithCmdAndOpts->DiagEngine);
+  if (!OriginalInvocation) {
     DiagEngineWithCmdAndOpts->DiagEngine->Report(
         diag::err_fe_expected_compiler_job)
         << llvm::join(CommandLine, " ");
@@ -762,10 +743,9 @@ bool CompilerInstanceWithContext::initialize(DiagnosticConsumer *DC) {
       Worker.PCHContainerOps, ModCache.get());
   auto &CI = *CIPtr;
 
-  if (!initializeScanCompilerInstance(
-          CI, OverlayFS, DiagEngineWithCmdAndOpts->DiagEngine->getClient(),
-          Worker.Service, Worker.DepFS))
-    return false;
+  initializeScanCompilerInstance(
+      CI, OverlayFS, DiagEngineWithCmdAndOpts->DiagEngine->getClient(),
+      Worker.Service, Worker.DepFS);
 
   StableDirs = getInitialStableDirs(CI);
   auto MaybePrebuiltModulesASTMap =
@@ -815,7 +795,7 @@ bool CompilerInstanceWithContext::computeDependencies(
     // file. In this case, we call BeginSourceFile to initialize.
     std::unique_ptr<FrontendAction> Action =
         std::make_unique<PreprocessOnlyAction>();
-    auto InputFile = CI.getFrontendOpts().Inputs.begin();
+    auto *InputFile = CI.getFrontendOpts().Inputs.begin();
     bool ActionBeginSucceeded = Action->BeginSourceFile(CI, *InputFile);
     assert(ActionBeginSucceeded && "Action BeginSourceFile must succeed");
     (void)ActionBeginSucceeded;
@@ -875,12 +855,4 @@ bool CompilerInstanceWithContext::computeDependencies(
 bool CompilerInstanceWithContext::finalize() {
   DiagConsumer->finish();
   return true;
-}
-
-llvm::Error CompilerInstanceWithContext::handleReturnStatus(bool Success) {
-  assert(DiagPrinterWithOS && "Must use the default DiagnosticConsumer.");
-  return Success ? llvm::Error::success()
-                 : llvm::make_error<llvm::StringError>(
-                       DiagPrinterWithOS->DiagnosticsOS.str(),
-                       llvm::inconvertibleErrorCode());
 }

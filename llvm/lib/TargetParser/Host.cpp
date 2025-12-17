@@ -203,6 +203,10 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
         .Case("0xb36", "arm1136j-s")
         .Case("0xb56", "arm1156t2-s")
         .Case("0xb76", "arm1176jz-s")
+        .Case("0xd8a", "c1-nano")
+        .Case("0xd90", "c1-premium")
+        .Case("0xd8b", "c1-pro")
+        .Case("0xd8c", "c1-ultra")
         .Case("0xc05", "cortex-a5")
         .Case("0xc07", "cortex-a7")
         .Case("0xc08", "cortex-a8")
@@ -2192,10 +2196,10 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["amx-avx512"] = HasLeaf1E && ((EAX >> 7) & 1) && HasAMXSave;
   Features["amx-movrs"] = HasLeaf1E && ((EAX >> 8) & 1) && HasAMXSave;
 
-  bool HasLeaf24 =
-      MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
+  bool HasLeaf24 = MaxLevel >= 0x24 &&
+                   !getX86CpuIDAndInfoEx(0x24, 0x0, &EAX, &EBX, &ECX, &EDX);
 
-  int AVX10Ver = HasLeaf24 && (EBX & 0xff);
+  int AVX10Ver = HasLeaf24 ? (EBX & 0xff) : 0;
   Features["avx10.1"] = HasAVX10 && AVX10Ver >= 1;
   Features["avx10.2"] = HasAVX10 && AVX10Ver >= 2;
 
@@ -2304,8 +2308,14 @@ StringMap<bool> sys::getHostCPUFeatures() {
 #ifndef PF_ARM_SVE2_INSTRUCTIONS_AVAILABLE
 #define PF_ARM_SVE2_INSTRUCTIONS_AVAILABLE 47
 #endif
+#ifndef PF_ARM_SVE2_1_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_SVE2_1_INSTRUCTIONS_AVAILABLE 48
+#endif
 #ifndef PF_ARM_SVE_PMULL128_INSTRUCTIONS_AVAILABLE
 #define PF_ARM_SVE_PMULL128_INSTRUCTIONS_AVAILABLE 50
+#endif
+#ifndef PF_ARM_SVE_BITPERM_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_SVE_BITPERM_INSTRUCTIONS_AVAILABLE 51
 #endif
 #ifndef PF_ARM_SVE_SHA3_INSTRUCTIONS_AVAILABLE
 #define PF_ARM_SVE_SHA3_INSTRUCTIONS_AVAILABLE 55
@@ -2313,15 +2323,34 @@ StringMap<bool> sys::getHostCPUFeatures() {
 #ifndef PF_ARM_SVE_SM4_INSTRUCTIONS_AVAILABLE
 #define PF_ARM_SVE_SM4_INSTRUCTIONS_AVAILABLE 56
 #endif
-#ifndef PF_ARM_SVE_I8MM_INSTRUCTIONS_AVAILABLE
-#define PF_ARM_SVE_I8MM_INSTRUCTIONS_AVAILABLE 57
-#endif
 #ifndef PF_ARM_SVE_F32MM_INSTRUCTIONS_AVAILABLE
 #define PF_ARM_SVE_F32MM_INSTRUCTIONS_AVAILABLE 58
 #endif
 #ifndef PF_ARM_SVE_F64MM_INSTRUCTIONS_AVAILABLE
 #define PF_ARM_SVE_F64MM_INSTRUCTIONS_AVAILABLE 59
 #endif
+#ifndef PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE 66
+#endif
+#ifndef PF_ARM_V82_FP16_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_V82_FP16_INSTRUCTIONS_AVAILABLE 67
+#endif
+#ifndef PF_ARM_V86_BF16_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_V86_BF16_INSTRUCTIONS_AVAILABLE 68
+#endif
+#ifndef PF_ARM_SME_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_SME_INSTRUCTIONS_AVAILABLE 70
+#endif
+#ifndef PF_ARM_SME2_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_SME2_INSTRUCTIONS_AVAILABLE 71
+#endif
+#ifndef PF_ARM_SME_F64F64_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_SME_F64F64_INSTRUCTIONS_AVAILABLE 85
+#endif
+#ifndef PF_ARM_SME_I16I64_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_SME_I16I64_INSTRUCTIONS_AVAILABLE 86
+#endif
+
 StringMap<bool> sys::getHostCPUFeatures() {
   StringMap<bool> Features;
 
@@ -2340,8 +2369,12 @@ StringMap<bool> sys::getHostCPUFeatures() {
       IsProcessorFeaturePresent(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE);
   Features["sve2"] =
       IsProcessorFeaturePresent(PF_ARM_SVE2_INSTRUCTIONS_AVAILABLE);
+  Features["sve2p1"] =
+      IsProcessorFeaturePresent(PF_ARM_SVE2_1_INSTRUCTIONS_AVAILABLE);
   Features["sve-aes"] =
       IsProcessorFeaturePresent(PF_ARM_SVE_PMULL128_INSTRUCTIONS_AVAILABLE);
+  Features["sve-bitperm"] =
+      IsProcessorFeaturePresent(PF_ARM_SVE_BITPERM_INSTRUCTIONS_AVAILABLE);
   Features["sve-sha3"] =
       IsProcessorFeaturePresent(PF_ARM_SVE_SHA3_INSTRUCTIONS_AVAILABLE);
   Features["sve-sm4"] =
@@ -2351,7 +2384,19 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["f64mm"] =
       IsProcessorFeaturePresent(PF_ARM_SVE_F64MM_INSTRUCTIONS_AVAILABLE);
   Features["i8mm"] =
-      IsProcessorFeaturePresent(PF_ARM_SVE_I8MM_INSTRUCTIONS_AVAILABLE);
+      IsProcessorFeaturePresent(PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE);
+  Features["fp16"] =
+      IsProcessorFeaturePresent(PF_ARM_V82_FP16_INSTRUCTIONS_AVAILABLE);
+  Features["bf16"] =
+      IsProcessorFeaturePresent(PF_ARM_V86_BF16_INSTRUCTIONS_AVAILABLE);
+  Features["sme"] =
+      IsProcessorFeaturePresent(PF_ARM_SME_INSTRUCTIONS_AVAILABLE);
+  Features["sme2"] =
+      IsProcessorFeaturePresent(PF_ARM_SME2_INSTRUCTIONS_AVAILABLE);
+  Features["sme-i16i64"] =
+      IsProcessorFeaturePresent(PF_ARM_SME_I16I64_INSTRUCTIONS_AVAILABLE);
+  Features["sme-f64f64"] =
+      IsProcessorFeaturePresent(PF_ARM_SME_F64F64_INSTRUCTIONS_AVAILABLE);
 
   // Avoid inferring "crypto" means more than the traditional AES + SHA2
   bool TradCrypto =

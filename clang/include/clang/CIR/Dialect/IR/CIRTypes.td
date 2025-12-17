@@ -306,6 +306,36 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
 }
 
 //===----------------------------------------------------------------------===//
+// CIR_DataMemberType
+//===----------------------------------------------------------------------===//
+
+def CIR_DataMemberType : CIR_Type<"DataMember", "data_member",
+    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]
+> {
+  let summary = "CIR type that represents a pointer-to-data-member in C++";
+  let description = [{
+    `cir.data_member` models a pointer-to-data-member in C++. Values of this
+    type are essentially offsets of the pointed-to member within one of its
+    containing record.
+  }];
+
+  let parameters = (ins "mlir::Type":$member_ty,
+                        "cir::RecordType":$class_ty);
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "mlir::Type":$member_ty, "cir::RecordType":$class_ty
+    ), [{
+      return $_get(member_ty.getContext(), member_ty, class_ty);
+    }]>,
+  ];
+
+  let assemblyFormat = [{
+    `<` $member_ty `in` $class_ty `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // CIR_VPtrType
 //===----------------------------------------------------------------------===//
 
@@ -392,8 +422,9 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 ]> {
   let summary = "CIR vector type";
   let description = [{
-    The `!cir.vector` type represents a fixed-size, one-dimensional vector.
-    It takes two parameters: the element type and the number of elements.
+    The `!cir.vector` type represents a one-dimensional vector.
+    It takes three parameters: the element type, the number of elements and the
+    scalability flag (optional, defaults to `false`).
 
     Syntax:
 
@@ -414,19 +445,21 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   }];
 
   let parameters = (ins
-    CIR_VectorElementType:$elementType,
-    "uint64_t":$size
+    CIR_VectorElementType:$element_type,
+    "uint64_t":$size,
+    OptionalParameter<"bool">:$is_scalable
   );
 
   let assemblyFormat = [{
-    `<` $size `x` $elementType `>`
+    `<` $size `x` $element_type `>`
   }];
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$elementType, "uint64_t":$size
+      "mlir::Type":$element_type, "uint64_t":$size, CArg<"bool",
+      "false">:$is_scalable
     ), [{
-        return $_get(elementType.getContext(), elementType, size);
+        return $_get(element_type.getContext(), element_type, size, is_scalable);
     }]>,
   ];
 
@@ -437,6 +470,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   }];
 
   let genVerifyDecl = 1;
+  let skipDefaultBuilders = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -693,7 +727,7 @@ def CIRRecordType : Type<
 def CIR_AnyType : AnyTypeOf<[
   CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
   CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_RecordType,
-  CIR_ComplexType, CIR_VPtrType
+  CIR_ComplexType, CIR_VPtrType, CIR_DataMemberType
 ]>;
 
 #endif // CLANG_CIR_DIALECT_IR_CIRTYPES_TD

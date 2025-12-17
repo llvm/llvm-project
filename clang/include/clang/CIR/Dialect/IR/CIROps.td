@@ -425,6 +425,28 @@ def CIR_ConstantOp : CIR_Op<"const", [
         return boolAttr.getValue();
       llvm_unreachable("Expected a BoolAttr in ConstantOp");
     }
+
+    bool isAllOnesValue() {
+      // Check for -1 integers
+      if (auto intAttr = getValueAttr<cir::IntAttr>())
+        return intAttr.getValue().isAllOnes();
+
+      // Check for FP which are bitcasted from -1 integers
+      if (auto fpAttr = getValueAttr<cir::FPAttr>())
+        return fpAttr.getValue().bitcastToAPInt().isAllOnes();
+
+      // Check for constant vectors with splat values
+      if (cir::VectorType v = mlir::dyn_cast<cir::VectorType>(getType()))
+        if (auto vecAttr = getValueAttr<mlir::DenseElementsAttr>())
+          if (vecAttr.isSplat()) {
+            auto splatAttr = vecAttr.getSplatValue<mlir::Attribute>();
+            if (auto splatInt = mlir::dyn_cast<cir::IntAttr>(splatAttr)) {
+              return splatInt.getValue().isAllOnes();
+          }
+      }
+
+      return false;
+    }
   }];
 
   let hasFolder = 1;
@@ -444,6 +466,15 @@ def CIR_MemOrder : CIR_I32EnumAttr<
     I32EnumAttrCase<"Release", 3, "release">,
     I32EnumAttrCase<"AcquireRelease", 4, "acq_rel">,
     I32EnumAttrCase<"SequentiallyConsistent", 5, "seq_cst">
+]>;
+
+//===----------------------------------------------------------------------===//
+// C/C++ sync scope definitions
+//===----------------------------------------------------------------------===//
+
+def CIR_SyncScopeKind : CIR_I32EnumAttr<"SyncScopeKind", "sync scope kind", [
+  I32EnumAttrCase<"SingleThread", 0, "single_thread">,
+  I32EnumAttrCase<"System", 1, "system">
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -586,6 +617,7 @@ def CIR_LoadOp : CIR_Op<"load", [
                        UnitAttr:$isDeref,
                        UnitAttr:$is_volatile,
                        OptionalAttr<I64Attr>:$alignment,
+                       OptionalAttr<CIR_SyncScopeKind>:$sync_scope,
                        OptionalAttr<CIR_MemOrder>:$mem_order);
   let results = (outs CIR_AnyType:$result);
 
@@ -593,6 +625,7 @@ def CIR_LoadOp : CIR_Op<"load", [
     (`deref` $isDeref^)?
     (`volatile` $is_volatile^)?
     (`align` `(` $alignment^ `)`)?
+    (`syncscope` `(` $sync_scope^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
   }];
@@ -638,11 +671,13 @@ def CIR_StoreOp : CIR_Op<"store", [
                            [MemWrite]>:$addr,
                        UnitAttr:$is_volatile,
                        OptionalAttr<I64Attr>:$alignment,
+                       OptionalAttr<CIR_SyncScopeKind>:$sync_scope,
                        OptionalAttr<CIR_MemOrder>:$mem_order);
 
   let assemblyFormat = [{
     (`volatile` $is_volatile^)?
     (`align` `(` $alignment^ `)`)?
+    (`syncscope` `(` $sync_scope^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
     $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
   }];
@@ -1047,6 +1082,12 @@ def CIR_SwitchOp : CIR_Op<"switch", [
     conditionally executing multiple regions of code. The operand to an switch
     is an integral condition value.
 
+    Besides taking an integer condition and CIR regions, it also accepts an
+    `all_enum_cases_covered` attribute indicating whether all enum cases are 
+    handled by the operation. Note that the presence of a default CaseOp does 
+    not imply `all_enum_cases_covered`. The original AST switch must explicitly list 
+    every enum case.
+
     The set of `cir.case` operations and their enclosing `cir.switch`
     represent the semantics of a C/C++ switch statement. Users can use
     `collectCases(llvm::SmallVector<CaseOp> &cases)` to collect the `cir.case`
@@ -1173,7 +1214,10 @@ def CIR_SwitchOp : CIR_Op<"switch", [
     ```
   }];
 
-  let arguments = (ins CIR_IntType:$condition);
+  let arguments = (ins 
+    CIR_IntType:$condition,
+    UnitAttr:$all_enum_cases_covered
+  );
 
   let regions = (region AnyRegion:$body);
 
@@ -1184,9 +1228,9 @@ def CIR_SwitchOp : CIR_Op<"switch", [
   ];
 
   let assemblyFormat = [{
-    custom<SwitchOp>(
-      $body, $condition, type($condition)
-    )
+    `(` $condition `:` qualified(type($condition)) `)` 
+     (`all_enum_cases_covered` $all_enum_cases_covered^)?
+    $body
     attr-dict
   }];
 
@@ -1488,6 +1532,55 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
     $destTrue (`(` $destOperandsTrue^ `:` type($destOperandsTrue) `)`)?
     `,`
     $destFalse (`(` $destOperandsFalse^ `:` type($destOperandsFalse) `)`)?
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// IndirectBrOp
+//===----------------------------------------------------------------------===//
+
+def CIR_IndirectBrOp : CIR_Op<"indirect_br", [
+  DeclareOpInterfaceMethods<BranchOpInterface>,
+  SameVariadicOperandSize, Terminator, Pure
+]> {
+  let summary = "Indirect branch";
+  let description = [{
+    The `cir.indirectbr` operation represents an indirect branch to one of
+    several possible successor blocks. The target block is computed from
+    the value of the given address operand.
+
+    This operation is typically generated when handling constructs like
+    the GCC extension `&&label` combined with an indirect `goto *ptr;`.
+
+    The `poison` attribute is used to mark an `indirectbr` that was created
+    but is known to be invalid, for instance when a label address was
+    taken but no indirect branch was ever emitted.
+
+    Example:
+
+    ```mlir
+      %0 = cir.block_address <@A, "A"> : !cir.ptr<!void>
+      cir.indirectbr %0 poison : <!void>, [
+      ^bb1
+      ]
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_VoidPtrType:$addr,
+    UnitAttr:$poison,
+    VariadicOfVariadic<AnyType, "operand_segments">:$succ_operands,
+    DenseI32ArrayAttr:$operand_segments
+    );
+
+  let successors = (successor VariadicSuccessor<AnySuccessor>:$successors);
+  let assemblyFormat = [{
+    $addr ( `poison` $poison^ )? `:` qualified(type($addr)) `,`
+    custom<IndirectBrOpSucessors>(ref(type($addr)),
+                                  $successors,
+                                  $succ_operands,
+                                  type($succ_operands))
     attr-dict
   }];
 }
@@ -1900,10 +1993,16 @@ def CIR_SelectOp : CIR_Op<"select", [
   let summary = "Yield one of two values based on a boolean value";
   let description = [{
     The `cir.select` operation takes three operands. The first operand
-    `condition` is a boolean value of type `!cir.bool`. The second and the third
-    operand can be of any CIR types, but their types must be the same. If the
-    first operand is `true`, the operation yields its second operand. Otherwise,
-    the operation yields its third operand.
+    `condition` is either a boolean value of type `!cir.bool` or a boolean
+    vector of type `!cir.bool`.  The second and the third operand can be of
+    any CIR types, but their types must be the same. If the first operand 
+    is `true`, the operation yields its second operand. Otherwise, the
+    operation yields its third operand.
+
+    In the case where the first operand is a boolean vector, then the second 
+    and third operand needs to also be of some vectors of the same type to
+    each other and that the number of elements of all three operands needs to 
+    be the same as well.
 
     Example:
 
@@ -1915,8 +2014,12 @@ def CIR_SelectOp : CIR_Op<"select", [
     ```
   }];
 
-  let arguments = (ins CIR_BoolType:$condition, CIR_AnyType:$true_value,
-                       CIR_AnyType:$false_value);
+  let arguments = (ins 
+    CIR_ScalarOrVectorOf<CIR_BoolType>:$condition,
+    CIR_AnyType:$true_value,
+    CIR_AnyType:$false_value
+  );
+
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
@@ -1929,6 +2032,7 @@ def CIR_SelectOp : CIR_Op<"select", [
   }];
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2029,6 +2133,13 @@ def CIR_GlobalLinkageKind : CIR_I32EnumAttr<
 // properties of a global variable will be added over time as more of ClangIR
 // is upstreamed.
 
+def CIR_TLSModel : CIR_I32EnumAttr<"TLS_Model", "TLS model", [
+  I32EnumAttrCase<"GeneralDynamic", 0, "tls_dyn">,
+  I32EnumAttrCase<"LocalDynamic", 1, "tls_local_dyn">,
+  I32EnumAttrCase<"InitialExec", 2, "tls_init_exec">,
+  I32EnumAttrCase<"LocalExec", 3, "tls_local_exec">
+]>;
+
 def CIR_GlobalOp : CIR_Op<"global", [
   DeclareOpInterfaceMethods<RegionBranchOpInterface>,
   DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
@@ -2057,6 +2168,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
                        CIR_GlobalLinkageKind:$linkage,
+                       OptionalAttr<CIR_TLSModel>:$tls_model,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$comdat,
                        UnitAttr:$constant,
@@ -2072,6 +2184,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
     (`constant` $constant^)?
     $linkage
     (`comdat` $comdat^)?
+    ($tls_model^)?
     (`dso_local` $dso_local^)?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
@@ -2135,16 +2248,22 @@ def CIR_GetGlobalOp : CIR_Op<"get_global", [
     undefined. The resulting type must always be a `!cir.ptr<...>` type with the
     same address space as the global variable.
 
+    Addresses of thread local globals can only be retrieved if this operation
+    is marked `thread_local`, which indicates the address isn't constant.
+
     Example:
     ```mlir
     %x = cir.get_global @gv : !cir.ptr<i32>
+    ...
+    %y = cir.get_global thread_local @tls_gv : !cir.ptr<i32>
     ```
   }];
 
-  let arguments = (ins FlatSymbolRefAttr:$name);
+  let arguments = (ins FlatSymbolRefAttr:$name, UnitAttr:$tls);
   let results = (outs Res<CIR_PointerType, "", []>:$addr);
 
   let assemblyFormat = [{
+    (`thread_local` $tls^)?
     $name `:` qualified(type($addr)) attr-dict
   }];
 }
@@ -2627,6 +2746,10 @@ def CIR_FuncOp : CIR_Op<"func", [
     The `always_inline` attribute marks a function that should always be inlined.
     The `inline_hint` attribute suggests that the function should be inlined.
 
+    The `personality` attribute specifies the personality function to use for
+    exception handling. This is a symbol reference to the personality function
+    (e.g., `@__gxx_personality_v0` for C++ exceptions).
+
     Example:
 
     ```mlir
@@ -2673,6 +2796,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs,
     OptionalAttr<FlatSymbolRefAttr>:$aliasee,
+    OptionalAttr<FlatSymbolRefAttr>:$personality,
     CIR_OptionalPriorityAttr:$global_ctor_priority,
     CIR_OptionalPriorityAttr:$global_dtor_priority,
     OptionalAttr<CIR_CXXSpecialMemberAttr>:$cxx_special_member
@@ -2907,6 +3031,8 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
 
   let results = (outs Optional<CIR_AnyType>:$result);
   let arguments = commonArgs;
+
+  let skipDefaultBuilders = 1;
 
   let builders = [
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee, "mlir::Type":$resType,
@@ -3438,6 +3564,63 @@ def CIR_ArrayDtor : CIR_ArrayInitDestroy<"array.dtor"> {
     }
     ```
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// GetRuntimeMemberOp
+//===----------------------------------------------------------------------===//
+
+def CIR_GetRuntimeMemberOp : CIR_Op<"get_runtime_member"> {
+  let summary = "Get the address of a member of a record";
+  let description = [{
+    The `cir.get_runtime_member` operation gets the address of a member from
+    the input record. The target member is given by a value of type
+    `!cir.data_member` (i.e. a pointer-to-data-member value).
+
+    This operation differs from `cir.get_member` in when the target member can
+    be determined. For the `cir.get_member` operation, the target member is
+    specified as a constant index so the member it returns access to is known
+    when the operation is constructed. For the `cir.get_runtime_member`
+    operation, the target member is given through a pointer-to-data-member
+    value which is unknown until the program being compiled is executed. In
+    other words, `cir.get_member` represents a normal member access through the
+    `.` operator in C/C++:
+
+    ```cpp
+    struct Foo { int x; };
+    Foo f;
+    (void)f.x;  // cir.get_member
+    ```
+
+    And `cir.get_runtime_member` represents a member access through the `.*` or
+    the `->*` operator in C++:
+
+    ```cpp
+    struct Foo { int x; }
+    Foo f;
+    Foo *p;
+    int Foo::*member;
+
+    (void)f.*member;   // cir.get_runtime_member
+    (void)p->*member;  // cir.get_runtime_member
+    ```
+
+    This operation expects a pointer to the base record as well as the pointer
+    to the target member.
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PtrToRecordType, "address of the record object", [MemRead]>:$addr,
+    Arg<CIR_DataMemberType, "pointer to the target member">:$member);
+
+  let results = (outs Res<CIR_PointerType, "">:$result);
+
+  let assemblyFormat = [{
+    $addr `[` $member `:` qualified(type($member)) `]` attr-dict
+    `:` qualified(type($addr)) `->` qualified(type($result))
+  }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4707,6 +4890,27 @@ class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let llvmOp = llvmOpName;
 }
 
+def CIR_SqrtOp : CIR_UnaryFPToFPBuiltinOp<"sqrt", "SqrtOp"> {
+  let summary = "Floating-point square root operation";
+  
+  let description = [{
+    Computes the square root of a floating-point value or vector.
+
+    The input must be either:
+      • a floating-point scalar type, or
+      • a vector whose element type is floating-point.
+
+    The result type must match the input type exactly.
+
+    Examples:
+      // scalar
+      %r = cir.sqrt %x : !cir.fp64
+
+      // vector
+      %v = cir.sqrt %vec : !cir.vector<!cir.fp32 x 4>
+  }];
+}
+
 def CIR_ACosOp : CIR_UnaryFPToFPBuiltinOp<"acos", "ACosOp"> {
   let summary = "Computes the arcus cosine of the specified value";
   let description = [{
@@ -5135,6 +5339,34 @@ def CIR_TryOp : CIR_Op<"try",[
 }
 
 //===----------------------------------------------------------------------===//
+// CatchParamOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CatchParamOp : CIR_Op<"catch_param", [HasParent<"cir::TryOp">]> {
+  let summary = "Represents the catch clause formal parameter";
+  let description = [{
+    The `cir.catch_param` is used to retrieves the exception object inside
+    the handler regions of `cir.try`.
+
+    This operation is used only before the CFG flatterning pass.
+
+    Example:
+
+    ```mlir
+    %exception = cir.catch_param : !cir.ptr<!void>
+    ```
+  }];
+
+  let results = (outs Optional<CIR_AnyType>:$param);
+  let assemblyFormat = [{
+    (`:` qualified(type($param))^)?
+    attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // Exception related: EhInflightOp
 //===----------------------------------------------------------------------===//
 
@@ -5186,11 +5418,6 @@ def CIR_AtomicFetchKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"Nand", 5, "nand">,
     I32EnumAttrCase<"Max", 6, "max">,
     I32EnumAttrCase<"Min", 7, "min">
-]>;
-
-def CIR_SyncScopeKind : CIR_I32EnumAttr<"SyncScopeKind", "sync scope kind", [
-  I32EnumAttrCase<"SingleThread", 0, "single_thread">,
-  I32EnumAttrCase<"System", 1, "system">
 ]>;
 
 def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
@@ -5416,7 +5643,7 @@ def CIR_AtomicClearOp : CIR_Op<"atomic.clear"> {
   }];
 }
 
-def CIR_AtomicFence : CIR_Op<"atomic.fence"> {
+def CIR_AtomicFenceOp : CIR_Op<"atomic.fence"> {
   let summary = "Atomic thread fence";
   let description = [{
     C/C++ Atomic thread fence synchronization primitive. Implements the builtin
