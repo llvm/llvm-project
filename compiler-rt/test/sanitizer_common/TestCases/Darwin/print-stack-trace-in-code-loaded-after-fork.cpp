@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
   PrintStackFnPtrTy PrintStackFnPtr = (PrintStackFnPtrTy)dlsym(handle, "PrintStack");
   assert(PrintStackFnPtr);
   // Check that the symbolizer is told examine the child process.
-  // CHECK: Launching Symbolizer process: {{.+}}atos -p [[CHILD_PID]]
+  // CHECK: Launching Symbolizer process: {{.+}}atos -i -p [[CHILD_PID]]
   // CHECK-STACKTRACE: #2{{( *0x.* *in *)?}} main {{.*}}print-stack-trace-in-code-loaded-after-fork.cpp:[[@LINE+1]]
   PrintStackFnPtr();
   return 0;
