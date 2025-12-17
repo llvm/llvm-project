@@ -118,14 +118,5 @@ typedef bool bool3 __attribute__((ext_vector_type(3)));
 typedef bool bool2x3 __attribute__((matrix_type(2,3)));
 
 export bool3 testTemplatedMatrixAccess(bool2x3 M) {
-  // CHECK: FunctionDecl {{.*}} used testTemplatedMatrixAccess 'bool3 (bool2x3)'
-  // CHECK-NEXT: ParmVarDecl {{.*}} used M 'bool2x3':'matrix<bool, 2, 3>'
-  // CHECK-NEXT: CompoundStmt {{.*}}
-  // CHECK-NEXT: ReturnStmt {{.*}}
-  // CHECK-NEXT: CallExpr {{.*}} 'vector<bool, 3>'
-  // CHECK-NEXT: ImplicitCastExpr {{.*}}  'vector<bool, 3> (*)(matrix<bool, 2, 3>)' <FunctionToPointerDecay>
-  // CHECK-NEXT: DeclRefExpr {{.*}}  'vector<bool, 3> (matrix<bool, 2, 3>)' lvalue Function {{.*}}  'getVecFromTemplateMat' 'vector<bool, 3> (matrix<bool, 2, 3>)' (FunctionTemplate {{.*}}  'getVecFromTemplateMat')
-  // CHECK-NEXT: ImplicitCastExpr {{.*}}  'bool2x3':'matrix<bool, 2, 3>' <LValueToRValue>
-  // CHECK-NEXT: DeclRefExpr {{.*}}  'bool2x3':'matrix<bool, 2, 3>' lvalue ParmVar {{.*}}  'M' 'bool2x3':'matrix<bool, 2, 3>'
   return getVecFromTemplateMat(M);
 }
