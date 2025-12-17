@@ -91,8 +91,6 @@ X86PreLegalizerCombinerImpl::X86PreLegalizerCombinerImpl(
 bool X86PreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
   if (tryCombineAllImpl(MI))
     return true;
-  LLVM_DEBUG(dbgs() << "\nNo table match found.\nTry Custom Combine for "
-                    << MI);
   return false;
 }
 
@@ -142,7 +140,7 @@ bool X86PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   auto *CSEInfo = &Wrapper.get(TPC.getCSEConfig());
 
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
-  const auto *LI = ST.getLegalizerInfo();
+  const LegalizerInfo *LI = ST.getLegalizerInfo();
 
   const Function &F = MF.getFunction();
   bool EnableOpt =
@@ -154,9 +152,7 @@ bool X86PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   CombinerInfo CInfo(/*AllowIllegalOps=*/ true, /*ShouldLegalizeIllegal=*/ false,
                      /*LegalizerInfo=*/LI, EnableOpt, F.hasOptSize(),
                      F.hasMinSize());
-  // Disable fixed-point iteration to reduce compile-time
-  CInfo.MaxIterations = 1;
-  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
+
   // This is the first Combiner, so the input IR might contain dead
   // instructions.
   CInfo.EnableFullDCE = true;
