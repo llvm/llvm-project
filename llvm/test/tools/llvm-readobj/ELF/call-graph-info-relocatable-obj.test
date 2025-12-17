@@ -9,7 +9,7 @@
 
 # LLVM:   CallGraph [
 # LLVM-NEXT:   Function {
-# LLVM-NEXT:     Name: _Z3foov
+# LLVM-NEXT:     Name: foo
 # LLVM-NEXT:     Version: 0
 # LLVM-NEXT:     IsIndirectTarget: Yes
 # LLVM-NEXT:     TypeId: 0xF85C699BB8EF20A2
@@ -20,7 +20,7 @@
 # LLVM-NEXT:     IndirectTypeIDs: []
 # LLVM-NEXT:   }
 # LLVM-NEXT:   Function {
-# LLVM-NEXT:     Name: _Z3barv
+# LLVM-NEXT:     Name: bar
 # LLVM-NEXT:     Version: 0
 # LLVM-NEXT:     IsIndirectTarget: Yes
 # LLVM-NEXT:     TypeId: 0xF85C699BB8EF20A2
@@ -31,7 +31,7 @@
 # LLVM-NEXT:     IndirectTypeIDs: []
 # LLVM-NEXT:   }
 # LLVM-NEXT:   Function {
-# LLVM-NEXT:     Name: _Z3bazc
+# LLVM-NEXT:     Name: baz
 # LLVM-NEXT:     Version: 0
 # LLVM-NEXT:     IsIndirectTarget: Yes
 # LLVM-NEXT:     TypeId: 0x308E4B8159BC8654
@@ -42,20 +42,20 @@
 # LLVM-NEXT:     IndirectTypeIDs: []
 # LLVM-NEXT:   }
 # LLVM-NEXT:   Function {
-# LLVM-NEXT:     Name: _Z6callerv
+# LLVM-NEXT:     Name: caller
 # LLVM-NEXT:     Version: 0
 # LLVM-NEXT:     IsIndirectTarget: Yes
 # LLVM-NEXT:     TypeId: 0xA9494DEF81A01DC
 # LLVM-NEXT:     NumDirectCallees: 3
 # LLVM-NEXT:     DirectCallees [
 # LLVM-NEXT:       {
-# LLVM-NEXT:         Name: _Z3foov
+# LLVM-NEXT:         Name: foo
 # LLVM-NEXT:       }
 # LLVM-NEXT:       {
-# LLVM-NEXT:         Name: _Z3barv
+# LLVM-NEXT:         Name: bar
 # LLVM-NEXT:       }
 # LLVM-NEXT:       {
-# LLVM-NEXT:         Name: _Z3bazc
+# LLVM-NEXT:         Name: baz
 # LLVM-NEXT:       }
 # LLVM-NEXT:     ]
 # LLVM-NEXT:     NumIndirectTargetTypeIDs: 2
@@ -66,7 +66,7 @@
 # JSON:     "CallGraph": [
 # JSON-NEXT:      {
 # JSON-NEXT:        "Function": {
-# JSON-NEXT:          "Name": "_Z3foov",
+# JSON-NEXT:          "Name": "foo",
 # JSON-NEXT:          "Version": 0,
 # JSON-NEXT:          "IsIndirectTarget": true,
 # JSON-NEXT:          "TypeId": 17896295136807035042,
@@ -78,7 +78,7 @@
 # JSON-NEXT:      },
 # JSON-NEXT:      {
 # JSON-NEXT:        "Function": {
-# JSON-NEXT:          "Name": "_Z3barv",
+# JSON-NEXT:          "Name": "bar",
 # JSON-NEXT:          "Version": 0,
 # JSON-NEXT:          "IsIndirectTarget": true,
 # JSON-NEXT:          "TypeId": 17896295136807035042,
@@ -90,7 +90,7 @@
 # JSON-NEXT:      },
 # JSON-NEXT:      {
 # JSON-NEXT:        "Function": {
-# JSON-NEXT:          "Name": "_Z3bazc",
+# JSON-NEXT:          "Name": "baz",
 # JSON-NEXT:          "Version": 0,
 # JSON-NEXT:          "IsIndirectTarget": true,
 # JSON-NEXT:          "TypeId": 3498816979441845844,
@@ -102,20 +102,20 @@
 # JSON-NEXT:      },
 # JSON-NEXT:      {
 # JSON-NEXT:        "Function": {
-# JSON-NEXT:          "Name": "_Z6callerv",
+# JSON-NEXT:          "Name": "caller",
 # JSON-NEXT:          "Version": 0,
 # JSON-NEXT:          "IsIndirectTarget": true,
 # JSON-NEXT:          "TypeId": 762397922298560988,
 # JSON-NEXT:          "NumDirectCallees": 3,
 # JSON-NEXT:          "DirectCallees": [
 # JSON-NEXT:            {
-# JSON-NEXT:              "Name": "_Z3foov"
+# JSON-NEXT:              "Name": "foo"
 # JSON-NEXT:            },
 # JSON-NEXT:            {
-# JSON-NEXT:              "Name": "_Z3barv"
+# JSON-NEXT:              "Name": "bar"
 # JSON-NEXT:            },
 # JSON-NEXT:            {
-# JSON-NEXT:              "Name": "_Z3bazc"
+# JSON-NEXT:              "Name": "baz"
 # JSON-NEXT:            }
 # JSON-NEXT:          ],
 # JSON-NEXT:          "NumIndirectTargetTypeIDs": 2,
@@ -142,45 +142,45 @@ Sections:
     Flags:           [ SHF_LINK_ORDER ]
     Link:            .text
     ContentArray: [
-      # --- Entry 1: _Z3foov (foo) ---
+      # --- Entry 1: foo (foo) ---
       # Offset 0x0
       0x00, # Format Version
       0x01, # Flags
-      # Offset 0x2 (Matches Reloc: _Z3foov)
+      # Offset 0x2 (Matches Reloc: foo)
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Address of foo
       0xA2, 0x20, 0xEF, 0xB8, 0x9B, 0x69, 0x5C, 0xF8, # TypeID of foo
 
-      # --- Entry 2: _Z3barv (bar) ---
+      # --- Entry 2: bar (bar) ---
       # Offset 0x12
       0x00, # Format Version
       0x01, # Flags
-      # Offset 0x14 (Matches Reloc: _Z3barv)
+      # Offset 0x14 (Matches Reloc: bar)
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Address of bar
       0xA2, 0x20, 0xEF, 0xB8, 0x9B, 0x69, 0x5C, 0xF8, # TypeID of bar
 
-      # --- Entry 3: _Z3bazc (baz) ---
+      # --- Entry 3: baz (baz) ---
       # Offset 0x24
       0x00, # Format Version
       0x01, # Flags
-      # Offset 0x26 (Matches Reloc: _Z3bazc)
+      # Offset 0x26 (Matches Reloc: baz)
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Address of baz
       0x54, 0x86, 0xBC, 0x59, 0x81, 0x4B, 0x8E, 0x30, # TypeID of baz
 
-      # --- Entry 4: _Z6callerv (caller) ---
+      # --- Entry 4: caller (caller) ---
       # Offset 0x36
       0x00, # Format Version
       0x07, # Flags (HasDirectCallees | IsIndirectTarget | ...)
-      # Offset 0x38 (Matches Reloc: _Z6callerv)
+      # Offset 0x38 (Matches Reloc: caller)
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Address of caller
       0xDC, 0x01, 0x1A, 0xF8, 0xDE, 0x94, 0x94, 0x0A, # TypeID of caller
 
       # Direct Callees List
       0x03, # NumDirectCallees (3)
-      # Offset 0x49 (Matches Reloc: _Z3foov)
+      # Offset 0x49 (Matches Reloc: foo)
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Callee 1: foo
-      # Offset 0x51 (Matches Reloc: _Z3barv)
+      # Offset 0x51 (Matches Reloc: bar)
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Callee 2: bar
-      # Offset 0x59 (Matches Reloc: _Z3bazc)
+      # Offset 0x59 (Matches Reloc: baz)
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # Callee 3: baz
 
       # Indirect Callees List
@@ -194,29 +194,29 @@ Sections:
     Info:            .llvm.callgraph
     Relocations:
       - Offset:          0x2
-        Symbol:          _Z3foov
+        Symbol:          foo
         Type:            R_X86_64_64
       - Offset:          0x14
-        Symbol:          _Z3barv
+        Symbol:          bar
         Type:            R_X86_64_64
       - Offset:          0x26
-        Symbol:          _Z3bazc
+        Symbol:          baz
         Type:            R_X86_64_64
       - Offset:          0x38
-        Symbol:          _Z6callerv
+        Symbol:          caller
         Type:            R_X86_64_64
       - Offset:          0x49
-        Symbol:          _Z3foov
+        Symbol:          foo
         Type:            R_X86_64_64
       - Offset:          0x51
-        Symbol:          _Z3barv
+        Symbol:          bar
         Type:            R_X86_64_64
       - Offset:          0x59
-        Symbol:          _Z3bazc
+        Symbol:          baz
         Type:            R_X86_64_64
 Symbols:
-  - Name:            _Z3foov
-  - Name:            _Z3barv
-  - Name:            _Z3bazc
-  - Name:            _Z6callerv
+  - Name:            foo
+  - Name:            bar
+  - Name:            baz
+  - Name:            caller
 ...
