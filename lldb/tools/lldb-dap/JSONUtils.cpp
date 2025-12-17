@@ -745,66 +745,62 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
   return llvm::json::Value(std::move(event));
 }
 
-const char *GetNonNullVariableName(lldb::SBValue &v) {
-  const char *name = v.GetName();
-  return name ? name : "<null>";
+llvm::StringRef GetNonNullVariableName(lldb::SBValue &v) {
+  const llvm::StringRef name = v.GetName();
+  return !name.empty() ? name : "<null>";
 }
 
 std::string CreateUniqueVariableNameForDisplay(lldb::SBValue &v,
                                                bool is_name_duplicated) {
-  lldb::SBStream name_builder;
-  name_builder.Print(GetNonNullVariableName(v));
+  std::string unique_name{};
+  llvm::raw_string_ostream name_builder(unique_name);
+  name_builder << GetNonNullVariableName(v);
   if (is_name_duplicated) {
-    lldb::SBDeclaration declaration = v.GetDeclaration();
-    const char *file_name = declaration.GetFileSpec().GetFilename();
+    const lldb::SBDeclaration declaration = v.GetDeclaration();
+    const llvm::StringRef file_name = declaration.GetFileSpec().GetFilename();
     const uint32_t line = declaration.GetLine();
 
-    if (file_name != nullptr && line > 0)
-      name_builder.Printf(" @ %s:%u", file_name, line);
-    else if (const char *location = v.GetLocation())
-      name_builder.Printf(" @ %s", location);
+    if (!file_name.empty() && line != 0 && line != LLDB_INVALID_LINE_NUMBER)
+      name_builder << llvm::formatv(" @ {}:{}", file_name, line);
+    else if (llvm::StringRef location = v.GetLocation(); !location.empty())
+      name_builder << llvm::formatv(" @ {}", location);
   }
-  return name_builder.GetData();
+  return unique_name;
 }
 
-VariableDescription::VariableDescription(lldb::SBValue v,
-                                         bool auto_variable_summaries,
-                                         bool format_hex,
-                                         bool is_name_duplicated,
-                                         std::optional<std::string> custom_name)
-    : v(v) {
-  name = custom_name
-             ? *custom_name
-             : CreateUniqueVariableNameForDisplay(v, is_name_duplicated);
+VariableDescription::VariableDescription(
+    lldb::SBValue val, bool auto_variable_summaries, bool format_hex,
+    bool is_name_duplicated, std::optional<llvm::StringRef> custom_name)
+    : val(val) {
+  name = custom_name.value_or(
+      CreateUniqueVariableNameForDisplay(val, is_name_duplicated));
 
-  type_obj = v.GetType();
-  std::string raw_display_type_name =
-      llvm::StringRef(type_obj.GetDisplayTypeName()).str();
+  type_obj = val.GetType();
+  llvm::StringRef raw_display_type_name = type_obj.GetDisplayTypeName();
   display_type_name =
       !raw_display_type_name.empty() ? raw_display_type_name : NO_TYPENAME;
 
   // Only format hex/default if there is no existing special format.
-  if (v.GetFormat() == lldb::eFormatDefault ||
-      v.GetFormat() == lldb::eFormatHex) {
-    if (format_hex)
-      v.SetFormat(lldb::eFormatHex);
-    else
-      v.SetFormat(lldb::eFormatDefault);
+  if (const lldb::Format current_format = val.GetFormat();
+      current_format == lldb::eFormatDefault ||
+      current_format == lldb::eFormatHex) {
+
+    val.SetFormat(format_hex ? lldb::eFormatHex : lldb::eFormatDefault);
   }
 
   llvm::raw_string_ostream os_display_value(display_value);
 
-  if (lldb::SBError sb_error = v.GetError(); sb_error.Fail()) {
+  if (lldb::SBError sb_error = val.GetError(); sb_error.Fail()) {
     error = sb_error.GetCString();
     os_display_value << "<error: " << error << ">";
   } else {
-    value = llvm::StringRef(v.GetValue()).str();
-    summary = llvm::StringRef(v.GetSummary()).str();
+    value = val.GetValue();
+    summary = val.GetSummary();
     if (summary.empty() && auto_variable_summaries)
-      auto_summary = TryCreateAutoSummary(v);
+      auto_summary = TryCreateAutoSummary(val);
 
     std::optional<std::string> effective_summary =
-        !summary.empty() ? summary : auto_summary;
+        !summary.empty() ? summary.str() : auto_summary;
 
     if (!value.empty()) {
       os_display_value << value;
@@ -817,7 +813,7 @@ VariableDescription::VariableDescription(lldb::SBValue v,
     } else {
       if (!raw_display_type_name.empty()) {
         os_display_value << raw_display_type_name;
-        lldb::addr_t address = v.GetLoadAddress();
+        lldb::addr_t address = val.GetLoadAddress();
         if (address != LLDB_INVALID_ADDRESS)
           os_display_value << " @ " << llvm::format_hex(address, 0);
       }
@@ -825,7 +821,7 @@ VariableDescription::VariableDescription(lldb::SBValue v,
   }
 
   lldb::SBStream evaluateStream;
-  v.GetExpressionPath(evaluateStream);
+  val.GetExpressionPath(evaluateStream);
   evaluate_name = llvm::StringRef(evaluateStream.GetData()).str();
 }
 
@@ -835,13 +831,13 @@ std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
   if (context != protocol::eEvaluateContextRepl)
     return display_value;
 
-  if (!v.IsValid())
+  if (!val.IsValid())
     return display_value;
 
   // Try the SBValue::GetDescription(), which may call into language runtime
   // specific formatters (see ValueObjectPrinter).
   lldb::SBStream stream;
-  v.GetDescription(stream);
+  val.GetDescription(stream);
   llvm::StringRef description = stream.GetData();
   return description.trim().str();
 }
