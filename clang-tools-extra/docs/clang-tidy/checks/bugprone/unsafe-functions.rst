@@ -103,10 +103,10 @@ the reasoning behind the replacement. The default reason is
 If `replacement` is empty, the default text `it should not be used` will be
 shown instead of the suggestion for a replacement.
 
-If the `reason` starts with the character ``>``, the reason becomes fully
+If the `reason` starts with the character `>`, the reason becomes fully
 custom. The default suffix is disabled even if a `replacement` is present,
 and only the reason message is shown after the matched function, to allow
-better control over the suggestions. (The starting ``>`` and whitespace
+better control over the suggestions. (The starting `>` and whitespace
 directly after it are trimmed from the message.)
 
 As an example, the following configuration matches only the function
@@ -124,10 +124,10 @@ using a fully custom reason.
    ::std::original(); // no-warning
    original_function(); // no-warning
 
-If the regular expression contains the character ``:``, it is matched against
+If the regular expression contains the character `:`, it is matched against
 the qualified name (i.e. ``std::original``), otherwise the regex is matched
 against the unqualified name (``original``). If the regular expression starts
-with ``::`` (or ``^::``), it is matched against the fully qualified name
+with `::` (or `^::`), it is matched against the fully qualified name
 (``::std::original``).
 
 One of the use cases for fully custom messages is suggesting compiler options
