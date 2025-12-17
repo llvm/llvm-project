@@ -717,12 +717,21 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FCANONICALIZE, MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Custom);
+
+    setOperationAction(ISD::LLROUND, MVT::f16, Expand);
     setOperationAction(ISD::LROUND, MVT::f16, Expand);
     setOperationAction(ISD::LRINT, MVT::f16, Expand);
     setOperationAction(ISD::LLRINT, MVT::f16, Expand);
-    setOperationAction(ISD::STRICT_LROUND, MVT::f16, Expand);
-    setOperationAction(ISD::STRICT_LRINT, MVT::f16, Expand);
-    setOperationAction(ISD::STRICT_LLRINT, MVT::f16, Expand);
+
+    setOperationAction(ISD::STRICT_LLROUND, MVT::f16, Promote);
+    setOperationAction(ISD::STRICT_LROUND, MVT::f16, Promote);
+    setOperationAction(ISD::STRICT_LRINT, MVT::f16, Promote);
+    setOperationAction(ISD::STRICT_LLRINT, MVT::f16, Promote);
+
+    AddPromotedToType(ISD::STRICT_LLROUND, MVT::f16, MVT::f32);
+    AddPromotedToType(ISD::STRICT_LROUND, MVT::f16, MVT::f32);
+    AddPromotedToType(ISD::STRICT_LRINT, MVT::f16, MVT::f32);
+    AddPromotedToType(ISD::STRICT_LLRINT, MVT::f16, MVT::f32);
 
     // Lower this to MOVMSK plus an AND.
     setOperationAction(ISD::FGETSIGN, MVT::i64, Custom);
