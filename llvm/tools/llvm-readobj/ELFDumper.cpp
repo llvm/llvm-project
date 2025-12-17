@@ -5300,7 +5300,8 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
       Obj.getSectionContents(*CGSection);
   if (!SectionBytesOrErr) {
     reportWarning(
-        createError("unable to read the SHT_LLVM_CALL_GRAPH type section"),
+        createError("unable to read the SHT_LLVM_CALL_GRAPH type section " +
+                    toString(SectionBytesOrErr.takeError())),
         FileName);
     return false;
   }
@@ -5312,7 +5313,8 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
   while (C && C.tell() < CGSection->sh_size) {
     uint8_t FormatVersionNumber = Data.getU8(C);
     if (!C) {
-      reportWarning(createError("failed while reading FormatVersionNumber"),
+      reportWarning(createError("failed while reading FormatVersionNumber " +
+                                toString(C.takeError())),
                     FileName);
       return false;
     }
@@ -5326,8 +5328,10 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
 
     uint8_t FlagsVal = Data.getU8(C);
     if (!C) {
-      reportWarning(createError("failed while reading call graph info's Flags"),
-                    FileName);
+      reportWarning(
+          createError("failed while reading call graph info's Flags " +
+                      toString(C.takeError())),
+          FileName);
       return false;
     }
     callgraph::Flags CGFlags = static_cast<callgraph::Flags>(FlagsVal);
@@ -5336,9 +5340,8 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
                                             callgraph::HasIndirectCallees;
     constexpr uint8_t ValidMask = static_cast<uint8_t>(ValidFlags);
     if ((FlagsVal & ~ValidMask) != 0) {
-      reportWarning(createError("unexpected value. Expected [0-" +
-                                std::to_string(ValidMask) + "] but found [" +
-                                std::to_string(FlagsVal) + "]"),
+      reportWarning(createError("unexpected Flags value [" +
+                                std::to_string(FlagsVal) + "] "),
                     FileName);
       return false;
     }
@@ -5348,7 +5351,8 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
         Data.getUnsigned(C, sizeof(typename ELFT::uint));
     if (!C) {
       reportWarning(
-          createError("failed while reading call graph info function entry PC"),
+          createError("failed while reading call graph info function entry PC" +
+                      toString(C.takeError())),
           FileName);
       return false;
     }
@@ -5363,7 +5367,9 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
     CGInfo.IsIndirectTarget = IsIndirectTarget;
     uint64_t TypeId = Data.getU64(C);
     if (!C) {
-      reportWarning(C.takeError(), FileName);
+      reportWarning(createError("failed while reading function type ID " +
+                                toString(C.takeError())),
+                    FileName);
       return false;
     }
     CGInfo.FunctionTypeId = TypeId;
@@ -5376,7 +5382,10 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
       // Read number of direct call sites for this function.
       uint64_t NumDirectCallees = Data.getULEB128(C);
       if (!C) {
-        reportWarning(C.takeError(), FileName);
+        reportWarning(
+            createError("failed while reading number of direct callees " +
+                        toString(C.takeError())),
+            FileName);
         return false;
       }
       // Read unique direct callees and populate FuncCGInfos.
@@ -5385,7 +5394,9 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
         typename ELFT::uint Callee =
             Data.getUnsigned(C, sizeof(typename ELFT::uint));
         if (!C) {
-          reportWarning(C.takeError(), FileName);
+          reportWarning(createError("failed while reading direct callee " +
+                                    toString(C.takeError())),
+                        FileName);
           return false;
         }
         CGInfo.DirectCallees.insert((IsETREL ? CalleeOffset : Callee));
@@ -5397,14 +5408,21 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
     if (HasIndirectTypeIds) {
       uint64_t NumIndirectTargetTypeIDs = Data.getULEB128(C);
       if (!C) {
-        reportWarning(C.takeError(), FileName);
+        reportWarning(
+            createError(
+                "failed while reading number of indirect target type IDs " +
+                toString(C.takeError())),
+            FileName);
         return false;
       }
       // Read unique indirect target type IDs and populate FuncCGInfos.
       for (uint64_t I = 0; I < NumIndirectTargetTypeIDs; ++I) {
         uint64_t TargetType = Data.getU64(C);
         if (!C) {
-          reportWarning(C.takeError(), FileName);
+          reportWarning(
+              createError("failed while reading indirect target type ID " +
+                          toString(C.takeError())),
+              FileName);
           return false;
         }
         CGInfo.IndirectTypeIDs.insert(TargetType);
@@ -5416,7 +5434,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
   if (UnknownCount)
     reportUniqueWarning(
         "SHT_LLVM_CALL_GRAPH type section has unknown type id for " +
-        std::to_string(UnknownCount) + " indirect targets.");
+        std::to_string(UnknownCount) + " indirect targets");
   return true;
 }
 
@@ -8261,7 +8279,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
   Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> MapOrErr =
       this->Obj.getSectionAndRelocations(IsMatch);
   if (!MapOrErr || MapOrErr->empty()) {
-    reportWarning(createError("no SHT_LLVM_CALL_GRAPH section found"),
+    reportWarning(createError("no SHT_LLVM_CALL_GRAPH section found " +
+                              toString(MapOrErr.takeError())),
                   this->FileName);
     return;
   }

@@ -34,7 +34,7 @@ Symbols:
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=WARN_FLAG
 # RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=WARN_FLAG
 
-# WARN_FLAG: warning: '[[FILE]]': unexpected value. Expected [0-7] but found [8]
+# WARN_FLAG: warning: '[[FILE]]': unexpected Flags value [8]
 
 --- !ELF
 FileHeader:
@@ -62,7 +62,7 @@ Symbols:
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=WARN_MISSING_DIRECT
 # RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=WARN_MISSING_DIRECT
 
-# WARN_MISSING_DIRECT: warning: '[[FILE]]': unable to decode LEB128 at offset 0x00000012: malformed uleb128, extends past end
+# WARN_MISSING_DIRECT: warning: '[[FILE]]': failed while reading number of direct callees unable to decode LEB128 at offset 0x00000012: malformed uleb128, extends past end
 
 --- !ELF
 FileHeader:
@@ -94,13 +94,13 @@ Symbols:
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t4 2>&1 | FileCheck %s -DFILE=%t4 --check-prefix=WARN_MISSING_INDIRECT
 # RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t4 2>&1 | FileCheck %s -DFILE=%t4 --check-prefix=WARN_MISSING_INDIRECT
 
-# WARN_MISSING_INDIRECT: warning: '[[FILE]]': unexpected end of data at offset 0x13 while reading [0x13, 0x1b)
+# WARN_MISSING_INDIRECT: warning: '[[FILE]]': failed while reading indirect target type ID unexpected end of data at offset 0x13 while reading [0x13, 0x1b)
 
 --- !ELF
 FileHeader:
   Class:    ELFCLASS64
   Data:     ELFDATA2LSB
-  Type:     ET_DYN
+  Type:     ET_REL
   Machine:  EM_X86_64
 Sections:
   - Name:  .text
@@ -129,7 +129,7 @@ Symbols:
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t5 2>&1 | FileCheck %s -DFILE=%t5 --check-prefix=WARN_NO_RELOC
 # RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t5 2>&1 | FileCheck %s -DFILE=%t5 --check-prefix=WARN_NO_RELOC
 
-# WARN_NO_RELOC: warning: '[[FILE]]': SHT_LLVM_CALL_GRAPH type section has unknown type id for 2 indirect targets.
+# WARN_NO_RELOC: warning: '[[FILE]]': SHT_LLVM_CALL_GRAPH type section has unknown type id for 2 indirect targets
 # WARN_NO_RELOC: warning: '[[FILE]]': unknown relocation at offset 2
 # WARN_NO_RELOC: warning: '[[FILE]]': unknown relocation at offset 19
 # WARN_NO_RELOC: warning: '[[FILE]]': unknown relocation at offset 29
