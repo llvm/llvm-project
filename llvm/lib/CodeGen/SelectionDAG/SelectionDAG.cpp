@@ -2807,7 +2807,7 @@ bool SelectionDAG::SignBitIsZeroFP(SDValue Op, unsigned Depth) const {
     return (NoFPClass & TestMask) == TestMask;
   }
   case ISD::ARITH_FENCE:
-    return SignBitIsZeroFP(Op, Depth + 1);
+    return SignBitIsZeroFP(Op.getOperand(0), Depth + 1);
   case ISD::FEXP:
   case ISD::FEXP2:
   case ISD::FEXP10:
