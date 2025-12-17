@@ -48158,37 +48158,81 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   SDValue FloatConst;
   if (sd_match(Cond, m_SetCC(m_FAbs(m_Value(T)), m_Value(FloatConst),
                              m_SpecificCondCode(ISD::SETOLT)))) {
-    if (FloatConst.getOpcode() != ISD::ConstantFP)
-      return SDValue();
     SDValue FpToInt = LHS;
     SDValue ConstNode = RHS;
-    if (FpToInt.getOpcode() != ISD::FP_TO_SINT) {
+    if (FpToInt.getOpcode() != ISD::FP_TO_SINT)
       std::swap(FpToInt, ConstNode);
-    }
 
-    if (FpToInt.getOpcode() != ISD::FP_TO_SINT) {
+    if (FpToInt.getOpcode() != ISD::FP_TO_SINT)
       return SDValue();
-    }
 
-    if (!DAG.isConstantValueOfAnyType(ConstNode)) {
+    if (!DAG.isConstantValueOfAnyType(ConstNode))
       return SDValue();
-    }
 
-    if (T != FpToInt.getOperand(0)) {
+    if (T != FpToInt.getOperand(0))
       return SDValue();
-    }
 
     EVT IntVT = FpToInt.getValueType();
-    APInt IntMin = APInt::getSignedMinValue(IntVT.getSizeInBits());
+    EVT FPVT = T.getValueType();
 
-    auto *C = cast<ConstantSDNode>(ConstNode);
-    if (C->getAPIntValue() != IntMin) {
+    EVT IntEltVT = IntVT.isVector() ? IntVT.getVectorElementType() : IntVT;
+
+    EVT FPEltVT = FPVT.isVector() ? FPVT.getVectorElementType() : FPVT;
+
+    if (!FPEltVT.isFloatingPoint())
+      return SDValue();
+
+    APInt IntMin = APInt::getSignedMinValue(IntEltVT.getSizeInBits());
+
+    if (!DAG.isConstantValueOfAnyType(ConstNode))
+      return SDValue();
+
+    if (auto *C = dyn_cast<ConstantSDNode>(ConstNode)) {
+      // scalar INT_MIN
+      if (C->getAPIntValue() != IntMin)
+        return SDValue();
+    } else if (ConstNode.getOpcode() == ISD::BUILD_VECTOR) {
+      // vector INT_MIN splat
+      for (unsigned Idx = 0, NumOperands = ConstNode.getNumOperands();
+           Idx != NumOperands; ++Idx) {
+        SDValue Op = ConstNode.getOperand(Idx);
+        auto *EltC = dyn_cast<ConstantSDNode>(Op);
+        if (!EltC || EltC->getAPIntValue() != IntMin)
+          return SDValue();
+      }
+    } else {
       return SDValue();
     }
 
-    // check if the Maxfloat value is matching the value of CmpConst
-    return DAG.getNode(ISD::FP_TO_SINT, DL, FpToInt.getValueType(),
-                       FpToInt.getOperand(0));
+    APFloat MaxAbsFP(FPEltVT.getFltSemantics(),
+                     APInt::getZero(FPEltVT.getSizeInBits()));
+
+    (void)MaxAbsFP.convertFromAPInt(IntMin, false,
+                                    APFloat::rmNearestTiesToEven);
+
+    bool Match = false;
+
+    if (auto *CFP = dyn_cast<ConstantFPSDNode>(FloatConst)) {
+      // scalar constant
+      Match = CFP->getValueAPF() == MaxAbsFP;
+    } else if (FloatConst.getOpcode() == ISD::BUILD_VECTOR) {
+      // vector splat
+      Match = true;
+      for (unsigned Idx = 0, NumOperands = FloatConst.getNumOperands();
+           Idx != NumOperands; ++Idx) {
+        SDValue Op = FloatConst.getOperand(Idx);
+        auto *EltCFP = dyn_cast<ConstantFPSDNode>(Op);
+        if (!EltCFP || EltCFP->getValueAPF() != MaxAbsFP) {
+          Match = false;
+          break;
+        }
+      }
+    }
+
+    if (!Match)
+      return SDValue();
+
+    return DAG.getNode(ISD::FP_TO_SINT, DL, IntVT, T);
   }
 
   // Attempt to combine (select M, (sub 0, X), X) -> (sub (xor X, M), M).
