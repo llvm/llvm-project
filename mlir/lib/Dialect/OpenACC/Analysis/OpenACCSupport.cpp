@@ -41,6 +41,14 @@ InFlightDiagnostic OpenACCSupport::emitNYI(Location loc, const Twine &message) {
   return mlir::emitError(loc, "not yet implemented: " + message);
 }
 
+remark::detail::InFlightRemark
+OpenACCSupport::emitRemark(Operation *op, const Twine &message,
+                           llvm::StringRef category) {
+  if (impl)
+    return impl->emitRemark(op, message, category);
+  return acc::emitRemark(op, message, category);
+}
+
 bool OpenACCSupport::isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
                                       Operation **definingOpPtr) {
   if (impl)

@@ -25,6 +25,7 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -1108,12 +1109,17 @@ std::string BTFDebug::populateFileContent(const DIFile *File) {
   std::string Line;
   Content.push_back(Line); // Line 0 for empty string
 
+  auto LoadFile = [](StringRef FileName) {
+    // FIXME(sandboxing): Propagating vfs::FileSystem here is lots of work.
+    auto BypassSandbox = sys::sandbox::scopedDisable();
+    return MemoryBuffer::getFile(FileName);
+  };
+
   std::unique_ptr<MemoryBuffer> Buf;
   auto Source = File->getSource();
   if (Source)
     Buf = MemoryBuffer::getMemBufferCopy(*Source);
-  else if (ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-               MemoryBuffer::getFile(FileName))
+  else if (ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr = LoadFile(FileName))
     Buf = std::move(*BufOrErr);
   if (Buf)
     for (line_iterator I(*Buf, false), E; I != E; ++I)

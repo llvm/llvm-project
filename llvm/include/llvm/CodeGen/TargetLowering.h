@@ -1494,6 +1494,10 @@ public:
            getOperationAction(Op, VT) == Legal;
   }
 
+  bool isOperationExpandOrLibCall(unsigned Op, EVT VT) const {
+    return isOperationExpand(Op, VT) || getOperationAction(Op, VT) == LibCall;
+  }
+
   /// Return how this load with extension should be treated: either it is legal,
   /// needs to be promoted to a larger size, needs to be expanded to some other
   /// code sequence, or the target has a custom expander for it.
@@ -2246,19 +2250,20 @@ public:
     return false;
   }
 
+  /// Whether AtomicExpandPass should automatically insert a seq_cst trailing
+  /// fence without reducing the ordering for this atomic store. Defaults to
+  /// false.
+  virtual bool
+  shouldInsertTrailingSeqCstFenceForAtomicStore(const Instruction *I) const {
+    return false;
+  }
+
   // The memory ordering that AtomicExpandPass should assign to a atomic
   // instruction that it has lowered by adding fences. This can be used
   // to "fold" one of the fences into the atomic instruction.
   virtual AtomicOrdering
   atomicOperationOrderAfterFenceSplit(const Instruction *I) const {
     return AtomicOrdering::Monotonic;
-  }
-
-  /// Whether AtomicExpandPass should automatically insert a trailing fence
-  /// without reducing the ordering for this atomic. Defaults to false.
-  virtual bool
-  shouldInsertTrailingFenceForAtomicStore(const Instruction *I) const {
-    return false;
   }
 
   /// Perform a load-linked operation on Addr, returning a "Value *" with the
