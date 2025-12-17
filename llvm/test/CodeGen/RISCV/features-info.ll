@@ -138,6 +138,7 @@
 ; CHECK-NEXT:   shifted-zextw-fusion             - Enable SLLI+SRLI to be fused when computing (shifted) word zero extension.
 ; CHECK-NEXT:   shlcofideleg                     - 'Shlcofideleg' (Delegating LCOFI Interrupts to VS-mode).
 ; CHECK-NEXT:   short-forward-branch-ialu        - Enable short forward branch optimization for RVI base instructions.
+; CHECK-NEXT:   short-forward-branch-iload       - Enable short forward branch optimization for load instructions.
 ; CHECK-NEXT:   short-forward-branch-iminmax     - Enable short forward branch optimization for MIN,MAX instructions in Zbb.
 ; CHECK-NEXT:   short-forward-branch-imul        - Enable short forward branch optimization for MUL instruction.
 ; CHECK-NEXT:   shtvala                          - 'Shtvala' (htval provides all needed values).

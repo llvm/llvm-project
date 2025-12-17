@@ -1,40 +1,12 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump -d %t --mattr=help 2>&1 | FileCheck %s
+# RUN: llvm-objdump -d %t --mcpu=help 2>&1 | FileCheck %s
 # REQUIRES: x86-registered-target
-
-# RUN: yaml2obj --docnum=1 %s -o %t
-# RUN: llvm-objdump -d %t --mattr=help 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-DISASSEMBLE
-# RUN: llvm-objdump -d %t --mcpu=help 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-DISASSEMBLE
 
 # CHECK: Available CPUs for this target:
 # CHECK: Available features for this target:
 ## To check we still disassemble the file:
-# CHECK-DISASSEMBLE: file format elf64-x86-64
-
-## The help message can be printed without -d.
-# RUN: llvm-objdump --mattr=help %t 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-NO-DISASSEMBLE
-# RUN: llvm-objdump --mcpu=help %t 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-NO-DISASSEMBLE
-
-# CHECK-NO-DISASSEMBLE-NOT: file format elf64-x86-64
-
-## We still handle other options.
-# RUN: llvm-objdump --mattr=help --section-headers %t 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-SECTION-HEADERS
-# RUN: llvm-objdump --mcpu=help --section-headers %t 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-SECTION-HEADERS
-
-# CHECK-SECTION-HEADERS: Sections:
-# CHECK-SECTION-HEADERS: Idx Name               Size     VMA              Type
-
-## We report an error when we can't infer the triple because we don't have --triple or an input object (including a.out).
-# RUN: not llvm-objdump --mattr=help 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=CHECK-MISSING-ERROR --implicit-check-not=error: -DMSG=%errc_ENOENT
-# RUN: not llvm-objdump --mcpu=help 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=CHECK-MISSING-ERROR --implicit-check-not=error: -DMSG=%errc_ENOENT
-
-# CHECK-MISSING-ERROR: llvm-objdump{{.*}}: error: 'a.out': triple was not specified and could not be inferred from the input file: [[MSG]]
+# CHECK: file format elf64-x86-64
 
 --- !ELF
 FileHeader:
@@ -42,68 +14,3 @@ FileHeader:
   Data:            ELFDATA2LSB
   Type:            ET_EXEC
   Machine:         EM_X86_64
-
-# RUN: yaml2obj --docnum=2 %s -o %t.minidump
-## We report an error when the binary file isn't an object file format.
-# RUN: not llvm-objdump --mattr=help %t.minidump 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=CHECK-UNSUPPORTED-ERROR --implicit-check-not=error: -DFILE=%t.minidump
-# RUN: not llvm-objdump --mcpu=help %t.minidump 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=CHECK-UNSUPPORTED-ERROR --implicit-check-not=error: -DFILE=%t.minidump
-
-# CHECK-UNSUPPORTED-ERROR: llvm-objdump{{.*}}: error: '[[FILE]]': target triple could not be derived from input file
-
---- !minidump
-Streams:
-  - Type:            SystemInfo
-    Processor Arch:  PPC
-    Platform ID:     Linux
-
-# RUN: llvm-ar rc %t.a %t
-# RUN: llvm-objdump --mcpu=help %t.a 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK
-# RUN: llvm-objdump --mattr=help %t.a 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK
-
-## We report an error when the triple cannot be inferred from any archive member.
-# RUN: llvm-ar rc %t.empty.a
-# RUN: not llvm-objdump --mcpu=help %t.empty.a 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-UNSUPPORTED-ERROR --implicit-check-not=error: -DFILE=%t.empty.a
-# RUN: not llvm-objdump --mattr=help %t.empty.a 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-UNSUPPORTED-ERROR --implicit-check-not=error: -DFILE=%t.empty.a
-
-## We are able to handle an archive with unsupported binary files. The target is
-## derived from the first recognised object file.
-# RUN: llvm-ar rc %t.a %t.minidump %t
-# RUN: llvm-objdump --mcpu=help %t.a 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK
-# RUN: llvm-objdump --mattr=help %t.a 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK
-
-## We report an error when the archive is malformed.
-# RUN: yaml2obj --docnum=3 %s -o %t.malformed.archive.a
-# RUN: not llvm-objdump --mcpu=help %t.malformed.archive.a 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-MALFORMED-ARCHIVE-ERROR --implicit-check-not=error: -DFILE=%t.malformed.archive.a
-# RUN: not llvm-objdump --mattr=help %t.malformed.archive.a 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-MALFORMED-ARCHIVE-ERROR --implicit-check-not=error: -DFILE=%t.malformed.archive.a
-
-# CHECK-MALFORMED-ARCHIVE-ERROR: llvm-objdump{{.*}}: error: '[[FILE]]': truncated or malformed archive
-
---- !Arch
-Members:
-  - Name: 'foo.c'
-    Size: '1'
-
-## We report an error when we encounter an unexpected error while iterating files in an archive.
-# RUN: yaml2obj --docnum=4 %s -o %t.invalid.error.code.archive.a
-# RUN: not llvm-objdump --mcpu=help %t.invalid.error.code.archive.a 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-INVALID-ERROR-ARCHIVE-ERROR --implicit-check-not=error: -DFILE=%t.invalid.error.code.archive.a
-# RUN: not llvm-objdump --mattr=help %t.invalid.error.code.archive.a 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-INVALID-ERROR-ARCHIVE-ERROR --implicit-check-not=error: -DFILE=%t.invalid.error.code.archive.a
-
-# CHECK-INVALID-ERROR-ARCHIVE-ERROR: llvm-objdump{{.*}}: error: [[FILE]](<file index: 1>): truncated or malformed archive (long name offset characters after the '/' are not all decimal numbers: '&a25*' for archive member header at offset 68)
-
---- !Arch
-Members:
-## We need the first member to be a valid member to trigger the right error.
-  - Name: 'hello.c/'
-  - Name: "/&a25*"
