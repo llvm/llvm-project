@@ -157,7 +157,7 @@ public:
 
   ConstString GetReExportedSymbolName() const { return m_reexport_name; }
 
-  FileSpec GetReExportedSymbolSharedLibrary() const {
+  const FileSpec &GetReExportedSymbolSharedLibrary() const {
     return m_reexport_library;
   }
 

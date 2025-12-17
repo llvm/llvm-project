@@ -265,12 +265,12 @@ void Symbol::Dump(Stream *s, Target *target, uint32_t index,
         "                                                         0x%8.8x %s",
         m_flags, name.AsCString(""));
 
-    intptr_t shlib = m_addr_range.GetByteSize();
+    const FileSpec &shlib = GetReExportedSymbolSharedLibrary();
     if (shlib)
-      s->Printf(" -> %s`%s\n", (const char *)shlib,
-                m_reexport_name.GetCString());
+      s->Printf(" -> %s`%s\n", shlib.GetPath().c_str(),
+                GetReExportedSymbolName().GetCString());
     else
-      s->Printf(" -> %s\n", m_reexport_name.GetCString());
+      s->Printf(" -> %s\n", GetReExportedSymbolName().GetCString());
   } else {
     const char *format =
         m_size_is_sibling
@@ -454,12 +454,13 @@ Symbol *Symbol::ResolveReExportedSymbolInModuleSpec(
 }
 
 Symbol *Symbol::ResolveReExportedSymbol(Target &target) const {
-  if (m_reexport_name) {
+  ConstString reexport_name(GetReExportedSymbolName());
+  if (reexport_name) {
     ModuleSpec module_spec;
     ModuleList seen_modules;
-    module_spec.GetFileSpec() = m_reexport_library;
+    module_spec.GetFileSpec() = GetReExportedSymbolSharedLibrary();
     if (module_spec.GetFileSpec()) {
-      return ResolveReExportedSymbolInModuleSpec(target, m_reexport_name,
+      return ResolveReExportedSymbolInModuleSpec(target, reexport_name,
                                                  module_spec, seen_modules);
     }
   }
