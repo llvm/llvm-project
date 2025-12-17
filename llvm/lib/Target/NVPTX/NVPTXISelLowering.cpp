@@ -6262,36 +6262,34 @@ static SDValue PerformSELECTShiftCombine(SDNode *N,
     return SDValue();
 
   SDValue ShiftAmt, ShiftOp;
+
+  // Match logical shifts where the shift amount in the guard matches the shift
+  // amount in the operation.
+  auto LogicalShift = m_AllOf(
+      m_Value(ShiftOp),
+      m_AnyOf(m_Srl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt))),
+              m_Shl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt)))));
+
   // shift_amt > BitWidth-1 ? 0 : shift_op
   bool MatchedUGT = sd_match(
       N, m_Select(m_SetCC(m_Value(ShiftAmt),
                           m_SpecificInt(APInt(BitWidth, BitWidth - 1)),
                           m_SpecificCondCode(ISD::SETUGT)),
-                  m_Zero(), m_Value(ShiftOp)));
+                  m_Zero(), LogicalShift));
   // shift_amt < BitWidth ? shift_op : 0
   bool MatchedULT =
       !MatchedUGT &&
       sd_match(N, m_Select(m_SetCC(m_Value(ShiftAmt),
                                    m_SpecificInt(APInt(BitWidth, BitWidth)),
                                    m_SpecificCondCode(ISD::SETULT)),
-                           m_Value(ShiftOp), m_Zero()));
+                           LogicalShift, m_Zero()));
 
   if (!MatchedUGT && !MatchedULT)
     return SDValue();
 
-  // Only handle logical shifts
-  unsigned ShiftOpc = ShiftOp.getOpcode();
-  if (ShiftOpc != ISD::SRL && ShiftOpc != ISD::SHL)
-    return SDValue();
-
-  // Verify the shift amount in the guard is the same as the shift amount in the
-  // shift operation.
-  if (!sd_match(ShiftOp.getOperand(1), m_TruncOrSelf(m_Specific(ShiftAmt))))
-    return SDValue();
-
   // Return a clamp shift operation, which has the same semantics as PTX shift.
-  unsigned ClampOpc =
-      ShiftOpc == ISD::SRL ? NVPTXISD::SRL_CLAMP : NVPTXISD::SHL_CLAMP;
+  unsigned ClampOpc = ShiftOp.getOpcode() == ISD::SRL ? NVPTXISD::SRL_CLAMP
+                                                      : NVPTXISD::SHL_CLAMP;
   return DCI.DAG.getNode(ClampOpc, SDLoc(N), ShiftOp.getValueType(),
                          ShiftOp.getOperand(0), ShiftOp.getOperand(1));
 }
