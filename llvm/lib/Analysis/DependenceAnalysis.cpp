@@ -377,6 +377,95 @@ private:
   friend struct SCEVVisitor<SCEVMonotonicityChecker, SCEVMonotonicity>;
 };
 
+/// A wrapper class for std::optional<APInt> that provides arithmetic operators
+/// with overflow checking in a signed sense. This allows us to omit inserting
+/// an overflow check at every arithmetic operation, which simplifies the code
+/// if the operations are chained like `a + b + c + ...`.
+///
+/// If an calculation overflows, the result becomes "invalid" which is
+/// internally represented by std::nullopt. If any operand of an arithmetic
+/// operation is "invalid", the result will also be "invalid".
+struct OverflowSafeSignedAPInt {
+  OverflowSafeSignedAPInt() : Value(std::nullopt) {}
+  OverflowSafeSignedAPInt(const APInt &V) : Value(V) {}
+  OverflowSafeSignedAPInt(const std::optional<APInt> &V) : Value(V) {}
+
+  OverflowSafeSignedAPInt operator+(const OverflowSafeSignedAPInt &RHS) const {
+    if (!Value || !RHS.Value)
+      return OverflowSafeSignedAPInt();
+    bool Overflow;
+    APInt Result = Value->sadd_ov(*RHS.Value, Overflow);
+    if (Overflow)
+      return OverflowSafeSignedAPInt();
+    return OverflowSafeSignedAPInt(Result);
+  }
+
+  OverflowSafeSignedAPInt operator+(int RHS) const {
+    if (!Value)
+      return OverflowSafeSignedAPInt();
+    return *this + fromInt(RHS);
+  }
+
+  OverflowSafeSignedAPInt operator-(const OverflowSafeSignedAPInt &RHS) const {
+    if (!Value || !RHS.Value)
+      return OverflowSafeSignedAPInt();
+    bool Overflow;
+    APInt Result = Value->ssub_ov(*RHS.Value, Overflow);
+    if (Overflow)
+      return OverflowSafeSignedAPInt();
+    return OverflowSafeSignedAPInt(Result);
+  }
+
+  OverflowSafeSignedAPInt operator-(int RHS) const {
+    if (!Value)
+      return OverflowSafeSignedAPInt();
+    return *this - fromInt(RHS);
+  }
+
+  OverflowSafeSignedAPInt operator*(const OverflowSafeSignedAPInt &RHS) const {
+    if (!Value || !RHS.Value)
+      return OverflowSafeSignedAPInt();
+    bool Overflow;
+    APInt Result = Value->smul_ov(*RHS.Value, Overflow);
+    if (Overflow)
+      return OverflowSafeSignedAPInt();
+    return OverflowSafeSignedAPInt(Result);
+  }
+
+  OverflowSafeSignedAPInt operator-() const {
+    if (!Value)
+      return OverflowSafeSignedAPInt();
+    if (Value->isMinSignedValue())
+      return OverflowSafeSignedAPInt();
+    return OverflowSafeSignedAPInt(-*Value);
+  }
+
+  operator bool() const { return Value.has_value(); }
+
+  bool operator!() const { return !Value.has_value(); }
+
+  const APInt &operator*() const {
+    assert(Value && "Value is not available.");
+    return *Value;
+  }
+
+  const APInt *operator->() const {
+    assert(Value && "Value is not available.");
+    return &*Value;
+  }
+
+private:
+  /// Underlying value. std::nullopt means "unknown". An arithmetic operation on
+  /// "unknown" always produces "unknown".
+  std::optional<APInt> Value;
+
+  OverflowSafeSignedAPInt fromInt(uint64_t V) const {
+    assert(Value && "Value is not available.");
+    return OverflowSafeSignedAPInt(
+        APInt(Value->getBitWidth(), V, /*isSigned=*/true));
+  }
+};
+
 } // anonymous namespace
 
 // Used to test the dependence analyzer.
@@ -1579,6 +1668,9 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
 // Computes the GCD of AM and BM.
 // Also finds a solution to the equation ax - by = gcd(a, b).
 // Returns true if dependence disproved; i.e., gcd does not divide Delta.
+//
+// We don't use OverflowSafeSignedAPInt here because it's known that this
+// algorithm doesn't overflow.
 static bool findGCD(unsigned Bits, const APInt &AM, const APInt &BM,
                     const APInt &Delta, APInt &G, APInt &X, APInt &Y) {
   APInt A0(Bits, 1, true), A1(Bits, 0, true);
@@ -1609,7 +1701,14 @@ static bool findGCD(unsigned Bits, const APInt &AM, const APInt &BM,
   return false;
 }
 
-static APInt floorOfQuotient(const APInt &A, const APInt &B) {
+static OverflowSafeSignedAPInt
+floorOfQuotient(const OverflowSafeSignedAPInt &OA,
+                const OverflowSafeSignedAPInt &OB) {
+  if (!OA || !OB)
+    return OverflowSafeSignedAPInt();
+
+  APInt A = *OA;
+  APInt B = *OB;
   APInt Q = A; // these need to be initialized
   APInt R = A;
   APInt::sdivrem(A, B, Q, R);
@@ -1617,20 +1716,25 @@ static APInt floorOfQuotient(const APInt &A, const APInt &B) {
     return Q;
   if ((A.sgt(0) && B.sgt(0)) || (A.slt(0) && B.slt(0)))
     return Q;
-  else
-    return Q - 1;
+  return OverflowSafeSignedAPInt(Q) - 1;
 }
 
-static APInt ceilingOfQuotient(const APInt &A, const APInt &B) {
+static OverflowSafeSignedAPInt
+ceilingOfQuotient(const OverflowSafeSignedAPInt &OA,
+                  const OverflowSafeSignedAPInt &OB) {
+  if (!OA || !OB)
+    return OverflowSafeSignedAPInt();
+
+  APInt A = *OA;
+  APInt B = *OB;
   APInt Q = A; // these need to be initialized
   APInt R = A;
   APInt::sdivrem(A, B, Q, R);
   if (R == 0)
     return Q;
   if ((A.sgt(0) && B.sgt(0)) || (A.slt(0) && B.slt(0)))
-    return Q + 1;
-  else
-    return Q;
+    return OverflowSafeSignedAPInt(Q) + 1;
+  return Q;
 }
 
 /// Given an affine expression of the form A*k + B, where k is an arbitrary
@@ -1662,29 +1766,26 @@ static APInt ceilingOfQuotient(const APInt &A, const APInt &B) {
 /// while working with them.
 ///
 /// Preconditions: \p A is non-zero, and we know A*k + B is non-negative.
-static std::pair<std::optional<APInt>, std::optional<APInt>>
-inferDomainOfAffine(const APInt &A, const APInt &B,
-                    const std::optional<APInt> &UB) {
-  assert(A != 0 && "A must be non-zero");
-  std::optional<APInt> TL, TU;
-  if (A.sgt(0)) {
+static std::pair<OverflowSafeSignedAPInt, OverflowSafeSignedAPInt>
+inferDomainOfAffine(OverflowSafeSignedAPInt A, OverflowSafeSignedAPInt B,
+                    OverflowSafeSignedAPInt UB) {
+  assert(A && B && "A and B must be available");
+  assert(*A != 0 && "A must be non-zero");
+  OverflowSafeSignedAPInt TL, TU;
+  if (A->sgt(0)) {
     TL = ceilingOfQuotient(-B, A);
-    LLVM_DEBUG(dbgs() << "\t    Possible TL = " << *TL << "\n");
+    LLVM_DEBUG(if (TL) dbgs() << "\t    Possible TL = " << *TL << "\n");
+
     // New bound check - modification to Banerjee's e3 check
-    if (UB) {
-      // TODO?: Overflow check for UB - B
-      TU = floorOfQuotient(*UB - B, A);
-      LLVM_DEBUG(dbgs() << "\t    Possible TU = " << *TU << "\n");
-    }
+    TU = floorOfQuotient(UB - B, A);
+    LLVM_DEBUG(if (TU) dbgs() << "\t    Possible TU = " << *TU << "\n");
   } else {
     TU = floorOfQuotient(-B, A);
-    LLVM_DEBUG(dbgs() << "\t    Possible TU = " << *TU << "\n");
+    LLVM_DEBUG(if (TU) dbgs() << "\t    Possible TU = " << *TU << "\n");
+
     // New bound check - modification to Banerjee's e3 check
-    if (UB) {
-      // TODO?: Overflow check for UB - B
-      TL = ceilingOfQuotient(*UB - B, A);
-      LLVM_DEBUG(dbgs() << "\t    Possible TL = " << *TL << "\n");
-    }
+    TL = ceilingOfQuotient(UB - B, A);
+    LLVM_DEBUG(if (TL) dbgs() << "\t    Possible TL = " << *TL << "\n");
   }
   return std::make_pair(TL, TU);
 }
@@ -1783,8 +1884,8 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   auto [TL0, TU0] = inferDomainOfAffine(TB, TX, UM);
   auto [TL1, TU1] = inferDomainOfAffine(TA, TY, UM);
 
-  auto CreateVec = [](const std::optional<APInt> &V0,
-                      const std::optional<APInt> &V1) {
+  auto CreateVec = [](const OverflowSafeSignedAPInt &V0,
+                      const OverflowSafeSignedAPInt &V1) {
     SmallVector<APInt, 2> Vec;
     if (V0)
       Vec.push_back(*V0);
@@ -1814,29 +1915,33 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
 
   // explore directions
   unsigned NewDirection = Dependence::DVEntry::NONE;
-  APInt LowerDistance, UpperDistance;
-  // TODO: Overflow check may be needed.
+  OverflowSafeSignedAPInt LowerDistance, UpperDistance;
+  OverflowSafeSignedAPInt OTY(TY), OTX(TX), OTA(TA), OTB(TB), OTL(TL), OTU(TU);
+  // NOTE: It's unclear whether these calculations can overflow. At the moment,
+  // we conservatively assume they can.
   if (TA.sgt(TB)) {
-    LowerDistance = (TY - TX) + (TA - TB) * TL;
-    UpperDistance = (TY - TX) + (TA - TB) * TU;
+    LowerDistance = (OTY - OTX) + (OTA - OTB) * OTL;
+    UpperDistance = (OTY - OTX) + (OTA - OTB) * OTU;
   } else {
-    LowerDistance = (TY - TX) + (TA - TB) * TU;
-    UpperDistance = (TY - TX) + (TA - TB) * TL;
+    LowerDistance = (OTY - OTX) + (OTA - OTB) * OTU;
+    UpperDistance = (OTY - OTX) + (OTA - OTB) * OTL;
   }
 
-  LLVM_DEBUG(dbgs() << "\t    LowerDistance = " << LowerDistance << "\n");
-  LLVM_DEBUG(dbgs() << "\t    UpperDistance = " << UpperDistance << "\n");
+  if (!LowerDistance || !UpperDistance)
+    return false;
 
-  APInt Zero(Bits, 0, true);
-  if (LowerDistance.sle(Zero) && UpperDistance.sge(Zero)) {
+  LLVM_DEBUG(dbgs() << "\t    LowerDistance = " << *LowerDistance << "\n");
+  LLVM_DEBUG(dbgs() << "\t    UpperDistance = " << *UpperDistance << "\n");
+
+  if (LowerDistance->sle(0) && UpperDistance->sge(0)) {
     NewDirection |= Dependence::DVEntry::EQ;
     ++ExactSIVsuccesses;
   }
-  if (LowerDistance.slt(0)) {
+  if (LowerDistance->slt(0)) {
     NewDirection |= Dependence::DVEntry::GT;
     ++ExactSIVsuccesses;
   }
-  if (UpperDistance.sgt(0)) {
+  if (UpperDistance->sgt(0)) {
     NewDirection |= Dependence::DVEntry::LT;
     ++ExactSIVsuccesses;
   }
@@ -2172,8 +2277,8 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   LLVM_DEBUG(dbgs() << "\t    TA = " << TA << "\n");
   LLVM_DEBUG(dbgs() << "\t    TB = " << TB << "\n");
 
-  auto CreateVec = [](const std::optional<APInt> &V0,
-                      const std::optional<APInt> &V1) {
+  auto CreateVec = [](const OverflowSafeSignedAPInt &V0,
+                      const OverflowSafeSignedAPInt &V1) {
     SmallVector<APInt, 2> Vec;
     if (V0)
       Vec.push_back(*V0);
