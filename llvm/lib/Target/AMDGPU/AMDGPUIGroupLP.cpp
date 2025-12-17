@@ -1047,7 +1047,7 @@ private:
       auto SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
         return Succ.getKind() == SDep::Data;
       });
-      if (SuccSize >= Size)
+      if (static_cast<unsigned>(SuccSize) >= Size)
         return false;
 
       if (HasIntermediary) {
@@ -1056,7 +1056,7 @@ private:
               llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
               });
-          if (SuccSize >= Size)
+          if (static_cast<unsigned>(SuccSize) >= Size)
             return false;
         }
       }
@@ -1087,7 +1087,7 @@ private:
       auto SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
         return Succ.getKind() == SDep::Data;
       });
-      if (SuccSize >= Size)
+      if (static_cast<unsigned>(SuccSize) >= Size)
         return true;
 
       if (HasIntermediary) {
@@ -1096,7 +1096,7 @@ private:
               llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
               });
-          if (SuccSize >= Size)
+          if (static_cast<unsigned>(SuccSize) >= Size)
             return true;
         }
       }
