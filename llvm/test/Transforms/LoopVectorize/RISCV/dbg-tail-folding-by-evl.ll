@@ -40,9 +40,9 @@ define void @reverse_store(ptr %a, i64 %n) !dbg !4 {
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP5]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG10:![0-9]+]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
+; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP:.*]], !dbg [[DBG10]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -87,7 +87,8 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: [[DBG7]] = !DILocation(line: 2, scope: [[DBG4]])
 ; CHECK: [[DBG8]] = !DILocation(line: 3, column: 7, scope: [[DBG4]])
 ; CHECK: [[DBG9]] = !DILocation(line: 3, column: 12, scope: [[DBG4]])
-; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META11:![0-9]+]], [[META12:![0-9]+]]}
-; CHECK: [[META11]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META12]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[DBG10]] = !DILocation(line: 2, column: 5, scope: [[DBG4]])
+; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META12:![0-9]+]], [[META13:![0-9]+]]}
+; CHECK: [[META12]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META13]] = !{!"llvm.loop.unroll.runtime.disable"}
 ;.
