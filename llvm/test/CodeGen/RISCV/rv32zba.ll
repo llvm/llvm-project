@@ -1300,3 +1300,90 @@ define ptr @shl_add_knownbits(ptr %p, i32 %i) {
   %r = getelementptr i8, ptr %p, i32 %shr
   ret ptr %r
 }
+
+; The shxadd_masked tests cover:
+;    (add (and (shl x, c1), c2), y)
+; -> (shXadd (and x, c2 >> c1), y)
+; i.e. shift left and then mask, so that shxadd can be selected.
+; TODO: This is not currently implemented.
+
+define i32 @sh1add_masked(i32 %a, i32 %b) nounwind {
+; RV32I-LABEL: sh1add_masked:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 24
+; RV32I-NEXT:    srli a0, a0, 23
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: sh1add_masked:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    slli a0, a0, 24
+; RV32ZBA-NEXT:    srli a0, a0, 23
+; RV32ZBA-NEXT:    add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+;
+; RV32XANDESPERF-LABEL: sh1add_masked:
+; RV32XANDESPERF:       # %bb.0:
+; RV32XANDESPERF-NEXT:    nds.bfoz a0, a0, 1, 8
+; RV32XANDESPERF-NEXT:    add a0, a0, a1
+; RV32XANDESPERF-NEXT:    ret
+  %shl = shl i32 %a, 1
+  %and = and i32 %shl, 510
+  %add = add i32 %and, %b
+  ret i32 %add
+}
+
+define i32 @sh2add_masked(i32 %a, i32 %b) nounwind {
+; RV32I-LABEL: sh2add_masked:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 22
+; RV32I-NEXT:    srli a0, a0, 20
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: sh2add_masked:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    slli a0, a0, 22
+; RV32ZBA-NEXT:    srli a0, a0, 20
+; RV32ZBA-NEXT:    add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+;
+; RV32XANDESPERF-LABEL: sh2add_masked:
+; RV32XANDESPERF:       # %bb.0:
+; RV32XANDESPERF-NEXT:    nds.bfoz a0, a0, 2, 11
+; RV32XANDESPERF-NEXT:    add a0, a0, a1
+; RV32XANDESPERF-NEXT:    ret
+  %shl = shl i32 %a, 2
+  %and = and i32 %shl, 4092
+  %add = add i32 %and, %b
+  ret i32 %add
+}
+
+define i32 @sh3add_masked(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: sh3add_masked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 768
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %shl = shl i32 %a, 3
+  %and = and i32 %shl, 6144
+  %add = add i32 %and, %b
+  ret i32 %add
+}
+
+; This should not trigger the optimisation as the shifted mask would not fit
+; in an immediate.
+define i32 @sh1add_large_mask(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: sh1add_large_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    lui a2, 1
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %shl = shl i32 %a, 1
+  %and = and i32 %shl, 4096
+  %add = add i32 %and, %b
+  ret i32 %add
+}

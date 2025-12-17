@@ -5087,3 +5087,90 @@ define i64 @exactashr1mul36(i64 %a) {
   %d = mul i64 %c, 36
   ret i64 %d
 }
+
+; The shxadd_masked tests cover:
+;    (add (and (shl x, c1), c2), y)
+; -> (shXadd (and x, c2 >> c1), y)
+; i.e. shift left and then mask, so that shxadd can be selected.
+; TODO: This is not currently implemented.
+
+define i64 @sh1add_masked(i64 %a, i64 %b) nounwind {
+; RV64I-LABEL: sh1add_masked:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    srli a0, a0, 55
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: sh1add_masked:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a0, a0, 56
+; RV64ZBA-NEXT:    srli a0, a0, 55
+; RV64ZBA-NEXT:    add a0, a0, a1
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: sh1add_masked:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    nds.bfoz a0, a0, 1, 8
+; RV64XANDESPERF-NEXT:    add a0, a0, a1
+; RV64XANDESPERF-NEXT:    ret
+  %shl = shl i64 %a, 1
+  %and = and i64 %shl, 510
+  %add = add i64 %and, %b
+  ret i64 %add
+}
+
+define i64 @sh2add_masked(i64 %a, i64 %b) nounwind {
+; RV64I-LABEL: sh2add_masked:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 54
+; RV64I-NEXT:    srli a0, a0, 52
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: sh2add_masked:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a0, a0, 54
+; RV64ZBA-NEXT:    srli a0, a0, 52
+; RV64ZBA-NEXT:    add a0, a0, a1
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: sh2add_masked:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    nds.bfoz a0, a0, 2, 11
+; RV64XANDESPERF-NEXT:    add a0, a0, a1
+; RV64XANDESPERF-NEXT:    ret
+  %shl = shl i64 %a, 2
+  %and = and i64 %shl, 4092
+  %add = add i64 %and, %b
+  ret i64 %add
+}
+
+define i64 @sh3add_masked(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: sh3add_masked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 768
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %shl = shl i64 %a, 3
+  %and = and i64 %shl, 6144
+  %add = add i64 %and, %b
+  ret i64 %add
+}
+
+; This should not trigger the optimisation as the shifted mask would not fit
+; in an immediate.
+define i64 @sh1add_large_mask(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: sh1add_large_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    lui a2, 1
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %shl = shl i64 %a, 1
+  %and = and i64 %shl, 4096
+  %add = add i64 %and, %b
+  ret i64 %add
+}
