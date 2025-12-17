@@ -121,3 +121,99 @@ func.func @drop_unit_dims_encoded_result(%arg0: tensor<1x1x42xf32>, %arg1: tenso
 //   ENCODE-SAME:        outs(%[[COLLAPSE_SHAPE_2]] : tensor<1x42xf32, #test.tensor_encoding<"encoding">>)
 //   ENCODE:           %[[EXPAND_SHAPE_0:.*]] = tensor.expand_shape %[[GENERIC_0]] {{\[\[}}0, 1], [2]] output_shape [1, 1, 42] : tensor<1x42xf32, #test.tensor_encoding<"encoding">> into tensor<1x1x42xf32, #test.tensor_encoding<"encoding">>
 //   ENCODE:           return %[[EXPAND_SHAPE_0]] : tensor<1x1x42xf32, #test.tensor_encoding<"encoding">>
+
+// -----
+
+#encoding1 = #test.tensor_encoding<"encoding1">
+#encoding2 = #test.tensor_encoding<"encoding2">
+
+func.func @drop_unit_dims_encoded_operand_and_result(%arg0: tensor<1x1x42xf32>, %arg1: tensor<1x1x42xf32, #encoding1>) -> tensor<1x1x42xf32, #encoding2> {
+  %0 = tensor.empty() : tensor<1x1x42xf32, #encoding2>
+  %1 = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+                     affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+                     affine_map<(d0, d1, d2) -> (d0, d1, d2)>],
+    iterator_types = ["parallel", "parallel", "parallel"]}
+    ins(%arg0, %arg1 : tensor<1x1x42xf32>, tensor<1x1x42xf32, #encoding1>) outs(%0 : tensor<1x1x42xf32, #encoding2>) {
+      ^bb0(%in0: f32, %in1 : f32, %out : f32):
+        %2 = arith.addf %in0, %in1 : f32
+        linalg.yield %2 : f32
+    } -> tensor<1x1x42xf32, #encoding2>
+  return %1 : tensor<1x1x42xf32, #encoding2>
+}
+
+// NOENCODE-LABEL:   @drop_unit_dims_encoded_operand_and_result
+// NOENCODE-SAME:      %[[ARG0:.*]]: tensor<1x1x42xf32>
+// NOENCODE-SAME:      %[[ARG1:.*]]: tensor<1x1x42xf32, #test.tensor_encoding<"encoding1">>
+// NOENCODE-SAME:      -> tensor<1x1x42xf32, #test.tensor_encoding<"encoding2">>
+// NOENCODE:           %[[EMPTY_0:.*]] = tensor.empty() : tensor<1x1x42xf32, #test.tensor_encoding<"encoding2">>
+// NOENCODE:           %[[GENERIC_0:.*]] = linalg.generic
+// NOENCODE-SAME:        iterator_types = ["parallel", "parallel", "parallel"]
+// NOENCODE-SAME:        ins(%[[ARG0]], %[[ARG1]] : tensor<1x1x42xf32>, tensor<1x1x42xf32, #test.tensor_encoding<"encoding1">>)
+// NOENCODE-SAME:        outs(%[[EMPTY_0]] : tensor<1x1x42xf32, #test.tensor_encoding<"encoding2">>)
+// NOENCODE-NOT:       tensor.expand_shape
+// NOENCODE:           return %[[GENERIC_0]] : tensor<1x1x42xf32, #test.tensor_encoding<"encoding2">>
+
+//   ENCODE-LABEL:   @drop_unit_dims_encoded_operand_and_result
+//   ENCODE-SAME:      %[[ARG0:.*]]: tensor<1x1x42xf32>,
+//   ENCODE-SAME:      %[[ARG1:.*]]: tensor<1x1x42xf32, #test.tensor_encoding<"encoding1">>
+//   ENCODE-SAME:      -> tensor<1x1x42xf32, #test.tensor_encoding<"encoding2">>
+//   ENCODE:           %[[EMPTY_0:.*]] = tensor.empty() : tensor<1x1x42xf32, #test.tensor_encoding<"encoding2">>
+//   ENCODE:           %[[COLLAPSE_SHAPE_0:.*]] = tensor.collapse_shape %[[ARG0]] {{\[\[}}0, 1], [2]] : tensor<1x1x42xf32> into tensor<1x42xf32>
+//   ENCODE:           %[[COLLAPSE_SHAPE_1:.*]] = tensor.collapse_shape %[[ARG1]] {{\[\[}}0, 1], [2]] : tensor<1x1x42xf32, #test.tensor_encoding<"encoding1">>
+//   ENCODE-SAME:        into tensor<1x42xf32, #test.tensor_encoding<"encoding1">>
+//   ENCODE:           %[[COLLAPSE_SHAPE_2:.*]] = tensor.collapse_shape %[[EMPTY_0]] {{\[\[}}0, 1], [2]] : tensor<1x1x42xf32, #test.tensor_encoding<"encoding2">>
+//   ENCODE-SAME:        into tensor<1x42xf32, #test.tensor_encoding<"encoding2">>
+//   ENCODE:           %[[GENERIC_0:.*]] = linalg.generic
+//   ENCODE-SAME:        iterator_types = ["parallel", "parallel"]
+//   ENCODE-SAME:        ins(%[[COLLAPSE_SHAPE_0]], %[[COLLAPSE_SHAPE_1]] : tensor<1x42xf32>, tensor<1x42xf32, #test.tensor_encoding<"encoding1">>)
+//   ENCODE-SAME:        outs(%[[COLLAPSE_SHAPE_2]] : tensor<1x42xf32, #test.tensor_encoding<"encoding2">>)
+//   ENCODE:           %[[EXPAND_SHAPE_0:.*]] = tensor.expand_shape %[[GENERIC_0]] {{\[\[}}0, 1], [2]] output_shape [1, 1, 42] : tensor<1x42xf32, #test.tensor_encoding<"encoding2">>
+//   ENCODE-SAME:        into tensor<1x1x42xf32, #test.tensor_encoding<"encoding2">>
+//   ENCODE:           return %[[EXPAND_SHAPE_0]] : tensor<1x1x42xf32, #test.tensor_encoding<"encoding2">>
+
+// -----
+
+#encoding1 = #test.tensor_encoding<"encoding1">
+#encoding2 = #test.tensor_encoding<"encoding2">
+
+func.func @drop_unit_dims_two_encoded_operands(%arg0: tensor<1x1x42xf32, #encoding1>, %arg1: tensor<1x1x42xf32, #encoding2>) -> tensor<1x1x42xf32> {
+  %0 = tensor.empty() : tensor<1x1x42xf32>
+  %1 = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+                     affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+                     affine_map<(d0, d1, d2) -> (d0, d1, d2)>],
+    iterator_types = ["parallel", "parallel", "parallel"]}
+    ins(%arg0, %arg1 : tensor<1x1x42xf32, #encoding1>, tensor<1x1x42xf32, #encoding2>) outs(%0 : tensor<1x1x42xf32>) {
+      ^bb0(%in0: f32, %in1 : f32, %out : f32):
+        %2 = arith.addf %in0, %in1 : f32
+        linalg.yield %2 : f32
+    } -> tensor<1x1x42xf32>
+  return %1 : tensor<1x1x42xf32>
+}
+
+// NOENCODE-LABEL:   @drop_unit_dims_two_encoded_operands
+// NOENCODE-SAME:      %[[ARG0:.*]]: tensor<1x1x42xf32, #test.tensor_encoding<"encoding1">>
+// NOENCODE-SAME:      %[[ARG1:.*]]: tensor<1x1x42xf32, #test.tensor_encoding<"encoding2">>) -> tensor<1x1x42xf32>
+// NOENCODE:           %[[EMPTY_0:.*]] = tensor.empty() : tensor<1x1x42xf32>
+// NOENCODE:           %[[GENERIC_0:.*]] = linalg.generic
+// NOENCODE-SAME:        iterator_types = ["parallel", "parallel", "parallel"]}
+// NOENCODE-SAME:        ins(%[[ARG0]], %[[ARG1]] : tensor<1x1x42xf32, #test.tensor_encoding<"encoding1">>, tensor<1x1x42xf32, #test.tensor_encoding<"encoding2">>)
+// NOENCODE-SAME:        outs(%[[EMPTY_0]] : tensor<1x1x42xf32>)
+// NOENCODE:           return %[[GENERIC_0]] : tensor<1x1x42xf32>
+
+//   ENCODE-LABEL:   @drop_unit_dims_two_encoded_operands
+//   ENCODE-SAME:      %[[ARG0:.*]]: tensor<1x1x42xf32, #test.tensor_encoding<"encoding1">>
+//   ENCODE-SAME:      %[[ARG1:.*]]: tensor<1x1x42xf32, #test.tensor_encoding<"encoding2">>) -> tensor<1x1x42xf32>
+//   ENCODE:           %[[EMPTY_0:.*]] = tensor.empty() : tensor<1x1x42xf32>
+//   ENCODE:           %[[COLLAPSE_SHAPE_0:.*]] = tensor.collapse_shape %[[ARG0]] {{\[\[}}0, 1], [2]] : tensor<1x1x42xf32, #test.tensor_encoding<"encoding1">>
+//   ENCODE-SAME:        into tensor<1x42xf32, #test.tensor_encoding<"encoding1">>
+//   ENCODE:           %[[COLLAPSE_SHAPE_1:.*]] = tensor.collapse_shape %[[ARG1]] {{\[\[}}0, 1], [2]] : tensor<1x1x42xf32, #test.tensor_encoding<"encoding2">>
+//   ENCODE-SAME:        into tensor<1x42xf32, #test.tensor_encoding<"encoding2">>
+//   ENCODE:           %[[COLLAPSE_SHAPE_2:.*]] = tensor.collapse_shape %[[EMPTY_0]] {{\[\[}}0, 1], [2]] : tensor<1x1x42xf32> into tensor<1x42xf32>
+//   ENCODE:           %[[GENERIC_0:.*]] = linalg.generic
+//   ENCODE-SAME:        iterator_types = ["parallel", "parallel"]
+//   ENCODE-SAME:        ins(%[[COLLAPSE_SHAPE_0]], %[[COLLAPSE_SHAPE_1]] : tensor<1x42xf32, #test.tensor_encoding<"encoding1">>, tensor<1x42xf32, #test.tensor_encoding<"encoding2">>)
+//   ENCODE-SAME:        outs(%[[COLLAPSE_SHAPE_2]] : tensor<1x42xf32>)
+//   ENCODE:           %[[EXPAND_SHAPE_0:.*]] = tensor.expand_shape %[[GENERIC_0]] {{\[\[}}0, 1], [2]] output_shape [1, 1, 42] : tensor<1x42xf32> into tensor<1x1x42xf32>
+//   ENCODE:           return %[[EXPAND_SHAPE_0]] : tensor<1x1x42xf32>
