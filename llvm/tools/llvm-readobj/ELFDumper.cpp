@@ -5347,8 +5347,8 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
     }
 
     uint64_t FuncAddrOffset = C.tell();
-    typename ELFT::uint FuncAddr =
-        Data.getUnsigned(C, sizeof(typename ELFT::uint));
+    uint64_t FuncAddr =
+        static_cast<uint64_t>(Data.getUnsigned(C, sizeof(typename ELFT::uint)));
     if (!C) {
       reportWarning(
           createError("failed while reading call graph info function entry PC" +
@@ -5389,8 +5389,8 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
       // Read unique direct callees and populate FuncCGInfos.
       for (uint64_t I = 0; I < NumDirectCallees; ++I) {
         uint64_t CalleeOffset = C.tell();
-        typename ELFT::uint Callee =
-            Data.getUnsigned(C, sizeof(typename ELFT::uint));
+        uint64_t Callee = static_cast<uint64_t>(
+            Data.getUnsigned(C, sizeof(typename ELFT::uint)));
         if (!C) {
           reportWarning(createError("failed while reading direct callee " +
                                     toString(C.takeError())),
