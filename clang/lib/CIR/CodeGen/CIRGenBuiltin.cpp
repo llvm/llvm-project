@@ -1519,13 +1519,7 @@ mlir::Value CIRGenFunction::emitVAArg(VAArgExpr *ve) {
   assert(!cir::MissingFeatures::msabi());
   assert(!cir::MissingFeatures::vlas());
   mlir::Location loc = cgm.getLoc(ve->getExprLoc());
-  QualType qualType = ve->getType();
-  mlir::Type type = convertType(qualType);
-
-  // For aggregate types, va_arg returns a pointer to the aggregate.
-  if (qualType->isAggregateType())
-    type = cir::PointerType::get(type.getContext(), type);
-
+  mlir::Type type = convertType(ve->getType());
   mlir::Value vaList = emitVAListRef(ve->getSubExpr()).getPointer();
   return cir::VAArgOp::create(builder, loc, type, vaList);
 }

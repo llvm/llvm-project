@@ -375,20 +375,22 @@ public:
   }
 
   void VisitVAArgExpr(VAArgExpr *e) {
-    // For aggregate va_arg, emitVAArg returns a pointer to the aggregate.
-    mlir::Value vaArgPtr = cgf.emitVAArg(e);
+    // emitVAArg returns an aggregate value (not a pointer) at the CIR level.
+    // ABI-specific pointer handling will be done later in LoweringPrepare.
+    mlir::Value vaArgValue = cgf.emitVAArg(e);
 
-    // Get alignment for the aggregate type.
-    CharUnits align = cgf.getContext().getTypeAlignInChars(e->getType());
+    // Create a temporary alloca to hold the aggregate value.
+    mlir::Location loc = cgf.getLoc(e->getSourceRange());
+    Address tmpAddr = cgf.createMemTemp(e->getType(), loc, "vaarg.tmp");
 
-    // Create an Address from the pointer value.
-    Address vaArgAddr(vaArgPtr, align);
+    // Store the va_arg result into the temporary.
+    cgf.emitAggregateStore(vaArgValue, tmpAddr);
 
-    // Create an LValue from the Address.
-    LValue vaArgLValue = cgf.makeAddrLValue(vaArgAddr, e->getType());
+    // Create an LValue from the temporary address.
+    LValue tmpLValue = cgf.makeAddrLValue(tmpAddr, e->getType());
 
-    // Copy the aggregate value from va_arg location to destination.
-    emitFinalDestCopy(e->getType(), vaArgLValue);
+    // Copy the aggregate value from temporary to destination.
+    emitFinalDestCopy(e->getType(), tmpLValue);
   }
 
   void VisitCXXThrowExpr(const CXXThrowExpr *e) {
