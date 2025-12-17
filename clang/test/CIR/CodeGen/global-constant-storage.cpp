@@ -47,7 +47,19 @@ public:
 
 const C c;
 
-// CIR checks for 'a' - should have constant storage
+// Check all globals first (they appear at the top of LLVM/OGCG output)
+// LLVM: @a ={{.*}} global {{.*}} zeroinitializer
+// LLVM: @a2 ={{.*}} global {{.*}} zeroinitializer
+// LLVM: @b ={{.*}} global {{.*}} zeroinitializer
+// LLVM: @_ZL1c ={{.*}} global {{.*}} zeroinitializer
+
+// OGCG: @a ={{.*}} global {{.*}} zeroinitializer
+// OGCG: @a2 ={{.*}} global {{.*}} zeroinitializer
+// OGCG: @b ={{.*}} global {{.*}} zeroinitializer
+// OGCG: @_ZL1c ={{.*}} global {{.*}} zeroinitializer
+
+// Test case 'a' - should have constant storage
+// CIR checks for 'a'
 // CIR: cir.global external @a = #cir.zero : !rec_A
 // CIR: cir.func internal private @__cxx_global_var_init() {
 // CIR:   %[[OBJ:.*]] = cir.get_global @a : !cir.ptr<!rec_A>
@@ -55,7 +67,20 @@ const C c;
 // CIR:   cir.return
 // CIR: }
 
-// CIR checks for 'a2' - should have constant storage (constexpr dtor)
+// LLVM checks for 'a' (no optimization)
+// LLVM: define internal void @__cxx_global_var_init() {
+// LLVM:   call void @_ZN1AC1Ev(ptr @a)
+// LLVM:   ret void
+// LLVM: }
+
+// OGCG checks for 'a' (no optimization)
+// OGCG: define internal void @__cxx_global_var_init() {{.*}} section ".text.startup" {
+// OGCG:   call void @_ZN1AC1Ev(ptr noundef nonnull align 4 dereferenceable(4) @a)
+// OGCG:   ret void
+// OGCG: }
+
+// Test case 'a2' - should have constant storage (constexpr dtor)
+// CIR checks for 'a2'
 // CIR: cir.global external @a2 = #cir.zero : !rec_A2
 // CIR: cir.func internal private @__cxx_global_var_init.1() {
 // CIR:   %[[OBJ:.*]] = cir.get_global @a2 : !cir.ptr<!rec_A2>
@@ -63,7 +88,20 @@ const C c;
 // CIR:   cir.return
 // CIR: }
 
-// CIR checks for 'b' - should NOT have constant storage (mutable member)
+// LLVM checks for 'a2' (no optimization)
+// LLVM: define internal void @__cxx_global_var_init.1() {
+// LLVM:   call void @_ZN2A2C1Ev(ptr @a2)
+// LLVM:   ret void
+// LLVM: }
+
+// OGCG checks for 'a2' (no optimization)
+// OGCG: define internal void @__cxx_global_var_init.1() {{.*}} section ".text.startup" {
+// OGCG:   call void @_ZN2A2C1Ev(ptr noundef nonnull align 4 dereferenceable(4) @a2)
+// OGCG:   ret void
+// OGCG: }
+
+// Test case 'b' - should NOT have constant storage (mutable member)
+// CIR checks for 'b'
 // CIR: cir.global external @b = #cir.zero : !rec_B
 // CIR: cir.func internal private @__cxx_global_var_init.2() {
 // CIR:   %[[OBJ:.*]] = cir.get_global @b : !cir.ptr<!rec_B>
@@ -71,7 +109,20 @@ const C c;
 // CIR:   cir.return
 // CIR: }
 
-// CIR checks for 'c' - Andy's simple case, should have constant storage (internal linkage)
+// LLVM checks for 'b' (no optimization)
+// LLVM: define internal void @__cxx_global_var_init.2() {
+// LLVM:   call void @_ZN1BC1Ev(ptr @b)
+// LLVM:   ret void
+// LLVM: }
+
+// OGCG checks for 'b' (no optimization)
+// OGCG: define internal void @__cxx_global_var_init.2() {{.*}} section ".text.startup" {
+// OGCG:   call void @_ZN1BC1Ev(ptr noundef nonnull align 4 dereferenceable(4) @b)
+// OGCG:   ret void
+// OGCG: }
+
+// Test case 'c' - Andy's simple case, should have constant storage (internal linkage)
+// CIR checks for 'c'
 // CIR: cir.global {{.*}} internal {{.*}} @_ZL1c = #cir.zero : !rec_C
 // CIR: cir.func internal private @__cxx_global_var_init.3() {
 // CIR:   %[[OBJ:.*]] = cir.get_global @_ZL1c : !cir.ptr<!rec_C>
@@ -79,107 +130,50 @@ const C c;
 // CIR:   cir.return
 // CIR: }
 
-// LLVM checks (no optimization)
-// Check all globals first (they appear at the top)
-// LLVM: @a ={{.*}} global {{.*}} zeroinitializer
-// LLVM: @a2 ={{.*}} global {{.*}} zeroinitializer
-// LLVM: @b ={{.*}} global {{.*}} zeroinitializer
-// LLVM: @_ZL1c ={{.*}} global {{.*}} zeroinitializer
-
-// Then check the init functions
-// LLVM: define internal void @__cxx_global_var_init() {
-// LLVM:   call void @_ZN1AC1Ev(ptr @a)
-// LLVM:   ret void
-// LLVM: }
-
-// LLVM: define internal void @__cxx_global_var_init.1() {
-// LLVM:   call void @_ZN2A2C1Ev(ptr @a2)
-// LLVM:   ret void
-// LLVM: }
-
-// LLVM: define internal void @__cxx_global_var_init.2() {
-// LLVM:   call void @_ZN1BC1Ev(ptr @b)
-// LLVM:   ret void
-// LLVM: }
-
+// LLVM checks for 'c' (no optimization)
 // LLVM: define internal void @__cxx_global_var_init.3() {
 // LLVM:   call void @_ZN1CC1Ev(ptr @_ZL1c)
 // LLVM:   ret void
 // LLVM: }
 
-// OGCG checks (no optimization)
-// Check all globals first (they appear at the top)
-// OGCG: @a ={{.*}} global {{.*}} zeroinitializer
-// OGCG: @a2 ={{.*}} global {{.*}} zeroinitializer
-// OGCG: @b ={{.*}} global {{.*}} zeroinitializer
-// OGCG: @_ZL1c ={{.*}} global {{.*}} zeroinitializer
-
-// Then check the init functions
-// OGCG: define internal void @__cxx_global_var_init() {{.*}} section ".text.startup" {
-// OGCG:   call void @_ZN1AC1Ev(ptr noundef nonnull align 4 dereferenceable(4) @a)
-// OGCG:   ret void
-// OGCG: }
-
-// OGCG: define internal void @__cxx_global_var_init.1() {{.*}} section ".text.startup" {
-// OGCG:   call void @_ZN2A2C1Ev(ptr noundef nonnull align 4 dereferenceable(4) @a2)
-// OGCG:   ret void
-// OGCG: }
-
-// OGCG: define internal void @__cxx_global_var_init.2() {{.*}} section ".text.startup" {
-// OGCG:   call void @_ZN1BC1Ev(ptr noundef nonnull align 4 dereferenceable(4) @b)
-// OGCG:   ret void
-// OGCG: }
-
+// OGCG checks for 'c' (no optimization)
 // OGCG: define internal void @__cxx_global_var_init.3() {{.*}} section ".text.startup" {
 // OGCG:   call void @_ZN1CC1Ev(ptr noundef nonnull align 4 dereferenceable(8) @_ZL1c)
 // OGCG:   ret void
 // OGCG: }
 
 // With optimization enabled, should emit invariant.start intrinsic for constant storage cases
-// Check all globals first (they appear at the top)
+
+// Check all globals first (they appear at the top of optimized LLVM/OGCG output)
 // LLVM-OPT: @a ={{.*}} global {{.*}} zeroinitializer
 // LLVM-OPT: @a2 ={{.*}} global {{.*}} zeroinitializer
 // LLVM-OPT: @b ={{.*}} global {{.*}} zeroinitializer
 // LLVM-OPT: @_ZL1c ={{.*}} global {{.*}} zeroinitializer
 
-// Then check the init functions with invariant.start
+// OGCG-OPT: @a ={{.*}} global {{.*}} zeroinitializer
+// OGCG-OPT: @a2 ={{.*}} global {{.*}} zeroinitializer
+// OGCG-OPT: @b ={{.*}} global {{.*}} zeroinitializer
+// OGCG-OPT: @_ZL1c ={{.*}} global {{.*}} zeroinitializer
+
+// Test case 'a' - optimized checks
 // LLVM-OPT: define internal void @__cxx_global_var_init() {
 // LLVM-OPT:   call void @_ZN1AC1Ev(ptr @a)
 // LLVM-OPT:   call {{.*}}@llvm.invariant.start.p0(i64 4, ptr @a)
 // LLVM-OPT:   ret void
 // LLVM-OPT: }
 
-// LLVM-OPT: define internal void @__cxx_global_var_init.1() {
-// LLVM-OPT:   call void @_ZN2A2C1Ev(ptr @a2)
-// LLVM-OPT:   call {{.*}}@llvm.invariant.start.p0(i64 4, ptr @a2)
-// LLVM-OPT:   ret void
-// LLVM-OPT: }
-
-// LLVM-OPT: define internal void @__cxx_global_var_init.2() {
-// LLVM-OPT:   call void @_ZN1BC1Ev(ptr @b)
-// LLVM-OPT-NOT: call {{.*}}@llvm.invariant.start.p0(i64 {{.*}}, ptr @b)
-// LLVM-OPT:   ret void
-// LLVM-OPT: }
-
-// LLVM-OPT: define internal void @__cxx_global_var_init.3() {
-// LLVM-OPT:   call void @_ZN1CC1Ev(ptr @_ZL1c)
-// LLVM-OPT:   call {{.*}}@llvm.invariant.start.p0(i64 8, ptr @_ZL1c)
-// LLVM-OPT:   ret void
-// LLVM-OPT: }
-
-// OGCG-OPT checks (with optimization)
-// Check all globals first (they appear at the top)
-// OGCG-OPT: @a ={{.*}} global {{.*}} zeroinitializer
-// OGCG-OPT: @a2 ={{.*}} global {{.*}} zeroinitializer
-// OGCG-OPT: @b ={{.*}} global {{.*}} zeroinitializer
-// OGCG-OPT: @_ZL1c ={{.*}} global {{.*}} zeroinitializer
-
-// Then check the init functions with invariant.start
 // OGCG-OPT: define internal void @__cxx_global_var_init() {{.*}} section ".text.startup" {
 // OGCG-OPT:   call void @_ZN1AC1Ev(ptr noundef nonnull align 4 dereferenceable(4) @a)
 // OGCG-OPT:   call {{.*}}@llvm.invariant.start.p0(i64 4, ptr @a)
 // OGCG-OPT:   ret void
 // OGCG-OPT: }
+
+// Test case 'a2' - optimized checks
+// LLVM-OPT: define internal void @__cxx_global_var_init.1() {
+// LLVM-OPT:   call void @_ZN2A2C1Ev(ptr @a2)
+// LLVM-OPT:   call {{.*}}@llvm.invariant.start.p0(i64 4, ptr @a2)
+// LLVM-OPT:   ret void
+// LLVM-OPT: }
 
 // OGCG-OPT: define internal void @__cxx_global_var_init.1() {{.*}} section ".text.startup" {
 // OGCG-OPT:   call void @_ZN2A2C1Ev(ptr noundef nonnull align 4 dereferenceable(4) @a2)
@@ -187,15 +181,28 @@ const C c;
 // OGCG-OPT:   ret void
 // OGCG-OPT: }
 
+// Test case 'b' - optimized checks (should NOT emit invariant.start)
+// LLVM-OPT: define internal void @__cxx_global_var_init.2() {
+// LLVM-OPT:   call void @_ZN1BC1Ev(ptr @b)
+// LLVM-OPT-NOT: call {{.*}}@llvm.invariant.start.p0(i64 {{.*}}, ptr @b)
+// LLVM-OPT:   ret void
+// LLVM-OPT: }
+
 // OGCG-OPT: define internal void @__cxx_global_var_init.2() {{.*}} section ".text.startup" {
 // OGCG-OPT:   call void @_ZN1BC1Ev(ptr noundef nonnull align 4 dereferenceable(4) @b)
 // OGCG-OPT-NOT: call {{.*}}@llvm.invariant.start.p0(i64 {{.*}}, ptr @b)
 // OGCG-OPT:   ret void
 // OGCG-OPT: }
 
+// Test case 'c' - optimized checks
+// LLVM-OPT: define internal void @__cxx_global_var_init.3() {
+// LLVM-OPT:   call void @_ZN1CC1Ev(ptr @_ZL1c)
+// LLVM-OPT:   call {{.*}}@llvm.invariant.start.p0(i64 8, ptr @_ZL1c)
+// LLVM-OPT:   ret void
+// LLVM-OPT: }
+
 // OGCG-OPT: define internal void @__cxx_global_var_init.3() {{.*}} section ".text.startup" {
 // OGCG-OPT:   call void @_ZN1CC1Ev(ptr noundef nonnull align 4 dereferenceable(8) @_ZL1c)
 // OGCG-OPT:   call {{.*}}@llvm.invariant.start.p0(i64 8, ptr @_ZL1c)
 // OGCG-OPT:   ret void
 // OGCG-OPT: }
-
