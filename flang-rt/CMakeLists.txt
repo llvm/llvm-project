@@ -23,7 +23,6 @@ set(FLANG_RT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(FLANG_RT_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 set(FLANG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../flang")
 
-
 list(APPEND CMAKE_MODULE_PATH
     "${FLANG_RT_SOURCE_DIR}/cmake/modules"
     "${FLANG_SOURCE_DIR}/cmake/modules"
@@ -44,9 +43,6 @@ include(CMakePushCheckState)
 
 # Path to LLVM development tools (FileCheck, llvm-lit, not, ...)
 set(LLVM_TOOLS_DIR "${LLVM_BINARY_DIR}/bin")
-
-# Fortran compiler not optional for building Flang-RT
-enable_language(Fortran)
 
 
 #################
@@ -261,7 +257,6 @@ if (FLANG_RT_INCLUDE_TESTS)
 else ()
   add_custom_target(check-flang-rt)
 endif()
-
 
 ###################
 # Install headers #
