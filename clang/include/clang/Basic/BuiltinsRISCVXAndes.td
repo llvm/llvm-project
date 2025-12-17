@@ -22,6 +22,8 @@ let Attributes = [NoThrow, Const] in {
 // XAndesPerf extension.
 //===----------------------------------------------------------------------===//
 
+// https://github.com/andestech/andes-intrinsic-doc/blob/main/andes-scalar-intrinsic.md
+
 let Features = "xandesperf,32bit" in {
 def ffb_32     : RISCVXAndesBuiltin<"int32_t(uint32_t, uint32_t)">;
 def ffzmism_32 : RISCVXAndesBuiltin<"int32_t(uint32_t, uint32_t)">;
