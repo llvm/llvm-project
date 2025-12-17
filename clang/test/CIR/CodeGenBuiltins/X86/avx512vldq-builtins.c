@@ -92,11 +92,17 @@ __m256i test_mm256_movm_epi64(__mmask8 __A) {
 }
 
 __mmask8 test_mm256_movepi32_mask(__m256i __A) {
+  // CIR-LABEL: _mm256_movepi32_mask
+  // CIR: [[CMP:%.*]] = cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<!s32i x 8>, !cir.vector<!cir.int<u, 1> x 8>
+  // CIR: %{{.*}} = cir.cast bitcast [[CMP]] : !cir.vector<!cir.int<u, 1> x 8> -> !u8i
+
   // LLVM-LABEL: @test_mm256_movepi32_mask
   // LLVM: [[CMP:%.*]] = icmp slt <8 x i32> %{{.*}}, zeroinitializer
+  // LLVM: bitcast <8 x i1> [[CMP]] to i8
 
   // OGCG-LABEL: @test_mm256_movepi32_mask
   // OGCG: [[CMP:%.*]] = icmp slt <8 x i32> %{{.*}}, zeroinitializer
+  // OGCG: bitcast <8 x i1> [[CMP]] to i8
   return _mm256_movepi32_mask(__A); 
 }
 
@@ -120,16 +126,19 @@ __mmask8 test_mm_movepi64_mask(__m128i __A) {
 
 __mmask8 test_mm256_movepi64_mask(__m256i __A) {
   // CIR-LABEL: _mm256_movepi64_mask
-  // CIR: %{{.*}} = cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<!s64i x 4>, !cir.vector<!cir.int<u, 1> x 4>
-  // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<!cir.int<u, 1> x 4>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<!cir.int<u, 1> x 8>
+  // CIR: [[CMP:%.*]] = cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<!s64i x 4>, !cir.vector<!cir.int<u, 1> x 4>
+  // CIR: [[SHUF:%.*]] = cir.vec.shuffle([[CMP]], %{{.*}} : !cir.vector<!cir.int<u, 1> x 4>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<!cir.int<u, 1> x 8>
+  // CIR: %{{.*}} = cir.cast bitcast [[SHUF]] : !cir.vector<!cir.int<u, 1> x 8> -> !u8i
 
   // LLVM-LABEL: @test_mm256_movepi64_mask
   // LLVM: [[CMP:%.*]] = icmp slt <4 x i64> %{{.*}}, zeroinitializer
   // LLVM: [[SHUF:%.*]] = shufflevector <4 x i1> [[CMP]], <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // LLVM: bitcast <8 x i1> [[SHUF]] to i8
 
   // OGCG-LABEL: @test_mm256_movepi64_mask
   // OGCG: [[CMP:%.*]] = icmp slt <4 x i64> %{{.*}}, zeroinitializer
   // OGCG: [[SHUF:%.*]] = shufflevector <4 x i1> [[CMP]], <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // OGCG: bitcast <8 x i1> [[SHUF]] to i8
   return _mm256_movepi64_mask(__A); 
 }
 
