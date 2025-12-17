@@ -17,11 +17,13 @@ add_orc_rt_unittest(CoreTests
   CallableTraitsHelperTest.cpp
   EndianTest.cpp
   ErrorTest.cpp
+  ErrorExceptionInteropTest.cpp
   ExecutorAddressTest.cpp
   IntervalMapTest.cpp
   IntervalSetTest.cpp
   MathTest.cpp
   MemoryFlagsTest.cpp
+  QueueingTaskDispatcherTest.cpp
   RTTITest.cpp
   ScopeExitTest.cpp
   SessionTest.cpp

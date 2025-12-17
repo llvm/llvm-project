@@ -218,6 +218,7 @@ define void @gather_nxv4i32_ind64_stride2(ptr noalias nocapture %a, ptr noalias 
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VECTOR_PH:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[DOTNEG:%.*]] = add nsw i64 [[TMP7]], -1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], [[DOTNEG]]
@@ -227,12 +228,11 @@ define void @gather_nxv4i32_ind64_stride2(ptr noalias nocapture %a, ptr noalias 
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[DOTIDX1:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i64 [[DOTIDX1]]
-; CHECK-NEXT:    [[DOTIDX3:%.*]] = shl nuw nsw i64 [[TMP2]], 5
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[B]], i64 [[DOTIDX3]]
-; CHECK-NEXT:    [[DOTIDX4:%.*]] = shl i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP11]], i64 [[DOTIDX4]]
+; CHECK-NEXT:    [[DOTIDX3:%.*]] = shl i64 [[TMP8]], 3
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[DOTIDX3]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC]])
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
@@ -240,9 +240,7 @@ define void @gather_nxv4i32_ind64_stride2(ptr noalias nocapture %a, ptr noalias 
 ; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC1]])
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER2:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[DOTIDX:%.*]] = shl nuw nsw i64 [[TMP13]], 4
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP12]], i64 [[DOTIDX]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw float, ptr [[TMP12]], i64 [[TMP3]]
 ; CHECK-NEXT:    store <vscale x 4 x float> [[WIDE_MASKED_GATHER]], ptr [[TMP12]], align 4
 ; CHECK-NEXT:    store <vscale x 4 x float> [[WIDE_MASKED_GATHER2]], ptr [[TMP14]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP7]]
