@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRGenBuilder.h"
 #include "CIRGenFunction.h"
 #include "clang/CIR/MissingFeatures.h"
 
@@ -30,6 +31,27 @@ using namespace clang;
 using namespace clang::CIRGen;
 using namespace llvm;
 
+template <typename... Operands>
+static mlir::Value emitIntrinsicCallOp(CIRGenBuilderTy &builder,
+                                       mlir::Location loc, const StringRef str,
+                                       const mlir::Type &resTy,
+                                       Operands &&...op) {
+  return cir::LLVMIntrinsicCallOp::create(builder, loc,
+                                          builder.getStringAttr(str), resTy,
+                                          std::forward<Operands>(op)...)
+      .getResult();
+}
+
+// Generate vscale * scalingFactor
+static mlir::Value genVscaleTimesFactor(mlir::Location loc,
+                                        CIRGenBuilderTy builder,
+                                        mlir::Type cirTy,
+                                        int32_t scalingFactor) {
+  mlir::Value vscale = emitIntrinsicCallOp(builder, loc, "vscale", cirTy);
+  return builder.createNUWAMul(loc, vscale,
+                               builder.getUInt64(scalingFactor, loc));
+}
+
 std::optional<mlir::Value>
 CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
                                           const CallExpr *expr) {
@@ -42,6 +64,8 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
   }
 
   assert(!cir::MissingFeatures::aarch64SVEIntrinsics());
+
+  mlir::Location loc = getLoc(expr->getExprLoc());
 
   switch (builtinID) {
   default:
@@ -101,18 +125,26 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
   case SVE::BI__builtin_sve_svdupq_n_s32:
   case SVE::BI__builtin_sve_svpfalse_b:
   case SVE::BI__builtin_sve_svpfalse_c:
-  case SVE::BI__builtin_sve_svlen_bf16:
-  case SVE::BI__builtin_sve_svlen_f16:
-  case SVE::BI__builtin_sve_svlen_f32:
-  case SVE::BI__builtin_sve_svlen_f64:
-  case SVE::BI__builtin_sve_svlen_s8:
-  case SVE::BI__builtin_sve_svlen_s16:
-  case SVE::BI__builtin_sve_svlen_s32:
-  case SVE::BI__builtin_sve_svlen_s64:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case SVE::BI__builtin_sve_svlen_u8:
+  case SVE::BI__builtin_sve_svlen_s8:
+    return genVscaleTimesFactor(loc, builder, convertType(expr->getType()), 16);
   case SVE::BI__builtin_sve_svlen_u16:
+  case SVE::BI__builtin_sve_svlen_s16:
+  case SVE::BI__builtin_sve_svlen_f16:
+  case SVE::BI__builtin_sve_svlen_bf16:
+    return genVscaleTimesFactor(loc, builder, convertType(expr->getType()), 8);
   case SVE::BI__builtin_sve_svlen_u32:
+  case SVE::BI__builtin_sve_svlen_s32:
+  case SVE::BI__builtin_sve_svlen_f32:
+    return genVscaleTimesFactor(loc, builder, convertType(expr->getType()), 4);
   case SVE::BI__builtin_sve_svlen_u64:
+  case SVE::BI__builtin_sve_svlen_s64:
+  case SVE::BI__builtin_sve_svlen_f64:
+    return genVscaleTimesFactor(loc, builder, convertType(expr->getType()), 2);
   case SVE::BI__builtin_sve_svtbl2_u8:
   case SVE::BI__builtin_sve_svtbl2_s8:
   case SVE::BI__builtin_sve_svtbl2_u16:

@@ -2910,7 +2910,7 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   });
   converter.addConversion([&](cir::VectorType type) -> mlir::Type {
     const mlir::Type ty = converter.convertType(type.getElementType());
-    return mlir::VectorType::get(type.getSize(), ty);
+    return mlir::VectorType::get(type.getSize(), ty, {type.getIsScalable()});
   });
   converter.addConversion([&](cir::BoolType type) -> mlir::Type {
     return mlir::IntegerType::get(type.getContext(), 1,

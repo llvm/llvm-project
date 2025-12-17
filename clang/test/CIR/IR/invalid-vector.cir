@@ -4,7 +4,7 @@
 
 module  {
 
-// expected-error @below {{failed to verify 'elementType'}}
+// expected-error @below {{failed to verify 'element_type'}}
 cir.global external @vec_b = #cir.zero : !cir.vector<4 x !cir.array<!s32i x 10>>
 
 }
