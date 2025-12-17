@@ -2192,6 +2192,295 @@ The ``griddepcontrol`` intrinsics allows the dependent grids and prerequisite gr
 For more information, refer 
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-griddepcontrol>`__.
 
+Tensormap Replace Intrinsics
+----------------------------
+
+These intrinsics modify the fields of the tensor-map object in ``tile`` mode at 
+the location specified by the address operand ``%addr``.
+
+For more information, refer to the 
+`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-tensormap-replace>`__.
+
+'``llvm.nvvm.tensormap.replace.global.address``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.global.address.p1(ptr addrspace(1) %addr, i64 %new_value)
+  declare void @llvm.nvvm.tensormap.replace.global.address.p3(ptr addrspace(3) %addr, i64 %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.global.address.*``' intrinsics replace the 
+``global_address`` field of the tensor-map object with ``%new_value``.
+
+'``llvm.nvvm.tensormap.replace.rank``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.rank.p1(ptr addrspace(1) %addr, i32 %new_value)
+  declare void @llvm.nvvm.tensormap.replace.rank.p3(ptr addrspace(3) %addr, i32 %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.rank.*``' intrinsics replace the ``rank`` 
+field of the tensor-map object with ``%new_value`` which must be one less than 
+the desired tensor rank as this field uses zero-based numbering.
+
+'``llvm.nvvm.tensormap.replace.global.stride``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.global.stride.p1(ptr addrspace(1) %addr, i32 immarg %ord, i64 %new_value)
+  declare void @llvm.nvvm.tensormap.replace.global.stride.p3(ptr addrspace(3) %addr, i32 immarg %ord, i64 %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.global.stride.*``' intrinsics replace the 
+``%ord``-th element of the ``global_stride`` field of the tensor-map object 
+with ``%new_value``.
+
+'``llvm.nvvm.tensormap.replace.element.stride``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.element.stride.p1(ptr addrspace(1) %addr, i32 immarg %ord, i32 %new_value)
+  declare void @llvm.nvvm.tensormap.replace.element.stride.p3(ptr addrspace(3) %addr, i32 immarg %ord, i32 %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.element.stride.*``' intrinsics replace the 
+``%ord``-th element of the ``element_stride`` field of the tensor-map object 
+with ``%new_value``.
+
+'``llvm.nvvm.tensormap.replace.global.dim``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.global.dim.p1(ptr addrspace(1) %addr, i32 immarg %ord, i32 %new_value)
+  declare void @llvm.nvvm.tensormap.replace.global.dim.p3(ptr addrspace(3) %addr, i32 immarg %ord, i32 %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.global.dim.*``' intrinsics replace the 
+``%ord``-th element of the ``global_dim`` field of the tensor-map object 
+with ``%new_value``.
+
+'``llvm.nvvm.tensormap.replace.box.dim``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.box.dim.p1(ptr addrspace(1) %addr, i32 immarg %ord, i32 %new_value)
+  declare void @llvm.nvvm.tensormap.replace.box.dim.p3(ptr addrspace(3) %addr, i32 immarg %ord, i32 %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.box.dim.*``' intrinsics replace the 
+``%ord``-th element of the ``box_dim`` field of the tensor-map object with 
+``%new_value``.
+
+'``llvm.nvvm.tensormap.replace.elemtype``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.elemtype.p1(ptr addrspace(1) %addr, i32 immarg %new_value)
+  declare void @llvm.nvvm.tensormap.replace.elemtype.p3(ptr addrspace(3) %addr, i32 immarg %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.elemtype.*``' intrinsics replace the 
+``elemtype`` field of the tensor-map object with the type specified by 
+``%new_value``.
+
+Semantics:
+""""""""""
+
+The following table shows the mapping of ``%new_value`` to the actual element 
+type:
+
+  ============================ =====
+  Element Type                 Value
+  ============================ =====
+  ``u8``                       0
+  ``u16``                      1
+  ``u32``                      2
+  ``s32``                      3
+  ``u64``                      4
+  ``s64``                      5
+  ``f16``                      6
+  ``f32``                      7
+  ``f32.ftz``                  8
+  ``f64``                      9
+  ``bf16``                     10
+  ``tf32``                     11
+  ``tf32.ftz``                 12
+  ``b4x16``                    13
+  ``b4x16_p64``                14
+  ``b6x16_p32`` or ``b6p2x16`` 15
+  ============================ =====
+
+'``llvm.nvvm.tensormap.replace.interleave.layout``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.interleave.layout.p1(ptr addrspace(1) %addr, i32 immarg %new_value)
+  declare void @llvm.nvvm.tensormap.replace.interleave.layout.p3(ptr addrspace(3) %addr, i32 immarg %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.interleave.layout.*``' intrinsics replace 
+the ``interleave_layout`` field of the tensor-map object with the layout 
+specified by ``%new_value``.
+
+Semantics:
+""""""""""
+
+The following table shows the mapping of ``%new_value`` to the actual layout:
+
+  ================== =====
+  Interleave Layout  Value
+  ================== =====
+  ``No interleave``  0
+  ``16B interleave`` 1
+  ``32B interleave`` 2
+  ================== =====
+
+'``llvm.nvvm.tensormap.replace.swizzle_mode``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.swizzle.mode.p1(ptr addrspace(1) %addr, i32 immarg %new_value)
+  declare void @llvm.nvvm.tensormap.replace.swizzle.mode.p3(ptr addrspace(3) %addr, i32 immarg %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.swizzle.mode.*``' intrinsics replace the 
+``swizzle_mode`` field of the tensor-map object with the swizzle mode specified 
+by ``%new_value``.
+
+Semantics:
+""""""""""
+
+The following table shows the mapping of ``%new_value`` to the actual swizzle 
+mode:
+
+  ================ =====
+  Swizzle Mode     Value
+  ================ =====
+  ``No swizzle``   0
+  ``32B swizzle``  1
+  ``64B swizzle``  2
+  ``128B swizzle`` 3
+  ``96B swizzle``  4
+  ================ =====
+  
+'``llvm.nvvm.tensormap.replace.swizzle_atomicity``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.swizzle.atomicity.p1(ptr addrspace(1) %addr, i32 immarg %new_value)
+  declare void @llvm.nvvm.tensormap.replace.swizzle.atomicity.p3(ptr addrspace(3) %addr, i32 immarg %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.swizzle.atomicity.*``' intrinsics replace 
+the ``swizzle_atomicity`` field of the tensor-map object with the swizzle 
+atomicity specified by ``%new_value``.
+
+Semantics:
+""""""""""
+
+The following table shows the mapping of ``%new_value`` to the actual swizzle 
+atomicity:
+
+  ================= =====
+  Swizzle Atomicity Value
+  ================= =====
+  ``16B``           0
+  ``32B``           1
+  ``32B + 8B flip`` 2
+  ``64B``           3
+  ================= =====
+
+'``llvm.nvvm.tensormap.replace.fill_mode``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.fill.mode.p1(ptr addrspace(1) %addr, i32 immarg %new_value)
+  declare void @llvm.nvvm.tensormap.replace.fill.mode.p3(ptr addrspace(3) %addr, i32 immarg %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.fill.mode.*``' intrinsics replace the 
+``fill_mode`` field of the tensor-map object with the fill mode specified by
+``%new_value``.
+
+Semantics:
+""""""""""
+
+The following table shows the mapping of ``%new_value`` to the actual fill mode:
+
+  ================ =====
+  Fill Mode        Value
+  ================ =====
+  ``Zero fill``    0
+  ``OOB-NaN fill`` 1
+  ================ =====
+
 TCGEN05 family of Intrinsics
 ----------------------------
 
