@@ -7276,9 +7276,7 @@ public:
                                 Scope *UDLScope = nullptr,
                                 ConversionAction Action = CA_ToExecEncoding);
 
-  ExprResult
-  ActOnUnevaluatedStringLiteral(ArrayRef<Token> StringToks,
-                                ConversionAction Action = CA_ToExecEncoding);
+  ExprResult ActOnUnevaluatedStringLiteral(ArrayRef<Token> StringToks);
 
   /// ControllingExprOrType is either an opaque pointer coming out of a
   /// ParsedType or an Expr *. FIXME: it'd be better to split this interface

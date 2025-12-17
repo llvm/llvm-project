@@ -2064,15 +2064,14 @@ static ExprResult BuildCookedLiteralOperatorCall(Sema &S, Scope *Scope,
   return S.BuildLiteralOperatorCall(R, OpNameInfo, Args, LitEndLoc);
 }
 
-ExprResult Sema::ActOnUnevaluatedStringLiteral(ArrayRef<Token> StringToks,
-                                               ConversionAction Action) {
+ExprResult Sema::ActOnUnevaluatedStringLiteral(ArrayRef<Token> StringToks) {
   // StringToks needs backing storage as it doesn't hold array elements itself
   std::vector<Token> ExpandedToks;
   if (getLangOpts().MicrosoftExt)
     StringToks = ExpandedToks = ExpandFunctionLocalPredefinedMacros(StringToks);
 
-  StringLiteralParser Literal(StringToks, PP,
-                              StringLiteralEvalMethod::Unevaluated, Action);
+  StringLiteralParser Literal(
+      StringToks, PP, StringLiteralEvalMethod::Unevaluated, CA_NoConversion);
   if (Literal.hadError)
     return ExprError();
 

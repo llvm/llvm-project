@@ -2988,8 +2988,7 @@ ExprResult Parser::ParseStringLiteralExpression(bool AllowUserDefinedLiteral,
 
   if (Unevaluated) {
     assert(!AllowUserDefinedLiteral && "UDL are always evaluated");
-    return Actions.ActOnUnevaluatedStringLiteral(StringToks,
-                                                 ParserConversionAction);
+    return Actions.ActOnUnevaluatedStringLiteral(StringToks);
   }
 
   // Pass the set of string tokens, ready for concatenation, to the actions.

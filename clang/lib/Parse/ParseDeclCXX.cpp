@@ -314,9 +314,7 @@ Decl *Parser::ParseNamespaceAlias(SourceLocation NamespaceLoc,
 
 Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
   assert(isTokenStringLiteral() && "Not a string literal!");
-  ExprResult Lang = (SaveAndRestore<ConversionAction>(ParserConversionAction,
-                                                      CA_NoConversion),
-                     ParseUnevaluatedStringLiteralExpression());
+  ExprResult Lang = ParseUnevaluatedStringLiteralExpression();
 
   ParseScope LinkageScope(this, Scope::DeclScope);
   Decl *LinkageSpec =
@@ -997,11 +995,9 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
                ? diag::warn_cxx20_compat_static_assert_user_generated_message
                : diag::ext_cxx_static_assert_user_generated_message);
       AssertMessage = ParseConstantExpressionInExprEvalContext();
-    } else if (tokenIsLikeStringLiteral(Tok, getLangOpts())) {
-      SaveAndRestore<ConversionAction> SavedTranslationState(
-          ParserConversionAction, CA_NoConversion);
+    } else if (tokenIsLikeStringLiteral(Tok, getLangOpts()))
       AssertMessage = ParseUnevaluatedStringLiteralExpression();
-    } else {
+    else {
       Diag(Tok, diag::err_expected_string_literal)
           << /*Source='static_assert'*/ 1;
       SkipMalformedDecl();

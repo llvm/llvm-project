@@ -1531,9 +1531,6 @@ void Parser::ParseExternalSourceSymbolAttribute(
       continue;
     }
 
-    SaveAndRestore<ConversionAction> SavedTranslationState(
-        ParserConversionAction, CA_NoConversion);
-
     if (Keyword == Ident_language) {
       if (HadLanguage) {
         Diag(KeywordLoc, diag::err_external_source_symbol_duplicate_clause)
