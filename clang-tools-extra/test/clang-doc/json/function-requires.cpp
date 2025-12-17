@@ -37,7 +37,6 @@ template<Incrementable T> Incrementable auto incrementTwo(T t);
 // CHECK-NEXT:            "End": true,
 // CHECK-NEXT:            "Expression": "Incrementable<T>",
 // CHECK-NEXT:            "Name": "Incrementable",
-// CHECK-NEXT:            "Path": "",
 // CHECK-NEXT:            "QualName": "Incrementable",
 // CHECK-NEXT:            "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:          }
@@ -76,7 +75,6 @@ template<Incrementable T> Incrementable auto incrementTwo(T t);
 // CHECK-NEXT:            "End": true,
 // CHECK-NEXT:            "Expression": "Incrementable<T>",
 // CHECK-NEXT:            "Name": "Incrementable",
-// CHECK-NEXT:            "Path": "",
 // CHECK-NEXT:            "QualName": "Incrementable",
 // CHECK-NEXT:            "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:          }

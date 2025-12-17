@@ -57,10 +57,38 @@
                         </ul>
                     </li>
                     {{/HasFunctions}}
+                    {{#HasNamespaces}}
+                    <li class="sidebar-section">
+                        <a class="sidebar-item" href="#Namespaces">Namespaces</a>
+                    </li>
+                    <li>
+                        <ul>
+                            {{#Namespaces}}
+                            <li class="sidebar-item-container">
+                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                            </li>
+                            {{/Namespaces}}
+                        </ul>
+                    </li>
+                    {{/HasNamespaces}}
                 </ul>
             </div>
             <div class="resizer" id="resizer"></div>
             <div class="content">
+                {{#HasNamespaces}}
+                <section id="Namespaces" class="section-container">
+                    <h2>Namespaces</h2>
+                    <ul class="class-container">
+                        {{#Namespaces}}
+                        <li id="{{USR}}">
+                            <a href="{{^Path}}../{{Name}}/{{/Path}}{{#Path}}./{{Name}}/{{/Path}}index.html">
+                                <pre><code class="language-cpp code-clang-doc">namespace {{Name}}</code></pre>
+                            </a>
+                        </li>
+                        {{/Namespaces}}
+                    </ul>
+                </section>
+                {{/HasNamespaces}}
                 {{#HasEnums}}
                 <section id="Enums" class="section-container">
                     <h2>Enumerations</h2>
