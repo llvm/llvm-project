@@ -214,6 +214,7 @@ This will produce a lot of output. Scroll back to just after you connected to
 the debug server. Look for lines like these:
 
 ::
+
    lldb             < 104> send packet: $qSupported:xmlRegisters=<...>
    lldb             < 260> read packet: $<...>qXfer:features:read+<...>
 
