@@ -2806,7 +2806,8 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
   // Fold chained GEP with constant base into single GEP:
   // gep i8, (gep i8, %base, C1), (select Cond, C2, C3)
   // -> gep i8, %base, (select Cond, C1+C2, C1+C3)
-  if (GEP.getNumIndices() == 1 && Src->getNumIndices() == 1) {
+  if (Src->hasOneUse() && GEP.getNumIndices() == 1 &&
+      Src->getNumIndices() == 1) {
     Value *SrcIdx = *Src->idx_begin();
     Value *GEPIdx = *GEP.idx_begin();
     const APInt *ConstOffset, *TrueVal, *FalseVal;

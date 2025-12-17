@@ -144,9 +144,9 @@ define ptr @src_fail_source_gep_multiple_use(i32 %arg0, ptr %arg1, ptr %arg2) {
 ; CHECK-LABEL: @src_fail_source_gep_multiple_use(
 ; CHECK-NEXT:    [[V0:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG1:%.*]], i64 8148
 ; CHECK-NEXT:    [[V1:%.*]] = icmp sgt i32 [[ARG0:%.*]], 3
+; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V1]], i64 55104, i64 21304
 ; CHECK-NEXT:    call void @use(ptr nonnull [[V0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[V1]], i64 63252, i64 29452
-; CHECK-NEXT:    [[V3:%.*]] = getelementptr i8, ptr [[ARG1]], i64 [[TMP1]]
+; CHECK-NEXT:    [[V3:%.*]] = getelementptr i8, ptr [[V0]], i64 [[V2]]
 ; CHECK-NEXT:    ret ptr [[V3]]
 ;
   %v0 = getelementptr inbounds nuw i8, ptr %arg1, i64 8148
@@ -163,8 +163,7 @@ define ptr @src_fail_source_gep_multiple_swap(i32 %arg0, ptr %arg1) {
 ; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V1]], i64 55104, i64 21304
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG1:%.*]], i64 [[V2]]
 ; CHECK-NEXT:    call void @use(ptr nonnull [[GEP1]])
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[V1]], i64 63252, i64 29452
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[ARG1]], i64 [[TMP1]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[GEP1]], i64 8148
 ; CHECK-NEXT:    ret ptr [[GEP2]]
 ;
   %v1 = icmp sgt i32 %arg0, 3
