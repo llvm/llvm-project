@@ -93,9 +93,12 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
   case file_magic::spirv_object:
     // Unrecognized object file format.
     return errorCodeToError(object_error::invalid_file_type);
-  case file_magic::offload_binary:
-    return std::unique_ptr<Binary>(
-        std::move(OffloadBinary::create(Buffer).get()[0]));
+  case file_magic::offload_binary: {
+    auto OffloadBinaryOrErr = OffloadBinary::create(Buffer);
+    if (!OffloadBinaryOrErr)
+      return OffloadBinaryOrErr.takeError();
+    return std::unique_ptr<Binary>(std::move(OffloadBinaryOrErr.get()[0]));
+  }
   case file_magic::minidump:
     return MinidumpFile::create(Buffer);
   case file_magic::tapi_file:
