@@ -1640,6 +1640,22 @@ def HasVendorXqcisync
       AssemblerPredicate<(all_of FeatureVendorXqcisync),
                          "'Xqcisync' (Qualcomm uC Sync Delay Extension)">;
 
+def FeatureVendorXqci
+    : RISCVExperimentalExtension<0, 13, "Qualcomm uC Extension",
+                                 [FeatureVendorXqcia, FeatureVendorXqciac,
+                                 FeatureVendorXqcibi, FeatureVendorXqcibm,
+                                 FeatureVendorXqcicli, FeatureVendorXqcicm,
+                                 FeatureVendorXqcics, FeatureVendorXqcicsr,
+                                 FeatureVendorXqciint, FeatureVendorXqciio,
+                                 FeatureVendorXqcilb, FeatureVendorXqcili,
+                                 FeatureVendorXqcilia, FeatureVendorXqcilo,
+                                 FeatureVendorXqcilsm, FeatureVendorXqcisim,
+                                 FeatureVendorXqcisls, FeatureVendorXqcisync]>;
+def HasVendorXqci
+    : Predicate<"Subtarget->hasVendorXqci()">,
+                AssemblerPredicate<(all_of FeatureVendorXqci),
+                "'Xqci' (Qualcomm uC Extension)">;
+
 // Rivos Extension(s)
 
 def FeatureVendorXRivosVisni
