@@ -155,11 +155,9 @@ public:
     return m_mangled;
   }
 
-  ConstString GetReExportedSymbolName() const { return m_reexport_name; }
+  ConstString GetReExportedSymbolName() const;
 
-  const FileSpec &GetReExportedSymbolSharedLibrary() const {
-    return m_reexport_library;
-  }
+  FileSpec GetReExportedSymbolSharedLibrary() const;
 
   void SetReExportedSymbolName(ConstString name);
 
@@ -321,6 +319,11 @@ protected:
 
   void SynthesizeNameIfNeeded() const;
 
+  struct ReExportInfo {
+    ConstString name;
+    FileSpec library;
+  };
+
   uint32_t m_uid =
       UINT32_MAX;           // User ID (usually the original symbol table index)
   uint16_t m_type_data = 0; // data specific to m_type
@@ -350,12 +353,9 @@ protected:
   AddressRange m_addr_range; // Contains the value, or the section offset
                              // address when the value is an address in a
                              // section, and the size (if any)
-  /// Stores the re-exported name if this symbol is of type
+  /// Stores re-export information if this symbol is of type
   /// eSymbolTypeReExported.
-  ConstString m_reexport_name;
-  /// Stores the re-exported shared library if this symbol is of type
-  /// eSymbolTypeReExported.
-  FileSpec m_reexport_library;
+  std::unique_ptr<ReExportInfo> m_reexport_info;
   uint32_t m_flags = 0; // A copy of the flags from the original symbol table,
                         // the ObjectFile plug-in can interpret these
 };

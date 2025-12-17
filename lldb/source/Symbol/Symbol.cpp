@@ -46,8 +46,8 @@ Symbol::Symbol(uint32_t symID, llvm::StringRef name, SymbolType type,
       m_demangled_is_synthesized(false),
       m_contains_linker_annotations(contains_linker_annotations),
       m_is_weak(false), m_type(type), m_mangled(name),
-      m_addr_range(section_sp, offset, size), m_reexport_name(),
-      m_reexport_library(), m_flags(flags) {}
+      m_addr_range(section_sp, offset, size), m_reexport_info(),
+      m_flags(flags) {}
 
 Symbol::Symbol(uint32_t symID, const Mangled &mangled, SymbolType type,
                bool external, bool is_debug, bool is_trampoline,
@@ -62,7 +62,7 @@ Symbol::Symbol(uint32_t symID, const Mangled &mangled, SymbolType type,
       m_demangled_is_synthesized(false),
       m_contains_linker_annotations(contains_linker_annotations),
       m_is_weak(false), m_type(type), m_mangled(mangled), m_addr_range(range),
-      m_reexport_name(), m_reexport_library(), m_flags(flags) {}
+      m_reexport_info(), m_flags(flags) {}
 
 Symbol::Symbol(const Symbol &rhs)
     : SymbolContextScope(rhs), m_uid(rhs.m_uid), m_type_data(rhs.m_type_data),
@@ -74,8 +74,10 @@ Symbol::Symbol(const Symbol &rhs)
       m_demangled_is_synthesized(rhs.m_demangled_is_synthesized),
       m_contains_linker_annotations(rhs.m_contains_linker_annotations),
       m_is_weak(rhs.m_is_weak), m_type(rhs.m_type), m_mangled(rhs.m_mangled),
-      m_addr_range(rhs.m_addr_range), m_reexport_name(rhs.m_reexport_name),
-      m_reexport_library(rhs.m_reexport_library), m_flags(rhs.m_flags) {}
+      m_addr_range(rhs.m_addr_range), m_reexport_info(), m_flags(rhs.m_flags) {
+  if (rhs.m_reexport_info)
+    m_reexport_info = std::make_unique<ReExportInfo>(*rhs.m_reexport_info);
+}
 
 const Symbol &Symbol::operator=(const Symbol &rhs) {
   if (this != &rhs) {
@@ -95,8 +97,8 @@ const Symbol &Symbol::operator=(const Symbol &rhs) {
     m_type = rhs.m_type;
     m_mangled = rhs.m_mangled;
     m_addr_range = rhs.m_addr_range;
-    m_reexport_name = rhs.m_reexport_name;
-    m_reexport_library = rhs.m_reexport_library;
+    if (rhs.m_reexport_info)
+      m_reexport_info = std::make_unique<ReExportInfo>(*rhs.m_reexport_info);
     m_flags = rhs.m_flags;
   }
   return *this;
@@ -174,17 +176,36 @@ ConstString Symbol::GetDisplayName() const {
   return GetMangled().GetDisplayDemangledName();
 }
 
+ConstString Symbol::GetReExportedSymbolName() const {
+  if (!m_reexport_info)
+    return ConstString();
+
+  return m_reexport_info->name;
+}
+
+FileSpec Symbol::GetReExportedSymbolSharedLibrary() const {
+  if (!m_reexport_info)
+    return FileSpec();
+
+  return m_reexport_info->library;
+}
+
 void Symbol::SetReExportedSymbolName(ConstString name) {
   SetType(eSymbolTypeReExported);
-  m_reexport_name = name;
+  if (!m_reexport_info)
+    m_reexport_info = std::make_unique<ReExportInfo>();
+  m_reexport_info->name = name;
 }
 
 bool Symbol::SetReExportedSymbolSharedLibrary(const FileSpec &fspec) {
-  if (m_type == eSymbolTypeReExported) {
-    m_reexport_library = fspec;
-    return true;
-  }
-  return false;
+  if (m_type != eSymbolTypeReExported)
+    return false;
+
+  if (!m_reexport_info)
+    m_reexport_info = std::make_unique<ReExportInfo>();
+
+  m_reexport_info->library = fspec;
+  return true;
 }
 
 uint32_t Symbol::GetSiblingIndex() const {
