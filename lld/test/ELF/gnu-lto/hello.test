@@ -11,6 +11,11 @@
 // RUN: llvm-readelf -s %t.dynamic | \
 // RUN:   FileCheck --check-prefix=READELF %s
 
+// RUN: clang -DFUNCTIONF=1 -c -flto -x c %s -o %tf.clang.o
+// RUN: not gcc -B%llvm_obj_root -fuse-ld=lld -flto %t.dynamic.o %tf.clang.o \
+// RUN:     -o %t.dynamic 2>&1 \
+// RUN:   | FileCheck --check-prefix=MIX %s
+
 // RUN: gcc -DFUNCTIONF=1 -c -flto -x c -fPIE %s -o %tf.pie.o
 // RUN: gcc -c -flto -x c -fPIE %s -o %t.pie.o
 // RUN: gcc -B%llvm_obj_root -fuse-ld=lld -flto -pie %t.pie.o %tf.pie.o \
@@ -35,3 +40,5 @@ int main() {
 // OBJDUMP: GCC
 
 // READELF: FUNC GLOBAL DEFAULT {{.*}} main
+
+// MIX: error: Mixing LLVM Bitcode files with GCC IR files is not supported.

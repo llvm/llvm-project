@@ -3352,6 +3352,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     compileBitcodeFiles<ELFT>(skipLinkedOutput);
 #if LLD_ENABLE_GNU_LTO
   } else {
+    if (!ctx.bitcodeFiles.empty())
+      Err(ctx)
+          << "Mixing LLVM Bitcode files with GCC IR files is not supported.";
     compileGccIRFiles<ELFT>(skipLinkedOutput);
 #endif
   }
