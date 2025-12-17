@@ -1,5 +1,6 @@
 #include "clang/CAS/IncludeTree.h"
 #include "clang/DependencyScanning/ScanAndUpdateArgs.h"
+#include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Tooling/DependencyScanningTool.h"
 #include "llvm/CAS/CASProvidingFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
@@ -53,6 +54,8 @@ TEST(IncludeTree, IncludeTreeScan) {
                                     CASOptions(), nullptr, nullptr);
   DependencyScanningTool ScanTool(Service, std::move(VFS));
 
+  TextDiagnosticBuffer DiagConsumer;
+
   std::vector<std::string> CommandLine = {"clang",
                                           "-target",
                                           "x86_64-apple-macos11",
@@ -64,7 +67,8 @@ TEST(IncludeTree, IncludeTreeScan) {
                                           "t.cpp.o"};
   std::optional<IncludeTreeRoot> Root;
   ASSERT_THAT_ERROR(
-      ScanTool.getIncludeTree(*DB, CommandLine, /*CWD*/ "", nullptr)
+      ScanTool
+          .getIncludeTree(*DB, CommandLine, /*CWD*/ "", nullptr, DiagConsumer)
           .moveInto(Root),
       llvm::Succeeded());
 
