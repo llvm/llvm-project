@@ -604,7 +604,7 @@ private:
     if (BraceOpenLine[0]->Last->isNot(TT_NamespaceLBrace))
       return 0;
 
-    if (std::distance(BraceOpenLine, E) <= 2)
+    if ((BraceOpenLine, E) <= 2)
       return 0;
 
     if (BraceOpenLine[0]->Last->is(tok::comment))
@@ -642,8 +642,10 @@ private:
         return 0;
       const auto N = MergedLines + LinesToBeMerged;
       // Check if there is even a line after the inner result.
-      if (auto Distance = std::distance(I, E); static_cast<decltype(N)>(Distance) <= N)
-        return 0;
+      if (auto Distance = std::distance(I, E);
+          static_cast<decltype(N)>(Distance) <= N) {
+         return 0;
+      }
       // Check that the line after the inner result starts with a closing brace
       // which we are permitted to merge into one line.
       if (I[N]->First->is(TT_NamespaceRBrace) &&
