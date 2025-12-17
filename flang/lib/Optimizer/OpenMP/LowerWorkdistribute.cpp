@@ -767,7 +767,7 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
       innerMapInfos, targetOp.getNowaitAttr(), targetOp.getPrivateVars(),
       targetOp.getPrivateSymsAttr(), targetOp.getPrivateNeedsBarrierAttr(),
       targetOp.getThreadLimitNumDimsAttr(), targetOp.getThreadLimitDimsValues(),
-      targetOp.getThreadLimit(), targetOp.getPrivateMapsAttr());
+      targetOp.getPrivateMapsAttr());
   rewriter.inlineRegionBefore(targetOp.getRegion(), newTargetOp.getRegion(),
                               newTargetOp.getRegion().begin());
   rewriter.replaceOp(targetOp, targetDataOp);
@@ -1488,7 +1488,7 @@ genPreTargetOp(omp::TargetOp targetOp, SmallVector<Value> &preMapOperands,
       targetOp.getPrivateVars(), targetOp.getPrivateSymsAttr(),
       targetOp.getPrivateNeedsBarrierAttr(),
       targetOp.getThreadLimitNumDimsAttr(), targetOp.getThreadLimitDimsValues(),
-      targetOp.getThreadLimit(), targetOp.getPrivateMapsAttr());
+      targetOp.getPrivateMapsAttr());
   auto *preTargetBlock = rewriter.createBlock(
       &preTargetOp.getRegion(), preTargetOp.getRegion().begin(), {}, {});
   IRMapping preMapping;
@@ -1579,7 +1579,7 @@ genIsolatedTargetOp(omp::TargetOp targetOp, SmallVector<Value> &postMapOperands,
       targetOp.getPrivateVars(), targetOp.getPrivateSymsAttr(),
       targetOp.getPrivateNeedsBarrierAttr(),
       targetOp.getThreadLimitNumDimsAttr(), targetOp.getThreadLimitDimsValues(),
-      targetOp.getThreadLimit(), targetOp.getPrivateMapsAttr());
+      targetOp.getPrivateMapsAttr());
   auto *isolatedTargetBlock =
       rewriter.createBlock(&isolatedTargetOp.getRegion(),
                            isolatedTargetOp.getRegion().begin(), {}, {});
@@ -1660,7 +1660,7 @@ static omp::TargetOp genPostTargetOp(omp::TargetOp targetOp,
       targetOp.getPrivateVars(), targetOp.getPrivateSymsAttr(),
       targetOp.getPrivateNeedsBarrierAttr(),
       targetOp.getThreadLimitNumDimsAttr(), targetOp.getThreadLimitDimsValues(),
-      targetOp.getThreadLimit(), targetOp.getPrivateMapsAttr());
+      targetOp.getPrivateMapsAttr());
   // Create the block for postTargetOp
   auto *postTargetBlock = rewriter.createBlock(
       &postTargetOp.getRegion(), postTargetOp.getRegion().begin(), {}, {});

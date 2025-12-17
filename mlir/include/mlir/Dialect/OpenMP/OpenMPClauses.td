@@ -1453,14 +1453,12 @@ class OpenMP_ThreadLimitClauseSkip<
                     extraClassDeclaration> {
   let arguments = (ins
     ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$thread_limit_num_dims,
-    Variadic<AnyInteger>:$thread_limit_dims_values,
-    Optional<AnyInteger>:$thread_limit
+    Variadic<AnyInteger>:$thread_limit_dims_values
   );
 
   let optAssemblyFormat = [{
     `thread_limit` `(` custom<ThreadLimitClause>(
-      $thread_limit_num_dims, $thread_limit_dims_values, type($thread_limit_dims_values),
-      $thread_limit, type($thread_limit)
+      $thread_limit_num_dims, $thread_limit_dims_values, type($thread_limit_dims_values)
     ) `)`
   }];
 
@@ -1468,14 +1466,14 @@ class OpenMP_ThreadLimitClauseSkip<
     The `thread_limit` clause specifies the limit on the number of threads.
 
     With dims modifier:
-    - The number of dimensions is specified by the `thread_limit_num_dims` attribute.
-    - The values for each dimension are specified by the `thread_limit_dims_values` attribute.
+    - The number of dimensions is specified by the `thread_limit_num_dims`.
+    - The values for each dimension are specified by the `thread_limit_dims_values`.
     - Format: `thread_limit(dims(N): values : type)`
     - Example: `thread_limit(dims(2): %n, %m : i64)`
 
     Without dims modifier:
-    - The number of threads is specified by the `thread_limit`.
-    - Format: `thread_limit(number_of_threads : type)`
+    - The number of threads is specified by the single value in `thread_limit_dims_values`.
+    - Format: `thread_limit(value : type)`
     - Example: `thread_limit(%n : i64)`
   }];
 
@@ -1497,6 +1495,8 @@ class OpenMP_ThreadLimitClauseSkip<
     ::mlir::Value getThreadLimitDimensionValue(unsigned index) {
       assert(index < getThreadLimitDimsCount() &&
              "Thread limit dims index out of bounds");
+      if (getThreadLimitDimsValues().empty())
+        return nullptr;
       return getThreadLimitDimsValues()[index];
     }
   }];
