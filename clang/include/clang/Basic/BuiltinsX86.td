@@ -82,17 +82,6 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
     }
   }
 
-  foreach Cmp = ["min", "max"] in {
-    let Features = "sse", Attributes = [Constexpr] in {
-      def Cmp#ps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
-      def Cmp#ss : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
-    }
-    let Features = "sse2", Attributes = [Constexpr] in {
-      def Cmp#pd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
-      def Cmp#sd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
-    }
-  }
-
   let Features = "sse" in {
     def cmpps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Constant char)">;
     def cmpss : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Constant char)">;
@@ -160,6 +149,10 @@ let Features = "sse", Header = "xmmintrin.h", Attributes = [NoThrow, RequireDecl
 
 let Features = "sse", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def shufps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Constant int)">;
+  def minps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
+  def minss : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
+  def maxps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
+  def maxss : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
 }
 
 let Features = "sse", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
@@ -247,6 +240,11 @@ let Features = "sse2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWi
   def pshufd : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Constant int)">;
   def pshufhw : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Constant int)">;
   def shufpd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Constant int)">;
+
+  def minpd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
+  def minsd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
+  def maxpd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
+  def maxsd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
 
   def psllwi128 : X86Builtin<"_Vector<8, short>(_Vector<8, short>, int)">;
   def pslldi128 : X86Builtin<"_Vector<4, int>(_Vector<4, int>, int)">;
@@ -462,6 +460,10 @@ let Features = "avx", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWid
   def vpermilvarps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, int>)">;
   def vpermilvarpd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, long long int>)">;
   def vpermilvarps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, int>)">;
+  def maxpd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>)">;
+  def maxps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>)">;
+  def minpd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>)">;
+  def minps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>)">;
 }
 
 let Features = "avx", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
@@ -476,13 +478,6 @@ let Features = "avx", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in
   def cvttpd2dq256 : X86Builtin<"_Vector<4, int>(_Vector<4, double>)">;
   def cvtpd2dq256 : X86Builtin<"_Vector<4, int>(_Vector<4, double>)">;
   def cvttps2dq256 : X86Builtin<"_Vector<8, int>(_Vector<8, float>)">;
-}
-
-let Features = "avx", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
-  foreach Op = ["max", "min"] in {
-    def Op#pd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>)">;
-    def Op#ps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>)">;
-  }
 }
 
 let Features = "avx", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
