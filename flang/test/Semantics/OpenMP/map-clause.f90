@@ -6,8 +6,8 @@ subroutine sb(arr)
   real(8) :: arr(*)
   real :: a
   integer:: b, c, i
-  common /var/ b, c  
-  
+  common /var/ b, c
+
   !ERROR: Assumed-size whole arrays may not appear on the MAP clause
   !$omp target map(arr)
   do i = 1, 100
