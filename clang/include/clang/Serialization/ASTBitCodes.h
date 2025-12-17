@@ -753,8 +753,11 @@ enum ASTRecordTypes {
 
   UPDATE_TU_LOCAL_VISIBLE = 77,
 
+  /// Record code for #pragma clang riscv intrinsic vector.
+  RISCV_VECTOR_INTRINSICS_PRAGMA = 78,
+
   /// Record code for availability domain table.
-  AVAILABILITY_DOMAIN_TABLE = 78,
+  AVAILABILITY_DOMAIN_TABLE = 79,
 };
 
 /// Record types used within a source manager block.
