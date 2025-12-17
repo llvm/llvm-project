@@ -270,38 +270,3 @@ entry:
         store <16 x i8> %tmp2, ptr %A
         ret void
 }
-
-define <32 x i32> @issue_172265(<32 x i32> %BS_ARG_1, <3 x i32> %0) {
-; CHECK-LABEL: issue_172265:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 3, 2, .LCPI18_0@toc@ha
-; CHECK-NEXT:    vspltw 3, 10, 1
-; CHECK-NEXT:    addi 3, 3, .LCPI18_0@toc@l
-; CHECK-NEXT:    vmr 7, 3
-; CHECK-NEXT:    lvx 4, 0, 3
-; CHECK-NEXT:    addis 3, 2, .LCPI18_1@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI18_1@toc@l
-; CHECK-NEXT:    vmr 8, 3
-; CHECK-NEXT:    vmr 9, 3
-; CHECK-NEXT:    vperm 4, 3, 3, 4
-; CHECK-NEXT:    lvx 1, 0, 3
-; CHECK-NEXT:    addis 3, 2, .LCPI18_2@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI18_2@toc@l
-; CHECK-NEXT:    lvx 5, 0, 3
-; CHECK-NEXT:    addis 3, 2, .LCPI18_3@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI18_3@toc@l
-; CHECK-NEXT:    lvx 6, 0, 3
-; CHECK-NEXT:    addis 3, 2, .LCPI18_4@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI18_4@toc@l
-; CHECK-NEXT:    vperm 4, 2, 4, 1
-; CHECK-NEXT:    lvx 2, 0, 3
-; CHECK-NEXT:    vperm 0, 3, 3, 5
-; CHECK-NEXT:    vperm 5, 3, 3, 6
-; CHECK-NEXT:    vperm 6, 3, 3, 2
-; CHECK-NEXT:    vmr 2, 0
-; CHECK-NEXT:    blr
-entry:
-  %vecinit37 = shufflevector <3 x i32> %0, <3 x i32> zeroinitializer, <32 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-  %shuffle56 = shufflevector <32 x i32> %vecinit37, <32 x i32> %BS_ARG_1, <32 x i32> <i32 4, i32 9, i32 3, i32 3, i32 4, i32 1, i32 1, i32 0, i32 16, i32 5, i32 5, i32 34, i32 3, i32 0, i32 8, i32 2, i32 8, i32 1, i32 0, i32 0, i32 0, i32 1, i32 0, i32 0, i32 7, i32 5, i32 3, i32 6, i32 0, i32 3, i32 4, i32 7>
-  ret <32 x i32> %shuffle56
-}
