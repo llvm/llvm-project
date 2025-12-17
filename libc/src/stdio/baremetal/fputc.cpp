@@ -1,4 +1,4 @@
-//===-- Implementation of putchar for baremetal -----------------*- C++ -*-===//
+//===-- Implementation of fputc for baremetal -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/putchar.h"
+#include "src/stdio/fputc.h"
 
 #include "hdr/stdio_macros.h" // for EOF
+#include "hdr/types/FILE.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
@@ -16,9 +17,9 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, putchar, (int c)) {
+LLVM_LIBC_FUNCTION(int, fputc, (int c, ::FILE *stream)) {
   unsigned char uc = static_cast<unsigned char>(c);
-  auto result = write_internal(reinterpret_cast<char *>(&uc), 1, stdout);
+  auto result = write_internal(reinterpret_cast<char *>(&uc), 1, stream);
   if (result.has_error())
     libc_errno = result.error;
   size_t written = result.value;

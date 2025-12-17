@@ -1,4 +1,4 @@
-//===-- Implementation of vprintf -------------------------------*- C++ -*-===//
+//===-- Implementation of vfscanf for baremetal -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,25 +6,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/vprintf.h"
+#include "src/stdio/vfscanf.h"
 
-#include "hdr/stdio_macros.h"
+#include "hdr/stdio_macros.h" // for EOF.
+#include "hdr/types/FILE.h"
 #include "src/__support/arg_list.h"
-#include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/baremetal/vfprintf_internal.h"
+#include "src/stdio/baremetal/vfscanf_internal.h"
 
+#include "hdr/types/FILE.h"
 #include <stdarg.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, vprintf,
-                   (const char *__restrict format, va_list vlist)) {
+LLVM_LIBC_FUNCTION(int, vfscanf,
+                   (::FILE *__restrict stream, const char *__restrict format,
+                    va_list vlist)) {
   internal::ArgList args(vlist); // This holder class allows for easier copying
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
 
-  return vfprintf_internal(stdout, format, args);
+  int ret_val = vfscanf_internal(stream, format, args);
+  // This is done to avoid including stdio.h in the internals. On most systems
+  // EOF is -1, so this will be transformed into just "return ret_val".
+  return (ret_val == -1) ? EOF : ret_val;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
