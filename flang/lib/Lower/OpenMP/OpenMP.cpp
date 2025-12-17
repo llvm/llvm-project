@@ -2330,11 +2330,17 @@ genScanOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   mlir::omp::ScanOp scanOp = mlir::omp::ScanOp::create(
       converter.getFirOpBuilder(), converter.getCurrentLocation(), clauseOps);
 
-  /// Scan redution is not implemented with nested workshare loops, linear
+  /// Scan reduction is not implemented with nested workshare loops, linear
   /// clause, tiling
   mlir::omp::LoopNestOp loopNestOp =
       scanOp->getParentOfType<mlir::omp::LoopNestOp>();
-  mlir::omp::WsloopOp wsLoopOp = scanOp->getParentOfType<mlir::omp::WsloopOp>();
+  llvm::SmallVector<mlir::omp::LoopWrapperInterface> loopWrappers;
+  loopNestOp.gatherWrappers(loopWrappers);
+  mlir::Operation *loopWrapperOp = loopWrappers.front().getOperation();
+  if (llvm::isa<mlir::omp::SimdOp>(loopWrapperOp)) TODO(loc, "unsupported simd");
+  if (loopWrappers.size() > 1) TODO(loc, "unsupported composite");
+  mlir::omp::WsloopOp wsLoopOp = llvm::cast<mlir::omp::WsloopOp>(loopWrapperOp);
+  //mlir::omp::WsloopOp wsLoopOp = scanOp->getParentOfType<mlir::omp::WsloopOp>();
   bool isNested =
       (loopNestOp.getNumLoops() > 1) ||
       (wsLoopOp && (wsLoopOp->getParentOfType<mlir::omp::WsloopOp>()));

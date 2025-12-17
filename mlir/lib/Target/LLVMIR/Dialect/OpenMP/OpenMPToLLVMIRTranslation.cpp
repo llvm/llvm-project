@@ -75,9 +75,13 @@ class OpenMPAllocaStackFrame
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpenMPAllocaStackFrame)
 
-  explicit OpenMPAllocaStackFrame(llvm::OpenMPIRBuilder::InsertPointTy allocaIP)
-      : allocaInsertPoint(allocaIP) {}
+  explicit OpenMPAllocaStackFrame(llvm::OpenMPIRBuilder::InsertPointTy allocaIP, bool parallelOp = false)
+      : allocaInsertPoint(allocaIP), containsParallelOp(parallelOp) {}
   llvm::OpenMPIRBuilder::InsertPointTy allocaInsertPoint;
+  // is set to true when a parallel Op is encountered.
+  // The alloca IP of a function where a parallel Op is defined may 
+  // be used for the scan directive.
+  bool containsParallelOp = false;
 };
 
 /// ModuleTranslation stack frame for OpenMP operations. This keeps track of the
@@ -2738,6 +2742,9 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   bool isInScanRegion =
       wsloopOp.getReductionMod() && (wsloopOp.getReductionMod().value() ==
                                      mlir::omp::ReductionModifier::inscan);
+  if (isInScanRegion)
+    assert(wsloopOp.getLinearVars().empty() &&
+           "Linear clause support is not enabled with scan reduction");
 
   // The only legal way for the direct parent to be omp.distribute is that this
   // represents 'distribute parallel do'. Otherwise, this is a regular
@@ -2781,7 +2788,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   const auto &&wsloopCodeGen = [&](llvm::CanonicalLoopInfo *loopInfo,
                                    bool noLoopMode, bool inputScanLoop) {
     // Emit Initialization and Update IR for linear variables
-    if (!isInScanRegion && !wsloopOp.getLinearVars().empty()) {
+    if (!wsloopOp.getLinearVars().empty()) {
       linearClauseProcessor.initLinearVar(builder, moduleTranslation,
                                           loopInfo->getPreheader());
       llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterBarrierIP =
@@ -2807,7 +2814,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
       return failure();
 
     // Emit finalization and in-place rewrites for linear vars.
-    if (!isInScanRegion && !wsloopOp.getLinearVars().empty()) {
+    if (!wsloopOp.getLinearVars().empty()) {
       llvm::OpenMPIRBuilder::InsertPointTy oldIP = builder.saveIP();
       if (loopInfo->getLastIter())
         return failure();
@@ -2871,9 +2878,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     }
   }
 
-  if (isInScanRegion)
-    assert(wsloopOp.getLinearVars().empty() &&
-           "Linear clause support is not enabled with scan reduction");
   // For Scan loops input loop need not pop cancellation CB and hence, it is set
   // false for the first loop
   bool inputScanLoop = isInScanRegion;
