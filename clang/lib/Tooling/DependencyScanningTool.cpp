@@ -362,8 +362,7 @@ DependencyScanningTool::initializeCompilerInstanceWithContextOrError(
 
   if (Result)
     return llvm::Error::success();
-  else
-    return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
+  return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
 }
 
 llvm::Expected<TranslationUnitDeps>

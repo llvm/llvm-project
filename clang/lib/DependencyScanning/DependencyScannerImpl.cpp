@@ -394,7 +394,7 @@ dependencies::createCompilerInvocation(ArrayRef<std::string> CommandLine,
   return Invocation;
 }
 
-bool dependencies::initializeScanCompilerInstance(
+void dependencies::initializeScanCompilerInstance(
     CompilerInstance &ScanInstance,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,
@@ -406,8 +406,6 @@ bool dependencies::initializeScanCompilerInstance(
   // Create the compiler's actual diagnostics engine.
   sanitizeDiagOpts(ScanInstance.getDiagnosticOpts());
   ScanInstance.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
-  if (!ScanInstance.hasDiagnostics())
-    return false;
 
   ScanInstance.getPreprocessorOpts().AllowPCHWithDifferentModulesCachePath =
       true;
@@ -462,8 +460,6 @@ bool dependencies::initializeScanCompilerInstance(
 
   // Avoid some checks and module map parsing when loading PCM files.
   ScanInstance.getPreprocessorOpts().ModulesCheckRelocated = false;
-
-  return true;
 }
 
 llvm::SmallVector<StringRef>
@@ -579,9 +575,8 @@ bool DependencyScanningAction::runInvocation(
   CompilerInstance &ScanInstance = *ScanInstanceStorage;
 
   assert(!DiagConsumerFinished && "attempt to reuse finished consumer");
-  if (!initializeScanCompilerInstance(ScanInstance, FS, DiagConsumer, Service,
-                                      DepFS))
-    return false;
+  initializeScanCompilerInstance(ScanInstance, FS, DiagConsumer, Service,
+                                 DepFS);
 
   llvm::SmallVector<StringRef> StableDirs = getInitialStableDirs(ScanInstance);
   auto MaybePrebuiltModulesASTMap =
@@ -657,10 +652,9 @@ bool CompilerInstanceWithContext::initialize(
       Worker.PCHContainerOps, ModCache.get());
   auto &CI = *CIPtr;
 
-  if (!initializeScanCompilerInstance(
-          CI, OverlayFS, DiagEngineWithCmdAndOpts->DiagEngine->getClient(),
-          Worker.Service, Worker.DepFS))
-    return false;
+  initializeScanCompilerInstance(
+      CI, OverlayFS, DiagEngineWithCmdAndOpts->DiagEngine->getClient(),
+      Worker.Service, Worker.DepFS);
 
   StableDirs = getInitialStableDirs(CI);
   auto MaybePrebuiltModulesASTMap =
