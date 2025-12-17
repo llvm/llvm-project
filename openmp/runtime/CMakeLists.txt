@@ -119,7 +119,7 @@ if(NOT DEFINED CMAKE_MACOSX_RPATH)
 endif()
 
 # Remove any cmake-automatic linking of the standard C++ library.
-# We neither need (nor want) the standard C++ library dependency even though we compile c++ files.
+# We neither need (nor want) the standard C++ library dependency even though we compile C++ files.
 if(NOT ${LIBOMP_USE_STDCPPLIB})
   set(LIBOMP_LINKER_LANGUAGE C)
   set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES)
