@@ -2249,31 +2249,31 @@ struct AMDGPUDPPLowering : public ConvertOpToLLVMPattern<DPPOp> {
 
     switch (kind) {
 
-    case DPPPerm::quad_perm:
-      if (auto quadPermAttr = cast<ArrayAttr>(*permArgument)) {
-        int32_t i = 0;
-        for (auto elem : quadPermAttr.getAsRange<IntegerAttr>()) {
-          uint32_t num = elem.getInt();
-          DppCtrl |= num << (i * 2);
-          i++;
-        }
+    case DPPPerm::quad_perm: {
+      auto quadPermAttr = cast<ArrayAttr>(*permArgument);
+      int32_t i = 0;
+      for (auto elem : quadPermAttr.getAsRange<IntegerAttr>()) {
+        uint32_t num = elem.getInt();
+        DppCtrl |= num << (i * 2);
+        i++;
       }
       break;
-    case DPPPerm::row_shl:
-      if (auto intAttr = cast<IntegerAttr>(*permArgument)) {
-        DppCtrl = intAttr.getInt() + DppCtrl::ROW_SHL0;
-      }
+    }
+    case DPPPerm::row_shl: {
+      auto intAttr = cast<IntegerAttr>(*permArgument);
+      DppCtrl = intAttr.getInt() + DppCtrl::ROW_SHL0;
       break;
-    case DPPPerm::row_shr:
-      if (auto intAttr = cast<IntegerAttr>(*permArgument)) {
-        DppCtrl = intAttr.getInt() + DppCtrl::ROW_SHR0;
-      }
+    }
+    case DPPPerm::row_shr: {
+      auto intAttr = cast<IntegerAttr>(*permArgument);
+      DppCtrl = intAttr.getInt() + DppCtrl::ROW_SHR0;
       break;
-    case DPPPerm::row_ror:
-      if (auto intAttr = cast<IntegerAttr>(*permArgument)) {
-        DppCtrl = intAttr.getInt() + DppCtrl::ROW_ROR0;
-      }
+    }
+    case DPPPerm::row_ror: {
+      auto intAttr = cast<IntegerAttr>(*permArgument);
+      DppCtrl = intAttr.getInt() + DppCtrl::ROW_ROR0;
       break;
+    }
     case DPPPerm::wave_shl:
       DppCtrl = DppCtrl::WAVE_SHL1;
       break;
@@ -3218,6 +3218,11 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
 
     Location loc = op.getLoc();
 
+    IntegerType i32 = rewriter.getI32Type();
+    [[maybe_unused]] Type v4i32 =
+        this->typeConverter->convertType(VectorType::get(4, i32));
+    assert(v4i32 && "expected type conversion to succeed");
+
     SmallVector<Value> consts;
     for (int64_t i = 0; i < 8; ++i)
       consts.push_back(createI32Constant(rewriter, loc, i));
@@ -3228,32 +3233,6 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     Value dgroup3 = this->getDGroup3(op, adaptor, rewriter, loc, consts);
     SmallVector<Value> results = {dgroup0, dgroup1, dgroup2, dgroup3};
     rewriter.replaceOpWithMultiple(op, {results});
-    return success();
-  }
-};
-
-template <typename SourceOp, typename TargetOp>
-struct AMDGPUTensorLoadStoreOpLowering
-    : public ConvertOpToLLVMPattern<SourceOp> {
-  using ConvertOpToLLVMPattern<SourceOp>::ConvertOpToLLVMPattern;
-  using Adaptor = typename ConvertOpToLLVMPattern<SourceOp>::OneToNOpAdaptor;
-  AMDGPUTensorLoadStoreOpLowering(const LLVMTypeConverter &converter,
-                                  Chipset chipset)
-      : ConvertOpToLLVMPattern<SourceOp>(converter), chipset(chipset) {}
-  Chipset chipset;
-
-  LogicalResult
-  matchAndRewrite(SourceOp op, Adaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    if (chipset < kGfx1250)
-      return op->emitOpError("is only supported on gfx1250");
-
-    ValueRange desc = adaptor.getDesc();
-    rewriter.replaceOpWithNewOp<TargetOp>(op, desc[0], desc[1], desc[2],
-                                          desc[3], /*cachePolicy=*/0,
-                                          /*alias_scopes=*/nullptr,
-                                          /*noalias_scopes=*/nullptr,
-                                          /*tbaa=*/nullptr);
     return success();
   }
 };
@@ -3327,24 +3306,6 @@ void mlir::populateAMDGPUTypeAndAttributeConversions(
     Type i32 = IntegerType::get(type.getContext(), 32);
     return typeConverter.convertType(VectorType::get(4, i32));
   });
-  typeConverter.addConversion(
-      [&](TDMDescriptorType type,
-          SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
-        Type i32 = IntegerType::get(type.getContext(), 32);
-        Type v4i32 = typeConverter.convertType(VectorType::get(4, i32));
-        Type v8i32 = typeConverter.convertType(VectorType::get(8, i32));
-        llvm::append_values(result, v4i32, v8i32, v4i32, v4i32);
-        return success();
-      });
-
-  auto addUnrealizedCast = [](OpBuilder &builder, TypeRange types,
-                              ValueRange inputs,
-                              Location loc) -> SmallVector<Value> {
-    auto cast = UnrealizedConversionCastOp::create(builder, loc, types, inputs);
-    return cast.getResults();
-  };
-
-  typeConverter.addTargetMaterialization(addUnrealizedCast);
 }
 
 void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
@@ -3375,11 +3336,7 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
            AMDGPUMakeDmaBaseLowering<MakeGatherDmaBaseOp>,
            AMDGPULowerDescriptor<MakeDmaDescriptorOp>,
-           AMDGPULowerDescriptor<MakeGatherDmaDescriptorOp>,
-           AMDGPUTensorLoadStoreOpLowering<TensorLoadToLDSOp,
-                                           ROCDL::TensorLoadToLDSOp>,
-           AMDGPUTensorLoadStoreOpLowering<TensorStoreFromLDSOp,
-                                           ROCDL::TensorStoreFromLDSOp>>(
-          converter, chipset);
+           AMDGPULowerDescriptor<MakeGatherDmaDescriptorOp>>(converter,
+                                                             chipset);
   patterns.add<AMDGPUSwizzleBitModeLowering>(converter);
 }
