@@ -75,3 +75,57 @@ export int4 AddIntMatrixConstant(int4x4 M) {
 // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 3
    return M[0] + M[1] + M[2] + M[3];
 }
+
+export vector<bool, 3> getBoolVecFromTemplateMat(matrix<bool, 2, 3> M) {
+    // CHECK: FunctionDecl {{.*}} used getBoolVecFromTemplateMat 'vector<bool, 3> (matrix<bool, 2, 3>)'
+    // CHECK-NEXT: ParmVarDecl {{.*}} used M 'matrix<bool, 2, 3>'
+    // CHECK-NEXT: CompoundStmt {{.*}}
+    // CHECK-NEXT: ReturnStmt {{.*}}
+    // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<bool, 3>' <LValueToRValue>
+    // CHECK-NEXT: MatrixSingleSubscriptExpr {{.*}} 'vector<bool, 3>' lvalue matrixcomponent
+    // CHECK-NEXT: DeclRefExpr {{.*}} 'matrix<bool, 2, 3>' lvalue ParmVar {{.*}} 'M' 'matrix<bool, 2, 3>'
+    // CHECK-NEXT: IntegerLiteral {{.*}}'int' 0
+    return M[0];
+}
+
+template<typename T>
+vector<T, 3> getVecFromTemplateMat(matrix<T, 2, 3> M) {
+    // CHECK: FunctionTemplateDecl {{.*}} getVecFromTemplateMat
+    // CHECK-NEXT: TemplateTypeParmDecl {{.*}}  referenced typename depth 0 index 0 T
+    // CHECK-NEXT: FunctionDecl {{.*}} getVecFromTemplateMat 'vector<T, 3> (matrix<T, 2, 3>)'
+    // CHECK-NEXT: ParmVarDecl {{.*}} referenced M 'matrix<T, 2, 3>'
+    // CHECK-NEXT: CompoundStmt {{.*}}
+    // CHECK-NEXT: ReturnStmt {{.*}}
+    // CHECK-NEXT: MatrixSubscriptExpr {{.*}} '<incomplete matrix index type>' lvalue matrixcomponent
+    // CHECK-NEXT: DeclRefExpr {{.*}} 'matrix<T, 2, 3>' lvalue ParmVar {{.*}} 'M' 'matrix<T, 2, 3>'
+    // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
+    // CHECK-NEXT: <<<NULL>>>
+    // CHECK-NEXT: FunctionDecl {{.*}} used getVecFromTemplateMat 'vector<bool, 3> (matrix<bool, 2, 3>)' implicit_instantiation instantiated_from {{.*}}
+    // CHECK-NEXT: TemplateArgument type 'bool'
+    // CHECK-NEXT: BuiltinType {{.*}} 'bool'
+    // CHECK-NEXT: ParmVarDecl {{.*}} used M 'matrix<bool, 2, 3>'
+    // CHECK-NEXT: CompoundStmt {{.*}}
+    // CHECK-NEXT: ReturnStmt {{.*}}
+    // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<bool, 3>' <LValueToRValue>
+    // CHECK-NEXT: MatrixSingleSubscriptExpr {{.*}} 'vector<bool, 3>' lvalue matrixcomponent
+    // CHECK-NEXT: DeclRefExpr {{.*}} <col:12> 'matrix<bool, 2, 3>' lvalue ParmVar {{.*}} 'M' 'matrix<bool, 2, 3>'
+    // CHECK-NEXT: IntegerLiteral {{.*}} <col:14> 'int' 0
+    // CHECK-NEXT: TypedefDecl {{.*}} referenced bool3 'vector<bool, 3>'
+    return M[0];
+}
+
+typedef bool bool3 __attribute__((ext_vector_type(3)));
+typedef bool bool2x3 __attribute__((matrix_type(2,3)));
+
+export bool3 testTemplatedMatrixAccess(bool2x3 M) {
+  // CHECK: FunctionDecl {{.*}} used testTemplatedMatrixAccess 'bool3 (bool2x3)'
+  // CHECK-NEXT: ParmVarDecl {{.*}} used M 'bool2x3':'matrix<bool, 2, 3>'
+  // CHECK-NEXT: CompoundStmt {{.*}}
+  // CHECK-NEXT: ReturnStmt {{.*}}
+  // CHECK-NEXT: CallExpr {{.*}} 'vector<bool, 3>'
+  // CHECK-NEXT: ImplicitCastExpr {{.*}}  'vector<bool, 3> (*)(matrix<bool, 2, 3>)' <FunctionToPointerDecay>
+  // CHECK-NEXT: DeclRefExpr {{.*}}  'vector<bool, 3> (matrix<bool, 2, 3>)' lvalue Function {{.*}}  'getVecFromTemplateMat' 'vector<bool, 3> (matrix<bool, 2, 3>)' (FunctionTemplate {{.*}}  'getVecFromTemplateMat')
+  // CHECK-NEXT: ImplicitCastExpr {{.*}}  'bool2x3':'matrix<bool, 2, 3>' <LValueToRValue>
+  // CHECK-NEXT: DeclRefExpr {{.*}}  'bool2x3':'matrix<bool, 2, 3>' lvalue ParmVar {{.*}}  'M' 'bool2x3':'matrix<bool, 2, 3>'
+  return getVecFromTemplateMat(M);
+}
