@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t-before.cir
+// RUN: FileCheck --check-prefix=CIR-BEFORE-LPP --input-file=%t-before.cir %s
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
@@ -46,6 +47,34 @@ public:
 };
 
 const C c;
+
+// CIR checks before LoweringPrepare transformation - globals have ctor regions
+// Test case 'a' - before LoweringPrepare
+// CIR-BEFORE-LPP: cir.global external @a = ctor : !rec_A {
+// CIR-BEFORE-LPP:   %[[OBJ:.*]] = cir.get_global @a : !cir.ptr<!rec_A>
+// CIR-BEFORE-LPP:   cir.call @_ZN1AC1Ev(%[[OBJ]]) : (!cir.ptr<!rec_A>) -> ()
+// CIR-BEFORE-LPP:   %[[OBJ2:.*]] = cir.get_global @a : !cir.ptr<!rec_A>
+// CIR-BEFORE-LPP: }
+
+// Test case 'a2' - before LoweringPrepare
+// CIR-BEFORE-LPP: cir.global external @a2 = ctor : !rec_A2 {
+// CIR-BEFORE-LPP:   %[[OBJ:.*]] = cir.get_global @a2 : !cir.ptr<!rec_A2>
+// CIR-BEFORE-LPP:   cir.call @_ZN2A2C1Ev(%[[OBJ]]) : (!cir.ptr<!rec_A2>) -> ()
+// CIR-BEFORE-LPP:   %[[OBJ2:.*]] = cir.get_global @a2 : !cir.ptr<!rec_A2>
+// CIR-BEFORE-LPP: }
+
+// Test case 'b' - before LoweringPrepare
+// CIR-BEFORE-LPP: cir.global external @b = ctor : !rec_B {
+// CIR-BEFORE-LPP:   %[[OBJ:.*]] = cir.get_global @b : !cir.ptr<!rec_B>
+// CIR-BEFORE-LPP:   cir.call @_ZN1BC1Ev(%[[OBJ]]) : (!cir.ptr<!rec_B>) -> ()
+// CIR-BEFORE-LPP: }
+
+// Test case 'c' - before LoweringPrepare (internal linkage)
+// CIR-BEFORE-LPP: cir.global {{.*}} internal {{.*}} @_ZL1c = ctor : !rec_C {
+// CIR-BEFORE-LPP:   %[[OBJ:.*]] = cir.get_global @_ZL1c : !cir.ptr<!rec_C>
+// CIR-BEFORE-LPP:   cir.call @_ZN1CC1Ev(%[[OBJ]]) : (!cir.ptr<!rec_C>) -> ()
+// CIR-BEFORE-LPP:   %[[OBJ2:.*]] = cir.get_global @_ZL1c : !cir.ptr<!rec_C>
+// CIR-BEFORE-LPP: }
 
 // Check all globals first (they appear at the top of LLVM/OGCG output)
 // LLVM: @a ={{.*}} global {{.*}} zeroinitializer
