@@ -273,7 +273,7 @@ private:
   bool insertFFSIfProfitable(Intrinsic::ID IntrinID, Value *InitX,
                              Instruction *DefX, PHINode *CntPhi,
                              Instruction *CntInst);
-  bool recognizeAndInsertFFS();  /// Find First Set: ctlz or cttz
+  bool recognizeAndInsertFFS(); /// Find First Set: ctlz or cttz
   bool recognizeShiftUntilLessThan();
   void transformLoopToCountable(Intrinsic::ID IntrinID, BasicBlock *PreCondBB,
                                 Instruction *CntInst, PHINode *CntPhi,
@@ -287,6 +287,8 @@ private:
   bool recognizeAndInsertStrLen();
 
   /// @}
+
+  bool recognizeNaivePopcount(const SCEV *BECount);
 };
 } // end anonymous namespace
 
@@ -401,6 +403,10 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
   if (!DisableLIRP::HashRecognize && !ApplyCodeSizeHeuristics)
     if (auto Res = HashRecognize(*CurLoop, *SE).getResult())
       optimizeCRCLoop(*Res);
+
+  // Try to recognize and replace naive shift-and-mask popcount.
+  if (recognizeNaivePopcount(BECount))
+    return true;
 
   return MadeChange;
 }
@@ -650,7 +656,8 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
     const SCEVAddRecExpr *FirstStoreEv =
         cast<SCEVAddRecExpr>(SE->getSCEV(FirstStorePtr));
     APInt FirstStride = getStoreStride(FirstStoreEv);
-    unsigned FirstStoreSize = DL->getTypeStoreSize(SL[i]->getValueOperand()->getType());
+    unsigned FirstStoreSize =
+        DL->getTypeStoreSize(SL[i]->getValueOperand()->getType());
 
     // See if we can optimize just this store in isolation.
     if (FirstStride == FirstStoreSize || -FirstStride == FirstStoreSize) {
@@ -1194,8 +1201,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     R << "Transformed loop-strided store in "
       << ore::NV("Function", TheStore->getFunction())
       << " function into a call to "
-      << ore::NV("NewFunction", NewCall->getCalledFunction())
-      << "() intrinsic";
+      << ore::NV("NewFunction", NewCall->getCalledFunction()) << "() intrinsic";
     if (!Stores.empty())
       R << ore::setExtraArgs();
     for (auto *I : Stores) {
@@ -1500,8 +1506,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
            << ore::NV("NewFunction", NewCall->getCalledFunction())
            << "() intrinsic from " << ore::NV("Inst", InstRemark)
            << " instruction in " << ore::NV("Function", TheStore->getFunction())
-           << " function"
-           << ore::setExtraArgs()
+           << " function" << ore::setExtraArgs()
            << ore::NV("FromBlock", TheStore->getParent()->getName())
            << ore::NV("ToBlock", Preheader->getName());
   });
@@ -2215,8 +2220,7 @@ static bool detectPopcountIdiom(Loop *CurLoop, BasicBlock *PreCondBB,
     ConstantInt *Dec = dyn_cast<ConstantInt>(SubOneOp->getOperand(1));
     if (!Dec ||
         !((SubOneOp->getOpcode() == Instruction::Sub && Dec->isOne()) ||
-          (SubOneOp->getOpcode() == Instruction::Add &&
-           Dec->isMinusOne()))) {
+          (SubOneOp->getOpcode() == Instruction::Add && Dec->isMinusOne()))) {
       return false;
     }
   }
@@ -2327,8 +2331,8 @@ static bool detectShiftUntilZeroIdiom(Loop *CurLoop, const DataLayout &DL,
   // step 2: detect instructions corresponding to "x.next = x >> 1 or x << 1"
   if (!DefX || !DefX->isShift())
     return false;
-  IntrinID = DefX->getOpcode() == Instruction::Shl ? Intrinsic::cttz :
-                                                     Intrinsic::ctlz;
+  IntrinID =
+      DefX->getOpcode() == Instruction::Shl ? Intrinsic::cttz : Intrinsic::ctlz;
   ConstantInt *Shft = dyn_cast<ConstantInt>(DefX->getOperand(1));
   if (!Shft || !Shft->isOne())
     return false;
@@ -2831,9 +2835,8 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
     TcPhi->insertBefore(Body->begin());
 
     Builder.SetInsertPoint(LbCond);
-    Instruction *TcDec = cast<Instruction>(
-        Builder.CreateSub(TcPhi, ConstantInt::get(Ty, 1),
-                          "tcdec", false, true));
+    Instruction *TcDec = cast<Instruction>(Builder.CreateSub(
+        TcPhi, ConstantInt::get(Ty, 1), "tcdec", false, true));
 
     TcPhi->addIncoming(TripCnt, PreHead);
     TcPhi->addIncoming(TcDec, Body);
@@ -3473,7 +3476,8 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
   // intrinsic we'll use are not cheap. Note that we are okay with *just*
   // making the loop countable, even if nothing else changes.
   IntrinsicCostAttributes Attrs(
-      IntrID, Ty, {PoisonValue::get(Ty), /*is_zero_poison=*/Builder.getFalse()});
+      IntrID, Ty,
+      {PoisonValue::get(Ty), /*is_zero_poison=*/Builder.getFalse()});
   InstructionCost Cost = TTI->getIntrinsicInstrCost(Attrs, CostKind);
   if (Cost > TargetTransformInfo::TCC_Basic) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE
@@ -3588,4 +3592,226 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
 
   ++NumShiftUntilZero;
   return MadeChange;
+}
+
+bool LoopIdiomRecognize::recognizeNaivePopcount(const SCEV *BECount) {
+  // Early exit: If trip count is already 0, loop is dead (already optimized)
+  if (BECount->isZero())
+    return false;
+
+  // 1. Basic Safety Checks
+  if (!CurLoop || CurLoop->getNumBackEdges() != 1 ||
+      CurLoop->getNumBlocks() != 1)
+    return false;
+
+  BasicBlock *Header = CurLoop->getHeader();
+  BasicBlock *Preheader = CurLoop->getLoopPreheader();
+  BasicBlock *ExitBB = CurLoop->getExitBlock();
+
+  if (!Header || !Preheader || !ExitBB)
+    return false;
+
+  // Ensure terminator is a conditional branch we can manipulate
+  BranchInst *TermBI = dyn_cast<BranchInst>(Header->getTerminator());
+  if (!TermBI || !TermBI->isConditional())
+    return false;
+
+  // 2. Safety Limit (avoid huge blocks)
+  unsigned InstCount = 0;
+  for (Instruction &I : *Header) {
+    if (InstCount++ > 50)
+      return false;
+    if (I.getType()->isVectorTy())
+      return false;
+  }
+
+  // 3. Match Canonical Induction Variable
+  PHINode *IndVar = CurLoop->getCanonicalInductionVariable();
+  Instruction *IVNext = nullptr;
+
+  if (!IndVar) {
+    for (PHINode &Phi : Header->phis()) {
+      ConstantInt *IVInit =
+          dyn_cast<ConstantInt>(Phi.getIncomingValueForBlock(Preheader));
+      if (!IVInit || !IVInit->isZero())
+        continue;
+
+      for (User *U : Phi.users()) {
+        if (Instruction *I = dyn_cast<Instruction>(U)) {
+          if (I->getParent() == Header && I->getOpcode() == Instruction::Add) {
+            Value *Op1 = I->getOperand(1);
+            if (ConstantInt *One = dyn_cast<ConstantInt>(Op1)) {
+              if (One->isOne() && I->getOperand(0) == &Phi) {
+                IndVar = &Phi;
+                IVNext = I;
+                break;
+              }
+            }
+          }
+        }
+      }
+      if (IndVar)
+        break;
+    }
+  } else {
+    for (User *U : IndVar->users()) {
+      if (Instruction *I = dyn_cast<Instruction>(U)) {
+        if (I->getParent() == Header && I->getOpcode() == Instruction::Add) {
+          if (I->getOperand(0) == IndVar &&
+              isa<ConstantInt>(I->getOperand(1)) &&
+              cast<ConstantInt>(I->getOperand(1))->isOne()) {
+            IVNext = I;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (!IndVar || !IVNext)
+    return false;
+
+  // 4. Match Accumulator and Bit Logic ((X >> i) & 1)
+  PHINode *AccPhi = nullptr;
+  Instruction *AddInst = nullptr;
+  Value *LoopVal = nullptr;
+
+  for (Instruction &Inst : *Header) {
+    if (Inst.getOpcode() != Instruction::Add)
+      continue;
+
+    PHINode *Phi = nullptr;
+    Value *Other = nullptr;
+    if (isa<PHINode>(Inst.getOperand(0))) {
+      Phi = cast<PHINode>(Inst.getOperand(0));
+      Other = Inst.getOperand(1);
+    } else if (isa<PHINode>(Inst.getOperand(1))) {
+      Phi = cast<PHINode>(Inst.getOperand(1));
+      Other = Inst.getOperand(0);
+    } else {
+      continue;
+    }
+
+    if (Phi->getParent() != Header)
+      continue;
+    ConstantInt *AccInit =
+        dyn_cast<ConstantInt>(Phi->getIncomingValueForBlock(Preheader));
+    if (!AccInit || !AccInit->isZero())
+      continue;
+
+    // Look through casts to find the And instruction
+    Value *AndInput = Other;
+    while (isa<CastInst>(AndInput))
+      AndInput = cast<CastInst>(AndInput)->getOperand(0);
+
+    Instruction *AndI = dyn_cast<Instruction>(AndInput);
+    if (!AndI || AndI->getOpcode() != Instruction::And)
+      continue;
+
+    ConstantInt *One = nullptr;
+    if ((One = dyn_cast<ConstantInt>(AndI->getOperand(1))) && One->isOne()) {
+    } else if ((One = dyn_cast<ConstantInt>(AndI->getOperand(0))) &&
+               One->isOne()) {
+    } else {
+      continue;
+    }
+
+    // Look through casts to find the Shift instruction
+    Value *ShiftInput = (AndI->getOperand(0) == One) ? AndI->getOperand(1)
+                                                     : AndI->getOperand(0);
+    while (isa<CastInst>(ShiftInput))
+      ShiftInput = cast<CastInst>(ShiftInput)->getOperand(0);
+
+    Instruction *ShrI = dyn_cast<Instruction>(ShiftInput);
+    if (!ShrI || (ShrI->getOpcode() != Instruction::LShr &&
+                  ShrI->getOpcode() != Instruction::AShr))
+      continue;
+
+    // Look through casts to find the shift amount
+    Value *ShAmt = ShrI->getOperand(1);
+    while (isa<CastInst>(ShAmt))
+      ShAmt = cast<CastInst>(ShAmt)->getOperand(0);
+    // The shift amount should be the induction variable itself
+    if (ShAmt != IndVar)
+      continue;
+
+    Value *X = ShrI->getOperand(0);
+    if (!CurLoop->isLoopInvariant(X))
+      continue;
+
+    LoopVal = X;
+    AccPhi = Phi;
+    AddInst = &Inst;
+    break;
+  }
+
+  if (!LoopVal || !AccPhi || !AddInst)
+    return false;
+
+  // 5. Verify Trip Count
+  unsigned BitWidth = LoopVal->getType()->getIntegerBitWidth();
+  const SCEVConstant *BECConst = dyn_cast<SCEVConstant>(BECount);
+  if (!BECConst)
+    return false;
+  if (BECConst->getAPInt().getZExtValue() + 1 != BitWidth)
+    return false;
+
+  // --- TRANSFORMATION ---
+
+  // 6. Insert Intrinsic in Preheader
+  IRBuilder<> Builder(Preheader->getTerminator());
+  CallInst *Ctpop =
+      createPopcntIntrinsic(Builder, LoopVal, AccPhi->getDebugLoc());
+
+  Value *FinalVal = Ctpop;
+  if (Ctpop->getType() != AccPhi->getType())
+    FinalVal = Builder.CreateTrunc(Ctpop, AccPhi->getType());
+
+  // 7. Replace uses by explicitly updating PHI nodes in ExitBB
+  // Don't use replaceUsesOutsideBlock on PHI nodes as it can cause hangs
+  ConstantInt *ExitCount = nullptr;
+  if (IndVar) {
+    uint64_t ExitVal = BECConst->getAPInt().getZExtValue() + 1;
+    auto *IndTy = cast<IntegerType>(IndVar->getType());
+    ExitCount = ConstantInt::get(IndTy, ExitVal);
+  }
+
+  // Update PHI nodes in ExitBB explicitly
+  SmallVector<PHINode *, 4> ExitPHIs;
+  for (PHINode &PN : ExitBB->phis()) {
+    int Idx = PN.getBasicBlockIndex(Header);
+    if (Idx == -1)
+      continue;
+    ExitPHIs.push_back(&PN);
+  }
+
+  for (PHINode *PN : ExitPHIs) {
+    int Idx = PN->getBasicBlockIndex(Header);
+    Value *IncomingVal = PN->getIncomingValue(Idx);
+
+    if (IncomingVal == AccPhi || IncomingVal == AddInst) {
+      PN->setIncomingValue(Idx, FinalVal);
+    } else if (ExitCount && (IncomingVal == IndVar || IncomingVal == IVNext)) {
+      PN->setIncomingValue(Idx, ExitCount);
+    }
+  }
+
+  // Replace uses outside the loop
+  // Use replaceUsesOutsideBlock which handles PHI nodes correctly
+  // We've already updated exit block PHI nodes explicitly above
+  AccPhi->replaceUsesOutsideBlock(FinalVal, Header);
+  AddInst->replaceUsesOutsideBlock(FinalVal, Header);
+
+  if (IndVar && ExitCount) {
+    IndVar->replaceUsesOutsideBlock(ExitCount, Header);
+    if (IVNext)
+      IVNext->replaceUsesOutsideBlock(ExitCount, Header);
+  }
+
+  // 8. Invalidate Analysis
+  SE->forgetLoop(CurLoop);
+
+  // LoopDeletion will detect the loop is dead and clean it up.
+
+  return true;
 }
