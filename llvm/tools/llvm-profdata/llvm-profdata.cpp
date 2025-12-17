@@ -3330,6 +3330,16 @@ static int showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
       MemProfSumBuilder.addRecord(Pair.Record);
     MemProfSumBuilder.getSummary()->printSummaryYaml(OS);
   }
+  if (!Data.YamlifiedDataAccessProfiles.isEmpty()) {
+    OS << "#\n";
+    OS << "# DataAccessProfileSummary: \n";
+    OS << "#   Num hot symbols and string literals: "
+       << Data.YamlifiedDataAccessProfiles.Records.size() << "\n";
+    OS << "#   Num known cold symbols: "
+       << Data.YamlifiedDataAccessProfiles.KnownColdSymbols.size() << "\n";
+    OS << "#   Num known cold string literals: "
+       << Data.YamlifiedDataAccessProfiles.KnownColdStrHashes.size() << "\n";
+  }
   // Construct yaml::Output with the maximum column width of 80 so that each
   // Frame fits in one line.
   yaml::Output Yout(OS, nullptr, 80);
