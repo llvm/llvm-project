@@ -1540,8 +1540,9 @@ struct __specialized_algorithm<_Algorithm::__for_each, __single_range<__tree<_Tp
 
   template <class _Tree, class _Func, class _Proj>
   _LIBCPP_HIDE_FROM_ABI static auto operator()(_Tree&& __range, _Func __func, _Proj __proj) {
-    std::__tree_iterate_from_root<__copy_cvref_t<_Tree, typename __remove_cvref_t<_Tree>::value_type>>(
-        [](__node_pointer) { return false; }, __range.__root(), __func, __proj);
+    if (__range.size() != 0)
+      std::__tree_iterate_from_root<__copy_cvref_t<_Tree, typename __remove_cvref_t<_Tree>::value_type>>(
+          [](__node_pointer) { return false; }, __range.__root(), __func, __proj);
     return std::make_pair(__range.end(), std::move(__func));
   }
 };
