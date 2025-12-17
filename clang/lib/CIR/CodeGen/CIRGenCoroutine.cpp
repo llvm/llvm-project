@@ -495,7 +495,6 @@ mlir::LogicalResult CIRGenFunction::emitCoreturnStmt(CoreturnStmt const &s) {
     // Make sure to evaluate the non initlist expression of a co_return
     // with a void expression for side effects.
     RunCleanupsScope cleanupScope(*this);
-    assert(!cir::MissingFeatures::ehCleanupScope());
     emitIgnoredExpr(rv);
   }
 
