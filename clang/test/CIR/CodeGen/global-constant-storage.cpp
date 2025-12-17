@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t-before.cir
 // RUN: FileCheck --check-prefix=CIR-BEFORE-LPP --input-file=%t-before.cir %s
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -O1 %s -o %t-o1.cir
+// RUN: FileCheck --check-prefix=CIR-O1 --input-file=%t-o1.cir %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
@@ -235,3 +237,30 @@ const C c;
 // OGCG-OPT:   call {{.*}}@llvm.invariant.start.p0(i64 8, ptr @_ZL1c)
 // OGCG-OPT:   ret void
 // OGCG-OPT: }
+
+// CIR checks at -O1 - should include invariant.start intrinsic calls for constant storage cases
+// CIR-O1: module {{.*}} attributes {{.*}} cir.opt_info = #cir.opt_info<level = 1
+
+// Test case 'a' - CIR at -O1
+// CIR-O1: cir.func internal private @__cxx_global_var_init() {
+// CIR-O1:   cir.call @_ZN1AC1Ev(%{{.*}}) : (!cir.ptr<!rec_A>) -> ()
+// CIR-O1:   cir.call_llvm_intrinsic "invariant.start" {{.*}} : (!s64i, !cir.ptr<!rec_A>) -> !cir.ptr<!rec_A>
+// CIR-O1: }
+
+// Test case 'a2' - CIR at -O1
+// CIR-O1: cir.func internal private @__cxx_global_var_init.1() {
+// CIR-O1:   cir.call @_ZN2A2C1Ev(%{{.*}}) : (!cir.ptr<!rec_A2>) -> ()
+// CIR-O1:   cir.call_llvm_intrinsic "invariant.start" {{.*}} : (!s64i, !cir.ptr<!rec_A2>) -> !cir.ptr<!rec_A2>
+// CIR-O1: }
+
+// Test case 'b' - CIR at -O1 (should NOT emit invariant.start)
+// CIR-O1: cir.func internal private @__cxx_global_var_init.2() {
+// CIR-O1:   cir.call @_ZN1BC1Ev(%{{.*}}) : (!cir.ptr<!rec_B>) -> ()
+// CIR-O1-NOT: cir.call_llvm_intrinsic "invariant.start"
+// CIR-O1: }
+
+// Test case 'c' - CIR at -O1
+// CIR-O1: cir.func internal private @__cxx_global_var_init.3() {
+// CIR-O1:   cir.call @_ZN1CC1Ev(%{{.*}}) : (!cir.ptr<!rec_C>) -> ()
+// CIR-O1:   cir.call_llvm_intrinsic "invariant.start" {{.*}} : (!s64i, !cir.ptr<!rec_C>) -> !cir.ptr<!rec_C>
+// CIR-O1: }
