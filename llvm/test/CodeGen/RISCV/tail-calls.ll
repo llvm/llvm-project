@@ -204,38 +204,38 @@ declare i32 @callee_args(i32 %a, i32 %b, i32 %c, i32 %dd, i32 %e, i32 %ff, i32 %
 define i32 @caller_args(i32 %a, i32 %b, i32 %c, i32 %dd, i32 %e, i32 %ff, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n) nounwind {
 ; CHECK-LABEL: caller_args:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lw t0, 0(sp)
-; CHECK-NEXT:    lw t1, 20(sp)
-; CHECK-NEXT:    lw t2, 4(sp)
-; CHECK-NEXT:    lw t3, 8(sp)
-; CHECK-NEXT:    lw t4, 12(sp)
-; CHECK-NEXT:    lw t5, 16(sp)
-; CHECK-NEXT:    sw t2, 4(sp)
-; CHECK-NEXT:    sw t3, 8(sp)
-; CHECK-NEXT:    sw t4, 12(sp)
-; CHECK-NEXT:    sw t5, 16(sp)
-; CHECK-NEXT:    sw t1, 20(sp)
-; CHECK-NEXT:    sw t0, 0(sp)
+; CHECK-NEXT:    lw t0, 20(sp)
+; CHECK-NEXT:    lw t1, 16(sp)
+; CHECK-NEXT:    lw t2, 0(sp)
+; CHECK-NEXT:    lw t3, 4(sp)
+; CHECK-NEXT:    lw t4, 8(sp)
+; CHECK-NEXT:    lw t5, 12(sp)
+; CHECK-NEXT:    sw t2, 0(sp)
+; CHECK-NEXT:    sw t3, 4(sp)
+; CHECK-NEXT:    sw t4, 8(sp)
+; CHECK-NEXT:    sw t5, 12(sp)
+; CHECK-NEXT:    sw t1, 16(sp)
+; CHECK-NEXT:    sw t0, 20(sp)
 ; CHECK-NEXT:    tail callee_args
 ;
 ; CHECK-LARGE-ZICFILP-LABEL: caller_args:
 ; CHECK-LARGE-ZICFILP:       # %bb.0: # %entry
 ; CHECK-LARGE-ZICFILP-NEXT:    lpad 0
-; CHECK-LARGE-ZICFILP-NEXT:    lw t0, 0(sp)
-; CHECK-LARGE-ZICFILP-NEXT:    lw t1, 20(sp)
-; CHECK-LARGE-ZICFILP-NEXT:    lw t2, 4(sp)
-; CHECK-LARGE-ZICFILP-NEXT:    lw t3, 16(sp)
-; CHECK-LARGE-ZICFILP-NEXT:    lw t4, 12(sp)
-; CHECK-LARGE-ZICFILP-NEXT:    lw t5, 8(sp)
-; CHECK-LARGE-ZICFILP-NEXT:    sw t2, 4(sp)
+; CHECK-LARGE-ZICFILP-NEXT:    lw t0, 20(sp)
+; CHECK-LARGE-ZICFILP-NEXT:    lw t1, 16(sp)
+; CHECK-LARGE-ZICFILP-NEXT:    lw t2, 0(sp)
+; CHECK-LARGE-ZICFILP-NEXT:    lw t3, 12(sp)
+; CHECK-LARGE-ZICFILP-NEXT:    lw t4, 8(sp)
+; CHECK-LARGE-ZICFILP-NEXT:    lw t5, 4(sp)
+; CHECK-LARGE-ZICFILP-NEXT:    sw t2, 0(sp)
 ; CHECK-LARGE-ZICFILP-NEXT:  .Lpcrel_hi8:
 ; CHECK-LARGE-ZICFILP-NEXT:    auipc t2, %pcrel_hi(.LCPI6_0)
 ; CHECK-LARGE-ZICFILP-NEXT:    lw t2, %pcrel_lo(.Lpcrel_hi8)(t2)
-; CHECK-LARGE-ZICFILP-NEXT:    sw t5, 8(sp)
-; CHECK-LARGE-ZICFILP-NEXT:    sw t4, 12(sp)
-; CHECK-LARGE-ZICFILP-NEXT:    sw t3, 16(sp)
-; CHECK-LARGE-ZICFILP-NEXT:    sw t1, 20(sp)
-; CHECK-LARGE-ZICFILP-NEXT:    sw t0, 0(sp)
+; CHECK-LARGE-ZICFILP-NEXT:    sw t5, 4(sp)
+; CHECK-LARGE-ZICFILP-NEXT:    sw t4, 8(sp)
+; CHECK-LARGE-ZICFILP-NEXT:    sw t3, 12(sp)
+; CHECK-LARGE-ZICFILP-NEXT:    sw t1, 16(sp)
+; CHECK-LARGE-ZICFILP-NEXT:    sw t0, 20(sp)
 ; CHECK-LARGE-ZICFILP-NEXT:    jr t2
 entry:
   %r = tail call i32 @callee_args(i32 %a, i32 %b, i32 %c, i32 %dd, i32 %e, i32 %ff, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n)

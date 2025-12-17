@@ -255,6 +255,11 @@ public:
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
 
+  SDValue addTokenForArgument(SDValue Chain,
+                              SelectionDAG &DAG,
+                              MachineFrameInfo &MFI,
+                              int ClobberedFI) const;
+
   SDValue lowerUnhandledCall(CallLoweringInfo &CLI,
                              SmallVectorImpl<SDValue> &InVals,
                              StringRef Reason) const;

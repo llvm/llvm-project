@@ -7,33 +7,33 @@ declare i32 @many_args_callee(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i3
 define i32 @many_args_tail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9) {
 ; RV32-LABEL: many_args_tail:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    li a0, 9
-; RV32-NEXT:    li t0, 8
+; RV32-NEXT:    li a0, 8
+; RV32-NEXT:    li t0, 9
 ; RV32-NEXT:    li a1, 1
 ; RV32-NEXT:    li a2, 2
 ; RV32-NEXT:    li a3, 3
 ; RV32-NEXT:    li a4, 4
 ; RV32-NEXT:    li a5, 5
 ; RV32-NEXT:    li a6, 6
-; RV32-NEXT:    sw a0, 4(sp)
+; RV32-NEXT:    sw a0, 0(sp)
 ; RV32-NEXT:    li a7, 7
-; RV32-NEXT:    sw t0, 0(sp)
+; RV32-NEXT:    sw t0, 4(sp)
 ; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    tail many_args_callee
 ;
 ; RV64-LABEL: many_args_tail:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a0, 9
-; RV64-NEXT:    li t0, 8
+; RV64-NEXT:    li a0, 8
+; RV64-NEXT:    li t0, 9
 ; RV64-NEXT:    li a1, 1
 ; RV64-NEXT:    li a2, 2
 ; RV64-NEXT:    li a3, 3
 ; RV64-NEXT:    li a4, 4
 ; RV64-NEXT:    li a5, 5
 ; RV64-NEXT:    li a6, 6
-; RV64-NEXT:    sd a0, 8(sp)
+; RV64-NEXT:    sd a0, 0(sp)
 ; RV64-NEXT:    li a7, 7
-; RV64-NEXT:    sd t0, 0(sp)
+; RV64-NEXT:    sd t0, 8(sp)
 ; RV64-NEXT:    li a0, 0
 ; RV64-NEXT:    tail many_args_callee
   %ret = tail call i32 @many_args_callee(i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9)
@@ -43,33 +43,33 @@ define i32 @many_args_tail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %
 define i32 @many_args_musttail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9) {
 ; RV32-LABEL: many_args_musttail:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    li a0, 9
-; RV32-NEXT:    li t0, 8
+; RV32-NEXT:    li a0, 8
+; RV32-NEXT:    li t0, 9
 ; RV32-NEXT:    li a1, 1
 ; RV32-NEXT:    li a2, 2
 ; RV32-NEXT:    li a3, 3
 ; RV32-NEXT:    li a4, 4
 ; RV32-NEXT:    li a5, 5
 ; RV32-NEXT:    li a6, 6
-; RV32-NEXT:    sw a0, 4(sp)
+; RV32-NEXT:    sw a0, 0(sp)
 ; RV32-NEXT:    li a7, 7
-; RV32-NEXT:    sw t0, 0(sp)
+; RV32-NEXT:    sw t0, 4(sp)
 ; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    tail many_args_callee
 ;
 ; RV64-LABEL: many_args_musttail:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a0, 9
-; RV64-NEXT:    li t0, 8
+; RV64-NEXT:    li a0, 8
+; RV64-NEXT:    li t0, 9
 ; RV64-NEXT:    li a1, 1
 ; RV64-NEXT:    li a2, 2
 ; RV64-NEXT:    li a3, 3
 ; RV64-NEXT:    li a4, 4
 ; RV64-NEXT:    li a5, 5
 ; RV64-NEXT:    li a6, 6
-; RV64-NEXT:    sd a0, 8(sp)
+; RV64-NEXT:    sd a0, 0(sp)
 ; RV64-NEXT:    li a7, 7
-; RV64-NEXT:    sd t0, 0(sp)
+; RV64-NEXT:    sd t0, 8(sp)
 ; RV64-NEXT:    li a0, 0
 ; RV64-NEXT:    tail many_args_callee
   %ret = musttail call i32 @many_args_callee(i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9)
@@ -83,33 +83,33 @@ define i32 @many_args_musttail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i
 define i32 @more_args_tail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9) {
 ; RV32-LABEL: more_args_tail:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    li a0, 9
-; RV32-NEXT:    li t0, 8
+; RV32-NEXT:    li a0, 8
+; RV32-NEXT:    li t0, 9
 ; RV32-NEXT:    li a1, 1
 ; RV32-NEXT:    li a2, 2
 ; RV32-NEXT:    li a3, 3
 ; RV32-NEXT:    li a4, 4
 ; RV32-NEXT:    li a5, 5
 ; RV32-NEXT:    li a6, 6
-; RV32-NEXT:    sw a0, 4(sp)
+; RV32-NEXT:    sw a0, 0(sp)
 ; RV32-NEXT:    li a7, 7
-; RV32-NEXT:    sw t0, 0(sp)
+; RV32-NEXT:    sw t0, 4(sp)
 ; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    tail many_args_callee
 ;
 ; RV64-LABEL: more_args_tail:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a0, 9
-; RV64-NEXT:    li t0, 8
+; RV64-NEXT:    li a0, 8
+; RV64-NEXT:    li t0, 9
 ; RV64-NEXT:    li a1, 1
 ; RV64-NEXT:    li a2, 2
 ; RV64-NEXT:    li a3, 3
 ; RV64-NEXT:    li a4, 4
 ; RV64-NEXT:    li a5, 5
 ; RV64-NEXT:    li a6, 6
-; RV64-NEXT:    sd a0, 8(sp)
+; RV64-NEXT:    sd a0, 0(sp)
 ; RV64-NEXT:    li a7, 7
-; RV64-NEXT:    sd t0, 0(sp)
+; RV64-NEXT:    sd t0, 8(sp)
 ; RV64-NEXT:    li a0, 0
 ; RV64-NEXT:    tail many_args_callee
   %ret = tail call i32 @many_args_callee(i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9)
@@ -121,17 +121,17 @@ define i32 @more_args_tail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %
 define i32 @different_args_tail_32bit(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4) {
 ; RV32-LABEL: different_args_tail_32bit:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    li a0, 9
-; RV32-NEXT:    li t0, 8
+; RV32-NEXT:    li a0, 8
+; RV32-NEXT:    li t0, 9
 ; RV32-NEXT:    li a1, 1
 ; RV32-NEXT:    li a2, 2
 ; RV32-NEXT:    li a3, 3
 ; RV32-NEXT:    li a4, 4
 ; RV32-NEXT:    li a5, 5
 ; RV32-NEXT:    li a6, 6
-; RV32-NEXT:    sw a0, 4(sp)
+; RV32-NEXT:    sw a0, 0(sp)
 ; RV32-NEXT:    li a7, 7
-; RV32-NEXT:    sw t0, 0(sp)
+; RV32-NEXT:    sw t0, 4(sp)
 ; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    tail many_args_callee
 ;
@@ -191,17 +191,17 @@ define i32 @different_args_tail_64bit(i128 %0, i128 %1, i128 %2, i128 %3, i128 %
 ;
 ; RV64-LABEL: different_args_tail_64bit:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a0, 9
-; RV64-NEXT:    li t0, 8
+; RV64-NEXT:    li a0, 8
+; RV64-NEXT:    li t0, 9
 ; RV64-NEXT:    li a1, 1
 ; RV64-NEXT:    li a2, 2
 ; RV64-NEXT:    li a3, 3
 ; RV64-NEXT:    li a4, 4
 ; RV64-NEXT:    li a5, 5
 ; RV64-NEXT:    li a6, 6
-; RV64-NEXT:    sd a0, 8(sp)
+; RV64-NEXT:    sd a0, 0(sp)
 ; RV64-NEXT:    li a7, 7
-; RV64-NEXT:    sd t0, 0(sp)
+; RV64-NEXT:    sd t0, 8(sp)
 ; RV64-NEXT:    li a0, 0
 ; RV64-NEXT:    tail many_args_callee
   %ret = tail call i32 @many_args_callee(i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9)

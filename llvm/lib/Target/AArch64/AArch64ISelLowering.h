@@ -630,6 +630,12 @@ private:
   bool
   isEligibleForTailCallOptimization(const CallLoweringInfo &CLI) const;
 
+  /// Finds the incoming stack arguments which overlap the given fixed stack
+  /// object and incorporates their load into the current chain. This prevents
+  /// an upcoming store from clobbering the stack argument before it's used.
+  SDValue addTokenForArgument(SDValue Chain, SelectionDAG &DAG,
+                              MachineFrameInfo &MFI, int ClobberedFI) const;
+
   bool DoesCalleeRestoreStack(CallingConv::ID CallCC, bool TailCallOpt) const;
 
   void saveVarArgRegisters(CCState &CCInfo, SelectionDAG &DAG, const SDLoc &DL,
