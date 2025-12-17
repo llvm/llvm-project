@@ -1,0 +1,10 @@
+// RUN: cir-opt %s --cir-to-llvm | FileCheck %s
+
+!u_empty = !cir.record<union {}>
+
+module {
+  cir.func @empty_union(%u: !u_empty) {
+    // CHECK-LABEL:   llvm.func @empty_union
+    cir.return
+  }
+}
