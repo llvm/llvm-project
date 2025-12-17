@@ -2561,6 +2561,10 @@ def warn_uninit_const_reference : Warning<
   "variable %0 is uninitialized when passed as a const reference argument "
   "here">, InGroup<UninitializedConstReference>, DefaultIgnore;
 
+def warn_uninit_const_pointer : Warning<
+  "variable %0 is uninitialized when passed as a const pointer argument here">,
+  InGroup<UninitializedConstPointer>, DefaultIgnore;
+
 def warn_unsequenced_mod_mod : Warning<
   "multiple unsequenced modifications to %0">, InGroup<Unsequenced>;
 def warn_unsequenced_mod_use : Warning<
@@ -11796,6 +11800,9 @@ def err_omp_expected_var_name_member_expr_or_array_item : Error<
   "expected variable name%select{|, data member of current class}0, array element or array section">;
 def err_omp_expected_addressable_lvalue_or_array_item : Error<
   "expected addressable lvalue expression, array element%select{ or array section|, array section or array shaping expression}0%select{| of non 'omp_depend_t' type}1">;
+def err_omp_expected_base_pointer_var_name_member_expr
+    : Error<"base-pointer is not a variable name%select{| or data member of "
+            "current class}0">;
 def err_omp_expected_named_var_member_or_array_expression: Error<
   "expected expression containing only member accesses and/or array sections based on named variables">;
 def err_omp_bit_fields_forbidden_in_clause : Error<

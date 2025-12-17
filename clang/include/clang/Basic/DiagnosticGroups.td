@@ -968,9 +968,11 @@ def UninitializedMaybe : DiagGroup<"conditional-uninitialized">;
 def UninitializedSometimes : DiagGroup<"sometimes-uninitialized">;
 def UninitializedStaticSelfInit : DiagGroup<"static-self-init">;
 def UninitializedConstReference : DiagGroup<"uninitialized-const-reference">;
+def UninitializedConstPointer : DiagGroup<"uninitialized-const-pointer">;
 def Uninitialized  : DiagGroup<"uninitialized", [UninitializedSometimes,
                                                  UninitializedStaticSelfInit,
-                                                 UninitializedConstReference]>;
+                                                 UninitializedConstReference,
+                                                 UninitializedConstPointer]>;
 def IgnoredPragmaIntrinsic : DiagGroup<"ignored-pragma-intrinsic">;
 // #pragma optimize is often used to avoid to work around MSVC codegen bugs or
 // to disable inlining. It's not completely clear what alternative to suggest
@@ -1777,3 +1779,6 @@ def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
 // Warnings about using the non-standard extension having an explicit specialization
 // with a storage class specifier.
 def ExplicitSpecializationStorageClass : DiagGroup<"explicit-specialization-storage-class">;
+
+// A warning for options that enable a feature that is not yet complete
+def ExperimentalOption : DiagGroup<"experimental-option">;
