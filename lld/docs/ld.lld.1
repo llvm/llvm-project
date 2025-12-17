@@ -506,6 +506,13 @@ section. For example, %25 decodes to a single %.
 Always generate position independent thunks.
 .It Fl -pie , Fl -pic-executable
 Create a position independent executable.
+.It Fl plugin Ar path
+Loads plugin from the absolute path
+.Ar path .
+The compiler usually adds this parameter automatically when link
+time optimization is enabled.
+Only supports the GNU LTO plugin. This feature is optional and may not be
+available.
 .It Fl -power10-stubs Ns = Ns Cm mode
 Whether to use Power10 instructions in call stubs for R_PPC64_REL24_NOTOC and TOC/NOTOC interworking.
 .Ar mode
