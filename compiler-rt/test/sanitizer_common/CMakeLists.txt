@@ -51,7 +51,7 @@ message(
 # Create a separate config for each tool we support.
 foreach(tool ${SUPPORTED_TOOLS})
   string(TOUPPER ${tool} tool_toupper)
-  if(${tool_toupper}_SUPPORTED_ARCH AND NOT COMPILER_RT_STANDALONE_BUILD)
+  if(${tool_toupper}_SUPPORTED_ARCH AND (NOT COMPILER_RT_STANDALONE_BUILD OR LLVM_RUNTIMES_BUILD))
     list(APPEND SANITIZER_COMMON_TEST_DEPS ${tool})
   endif()
   set(TEST_ARCH ${${tool_toupper}_SUPPORTED_ARCH})
