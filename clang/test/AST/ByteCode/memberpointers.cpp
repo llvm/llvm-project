@@ -249,3 +249,21 @@ namespace CallExprTypeMismatch {
   }
   static_assert(test(), "");
 }
+
+namespace CastMemberPtrPtrFailed{
+  struct S {
+    constexpr S() {}
+    constexpr int f() const;
+    constexpr int g() const;
+  };
+  struct T : S {
+    constexpr T(int n) : S(), n(n) {}
+    int n;
+  };
+
+  constexpr int S::g() const {
+    return this->*(int(S::*))&T::n; // both-note {{subexpression}}
+  }
+  static_assert(S().g(), ""); // both-error {{constant expression}} \
+                              // both-note {{in call to 'S().g()'}}
+}

@@ -254,33 +254,13 @@ Function *IndirectCallEdge::GetCallee(ModuleList &images,
 
 /// @}
 
-AddressRange CollapseRanges(llvm::ArrayRef<AddressRange> ranges) {
-  if (ranges.empty())
-    return AddressRange();
-  if (ranges.size() == 1)
-    return ranges[0];
-
-  Address lowest_addr = ranges[0].GetBaseAddress();
-  addr_t highest_addr = lowest_addr.GetFileAddress() + ranges[0].GetByteSize();
-  for (const AddressRange &range : ranges.drop_front()) {
-    Address range_begin = range.GetBaseAddress();
-    addr_t range_end = range_begin.GetFileAddress() + range.GetByteSize();
-    if (range_begin.GetFileAddress() < lowest_addr.GetFileAddress())
-      lowest_addr = range_begin;
-    if (range_end > highest_addr)
-      highest_addr = range_end;
-  }
-  return AddressRange(lowest_addr, highest_addr - lowest_addr.GetFileAddress());
-}
-
 //
 Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
                    lldb::user_id_t type_uid, const Mangled &mangled, Type *type,
                    Address address, AddressRanges ranges)
     : UserID(func_uid), m_comp_unit(comp_unit), m_type_uid(type_uid),
       m_type(type), m_mangled(mangled), m_block(*this, func_uid),
-      m_range(CollapseRanges(ranges)), m_address(std::move(address)),
-      m_prologue_byte_size(0) {
+      m_address(std::move(address)), m_prologue_byte_size(0) {
   assert(comp_unit != nullptr);
   lldb::addr_t base_file_addr = m_address.GetFileAddress();
   for (const AddressRange &range : ranges)
@@ -292,10 +272,10 @@ Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
 
 Function::~Function() = default;
 
-void Function::GetStartLineSourceInfo(SupportFileSP &source_file_sp,
+void Function::GetStartLineSourceInfo(SupportFileNSP &source_file_sp,
                                       uint32_t &line_no) {
   line_no = 0;
-  source_file_sp.reset();
+  source_file_sp = std::make_shared<SupportFile>();
 
   if (m_comp_unit == nullptr)
     return;
@@ -320,9 +300,9 @@ void Function::GetStartLineSourceInfo(SupportFileSP &source_file_sp,
   }
 }
 
-llvm::Expected<std::pair<SupportFileSP, Function::SourceRange>>
+llvm::Expected<std::pair<SupportFileNSP, Function::SourceRange>>
 Function::GetSourceInfo() {
-  SupportFileSP source_file_sp;
+  SupportFileNSP source_file_sp = std::make_shared<SupportFile>();
   uint32_t start_line;
   GetStartLineSourceInfo(source_file_sp, start_line);
   LineTable *line_table = m_comp_unit->GetLineTable();
@@ -363,7 +343,7 @@ llvm::ArrayRef<std::unique_ptr<CallEdge>> Function::GetCallEdges() {
   Block &block = GetBlock(/*can_create*/true);
   SymbolFile *sym_file = block.GetSymbolFile();
   if (!sym_file)
-    return std::nullopt;
+    return {};
 
   // Lazily read call site information from the SymbolFile.
   m_call_edges = sym_file->ParseCallEdgesInFunction(GetID());
@@ -464,8 +444,7 @@ void Function::Dump(Stream *s, bool show_context) const {
   s->EOL();
   // Dump the root object
   if (m_block.BlockInfoHasBeenParsed())
-    m_block.Dump(s, m_range.GetBaseAddress().GetFileAddress(), INT_MAX,
-                 show_context);
+    m_block.Dump(s, m_address.GetFileAddress(), INT_MAX, show_context);
 }
 
 void Function::CalculateSymbolContext(SymbolContext *sc) {
@@ -474,8 +453,7 @@ void Function::CalculateSymbolContext(SymbolContext *sc) {
 }
 
 ModuleSP Function::CalculateSymbolContextModule() {
-  SectionSP section_sp(m_range.GetBaseAddress().GetSection());
-  if (section_sp)
+  if (SectionSP section_sp = m_address.GetSection())
     return section_sp->GetModule();
 
   return this->GetCompileUnit()->GetModule();

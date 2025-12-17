@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN %s
 
 @L = external local_unnamed_addr addrspace(3) global [9 x double], align 16
 @Ldisp = external local_unnamed_addr addrspace(3) global [96 x double], align 16

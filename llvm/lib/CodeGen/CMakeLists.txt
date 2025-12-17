@@ -35,6 +35,7 @@ add_llvm_component_library(LLVMCodeGen
   BasicBlockSections.cpp
   BasicBlockPathCloning.cpp
   BasicBlockSectionsProfileReader.cpp
+  BasicBlockMatchingAndInference.cpp
   CalcSpillWeights.cpp
   CallBrPrepare.cpp
   CallingConvLower.cpp
@@ -88,6 +89,7 @@ add_llvm_component_library(LLVMCodeGen
   LatencyPriorityQueue.cpp
   LazyMachineBlockFrequencyInfo.cpp
   LexicalScopes.cpp
+  LibcallLoweringInfo.cpp
   LiveDebugVariables.cpp
   LiveIntervals.cpp
   LiveInterval.cpp
@@ -108,6 +110,7 @@ add_llvm_component_library(LLVMCodeGen
   LowerEmuTLS.cpp
   MachineBasicBlock.cpp
   MachineBlockFrequencyInfo.cpp
+  MachineBlockHashInfo.cpp
   MachineBlockPlacement.cpp
   MachineBranchProbabilityInfo.cpp
   MachineCFGPrinter.cpp
@@ -155,6 +158,7 @@ add_llvm_component_library(LLVMCodeGen
   MIRFSDiscriminator.cpp
   MIRSampleProfile.cpp
   MIRYamlMapping.cpp
+  MIR2Vec.cpp
   MLRegAllocEvictAdvisor.cpp
   MLRegAllocPriorityAdvisor.cpp
   ModuloSchedule.cpp
@@ -228,6 +232,7 @@ add_llvm_component_library(LLVMCodeGen
   StackProtector.cpp
   StackSlotColoring.cpp
   StaticDataSplitter.cpp
+  StaticDataAnnotator.cpp
   SwiftErrorValueTracking.cpp
   SwitchLoweringUtils.cpp
   TailDuplication.cpp
@@ -249,6 +254,7 @@ add_llvm_component_library(LLVMCodeGen
   VirtRegMap.cpp
   WasmEHPrepare.cpp
   WindowScheduler.cpp
+  WindowsSecureHotPatching.cpp
   WinEHPrepare.cpp
   XRayInstrumentation.cpp
   ${GeneratedMLSources}

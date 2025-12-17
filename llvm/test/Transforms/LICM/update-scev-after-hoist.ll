@@ -4,7 +4,7 @@
 define i16 @main() {
 ; SCEV-EXPR-LABEL: 'main'
 ; SCEV-EXPR-NEXT:  Classifying expressions for: @main
-; SCEV-EXPR-NEXT:    %mul = phi i16 [ 1, %entry ], [ %mul.n.3.reass, %loop ]
+; SCEV-EXPR-NEXT:    %mul = phi i16 [ 1, %entry ], [ %mul.n.3, %loop ]
 ; SCEV-EXPR-NEXT:    --> %mul U: [0,-15) S: [-32768,32753) Exits: 4096 LoopDispositions: { %loop: Variant }
 ; SCEV-EXPR-NEXT:    %div = phi i16 [ 32767, %entry ], [ %div.n.3, %loop ]
 ; SCEV-EXPR-NEXT:    --> %div U: [-2048,-32768) S: [-2048,-32768) Exits: 7 LoopDispositions: { %loop: Variant }
@@ -16,7 +16,7 @@ define i16 @main() {
 ; SCEV-EXPR-NEXT:    --> %div.n.1 U: [-8192,8192) S: [-8192,8192) Exits: 1 LoopDispositions: { %loop: Variant }
 ; SCEV-EXPR-NEXT:    %div.n.2 = sdiv i16 %div.n.1, 2
 ; SCEV-EXPR-NEXT:    --> %div.n.2 U: [-4096,4096) S: [-4096,4096) Exits: 0 LoopDispositions: { %loop: Variant }
-; SCEV-EXPR-NEXT:    %mul.n.3.reass = mul i16 %mul, 16
+; SCEV-EXPR-NEXT:    %mul.n.3 = mul i16 %mul.n.reass.reass, 2
 ; SCEV-EXPR-NEXT:    --> (16 * %mul) U: [0,-15) S: [-32768,32753) Exits: 0 LoopDispositions: { %loop: Variant }
 ; SCEV-EXPR-NEXT:    %div.n.3 = sdiv i16 %div.n.2, 2
 ; SCEV-EXPR-NEXT:    --> %div.n.3 U: [-2048,2048) S: [-2048,2048) Exits: 0 LoopDispositions: { %loop: Variant }

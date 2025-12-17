@@ -12,8 +12,8 @@
 #include "src/__support/common.h"
 
 #include "hdr/types/mode_t.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include <sys/stat.h>
 #include <sys/syscall.h> // For syscall numbers.
 

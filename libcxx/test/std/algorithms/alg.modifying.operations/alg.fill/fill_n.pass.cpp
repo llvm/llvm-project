@@ -17,6 +17,8 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <deque>
+#include <ranges>
 #include <vector>
 
 #include "sized_allocator.h"
@@ -52,57 +54,29 @@ struct Test {
   }
 };
 
-TEST_CONSTEXPR_CXX20 void test_int_array() {
-  {
-    int a[4] = {};
-    assert(std::fill_n(a, UDI(4), static_cast<char>(1)) == a + 4);
-    assert(a[0] == 1 && a[1] == 1 && a[2] == 1 && a[3] == 1);
-  }
-#if TEST_STD_VER >= 11
-  {
-    const std::size_t N = 5;
-    int ib[]            = {0, 0, 0, 0, 0, 0}; // one bigger than N
-
-    auto it = std::fill_n(std::begin(ib), N, 5);
-    assert(it == (std::begin(ib) + N) && std::all_of(std::begin(ib), it, [](int a) { return a == 5; }) &&
-           *it == 0 // don't overwrite the last value in the output array
-    );
-  }
-#endif
-}
-
 struct source {
   TEST_CONSTEXPR source() = default;
   TEST_CONSTEXPR_CXX20 operator int() const { return 1; }
 };
 
-TEST_CONSTEXPR_CXX20 void test_int_array_struct_source() {
-  int a[4] = {};
-  assert(std::fill_n(a, UDI(4), source()) == a + 4);
-  assert(a[0] == 1);
-  assert(a[1] == 1);
-  assert(a[2] == 1);
-  assert(a[3] == 1);
-}
-
-class A {
+class CharWrapper {
   char a_;
 
 public:
-  TEST_CONSTEXPR A() : a_('a') {};
-  TEST_CONSTEXPR explicit A(char a) : a_(a) {}
+  TEST_CONSTEXPR CharWrapper() : a_('a') {};
+  TEST_CONSTEXPR explicit CharWrapper(char a) : a_(a) {}
   TEST_CONSTEXPR operator unsigned char() const { return 'b'; }
 
-  TEST_CONSTEXPR friend bool operator==(const A& x, const A& y) { return x.a_ == y.a_; }
+  TEST_CONSTEXPR friend bool operator==(const CharWrapper& x, const CharWrapper& y) { return x.a_ == y.a_; }
 };
 
-struct B {
-  TEST_CONSTEXPR B() : c(0) {}
-  TEST_CONSTEXPR B(char xc) : c(xc + 1) {}
+struct CharTransformer {
+  TEST_CONSTEXPR CharTransformer() : c(0) {}
+  TEST_CONSTEXPR CharTransformer(char xc) : c(xc + 1) {}
   char c;
 };
 
-struct Storage {
+struct CharUnionStorage {
   union {
     unsigned char a;
     unsigned char b;
@@ -154,35 +128,66 @@ TEST_CONSTEXPR_CXX20 bool test_vector_bool(std::size_t N) {
   return true;
 }
 
-TEST_CONSTEXPR_CXX20 void test_struct_array() {
-  {
-    A a[3];
-    assert(std::fill_n(&a[0], UDI(3), A('a')) == a + 3);
-    assert(a[0] == A('a'));
-    assert(a[1] == A('a'));
-    assert(a[2] == A('a'));
-  }
-  {
-    B b[4] = {};
-    assert(std::fill_n(b, UDI(4), static_cast<char>(10)) == b + 4);
-    assert(b[0].c == 11);
-    assert(b[1].c == 11);
-    assert(b[2].c == 11);
-    assert(b[3].c == 11);
-  }
-  {
-    Storage foo[5];
-    std::fill_n(&foo[0], UDI(5), Storage());
-  }
+/*TEST_CONSTEXPR_CXX26*/ void test_deque() { // TODO: Mark as TEST_CONSTEXPR_CXX26 once std::deque is constexpr
+  std::deque<int> in(20);
+  std::deque<int> expected(in.size(), 42);
+  std::fill_n(in.begin(), in.size(), 42);
+  assert(in == expected);
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::forward_iterator_list<char*>(), Test<char>());
   types::for_each(types::forward_iterator_list<int*>(), Test<int>());
 
-  test_int_array();
-  test_struct_array();
-  test_int_array_struct_source();
+  { // Test with int arrays
+    {
+      int a[4] = {};
+      assert(std::fill_n(a, UDI(4), static_cast<char>(1)) == a + 4);
+      assert(a[0] == 1 && a[1] == 1 && a[2] == 1 && a[3] == 1);
+    }
+#if TEST_STD_VER >= 11
+    {
+      const std::size_t N = 5;
+      int ib[]            = {0, 0, 0, 0, 0, 0}; // one bigger than N
+
+      auto it = std::fill_n(std::begin(ib), N, 5);
+      assert(it == (std::begin(ib) + N) && std::all_of(std::begin(ib), it, [](int a) { return a == 5; }) &&
+             *it == 0 // don't overwrite the last value in the output array
+      );
+    }
+#endif
+  }
+
+  { // Test with struct arrays
+    {
+      CharWrapper a[3];
+      assert(std::fill_n(&a[0], UDI(3), CharWrapper('a')) == a + 3);
+      assert(a[0] == CharWrapper('a'));
+      assert(a[1] == CharWrapper('a'));
+      assert(a[2] == CharWrapper('a'));
+    }
+    {
+      CharTransformer b[4] = {};
+      assert(std::fill_n(b, UDI(4), static_cast<char>(10)) == b + 4);
+      assert(b[0].c == 11);
+      assert(b[1].c == 11);
+      assert(b[2].c == 11);
+      assert(b[3].c == 11);
+    }
+    {
+      CharUnionStorage foo[5];
+      std::fill_n(&foo[0], UDI(5), CharUnionStorage());
+    }
+  }
+
+  { // Test with an int array and struct source
+    int a[4] = {};
+    assert(std::fill_n(a, UDI(4), source()) == a + 4);
+    assert(a[0] == 1);
+    assert(a[1] == 1);
+    assert(a[2] == 1);
+    assert(a[3] == 1);
+  }
 
   { // Test vector<bool>::iterator optimization
     assert(test_vector_bool(8));
@@ -224,6 +229,20 @@ TEST_CONSTEXPR_CXX20 bool test() {
       assert(in == expected);
     }
   }
+
+  if (!TEST_IS_CONSTANT_EVALUATED) // TODO: Use TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED when std::deque is made constexpr
+    test_deque();
+
+#if TEST_STD_VER >= 20
+  {
+    std::vector<std::vector<int>> v{{1, 2}, {1, 2, 3}, {}, {3, 4, 5}, {6}, {7, 8, 9, 6}, {0, 1, 2, 3, 0, 1, 2}};
+    auto jv = std::ranges::join_view(v);
+    std::fill_n(jv.begin(), std::distance(jv.begin(), jv.end()), 42);
+    for (const auto& vec : v)
+      for (auto n : vec)
+        assert(n == 42);
+  }
+#endif
 
   return true;
 }

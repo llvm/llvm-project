@@ -5,7 +5,7 @@
 add_custom_target(check-clang-python
     COMMAND ${CMAKE_COMMAND} -E env
             CLANG_NO_DEFAULT_CONFIG=1
-            CLANG_LIBRARY_PATH=$<TARGET_FILE_DIR:libclang>
+            LIBCLANG_LIBRARY_PATH=$<TARGET_FILE_DIR:libclang>
             "${Python3_EXECUTABLE}" -m unittest discover
     DEPENDS libclang
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..)
@@ -35,7 +35,7 @@ if(WIN32)
 endif()
 
 # The Python FFI interface is broken on AIX: https://bugs.python.org/issue38628.
-if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   set(RUN_PYTHON_TESTS FALSE)
 endif()
 

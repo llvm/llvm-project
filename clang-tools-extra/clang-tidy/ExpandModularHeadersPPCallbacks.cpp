@@ -1,4 +1,4 @@
-//===- ExpandModularHeadersPPCallbacks.h - clang-tidy -----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,7 +35,7 @@ public:
                          const SrcMgr::ContentCache &ContentCache,
                          llvm::vfs::InMemoryFileSystem &InMemoryFs) {
     // Return if we are not interested in the contents of this file.
-    if (!FilesToRecord.count(File))
+    if (!FilesToRecord.contains(File))
       return;
 
     // FIXME: Why is this happening? We might be losing contents here.
@@ -49,8 +49,8 @@ public:
     FilesToRecord.erase(File);
   }
 
-  /// Makes sure we have contents for all the files we were interested in. Ideally
-  /// `FilesToRecord` should be empty.
+  /// Makes sure we have contents for all the files we were interested in.
+  /// Ideally `FilesToRecord` should be empty.
   void checkAllFilesRecorded() {
     LLVM_DEBUG({
       for (auto FileEntry : FilesToRecord)
@@ -65,18 +65,17 @@ private:
 };
 
 ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
-    CompilerInstance *CI,
-    IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS)
+    CompilerInstance *CI, llvm::vfs::OverlayFileSystem &OverlayFS)
     : Recorder(std::make_unique<FileRecorder>()), Compiler(*CI),
       InMemoryFs(new llvm::vfs::InMemoryFileSystem),
       Sources(Compiler.getSourceManager()),
       // Forward the new diagnostics to the original DiagnosticConsumer.
-      Diags(new DiagnosticIDs, new DiagnosticOptions,
+      Diags(DiagnosticIDs::create(), DiagOpts,
             new ForwardingDiagnosticConsumer(Compiler.getDiagnosticClient())),
       LangOpts(Compiler.getLangOpts()), HSOpts(Compiler.getHeaderSearchOpts()) {
   // Add a FileSystem containing the extra files needed in place of modular
   // headers.
-  OverlayFS->pushOverlay(InMemoryFs);
+  OverlayFS.pushOverlay(InMemoryFs);
 
   Diags.setSourceManager(&Sources);
   // FIXME: Investigate whatever is there better way to initialize DiagEngine
@@ -89,15 +88,14 @@ ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
   HeaderInfo = std::make_unique<HeaderSearch>(HSOpts, Sources, Diags, LangOpts,
                                               &Compiler.getTarget());
 
-  auto PO = std::make_shared<PreprocessorOptions>();
-  *PO = Compiler.getPreprocessorOpts();
-
-  PP = std::make_unique<clang::Preprocessor>(PO, Diags, LangOpts, Sources,
-                                              *HeaderInfo, ModuleLoader,
-                                              /*IILookup=*/nullptr,
-                                              /*OwnsHeaderSearch=*/false);
+  PP = std::make_unique<clang::Preprocessor>(Compiler.getPreprocessorOpts(),
+                                             Diags, LangOpts, Sources,
+                                             *HeaderInfo, ModuleLoader,
+                                             /*IILookup=*/nullptr,
+                                             /*OwnsHeaderSearch=*/false);
   PP->Initialize(Compiler.getTarget(), Compiler.getAuxTarget());
-  InitializePreprocessor(*PP, *PO, Compiler.getPCHContainerReader(),
+  InitializePreprocessor(*PP, Compiler.getPreprocessorOpts(),
+                         Compiler.getPCHContainerReader(),
                          Compiler.getFrontendOpts(), Compiler.getCodeGenOpts());
   ApplyHeaderSearchOptions(*HeaderInfo, HSOpts, LangOpts,
                            Compiler.getTarget().getTriple());

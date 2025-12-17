@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx11 -Wc++11-compat %s
-// RUN: %clang_cc1 -fsyntax-only -verify -Wc++11-compat %s -std=c++98
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98 -Wc++11-compat %s -std=c++98
 class C {
 public:
   auto int errx; // expected-error {{storage class specified for a member declaration}}
@@ -32,7 +32,7 @@ public:
   int : 1, : 2;
   typedef int E : 1; // expected-error {{typedef member 'E' cannot be a bit-field}}
   static int sb : 1; // expected-error {{static member 'sb' cannot be a bit-field}}
-  static int vs;
+  static int vs; // cxx11-note {{declared here}}
 
   typedef int func();
   func tm;
@@ -48,20 +48,28 @@ public:
 #endif
   static int si = 0; // expected-error {{non-const static data member must be initialized out of line}}
   static const NestedC ci = 0; // expected-error {{static data member of type 'const NestedC' must be initialized out of line}}
-  static const int nci = vs; // expected-error {{in-class initializer for static data member is not a constant expression}}
+  static const int nci = vs; // expected-error {{in-class initializer for static data member is not a constant expression}} \
+  // cxx11-note {{read of non-const variable 'vs' is not allowed in a constant expression}} \
+  // cxx98-note {{subexpression not valid in a constant expression}}
   static const int vi = 0;
   static const volatile int cvi = 0; // ok, illegal in C++11
 #if __cplusplus >= 201103L
   // expected-error@-2 {{static const volatile data member must be initialized out of line}}
 #endif
   static const E evi = 0;
-  static const int overflow = 1000000*1000000; // cxx11-error {{in-class initializer for static data member is not a constant expression}}
-                                               // expected-warning@-1 {{overflow in expression}}
-  static const int overflow_shift = 1<<32; // cxx11-error {{in-class initializer for static data member is not a constant expression}}
-  static const int overflow_shift2 = 1>>32; // cxx11-error {{in-class initializer for static data member is not a constant expression}}
-  static const int overflow_shift3 = 1<<-1; // cxx11-error {{in-class initializer for static data member is not a constant expression}}
-  static const int overflow_shift4 = 1<<-1; // cxx11-error {{in-class initializer for static data member is not a constant expression}}
-  static const int overflow_shift5 = -1<<1; // cxx11-error {{in-class initializer for static data member is not a constant expression}}
+  static const int overflow = 1000000*1000000; // cxx11-error {{in-class initializer for static data member is not a constant expression}} \
+                                               // cxx11-note {{value 1000000000000 is outside the range of representable values of type 'int'}} \
+                                               // expected-warning {{overflow in expression}}
+  static const int overflow_shift = 1<<32; // cxx11-error {{in-class initializer for static data member is not a constant expression}} \
+                                           // cxx11-note {{shift count 32 >= width of type 'int' (32 bits)}}
+  static const int overflow_shift2 = 1>>32; // cxx11-error {{in-class initializer for static data member is not a constant expression}}\
+                                            // cxx11-note {{shift count 32 >= width of type 'int' (32 bits)}}
+  static const int overflow_shift3 = 1<<-1; // cxx11-error {{in-class initializer for static data member is not a constant expression}} \
+                                            // cxx11-note {{negative shift count -1}}
+  static const int overflow_shift4 = 1<<-1; // cxx11-error {{in-class initializer for static data member is not a constant expression}} \
+                                            // cxx11-note {{negative shift count -1}}
+  static const int overflow_shift5 = -1<<1; // cxx11-error {{in-class initializer for static data member is not a constant expression}} \
+                                            // cxx11-note {{left shift of negative value -1}}
 
   void m() {
     sx = 0;

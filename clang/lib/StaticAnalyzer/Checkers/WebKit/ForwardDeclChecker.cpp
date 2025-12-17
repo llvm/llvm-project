@@ -9,7 +9,6 @@
 #include "ASTUtils.h"
 #include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
-#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -21,7 +20,6 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/SaveAndRestore.h"
-#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -30,7 +28,7 @@ namespace {
 
 class ForwardDeclChecker : public Checker<check::ASTDecl<TranslationUnitDecl>> {
   BugType Bug;
-  mutable BugReporter *BR;
+  mutable BugReporter *BR = nullptr;
   mutable RetainTypeChecker RTC;
   mutable llvm::DenseSet<const Type *> SystemTypes;
 
@@ -107,18 +105,18 @@ public:
   void visitTypedef(const TypedefDecl *TD) const {
     RTC.visitTypedef(TD);
     auto QT = TD->getUnderlyingType().getCanonicalType();
+    assert(BR && "expected nonnull BugReporter");
     if (BR->getSourceManager().isInSystemHeader(TD->getBeginLoc())) {
-      if (auto *Type = QT.getTypePtrOrNull(); Type && QT->isPointerType())
+      if (auto *Type = QT.getTypePtrOrNull())
         SystemTypes.insert(Type);
     }
   }
 
   bool isUnknownType(QualType QT) const {
-    auto *Type = QT.getTypePtrOrNull();
-    if (!Type)
-      return false;
     auto *CanonicalType = QT.getCanonicalType().getTypePtrOrNull();
-    auto PointeeQT = Type->getPointeeType();
+    if (!CanonicalType)
+      return false;
+    auto PointeeQT = CanonicalType->getPointeeType();
     auto *PointeeType = PointeeQT.getTypePtrOrNull();
     if (!PointeeType)
       return false;
@@ -126,9 +124,20 @@ public:
     if (!R) // Forward declaration of a Objective-C interface is safe.
       return false;
     auto Name = R->getName();
-    return !R->hasDefinition() && !RTC.isUnretained(QT) &&
-           !SystemTypes.contains(CanonicalType) &&
-           !Name.starts_with("Opaque") && Name != "_NSZone";
+    if (R->hasDefinition())
+      return false;
+    // Find a definition amongst template declarations.
+    if (auto *Specialization = dyn_cast<ClassTemplateSpecializationDecl>(R)) {
+      if (auto *S = Specialization->getSpecializedTemplate()) {
+        for (S = S->getMostRecentDecl(); S; S = S->getPreviousDecl()) {
+          if (S->isThisDeclarationADefinition())
+            return false;
+        }
+      }
+    }
+    return !RTC.isUnretained(QT) && !SystemTypes.contains(CanonicalType) &&
+           !SystemTypes.contains(PointeeType) && !Name.starts_with("Opaque") &&
+           Name != "_NSZone";
   }
 
   void visitRecordDecl(const RecordDecl *RD, const Decl *DeclWithIssue) const {
@@ -146,13 +155,14 @@ public:
     if (Kind != TagTypeKind::Struct && Kind != TagTypeKind::Class)
       return;
 
+    assert(BR && "expected nonnull BugReporter");
     if (BR->getSourceManager().isInSystemHeader(RDLocation))
       return;
 
     // Ref-counted smartpointers actually have raw-pointer to uncounted type as
     // a member but we trust them to handle it correctly.
     auto R = llvm::dyn_cast_or_null<CXXRecordDecl>(RD);
-    if (!R || isRefCounted(R) || isCheckedPtr(R) || isRetainPtr(R))
+    if (!R || isRefCounted(R) || isCheckedPtr(R) || isRetainPtrOrOSPtr(R))
       return;
 
     for (auto *Member : RD->fields()) {
@@ -177,6 +187,7 @@ public:
   }
 
   void visitVarDecl(const VarDecl *V, const Decl *DeclWithIssue) const {
+    assert(BR && "expected nonnull BugReporter");
     if (BR->getSourceManager().isInSystemHeader(V->getBeginLoc()))
       return;
 
@@ -194,6 +205,7 @@ public:
   }
 
   void visitCallExpr(const CallExpr *CE, const Decl *DeclWithIssue) const {
+    assert(BR && "expected nonnull BugReporter");
     if (BR->getSourceManager().isInSystemHeader(CE->getExprLoc()))
       return;
 
@@ -211,6 +223,7 @@ public:
 
   void visitConstructExpr(const CXXConstructExpr *CE,
                           const Decl *DeclWithIssue) const {
+    assert(BR && "expected nonnull BugReporter");
     if (BR->getSourceManager().isInSystemHeader(CE->getExprLoc()))
       return;
 
@@ -228,10 +241,12 @@ public:
 
   void visitObjCMessageExpr(const ObjCMessageExpr *E,
                             const Decl *DeclWithIssue) const {
+    assert(BR && "expected nonnull BugReporter");
     if (BR->getSourceManager().isInSystemHeader(E->getExprLoc()))
       return;
 
-    if (auto *Receiver = E->getInstanceReceiver()->IgnoreParenCasts()) {
+    if (auto *Receiver = E->getInstanceReceiver()) {
+      Receiver = Receiver->IgnoreParenCasts();
       if (isUnknownType(E->getReceiverType()))
         reportUnknownRecieverType(Receiver, DeclWithIssue);
     }
@@ -248,18 +263,43 @@ public:
   void visitCallArg(const Expr *Arg, const ParmVarDecl *Param,
                     const Decl *DeclWithIssue) const {
     auto *ArgExpr = Arg->IgnoreParenCasts();
-    if (auto *InnerCE = dyn_cast<CallExpr>(Arg)) {
-      auto *InnerCallee = InnerCE->getDirectCallee();
-      if (InnerCallee && InnerCallee->isInStdNamespace() &&
-          safeGetName(InnerCallee) == "move" && InnerCE->getNumArgs() == 1) {
-        ArgExpr = InnerCE->getArg(0);
-        if (ArgExpr)
-          ArgExpr = ArgExpr->IgnoreParenCasts();
+    while (ArgExpr) {
+      ArgExpr = ArgExpr->IgnoreParenCasts();
+      if (auto *InnerCE = dyn_cast<CallExpr>(ArgExpr)) {
+        if (auto *InnerCallee = InnerCE->getDirectCallee()) {
+          if (isStdOrWTFMove(InnerCallee) && InnerCE->getNumArgs() == 1) {
+            ArgExpr = InnerCE->getArg(0);
+            continue;
+          }
+        }
+      }
+      if (auto *UO = dyn_cast<UnaryOperator>(ArgExpr)) {
+        auto OpCode = UO->getOpcode();
+        if (OpCode == UO_Deref || OpCode == UO_AddrOf) {
+          ArgExpr = UO->getSubExpr();
+          continue;
+        }
+      }
+      break;
+    }
+
+    if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(ArgExpr)) {
+      if (isOwnerPtrType(MemberCallExpr->getObjectType()))
+        return;
+    }
+
+    if (auto *OpCE = dyn_cast<CXXOperatorCallExpr>(ArgExpr)) {
+      auto *Method = dyn_cast_or_null<CXXMethodDecl>(OpCE->getDirectCallee());
+      if (Method && isOwnerPtr(safeGetName(Method->getParent()))) {
+        if (OpCE->getOperator() == OO_Star && OpCE->getNumArgs() == 1)
+          return;
       }
     }
-    if (isa<CXXNullPtrLiteralExpr>(ArgExpr) || isa<IntegerLiteral>(ArgExpr) ||
+
+    if (isNullPtr(ArgExpr) || isa<IntegerLiteral>(ArgExpr) ||
         isa<CXXDefaultArgExpr>(ArgExpr))
       return;
+
     if (auto *DRE = dyn_cast<DeclRefExpr>(ArgExpr)) {
       if (auto *ValDecl = DRE->getDecl()) {
         if (isa<ParmVarDecl>(ValDecl))
@@ -308,6 +348,7 @@ public:
     const std::string TypeName = Type.getAsString();
     Os << Description << " uses a forward declared type '" << TypeName << "'";
 
+    assert(BR && "expected nonnull BugReporter");
     PathDiagnosticLocation BSLoc(SrcLoc, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
     Report->addRange(SrcRange);

@@ -2,14 +2,14 @@
 
 ! RUN: split-file %s %t
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %t/static_len.f90 2>&1 | FileCheck %s --check-prefix=STATIC_LEN
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - %t/static_len.f90 2>&1 \
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization -o - %t/static_len.f90 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=STATIC_LEN
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %t/dyn_len.f90 2>&1 | FileCheck %s --check-prefix=DYN_LEN
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - %t/dyn_len.f90 2>&1 \
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization -o - %t/dyn_len.f90 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=DYN_LEN
 
 !--- static_len.f90

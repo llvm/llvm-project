@@ -18,6 +18,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/ModuleMapFile.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -262,6 +263,18 @@ private:
   /// Describes whether we haved loaded a particular file as a module
   /// map.
   llvm::DenseMap<const FileEntry *, bool> LoadedModuleMap;
+  llvm::DenseMap<const FileEntry *, const modulemap::ModuleMapFile *>
+      ParsedModuleMap;
+
+  std::vector<std::unique_ptr<modulemap::ModuleMapFile>> ParsedModuleMaps;
+
+  /// Map from top level module name to a list of ModuleDecls in the order they
+  /// were discovered. This allows handling shadowing correctly and diagnosing
+  /// redefinitions.
+  llvm::StringMap<SmallVector<std::pair<const modulemap::ModuleMapFile *,
+                                        const modulemap::ModuleDecl *>,
+                              1>>
+      ParsedModules;
 
   /// Resolve the given export declaration into an actual export
   /// declaration.
@@ -478,6 +491,8 @@ public:
   /// \returns The named module, if known; otherwise, returns null.
   Module *findModule(StringRef Name) const;
 
+  Module *findOrLoadModule(StringRef Name);
+
   Module *findOrInferSubmodule(Module *Parent, StringRef Name);
 
   /// Retrieve a module with the given name using lexical name lookup,
@@ -693,6 +708,11 @@ public:
   void addHeader(Module *Mod, Module::Header Header,
                  ModuleHeaderRole Role, bool Imported = false);
 
+  /// Parse a module map without creating `clang::Module` instances.
+  bool parseModuleMapFile(FileEntryRef File, bool IsSystem,
+                          DirectoryEntryRef Dir, FileID ID = FileID(),
+                          SourceLocation ExternModuleLoc = SourceLocation());
+
   /// Load the given module map file, and record any modules we
   /// encounter.
   ///
@@ -713,10 +733,11 @@ public:
   ///        that caused us to load this module map file, if any.
   ///
   /// \returns true if an error occurred, false otherwise.
-  bool loadModuleMapFile(FileEntryRef File, bool IsSystem,
-                         DirectoryEntryRef HomeDir, FileID ID = FileID(),
-                         unsigned *Offset = nullptr,
-                         SourceLocation ExternModuleLoc = SourceLocation());
+  bool
+  parseAndLoadModuleMapFile(FileEntryRef File, bool IsSystem,
+                            DirectoryEntryRef HomeDir, FileID ID = FileID(),
+                            unsigned *Offset = nullptr,
+                            SourceLocation ExternModuleLoc = SourceLocation());
 
   /// Dump the contents of the module map, for debugging purposes.
   void dump();

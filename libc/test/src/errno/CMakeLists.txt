@@ -12,4 +12,5 @@ add_libc_unittest(
     errno_test.cpp
   DEPENDS
     libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
 )

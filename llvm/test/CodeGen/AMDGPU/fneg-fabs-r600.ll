@@ -176,5 +176,3 @@ declare float @llvm.fabs.f32(float) readnone
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>) readnone
 declare <4 x float> @llvm.fabs.v4f32(<4 x float>) readnone
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

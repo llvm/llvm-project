@@ -3,8 +3,8 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx900 --denormal-fp-math=preserve-sign < %s | FileCheck -check-prefix=GFX9-DENORM %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1010 -fp-contract=fast < %s | FileCheck -check-prefix=GFX10-CONTRACT %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1010 --denormal-fp-math=preserve-sign < %s | FileCheck -check-prefix=GFX10-DENORM %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -fp-contract=fast < %s | FileCheck -check-prefix=GFX11-CONTRACT %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 --denormal-fp-math=preserve-sign < %s | FileCheck -check-prefix=GFX11-DENORM %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -fp-contract=fast < %s | FileCheck -check-prefixes=GFX11-CONTRACT %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 --denormal-fp-math=preserve-sign < %s | FileCheck -check-prefixes=GFX11-DENORM %s
 
 ; fadd (fma a, b, (fmul c, d)), e --> fma a, b, (fma c, d, e)
 ; fadd e, (fma a, b, (fmul c, d)) --> fma a, b, (fma c, d, e)

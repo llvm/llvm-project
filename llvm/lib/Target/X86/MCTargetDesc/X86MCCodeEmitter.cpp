@@ -12,7 +12,7 @@
 
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86FixupKinds.h"
-#include "MCTargetDesc/X86MCExpr.h"
+#include "MCTargetDesc/X86MCAsmInfo.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -358,8 +358,8 @@ private:
 
   unsigned getX86RegEncoding(const MCInst &MI, unsigned OpNum) const;
 
-  void emitImmediate(const MCOperand &Disp, SMLoc Loc, unsigned ImmSize,
-                     MCFixupKind FixupKind, uint64_t StartByte,
+  void emitImmediate(const MCOperand &Disp, SMLoc Loc, unsigned FixupKind,
+                     bool IsPCRel, uint64_t StartByte,
                      SmallVectorImpl<char> &CB,
                      SmallVectorImpl<MCFixup> &Fixups, int ImmOffset = 0) const;
 
@@ -441,17 +441,26 @@ static bool isDispOrCDisp8(uint64_t TSFlags, int Value, int &ImmOffset) {
 /// instruction with the specified TSFlags.
 static MCFixupKind getImmFixupKind(uint64_t TSFlags) {
   unsigned Size = X86II::getSizeOfImm(TSFlags);
-  bool isPCRel = X86II::isImmPCRel(TSFlags);
-
   if (X86II::isImmSigned(TSFlags)) {
     switch (Size) {
     default:
       llvm_unreachable("Unsupported signed fixup size!");
     case 4:
-      return MCFixupKind(X86::reloc_signed_4byte);
+      return X86::reloc_signed_4byte;
     }
   }
-  return MCFixup::getKindForSize(Size, isPCRel);
+  switch (Size) {
+  default:
+    llvm_unreachable("Invalid generic fixup size!");
+  case 1:
+    return FK_Data_1;
+  case 2:
+    return FK_Data_2;
+  case 4:
+    return FK_Data_4;
+  case 8:
+    return FK_Data_8;
+  }
 }
 
 enum GlobalOffsetTableExprKind { GOT_None, GOT_Normal, GOT_SymDiff };
@@ -461,6 +470,9 @@ enum GlobalOffsetTableExprKind { GOT_None, GOT_Normal, GOT_SymDiff };
 /// ELF i386 as _GLOBAL_OFFSET_TABLE_ is magical. We check only simple case that
 /// are know to be used: _GLOBAL_OFFSET_TABLE_ by itself or at the start of a
 /// binary expression.
+///
+/// TODO: Move this to X86AsmBackend.cpp at relocation decision phase so that we
+/// don't have to mess with MCExpr.
 static GlobalOffsetTableExprKind
 startsWithGlobalOffsetTable(const MCExpr *Expr) {
   const MCExpr *RHS = nullptr;
@@ -485,7 +497,7 @@ startsWithGlobalOffsetTable(const MCExpr *Expr) {
 static bool hasSecRelSymbolRef(const MCExpr *Expr) {
   if (Expr->getKind() == MCExpr::SymbolRef) {
     auto *Ref = static_cast<const MCSymbolRefExpr *>(Expr);
-    return Ref->getKind() == MCSymbolRefExpr::VK_SECREL;
+    return Ref->getSpecifier() == X86::S_COFF_SECREL;
   }
   return false;
 }
@@ -495,7 +507,8 @@ static bool isPCRel32Branch(const MCInst &MI, const MCInstrInfo &MCII) {
   const MCInstrDesc &Desc = MCII.get(Opcode);
   if ((Opcode != X86::CALL64pcrel32 && Opcode != X86::JMP_4 &&
        Opcode != X86::JCC_4) ||
-      getImmFixupKind(Desc.TSFlags) != FK_PCRel_4)
+      !(getImmFixupKind(Desc.TSFlags) == FK_Data_4 &&
+        X86II::isImmPCRel(Desc.TSFlags)))
     return false;
 
   unsigned CurOp = X86II::getOperandBias(Desc);
@@ -504,7 +517,7 @@ static bool isPCRel32Branch(const MCInst &MI, const MCInstrInfo &MCII) {
     return false;
 
   auto *Ref = dyn_cast<MCSymbolRefExpr>(Op.getExpr());
-  return Ref && getSpecifier(Ref) == X86MCExpr::VK_None;
+  return Ref && Ref->getSpecifier() == X86::S_None;
 }
 
 unsigned X86MCCodeEmitter::getX86RegNum(const MCOperand &MO) const {
@@ -517,17 +530,29 @@ unsigned X86MCCodeEmitter::getX86RegEncoding(const MCInst &MI,
 }
 
 void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
-                                     unsigned Size, MCFixupKind FixupKind,
+                                     unsigned FixupKind, bool PCRel,
                                      uint64_t StartByte,
                                      SmallVectorImpl<char> &CB,
                                      SmallVectorImpl<MCFixup> &Fixups,
                                      int ImmOffset) const {
+  unsigned Size = 4;
+  switch (FixupKind) {
+  case FK_Data_1:
+    Size = 1;
+    break;
+  case FK_Data_2:
+    Size = 2;
+    break;
+  case FK_Data_8:
+    Size = 8;
+    break;
+  }
   const MCExpr *Expr = nullptr;
   if (DispOp.isImm()) {
     // If this is a simple integer displacement that doesn't require a
     // relocation, emit it now.
-    if (FixupKind != FK_PCRel_1 && FixupKind != FK_PCRel_2 &&
-        FixupKind != FK_PCRel_4) {
+    if (!(is_contained({FK_Data_1, FK_Data_2, FK_Data_4}, FixupKind) &&
+          PCRel)) {
       emitConstant(DispOp.getImm() + ImmOffset, Size, CB);
       return;
     }
@@ -538,65 +563,40 @@ void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
 
   // If we have an immoffset, add it to the expression.
   if ((FixupKind == FK_Data_4 || FixupKind == FK_Data_8 ||
-       FixupKind == MCFixupKind(X86::reloc_signed_4byte))) {
+       FixupKind == X86::reloc_signed_4byte)) {
     GlobalOffsetTableExprKind Kind = startsWithGlobalOffsetTable(Expr);
     if (Kind != GOT_None) {
       assert(ImmOffset == 0);
 
       if (Size == 8) {
-        FixupKind =
-            MCFixupKind(FirstLiteralRelocationKind + ELF::R_X86_64_GOTPC64);
+        FixupKind = FirstLiteralRelocationKind + ELF::R_X86_64_GOTPC64;
       } else {
         assert(Size == 4);
-        FixupKind = MCFixupKind(X86::reloc_global_offset_table);
+        FixupKind = X86::reloc_global_offset_table;
       }
 
       if (Kind == GOT_Normal)
         ImmOffset = static_cast<int>(CB.size() - StartByte);
     } else if (Expr->getKind() == MCExpr::SymbolRef) {
       if (hasSecRelSymbolRef(Expr)) {
-        FixupKind = MCFixupKind(FK_SecRel_4);
+        FixupKind = FK_SecRel_4;
       }
     } else if (Expr->getKind() == MCExpr::Binary) {
       const MCBinaryExpr *Bin = static_cast<const MCBinaryExpr *>(Expr);
       if (hasSecRelSymbolRef(Bin->getLHS()) ||
           hasSecRelSymbolRef(Bin->getRHS())) {
-        FixupKind = MCFixupKind(FK_SecRel_4);
+        FixupKind = FK_SecRel_4;
       }
     }
   }
 
-  // If the fixup is pc-relative, we need to bias the value to be relative to
-  // the start of the field, not the end of the field.
-  if (FixupKind == FK_PCRel_4 ||
-      FixupKind == MCFixupKind(X86::reloc_riprel_4byte) ||
-      FixupKind == MCFixupKind(X86::reloc_riprel_4byte_movq_load) ||
-      FixupKind == MCFixupKind(X86::reloc_riprel_4byte_movq_load_rex2) ||
-      FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax) ||
-      FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_rex) ||
-      FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_rex2) ||
-      FixupKind == MCFixupKind(X86::reloc_branch_4byte_pcrel) ||
-      FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_evex)) {
-    ImmOffset -= 4;
-    // If this is a pc-relative load off _GLOBAL_OFFSET_TABLE_:
-    // leaq _GLOBAL_OFFSET_TABLE_(%rip), %r15
-    // this needs to be a GOTPC32 relocation.
-    if (startsWithGlobalOffsetTable(Expr) != GOT_None)
-      FixupKind = MCFixupKind(X86::reloc_global_offset_table);
-  }
-
-  if (FixupKind == FK_PCRel_2)
-    ImmOffset -= 2;
-  if (FixupKind == FK_PCRel_1)
-    ImmOffset -= 1;
-
   if (ImmOffset)
     Expr = MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(ImmOffset, Ctx),
-                                   Ctx);
+                                   Ctx, Expr->getLoc());
 
-  // Emit a symbolic constant as a fixup and 4 zeros.
+  // Emit a symbolic constant as a fixup and a few zero bytes.
   Fixups.push_back(MCFixup::create(static_cast<uint32_t>(CB.size() - StartByte),
-                                   Expr, FixupKind, Loc));
+                                   Expr, FixupKind, PCRel));
   emitConstant(0, Size, CB);
 }
 
@@ -695,8 +695,8 @@ void X86MCCodeEmitter::emitMemModRMByte(
                       ? X86II::getSizeOfImm(TSFlags)
                       : 0;
 
-    emitImmediate(Disp, MI.getLoc(), 4, MCFixupKind(FixupKind), StartByte, CB,
-                  Fixups, -ImmSize);
+    emitImmediate(Disp, MI.getLoc(), FixupKind, true, StartByte, CB, Fixups,
+                  -ImmSize);
     return;
   }
 
@@ -750,7 +750,8 @@ void X86MCCodeEmitter::emitMemModRMByte(
         }
         // Use the [REG]+disp8 form, including for [BP] which cannot be encoded.
         emitByte(modRMByte(1, RegOpcodeField, RMfield), CB);
-        emitImmediate(Disp, MI.getLoc(), 1, FK_Data_1, StartByte, CB, Fixups);
+        emitImmediate(Disp, MI.getLoc(), FK_Data_1, false, StartByte, CB,
+                      Fixups);
         return;
       }
       // This is the [REG]+disp16 case.
@@ -762,7 +763,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
     }
 
     // Emit 16-bit displacement for plain disp16 or [REG]+disp16 cases.
-    emitImmediate(Disp, MI.getLoc(), 2, FK_Data_2, StartByte, CB, Fixups);
+    emitImmediate(Disp, MI.getLoc(), FK_Data_2, false, StartByte, CB, Fixups);
     return;
   }
 
@@ -780,7 +781,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
                                    STI.hasFeature(X86::Is64Bit))) {
     if (!BaseReg) { // [disp32]     in X86-32 mode
       emitByte(modRMByte(0, RegOpcodeField, 5), CB);
-      emitImmediate(Disp, MI.getLoc(), 4, FK_Data_4, StartByte, CB, Fixups);
+      emitImmediate(Disp, MI.getLoc(), FK_Data_4, false, StartByte, CB, Fixups);
       return;
     }
 
@@ -798,10 +799,10 @@ void X86MCCodeEmitter::emitMemModRMByte(
       // If the displacement is @tlscall, treat it as a zero.
       if (Disp.isExpr()) {
         auto *Sym = dyn_cast<MCSymbolRefExpr>(Disp.getExpr());
-        if (Sym && getSpecifier(Sym) == X86MCExpr::VK_TLSCALL) {
+        if (Sym && Sym->getSpecifier() == X86::S_TLSCALL) {
           // This is exclusively used by call *a@tlscall(base). The relocation
           // (R_386_TLSCALL or R_X86_64_TLSCALL) applies to the beginning.
-          Fixups.push_back(MCFixup::create(0, Sym, FK_NONE, MI.getLoc()));
+          Fixups.push_back(MCFixup::create(0, Sym, FK_NONE));
           emitByte(modRMByte(0, RegOpcodeField, BaseRegNo), CB);
           return;
         }
@@ -816,8 +817,8 @@ void X86MCCodeEmitter::emitMemModRMByte(
       int ImmOffset = 0;
       if (isDispOrCDisp8(TSFlags, Disp.getImm(), ImmOffset)) {
         emitByte(modRMByte(1, RegOpcodeField, BaseRegNo), CB);
-        emitImmediate(Disp, MI.getLoc(), 1, FK_Data_1, StartByte, CB, Fixups,
-                      ImmOffset);
+        emitImmediate(Disp, MI.getLoc(), FK_Data_1, false, StartByte, CB,
+                      Fixups, ImmOffset);
         return;
       }
     }
@@ -829,8 +830,8 @@ void X86MCCodeEmitter::emitMemModRMByte(
     unsigned Opcode = MI.getOpcode();
     unsigned FixupKind = Opcode == X86::MOV32rm ? X86::reloc_signed_4byte_relax
                                                 : X86::reloc_signed_4byte;
-    emitImmediate(Disp, MI.getLoc(), 4, MCFixupKind(FixupKind), StartByte, CB,
-                  Fixups);
+    emitImmediate(Disp, MI.getLoc(), MCFixupKind(FixupKind), false, StartByte,
+                  CB, Fixups);
     return;
   }
 
@@ -878,11 +879,11 @@ void X86MCCodeEmitter::emitMemModRMByte(
 
   // Do we need to output a displacement?
   if (ForceDisp8)
-    emitImmediate(Disp, MI.getLoc(), 1, FK_Data_1, StartByte, CB, Fixups,
+    emitImmediate(Disp, MI.getLoc(), FK_Data_1, false, StartByte, CB, Fixups,
                   ImmOffset);
   else if (ForceDisp32)
-    emitImmediate(Disp, MI.getLoc(), 4, MCFixupKind(X86::reloc_signed_4byte),
-                  StartByte, CB, Fixups);
+    emitImmediate(Disp, MI.getLoc(), X86::reloc_signed_4byte, false, StartByte,
+                  CB, Fixups);
 }
 
 /// Emit all instruction prefixes.
@@ -1046,9 +1047,6 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
 
   Prefix.setL(TSFlags & X86II::VEX_L);
   Prefix.setL2(TSFlags & X86II::EVEX_L2);
-  if ((TSFlags & X86II::EVEX_L2) && STI.hasFeature(X86::FeatureAVX512) &&
-      !STI.hasFeature(X86::FeatureEVEX512))
-    report_fatal_error("ZMM registers are not supported without EVEX512");
   switch (TSFlags & X86II::OpPrefixMask) {
   case X86II::PD:
     Prefix.setPP(0x1); // 66
@@ -1374,8 +1372,8 @@ PrefixKind X86MCCodeEmitter::emitREXPrefix(int MemOperand, const MCInst &MI,
       // handled as a special case here so that it also works for hand-written
       // assembly without the user needing to write REX, as with GNU as.
       const auto *Ref = dyn_cast<MCSymbolRefExpr>(MO.getExpr());
-      if (Ref && (getSpecifier(Ref) == X86MCExpr::VK_GOTTPOFF ||
-                  getSpecifier(Ref) == X86MCExpr::VK_TLSDESC)) {
+      if (Ref && (Ref->getSpecifier() == X86::S_GOTTPOFF ||
+                  Ref->getSpecifier() == X86::S_TLSDESC)) {
         Prefix.setLowerBound(REX);
       }
     }
@@ -1617,33 +1615,29 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
       break;
 
     const MCOperand &Op = MI.getOperand(CurOp++);
-    emitImmediate(Op, MI.getLoc(), X86II::getSizeOfImm(TSFlags),
-                  MCFixupKind(X86::reloc_branch_4byte_pcrel), StartByte, CB,
-                  Fixups);
+    emitImmediate(Op, MI.getLoc(), X86::reloc_branch_4byte_pcrel, true,
+                  StartByte, CB, Fixups);
     break;
   }
   case X86II::RawFrmMemOffs:
     emitByte(BaseOpcode, CB);
-    emitImmediate(MI.getOperand(CurOp++), MI.getLoc(),
-                  X86II::getSizeOfImm(TSFlags), getImmFixupKind(TSFlags),
-                  StartByte, CB, Fixups);
+    emitImmediate(MI.getOperand(CurOp++), MI.getLoc(), getImmFixupKind(TSFlags),
+                  X86II::isImmPCRel(TSFlags), StartByte, CB, Fixups);
     ++CurOp; // skip segment operand
     break;
   case X86II::RawFrmImm8:
     emitByte(BaseOpcode, CB);
-    emitImmediate(MI.getOperand(CurOp++), MI.getLoc(),
-                  X86II::getSizeOfImm(TSFlags), getImmFixupKind(TSFlags),
+    emitImmediate(MI.getOperand(CurOp++), MI.getLoc(), getImmFixupKind(TSFlags),
+                  X86II::isImmPCRel(TSFlags), StartByte, CB, Fixups);
+    emitImmediate(MI.getOperand(CurOp++), MI.getLoc(), FK_Data_1, false,
                   StartByte, CB, Fixups);
-    emitImmediate(MI.getOperand(CurOp++), MI.getLoc(), 1, FK_Data_1, StartByte,
-                  CB, Fixups);
     break;
   case X86II::RawFrmImm16:
     emitByte(BaseOpcode, CB);
-    emitImmediate(MI.getOperand(CurOp++), MI.getLoc(),
-                  X86II::getSizeOfImm(TSFlags), getImmFixupKind(TSFlags),
+    emitImmediate(MI.getOperand(CurOp++), MI.getLoc(), getImmFixupKind(TSFlags),
+                  X86II::isImmPCRel(TSFlags), StartByte, CB, Fixups);
+    emitImmediate(MI.getOperand(CurOp++), MI.getLoc(), FK_Data_2, false,
                   StartByte, CB, Fixups);
-    emitImmediate(MI.getOperand(CurOp++), MI.getLoc(), 2, FK_Data_2, StartByte,
-                  CB, Fixups);
     break;
 
   case X86II::AddRegFrm:
@@ -1996,7 +1990,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
       assert(Val < 16 && "Immediate operand value out of range");
       I8RegNum |= Val;
     }
-    emitImmediate(MCOperand::createImm(I8RegNum), MI.getLoc(), 1, FK_Data_1,
+    emitImmediate(MCOperand::createImm(I8RegNum), MI.getLoc(), FK_Data_1, false,
                   StartByte, CB, Fixups);
   } else {
     // If there is a remaining operand, it must be a trailing immediate. Emit it
@@ -2004,12 +1998,12 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     // (SSE4a extrq and insertq) have two trailing immediates.
 
     // Skip two trainling conditional operands encoded in EVEX prefix
-    unsigned RemaningOps = NumOps - CurOp - 2 * HasTwoConditionalOps;
-    while (RemaningOps) {
+    unsigned RemainingOps = NumOps - CurOp - 2 * HasTwoConditionalOps;
+    while (RemainingOps) {
       emitImmediate(MI.getOperand(CurOp++), MI.getLoc(),
-                    X86II::getSizeOfImm(TSFlags), getImmFixupKind(TSFlags),
-                    StartByte, CB, Fixups);
-      --RemaningOps;
+                    getImmFixupKind(Desc.TSFlags),
+                    X86II::isImmPCRel(Desc.TSFlags), StartByte, CB, Fixups);
+      --RemainingOps;
     }
     CurOp += 2 * HasTwoConditionalOps;
   }

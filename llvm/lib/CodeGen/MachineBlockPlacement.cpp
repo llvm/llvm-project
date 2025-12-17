@@ -104,6 +104,12 @@ static cl::opt<unsigned> MaxBytesForAlignmentOverride(
              "alignment"),
     cl::init(0), cl::Hidden);
 
+static cl::opt<unsigned> PredecessorLimit(
+    "block-placement-predecessor-limit",
+    cl::desc("For blocks with more predecessors, certain layout optimizations"
+             "will be disabled to prevent quadratic compile time."),
+    cl::init(1000), cl::Hidden);
+
 // FIXME: Find a good default for this flag and remove the flag.
 static cl::opt<unsigned> ExitBlockBias(
     "block-placement-exit-block-bias",
@@ -1024,12 +1030,17 @@ bool MachineBlockPlacement::isTrellis(
   if (BB->succ_size() != 2 || ViableSuccs.size() != 2)
     return false;
 
-  SmallPtrSet<const MachineBasicBlock *, 2> Successors(BB->succ_begin(),
-                                                       BB->succ_end());
+  SmallPtrSet<const MachineBasicBlock *, 2> Successors(llvm::from_range,
+                                                       BB->successors());
   // To avoid reviewing the same predecessors twice.
   SmallPtrSet<const MachineBasicBlock *, 8> SeenPreds;
 
   for (MachineBasicBlock *Succ : ViableSuccs) {
+    // Compile-time optimization: runtime is quadratic in the number of
+    // predecessors. For such uncommon cases, exit early.
+    if (Succ->pred_size() > PredecessorLimit)
+      return false;
+
     int PredCount = 0;
     for (auto *SuccPred : Succ->predecessors()) {
       // Allow triangle successors, but don't count them.
@@ -1117,8 +1128,8 @@ MachineBlockPlacement::getBestTrellisSuccessor(
     const BlockFilterSet *BlockFilter) {
 
   BlockAndTailDupResult Result = {nullptr, false};
-  SmallPtrSet<const MachineBasicBlock *, 4> Successors(BB->succ_begin(),
-                                                       BB->succ_end());
+  SmallPtrSet<const MachineBasicBlock *, 4> Successors(llvm::from_range,
+                                                       BB->successors());
 
   // We assume size 2 because it's common. For general n, we would have to do
   // the Hungarian algorithm, but it's not worth the complexity because more
@@ -1132,11 +1143,13 @@ MachineBlockPlacement::getBestTrellisSuccessor(
   for (auto *Succ : ViableSuccs) {
     for (MachineBasicBlock *SuccPred : Succ->predecessors()) {
       // Skip any placed predecessors that are not BB
-      if (SuccPred != BB)
-        if ((BlockFilter && !BlockFilter->count(SuccPred)) ||
-            BlockToChain[SuccPred] == &Chain ||
-            BlockToChain[SuccPred] == BlockToChain[Succ])
+      if (SuccPred != BB) {
+        if (BlockFilter && !BlockFilter->count(SuccPred))
           continue;
+        const BlockChain *SuccPredChain = BlockToChain[SuccPred];
+        if (SuccPredChain == &Chain || SuccPredChain == BlockToChain[Succ])
+          continue;
+      }
       BlockFrequency EdgeFreq = MBFI->getBlockFreq(SuccPred) *
                                 MBPI->getEdgeProbability(SuccPred, Succ);
       Edges[SuccIndex].push_back({EdgeFreq, SuccPred, Succ});
@@ -1207,8 +1220,8 @@ bool MachineBlockPlacement::canTailDuplicateUnplacedPreds(
   unsigned int NumDup = 0;
 
   // For CFG checking.
-  SmallPtrSet<const MachineBasicBlock *, 4> Successors(BB->succ_begin(),
-                                                       BB->succ_end());
+  SmallPtrSet<const MachineBasicBlock *, 4> Successors(llvm::from_range,
+                                                       BB->successors());
   for (MachineBasicBlock *Pred : Succ->predecessors()) {
     // Make sure all unplaced and unfiltered predecessors can be
     // tail-duplicated into.
@@ -1468,6 +1481,11 @@ bool MachineBlockPlacement::hasBetterLayoutPredecessor(
 
   // There isn't a better layout when there are no unscheduled predecessors.
   if (SuccChain.UnscheduledPredecessors == 0)
+    return false;
+
+  // Compile-time optimization: runtime is quadratic in the number of
+  // predecessors. For such uncommon cases, exit early.
+  if (Succ->pred_size() > PredecessorLimit)
     return false;
 
   // There are two basic scenarios here:
@@ -3210,13 +3228,9 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
     // Signal to outer function
     Removed = true;
 
-    // Conservative default.
-    bool InWorkList = true;
     // Remove from the Chain and Chain Map
     if (auto It = BlockToChain.find(RemBB); It != BlockToChain.end()) {
-      BlockChain *Chain = It->second;
-      InWorkList = Chain->UnscheduledPredecessors == 0;
-      Chain->remove(RemBB);
+      It->second->remove(RemBB);
       BlockToChain.erase(It);
     }
 
@@ -3226,11 +3240,10 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
     }
 
     // Handle the Work Lists
-    if (InWorkList) {
-      SmallVectorImpl<MachineBasicBlock *> &RemoveList = BlockWorkList;
-      if (RemBB->isEHPad())
-        RemoveList = EHPadWorkList;
-      llvm::erase(RemoveList, RemBB);
+    if (RemBB->isEHPad()) {
+      llvm::erase(EHPadWorkList, RemBB);
+    } else {
+      llvm::erase(BlockWorkList, RemBB);
     }
 
     // Handle the filter set
@@ -3837,7 +3850,7 @@ namespace {
 /// placement. This is separate from the actual placement pass so that they can
 /// be computed in the absence of any placement transformations or when using
 /// alternative placement strategies.
-class MachineBlockPlacementStats : public MachineFunctionPass {
+class MachineBlockPlacementStats {
   /// A handle to the branch probability pass.
   const MachineBranchProbabilityInfo *MBPI;
 
@@ -3845,13 +3858,27 @@ class MachineBlockPlacementStats : public MachineFunctionPass {
   const MachineBlockFrequencyInfo *MBFI;
 
 public:
+  MachineBlockPlacementStats(const MachineBranchProbabilityInfo *MBPI,
+                             const MachineBlockFrequencyInfo *MBFI)
+      : MBPI(MBPI), MBFI(MBFI) {}
+  bool run(MachineFunction &MF);
+};
+
+class MachineBlockPlacementStatsLegacy : public MachineFunctionPass {
+public:
   static char ID; // Pass identification, replacement for typeid
 
-  MachineBlockPlacementStats() : MachineFunctionPass(ID) {
-    initializeMachineBlockPlacementStatsPass(*PassRegistry::getPassRegistry());
+  MachineBlockPlacementStatsLegacy() : MachineFunctionPass(ID) {
+    initializeMachineBlockPlacementStatsLegacyPass(
+        *PassRegistry::getPassRegistry());
   }
 
-  bool runOnMachineFunction(MachineFunction &F) override;
+  bool runOnMachineFunction(MachineFunction &F) override {
+    auto *MBPI =
+        &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+    auto *MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+    return MachineBlockPlacementStats(MBPI, MBFI).run(F);
+  }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
@@ -3863,27 +3890,34 @@ public:
 
 } // end anonymous namespace
 
-char MachineBlockPlacementStats::ID = 0;
+char MachineBlockPlacementStatsLegacy::ID = 0;
 
-char &llvm::MachineBlockPlacementStatsID = MachineBlockPlacementStats::ID;
+char &llvm::MachineBlockPlacementStatsID = MachineBlockPlacementStatsLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(MachineBlockPlacementStats, "block-placement-stats",
+INITIALIZE_PASS_BEGIN(MachineBlockPlacementStatsLegacy, "block-placement-stats",
                       "Basic Block Placement Stats", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
-INITIALIZE_PASS_END(MachineBlockPlacementStats, "block-placement-stats",
+INITIALIZE_PASS_END(MachineBlockPlacementStatsLegacy, "block-placement-stats",
                     "Basic Block Placement Stats", false, false)
 
-bool MachineBlockPlacementStats::runOnMachineFunction(MachineFunction &F) {
+PreservedAnalyses
+MachineBlockPlacementStatsPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &MFAM) {
+  auto &MBPI = MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
+  auto &MBFI = MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+
+  MachineBlockPlacementStats(&MBPI, &MBFI).run(MF);
+  return PreservedAnalyses::all();
+}
+
+bool MachineBlockPlacementStats::run(MachineFunction &F) {
   // Check for single-block functions and skip them.
   if (std::next(F.begin()) == F.end())
     return false;
 
   if (!isFunctionInPrintList(F.getName()))
     return false;
-
-  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
-  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
 
   for (MachineBasicBlock &MBB : F) {
     BlockFrequency BlockFreq = MBFI->getBlockFreq(&MBB);

@@ -11,16 +11,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Hash.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/xxhash.h"
 
 using namespace llvm;
 
@@ -207,10 +208,16 @@ void llvm::setKCFIType(Module &M, Function &F, StringRef MangledType) {
   std::string Type = MangledType.str();
   if (M.getModuleFlag("cfi-normalize-integers"))
     Type += ".normalized";
+
+  // Determine which hash algorithm to use
+  auto *MD = dyn_cast_or_null<MDString>(M.getModuleFlag("kcfi-hash"));
+  KCFIHashAlgorithm Algorithm =
+      parseKCFIHashAlgorithm(MD ? MD->getString() : "");
+
   F.setMetadata(LLVMContext::MD_kcfi_type,
                 MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
                                      Type::getInt32Ty(Ctx),
-                                     static_cast<uint32_t>(xxHash64(Type))))));
+                                     getKCFITypeID(Type, Algorithm)))));
   // If the module was compiled with -fpatchable-function-entry, ensure
   // we use the same patchable-function-prefix.
   if (auto *MD = mdconst::extract_or_null<ConstantInt>(
@@ -345,27 +352,26 @@ void llvm::filterDeadComdatFunctions(
 
 std::string llvm::getUniqueModuleId(Module *M) {
   MD5 Md5;
-  bool ExportsSymbols = false;
-  auto AddGlobal = [&](GlobalValue &GV) {
-    if (GV.isDeclaration() || GV.getName().starts_with("llvm.") ||
-        !GV.hasExternalLinkage() || GV.hasComdat())
-      return;
-    ExportsSymbols = true;
-    Md5.update(GV.getName());
-    Md5.update(ArrayRef<uint8_t>{0});
-  };
 
-  for (auto &F : *M)
-    AddGlobal(F);
-  for (auto &GV : M->globals())
-    AddGlobal(GV);
-  for (auto &GA : M->aliases())
-    AddGlobal(GA);
-  for (auto &IF : M->ifuncs())
-    AddGlobal(IF);
+  auto *UniqueSourceFileIdentifier = dyn_cast_or_null<MDNode>(
+      M->getModuleFlag("Unique Source File Identifier"));
+  if (UniqueSourceFileIdentifier) {
+    Md5.update(
+        cast<MDString>(UniqueSourceFileIdentifier->getOperand(0))->getString());
+  } else {
+    bool ExportsSymbols = false;
+    for (auto &GV : M->global_values()) {
+      if (GV.isDeclaration() || GV.getName().starts_with("llvm.") ||
+          !GV.hasExternalLinkage() || GV.hasComdat())
+        continue;
+      ExportsSymbols = true;
+      Md5.update(GV.getName());
+      Md5.update(ArrayRef<uint8_t>{0});
+    }
 
-  if (!ExportsSymbols)
-    return "";
+    if (!ExportsSymbols)
+      return "";
+  }
 
   MD5::MD5Result R;
   Md5.final(R);

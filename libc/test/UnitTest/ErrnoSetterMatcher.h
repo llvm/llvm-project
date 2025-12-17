@@ -12,9 +12,9 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/StringUtil/error_to_string.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
-#include "src/errno/libc_errno.h"
 #include "test/UnitTest/Test.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -114,8 +114,8 @@ public:
 
   bool match(T got) {
     actual_return = got;
-    actual_errno = LIBC_NAMESPACE::libc_errno;
-    LIBC_NAMESPACE::libc_errno = 0;
+    actual_errno = libc_errno;
+    libc_errno = 0;
     if constexpr (ignore_errno())
       return return_cmp.compare(actual_return);
     else

@@ -69,15 +69,15 @@ private:
   Value extractField(OpBuilder &builder, Location loc,
                      ArrayRef<int64_t> indices) const {
     return genCast(builder, loc,
-                   builder.create<LLVM::ExtractValueOp>(loc, value, indices),
+                   LLVM::ExtractValueOp::create(builder, loc, value, indices),
                    builder.getIndexType());
   }
 
   void insertField(OpBuilder &builder, Location loc, ArrayRef<int64_t> indices,
                    Value v) {
-    value = builder.create<LLVM::InsertValueOp>(
-        loc, value, genCast(builder, loc, v, builder.getIntegerType(64)),
-        indices);
+    value = LLVM::InsertValueOp::create(
+        builder, loc, value,
+        genCast(builder, loc, v, builder.getIntegerType(64)), indices);
   }
 
 public:
@@ -110,7 +110,7 @@ public:
 
 Value SpecifierStructBuilder::getInitValue(OpBuilder &builder, Location loc,
                                            Type structType, Value source) {
-  Value metaData = builder.create<LLVM::PoisonOp>(loc, structType);
+  Value metaData = LLVM::PoisonOp::create(builder, loc, structType);
   SpecifierStructBuilder md(metaData);
   if (!source) {
     auto memSizeArrayType =
@@ -204,15 +204,15 @@ void SpecifierStructBuilder::setMemSize(OpBuilder &builder, Location loc,
 /// Builds IR extracting the memory size array from the descriptor.
 Value SpecifierStructBuilder::memSizeArray(OpBuilder &builder,
                                            Location loc) const {
-  return builder.create<LLVM::ExtractValueOp>(loc, value,
-                                              kMemSizePosInSpecifier);
+  return LLVM::ExtractValueOp::create(builder, loc, value,
+                                      kMemSizePosInSpecifier);
 }
 
 /// Builds IR inserting the memory size array into the descriptor.
 void SpecifierStructBuilder::setMemSizeArray(OpBuilder &builder, Location loc,
                                              Value array) {
-  value = builder.create<LLVM::InsertValueOp>(loc, value, array,
-                                              kMemSizePosInSpecifier);
+  value = LLVM::InsertValueOp::create(builder, loc, value, array,
+                                      kMemSizePosInSpecifier);
 }
 
 } // namespace

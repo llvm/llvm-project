@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVTargetObjectFile.h"
-#include "MCTargetDesc/RISCVMCExpr.h"
 #include "MCTargetDesc/RISCVMCObjectFileInfo.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -27,7 +26,7 @@ void RISCVELFTargetObjectFile::Initialize(MCContext &Ctx,
                                           const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
 
-  PLTRelativeSpecifier = RISCVMCExpr::VK_PLT;
+  PLTPCRelativeSpecifier = ELF::R_RISCV_PLT32;
   SupportIndirectSymViaGOTPCRel = true;
 
   SmallDataSection = getContext().getELFSection(
@@ -49,11 +48,11 @@ void RISCVELFTargetObjectFile::Initialize(MCContext &Ctx,
 const MCExpr *RISCVELFTargetObjectFile::getIndirectSymViaGOTPCRel(
     const GlobalValue *GV, const MCSymbol *Sym, const MCValue &MV,
     int64_t Offset, MachineModuleInfo *MMI, MCStreamer &Streamer) const {
-  int64_t FinalOffset = Offset + MV.getConstant();
-  const MCExpr *Res =
-      MCSymbolRefExpr::create(Sym, RISCVMCExpr::VK_GOTPCREL, getContext());
-  const MCExpr *Off = MCConstantExpr::create(FinalOffset, getContext());
-  return MCBinaryExpr::createAdd(Res, Off, getContext());
+  auto &Ctx = getContext();
+  const MCExpr *Res = MCSymbolRefExpr::create(Sym, Ctx);
+  Res = MCBinaryExpr::createAdd(
+      Res, MCConstantExpr::create(Offset + MV.getConstant(), Ctx), Ctx);
+  return MCSpecifierExpr::create(Res, ELF::R_RISCV_GOT32_PCREL, Ctx);
 }
 
 // A address must be loaded from a small section if its size is less than the

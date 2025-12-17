@@ -78,8 +78,7 @@ void IRInstructionData::initializeInstruction() {
   // We capture the incoming BasicBlocks as values as well as the incoming
   // Values in order to check for structural similarity.
   if (PHINode *PN = dyn_cast<PHINode>(Inst))
-    for (BasicBlock *BB : PN->blocks())
-      OperVals.push_back(BB);
+    llvm::append_range(OperVals, PN->blocks());
 }
 
 IRInstructionData::IRInstructionData(IRInstructionDataList &IDList)
@@ -1307,12 +1306,11 @@ static void findCandidateStructures(
        CandIt != CandEndIt; CandIt++) {
 
     // Determine if it has an assigned structural group already.
-    CandToGroupIt = CandToGroup.find(&*CandIt);
-    if (CandToGroupIt == CandToGroup.end()) {
-      // If not, we assign it one, and add it to our mapping.
-      std::tie(CandToGroupIt, Inserted) =
-          CandToGroup.insert(std::make_pair(&*CandIt, CurrentGroupNum++));
-    }
+    // If not, we assign it one, and add it to our mapping.
+    std::tie(CandToGroupIt, Inserted) =
+        CandToGroup.try_emplace(&*CandIt, CurrentGroupNum);
+    if (Inserted)
+      ++CurrentGroupNum;
 
     // Get the structural group number from the iterator.
     OuterGroupNum = CandToGroupIt->second;
@@ -1473,10 +1471,7 @@ INITIALIZE_PASS(IRSimilarityIdentifierWrapperPass, "ir-similarity-identifier",
                 "ir-similarity-identifier", false, true)
 
 IRSimilarityIdentifierWrapperPass::IRSimilarityIdentifierWrapperPass()
-    : ModulePass(ID) {
-  initializeIRSimilarityIdentifierWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : ModulePass(ID) {}
 
 bool IRSimilarityIdentifierWrapperPass::doInitialization(Module &M) {
   IRSI.reset(new IRSimilarityIdentifier(!DisableBranches, !DisableIndirectCalls,

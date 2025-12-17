@@ -15,7 +15,7 @@ class MultipleHitsTestCase(TestBase):
     @skipIf(
         bugnumber="llvm.org/pr30758",
         oslist=["linux"],
-        archs=["arm", "aarch64", "powerpc64le"],
+        archs=["arm$", "aarch64", "powerpc64le"],
     )
     @skipIfwatchOS
     def test(self):

@@ -17,7 +17,7 @@
 HIP Support
 =============
 
-HIP (Heterogeneous-Compute Interface for Portability) `<https://github.com/ROCm-Developer-Tools/HIP>`_ is
+HIP (Heterogeneous-Compute Interface for Portability) `<https://github.com/ROCm/HIP>`_ is
 a C++ Runtime API and Kernel Language. It enables developers to create portable applications for
 offloading computation to different hardware platforms from a single source code.
 
@@ -41,9 +41,9 @@ backend or the out-of-tree LLVM-SPIRV translator. The SPIR-V is then bundled and
 .. note::
    While Clang does not directly provide HIP support for NVIDIA GPUs and CPUs, these platforms are supported via other means:
 
-   - NVIDIA GPUs: HIP support is offered through the HIP project `<https://github.com/ROCm-Developer-Tools/HIP>`_, which provides a header-only library for translating HIP runtime APIs into CUDA runtime APIs. The code is subsequently compiled using NVIDIA's `nvcc`.
+   - NVIDIA GPUs: HIP support is offered through the HIP project `<https://github.com/ROCm/HIP>`_, which provides a header-only library for translating HIP runtime APIs into CUDA runtime APIs. The code is subsequently compiled using NVIDIA's `nvcc`.
 
-   - CPUs: HIP support is available through the HIP-CPU runtime library `<https://github.com/ROCm-Developer-Tools/HIP-CPU>`_. This header-only library enables CPUs to execute unmodified HIP code.
+   - CPUs: HIP support is available through the HIP-CPU runtime library `<https://github.com/ROCm/HIP-CPU>`_. This header-only library enables CPUs to execute unmodified HIP code.
 
 
 Example Usage
@@ -164,6 +164,8 @@ Predefined Macros
      - Represents wavefront memory scope in HIP (value is 2).
    * - ``__HIP_MEMORY_SCOPE_WORKGROUP``
      - Represents workgroup memory scope in HIP (value is 3).
+   * - ``__HIP_MEMORY_SCOPE_CLUSTER``
+     - Represents cluster memory scope in HIP (value is 6).
    * - ``__HIP_MEMORY_SCOPE_AGENT``
      - Represents agent memory scope in HIP (value is 4).
    * - ``__HIP_MEMORY_SCOPE_SYSTEM``
@@ -178,8 +180,7 @@ Predefined Macros
      - Alias to ``__HIP_API_PER_THREAD_DEFAULT_STREAM__``. Deprecated.
 
 Note that some architecture specific AMDGPU macros will have default values when
-used from the HIP host compilation. Other :doc:`AMDGPU macros <AMDGPUSupport>`
-like ``__AMDGCN_WAVEFRONT_SIZE__`` (deprecated) will default to 64 for example.
+used from the HIP host compilation.
 
 Compilation Modes
 =================
@@ -208,6 +209,95 @@ Host Code Compilation
 - Compiles to a relocatable object for each TU.
 - These relocatable objects are then linked together.
 - Host code within a TU can call host functions and launch kernels from another TU.
+
+HIP Fat Binary Registration and Unregistration
+==============================================
+
+When compiling HIP for AMD GPUs, Clang embeds device code into HIP "fat
+binaries" and generates host-side helper functions that register these
+fat binaries with the HIP runtime at program start and unregister them at
+program exit. In non-RDC mode (``-fno-gpu-rdc``), each compilation unit
+typically produces its own HIP fat binary: a container that holds, for every
+enabled GPU architecture, a fully linked offloading device image (for example,
+a GPU code object) that can be loaded directly by the HIP runtime. In RDC mode
+(``-fgpu-rdc``), each compilation unit contributes device code in a relocatable
+form (for example, GPU object files or LLVM IR). A later device-link step links
+those relocatable inputs into fully linked device images per GPU architecture
+and then packages those images into a HIP fat binary container.
+
+Registering a HIP fat binary allows the runtime to discover the kernels and
+device variables defined in that container and to associate host-side addresses
+and symbols with the corresponding GPU-side entities. For example, when a
+host-side kernel launch stub is called, the HIP runtime uses information
+established during registration (and the fat binary handle it returned) to
+identify which GPU kernel symbol to launch from which device image.
+
+At the LLVM IR level, Clang/LLVM typically create an internal module
+constructor (for example ``__hip_module_ctor`` or a ``.hip.fatbin_reg``
+function) and add it to ``@llvm.global_ctors``. This constructor is called by
+the C runtime before ``main`` and it:
+
+* calls ``__hipRegisterFatBinary`` with a pointer to an internal wrapper
+  object that describes the HIP fat binary;
+* stores the returned handle in an internal global variable;
+* calls an internal helper such as ``__hip_register_globals`` to register
+  kernels, device variables and other metadata associated with the fat binary;
+* registers a corresponding module destructor with ``atexit`` so it will run
+  during program termination and use the stored handle to unregister the fat
+  binary from the HIP runtime.
+
+The module destructor (for example ``__hip_module_dtor`` or a
+``.hip.fatbin_unreg`` function) loads the stored handle, checks that it is
+non-null, calls ``__hipUnregisterFatBinary`` to unregister the fat binary from
+the HIP runtime, and then clears the handle. This ensures that the HIP runtime
+sees each fat binary registered exactly once and that it is unregistered once
+at exit, even when multiple translation units contribute HIP kernels to the
+same host program.
+
+These registration/unregistration helpers are implementation details of Clang's
+HIP code generation; user code should not call ``__hipRegisterFatBinary`` or
+``__hipUnregisterFatBinary`` directly.
+
+Implications for HIP Application Developers
+-------------------------------------------
+
+From the point of view of HIP application code, Clang and the HIP runtime
+provide the following guarantees:
+
+* Kernels and device variables defined in HIP code will be registered with the
+  HIP runtime before ``main`` begins execution.
+* Fat binaries will be unregistered via an ``atexit``-registered module
+  destructor after ``main`` returns (or after ``exit`` is called).
+
+Beyond these points, the detailed ordering of fat binary registration and
+unregistration relative to user-defined global constructors, destructors and
+other ``atexit`` handlers is not specified and should not be relied upon.
+Applications should avoid depending on HIP kernels or device variables being
+usable from global constructors or destructors, and instead perform HIP
+initialization and teardown that touches device state in ``main`` (or in
+functions called from ``main``).
+
+Implications for HIP Runtime Developers
+---------------------------------------
+
+HIP runtime implementations that are linked with Clang-generated host code
+must handle registration and unregistration in the presence of uncertain
+global ctor/dtor ordering:
+
+* ``__hipRegisterFatBinary`` must accept a pointer to the compiler-generated
+  wrapper object and return an opaque handle that remains valid for as long as
+  the fat binary may be used.
+* ``__hipUnregisterFatBinary`` must accept the handle previously returned by
+  ``__hipRegisterFatBinary`` and perform any necessary cleanup. It may be
+  called late in process teardown, after other parts of the runtime have
+  started shutting down, so it should be robust in the presence of partially
+  torn-down state.
+* Runtimes should use appropriate synchronization and guards so that fat
+  binary registration does not observe uninitialized resources and
+  unregistration does not release resources that are still required by other
+  runtime components. In particular, registration and unregistration routines
+  should be written to be safe under repeated calls and in the presence of
+  concurrent or overlapping initialization/teardown logic.
 
 Syntax Difference with CUDA
 ===========================
@@ -259,7 +349,7 @@ In other scenarios, calling virtual functions is not allowed.
 Explanation
 -----------
 
-An object constructed on the device side contains a pointer to the virtual function table on the device side, which is not accessible in host code, and vice versa. Thus, trying to invoke virtual functions from a context different from where the object was constructed will be disallowed because the appropriate virtual table cannot be accessed. The virtual function tables for offloading devices with different architecures are different, therefore trying to invoke virtual functions from an offloading device with a different architecture than where the object is constructed is also disallowed.
+An object constructed on the device side contains a pointer to the virtual function table on the device side, which is not accessible in host code, and vice versa. Thus, trying to invoke virtual functions from a context different from where the object was constructed will be disallowed because the appropriate virtual table cannot be accessed. The virtual function tables for offloading devices with different architectures are different, therefore trying to invoke virtual functions from an offloading device with a different architecture than where the object is constructed is also disallowed.
 
 Example Usage
 -------------
@@ -285,6 +375,94 @@ Example Usage
       Base* basePtr = &obj;
       basePtr->virtualFunction(); // Allowed since obj is constructed in device code
    }
+
+Alias Attribute Support
+=======================
+
+Clang supports alias attributes in HIP code, allowing creation of alternative names for functions and variables. 
+ - Aliases work with ``__host__``, ``__device__``, and ``__host__ __device__`` functions and variables.
+ - The alias attribute uses the syntax ``__attribute__((alias("target_name")))``. Both weak and strong aliases are supported.
+ - Outside of ``extern "C"``, the alias target must use the mangled name of the aliasee
+ - The alias is only emitted if the aliasee is emitted on the same side (ie __host__ or __device__), otherwise it is ignored.
+
+Example Usage
+-------------
+
+.. code-block:: c++
+
+   extern "C" {
+     // Host function alias
+     int __HostFunc(void) { return 0; }
+     int HostFunc(void) __attribute__((weak, alias("__HostFunc")));
+
+     // Device function alias
+     __device__ int __DeviceFunc(void) { return 1; }
+     __device__ int DeviceFunc(void) __attribute__((weak, alias("__DeviceFunc")));
+
+     // Host-device function alias
+     __host__ __device__ int __BothFunc(void) { return 2; }
+     __host__ __device__ int BothFunc(void) __attribute__((alias("__BothFunc")));
+
+     // Variable alias
+     int __host_var = 3;
+     extern int __attribute__((weak, alias("__host_var"))) host_var;
+   }
+   // Mangled / overload alias
+   __host__ __device__ float __Four(float f) { return 2.0f * f; }
+   __host__ __device__ int Four(void) __attribute__((weak, alias("_Z6__Fourv")));
+   __host__ __device__ float Four(float f) __attribute__((weak, alias("_Z6__Fourf")));
+
+C++17 Class Template Argument Deduction (CTAD) Support
+======================================================
+
+Clang supports C++17 Class Template Argument Deduction (CTAD) in both host and
+device code for HIP. This allows you to omit template arguments when creating
+class template instances, letting the compiler deduce them from constructor
+arguments.
+
+.. code-block:: c++
+
+   #include <tuple>
+
+   __host__ __device__ void func() {
+     std::tuple<int, int> t = std::tuple(1, 1);
+   }
+
+In the above example, ``std::tuple(1, 1)`` automatically deduces the type to be
+``std::tuple<int, int>``.
+
+Deduction Guides
+----------------
+
+User-defined deduction guides are also supported. Since deduction guides are not
+executable code and only participate in type deduction, they semantically behave
+as ``__host__ __device__``. This ensures they are available for deduction in both
+host and device contexts, and CTAD continues to respect any constraints on the
+corresponding constructors in the usual C++ way.
+
+.. code-block:: c++
+
+   template <typename T>
+   struct MyType {
+     T value;
+     __device__ MyType(T v) : value(v) {}
+   };
+
+   MyType(float) -> MyType<double>;
+
+   __device__ void deviceFunc() {
+     MyType m(1.0f); // Deduces MyType<double>
+   }
+
+.. note::
+
+   Explicit HIP target attributes such as ``__host__`` or ``__device__``
+   are currently only permitted on deduction guides when both are present
+   (``__host__ __device__``). This usage is deprecated and will be rejected
+   in a future version of Clang; prefer omitting HIP target attributes on
+   deduction guides entirely. Clang treats all deduction guides as if they
+   were ``__host__ __device__``, so ``__host__``-only, ``__device__``-only,
+   or ``__global__`` deduction guides are rejected as ill-formed.
 
 Host and Device Attributes of Default Destructors
 ===================================================
@@ -328,7 +506,7 @@ The `parallel_unsequenced_policy <https://en.cppreference.com/w/cpp/algorithm/ex
 maps relatively well to the execution model of AMD GPUs. This, coupled with the
 the availability and maturity of GPU accelerated algorithm libraries that
 implement most / all corresponding algorithms in the standard library
-(e.g. `rocThrust <https://github.com/ROCmSoftwarePlatform/rocThrust>`__), makes
+(e.g. `rocThrust <https://github.com/ROCm/rocm-libraries/tree/develop/projects/rocthrust>`__), makes
 it feasible to provide seamless accelerator offload for supported algorithms,
 when an accelerated version exists. Thus, it becomes possible to easily access
 the computational resources of an AMD accelerator, via a well specified,
@@ -483,7 +661,7 @@ such as GPUs, work.
      allocation / deallocation functions with accelerator-aware equivalents,
      based on a pre-established table; the list of functions that can be
      interposed is available
-     `here <https://github.com/ROCmSoftwarePlatform/roc-stdpar#allocation--deallocation-interposition-status>`__;
+     `here <https://github.com/ROCm/roc-stdpar#allocation--deallocation-interposition-status>`__;
    - This is only run when compiling for the host.
 
 The second pass is optional.
@@ -518,7 +696,7 @@ Predefined Macros
    * - ``__HIPSTDPAR__``
      - Defined when Clang is compiling code in algorithm offload mode, enabled
        with the ``--hipstdpar`` compiler option.
-   * - ``__HIPSTDPAR_INTERPOSE_ALLOC__``
+   * - ``__HIPSTDPAR_INTERPOSE_ALLOC__`` / ``__HIPSTDPAR_INTERPOSE_ALLOC_V1__``
      - Defined only when compiling in algorithm offload mode, when the user
        enables interposition mode with the ``--hipstdpar-interpose-alloc``
        compiler option, indicating that all dynamic memory allocation /
@@ -545,37 +723,22 @@ The following restrictions imposed on user code apply to both modes:
 1. Pointers to function, and all associated features, such as e.g. dynamic
    polymorphism, cannot be used (directly or transitively) by the user provided
    callable passed to an algorithm invocation;
-2. Global / namespace scope / ``static`` / ``thread`` storage duration variables
-   cannot be used (directly or transitively) in name by the user provided
-   callable;
-
-   - When executing in **HMM Mode** they can be used in address e.g.:
-
-     .. code-block:: C++
-
-        namespace { int foo = 42; }
-
-        bool never(const std::vector<int>& v) {
-          return std::any_of(std::execution::par_unseq, std::cbegin(v), std::cend(v), [](auto&& x) {
-            return x == foo;
-          });
-        }
-
-        bool only_in_hmm_mode(const std::vector<int>& v) {
-          return std::any_of(std::execution::par_unseq, std::cbegin(v), std::cend(v),
-                             [p = &foo](auto&& x) { return x == *p; });
-        }
-
-3. Only algorithms that are invoked with the ``parallel_unsequenced_policy`` are
+2. ``static`` (except for program-wide unique ones) / ``thread`` storage
+   duration variables cannot be used (directly or transitively) in name by the
+   user provided callable;
+3. User code must be compiled in ``-fgpu-rdc`` mode in order for global /
+   namespace scope variables / program-wide unique ``static`` storage duration
+   variables to be usable in name by the user provided callable;
+4. Only algorithms that are invoked with the ``parallel_unsequenced_policy`` are
    candidates for offload;
-4. Only algorithms that are invoked with iterator arguments that model
+5. Only algorithms that are invoked with iterator arguments that model
    `random_access_iterator <https://en.cppreference.com/w/cpp/iterator/random_access_iterator>`_
    are candidates for offload;
-5. `Exceptions <https://en.cppreference.com/w/cpp/language/exceptions>`_ cannot
+6. `Exceptions <https://en.cppreference.com/w/cpp/language/exceptions>`_ cannot
    be used by the user provided callable;
-6. Dynamic memory allocation (e.g. ``operator new``) cannot be used by the user
+7. Dynamic memory allocation (e.g. ``operator new``) cannot be used by the user
    provided callable;
-7. Selective offload is not possible i.e. it is not possible to indicate that
+8. Selective offload is not possible i.e. it is not possible to indicate that
    only some algorithms invoked with the ``parallel_unsequenced_policy`` are to
    be executed on the accelerator.
 
@@ -585,15 +748,6 @@ additional restrictions:
 1. All code that is expected to interoperate has to be recompiled with the
    ``--hipstdpar-interpose-alloc`` flag i.e. it is not safe to compose libraries
    that have been independently compiled;
-2. automatic storage duration (i.e. stack allocated) variables cannot be used
-   (directly or transitively) by the user provided callable e.g.
-
-   .. code-block:: c++
-
-      bool never(const std::vector<int>& v, int n) {
-        return std::any_of(std::execution::par_unseq, std::cbegin(v), std::cend(v),
-                           [p = &n](auto&& x) { return x == *p; });
-      }
 
 Current Support
 ===============
@@ -626,17 +780,12 @@ Linux operating system. Support is synthesised in the following table:
 
 The minimum Linux kernel version for running in HMM mode is 6.4.
 
-The forwarding header can be obtained from
-`its GitHub repository <https://github.com/ROCmSoftwarePlatform/roc-stdpar>`_.
-It will be packaged with a future `ROCm <https://rocm.docs.amd.com/en/latest/>`_
-release. Because accelerated algorithms are provided via
-`rocThrust <https://rocm.docs.amd.com/projects/rocThrust/en/latest/>`_, a
-transitive dependency on
-`rocPrim <https://rocm.docs.amd.com/projects/rocPRIM/en/latest/>`_ exists. Both
-can be obtained either by installing their associated components of the
-`ROCm <https://rocm.docs.amd.com/en/latest/>`_ stack, or from their respective
-repositories. The list algorithms that can be offloaded is available
-`here <https://github.com/ROCmSoftwarePlatform/roc-stdpar#algorithm-support-status>`_.
+The forwarding header is packaged by
+`ROCm <https://rocm.docs.amd.com/en/latest/>`_, and is obtainable by installing
+the `hipstdpar` packege. The list algorithms that can be offloaded is available
+`here <https://github.com/ROCm/roc-stdpar#algorithm-support-status>`_. More
+details are available via the dedicated blog
+`<https://rocm.blogs.amd.com/software-tools-optimization/hipstdpar/README.html>`_.
 
 HIP Specific Elements
 ---------------------
@@ -690,9 +839,8 @@ HIP Specific Elements
 Open Questions / Future Developments
 ====================================
 
-1. The restriction on the use of global / namespace scope / ``static`` /
-   ``thread`` storage duration variables in offloaded algorithms will be lifted
-   in the future, when running in **HMM Mode**;
+1. The restriction on the use of ``static`` / ``thread`` storage duration
+   variables in offloaded algorithms might be lifted;
 2. The restriction on the use of dynamic memory allocation in offloaded
    algorithms will be lifted in the future.
 3. The restriction on the use of pointers to function, and associated features
@@ -704,7 +852,7 @@ Open Questions / Future Developments
 SPIR-V Support on HIPAMD ToolChain
 ==================================
 
-The HIPAMD ToolChain supports targetting
+The HIPAMD ToolChain supports targeting
 `AMDGCN Flavoured SPIR-V <https://llvm.org/docs/SPIRVUsage.html#target-triples>`_.
 The support for SPIR-V in the ROCm and HIPAMD ToolChain is under active
 development.

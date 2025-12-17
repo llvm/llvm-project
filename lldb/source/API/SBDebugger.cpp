@@ -179,48 +179,9 @@ void SBDebugger::Initialize() {
 lldb::SBError SBDebugger::InitializeWithErrorHandling() {
   LLDB_INSTRUMENT();
 
-  auto LoadPlugin = [](const lldb::DebuggerSP &debugger_sp,
-                       const FileSpec &spec,
-                       Status &error) -> llvm::sys::DynamicLibrary {
-    llvm::sys::DynamicLibrary dynlib =
-        llvm::sys::DynamicLibrary::getPermanentLibrary(spec.GetPath().c_str());
-    if (dynlib.isValid()) {
-      typedef bool (*LLDBCommandPluginInit)(lldb::SBDebugger debugger);
-
-      lldb::SBDebugger debugger_sb(debugger_sp);
-      // This calls the bool lldb::PluginInitialize(lldb::SBDebugger debugger)
-      // function.
-      // TODO: mangle this differently for your system - on OSX, the first
-      // underscore needs to be removed and the second one stays
-      LLDBCommandPluginInit init_func =
-          (LLDBCommandPluginInit)(uintptr_t)dynlib.getAddressOfSymbol(
-              "_ZN4lldb16PluginInitializeENS_10SBDebuggerE");
-      if (init_func) {
-        if (init_func(debugger_sb))
-          return dynlib;
-        else
-          error = Status::FromErrorString(
-              "plug-in refused to load "
-              "(lldb::PluginInitialize(lldb::SBDebugger) "
-              "returned false)");
-      } else {
-        error = Status::FromErrorString(
-            "plug-in is missing the required initialization: "
-            "lldb::PluginInitialize(lldb::SBDebugger)");
-      }
-    } else {
-      if (FileSystem::Instance().Exists(spec))
-        error = Status::FromErrorString(
-            "this file does not represent a loadable dylib");
-      else
-        error = Status::FromErrorString("no such file");
-    }
-    return llvm::sys::DynamicLibrary();
-  };
-
   SBError error;
   if (auto e = g_debugger_lifetime->Initialize(
-          std::make_unique<SystemInitializerFull>(), LoadPlugin)) {
+          std::make_unique<SystemInitializerFull>())) {
     error.SetError(Status::FromError(std::move(e)));
   }
   return error;
@@ -366,8 +327,8 @@ void SBDebugger::SkipAppInitFiles(bool b) {
 void SBDebugger::SetInputFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_INSTRUMENT_VA(this, fh, transfer_ownership);
   if (m_opaque_sp)
-    m_opaque_sp->SetInputFile(
-        (FileSP)std::make_shared<NativeFile>(fh, transfer_ownership));
+    m_opaque_sp->SetInputFile((FileSP)std::make_shared<NativeFile>(
+        fh, File::eOpenOptionReadOnly, transfer_ownership));
 }
 
 SBError SBDebugger::SetInputString(const char *data) {
@@ -424,7 +385,8 @@ SBError SBDebugger::SetOutputFile(FileSP file_sp) {
 
 void SBDebugger::SetOutputFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_INSTRUMENT_VA(this, fh, transfer_ownership);
-  SetOutputFile((FileSP)std::make_shared<NativeFile>(fh, transfer_ownership));
+  SetOutputFile((FileSP)std::make_shared<NativeFile>(
+      fh, File::eOpenOptionWriteOnly, transfer_ownership));
 }
 
 SBError SBDebugger::SetOutputFile(SBFile file) {
@@ -444,7 +406,8 @@ SBError SBDebugger::SetOutputFile(SBFile file) {
 
 void SBDebugger::SetErrorFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_INSTRUMENT_VA(this, fh, transfer_ownership);
-  SetErrorFile((FileSP)std::make_shared<NativeFile>(fh, transfer_ownership));
+  SetErrorFile((FileSP)std::make_shared<NativeFile>(
+      fh, File::eOpenOptionWriteOnly, transfer_ownership));
 }
 
 SBError SBDebugger::SetErrorFile(FileSP file_sp) {
@@ -615,8 +578,10 @@ void SBDebugger::HandleProcessEvent(const SBProcess &process,
                                     FILE *err) {
   LLDB_INSTRUMENT_VA(this, process, event, out, err);
 
-  FileSP outfile = std::make_shared<NativeFile>(out, false);
-  FileSP errfile = std::make_shared<NativeFile>(err, false);
+  FileSP outfile =
+      std::make_shared<NativeFile>(out, File::eOpenOptionWriteOnly, false);
+  FileSP errfile =
+      std::make_shared<NativeFile>(err, File::eOpenOptionWriteOnly, false);
   return HandleProcessEvent(process, event, outfile, errfile);
 }
 
@@ -744,61 +709,11 @@ const char *SBDebugger::StateAsCString(StateType state) {
   return lldb_private::StateAsCString(state);
 }
 
-static void AddBoolConfigEntry(StructuredData::Dictionary &dict,
-                               llvm::StringRef name, bool value,
-                               llvm::StringRef description) {
-  auto entry_up = std::make_unique<StructuredData::Dictionary>();
-  entry_up->AddBooleanItem("value", value);
-  entry_up->AddStringItem("description", description);
-  dict.AddItem(name, std::move(entry_up));
-}
-
-static void AddLLVMTargets(StructuredData::Dictionary &dict) {
-  auto array_up = std::make_unique<StructuredData::Array>();
-#define LLVM_TARGET(target)                                                    \
-  array_up->AddItem(std::make_unique<StructuredData::String>(#target));
-#include "llvm/Config/Targets.def"
-  auto entry_up = std::make_unique<StructuredData::Dictionary>();
-  entry_up->AddItem("value", std::move(array_up));
-  entry_up->AddStringItem("description", "A list of configured LLVM targets.");
-  dict.AddItem("targets", std::move(entry_up));
-}
-
 SBStructuredData SBDebugger::GetBuildConfiguration() {
   LLDB_INSTRUMENT();
 
-  auto config_up = std::make_unique<StructuredData::Dictionary>();
-  AddBoolConfigEntry(
-      *config_up, "xml", XMLDocument::XMLEnabled(),
-      "A boolean value that indicates if XML support is enabled in LLDB");
-  AddBoolConfigEntry(
-      *config_up, "curl", LLVM_ENABLE_CURL,
-      "A boolean value that indicates if CURL support is enabled in LLDB");
-  AddBoolConfigEntry(
-      *config_up, "curses", LLDB_ENABLE_CURSES,
-      "A boolean value that indicates if curses support is enabled in LLDB");
-  AddBoolConfigEntry(
-      *config_up, "editline", LLDB_ENABLE_LIBEDIT,
-      "A boolean value that indicates if editline support is enabled in LLDB");
-  AddBoolConfigEntry(*config_up, "editline_wchar", LLDB_EDITLINE_USE_WCHAR,
-                     "A boolean value that indicates if editline wide "
-                     "characters support is enabled in LLDB");
-  AddBoolConfigEntry(
-      *config_up, "lzma", LLDB_ENABLE_LZMA,
-      "A boolean value that indicates if lzma support is enabled in LLDB");
-  AddBoolConfigEntry(
-      *config_up, "python", LLDB_ENABLE_PYTHON,
-      "A boolean value that indicates if python support is enabled in LLDB");
-  AddBoolConfigEntry(
-      *config_up, "lua", LLDB_ENABLE_LUA,
-      "A boolean value that indicates if lua support is enabled in LLDB");
-  AddBoolConfigEntry(*config_up, "fbsdvmcore", LLDB_ENABLE_FBSDVMCORE,
-                     "A boolean value that indicates if fbsdvmcore support is "
-                     "enabled in LLDB");
-  AddLLVMTargets(*config_up);
-
   SBStructuredData data;
-  data.m_impl_up->SetObjectSP(std::move(config_up));
+  data.m_impl_up->SetObjectSP(Debugger::GetBuildConfiguration());
   return data;
 }
 
@@ -965,6 +880,17 @@ SBTarget SBDebugger::GetDummyTarget() {
   return sb_target;
 }
 
+void SBDebugger::DispatchClientTelemetry(const lldb::SBStructuredData &entry) {
+  LLDB_INSTRUMENT_VA(this);
+  if (m_opaque_sp) {
+    m_opaque_sp->DispatchClientTelemetry(*entry.m_impl_up);
+  } else {
+    Log *log = GetLog(LLDBLog::API);
+    LLDB_LOGF(log,
+              "Could not send telemetry from SBDebugger - debugger was null.");
+  }
+}
+
 bool SBDebugger::DeleteTarget(lldb::SBTarget &target) {
   LLDB_INSTRUMENT_VA(this, target);
 
@@ -1009,6 +935,17 @@ uint32_t SBDebugger::GetIndexOfTarget(lldb::SBTarget target) {
     return UINT32_MAX;
 
   return m_opaque_sp->GetTargetList().GetIndexOfTarget(target.GetSP());
+}
+
+SBTarget SBDebugger::FindTargetByGloballyUniqueID(lldb::user_id_t id) {
+  LLDB_INSTRUMENT_VA(this, id);
+  SBTarget sb_target;
+  if (m_opaque_sp) {
+    // No need to lock, the target list is thread safe
+    sb_target.SetSP(
+        m_opaque_sp->GetTargetList().FindTargetByGloballyUniqueID(id));
+  }
+  return sb_target;
 }
 
 SBTarget SBDebugger::FindTargetWithProcessID(lldb::pid_t pid) {

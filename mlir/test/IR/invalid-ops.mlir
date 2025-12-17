@@ -107,7 +107,7 @@ func.func @return_not_in_function() {
 // -----
 
 func.func @invalid_splat(%v : f32) { // expected-note {{prior use here}}
-  vector.splat %v : vector<8xf64>
+  vector.broadcast %v : f64 to vector<8xf64>
   // expected-error@-1 {{expects different type than prior uses}}
   return
 }
@@ -123,3 +123,33 @@ func.func @invalid_splat(%v : f32) { // expected-note {{prior use here}}
 
 // expected-error@+1 {{number of operands and types do not match: got 0 operands and 1 types}}
 test.variadic_args_types_split "hello_world" : i32
+
+// -----
+
+// Test multiple verifier errors in the same split to ensure all are reported.
+
+func.func @verify_fail_1() {
+  // expected-error@+1 {{'arith.constant' op integer return type must be signless}}
+  %r = "arith.constant"() {value = -1 : si32} : () -> si32
+  return
+}
+
+func.func @verify_fail_2() {
+  // expected-error@+1 {{'arith.constant' op value must be an integer, float, or elements attribute}}
+  %r = "arith.constant"() {value = "hi" : i32} : () -> i32
+  return
+}
+
+func.func @verify_fail_3() {
+  // expected-error@+1 {{'arith.constant' op integer return type must be signless}}
+  %r = "arith.constant"() {value = -3 : si32} : () -> si32
+  return
+}
+
+// -----
+
+// Verify that symbols with results are rejected
+module {
+  // expected-error@+1 {{'test.symbol_with_result' op symbols must not have results}}
+  %0 = "test.symbol_with_result"() <{sym_name = "test_symbol"}> : () -> i32
+}

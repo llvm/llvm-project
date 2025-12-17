@@ -112,7 +112,7 @@ static void CheckTeamType(
 
 static void CheckTeamStat(
     SemanticsContext &context, const parser::ImageSelectorSpec::Stat &stat) {
-  const parser::Variable &var{stat.v.thing.thing.value()};
+  const auto &var{parser::UnwrapRef<parser::Variable>(stat)};
   if (parser::GetCoindexedNamedObject(var)) {
     context.Say(parser::FindSourceLocation(var), // C931
         "Image selector STAT variable must not be a coindexed "
@@ -147,7 +147,8 @@ static void CheckSyncStat(SemanticsContext &context,
           },
           [&](const parser::MsgVariable &var) {
             WarnOnDeferredLengthCharacterScalar(context, GetExpr(context, var),
-                var.v.thing.thing.GetSource(), "ERRMSG=");
+                parser::UnwrapRef<parser::Variable>(var).GetSource(),
+                "ERRMSG=");
             if (gotMsg) {
               context.Say( // C1172
                   "The errmsg-variable in a sync-stat-list may not be repeated"_err_en_US);
@@ -194,13 +195,32 @@ void CoarrayChecker::Leave(const parser::SyncAllStmt &x) {
 
 void CoarrayChecker::Leave(const parser::SyncImagesStmt &x) {
   CheckSyncStatList(context_, std::get<std::list<parser::StatOrErrmsg>>(x.t));
-
   const auto &imageSet{std::get<parser::SyncImagesStmt::ImageSet>(x.t)};
   if (const auto *intExpr{std::get_if<parser::IntExpr>(&imageSet.u)}) {
     if (const auto *expr{GetExpr(context_, *intExpr)}) {
       if (expr->Rank() > 1) {
         context_.Say(parser::FindSourceLocation(imageSet), // C1174
             "An image-set that is an int-expr must be a scalar or a rank-one array"_err_en_US);
+      }
+      if (const auto *someInt{
+              std::get_if<evaluate::Expr<evaluate::SomeInteger>>(&expr->u)};
+          someInt && evaluate::IsActuallyConstant(*someInt)) {
+        auto converted{evaluate::Fold(context_.foldingContext(),
+            evaluate::ConvertToType<evaluate::SubscriptInteger>(
+                common::Clone(*someInt)))};
+        if (const auto *cst{
+                evaluate::UnwrapConstantValue<evaluate::SubscriptInteger>(
+                    converted)}) {
+          for (auto elt : cst->values()) {
+            auto n{elt.ToInt64()};
+            if (n < 1) {
+              context_.Say(parser::FindSourceLocation(imageSet),
+                  "Image number %jd in the image-set is not valid"_err_en_US,
+                  std::intmax_t{n});
+              break;
+            }
+          }
+        }
       }
     }
   }
@@ -241,7 +261,9 @@ static void CheckEventWaitSpecList(SemanticsContext &context,
                       [&](const parser::MsgVariable &var) {
                         WarnOnDeferredLengthCharacterScalar(context,
                             GetExpr(context, var),
-                            var.v.thing.thing.GetSource(), "ERRMSG=");
+                            parser::UnwrapRef<parser::Variable>(var)
+                                .GetSource(),
+                            "ERRMSG=");
                         if (gotMsg) {
                           context.Say( // C1178
                               "A errmsg-variable in a event-wait-spec-list may not be repeated"_err_en_US);
@@ -354,41 +376,12 @@ void CoarrayChecker::Leave(const parser::CriticalStmt &x) {
 }
 
 void CoarrayChecker::Leave(const parser::ImageSelector &imageSelector) {
-  haveStat_ = false;
-  haveTeam_ = false;
-  haveTeamNumber_ = false;
   for (const auto &imageSelectorSpec :
       std::get<std::list<parser::ImageSelectorSpec>>(imageSelector.t)) {
-    if (const auto *team{
-            std::get_if<parser::TeamValue>(&imageSelectorSpec.u)}) {
-      if (haveTeam_) {
-        context_.Say(parser::FindSourceLocation(imageSelectorSpec), // C929
-            "TEAM value can only be specified once"_err_en_US);
-      }
-      CheckTeamType(context_, *team);
-      haveTeam_ = true;
-    }
     if (const auto *stat{std::get_if<parser::ImageSelectorSpec::Stat>(
             &imageSelectorSpec.u)}) {
-      if (haveStat_) {
-        context_.Say(parser::FindSourceLocation(imageSelectorSpec), // C929
-            "STAT variable can only be specified once"_err_en_US);
-      }
       CheckTeamStat(context_, *stat);
-      haveStat_ = true;
     }
-    if (std::get_if<parser::ImageSelectorSpec::Team_Number>(
-            &imageSelectorSpec.u)) {
-      if (haveTeamNumber_) {
-        context_.Say(parser::FindSourceLocation(imageSelectorSpec), // C929
-            "TEAM_NUMBER value can only be specified once"_err_en_US);
-      }
-      haveTeamNumber_ = true;
-    }
-  }
-  if (haveTeam_ && haveTeamNumber_) {
-    context_.Say(parser::FindSourceLocation(imageSelector), // C930
-        "Cannot specify both TEAM and TEAM_NUMBER"_err_en_US);
   }
 }
 

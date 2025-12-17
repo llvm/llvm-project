@@ -84,8 +84,8 @@ Expected<void *> get_ctor_dtor_array(const void *image, const size_t size,
   }
   // Lower priority constructors are run before higher ones. The reverse is true
   // for destructors.
-  llvm::sort(ctors, [](auto x, auto y) { return x.second < y.second; });
-  llvm::sort(dtors, [](auto x, auto y) { return x.second < y.second; });
+  llvm::sort(ctors, llvm::less_second());
+  llvm::sort(dtors, llvm::less_second());
 
   // Allocate host pinned memory to make these arrays visible to the GPU.
   CUdeviceptr *dev_memory = reinterpret_cast<CUdeviceptr *>(allocator(
@@ -177,7 +177,7 @@ CUresult launch_kernel(CUmodule binary, CUstream stream, rpc::Server &server,
     handle_error(err);
 
   // Set up the arguments to the '_start' kernel on the GPU.
-  uint64_t args_size = sizeof(args_t);
+  uint64_t args_size = std::is_empty_v<args_t> ? 0 : sizeof(args_t);
   void *args_config[] = {CU_LAUNCH_PARAM_BUFFER_POINTER, &kernel_args,
                          CU_LAUNCH_PARAM_BUFFER_SIZE, &args_size,
                          CU_LAUNCH_PARAM_END};
@@ -342,7 +342,7 @@ int load_nvptx(int argc, const char **argv, const char **envp, void *image,
   if (CUresult err = cuStreamSynchronize(stream))
     handle_error(err);
 
-  end_args_t fini_args = {host_ret};
+  end_args_t fini_args = {};
   if (CUresult err =
           launch_kernel(binary, stream, server, single_threaded_params, "_end",
                         fini_args, print_resource_usage))

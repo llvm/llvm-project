@@ -6,8 +6,15 @@
 
 -->
 
-# OpenMP dialect: Fortran descriptor type mapping for offload
+# Fortran descriptor type mapping for OpenMP offload
+```{contents}
+---
+local:
+---
+```
 
+
+## Details
 The initial method for mapping Fortran types tied to descriptors for OpenMP offloading is to treat these types 
 as a special case of OpenMP record type (C/C++ structure/class, Fortran derived type etc.) mapping as far as the 
 runtime is concerned. Where the box (descriptor information) is the holding container and the underlying 
@@ -103,7 +110,7 @@ it is a little rigid in how the descriptor mappings are handled as there is no s
 to specialise the mappings for possible edge cases without polluting the dialect or lowering with further
 knowledge of Fortran and the FIR dialect.
 
-# OpenMP dialect differences from OpenACC dialect
+## Differences from OpenACC
 
 The descriptor mapping for OpenMP currently works differently to the planned direction for OpenACC, however, 
 it is possible and would likely be ideal to align the method with OpenACC in the future. 

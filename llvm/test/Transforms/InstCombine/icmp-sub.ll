@@ -290,8 +290,7 @@ define i1 @subC_nsw_ne(i32 %x) {
 ; CHECK-LABEL: @subC_nsw_ne(
 ; CHECK-NEXT:    [[SUBX:%.*]] = sub nsw i32 -2147483647, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[SUBX]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[X]], 2147483603
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %subx = sub nsw i32 -2147483647, %x
   call void @use(i32 %subx)

@@ -176,6 +176,10 @@ void populateFoldConstantExtractSlicePatterns(
           return false;
         });
 
+/// Patterns to fold extracts of a collapse_shaped tensor to an extract of the
+/// source tensor.
+void populateFoldCollapseExtractPatterns(RewritePatternSet &patterns);
+
 } // namespace tensor
 } // namespace mlir
 

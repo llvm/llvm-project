@@ -116,7 +116,8 @@ void SBStream::RedirectToFile(const char *path, bool append) {
 
 void SBStream::RedirectToFileHandle(FILE *fh, bool transfer_fh_ownership) {
   LLDB_INSTRUMENT_VA(this, fh, transfer_fh_ownership);
-  FileSP file = std::make_unique<NativeFile>(fh, transfer_fh_ownership);
+  FileSP file = std::make_unique<NativeFile>(fh, File::eOpenOptionReadWrite,
+                                             transfer_fh_ownership);
   return RedirectToFile(file);
 }
 

@@ -72,8 +72,6 @@ define void @store_v4i32_align2(<4 x i32> %x, ptr %ptr) {
   ret void
 }
 
-declare <2 x i16> @llvm.masked.gather.v2i16.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x i16>)
-
 define <2 x i16> @mgather_v2i16_align1(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i16> %passthru) {
 ; RV32-SLOW-LABEL: mgather_v2i16_align1:
 ; RV32-SLOW:       # %bb.0:
@@ -160,8 +158,6 @@ define <2 x i16> @mgather_v2i16_align1(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i16> %
   ret <2 x i16> %v
 }
 
-declare <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x i64>)
-
 define <2 x i64> @mgather_v2i64_align4(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %passthru) {
 ; RV32-SLOW-LABEL: mgather_v2i64_align4:
 ; RV32-SLOW:       # %bb.0:
@@ -204,7 +200,7 @@ define <2 x i64> @mgather_v2i64_align4(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %
 ; RV64-SLOW-NEXT:  # %bb.1: # %cond.load
 ; RV64-SLOW-NEXT:    vsetvli zero, zero, e64, m8, tu, ma
 ; RV64-SLOW-NEXT:    vmv.x.s a1, v8
-; RV64-SLOW-NEXT:    lwu a2, 4(a1)
+; RV64-SLOW-NEXT:    lw a2, 4(a1)
 ; RV64-SLOW-NEXT:    lwu a1, 0(a1)
 ; RV64-SLOW-NEXT:    slli a2, a2, 32
 ; RV64-SLOW-NEXT:    or a1, a2, a1
@@ -216,7 +212,7 @@ define <2 x i64> @mgather_v2i64_align4(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %
 ; RV64-SLOW-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-SLOW-NEXT:    vslidedown.vi v8, v8, 1
 ; RV64-SLOW-NEXT:    vmv.x.s a0, v8
-; RV64-SLOW-NEXT:    lwu a1, 4(a0)
+; RV64-SLOW-NEXT:    lw a1, 4(a0)
 ; RV64-SLOW-NEXT:    lwu a0, 0(a0)
 ; RV64-SLOW-NEXT:    slli a1, a1, 32
 ; RV64-SLOW-NEXT:    or a0, a1, a0
@@ -243,8 +239,6 @@ define <2 x i64> @mgather_v2i64_align4(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %
   %v = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> %ptrs, i32 4, <2 x i1> %m, <2 x i64> %passthru)
   ret <2 x i64> %v
 }
-
-declare void @llvm.masked.scatter.v4i16.v4p0(<4 x i16>, <4 x ptr>, i32, <4 x i1>)
 
 define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x ptr> %ptrs, <4 x i1> %m) {
 ; RV32-SLOW-LABEL: mscatter_v4i16_align1:
@@ -392,8 +386,6 @@ define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x ptr> %ptrs, <4 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v2i32.v2p0(<2 x i32>, <2 x ptr>, i32, <2 x i1>)
-
 define void @mscatter_v2i32_align2(<2 x i32> %val, <2 x ptr> %ptrs, <2 x i1> %m) {
 ; RV32-SLOW-LABEL: mscatter_v2i32_align2:
 ; RV32-SLOW:       # %bb.0:
@@ -476,8 +468,6 @@ define void @mscatter_v2i32_align2(<2 x i32> %val, <2 x ptr> %ptrs, <2 x i1> %m)
   ret void
 }
 
-declare <2 x i32> @llvm.masked.load.v2i32(ptr, i32, <2 x i1>, <2 x i32>)
-
 define void @masked_load_v2i32_align1(ptr %a, <2 x i32> %m, ptr %res_ptr) nounwind {
 ; RV32-SLOW-LABEL: masked_load_v2i32_align1:
 ; RV32-SLOW:       # %bb.0:
@@ -500,7 +490,7 @@ define void @masked_load_v2i32_align1(ptr %a, <2 x i32> %m, ptr %res_ptr) nounwi
 ; RV32-SLOW-NEXT:    or a4, a6, a5
 ; RV32-SLOW-NEXT:    or a3, a4, a3
 ; RV32-SLOW-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; RV32-SLOW-NEXT:    vmv.v.x v8, a3
+; RV32-SLOW-NEXT:    vmv.s.x v8, a3
 ; RV32-SLOW-NEXT:  .LBB8_2: # %else
 ; RV32-SLOW-NEXT:    andi a2, a2, 2
 ; RV32-SLOW-NEXT:    beqz a2, .LBB8_4
@@ -544,7 +534,7 @@ define void @masked_load_v2i32_align1(ptr %a, <2 x i32> %m, ptr %res_ptr) nounwi
 ; RV64-SLOW-NEXT:    or a4, a6, a5
 ; RV64-SLOW-NEXT:    or a3, a4, a3
 ; RV64-SLOW-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; RV64-SLOW-NEXT:    vmv.v.x v8, a3
+; RV64-SLOW-NEXT:    vmv.s.x v8, a3
 ; RV64-SLOW-NEXT:  .LBB8_2: # %else
 ; RV64-SLOW-NEXT:    andi a2, a2, 2
 ; RV64-SLOW-NEXT:    beqz a2, .LBB8_4
@@ -575,12 +565,10 @@ define void @masked_load_v2i32_align1(ptr %a, <2 x i32> %m, ptr %res_ptr) nounwi
 ; FAST-NEXT:    vse32.v v8, (a1)
 ; FAST-NEXT:    ret
   %mask = icmp eq <2 x i32> %m, zeroinitializer
-  %load = call <2 x i32> @llvm.masked.load.v2i32(ptr %a, i32 1, <2 x i1> %mask, <2 x i32> undef)
+  %load = call <2 x i32> @llvm.masked.load.v2i32(ptr %a, i32 1, <2 x i1> %mask, <2 x i32> poison)
   store <2 x i32> %load, ptr %res_ptr
   ret void
 }
-
-declare void @llvm.masked.store.v2i32.p0(<2 x i32>, ptr, i32, <2 x i1>)
 
 define void @masked_store_v2i32_align2(<2 x i32> %val, ptr %a, <2 x i32> %m) nounwind {
 ; SLOW-LABEL: masked_store_v2i32_align2:

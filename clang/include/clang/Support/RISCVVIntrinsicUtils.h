@@ -376,6 +376,8 @@ enum PolicyScheme : uint8_t {
   HasPolicyOperand,
 };
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, enum PolicyScheme PS);
+
 // TODO refactor RVVIntrinsic class design after support all intrinsic
 // combination. This represents an instantiation of an intrinsic with a
 // particular type and prototype
@@ -400,6 +402,7 @@ private:
   std::vector<int64_t> IntrinsicTypes;
   unsigned NF = 1;
   Policy PolicyAttrs;
+  unsigned TWiden = 0;
 
 public:
   RVVIntrinsic(llvm::StringRef Name, llvm::StringRef Suffix,
@@ -408,8 +411,8 @@ public:
                bool HasVL, PolicyScheme Scheme, bool SupportOverloading,
                bool HasBuiltinAlias, llvm::StringRef ManualCodegen,
                const RVVTypes &Types,
-               const std::vector<int64_t> &IntrinsicTypes,
-               unsigned NF, Policy PolicyAttrs, bool HasFRMRoundModeOp);
+               const std::vector<int64_t> &IntrinsicTypes, unsigned NF,
+               Policy PolicyAttrs, bool HasFRMRoundModeOp, unsigned TWiden);
   ~RVVIntrinsic() = default;
 
   RVVTypePtr getOutputType() const { return OutputType; }
@@ -433,6 +436,7 @@ public:
   llvm::StringRef getManualCodegen() const { return ManualCodegen; }
   PolicyScheme getPolicyScheme() const { return Scheme; }
   unsigned getNF() const { return NF; }
+  unsigned getTWiden() const { return TWiden; }
   const std::vector<int64_t> &getIntrinsicTypes() const {
     return IntrinsicTypes;
   }
@@ -481,32 +485,6 @@ public:
                                    Policy &PolicyAttrs, bool HasFRMRoundModeOp);
 };
 
-// RVVRequire should be sync'ed with target features, but only
-// required features used in riscv_vector.td.
-enum RVVRequire {
-  RVV_REQ_RV64,
-  RVV_REQ_Zvfhmin,
-  RVV_REQ_Xsfvcp,
-  RVV_REQ_Xsfvfnrclipxfqf,
-  RVV_REQ_Xsfvfwmaccqqq,
-  RVV_REQ_Xsfvqmaccdod,
-  RVV_REQ_Xsfvqmaccqoq,
-  RVV_REQ_Zvbb,
-  RVV_REQ_Zvbc,
-  RVV_REQ_Zvkb,
-  RVV_REQ_Zvkg,
-  RVV_REQ_Zvkned,
-  RVV_REQ_Zvknha,
-  RVV_REQ_Zvknhb,
-  RVV_REQ_Zvksed,
-  RVV_REQ_Zvksh,
-  RVV_REQ_Zvfbfwma,
-  RVV_REQ_Zvfbfmin,
-  RVV_REQ_Zvfh,
-  RVV_REQ_Experimental,
-  RVV_REQ_NUM,
-};
-
 // Raw RVV intrinsic info, used to expand later.
 // This struct is highly compact for minimized code size.
 struct RVVIntrinsicRecord {
@@ -518,7 +496,7 @@ struct RVVIntrinsicRecord {
   const char *OverloadedName;
 
   // Required target features for this intrinsic.
-  uint32_t RequiredExtensions[(RVV_REQ_NUM + 31) / 32];
+  const char *RequiredExtensions;
 
   // Prototype for this intrinsic, index of RVVSignatureTable.
   uint16_t PrototypeIndex;

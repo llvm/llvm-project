@@ -41,7 +41,7 @@ class TestContinue(GDBRemoteTestBase):
         lldbutil.expect_state_changes(
             self, self.dbg.GetListener(), process, [lldb.eStateExited]
         )
-        self.assertPacketLogContains(["vCont;C13:401"])
+        self.assertPacketLogReceived(["vCont;C13:401"])
 
     def test_continue_no_vCont(self):
         class MyResponder(self.BaseResponder):
@@ -61,7 +61,7 @@ class TestContinue(GDBRemoteTestBase):
         lldbutil.expect_state_changes(
             self, self.dbg.GetListener(), process, [lldb.eStateExited]
         )
-        self.assertPacketLogContains(["Hc401", "C13"])
+        self.assertPacketLogReceived(["Hc401", "C13"])
 
     def test_continue_multiprocess(self):
         class MyResponder(self.BaseResponder):
@@ -74,4 +74,4 @@ class TestContinue(GDBRemoteTestBase):
         lldbutil.expect_state_changes(
             self, self.dbg.GetListener(), process, [lldb.eStateExited]
         )
-        self.assertPacketLogContains(["vCont;C13:p400.401"])
+        self.assertPacketLogReceived(["vCont;C13:p400.401"])

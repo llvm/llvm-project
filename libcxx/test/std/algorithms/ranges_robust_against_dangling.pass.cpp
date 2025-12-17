@@ -18,11 +18,13 @@
 #include <concepts>
 #include <functional>
 #include <iterator>
+#include <numeric>
 #include <ranges>
 #include <random>
 #include <utility>
 
 #include "test_iterators.h"
+#include "test_macros.h"
 
 struct NonBorrowedRange {
   using Iter = int*;
@@ -78,6 +80,9 @@ constexpr bool test_all() {
   using std::ranges::move_result;
   using std::ranges::move_backward_result;
   using std::ranges::next_permutation_result;
+#if TEST_STD_VER >= 23
+  using std::ranges::out_value_result;
+#endif
   using std::ranges::partial_sort_copy_result;
   using std::ranges::partition_copy_result;
   using std::ranges::prev_permutation_result;
@@ -216,6 +221,10 @@ constexpr bool test_all() {
   dangling_1st(std::ranges::sort_heap, in);
   dangling_1st<prev_permutation_result<dangling>>(std::ranges::prev_permutation, in);
   dangling_1st<next_permutation_result<dangling>>(std::ranges::next_permutation, in);
+
+#if TEST_STD_VER >= 23
+  dangling_1st<out_value_result<dangling, decltype(x)>>(std::ranges::iota, in, x);
+#endif
 
   return true;
 }

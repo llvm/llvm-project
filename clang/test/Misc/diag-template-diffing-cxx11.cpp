@@ -24,17 +24,17 @@ namespace std {
   }
 } // end namespace std
 // CHECK-ELIDE-NOTREE: no matching function for call to 'f'
-// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<std::string>' to 'vector<string>' for 1st argument
+// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<std::basic_string>' to 'vector<versa_string>' for 1st argument
 // CHECK-NOELIDE-NOTREE: no matching function for call to 'f'
-// CHECK-NOELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<std::string>' to 'vector<string>' for 1st argument
+// CHECK-NOELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<std::basic_string>' to 'vector<versa_string>' for 1st argument
 // CHECK-ELIDE-TREE: no matching function for call to 'f'
 // CHECK-ELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-ELIDE-TREE:   vector<
-// CHECK-ELIDE-TREE:     [std::string != string]>
+// CHECK-ELIDE-TREE:     [std::basic_string != versa_string]>
 // CHECK-NOELIDE-TREE: no matching function for call to 'f'
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   vector<
-// CHECK-NOELIDE-TREE:     [std::string != string]>
+// CHECK-NOELIDE-TREE:     [std::basic_string != versa_string]>
 
 template <int... A>
 class I1{};
@@ -265,14 +265,14 @@ int k9 = f9(V9<double>());
 // CHECK-ELIDE-TREE:   S9<
 // CHECK-ELIDE-TREE:     [2 * ...],
 // CHECK-ELIDE-TREE:     U9<
-// CHECK-ELIDE-TREE:       [(no qualifiers) != const] double>>
+// CHECK-ELIDE-TREE:       [double != const double]>>
 // CHECK-NOELIDE-TREE: no matching function for call to 'f9'
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   S9<
 // CHECK-NOELIDE-TREE:     int,
 // CHECK-NOELIDE-TREE:     char,
 // CHECK-NOELIDE-TREE:     U9<
-// CHECK-NOELIDE-TREE:       [(no qualifiers) != const] double>>
+// CHECK-NOELIDE-TREE:       [double != const double]>>
 
 template<typename ...A> class class_types {};
 void set10(class_types<int, int>) {}

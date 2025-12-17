@@ -16,13 +16,6 @@ include "SPIRVSymbolicOperands.td"
 // Codegen only metadata instructions
 let isCodeGenOnly=1 in {
   def ASSIGN_TYPE: Pseudo<(outs ID:$dst_id), (ins ID:$src_id, TYPE:$src_ty)>;
-  def DECL_TYPE: Pseudo<(outs ID:$dst_id), (ins ID:$src_id, TYPE:$src_ty)>;
-  def GET_ID: Pseudo<(outs iID:$dst_id), (ins iID:$src)>;
-  def GET_fID: Pseudo<(outs fID:$dst_id), (ins fID:$src)>;
-  def GET_pID: Pseudo<(outs pID:$dst_id), (ins pID:$src)>;
-  def GET_vID: Pseudo<(outs vID:$dst_id), (ins vID:$src)>;
-  def GET_vfID: Pseudo<(outs vfID:$dst_id), (ins vfID:$src)>;
-  def GET_vpID: Pseudo<(outs vpID:$dst_id), (ins vpID:$src)>;
 }
 
 def UNKNOWN_type
@@ -174,7 +167,7 @@ def OpTypeVoid: Op<19, (outs TYPE:$type), (ins), "$type = OpTypeVoid">;
 def OpTypeBool: Op<20, (outs TYPE:$type), (ins), "$type = OpTypeBool">;
 def OpTypeInt: Op<21, (outs TYPE:$type), (ins i32imm:$width, i32imm:$signedness),
                   "$type = OpTypeInt $width $signedness">;
-def OpTypeFloat: Op<22, (outs TYPE:$type), (ins i32imm:$width),
+def OpTypeFloat: Op<22, (outs TYPE:$type), (ins i32imm:$width, variable_ops),
                   "$type = OpTypeFloat $width">;
 def OpTypeVector: Op<23, (outs TYPE:$type), (ins TYPE:$compType, i32imm:$compCount),
                   "$type = OpTypeVector $compType $compCount">;
@@ -219,41 +212,20 @@ def OpTypeCooperativeMatrixKHR: Op<4456, (outs TYPE:$res),
 
 // 3.42.7 Constant-Creation Instructions
 
-def imm_to_i32 : SDNodeXForm<imm, [{
-return CurDAG->getTargetConstant(
-  N->getValueAP().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i32);
-}]>;
-
-def fimm_to_i64 : SDNodeXForm<imm, [{
-return CurDAG->getTargetConstant(
-  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i64);
-}]>;
-
-def gi_bitcast_fimm_to_i64 : GICustomOperandRenderer<"renderFImm64">,
-  GISDNodeXFormEquiv<fimm_to_i64>;
-
-def gi_bitcast_imm_to_i32 : GICustomOperandRenderer<"renderImm32">,
-  GISDNodeXFormEquiv<imm_to_i32>;
-
-def PseudoConstI: IntImmLeaf<i64, [{ return Imm.getBitWidth() <= 32; }], imm_to_i32>;
-def PseudoConstF: FPImmLeaf<f64, [{  return true; }], fimm_to_i64>;
-def ConstPseudoTrue: IntImmLeaf<i64, [{ return Imm.getBitWidth() == 1 && Imm.getZExtValue() == 1; }]>;
-def ConstPseudoFalse: IntImmLeaf<i64, [{ return Imm.getBitWidth() == 1 && Imm.getZExtValue() == 0; }]>;
-def ConstPseudoNull: IntImmLeaf<i64, [{ return Imm.isZero(); }]>;
-
 multiclass IntFPImm<bits<16> opCode, string name> {
   def I: Op<opCode, (outs iID:$dst), (ins TYPE:$type, iID:$src, variable_ops),
-                  "$dst = "#name#" $type", [(set iID:$dst, (assigntype PseudoConstI:$src, TYPE:$type))]>;
+                  "$dst = "#name#" $type">;
   def F: Op<opCode, (outs fID:$dst), (ins TYPE:$type, fID:$src, variable_ops),
-                  "$dst = "#name#" $type", [(set fID:$dst, (assigntype PseudoConstF:$src, TYPE:$type))]>;
+                  "$dst = "#name#" $type">;
 }
+defm OpConstant: IntFPImm<43, "OpConstant">;
 
+def ConstPseudoTrue: IntImmLeaf<i64, [{ return Imm.getBitWidth() == 1 && Imm.getZExtValue() == 1; }]>;
+def ConstPseudoFalse: IntImmLeaf<i64, [{ return Imm.getBitWidth() == 1 && Imm.getZExtValue() == 0; }]>;
 def OpConstantTrue: Op<41, (outs iID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantTrue $src_ty",
                       [(set iID:$dst, (assigntype ConstPseudoTrue, TYPE:$src_ty))]>;
 def OpConstantFalse: Op<42, (outs iID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantFalse $src_ty",
                       [(set iID:$dst, (assigntype ConstPseudoFalse, TYPE:$src_ty))]>;
-
-defm OpConstant: IntFPImm<43, "OpConstant">;
 
 def OpConstantComposite: Op<44, (outs ID:$res), (ins TYPE:$type, variable_ops),
                   "$res = OpConstantComposite $type">;
@@ -273,7 +245,7 @@ def OpSpecConstantComposite: Op<51, (outs ID:$res), (ins TYPE:$type, variable_op
                   "$res = OpSpecConstantComposite $type">;
 def OpSpecConstantCompositeContinuedINTEL: Op<6092, (outs), (ins variable_ops),
                   "OpSpecConstantCompositeContinuedINTEL">;
-def OpSpecConstantOp: Op<52, (outs ID:$res), (ins TYPE:$t, i32imm:$c, ID:$o, variable_ops),
+def OpSpecConstantOp: Op<52, (outs ID:$res), (ins TYPE:$t, SpecConstantOpOperands:$c, ID:$o, variable_ops),
                   "$res = OpSpecConstantOp $t $c $o">;
 
 // 3.42.8 Memory Instructions
@@ -473,13 +445,13 @@ def OpCrossWorkgroupCastToPtrINTEL : UnOp<"OpCrossWorkgroupCastToPtrINTEL", 5938
 def OpConvertFToBF16INTEL : UnOp<"OpConvertFToBF16INTEL", 6116>;
 def OpConvertBF16ToFINTEL : UnOp<"OpConvertBF16ToFINTEL", 6117>;
 
+// SPV_INTEL_tensor_float32_conversion
+def OpRoundFToTF32INTEL : UnOp<"OpRoundFToTF32INTEL", 6426>;
+
 // 3.42.12 Composite Instructions
 
-//def OpVectorExtractDynamic: Op<77, (outs ID:$res), (ins TYPE:$type, vID:$vec, ID:$idx),
-//                  "$res = OpVectorExtractDynamic $type $vec $idx", [(set ID:$res, (assigntype (extractelt vID:$vec, ID:$idx), TYPE:$type))]>;
 def OpVectorExtractDynamic: Op<77, (outs ID:$res), (ins TYPE:$type, vID:$vec, ID:$idx),
                   "$res = OpVectorExtractDynamic $type $vec $idx">;
-
 def OpVectorInsertDynamic: Op<78, (outs ID:$res), (ins TYPE:$ty, ID:$vec, ID:$comp, ID:$idx),
                   "$res = OpVectorInsertDynamic $ty $vec $comp $idx">;
 def OpVectorShuffle: Op<79, (outs ID:$res), (ins TYPE:$ty, ID:$v1, ID:$v2, variable_ops),
@@ -665,8 +637,8 @@ let isReturn = 1, hasDelaySlot = 0, isBarrier = 0, isTerminator = 1, isNotDuplic
   def OpReturnValue: Op<254, (outs), (ins ID:$ret), "OpReturnValue $ret">;
   def OpUnreachable: SimpleOp<"OpUnreachable", 255>;
 }
-def OpLifetimeStart: Op<256, (outs), (ins ID:$ptr, i32imm:$sz), "OpLifetimeStart $ptr, $sz">;
-def OpLifetimeStop: Op<257, (outs), (ins ID:$ptr, i32imm:$sz), "OpLifetimeStop $ptr, $sz">;
+def OpLifetimeStart: Op<256, (outs), (ins ID:$ptr, i32imm:$sz), "OpLifetimeStart $ptr $sz">;
+def OpLifetimeStop: Op<257, (outs), (ins ID:$ptr, i32imm:$sz), "OpLifetimeStop $ptr $sz">;
 def OpDemoteToHelperInvocation: SimpleOp<"OpDemoteToHelperInvocation", 5380>;
 
 // 3.42.18 Atomic Instructions
@@ -767,6 +739,10 @@ def OpGroupFMax: OpGroup<"FMax", 269>;
 def OpGroupUMax: OpGroup<"UMax", 270>;
 def OpGroupSMax: OpGroup<"SMax", 271>;
 
+def OpSubgroupMatrixMultiplyAccumulateINTEL: Op<6237, (outs ID:$res),
+        (ins TYPE:$ty, ID:$KDim, ID:$A, ID:$B, ID:$C, variable_ops),
+                  "$res = OpSubgroupMatrixMultiplyAccumulateINTEL $ty $KDim $A $B $C">;
+
 // TODO: 3.42.22. Device-Side Enqueue Instructions
 def OpEnqueueKernel: Op<292, (outs ID:$res), (ins TYPE:$type, ID:$queue, ID:$flags, ID:$NDR, ID:$nevents, ID:$wevents,
                                               ID:$revent, ID:$invoke, ID:$param, ID:$psize, ID:$palign, variable_ops),
@@ -787,7 +763,38 @@ def OpGetDefaultQueue: Op<303, (outs ID:$res), (ins TYPE:$type),
 def OpBuildNDRange: Op<304, (outs ID:$res), (ins TYPE:$type, ID:$GWS, ID:$LWS, ID:$GWO),
                   "$res = OpBuildNDRange $type $GWS $LWS $GWO">;
 
-// TODO: 3.42.23. Pipe Instructions
+// 3.42.23. Pipe Instructions
+
+def OpReadPipe: Op<274, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$Pointer, ID:$PcktSize, ID:$PcktAlign),
+                  "$res = OpReadPipe $type $Pipe $Pointer $PcktSize $PcktAlign">;
+def OpWritePipe: Op<275, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$Pointer, ID:$PcktSize, ID:$PcktAlign),
+                  "$res = OpWritePipe $type $Pipe $Pointer $PcktSize $PcktAlign">;
+def OpReservedReadPipe : Op<276, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$ReserveId, ID:$Index, ID:$Pointer, ID:$PcktSize, ID:$PcktAlign),
+                  "$res = OpReservedReadPipe $type $Pipe $ReserveId $Index $Pointer $PcktSize $PcktAlign">;
+def OpReservedWritePipe : Op<277, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$ReserveId, ID:$Index, ID:$Pointer, ID:$PcktSize, ID:$PcktAlign), 
+                  "$res = OpReservedWritePipe $type $Pipe $ReserveId $Index $Pointer $PcktSize $PcktAlign">;
+def OpReserveReadPipePackets : Op<278, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$NumPckts, ID:$PcktSize, ID:$PcktAlign),
+                  "$res = OpReserveReadPipePackets $type $Pipe $NumPckts $PcktSize $PcktAlign">;
+def OpReserveWritePipePackets : Op<279, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$NumPckts, ID:$PcktSize, ID:$PcktAlign),
+                  "$res = OpReserveWritePipePackets $type $Pipe $NumPckts $PcktSize $PcktAlign">;
+def OpCommitReadPipe : Op<280, (outs), (ins ID:$Pipe, ID:$ReserveId, ID:$PcktSize, ID:$PcktAlign),
+                  "OpCommitReadPipe $Pipe $ReserveId $PcktSize $PcktAlign">;
+def OpCommitWritePipe : Op<281, (outs), (ins ID:$Pipe, ID:$ReserveId, ID:$PcktSize, ID:$PcktAlign),
+                  "OpCommitWritePipe $Pipe $ReserveId $PcktSize $PcktAlign">;
+def OpIsValidReserveId : Op<282, (outs ID:$res), (ins TYPE:$type, ID:$ReserveId),
+                  "$res = OpIsValidReserveId $type $ReserveId">;
+def OpGetNumPipePackets : Op<283, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$PacketSize, ID:$PacketAlign),
+                  "$res = OpGetNumPipePackets $type $Pipe $PacketSize $PacketAlign">;
+def OpGetMaxPipePackets : Op<284, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$PacketSize, ID:$PacketAlign),
+                  "$res = OpGetMaxPipePackets $type $Pipe $PacketSize $PacketAlign">;
+def OpGroupReserveReadPipePackets : Op<285, (outs ID:$res), (ins TYPE:$type, ID:$Scope, ID:$Pipe, ID:$NumPckts, ID:$PacketSize, ID:$PacketAlign),
+                  "$res = OpGroupReserveReadPipePackets $type $Scope $Pipe $NumPckts $PacketSize $PacketAlign">;
+def OpGroupReserveWritePipePackets : Op<286, (outs ID:$res), (ins TYPE:$type, ID:$Scope, ID:$Pipe, ID:$NumPckts, ID:$PacketSize, ID:$PacketAlign),
+                  "$res = OpGroupReserveWritePipePackets $type $Scope $Pipe $NumPckts $PacketSize $PacketAlign">;
+def OpGroupCommitReadPipe : Op<287, (outs), (ins ID:$Scope, ID:$Pipe, ID:$ReserveId, ID:$PacketSize, ID:$PacketAlign),
+                  "OpGroupCommitReadPipe $Scope $Pipe $ReserveId $PacketSize $PacketAlign">;
+def OpGroupCommitWritePipe : Op<288, (outs), (ins ID:$Scope, ID:$Pipe, ID:$ReserveId, ID:$PacketSize, ID:$PacketAlign),
+                  "OpGroupCommitWritePipe $Scope $Pipe $ReserveId $PacketSize $PacketAlign">;
 
 // 3.42.24. Non-Uniform Instructions
 
@@ -959,3 +966,60 @@ def OpAliasScopeDeclINTEL: Op<5912, (outs ID:$res), (ins ID:$AliasDomain, variab
                   "$res = OpAliasScopeDeclINTEL $AliasDomain">;
 def OpAliasScopeListDeclINTEL: Op<5913, (outs ID:$res), (ins variable_ops),
                   "$res = OpAliasScopeListDeclINTEL">;
+
+// SPV_INTEL_ternary_bitwise_function
+def OpBitwiseFunctionINTEL: Op<6242, (outs ID:$res), (ins TYPE:$type, ID:$a, ID:$b, ID:$c, ID:$lut_index),
+                  "$res = OpBitwiseFunctionINTEL $type $a $b $c $lut_index">;
+
+// SPV_INTEL_2d_block_io
+def OpSubgroup2DBlockLoadINTEL: Op<6231, (outs), (ins ID:$element_size, ID:$block_width, ID:$block_height,
+                  ID:$block_count, ID:$src_base_ptr, ID:$memory_width, ID:$memory_height, ID:$memory_pitch, ID:$coord, ID:$dst_ptr),
+                  "OpSubgroup2DBlockLoadINTEL $element_size $block_width $block_height $block_count $src_base_ptr $memory_width $memory_height $memory_pitch $coord $dst_ptr">;
+def OpSubgroup2DBlockLoadTransposeINTEL: Op<6233, (outs), (ins ID:$element_size, ID:$block_width, ID:$block_height,
+                  ID:$block_count, ID:$src_base_ptr, ID:$memory_width, ID:$memory_height, ID:$memory_pitch, ID:$coord, ID:$dst_ptr),
+                  "OpSubgroup2DBlockLoadTransposeINTEL $element_size $block_width $block_height $block_count $src_base_ptr $memory_width $memory_height $memory_pitch $coord $dst_ptr">;
+def OpSubgroup2DBlockLoadTransformINTEL: Op<6232, (outs), (ins ID:$element_size, ID:$block_width, ID:$block_height,
+                  ID:$block_count, ID:$src_base_ptr, ID:$memory_width, ID:$memory_height, ID:$memory_pitch, ID:$coord, ID:$dst_ptr),
+                  "OpSubgroup2DBlockLoadTransformINTEL $element_size $block_width $block_height $block_count $src_base_ptr $memory_width $memory_height $memory_pitch $coord $dst_ptr">;
+def OpSubgroup2DBlockPrefetchINTEL: Op<6234, (outs), (ins ID:$element_size, ID:$block_width, ID:$block_height,
+                  ID:$block_count, ID:$src_base_ptr, ID:$memory_width, ID:$memory_height, ID:$memory_pitch, ID:$coord),
+                  "OpSubgroup2DBlockPrefetchINTEL $element_size $block_width $block_height $block_count $src_base_ptr $memory_width $memory_height $memory_pitch $coord">;
+def OpSubgroup2DBlockStoreINTEL: Op<6235, (outs), (ins ID:$element_size, ID:$block_width, ID:$block_height,
+                  ID:$block_count, ID:$src_ptr, ID:$dst_base_ptr, ID:$memory_width, ID:$memory_height, ID:$memory_pitch, ID:$coord),
+                  "OpSubgroup2DBlockStoreINTEL $element_size $block_width $block_height $block_count $src_ptr $dst_base_ptr $memory_width $memory_height $memory_pitch $coord">;
+
+// SPV_INTEL_predicated_io
+def OpPredicatedLoadINTEL: Op<6528, (outs ID:$res), (ins TYPE:$resType, ID:$ptr, ID:$predicate, ID:$default_value, variable_ops),
+                  "$res = OpPredicatedLoadINTEL $resType $ptr $predicate $default_value">;
+def OpPredicatedStoreINTEL: Op<6529, (outs), (ins ID:$ptr, ID:$object, ID:$predicate, variable_ops),
+                  "OpPredicatedStoreINTEL $ptr $object $predicate">;
+
+//SPV_ALTERA_blocking_pipes
+def OpReadPipeBlockingALTERA :Op<5946, (outs), (ins ID:$pipe, ID:$pointer, ID:$packetSize, ID:$packetAlignment),
+                   "OpReadPipeBlockingALTERA $pipe $pointer $packetSize $packetAlignment">;
+def OpWritePipeBlockingALTERA :Op<5946, (outs), (ins ID:$pipe, ID:$pointer, ID:$packetSize, ID:$packetAlignment),
+                   "OpWritePipeBlockingALTERA $pipe $pointer $packetSize $packetAlignment">;
+
+//SPV_ALTERA_arbitrary_precision_fixed_point
+def OpFixedSqrtALTERA: Op<5923, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedSqrtALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedRecipALTERA: Op<5924, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedRecipALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedRsqrtALTERA: Op<5925, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedRsqrtALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedSinALTERA: Op<5926, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedSinALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedCosALTERA: Op<5927, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedCosALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedSinCosALTERA: Op<5928, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedSinCosALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedSinPiALTERA: Op<5929, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedSinPiALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedCosPiALTERA: Op<5930, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedCosPiALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedSinCosPiALTERA: Op<5931, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedSinCosPiALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedLogALTERA: Op<5932, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedLogALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedExpALTERA: Op<5933, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedExpALTERA $result_type $input $sign $l $rl $q $o">;

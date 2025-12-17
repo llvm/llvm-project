@@ -8,7 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
-#include "clang/Basic/TargetOptions.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace clang;
@@ -95,8 +95,7 @@ unsigned AMDGPUABIInfo::numRegsForType(QualType Ty) const {
     return EltNumRegs * VT->getNumElements();
   }
 
-  if (const RecordType *RT = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
+  if (const auto *RD = Ty->getAsRecordDecl()) {
     assert(!RD->hasFlexibleArrayMember());
 
     for (const FieldDecl *Field : RD->fields()) {
@@ -152,11 +151,9 @@ ABIArgInfo AMDGPUABIInfo::classifyReturnType(QualType RetTy) const {
       if (const Type *SeltTy = isSingleElementStruct(RetTy, getContext()))
         return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
 
-      if (const RecordType *RT = RetTy->getAs<RecordType>()) {
-        const RecordDecl *RD = RT->getDecl();
-        if (RD->hasFlexibleArrayMember())
-          return DefaultABIInfo::classifyReturnType(RetTy);
-      }
+      if (const auto *RD = RetTy->getAsRecordDecl();
+          RD && RD->hasFlexibleArrayMember())
+        return DefaultABIInfo::classifyReturnType(RetTy);
 
       // Pack aggregates <= 4 bytes into single VGPR or pair.
       uint64_t Size = getContext().getTypeSize(RetTy);
@@ -198,14 +195,10 @@ ABIArgInfo AMDGPUABIInfo::classifyKernelArgumentType(QualType Ty) const {
         /*ToAS=*/getContext().getTargetAddressSpace(LangAS::cuda_device));
   }
 
-  // FIXME: Should also use this for OpenCL, but it requires addressing the
-  // problem of kernels being called.
-  //
   // FIXME: This doesn't apply the optimization of coercing pointers in structs
   // to global address space when using byref. This would require implementing a
   // new kind of coercion of the in-memory type when for indirect arguments.
-  if (!getContext().getLangOpts().OpenCL && LTy == OrigLTy &&
-      isAggregateTypeForABI(Ty)) {
+  if (LTy == OrigLTy && isAggregateTypeForABI(Ty)) {
     return ABIArgInfo::getIndirectAliased(
         getContext().getTypeAlignInChars(Ty),
         getContext().getTargetAddressSpace(LangAS::opencl_constant),
@@ -249,11 +242,9 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
     if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
       return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
 
-    if (const RecordType *RT = Ty->getAs<RecordType>()) {
-      const RecordDecl *RD = RT->getDecl();
-      if (RD->hasFlexibleArrayMember())
-        return DefaultABIInfo::classifyArgumentType(Ty);
-    }
+    if (const auto *RD = Ty->getAsRecordDecl();
+        RD && RD->hasFlexibleArrayMember())
+      return DefaultABIInfo::classifyArgumentType(Ty);
 
     // Pack aggregates <= 8 bytes into single VGPR or pair.
     uint64_t Size = getContext().getTypeSize(Ty);
@@ -302,14 +293,13 @@ public:
   AMDGPUTargetCodeGenInfo(CodeGenTypes &CGT)
       : TargetCodeGenInfo(std::make_unique<AMDGPUABIInfo>(CGT)) {}
 
+  bool supportsLibCall() const override { return false; }
   void setFunctionDeclAttributes(const FunctionDecl *FD, llvm::Function *F,
                                  CodeGenModule &CGM) const;
 
-  void emitTargetGlobals(CodeGen::CodeGenModule &CGM) const override;
-
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
-  unsigned getOpenCLKernelCallingConv() const override;
+  unsigned getDeviceKernelCallingConv() const override;
 
   llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
       llvm::PointerType *T, QualType QT) const override;
@@ -342,7 +332,7 @@ static bool requiresAMDGPUProtectedVisibility(const Decl *D,
     return false;
 
   return !D->hasAttr<OMPDeclareTargetDeclAttr>() &&
-         (D->hasAttr<OpenCLKernelAttr>() ||
+         (D->hasAttr<DeviceKernelAttr>() ||
           (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
           (isa<VarDecl>(D) &&
            (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
@@ -355,7 +345,7 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
   const auto *ReqdWGS =
       M.getLangOpts().OpenCL ? FD->getAttr<ReqdWorkGroupSizeAttr>() : nullptr;
   const bool IsOpenCLKernel =
-      M.getLangOpts().OpenCL && FD->hasAttr<OpenCLKernelAttr>();
+      M.getLangOpts().OpenCL && FD->hasAttr<DeviceKernelAttr>();
   const bool IsHIPKernel = M.getLangOpts().HIP && FD->hasAttr<CUDAGlobalAttr>();
 
   const auto *FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>();
@@ -412,40 +402,26 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
 
     F->addFnAttr("amdgpu-max-num-workgroups", AttrVal.str());
   }
-}
 
-/// Emits control constants used to change per-architecture behaviour in the
-/// AMDGPU ROCm device libraries.
-void AMDGPUTargetCodeGenInfo::emitTargetGlobals(
-    CodeGen::CodeGenModule &CGM) const {
-  StringRef Name = "__oclc_ABI_version";
-  llvm::GlobalVariable *OriginalGV = CGM.getModule().getNamedGlobal(Name);
-  if (OriginalGV && !llvm::GlobalVariable::isExternalLinkage(OriginalGV->getLinkage()))
-    return;
-
-  if (CGM.getTarget().getTargetOpts().CodeObjectVersion ==
-      llvm::CodeObjectVersionKind::COV_None)
-    return;
-
-  auto *Type = llvm::IntegerType::getIntNTy(CGM.getModule().getContext(), 32);
-  llvm::Constant *COV = llvm::ConstantInt::get(
-      Type, CGM.getTarget().getTargetOpts().CodeObjectVersion);
-
-  // It needs to be constant weak_odr without externally_initialized so that
-  // the load instuction can be eliminated by the IPSCCP.
-  auto *GV = new llvm::GlobalVariable(
-      CGM.getModule(), Type, true, llvm::GlobalValue::WeakODRLinkage, COV, Name,
-      nullptr, llvm::GlobalValue::ThreadLocalMode::NotThreadLocal,
-      CGM.getContext().getTargetAddressSpace(LangAS::opencl_constant));
-  GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Local);
-  GV->setVisibility(llvm::GlobalValue::VisibilityTypes::HiddenVisibility);
-
-  // Replace any external references to this variable with the new global.
-  if (OriginalGV) {
-    OriginalGV->replaceAllUsesWith(GV);
-    GV->takeName(OriginalGV);
-    OriginalGV->eraseFromParent();
+  if (auto *Attr = FD->getAttr<CUDAClusterDimsAttr>()) {
+    auto GetExprVal = [&](const auto &E) {
+      return E ? E->EvaluateKnownConstInt(M.getContext()).getExtValue() : 1;
+    };
+    unsigned X = GetExprVal(Attr->getX());
+    unsigned Y = GetExprVal(Attr->getY());
+    unsigned Z = GetExprVal(Attr->getZ());
+    llvm::SmallString<32> AttrVal;
+    llvm::raw_svector_ostream OS(AttrVal);
+    OS << X << ',' << Y << ',' << Z;
+    F->addFnAttr("amdgpu-cluster-dims", AttrVal.str());
   }
+
+  // OpenCL doesn't support cluster feature.
+  const TargetInfo &TTI = M.getContext().getTargetInfo();
+  if ((IsOpenCLKernel &&
+       TTI.hasFeatureEnabled(TTI.getTargetOpts().FeatureMap, "clusters")) ||
+      FD->hasAttr<CUDANoClusterAttr>())
+    F->addFnAttr("amdgpu-cluster-dims", "0,0,0");
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
@@ -465,12 +441,11 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (FD)
     setFunctionDeclAttributes(FD, F, M);
-
   if (!getABIInfo().getCodeGenOpts().EmitIEEENaNCompliantInsts)
     F->addFnAttr("amdgpu-ieee", "false");
 }
 
-unsigned AMDGPUTargetCodeGenInfo::getOpenCLKernelCallingConv() const {
+unsigned AMDGPUTargetCodeGenInfo::getDeviceKernelCallingConv() const {
   return llvm::CallingConv::AMDGPU_KERNEL;
 }
 
@@ -531,6 +506,10 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
   case SyncScope::OpenCLSubGroup:
   case SyncScope::WavefrontScope:
     Name = "wavefront";
+    break;
+  case SyncScope::HIPCluster:
+  case SyncScope::ClusterScope:
+    Name = "cluster";
     break;
   case SyncScope::HIPWorkgroup:
   case SyncScope::OpenCLWorkGroup:
@@ -611,7 +590,7 @@ bool AMDGPUTargetCodeGenInfo::shouldEmitDWARFBitFieldSeparators() const {
 void AMDGPUTargetCodeGenInfo::setCUDAKernelCallingConvention(
     const FunctionType *&FT) const {
   FT = getABIInfo().getContext().adjustFunctionType(
-      FT, FT->getExtInfo().withCallingConv(CC_OpenCLKernel));
+      FT, FT->getExtInfo().withCallingConv(CC_DeviceKernel));
 }
 
 /// Return IR struct type for rtinfo struct in rocm-device-libs used for device
@@ -678,7 +657,7 @@ llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
   // kernel address (only the kernel descriptor).
   auto *F = llvm::Function::Create(FT, llvm::GlobalValue::InternalLinkage, Name,
                                    &Mod);
-  F->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
+  F->setCallingConv(getDeviceKernelCallingConv());
 
   llvm::AttrBuilder KernelAttrs(C);
   // FIXME: The invoke isn't applying the right attributes either

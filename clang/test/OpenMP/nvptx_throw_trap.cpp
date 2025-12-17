@@ -1,4 +1,4 @@
-// REQUIRES: nvptx-registered-target
+// REQUIRES: nvptx-registered-target, x86-registered-target
 
 // RUN: %clang_cc1 -fopenmp -triple nvptx64 -fopenmp-is-target-device %s -S -Wno-openmp-target-exception -o - | FileCheck -check-prefix=DEVICE %s
 // RUN: %clang_cc1 -fopenmp -triple x86_64-pc-linux-gnu -fopenmp-is-target-device -fcxx-exceptions %s -S -Wno-openmp-target-exception -o - | FileCheck -check-prefix=HOST %s
@@ -8,6 +8,6 @@
 // HOST-NOT: trap;
 #pragma omp declare target
 void foo(void) {
-	throw 404; 
+	throw 404;
 }
 #pragma omp end declare target

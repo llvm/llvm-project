@@ -11,7 +11,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; the method implementation and it is not guaranteed that the best option
 ; encountered first (like here).
 
-define double @root_selection(double %a, double %b, double %c, double %d) local_unnamed_addr #0 {
+define double @root_selection(double %a, double %b, double %c, double %d) local_unnamed_addr {
 ; CHECK-LABEL: @root_selection(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[B:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[A:%.*]], i32 1
@@ -53,5 +53,3 @@ define double @root_selection(double %a, double %b, double %c, double %d) local_
   %i18 = fadd fast double %i17, %d
   ret double %i18
 }
-
-attributes #0 = { "unsafe-fp-math"="true" }

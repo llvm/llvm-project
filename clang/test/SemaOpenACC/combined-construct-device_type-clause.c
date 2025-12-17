@@ -6,22 +6,22 @@ void uses() {
   typedef struct S{} STy;
   STy SImpl;
 
-#pragma acc parallel loop device_type(I)
+#pragma acc parallel loop device_type(radeon)
   for(int i = 0; i < 5; ++i);
-#pragma acc serial loop device_type(S) dtype(STy)
+#pragma acc serial loop device_type(multicore) dtype(host)
   for(int i = 0; i < 5; ++i);
-#pragma acc kernels loop dtype(SImpl)
+#pragma acc kernels loop dtype(acc_device_nvidia)
   for(int i = 0; i < 5; ++i);
-#pragma acc kernels loop dtype(int) device_type(*)
+#pragma acc kernels loop dtype(default) device_type(*)
   for(int i = 0; i < 5; ++i);
-#pragma acc kernels loop dtype(true) device_type(false)
+#pragma acc kernels loop dtype(nvidia) device_type(radeon)
   for(int i = 0; i < 5; ++i);
 
   // expected-error@+1{{expected identifier}}
-#pragma acc kernels loop dtype(int, *)
+#pragma acc kernels loop dtype(radeon, *)
   for(int i = 0; i < 5; ++i);
 
-#pragma acc parallel loop device_type(I, int)
+#pragma acc parallel loop device_type(host, multicore)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{expected ','}}
   // expected-error@+1{{expected identifier}}
@@ -60,37 +60,37 @@ void uses() {
 #pragma acc serial loop device_type(*) nohost
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'default' may not follow a 'device_type' clause in a 'kernels loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels loop device_type(*) default(none)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'if' may not follow a 'device_type' clause in a 'parallel loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc parallel loop device_type(*) if(1)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'self' may not follow a 'device_type' clause in a 'serial loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc serial loop device_type(*) self
   for(int i = 0; i < 5; ++i);
 
   int Var;
   int *VarPtr;
   // expected-error@+2{{OpenACC clause 'copy' may not follow a 'device_type' clause in a 'kernels loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels loop device_type(*) copy(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'pcopy' may not follow a 'device_type' clause in a 'parallel loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc parallel loop device_type(*) pcopy(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'present_or_copy' may not follow a 'device_type' clause in a 'serial loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc serial loop device_type(*) present_or_copy(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'kernels loop' directive}}
 #pragma acc kernels loop device_type(*) use_device(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'attach' may not follow a 'device_type' clause in a 'parallel loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc parallel loop device_type(*) attach(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'delete' clause is not valid on 'serial loop' directive}}
@@ -103,14 +103,14 @@ void uses() {
 #pragma acc parallel loop device_type(*) device(VarPtr)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'deviceptr' may not follow a 'device_type' clause in a 'serial loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc serial loop device_type(*) deviceptr(VarPtr)
   for(int i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'device_resident' clause is not valid on 'kernels loop' directive}}
 #pragma acc kernels loop device_type(*)  device_resident(VarPtr)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'firstprivate' may not follow a 'device_type' clause in a 'parallel loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc parallel loop device_type(*) firstprivate(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'host' clause is not valid on 'serial loop' directive}}
@@ -120,55 +120,55 @@ void uses() {
 #pragma acc parallel loop device_type(*) link(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'no_create' may not follow a 'device_type' clause in a 'serial loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc serial loop device_type(*) no_create(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'present' may not follow a 'device_type' clause in a 'kernels loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels loop device_type(*) present(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'private' may not follow a 'device_type' clause in a 'parallel loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc parallel loop device_type(*) private(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'copyout' may not follow a 'device_type' clause in a 'serial loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc serial loop device_type(*) copyout(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'pcopyout' may not follow a 'device_type' clause in a 'serial loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc serial loop device_type(*) pcopyout(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'present_or_copyout' may not follow a 'device_type' clause in a 'parallel loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc parallel loop device_type(*) present_or_copyout(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'copyin' may not follow a 'device_type' clause in a 'serial loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc serial loop device_type(*) copyin(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'pcopyin' may not follow a 'device_type' clause in a 'serial loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc serial loop device_type(*) pcopyin(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'present_or_copyin' may not follow a 'device_type' clause in a 'parallel loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc parallel loop device_type(*) present_or_copyin(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'create' may not follow a 'device_type' clause in a 'serial loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc serial loop device_type(*) create(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'pcreate' may not follow a 'device_type' clause in a 'serial loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc serial loop device_type(*) pcreate(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'present_or_create' may not follow a 'device_type' clause in a 'parallel loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc parallel loop device_type(*) present_or_create(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'reduction' may not follow a 'device_type' clause in a 'serial loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc serial loop device_type(*) reduction(+:Var)
   for(int i = 0; i < 5; ++i);
 #pragma acc serial loop device_type(*) collapse(1)

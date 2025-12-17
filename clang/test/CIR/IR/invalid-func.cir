@@ -1,0 +1,11 @@
+// RUN: cir-opt %s -verify-diagnostics
+
+module {
+  cir.func @l0() {
+    cir.return
+  }
+
+  cir.func @l1() alias(@l0) { // expected-error {{function alias shall not have a body}}
+    cir.return
+  }
+}

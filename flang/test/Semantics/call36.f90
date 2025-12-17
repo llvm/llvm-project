@@ -15,7 +15,7 @@ module m
     call intentInUnlimited(scalar)
     !ERROR: Actual argument associated with POINTER dummy argument 'x=' must also be POINTER unless INTENT(IN)
     call intentInOutUnlimited(scalar)
-    !PORTABILITY: If a POINTER or ALLOCATABLE dummy or actual argument is unlimited polymorphic, both should be so
+    !PORTABILITY: If a POINTER or ALLOCATABLE dummy or actual argument is unlimited polymorphic, both should be so [-Wrelaxed-intent-in-checking]
     call intentInUnlimited(arrayptr)
     !ERROR: If a POINTER or ALLOCATABLE dummy or actual argument is unlimited polymorphic, both must be so
     call intentInOutUnlimited(arrayptr)

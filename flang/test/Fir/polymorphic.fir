@@ -86,7 +86,7 @@ func.func @_QMunlimitedPsub1(%arg0: !fir.class<!fir.array<?xnone>> {fir.bindc_na
 }
 
 // CHECK-LABEL: define void @_QMunlimitedPsub1(
-// CHECK-SAME: ptr %[[ARRAY:.*]]){{.*}}{
+// CHECK-SAME: ptr {{[^%]*}}%[[ARRAY:.*]]){{.*}}{
 // CHECK: %[[BOX:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
 // CHECK: %{{.}} = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[ARRAY]], i32 0, i32 7, i32 0, i32 2
 // CHECK: %[[TYPE_DESC_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[ARRAY]], i32 0, i32 8

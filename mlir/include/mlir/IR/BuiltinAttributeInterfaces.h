@@ -270,6 +270,12 @@ LogicalResult
 verifyAffineMapAsLayout(AffineMap m, ArrayRef<int64_t> shape,
                         function_ref<InFlightDiagnostic()> emitError);
 
+// Return the strides and offsets that can be inferred from the given affine
+// layout map given the map and a memref shape.
+LogicalResult getAffineMapStridesAndOffset(AffineMap map,
+                                           ArrayRef<int64_t> shape,
+                                           SmallVectorImpl<int64_t> &strides,
+                                           int64_t &offset);
 } // namespace detail
 
 } // namespace mlir

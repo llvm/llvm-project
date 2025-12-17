@@ -322,15 +322,17 @@ void MachineInstr::setExtraInfo(MachineFunction &MF,
                                 MCSymbol *PreInstrSymbol,
                                 MCSymbol *PostInstrSymbol,
                                 MDNode *HeapAllocMarker, MDNode *PCSections,
-                                uint32_t CFIType, MDNode *MMRAs) {
+                                uint32_t CFIType, MDNode *MMRAs, Value *DS) {
   bool HasPreInstrSymbol = PreInstrSymbol != nullptr;
   bool HasPostInstrSymbol = PostInstrSymbol != nullptr;
   bool HasHeapAllocMarker = HeapAllocMarker != nullptr;
   bool HasPCSections = PCSections != nullptr;
   bool HasCFIType = CFIType != 0;
   bool HasMMRAs = MMRAs != nullptr;
+  bool HasDS = DS != nullptr;
   int NumPointers = MMOs.size() + HasPreInstrSymbol + HasPostInstrSymbol +
-                    HasHeapAllocMarker + HasPCSections + HasCFIType + HasMMRAs;
+                    HasHeapAllocMarker + HasPCSections + HasCFIType + HasMMRAs +
+                    HasDS;
 
   // Drop all extra info if there is none.
   if (NumPointers <= 0) {
@@ -343,10 +345,10 @@ void MachineInstr::setExtraInfo(MachineFunction &MF,
   // 32-bit pointers.
   // FIXME: Maybe we should make the symbols in the extra info mutable?
   else if (NumPointers > 1 || HasMMRAs || HasHeapAllocMarker || HasPCSections ||
-           HasCFIType) {
+           HasCFIType || HasDS) {
     Info.set<EIIK_OutOfLine>(
         MF.createMIExtraInfo(MMOs, PreInstrSymbol, PostInstrSymbol,
-                             HeapAllocMarker, PCSections, CFIType, MMRAs));
+                             HeapAllocMarker, PCSections, CFIType, MMRAs, DS));
     return;
   }
 
@@ -365,7 +367,7 @@ void MachineInstr::dropMemRefs(MachineFunction &MF) {
 
   setExtraInfo(MF, {}, getPreInstrSymbol(), getPostInstrSymbol(),
                getHeapAllocMarker(), getPCSections(), getCFIType(),
-               getMMRAMetadata());
+               getMMRAMetadata(), getDeactivationSymbol());
 }
 
 void MachineInstr::setMemRefs(MachineFunction &MF,
@@ -377,7 +379,7 @@ void MachineInstr::setMemRefs(MachineFunction &MF,
 
   setExtraInfo(MF, MMOs, getPreInstrSymbol(), getPostInstrSymbol(),
                getHeapAllocMarker(), getPCSections(), getCFIType(),
-               getMMRAMetadata());
+               getMMRAMetadata(), getDeactivationSymbol());
 }
 
 void MachineInstr::addMemOperand(MachineFunction &MF,
@@ -488,7 +490,7 @@ void MachineInstr::setPreInstrSymbol(MachineFunction &MF, MCSymbol *Symbol) {
 
   setExtraInfo(MF, memoperands(), Symbol, getPostInstrSymbol(),
                getHeapAllocMarker(), getPCSections(), getCFIType(),
-               getMMRAMetadata());
+               getMMRAMetadata(), getDeactivationSymbol());
 }
 
 void MachineInstr::setPostInstrSymbol(MachineFunction &MF, MCSymbol *Symbol) {
@@ -504,7 +506,7 @@ void MachineInstr::setPostInstrSymbol(MachineFunction &MF, MCSymbol *Symbol) {
 
   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), Symbol,
                getHeapAllocMarker(), getPCSections(), getCFIType(),
-               getMMRAMetadata());
+               getMMRAMetadata(), getDeactivationSymbol());
 }
 
 void MachineInstr::setHeapAllocMarker(MachineFunction &MF, MDNode *Marker) {
@@ -513,7 +515,8 @@ void MachineInstr::setHeapAllocMarker(MachineFunction &MF, MDNode *Marker) {
     return;
 
   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
-               Marker, getPCSections(), getCFIType(), getMMRAMetadata());
+               Marker, getPCSections(), getCFIType(), getMMRAMetadata(),
+               getDeactivationSymbol());
 }
 
 void MachineInstr::setPCSections(MachineFunction &MF, MDNode *PCSections) {
@@ -523,7 +526,7 @@ void MachineInstr::setPCSections(MachineFunction &MF, MDNode *PCSections) {
 
   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
                getHeapAllocMarker(), PCSections, getCFIType(),
-               getMMRAMetadata());
+               getMMRAMetadata(), getDeactivationSymbol());
 }
 
 void MachineInstr::setCFIType(MachineFunction &MF, uint32_t Type) {
@@ -532,7 +535,8 @@ void MachineInstr::setCFIType(MachineFunction &MF, uint32_t Type) {
     return;
 
   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
-               getHeapAllocMarker(), getPCSections(), Type, getMMRAMetadata());
+               getHeapAllocMarker(), getPCSections(), Type, getMMRAMetadata(),
+               getDeactivationSymbol());
 }
 
 void MachineInstr::setMMRAMetadata(MachineFunction &MF, MDNode *MMRAs) {
@@ -541,7 +545,18 @@ void MachineInstr::setMMRAMetadata(MachineFunction &MF, MDNode *MMRAs) {
     return;
 
   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
-               getHeapAllocMarker(), getPCSections(), getCFIType(), MMRAs);
+               getHeapAllocMarker(), getPCSections(), getCFIType(), MMRAs,
+               getDeactivationSymbol());
+}
+
+void MachineInstr::setDeactivationSymbol(MachineFunction &MF, Value *DS) {
+  // Do nothing if old and new symbols are the same.
+  if (DS == getDeactivationSymbol())
+    return;
+
+  setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
+               getHeapAllocMarker(), getPCSections(), getCFIType(),
+               getMMRAMetadata(), DS);
 }
 
 void MachineInstr::cloneInstrSymbols(MachineFunction &MF,
@@ -585,6 +600,8 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
       MIFlags |= MachineInstr::MIFlag::NoUSWrap;
     if (GEP->hasNoUnsignedWrap())
       MIFlags |= MachineInstr::MIFlag::NoUWrap;
+    if (GEP->isInBounds())
+      MIFlags |= MachineInstr::MIFlag::InBounds;
   }
 
   // Copy the nonneg flag.
@@ -728,6 +745,8 @@ bool MachineInstr::isIdenticalTo(const MachineInstr &Other,
   // Call instructions with different CFI types are not identical.
   if (isCall() && getCFIType() != Other.getCFIType())
     return false;
+  if (getDeactivationSymbol() != Other.getDeactivationSymbol())
+    return false;
 
   return true;
 }
@@ -794,13 +813,34 @@ bool MachineInstr::shouldUpdateAdditionalCallInfo() const {
   return isCandidateForAdditionalCallInfo();
 }
 
+template <typename Operand, typename Instruction>
+static iterator_range<
+    filter_iterator<Operand *, std::function<bool(Operand &Op)>>>
+getDebugOperandsForRegHelper(Instruction *MI, Register Reg) {
+  std::function<bool(Operand & Op)> OpUsesReg(
+      [Reg](Operand &Op) { return Op.isReg() && Op.getReg() == Reg; });
+  return make_filter_range(MI->debug_operands(), OpUsesReg);
+}
+
+iterator_range<filter_iterator<const MachineOperand *,
+                               std::function<bool(const MachineOperand &Op)>>>
+MachineInstr::getDebugOperandsForReg(Register Reg) const {
+  return getDebugOperandsForRegHelper<const MachineOperand, const MachineInstr>(
+      this, Reg);
+}
+
+iterator_range<
+    filter_iterator<MachineOperand *, std::function<bool(MachineOperand &Op)>>>
+MachineInstr::getDebugOperandsForReg(Register Reg) {
+  return getDebugOperandsForRegHelper<MachineOperand, MachineInstr>(this, Reg);
+}
+
 unsigned MachineInstr::getNumExplicitOperands() const {
   unsigned NumOperands = MCID->getNumOperands();
   if (!MCID->isVariadic())
     return NumOperands;
 
-  for (unsigned I = NumOperands, E = getNumOperands(); I != E; ++I) {
-    const MachineOperand &MO = getOperand(I);
+  for (const MachineOperand &MO : operands_impl().drop_front(NumOperands)) {
     // The operands must always be in the following order:
     // - explicit reg defs,
     // - other explicit operands (reg uses, immediates, etc.),
@@ -818,8 +858,7 @@ unsigned MachineInstr::getNumExplicitDefs() const {
   if (!MCID->isVariadic())
     return NumDefs;
 
-  for (unsigned I = NumDefs, E = getNumOperands(); I != E; ++I) {
-    const MachineOperand &MO = getOperand(I);
+  for (const MachineOperand &MO : operands_impl().drop_front(NumDefs)) {
     if (!MO.isReg() || !MO.isDef() || MO.isImplicit())
       break;
     ++NumDefs;
@@ -954,11 +993,9 @@ MachineInstr::getRegClassConstraint(unsigned OpIdx,
                                     const TargetRegisterInfo *TRI) const {
   assert(getParent() && "Can't have an MBB reference here!");
   assert(getMF() && "Can't have an MF reference here!");
-  const MachineFunction &MF = *getMF();
-
   // Most opcodes have fixed constraints in their MCInstrDesc.
   if (!isInlineAsm())
-    return TII->getRegClass(getDesc(), OpIdx, TRI, MF);
+    return TII->getRegClass(getDesc(), OpIdx);
 
   if (!getOperand(OpIdx).isReg())
     return nullptr;
@@ -981,7 +1018,7 @@ MachineInstr::getRegClassConstraint(unsigned OpIdx,
 
   // Assume that all registers in a memory operand are pointers.
   if (F.isMemKind())
-    return TRI->getPointerRegClass(MF);
+    return TRI->getPointerRegClass();
 
   return nullptr;
 }
@@ -1174,9 +1211,9 @@ void MachineInstr::tieOperands(unsigned DefIdx, unsigned UseIdx) {
   assert(!DefMO.isTied() && "Def is already tied to another use");
   assert(!UseMO.isTied() && "Use is already tied to another def");
 
-  if (DefIdx < TiedMax)
+  if (DefIdx < TiedMax) {
     UseMO.TiedTo = DefIdx + 1;
-  else {
+  } else {
     // Inline asm can use the group descriptors to find tied operands,
     // statepoint tied operands are trivial to match (1-1 reg def with reg use),
     // but on normal instruction, the tied def must be within the first TiedMax
@@ -1527,10 +1564,14 @@ bool MachineInstr::mayAlias(BatchAAResults *AA, const MachineInstr &Other,
 
   // Check each pair of memory operands from both instructions, which can't
   // alias only if all pairs won't alias.
-  for (auto *MMOa : memoperands())
-    for (auto *MMOb : Other.memoperands())
+  for (auto *MMOa : memoperands()) {
+    for (auto *MMOb : Other.memoperands()) {
+      if (!MMOa->isStore() && !MMOb->isStore())
+        continue;
       if (MemOperandsHaveAlias(MFI, AA, UseTBAA, MMOa, MMOb))
         return true;
+    }
+  }
 
   return false;
 }
@@ -1840,8 +1881,12 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "nneg ";
   if (getFlag(MachineInstr::Disjoint))
     OS << "disjoint ";
+  if (getFlag(MachineInstr::NoUSWrap))
+    OS << "nusw ";
   if (getFlag(MachineInstr::SameSign))
     OS << "samesign ";
+  if (getFlag(MachineInstr::InBounds))
+    OS << "inbounds ";
 
   // Print the opcode name.
   if (TII)
@@ -1966,7 +2011,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   // operands.
   if (MCSymbol *PreInstrSymbol = getPreInstrSymbol()) {
     if (!FirstOp) {
-      FirstOp = false;
       OS << ',';
     }
     OS << " pre-instr-symbol ";
@@ -1974,7 +2018,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   if (MCSymbol *PostInstrSymbol = getPostInstrSymbol()) {
     if (!FirstOp) {
-      FirstOp = false;
       OS << ',';
     }
     OS << " post-instr-symbol ";
@@ -1982,7 +2025,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   if (MDNode *HeapAllocMarker = getHeapAllocMarker()) {
     if (!FirstOp) {
-      FirstOp = false;
       OS << ',';
     }
     OS << " heap-alloc-marker ";
@@ -1990,7 +2032,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   if (MDNode *PCSections = getPCSections()) {
     if (!FirstOp) {
-      FirstOp = false;
       OS << ',';
     }
     OS << " pcsections ";
@@ -1998,7 +2039,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   if (MDNode *MMRA = getMMRAMetadata()) {
     if (!FirstOp) {
-      FirstOp = false;
       OS << ',';
     }
     OS << " mmra ";
@@ -2009,6 +2049,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << ',';
     OS << " cfi-type " << CFIType;
   }
+  if (getDeactivationSymbol())
+    OS << ", deactivation-symbol " << getDeactivationSymbol()->getName();
 
   if (DebugInstrNum) {
     if (!FirstOp)
@@ -2284,7 +2326,7 @@ MachineInstrExpressionTrait::getHashValue(const MachineInstr* const &MI) {
 
     HashComponents.push_back(hash_value(MO));
   }
-  return hash_combine_range(HashComponents.begin(), HashComponents.end());
+  return hash_combine_range(HashComponents);
 }
 
 const MDNode *MachineInstr::getLocCookieMD() const {
@@ -2420,9 +2462,8 @@ static const DIExpression *computeExprForSpill(
 static const DIExpression *computeExprForSpill(const MachineInstr &MI,
                                                Register SpillReg) {
   assert(MI.hasDebugOperandForReg(SpillReg) && "Spill Reg is not used in MI.");
-  SmallVector<const MachineOperand *> SpillOperands;
-  for (const MachineOperand &Op : MI.getDebugOperandsForReg(SpillReg))
-    SpillOperands.push_back(&Op);
+  SmallVector<const MachineOperand *> SpillOperands(
+      llvm::make_pointer_range(MI.getDebugOperandsForReg(SpillReg)));
   return computeExprForSpill(MI, SpillOperands);
 }
 
@@ -2525,7 +2566,7 @@ using MMOList = SmallVector<const MachineMemOperand *, 2>;
 
 static LocationSize getSpillSlotSize(const MMOList &Accesses,
                                      const MachineFrameInfo &MFI) {
-  uint64_t Size = 0;
+  std::optional<TypeSize> Size;
   for (const auto *A : Accesses) {
     if (MFI.isSpillSlotObjectIndex(
             cast<FixedStackPseudoSourceValue>(A->getPseudoValue())
@@ -2533,10 +2574,15 @@ static LocationSize getSpillSlotSize(const MMOList &Accesses,
       LocationSize S = A->getSize();
       if (!S.hasValue())
         return LocationSize::beforeOrAfterPointer();
-      Size += S.getValue();
+      if (!Size)
+        Size = S.getValue();
+      else
+        Size = *Size + S.getValue();
     }
   }
-  return Size;
+  if (!Size)
+    return LocationSize::precise(0);
+  return LocationSize::precise(*Size);
 }
 
 std::optional<LocationSize>
@@ -2718,4 +2764,19 @@ bool MachineInstr::mayFoldInlineAsmRegOp(unsigned OpId) const {
   if (F.isRegUseKind() || F.isRegDefKind() || F.isRegDefEarlyClobberKind())
     return F.getRegMayBeFolded();
   return false;
+}
+
+unsigned MachineInstr::removePHIIncomingValueFor(const MachineBasicBlock &MBB) {
+  assert(isPHI());
+
+  // Phi might have multiple entries for MBB. Need to remove them all.
+  unsigned RemovedCount = 0;
+  for (unsigned N = getNumOperands(); N > 2; N -= 2) {
+    if (getOperand(N - 1).getMBB() == &MBB) {
+      removeOperand(N - 1);
+      removeOperand(N - 2);
+      RemovedCount += 2;
+    }
+  }
+  return RemovedCount;
 }

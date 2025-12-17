@@ -24,9 +24,9 @@ static SMap *AsMap(void *m) { return (SMap*) m; }
 
 CFGStmtMap::~CFGStmtMap() { delete AsMap(M); }
 
-CFGBlock *CFGStmtMap::getBlock(Stmt *S) {
+const CFGBlock *CFGStmtMap::getBlock(const Stmt *S) const {
   SMap *SM = AsMap(M);
-  Stmt *X = S;
+  const Stmt *X = S;
 
   // If 'S' isn't in the map, walk the ParentMap to see if one of its ancestors
   // is in the map.
@@ -83,8 +83,8 @@ CFGStmtMap *CFGStmtMap::Build(CFG *C, ParentMap *PM) {
 
   // Walk all blocks, accumulating the block-level expressions, labels,
   // and terminators.
-  for (CFG::iterator I = C->begin(), E = C->end(); I != E; ++I)
-    Accumulate(*SM, *I);
+  for (CFGBlock *BB : *C)
+    Accumulate(*SM, BB);
 
   return new CFGStmtMap(PM, SM);
 }

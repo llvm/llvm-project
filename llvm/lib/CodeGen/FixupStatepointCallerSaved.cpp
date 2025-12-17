@@ -242,8 +242,7 @@ public:
     ReservedSlots.clear();
     if (EHPad)
       if (auto It = GlobalIndices.find(EHPad); It != GlobalIndices.end())
-        for (auto &RSP : It->second)
-          ReservedSlots.insert(RSP.second);
+        ReservedSlots.insert_range(llvm::make_second_range(It->second));
   }
 
   // Get frame index to spill the register.
@@ -421,7 +420,7 @@ public:
 
       LLVM_DEBUG(dbgs() << "Insert spill before " << *InsertBefore);
       TII.storeRegToStackSlot(*MI.getParent(), InsertBefore, Reg, IsKill, FI,
-                              RC, &TRI, Register());
+                              RC, Register());
     }
   }
 
@@ -430,7 +429,7 @@ public:
     const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
     int FI = RegToSlotIdx[Reg];
     if (It != MBB->end()) {
-      TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, &TRI, Register());
+      TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, Register());
       return;
     }
 
@@ -438,7 +437,7 @@ public:
     // and then swap them.
     assert(!MBB->empty() && "Empty block");
     --It;
-    TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, &TRI, Register());
+    TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, Register());
     MachineInstr *Reload = It->getPrevNode();
     int Dummy = 0;
     (void)Dummy;

@@ -54,6 +54,13 @@ BASE_REQUIRED_TEMPLATE_TYPE(SecondaryT)
 // Indicates possible support for Memory Tagging.
 BASE_OPTIONAL(const bool, MaySupportMemoryTagging, false)
 
+// Disable the quarantine code.
+BASE_OPTIONAL(const bool, QuarantineDisabled, false)
+
+// If set to true, malloc_usable_size returns the exact size of the allocation.
+// If set to false, return the total available size in the allocation.
+BASE_OPTIONAL(const bool, ExactUsableSize, true)
+
 // PRIMARY_REQUIRED_TYPE(NAME)
 //
 // SizeClassMap to use with the Primary.
@@ -81,6 +88,10 @@ PRIMARY_REQUIRED(const s32, MaxReleaseToOsIntervalMs)
 
 // PRIMARY_OPTIONAL(TYPE, NAME, DEFAULT)
 //
+
+// Enables/disables primary block caching. Batch class still caches.
+PRIMARY_OPTIONAL(const bool, EnableBlockCache, true)
+
 // The scale of a compact pointer. E.g., Ptr = Base + (CompactPtr << Scale).
 PRIMARY_OPTIONAL(const uptr, CompactPtrScale, SCUDO_MIN_ALIGNMENT_LOG)
 

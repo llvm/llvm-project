@@ -31,7 +31,7 @@ entry:
   %i.addr = alloca i64, align 8
   store i64 %i, ptr %i.addr, align 8
   call void @llvm.dbg.declare(metadata ptr %i.addr, metadata !16, metadata !17), !dbg !18
-  %call = call i32 @rand() #3, !dbg !19
+  %call = call i32 @rand(), !dbg !19
 ; CHECK: !prof ![[PROF1:[0-9]+]]
   %cmp = icmp slt i32 %call, 500, !dbg !21
   br i1 %cmp, label %if.then, label %if.else, !dbg !22
@@ -42,7 +42,7 @@ if.then:                                          ; preds = %entry
   br label %return, !dbg !23
 
 if.else:                                          ; preds = %entry
-  %call1 = call i32 @rand() #3, !dbg !25
+  %call1 = call i32 @rand(), !dbg !25
 ; CHECK: !prof ![[PROF3:[0-9]+]]
   %cmp2 = icmp sgt i32 %call1, 5000, !dbg !28
   br i1 %cmp2, label %if.then.3, label %if.else.4, !dbg !29
@@ -62,10 +62,10 @@ return:                                           ; preds = %if.else.4, %if.then
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; Function Attrs: nounwind
-declare i32 @rand() #2
+declare i32 @rand()
 
 ; Function Attrs: nounwind uwtable
 define i32 @main() #0 !dbg !9 {
@@ -141,10 +141,7 @@ for.end.6:                                        ; preds = %for.cond
 ; CHECK: ![[PROF7]] = !{!"branch_weights", i32 18943, i32 1}
 ; CHECK: ![[PROF8]] = !{!"branch_weights", i32 18942}
 
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" "use-sample-profile" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { nounwind }
+attributes #0 = { nounwind uwtable "use-sample-profile" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!13, !14}

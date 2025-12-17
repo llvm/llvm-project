@@ -15,7 +15,7 @@ CHECK:      Section     : .text
 CHECK:      IsSimple    : 1
 CHECK:      BB Count    : 5
 CHECK:      Exec Count  : 199
-CHECK:      Branch Count: 7689
+CHECK:      Sample Count: 7689
 CHECK:    }
 CHECK:    .LBB{{.*}}
 CHECK:      Exec Count : 199

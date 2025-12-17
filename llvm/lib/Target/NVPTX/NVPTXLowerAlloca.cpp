@@ -33,10 +33,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-void initializeNVPTXLowerAllocaPass(PassRegistry &);
-}
-
 namespace {
 class NVPTXLowerAlloca : public FunctionPass {
   bool runOnFunction(Function &F) override;

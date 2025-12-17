@@ -41,7 +41,7 @@ void f4(char *array) {
 
   _Static_assert(sizeof(int) == 4, "Wrong triple for the test");
 
-  clang_analyzer_dump_int(__builtin_bit_cast(int, b)); // expected-warning {{lazyCompoundVal}}
+  clang_analyzer_dump_int(__builtin_bit_cast(int, b)); // expected-warning {{Unknown}}
   clang_analyzer_dump_int(array[__builtin_bit_cast(int, b)]); // expected-warning {{Unknown}}
 
   array[__builtin_bit_cast(int, b)] = 0x10; // no crash

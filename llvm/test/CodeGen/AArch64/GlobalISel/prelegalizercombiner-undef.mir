@@ -210,9 +210,7 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
-    ; Show that we don't do the combine when one of the vectors is not a
-    ; G_IMPLICIT_DEF.
-    ;
+    ; Show that we don't do the combine when one of the vectors is not a G_IMPLICIT_DEF.
     ; CHECK-LABEL: name: shufflevector_not_all_ops_undef
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}

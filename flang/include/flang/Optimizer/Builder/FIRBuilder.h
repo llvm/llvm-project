@@ -150,7 +150,7 @@ public:
   mlir::Block *getAllocaBlock();
 
   /// Safely create a reference type to the type `eleTy`.
-  mlir::Type getRefType(mlir::Type eleTy);
+  mlir::Type getRefType(mlir::Type eleTy, bool isVolatile = false);
 
   /// Create a sequence of `eleTy` with `rank` dimensions of unknown size.
   mlir::Type getVarLenSeqTy(mlir::Type eleTy, unsigned rank = 1);
@@ -206,6 +206,11 @@ public:
   /// Create a real constant of type \p realType with a value zero.
   mlir::Value createRealZeroConstant(mlir::Location loc, mlir::Type realType) {
     return createRealConstant(loc, realType, 0u);
+  }
+
+  /// Create a real constant of type \p realType with value one.
+  mlir::Value createRealOneConstant(mlir::Location loc, mlir::Type realType) {
+    return createRealConstant(loc, realType, 1u);
   }
 
   /// Create a slot for a local on the stack. Besides the variable's type and
@@ -268,6 +273,50 @@ public:
                       mlir::ValueRange lenParams = {},
                       llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
 
+  /// Sample genDeclare callback for createArrayTemp() below.
+  /// It creates fir.declare operation using the given operands.
+  /// \p memref is the base of the allocated temporary,
+  /// which may be !fir.ref<!fir.array<>> or !fir.box/class<>.
+  static mlir::Value genTempDeclareOp(fir::FirOpBuilder &builder,
+                                      mlir::Location loc, mlir::Value memref,
+                                      llvm::StringRef name, mlir::Value shape,
+                                      llvm::ArrayRef<mlir::Value> typeParams,
+                                      fir::FortranVariableFlagsAttr attrs);
+
+  /// Create a temporary with the given \p baseType,
+  /// \p shape, \p extents and \p typeParams. An optional
+  /// \p polymorphicMold specifies the entity which dynamic type
+  /// has to be used for the allocation.
+  /// \p genDeclare callback generates a declare operation
+  /// for the created temporary. FIR passes may use genTempDeclareOp()
+  /// function above that creates fir.declare.
+  /// HLFIR passes may provide their own callback that generates
+  /// hlfir.declare. Some passes may provide a callback that
+  /// just passes through the base of the temporary.
+  /// If \p useStack is true, the function will try to do the allocation
+  /// in stack memory (which is not always possible currently).
+  /// The first return value is the base of the temporary object,
+  /// which may be !fir.ref<!fir.array<>> or !fir.box/class<>.
+  /// The second return value is true, if the actual allocation
+  /// was done in heap memory.
+  std::pair<mlir::Value, bool> createAndDeclareTemp(
+      mlir::Location loc, mlir::Type baseType, mlir::Value shape,
+      llvm::ArrayRef<mlir::Value> extents,
+      llvm::ArrayRef<mlir::Value> typeParams,
+      const std::function<decltype(genTempDeclareOp)> &genDeclare,
+      mlir::Value polymorphicMold, bool useStack, llvm::StringRef tmpName);
+  /// Create and declare an array temporary.
+  std::pair<mlir::Value, bool>
+  createArrayTemp(mlir::Location loc, fir::SequenceType arrayType,
+                  mlir::Value shape, llvm::ArrayRef<mlir::Value> extents,
+                  llvm::ArrayRef<mlir::Value> typeParams,
+                  const std::function<decltype(genTempDeclareOp)> &genDeclare,
+                  mlir::Value polymorphicMold, bool useStack = false,
+                  llvm::StringRef tmpName = ".tmp.array") {
+    return createAndDeclareTemp(loc, arrayType, shape, extents, typeParams,
+                                genDeclare, polymorphicMold, useStack, tmpName);
+  }
+
   /// Create an LLVM stack save intrinsic op. Returns the saved stack pointer.
   /// The stack address space is fetched from the data layout of the current
   /// module.
@@ -321,7 +370,14 @@ public:
   // Linkage helpers (inline). The default linkage is external.
   //===--------------------------------------------------------------------===//
 
-  mlir::StringAttr createCommonLinkage() { return getStringAttr("common"); }
+  static mlir::StringAttr createCommonLinkage(mlir::MLIRContext *context) {
+    return mlir::StringAttr::get(context, "common");
+  }
+  mlir::StringAttr createCommonLinkage() {
+    return createCommonLinkage(getContext());
+  }
+
+  mlir::StringAttr createExternalLinkage() { return getStringAttr("external"); }
 
   mlir::StringAttr createInternalLinkage() { return getStringAttr("internal"); }
 
@@ -362,6 +418,15 @@ public:
   /// Lazy creation of fir.convert op.
   mlir::Value createConvert(mlir::Location loc, mlir::Type toTy,
                             mlir::Value val);
+
+  /// Create a fir.convert op with a volatile cast if the source value's type
+  /// does not match the target type's volatility.
+  mlir::Value createConvertWithVolatileCast(mlir::Location loc, mlir::Type toTy,
+                                            mlir::Value val);
+
+  /// Cast \p value to have \p isVolatile volatility.
+  mlir::Value createVolatileCast(mlir::Location loc, bool isVolatile,
+                                 mlir::Value value);
 
   /// Create a fir.store of \p val into \p addr. A lazy conversion
   /// of \p val to the element type of \p addr is created if needed.
@@ -477,27 +542,28 @@ public:
   /// bodies.
   IfBuilder genIfOp(mlir::Location loc, mlir::TypeRange results,
                     mlir::Value cdt, bool withElseRegion) {
-    auto op = create<fir::IfOp>(loc, results, cdt, withElseRegion);
+    auto op = fir::IfOp::create(*this, loc, results, cdt, withElseRegion);
     return IfBuilder(op, *this);
   }
 
   /// Create an IfOp with no "else" region, and no result values.
   /// Usage: genIfThen(loc, cdt).genThen(lambda).end();
   IfBuilder genIfThen(mlir::Location loc, mlir::Value cdt) {
-    auto op = create<fir::IfOp>(loc, std::nullopt, cdt, false);
+    auto op = fir::IfOp::create(*this, loc, mlir::TypeRange(), cdt, false);
     return IfBuilder(op, *this);
   }
 
   /// Create an IfOp with an "else" region, and no result values.
   /// Usage: genIfThenElse(loc, cdt).genThen(lambda).genElse(lambda).end();
   IfBuilder genIfThenElse(mlir::Location loc, mlir::Value cdt) {
-    auto op = create<fir::IfOp>(loc, std::nullopt, cdt, true);
+    auto op = fir::IfOp::create(*this, loc, mlir::TypeRange(), cdt, true);
     return IfBuilder(op, *this);
   }
 
   mlir::Value genNot(mlir::Location loc, mlir::Value boolean) {
-    return create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::eq,
-                                       boolean, createBool(loc, false));
+    return mlir::arith::CmpIOp::create(*this, loc,
+                                       mlir::arith::CmpIPredicate::eq, boolean,
+                                       createBool(loc, false));
   }
 
   /// Generate code testing \p addr is not a null address.
@@ -556,6 +622,17 @@ public:
     return integerOverflowFlags;
   }
 
+  /// Set ComplexDivisionToRuntimeFlag value. If set to true, complex number
+  /// division is lowered to a runtime function by this builder.
+  void setComplexDivisionToRuntimeFlag(bool flag) {
+    complexDivisionToRuntimeFlag = flag;
+  }
+
+  /// Get current ComplexDivisionToRuntimeFlag value.
+  bool getComplexDivisionToRuntimeFlag() const {
+    return complexDivisionToRuntimeFlag;
+  }
+
   /// Dump the current function. (debug)
   LLVM_DUMP_METHOD void dumpFunc();
 
@@ -577,7 +654,7 @@ public:
   mlir::Value createUnsigned(mlir::Location loc, mlir::Type resultType,
                              mlir::Value left, mlir::Value right) {
     if (!resultType.isIntOrFloat())
-      return create<OpTy>(loc, resultType, left, right);
+      return OpTy::create(*this, loc, resultType, left, right);
     mlir::Type signlessType = mlir::IntegerType::get(
         getContext(), resultType.getIntOrFloatBitWidth(),
         mlir::IntegerType::SignednessSemantics::Signless);
@@ -590,10 +667,19 @@ public:
       right = createConvert(loc, signlessType, right);
       opResType = signlessType;
     }
-    mlir::Value result = create<OpTy>(loc, opResType, left, right);
+    mlir::Value result = OpTy::create(*this, loc, opResType, left, right);
     if (resultType.isUnsignedInteger())
       result = createConvert(loc, resultType, result);
     return result;
+  }
+
+  /// Compare two pointer-like values using the given predicate.
+  mlir::Value genPtrCompare(mlir::Location loc,
+                            mlir::arith::CmpIPredicate predicate,
+                            mlir::Value ptr1, mlir::Value ptr2) {
+    ptr1 = createConvert(loc, getIndexType(), ptr1);
+    ptr2 = createConvert(loc, getIndexType(), ptr2);
+    return mlir::arith::CmpIOp::create(*this, loc, predicate, ptr1, ptr2);
   }
 
 private:
@@ -610,6 +696,10 @@ private:
   /// IntegerOverflowFlags that need to be set for operations that support
   /// mlir::arith::IntegerOverflowFlagsAttr.
   mlir::arith::IntegerOverflowFlags integerOverflowFlags{};
+
+  /// Flag to control whether complex number division is lowered to a runtime
+  /// function or to the MLIR complex dialect.
+  bool complexDivisionToRuntimeFlag = true;
 
   /// fir::GlobalOp and func::FuncOp symbol table to speed-up
   /// lookups.
@@ -735,7 +825,8 @@ void genScalarAssignment(fir::FirOpBuilder &builder, mlir::Location loc,
                          const fir::ExtendedValue &lhs,
                          const fir::ExtendedValue &rhs,
                          bool needFinalization = false,
-                         bool isTemporaryLHS = false);
+                         bool isTemporaryLHS = false,
+                         mlir::ArrayAttr accessGroups = {});
 
 /// Assign \p rhs to \p lhs. Both \p rhs and \p lhs must be scalar derived
 /// types. The assignment follows Fortran intrinsic assignment semantic for
@@ -769,6 +860,11 @@ mlir::Value genLenOfCharacter(fir::FirOpBuilder &builder, mlir::Location loc,
 /// for logical types).
 mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
                             mlir::Type type);
+
+/// Create a one value of a given numerical or logical \p type (`true`
+/// for logical types).
+mlir::Value createOneValue(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Type type);
 
 /// Get the integer constants of triplet and compute the extent.
 std::optional<std::int64_t> getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
@@ -827,7 +923,7 @@ llvm::SmallVector<mlir::Value>
 elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams);
 
 /// Get the address space which should be used for allocas
-uint64_t getAllocaAddressSpace(mlir::DataLayout *dataLayout);
+uint64_t getAllocaAddressSpace(const mlir::DataLayout *dataLayout);
 
 /// The two vectors of MLIR values have the following property:
 ///   \p extents1[i] must have the same value as \p extents2[i]
@@ -837,6 +933,10 @@ uint64_t getAllocaAddressSpace(mlir::DataLayout *dataLayout);
 /// and extents2[j] is not, then result[j] is the MLIR value extents1[j].
 llvm::SmallVector<mlir::Value> deduceOptimalExtents(mlir::ValueRange extents1,
                                                     mlir::ValueRange extents2);
+
+uint64_t getGlobalAddressSpace(mlir::DataLayout *dataLayout);
+
+uint64_t getProgramAddressSpace(mlir::DataLayout *dataLayout);
 
 /// Given array extents generate code that sets them all to zeroes,
 /// if the array is empty, e.g.:
@@ -850,6 +950,37 @@ llvm::SmallVector<mlir::Value> deduceOptimalExtents(mlir::ValueRange extents1,
 ///   %result1 = arith.select %p4, %c0, %e1 : index
 llvm::SmallVector<mlir::Value> updateRuntimeExtentsForEmptyArrays(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::ValueRange extents);
+
+/// Given \p box of type fir::BaseBoxType representing an array,
+/// the function generates code to fetch the lower bounds,
+/// the extents and the strides from the box. The values are returned via
+/// \p lbounds, \p extents and \p strides.
+void genDimInfoFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
+                       mlir::Value box,
+                       llvm::SmallVectorImpl<mlir::Value> *lbounds,
+                       llvm::SmallVectorImpl<mlir::Value> *extents,
+                       llvm::SmallVectorImpl<mlir::Value> *strides);
+
+/// Generate an LLVM dialect lifetime start marker at the current insertion
+/// point given an fir.alloca. Returns the value to be passed to the lifetime
+/// end marker.
+mlir::Value genLifetimeStart(mlir::OpBuilder &builder, mlir::Location loc,
+                             fir::AllocaOp alloc, const mlir::DataLayout *dl);
+
+/// Generate an LLVM dialect lifetime end marker at the current insertion point
+/// given an llvm.ptr value.
+void genLifetimeEnd(mlir::OpBuilder &builder, mlir::Location loc,
+                    mlir::Value mem);
+
+/// Given a fir.box or fir.class \p box describing an entity and a raw address
+/// \p newAddr for an entity with the same Fortran properties (rank, dynamic
+/// type, length parameters and bounds) and attributes (POINTER or ALLOCATABLE),
+/// create a box for \p newAddr with the same type as \p box. This assumes \p
+/// newAddr is for contiguous storage (\p box does not have to be contiguous).
+mlir::Value getDescriptorWithNewBaseAddress(fir::FirOpBuilder &builder,
+                                            mlir::Location loc, mlir::Value box,
+                                            mlir::Value newAddr);
+
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

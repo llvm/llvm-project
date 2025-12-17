@@ -100,27 +100,62 @@ define <vscale x 4 x i4> @test_compress_illegal_element_type(<vscale x 4 x i4> %
     ret <vscale x 4 x i4> %out
 }
 
+define <vscale x 4 x i32> @test_compress_knownbits_zext(<vscale x 4 x i16> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %passthru) nounwind {
+; CHECK-LABEL: test_compress_knownbits_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and z0.s, z0.s, #0xffff
+; CHECK-NEXT:    cntp x8, p0, p0.s
+; CHECK-NEXT:    and z1.s, z1.s, #0x3
+; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %xvec = zext <vscale x 4 x i16> %vec to <vscale x 4 x i32>
+  %xpassthru = and <vscale x 4 x i32> %passthru, splat (i32 3)
+  %out = call <vscale x 4 x i32> @llvm.experimental.vector.compress(<vscale x 4 x i32> %xvec, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %xpassthru)
+  %res = and <vscale x 4 x i32> %out, splat (i32 65535)
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 4 x i32> @test_compress_numsignbits_sext(<vscale x 4 x i16> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %passthru) nounwind {
+; CHECK-LABEL: test_compress_numsignbits_sext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    and z1.s, z1.s, #0x3
+; CHECK-NEXT:    cntp x8, p0, p0.s
+; CHECK-NEXT:    sxth z0.s, p1/m, z0.s
+; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %xvec = sext <vscale x 4 x i16> %vec to <vscale x 4 x i32>
+  %xpassthru = and <vscale x 4 x i32> %passthru, splat (i32 3)
+  %out = call <vscale x 4 x i32> @llvm.experimental.vector.compress(<vscale x 4 x i32> %xvec, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %xpassthru)
+  %shl = shl <vscale x 4 x i32> %out, splat (i32 16)
+  %res = ashr <vscale x 4 x i32> %shl, splat (i32 16)
+  ret <vscale x 4 x i32> %res
+}
+
 define <vscale x 8 x i32> @test_compress_large(<vscale x 8 x i32> %vec, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: test_compress_large:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    cnth x9
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    sub x9, x9, #1
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    compact z0.s, p2, z0.s
-; CHECK-NEXT:    cntp x8, p1, p2.s
+; CHECK-NEXT:    sub x9, x9, #1
+; CHECK-NEXT:    cntp x8, p1, p1.s
+; CHECK-NEXT:    compact z0.s, p1, z0.s
 ; CHECK-NEXT:    compact z1.s, p0, z1.s
-; CHECK-NEXT:    str z0, [sp]
-; CHECK-NEXT:    mov w8, w8
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmp x8, x9
+; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    st1w { z1.s }, p1, [x9, x8, lsl #2]
+; CHECK-NEXT:    st1w { z1.s }, p0, [x9, x8, lsl #2]
 ; CHECK-NEXT:    ldr z0, [sp]
 ; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    addvl sp, sp, #2
@@ -196,23 +231,24 @@ define <4 x double> @test_compress_v4f64_with_sve(<4 x double> %vec, <4 x i1> %m
 ; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movi v5.2s, #1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ushll v3.2d, v2.2s, #0
 ; CHECK-NEXT:    ushll2 v4.2d, v2.4s, #0
-; CHECK-NEXT:    fmov x8, d2
+; CHECK-NEXT:    and v2.8b, v2.8b, v5.8b
 ; CHECK-NEXT:    shl v3.2d, v3.2d, #63
 ; CHECK-NEXT:    shl v4.2d, v4.2d, #63
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    addp v2.2s, v2.2s, v2.2s
 ; CHECK-NEXT:    cmlt v3.2d, v3.2d, #0
 ; CHECK-NEXT:    cmlt v4.2d, v4.2d, #0
-; CHECK-NEXT:    and x8, x8, #0x3
-; CHECK-NEXT:    lsl x8, x8, #3
+; CHECK-NEXT:    fmov w8, s2
 ; CHECK-NEXT:    and z3.d, z3.d, #0x1
 ; CHECK-NEXT:    and z4.d, z4.d, #0x1
+; CHECK-NEXT:    and x8, x8, #0x3
+; CHECK-NEXT:    lsl x8, x8, #3
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z3.d, #0
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z4.d, #0
 ; CHECK-NEXT:    compact z0.d, p1, z0.d

@@ -109,7 +109,8 @@ void ompt_pre_init(void);
 void ompt_post_init(void);
 void ompt_fini(void);
 
-#define OMPT_GET_RETURN_ADDRESS(level) __builtin_return_address(level)
+#define OMPT_GET_RETURN_ADDRESS(level)                                         \
+  __builtin_extract_return_addr(__builtin_return_address(level))
 #define OMPT_GET_FRAME_ADDRESS(level) __builtin_frame_address(level)
 #define OMPT_FRAME_FLAGS_APP (ompt_frame_application | ompt_frame_cfa)
 #define OMPT_FRAME_FLAGS_RUNTIME (ompt_frame_runtime | ompt_frame_cfa)

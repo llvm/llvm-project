@@ -62,9 +62,7 @@ class AArch64StackTaggingPreRA : public MachineFunctionPass {
 
 public:
   static char ID;
-  AArch64StackTaggingPreRA() : MachineFunctionPass(ID) {
-    initializeAArch64StackTaggingPreRAPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64StackTaggingPreRA() : MachineFunctionPass(ID) {}
 
   bool mayUseUncheckedLoadStore();
   void uncheckUsesOf(unsigned TaggedReg, int FI);

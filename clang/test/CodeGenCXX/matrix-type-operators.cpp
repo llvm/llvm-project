@@ -215,11 +215,11 @@ void insert(MyMatrix<EltTy, Rows, Columns> &Mat, EltTy e, unsigned i, unsigned j
 
 void test_insert_template1(MyMatrix<unsigned, 2, 2> &Mat, unsigned e, unsigned i, unsigned j) {
   // CHECK-LABEL: @_Z21test_insert_template1R8MyMatrixIjLj2ELj2EEjjj(
-  // NOOPT:         [[MAT_ADDR:%.*]] = load ptr, ptr %Mat.addr, align 8{{$}}
+  // NOOPT:         [[MAT_ADDR:%.*]] = load ptr, ptr %Mat.addr, align 8,
   // NOOPT-NEXT:    [[E:%.*]] = load i32, ptr %e.addr, align 4{{$}}
   // NOOPT-NEXT:    [[I:%.*]] = load i32, ptr %i.addr, align 4{{$}}
   // NOOPT-NEXT:    [[J:%.*]] = load i32, ptr %j.addr, align 4{{$}}
-  // OPT:           [[MAT_ADDR:%.*]] = load ptr, ptr %Mat.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
+  // OPT:           [[MAT_ADDR:%.*]] = load ptr, ptr %Mat.addr, align 8, !tbaa !{{[0-9]+}},
   // OPT-NEXT:      [[E:%.*]] = load i32, ptr %e.addr, align 4, !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:      [[I:%.*]] = load i32, ptr %i.addr, align 4, !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:      [[J:%.*]] = load i32, ptr %j.addr, align 4, !tbaa !{{[0-9]+}}{{$}}
@@ -249,9 +249,9 @@ void test_insert_template1(MyMatrix<unsigned, 2, 2> &Mat, unsigned e, unsigned i
 
 void test_insert_template2(MyMatrix<float, 3, 8> &Mat, float e) {
   // CHECK-LABEL: @_Z21test_insert_template2R8MyMatrixIfLj3ELj8EEf(
-  // NOOPT:         [[MAT_ADDR:%.*]] = load ptr, ptr %Mat.addr, align 8{{$}}
+  // NOOPT:         [[MAT_ADDR:%.*]] = load ptr, ptr %Mat.addr, align 8,
   // NOOPT-NEXT:    [[E:%.*]] = load float, ptr %e.addr, align 4{{$}}
-  // OPT:           [[MAT_ADDR:%.*]] = load ptr, ptr %Mat.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
+  // OPT:           [[MAT_ADDR:%.*]] = load ptr, ptr %Mat.addr, align 8, !tbaa !{{[0-9]+}},
   // OPT-NEXT:      [[E:%.*]] = load float, ptr %e.addr, align 4, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:    call void @_Z6insertIfLj3ELj8EEvR8MyMatrixIT_XT0_EXT1_EES1_jj(ptr noundef nonnull align 4 dereferenceable(96) [[MAT_ADDR]], float noundef [[E]], i32 noundef 2, i32 noundef 5)
   // CHECK-NEXT:    ret void
@@ -350,11 +350,11 @@ double extract_IntWrapper_idx(double4x4 &m, IntWrapper i, UnsignedWrapper j) {
   // CHECK-NEXT:    [[J_SUB_EXT:%.*]] = zext i32 [[J_SUB]] to i64
   // CHECK-NEXT:    [[IDX1:%.*]] = mul i64 [[J_SUB_EXT]], 4
   // CHECK-NEXT:    [[IDX2:%.*]] = add i64 [[IDX1]], [[I_ADD_EXT]]
-  // NOOPT-NEXT:    [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8{{$}}
+  // NOOPT-NEXT:    [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8,
   // NOOPT-NEXT:    [[MAT:%.*]] = load <16 x double>, ptr [[MAT_ADDR]], align 8{{$}}
   // OPT-NEXT:      [[CMP:%.*]] = icmp ult i64 [[IDX2]], 16
   // OPT-NEXT:      call void @llvm.assume(i1 [[CMP]])
-  // OPT-NEXT:      [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
+  // OPT-NEXT:      [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8, !tbaa !{{[0-9]+}},
   // OPT-NEXT:      [[MAT:%.*]] = load <16 x double>, ptr [[MAT_ADDR]], align 8, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:    [[MATEXT:%.*]]  = extractelement <16 x double> [[MAT]], i64 [[IDX2]]
   // CHECK-NEXT:    ret double [[MATEXT]]
@@ -381,8 +381,8 @@ void test_constexpr1(matrix_type<float, 4, 4> &m) {
   // OPT:           [[MAT:%.*]] = load <16 x float>, ptr {{.*}}, align 4, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:    [[IM:%.*]] = call noundef <16 x float> @_ZNK13identmatrix_tcvu11matrix_typeIXT0_EXT0_ET_EIfLj4EEEv(ptr {{[^,]*}} @_ZL11identmatrix)
   // CHECK-NEXT:    [[ADD:%.*]] = fadd <16 x float> [[MAT]], [[IM]]
-  // NOOPT-NEXT:    [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8{{$}}
-  // OPT-NEXT:      [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
+  // NOOPT-NEXT:    [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8,
+  // OPT-NEXT:      [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8, !tbaa !{{[0-9]+}},
   // CHECK-NEXT:    store <16 x float> [[ADD]], ptr [[MAT_ADDR]], align 4
   // CHECK-NEXT:    ret voi
 
@@ -412,8 +412,8 @@ void test_constexpr2(matrix_type<int, 5, 5> &m) {
   // OPT:           [[MAT:%.*]] = load <25 x i32>, ptr {{.*}}, align 4, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:    [[SUB:%.*]] = sub <25 x i32> [[IM]], [[MAT]]
   // CHECK-NEXT:    [[SUB2:%.*]] = add <25 x i32> [[SUB]], splat (i32 1)
-  // NOOPT-NEXT:    [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8{{$}}
-  // OPT-NEXT:      [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
+  // NOOPT-NEXT:    [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8,
+  // OPT-NEXT:      [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8, !tbaa !{{[0-9]+}},
   // CHECK-NEXT:    store <25 x i32> [[SUB2]], ptr [[MAT_ADDR]], align 4
   // CHECK-NEXT:    ret void
   //

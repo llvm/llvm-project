@@ -152,15 +152,16 @@ void IOHandlerConfirm::IOHandlerComplete(IOHandler &io_handler,
 
 void IOHandlerConfirm::IOHandlerInputComplete(IOHandler &io_handler,
                                               std::string &line) {
-  if (line.empty()) {
+  const llvm::StringRef input = llvm::StringRef(line).rtrim();
+  if (input.empty()) {
     // User just hit enter, set the response to the default
     m_user_response = m_default_response;
     io_handler.SetIsDone(true);
     return;
   }
 
-  if (line.size() == 1) {
-    switch (line[0]) {
+  if (input.size() == 1) {
+    switch (input[0]) {
     case 'y':
     case 'Y':
       m_user_response = true;
@@ -176,10 +177,10 @@ void IOHandlerConfirm::IOHandlerInputComplete(IOHandler &io_handler,
     }
   }
 
-  if (line == "yes" || line == "YES" || line == "Yes") {
+  if (input.equals_insensitive("yes")) {
     m_user_response = true;
     io_handler.SetIsDone(true);
-  } else if (line == "no" || line == "NO" || line == "No") {
+  } else if (input.equals_insensitive("no")) {
     m_user_response = false;
     io_handler.SetIsDone(true);
   }
@@ -244,8 +245,13 @@ IOHandlerEditline::IOHandlerEditline(
   SetPrompt(prompt);
 
 #if LLDB_ENABLE_LIBEDIT
-  const bool use_editline = m_input_sp && m_output_sp && m_error_sp &&
-                            m_input_sp->GetIsRealTerminal();
+  // To use Editline, we need an input, output, and error stream. Not all valid
+  // files will have a FILE* stream. Don't use Editline if the input is not a
+  // real terminal.
+  const bool use_editline =
+      m_input_sp && m_input_sp->GetIsRealTerminal() &&             // Input
+      m_output_sp && m_output_sp->GetUnlockedFile().GetStream() && // Output
+      m_error_sp && m_error_sp->GetUnlockedFile().GetStream();     // Error
   if (use_editline) {
     m_editline_up = std::make_unique<Editline>(
         editline_name, m_input_sp ? m_input_sp->GetStream() : nullptr,
@@ -258,6 +264,7 @@ IOHandlerEditline::IOHandlerEditline(
     m_editline_up->SetAutoCompleteCallback([this](CompletionRequest &request) {
       this->AutoCompleteCallback(request);
     });
+    m_editline_up->SetRedrawCallback([this]() { this->RedrawCallback(); });
 
     if (debugger.GetUseAutosuggestion()) {
       m_editline_up->SetSuggestionCallback([this](llvm::StringRef line) {
@@ -439,6 +446,11 @@ IOHandlerEditline::SuggestionCallback(llvm::StringRef line) {
 void IOHandlerEditline::AutoCompleteCallback(CompletionRequest &request) {
   m_delegate.IOHandlerComplete(*this, request);
 }
+
+void IOHandlerEditline::RedrawCallback() {
+  m_debugger.RedrawStatusline(std::nullopt);
+}
+
 #endif
 
 const char *IOHandlerEditline::GetPrompt() {
@@ -465,6 +477,21 @@ bool IOHandlerEditline::SetPrompt(llvm::StringRef prompt) {
         ansi::FormatAnsiTerminalCodes(m_debugger.GetPromptAnsiPrefix()));
     m_editline_up->SetPromptAnsiSuffix(
         ansi::FormatAnsiTerminalCodes(m_debugger.GetPromptAnsiSuffix()));
+  }
+#endif
+  return true;
+}
+
+bool IOHandlerEditline::SetUseColor(bool use_color) {
+  m_color = use_color;
+
+#if LLDB_ENABLE_LIBEDIT
+  if (m_editline_up) {
+    m_editline_up->UseColor(use_color);
+    m_editline_up->SetSuggestionAnsiPrefix(ansi::FormatAnsiTerminalCodes(
+        m_debugger.GetAutosuggestionAnsiPrefix()));
+    m_editline_up->SetSuggestionAnsiSuffix(ansi::FormatAnsiTerminalCodes(
+        m_debugger.GetAutosuggestionAnsiSuffix()));
   }
 #endif
   return true;
@@ -641,4 +668,11 @@ void IOHandlerEditline::PrintAsync(const char *s, size_t len, bool is_stdout) {
       IOHandler::PrintAsync(prompt, strlen(prompt), is_stdout);
 #endif
   }
+}
+
+void IOHandlerEditline::Refresh() {
+#if LLDB_ENABLE_LIBEDIT
+  if (m_editline_up)
+    m_editline_up->Refresh();
+#endif
 }

@@ -1,4 +1,4 @@
-//===--- UseStdNumbersCheck.cpp - clang_tidy ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,7 +27,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/MathExtras.h"
 #include <array>
 #include <cmath>
 #include <cstdint>
@@ -81,16 +80,17 @@ AST_MATCHER_P(clang::Expr, anyOfExhaustive, std::vector<Matcher<clang::Stmt>>,
 // literals.
 struct MatchBuilder {
   auto
-  ignoreParenAndArithmeticCasting(const Matcher<clang::Expr> Matcher) const {
+  ignoreParenAndArithmeticCasting(const Matcher<clang::Expr> &Matcher) const {
     return expr(hasType(qualType(isArithmetic())), ignoringParenCasts(Matcher));
   }
 
-  auto ignoreParenAndFloatingCasting(const Matcher<clang::Expr> Matcher) const {
+  auto
+  ignoreParenAndFloatingCasting(const Matcher<clang::Expr> &Matcher) const {
     return expr(hasType(qualType(isFloating())), ignoringParenCasts(Matcher));
   }
 
   auto matchMathCall(const StringRef FunctionName,
-                     const Matcher<clang::Expr> ArgumentMatcher) const {
+                     const Matcher<clang::Expr> &ArgumentMatcher) const {
     auto HasAnyPrecisionName = hasAnyName(
         FunctionName, (FunctionName + "l").str(),
         (FunctionName + "f").str()); // Support long double(l) and float(f).
@@ -100,7 +100,7 @@ struct MatchBuilder {
                  hasArgument(0, ArgumentMatcher))));
   }
 
-  auto matchSqrt(const Matcher<clang::Expr> ArgumentMatcher) const {
+  auto matchSqrt(const Matcher<clang::Expr> &ArgumentMatcher) const {
     return matchMathCall("sqrt", ArgumentMatcher);
   }
 
@@ -148,7 +148,7 @@ struct MatchBuilder {
     return expr(anyOf(Int, Float, Dref));
   }
 
-  auto match1Div(const Matcher<clang::Expr> Match) const {
+  auto match1Div(const Matcher<clang::Expr> &Match) const {
     return binaryOperator(hasOperatorName("/"), hasLHS(matchValue(1)),
                           hasRHS(Match));
   }
@@ -255,8 +255,10 @@ struct MatchBuilder {
   double DiffThreshold;
 };
 
-std::string getCode(const StringRef Constant, const bool IsFloat,
-                    const bool IsLongDouble) {
+} // namespace
+
+static std::string getCode(const StringRef Constant, const bool IsFloat,
+                           const bool IsLongDouble) {
   if (IsFloat) {
     return ("std::numbers::" + Constant + "_v<float>").str();
   }
@@ -266,9 +268,9 @@ std::string getCode(const StringRef Constant, const bool IsFloat,
   return ("std::numbers::" + Constant).str();
 }
 
-bool isRangeOfCompleteMacro(const clang::SourceRange &Range,
-                            const clang::SourceManager &SM,
-                            const clang::LangOptions &LO) {
+static bool isRangeOfCompleteMacro(const clang::SourceRange &Range,
+                                   const clang::SourceManager &SM,
+                                   const clang::LangOptions &LO) {
   if (!Range.getBegin().isMacroID()) {
     return false;
   }
@@ -286,8 +288,6 @@ bool isRangeOfCompleteMacro(const clang::SourceRange &Range,
 
   return true;
 }
-
-} // namespace
 
 namespace clang::tidy::modernize {
 UseStdNumbersCheck::UseStdNumbersCheck(const StringRef Name,
@@ -307,7 +307,7 @@ UseStdNumbersCheck::UseStdNumbersCheck(const StringRef Name,
 
 void UseStdNumbersCheck::registerMatchers(MatchFinder *const Finder) {
   const auto Matches = MatchBuilder{DiffThreshold};
-  std::vector<Matcher<clang::Stmt>> ConstantMatchers = {
+  const std::vector<Matcher<clang::Stmt>> ConstantMatchers = {
       Matches.matchLog2Euler(),     Matches.matchLog10Euler(),
       Matches.matchEulerTopLevel(), Matches.matchEgamma(),
       Matches.matchInvSqrtPi(),     Matches.matchInvPi(),
@@ -319,7 +319,7 @@ void UseStdNumbersCheck::registerMatchers(MatchFinder *const Finder) {
 
   Finder->addMatcher(
       expr(
-          anyOfExhaustive(std::move(ConstantMatchers)),
+          anyOfExhaustive(ConstantMatchers),
           unless(hasParent(explicitCastExpr(hasDestinationType(isFloating())))),
           hasType(qualType(hasCanonicalTypeUnqualified(
               anyOf(qualType(asString("float")).bind("float"),
@@ -415,9 +415,7 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  llvm::sort(MatchedLiterals, [](const auto &LHS, const auto &RHS) {
-    return std::get<1>(LHS) < std::get<1>(RHS);
-  });
+  llvm::sort(MatchedLiterals, llvm::less_second());
 
   const auto &[Constant, Diff, Node] = MatchedLiterals.front();
 

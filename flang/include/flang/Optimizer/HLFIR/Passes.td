@@ -61,12 +61,24 @@ def SimplifyHLFIRIntrinsics : Pass<"simplify-hlfir-intrinsics"> {
                         "the hlfir.matmul.">];
 }
 
+def ExpressionSimplification : Pass<"hlfir-expression-simplification"> {
+  let summary = "Simplify Fortran expressions";
+}
+
 def InlineElementals : Pass<"inline-elementals"> {
   let summary = "Inline chained hlfir.elemental operations";
 }
 
 def InlineHLFIRAssign : Pass<"inline-hlfir-assign"> {
   let summary = "Inline hlfir.assign operations";
+}
+
+def InlineHLFIRCopyIn : Pass<"inline-hlfir-copy-in"> {
+  let summary = "Inline hlfir.copy_in operations";
+}
+
+def PropagateFortranVariableAttributes : Pass<"propagate-fortran-attrs"> {
+  let summary = "Propagate FortranVariableFlagsAttr attributes through HLFIR";
 }
 
 #endif //FORTRAN_DIALECT_HLFIR_PASSES

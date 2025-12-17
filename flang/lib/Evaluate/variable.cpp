@@ -69,13 +69,9 @@ Triplet &Triplet::set_stride(Expr<SubscriptInteger> &&expr) {
   return *this;
 }
 
-CoarrayRef::CoarrayRef(SymbolVector &&base, std::vector<Subscript> &&ss,
-    std::vector<Expr<SubscriptInteger>> &&css)
-    : base_{std::move(base)}, subscript_(std::move(ss)),
-      cosubscript_(std::move(css)) {
-  CHECK(!base_.empty());
-  CHECK(!cosubscript_.empty());
-}
+CoarrayRef::CoarrayRef(
+    DataRef &&base, std::vector<Expr<SubscriptInteger>> &&css)
+    : base_{std::move(base)}, cosubscript_(std::move(css)) {}
 
 std::optional<Expr<SomeInteger>> CoarrayRef::stat() const {
   if (stat_) {
@@ -85,9 +81,17 @@ std::optional<Expr<SomeInteger>> CoarrayRef::stat() const {
   }
 }
 
-std::optional<Expr<SomeInteger>> CoarrayRef::team() const {
+std::optional<Expr<SomeType>> CoarrayRef::team() const {
   if (team_) {
     return team_.value().value();
+  } else {
+    return std::nullopt;
+  }
+}
+
+std::optional<Expr<SomeType>> CoarrayRef::notify() const {
+  if (notify_) {
+    return notify_.value().value();
   } else {
     return std::nullopt;
   }
@@ -99,16 +103,23 @@ CoarrayRef &CoarrayRef::set_stat(Expr<SomeInteger> &&v) {
   return *this;
 }
 
-CoarrayRef &CoarrayRef::set_team(Expr<SomeInteger> &&v, bool isTeamNumber) {
-  CHECK(IsVariable(v));
+CoarrayRef &CoarrayRef::set_team(Expr<SomeType> &&v) {
   team_.emplace(std::move(v));
-  teamIsTeamNumber_ = isTeamNumber;
   return *this;
 }
 
-const Symbol &CoarrayRef::GetFirstSymbol() const { return base_.front(); }
+CoarrayRef &CoarrayRef::set_notify(Expr<SomeType> &&v) {
+  notify_.emplace(std::move(v));
+  return *this;
+}
 
-const Symbol &CoarrayRef::GetLastSymbol() const { return base_.back(); }
+const Symbol &CoarrayRef::GetFirstSymbol() const {
+  return base().GetFirstSymbol();
+}
+
+const Symbol &CoarrayRef::GetLastSymbol() const {
+  return base().GetLastSymbol();
+}
 
 void Substring::SetBounds(std::optional<Expr<SubscriptInteger>> &lower,
     std::optional<Expr<SubscriptInteger>> &upper) {
@@ -214,21 +225,17 @@ std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
   }
   if (!result) { // error cases
     if (*lbi < 1) {
-      if (context.languageFeatures().ShouldWarn(common::UsageWarning::Bounds)) {
-        context.messages().Say(common::UsageWarning::Bounds,
-            "Lower bound (%jd) on substring is less than one"_warn_en_US,
-            static_cast<std::intmax_t>(*lbi));
-      }
+      context.Warn(common::UsageWarning::Bounds,
+          "Lower bound (%jd) on substring is less than one"_warn_en_US,
+          static_cast<std::intmax_t>(*lbi));
       *lbi = 1;
       lower_ = AsExpr(Constant<SubscriptInteger>{1});
     }
     if (length && *ubi > *length) {
-      if (context.languageFeatures().ShouldWarn(common::UsageWarning::Bounds)) {
-        context.messages().Say(common::UsageWarning::Bounds,
-            "Upper bound (%jd) on substring is greater than character length (%jd)"_warn_en_US,
-            static_cast<std::intmax_t>(*ubi),
-            static_cast<std::intmax_t>(*length));
-      }
+      context.Warn(common::UsageWarning::Bounds,
+          "Upper bound (%jd) on substring is greater than character length (%jd)"_warn_en_US,
+          static_cast<std::intmax_t>(*ubi),
+          static_cast<std::intmax_t>(*length));
       *ubi = *length;
       upper_ = AsExpr(Constant<SubscriptInteger>{*ubi});
     }
@@ -426,17 +433,7 @@ int ArrayRef::Rank() const {
   }
 }
 
-int CoarrayRef::Rank() const {
-  if (!subscript_.empty()) {
-    int rank{0};
-    for (const auto &expr : subscript_) {
-      rank += expr.Rank();
-    }
-    return rank;
-  } else {
-    return base_.back()->Rank();
-  }
-}
+int CoarrayRef::Rank() const { return base().Rank(); }
 
 int DataRef::Rank() const {
   return common::visit(common::visitors{
@@ -671,22 +668,6 @@ std::optional<DynamicType> Designator<T>::GetType() const {
   return std::nullopt;
 }
 
-static NamedEntity AsNamedEntity(const SymbolVector &x) {
-  CHECK(!x.empty());
-  NamedEntity result{x.front()};
-  int j{0};
-  for (const Symbol &symbol : x) {
-    if (j++ != 0) {
-      DataRef base{result.IsSymbol() ? DataRef{result.GetLastSymbol()}
-                                     : DataRef{result.GetComponent()}};
-      result = NamedEntity{Component{std::move(base), symbol}};
-    }
-  }
-  return result;
-}
-
-NamedEntity CoarrayRef::GetBase() const { return AsNamedEntity(base_); }
-
 // Equality testing
 
 // For the purposes of comparing type parameter expressions while
@@ -759,9 +740,8 @@ bool ArrayRef::operator==(const ArrayRef &that) const {
   return base_ == that.base_ && subscript_ == that.subscript_;
 }
 bool CoarrayRef::operator==(const CoarrayRef &that) const {
-  return base_ == that.base_ && subscript_ == that.subscript_ &&
-      cosubscript_ == that.cosubscript_ && stat_ == that.stat_ &&
-      team_ == that.team_ && teamIsTeamNumber_ == that.teamIsTeamNumber_;
+  return base_ == that.base_ && cosubscript_ == that.cosubscript_ &&
+      stat_ == that.stat_ && team_ == that.team_;
 }
 bool DataRef::operator==(const DataRef &that) const {
   return TestVariableEquality(*this, that);

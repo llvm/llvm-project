@@ -7,9 +7,15 @@ set(LLVM_LINK_COMPONENTS
 
 add_bolt_unittest(CoreTests
   BinaryContext.cpp
+  ClusteredRows.cpp
   MCPlusBuilder.cpp
   MemoryMaps.cpp
   DynoStats.cpp
+
+  # FIXME CoreTests uses `llvm::detail::TakeError(llvm::Error)`, but linking
+  #       to LLVMTestingSupport introduces a transitive dependency on the
+  #       dynamic LLVM library when LLVM_LINK_LLVM_DYLIB is ON.
+  ${LLVM_MAIN_SRC_DIR}/lib/Testing/Support/Error.cpp
 
   DISABLE_LLVM_LINK_LLVM_DYLIB
   )
@@ -19,7 +25,7 @@ target_link_libraries(CoreTests
   LLVMBOLTCore
   LLVMBOLTRewrite
   LLVMBOLTProfile
-  LLVMTestingSupport
+  LLVMBOLTUtils
   )
 
 foreach (tgt ${BOLT_TARGETS_TO_BUILD})

@@ -1,0 +1,40 @@
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llc -filetype=obj -o %t/foo.o %S/Inputs/foo-initializer.ll
+# RUN: llvm-ar crs %t/libFoo.a %t/foo.o
+# RUN: llc -filetype=obj -o %t/foo.o %S/Inputs/bar-initializer.ll
+# RUN: llvm-ar q %t/libFoo.a %t/foo.o
+# RUN: llc -filetype=obj -o %t/main.o %S/Inputs/main-ret-0.ll
+# RUN: llvm-jitlink -all_load -show-init-es -noexec %t/main.o -L%t -lFoo \
+# RUN:     | FileCheck %s
+#
+# FIXME: Enable this test on Windows/arm64 once that backend is available.
+# UNSUPPORTED: target=aarch64-{{.*}}-windows-{{.*}}
+#
+# On MinGW targets, when compiling the main() function, it gets
+# an implicitly generated call to __main(), which is missing in
+# this context.
+# XFAIL: target={{.*}}-windows-gnu
+#
+# Check that synthesized archive member names are unambiguous, even if an
+# archive contains multiple files with the same name.
+#
+# Background: Static achives may contain duplicate member filenames. E.g. we
+# can create an archive with initially contaning a single object file 'foo.o',
+# then append another copy of 'foo.o' to produce an archive containing two
+# consecutive copies:
+#
+#   % llvm-ar crs libfoo.a foo.o
+#   % llvm-ar q libfoo.a foo.o
+#   % llvm-ar t libfoo.a
+#   foo.o
+#   foo.o
+#
+# In this test we create two different 'foo.o' files, each containing a static
+# initializer. Since initializer names are based on the full archive member
+# names, failure to give the members unique names will result in a duplicate
+# definition error. The `-all_load` option is used to force all member files in
+# the archive to be loaded, despite the members not being directly referenced.
+#
+# CHECK-DAG: main{{.*}}main.o
+# CHECK-DAG: initializer_foo_ran{{.*}}libFoo.a[0](foo.o)
+# CHECK-DAG: initializer_bar_ran{{.*}}libFoo.a[1](foo.o)

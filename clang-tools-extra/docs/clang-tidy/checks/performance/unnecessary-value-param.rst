@@ -56,7 +56,7 @@ Will become:
 
 Because the fix-it needs to change the signature of the function, it may break
 builds if the function is used in multiple translation units or some codes
-depends on funcion signatures.
+depends on function signatures.
 
 Options
 -------
@@ -74,3 +74,10 @@ Options
    default is empty. If a name in the list contains the sequence `::`, it is
    matched against the qualified type name (i.e. ``namespace::Type``),
    otherwise it is matched against only the type name (i.e. ``Type``).
+
+.. option:: IgnoreCoroutines
+
+   A boolean specifying whether the check should suggest passing parameters by
+   reference in coroutines. Passing parameters by reference in coroutines may
+   not be safe, please see :doc:`cppcoreguidelines-avoid-reference-coroutine-parameters <../cppcoreguidelines/avoid-reference-coroutine-parameters>`
+   for more information. Default is `true`.

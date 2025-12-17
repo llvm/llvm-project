@@ -1,4 +1,4 @@
-//===--- UnintendedCharOstreamOutputCheck.cpp - clang-tidy ----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "UnintendedCharOstreamOutputCheck.h"
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -35,10 +37,14 @@ AST_MATCHER(Type, isChar) {
 
 UnintendedCharOstreamOutputCheck::UnintendedCharOstreamOutputCheck(
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context), CastTypeName(Options.get("CastTypeName")) {
-}
+    : ClangTidyCheck(Name, Context),
+      AllowedTypes(utils::options::parseStringList(
+          Options.get("AllowedTypes", "unsigned char;signed char"))),
+      CastTypeName(Options.get("CastTypeName")) {}
 void UnintendedCharOstreamOutputCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "AllowedTypes",
+                utils::options::serializeStringList(AllowedTypes));
   if (CastTypeName.has_value())
     Options.store(Opts, "CastTypeName", CastTypeName.value());
 }
@@ -50,13 +56,20 @@ void UnintendedCharOstreamOutputCheck::registerMatchers(MatchFinder *Finder) {
                     // with char / unsigned char / signed char
                     classTemplateSpecializationDecl(
                         hasTemplateArgument(0, refersToType(isChar()))));
+  auto IsDeclRefExprFromAllowedTypes = declRefExpr(to(varDecl(
+      hasType(matchers::matchesAnyListedTypeName(AllowedTypes, false)))));
+  auto IsExplicitCastExprFromAllowedTypes = explicitCastExpr(hasDestinationType(
+      matchers::matchesAnyListedTypeName(AllowedTypes, false)));
   Finder->addMatcher(
       cxxOperatorCallExpr(
           hasOverloadedOperatorName("<<"),
           hasLHS(hasType(hasUnqualifiedDesugaredType(
               recordType(hasDeclaration(cxxRecordDecl(
                   anyOf(BasicOstream, isDerivedFrom(BasicOstream)))))))),
-          hasRHS(hasType(hasUnqualifiedDesugaredType(isNumericChar()))))
+          hasRHS(expr(hasType(hasUnqualifiedDesugaredType(isNumericChar())),
+                      unless(ignoringParenImpCasts(
+                          anyOf(IsDeclRefExprFromAllowedTypes,
+                                IsExplicitCastExprFromAllowedTypes))))))
           .bind("x"),
       this);
 }
@@ -67,17 +80,17 @@ void UnintendedCharOstreamOutputCheck::check(
   const Expr *Value = Call->getArg(1);
   const SourceRange SourceRange = Value->getSourceRange();
 
-  DiagnosticBuilder Builder =
+  const DiagnosticBuilder Builder =
       diag(Call->getOperatorLoc(),
            "%0 passed to 'operator<<' outputs as character instead of integer. "
            "cast to 'unsigned int' to print numeric value or cast to 'char' to "
            "print as character")
       << Value->getType() << SourceRange;
 
-  QualType T = Value->getType();
+  const QualType T = Value->getType();
   const Type *UnqualifiedDesugaredType = T->getUnqualifiedDesugaredType();
 
-  llvm::StringRef CastType = CastTypeName.value_or(
+  const llvm::StringRef CastType = CastTypeName.value_or(
       UnqualifiedDesugaredType->isSpecificBuiltinType(BuiltinType::SChar)
           ? "int"
           : "unsigned int");

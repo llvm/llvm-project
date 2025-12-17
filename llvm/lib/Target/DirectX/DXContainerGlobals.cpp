@@ -28,7 +28,7 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include <optional>
+#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -51,9 +51,7 @@ class DXContainerGlobals : public llvm::ModulePass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  DXContainerGlobals() : ModulePass(ID) {
-    initializeDXContainerGlobalsPass(*PassRegistry::getPassRegistry());
-  }
+  DXContainerGlobals() : ModulePass(ID) {}
 
   StringRef getPassName() const override {
     return "DXContainer Global Emitter";
@@ -67,7 +65,7 @@ public:
     AU.addRequired<RootSignatureAnalysisWrapper>();
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addRequired<DXILResourceTypeWrapperPass>();
-    AU.addRequired<DXILResourceBindingWrapperPass>();
+    AU.addRequired<DXILResourceWrapperPass>();
   }
 };
 
@@ -105,7 +103,7 @@ GlobalVariable *DXContainerGlobals::computeShaderHash(Module &M) {
   dxbc::ShaderHash HashData = {0, {0}};
   // The Hash's IncludesSource flag gets set whenever the hashed shader includes
   // debug information.
-  if (M.debug_compile_units_begin() != M.debug_compile_units_end())
+  if (!M.debug_compile_units().empty())
     HashData.Flags = static_cast<uint32_t>(dxbc::HashFlags::IncludesSource);
 
   memcpy(reinterpret_cast<void *>(&HashData.Digest), Result.data(), 16);
@@ -160,20 +158,22 @@ void DXContainerGlobals::addRootSignature(Module &M,
   if (MMI.ShaderProfile == llvm::Triple::Library)
     return;
 
-  assert(MMI.EntryPropertyVec.size() == 1);
+  auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>().getRSInfo();
+  const Function *EntryFunction = nullptr;
 
-  auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>();
-  const Function *EntryFunction = MMI.EntryPropertyVec[0].Entry;
-  const auto &FuncRs = RSA.find(EntryFunction);
+  if (MMI.ShaderProfile != llvm::Triple::RootSignature) {
+    assert(MMI.EntryPropertyVec.size() == 1);
+    EntryFunction = MMI.EntryPropertyVec[0].Entry;
+  }
 
-  if (FuncRs == RSA.end())
+  const mcdxbc::RootSignatureDesc *RS = RSA.getDescForFunction(EntryFunction);
+  if (!RS)
     return;
 
-  const RootSignatureDesc &RS = FuncRs->second;
   SmallString<256> Data;
   raw_svector_ostream OS(Data);
 
-  RS.write(OS);
+  RS->write(OS);
 
   Constant *Constant =
       ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
@@ -181,43 +181,46 @@ void DXContainerGlobals::addRootSignature(Module &M,
 }
 
 void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
-  const DXILBindingMap &DBM =
-      getAnalysis<DXILResourceBindingWrapperPass>().getBindingMap();
+  const DXILResourceMap &DRM =
+      getAnalysis<DXILResourceWrapperPass>().getResourceMap();
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
 
   auto MakeBinding =
-      [](const dxil::ResourceBindingInfo::ResourceBinding &Binding,
+      [](const dxil::ResourceInfo::ResourceBinding &Binding,
          const dxbc::PSV::ResourceType Type, const dxil::ResourceKind Kind,
          const dxbc::PSV::ResourceFlags Flags = dxbc::PSV::ResourceFlags()) {
         dxbc::PSV::v2::ResourceBindInfo BindInfo;
         BindInfo.Type = Type;
         BindInfo.LowerBound = Binding.LowerBound;
-        BindInfo.UpperBound = Binding.LowerBound + Binding.Size - 1;
+        assert(
+            (Binding.Size == UINT32_MAX ||
+             (uint64_t)Binding.LowerBound + Binding.Size - 1 <= UINT32_MAX) &&
+            "Resource range is too large");
+        BindInfo.UpperBound = (Binding.Size == UINT32_MAX)
+                                  ? UINT32_MAX
+                                  : Binding.LowerBound + Binding.Size - 1;
         BindInfo.Space = Binding.Space;
         BindInfo.Kind = static_cast<dxbc::PSV::ResourceKind>(Kind);
         BindInfo.Flags = Flags;
         return BindInfo;
       };
 
-  for (const dxil::ResourceBindingInfo &RBI : DBM.cbuffers()) {
-    const dxil::ResourceBindingInfo::ResourceBinding &Binding =
-        RBI.getBinding();
+  for (const dxil::ResourceInfo &RI : DRM.cbuffers()) {
+    const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
     PSV.Resources.push_back(MakeBinding(Binding, dxbc::PSV::ResourceType::CBV,
                                         dxil::ResourceKind::CBuffer));
   }
-  for (const dxil::ResourceBindingInfo &RBI : DBM.samplers()) {
-    const dxil::ResourceBindingInfo::ResourceBinding &Binding =
-        RBI.getBinding();
+  for (const dxil::ResourceInfo &RI : DRM.samplers()) {
+    const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
     PSV.Resources.push_back(MakeBinding(Binding,
                                         dxbc::PSV::ResourceType::Sampler,
                                         dxil::ResourceKind::Sampler));
   }
-  for (const dxil::ResourceBindingInfo &RBI : DBM.srvs()) {
-    const dxil::ResourceBindingInfo::ResourceBinding &Binding =
-        RBI.getBinding();
+  for (const dxil::ResourceInfo &RI : DRM.srvs()) {
+    const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
 
-    dxil::ResourceTypeInfo &TypeInfo = DRTM[RBI.getHandleTy()];
+    dxil::ResourceTypeInfo &TypeInfo = DRTM[RI.getHandleTy()];
     dxbc::PSV::ResourceType ResType;
     if (TypeInfo.isStruct())
       ResType = dxbc::PSV::ResourceType::SRVStructured;
@@ -229,13 +232,12 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
     PSV.Resources.push_back(
         MakeBinding(Binding, ResType, TypeInfo.getResourceKind()));
   }
-  for (const dxil::ResourceBindingInfo &RBI : DBM.uavs()) {
-    const dxil::ResourceBindingInfo::ResourceBinding &Binding =
-        RBI.getBinding();
+  for (const dxil::ResourceInfo &RI : DRM.uavs()) {
+    const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
 
-    dxil::ResourceTypeInfo &TypeInfo = DRTM[RBI.getHandleTy()];
+    dxil::ResourceTypeInfo &TypeInfo = DRTM[RI.getHandleTy()];
     dxbc::PSV::ResourceType ResType;
-    if (TypeInfo.getUAV().HasCounter)
+    if (RI.hasCounter())
       ResType = dxbc::PSV::ResourceType::UAVStructuredWithCounter;
     else if (TypeInfo.isStruct())
       ResType = dxbc::PSV::ResourceType::UAVStructured;
@@ -265,7 +267,8 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
   dxil::ModuleMetadataInfo &MMI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
   assert(MMI.EntryPropertyVec.size() == 1 ||
-         MMI.ShaderProfile == Triple::Library);
+         MMI.ShaderProfile == Triple::Library ||
+         MMI.ShaderProfile == Triple::RootSignature);
   PSV.BaseData.ShaderStage =
       static_cast<uint8_t>(MMI.ShaderProfile - Triple::Pixel);
 
@@ -281,12 +284,20 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
     PSV.BaseData.NumThreadsX = MMI.EntryPropertyVec[0].NumThreadsX;
     PSV.BaseData.NumThreadsY = MMI.EntryPropertyVec[0].NumThreadsY;
     PSV.BaseData.NumThreadsZ = MMI.EntryPropertyVec[0].NumThreadsZ;
+    if (MMI.EntryPropertyVec[0].WaveSizeMin) {
+      PSV.BaseData.MinimumWaveLaneCount = MMI.EntryPropertyVec[0].WaveSizeMin;
+      PSV.BaseData.MaximumWaveLaneCount =
+          MMI.EntryPropertyVec[0].WaveSizeMax
+              ? MMI.EntryPropertyVec[0].WaveSizeMax
+              : MMI.EntryPropertyVec[0].WaveSizeMin;
+    }
     break;
   default:
     break;
   }
 
-  if (MMI.ShaderProfile != Triple::Library)
+  if (MMI.ShaderProfile != Triple::Library &&
+      MMI.ShaderProfile != Triple::RootSignature)
     PSV.EntryName = MMI.EntryPropertyVec[0].Entry->getName();
 
   PSV.finalize(MMI.ShaderProfile);
@@ -302,7 +313,7 @@ INITIALIZE_PASS_BEGIN(DXContainerGlobals, "dxil-globals",
 INITIALIZE_PASS_DEPENDENCY(ShaderFlagsAnalysisWrapper)
 INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DXILResourceBindingWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
 INITIALIZE_PASS_END(DXContainerGlobals, "dxil-globals",
                     "DXContainer Global Emitter", false, true)
 

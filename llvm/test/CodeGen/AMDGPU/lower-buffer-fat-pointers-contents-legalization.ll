@@ -1898,10 +1898,9 @@ define void @store_v32i6(<6 x i32> %data.abi, ptr addrspace(8) inreg %buf) {
 ; CHECK-LABEL: define void @store_v32i6(
 ; CHECK-SAME: <6 x i32> [[DATA_ABI:%.*]], ptr addrspace(8) inreg [[BUF:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DATA:%.*]] = bitcast <6 x i32> [[DATA_ABI]] to <32 x i6>
-; CHECK-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <32 x i6> [[DATA]] to <6 x i32>
-; CHECK-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <6 x i32> [[DATA_LEGAL]], <6 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <6 x i32> [[DATA_ABI]], <6 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 32 [[BUF]], i32 0, i32 0, i32 0)
-; CHECK-NEXT:    [[DATA_SLICE_4:%.*]] = shufflevector <6 x i32> [[DATA_LEGAL]], <6 x i32> poison, <2 x i32> <i32 4, i32 5>
+; CHECK-NEXT:    [[DATA_SLICE_4:%.*]] = shufflevector <6 x i32> [[DATA_ABI]], <6 x i32> poison, <2 x i32> <i32 4, i32 5>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 16 [[BUF]], i32 16, i32 0, i32 0)
 ; CHECK-NEXT:    ret void
 ;

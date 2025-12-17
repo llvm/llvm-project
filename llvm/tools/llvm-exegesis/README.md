@@ -32,6 +32,9 @@ architectures:
     e.g. pseudo instructions and most register classes are not supported.
 * MIPS
 * PowerPC (PowerPC64LE only)
+* RISC-V
+  * RV64I/E, RV32I/E and extensions supported by LLVM's RISC-V backend with
+    some limitations.
 
 Note that not all benchmarking functionality is guaranteed to work on all platforms.
 

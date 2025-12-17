@@ -9,7 +9,6 @@
 #include "ASTUtils.h"
 #include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
-#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -36,6 +35,7 @@ public:
       : Bug(this, description, "WebKit coding guidelines") {}
 
   virtual std::optional<bool> isUnsafePtr(QualType) const = 0;
+  virtual bool isPtrType(const std::string &) const = 0;
   virtual const char *ptrKind(QualType QT) const = 0;
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
@@ -50,7 +50,9 @@ public:
       llvm::DenseSet<const DeclRefExpr *> DeclRefExprsToIgnore;
       llvm::DenseSet<const LambdaExpr *> LambdasToIgnore;
       llvm::DenseSet<const ValueDecl *> ProtectedThisDecls;
+      llvm::DenseSet<const CallExpr *> CallToIgnore;
       llvm::DenseSet<const CXXConstructExpr *> ConstructToIgnore;
+      llvm::DenseMap<const VarDecl *, const LambdaExpr *> LambdaOwnerMap;
 
       QualType ClsType;
 
@@ -66,6 +68,15 @@ public:
         if (CXXMD->isInstance())
           ClsType = CXXMD->getThisType();
         return DynamicRecursiveASTVisitor::TraverseCXXMethodDecl(CXXMD);
+      }
+
+      bool TraverseObjCMethodDecl(ObjCMethodDecl *OCMD) override {
+        llvm::SaveAndRestore SavedDecl(ClsType);
+        if (OCMD && OCMD->isInstanceMethod()) {
+          if (auto *ImplParamDecl = OCMD->getSelfDecl())
+            ClsType = ImplParamDecl->getType();
+        }
+        return DynamicRecursiveASTVisitor::TraverseObjCMethodDecl(OCMD);
       }
 
       bool VisitTypedefDecl(TypedefDecl *TD) override {
@@ -92,10 +103,60 @@ public:
         auto *Init = VD->getInit();
         if (!Init)
           return true;
-        auto *L = dyn_cast_or_null<LambdaExpr>(Init->IgnoreParenCasts());
-        if (!L)
+        if (auto *L = dyn_cast_or_null<LambdaExpr>(Init->IgnoreParenCasts())) {
+          LambdasToIgnore.insert(L); // Evaluate lambdas in VisitDeclRefExpr.
           return true;
-        LambdasToIgnore.insert(L); // Evaluate lambdas in VisitDeclRefExpr.
+        }
+        if (!VD->hasLocalStorage())
+          return true;
+        if (auto *E = dyn_cast<ExprWithCleanups>(Init))
+          Init = E->getSubExpr();
+        if (auto *E = dyn_cast<CXXBindTemporaryExpr>(Init))
+          Init = E->getSubExpr();
+        if (auto *CE = dyn_cast<CallExpr>(Init)) {
+          if (auto *Callee = CE->getDirectCallee()) {
+            auto FnName = safeGetName(Callee);
+            unsigned ArgCnt = CE->getNumArgs();
+            if (FnName == "makeScopeExit" && ArgCnt == 1) {
+              auto *Arg = CE->getArg(0);
+              if (auto *E = dyn_cast<MaterializeTemporaryExpr>(Arg))
+                Arg = E->getSubExpr();
+              if (auto *L = dyn_cast<LambdaExpr>(Arg)) {
+                LambdaOwnerMap.insert(std::make_pair(VD, L));
+                CallToIgnore.insert(CE);
+                LambdasToIgnore.insert(L);
+              }
+            } else if (FnName == "makeVisitor") {
+              for (unsigned ArgIndex = 0; ArgIndex < ArgCnt; ++ArgIndex) {
+                auto *Arg = CE->getArg(ArgIndex);
+                if (auto *E = dyn_cast<MaterializeTemporaryExpr>(Arg))
+                  Arg = E->getSubExpr();
+                if (auto *L = dyn_cast<LambdaExpr>(Arg)) {
+                  LambdaOwnerMap.insert(std::make_pair(VD, L));
+                  CallToIgnore.insert(CE);
+                  LambdasToIgnore.insert(L);
+                }
+              }
+            }
+          }
+        } else if (auto *CE = dyn_cast<CXXConstructExpr>(Init)) {
+          if (auto *Ctor = CE->getConstructor()) {
+            if (auto *Cls = Ctor->getParent()) {
+              auto FnName = safeGetName(Cls);
+              unsigned ArgCnt = CE->getNumArgs();
+              if (FnName == "ScopeExit" && ArgCnt == 1) {
+                auto *Arg = CE->getArg(0);
+                if (auto *E = dyn_cast<MaterializeTemporaryExpr>(Arg))
+                  Arg = E->getSubExpr();
+                if (auto *L = dyn_cast<LambdaExpr>(Arg)) {
+                  LambdaOwnerMap.insert(std::make_pair(VD, L));
+                  ConstructToIgnore.insert(CE);
+                  LambdasToIgnore.insert(L);
+                }
+              }
+            }
+          }
+        }
         return true;
       }
 
@@ -105,6 +166,12 @@ public:
         auto *VD = dyn_cast_or_null<VarDecl>(DRE->getDecl());
         if (!VD)
           return true;
+        if (auto It = LambdaOwnerMap.find(VD); It != LambdaOwnerMap.end()) {
+          auto *L = It->second;
+          Checker->visitLambdaExpr(L, shouldCheckThis() && !hasProtectedThis(L),
+                                   ClsType);
+          return true;
+        }
         auto *Init = VD->getInit();
         if (!Init)
           return true;
@@ -117,13 +184,23 @@ public:
         return true;
       }
 
-      // WTF::switchOn(T, F... f) is a variadic template function and couldn't
-      // be annotated with NOESCAPE. We hard code it here to workaround that.
-      bool shouldTreatAllArgAsNoEscape(FunctionDecl *Decl) {
-        auto *NsDecl = Decl->getParent();
-        if (!NsDecl || !isa<NamespaceDecl>(NsDecl))
-          return false;
-        return safeGetName(NsDecl) == "WTF" && safeGetName(Decl) == "switchOn";
+      bool shouldTreatAllArgAsNoEscape(FunctionDecl *FDecl) {
+        std::string PreviousName = safeGetName(FDecl);
+        for (auto *Decl = FDecl->getParent(); Decl; Decl = Decl->getParent()) {
+          if (!isa<NamespaceDecl>(Decl) && !isa<CXXRecordDecl>(Decl))
+            return false;
+          auto Name = safeGetName(Decl);
+          // WTF::switchOn(T, F... f) is a variadic template function and
+          // couldn't be annotated with NOESCAPE. We hard code it here to
+          // workaround that.
+          if (Name == "WTF" && PreviousName == "switchOn")
+            return true;
+          // Treat every argument of functions in std::ranges as noescape.
+          if (Name == "std" && PreviousName == "ranges")
+            return true;
+          PreviousName = Name;
+        }
+        return false;
       }
 
       bool VisitCXXConstructExpr(CXXConstructExpr *CE) override {
@@ -148,24 +225,65 @@ public:
       }
 
       bool VisitCallExpr(CallExpr *CE) override {
+        if (CallToIgnore.contains(CE))
+          return true;
         checkCalleeLambda(CE);
         if (auto *Callee = CE->getDirectCallee()) {
-          unsigned ArgIndex = isa<CXXOperatorCallExpr>(CE);
-          bool TreatAllArgsAsNoEscape = shouldTreatAllArgAsNoEscape(Callee);
-          for (auto *Param : Callee->parameters()) {
-            if (ArgIndex >= CE->getNumArgs())
-              return true;
-            auto *Arg = CE->getArg(ArgIndex)->IgnoreParenCasts();
-            if (auto *L = findLambdaInArg(Arg)) {
-              LambdasToIgnore.insert(L);
-              if (!Param->hasAttr<NoEscapeAttr>() && !TreatAllArgsAsNoEscape)
-                Checker->visitLambdaExpr(
-                    L, shouldCheckThis() && !hasProtectedThis(L), ClsType);
-            }
-            ++ArgIndex;
+          if (isVisitFunction(CE, Callee))
+            return true;
+          checkParameters(CE, Callee);
+        } else if (auto *CalleeE = CE->getCallee()) {
+          if (auto *DRE = dyn_cast<DeclRefExpr>(CalleeE->IgnoreParenCasts())) {
+            if (auto *Callee = dyn_cast_or_null<FunctionDecl>(DRE->getDecl()))
+              checkParameters(CE, Callee);
           }
         }
         return true;
+      }
+
+      bool isVisitFunction(CallExpr *CallExpr, FunctionDecl *FnDecl) {
+        bool IsVisitFn = safeGetName(FnDecl) == "visit";
+        if (!IsVisitFn)
+          return false;
+        bool ArgCnt = CallExpr->getNumArgs();
+        if (!ArgCnt)
+          return false;
+        auto *Ns = FnDecl->getParent();
+        if (!Ns)
+          return false;
+        auto NsName = safeGetName(Ns);
+        if (NsName != "WTF" && NsName != "std")
+          return false;
+        auto *Arg = CallExpr->getArg(0);
+        if (!Arg)
+          return false;
+        auto *DRE = dyn_cast<DeclRefExpr>(Arg->IgnoreParenCasts());
+        if (!DRE)
+          return false;
+        auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+        if (!VD)
+          return false;
+        if (!LambdaOwnerMap.contains(VD))
+          return false;
+        DeclRefExprsToIgnore.insert(DRE);
+        return true;
+      }
+
+      void checkParameters(CallExpr *CE, FunctionDecl *Callee) {
+        unsigned ArgIndex = isa<CXXOperatorCallExpr>(CE);
+        bool TreatAllArgsAsNoEscape = shouldTreatAllArgAsNoEscape(Callee);
+        for (auto *Param : Callee->parameters()) {
+          if (ArgIndex >= CE->getNumArgs())
+            return;
+          auto *Arg = CE->getArg(ArgIndex)->IgnoreParenCasts();
+          if (auto *L = findLambdaInArg(Arg)) {
+            LambdasToIgnore.insert(L);
+            if (!Param->hasAttr<NoEscapeAttr>() && !TreatAllArgsAsNoEscape)
+              Checker->visitLambdaExpr(
+                  L, shouldCheckThis() && !hasProtectedThis(L), ClsType);
+          }
+          ++ArgIndex;
+        }
       }
 
       LambdaExpr *findLambdaInArg(Expr *E) {
@@ -214,20 +332,28 @@ public:
         if (!Init)
           return nullptr;
         if (auto *Lambda = dyn_cast<LambdaExpr>(Init)) {
+          DeclRefExprsToIgnore.insert(DRE);
           updateIgnoreList();
           return Lambda;
         }
-        TempExpr = dyn_cast<CXXBindTemporaryExpr>(Init->IgnoreParenCasts());
-        if (!TempExpr)
-          return nullptr;
-        updateIgnoreList();
-        return dyn_cast_or_null<LambdaExpr>(TempExpr->getSubExpr());
+        return nullptr;
       }
 
       void checkCalleeLambda(CallExpr *CE) {
         auto *Callee = CE->getCallee();
         if (!Callee)
           return;
+        Callee = Callee->IgnoreParenCasts();
+        if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Callee)) {
+          Callee = MTE->getSubExpr();
+          if (!Callee)
+            return;
+          Callee = Callee->IgnoreParenCasts();
+        }
+        if (auto *L = dyn_cast<LambdaExpr>(Callee)) {
+          LambdasToIgnore.insert(L); // Calling a lambda upon creation is safe.
+          return;
+        }
         auto *DRE = dyn_cast<DeclRefExpr>(Callee->IgnoreParenCasts());
         if (!DRE)
           return;
@@ -253,11 +379,9 @@ public:
           return;
         DeclRefExprsToIgnore.insert(ArgRef);
         LambdasToIgnore.insert(L);
-        Checker->visitLambdaExpr(L, shouldCheckThis() && !hasProtectedThis(L),
-                                 ClsType, /* ignoreParamVarDecl */ true);
       }
 
-      bool hasProtectedThis(LambdaExpr *L) {
+      bool hasProtectedThis(const LambdaExpr *L) {
         for (const LambdaCapture &OtherCapture : L->captures()) {
           if (!OtherCapture.capturesVariable())
             continue;
@@ -275,10 +399,10 @@ public:
         auto *VD = dyn_cast<VarDecl>(ValueDecl);
         if (!VD)
           return false;
-        auto *Init = VD->getInit()->IgnoreParenCasts();
+        auto *Init = VD->getInit();
         if (!Init)
           return false;
-        const Expr *Arg = Init;
+        const Expr *Arg = Init->IgnoreParenCasts();
         do {
           if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Arg))
             Arg = BTE->getSubExpr()->IgnoreParenCasts();
@@ -287,7 +411,7 @@ public:
             if (!Ctor)
               return false;
             auto clsName = safeGetName(Ctor->getParent());
-            if (isRefType(clsName) && CE->getNumArgs()) {
+            if (Checker->isPtrType(clsName) && CE->getNumArgs()) {
               Arg = CE->getArg(0)->IgnoreParenCasts();
               continue;
             }
@@ -303,9 +427,12 @@ public:
             return false;
           }
           if (auto *CE = dyn_cast<CallExpr>(Arg)) {
-            if (CE->isCallToStdMove() && CE->getNumArgs() == 1) {
-              Arg = CE->getArg(0)->IgnoreParenCasts();
-              continue;
+            if (auto *Callee = CE->getDirectCallee()) {
+              if ((isStdOrWTFMove(Callee) || isCtorOfSafePtr(Callee)) &&
+                  CE->getNumArgs() == 1) {
+                Arg = CE->getArg(0)->IgnoreParenCasts();
+                continue;
+              }
             }
           }
           if (auto *OpCE = dyn_cast<CXXOperatorCallExpr>(Arg)) {
@@ -315,7 +442,7 @@ public:
               if (!Callee)
                 return false;
               auto clsName = safeGetName(Callee->getParent());
-              if (!isRefType(clsName) || !OpCE->getNumArgs())
+              if (!Checker->isPtrType(clsName) || !OpCE->getNumArgs())
                 return false;
               Arg = OpCE->getArg(0)->IgnoreParenCasts();
               continue;
@@ -330,8 +457,15 @@ public:
           }
           break;
         } while (Arg);
-        if (auto *DRE = dyn_cast<DeclRefExpr>(Arg))
-          return ProtectedThisDecls.contains(DRE->getDecl());
+        if (auto *DRE = dyn_cast<DeclRefExpr>(Arg)) {
+          auto *Decl = DRE->getDecl();
+          if (auto *ImplicitParam = dyn_cast<ImplicitParamDecl>(Decl)) {
+            auto kind = ImplicitParam->getParameterKind();
+            return kind == ImplicitParamKind::ObjCSelf ||
+                   kind == ImplicitParamKind::CXXThis;
+          }
+          return ProtectedThisDecls.contains(Decl);
+        }
         return isa<CXXThisExpr>(Arg);
       }
     };
@@ -342,7 +476,8 @@ public:
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
 
-  void visitLambdaExpr(LambdaExpr *L, bool shouldCheckThis, const QualType T,
+  void visitLambdaExpr(const LambdaExpr *L, bool shouldCheckThis,
+                       const QualType T,
                        bool ignoreParamVarDecl = false) const {
     if (TFA.isTrivial(L->getBody()))
       return;
@@ -351,10 +486,20 @@ public:
         ValueDecl *CapturedVar = C.getCapturedVar();
         if (ignoreParamVarDecl && isa<ParmVarDecl>(CapturedVar))
           continue;
+        if (auto *ImplicitParam = dyn_cast<ImplicitParamDecl>(CapturedVar)) {
+          auto kind = ImplicitParam->getParameterKind();
+          if ((kind == ImplicitParamKind::ObjCSelf ||
+               kind == ImplicitParamKind::CXXThis) &&
+              !shouldCheckThis)
+            continue;
+        }
         QualType CapturedVarQualType = CapturedVar->getType();
         auto IsUncountedPtr = isUnsafePtr(CapturedVar->getType());
+        if (C.getCaptureKind() == LCK_ByCopy &&
+            CapturedVarQualType->isReferenceType())
+          continue;
         if (IsUncountedPtr && *IsUncountedPtr)
-          reportBug(C, CapturedVar, CapturedVarQualType);
+          reportBug(C, CapturedVar, CapturedVarQualType, L);
       } else if (C.capturesThis() && shouldCheckThis) {
         if (ignoreParamVarDecl) // this is always a parameter to this function.
           continue;
@@ -364,11 +509,12 @@ public:
   }
 
   void reportBug(const LambdaCapture &Capture, ValueDecl *CapturedVar,
-                 const QualType T) const {
+                 const QualType T, const LambdaExpr *L) const {
     assert(CapturedVar);
 
-    if (isa<ImplicitParamDecl>(CapturedVar) && !Capture.getLocation().isValid())
-      return; // Ignore implicit captruing of self.
+    auto Location = Capture.getLocation();
+    if (isa<ImplicitParamDecl>(CapturedVar) && !Location.isValid())
+      Location = L->getBeginLoc();
 
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
@@ -387,7 +533,7 @@ public:
     printQuotedQualifiedName(Os, CapturedVar);
     Os << " to " << ptrKind(T) << " type is unsafe.";
 
-    PathDiagnosticLocation BSLoc(Capture.getLocation(), BR->getSourceManager());
+    PathDiagnosticLocation BSLoc(Location, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
     BR->emitReport(std::move(Report));
   }
@@ -429,6 +575,10 @@ public:
     return result2;
   }
 
+  virtual bool isPtrType(const std::string &Name) const final {
+    return isRefType(Name) || isCheckedPtr(Name);
+  }
+
   const char *ptrKind(QualType QT) const final {
     if (isUncounted(QT))
       return "uncounted";
@@ -445,7 +595,13 @@ public:
   }
 
   std::optional<bool> isUnsafePtr(QualType QT) const final {
+    if (QT.hasStrongOrWeakObjCLifetime())
+      return false;
     return RTC->isUnretained(QT);
+  }
+
+  virtual bool isPtrType(const std::string &Name) const final {
+    return isRetainPtrOrOSPtr(Name);
   }
 
   const char *ptrKind(QualType QT) const final { return "unretained"; }

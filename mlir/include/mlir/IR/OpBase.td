@@ -22,7 +22,7 @@ include "mlir/IR/Utils.td"
 include "mlir/IR/AttrTypeBase.td"
 
 //===----------------------------------------------------------------------===//
-// OpTrait definitions
+// *OpTrait definitions
 //===----------------------------------------------------------------------===//
 
 // A trait that describes the structure of operation will be marked with
@@ -556,6 +556,29 @@ class AllShapesMatch<list<string> names> :
 class AllTypesMatch<list<string> names> :
     AllMatchSameOperatorTrait<names, "$_self.getType()", "type">;
 
+// Checks that all type IDs match.
+class AllTypeIDsMatch<list<string> names> :
+    AllMatchSameOperatorTrait<names, "$_self.getType().getTypeID()", "type IDs">;
+
+// A type constraint that verifies that a shaped type matches the size and
+// element type of a container with element types. More specifically, it denotes
+// shapedArg.getType().getNumElements() == elementsArg.size() &&
+// shapedArg.getType().getElementType() == elementsArg[i].getType(), for i in
+// [0, elementsArg.size()).
+class ShapedTypeMatchesElementCountAndTypes<string shapedArg,
+                                            string elementsArg> :
+    PredOpTrait<"shaped type '" # shapedArg # "' matches '" # elementsArg # "' "
+                "element count and types",
+        And<[CPred<ElementCount<shapedArg>.result # " == "
+                     "static_cast<int64_t>($" # elementsArg # ".getTypes().size())">,
+             CPred<"::llvm::all_of($" # elementsArg # ".getTypes(), "
+                     "[&](::mlir::Type t) { return t == "
+                       # ElementType<shapedArg>.result # "; })">]>> {
+
+  string shaped = shapedArg;
+  string elements = elementsArg;
+}
+
 // A type constraint that denotes `transform(lhs.getType()) == rhs.getType()`.
 // An optional comparator function may be provided that changes the above form
 // into: `comparator(transform(lhs.getType()), rhs.getType())`.
@@ -583,6 +606,51 @@ class OptionalTypesMatchWith<string summary, string lhsArg, string rhsArg,
 class RangedTypesMatchWith<string summary, string lhsArg, string rhsArg,
                            string transform>
   : TypesMatchWith<summary, lhsArg, rhsArg, transform, "llvm::equal">;
+
+// Checks that each inputArg has the same type as the corresponding entry
+// in allowedTypes
+class InputMatchesTypes<list<string> inputArgs, list<Type> allowedTypes> :
+    PredOpTrait<"operands {" # !interleave(inputArgs, ", ") # "} match expected types",
+                !foldl(TruePred, !range(!size(inputArgs)), acc, i,
+                       And<[acc,
+                           SubstLeaves<"$_self", "$" # inputArgs[i] # ".getType()",
+                                      allowedTypes[i].predicate>
+                       ]>)> {
+    assert !eq(!size(inputArgs), !size(allowedTypes)),
+           "inputArgs and allowedTypes lists must have the same length";
+
+    list<string> inputArgList = inputArgs;
+    list<Type> allowedTypeList = allowedTypes;
+}
+
+// Checks that inputArgs match one of the allowed type combinations.
+// Each combination in allowedCombinations must have the same number of types
+// as there are inputArgs.
+class InputAddressIsCombinationOf<list<string> inputArgs, 
+                                  list<list<Type>> allowedCombinations,
+                                  string description = ""> :
+    PredOpTrait<!if(!empty(description), 
+                    "operands {" # !interleave(inputArgs, ", ") # "} match one of the allowed type combinations",
+                    description),
+                Or<!foreach(combination, allowedCombinations,
+                           !foldl(TruePred, !range(!size(inputArgs)), acc, i,
+                                  And<[acc,
+                                      SubstLeaves<"$_self", "$" # inputArgs[i] # ".getType()",
+                                                 combination[i].predicate>
+                                  ]>))>> {
+    assert !gt(!size(allowedCombinations), 0),
+           "allowedCombinations must not be empty";
+    
+    // Validate that each combination has the same number of types as inputArgs
+    defvar inputArgSize = !size(inputArgs);
+    defvar validSizes = !foldl(1, allowedCombinations, acc, combination,
+                              !and(acc, !eq(inputArgSize, !size(combination))));
+    assert validSizes,
+           "each combination in allowedCombinations must have the same length as inputArgs";
+    
+    list<string> inputArgList = inputArgs;
+    list<list<Type>> allowedCombinationList = allowedCombinations;
+}
 
 // Type Constraint operand `idx`'s Element type is `type`.
 class TCopVTEtIs<int idx, Type type> : And<[

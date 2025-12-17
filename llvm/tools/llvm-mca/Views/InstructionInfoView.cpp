@@ -136,7 +136,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     FOS.PadToColumn(Paddings[2]);
     if (IIVDEntry.RThroughput) {
       double RT = *IIVDEntry.RThroughput;
-      FOS << format("%.2f", RT);
+      FOS << format("%.2f", floor((RT * 100) + 0.5) / 100);
     } else {
       FOS << " -";
     }

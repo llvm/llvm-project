@@ -27,7 +27,7 @@ define <4 x i64> @vpaddq256_broadcast_test(<4 x i64> %i) nounwind {
 ; CHECK-LABEL: vpaddq256_broadcast_test:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0xfd,0x38,0xd4,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %x = add <4 x i64> %i, <i64 2, i64 2, i64 2, i64 2>
   ret <4 x i64> %x
@@ -68,7 +68,7 @@ define <8 x i32> @vpaddd256_broadcast_test(<8 x i32> %i) nounwind {
 ; CHECK-LABEL: vpaddd256_broadcast_test:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x38,0xfe,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %x = add <8 x i32> %i, <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   ret <8 x i32> %x
@@ -116,7 +116,7 @@ define <8 x i32> @vpaddd256_mask_broadcast_test(<8 x i32> %i, <8 x i32> %mask1) 
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestmd %ymm1, %ymm1, %k1 ## encoding: [0x62,0xf2,0x75,0x28,0x27,0xc9]
 ; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x39,0xfe,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <8 x i32> %mask1, zeroinitializer
   %x = add <8 x i32> %i, <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
@@ -142,7 +142,7 @@ define <8 x i32> @vpaddd256_maskz_broadcast_test(<8 x i32> %i, <8 x i32> %mask1)
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestmd %ymm1, %ymm1, %k1 ## encoding: [0x62,0xf2,0x75,0x28,0x27,0xc9]
 ; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0xb9,0xfe,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <8 x i32> %mask1, zeroinitializer
   %x = add <8 x i32> %i, <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
@@ -191,7 +191,7 @@ define <4 x double> @test_fold_vaddpd_256(<4 x double> %y) {
 ; CHECK-LABEL: test_fold_vaddpd_256:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x58,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
 entry:
   %add.i = fadd <4 x double> %y, <double 4.500000e+00, double 3.400000e+00, double 4.500000e+00, double 5.600000e+00>
@@ -202,7 +202,7 @@ define <8 x float> @test_broadcast_vaddpd_256(<8 x float> %a) nounwind {
 ; CHECK-LABEL: test_broadcast_vaddpd_256:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7c,0x38,0x58,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = fadd <8 x float> %a, <float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000>
   ret <8 x float> %b
@@ -493,7 +493,7 @@ define <4 x i32> @vpaddd128_broadcast_test(<4 x i32> %i) nounwind {
 ; CHECK-LABEL: vpaddd128_broadcast_test:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0x7d,0x18,0xfe,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %x = add <4 x i32> %i, <i32 6, i32 6, i32 6, i32 6>
   ret <4 x i32> %x
@@ -541,7 +541,7 @@ define <4 x i32> @vpaddd128_mask_broadcast_test(<4 x i32> %i, <4 x i32> %mask1) 
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestmd %xmm1, %xmm1, %k1 ## encoding: [0x62,0xf2,0x75,0x08,0x27,0xc9]
 ; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x19,0xfe,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <4 x i32> %mask1, zeroinitializer
   %x = add <4 x i32> %i, <i32 7, i32 7, i32 7, i32 7>
@@ -567,7 +567,7 @@ define <4 x i32> @vpaddd128_maskz_broadcast_test(<4 x i32> %i, <4 x i32> %mask1)
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestmd %xmm1, %xmm1, %k1 ## encoding: [0x62,0xf2,0x75,0x08,0x27,0xc9]
 ; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0x99,0xfe,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <4 x i32> %mask1, zeroinitializer
   %x = add <4 x i32> %i, <i32 8, i32 8, i32 8, i32 8>
@@ -616,7 +616,7 @@ define <2 x double> @test_fold_vaddpd_128(<2 x double> %y) {
 ; CHECK-LABEL: test_fold_vaddpd_128:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x58,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
 entry:
   %add.i = fadd <2 x double> %y, <double 4.500000e+00, double 3.400000e+00>
@@ -627,7 +627,7 @@ define <4 x float> @test_broadcast_vaddpd_128(<4 x float> %a) nounwind {
 ; CHECK-LABEL: test_broadcast_vaddpd_128:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0x7c,0x18,0x58,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = fadd <4 x float> %a, <float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000>
   ret <4 x float> %b

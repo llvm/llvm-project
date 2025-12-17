@@ -52,7 +52,7 @@ public:
   lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
                                              bool can_create = true) override;
 
-  size_t GetIndexOfChildWithName(llvm::StringRef name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 protected:
   bool UpdateValue() override;

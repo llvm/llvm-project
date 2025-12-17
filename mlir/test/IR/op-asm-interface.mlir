@@ -71,12 +71,32 @@ func.func @alias_from_op_asm_type_interface() {
 
 // -----
 
+// CHECK: !op_asm_type_interface_tablegen_default =
+!type = !test.op_asm_type_interface_tablegen_default
+
+func.func @alias_from_op_asm_type_interface_tablegen_default() {
+  %0 = "test.result_name_from_type"() : () -> !type
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // Test OpAsmAttrInterface
 //===----------------------------------------------------------------------===//
 
 // CHECK: #op_asm_attr_interface_test
 #attr = #test.op_asm_attr_interface<value = "test">
+
+func.func @test_op_asm_attr_interface() {
+  %1 = "test.result_name_from_type"() {attr = #attr} : () -> !test.op_asm_type_interface
+  return
+}
+
+// -----
+
+// CHECK: #op_asm_attr_interface_tablegen_default
+#attr = #test.op_asm_attr_interface_tablegen_default<value = "test">
 
 func.func @test_op_asm_attr_interface() {
   %1 = "test.result_name_from_type"() {attr = #attr} : () -> !test.op_asm_type_interface
