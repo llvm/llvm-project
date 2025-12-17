@@ -8563,12 +8563,11 @@ bool ASTReader::LoadExternalSpecializationsImpl(
     ArrayRef<TemplateArgument> TemplateArgs) {
   assert(D);
 
-  reader::LazySpecializationInfoLookupTable *LookupTable =
-      nullptr;
+  reader::LazySpecializationInfoLookupTable *LookupTable = nullptr;
   if (auto It = SpecLookups.find(D); It != SpecLookups.end())
     LookupTable = &It->getSecond();
   if (!LookupTable)
-    return false; 
+    return false;
 
   // NOTE: The getNameForDiagnostic usage in the lambda may mutate the
   // `SpecLookups` object.
