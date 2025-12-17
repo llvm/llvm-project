@@ -36,12 +36,15 @@
 // CK30-DAG: [[BASE:%.+]] = type { ptr, i32, ptr }
 // CK30-DAG: [[STRUCT:%.+]] = type { [[BASE]], ptr, ptr, i32, ptr }
 
+// &s,             &s,             sizeof(s),             TO | FROM | PARAM
+// &s.ptr1[0],     &s.ptr1[0],     sizeof(s.ptr1[0]),     TO | FROM
+// &s.ptr1,        &s.ptr1[0],     sizeof(void*),         ATTACH
+// &s.ptrBase1[0], &s.ptrBase1[0], sizeof(s.ptrBase1[0]), TO | FROM
+// &s.ptrBase1,    &s.ptrBase1[0], sizeof(void*),         ATTACH
+
 // CK30-LABEL: @.__omp_offloading_{{.*}}map_with_deep_copy{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK30: [[SIZE00:@.+]] = private unnamed_addr constant [4 x i64] [i64 0, i64 {{56|28}}, i64 4, i64 4]
-// The first element: 0x20 - OMP_MAP_TARGET_PARAM
-// 2: 0x1000000000003 - OMP_MAP_MEMBER_OF(0) | OMP_MAP_TO | OMP_MAP_FROM - copies all the data in structs excluding deep-copied elements (from &s to end of s).
-// 3-4: 0x1000000000013 - OMP_MAP_MEMBER_OF(0) | OMP_MAP_PTR_AND_OBJ | OMP_MAP_TO | OMP_MAP_FROM - deep copy of the pointers + pointee.
-// CK30: [[MTYPE00:@.+]] = private {{.*}}constant [4 x i64] [i64 32, i64 281474976710659, i64 281474976710675, i64 281474976710675]
+// CK30: [[SIZE00:@.+]] = private unnamed_addr constant [5 x i64] [i64 {{56|28}}, i64 4, i64 {{4|8}}, i64 4, i64 {{4|8}}]
+// CK30: [[MTYPE00:@.+]] = private unnamed_addr constant [5 x i64] [i64 [[#0x23]], i64 3, i64 [[#0x8000]], i64 3, i64 [[#0x8000]]]
 
 typedef struct {
   int *ptrBase;
@@ -61,46 +64,44 @@ typedef struct StructWithPtrTag : public Base {
 // CK30-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
 // CK30-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
 // CK30-DAG: store ptr [[PGEP:%.+]], ptr [[PARG]]
-// CK30-DAG: [[SARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 4
-// CK30-DAG: store ptr [[SIZES:%.+]], ptr [[SARG]]
-// CK30-DAG: [[SIZES]] = getelementptr inbounds [4 x i{{64|32}}], ptr [[SIZES:%.+]], i32 0, i32 0
-// CK30-DAG: [[PGEP]] = getelementptr inbounds [4 x ptr], ptr [[PTRS:%.+]], i32 0, i32 0
-// CK30-DAG: [[BPGEP]] = getelementptr inbounds [4 x ptr], ptr [[BASES:%.+]], i32 0, i32 0
+// CK30-DAG: [[PGEP]] = getelementptr inbounds [5 x ptr], ptr [[PTRS:%.+]], i32 0, i32 0
+// CK30-DAG: [[BPGEP]] = getelementptr inbounds [5 x ptr], ptr [[BASES:%.+]], i32 0, i32 0
 
-// CK30-DAG: [[BASE_PTR:%.+]] = getelementptr inbounds [4 x ptr], ptr [[BASES]], i32 0, i32 0
+// CK30-DAG: [[BASE_PTR:%.+]] = getelementptr inbounds [5 x ptr], ptr [[BASES]], i32 0, i32 0
 // CK30-DAG: store ptr [[S:%.+]], ptr [[BASE_PTR]],
-// CK30-DAG: [[PTR:%.+]] = getelementptr inbounds [4 x ptr], ptr [[PTRS]], i32 0, i32 0
-// CK30-DAG: store ptr [[S]], ptr [[PTR]],
-// CK30-DAG: [[SIZE:%.+]] = getelementptr inbounds [4 x i{{64|32}}], ptr [[SIZES]], i32 0, i32 0
-// CK30-DAG: store i64 [[S_ALLOC_SIZE:%.+]], ptr [[SIZE]],
-// CK30-DAG: [[S_ALLOC_SIZE]] = sdiv exact i64 [[DIFF:%.+]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CK30-DAG: [[DIFF]] = sub i64 [[S_END_BC:%.+]], [[S_BEGIN_BC:%.+]]
-// CK30-DAG: [[S_BEGIN_BC]] = ptrtoint ptr [[S_BEGIN:%.+]] to i64
-// CK30-DAG: [[S_END_BC]] = ptrtoint ptr [[S_END:%.+]] to i64
-// CK30-DAG: [[REAL_S_END:%.+]] = getelementptr [[STRUCT]], ptr [[S]], i32 1
-
-// CK30-DAG: [[BASE_PTR:%.+]] = getelementptr inbounds [4 x ptr], ptr [[BASES]], i32 0, i32 1
-// CK30-DAG: store ptr [[S]], ptr [[BASE_PTR]],
-// CK30-DAG: [[PTR:%.+]] = getelementptr inbounds [4 x ptr], ptr [[PTRS]], i32 0, i32 1
+// CK30-DAG: [[PTR:%.+]] = getelementptr inbounds [5 x ptr], ptr [[PTRS]], i32 0, i32 0
 // CK30-DAG: store ptr [[S]], ptr [[PTR]],
 
-// CK30-DAG: [[BASE_PTR:%.+]] = getelementptr inbounds [4 x ptr], ptr [[BASES]], i32 0, i32 2
-// CK30-DAG: store ptr [[S_PTR1:%.+]], ptr [[BASE_PTR]],
-// CK30-DAG: [[PTR:%.+]] = getelementptr inbounds [4 x ptr], ptr [[PTRS]], i32 0, i32 2
+// CK30-DAG: [[BASE_PTR:%.+]] = getelementptr inbounds [5 x ptr], ptr [[BASES]], i32 0, i32 1
+// CK30-DAG: [[PTR:%.+]] = getelementptr inbounds [5 x ptr], ptr [[PTRS]], i32 0, i32 1
+// CK30-DAG: store ptr [[S_PTR1_REF:%.+]], ptr [[BASE_PTR]],
 // CK30-DAG: store ptr [[S_PTR1_BEGIN:%.+]], ptr [[PTR]],
+// CK30-DAG: [[S_PTR1_REF]] = load ptr, ptr [[S_PTR1:%.+]],
 // CK30-DAG: [[S_PTR1]] = getelementptr inbounds nuw [[STRUCT]], ptr [[S]], i32 0, i32 4
-// CK30-DAG: [[S_PTR1_BEGIN]] = getelementptr inbounds nuw i32, ptr [[S_PTR1_BEGIN_REF:%.+]], i{{64|32}} 0
-// CK30-DAG: [[S_PTR1_BEGIN_REF]] = load ptr, ptr [[S_PTR1:%.+]],
-// CK30-DAG: [[S_PTR1]] = getelementptr inbounds nuw [[STRUCT]], ptr [[S]], i32 0, i32 4
+// CK30-DAG: [[S_PTR1_BEGIN]] = getelementptr inbounds nuw i32, ptr [[S_PTR1_REF1:%.+]], i{{64|32}} 0
+// CK30-DAG: [[S_PTR1_REF1]] = load ptr, ptr [[S_PTR11:%.+]],
+// CK30-DAG: [[S_PTR11]] = getelementptr inbounds nuw [[STRUCT]], ptr [[S]], i32 0, i32 4
 
-// CK30-DAG: [[BASE_PTR:%.+]] = getelementptr inbounds [4 x ptr], ptr [[BASES]], i32 0, i32 3
-// CK30-DAG: store ptr [[S_PTRBASE1:%.+]], ptr [[BASE_PTR]],
-// CK30-DAG: [[PTR:%.+]] = getelementptr inbounds [4 x ptr], ptr [[PTRS]], i32 0, i32 3
+// CK30-DAG: [[BASE_PTR:%.+]] = getelementptr inbounds [5 x ptr], ptr [[BASES]], i32 0, i32 2
+// CK30-DAG: [[PTR:%.+]] = getelementptr inbounds [5 x ptr], ptr [[PTRS]], i32 0, i32 2
+// CK30-DAG: store ptr [[S_PTR1]], ptr [[BASE_PTR]],
+// CK30-DAG: store ptr [[S_PTR1_BEGIN]], ptr [[PTR]],
+
+// CK30-DAG: [[BASE_PTR:%.+]] = getelementptr inbounds [5 x ptr], ptr [[BASES]], i32 0, i32 3
+// CK30-DAG: [[PTR:%.+]] = getelementptr inbounds [5 x ptr], ptr [[PTRS]], i32 0, i32 3
+// CK30-DAG: store ptr [[S_PTRBASE1_REF:%.+]], ptr [[BASE_PTR]],
 // CK30-DAG: store ptr [[S_PTRBASE1_BEGIN:%.+]], ptr [[PTR]],
+// CK30-DAG: [[S_PTRBASE1_REF]] = load ptr, ptr [[S_PTRBASE1:%.+]],
 // CK30-DAG: [[S_PTRBASE1]] = getelementptr inbounds nuw [[BASE]], ptr [[S_BASE:%.+]], i32 0, i32 2
-// CK30-DAG: [[S_PTRBASE1_BEGIN]] = getelementptr inbounds nuw i32, ptr [[S_PTRBASE1_BEGIN_REF:%.+]], i{{64|32}} 0
-// CK30-DAG: [[S_PTRBASE1_BEGIN_REF]] = load ptr, ptr [[S_PTRBASE1:%.+]],
-// CK30-DAG: [[S_PTRBASE1]] = getelementptr inbounds nuw [[BASE]], ptr [[S_BASE:%.+]], i32 0, i32 2
+// CK30-DAG: [[S_PTRBASE1_BEGIN]] = getelementptr inbounds nuw i32, ptr [[S_PTRBASE1_REF1:%.+]], i{{64|32}} 0
+// CK30-DAG: [[S_PTRBASE1_REF1]] = load ptr, ptr [[S_PTRBASE11:%.+]],
+// CK30-DAG: [[S_PTRBASE11]] = getelementptr inbounds nuw [[BASE]], ptr [[S_BASE:%.+]], i32 0, i32 2
+
+// CK30-DAG: [[BASE_PTR:%.+]] = getelementptr inbounds [5 x ptr], ptr [[BASES]], i32 0, i32 4
+// CK30-DAG: [[PTR:%.+]] = getelementptr inbounds [5 x ptr], ptr [[PTRS]], i32 0, i32 4
+// CK30-DAG: store ptr [[S_PTRBASE1]], ptr [[BASE_PTR]],
+// CK30-DAG: store ptr [[S_PTRBASE1_BEGIN]], ptr [[PTR]],
+
 void map_with_deep_copy() {
   StructWithPtr s;
 #pragma omp target map(s, s.ptr1 [0:1], s.ptrBase1 [0:1])

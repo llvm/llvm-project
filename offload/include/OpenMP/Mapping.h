@@ -35,7 +35,7 @@ class MappingConfig {
     UseEventsForAtomicTransfers = ForceAtomic;
 
     BoolEnvar TreatAttachAutoAsAlwaysEnvar(
-        "LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS", false);
+        "LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS", true);
     TreatAttachAutoAsAlways = TreatAttachAutoAsAlwaysEnvar;
   }
 

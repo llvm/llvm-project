@@ -23,31 +23,33 @@ void f1() {
 
 void f2() {
   // &ps[0], &ps->y, sizeof(ps->y), TO | PARAM
+  // &ps,    &ps->y, sizeof(ps),    ATTACH
   #pragma omp target map(to: ps->y)
     ps->y = 6;
 }
 
 void f3() {
-  // &ps[0], &ps[0], sizeof(ps[0]), PARAM | ALLOC
-  // &ps, &ps, sizeof(ps), TO | MEMBER_OF(1)
-  // &ps[0], &ps->y, sizeof(ps->y), TO | MEMBER_OF(1)
+  // &ps,    &ps,    sizeof(ps),    TO | PARAM
+  // &ps[0], &ps->y, sizeof(ps->y), TO
+  // &ps,    &ps->y, sizeof(ps),    ATTACH
   #pragma omp target map(to: ps, ps->y)
     ps->y = 7;
 }
 
 void f4() {
-  // &ps[0], &ps[0], sizeof(ps[0]), PARAM | ALLOC
-  // &ps[0], &ps->y, sizeof(ps->y), TO | MEMBER_OF(1)
-  // &ps, &ps, sizeof(ps), TO | MEMBER_OF(1)
+  // &ps,    &ps,    sizeof(ps),    TO | PARAM
+  // &ps[0], &ps->y, sizeof(ps->y), TO
+  // &ps,    &ps->y, sizeof(ps),    ATTACH
   #pragma omp target map(to: ps->y, ps)
     ps->y = 8;
 }
 
 void f5() {
-  // &ps[0], &ps[0], sizeof(ps[0]), PARAM | ALLOC
-  // &ps[0], &ps->y, sizeof(ps->y), TO | MEMBER_OF(1)
-  // &ps, &ps, sizeof(ps), TO | MEMBER_OF(1)
-  // &ps[0], &ps->x, sizeof(ps->x), TO | MEMBER_OF(1)
+  // &ps,    &ps,      sizeof(ps),                    TO | PARAM
+  // &ps[0], &ps[0].x, ((&ps[0].y + 1) - &ps[0].x)/8, ALLOC
+  // &ps[0], &ps->y,   sizeof(ps->y),                 TO | MEMBER_OF(2)
+  // &ps[0], &ps->x,   sizeof(ps->x),                 TO | MEMBER_OF(2)
+  // &ps,    &ps[0].x, sizeof(ps),                    ATTACH
   #pragma omp target map(to: ps->y, ps, ps->x)
     ps->y = 9;
 }
@@ -56,14 +58,14 @@ void f5() {
 //.
 // CHECK: @.offload_sizes = private unnamed_addr constant [1 x i64] [i64 8]
 // CHECK: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 [[#0x21]]]
-// CHECK: @.offload_sizes.1 = private unnamed_addr constant [1 x i64] [i64 4]
-// CHECK: @.offload_maptypes.2 = private unnamed_addr constant [1 x i64] [i64 [[#0x21]]]
-// CHECK: @.offload_sizes.3 = private unnamed_addr constant [3 x i64] [i64 0, i64 8, i64 4]
-// CHECK: @.offload_maptypes.4 = private unnamed_addr constant [3 x i64] [i64 [[#0x20]], i64 [[#0x1000000000001]], i64 [[#0x1000000000001]]]
-// CHECK: @.offload_sizes.5 = private unnamed_addr constant [3 x i64] [i64 0, i64 4, i64 8]
-// CHECK: @.offload_maptypes.6 = private unnamed_addr constant [3 x i64] [i64 [[#0x20]], i64 [[#0x1000000000001]], i64 [[#0x1000000000001]]]
-// CHECK: @.offload_sizes.7 = private unnamed_addr constant [4 x i64] [i64 0, i64 4, i64 8, i64 2]
-// CHECK: @.offload_maptypes.8 = private unnamed_addr constant [4 x i64] [i64 [[#0x20]], i64 [[#0x1000000000001]], i64 [[#0x1000000000001]], i64 [[#0x1000000000001]]]
+// CHECK: @.offload_sizes.1 = private unnamed_addr constant [2 x i64] [i64 4, i64 8]
+// CHECK: @.offload_maptypes.2 = private unnamed_addr constant [2 x i64] [i64 [[#0x21]], i64 [[#0x8000]]]
+// CHECK: @.offload_sizes.3 = private unnamed_addr constant [3 x i64] [i64 8, i64 4, i64 8]
+// CHECK: @.offload_maptypes.4 = private unnamed_addr constant [3 x i64] [i64 [[#0x21]], i64 [[#0x1]], i64 [[#0x8000]]]
+// CHECK: @.offload_sizes.5 = private unnamed_addr constant [3 x i64] [i64 8, i64 4, i64 8]
+// CHECK: @.offload_maptypes.6 = private unnamed_addr constant [3 x i64] [i64 [[#0x21]], i64 [[#0x1]], i64 [[#0x8000]]]
+// CHECK: @.offload_sizes.7 = private unnamed_addr constant [5 x i64] [i64 8, i64 0, i64 4, i64 2, i64 8]
+// CHECK: @.offload_maptypes.8 = private unnamed_addr constant [5 x i64] [i64 [[#0x21]], i64 [[#0x0]], i64 [[#0x2000000000001]], i64 [[#0x2000000000001]], i64 [[#0x8000]]]
 //.
 // CHECK-LABEL: define dso_local void @_Z2f1v(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
@@ -97,18 +99,24 @@ void f5() {
 // CHECK:    [[TMP1:%.*]] = load ptr, ptr @ps, align 8
 // CHECK:    [[TMP2:%.*]] = load ptr, ptr @ps, align 8
 // CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[TMP2]], i32 0, i32 1
-// CHECK:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS:%.*]], i32 0, i32 0
+// CHECK:    [[TMP3:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS:%.*]], i32 0, i32 0
 // CHECK:    store ptr [[TMP1]], ptr [[TMP3]], align 8
-// CHECK:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS:%.*]], i32 0, i32 0
+// CHECK:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS:%.*]], i32 0, i32 0
 // CHECK:    store ptr [[Y]], ptr [[TMP4]], align 8
-// CHECK:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS:%.*]], i64 0, i64 0
+// CHECK:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS:%.*]], i64 0, i64 0
 // CHECK:    store ptr null, ptr [[TMP5]], align 8
-// CHECK:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// CHECK:    [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// CHECK:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], ptr [[KERNEL_ARGS:%.*]], i32 0, i32 0
+// CHECK:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
+// CHECK:    store ptr @ps, ptr [[TMP6]], align 8
+// CHECK:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
+// CHECK:    store ptr [[Y]], ptr [[TMP7]], align 8
+// CHECK:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 1
+// CHECK:    store ptr null, ptr [[TMP8]], align 8
+// CHECK:    [[TMP9:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], ptr [[KERNEL_ARGS:%.*]], i32 0, i32 0
 //
 //
-// CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z2f2v_l26(
+// CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z2f2v_l27(
 // CHECK-SAME: ptr noundef [[PS:%.*]]) #[[ATTR1]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[PS]], ptr [[PS_ADDR:%.*]], align 8
@@ -123,46 +131,37 @@ void f5() {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    [[TMP0:%.*]] = load ptr, ptr @ps, align 8
 // CHECK:    [[TMP1:%.*]] = load ptr, ptr @ps, align 8
-// CHECK:    [[TMP2:%.*]] = load ptr, ptr @ps, align 8
-// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[TMP2]], i32 0, i32 1
-// CHECK:    [[TMP3:%.*]] = getelementptr [[STRUCT_S]], ptr [[TMP1]], i32 1
-// CHECK:    [[TMP4:%.*]] = ptrtoint ptr [[TMP3]] to i64
-// CHECK:    [[TMP5:%.*]] = ptrtoint ptr [[TMP1]] to i64
-// CHECK:    [[TMP6:%.*]] = sub i64 [[TMP4]], [[TMP5]]
-// CHECK:    [[TMP7:%.*]] = sdiv exact i64 [[TMP6]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES:%.*]], ptr align 8 @.offload_sizes.3, i64 24, i1 false)
-// CHECK:    [[TMP8:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS:%.*]], i32 0, i32 0
-// CHECK:    store ptr [[TMP1]], ptr [[TMP8]], align 8
-// CHECK:    [[TMP9:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS:%.*]], i32 0, i32 0
-// CHECK:    store ptr [[TMP1]], ptr [[TMP9]], align 8
-// CHECK:    [[TMP10:%.*]] = getelementptr inbounds [3 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
-// CHECK:    store i64 [[TMP7]], ptr [[TMP10]], align 8
-// CHECK:    [[TMP11:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_MAPPERS:%.*]], i64 0, i64 0
-// CHECK:    store ptr null, ptr [[TMP11]], align 8
-// CHECK:    [[TMP12:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
-// CHECK:    store ptr @ps, ptr [[TMP12]], align 8
-// CHECK:    [[TMP13:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
-// CHECK:    store ptr @ps, ptr [[TMP13]], align 8
-// CHECK:    [[TMP14:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 1
-// CHECK:    store ptr null, ptr [[TMP14]], align 8
-// CHECK:    [[TMP15:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 2
-// CHECK:    store ptr [[TMP1]], ptr [[TMP15]], align 8
-// CHECK:    [[TMP16:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 2
-// CHECK:    store ptr [[Y]], ptr [[TMP16]], align 8
-// CHECK:    [[TMP17:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 2
-// CHECK:    store ptr null, ptr [[TMP17]], align 8
-// CHECK:    [[TMP18:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// CHECK:    [[TMP19:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// CHECK:    [[TMP20:%.*]] = getelementptr inbounds [3 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
-// CHECK:    [[TMP21:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], ptr [[KERNEL_ARGS:%.*]], i32 0, i32 0
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[TMP1]], i32 0, i32 1
+// CHECK:    [[TMP2:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS:%.*]], i32 0, i32 0
+// CHECK:    store ptr @ps, ptr [[TMP2]], align 8
+// CHECK:    [[TMP3:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS:%.*]], i32 0, i32 0
+// CHECK:    store ptr @ps, ptr [[TMP3]], align 8
+// CHECK:    [[TMP4:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_MAPPERS:%.*]], i64 0, i64 0
+// CHECK:    store ptr null, ptr [[TMP4]], align 8
+// CHECK:    [[TMP5:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
+// CHECK:    store ptr [[TMP0]], ptr [[TMP5]], align 8
+// CHECK:    [[TMP6:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
+// CHECK:    store ptr [[Y]], ptr [[TMP6]], align 8
+// CHECK:    [[TMP7:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 1
+// CHECK:    store ptr null, ptr [[TMP7]], align 8
+// CHECK:    [[TMP8:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 2
+// CHECK:    store ptr @ps, ptr [[TMP8]], align 8
+// CHECK:    [[TMP9:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 2
+// CHECK:    store ptr [[Y]], ptr [[TMP9]], align 8
+// CHECK:    [[TMP10:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 2
+// CHECK:    store ptr null, ptr [[TMP10]], align 8
+// CHECK:    [[TMP11:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK:    [[TMP12:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], ptr [[KERNEL_ARGS:%.*]], i32 0, i32 0
 //
 //
-// CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z2f3v_l34(
-// CHECK-SAME: ptr noundef [[PS:%.*]]) #[[ATTR1]] {
+// CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z2f3v_l35(
+// CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(8) [[PS:%.*]]) #[[ATTR1]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[PS]], ptr [[PS_ADDR:%.*]], align 8
-// CHECK:    [[TMP0:%.*]] = load ptr, ptr [[PS_ADDR]], align 8
-// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[TMP0]], i32 0, i32 1
+// CHECK:    [[TMP0:%.*]] = load ptr, ptr [[PS_ADDR]], align 8, !nonnull [[META13]], !align [[META14]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[TMP1]], i32 0, i32 1
 // CHECK:    store i32 7, ptr [[Y]], align 4
 // CHECK:    ret void
 //
@@ -172,46 +171,37 @@ void f5() {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    [[TMP0:%.*]] = load ptr, ptr @ps, align 8
 // CHECK:    [[TMP1:%.*]] = load ptr, ptr @ps, align 8
-// CHECK:    [[TMP2:%.*]] = load ptr, ptr @ps, align 8
-// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[TMP2]], i32 0, i32 1
-// CHECK:    [[TMP3:%.*]] = getelementptr [[STRUCT_S]], ptr [[TMP1]], i32 1
-// CHECK:    [[TMP4:%.*]] = ptrtoint ptr [[TMP3]] to i64
-// CHECK:    [[TMP5:%.*]] = ptrtoint ptr [[TMP1]] to i64
-// CHECK:    [[TMP6:%.*]] = sub i64 [[TMP4]], [[TMP5]]
-// CHECK:    [[TMP7:%.*]] = sdiv exact i64 [[TMP6]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES:%.*]], ptr align 8 @.offload_sizes.5, i64 24, i1 false)
-// CHECK:    [[TMP8:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS:%.*]], i32 0, i32 0
-// CHECK:    store ptr [[TMP1]], ptr [[TMP8]], align 8
-// CHECK:    [[TMP9:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS:%.*]], i32 0, i32 0
-// CHECK:    store ptr [[TMP1]], ptr [[TMP9]], align 8
-// CHECK:    [[TMP10:%.*]] = getelementptr inbounds [3 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
-// CHECK:    store i64 [[TMP7]], ptr [[TMP10]], align 8
-// CHECK:    [[TMP11:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_MAPPERS:%.*]], i64 0, i64 0
-// CHECK:    store ptr null, ptr [[TMP11]], align 8
-// CHECK:    [[TMP12:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
-// CHECK:    store ptr [[TMP1]], ptr [[TMP12]], align 8
-// CHECK:    [[TMP13:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
-// CHECK:    store ptr [[Y]], ptr [[TMP13]], align 8
-// CHECK:    [[TMP14:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 1
-// CHECK:    store ptr null, ptr [[TMP14]], align 8
-// CHECK:    [[TMP15:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 2
-// CHECK:    store ptr @ps, ptr [[TMP15]], align 8
-// CHECK:    [[TMP16:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 2
-// CHECK:    store ptr @ps, ptr [[TMP16]], align 8
-// CHECK:    [[TMP17:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 2
-// CHECK:    store ptr null, ptr [[TMP17]], align 8
-// CHECK:    [[TMP18:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// CHECK:    [[TMP19:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// CHECK:    [[TMP20:%.*]] = getelementptr inbounds [3 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
-// CHECK:    [[TMP21:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], ptr [[KERNEL_ARGS:%.*]], i32 0, i32 0
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[TMP1]], i32 0, i32 1
+// CHECK:    [[TMP2:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS:%.*]], i32 0, i32 0
+// CHECK:    store ptr @ps, ptr [[TMP2]], align 8
+// CHECK:    [[TMP3:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS:%.*]], i32 0, i32 0
+// CHECK:    store ptr @ps, ptr [[TMP3]], align 8
+// CHECK:    [[TMP4:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_MAPPERS:%.*]], i64 0, i64 0
+// CHECK:    store ptr null, ptr [[TMP4]], align 8
+// CHECK:    [[TMP5:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
+// CHECK:    store ptr [[TMP0]], ptr [[TMP5]], align 8
+// CHECK:    [[TMP6:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
+// CHECK:    store ptr [[Y]], ptr [[TMP6]], align 8
+// CHECK:    [[TMP7:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 1
+// CHECK:    store ptr null, ptr [[TMP7]], align 8
+// CHECK:    [[TMP8:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 2
+// CHECK:    store ptr @ps, ptr [[TMP8]], align 8
+// CHECK:    [[TMP9:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 2
+// CHECK:    store ptr [[Y]], ptr [[TMP9]], align 8
+// CHECK:    [[TMP10:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 2
+// CHECK:    store ptr null, ptr [[TMP10]], align 8
+// CHECK:    [[TMP11:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK:    [[TMP12:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], ptr [[KERNEL_ARGS:%.*]], i32 0, i32 0
 //
 //
-// CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z2f4v_l42(
-// CHECK-SAME: ptr noundef [[PS:%.*]]) #[[ATTR1]] {
+// CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z2f4v_l43(
+// CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(8) [[PS:%.*]]) #[[ATTR1]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[PS]], ptr [[PS_ADDR:%.*]], align 8
-// CHECK:    [[TMP0:%.*]] = load ptr, ptr [[PS_ADDR]], align 8
-// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[TMP0]], i32 0, i32 1
+// CHECK:    [[TMP0:%.*]] = load ptr, ptr [[PS_ADDR]], align 8, !nonnull [[META13]], !align [[META14]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[TMP1]], i32 0, i32 1
 // CHECK:    store i32 8, ptr [[Y]], align 4
 // CHECK:    ret void
 //
@@ -221,55 +211,61 @@ void f5() {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    [[TMP0:%.*]] = load ptr, ptr @ps, align 8
 // CHECK:    [[TMP1:%.*]] = load ptr, ptr @ps, align 8
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[TMP1]], i32 0, i32 1
 // CHECK:    [[TMP2:%.*]] = load ptr, ptr @ps, align 8
-// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[TMP2]], i32 0, i32 1
 // CHECK:    [[TMP3:%.*]] = load ptr, ptr @ps, align 8
-// CHECK:    [[TMP4:%.*]] = load ptr, ptr @ps, align 8
-// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[TMP4]], i32 0, i32 0
-// CHECK:    [[TMP5:%.*]] = getelementptr [[STRUCT_S]], ptr [[TMP1]], i32 1
-// CHECK:    [[TMP6:%.*]] = ptrtoint ptr [[TMP5]] to i64
-// CHECK:    [[TMP7:%.*]] = ptrtoint ptr [[TMP1]] to i64
-// CHECK:    [[TMP8:%.*]] = sub i64 [[TMP6]], [[TMP7]]
-// CHECK:    [[TMP9:%.*]] = sdiv exact i64 [[TMP8]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES:%.*]], ptr align 8 @.offload_sizes.7, i64 32, i1 false)
-// CHECK:    [[TMP10:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_BASEPTRS:%.*]], i32 0, i32 0
-// CHECK:    store ptr [[TMP1]], ptr [[TMP10]], align 8
-// CHECK:    [[TMP11:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_PTRS:%.*]], i32 0, i32 0
-// CHECK:    store ptr [[TMP1]], ptr [[TMP11]], align 8
-// CHECK:    [[TMP12:%.*]] = getelementptr inbounds [4 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
-// CHECK:    store i64 [[TMP9]], ptr [[TMP12]], align 8
-// CHECK:    [[TMP13:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_MAPPERS:%.*]], i64 0, i64 0
-// CHECK:    store ptr null, ptr [[TMP13]], align 8
-// CHECK:    [[TMP14:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
-// CHECK:    store ptr [[TMP1]], ptr [[TMP14]], align 8
-// CHECK:    [[TMP15:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
-// CHECK:    store ptr [[Y]], ptr [[TMP15]], align 8
-// CHECK:    [[TMP16:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 1
-// CHECK:    store ptr null, ptr [[TMP16]], align 8
-// CHECK:    [[TMP17:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 2
-// CHECK:    store ptr @ps, ptr [[TMP17]], align 8
-// CHECK:    [[TMP18:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 2
-// CHECK:    store ptr @ps, ptr [[TMP18]], align 8
-// CHECK:    [[TMP19:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 2
-// CHECK:    store ptr null, ptr [[TMP19]], align 8
-// CHECK:    [[TMP20:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 3
-// CHECK:    store ptr [[TMP3]], ptr [[TMP20]], align 8
-// CHECK:    [[TMP21:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 3
-// CHECK:    store ptr [[X]], ptr [[TMP21]], align 8
-// CHECK:    [[TMP22:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 3
-// CHECK:    store ptr null, ptr [[TMP22]], align 8
-// CHECK:    [[TMP23:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// CHECK:    [[TMP24:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// CHECK:    [[TMP25:%.*]] = getelementptr inbounds [4 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
-// CHECK:    [[TMP26:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], ptr [[KERNEL_ARGS:%.*]], i32 0, i32 0
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[TMP3]], i32 0, i32 0
+// CHECK:    [[TMP4:%.*]] = getelementptr i32, ptr [[Y]], i32 1
+// CHECK:    [[TMP5:%.*]] = ptrtoint ptr [[TMP4]] to i64
+// CHECK:    [[TMP6:%.*]] = ptrtoint ptr [[X]] to i64
+// CHECK:    [[TMP7:%.*]] = sub i64 [[TMP5]], [[TMP6]]
+// CHECK:    [[TMP8:%.*]] = sdiv exact i64 [[TMP7]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
+// CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES:%.*]], ptr align 8 @.offload_sizes.7, i64 40, i1 false)
+// CHECK:    [[TMP9:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_BASEPTRS:%.*]], i32 0, i32 0
+// CHECK:    store ptr @ps, ptr [[TMP9]], align 8
+// CHECK:    [[TMP10:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_PTRS:%.*]], i32 0, i32 0
+// CHECK:    store ptr @ps, ptr [[TMP10]], align 8
+// CHECK:    [[TMP11:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_MAPPERS:%.*]], i64 0, i64 0
+// CHECK:    store ptr null, ptr [[TMP11]], align 8
+// CHECK:    [[TMP12:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 1
+// CHECK:    store ptr [[TMP0]], ptr [[TMP12]], align 8
+// CHECK:    [[TMP13:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 1
+// CHECK:    store ptr [[X]], ptr [[TMP13]], align 8
+// CHECK:    [[TMP14:%.*]] = getelementptr inbounds [5 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 1
+// CHECK:    store i64 [[TMP8]], ptr [[TMP14]], align 8
+// CHECK:    [[TMP15:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 1
+// CHECK:    store ptr null, ptr [[TMP15]], align 8
+// CHECK:    [[TMP16:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 2
+// CHECK:    store ptr [[TMP0]], ptr [[TMP16]], align 8
+// CHECK:    [[TMP17:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 2
+// CHECK:    store ptr [[Y]], ptr [[TMP17]], align 8
+// CHECK:    [[TMP18:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 2
+// CHECK:    store ptr null, ptr [[TMP18]], align 8
+// CHECK:    [[TMP19:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 3
+// CHECK:    store ptr [[TMP2]], ptr [[TMP19]], align 8
+// CHECK:    [[TMP20:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 3
+// CHECK:    store ptr [[X]], ptr [[TMP20]], align 8
+// CHECK:    [[TMP21:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 3
+// CHECK:    store ptr null, ptr [[TMP21]], align 8
+// CHECK:    [[TMP22:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 4
+// CHECK:    store ptr @ps, ptr [[TMP22]], align 8
+// CHECK:    [[TMP23:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 4
+// CHECK:    store ptr [[X]], ptr [[TMP23]], align 8
+// CHECK:    [[TMP24:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 4
+// CHECK:    store ptr null, ptr [[TMP24]], align 8
+// CHECK:    [[TMP25:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK:    [[TMP26:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK:    [[TMP27:%.*]] = getelementptr inbounds [5 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
+// CHECK:    [[TMP28:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], ptr [[KERNEL_ARGS:%.*]], i32 0, i32 0
 //
 //
-// CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z2f5v_l51(
-// CHECK-SAME: ptr noundef [[PS:%.*]]) #[[ATTR1]] {
+// CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z2f5v_l53(
+// CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(8) [[PS:%.*]]) #[[ATTR1]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[PS]], ptr [[PS_ADDR:%.*]], align 8
-// CHECK:    [[TMP0:%.*]] = load ptr, ptr [[PS_ADDR]], align 8
-// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[TMP0]], i32 0, i32 1
+// CHECK:    [[TMP0:%.*]] = load ptr, ptr [[PS_ADDR]], align 8, !nonnull [[META13]], !align [[META14]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[TMP1]], i32 0, i32 1
 // CHECK:    store i32 9, ptr [[Y]], align 4
 // CHECK:    ret void
 //

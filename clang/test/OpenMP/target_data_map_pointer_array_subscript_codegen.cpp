@@ -33,20 +33,60 @@ typedef struct {
 MyObject *objects;
 #pragma omp end declare target
 
-// CHECK-DAG: [[SIZES0:@.+]] = private unnamed_addr constant [1 x i64] [i64 {{8|4}}]
-// CHECK-DAG: [[MAPS0:@.+]] = private unnamed_addr constant [1 x i64] [i64 17]
-// CHECK-DAG: [[SIZES1:@.+]] = private unnamed_addr constant [2 x i64] [i64 0, i64 4]
-// CHECK-DAG: [[MAPS1:@.+]] = private unnamed_addr constant [2 x i64] [i64 0, i64 281474976710673]
+// CHECK-DAG: [[SIZES0:@.+]] = private unnamed_addr constant [2 x i64] [i64 {{8|4}}, i64 {{8|4}}]
+// CHECK-DAG: [[MAPS0:@.+]] = private unnamed_addr constant [2 x i64] [i64 1, i64 32768]
+// CHECK-DAG: [[SIZES1:@.+]] = private unnamed_addr constant [2 x i64] [i64 4, i64 {{8|4}}]
+// CHECK-DAG: [[MAPS1:@.+]] = private unnamed_addr constant [2 x i64] [i64 1, i64 32768]
 // CHECK: @main
 int main(void) {
-// CHECK: [[BPTR0:%.+]] = getelementptr inbounds [1 x ptr], ptr %{{.+}}, i32 0, i32 0
-// CHECK: store ptr @objects, ptr [[BPTR0]],
-// CHECK: call void @__tgt_target_data_begin_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr %{{.+}}, ptr %{{.+}}, ptr [[SIZES0]], ptr [[MAPS0]], ptr null, ptr null)
+
+//  &objects[0], &objects[1], 1 * sizeof(objects[0]), TO
+//  &objects,    &objects[1], sizeof(objects),        ATTACH
+
+// CHECK-DAG: call void @__tgt_target_data_begin_mapper(ptr @{{.+}}, i64 -1, i32 2, ptr [[BPGEP:%.+]], ptr [[PGEP:%.+]], ptr [[SIZES0]], ptr [[MAPS0]], ptr null, ptr null)
+// CHECK-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CHECK-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+
+// CHECK-DAG: [[BP0:%.+]] = getelementptr inbounds {{.*}}ptr [[BP]], i32 0, i32 0
+// CHECK-DAG: [[P0:%.+]] = getelementptr inbounds {{.*}}ptr [[P]], i32 0, i32 0
+// CHECK-DAG: store ptr [[RVAR0:%.+]], ptr [[BP0]]
+// CHECK-DAG: store ptr [[SEC0:%.+]], ptr [[P0]]
+// CHECK-DAG: [[RVAR0]] = load ptr, ptr @objects
+// CHECK-DAG: [[SEC0]] = getelementptr {{.*}}ptr [[RVAR00:%.+]], i{{.+}} 1
+// CHECK-DAG: [[RVAR00]] = load ptr, ptr @objects
+
+// CHECK-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+// CHECK-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+// CHECK-DAG: store ptr @objects, ptr [[BP1]]
+// CHECK-DAG: store ptr [[SEC0]], ptr [[P1]]
+
 #pragma omp target enter data map(to : objects [1:1])
-// CHECK: [[OBJ:%.+]] = load ptr, ptr @objects,
-// CHECK: [[BPTR0:%.+]] = getelementptr inbounds [2 x ptr], ptr %{{.+}}, i32 0, i32 0
-// CHECK: store ptr [[OBJ]], ptr [[BPTR0]],
-// CHECK: call void @__tgt_target_data_begin_mapper(ptr @{{.+}}, i64 -1, i32 2, ptr %{{.+}}, ptr %{{.+}}, ptr %{{.+}}, ptr [[MAPS1]], ptr null, ptr null)
+
+//  &objects[1].arr[0], &objects[1].arr[/*lb=*/0], 1 * sizeof(objects[1],  arr[0:1]), TO
+//  &objects[1].arr,    &objects[1].arr[/*lb=*/0], sizeof(objects[1].arr), ATTACH
+
+// CHECK-DAG: call void @__tgt_target_data_begin_mapper(ptr @{{.+}}, i64 -1, i32 2, ptr [[BPGEP:%.+]], ptr [[PGEP:%.+]], ptr [[SIZES1]], ptr [[MAPS1]], ptr null, ptr null)
+// CHECK-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CHECK-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+
+// CHECK-DAG: [[BP0:%.+]] = getelementptr inbounds {{.*}}ptr [[BP]], i32 0, i32 0
+// CHECK-DAG: [[P0:%.+]] = getelementptr inbounds {{.*}}ptr [[P]], i32 0, i32 0
+// CHECK-DAG: store ptr [[RVAR0:%.+]], ptr [[BP0]]
+// CHECK-DAG: store ptr [[SEC0:%.+]], ptr [[P0]]
+// CHECK-DAG: [[RVAR0]] = load ptr, ptr [[RVAR00:[^,]+]]
+// CHECK-DAG: [[RVAR00]] = getelementptr inbounds nuw %struct.MyObject, ptr [[RVAR000:%[^,]+]], i32 0, i32 0
+// CHECK-DAG: [[RVAR000]] = getelementptr inbounds %struct.MyObject, ptr [[RVAR0000:%[^,]+]], i{{.*}} 1
+// CHECK-DAG: [[RVAR0000]] = load ptr, ptr @objects
+// CHECK-DAG: [[SEC0]] = getelementptr inbounds nuw i32, ptr [[SEC00:%.*]], i{{.*}} 0
+// CHECK-DAG: [[SEC00]] = load ptr, ptr [[SEC000:[^,]+]]
+// CHECK-DAG: [[SEC000]] = getelementptr inbounds nuw %struct.MyObject, ptr [[SEC0000:%[^,]+]], i32 0, i32 0
+// CHECK-DAG: [[SEC0000]] = getelementptr inbounds %struct.MyObject, ptr [[SEC00000:%[^,]+]], i{{.*}} 1
+// CHECK-DAG: [[SEC00000]] = load ptr, ptr @objects
+
+// CHECK-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+// CHECK-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+// CHECK-DAG: store ptr [[RVAR00]], ptr [[BP1]]
+// CHECK-DAG: store ptr [[SEC0]], ptr [[P1]]
 #pragma omp target enter data map(to : objects[1].arr [0:1])
 
   return 0;

@@ -18,6 +18,17 @@ struct T : public S {
 int main() {
   T v;
 
+// &v,       &v,                 sizeof(v),                         ALLOC | PARAM
+// &v,       &v.z + sizeof(int), sizeof(v.p1 to v.p2),              TO | FROM | MEMBER_OF_1
+// &v,       &v.c + sizeof(int), sizeof(T) - (&v.c + sizeof(int))), TO | FROM | MEMBER_OF_1
+// &v,       &v.x,               sizeof(v.x),                       TO | FROM | MEMBER_OF_1
+// &v,       &v.y,               sizeof(v.y),                       TO | FROM | MEMBER_OF_1
+// &v,       &v.z,               sizeof(v.z),                       TO | FROM | MEMBER_OF_1
+// &v,       &v.a,               sizeof(v.a),                       TO | FROM | MEMBER_OF_1
+// &v,       &v.b,               sizeof(v.b),                       TO | FROM | MEMBER_OF_1
+// &v,       &v.c,               sizeof(v.c),                       TO | FROM | MEMBER_OF_1
+// &v.p1[0], &v.p1[0],           8 * sizeof(int),                   TO | FROM
+// &v.p1,    &v.p1[0],           sizeof(v.p1),                      ATTACH
 #pragma omp target map(tofrom: v, v.x, v.y, v.z, v.p1[:8], v.a, v.b, v.c)
   {
     v.x++;
@@ -32,21 +43,21 @@ int main() {
   return 0;
 }
 
-// CHECK: [[CSTSZ:@.+]] = private {{.*}}constant [10 x i64] [i64 0, i64 0, i64 0, i64 4, i64 4, i64 4, i64 32, i64 4, i64 4, i64 4]
-// CHECK: [[CSTTY:@.+]] = private {{.*}}constant [10 x i64] [i64 [[#0x20]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]], i64 [[#0x1000000000013]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]]]
+// CHECK: [[CSTSZ:@.+]] = private {{.*}}constant [11 x i64] [i64 0, i64 0, i64 0, i64 4, i64 4, i64 4, i64 4, i64 4, i64 4, i64 32, i64 8]
+// CHECK: [[CSTTY:@.+]] = private {{.*}}constant [11 x i64] [i64 [[#0x20]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]], i64 [[#0x3]], i64 [[#0x8000]]]
 
 // CHECK-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CHECK-DAG: [[KSIZE:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 4
 // CHECK-DAG: store ptr [[SZBASE:%.+]], ptr [[KSIZE]], align 8
-// CHECK-DAG: [[SZBASE]] = getelementptr inbounds [10 x i64], ptr [[SIZES:%[^,]*]], i32 0, i32 0
+// CHECK-DAG: [[SZBASE]] = getelementptr inbounds [11 x i64], ptr [[SIZES:%[^,]*]], i32 0, i32 0
 
-// Check for filling of four non-constant size elements here: the whole struct
+// Check for filling of three non-constant size elements here: the whole struct
 // size, the (padded) region covering p1 & p2, and the padding at the end of
 // struct T.
 
-// CHECK-DAG: [[STR:%.+]] = getelementptr inbounds [10 x i64], ptr [[SIZES]], i32 0, i32 0
+// CHECK-DAG: [[STR:%.+]] = getelementptr inbounds [11 x i64], ptr [[SIZES]], i32 0, i32 0
 // CHECK-DAG: store i64 %{{.+}}, ptr [[STR]], align 8
-// CHECK-DAG: [[P1P2:%.+]] = getelementptr inbounds [10 x i64], ptr [[SIZES]], i32 0, i32 1
+// CHECK-DAG: [[P1P2:%.+]] = getelementptr inbounds [11 x i64], ptr [[SIZES]], i32 0, i32 1
 // CHECK-DAG: store i64 %{{.+}}, ptr [[P1P2]], align 8
-// CHECK-DAG: [[PAD:%.+]] = getelementptr inbounds [10 x i64], ptr [[SIZES]], i32 0, i32 2
+// CHECK-DAG: [[PAD:%.+]] = getelementptr inbounds [11 x i64], ptr [[SIZES]], i32 0, i32 2
 // CHECK-DAG: store i64 %{{.+}}, ptr [[PAD]], align 8
