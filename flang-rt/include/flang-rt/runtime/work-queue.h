@@ -456,8 +456,7 @@ public:
     if (runTicketsImmediately_) {
       return InitializeTicket{descriptor, derived, memcpyFct}.Run(*this);
     } else {
-      StartTicket().u.emplace<InitializeTicket>(
-          descriptor, derived, memcpyFct);
+      StartTicket().u.emplace<InitializeTicket>(descriptor, derived, memcpyFct);
       return StatContinue;
     }
   }
