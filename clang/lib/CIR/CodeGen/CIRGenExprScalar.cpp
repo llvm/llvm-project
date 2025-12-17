@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenValue.h"
 
@@ -262,8 +263,11 @@ public:
     return {};
   }
   mlir::Value VisitEmbedExpr(EmbedExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: embed");
-    return {};
+    assert(e->getDataElementCount() == 1);
+    auto it = e->begin();
+    llvm::APInt value = (*it)->getValue();
+    return builder.getConstInt(cgf.getLoc(e->getExprLoc()), value,
+                               e->getType()->isUnsignedIntegerType());
   }
   mlir::Value VisitOpaqueValueExpr(OpaqueValueExpr *e) {
     if (e->isGLValue())
@@ -810,8 +814,14 @@ public:
     return {};
   }
   mlir::Value VisitSourceLocExpr(SourceLocExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: source loc");
-    return {};
+    ASTContext &ctx = cgf.getContext();
+    APValue evaluated =
+        e->EvaluateInContext(ctx, cgf.curSourceLocExprScope.getDefaultExpr());
+    mlir::Attribute attribute = ConstantEmitter(cgf).emitAbstract(
+        e->getLocation(), evaluated, e->getType());
+    mlir::TypedAttr typedAttr = mlir::cast<mlir::TypedAttr>(attribute);
+    return cir::ConstantOp::create(builder, cgf.getLoc(e->getExprLoc()),
+                                   typedAttr);
   }
   mlir::Value VisitCXXDefaultArgExpr(CXXDefaultArgExpr *dae) {
     CIRGenFunction::CXXDefaultArgExprScope scope(cgf, dae);
@@ -833,28 +843,27 @@ public:
     return {};
   }
   mlir::Value VisitTypeTraitExpr(const TypeTraitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: type trait");
+    mlir::Location loc = cgf.getLoc(e->getExprLoc());
+    if (e->isStoredAsBoolean())
+      return builder.getBool(e->getBoolValue(), loc);
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "ScalarExprEmitter: TypeTraitExpr stored as int");
     return {};
   }
   mlir::Value
   VisitConceptSpecializationExpr(const ConceptSpecializationExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: concept specialization");
-    return {};
+    return builder.getBool(e->isSatisfied(), cgf.getLoc(e->getExprLoc()));
   }
   mlir::Value VisitRequiresExpr(const RequiresExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: requires");
-    return {};
+    return builder.getBool(e->isSatisfied(), cgf.getLoc(e->getExprLoc()));
   }
   mlir::Value VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: array type trait");
-    return {};
+    mlir::Type type = cgf.convertType(e->getType());
+    mlir::Location loc = cgf.getLoc(e->getExprLoc());
+    return builder.getConstInt(loc, type, e->getValue());
   }
   mlir::Value VisitExpressionTraitExpr(const ExpressionTraitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: expression trait");
-    return {};
+    return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
   }
   mlir::Value VisitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -865,9 +874,9 @@ public:
     cgf.emitCXXThrowExpr(e);
     return {};
   }
+
   mlir::Value VisitCXXNoexceptExpr(CXXNoexceptExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: cxx noexcept");
-    return {};
+    return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
   }
 
   /// Emit a conversion from the specified type to the specified destination
@@ -1333,13 +1342,11 @@ public:
   }
 
   mlir::Value VisitBinPtrMemD(const BinaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: ptr mem d");
-    return {};
+    return emitLoadOfLValue(e);
   }
 
   mlir::Value VisitBinPtrMemI(const BinaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: ptr mem i");
-    return {};
+    return emitLoadOfLValue(e);
   }
 
   // Other Operators.
@@ -1349,8 +1356,7 @@ public:
   }
 
   mlir::Value VisitChooseExpr(ChooseExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: choose");
-    return {};
+    return Visit(e->getChosenSubExpr());
   }
 
   mlir::Value VisitObjCStringLiteral(const ObjCStringLiteral *e) {

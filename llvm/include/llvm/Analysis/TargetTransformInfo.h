@@ -24,6 +24,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/Uniformity.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/InterestingMemoryOperand.h"
 #include "llvm/IR/FMF.h"
@@ -511,16 +512,14 @@ public:
   /// uniformity analysis and assume all values are uniform.
   LLVM_ABI bool hasBranchDivergence(const Function *F = nullptr) const;
 
-  /// Returns whether V is a source of divergence.
-  ///
-  /// This function provides the target-dependent information for
-  /// the target-independent UniformityAnalysis.
-  LLVM_ABI bool isSourceOfDivergence(const Value *V) const;
-
-  // Returns true for the target specific
-  // set of operations which produce uniform result
-  // even taking non-uniform arguments
-  LLVM_ABI bool isAlwaysUniform(const Value *V) const;
+  /// Get target-specific uniformity information for an instruction.
+  /// This allows targets to provide more fine-grained control over
+  /// uniformity analysis by specifying whether specific instructions
+  /// should always or never be considered uniform, or require custom
+  /// operand-based analysis.
+  /// \param V The value to query for uniformity information.
+  /// \return InstructionUniformity.
+  LLVM_ABI InstructionUniformity getInstructionUniformity(const Value *V) const;
 
   /// Query the target whether the specified address space cast from FromAS to
   /// ToAS is valid.

@@ -276,8 +276,8 @@ TARGET_BUILTIN(__builtin_amdgcn_flat_atomic_fadd_f64, "dd*0d", "t", "gfx90a-inst
 TARGET_BUILTIN(__builtin_amdgcn_flat_atomic_fmin_f64, "dd*0d", "t", "gfx90a-insts")
 TARGET_BUILTIN(__builtin_amdgcn_flat_atomic_fmax_f64, "dd*0d", "t", "gfx90a-insts")
 
-TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_fadd_f64, "dd*3d", "t", "gfx90a-insts")
-TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_fadd_f32, "ff*3f", "t", "gfx8-insts")
+TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_fadd_f64, "dd*3d", "", "gfx90a-insts")
+TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_fadd_f32, "ff*3f", "", "gfx8-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_flat_atomic_fadd_f32, "ff*0f", "t", "gfx940-insts")
 TARGET_BUILTIN(__builtin_amdgcn_flat_atomic_fadd_v2f16, "V2hV2h*0V2h", "t", "atomic-flat-pk-add-16-insts")
@@ -749,6 +749,7 @@ TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr16_b128_v8bf16, "V8yV8y*3", "nc", "gfx
 
 TARGET_BUILTIN(__builtin_amdgcn_s_setprio_inc_wg, "vIs", "n", "setprio-inc-wg-inst")
 TARGET_BUILTIN(__builtin_amdgcn_s_monitor_sleep,  "vIs", "n", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_s_wakeup_barrier, "vv*", "n", "s-wakeup-barrier-inst")
 
 TARGET_BUILTIN(__builtin_amdgcn_s_wait_asynccnt, "vIUs", "n", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_s_wait_tensorcnt, "vIUs", "n", "gfx1250-insts")
