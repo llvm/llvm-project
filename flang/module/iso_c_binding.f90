@@ -29,7 +29,7 @@ module iso_c_binding
   private
 
   public :: c_associated, c_funloc, c_funptr, c_f_pointer, c_loc, &
-    c_null_funptr, c_null_ptr, c_ptr, c_sizeof, &
+    c_null_funptr, c_null_ptr, c_ptr, c_sizeof, f_c_string, &
     operator(==), operator(/=)
 
   ! Table 18.2 (in clause 18.3.1)
@@ -144,5 +144,19 @@ module iso_c_binding
     procedure(), pointer, intent(out) :: fptr
     ! TODO: implement
   end subroutine c_f_procpointer
+
+  ! F_C_STRING - Convert Fortran string to C null-terminated string
+  ! Fortran 2023 standard intrinsic
+  pure function f_c_string(string, asis) result(res)
+    character(kind=c_char, len=*), intent(in) :: string
+    logical, optional, intent(in) :: asis
+    character(kind=c_char, len=:), allocatable :: res
+
+    if (present(asis) .and. asis) then
+      res = string // c_null_char
+    else
+      res = trim(string) // c_null_char
+    end if
+  end function f_c_string
 
 end module iso_c_binding

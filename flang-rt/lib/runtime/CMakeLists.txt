@@ -75,6 +75,7 @@ set(supported_sources
 # List of source not used for GPU offloading.
 set(host_sources
   ${FLANG_SOURCE_DIR}/module/iso_fortran_env_impl.f90
+  ${FLANG_SOURCE_DIR}/module/iso_c_binding.f90
   command.cpp
   complex-powi.cpp
   complex-reduction.c
