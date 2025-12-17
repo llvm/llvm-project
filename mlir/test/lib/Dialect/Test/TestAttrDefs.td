@@ -360,6 +360,14 @@ def TestConditionalAliasAttr : Test_Attr<"TestConditionalAlias"> {
   }];
 }
 
+def TestNestedAliasAttr : Test_Attr<"TestNestedAlias"> {
+  let mnemonic = "nested_alias";
+  let parameters = (ins "mlir::StringAttr":$value, OptionalParameter<"TestNestedAliasAttr">:$nested);
+  let assemblyFormat = [{
+    `<` $value (`,` $nested^)? `>`
+  }];
+}
+
 // Test AsmParser::parseFloat(const fltSemnatics&, APFloat&) API through the
 // custom parser and printer.
 def TestCustomFloatAttr : Test_Attr<"TestCustomFloat"> {
