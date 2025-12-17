@@ -516,3 +516,46 @@ TEST(CASFileSystemTest, recursiveDirectoryIteratorNested) {
                                             sys::fs::file_type::regular_file));
   ASSERT_TRUE(isEnd(D, EC));
 }
+
+TEST(CASFileSystemTest, print) {
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
+  ASSERT_TRUE(CAS);
+  std::optional<ObjectProxy> Tree;
+  ASSERT_THAT_ERROR(createNestedTree(*CAS).moveInto(Tree), Succeeded());
+  std::unique_ptr<vfs::FileSystem> CASFS;
+  ASSERT_THAT_ERROR(createFS(*CAS, *Tree).moveInto(CASFS), Succeeded());
+
+  {
+    std::string FSStr;
+    llvm::raw_string_ostream OS(FSStr);
+    CASFS->print(OS, vfs::FileSystem::PrintType::Summary);
+    EXPECT_EQ(FSStr, "CASFileSystem\n");
+  }
+  {
+    std::string FSStr;
+    llvm::raw_string_ostream OS(FSStr);
+    CASFS->print(OS, vfs::FileSystem::PrintType::Contents);
+    std::string Expected = "CASFileSystem\n";
+    Expected += "  root: / " + Tree->getID().toString() + "\n";
+    EXPECT_EQ(FSStr, Expected);
+  }
+  {
+    std::string FSStr;
+    llvm::raw_string_ostream OS(FSStr);
+    CASFS->print(OS, vfs::FileSystem::PrintType::RecursiveContents);
+    std::string Expected = "CASFileSystem\n";
+    Expected += "  root: / " + Tree->getID().toString() + "\n";
+    StringRef Printed(FSStr);
+    EXPECT_TRUE(Printed.consume_front("CASFileSystem")) << Printed;
+    EXPECT_TRUE(Printed.consume_front("\n  root: / llvmcas://")) << Printed;
+    Printed = Printed.drop_front(64); // 32 hash bytes in hex
+    EXPECT_TRUE(Printed.consume_front("\n    file llvmcas://")) << Printed;
+    Printed = Printed.drop_front(64); // 32 hash bytes in hex
+    EXPECT_TRUE(Printed.consume_front(" /d2")) << Printed;
+    EXPECT_TRUE(Printed.consume_front("\n    file llvmcas://")) << Printed;
+    Printed = Printed.drop_front(64); // 32 hash bytes in hex
+    EXPECT_TRUE(Printed.consume_front(" /t1/d1\n")) << Printed;
+    // ...
+    EXPECT_TRUE(Printed.consume_back("/t3/t2/d2\n")) << Printed;
+  }
+}

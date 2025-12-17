@@ -1039,6 +1039,26 @@ public:
   createThreadSafeProxyFS() override {
     llvm::report_fatal_error("not implemented");
   }
+
+  void printImpl(raw_ostream &OS, PrintType Type,
+                 unsigned IndentLevel) const final {
+    printIndent(OS, IndentLevel);
+    IndentLevel += 1;
+    OS << "IncludeTreeFileSystem\n";
+    if (Type == PrintType::Summary)
+      return;
+
+    // Files is unordered, so sort by name to get a deterministic order.
+    std::vector<std::pair<StringRef, ObjectRef>> FileRefs;
+    for (auto &[Name, F] : Files)
+      FileRefs.emplace_back(Name, F.ContentsRef);
+    llvm::sort(FileRefs, [](auto &&A, auto &&B) { return A.first < B.first; });
+
+    for (auto &[Name, ContentsRef] : FileRefs) {
+      printIndent(OS, IndentLevel);
+      OS << Name << ' ' << CAS.getID(ContentsRef) << '\n';
+    }
+  }
 };
 } // namespace
 

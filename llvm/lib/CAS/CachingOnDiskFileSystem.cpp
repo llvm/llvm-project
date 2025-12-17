@@ -121,6 +121,9 @@ public:
     return makeIntrusiveRefCnt<CachingOnDiskFileSystemImpl>(*this);
   }
 
+  void printImpl(raw_ostream &OS, PrintType Type,
+                 unsigned IndentLevel) const final;
+
   CachingOnDiskFileSystemImpl(std::shared_ptr<ObjectStore> DB)
       : CachingOnDiskFileSystem(std::move(DB)) {
     initializeWorkingDirectory();
@@ -892,6 +895,13 @@ public:
 std::unique_ptr<CachingOnDiskFileSystem::TreeBuilder>
 CachingOnDiskFileSystemImpl::createTreeBuilder() {
   return std::make_unique<TreeBuilder>(*this);
+}
+
+void CachingOnDiskFileSystemImpl::printImpl(raw_ostream &OS, PrintType Type,
+                                            unsigned IndentLevel) const {
+  printIndent(OS, IndentLevel);
+  OS << "CachingOnDiskFileSystem\n";
+  // FIXME: print contents
 }
 
 void CachingOnDiskFileSystemImpl::TreeBuilder::pushSymlink(
