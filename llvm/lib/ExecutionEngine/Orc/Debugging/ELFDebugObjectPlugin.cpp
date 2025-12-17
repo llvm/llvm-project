@@ -127,8 +127,9 @@ Error DebugObject::visitSectionLoadAddresses(GetLoadAddressFn Callback) {
     if (Name->empty())
       continue;
     ExecutorAddr LoadAddress = Callback(*Name);
-    const_cast<SectionHeader &>(Header).sh_addr =
-        static_cast<typename ELFT::uint>(LoadAddress.getValue());
+    if (LoadAddress)
+      const_cast<SectionHeader &>(Header).sh_addr =
+          static_cast<typename ELFT::uint>(LoadAddress.getValue());
   }
 
   LLVM_DEBUG({
@@ -267,11 +268,16 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
     // section headers in our debug object allocation
     Error Err = DebugObj->visitSections(
         [&G, &SectionsPatched, &HasDebugSections](StringRef Name) {
+          Section *S = G.findSectionByName(Name);
+          if (!S) {
+            // The section may have been merged into a different one during
+            // linking, ignore it.
+            return ExecutorAddr();
+          }
+
           SectionsPatched += 1;
           if (isDwarfSection(Name))
             HasDebugSections = true;
-          Section *S = G.findSectionByName(Name);
-          assert(S && "No graph section for object section");
           return SectionRange(*S).getStart();
         });
 

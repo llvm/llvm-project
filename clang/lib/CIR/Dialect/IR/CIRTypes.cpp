@@ -822,7 +822,7 @@ cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 
 mlir::LogicalResult cir::VectorType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    mlir::Type elementType, uint64_t size) {
+    mlir::Type elementType, uint64_t size, bool scalable) {
   if (size == 0)
     return emitError() << "the number of vector elements must be non-zero";
   return success();
