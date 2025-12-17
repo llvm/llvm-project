@@ -20945,8 +20945,8 @@ performLastTrueTestVectorCombine(SDNode *N,
 
   SDValue Idx = N->getOperand(1);
   unsigned NumEls = OpVT.getVectorElementCount().getKnownMinValue();
-  if (!sd_match(Idx,  m_ZExtOrSelf(
-    m_Add(m_VScale(m_SpecificInt(NumEls)), m_AllOnes()))))
+  if (!sd_match(Idx, m_ZExtOrSelf(
+                         m_Add(m_VScale(m_SpecificInt(NumEls)), m_AllOnes()))))
     return SDValue();
 
   // Extracts of lane EC-1 for SVE can be expressed as PTEST(Op, LAST) ? 1 : 0
