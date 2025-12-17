@@ -425,11 +425,10 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
     if (resultTy.getRank() != 2)
       return failure();
 
-    auto layoutCd = op.getLayoutCdAttr();
-    auto layoutA = op.getLayoutAAttr();
-    auto layoutB = op.getLayoutBAttr();
-    if (!layoutCd || !layoutA || !layoutB)
+    auto originalLayout = xegpu::getDistributeLayoutAttr(op.getResult());
+    if (!originalLayout)
       return failure();
+
     size_t i = 0;
     SmallVector<Value> newDpasOps;
     for (auto aVec : adaptor.getLhs()) {
@@ -448,12 +447,11 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
             llvm::cast<VectorType>(bVec.getType()).getShape();
         VectorType resTy = VectorType::get({aVecShape[0], bVecShape[1]},
                                            resultTy.getElementType());
-        auto newDpasOp = xegpu::DpasOp::create(rewriter, loc, resTy, operands);
-        newDpasOp.setLayoutCdAttr(layoutCd.dropSgLayoutAndData());
-        newDpasOp.setLayoutAAttr(layoutA.dropSgLayoutAndData());
-        newDpasOp.setLayoutBAttr(layoutB.dropSgLayoutAndData());
+        tmpC = xegpu::DpasOp::create(rewriter, loc, resTy, operands);
+        xegpu::setDistributeLayoutAttr(cast<OpResult>(tmpC),
+                                       originalLayout.dropSgLayoutAndData());
 
-        newDpasOps.push_back(newDpasOp);
+        newDpasOps.push_back(tmpC);
       }
     }
     rewriter.replaceOpWithMultiple(op, {newDpasOps});
@@ -493,7 +491,7 @@ struct WgToSgVectorBroadcastOp
     ArrayRef<int64_t> wgShape = resultType.getShape();
 
     xegpu::DistributeLayoutAttr layout =
-        xegpu::getTemporaryLayout(llvm::cast<OpResult>(op.getResult()));
+        xegpu::getDistributeLayoutAttr(op.getResult());
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -508,8 +506,8 @@ struct WgToSgVectorBroadcastOp
     for (auto operand : adaptor.getOperands().front()) {
       auto newBroadcast = vector::BroadcastOp::create(rewriter, op.getLoc(),
                                                       newResultType, operand);
-      xegpu::setTemporaryLayout(newBroadcast->getResult(0),
-                                layout.dropSgLayoutAndData());
+      xegpu::setDistributeLayoutAttr(newBroadcast->getResult(0),
+                                     layout.dropSgLayoutAndData());
 
       newBroadcastOps.push_back(newBroadcast.getResult());
     }
@@ -536,7 +534,7 @@ struct WgToSgElementwiseOp : public ConversionPattern {
     ArrayRef<int64_t> wgShape = resultType.getShape();
 
     xegpu::DistributeLayoutAttr layout =
-        xegpu::getTemporaryLayout(llvm::cast<OpResult>(op->getResult(0)));
+        xegpu::getDistributeLayoutAttr(op->getResult(0));
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -742,7 +740,7 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
       return failure();
 
     xegpu::DistributeLayoutAttr layout =
-        xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
+        xegpu::getDistributeLayoutAttr(op.getResult());
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -756,8 +754,8 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
     auto eltType = vecType.getElementType();
 
     auto setLayout = [&](Value val) {
-      xegpu::setTemporaryLayout(llvm::dyn_cast<OpResult>(val),
-                                layout.dropSgLayoutAndData());
+      xegpu::setDistributeLayoutAttr(llvm::dyn_cast<OpResult>(val),
+                                     layout.dropSgLayoutAndData());
     };
 
     if (vecAttr.isSplat()) {
@@ -903,8 +901,8 @@ struct WgToSgLoadGatherOpWithOffset
       return failure();
     ArrayRef<int64_t> wgShape = resultType.getShape();
 
-    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
-
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getDistributeLayoutAttr(op.getResult());
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -932,7 +930,7 @@ struct WgToSgLoadGatherOpWithOffset
           rewriter, loc, newTy, op.getSource(), offsets, mask, chunkSizeAttr,
           op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(),
           newLayout);
-      newLoadOp.setAnchorLayout(newLayout);
+      xegpu::setDistributeLayoutAttr(newLoadOp->getResult(0), newLayout);
       newLoadOps.push_back(newLoadOp);
     }
     rewriter.replaceOpWithMultiple(op, {newLoadOps});
@@ -957,8 +955,8 @@ struct WgToSgStoreScatterOpWithOffset
     if (!valueType)
       return failure();
 
-    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
-
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getDistributeLayoutAttr(op.getOperand(0));
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -987,7 +985,7 @@ struct WgToSgStoreScatterOpWithOffset
         // Skip for operand one (memref)
         if (operand.getOperandNumber() == 1)
           continue;
-        xegpu::setTemporaryLayout(operand, layout.dropSgLayoutAndData());
+        xegpu::setDistributeLayoutAttr(operand, layout.dropSgLayoutAndData());
       }
     }
     rewriter.eraseOp(op);
@@ -1052,7 +1050,7 @@ struct WgToSgVectorStepOp : public OpConversionPattern<vector::StepOp> {
   matchAndRewrite(vector::StepOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     xegpu::DistributeLayoutAttr layout =
-        xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
+        xegpu::getDistributeLayoutAttr(op.getResult());
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -1080,12 +1078,12 @@ struct WgToSgVectorStepOp : public OpConversionPattern<vector::StepOp> {
           vector::BroadcastOp::create(rewriter, loc, newTy, offsets[0]);
       auto finalSteps =
           arith::AddIOp::create(rewriter, loc, steps, bcastOffset);
-      xegpu::setTemporaryLayout(steps->getResult(0),
-                                layout.dropSgLayoutAndData());
-      xegpu::setTemporaryLayout(bcastOffset->getResult(0),
-                                layout.dropSgLayoutAndData());
-      xegpu::setTemporaryLayout(finalSteps->getResult(0),
-                                layout.dropSgLayoutAndData());
+      xegpu::setDistributeLayoutAttr(steps->getResult(0),
+                                     layout.dropSgLayoutAndData());
+      xegpu::setDistributeLayoutAttr(bcastOffset->getResult(0),
+                                     layout.dropSgLayoutAndData());
+      xegpu::setDistributeLayoutAttr(finalSteps->getResult(0),
+                                     layout.dropSgLayoutAndData());
       newOps.push_back(finalSteps);
     }
 
@@ -1109,7 +1107,7 @@ struct WgToSgVectorShapeCastOp
 
     ArrayRef<int64_t> wgShape = resultType.getShape();
     xegpu::DistributeLayoutAttr layout =
-        xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
+        xegpu::getDistributeLayoutAttr(op.getResult());
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -1174,8 +1172,8 @@ struct WgToSgVectorShapeCastOp
     for (auto src : adaptor.getSource()) {
       auto newShapeCast = vector::ShapeCastOp::create(rewriter, op.getLoc(),
                                                       newResultType, src);
-      xegpu::setTemporaryLayout(newShapeCast->getResult(0),
-                                layout.dropSgLayoutAndData());
+      xegpu::setDistributeLayoutAttr(newShapeCast->getResult(0),
+                                     layout.dropSgLayoutAndData());
       newShapeCastOps.push_back(newShapeCast.getResult());
     }
 
@@ -1203,7 +1201,7 @@ struct WgToSgMultiDimReductionOp
 
     auto srcShape = srcType.getShape();
     xegpu::DistributeLayoutAttr layout =
-        xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
+        xegpu::getDistributeLayoutAttr(op.getResult());
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -1236,8 +1234,8 @@ struct WgToSgMultiDimReductionOp
       auto newOp = vector::MultiDimReductionOp::create(
           rewriter, op.getLoc(), newDstType, op.getKind(), sgSrc,
           adaptor.getAcc()[0], op.getReductionDims());
-      xegpu::setTemporaryLayout(newOp->getResult(0),
-                                layout.dropSgLayoutAndData());
+      xegpu::setDistributeLayoutAttr(newOp->getResult(0),
+                                     layout.dropSgLayoutAndData());
       newReductions.push_back(newOp.getResult());
     }
 
@@ -1258,10 +1256,10 @@ struct WgToSgVectorTransposeOp
 
     ArrayRef<int64_t> wgShape = resultType.getShape();
     xegpu::DistributeLayoutAttr layout =
-        xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
+        xegpu::getDistributeLayoutAttr(op.getResult());
     if (!layout || !layout.isForWorkgroup())
       return failure();
-    // TODO-LayoutRefactor: handle the case using getTemporaryLayout
+
     xegpu::DistributeLayoutAttr sourceLayout =
         xegpu::getDistributeLayoutAttr(op.getVector());
     if (!sourceLayout || !sourceLayout.isForWorkgroup())
@@ -1300,8 +1298,8 @@ struct WgToSgVectorTransposeOp
     for (auto src : adaptor.getVector()) {
       auto newTranspose = vector::TransposeOp::create(
           rewriter, op.getLoc(), newResultType, src, permutation);
-      xegpu::setTemporaryLayout(newTranspose->getResult(0),
-                                layout.dropSgLayoutAndData());
+      xegpu::setDistributeLayoutAttr(newTranspose->getResult(0),
+                                     layout.dropSgLayoutAndData());
       newTransposeOps.push_back(newTranspose.getResult());
     }
 
@@ -1320,7 +1318,7 @@ struct WgToSgVectorMaskOp : public OpConversionPattern<MaskOpType> {
       typename OpConversionPattern<MaskOpType>::OneToNOpAdaptor adaptor,
       ConversionPatternRewriter &rewriter) const override {
     xegpu::DistributeLayoutAttr layout =
-        xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
+        xegpu::getDistributeLayoutAttr(op.getResult());
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -1370,8 +1368,8 @@ struct WgToSgVectorMaskOp : public OpConversionPattern<MaskOpType> {
 
       auto newCreateMaskOp =
           vector::CreateMaskOp::create(rewriter, loc, resultType, maskOperands);
-      xegpu::setTemporaryLayout(newCreateMaskOp->getResult(0),
-                                layout.dropSgLayoutAndData());
+      xegpu::setDistributeLayoutAttr(newCreateMaskOp->getResult(0),
+                                     layout.dropSgLayoutAndData());
       newCreateMaskOps.push_back(newCreateMaskOp.getResult());
     }
 
@@ -1411,14 +1409,6 @@ struct XeGPUWgToSgDistributePass
 } // namespace
 
 void XeGPUWgToSgDistributePass::runOnOperation() {
-
-  // TODO-LayoutRefactor: unify the local propagation for layout preprocessing
-  // Operation *op = getOperation();
-  // if (!xegpu::recoverTemporaryLayouts(op)) {
-  //   signalPassFailure();
-  //   return;
-  // }
-
   // Track existing UnrealizedConversionCastOps
   SmallVector<Operation *> existingCastOps;
   getOperation()->walk([&](UnrealizedConversionCastOp castOp) {
@@ -1509,7 +1499,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   });
 
   target.addDynamicallyLegalOp<xegpu::DpasOp>([=](xegpu::DpasOp op) -> bool {
-    auto layout = op.getLayoutCdAttr();
+    auto layout = xegpu::getDistributeLayoutAttr(op.getResult());
     return isLegal(layout);
   });
 
@@ -1529,8 +1519,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
         if (!vecType)
           return true;
 
-        auto layout =
-            xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
+        auto layout = xegpu::getDistributeLayoutAttr(op.getResult());
         return isLegal(layout);
       });
 
@@ -1540,20 +1529,19 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
                                vector::ConstantMaskOp, vector::CreateMaskOp>(
       [=](Operation *op) -> bool {
         // Check for either a SliceAttr or LayoutAttr on the result.
-        auto layout =
-            xegpu::getTemporaryLayout(dyn_cast<OpResult>(op->getResult(0)));
+        auto layout = xegpu::getDistributeLayoutAttr(op->getResult(0));
         return isLegal(layout);
       });
 
   target.addDynamicallyLegalOp<xegpu::LoadGatherOp>(
       [=](xegpu::LoadGatherOp op) -> bool {
-        auto layout = op.getLayoutAttr();
+        auto layout = xegpu::getDistributeLayoutAttr(op.getResult());
         return isLegal(layout);
       });
 
   target.addDynamicallyLegalOp<xegpu::StoreScatterOp>(
       [=](xegpu::StoreScatterOp op) -> bool {
-        auto layout = op.getLayoutAttr();
+        auto layout = xegpu::getDistributeLayoutAttr(op.getOperand(0));
         return isLegal(layout);
       });
 
@@ -1583,7 +1571,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
         }
 
         xegpu::DistributeLayoutAttr layout =
-            xegpu::getTemporaryLayout(op->getResult(0));
+            xegpu::getDistributeLayoutAttr(op->getResult(0));
         return isLegal(layout);
       });
 
@@ -1608,7 +1596,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   // Layout propagation pass will activated.
   getOperation()->walk([](Operation *op) {
     for (OpResult result : op->getOpResults()) {
-      std::string name = xegpu::getTemporaryLayoutName(result);
+      std::string name = xegpu::getLayoutName(result);
       if (auto layout = op->getAttrOfType<xegpu::LayoutAttr>(name)) {
         op->removeAttr(name);
         if (!isa<scf::IfOp, scf::ForOp, scf::WhileOp, scf::ConditionOp>(op)) {

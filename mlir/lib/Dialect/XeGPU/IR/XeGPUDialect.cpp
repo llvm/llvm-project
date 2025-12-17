@@ -35,8 +35,6 @@ void XeGPUDialect::initialize() {
 #include <mlir/Dialect/XeGPU/IR/XeGPUAttrs.cpp.inc>
       >();
 }
-#define GET_OP_INTERFACE_CLASSES
-#include "mlir/Dialect/XeGPU/IR/XeGPUOpInterface.cpp.inc"
 
 // A `srcShape` consists of N distribution units, each being `subShapesLayout` x
 // `subShape`. A `delinearizedId` is used to identify a particular `subShape`

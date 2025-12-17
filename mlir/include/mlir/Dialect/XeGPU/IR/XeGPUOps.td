@@ -17,7 +17,6 @@ include "mlir/Interfaces/ShapedOpInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 
-
 // Base class for dialect operations. This operation inherits from the base
 // `Op` class in OpBase.td, and provides:
 //   * The parent dialect of the operation.
@@ -248,7 +247,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
   }];
 }
 
-def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", [AnchorLayoutInterface]> {
+def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
   let summary = "prefetches a n-D block to cache";
   let description = [{
     It issues an instruction to prefetch a block of data from continuous
@@ -297,14 +296,6 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", [AnchorLayoutInterface]> {
       return getTensorDesc().getType();
     }
 
-    xegpu::DistributeLayoutAttr getAnchorLayout() {
-      return getLayout().value_or(nullptr);
-    }
-
-    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-      setLayoutAttr(anchorLayout);
-    }
-
    SmallVector<OpFoldResult> getMixedOffsets() {
       auto statics = getConstOffsets().value_or(SmallVector<int64_t>());
       auto dynamics = getOffsets();
@@ -347,7 +338,7 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", [AnchorLayoutInterface]> {
 
 
 def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
-  AllElementTypesMatch<["value", "TensorDesc"]>, MemoryEffects<[MemRead]>, AnchorLayoutInterface
+  AllElementTypesMatch<["value", "TensorDesc"]>, MemoryEffects<[MemRead]>
   ]> {
   let summary = "loads a n-D block from memory (represented by TensorDesc)"
                 "to registers (represented by vector)";
@@ -428,14 +419,6 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
       return getTensorDesc().getType();
     }
 
-    xegpu::DistributeLayoutAttr getAnchorLayout() {
-      return getLayout().value_or(nullptr);
-    }
-
-    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-      setLayoutAttr(anchorLayout);
-    }
-
     SmallVector<OpFoldResult> getMixedOffsets() {
       auto statics = getConstOffsets().value_or(SmallVector<int64_t>());
       auto dynamics = getOffsets();
@@ -479,7 +462,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
 }
 
 def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
-  AllElementTypesMatch<["value", "TensorDesc"]>, MemoryEffects<[MemWrite]>, AnchorLayoutInterface
+  AllElementTypesMatch<["value", "TensorDesc"]>, MemoryEffects<[MemWrite]>
   ]> {
   let summary = "stores a n-D block register region back to memory, currently only supports 2D";
 
@@ -547,14 +530,6 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
 
     xegpu::TensorDescType getTensorDescType() {
       return getTensorDesc().getType();
-    }
-
-    xegpu::DistributeLayoutAttr getAnchorLayout() {
-      return getLayout().value_or(nullptr);
-    }
-
-    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-      setLayoutAttr(anchorLayout);
     }
 
     SmallVector<OpFoldResult> getMixedOffsets() {
@@ -749,7 +724,7 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
   let hasVerifier = 1;
 }
 
-def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [AnchorLayoutInterface]> {
+def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
   let summary = "prefetches a set of scattered data points to cache";
 
   let description = [{
@@ -838,14 +813,6 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [AnchorLayoutInterface]> {
       return getSource().getType();
     }
 
-    xegpu::DistributeLayoutAttr getAnchorLayout() {
-      return getLayout().value_or(nullptr);
-    }
-
-    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-      setLayoutAttr(anchorLayout);
-    }
-
     TypedValue<xegpu::TensorDescType> getTensorDesc() {
       if (auto tdescType = getTensorDescType()) {
         return llvm::cast<TypedValue<xegpu::TensorDescType>>(getSource());
@@ -876,7 +843,7 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [AnchorLayoutInterface]> {
   let hasVerifier = 1;
 }
 
-def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayoutInterface]> {
+def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
   let summary = "load a set of scattered data points from memory.";
 
   let description = [{ It (aka. load) load data per each lane. The output
@@ -982,14 +949,6 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
       return getSource().getType();
     }
 
-    xegpu::DistributeLayoutAttr getAnchorLayout() {
-      return getLayout().value_or(nullptr);
-    }
-
-    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-      setLayoutAttr(anchorLayout);
-    }
-
     TypedValue<xegpu::TensorDescType> getTensorDesc() {
       if (auto tdescType = getTensorDescType()) {
         return llvm::cast<TypedValue<xegpu::TensorDescType>>(getSource());
@@ -1046,7 +1005,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
   let hasVerifier = 1;
 }
 
-def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorLayoutInterface]> {
+def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
   let summary = "store data to scattered memory locations.";
   let description =
       [{ It (aka. store) stores data to scattered memory locations. The value is
@@ -1119,7 +1078,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
                            l2_hint = #xegpu.cache_hint<cached>,
                            l3_hint = #xegpu.cache_hint<cached>,
                            layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
-      : vector<16xf32>, memref<1024xf32>, vector<16xi1>, vector<16xindex>
+      : memref<1024xf32>, vector<16xi1>, vector<16xindex> -> vector<16xf32>
   ```
 
   Example 4 (Lane level):
@@ -1146,14 +1105,6 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
   let extraClassDeclaration = extraBaseClassDeclaration#[{
     Type getDestType() {
       return getDest().getType();
-    }
-
-    xegpu::DistributeLayoutAttr getAnchorLayout() {
-      return getLayout().value_or(nullptr);
-    }
-
-    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-      setLayoutAttr(anchorLayout);
     }
 
     TypedValue<xegpu::TensorDescType> getTensorDesc() {
@@ -1266,7 +1217,7 @@ def XeGPU_UpdateOffsetOp: XeGPU_Op<"update_offset",
   let hasVerifier = 1;
 }
 
-def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>, AnchorLayoutInterface]> {
+def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]> {
   let summary = "It performs mma computation";
 
   let description = [{DPAS performs matrix multiplication on matrix A of `mxk`
@@ -1327,15 +1278,6 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
   let results = (outs XeGPU_DpasResType: $result);
 
   let extraClassDeclaration = [{
-
-    xegpu::DistributeLayoutAttr getAnchorLayout() {
-      return getLayoutCd().value_or(nullptr);
-    }
-
-    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-      setLayoutCdAttr(anchorLayout);
-    }
-
     VectorType getLhsType() {
       return getLhs().getType();
     }
@@ -1369,8 +1311,7 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
 def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
       MemoryEffects<[MemRead, MemWrite]>,
       AllElementTypesMatch<["tensorDesc", "value", "result"]>,
-      AllShapesMatch<["tensorDesc", "value", "result"]>, 
-      AnchorLayoutInterface]> {
+      AllShapesMatch<["tensorDesc", "value", "result"]>]> {
   let summary = "Atomic read-modify-write operation on the TensorDesc. ";
 
   let description = [{
@@ -1409,17 +1350,6 @@ def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
     XeGPU_MaskType:$mask,
     XeGPU_ValueType:$value,
     OptionalAttr<DistributeLayoutAttr>:$layout);
-
-  let extraClassDeclaration = [{
-    xegpu::DistributeLayoutAttr getAnchorLayout() {
-      return getLayout().value_or(nullptr);
-    }
-
-    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-      setLayoutAttr(anchorLayout);
-    }
-
-  }];
 
   let results = (outs XeGPU_ValueType:$result);
 
@@ -1494,7 +1424,7 @@ def XeGPU_FenceOp: XeGPU_Op<"fence", []> {
   let extraClassDeclaration = extraBaseClassDeclaration;
 }
 
-def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["source", "result"]>, AnchorLayoutInterface]> {
+def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["source", "result"]>]> {
     let summary = "Convert the layout of the input operand";
     let description = [{
       `convert_layout` redistribute data across subgroups and/or lanes from the `input_layout` to
@@ -1527,16 +1457,6 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["sou
     let results = (outs XeGPU_VectorType: $result);
     let assemblyFormat = [{
         $source prop-dict attr-dict `:` type($source)
-    }];
-    let extraClassDeclaration = [{
-      xegpu::DistributeLayoutAttr getAnchorLayout() {
-        return getTargetLayout();
-      }
-
-      void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-        setTargetLayoutAttr(anchorLayout);
-      }
-
     }];
 
     let hasFolder = 1;
@@ -1579,7 +1499,7 @@ def XeGPU_CreateMemDescOp: XeGPU_Op<"create_mem_desc", [Pure,
 }
 
 def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
-                              AllElementTypesMatch<["mem_desc", "res"]>, AnchorLayoutInterface]>  {
+                              AllElementTypesMatch<["mem_desc", "res"]>]>  {
   let arguments = (ins XeGPU_MemDesc:$mem_desc,
     Variadic<Index>: $offsets,
     DenseI64ArrayAttr: $const_offsets,
@@ -1638,22 +1558,13 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
         return vecTy.getShape();
       return {};
     }
-
-    xegpu::DistributeLayoutAttr getAnchorLayout() {
-      return getLayout().value_or(nullptr);
-    }
-
-    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-      setLayoutAttr(anchorLayout);
-    }
-
   }];
 
   let hasVerifier = 1;
 }
 
 def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
-                              AllElementTypesMatch<["mem_desc", "data"]>, AnchorLayoutInterface]> {
+                              AllElementTypesMatch<["mem_desc", "data"]>]> {
   let arguments = (ins
     AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>:$data,
     XeGPU_MemDesc:$mem_desc,
@@ -1704,14 +1615,6 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
       if (auto vecTy = llvm::dyn_cast<VectorType>(DataTy))
         return vecTy.getShape();
       return {};
-    }
-
-    xegpu::DistributeLayoutAttr getAnchorLayout() {
-      return getLayout().value_or(nullptr);
-    }
-
-    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
-      setLayoutAttr(anchorLayout);
     }
 
   }];
