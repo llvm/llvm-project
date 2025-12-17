@@ -11,22 +11,22 @@
 
 --- !ELF
 FileHeader:
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_DYN
-  Machine:         EM_X86_64
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_DYN
+  Machine:  EM_X86_64
 Sections:
-  - Name:            .text
-    Type:            SHT_PROGBITS
-    Size:            5
-  - Name:            .llvm.callgraph
-    Type:            SHT_LLVM_CALL_GRAPH
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Size:  5
+  - Name:  .llvm.callgraph
+    Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
       # --- Entry 1: foo (foo) ---
       0x01, # Format Version - only supported value is 0x00
     ]
 Symbols:
-  - Name:            foo
+  - Name:  foo
 ...
 
 ## Check Flags.
@@ -38,23 +38,23 @@ Symbols:
 
 --- !ELF
 FileHeader:
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_DYN
-  Machine:         EM_X86_64
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_DYN
+  Machine:  EM_X86_64
 Sections:
-  - Name:            .text
-    Type:            SHT_PROGBITS
-    Size:            5
-  - Name:            .llvm.callgraph
-    Type:            SHT_LLVM_CALL_GRAPH
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Size:  5
+  - Name:  .llvm.callgraph
+    Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
       # --- Entry 1: foo (foo) ---
       0x00, # Format Version
       0x08, # Flags - only valid values are 0x00 to 0x07
     ]
 Symbols:
-  - Name:            foo
+  - Name:  foo
 ...
 
 ## Check missing direct call info.
@@ -66,16 +66,16 @@ Symbols:
 
 --- !ELF
 FileHeader:
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_DYN
-  Machine:         EM_X86_64
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_DYN
+  Machine:  EM_X86_64
 Sections:
-  - Name:            .text
-    Type:            SHT_PROGBITS
-    Size:            5
-  - Name:            .llvm.callgraph
-    Type:            SHT_LLVM_CALL_GRAPH
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Size:  5
+  - Name:  .llvm.callgraph
+    Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
       # --- Entry 1: foo (foo) ---
       0x00, # Format Version
@@ -86,7 +86,7 @@ Sections:
         #< Missing direct callees info here
     ]
 Symbols:
-  - Name:            foo
+  - Name:  foo
 ...
 
 ## Check missing indirect target type IDs.
@@ -98,16 +98,16 @@ Symbols:
 
 --- !ELF
 FileHeader:
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_DYN
-  Machine:         EM_X86_64
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_DYN
+  Machine:  EM_X86_64
 Sections:
-  - Name:            .text
-    Type:            SHT_PROGBITS
-    Size:            5
-  - Name:            .llvm.callgraph
-    Type:            SHT_LLVM_CALL_GRAPH
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Size:  5
+  - Name:  .llvm.callgraph
+    Type:  SHT_LLVM_CALL_GRAPH
     ContentArray: [
       # --- Entry 1: foo (foo) ---
       0x00, # Format Version
@@ -120,7 +120,7 @@ Sections:
         #< Missing indirect call entries here.
     ]
 Symbols:
-  - Name:            foo
+  - Name:  foo
 ...
 
 ## Check missing relocation information.
@@ -137,10 +137,10 @@ Symbols:
 
 --- !ELF
 FileHeader:
-  Class: ELFCLASS64
-  Data:  ELFDATA2LSB
-  Type:  ET_REL
-  Machine: EM_X86_64
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
 Sections:
   - Name: .text
     Type: SHT_PROGBITS
@@ -166,10 +166,10 @@ Sections:
         '10', '0', '0', '0', '0', '0', '0', '0', # baz()'s address
         '32', '0', '0', '0', '0', '0', '0', '0', # baz()'s TypeID Unknown
       ]
-  - Name:            .rela.llvm.callgraph
-    Type:            SHT_RELA
-    Flags:           [ SHF_INFO_LINK ]
-    Link:            .symtab
+  - Name:   .rela.llvm.callgraph
+    Type:   SHT_RELA
+    Flags:  [ SHF_INFO_LINK ]
+    Link:   .symtab
     Relocations:
       # 1. Pointer to foo() definition
       - Offset: 0x2
@@ -193,9 +193,9 @@ Sections:
         Symbol: baz
         Type:   R_X86_64_64
 Symbols:
-  - Name:            foo
-  - Name:            bar
-  - Name:            baz
+  - Name:  foo
+  - Name:  bar
+  - Name:  baz
 ...
 
 ## Tests that --call-graph-info warns if there is no section of type SHT_LLVM_CALL_GRAPH.
@@ -208,14 +208,14 @@ Symbols:
 
 --- !ELF
 FileHeader:
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_DYN
-  Machine:         EM_X86_64
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_DYN
+  Machine:  EM_X86_64
 Sections:
-  - Name:            .text
-    Type:            SHT_PROGBITS
-    Size:            5
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Size:  5
 Symbols:
-  - Name:            foo
+  - Name:  foo
 ...

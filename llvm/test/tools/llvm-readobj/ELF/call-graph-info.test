@@ -158,19 +158,19 @@
 
 --- !ELF
 FileHeader:
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_DYN
-  Machine:         EM_X86_64
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_DYN
+  Machine:  EM_X86_64
 Sections:
-  - Name:            .text
-    Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    Size:            0x2000
-  - Name:            .llvm.callgraph
-    Type:            SHT_LLVM_CALL_GRAPH
-    Flags:           [ SHF_LINK_ORDER ]
-    Link:            .text
+  - Name:   .text
+    Type:   SHT_PROGBITS
+    Flags:  [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:   0x2000
+  - Name:   .llvm.callgraph
+    Type:   SHT_LLVM_CALL_GRAPH
+    Flags:  [ SHF_LINK_ORDER ]
+    Link:   .text
     ContentArray: [
       # --- foo ---
       0x00, # Version
@@ -208,20 +208,20 @@ Sections:
       0x54, 0x86, 0xBC, 0x59, 0x81, 0x4B, 0x8E, 0x30  # TypeID 2
     ]
 Symbols:
-  - Name:            foo
-    Type:            STT_FUNC
-    Section:         .text
-    Value:           0x1790
-  - Name:            bar
-    Type:            STT_FUNC
-    Section:         .text
-    Value:           0x17A0
-  - Name:            baz
-    Type:            STT_FUNC
-    Section:         .text
-    Value:           0x17B0
-  - Name:            main
-    Type:            STT_FUNC
-    Section:         .text
-    Value:           0x17C0
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1790
+  - Name:     bar
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x17A0
+  - Name:     baz
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x17B0
+  - Name:     main
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x17C0
 ...

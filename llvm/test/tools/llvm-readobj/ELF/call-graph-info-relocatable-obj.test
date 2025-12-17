@@ -129,18 +129,18 @@
 
 --- !ELF
 FileHeader:
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_REL
-  Machine:         EM_X86_64
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
 Sections:
-  - Name:            .text
-    Type:            SHT_PROGBITS
-    Size:            0x84
-  - Name:            .llvm.callgraph
-    Type:            SHT_LLVM_CALL_GRAPH
-    Flags:           [ SHF_LINK_ORDER ]
-    Link:            .text
+  - Name:   .text
+    Type:   SHT_PROGBITS
+    Size:   0x84
+  - Name:   .llvm.callgraph
+    Type:   SHT_LLVM_CALL_GRAPH
+    Flags:  [ SHF_LINK_ORDER ]
+    Link:   .text
     ContentArray: [
       # --- Entry 1: foo (foo) ---
       # Offset 0x0
@@ -188,35 +188,35 @@ Sections:
       0xA2, 0x20, 0xEF, 0xB8, 0x9B, 0x69, 0x5C, 0xF8, # Indirect TypeID 1 (matches foo/bar)
       0x54, 0x86, 0xBC, 0x59, 0x81, 0x4B, 0x8E, 0x30  # Indirect TypeID 2 (matches baz)
     ]
-  - Name:            .rela.llvm.callgraph
-    Type:            SHT_RELA
-    Flags:           [ SHF_INFO_LINK ]
-    Info:            .llvm.callgraph
+  - Name:   .rela.llvm.callgraph
+    Type:   SHT_RELA
+    Flags:  [ SHF_INFO_LINK ]
+    Info:   .llvm.callgraph
     Relocations:
-      - Offset:          0x2
-        Symbol:          foo
-        Type:            R_X86_64_64
-      - Offset:          0x14
-        Symbol:          bar
-        Type:            R_X86_64_64
-      - Offset:          0x26
-        Symbol:          baz
-        Type:            R_X86_64_64
-      - Offset:          0x38
-        Symbol:          caller
-        Type:            R_X86_64_64
-      - Offset:          0x49
-        Symbol:          foo
-        Type:            R_X86_64_64
-      - Offset:          0x51
-        Symbol:          bar
-        Type:            R_X86_64_64
-      - Offset:          0x59
-        Symbol:          baz
-        Type:            R_X86_64_64
+      - Offset:  0x2
+        Symbol:  foo
+        Type:    R_X86_64_64
+      - Offset:  0x14
+        Symbol:  bar
+        Type:    R_X86_64_64
+      - Offset:  0x26
+        Symbol:  baz
+        Type:    R_X86_64_64
+      - Offset:  0x38
+        Symbol:  caller
+        Type:    R_X86_64_64
+      - Offset:  0x49
+        Symbol:  foo
+        Type:    R_X86_64_64
+      - Offset:  0x51
+        Symbol:  bar
+        Type:    R_X86_64_64
+      - Offset:  0x59
+        Symbol:  baz
+        Type:    R_X86_64_64
 Symbols:
-  - Name:            foo
-  - Name:            bar
-  - Name:            baz
-  - Name:            caller
+  - Name:  foo
+  - Name:  bar
+  - Name:  baz
+  - Name:  caller
 ...
