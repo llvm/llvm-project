@@ -132,7 +132,7 @@ public:
   /// \returns
   ///   An unsorted copy of all memory regions to save. If no process or style
   ///   is specified an empty collection will be returned.
-  SBMemoryRegionInfoList GetMemoryRegionsToSave();
+  SBMemoryRegionInfoList GetMemoryRegionsToSave() const;
 
   /// Get the current total number of bytes the core is expected to have
   /// excluding the overhead of the core file format. Requires a Process and

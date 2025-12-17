@@ -126,7 +126,7 @@ public:
   ///
   /// The description format is: [Hex start - Hex End) with associated
   /// permissions (RWX)
-  bool GetDescription(lldb::SBStream &description) const;
+  bool GetDescription(lldb::SBStream &description);
 
 private:
   friend class SBProcess;

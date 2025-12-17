@@ -133,7 +133,7 @@ uint64_t SBSaveCoreOptions::GetCurrentSizeInBytes(SBError &error) {
   return *expected_bytes;
 }
 
-lldb::SBMemoryRegionInfoList SBSaveCoreOptions::GetMemoryRegionsToSave() {
+lldb::SBMemoryRegionInfoList SBSaveCoreOptions::GetMemoryRegionsToSave() const {
   LLDB_INSTRUMENT_VA(this);
   llvm::Expected<lldb_private::CoreFileMemoryRanges> memory_ranges =
       m_opaque_up->GetMemoryRegionsToSave();
