@@ -1305,8 +1305,8 @@ void transform::TrackingListener::notifyOperationReplaced(
   // Check if there are any handles that must be updated.
   Value aliveHandle;
   if (config.skipHandleFn) {
-    auto it = llvm::find_if(opHandles,
-                            [&](Value v) { return !config.skipHandleFn(v); });
+    auto *it = llvm::find_if(opHandles,
+                             [&](Value v) { return !config.skipHandleFn(v); });
     if (it != opHandles.end())
       aliveHandle = *it;
   } else if (!opHandles.empty()) {
