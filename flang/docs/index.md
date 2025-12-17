@@ -30,6 +30,7 @@ on how to get in touch with us and to learn more about the current status.
    OpenMPSupport
    Real16MathSupport
    Unsigned
+   FAQ
 ```
 
 # Contributing to Flang
