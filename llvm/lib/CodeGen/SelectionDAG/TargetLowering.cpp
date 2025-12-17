@@ -8783,10 +8783,11 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
     MinMaxOpc = MinMaxOpcNum2019;
   else if (isOperationCustom(MinMaxOpcIeee, VT))
     MinMaxOpc = MinMaxOpcIeee;
-  else if (isOperationCustom(MinMaxOpcNum, VT))
-    MinMaxOpc = MinMaxOpcNum;
   else if (isOperationCustom(MinMaxOpcNum2019, VT))
     MinMaxOpc = MinMaxOpcNum2019;
+  // TODO: we don't use isOperationCustom(ISD::FMAXNUM or ISD::FMINNUM)
+  // due to some backends cannot process +0 vs -0 correctly: x86 is an
+  // example.
   if (MinMaxOpc != ISD::DELETED_NODE) {
     // TODO: we can also move NaN from RHS to LHS
     // and LHS to RHS, so that we can keep payloads of NaNs.
