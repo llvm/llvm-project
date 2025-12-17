@@ -14,10 +14,10 @@ define <4 x double> @concat_fmax_v4f64_v2f64(<2 x double> %a0, <2 x double> %a1)
 ;
 ; AVX-LABEL: concat_fmax_v4f64_v2f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vmaxpd %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vmaxpd %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %v0 = call <2 x double> @llvm.x86.sse2.max.pd(<2 x double> %a0, <2 x double> zeroinitializer)
   %v1 = call <2 x double> @llvm.x86.sse2.max.pd(<2 x double> %a1, <2 x double> zeroinitializer)
@@ -35,10 +35,10 @@ define <8 x float> @concat_fmax_v8f32_v4f32(<4 x float> %a0, <4 x float> %a1) {
 ;
 ; AVX-LABEL: concat_fmax_v8f32_v4f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vmaxps %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vmaxps %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vmaxps %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %v0 = call <4 x float> @llvm.x86.sse.max.ps(<4 x float> %a0, <4 x float> zeroinitializer)
   %v1 = call <4 x float> @llvm.x86.sse.max.ps(<4 x float> %a1, <4 x float> zeroinitializer)
