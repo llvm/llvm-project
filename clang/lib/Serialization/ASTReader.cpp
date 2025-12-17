@@ -8883,14 +8883,17 @@ void ASTReader::StartTranslationUnit(ASTConsumer *Consumer) {
     DeserializationListener->ReaderInitialized(this);
 }
 
+unsigned ASTReader::getNumDeclsLoaded() const {
+  return DeclsLoaded.size() -
+  llvm::count(DeclsLoaded.materialized(), (Decl *)nullptr);
+}
+
 void ASTReader::PrintStats() {
   std::fprintf(stderr, "*** AST File Statistics:\n");
 
   unsigned NumTypesLoaded =
       TypesLoaded.size() - llvm::count(TypesLoaded.materialized(), QualType());
-  unsigned NumDeclsLoaded =
-      DeclsLoaded.size() -
-      llvm::count(DeclsLoaded.materialized(), (Decl *)nullptr);
+  unsigned NumDeclsLoaded = getNumDeclsLoaded();
   unsigned NumIdentifiersLoaded =
       IdentifiersLoaded.size() -
       llvm::count(IdentifiersLoaded, (IdentifierInfo *)nullptr);

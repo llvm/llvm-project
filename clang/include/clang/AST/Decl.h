@@ -108,6 +108,9 @@ class TranslationUnitDecl : public Decl,
   TranslationUnitDecl *getNextRedeclarationImpl() override {
     return getNextRedeclaration();
   }
+  TranslationUnitDecl *getNextRedeclarationNoUpdateImpl() override {
+    return getNextRedeclarationNoUpdate();
+  }
 
   TranslationUnitDecl *getPreviousDeclImpl() override {
     return getPreviousDecl();
@@ -607,6 +610,7 @@ class NamespaceDecl : public NamespaceBaseDecl,
   using redeclarable_base = Redeclarable<NamespaceDecl>;
 
   NamespaceDecl *getNextRedeclarationImpl() override;
+  NamespaceDecl *getNextRedeclarationNoUpdateImpl() override;
   NamespaceDecl *getPreviousDeclImpl() override;
   NamespaceDecl *getMostRecentDeclImpl() override;
 
@@ -1133,6 +1137,10 @@ protected:
 
   VarDecl *getNextRedeclarationImpl() override {
     return getNextRedeclaration();
+  }
+
+  VarDecl *getNextRedeclarationNoUpdateImpl() override {
+    return getNextRedeclarationNoUpdate();
   }
 
   VarDecl *getPreviousDeclImpl() override {
@@ -2161,6 +2169,10 @@ protected:
 
   FunctionDecl *getNextRedeclarationImpl() override {
     return getNextRedeclaration();
+  }
+
+  FunctionDecl *getNextRedeclarationNoUpdateImpl() override {
+    return getNextRedeclarationNoUpdate();
   }
 
   FunctionDecl *getPreviousDeclImpl() override {
@@ -3586,6 +3598,10 @@ protected:
     return getNextRedeclaration();
   }
 
+  TypedefNameDecl *getNextRedeclarationNoUpdateImpl() override {
+    return getNextRedeclarationNoUpdate();
+  }
+
   TypedefNameDecl *getPreviousDeclImpl() override {
     return getPreviousDecl();
   }
@@ -3753,6 +3769,10 @@ protected:
 
   TagDecl *getNextRedeclarationImpl() override {
     return getNextRedeclaration();
+  }
+
+  TagDecl *getNextRedeclarationNoUpdateImpl() override {
+    return getNextRedeclarationNoUpdate();
   }
 
   TagDecl *getPreviousDeclImpl() override {

@@ -221,6 +221,7 @@ class ObjCMethodDecl : public NamedDecl, public DeclContext {
   /// An interface declaration will return its definition.
   /// Otherwise it will return itself.
   ObjCMethodDecl *getNextRedeclarationImpl() override;
+  ObjCMethodDecl *getNextRedeclarationNoUpdateImpl() override;
 
 public:
   friend class ASTDeclReader;
@@ -1265,6 +1266,9 @@ class ObjCInterfaceDecl : public ObjCContainerDecl
   ObjCInterfaceDecl *getNextRedeclarationImpl() override {
     return getNextRedeclaration();
   }
+  ObjCInterfaceDecl *getNextRedeclarationNoUpdateImpl() override {
+    return getNextRedeclarationNoUpdate();
+  }
 
   ObjCInterfaceDecl *getPreviousDeclImpl() override {
     return getPreviousDecl();
@@ -2121,6 +2125,9 @@ class ObjCProtocolDecl : public ObjCContainerDecl,
 
   ObjCProtocolDecl *getNextRedeclarationImpl() override {
     return getNextRedeclaration();
+  }
+  ObjCProtocolDecl *getNextRedeclarationNoUpdateImpl() override {
+    return getNextRedeclarationNoUpdate();
   }
 
   ObjCProtocolDecl *getPreviousDeclImpl() override {

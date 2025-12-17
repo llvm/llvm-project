@@ -3329,6 +3329,10 @@ NamespaceDecl *NamespaceDecl::getNextRedeclarationImpl() {
   return getNextRedeclaration();
 }
 
+NamespaceDecl *NamespaceDecl::getNextRedeclarationNoUpdateImpl() {
+  return getNextRedeclarationNoUpdate();
+}
+
 NamespaceDecl *NamespaceDecl::getPreviousDeclImpl() {
   return getPreviousDecl();
 }
@@ -3341,6 +3345,10 @@ void NamespaceAliasDecl::anchor() {}
 
 NamespaceAliasDecl *NamespaceAliasDecl::getNextRedeclarationImpl() {
   return getNextRedeclaration();
+}
+
+NamespaceAliasDecl *NamespaceAliasDecl::getNextRedeclarationNoUpdateImpl() {
+  return getNextRedeclarationNoUpdate();
 }
 
 NamespaceAliasDecl *NamespaceAliasDecl::getPreviousDeclImpl() {

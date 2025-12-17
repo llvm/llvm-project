@@ -718,6 +718,9 @@ class RedeclarableTemplateDecl : public TemplateDecl,
   RedeclarableTemplateDecl *getNextRedeclarationImpl() override {
     return getNextRedeclaration();
   }
+  RedeclarableTemplateDecl *getNextRedeclarationNoUpdateImpl() override {
+    return getNextRedeclarationNoUpdate();
+  }
 
   RedeclarableTemplateDecl *getPreviousDeclImpl() override {
     return getPreviousDecl();

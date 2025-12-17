@@ -117,6 +117,7 @@ protected:
              isa<UninitializedLatest>(cast<NotKnownLatest>(Link));
     }
 
+    template <bool Update = true>
     decl_type *getPrevious(const decl_type *D) const {
       if (NotKnownLatest NKL = dyn_cast<NotKnownLatest>(Link)) {
         if (auto *Prev = dyn_cast<Previous>(NKL))
@@ -128,7 +129,8 @@ protected:
                            const_cast<decl_type *>(D));
       }
 
-      return static_cast<decl_type *>(cast<KnownLatest>(Link).get(D));
+      return Update ? static_cast<decl_type *>(cast<KnownLatest>(Link).get(D))
+        : static_cast<decl_type *>(cast<KnownLatest>(Link).getNotUpdated());
     }
 
     void setPrevious(decl_type *D) {
@@ -183,7 +185,11 @@ protected:
   decl_type *First;
 
   decl_type *getNextRedeclaration() const {
-    return RedeclLink.getPrevious(static_cast<const decl_type *>(this));
+    return RedeclLink.template getPrevious</*update=*/true>(static_cast<const decl_type *>(this));
+  }
+
+  decl_type *getNextRedeclarationNoUpdate() const {
+    return RedeclLink.template getPrevious</*update=*/false>(static_cast<const decl_type *>(this));
   }
 
 public:
