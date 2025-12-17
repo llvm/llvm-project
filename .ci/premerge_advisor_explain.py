@@ -158,3 +158,5 @@ if __name__ == "__main__":
         args.pr_number,
         args.return_code,
     )
+
+    sys.exit(args.return_code)
