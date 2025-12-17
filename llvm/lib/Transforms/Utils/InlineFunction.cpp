@@ -1189,19 +1189,9 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
         continue;
 
       bool IsArgMemOnlyCall = false, IsFuncCall = false;
-      SmallVector<const Value *, 2> PtrArgs;
+      std::optional<SmallVector<const Value *, 2u>> PtrArgs = getMemAccessOperands(I);
 
-      if (const LoadInst *LI = dyn_cast<LoadInst>(I))
-        PtrArgs.push_back(LI->getPointerOperand());
-      else if (const StoreInst *SI = dyn_cast<StoreInst>(I))
-        PtrArgs.push_back(SI->getPointerOperand());
-      else if (const VAArgInst *VAAI = dyn_cast<VAArgInst>(I))
-        PtrArgs.push_back(VAAI->getPointerOperand());
-      else if (const AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(I))
-        PtrArgs.push_back(CXI->getPointerOperand());
-      else if (const AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(I))
-        PtrArgs.push_back(RMWI->getPointerOperand());
-      else if (const auto *Call = dyn_cast<CallBase>(I)) {
+      if (const auto *Call = dyn_cast<CallBase>(I)) {
         // If we know that the call does not access memory, then we'll still
         // know that about the inlined clone of this call site, and we don't
         // need to add metadata.
@@ -1219,23 +1209,13 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
           if (ME.onlyAccessesArgPointees())
             IsArgMemOnlyCall = true;
         }
-
-        for (Value *Arg : Call->args()) {
-          // Only care about pointer arguments. If a noalias argument is
-          // accessed through a non-pointer argument, it must be captured
-          // first (e.g. via ptrtoint), and we protect against captures below.
-          if (!Arg->getType()->isPointerTy())
-            continue;
-
-          PtrArgs.push_back(Arg);
-        }
       }
 
       // If we found no pointers, then this instruction is not suitable for
       // pairing with an instruction to receive aliasing metadata.
       // However, if this is a call, this we might just alias with none of the
       // noalias arguments.
-      if (PtrArgs.empty() && !IsFuncCall)
+      if (!PtrArgs && !IsFuncCall)
         continue;
 
       // It is possible that there is only one underlying object, but you
@@ -1244,11 +1224,13 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
       SmallPtrSet<const Value *, 4> ObjSet;
       SmallVector<Metadata *, 4> Scopes, NoAliases;
 
-      for (const Value *V : PtrArgs) {
-        SmallVector<const Value *, 4> Objects;
-        getUnderlyingObjects(V, Objects, /* LI = */ nullptr);
+      if (PtrArgs) {
+        for (const Value *V : *PtrArgs) {
+          SmallVector<const Value *, 4> Objects;
+          getUnderlyingObjects(V, Objects, /* LI = */ nullptr);
 
-        ObjSet.insert_range(Objects);
+          ObjSet.insert_range(Objects);
+        }
       }
 
       // Figure out if we're derived from anything that is not a noalias

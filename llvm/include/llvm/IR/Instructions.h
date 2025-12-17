@@ -5196,6 +5196,38 @@ inline void setAtomicSyncScopeID(Instruction *I, SyncScope::ID SSID) {
     llvm_unreachable("unhandled atomic operation");
 }
 
+/// A helper function that returns the pointer operands of a memory-access
+/// instruction.
+inline std::optional<SmallVector<const Value *, 2u>>
+getMemAccessOperands(const Instruction *I) {
+  if (const LoadInst *LI = dyn_cast<LoadInst>(I))
+    return {{LI->getPointerOperand()}};
+  if (const StoreInst *SI = dyn_cast<StoreInst>(I))
+    return {{SI->getPointerOperand()}};
+  if (const VAArgInst *VAAI = dyn_cast<VAArgInst>(I))
+    return {{VAAI->getPointerOperand()}};
+  if (const AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(I))
+    return {{CXI->getPointerOperand()}};
+  if (const AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(I))
+    return {{RMWI->getPointerOperand()}};
+  if (const auto *Call = dyn_cast<CallBase>(I)) {
+    if (Call->doesNotAccessMemory())
+      return std::nullopt;
+
+    SmallVector<const Value *, 2u> PtrArgs;
+    for (Value *Arg : Call->args()) {
+      if (!Arg->getType()->isPointerTy())
+        continue;
+
+      PtrArgs.push_back(Arg);
+    }
+
+    return PtrArgs;
+  }
+
+  return std::nullopt;
+}
+
 //===----------------------------------------------------------------------===//
 //                              FreezeInst Class
 //===----------------------------------------------------------------------===//
