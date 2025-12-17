@@ -20,6 +20,9 @@
   define void @pair_if_not_adjacent() nounwind { ret void }
   define void @pair_if_not_adjacent_use() nounwind { ret void }
   define void @no_pair_if_not_adjacent_use() nounwind { ret void }
+  define void @pair_two_sw_into_qc_setwmi() nounwind { ret void }
+  define void @pair_two_sw_into_qc_setwmi_reversed() nounwind { ret void }
+  define void @pair_if_not_adjacent_setwmi() nounwind { ret void }
 ---
 name: pair_two_lw_into_qc_lwmi
 tracksRegLiveness: false
@@ -310,6 +313,56 @@ body: |
     $x1 = ADDI $x1, 10
     SW $x2, $x10, 40 :: (store (s32), align 4)
     $x2 = LW $x10, 24 :: (load (s32), align 4)
+    PseudoRET
+
+...
+---
+name: pair_two_sw_into_qc_setwmi
+tracksRegLiveness: false
+body: |
+  bb.0:
+    liveins: $x10, $x1
+    ; CHECK-LABEL: name: pair_two_sw_into_qc_setwmi
+    ; CHECK: liveins: $x10, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: QC_SETWMI $x1, $x10, 2, 20 :: (store (s32))
+    ; CHECK-NEXT: PseudoRET
+    SW $x1, $x10, 20 :: (store (s32), align 4)
+    SW $x1, $x10, 24 :: (store (s32), align 4)
+    PseudoRET
+
+...
+---
+name: pair_two_sw_into_qc_setwmi_reversed
+tracksRegLiveness: false
+body: |
+  bb.0:
+    liveins: $x10, $x2
+    ; CHECK-LABEL: name: pair_two_sw_into_qc_setwmi_reversed
+    ; CHECK: liveins: $x10, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: QC_SETWMI $x2, $x10, 2, 20 :: (store (s32))
+    ; CHECK-NEXT: PseudoRET
+    SW $x2, $x10, 24 :: (store (s32), align 4)
+    SW $x2, $x10, 20 :: (store (s32), align 4)
+    PseudoRET
+
+...
+---
+name: pair_if_not_adjacent_setwmi
+tracksRegLiveness: false
+body: |
+  bb.0:
+    liveins: $x10, $x1
+    ; CHECK-LABEL: name: pair_if_not_adjacent_setwmi
+    ; CHECK: liveins: $x10, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: QC_SETWMI killed $x1, $x10, 2, 20 :: (store (s32))
+    ; CHECK-NEXT: $x2 = ADDI $x2, 10
+    ; CHECK-NEXT: PseudoRET
+    SW $x1, $x10, 20 :: (store (s32), align 4)
+    $x2 = ADDI $x2, 10
+    SW killed $x1, $x10, 24 :: (store (s32), align 4)
     PseudoRET
 
 ...
