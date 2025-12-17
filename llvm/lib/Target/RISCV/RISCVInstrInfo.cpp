@@ -4907,6 +4907,14 @@ bool RISCV::isRVVSpill(const MachineInstr &MI) {
   return true;
 }
 
+/// Return true if \p MI is a copy that will be lowered to one or more vmvNr.vs.
+bool RISCV::isVectorCopy(const TargetRegisterInfo *TRI,
+                         const MachineInstr &MI) {
+  return MI.isCopy() && MI.getOperand(0).getReg().isPhysical() &&
+         RISCVRegisterInfo::isRVVRegClass(
+             TRI->getMinimalPhysRegClass(MI.getOperand(0).getReg()));
+}
+
 std::optional<std::pair<unsigned, unsigned>>
 RISCV::isRVVSpillForZvlsseg(unsigned Opcode) {
   switch (Opcode) {
