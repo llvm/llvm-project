@@ -3515,7 +3515,7 @@ static mlir::ParseResult parseTryHandlerRegions(
 LogicalResult
 cir::EhTypeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   Operation *op = symbolTable.lookupNearestSymbolFrom(*this, getTypeSymAttr());
-  if (!isa<GlobalOp>(op))
+  if (!isa_and_nonnull<GlobalOp>(op))
     return emitOpError("'")
            << getTypeSym() << "' does not reference a valid cir.global";
   return success();

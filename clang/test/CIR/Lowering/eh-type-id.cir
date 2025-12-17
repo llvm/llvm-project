@@ -15,7 +15,7 @@ cir.func private @exception_handling_type_id() {
 
 // CHECK: llvm.func @exception_handling_type_id() attributes {sym_visibility = "private"} {
 // CHECK:   %[[GV_ADDR_OF:.*]] = llvm.mlir.addressof @_ZTIi : !llvm.ptr
-// CHECK:   %[[TYPE_ID:.*]] = llvm.call_intrinsic "llvm.eh.typeid.for.p0"(%[[GV_ADDR_OF]]) : (!llvm.ptr) -> i32
+// CHECK:   %[[TYPE_ID:.*]] = llvm.intr.eh.typeid.for %[[GV_ADDR_OF]] : (!llvm.ptr) -> i32
 // CHECK:   llvm.return
 // CHECK: }
 

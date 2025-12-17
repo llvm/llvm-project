@@ -5525,7 +5525,7 @@ def CIR_EhInflightOp : CIR_Op<"eh.inflight_exception"> {
 
 def CIR_EhTypeIdOp : CIR_Op<"eh.typeid",
   [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
-  let summary = "Compute exception type id from it's global type symbol";
+  let summary = "Compute exception type id from its global type symbol";
   let description = [{
     Returns the exception type id for a given global symbol representing
     a type.

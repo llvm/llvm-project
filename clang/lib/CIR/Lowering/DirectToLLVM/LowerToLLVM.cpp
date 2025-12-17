@@ -3477,10 +3477,8 @@ mlir::LogicalResult CIRToLLVMEhTypeIdOpLowering::matchAndRewrite(
       rewriter, op.getLoc(),
       mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
       op.getTypeSymAttr());
-  mlir::LLVM::CallIntrinsicOp newOp = createCallLLVMIntrinsicOp(
-      rewriter, op.getLoc(), "llvm.eh.typeid.for.p0", rewriter.getI32Type(),
-      mlir::ValueRange{addrOp});
-  rewriter.replaceOp(op, newOp);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::EhTypeidForOp>(
+      op, rewriter.getI32Type(), addrOp);
   return mlir::success();
 }
 
