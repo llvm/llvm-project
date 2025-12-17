@@ -15,17 +15,17 @@ target triple = "x86_64-apple-macosx10.6.0"
 define void @symbolicrdiv0(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ssp {
 ; CHECK-LABEL: 'symbolicrdiv0'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx8, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - flow [|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx8, align 4 --> Dst: %0 = load i32, ptr %arrayidx8, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent input [*]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx8, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ;
 entry:
   %cmp4 = icmp eq i64 %n1, 0
@@ -84,17 +84,17 @@ for.end11:                                        ; preds = %for.end11.loopexit,
 define void @symbolicrdiv1(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ssp {
 ; CHECK-LABEL: 'symbolicrdiv1'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx9, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - flow [|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx9, align 4 --> Dst: %0 = load i32, ptr %arrayidx9, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent input [*]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx9, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ;
 entry:
   %cmp4 = icmp eq i64 %n1, 0
@@ -155,17 +155,17 @@ for.end12:                                        ; preds = %for.end12.loopexit,
 define void @symbolicrdiv2(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ssp {
 ; CHECK-LABEL: 'symbolicrdiv2'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx7, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - flow [|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx7, align 4 --> Dst: %0 = load i32, ptr %arrayidx7, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent input [*]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx7, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ;
 entry:
   %cmp4 = icmp eq i64 %n1, 0
@@ -224,17 +224,17 @@ for.end10:                                        ; preds = %for.end10.loopexit,
 define void @symbolicrdiv3(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ssp {
 ; CHECK-LABEL: 'symbolicrdiv3'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx6, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - flow [|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx6, align 4 --> Dst: %0 = load i32, ptr %arrayidx6, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent input [*]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx6, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ;
 entry:
   %cmp4 = icmp eq i64 %n1, 0
@@ -291,17 +291,17 @@ for.end9:                                         ; preds = %for.end9.loopexit, 
 define void @symbolicrdiv4(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ssp {
 ; CHECK-LABEL: 'symbolicrdiv4'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx7, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - flow [|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx7, align 4 --> Dst: %0 = load i32, ptr %arrayidx7, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent input [*]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx7, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ;
 entry:
   %cmp4 = icmp eq i64 %n1, 0
@@ -359,17 +359,17 @@ for.end10:                                        ; preds = %for.end10.loopexit,
 define void @symbolicrdiv5(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ssp {
 ; CHECK-LABEL: 'symbolicrdiv5'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx7, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - flow [|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx7, align 4 --> Dst: %0 = load i32, ptr %arrayidx7, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent input [*]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx7, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ;
 entry:
   %cmp4 = icmp eq i64 %n1, 0
@@ -429,7 +429,7 @@ define void @symbolicrdiv6(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ss
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - output [* *]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx4, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - flow [* *|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.12, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx4, align 4 --> Dst: %0 = load i32, ptr %arrayidx4, align 4

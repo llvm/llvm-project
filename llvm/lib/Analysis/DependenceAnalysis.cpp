@@ -50,7 +50,6 @@
 #include "llvm/Analysis/Delinearization.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
@@ -155,13 +154,6 @@ static cl::opt<DependenceTestType> EnableDependenceTest(
                clEnumValN(DependenceTestType::BanerjeeMIV, "banerjee-miv",
                           "Enable only Banerjee MIV test.")));
 
-// TODO: This flag is disabled by default because it is still under development.
-// Enable it or delete this flag when the feature is ready.
-static cl::opt<bool> EnableMonotonicityCheck(
-    "da-enable-monotonicity-check", cl::init(false), cl::Hidden,
-    cl::desc("Check if the subscripts are monotonic. If it's not, dependence "
-             "is reported as unknown."));
-
 static cl::opt<bool> DumpMonotonicityReport(
     "da-dump-monotonicity-report", cl::init(false), cl::Hidden,
     cl::desc(
@@ -216,169 +208,6 @@ void DependenceAnalysisWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<LoopInfoWrapperPass>();
 }
 
-namespace {
-
-/// The property of monotonicity of a SCEV. To define the monotonicity, assume
-/// a SCEV defined within N-nested loops. Let i_k denote the iteration number
-/// of the k-th loop. Then we can regard the SCEV as an N-ary function:
-///
-///   F(i_1, i_2, ..., i_N)
-///
-/// The domain of i_k is the closed range [0, BTC_k], where BTC_k is the
-/// backedge-taken count of the k-th loop.
-///
-/// A function F is said to be "monotonically increasing with respect to the
-/// k-th loop" if x <= y implies the following condition:
-///
-///   F(i_1, ..., i_{k-1}, x, i_{k+1}, ..., i_N) <=
-///   F(i_1, ..., i_{k-1}, y, i_{k+1}, ..., i_N)
-///
-/// where i_1, ..., i_{k-1}, i_{k+1}, ..., i_N, x, and y are elements of their
-/// respective domains.
-///
-/// Likewise F is "monotonically decreasing with respect to the k-th loop"
-/// if x <= y implies
-///
-///   F(i_1, ..., i_{k-1}, x, i_{k+1}, ..., i_N) >=
-///   F(i_1, ..., i_{k-1}, y, i_{k+1}, ..., i_N)
-///
-/// A function F that is monotonically increasing or decreasing with respect to
-/// the k-th loop is simply called "monotonic with respect to k-th loop".
-///
-/// A function F is said to be "multivariate monotonic" when it is monotonic
-/// with respect to all of the N loops.
-///
-/// Since integer comparison can be either signed or unsigned, we need to
-/// distinguish monotonicity in the signed sense from that in the unsigned
-/// sense. Note that the inequality "x <= y" merely indicates loop progression
-/// and is not affected by the difference between signed and unsigned order.
-///
-/// Currently we only consider monotonicity in a signed sense.
-enum class SCEVMonotonicityType {
-  /// We don't know anything about the monotonicity of the SCEV.
-  Unknown,
-
-  /// The SCEV is loop-invariant with respect to the outermost loop. In other
-  /// words, the function F corresponding to the SCEV is a constant function.
-  Invariant,
-
-  /// The function F corresponding to the SCEV is multivariate monotonic in a
-  /// signed sense. Note that the multivariate monotonic function may also be a
-  /// constant function. The order employed in the definition of monotonicity
-  /// is not strict order.
-  MultivariateSignedMonotonic,
-};
-
-struct SCEVMonotonicity {
-  SCEVMonotonicity(SCEVMonotonicityType Type,
-                   const SCEV *FailurePoint = nullptr);
-
-  SCEVMonotonicityType getType() const { return Type; }
-
-  const SCEV *getFailurePoint() const { return FailurePoint; }
-
-  bool isUnknown() const { return Type == SCEVMonotonicityType::Unknown; }
-
-  void print(raw_ostream &OS, unsigned Depth) const;
-
-private:
-  SCEVMonotonicityType Type;
-
-  /// The subexpression that caused Unknown. Mainly for debugging purpose.
-  const SCEV *FailurePoint;
-};
-
-/// Check the monotonicity of a SCEV. Since dependence tests (SIV, MIV, etc.)
-/// assume that subscript expressions are (multivariate) monotonic, we need to
-/// verify this property before applying those tests. Violating this assumption
-/// may cause them to produce incorrect results.
-struct SCEVMonotonicityChecker
-    : public SCEVVisitor<SCEVMonotonicityChecker, SCEVMonotonicity> {
-
-  SCEVMonotonicityChecker(ScalarEvolution *SE) : SE(SE) {}
-
-  /// Check the monotonicity of \p Expr. \p Expr must be integer type. If \p
-  /// OutermostLoop is not null, \p Expr must be defined in \p OutermostLoop or
-  /// one of its nested loops.
-  SCEVMonotonicity checkMonotonicity(const SCEV *Expr,
-                                     const Loop *OutermostLoop);
-
-private:
-  ScalarEvolution *SE;
-
-  /// The outermost loop that DA is analyzing.
-  const Loop *OutermostLoop;
-
-  /// A helper to classify \p Expr as either Invariant or Unknown.
-  SCEVMonotonicity invariantOrUnknown(const SCEV *Expr);
-
-  /// Return true if \p Expr is loop-invariant with respect to the outermost
-  /// loop.
-  bool isLoopInvariant(const SCEV *Expr) const;
-
-  /// A helper to create an Unknown SCEVMonotonicity.
-  SCEVMonotonicity createUnknown(const SCEV *FailurePoint) {
-    return SCEVMonotonicity(SCEVMonotonicityType::Unknown, FailurePoint);
-  }
-
-  SCEVMonotonicity visitAddRecExpr(const SCEVAddRecExpr *Expr);
-
-  SCEVMonotonicity visitConstant(const SCEVConstant *) {
-    return SCEVMonotonicity(SCEVMonotonicityType::Invariant);
-  }
-  SCEVMonotonicity visitVScale(const SCEVVScale *) {
-    return SCEVMonotonicity(SCEVMonotonicityType::Invariant);
-  }
-
-  // TODO: Handle more cases.
-  SCEVMonotonicity visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
-    return invariantOrUnknown(Expr);
-  }
-  SCEVMonotonicity visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
-    return invariantOrUnknown(Expr);
-  }
-  SCEVMonotonicity visitAddExpr(const SCEVAddExpr *Expr) {
-    return invariantOrUnknown(Expr);
-  }
-  SCEVMonotonicity visitMulExpr(const SCEVMulExpr *Expr) {
-    return invariantOrUnknown(Expr);
-  }
-  SCEVMonotonicity visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
-    return invariantOrUnknown(Expr);
-  }
-  SCEVMonotonicity visitTruncateExpr(const SCEVTruncateExpr *Expr) {
-    return invariantOrUnknown(Expr);
-  }
-  SCEVMonotonicity visitUDivExpr(const SCEVUDivExpr *Expr) {
-    return invariantOrUnknown(Expr);
-  }
-  SCEVMonotonicity visitSMaxExpr(const SCEVSMaxExpr *Expr) {
-    return invariantOrUnknown(Expr);
-  }
-  SCEVMonotonicity visitUMaxExpr(const SCEVUMaxExpr *Expr) {
-    return invariantOrUnknown(Expr);
-  }
-  SCEVMonotonicity visitSMinExpr(const SCEVSMinExpr *Expr) {
-    return invariantOrUnknown(Expr);
-  }
-  SCEVMonotonicity visitUMinExpr(const SCEVUMinExpr *Expr) {
-    return invariantOrUnknown(Expr);
-  }
-  SCEVMonotonicity visitSequentialUMinExpr(const SCEVSequentialUMinExpr *Expr) {
-    return invariantOrUnknown(Expr);
-  }
-  SCEVMonotonicity visitUnknown(const SCEVUnknown *Expr) {
-    return invariantOrUnknown(Expr);
-  }
-  SCEVMonotonicity visitCouldNotCompute(const SCEVCouldNotCompute *Expr) {
-    return invariantOrUnknown(Expr);
-  }
-
-  friend struct SCEVVisitor<SCEVMonotonicityChecker, SCEVMonotonicity>;
-};
-
-} // anonymous namespace
-
 // Used to test the dependence analyzer.
 // Looks through the function, noting instructions that may access memory.
 // Calls depends() on every possible pair and prints out the result.
@@ -399,10 +228,19 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
       const Loop *OutermostLoop = L ? L->getOutermostLoop() : nullptr;
       const SCEV *PtrSCEV = SE.getSCEVAtScope(Ptr, L);
       const SCEV *AccessFn = SE.removePointerBase(PtrSCEV);
-      SCEVMonotonicity Mon = Checker.checkMonotonicity(AccessFn, OutermostLoop);
       OS.indent(2) << "Inst: " << Inst << "\n";
       OS.indent(4) << "Expr: " << *AccessFn << "\n";
-      Mon.print(OS, 4);
+      for (SCEVMonotonicityDomain Domain :
+           {SCEVMonotonicityDomain::EffectiveDomain,
+            SCEVMonotonicityDomain::EntireDomain}) {
+        OS.indent(4) << (Domain == SCEVMonotonicityDomain::EffectiveDomain
+                             ? "EffectiveDomain"
+                             : "EntireDomain")
+                     << "\n";
+        SCEVMonotonicity Mon =
+            Checker.checkMonotonicity(AccessFn, OutermostLoop, Domain);
+        Mon.print(OS, 6);
+      }
     }
     OS << "\n";
   }
@@ -630,7 +468,7 @@ void SCEVMonotonicity::print(raw_ostream &OS, unsigned Depth) const {
 }
 
 bool SCEVMonotonicityChecker::isLoopInvariant(const SCEV *Expr) const {
-  return !OutermostLoop || SE->isLoopInvariant(Expr, OutermostLoop);
+  return !Ctx.OutermostLoop || SE->isLoopInvariant(Expr, Ctx.OutermostLoop);
 }
 
 SCEVMonotonicity SCEVMonotonicityChecker::invariantOrUnknown(const SCEV *Expr) {
@@ -641,11 +479,14 @@ SCEVMonotonicity SCEVMonotonicityChecker::invariantOrUnknown(const SCEV *Expr) {
 
 SCEVMonotonicity
 SCEVMonotonicityChecker::checkMonotonicity(const SCEV *Expr,
-                                           const Loop *OutermostLoop) {
+                                           const Loop *OutermostLoop,
+                                           SCEVMonotonicityDomain Domain) {
   assert((!OutermostLoop || OutermostLoop->isOutermost()) &&
          "OutermostLoop must be outermost");
   assert(Expr->getType()->isIntegerTy() && "Expr must be integer type");
-  this->OutermostLoop = OutermostLoop;
+  Ctx.clear();
+  Ctx.OutermostLoop = OutermostLoop;
+  Ctx.Domain = Domain;
   return visit(Expr);
 }
 
@@ -662,20 +503,45 @@ SCEVMonotonicityChecker::checkMonotonicity(const SCEV *Expr,
 /// AddRec.
 SCEVMonotonicity
 SCEVMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
-  if (!Expr->isAffine() || !Expr->hasNoSignedWrap())
-    return createUnknown(Expr);
+  auto Res = [&]() {
+    if (!Expr->isAffine() || !Expr->hasNoSignedWrap())
+      return createUnknown(Expr);
 
-  const SCEV *Start = Expr->getStart();
-  const SCEV *Step = Expr->getStepRecurrence(*SE);
+    const SCEV *Start = Expr->getStart();
+    const SCEV *Step = Expr->getStepRecurrence(*SE);
 
-  SCEVMonotonicity StartMon = visit(Start);
-  if (StartMon.isUnknown())
-    return StartMon;
+    SCEVMonotonicity StartMon = visit(Start);
+    if (StartMon.isUnknown())
+      return StartMon;
 
-  if (!isLoopInvariant(Step))
-    return createUnknown(Expr);
+    if (!isLoopInvariant(Step))
+      return createUnknown(Expr);
 
-  return SCEVMonotonicity(SCEVMonotonicityType::MultivariateSignedMonotonic);
+    if (Ctx.Domain == SCEVMonotonicityDomain::EntireDomain) {
+      // If we have a conditional branch like the following:
+      //
+      //   for (i = 0; i < N; i++)
+      //     if (i < 10)
+      //       for (j = 0; j < M; j++)
+      //         A[i + j] = ...;
+      //
+      // The addrec for `i + j` will be like
+      // `{{0,+,1}<nsw><loop.i>,+,1}<nsw><loop.j>`. This doesn't imply `N + M`
+      // doesn't overflow, since the nsw for the j-loop is meaningful only when
+      // `i < 10`. Thus we cannot conclude the monotonicity over EntireDomain.
+      if (Ctx.FoundInnermostAddRec)
+        return createUnknown(Expr);
+
+      // By definition, the exact backedge-taken count must exist.
+      if (!SE->hasLoopInvariantBackedgeTakenCount(Expr->getLoop()))
+        return createUnknown(Expr);
+    }
+
+    return SCEVMonotonicity(SCEVMonotonicityType::MultivariateSignedMonotonic);
+  }();
+
+  Ctx.FoundInnermostAddRec = true;
+  return Res;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1204,37 +1070,33 @@ static const SCEV *minusSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
   return nullptr;
 }
 
-/// Returns \p A * \p B if it guaranteed not to signed wrap. Otherwise returns
-/// nullptr. \p A and \p B must have the same integer type.
-static const SCEV *mulSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
-                                           ScalarEvolution &SE) {
-  if (SE.willNotOverflow(Instruction::Mul, /*Signed=*/true, A, B))
-    return SE.getMulExpr(A, B);
-  return nullptr;
-}
-
-/// Returns the absolute value of \p A. In the context of dependence analysis,
-/// we need an absolute value in a mathematical sense. If \p A is the signed
-/// minimum value, we cannot represent it unless extending the original type.
-/// Thus if we cannot prove that \p A is not the signed minimum value, returns
-/// nullptr.
-static const SCEV *absSCEVNoSignedOverflow(const SCEV *A, ScalarEvolution &SE) {
-  IntegerType *Ty = cast<IntegerType>(A->getType());
-  if (!Ty)
-    return nullptr;
-
-  const SCEV *SMin =
-      SE.getConstant(APInt::getSignedMinValue(Ty->getBitWidth()));
-  if (!SE.isKnownPredicate(CmpInst::ICMP_NE, A, SMin))
-    return nullptr;
-  return SE.getAbsExpr(A, /*IsNSW=*/true);
-}
-
 /// Returns true iff \p Test is enabled.
 static bool isDependenceTestEnabled(DependenceTestType Test) {
   if (EnableDependenceTest == DependenceTestType::All)
     return true;
   return EnableDependenceTest == Test;
+}
+
+bool DependenceInfo::isMonotonic(const SCEV *Expr,
+                                 SCEVMonotonicityDomain Domain,
+                                 const Loop *OutermostLoop) {
+  SCEVMonotonicity Mon =
+      MonChecker.checkMonotonicity(Expr, OutermostLoop, Domain);
+  switch (Mon.getType()) {
+  case SCEVMonotonicityType::Invariant:
+  case SCEVMonotonicityType::MultivariateSignedMonotonic:
+    return true;
+  case SCEVMonotonicityType::Unknown:
+    return false;
+  }
+  llvm_unreachable("Unknown SCEVMonotonicityType");
+}
+
+bool DependenceInfo::isMonotonicPair(const SCEV *Src, const SCEV *Dst,
+                                     SCEVMonotonicityDomain Domain,
+                                     const Loop *OutermostLoop) {
+  return isMonotonic(Src, Domain, OutermostLoop) &&
+         isMonotonic(Dst, Domain, OutermostLoop);
 }
 
 // testZIV -
@@ -1266,6 +1128,15 @@ bool DependenceInfo::testZIV(const SCEV *Src, const SCEV *Dst,
   return false; // possibly dependent
 }
 
+static std::pair<const SCEV *, const SCEV *>
+evaluateFirstAndLast(ScalarEvolution &SE, const SCEVAddRecExpr *Expr,
+                     const SCEV *BTC) {
+  const SCEV *Zero = SE.getZero(Expr->getType());
+  const SCEV *First = Expr->evaluateAtIteration(Zero, SE);
+  const SCEV *Last = Expr->evaluateAtIteration(BTC, SE);
+  return std::make_pair(First, Last);
+}
+
 // strongSIVtest -
 // From the paper, Practical Dependence Testing, Section 4.2.1
 //
@@ -1293,14 +1164,19 @@ bool DependenceInfo::testZIV(const SCEV *Src, const SCEV *Dst,
 //                { > if d < 0
 //
 // Return true if dependence disproved.
-bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
-                                   const SCEV *DstConst, const Loop *CurSrcLoop,
-                                   const Loop *CurDstLoop, unsigned Level,
+bool DependenceInfo::strongSIVtest(const SCEVAddRecExpr *Src,
+                                   const SCEVAddRecExpr *Dst, unsigned Level,
                                    FullDependence &Result,
                                    bool UnderRuntimeAssumptions) {
   if (!isDependenceTestEnabled(DependenceTestType::StrongSIV))
     return false;
 
+  const SCEV *Coeff = Src->getStepRecurrence(*SE);
+  const SCEV *SrcConst = Src->getStart();
+  const SCEV *DstConst = Dst->getStart();
+  const Loop *CurSrcLoop = Src->getLoop();
+  assert(Coeff == Dst->getStepRecurrence(*SE) &&
+         "Strong SIV requires identical coefficients");
   LLVM_DEBUG(dbgs() << "\tStrong SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    Coeff = " << *Coeff);
   LLVM_DEBUG(dbgs() << ", " << *Coeff->getType() << "\n");
@@ -1312,6 +1188,44 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
   assert(0 < Level && Level <= CommonLevels && "level out of range");
   Level--;
 
+  // Check max(Src) < min(Dst) || max(Dst) < min(Src).
+  bool CheckByRange = [&]() {
+    if (!isMonotonicPair(Src, Dst, SCEVMonotonicityDomain::EntireDomain,
+                         CurSrcLoop->getOutermostLoop()))
+      return false;
+
+    const SCEV *BTC = collectUpperBound(CurSrcLoop, Src->getType());
+    assert(BTC && "Must have upper bound for monotonicity over EntireDomain");
+    const auto [SrcFirst, SrcLast] = evaluateFirstAndLast(*SE, Src, BTC);
+    const auto [DstFirst, DstLast] = evaluateFirstAndLast(*SE, Dst, BTC);
+
+    // 0 <= a, so SrcFirst <= SrcLast and DstFirst <= DstLast
+    if (SE->isKnownNonNegative(Coeff))
+      return SE->isKnownPredicate(ICmpInst::ICMP_SLT, SrcLast, DstFirst) ||
+             SE->isKnownPredicate(ICmpInst::ICMP_SLT, DstLast, SrcFirst);
+
+    // a <= 0, so SrcLast <= SrcFirst and DstLast <= DstFirst
+    if (SE->isKnownNonPositive(Coeff))
+      return SE->isKnownPredicate(ICmpInst::ICMP_SLT, SrcFirst, DstLast) ||
+             SE->isKnownPredicate(ICmpInst::ICMP_SLT, DstFirst, SrcLast);
+
+    return SE->isKnownPredicate(ICmpInst::ICMP_SLT,
+                                SE->getSMaxExpr(SrcFirst, SrcLast),
+                                SE->getSMinExpr(DstFirst, DstLast)) ||
+           SE->isKnownPredicate(ICmpInst::ICMP_SLT,
+                                SE->getSMaxExpr(DstFirst, DstLast),
+                                SE->getSMinExpr(SrcFirst, SrcLast));
+  }();
+  if (CheckByRange) {
+    // Distance greater than trip count - no dependence
+    ++StrongSIVindependence;
+    ++StrongSIVsuccesses;
+    return true;
+  }
+
+  if (!isMonotonicPair(Src, Dst, SCEVMonotonicityDomain::EffectiveDomain,
+                       CurSrcLoop->getOutermostLoop()))
+    return false;
   const SCEV *Delta = minusSCEVNoSignedOverflow(SrcConst, DstConst, *SE);
   if (!Delta) {
     Result.Consistent = false;
@@ -1319,30 +1233,6 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
   }
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta);
   LLVM_DEBUG(dbgs() << ", " << *Delta->getType() << "\n");
-
-  // check that |Delta| < iteration count
-  bool IsDeltaLarge = [&] {
-    const SCEV *UpperBound = collectUpperBound(CurSrcLoop, Delta->getType());
-    if (!UpperBound)
-      return false;
-
-    LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound);
-    LLVM_DEBUG(dbgs() << ", " << *UpperBound->getType() << "\n");
-    const SCEV *AbsDelta = absSCEVNoSignedOverflow(Delta, *SE);
-    const SCEV *AbsCoeff = absSCEVNoSignedOverflow(Coeff, *SE);
-    if (!AbsDelta || !AbsCoeff)
-      return false;
-    const SCEV *Product = mulSCEVNoSignedOverflow(UpperBound, AbsCoeff, *SE);
-    if (!Product)
-      return false;
-    return isKnownPredicate(CmpInst::ICMP_SGT, AbsDelta, Product);
-  }();
-  if (IsDeltaLarge) {
-    // Distance greater than trip count - no dependence
-    ++StrongSIVindependence;
-    ++StrongSIVsuccesses;
-    return true;
-  }
 
   // Can we compute distance?
   if (isa<SCEVConstant>(Delta) && isa<SCEVConstant>(Coeff)) {
@@ -2211,39 +2101,36 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
 // backup for the RDIV test. Note that i and j can be the same variable,
 // letting this test serve as a backup for the various SIV tests.
 //
-// For a dependence to exist, c1 + a1*i must equal c2 + a2*j for some
-//  0 <= i <= N1 and some 0 <= j <= N2, where N1 and N2 are the (normalized)
-// loop bounds for the i and j loops, respectively. So, ...
-//
-// c1 + a1*i = c2 + a2*j
-// a1*i - a2*j = c2 - c1
-//
-// To test for a dependence, we compute c2 - c1 and make sure it's in the
-// range of the maximum and minimum possible values of a1*i - a2*j.
-// Considering the signs of a1 and a2, we have 4 possible cases:
+// To test for a dependence, we compare the minimum/maximum values of c1 + a1*i
+// and c2 + a2*j.
+// Considering the signs of a1 and a2, we have 4 possible cases (0 <= i <= N1
+// and 0 <= j <= N2):
 //
 // 1) If a1 >= 0 and a2 >= 0, then
-//        a1*0 - a2*N2 <= c2 - c1 <= a1*N1 - a2*0
-//              -a2*N2 <= c2 - c1 <= a1*N1
+//        a1*N1 + c1 <= a2*0 + c2 or a2*N2 + c2 <= a1*0 + c1
 //
 // 2) If a1 >= 0 and a2 <= 0, then
-//        a1*0 - a2*0 <= c2 - c1 <= a1*N1 - a2*N2
-//                  0 <= c2 - c1 <= a1*N1 - a2*N2
+//        a1*N1 + c1 <= a2*N2 + c2 or a2*0 + c2 <= a1*0 + c1
 //
 // 3) If a1 <= 0 and a2 >= 0, then
-//        a1*N1 - a2*N2 <= c2 - c1 <= a1*0 - a2*0
-//        a1*N1 - a2*N2 <= c2 - c1 <= 0
+//        a1*0 + c1 <= a2*0 + c2 or a2*N2 + c2 <= a1*N1 + c1
 //
 // 4) If a1 <= 0 and a2 <= 0, then
-//        a1*N1 - a2*0  <= c2 - c1 <= a1*0 - a2*N2
-//        a1*N1         <= c2 - c1 <=       -a2*N2
+//        a1*0 + c1 <= a2*N2 + c2 or a2*0 + c2 <= a1*N1 + c1
 //
 // return true if dependence disproved
-bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
-                                      const SCEV *C1, const SCEV *C2,
-                                      const Loop *Loop1,
-                                      const Loop *Loop2) const {
+bool DependenceInfo::symbolicRDIVtest(const SCEVAddRecExpr *Src,
+                                      const SCEVAddRecExpr *Dst) {
   if (!isDependenceTestEnabled(DependenceTestType::SymbolicRDIV))
+    return false;
+
+  const SCEV *A1 = Src->getStepRecurrence(*SE);
+  const SCEV *A2 = Dst->getStepRecurrence(*SE);
+  const Loop *Loop1 = Src->getLoop();
+  const Loop *Loop2 = Dst->getLoop();
+
+  if (!isMonotonicPair(Src, Dst, SCEVMonotonicityDomain::EntireDomain,
+                       Loop1->getOutermostLoop()))
     return false;
 
   ++SymbolicRDIVapplications;
@@ -2251,98 +2138,35 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
   LLVM_DEBUG(dbgs() << "\t    A1 = " << *A1);
   LLVM_DEBUG(dbgs() << ", type = " << *A1->getType() << "\n");
   LLVM_DEBUG(dbgs() << "\t    A2 = " << *A2 << "\n");
-  LLVM_DEBUG(dbgs() << "\t    C1 = " << *C1 << "\n");
-  LLVM_DEBUG(dbgs() << "\t    C2 = " << *C2 << "\n");
   const SCEV *N1 = collectUpperBound(Loop1, A1->getType());
   const SCEV *N2 = collectUpperBound(Loop2, A1->getType());
   LLVM_DEBUG(if (N1) dbgs() << "\t    N1 = " << *N1 << "\n");
   LLVM_DEBUG(if (N2) dbgs() << "\t    N2 = " << *N2 << "\n");
-  const SCEV *C2_C1 = SE->getMinusSCEV(C2, C1);
-  const SCEV *C1_C2 = SE->getMinusSCEV(C1, C2);
-  LLVM_DEBUG(dbgs() << "\t    C2 - C1 = " << *C2_C1 << "\n");
-  LLVM_DEBUG(dbgs() << "\t    C1 - C2 = " << *C1_C2 << "\n");
-  if (SE->isKnownNonNegative(A1)) {
-    if (SE->isKnownNonNegative(A2)) {
-      // A1 >= 0 && A2 >= 0
-      if (N1) {
-        // make sure that c2 - c1 <= a1*N1
-        const SCEV *A1N1 = SE->getMulExpr(A1, N1);
-        LLVM_DEBUG(dbgs() << "\t    A1*N1 = " << *A1N1 << "\n");
-        if (isKnownPredicate(CmpInst::ICMP_SGT, C2_C1, A1N1)) {
-          ++SymbolicRDIVindependence;
-          return true;
-        }
-      }
-      if (N2) {
-        // make sure that -a2*N2 <= c2 - c1, or a2*N2 >= c1 - c2
-        const SCEV *A2N2 = SE->getMulExpr(A2, N2);
-        LLVM_DEBUG(dbgs() << "\t    A2*N2 = " << *A2N2 << "\n");
-        if (isKnownPredicate(CmpInst::ICMP_SLT, A2N2, C1_C2)) {
-          ++SymbolicRDIVindependence;
-          return true;
-        }
-      }
-    } else if (SE->isKnownNonPositive(A2)) {
-      // a1 >= 0 && a2 <= 0
-      if (N1 && N2) {
-        // make sure that c2 - c1 <= a1*N1 - a2*N2
-        const SCEV *A1N1 = SE->getMulExpr(A1, N1);
-        const SCEV *A2N2 = SE->getMulExpr(A2, N2);
-        const SCEV *A1N1_A2N2 = SE->getMinusSCEV(A1N1, A2N2);
-        LLVM_DEBUG(dbgs() << "\t    A1*N1 - A2*N2 = " << *A1N1_A2N2 << "\n");
-        if (isKnownPredicate(CmpInst::ICMP_SGT, C2_C1, A1N1_A2N2)) {
-          ++SymbolicRDIVindependence;
-          return true;
-        }
-      }
-      // make sure that 0 <= c2 - c1
-      if (SE->isKnownNegative(C2_C1)) {
-        ++SymbolicRDIVindependence;
-        return true;
-      }
+
+  auto IsKnownSLT = [&](const SCEV *LHS, const SCEV *RHS) {
+    return SE->isKnownPredicate(CmpInst::ICMP_SLT, LHS, RHS);
+  };
+
+  auto Res = [&]() {
+    auto [SrcFirst, SrcLast] = evaluateFirstAndLast(*SE, Src, N1);
+    auto [DstFirst, DstLast] = evaluateFirstAndLast(*SE, Dst, N2);
+    if (SE->isKnownNonNegative(A1)) {
+      if (SE->isKnownNonNegative(A2))
+        return IsKnownSLT(SrcLast, DstFirst) || IsKnownSLT(DstLast, SrcFirst);
+      if (SE->isKnownNonPositive(A2))
+        return IsKnownSLT(SrcLast, DstLast) || IsKnownSLT(DstFirst, SrcFirst);
+    } else if (SE->isKnownNonPositive(A1)) {
+      if (SE->isKnownNonNegative(A2))
+        return IsKnownSLT(SrcFirst, DstFirst) || IsKnownSLT(DstLast, SrcLast);
+      if (SE->isKnownNonPositive(A2))
+        return IsKnownSLT(SrcFirst, DstLast) || IsKnownSLT(DstFirst, SrcLast);
     }
-  } else if (SE->isKnownNonPositive(A1)) {
-    if (SE->isKnownNonNegative(A2)) {
-      // a1 <= 0 && a2 >= 0
-      if (N1 && N2) {
-        // make sure that a1*N1 - a2*N2 <= c2 - c1
-        const SCEV *A1N1 = SE->getMulExpr(A1, N1);
-        const SCEV *A2N2 = SE->getMulExpr(A2, N2);
-        const SCEV *A1N1_A2N2 = SE->getMinusSCEV(A1N1, A2N2);
-        LLVM_DEBUG(dbgs() << "\t    A1*N1 - A2*N2 = " << *A1N1_A2N2 << "\n");
-        if (isKnownPredicate(CmpInst::ICMP_SGT, A1N1_A2N2, C2_C1)) {
-          ++SymbolicRDIVindependence;
-          return true;
-        }
-      }
-      // make sure that c2 - c1 <= 0
-      if (SE->isKnownPositive(C2_C1)) {
-        ++SymbolicRDIVindependence;
-        return true;
-      }
-    } else if (SE->isKnownNonPositive(A2)) {
-      // a1 <= 0 && a2 <= 0
-      if (N1) {
-        // make sure that a1*N1 <= c2 - c1
-        const SCEV *A1N1 = SE->getMulExpr(A1, N1);
-        LLVM_DEBUG(dbgs() << "\t    A1*N1 = " << *A1N1 << "\n");
-        if (isKnownPredicate(CmpInst::ICMP_SGT, A1N1, C2_C1)) {
-          ++SymbolicRDIVindependence;
-          return true;
-        }
-      }
-      if (N2) {
-        // make sure that c2 - c1 <= -a2*N2, or c1 - c2 >= a2*N2
-        const SCEV *A2N2 = SE->getMulExpr(A2, N2);
-        LLVM_DEBUG(dbgs() << "\t    A2*N2 = " << *A2N2 << "\n");
-        if (isKnownPredicate(CmpInst::ICMP_SLT, C1_C2, A2N2)) {
-          ++SymbolicRDIVindependence;
-          return true;
-        }
-      }
-    }
-  }
-  return false;
+    return false;
+  }();
+
+  if (Res)
+    ++SymbolicRDIVindependence;
+  return Res;
 }
 
 // testSIV -
@@ -2373,9 +2197,8 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
     Level = mapSrcLoop(CurSrcLoop);
     bool disproven;
     if (SrcCoeff == DstCoeff)
-      disproven =
-          strongSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop, CurDstLoop,
-                        Level, Result, UnderRuntimeAssumptions);
+      disproven = strongSIVtest(SrcAddRec, DstAddRec, Level, Result,
+                                UnderRuntimeAssumptions);
     else if (SrcCoeff == SE->getNegativeSCEV(DstCoeff))
       disproven = weakCrossingSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop,
                                       CurDstLoop, Level, Result);
@@ -2383,8 +2206,7 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
       disproven = exactSIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst,
                                CurSrcLoop, CurDstLoop, Level, Result);
     return disproven || gcdMIVtest(Src, Dst, Result) ||
-           symbolicRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, CurSrcLoop,
-                            CurDstLoop);
+           symbolicRDIVtest(SrcAddRec, DstAddRec);
   }
   if (SrcAddRec) {
     const SCEV *SrcConst = SrcAddRec->getStart();
@@ -2472,9 +2294,7 @@ bool DependenceInfo::testRDIV(const SCEV *Src, const SCEV *Dst,
     llvm_unreachable("RDIV expected at least one AddRec");
   return exactRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, SrcLoop, DstLoop,
                        Result) ||
-         gcdMIVtest(Src, Dst, Result) ||
-         symbolicRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, SrcLoop,
-                          DstLoop);
+         gcdMIVtest(Src, Dst, Result);
 }
 
 // Tests the single-subscript MIV pair (Src and Dst) for dependence.
@@ -3221,19 +3041,10 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
   // resize Pair to contain as many pairs of subscripts as the delinearization
   // has found, and then initialize the pairs following the delinearization.
   Pair.resize(Size);
-  SCEVMonotonicityChecker MonChecker(SE);
-  const Loop *OutermostLoop = SrcLoop ? SrcLoop->getOutermostLoop() : nullptr;
   for (int I = 0; I < Size; ++I) {
     Pair[I].Src = SrcSubscripts[I];
     Pair[I].Dst = DstSubscripts[I];
     unifySubscriptType(&Pair[I]);
-
-    if (EnableMonotonicityCheck) {
-      if (MonChecker.checkMonotonicity(Pair[I].Src, OutermostLoop).isUnknown())
-        return false;
-      if (MonChecker.checkMonotonicity(Pair[I].Dst, OutermostLoop).isUnknown())
-        return false;
-    }
   }
 
   return true;
@@ -3492,14 +3303,6 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   SmallVector<Subscript, 2> Pair(Pairs);
   Pair[0].Src = SrcEv;
   Pair[0].Dst = DstEv;
-
-  SCEVMonotonicityChecker MonChecker(SE);
-  const Loop *OutermostLoop = SrcLoop ? SrcLoop->getOutermostLoop() : nullptr;
-  if (EnableMonotonicityCheck)
-    if (MonChecker.checkMonotonicity(Pair[0].Src, OutermostLoop).isUnknown() ||
-        MonChecker.checkMonotonicity(Pair[0].Dst, OutermostLoop).isUnknown())
-      return std::make_unique<Dependence>(Src, Dst,
-                                          SCEVUnionPredicate(Assume, *SE));
 
   if (Delinearize) {
     if (tryDelinearize(Src, Dst, Pair)) {
