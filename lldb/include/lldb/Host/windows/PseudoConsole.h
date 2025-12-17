@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Host_Windows_PseudoConsole_H_
-#define liblldb_Host_Windows_PseudoConsole_H_
+#ifndef LIBLLDB_HOST_WINDOWS_PSEUDOCONSOLE_H_
+#define LIBLLDB_HOST_WINDOWS_PSEUDOCONSOLE_H_
 
 #include "llvm/Support/Error.h"
 #include <string>
 
 #define PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE 0x20016
+typedef void *HANDLE;
+typedef void *HPCON;
 
 namespace lldb_private {
 
@@ -31,7 +33,7 @@ public:
   /// \return
   ///     The ConPTY HPCON handle, or INVALID_HANDLE_VALUE if it is currently
   ///     invalid.
-  void *GetPseudoTerminalHandle() { return m_conpty_handle; };
+  HPCON GetPseudoTerminalHandle() { return m_conpty_handle; };
 
   /// The STDOUT read HANDLE accessor.
   ///
@@ -40,7 +42,7 @@ public:
   /// \return
   ///     The STDOUT read HANDLE, or INVALID_HANDLE_VALUE if it is currently
   ///     invalid.
-  void *GetSTDOUTHandle() const { return m_conpty_output; };
+  HANDLE GetSTDOUTHandle() const { return m_conpty_output; };
 
   /// The STDIN write HANDLE accessor.
   ///
@@ -49,13 +51,13 @@ public:
   /// \return
   ///     The STDIN write HANDLE, or INVALID_HANDLE_VALUE if it is currently
   ///     invalid.
-  void *GetSTDINHandle() const { return m_conpty_input; };
+  HANDLE GetSTDINHandle() const { return m_conpty_input; };
 
 protected:
-  void *m_conpty_handle = ((void *)(long long)-1);
-  void *m_conpty_output = ((void *)(long long)-1);
-  void *m_conpty_input = ((void *)(long long)-1);
+  HANDLE m_conpty_handle = ((HANDLE)(long long)-1);
+  HANDLE m_conpty_output = ((HANDLE)(long long)-1);
+  HANDLE m_conpty_input = ((HANDLE)(long long)-1);
 };
 }; // namespace lldb_private
 
-#endif // liblldb_Host_Windows_PseudoConsole_H_
+#endif // LIBLLDB_HOST_WINDOWS_PSEUDOCONSOLE_H_

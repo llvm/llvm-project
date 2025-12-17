@@ -977,7 +977,7 @@ public:
     SetIsDone(false);
     SetIsRunning(true);
 
-    HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+    HANDLE hStdin = (HANDLE)_get_osfhandle(m_read_file.GetDescriptor());
     HANDLE hInterrupt = (HANDLE)_get_osfhandle(m_pipe.GetReadFileDescriptor());
     HANDLE waitHandles[2] = {hStdin, hInterrupt};
 
@@ -1009,9 +1009,10 @@ public:
         if (!ReadFile(hInterrupt, &ch, 1, &read, nullptr) || read != 1)
           goto exit_loop;
 
-        if (ch == 'q')
+        if (ch == eControlOpQuit)
           goto exit_loop;
-        if (ch == 'i' && StateIsRunningState(m_process->GetState()))
+        if (ch == eControlOpInterrupt &&
+            StateIsRunningState(m_process->GetState()))
           m_process->SendAsyncInterrupt();
         break;
       }
@@ -1028,7 +1029,7 @@ public:
     std::lock_guard<std::mutex> guard(m_mutex);
     SetIsDone(true);
     if (m_is_running) {
-      char ch = 'q'; // Send 'q' for quit
+      char ch = eControlOpQuit;
       if (llvm::Error err = m_pipe.Write(&ch, 1).takeError()) {
         LLDB_LOG_ERROR(GetLog(LLDBLog::Process), std::move(err),
                        "Pipe write failed: {0}");
@@ -1038,7 +1039,7 @@ public:
 
   bool Interrupt() override {
     if (m_active) {
-      char ch = 'i'; // Send 'i' for interrupt
+      char ch = eControlOpInterrupt;
       return !errorToBool(m_pipe.Write(&ch, 1).takeError());
     }
     if (StateIsRunningState(m_process->GetState())) {
@@ -1059,6 +1060,11 @@ private:
   Pipe m_pipe;
   std::mutex m_mutex;
   bool m_is_running = false;
+
+  enum ControlOp : char {
+    eControlOpQuit = 'q',
+    eControlOpInterrupt = 'i',
+  };
 };
 
 void ProcessWindows::SetPseudoConsoleHandle(

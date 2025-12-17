@@ -27,6 +27,12 @@
 
 namespace lldb_private {
 
+#if defined(_WIN32)
+using PTY = PseudoConsole;
+#else
+using PTY = PseudoTerminal;
+#endif
+
 // ProcessLaunchInfo
 //
 // Describes any information that is required to launch a process.
@@ -122,15 +128,9 @@ public:
 
   bool MonitorProcess() const;
 
-#ifdef _WIN32
-  PseudoConsole &GetPTY() const { return *m_pty; }
+  PTY &GetPTY() const { return *m_pty; }
 
-  std::shared_ptr<PseudoConsole> GetPTYSP() const { return m_pty; }
-#else
-  PseudoTerminal &GetPTY() const { return *m_pty; }
-
-  std::shared_ptr<PseudoTerminal> GetPTYSP() const { return m_pty; }
-#endif
+  std::shared_ptr<PTY> GetPTYSP() const { return m_pty; }
 
   void SetLaunchEventData(const char *data) { m_event_data.assign(data); }
 
@@ -148,11 +148,7 @@ protected:
   FileSpec m_shell;
   Flags m_flags; // Bitwise OR of bits from lldb::LaunchFlags
   std::vector<FileAction> m_file_actions; // File actions for any other files
-#ifdef _WIN32
-  std::shared_ptr<PseudoConsole> m_pty;
-#else
-  std::shared_ptr<PseudoTerminal> m_pty;
-#endif
+  std::shared_ptr<PTY> m_pty;
   uint32_t m_resume_count = 0; // How many times do we resume after launching
   Host::MonitorChildProcessCallback m_monitor_callback;
   std::string m_event_data; // A string passed to the plugin launch, having no
