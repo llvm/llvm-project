@@ -30,7 +30,8 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK3]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 16
+; DEFAULT-NEXT:    [[TMP13:%.*]] = mul nuw i64 [[TMP9]], 8
+; DEFAULT-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP13]], 2
 ; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP10]]
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i32> poison, i32 [[X]], i64 0
@@ -40,9 +41,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT:       [[VECTOR_BODY]]:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[INDEX]]
-; DEFAULT-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP14:%.*]] = shl nuw i64 [[TMP13]], 3
-; DEFAULT-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP12]], i64 [[TMP14]]
+; DEFAULT-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP12]], i64 [[TMP13]]
 ; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP12]], align 1
 ; DEFAULT-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 8 x i8>, ptr [[TMP15]], align 1
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD]] to <vscale x 8 x i16>
@@ -56,9 +55,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[TMP24:%.*]] = trunc <vscale x 8 x i16> [[TMP22]] to <vscale x 8 x i8>
 ; DEFAULT-NEXT:    [[TMP25:%.*]] = trunc <vscale x 8 x i16> [[TMP23]] to <vscale x 8 x i8>
 ; DEFAULT-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
-; DEFAULT-NEXT:    [[TMP27:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP28:%.*]] = shl nuw i64 [[TMP27]], 3
-; DEFAULT-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[TMP26]], i64 [[TMP28]]
+; DEFAULT-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[TMP26]], i64 [[TMP13]]
 ; DEFAULT-NEXT:    store <vscale x 8 x i8> [[TMP24]], ptr [[TMP26]], align 1
 ; DEFAULT-NEXT:    store <vscale x 8 x i8> [[TMP25]], ptr [[TMP29]], align 1
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP10]]

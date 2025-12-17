@@ -3334,7 +3334,7 @@ as follows:
 ``A<address space>``
     Specifies the address space of objects created by '``alloca``'.
     Defaults to the default address space of 0.
-``p[<flags>][<as>]:<size>:<abi>[:<pref>[:<idx>]]``
+``p[<flags>][<as>][(<name>)]:<size>:<abi>[:<pref>[:<idx>]]``
     This specifies the properties of a pointer in address space ``as``.
     The ``<size>`` parameter specifies the size of the bitwise representation.
     For :ref:`non-integral pointers <nointptrtype>` the representation size may
@@ -3353,7 +3353,11 @@ as follows:
     The optional ``<flags>`` are used to specify properties of pointers in this
     address space: the character ``u`` marks pointers as having an unstable
     representation, and ``e`` marks pointers having external state. See
-    :ref:`Non-Integral Pointer Types <nointptrtype>`.
+    :ref:`Non-Integral Pointer Types <nointptrtype>`. The ``<name>`` is an
+    optional name of that address space, surrounded by ``(`` and ``)``. If the
+    name is specified, it must be unique to that address space and cannot be
+    ``A``, ``G``, or ``P`` which are pre-defined names used to denote alloca,
+    global, and program address space respectively.
 
 ``i<size>:<abi>[:<pref>]``
     This specifies the alignment for an integer type of a given bit
@@ -16289,6 +16293,13 @@ Semantics:
 This function returns the first value raised to the second power with an
 unspecified sequence of rounding operations.
 
+Note that the `powi` function is unusual in that NaN inputs can lead to non-NaN
+results, and this depends on the kind of NaN (quiet vs signaling). Due to how
+:ref:`LLVM treats NaN values <floatnan>` in non-constrained functions, the
+function may non-deterministically treat signaling NaNs as quiet NaNs. For
+example, `powi(QNaN, 0)` returns `1.0`, and `powi(SNaN, 0)` may
+non-deterministically return `1.0` or a NaN.
+
 .. _t_llvm_sin:
 
 '``llvm.sin.*``' Intrinsic
@@ -16850,6 +16861,13 @@ trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
+
+Note that the `pow` function is unusual in that NaN inputs can lead to non-NaN
+results, and this depends on the kind of NaN (quiet vs signaling). Due to how
+:ref:`LLVM treats NaN values <floatnan>` in non-constrained functions, the
+function may non-deterministically treat signaling NaNs as quiet NaNs. For
+example, `pow(QNaN, 0.0)` returns `1.0`, and `pow(SNaN, 0.0)` may
+non-deterministically return `1.0` or a NaN.
 
 .. _int_exp:
 
@@ -24430,7 +24448,7 @@ Examples:
 .. _int_loop_dependence_war_mask:
 
 '``llvm.loop.dependence.war.mask.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -24469,11 +24487,12 @@ Semantics:
 The intrinsic returns ``poison`` if the distance between ``%prtA`` and ``%ptrB``
 is smaller than ``VF * %elementsize`` and either ``%ptrA + VF * %elementSize``
 or ``%ptrB + VF * %elementSize`` wrap.
+
 The element of the result mask is active when loading from %ptrA then storing to
 %ptrB is safe and doesn't result in a write-after-read hazard, meaning that:
 
 * (ptrB - ptrA) <= 0 (guarantees that all lanes are loaded before any stores), or
-* (ptrB - ptrA) >= elementSize * lane (guarantees that this lane is loaded
+* elementSize * lane < (ptrB - ptrA) (guarantees that this lane is loaded
   before the store to the same address)
 
 Examples:
@@ -24486,10 +24505,37 @@ Examples:
       [...]
       call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr align 4 %ptrB, <4 x i1> %loop.dependence.mask)
 
+      ; For the above example, consider the following cases:
+      ;
+      ; 1. ptrA >= ptrB
+      ;
+      ;   load =      <0,1,2,3>     ; uint32_t load = array[i+2];
+      ;  store =  <0,1,2,3>         ; array[i] = store;
+      ;
+      ; This results in an all-true mask, as the load always occurs before the
+      ; store, so it does not depend on any values to be stored.
+      ;
+      ; 2. ptrB - ptrA = 2 * elementSize:
+      ;
+      ;   load =  <0,1,2,3>         ; uint32_t load = array[i];
+      ;  store =      <0,1,2,3>     ; array[i+2] = store;
+      ;
+      ; This results in a mask with the first two lanes active. This is because
+      ; we can only read two lanes before we would read values that have yet to
+      ; be written.
+      ;
+      ; 3. ptrB - ptrA = 4 * elementSize
+      ;
+      ;   load =  <0,1,2,3>         ; uint32_t load = array[i];
+      ;  store =          <0,1,2,3> ; array[i+4] = store;
+      ;
+      ; This results in an all-true mask, as the store is a full vector ahead
+      ; of the load, so all values will be written before any lane is read.
+
 .. _int_loop_dependence_raw_mask:
 
 '``llvm.loop.dependence.raw.mask.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -24533,10 +24579,11 @@ Semantics:
 The intrinsic returns ``poison`` if the distance between ``%prtA`` and ``%ptrB``
 is smaller than ``VF * %elementsize`` and either ``%ptrA + VF * %elementSize``
 or ``%ptrB + VF * %elementSize`` wrap.
+
 The element of the result mask is active when storing to %ptrA then loading from
 %ptrB is safe and doesn't result in aliasing, meaning that:
 
-* abs(ptrB - ptrA) >= elementSize * lane (guarantees that the store of this lane
+* elementSize * lane < abs(ptrB - ptrA) (guarantees that the store of this lane
   occurs before loading from this address), or
 * ptrA == ptrB (doesn't introduce any new hazards that weren't in the scalar
   code)
@@ -24550,6 +24597,32 @@ Examples:
       call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr align 4 %ptrA, <4 x i1> %loop.dependence.mask)
       [...]
       %vecB = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr align 4 %ptrB, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
+
+      ; For the above example, consider the following cases:
+      ;
+      ; 1. ptrA == ptrB
+      ;
+      ;  store = <0,1,2,3>       ; array[i] = store;
+      ;   load = <0,1,2,3>       ; uint32_t load = array[i];
+      ;
+      ; This results in a all-true mask. There is no conflict.
+      ;
+      ; 2. ptrB - ptrA = 2 * elementSize
+      ;
+      ;  store =  <0,1,2,3>      ; array[i] = store;
+      ;   load =      <0,1,2,3>  ; uint32_t load = array[i+2];
+      ;
+      ; This results in a mask with the first two lanes active. In this case,
+      ; only two lanes can be written without overwriting values yet to be read.
+      ;
+      ; 3. ptrB - ptrA = -2 * elementSize
+      ;
+      ;  store =      <0,1,2,3>  ; array[i+2] = store;
+      ;   load =  <0,1,2,3>      ; uint32_t load = array[i];
+      ;
+      ; This also results in a mask with the first two lanes active. This is
+      ; because if any more lanes were active the load would be dependent on the
+      ; completion of the store.
 
 .. _int_experimental_vp_splice:
 
