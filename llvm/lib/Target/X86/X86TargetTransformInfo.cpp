@@ -7202,7 +7202,7 @@ bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
       (ST->hasBMI() || (I->getType()->isVectorTy() && ST->hasSSE2()))) {
     for (auto &Op : I->operands()) {
       // (and X, (not Y)) -> (andn X, Y)
-      if (match(Op.get(), m_Not(m_Value()))) {
+      if (match(Op.get(), m_Not(m_Value())) && !I->getType()->isIntegerTy(8)) {
         Ops.push_back(&Op);
         return true;
       }
