@@ -204,52 +204,56 @@ Error MemAllocatorTy::MemPoolTy::init(MemAllocatorTy *AllocatorIn) {
 }
 
 void MemAllocatorTy::MemPoolTy::printUsage() {
-  auto PrintNum = [](uint64_t Num) {
-    if (Num > 1e9)
-      fprintf(stderr, "%11.2e", float(Num));
-    else
-      fprintf(stderr, "%11" PRIu64, Num);
-  };
+  ODBG_OS([&](llvm::raw_ostream &Os) {
+    auto PrintNum = [&](uint64_t Num) {
+      if (Num > 1e9)
+        Os << llvm::format("%.2e", float(Num));
+      else
+        Os << llvm::format("%11" PRIu64, Num);
+    };
 
-  bool HasPoolAlloc = false;
-  for (auto &Stat : BucketStats) {
-    if (Stat.first > 0 || Stat.second > 0) {
-      HasPoolAlloc = true;
-      break;
-    }
-  }
-
-  DP("MemPool usage for %s, device " DPxMOD "\n", AllocKindToStr(AllocKind),
-     DPxPTR(Allocator->Device));
-
-  if (HasPoolAlloc) {
-    DP("-- AllocMax=%zu(MB), Capacity=%" PRIu32 ", PoolSizeMax=%zu(MB)\n",
-       AllocMax >> 20, BlockCapacity, PoolSizeMax >> 20);
-    DP("-- %18s:%11s%11s%11s\n", "", "NewAlloc", "Reuse", "Hit(%)");
-    for (size_t I = 0; I < Buckets.size(); I++) {
-      const auto &Stat = BucketStats[I];
+    bool HasPoolAlloc = false;
+    for (auto &Stat : BucketStats) {
       if (Stat.first > 0 || Stat.second > 0) {
-        DP("-- Bucket[%10zu]:", BucketParams[I].first);
-        PrintNum(Stat.first);
-        PrintNum(Stat.second);
-        fprintf(stderr, "%11.2f\n",
-                float(Stat.second) / float(Stat.first + Stat.second) * 100);
+        HasPoolAlloc = true;
+        break;
       }
     }
-  } else {
-    DP("-- Not used\n");
-  }
+
+    Os << "MemPool usage for " << AllocKindToStr(AllocKind) << ", device "
+       << Allocator->Device << "\n";
+
+    if (HasPoolAlloc) {
+      Os << "-- AllocMax=" << (AllocMax >> 20)
+         << "(MB), Capacity=" << BlockCapacity
+         << ", PoolSizeMax=" << (PoolSizeMax >> 20) << "(MB)\n";
+      Os << "-- "
+         << llvm::format("%18s:%11s%11s%11s\n", "", "NewAlloc", "Reuse",
+                         "Hit(%)");
+      for (size_t I = 0; I < Buckets.size(); I++) {
+        const auto &Stat = BucketStats[I];
+        if (Stat.first > 0 || Stat.second > 0) {
+          Os << "-- Bucket[" << llvm::format("%10zu", BucketParams[I].first)
+             << "]:";
+          PrintNum(Stat.first);
+          PrintNum(Stat.second);
+          Os << llvm::format("%11.2f\n", float(Stat.second) /
+                                             float(Stat.first + Stat.second) *
+                                             100);
+        }
+      }
+    } else {
+      Os << "-- Not used\n";
+    }
+  });
 }
 
 /// Release resources used in the pool.
 Error MemAllocatorTy::MemPoolTy::deinit() {
-  const int DebugLevel = getDebugLevel();
-  if (DebugLevel > 0)
-    printUsage();
+  printUsage();
   for (auto &Bucket : Buckets) {
     for (auto *Block : Bucket) {
-      if (DebugLevel > 0)
-        Allocator->log(0, Block->Size, AllocKind);
+      ODBG_IF([&](){ Allocator->log(0, Block->Size, AllocKind); });
       auto Err =
           Allocator->deallocFromL0(reinterpret_cast<void *>(Block->Base));
       delete Block;
@@ -461,24 +465,32 @@ Error MemAllocatorTy::deinit() {
     CounterPool.reset(nullptr);
   }
   // Report memory usage if requested.
-  if (getDebugLevel() > 0) {
+  ODBG_OS([&](llvm::raw_ostream &Os) {
     for (size_t Kind = 0; Kind < MaxMemKind; Kind++) {
       auto &Stat = Stats[Kind];
-      DP("Memory usage for %s, device " DPxMOD "\n", AllocKindToStr(Kind),
-         DPxPTR(Device));
+      Os << "Memory usage for " << AllocKindToStr(Kind) << ", device " << Device
+         << "\n";
       if (Stat.NumAllocs[0] == 0 && Stat.NumAllocs[1] == 0) {
-        DP("-- Not used\n");
+        Os << "-- Not used\n";
         continue;
       }
-      DP("-- Allocator: %12s, %12s\n", "Native", "Pool");
-      DP("-- Requested: %12zu, %12zu\n", Stat.Requested[0], Stat.Requested[1]);
-      DP("-- Allocated: %12zu, %12zu\n", Stat.Allocated[0], Stat.Allocated[1]);
-      DP("-- Freed    : %12zu, %12zu\n", Stat.Freed[0], Stat.Freed[1]);
-      DP("-- InUse    : %12zu, %12zu\n", Stat.InUse[0], Stat.InUse[1]);
-      DP("-- PeakUse  : %12zu, %12zu\n", Stat.PeakUse[0], Stat.PeakUse[1]);
-      DP("-- NumAllocs: %12zu, %12zu\n", Stat.NumAllocs[0], Stat.NumAllocs[1]);
+      Os << "-- Allocator: " << llvm::format("%12s","Native")
+         << ", " << llvm::format("%12s","Pool")
+         << "\n";
+      Os << "-- Requested: " << llvm::format("%12zu", Stat.Requested[0])
+         << ", " << llvm::format("%12zu", Stat.Requested[1]) << "\n";
+      Os << "-- Allocated: " << llvm::format("%12zu", Stat.Allocated[0])
+         << ", " << llvm::format("%12zu", Stat.Allocated[1]) << "\n";
+      Os << "-- Freed    : " << llvm::format("%12zu", Stat.Freed[0])
+         << ", " << llvm::format("%12zu", Stat.Freed[1]) << "\n";
+      Os << "-- InUse    : " << llvm::format("%12zu", Stat.InUse[0])
+         << ", " << llvm::format("%12zu", Stat.InUse[1]) << "\n";
+      Os << "-- PeakUse  : " << llvm::format("%12zu", Stat.PeakUse[0])
+         << ", " << llvm::format("%12zu", Stat.PeakUse[1]) << "\n";
+      Os << "-- NumAllocs: " << llvm::format("%12zu", Stat.NumAllocs[0])
+         << ", " << llvm::format("%12zu", Stat.NumAllocs[1]) << "\n";
     }
-  }
+  });
 
   // Mark as deinitialized.
   L0Context = nullptr;
