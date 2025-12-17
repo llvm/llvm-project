@@ -42,6 +42,15 @@ public:
   virtual void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
                                   SourceLocation FreeLoc,
                                   Confidence Confidence) {}
+
+  virtual void reportUseAfterReturn(const Expr *IssueExpr,
+                                    const Expr *EscapeExpr,
+                                    SourceLocation ExpiryLoc,
+                                    Confidence Confidence) {}
+
+  // Suggests lifetime bound annotations for function paramters
+  virtual void suggestAnnotation(const ParmVarDecl *PVD,
+                                 const Expr *EscapeExpr) {}
 };
 
 /// The main entry point for the analysis.
@@ -71,13 +80,13 @@ public:
     return *LoanPropagation;
   }
   LiveOriginsAnalysis &getLiveOrigins() const { return *LiveOrigins; }
-  FactManager &getFactManager() { return FactMgr; }
+  FactManager &getFactManager() { return *FactMgr; }
 
 private:
   AnalysisDeclContext &AC;
   LifetimeSafetyReporter *Reporter;
   LifetimeFactory Factory;
-  FactManager FactMgr;
+  std::unique_ptr<FactManager> FactMgr;
   std::unique_ptr<LiveOriginsAnalysis> LiveOrigins;
   std::unique_ptr<LoanPropagationAnalysis> LoanPropagation;
 };

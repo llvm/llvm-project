@@ -53,6 +53,8 @@ def uimm5gt3 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
   let OperandType = "OPERAND_UIMM5_GT3";
 }
 
+def tuimm5gt3 : TImmLeaf<XLenVT, [{return (Imm > 3) && isUInt<5>(Imm);}]>;
+
 def UImm5Plus1AsmOperand : AsmOperandClass {
   let Name = "UImm5Plus1";
   let RenderMethod = "addImmOperands";
@@ -60,7 +62,7 @@ def UImm5Plus1AsmOperand : AsmOperandClass {
 }
 
 def uimm5_plus1 : RISCVOp, ImmLeaf<XLenVT,
-  [{return (isUInt<5>(Imm) && (Imm != 0)) || (Imm == 32);}]> {
+  [{return Imm >= 1 && Imm <= 32;}]> {
   let ParserMatchClass = UImm5Plus1AsmOperand;
   let EncoderMethod = "getImmOpValueMinus1";
   let DecoderMethod = "decodeUImmPlus1Operand<5>";
@@ -69,12 +71,12 @@ def uimm5_plus1 : RISCVOp, ImmLeaf<XLenVT,
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
-    return (isUInt<5>(Imm) && (Imm != 0)) || (Imm == 32);
+    return Imm >= 1 && Imm <= 32;
   }];
 }
 
 def uimm5ge6_plus1 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
-  [{return (Imm >= 6) && (isUInt<5>(Imm) || (Imm == 32));}]> {
+  [{return Imm >= 6 && Imm <= 32;}]> {
   let ParserMatchClass = UImmAsmOperand<5, "GE6Plus1">;
   let EncoderMethod = "getImmOpValueMinus1";
   let DecoderMethod = "decodeUImmPlus1OperandGE<5,6>";
@@ -83,7 +85,7 @@ def uimm5ge6_plus1 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
-    return (Imm >= 6) && (isUInt<5>(Imm) || (Imm == 32));
+    return Imm >= 6 && Imm <= 32;
   }];
 }
 
@@ -815,6 +817,28 @@ class QCIRVInst48EJ<bits<2> func2, string opcodestr>
   let Inst{6-0} = 0b0011111;
 }
 
+class SFBQC_LI
+    : Pseudo<(outs GPR:$dst),
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev,
+                  simm20_li:$imm), []> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let Size = 8;
+  let Constraints = "$dst = $falsev";
+}
+
+class SFBQC_E_LI
+    : Pseudo<(outs GPR:$dst),
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev,
+                  bare_simm32:$imm), []> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let Size = 10;
+  let Constraints = "$dst = $falsev";
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -1306,6 +1330,11 @@ def PseudoQC_E_SH : PseudoStore<"qc.e.sh">;
 def PseudoQC_E_SW : PseudoStore<"qc.e.sw">;
 } // Predicates = [HasVendorXqcilo, IsRV32]
 
+let Predicates = [HasShortForwardBranchIALU] in {
+def PseudoCCQC_LI : SFBQC_LI;
+def PseudoCCQC_E_LI : SFBQC_E_LI;
+}
+
 //===----------------------------------------------------------------------===//
 // Code Gen Patterns
 //===----------------------------------------------------------------------===//
@@ -1419,8 +1448,8 @@ def : Pat<(i32 (add GPRNoX0:$rd, (mul GPRNoX0:$rs1, simm12_lo:$imm12))),
           (QC_MULIADD GPRNoX0:$rd, GPRNoX0:$rs1, simm12_lo:$imm12)>;
 def : Pat<(i32 (add_like_non_imm12 (shl GPRNoX0:$rs1, (i32 uimm5gt3:$imm)), GPRNoX0:$rs2)),
           (QC_SHLADD GPRNoX0:$rs1, GPRNoX0:$rs2, uimm5gt3:$imm)>;
-def : Pat<(i32 (riscv_shl_add GPRNoX0:$rs1, (i32 uimm5gt3:$imm), GPRNoX0:$rs2)),
-          (QC_SHLADD GPRNoX0:$rs1, GPRNoX0:$rs2, uimm5gt3:$imm)>;
+def : Pat<(i32 (riscv_shl_add GPRNoX0:$rs1, (i32 tuimm5gt3:$imm), GPRNoX0:$rs2)),
+          (QC_SHLADD GPRNoX0:$rs1, GPRNoX0:$rs2, tuimm5gt3:$imm)>;
 } // Predicates = [HasVendorXqciac, IsRV32]
 
 /// Simple arithmetic operations
@@ -1542,7 +1571,7 @@ def: Pat<(i32 (ctlz (not (i32 GPR:$rs1)))), (QC_CLO GPR:$rs1)>;
 let Predicates = [HasVendorXqciint, IsRV32] in
 def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;
 
-let Predicates = [HasVendorXqcicm, NoShortForwardBranchOpt, IsRV32] in {
+let Predicates = [HasVendorXqcicm, NoShortForwardBranch, IsRV32] in {
 def : QCIMVCCPat<SETEQ,  QC_MVEQ>;
 def : QCIMVCCPat<SETNE,  QC_MVNE>;
 def : QCIMVCCPat<SETLT,  QC_MVLT>;

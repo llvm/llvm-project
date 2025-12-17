@@ -704,6 +704,7 @@ else()
   option(LLVM_ENABLE_ASSERTIONS "Enable assertions" ON)
 endif()
 
+option(LLVM_ENABLE_IO_SANDBOX "Enable IO sandboxing in supported tools" ${LLVM_ENABLE_ASSERTIONS})
 option(LLVM_ENABLE_EXPENSIVE_CHECKS "Enable expensive checks" OFF)
 
 set(LLVM_ABI_BREAKING_CHECKS "WITH_ASSERTS" CACHE STRING
@@ -1264,10 +1265,10 @@ endif()
 # Build with _XOPEN_SOURCE on z/OS.
 if (CMAKE_SYSTEM_NAME MATCHES "OS390")
   add_compile_definitions(_XOPEN_SOURCE=600)
+  add_compile_definitions(_XPLATFORM_SOURCE) # Needed e.g. for O_CLOEXEC.
   add_compile_definitions(_OPEN_SYS) # Needed for process information.
   add_compile_definitions(_OPEN_SYS_FILE_EXT) # Needed for EBCDIC I/O.
   add_compile_definitions(_EXT) # Needed for file data.
-  add_compile_definitions(_UNIX03_THREADS) # Multithreading support.
   # Need to build LLVM as ASCII application.
   # This can't be a global setting because other projects may
   # need to be built in EBCDIC mode.
@@ -1292,6 +1293,11 @@ endif(LLVM_USE_HOST_TOOLS)
 if(LLVM_TARGET_IS_CROSSCOMPILE_HOST)
 # Dummy use to avoid CMake Warning: Manually-specified variables were not used
 # (this is a variable that CrossCompile sets on recursive invocations)
+endif()
+
+# Special hack for z/OS for missing POSIX functions
+if (CMAKE_SYSTEM_NAME MATCHES "OS390")
+  include_directories(SYSTEM "${LLVM_MAIN_INCLUDE_DIR}/llvm/Support/SystemZ/zos_wrappers" )
 endif()
 
 if( "${CMAKE_SYSTEM_NAME}" MATCHES SunOS )
@@ -1340,9 +1346,7 @@ if( LLVM_INCLUDE_UTILS )
   add_subdirectory(utils/mlgo-utils)
   add_subdirectory(utils/llvm-test-mustache-spec)
   if( LLVM_INCLUDE_TESTS )
-    set(LLVM_SUBPROJECT_TITLE "Third-Party/Google Test")
     add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
-    set(LLVM_SUBPROJECT_TITLE)
   endif()
 else()
   if ( LLVM_INCLUDE_TESTS )

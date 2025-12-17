@@ -242,13 +242,13 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void swap(thread& __t) _NOEXCEPT { std::swap(__t_, __t.__t_); }
 
-  _LIBCPP_HIDE_FROM_ABI bool joinable() const _NOEXCEPT { return !__libcpp_thread_isnull(&__t_); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool joinable() const _NOEXCEPT { return !__libcpp_thread_isnull(&__t_); }
   void join();
   void detach();
-  _LIBCPP_HIDE_FROM_ABI id get_id() const _NOEXCEPT { return __libcpp_thread_get_id(&__t_); }
-  _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() _NOEXCEPT { return __t_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI id get_id() const _NOEXCEPT { return __libcpp_thread_get_id(&__t_); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() _NOEXCEPT { return __t_; }
 
-  static unsigned hardware_concurrency() _NOEXCEPT;
+  [[__nodiscard__]] static unsigned hardware_concurrency() _NOEXCEPT;
 };
 
 inline _LIBCPP_HIDE_FROM_ABI void swap(thread& __x, thread& __y) _NOEXCEPT { __x.swap(__y); }

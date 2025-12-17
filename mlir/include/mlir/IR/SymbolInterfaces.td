@@ -171,6 +171,8 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
     if (concreteOp.isDeclaration() && concreteOp.isPublic())
       return concreteOp.emitOpError("symbol declaration cannot have public "
              "visibility");
+    if ($_op->getNumResults() != 0)
+      return concreteOp.emitOpError("symbols must not have results");
     auto parent = $_op->getParentOp();
     if (parent && !parent->hasTrait<OpTrait::SymbolTable>() && parent->isRegistered()) {
       return concreteOp.emitOpError("symbol's parent must have the SymbolTable "
@@ -208,7 +210,7 @@ def SymbolUserOpInterface : OpInterface<"SymbolUserOpInterface"> {
     This interface describes an operation that may use a `Symbol`. This
     interface allows for users of symbols to hook into verification and other
     symbol related utilities that are either costly or otherwise disallowed
-    within a traditional operation.
+    within an operation.
   }];
   let cppNamespace = "::mlir";
 
@@ -216,6 +218,25 @@ def SymbolUserOpInterface : OpInterface<"SymbolUserOpInterface"> {
     InterfaceMethod<"Verify the symbol uses held by this operation.",
       "::llvm::LogicalResult", "verifySymbolUses",
       (ins "::mlir::SymbolTableCollection &":$symbolTable)
+    >,
+  ];
+}
+
+def SymbolUserAttrInterface : AttrInterface<"SymbolUserAttrInterface"> {
+  let description = [{
+    This interface describes an attribute that may use a `Symbol`. This
+    interface allows for users of symbols to hook into verification and other
+    symbol related utilities that are either costly or otherwise disallowed
+    within an operation (e.g., recreating symbol users per op verified rather
+    than per symbol table, or querying symbols usage of sibblings).
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<"Verify the symbol uses held by this attribute of this operation.",
+      "::llvm::LogicalResult", "verifySymbolUses",
+      (ins "::mlir::Operation *":$op,
+           "::mlir::SymbolTableCollection &":$symbolTable)
     >,
   ];
 }

@@ -35,6 +35,7 @@ DLWRAP(cuFuncSetAttribute, 3)
 
 // Device info
 DLWRAP(cuDeviceGetName, 3)
+DLWRAP(cuDeviceGetUuid, 2)
 DLWRAP(cuDeviceTotalMem, 2)
 DLWRAP(cuDriverGetVersion, 1)
 
@@ -80,6 +81,7 @@ DLWRAP(cuDevicePrimaryCtxSetFlags, 2)
 DLWRAP(cuDevicePrimaryCtxRetain, 2)
 DLWRAP(cuModuleLoadDataEx, 5)
 DLWRAP(cuOccupancyMaxPotentialBlockSize, 6)
+DLWRAP(cuFuncGetParamInfo, 4)
 
 DLWRAP(cuDeviceCanAccessPeer, 3)
 DLWRAP(cuCtxEnablePeerAccess, 2)

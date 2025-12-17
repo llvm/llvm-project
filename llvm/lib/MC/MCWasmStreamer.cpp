@@ -153,7 +153,7 @@ void MCWasmStreamer::emitIdent(StringRef IdentString) {
 }
 
 void MCWasmStreamer::finishImpl() {
-  emitFrames(nullptr);
+  emitFrames();
 
   this->MCObjectStreamer::finishImpl();
 }

@@ -83,7 +83,6 @@ static const llvm::StringSet<> ValueTraits = {
     "is_pointer_interconvertible_base_of",
     "is_polymorphic",
     "is_reference",
-    "is_replaceable",
     "is_rvalue_reference",
     "is_same",
     "is_scalar",
@@ -286,7 +285,7 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (const auto *TL = Result.Nodes.getNodeAs<TypedefTypeLoc>(Bind)) {
     const NestedNameSpecifierLoc QualLoc = TL->getQualifierLoc();
-    NestedNameSpecifier NNS = QualLoc.getNestedNameSpecifier();
+    const NestedNameSpecifier NNS = QualLoc.getNestedNameSpecifier();
     if (const auto *CTSD = dyn_cast_if_present<ClassTemplateSpecializationDecl>(
             NNS.getAsRecordDecl())) {
       if (isNamedDeclInStdTraitsSet(CTSD, TypeTraits))
@@ -304,7 +303,7 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (const auto *DNTL = Result.Nodes.getNodeAs<DependentNameTypeLoc>(Bind)) {
-    NestedNameSpecifierLoc QualLoc = DNTL->getQualifierLoc();
+    const NestedNameSpecifierLoc QualLoc = DNTL->getQualifierLoc();
     if (checkTemplatedDecl(QualLoc.getNestedNameSpecifier(), TypeTraits))
       EmitTypeWarning(QualLoc, DNTL->getEndLoc(),
                       DNTL->getElaboratedKeywordLoc());

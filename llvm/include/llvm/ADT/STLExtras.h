@@ -1415,6 +1415,18 @@ template <typename ContainerTy> auto make_second_range(ContainerTy &&c) {
       });
 }
 
+/// Return a range that conditionally reverses \p C. The collection is iterated
+/// in reverse if \p ShouldReverse is true (otherwise, it is iterated forwards).
+template <typename ContainerTy>
+[[nodiscard]] auto reverse_conditionally(ContainerTy &&C, bool ShouldReverse) {
+  using IterTy = detail::IterOfRange<ContainerTy>;
+  using ReferenceTy = typename std::iterator_traits<IterTy>::reference;
+  return map_range(zip_equal(reverse(C), C),
+                   [ShouldReverse](auto I) -> ReferenceTy {
+                     return ShouldReverse ? std::get<0>(I) : std::get<1>(I);
+                   });
+}
+
 //===----------------------------------------------------------------------===//
 //     Extra additions to <utility>
 //===----------------------------------------------------------------------===//
@@ -2140,7 +2152,17 @@ void append_range(Container &C, Range &&R) {
 /// Appends all `Values` to container `C`.
 template <typename Container, typename... Args>
 void append_values(Container &C, Args &&...Values) {
-  C.reserve(range_size(C) + sizeof...(Args));
+  if (size_t InitialSize = range_size(C); InitialSize == 0) {
+    // Only reserve if the container is empty. Reserving on a non-empty
+    // container may interfere with the exponential growth strategy, if the
+    // container does not round up the capacity. Consider `append_values` called
+    // repeatedly in a loop: each call would reserve exactly `size + N`, causing
+    // the capacity to grow linearly (e.g., 100 -> 105 -> 110 -> ...) instead of
+    // exponentially (e.g., 100 -> 200 -> ...). Linear growth turns the
+    // amortized O(1) append into O(n) because every few insertions trigger a
+    // reallocation and copy of all elements.
+    C.reserve(InitialSize + sizeof...(Args));
+  }
   // Append all values one by one.
   ((void)C.insert(C.end(), std::forward<Args>(Values)), ...);
 }
@@ -2599,16 +2621,6 @@ template <typename ContainerTy>
 bool hasNItemsOrLess(ContainerTy &&C, unsigned N) {
   return hasNItemsOrLess(adl_begin(C), adl_end(C), N);
 }
-
-/// Returns a raw pointer that represents the same address as the argument.
-///
-/// This implementation can be removed once we move to C++20 where it's defined
-/// as std::to_address().
-///
-/// The std::pointer_traits<>::to_address(p) variations of these overloads has
-/// not been implemented.
-template <class Ptr> auto to_address(const Ptr &P) { return P.operator->(); }
-template <class T> constexpr T *to_address(T *P) { return P; }
 
 // Detect incomplete types, relying on the fact that their size is unknown.
 namespace detail {

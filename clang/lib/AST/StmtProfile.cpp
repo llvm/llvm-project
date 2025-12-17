@@ -323,6 +323,8 @@ void StmtProfiler::VisitReturnStmt(const ReturnStmt *S) {
   VisitStmt(S);
 }
 
+void StmtProfiler::VisitDeferStmt(const DeferStmt *S) { VisitStmt(S); }
+
 void StmtProfiler::VisitGCCAsmStmt(const GCCAsmStmt *S) {
   VisitStmt(S);
   ID.AddBoolean(S->isVolatile());
@@ -966,6 +968,12 @@ void OMPClauseProfiler::VisitOMPXDynCGroupMemClause(
     const OMPXDynCGroupMemClause *C) {
   VisitOMPClauseWithPreInit(C);
   if (Expr *Size = C->getSize())
+    Profiler->VisitStmt(Size);
+}
+void OMPClauseProfiler::VisitOMPDynGroupprivateClause(
+    const OMPDynGroupprivateClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  if (auto *Size = C->getSize())
     Profiler->VisitStmt(Size);
 }
 void OMPClauseProfiler::VisitOMPDoacrossClause(const OMPDoacrossClause *C) {

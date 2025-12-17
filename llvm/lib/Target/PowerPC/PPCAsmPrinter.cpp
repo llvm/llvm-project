@@ -2750,6 +2750,10 @@ void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (isSpecialLLVMGlobalArrayToSkip(GV) || isSpecialLLVMGlobalArrayForStaticInit(GV))
     return;
 
+  // Ignore non-emitted data.
+  if (GV->getSection() == "llvm.metadata")
+    return;
+
   // If the Global Variable has the toc-data attribute, it needs to be emitted
   // when we emit the .toc section.
   if (GV->hasAttribute("toc-data")) {

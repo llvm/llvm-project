@@ -3,8 +3,9 @@
 cert-mem57-cpp
 ==============
 
-The `cert-mem57-cpp` is an aliaes, please see
-`bugprone-default-operator-new-on-overaligned-type <../bugprone/default-operator-new-on-overaligned-type>`_
+The `cert-mem57-cpp` is an alias, please see
+:doc:`bugprone-default-operator-new-on-overaligned-type
+<../bugprone/default-operator-new-on-overaligned-type>`
 for more information.
 
 This check corresponds to the CERT C++ Coding Standard rule

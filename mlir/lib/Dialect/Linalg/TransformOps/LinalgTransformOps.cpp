@@ -176,7 +176,8 @@ static DiagnosedSilenceableFailure reifyMixedParamAndHandleResults(
     if (auto attr = dyn_cast<Attribute>(paramOrHandle)) {
       reified.push_back(cast<IntegerAttr>(attr).getInt());
       continue;
-    } else if (isa<ParamType>(cast<Value>(paramOrHandle).getType())) {
+    }
+    if (isa<ParamType>(cast<Value>(paramOrHandle).getType())) {
       ArrayRef<Attribute> params = state.getParams(cast<Value>(paramOrHandle));
       if (params.size() != 1)
         return transformOp.emitSilenceableError() << "expected a single param";
@@ -997,8 +998,11 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
       // Iterate over the outputs of the producer and over the loop bbArgs and
       // check if any bbArg points to the same value as the producer output. In
       // such case, make the producer output point to the bbArg directly.
-      for (OpOperand &initOperandPtr :
-           cast<DestinationStyleOpInterface>(clone).getDpsInitsMutable()) {
+      auto dpsInterface = dyn_cast<DestinationStyleOpInterface>(clone);
+      if (!dpsInterface)
+        return;
+
+      for (OpOperand &initOperandPtr : dpsInterface.getDpsInitsMutable()) {
         Value producerOperand =
             clone->getOperand(initOperandPtr.getOperandNumber());
         for (BlockArgument containerIterArg :
@@ -1060,7 +1064,7 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
       resultNumber, offsets, sizes);
 
   // Cleanup clone.
-  if (dyn_cast<LoopLikeOpInterface>(containingOp))
+  if (isa<LoopLikeOpInterface>(containingOp))
     rewriter.eraseOp(tileableProducer);
 
   return std::make_tuple(tileAndFuseResult->tiledOps, newContainingOp);

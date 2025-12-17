@@ -31,7 +31,6 @@
 #include <cinttypes>
 #include <cstdint>
 #include <string>
-#include <utility>
 
 using namespace llvm;
 using namespace dwarf;
@@ -247,7 +246,7 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
   // having both the raw value and the pretty-printed value is
   // interesting. These attributes are handled below.
   if (Attr == DW_AT_specification || Attr == DW_AT_abstract_origin ||
-      Attr == DW_AT_call_origin) {
+      Attr == DW_AT_call_origin || Attr == DW_AT_import) {
     if (const char *Name =
             Die.getAttributeValueAsReferencedDie(FormValue).getName(
                 DINameKind::LinkageName))
@@ -704,7 +703,9 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
           DIDumpOptions ChildDumpOpts = DumpOpts;
           ChildDumpOpts.ShowParents = false;
           while (Child) {
-            Child.dump(OS, Indent + 2, ChildDumpOpts);
+            if (DumpOpts.FilterChildTag.empty() ||
+                llvm::is_contained(DumpOpts.FilterChildTag, Child.getTag()))
+              Child.dump(OS, Indent + 2, ChildDumpOpts);
             Child = Child.getSibling();
           }
         }
@@ -852,6 +853,7 @@ bool DWARFAttribute::mayHaveLocationExpr(dwarf::Attribute Attr) {
   // Extensions.
   case DW_AT_GNU_call_site_value:
   case DW_AT_GNU_call_site_target:
+  case DW_AT_GNU_call_site_target_clobbered:
     return true;
   default:
     return false;

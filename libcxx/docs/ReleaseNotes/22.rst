@@ -39,7 +39,8 @@ Implemented Papers
 ------------------
 
 - P2321R2: ``zip`` (`Github <https://llvm.org/PR105169>`__) (The paper is partially implemented. ``zip_transform_view``
-  is implemented in this release)
+  and `adjacent_view` are implemented in this release)
+- P2988R12: ``std::optional<T&>`` (`Github <https://llvm.org/PR148131>`__)
 - P3044R2: sub-``string_view`` from ``string`` (`Github <https://llvm.org/PR148140>`__)
 - P3223R2: Making ``std::istream::ignore`` less surprising (`Github <https://llvm.org/PR148178>`__)
 - P3060R3: Add ``std::views::indices(n)`` (`Github <https://llvm.org/PR148175>`__)
@@ -81,6 +82,13 @@ Improvements and New Features
 - The ``std::{generate, generate_n}`` and ``std::ranges::generate_n`` algorithms have been optimized for segmented
   iterators, resulting in a performance improvement for ``std::deque<short>`` and
   ``std::join_view<vector<vector<short>>>`` iterators.
+- ``std::atomic::wait`` has been refactored to accept more types to use platform native wait functions directly.
+  This is guarded behind the ABI Macro ``_LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE``.
+- The performance of ``vector<bool>::reserve()`` has been improved by up to 2x.
+
+- ``std::for_each`` and ``ranges::for_each`` have been optimized to iterate more efficiently over the associative
+  containers, resulting in performance improvements of up to 2x.
+- The ``num_get::do_get`` integral overloads have been optimized, resulting in a performance improvement of up to 2.8x.
 
 Deprecations and Removals
 -------------------------
@@ -112,6 +120,17 @@ ABI Affecting Changes
   ``__hash_map_hasher`` and ``__hash_map_equal`` have been refactored to use ``_LIBCPP_COMPRESSED_ELEMENT`` instead of
   potentially inheriting from the types they wrap. At this point in time we are not aware of any ABI changes caused by
   this.
+
+- ``ranges::iota_view`` is now aware of ``__int128``. This causes ``iota_view::difference_type`` to change from
+  ``long long`` to ``__int128`` in some cases.
+
+- ``std::allocator`` is now trivially default constructible. The behaviour can be reverted by defining
+  ``_LIBCPP_DEPRECATED_ABI_NON_TRIVIAL_ALLOCATOR``. Please inform the libc++ team if you need this flag, since it will
+  be removed in LLVM 24 if there is no evidence that it's required.
+
+- ``bitset::operator[]`` now returns ``bool``, making libc++ conforming. The behaviour can be reverted by defining
+  ``_LIBCPP_DEPRECATED_ABI_BITSET_CONST_SUBSCRIPT_RETURN_REF``. Please inform the libc++ team if you need this flag,
+  since it will be removed in LLVM 24 if there is no evidence that it's required.
 
 Build System Changes
 --------------------

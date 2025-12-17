@@ -50,7 +50,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <algorithm>
 #include <iterator>
 #include <optional>
 #include <tuple>
@@ -191,6 +190,14 @@ template <typename I, typename E> using ObjectListT = ListT<ObjectT<I, E>>;
 using DirectiveName = llvm::omp::Directive;
 
 template <typename I, typename E> //
+struct StylizedInstanceT {
+  using Variables = ObjectListT<I, E>;
+  using Instance = E;
+  using TupleTrait = std::true_type;
+  std::tuple<Variables, Instance> t;
+};
+
+template <typename I, typename E> //
 struct DefinedOperatorT {
   struct DefinedOpName {
     using WrapperTrait = std::true_type;
@@ -242,7 +249,7 @@ ENUM(MotionExpectation, Present);
 // V5.2: [15.9.1] `task-dependence-type` modifier
 ENUM(DependenceType, Depobj, In, Inout, Inoutset, Mutexinoutset, Out, Sink,
      Source);
-ENUM(Prescriptiveness, Strict, Fallback);
+ENUM(Prescriptiveness, Strict);
 
 template <typename I, typename E> //
 struct LoopIterationT {
@@ -446,7 +453,12 @@ struct CollapseT {
   N v;
 };
 
-// V5.2: [15.8.3] `extended-atomic` clauses
+// [6.0:266]
+template <typename T, typename I, typename E> //
+struct CollectorT {
+  using IncompleteTrait = std::true_type;
+};
+
 template <typename T, typename I, typename E> //
 struct CompareT {
   using EmptyTrait = std::true_type;
@@ -587,10 +599,10 @@ struct DynamicAllocatorsT {
 template <typename T, typename I, typename E> //
 struct DynGroupprivateT {
   ENUM(AccessGroup, Cgroup);
-  using Prescriptiveness = type::Prescriptiveness;
+  ENUM(Fallback, Abort, Default_Mem, Null);
   using Size = E;
   using TupleTrait = std::true_type;
-  std::tuple<OPT(AccessGroup), OPT(Prescriptiveness), Size> t;
+  std::tuple<OPT(AccessGroup), OPT(Fallback), Size> t;
 };
 
 // V5.2: [5.8.4] `enter` clause
@@ -736,6 +748,12 @@ struct IndirectT {
   OPT(InvokedByFptr) v;
 };
 
+// [6.0:265-266]
+template <typename T, typename I, typename E> //
+struct InductorT {
+  using IncompleteTrait = std::true_type;
+};
+
 // V5.2: [14.1.2] `init` clause
 template <typename T, typename I, typename E> //
 struct InitT {
@@ -752,9 +770,9 @@ struct InitT {
 // V5.2: [5.5.4] `initializer` clause
 template <typename T, typename I, typename E> //
 struct InitializerT {
-  using InitializerExpr = E;
+  using List = ListT<type::StylizedInstanceT<I, E>>;
   using WrapperTrait = std::true_type;
-  InitializerExpr v;
+  List v;
 };
 
 // V5.2: [5.5.10] `in_reduction` clause
@@ -1297,7 +1315,7 @@ struct WriteT {
 };
 
 // V6: [6.4.7] Looprange clause
-template <typename T, typename I, typename E> struct LoopRangeT {
+template <typename T, typename I, typename E> struct LooprangeT {
   using Begin = E;
   using End = E;
 
@@ -1324,8 +1342,9 @@ using EmptyClausesT = std::variant<
 
 template <typename T, typename I, typename E>
 using IncompleteClausesT =
-    std::variant<AdjustArgsT<T, I, E>, AppendArgsT<T, I, E>, GraphIdT<T, I, E>,
-                 GraphResetT<T, I, E>, MatchT<T, I, E>, OtherwiseT<T, I, E>,
+    std::variant<AdjustArgsT<T, I, E>, AppendArgsT<T, I, E>,
+                 CollectorT<T, I, E>, GraphIdT<T, I, E>, GraphResetT<T, I, E>,
+                 InductorT<T, I, E>, MatchT<T, I, E>, OtherwiseT<T, I, E>,
                  ReplayableT<T, I, E>, TransparentT<T, I, E>, WhenT<T, I, E>>;
 
 template <typename T, typename I, typename E>
@@ -1335,7 +1354,7 @@ using TupleClausesT =
                  DoacrossT<T, I, E>, DynGroupprivateT<T, I, E>, FromT<T, I, E>,
                  GrainsizeT<T, I, E>, IfT<T, I, E>, InitT<T, I, E>,
                  InReductionT<T, I, E>, LastprivateT<T, I, E>, LinearT<T, I, E>,
-                 LoopRangeT<T, I, E>, MapT<T, I, E>, NumTasksT<T, I, E>,
+                 LooprangeT<T, I, E>, MapT<T, I, E>, NumTasksT<T, I, E>,
                  OrderT<T, I, E>, ReductionT<T, I, E>, ScheduleT<T, I, E>,
                  TaskReductionT<T, I, E>, ToT<T, I, E>>;
 

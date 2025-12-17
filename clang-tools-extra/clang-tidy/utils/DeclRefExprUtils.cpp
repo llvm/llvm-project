@@ -21,10 +21,7 @@ using llvm::SmallPtrSet;
 
 template <typename S>
 static bool isSetDifferenceEmpty(const S &S1, const S &S2) {
-  for (auto E : S1)
-    if (S2.count(E) == 0)
-      return false;
-  return true;
+  return llvm::none_of(S1, [&S2](const auto &E) { return !S2.contains(E); });
 }
 
 // Extracts all Nodes keyed by ID from Matches and inserts them into Nodes.
@@ -63,7 +60,7 @@ static bool hasSameParameterTypes(const CXXMethodDecl &D,
 static const CXXMethodDecl *findConstOverload(const CXXMethodDecl &D) {
   assert(!D.isConst());
 
-  DeclContext::lookup_result LookupResult =
+  const DeclContext::lookup_result LookupResult =
       D.getParent()->lookup(D.getNameInfo().getName());
   if (LookupResult.isSingleResult()) {
     // No overload.

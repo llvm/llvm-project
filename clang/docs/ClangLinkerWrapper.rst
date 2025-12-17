@@ -27,7 +27,7 @@ only for the linker wrapper will be forwarded to the wrapped linker job.
 
 .. code-block:: console
 
-  USAGE: clang-linker-wrapper [options] -- <options to passed to the linker>
+  USAGE: clang-linker-wrapper [options] -- <options to pass to the linker>
 
   OPTIONS:
     --cuda-path=<dir>      Set the system CUDA path

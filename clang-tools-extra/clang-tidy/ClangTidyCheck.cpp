@@ -161,7 +161,7 @@ ClangTidyCheck::OptionsView::getEnumInt(StringRef LocalName,
   if (Iter == CheckOptions.end())
     return std::nullopt;
 
-  StringRef Value = Iter->getValue().Value;
+  const StringRef Value = Iter->getValue().Value;
   StringRef Closest;
   unsigned EditDistance = 3;
   for (const auto &NameAndEnum : Mapping) {
@@ -173,7 +173,7 @@ ClangTidyCheck::OptionsView::getEnumInt(StringRef LocalName,
       EditDistance = 0;
       continue;
     }
-    unsigned Distance =
+    const unsigned Distance =
         Value.edit_distance(NameAndEnum.second, true, EditDistance);
     if (Distance < EditDistance) {
       EditDistance = Distance;

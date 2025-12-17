@@ -45,7 +45,6 @@
 #include "llvm/Analysis/IR2Vec.h"
 #include "llvm/Analysis/IVUsers.h"
 #include "llvm/Analysis/InlineAdvisor.h"
-#include "llvm/Analysis/InlineSizeEstimatorAnalysis.h"
 #include "llvm/Analysis/InstCount.h"
 #include "llvm/Analysis/KernelInfo.h"
 #include "llvm/Analysis/LastRunTrackingAnalysis.h"
@@ -67,6 +66,7 @@
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionDivision.h"
@@ -899,6 +899,11 @@ Expected<bool> parseEntryExitInstrumenterPassOptions(StringRef Params) {
                                             "EntryExitInstrumenter");
 }
 
+Expected<bool> parseDropUnnecessaryAssumesPassOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "drop-deref",
+                                            "DropUnnecessaryAssumes");
+}
+
 Expected<bool> parseLoopExtractorPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "single", "LoopExtractor");
 }
@@ -1585,24 +1590,31 @@ parseBoundsCheckingOptions(StringRef Params) {
       Options.Rt = {
           /*MinRuntime=*/false,
           /*MayReturn=*/true,
+          /*HandlerPreserveAllRegs=*/false,
       };
     } else if (ParamName == "rt-abort") {
       Options.Rt = {
           /*MinRuntime=*/false,
           /*MayReturn=*/false,
+          /*HandlerPreserveAllRegs=*/false,
       };
     } else if (ParamName == "min-rt") {
       Options.Rt = {
           /*MinRuntime=*/true,
           /*MayReturn=*/true,
+          /*HandlerPreserveAllRegs=*/false,
       };
     } else if (ParamName == "min-rt-abort") {
       Options.Rt = {
           /*MinRuntime=*/true,
           /*MayReturn=*/false,
+          /*HandlerPreserveAllRegs=*/false,
       };
     } else if (ParamName == "merge") {
       Options.Merge = true;
+    } else if (ParamName == "handler-preserve-all-regs") {
+      if (Options.Rt)
+        Options.Rt->HandlerPreserveAllRegs = true;
     } else {
       StringRef ParamEQ;
       StringRef Val;

@@ -147,9 +147,8 @@ static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_sub_ps(__m256 __a,
 ///    A 256-bit vector of [4 x double] containing the right source operand.
 /// \returns A 256-bit vector of [4 x double] containing the alternating sums
 ///    and differences between both operands.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_addsub_pd(__m256d __a, __m256d __b)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_addsub_pd(__m256d __a, __m256d __b) {
   return (__m256d)__builtin_ia32_addsubpd256((__v4df)__a, (__v4df)__b);
 }
 
@@ -166,9 +165,8 @@ _mm256_addsub_pd(__m256d __a, __m256d __b)
 ///    A 256-bit vector of [8 x float] containing the right source operand.
 /// \returns A 256-bit vector of [8 x float] containing the alternating sums and
 ///    differences between both operands.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_addsub_ps(__m256 __a, __m256 __b)
-{
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_addsub_ps(__m256 __a, __m256 __b) {
   return (__m256)__builtin_ia32_addsubps256((__v8sf)__a, (__v8sf)__b);
 }
 
@@ -335,10 +333,8 @@ static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_mul_ps(__m256 __a,
 ///    A 256-bit vector of [4 x double].
 /// \returns A 256-bit vector of [4 x double] containing the square roots of the
 ///    values in the operand.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_sqrt_pd(__m256d __a)
-{
-  return (__m256d)__builtin_ia32_sqrtpd256((__v4df)__a);
+static __inline __m256d __DEFAULT_FN_ATTRS _mm256_sqrt_pd(__m256d __a) {
+  return __builtin_elementwise_sqrt(__a);
 }
 
 /// Calculates the square roots of the values in a 256-bit vector of
@@ -352,10 +348,8 @@ _mm256_sqrt_pd(__m256d __a)
 ///    A 256-bit vector of [8 x float].
 /// \returns A 256-bit vector of [8 x float] containing the square roots of the
 ///    values in the operand.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_sqrt_ps(__m256 __a)
-{
-  return (__m256)__builtin_ia32_sqrtps256((__v8sf)__a);
+static __inline __m256 __DEFAULT_FN_ATTRS _mm256_sqrt_ps(__m256 __a) {
+  return __builtin_elementwise_sqrt(__a);
 }
 
 /// Calculates the reciprocal square roots of the values in a 256-bit
@@ -789,9 +783,8 @@ static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_hsub_ps(__m256 __a,
 ///      1: Bits [127:64] of the source are copied to bits [127:64] of the
 ///         returned vector.
 /// \returns A 128-bit vector of [2 x double] containing the copied values.
-static __inline __m128d __DEFAULT_FN_ATTRS128
-_mm_permutevar_pd(__m128d __a, __m128i __c)
-{
+static __inline __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_permutevar_pd(__m128d __a, __m128i __c) {
   return (__m128d)__builtin_ia32_vpermilvarpd((__v2df)__a, (__v2di)__c);
 }
 
@@ -828,9 +821,8 @@ _mm_permutevar_pd(__m128d __a, __m128i __c)
 ///      1: Bits [255:192] of the source are copied to bits [255:192] of the
 ///    returned vector.
 /// \returns A 256-bit vector of [4 x double] containing the copied values.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_permutevar_pd(__m256d __a, __m256i __c)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_permutevar_pd(__m256d __a, __m256i __c) {
   return (__m256d)__builtin_ia32_vpermilvarpd256((__v4df)__a, (__v4di)__c);
 }
 
@@ -883,9 +875,8 @@ _mm256_permutevar_pd(__m256d __a, __m256i __c)
 ///      11: Bits [127:96] of the source are copied to bits [127:96] of the
 ///          returned vector.
 /// \returns A 128-bit vector of [4 x float] containing the copied values.
-static __inline __m128 __DEFAULT_FN_ATTRS128
-_mm_permutevar_ps(__m128 __a, __m128i __c)
-{
+static __inline __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_permutevar_ps(__m128 __a, __m128i __c) {
   return (__m128)__builtin_ia32_vpermilvarps((__v4sf)__a, (__v4si)__c);
 }
 
@@ -974,9 +965,8 @@ _mm_permutevar_ps(__m128 __a, __m128i __c)
 ///      11: Bits [255:224] of the source are copied to bits [255:224] of the
 ///          returned vector.
 /// \returns A 256-bit vector of [8 x float] containing the copied values.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_permutevar_ps(__m256 __a, __m256i __c)
-{
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_permutevar_ps(__m256 __a, __m256i __c) {
   return (__m256)__builtin_ia32_vpermilvarps256((__v8sf)__a, (__v8si)__c);
 }
 
@@ -2196,9 +2186,8 @@ _mm256_cvtepi32_ps(__m256i __a) {
 /// \param __a
 ///    A 256-bit vector of [4 x double].
 /// \returns A 128-bit vector of [4 x float] containing the converted values.
-static __inline __m128 __DEFAULT_FN_ATTRS
-_mm256_cvtpd_ps(__m256d __a)
-{
+static __inline __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvtpd_ps(__m256d __a) {
   return (__m128)__builtin_ia32_cvtpd2ps256((__v4df) __a);
 }
 
@@ -3616,9 +3605,7 @@ _mm256_undefined_pd(void)
 /// This intrinsic has no corresponding instruction.
 ///
 /// \returns A 256-bit vector of [8 x float] containing undefined values.
-static __inline__ __m256 __DEFAULT_FN_ATTRS
-_mm256_undefined_ps(void)
-{
+static __inline__ __m256 __DEFAULT_FN_ATTRS _mm256_undefined_ps(void) {
   return (__m256)__builtin_ia32_undef256();
 }
 
