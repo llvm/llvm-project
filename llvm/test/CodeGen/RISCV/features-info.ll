@@ -141,6 +141,7 @@
 ; CHECK-NEXT:   short-forward-branch-iload       - Enable short forward branch optimization for load instructions.
 ; CHECK-NEXT:   short-forward-branch-iminmax     - Enable short forward branch optimization for MIN,MAX instructions in Zbb.
 ; CHECK-NEXT:   short-forward-branch-imul        - Enable short forward branch optimization for MUL instruction.
+; CHECK-NEXT:   short-forward-branch-iqcload     - Enable short forward branch optimization for QC load instructions.
 ; CHECK-NEXT:   shtvala                          - 'Shtvala' (htval provides all needed values).
 ; CHECK-NEXT:   shvsatpa                         - 'Shvsatpa' (vsatp supports all modes supported by satp).
 ; CHECK-NEXT:   shvstvala                        - 'Shvstvala' (vstval provides all needed values).
