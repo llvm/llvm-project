@@ -102,6 +102,8 @@ add_clang_library(clangDriver
   clangBasic
   clangCAS
   clangFrontend
+  clangSerialization
+  clangLex
   clangOptions
   ${system_libs}
   )
