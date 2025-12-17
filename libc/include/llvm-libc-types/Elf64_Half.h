@@ -1,4 +1,4 @@
-//===-- Definition of macros from elf.h -----------------------------------===//
+//===-- Definition of Elf64_Half type -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_MACROS_ELF_MACROS_H
-#define LLVM_LIBC_MACROS_ELF_MACROS_H
+#ifndef LLVM_LIBC_TYPES_ELF64_HALF_H
+#define LLVM_LIBC_TYPES_ELF64_HALF_H
 
-#define EI_NIDENT 16
+#include "../llvm-libc-macros/stdint-macros.h"
 
-#endif // LLVM_LIBC_MACROS_ELF_MACROS_H
+typedef uint16_t Elf64_Half;
+
+#endif // LLVM_LIBC_TYPES_ELF64_HALF_H

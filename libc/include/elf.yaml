@@ -1,9 +1,165 @@
 header: elf.h
 header_template: elf.h.def
 standards:
-  - Linux
-macros: []
-types: []
+  - svid
+macros:
+  - macro_name: EI_MAG0
+    macro_value: 0
+  - macro_name: EI_MAG1
+    macro_value: 1
+  - macro_name: EI_MAG2
+    macro_value: 2
+  - macro_name: EI_MAG3
+    macro_value: 3
+  - macro_name: EI_CLASS
+    macro_value: 4
+  - macro_name: EI_DATA
+    macro_value: 5
+  - macro_name: EI_VERSION
+    macro_value: 6
+  - macro_name: EI_OSABI
+    macro_value: 7
+  - macro_name: EI_ABIVERSION
+    macro_value: 8
+  - macro_name: EI_PAD
+    macro_value: 9
+  - macro_name: EI_NIDENT
+    macro_value: 16
+  - macro_name: ELFMAG0
+    macro_value: '0x7f'
+  - macro_name: ELFMAG1
+    macro_value: "'E'"
+  - macro_name: ELFMAG2
+    macro_value: "'L'"
+  - macro_name: ELFMAG3
+    macro_value: "'F'"
+  - macro_name: ELFMAG
+    macro_value: '"\177ELF"'
+  - macro_name: SELFMAG
+    macro_value: 4
+  - macro_name: ELFCLASSNONE
+    macro_value: 0
+  - macro_name: ELFCLASS32
+    macro_value: 1
+  - macro_name: ELFCLASS64
+    macro_value: 2
+  - macro_name: ELFDATANONE
+    macro_value: 0
+  - macro_name: ELFDATA2LSB
+    macro_value: 1
+  - macro_name: ELFDATA2MSB
+    macro_value: 2
+  - macro_name: ELFOSABI_NONE
+    macro_value: 0
+  - macro_name: ET_NONE
+    macro_value: 0
+  - macro_name: ET_REL
+    macro_value: 1
+  - macro_name: ET_EXEC
+    macro_value: 2
+  - macro_name: ET_DYN
+    macro_value: 3
+  - macro_name: ET_CORE
+    macro_value: 4
+  - macro_name: ET_LOOS
+    macro_value: '0xfe00'
+  - macro_name: ET_HIOS
+    macro_value: '0xfeff'
+  - macro_name: ET_LOPROC
+    macro_value: '0xff00'
+  - macro_name: ET_HIPROC
+    macro_value: '0xffff'
+  - macro_name: EM_NONE
+    macro_value: 0
+  - macro_name: EV_NONE
+    macro_value: 0
+  - macro_name: EV_CURRENT
+    macro_value: 1
+  - macro_name: PT_NULL
+    macro_value: 0
+  - macro_name: PT_LOAD
+    macro_value: 1
+  - macro_name: PT_DYNAMIC
+    macro_value: 2
+  - macro_name: PT_INTERP
+    macro_value: 3
+  - macro_name: PT_NOTE
+    macro_value: 4
+  - macro_name: PT_SHLIB
+    macro_value: 5
+  - macro_name: PT_PHDR
+    macro_value: 6
+  - macro_name: PT_TLS
+    macro_value: 7
+  - macro_name: PT_LOOS
+    macro_value: '0x60000000'
+  - macro_name: PT_HIOS
+    macro_value: '0x6fffffff'
+  - macro_name: PT_LOPROC
+    macro_value: '0x70000000'
+  - macro_name: PT_HIPROC
+    macro_value: '0x7fffffff'
+  - macro_name: PF_X
+    macro_value: '0x1'
+  - macro_name: PF_W
+    macro_value: '0x2'
+  - macro_name: PF_R
+    macro_value: '0x4'
+  - macro_name: PF_MASKOS
+    macro_value: '0x0ff00000'
+  - macro_name: PF_MASKPROC
+    macro_value: '0xf0000000'
+  # Notes used in ET_CORE.
+  - macro_name: NT_PRSTATUS
+    macro_value: 1
+    standards:
+      - linux
+  - macro_name: NT_PRFPREG
+    macro_value: 2
+    standards:
+      - linux
+  - macro_name: NT_PRPSINFO
+    macro_value: 3
+    standards:
+      - linux
+  - macro_name: NT_TASKSTRUCT
+    macro_value: 4
+    standards:
+      - linux
+  - macro_name: NT_PLATFORM
+    macro_value: 5
+    standards:
+      - linux
+  - macro_name: NT_AUXV
+    macro_value: 6
+    standards:
+      - linux
+  # Notes used by GNU toolchain.
+  - macro_name: NT_GNU_BUILD_ID
+    macro_value: 3
+    standards:
+      - gnu
+types:
+  - type_name: Elf32_Addr
+  - type_name: Elf32_Half
+  - type_name: Elf32_Off
+  - type_name: Elf32_Sword
+  - type_name: Elf32_Word
+  - type_name: Elf32_Lword
+  - type_name: Elf32_Ehdr
+  - type_name: Elf32_Phdr
+  - type_name: Elf32_Nhdr
+  - type_name: Elf64_Addr
+  - type_name: Elf64_Half
+  - type_name: Elf64_Off
+  - type_name: Elf64_Sword
+  - type_name: Elf64_Sxword
+  - type_name: Elf64_Word
+  - type_name: Elf64_Lword
+  - type_name: Elf64_Xword
+  - type_name: Elf64_Ehdr
+  - type_name: Elf64_Phdr
+  - type_name: Elf64_Nhdr
 enums: []
 objects: []
 functions: []
