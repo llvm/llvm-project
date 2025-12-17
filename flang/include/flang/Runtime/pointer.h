@@ -92,11 +92,11 @@ int RTDECL(PointerCheckLengthParameter)(Descriptor &,
 #ifdef RT_DEVICE_COMPILATION
 int RTDECL(PointerAllocate)(Descriptor &, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
-    int sourceLine = 0, MemmoveFct memmoveFct = &MemcpyWrapper);
+    int sourceLine = 0, MemcpyFct memcpyFct = &MemcpyWrapper);
 #else
 int RTDECL(PointerAllocate)(Descriptor &, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
-    int sourceLine = 0, MemmoveFct memmoveFct = &Fortran::runtime::memcpy);
+    int sourceLine = 0, MemcpyFct memcpyFct = &Fortran::runtime::memcpy);
 #endif
 int RTDECL(PointerAllocateSource)(Descriptor &, const Descriptor &source,
     bool hasStat = false, const Descriptor *errMsg = nullptr,

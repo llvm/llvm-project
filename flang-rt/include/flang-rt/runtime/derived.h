@@ -26,7 +26,7 @@ class Terminator;
 // Returns a STAT= code (0 when all's well).
 RT_API_ATTRS int Initialize(const Descriptor &, const typeInfo::DerivedType &,
     Terminator &, bool hasStat = false, const Descriptor *errMsg = nullptr,
-    MemmoveFct memmoveFct = nullptr);
+    MemcpyFct memcpyFct = nullptr);
 
 // Initializes an object clone from the original object.
 // Each allocatable member of the clone is allocated with the same bounds as

@@ -46,7 +46,7 @@ int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, int64_t *stream,
     const char *sourceFile, int sourceLine, bool deviceInit) {
   // Perform the standard allocation.
   int stat{RTNAME(AllocatableAllocate)(desc, stream, hasStat, errMsg,
-      sourceFile, sourceLine, deviceInit ? &MemmoveHostToDevice : nullptr)};
+      sourceFile, sourceLine, deviceInit ? &MemcpyHostToDevice : nullptr)};
   if (pinned) {
     // Set pinned according to stat. More infrastructre is needed to set it
     // closer to the actual allocation call.

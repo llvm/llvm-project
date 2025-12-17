@@ -27,7 +27,7 @@ int RTDEF(CUFPointerAllocate)(Descriptor &desc, int64_t *stream, bool *pinned,
     int sourceLine, bool deviceInit) {
   // Perform the standard allocation.
   int stat{RTNAME(PointerAllocate)(desc, hasStat, errMsg, sourceFile,
-      sourceLine, deviceInit ? &MemmoveHostToDevice : nullptr)};
+      sourceLine, deviceInit ? &MemcpyHostToDevice : nullptr)};
   if (pinned) {
     // Set pinned according to stat. More infrastructre is needed to set it
     // closer to the actual allocation call.

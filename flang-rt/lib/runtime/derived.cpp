@@ -33,9 +33,9 @@ static RT_API_ATTRS void GetComponentExtents(SubscriptValue (&extents)[maxRank],
 
 RT_API_ATTRS int Initialize(const Descriptor &instance,
     const typeInfo::DerivedType &derived, Terminator &terminator, bool,
-    const Descriptor *, MemmoveFct memmoveFct) {
+    const Descriptor *, MemcpyFct memcpyFct) {
   WorkQueue workQueue{terminator};
-  int status{workQueue.BeginInitialize(instance, derived, memmoveFct)};
+  int status{workQueue.BeginInitialize(instance, derived, memcpyFct)};
   return status == StatContinue ? workQueue.Run() : status;
 }
 
@@ -73,7 +73,7 @@ RT_API_ATTRS int InitializeTicket::Continue(WorkQueue &workQueue) {
       // Explicit initialization of data pointers and
       // non-allocatable non-automatic components
       std::size_t bytes{component_->SizeInBytes(instance_)};
-      memmoveFct_(rawComponent, init, bytes);
+      memcpyFct_(rawComponent, init, bytes);
     } else if (component_->genre() == typeInfo::Component::Genre::Pointer ||
         component_->genre() == typeInfo::Component::Genre::PointerDevice) {
       // Data pointers without explicit initialization are established
@@ -111,20 +111,20 @@ RT_API_ATTRS int InitializeTicket::Continue(WorkQueue &workQueue) {
             chunk = done;
           }
           char *uninitialized{rawInstance + done * *stride};
-          memmoveFct_(uninitialized, rawInstance, chunk * *stride);
+          memcpyFct_(uninitialized, rawInstance, chunk * *stride);
           done += chunk;
         }
       } else {
         for (std::size_t done{1}; done < elements_; ++done) {
           char *uninitialized{rawInstance + done * *stride};
-          memmoveFct_(uninitialized, rawInstance, elementBytes);
+          memcpyFct_(uninitialized, rawInstance, elementBytes);
         }
       }
     } else { // one at a time with subscription
       for (Elementwise::Advance(); !Elementwise::IsComplete();
           Elementwise::Advance()) {
         char *element{instance_.Element<char>(subscripts_)};
-        memmoveFct_(element, rawInstance, elementBytes);
+        memcpyFct_(element, rawInstance, elementBytes);
       }
     }
   }
