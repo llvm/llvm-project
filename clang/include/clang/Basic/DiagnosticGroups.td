@@ -634,6 +634,7 @@ Warn about designated initializers with some fields missing (only in C++).
 // but missing-designated-field-initializers can be turned off to match old clang behavior.
 def MissingFieldInitializers : DiagGroup<"missing-field-initializers",
                                          [MissingDesignatedFieldInitializers]>;
+def IndexStore : DiagGroup<"index-store">;
 def ModuleLock : DiagGroup<"module-lock">;
 def ModuleBuild : DiagGroup<"module-build">;
 def ModuleImport : DiagGroup<"module-import">;
@@ -642,7 +643,7 @@ def ModuleConflict : DiagGroup<"module-conflict">;
 def ModuleFileExtension : DiagGroup<"module-file-extension">;
 def ModuleIncludeDirectiveTranslation : DiagGroup<"module-include-translation">;
 def ModuleMap : DiagGroup<"module-map">;
-def IndexStore : DiagGroup<"index-store">;
+def ModulesDriver : DiagGroup<"modules-driver">;
 def RoundTripCC1Args : DiagGroup<"round-trip-cc1-args">;
 def NewlineEOF : DiagGroup<"newline-eof">;
 def Nullability : DiagGroup<"nullability">;
