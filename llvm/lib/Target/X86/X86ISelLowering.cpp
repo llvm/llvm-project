@@ -388,10 +388,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i8   , Legal);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1   , Expand);
 
-  setOperationAction(ISD::FREM             , MVT::f32  , Expand);
-  setOperationAction(ISD::FREM             , MVT::f64  , Expand);
-  setOperationAction(ISD::FREM             , MVT::f80  , Expand);
-  setOperationAction(ISD::FREM             , MVT::f128 , Expand);
+  setOperationAction(ISD::FREM, MVT::f32, LibCall);
+  setOperationAction(ISD::FREM, MVT::f64, LibCall);
+  setOperationAction(ISD::FREM, MVT::f80, LibCall);
+  setOperationAction(ISD::FREM, MVT::f128, LibCall);
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasX87()) {
     setOperationAction(ISD::GET_ROUNDING   , MVT::i32  , Custom);
@@ -2642,7 +2642,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
           ISD::FTANH,  ISD::STRICT_FTANH,
           // TODO: Add ISD:::STRICT_FMODF too once implemented.
           ISD::FMODF})
-      if (isOperationExpand(Op, MVT::f32))
+     if (isOperationExpandOrLibCall(Op, MVT::f32))
         setOperationAction(Op, MVT::f32, Promote);
   // clang-format on
 
@@ -59673,6 +59673,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case ISD::FADD:
     case ISD::FSUB:
     case ISD::FMUL:
+    case X86ISD::FMAX:
+    case X86ISD::FMIN:
       if (!IsSplat && (VT.is256BitVector() ||
                        (VT.is512BitVector() && Subtarget.useAVX512Regs()))) {
         SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
