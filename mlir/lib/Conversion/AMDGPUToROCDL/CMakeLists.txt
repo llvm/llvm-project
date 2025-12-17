@@ -8,6 +8,7 @@ add_mlir_conversion_library(MLIRAMDGPUToROCDL
   MLIRConversionPassIncGen
 
   LINK_COMPONENTS
+  AMDGPUUtils
   Core
 
   LINK_LIBS PUBLIC
