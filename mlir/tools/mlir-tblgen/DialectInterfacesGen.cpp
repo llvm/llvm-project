@@ -160,7 +160,7 @@ static void emitConstructor(const DialectInterface &interface,
 
   ios.indent(2);
   ios << llvm::formatv("{0}(::mlir::Dialect *dialect) : Base(dialect) {{}\n",
-                      interface.getName());
+                       interface.getName());
 }
 
 void DialectInterfaceGenerator::emitInterfaceDecl(
