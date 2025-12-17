@@ -18,7 +18,7 @@ define void @test() {
 ; CHECK:       bb8:
 ; CHECK-NEXT:    [[VAR9:%.*]] = load atomic i32, ptr addrspace(1) poison unordered, align 8, !range [[RNG0]], !invariant.load [[META1]], !noundef [[META1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[VAR9]] to i64
-; CHECK-NEXT:    [[VAR10:%.*]] = icmp ult i64 [[INDVARS_IV]], [[TMP0]]
+; CHECK-NEXT:    [[VAR10:%.*]] = icmp samesign ult i64 [[INDVARS_IV]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[VAR10]], label [[BB12]], label [[BB11:%.*]]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    ret void

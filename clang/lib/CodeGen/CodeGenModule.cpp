@@ -66,11 +66,12 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Hash.h"
 #include "llvm/Support/TimeProfiler.h"
-#include "llvm/Support/xxhash.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/TargetParser/X86TargetParser.h"
+#include "llvm/Transforms/Instrumentation/KCFI.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include <optional>
 #include <set>
@@ -377,15 +378,11 @@ static void checkDataLayoutConsistency(const TargetInfo &Target,
     Check("bfloat", llvm::Type::getBFloatTy(Context), Target.BFloat16Align);
   Check("float", llvm::Type::getFloatingPointTy(Context, *Target.FloatFormat),
         Target.FloatAlign);
-  // FIXME: AIX specifies wrong double alignment in DataLayout
-  if (!Triple.isOSAIX()) {
-    Check("double",
-          llvm::Type::getFloatingPointTy(Context, *Target.DoubleFormat),
-          Target.DoubleAlign);
-    Check("long double",
-          llvm::Type::getFloatingPointTy(Context, *Target.LongDoubleFormat),
-          Target.LongDoubleAlign);
-  }
+  Check("double", llvm::Type::getFloatingPointTy(Context, *Target.DoubleFormat),
+        Target.DoubleAlign);
+  Check("long double",
+        llvm::Type::getFloatingPointTy(Context, *Target.LongDoubleFormat),
+        Target.LongDoubleAlign);
   if (Target.hasFloat128Type())
     Check("__float128", llvm::Type::getFP128Ty(Context), Target.Float128Align);
   if (Target.hasIbm128Type())
@@ -1272,6 +1269,12 @@ void CodeGenModule::Release() {
                                 CodeGenOpts.PatchableFunctionEntryOffset);
     if (CodeGenOpts.SanitizeKcfiArity)
       getModule().addModuleFlag(llvm::Module::Override, "kcfi-arity", 1);
+    // Store the hash algorithm choice for use in LLVM passes
+    getModule().addModuleFlag(
+        llvm::Module::Override, "kcfi-hash",
+        llvm::MDString::get(
+            getLLVMContext(),
+            llvm::stringifyKCFIHashAlgorithm(CodeGenOpts.SanitizeKcfiHash)));
   }
 
   if (CodeGenOpts.CFProtectionReturn &&
@@ -2450,8 +2453,8 @@ llvm::ConstantInt *CodeGenModule::CreateKCFITypeId(QualType T, StringRef Salt) {
   if (getCodeGenOpts().SanitizeCfiICallGeneralizePointers)
     Out << ".generalized";
 
-  return llvm::ConstantInt::get(Int32Ty,
-                                static_cast<uint32_t>(llvm::xxHash64(OutName)));
+  return llvm::ConstantInt::get(
+      Int32Ty, llvm::getKCFITypeID(OutName, getCodeGenOpts().SanitizeKcfiHash));
 }
 
 void CodeGenModule::SetLLVMFunctionAttributes(GlobalDecl GD,
@@ -3205,7 +3208,8 @@ void CodeGenModule::finalizeKCFITypes() {
       continue;
 
     std::string Asm = (".weak __kcfi_typeid_" + Name + "\n.set __kcfi_typeid_" +
-                       Name + ", " + Twine(Type->getZExtValue()) + "\n")
+                       Name + ", " + Twine(Type->getZExtValue()) + " /* " +
+                       Twine(Type->getSExtValue()) + " */\n")
                           .str();
     M.appendModuleInlineAsm(Asm);
   }

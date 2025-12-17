@@ -533,7 +533,8 @@ void ClangTidyDiagnosticConsumer::forwardDiagnostic(const Diagnostic &Info) {
       Builder << Qualifiers::fromOpaqueValue(Info.getRawArg(Index));
       break;
     case clang::DiagnosticsEngine::ak_qualtype:
-      Builder << QualType::getFromOpaquePtr((void *)Info.getRawArg(Index));
+      Builder << QualType::getFromOpaquePtr(
+          reinterpret_cast<void *>(Info.getRawArg(Index)));
       break;
     case clang::DiagnosticsEngine::ak_declarationname:
       Builder << DeclarationName::getFromOpaqueInteger(Info.getRawArg(Index));
