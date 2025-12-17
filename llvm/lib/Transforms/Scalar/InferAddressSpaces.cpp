@@ -250,10 +250,7 @@ class InferAddressSpacesImpl {
 
   unsigned getPredicatedAddrSpace(const Value &PtrV,
                                   const Value *UserCtx) const;
-  unsigned
-  getLoadPtrAddrSpaceImpl(const LoadInst *LI, unsigned NewAS, MemoryAccess *MA,
-                          ValueToAddrSpaceMapTy &InferredAddrSpace,
-                          SmallPtrSet<MemoryAccess *, 8> &Visited) const;
+
   unsigned getLoadPtrAddrSpace(const LoadInst *LI,
                                ValueToAddrSpaceMapTy &InferredAddrSpace) const;
 
@@ -1057,98 +1054,29 @@ InferAddressSpacesImpl::getPredicatedAddrSpace(const Value &Ptr,
   return UninitializedAddressSpace;
 }
 
-static bool isReallyAClobber(const Value *Ptr, MemoryDef *Def,
+static bool isReallyAClobber(const MemoryLocation &Loc, MemoryDef *Def,
                              BatchAAResults *AA,
                              const TargetTransformInfo *TTI) {
   Instruction *DI = Def->getMemoryInst();
 
-  if (auto *CB = dyn_cast<CallBase>(DI);
-      CB && CB->onlyAccessesInaccessibleMemory())
-    return false;
-
   if (isa<FenceInst>(DI))
     return false;
 
-  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(DI);
-      II && TTI->isArtificialClobber(II->getIntrinsicID())) {
-    return false;
+  if (auto *CB = dyn_cast<CallBase>(DI)) {
+    if (CB->onlyAccessesInaccessibleMemory())
+      return false;
+    if (auto *II = dyn_cast<IntrinsicInst>(CB))
+      if (TTI->isArtificialClobber(II->getIntrinsicID()))
+        return false;
   }
 
   // Ignore atomics not aliasing with the original load, any atomic is a
   // universal MemoryDef from MSSA's point of view too, just like a fence.
-  const auto checkNoAlias = [AA, Ptr](auto I) -> bool {
-    return I && AA->isNoAlias(MemoryLocation::get(dyn_cast<Instruction>(
-                                  I->getPointerOperand())),
-                              MemoryLocation::get(dyn_cast<LoadInst>(Ptr)));
-  };
-
-  if (checkNoAlias(dyn_cast<AtomicCmpXchgInst>(DI)) ||
-      checkNoAlias(dyn_cast<AtomicRMWInst>(DI)))
-    return false;
+  if (isa<AtomicRMWInst>(DI) || isa<AtomicCmpXchgInst>(DI)) {
+    return !AA->isNoAlias(Loc, MemoryLocation::get(DI));
+  }
 
   return true;
-}
-
-unsigned InferAddressSpacesImpl::getLoadPtrAddrSpaceImpl(
-    const LoadInst *LI, unsigned AS, MemoryAccess *MA,
-    ValueToAddrSpaceMapTy &InferredAddrSpace,
-    SmallPtrSet<MemoryAccess *, 8> &Visited) const {
-  MemorySSAWalker *Walker = MSSA->getWalker();
-  BatchAAResults BatchAA(*AA);
-  MemoryLocation Loc(MemoryLocation::get(LI));
-
-  if (MSSA->isLiveOnEntryDef(MA))
-    return TTI->getAssumedLiveOnEntryDefAddrSpace(LI);
-
-  if (!Visited.insert(MA).second)
-    return AS;
-
-  if (MemoryDef *Def = dyn_cast<MemoryDef>(MA)) {
-    if (!isReallyAClobber(LI->getPointerOperand(), Def, &BatchAA, TTI))
-      return getLoadPtrAddrSpaceImpl(
-          LI, AS,
-          Walker->getClobberingMemoryAccess(Def->getDefiningAccess(), Loc),
-          InferredAddrSpace, Visited);
-
-    Instruction *DI = Def->getMemoryInst();
-    StoreInst *SI = dyn_cast<StoreInst>(DI);
-
-    // TODO: handle other memory writing instructions
-    if (!SI)
-      return FlatAddrSpace;
-
-    Type *ValType = SI->getValueOperand()->getType();
-    unsigned ValAS = FlatAddrSpace;
-    auto I = InferredAddrSpace.find(SI->getValueOperand());
-    if (I != InferredAddrSpace.end())
-      ValAS = I->second;
-    else if (ValType->isPtrOrPtrVectorTy())
-      ValAS = ValType->getPointerAddressSpace();
-
-    AS = joinAddressSpaces(AS, ValAS);
-
-    if (AS == FlatAddrSpace)
-      return FlatAddrSpace;
-
-    if (BatchAA.isMustAlias(Loc, MemoryLocation::get(SI))) {
-      return AS;
-    }
-
-    return getLoadPtrAddrSpaceImpl(
-        LI, AS,
-        Walker->getClobberingMemoryAccess(Def->getDefiningAccess(), Loc),
-        InferredAddrSpace, Visited);
-  }
-
-  const MemoryPhi *Phi = cast<MemoryPhi>(MA);
-  for (const auto &Use : Phi->incoming_values()) {
-    AS = getLoadPtrAddrSpaceImpl(LI, AS, cast<MemoryAccess>(&Use),
-                                 InferredAddrSpace, Visited);
-    if (AS == FlatAddrSpace)
-      return FlatAddrSpace;
-  }
-
-  return AS;
 }
 
 unsigned InferAddressSpacesImpl::getLoadPtrAddrSpace(
@@ -1157,10 +1085,56 @@ unsigned InferAddressSpacesImpl::getLoadPtrAddrSpace(
     return UninitializedAddressSpace;
 
   SmallPtrSet<MemoryAccess *, 8> Visited;
-  return getLoadPtrAddrSpaceImpl(
-      LI, UninitializedAddressSpace,
-      MSSA->getWalker()->getClobberingMemoryAccess(LI), InferredAddrSpace,
-      Visited);
+  MemorySSAWalker *Walker = MSSA->getWalker();
+  MemoryLocation Loc = MemoryLocation::get(LI);
+
+  std::function<unsigned(unsigned, MemoryAccess *)> Recurse =
+      [&](unsigned AS, MemoryAccess *MA) -> unsigned {
+    if (MSSA->isLiveOnEntryDef(MA))
+      return TTI->getAssumedLiveOnEntryDefAddrSpace(LI);
+
+    if (!Visited.insert(MA).second)
+      return AS;
+
+    if (auto *Def = dyn_cast<MemoryDef>(MA)) {
+      BatchAAResults BatchAA(*AA);
+      if (!isReallyAClobber(Loc, Def, &BatchAA, TTI))
+        return Recurse(AS, Walker->getClobberingMemoryAccess(
+                               Def->getDefiningAccess(), Loc));
+
+      Instruction *DI = Def->getMemoryInst();
+      StoreInst *SI = dyn_cast<StoreInst>(DI);
+      if (!SI)
+        return FlatAddrSpace;
+
+      unsigned ValAS = FlatAddrSpace;
+      Value *ValOp = SI->getValueOperand();
+      if (auto It = InferredAddrSpace.find(ValOp);
+          It != InferredAddrSpace.end())
+        ValAS = It->second;
+      else if (ValOp->getType()->isPtrOrPtrVectorTy())
+        ValAS = ValOp->getType()->getPointerAddressSpace();
+
+      AS = joinAddressSpaces(AS, ValAS);
+      if (AS == FlatAddrSpace ||
+          BatchAA.isMustAlias(Loc, MemoryLocation::get(SI)))
+        return AS;
+
+      return Recurse(
+          AS, Walker->getClobberingMemoryAccess(Def->getDefiningAccess(), Loc));
+    }
+
+    const MemoryPhi *Phi = cast<MemoryPhi>(MA);
+    for (const auto &Incoming : Phi->incoming_values()) {
+      AS = Recurse(AS, cast<MemoryAccess>(&Incoming));
+      if (AS == FlatAddrSpace)
+        return FlatAddrSpace;
+    }
+    return AS;
+  };
+
+  return Recurse(UninitializedAddressSpace,
+                 Walker->getClobberingMemoryAccess(LI));
 }
 
 bool InferAddressSpacesImpl::updateAddressSpace(
