@@ -106,7 +106,8 @@ Otherwise, the result is a glvalue with type ``cv T`` and with the same value
 category as ``E1`` which refers to the element at the given row and column in
 the matrix.
 
-Programs containing a single subscript expression into a matrix are ill-formed.
+A single subscript expression into a matrix is legal in HLSL and yields the
+column-sized vector for the selected row, but is ill-formed in C and C++.
 
 **Note**: We considered providing an expression of the form
 ``postfix-expression [expression]`` to access columns of a matrix. We think

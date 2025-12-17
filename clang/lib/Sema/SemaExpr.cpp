@@ -5159,10 +5159,9 @@ ExprResult Sema::CreateBuiltinMatrixSubscriptExpr(Expr *Base, Expr *RowIdx,
     return RowR;
   RowIdx = RowR.get();
 
-  if (!ColumnIdx) {
+  if (!ColumnIdx)
     return new (Context) MatrixSubscriptExpr(
         Base, RowIdx, ColumnIdx, Context.IncompleteMatrixIdxTy, RBLoc);
-  }
 
   // Build an unanalyzed expression if any of the operands is type-dependent.
   if (Base->isTypeDependent() || RowIdx->isTypeDependent() ||

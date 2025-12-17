@@ -2729,18 +2729,13 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
 
       llvm::Value *Row = Dst.getMatrixRowIdx();
       llvm::Value *RowVal = Src.getScalarVal(); // <NumCols x T>
-
       llvm::MatrixBuilder MB(Builder);
 
       for (unsigned Col = 0; Col < NumCols; ++Col) {
         llvm::Value *ColIdx = llvm::ConstantInt::get(Row->getType(), Col);
-
         llvm::Value *EltIndex = MB.CreateIndex(Row, ColIdx, NumRows);
-
         llvm::Value *Lane = llvm::ConstantInt::get(Builder.getInt32Ty(), Col);
-
         llvm::Value *NewElt = Builder.CreateExtractElement(RowVal, Lane);
-
         MatrixVec = Builder.CreateInsertElement(MatrixVec, NewElt, EltIndex);
       }
 
@@ -4968,7 +4963,6 @@ LValue CodeGenFunction::EmitMatrixSingleSubscriptExpr(
   llvm::Value *RowIdx = EmitMatrixIndexExpr(E->getRowIdx());
 
   if (auto *RowConst = llvm::dyn_cast<llvm::ConstantInt>(RowIdx)) {
-
     // Extract matrix shape from the AST type
     const auto *MatTy = E->getBase()->getType()->castAs<ConstantMatrixType>();
     unsigned NumCols = MatTy->getNumColumns();

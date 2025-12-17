@@ -2120,7 +2120,6 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
 
   // Row index
   Value *RowIdx = CGF.EmitMatrixIndexExpr(E->getRowIdx());
-
   llvm::MatrixBuilder MB(Builder);
 
   // The row index must be in [0, NumRows)
