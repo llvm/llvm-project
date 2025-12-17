@@ -3581,6 +3581,8 @@ static void mcpuHelp() {
   if (!DummyTarget)
     reportCmdLineError(ErrMessage);
   // We need to access the Help() through the corresponding MCSubtargetInfo.
+  // To avoid a memory leak, we wrap the createMcSubtargetInfo result in a
+  // unique_ptr.
   std::unique_ptr<MCSubtargetInfo> MSI(
       DummyTarget->createMCSubtargetInfo(TheTriple, "help", ""));
 }
