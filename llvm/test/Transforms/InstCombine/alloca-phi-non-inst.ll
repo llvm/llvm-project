@@ -34,7 +34,7 @@ BS_LABEL_7:                                       ; preds = %BS_LABEL_3, %sw.epi
   br label %BS_LABEL_3
 
 BS_LABEL_3:                                       ; preds = %BS_LABEL_7, %sw.epilog, %entry, %entry
-  %l_631.0 = phi ptr addrspace(5) [ %l_631.1, %BS_LABEL_7 ], [ %arrayidx, %sw.epilog ], [ undef, %entry ], [ undef, %entry ]
+  %l_631.0 = phi ptr addrspace(5) [ %l_631.1, %BS_LABEL_7 ], [ %arrayidx, %sw.epilog ], [ poison, %entry ], [ poison, %entry ]
   %cmp = icmp ugt ptr addrspace(5) %l_631.0, null
   br label %BS_LABEL_7
 }
