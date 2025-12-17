@@ -8,6 +8,8 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
+#include "TestTypes.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -260,6 +262,52 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
       return AliasResult::FinalAlias;
     }
     return AliasResult::NoAlias;
+  }
+
+  void registerAttrAliasPrinter(InsertAttrAliasPrinter insertFn) const final {
+    insertFn(TypeID::get<TypeAttr>(),
+             [](Attribute attr, AsmPrinter &printer, bool printStripped) {
+               auto tTy = dyn_cast<TupleType>(cast<TypeAttr>(attr).getValue());
+               if (!tTy || tTy.size() != 1)
+                 return;
+               if (auto iTy = dyn_cast<TestIntegerType>(tTy.getType(0));
+                   !iTy || iTy.getWidth() != 7)
+                 return;
+               printer.getStream() << "tuple_i7_from_attr";
+             });
+    insertFn(TypeID::get<TypeAttr>(),
+             [](Attribute attr, AsmPrinter &printer, bool printStripped) {
+               auto tTy = dyn_cast<TupleType>(cast<TypeAttr>(attr).getValue());
+               if (!tTy || tTy.size() != 1)
+                 return;
+               if (auto iTy = dyn_cast<TestIntegerType>(tTy.getType(0));
+                   !iTy || iTy.getWidth() != 6)
+                 return;
+               printer.getStream() << "tuple_i6_from_attr";
+             });
+  }
+
+  void registerTypeAliasPrinter(InsertTypeAliasPrinter insertFn) const final {
+    insertFn(TypeID::get<TupleType>(),
+             [](Type type, AsmPrinter &printer, bool printStripped) {
+               auto tTy = dyn_cast<TupleType>(type);
+               if (!tTy || tTy.size() != 1)
+                 return;
+               if (auto iTy = dyn_cast<TestIntegerType>(tTy.getType(0));
+                   !iTy || iTy.getWidth() != 7)
+                 return;
+               printer.getStream() << "tuple_i7";
+             });
+    insertFn(TypeID::get<TupleType>(),
+             [](Type type, AsmPrinter &printer, bool printStripped) {
+               auto tTy = dyn_cast<TupleType>(type);
+               if (!tTy || tTy.size() != 1)
+                 return;
+               if (auto iTy = dyn_cast<TestIntegerType>(tTy.getType(0));
+                   !iTy || iTy.getWidth() != 6)
+                 return;
+               printer.getStream() << "tuple_i6";
+             });
   }
 
   //===------------------------------------------------------------------===//

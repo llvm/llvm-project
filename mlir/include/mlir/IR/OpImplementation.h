@@ -17,6 +17,8 @@
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpAsmSupport.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/TypeID.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/SMLoc.h"
 #include <optional>
@@ -169,6 +171,9 @@ public:
     if (succeeded(printAlias(attrOrType)))
       return;
 
+    if (succeeded(printDialectAlias(attrOrType, /*printStripped=*/true)))
+      return;
+
     raw_ostream &os = getStream();
     uint64_t posPrior = os.tell();
     attrOrType.print(*this);
@@ -217,6 +222,14 @@ public:
   /// Print the alias for the given type, return failure if no alias could
   /// be printed.
   virtual LogicalResult printAlias(Type type);
+
+  /// Print the alias for the given attribute, return failure if no alias could
+  /// be printed.
+  virtual LogicalResult printDialectAlias(Attribute attr, bool printStripped);
+
+  /// Print the alias for the given type, return failure if no alias could
+  /// be printed.
+  virtual LogicalResult printDialectAlias(Type type, bool printStripped);
 
   /// Print the given string as a keyword, or a quoted and escaped string if it
   /// has any special or non-printable characters in it.
@@ -1797,6 +1810,30 @@ public:
   }
   virtual AliasResult getAlias(Type type, raw_ostream &os) const {
     return AliasResult::NoAlias;
+  }
+
+  /// Hooks for registering alias printers for types and attributes. These
+  /// printers are invoked when printing types or attributes of the given
+  /// TypeID. Printers are invoked in the order they are registered, and the
+  /// first one to print an alias is used.
+  /// The precedence of these printers is as follow:
+  /// 1. The type and attribute aliases returned by `getAlias`.
+  /// 2. Dialect-specific alias printers registered here.
+  /// 3. The type and attribute printers.
+  /// The boolean argument to the printer indicates whether the stripped form
+  /// of the type or attribute is being printed.
+  /// NOTE: This mechanism caches the printed object, therefore the printer
+  /// must always produce the same output for the same input.
+  using AttributeAliasPrinter =
+      llvm::function_ref<void(Attribute, AsmPrinter &, bool)>;
+  using InsertAttrAliasPrinter =
+      llvm::function_ref<void(TypeID, AttributeAliasPrinter)>;
+  virtual void registerAttrAliasPrinter(InsertAttrAliasPrinter insertFn) const {
+  }
+  using TypeAliasPrinter = llvm::function_ref<void(Type, AsmPrinter &, bool)>;
+  using InsertTypeAliasPrinter =
+      llvm::function_ref<void(TypeID, TypeAliasPrinter)>;
+  virtual void registerTypeAliasPrinter(InsertTypeAliasPrinter insertFn) const {
   }
 
   //===--------------------------------------------------------------------===//
