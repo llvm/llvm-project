@@ -1824,7 +1824,8 @@ public:
   /// there is no vector code generation, the check blocks are removed
   /// completely.
   void create(Loop *L, const LoopAccessInfo &LAI,
-              const SCEVPredicate &UnionPred, ElementCount VF, unsigned IC) {
+              const SCEVPredicate &UnionPred, ElementCount VF, unsigned IC,
+              OptimizationRemarkEmitter &ORE) {
 
     // Hard cutoff to limit compile-time increase in case a very large number of
     // runtime checks needs to be generated.
@@ -1832,8 +1833,19 @@ public:
     // profile info.
     CostTooHigh =
         LAI.getNumRuntimePointerChecks() > VectorizeMemoryCheckThreshold;
-    if (CostTooHigh)
+    if (CostTooHigh) {
+      // Mark runtime checks as never succeeding when they exceed the threshold.
+      MemRuntimeCheckCond = ConstantInt::getTrue(L->getHeader()->getContext());
+      SCEVCheckCond = ConstantInt::getTrue(L->getHeader()->getContext());
+      ORE.emit([&]() {
+        return OptimizationRemarkAnalysisAliasing(
+                   DEBUG_TYPE, "TooManyMemoryRuntimeChecks", L->getStartLoc(),
+                   L->getHeader())
+               << "loop not vectorized: too many memory checks needed";
+      });
+      LLVM_DEBUG(dbgs() << "LV: Too many memory checks needed.\n");
       return;
+    }
 
     BasicBlock *LoopHeader = L->getHeader();
     BasicBlock *Preheader = L->getLoopPreheader();
@@ -9980,7 +9992,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     //  Optimistically generate runtime checks if they are needed. Drop them if
     //  they turn out to not be profitable.
     if (VF.Width.isVector() || SelectedIC > 1) {
-      Checks.create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, SelectedIC);
+      Checks.create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, SelectedIC,
+                    *ORE);
 
       // Bail out early if either the SCEV or memory runtime checks are known to
       // fail. In that case, the vector loop would never execute.
