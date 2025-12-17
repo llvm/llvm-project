@@ -58,7 +58,8 @@ entry:
   ;; v[idx].q
   ;
   ; CHECK: [[MUL0:%.*]] = mul i32 %idx, 2
-  ; TODO: It would be nice to combine adds, but this is fine for correctness.
+  ;; Note: It would be nice to combine consecutive adds, but this is fine as is
+  ;; as far as correctness is concerned..
   ; CHECK: [[ADD0:%.*]] = add i32 [[MUL0]], 3
   ; CHECK: [[ADD1:%.*]] = add i32 [[ADD0]], 1
   ; CHECK: [[LOAD:%.*]] = call { i32, i32, i32, i32 } @llvm.dx.resource.load.cbufferrow.4.{{.*}}(target("dx.CBuffer", %__cblayout_CB) [[CB]], i32 [[ADD1]])

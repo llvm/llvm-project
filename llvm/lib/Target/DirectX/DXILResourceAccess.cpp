@@ -98,7 +98,7 @@ static void createTypedBufferStore(IntrinsicInst *II, StoreInst *SI,
   if (V->getType() == ContainedType) {
     // V is already the right type.
     assert(SI->getPointerOperand() == II &&
-           "store of whole element has offset?");
+           "Store of whole element has mismatched address to store to");
   } else if (V->getType() == ScalarType) {
     // We're storing a scalar, so we need to load the current value and only
     // replace the relevant part.
@@ -280,6 +280,8 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
   // means that only the very last pointer access can point into a row.
   auto *LastGEP = dyn_cast<GEPOperator>(LI->getPointerOperand());
   if (!LastGEP) {
+    // If we don't have a GEP at all we're just accessing the resource through
+    // the result of getpointer directly.
     assert(LI->getPointerOperand() == II &&
            "Unexpected indirect access to resource without GEP");
     CurrentIndex =
