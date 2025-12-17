@@ -2615,3 +2615,49 @@ namespace DoubleCapture {
     };
   }
 }
+
+namespace GH150709 {
+  struct C { };
+  struct D : C {
+    constexpr int f() const { return 1; };
+  };
+  struct E : C { };
+  struct F : D { };
+  struct G : E { };
+  
+  constexpr C c1, c2[2];
+  constexpr D d1, d2[2];
+  constexpr E e1, e2[2];
+  constexpr F f;
+  constexpr G g;
+
+  constexpr auto mp = static_cast<int (C::*)() const>(&D::f);
+
+  // sanity checks for fix of GH150709 (unchanged behavior)
+  static_assert((c1.*mp)() == 1, ""); // expected-error {{constant expression}}
+  static_assert((d1.*mp)() == 1, "");
+  static_assert((f.*mp)() == 1, "");
+  static_assert((c2[0].*mp)() == 1, ""); // expected-error {{constant expression}}
+  static_assert((d2[0].*mp)() == 1, "");
+
+  // incorrectly undiagnosed before fix of GH150709
+  static_assert((e1.*mp)() == 1, ""); // expected-error {{constant expression}}
+  static_assert((e2[0].*mp)() == 1, ""); // expected-error {{constant expression}}
+  static_assert((g.*mp)() == 1, ""); // expected-error {{constant expression}}
+}
+
+namespace GH154567 {
+  struct T {
+    int i;
+  };
+
+  struct S {
+    struct { // expected-warning {{GNU extension}}
+      T val;
+    };
+    constexpr S() : val() {}
+  };
+
+  constexpr S s{};
+  static_assert(s.val.i == 0, "");
+}

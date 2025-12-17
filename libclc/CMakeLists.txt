@@ -31,6 +31,7 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   clc/lib/amdgcn/SOURCES;
   clc/lib/amdgpu/SOURCES;
   clc/lib/clspv/SOURCES;
+  clc/lib/ptx-nvidiacl/SOURCES;
   clc/lib/r600/SOURCES;
   clc/lib/spirv/SOURCES;
 )
@@ -73,6 +74,10 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
       set( ${tool}_target )
     endforeach()
   endif()
+
+  # Setup the paths where libclc runtimes should be stored.
+  set( LIBCLC_OUTPUT_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR} )
+  set( LIBCLC_INSTALL_DIR ${CMAKE_INSTALL_DATADIR}/clc )
 else()
   # In-tree configuration
   set( LIBCLC_STANDALONE_BUILD FALSE )
@@ -92,10 +97,18 @@ else()
     get_host_tool_path( llvm-link LLVM_LINK llvm-link_exe llvm-link_target )
     get_host_tool_path( opt OPT opt_exe opt_target )
   endif()
-endif()
 
-# Setup the paths where libclc runtimes should be stored.
-set( LIBCLC_OUTPUT_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR} )
+  # Setup the paths where libclc runtimes should be stored. By default, in an
+  # in-tree build we place the libraries in clang's resource driectory.
+  include(GetClangResourceDir)
+  get_clang_resource_dir( LIBCLC_INSTALL_DIR )
+  cmake_path( APPEND LIBCLC_INSTALL_DIR "lib" "libclc" )
+
+  # Note we do not adhere to LLVM_ENABLE_PER_TARGET_RUNTIME_DIR.
+  cmake_path( GET LLVM_LIBRARY_OUTPUT_INTDIR PARENT_PATH LIBCLC_OUTPUT_LIBRARY_DIR )
+  cmake_path( APPEND LIBCLC_OUTPUT_LIBRARY_DIR ${LIBCLC_INSTALL_DIR} )
+  file( MAKE_DIRECTORY ${LIBCLC_OUTPUT_LIBRARY_DIR} )
+endif()
 
 if( EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
   message( WARNING "Using custom LLVM tools to build libclc: "
@@ -114,7 +127,7 @@ if( EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
 endif()
 
 foreach( tool IN ITEMS clang opt llvm-as llvm-link )
-  if( NOT EXISTS "${${tool}_exe}" AND "${tool}_target" STREQUAL "" )
+  if( NOT EXISTS "${${tool}_exe}" AND "${${tool}_target}" STREQUAL "" )
     message( FATAL_ERROR "libclc toolchain incomplete - missing tool ${tool}!" )
   endif()
 endforeach()
@@ -215,7 +228,7 @@ set( tahiti_aliases pitcairn verde oland hainan bonaire kabini kaveri hawaii
   gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036
   gfx1100 gfx1101 gfx1102 gfx1103
   gfx1150 gfx1151 gfx1152 gfx1153
-  gfx1200 gfx1201
+  gfx1200 gfx1201 gfx1250 gfx1251
 )
 
 # pkg-config file
@@ -385,6 +398,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
     message( STATUS "  device: ${d} ( ${${d}_aliases} )" )
 
+    set( MACRO_ARCH ${ARCH} )
     if ( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64 )
       set( build_flags -O0 -finline-hint-functions -DCLC_SPIRV )
       set( opt_flags )
@@ -403,7 +417,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     else()
       set( build_flags )
       set( opt_flags -O3 )
-      set( MACRO_ARCH ${ARCH} )
     endif()
 
     set( LIBCLC_ARCH_OBJFILE_DIR "${LIBCLC_OBJFILE_DIR}/${arch_suffix}" )
@@ -452,20 +465,19 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       -D__CLC_GENERIC_ADDRSPACE_VAL=${generic_addrspace_val}
     )
 
-    set( clc_build_flags ${build_flags} -DCLC_INTERNAL )
-
     add_libclc_builtin_set(
       CLC_INTERNAL
       ARCH ${ARCH}
       ARCH_SUFFIX clc-${arch_suffix}
       TRIPLE ${clang_triple}
-      COMPILE_FLAGS ${clc_build_flags}
+      COMPILE_FLAGS ${build_flags}
       OPT_FLAGS ${opt_flags}
       LIB_FILES ${clc_lib_files}
       GEN_FILES ${clc_gen_files}
     )
 
     list( APPEND build_flags
+      -Xclang -fdeclare-opencl-builtins -Xclang -finclude-default-header
       -I${CMAKE_CURRENT_SOURCE_DIR}/opencl/include
     )
 

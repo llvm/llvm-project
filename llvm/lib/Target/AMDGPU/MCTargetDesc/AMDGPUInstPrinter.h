@@ -35,6 +35,8 @@ public:
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
   static void printRegOperand(MCRegister Reg, raw_ostream &O,
                               const MCRegisterInfo &MRI);
+  void printRegOperand(MCRegister Reg, unsigned Opc, unsigned OpNo,
+                       raw_ostream &O, const MCRegisterInfo &MRI);
 
 private:
   void printU16ImmOperand(const MCInst *MI, unsigned OpNo,
@@ -70,11 +72,14 @@ private:
   void printSymbolicFormat(const MCInst *MI,
                            const MCSubtargetInfo &STI, raw_ostream &O);
 
-  void printRegOperand(unsigned RegNo, raw_ostream &O);
+  void printRegOperand(MCRegister Reg, raw_ostream &O);
   void printVOPDst(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
   void printVINTRPDst(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                       raw_ostream &O);
+  void printAVLdSt32Align2RegOp(const MCInst *MI, unsigned OpNo,
+                                const MCSubtargetInfo &STI, raw_ostream &O);
+
   void printImmediateInt16(uint32_t Imm, const MCSubtargetInfo &STI,
                            raw_ostream &O);
   void printImmediateBF16(uint32_t Imm, const MCSubtargetInfo &STI,
@@ -89,6 +94,7 @@ private:
                         raw_ostream &O);
   void printImmediate64(uint64_t Imm, const MCSubtargetInfo &STI,
                         raw_ostream &O, bool IsFP);
+  void printLiteral64(uint64_t Imm, raw_ostream &O, bool IsFP);
   void printOperand(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
   void printRegularOperand(const MCInst *MI, unsigned OpNo,
@@ -140,6 +146,19 @@ private:
                        const MCSubtargetInfo &STI, raw_ostream &O);
   void printMatrixBFMT(const MCInst *MI, unsigned OpNo,
                        const MCSubtargetInfo &STI, raw_ostream &O);
+  void printMatrixScale(const MCInst *MI, unsigned OpNo,
+                        const MCSubtargetInfo &STI, raw_ostream &O, char AorB);
+  void printMatrixAScale(const MCInst *MI, unsigned OpNo,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
+  void printMatrixBScale(const MCInst *MI, unsigned OpNo,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
+  void printMatrixScaleFmt(const MCInst *MI, unsigned OpNo,
+                           const MCSubtargetInfo &STI, raw_ostream &O,
+                           char AorB);
+  void printMatrixAScaleFmt(const MCInst *MI, unsigned OpNo,
+                            const MCSubtargetInfo &STI, raw_ostream &O);
+  void printMatrixBScaleFmt(const MCInst *MI, unsigned OpNo,
+                            const MCSubtargetInfo &STI, raw_ostream &O);
   void printInterpSlot(const MCInst *MI, unsigned OpNo,
                        const MCSubtargetInfo &STI, raw_ostream &O);
   void printInterpAttr(const MCInst *MI, unsigned OpNo,

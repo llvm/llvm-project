@@ -790,8 +790,7 @@ bool ValueObject::SetData(DataExtractor &data, Status &error) {
     return false;
   }
 
-  uint64_t count = 0;
-  const Encoding encoding = GetCompilerType().GetEncoding(count);
+  const Encoding encoding = GetCompilerType().GetEncoding();
 
   const size_t byte_size = llvm::expectedToOptional(GetByteSize()).value_or(0);
 
@@ -1669,8 +1668,7 @@ bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
     return false;
   }
 
-  uint64_t count = 0;
-  const Encoding encoding = GetCompilerType().GetEncoding(count);
+  const Encoding encoding = GetCompilerType().GetEncoding();
 
   const size_t byte_size = llvm::expectedToOptional(GetByteSize()).value_or(0);
 
@@ -3588,6 +3586,13 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromAPFloat(
     lldb::TargetSP target, const llvm::APFloat &v, CompilerType type,
     llvm::StringRef name) {
   return CreateValueObjectFromAPInt(target, v.bitcastToAPInt(), type, name);
+}
+
+lldb::ValueObjectSP ValueObject::CreateValueObjectFromScalar(
+    lldb::TargetSP target, Scalar &s, CompilerType type, llvm::StringRef name) {
+  ExecutionContext exe_ctx(target.get(), false);
+  return ValueObjectConstResult::Create(exe_ctx.GetBestExecutionContextScope(),
+                                        type, s, ConstString(name));
 }
 
 lldb::ValueObjectSP

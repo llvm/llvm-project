@@ -4,7 +4,7 @@
 define ptr @f1(ptr %arg, i64 %arg1) {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[ARG:%.*]], i64 72
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [6 x i32], ptr [[TMP1]], i64 0, i64 [[ARG1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP1]], i64 [[ARG1:%.*]]
 ; CHECK-NEXT:    ret ptr [[TMP2]]
 ;
   %1 = getelementptr [6 x i32], ptr %arg, i64 3
@@ -16,7 +16,7 @@ define ptr @f2(ptr %arg, i64 %arg1) {
 ; CHECK-LABEL: @f2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[ARG:%.*]], i64 72
 ; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr [6 x i32], ptr [[TMP1]], i64 [[ARG1:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [6 x i32], ptr [[DOTSPLIT]], i64 0, i64 [[ARG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[DOTSPLIT]], i64 [[ARG1]]
 ; CHECK-NEXT:    ret ptr [[TMP2]]
 ;
   %1 = getelementptr [6 x i32], ptr %arg, i64 3

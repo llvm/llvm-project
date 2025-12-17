@@ -54,6 +54,7 @@ using namespace llvm::SCEVPatternMatch;
 STATISTIC(NumPeeled, "Number of loops peeled");
 STATISTIC(NumPeeledEnd, "Number of loops peeled from end");
 
+namespace llvm {
 static cl::opt<unsigned> UnrollPeelCount(
     "unroll-peel-count", cl::Hidden,
     cl::desc("Set the unroll peeling count, for testing purposes"));
@@ -81,7 +82,14 @@ static cl::opt<bool> DisableAdvancedPeeling(
     cl::desc(
         "Disable advance peeling. Issues for convergent targets (D134803)."));
 
+static cl::opt<bool> EnablePeelingForIV(
+    "enable-peeling-for-iv", cl::init(false), cl::Hidden,
+    cl::desc("Enable peeling to convert Phi nodes into IVs"));
+
 static const char *PeeledCountMetaData = "llvm.loop.peeled.count";
+
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
 
 // Check whether we are capable of peeling this loop.
 bool llvm::canPeel(const Loop *L) {
@@ -155,43 +163,166 @@ namespace {
 // corresponding calls to g are determined and the code for computing
 // x, y, and a can be removed.
 //
+// Similarly, there are cases where peeling makes Phi nodes loop-inductions
+// (i.e., the value is increased or decreased by a fixed amount on every
+// iteration). For example, consider the following function.
+//
+//   #define N 100
+//   void f(int a[], int b[]) {
+//     int im = N - 1;
+//     for (int i = 0; i < N; i++) {
+//       a[i] = b[i] + b[im];
+//       im = i;
+//     }
+//   }
+//
+// The IR of the loop will look something like the following.
+//
+//   %i = phi i32 [ 0, %entry ], [ %i.next, %for.body ]
+//   %im = phi i32 [ 99, %entry ], [ %i, %for.body ]
+//   ...
+//   %i.next = add nuw nsw i32 %i, 1
+//   ...
+//
+// In this case, %im becomes a loop-induction variable by peeling 1 iteration,
+// because %i is a loop-induction one. The peeling count can be determined by
+// the same algorithm with loop-invariant case. Such peeling is profitable for
+// loop-vectorization.
+//
 // The PhiAnalyzer class calculates how many times a loop should be
 // peeled based on the above analysis of the phi nodes in the loop while
 // respecting the maximum specified.
 class PhiAnalyzer {
 public:
-  PhiAnalyzer(const Loop &L, unsigned MaxIterations);
+  PhiAnalyzer(const Loop &L, unsigned MaxIterations, bool PeelForIV);
 
   // Calculate the sufficient minimum number of iterations of the loop to peel
   // such that phi instructions become determined (subject to allowable limits)
   std::optional<unsigned> calculateIterationsToPeel();
 
 protected:
-  using PeelCounter = std::optional<unsigned>;
+  enum class PeelCounterType {
+    Invariant,
+    Induction,
+  };
+
+  using PeelCounterValue = std::pair<unsigned, PeelCounterType>;
+  using PeelCounter = std::optional<PeelCounterValue>;
   const PeelCounter Unknown = std::nullopt;
 
   // Add 1 respecting Unknown and return Unknown if result over MaxIterations
   PeelCounter addOne(PeelCounter PC) const {
     if (PC == Unknown)
       return Unknown;
-    return (*PC + 1 <= MaxIterations) ? PeelCounter{*PC + 1} : Unknown;
+    auto [Val, Ty] = *PC;
+    return (Val + 1 <= MaxIterations) ? PeelCounter({Val + 1, Ty}) : Unknown;
   }
 
-  // Calculate the number of iterations after which the given value
-  // becomes an invariant.
+  // Return a value representing zero for the given counter type.
+  PeelCounter makeZero(PeelCounterType Ty) const {
+    return PeelCounter({0, Ty});
+  }
+
+  // Calculate the number of iterations after which the given value becomes an
+  // invariant or an induction.
   PeelCounter calculate(const Value &);
+
+  // Auxiliary function to calculate the number of iterations for a comparison
+  // instruction or a binary operator.
+  PeelCounter mergeTwoCounters(const Instruction &CmpOrBinaryOp,
+                               const PeelCounterValue &LHS,
+                               const PeelCounterValue &RHS) const;
+
+  // Returns true if the \p Phi is an induction in the target loop. This is a
+  // lightweight check and possible to detect an IV in some cases.
+  bool isInductionPHI(const PHINode *Phi) const;
 
   const Loop &L;
   const unsigned MaxIterations;
+  const bool PeelForIV;
 
-  // Map of Values to number of iterations to invariance
-  SmallDenseMap<const Value *, PeelCounter> IterationsToInvariance;
+  // Map of Values to number of iterations to invariance or induction
+  SmallDenseMap<const Value *, PeelCounter> IterationsToInvarianceOrInduction;
 };
 
-PhiAnalyzer::PhiAnalyzer(const Loop &L, unsigned MaxIterations)
-    : L(L), MaxIterations(MaxIterations) {
+PhiAnalyzer::PhiAnalyzer(const Loop &L, unsigned MaxIterations, bool PeelForIV)
+    : L(L), MaxIterations(MaxIterations), PeelForIV(PeelForIV) {
   assert(canPeel(&L) && "loop is not suitable for peeling");
   assert(MaxIterations > 0 && "no peeling is allowed?");
+}
+
+/// Test whether \p Phi is an induction variable. Although this can be
+/// determined using SCEV analysis, it is expensive to compute here. Instead,
+/// we perform cheaper checks that may not detect complex cases but are
+/// sufficient for some situations.
+bool PhiAnalyzer::isInductionPHI(const PHINode *Phi) const {
+  // Currently we only support a loop that has single latch.
+  BasicBlock *Latch = L.getLoopLatch();
+  if (Latch == nullptr)
+    return false;
+
+  Value *Cur = Phi->getIncomingValueForBlock(Latch);
+  SmallPtrSet<Value *, 4> Visited;
+  bool VisitBinOp = false;
+
+  // Starting from the incoming value of the Phi, we follow the use-def chain.
+  // We consider Phi to be an IV if we can reach it again by traversing only
+  // add, sub, or cast instructions.
+  while (true) {
+    if (Cur == Phi)
+      break;
+
+    // Avoid infinite loop.
+    if (!Visited.insert(Cur).second)
+      return false;
+
+    auto *I = dyn_cast<Instruction>(Cur);
+    if (!I || !L.contains(I))
+      return false;
+
+    if (auto *Cast = dyn_cast<CastInst>(I)) {
+      Cur = Cast->getOperand(0);
+    } else if (auto *BinOp = dyn_cast<BinaryOperator>(I)) {
+      if (BinOp->getOpcode() != Instruction::Add &&
+          BinOp->getOpcode() != Instruction::Sub)
+        return false;
+      if (!isa<ConstantInt>(BinOp->getOperand(1)))
+        return false;
+
+      VisitBinOp = true;
+      Cur = BinOp->getOperand(0);
+    } else {
+      return false;
+    }
+  }
+
+  // Ignore cases where no binary operations are visited.
+  return VisitBinOp;
+}
+
+/// When either \p LHS or \p RHS is an IV, the result of \p CmpOrBinaryOp is
+/// considered an IV only if it is an addition or a subtraction. Otherwise the
+/// result can be a value that is neither a loop-invariant nor an IV.
+///
+/// If both \p LHS and \p RHS are loop-invariants, then the result of
+/// \CmpOrBinaryOp is also a loop-invariant.
+PhiAnalyzer::PeelCounter
+PhiAnalyzer::mergeTwoCounters(const Instruction &CmpOrBinaryOp,
+                              const PeelCounterValue &LHS,
+                              const PeelCounterValue &RHS) const {
+  auto &[LVal, LTy] = LHS;
+  auto &[RVal, RTy] = RHS;
+  unsigned NewVal = std::max(LVal, RVal);
+
+  if (LTy == PeelCounterType::Induction || RTy == PeelCounterType::Induction) {
+    if (const auto *BinOp = dyn_cast<BinaryOperator>(&CmpOrBinaryOp)) {
+      if (BinOp->getOpcode() == Instruction::Add ||
+          BinOp->getOpcode() == Instruction::Sub)
+        return PeelCounter({NewVal, PeelCounterType::Induction});
+    }
+    return Unknown;
+  }
+  return PeelCounter({NewVal, PeelCounterType::Invariant});
 }
 
 // This function calculates the number of iterations after which the value
@@ -212,25 +343,34 @@ PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(const Value &V) {
   // If we already know the answer, take it from the map.
   // Otherwise, place Unknown to map to avoid infinite recursion. Such
   // cycles can never stop on an invariant.
-  auto [I, Inserted] = IterationsToInvariance.try_emplace(&V, Unknown);
+  auto [I, Inserted] =
+      IterationsToInvarianceOrInduction.try_emplace(&V, Unknown);
   if (!Inserted)
     return I->second;
 
   if (L.isLoopInvariant(&V))
     // Loop invariant so known at start.
-    return (IterationsToInvariance[&V] = 0);
+    return (IterationsToInvarianceOrInduction[&V] =
+                makeZero(PeelCounterType::Invariant));
   if (const PHINode *Phi = dyn_cast<PHINode>(&V)) {
     if (Phi->getParent() != L.getHeader()) {
       // Phi is not in header block so Unknown.
-      assert(IterationsToInvariance[&V] == Unknown && "unexpected value saved");
+      assert(IterationsToInvarianceOrInduction[&V] == Unknown &&
+             "unexpected value saved");
       return Unknown;
     }
+
+    // If Phi is an induction, register it as a starting point.
+    if (PeelForIV && isInductionPHI(Phi))
+      return (IterationsToInvarianceOrInduction[&V] =
+                  makeZero(PeelCounterType::Induction));
+
     // We need to analyze the input from the back edge and add 1.
     Value *Input = Phi->getIncomingValueForBlock(L.getLoopLatch());
     PeelCounter Iterations = calculate(*Input);
-    assert(IterationsToInvariance[Input] == Iterations &&
+    assert(IterationsToInvarianceOrInduction[Input] == Iterations &&
            "unexpected value saved");
-    return (IterationsToInvariance[Phi] = addOne(Iterations));
+    return (IterationsToInvarianceOrInduction[Phi] = addOne(Iterations));
   }
   if (const Instruction *I = dyn_cast<Instruction>(&V)) {
     if (isa<CmpInst>(I) || I->isBinaryOp()) {
@@ -241,26 +381,30 @@ PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(const Value &V) {
       PeelCounter RHS = calculate(*I->getOperand(1));
       if (RHS == Unknown)
         return Unknown;
-      return (IterationsToInvariance[I] = {std::max(*LHS, *RHS)});
+      return (IterationsToInvarianceOrInduction[I] =
+                  mergeTwoCounters(*I, *LHS, *RHS));
     }
     if (I->isCast())
       // Cast instructions get the value of the operand.
-      return (IterationsToInvariance[I] = calculate(*I->getOperand(0)));
+      return (IterationsToInvarianceOrInduction[I] =
+                  calculate(*I->getOperand(0)));
   }
   // TODO: handle more expressions
 
   // Everything else is Unknown.
-  assert(IterationsToInvariance[&V] == Unknown && "unexpected value saved");
+  assert(IterationsToInvarianceOrInduction[&V] == Unknown &&
+         "unexpected value saved");
   return Unknown;
 }
 
 std::optional<unsigned> PhiAnalyzer::calculateIterationsToPeel() {
   unsigned Iterations = 0;
   for (auto &PHI : L.getHeader()->phis()) {
-    PeelCounter ToInvariance = calculate(PHI);
-    if (ToInvariance != Unknown) {
-      assert(*ToInvariance <= MaxIterations && "bad result in phi analysis");
-      Iterations = std::max(Iterations, *ToInvariance);
+    PeelCounter ToInvarianceOrInduction = calculate(PHI);
+    if (ToInvarianceOrInduction != Unknown) {
+      unsigned Val = ToInvarianceOrInduction->first;
+      assert(Val <= MaxIterations && "bad result in phi analysis");
+      Iterations = std::max(Iterations, Val);
       if (Iterations == MaxIterations)
         break;
     }
@@ -275,9 +419,9 @@ std::optional<unsigned> PhiAnalyzer::calculateIterationsToPeel() {
 // the remainder loop after peeling. The load must also be used (transitively)
 // by an exit condition. Returns the number of iterations to peel off (at the
 // moment either 0 or 1).
-static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
-                                                      DominatorTree &DT,
-                                                      AssumptionCache *AC) {
+static unsigned peelToTurnInvariantLoadsDereferenceable(Loop &L,
+                                                        DominatorTree &DT,
+                                                        AssumptionCache *AC) {
   // Skip loops with a single exiting block, because there should be no benefit
   // for the heuristic below.
   if (L.getExitingBlock())
@@ -303,7 +447,10 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
   const DataLayout &DL = L.getHeader()->getDataLayout();
   for (BasicBlock *BB : L.blocks()) {
     for (Instruction &I : *BB) {
-      if (I.mayWriteToMemory())
+      // Calls that only access inaccessible memory can never alias with loads.
+      if (I.mayWriteToMemory() &&
+          !(isa<CallBase>(I) &&
+            cast<CallBase>(I).onlyAccessesInaccessibleMemory()))
         return 0;
 
       if (LoadUsers.contains(&I))
@@ -351,7 +498,7 @@ bool llvm::canPeelLastIteration(const Loop &L, ScalarEvolution &SE) {
                     m_BasicBlock(Succ1), m_BasicBlock(Succ2))) &&
          ((Pred == CmpInst::ICMP_EQ && Succ2 == L.getHeader()) ||
           (Pred == CmpInst::ICMP_NE && Succ1 == L.getHeader())) &&
-         Bound->getType()->isIntegerTy() && 
+         Bound->getType()->isIntegerTy() &&
          SE.isLoopInvariant(SE.getSCEV(Bound), &L) &&
          match(SE.getSCEV(Inc),
                m_scev_AffineAddRec(m_SCEV(), m_scev_One(), m_SpecificLoop(&L)));
@@ -368,7 +515,7 @@ static bool shouldPeelLastIteration(Loop &L, CmpPredicate Pred,
     return false;
 
   const SCEV *BTC = SE.getBackedgeTakenCount(&L);
-  SCEVExpander Expander(SE, L.getHeader()->getDataLayout(), "loop-peel");
+  SCEVExpander Expander(SE, "loop-peel");
   if (!SE.isKnownNonZero(BTC) &&
       Expander.isHighCostExpansion(BTC, &L, SCEVCheapExpansionBudget, &TTI,
                                    L.getLoopPredecessor()->getTerminator()))
@@ -654,14 +801,15 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // in TTI.getPeelingPreferences or by the flag -unroll-peel-count.
   unsigned DesiredPeelCount = TargetPeelCount;
 
-  // Here we try to get rid of Phis which become invariants after 1, 2, ..., N
-  // iterations of the loop. For this we compute the number for iterations after
-  // which every Phi is guaranteed to become an invariant, and try to peel the
-  // maximum number of iterations among these values, thus turning all those
-  // Phis into invariants.
+  // Here we try to get rid of Phis which become invariants or inductions after
+  // 1, 2, ..., N iterations of the loop. For this we compute the number for
+  // iterations after which every Phi is guaranteed to become an invariant or an
+  // induction, and try to peel the maximum number of iterations among these
+  // values, thus turning all those Phis into invariants or inductions.
   if (MaxPeelCount > DesiredPeelCount) {
     // Check how many iterations are useful for resolving Phis
-    auto NumPeels = PhiAnalyzer(*L, MaxPeelCount).calculateIterationsToPeel();
+    auto NumPeels = PhiAnalyzer(*L, MaxPeelCount, EnablePeelingForIV)
+                        .calculateIterationsToPeel();
     if (NumPeels)
       DesiredPeelCount = std::max(DesiredPeelCount, *NumPeels);
   }
@@ -671,7 +819,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   DesiredPeelCount = std::max(DesiredPeelCount, CountToEliminateCmps);
 
   if (DesiredPeelCount == 0)
-    DesiredPeelCount = peelToTurnInvariantLoadsDerefencebale(*L, DT, AC);
+    DesiredPeelCount = peelToTurnInvariantLoadsDereferenceable(*L, DT, AC);
 
   if (DesiredPeelCount > 0) {
     DesiredPeelCount = std::min(DesiredPeelCount, MaxPeelCount);
@@ -680,7 +828,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
     if (DesiredPeelCount + AlreadyPeeled <= UnrollPeelMaxCount) {
       LLVM_DEBUG(dbgs() << "Peel " << DesiredPeelCount
                         << " iteration(s) to turn"
-                        << " some Phis into invariants.\n");
+                        << " some Phis into invariants or inductions.\n");
       PP.PeelCount = DesiredPeelCount;
       PP.PeelProfiledIterations = false;
       PP.PeelLast = false;
@@ -739,84 +887,6 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
     LLVM_DEBUG(dbgs() << "Max peel cost: " << Threshold << "\n");
     LLVM_DEBUG(dbgs() << "Max peel count by cost: "
                       << (Threshold / LoopSize - 1) << "\n");
-  }
-}
-
-struct WeightInfo {
-  // Weights for current iteration.
-  SmallVector<uint32_t> Weights;
-  // Weights to subtract after each iteration.
-  const SmallVector<uint32_t> SubWeights;
-};
-
-/// Update the branch weights of an exiting block of a peeled-off loop
-/// iteration.
-/// Let F is a weight of the edge to continue (fallthrough) into the loop.
-/// Let E is a weight of the edge to an exit.
-/// F/(F+E) is a probability to go to loop and E/(F+E) is a probability to
-/// go to exit.
-/// Then, Estimated ExitCount = F / E.
-/// For I-th (counting from 0) peeled off iteration we set the weights for
-/// the peeled exit as (EC - I, 1). It gives us reasonable distribution,
-/// The probability to go to exit 1/(EC-I) increases. At the same time
-/// the estimated exit count in the remainder loop reduces by I.
-/// To avoid dealing with division rounding we can just multiple both part
-/// of weights to E and use weight as (F - I * E, E).
-static void updateBranchWeights(Instruction *Term, WeightInfo &Info) {
-  setBranchWeights(*Term, Info.Weights, /*IsExpected=*/false);
-  for (auto [Idx, SubWeight] : enumerate(Info.SubWeights))
-    if (SubWeight != 0)
-      // Don't set the probability of taking the edge from latch to loop header
-      // to less than 1:1 ratio (meaning Weight should not be lower than
-      // SubWeight), as this could significantly reduce the loop's hotness,
-      // which would be incorrect in the case of underestimating the trip count.
-      Info.Weights[Idx] =
-          Info.Weights[Idx] > SubWeight
-              ? std::max(Info.Weights[Idx] - SubWeight, SubWeight)
-              : SubWeight;
-}
-
-/// Initialize the weights for all exiting blocks.
-static void initBranchWeights(DenseMap<Instruction *, WeightInfo> &WeightInfos,
-                              Loop *L) {
-  SmallVector<BasicBlock *> ExitingBlocks;
-  L->getExitingBlocks(ExitingBlocks);
-  for (BasicBlock *ExitingBlock : ExitingBlocks) {
-    Instruction *Term = ExitingBlock->getTerminator();
-    SmallVector<uint32_t> Weights;
-    if (!extractBranchWeights(*Term, Weights))
-      continue;
-
-    // See the comment on updateBranchWeights() for an explanation of what we
-    // do here.
-    uint32_t FallThroughWeights = 0;
-    uint32_t ExitWeights = 0;
-    for (auto [Succ, Weight] : zip(successors(Term), Weights)) {
-      if (L->contains(Succ))
-        FallThroughWeights += Weight;
-      else
-        ExitWeights += Weight;
-    }
-
-    // Don't try to update weights for degenerate case.
-    if (FallThroughWeights == 0)
-      continue;
-
-    SmallVector<uint32_t> SubWeights;
-    for (auto [Succ, Weight] : zip(successors(Term), Weights)) {
-      if (!L->contains(Succ)) {
-        // Exit weights stay the same.
-        SubWeights.push_back(0);
-        continue;
-      }
-
-      // Subtract exit weights on each iteration, distributed across all
-      // fallthrough edges.
-      double W = (double)Weight / (double)FallThroughWeights;
-      SubWeights.push_back((uint32_t)(ExitWeights * W));
-    }
-
-    WeightInfos.insert({Term, {std::move(Weights), std::move(SubWeights)}});
   }
 }
 
@@ -1116,10 +1186,36 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
 
     // If the original loop may only execute a single iteration we need to
     // insert a trip count check and skip the original loop with the last
-    // iteration peeled off if necessary.
-    if (!SE->isKnownNonZero(BTC)) {
+    // iteration peeled off if necessary.  Either way, we must update branch
+    // weights to maintain the loop body frequency.
+    if (SE->isKnownNonZero(BTC)) {
+      // We have just proven that, when reached, the original loop always
+      // executes at least two iterations.  Thus, we unconditionally execute
+      // both the remaining loop's initial iteration and the peeled iteration.
+      // But that increases the latter's frequency above its frequency in the
+      // original loop.  To maintain the total frequency, we compensate by
+      // decreasing the remaining loop body's frequency to indicate one less
+      // iteration.
+      //
+      // We use this formula to convert probability to/from frequency:
+      // Sum(i=0..inf)(P^i) = 1/(1-P) = Freq.
+      if (BranchProbability P = getLoopProbability(L); !P.isUnknown()) {
+        // Trying to subtract one from an infinite loop is pointless, and our
+        // formulas then produce division by zero, so skip that case.
+        if (BranchProbability ExitP = P.getCompl(); !ExitP.isZero()) {
+          double Freq = 1 / ExitP.toDouble();
+          // No branch weights can produce a frequency of less than one given
+          // the initial iteration, and our formulas produce a negative
+          // probability if we try.
+          assert(Freq >= 1.0 && "expected freq >= 1 due to initial iteration");
+          double NewFreq = std::max(Freq - 1, 1.0);
+          setLoopProbability(
+              L, BranchProbability::getBranchProbability(1 - 1 / NewFreq));
+        }
+      }
+    } else {
       NewPreHeader = SplitEdge(PreHeader, Header, &DT, LI);
-      SCEVExpander Expander(*SE, Latch->getDataLayout(), "loop-peel");
+      SCEVExpander Expander(*SE, "loop-peel");
 
       BranchInst *PreHeaderBR = cast<BranchInst>(PreHeader->getTerminator());
       Value *BTCValue =
@@ -1127,7 +1223,24 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
       IRBuilder<> B(PreHeaderBR);
       Value *Cond =
           B.CreateICmpNE(BTCValue, ConstantInt::get(BTCValue->getType(), 0));
-      B.CreateCondBr(Cond, NewPreHeader, InsertTop);
+      auto *BI = B.CreateCondBr(Cond, NewPreHeader, InsertTop);
+      SmallVector<uint32_t> Weights;
+      auto *OrigLatchBr = Latch->getTerminator();
+      auto HasBranchWeights = !ProfcheckDisableMetadataFixes &&
+                              extractBranchWeights(*OrigLatchBr, Weights);
+      if (HasBranchWeights) {
+        // The probability that the new guard skips the loop to execute just one
+        // iteration is the original loop's probability of exiting at the latch
+        // after any iteration. That should maintain the original loop body
+        // frequency. Upon arriving at the loop, due to the guard, the
+        // probability of reaching iteration i of the new loop is the
+        // probability of reaching iteration i+1 of the original loop. The
+        // probability of reaching the peeled iteration is 1, which is the
+        // probability of reaching iteration 0 of the original loop.
+        if (L->getExitBlock() == OrigLatchBr->getSuccessor(0))
+          std::swap(Weights[0], Weights[1]);
+        setBranchWeights(*BI, Weights, /*IsExpected=*/false);
+      }
       PreHeaderBR->eraseFromParent();
 
       // PreHeader now dominates InsertTop.
@@ -1191,11 +1304,6 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
   Instruction *LatchTerm =
       cast<Instruction>(cast<BasicBlock>(Latch)->getTerminator());
 
-  // If we have branch weight information, we'll want to update it for the
-  // newly created branches.
-  DenseMap<Instruction *, WeightInfo> Weights;
-  initBranchWeights(Weights, L);
-
   // Identify what noalias metadata is inside the loop: if it is inside the
   // loop, the associated metadata must be cloned for each iteration.
   SmallVector<MDNode *, 6> LoopLocalNoAliasDeclScopes;
@@ -1241,11 +1349,6 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
     assert(DT.verify(DominatorTree::VerificationLevel::Fast));
 #endif
 
-    for (auto &[Term, Info] : Weights) {
-      auto *TermCopy = cast<Instruction>(VMap[Term]);
-      updateBranchWeights(TermCopy, Info);
-    }
-
     // Remove Loop metadata from the latch branch instruction
     // because it is not the Loop's latch branch anymore.
     auto *LatchTermCopy = cast<Instruction>(VMap[LatchTerm]);
@@ -1285,15 +1388,38 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
     }
   }
 
-  for (const auto &[Term, Info] : Weights) {
-    setBranchWeights(*Term, Info.Weights, /*IsExpected=*/false);
-  }
-
   // Update Metadata for count of peeled off iterations.
   unsigned AlreadyPeeled = 0;
   if (auto Peeled = getOptionalIntLoopAttribute(L, PeeledCountMetaData))
     AlreadyPeeled = *Peeled;
-  addStringMetadataToLoop(L, PeeledCountMetaData, AlreadyPeeled + PeelCount);
+  unsigned TotalPeeled = AlreadyPeeled + PeelCount;
+  addStringMetadataToLoop(L, PeeledCountMetaData, TotalPeeled);
+
+  // Update metadata for the estimated trip count.  The original branch weight
+  // metadata is already correct for both the remaining loop and the peeled loop
+  // iterations, so do not adjust it.
+  //
+  // For example, consider what happens when peeling 2 iterations from a loop
+  // with an estimated trip count of 10 and inserting them before the remaining
+  // loop.  Each of the peeled iterations and each iteration in the remaining
+  // loop still has the same probability of exiting the *entire original* loop
+  // as it did when in the original loop, and thus it should still have the same
+  // branch weights.  The peeled iterations' non-zero probabilities of exiting
+  // already appropriately reduce the probability of reaching the remaining
+  // iterations just as they did in the original loop.  Trying to also adjust
+  // the remaining loop's branch weights to reflect its new trip count of 8 will
+  // erroneously further reduce its block frequencies.  However, in case an
+  // analysis later needs to determine the trip count of the remaining loop
+  // while examining it in isolation without considering the probability of
+  // actually reaching it, we store the new trip count as separate metadata.
+  if (auto EstimatedTripCount = getLoopEstimatedTripCount(L)) {
+    unsigned EstimatedTripCountNew = *EstimatedTripCount;
+    if (EstimatedTripCountNew < TotalPeeled)
+      EstimatedTripCountNew = 0;
+    else
+      EstimatedTripCountNew -= TotalPeeled;
+    setLoopEstimatedTripCount(L, EstimatedTripCountNew);
+  }
 
   if (Loop *ParentLoop = L->getParentLoop())
     L = ParentLoop;

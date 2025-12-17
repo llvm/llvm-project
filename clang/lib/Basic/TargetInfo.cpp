@@ -18,6 +18,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <cstdlib>
@@ -58,11 +59,12 @@ static const LangASMap FakeAddrSpaceMap = {
 TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   // Set defaults.  Defaults are set for a 32-bit RISC platform, like PPC or
   // SPARC.  These should be overridden by concrete targets as needed.
+  HasMustTail = true;
   BigEndian = !T.isLittleEndian();
   TLSSupported = true;
   VLASupported = true;
   NoAsmVariants = false;
-  HasLegalHalfType = false;
+  HasFastHalfType = false;
   HalfArgsAndReturns = false;
   HasFloat128 = false;
   HasIbm128 = false;
@@ -154,7 +156,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   Float128Format = &llvm::APFloat::IEEEquad();
   Ibm128Format = &llvm::APFloat::PPCDoubleDouble();
   MCountName = "mcount";
-  UserLabelPrefix = "_";
+  UserLabelPrefix = Triple.isOSBinFormatMachO() ? "_" : "";
   RegParmMax = 0;
   SSERegParmMax = 0;
   HasAlignMac68kSupport = false;
@@ -194,9 +196,10 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
 // Out of line virtual dtor for TargetInfo.
 TargetInfo::~TargetInfo() {}
 
-void TargetInfo::resetDataLayout(StringRef DL, const char *ULP) {
-  DataLayoutString = DL.str();
-  UserLabelPrefix = ULP;
+void TargetInfo::resetDataLayout(StringRef DL) { DataLayoutString = DL.str(); }
+
+void TargetInfo::resetDataLayout() {
+  DataLayoutString = Triple.computeDataLayout(getABI());
 }
 
 bool
@@ -626,8 +629,34 @@ TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
   return CCK_Default;
 }
 
+bool TargetInfo::callGlobalDeleteInDeletingDtor(
+    const LangOptions &LangOpts) const {
+  if (getCXXABI() == TargetCXXABI::Microsoft &&
+      LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver21)
+    return true;
+  return false;
+}
+
+bool TargetInfo::emitVectorDeletingDtors(const LangOptions &LangOpts) const {
+  if (getCXXABI() == TargetCXXABI::Microsoft &&
+      LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver21)
+    return true;
+  return false;
+}
+
 bool TargetInfo::areDefaultedSMFStillPOD(const LangOptions &LangOpts) const {
   return LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver15;
+}
+
+void TargetInfo::setDependentOpenCLOpts() {
+  auto &Opts = getSupportedOpenCLOpts();
+  if (!hasFeatureEnabled(Opts, "cl_khr_fp64") ||
+      !hasFeatureEnabled(Opts, "__opencl_c_fp64")) {
+    setFeatureEnabled(Opts, "__opencl_c_ext_fp64_global_atomic_add", false);
+    setFeatureEnabled(Opts, "__opencl_c_ext_fp64_local_atomic_add", false);
+    setFeatureEnabled(Opts, "__opencl_c_ext_fp64_global_atomic_min_max", false);
+    setFeatureEnabled(Opts, "__opencl_c_ext_fp64_local_atomic_min_max", false);
+  }
 }
 
 LangAS TargetInfo::getOpenCLTypeAddrSpace(OpenCLTypeKind TK) const {
@@ -1033,4 +1062,52 @@ void TargetInfo::copyAuxTarget(const TargetInfo *Aux) {
   auto *Target = static_cast<TransferrableTargetInfo*>(this);
   auto *Src = static_cast<const TransferrableTargetInfo*>(Aux);
   *Target = *Src;
+}
+
+std::string
+TargetInfo::simplifyConstraint(StringRef Constraint,
+                               SmallVectorImpl<ConstraintInfo> *OutCons) const {
+  std::string Result;
+
+  for (const char *I = Constraint.begin(), *E = Constraint.end(); I < E; I++) {
+    switch (*I) {
+    default:
+      Result += convertConstraint(I);
+      break;
+    // Ignore these
+    case '*':
+    case '?':
+    case '!':
+    case '=': // Will see this and the following in mult-alt constraints.
+    case '+':
+      break;
+    case '#': // Ignore the rest of the constraint alternative.
+      while (I + 1 != E && I[1] != ',')
+        I++;
+      break;
+    case '&':
+    case '%':
+      Result += *I;
+      while (I + 1 != E && I[1] == *I)
+        I++;
+      break;
+    case ',':
+      Result += "|";
+      break;
+    case 'g':
+      Result += "imr";
+      break;
+    case '[': {
+      assert(OutCons &&
+             "Must pass output names to constraints with a symbolic name");
+      unsigned Index;
+      bool ResolveResult = resolveSymbolicName(I, *OutCons, Index);
+      assert(ResolveResult && "Could not resolve symbolic name");
+      (void)ResolveResult;
+      Result += llvm::utostr(Index);
+      break;
+    }
+    }
+  }
+  return Result;
 }

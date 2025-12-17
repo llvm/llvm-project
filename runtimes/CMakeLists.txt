@@ -35,8 +35,8 @@ list(INSERT CMAKE_MODULE_PATH 0
 
 # We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
 # on libc++, so we put it after.
-set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;libclc;openmp;offload")
-set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc;flang-rt;libsycl")
+set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;libclc;openmp;offload")
+set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc;flang-rt;libsycl;orc-rt")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
@@ -44,7 +44,6 @@ if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
 endif()
 include(SortSubset)
 sort_subset("${LLVM_SUPPORTED_RUNTIMES}" "${LLVM_ENABLE_RUNTIMES}" LLVM_ENABLE_RUNTIMES)
-
 foreach(proj ${LLVM_ENABLE_RUNTIMES})
   set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
   if(IS_DIRECTORY ${proj_dir} AND EXISTS ${proj_dir}/CMakeLists.txt)
@@ -75,13 +74,8 @@ endif()
 if (NOT LLVM_FOUND)
   set(LLVM_TOOLS_BINARY_DIR ${LLVM_BINARY_DIR}/bin)
   set(LLVM_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
-  set(LLVM_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib)
+  set(LLVM_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
 endif()
-
-# Setting these variables will allow the sub-build to put their outputs into
-# the library and bin directories of the top-level build.
-set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_LIBRARY_DIR})
-set(LLVM_RUNTIME_OUTPUT_INTDIR ${LLVM_TOOLS_BINARY_DIR})
 
 # This variable makes sure that e.g. llvm-lit is found.
 set(LLVM_MAIN_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../llvm)
@@ -96,8 +90,19 @@ include(CheckCXXCompilerFlag)
 # Determine whether we are in the runtimes/runtimes-bins directory of a
 # bootstrap build.
 set(LLVM_TREE_AVAILABLE OFF)
-if (LLVM_LIBRARY_OUTPUT_INTDIR AND LLVM_RUNTIME_OUTPUT_INTDIR AND PACKAGE_VERSION)
+if (LLVM_LIBRARY_DIR AND LLVM_TOOLS_BINARY_DIR AND PACKAGE_VERSION)
   set(LLVM_TREE_AVAILABLE ON)
+endif()
+
+if(LLVM_TREE_AVAILABLE)
+  # Setting these variables will allow the sub-build to put their outputs into
+  # the library and bin directories of the top-level build.
+  set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_LIBRARY_DIR})
+  set(LLVM_RUNTIME_OUTPUT_INTDIR ${LLVM_TOOLS_BINARY_DIR})
+else()
+  # Use own build directory for artifact output.
+  set(LLVM_LIBRARY_OUTPUT_INTDIR "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX}")
+  set(LLVM_RUNTIME_OUTPUT_INTDIR "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin")
 endif()
 
 # CMake omits default compiler include paths, but in runtimes build, we use
@@ -160,23 +165,35 @@ endif()
 # Check for -nostdlib++ first; if there's no C++ standard library yet,
 # all check_cxx_compiler_flag commands will fail until we add -nostdlib++
 # (or -nodefaultlibs).
-llvm_check_compiler_linker_flag(CXX "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
-if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
+#
+# CMAKE_REQUIRED_FLAGS is used both for C and C++ compilation. This breaks
+# compiling with GCC (and we should not need to force -nostd* for GCC anyway),
+# so apply it only with Clang. However, since there are cases when appending
+# the flag actually breaks the build, still perform the checks rather than
+# appending it unconditionally.
+#
+# TODO: find a better solution. See the discussion on:
+# https://github.com/llvm/llvm-project/issues/90332
+# https://github.com/llvm/llvm-project/pull/108357
+
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  llvm_check_compiler_linker_flag(CXX "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+  if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
+  endif()
+  check_cxx_compiler_flag(-nostdinc++ CXX_SUPPORTS_NOSTDINCXX_FLAG)
+  if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdinc++")
+  endif()
 endif()
-check_cxx_compiler_flag(-nostdinc++ CXX_SUPPORTS_NOSTDINCXX_FLAG)
-if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdinc++")
+
+# The NVPTX target needs to override linking to pass compiler flag checks.
+if("${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -flto -c")
 endif()
 
 # Avoid checking whether the compiler is working.
 set(LLVM_COMPILER_CHECKED ON)
-
-# This can be used to detect whether we're targeting a GPU architecture.
-if("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn" OR
-   "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx64")
-  set(LLVM_RUNTIMES_GPU_BUILD ON)
-endif()
 
 # Handle common options used by all runtimes.
 include(AddLLVM)
@@ -222,6 +239,20 @@ endif()
 option(LLVM_INCLUDE_TESTS "Generate build targets for the runtimes unit tests." ON)
 option(LLVM_INCLUDE_DOCS "Generate build targets for the runtimes documentation." ON)
 option(LLVM_ENABLE_SPHINX "Use Sphinx to generate the runtimes documentation." OFF)
+option(RUNTIMES_EXECUTE_ONLY_CODE "Compile runtime libraries as execute-only." OFF)
+
+if (RUNTIMES_EXECUTE_ONLY_CODE)
+  # If a target doesn't support or recognise -mexecute-only, Clang will simply ignore the flag.
+  # We can check for this case using -Werror=unused-command-line-argument.
+  check_c_compiler_flag("-mexecute-only -Werror=unused-command-line-argument" C_SUPPORTS_MEXECUTE_ONLY)
+  if (NOT C_SUPPORTS_MEXECUTE_ONLY)
+    message(FATAL_ERROR "RUNTIMES_EXECUTE_ONLY_CODE was turned on, but the target '${LLVM_TARGET_TRIPLE}'"
+                        " doesn't support the -mexecute-only flag")
+  endif()
+
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mexecute-only")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mexecute-only")
+endif()
 
 # Use libtool instead of ar if you are both on an Apple host, and targeting Apple.
 if(CMAKE_HOST_APPLE AND APPLE)
@@ -230,6 +261,20 @@ endif()
 
 # This can be used to detect whether we're in the runtimes build.
 set(LLVM_RUNTIMES_BUILD ON)
+
+# Make GTest available to all runtimes
+# The runtime must call make_gtest_target() for it to become available. This is
+# to avoid build failures when gtest is not actually needed. In particular,
+# mingw-incomplete-sysroot is missing C++ header files that GTest needs to
+# compile.
+function(build_gtest)
+  if(TARGET default_gtest)
+    # Already available
+    return()
+  endif()
+
+  add_subdirectory("${LLVM_THIRD_PARTY_DIR}/unittest" "${CMAKE_BINARY_DIR}/third-party/runtimes_gtest")
+endfunction()
 
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)
@@ -254,7 +299,6 @@ foreach(entry ${runtimes})
   # will be included under here.
   set(HAVE_${canon_name} ON)
 endforeach()
-
 if(LLVM_INCLUDE_TESTS)
   # If built with the runtimes build (rooted at runtimes/CMakeLists.txt), we
   # won't have llvm-lit. If built with the bootstrapping build (rooted at

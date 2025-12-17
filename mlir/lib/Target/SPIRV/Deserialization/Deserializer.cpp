@@ -138,6 +138,7 @@ LogicalResult spirv::Deserializer::processHeader() {
       MIN_VERSION_CASE(3);
       MIN_VERSION_CASE(4);
       MIN_VERSION_CASE(5);
+      MIN_VERSION_CASE(6);
 #undef MIN_VERSION_CASE
     default:
       return emitError(unknownLoc, "unsupported SPIR-V minor version: ")
@@ -228,7 +229,7 @@ spirv::Deserializer::processMemoryModel(ArrayRef<uint32_t> operands) {
 }
 
 template <typename AttrTy, typename EnumAttrTy, typename EnumTy>
-LogicalResult deserializeCacheControlDecoration(
+static LogicalResult deserializeCacheControlDecoration(
     Location loc, OpBuilder &opBuilder,
     DenseMap<uint32_t, NamedAttrList> &decorations, ArrayRef<uint32_t> words,
     StringAttr symbol, StringRef decorationName, StringRef cacheControlKind) {
@@ -343,6 +344,9 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::RestrictPointer:
   case spirv::Decoration::NoContraction:
   case spirv::Decoration::Constant:
+  case spirv::Decoration::Invariant:
+  case spirv::Decoration::Patch:
+  case spirv::Decoration::Coherent:
     if (words.size() != 2) {
       return emitError(unknownLoc, "OpDecoration with ")
              << decorationName << "needs a single target <id>";
@@ -666,6 +670,200 @@ spirv::Deserializer::processFunctionEnd(ArrayRef<uint32_t> operands) {
   return success();
 }
 
+LogicalResult
+spirv::Deserializer::processGraphEntryPointARM(ArrayRef<uint32_t> operands) {
+  if (operands.size() < 2) {
+    return emitError(unknownLoc,
+                     "missing graph defintion in OpGraphEntryPointARM");
+  }
+
+  unsigned wordIndex = 0;
+  uint32_t graphID = operands[wordIndex++];
+  if (!graphMap.contains(graphID)) {
+    return emitError(unknownLoc,
+                     "missing graph definition/declaration with id ")
+           << graphID;
+  }
+
+  spirv::GraphARMOp graphARM = graphMap[graphID];
+  StringRef name = decodeStringLiteral(operands, wordIndex);
+  graphARM.setSymName(name);
+  graphARM.setEntryPoint(true);
+
+  SmallVector<Attribute, 4> interface;
+  for (int64_t size = operands.size(); wordIndex < size; ++wordIndex) {
+    if (spirv::GlobalVariableOp arg = getGlobalVariable(operands[wordIndex])) {
+      interface.push_back(SymbolRefAttr::get(arg.getOperation()));
+    } else {
+      return emitError(unknownLoc, "undefined result <id> ")
+             << operands[wordIndex] << " while decoding OpGraphEntryPoint";
+    }
+  }
+
+  // RAII guard to reset the insertion point to previous value when done.
+  OpBuilder::InsertionGuard insertionGuard(opBuilder);
+  opBuilder.setInsertionPoint(graphARM);
+  spirv::GraphEntryPointARMOp::create(
+      opBuilder, unknownLoc, SymbolRefAttr::get(opBuilder.getContext(), name),
+      opBuilder.getArrayAttr(interface));
+
+  return success();
+}
+
+LogicalResult
+spirv::Deserializer::processGraphARM(ArrayRef<uint32_t> operands) {
+  if (curGraph) {
+    return emitError(unknownLoc, "found graph inside graph");
+  }
+  // Get the result type.
+  if (operands.size() < 2) {
+    return emitError(unknownLoc, "OpGraphARM must have at least 2 parameters");
+  }
+
+  Type type = getType(operands[0]);
+  if (!type || !isa<GraphType>(type)) {
+    return emitError(unknownLoc, "unknown graph type from <id> ")
+           << operands[0];
+  }
+  auto graphType = cast<GraphType>(type);
+  if (graphType.getNumResults() <= 0) {
+    return emitError(unknownLoc, "expected at least one result");
+  }
+
+  uint32_t graphID = operands[1];
+  if (graphMap.count(graphID)) {
+    return emitError(unknownLoc, "duplicate graph definition/declaration");
+  }
+
+  std::string graphName = getGraphSymbol(graphID);
+  auto graphOp =
+      spirv::GraphARMOp::create(opBuilder, unknownLoc, graphName, graphType);
+  curGraph = graphMap[graphID] = graphOp;
+  Block *entryBlock = graphOp.addEntryBlock();
+  LLVM_DEBUG({
+    logger.startLine()
+        << "//===-------------------------------------------===//\n";
+    logger.startLine() << "[graph] name: " << graphName << "\n";
+    logger.startLine() << "[graph] type: " << graphType << "\n";
+    logger.startLine() << "[graph] ID: " << graphID << "\n";
+    logger.startLine() << "[graph] entry block: " << entryBlock << "\n";
+    logger.indent();
+  });
+
+  // Parse the op argument instructions.
+  for (auto [index, argType] : llvm::enumerate(graphType.getInputs())) {
+    spirv::Opcode opcode;
+    ArrayRef<uint32_t> operands;
+    if (failed(sliceInstruction(opcode, operands,
+                                spirv::Opcode::OpGraphInputARM))) {
+      return failure();
+    }
+    if (operands.size() != 3) {
+      return emitError(unknownLoc, "expected result type, result <id> and "
+                                   "input index for OpGraphInputARM");
+    }
+
+    Type argDefinedType = getType(operands[0]);
+    if (!argDefinedType) {
+      return emitError(unknownLoc, "unknown operand type <id> ") << operands[0];
+    }
+
+    if (argDefinedType != argType) {
+      return emitError(unknownLoc,
+                       "mismatch in argument type between graph type "
+                       "definition ")
+             << graphType << " and argument type definition " << argDefinedType
+             << " at argument " << index;
+    }
+    if (getValue(operands[1])) {
+      return emitError(unknownLoc, "duplicate definition of result <id> ")
+             << operands[1];
+    }
+
+    IntegerAttr inputIndexAttr = getConstantInt(operands[2]);
+    if (!inputIndexAttr) {
+      return emitError(unknownLoc,
+                       "unable to read inputIndex value from constant op ")
+             << operands[2];
+    }
+    BlockArgument argValue = graphOp.getArgument(inputIndexAttr.getInt());
+    valueMap[operands[1]] = argValue;
+  }
+
+  graphOutputs.resize(graphType.getNumResults());
+
+  // RAII guard to reset the insertion point to the module's region after
+  // deserializing the body of this function.
+  OpBuilder::InsertionGuard moduleInsertionGuard(opBuilder);
+
+  blockMap[graphID] = entryBlock;
+  if (failed(createGraphBlock(graphID))) {
+    return failure();
+  }
+
+  // Process all the instructions in the graph until and including
+  // OpGraphEndARM.
+  spirv::Opcode opcode;
+  ArrayRef<uint32_t> instOperands;
+  do {
+    if (failed(sliceInstruction(opcode, instOperands, std::nullopt))) {
+      return failure();
+    }
+
+    if (failed(processInstruction(opcode, instOperands))) {
+      return failure();
+    }
+  } while (opcode != spirv::Opcode::OpGraphEndARM);
+
+  return success();
+}
+
+LogicalResult
+spirv::Deserializer::processOpGraphSetOutputARM(ArrayRef<uint32_t> operands) {
+  if (operands.size() != 2) {
+    return emitError(
+        unknownLoc,
+        "expected value id and output index for OpGraphSetOutputARM");
+  }
+
+  uint32_t id = operands[0];
+  Value value = getValue(id);
+  if (!value) {
+    return emitError(unknownLoc, "could not find result <id> ") << id;
+  }
+
+  IntegerAttr outputIndexAttr = getConstantInt(operands[1]);
+  if (!outputIndexAttr) {
+    return emitError(unknownLoc,
+                     "unable to read outputIndex value from constant op ")
+           << operands[1];
+  }
+  graphOutputs[outputIndexAttr.getInt()] = value;
+  return success();
+}
+
+LogicalResult
+spirv::Deserializer::processGraphEndARM(ArrayRef<uint32_t> operands) {
+  // Create GraphOutputsARM instruction.
+  spirv::GraphOutputsARMOp::create(opBuilder, unknownLoc, graphOutputs);
+
+  // Process OpGraphEndARM.
+  if (!operands.empty()) {
+    return emitError(unknownLoc, "unexpected operands for OpGraphEndARM");
+  }
+
+  curBlock = nullptr;
+  curGraph = std::nullopt;
+  graphOutputs.clear();
+
+  LLVM_DEBUG({
+    logger.unindent();
+    logger.startLine()
+        << "//===-------------------------------------------===//\n";
+  });
+  return success();
+}
+
 std::optional<std::pair<Attribute, Type>>
 spirv::Deserializer::getConstant(uint32_t id) {
   auto constIt = constantMap.find(id);
@@ -698,6 +896,14 @@ std::string spirv::Deserializer::getFunctionSymbol(uint32_t id) {
   return funcName;
 }
 
+std::string spirv::Deserializer::getGraphSymbol(uint32_t id) {
+  std::string graphName = nameMap.lookup(id).str();
+  if (graphName.empty()) {
+    graphName = "spirv_graph_" + std::to_string(id);
+  }
+  return graphName;
+}
+
 std::string spirv::Deserializer::getSpecConstantSymbol(uint32_t id) {
   auto constName = nameMap.lookup(id).str();
   if (constName.empty()) {
@@ -718,6 +924,14 @@ spirv::Deserializer::createSpecConstant(Location loc, uint32_t resultID,
   }
   specConstMap[resultID] = op;
   return op;
+}
+
+std::optional<spirv::GraphConstantARMOpMaterializationInfo>
+spirv::Deserializer::getGraphConstantARM(uint32_t id) {
+  auto graphConstIt = graphConstantMap.find(id);
+  if (graphConstIt == graphConstantMap.end())
+    return std::nullopt;
+  return graphConstIt->getSecond();
 }
 
 LogicalResult
@@ -941,6 +1155,8 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
     return processMatrixType(operands);
   case spirv::Opcode::OpTypeTensorARM:
     return processTensorARMType(operands);
+  case spirv::Opcode::OpTypeGraphARM:
+    return processGraphTypeARM(operands);
   default:
     return emitError(unknownLoc, "unhandled type instruction");
   }
@@ -1309,6 +1525,35 @@ spirv::Deserializer::processTensorARMType(ArrayRef<uint32_t> operands) {
 }
 
 LogicalResult
+spirv::Deserializer::processGraphTypeARM(ArrayRef<uint32_t> operands) {
+  unsigned size = operands.size();
+  if (size < 2) {
+    return emitError(unknownLoc, "OpTypeGraphARM must have at least 2 operands "
+                                 "(result_id, num_inputs, (inout0_type, "
+                                 "inout1_type, ...))")
+           << size;
+  }
+  uint32_t numInputs = operands[1];
+  SmallVector<Type, 1> argTypes;
+  SmallVector<Type, 1> returnTypes;
+  for (unsigned i = 2; i < size; ++i) {
+    Type inOutTy = getType(operands[i]);
+    if (!inOutTy) {
+      return emitError(unknownLoc,
+                       "OpTypeGraphARM references undefined element type.")
+             << operands[i];
+    }
+    if (i - 2 >= numInputs) {
+      returnTypes.push_back(inOutTy);
+    } else {
+      argTypes.push_back(inOutTy);
+    }
+  }
+  typeMap[operands[0]] = GraphType::get(context, argTypes, returnTypes);
+  return success();
+}
+
+LogicalResult
 spirv::Deserializer::processTypeForwardPointer(ArrayRef<uint32_t> operands) {
   if (operands.size() != 2)
     return emitError(unknownLoc,
@@ -1557,7 +1802,19 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
   }
 
   auto resultID = operands[1];
-  if (auto shapedType = dyn_cast<ShapedType>(resultType)) {
+  if (auto tensorType = dyn_cast<TensorArmType>(resultType)) {
+    SmallVector<Attribute> flattenedElems;
+    for (Attribute element : elements) {
+      if (auto denseElemAttr = dyn_cast<DenseElementsAttr>(element)) {
+        for (auto value : denseElemAttr.getValues<Attribute>())
+          flattenedElems.push_back(value);
+      } else {
+        flattenedElems.push_back(element);
+      }
+    }
+    auto attr = DenseElementsAttr::get(tensorType, flattenedElems);
+    constantMap.try_emplace(resultID, attr, tensorType);
+  } else if (auto shapedType = dyn_cast<ShapedType>(resultType)) {
     auto attr = DenseElementsAttr::get(shapedType, elements);
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.
@@ -1808,6 +2065,34 @@ spirv::Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
          << resultType;
 }
 
+LogicalResult
+spirv::Deserializer::processGraphConstantARM(ArrayRef<uint32_t> operands) {
+  if (operands.size() < 3) {
+    return emitError(unknownLoc)
+           << "OpGraphConstantARM must have at least 2 operands";
+  }
+
+  Type resultType = getType(operands[0]);
+  if (!resultType) {
+    return emitError(unknownLoc, "undefined result type from <id> ")
+           << operands[0];
+  }
+
+  uint32_t resultID = operands[1];
+
+  if (!dyn_cast<spirv::TensorArmType>(resultType)) {
+    return emitError(unknownLoc, "result must be of type OpTypeTensorARM");
+  }
+
+  APInt graph_constant_id = APInt(32, operands[2], /*isSigned=*/true);
+  Type i32Ty = opBuilder.getIntegerType(32);
+  IntegerAttr attr = opBuilder.getIntegerAttr(i32Ty, graph_constant_id);
+  graphConstantMap.try_emplace(
+      resultID, GraphConstantARMOpMaterializationInfo{resultType, attr});
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Control flow
 //===----------------------------------------------------------------------===//
@@ -1905,6 +2190,24 @@ LogicalResult spirv::Deserializer::processLabel(ArrayRef<uint32_t> operands) {
   return success();
 }
 
+LogicalResult spirv::Deserializer::createGraphBlock(uint32_t graphID) {
+  if (!curGraph) {
+    return emitError(unknownLoc, "a graph block must appear inside a graph");
+  }
+
+  // We may have forward declared this block.
+  Block *block = getOrCreateBlock(graphID);
+  LLVM_DEBUG(logger.startLine()
+             << "[block] populating block " << block << "\n");
+  // If we have seen this block, make sure it was just a forward declaration.
+  assert(block->empty() && "re-deserialize the same block!");
+
+  opBuilder.setInsertionPointToStart(block);
+  blockMap[graphID] = curBlock = block;
+
+  return success();
+}
+
 LogicalResult
 spirv::Deserializer::processSelectionMerge(ArrayRef<uint32_t> operands) {
   if (!curBlock) {
@@ -1986,6 +2289,38 @@ LogicalResult spirv::Deserializer::processPhi(ArrayRef<uint32_t> operands) {
     LLVM_DEBUG(logger.startLine() << "[phi] predecessor @ " << predecessor
                                   << " with arg id = " << value << "\n");
   }
+
+  return success();
+}
+
+LogicalResult spirv::Deserializer::processSwitch(ArrayRef<uint32_t> operands) {
+  if (!curBlock)
+    return emitError(unknownLoc, "OpSwitch must appear in a block");
+
+  if (operands.size() < 2)
+    return emitError(unknownLoc, "OpSwitch must at least specify selector and "
+                                 "a default target");
+
+  if (operands.size() % 2)
+    return emitError(unknownLoc,
+                     "OpSwitch must at have an even number of operands: "
+                     "selector, default target and any number of literal and "
+                     "label <id> pairs");
+
+  Value selector = getValue(operands[0]);
+  Block *defaultBlock = getOrCreateBlock(operands[1]);
+  Location loc = createFileLineColLoc(opBuilder);
+
+  SmallVector<int32_t> literals;
+  SmallVector<Block *> blocks;
+  for (unsigned i = 2, e = operands.size(); i < e; i += 2) {
+    literals.push_back(operands[i]);
+    blocks.push_back(getOrCreateBlock(operands[i + 1]));
+  }
+
+  SmallVector<ValueRange> targetOperands(blocks.size(), {});
+  spirv::SwitchOp::create(opBuilder, loc, selector, defaultBlock,
+                          ArrayRef<Value>(), literals, blocks, targetOperands);
 
   return success();
 }
@@ -2317,6 +2652,11 @@ LogicalResult ControlFlowStructurizer::structurize() {
   // region. We cannot handle such cases given that once a value is sinked into
   // the SelectionOp/LoopOp's region, there is no escape for it.
   for (auto *block : constructBlocks) {
+    if (!block->use_empty())
+      return emitError(block->getParent()->getLoc(),
+                       "failed control flow structurization: "
+                       "block has uses outside of the "
+                       "enclosing selection/loop construct");
     for (Operation &op : *block)
       if (!op.use_empty())
         return op.emitOpError("failed control flow structurization: value has "
@@ -2492,6 +2832,23 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
             branchCondOp.getFalseBlock());
 
       branchCondOp.erase();
+    } else if (auto switchOp = dyn_cast<spirv::SwitchOp>(op)) {
+      if (target == switchOp.getDefaultTarget()) {
+        SmallVector<ValueRange> targetOperands(switchOp.getTargetOperands());
+        DenseIntElementsAttr literals =
+            switchOp.getLiterals().value_or(DenseIntElementsAttr());
+        spirv::SwitchOp::create(
+            opBuilder, switchOp.getLoc(), switchOp.getSelector(),
+            switchOp.getDefaultTarget(), blockArgs, literals,
+            switchOp.getTargets(), targetOperands);
+        switchOp.erase();
+      } else {
+        SuccessorRange targets = switchOp.getTargets();
+        auto it = llvm::find(targets, target);
+        assert(it != targets.end());
+        size_t index = std::distance(targets.begin(), it);
+        switchOp.getTargetOperandsMutable(index).assign(blockArgs);
+      }
     } else {
       return emitError(unknownLoc, "unimplemented terminator for Phi creation");
     }
@@ -2512,7 +2869,7 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
   return success();
 }
 
-LogicalResult spirv::Deserializer::splitConditionalBlocks() {
+LogicalResult spirv::Deserializer::splitSelectionHeader() {
   // Create a copy, so we can modify keys in the original.
   BlockMergeInfoMap blockMergeInfoCopy = blockMergeInfo;
   for (auto it = blockMergeInfoCopy.begin(), e = blockMergeInfoCopy.end();
@@ -2529,7 +2886,7 @@ LogicalResult spirv::Deserializer::splitConditionalBlocks() {
     Operation *terminator = block->getTerminator();
     assert(terminator);
 
-    if (!isa<spirv::BranchConditionalOp>(terminator))
+    if (!isa<spirv::BranchConditionalOp, spirv::SwitchOp>(terminator))
       continue;
 
     // Check if the current header block is a merge block of another construct.
@@ -2539,10 +2896,10 @@ LogicalResult spirv::Deserializer::splitConditionalBlocks() {
         splitHeaderMergeBlock = true;
     }
 
-    // Do not split a block that only contains a conditional branch, unless it
-    // is also a merge block of another construct - in that case we want to
-    // split the block. We do not want two constructs to share header / merge
-    // block.
+    // Do not split a block that only contains a conditional branch / switch,
+    // unless it is also a merge block of another construct - in that case we
+    // want to split the block. We do not want two constructs to share header /
+    // merge block.
     if (!llvm::hasSingleElement(*block) || splitHeaderMergeBlock) {
       Block *newBlock = block->splitBlock(terminator);
       OpBuilder builder(block, block->end());
@@ -2580,13 +2937,10 @@ LogicalResult spirv::Deserializer::structurizeControlFlow() {
     logger.startLine() << "\n";
   });
 
-  if (failed(splitConditionalBlocks())) {
+  if (failed(splitSelectionHeader())) {
     return failure();
   }
 
-  // TODO: This loop is non-deterministic. Iteration order may vary between runs
-  // for the same shader as the key to the map is a pointer. See:
-  // https://github.com/llvm/llvm-project/issues/128547
   while (!blockMergeInfo.empty()) {
     Block *headerBlock = blockMergeInfo.begin()->first;
     BlockMergeInfo mergeInfo = blockMergeInfo.begin()->second;

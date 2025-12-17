@@ -138,6 +138,7 @@ class VectorLegalizer {
   SDValue ExpandVP_FNEG(SDNode *Node);
   SDValue ExpandVP_FABS(SDNode *Node);
   SDValue ExpandVP_FCOPYSIGN(SDNode *Node);
+  SDValue ExpandLOOP_DEPENDENCE_MASK(SDNode *N);
   SDValue ExpandSELECT(SDNode *Node);
   std::pair<SDValue, SDValue> ExpandLoad(SDNode *N);
   SDValue ExpandStore(SDNode *N);
@@ -155,11 +156,6 @@ class VectorLegalizer {
   void ExpandREM(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
   bool tryExpandVecMathCall(SDNode *Node, RTLIB::Libcall LC,
-                            SmallVectorImpl<SDValue> &Results);
-  bool tryExpandVecMathCall(SDNode *Node, RTLIB::Libcall Call_F32,
-                            RTLIB::Libcall Call_F64, RTLIB::Libcall Call_F80,
-                            RTLIB::Libcall Call_F128,
-                            RTLIB::Libcall Call_PPCF128,
                             SmallVectorImpl<SDValue> &Results);
 
   void UnrollStrictFPOp(SDNode *Node, SmallVectorImpl<SDValue> &Results);
@@ -475,6 +471,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VECTOR_COMPRESS:
   case ISD::SCMP:
   case ISD::UCMP:
+  case ISD::LOOP_DEPENDENCE_WAR_MASK:
+  case ISD::LOOP_DEPENDENCE_RAW_MASK:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::SMULFIX:
@@ -531,6 +529,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
   case ISD::PARTIAL_REDUCE_SUMLA:
+  case ISD::PARTIAL_REDUCE_FMLA:
     Action =
         TLI.getPartialReduceMLAAction(Op.getOpcode(), Node->getValueType(0),
                                       Node->getOperand(1).getValueType());
@@ -1240,6 +1239,7 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
   case ISD::PARTIAL_REDUCE_SUMLA:
+  case ISD::PARTIAL_REDUCE_FMLA:
     Results.push_back(TLI.expandPartialReduceMLA(Node, DAG));
     return;
   case ISD::VECREDUCE_SEQ_FADD:
@@ -1256,27 +1256,32 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
-  case ISD::FREM:
-    if (tryExpandVecMathCall(Node, RTLIB::REM_F32, RTLIB::REM_F64,
-                             RTLIB::REM_F80, RTLIB::REM_F128,
-                             RTLIB::REM_PPCF128, Results))
+  case ISD::FREM: {
+    RTLIB::Libcall LC = RTLIB::getREM(Node->getValueType(0));
+    if (tryExpandVecMathCall(Node, LC, Results))
       return;
 
     break;
+  }
   case ISD::FSINCOS:
   case ISD::FSINCOSPI: {
-    EVT VT = Node->getValueType(0).getVectorElementType();
+    EVT VT = Node->getValueType(0);
     RTLIB::Libcall LC = Node->getOpcode() == ISD::FSINCOS
                             ? RTLIB::getSINCOS(VT)
                             : RTLIB::getSINCOSPI(VT);
-    if (DAG.expandMultipleResultFPLibCall(LC, Node, Results))
+    if (LC != RTLIB::UNKNOWN_LIBCALL &&
+        TLI.expandMultipleResultFPLibCall(DAG, LC, Node, Results))
       return;
+
+    // TODO: Try to see if there's a narrower call available to use before
+    // scalarizing.
     break;
   }
   case ISD::FMODF: {
-    RTLIB::Libcall LC =
-        RTLIB::getMODF(Node->getValueType(0).getVectorElementType());
-    if (DAG.expandMultipleResultFPLibCall(LC, Node, Results,
+    EVT VT = Node->getValueType(0);
+    RTLIB::Libcall LC = RTLIB::getMODF(VT);
+    if (LC != RTLIB::UNKNOWN_LIBCALL &&
+        TLI.expandMultipleResultFPLibCall(DAG, LC, Node, Results,
                                           /*CallRetResNo=*/0))
       return;
     break;
@@ -1290,6 +1295,10 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::SCMP:
   case ISD::UCMP:
     Results.push_back(TLI.expandCMP(Node, DAG));
+    return;
+  case ISD::LOOP_DEPENDENCE_WAR_MASK:
+  case ISD::LOOP_DEPENDENCE_RAW_MASK:
+    Results.push_back(ExpandLOOP_DEPENDENCE_MASK(Node));
     return;
 
   case ISD::FADD:
@@ -1796,6 +1805,45 @@ SDValue VectorLegalizer::ExpandVP_FCOPYSIGN(SDNode *Node) {
   return DAG.getNode(ISD::BITCAST, DL, VT, CopiedSign);
 }
 
+SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue SourceValue = N->getOperand(0);
+  SDValue SinkValue = N->getOperand(1);
+  SDValue EltSizeInBytes = N->getOperand(2);
+
+  // Note: The lane offset is scalable if the mask is scalable.
+  ElementCount LaneOffsetEC =
+      ElementCount::get(N->getConstantOperandVal(3), VT.isScalableVT());
+
+  EVT PtrVT = SourceValue->getValueType(0);
+  bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
+
+  // Take the difference between the pointers and divided by the element size,
+  // to see how many lanes separate them.
+  SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
+  if (IsReadAfterWrite)
+    Diff = DAG.getNode(ISD::ABS, DL, PtrVT, Diff);
+  Diff = DAG.getNode(ISD::SDIV, DL, PtrVT, Diff, EltSizeInBytes);
+
+  // The pointers do not alias if:
+  //  * Diff <= 0 (WAR_MASK)
+  //  * Diff == 0 (RAW_MASK)
+  EVT CmpVT =
+      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), PtrVT);
+  SDValue Zero = DAG.getConstant(0, DL, PtrVT);
+  SDValue Cmp = DAG.getSetCC(DL, CmpVT, Diff, Zero,
+                             IsReadAfterWrite ? ISD::SETEQ : ISD::SETLE);
+
+  // The pointers do not alias if:
+  // Lane + LaneOffset < Diff (WAR/RAW_MASK)
+  SDValue LaneOffset = DAG.getElementCount(DL, PtrVT, LaneOffsetEC);
+  SDValue MaskN =
+      DAG.getSelect(DL, PtrVT, Cmp, DAG.getConstant(-1, DL, PtrVT), Diff);
+
+  return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, VT, LaneOffset, MaskN);
+}
+
 void VectorLegalizer::ExpandFP_TO_UINT(SDNode *Node,
                                        SmallVectorImpl<SDValue> &Results) {
   // Attempt to expand using TargetLowering.
@@ -2175,103 +2223,58 @@ bool VectorLegalizer::tryExpandVecMathCall(SDNode *Node, RTLIB::Libcall LC,
   // converted to their none strict counterpart.
   assert(!Node->isStrictFPOpcode() && "Unexpected strict fp operation!");
 
-  const char *LCName = TLI.getLibcallName(LC);
-  if (!LCName)
+  RTLIB::LibcallImpl LCImpl = TLI.getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported)
     return false;
-  LLVM_DEBUG(dbgs() << "Looking for vector variant of " << LCName << "\n");
 
   EVT VT = Node->getValueType(0);
-  ElementCount VL = VT.getVectorElementCount();
+  const RTLIB::RuntimeLibcallsInfo &RTLCI = TLI.getRuntimeLibcallsInfo();
+  LLVMContext &Ctx = *DAG.getContext();
 
-  // Lookup a vector function equivalent to the specified libcall. Prefer
-  // unmasked variants but we will generate a mask if need be.
-  const TargetLibraryInfo &TLibInfo = DAG.getLibInfo();
-  const VecDesc *VD = TLibInfo.getVectorMappingInfo(LCName, VL, false);
-  if (!VD)
-    VD = TLibInfo.getVectorMappingInfo(LCName, VL, /*Masked=*/true);
-  if (!VD)
-    return false;
-
-  LLVMContext *Ctx = DAG.getContext();
-  Type *Ty = VT.getTypeForEVT(*Ctx);
-  Type *ScalarTy = Ty->getScalarType();
-
-  // Construct a scalar function type based on Node's operands.
-  SmallVector<Type *, 8> ArgTys;
-  for (unsigned i = 0; i < Node->getNumOperands(); ++i) {
-    assert(Node->getOperand(i).getValueType() == VT &&
-           "Expected matching vector types!");
-    ArgTys.push_back(ScalarTy);
-  }
-  FunctionType *ScalarFTy = FunctionType::get(ScalarTy, ArgTys, false);
-
-  // Generate call information for the vector function.
-  const std::string MangledName = VD->getVectorFunctionABIVariantString();
-  auto OptVFInfo = VFABI::tryDemangleForVFABI(MangledName, ScalarFTy);
-  if (!OptVFInfo)
-    return false;
-
-  LLVM_DEBUG(dbgs() << "Found vector variant " << VD->getVectorFnName()
-                    << "\n");
-
-  // Sanity check just in case OptVFInfo has unexpected parameters.
-  if (OptVFInfo->Shape.Parameters.size() !=
-      Node->getNumOperands() + VD->isMasked())
-    return false;
-
-  // Collect vector call operands.
+  auto [FuncTy, FuncAttrs] = RTLCI.getFunctionTy(
+      Ctx, DAG.getSubtarget().getTargetTriple(), DAG.getDataLayout(), LCImpl);
 
   SDLoc DL(Node);
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.IsSExt = false;
-  Entry.IsZExt = false;
 
-  unsigned OpNum = 0;
-  for (auto &VFParam : OptVFInfo->Shape.Parameters) {
-    if (VFParam.ParamKind == VFParamKind::GlobalPredicate) {
-      EVT MaskVT = TLI.getSetCCResultType(DAG.getDataLayout(), *Ctx, VT);
-      Entry.Node = DAG.getBoolConstant(true, DL, MaskVT, VT);
-      Entry.Ty = MaskVT.getTypeForEVT(*Ctx);
-      Args.push_back(Entry);
-      continue;
+  bool HasMaskArg = RTLCI.hasVectorMaskArgument(LCImpl);
+
+  // Sanity check just in case function has unexpected parameters.
+  assert(FuncTy->getNumParams() == Node->getNumOperands() + HasMaskArg &&
+         EVT::getEVT(FuncTy->getReturnType(), true) == VT &&
+         "mismatch in value type and call signature type");
+
+  for (unsigned I = 0, E = FuncTy->getNumParams(); I != E; ++I) {
+    Type *ParamTy = FuncTy->getParamType(I);
+
+    if (HasMaskArg && I == E - 1) {
+      assert(cast<VectorType>(ParamTy)->getElementType()->isIntegerTy(1) &&
+             "unexpected vector mask type");
+      EVT MaskVT = TLI.getSetCCResultType(DAG.getDataLayout(), Ctx, VT);
+      Args.emplace_back(DAG.getBoolConstant(true, DL, MaskVT, VT),
+                        MaskVT.getTypeForEVT(Ctx));
+
+    } else {
+      SDValue Op = Node->getOperand(I);
+      assert(Op.getValueType() == EVT::getEVT(ParamTy, true) &&
+             "mismatch in value type and call argument type");
+      Args.emplace_back(Op, ParamTy);
     }
-
-    // Only vector operands are supported.
-    if (VFParam.ParamKind != VFParamKind::Vector)
-      return false;
-
-    Entry.Node = Node->getOperand(OpNum++);
-    Entry.Ty = Ty;
-    Args.push_back(Entry);
   }
 
   // Emit a call to the vector function.
-  SDValue Callee = DAG.getExternalSymbol(VD->getVectorFnName().data(),
-                                         TLI.getPointerTy(DAG.getDataLayout()));
+  SDValue Callee =
+      DAG.getExternalSymbol(LCImpl, TLI.getPointerTy(DAG.getDataLayout()));
+  CallingConv::ID CC = RTLCI.getLibcallImplCallingConv(LCImpl);
+
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(DL)
       .setChain(DAG.getEntryNode())
-      .setLibCallee(CallingConv::C, Ty, Callee, std::move(Args));
+      .setLibCallee(CC, FuncTy->getReturnType(), Callee, std::move(Args));
 
   std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
   Results.push_back(CallResult.first);
   return true;
-}
-
-/// Try to expand the node to a vector libcall based on the result type.
-bool VectorLegalizer::tryExpandVecMathCall(
-    SDNode *Node, RTLIB::Libcall Call_F32, RTLIB::Libcall Call_F64,
-    RTLIB::Libcall Call_F80, RTLIB::Libcall Call_F128,
-    RTLIB::Libcall Call_PPCF128, SmallVectorImpl<SDValue> &Results) {
-  RTLIB::Libcall LC = RTLIB::getFPLibCall(
-      Node->getValueType(0).getVectorElementType(), Call_F32, Call_F64,
-      Call_F80, Call_F128, Call_PPCF128);
-
-  if (LC == RTLIB::UNKNOWN_LIBCALL)
-    return false;
-
-  return tryExpandVecMathCall(Node, LC, Results);
 }
 
 void VectorLegalizer::UnrollStrictFPOp(SDNode *Node,

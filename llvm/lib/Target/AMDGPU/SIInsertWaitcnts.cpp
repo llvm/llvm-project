@@ -32,11 +32,15 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/TargetParser/TargetParser.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "si-insert-waitcnts"
@@ -93,7 +97,40 @@ auto inst_counter_types(InstCounterType MaxCounter = NUM_INST_CNTS) {
   return enum_seq(LOAD_CNT, MaxCounter);
 }
 
-using RegInterval = std::pair<int, int>;
+/// Integer IDs used to track vector memory locations we may have to wait on.
+/// Encoded as u16 chunks:
+///
+///   [0,               REGUNITS_END ): MCRegUnit
+///   [LDSDMA_BEGIN,    LDSDMA_END  ) : LDS DMA IDs
+///
+/// NOTE: The choice of encoding these as "u16 chunks" is arbitrary.
+/// It gives (2 << 16) - 1 entries per category which is more than enough
+/// for all register units. MCPhysReg is u16 so we don't even support >u16
+/// physical register numbers at this time, let alone >u16 register units.
+/// In any case, an assertion in "WaitcntBrackets" ensures REGUNITS_END
+/// is enough for all register units.
+using VMEMID = uint32_t;
+
+enum : VMEMID {
+  TRACKINGID_RANGE_LEN = (1 << 16),
+
+  // Important: MCRegUnits must always be tracked starting from 0, as we
+  // need to be able to convert between a MCRegUnit and a VMEMID freely.
+  REGUNITS_BEGIN = 0,
+  REGUNITS_END = REGUNITS_BEGIN + TRACKINGID_RANGE_LEN,
+
+  // Note for LDSDMA: LDSDMA_BEGIN corresponds to the "common"
+  // entry, which is updated for all LDS DMA operations encountered.
+  // Specific LDS DMA IDs start at LDSDMA_BEGIN + 1.
+  NUM_LDSDMA = TRACKINGID_RANGE_LEN,
+  LDSDMA_BEGIN = REGUNITS_END,
+  LDSDMA_END = LDSDMA_BEGIN + NUM_LDSDMA,
+};
+
+/// Convert a MCRegUnit to a VMEMID.
+static constexpr VMEMID toVMEMID(MCRegUnit RU) {
+  return static_cast<unsigned>(RU);
+}
 
 struct HardwareLimits {
   unsigned LoadcntMax; // Corresponds to VMcnt prior to gfx12.
@@ -107,8 +144,7 @@ struct HardwareLimits {
 };
 
 #define AMDGPU_DECLARE_WAIT_EVENTS(DECL)                                       \
-  DECL(VMEM_ACCESS)              /* vmem read & write */                       \
-  DECL(VMEM_READ_ACCESS)         /* vmem read */                               \
+  DECL(VMEM_ACCESS) /* vmem read & write (pre-gfx10), vmem read (gfx10+) */    \
   DECL(VMEM_SAMPLER_READ_ACCESS) /* vmem SAMPLER read (gfx12+ only) */         \
   DECL(VMEM_BVH_READ_ACCESS)     /* vmem BVH read (gfx12+ only) */             \
   DECL(VMEM_WRITE_ACCESS)        /* vmem write that is not scratch */          \
@@ -117,6 +153,7 @@ struct HardwareLimits {
   DECL(LDS_ACCESS)               /* lds read & write */                        \
   DECL(GDS_ACCESS)               /* gds read & write */                        \
   DECL(SQ_MESSAGE)               /* send message */                            \
+  DECL(SCC_WRITE)                /* write to SCC from barrier */               \
   DECL(SMEM_ACCESS)              /* scalar-memory read & write */              \
   DECL(SMEM_GROUP)               /* scalar-memory group */                     \
   DECL(EXP_GPR_LOCK)             /* export holding on its data src */          \
@@ -140,26 +177,6 @@ static constexpr StringLiteral WaitEventTypeName[] = {
 };
 #undef AMDGPU_EVENT_NAME
 // clang-format on
-
-// The mapping is:
-//  0                .. SQ_MAX_PGM_VGPRS-1               real VGPRs
-//  SQ_MAX_PGM_VGPRS .. NUM_ALL_VGPRS-1                  extra VGPR-like slots
-//  NUM_ALL_VGPRS    .. NUM_ALL_VGPRS+SQ_MAX_PGM_SGPRS-1 real SGPRs
-// We reserve a fixed number of VGPR slots in the scoring tables for
-// special tokens like SCMEM_LDS (needed for buffer load to LDS).
-enum RegisterMapping {
-  SQ_MAX_PGM_VGPRS = 1024, // Maximum programmable VGPRs across all targets.
-  AGPR_OFFSET = 512,       // Maximum programmable ArchVGPRs across all targets.
-  SQ_MAX_PGM_SGPRS = 128,  // Maximum programmable SGPRs across all targets.
-  // Artificial register slots to track LDS writes into specific LDS locations
-  // if a location is known. When slots are exhausted or location is
-  // unknown use the first slot. The first slot is also always updated in
-  // addition to known location's slot to properly generate waits if dependent
-  // instruction's location is unknown.
-  FIRST_LDS_VGPR = SQ_MAX_PGM_VGPRS, // Extra slots for LDS stores.
-  NUM_LDS_VGPRS = 9,                 // One more than the stores we track.
-  NUM_ALL_VGPRS = SQ_MAX_PGM_VGPRS + NUM_LDS_VGPRS, // Where SGPRs start.
-};
 
 // Enumerate different types of result-returning VMEM operations. Although
 // s_waitcnt orders them all with a single vmcnt counter, in the absence of
@@ -336,9 +353,7 @@ public:
 
 class WaitcntGeneratorPreGFX12 : public WaitcntGenerator {
 public:
-  WaitcntGeneratorPreGFX12() = default;
-  WaitcntGeneratorPreGFX12(const MachineFunction &MF)
-      : WaitcntGenerator(MF, NUM_NORMAL_INST_CNTS) {}
+  using WaitcntGenerator::WaitcntGenerator;
 
   bool
   applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
@@ -353,8 +368,8 @@ public:
     assert(ST);
 
     static const unsigned WaitEventMaskForInstPreGFX12[NUM_INST_CNTS] = {
-        eventMask({VMEM_ACCESS, VMEM_READ_ACCESS, VMEM_SAMPLER_READ_ACCESS,
-                   VMEM_BVH_READ_ACCESS}),
+        eventMask(
+            {VMEM_ACCESS, VMEM_SAMPLER_READ_ACCESS, VMEM_BVH_READ_ACCESS}),
         eventMask({SMEM_ACCESS, LDS_ACCESS, GDS_ACCESS, SQ_MESSAGE}),
         eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
                    EXP_POS_ACCESS, EXP_LDS_ACCESS}),
@@ -372,10 +387,7 @@ public:
 
 class WaitcntGeneratorGFX12Plus : public WaitcntGenerator {
 public:
-  WaitcntGeneratorGFX12Plus() = default;
-  WaitcntGeneratorGFX12Plus(const MachineFunction &MF,
-                            InstCounterType MaxCounter)
-      : WaitcntGenerator(MF, MaxCounter) {}
+  using WaitcntGenerator::WaitcntGenerator;
 
   bool
   applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
@@ -390,14 +402,14 @@ public:
     assert(ST);
 
     static const unsigned WaitEventMaskForInstGFX12Plus[NUM_INST_CNTS] = {
-        eventMask({VMEM_ACCESS, VMEM_READ_ACCESS}),
+        eventMask({VMEM_ACCESS}),
         eventMask({LDS_ACCESS, GDS_ACCESS}),
         eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
                    EXP_POS_ACCESS, EXP_LDS_ACCESS}),
         eventMask({VMEM_WRITE_ACCESS, SCRATCH_WRITE_ACCESS}),
         eventMask({VMEM_SAMPLER_READ_ACCESS}),
         eventMask({VMEM_BVH_READ_ACCESS}),
-        eventMask({SMEM_ACCESS, SQ_MESSAGE}),
+        eventMask({SMEM_ACCESS, SQ_MESSAGE, SCC_WRITE}),
         eventMask({VMEM_GROUP, SMEM_GROUP})};
 
     return WaitEventMaskForInstGFX12Plus;
@@ -409,15 +421,14 @@ public:
 class SIInsertWaitcnts {
 public:
   const GCNSubtarget *ST;
+  const SIInstrInfo *TII = nullptr;
+  const SIRegisterInfo *TRI = nullptr;
+  const MachineRegisterInfo *MRI = nullptr;
   InstCounterType SmemAccessCounter;
   InstCounterType MaxCounter;
   const unsigned *WaitEventMaskForInst;
 
 private:
-  const SIInstrInfo *TII = nullptr;
-  const SIRegisterInfo *TRI = nullptr;
-  const MachineRegisterInfo *MRI = nullptr;
-
   DenseMap<const Value *, MachineBasicBlock *> SLoadAddresses;
   DenseMap<MachineBasicBlock *, bool> PreheadersToFlush;
   MachineLoopInfo *MLI;
@@ -486,13 +497,6 @@ public:
   bool isVMEMOrFlatVMEM(const MachineInstr &MI) const;
   bool run(MachineFunction &MF);
 
-  bool isForceEmitWaitcnt() const {
-    for (auto T : inst_counter_types())
-      if (ForceEmitWaitcnt[T])
-        return true;
-    return false;
-  }
-
   void setForceEmitWaitcnt() {
 // For non-debug builds, ForceEmitWaitcnt has been initialized to false;
 // For debug builds, get the debug counter info and adjust if need be
@@ -530,8 +534,9 @@ public:
   // instruction.
   WaitEventType getVmemWaitEventType(const MachineInstr &Inst) const {
     switch (Inst.getOpcode()) {
+    // FIXME: GLOBAL_INV needs to be tracked with xcnt too.
     case AMDGPU::GLOBAL_INV:
-      return VMEM_READ_ACCESS; // tracked using loadcnt
+      return VMEM_ACCESS; // tracked using loadcnt
     case AMDGPU::GLOBAL_WB:
     case AMDGPU::GLOBAL_WBINV:
       return VMEM_WRITE_ACCESS; // tracked using storecnt
@@ -541,7 +546,7 @@ public:
 
     // Maps VMEM access types to their corresponding WaitEventType.
     static const WaitEventType VmemReadMapping[NUM_VMEM_TYPES] = {
-        VMEM_READ_ACCESS, VMEM_SAMPLER_READ_ACCESS, VMEM_BVH_READ_ACCESS};
+        VMEM_ACCESS, VMEM_SAMPLER_READ_ACCESS, VMEM_BVH_READ_ACCESS};
 
     assert(SIInstrInfo::isVMEM(Inst));
     // LDS DMA loads are also stores, but on the LDS side. On the VMEM side
@@ -550,21 +555,15 @@ public:
       return VMEM_ACCESS;
     if (Inst.mayStore() &&
         (!Inst.mayLoad() || SIInstrInfo::isAtomicNoRet(Inst))) {
-      // FLAT and SCRATCH instructions may access scratch. Other VMEM
-      // instructions do not.
-      if (TII->mayAccessScratchThroughFlat(Inst))
+      if (TII->mayAccessScratch(Inst))
         return SCRATCH_WRITE_ACCESS;
       return VMEM_WRITE_ACCESS;
     }
     if (!ST->hasExtendedWaitCounts() || SIInstrInfo::isFLAT(Inst))
-      return VMEM_READ_ACCESS;
+      return VMEM_ACCESS;
     return VmemReadMapping[getVmemType(Inst)];
   }
 
-  bool hasXcnt() const { return ST->hasWaitXCnt(); }
-
-  bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
-  bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
   bool isVmemAccess(const MachineInstr &MI) const;
   bool generateWaitcntInstBefore(MachineInstr &MI,
                                  WaitcntBrackets &ScoreBrackets,
@@ -594,7 +593,30 @@ public:
 // "s_waitcnt 0" before use.
 class WaitcntBrackets {
 public:
-  WaitcntBrackets(const SIInsertWaitcnts *Context) : Context(Context) {}
+  WaitcntBrackets(const SIInsertWaitcnts *Context) : Context(Context) {
+    assert(Context->TRI->getNumRegUnits() < REGUNITS_END);
+  }
+
+#ifndef NDEBUG
+  ~WaitcntBrackets() {
+    unsigned NumUnusedVmem = 0, NumUnusedSGPRs = 0;
+    for (auto &[ID, Val] : VMem) {
+      if (Val.empty())
+        ++NumUnusedVmem;
+    }
+    for (auto &[ID, Val] : SGPRs) {
+      if (Val.empty())
+        ++NumUnusedSGPRs;
+    }
+
+    if (NumUnusedVmem || NumUnusedSGPRs) {
+      errs() << "WaitcntBracket had unused entries at destruction time: "
+             << NumUnusedVmem << " VMem and " << NumUnusedSGPRs
+             << " SGPR unused entries\n";
+      std::abort();
+    }
+  }
+#endif
 
   bool isSmemCounter(InstCounterType T) const {
     return T == Context->SmemAccessCounter || T == X_CNT;
@@ -619,36 +641,34 @@ public:
     return getScoreUB(T) - getScoreLB(T);
   }
 
-  unsigned getRegScore(int GprNo, InstCounterType T) const {
-    if (GprNo < NUM_ALL_VGPRS)
-      return VgprScores[T][GprNo];
-    return SgprScores[getSgprScoresIdx(T)][GprNo - NUM_ALL_VGPRS];
+  unsigned getSGPRScore(MCRegUnit RU, InstCounterType T) const {
+    auto It = SGPRs.find(RU);
+    return It != SGPRs.end() ? It->second.Scores[getSgprScoresIdx(T)] : 0;
+  }
+
+  unsigned getVMemScore(VMEMID TID, InstCounterType T) const {
+    auto It = VMem.find(TID);
+    return It != VMem.end() ? It->second.Scores[T] : 0;
   }
 
   bool merge(const WaitcntBrackets &Other);
 
-  RegInterval getRegInterval(const MachineInstr *MI,
-                             const MachineRegisterInfo *MRI,
-                             const SIRegisterInfo *TRI,
-                             const MachineOperand &Op) const;
-
   bool counterOutOfOrder(InstCounterType T) const;
-  void simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const;
+  void simplifyWaitcnt(AMDGPU::Waitcnt &Wait);
   void simplifyWaitcnt(InstCounterType T, unsigned &Count) const;
+  bool hasRedundantXCntWithKmCnt(const AMDGPU::Waitcnt &Wait);
+  bool canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait);
+  void simplifyXcnt(AMDGPU::Waitcnt &CheckWait, AMDGPU::Waitcnt &UpdateWait);
 
-  void determineWait(InstCounterType T, RegInterval Interval,
-                     AMDGPU::Waitcnt &Wait) const;
-  void determineWait(InstCounterType T, int RegNo,
-                     AMDGPU::Waitcnt &Wait) const {
-    determineWait(T, {RegNo, RegNo + 1}, Wait);
-  }
+  void determineWaitForPhysReg(InstCounterType T, MCPhysReg Reg,
+                               AMDGPU::Waitcnt &Wait) const;
+  void determineWaitForLDSDMA(InstCounterType T, VMEMID TID,
+                              AMDGPU::Waitcnt &Wait) const;
+  void tryClearSCCWriteEvent(MachineInstr *Inst);
 
   void applyWaitcnt(const AMDGPU::Waitcnt &Wait);
   void applyWaitcnt(InstCounterType T, unsigned Count);
-  void applyXcnt(const AMDGPU::Waitcnt &Wait);
-  void updateByEvent(const SIInstrInfo *TII, const SIRegisterInfo *TRI,
-                     const MachineRegisterInfo *MRI, WaitEventType E,
-                     MachineInstr &MI);
+  void updateByEvent(WaitEventType E, MachineInstr &MI);
 
   unsigned hasPendingEvent() const { return PendingEvents; }
   unsigned hasPendingEvent(WaitEventType E) const {
@@ -691,19 +711,22 @@ public:
 
   // Return true if there might be pending writes to the vgpr-interval by VMEM
   // instructions with types different from V.
-  bool hasOtherPendingVmemTypes(RegInterval Interval, VmemType V) const {
-    for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
-      assert(RegNo < NUM_ALL_VGPRS);
-      if (VgprVmemTypes[RegNo] & ~(1 << V))
+  bool hasOtherPendingVmemTypes(MCPhysReg Reg, VmemType V) const {
+    for (MCRegUnit RU : regunits(Reg)) {
+      auto It = VMem.find(toVMEMID(RU));
+      if (It != VMem.end() && (It->second.VMEMTypes & ~(1 << V)))
         return true;
     }
     return false;
   }
 
-  void clearVgprVmemTypes(RegInterval Interval) {
-    for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
-      assert(RegNo < NUM_ALL_VGPRS);
-      VgprVmemTypes[RegNo] = 0;
+  void clearVgprVmemTypes(MCPhysReg Reg) {
+    for (MCRegUnit RU : regunits(Reg)) {
+      if (auto It = VMem.find(toVMEMID(RU)); It != VMem.end()) {
+        It->second.VMEMTypes = 0;
+        if (It->second.empty())
+          VMem.erase(It);
+      }
     }
   }
 
@@ -719,10 +742,14 @@ public:
 
   bool hasPointSampleAccel(const MachineInstr &MI) const;
   bool hasPointSamplePendingVmemTypes(const MachineInstr &MI,
-                                      RegInterval Interval) const;
+                                      MCPhysReg RU) const;
 
   void print(raw_ostream &) const;
   void dump() const { print(dbgs()); }
+
+  // Free up memory by removing empty entries from the DenseMap that track event
+  // scores.
+  void purgeEmptyTrackingData();
 
 private:
   struct MergeInfo {
@@ -731,8 +758,23 @@ private:
     unsigned MyShift;
     unsigned OtherShift;
   };
+
+  void determineWaitForScore(InstCounterType T, unsigned Score,
+                             AMDGPU::Waitcnt &Wait) const;
+
   static bool mergeScore(const MergeInfo &M, unsigned &Score,
                          unsigned OtherScore);
+
+  iterator_range<MCRegUnitIterator> regunits(MCPhysReg Reg) const {
+    assert(Reg != AMDGPU::SCC && "Shouldn't be used on SCC");
+    if (!Context->TRI->isInAllocatableClass(Reg))
+      return {{}, {}};
+    const TargetRegisterClass *RC = Context->TRI->getPhysRegBaseClass(Reg);
+    unsigned Size = Context->TRI->getRegSizeInBits(*RC);
+    if (Size == 16 && Context->ST->hasD16Writes32BitVgpr())
+      Reg = Context->TRI->get32BitRegister(Reg);
+    return Context->TRI->regunits(Reg);
+  }
 
   void setScoreLB(InstCounterType T, unsigned Val) {
     assert(T < NUM_INST_CNTS);
@@ -750,16 +792,27 @@ private:
       ScoreLBs[EXP_CNT] = ScoreUBs[EXP_CNT] - Context->getWaitCountMax(EXP_CNT);
   }
 
-  void setRegScore(int GprNo, InstCounterType T, unsigned Val) {
-    setScoreByInterval({GprNo, GprNo + 1}, T, Val);
+  void setRegScore(MCPhysReg Reg, InstCounterType T, unsigned Val) {
+    const SIRegisterInfo *TRI = Context->TRI;
+    if (Reg == AMDGPU::SCC) {
+      SCCScore = Val;
+    } else if (TRI->isVectorRegister(*Context->MRI, Reg)) {
+      for (MCRegUnit RU : regunits(Reg))
+        VMem[toVMEMID(RU)].Scores[T] = Val;
+    } else if (TRI->isSGPRReg(*Context->MRI, Reg)) {
+      auto STy = getSgprScoresIdx(T);
+      for (MCRegUnit RU : regunits(Reg))
+        SGPRs[RU].Scores[STy] = Val;
+    } else {
+      llvm_unreachable("Register cannot be tracked/unknown register!");
+    }
   }
 
-  void setScoreByInterval(RegInterval Interval, InstCounterType CntTy,
-                          unsigned Score);
+  void setVMemScore(VMEMID TID, InstCounterType T, unsigned Val) {
+    VMem[TID].Scores[T] = Val;
+  }
 
-  void setScoreByOperand(const MachineInstr *MI, const SIRegisterInfo *TRI,
-                         const MachineRegisterInfo *MRI,
-                         const MachineOperand &Op, InstCounterType CntTy,
+  void setScoreByOperand(const MachineOperand &Op, InstCounterType CntTy,
                          unsigned Val);
 
   const SIInsertWaitcnts *Context;
@@ -771,22 +824,52 @@ private:
   unsigned LastFlat[NUM_INST_CNTS] = {0};
   // Remember the last GDS operation.
   unsigned LastGDS = 0;
-  // wait_cnt scores for every vgpr.
-  // Keep track of the VgprUB and SgprUB to make merge at join efficient.
-  int VgprUB = -1;
-  int SgprUB = -1;
-  unsigned VgprScores[NUM_INST_CNTS][NUM_ALL_VGPRS] = {{0}};
-  // Wait cnt scores for every sgpr, the DS_CNT (corresponding to LGKMcnt
-  // pre-gfx12) or KM_CNT (gfx12+ only), and X_CNT (gfx1250) are relevant.
-  // Row 0 represents the score for either DS_CNT or KM_CNT and row 1 keeps the
-  // X_CNT score.
-  unsigned SgprScores[2][SQ_MAX_PGM_SGPRS] = {{0}};
-  // Bitmask of the VmemTypes of VMEM instructions that might have a pending
-  // write to each vgpr.
-  unsigned char VgprVmemTypes[NUM_ALL_VGPRS] = {0};
+
+  // The score tracking logic is fragmented as follows:
+  // - VMem: VGPR RegUnits and LDS DMA IDs, see the VMEMID encoding.
+  // - SGPRs: SGPR RegUnits
+  // - SCC: Non-allocatable and not general purpose: not a SGPR.
+  //
+  // For the VMem case, if the key is within the range of LDS DMA IDs,
+  // then the corresponding index into the `LDSDMAStores` vector below is:
+  //   Key - LDSDMA_BEGIN - 1
+  // This is because LDSDMA_BEGIN is a generic entry and does not have an
+  // associated MachineInstr.
+  //
+  // TODO: Could we track SCC alongside SGPRs so it's not longer a special case?
+
+  struct VMEMInfo {
+    // Scores for all instruction counters.
+    std::array<unsigned, NUM_INST_CNTS> Scores = {0};
+    // Bitmask of the VmemTypes of VMEM instructions for this VGPR.
+    unsigned VMEMTypes = 0;
+
+    bool empty() const {
+      return all_of(Scores, [](unsigned K) { return K == 0; }) && !VMEMTypes;
+    }
+  };
+
+  struct SGPRInfo {
+    // Wait cnt scores for every sgpr, the DS_CNT (corresponding to LGKMcnt
+    // pre-gfx12) or KM_CNT (gfx12+ only), and X_CNT (gfx1250) are relevant.
+    // Row 0 represents the score for either DS_CNT or KM_CNT and row 1 keeps
+    // the X_CNT score.
+    std::array<unsigned, 2> Scores = {0};
+
+    bool empty() const { return !Scores[0] && !Scores[1]; }
+  };
+
+  DenseMap<VMEMID, VMEMInfo> VMem; // VGPR + LDS DMA
+  DenseMap<MCRegUnit, SGPRInfo> SGPRs;
+
+  // Reg score for SCC.
+  unsigned SCCScore = 0;
+  // The unique instruction that has an SCC write pending, if there is one.
+  const MachineInstr *PendingSCCWrite = nullptr;
+
   // Store representative LDS DMA operations. The only useful info here is
   // alias info. One store is kept per unique AAInfo.
-  SmallVector<const MachineInstr *, NUM_LDS_VGPRS - 1> LDSDMAStores;
+  SmallVector<const MachineInstr *> LDSDMAStores;
 };
 
 class SIInsertWaitcntsLegacy : public MachineFunctionPass {
@@ -812,69 +895,9 @@ public:
 
 } // end anonymous namespace
 
-RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
-                                            const MachineRegisterInfo *MRI,
-                                            const SIRegisterInfo *TRI,
-                                            const MachineOperand &Op) const {
-  if (!TRI->isInAllocatableClass(Op.getReg()))
-    return {-1, -1};
-
-  // A use via a PW operand does not need a waitcnt.
-  // A partial write is not a WAW.
-  assert(!Op.getSubReg() || !Op.isUndef());
-
-  RegInterval Result;
-
-  MCRegister MCReg = AMDGPU::getMCReg(Op.getReg(), *Context->ST);
-  unsigned RegIdx = TRI->getHWRegIndex(MCReg);
-  assert(isUInt<8>(RegIdx));
-
-  const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Op.getReg());
-  unsigned Size = TRI->getRegSizeInBits(*RC);
-
-  // AGPRs/VGPRs are tracked every 16 bits, SGPRs by 32 bits
-  if (TRI->isVectorRegister(*MRI, Op.getReg())) {
-    unsigned Reg = RegIdx << 1 | (AMDGPU::isHi16Reg(MCReg, *TRI) ? 1 : 0);
-    assert(Reg < AGPR_OFFSET);
-    Result.first = Reg;
-    if (TRI->isAGPR(*MRI, Op.getReg()))
-      Result.first += AGPR_OFFSET;
-    assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
-    assert(Size % 16 == 0);
-    Result.second = Result.first + (Size / 16);
-  } else if (TRI->isSGPRReg(*MRI, Op.getReg()) && RegIdx < SQ_MAX_PGM_SGPRS) {
-    // SGPRs including VCC, TTMPs and EXEC but excluding read-only scalar
-    // sources like SRC_PRIVATE_BASE.
-    Result.first = RegIdx + NUM_ALL_VGPRS;
-    Result.second = Result.first + divideCeil(Size, 32);
-  } else {
-    return {-1, -1};
-  }
-
-  return Result;
-}
-
-void WaitcntBrackets::setScoreByInterval(RegInterval Interval,
-                                         InstCounterType CntTy,
-                                         unsigned Score) {
-  for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
-    if (RegNo < NUM_ALL_VGPRS) {
-      VgprUB = std::max(VgprUB, RegNo);
-      VgprScores[CntTy][RegNo] = Score;
-    } else {
-      SgprUB = std::max(SgprUB, RegNo - NUM_ALL_VGPRS);
-      SgprScores[getSgprScoresIdx(CntTy)][RegNo - NUM_ALL_VGPRS] = Score;
-    }
-  }
-}
-
-void WaitcntBrackets::setScoreByOperand(const MachineInstr *MI,
-                                        const SIRegisterInfo *TRI,
-                                        const MachineRegisterInfo *MRI,
-                                        const MachineOperand &Op,
+void WaitcntBrackets::setScoreByOperand(const MachineOperand &Op,
                                         InstCounterType CntTy, unsigned Score) {
-  RegInterval Interval = getRegInterval(MI, MRI, TRI, Op);
-  setScoreByInterval(Interval, CntTy, Score);
+  setRegScore(Op.getReg().asMCReg(), CntTy, Score);
 }
 
 // Return true if the subtarget is one that enables Point Sample Acceleration
@@ -897,19 +920,17 @@ bool WaitcntBrackets::hasPointSampleAccel(const MachineInstr &MI) const {
 // one that has outstanding writes to vmem-types different than VMEM_NOSAMPLER
 // (this is the type that a point sample accelerated instruction effectively
 // becomes)
-bool WaitcntBrackets::hasPointSamplePendingVmemTypes(
-    const MachineInstr &MI, RegInterval Interval) const {
+bool WaitcntBrackets::hasPointSamplePendingVmemTypes(const MachineInstr &MI,
+                                                     MCPhysReg Reg) const {
   if (!hasPointSampleAccel(MI))
     return false;
 
-  return hasOtherPendingVmemTypes(Interval, VMEM_NOSAMPLER);
+  return hasOtherPendingVmemTypes(Reg, VMEM_NOSAMPLER);
 }
 
-void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
-                                    const SIRegisterInfo *TRI,
-                                    const MachineRegisterInfo *MRI,
-                                    WaitEventType E, MachineInstr &Inst) {
+void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
   InstCounterType T = eventCounter(Context->WaitEventMaskForInst, E);
+  assert(T < Context->MaxCounter);
 
   unsigned UB = getScoreUB(T);
   unsigned CurrScore = UB + 1;
@@ -921,6 +942,10 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
   PendingEvents |= 1 << E;
   setScoreUB(T, CurrScore);
 
+  const SIRegisterInfo *TRI = Context->TRI;
+  const MachineRegisterInfo *MRI = Context->MRI;
+  const SIInstrInfo *TII = Context->TII;
+
   if (T == EXP_CNT) {
     // Put score on the source vgprs. If this is a store, just use those
     // specific register(s).
@@ -928,60 +953,52 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       // All GDS operations must protect their address register (same as
       // export.)
       if (const auto *AddrOp = TII->getNamedOperand(Inst, AMDGPU::OpName::addr))
-        setScoreByOperand(&Inst, TRI, MRI, *AddrOp, EXP_CNT, CurrScore);
+        setScoreByOperand(*AddrOp, EXP_CNT, CurrScore);
 
       if (Inst.mayStore()) {
         if (const auto *Data0 =
                 TII->getNamedOperand(Inst, AMDGPU::OpName::data0))
-          setScoreByOperand(&Inst, TRI, MRI, *Data0, EXP_CNT, CurrScore);
+          setScoreByOperand(*Data0, EXP_CNT, CurrScore);
         if (const auto *Data1 =
                 TII->getNamedOperand(Inst, AMDGPU::OpName::data1))
-          setScoreByOperand(&Inst, TRI, MRI, *Data1, EXP_CNT, CurrScore);
+          setScoreByOperand(*Data1, EXP_CNT, CurrScore);
       } else if (SIInstrInfo::isAtomicRet(Inst) && !SIInstrInfo::isGWS(Inst) &&
                  Inst.getOpcode() != AMDGPU::DS_APPEND &&
                  Inst.getOpcode() != AMDGPU::DS_CONSUME &&
                  Inst.getOpcode() != AMDGPU::DS_ORDERED_COUNT) {
         for (const MachineOperand &Op : Inst.all_uses()) {
           if (TRI->isVectorRegister(*MRI, Op.getReg()))
-            setScoreByOperand(&Inst, TRI, MRI, Op, EXP_CNT, CurrScore);
+            setScoreByOperand(Op, EXP_CNT, CurrScore);
         }
       }
     } else if (TII->isFLAT(Inst)) {
       if (Inst.mayStore()) {
-        setScoreByOperand(&Inst, TRI, MRI,
-                          *TII->getNamedOperand(Inst, AMDGPU::OpName::data),
+        setScoreByOperand(*TII->getNamedOperand(Inst, AMDGPU::OpName::data),
                           EXP_CNT, CurrScore);
       } else if (SIInstrInfo::isAtomicRet(Inst)) {
-        setScoreByOperand(&Inst, TRI, MRI,
-                          *TII->getNamedOperand(Inst, AMDGPU::OpName::data),
+        setScoreByOperand(*TII->getNamedOperand(Inst, AMDGPU::OpName::data),
                           EXP_CNT, CurrScore);
       }
     } else if (TII->isMIMG(Inst)) {
       if (Inst.mayStore()) {
-        setScoreByOperand(&Inst, TRI, MRI, Inst.getOperand(0), EXP_CNT,
-                          CurrScore);
+        setScoreByOperand(Inst.getOperand(0), EXP_CNT, CurrScore);
       } else if (SIInstrInfo::isAtomicRet(Inst)) {
-        setScoreByOperand(&Inst, TRI, MRI,
-                          *TII->getNamedOperand(Inst, AMDGPU::OpName::data),
+        setScoreByOperand(*TII->getNamedOperand(Inst, AMDGPU::OpName::data),
                           EXP_CNT, CurrScore);
       }
     } else if (TII->isMTBUF(Inst)) {
       if (Inst.mayStore())
-        setScoreByOperand(&Inst, TRI, MRI, Inst.getOperand(0), EXP_CNT,
-                          CurrScore);
+        setScoreByOperand(Inst.getOperand(0), EXP_CNT, CurrScore);
     } else if (TII->isMUBUF(Inst)) {
       if (Inst.mayStore()) {
-        setScoreByOperand(&Inst, TRI, MRI, Inst.getOperand(0), EXP_CNT,
-                          CurrScore);
+        setScoreByOperand(Inst.getOperand(0), EXP_CNT, CurrScore);
       } else if (SIInstrInfo::isAtomicRet(Inst)) {
-        setScoreByOperand(&Inst, TRI, MRI,
-                          *TII->getNamedOperand(Inst, AMDGPU::OpName::data),
+        setScoreByOperand(*TII->getNamedOperand(Inst, AMDGPU::OpName::data),
                           EXP_CNT, CurrScore);
       }
     } else if (TII->isLDSDIR(Inst)) {
       // LDSDIR instructions attach the score to the destination.
-      setScoreByOperand(&Inst, TRI, MRI,
-                        *TII->getNamedOperand(Inst, AMDGPU::OpName::vdst),
+      setScoreByOperand(*TII->getNamedOperand(Inst, AMDGPU::OpName::vdst),
                         EXP_CNT, CurrScore);
     } else {
       if (TII->isEXP(Inst)) {
@@ -991,18 +1008,27 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         // score.
         for (MachineOperand &DefMO : Inst.all_defs()) {
           if (TRI->isVGPR(*MRI, DefMO.getReg())) {
-            setScoreByOperand(&Inst, TRI, MRI, DefMO, EXP_CNT, CurrScore);
+            setScoreByOperand(DefMO, EXP_CNT, CurrScore);
           }
         }
       }
       for (const MachineOperand &Op : Inst.all_uses()) {
         if (TRI->isVectorRegister(*MRI, Op.getReg()))
-          setScoreByOperand(&Inst, TRI, MRI, Op, EXP_CNT, CurrScore);
+          setScoreByOperand(Op, EXP_CNT, CurrScore);
       }
     }
   } else if (T == X_CNT) {
+    WaitEventType OtherEvent = E == SMEM_GROUP ? VMEM_GROUP : SMEM_GROUP;
+    if (PendingEvents & (1 << OtherEvent)) {
+      // Hardware inserts an implicit xcnt between interleaved
+      // SMEM and VMEM operations. So there will never be
+      // outstanding address translations for both SMEM and
+      // VMEM at the same time.
+      setScoreLB(T, getScoreUB(T) - 1);
+      PendingEvents &= ~(1 << OtherEvent);
+    }
     for (const MachineOperand &Op : Inst.all_uses())
-      setScoreByOperand(&Inst, TRI, MRI, Op, T, CurrScore);
+      setScoreByOperand(Op, T, CurrScore);
   } else /* LGKM_CNT || EXP_CNT || VS_CNT || NUM_INST_CNTS */ {
     // Match the score to the destination registers.
     //
@@ -1014,9 +1040,8 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
     // Special cases where implicit register defs exists, such as M0 or VCC,
     // but none with memory instructions.
     for (const MachineOperand &Op : Inst.defs()) {
-      RegInterval Interval = getRegInterval(&Inst, MRI, TRI, Op);
       if (T == LOAD_CNT || T == SAMPLE_CNT || T == BVH_CNT) {
-        if (Interval.first >= NUM_ALL_VGPRS)
+        if (!TRI->isVectorRegister(*MRI, Op.getReg())) // TODO: add wrapper
           continue;
         if (updateVMCntOnly(Inst)) {
           // updateVMCntOnly should only leave us with VGPRs
@@ -1029,16 +1054,20 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
           // this with another potential dependency
           if (hasPointSampleAccel(Inst))
             TypesMask |= 1 << VMEM_NOSAMPLER;
-          for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo)
-            VgprVmemTypes[RegNo] |= TypesMask;
+          for (MCRegUnit RU : regunits(Op.getReg().asMCReg()))
+            VMem[toVMEMID(RU)].VMEMTypes |= TypesMask;
         }
       }
-      setScoreByInterval(Interval, T, CurrScore);
+      setScoreByOperand(Op, T, CurrScore);
     }
     if (Inst.mayStore() &&
         (TII->isDS(Inst) || TII->mayWriteLDSThroughDMA(Inst))) {
       // MUBUF and FLAT LDS DMA operations need a wait on vmcnt before LDS
       // written can be accessed. A load from LDS to VMEM does not need a wait.
+      //
+      // The "Slot" is the offset from LDSDMA_BEGIN. If it's non-zero, then
+      // there is a MachineInstr in LDSDMAStores used to track this LDSDMA
+      // store. The "Slot" is the index into LDSDMAStores + 1.
       unsigned Slot = 0;
       for (const auto *MemOp : Inst.memoperands()) {
         if (!MemOp->isStore() ||
@@ -1051,9 +1080,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         // original memory object and practically produced in the module LDS
         // lowering pass. If there is no scope available we will not be able
         // to disambiguate LDS aliasing as after the module lowering all LDS
-        // is squashed into a single big object. Do not attempt to use one of
-        // the limited LDSDMAStores for something we will not be able to use
-        // anyway.
+        // is squashed into a single big object.
         if (!AAI || !AAI.Scope)
           break;
         for (unsigned I = 0, E = LDSDMAStores.size(); I != E && !Slot; ++I) {
@@ -1064,15 +1091,23 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
             }
           }
         }
-        if (Slot || LDSDMAStores.size() == NUM_LDS_VGPRS - 1)
+        if (Slot)
           break;
+        // The slot may not be valid because it can be >= NUM_LDSDMA which
+        // means the scoreboard cannot track it. We still want to preserve the
+        // MI in order to check alias information, though.
         LDSDMAStores.push_back(&Inst);
         Slot = LDSDMAStores.size();
         break;
       }
-      setRegScore(FIRST_LDS_VGPR + Slot, T, CurrScore);
-      if (Slot)
-        setRegScore(FIRST_LDS_VGPR, T, CurrScore);
+      setVMemScore(LDSDMA_BEGIN, T, CurrScore);
+      if (Slot && Slot < NUM_LDSDMA)
+        setVMemScore(LDSDMA_BEGIN + Slot, T, CurrScore);
+    }
+
+    if (SIInstrInfo::isSBarrierSCCWrite(Inst.getOpcode())) {
+      setRegScore(AMDGPU::SCC, T, CurrScore);
+      PendingSCCWrite = &Inst;
     }
   }
 }
@@ -1087,33 +1122,33 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
     switch (T) {
     case LOAD_CNT:
       OS << "    " << (ST->hasExtendedWaitCounts() ? "LOAD" : "VM") << "_CNT("
-         << SR << "): ";
+         << SR << "):";
       break;
     case DS_CNT:
       OS << "    " << (ST->hasExtendedWaitCounts() ? "DS" : "LGKM") << "_CNT("
-         << SR << "): ";
+         << SR << "):";
       break;
     case EXP_CNT:
-      OS << "    EXP_CNT(" << SR << "): ";
+      OS << "    EXP_CNT(" << SR << "):";
       break;
     case STORE_CNT:
       OS << "    " << (ST->hasExtendedWaitCounts() ? "STORE" : "VS") << "_CNT("
-         << SR << "): ";
+         << SR << "):";
       break;
     case SAMPLE_CNT:
-      OS << "    SAMPLE_CNT(" << SR << "): ";
+      OS << "    SAMPLE_CNT(" << SR << "):";
       break;
     case BVH_CNT:
-      OS << "    BVH_CNT(" << SR << "): ";
+      OS << "    BVH_CNT(" << SR << "):";
       break;
     case KM_CNT:
-      OS << "    KM_CNT(" << SR << "): ";
+      OS << "    KM_CNT(" << SR << "):";
       break;
     case X_CNT:
-      OS << "    X_CNT(" << SR << "): ";
+      OS << "    X_CNT(" << SR << "):";
       break;
     default:
-      OS << "    UNKNOWN(" << SR << "): ";
+      OS << "    UNKNOWN(" << SR << "):";
       break;
     }
 
@@ -1121,27 +1156,38 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
       // Print vgpr scores.
       unsigned LB = getScoreLB(T);
 
-      for (int J = 0; J <= VgprUB; J++) {
-        unsigned RegScore = getRegScore(J, T);
+      SmallVector<VMEMID> SortedVMEMIDs(VMem.keys());
+      sort(SortedVMEMIDs);
+
+      for (auto ID : SortedVMEMIDs) {
+        unsigned RegScore = VMem.at(ID).Scores[T];
         if (RegScore <= LB)
           continue;
         unsigned RelScore = RegScore - LB - 1;
-        if (J < FIRST_LDS_VGPR) {
-          OS << RelScore << ":v" << J << " ";
+        if (ID < REGUNITS_END) {
+          OS << ' ' << RelScore << ":vRU" << ID;
         } else {
-          OS << RelScore << ":ds ";
+          assert(ID >= LDSDMA_BEGIN && ID < LDSDMA_END &&
+                 "Unhandled/unexpected ID value!");
+          OS << ' ' << RelScore << ":LDSDMA" << ID;
         }
       }
+
       // Also need to print sgpr scores for lgkm_cnt or xcnt.
       if (isSmemCounter(T)) {
-        for (int J = 0; J <= SgprUB; J++) {
-          unsigned RegScore = getRegScore(J + NUM_ALL_VGPRS, T);
+        SmallVector<MCRegUnit> SortedSMEMIDs(SGPRs.keys());
+        sort(SortedSMEMIDs);
+        for (auto ID : SortedSMEMIDs) {
+          unsigned RegScore = SGPRs.at(ID).Scores[getSgprScoresIdx(T)];
           if (RegScore <= LB)
             continue;
           unsigned RelScore = RegScore - LB - 1;
-          OS << RelScore << ":s" << J << " ";
+          OS << ' ' << RelScore << ":sRU" << static_cast<unsigned>(ID);
         }
       }
+
+      if (T == KM_CNT && SCCScore > 0)
+        OS << ' ' << SCCScore << ":scc";
     }
     OS << '\n';
   }
@@ -1164,7 +1210,7 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
 
 /// Simplify the waitcnt, in the sense of removing redundant counts, and return
 /// whether a waitcnt instruction is needed at all.
-void WaitcntBrackets::simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const {
+void WaitcntBrackets::simplifyWaitcnt(AMDGPU::Waitcnt &Wait) {
   simplifyWaitcnt(LOAD_CNT, Wait.LoadCnt);
   simplifyWaitcnt(EXP_CNT, Wait.ExpCnt);
   simplifyWaitcnt(DS_CNT, Wait.DsCnt);
@@ -1172,7 +1218,7 @@ void WaitcntBrackets::simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const {
   simplifyWaitcnt(SAMPLE_CNT, Wait.SampleCnt);
   simplifyWaitcnt(BVH_CNT, Wait.BvhCnt);
   simplifyWaitcnt(KM_CNT, Wait.KmCnt);
-  simplifyWaitcnt(X_CNT, Wait.XCnt);
+  simplifyXcnt(Wait, Wait);
 }
 
 void WaitcntBrackets::simplifyWaitcnt(InstCounterType T,
@@ -1184,35 +1230,80 @@ void WaitcntBrackets::simplifyWaitcnt(InstCounterType T,
     Count = ~0u;
 }
 
-void WaitcntBrackets::determineWait(InstCounterType T, RegInterval Interval,
-                                    AMDGPU::Waitcnt &Wait) const {
+void WaitcntBrackets::purgeEmptyTrackingData() {
+  for (auto &[K, V] : make_early_inc_range(VMem)) {
+    if (V.empty())
+      VMem.erase(K);
+  }
+  for (auto &[K, V] : make_early_inc_range(SGPRs)) {
+    if (V.empty())
+      SGPRs.erase(K);
+  }
+}
+
+void WaitcntBrackets::determineWaitForScore(InstCounterType T,
+                                            unsigned ScoreToWait,
+                                            AMDGPU::Waitcnt &Wait) const {
   const unsigned LB = getScoreLB(T);
   const unsigned UB = getScoreUB(T);
-  for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
-    unsigned ScoreToWait = getRegScore(RegNo, T);
 
-    // If the score of src_operand falls within the bracket, we need an
-    // s_waitcnt instruction.
-    if ((UB >= ScoreToWait) && (ScoreToWait > LB)) {
-      if ((T == LOAD_CNT || T == DS_CNT) && hasPendingFlat() &&
-          !Context->ST->hasFlatLgkmVMemCountInOrder()) {
-        // If there is a pending FLAT operation, and this is a VMem or LGKM
-        // waitcnt and the target can report early completion, then we need
-        // to force a waitcnt 0.
-        addWait(Wait, T, 0);
-      } else if (counterOutOfOrder(T)) {
-        // Counter can get decremented out-of-order when there
-        // are multiple types event in the bracket. Also emit an s_wait counter
-        // with a conservative value of 0 for the counter.
-        addWait(Wait, T, 0);
-      } else {
-        // If a counter has been maxed out avoid overflow by waiting for
-        // MAX(CounterType) - 1 instead.
-        unsigned NeededWait =
-            std::min(UB - ScoreToWait, Context->getWaitCountMax(T) - 1);
-        addWait(Wait, T, NeededWait);
-      }
+  // If the score falls within the bracket, we need a waitcnt.
+  if ((UB >= ScoreToWait) && (ScoreToWait > LB)) {
+    if ((T == LOAD_CNT || T == DS_CNT) && hasPendingFlat() &&
+        !Context->ST->hasFlatLgkmVMemCountInOrder()) {
+      // If there is a pending FLAT operation, and this is a VMem or LGKM
+      // waitcnt and the target can report early completion, then we need
+      // to force a waitcnt 0.
+      addWait(Wait, T, 0);
+    } else if (counterOutOfOrder(T)) {
+      // Counter can get decremented out-of-order when there
+      // are multiple types event in the bracket. Also emit an s_wait counter
+      // with a conservative value of 0 for the counter.
+      addWait(Wait, T, 0);
+    } else {
+      // If a counter has been maxed out avoid overflow by waiting for
+      // MAX(CounterType) - 1 instead.
+      unsigned NeededWait =
+          std::min(UB - ScoreToWait, Context->getWaitCountMax(T) - 1);
+      addWait(Wait, T, NeededWait);
     }
+  }
+}
+
+void WaitcntBrackets::determineWaitForPhysReg(InstCounterType T, MCPhysReg Reg,
+                                              AMDGPU::Waitcnt &Wait) const {
+  if (Reg == AMDGPU::SCC) {
+    determineWaitForScore(T, SCCScore, Wait);
+  } else {
+    bool IsVGPR = Context->TRI->isVectorRegister(*Context->MRI, Reg);
+    for (MCRegUnit RU : regunits(Reg))
+      determineWaitForScore(
+          T, IsVGPR ? getVMemScore(toVMEMID(RU), T) : getSGPRScore(RU, T),
+          Wait);
+  }
+}
+
+void WaitcntBrackets::determineWaitForLDSDMA(InstCounterType T, VMEMID TID,
+                                             AMDGPU::Waitcnt &Wait) const {
+  assert(TID >= LDSDMA_BEGIN && TID < LDSDMA_END);
+  determineWaitForScore(T, getVMemScore(TID, T), Wait);
+}
+
+void WaitcntBrackets::tryClearSCCWriteEvent(MachineInstr *Inst) {
+  // S_BARRIER_WAIT on the same barrier guarantees that the pending write to
+  // SCC has landed
+  if (PendingSCCWrite &&
+      PendingSCCWrite->getOpcode() == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM &&
+      PendingSCCWrite->getOperand(0).getImm() == Inst->getOperand(0).getImm()) {
+    unsigned SCC_WRITE_PendingEvent = 1 << SCC_WRITE;
+    // If this SCC_WRITE is the only pending KM_CNT event, clear counter.
+    if ((PendingEvents & Context->WaitEventMaskForInst[KM_CNT]) ==
+        SCC_WRITE_PendingEvent) {
+      setScoreLB(KM_CNT, getScoreUB(KM_CNT));
+    }
+
+    PendingEvents &= ~SCC_WRITE_PendingEvent;
+    PendingSCCWrite = nullptr;
   }
 }
 
@@ -1224,7 +1315,7 @@ void WaitcntBrackets::applyWaitcnt(const AMDGPU::Waitcnt &Wait) {
   applyWaitcnt(SAMPLE_CNT, Wait.SampleCnt);
   applyWaitcnt(BVH_CNT, Wait.BvhCnt);
   applyWaitcnt(KM_CNT, Wait.KmCnt);
-  applyXcnt(Wait);
+  applyWaitcnt(X_CNT, Wait.XCnt);
 }
 
 void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
@@ -1241,21 +1332,42 @@ void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
   }
 }
 
-void WaitcntBrackets::applyXcnt(const AMDGPU::Waitcnt &Wait) {
+bool WaitcntBrackets::hasRedundantXCntWithKmCnt(const AMDGPU::Waitcnt &Wait) {
   // Wait on XCNT is redundant if we are already waiting for a load to complete.
   // SMEM can return out of order, so only omit XCNT wait if we are waiting till
   // zero.
-  if (Wait.KmCnt == 0 && hasPendingEvent(SMEM_GROUP))
-    return applyWaitcnt(X_CNT, 0);
+  return Wait.KmCnt == 0 && hasPendingEvent(SMEM_GROUP);
+}
 
+bool WaitcntBrackets::canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait) {
   // If we have pending store we cannot optimize XCnt because we do not wait for
   // stores. VMEM loads retun in order, so if we only have loads XCnt is
   // decremented to the same number as LOADCnt.
-  if (Wait.LoadCnt != ~0u && hasPendingEvent(VMEM_GROUP) &&
-      !hasPendingEvent(STORE_CNT))
-    return applyWaitcnt(X_CNT, std::min(Wait.XCnt, Wait.LoadCnt));
+  return Wait.LoadCnt != ~0u && hasPendingEvent(VMEM_GROUP) &&
+         !hasPendingEvent(STORE_CNT);
+}
 
-  applyWaitcnt(X_CNT, Wait.XCnt);
+void WaitcntBrackets::simplifyXcnt(AMDGPU::Waitcnt &CheckWait,
+                                   AMDGPU::Waitcnt &UpdateWait) {
+  // Try to simplify xcnt further by checking for joint kmcnt and loadcnt
+  // optimizations. On entry to a block with multiple predescessors, there may
+  // be pending SMEM and VMEM events active at the same time.
+  // In such cases, only clear one active event at a time.
+  // TODO: Revisit xcnt optimizations for gfx1250.
+  if (hasRedundantXCntWithKmCnt(CheckWait)) {
+    if (!hasMixedPendingEvents(X_CNT)) {
+      applyWaitcnt(X_CNT, 0);
+    } else {
+      PendingEvents &= ~(1 << SMEM_GROUP);
+    }
+  } else if (canOptimizeXCntWithLoadCnt(CheckWait)) {
+    if (!hasMixedPendingEvents(X_CNT)) {
+      applyWaitcnt(X_CNT, std::min(CheckWait.XCnt, CheckWait.LoadCnt));
+    } else if (CheckWait.LoadCnt == 0) {
+      PendingEvents &= ~(1 << VMEM_GROUP);
+    }
+  }
+  simplifyWaitcnt(X_CNT, UpdateWait.XCnt);
 }
 
 // Where there are multiple types of event in the bracket of a counter,
@@ -1383,9 +1495,9 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
     } else if (Opcode == AMDGPU::S_WAITCNT_lds_direct) {
       assert(ST->hasVMemToLDSLoad());
       LLVM_DEBUG(dbgs() << "Processing S_WAITCNT_lds_direct: " << II
-                        << "Before: " << Wait.LoadCnt << '\n';);
-      ScoreBrackets.determineWait(LOAD_CNT, FIRST_LDS_VGPR, Wait);
-      LLVM_DEBUG(dbgs() << "After: " << Wait.LoadCnt << '\n';);
+                        << "Before: " << Wait << '\n';);
+      ScoreBrackets.determineWaitForLDSDMA(LOAD_CNT, LDSDMA_BEGIN, Wait);
+      LLVM_DEBUG(dbgs() << "After: " << Wait << '\n';);
 
       // It is possible (but unlikely) that this is the only wait instruction,
       // in which case, we exit this loop without a WaitcntInstr to consume
@@ -1472,7 +1584,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
         BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT)).addImm(Enc);
     Modified = true;
 
-    LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
+    LLVM_DEBUG(dbgs() << "PreGFX12::createNewWaitcnt\n";
                if (It != Block.instr_end()) dbgs() << "Old Instr: " << *It;
                dbgs() << "New Instr: " << *SWaitInst << '\n');
   }
@@ -1486,7 +1598,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
             .addImm(Wait.StoreCnt);
     Modified = true;
 
-    LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
+    LLVM_DEBUG(dbgs() << "PreGFX12::createNewWaitcnt\n";
                if (It != Block.instr_end()) dbgs() << "Old Instr: " << *It;
                dbgs() << "New Instr: " << *SWaitInst << '\n');
   }
@@ -1590,6 +1702,8 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     }
   }
 
+  // Save the pre combine waitcnt in order to make xcnt checks.
+  AMDGPU::Waitcnt PreCombine = Wait;
   if (CombinedLoadDsCntInstr) {
     // Only keep an S_WAIT_LOADCNT_DSCNT if both counters actually need
     // to be waited for. Otherwise, let the instruction be deleted so
@@ -1680,6 +1794,13 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
   }
 
   for (auto CT : inst_counter_types(NUM_EXTENDED_INST_CNTS)) {
+    if ((CT == KM_CNT && ScoreBrackets.hasRedundantXCntWithKmCnt(PreCombine)) ||
+        (CT == LOAD_CNT &&
+         ScoreBrackets.canOptimizeXCntWithLoadCnt(PreCombine))) {
+      // Xcnt may need to be updated depending on a pre-existing KM/LOAD_CNT
+      // due to taking the backedge of a block.
+      ScoreBrackets.simplifyXcnt(PreCombine, Wait);
+    }
     if (!WaitInstrs[CT])
       continue;
 
@@ -1744,7 +1865,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
     if (SWaitInst) {
       Modified = true;
 
-      LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
+      LLVM_DEBUG(dbgs() << "GFX12Plus::createNewWaitcnt\n";
                  if (It != Block.instr_end()) dbgs() << "Old Instr: " << *It;
                  dbgs() << "New Instr: " << *SWaitInst << '\n');
     }
@@ -1764,18 +1885,12 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
 
     Modified = true;
 
-    LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
+    LLVM_DEBUG(dbgs() << "GFX12Plus::createNewWaitcnt\n";
                if (It != Block.instr_end()) dbgs() << "Old Instr: " << *It;
                dbgs() << "New Instr: " << *SWaitInst << '\n');
   }
 
   return Modified;
-}
-
-static bool readsVCCZ(const MachineInstr &MI) {
-  unsigned Opc = MI.getOpcode();
-  return (Opc == AMDGPU::S_CBRANCH_VCCNZ || Opc == AMDGPU::S_CBRANCH_VCCZ) &&
-         !MI.getOperand(1).isUndef();
 }
 
 /// \returns true if the callee inserts an s_waitcnt 0 on function entry.
@@ -1812,26 +1927,24 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   assert(!MI.isMetaInstruction());
 
   AMDGPU::Waitcnt Wait;
+  const unsigned Opc = MI.getOpcode();
 
   // FIXME: This should have already been handled by the memory legalizer.
   // Removing this currently doesn't affect any lit tests, but we need to
   // verify that nothing was relying on this. The number of buffer invalidates
   // being handled here should not be expanded.
-  if (MI.getOpcode() == AMDGPU::BUFFER_WBINVL1 ||
-      MI.getOpcode() == AMDGPU::BUFFER_WBINVL1_SC ||
-      MI.getOpcode() == AMDGPU::BUFFER_WBINVL1_VOL ||
-      MI.getOpcode() == AMDGPU::BUFFER_GL0_INV ||
-      MI.getOpcode() == AMDGPU::BUFFER_GL1_INV) {
+  if (Opc == AMDGPU::BUFFER_WBINVL1 || Opc == AMDGPU::BUFFER_WBINVL1_SC ||
+      Opc == AMDGPU::BUFFER_WBINVL1_VOL || Opc == AMDGPU::BUFFER_GL0_INV ||
+      Opc == AMDGPU::BUFFER_GL1_INV) {
     Wait.LoadCnt = 0;
   }
 
   // All waits must be resolved at call return.
   // NOTE: this could be improved with knowledge of all call sites or
   //   with knowledge of the called routines.
-  if (MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG ||
-      MI.getOpcode() == AMDGPU::SI_RETURN ||
-      MI.getOpcode() == AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN ||
-      MI.getOpcode() == AMDGPU::S_SETPC_B64_return ||
+  if (Opc == AMDGPU::SI_RETURN_TO_EPILOG || Opc == AMDGPU::SI_RETURN ||
+      Opc == AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN ||
+      Opc == AMDGPU::S_SETPC_B64_return ||
       (MI.isReturn() && MI.isCall() && !callWaitsOnFunctionEntry(MI))) {
     Wait = Wait.combined(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false));
   }
@@ -1843,8 +1956,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // send a message to explicitly release all VGPRs before the stores have
   // completed, but it is only safe to do this if there are no outstanding
   // scratch stores.
-  else if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
-           MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED) {
+  else if (Opc == AMDGPU::S_ENDPGM || Opc == AMDGPU::S_ENDPGM_SAVED) {
     if (!WCG->isOptNone() &&
         (MI.getMF()->getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled() ||
          (ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
@@ -1853,8 +1965,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       ReleaseVGPRInsts.insert(&MI);
   }
   // Resolve vm waits before gs-done.
-  else if ((MI.getOpcode() == AMDGPU::S_SENDMSG ||
-            MI.getOpcode() == AMDGPU::S_SENDMSGHALT) &&
+  else if ((Opc == AMDGPU::S_SENDMSG || Opc == AMDGPU::S_SENDMSGHALT) &&
            ST->hasLegacyGeometry() &&
            ((MI.getOperand(0).getImm() & AMDGPU::SendMsg::ID_MASK_PreGFX11_) ==
             AMDGPU::SendMsg::ID_GS_DONE_PreGFX11)) {
@@ -1879,7 +1990,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
 
     // Wait for any pending GDS instruction to complete before any
     // "Always GDS" instruction.
-    if (TII->isAlwaysGDS(MI.getOpcode()) && ScoreBrackets.hasPendingGDS())
+    if (TII->isAlwaysGDS(Opc) && ScoreBrackets.hasPendingGDS())
       addWait(Wait, DS_CNT, ScoreBrackets.getPendingGDSWait());
 
     if (MI.isCall() && callWaitsOnFunctionEntry(MI)) {
@@ -1890,21 +2001,17 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
 
       const auto &CallAddrOp = *TII->getNamedOperand(MI, AMDGPU::OpName::src0);
       if (CallAddrOp.isReg()) {
-        RegInterval CallAddrOpInterval =
-            ScoreBrackets.getRegInterval(&MI, MRI, TRI, CallAddrOp);
-
-        ScoreBrackets.determineWait(SmemAccessCounter, CallAddrOpInterval,
-                                    Wait);
+        ScoreBrackets.determineWaitForPhysReg(
+            SmemAccessCounter, CallAddrOp.getReg().asMCReg(), Wait);
 
         if (const auto *RtnAddrOp =
                 TII->getNamedOperand(MI, AMDGPU::OpName::dst)) {
-          RegInterval RtnAddrOpInterval =
-              ScoreBrackets.getRegInterval(&MI, MRI, TRI, *RtnAddrOp);
-
-          ScoreBrackets.determineWait(SmemAccessCounter, RtnAddrOpInterval,
-                                      Wait);
+          ScoreBrackets.determineWaitForPhysReg(
+              SmemAccessCounter, RtnAddrOp->getReg().asMCReg(), Wait);
         }
       }
+    } else if (Opc == AMDGPU::S_BARRIER_WAIT) {
+      ScoreBrackets.tryClearSCCWriteEvent(&MI);
     } else {
       // FIXME: Should not be relying on memoperands.
       // Look at the source operands of every instruction to see if
@@ -1937,24 +2044,26 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
           continue;
 
         // LOAD_CNT is only relevant to vgpr or LDS.
-        unsigned RegNo = FIRST_LDS_VGPR;
-        // Only objects with alias scope info were added to LDSDMAScopes array.
-        // In the absense of the scope info we will not be able to disambiguate
-        // aliasing here. There is no need to try searching for a corresponding
-        // store slot. This is conservatively correct because in that case we
-        // will produce a wait using the first (general) LDS DMA wait slot which
-        // will wait on all of them anyway.
-        if (Ptr && Memop->getAAInfo() && Memop->getAAInfo().Scope) {
+        unsigned TID = LDSDMA_BEGIN;
+        if (Ptr && Memop->getAAInfo()) {
           const auto &LDSDMAStores = ScoreBrackets.getLDSDMAStores();
           for (unsigned I = 0, E = LDSDMAStores.size(); I != E; ++I) {
-            if (MI.mayAlias(AA, *LDSDMAStores[I], true))
-              ScoreBrackets.determineWait(LOAD_CNT, RegNo + I + 1, Wait);
+            if (MI.mayAlias(AA, *LDSDMAStores[I], true)) {
+              if ((I + 1) >= NUM_LDSDMA) {
+                // We didn't have enough slot to track this LDS DMA store, it
+                // has been tracked using the common RegNo (FIRST_LDS_VGPR).
+                ScoreBrackets.determineWaitForLDSDMA(LOAD_CNT, TID, Wait);
+                break;
+              }
+
+              ScoreBrackets.determineWaitForLDSDMA(LOAD_CNT, TID + I + 1, Wait);
+            }
           }
         } else {
-          ScoreBrackets.determineWait(LOAD_CNT, RegNo, Wait);
+          ScoreBrackets.determineWaitForLDSDMA(LOAD_CNT, TID, Wait);
         }
         if (Memop->isStore()) {
-          ScoreBrackets.determineWait(EXP_CNT, RegNo, Wait);
+          ScoreBrackets.determineWaitForLDSDMA(EXP_CNT, TID, Wait);
         }
       }
 
@@ -1967,7 +2076,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         if (Op.isTied() && Op.isUse() && TII->doesNotReadTiedSource(MI))
           continue;
 
-        RegInterval Interval = ScoreBrackets.getRegInterval(&MI, MRI, TRI, Op);
+        MCPhysReg Reg = Op.getReg().asMCReg();
 
         const bool IsVGPR = TRI->isVectorRegister(*MRI, Op.getReg());
         if (IsVGPR) {
@@ -1986,50 +2095,66 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
           // Additionally check instructions where Point Sample Acceleration
           // might be applied.
           if (Op.isUse() || !updateVMCntOnly(MI) ||
-              ScoreBrackets.hasOtherPendingVmemTypes(Interval,
-                                                     getVmemType(MI)) ||
-              ScoreBrackets.hasPointSamplePendingVmemTypes(MI, Interval) ||
+              ScoreBrackets.hasOtherPendingVmemTypes(Reg, getVmemType(MI)) ||
+              ScoreBrackets.hasPointSamplePendingVmemTypes(MI, Reg) ||
               !ST->hasVmemWriteVgprInOrder()) {
-            ScoreBrackets.determineWait(LOAD_CNT, Interval, Wait);
-            ScoreBrackets.determineWait(SAMPLE_CNT, Interval, Wait);
-            ScoreBrackets.determineWait(BVH_CNT, Interval, Wait);
-            ScoreBrackets.clearVgprVmemTypes(Interval);
+            ScoreBrackets.determineWaitForPhysReg(LOAD_CNT, Reg, Wait);
+            ScoreBrackets.determineWaitForPhysReg(SAMPLE_CNT, Reg, Wait);
+            ScoreBrackets.determineWaitForPhysReg(BVH_CNT, Reg, Wait);
+            ScoreBrackets.clearVgprVmemTypes(Reg);
           }
 
           if (Op.isDef() || ScoreBrackets.hasPendingEvent(EXP_LDS_ACCESS)) {
-            ScoreBrackets.determineWait(EXP_CNT, Interval, Wait);
+            ScoreBrackets.determineWaitForPhysReg(EXP_CNT, Reg, Wait);
           }
-          ScoreBrackets.determineWait(DS_CNT, Interval, Wait);
+          ScoreBrackets.determineWaitForPhysReg(DS_CNT, Reg, Wait);
+        } else if (Op.getReg() == AMDGPU::SCC) {
+          ScoreBrackets.determineWaitForPhysReg(KM_CNT, Reg, Wait);
         } else {
-          ScoreBrackets.determineWait(SmemAccessCounter, Interval, Wait);
+          ScoreBrackets.determineWaitForPhysReg(SmemAccessCounter, Reg, Wait);
         }
 
-        if (hasXcnt() && Op.isDef())
-          ScoreBrackets.determineWait(X_CNT, Interval, Wait);
+        if (ST->hasWaitXCnt() && Op.isDef())
+          ScoreBrackets.determineWaitForPhysReg(X_CNT, Reg, Wait);
       }
     }
   }
 
-  // The subtarget may have an implicit S_WAITCNT 0 before barriers. If it does
-  // not, we need to ensure the subtarget is capable of backing off barrier
-  // instructions in case there are any outstanding memory operations that may
-  // cause an exception. Otherwise, insert an explicit S_WAITCNT 0 here.
-  if (TII->isBarrierStart(MI.getOpcode()) &&
-      !ST->hasAutoWaitcntBeforeBarrier() && !ST->supportsBackOffBarrier()) {
+  // Ensure safety against exceptions from outstanding memory operations while
+  // waiting for a barrier:
+  //
+  //  * Some subtargets safely handle backing off the barrier in hardware
+  //    when an exception occurs.
+  //  * Some subtargets have an implicit S_WAITCNT 0 before barriers, so that
+  //    there can be no outstanding memory operations during the wait.
+  //  * Subtargets with split barriers don't need to back off the barrier; it
+  //    is up to the trap handler to preserve the user barrier state correctly.
+  //
+  // In all other cases, ensure safety by ensuring that there are no outstanding
+  // memory operations.
+  if (Opc == AMDGPU::S_BARRIER && !ST->hasAutoWaitcntBeforeBarrier() &&
+      !ST->supportsBackOffBarrier()) {
     Wait = Wait.combined(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/true));
   }
 
   // TODO: Remove this work-around, enable the assert for Bug 457939
   //       after fixing the scheduler. Also, the Shader Compiler code is
   //       independent of target.
-  if (readsVCCZ(MI) && ST->hasReadVCCZBug()) {
-    if (ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
-      Wait.DsCnt = 0;
-    }
+  if (SIInstrInfo::isCBranchVCCZRead(MI) && ST->hasReadVCCZBug() &&
+      ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
+    Wait.DsCnt = 0;
   }
 
   // Verify that the wait is actually needed.
   ScoreBrackets.simplifyWaitcnt(Wait);
+
+  // Since the translation for VMEM addresses occur in-order, we can apply the
+  // XCnt if the current instruction is of VMEM type and has a memory
+  // dependency with another VMEM instruction in flight.
+  if (Wait.XCnt != ~0u && isVmemAccess(MI)) {
+    ScoreBrackets.applyWaitcnt(X_CNT, Wait.XCnt);
+    Wait.XCnt = ~0u;
+  }
 
   // When forcing emit, we need to skip terminators because that would break the
   // terminators of the MBB if we emit a waitcnt between terminators.
@@ -2099,94 +2224,15 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
                       << "Update Instr: " << *It);
   }
 
-  // XCnt may be already consumed by a load wait.
-  if (Wait.KmCnt == 0 && Wait.XCnt != ~0u &&
-      !ScoreBrackets.hasPendingEvent(SMEM_GROUP))
-    Wait.XCnt = ~0u;
-
-  if (Wait.LoadCnt == 0 && Wait.XCnt != ~0u &&
-      !ScoreBrackets.hasPendingEvent(VMEM_GROUP))
-    Wait.XCnt = ~0u;
-
-  // Since the translation for VMEM addresses occur in-order, we can skip the
-  // XCnt if the current instruction is of VMEM type and has a memory dependency
-  // with another VMEM instruction in flight.
-  if (Wait.XCnt != ~0u && isVmemAccess(*It))
-    Wait.XCnt = ~0u;
-
   if (WCG->createNewWaitcnt(Block, It, Wait))
     Modified = true;
 
   return Modified;
 }
 
-// This is a flat memory operation. Check to see if it has memory tokens other
-// than LDS. Other address spaces supported by flat memory operations involve
-// global memory.
-bool SIInsertWaitcnts::mayAccessVMEMThroughFlat(const MachineInstr &MI) const {
-  assert(TII->isFLAT(MI));
-
-  // All flat instructions use the VMEM counter except prefetch.
-  if (!TII->usesVM_CNT(MI))
-    return false;
-
-  // If there are no memory operands then conservatively assume the flat
-  // operation may access VMEM.
-  if (MI.memoperands_empty())
-    return true;
-
-  // See if any memory operand specifies an address space that involves VMEM.
-  // Flat operations only supported FLAT, LOCAL (LDS), or address spaces
-  // involving VMEM such as GLOBAL, CONSTANT, PRIVATE (SCRATCH), etc. The REGION
-  // (GDS) address space is not supported by flat operations. Therefore, simply
-  // return true unless only the LDS address space is found.
-  for (const MachineMemOperand *Memop : MI.memoperands()) {
-    unsigned AS = Memop->getAddrSpace();
-    assert(AS != AMDGPUAS::REGION_ADDRESS);
-    if (AS != AMDGPUAS::LOCAL_ADDRESS)
-      return true;
-  }
-
-  return false;
-}
-
-// This is a flat memory operation. Check to see if it has memory tokens for
-// either LDS or FLAT.
-bool SIInsertWaitcnts::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
-  assert(TII->isFLAT(MI));
-
-  // Flat instruction such as SCRATCH and GLOBAL do not use the lgkm counter.
-  if (!TII->usesLGKM_CNT(MI))
-    return false;
-
-  // If in tgsplit mode then there can be no use of LDS.
-  if (ST->isTgSplitEnabled())
-    return false;
-
-  // If there are no memory operands then conservatively assume the flat
-  // operation may access LDS.
-  if (MI.memoperands_empty())
-    return true;
-
-  // See if any memory operand specifies an address space that involves LDS.
-  for (const MachineMemOperand *Memop : MI.memoperands()) {
-    unsigned AS = Memop->getAddrSpace();
-    if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS)
-      return true;
-  }
-
-  return false;
-}
-
 bool SIInsertWaitcnts::isVmemAccess(const MachineInstr &MI) const {
-  return (TII->isFLAT(MI) && mayAccessVMEMThroughFlat(MI)) ||
+  return (TII->isFLAT(MI) && TII->mayAccessVMEMThroughFlat(MI)) ||
          (TII->isVMEM(MI) && !AMDGPU::getMUBUFIsBufferInv(MI.getOpcode()));
-}
-
-static bool isGFX12CacheInvOrWBInst(MachineInstr &Inst) {
-  auto Opc = Inst.getOpcode();
-  return Opc == AMDGPU::GLOBAL_INV || Opc == AMDGPU::GLOBAL_WB ||
-         Opc == AMDGPU::GLOBAL_WBINV;
 }
 
 // Return true if the next instruction is S_ENDPGM, following fallthrough
@@ -2252,6 +2298,8 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   // Now look at the instruction opcode. If it is a memory access
   // instruction, update the upper-bound of the appropriate counter's
   // bracket and the destination operand scores.
+  // For architectures with X_CNT, mark the source address operands
+  // with the appropriate counter values.
   // TODO: Use the (TSFlags & SIInstrFlags::DS_CNT) property everywhere.
 
   bool IsVMEMAccess = false;
@@ -2259,16 +2307,15 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   if (TII->isDS(Inst) && TII->usesLGKM_CNT(Inst)) {
     if (TII->isAlwaysGDS(Inst.getOpcode()) ||
         TII->hasModifiersSet(Inst, AMDGPU::OpName::gds)) {
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, GDS_ACCESS, Inst);
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, GDS_GPR_LOCK, Inst);
+      ScoreBrackets->updateByEvent(GDS_ACCESS, Inst);
+      ScoreBrackets->updateByEvent(GDS_GPR_LOCK, Inst);
       ScoreBrackets->setPendingGDS();
     } else {
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, LDS_ACCESS, Inst);
+      ScoreBrackets->updateByEvent(LDS_ACCESS, Inst);
     }
   } else if (TII->isFLAT(Inst)) {
-    if (isGFX12CacheInvOrWBInst(Inst)) {
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, getVmemWaitEventType(Inst),
-                                   Inst);
+    if (SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode())) {
+      ScoreBrackets->updateByEvent(getVmemWaitEventType(Inst), Inst);
       return;
     }
 
@@ -2276,36 +2323,36 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
 
     int FlatASCount = 0;
 
-    if (mayAccessVMEMThroughFlat(Inst)) {
+    if (TII->mayAccessVMEMThroughFlat(Inst)) {
       ++FlatASCount;
       IsVMEMAccess = true;
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, getVmemWaitEventType(Inst),
-                                   Inst);
+      ScoreBrackets->updateByEvent(getVmemWaitEventType(Inst), Inst);
     }
 
-    if (mayAccessLDSThroughFlat(Inst)) {
+    if (TII->mayAccessLDSThroughFlat(Inst)) {
       ++FlatASCount;
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, LDS_ACCESS, Inst);
+      ScoreBrackets->updateByEvent(LDS_ACCESS, Inst);
     }
 
-    // This is a flat memory operation that access both VMEM and LDS, so note it
-    // - it will require that both the VM and LGKM be flushed to zero if it is
-    // pending when a VM or LGKM dependency occurs.
-    if (FlatASCount > 1)
+    // Async/LDSDMA operations have FLAT encoding but do not actually use flat
+    // pointers. They do have two operands that each access global and LDS, thus
+    // making it appear at this point that they are using a flat pointer. Filter
+    // them out, and for the rest, generate a dependency on flat pointers so
+    // that both VM and LGKM counters are flushed.
+    if (!SIInstrInfo::isLDSDMA(Inst) && FlatASCount > 1)
       ScoreBrackets->setPendingFlat();
   } else if (SIInstrInfo::isVMEM(Inst) &&
              !llvm::AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode())) {
     IsVMEMAccess = true;
-    ScoreBrackets->updateByEvent(TII, TRI, MRI, getVmemWaitEventType(Inst),
-                                 Inst);
+    ScoreBrackets->updateByEvent(getVmemWaitEventType(Inst), Inst);
 
     if (ST->vmemWriteNeedsExpWaitcnt() &&
         (Inst.mayStore() || SIInstrInfo::isAtomicRet(Inst))) {
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, VMW_GPR_LOCK, Inst);
+      ScoreBrackets->updateByEvent(VMW_GPR_LOCK, Inst);
     }
   } else if (TII->isSMRD(Inst)) {
     IsSMEMAccess = true;
-    ScoreBrackets->updateByEvent(TII, TRI, MRI, SMEM_ACCESS, Inst);
+    ScoreBrackets->updateByEvent(SMEM_ACCESS, Inst);
   } else if (Inst.isCall()) {
     if (callWaitsOnFunctionReturn(Inst)) {
       // Act as a wait on everything
@@ -2317,45 +2364,45 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt());
     }
   } else if (SIInstrInfo::isLDSDIR(Inst)) {
-    ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_LDS_ACCESS, Inst);
+    ScoreBrackets->updateByEvent(EXP_LDS_ACCESS, Inst);
   } else if (TII->isVINTERP(Inst)) {
     int64_t Imm = TII->getNamedOperand(Inst, AMDGPU::OpName::waitexp)->getImm();
     ScoreBrackets->applyWaitcnt(EXP_CNT, Imm);
   } else if (SIInstrInfo::isEXP(Inst)) {
     unsigned Imm = TII->getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm();
     if (Imm >= AMDGPU::Exp::ET_PARAM0 && Imm <= AMDGPU::Exp::ET_PARAM31)
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_PARAM_ACCESS, Inst);
+      ScoreBrackets->updateByEvent(EXP_PARAM_ACCESS, Inst);
     else if (Imm >= AMDGPU::Exp::ET_POS0 && Imm <= AMDGPU::Exp::ET_POS_LAST)
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_POS_ACCESS, Inst);
+      ScoreBrackets->updateByEvent(EXP_POS_ACCESS, Inst);
     else
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_GPR_LOCK, Inst);
+      ScoreBrackets->updateByEvent(EXP_GPR_LOCK, Inst);
+  } else if (SIInstrInfo::isSBarrierSCCWrite(Inst.getOpcode())) {
+    ScoreBrackets->updateByEvent(SCC_WRITE, Inst);
   } else {
     switch (Inst.getOpcode()) {
     case AMDGPU::S_SENDMSG:
     case AMDGPU::S_SENDMSG_RTN_B32:
     case AMDGPU::S_SENDMSG_RTN_B64:
     case AMDGPU::S_SENDMSGHALT:
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, SQ_MESSAGE, Inst);
+      ScoreBrackets->updateByEvent(SQ_MESSAGE, Inst);
       break;
     case AMDGPU::S_MEMTIME:
     case AMDGPU::S_MEMREALTIME:
-    case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0:
-    case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM:
     case AMDGPU::S_GET_BARRIER_STATE_M0:
     case AMDGPU::S_GET_BARRIER_STATE_IMM:
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, SMEM_ACCESS, Inst);
+      ScoreBrackets->updateByEvent(SMEM_ACCESS, Inst);
       break;
     }
   }
 
-  if (!hasXcnt())
+  if (!ST->hasWaitXCnt())
     return;
 
   if (IsVMEMAccess)
-    ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_GROUP, Inst);
+    ScoreBrackets->updateByEvent(VMEM_GROUP, Inst);
 
   if (IsSMEMAccess)
-    ScoreBrackets->updateByEvent(TII, TRI, MRI, SMEM_GROUP, Inst);
+    ScoreBrackets->updateByEvent(SMEM_GROUP, Inst);
 }
 
 bool WaitcntBrackets::mergeScore(const MergeInfo &M, unsigned &Score,
@@ -2375,8 +2422,12 @@ bool WaitcntBrackets::mergeScore(const MergeInfo &M, unsigned &Score,
 bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
   bool StrictDom = false;
 
-  VgprUB = std::max(VgprUB, Other.VgprUB);
-  SgprUB = std::max(SgprUB, Other.SgprUB);
+  // Check if "other" has keys we don't have, and create default entries for
+  // those. If they remain empty after merging, we will clean it up after.
+  for (auto K : Other.VMem.keys())
+    VMem.try_emplace(K);
+  for (auto K : Other.SGPRs.keys())
+    SGPRs.try_emplace(K);
 
   for (auto T : inst_counter_types(Context->MaxCounter)) {
     // Merge event flags for this counter
@@ -2407,23 +2458,41 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
     if (T == DS_CNT)
       StrictDom |= mergeScore(M, LastGDS, Other.LastGDS);
 
-    for (int J = 0; J <= VgprUB; J++)
-      StrictDom |= mergeScore(M, VgprScores[T][J], Other.VgprScores[T][J]);
+    if (T == KM_CNT) {
+      StrictDom |= mergeScore(M, SCCScore, Other.SCCScore);
+      if (Other.hasPendingEvent(SCC_WRITE)) {
+        unsigned OldEventsHasSCCWrite = OldEvents & (1 << SCC_WRITE);
+        if (!OldEventsHasSCCWrite) {
+          PendingSCCWrite = Other.PendingSCCWrite;
+        } else if (PendingSCCWrite != Other.PendingSCCWrite) {
+          PendingSCCWrite = nullptr;
+        }
+      }
+    }
+
+    for (auto &[RegID, Info] : VMem)
+      StrictDom |= mergeScore(M, Info.Scores[T], Other.getVMemScore(RegID, T));
 
     if (isSmemCounter(T)) {
       unsigned Idx = getSgprScoresIdx(T);
-      for (int J = 0; J <= SgprUB; J++)
-        StrictDom |=
-            mergeScore(M, SgprScores[Idx][J], Other.SgprScores[Idx][J]);
+      for (auto &[RegID, Info] : SGPRs) {
+        auto It = Other.SGPRs.find(RegID);
+        unsigned OtherScore =
+            (It != Other.SGPRs.end()) ? It->second.Scores[Idx] : 0;
+        StrictDom |= mergeScore(M, Info.Scores[Idx], OtherScore);
+      }
     }
   }
 
-  for (int J = 0; J <= VgprUB; J++) {
-    unsigned char NewVmemTypes = VgprVmemTypes[J] | Other.VgprVmemTypes[J];
-    StrictDom |= NewVmemTypes != VgprVmemTypes[J];
-    VgprVmemTypes[J] = NewVmemTypes;
+  for (auto &[TID, Info] : VMem) {
+    if (auto It = Other.VMem.find(TID); It != Other.VMem.end()) {
+      unsigned char NewVmemTypes = Info.VMEMTypes | It->second.VMEMTypes;
+      StrictDom |= NewVmemTypes != Info.VMEMTypes;
+      Info.VMEMTypes = NewVmemTypes;
+    }
   }
 
+  purgeEmptyTrackingData();
   return StrictDom;
 }
 
@@ -2494,7 +2563,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     OldWaitcntInstr = nullptr;
 
     // Restore vccz if it's not known to be correct already.
-    bool RestoreVCCZ = !VCCZCorrect && readsVCCZ(Inst);
+    bool RestoreVCCZ = !VCCZCorrect && SIInstrInfo::isCBranchVCCZRead(Inst);
 
     // Don't examine operands unless we need to track vccz correctness.
     if (ST->hasReadVCCZBug() || !ST->partialVCCWritesUpdateVCCZ()) {
@@ -2617,7 +2686,7 @@ bool SIInsertWaitcnts::isPreheaderToFlush(
 
 bool SIInsertWaitcnts::isVMEMOrFlatVMEM(const MachineInstr &MI) const {
   if (SIInstrInfo::isFLAT(MI))
-    return mayAccessVMEMThroughFlat(MI);
+    return TII->mayAccessVMEMThroughFlat(MI);
   return SIInstrInfo::isVMEM(MI);
 }
 
@@ -2634,35 +2703,34 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
   bool HasVMemLoad = false;
   bool HasVMemStore = false;
   bool UsesVgprLoadedOutside = false;
-  DenseSet<Register> VgprUse;
-  DenseSet<Register> VgprDef;
+  DenseSet<MCRegUnit> VgprUse;
+  DenseSet<MCRegUnit> VgprDef;
 
   for (MachineBasicBlock *MBB : ML->blocks()) {
     for (MachineInstr &MI : *MBB) {
       if (isVMEMOrFlatVMEM(MI)) {
-        if (MI.mayLoad())
-          HasVMemLoad = true;
-        if (MI.mayStore())
-          HasVMemStore = true;
+        HasVMemLoad |= MI.mayLoad();
+        HasVMemStore |= MI.mayStore();
       }
+
       for (const MachineOperand &Op : MI.all_uses()) {
-        if (!TRI->isVectorRegister(*MRI, Op.getReg()))
+        if (Op.isDebug() || !TRI->isVectorRegister(*MRI, Op.getReg()))
           continue;
-        RegInterval Interval = Brackets.getRegInterval(&MI, MRI, TRI, Op);
         // Vgpr use
-        for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
+        for (MCRegUnit RU : TRI->regunits(Op.getReg().asMCReg())) {
           // If we find a register that is loaded inside the loop, 1. and 2.
           // are invalidated and we can exit.
-          if (VgprDef.contains(RegNo))
+          if (VgprDef.contains(RU))
             return false;
-          VgprUse.insert(RegNo);
+          VgprUse.insert(RU);
           // If at least one of Op's registers is in the score brackets, the
           // value is likely loaded outside of the loop.
-          if (Brackets.getRegScore(RegNo, LOAD_CNT) >
+          VMEMID ID = toVMEMID(RU);
+          if (Brackets.getVMemScore(ID, LOAD_CNT) >
                   Brackets.getScoreLB(LOAD_CNT) ||
-              Brackets.getRegScore(RegNo, SAMPLE_CNT) >
+              Brackets.getVMemScore(ID, SAMPLE_CNT) >
                   Brackets.getScoreLB(SAMPLE_CNT) ||
-              Brackets.getRegScore(RegNo, BVH_CNT) >
+              Brackets.getVMemScore(ID, BVH_CNT) >
                   Brackets.getScoreLB(BVH_CNT)) {
             UsesVgprLoadedOutside = true;
             break;
@@ -2673,13 +2741,12 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
       // VMem load vgpr def
       if (isVMEMOrFlatVMEM(MI) && MI.mayLoad()) {
         for (const MachineOperand &Op : MI.all_defs()) {
-          RegInterval Interval = Brackets.getRegInterval(&MI, MRI, TRI, Op);
-          for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
+          for (MCRegUnit RU : TRI->regunits(Op.getReg().asMCReg())) {
             // If we find a register that is loaded inside the loop, 1. and 2.
             // are invalidated and we can exit.
-            if (VgprUse.contains(RegNo))
+            if (VgprUse.contains(RU))
               return false;
-            VgprDef.insert(RegNo);
+            VgprDef.insert(RU);
           }
         }
       }
@@ -2733,7 +2800,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
     WCG = &WCGGFX12Plus;
   } else {
     MaxCounter = NUM_NORMAL_INST_CNTS;
-    WCGPreGFX12 = WaitcntGeneratorPreGFX12(MF);
+    WCGPreGFX12 = WaitcntGeneratorPreGFX12(MF, MaxCounter);
     WCG = &WCGPreGFX12;
   }
 
@@ -2758,17 +2825,10 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   Limits.KmcntMax = AMDGPU::getKmcntBitMask(IV);
   Limits.XcntMax = AMDGPU::getXcntBitMask(IV);
 
-  [[maybe_unused]] unsigned NumVGPRsMax =
-      ST->getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize());
-  [[maybe_unused]] unsigned NumSGPRsMax = ST->getAddressableNumSGPRs();
-  assert(NumVGPRsMax <= SQ_MAX_PGM_VGPRS);
-  assert(NumSGPRsMax <= SQ_MAX_PGM_SGPRS);
-
   BlockInfos.clear();
   bool Modified = false;
 
   MachineBasicBlock &EntryBB = MF.front();
-  MachineBasicBlock::iterator I = EntryBB.begin();
 
   if (!MFI->isEntryFunction()) {
     // Wait for any outstanding memory operations that the input registers may
@@ -2777,9 +2837,9 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
 
     // TODO: Could insert earlier and schedule more liberally with operations
     // that only use caller preserved registers.
-    for (MachineBasicBlock::iterator E = EntryBB.end();
-         I != E && (I->isPHI() || I->isMetaInstruction()); ++I)
-      ;
+    MachineBasicBlock::iterator I = EntryBB.begin();
+    while (I != EntryBB.end() && I->isMetaInstruction())
+      ++I;
 
     if (ST->hasExtendedWaitCounts()) {
       BuildMI(EntryBB, I, DebugLoc(), TII->get(AMDGPU::S_WAIT_LOADCNT_DSCNT))

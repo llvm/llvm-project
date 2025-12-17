@@ -52,6 +52,9 @@ class MCObjectStreamer : public MCStreamer {
   DenseMap<const MCSymbol *, SmallVector<PendingAssignment, 1>>
       pendingAssignments;
 
+  SmallVector<std::unique_ptr<uint8_t[]>, 0> FragStorage;
+  // Available bytes in the current block for trailing data or new fragments.
+  size_t FragSpace = 0;
   // Used to allocate special fragments that do not use MCFragment's fixed-size
   // part.
   BumpPtrAllocator SpecialFragAllocator;
@@ -65,7 +68,7 @@ protected:
   MCObjectStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
                    std::unique_ptr<MCObjectWriter> OW,
                    std::unique_ptr<MCCodeEmitter> Emitter);
-  ~MCObjectStreamer();
+  ~MCObjectStreamer() override;
 
 public:
   /// state management
@@ -74,7 +77,7 @@ public:
   /// Object streamers require the integrated assembler.
   bool isIntegratedAssemblerRequired() const override { return true; }
 
-  void emitFrames(MCAsmBackend *MAB);
+  void emitFrames();
   MCSymbol *emitCFILabel() override;
   void emitCFISections(bool EH, bool Debug, bool SFrame) override;
 
@@ -86,25 +89,28 @@ public:
   /// \name MCStreamer Interface
   /// @{
 
+  uint8_t *getCurFragEnd() const {
+    return reinterpret_cast<uint8_t *>(CurFrag + 1) + CurFrag->getFixedSize();
+  }
+  MCFragment *allocFragSpace(size_t Headroom);
   // Add a new fragment to the current section without a variable-size tail.
   void newFragment();
 
-  template <typename FT, typename... Args> FT *allocFragment(Args &&...args) {
-    auto *F = new (SpecialFragAllocator.Allocate(sizeof(FT), alignof(FT)))
-        FT(std::forward<Args>(args)...);
-    return F;
-  }
   // Add a new special fragment to the current section and start a new empty
   // fragment.
   template <typename FT, typename... Args>
   FT *newSpecialFragment(Args &&...args) {
-    auto *F = allocFragment<FT, Args...>(std::forward<Args>(args)...);
+    auto *F = new (SpecialFragAllocator.Allocate(sizeof(FT), alignof(FT)))
+        FT(std::forward<Args>(args)...);
     addSpecialFragment(F);
     return F;
   }
 
+  void ensureHeadroom(size_t Headroom);
   void appendContents(ArrayRef<char> Contents);
-  void appendContents(size_t Num, char Elt);
+  void appendContents(size_t Num, uint8_t Elt);
+  // Add a fixup to the current fragment. Call ensureHeadroom beforehand to
+  // ensure the fixup and appended content apply to the same fragment.
   void addFixup(const MCExpr *Value, MCFixupKind Kind);
 
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
@@ -144,6 +150,9 @@ public:
                              MCSymbol *EndLabel = nullptr) override;
   void emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
                                  const MCSymbol *Label, SMLoc Loc);
+  void emitSFrameCalculateFuncOffset(const MCSymbol *FunCabsel,
+                                     const MCSymbol *FREBegin,
+                                     MCFragment *FDEFrag, SMLoc Loc);
   void emitCVLocDirective(unsigned FunctionId, unsigned FileNo, unsigned Line,
                           unsigned Column, bool PrologueEnd, bool IsStmt,
                           StringRef FileName, SMLoc Loc) override;

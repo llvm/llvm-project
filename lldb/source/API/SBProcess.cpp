@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBProcess.h"
+#include "lldb/Host/File.h"
 #include "lldb/Utility/Instrumentation.h"
 
 #include <cinttypes>
@@ -310,7 +311,8 @@ void SBProcess::ReportEventState(const SBEvent &event, SBFile out) const {
 
 void SBProcess::ReportEventState(const SBEvent &event, FILE *out) const {
   LLDB_INSTRUMENT_VA(this, event, out);
-  FileSP outfile = std::make_shared<NativeFile>(out, false);
+  FileSP outfile =
+      std::make_shared<NativeFile>(out, File::eOpenOptionWriteOnly, false);
   return ReportEventState(event, outfile);
 }
 

@@ -109,6 +109,7 @@ static bool isODRAttribute(uint16_t Attr) {
   case dwarf::DW_AT_specification:
   case dwarf::DW_AT_abstract_origin:
   case dwarf::DW_AT_import:
+  case dwarf::DW_AT_LLVM_alloc_type:
     return true;
   }
   llvm_unreachable("Improper attribute.");
@@ -150,22 +151,84 @@ static bool isTypeTag(uint16_t Tag) {
   return false;
 }
 
-bool DWARFLinker::DIECloner::getDIENames(const DWARFDie &Die,
-                                         AttributesInfo &Info,
-                                         OffsetsStringPool &StringPool,
-                                         bool StripTemplate) {
+/// Recurse through the input DIE's canonical references until we find a
+/// DW_AT_name.
+llvm::StringRef
+DWARFLinker::DIECloner::getCanonicalDIEName(DWARFDie Die, const DWARFFile &File,
+                                            CompileUnit *Unit) {
+  if (!Die)
+    return {};
+
+  std::optional<DWARFFormValue> Ref;
+
+  auto GetDieName = [](const DWARFDie &D) -> llvm::StringRef {
+    auto NameForm = D.find(llvm::dwarf::DW_AT_name);
+    if (!NameForm)
+      return {};
+
+    auto NameOrErr = NameForm->getAsCString();
+    if (!NameOrErr) {
+      llvm::consumeError(NameOrErr.takeError());
+      return {};
+    }
+
+    return *NameOrErr;
+  };
+
+  llvm::StringRef Name = GetDieName(Die);
+  if (!Name.empty())
+    return Name;
+
+  while (true) {
+    if (!(Ref = Die.find(llvm::dwarf::DW_AT_specification)) &&
+        !(Ref = Die.find(llvm::dwarf::DW_AT_abstract_origin)))
+      break;
+
+    Die = Linker.resolveDIEReference(File, CompileUnits, *Ref, Die, Unit);
+    if (!Die)
+      break;
+
+    assert(Unit);
+
+    unsigned SpecIdx = Unit->getOrigUnit().getDIEIndex(Die);
+    CompileUnit::DIEInfo &SpecInfo = Unit->getInfo(SpecIdx);
+    if (SpecInfo.Ctxt && SpecInfo.Ctxt->hasCanonicalDIE()) {
+      if (!SpecInfo.Ctxt->getCanonicalName().empty()) {
+        Name = SpecInfo.Ctxt->getCanonicalName();
+        break;
+      }
+    }
+
+    Name = GetDieName(Die);
+    if (!Name.empty())
+      break;
+  }
+
+  return Name;
+}
+
+bool DWARFLinker::DIECloner::getDIENames(
+    const DWARFDie &Die, AttributesInfo &Info, OffsetsStringPool &StringPool,
+    const DWARFFile &File, CompileUnit &Unit, bool StripTemplate) {
   // This function will be called on DIEs having low_pcs and
   // ranges. As getting the name might be more expansive, filter out
   // blocks directly.
   if (Die.getTag() == dwarf::DW_TAG_lexical_block)
     return false;
 
+  // The mangled name of an specification DIE will by virtue of the
+  // uniquing algorithm be the same as the one it got uniqued into.
+  // So just use the input DIE's linkage name.
   if (!Info.MangledName)
     if (const char *MangledName = Die.getLinkageName())
       Info.MangledName = StringPool.getEntry(MangledName);
 
+  // For subprograms with linkage names, we unique on the linkage name,
+  // so DW_AT_name's may differ between the input and canonical DIEs.
+  // Use the name of the canonical DIE.
   if (!Info.Name)
-    if (const char *Name = Die.getShortName())
+    if (llvm::StringRef Name = getCanonicalDIEName(Die, File, &Unit);
+        !Name.empty())
       Info.Name = StringPool.getEntry(Name);
 
   if (!Info.MangledName)
@@ -1938,7 +2001,7 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
   // accelerator tables too. For now stick with dsymutil's behavior.
   if ((Info.InDebugMap || AttrInfo.HasLowPc || AttrInfo.HasRanges) &&
       Tag != dwarf::DW_TAG_compile_unit &&
-      getDIENames(InputDIE, AttrInfo, DebugStrPool,
+      getDIENames(InputDIE, AttrInfo, DebugStrPool, File, Unit,
                   Tag != dwarf::DW_TAG_inlined_subroutine)) {
     if (AttrInfo.MangledName && AttrInfo.MangledName != AttrInfo.Name)
       Unit.addNameAccelerator(Die, AttrInfo.MangledName,
@@ -1961,7 +2024,7 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
   } else if (Tag == dwarf::DW_TAG_imported_declaration && AttrInfo.Name) {
     Unit.addNamespaceAccelerator(Die, AttrInfo.Name);
   } else if (isTypeTag(Tag) && !AttrInfo.IsDeclaration) {
-    bool Success = getDIENames(InputDIE, AttrInfo, DebugStrPool);
+    bool Success = getDIENames(InputDIE, AttrInfo, DebugStrPool, File, Unit);
     uint64_t RuntimeLang =
         dwarf::toUnsigned(InputDIE.find(dwarf::DW_AT_APPLE_runtime_class))
             .value_or(0);
@@ -2426,11 +2489,13 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
           uint64_t OrigStmtSeq = StmtSeq.get();
           // 1. Get the original row index from the stmt list offset.
           auto OrigRowIter = SeqOffToOrigRow.find(OrigStmtSeq);
+          const uint64_t InvalidOffset =
+              Unit.getOrigUnit().getFormParams().getDwarfMaxOffset();
           // Check whether we have an output sequence for the StmtSeq offset.
           // Some sequences are discarded by the DWARFLinker if they are invalid
           // (empty).
           if (OrigRowIter == SeqOffToOrigRow.end()) {
-            StmtSeq.set(UINT64_MAX);
+            StmtSeq.set(InvalidOffset);
             continue;
           }
           size_t OrigRowIndex = OrigRowIter->second;
@@ -2440,7 +2505,7 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
           if (NewRowIter == OrigRowToNewRow.end()) {
             // If the original row index is not found in the map, update the
             // stmt_sequence attribute to the 'invalid offset' magic value.
-            StmtSeq.set(UINT64_MAX);
+            StmtSeq.set(InvalidOffset);
             continue;
           }
 

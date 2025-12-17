@@ -7,6 +7,7 @@
 // =============================================================================
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -14,8 +15,10 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallSet.h"
@@ -38,19 +41,30 @@ static bool isScalarLikeType(Type type) {
   return type.isIntOrIndexOrFloat() || isa<ComplexType>(type);
 }
 
-struct MemRefPointerLikeModel
-    : public PointerLikeType::ExternalModel<MemRefPointerLikeModel,
-                                            MemRefType> {
-  Type getElementType(Type pointer) const {
-    return cast<MemRefType>(pointer).getElementType();
+/// Helper function to attach the `VarName` attribute to an operation
+/// if a variable name is provided.
+static void attachVarNameAttr(Operation *op, OpBuilder &builder,
+                              StringRef varName) {
+  if (!varName.empty()) {
+    auto varNameAttr = acc::VarNameAttr::get(builder.getContext(), varName);
+    op->setAttr(acc::getVarNameAttrName(), varNameAttr);
   }
+}
+
+template <typename T>
+struct MemRefPointerLikeModel
+    : public PointerLikeType::ExternalModel<MemRefPointerLikeModel<T>, T> {
+  Type getElementType(Type pointer) const {
+    return cast<T>(pointer).getElementType();
+  }
+
   mlir::acc::VariableTypeCategory
   getPointeeTypeCategory(Type pointer, TypedValue<PointerLikeType> varPtr,
                          Type varType) const {
     if (auto mappableTy = dyn_cast<MappableType>(varType)) {
       return mappableTy.getTypeCategory(varPtr);
     }
-    auto memrefTy = cast<MemRefType>(pointer);
+    auto memrefTy = cast<T>(pointer);
     if (!memrefTy.hasRank()) {
       // This memref is unranked - aka it could have any rank, including a
       // rank of 0 which could mean scalar. For now, return uncategorized.
@@ -70,12 +84,211 @@ struct MemRefPointerLikeModel
     assert(memrefTy.getRank() > 0 && "rank expected to be positive");
     return mlir::acc::VariableTypeCategory::array;
   }
+
+  mlir::Value genAllocate(Type pointer, OpBuilder &builder, Location loc,
+                          StringRef varName, Type varType, Value originalVar,
+                          bool &needsFree) const {
+    auto memrefTy = cast<MemRefType>(pointer);
+
+    // Check if this is a static memref (all dimensions are known) - if yes
+    // then we can generate an alloca operation.
+    if (memrefTy.hasStaticShape()) {
+      needsFree = false; // alloca doesn't need deallocation
+      auto allocaOp = memref::AllocaOp::create(builder, loc, memrefTy);
+      attachVarNameAttr(allocaOp, builder, varName);
+      return allocaOp.getResult();
+    }
+
+    // For dynamic memrefs, extract sizes from the original variable if
+    // provided. Otherwise they cannot be handled.
+    if (originalVar && originalVar.getType() == memrefTy &&
+        memrefTy.hasRank()) {
+      SmallVector<Value> dynamicSizes;
+      for (int64_t i = 0; i < memrefTy.getRank(); ++i) {
+        if (memrefTy.isDynamicDim(i)) {
+          // Extract the size of dimension i from the original variable
+          auto indexValue = arith::ConstantIndexOp::create(builder, loc, i);
+          auto dimSize =
+              memref::DimOp::create(builder, loc, originalVar, indexValue);
+          dynamicSizes.push_back(dimSize);
+        }
+        // Note: We only add dynamic sizes to the dynamicSizes array
+        // Static dimensions are handled automatically by AllocOp
+      }
+      needsFree = true; // alloc needs deallocation
+      auto allocOp =
+          memref::AllocOp::create(builder, loc, memrefTy, dynamicSizes);
+      attachVarNameAttr(allocOp, builder, varName);
+      return allocOp.getResult();
+    }
+
+    // TODO: Unranked not yet supported.
+    return {};
+  }
+
+  bool genFree(Type pointer, OpBuilder &builder, Location loc,
+               TypedValue<PointerLikeType> varToFree, Value allocRes,
+               Type varType) const {
+    if (auto memrefValue = dyn_cast<TypedValue<MemRefType>>(varToFree)) {
+      // Use allocRes if provided to determine the allocation type
+      Value valueToInspect = allocRes ? allocRes : memrefValue;
+
+      // Walk through casts to find the original allocation
+      Value currentValue = valueToInspect;
+      Operation *originalAlloc = nullptr;
+
+      // Follow the chain of operations to find the original allocation
+      // even if a casted result is provided.
+      while (currentValue) {
+        if (auto *definingOp = currentValue.getDefiningOp()) {
+          // Check if this is an allocation operation
+          if (isa<memref::AllocOp, memref::AllocaOp>(definingOp)) {
+            originalAlloc = definingOp;
+            break;
+          }
+
+          // Check if this is a cast operation we can look through
+          if (auto castOp = dyn_cast<memref::CastOp>(definingOp)) {
+            currentValue = castOp.getSource();
+            continue;
+          }
+
+          // Check for other cast-like operations
+          if (auto reinterpretCastOp =
+                  dyn_cast<memref::ReinterpretCastOp>(definingOp)) {
+            currentValue = reinterpretCastOp.getSource();
+            continue;
+          }
+
+          // If we can't look through this operation, stop
+          break;
+        }
+        // This is a block argument or similar - can't trace further.
+        break;
+      }
+
+      if (originalAlloc) {
+        if (isa<memref::AllocaOp>(originalAlloc)) {
+          // This is an alloca - no dealloc needed, but return true (success)
+          return true;
+        }
+        if (isa<memref::AllocOp>(originalAlloc)) {
+          // This is an alloc - generate dealloc on varToFree
+          memref::DeallocOp::create(builder, loc, memrefValue);
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  bool genCopy(Type pointer, OpBuilder &builder, Location loc,
+               TypedValue<PointerLikeType> destination,
+               TypedValue<PointerLikeType> source, Type varType) const {
+    // Generate a copy operation between two memrefs
+    auto destMemref = dyn_cast_if_present<TypedValue<MemRefType>>(destination);
+    auto srcMemref = dyn_cast_if_present<TypedValue<MemRefType>>(source);
+
+    // As per memref documentation, source and destination must have same
+    // element type and shape in order to be compatible. We do not want to fail
+    // with an IR verification error - thus check that before generating the
+    // copy operation.
+    if (destMemref && srcMemref &&
+        destMemref.getType().getElementType() ==
+            srcMemref.getType().getElementType() &&
+        destMemref.getType().getShape() == srcMemref.getType().getShape()) {
+      memref::CopyOp::create(builder, loc, srcMemref, destMemref);
+      return true;
+    }
+
+    return false;
+  }
+
+  mlir::Value genLoad(Type pointer, OpBuilder &builder, Location loc,
+                      TypedValue<PointerLikeType> srcPtr,
+                      Type valueType) const {
+    // Load from a memref - only valid for scalar memrefs (rank 0).
+    // This is because the address computation for memrefs is part of the load
+    // (and not computed separately), but the API does not have arguments for
+    // indexing.
+    auto memrefValue = dyn_cast_if_present<TypedValue<MemRefType>>(srcPtr);
+    if (!memrefValue)
+      return {};
+
+    auto memrefTy = memrefValue.getType();
+
+    // Only load from scalar memrefs (rank 0)
+    if (memrefTy.getRank() != 0)
+      return {};
+
+    return memref::LoadOp::create(builder, loc, memrefValue);
+  }
+
+  bool genStore(Type pointer, OpBuilder &builder, Location loc,
+                Value valueToStore, TypedValue<PointerLikeType> destPtr) const {
+    // Store to a memref - only valid for scalar memrefs (rank 0)
+    // This is because the address computation for memrefs is part of the store
+    // (and not computed separately), but the API does not have arguments for
+    // indexing.
+    auto memrefValue = dyn_cast_if_present<TypedValue<MemRefType>>(destPtr);
+    if (!memrefValue)
+      return false;
+
+    auto memrefTy = memrefValue.getType();
+
+    // Only store to scalar memrefs (rank 0)
+    if (memrefTy.getRank() != 0)
+      return false;
+
+    memref::StoreOp::create(builder, loc, valueToStore, memrefValue);
+    return true;
+  }
 };
 
 struct LLVMPointerPointerLikeModel
     : public PointerLikeType::ExternalModel<LLVMPointerPointerLikeModel,
                                             LLVM::LLVMPointerType> {
   Type getElementType(Type pointer) const { return Type(); }
+
+  mlir::Value genLoad(Type pointer, OpBuilder &builder, Location loc,
+                      TypedValue<PointerLikeType> srcPtr,
+                      Type valueType) const {
+    // For LLVM pointers, we need the valueType to determine what to load
+    if (!valueType)
+      return {};
+
+    return LLVM::LoadOp::create(builder, loc, valueType, srcPtr);
+  }
+
+  bool genStore(Type pointer, OpBuilder &builder, Location loc,
+                Value valueToStore, TypedValue<PointerLikeType> destPtr) const {
+    LLVM::StoreOp::create(builder, loc, valueToStore, destPtr);
+    return true;
+  }
+};
+
+struct MemrefAddressOfGlobalModel
+    : public AddressOfGlobalOpInterface::ExternalModel<
+          MemrefAddressOfGlobalModel, memref::GetGlobalOp> {
+  SymbolRefAttr getSymbol(Operation *op) const {
+    auto getGlobalOp = cast<memref::GetGlobalOp>(op);
+    return getGlobalOp.getNameAttr();
+  }
+};
+
+struct MemrefGlobalVariableModel
+    : public GlobalVariableOpInterface::ExternalModel<MemrefGlobalVariableModel,
+                                                      memref::GlobalOp> {
+  bool isConstant(Operation *op) const {
+    auto globalOp = cast<memref::GlobalOp>(op);
+    return globalOp.getConstant();
+  }
+
+  Region *getInitRegion(Operation *op) const {
+    // GlobalOp uses attributes for initialization, not regions
+    return nullptr;
+  }
 };
 
 /// Helper function for any of the times we need to modify an ArrayAttr based on
@@ -93,8 +306,8 @@ mlir::ArrayAttr addDeviceTypeAffectedOperandHelper(
     deviceTypes.push_back(
         acc::DeviceTypeAttr::get(context, acc::DeviceType::None));
 
-  for (DeviceType DT : newDeviceTypes)
-    deviceTypes.push_back(acc::DeviceTypeAttr::get(context, DT));
+  for (DeviceType dt : newDeviceTypes)
+    deviceTypes.push_back(acc::DeviceTypeAttr::get(context, dt));
 
   return mlir::ArrayAttr::get(context, deviceTypes);
 }
@@ -121,10 +334,10 @@ mlir::ArrayAttr addDeviceTypeAffectedOperandHelper(
         acc::DeviceTypeAttr::get(context, acc::DeviceType::None));
   }
 
-  for (DeviceType DT : newDeviceTypes) {
+  for (DeviceType dt : newDeviceTypes) {
     argCollection.append(arguments);
     segments.push_back(arguments.size());
-    deviceTypes.push_back(acc::DeviceTypeAttr::get(context, DT));
+    deviceTypes.push_back(acc::DeviceTypeAttr::get(context, dt));
   }
 
   return mlir::ArrayAttr::get(context, deviceTypes);
@@ -163,9 +376,72 @@ void OpenACCDialect::initialize() {
   // By attaching interfaces here, we make the OpenACC dialect dependent on
   // the other dialects. This is probably better than having dialects like LLVM
   // and memref be dependent on OpenACC.
-  MemRefType::attachInterface<MemRefPointerLikeModel>(*getContext());
+  MemRefType::attachInterface<MemRefPointerLikeModel<MemRefType>>(
+      *getContext());
+  UnrankedMemRefType::attachInterface<
+      MemRefPointerLikeModel<UnrankedMemRefType>>(*getContext());
   LLVM::LLVMPointerType::attachInterface<LLVMPointerPointerLikeModel>(
       *getContext());
+
+  // Attach operation interfaces
+  memref::GetGlobalOp::attachInterface<MemrefAddressOfGlobalModel>(
+      *getContext());
+  memref::GlobalOp::attachInterface<MemrefGlobalVariableModel>(*getContext());
+}
+
+//===----------------------------------------------------------------------===//
+// RegionBranchOpInterface for acc.kernels / acc.parallel / acc.serial /
+// acc.kernel_environment / acc.data / acc.host_data
+//===----------------------------------------------------------------------===//
+
+/// Generic helper for single-region OpenACC ops that execute their body once
+/// and then return to the parent operation with their results (if any).
+static void
+getSingleRegionOpSuccessorRegions(Operation *op, Region &region,
+                                  RegionBranchPoint point,
+                                  SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent()) {
+    regions.push_back(RegionSuccessor(&region));
+    return;
+  }
+
+  regions.push_back(RegionSuccessor(op, op->getResults()));
+}
+
+void KernelsOp::getSuccessorRegions(RegionBranchPoint point,
+                                    SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+void ParallelOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+void SerialOp::getSuccessorRegions(RegionBranchPoint point,
+                                   SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+void KernelEnvironmentOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+void DataOp::getSuccessorRegions(RegionBranchPoint point,
+                                 SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+void HostDataOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
 }
 
 //===----------------------------------------------------------------------===//
@@ -173,9 +449,7 @@ void OpenACCDialect::initialize() {
 //===----------------------------------------------------------------------===//
 
 static bool hasDeviceTypeValues(std::optional<mlir::ArrayAttr> arrayAttr) {
-  if (arrayAttr && *arrayAttr && arrayAttr->size() > 0)
-    return true;
-  return false;
+  return arrayAttr && *arrayAttr && arrayAttr->size() > 0;
 }
 
 static bool hasDeviceType(std::optional<mlir::ArrayAttr> arrayAttr,
@@ -333,6 +607,28 @@ checkValidModifier(Op op, acc::DataClauseModifier validModifiers) {
   return success();
 }
 
+template <typename OpT, typename RecipeOpT>
+static LogicalResult checkRecipe(OpT op, llvm::StringRef operandName) {
+  // Mappable types do not need a recipe because it is possible to generate one
+  // from its API. Reject reductions though because no API is available for them
+  // at this time.
+  if (mlir::acc::isMappableType(op.getVar().getType()) &&
+      !std::is_same_v<OpT, acc::ReductionOp>)
+    return success();
+
+  mlir::SymbolRefAttr operandRecipe = op.getRecipeAttr();
+  if (!operandRecipe)
+    return op->emitOpError() << "recipe expected for " << operandName;
+
+  auto decl =
+      SymbolTable::lookupNearestSymbolFrom<RecipeOpT>(op, operandRecipe);
+  if (!decl)
+    return op->emitOpError()
+           << "expected symbol reference " << operandRecipe << " to point to a "
+           << operandName << " declaration";
+  return success();
+}
+
 static ParseResult parseVar(mlir::OpAsmParser &parser,
                             OpAsmParser::UnresolvedOperand &var) {
   // Either `var` or `varPtr` keyword is required.
@@ -439,6 +735,18 @@ static void printVarPtrType(mlir::OpAsmPrinter &p, mlir::Operation *op,
   }
 }
 
+static ParseResult parseRecipeSym(mlir::OpAsmParser &parser,
+                                  mlir::SymbolRefAttr &recipeAttr) {
+  if (failed(parser.parseAttribute(recipeAttr)))
+    return failure();
+  return success();
+}
+
+static void printRecipeSym(mlir::OpAsmPrinter &p, mlir::Operation *op,
+                           mlir::SymbolRefAttr recipeAttr) {
+  p << recipeAttr;
+}
+
 //===----------------------------------------------------------------------===//
 // DataBoundsOp
 //===----------------------------------------------------------------------===//
@@ -461,6 +769,9 @@ LogicalResult acc::PrivateOp::verify() {
     return failure();
   if (failed(checkNoModifier(*this)))
     return failure();
+  if (failed(
+          checkRecipe<acc::PrivateOp, acc::PrivateRecipeOp>(*this, "private")))
+    return failure();
   return success();
 }
 
@@ -468,6 +779,23 @@ LogicalResult acc::PrivateOp::verify() {
 // FirstprivateOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::FirstprivateOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_firstprivate)
+    return emitError("data clause associated with firstprivate operation must "
+                     "match its intent");
+  if (failed(checkVarAndVarType(*this)))
+    return failure();
+  if (failed(checkNoModifier(*this)))
+    return failure();
+  if (failed(checkRecipe<acc::FirstprivateOp, acc::FirstprivateRecipeOp>(
+          *this, "firstprivate")))
+    return failure();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// FirstprivateMapInitialOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::FirstprivateMapInitialOp::verify() {
   if (getDataClause() != acc::DataClause::acc_firstprivate)
     return emitError("data clause associated with firstprivate operation must "
                      "match its intent");
@@ -488,6 +816,9 @@ LogicalResult acc::ReductionOp::verify() {
   if (failed(checkVarAndVarType(*this)))
     return failure();
   if (failed(checkNoModifier(*this)))
+    return failure();
+  if (failed(checkRecipe<acc::ReductionOp, acc::ReductionRecipeOp>(
+          *this, "reduction")))
     return failure();
   return success();
 }
@@ -894,6 +1225,197 @@ struct RemoveConstantIfConditionWithRegion : public OpRewritePattern<OpTy> {
   }
 };
 
+/// Remove empty acc.kernel_environment operations. If the operation has wait
+/// operands, create a acc.wait operation to preserve synchronization.
+struct RemoveEmptyKernelEnvironment
+    : public OpRewritePattern<acc::KernelEnvironmentOp> {
+  using OpRewritePattern<acc::KernelEnvironmentOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(acc::KernelEnvironmentOp op,
+                                PatternRewriter &rewriter) const override {
+    assert(op->getNumRegions() == 1 && "expected op to have one region");
+
+    Block &block = op.getRegion().front();
+    if (!block.empty())
+      return failure();
+
+    // Conservatively disable canonicalization of empty acc.kernel_environment
+    // operations if the wait operands in the kernel_environment cannot be fully
+    // represented by acc.wait operation.
+
+    // Disable canonicalization if device type is not the default
+    if (auto deviceTypeAttr = op.getWaitOperandsDeviceTypeAttr()) {
+      for (auto attr : deviceTypeAttr) {
+        if (auto dtAttr = mlir::dyn_cast<acc::DeviceTypeAttr>(attr)) {
+          if (dtAttr.getValue() != mlir::acc::DeviceType::None)
+            return failure();
+        }
+      }
+    }
+
+    // Disable canonicalization if any wait segment has a devnum
+    if (auto hasDevnumAttr = op.getHasWaitDevnumAttr()) {
+      for (auto attr : hasDevnumAttr) {
+        if (auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>(attr)) {
+          if (boolAttr.getValue())
+            return failure();
+        }
+      }
+    }
+
+    // Disable canonicalization if there are multiple wait segments
+    if (auto segmentsAttr = op.getWaitOperandsSegmentsAttr()) {
+      if (segmentsAttr.size() > 1)
+        return failure();
+    }
+
+    // Remove empty kernel environment.
+    // Preserve synchronization by creating acc.wait operation if needed.
+    if (!op.getWaitOperands().empty() || op.getWaitOnlyAttr())
+      rewriter.replaceOpWithNewOp<acc::WaitOp>(op, op.getWaitOperands(),
+                                               /*asyncOperand=*/Value(),
+                                               /*waitDevnum=*/Value(),
+                                               /*async=*/nullptr,
+                                               /*ifCond=*/Value());
+    else
+      rewriter.eraseOp(op);
+
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// Recipe Region Helpers
+//===----------------------------------------------------------------------===//
+
+/// Create and populate an init region for privatization recipes.
+/// Returns success if the region is populated, failure otherwise.
+/// Sets needsFree to indicate if the allocated memory requires deallocation.
+static LogicalResult createInitRegion(OpBuilder &builder, Location loc,
+                                      Region &initRegion, Type varType,
+                                      StringRef varName, ValueRange bounds,
+                                      bool &needsFree) {
+  // Create init block with arguments: original value + bounds
+  SmallVector<Type> argTypes{varType};
+  SmallVector<Location> argLocs{loc};
+  for (Value bound : bounds) {
+    argTypes.push_back(bound.getType());
+    argLocs.push_back(loc);
+  }
+
+  Block *initBlock = builder.createBlock(&initRegion);
+  initBlock->addArguments(argTypes, argLocs);
+  builder.setInsertionPointToStart(initBlock);
+
+  Value privatizedValue;
+
+  // Get the block argument that represents the original variable
+  Value blockArgVar = initBlock->getArgument(0);
+
+  // Generate init region body based on variable type
+  if (isa<MappableType>(varType)) {
+    auto mappableTy = cast<MappableType>(varType);
+    auto typedVar = cast<TypedValue<MappableType>>(blockArgVar);
+    privatizedValue = mappableTy.generatePrivateInit(
+        builder, loc, typedVar, varName, bounds, {}, needsFree);
+    if (!privatizedValue)
+      return failure();
+  } else {
+    assert(isa<PointerLikeType>(varType) && "Expected PointerLikeType");
+    auto pointerLikeTy = cast<PointerLikeType>(varType);
+    // Use PointerLikeType's allocation API with the block argument
+    privatizedValue = pointerLikeTy.genAllocate(builder, loc, varName, varType,
+                                                blockArgVar, needsFree);
+    if (!privatizedValue)
+      return failure();
+  }
+
+  // Add yield operation to init block
+  acc::YieldOp::create(builder, loc, privatizedValue);
+
+  return success();
+}
+
+/// Create and populate a copy region for firstprivate recipes.
+/// Returns success if the region is populated, failure otherwise.
+/// TODO: Handle MappableType - it does not yet have a copy API.
+static LogicalResult createCopyRegion(OpBuilder &builder, Location loc,
+                                      Region &copyRegion, Type varType,
+                                      ValueRange bounds) {
+  // Create copy block with arguments: original value + privatized value +
+  // bounds
+  SmallVector<Type> copyArgTypes{varType, varType};
+  SmallVector<Location> copyArgLocs{loc, loc};
+  for (Value bound : bounds) {
+    copyArgTypes.push_back(bound.getType());
+    copyArgLocs.push_back(loc);
+  }
+
+  Block *copyBlock = builder.createBlock(&copyRegion);
+  copyBlock->addArguments(copyArgTypes, copyArgLocs);
+  builder.setInsertionPointToStart(copyBlock);
+
+  bool isMappable = isa<MappableType>(varType);
+  bool isPointerLike = isa<PointerLikeType>(varType);
+  // TODO: Handle MappableType - it does not yet have a copy API.
+  // Otherwise, for now just fallback to pointer-like behavior.
+  if (isMappable && !isPointerLike)
+    return failure();
+
+  // Generate copy region body based on variable type
+  if (isPointerLike) {
+    auto pointerLikeTy = cast<PointerLikeType>(varType);
+    Value originalArg = copyBlock->getArgument(0);
+    Value privatizedArg = copyBlock->getArgument(1);
+
+    // Generate copy operation using PointerLikeType interface
+    if (!pointerLikeTy.genCopy(
+            builder, loc, cast<TypedValue<PointerLikeType>>(privatizedArg),
+            cast<TypedValue<PointerLikeType>>(originalArg), varType))
+      return failure();
+  }
+
+  // Add terminator to copy block
+  acc::TerminatorOp::create(builder, loc);
+
+  return success();
+}
+
+/// Create and populate a destroy region for privatization recipes.
+/// Returns success if the region is populated, failure otherwise.
+static LogicalResult createDestroyRegion(OpBuilder &builder, Location loc,
+                                         Region &destroyRegion, Type varType,
+                                         Value allocRes, ValueRange bounds) {
+  // Create destroy block with arguments: original value + privatized value +
+  // bounds
+  SmallVector<Type> destroyArgTypes{varType, varType};
+  SmallVector<Location> destroyArgLocs{loc, loc};
+  for (Value bound : bounds) {
+    destroyArgTypes.push_back(bound.getType());
+    destroyArgLocs.push_back(loc);
+  }
+
+  Block *destroyBlock = builder.createBlock(&destroyRegion);
+  destroyBlock->addArguments(destroyArgTypes, destroyArgLocs);
+  builder.setInsertionPointToStart(destroyBlock);
+
+  auto varToFree =
+      cast<TypedValue<PointerLikeType>>(destroyBlock->getArgument(1));
+  if (isa<MappableType>(varType)) {
+    auto mappableTy = cast<MappableType>(varType);
+    if (!mappableTy.generatePrivateDestroy(builder, loc, varToFree))
+      return failure();
+  } else {
+    assert(isa<PointerLikeType>(varType) && "Expected PointerLikeType");
+    auto pointerLikeTy = cast<PointerLikeType>(varType);
+    if (!pointerLikeTy.genFree(builder, loc, varToFree, allocRes, varType))
+      return failure();
+  }
+
+  acc::TerminatorOp::create(builder, loc);
+  return success();
+}
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -941,6 +1463,70 @@ LogicalResult acc::PrivateRecipeOp::verifyRegions() {
   return success();
 }
 
+std::optional<PrivateRecipeOp>
+PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
+                                   StringRef recipeName, Type varType,
+                                   StringRef varName, ValueRange bounds) {
+  // First, validate that we can handle this variable type
+  bool isMappable = isa<MappableType>(varType);
+  bool isPointerLike = isa<PointerLikeType>(varType);
+
+  // Unsupported type
+  if (!isMappable && !isPointerLike)
+    return std::nullopt;
+
+  OpBuilder::InsertionGuard guard(builder);
+
+  // Create the recipe operation first so regions have proper parent context
+  auto recipe = PrivateRecipeOp::create(builder, loc, recipeName, varType);
+
+  // Populate the init region
+  bool needsFree = false;
+  if (failed(createInitRegion(builder, loc, recipe.getInitRegion(), varType,
+                              varName, bounds, needsFree))) {
+    recipe.erase();
+    return std::nullopt;
+  }
+
+  // Only create destroy region if the allocation needs deallocation
+  if (needsFree) {
+    // Extract the allocated value from the init block's yield operation
+    auto yieldOp =
+        cast<acc::YieldOp>(recipe.getInitRegion().front().getTerminator());
+    Value allocRes = yieldOp.getOperand(0);
+
+    if (failed(createDestroyRegion(builder, loc, recipe.getDestroyRegion(),
+                                   varType, allocRes, bounds))) {
+      recipe.erase();
+      return std::nullopt;
+    }
+  }
+
+  return recipe;
+}
+
+std::optional<PrivateRecipeOp>
+PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
+                                   StringRef recipeName,
+                                   FirstprivateRecipeOp firstprivRecipe) {
+  // Create the private.recipe op with the same type as the firstprivate.recipe.
+  OpBuilder::InsertionGuard guard(builder);
+  auto varType = firstprivRecipe.getType();
+  auto recipe = PrivateRecipeOp::create(builder, loc, recipeName, varType);
+
+  // Clone the init region
+  IRMapping mapping;
+  firstprivRecipe.getInitRegion().cloneInto(&recipe.getInitRegion(), mapping);
+
+  // Clone destroy region if the firstprivate.recipe has one.
+  if (!firstprivRecipe.getDestroyRegion().empty()) {
+    IRMapping mapping;
+    firstprivRecipe.getDestroyRegion().cloneInto(&recipe.getDestroyRegion(),
+                                                 mapping);
+  }
+  return recipe;
+}
+
 //===----------------------------------------------------------------------===//
 // FirstprivateRecipeOp
 //===----------------------------------------------------------------------===//
@@ -969,6 +1555,55 @@ LogicalResult acc::FirstprivateRecipeOp::verifyRegions() {
     return failure();
 
   return success();
+}
+
+std::optional<FirstprivateRecipeOp>
+FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
+                                        StringRef recipeName, Type varType,
+                                        StringRef varName, ValueRange bounds) {
+  // First, validate that we can handle this variable type
+  bool isMappable = isa<MappableType>(varType);
+  bool isPointerLike = isa<PointerLikeType>(varType);
+
+  // Unsupported type
+  if (!isMappable && !isPointerLike)
+    return std::nullopt;
+
+  OpBuilder::InsertionGuard guard(builder);
+
+  // Create the recipe operation first so regions have proper parent context
+  auto recipe = FirstprivateRecipeOp::create(builder, loc, recipeName, varType);
+
+  // Populate the init region
+  bool needsFree = false;
+  if (failed(createInitRegion(builder, loc, recipe.getInitRegion(), varType,
+                              varName, bounds, needsFree))) {
+    recipe.erase();
+    return std::nullopt;
+  }
+
+  // Populate the copy region
+  if (failed(createCopyRegion(builder, loc, recipe.getCopyRegion(), varType,
+                              bounds))) {
+    recipe.erase();
+    return std::nullopt;
+  }
+
+  // Only create destroy region if the allocation needs deallocation
+  if (needsFree) {
+    // Extract the allocated value from the init block's yield operation
+    auto yieldOp =
+        cast<acc::YieldOp>(recipe.getInitRegion().front().getTerminator());
+    Value allocRes = yieldOp.getOperand(0);
+
+    if (failed(createDestroyRegion(builder, loc, recipe.getDestroyRegion(),
+                                   varType, allocRes, bounds))) {
+      recipe.erase();
+      return std::nullopt;
+    }
+  }
+
+  return recipe;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1002,40 +1637,6 @@ LogicalResult acc::ReductionRecipeOp::verifyRegions() {
 }
 
 //===----------------------------------------------------------------------===//
-// Custom parser and printer verifier for private clause
-//===----------------------------------------------------------------------===//
-
-static ParseResult parseSymOperandList(
-    mlir::OpAsmParser &parser,
-    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &operands,
-    llvm::SmallVectorImpl<Type> &types, mlir::ArrayAttr &symbols) {
-  llvm::SmallVector<SymbolRefAttr> attributes;
-  if (failed(parser.parseCommaSeparatedList([&]() {
-        if (parser.parseAttribute(attributes.emplace_back()) ||
-            parser.parseArrow() ||
-            parser.parseOperand(operands.emplace_back()) ||
-            parser.parseColonType(types.emplace_back()))
-          return failure();
-        return success();
-      })))
-    return failure();
-  llvm::SmallVector<mlir::Attribute> arrayAttr(attributes.begin(),
-                                               attributes.end());
-  symbols = ArrayAttr::get(parser.getContext(), arrayAttr);
-  return success();
-}
-
-static void printSymOperandList(mlir::OpAsmPrinter &p, mlir::Operation *op,
-                                mlir::OperandRange operands,
-                                mlir::TypeRange types,
-                                std::optional<mlir::ArrayAttr> attributes) {
-  llvm::interleaveComma(llvm::zip(*attributes, operands), p, [&](auto it) {
-    p << std::get<0>(it) << " -> " << std::get<1>(it) << " : "
-      << std::get<1>(it).getType();
-  });
-}
-
-//===----------------------------------------------------------------------===//
 // ParallelOp
 //===----------------------------------------------------------------------===//
 
@@ -1054,45 +1655,19 @@ static LogicalResult checkDataOperands(Op op,
   return success();
 }
 
-template <typename Op>
-static LogicalResult
-checkSymOperandList(Operation *op, std::optional<mlir::ArrayAttr> attributes,
-                    mlir::OperandRange operands, llvm::StringRef operandName,
-                    llvm::StringRef symbolName, bool checkOperandType = true) {
-  if (!operands.empty()) {
-    if (!attributes || attributes->size() != operands.size())
-      return op->emitOpError()
-             << "expected as many " << symbolName << " symbol reference as "
-             << operandName << " operands";
-  } else {
-    if (attributes)
-      return op->emitOpError()
-             << "unexpected " << symbolName << " symbol reference";
-    return success();
-  }
-
+template <typename OpT, typename RecipeOpT>
+static LogicalResult checkPrivateOperands(mlir::Operation *accConstructOp,
+                                          const mlir::ValueRange &operands,
+                                          llvm::StringRef operandName) {
   llvm::DenseSet<Value> set;
-  for (auto args : llvm::zip(operands, *attributes)) {
-    mlir::Value operand = std::get<0>(args);
-
+  for (mlir::Value operand : operands) {
+    if (!mlir::isa<OpT>(operand.getDefiningOp()))
+      return accConstructOp->emitOpError()
+             << "expected " << operandName << " as defining op";
     if (!set.insert(operand).second)
-      return op->emitOpError()
+      return accConstructOp->emitOpError()
              << operandName << " operand appears more than once";
-
-    mlir::Type varType = operand.getType();
-    auto symbolRef = llvm::cast<SymbolRefAttr>(std::get<1>(args));
-    auto decl = SymbolTable::lookupNearestSymbolFrom<Op>(op, symbolRef);
-    if (!decl)
-      return op->emitOpError()
-             << "expected symbol reference " << symbolRef << " to point to a "
-             << operandName << " declaration";
-
-    if (checkOperandType && decl.getType() && decl.getType() != varType)
-      return op->emitOpError() << "expected " << operandName << " (" << varType
-                               << ") to be the same type as " << operandName
-                               << " declaration (" << decl.getType() << ")";
   }
-
   return success();
 }
 
@@ -1149,17 +1724,17 @@ static LogicalResult verifyDeviceTypeAndSegmentCountMatch(
 }
 
 LogicalResult acc::ParallelOp::verify() {
-  if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizationRecipes(), getPrivateOperands(), "private",
-          "privatizations", /*checkOperandType=*/false)))
+  if (failed(checkPrivateOperands<mlir::acc::PrivateOp,
+                                  mlir::acc::PrivateRecipeOp>(
+          *this, getPrivateOperands(), "private")))
     return failure();
-  if (failed(checkSymOperandList<mlir::acc::FirstprivateRecipeOp>(
-          *this, getFirstprivatizationRecipes(), getFirstprivateOperands(),
-          "firstprivate", "firstprivatizations", /*checkOperandType=*/false)))
+  if (failed(checkPrivateOperands<mlir::acc::FirstprivateOp,
+                                  mlir::acc::FirstprivateRecipeOp>(
+          *this, getFirstprivateOperands(), "firstprivate")))
     return failure();
-  if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
-          *this, getReductionRecipes(), getReductionOperands(), "reduction",
-          "reductions", false)))
+  if (failed(checkPrivateOperands<mlir::acc::ReductionOp,
+                                  mlir::acc::ReductionRecipeOp>(
+          *this, getReductionOperands(), "reduction")))
     return failure();
 
   if (failed(verifyDeviceTypeAndSegmentCountMatch(
@@ -1290,7 +1865,6 @@ void ParallelOp::build(mlir::OpBuilder &odsBuilder,
                        mlir::ValueRange gangPrivateOperands,
                        mlir::ValueRange gangFirstPrivateOperands,
                        mlir::ValueRange dataClauseOperands) {
-
   ParallelOp::build(
       odsBuilder, odsState, asyncOperands, /*asyncOperandsDeviceType=*/nullptr,
       /*asyncOnly=*/nullptr, waitOperands, /*waitOperandsSegments=*/nullptr,
@@ -1299,9 +1873,8 @@ void ParallelOp::build(mlir::OpBuilder &odsBuilder,
       /*numGangsDeviceType=*/nullptr, numWorkers,
       /*numWorkersDeviceType=*/nullptr, vectorLength,
       /*vectorLengthDeviceType=*/nullptr, ifCond, selfCond,
-      /*selfAttr=*/nullptr, reductionOperands, /*reductionRecipes=*/nullptr,
-      gangPrivateOperands, /*privatizations=*/nullptr, gangFirstPrivateOperands,
-      /*firstprivatizations=*/nullptr, dataClauseOperands,
+      /*selfAttr=*/nullptr, reductionOperands, gangPrivateOperands,
+      gangFirstPrivateOperands, dataClauseOperands,
       /*defaultAttr=*/nullptr, /*combined=*/nullptr);
 }
 
@@ -1378,16 +1951,22 @@ void acc::ParallelOp::addWaitOperands(
 void acc::ParallelOp::addPrivatization(MLIRContext *context,
                                        mlir::acc::PrivateOp op,
                                        mlir::acc::PrivateRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
   getPrivateOperandsMutable().append(op.getResult());
+}
 
-  llvm::SmallVector<mlir::Attribute> recipes;
+void acc::ParallelOp::addFirstPrivatization(
+    MLIRContext *context, mlir::acc::FirstprivateOp op,
+    mlir::acc::FirstprivateRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
+  getFirstprivateOperandsMutable().append(op.getResult());
+}
 
-  if (getPrivatizationRecipesAttr())
-    llvm::copy(getPrivatizationRecipesAttr(), std::back_inserter(recipes));
-
-  recipes.push_back(
-      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
-  setPrivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
+void acc::ParallelOp::addReduction(MLIRContext *context,
+                                   mlir::acc::ReductionOp op,
+                                   mlir::acc::ReductionRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
+  getReductionOperandsMutable().append(op.getResult());
 }
 
 static ParseResult parseNumGangs(
@@ -1955,17 +2534,17 @@ mlir::Value SerialOp::getWaitDevnum(mlir::acc::DeviceType deviceType) {
 }
 
 LogicalResult acc::SerialOp::verify() {
-  if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizationRecipes(), getPrivateOperands(), "private",
-          "privatizations", /*checkOperandType=*/false)))
+  if (failed(checkPrivateOperands<mlir::acc::PrivateOp,
+                                  mlir::acc::PrivateRecipeOp>(
+          *this, getPrivateOperands(), "private")))
     return failure();
-  if (failed(checkSymOperandList<mlir::acc::FirstprivateRecipeOp>(
-          *this, getFirstprivatizationRecipes(), getFirstprivateOperands(),
-          "firstprivate", "firstprivatizations", /*checkOperandType=*/false)))
+  if (failed(checkPrivateOperands<mlir::acc::FirstprivateOp,
+                                  mlir::acc::FirstprivateRecipeOp>(
+          *this, getFirstprivateOperands(), "firstprivate")))
     return failure();
-  if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
-          *this, getReductionRecipes(), getReductionOperands(), "reduction",
-          "reductions", false)))
+  if (failed(checkPrivateOperands<mlir::acc::ReductionOp,
+                                  mlir::acc::ReductionRecipeOp>(
+          *this, getReductionOperands(), "reduction")))
     return failure();
 
   if (failed(verifyDeviceTypeAndSegmentCountMatch(
@@ -2029,16 +2608,22 @@ void acc::SerialOp::addWaitOperands(
 void acc::SerialOp::addPrivatization(MLIRContext *context,
                                      mlir::acc::PrivateOp op,
                                      mlir::acc::PrivateRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
   getPrivateOperandsMutable().append(op.getResult());
+}
 
-  llvm::SmallVector<mlir::Attribute> recipes;
+void acc::SerialOp::addFirstPrivatization(
+    MLIRContext *context, mlir::acc::FirstprivateOp op,
+    mlir::acc::FirstprivateRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
+  getFirstprivateOperandsMutable().append(op.getResult());
+}
 
-  if (getPrivatizationRecipesAttr())
-    llvm::copy(getPrivatizationRecipesAttr(), std::back_inserter(recipes));
-
-  recipes.push_back(
-      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
-  setPrivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
+void acc::SerialOp::addReduction(MLIRContext *context,
+                                 mlir::acc::ReductionOp op,
+                                 mlir::acc::ReductionRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
+  getReductionOperandsMutable().append(op.getResult());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2168,6 +2753,27 @@ LogicalResult acc::KernelsOp::verify() {
   return checkDataOperands<acc::KernelsOp>(*this, getDataClauseOperands());
 }
 
+void acc::KernelsOp::addPrivatization(MLIRContext *context,
+                                      mlir::acc::PrivateOp op,
+                                      mlir::acc::PrivateRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
+  getPrivateOperandsMutable().append(op.getResult());
+}
+
+void acc::KernelsOp::addFirstPrivatization(
+    MLIRContext *context, mlir::acc::FirstprivateOp op,
+    mlir::acc::FirstprivateRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
+  getFirstprivateOperandsMutable().append(op.getResult());
+}
+
+void acc::KernelsOp::addReduction(MLIRContext *context,
+                                  mlir::acc::ReductionOp op,
+                                  mlir::acc::ReductionRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
+  getReductionOperandsMutable().append(op.getResult());
+}
+
 void acc::KernelsOp::addNumWorkersOperand(
     MLIRContext *context, mlir::Value newValue,
     llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
@@ -2257,6 +2863,15 @@ LogicalResult acc::HostDataOp::verify() {
 void acc::HostDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
   results.add<RemoveConstantIfConditionWithRegion<HostDataOp>>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// KernelEnvironmentOp
+//===----------------------------------------------------------------------===//
+
+void acc::KernelEnvironmentOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<RemoveEmptyKernelEnvironment>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2468,19 +3083,21 @@ bool hasDuplicateDeviceTypes(
 }
 
 /// Check for duplicates in the DeviceType array attribute.
-LogicalResult checkDeviceTypes(mlir::ArrayAttr deviceTypes) {
+/// Returns std::nullopt if no duplicates, or the duplicate DeviceType if found.
+static std::optional<mlir::acc::DeviceType>
+checkDeviceTypes(mlir::ArrayAttr deviceTypes) {
   llvm::SmallSet<mlir::acc::DeviceType, 3> crtDeviceTypes;
   if (!deviceTypes)
-    return success();
+    return std::nullopt;
   for (auto attr : deviceTypes) {
     auto deviceTypeAttr =
         mlir::dyn_cast_or_null<mlir::acc::DeviceTypeAttr>(attr);
     if (!deviceTypeAttr)
-      return failure();
+      return mlir::acc::DeviceType::None;
     if (!crtDeviceTypes.insert(deviceTypeAttr.getValue()).second)
-      return failure();
+      return deviceTypeAttr.getValue();
   }
-  return success();
+  return std::nullopt;
 }
 
 LogicalResult acc::LoopOp::verify() {
@@ -2507,9 +3124,10 @@ LogicalResult acc::LoopOp::verify() {
           getCollapseDeviceTypeAttr().getValue().size())
     return emitOpError() << "collapse attribute count must match collapse"
                          << " device_type count";
-  if (failed(checkDeviceTypes(getCollapseDeviceTypeAttr())))
-    return emitOpError()
-           << "duplicate device_type found in collapseDeviceType attribute";
+  if (auto duplicateDeviceType = checkDeviceTypes(getCollapseDeviceTypeAttr()))
+    return emitOpError() << "duplicate device_type `"
+                         << acc::stringifyDeviceType(*duplicateDeviceType)
+                         << "` found in collapseDeviceType attribute";
 
   // Check gang
   if (!getGangOperands().empty()) {
@@ -2522,8 +3140,12 @@ LogicalResult acc::LoopOp::verify() {
       return emitOpError() << "gangOperandsArgType attribute count must match"
                            << " gangOperands count";
   }
-  if (getGangAttr() && failed(checkDeviceTypes(getGangAttr())))
-    return emitOpError() << "duplicate device_type found in gang attribute";
+  if (getGangAttr()) {
+    if (auto duplicateDeviceType = checkDeviceTypes(getGangAttr()))
+      return emitOpError() << "duplicate device_type `"
+                           << acc::stringifyDeviceType(*duplicateDeviceType)
+                           << "` found in gang attribute";
+  }
 
   if (failed(verifyDeviceTypeAndSegmentCountMatch(
           *this, getGangOperands(), getGangOperandsSegmentsAttr(),
@@ -2531,22 +3153,30 @@ LogicalResult acc::LoopOp::verify() {
     return failure();
 
   // Check worker
-  if (failed(checkDeviceTypes(getWorkerAttr())))
-    return emitOpError() << "duplicate device_type found in worker attribute";
-  if (failed(checkDeviceTypes(getWorkerNumOperandsDeviceTypeAttr())))
-    return emitOpError() << "duplicate device_type found in "
-                            "workerNumOperandsDeviceType attribute";
+  if (auto duplicateDeviceType = checkDeviceTypes(getWorkerAttr()))
+    return emitOpError() << "duplicate device_type `"
+                         << acc::stringifyDeviceType(*duplicateDeviceType)
+                         << "` found in worker attribute";
+  if (auto duplicateDeviceType =
+          checkDeviceTypes(getWorkerNumOperandsDeviceTypeAttr()))
+    return emitOpError() << "duplicate device_type `"
+                         << acc::stringifyDeviceType(*duplicateDeviceType)
+                         << "` found in workerNumOperandsDeviceType attribute";
   if (failed(verifyDeviceTypeCountMatch(*this, getWorkerNumOperands(),
                                         getWorkerNumOperandsDeviceTypeAttr(),
                                         "worker")))
     return failure();
 
   // Check vector
-  if (failed(checkDeviceTypes(getVectorAttr())))
-    return emitOpError() << "duplicate device_type found in vector attribute";
-  if (failed(checkDeviceTypes(getVectorOperandsDeviceTypeAttr())))
-    return emitOpError() << "duplicate device_type found in "
-                            "vectorOperandsDeviceType attribute";
+  if (auto duplicateDeviceType = checkDeviceTypes(getVectorAttr()))
+    return emitOpError() << "duplicate device_type `"
+                         << acc::stringifyDeviceType(*duplicateDeviceType)
+                         << "` found in vector attribute";
+  if (auto duplicateDeviceType =
+          checkDeviceTypes(getVectorOperandsDeviceTypeAttr()))
+    return emitOpError() << "duplicate device_type `"
+                         << acc::stringifyDeviceType(*duplicateDeviceType)
+                         << "` found in vectorOperandsDeviceType attribute";
   if (failed(verifyDeviceTypeCountMatch(*this, getVectorOperands(),
                                         getVectorOperandsDeviceTypeAttr(),
                                         "vector")))
@@ -2611,14 +3241,19 @@ LogicalResult acc::LoopOp::verify() {
     }
   }
 
-  if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizationRecipes(), getPrivateOperands(), "private",
-          "privatizations", false)))
+  if (failed(checkPrivateOperands<mlir::acc::PrivateOp,
+                                  mlir::acc::PrivateRecipeOp>(
+          *this, getPrivateOperands(), "private")))
     return failure();
 
-  if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
-          *this, getReductionRecipes(), getReductionOperands(), "reduction",
-          "reductions", false)))
+  if (failed(checkPrivateOperands<mlir::acc::FirstprivateOp,
+                                  mlir::acc::FirstprivateRecipeOp>(
+          *this, getFirstprivateOperands(), "firstprivate")))
+    return failure();
+
+  if (failed(checkPrivateOperands<mlir::acc::ReductionOp,
+                                  mlir::acc::ReductionRecipeOp>(
+          *this, getReductionOperands(), "reduction")))
     return failure();
 
   if (getCombined().has_value() &&
@@ -2632,8 +3267,12 @@ LogicalResult acc::LoopOp::verify() {
   if (getRegion().empty())
     return emitError("expected non-empty body.");
 
-  // When it is container-like - it is expected to hold a loop-like operation.
-  if (isContainerLike()) {
+  if (getUnstructured()) {
+    if (!isContainerLike())
+      return emitError(
+          "unstructured acc.loop must not have induction variables");
+  } else if (isContainerLike()) {
+    // When it is container-like - it is expected to hold a loop-like operation.
     // Obtain the maximum collapse count - we use this to check that there
     // are enough loops contained.
     uint64_t collapseCount = getCollapseValue().value_or(1);
@@ -2679,7 +3318,8 @@ LogicalResult acc::LoopOp::verify() {
 }
 
 unsigned LoopOp::getNumDataOperands() {
-  return getReductionOperands().size() + getPrivateOperands().size();
+  return getReductionOperands().size() + getPrivateOperands().size() +
+         getFirstprivateOperands().size();
 }
 
 Value LoopOp::getDataOperand(unsigned i) {
@@ -2904,10 +3544,10 @@ void acc::LoopOp::setCollapseForDeviceTypes(
     newDeviceTypes.push_back(
         acc::DeviceTypeAttr::get(context, DeviceType::None));
   } else {
-    for (DeviceType DT : effectiveDeviceTypes) {
+    for (DeviceType dt : effectiveDeviceTypes) {
       newValues.push_back(
           mlir::IntegerAttr::get(mlir::IntegerType::get(context, 64), value));
-      newDeviceTypes.push_back(acc::DeviceTypeAttr::get(context, DT));
+      newDeviceTypes.push_back(acc::DeviceTypeAttr::get(context, dt));
     }
   }
 
@@ -3047,16 +3687,21 @@ void acc::LoopOp::addGangOperands(
 void acc::LoopOp::addPrivatization(MLIRContext *context,
                                    mlir::acc::PrivateOp op,
                                    mlir::acc::PrivateRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
   getPrivateOperandsMutable().append(op.getResult());
+}
 
-  llvm::SmallVector<mlir::Attribute> recipes;
+void acc::LoopOp::addFirstPrivatization(
+    MLIRContext *context, mlir::acc::FirstprivateOp op,
+    mlir::acc::FirstprivateRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
+  getFirstprivateOperandsMutable().append(op.getResult());
+}
 
-  if (getPrivatizationRecipesAttr())
-    llvm::copy(getPrivatizationRecipesAttr(), std::back_inserter(recipes));
-
-  recipes.push_back(
-      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
-  setPrivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
+void acc::LoopOp::addReduction(MLIRContext *context, mlir::acc::ReductionOp op,
+                               mlir::acc::ReductionRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
+  getReductionOperandsMutable().append(op.getResult());
 }
 
 //===----------------------------------------------------------------------===//
@@ -3072,7 +3717,8 @@ LogicalResult acc::DataOp::verify() {
                      "must appear on the data operation");
 
   for (mlir::Value operand : getDataClauseOperands())
-    if (!mlir::isa<acc::AttachOp, acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
+    if (isa<BlockArgument>(operand) ||
+        !mlir::isa<acc::AttachOp, acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
                    acc::DeleteOp, acc::DetachOp, acc::DevicePtrOp,
                    acc::GetDevicePtrOp, acc::NoCreateOp, acc::PresentOp>(
             operand.getDefiningOp()))
@@ -3392,7 +4038,8 @@ LogicalResult AtomicUpdateOp::canonicalize(AtomicUpdateOp op,
   }
 
   if (Value writeVal = op.getWriteOpVal()) {
-    rewriter.replaceOpWithNewOp<AtomicWriteOp>(op, op.getX(), writeVal);
+    rewriter.replaceOpWithNewOp<AtomicWriteOp>(op, op.getX(), writeVal,
+                                               op.getIfCond());
     return success();
   }
 
@@ -3441,7 +4088,8 @@ checkDeclareOperands(Op &op, const mlir::ValueRange &operands,
         "at least one operand must appear on the declare operation");
 
   for (mlir::Value operand : operands) {
-    if (!mlir::isa<acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
+    if (isa<BlockArgument>(operand) ||
+        !mlir::isa<acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
                    acc::DevicePtrOp, acc::GetDevicePtrOp, acc::PresentOp,
                    acc::DeclareDeviceResidentOp, acc::DeclareLinkOp>(
             operand.getDefiningOp()))
@@ -3518,7 +4166,8 @@ LogicalResult acc::RoutineOp::verify() {
 
     if (parallelism > 1 || (baseParallelism == 1 && parallelism == 1))
       return emitError() << "only one of `gang`, `worker`, `vector`, `seq` can "
-                            "be present at the same time";
+                            "be present at the same time for device_type `"
+                         << acc::stringifyDeviceType(dtype) << "`";
   }
 
   return success();
@@ -3813,6 +4462,100 @@ RoutineOp::getGangDimValue(mlir::acc::DeviceType deviceType) {
     return intAttr.getInt();
   }
   return std::nullopt;
+}
+
+void RoutineOp::addSeq(MLIRContext *context,
+                       llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setSeqAttr(addDeviceTypeAffectedOperandHelper(context, getSeqAttr(),
+                                                effectiveDeviceTypes));
+}
+
+void RoutineOp::addVector(MLIRContext *context,
+                          llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setVectorAttr(addDeviceTypeAffectedOperandHelper(context, getVectorAttr(),
+                                                   effectiveDeviceTypes));
+}
+
+void RoutineOp::addWorker(MLIRContext *context,
+                          llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setWorkerAttr(addDeviceTypeAffectedOperandHelper(context, getWorkerAttr(),
+                                                   effectiveDeviceTypes));
+}
+
+void RoutineOp::addGang(MLIRContext *context,
+                        llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setGangAttr(addDeviceTypeAffectedOperandHelper(context, getGangAttr(),
+                                                 effectiveDeviceTypes));
+}
+
+void RoutineOp::addGang(MLIRContext *context,
+                        llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
+                        uint64_t val) {
+  llvm::SmallVector<mlir::Attribute> dimValues;
+  llvm::SmallVector<mlir::Attribute> deviceTypes;
+
+  if (getGangDimAttr())
+    llvm::copy(getGangDimAttr(), std::back_inserter(dimValues));
+  if (getGangDimDeviceTypeAttr())
+    llvm::copy(getGangDimDeviceTypeAttr(), std::back_inserter(deviceTypes));
+
+  assert(dimValues.size() == deviceTypes.size());
+
+  if (effectiveDeviceTypes.empty()) {
+    dimValues.push_back(
+        mlir::IntegerAttr::get(mlir::IntegerType::get(context, 64), val));
+    deviceTypes.push_back(
+        acc::DeviceTypeAttr::get(context, acc::DeviceType::None));
+  } else {
+    for (DeviceType dt : effectiveDeviceTypes) {
+      dimValues.push_back(
+          mlir::IntegerAttr::get(mlir::IntegerType::get(context, 64), val));
+      deviceTypes.push_back(acc::DeviceTypeAttr::get(context, dt));
+    }
+  }
+  assert(dimValues.size() == deviceTypes.size());
+
+  setGangDimAttr(mlir::ArrayAttr::get(context, dimValues));
+  setGangDimDeviceTypeAttr(mlir::ArrayAttr::get(context, deviceTypes));
+}
+
+void RoutineOp::addBindStrName(MLIRContext *context,
+                               llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
+                               mlir::StringAttr val) {
+  unsigned before = getBindStrNameDeviceTypeAttr()
+                        ? getBindStrNameDeviceTypeAttr().size()
+                        : 0;
+
+  setBindStrNameDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getBindStrNameDeviceTypeAttr(), effectiveDeviceTypes));
+  unsigned after = getBindStrNameDeviceTypeAttr().size();
+
+  llvm::SmallVector<mlir::Attribute> vals;
+  if (getBindStrNameAttr())
+    llvm::copy(getBindStrNameAttr(), std::back_inserter(vals));
+  for (unsigned i = 0; i < after - before; ++i)
+    vals.push_back(val);
+
+  setBindStrNameAttr(mlir::ArrayAttr::get(context, vals));
+}
+
+void RoutineOp::addBindIDName(MLIRContext *context,
+                              llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
+                              mlir::SymbolRefAttr val) {
+  unsigned before =
+      getBindIdNameDeviceTypeAttr() ? getBindIdNameDeviceTypeAttr().size() : 0;
+
+  setBindIdNameDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getBindIdNameDeviceTypeAttr(), effectiveDeviceTypes));
+  unsigned after = getBindIdNameDeviceTypeAttr().size();
+
+  llvm::SmallVector<mlir::Attribute> vals;
+  if (getBindIdNameAttr())
+    llvm::copy(getBindIdNameAttr(), std::back_inserter(vals));
+  for (unsigned i = 0; i < after - before; ++i)
+    vals.push_back(val);
+
+  setBindIdNameAttr(mlir::ArrayAttr::get(context, vals));
 }
 
 //===----------------------------------------------------------------------===//
@@ -4199,13 +4942,11 @@ mlir::acc::getMutableDataOperands(mlir::Operation *accOp) {
   return dataOperands;
 }
 
-mlir::Operation *mlir::acc::getEnclosingComputeOp(mlir::Region &region) {
-  mlir::Operation *parentOp = region.getParentOp();
-  while (parentOp) {
-    if (mlir::isa<ACC_COMPUTE_CONSTRUCT_OPS>(parentOp)) {
-      return parentOp;
-    }
-    parentOp = parentOp->getParentOp();
-  }
-  return nullptr;
+mlir::SymbolRefAttr mlir::acc::getRecipe(mlir::Operation *accOp) {
+  auto recipe{
+      llvm::TypeSwitch<mlir::Operation *, mlir::SymbolRefAttr>(accOp)
+          .Case<ACC_DATA_ENTRY_OPS>(
+              [&](auto entry) { return entry.getRecipeAttr(); })
+          .Default([&](mlir::Operation *) { return mlir::SymbolRefAttr{}; })};
+  return recipe;
 }

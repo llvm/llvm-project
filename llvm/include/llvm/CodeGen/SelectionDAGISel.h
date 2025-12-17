@@ -46,6 +46,7 @@ class SelectionDAGISel {
 public:
   TargetMachine &TM;
   const TargetLibraryInfo *LibInfo;
+  const RTLIB::RuntimeLibcallsInfo *RuntimeLibCallInfo;
   std::unique_ptr<FunctionLoweringInfo> FuncInfo;
   std::unique_ptr<SwiftErrorValueTracking> SwiftError;
   MachineFunction *MF;
@@ -57,7 +58,7 @@ public:
   AssumptionCache *AC = nullptr;
   GCFunctionInfo *GFI = nullptr;
   SSPLayoutInfo *SP = nullptr;
-  TargetTransformInfo *TTI = nullptr;
+  const TargetTransformInfo *TTI = nullptr;
   CodeGenOptLevel OptLevel;
   const TargetInstrInfo *TII;
   const TargetLowering *TLI;
@@ -150,6 +151,7 @@ public:
     OPC_RecordChild7,
     OPC_RecordMemRef,
     OPC_CaptureGlueInput,
+    OPC_CaptureDeactivationSymbol,
     OPC_MoveChild,
     OPC_MoveChild0,
     OPC_MoveChild1,
@@ -471,6 +473,7 @@ private:
   void Select_WRITE_REGISTER(SDNode *Op);
   void Select_UNDEF(SDNode *N);
   void Select_FAKE_USE(SDNode *N);
+  void Select_RELOC_NONE(SDNode *N);
   void CannotYetSelect(SDNode *N);
 
   void Select_FREEZE(SDNode *N);

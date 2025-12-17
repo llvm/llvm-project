@@ -190,6 +190,16 @@ class TypeSourceInfo;
       llvm::SmallDenseMap<Decl *, int, 32> Aux;
     };
 
+    class FunctionDeclImportCycleDetector {
+    public:
+      auto makeScopedCycleDetection(const FunctionDecl *D);
+
+      bool isCycle(const FunctionDecl *D) const;
+
+    private:
+      llvm::DenseSet<const FunctionDecl *> FunctionDeclsWithImportInProgress;
+    };
+
   private:
     std::shared_ptr<ASTImporterSharedState> SharedState = nullptr;
 
@@ -254,6 +264,12 @@ class TypeSourceInfo;
     /// Declaration (from, to) pairs that are known not to be equivalent
     /// (which we have already complained about).
     NonEquivalentDeclSet NonEquivalentDecls;
+    /// A FunctionDecl can have properties that have a reference to the
+    /// function itself and are imported before the function is created. This
+    /// can come for example from auto return type or when template parameters
+    /// are used in the return type or parameters. This member is used to detect
+    /// cyclic import of FunctionDecl objects to avoid infinite recursion.
+    FunctionDeclImportCycleDetector FindFunctionDeclImportCycle;
 
     using FoundDeclsTy = SmallVector<NamedDecl *, 2>;
     FoundDeclsTy findDeclsInToCtx(DeclContext *DC, DeclarationName Name);
@@ -404,7 +420,7 @@ class TypeSourceInfo;
     ///
     /// \returns The equivalent nested-name-specifier in the "to"
     /// context, or the import error.
-    llvm::Expected<NestedNameSpecifier *> Import(NestedNameSpecifier *FromNNS);
+    llvm::Expected<NestedNameSpecifier> Import(NestedNameSpecifier FromNNS);
 
     /// Import the given nested-name-specifier-loc from the "from"
     /// context into the "to" context.

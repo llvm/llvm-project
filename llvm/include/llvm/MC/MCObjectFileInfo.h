@@ -13,6 +13,7 @@
 #ifndef LLVM_MC_MCOBJECTFILEINFO_H
 #define LLVM_MC_MCOBJECTFILEINFO_H
 
+#include "llvm/BinaryFormat/SFrame.h"
 #include "llvm/BinaryFormat/Swift.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/Support/Compiler.h"
@@ -28,10 +29,6 @@ class MCSection;
 
 class LLVM_ABI MCObjectFileInfo {
 protected:
-  /// True if target object file supports a weak_definition of constant 0 for an
-  /// omitted EH frame.
-  bool SupportsWeakOmittedEHFrame = false;
-
   /// True if the target object file supports emitting a compact unwind section
   /// without an associated EH frame section.
   bool SupportsCompactUnwindWithoutEHFrame = false;
@@ -49,6 +46,9 @@ protected:
 
   /// Compact unwind encoding indicating that we should emit only an EH frame.
   unsigned CompactUnwindDwarfEHFrameOnly = 0;
+
+  /// SFrame ABI architecture byte.
+  std::optional<sframe::ABI> SFrameABIArch = {};
 
   /// Section directive for standard text.
   MCSection *TextSection = nullptr;
@@ -177,6 +177,9 @@ protected:
   /// It is initialized on demand so it can be overwritten (with uniquing).
   MCSection *EHFrameSection = nullptr;
 
+  /// SFrame section.
+  MCSection *SFrameSection = nullptr;
+
   /// Section containing metadata on function stack sizes.
   MCSection *StackSizesSection = nullptr;
 
@@ -253,9 +256,6 @@ public:
   virtual ~MCObjectFileInfo();
   MCContext &getContext() const { return *Ctx; }
 
-  bool getSupportsWeakOmittedEHFrame() const {
-    return SupportsWeakOmittedEHFrame;
-  }
   bool getSupportsCompactUnwindWithoutEHFrame() const {
     return SupportsCompactUnwindWithoutEHFrame;
   }
@@ -269,6 +269,7 @@ public:
     return CompactUnwindDwarfEHFrameOnly;
   }
 
+  std::optional<sframe::ABI> getSFrameABIArch() const { return SFrameABIArch; }
   virtual unsigned getTextSectionAlignment() const { return 4; }
   MCSection *getTextSection() const { return TextSection; }
   MCSection *getDataSection() const { return DataSection; }
@@ -450,6 +451,7 @@ public:
   MCSection *getTOCBaseSection() const { return TOCBaseSection; }
 
   MCSection *getEHFrameSection() const { return EHFrameSection; }
+  MCSection *getSFrameSection() const { return SFrameSection; }
 
   bool isPositionIndependent() const { return PositionIndependent; }
 

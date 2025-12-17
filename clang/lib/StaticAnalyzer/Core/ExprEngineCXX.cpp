@@ -71,21 +71,30 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
   Bldr.takeNodes(Pred);
 
   assert(ThisRD);
-  SVal V = Call.getArgSVal(0);
-  const Expr *VExpr = Call.getArgExpr(0);
 
-  // If the value being copied is not unknown, load from its location to get
-  // an aggregate rvalue.
-  if (std::optional<Loc> L = V.getAs<Loc>())
-    V = Pred->getState()->getSVal(*L);
-  else
-    assert(V.isUnknownOrUndef());
+  if (!ThisRD->isEmpty()) {
+    SVal V = Call.getArgSVal(0);
+    const Expr *VExpr = Call.getArgExpr(0);
 
-  ExplodedNodeSet Tmp;
-  evalLocation(Tmp, CallExpr, VExpr, Pred, Pred->getState(), V,
-               /*isLoad=*/true);
-  for (ExplodedNode *N : Tmp)
-    evalBind(Dst, CallExpr, N, ThisVal, V, true);
+    // If the value being copied is not unknown, load from its location to get
+    // an aggregate rvalue.
+    if (std::optional<Loc> L = V.getAs<Loc>())
+      V = Pred->getState()->getSVal(*L);
+    else
+      assert(V.isUnknownOrUndef());
+
+    ExplodedNodeSet Tmp;
+    evalLocation(Tmp, CallExpr, VExpr, Pred, Pred->getState(), V,
+                 /*isLoad=*/true);
+    for (ExplodedNode *N : Tmp)
+      evalBind(Dst, CallExpr, N, ThisVal, V, !AlwaysReturnsLValue);
+  } else {
+    // We can't copy empty classes because of empty base class optimization.
+    // In that case, copying the empty base class subobject would overwrite the
+    // object that it overlaps with - so let's not do that.
+    // See issue-157467.cpp for an example.
+    Dst.Add(Pred);
+  }
 
   PostStmt PS(CallExpr, LCtx);
   for (ExplodedNode *N : Dst) {
@@ -900,7 +909,14 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
   ExplodedNodeSet DstPostCall;
   StmtNodeBuilder CallBldr(DstPreCall, DstPostCall, *currBldrCtx);
   for (ExplodedNode *I : DstPreCall) {
-    // FIXME: Provide evalCall for checkers?
+    // Operator new calls (CXXNewExpr) are intentionally not eval-called,
+    // because it does not make sense to eval-call user-provided functions.
+    // 1) If the new operator can be inlined, then don't prevent it from
+    //    inlining by having an eval-call of that operator.
+    // 2) If it can't be inlined, then the default conservative modeling
+    //    is what we want anyway.
+    // So the best is to not allow eval-calling CXXNewExprs from checkers.
+    // Checkers can provide their pre/post-call callbacks if needed.
     defaultEvalCall(CallBldr, I, *Call);
   }
   // If the call is inlined, DstPostCall will be empty and we bail out now.
@@ -997,7 +1013,7 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
     // FIXME: Once we figure out how we want allocators to work,
     // we should be using the usual pre-/(default-)eval-/post-call checkers
     // here.
-    State = Call->invalidateRegions(blockCount);
+    State = Call->invalidateRegions(blockCount, State);
     if (!State)
       return;
 
@@ -1101,6 +1117,10 @@ void ExprEngine::VisitCXXDeleteExpr(const CXXDeleteExpr *CDE,
   if (AMgr.getAnalyzerOptions().MayInlineCXXAllocator) {
     StmtNodeBuilder Bldr(DstPreCall, DstPostCall, *currBldrCtx);
     for (ExplodedNode *I : DstPreCall) {
+      // Intentionally either inline or conservative eval-call the operator
+      // delete, but avoid triggering an eval-call event for checkers.
+      // As detailed at handling CXXNewExprs, in short, because it does not
+      // really make sense to eval-call user-provided functions.
       defaultEvalCall(Bldr, I, *Call);
     }
   } else {

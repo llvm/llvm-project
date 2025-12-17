@@ -20,6 +20,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errno.h"
@@ -70,24 +71,11 @@ Expected<std::string> python::As<std::string>(Expected<PythonObject> &&obj) {
   return std::string(utf8.get());
 }
 
-static bool python_is_finalizing() {
-#if PY_VERSION_HEX >= 0x030d0000
-  return Py_IsFinalizing();
-#else
-  return _Py_IsFinalizing();
-#endif
-}
-
 void PythonObject::Reset() {
   if (m_py_obj && Py_IsInitialized()) {
-    if (python_is_finalizing()) {
-      // Leak m_py_obj rather than crashing the process.
-      // https://docs.python.org/3/c-api/init.html#c.PyGILState_Ensure
-    } else {
-      PyGILState_STATE state = PyGILState_Ensure();
-      Py_DECREF(m_py_obj);
-      PyGILState_Release(state);
-    }
+    PyGILState_STATE state = PyGILState_Ensure();
+    Py_DECREF(m_py_obj);
+    PyGILState_Release(state);
   }
   m_py_obj = nullptr;
 }
@@ -131,23 +119,30 @@ void StructuredPythonObject::Serialize(llvm::json::OStream &s) const {
 // PythonObject
 
 void PythonObject::Dump(Stream &strm) const {
-  if (m_py_obj) {
-    FILE *file = llvm::sys::RetryAfterSignal(nullptr, ::tmpfile);
-    if (file) {
-      ::PyObject_Print(m_py_obj, file, 0);
-      const long length = ftell(file);
-      if (length) {
-        ::rewind(file);
-        std::vector<char> file_contents(length, '\0');
-        const size_t length_read =
-            ::fread(file_contents.data(), 1, file_contents.size(), file);
-        if (length_read > 0)
-          strm.Write(file_contents.data(), length_read);
-      }
-      ::fclose(file);
-    }
-  } else
-    strm.PutCString("NULL");
+  if (!m_py_obj) {
+    strm << "NULL";
+    return;
+  }
+
+  PyObject *py_str = PyObject_Repr(m_py_obj);
+  if (!py_str)
+    return;
+
+  auto release_py_str = llvm::make_scope_exit([py_str] { Py_DECREF(py_str); });
+
+  PyObject *py_bytes = PyUnicode_AsEncodedString(py_str, "utf-8", "replace");
+  if (!py_bytes)
+    return;
+
+  auto release_py_bytes =
+      llvm::make_scope_exit([py_bytes] { Py_DECREF(py_bytes); });
+
+  char *buffer = nullptr;
+  Py_ssize_t length = 0;
+  if (PyBytes_AsStringAndSize(py_bytes, &buffer, &length) == -1)
+    return;
+
+  strm << llvm::StringRef(buffer, length);
 }
 
 PyObjectType PythonObject::GetObjectType() const {
@@ -261,7 +256,6 @@ PythonObject PythonObject::GetAttributeValue(llvm::StringRef attr) const {
 }
 
 StructuredData::ObjectSP PythonObject::CreateStructuredObject() const {
-  assert(PyGILState_Check());
   switch (GetObjectType()) {
   case PyObjectType::Dictionary:
     return PythonDictionary(PyRefType::Borrowed, m_py_obj)
@@ -411,25 +405,38 @@ Expected<llvm::StringRef> PythonString::AsUTF8() const {
   if (!IsValid())
     return nullDeref();
 
-  Py_ssize_t size;
-  const char *data;
+  // PyUnicode_AsUTF8AndSize caches the UTF-8 representation of the string in
+  // the Unicode object, which makes it more efficient and ties the lifetime of
+  // the data to the Python string. However, it was only added to the Stable API
+  // in Python 3.10. Older versions that want to use the Stable API must use
+  // PyUnicode_AsUTF8String in combination with ConstString.
+#if defined(Py_LIMITED_API) && (Py_LIMITED_API < 0x030a0000)
+  PyObject *py_bytes = PyUnicode_AsUTF8String(m_py_obj);
+  if (!py_bytes)
+    return exception();
+  auto release_py_str =
+      llvm::make_scope_exit([py_bytes] { Py_DECREF(py_bytes); });
+  Py_ssize_t size = PyBytes_Size(py_bytes);
+  const char *str = PyBytes_AsString(py_bytes);
 
-  data = PyUnicode_AsUTF8AndSize(m_py_obj, &size);
-
-  if (!data)
+  if (!str)
     return exception();
 
-  return llvm::StringRef(data, size);
+  return ConstString(str, size).GetStringRef();
+#else
+  Py_ssize_t size;
+  const char *str = PyUnicode_AsUTF8AndSize(m_py_obj, &size);
+
+  if (!str)
+    return exception();
+
+  return llvm::StringRef(str, size);
+#endif
 }
 
 size_t PythonString::GetSize() const {
-  if (IsValid()) {
-#if PY_MINOR_VERSION >= 3
+  if (IsValid())
     return PyUnicode_GetLength(m_py_obj);
-#else
-    return PyUnicode_GetSize(m_py_obj);
-#endif
-  }
   return 0;
 }
 
@@ -803,6 +810,17 @@ bool PythonCallable::Check(PyObject *py_obj) {
   if (!py_obj)
     return false;
 
+  PythonObject python_obj(PyRefType::Borrowed, py_obj);
+
+  // Handle staticmethod/classmethod descriptors by extracting the
+  // `__func__` attribute.
+  if (python_obj.HasAttribute("__func__")) {
+    PythonObject function_obj = python_obj.GetAttributeValue("__func__");
+    if (!function_obj.IsAllocated())
+      return false;
+    return PyCallable_Check(function_obj.release());
+  }
+
   return PyCallable_Check(py_obj);
 }
 
@@ -1086,40 +1104,6 @@ public:
 char SimplePythonFile::ID = 0;
 } // namespace
 
-namespace {
-class PythonBuffer {
-public:
-  PythonBuffer &operator=(const PythonBuffer &) = delete;
-  PythonBuffer(const PythonBuffer &) = delete;
-
-  static Expected<PythonBuffer> Create(PythonObject &obj,
-                                       int flags = PyBUF_SIMPLE) {
-    Py_buffer py_buffer = {};
-    PyObject_GetBuffer(obj.get(), &py_buffer, flags);
-    if (!py_buffer.obj)
-      return llvm::make_error<PythonException>();
-    return PythonBuffer(py_buffer);
-  }
-
-  PythonBuffer(PythonBuffer &&other) {
-    m_buffer = other.m_buffer;
-    other.m_buffer.obj = nullptr;
-  }
-
-  ~PythonBuffer() {
-    if (m_buffer.obj)
-      PyBuffer_Release(&m_buffer);
-  }
-
-  Py_buffer &get() { return m_buffer; }
-
-private:
-  // takes ownership of the buffer.
-  PythonBuffer(const Py_buffer &py_buffer) : m_buffer(py_buffer) {}
-  Py_buffer m_buffer;
-};
-} // namespace
-
 // Shared methods between TextPythonFile and BinaryPythonFile
 namespace {
 class PythonIOFile : public OwnedPythonFile<File> {
@@ -1213,12 +1197,12 @@ public:
       num_bytes = 0;
       return Status();
     }
-    auto pybuffer = PythonBuffer::Create(pybuffer_obj.get());
-    if (!pybuffer)
-      // Cloning since the wrapped exception may still reference the PyThread.
-      return Status::FromError(pybuffer.takeError()).Clone();
-    memcpy(buf, pybuffer.get().get().buf, pybuffer.get().get().len);
-    num_bytes = pybuffer.get().get().len;
+    PythonBytes pybytes(PyRefType::Borrowed, pybuffer_obj->get());
+    if (!pybytes)
+      return Status::FromError(llvm::make_error<PythonException>());
+    llvm::ArrayRef<uint8_t> bytes = pybytes.GetBytes();
+    memcpy(buf, bytes.begin(), bytes.size());
+    num_bytes = bytes.size();
     return Status();
   }
 };
@@ -1473,10 +1457,8 @@ python::runStringMultiLine(const llvm::Twine &string,
   return Take<PythonObject>(result);
 }
 
-namespace lldb_private {
-namespace python {
-PyObject *RunString(const char *str, int start, PyObject *globals,
-                    PyObject *locals) {
+PyObject *lldb_private::python::RunString(const char *str, int start,
+                                          PyObject *globals, PyObject *locals) {
   const char *filename = "<string>";
 
   // Compile the string into a code object.
@@ -1493,7 +1475,7 @@ PyObject *RunString(const char *str, int start, PyObject *globals,
   return result;
 }
 
-int RunSimpleString(const char *str) {
+int lldb_private::python::RunSimpleString(const char *str) {
   PyObject *main_module = PyImport_AddModule("__main__");
   if (!main_module)
     return -1;
@@ -1508,7 +1490,4 @@ int RunSimpleString(const char *str) {
 
   return 0;
 }
-} // namespace python
-} // namespace lldb_private
-
 #endif

@@ -202,7 +202,7 @@ namespace cwg2285 { // cwg2285: 4
   void test() {
     using T = int[1];
     auto [a] = T{a};
-    // since-cxx17-error@-1 {{binding 'a' cannot appear in the initializer of its own decomposition declaration}}
+    // since-cxx17-error@-1 {{binding 'a' cannot appear in the initializer of its own structured binding declaration}}
   }
 #endif
 } // namespace cwg2285

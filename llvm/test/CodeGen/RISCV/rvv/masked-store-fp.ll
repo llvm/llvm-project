@@ -13,7 +13,6 @@ define void @masked_store_nxv1bf16(<vscale x 1 x bfloat> %val, ptr %a, <vscale x
   call void @llvm.masked.store.nxv1bf16.p0(<vscale x 1 x bfloat> %val, ptr %a, i32 2, <vscale x 1 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv1bf16.p0(<vscale x 1 x bfloat>, ptr, i32, <vscale x 1 x i1>)
 
 define void @masked_store_nxv1f16(<vscale x 1 x half> %val, ptr %a, <vscale x 1 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv1f16:
@@ -24,7 +23,6 @@ define void @masked_store_nxv1f16(<vscale x 1 x half> %val, ptr %a, <vscale x 1 
   call void @llvm.masked.store.nxv1f16.p0(<vscale x 1 x half> %val, ptr %a, i32 2, <vscale x 1 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv1f16.p0(<vscale x 1 x half>, ptr, i32, <vscale x 1 x i1>)
 
 define void @masked_store_nxv1f32(<vscale x 1 x float> %val, ptr %a, <vscale x 1 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv1f32:
@@ -35,7 +33,6 @@ define void @masked_store_nxv1f32(<vscale x 1 x float> %val, ptr %a, <vscale x 1
   call void @llvm.masked.store.nxv1f32.p0(<vscale x 1 x float> %val, ptr %a, i32 4, <vscale x 1 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv1f32.p0(<vscale x 1 x float>, ptr, i32, <vscale x 1 x i1>)
 
 define void @masked_store_nxv1f64(<vscale x 1 x double> %val, ptr %a, <vscale x 1 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv1f64:
@@ -46,7 +43,6 @@ define void @masked_store_nxv1f64(<vscale x 1 x double> %val, ptr %a, <vscale x 
   call void @llvm.masked.store.nxv1f64.p0(<vscale x 1 x double> %val, ptr %a, i32 8, <vscale x 1 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv1f64.p0(<vscale x 1 x double>, ptr, i32, <vscale x 1 x i1>)
 
 define void @masked_store_nxv2bf16(<vscale x 2 x bfloat> %val, ptr %a, <vscale x 2 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv2bf16:
@@ -57,7 +53,6 @@ define void @masked_store_nxv2bf16(<vscale x 2 x bfloat> %val, ptr %a, <vscale x
   call void @llvm.masked.store.nxv2bf16.p0(<vscale x 2 x bfloat> %val, ptr %a, i32 2, <vscale x 2 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv2bf16.p0(<vscale x 2 x bfloat>, ptr, i32, <vscale x 2 x i1>)
 
 define void @masked_store_nxv2f16(<vscale x 2 x half> %val, ptr %a, <vscale x 2 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv2f16:
@@ -68,7 +63,6 @@ define void @masked_store_nxv2f16(<vscale x 2 x half> %val, ptr %a, <vscale x 2 
   call void @llvm.masked.store.nxv2f16.p0(<vscale x 2 x half> %val, ptr %a, i32 2, <vscale x 2 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv2f16.p0(<vscale x 2 x half>, ptr, i32, <vscale x 2 x i1>)
 
 define void @masked_store_nxv2f32(<vscale x 2 x float> %val, ptr %a, <vscale x 2 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv2f32:
@@ -79,7 +73,6 @@ define void @masked_store_nxv2f32(<vscale x 2 x float> %val, ptr %a, <vscale x 2
   call void @llvm.masked.store.nxv2f32.p0(<vscale x 2 x float> %val, ptr %a, i32 4, <vscale x 2 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv2f32.p0(<vscale x 2 x float>, ptr, i32, <vscale x 2 x i1>)
 
 define void @masked_store_nxv2f64(<vscale x 2 x double> %val, ptr %a, <vscale x 2 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv2f64:
@@ -90,7 +83,6 @@ define void @masked_store_nxv2f64(<vscale x 2 x double> %val, ptr %a, <vscale x 
   call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %val, ptr %a, i32 8, <vscale x 2 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double>, ptr, i32, <vscale x 2 x i1>)
 
 define void @masked_store_nxv4bf16(<vscale x 4 x bfloat> %val, ptr %a, <vscale x 4 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv4bf16:
@@ -101,7 +93,6 @@ define void @masked_store_nxv4bf16(<vscale x 4 x bfloat> %val, ptr %a, <vscale x
   call void @llvm.masked.store.nxv4bf16.p0(<vscale x 4 x bfloat> %val, ptr %a, i32 2, <vscale x 4 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv4bf16.p0(<vscale x 4 x bfloat>, ptr, i32, <vscale x 4 x i1>)
 
 define void @masked_store_nxv4f16(<vscale x 4 x half> %val, ptr %a, <vscale x 4 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv4f16:
@@ -112,7 +103,6 @@ define void @masked_store_nxv4f16(<vscale x 4 x half> %val, ptr %a, <vscale x 4 
   call void @llvm.masked.store.nxv4f16.p0(<vscale x 4 x half> %val, ptr %a, i32 2, <vscale x 4 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv4f16.p0(<vscale x 4 x half>, ptr, i32, <vscale x 4 x i1>)
 
 define void @masked_store_nxv4f32(<vscale x 4 x float> %val, ptr %a, <vscale x 4 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv4f32:
@@ -123,7 +113,6 @@ define void @masked_store_nxv4f32(<vscale x 4 x float> %val, ptr %a, <vscale x 4
   call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> %val, ptr %a, i32 4, <vscale x 4 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float>, ptr, i32, <vscale x 4 x i1>)
 
 define void @masked_store_nxv4f64(<vscale x 4 x double> %val, ptr %a, <vscale x 4 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv4f64:
@@ -134,7 +123,6 @@ define void @masked_store_nxv4f64(<vscale x 4 x double> %val, ptr %a, <vscale x 
   call void @llvm.masked.store.nxv4f64.p0(<vscale x 4 x double> %val, ptr %a, i32 8, <vscale x 4 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv4f64.p0(<vscale x 4 x double>, ptr, i32, <vscale x 4 x i1>)
 
 define void @masked_store_nxv8bf16(<vscale x 8 x bfloat> %val, ptr %a, <vscale x 8 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv8bf16:
@@ -145,7 +133,6 @@ define void @masked_store_nxv8bf16(<vscale x 8 x bfloat> %val, ptr %a, <vscale x
   call void @llvm.masked.store.nxv8bf16.p0(<vscale x 8 x bfloat> %val, ptr %a, i32 2, <vscale x 8 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv8bf16.p0(<vscale x 8 x bfloat>, ptr, i32, <vscale x 8 x i1>)
 
 define void @masked_store_nxv8f16(<vscale x 8 x half> %val, ptr %a, <vscale x 8 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv8f16:
@@ -156,7 +143,6 @@ define void @masked_store_nxv8f16(<vscale x 8 x half> %val, ptr %a, <vscale x 8 
   call void @llvm.masked.store.nxv8f16.p0(<vscale x 8 x half> %val, ptr %a, i32 2, <vscale x 8 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv8f16.p0(<vscale x 8 x half>, ptr, i32, <vscale x 8 x i1>)
 
 define void @masked_store_nxv8f32(<vscale x 8 x float> %val, ptr %a, <vscale x 8 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv8f32:
@@ -167,7 +153,6 @@ define void @masked_store_nxv8f32(<vscale x 8 x float> %val, ptr %a, <vscale x 8
   call void @llvm.masked.store.nxv8f32.p0(<vscale x 8 x float> %val, ptr %a, i32 4, <vscale x 8 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv8f32.p0(<vscale x 8 x float>, ptr, i32, <vscale x 8 x i1>)
 
 define void @masked_store_nxv8f64(<vscale x 8 x double> %val, ptr %a, <vscale x 8 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv8f64:
@@ -178,7 +163,6 @@ define void @masked_store_nxv8f64(<vscale x 8 x double> %val, ptr %a, <vscale x 
   call void @llvm.masked.store.nxv8f64.p0(<vscale x 8 x double> %val, ptr %a, i32 8, <vscale x 8 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv8f64.p0(<vscale x 8 x double>, ptr, i32, <vscale x 8 x i1>)
 
 define void @masked_store_nxv16bf16(<vscale x 16 x bfloat> %val, ptr %a, <vscale x 16 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv16bf16:
@@ -189,7 +173,6 @@ define void @masked_store_nxv16bf16(<vscale x 16 x bfloat> %val, ptr %a, <vscale
   call void @llvm.masked.store.nxv16bf16.p0(<vscale x 16 x bfloat> %val, ptr %a, i32 2, <vscale x 16 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv16bf16.p0(<vscale x 16 x bfloat>, ptr, i32, <vscale x 16 x i1>)
 
 define void @masked_store_nxv16f16(<vscale x 16 x half> %val, ptr %a, <vscale x 16 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv16f16:
@@ -200,7 +183,6 @@ define void @masked_store_nxv16f16(<vscale x 16 x half> %val, ptr %a, <vscale x 
   call void @llvm.masked.store.nxv16f16.p0(<vscale x 16 x half> %val, ptr %a, i32 2, <vscale x 16 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv16f16.p0(<vscale x 16 x half>, ptr, i32, <vscale x 16 x i1>)
 
 define void @masked_store_nxv16f32(<vscale x 16 x float> %val, ptr %a, <vscale x 16 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv16f32:
@@ -211,7 +193,6 @@ define void @masked_store_nxv16f32(<vscale x 16 x float> %val, ptr %a, <vscale x
   call void @llvm.masked.store.nxv16f32.p0(<vscale x 16 x float> %val, ptr %a, i32 4, <vscale x 16 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv16f32.p0(<vscale x 16 x float>, ptr, i32, <vscale x 16 x i1>)
 
 define void @masked_store_nxv32bf16(<vscale x 32 x bfloat> %val, ptr %a, <vscale x 32 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv32bf16:
@@ -222,7 +203,6 @@ define void @masked_store_nxv32bf16(<vscale x 32 x bfloat> %val, ptr %a, <vscale
   call void @llvm.masked.store.nxv32bf16.p0(<vscale x 32 x bfloat> %val, ptr %a, i32 2, <vscale x 32 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv32bf16.p0(<vscale x 32 x bfloat>, ptr, i32, <vscale x 32 x i1>)
 
 define void @masked_store_nxv32f16(<vscale x 32 x half> %val, ptr %a, <vscale x 32 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_store_nxv32f16:
@@ -233,4 +213,3 @@ define void @masked_store_nxv32f16(<vscale x 32 x half> %val, ptr %a, <vscale x 
   call void @llvm.masked.store.nxv32f16.p0(<vscale x 32 x half> %val, ptr %a, i32 2, <vscale x 32 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.nxv32f16.p0(<vscale x 32 x half>, ptr, i32, <vscale x 32 x i1>)

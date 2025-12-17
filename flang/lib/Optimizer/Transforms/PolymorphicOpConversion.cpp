@@ -246,7 +246,9 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
     args.append(dispatch.getArgs().begin(), dispatch.getArgs().end());
     rewriter.replaceOpWithNewOp<fir::CallOp>(
         dispatch, resTypes, nullptr, args, dispatch.getArgAttrsAttr(),
-        dispatch.getResAttrsAttr(), dispatch.getProcedureAttrsAttr());
+        dispatch.getResAttrsAttr(), dispatch.getProcedureAttrsAttr(),
+        /*inline_attr*/ fir::FortranInlineEnumAttr{},
+        /*accessGroups*/ mlir::ArrayAttr{});
     return mlir::success();
   }
 
@@ -447,9 +449,8 @@ llvm::LogicalResult SelectTypeConv::genTypeLadderStep(
                                                      rewriter.getI1Type()),
                             {runtimeAttr});
     }
-    cmp = rewriter
-              .create<fir::CallOp>(loc, callee,
-                                   mlir::ValueRange{descSelector, typeDesc})
+    cmp = fir::CallOp::create(rewriter, loc, callee,
+                              mlir::ValueRange{descSelector, typeDesc})
               .getResult(0);
   }
 

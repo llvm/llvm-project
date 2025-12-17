@@ -22,6 +22,11 @@
 #  endif
 #  include <stdio.h>
 
+// Start searching for available memory region past PAGEZERO, which is
+// 4KB on 32-bit and 4GB on 64-bit.
+#  define GAP_SEARCH_START_ADDRESS \
+    ((SANITIZER_WORDSIZE == 32) ? 0x000000001000 : 0x000100000000)
+
 #  include "sanitizer_common.h"
 #  include "sanitizer_file.h"
 #  include "sanitizer_flags.h"
@@ -58,9 +63,11 @@ extern char ***_NSGetArgv(void);
 #  include <dlfcn.h>  // for dladdr()
 #  include <errno.h>
 #  include <fcntl.h>
+#  include <inttypes.h>
 #  include <libkern/OSAtomic.h>
 #  include <mach-o/dyld.h>
 #  include <mach/mach.h>
+#  include <mach/mach_error.h>
 #  include <mach/mach_time.h>
 #  include <mach/vm_statistics.h>
 #  include <malloc/malloc.h>
@@ -96,7 +103,15 @@ extern "C" {
     natural_t *nesting_depth,
     vm_region_recurse_info_t info,
     mach_msg_type_number_t *infoCnt);
+
+  extern const void* _dyld_get_shared_cache_range(size_t* length);
 }
+
+#  if !SANITIZER_GO
+// Weak symbol no-op when TSan is not linked
+SANITIZER_WEAK_ATTRIBUTE extern void __tsan_set_in_internal_write_call(
+    bool value) {}
+#  endif
 
 namespace __sanitizer {
 
@@ -168,7 +183,15 @@ uptr internal_read(fd_t fd, void *buf, uptr count) {
 }
 
 uptr internal_write(fd_t fd, const void *buf, uptr count) {
+#  if SANITIZER_GO
   return write(fd, buf, count);
+#  else
+  // We need to disable interceptors when writing in TSan
+  __tsan_set_in_internal_write_call(true);
+  uptr res = write(fd, buf, count);
+  __tsan_set_in_internal_write_call(false);
+  return res;
+#  endif
 }
 
 uptr internal_stat(const char *path, void *buf) {
@@ -258,53 +281,43 @@ int internal_sysctlbyname(const char *sname, void *oldp, uptr *oldlenp,
                       (size_t)newlen);
 }
 
-static fd_t internal_spawn_impl(const char *argv[], const char *envp[],
-                                pid_t *pid) {
-  fd_t primary_fd = kInvalidFd;
-  fd_t secondary_fd = kInvalidFd;
+bool internal_spawn(const char* argv[], const char* envp[], pid_t* pid,
+                    fd_t fd_stdin, fd_t fd_stdout) {
+  // NOTE: Caller ensures that fd_stdin and fd_stdout are not 0, 1, or 2, since
+  // this can break communication.
+  //
+  // NOTE: Caller is responsible for closing fd_stdin after the process has
+  // died.
 
+  int res;
   auto fd_closer = at_scope_exit([&] {
-    internal_close(primary_fd);
-    internal_close(secondary_fd);
+    // NOTE: We intentionally do not close fd_stdin since this can
+    // cause us to receive a fatal SIGPIPE if the process dies.
+    internal_close(fd_stdout);
   });
-
-  // We need a new pseudoterminal to avoid buffering problems. The 'atos' tool
-  // in particular detects when it's talking to a pipe and forgets to flush the
-  // output stream after sending a response.
-  primary_fd = posix_openpt(O_RDWR);
-  if (primary_fd == kInvalidFd)
-    return kInvalidFd;
-
-  int res = grantpt(primary_fd) || unlockpt(primary_fd);
-  if (res != 0) return kInvalidFd;
-
-  // Use TIOCPTYGNAME instead of ptsname() to avoid threading problems.
-  char secondary_pty_name[128];
-  res = ioctl(primary_fd, TIOCPTYGNAME, secondary_pty_name);
-  if (res == -1) return kInvalidFd;
-
-  secondary_fd = internal_open(secondary_pty_name, O_RDWR);
-  if (secondary_fd == kInvalidFd)
-    return kInvalidFd;
 
   // File descriptor actions
   posix_spawn_file_actions_t acts;
   res = posix_spawn_file_actions_init(&acts);
-  if (res != 0) return kInvalidFd;
+  if (res != 0)
+    return false;
 
   auto acts_cleanup = at_scope_exit([&] {
     posix_spawn_file_actions_destroy(&acts);
   });
 
-  res = posix_spawn_file_actions_adddup2(&acts, secondary_fd, STDIN_FILENO) ||
-        posix_spawn_file_actions_adddup2(&acts, secondary_fd, STDOUT_FILENO) ||
-        posix_spawn_file_actions_addclose(&acts, secondary_fd);
-  if (res != 0) return kInvalidFd;
+  res = posix_spawn_file_actions_adddup2(&acts, fd_stdin, STDIN_FILENO) ||
+        posix_spawn_file_actions_adddup2(&acts, fd_stdout, STDOUT_FILENO) ||
+        posix_spawn_file_actions_addclose(&acts, fd_stdin) ||
+        posix_spawn_file_actions_addclose(&acts, fd_stdout);
+  if (res != 0)
+    return false;
 
   // Spawn attributes
   posix_spawnattr_t attrs;
   res = posix_spawnattr_init(&attrs);
-  if (res != 0) return kInvalidFd;
+  if (res != 0)
+    return false;
 
   auto attrs_cleanup  = at_scope_exit([&] {
     posix_spawnattr_destroy(&attrs);
@@ -313,50 +326,17 @@ static fd_t internal_spawn_impl(const char *argv[], const char *envp[],
   // In the spawned process, close all file descriptors that are not explicitly
   // described by the file actions object. This is Darwin-specific extension.
   res = posix_spawnattr_setflags(&attrs, POSIX_SPAWN_CLOEXEC_DEFAULT);
-  if (res != 0) return kInvalidFd;
+  if (res != 0)
+    return false;
 
   // posix_spawn
   char **argv_casted = const_cast<char **>(argv);
   char **envp_casted = const_cast<char **>(envp);
   res = posix_spawn(pid, argv[0], &acts, &attrs, argv_casted, envp_casted);
-  if (res != 0) return kInvalidFd;
+  if (res != 0)
+    return false;
 
-  // Disable echo in the new terminal, disable CR.
-  struct termios termflags;
-  tcgetattr(primary_fd, &termflags);
-  termflags.c_oflag &= ~ONLCR;
-  termflags.c_lflag &= ~ECHO;
-  tcsetattr(primary_fd, TCSANOW, &termflags);
-
-  // On success, do not close primary_fd on scope exit.
-  fd_t fd = primary_fd;
-  primary_fd = kInvalidFd;
-
-  return fd;
-}
-
-fd_t internal_spawn(const char *argv[], const char *envp[], pid_t *pid) {
-  // The client program may close its stdin and/or stdout and/or stderr thus
-  // allowing open/posix_openpt to reuse file descriptors 0, 1 or 2. In this
-  // case the communication is broken if either the parent or the child tries to
-  // close or duplicate these descriptors. We temporarily reserve these
-  // descriptors here to prevent this.
-  fd_t low_fds[3];
-  size_t count = 0;
-
-  for (; count < 3; count++) {
-    low_fds[count] = posix_openpt(O_RDWR);
-    if (low_fds[count] >= STDERR_FILENO)
-      break;
-  }
-
-  fd_t fd = internal_spawn_impl(argv, envp, pid);
-
-  for (; count > 0; count--) {
-    internal_close(low_fds[count]);
-  }
-
-  return fd;
+  return true;
 }
 
 uptr internal_rename(const char *oldpath, const char *newpath) {
@@ -769,11 +749,17 @@ void internal_join_thread(void *th) { pthread_join((pthread_t)th, 0); }
 static Mutex syslog_lock;
 #  endif
 
+#  if SANITIZER_DRIVERKIT
+#    define SANITIZER_OS_LOG os_log
+#  else
+#    define SANITIZER_OS_LOG os_log_error
+#  endif
+
 void WriteOneLineToSyslog(const char *s) {
 #if !SANITIZER_GO
   syslog_lock.CheckLocked();
   if (GetMacosAlignedVersion() >= MacosVersion(10, 12)) {
-    os_log_error(OS_LOG_DEFAULT, "%{public}s", s);
+    SANITIZER_OS_LOG(OS_LOG_DEFAULT, "%{public}s", s);
   } else {
 #pragma clang diagnostic push
 // as_log is deprecated.
@@ -837,22 +823,22 @@ void LogMessageOnPrintf(const char *str) {
 
 void LogFullErrorReport(const char *buffer) {
 #  if !SANITIZER_GO
-  // Log with os_log_error. This will make it into the crash log.
+  // When logging with os_log_error this will make it into the crash log.
   if (internal_strncmp(SanitizerToolName, "AddressSanitizer",
                        sizeof("AddressSanitizer") - 1) == 0)
-    os_log_error(OS_LOG_DEFAULT, "Address Sanitizer reported a failure.");
+    SANITIZER_OS_LOG(OS_LOG_DEFAULT, "Address Sanitizer reported a failure.");
   else if (internal_strncmp(SanitizerToolName, "UndefinedBehaviorSanitizer",
                             sizeof("UndefinedBehaviorSanitizer") - 1) == 0)
-    os_log_error(OS_LOG_DEFAULT,
-                 "Undefined Behavior Sanitizer reported a failure.");
+    SANITIZER_OS_LOG(OS_LOG_DEFAULT,
+                     "Undefined Behavior Sanitizer reported a failure.");
   else if (internal_strncmp(SanitizerToolName, "ThreadSanitizer",
                             sizeof("ThreadSanitizer") - 1) == 0)
-    os_log_error(OS_LOG_DEFAULT, "Thread Sanitizer reported a failure.");
+    SANITIZER_OS_LOG(OS_LOG_DEFAULT, "Thread Sanitizer reported a failure.");
   else
-    os_log_error(OS_LOG_DEFAULT, "Sanitizer tool reported a failure.");
+    SANITIZER_OS_LOG(OS_LOG_DEFAULT, "Sanitizer tool reported a failure.");
 
   if (common_flags()->log_to_syslog)
-    os_log_error(OS_LOG_DEFAULT, "Consult syslog for more information.");
+    SANITIZER_OS_LOG(OS_LOG_DEFAULT, "Consult syslog for more information.");
 
   // Log to syslog.
   // The logging on OS X may call pthread_create so we need the threading
@@ -933,7 +919,17 @@ static void DisableMmapExcGuardExceptions() {
       RTLD_DEFAULT, "task_set_exc_guard_behavior");
   if (set_behavior == nullptr) return;
   const task_exc_guard_behavior_t task_exc_guard_none = 0;
-  set_behavior(mach_task_self(), task_exc_guard_none);
+  kern_return_t res = set_behavior(mach_task_self(), task_exc_guard_none);
+  if (res != KERN_SUCCESS) {
+    Report(
+        "WARN: task_set_exc_guard_behavior returned %d (%s), "
+        "mmap may fail unexpectedly.\n",
+        res, mach_error_string(res));
+    if (res == KERN_DENIED)
+      Report(
+          "HINT: Check that task_set_exc_guard_behavior is allowed by "
+          "sandbox.\n");
+  }
 }
 
 static void VerifyInterceptorsWorking();
@@ -1100,6 +1096,67 @@ static void StripEnv() {
 }
 #endif  // SANITIZER_GO
 
+// Prints out a consolidated memory map: contiguous regions
+// are merged together.
+static void PrintVmmap() {
+  const mach_vm_address_t max_vm_address = GetMaxVirtualAddress() + 1;
+  mach_vm_address_t address = GAP_SEARCH_START_ADDRESS;
+  kern_return_t kr = KERN_SUCCESS;
+
+  Report("Memory map:\n");
+  mach_vm_address_t last = 0;
+  mach_vm_address_t lastsz = 0;
+
+  while (1) {
+    mach_vm_size_t vmsize = 0;
+    natural_t depth = 0;
+    vm_region_submap_short_info_data_64_t vminfo;
+    mach_msg_type_number_t count = VM_REGION_SUBMAP_SHORT_INFO_COUNT_64;
+    kr = mach_vm_region_recurse(mach_task_self(), &address, &vmsize, &depth,
+                                (vm_region_info_t)&vminfo, &count);
+
+    if (kr == KERN_DENIED) {
+      Report(
+          "ERROR: mach_vm_region_recurse got KERN_DENIED when printing memory "
+          "map.\n");
+      Report(
+          "HINT: Check whether mach_vm_region_recurse is allowed by "
+          "sandbox.\n");
+    }
+
+    if (kr == KERN_SUCCESS && address < max_vm_address) {
+      if (last + lastsz == address) {
+        // This region is contiguous with the last; merge together.
+        lastsz += vmsize;
+      } else {
+        if (lastsz)
+          Printf("|| `[%p, %p]` || size=0x%016" PRIx64 " ||\n", (void*)last,
+                 (void*)(last + lastsz), lastsz);
+
+        last = address;
+        lastsz = vmsize;
+      }
+      address += vmsize;
+    } else {
+      // We've reached the end of the memory map. Print the last remaining
+      // region, if there is one.
+      if (lastsz)
+        Printf("|| `[%p, %p]` || size=0x%016" PRIx64 " ||\n", (void*)last,
+               (void*)(last + lastsz), lastsz);
+
+      break;
+    }
+  }
+}
+
+static void ReportShadowAllocFail(uptr shadow_size_bytes, uptr alignment) {
+  Report(
+      "FATAL: Failed to allocate shadow memory. Tried to allocate %p bytes "
+      "(alignment=%p).\n",
+      (void*)shadow_size_bytes, (void*)alignment);
+  PrintVmmap();
+}
+
 char **GetArgv() {
   return *_NSGetArgv();
 }
@@ -1207,10 +1264,11 @@ uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
     if (new_max_vm < max_occupied_addr) {
       Report("Unable to find a memory range for dynamic shadow.\n");
       Report(
-          "space_size = %p, largest_gap_found = %p, max_occupied_addr = %p, "
-          "new_max_vm = %p\n",
-          (void *)space_size, (void *)largest_gap_found,
-          (void *)max_occupied_addr, (void *)new_max_vm);
+          "\tspace_size = %p\n\tlargest_gap_found = %p\n\tmax_occupied_addr "
+          "= %p\n\tnew_max_vm = %p\n",
+          (void*)space_size, (void*)largest_gap_found, (void*)max_occupied_addr,
+          (void*)new_max_vm);
+      ReportShadowAllocFail(shadow_size_bytes, alignment);
       CHECK(0 && "cannot place shadow");
     }
     RestrictMemoryToMaxAddress(new_max_vm);
@@ -1221,6 +1279,7 @@ uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
                                             nullptr, nullptr);
     if (shadow_start == 0) {
       Report("Unable to find a memory range after restricting VM.\n");
+      ReportShadowAllocFail(shadow_size_bytes, alignment);
       CHECK(0 && "cannot place shadow after restricting vm");
     }
   }
@@ -1236,40 +1295,51 @@ uptr MapDynamicShadowAndAliases(uptr shadow_size, uptr alias_size,
 }
 
 uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
-                              uptr *largest_gap_found,
-                              uptr *max_occupied_addr) {
-  typedef vm_region_submap_short_info_data_64_t RegionInfo;
-  enum { kRegionInfoSize = VM_REGION_SUBMAP_SHORT_INFO_COUNT_64 };
-  // Start searching for available memory region past PAGEZERO, which is
-  // 4KB on 32-bit and 4GB on 64-bit.
-  mach_vm_address_t start_address =
-    (SANITIZER_WORDSIZE == 32) ? 0x000000001000 : 0x000100000000;
-
+                              uptr* largest_gap_found,
+                              uptr* max_occupied_addr) {
   const mach_vm_address_t max_vm_address = GetMaxVirtualAddress() + 1;
-  mach_vm_address_t address = start_address;
-  mach_vm_address_t free_begin = start_address;
+  mach_vm_address_t address = GAP_SEARCH_START_ADDRESS;
+  mach_vm_address_t free_begin = GAP_SEARCH_START_ADDRESS;
   kern_return_t kr = KERN_SUCCESS;
   if (largest_gap_found) *largest_gap_found = 0;
   if (max_occupied_addr) *max_occupied_addr = 0;
   while (kr == KERN_SUCCESS) {
     mach_vm_size_t vmsize = 0;
     natural_t depth = 0;
-    RegionInfo vminfo;
-    mach_msg_type_number_t count = kRegionInfoSize;
+    vm_region_submap_short_info_data_64_t vminfo;
+    mach_msg_type_number_t count = VM_REGION_SUBMAP_SHORT_INFO_COUNT_64;
     kr = mach_vm_region_recurse(mach_task_self(), &address, &vmsize, &depth,
                                 (vm_region_info_t)&vminfo, &count);
 
-    // There are cases where going beyond the processes' max vm does
-    // not return KERN_INVALID_ADDRESS so we check for going beyond that
-    // max address as well.
-    if (kr == KERN_INVALID_ADDRESS || address > max_vm_address) {
+    if (kr == KERN_SUCCESS) {
+      // There are cases where going beyond the processes' max vm does
+      // not return KERN_INVALID_ADDRESS so we check for going beyond that
+      // max address as well.
+      if (address > max_vm_address) {
+        address = max_vm_address;
+        kr = -1;  // break after this iteration.
+      }
+
+      if (max_occupied_addr)
+        *max_occupied_addr = address + vmsize;
+    } else if (kr == KERN_INVALID_ADDRESS) {
       // No more regions beyond "address", consider the gap at the end of VM.
       address = max_vm_address;
-      vmsize = 0;
-      kr = -1;  // break after this iteration.
+
+      // We will break after this iteration anyway since kr != KERN_SUCCESS
+    } else if (kr == KERN_DENIED) {
+      Report("ERROR: Unable to find a memory range for dynamic shadow.\n");
+      Report("HINT: Ensure mach_vm_region_recurse is allowed under sandbox.\n");
+      Die();
     } else {
-      if (max_occupied_addr) *max_occupied_addr = address + vmsize;
+      Report(
+          "WARNING: mach_vm_region_recurse returned unexpected code %d (%s)\n",
+          kr, mach_error_string(kr));
+      DCHECK(false && "mach_vm_region_recurse returned unexpected code");
+      break;  // address is not valid unless KERN_SUCCESS, therefore we must not
+              // use it.
     }
+
     if (free_begin != address) {
       // We found a free region [free_begin..address-1].
       uptr gap_start = RoundUpTo((uptr)free_begin + left_padding, alignment);
@@ -1290,6 +1360,58 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
 
   // We looked at all free regions and could not find one large enough.
   return 0;
+}
+
+// This function (when used during initialization when there is
+// only a single thread), can be used to verify that a range
+// of memory hasn't already been mapped, and won't be mapped
+// later in the shared cache.
+//
+// If the syscall mach_vm_region_recurse fails (due to sandbox),
+// we assume that the memory is not mapped so that execution can continue.
+//
+// NOTE: range_end is inclusive
+//
+// WARNING: This function must NOT allocate memory, since it is
+// used in InitializeShadowMemory between where we search for
+// space for shadow and where we actually allocate it.
+bool MemoryRangeIsAvailable(uptr range_start, uptr range_end) {
+  mach_vm_size_t vmsize = 0;
+  natural_t depth = 0;
+  vm_region_submap_short_info_data_64_t vminfo;
+  mach_msg_type_number_t count = VM_REGION_SUBMAP_SHORT_INFO_COUNT_64;
+  mach_vm_address_t address = range_start;
+
+  // First, check if the range is already mapped.
+  kern_return_t kr =
+      mach_vm_region_recurse(mach_task_self(), &address, &vmsize, &depth,
+                             (vm_region_info_t)&vminfo, &count);
+
+  if (kr == KERN_DENIED) {
+    Report(
+        "WARN: mach_vm_region_recurse returned KERN_DENIED when checking "
+        "whether an address is mapped.\n");
+    Report("HINT: Is mach_vm_region_recurse allowed by sandbox?\n");
+  }
+
+  if (kr == KERN_SUCCESS && !IntervalsAreSeparate(address, address + vmsize - 1,
+                                                  range_start, range_end)) {
+    // Overlaps with already-mapped memory
+    return false;
+  }
+
+  size_t cacheLength;
+  uptr cacheStart = (uptr)_dyld_get_shared_cache_range(&cacheLength);
+
+  if (cacheStart &&
+      !IntervalsAreSeparate(cacheStart, cacheStart + cacheLength - 1,
+                            range_start, range_end)) {
+    // Overlaps with shared cache region
+    return false;
+  }
+
+  // We believe this address is available.
+  return true;
 }
 
 // FIXME implement on this platform.

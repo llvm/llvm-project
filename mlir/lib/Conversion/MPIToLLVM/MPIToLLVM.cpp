@@ -93,13 +93,13 @@ public:
   /// Different MPI implementations have different communicator types.
   /// Using i64 as a portable, intermediate type.
   /// Appropriate cast needs to take place before calling MPI functions.
-  virtual Value getCommWorld(const Location loc,
+  virtual Value getCommWorld(Location loc,
                              ConversionPatternRewriter &rewriter) = 0;
 
   /// Type converter provides i64 type for communicator type.
   /// Converts to native type, which might be ptr or int or whatever.
-  virtual Value castComm(const Location loc,
-                         ConversionPatternRewriter &rewriter, Value comm) = 0;
+  virtual Value castComm(Location loc, ConversionPatternRewriter &rewriter,
+                         Value comm) = 0;
 
   /// Get the MPI_STATUS_IGNORE value (typically a pointer type).
   virtual intptr_t getStatusIgnore() = 0;
@@ -109,13 +109,12 @@ public:
 
   /// Gets or creates an MPI datatype as a value which corresponds to the given
   /// type.
-  virtual Value getDataType(const Location loc,
-                            ConversionPatternRewriter &rewriter, Type type) = 0;
+  virtual Value getDataType(Location loc, ConversionPatternRewriter &rewriter,
+                            Type type) = 0;
 
   /// Gets or creates an MPI_Op value which corresponds to the given
   /// enum value.
-  virtual Value getMPIOp(const Location loc,
-                         ConversionPatternRewriter &rewriter,
+  virtual Value getMPIOp(Location loc, ConversionPatternRewriter &rewriter,
                          mpi::MPI_ReductionOpEnum opAttr) = 0;
 };
 
@@ -272,7 +271,7 @@ public:
 
   Value getCommWorld(const Location loc,
                      ConversionPatternRewriter &rewriter) override {
-    auto context = rewriter.getContext();
+    auto *context = rewriter.getContext();
     // get external opaque struct pointer type
     auto commStructT =
         LLVM::LLVMStructType::getOpaque("ompi_communicator_t", context);
@@ -324,7 +323,7 @@ public:
     else
       assert(false && "unsupported type");
 
-    auto context = rewriter.getContext();
+    auto *context = rewriter.getContext();
     // get external opaque struct pointer type
     auto typeStructT =
         LLVM::LLVMStructType::getOpaque("ompi_predefined_datatype_t", context);
@@ -383,7 +382,7 @@ public:
       op = "ompi_mpi_replace";
       break;
     }
-    auto context = rewriter.getContext();
+    auto *context = rewriter.getContext();
     // get external opaque struct pointer type
     auto opStructT =
         LLVM::LLVMStructType::getOpaque("ompi_predefined_op_t", context);
@@ -405,7 +404,8 @@ std::unique_ptr<MPIImplTraits> MPIImplTraits::get(ModuleOp &moduleOp) {
     return std::make_unique<OMPIImplTraits>(moduleOp);
   if (!strAttr || strAttr.getValue() != "MPICH")
     moduleOp.emitWarning() << "Unknown \"MPI:Implementation\" value in DLTI ("
-                           << strAttr.getValue() << "), defaulting to MPICH";
+                           << (strAttr ? strAttr.getValue() : "<NULL>")
+                           << "), defaulting to MPICH";
   return std::make_unique<MPICHImplTraits>(moduleOp);
 }
 

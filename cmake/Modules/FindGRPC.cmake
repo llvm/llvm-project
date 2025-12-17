@@ -3,21 +3,23 @@ option(ENABLE_GRPC_REFLECTION "Link to gRPC Reflection library" OFF)
 # FIXME(kirillbobyrev): Check if gRPC and Protobuf headers can be included at
 # configure time.
 find_package(Threads REQUIRED)
-if (GRPC_INSTALL_PATH)
-  # This setup requires gRPC to be built from sources using CMake and installed
-  # to ${GRPC_INSTALL_PATH} via -DCMAKE_INSTALL_PREFIX=${GRPC_INSTALL_PATH}.
-  # Libraries will be linked according to gRPC build policy which generates
-  # static libraries when BUILD_SHARED_LIBS is Off and dynamic libraries when
-  # it's On (NOTE: This is a variable passed to gRPC CMake build invocation,
-  # LLVM's BUILD_SHARED_LIBS has no effect).
-  set(protobuf_MODULE_COMPATIBLE TRUE)
-  find_package(Protobuf CONFIG REQUIRED HINTS ${GRPC_INSTALL_PATH})
-  message(STATUS "Using protobuf ${Protobuf_VERSION}")
-  find_package(gRPC CONFIG REQUIRED HINTS ${GRPC_INSTALL_PATH})
-  message(STATUS "Using gRPC ${gRPC_VERSION}")
 
-  include_directories(${Protobuf_INCLUDE_DIRS})
+# Prefer finding gPRC through CMakeConfig and a hint can be provided via
+# GRPC_INSTALL_PATH. This requires gRPC to be built and installed
+# to ${GRPC_INSTALL_PATH} via -DCMAKE_INSTALL_PREFIX=${GRPC_INSTALL_PATH}.
+# Libraries will be linked according to gRPC build policy which generates
+# static libraries when BUILD_SHARED_LIBS is Off and dynamic libraries when
+# it's On (NOTE: This is a variable passed to gRPC CMake build invocation,
+# LLVM's BUILD_SHARED_LIBS has no effect).
+# Package managers like Homebrew will also install Config.cmake and user can
+# specify GRPC_INSTALL_PATH or CMAKE_PREFIX_PATH to locate installed package.
+set(protobuf_MODULE_COMPATIBLE TRUE)
+find_package(Protobuf CONFIG HINTS ${GRPC_INSTALL_PATH})
+message(STATUS "Using protobuf ${Protobuf_VERSION}")
+find_package(gRPC CONFIG HINTS ${GRPC_INSTALL_PATH})
+message(STATUS "Using gRPC ${gRPC_VERSION}")
 
+if (Protobuf_FOUND AND gRPC_FOUND)
   # gRPC CMake CONFIG gives the libraries slightly odd names, make them match
   # the conventional system-installed names.
   set_target_properties(protobuf::libprotobuf PROPERTIES IMPORTED_GLOBAL TRUE)
@@ -32,10 +34,12 @@ if (GRPC_INSTALL_PATH)
   set(GRPC_CPP_PLUGIN $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
   set(PROTOC ${Protobuf_PROTOC_EXECUTABLE})
 else()
-  # This setup requires system-installed gRPC and Protobuf.
+  # Now fallback to system-installed gRPC and ProtoBuf.
   # We always link dynamically in this mode. While the static libraries are
   # usually installed, the CMake files telling us *which* static libraries to
   # link are not.
+  # FIXME: this path should not work on newer grpc versions and should be
+  # removed in favor of `find_package` implementation.
   if (NOT BUILD_SHARED_LIBS)
     message(NOTICE "gRPC and Protobuf will be linked dynamically. If you want static linking, build gRPC from sources with -DBUILD_SHARED_LIBS=Off.")
   endif()
@@ -44,55 +48,17 @@ else()
   if (NOT GRPC_CPP_PLUGIN OR NOT PROTOC)
     message(FATAL_ERROR "gRPC C++ Plugin and Protoc must be on $PATH for gRPC-enabled build.")
   endif()
-  # On macOS the libraries are typically installed via Homebrew and are not on
-  # the system path.
-  set(GRPC_OPTS "")
-  set(PROTOBUF_OPTS "")
-  set(GRPC_INCLUDE_PATHS "")
-  if (${APPLE})
-    find_program(HOMEBREW brew)
-    # If Homebrew is not found, the user might have installed libraries
-    # manually. Fall back to the system path.
-    if (HOMEBREW)
-      execute_process(COMMAND ${HOMEBREW} --prefix grpc
-        OUTPUT_VARIABLE GRPC_HOMEBREW_PATH
-        RESULT_VARIABLE GRPC_HOMEBREW_RETURN_CODE
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-      execute_process(COMMAND ${HOMEBREW} --prefix protobuf
-        OUTPUT_VARIABLE PROTOBUF_HOMEBREW_PATH
-        RESULT_VARIABLE PROTOBUF_HOMEBREW_RETURN_CODE
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-      execute_process(COMMAND ${HOMEBREW} --prefix abseil
-        OUTPUT_VARIABLE ABSL_HOMEBREW_PATH
-        RESULT_VARIABLE ABSL_HOMEBREW_RETURN_CODE
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-      # If either library is not installed via Homebrew, fall back to the
-      # system path.
-      if (GRPC_HOMEBREW_RETURN_CODE EQUAL "0")
-        list(APPEND GRPC_INCLUDE_PATHS ${GRPC_HOMEBREW_PATH}/include)
-        list(APPEND GRPC_OPTS PATHS ${GRPC_HOMEBREW_PATH}/lib NO_DEFAULT_PATH)
-      endif()
-      if (PROTOBUF_HOMEBREW_RETURN_CODE EQUAL "0")
-        list(APPEND GRPC_INCLUDE_PATHS ${PROTOBUF_HOMEBREW_PATH}/include)
-        list(APPEND PROTOBUF_OPTS PATHS ${PROTOBUF_HOMEBREW_PATH}/lib NO_DEFAULT_PATH)
-      endif()
-      if (ABSL_HOMEBREW_RETURN_CODE EQUAL "0")
-        list(APPEND GRPC_INCLUDE_PATHS ${ABSL_HOMEBREW_PATH}/include)
-      endif()
-    endif()
-  endif()
   if(NOT TARGET grpc++)
-    find_library(GRPC_LIBRARY grpc++ ${GRPC_OPTS} REQUIRED)
+    find_library(GRPC_LIBRARY grpc++ REQUIRED)
     add_library(grpc++ UNKNOWN IMPORTED GLOBAL)
     message(STATUS "Using grpc++: " ${GRPC_LIBRARY})
     set_target_properties(grpc++ PROPERTIES IMPORTED_LOCATION ${GRPC_LIBRARY})
-    target_include_directories(grpc++ INTERFACE ${GRPC_INCLUDE_PATHS})
     if (ENABLE_GRPC_REFLECTION)
-      find_library(GRPC_REFLECTION_LIBRARY grpc++_reflection ${GRPC_OPTS} REQUIRED)
+      find_library(GRPC_REFLECTION_LIBRARY grpc++_reflection REQUIRED)
       add_library(grpc++_reflection UNKNOWN IMPORTED GLOBAL)
       set_target_properties(grpc++_reflection PROPERTIES IMPORTED_LOCATION ${GRPC_REFLECTION_LIBRARY})
     endif()
-    find_library(PROTOBUF_LIBRARY protobuf ${PROTOBUF_OPTS} REQUIRED)
+    find_library(PROTOBUF_LIBRARY protobuf REQUIRED)
     message(STATUS "Using protobuf: " ${PROTOBUF_LIBRARY})
     add_library(protobuf UNKNOWN IMPORTED GLOBAL)
     set_target_properties(protobuf PROPERTIES IMPORTED_LOCATION ${PROTOBUF_LIBRARY})

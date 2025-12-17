@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PlistDiagnostics.h"
 #include "clang/Analysis/IssueHash.h"
 #include "clang/Analysis/MacroExpansionContext.h"
 #include "clang/Analysis/PathDiagnostic.h"
@@ -528,19 +529,31 @@ PlistDiagnostics::PlistDiagnostics(
   (void)this->CTU;
 }
 
-void ento::createPlistDiagnosticConsumer(
+/// Creates and registers a Plist diagnostic consumer, without any additional
+/// text consumer.
+void ento::createPlistDiagnosticConsumerImpl(
     PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &OutputFile, const Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU,
-    const MacroExpansionContext &MacroExpansions) {
+    const MacroExpansionContext &MacroExpansions, bool SupportsMultipleFiles) {
 
   // TODO: Emit an error here.
   if (OutputFile.empty())
     return;
 
   C.push_back(std::make_unique<PlistDiagnostics>(
-      DiagOpts, OutputFile, PP, CTU, MacroExpansions,
-      /*supportsMultipleFiles=*/false));
+      DiagOpts, OutputFile, PP, CTU, MacroExpansions, SupportsMultipleFiles));
+}
+
+void ento::createPlistDiagnosticConsumer(
+    PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
+    const std::string &OutputFile, const Preprocessor &PP,
+    const cross_tu::CrossTranslationUnitContext &CTU,
+    const MacroExpansionContext &MacroExpansions) {
+
+  createPlistDiagnosticConsumerImpl(DiagOpts, C, OutputFile, PP, CTU,
+                                    MacroExpansions,
+                                    /*SupportsMultipleFiles=*/false);
   createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, OutputFile,
                                           PP, CTU, MacroExpansions);
 }
@@ -551,13 +564,10 @@ void ento::createPlistMultiFileDiagnosticConsumer(
     const cross_tu::CrossTranslationUnitContext &CTU,
     const MacroExpansionContext &MacroExpansions) {
 
-  // TODO: Emit an error here.
-  if (OutputFile.empty())
-    return;
+  createPlistDiagnosticConsumerImpl(DiagOpts, C, OutputFile, PP, CTU,
+                                    MacroExpansions,
+                                    /*SupportsMultipleFiles=*/true);
 
-  C.push_back(std::make_unique<PlistDiagnostics>(
-      DiagOpts, OutputFile, PP, CTU, MacroExpansions,
-      /*supportsMultipleFiles=*/true));
   createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, OutputFile,
                                           PP, CTU, MacroExpansions);
 }
@@ -696,13 +706,11 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
     o << "   <key>issue_hash_content_of_line_in_context</key>";
     PathDiagnosticLocation UPDLoc = D->getUniqueingLoc();
     FullSourceLoc L(SM.getExpansionLoc(UPDLoc.isValid()
-                                            ? UPDLoc.asLocation()
-                                            : D->getLocation().asLocation()),
+                                           ? UPDLoc.asLocation()
+                                           : D->getLocation().asLocation()),
                     SM);
-    const Decl *DeclWithIssue = D->getDeclWithIssue();
-    EmitString(o, getIssueHash(L, D->getCheckerName(), D->getBugType(),
-                               DeclWithIssue, LangOpts))
-        << '\n';
+
+    EmitString(o, D->getIssueHash(SM, LangOpts)) << '\n';
 
     // Output information about the semantic context where
     // the issue occurred.

@@ -76,10 +76,11 @@ public:
 
     const bool zero_memory = false;
     IRMemoryMap::AllocationPolicy used_policy;
-    auto address_or_error = map.Malloc(
+    const uint64_t malloc_size =
         llvm::expectedToOptional(m_persistent_variable_sp->GetByteSize())
-            .value_or(0),
-        8, lldb::ePermissionsReadable | lldb::ePermissionsWritable,
+            .value_or(0);
+    auto address_or_error = map.Malloc(
+        malloc_size, 8, lldb::ePermissionsReadable | lldb::ePermissionsWritable,
         IRMemoryMap::eAllocationPolicyMirror, zero_memory, &used_policy);
     if (!address_or_error) {
       err = Status::FromErrorStringWithFormat(
@@ -90,8 +91,9 @@ public:
     }
     lldb::addr_t mem = *address_or_error;
 
-    LLDB_LOGF(log, "Allocated %s (0x%" PRIx64 ") successfully",
-              m_persistent_variable_sp->GetName().GetCString(), mem);
+    LLDB_LOGF(
+        log, "Allocated 0x%" PRIx64 "bytes for %s (0x%" PRIx64 ") successfully",
+        malloc_size, m_persistent_variable_sp->GetName().GetCString(), mem);
 
     // Put the location of the spare memory into the live data of the
     // ValueObject.
@@ -143,12 +145,12 @@ public:
   void DestroyAllocation(IRMemoryMap &map, Status &err) {
     Status deallocate_error;
 
-    map.Free((lldb::addr_t)m_persistent_variable_sp->m_live_sp->GetValue()
-                 .GetScalar()
-                 .ULongLong(),
+    lldb::ValueObjectSP live_valobj_sp =
+        m_persistent_variable_sp->GetLiveObject();
+    map.Free((lldb::addr_t)live_valobj_sp->GetValue().GetScalar().ULongLong(),
              deallocate_error);
 
-    m_persistent_variable_sp->m_live_sp.reset();
+    live_valobj_sp.reset();
 
     if (!deallocate_error.Success()) {
       err = Status::FromErrorStringWithFormat(
@@ -183,17 +185,17 @@ public:
         return;
     }
 
+    lldb::ValueObjectSP live_valobj_sp =
+        m_persistent_variable_sp->GetLiveObject();
     if ((m_persistent_variable_sp->m_flags &
              ExpressionVariable::EVIsProgramReference &&
-         m_persistent_variable_sp->m_live_sp) ||
+         live_valobj_sp) ||
         m_persistent_variable_sp->m_flags &
             ExpressionVariable::EVIsLLDBAllocated) {
       Status write_error;
 
-      map.WriteScalarToMemory(
-          load_addr,
-          m_persistent_variable_sp->m_live_sp->GetValue().GetScalar(),
-          map.GetAddressByteSize(), write_error);
+      map.WriteScalarToMemory(load_addr, live_valobj_sp->GetValue().GetScalar(),
+                              map.GetAddressByteSize(), write_error);
 
       if (!write_error.Success()) {
         err = Status::FromErrorStringWithFormat(
@@ -229,13 +231,15 @@ public:
       m_delegate->DidDematerialize(m_persistent_variable_sp);
     }
 
+    lldb::ValueObjectSP live_valobj_sp =
+        m_persistent_variable_sp->GetLiveObject();
     if ((m_persistent_variable_sp->m_flags &
          ExpressionVariable::EVIsLLDBAllocated) ||
         (m_persistent_variable_sp->m_flags &
          ExpressionVariable::EVIsProgramReference)) {
       if (m_persistent_variable_sp->m_flags &
               ExpressionVariable::EVIsProgramReference &&
-          !m_persistent_variable_sp->m_live_sp) {
+          !live_valobj_sp) {
         // If the reference comes from the program, then the
         // ClangExpressionVariable's live variable data hasn't been set up yet.
         // Do this now.
@@ -255,7 +259,7 @@ public:
 
         m_persistent_variable_sp->m_live_sp = ValueObjectConstResult::Create(
             map.GetBestExecutionContextScope(),
-            m_persistent_variable_sp.get()->GetCompilerType(),
+            m_persistent_variable_sp->GetCompilerType(),
             m_persistent_variable_sp->GetName(), location, eAddressTypeLoad,
             llvm::expectedToOptional(m_persistent_variable_sp->GetByteSize())
                 .value_or(0));
@@ -277,19 +281,17 @@ public:
         }
       }
 
-      lldb::addr_t mem = m_persistent_variable_sp->m_live_sp->GetValue()
-                             .GetScalar()
-                             .ULongLong();
-
-      if (!m_persistent_variable_sp->m_live_sp) {
+      if (!live_valobj_sp) {
         err = Status::FromErrorStringWithFormat(
             "couldn't find the memory area used to store %s",
             m_persistent_variable_sp->GetName().GetCString());
         return;
       }
 
-      if (m_persistent_variable_sp->m_live_sp->GetValue()
-              .GetValueAddressType() != eAddressTypeLoad) {
+      lldb::addr_t mem = live_valobj_sp->GetValue().GetScalar().ULongLong();
+
+      if (live_valobj_sp->GetValue().GetValueAddressType() !=
+          eAddressTypeLoad) {
         err = Status::FromErrorStringWithFormat(
             "the address of the memory area for %s is in an incorrect format",
             m_persistent_variable_sp->GetName().GetCString());
@@ -326,7 +328,6 @@ public:
               read_error.AsCString());
           return;
         }
-
         m_persistent_variable_sp->m_flags &=
             ~ExpressionVariable::EVNeedsFreezeDry;
       }
@@ -1377,29 +1378,26 @@ public:
       return;
     }
 
-    DataExtractor register_data;
-
-    if (!reg_value.GetData(register_data)) {
-      err = Status::FromErrorStringWithFormat(
-          "couldn't get the data for register %s", m_register_info.name);
-      return;
-    }
-
-    if (register_data.GetByteSize() != m_register_info.byte_size) {
+    if (reg_value.GetByteSize() != m_register_info.byte_size) {
       err = Status::FromErrorStringWithFormat(
           "data for register %s had size %llu but we expected %llu",
-          m_register_info.name, (unsigned long long)register_data.GetByteSize(),
+          m_register_info.name, (unsigned long long)reg_value.GetByteSize(),
           (unsigned long long)m_register_info.byte_size);
       return;
     }
 
-    m_register_contents = std::make_shared<DataBufferHeap>(
-        register_data.GetDataStart(), register_data.GetByteSize());
+    lldb_private::DataBufferHeap buf(reg_value.GetByteSize(), 0);
+    reg_value.GetAsMemoryData(m_register_info, buf.GetBytes(),
+                              buf.GetByteSize(), map.GetByteOrder(), err);
+    if (!err.Success())
+      return;
+
+    m_register_contents = std::make_shared<DataBufferHeap>(buf);
 
     Status write_error;
 
-    map.WriteMemory(load_addr, register_data.GetDataStart(),
-                    register_data.GetByteSize(), write_error);
+    map.WriteMemory(load_addr, buf.GetBytes(), reg_value.GetByteSize(),
+                    write_error);
 
     if (!write_error.Success()) {
       err = Status::FromErrorStringWithFormat(

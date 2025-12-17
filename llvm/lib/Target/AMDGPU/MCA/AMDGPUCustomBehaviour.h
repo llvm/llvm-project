@@ -26,16 +26,15 @@ namespace llvm {
 namespace mca {
 
 class AMDGPUInstrPostProcess : public InstrPostProcess {
-  void processWaitCnt(std::unique_ptr<Instruction> &Inst, const MCInst &MCI);
+  void processWaitCnt(Instruction &Inst, const MCInst &MCI);
 
 public:
   AMDGPUInstrPostProcess(const MCSubtargetInfo &STI, const MCInstrInfo &MCII)
       : InstrPostProcess(STI, MCII) {}
 
-  ~AMDGPUInstrPostProcess() = default;
+  ~AMDGPUInstrPostProcess() override = default;
 
-  void postProcessInstruction(std::unique_ptr<Instruction> &Inst,
-                              const MCInst &MCI) override;
+  void postProcessInstruction(Instruction &Inst, const MCInst &MCI) override;
 };
 
 struct WaitCntInfo {
@@ -89,7 +88,7 @@ public:
   AMDGPUCustomBehaviour(const MCSubtargetInfo &STI,
                         const mca::SourceMgr &SrcMgr, const MCInstrInfo &MCII);
 
-  ~AMDGPUCustomBehaviour() = default;
+  ~AMDGPUCustomBehaviour() override = default;
   /// This method is used to determine if an instruction
   /// should be allowed to be dispatched. The return value is
   /// how many cycles until the instruction can be dispatched.

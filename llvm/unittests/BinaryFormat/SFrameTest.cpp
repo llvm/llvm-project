@@ -54,28 +54,28 @@ TYPED_TEST_SUITE(SFrameTest, Types, NameGenerator);
 
 TYPED_TEST(SFrameTest, FDEFlags) {
   FuncDescEntry<TestFixture::Endian> FDE = {};
-  EXPECT_EQ(FDE.Info, 0u);
-  EXPECT_EQ(FDE.getPAuthKey(), 0);
-  EXPECT_EQ(FDE.getFDEType(), FDEType::PCInc);
-  EXPECT_EQ(FDE.getFREType(), FREType::Addr1);
+  EXPECT_EQ(FDE.Info.Info, 0u);
+  EXPECT_EQ(FDE.Info.getPAuthKey(), 0);
+  EXPECT_EQ(FDE.Info.getFDEType(), FDEType::PCInc);
+  EXPECT_EQ(FDE.Info.getFREType(), FREType::Addr1);
 
-  FDE.setPAuthKey(1);
-  EXPECT_EQ(FDE.Info, 0x20u);
-  EXPECT_EQ(FDE.getPAuthKey(), 1);
-  EXPECT_EQ(FDE.getFDEType(), FDEType::PCInc);
-  EXPECT_EQ(FDE.getFREType(), FREType::Addr1);
+  FDE.Info.setPAuthKey(1);
+  EXPECT_EQ(FDE.Info.Info, 0x20u);
+  EXPECT_EQ(FDE.Info.getPAuthKey(), 1);
+  EXPECT_EQ(FDE.Info.getFDEType(), FDEType::PCInc);
+  EXPECT_EQ(FDE.Info.getFREType(), FREType::Addr1);
 
-  FDE.setFDEType(FDEType::PCMask);
-  EXPECT_EQ(FDE.Info, 0x30u);
-  EXPECT_EQ(FDE.getPAuthKey(), 1);
-  EXPECT_EQ(FDE.getFDEType(), FDEType::PCMask);
-  EXPECT_EQ(FDE.getFREType(), FREType::Addr1);
+  FDE.Info.setFDEType(FDEType::PCMask);
+  EXPECT_EQ(FDE.Info.Info, 0x30u);
+  EXPECT_EQ(FDE.Info.getPAuthKey(), 1);
+  EXPECT_EQ(FDE.Info.getFDEType(), FDEType::PCMask);
+  EXPECT_EQ(FDE.Info.getFREType(), FREType::Addr1);
 
-  FDE.setFREType(FREType::Addr4);
-  EXPECT_EQ(FDE.Info, 0x32u);
-  EXPECT_EQ(FDE.getPAuthKey(), 1);
-  EXPECT_EQ(FDE.getFDEType(), FDEType::PCMask);
-  EXPECT_EQ(FDE.getFREType(), FREType::Addr4);
+  FDE.Info.setFREType(FREType::Addr4);
+  EXPECT_EQ(FDE.Info.Info, 0x32u);
+  EXPECT_EQ(FDE.Info.getPAuthKey(), 1);
+  EXPECT_EQ(FDE.Info.getFDEType(), FDEType::PCMask);
+  EXPECT_EQ(FDE.Info.getFREType(), FREType::Addr4);
 }
 
 TYPED_TEST(SFrameTest, FREFlags) {

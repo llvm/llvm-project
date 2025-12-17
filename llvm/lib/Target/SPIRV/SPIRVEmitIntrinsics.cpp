@@ -17,12 +17,16 @@
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/TypedPointerType.h"
+#include "llvm/Transforms/Utils/Local.h"
 
+#include <cassert>
 #include <queue>
 #include <unordered_set>
 
@@ -150,6 +154,7 @@ class SPIRVEmitIntrinsics
   void insertPtrCastOrAssignTypeInstr(Instruction *I, IRBuilder<> &B);
   bool shouldTryToAddMemAliasingDecoration(Instruction *Inst);
   void insertSpirvDecorations(Instruction *I, IRBuilder<> &B);
+  void insertConstantsForFPFastMathDefault(Module &M);
   void processGlobalValue(GlobalVariable &GV, IRBuilder<> &B);
   void processParamTypes(Function *F, IRBuilder<> &B);
   void processParamTypesByFunHeader(Function *F, IRBuilder<> &B);
@@ -186,6 +191,8 @@ class SPIRVEmitIntrinsics
                                   Instruction *Dest, bool DeleteOld = true);
 
   void applyDemangledPtrArgTypes(IRBuilder<> &B);
+
+  GetElementPtrInst *simplifyZeroLengthArrayGepInst(GetElementPtrInst *GEP);
 
   bool runOnFunction(Function &F);
   bool postprocessTypes(Module &M);
@@ -353,6 +360,17 @@ static void emitAssignName(Instruction *I, IRBuilder<> &B) {
   if (!I->hasName() || I->getType()->isAggregateType() ||
       expectIgnoredInIRTranslation(I))
     return;
+
+  if (isa<CallBase>(I)) {
+    // TODO: this is a temporary workaround meant to prevent inserting internal
+    //       noise into the generated binary; remove once we rework the entire
+    //       aggregate removal machinery.
+    StringRef Name = I->getName();
+    if (Name.starts_with("spv.mutated_callsite"))
+      return;
+    if (Name.starts_with("spv.named_mutated_callsite"))
+      I->setName(Name.substr(Name.rfind('.') + 1));
+  }
   reportFatalOnTokenType(I);
   setInsertPointAfterDef(B, I);
   LLVMContext &Ctx = I->getContext();
@@ -495,7 +513,7 @@ void SPIRVEmitIntrinsics::propagateElemTypeRec(
   std::unordered_set<Value *> Visited;
   DenseMap<Function *, CallInst *> Ptrcasts;
   propagateElemTypeRec(Op, PtrElemTy, CastElemTy, VisitedSubst, Visited,
-                       Ptrcasts);
+                       std::move(Ptrcasts));
 }
 
 void SPIRVEmitIntrinsics::propagateElemTypeRec(
@@ -647,9 +665,20 @@ bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
       Offset -= STL->getElementOffset(Element);
       CurType = ST->getElementType(Element);
       OnLiteralIndexing(CurType, Element);
+    } else if (auto *VT = dyn_cast<FixedVectorType>(CurType)) {
+      Type *EltTy = VT->getElementType();
+      TypeSize EltSizeBits = DL.getTypeSizeInBits(EltTy);
+      assert(EltSizeBits % 8 == 0 &&
+             "Element type size in bits must be a multiple of 8.");
+      uint32_t EltTypeSize = EltSizeBits / 8;
+      assert(Offset < VT->getNumElements() * EltTypeSize);
+      uint64_t Index = Offset / EltTypeSize;
+      Offset -= Index * EltTypeSize;
+      CurType = EltTy;
+      OnLiteralIndexing(CurType, Index);
+
     } else {
-      // Vector type indexing should not use GEP.
-      // So if we have an index left, something is wrong. Giving up.
+      // Unknown composite kind; give up.
       return true;
     }
   } while (Offset > 0);
@@ -752,14 +781,21 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
     if (Type *ElemTy = getPointeeType(KnownTy))
       maybeAssignPtrType(Ty, I, ElemTy, UnknownElemTypeI8);
   } else if (auto *Ref = dyn_cast<GlobalValue>(I)) {
-    Ty = deduceElementTypeByValueDeep(
-        Ref->getValueType(),
-        Ref->getNumOperands() > 0 ? Ref->getOperand(0) : nullptr, Visited,
-        UnknownElemTypeI8);
+    if (auto *Fn = dyn_cast<Function>(Ref)) {
+      Ty = SPIRV::getOriginalFunctionType(*Fn);
+      GR->addDeducedElementType(I, Ty);
+    } else {
+      Ty = deduceElementTypeByValueDeep(
+          Ref->getValueType(),
+          Ref->getNumOperands() > 0 ? Ref->getOperand(0) : nullptr, Visited,
+          UnknownElemTypeI8);
+    }
   } else if (auto *Ref = dyn_cast<AddrSpaceCastInst>(I)) {
     Type *RefTy = deduceElementTypeHelper(Ref->getPointerOperand(), Visited,
                                           UnknownElemTypeI8);
     maybeAssignPtrType(Ty, I, RefTy, UnknownElemTypeI8);
+  } else if (auto *Ref = dyn_cast<IntToPtrInst>(I)) {
+    maybeAssignPtrType(Ty, I, Ref->getDestTy(), UnknownElemTypeI8);
   } else if (auto *Ref = dyn_cast<BitCastInst>(I)) {
     if (Type *Src = Ref->getSrcTy(), *Dest = Ref->getDestTy();
         isPointerTy(Src) && isPointerTy(Dest))
@@ -828,13 +864,11 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
         if (Ty->isArrayTy())
           Ty = Ty->getArrayElementType();
         else {
-          TargetExtType *BufferTy = cast<TargetExtType>(Ty);
-          assert(BufferTy->getTargetExtName() == "spirv.Layout");
-          Ty = BufferTy->getTypeParameter(0);
           assert(Ty && Ty->isStructTy());
           uint32_t Index = cast<ConstantInt>(II->getOperand(1))->getZExtValue();
           Ty = cast<StructType>(Ty)->getElementType(Index);
         }
+        Ty = reconstitutePeeledArrayType(Ty);
       } else {
         llvm_unreachable("Unknown handle type for spv_resource_getpointer.");
       }
@@ -893,17 +927,16 @@ Type *SPIRVEmitIntrinsics::deduceNestedTypeHelper(
     bool Change = false;
     for (unsigned i = 0; i < U->getNumOperands(); ++i) {
       Value *Op = U->getOperand(i);
+      assert(Op && "Operands should not be null.");
       Type *OpTy = Op->getType();
       Type *Ty = OpTy;
-      if (Op) {
-        if (auto *PtrTy = dyn_cast<PointerType>(OpTy)) {
-          if (Type *NestedTy =
-                  deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8))
-            Ty = getTypedPointerWrapper(NestedTy, PtrTy->getAddressSpace());
-        } else {
-          Ty = deduceNestedTypeHelper(dyn_cast<User>(Op), OpTy, Visited,
-                                      UnknownElemTypeI8);
-        }
+      if (auto *PtrTy = dyn_cast<PointerType>(OpTy)) {
+        if (Type *NestedTy =
+                deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8))
+          Ty = getTypedPointerWrapper(NestedTy, PtrTy->getAddressSpace());
+      } else {
+        Ty = deduceNestedTypeHelper(dyn_cast<User>(Op), OpTy, Visited,
+                                    UnknownElemTypeI8);
       }
       Tys.push_back(Ty);
       Change |= Ty != OpTy;
@@ -1057,10 +1090,10 @@ void SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionPointer(
   if (!Op || !isPointerTy(Op->getType()))
     return;
   Ops.push_back(std::make_pair(Op, std::numeric_limits<unsigned>::max()));
-  FunctionType *FTy = CI->getFunctionType();
+  FunctionType *FTy = SPIRV::getOriginalFunctionType(*CI);
   bool IsNewFTy = false, IsIncomplete = false;
   SmallVector<Type *, 4> ArgTys;
-  for (Value *Arg : CI->args()) {
+  for (auto &&[ParmIdx, Arg] : llvm::enumerate(CI->args())) {
     Type *ArgTy = Arg->getType();
     if (ArgTy->isPointerTy()) {
       if (Type *ElemTy = GR->findDeducedElementType(Arg)) {
@@ -1071,6 +1104,8 @@ void SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionPointer(
       } else {
         IsIncomplete = true;
       }
+    } else {
+      ArgTy = FTy->getFunctionParamType(ParmIdx);
     }
     ArgTys.push_back(ArgTy);
   }
@@ -1386,19 +1421,19 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
       Constant *AggrConst = nullptr;
       Type *ResTy = nullptr;
       if (auto *COp = dyn_cast<ConstantVector>(Op)) {
-        AggrConst = cast<Constant>(COp);
+        AggrConst = COp;
         ResTy = COp->getType();
       } else if (auto *COp = dyn_cast<ConstantArray>(Op)) {
-        AggrConst = cast<Constant>(COp);
+        AggrConst = COp;
         ResTy = B.getInt32Ty();
       } else if (auto *COp = dyn_cast<ConstantStruct>(Op)) {
-        AggrConst = cast<Constant>(COp);
+        AggrConst = COp;
         ResTy = B.getInt32Ty();
       } else if (auto *COp = dyn_cast<ConstantDataArray>(Op)) {
-        AggrConst = cast<Constant>(COp);
+        AggrConst = COp;
         ResTy = B.getInt32Ty();
       } else if (auto *COp = dyn_cast<ConstantAggregateZero>(Op)) {
-        AggrConst = cast<Constant>(COp);
+        AggrConst = COp;
         ResTy = Op->getType()->isVectorTy() ? COp->getType() : B.getInt32Ty();
       }
       if (AggrConst) {
@@ -1533,19 +1568,18 @@ void SPIRVEmitIntrinsics::useRoundingMode(ConstrainedFPIntrinsic *FPI,
 
 Instruction *SPIRVEmitIntrinsics::visitSwitchInst(SwitchInst &I) {
   BasicBlock *ParentBB = I.getParent();
+  Function *F = ParentBB->getParent();
   IRBuilder<> B(ParentBB);
   B.SetInsertPoint(&I);
   SmallVector<Value *, 4> Args;
   SmallVector<BasicBlock *> BBCases;
-  for (auto &Op : I.operands()) {
-    if (Op.get()->getType()->isSized()) {
-      Args.push_back(Op);
-    } else if (BasicBlock *BB = dyn_cast<BasicBlock>(Op.get())) {
-      BBCases.push_back(BB);
-      Args.push_back(BlockAddress::get(BB->getParent(), BB));
-    } else {
-      report_fatal_error("Unexpected switch operand");
-    }
+  Args.push_back(I.getCondition());
+  BBCases.push_back(I.getDefaultDest());
+  Args.push_back(BlockAddress::get(F, I.getDefaultDest()));
+  for (auto &Case : I.cases()) {
+    Args.push_back(Case.getCaseValue());
+    BBCases.push_back(Case.getCaseSuccessor());
+    Args.push_back(BlockAddress::get(F, Case.getCaseSuccessor()));
   }
   CallInst *NewI = B.CreateIntrinsic(Intrinsic::spv_switch,
                                      {I.getOperand(0)->getType()}, {Args});
@@ -1564,16 +1598,57 @@ Instruction *SPIRVEmitIntrinsics::visitSwitchInst(SwitchInst &I) {
   return BrI;
 }
 
-Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
-  if (I.getSourceElementType() == IntegerType::getInt8Ty(CurrF->getContext()) &&
-      TM->getSubtargetImpl()->isLogicalSPIRV()) {
-    Instruction *Result = buildLogicalAccessChainFromGEP(I);
-    if (Result)
-      return Result;
+static bool isFirstIndexZero(const GetElementPtrInst *GEP) {
+  if (GEP->getNumIndices() == 0)
+    return false;
+  if (const auto *CI = dyn_cast<ConstantInt>(GEP->getOperand(1))) {
+    return CI->getZExtValue() == 0;
   }
+  return false;
+}
 
+Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
+
+  if (TM->getSubtargetImpl()->isLogicalSPIRV() && !isFirstIndexZero(&I)) {
+    // Logical SPIR-V cannot use the OpPtrAccessChain instruction. If the first
+    // index of the GEP is not 0, then we need to try to adjust it.
+    //
+    // If the GEP is doing byte addressing, try to rebuild the full access chain
+    // from the type of the pointer.
+    if (I.getSourceElementType() ==
+        IntegerType::getInt8Ty(CurrF->getContext())) {
+      return buildLogicalAccessChainFromGEP(I);
+    }
+
+    // Look for the array-to-pointer decay. If this is the pattern
+    // we can adjust the types, and prepend a 0 to the indices.
+    Value *PtrOp = I.getPointerOperand();
+    Type *SrcElemTy = I.getSourceElementType();
+    Type *DeducedPointeeTy = deduceElementType(PtrOp, true);
+
+    if (auto *ArrTy = dyn_cast<ArrayType>(DeducedPointeeTy)) {
+      if (ArrTy->getElementType() == SrcElemTy) {
+        SmallVector<Value *> NewIndices;
+        Type *FirstIdxType = I.getOperand(1)->getType();
+        NewIndices.push_back(ConstantInt::get(FirstIdxType, 0));
+        for (Value *Idx : I.indices())
+          NewIndices.push_back(Idx);
+
+        SmallVector<Type *, 2> Types = {I.getType(), I.getPointerOperandType()};
+        SmallVector<Value *, 4> Args;
+        Args.push_back(B.getInt1(I.isInBounds()));
+        Args.push_back(I.getPointerOperand());
+        Args.append(NewIndices.begin(), NewIndices.end());
+
+        auto *NewI = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
+        replaceAllUsesWithAndErase(B, &I, NewI);
+        return NewI;
+      }
+    }
+  }
+
   SmallVector<Type *, 2> Types = {I.getType(), I.getOperand(0)->getType()};
   SmallVector<Value *, 4> Args;
   Args.push_back(B.getInt1(I.isInBounds()));
@@ -1767,16 +1842,12 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
     Value *Pointer = GEPI->getPointerOperand();
     Type *OpTy = nullptr;
 
-    // Knowing the accessed type is mandatory for logical SPIR-V. Sadly,
-    // the GEP source element type should not be used for this purpose, and
-    // the alternative type-scavenging method is not working.
-    // Physical SPIR-V can work around this, but not logical, hence still
-    // try to rely on the broken type scavenging for logical.
-    bool IsRewrittenGEP =
-        GEPI->getSourceElementType() == IntegerType::getInt8Ty(I->getContext());
-    if (IsRewrittenGEP && TM->getSubtargetImpl()->isLogicalSPIRV()) {
-      Value *Src = getPointerRoot(Pointer);
-      OpTy = GR->findDeducedElementType(Src);
+    // Logical SPIR-V is not allowed to use Op*PtrAccessChain instructions. If
+    // the first index is 0, then we can trivially lower to OpAccessChain. If
+    // not we need to try to rewrite the GEP. We avoid adding a pointer cast at
+    // this time, and will rewrite the GEP when visiting it.
+    if (TM->getSubtargetImpl()->isLogicalSPIRV() && !isFirstIndexZero(GEPI)) {
+      return;
     }
 
     // In all cases, fall back to the GEP type if type scavenging failed.
@@ -1906,11 +1977,12 @@ Instruction *SPIRVEmitIntrinsics::visitInsertValueInst(InsertValueInst &I) {
   B.SetInsertPoint(&I);
   SmallVector<Type *, 1> Types = {I.getInsertedValueOperand()->getType()};
   SmallVector<Value *> Args;
-  for (auto &Op : I.operands())
-    if (isa<UndefValue>(Op))
-      Args.push_back(UndefValue::get(B.getInt32Ty()));
-    else
-      Args.push_back(Op);
+  Value *AggregateOp = I.getAggregateOperand();
+  if (isa<UndefValue>(AggregateOp))
+    Args.push_back(UndefValue::get(B.getInt32Ty()));
+  else
+    Args.push_back(AggregateOp);
+  Args.push_back(I.getInsertedValueOperand());
   for (auto &Op : I.indices())
     Args.push_back(B.getInt32(Op));
   Instruction *NewI =
@@ -2022,9 +2094,13 @@ Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
 
 void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
                                              IRBuilder<> &B) {
-  // Skip special artifical variable llvm.global.annotations.
-  if (GV.getName() == "llvm.global.annotations")
+  // Skip special artificial variables.
+  static const StringSet<> ArtificialGlobals{"llvm.global.annotations",
+                                             "llvm.compiler.used"};
+
+  if (ArtificialGlobals.contains(GV.getName()))
     return;
+
   Constant *Init = nullptr;
   if (hasInitializer(&GV)) {
     // Deduce element type and store results in Global Registry.
@@ -2138,7 +2214,9 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
   for (const auto &Op : I->operands()) {
     if (isa<ConstantPointerNull>(Op) || isa<UndefValue>(Op) ||
         // Check GetElementPtrConstantExpr case.
-        (isa<ConstantExpr>(Op) && isa<GEPOperator>(Op))) {
+        (isa<ConstantExpr>(Op) &&
+         (isa<GEPOperator>(Op) ||
+          (cast<ConstantExpr>(Op)->getOpcode() == CastInst::IntToPtr)))) {
       setInsertPointSkippingPhis(B, I);
       Type *OpTy = Op->getType();
       if (isa<UndefValue>(Op) && OpTy->isAggregateType()) {
@@ -2242,6 +2320,198 @@ void SPIRVEmitIntrinsics::insertSpirvDecorations(Instruction *I,
     B.CreateIntrinsic(Intrinsic::spv_assign_fpmaxerror_decoration,
                       {I->getType()},
                       {I, MetadataAsValue::get(I->getContext(), MD)});
+  }
+}
+
+static SPIRV::FPFastMathDefaultInfoVector &getOrCreateFPFastMathDefaultInfoVec(
+    const Module &M,
+    DenseMap<Function *, SPIRV::FPFastMathDefaultInfoVector>
+        &FPFastMathDefaultInfoMap,
+    Function *F) {
+  auto it = FPFastMathDefaultInfoMap.find(F);
+  if (it != FPFastMathDefaultInfoMap.end())
+    return it->second;
+
+  // If the map does not contain the entry, create a new one. Initialize it to
+  // contain all 3 elements sorted by bit width of target type: {half, float,
+  // double}.
+  SPIRV::FPFastMathDefaultInfoVector FPFastMathDefaultInfoVec;
+  FPFastMathDefaultInfoVec.emplace_back(Type::getHalfTy(M.getContext()),
+                                        SPIRV::FPFastMathMode::None);
+  FPFastMathDefaultInfoVec.emplace_back(Type::getFloatTy(M.getContext()),
+                                        SPIRV::FPFastMathMode::None);
+  FPFastMathDefaultInfoVec.emplace_back(Type::getDoubleTy(M.getContext()),
+                                        SPIRV::FPFastMathMode::None);
+  return FPFastMathDefaultInfoMap[F] = std::move(FPFastMathDefaultInfoVec);
+}
+
+static SPIRV::FPFastMathDefaultInfo &getFPFastMathDefaultInfo(
+    SPIRV::FPFastMathDefaultInfoVector &FPFastMathDefaultInfoVec,
+    const Type *Ty) {
+  size_t BitWidth = Ty->getScalarSizeInBits();
+  int Index =
+      SPIRV::FPFastMathDefaultInfoVector::computeFPFastMathDefaultInfoVecIndex(
+          BitWidth);
+  assert(Index >= 0 && Index < 3 &&
+         "Expected FPFastMathDefaultInfo for half, float, or double");
+  assert(FPFastMathDefaultInfoVec.size() == 3 &&
+         "Expected FPFastMathDefaultInfoVec to have exactly 3 elements");
+  return FPFastMathDefaultInfoVec[Index];
+}
+
+void SPIRVEmitIntrinsics::insertConstantsForFPFastMathDefault(Module &M) {
+  const SPIRVSubtarget *ST = TM->getSubtargetImpl();
+  if (!ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2))
+    return;
+
+  // Store the FPFastMathDefaultInfo in the FPFastMathDefaultInfoMap.
+  // We need the entry point (function) as the key, and the target
+  // type and flags as the value.
+  // We also need to check ContractionOff and SignedZeroInfNanPreserve
+  // execution modes, as they are now deprecated and must be replaced
+  // with FPFastMathDefaultInfo.
+  auto Node = M.getNamedMetadata("spirv.ExecutionMode");
+  if (!Node) {
+    if (!M.getNamedMetadata("opencl.enable.FP_CONTRACT")) {
+      // This requires emitting ContractionOff. However, because
+      // ContractionOff is now deprecated, we need to replace it with
+      // FPFastMathDefaultInfo with FP Fast Math Mode bitmask set to all 0.
+      // We need to create the constant for that.
+
+      // Create constant instruction with the bitmask flags.
+      Constant *InitValue =
+          ConstantInt::get(Type::getInt32Ty(M.getContext()), 0);
+      // TODO: Reuse constant if there is one already with the required
+      // value.
+      [[maybe_unused]] GlobalVariable *GV =
+          new GlobalVariable(M,                                // Module
+                             Type::getInt32Ty(M.getContext()), // Type
+                             true,                             // isConstant
+                             GlobalValue::InternalLinkage,     // Linkage
+                             InitValue                         // Initializer
+          );
+    }
+    return;
+  }
+
+  // The table maps function pointers to their default FP fast math info. It
+  // can be assumed that the SmallVector is sorted by the bit width of the
+  // type. The first element is the smallest bit width, and the last element
+  // is the largest bit width, therefore, we will have {half, float, double}
+  // in the order of their bit widths.
+  DenseMap<Function *, SPIRV::FPFastMathDefaultInfoVector>
+      FPFastMathDefaultInfoMap;
+
+  for (unsigned i = 0; i < Node->getNumOperands(); i++) {
+    MDNode *MDN = cast<MDNode>(Node->getOperand(i));
+    assert(MDN->getNumOperands() >= 2 && "Expected at least 2 operands");
+    Function *F = cast<Function>(
+        cast<ConstantAsMetadata>(MDN->getOperand(0))->getValue());
+    const auto EM =
+        cast<ConstantInt>(
+            cast<ConstantAsMetadata>(MDN->getOperand(1))->getValue())
+            ->getZExtValue();
+    if (EM == SPIRV::ExecutionMode::FPFastMathDefault) {
+      assert(MDN->getNumOperands() == 4 &&
+             "Expected 4 operands for FPFastMathDefault");
+      const Type *T = cast<ValueAsMetadata>(MDN->getOperand(2))->getType();
+      unsigned Flags =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>(MDN->getOperand(3))->getValue())
+              ->getZExtValue();
+      SPIRV::FPFastMathDefaultInfoVector &FPFastMathDefaultInfoVec =
+          getOrCreateFPFastMathDefaultInfoVec(M, FPFastMathDefaultInfoMap, F);
+      SPIRV::FPFastMathDefaultInfo &Info =
+          getFPFastMathDefaultInfo(FPFastMathDefaultInfoVec, T);
+      Info.FastMathFlags = Flags;
+      Info.FPFastMathDefault = true;
+    } else if (EM == SPIRV::ExecutionMode::ContractionOff) {
+      assert(MDN->getNumOperands() == 2 &&
+             "Expected no operands for ContractionOff");
+
+      // We need to save this info for every possible FP type, i.e. {half,
+      // float, double, fp128}.
+      SPIRV::FPFastMathDefaultInfoVector &FPFastMathDefaultInfoVec =
+          getOrCreateFPFastMathDefaultInfoVec(M, FPFastMathDefaultInfoMap, F);
+      for (SPIRV::FPFastMathDefaultInfo &Info : FPFastMathDefaultInfoVec) {
+        Info.ContractionOff = true;
+      }
+    } else if (EM == SPIRV::ExecutionMode::SignedZeroInfNanPreserve) {
+      assert(MDN->getNumOperands() == 3 &&
+             "Expected 1 operand for SignedZeroInfNanPreserve");
+      unsigned TargetWidth =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>(MDN->getOperand(2))->getValue())
+              ->getZExtValue();
+      // We need to save this info only for the FP type with TargetWidth.
+      SPIRV::FPFastMathDefaultInfoVector &FPFastMathDefaultInfoVec =
+          getOrCreateFPFastMathDefaultInfoVec(M, FPFastMathDefaultInfoMap, F);
+      int Index = SPIRV::FPFastMathDefaultInfoVector::
+          computeFPFastMathDefaultInfoVecIndex(TargetWidth);
+      assert(Index >= 0 && Index < 3 &&
+             "Expected FPFastMathDefaultInfo for half, float, or double");
+      assert(FPFastMathDefaultInfoVec.size() == 3 &&
+             "Expected FPFastMathDefaultInfoVec to have exactly 3 elements");
+      FPFastMathDefaultInfoVec[Index].SignedZeroInfNanPreserve = true;
+    }
+  }
+
+  std::unordered_map<unsigned, GlobalVariable *> GlobalVars;
+  for (auto &[Func, FPFastMathDefaultInfoVec] : FPFastMathDefaultInfoMap) {
+    if (FPFastMathDefaultInfoVec.empty())
+      continue;
+
+    for (const SPIRV::FPFastMathDefaultInfo &Info : FPFastMathDefaultInfoVec) {
+      assert(Info.Ty && "Expected target type for FPFastMathDefaultInfo");
+      // Skip if none of the execution modes was used.
+      unsigned Flags = Info.FastMathFlags;
+      if (Flags == SPIRV::FPFastMathMode::None && !Info.ContractionOff &&
+          !Info.SignedZeroInfNanPreserve && !Info.FPFastMathDefault)
+        continue;
+
+      // Check if flags are compatible.
+      if (Info.ContractionOff && (Flags & SPIRV::FPFastMathMode::AllowContract))
+        report_fatal_error("Conflicting FPFastMathFlags: ContractionOff "
+                           "and AllowContract");
+
+      if (Info.SignedZeroInfNanPreserve &&
+          !(Flags &
+            (SPIRV::FPFastMathMode::NotNaN | SPIRV::FPFastMathMode::NotInf |
+             SPIRV::FPFastMathMode::NSZ))) {
+        if (Info.FPFastMathDefault)
+          report_fatal_error("Conflicting FPFastMathFlags: "
+                             "SignedZeroInfNanPreserve but at least one of "
+                             "NotNaN/NotInf/NSZ is enabled.");
+      }
+
+      if ((Flags & SPIRV::FPFastMathMode::AllowTransform) &&
+          !((Flags & SPIRV::FPFastMathMode::AllowReassoc) &&
+            (Flags & SPIRV::FPFastMathMode::AllowContract))) {
+        report_fatal_error("Conflicting FPFastMathFlags: "
+                           "AllowTransform requires AllowReassoc and "
+                           "AllowContract to be set.");
+      }
+
+      auto it = GlobalVars.find(Flags);
+      GlobalVariable *GV = nullptr;
+      if (it != GlobalVars.end()) {
+        // Reuse existing global variable.
+        GV = it->second;
+      } else {
+        // Create constant instruction with the bitmask flags.
+        Constant *InitValue =
+            ConstantInt::get(Type::getInt32Ty(M.getContext()), Flags);
+        // TODO: Reuse constant if there is one already with the required
+        // value.
+        GV = new GlobalVariable(M,                                // Module
+                                Type::getInt32Ty(M.getContext()), // Type
+                                true,                             // isConstant
+                                GlobalValue::InternalLinkage,     // Linkage
+                                InitValue                         // Initializer
+        );
+        GlobalVars[Flags] = GV;
+      }
+    }
   }
 }
 
@@ -2561,6 +2831,28 @@ void SPIRVEmitIntrinsics::applyDemangledPtrArgTypes(IRBuilder<> &B) {
   }
 }
 
+GetElementPtrInst *
+SPIRVEmitIntrinsics::simplifyZeroLengthArrayGepInst(GetElementPtrInst *GEP) {
+  // getelementptr [0 x T], P, 0 (zero), I -> getelementptr T, P, I.
+  // If type is 0-length array and first index is 0 (zero), drop both the
+  // 0-length array type and the first index. This is a common pattern in
+  // the IR, e.g. when using a zero-length array as a placeholder for a
+  // flexible array such as unbound arrays.
+  assert(GEP && "GEP is null");
+  Type *SrcTy = GEP->getSourceElementType();
+  SmallVector<Value *, 8> Indices(GEP->indices());
+  ArrayType *ArrTy = dyn_cast<ArrayType>(SrcTy);
+  if (ArrTy && ArrTy->getNumElements() == 0 &&
+      PatternMatch::match(Indices[0], PatternMatch::m_Zero())) {
+    Indices.erase(Indices.begin());
+    SrcTy = ArrTy->getElementType();
+    return GetElementPtrInst::Create(SrcTy, GEP->getPointerOperand(), Indices,
+                                     GEP->getNoWrapFlags(), "",
+                                     GEP->getIterator());
+  }
+  return nullptr;
+}
+
 bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   if (Func.isDeclaration())
     return false;
@@ -2578,19 +2870,34 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   AggrConstTypes.clear();
   AggrStores.clear();
 
-  // fix GEP result types ahead of inference
+  // Fix GEP result types ahead of inference, and simplify if possible.
+  // Data structure for dead instructions that were simplified and replaced.
+  SmallPtrSet<Instruction *, 4> DeadInsts;
   for (auto &I : instructions(Func)) {
     auto *Ref = dyn_cast<GetElementPtrInst>(&I);
     if (!Ref || GR->findDeducedElementType(Ref))
       continue;
+
+    GetElementPtrInst *NewGEP = simplifyZeroLengthArrayGepInst(Ref);
+    if (NewGEP) {
+      Ref->replaceAllUsesWith(NewGEP);
+      DeadInsts.insert(Ref);
+      Ref = NewGEP;
+    }
     if (Type *GepTy = getGEPType(Ref))
       GR->addDeducedElementType(Ref, normalizeType(GepTy));
+  }
+  // Remove dead instructions that were simplified and replaced.
+  for (auto *I : DeadInsts) {
+    assert(I->use_empty() && "Dead instruction should not have any uses left");
+    I->eraseFromParent();
   }
 
   processParamTypesByFunHeader(CurrF, B);
 
-  // StoreInst's operand type can be changed during the next transformations,
-  // so we need to store it in the set. Also store already transformed types.
+  // StoreInst's operand type can be changed during the next
+  // transformations, so we need to store it in the set. Also store already
+  // transformed types.
   for (auto &I : instructions(Func)) {
     StoreInst *SI = dyn_cast<StoreInst>(&I);
     if (!SI)
@@ -2637,8 +2944,8 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   for (auto &I : llvm::reverse(instructions(Func)))
     deduceOperandElementType(&I, &IncompleteRets);
 
-  // Pass forward for PHIs only, their operands are not preceed the instruction
-  // in meaning of `instructions(Func)`.
+  // Pass forward for PHIs only, their operands are not preceed the
+  // instruction in meaning of `instructions(Func)`.
   for (BasicBlock &BB : Func)
     for (PHINode &Phi : BB.phis())
       if (isPointerTy(Phi.getType()))
@@ -2648,8 +2955,8 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     TrackConstants = true;
     if (!I->getType()->isVoidTy() || isa<StoreInst>(I))
       setInsertPointAfterDef(B, I);
-    // Visitors return either the original/newly created instruction for further
-    // processing, nullptr otherwise.
+    // Visitors return either the original/newly created instruction for
+    // further processing, nullptr otherwise.
     I = visit(*I);
     if (!I)
       continue;
@@ -2772,6 +3079,7 @@ bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
   bool Changed = false;
 
   parseFunDeclarations(M);
+  insertConstantsForFPFastMathDefault(M);
 
   TodoType.clear();
   for (auto &F : M)

@@ -68,7 +68,6 @@ public:
     uint32_t fdeVARel;
   };
 
-  SmallVector<FdeData, 0> getFdeData() const;
   ArrayRef<CieRecord *> getCieRecords() const { return cieRecords; }
   template <class ELFT>
   void iterateFDEWithLSDA(llvm::function_ref<void(InputSection &)> fn);
@@ -78,21 +77,14 @@ private:
   // allocating one for each EhInputSection.
   llvm::DenseMap<size_t, CieRecord *> offsetToCie;
 
-  uint64_t size = 0;
-
-  template <class ELFT, class RelTy>
-  void addRecords(EhInputSection *s, llvm::ArrayRef<RelTy> rels);
-  template <class ELFT> void addSectionAux(EhInputSection *s);
-  template <class ELFT, class RelTy>
-  void iterateFDEWithLSDAAux(EhInputSection &sec, ArrayRef<RelTy> rels,
+  template <llvm::endianness E> void addRecords(EhInputSection *s);
+  template <class ELFT>
+  void iterateFDEWithLSDAAux(EhInputSection &sec,
                              llvm::DenseSet<size_t> &ciesWithLSDA,
                              llvm::function_ref<void(InputSection &)> fn);
 
-  template <class ELFT, class RelTy>
-  CieRecord *addCie(EhSectionPiece &piece, ArrayRef<RelTy> rels);
-
-  template <class ELFT, class RelTy>
-  Defined *isFdeLive(EhSectionPiece &piece, ArrayRef<RelTy> rels);
+  CieRecord *addCie(EhSectionPiece &piece, ArrayRef<Relocation> rels);
+  Defined *isFdeLive(EhSectionPiece &piece, ArrayRef<Relocation> rels);
 
   uint64_t getFdePc(uint8_t *buf, size_t off, uint8_t enc) const;
 
@@ -100,6 +92,17 @@ private:
 
   // CIE records are uniquified by their contents and personality functions.
   llvm::DenseMap<std::pair<ArrayRef<uint8_t>, Symbol *>, CieRecord *> cieMap;
+};
+
+// .eh_frame_hdr contains a binary search table for .eh_frame FDEs. The section
+// is covered by a PT_GNU_EH_FRAME segment, which allows the runtime unwinder to
+// locate it via functions like `dl_iterate_phdr`.
+class EhFrameHeader final : public SyntheticSection {
+public:
+  EhFrameHeader(Ctx &);
+  void writeTo(uint8_t *buf) override;
+  size_t getSize() const override;
+  bool isNeeded() const override;
 };
 
 class GotSection final : public SyntheticSection {
@@ -132,7 +135,6 @@ public:
 protected:
   size_t numEntries = 0;
   uint32_t tlsIndexOff = -1;
-  uint64_t size = 0;
   struct AuthEntryInfo {
     size_t offset;
     bool isSymbolFunc;
@@ -187,7 +189,6 @@ public:
   static bool classof(const SectionBase *s) {
     return isa<SyntheticSection>(s) && cast<SyntheticSection>(s)->bss;
   }
-  uint64_t size;
 };
 
 class MipsGotSection final : public SyntheticSection {
@@ -317,8 +318,6 @@ private:
   // Number of "Header" entries.
   static const unsigned headerEntriesNum = 2;
 
-  uint64_t size = 0;
-
   // Symbol and addend.
   using GotEntry = std::pair<Symbol *, int64_t>;
 
@@ -412,8 +411,6 @@ public:
 private:
   const bool dynamic;
 
-  uint64_t size = 0;
-
   llvm::DenseMap<llvm::CachedHashStringRef, unsigned> stringMap;
   SmallVector<StringRef, 0> strings;
 };
@@ -480,7 +477,6 @@ public:
 
 private:
   std::vector<std::pair<int32_t, uint64_t>> computeContents();
-  uint64_t size = 0;
 };
 
 class RelocationBaseSection : public SyntheticSection {
@@ -784,11 +780,9 @@ public:
   void writeTo(uint8_t *buf) override {}
 };
 
-class RandomizePaddingSection final : public SyntheticSection {
-  uint64_t size;
-
+class PaddingSection final : public SyntheticSection {
 public:
-  RandomizePaddingSection(Ctx &ctx, uint64_t size, OutputSection *parent);
+  PaddingSection(Ctx &ctx, uint64_t amount, OutputSection *parent);
   size_t getSize() const override { return size; }
   void writeTo(uint8_t *buf) override;
 };
@@ -981,24 +975,6 @@ private:
   SmallVector<GdbSymbol, 0> symbols;
 
   size_t size;
-};
-
-// --eh-frame-hdr option tells linker to construct a header for all the
-// .eh_frame sections. This header is placed to a section named .eh_frame_hdr
-// and also to a PT_GNU_EH_FRAME segment.
-// At runtime the unwinder then can find all the PT_GNU_EH_FRAME segments by
-// calling dl_iterate_phdr.
-// This section contains a lookup table for quick binary search of FDEs.
-// Detailed info about internals can be found in Ian Lance Taylor's blog:
-// http://www.airs.com/blog/archives/460 (".eh_frame")
-// http://www.airs.com/blog/archives/462 (".eh_frame_hdr")
-class EhFrameHeader final : public SyntheticSection {
-public:
-  EhFrameHeader(Ctx &);
-  void write();
-  void writeTo(uint8_t *buf) override;
-  size_t getSize() const override;
-  bool isNeeded() const override;
 };
 
 // For more information about .gnu.version and .gnu.version_r see:

@@ -16,6 +16,7 @@
 
 using namespace mlir;
 using namespace presburger;
+using ::testing::ElementsAre;
 
 TEST(IntegerRelationTest, getDomainAndRangeSet) {
   IntegerRelation rel = parseRelationFromSet(
@@ -701,4 +702,41 @@ TEST(IntegerRelationTest, rangeProductSymbols) {
       1);
 
   EXPECT_TRUE(expected.isEqual(rangeProd));
+}
+
+TEST(IntegerRelationTest, getVarKindRange) {
+  IntegerRelation r1 = parseRelationFromSet(
+      "(i1, i2, i3, i4, i5) : (i1 >= 0, i2 >= 0, i3 >= 0, i4 >= 0, i5 >= 0)",
+      2);
+  SmallVector<unsigned> actual;
+  for (unsigned var : r1.iterVarKind(VarKind::Range)) {
+    actual.push_back(var);
+  }
+  EXPECT_THAT(actual, ElementsAre(2, 3, 4));
+}
+
+TEST(IntegerRelationTest, addLocalModulo) {
+  IntegerRelation rel = parseRelationFromSet("(x) : (x >= 0, 100 - x >= 0)", 1);
+  unsigned result = rel.addLocalModulo({1, 0}, 32); // x % 32
+  rel.convertVarKind(VarKind::Local,
+                     result - rel.getVarKindOffset(VarKind::Local),
+                     rel.getNumVarKind(VarKind::Local), VarKind::Range);
+  for (unsigned x = 0; x <= 100; ++x) {
+    EXPECT_TRUE(rel.containsPointNoLocal({x, x % 32}));
+  }
+}
+
+TEST(IntegerRelationTest, simplify) {
+  IntegerRelation rel =
+      parseRelationFromSet("(x, y, z): (2*x + y - 4*z - 3 == 0, "
+                           "3*x - y - 3*z + 2 == 0, x + 3*y - 5*z - 8 == 0,"
+                           "x - y + z >= 0)",
+                           2);
+  IntegerRelation copy = rel;
+  rel.simplify();
+
+  EXPECT_TRUE(rel.isEqual(copy));
+  // The third equality is redundant and should be removed.
+  // It can be obtained from 2 times the first equality minus the second.
+  EXPECT_TRUE(rel.getNumEqualities() == 2);
 }

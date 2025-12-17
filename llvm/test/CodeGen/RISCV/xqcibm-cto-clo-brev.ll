@@ -6,21 +6,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zbb,experimental-xqcibm -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32ZBBXQCIBM
 
-declare i8 @llvm.cttz.i8(i8, i1)
-declare i16 @llvm.cttz.i16(i16, i1)
-declare i32 @llvm.cttz.i32(i32, i1)
-declare i64 @llvm.cttz.i64(i64, i1)
-
-declare i8 @llvm.ctlz.i8(i8, i1)
-declare i16 @llvm.ctlz.i16(i16, i1)
-declare i32 @llvm.ctlz.i32(i32, i1)
-declare i64 @llvm.ctlz.i64(i64, i1)
-
-declare i8 @llvm.bitreverse.i8(i8)
-declare i16 @llvm.bitreverse.i16(i16)
-declare i32 @llvm.bitreverse.i32(i32)
-declare i64 @llvm.bitreverse.i64(i64)
-
 define i8 @test_cttz_i8(i8 %a) nounwind {
 ; RV32I-LABEL: test_cttz_i8:
 ; RV32I:       # %bb.0:
@@ -171,8 +156,8 @@ define i64 @test_cttz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:  # %bb.1: # %cond.false
 ; RV32I-NEXT:    neg a0, s2
 ; RV32I-NEXT:    and a0, s2, a0
-; RV32I-NEXT:    lui a1, 30667
-; RV32I-NEXT:    addi s1, a1, 1329
+; RV32I-NEXT:    lui s1, 30667
+; RV32I-NEXT:    addi s1, s1, 1329
 ; RV32I-NEXT:    mv a1, s1
 ; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    mv s0, a0
@@ -190,16 +175,14 @@ define i64 @test_cttz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    addi a0, a0, 32
 ; RV32I-NEXT:    j .LBB3_5
 ; RV32I-NEXT:  .LBB3_3:
-; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    li a0, 64
-; RV32I-NEXT:    j .LBB3_6
+; RV32I-NEXT:    j .LBB3_5
 ; RV32I-NEXT:  .LBB3_4:
 ; RV32I-NEXT:    srli s0, s0, 27
 ; RV32I-NEXT:    add s0, s4, s0
 ; RV32I-NEXT:    lbu a0, 0(s0)
-; RV32I-NEXT:  .LBB3_5: # %cond.false
+; RV32I-NEXT:  .LBB3_5: # %cond.end
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:  .LBB3_6: # %cond.end
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -364,8 +347,8 @@ define i64 @test_cttz_i64_zero_undef(i64 %a) nounwind {
 ; RV32I-NEXT:    not s4, a0
 ; RV32I-NEXT:    neg a0, s4
 ; RV32I-NEXT:    and a0, s4, a0
-; RV32I-NEXT:    lui a1, 30667
-; RV32I-NEXT:    addi s1, a1, 1329
+; RV32I-NEXT:    lui s1, 30667
+; RV32I-NEXT:    addi s1, s1, 1329
 ; RV32I-NEXT:    mv a1, s1
 ; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    mv s0, a0
@@ -641,8 +624,8 @@ define i64 @test_ctlz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB11_3:
-; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    li a0, 64
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB11_4:
 ; RV32I-NEXT:    srli a4, a3, 1

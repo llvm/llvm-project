@@ -1,4 +1,5 @@
 // RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-cf -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-cf="allow-pattern-rollback=0" -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func @simple_std_for_loop(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 //  CHECK-NEXT:  cf.br ^bb1(%{{.*}} : index)
@@ -13,6 +14,24 @@
 //  CHECK-NEXT:    return
 func.func @simple_std_for_loop(%arg0 : index, %arg1 : index, %arg2 : index) {
   scf.for %i0 = %arg0 to %arg1 step %arg2 {
+    %c1 = arith.constant 1 : index
+  }
+  return
+}
+
+// CHECK-LABEL: func @unsigned_loop(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
+//  CHECK-NEXT:  cf.br ^bb1(%{{.*}} : index)
+//  CHECK-NEXT:  ^bb1(%{{.*}}: index):    // 2 preds: ^bb0, ^bb2
+//  CHECK-NEXT:    %{{.*}} = arith.cmpi ult, %{{.*}}, %{{.*}} : index
+//  CHECK-NEXT:    cf.cond_br %{{.*}}, ^bb2, ^bb3
+//  CHECK-NEXT:  ^bb2:   // pred: ^bb1
+//  CHECK-NEXT:    %{{.*}} = arith.constant 1 : index
+//  CHECK-NEXT:    %[[iv:.*]] = arith.addi %{{.*}}, %{{.*}} : index
+//  CHECK-NEXT:    cf.br ^bb1(%[[iv]] : index)
+//  CHECK-NEXT:  ^bb3:   // pred: ^bb1
+//  CHECK-NEXT:    return
+func.func @unsigned_loop(%arg0 : index, %arg1 : index, %arg2 : index) {
+  scf.for unsigned %i0 = %arg0 to %arg1 step %arg2 {
     %c1 = arith.constant 1 : index
   }
   return

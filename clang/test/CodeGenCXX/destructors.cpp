@@ -308,7 +308,7 @@ namespace test5 {
   // CHECK5:      [[ELEMS:%.*]] = alloca [5 x [[A:%.*]]], align
   // CHECK5v03-NEXT: [[EXN:%.*]] = alloca ptr
   // CHECK5v03-NEXT: [[SEL:%.*]] = alloca i32
-  // CHECK5-NEXT: call void @llvm.lifetime.start.p0(i64 5, ptr [[ELEMS]])
+  // CHECK5-NEXT: call void @llvm.lifetime.start.p0(ptr [[ELEMS]])
   // CHECK5-NEXT: [[BEGIN:%.*]] = getelementptr inbounds [5 x [[A]]], ptr [[ELEMS]], i32 0, i32 0
   // CHECK5-NEXT: [[END:%.*]] = getelementptr inbounds [[A]], ptr [[BEGIN]], i64 5
   // CHECK5-NEXT: br label
@@ -482,24 +482,24 @@ namespace test11 {
 
 // CHECK6: {{^}}invoke.cont
 // CHECK6: call void @_ZN6test112S1D1Ev(ptr {{[^,]*}} [[T1]])
-// CHECK6: call void @llvm.lifetime.end.p0(i64 32, ptr [[T1]])
+// CHECK6: call void @llvm.lifetime.end.p0(ptr [[T1]])
 // CHECK6: {{^}}lpad
 // CHECK6: call void @_ZN6test112S1D1Ev(ptr {{[^,]*}} [[T1]])
-// CHECK6: call void @llvm.lifetime.end.p0(i64 32, ptr [[T1]])
+// CHECK6: call void @llvm.lifetime.end.p0(ptr [[T1]])
 
 // CHECK6: {{^}}invoke.cont
 // CHECK6: call void @_ZN6test112S1D1Ev(ptr {{[^,]*}} [[T2]])
-// CHECK6: call void @llvm.lifetime.end.p0(i64 32, ptr [[T2]])
+// CHECK6: call void @llvm.lifetime.end.p0(ptr [[T2]])
 // CHECK6: {{^}}lpad
 // CHECK6: call void @_ZN6test112S1D1Ev(ptr {{[^,]*}} [[T2]])
-// CHECK6: call void @llvm.lifetime.end.p0(i64 32, ptr [[T2]])
+// CHECK6: call void @llvm.lifetime.end.p0(ptr [[T2]])
 
 // CHECK6: {{^}}invoke.cont
 // CHECK6: call void @_ZN6test112S1D1Ev(ptr {{[^,]*}} [[T3]])
-// CHECK6: call void @llvm.lifetime.end.p0(i64 32, ptr [[T3]])
+// CHECK6: call void @llvm.lifetime.end.p0(ptr [[T3]])
 // CHECK6: {{^}}lpad
 // CHECK6: call void @_ZN6test112S1D1Ev(ptr {{[^,]*}} [[T3]])
-// CHECK6: call void @llvm.lifetime.end.p0(i64 32, ptr [[T3]])
+// CHECK6: call void @llvm.lifetime.end.p0(ptr [[T3]])
 
   struct S1 {
     ~S1();
