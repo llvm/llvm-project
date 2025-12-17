@@ -28,6 +28,26 @@ using namespace llvm::object;
 
 namespace {
 
+/// A MemoryBuffer that shares ownership of the underlying memory.
+/// This allows multiple OffloadBinary instances to share the same buffer.
+class SharedMemoryBuffer : public MemoryBuffer {
+public:
+  SharedMemoryBuffer(std::shared_ptr<MemoryBuffer> Buf)
+      : SharedBuf(std::move(Buf)) {
+    init(SharedBuf->getBufferStart(), SharedBuf->getBufferEnd(),
+         /*RequiresNullTerminator=*/false);
+  }
+
+  BufferKind getBufferKind() const override { return MemoryBuffer_Malloc; }
+
+  StringRef getBufferIdentifier() const override {
+    return SharedBuf->getBufferIdentifier();
+  }
+
+private:
+  const std::shared_ptr<MemoryBuffer> SharedBuf;
+};
+
 /// Attempts to extract all the embedded device images contained inside the
 /// buffer \p Contents. The buffer is expected to contain a valid offloading
 /// binary format.
@@ -57,10 +77,15 @@ Error extractOffloadFiles(MemoryBufferRef Contents,
     auto BinariesOrErr = OffloadBinary::create(*BufferCopy);
     if (!BinariesOrErr)
       return BinariesOrErr.takeError();
+
+    // Share ownership among multiple OffloadFiles.
+    std::shared_ptr<MemoryBuffer> SharedBuffer =
+        std::shared_ptr<MemoryBuffer>(std::move(BufferCopy));
+
     for (auto &Binary : *BinariesOrErr) {
-      std::unique_ptr<MemoryBuffer> BufferClone = MemoryBuffer::getMemBuffer(
-          BufferCopy->getBuffer(), BufferCopy->getBufferIdentifier());
-      Binaries.emplace_back(std::move(Binary), std::move(BufferClone));
+      std::unique_ptr<SharedMemoryBuffer> SharedBufferPtr =
+          std::make_unique<SharedMemoryBuffer>(SharedBuffer);
+      Binaries.emplace_back(std::move(Binary), std::move(SharedBufferPtr));
     }
 
     Offset += Header->Size;
