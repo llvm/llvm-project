@@ -96,8 +96,6 @@ void TimeSubtractionCheck::registerMatchers(MatchFinder *Finder) {
     const std::string TimeInverse = (llvm::Twine("ToUnix") + ScaleName).str();
     std::optional<DurationScale> Scale = getScaleForTimeInverse(TimeInverse);
     assert(Scale && "Unknown scale encountered");
-    if (!Scale)
-      continue;
 
     auto TimeInverseMatcher = callExpr(callee(
         functionDecl(hasName((llvm::Twine("::absl::") + TimeInverse).str()))
