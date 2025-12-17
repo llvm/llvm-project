@@ -25,9 +25,9 @@ RT_EXT_API_GROUP_BEGIN
 
 int RTDEF(CUFAllocatableAllocateSync)(Descriptor &desc, int64_t *stream,
     bool *pinned, bool hasStat, const Descriptor *errMsg,
-    const char *sourceFile, int sourceLine) {
-  int stat{RTNAME(CUFAllocatableAllocate)(
-      desc, stream, pinned, hasStat, errMsg, sourceFile, sourceLine)};
+    const char *sourceFile, int sourceLine, bool deviceInit) {
+  int stat{RTNAME(CUFAllocatableAllocate)(desc, stream, pinned, hasStat, errMsg,
+      sourceFile, sourceLine, deviceInit)};
 #ifndef RT_DEVICE_COMPILATION
   // Descriptor synchronization is only done when the allocation is done
   // from the host.
@@ -43,10 +43,10 @@ int RTDEF(CUFAllocatableAllocateSync)(Descriptor &desc, int64_t *stream,
 
 int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, int64_t *stream,
     bool *pinned, bool hasStat, const Descriptor *errMsg,
-    const char *sourceFile, int sourceLine) {
+    const char *sourceFile, int sourceLine, bool deviceInit) {
   // Perform the standard allocation.
-  int stat{RTNAME(AllocatableAllocate)(
-      desc, stream, hasStat, errMsg, sourceFile, sourceLine)};
+  int stat{RTNAME(AllocatableAllocate)(desc, stream, hasStat, errMsg,
+      sourceFile, sourceLine, deviceInit ? &MemmoveHostToDevice : nullptr)};
   if (pinned) {
     // Set pinned according to stat. More infrastructre is needed to set it
     // closer to the actual allocation call.
