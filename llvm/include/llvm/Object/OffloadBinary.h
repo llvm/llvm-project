@@ -208,9 +208,9 @@ public:
               std::unique_ptr<MemoryBuffer> Buffer)
       : OwningBinary<OffloadBinary>(std::move(Binary), std::move(Buffer)) {}
 
-  /// Make a copy of this offloading file.
+  /// Make a deep copy of this offloading file.
   OffloadFile copy() const {
-    std::unique_ptr<MemoryBuffer> Buffer = MemoryBuffer::getMemBuffer(
+    std::unique_ptr<MemoryBuffer> Buffer = MemoryBuffer::getMemBufferCopy(
         getBinary()->getMemoryBufferRef().getBuffer(),
         getBinary()->getMemoryBufferRef().getBufferIdentifier());
 
