@@ -1,4 +1,4 @@
-//===-- Implementation of vprintf -------------------------------*- C++ -*-===//
+//===-- Implementation of vfprintf for baremetal ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/vprintf.h"
+#include "src/stdio/vfprintf.h"
 
-#include "hdr/stdio_macros.h"
+#include "hdr/types/FILE.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
@@ -18,13 +18,14 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, vprintf,
-                   (const char *__restrict format, va_list vlist)) {
+LLVM_LIBC_FUNCTION(int, vfprintf,
+                   (::FILE *__restrict stream, const char *__restrict format,
+                    va_list vlist)) {
   internal::ArgList args(vlist); // This holder class allows for easier copying
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
 
-  return vfprintf_internal(stdout, format, args);
+  return vfprintf_internal(stream, format, args);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
