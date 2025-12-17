@@ -21,61 +21,38 @@ typedef HRESULT(WINAPI *CreatePseudoConsole_t)(COORD size, HANDLE hInput,
                                                HANDLE hOutput, DWORD dwFlags,
                                                HPCON *phPC);
 
-typedef HRESULT(WINAPI *ResizePseudoConsole_t)(HPCON hPC, COORD size);
-
 typedef VOID(WINAPI *ClosePseudoConsole_t)(HPCON hPC);
 
-class ConPTY {
-public:
-  static bool Initialize() {
-    std::lock_guard<std::mutex> guard(m_initialized_mutex);
-
-    if (!m_initialized) {
-      m_initialized = true;
-
-      HMODULE hMod = LoadLibraryW(L"kernel32.dll");
-      if (!hMod) {
-        return false;
-      }
-
-      pCreate =
-          (CreatePseudoConsole_t)GetProcAddress(hMod, "CreatePseudoConsole");
-      pClose = (ClosePseudoConsole_t)GetProcAddress(hMod, "ClosePseudoConsole");
-
-      m_success = (pCreate && pClose);
-    }
-
-    return m_success;
+struct Kernel32 {
+  Kernel32() {
+    hModule = LoadLibraryW(L"kernel32.dll");
+    CreatePseudoConsole_ =
+        (CreatePseudoConsole_t)GetProcAddress(hModule, "CreatePseudoConsole");
+    ClosePseudoConsole_ =
+        (ClosePseudoConsole_t)GetProcAddress(hModule, "ClosePseudoConsole");
+    isAvailable = (CreatePseudoConsole_ && ClosePseudoConsole_);
   }
 
-  static bool IsAvailable() { return Initialize(); }
-
-  static CreatePseudoConsole_t Create() {
-    Initialize();
-    return pCreate;
+  HRESULT CreatePseudoConsole(COORD size, HANDLE hInput, HANDLE hOutput,
+                              DWORD dwFlags, HPCON *phPC) {
+    return CreatePseudoConsole_(size, hInput, hOutput, dwFlags, phPC);
   }
 
-  static ClosePseudoConsole_t Close() {
-    Initialize();
-    return pClose;
-  }
+  VOID ClosePseudoConsole(HPCON hPC) { return ClosePseudoConsole_(hPC); }
+
+  bool IsAvailable() { return isAvailable; }
 
 private:
-  static CreatePseudoConsole_t pCreate;
-  static ClosePseudoConsole_t pClose;
-  static std::mutex m_initialized_mutex;
-  static bool m_initialized;
-  static bool m_success;
+  HMODULE hModule;
+  CreatePseudoConsole_t CreatePseudoConsole_;
+  ClosePseudoConsole_t ClosePseudoConsole_;
+  bool isAvailable;
 };
 
-CreatePseudoConsole_t ConPTY::pCreate = nullptr;
-ClosePseudoConsole_t ConPTY::pClose = nullptr;
-std::mutex ConPTY::m_initialized_mutex{};
-bool ConPTY::m_initialized = false;
-bool ConPTY::m_success = false;
+static Kernel32 kernel32;
 
 llvm::Error PseudoConsole::OpenPseudoConsole() {
-  if (!ConPTY::IsAvailable())
+  if (!kernel32.IsAvailable())
     return llvm::make_error<llvm::StringError>("ConPTY is not available",
                                                llvm::errc::io_error);
   HRESULT hr;
@@ -102,7 +79,8 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
 
   COORD consoleSize{80, 25};
   HPCON hPC = INVALID_HANDLE_VALUE;
-  hr = ConPTY::Create()(consoleSize, hInputRead, hOutputWrite, 0, &hPC);
+  hr = kernel32.CreatePseudoConsole(consoleSize, hInputRead, hOutputWrite, 0,
+                                    &hPC);
   CloseHandle(hInputRead);
   CloseHandle(hOutputWrite);
 
@@ -126,7 +104,7 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
 
 void PseudoConsole::Close() {
   if (m_conpty_handle != INVALID_HANDLE_VALUE)
-    ConPTY::Close()(m_conpty_handle);
+    kernel32.ClosePseudoConsole(m_conpty_handle);
   CloseHandle(m_conpty_input);
   CloseHandle(m_conpty_output);
   m_conpty_handle = INVALID_HANDLE_VALUE;
