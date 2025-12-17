@@ -604,7 +604,7 @@ private:
     if (BraceOpenLine[0]->Last->isNot(TT_NamespaceLBrace))
       return 0;
 
-    if ((BraceOpenLine, E) <= 2)
+    if (std::distance(BraceOpenLine, E) <= 2)
       return 0;
 
     if (BraceOpenLine[0]->Last->is(tok::comment))
