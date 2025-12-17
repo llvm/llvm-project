@@ -55,7 +55,7 @@ StandaloneDiagnostic::StandaloneDiagnostic(const LangOptions &LangOpts,
 
 StoredDiagnostic
 translateStandaloneDiag(FileManager &FileMgr, SourceManager &SrcMgr,
-                        const StandaloneDiagnostic &StandaloneDiag,
+                        StandaloneDiagnostic StandaloneDiag,
                         llvm::StringMap<SourceLocation> &SrcLocCache) {
   const auto FileRef = FileMgr.getOptionalFileRef(StandaloneDiag.Filename);
   if (!FileRef)
@@ -77,7 +77,7 @@ translateStandaloneDiag(FileManager &FileMgr, SourceManager &SrcMgr,
 
     if (FileLoc.isInvalid())
       return StoredDiagnostic(StandaloneDiag.Level, StandaloneDiag.ID,
-                              StandaloneDiag.Message);
+                              std::move(StandaloneDiag.Message));
 
     SrcLocCache[StandaloneDiag.Filename] = FileLoc;
   }
@@ -100,9 +100,9 @@ translateStandaloneDiag(FileManager &FileMgr, SourceManager &SrcMgr,
 
   SmallVector<FixItHint, 2> TranslatedFixIts;
   TranslatedFixIts.reserve(StandaloneDiag.FixIts.size());
-  for (const auto &FixIt : StandaloneDiag.FixIts) {
+  for (auto &FixIt : StandaloneDiag.FixIts) {
     FixItHint TranslatedFixIt;
-    TranslatedFixIt.CodeToInsert = FixIt.CodeToInsert;
+    TranslatedFixIt.CodeToInsert = std::move(FixIt.CodeToInsert);
     TranslatedFixIt.RemoveRange = ConvertOffsetRange(FixIt.RemoveRange);
     TranslatedFixIt.InsertFromRange = ConvertOffsetRange(FixIt.InsertFromRange);
     TranslatedFixIt.BeforePreviousInsertions = FixIt.BeforePreviousInsertions;
@@ -110,8 +110,8 @@ translateStandaloneDiag(FileManager &FileMgr, SourceManager &SrcMgr,
   }
 
   return StoredDiagnostic(StandaloneDiag.Level, StandaloneDiag.ID,
-                          StandaloneDiag.Message, Loc, TranslatedRanges,
-                          TranslatedFixIts);
+                          std::move(StandaloneDiag.Message), Loc,
+                          TranslatedRanges, TranslatedFixIts);
 }
 
 } // namespace clang

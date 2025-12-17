@@ -74,7 +74,7 @@ struct StandaloneDiagnostic {
 /// StandaloneDiagnostics themselfs cannot be emitted directly.
 StoredDiagnostic
 translateStandaloneDiag(FileManager &FileMgr, SourceManager &SrcMgr,
-                        const StandaloneDiagnostic &StandaloneDiag,
+                        StandaloneDiagnostic StandaloneDiag,
                         llvm::StringMap<SourceLocation> &SrcLocCache);
 
 } // namespace clang
