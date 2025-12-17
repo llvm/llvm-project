@@ -39,7 +39,7 @@ int main() {
   // clang-format off
   // CHECK: omptarget --> Entry  0: Base=0x{{0*}}[[DAT_HST_PTR_BASE:.*]], Begin=0x{{0*}}[[DAT_HST_PTR_BASE]], Size=288, Type=0x{{0*}}1, Name=unknown
   // CHECK: omptarget --> Entry  1: Base=0x{{0*}}[[DATUM_HST_PTEE_BASE:.*]], Begin=0x{{0*}}[[DATUM_HST_PTEE_BASE]], Size=40, Type=0x{{0*}}1, Name=unknown
-  // CHECK: omptarget --> Entry  2: Base=0x{{0*}}[[DAT_HST_PTR_BASE]], Begin=0x[[DATUM_HST_PTEE_BASE]], Size=8, Type=0x{{0*}}4000, Name=unknown
+  // CHECK: omptarget --> Entry  2: Base=0x{{0*}}[[DAT_HST_PTR_BASE]], Begin=0x{{0*}}[[DATUM_HST_PTEE_BASE]], Size=8, Type=0x{{0*}}4000, Name=unknown
   // CHECK: omptarget --> Entry  3: Base=0x{{0*}}[[MORE_DATUM_HST_PTEE_BASE:.*]], Begin=0x{{0*}}[[MORE_DATUM_HST_PTEE_BASE]], Size=80, Type=0x{{0*}}1, Name=unknown
   // CHECK: omptarget --> Entry  4: Base=0x{{0*}}[[MORE_DATUM_HST_PTR_BASE:.*]], Begin=0x{{0*}}[[MORE_DATUM_HST_PTEE_BASE]], Size=8, Type=0x{{0*}}4000, Name=unknown
   // clang-format on
