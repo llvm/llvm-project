@@ -8251,8 +8251,7 @@ SDValue TargetLowering::expandFunnelShift(SDNode *Node,
     if (isNonZeroModBitWidthOrUndef(Z, BW)) {
       // fshl X, Y, Z -> fshr X, Y, -Z
       // fshr X, Y, Z -> fshl X, Y, -Z
-      SDValue Zero = DAG.getConstant(0, DL, ShVT);
-      Z = DAG.getNode(ISD::SUB, DL, VT, Zero, Z);
+      Z = DAG.getNegative(Z, DL, ShVT);
     } else {
       // fshl X, Y, Z -> fshr (srl X, 1), (fshr X, Y, 1), ~Z
       // fshr X, Y, Z -> fshl (fshl X, Y, 1), (shl Y, 1), ~Z
