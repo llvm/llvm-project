@@ -202,7 +202,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
     CmdArgs.push_back("-fstack-arrays");
 
   // -fno-protect-parens is the default for -Ofast.
-  if (Args.hasFlag(options::OPT_fprotect_parens, options::OPT_fno_protect_parens,
+  if (Args.hasFlag(options::OPT_fprotect_parens,
+                   options::OPT_fno_protect_parens,
                    /*Default=*/!Args.hasArg(options::OPT_Ofast)))
     CmdArgs.push_back("-fprotect-parens");
   else
