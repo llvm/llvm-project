@@ -413,13 +413,6 @@ bool CGObjCRuntime::canMessageReceiverBeNull(
   return true;
 }
 
-bool CGObjCRuntime::canClassObjectBeUnrealized(
-    const ObjCInterfaceDecl *CalleeClassDecl, CodeGenFunction &CGF) const {
-  // TODO
-  // Otherwise, assume it can be unrealized.
-  return true;
-}
-
 bool CGObjCRuntime::isWeakLinkedClass(const ObjCInterfaceDecl *ID) {
   do {
     if (ID->isWeakImported())

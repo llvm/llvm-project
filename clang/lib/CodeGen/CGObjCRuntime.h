@@ -329,16 +329,6 @@ public:
                                 const ObjCInterfaceDecl *classReceiver,
                                 llvm::Value *receiver);
 
-  /// Check if a class object can be unrealized (not yet initialized).
-  /// Returns true if the class may be unrealized, false if provably realized.
-  ///
-  /// TODO: Returns false if:
-  /// - An instance method on the same class was called in a dominating path
-  /// - The class was explicitly realized earlier in control flow
-  /// - Note: [Parent foo] does NOT realize Child (inheritance care needed)
-  virtual bool canClassObjectBeUnrealized(const ObjCInterfaceDecl *ClassDecl,
-                                          CodeGenFunction &CGF) const;
-
   static bool isWeakLinkedClass(const ObjCInterfaceDecl *cls);
 
   /// Destroy the callee-destroyed arguments of the given method,
