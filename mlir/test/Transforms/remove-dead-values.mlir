@@ -688,6 +688,25 @@ func.func @dead_value_loop_ivs_no_result(%lb: index, %ub: index, %step: index, %
 
 // -----
 
+// This test verifies that the induction variable in affine.for with constant
+// bounds is not deleted. This is a regression test for a bug where affine.for
+// with constant bounds (no operands for lb/ub/step) would have its IV deleted
+// because visitBranchOperand() was never called (no non-forwarded operands).
+
+// CHECK-LABEL: func @affine_for_iv_constant_bounds
+// CHECK: affine.for %{{.*}} = 0 to 1024 iter_args(%{{.*}} = %{{.*}}) -> (i32)
+func.func @affine_for_iv_constant_bounds() -> i32 {
+  %c1_i32 = arith.constant 1 : i32
+  %c0_i32 = arith.constant 0 : i32
+  %0 = affine.for %iv = 0 to 1024 iter_args(%arg = %c0_i32) -> (i32) {
+    %1 = arith.addi %arg, %c1_i32 : i32
+    affine.yield %1 : i32
+  }
+  return %0 : i32
+}
+
+// -----
+
 // CHECK-LABEL: func @op_block_have_dead_arg
 func.func @op_block_have_dead_arg(%arg0: index, %arg1: index, %arg2: i1) {
   scf.execute_region {

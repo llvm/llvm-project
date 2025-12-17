@@ -17,6 +17,7 @@
 #include <mlir/IR/Operation.h>
 #include <mlir/IR/Value.h>
 #include <mlir/Interfaces/CallInterfaces.h>
+#include <mlir/Interfaces/ControlFlowInterfaces.h>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <mlir/Support/LLVM.h>
 
@@ -166,25 +167,6 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
           blocks.push_back(&block);
       }
     }
-
-    // In the block of the successor block argument of RegionBranchOpInterface,
-    // there may be arguments of RegionBranchOpInterface, such as the IV of
-    // scf.forOp. Explicitly set this argument to live.
-    for (Region &region : op->getRegions()) {
-      SmallVector<RegionSuccessor> successors;
-      regionBranchOp.getSuccessorRegions(region, successors);
-      for (RegionSuccessor successor : successors) {
-        if (successor.isParent())
-          continue;
-        auto arguments = successor.getSuccessor()->getArguments();
-        ValueRange regionInputs = successor.getSuccessorInputs();
-        for (auto argument : arguments) {
-          if (llvm::find(regionInputs, argument) == regionInputs.end()) {
-            argumentNotOperand.push_back(argument);
-          }
-        }
-      }
-    }
   } else if (isa<BranchOpInterface>(op)) {
     // We cannot track all successor blocks of the branch operation(More
     // specifically, it's the successor's successor). Additionally, different
@@ -327,28 +309,60 @@ RunLivenessAnalysis::RunLivenessAnalysis(Operation *op) {
   solver.load<LivenessAnalysis>(symbolTable);
   LDBG() << "Initializing and running solver";
   (void)solver.initializeAndRun(op);
+
   LDBG() << "RunLivenessAnalysis initialized for op: " << op->getName()
-         << " check on unreachable code now:";
-  // The framework doesn't visit operations in dead blocks, so we need to
-  // explicitly mark them as dead.
+         << ", post-processing values:";
+  // Post-process the analysis results in a single walk:
+  //
+  // 1. Mark non-successor-input block arguments as live. These are arguments
+  //    like induction variables (IVs) that are implicitly defined by the op
+  //    rather than forwarded from operands. For example, affine.for encodes
+  //    its bounds in affine maps rather than as SSA operands, so the IV is
+  //    not a successor input and must be explicitly marked live here.
+  //
+  // 2. Create dead states for values in unreachable blocks. The dataflow
+  //    framework doesn't visit operations in dead blocks, so we must
+  //    explicitly handle them here.
   op->walk([&](Operation *op) {
-    for (auto result : llvm::enumerate(op->getResults())) {
-      if (getLiveness(result.value()))
+    // (1) Handle RegionBranchOpInterface: mark non-successor-input args live.
+    if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
+      SmallVector<RegionSuccessor> successors;
+      regionBranchOp.getSuccessorRegions(RegionBranchPoint::parent(),
+                                         successors);
+      for (RegionSuccessor &successor : successors) {
+        Region *successorRegion = successor.getSuccessor();
+        if (!successorRegion || successorRegion->empty())
+          continue;
+        Block &entryBlock = successorRegion->front();
+        ValueRange inputs = successor.getSuccessorInputs();
+        for (BlockArgument arg : entryBlock.getArguments()) {
+          if (llvm::find(inputs, arg) == inputs.end()) {
+            LDBG() << "Marking non-successor-input block argument live: "
+                   << arg;
+            (void)solver.getOrCreateState<Liveness>(arg)->markLive();
+          }
+        }
+      }
+    }
+
+    // (2) Handle unreachable code: create dead states for unvisited values.
+    for (OpResult result : op->getResults()) {
+      if (getLiveness(result))
         continue;
-      LDBG() << "Result: " << result.index() << " of "
+      LDBG() << "Result " << result.getResultNumber() << " of "
              << OpWithFlags(op, OpPrintingFlags().skipRegions())
              << " has no liveness info (unreachable), mark dead";
-      solver.getOrCreateState<Liveness>(result.value());
+      solver.getOrCreateState<Liveness>(result);
     }
-    for (auto &region : op->getRegions()) {
-      for (auto &block : region) {
-        for (auto blockArg : llvm::enumerate(block.getArguments())) {
-          if (getLiveness(blockArg.value()))
+    for (Region &region : op->getRegions()) {
+      for (Block &block : region) {
+        for (BlockArgument blockArg : block.getArguments()) {
+          if (getLiveness(blockArg))
             continue;
-          LDBG() << "Block argument: " << blockArg.index() << " of "
+          LDBG() << "Block argument " << blockArg.getArgNumber() << " of "
                  << OpWithFlags(op, OpPrintingFlags().skipRegions())
                  << " has no liveness info, mark dead";
-          solver.getOrCreateState<Liveness>(blockArg.value());
+          solver.getOrCreateState<Liveness>(blockArg);
         }
       }
     }
