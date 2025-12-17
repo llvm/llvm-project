@@ -173,6 +173,8 @@ def SetOpLayoutAttrOp : Op<Transform_Dialect, "xegpu.set_op_layout_attr", [
       return getMixedValues(getStaticInstData(), getInstData(), b);
     }
   }];
+
+  let hasVerifier = 1;
 }
 
 def SetGPULaunchThreadsOp

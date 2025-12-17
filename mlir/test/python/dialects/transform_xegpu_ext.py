@@ -103,11 +103,11 @@ def setOpLayoutAttrOperandMinimal():
     # CHECK-LABEL: TEST: setOpLayoutAttr
     # CHECK: transform.xegpu.set_op_layout_attr %
     # CHECK: operand
-    # NO-CHECK: index = 0
-    # NO-CHECK: result
+    # CHECK-NOT: index = 0
+    # CHECK-NOT: result
     # CHECK: sg_layout = [6, 4]
     # CHECK: sg_data = [32, 16]
-    # NO-CHECK: inst_data
+    # CHECK-NOT: inst_data
 
 
 @run
@@ -130,7 +130,7 @@ def setOpLayoutAttrResult():
     # CHECK-LABEL: TEST: setOpLayoutAttrResult
     # CHECK: transform.xegpu.set_op_layout_attr %
     # CHECK: result
-    # NO-CHECK: index = 0
+    # CHECK-NOT: index = 0
     # CHECK: sg_layout = [6, 4]
     # CHECK: sg_data = [32, 16]
     # CHECK: inst_data = [8, 16]
@@ -157,7 +157,7 @@ def setOpLayoutAttrResultSlice():
     # CHECK-LABEL: TEST: setOpLayoutAttrResultSlice
     # CHECK: transform.xegpu.set_op_layout_attr %
     # CHECK: result
-    # NO-CHECK: index = 0
+    # CHECK-NOT: index = 0
     # CHECK: sg_layout = [6, 4]
     # CHECK: sg_data = [32, 16]
     # CHECK: inst_data = [8, 16]
@@ -182,9 +182,9 @@ def setOpLayoutAttrAnchor():
         transform.YieldOp()
     # CHECK-LABEL: TEST: setOpLayoutAttrAnchor
     # CHECK: transform.xegpu.set_op_layout_attr %
-    # NO-CHECK: result
-    # NO-CHECK: operand
-    # NO-CHECK: index = 0
+    # CHECK-NOT: result
+    # CHECK-NOT: operand
+    # CHECK-NOT: index = 0
     # CHECK: sg_layout = [6, 4]
     # CHECK: sg_data = [32, 16]
     # CHECK: inst_data = [8, 16]

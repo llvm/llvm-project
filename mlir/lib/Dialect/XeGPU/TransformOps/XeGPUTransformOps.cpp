@@ -325,11 +325,6 @@ transform::SetOpLayoutAttrOp::apply(transform::TransformRewriter &rewriter,
   bool resultTarget = getResult();
   bool operandTarget = getOperand();
 
-  if (resultTarget && operandTarget) {
-    return emitSilenceableFailure(getLoc())
-           << "Cannot set both result and operand layout attributes.";
-  }
-
   int64_t index = getIndex();
   if (resultTarget && index >= target->getNumResults()) {
     return emitSilenceableFailure(getLoc())
@@ -386,6 +381,13 @@ void transform::SetOpLayoutAttrOp::getEffects(
   onlyReadsHandle(getSgDataMutable(), effects);
   onlyReadsHandle(getInstDataMutable(), effects);
   modifiesPayload(effects);
+}
+
+LogicalResult transform::SetOpLayoutAttrOp::verify() {
+  if (getResult() && getOperand()) {
+    return emitOpError("Cannot set both result and operand simultaneously.");
+  }
+  return success();
 }
 
 void transform::SetGPULaunchThreadsOp::build(
