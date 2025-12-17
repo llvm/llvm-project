@@ -6,7 +6,7 @@ SUBROUTINE LINEAR_GOOD(N)
   INTEGER N, i, j, a, b(10)
   !$omp target
   !$omp teams
-  !$omp distribute parallel do simd linear(i) 
+  !$omp distribute parallel do simd linear(i)
   do i = 1, N
      a = 3.14
   enddo
@@ -21,7 +21,7 @@ SUBROUTINE LINEAR_BAD(N)
   !$omp target
   !$omp teams
   !ERROR: Variable 'j' not allowed in LINEAR clause, only loop iterator can be specified in LINEAR clause of a construct combined with DISTRIBUTE
-  !$omp distribute parallel do simd linear(j) 
+  !$omp distribute parallel do simd linear(j)
   do i = 1, N
       a = 3.14
   enddo
@@ -39,7 +39,7 @@ SUBROUTINE LINEAR_BAD(N)
   enddo
   !$omp end distribute parallel do simd
   !$omp end teams
-  !$omp end target 
+  !$omp end target
 
   !$omp target
   !$omp teams
@@ -51,7 +51,7 @@ SUBROUTINE LINEAR_BAD(N)
   enddo
   !$omp end distribute parallel do simd
   !$omp end teams
-  !$omp end target 
+  !$omp end target
 
   !WARNING: `DISTRIBUTE` must be dynamically enclosed in a `TEAMS` region.
   !ERROR: Variable 'j' not allowed in LINEAR clause, only loop iterator can be specified in LINEAR clause of a construct combined with DISTRIBUTE
