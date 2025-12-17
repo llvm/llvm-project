@@ -341,6 +341,11 @@ hsa_status_t asan_hsa_amd_vmem_address_reserve_align(void** ptr, size_t size,
                                                      BufferedStackTrace* stack);
 hsa_status_t asan_hsa_amd_vmem_address_free(void* ptr, size_t size,
                                             BufferedStackTrace* stack);
+hsa_status_t asan_hsa_amd_pointer_info(const void* ptr,
+                                       hsa_amd_pointer_info_t* info,
+                                       void* (*alloc)(size_t),
+                                       uint32_t* num_agents_accessible,
+                                       hsa_agent_t** accessible);
 } // namespace __asan
 #endif
 

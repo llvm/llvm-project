@@ -913,6 +913,15 @@ INTERCEPTOR(hsa_status_t, hsa_amd_vmem_address_free, void* ptr, size_t size) {
   return asan_hsa_amd_vmem_address_free(ptr, size, &stack);
 }
 
+INTERCEPTOR(hsa_status_t, hsa_amd_pointer_info, const void* ptr,
+            hsa_amd_pointer_info_t* info, void* (*alloc)(size_t),
+            uint32_t* num_agents_accessible, hsa_agent_t** accessible) {
+  AsanInitFromRtl();
+  ENSURE_HSA_INITED();
+  return asan_hsa_amd_pointer_info(ptr, info, alloc, num_agents_accessible,
+                                   accessible);
+}
+
 void InitializeAmdgpuInterceptors() {
   ASAN_INTERCEPT_FUNC(hsa_memory_copy);
   ASAN_INTERCEPT_FUNC(hsa_amd_memory_pool_allocate);
@@ -927,6 +936,7 @@ void InitializeAmdgpuInterceptors() {
   ASAN_INTERCEPT_FUNC(hsa_amd_ipc_memory_detach);
   ASAN_INTERCEPT_FUNC(hsa_amd_vmem_address_reserve_align);
   ASAN_INTERCEPT_FUNC(hsa_amd_vmem_address_free);
+  ASAN_INTERCEPT_FUNC(hsa_amd_pointer_info);
 }
 
 void ENSURE_HSA_INITED() {

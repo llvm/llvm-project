@@ -1399,7 +1399,10 @@ DECLARE_REAL(hsa_status_t, hsa_amd_ipc_memory_attach,
 DECLARE_REAL(hsa_status_t, hsa_amd_ipc_memory_detach, void *mapped_ptr)
 DECLARE_REAL(hsa_status_t, hsa_amd_vmem_address_reserve_align, void** ptr,
              size_t size, uint64_t address, uint64_t alignment, uint64_t flags)
-DECLARE_REAL(hsa_status_t, hsa_amd_vmem_address_free, void* ptr, size_t size);
+DECLARE_REAL(hsa_status_t, hsa_amd_vmem_address_free, void* ptr, size_t size)
+DECLARE_REAL(hsa_status_t, hsa_amd_pointer_info, const void* ptr,
+             hsa_amd_pointer_info_t* info, void* (*alloc)(size_t),
+             uint32_t* num_agents_accessible, hsa_agent_t** accessible)
 
 namespace __asan {
 
@@ -1452,18 +1455,22 @@ static struct AP64<LocalAddressSpaceView> AP_;
 static struct AP32<LocalAddressSpaceView> AP_;
 #endif
 
-hsa_status_t asan_hsa_amd_ipc_memory_create(void *ptr, size_t len,
-  hsa_amd_ipc_memory_t * handle) {
-  void *ptr_;
-  size_t len_ = get_allocator().GetActuallyAllocatedSize(ptr);
-  if (len_) {
+hsa_status_t asan_hsa_amd_ipc_memory_create(void* ptr, size_t len,
+                                            hsa_amd_ipc_memory_t* handle) {
+  void* ptr_ = get_allocator().GetBlockBegin(ptr);
+  AsanChunk* m = ptr_
+                     ? instance.GetAsanChunkByAddr(reinterpret_cast<uptr>(ptr_))
+                     : nullptr;
+  if (ptr_ && m) {
     static_assert(AP_.kMetadataSize == 0, "Expression below requires this");
-    ptr_ = reinterpret_cast<void *>(reinterpret_cast<uptr>(ptr) - kPageSize_);
-  } else {
-    ptr_ = ptr;
-    len_ = len;
+    uptr p = reinterpret_cast<uptr>(ptr);
+    uptr p_ = reinterpret_cast<uptr>(ptr_);
+    if (p == p_ + kPageSize_ && len == m->UsedSize()) {
+      size_t len_ = get_allocator().GetActuallyAllocatedSize(ptr_);
+      return REAL(hsa_amd_ipc_memory_create)(ptr_, len_, handle);
+    }
   }
-  return REAL(hsa_amd_ipc_memory_create)(ptr_, len_, handle);
+  return REAL(hsa_amd_ipc_memory_create)(ptr, len, handle);
 }
 
 hsa_status_t asan_hsa_amd_ipc_memory_attach(const hsa_amd_ipc_memory_t *handle,
@@ -1540,5 +1547,36 @@ hsa_status_t asan_hsa_amd_vmem_address_free(void* ptr, size_t size,
   }
   return REAL(hsa_amd_vmem_address_free)(ptr, size);
 }
+
+hsa_status_t asan_hsa_amd_pointer_info(const void* ptr,
+                                       hsa_amd_pointer_info_t* info,
+                                       void* (*alloc)(size_t),
+                                       uint32_t* num_agents_accessible,
+                                       hsa_agent_t** accessible) {
+  void* ptr_ = get_allocator().GetBlockBegin(ptr);
+  AsanChunk* m = ptr_
+                     ? instance.GetAsanChunkByAddr(reinterpret_cast<uptr>(ptr_))
+                     : nullptr;
+  if (ptr_ && m) {
+    hsa_status_t status = REAL(hsa_amd_pointer_info)(
+        ptr_, info, alloc, num_agents_accessible, accessible);
+    if (status == HSA_STATUS_SUCCESS && info) {
+      static_assert(AP_.kMetadataSize == 0, "Expression below requires this");
+      // Adjust base address of agent,host and sizeInBytes so as to return
+      // the actual pointer information of user allocation rather than asan
+      // allocation. Asan allocation pointer info can be acquired using internal
+      // 'GetPointerInfo'
+      info->agentBaseAddress = reinterpret_cast<void*>(
+          reinterpret_cast<uptr>(info->agentBaseAddress) + kPageSize_);
+      info->hostBaseAddress = reinterpret_cast<void*>(
+          reinterpret_cast<uptr>(info->hostBaseAddress) + kPageSize_);
+      info->sizeInBytes = m->UsedSize();
+    }
+    return status;
+  }
+  return REAL(hsa_amd_pointer_info)(ptr, info, alloc, num_agents_accessible,
+                                    accessible);
+}
+
 }  // namespace __asan
 #endif
