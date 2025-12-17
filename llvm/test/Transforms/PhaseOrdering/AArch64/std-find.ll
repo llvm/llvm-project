@@ -90,7 +90,7 @@ define i64 @std_find_i16_constant_offset_no_assumptions(ptr %first.coerce, i16 n
 ; CHECK-NEXT:    [[CMP_NOT_I_I:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[COERCE_VAL_IP]]
 ; CHECK-NEXT:    br i1 [[CMP_NOT_I_I]], label %[[RETURN]], label %[[LOOP_HEADER]]
 ; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    [[MERGE_PH:%.*]] = phi ptr [ [[COERCE_VAL_IP]], %[[LOOP_LATCH]] ], [ [[PTR_IV]], %[[LOOP_HEADER]] ]
+; CHECK-NEXT:    [[MERGE_PH:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[COERCE_VAL_IP]], %[[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[DOTPRE:%.*]] = ptrtoint ptr [[MERGE_PH]] to i64
 ; CHECK-NEXT:    ret i64 [[DOTPRE]]
 ;
