@@ -10,6 +10,7 @@
 
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 namespace mlir {
@@ -18,15 +19,18 @@ namespace mlir {
 // Helper Functions
 //===----------------------------------------------------------------------===//
 
+/// Note that these functions don't take a `SymbolTable` because GPU module
+/// lowerings can have name collisions as an intermediate state.
+
 /// Find or create an external function declaration in the given module.
-LLVM::LLVMFuncOp getOrDefineFunction(gpu::GPUModuleOp moduleOp, Location loc,
+LLVM::LLVMFuncOp getOrDefineFunction(Operation *moduleOp, Location loc,
                                      OpBuilder &b, StringRef name,
                                      LLVM::LLVMFunctionType type);
 
 /// Create a global that contains the given string. If a global with the same
 /// string already exists in the module, return that global.
 LLVM::GlobalOp getOrCreateStringConstant(OpBuilder &b, Location loc,
-                                         gpu::GPUModuleOp moduleOp, Type llvmI8,
+                                         Operation *moduleOp, Type llvmI8,
                                          StringRef namePrefix, StringRef str,
                                          uint64_t alignment = 0,
                                          unsigned addrSpace = 0);
@@ -43,8 +47,9 @@ struct GPUDynamicSharedMemoryOpLowering
   using ConvertOpToLLVMPattern<
       gpu::DynamicSharedMemoryOp>::ConvertOpToLLVMPattern;
   GPUDynamicSharedMemoryOpLowering(const LLVMTypeConverter &converter,
-                                   unsigned alignmentBit = 0)
-      : ConvertOpToLLVMPattern<gpu::DynamicSharedMemoryOp>(converter),
+                                   unsigned alignmentBit = 0,
+                                   PatternBenefit benefit = 1)
+      : ConvertOpToLLVMPattern<gpu::DynamicSharedMemoryOp>(converter, benefit),
         alignmentBit(alignmentBit) {}
 
   LogicalResult
@@ -81,8 +86,9 @@ struct GPUFuncOpLoweringOptions {
 
 struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
   GPUFuncOpLowering(const LLVMTypeConverter &converter,
-                    const GPUFuncOpLoweringOptions &options)
-      : ConvertOpToLLVMPattern<gpu::GPUFuncOp>(converter),
+                    const GPUFuncOpLoweringOptions &options,
+                    PatternBenefit benefit = 1)
+      : ConvertOpToLLVMPattern<gpu::GPUFuncOp>(converter, benefit),
         allocaAddrSpace(options.allocaAddrSpace),
         workgroupAddrSpace(options.workgroupAddrSpace),
         kernelAttributeName(options.kernelAttributeName),
@@ -137,13 +143,23 @@ struct GPUPrintfOpToHIPLowering : public ConvertOpToLLVMPattern<gpu::PrintfOp> {
 /// This pass will add a declaration of printf() to the GPUModule if needed
 /// and separate out the format strings into global constants. For some
 /// runtimes, such as OpenCL on AMD, this is sufficient setup, as the compiler
-/// will lower printf calls to appropriate device-side code
+/// will lower printf calls to appropriate device-side code.
+/// However not all backends use the same calling convention and function
+/// naming.
+/// For example, the LLVM SPIRV backend requires calling convention
+/// LLVM::cconv::CConv::SPIR_FUNC and function name needs to be
+/// mangled as "_Z6printfPU3AS2Kcz".
+/// Default callingConvention is LLVM::cconv::CConv::C and
+/// funcName is "printf" but they can be customized as needed.
 struct GPUPrintfOpToLLVMCallLowering
     : public ConvertOpToLLVMPattern<gpu::PrintfOp> {
-  GPUPrintfOpToLLVMCallLowering(const LLVMTypeConverter &converter,
-                                int addressSpace = 0)
+  GPUPrintfOpToLLVMCallLowering(
+      const LLVMTypeConverter &converter, int addressSpace = 0,
+      LLVM::cconv::CConv callingConvention = LLVM::cconv::CConv::C,
+      StringRef funcName = "printf")
       : ConvertOpToLLVMPattern<gpu::PrintfOp>(converter),
-        addressSpace(addressSpace) {}
+        addressSpace(addressSpace), callingConvention(callingConvention),
+        funcName(funcName) {}
 
   LogicalResult
   matchAndRewrite(gpu::PrintfOp gpuPrintfOp, gpu::PrintfOpAdaptor adaptor,
@@ -151,6 +167,8 @@ struct GPUPrintfOpToLLVMCallLowering
 
 private:
   int addressSpace;
+  LLVM::cconv::CConv callingConvention;
+  StringRef funcName;
 };
 
 /// Lowering of gpu.printf to a vprintf standard library.
@@ -172,13 +190,13 @@ struct GPUReturnOpLowering : public ConvertOpToLLVMPattern<gpu::ReturnOp> {
 };
 
 namespace impl {
-/// Unrolls op if it's operating on vectors.
+/// Unrolls op to array/vector elements.
 LogicalResult scalarizeVectorOp(Operation *op, ValueRange operands,
                                 ConversionPatternRewriter &rewriter,
                                 const LLVMTypeConverter &converter);
 } // namespace impl
 
-/// Rewriting that unrolls SourceOp to scalars if it's operating on vectors.
+/// Unrolls SourceOp to array/vector elements.
 template <typename SourceOp>
 struct ScalarizeVectorOpLowering : public ConvertOpToLLVMPattern<SourceOp> {
 public:
@@ -191,6 +209,7 @@ public:
                                    *this->getTypeConverter());
   }
 };
+
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_GPUCOMMON_GPUOPSLOWERING_H_

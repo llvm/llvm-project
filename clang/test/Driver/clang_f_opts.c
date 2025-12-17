@@ -45,6 +45,22 @@
 // CHECK-UNROLL-LOOPS: "-funroll-loops"
 // CHECK-NO-UNROLL-LOOPS: "-fno-unroll-loops"
 
+// RUN: %clang -### -S -floop-interchange %s 2>&1 | FileCheck -check-prefix=CHECK-INTERCHANGE-LOOPS %s
+// RUN: %clang -### -S -fno-loop-interchange %s 2>&1 | FileCheck -check-prefix=CHECK-NO-INTERCHANGE-LOOPS %s
+// RUN: %clang -### -S -fno-loop-interchange -floop-interchange %s 2>&1 | FileCheck -check-prefix=CHECK-INTERCHANGE-LOOPS %s
+// RUN: %clang -### -S -floop-interchange -fno-loop-interchange %s 2>&1 | FileCheck -check-prefix=CHECK-NO-INTERCHANGE-LOOPS %s
+// CHECK-INTERCHANGE-LOOPS: "-floop-interchange"
+// CHECK-NO-INTERCHANGE-LOOPS: "-fno-loop-interchange"
+
+// RUN: %clang -### -S -fexperimental-loop-fusion %s -o /dev/null 2>&1 | FileCheck -check-prefix=CHECK-FUSE-LOOPS %s
+// CHECK-FUSE-LOOPS: "-fexperimental-loop-fusion"
+//
+// RUN: %clang -c -fexperimental-loop-fusion -mllvm -print-pipeline-passes -O3 %s -o /dev/null 2>&1 | FileCheck --check-prefixes=LOOP-FUSION-ON %s
+// RUN: %clang -c -mllvm -print-pipeline-passes -O3 %s -o /dev/null 2>&1 | FileCheck --check-prefixes=LOOP-FUSION-OFF %s
+
+// LOOP-FUSION-ON: loop-fusion
+// LOOP-FUSION-OFF-NOT: loop-fusion
+
 // RUN: %clang -### -S -fprofile-sample-accurate %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-SAMPLE-ACCURATE %s
 // CHECK-PROFILE-SAMPLE-ACCURATE: "-fprofile-sample-accurate"
 
@@ -103,8 +119,6 @@
 // RUN: %clang -### -S -fcoverage-mapping -fno-coverage-mapping %s 2>&1 | FileCheck -check-prefix=CHECK-DISABLE-COVERAGE %s
 // RUN: %clang -### -S -fprofile-instr-generate -fcoverage-mapping -fno-coverage-mapping %s 2>&1 | FileCheck -check-prefix=CHECK-DISABLE-COVERAGE %s
 // RUN: %clang -### -S -fprofile-remapping-file=foo/bar.txt %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-REMAP %s
-// RUN: %clang -### -S -forder-file-instrumentation %s 2>&1 | FileCheck -check-prefix=CHECK-ORDERFILE-INSTR %s
-// RUN: %clang -### --target=x86_64-linux-gnu -flto -forder-file-instrumentation %s 2>&1 | FileCheck -check-prefix=CHECK-ORDERFILE-INSTR-LTO %s
 // CHECK-PROFILE-GENERATE: "-fprofile-instrument=clang"
 // CHECK-PROFILE-GENERATE-LLVM: "-fprofile-instrument=llvm"
 // CHECK-PROFILE-GENERATE-DIR: "-fprofile-instrument-path=/some/dir{{/|\\\\}}{{.*}}"
@@ -116,21 +130,23 @@
 // CHECK-COVERAGE-AND-GEN: '-fcoverage-mapping' only allowed with '-fprofile-instr-generate'
 // CHECK-DISABLE-COVERAGE-NOT: "-fcoverage-mapping"
 // CHECK-PROFILE-REMAP: "-fprofile-remapping-file=foo/bar.txt"
-// CHECK-ORDERFILE-INSTR: "-forder-file-instrumentation"
-// CHECK-ORDERFILE-INSTR: "-enable-order-file-instrumentation"
-// CHECK-ORDERFILE-INSTR-LTO: "-forder-file-instrumentation"
-// CHECK-ORDERFILE-INSTR-LTO-NOT: "-enable-order-file-instrumentation"
+
+// RUN: rm -rf %t && mkdir %t
+// RUN: llvm-profdata merge -o %t/somefile.prof %S/Inputs/a.proftext
+// RUN: llvm-profdata merge -o %t/default.profdata %S/Inputs/a.proftext
+// RUN: cd %t
 
 // RUN: %clang -### -S -fprofile-use %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE %s
 // RUN: %clang -### -S -fprofile-instr-use %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE %s
-// RUN: mkdir -p %t.d/some/dir
-// RUN: %clang -### -S -fprofile-use=%t.d/some/dir %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-DIR %s
-// RUN: %clang -### -S -fprofile-instr-use=/tmp/somefile.prof %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-FILE %s
+// RUN: mkdir -p %t/some/dir
+// RUN: cp %t/default.profdata %t/some/dir
+// RUN: %clang -### -S -fprofile-use=%t/some/dir %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-DIR %s
+// RUN: %clang -### -S -fprofile-instr-use=%t/somefile.prof %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-FILE %s
 // CHECK-PROFILE-USE: "-fprofile-instrument-use-path=default.profdata"
-// CHECK-PROFILE-USE-DIR: "-fprofile-instrument-use-path={{.*}}.d/some/dir{{/|\\\\}}default.profdata"
-// CHECK-PROFILE-USE-FILE: "-fprofile-instrument-use-path=/tmp/somefile.prof"
+// CHECK-PROFILE-USE-DIR: "-fprofile-instrument-use-path={{.*}}some/dir{{/|\\\\}}default.profdata"
+// CHECK-PROFILE-USE-FILE: "-fprofile-instrument-use-path={{.*}}somefile.prof"
 
-// RUN: %clang -### -S -fprofile-instr-use=%t.profdata -fdiagnostics-misexpect-tolerance=10 -Wmisexpect %s 2>&1 | FileCheck %s --check-prefix=CHECK-MISEXPECT-TOLLERANCE
+// RUN: %clang -### -S -fprofile-instr-use=%t/somefile.prof -fdiagnostics-misexpect-tolerance=10 -Wmisexpect %s 2>&1 | FileCheck %s --check-prefix=CHECK-MISEXPECT-TOLLERANCE
 // CHECK-MISEXPECT-TOLLERANCE: "-fdiagnostics-misexpect-tolerance=10"
 // CHECK-MISEXPECT-TOLLERANCE-NOT: argument unused
 
@@ -146,7 +162,7 @@
 // RUN: %clang -### -S -O2 %s 2>&1 | FileCheck -check-prefix=CHECK-VECTORIZE %s
 // RUN: %clang -### -S -Os %s 2>&1 | FileCheck -check-prefix=CHECK-VECTORIZE %s
 // RUN: %clang -### -S -O3 %s 2>&1 | FileCheck -check-prefix=CHECK-VECTORIZE %s
-// RUN: %clang -### -S -fno-vectorize -O3 %s 2>&1 | FileCheck -check-prefix=CHECK-VECTORIZE %s
+// RUN: %clang -### -S -fno-vectorize -O3 %s 2>&1 | FileCheck -check-prefix=CHECK-NO-VECTORIZE %s
 // RUN: %clang -### -S -O1 -fvectorize %s 2>&1 | FileCheck -check-prefix=CHECK-VECTORIZE %s
 // RUN: %clang -### -S -Ofast %s 2>&1 | FileCheck -check-prefix=CHECK-VECTORIZE %s
 // RUN: %clang -### -S %s 2>&1 | FileCheck -check-prefix=CHECK-NO-VECTORIZE %s
@@ -169,7 +185,7 @@
 // RUN: %clang -### -S -Os %s 2>&1 | FileCheck -check-prefix=CHECK-SLP-VECTORIZE %s
 // RUN: %clang -### -S -Oz %s 2>&1 | FileCheck -check-prefix=CHECK-SLP-VECTORIZE %s
 // RUN: %clang -### -S -O3 %s 2>&1 | FileCheck -check-prefix=CHECK-SLP-VECTORIZE %s
-// RUN: %clang -### -S -fno-slp-vectorize -O3 %s 2>&1 | FileCheck -check-prefix=CHECK-SLP-VECTORIZE %s
+// RUN: %clang -### -S -fno-slp-vectorize -O3 %s 2>&1 | FileCheck -check-prefix=CHECK-NO-SLP-VECTORIZE %s
 // RUN: %clang -### -S -O1 -fslp-vectorize %s 2>&1 | FileCheck -check-prefix=CHECK-SLP-VECTORIZE %s
 // RUN: %clang -### -S -Ofast %s 2>&1 | FileCheck -check-prefix=CHECK-SLP-VECTORIZE %s
 // RUN: %clang -### -S %s 2>&1 | FileCheck -check-prefix=CHECK-NO-SLP-VECTORIZE %s
@@ -213,11 +229,11 @@
 // RUN: %clang -S -O20 -o /dev/null %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-O %s
 // CHECK-INVALID-O: warning: optimization level '-O20' is not supported; using '-O3' instead
 
-// RUN: not %clang -### -S -finput-charset=iso-8859-1 -o /dev/null %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-CHARSET %s
-// CHECK-INVALID-CHARSET: error: invalid value 'iso-8859-1' in '-finput-charset=iso-8859-1'
+// RUN: not %clang -### -S -finput-charset=iso-8859-1 -o /dev/null %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-INPUT-CHARSET %s
+// CHECK-INVALID-INPUT-CHARSET: error: invalid value 'iso-8859-1' in '-finput-charset=iso-8859-1'
 
-// RUN: not %clang -### -S -fexec-charset=iso-8859-1 -o /dev/null %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-INPUT-CHARSET %s
-// CHECK-INVALID-INPUT-CHARSET: error: invalid value 'iso-8859-1' in '-fexec-charset=iso-8859-1'
+// RUN: not %clang -### -S -fexec-charset=iso-8859-1 -o /dev/null %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-EXEC-CHARSET %s
+// CHECK-INVALID-EXEC-CHARSET: error: invalid value 'iso-8859-1' in '-fexec-charset=iso-8859-1'
 
 // Test that we don't error on these.
 // RUN: not %clang -### -S -Werror                                                \
@@ -361,10 +377,8 @@
 // RUN: -ftree-ter                                                            \
 // RUN: -ftree-vrp                                                            \
 // RUN: -fno-devirtualize                                                     \
-// RUN: -fno-devirtualize-speculatively                                       \
 // RUN: -fslp-vectorize-aggressive                                            \
 // RUN: -fno-slp-vectorize-aggressive                                         \
-// RUN: -forder-file-instrumentation                                          \
 // RUN: %s 2>&1 | FileCheck --check-prefix=CHECK-WARNING %s
 // CHECK-WARNING-DAG: optimization flag '-finline-limit=1000' is not supported
 // CHECK-WARNING-DAG: optimization flag '-finline-limit' is not supported
@@ -421,10 +435,8 @@
 // CHECK-WARNING-DAG: optimization flag '-ftree-ter' is not supported
 // CHECK-WARNING-DAG: optimization flag '-ftree-vrp' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fno-devirtualize' is not supported
-// CHECK-WARNING-DAG: optimization flag '-fno-devirtualize-speculatively' is not supported
 // CHECK-WARNING-DAG: the flag '-fslp-vectorize-aggressive' has been deprecated and will be ignored
 // CHECK-WARNING-DAG: the flag '-fno-slp-vectorize-aggressive' has been deprecated and will be ignored
-// CHECK-WARNING-DAG: argument '-forder-file-instrumentation' is deprecated, use '-mllvm -pgo-temporal-instrumentation' instead
 
 // Test that we mute the warning on these
 // RUN: %clang -### -finline-limit=1000 -Wno-invalid-command-line-argument              \
@@ -543,19 +555,6 @@
 // CHECK-RECORD-GCC-SWITCHES: "-record-command-line"
 // CHECK-NO-RECORD-GCC-SWITCHES-NOT: "-record-command-line"
 // CHECK-RECORD-GCC-SWITCHES-ERROR: error: unsupported option '-frecord-command-line' for target
-// Test when clang is in a path containing a space.
-// The initial `rm` is a workaround for https://openradar.appspot.com/FB8914243
-// (Scenario: Run tests once, `clang` gets copied and run at new location and signature
-// is cached at the new clang's inode, then clang is changed, tests run again, old signature
-// is still cached with old clang's inode, so it won't execute this time. Removing the dir
-// first guarantees a new inode without old cache entries.)
-// RUN: rm -rf "%t.r/with spaces"
-// RUN: mkdir -p "%t.r/with spaces"
-// RUN: cp %clang "%t.r/with spaces/clang"
-// RUN: "%t.r/with spaces/clang" -### -S --target=x86_64-unknown-linux -frecord-gcc-switches %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES-ESCAPED %s
-// CHECK-RECORD-GCC-SWITCHES-ESCAPED: "-record-command-line" "{{.+}}with\\ spaces{{.+}}"
-// Clean up copy of large binary copied into temp directory to avoid bloat.
-// RUN: rm -f "%t.r/with spaces/clang" || true
 
 // RUN: %clang -### -S -ftrivial-auto-var-init=uninitialized %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-UNINIT %s
 // RUN: %clang -### -S -ftrivial-auto-var-init=pattern %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-PATTERN %s

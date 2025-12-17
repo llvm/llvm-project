@@ -148,6 +148,16 @@ void TestGCDDispatchAfter() {
   wait_forever();
 }
 
+void TestGCDDispatchApply() {
+  dispatch_queue_t queue = dispatch_get_global_queue(0, 0);
+  __block char *buffer = (char *)malloc(4);
+  dispatch_apply(8, queue, ^(size_t i) {
+    access_memory(&buffer[i]);
+  });
+
+  free(buffer);  // not reached
+}
+
 void worker_do_deallocate(void *ptr) {
   free(ptr);
 }

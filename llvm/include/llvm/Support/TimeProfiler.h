@@ -77,6 +77,7 @@
 #define LLVM_SUPPORT_TIMEPROFILER_H
 
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -106,24 +107,24 @@ struct TimeTraceMetadata {
 };
 
 struct TimeTraceProfiler;
-TimeTraceProfiler *getTimeTraceProfilerInstance();
+LLVM_ABI TimeTraceProfiler *getTimeTraceProfilerInstance();
 
-bool isTimeTraceVerbose();
+LLVM_ABI bool isTimeTraceVerbose();
 
 struct TimeTraceProfilerEntry;
 
 /// Initialize the time trace profiler.
 /// This sets up the global \p TimeTraceProfilerInstance
 /// variable to be the profiler instance.
-void timeTraceProfilerInitialize(unsigned TimeTraceGranularity,
-                                 StringRef ProcName,
-                                 bool TimeTraceVerbose = false);
+LLVM_ABI void timeTraceProfilerInitialize(unsigned TimeTraceGranularity,
+                                          StringRef ProcName,
+                                          bool TimeTraceVerbose = false);
 
 /// Cleanup the time trace profiler, if it was initialized.
-void timeTraceProfilerCleanup();
+LLVM_ABI void timeTraceProfilerCleanup();
 
 /// Finish a time trace profiler running on a worker thread.
-void timeTraceProfilerFinishThread();
+LLVM_ABI void timeTraceProfilerFinishThread();
 
 /// Is the time trace profiler enabled, i.e. initialized?
 inline bool timeTraceProfilerEnabled() {
@@ -133,27 +134,27 @@ inline bool timeTraceProfilerEnabled() {
 /// Write profiling data to output stream.
 /// Data produced is JSON, in Chrome "Trace Event" format, see
 /// https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview
-void timeTraceProfilerWrite(raw_pwrite_stream &OS);
+LLVM_ABI void timeTraceProfilerWrite(raw_pwrite_stream &OS);
 
 /// Write profiling data to a file.
 /// The function will write to \p PreferredFileName if provided, if not
 /// then will write to \p FallbackFileName appending .time-trace.
 /// Returns a StringError indicating a failure if the function is
 /// unable to open the file for writing.
-Error timeTraceProfilerWrite(StringRef PreferredFileName,
-                             StringRef FallbackFileName);
+LLVM_ABI Error timeTraceProfilerWrite(StringRef PreferredFileName,
+                                      StringRef FallbackFileName);
 
 /// Manually begin a time section, with the given \p Name and \p Detail.
 /// Profiler copies the string data, so the pointers can be given into
 /// temporaries. Time sections can be hierarchical; every Begin must have a
 /// matching End pair but they can nest.
-TimeTraceProfilerEntry *timeTraceProfilerBegin(StringRef Name,
-                                               StringRef Detail);
-TimeTraceProfilerEntry *
+LLVM_ABI TimeTraceProfilerEntry *timeTraceProfilerBegin(StringRef Name,
+                                                        StringRef Detail);
+LLVM_ABI TimeTraceProfilerEntry *
 timeTraceProfilerBegin(StringRef Name,
                        llvm::function_ref<std::string()> Detail);
 
-TimeTraceProfilerEntry *
+LLVM_ABI TimeTraceProfilerEntry *
 timeTraceProfilerBegin(StringRef Name,
                        llvm::function_ref<TimeTraceMetadata()> MetaData);
 
@@ -162,16 +163,17 @@ timeTraceProfilerBegin(StringRef Name,
 /// separately from other traces. See
 /// https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview#heading=h.jh64i9l3vwa1
 /// for more details.
-TimeTraceProfilerEntry *timeTraceAsyncProfilerBegin(StringRef Name,
-                                                    StringRef Detail);
+LLVM_ABI TimeTraceProfilerEntry *timeTraceAsyncProfilerBegin(StringRef Name,
+                                                             StringRef Detail);
 
 // Mark an instant event.
-void timeTraceAddInstantEvent(StringRef Name,
-                              llvm::function_ref<std::string()> Detail);
+LLVM_ABI void
+timeTraceAddInstantEvent(StringRef Name,
+                         llvm::function_ref<std::string()> Detail);
 
 /// Manually end the last time section.
-void timeTraceProfilerEnd();
-void timeTraceProfilerEnd(TimeTraceProfilerEntry *E);
+LLVM_ABI void timeTraceProfilerEnd();
+LLVM_ABI void timeTraceProfilerEnd(TimeTraceProfilerEntry *E);
 
 /// The TimeTraceScope is a helper class to call the begin and end functions
 /// of the time trace profiler.  When the object is constructed, it begins

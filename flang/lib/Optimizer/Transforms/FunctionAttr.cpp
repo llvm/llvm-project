@@ -27,15 +27,8 @@ namespace {
 
 class FunctionAttrPass : public fir::impl::FunctionAttrBase<FunctionAttrPass> {
 public:
-  FunctionAttrPass(const fir::FunctionAttrOptions &options) {
-    framePointerKind = options.framePointerKind;
-    noInfsFPMath = options.noInfsFPMath;
-    noNaNsFPMath = options.noNaNsFPMath;
-    approxFuncFPMath = options.approxFuncFPMath;
-    noSignedZerosFPMath = options.noSignedZerosFPMath;
-    unsafeFPMath = options.unsafeFPMath;
-  }
-  FunctionAttrPass() {}
+  FunctionAttrPass(const fir::FunctionAttrOptions &options) : Base{options} {}
+  FunctionAttrPass() = default;
   void runOnOperation() override;
 };
 
@@ -54,14 +47,28 @@ void FunctionAttrPass::runOnOperation() {
   if ((isFromModule || !func.isDeclaration()) &&
       !fir::hasBindcAttr(func.getOperation())) {
     llvm::StringRef nocapture = mlir::LLVM::LLVMDialect::getNoCaptureAttrName();
+    llvm::StringRef noalias = mlir::LLVM::LLVMDialect::getNoAliasAttrName();
     mlir::UnitAttr unitAttr = mlir::UnitAttr::get(func.getContext());
 
     for (auto [index, argType] : llvm::enumerate(func.getArgumentTypes())) {
+      bool isNoCapture = false;
+      bool isNoAlias = false;
       if (mlir::isa<fir::ReferenceType>(argType) &&
           !func.getArgAttr(index, fir::getTargetAttrName()) &&
           !func.getArgAttr(index, fir::getAsynchronousAttrName()) &&
-          !func.getArgAttr(index, fir::getVolatileAttrName()))
+          !func.getArgAttr(index, fir::getVolatileAttrName())) {
+        isNoCapture = true;
+        isNoAlias = !fir::isPointerType(argType);
+      } else if (mlir::isa<fir::BaseBoxType>(argType)) {
+        // !fir.box arguments will be passed as descriptor pointers
+        // at LLVM IR dialect level - they cannot be captured,
+        // and cannot alias with anything within the function.
+        isNoCapture = isNoAlias = true;
+      }
+      if (isNoCapture && setNoCapture)
         func.setArgAttr(index, nocapture, unitAttr);
+      if (isNoAlias && setNoAlias)
+        func.setArgAttr(index, noalias, unitAttr);
     }
   }
 
@@ -72,6 +79,14 @@ void FunctionAttrPass::runOnOperation() {
 
   auto llvmFuncOpName =
       mlir::OperationName(mlir::LLVM::LLVMFuncOp::getOperationName(), context);
+  if (!instrumentFunctionEntry.empty())
+    func->setAttr(mlir::LLVM::LLVMFuncOp::getInstrumentFunctionEntryAttrName(
+                      llvmFuncOpName),
+                  mlir::StringAttr::get(context, instrumentFunctionEntry));
+  if (!instrumentFunctionExit.empty())
+    func->setAttr(mlir::LLVM::LLVMFuncOp::getInstrumentFunctionExitAttrName(
+                      llvmFuncOpName),
+                  mlir::StringAttr::get(context, instrumentFunctionExit));
   if (noInfsFPMath)
     func->setAttr(
         mlir::LLVM::LLVMFuncOp::getNoInfsFpMathAttrName(llvmFuncOpName),
@@ -80,18 +95,18 @@ void FunctionAttrPass::runOnOperation() {
     func->setAttr(
         mlir::LLVM::LLVMFuncOp::getNoNansFpMathAttrName(llvmFuncOpName),
         mlir::BoolAttr::get(context, true));
-  if (approxFuncFPMath)
-    func->setAttr(
-        mlir::LLVM::LLVMFuncOp::getApproxFuncFpMathAttrName(llvmFuncOpName),
-        mlir::BoolAttr::get(context, true));
   if (noSignedZerosFPMath)
     func->setAttr(
         mlir::LLVM::LLVMFuncOp::getNoSignedZerosFpMathAttrName(llvmFuncOpName),
         mlir::BoolAttr::get(context, true));
-  if (unsafeFPMath)
+  if (!reciprocals.empty())
     func->setAttr(
-        mlir::LLVM::LLVMFuncOp::getUnsafeFpMathAttrName(llvmFuncOpName),
-        mlir::BoolAttr::get(context, true));
+        mlir::LLVM::LLVMFuncOp::getReciprocalEstimatesAttrName(llvmFuncOpName),
+        mlir::StringAttr::get(context, reciprocals));
+  if (!preferVectorWidth.empty())
+    func->setAttr(
+        mlir::LLVM::LLVMFuncOp::getPreferVectorWidthAttrName(llvmFuncOpName),
+        mlir::StringAttr::get(context, preferVectorWidth));
 
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
 }

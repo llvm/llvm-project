@@ -452,6 +452,38 @@ llvm::Error Host::OpenFileInExternalEditor(llvm::StringRef editor,
 #endif // TARGET_OS_OSX
 }
 
+llvm::Error Host::OpenURL(llvm::StringRef url) {
+#if !TARGET_OS_OSX
+  return llvm::errorCodeToError(
+      std::error_code(ENOTSUP, std::system_category()));
+#else  // !TARGET_OS_OSX
+  if (url.empty())
+    return llvm::createStringError("Cannot open empty URL.");
+
+  LLDB_LOG(GetLog(LLDBLog::Host), "Opening URL: {0}", url);
+
+  CFCString url_cfstr(url.data(), kCFStringEncodingUTF8);
+  CFCReleaser<CFURLRef> cfurl = ::CFURLCreateWithString(
+      /*allocator=*/NULL,
+      /*URLString*/ url_cfstr.get(),
+      /*baseURL=*/NULL);
+
+  if (!cfurl.get())
+    return llvm::createStringError(
+        llvm::formatv("could not create CFURL from URL \"{0}\"", url));
+
+  OSStatus error = ::LSOpenCFURLRef(
+      /*inURL=*/cfurl.get(),
+      /*outLaunchedURL=*/NULL);
+
+  if (error != noErr)
+    return llvm::createStringError(
+        llvm::formatv("LSOpenCFURLRef failed: error {0:x}", error));
+
+  return llvm::Error::success();
+#endif // TARGET_OS_OSX
+}
+
 bool Host::IsInteractiveGraphicSession() {
 #if !TARGET_OS_OSX
   return false;
@@ -563,7 +595,9 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
       const llvm::Triple::ArchType triple_arch = triple.getArch();
       const bool check_for_ios_simulator =
           (triple_arch == llvm::Triple::x86 ||
-           triple_arch == llvm::Triple::x86_64);
+           triple_arch == llvm::Triple::x86_64 ||
+           triple_arch == llvm::Triple::aarch64);
+
       const char *cstr = data.GetCStr(&offset);
       if (cstr) {
         process_info.GetExecutableFile().SetFile(cstr, FileSpec::Style::native);
@@ -589,21 +623,20 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
           }
 
           Environment &proc_env = process_info.GetEnvironment();
-          while ((cstr = data.GetCStr(&offset))) {
-            if (cstr[0] == '\0')
-              break;
-
-            if (check_for_ios_simulator) {
-              if (strncmp(cstr, "SIMULATOR_UDID=", strlen("SIMULATOR_UDID=")) ==
-                  0)
-                process_info.GetArchitecture().GetTriple().setOS(
-                    llvm::Triple::IOS);
-              else
-                process_info.GetArchitecture().GetTriple().setOS(
-                    llvm::Triple::MacOSX);
-            }
-
-            proc_env.insert(cstr);
+          bool is_simulator = false;
+          llvm::StringRef env_var;
+          while (!(env_var = data.GetCStr(&offset)).empty()) {
+            if (check_for_ios_simulator &&
+                env_var.starts_with("SIMULATOR_UDID="))
+              is_simulator = true;
+            proc_env.insert(env_var);
+          }
+          llvm::Triple &triple = process_info.GetArchitecture().GetTriple();
+          if (is_simulator) {
+            triple.setOS(llvm::Triple::IOS);
+            triple.setEnvironment(llvm::Triple::Simulator);
+          } else {
+            triple.setOS(llvm::Triple::MacOSX);
           }
           return true;
         }
@@ -709,8 +742,8 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
         !match_info.ProcessIDsMatch(process_info))
       continue;
 
-    // Get CPU type first so we can know to look for iOS simulator is we have
-    // x86 or x86_64
+    // Get CPU type first so we can know to look for iOS simulator if we have
+    // a compatible type.
     if (GetMacOSXProcessCPUType(process_info)) {
       if (GetMacOSXProcessArgs(&match_info, process_info)) {
         if (match_info.Matches(process_info))
@@ -980,20 +1013,29 @@ static Status LaunchProcessXPC(const char *exe_path,
   xpc_dictionary_set_int64(message, LauncherXPCServicePosixspawnFlagsKey,
                            GetPosixspawnFlags(launch_info));
   const FileAction *file_action = launch_info.GetFileActionForFD(STDIN_FILENO);
-  if (file_action && !file_action->GetPath().empty()) {
+  std::string file_action_path;
+  if (file_action)
+    file_action_path = file_action->GetFileSpec().GetPath();
+
+  if (!file_action_path.empty())
     xpc_dictionary_set_string(message, LauncherXPCServiceStdInPathKeyKey,
-                              file_action->GetPath().str().c_str());
-  }
+                              file_action_path.c_str());
+
   file_action = launch_info.GetFileActionForFD(STDOUT_FILENO);
-  if (file_action && !file_action->GetPath().empty()) {
+  if (file_action)
+    file_action_path = file_action->GetFileSpec().GetPath();
+
+  if (!file_action_path.empty())
     xpc_dictionary_set_string(message, LauncherXPCServiceStdOutPathKeyKey,
-                              file_action->GetPath().str().c_str());
-  }
+                              file_action_path.c_str());
+
   file_action = launch_info.GetFileActionForFD(STDERR_FILENO);
-  if (file_action && !file_action->GetPath().empty()) {
+  if (file_action)
+    file_action_path = file_action->GetFileSpec().GetPath();
+
+  if (!file_action_path.empty())
     xpc_dictionary_set_string(message, LauncherXPCServiceStdErrPathKeyKey,
-                              file_action->GetPath().str().c_str());
-  }
+                              file_action_path.c_str());
 
   xpc_object_t reply =
       xpc_connection_send_message_with_reply_sync(conn, message);
@@ -1068,7 +1110,7 @@ static bool AddPosixSpawnFileAction(void *_file_actions, const FileAction *info,
     else if (info->GetActionArgument() == -1)
       error = Status::FromErrorString(
           "invalid duplicate fd for posix_spawn_file_actions_adddup2(...)");
-    else {
+    else if (info->GetFD() != info->GetActionArgument()) {
       error =
           Status(::posix_spawn_file_actions_adddup2(file_actions, info->GetFD(),
                                                     info->GetActionArgument()),
@@ -1078,6 +1120,15 @@ static bool AddPosixSpawnFileAction(void *_file_actions, const FileAction *info,
                  "error: {0}, posix_spawn_file_actions_adddup2 "
                  "(action={1}, fd={2}, dup_fd={3})",
                  error, file_actions, info->GetFD(), info->GetActionArgument());
+    } else {
+      error =
+          Status(::posix_spawn_file_actions_addinherit_np(file_actions, info->GetFD()),
+                 eErrorTypePOSIX);
+      if (error.Fail())
+        LLDB_LOG(log,
+                 "error: {0}, posix_spawn_file_actions_addinherit_np "
+                 "(action={1}, fd={2})",
+                 error, file_actions, info->GetFD());
     }
     break;
 
@@ -1093,16 +1144,16 @@ static bool AddPosixSpawnFileAction(void *_file_actions, const FileAction *info,
       if (oflag & O_CREAT)
         mode = 0640;
 
-      error = Status(::posix_spawn_file_actions_addopen(
-                         file_actions, info->GetFD(),
-                         info->GetPath().str().c_str(), oflag, mode),
-                     eErrorTypePOSIX);
+      const std::string file_path(info->GetFileSpec().GetPath());
+      error = Status(
+          ::posix_spawn_file_actions_addopen(file_actions, info->GetFD(),
+                                             file_path.c_str(), oflag, mode),
+          eErrorTypePOSIX);
       if (error.Fail())
         LLDB_LOG(log,
                  "error: {0}, posix_spawn_file_actions_addopen (action={1}, "
                  "fd={2}, path='{3}', oflag={4}, mode={5})",
-                 error, file_actions, info->GetFD(), info->GetPath(), oflag,
-                 mode);
+                 error, file_actions, info->GetFD(), file_path, oflag, mode);
     }
     break;
   }
@@ -1165,6 +1216,38 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
       LLDB_LOG(log, "error: {0}, setup_posix_spawn_responsible_flag(&attr)",
                error);
       return error;
+    }
+  }
+
+  if (launch_info.GetFlags().Test(eLaunchFlagMemoryTagging)) {
+    // The following function configures the spawn attributes to launch the
+    // process with memory tagging explicitly enabled.  We look it up
+    // dynamically since it is only available on newer OS.  Does nothing on
+    // hardware which does not support MTE.
+    //
+    //   int posix_spawnattr_set_use_sec_transition_shims_np(
+    //       posix_spawnattr_t *attr, uint32_t flags);
+    //
+    using posix_spawnattr_set_use_sec_transition_shims_np_t =
+        int (*)(posix_spawnattr_t *attr, uint32_t flags);
+    auto posix_spawnattr_enable_memory_tagging_fn =
+        (posix_spawnattr_set_use_sec_transition_shims_np_t)dlsym(
+            RTLD_DEFAULT, "posix_spawnattr_set_use_sec_transition_shims_np");
+    if (posix_spawnattr_enable_memory_tagging_fn) {
+      error = Status(posix_spawnattr_enable_memory_tagging_fn(&attr, 0),
+                     eErrorTypePOSIX);
+      if (error.Fail()) {
+        LLDB_LOG(log,
+                 "error: {0}, "
+                 "posix_spawnattr_set_use_sec_transition_shims_np(&attr, 0)",
+                 error);
+        return error;
+      }
+    } else {
+      LLDB_LOG(log,
+               "error: posix_spawnattr_set_use_sec_transition_shims_np not "
+               "available",
+               error);
     }
   }
 
@@ -1439,7 +1522,7 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
       char *wd = getcwd(nullptr, 0);
       if (wd == nullptr) {
         error = Status::FromErrorStringWithFormat(
-            "cwd does not exist; cannot launch with shell argument expansion");
+            "cwd does not exist: Cannot launch with shell argument expansion");
         return error;
       } else {
         FileSpec working_dir(wd);

@@ -22,20 +22,21 @@
 #include "src/string/memory_utils/x86_64/inline_memcpy.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY                                    \
   inline_memcpy_x86_maybe_interpose_repmovsb
+#elif defined(LIBC_TARGET_ARCH_IS_ARM)
+#include "src/string/memory_utils/arm/inline_memcpy.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY inline_memcpy_arm
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "src/string/memory_utils/aarch64/inline_memcpy.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY inline_memcpy_aarch64
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "src/string/memory_utils/riscv/inline_memcpy.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY inline_memcpy_riscv
-#elif defined(LIBC_TARGET_ARCH_IS_ARM)
-#include "src/string/memory_utils/generic/byte_per_byte.h"
-#define LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY inline_memcpy_byte_per_byte
 #elif defined(LIBC_TARGET_ARCH_IS_GPU)
 #include "src/string/memory_utils/generic/builtin.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY inline_memcpy_builtin
 #else
-#error "Unsupported architecture"
+#include "src/string/memory_utils/generic/byte_per_byte.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY inline_memcpy_byte_per_byte
 #endif
 
 namespace LIBC_NAMESPACE_DECL {

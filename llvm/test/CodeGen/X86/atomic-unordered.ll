@@ -272,16 +272,11 @@ define i256 @load_i256(ptr %ptr) {
 ; CHECK-O0-NEXT:    callq __atomic_load@PLT
 ; CHECK-O0-NEXT:    movq (%rsp), %rdi # 8-byte Reload
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
-; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
-; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
-; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %r8
-; CHECK-O0-NEXT:    movq %r8, 24(%rdi)
-; CHECK-O0-NEXT:    movq %rsi, 16(%rdi)
-; CHECK-O0-NEXT:    movq %rdx, 8(%rdi)
-; CHECK-O0-NEXT:    movq %rcx, (%rdi)
+; CHECK-O0-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0
+; CHECK-O0-NEXT:    vmovups %ymm0, (%rdi)
 ; CHECK-O0-NEXT:    addq $56, %rsp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O0-NEXT:    vzeroupper
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_i256:
@@ -2096,7 +2091,7 @@ define i64 @nofold_fence(ptr %p) {
 ; CHECK-LABEL: nofold_fence:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    mfence
+; CHECK-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    addq $15, %rax
 ; CHECK-NEXT:    retq
   %v = load atomic i64, ptr %p unordered, align 8
@@ -2170,7 +2165,7 @@ define i64 @fold_constant_fence(i64 %arg) {
 ; CHECK-LABEL: fold_constant_fence:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq Constant(%rip), %rax
-; CHECK-NEXT:    mfence
+; CHECK-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    addq %rdi, %rax
 ; CHECK-NEXT:    retq
   %v = load atomic i64, ptr @Constant unordered, align 8
@@ -2197,7 +2192,7 @@ define i64 @fold_invariant_fence(ptr dereferenceable(8) %p, i64 %arg) {
 ; CHECK-LABEL: fold_invariant_fence:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    mfence
+; CHECK-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    addq %rsi, %rax
 ; CHECK-NEXT:    retq
   %v = load atomic i64, ptr %p unordered, align 8, !invariant.load !{}
@@ -2321,7 +2316,7 @@ define i1 @fold_cmp_over_fence(ptr %p, i32 %v1) {
 ; CHECK-O0-LABEL: fold_cmp_over_fence:
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movl (%rdi), %eax
-; CHECK-O0-NEXT:    mfence
+; CHECK-O0-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    cmpl %eax, %esi
 ; CHECK-O0-NEXT:    jne .LBB116_2
 ; CHECK-O0-NEXT:  # %bb.1: # %taken
@@ -2335,7 +2330,7 @@ define i1 @fold_cmp_over_fence(ptr %p, i32 %v1) {
 ; CHECK-O3-LABEL: fold_cmp_over_fence:
 ; CHECK-O3:       # %bb.0:
 ; CHECK-O3-NEXT:    movl (%rdi), %eax
-; CHECK-O3-NEXT:    mfence
+; CHECK-O3-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
 ; CHECK-O3-NEXT:    cmpl %eax, %esi
 ; CHECK-O3-NEXT:    jne .LBB116_2
 ; CHECK-O3-NEXT:  # %bb.1: # %taken

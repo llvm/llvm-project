@@ -20,9 +20,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Error.h"
-#include <algorithm>
 #include <cerrno>
-#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -95,16 +93,14 @@ TGLexer::TGLexer(SourceMgr &SM, ArrayRef<std::string> Macros) : SrcMgr(SM) {
   }
 }
 
-SMLoc TGLexer::getLoc() const {
-  return SMLoc::getFromPointer(TokStart);
-}
+SMLoc TGLexer::getLoc() const { return SMLoc::getFromPointer(TokStart); }
 
 SMRange TGLexer::getLocRange() const {
   return {getLoc(), SMLoc::getFromPointer(CurPtr)};
 }
 
 /// ReturnError - Set the error to the specified string at the specified
-/// location.  This is defined to always return tgtok::Error.
+/// location. This is defined to always return tgtok::Error.
 tgtok::TokKind TGLexer::ReturnError(SMLoc Loc, const Twine &Msg) {
   PrintError(Loc, Msg);
   return tgtok::Error;
@@ -118,7 +114,7 @@ bool TGLexer::processEOF() {
   SMLoc ParentIncludeLoc = SrcMgr.getParentIncludeLoc(CurBuffer);
   if (ParentIncludeLoc != SMLoc()) {
     // If prepExitInclude() detects a problem with the preprocessing
-    // control stack, it will return false.  Pretend that we reached
+    // control stack, it will return false. Pretend that we reached
     // the final EOF and stop lexing more tokens by returning false
     // to LexToken().
     if (!prepExitInclude(false))
@@ -149,7 +145,7 @@ int TGLexer::getNextChar() {
 
   case 0: {
     // A NUL character in the stream is either the end of the current buffer or
-    // a spurious NUL in the file.  Disambiguate that here.
+    // a spurious NUL in the file. Disambiguate that here.
     if (CurPtr - 1 == CurBuf.end()) {
       --CurPtr; // Arrange for another call to return EOF again.
       return EOF;
@@ -162,144 +158,185 @@ int TGLexer::getNextChar() {
   case '\n':
   case '\r':
     // Handle the newline character by ignoring it and incrementing the line
-    // count.  However, be careful about 'dos style' files with \n\r in them.
+    // count. However, be careful about 'dos style' files with \n\r in them.
     // Only treat a \n\r or \r\n as a single line.
-    if ((*CurPtr == '\n' || (*CurPtr == '\r')) &&
-        *CurPtr != CurChar)
-      ++CurPtr;  // Eat the two char newline sequence.
+    if ((*CurPtr == '\n' || (*CurPtr == '\r')) && *CurPtr != CurChar)
+      ++CurPtr; // Eat the two char newline sequence.
     return '\n';
   }
 }
 
-int TGLexer::peekNextChar(int Index) const {
-  return *(CurPtr + Index);
-}
+int TGLexer::peekNextChar(int Index) const { return *(CurPtr + Index); }
 
 tgtok::TokKind TGLexer::LexToken(bool FileOrLineStart) {
-  TokStart = CurPtr;
-  // This always consumes at least one character.
-  int CurChar = getNextChar();
+  while (true) {
+    TokStart = CurPtr;
+    // This always consumes at least one character.
+    int CurChar = getNextChar();
 
-  switch (CurChar) {
-  default:
-    // Handle letters: [a-zA-Z_]
-    if (isValidIDChar(CurChar, /*First=*/true))
-      return LexIdentifier();
+    switch (CurChar) {
+    default:
+      // Handle letters: [a-zA-Z_]
+      if (isValidIDChar(CurChar, /*First=*/true))
+        return LexIdentifier();
 
-    // Unknown character, emit an error.
-    return ReturnError(TokStart, "unexpected character");
-  case EOF:
-    // Lex next token, if we just left an include file.
-    // Note that leaving an include file means that the next
-    // symbol is located at the end of the 'include "..."'
-    // construct, so LexToken() is called with default
-    // false parameter.
-    if (processEOF())
-      return LexToken();
-
-    // Return EOF denoting the end of lexing.
-    return tgtok::Eof;
-
-  case ':': return tgtok::colon;
-  case ';': return tgtok::semi;
-  case ',': return tgtok::comma;
-  case '<': return tgtok::less;
-  case '>': return tgtok::greater;
-  case ']': return tgtok::r_square;
-  case '{': return tgtok::l_brace;
-  case '}': return tgtok::r_brace;
-  case '(': return tgtok::l_paren;
-  case ')': return tgtok::r_paren;
-  case '=': return tgtok::equal;
-  case '?': return tgtok::question;
-  case '#':
-    if (FileOrLineStart) {
-      tgtok::TokKind Kind = prepIsDirective();
-      if (Kind != tgtok::Error)
-        return lexPreprocessor(Kind);
-    }
-
-    return tgtok::paste;
-
-  // The period is a separate case so we can recognize the "..."
-  // range punctuator.
-  case '.':
-    if (peekNextChar(0) == '.') {
-      ++CurPtr; // Eat second dot.
-      if (peekNextChar(0) == '.') {
-        ++CurPtr; // Eat third dot.
-        return tgtok::dotdotdot;
-      }
-      return ReturnError(TokStart, "invalid '..' punctuation");
-    }
-    return tgtok::dot;
-
-  case '\r':
-    PrintFatalError("getNextChar() must never return '\r'");
-    return tgtok::Error;
-
-  case ' ':
-  case '\t':
-    // Ignore whitespace.
-    return LexToken(FileOrLineStart);
-  case '\n':
-    // Ignore whitespace, and identify the new line.
-    return LexToken(true);
-  case '/':
-    // If this is the start of a // comment, skip until the end of the line or
-    // the end of the buffer.
-    if (*CurPtr == '/')
-      SkipBCPLComment();
-    else if (*CurPtr == '*') {
-      if (SkipCComment())
-        return tgtok::Error;
-    } else // Otherwise, this is an error.
+      // Unknown character, emit an error.
       return ReturnError(TokStart, "unexpected character");
-    return LexToken(FileOrLineStart);
-  case '-': case '+':
-  case '0': case '1': case '2': case '3': case '4': case '5': case '6':
-  case '7': case '8': case '9': {
-    int NextChar = 0;
-    if (isDigit(CurChar)) {
-      // Allow identifiers to start with a number if it is followed by
-      // an identifier.  This can happen with paste operations like
-      // foo#8i.
-      int i = 0;
-      do {
-        NextChar = peekNextChar(i++);
-      } while (isDigit(NextChar));
+    case EOF:
+      // Lex next token, if we just left an include file.
+      if (processEOF()) {
+        // Leaving an include file means that the next symbol is located at the
+        // end of the 'include "..."' construct.
+        FileOrLineStart = false;
+        break;
+      }
 
-      if (NextChar == 'x' || NextChar == 'b') {
-        // If this is [0-9]b[01] or [0-9]x[0-9A-fa-f] this is most
-        // likely a number.
-        int NextNextChar = peekNextChar(i);
-        switch (NextNextChar) {
-        default:
-          break;
-        case '0': case '1':
-          if (NextChar == 'b')
-            return LexNumber();
-          [[fallthrough]];
-        case '2': case '3': case '4': case '5':
-        case '6': case '7': case '8': case '9':
-        case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
-        case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
-          if (NextChar == 'x')
-            return LexNumber();
-          break;
+      // Return EOF denoting the end of lexing.
+      return tgtok::Eof;
+
+    case ':':
+      return tgtok::colon;
+    case ';':
+      return tgtok::semi;
+    case ',':
+      return tgtok::comma;
+    case '<':
+      return tgtok::less;
+    case '>':
+      return tgtok::greater;
+    case ']':
+      return tgtok::r_square;
+    case '{':
+      return tgtok::l_brace;
+    case '}':
+      return tgtok::r_brace;
+    case '(':
+      return tgtok::l_paren;
+    case ')':
+      return tgtok::r_paren;
+    case '=':
+      return tgtok::equal;
+    case '?':
+      return tgtok::question;
+    case '#':
+      if (FileOrLineStart) {
+        tgtok::TokKind Kind = prepIsDirective();
+        if (Kind != tgtok::Error)
+          return lexPreprocessor(Kind);
+      }
+
+      return tgtok::paste;
+
+      // The period is a separate case so we can recognize the "..."
+      // range punctuator.
+    case '.':
+      if (peekNextChar(0) == '.') {
+        ++CurPtr; // Eat second dot.
+        if (peekNextChar(0) == '.') {
+          ++CurPtr; // Eat third dot.
+          return tgtok::dotdotdot;
+        }
+        return ReturnError(TokStart, "invalid '..' punctuation");
+      }
+      return tgtok::dot;
+
+    case '\r':
+      llvm_unreachable("getNextChar() must never return '\r'");
+
+    case ' ':
+    case '\t':
+      // Ignore whitespace.
+      break;
+    case '\n':
+      // Ignore whitespace, and identify the new line.
+      FileOrLineStart = true;
+      break;
+    case '/':
+      // If this is the start of a // comment, skip until the end of the line or
+      // the end of the buffer.
+      if (*CurPtr == '/')
+        SkipBCPLComment();
+      else if (*CurPtr == '*') {
+        if (SkipCComment())
+          return tgtok::Error;
+      } else // Otherwise, this is an error.
+        return ReturnError(TokStart, "unexpected character");
+      break;
+    case '-':
+    case '+':
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9': {
+      int NextChar = 0;
+      if (isDigit(CurChar)) {
+        // Allow identifiers to start with a number if it is followed by
+        // an identifier.  This can happen with paste operations like
+        // foo#8i.
+        int i = 0;
+        do {
+          NextChar = peekNextChar(i++);
+        } while (isDigit(NextChar));
+
+        if (NextChar == 'x' || NextChar == 'b') {
+          // If this is [0-9]b[01] or [0-9]x[0-9A-fa-f] this is most
+          // likely a number.
+          int NextNextChar = peekNextChar(i);
+          switch (NextNextChar) {
+          default:
+            break;
+          case '0':
+          case '1':
+            if (NextChar == 'b')
+              return LexNumber();
+            [[fallthrough]];
+          case '2':
+          case '3':
+          case '4':
+          case '5':
+          case '6':
+          case '7':
+          case '8':
+          case '9':
+          case 'a':
+          case 'b':
+          case 'c':
+          case 'd':
+          case 'e':
+          case 'f':
+          case 'A':
+          case 'B':
+          case 'C':
+          case 'D':
+          case 'E':
+          case 'F':
+            if (NextChar == 'x')
+              return LexNumber();
+            break;
+          }
         }
       }
+
+      if (isValidIDChar(NextChar, /*First=*/true))
+        return LexIdentifier();
+
+      return LexNumber();
     }
-
-    if (isValidIDChar(NextChar, /*First=*/true))
-      return LexIdentifier();
-
-    return LexNumber();
-  }
-  case '"': return LexString();
-  case '$': return LexVarName();
-  case '[': return LexBracket();
-  case '!': return LexExclaim();
+    case '"':
+      return LexString();
+    case '$':
+      return LexVarName();
+    case '[':
+      return LexBracket();
+    case '!':
+      return LexExclaim();
+    }
   }
 }
 
@@ -325,7 +362,9 @@ tgtok::TokKind TGLexer::LexString() {
     ++CurPtr;
 
     switch (*CurPtr) {
-    case '\\': case '\'': case '"':
+    case '\\':
+    case '\'':
+    case '"':
       // These turn into their literal character.
       CurStrVal += *CurPtr++;
       break;
@@ -379,7 +418,7 @@ tgtok::TokKind TGLexer::LexIdentifier() {
     ++CurPtr;
 
   // Check to see if this identifier is a reserved keyword.
-  StringRef Str(IdentStart, CurPtr-IdentStart);
+  StringRef Str(IdentStart, CurPtr - IdentStart);
 
   tgtok::TokKind Kind = StringSwitch<tgtok::TokKind>(Str)
                             .Case("int", tgtok::Int)
@@ -412,25 +451,27 @@ tgtok::TokKind TGLexer::LexIdentifier() {
 
   // A couple of tokens require special processing.
   switch (Kind) {
-    case tgtok::Include:
-      if (LexInclude()) return tgtok::Error;
-      return Lex();
-    case tgtok::Id:
-      CurStrVal.assign(Str.begin(), Str.end());
-      break;
-    default:
-      break;
+  case tgtok::Include:
+    if (LexInclude())
+      return tgtok::Error;
+    return Lex();
+  case tgtok::Id:
+    CurStrVal.assign(Str.begin(), Str.end());
+    break;
+  default:
+    break;
   }
 
   return Kind;
 }
 
-/// LexInclude - We just read the "include" token.  Get the string token that
+/// LexInclude - We just read the "include" token. Get the string token that
 /// comes next and enter the include.
 bool TGLexer::LexInclude() {
   // The token after the include must be a string.
   tgtok::TokKind Tok = LexToken();
-  if (Tok == tgtok::Error) return true;
+  if (Tok == tgtok::Error)
+    return true;
   if (Tok != tgtok::StrVal) {
     PrintError(getLoc(), "expected filename after include");
     return true;
@@ -459,15 +500,15 @@ bool TGLexer::LexInclude() {
 /// SkipBCPLComment - Skip over the comment by finding the next CR or LF.
 /// Or we may end up at the end of the buffer.
 void TGLexer::SkipBCPLComment() {
-  ++CurPtr;  // skip the second slash.
+  ++CurPtr; // Skip the second slash.
   auto EOLPos = CurBuf.find_first_of("\r\n", CurPtr - CurBuf.data());
   CurPtr = (EOLPos == StringRef::npos) ? CurBuf.end() : CurBuf.data() + EOLPos;
 }
 
-/// SkipCComment - This skips C-style /**/ comments.  The only difference from C
+/// SkipCComment - This skips C-style /**/ comments. The only difference from C
 /// is that we allow nesting.
 bool TGLexer::SkipCComment() {
-  ++CurPtr;  // skip the star.
+  ++CurPtr; // Skip the star.
   unsigned CommentDepth = 1;
 
   while (true) {
@@ -478,15 +519,17 @@ bool TGLexer::SkipCComment() {
       return true;
     case '*':
       // End of the comment?
-      if (CurPtr[0] != '/') break;
+      if (CurPtr[0] != '/')
+        break;
 
-      ++CurPtr;   // End the */.
+      ++CurPtr; // End the */.
       if (--CommentDepth == 0)
         return false;
       break;
     case '/':
       // Start of a nested comment?
-      if (CurPtr[0] != '*') break;
+      if (CurPtr[0] != '*')
+        break;
       ++CurPtr;
       ++CommentDepth;
       break;
@@ -557,8 +600,8 @@ tgtok::TokKind TGLexer::LexNumber() {
   return Base == 2 ? tgtok::BinaryIntVal : tgtok::IntVal;
 }
 
-/// LexBracket - We just read '['.  If this is a code block, return it,
-/// otherwise return the bracket.  Match: '[' and '[{ ( [^}]+ | }[^]] )* }]'
+/// LexBracket - We just read '['. If this is a code block, return it,
+/// otherwise return the bracket. Match: '[' and '[{ ( [^}]+ | }[^]] )* }]'
 tgtok::TokKind TGLexer::LexBracket() {
   if (CurPtr[0] != '{')
     return tgtok::l_square;
@@ -566,14 +609,17 @@ tgtok::TokKind TGLexer::LexBracket() {
   const char *CodeStart = CurPtr;
   while (true) {
     int Char = getNextChar();
-    if (Char == EOF) break;
+    if (Char == EOF)
+      break;
 
-    if (Char != '}') continue;
+    if (Char != '}')
+      continue;
 
     Char = getNextChar();
-    if (Char == EOF) break;
+    if (Char == EOF)
+      break;
     if (Char == ']') {
-      CurStrVal.assign(CodeStart, CurPtr-2);
+      CurStrVal.assign(CodeStart, CurPtr - 2);
       return tgtok::CodeFragment;
     }
   }
@@ -633,10 +679,15 @@ tgtok::TokKind TGLexer::LexExclaim() {
           .Case("strconcat", tgtok::XStrConcat)
           .Case("initialized", tgtok::XInitialized)
           .Case("interleave", tgtok::XInterleave)
+          .Case("instances", tgtok::XInstances)
           .Case("substr", tgtok::XSubstr)
           .Case("find", tgtok::XFind)
-          .Cases("setdagop", "setop", tgtok::XSetDagOp) // !setop is deprecated.
-          .Cases("getdagop", "getop", tgtok::XGetDagOp) // !getop is deprecated.
+          .Cases({"setdagop", "setop"},
+                 tgtok::XSetDagOp) // !setop is deprecated.
+          .Cases({"getdagop", "getop"},
+                 tgtok::XGetDagOp) // !getop is deprecated.
+          .Case("setdagopname", tgtok::XSetDagOpName)
+          .Case("getdagopname", tgtok::XGetDagOpName)
           .Case("getdagarg", tgtok::XGetDagArg)
           .Case("getdagname", tgtok::XGetDagName)
           .Case("setdagarg", tgtok::XSetDagArg)
@@ -645,6 +696,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
           .Case("tolower", tgtok::XToLower)
           .Case("toupper", tgtok::XToUpper)
           .Case("repr", tgtok::XRepr)
+          .Case("match", tgtok::XMatch)
           .Default(tgtok::Error);
 
   return Kind != tgtok::Error ? Kind
@@ -664,11 +716,10 @@ bool TGLexer::prepExitInclude(bool IncludeStackMustBeEmpty) {
   PrepIncludeStack.pop_back();
 
   if (IncludeStackMustBeEmpty) {
-    if (!PrepIncludeStack.empty())
-      PrintFatalError("preprocessor include stack is not empty");
+    assert(PrepIncludeStack.empty() &&
+           "preprocessor include stack is not empty");
   } else {
-    if (PrepIncludeStack.empty())
-      PrintFatalError("preprocessor include stack is empty");
+    assert(!PrepIncludeStack.empty() && "preprocessor include stack is empty");
   }
 
   return true;
@@ -689,7 +740,7 @@ tgtok::TokKind TGLexer::prepIsDirective() const {
         NextChar == '\n' ||
         // It looks like TableGen does not support '\r' as the actual
         // carriage return, e.g. getNextChar() treats a single '\r'
-        // as '\n'.  So we do the same here.
+        // as '\n'. So we do the same here.
         NextChar == '\r')
       return Kind;
 
@@ -702,7 +753,7 @@ tgtok::TokKind TGLexer::prepIsDirective() const {
     //     #define/**/ AND #define//
     //
     // These cases will be reported as incorrect after calling
-    // prepLexMacroName().  We could have supported C-style comments
+    // prepLexMacroName(). We could have supported C-style comments
     // after #ifdef/#define, but this would complicate the code
     // for little benefit.
     if (NextChar == '/') {
@@ -718,27 +769,25 @@ tgtok::TokKind TGLexer::prepIsDirective() const {
   return tgtok::Error;
 }
 
-bool TGLexer::prepEatPreprocessorDirective(tgtok::TokKind Kind) {
+void TGLexer::prepEatPreprocessorDirective(tgtok::TokKind Kind) {
   TokStart = CurPtr;
 
-  for (const auto [PKind, PWord] : PreprocessorDirs)
+  for (const auto [PKind, PWord] : PreprocessorDirs) {
     if (PKind == Kind) {
       // Advance CurPtr to the end of the preprocessing word.
       CurPtr += PWord.size();
-      return true;
+      return;
     }
+  }
 
-  PrintFatalError("unsupported preprocessing token in "
-                  "prepEatPreprocessorDirective()");
-  return false;
+  llvm_unreachable(
+      "unsupported preprocessing token in prepEatPreprocessorDirective()");
 }
 
 tgtok::TokKind TGLexer::lexPreprocessor(tgtok::TokKind Kind,
                                         bool ReturnNextLiveToken) {
-  // We must be looking at a preprocessing directive.  Eat it!
-  if (!prepEatPreprocessorDirective(Kind))
-    PrintFatalError("lexPreprocessor() called for unknown "
-                    "preprocessor directive");
+  // We must be looking at a preprocessing directive. Eat it!
+  prepEatPreprocessorDirective(Kind);
 
   if (Kind == tgtok::Ifdef || Kind == tgtok::Ifndef) {
     StringRef MacroName = prepLexMacroName();
@@ -818,13 +867,11 @@ tgtok::TokKind TGLexer::lexPreprocessor(tgtok::TokKind Kind,
     if (PrepIncludeStack.back().empty())
       return ReturnError(TokStart, "#endif without #ifdef");
 
-    auto &IfdefOrElseEntry = PrepIncludeStack.back().back();
+    [[maybe_unused]] auto &IfdefOrElseEntry = PrepIncludeStack.back().back();
 
-    if (IfdefOrElseEntry.Kind != tgtok::Ifdef &&
-        IfdefOrElseEntry.Kind != tgtok::Else) {
-      PrintFatalError("invalid preprocessor control on the stack");
-      return tgtok::Error;
-    }
+    assert((IfdefOrElseEntry.Kind == tgtok::Ifdef ||
+            IfdefOrElseEntry.Kind == tgtok::Else) &&
+           "invalid preprocessor control on the stack");
 
     if (!prepSkipDirectiveEnd())
       return ReturnError(CurPtr, "only comments are supported after #endif");
@@ -852,21 +899,17 @@ tgtok::TokKind TGLexer::lexPreprocessor(tgtok::TokKind Kind,
       return ReturnError(CurPtr,
                          "only comments are supported after #define NAME");
 
-    if (!ReturnNextLiveToken) {
-      PrintFatalError("#define must be ignored during the lines skipping");
-      return tgtok::Error;
-    }
+    assert(ReturnNextLiveToken &&
+           "#define must be ignored during the lines skipping");
 
     return LexToken();
   }
 
-  PrintFatalError("preprocessing directive is not supported");
-  return tgtok::Error;
+  llvm_unreachable("preprocessing directive is not supported");
 }
 
 bool TGLexer::prepSkipRegion(bool MustNeverBeFalse) {
-  if (!MustNeverBeFalse)
-    PrintFatalError("invalid recursion.");
+  assert(MustNeverBeFalse && "invalid recursion.");
 
   do {
     // Skip all symbols to the line end.
@@ -889,7 +932,7 @@ bool TGLexer::prepSkipRegion(bool MustNeverBeFalse) {
     tgtok::TokKind Kind = prepIsDirective();
 
     // If we did not find a preprocessing directive or it is #define,
-    // then just skip to the next line.  We do not have to do anything
+    // then just skip to the next line. We do not have to do anything
     // for #define in the line-skipping mode.
     if (Kind == tgtok::Error || Kind == tgtok::Define)
       continue;
@@ -902,27 +945,24 @@ bool TGLexer::prepSkipRegion(bool MustNeverBeFalse) {
     if (ProcessedKind == tgtok::Error)
       return false;
 
-    if (Kind != ProcessedKind)
-      PrintFatalError("prepIsDirective() and lexPreprocessor() "
-                      "returned different token kinds");
+    assert(Kind == ProcessedKind && "prepIsDirective() and lexPreprocessor() "
+                                    "returned different token kinds");
 
     // If this preprocessing directive enables tokens processing,
     // then return to the lexPreprocessor() and get to the next token.
     // We can move from line-skipping mode to processing tokens only
     // due to #else or #endif.
     if (prepIsProcessingEnabled()) {
-      if (Kind != tgtok::Else && Kind != tgtok::Endif) {
-        PrintFatalError("tokens processing was enabled by an unexpected "
-                        "preprocessing directive");
-        return false;
-      }
+      assert((Kind == tgtok::Else || Kind == tgtok::Endif) &&
+             "tokens processing was enabled by an unexpected preprocessing "
+             "directive");
 
       return true;
     }
   } while (CurPtr != CurBuf.end());
 
   // We have reached the end of the file, but never left the lines-skipping
-  // mode.  This means there is no matching #endif.
+  // mode. This means there is no matching #endif.
   prepReportPreprocessorStackError();
   return false;
 }
@@ -952,8 +992,8 @@ bool TGLexer::prepSkipLineBegin() {
         // Skip C-style comment.
         // Note that we do not care about skipping the C++-style comments.
         // If the line contains "//", it may not contain any processable
-        // preprocessing directive.  Just return CurPtr pointing to
-        // the first '/' in this case.  We also do not care about
+        // preprocessing directive. Just return CurPtr pointing to
+        // the first '/' in this case. We also do not care about
         // incorrect symbols after the first '/' - we are in lines-skipping
         // mode, so incorrect code is allowed to some extent.
 
@@ -981,7 +1021,7 @@ bool TGLexer::prepSkipLineBegin() {
     ++CurPtr;
   }
 
-  // We have reached the end of the file.  Return to the lines skipping
+  // We have reached the end of the file. Return to the lines skipping
   // code, and allow it to handle the EOF as needed.
   return true;
 }
@@ -1007,7 +1047,7 @@ bool TGLexer::prepSkipDirectiveEnd() {
         SkipBCPLComment();
       } else if (NextChar == '*') {
         // When we are skipping C-style comment at the end of a preprocessing
-        // directive, we can skip several lines.  If any meaningful TD token
+        // directive, we can skip several lines. If any meaningful TD token
         // follows the end of the C-style comment on the same line, it will
         // be considered as an invalid usage of TD token.
         // For example, we want to forbid usages like this one:
@@ -1016,7 +1056,7 @@ bool TGLexer::prepSkipDirectiveEnd() {
         //     #define MACRO /* This macro is used
         //                      to ... */ class Class {}
         // One can argue that this should be allowed, but it does not seem
-        // to be worth of the complication.  Moreover, this matches
+        // to be worth of the complication. Moreover, this matches
         // the C preprocessor behavior.
 
         // Set TokStart to the beginning of the comment to enable proper
@@ -1053,10 +1093,6 @@ bool TGLexer::prepIsProcessingEnabled() {
 }
 
 void TGLexer::prepReportPreprocessorStackError() {
-  if (PrepIncludeStack.back().empty())
-    PrintFatalError("prepReportPreprocessorStackError() called with "
-                    "empty control stack");
-
   auto &PrepControl = PrepIncludeStack.back().back();
   PrintError(CurBuf.end(), "reached EOF without matching #endif");
   PrintError(PrepControl.SrcPos, "the latest preprocessor control is here");

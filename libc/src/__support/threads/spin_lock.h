@@ -34,7 +34,7 @@ public:
     // .LBB0_2:                          |                  jmp     .LBB0_4
     //         isb                       |         .LBB0_2:
     // .LBB0_3:                          |                  pause
-    //         ldrb    w9, [x0]          |         .LBB0_3:       
+    //         ldrb    w9, [x0]          |         .LBB0_3:
     //         tbnz    w9, #0, .LBB0_2   |                  movzx   eax, byte ptr [rdi]
     //         b       .LBB0_1           |                  test    al, 1
     // .LBB0_4:                          |                  jne     .LBB0_2

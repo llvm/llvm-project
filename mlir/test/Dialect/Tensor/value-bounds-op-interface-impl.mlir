@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-affine-reify-value-bounds -verify-diagnostics \
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(test-affine-reify-value-bounds))' -verify-diagnostics \
 // RUN:     -split-input-file | FileCheck %s
 
 func.func @unknown_op() -> index {
@@ -40,6 +40,17 @@ func.func @dim(%t: tensor<?xf32>) -> index {
   %0 = tensor.dim %t, %c0 : tensor<?xf32>
   %1 = "test.reify_bound"(%0) : (index) -> (index)
   return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @dim_all_positive(
+func.func @dim_all_positive(%t: tensor<?xf32>, %x: index) {
+  %c0 = arith.constant 0 : index
+  %0 = tensor.dim %t, %x : tensor<?xf32>
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %c0) {cmp = "GE" } : (index, index) -> ()
+  return
 }
 
 // -----
@@ -200,5 +211,22 @@ func.func @dynamic_dims_are_maybe_equal_2(%t: tensor<?x?xf32>) {
   %dim1 = tensor.dim %t, %c1 : tensor<?x?xf32>
   // expected-error @below {{unknown}}
   "test.compare"(%dim0, %dim1) : (index, index) -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL:  func.func @pad_reification
+func.func @pad_reification(%cst : f32, %idx : index, %t: tensor<64x?x64xf32>) {
+  %pad_amt = affine.apply affine_map<(d0) -> (-d0 + 256)>(%idx)
+  %es = tensor.extract_slice %t[0, 0, 0] [1, %idx, 64] [1, 1, 1] : tensor<64x?x64xf32> to tensor<1x?x64xf32>
+
+  %padded = tensor.pad %es low[0, 0, 0] high[0, %pad_amt, 0] {
+  ^bb0(%a: index, %b: index, %c: index):
+    tensor.yield %cst : f32
+  } : tensor<1x?x64xf32> to tensor<1x?x64xf32>
+
+  // CHECK: arith.constant 256 : index
+  %1 = "test.reify_bound"(%padded) {dim = 1, constant} : (tensor<1x?x64xf32>) -> (index)
   return
 }

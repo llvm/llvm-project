@@ -9,11 +9,13 @@
 #ifndef _LIBCPP___ALGORITHM_MOVE_H
 #define _LIBCPP___ALGORITHM_MOVE_H
 
+#include <__algorithm/copy.h>
 #include <__algorithm/copy_move_common.h>
 #include <__algorithm/for_each_segment.h>
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/min.h>
 #include <__config>
+#include <__fwd/bit_reference.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/segmented_iterator.h>
 #include <__type_traits/common_type.h>
@@ -50,7 +52,7 @@ struct __move_impl {
 
   template <class _InIter, class _OutIter>
   struct _MoveSegment {
-    using _Traits = __segmented_iterator_traits<_InIter>;
+    using _Traits _LIBCPP_NODEBUG = __segmented_iterator_traits<_InIter>;
 
     _OutIter& __result_;
 
@@ -63,7 +65,7 @@ struct __move_impl {
     }
   };
 
-  template <class _InIter, class _OutIter, __enable_if_t<__is_segmented_iterator<_InIter>::value, int> = 0>
+  template <class _InIter, class _OutIter, __enable_if_t<__is_segmented_iterator_v<_InIter>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
   operator()(_InIter __first, _InIter __last, _OutIter __result) const {
     std::__for_each_segment(__first, __last, _MoveSegment<_InIter, _OutIter>(__result));
@@ -73,12 +75,13 @@ struct __move_impl {
   template <class _InIter,
             class _OutIter,
             __enable_if_t<__has_random_access_iterator_category<_InIter>::value &&
-                              !__is_segmented_iterator<_InIter>::value && __is_segmented_iterator<_OutIter>::value,
+                              !__is_segmented_iterator_v<_InIter> && __is_segmented_iterator_v<_OutIter>,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
   operator()(_InIter __first, _InIter __last, _OutIter __result) const {
     using _Traits = __segmented_iterator_traits<_OutIter>;
-    using _DiffT  = typename common_type<__iter_diff_t<_InIter>, __iter_diff_t<_OutIter> >::type;
+    using _DiffT =
+        typename common_type<__iterator_difference_type<_InIter>, __iterator_difference_type<_OutIter> >::type;
 
     if (__first == __last)
       return std::make_pair(std::move(__first), std::move(__result));
@@ -96,6 +99,14 @@ struct __move_impl {
 
       __local_first = _Traits::__begin(++__segment_iterator);
     }
+  }
+
+  template <class _Cp, bool _IsConst>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<__bit_iterator<_Cp, _IsConst>, __bit_iterator<_Cp, false> >
+  operator()(__bit_iterator<_Cp, _IsConst> __first,
+             __bit_iterator<_Cp, _IsConst> __last,
+             __bit_iterator<_Cp, false> __result) {
+    return std::__copy(__first, __last, __result);
   }
 
   // At this point, the iterators have been unwrapped so any `contiguous_iterator` has been unwrapped to a pointer.

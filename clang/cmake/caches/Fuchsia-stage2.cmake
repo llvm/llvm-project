@@ -44,7 +44,6 @@ set(CLANG_DEFAULT_LINKER lld CACHE STRING "")
 set(CLANG_DEFAULT_OBJCOPY llvm-objcopy CACHE STRING "")
 set(CLANG_DEFAULT_RTLIB compiler-rt CACHE STRING "")
 set(CLANG_DEFAULT_UNWINDLIB libunwind CACHE STRING "")
-set(CLANG_ENABLE_ARCMT OFF CACHE BOOL "")
 set(CLANG_ENABLE_STATIC_ANALYZER ON CACHE BOOL "")
 set(CLANG_PLUGIN_SUPPORT OFF CACHE BOOL "")
 
@@ -59,7 +58,7 @@ set(CMAKE_CXX_VISIBILITY_PRESET default CACHE STRING "")
 
 set(CMAKE_BUILD_TYPE Release CACHE STRING "")
 if (APPLE)
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "")
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "")
 elseif(WIN32)
   set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded" CACHE STRING "")
 endif()
@@ -84,7 +83,7 @@ if(APPLE)
   set(LIBCXX_ENABLE_STATIC_ABI_LIBRARY ON CACHE BOOL "")
   set(LIBCXX_HARDENING_MODE "none" CACHE STRING "")
   set(LIBCXX_USE_COMPILER_RT ON CACHE BOOL "")
-  set(RUNTIMES_CMAKE_ARGS "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13;-DCMAKE_OSX_ARCHITECTURES=arm64|x86_64" CACHE STRING "")
+  set(RUNTIMES_CMAKE_ARGS "-DCMAKE_OSX_DEPLOYMENT_TARGET=11.0;-DCMAKE_OSX_ARCHITECTURES=arm64|x86_64" CACHE STRING "")
 endif()
 
 if(WIN32 OR LLVM_WINSYSROOT)
@@ -190,6 +189,10 @@ foreach(target aarch64-unknown-linux-gnu;armv7-unknown-linux-gnueabihf;i386-unkn
     set(RUNTIMES_${target}_LLVM_TOOLS_DIR "${CMAKE_BINARY_DIR}/bin" CACHE BOOL "")
     set(RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
 
+    # Enable FatLTO for Linux and baremetal runtimes
+    set(RUNTIMES_${target}_LLVM_ENABLE_LTO OFF CACHE BOOL "")
+    set(RUNTIMES_${target}_LLVM_ENABLE_FATLTO OFF CACHE BOOL "")
+
     # Use .build-id link.
     list(APPEND RUNTIME_BUILD_ID_LINK "${target}")
   endif()
@@ -197,16 +200,17 @@ endforeach()
 
 if(FUCHSIA_SDK)
   set(FUCHSIA_aarch64-unknown-fuchsia_NAME arm64)
+  set(FUCHSIA_arm-unknown-fuchsia_NAME arm)
   set(FUCHSIA_i386-unknown-fuchsia_NAME x64)
   set(FUCHSIA_x86_64-unknown-fuchsia_NAME x64)
   set(FUCHSIA_riscv64-unknown-fuchsia_NAME riscv64)
-  foreach(target i386-unknown-fuchsia;x86_64-unknown-fuchsia;aarch64-unknown-fuchsia;riscv64-unknown-fuchsia)
+  foreach(target i386-unknown-fuchsia;x86_64-unknown-fuchsia;aarch64-unknown-fuchsia;arm-unknown-fuchsia;riscv64-unknown-fuchsia)
     set(FUCHSIA_${target}_COMPILER_FLAGS "--target=${target} -I${FUCHSIA_SDK}/pkg/sync/include -I${FUCHSIA_SDK}/pkg/fdio/include")
     set(FUCHSIA_${target}_LINKER_FLAGS "-L${FUCHSIA_SDK}/arch/${FUCHSIA_${target}_NAME}/lib")
     set(FUCHSIA_${target}_SYSROOT "${FUCHSIA_SDK}/arch/${FUCHSIA_${target}_NAME}/sysroot")
   endforeach()
 
-  foreach(target i386-unknown-fuchsia;x86_64-unknown-fuchsia;aarch64-unknown-fuchsia;riscv64-unknown-fuchsia)
+  foreach(target i386-unknown-fuchsia;x86_64-unknown-fuchsia;aarch64-unknown-fuchsia;arm-unknown-fuchsia;riscv64-unknown-fuchsia)
     # Set the per-target builtins options.
     list(APPEND BUILTIN_TARGETS "${target}")
     set(BUILTINS_${target}_CMAKE_SYSTEM_NAME Fuchsia CACHE STRING "")
@@ -272,6 +276,10 @@ if(FUCHSIA_SDK)
     set(RUNTIMES_${target}+asan+noexcept_LIBCXXABI_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
     set(RUNTIMES_${target}+asan+noexcept_LIBCXX_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
 
+    # Enable FatLTO for Fuchsia runtimes
+    set(RUNTIMES_${target}_LLVM_ENABLE_LTO OFF CACHE BOOL "")
+    set(RUNTIMES_${target}_LLVM_ENABLE_FATLTO OFF CACHE BOOL "")
+
     # Use .build-id link.
     list(APPEND RUNTIME_BUILD_ID_LINK "${target}")
   endforeach()
@@ -300,7 +308,7 @@ if(FUCHSIA_SDK)
   set(LLVM_RUNTIME_MULTILIB_hwasan+noexcept_TARGETS "aarch64-unknown-fuchsia;riscv64-unknown-fuchsia" CACHE STRING "")
 endif()
 
-foreach(target armv6m-none-eabi;armv7m-none-eabi;armv8m.main-none-eabi;armv8.1m.main-none-eabi;aarch64-none-elf)
+foreach(target armv6m-none-eabi;armv7m-none-eabi;armv7em-none-eabi;armv8m.main-none-eabi;armv8.1m.main-none-eabi;aarch64-none-elf)
   list(APPEND BUILTIN_TARGETS "${target}")
   set(BUILTINS_${target}_CMAKE_SYSTEM_NAME Generic CACHE STRING "")
   set(BUILTINS_${target}_CMAKE_SYSTEM_PROCESSOR arm CACHE STRING "")
@@ -333,7 +341,7 @@ foreach(target armv6m-none-eabi;armv7m-none-eabi;armv8m.main-none-eabi;armv8.1m.
   foreach(lang C;CXX;ASM)
     # TODO: The preprocessor defines workaround various issues in libc and libc++ integration.
     # These should be addressed and removed over time.
-    set(RUNTIMES_${target}_CMAKE_${lang}_local_flags "--target=${target} -Wno-atomic-alignment \"-Dvfprintf(stream, format, vlist)=vprintf(format, vlist)\" \"-Dfprintf(stream, format, ...)=printf(format)\" -D_LIBCPP_PRINT=1")
+    set(RUNTIMES_${target}_CMAKE_${lang}_local_flags "--target=${target} -Wno-atomic-alignment \"-Dvfprintf(stream, format, vlist)=vprintf(format, vlist)\" \"-Dfprintf(stream, format, ...)=printf(format)\" \"-Dfputs(string, stream)=puts(string)\" -D_LIBCPP_PRINT=1")
     if(NOT ${target} STREQUAL "aarch64-none-elf")
       set(RUNTIMES_${target}_CMAKE_${lang}_local_flags "${RUNTIMES_${target}_CMAKE_${lang}_local_flags} -mthumb")
     endif()
@@ -355,7 +363,6 @@ foreach(target armv6m-none-eabi;armv7m-none-eabi;armv8m.main-none-eabi;armv8.1m.
   set(RUNTIMES_${target}_LIBCXX_ENABLE_SHARED OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_STATIC ON CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_SHARED_OUTPUT_NAME "c++-shared" CACHE STRING "")
-  set(RUNTIMES_${target}_LIBCXX_LIBC "llvm-libc" CACHE STRING "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_FILESYSTEM OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_RANDOM_DEVICE OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_LOCALIZATION OFF CACHE BOOL "")
@@ -369,6 +376,11 @@ foreach(target armv6m-none-eabi;armv7m-none-eabi;armv8m.main-none-eabi;armv8.1m.
   set(RUNTIMES_${target}_LLVM_INCLUDE_TESTS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_ASSERTIONS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES "libc;libcxx" CACHE STRING "")
+  set(RUNTIMES_${target}_RUNTIMES_USE_LIBC "llvm-libc" CACHE STRING "")
+
+  # Enable FatLTO for baremetal runtimes
+  set(RUNTIMES_${target}_LLVM_ENABLE_LTO OFF CACHE BOOL "")
+  set(RUNTIMES_${target}_LLVM_ENABLE_FATLTO OFF CACHE BOOL "")
 endforeach()
 
 foreach(target riscv32-unknown-elf)
@@ -394,7 +406,7 @@ foreach(target riscv32-unknown-elf)
   foreach(lang C;CXX;ASM)
     # TODO: The preprocessor defines workaround various issues in libc and libc++ integration.
     # These should be addressed and removed over time.
-    set(RUNTIMES_${target}_CMAKE_${lang}_FLAGS "--target=${target} -march=rv32imafc -mabi=ilp32f -Wno-atomic-alignment \"-Dvfprintf(stream, format, vlist)=vprintf(format, vlist)\" \"-Dfprintf(stream, format, ...)=printf(format)\" -D_LIBCPP_PRINT=1" CACHE STRING "")
+    set(RUNTIMES_${target}_CMAKE_${lang}_FLAGS "--target=${target} -march=rv32imafc -mabi=ilp32f -Wno-atomic-alignment \"-Dvfprintf(stream, format, vlist)=vprintf(format, vlist)\" \"-Dfprintf(stream, format, ...)=printf(format)\" \"-Dfputs(string, stream)=puts(string)\" -D_LIBCPP_PRINT=1" CACHE STRING "")
   endforeach()
   foreach(type SHARED;MODULE;EXE)
     set(RUNTIMES_${target}_CMAKE_${type}_LINKER_FLAGS "-fuse-ld=lld" CACHE STRING "")
@@ -406,7 +418,6 @@ foreach(target riscv32-unknown-elf)
   set(RUNTIMES_${target}_LIBCXX_ENABLE_SHARED OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_STATIC ON CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_SHARED_OUTPUT_NAME "c++-shared" CACHE STRING "")
-  set(RUNTIMES_${target}_LIBCXX_LIBC "llvm-libc" CACHE STRING "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_FILESYSTEM OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_RANDOM_DEVICE OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_LOCALIZATION OFF CACHE BOOL "")
@@ -420,6 +431,11 @@ foreach(target riscv32-unknown-elf)
   set(RUNTIMES_${target}_LLVM_INCLUDE_TESTS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_ASSERTIONS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES "libc;libcxx" CACHE STRING "")
+  set(RUNTIMES_${target}_RUNTIMES_USE_LIBC "llvm-libc" CACHE STRING "")
+
+  # Enable FatLTO for baremetal runtimes
+  set(RUNTIMES_${target}_LLVM_ENABLE_LTO OFF CACHE BOOL "")
+  set(RUNTIMES_${target}_LLVM_ENABLE_FATLTO OFF CACHE BOOL "")
 endforeach()
 
 set(LLVM_BUILTIN_TARGETS "${BUILTIN_TARGETS}" CACHE STRING "")

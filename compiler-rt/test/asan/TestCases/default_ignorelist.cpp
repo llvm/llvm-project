@@ -1,5 +1,5 @@
 // FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=316
-// XFAIL: android
+// XFAIL: android, msvc
 // UNSUPPORTED: ios
 //
 // Test that ASan uses the default ignorelist from resource directory.

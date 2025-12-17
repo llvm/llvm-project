@@ -14,7 +14,7 @@
 ; CHECK-DAG: %[[#PtrStruct:]] = OpTypePointer CrossWorkgroup %[[#Struct]]
 ; CHECK-DAG: %[[#Var:]] = OpVariable %[[#PtrStruct]] CrossWorkgroup %[[#VarInit]]
 ; CHECK-DAG: %[[#Bytes:]] = OpVariable %[[#PtrChar]] CrossWorkgroup %[[#]]
-; CHECK-DAG: %[[#BytesGEP:]] = OpSpecConstantOp %[[#PtrChar]] 70 %[[#Bytes]] %[[#C648]]
+; CHECK-DAG: %[[#BytesGEP:]] = OpSpecConstantOp %[[#PtrChar]] InBoundsPtrAccessChain %[[#Bytes]] %[[#C648]]
 
 ; CHECK: OpFunction
 ; CHECK: %[[#]] = OpFunctionParameter %[[#]]

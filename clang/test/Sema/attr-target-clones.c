@@ -28,6 +28,17 @@ int __attribute__((target_clones("sse4.2", "arch=atom", "default"))) redecl4(voi
 int __attribute__((target_clones("sse4.2", "arch=sandybridge", "default")))
 redecl4(void) { return 1; }
 
+int __attribute__((target_clones("sse4.2", "default"))) redecl5(void);
+int redecl5(void) { return 1; }
+
+int redecl6(void);
+int __attribute__((target_clones("sse4.2", "default"))) redecl6(void) { return 1; }
+
+int __attribute__((target_clones("sse4.2", "default"))) redecl7(void);
+// expected-error@+2 {{multiversioning attributes cannot be combined}}
+// expected-note@-2 {{previous declaration is here}}
+int __attribute__((target("sse4.2"))) redecl7(void) { return 1; }
+
 int __attribute__((target("sse4.2"))) redef2(void) { return 1; }
 // expected-error@+2 {{multiversioning attributes cannot be combined}}
 // expected-note@-2 {{previous declaration is here}}
@@ -87,6 +98,8 @@ int useage(void) {
 int __attribute__((target_clones("sse4.2", "default"))) mv_after_use(void) { return 1; }
 
 void bad_overload1(void) __attribute__((target_clones("mmx", "sse4.2", "default")));
+// expected-error@+2 {{conflicting types for 'bad_overload1'}}
+// expected-note@-2 {{previous declaration is here}}
 void bad_overload1(int p) {}
 
 void bad_overload2(int p) {}
@@ -122,3 +135,6 @@ void good_overload5(int) __attribute__((target_clones("mmx", "sse4.2", "default"
 void good_isa_level(int) __attribute__((target_clones("default", "arch=x86-64", "arch=x86-64-v2", "arch=x86-64-v3", "arch=x86-64-v4")));
 // expected-warning@+1 {{unsupported CPU 'x86-64-v5' in the 'target_clones' attribute string; 'target_clones' attribute ignored}}
 void bad_isa_level(int) __attribute__((target_clones("default", "arch=x86-64-v5")));
+
+// expected-warning@+1 {{unsupported 'sha' in the 'target_clones' attribute string; 'target_clones' attribute ignored}}
+void bad_feature(void) __attribute__((target_clones("default", "sse4.2", "sha")));

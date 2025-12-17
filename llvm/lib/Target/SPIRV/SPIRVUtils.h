@@ -17,10 +17,12 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/TypedPointerType.h"
 #include <queue>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 
 namespace llvm {
@@ -111,6 +113,59 @@ public:
                          std::function<bool(BasicBlock *)> Op);
 };
 
+namespace SPIRV {
+struct FPFastMathDefaultInfo {
+  const Type *Ty = nullptr;
+  unsigned FastMathFlags = 0;
+  // When SPV_KHR_float_controls2 ContractionOff and SignzeroInfNanPreserve are
+  // deprecated, and we replace them with FPFastMathDefault appropriate flags
+  // instead. However, we have no guarantee about the order in which we will
+  // process execution modes. Therefore it could happen that we first process
+  // ContractionOff, setting AllowContraction bit to 0, and then we process
+  // FPFastMathDefault enabling AllowContraction bit, effectively invalidating
+  // ContractionOff. Because of that, it's best to keep separate bits for the
+  // different execution modes, and we will try and combine them later when we
+  // emit OpExecutionMode instructions.
+  bool ContractionOff = false;
+  bool SignedZeroInfNanPreserve = false;
+  bool FPFastMathDefault = false;
+
+  FPFastMathDefaultInfo() = default;
+  FPFastMathDefaultInfo(const Type *Ty, unsigned FastMathFlags)
+      : Ty(Ty), FastMathFlags(FastMathFlags) {}
+  bool operator==(const FPFastMathDefaultInfo &Other) const {
+    return Ty == Other.Ty && FastMathFlags == Other.FastMathFlags &&
+           ContractionOff == Other.ContractionOff &&
+           SignedZeroInfNanPreserve == Other.SignedZeroInfNanPreserve &&
+           FPFastMathDefault == Other.FPFastMathDefault;
+  }
+};
+
+struct FPFastMathDefaultInfoVector
+    : public SmallVector<SPIRV::FPFastMathDefaultInfo, 3> {
+  static size_t computeFPFastMathDefaultInfoVecIndex(size_t BitWidth) {
+    switch (BitWidth) {
+    case 16: // half
+      return 0;
+    case 32: // float
+      return 1;
+    case 64: // double
+      return 2;
+    default:
+      report_fatal_error("Expected BitWidth to be 16, 32, 64", false);
+    }
+    llvm_unreachable(
+        "Unreachable code in computeFPFastMathDefaultInfoVecIndex");
+  }
+};
+
+// This code restores function args/retvalue types for composite cases
+// because the final types should still be aggregate whereas they're i32
+// during the translation to cope with aggregate flattening etc.
+FunctionType *getOriginalFunctionType(const Function &F);
+FunctionType *getOriginalFunctionType(const CallBase &CB);
+} // namespace SPIRV
+
 // Add the given string as a series of integer operand, inserting null
 // terminators and padding to make sure the operands all have 32-bit
 // little-endian words.
@@ -122,6 +177,10 @@ void addStringImm(const StringRef &Str, IRBuilder<> &B,
 // Read the series of integer operands back as a null-terminated string using
 // the reverse of the logic in addStringImm.
 std::string getStringImm(const MachineInstr &MI, unsigned StartIndex);
+
+// Returns the string constant that the register refers to. It is assumed that
+// Reg is a global value that contains a string.
+std::string getStringValueFromReg(Register Reg, MachineRegisterInfo &MRI);
 
 // Add the given numerical immediate to MIB.
 void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB);
@@ -142,9 +201,20 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
                      const std::vector<uint32_t> &DecArgs,
                      StringRef StrImm = "");
 
+// Add an OpDecorate instruction for the given Reg.
+void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
+                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
+                           const std::vector<uint32_t> &DecArgs,
+                           StringRef StrImm = "");
+void buildOpMemberDecorate(Register Reg, MachineInstr &I,
+                           const SPIRVInstrInfo &TII,
+                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
+                           const std::vector<uint32_t> &DecArgs,
+                           StringRef StrImm = "");
+
 // Add an OpDecorate instruction by "spirv.Decorations" metadata node.
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
-                             const MDNode *GVarMD);
+                             const MDNode *GVarMD, const SPIRVSubtarget &ST);
 
 // Return a valid position for the OpVariable instruction inside a function,
 // i.e., at the beginning of the first block of the function.
@@ -153,6 +223,19 @@ MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I);
 // Return a valid position for the instruction at the end of the block before
 // terminators and debug instructions.
 MachineBasicBlock::iterator getInsertPtValidEnd(MachineBasicBlock *MBB);
+
+// Returns true if a pointer to the storage class can be casted to/from a
+// pointer to the Generic storage class.
+constexpr bool isGenericCastablePtr(SPIRV::StorageClass::StorageClass SC) {
+  switch (SC) {
+  case SPIRV::StorageClass::Workgroup:
+  case SPIRV::StorageClass::CrossWorkgroup:
+  case SPIRV::StorageClass::Function:
+    return true;
+  default:
+    return false;
+  }
+}
 
 // Convert a SPIR-V storage class to the corresponding LLVM IR address space.
 // TODO: maybe the following two functions should be handled in the subtarget
@@ -182,6 +265,10 @@ storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
     return 9;
   case SPIRV::StorageClass::Private:
     return 10;
+  case SPIRV::StorageClass::StorageBuffer:
+    return 11;
+  case SPIRV::StorageClass::Uniform:
+    return 12;
   default:
     report_fatal_error("Unable to get address space id");
   }
@@ -206,6 +293,9 @@ MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
 
 // Get constant integer value of the given ConstReg.
 uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI);
+
+// Get constant integer value of the given ConstReg, sign-extended.
+int64_t getIConstValSext(Register ConstReg, const MachineRegisterInfo *MRI);
 
 // Check if MI is a SPIR-V specific intrinsic call.
 bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID);
@@ -235,6 +325,25 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx);
 // dominators. This should match both the SPIR-V and the MIR requirements.
 // Returns true if the function was changed.
 bool sortBlocks(Function &F);
+
+// Check for peeled array structs and recursively reconstitute them. In HLSL
+// CBuffers, arrays may have padding between the elements, but not after the
+// last element. To represent this in LLVM IR an array [N x T] will be
+// represented as {[N-1 x {T, spirv.Padding}], T}. The function
+// matchPeeledArrayPattern recognizes this pattern retrieving the type {T,
+// spirv.Padding}, and the size N.
+bool matchPeeledArrayPattern(const StructType *Ty, Type *&OriginalElementType,
+                             uint64_t &TotalSize);
+
+// This function will turn the type {[N-1 x {T, spirv.Padding}], T} back into
+// [N x {T, spirv.Padding}]. So it can be translated into SPIR-V. The offset
+// decorations will be such that there will be no padding after the array when
+// relevant.
+Type *reconstitutePeeledArrayType(Type *Ty);
+
+inline bool hasInitializer(const GlobalVariable *GV) {
+  return GV->hasInitializer() && !isa<UndefValue>(GV->getInitializer());
+}
 
 // True if this is an instance of TypedPointerType.
 inline bool isTypedPointerTy(const Type *T) {
@@ -377,13 +486,47 @@ inline const Type *unifyPtrType(const Type *Ty) {
   return toTypedPointer(const_cast<Type *>(Ty));
 }
 
+inline bool isVector1(Type *Ty) {
+  auto *FVTy = dyn_cast<FixedVectorType>(Ty);
+  return FVTy && FVTy->getNumElements() == 1;
+}
+
+// Modify an LLVM type to conform with future transformations in IRTranslator.
+// At the moment use cases comprise only a <1 x Type> vector. To extend when/if
+// needed.
+inline Type *normalizeType(Type *Ty) {
+  auto *FVTy = dyn_cast<FixedVectorType>(Ty);
+  if (!FVTy || FVTy->getNumElements() != 1)
+    return Ty;
+  // If it's a <1 x Type> vector type, replace it by the element type, because
+  // it's not a legal vector type in LLT and IRTranslator will represent it as
+  // the scalar eventually.
+  return normalizeType(FVTy->getElementType());
+}
+
+inline PoisonValue *getNormalizedPoisonValue(Type *Ty) {
+  return PoisonValue::get(normalizeType(Ty));
+}
+
+inline MetadataAsValue *buildMD(Value *Arg) {
+  LLVMContext &Ctx = Arg->getContext();
+  return MetadataAsValue::get(
+      Ctx, MDNode::get(Ctx, ValueAsMetadata::getConstant(Arg)));
+}
+
+CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
+                          Value *Arg, Value *Arg2, ArrayRef<Constant *> Imms,
+                          IRBuilder<> &B);
+
 MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 
 #define SPIRV_BACKEND_SERVICE_FUN_NAME "__spirv_backend_service_fun"
 bool getVacantFunctionName(Module &M, std::string &Name);
 
 void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
-                     MachineIRBuilder &MIRBuilder, bool Force = false);
+                     MachineIRBuilder &MIRBuilder,
+                     SPIRV::AccessQualifier::AccessQualifier AccessQual,
+                     bool EmitIR, bool Force = false);
 void setRegClassType(Register Reg, const MachineInstr *SpvType,
                      SPIRVGlobalRegistry *GR, MachineRegisterInfo *MRI,
                      const MachineFunction &MF, bool Force = false);
@@ -394,8 +537,9 @@ Register createVirtualRegister(const MachineInstr *SpvType,
 Register createVirtualRegister(const MachineInstr *SpvType,
                                SPIRVGlobalRegistry *GR,
                                MachineIRBuilder &MIRBuilder);
-Register createVirtualRegister(const Type *Ty, SPIRVGlobalRegistry *GR,
-                               MachineIRBuilder &MIRBuilder);
+Register createVirtualRegister(
+    const Type *Ty, SPIRVGlobalRegistry *GR, MachineIRBuilder &MIRBuilder,
+    SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR);
 
 // Return true if there is an opaque pointer type nested in the argument.
 bool isNestedPointer(const Type *Ty);
@@ -413,5 +557,30 @@ inline FPDecorationId demangledPostfixToDecorationId(const std::string &S) {
   return It == Mapping.end() ? FPDecorationId::NONE : It->second;
 }
 
+SmallVector<MachineInstr *, 4>
+createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
+                            unsigned MinWC, unsigned ContinuedOpcode,
+                            ArrayRef<Register> Args, Register ReturnRegister,
+                            Register TypeID);
+
+// Instruction selection directed by type folding.
+const std::set<unsigned> &getTypeFoldingSupportedOpcodes();
+bool isTypeFoldingSupported(unsigned Opcode);
+
+// Get loop controls from llvm.loop. metadata.
+SmallVector<unsigned, 1> getSpirvLoopControlOperandsFromLoopMetadata(Loop *L);
+
+// Traversing [g]MIR accounting for pseudo-instructions.
+MachineInstr *passCopy(MachineInstr *Def, const MachineRegisterInfo *MRI);
+MachineInstr *getDef(const MachineOperand &MO, const MachineRegisterInfo *MRI);
+MachineInstr *getImm(const MachineOperand &MO, const MachineRegisterInfo *MRI);
+int64_t foldImm(const MachineOperand &MO, const MachineRegisterInfo *MRI);
+unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
+                                const MachineInstr *ResType);
+MachineBasicBlock::iterator
+getFirstValidInstructionInsertPoint(MachineBasicBlock &BB);
+
+std::optional<SPIRV::LinkageType::LinkageType>
+getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV);
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

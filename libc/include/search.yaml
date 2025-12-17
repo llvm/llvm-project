@@ -1,44 +1,46 @@
 header: search.h
-macros: []
+standards:
+  - posix
 types:
-  - type_name: struct_hsearch_data
-  - type_name: ENTRY
   - type_name: ACTION
-  - type_name: __lsearchcompare_t
+  - type_name: ENTRY
+  - type_name: VISIT
+  - type_name: __search_compare_t
+  - type_name: struct_hsearch_data
 enums: []
 objects: []
 functions:
   - name: hcreate
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: size_t
   - name: hcreate_r
-    standards: GNUExtensions
+    standards: gnu
     return_type: int
     arguments:
       - type: size_t
       - type: struct hsearch_data *
   - name: hdestroy
-    standards: GNUExtensions
+    standards: gnu
     return_type: void
     arguments: []
   - name: hdestroy_r
     standards:
-      - POSIX
+      - posix
     return_type: void
     arguments:
       - type: struct hsearch_data *
   - name: hsearch
     standards:
-      - POSIX
+      - posix
     return_type: ENTRY *
     arguments:
       - type: ENTRY
       - type: ACTION
   - name: hsearch_r
-    standards: GNUExtensions
+    standards: gnu
     return_type: int
     arguments:
       - type: ENTRY
@@ -47,24 +49,34 @@ functions:
       - type: struct hsearch_data *
   - name: insque
     standards:
-      - POSIX
+      - posix
     return_type: void
     arguments:
       - type: void *
       - type: void *
   - name: remque
     standards:
-      - POSIX
+      - posix
     return_type: void
     arguments:
       - type: void *
   - name: lfind
     standards:
-      - POSIX
+      - posix
     return_type: void *
     arguments:
       - type: const void *
       - type: const void *
       - type: size_t *
       - type: size_t
-      - type: __lsearchcompare_t
+      - type: __search_compare_t
+  - name: lsearch
+    standards:
+      - posix
+    return_type: void *
+    arguments:
+      - type: const void *
+      - type: void *
+      - type: size_t *
+      - type: size_t
+      - type: __search_compare_t

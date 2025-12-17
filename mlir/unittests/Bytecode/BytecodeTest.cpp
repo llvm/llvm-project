@@ -10,13 +10,17 @@
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/Parser/Parser.h"
 
+#include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBufferRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -37,6 +41,29 @@ module @TestDialectResources attributes {
 #-}
 )";
 
+struct MockOstream final : public raw_ostream {
+  std::unique_ptr<std::byte[]> buffer;
+  size_t size = 0;
+
+  MOCK_METHOD(void, reserveExtraSpace, (uint64_t extraSpace), (override));
+
+  MockOstream() : raw_ostream(true) {}
+  uint64_t current_pos() const override { return pos; }
+
+private:
+  size_t pos = 0;
+
+  void write_impl(const char *ptr, size_t length) override {
+    if (pos + length <= size) {
+      memcpy((void *)(buffer.get() + pos), ptr, length);
+      pos += length;
+    } else {
+      report_fatal_error(
+          "Attempted to write past the end of the fixed size buffer.");
+    }
+  }
+};
+
 TEST(Bytecode, MultiModuleWithResource) {
   MLIRContext context;
   Builder builder(&context);
@@ -45,12 +72,19 @@ TEST(Bytecode, MultiModuleWithResource) {
       parseSourceString<Operation *>(irWithResources, parseConfig);
   ASSERT_TRUE(module);
 
-  // Write the module to bytecode
-  std::string buffer;
-  llvm::raw_string_ostream ostream(buffer);
+  // Write the module to bytecode.
+  // Ensure that reserveExtraSpace is called with the size needed to write the
+  // bytecode buffer.
+  MockOstream ostream;
+  EXPECT_CALL(ostream, reserveExtraSpace).WillOnce([&](uint64_t space) {
+    ostream.buffer = std::make_unique<std::byte[]>(space);
+    ostream.size = space;
+  });
   ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), ostream)));
 
   // Create copy of buffer which is aligned to requested resource alignment.
+  std::string buffer((char *)ostream.buffer.get(),
+                     (char *)ostream.buffer.get() + ostream.size);
   constexpr size_t kAlignment = 0x20;
   size_t bufferSize = buffer.size();
   buffer.reserve(bufferSize + kAlignment - 1);
@@ -86,6 +120,54 @@ TEST(Bytecode, MultiModuleWithResource) {
 
   checkResourceAttribute(*module);
   checkResourceAttribute(*roundTripModule);
+}
+
+TEST(Bytecode, AlignmentFailure) {
+  MLIRContext context;
+  Builder builder(&context);
+  ParserConfig parseConfig(&context);
+  OwningOpRef<Operation *> module =
+      parseSourceString<Operation *>(irWithResources, parseConfig);
+  ASSERT_TRUE(module);
+
+  // Write the module to bytecode.
+  std::string serializedBytecode;
+  llvm::raw_string_ostream ostream(serializedBytecode);
+  ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), ostream)));
+
+  // Create copy of buffer which is not aligned to requested resource alignment.
+  std::string buffer(serializedBytecode);
+  size_t bufferSize = buffer.size();
+
+  // Increment into the buffer until we get to an address that is 2 byte aligned
+  // but not 32 byte aligned.
+  size_t pad = 0;
+  while (true) {
+    if (llvm::isAddrAligned(Align(2), buffer.data() + pad) &&
+        !llvm::isAddrAligned(Align(32), buffer.data() + pad))
+      break;
+
+    pad++;
+    // Pad the beginning of the buffer to push the start point to an unaligned
+    // value.
+    buffer.insert(0, 1, ' ');
+  }
+
+  StringRef alignedBuffer(buffer.data() + pad, bufferSize);
+
+  // Attach a diagnostic handler to get the error message.
+  llvm::SmallVector<std::string> msg;
+  ScopedDiagnosticHandler handler(
+      &context, [&msg](Diagnostic &diag) { msg.push_back(diag.str()); });
+
+  // Parse it back
+  OwningOpRef<Operation *> roundTripModule =
+      parseSourceString<Operation *>(alignedBuffer, parseConfig);
+  ASSERT_FALSE(roundTripModule);
+  ASSERT_THAT(msg[0].data(), ::testing::StartsWith(
+                                 "expected section alignment 32 but bytecode "
+                                 "buffer"));
+  ASSERT_STREQ(msg[1].data(), "failed to align section ID: 5");
 }
 
 namespace {
@@ -146,4 +228,40 @@ TEST(Bytecode, OpWithoutProperties) {
 
   EXPECT_TRUE(OperationEquivalence::computeHash(op.get()) ==
               OperationEquivalence::computeHash(roundtripped));
+}
+
+TEST(Bytecode, DeepCallSiteLoc) {
+  MLIRContext context;
+  ParserConfig config(&context);
+
+  // Create a deep CallSiteLoc chain to test iterative parsing.
+  Location baseLoc = FileLineColLoc::get(&context, "test.mlir", 1, 1);
+  Location loc = baseLoc;
+  constexpr int kDepth = 1000;
+  for (int i = 0; i < kDepth; ++i) {
+    loc = CallSiteLoc::get(loc, baseLoc);
+  }
+
+  // Create a simple module with the deep location.
+  Builder builder(&context);
+  OwningOpRef<ModuleOp> module =
+      ModuleOp::create(loc, /*attributes=*/std::nullopt);
+  ASSERT_TRUE(module);
+
+  // Write to bytecode.
+  std::string bytecode;
+  llvm::raw_string_ostream os(bytecode);
+  ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), os)));
+
+  // Parse it back using the bytecode reader.
+  std::unique_ptr<Block> block = std::make_unique<Block>();
+  ASSERT_TRUE(succeeded(readBytecodeFile(
+      llvm::MemoryBufferRef(bytecode, "string-buffer"), block.get(), config)));
+
+  // Verify we got the roundtripped module.
+  ASSERT_FALSE(block->empty());
+  Operation *roundTripped = &block->front();
+
+  // Verify the location matches.
+  EXPECT_EQ(module.get()->getLoc(), roundTripped->getLoc());
 }

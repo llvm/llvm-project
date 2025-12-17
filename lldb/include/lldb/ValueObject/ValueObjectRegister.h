@@ -37,7 +37,7 @@ public:
                                     lldb::RegisterContextSP &reg_ctx_sp,
                                     uint32_t set_idx);
 
-  std::optional<uint64_t> GetByteSize() override;
+  llvm::Expected<uint64_t> GetByteSize() override;
 
   lldb::ValueType GetValueType() const override {
     return lldb::eValueTypeRegisterSet;
@@ -52,7 +52,7 @@ public:
   lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
                                              bool can_create = true) override;
 
-  size_t GetIndexOfChildWithName(llvm::StringRef name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 protected:
   bool UpdateValue() override;
@@ -89,7 +89,7 @@ public:
                                     lldb::RegisterContextSP &reg_ctx_sp,
                                     const RegisterInfo *reg_info);
 
-  std::optional<uint64_t> GetByteSize() override;
+  llvm ::Expected<uint64_t> GetByteSize() override;
 
   lldb::ValueType GetValueType() const override {
     return lldb::eValueTypeRegister;

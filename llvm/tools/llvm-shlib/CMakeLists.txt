@@ -33,7 +33,7 @@ if(LLVM_BUILD_LLVM_DYLIB)
   if (LLVM_LINK_LLVM_DYLIB)
     set(INSTALL_WITH_TOOLCHAIN INSTALL_WITH_TOOLCHAIN)
   endif()
-  if (WIN32)
+  if (WIN32 OR CYGWIN)
     add_llvm_library(LLVM SHARED DISABLE_LLVM_LINK_LLVM_DYLIB SONAME ${INSTALL_WITH_TOOLCHAIN} ${SOURCES})
   else()
     add_llvm_library(LLVM SHARED DISABLE_LLVM_LINK_LLVM_DYLIB OUTPUT_NAME LLVM ${INSTALL_WITH_TOOLCHAIN} ${SOURCES})
@@ -41,14 +41,32 @@ if(LLVM_BUILD_LLVM_DYLIB)
     llvm_install_library_symlink(LLVM-${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX} $<TARGET_FILE_NAME:LLVM> SHARED FULL_DEST COMPONENT LLVM)
   endif()
 
+  if (MINGW OR CYGWIN)
+    # The LLVM DLL is supposed to export all symbols (except for ones
+    # that are explicitly hidden). Normally, this is what happens anyway, but
+    # if there are symbols that are marked explicitly as dllexport, we'd only
+    # export them and nothing else. Therefore, add --export-all-symbols to
+    # make sure we export all symbols despite potential dllexports.
+    target_link_options(LLVM PRIVATE LINKER:--export-all-symbols)
+  endif()
+
   list(REMOVE_DUPLICATES LIB_NAMES)
   if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
     set(LIB_NAMES -Wl,-all_load ${LIB_NAMES})
   else()
-    configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/simple_version_script.map.in
-    ${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map)
-
+    if("${CMAKE_CFG_INTDIR}" STREQUAL ".")
+      configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/simple_version_script.map.in
+        ${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map)
+    else()
+      foreach(BUILD_MODE ${CMAKE_CONFIGURATION_TYPES})
+        # Replace the special string with a per config directory.
+        string(REPLACE ${CMAKE_CFG_INTDIR} ${BUILD_MODE} PER_CONF_LIBRARY_DIR ${LLVM_LIBRARY_DIR})
+        configure_file(
+          ${CMAKE_CURRENT_SOURCE_DIR}/simple_version_script.map.in
+          ${PER_CONF_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map)
+      endforeach()
+    endif()
     if(MSVC)
       target_link_directories(LLVM PRIVATE ${LLVM_LIBRARY_DIR})
       foreach(library ${LIB_NAMES})
@@ -57,11 +75,11 @@ if(LLVM_BUILD_LLVM_DYLIB)
     else()
       # GNU ld doesn't resolve symbols in the version script.
       set(LIB_NAMES -Wl,--whole-archive ${LIB_NAMES} -Wl,--no-whole-archive)
-      if (NOT LLVM_LINKER_IS_SOLARISLD AND NOT MINGW)
+      if (NOT LLVM_LINKER_IS_SOLARISLD AND NOT MINGW AND NOT CYGWIN)
         # Solaris ld does not accept global: *; so there is no way to version *all* global symbols
         set(LIB_NAMES -Wl,--version-script,${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map ${LIB_NAMES})
       endif()
-      if (NOT MINGW AND NOT LLVM_LINKER_IS_SOLARISLD_ILLUMOS)
+      if (LLVM_LINKER_SUPPORTS_B_SYMBOLIC_FUNCTIONS)
         # Optimize function calls for default visibility definitions to avoid PLT and
         # reduce dynamic relocations.
         # Note: for -fno-pic default, the address of a function may be different from
@@ -156,7 +174,10 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
   # Need to separate lib names with newlines.
   string(REPLACE ";" "\n" FILE_CONTENT "${FULL_LIB_NAMES}")
 
-  if(NOT "${CMAKE_CFG_INTDIR}" STREQUAL ".")
+  if("${CMAKE_CFG_INTDIR}" STREQUAL ".")
+    # Write out the full lib names into file to be read by the python script.
+    file(WRITE ${LIBSFILE} "${FILE_CONTENT}")
+  else()
     foreach(BUILD_MODE ${CMAKE_CONFIGURATION_TYPES})
       # Replace the special string with a per config directory.
       string(REPLACE ${CMAKE_CFG_INTDIR} ${BUILD_MODE} PER_CONF_CONTENT "${FILE_CONTENT}")
@@ -166,9 +187,6 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
       # ${CMAKE_CFG_INTDIR} correctly and select the right one.
       file(WRITE ${LLVM_BINARY_DIR}/${BUILD_MODE}/libllvm-c.args "${PER_CONF_CONTENT}")
     endforeach()
-  else()
-    # Write out the full lib names into file to be read by the python script.
-    file(WRITE ${LIBSFILE} "${FILE_CONTENT}")
   endif()
 
   # Generate the exports file dynamically.

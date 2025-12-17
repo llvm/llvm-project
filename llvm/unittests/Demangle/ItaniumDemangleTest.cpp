@@ -98,7 +98,7 @@ TEST(ItaniumDemangle, HalfType) {
     Node *parseType() {
       OutputBuffer OB;
       Node *N = AbstractManglingParser<TestParser, TestAllocator>::parseType();
-      N->printLeft(OB);
+      OB.printLeft(*N);
       std::string_view Name = N->getBaseName();
       if (!Name.empty())
         Types.push_back(std::string(Name.begin(), Name.end()));

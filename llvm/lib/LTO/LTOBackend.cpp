@@ -17,6 +17,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -35,7 +36,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Program.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -43,7 +43,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
-#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
 #include <optional>
@@ -195,16 +194,16 @@ static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
   for (auto &PluginFN : PassPlugins) {
     auto PassPlugin = PassPlugin::Load(PluginFN);
     if (!PassPlugin)
-      report_fatal_error(PassPlugin.takeError(), /*gen_crash_diag=*/false);
+      reportFatalUsageError(PassPlugin.takeError());
     PassPlugin->registerPassBuilderCallbacks(PB);
   }
 }
 
 static std::unique_ptr<TargetMachine>
 createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
-  StringRef TheTriple = M.getTargetTriple();
+  const Triple &TheTriple = M.getTargetTriple();
   SubtargetFeatures Features;
-  Features.getDefaultSubtargetFeatures(Triple(TheTriple));
+  Features.getDefaultSubtargetFeatures(TheTriple);
   for (const std::string &A : Conf.MAttrs)
     Features.AddFeature(A);
 
@@ -221,8 +220,13 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   else
     CodeModel = M.getCodeModel();
 
+  TargetOptions TargetOpts = Conf.Options;
+  if (TargetOpts.MCOptions.ABIName.empty()) {
+    TargetOpts.MCOptions.ABIName = M.getTargetABIFromMD();
+  }
+
   std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
-      TheTriple, Conf.CPU, Features.getString(), Conf.Options, RelocModel,
+      TheTriple, Conf.CPU, Features.getString(), TargetOpts, RelocModel,
       CodeModel, Conf.CGOptLevel));
 
   assert(TM && "Failed to create target machine");
@@ -237,27 +241,26 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
                            unsigned OptLevel, bool IsThinLTO,
                            ModuleSummaryIndex *ExportSummary,
                            const ModuleSummaryIndex *ImportSummary) {
-  auto FS = vfs::getRealFileSystem();
   std::optional<PGOOptions> PGOOpt;
   if (!Conf.SampleProfile.empty())
     PGOOpt = PGOOptions(Conf.SampleProfile, "", Conf.ProfileRemapping,
-                        /*MemoryProfile=*/"", FS, PGOOptions::SampleUse,
+                        /*MemoryProfile=*/"", PGOOptions::SampleUse,
                         PGOOptions::NoCSAction,
                         PGOOptions::ColdFuncOpt::Default, true);
   else if (Conf.RunCSIRInstr) {
     PGOOpt = PGOOptions("", Conf.CSIRProfile, Conf.ProfileRemapping,
-                        /*MemoryProfile=*/"", FS, PGOOptions::IRUse,
+                        /*MemoryProfile=*/"", PGOOptions::IRUse,
                         PGOOptions::CSIRInstr, PGOOptions::ColdFuncOpt::Default,
                         Conf.AddFSDiscriminator);
   } else if (!Conf.CSIRProfile.empty()) {
-    PGOOpt = PGOOptions(Conf.CSIRProfile, "", Conf.ProfileRemapping,
-                        /*MemoryProfile=*/"", FS, PGOOptions::IRUse,
-                        PGOOptions::CSIRUse, PGOOptions::ColdFuncOpt::Default,
-                        Conf.AddFSDiscriminator);
+    PGOOpt =
+        PGOOptions(Conf.CSIRProfile, "", Conf.ProfileRemapping,
+                   /*MemoryProfile=*/"", PGOOptions::IRUse, PGOOptions::CSIRUse,
+                   PGOOptions::ColdFuncOpt::Default, Conf.AddFSDiscriminator);
     NoPGOWarnMismatch = !Conf.PGOWarnMismatch;
   } else if (Conf.AddFSDiscriminator) {
-    PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", nullptr,
-                        PGOOptions::NoAction, PGOOptions::NoCSAction,
+    PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", PGOOptions::NoAction,
+                        PGOOptions::NoCSAction,
                         PGOOptions::ColdFuncOpt::Default, true);
   }
   TM->setPGOOption(PGOOpt);
@@ -276,7 +279,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   RegisterPassPlugins(Conf.PassPlugins, PB);
 
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
-      new TargetLibraryInfoImpl(Triple(TM->getTargetTriple())));
+      new TargetLibraryInfoImpl(TM->getTargetTriple(), TM->Options.VecLib));
   if (Conf.Freestanding)
     TLII->disableAllFunctions();
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
@@ -351,10 +354,19 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   MPM.run(Mod, MAM);
 }
 
+static bool isEmptyModule(const Module &Mod) {
+  // Module is empty if it has no functions, no globals, no inline asm and no
+  // named metadata (aliases and ifuncs require functions or globals so we
+  // don't need to check those explicitly).
+  return Mod.empty() && Mod.global_empty() && Mod.named_metadata_empty() &&
+         Mod.getModuleInlineAsm().empty();
+}
+
 bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
               bool IsThinLTO, ModuleSummaryIndex *ExportSummary,
               const ModuleSummaryIndex *ImportSummary,
               const std::vector<uint8_t> &CmdArgs) {
+  llvm::TimeTraceScope timeScope("opt");
   if (EmbedBitcode == LTOBitcodeEmbedding::EmbedPostMergePreOptimized) {
     // FIXME: the motivation for capturing post-merge bitcode and command line
     // is replicating the compilation environment from bitcode, without needing
@@ -372,15 +384,23 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
                                /*EmbedBitcode*/ true, /*EmbedCmdline*/ true,
                                /*Cmdline*/ CmdArgs);
   }
-  // FIXME: Plumb the combined index into the new pass manager.
-  runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
-                 ImportSummary);
+  // No need to run any opt passes if the module is empty.
+  // In theory these passes should take almost no time for an empty
+  // module, however, this guards against doing any unnecessary summary-based
+  // analysis in the case of a ThinLTO build where this might be an empty
+  // regular LTO combined module, with a large combined index from ThinLTO.
+  if (!isEmptyModule(Mod)) {
+    // FIXME: Plumb the combined index into the new pass manager.
+    runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
+                   ImportSummary);
+  }
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
 
 static void codegen(const Config &Conf, TargetMachine *TM,
                     AddStreamFn AddStream, unsigned Task, Module &Mod,
                     const ModuleSummaryIndex &CombinedIndex) {
+  llvm::TimeTraceScope timeScope("codegen");
   if (Conf.PreCodeGenModuleHook && !Conf.PreCodeGenModuleHook(Task, Mod))
     return;
 
@@ -419,21 +439,41 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
   TM->Options.ObjectFilenameForDebug = Stream->ObjectPathName;
 
-  legacy::PassManager CodeGenPasses;
-  TargetLibraryInfoImpl TLII(Triple(Mod.getTargetTriple()));
-  CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
-  CodeGenPasses.add(
-      createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
-  if (Conf.PreCodeGenPassesHook)
-    Conf.PreCodeGenPassesHook(CodeGenPasses);
-  if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,
-                              DwoOut ? &DwoOut->os() : nullptr,
-                              Conf.CGFileType))
-    report_fatal_error("Failed to setup codegen");
-  CodeGenPasses.run(Mod);
+  // Create the codegen pipeline in its own scope so it gets deleted before
+  // Stream->commit() is called. The commit function of CacheStream deletes
+  // the raw stream, which is too early as streamers (e.g. MCAsmStreamer)
+  // keep the pointer and may use it until their destruction. See #138194.
+  {
+    legacy::PassManager CodeGenPasses;
+    TargetLibraryInfoImpl TLII(Mod.getTargetTriple(), TM->Options.VecLib);
+    CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
+    CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
+        Mod.getTargetTriple(), TM->Options.ExceptionModel,
+        TM->Options.FloatABIType, TM->Options.EABIVersion,
+        TM->Options.MCOptions.ABIName, TM->Options.VecLib));
 
-  if (DwoOut)
-    DwoOut->keep();
+    // No need to make index available if the module is empty.
+    // In theory these passes should not use the index for an empty
+    // module, however, this guards against doing any unnecessary summary-based
+    // analysis in the case of a ThinLTO build where this might be an empty
+    // regular LTO combined module, with a large combined index from ThinLTO.
+    if (!isEmptyModule(Mod))
+      CodeGenPasses.add(
+          createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
+    if (Conf.PreCodeGenPassesHook)
+      Conf.PreCodeGenPassesHook(CodeGenPasses);
+    if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,
+                                DwoOut ? &DwoOut->os() : nullptr,
+                                Conf.CGFileType))
+      report_fatal_error("Failed to setup codegen");
+    CodeGenPasses.run(Mod);
+
+    if (DwoOut)
+      DwoOut->keep();
+  }
+
+  if (Error Err = Stream->commit())
+    report_fatal_error(std::move(Err));
 }
 
 static void splitCodeGen(const Config &C, TargetMachine *TM,
@@ -494,9 +534,9 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
 static Expected<const Target *> initAndLookupTarget(const Config &C,
                                                     Module &Mod) {
   if (!C.OverrideTriple.empty())
-    Mod.setTargetTriple(C.OverrideTriple);
+    Mod.setTargetTriple(Triple(C.OverrideTriple));
   else if (Mod.getTargetTriple().empty())
-    Mod.setTargetTriple(C.DefaultTriple);
+    Mod.setTargetTriple(Triple(C.DefaultTriple));
 
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(Mod.getTargetTriple(), Msg);
@@ -505,12 +545,12 @@ static Expected<const Target *> initAndLookupTarget(const Config &C,
   return T;
 }
 
-Error lto::finalizeOptimizationRemarks(
-    std::unique_ptr<ToolOutputFile> DiagOutputFile) {
+Error lto::finalizeOptimizationRemarks(LLVMRemarkFileHandle DiagOutputFile) {
   // Make sure we flush the diagnostic remarks file in case the linker doesn't
   // call the global destructors before exiting.
   if (!DiagOutputFile)
     return Error::success();
+  DiagOutputFile.finalize();
   DiagOutputFile->keep();
   DiagOutputFile->os().flush();
   return Error::success();
@@ -519,6 +559,7 @@ Error lto::finalizeOptimizationRemarks(
 Error lto::backend(const Config &C, AddStreamFn AddStream,
                    unsigned ParallelCodeGenParallelismLevel, Module &Mod,
                    ModuleSummaryIndex &CombinedIndex) {
+  llvm::TimeTraceScope timeScope("LTO backend");
   Expected<const Target *> TOrErr = initAndLookupTarget(C, Mod);
   if (!TOrErr)
     return TOrErr.takeError();
@@ -544,6 +585,7 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
 
 static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
                             const ModuleSummaryIndex &Index) {
+  llvm::TimeTraceScope timeScope("Drop dead symbols");
   std::vector<GlobalValue*> DeadGVs;
   for (auto &GV : Mod.global_values())
     if (GlobalValueSummary *GVS = DefinedGlobals.lookup(GV.getGUID()))
@@ -570,6 +612,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                        MapVector<StringRef, BitcodeModule> *ModuleMap,
                        bool CodeGenOnly, AddStreamFn IRAddStream,
                        const std::vector<uint8_t> &CmdArgs) {
+  llvm::TimeTraceScope timeScope("Thin backend", Mod.getModuleIdentifier());
   Expected<const Target *> TOrErr = initAndLookupTarget(Conf, Mod);
   if (!TOrErr)
     return TOrErr.takeError();
@@ -602,7 +645,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
 
   auto OptimizeAndCodegen =
       [&](Module &Mod, TargetMachine *TM,
-          std::unique_ptr<ToolOutputFile> DiagnosticOutputFile) {
+          LLVMRemarkFileHandle DiagnosticOutputFile) {
         // Perform optimization and code generation for ThinLTO.
         if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
                  /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
@@ -646,6 +689,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
   auto ModuleLoader = [&](StringRef Identifier) {
+    llvm::TimeTraceScope moduleLoaderScope("Module loader", Identifier);
     assert(Mod.getContext().isODRUniquingDebugTypes() &&
            "ODR Type uniquing should be enabled on the context");
     if (ModuleMap) {
@@ -679,13 +723,15 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
     return MOrErr;
   };
 
-  FunctionImporter Importer(CombinedIndex, ModuleLoader,
-                            ClearDSOLocalOnDeclarations);
-  if (Error Err = Importer.importFunctions(Mod, ImportList).takeError())
-    return Err;
+  {
+    llvm::TimeTraceScope importScope("Import functions");
+    FunctionImporter Importer(CombinedIndex, ModuleLoader,
+                              ClearDSOLocalOnDeclarations);
+    if (Error Err = Importer.importFunctions(Mod, ImportList).takeError())
+      return Err;
+  }
 
   // Do this after any importing so that imported code is updated.
-  updateMemProfAttributes(Mod, CombinedIndex);
   updatePublicTypeTestCalls(Mod, CombinedIndex.withWholeProgramVisibility());
 
   if (Conf.PostImportModuleHook && !Conf.PostImportModuleHook(Task, Mod))
@@ -730,11 +776,11 @@ bool lto::initImportList(const Module &M,
   // via a WriteIndexesThinBackend.
   for (const auto &GlobalList : CombinedIndex) {
     // Ignore entries for undefined references.
-    if (GlobalList.second.SummaryList.empty())
+    if (GlobalList.second.getSummaryList().empty())
       continue;
 
     auto GUID = GlobalList.first;
-    for (const auto &Summary : GlobalList.second.SummaryList) {
+    for (const auto &Summary : GlobalList.second.getSummaryList()) {
       // Skip the summaries for the importing module. These are included to
       // e.g. record required linkage changes.
       if (Summary->modulePath() == M.getModuleIdentifier())

@@ -54,14 +54,13 @@ inline stable_hash stable_hash_combine(stable_hash A, stable_hash B,
 // maintain closeness to the original name across different builds.
 inline StringRef get_stable_name(StringRef Name) {
   // Return the part after ".content." that represents contents.
-  auto [P0, S0] = Name.rsplit(".content.");
+  StringRef S0 = Name.rsplit(".content.").second;
   if (!S0.empty())
     return S0;
 
   // Ignore these suffixes.
-  auto [P1, S1] = Name.rsplit(".llvm.");
-  auto [P2, S2] = P1.rsplit(".__uniq.");
-  return P2;
+  StringRef P1 = Name.rsplit(".llvm.").first;
+  return P1.rsplit(".__uniq.").first;
 }
 
 // Generates a consistent hash value for a given input name across different

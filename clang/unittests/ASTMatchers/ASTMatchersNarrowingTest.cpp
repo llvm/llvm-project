@@ -26,6 +26,19 @@ TEST_P(ASTMatchersTest, IsExpandedFromMacro_MatchesInFile) {
   EXPECT_TRUE(matches(input, binaryOperator(isExpandedFromMacro("MY_MACRO"))));
 }
 
+static std::string constructMacroName(llvm::StringRef A, llvm::StringRef B) {
+  return (A + "_" + B).str();
+}
+
+TEST_P(ASTMatchersTest, IsExpandedFromMacro_ConstructedMacroName) {
+  StringRef input = R"cc(
+#define MY_MACRO(a) (4 + (a))
+    void Test() { MY_MACRO(4); }
+  )cc";
+  auto matcher = isExpandedFromMacro(constructMacroName("MY", "MACRO"));
+  EXPECT_TRUE(matches(input, binaryOperator(matcher)));
+}
+
 TEST_P(ASTMatchersTest, IsExpandedFromMacro_MatchesNested) {
   StringRef input = R"cc(
 #define MY_MACRO(a) (4 + (a))
@@ -1167,6 +1180,23 @@ TEST_P(ASTMatchersTest, IsDerivedFrom_EmptyName) {
   EXPECT_TRUE(notMatches(Code, cxxRecordDecl(isSameOrDerivedFrom(""))));
 }
 
+TEST_P(ASTMatchersTest, IsDerivedFrom_ElaboratedType) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  DeclarationMatcher IsDerivenFromBase = cxxRecordDecl(
+      isDerivedFrom(decl().bind("typedef")), unless(isImplicit()));
+
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "struct AnInterface {};"
+      "typedef AnInterface UnusedTypedef;"
+      "typedef AnInterface Base;"
+      "class AClass : public Base {};",
+      IsDerivenFromBase,
+      std::make_unique<VerifyIdIsBoundTo<TypedefDecl>>("typedef", "Base")));
+}
+
 TEST_P(ASTMatchersTest, IsDerivedFrom_ObjC) {
   DeclarationMatcher IsDerivedFromX = objcInterfaceDecl(isDerivedFrom("X"));
   EXPECT_TRUE(
@@ -2011,6 +2041,13 @@ TEST_P(ASTMatchersTest, TemplateArgumentCountIs) {
   EXPECT_TRUE(
       notMatches("template<typename T> struct C {}; C<int> c;",
                  templateSpecializationType(templateArgumentCountIs(2))));
+
+  const char *FuncTemplateCode =
+      "template<typename T> T f(); auto v = f<int>();";
+  EXPECT_TRUE(
+      matches(FuncTemplateCode, functionDecl(templateArgumentCountIs(1))));
+  EXPECT_TRUE(
+      notMatches(FuncTemplateCode, functionDecl(templateArgumentCountIs(2))));
 }
 
 TEST_P(ASTMatchersTest, IsIntegral) {
@@ -2253,6 +2290,21 @@ TEST_P(ASTMatchersTest, HasDependentName_DependentScopeDeclRefExpr) {
                       dependentScopeDeclRefExpr(hasDependentName("foo"))));
 }
 
+TEST_P(ASTMatchersTest, HasDependentName_DependentNameType) {
+  if (!GetParam().isCXX()) {
+    // FIXME: Fix this test to work with delayed template parsing.
+    return;
+  }
+
+  EXPECT_TRUE(matches(
+      R"(
+        template <typename T> struct declToImport {
+          typedef typename T::type dependent_name;
+        };
+      )",
+      dependentNameType(hasDependentName("type"))));
+}
+
 TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
 
   // Member functions:
@@ -2263,10 +2315,9 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(hasType(elaboratedType(namesType(
-                templateSpecializationType(hasDeclaration(classTemplateDecl(
-                    has(cxxRecordDecl(has(cxxMethodDecl(hasName("mem"))
-                                              .bind("templMem")))))))))))),
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(cxxMethodDecl(hasName("mem")).bind("templMem")))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
 
     EXPECT_TRUE(
@@ -2284,10 +2335,9 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(
-                hasType(elaboratedType(namesType(templateSpecializationType(
-                    hasDeclaration(classTemplateDecl(has(cxxRecordDecl(has(
-                        fieldDecl(hasName("mem")).bind("templMem")))))))))))),
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(fieldDecl(hasName("mem")).bind("templMem")))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
   }
 
@@ -2302,10 +2352,9 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(
-                hasType(elaboratedType(namesType(templateSpecializationType(
-                    hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
-                        has(varDecl(hasName("mem")).bind("templMem")))))))))))),
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(varDecl(hasName("mem")).bind("templMem")))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
   }
   {
@@ -2886,6 +2935,19 @@ TEST_P(ASTMatchersTest, IsBitField) {
                          fieldDecl(isBitField(), hasName("b"))));
   EXPECT_TRUE(matches("struct C { int a : 2; int b : 4; };",
                       fieldDecl(isBitField(), hasBitWidth(2), hasName("a"))));
+  if (GetParam().isCXX()) {
+    // This test verifies 2 things:
+    // (1) That templates work correctly.
+    // (2) That the matcher does not crash on template-dependent bit widths.
+    EXPECT_TRUE(matches("template<int N> "
+                        "struct C { "
+                        "explicit C(bool x) : a(x) { } "
+                        "int a : N; "
+                        "int b : 4; "
+                        "}; "
+                        "template struct C<2>;",
+                        fieldDecl(isBitField(), hasBitWidth(2), hasName("a"))));
+  }
 }
 
 TEST_P(ASTMatchersTest, HasInClassInitializer) {
@@ -4314,7 +4376,7 @@ TEST_P(ASTMatchersTest, hasOperator) {
 TEST_P(ASTMatchersTest, IsMain) {
   EXPECT_TRUE(matches("int main() {}", functionDecl(isMain())));
 
-  EXPECT_TRUE(notMatches("int main2() {}", functionDecl(isMain())));
+  EXPECT_TRUE(notMatches("int main2() { return 0; }", functionDecl(isMain())));
 }
 
 TEST_P(ASTMatchersTest, OMPExecutableDirective_IsStandaloneDirective) {

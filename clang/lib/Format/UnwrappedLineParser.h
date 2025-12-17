@@ -145,7 +145,8 @@ private:
                               bool *HasLabel = nullptr);
   bool tryToParseBracedList();
   bool parseBracedList(bool IsAngleBracket = false, bool IsEnum = false);
-  bool parseParens(TokenType AmpAmpTokenType = TT_Unknown);
+  bool parseParens(TokenType AmpAmpTokenType = TT_Unknown,
+                   bool InMacroCall = false);
   void parseSquare(bool LambdaIntroducer = false);
   void keepAncestorBraces();
   void parseUnbracedBody(bool CheckEOF = false);
@@ -167,15 +168,17 @@ private:
   void parseAccessSpecifier();
   bool parseEnum();
   bool parseStructLike();
-  bool parseRequires();
-  void parseRequiresClause(FormatToken *RequiresToken);
-  void parseRequiresExpression(FormatToken *RequiresToken);
+  bool parseRequires(bool SeenEqual);
+  void parseRequiresClause();
+  void parseRequiresExpression();
   void parseConstraintExpression();
+  void parseCppExportBlock();
+  void parseNamespaceOrExportBlock(unsigned AddLevels);
   void parseJavaEnumBody();
   // Parses a record (aka class) as a top level element. If ParseAsExpr is true,
   // parses the record as a child block, i.e. if the class declaration is an
   // expression.
-  void parseRecord(bool ParseAsExpr = false);
+  void parseRecord(bool ParseAsExpr = false, bool IsJavaRecord = false);
   void parseObjCLightweightGenerics();
   void parseObjCMethod();
   void parseObjCProtocolList();
@@ -202,6 +205,8 @@ private:
   unsigned parseVerilogHierarchyHeader();
   void parseVerilogTable();
   void parseVerilogCaseLabel();
+  // For import, export, and extern.
+  void parseVerilogExtern();
   std::optional<llvm::SmallVector<llvm::SmallVector<FormatToken *, 8>, 1>>
   parseMacroCall();
 
@@ -296,8 +301,11 @@ private:
   // Since the next token might already be in a new unwrapped line, we need to
   // store the comments belonging to that token.
   SmallVector<FormatToken *, 1> CommentsBeforeNextToken;
+
   FormatToken *FormatTok = nullptr;
-  bool MustBreakBeforeNextToken;
+
+  // Has just finished parsing a preprocessor line.
+  bool AtEndOfPPLine;
 
   // The parsed lines. Only added to through \c CurrentLines.
   SmallVector<UnwrappedLine, 8> Lines;
@@ -390,6 +398,13 @@ private:
 
   // Current state of include guard search.
   IncludeGuardState IncludeGuard;
+
+  IncludeGuardState
+  getIncludeGuardState(FormatStyle::PPDirectiveIndentStyle Style) const {
+    return Style == FormatStyle::PPDIS_None || Style == FormatStyle::PPDIS_Leave
+               ? IG_Rejected
+               : IG_Inited;
+  }
 
   // Points to the #ifndef condition for a potential include guard. Null unless
   // IncludeGuardState == IG_IfNdefed.

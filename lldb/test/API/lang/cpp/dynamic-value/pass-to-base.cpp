@@ -45,5 +45,7 @@ main (int argc, char **argv)
 
   myB.doSomething(*make_anonymous_B());
 
+  take_A(&myB);
+
   return 0;
 }

@@ -4,9 +4,9 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK: %[[#image1d_t:]] = OpTypeImage
-; CHECK: %[[#sampler_t:]] = OpTypeSampler
-; CHECK: %[[#sampled_image_t:]] = OpTypeSampledImage
+; CHECK-DAG: %[[#image1d_t:]] = OpTypeImage
+; CHECK-DAG: %[[#sampler_t:]] = OpTypeSampler
+; CHECK-DAG: %[[#sampled_image_t:]] = OpTypeSampledImage
 
 declare dso_local spir_func ptr addrspace(4) @_Z20__spirv_SampledImageI14ocl_image1d_roPvET0_T_11ocl_sampler(target("spirv.Image", void, 0, 0, 0, 0, 0, 0, 0) %0, target("spirv.Sampler") %1) local_unnamed_addr
 

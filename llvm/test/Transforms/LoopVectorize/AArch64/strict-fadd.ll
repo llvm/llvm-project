@@ -401,8 +401,7 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-ORDERED: br i1 %[[EXTRACT]], label %pred.load.if, label %pred.load.continue
 ; CHECK-ORDERED: pred.load.continue6
 ; CHECK-ORDERED: %[[PHI1:.*]] = phi <4 x float> [ %[[PHI0:.*]], %pred.load.continue4 ], [ %[[INS_ELT:.*]], %pred.load.if5 ]
-; CHECK-ORDERED: %[[XOR:.*]] =  xor <4 x i1> %[[FCMP1]], splat (i1 true)
-; CHECK-ORDERED: %[[PRED:.*]] = select <4 x i1> %[[XOR]], <4 x float> splat (float 3.000000e+00), <4 x float> %[[PHI1]]
+; CHECK-ORDERED: %[[PRED:.*]] = select <4 x i1> %[[FCMP1]], <4 x float> %[[PHI1]], <4 x float> splat (float 3.000000e+00)
 ; CHECK-ORDERED: %[[RDX]] = call float @llvm.vector.reduce.fadd.v4f32(float %[[PHI]], <4 x float> %[[PRED]])
 ; CHECK-ORDERED: for.body
 ; CHECK-ORDERED: %[[RES_PHI:.*]] = phi float [ %[[MERGE_RDX:.*]], %scalar.ph ], [ %[[FADD:.*]], %for.inc ]
@@ -427,8 +426,7 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-UNORDERED: %[[EXTRACT:.*]] = extractelement <4 x i1> %[[FCMP1]], i32 0
 ; CHECK-UNORDERED: br i1 %[[EXTRACT]], label %pred.load.if, label %pred.load.continue
 ; CHECK-UNORDERED: pred.load.continue6
-; CHECK-UNORDERED: %[[XOR:.*]] =  xor <4 x i1> %[[FCMP1]], splat (i1 true)
-; CHECK-UNORDERED: %[[PRED:.*]] = select <4 x i1> %[[XOR]], <4 x float> splat (float 3.000000e+00), <4 x float> %[[PRED_PHI:.*]]
+; CHECK-UNORDERED: %[[PRED:.*]] = select <4 x i1> %[[FCMP1]], <4 x float> %[[PRED_PHI:.*]], <4 x float> splat (float 3.000000e+00)
 ; CHECK-UNORDERED: %[[VEC_FADD]] = fadd <4 x float> %[[PHI]], %[[PRED]]
 ; CHECK-UNORDERED-NOT: call float @llvm.vector.reduce.fadd
 ; CHECK-UNORDERED: middle.block
@@ -492,8 +490,7 @@ define float @fadd_predicated(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-ORDERED: %[[MASK:.*]] = select <2 x i1> %0, <2 x float> %[[PHI]], <2 x float> splat (float -0.000000e+00)
 ; CHECK-ORDERED: %[[RDX]] = call float @llvm.vector.reduce.fadd.v2f32(float %[[RDX_PHI]], <2 x float> %[[MASK]])
 ; CHECK-ORDERED: for.end:
-; CHECK-ORDERED: %[[RES_PHI:.*]] = phi float [ %[[FADD:.*]], %for.body ], [ %[[RDX]], %middle.block ]
-; CHECK-ORDERED: ret float %[[RES_PHI]]
+; CHECK-ORDERED: ret float %[[RDX]]
 
 ; CHECK-UNORDERED-LABEL: @fadd_predicated
 ; CHECK-UNORDERED: vector.ph
@@ -509,12 +506,8 @@ define float @fadd_predicated(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-UNORDERED-NOT: call float @llvm.vector.reduce.fadd
 ; CHECK-UNORDERED: middle.block
 ; CHECK-UNORDERED: %[[RDX:.*]] = call float @llvm.vector.reduce.fadd.v2f32(float -0.000000e+00, <2 x float> %[[MASK]])
-; CHECK-UNORDERED: for.body
-; CHECK-UNORDERED: %[[LOAD:.*]] = load float, ptr
-; CHECK-UNORDERED: %[[FADD2:.*]] = fadd float {{.*}}, %[[LOAD]]
 ; CHECK-UNORDERED: for.end
-; CHECK-UNORDERED: %[[SUM:.*]] = phi float [ %[[FADD2]], %for.body ], [ %[[RDX]], %middle.block ]
-; CHECK-UNORDERED: ret float %[[SUM]]
+; CHECK-UNORDERED: ret float %[[RDX]]
 
 ; CHECK-NOT-VECTORIZED-LABEL: @fadd_predicated
 ; CHECK-NOT-VECTORIZED-NOT: vector.body
@@ -936,7 +929,7 @@ for.end:
 }
 
 ; Test case where the reduction step is a first-order recurrence.
-define double @reduction_increment_by_first_order_recurrence() {
+define double @reduction_increment_by_first_order_recurrence(i32 %n) {
 ; CHECK-ORDERED-LABEL: @reduction_increment_by_first_order_recurrence(
 ; CHECK-ORDERED:  vector.body:
 ; CHECK-ORDERED:    [[RED:%.*]] = phi double [ 0.000000e+00, %vector.ph ], [ [[RED_NEXT:%.*]], %vector.body ]
@@ -945,7 +938,7 @@ define double @reduction_increment_by_first_order_recurrence() {
 ; CHECK-ORDERED:    [[TMP1:%.*]] = shufflevector <4 x double> [[VECTOR_RECUR]], <4 x double> [[FOR_NEXT]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-ORDERED:    [[RED_NEXT]] = call double @llvm.vector.reduce.fadd.v4f64(double [[RED]], <4 x double> [[TMP1]])
 ; CHECK-ORDERED:  scalar.ph:
-; CHECK-ORDERED:    = phi double [ [[RED_NEXT]], %middle.block ], [ 0.000000e+00, %entry ]
+; CHECK-ORDERED:    = phi double [ [[RED_NEXT]], %middle.block ]
 ;
 ; CHECK-UNORDERED-LABEL: @reduction_increment_by_first_order_recurrence(
 ; CHECK-UNORDERED:  vector.body:
@@ -957,7 +950,7 @@ define double @reduction_increment_by_first_order_recurrence() {
 ; CHECK-UNORDERED:  middle.block:
 ; CHECK-UNORDERED:    [[RDX:%.*]] = call double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[RED_NEXT]])
 ; CHECK-UNORDERED:  scalar.ph:
-; CHECK-UNORDERED:    [[BC_MERGE_RDX:%.*]] = phi double [ [[RDX]], %middle.block ], [ 0.000000e+00, %entry ]
+; CHECK-UNORDERED:    [[BC_MERGE_RDX:%.*]] = phi double [ [[RDX]], %middle.block ]
 ;
 ; CHECK-NOT-VECTORIZED-LABEL: @reduction_increment_by_first_order_recurrence(
 ; CHECK-NOT-VECTORIZED-NOT: vector.body
@@ -972,7 +965,7 @@ loop:
   %red.next = fadd double %for, %red
   %for.next = sitofp i32 %iv to double
   %iv.next = add nsw i32 %iv, 1
-  %ec = icmp eq i32 %iv.next, 0
+  %ec = icmp eq i32 %iv.next, %n
   br i1 %ec, label %exit, label %loop, !llvm.loop !13
 
 exit:

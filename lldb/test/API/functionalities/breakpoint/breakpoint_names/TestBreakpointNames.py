@@ -216,16 +216,14 @@ class BreakpointNames(TestBase):
         )
 
     def check_option_values(self, bp_object):
-        self.assertEqual(bp_object.IsOneShot(), self.is_one_shot, "IsOneShot")
-        self.assertEqual(bp_object.GetIgnoreCount(), self.ignore_count, "IgnoreCount")
-        self.assertEqual(bp_object.GetCondition(), self.condition, "Condition")
-        self.assertEqual(
-            bp_object.GetAutoContinue(), self.auto_continue, "AutoContinue"
-        )
-        self.assertEqual(bp_object.GetThreadID(), self.tid, "Thread ID")
-        self.assertEqual(bp_object.GetThreadIndex(), self.tidx, "Thread Index")
-        self.assertEqual(bp_object.GetThreadName(), self.thread_name, "Thread Name")
-        self.assertEqual(bp_object.GetQueueName(), self.queue_name, "Queue Name")
+        self.assertEqual(bp_object.one_shot, self.is_one_shot, "IsOneShot")
+        self.assertEqual(bp_object.ignore_count, self.ignore_count, "IgnoreCount")
+        self.assertEqual(bp_object.condition, self.condition, "Condition")
+        self.assertEqual(bp_object.auto_continue, self.auto_continue, "AutoContinue")
+        self.assertEqual(bp_object.thread_id, self.tid, "Thread ID")
+        self.assertEqual(bp_object.thread_index, self.tidx, "Thread Index")
+        self.assertEqual(bp_object.thread_name, self.thread_name, "Thread Name")
+        self.assertEqual(bp_object.queue_name, self.queue_name, "Queue Name")
         set_cmds = lldb.SBStringList()
         bp_object.GetCommandLineCommands(set_cmds)
         self.assertEqual(

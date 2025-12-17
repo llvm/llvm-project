@@ -38,9 +38,9 @@ define fastcc void @rec(ptr %0, i64 %1) {
 ;
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@rec
-; CGSCC-SAME: (ptr nocapture writeonly [[TMP0:%.*]], i64 [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
+; CGSCC-SAME: (ptr writeonly captures(none) [[TMP0:%.*]], i64 [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[TMP0]], i64 [[TMP1]]
 ; CGSCC-NEXT:    store i32 0, ptr [[TMP3]], align 4
-; CGSCC-NEXT:    call fastcc void @rec(ptr nocapture writeonly [[TMP0]], i64 0) #[[ATTR1:[0-9]+]]
+; CGSCC-NEXT:    call fastcc void @rec(ptr writeonly captures(none) [[TMP0]], i64 0) #[[ATTR1:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;

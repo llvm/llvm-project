@@ -61,6 +61,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ProfileData/ItaniumManglingCanonicalizer.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -83,7 +84,7 @@ public:
   int64_t getLineNum() const { return Line; }
   StringRef getMessage() const { return Message; }
 
-  static char ID;
+  LLVM_ABI static char ID;
 
 private:
   std::string File;
@@ -99,7 +100,7 @@ class SymbolRemappingReader {
 public:
   /// Read remappings from the given buffer, which must live as long as
   /// the remapper.
-  Error read(MemoryBuffer &B);
+  LLVM_ABI Error read(MemoryBuffer &B);
 
   /// A Key represents an equivalence class of symbol names.
   using Key = uintptr_t;

@@ -27,8 +27,8 @@
 // CHECK-NEXT:    br label [[RETURN]]
 // CHECK:       if.end2:
 // CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], 171141184020873984
-// CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 171141184020873984
+// CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], 162133984766132992
+// CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 162133984766132992
 // CHECK-NEXT:    [[TMP11:%.*]] = and i1 true, [[TMP10]]
 // CHECK-NEXT:    br i1 [[TMP11]], label [[IF_THEN3:%.*]], label [[IF_END4:%.*]]
 // CHECK:       if.then3:
@@ -53,7 +53,7 @@ int main(void) {
   if (__builtin_cpu_supports("sve2-aes+memtag"))
     return 2;
 
-  if (__builtin_cpu_supports("sme2+ls64+wfxt"))
+  if (__builtin_cpu_supports("sme2+wfxt"))
     return 3;
 
   if (__builtin_cpu_supports("avx2"))

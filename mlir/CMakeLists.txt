@@ -21,6 +21,11 @@ set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
 if(MLIR_STANDALONE_BUILD)
   find_package(LLVM CONFIG REQUIRED)
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${LLVM_CMAKE_DIR})
+
+  separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+  add_definitions(${LLVM_DEFINITIONS_LIST})
+  list(APPEND CMAKE_REQUIRED_DEFINITIONS ${LLVM_DEFINITIONS_LIST})
+
   include(HandleLLVMOptions)
   include(AddLLVM)
   include(TableGen)
@@ -63,6 +68,7 @@ list(INSERT CMAKE_MODULE_PATH 0
   )
 
 include(AddMLIR)
+include(IRDLToCpp)
 
 # -BSymbolic is incompatible with TypeID
 if("${CMAKE_SHARED_LINKER_FLAGS}" MATCHES "-Bsymbolic[^-]")
@@ -118,10 +124,13 @@ set_target_properties(mlir-doc PROPERTIES FOLDER "MLIR/Docs")
 
 # Only enable execution engine if the native target is available.
 if(${LLVM_NATIVE_ARCH} IN_LIST LLVM_TARGETS_TO_BUILD)
-  set(MLIR_ENABLE_EXECUTION_ENGINE 1)
+  set(MLIR_ENABLE_EXECUTION_ENGINE_default 1)
 else()
-  set(MLIR_ENABLE_EXECUTION_ENGINE 0)
+  set(MLIR_ENABLE_EXECUTION_ENGINE_default 0)
 endif()
+option(MLIR_ENABLE_EXECUTION_ENGINE
+       "Enable building the MLIR Execution Engine."
+       ${MLIR_ENABLE_EXECUTION_ENGINE_default})
 
 # Build the ROCm conversions and run according tests if the AMDGPU backend
 # is available.
@@ -131,9 +140,18 @@ else()
   set(MLIR_ENABLE_ROCM_CONVERSIONS 0)
 endif()
 
+# Build the XeVM conversions and run according tests if the SPIRV backend
+# is available.
+if ("SPIRV" IN_LIST LLVM_TARGETS_TO_BUILD)
+  set(MLIR_ENABLE_XEVM_CONVERSIONS 1)
+else()
+  set(MLIR_ENABLE_XEVM_CONVERSIONS 0)
+endif()
+
 set(MLIR_ENABLE_CUDA_RUNNER 0 CACHE BOOL "Enable building the MLIR CUDA runner")
 set(MLIR_ENABLE_ROCM_RUNNER 0 CACHE BOOL "Enable building the MLIR ROCm runner")
 set(MLIR_ENABLE_SYCL_RUNNER 0 CACHE BOOL "Enable building the MLIR SYCL runner")
+set(MLIR_ENABLE_LEVELZERO_RUNNER 0 CACHE BOOL "Enable building the MLIR LevelZero runner")
 set(MLIR_ENABLE_SPIRV_CPU_RUNNER 0 CACHE BOOL "Enable building the MLIR SPIR-V cpu runner")
 set(MLIR_ENABLE_VULKAN_RUNNER 0 CACHE BOOL "Enable building the MLIR Vulkan runner")
 set(MLIR_ENABLE_NVPTXCOMPILER 0 CACHE BOOL
@@ -170,12 +188,20 @@ configure_file(
 #   The pybind11 library can be found (set with -DPYBIND_DIR=...)
 #   The python executable is correct (set with -DPython3_EXECUTABLE=...)
 # By default, find_package and probing for installed pybind11 is performed.
-# Super projects can set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES=ON to 
+# Super projects can set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES=ON to
 # disable all package setup and control it themselves.
 #-------------------------------------------------------------------------------
 
+set(MLIR_BINDINGS_PYTHON_NB_DOMAIN "mlir"
+  CACHE STRING "nanobind domain for MLIR python bindings.")
+set(MLIR_PYTHON_PACKAGE_PREFIX "mlir"
+  CACHE STRING "Specifies that all MLIR packages are co-located under the
+  `MLIR_PYTHON_PACKAGE_PREFIX` top level package (the API has been
+  embedded in a relocatable way).")
 set(MLIR_ENABLE_BINDINGS_PYTHON 0 CACHE BOOL
        "Enables building of Python bindings.")
+set(MLIR_BINDINGS_PYTHON_INSTALL_PREFIX "python_packages/mlir_core/mlir" CACHE STRING
+       "Prefix under install directory to place python bindings")
 set(MLIR_DETECT_PYTHON_ENV_PRIME_SEARCH 1 CACHE BOOL
        "Prime the python detection by searching for a full 'Development' \
        component first (temporary while diagnosing environment specific Python \
@@ -186,6 +212,19 @@ set(MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES 0 CACHE BOOL
        must perform an appropriate find_package of Python3 with \
        'Development.Module' and ensure that find_package(pybind11) is \
        satisfied (and keep up to date as requirements evolve).")
+
+set(_mlir_python_stubgen_enabled ON)
+# Stubgen doesn't work when cross-compiling (stubgen will run in the host interpreter and then fail
+# to find the extension module for the host arch).
+# Note: Stubgen requires some extra handling to work properly when sanitizers are enabled,
+# so we skip running it in that case now.
+if(CMAKE_CROSSCOMPILING OR (NOT LLVM_USE_SANITIZER STREQUAL ""))
+  set(_mlir_python_stubgen_enabled OFF)
+endif()
+
+option(MLIR_PYTHON_STUBGEN_ENABLED
+       "Generate Python type stubs for the MLIR Python bindings."
+       ${_mlir_python_stubgen_enabled})
 
 if(MLIR_ENABLE_BINDINGS_PYTHON)
   include(MLIRDetectPythonEnv)
@@ -204,6 +243,7 @@ include_directories(BEFORE
 # Adding tools/mlir-tblgen here as calling add_tablegen sets some variables like
 # MLIR_TABLEGEN_EXE in PARENT_SCOPE which gets lost if that folder is included
 # from another directory like tools
+add_subdirectory(tools/mlir-irdl-to-cpp)
 add_subdirectory(tools/mlir-linalg-ods-gen)
 add_subdirectory(tools/mlir-pdll)
 add_subdirectory(tools/mlir-tblgen)

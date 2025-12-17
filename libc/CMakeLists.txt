@@ -4,7 +4,7 @@ set(LLVM_SUBPROJECT_TITLE "libc")
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   message(FATAL_ERROR "Builds rooted in the libc directory are not supported. "
     "Builds should be rooted in the runtimes directory instead. "
-    "Please see the documentation at https://libc.llvm.org/usage_modes.html for more info.")
+    "Please see the documentation at https://libc.llvm.org/build_and_test.html for more info.")
 endif()
 
 # Include LLVM's cmake policies.
@@ -34,6 +34,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_definitions("-D_DEBUG")
 endif()
 
+
 # Default to C++17
 set(CMAKE_CXX_STANDARD 17)
 
@@ -46,23 +47,15 @@ set(LIBC_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 set(LIBC_ENABLE_USE_BY_CLANG OFF CACHE BOOL "Whether or not to place libc in a build directory findable by a just built clang")
 
-set(LIBC_KERNEL_HEADERS "/usr/include" CACHE STRING "Path to Linux kernel headers")
-
 # Defining a global namespace to enclose all libc functions.
 set(default_namespace "__llvm_libc")
 if(LLVM_VERSION_MAJOR)
-  set(default_namespace "__llvm_libc_${LLVM_VERSION_MAJOR}_${LLVM_VERSION_MINOR}_${LLVM_VERSION_PATCH}_${LLVM_VERSION_SUFFIX}")
+  string(REPLACE "-" "" NS_LLVM_VERSION_SUFFIX "${LLVM_VERSION_SUFFIX}")
+  set(default_namespace "__llvm_libc_${LLVM_VERSION_MAJOR}_${LLVM_VERSION_MINOR}_${LLVM_VERSION_PATCH}_${NS_LLVM_VERSION_SUFFIX}")
 endif()
 set(LIBC_NAMESPACE ${default_namespace}
   CACHE STRING "The namespace to use to enclose internal implementations. Must start with '__llvm_libc'."
 )
-
-# We will build the GPU utilities if we are not doing a runtimes build.
-option(LIBC_BUILD_GPU_LOADER "Always build the GPU loader utilities" OFF)
-if(LIBC_BUILD_GPU_LOADER OR ((NOT LLVM_RUNTIMES_BUILD) AND LLVM_LIBC_GPU_BUILD))
-  add_subdirectory(utils/gpu)
-  return()
-endif()
 
 option(LIBC_CMAKE_VERBOSE_LOGGING
   "Log details warnings and notifications during CMake configuration." OFF)
@@ -80,6 +73,13 @@ add_compile_definitions(LIBC_NAMESPACE=${LIBC_NAMESPACE})
 # Flags to pass down to the compiler while building the libc functions.
 set(LIBC_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Architecture to tell clang to optimize for (e.g. -march=... or -mcpu=...)")
 set(LIBC_TEST_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Common compile options for all the tests.")
+
+set(LIBC_LINK_OPTIONS_DEFAULT "" CACHE STRING "Arguments used when linking.")
+set(LIBC_TEST_LINK_OPTIONS_DEFAULT "" CACHE STRING "Common link options for all the tests.")
+
+set(LIBC_TEST_CMD "" CACHE STRING
+  "The full test command in the form <command> binary=@BINARY@, if using another program to test (e.g. QEMU)")
+set(LIBC_TEST_HERMETIC_ONLY "" OFF CACHE BOOL "Only enable hermetic tests.")
 
 list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT ${LIBC_COMMON_TUNE_OPTIONS})
 
@@ -127,19 +127,30 @@ else()
   endif()
 endif()
 
-option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" OFF)
+# Defines LIBC_TARGET_ARCHITECTURE and associated macros.
+set(LIBC_TARGET_TRIPLE "" CACHE STRING "The target triple for the libc build.")
+include(LLVMLibCArchitectures)
+
+# Some targets can only support the full build.
+set(default_to_full_build OFF)
+if(LIBC_TARGET_OS_IS_GPU)
+  set(default_to_full_build ON)
+endif()
+
+option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" ${default_to_full_build})
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
-
-set(LIBC_TARGET_TRIPLE "" CACHE STRING "The target triple for the libc build.")
+option(LLVM_LIBC_ALL_HEADERS "Outputs all functions in header files, regardless of whether they are enabled on this target" OFF)
 
 option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
 
+if(LIBC_TARGET_OS_IS_LINUX)
+  set(kernel_headers "/usr/include")
+endif()
+set(LIBC_KERNEL_HEADERS "${kernel_headers}" CACHE STRING "Path to Linux kernel headers")
+
 set(LIBC_ENABLE_UNITTESTS ON)
 set(LIBC_ENABLE_HERMETIC_TESTS ${LLVM_LIBC_FULL_BUILD})
-
-# Defines LIBC_TARGET_ARCHITECTURE and associated macros.
-include(LLVMLibCArchitectures)
 
 set(LIBC_CONFIG_JSON_FILE_LIST "")
 
@@ -220,6 +231,7 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
   if(LIBC_LIBDIR_SUBDIR)
     string(APPEND LIBC_TARGET_SUBDIR /${LIBC_LIBDIR_SUBDIR})
   endif()
+  cmake_path(NORMAL_PATH LIBC_TARGET_SUBDIR)
 endif()
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND (LIBC_ENABLE_USE_BY_CLANG OR LIBC_TARGET_OS_IS_GPU))
@@ -237,7 +249,7 @@ else()
     set(LIBC_INCLUDE_DIR ${CMAKE_BINARY_DIR}/include)
     set(LIBC_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
   endif()
-  if(LIBC_TARGET_OS_IS_GPU)
+  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
     if(LIBC_TARGET_TRIPLE)
       set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/${LIBC_TARGET_TRIPLE})
     else()
@@ -262,6 +274,7 @@ if(LIBC_TARGET_OS_IS_GPU)
 endif()
 
 include(LLVMLibCCheckMPFR)
+include(LLVMLibCCheckMPC)
 
 if(LLVM_LIBC_CLANG_TIDY)
   set(LLVM_LIBC_ENABLE_LINTING ON)
@@ -323,6 +336,9 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
   if (NOT ("compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS OR "compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES))
     message(FATAL_ERROR "SCUDO cannot be included without adding compiler-rt to LLVM_ENABLE_PROJECTS or LLVM_ENABLE_RUNTIMES")
   endif()
+  if (DEFINED COMPILER_RT_BUILD_SANITIZERS AND NOT COMPILER_RT_BUILD_SANITIZERS)
+    message(FATAL_ERROR "Disabling COMPILER_RT_BUILD_SANITIZERS will produce a libc without malloc/free")
+  endif()
 endif()
 
 option(LIBC_INCLUDE_DOCS "Build the libc documentation." ${LLVM_INCLUDE_DOCS})
@@ -350,7 +366,7 @@ elseif(LLVM_LIBC_FULL_BUILD)
   message(FATAL_ERROR "${LIBC_CONFIG_PATH}/headers.txt file not found and fullbuild requested.")
 endif()
 
-# Check exclude.txt that appends to LIBC_EXCLUDE_ENTRYPOINTS list
+# Check exclude.txt that appends to TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS list
 if(EXISTS "${LIBC_CONFIG_PATH}/exclude.txt")
     include("${LIBC_CONFIG_PATH}/exclude.txt")
 endif()

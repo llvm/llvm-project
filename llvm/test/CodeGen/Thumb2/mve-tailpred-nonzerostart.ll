@@ -11,10 +11,10 @@ define arm_aapcs_vfpcc void @start12(ptr nocapture readonly %x, ptr nocapture re
 ; CHECK-NEXT:    poplt {r4, pc}
 ; CHECK-NEXT:  .LBB0_1: @ %vector.ph
 ; CHECK-NEXT:    vmov r12, s0
-; CHECK-NEXT:    subs r3, #12
 ; CHECK-NEXT:    adds r0, #48
 ; CHECK-NEXT:    adds r1, #48
 ; CHECK-NEXT:    adds r2, #48
+; CHECK-NEXT:    subs r3, #12
 ; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1

@@ -34,17 +34,17 @@ jobs:
     if: >-
       github.repository_owner == 'llvm' &&
       github.event.action != 'closed'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     container:
-      image: 'ghcr.io/llvm/ci-ubuntu-22.04:latest'
+      image: 'ghcr.io/llvm/ci-ubuntu-24.04:latest'
     env:
       LLVM_VERSION: 18
     steps:
       - name: Checkout Source
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1
+        uses: hendrikmuhs/ccache-action@5ebbd400eff9e74630f759d94ddd7b6c26299639 # v1.2.20
         with:
           # A full build of llvm, clang, lld, and lldb takes about 250MB
           # of ccache space. There's not much reason to have more than this,
@@ -87,7 +87,7 @@ jobs:
           scan-build --generate-index-only build/analyzer-results
 
       - name: Upload Results
-        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()
         with:
           name: analyzer-results

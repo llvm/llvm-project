@@ -35,7 +35,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
-#include <iterator>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -558,6 +557,22 @@ public:
     return isPostDominator() && !A->getBlock();
   }
 
+  template <typename IteratorTy>
+  NodeT *findNearestCommonDominator(iterator_range<IteratorTy> Nodes) const {
+    assert(!Nodes.empty() && "Nodes list is empty!");
+
+    NodeT *NCD = *Nodes.begin();
+    for (NodeT *Node : llvm::drop_begin(Nodes)) {
+      NCD = findNearestCommonDominator(NCD, Node);
+
+      // Stop when the root is reached.
+      if (isVirtualRoot(getNode(NCD)))
+        return nullptr;
+    }
+
+    return NCD;
+  }
+
   //===--------------------------------------------------------------------===//
   // API to update (Post)DominatorTree information based on modifications to
   // the CFG...
@@ -902,7 +917,7 @@ public:
   }
 
 protected:
-  void addRoot(NodeT *BB) { this->Roots.push_back(BB); }
+  inline void addRoot(NodeT *BB) { this->Roots.push_back(BB); }
 
   DomTreeNodeBase<NodeT> *createNode(NodeT *BB,
                                      DomTreeNodeBase<NodeT> *IDom = nullptr) {

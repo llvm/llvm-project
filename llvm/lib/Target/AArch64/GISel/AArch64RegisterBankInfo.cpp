@@ -13,6 +13,7 @@
 
 #include "AArch64RegisterBankInfo.h"
 #include "AArch64RegisterInfo.h"
+#include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -466,6 +467,34 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   case Intrinsic::aarch64_neon_fminv:
   case Intrinsic::aarch64_neon_fmaxnmv:
   case Intrinsic::aarch64_neon_fminnmv:
+  case Intrinsic::aarch64_neon_fmulx:
+  case Intrinsic::aarch64_neon_frecpe:
+  case Intrinsic::aarch64_neon_frecps:
+  case Intrinsic::aarch64_neon_frecpx:
+  case Intrinsic::aarch64_neon_frsqrte:
+  case Intrinsic::aarch64_neon_frsqrts:
+  case Intrinsic::aarch64_neon_facge:
+  case Intrinsic::aarch64_neon_facgt:
+  case Intrinsic::aarch64_neon_fabd:
+  case Intrinsic::aarch64_sisd_fabd:
+  case Intrinsic::aarch64_neon_sqrdmlah:
+  case Intrinsic::aarch64_neon_sqrdmlsh:
+  case Intrinsic::aarch64_neon_sqrdmulh:
+  case Intrinsic::aarch64_neon_sqadd:
+  case Intrinsic::aarch64_neon_sqsub:
+  case Intrinsic::aarch64_crypto_sha1h:
+  case Intrinsic::aarch64_neon_srshl:
+  case Intrinsic::aarch64_neon_urshl:
+  case Intrinsic::aarch64_neon_sqshl:
+  case Intrinsic::aarch64_neon_uqshl:
+  case Intrinsic::aarch64_neon_sqrshl:
+  case Intrinsic::aarch64_neon_uqrshl:
+  case Intrinsic::aarch64_neon_ushl:
+  case Intrinsic::aarch64_neon_sshl:
+  case Intrinsic::aarch64_crypto_sha1c:
+  case Intrinsic::aarch64_crypto_sha1p:
+  case Intrinsic::aarch64_crypto_sha1m:
+  case Intrinsic::aarch64_sisd_fcvtxn:
     return true;
   case Intrinsic::aarch64_neon_saddlv: {
     const LLT SrcTy = MRI.getType(MI.getOperand(2).getReg());
@@ -475,9 +504,9 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   }
 }
 
-bool AArch64RegisterBankInfo::isPHIWithFPContraints(
+bool AArch64RegisterBankInfo::isPHIWithFPConstraints(
     const MachineInstr &MI, const MachineRegisterInfo &MRI,
-    const TargetRegisterInfo &TRI, const unsigned Depth) const {
+    const AArch64RegisterInfo &TRI, const unsigned Depth) const {
   if (!MI.isPHI() || Depth > MaxFPRSearchDepth)
     return false;
 
@@ -485,13 +514,13 @@ bool AArch64RegisterBankInfo::isPHIWithFPContraints(
                 [&](const MachineInstr &UseMI) {
                   if (onlyUsesFP(UseMI, MRI, TRI, Depth + 1))
                     return true;
-                  return isPHIWithFPContraints(UseMI, MRI, TRI, Depth + 1);
+                  return isPHIWithFPConstraints(UseMI, MRI, TRI, Depth + 1);
                 });
 }
 
 bool AArch64RegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
                                                const MachineRegisterInfo &MRI,
-                                               const TargetRegisterInfo &TRI,
+                                               const AArch64RegisterInfo &TRI,
                                                unsigned Depth) const {
   unsigned Op = MI.getOpcode();
   if (Op == TargetOpcode::G_INTRINSIC && isFPIntrinsic(MRI, MI))
@@ -529,7 +558,7 @@ bool AArch64RegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
 
 bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
                                          const MachineRegisterInfo &MRI,
-                                         const TargetRegisterInfo &TRI,
+                                         const AArch64RegisterInfo &TRI,
                                          unsigned Depth) const {
   switch (MI.getOpcode()) {
   case TargetOpcode::G_FPTOSI:
@@ -539,7 +568,25 @@ bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
   case TargetOpcode::G_FCMP:
   case TargetOpcode::G_LROUND:
   case TargetOpcode::G_LLROUND:
+  case AArch64::G_PMULL:
     return true;
+  case TargetOpcode::G_INTRINSIC:
+    switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
+    case Intrinsic::aarch64_neon_fcvtas:
+    case Intrinsic::aarch64_neon_fcvtau:
+    case Intrinsic::aarch64_neon_fcvtzs:
+    case Intrinsic::aarch64_neon_fcvtzu:
+    case Intrinsic::aarch64_neon_fcvtms:
+    case Intrinsic::aarch64_neon_fcvtmu:
+    case Intrinsic::aarch64_neon_fcvtns:
+    case Intrinsic::aarch64_neon_fcvtnu:
+    case Intrinsic::aarch64_neon_fcvtps:
+    case Intrinsic::aarch64_neon_fcvtpu:
+      return true;
+    default:
+      break;
+    }
+    break;
   default:
     break;
   }
@@ -548,10 +595,12 @@ bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
 
 bool AArch64RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
                                             const MachineRegisterInfo &MRI,
-                                            const TargetRegisterInfo &TRI,
+                                            const AArch64RegisterInfo &TRI,
                                             unsigned Depth) const {
   switch (MI.getOpcode()) {
   case AArch64::G_DUP:
+  case AArch64::G_SADDLP:
+  case AArch64::G_UADDLP:
   case TargetOpcode::G_SITOFP:
   case TargetOpcode::G_UITOFP:
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
@@ -584,6 +633,19 @@ bool AArch64RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
   return hasFPConstraints(MI, MRI, TRI, Depth);
 }
 
+bool AArch64RegisterBankInfo::prefersFPUse(const MachineInstr &MI,
+                                           const MachineRegisterInfo &MRI,
+                                           const AArch64RegisterInfo &TRI,
+                                           unsigned Depth) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP:
+    return MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() ==
+           MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+  }
+  return onlyDefinesFP(MI, MRI, TRI, Depth);
+}
+
 bool AArch64RegisterBankInfo::isLoadFromFPType(const MachineInstr &MI) const {
   // GMemOperation because we also want to match indexed loads.
   auto *MemOp = cast<GMemOperation>(&MI);
@@ -604,7 +666,7 @@ bool AArch64RegisterBankInfo::isLoadFromFPType(const MachineInstr &MI) const {
     // Look at the first element of the array to determine its type
     if (isa<ArrayType>(EltTy))
       EltTy = EltTy->getArrayElementType();
-  } else {
+  } else if (!isa<Constant>(LdVal)) {
     // FIXME: grubbing around uses is pretty ugly, but with no more
     // `getPointerElementType` there's not much else we can do.
     for (const auto *LdUser : LdVal->users()) {
@@ -637,8 +699,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const TargetSubtargetInfo &STI = MF.getSubtarget();
-  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+  const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
+  const AArch64RegisterInfo &TRI = *STI.getRegisterInfo();
 
   switch (Opc) {
     // G_{F|S|U}REM are not listed because they are not legal.
@@ -747,6 +809,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (Ty.isVector())
       OpRegBankIdx[Idx] = PMI_FirstFPR;
     else if (isPreISelGenericFloatingPointOpcode(Opc) ||
+             (MO.isDef() && onlyDefinesFP(MI, MRI, TRI)) ||
+             (MO.isUse() && onlyUsesFP(MI, MRI, TRI)) ||
              Ty.getSizeInBits() > 64)
       OpRegBankIdx[Idx] = PMI_FirstFPR;
     else
@@ -792,22 +856,42 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // Integer to FP conversions don't necessarily happen between GPR -> FPR
     // regbanks. They can also be done within an FPR register.
     Register SrcReg = MI.getOperand(1).getReg();
-    if (getRegBank(SrcReg, MRI, TRI) == &AArch64::FPRRegBank)
+    if (getRegBank(SrcReg, MRI, TRI) == &AArch64::FPRRegBank &&
+        MRI.getType(SrcReg).getSizeInBits() ==
+            MRI.getType(MI.getOperand(0).getReg()).getSizeInBits())
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
     else
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstGPR};
     break;
   }
-  case TargetOpcode::G_FPTOSI:
-  case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_FPTOSI_SAT:
   case TargetOpcode::G_FPTOUI_SAT:
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_INTRINSIC_LRINT:
   case TargetOpcode::G_INTRINSIC_LLRINT:
-    if (MRI.getType(MI.getOperand(0).getReg()).isVector())
+  case TargetOpcode::G_LROUND:
+  case TargetOpcode::G_LLROUND: {
+    LLT DstType = MRI.getType(MI.getOperand(0).getReg());
+    if (DstType.isVector())
       break;
-    OpRegBankIdx = {PMI_FirstGPR, PMI_FirstFPR};
+    if (DstType == LLT::scalar(16)) {
+      OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
+      break;
+    }
+    TypeSize DstSize = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
+    TypeSize SrcSize = getSizeInBits(MI.getOperand(1).getReg(), MRI, TRI);
+    if (((DstSize == SrcSize) || STI.hasFeature(AArch64::FeatureFPRCVT)) &&
+        all_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+               [&](const MachineInstr &UseMI) {
+                 return onlyUsesFP(UseMI, MRI, TRI) ||
+                        prefersFPUse(UseMI, MRI, TRI);
+               }))
+      OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
+    else
+      OpRegBankIdx = {PMI_FirstGPR, PMI_FirstFPR};
     break;
+  }
   case TargetOpcode::G_FCMP: {
     // If the result is a vector, it must use a FPR.
     AArch64GenRegisterBankInfo::PartialMappingIdx Idx0 =
@@ -861,13 +945,13 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                  // instruction.
                  //
                  // Int->FP conversion operations are also captured in
-                 // onlyDefinesFP().
+                 // prefersFPUse().
 
-                 if (isPHIWithFPContraints(UseMI, MRI, TRI))
+                 if (isPHIWithFPConstraints(UseMI, MRI, TRI))
                    return true;
 
                  return onlyUsesFP(UseMI, MRI, TRI) ||
-                        onlyDefinesFP(UseMI, MRI, TRI);
+                        prefersFPUse(UseMI, MRI, TRI);
                }))
       OpRegBankIdx[0] = PMI_FirstFPR;
     break;
@@ -1082,30 +1166,69 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS: {
-    // Check if we know that the intrinsic has any constraints on its register
-    // banks. If it does, then update the mapping accordingly.
-    unsigned Idx = 0;
-    if (onlyDefinesFP(MI, MRI, TRI))
-      for (const auto &Op : MI.defs()) {
-        if (Op.isReg())
-          OpRegBankIdx[Idx] = PMI_FirstFPR;
-        ++Idx;
+    switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
+    case Intrinsic::aarch64_neon_fcvtas:
+    case Intrinsic::aarch64_neon_fcvtau:
+    case Intrinsic::aarch64_neon_fcvtzs:
+    case Intrinsic::aarch64_neon_fcvtzu:
+    case Intrinsic::aarch64_neon_fcvtms:
+    case Intrinsic::aarch64_neon_fcvtmu:
+    case Intrinsic::aarch64_neon_fcvtns:
+    case Intrinsic::aarch64_neon_fcvtnu:
+    case Intrinsic::aarch64_neon_fcvtps:
+    case Intrinsic::aarch64_neon_fcvtpu: {
+      OpRegBankIdx[2] = PMI_FirstFPR;
+      if (MRI.getType(MI.getOperand(0).getReg()).isVector()) {
+        OpRegBankIdx[0] = PMI_FirstFPR;
+        break;
       }
-    else
-      Idx += MI.getNumExplicitDefs();
+      TypeSize DstSize = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
+      TypeSize SrcSize = getSizeInBits(MI.getOperand(2).getReg(), MRI, TRI);
+      if (((DstSize == SrcSize) || STI.hasFeature(AArch64::FeatureFPRCVT)) &&
+          all_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+                 [&](const MachineInstr &UseMI) {
+                   return onlyUsesFP(UseMI, MRI, TRI) ||
+                          prefersFPUse(UseMI, MRI, TRI);
+                 }))
+        OpRegBankIdx[0] = PMI_FirstFPR;
+      else
+        OpRegBankIdx[0] = PMI_FirstGPR;
+      break;
+    }
+    case Intrinsic::aarch64_neon_vcvtfxs2fp:
+    case Intrinsic::aarch64_neon_vcvtfxu2fp:
+    case Intrinsic::aarch64_neon_vcvtfp2fxs:
+    case Intrinsic::aarch64_neon_vcvtfp2fxu:
+      // Override these intrinsics, because they would have a partial
+      // mapping. This is needed for 'half' types, which otherwise don't
+      // get legalised correctly.
+      OpRegBankIdx[0] = PMI_FirstFPR;
+      OpRegBankIdx[2] = PMI_FirstFPR;
+      // OpRegBankIdx[1] is the intrinsic ID.
+      // OpRegBankIdx[3] is an integer immediate.
+      break;
+    default: {
+      // Check if we know that the intrinsic has any constraints on its register
+      // banks. If it does, then update the mapping accordingly.
+      unsigned Idx = 0;
+      if (onlyDefinesFP(MI, MRI, TRI))
+        for (const auto &Op : MI.defs()) {
+          if (Op.isReg())
+            OpRegBankIdx[Idx] = PMI_FirstFPR;
+          ++Idx;
+        }
+      else
+        Idx += MI.getNumExplicitDefs();
 
-    if (onlyUsesFP(MI, MRI, TRI))
-      for (const auto &Op : MI.explicit_uses()) {
-        if (Op.isReg())
-          OpRegBankIdx[Idx] = PMI_FirstFPR;
-        ++Idx;
-      }
-    break;
-  }
-  case TargetOpcode::G_LROUND:
-  case TargetOpcode::G_LLROUND: {
-    // Source is always floating point and destination is always integer.
-    OpRegBankIdx = {PMI_FirstGPR, PMI_FirstFPR};
+      if (onlyUsesFP(MI, MRI, TRI))
+        for (const auto &Op : MI.explicit_uses()) {
+          if (Op.isReg())
+            OpRegBankIdx[Idx] = PMI_FirstFPR;
+          ++Idx;
+        }
+      break;
+    }
+    }
     break;
   }
   }

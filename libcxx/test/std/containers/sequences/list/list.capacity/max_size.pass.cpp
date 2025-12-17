@@ -8,7 +8,7 @@
 
 // <list>
 
-// size_type max_size() const noexcept
+// size_type max_size() const noexcept // constexpr since C++26
 
 #include <cassert>
 #include <limits>
@@ -18,7 +18,7 @@
 #include "test_allocator.h"
 #include "test_macros.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef limited_allocator<int, 10> A;
     typedef std::list<int, A> C;
@@ -29,20 +29,27 @@ int main(int, char**) {
   {
     typedef limited_allocator<int, (std::size_t)-1> A;
     typedef std::list<int, A> C;
-    const C::size_type max_dist =
-        static_cast<C::size_type>(std::numeric_limits<C::difference_type>::max());
+    const C::size_type max_dist = static_cast<C::size_type>(std::numeric_limits<C::difference_type>::max());
     C c;
     assert(c.max_size() <= max_dist);
     LIBCPP_ASSERT(c.max_size() == max_dist);
   }
   {
     typedef std::list<char> C;
-    const C::size_type max_dist =
-        static_cast<C::size_type>(std::numeric_limits<C::difference_type>::max());
+    const C::size_type max_dist = static_cast<C::size_type>(std::numeric_limits<C::difference_type>::max());
     C c;
     assert(c.max_size() <= max_dist);
     assert(c.max_size() <= alloc_max_size(c.get_allocator()));
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

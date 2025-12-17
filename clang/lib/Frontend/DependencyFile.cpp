@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/DirectoryLookup.h"
 #include "clang/Lex/ModuleMap.h"
@@ -23,10 +23,8 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
-#include <system_error>
 
 using namespace clang;
 
@@ -75,6 +73,17 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
                                     /*IsSystem*/ false,
                                     /*IsModuleFile*/ false,
                                     /*IsMissing*/ false);
+  }
+
+  bool EmbedFileNotFound(StringRef FileName) override {
+    DepCollector.maybeAddDependency(
+        llvm::sys::path::remove_leading_dotslash(FileName),
+        /*FromModule=*/false,
+        /*IsSystem=*/false,
+        /*IsModuleFile=*/false,
+        /*IsMissing=*/true);
+    // Return true to silence the file not found diagnostic.
+    return true;
   }
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
@@ -238,7 +247,6 @@ void DependencyFileGenerator::attachToPreprocessor(Preprocessor &PP) {
     PP.SetSuppressIncludeNotFoundError(true);
 
   DependencyCollector::attachToPreprocessor(PP);
-  FS = PP.getFileManager().getVirtualFileSystemPtr();
 }
 
 bool DependencyFileGenerator::sawDependency(StringRef Filename, bool FromModule,
@@ -315,22 +323,11 @@ void DependencyFileGenerator::finishedMainFile(DiagnosticsEngine &Diags) {
 /// https://msdn.microsoft.com/en-us/library/dd9y37ha.aspx for NMake info,
 /// https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247(v=vs.85).aspx
 /// for Windows file-naming info.
-static void printFilename(raw_ostream &OS, llvm::vfs::FileSystem *FS,
-                          StringRef Filename,
+static void PrintFilename(raw_ostream &OS, StringRef Filename,
                           DependencyOutputFormat OutputFormat) {
   // Convert filename to platform native path
   llvm::SmallString<256> NativePath;
   llvm::sys::path::native(Filename.str(), NativePath);
-  // Resolve absolute path. Make and Ninja canonicalize paths
-  // without checking for symbolic links in the path, for performance concerns.
-  // If there is something like `/bin/../lib64` -> `/usr/lib64`
-  // (where `/bin` links to `/usr/bin`), Make will see them as `/lib64`.
-  if (FS != nullptr && llvm::sys::path::is_absolute(NativePath)) {
-    llvm::SmallString<256> NativePathTmp = NativePath;
-    std::error_code EC = FS->getRealPath(NativePathTmp, NativePath);
-    if (EC)
-      NativePath = NativePathTmp;
-  }
 
   if (OutputFormat == DependencyOutputFormat::NMake) {
     // Add quotes if needed. These are the characters listed as "special" to
@@ -414,7 +411,7 @@ void DependencyFileGenerator::outputDependencyFile(llvm::raw_ostream &OS) {
       Columns = 2;
     }
     OS << ' ';
-    printFilename(OS, FS.get(), File, OutputFormat);
+    PrintFilename(OS, File, OutputFormat);
     Columns += N + 1;
   }
   OS << '\n';
@@ -425,7 +422,7 @@ void DependencyFileGenerator::outputDependencyFile(llvm::raw_ostream &OS) {
     for (auto I = Files.begin(), E = Files.end(); I != E; ++I) {
       if (Index++ == InputFileIndex)
         continue;
-      printFilename(OS, FS.get(), *I, OutputFormat);
+      PrintFilename(OS, *I, OutputFormat);
       OS << ":\n";
     }
   }

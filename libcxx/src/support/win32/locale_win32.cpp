@@ -26,7 +26,7 @@ __locale_t __newlocale(int /*mask*/, const char* locale, __locale_t /*base*/) {
   return {::_create_locale(LC_ALL, locale), locale};
 }
 
-lconv* __localeconv(__locale_t& loc) {
+__lconv_t* __localeconv(__locale_t& loc) {
   __locale_guard __current(loc);
   lconv* lc = std::localeconv();
   if (!lc)
@@ -144,7 +144,7 @@ int __snprintf(char* ret, size_t n, __locale_t loc, const char* format, ...) {
 // Like sprintf, but when return value >= 0 it returns
 // a pointer to a malloc'd string in *sptr.
 // If return >= 0, use free to delete *sptr.
-int __libcpp_vasprintf(char** sptr, const char* __restrict format, va_list ap) {
+static int __libcpp_vasprintf(char** sptr, const char* __restrict format, va_list ap) {
   *sptr = nullptr;
   // Query the count required.
   va_list ap_copy;

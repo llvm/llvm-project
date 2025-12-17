@@ -2,15 +2,15 @@
 // different EH personality depending on the -GS setting, so test both -GS+ and
 // -GS-.
 //
-// RUN: cl -c %s -Fo%t.obj -DCOMPILE_SEH
-// RUN: %clangxx_asan -o %t.exe %s %t.obj
+// RUN: cl /EHa %MD -c %s -Fo%t.obj -DCOMPILE_SEH
+// RUN: %clangxx_asan -o %t.exe %s %t.obj -DCOMPILE_MAIN
 // RUN: %run %t.exe
 //
-// RUN: cl -GS- -c %s -Fo%t.obj -DCOMPILE_SEH
-// RUN: %clangxx_asan -o %t.exe %s %t.obj
+// RUN: cl /EHa %MD -GS- -c %s -Fo%t.obj -DCOMPILE_SEH
+// RUN: %clangxx_asan -o %t.exe %s %t.obj -DCOMPILE_MAIN
 // RUN: %run %t.exe
 //
-// RUN: %clang_cl_asan %s -DCOMPILE_SEH -Fe%t.exe
+// RUN: %clang_cl_asan /EHa %MD %s -DCOMPILE_SEH -Fe%t.exe -DCOMPILE_MAIN
 // RUN: %run %t.exe
 
 #include <windows.h>
@@ -42,7 +42,7 @@ void ThrowAndCatch() {
 }
 #endif
 
-#if defined(__clang__)
+#if defined(COMPILE_MAIN)
 int main() {
   char x[32];
   fprintf(stderr, "Before: %p poisoned: %d\n", &x,

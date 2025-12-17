@@ -81,7 +81,7 @@ void g() {
     A b(auto ()->C);
     static_assert(sizeof(B ()->C[1] == sizeof(int)), "");
     sizeof(auto () -> C[1]);
-    // since-cxx11-error@-1 {{function cannot return array type 'C[1]' (aka 'cwg1223::BB[1]')}}
+    // since-cxx11-error@-1 {{function cannot return array type 'C[1]' (aka 'struct BB[1]')}}
 }
 #endif
 } // namespace cwg1223
@@ -155,6 +155,8 @@ namespace cwg1295 { // cwg1295: 4
   // cxx98-14-error@-1 {{non-type template argument does not refer to any declaration}}
   //   cxx98-14-note@#cwg1295-Y {{template parameter is declared here}}
   // since-cxx17-error@#cwg1295-y {{reference cannot bind to bit-field in converted constant expression}}
+  //   since-cxx17-note@#cwg1295-Y {{template parameter is declared here}}
+
 
 #if __cplusplus >= 201103L
   const unsigned other = 0;

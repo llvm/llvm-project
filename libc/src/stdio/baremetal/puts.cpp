@@ -17,8 +17,8 @@ LLVM_LIBC_FUNCTION(int, puts, (const char *__restrict str)) {
   cpp::string_view str_view(str);
 
   // TODO: Can we combine these to avoid needing two writes?
-  write_to_stderr(str_view);
-  write_to_stderr("\n");
+  write_to_stdout(str_view);
+  write_to_stdout("\n");
 
   return 0;
 }

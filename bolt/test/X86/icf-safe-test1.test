@@ -18,12 +18,10 @@
 # SAFEICFCHECK: skipping function with reference taken barAddFunc
 # SAFEICFCHECK-NEXT: ICF iteration 1
 # SAFEICFCHECK-NEXT: folding barSubFunc into fooSubFunc
-# SAFEICFCHECK-NEXT: ===---------
 
 # SAFEICFCHECKNOCFG: skipping function with reference taken barAddFunc
 # SAFEICFCHECKNOCFG-NEXT: ICF iteration 1
 # SAFEICFCHECKNOCFG-NEXT: folding barSubFunc into fooSubFunc
-# SAFEICFCHECKNOCFG-NEXT: ===---------
 
 ## clang++ -c main.cpp -o main.o
 ## extern int FooVar;

@@ -22,7 +22,6 @@
 #include "lldb/Host/HostNativeProcessBase.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
-#include "lldb/Host/windows/windows.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -80,8 +79,10 @@ namespace lldb_private {
 
 ProcessSP ProcessWindows::CreateInstance(lldb::TargetSP target_sp,
                                          lldb::ListenerSP listener_sp,
-                                         const FileSpec *,
+                                         const FileSpec *crash_file_path,
                                          bool can_connect) {
+  if (crash_file_path)
+    return nullptr; // Cannot create a Windows process from a crash_file.
   return ProcessSP(new ProcessWindows(target_sp, listener_sp));
 }
 
@@ -236,9 +237,15 @@ ProcessWindows::DoAttachToProcessWithID(lldb::pid_t pid,
   return error;
 }
 
-Status ProcessWindows::DoResume() {
+Status ProcessWindows::DoResume(RunDirection direction) {
   Log *log = GetLog(WindowsLog::Process);
   llvm::sys::ScopedLock lock(m_mutex);
+
+  if (direction == RunDirection::eRunReverse) {
+    return Status::FromErrorStringWithFormatv(
+        "{0} does not support reverse execution of processes", GetPluginName());
+  }
+
   Status error;
 
   StateType private_state = GetPrivateState();
@@ -410,24 +417,17 @@ void ProcessWindows::RefreshStateAfterStop() {
   if (!stop_thread)
     return;
 
+  RegisterContextSP register_context = stop_thread->GetRegisterContext();
+  uint64_t pc = register_context->GetPC();
+
+  // If we're at a BreakpointSite, mark this as an Unexecuted Breakpoint.
+  // We'll clear that state if we've actually executed the breakpoint.
+  BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
+  if (site && site->IsEnabled())
+    stop_thread->SetThreadStoppedAtUnexecutedBP(pc);
+
   switch (active_exception->GetExceptionCode()) {
   case EXCEPTION_SINGLE_STEP: {
-    RegisterContextSP register_context = stop_thread->GetRegisterContext();
-    const uint64_t pc = register_context->GetPC();
-    BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
-    if (site && site->ValidForThisThread(*stop_thread)) {
-      LLDB_LOG(log,
-               "Single-stepped onto a breakpoint in process {0} at "
-               "address {1:x} with breakpoint site {2}",
-               m_session_data->m_debugger->GetProcess().GetProcessId(), pc,
-               site->GetID());
-      stop_info = StopInfo::CreateStopReasonWithBreakpointSiteID(*stop_thread,
-                                                                 site->GetID());
-      stop_thread->SetStopInfo(stop_info);
-
-      return;
-    }
-
     auto *reg_ctx = static_cast<RegisterContextWindows *>(
         stop_thread->GetRegisterContext().get());
     uint32_t slot_id = reg_ctx->GetTriggeredHardwareBreakpointSlotId();
@@ -452,8 +452,6 @@ void ProcessWindows::RefreshStateAfterStop() {
   }
 
   case EXCEPTION_BREAKPOINT: {
-    RegisterContextSP register_context = stop_thread->GetRegisterContext();
-
     int breakpoint_size = 1;
     switch (GetTarget().GetArchitecture().GetMachine()) {
     case llvm::Triple::aarch64:
@@ -476,9 +474,9 @@ void ProcessWindows::RefreshStateAfterStop() {
     }
 
     // The current PC is AFTER the BP opcode, on all architectures.
-    uint64_t pc = register_context->GetPC() - breakpoint_size;
+    pc = register_context->GetPC() - breakpoint_size;
 
-    BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
+    site = GetBreakpointSiteList().FindByAddress(pc);
     if (site) {
       LLDB_LOG(log,
                "detected breakpoint in process {0} at address {1:x} with "
@@ -486,6 +484,7 @@ void ProcessWindows::RefreshStateAfterStop() {
                m_session_data->m_debugger->GetProcess().GetProcessId(), pc,
                site->GetID());
 
+      stop_thread->SetThreadHitBreakpointSite();
       if (site->ValidForThisThread(*stop_thread)) {
         LLDB_LOG(log,
                  "Breakpoint site {0} is valid for this thread ({1:x}), "
@@ -669,7 +668,7 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
     target->ModulesDidUnload(unloaded_modules, true);
   }
 
-  SetProcessExitStatus(GetID(), true, 0, exit_code);
+  SetExitStatus(exit_code, /*exit_string=*/"");
   SetPrivateState(eStateExited);
 
   ProcessDebugger::OnExitProcess(exit_code);

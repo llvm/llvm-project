@@ -13,6 +13,7 @@
 #include "CodeGenTypes.h"
 #include "CGCXXABI.h"
 #include "CGCall.h"
+#include "CGDebugInfo.h"
 #include "CGHLSLRuntime.h"
 #include "CGOpenCLRuntime.h"
 #include "CGRecordLayout.h"
@@ -61,7 +62,7 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
   // FullyQualifiedNames.
   PrintingPolicy Policy = RD->getASTContext().getPrintingPolicy();
   Policy.SuppressInlineNamespace =
-      PrintingPolicy::SuppressInlineNamespaceMode::None;
+      llvm::to_underlying(PrintingPolicy::SuppressInlineNamespaceMode::None);
 
   // Name the codegen type after the typedef name
   // if there is no tag type name available
@@ -103,7 +104,10 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
   if (T->isConstantMatrixType()) {
     const Type *Ty = Context.getCanonicalType(T).getTypePtr();
     const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);
-    return llvm::ArrayType::get(ConvertType(MT->getElementType()),
+    llvm::Type *IRElemTy = ConvertType(MT->getElementType());
+    if (Context.getLangOpts().HLSL && T->isConstantMatrixBoolType())
+      IRElemTy = ConvertTypeForMem(Context.BoolTy);
+    return llvm::ArrayType::get(IRElemTy,
                                 MT->getNumRows() * MT->getNumColumns());
   }
 
@@ -112,6 +116,12 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
   // Check for the boolean vector case.
   if (T->isExtVectorBoolType()) {
     auto *FixedVT = cast<llvm::FixedVectorType>(R);
+
+    if (Context.getLangOpts().HLSL) {
+      llvm::Type *IRElemTy = ConvertTypeForMem(Context.BoolTy);
+      return llvm::FixedVectorType::get(IRElemTy, FixedVT->getNumElements());
+    }
+
     // Pad to at least one byte.
     uint64_t BytePadded = std::max<uint64_t>(FixedVT->getNumElements(), 8);
     return llvm::IntegerType::get(FixedVT->getContext(), BytePadded);
@@ -222,12 +232,13 @@ bool CodeGenTypes::isFuncTypeConvertible(const FunctionType *FT) {
 /// UpdateCompletedType - When we find the full definition for a TagDecl,
 /// replace the 'opaque' type we previously made for it if applicable.
 void CodeGenTypes::UpdateCompletedType(const TagDecl *TD) {
+  CanQualType T = CGM.getContext().getCanonicalTagType(TD);
   // If this is an enum being completed, then we flush all non-struct types from
   // the cache.  This allows function types and other things that may be derived
   // from the enum to be recomputed.
   if (const EnumDecl *ED = dyn_cast<EnumDecl>(TD)) {
     // Only flush the cache if we've actually already converted this type.
-    if (TypeCache.count(ED->getTypeForDecl())) {
+    if (TypeCache.count(T->getTypePtr())) {
       // Okay, we formed some types based on this.  We speculated that the enum
       // would be lowered to i32, so we only need to flush the cache if this
       // didn't happen.
@@ -248,7 +259,7 @@ void CodeGenTypes::UpdateCompletedType(const TagDecl *TD) {
 
   // Only complete it if we converted it already.  If we haven't converted it
   // yet, we'll just do it lazily.
-  if (RecordDeclTypes.count(Context.getTagDeclType(RD).getTypePtr()))
+  if (RecordDeclTypes.count(T.getTypePtr()))
     ConvertRecordDeclType(RD);
 
   // If necessary, provide the full definition of a type only used with a
@@ -258,7 +269,7 @@ void CodeGenTypes::UpdateCompletedType(const TagDecl *TD) {
 }
 
 void CodeGenTypes::RefreshTypeCacheForClass(const CXXRecordDecl *RD) {
-  QualType T = Context.getRecordType(RD);
+  CanQualType T = Context.getCanonicalTagType(RD);
   T = Context.getCanonicalType(T);
 
   const Type *Ty = T.getTypePtr();
@@ -303,12 +314,12 @@ llvm::Type *CodeGenTypes::ConvertFunctionTypeInternal(QualType QFT) {
 
     // Force conversion of all the relevant record types, to make sure
     // we re-convert the FunctionType when appropriate.
-    if (const RecordType *RT = FT->getReturnType()->getAs<RecordType>())
-      ConvertRecordDeclType(RT->getDecl());
+    if (const auto *RD = FT->getReturnType()->getAsRecordDecl())
+      ConvertRecordDeclType(RD);
     if (const FunctionProtoType *FPT = dyn_cast<FunctionProtoType>(FT))
       for (unsigned i = 0, e = FPT->getNumParams(); i != e; i++)
-        if (const RecordType *RT = FPT->getParamType(i)->getAs<RecordType>())
-          ConvertRecordDeclType(RT->getDecl());
+        if (const auto *RD = FPT->getParamType(i)->getAsRecordDecl())
+          ConvertRecordDeclType(RD);
 
     SkippedLayout = true;
 
@@ -365,8 +376,8 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   }
 
   // RecordTypes are cached and processed specially.
-  if (const RecordType *RT = dyn_cast<RecordType>(Ty))
-    return ConvertRecordDeclType(RT->getDecl());
+  if (const auto *RT = dyn_cast<RecordType>(Ty))
+    return ConvertRecordDeclType(RT->getDecl()->getDefinitionOrSelf());
 
   llvm::Type *CachedType = nullptr;
   auto TCI = TypeCache.find(Ty);
@@ -505,15 +516,17 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case BuiltinType::Id:
 #define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
   case BuiltinType::Id:
-#define AARCH64_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                \
-  case BuiltinType::Id:
-#define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
       {
         ASTContext::BuiltinVectorTypeInfo Info =
             Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
-        auto VTy =
-            llvm::VectorType::get(ConvertType(Info.ElementType), Info.EC);
+        // The `__mfp8` type maps to `<1 x i8>` which can't be used to build
+        // a <N x i8> vector type, hence bypass the call to `ConvertType` for
+        // the element type and create the vector type directly.
+        auto *EltTy = Info.ElementType->isMFloat8Type()
+                          ? llvm::Type::getInt8Ty(getLLVMContext())
+                          : ConvertType(Info.ElementType);
+        auto *VTy = llvm::VectorType::get(EltTy, Info.EC);
         switch (Info.NumVectors) {
         default:
           llvm_unreachable("Expected 1, 2, 3 or 4 vectors!");
@@ -529,6 +542,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       }
     case BuiltinType::SveCount:
       return llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
+    case BuiltinType::MFloat8:
+      return llvm::VectorType::get(llvm::Type::getInt8Ty(getLLVMContext()), 1,
+                                   false);
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
     case BuiltinType::Id: \
       ResultType = \
@@ -648,8 +664,10 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::Vector: {
     const auto *VT = cast<VectorType>(Ty);
     // An ext_vector_type of Bool is really a vector of bits.
-    llvm::Type *IRElemTy = VT->isExtVectorBoolType()
+    llvm::Type *IRElemTy = VT->isPackedVectorBoolType(Context)
                                ? llvm::Type::getInt1Ty(getLLVMContext())
+                           : VT->getElementType()->isMFloat8Type()
+                               ? llvm::Type::getInt8Ty(getLLVMContext())
                                : ConvertType(VT->getElementType());
     ResultType = llvm::FixedVectorType::get(IRElemTy, VT->getNumElements());
     break;
@@ -685,7 +703,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     break;
 
   case Type::Enum: {
-    const EnumDecl *ED = cast<EnumType>(Ty)->getDecl();
+    const auto *ED = Ty->castAsEnumDecl();
     if (ED->isCompleteDefinition() || ED->isFixed())
       return ConvertType(ED->getIntegerType());
     // Return a placeholder 'i32' type.  This can be changed later when the
@@ -711,8 +729,10 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::MemberPointer: {
     auto *MPTy = cast<MemberPointerType>(Ty);
     if (!getCXXABI().isMemberPointerConvertible(MPTy)) {
-      auto *C = MPTy->getClass();
-      auto Insertion = RecordsWithOpaqueMemberPointers.insert({C, nullptr});
+      CanQualType T = CGM.getContext().getCanonicalTagType(
+          MPTy->getMostRecentCXXRecordDecl());
+      auto Insertion =
+          RecordsWithOpaqueMemberPointers.try_emplace(T.getTypePtr());
       if (Insertion.second)
         Insertion.first->second = llvm::StructType::create(getLLVMContext());
       ResultType = Insertion.first->second;
@@ -750,6 +770,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     break;
   }
   case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
     ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
     break;
   }
@@ -774,7 +795,7 @@ bool CodeGenModule::isPaddedAtomicType(const AtomicType *type) {
 llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {
   // TagDecl's are not necessarily unique, instead use the (clang)
   // type connected to the decl.
-  const Type *Key = Context.getTagDeclType(RD).getTypePtr();
+  const Type *Key = Context.getCanonicalTagType(RD).getTypePtr();
 
   llvm::StructType *&Entry = RecordDeclTypes[Key];
 
@@ -795,7 +816,7 @@ llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {
   if (const CXXRecordDecl *CRD = dyn_cast<CXXRecordDecl>(RD)) {
     for (const auto &I : CRD->bases()) {
       if (I.isVirtual()) continue;
-      ConvertRecordDeclType(I.getType()->castAs<RecordType>()->getDecl());
+      ConvertRecordDeclType(I.getType()->castAsRecordDecl());
     }
   }
 
@@ -815,7 +836,7 @@ llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {
 /// getCGRecordLayout - Return record layout info for the given record decl.
 const CGRecordLayout &
 CodeGenTypes::getCGRecordLayout(const RecordDecl *RD) {
-  const Type *Key = Context.getTagDeclType(RD).getTypePtr();
+  const Type *Key = Context.getCanonicalTagType(RD).getTypePtr();
 
   auto I = CGRecordLayouts.find(Key);
   if (I != CGRecordLayouts.end())
@@ -832,12 +853,14 @@ CodeGenTypes::getCGRecordLayout(const RecordDecl *RD) {
 }
 
 bool CodeGenTypes::isPointerZeroInitializable(QualType T) {
-  assert((T->isAnyPointerType() || T->isBlockPointerType()) && "Invalid type");
+  assert((T->isAnyPointerType() || T->isBlockPointerType() ||
+          T->isNullPtrType()) &&
+         "Invalid type");
   return isZeroInitializable(T);
 }
 
 bool CodeGenTypes::isZeroInitializable(QualType T) {
-  if (T->getAs<PointerType>())
+  if (T->getAs<PointerType>() || T->isNullPtrType())
     return Context.getTargetNullPointerValue(T) == 0;
 
   if (const auto *AT = Context.getAsArrayType(T)) {
@@ -851,14 +874,16 @@ bool CodeGenTypes::isZeroInitializable(QualType T) {
 
   // Records are non-zero-initializable if they contain any
   // non-zero-initializable subobjects.
-  if (const RecordType *RT = T->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
+  if (const auto *RD = T->getAsRecordDecl())
     return isZeroInitializable(RD);
-  }
 
   // We have to ask the ABI about member pointers.
   if (const MemberPointerType *MPT = T->getAs<MemberPointerType>())
     return getCXXABI().isZeroInitializable(MPT);
+
+  // HLSL Inline SPIR-V types are non-zero-initializable.
+  if (T->getAs<HLSLInlineSpirvType>())
+    return false;
 
   // Everything else is okay.
   return true;

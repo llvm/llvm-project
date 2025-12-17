@@ -28,11 +28,7 @@ static unsigned getUnconditionalBranch(const MipsSubtarget &STI) {
 }
 
 MipsSEInstrInfo::MipsSEInstrInfo(const MipsSubtarget &STI)
-    : MipsInstrInfo(STI, getUnconditionalBranch(STI)), RI() {}
-
-const MipsRegisterInfo &MipsSEInstrInfo::getRegisterInfo() const {
-  return RI;
-}
+    : MipsInstrInfo(STI, RI, getUnconditionalBranch(STI)), RI(STI) {}
 
 /// isLoadFromStackSlot - If the specified machine instruction is a direct
 /// load from a stack slot, return the virtual or physical register number of
@@ -79,8 +75,8 @@ Register MipsSEInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 
 void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
-                                  const DebugLoc &DL, MCRegister DestReg,
-                                  MCRegister SrcReg, bool KillSrc,
+                                  const DebugLoc &DL, Register DestReg,
+                                  Register SrcReg, bool KillSrc,
                                   bool RenamableDest, bool RenamableSrc) const {
   unsigned Opc = 0, ZeroReg = 0;
   bool isMicroMips = Subtarget.inMicroMipsMode();
@@ -209,11 +205,12 @@ MipsSEInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   return std::nullopt;
 }
 
-void MipsSEInstrInfo::
-storeRegToStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                Register SrcReg, bool isKill, int FI,
-                const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
-                int64_t Offset) const {
+void MipsSEInstrInfo::storeRegToStack(MachineBasicBlock &MBB,
+                                      MachineBasicBlock::iterator I,
+                                      Register SrcReg, bool isKill, int FI,
+                                      const TargetRegisterClass *RC,
+                                      int64_t Offset,
+                                      MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   MachineMemOperand *MMO = GetMemOperand(MBB, FI, MachineMemOperand::MOStore);
 
@@ -237,16 +234,16 @@ storeRegToStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     Opc = Mips::SDC1;
   else if (Mips::FGR64RegClass.hasSubClassEq(RC))
     Opc = Mips::SDC164;
-  else if (TRI->isTypeLegalForClass(*RC, MVT::v16i8))
+  else if (RI.isTypeLegalForClass(*RC, MVT::v16i8))
     Opc = Mips::ST_B;
-  else if (TRI->isTypeLegalForClass(*RC, MVT::v8i16) ||
-           TRI->isTypeLegalForClass(*RC, MVT::v8f16))
+  else if (RI.isTypeLegalForClass(*RC, MVT::v8i16) ||
+           RI.isTypeLegalForClass(*RC, MVT::v8f16))
     Opc = Mips::ST_H;
-  else if (TRI->isTypeLegalForClass(*RC, MVT::v4i32) ||
-           TRI->isTypeLegalForClass(*RC, MVT::v4f32))
+  else if (RI.isTypeLegalForClass(*RC, MVT::v4i32) ||
+           RI.isTypeLegalForClass(*RC, MVT::v4f32))
     Opc = Mips::ST_W;
-  else if (TRI->isTypeLegalForClass(*RC, MVT::v2i64) ||
-           TRI->isTypeLegalForClass(*RC, MVT::v2f64))
+  else if (RI.isTypeLegalForClass(*RC, MVT::v2i64) ||
+           RI.isTypeLegalForClass(*RC, MVT::v2f64))
     Opc = Mips::ST_D;
   else if (Mips::LO32RegClass.hasSubClassEq(RC))
     Opc = Mips::SW;
@@ -283,10 +280,12 @@ storeRegToStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     .addFrameIndex(FI).addImm(Offset).addMemOperand(MMO);
 }
 
-void MipsSEInstrInfo::
-loadRegFromStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                 Register DestReg, int FI, const TargetRegisterClass *RC,
-                 const TargetRegisterInfo *TRI, int64_t Offset) const {
+void MipsSEInstrInfo::loadRegFromStack(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator I,
+                                       Register DestReg, int FI,
+                                       const TargetRegisterClass *RC,
+                                       int64_t Offset,
+                                       MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
   MachineMemOperand *MMO = GetMemOperand(MBB, FI, MachineMemOperand::MOLoad);
@@ -315,16 +314,16 @@ loadRegFromStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     Opc = Mips::LDC1;
   else if (Mips::FGR64RegClass.hasSubClassEq(RC))
     Opc = Mips::LDC164;
-  else if (TRI->isTypeLegalForClass(*RC, MVT::v16i8))
+  else if (RI.isTypeLegalForClass(*RC, MVT::v16i8))
     Opc = Mips::LD_B;
-  else if (TRI->isTypeLegalForClass(*RC, MVT::v8i16) ||
-           TRI->isTypeLegalForClass(*RC, MVT::v8f16))
+  else if (RI.isTypeLegalForClass(*RC, MVT::v8i16) ||
+           RI.isTypeLegalForClass(*RC, MVT::v8f16))
     Opc = Mips::LD_H;
-  else if (TRI->isTypeLegalForClass(*RC, MVT::v4i32) ||
-           TRI->isTypeLegalForClass(*RC, MVT::v4f32))
+  else if (RI.isTypeLegalForClass(*RC, MVT::v4i32) ||
+           RI.isTypeLegalForClass(*RC, MVT::v4f32))
     Opc = Mips::LD_W;
-  else if (TRI->isTypeLegalForClass(*RC, MVT::v2i64) ||
-           TRI->isTypeLegalForClass(*RC, MVT::v2f64))
+  else if (RI.isTypeLegalForClass(*RC, MVT::v2i64) ||
+           RI.isTypeLegalForClass(*RC, MVT::v2f64))
     Opc = Mips::LD_D;
   else if (Mips::HI32RegClass.hasSubClassEq(RC))
     Opc = Mips::LW;
@@ -680,8 +679,8 @@ MipsSEInstrInfo::compareOpndSize(unsigned Opc,
   const MCInstrDesc &Desc = get(Opc);
   assert(Desc.NumOperands == 2 && "Unary instruction expected.");
   const MipsRegisterInfo *RI = &getRegisterInfo();
-  unsigned DstRegSize = RI->getRegSizeInBits(*getRegClass(Desc, 0, RI, MF));
-  unsigned SrcRegSize = RI->getRegSizeInBits(*getRegClass(Desc, 1, RI, MF));
+  unsigned DstRegSize = RI->getRegSizeInBits(*getRegClass(Desc, 0));
+  unsigned SrcRegSize = RI->getRegSizeInBits(*getRegClass(Desc, 1));
 
   return std::make_pair(DstRegSize > SrcRegSize, DstRegSize < SrcRegSize);
 }

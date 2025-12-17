@@ -1,4 +1,4 @@
-//===--- UnusedRaiiCheck.cpp - clang-tidy ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -37,8 +37,8 @@ void UnusedRaiiCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 template <typename T>
-void reportDiagnostic(DiagnosticBuilder D, const T *Node, SourceRange SR,
-                      bool DefaultConstruction) {
+static void reportDiagnostic(const DiagnosticBuilder &D, const T *Node,
+                             SourceRange SR, bool DefaultConstruction) {
   const char *Replacement = " give_me_a_name";
 
   // If this is a default ctor we have to remove the parens or we'll introduce a

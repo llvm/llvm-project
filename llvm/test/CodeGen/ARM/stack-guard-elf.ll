@@ -43,10 +43,10 @@ define i32 @test1() #0 {
 ; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:  .LCPI0_0:
 ; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:    .long __stack_chk_guard(GOT_PREL)-((.LPC0_0+8)-.Ltmp0)
+; CHECK-NEXT:    .long __stack_chk_guard(GOT_PREL)-(.LPC0_0+8-.Ltmp0)
 ; CHECK-NEXT:  .LCPI0_1:
 ; CHECK-NEXT:  .Ltmp1:
-; CHECK-NEXT:    .long __stack_chk_guard(GOT_PREL)-((.LPC0_1+8)-.Ltmp1)
+; CHECK-NEXT:    .long __stack_chk_guard(GOT_PREL)-(.LPC0_1+8-.Ltmp1)
 ;
 ; THUMB1-LABEL: test1:
 ; THUMB1:       @ %bb.0:
@@ -88,10 +88,10 @@ define i32 @test1() #0 {
 ; THUMB1-NEXT:  @ %bb.3:
 ; THUMB1-NEXT:  .LCPI0_0:
 ; THUMB1-NEXT:  .Ltmp0:
-; THUMB1-NEXT:    .long __stack_chk_guard(GOT_PREL)-((.LPC0_0+4)-.Ltmp0)
+; THUMB1-NEXT:    .long __stack_chk_guard(GOT_PREL)-(.LPC0_0+4-.Ltmp0)
 ; THUMB1-NEXT:  .LCPI0_1:
 ; THUMB1-NEXT:  .Ltmp1:
-; THUMB1-NEXT:    .long __stack_chk_guard(GOT_PREL)-((.LPC0_1+4)-.Ltmp1)
+; THUMB1-NEXT:    .long __stack_chk_guard(GOT_PREL)-(.LPC0_1+4-.Ltmp1)
 ;
 ; THUMB1-PIC-LABEL: test1:
 ; THUMB1-PIC:       @ %bb.0:
@@ -133,10 +133,10 @@ define i32 @test1() #0 {
 ; THUMB1-PIC-NEXT:  @ %bb.3:
 ; THUMB1-PIC-NEXT:  .LCPI0_0:
 ; THUMB1-PIC-NEXT:  .Ltmp0:
-; THUMB1-PIC-NEXT:    .long __stack_chk_guard(GOT_PREL)-((.LPC0_0+4)-.Ltmp0)
+; THUMB1-PIC-NEXT:    .long __stack_chk_guard(GOT_PREL)-(.LPC0_0+4-.Ltmp0)
 ; THUMB1-PIC-NEXT:  .LCPI0_1:
 ; THUMB1-PIC-NEXT:  .Ltmp1:
-; THUMB1-PIC-NEXT:    .long __stack_chk_guard(GOT_PREL)-((.LPC0_1+4)-.Ltmp1)
+; THUMB1-PIC-NEXT:    .long __stack_chk_guard(GOT_PREL)-(.LPC0_1+4-.Ltmp1)
 ;
 ; THUMB2-LABEL: test1:
 ; THUMB2:       @ %bb.0:
@@ -169,10 +169,10 @@ define i32 @test1() #0 {
 ; THUMB2-NEXT:  @ %bb.2:
 ; THUMB2-NEXT:  .LCPI0_0:
 ; THUMB2-NEXT:  .Ltmp0:
-; THUMB2-NEXT:    .long __stack_chk_guard(GOT_PREL)-((.LPC0_0+4)-.Ltmp0)
+; THUMB2-NEXT:    .long __stack_chk_guard(GOT_PREL)-(.LPC0_0+4-.Ltmp0)
 ; THUMB2-NEXT:  .LCPI0_1:
 ; THUMB2-NEXT:  .Ltmp1:
-; THUMB2-NEXT:    .long __stack_chk_guard(GOT_PREL)-((.LPC0_1+4)-.Ltmp1)
+; THUMB2-NEXT:    .long __stack_chk_guard(GOT_PREL)-(.LPC0_1+4-.Ltmp1)
 ;
 ; THUMB2-PIC-LABEL: test1:
 ; THUMB2-PIC:       @ %bb.0:
@@ -205,10 +205,10 @@ define i32 @test1() #0 {
 ; THUMB2-PIC-NEXT:  @ %bb.2:
 ; THUMB2-PIC-NEXT:  .LCPI0_0:
 ; THUMB2-PIC-NEXT:  .Ltmp0:
-; THUMB2-PIC-NEXT:    .long __stack_chk_guard(GOT_PREL)-((.LPC0_0+4)-.Ltmp0)
+; THUMB2-PIC-NEXT:    .long __stack_chk_guard(GOT_PREL)-(.LPC0_0+4-.Ltmp0)
 ; THUMB2-PIC-NEXT:  .LCPI0_1:
 ; THUMB2-PIC-NEXT:  .Ltmp1:
-; THUMB2-PIC-NEXT:    .long __stack_chk_guard(GOT_PREL)-((.LPC0_1+4)-.Ltmp1)
+; THUMB2-PIC-NEXT:    .long __stack_chk_guard(GOT_PREL)-(.LPC0_1+4-.Ltmp1)
   %a1 = alloca [256 x i32], align 4
   call void @foo(ptr %a1) #3
   ret i32 0

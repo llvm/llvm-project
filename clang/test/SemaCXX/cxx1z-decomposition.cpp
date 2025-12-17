@@ -3,22 +3,22 @@
 // RUN: %clang_cc1 -std=c++20 -Wpre-c++20-compat -fexperimental-new-constant-interpreter -verify=expected %s
 
 void use_from_own_init() {
-  auto [a] = a; // expected-error {{binding 'a' cannot appear in the initializer of its own decomposition declaration}}
+  auto [a] = a; // expected-error {{binding 'a' cannot appear in the initializer of its own structured binding declaration}}
 }
 
 void num_elems() {
   struct A0 {} a0;
   int a1[1], a2[2];
 
-  auto [] = a0; // expected-warning {{does not allow a decomposition group to be empty}}
-  auto [v1] = a0; // expected-error {{type 'struct A0' decomposes into 0 elements, but 1 name was provided}}
-  auto [] = a1; // expected-error {{type 'int[1]' decomposes into 1 element, but no names were provided}} expected-warning {{empty}}
+  auto [] = a0; // expected-warning {{does not allow a structured binding group to be empty}}
+  auto [v1] = a0; // expected-error {{type 'struct A0' binds to 0 elements, but 1 name was provided}}
+  auto [] = a1; // expected-error {{type 'int[1]' binds to 1 element, but no names were provided}} expected-warning {{empty}}
   auto [v2] = a1;
-  auto [v3, v4] = a1; // expected-error {{type 'int[1]' decomposes into 1 element, but 2 names were provided}}
-  auto [] = a2; // expected-error {{type 'int[2]' decomposes into 2 elements, but no names were provided}} expected-warning {{empty}}
-  auto [v5] = a2; // expected-error {{type 'int[2]' decomposes into 2 elements, but only 1 name was provided}}
+  auto [v3, v4] = a1; // expected-error {{type 'int[1]' binds to 1 element, but 2 names were provided}}
+  auto [] = a2; // expected-error {{type 'int[2]' binds to 2 elements, but no names were provided}} expected-warning {{empty}}
+  auto [v5] = a2; // expected-error {{type 'int[2]' binds to 2 elements, but only 1 name was provided}}
   auto [v6, v7] = a2;
-  auto [v8, v9, v10] = a2; // expected-error {{type 'int[2]' decomposes into 2 elements, but 3 names were provided}}
+  auto [v8, v9, v10] = a2; // expected-error {{type 'int[2]' binds to 2 elements, but 3 names were provided}}
 }
 
 // As a Clang extension, _Complex can be decomposed.
@@ -105,7 +105,7 @@ void enclosing() {
 void bitfield() {
   struct { int a : 3, : 4, b : 5; } a;
   auto &[x, y] = a;
-  auto &[p, q, r] = a; // expected-error-re {{type 'struct (unnamed struct at {{.*}})' decomposes into 2 elements, but 3 names were provided}}
+  auto &[p, q, r] = a; // expected-error-re {{type 'struct (unnamed struct at {{.*}})' binds to 2 elements, but 3 names were provided}}
 }
 
 void for_range() {
@@ -115,13 +115,14 @@ void for_range() {
   }
 
   int y[5];
-  for (auto[c] : y) { // expected-error {{cannot decompose non-class, non-array type 'int'}}
+  for (auto[c] : y) { // expected-error {{cannot bind non-class, non-array type 'int'}}
     c++;
   }
 }
 
 int error_recovery() {
-  auto [foobar]; // expected-error {{requires an initializer}}
+  auto [foobar]; // expected-error {{requires an initializer}} \
+                    expected-note {{'foobar' declared here}}
   return foobar_; // expected-error {{undeclared identifier 'foobar_'}}
 }
 
@@ -156,16 +157,16 @@ int f2() {
 namespace lambdas {
   void f() {
     int n;
-    auto [a] =  // expected-error {{cannot decompose lambda closure type}}
+    auto [a] =  // expected-error {{cannot bind lambda closure type}}
         [n] {}; // expected-note {{lambda expression}}
   }
 
-  auto [] = []{}; // expected-warning {{ISO C++17 does not allow a decomposition group to be empty}}
+  auto [] = []{}; // expected-warning {{ISO C++17 does not allow a structured binding group to be empty}}
 
   int g() {
     int n = 0;
     auto a = [=](auto &self) { // expected-note {{lambda expression}}
-      auto &[capture] = self; // expected-error {{cannot decompose lambda closure type}}
+      auto &[capture] = self; // expected-error {{cannot bind lambda closure type}}
       ++capture;
       return n;
     };
@@ -187,51 +188,45 @@ namespace lambdas {
     struct A : decltype(x) {
       int n;
     };
-    auto &&[r] = A{x, 0}; // expected-error-re {{cannot decompose class type 'A': both it and its base class 'decltype(x)' (aka '(lambda {{.*}})') have non-static data members}}
+    auto &&[r] = A{x, 0}; // expected-error-re {{cannot bind class type 'A': both it and its base class 'decltype(x)' (aka '(lambda {{.*}})') have non-static data members}}
     return r;
   }
 
   void j() {
     auto x = [] {};
     struct A : decltype(x) {};
-    auto &&[] = A{x}; // expected-warning {{ISO C++17 does not allow a decomposition group to be empty}}
+    auto &&[] = A{x}; // expected-warning {{ISO C++17 does not allow a structured binding group to be empty}}
   }
 }
 
 namespace by_value_array_copy {
   struct explicit_copy {
-    explicit_copy() = default; // expected-note 2{{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
-    explicit explicit_copy(const explicit_copy&) = default; // expected-note 2{{explicit constructor is not a candidate}}
+    explicit_copy() = default; // expected-note {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
+    explicit explicit_copy(const explicit_copy&) = default; // expected-note {{explicit constructor is not a candidate}}
   };
 
-  constexpr int direct_initialization_for_elements() {
-    explicit_copy ec_arr[2];
-    auto [a1, b1](ec_arr);
+  constexpr int simple_array_elements() {
+    int arr[2]{1, 2};
 
-    int arr[3]{1, 2, 3};
-    auto [a2, b2, c2](arr);
-    arr[0]--;
-    return a2 + b2 + c2 + arr[0];
-  }
-  static_assert(direct_initialization_for_elements() == 6);
+    auto [a1, a2] = arr;
+    auto [b1, b2](arr);
+    auto [c1, c2]{arr}; // GH31813
 
-  constexpr int copy_initialization_for_elements() {
-    int arr[2]{4, 5};
-    auto [a1, b1] = arr;
-    auto [a2, b2]{arr}; // GH31813
     arr[0] = 0;
-    return a1 + b1 + a2 + b2 + arr[0];
+    return arr[0] + a1 + a2 + b1 + b2 + c1 + c2;
   }
-  static_assert(copy_initialization_for_elements() == 18);
+  static_assert(simple_array_elements() == 9);
 
-  void copy_initialization_for_elements_with_explicit_copy_ctor() {
-    explicit_copy ec_arr[2];
-    auto [a1, b1] = ec_arr; // expected-error {{no matching constructor for initialization of 'explicit_copy[2]'}}
-    auto [a2, b2]{ec_arr}; // expected-error {{no matching constructor for initialization of 'explicit_copy[2]'}}
+  void explicit_copy_ctor_array_elements() {
+    explicit_copy ec_arr[1];
+
+    auto [a] = ec_arr; // expected-error {{no matching constructor for initialization of 'explicit_copy[1]'}}
+    auto [b](ec_arr);
+    auto [c]{ec_arr};
 
     // Test prvalue
-    using T = explicit_copy[2];
-    auto [a3, b3] = T{};
-    auto [a4, b4]{T{}};
+    using T = explicit_copy[1];
+    auto [d] = T{};
   }
+
 } // namespace by_value_array_copy

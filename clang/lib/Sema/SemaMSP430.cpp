@@ -32,14 +32,14 @@ void SemaMSP430::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
   }
 
   if (hasFunctionProto(D) && getFunctionOrMethodNumParams(D) != 0) {
-    Diag(D->getLocation(), diag::warn_interrupt_attribute_invalid)
-        << /*MSP430*/ 1 << 0;
+    Diag(D->getLocation(), diag::warn_interrupt_signal_attribute_invalid)
+        << /*MSP430*/ 1 << /*interrupt*/ 0 << 0;
     return;
   }
 
   if (!getFunctionOrMethodResultType(D)->isVoidType()) {
-    Diag(D->getLocation(), diag::warn_interrupt_attribute_invalid)
-        << /*MSP430*/ 1 << 1;
+    Diag(D->getLocation(), diag::warn_interrupt_signal_attribute_invalid)
+        << /*MSP430*/ 1 << /*interrupt*/ 0 << 1;
     return;
   }
 
@@ -53,7 +53,7 @@ void SemaMSP430::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  Expr *NumParamsExpr = static_cast<Expr *>(AL.getArgAsExpr(0));
+  Expr *NumParamsExpr = AL.getArgAsExpr(0);
   std::optional<llvm::APSInt> NumParams = llvm::APSInt(32);
   if (!(NumParams = NumParamsExpr->getIntegerConstantExpr(getASTContext()))) {
     Diag(AL.getLoc(), diag::err_attribute_argument_type)

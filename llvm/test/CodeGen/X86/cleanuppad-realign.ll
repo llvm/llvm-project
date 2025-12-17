@@ -74,5 +74,7 @@ ehcleanup:                                        ; preds = %entry
 ; X64: 	       andq    $-32, %rdx
 ; X64: 	       movq    %rdx, %rbx
 ; X64-NOT: 	mov{{.*}}, %rbx
+; X64:         .seh_startepilogue
 ; X64:         popq    %rbp
+; X64:         .seh_endepilogue
 ; X64:         retq                            # CLEANUPRET

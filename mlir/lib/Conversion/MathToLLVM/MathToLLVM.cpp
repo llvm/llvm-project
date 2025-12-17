@@ -18,6 +18,8 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 
+#include "llvm/ADT/FloatingPointMode.h"
+
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMATHTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
@@ -30,17 +32,22 @@ namespace {
 template <typename SourceOp, typename TargetOp>
 using ConvertFastMath = arith::AttrConvertFastMathToLLVM<SourceOp, TargetOp>;
 
-template <typename SourceOp, typename TargetOp>
+template <typename SourceOp, typename TargetOp, bool FailOnUnsupportedFP = true>
 using ConvertFMFMathToLLVMPattern =
-    VectorConvertToLLVMPattern<SourceOp, TargetOp, ConvertFastMath>;
+    VectorConvertToLLVMPattern<SourceOp, TargetOp, ConvertFastMath,
+                               FailOnUnsupportedFP>;
 
 using AbsFOpLowering = ConvertFMFMathToLLVMPattern<math::AbsFOp, LLVM::FAbsOp>;
 using CeilOpLowering = ConvertFMFMathToLLVMPattern<math::CeilOp, LLVM::FCeilOp>;
 using CopySignOpLowering =
     ConvertFMFMathToLLVMPattern<math::CopySignOp, LLVM::CopySignOp>;
 using CosOpLowering = ConvertFMFMathToLLVMPattern<math::CosOp, LLVM::CosOp>;
+using CoshOpLowering = ConvertFMFMathToLLVMPattern<math::CoshOp, LLVM::CoshOp>;
+using AcosOpLowering = ConvertFMFMathToLLVMPattern<math::AcosOp, LLVM::ACosOp>;
 using CtPopFOpLowering =
-    VectorConvertToLLVMPattern<math::CtPopOp, LLVM::CtPopOp>;
+    VectorConvertToLLVMPattern<math::CtPopOp, LLVM::CtPopOp,
+                               AttrConvertPassThrough,
+                               /*FailOnUnsupportedFP=*/true>;
 using Exp2OpLowering = ConvertFMFMathToLLVMPattern<math::Exp2Op, LLVM::Exp2Op>;
 using ExpOpLowering = ConvertFMFMathToLLVMPattern<math::ExpOp, LLVM::ExpOp>;
 using FloorOpLowering =
@@ -58,42 +65,55 @@ using RoundEvenOpLowering =
 using RoundOpLowering =
     ConvertFMFMathToLLVMPattern<math::RoundOp, LLVM::RoundOp>;
 using SinOpLowering = ConvertFMFMathToLLVMPattern<math::SinOp, LLVM::SinOp>;
+using SinhOpLowering = ConvertFMFMathToLLVMPattern<math::SinhOp, LLVM::SinhOp>;
+using ASinOpLowering = ConvertFMFMathToLLVMPattern<math::AsinOp, LLVM::ASinOp>;
 using SqrtOpLowering = ConvertFMFMathToLLVMPattern<math::SqrtOp, LLVM::SqrtOp>;
 using FTruncOpLowering =
     ConvertFMFMathToLLVMPattern<math::TruncOp, LLVM::FTruncOp>;
-
+using TanOpLowering = ConvertFMFMathToLLVMPattern<math::TanOp, LLVM::TanOp>;
+using TanhOpLowering = ConvertFMFMathToLLVMPattern<math::TanhOp, LLVM::TanhOp>;
+using ATanOpLowering = ConvertFMFMathToLLVMPattern<math::AtanOp, LLVM::ATanOp>;
+using ATan2OpLowering =
+    ConvertFMFMathToLLVMPattern<math::Atan2Op, LLVM::ATan2Op>;
 // A `CtLz/CtTz/absi(a)` is converted into `CtLz/CtTz/absi(a, false)`.
+// TODO: Result and operand types match for `absi` as opposed to `ct*z`, so it
+// may be better to separate the patterns.
 template <typename MathOp, typename LLVMOp>
-struct IntOpWithFlagLowering : public ConvertOpToLLVMPattern<MathOp> {
-  using ConvertOpToLLVMPattern<MathOp>::ConvertOpToLLVMPattern;
+struct IntOpWithFlagLowering
+    : public ConvertOpToLLVMPattern<MathOp, /*FailOnUnsupportedFP=*/true> {
+  using ConvertOpToLLVMPattern<
+      MathOp, /*FailOnUnsupportedFP=*/true>::ConvertOpToLLVMPattern;
   using Super = IntOpWithFlagLowering<MathOp, LLVMOp>;
 
   LogicalResult
   matchAndRewrite(MathOp op, typename MathOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    const auto &typeConverter = *this->getTypeConverter();
     auto operandType = adaptor.getOperand().getType();
-
-    if (!operandType || !LLVM::isCompatibleType(operandType))
+    auto llvmOperandType = typeConverter.convertType(operandType);
+    if (!llvmOperandType)
       return failure();
 
     auto loc = op.getLoc();
     auto resultType = op.getResult().getType();
+    auto llvmResultType = typeConverter.convertType(resultType);
+    if (!llvmResultType)
+      return failure();
 
-    if (!isa<LLVM::LLVMArrayType>(operandType)) {
-      rewriter.replaceOpWithNewOp<LLVMOp>(op, resultType, adaptor.getOperand(),
-                                          false);
+    if (!isa<LLVM::LLVMArrayType>(llvmOperandType)) {
+      rewriter.replaceOpWithNewOp<LLVMOp>(op, llvmResultType,
+                                          adaptor.getOperand(), false);
       return success();
     }
 
-    auto vectorType = dyn_cast<VectorType>(resultType);
-    if (!vectorType)
+    if (!isa<VectorType>(llvmResultType))
       return failure();
 
     return LLVM::detail::handleMultidimensionalVectors(
-        op.getOperation(), adaptor.getOperands(), *this->getTypeConverter(),
+        op.getOperation(), adaptor.getOperands(), typeConverter,
         [&](Type llvm1DVectorTy, ValueRange operands) {
-          return rewriter.create<LLVMOp>(loc, llvm1DVectorTy, operands[0],
-                                         false);
+          return LLVMOp::create(rewriter, loc, llvm1DVectorTy, operands[0],
+                                false);
         },
         rewriter);
   }
@@ -106,179 +126,277 @@ using CountTrailingZerosOpLowering =
                           LLVM::CountTrailingZerosOp>;
 using AbsIOpLowering = IntOpWithFlagLowering<math::AbsIOp, LLVM::AbsOp>;
 
+// A `sincos` is converted into `llvm.intr.sincos` followed by extractvalue ops.
+struct SincosOpLowering
+    : public ConvertOpToLLVMPattern<math::SincosOp,
+                                    /*FailOnUnsupportedFP=*/true> {
+  using ConvertOpToLLVMPattern<
+      math::SincosOp, /*FailOnUnsupportedFP=*/true>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(math::SincosOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    const LLVMTypeConverter &typeConverter = *this->getTypeConverter();
+    mlir::Location loc = op.getLoc();
+    mlir::Type operandType = adaptor.getOperand().getType();
+    mlir::Type llvmOperandType = typeConverter.convertType(operandType);
+    mlir::Type sinType = typeConverter.convertType(op.getSin().getType());
+    mlir::Type cosType = typeConverter.convertType(op.getCos().getType());
+    if (!llvmOperandType || !sinType || !cosType)
+      return failure();
+
+    ConvertFastMath<math::SincosOp, LLVM::SincosOp> attrs(op);
+
+    auto structType = LLVM::LLVMStructType::getLiteral(
+        rewriter.getContext(), {llvmOperandType, llvmOperandType});
+
+    auto sincosOp = LLVM::SincosOp::create(
+        rewriter, loc, structType, adaptor.getOperand(), attrs.getAttrs());
+
+    auto sinValue = LLVM::ExtractValueOp::create(rewriter, loc, sincosOp, 0);
+    auto cosValue = LLVM::ExtractValueOp::create(rewriter, loc, sincosOp, 1);
+
+    rewriter.replaceOp(op, {sinValue, cosValue});
+    return success();
+  }
+};
+
 // A `expm1` is converted into `exp - 1`.
-struct ExpM1OpLowering : public ConvertOpToLLVMPattern<math::ExpM1Op> {
-  using ConvertOpToLLVMPattern<math::ExpM1Op>::ConvertOpToLLVMPattern;
+struct ExpM1OpLowering
+    : public ConvertOpToLLVMPattern<math::ExpM1Op,
+                                    /*FailOnUnsupportedFP=*/true> {
+  using ConvertOpToLLVMPattern<
+      math::ExpM1Op, /*FailOnUnsupportedFP=*/true>::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(math::ExpM1Op op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    const auto &typeConverter = *this->getTypeConverter();
     auto operandType = adaptor.getOperand().getType();
-
-    if (!operandType || !LLVM::isCompatibleType(operandType))
+    auto llvmOperandType = typeConverter.convertType(operandType);
+    if (!llvmOperandType)
       return failure();
 
     auto loc = op.getLoc();
     auto resultType = op.getResult().getType();
-    auto floatType = cast<FloatType>(getElementTypeOrSelf(resultType));
+    auto floatType = cast<FloatType>(
+        typeConverter.convertType(getElementTypeOrSelf(resultType)));
     auto floatOne = rewriter.getFloatAttr(floatType, 1.0);
     ConvertFastMath<math::ExpM1Op, LLVM::ExpOp> expAttrs(op);
     ConvertFastMath<math::ExpM1Op, LLVM::FSubOp> subAttrs(op);
 
-    if (!isa<LLVM::LLVMArrayType>(operandType)) {
+    if (!isa<LLVM::LLVMArrayType>(llvmOperandType)) {
       LLVM::ConstantOp one;
-      if (LLVM::isCompatibleVectorType(operandType)) {
-        one = rewriter.create<LLVM::ConstantOp>(
-            loc, operandType,
-            SplatElementsAttr::get(cast<ShapedType>(resultType), floatOne));
+      if (LLVM::isCompatibleVectorType(llvmOperandType)) {
+        one = LLVM::ConstantOp::create(
+            rewriter, loc, llvmOperandType,
+            SplatElementsAttr::get(cast<ShapedType>(llvmOperandType),
+                                   floatOne));
       } else {
-        one = rewriter.create<LLVM::ConstantOp>(loc, operandType, floatOne);
+        one =
+            LLVM::ConstantOp::create(rewriter, loc, llvmOperandType, floatOne);
       }
-      auto exp = rewriter.create<LLVM::ExpOp>(loc, adaptor.getOperand(),
-                                              expAttrs.getAttrs());
+      auto exp = LLVM::ExpOp::create(rewriter, loc, adaptor.getOperand(),
+                                     expAttrs.getAttrs());
       rewriter.replaceOpWithNewOp<LLVM::FSubOp>(
-          op, operandType, ValueRange{exp, one}, subAttrs.getAttrs());
+          op, llvmOperandType, ValueRange{exp, one}, subAttrs.getAttrs());
       return success();
     }
 
-    auto vectorType = dyn_cast<VectorType>(resultType);
-    if (!vectorType)
+    if (!isa<VectorType>(resultType))
       return rewriter.notifyMatchFailure(op, "expected vector result type");
 
     return LLVM::detail::handleMultidimensionalVectors(
-        op.getOperation(), adaptor.getOperands(), *getTypeConverter(),
+        op.getOperation(), adaptor.getOperands(), typeConverter,
         [&](Type llvm1DVectorTy, ValueRange operands) {
           auto numElements = LLVM::getVectorNumElements(llvm1DVectorTy);
           auto splatAttr = SplatElementsAttr::get(
               mlir::VectorType::get({numElements.getKnownMinValue()}, floatType,
                                     {numElements.isScalable()}),
               floatOne);
-          auto one =
-              rewriter.create<LLVM::ConstantOp>(loc, llvm1DVectorTy, splatAttr);
-          auto exp = rewriter.create<LLVM::ExpOp>(
-              loc, llvm1DVectorTy, operands[0], expAttrs.getAttrs());
-          return rewriter.create<LLVM::FSubOp>(
-              loc, llvm1DVectorTy, ValueRange{exp, one}, subAttrs.getAttrs());
+          auto one = LLVM::ConstantOp::create(rewriter, loc, llvm1DVectorTy,
+                                              splatAttr);
+          auto exp = LLVM::ExpOp::create(rewriter, loc, llvm1DVectorTy,
+                                         operands[0], expAttrs.getAttrs());
+          return LLVM::FSubOp::create(rewriter, loc, llvm1DVectorTy,
+                                      ValueRange{exp, one},
+                                      subAttrs.getAttrs());
         },
         rewriter);
   }
 };
 
 // A `log1p` is converted into `log(1 + ...)`.
-struct Log1pOpLowering : public ConvertOpToLLVMPattern<math::Log1pOp> {
-  using ConvertOpToLLVMPattern<math::Log1pOp>::ConvertOpToLLVMPattern;
+struct Log1pOpLowering
+    : public ConvertOpToLLVMPattern<math::Log1pOp,
+                                    /*FailOnUnsupportedFP=*/true> {
+  using ConvertOpToLLVMPattern<
+      math::Log1pOp, /*FailOnUnsupportedFP=*/true>::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(math::Log1pOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    const auto &typeConverter = *this->getTypeConverter();
     auto operandType = adaptor.getOperand().getType();
-
-    if (!operandType || !LLVM::isCompatibleType(operandType))
+    auto llvmOperandType = typeConverter.convertType(operandType);
+    if (!llvmOperandType)
       return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
     auto loc = op.getLoc();
     auto resultType = op.getResult().getType();
-    auto floatType = cast<FloatType>(getElementTypeOrSelf(resultType));
+    auto floatType = cast<FloatType>(
+        typeConverter.convertType(getElementTypeOrSelf(resultType)));
     auto floatOne = rewriter.getFloatAttr(floatType, 1.0);
     ConvertFastMath<math::Log1pOp, LLVM::FAddOp> addAttrs(op);
     ConvertFastMath<math::Log1pOp, LLVM::LogOp> logAttrs(op);
 
-    if (!isa<LLVM::LLVMArrayType>(operandType)) {
+    if (!isa<LLVM::LLVMArrayType>(llvmOperandType)) {
       LLVM::ConstantOp one =
-          LLVM::isCompatibleVectorType(operandType)
-              ? rewriter.create<LLVM::ConstantOp>(
-                    loc, operandType,
-                    SplatElementsAttr::get(cast<ShapedType>(resultType),
+          isa<VectorType>(llvmOperandType)
+              ? LLVM::ConstantOp::create(
+                    rewriter, loc, llvmOperandType,
+                    SplatElementsAttr::get(cast<ShapedType>(llvmOperandType),
                                            floatOne))
-              : rewriter.create<LLVM::ConstantOp>(loc, operandType, floatOne);
+              : LLVM::ConstantOp::create(rewriter, loc, llvmOperandType,
+                                         floatOne);
 
-      auto add = rewriter.create<LLVM::FAddOp>(
-          loc, operandType, ValueRange{one, adaptor.getOperand()},
-          addAttrs.getAttrs());
-      rewriter.replaceOpWithNewOp<LLVM::LogOp>(op, operandType, ValueRange{add},
-                                               logAttrs.getAttrs());
+      auto add = LLVM::FAddOp::create(rewriter, loc, llvmOperandType,
+                                      ValueRange{one, adaptor.getOperand()},
+                                      addAttrs.getAttrs());
+      rewriter.replaceOpWithNewOp<LLVM::LogOp>(
+          op, llvmOperandType, ValueRange{add}, logAttrs.getAttrs());
       return success();
     }
 
-    auto vectorType = dyn_cast<VectorType>(resultType);
-    if (!vectorType)
+    if (!isa<VectorType>(resultType))
       return rewriter.notifyMatchFailure(op, "expected vector result type");
 
     return LLVM::detail::handleMultidimensionalVectors(
-        op.getOperation(), adaptor.getOperands(), *getTypeConverter(),
+        op.getOperation(), adaptor.getOperands(), typeConverter,
         [&](Type llvm1DVectorTy, ValueRange operands) {
           auto numElements = LLVM::getVectorNumElements(llvm1DVectorTy);
           auto splatAttr = SplatElementsAttr::get(
               mlir::VectorType::get({numElements.getKnownMinValue()}, floatType,
                                     {numElements.isScalable()}),
               floatOne);
-          auto one =
-              rewriter.create<LLVM::ConstantOp>(loc, llvm1DVectorTy, splatAttr);
-          auto add = rewriter.create<LLVM::FAddOp>(loc, llvm1DVectorTy,
-                                                   ValueRange{one, operands[0]},
-                                                   addAttrs.getAttrs());
-          return rewriter.create<LLVM::LogOp>(
-              loc, llvm1DVectorTy, ValueRange{add}, logAttrs.getAttrs());
+          auto one = LLVM::ConstantOp::create(rewriter, loc, llvm1DVectorTy,
+                                              splatAttr);
+          auto add = LLVM::FAddOp::create(rewriter, loc, llvm1DVectorTy,
+                                          ValueRange{one, operands[0]},
+                                          addAttrs.getAttrs());
+          return LLVM::LogOp::create(rewriter, loc, llvm1DVectorTy,
+                                     ValueRange{add}, logAttrs.getAttrs());
         },
         rewriter);
   }
 };
 
 // A `rsqrt` is converted into `1 / sqrt`.
-struct RsqrtOpLowering : public ConvertOpToLLVMPattern<math::RsqrtOp> {
-  using ConvertOpToLLVMPattern<math::RsqrtOp>::ConvertOpToLLVMPattern;
+struct RsqrtOpLowering
+    : public ConvertOpToLLVMPattern<math::RsqrtOp,
+                                    /*FailOnUnsupportedFP=*/true> {
+  using ConvertOpToLLVMPattern<
+      math::RsqrtOp, /*FailOnUnsupportedFP=*/true>::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(math::RsqrtOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    const auto &typeConverter = *this->getTypeConverter();
     auto operandType = adaptor.getOperand().getType();
-
-    if (!operandType || !LLVM::isCompatibleType(operandType))
+    auto llvmOperandType = typeConverter.convertType(operandType);
+    if (!llvmOperandType)
       return failure();
 
     auto loc = op.getLoc();
     auto resultType = op.getResult().getType();
-    auto floatType = cast<FloatType>(getElementTypeOrSelf(resultType));
+    auto floatType = cast<FloatType>(
+        typeConverter.convertType(getElementTypeOrSelf(resultType)));
     auto floatOne = rewriter.getFloatAttr(floatType, 1.0);
     ConvertFastMath<math::RsqrtOp, LLVM::SqrtOp> sqrtAttrs(op);
     ConvertFastMath<math::RsqrtOp, LLVM::FDivOp> divAttrs(op);
 
-    if (!isa<LLVM::LLVMArrayType>(operandType)) {
+    if (!isa<LLVM::LLVMArrayType>(llvmOperandType)) {
       LLVM::ConstantOp one;
-      if (LLVM::isCompatibleVectorType(operandType)) {
-        one = rewriter.create<LLVM::ConstantOp>(
-            loc, operandType,
-            SplatElementsAttr::get(cast<ShapedType>(resultType), floatOne));
+      if (isa<VectorType>(llvmOperandType)) {
+        one = LLVM::ConstantOp::create(
+            rewriter, loc, llvmOperandType,
+            SplatElementsAttr::get(cast<ShapedType>(llvmOperandType),
+                                   floatOne));
       } else {
-        one = rewriter.create<LLVM::ConstantOp>(loc, operandType, floatOne);
+        one =
+            LLVM::ConstantOp::create(rewriter, loc, llvmOperandType, floatOne);
       }
-      auto sqrt = rewriter.create<LLVM::SqrtOp>(loc, adaptor.getOperand(),
-                                                sqrtAttrs.getAttrs());
+      auto sqrt = LLVM::SqrtOp::create(rewriter, loc, adaptor.getOperand(),
+                                       sqrtAttrs.getAttrs());
       rewriter.replaceOpWithNewOp<LLVM::FDivOp>(
-          op, operandType, ValueRange{one, sqrt}, divAttrs.getAttrs());
+          op, llvmOperandType, ValueRange{one, sqrt}, divAttrs.getAttrs());
       return success();
     }
 
-    auto vectorType = dyn_cast<VectorType>(resultType);
-    if (!vectorType)
+    if (!isa<VectorType>(resultType))
       return failure();
 
     return LLVM::detail::handleMultidimensionalVectors(
-        op.getOperation(), adaptor.getOperands(), *getTypeConverter(),
+        op.getOperation(), adaptor.getOperands(), typeConverter,
         [&](Type llvm1DVectorTy, ValueRange operands) {
           auto numElements = LLVM::getVectorNumElements(llvm1DVectorTy);
           auto splatAttr = SplatElementsAttr::get(
               mlir::VectorType::get({numElements.getKnownMinValue()}, floatType,
                                     {numElements.isScalable()}),
               floatOne);
-          auto one =
-              rewriter.create<LLVM::ConstantOp>(loc, llvm1DVectorTy, splatAttr);
-          auto sqrt = rewriter.create<LLVM::SqrtOp>(
-              loc, llvm1DVectorTy, operands[0], sqrtAttrs.getAttrs());
-          return rewriter.create<LLVM::FDivOp>(
-              loc, llvm1DVectorTy, ValueRange{one, sqrt}, divAttrs.getAttrs());
+          auto one = LLVM::ConstantOp::create(rewriter, loc, llvm1DVectorTy,
+                                              splatAttr);
+          auto sqrt = LLVM::SqrtOp::create(rewriter, loc, llvm1DVectorTy,
+                                           operands[0], sqrtAttrs.getAttrs());
+          return LLVM::FDivOp::create(rewriter, loc, llvm1DVectorTy,
+                                      ValueRange{one, sqrt},
+                                      divAttrs.getAttrs());
         },
         rewriter);
+  }
+};
+
+struct IsNaNOpLowering
+    : public ConvertOpToLLVMPattern<math::IsNaNOp,
+                                    /*FailOnUnsupportedFP=*/true> {
+  using ConvertOpToLLVMPattern<
+      math::IsNaNOp, /*FailOnUnsupportedFP=*/true>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(math::IsNaNOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    const auto &typeConverter = *this->getTypeConverter();
+    auto operandType =
+        typeConverter.convertType(adaptor.getOperand().getType());
+    auto resultType = typeConverter.convertType(op.getResult().getType());
+    if (!operandType || !resultType)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<LLVM::IsFPClass>(
+        op, resultType, adaptor.getOperand(), llvm::fcNan);
+    return success();
+  }
+};
+
+struct IsFiniteOpLowering
+    : public ConvertOpToLLVMPattern<math::IsFiniteOp,
+                                    /*FailOnUnsupportedFP=*/true> {
+  using ConvertOpToLLVMPattern<
+      math::IsFiniteOp, /*FailOnUnsupportedFP=*/true>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(math::IsFiniteOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    const auto &typeConverter = *this->getTypeConverter();
+    auto operandType =
+        typeConverter.convertType(adaptor.getOperand().getType());
+    auto resultType = typeConverter.convertType(op.getResult().getType());
+    if (!operandType || !resultType)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<LLVM::IsFPClass>(
+        op, resultType, adaptor.getOperand(), llvm::fcFinite);
+    return success();
   }
 };
 
@@ -300,16 +418,20 @@ struct ConvertMathToLLVMPass
 
 void mlir::populateMathToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
-    bool approximateLog1p) {
+    bool approximateLog1p, PatternBenefit benefit) {
   if (approximateLog1p)
-    patterns.add<Log1pOpLowering>(converter);
+    patterns.add<Log1pOpLowering>(converter, benefit);
   // clang-format off
   patterns.add<
+    IsNaNOpLowering,
+    IsFiniteOpLowering,
     AbsFOpLowering,
     AbsIOpLowering,
     CeilOpLowering,
     CopySignOpLowering,
     CosOpLowering,
+    CoshOpLowering,
+    AcosOpLowering,
     CountLeadingZerosOpLowering,
     CountTrailingZerosOpLowering,
     CtPopFOpLowering,
@@ -326,10 +448,17 @@ void mlir::populateMathToLLVMConversionPatterns(
     RoundEvenOpLowering,
     RoundOpLowering,
     RsqrtOpLowering,
+    SincosOpLowering,
     SinOpLowering,
+    SinhOpLowering,
+    ASinOpLowering,
     SqrtOpLowering,
-    FTruncOpLowering
-  >(converter);
+    FTruncOpLowering,
+    TanOpLowering,
+    TanhOpLowering,
+    ATanOpLowering,
+    ATan2OpLowering
+  >(converter, benefit);
   // clang-format on
 }
 

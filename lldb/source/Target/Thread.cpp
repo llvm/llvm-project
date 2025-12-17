@@ -13,9 +13,12 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Interpreter/Interfaces/ScriptedFrameInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedFrameProviderInterface.h"
 #include "lldb/Interpreter/OptionValueFileSpecList.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -26,6 +29,7 @@
 #include "lldb/Target/ScriptedThreadPlan.h"
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/StopInfo.h"
+#include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlan.h"
@@ -45,6 +49,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
@@ -223,6 +228,7 @@ Thread::Thread(Process &process, lldb::tid_t tid, bool use_invalid_index_id)
       m_process_wp(process.shared_from_this()), m_stop_info_sp(),
       m_stop_info_stop_id(0), m_stop_info_override_stop_id(0),
       m_should_run_before_public_stop(false),
+      m_stopped_at_unexecuted_bp(LLDB_INVALID_ADDRESS),
       m_index_id(use_invalid_index_id ? LLDB_INVALID_INDEX32
                                       : process.GetNextThreadIndexID(tid)),
       m_reg_context_sp(), m_state(eStateUnloaded), m_state_mutex(),
@@ -256,6 +262,7 @@ void Thread::DestroyThread() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
   m_curr_frames_sp.reset();
   m_prev_frames_sp.reset();
+  m_frame_provider_sp.reset();
   m_prev_framezero_pc.reset();
 }
 
@@ -525,6 +532,7 @@ bool Thread::CheckpointThreadState(ThreadStateCheckpoint &saved_state) {
   saved_state.current_inlined_depth = GetCurrentInlinedDepth();
   saved_state.m_completed_plan_checkpoint =
       GetPlans().CheckpointCompletedPlans();
+  saved_state.stopped_at_unexecuted_bp = m_stopped_at_unexecuted_bp;
 
   return true;
 }
@@ -560,6 +568,7 @@ void Thread::RestoreThreadStateFromCheckpoint(
       saved_state.current_inlined_depth);
   GetPlans().RestoreCompletedPlanCheckpoint(
       saved_state.m_completed_plan_checkpoint);
+  m_stopped_at_unexecuted_bp = saved_state.stopped_at_unexecuted_bp;
 }
 
 StateType Thread::GetState() const {
@@ -617,7 +626,7 @@ void Thread::WillStop() {
   current_plan->WillStop();
 }
 
-void Thread::SetupForResume() {
+bool Thread::SetupToStepOverBreakpointIfNeeded(RunDirection direction) {
   if (GetResumeState() != eStateSuspended) {
     // First check whether this thread is going to "actually" resume at all.
     // For instance, if we're stepping from one level to the next of an
@@ -625,18 +634,27 @@ void Thread::SetupForResume() {
     // without actually running this thread.  In that case, for this thread we
     // shouldn't push a step over breakpoint plan or do that work.
     if (GetCurrentPlan()->IsVirtualStep())
-      return;
+      return false;
 
     // If we're at a breakpoint push the step-over breakpoint plan.  Do this
     // before telling the current plan it will resume, since we might change
     // what the current plan is.
 
     lldb::RegisterContextSP reg_ctx_sp(GetRegisterContext());
-    if (reg_ctx_sp) {
+    ProcessSP process_sp(GetProcess());
+    if (reg_ctx_sp && process_sp && direction == eRunForward) {
       const addr_t thread_pc = reg_ctx_sp->GetPC();
       BreakpointSiteSP bp_site_sp =
-          GetProcess()->GetBreakpointSiteList().FindByAddress(thread_pc);
-      if (bp_site_sp) {
+          process_sp->GetBreakpointSiteList().FindByAddress(thread_pc);
+      // If we're at a BreakpointSite which we have either
+      //   1. already triggered/hit, or
+      //   2. the Breakpoint was added while stopped, or the pc was moved
+      //      to this BreakpointSite
+      // Step past the breakpoint before resuming.
+      // If we stopped at a breakpoint instruction/BreakpointSite location
+      // without hitting it, and we're still at that same address on
+      // resuming, then we want to hit the BreakpointSite when we resume.
+      if (bp_site_sp && m_stopped_at_unexecuted_bp != thread_pc) {
         // Note, don't assume there's a ThreadPlanStepOverBreakpoint, the
         // target may not require anything special to step over a breakpoint.
 
@@ -663,11 +681,13 @@ void Thread::SetupForResume() {
               step_bp_plan->SetAutoContinue(true);
             }
             QueueThreadPlan(step_bp_plan_sp, false);
+            return true;
           }
         }
       }
     }
   }
+  return false;
 }
 
 bool Thread::ShouldResume(StateType resume_state) {
@@ -696,9 +716,8 @@ bool Thread::ShouldResume(StateType resume_state) {
   const uint32_t process_stop_id = GetProcess()->GetStopID();
   if (m_stop_info_stop_id == process_stop_id &&
       (m_stop_info_sp && m_stop_info_sp->IsValid())) {
-    StopInfo *stop_info = GetPrivateStopInfo().get();
-    if (stop_info)
-      stop_info->WillResume(resume_state);
+    if (StopInfoSP stop_info_sp = GetPrivateStopInfo())
+      stop_info_sp->WillResume(resume_state);
   }
 
   // Tell all the plans that we are about to resume in case they need to clear
@@ -725,6 +744,7 @@ bool Thread::ShouldResume(StateType resume_state) {
 
   if (need_to_resume) {
     ClearStackFrames();
+    m_stopped_at_unexecuted_bp = LLDB_INVALID_ADDRESS;
     // Let Thread subclasses do any special work they need to prior to resuming
     WillResume(resume_state);
   }
@@ -1345,9 +1365,8 @@ ThreadPlanSP Thread::QueueThreadPlanForStepOutNoShouldStop(
   const bool calculate_return_value =
       false; // No need to calculate the return value here.
   ThreadPlanSP thread_plan_sp(new ThreadPlanStepOut(
-      *this, addr_context, first_insn, stop_other_threads, report_stop_vote,
-      report_run_vote, frame_idx, eLazyBoolNo, continue_to_next_branch,
-      calculate_return_value));
+      *this, stop_other_threads, report_stop_vote, report_run_vote, frame_idx,
+      continue_to_next_branch, calculate_return_value));
 
   ThreadPlanStepOut *new_plan =
       static_cast<ThreadPlanStepOut *>(thread_plan_sp.get());
@@ -1426,11 +1445,74 @@ void Thread::CalculateExecutionContext(ExecutionContext &exe_ctx) {
 StackFrameListSP Thread::GetStackFrameList() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
 
-  if (!m_curr_frames_sp)
+  if (m_curr_frames_sp)
+    return m_curr_frames_sp;
+
+  // First, try to load a frame provider if we don't have one yet.
+  if (!m_frame_provider_sp) {
+    ProcessSP process_sp = GetProcess();
+    if (process_sp) {
+      Target &target = process_sp->GetTarget();
+      const auto &descriptors = target.GetScriptedFrameProviderDescriptors();
+
+      // Find first descriptor that applies to this thread.
+      for (const auto &entry : descriptors) {
+        const ScriptedFrameProviderDescriptor &descriptor = entry.second;
+        if (descriptor.IsValid() && descriptor.AppliesToThread(*this)) {
+          if (llvm::Error error = LoadScriptedFrameProvider(descriptor)) {
+            LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), std::move(error),
+                           "Failed to load scripted frame provider: {0}");
+          }
+          break; // Use first matching descriptor (success or failure).
+        }
+      }
+    }
+  }
+
+  // Create the frame list based on whether we have a provider.
+  if (m_frame_provider_sp) {
+    // We have a provider - create synthetic frame list.
+    StackFrameListSP input_frames = m_frame_provider_sp->GetInputFrames();
+    m_curr_frames_sp = std::make_shared<SyntheticStackFrameList>(
+        *this, input_frames, m_prev_frames_sp, true);
+  } else {
+    // No provider - use normal unwinder frames.
     m_curr_frames_sp =
         std::make_shared<StackFrameList>(*this, m_prev_frames_sp, true);
+  }
 
   return m_curr_frames_sp;
+}
+
+llvm::Error Thread::LoadScriptedFrameProvider(
+    const ScriptedFrameProviderDescriptor &descriptor) {
+  std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
+
+  // Note: We don't create input_frames here - it will be created lazily
+  // by SyntheticStackFrameList when frames are first fetched.
+  // Creating them too early can cause crashes during thread initialization.
+
+  // Create a temporary StackFrameList just to get the thread reference for the
+  // provider. The provider won't actually use this - it will get real input
+  // frames from SyntheticStackFrameList later.
+  StackFrameListSP temp_frames =
+      std::make_shared<StackFrameList>(*this, m_prev_frames_sp, true);
+
+  auto provider_or_err =
+      SyntheticFrameProvider::CreateInstance(temp_frames, descriptor);
+  if (!provider_or_err)
+    return provider_or_err.takeError();
+
+  ClearScriptedFrameProvider();
+  m_frame_provider_sp = *provider_or_err;
+  return llvm::Error::success();
+}
+
+void Thread::ClearScriptedFrameProvider() {
+  std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
+  m_frame_provider_sp.reset();
+  m_curr_frames_sp.reset();
+  m_prev_frames_sp.reset();
 }
 
 std::optional<addr_t> Thread::GetPreviousFrameZeroPC() {
@@ -1453,6 +1535,7 @@ void Thread::ClearStackFrames() {
     m_prev_frames_sp.swap(m_curr_frames_sp);
   m_curr_frames_sp.reset();
 
+  m_frame_provider_sp.reset();
   m_extended_info.reset();
   m_extended_info_fetched = false;
 }
@@ -1654,10 +1737,14 @@ void Thread::DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx,
   ExecutionContext exe_ctx(shared_from_this());
 
   const FormatEntity::Entry *thread_format;
-  if (stop_format)
-    thread_format = exe_ctx.GetTargetRef().GetDebugger().GetThreadStopFormat();
-  else
-    thread_format = exe_ctx.GetTargetRef().GetDebugger().GetThreadFormat();
+  FormatEntity::Entry format_entry;
+  if (stop_format) {
+    format_entry = exe_ctx.GetTargetRef().GetDebugger().GetThreadStopFormat();
+    thread_format = &format_entry;
+  } else {
+    format_entry = exe_ctx.GetTargetRef().GetDebugger().GetThreadFormat();
+    thread_format = &format_entry;
+  }
 
   assert(thread_format);
 
@@ -1740,6 +1827,8 @@ std::string Thread::StopReasonAsString(lldb::StopReason reason) {
     return "processor trace";
   case eStopReasonInterrupt:
     return "async interrupt";
+  case eStopReasonHistoryBoundary:
+    return "history boundary";
   }
 
   return "StopReason = " + std::to_string(reason);
@@ -1921,6 +2010,7 @@ Unwind &Thread::GetUnwinder() {
 void Thread::Flush() {
   ClearStackFrames();
   m_reg_context_sp.reset();
+  m_stopped_at_unexecuted_bp = LLDB_INVALID_ADDRESS;
 }
 
 bool Thread::IsStillAtLastBreakpointHit() {
@@ -2081,10 +2171,13 @@ lldb::ValueObjectSP Thread::GetSiginfoValue() {
     return ValueObjectConstResult::Create(
         &target, Status::FromErrorString("no siginfo_t for the platform"));
 
-  std::optional<uint64_t> type_size = type.GetByteSize(nullptr);
-  assert(type_size);
+  auto type_size_or_err = type.GetByteSize(nullptr);
+  if (!type_size_or_err)
+    return ValueObjectConstResult::Create(
+        &target, Status::FromError(type_size_or_err.takeError()));
+
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> data =
-      GetSiginfo(*type_size);
+      GetSiginfo(*type_size_or_err);
   if (!data)
     return ValueObjectConstResult::Create(&target,
                                           Status::FromError(data.takeError()));

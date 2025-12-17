@@ -2,30 +2,31 @@
 ; pointers/PtrCast-null-in-OpSpecConstantOp.ll (that is OpSpecConstantOp with ptr-cast operation) correctly
 ; work also for function pointers.
 
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - --spirv-ext=+SPV_INTEL_function_pointers | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - --spirv-ext=+SPV_INTEL_function_pointers | FileCheck %s
 ; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; TODO: This test currently fails with LLVM_ENABLE_EXPENSIVE_CHECKS enabled
-; XFAIL: expensive_checks
-
-; Running with -verify-machineinstrs would lead to "Reading virtual register without a def"
-; error, because OpConstantFunctionPointerINTEL forward-refers to a function definition.
-
-; CHECK-COUNT-3: %[[#]] = OpSpecConstantOp %[[#]] 121 %[[#]]
+; CHECK-COUNT-3: %[[#]] = OpSpecConstantOp %[[#]] PtrCastToGeneric %[[#]]
 ; CHECK-COUNT-3: OpPtrCastToGeneric
 
 @G1 = addrspace(1) constant { [3 x ptr addrspace(4)] } { [3 x ptr addrspace(4)] [ptr addrspace(4) null, ptr addrspace(4) addrspacecast (ptr @foo to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr @bar to ptr addrspace(4))] }
 @G2 = addrspace(1) constant { [3 x ptr addrspace(4)] } { [3 x ptr addrspace(4)] [ptr addrspace(4) addrspacecast (ptr null to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr @bar to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr @foo to ptr addrspace(4))] }
 
+@G_r1_foo = global ptr addrspace(4) null
+@G_r2_foo = global ptr addrspace(4) null
+@G_r1_bar = global ptr addrspace(4) null
+
 define void @foo(ptr addrspace(4) %p) {
 entry:
   %r1 = addrspacecast ptr @foo to ptr addrspace(4)
+  store ptr addrspace(4) %r1, ptr @G_r1_foo
   %r2 = addrspacecast ptr null to ptr addrspace(4)
+  store ptr addrspace(4) %r2, ptr @G_r2_foo
   ret void
 }
 
 define void @bar(ptr addrspace(4) %p) {
 entry:
   %r1 = addrspacecast ptr @bar to ptr addrspace(4)
+  store ptr addrspace(4) %r1, ptr @G_r1_bar
   ret void
 }

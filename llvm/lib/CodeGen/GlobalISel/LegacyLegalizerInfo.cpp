@@ -305,17 +305,16 @@ LegacyLegalizerInfo::findScalarLegalAction(const InstrAspect &Aspect) const {
   if (Aspect.Opcode < FirstOp || Aspect.Opcode > LastOp)
     return {NotFound, LLT()};
   const unsigned OpcodeIdx = getOpcodeIdxForOpcode(Aspect.Opcode);
-  if (Aspect.Type.isPointer() &&
-      AddrSpace2PointerActions[OpcodeIdx].find(Aspect.Type.getAddressSpace()) ==
-          AddrSpace2PointerActions[OpcodeIdx].end()) {
-    return {NotFound, LLT()};
+  ArrayRef<SizeAndActionsVec> Actions;
+  if (Aspect.Type.isPointer()) {
+    auto &PA = AddrSpace2PointerActions[OpcodeIdx];
+    auto It = PA.find(Aspect.Type.getAddressSpace());
+    if (It == PA.end())
+      return {NotFound, LLT()};
+    Actions = It->second;
+  } else {
+    Actions = ScalarActions[OpcodeIdx];
   }
-  const SmallVector<SizeAndActionsVec, 1> &Actions =
-      Aspect.Type.isPointer()
-          ? AddrSpace2PointerActions[OpcodeIdx]
-                .find(Aspect.Type.getAddressSpace())
-                ->second
-          : ScalarActions[OpcodeIdx];
   if (Aspect.Idx >= Actions.size())
     return {NotFound, LLT()};
   const SizeAndActionsVec &Vec = Actions[Aspect.Idx];

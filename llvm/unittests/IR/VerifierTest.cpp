@@ -9,6 +9,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -60,7 +61,7 @@ TEST(VerifierTest, Freeze) {
   // Valid type : freeze(<2 x i32>)
   Constant *CV = ConstantVector::getSplat(ElementCount::getFixed(2), CI);
   FreezeInst *FI_vec = new FreezeInst(CV);
-  FI_vec->insertBefore(RI);
+  FI_vec->insertBefore(RI->getIterator());
 
   EXPECT_FALSE(verifyFunction(*F));
 
@@ -69,17 +70,17 @@ TEST(VerifierTest, Freeze) {
   // Valid type : freeze(float)
   Constant *CFP = ConstantFP::get(Type::getDoubleTy(C), 0.0);
   FreezeInst *FI_dbl = new FreezeInst(CFP);
-  FI_dbl->insertBefore(RI);
+  FI_dbl->insertBefore(RI->getIterator());
 
   EXPECT_FALSE(verifyFunction(*F));
 
   FI_dbl->eraseFromParent();
 
   // Valid type : freeze(i32*)
-  PointerType *PT = PointerType::get(ITy, 0);
+  PointerType *PT = PointerType::get(C, 0);
   ConstantPointerNull *CPN = ConstantPointerNull::get(PT);
   FreezeInst *FI_ptr = new FreezeInst(CPN);
-  FI_ptr->insertBefore(RI);
+  FI_ptr->insertBefore(RI->getIterator());
 
   EXPECT_FALSE(verifyFunction(*F));
 
@@ -87,7 +88,7 @@ TEST(VerifierTest, Freeze) {
 
   // Valid type : freeze(int)
   FreezeInst *FI = new FreezeInst(CI);
-  FI->insertBefore(RI);
+  FI->insertBefore(RI->getIterator());
 
   EXPECT_FALSE(verifyFunction(*F));
 
@@ -232,8 +233,9 @@ TEST(VerifierTest, DetectInvalidDebugInfo) {
     LLVMContext C;
     Module M("M", C);
     DIBuilder DIB(M);
-    DIB.createCompileUnit(dwarf::DW_LANG_C89, DIB.createFile("broken.c", "/"),
-                          "unittest", false, "", 0);
+    DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C89),
+                          DIB.createFile("broken.c", "/"), "unittest", false,
+                          "", 0);
     DIB.finalize();
     EXPECT_FALSE(verifyModule(M));
 
@@ -247,7 +249,7 @@ TEST(VerifierTest, DetectInvalidDebugInfo) {
     LLVMContext C;
     Module M("M", C);
     DIBuilder DIB(M);
-    auto *CU = DIB.createCompileUnit(dwarf::DW_LANG_C89,
+    auto *CU = DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C89),
                                      DIB.createFile("broken.c", "/"),
                                      "unittest", false, "", 0);
     new GlobalVariable(M, Type::getInt8Ty(C), false,
@@ -327,9 +329,6 @@ TEST(VerifierTest, SwitchInst) {
   Switch->addCase(ConstantInt::get(Int32Ty, 2), OnTwo);
 
   EXPECT_FALSE(verifyFunction(*F));
-  // set one case value to function argument.
-  Switch->setOperand(2, F->getArg(1));
-  EXPECT_TRUE(verifyFunction(*F));
 }
 
 TEST(VerifierTest, CrossFunctionRef) {
@@ -403,7 +402,7 @@ TEST(VerifierTest, GetElementPtrInst) {
                                 ConstantInt::get(Type::getInt64Ty(C), 0))},
       Entry);
 
-  GEPVec->insertBefore(RI);
+  GEPVec->insertBefore(RI->getIterator());
 
   // Break the address space of the source value
   GEPVec->getOperandUse(0).set(ConstantAggregateZero::get(V2P2Ty));
@@ -413,27 +412,6 @@ TEST(VerifierTest, GetElementPtrInst) {
   EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
   EXPECT_TRUE(
       StringRef(Error).starts_with("GEP address space doesn't match type"))
-      << Error;
-}
-
-TEST(VerifierTest, DetectTaggedGlobalInSection) {
-  LLVMContext C;
-  Module M("M", C);
-  GlobalVariable *GV = new GlobalVariable(
-      Type::getInt64Ty(C), false, GlobalValue::InternalLinkage,
-      ConstantInt::get(Type::getInt64Ty(C), 1));
-  GV->setDSOLocal(true);
-  GlobalValue::SanitizerMetadata MD{};
-  MD.Memtag = true;
-  GV->setSanitizerMetadata(MD);
-  GV->setSection("foo");
-  M.insertGlobalVariable(GV);
-
-  std::string Error;
-  raw_string_ostream ErrorOS(Error);
-  EXPECT_TRUE(verifyModule(M, &ErrorOS));
-  EXPECT_TRUE(
-      StringRef(Error).starts_with("tagged GlobalValue must not be in section"))
       << Error;
 }
 

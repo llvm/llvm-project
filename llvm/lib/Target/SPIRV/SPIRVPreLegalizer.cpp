@@ -16,12 +16,11 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
 
 #define DEBUG_TYPE "spirv-prelegalizer"
 
@@ -31,18 +30,21 @@ namespace {
 class SPIRVPreLegalizer : public MachineFunctionPass {
 public:
   static char ID;
-  SPIRVPreLegalizer() : MachineFunctionPass(ID) {
-    initializeSPIRVPreLegalizerPass(*PassRegistry::getPassRegistry());
-  }
+  SPIRVPreLegalizer() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 } // namespace
+
+void SPIRVPreLegalizer::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
+  MachineFunctionPass::getAnalysisUsage(AU);
+}
 
 static void
 addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                     const SPIRVSubtarget &STI,
-                    DenseMap<MachineInstr *, Type *> &TargetExtConstTypes,
-                    SmallSet<Register, 4> &TrackedConstRegs) {
+                    DenseMap<MachineInstr *, Type *> &TargetExtConstTypes) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   DenseMap<MachineInstr *, Register> RegsAlreadyAddedToDT;
   SmallVector<MachineInstr *, 10> ToErase, ToEraseComposites;
@@ -58,9 +60,10 @@ addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                              ->getValue());
       if (auto *GV = dyn_cast<GlobalValue>(Const)) {
         Register Reg = GR->find(GV, &MF);
-        if (!Reg.isValid())
-          GR->add(GV, &MF, SrcReg);
-        else
+        if (!Reg.isValid()) {
+          GR->add(GV, MRI.getVRegDef(SrcReg));
+          GR->addGlobalObject(GV, &MF, SrcReg);
+        } else
           RegsAlreadyAddedToDT[&MI] = Reg;
       } else {
         Register Reg = GR->find(Const, &MF);
@@ -69,29 +72,34 @@ addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             auto *BuildVec = MRI.getVRegDef(SrcReg);
             assert(BuildVec &&
                    BuildVec->getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+            GR->add(Const, BuildVec);
             for (unsigned i = 0; i < ConstVec->getNumElements(); ++i) {
               // Ensure that OpConstantComposite reuses a constant when it's
               // already created and available in the same machine function.
               Constant *ElemConst = ConstVec->getElementAsConstant(i);
               Register ElemReg = GR->find(ElemConst, &MF);
               if (!ElemReg.isValid())
-                GR->add(ElemConst, &MF, BuildVec->getOperand(1 + i).getReg());
+                GR->add(ElemConst,
+                        MRI.getVRegDef(BuildVec->getOperand(1 + i).getReg()));
               else
                 BuildVec->getOperand(1 + i).setReg(ElemReg);
             }
           }
-          GR->add(Const, &MF, SrcReg);
-          TrackedConstRegs.insert(SrcReg);
           if (Const->getType()->isTargetExtTy()) {
             // remember association so that we can restore it when assign types
             MachineInstr *SrcMI = MRI.getVRegDef(SrcReg);
+            if (SrcMI)
+              GR->add(Const, SrcMI);
             if (SrcMI && (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT ||
                           SrcMI->getOpcode() == TargetOpcode::G_IMPLICIT_DEF))
               TargetExtConstTypes[SrcMI] = Const->getType();
             if (Const->isNullValue()) {
-              MachineIRBuilder MIB(MF);
-              SPIRVType *ExtType =
-                  GR->getOrCreateSPIRVType(Const->getType(), MIB);
+              MachineBasicBlock &DepMBB = MF.front();
+              MachineIRBuilder MIB(DepMBB, DepMBB.getFirstNonPHI());
+              SPIRVType *ExtType = GR->getOrCreateSPIRVType(
+                  Const->getType(), MIB, SPIRV::AccessQualifier::ReadWrite,
+                  true);
+              assert(SrcMI && "Expected source instruction to be valid");
               SrcMI->setDesc(STI.getInstrInfo()->get(SPIRV::OpConstantNull));
               SrcMI->addOperand(MachineOperand::CreateReg(
                   GR->getSPIRVTypeID(ExtType), false));
@@ -111,44 +119,44 @@ addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   }
   for (MachineInstr *MI : ToErase) {
     Register Reg = MI->getOperand(2).getReg();
-    if (RegsAlreadyAddedToDT.contains(MI))
-      Reg = RegsAlreadyAddedToDT[MI];
+    auto It = RegsAlreadyAddedToDT.find(MI);
+    if (It != RegsAlreadyAddedToDT.end())
+      Reg = It->second;
     auto *RC = MRI.getRegClassOrNull(MI->getOperand(0).getReg());
     if (!MRI.getRegClassOrNull(Reg) && RC)
       MRI.setRegClass(Reg, RC);
     MRI.replaceRegWith(MI->getOperand(0).getReg(), Reg);
+    GR->invalidateMachineInstr(MI);
     MI->eraseFromParent();
   }
-  for (MachineInstr *MI : ToEraseComposites)
+  for (MachineInstr *MI : ToEraseComposites) {
+    GR->invalidateMachineInstr(MI);
     MI->eraseFromParent();
+  }
 }
 
-static void
-foldConstantsIntoIntrinsics(MachineFunction &MF,
-                            const SmallSet<Register, 4> &TrackedConstRegs) {
-  SmallVector<MachineInstr *, 10> ToErase;
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  const unsigned AssignNameOperandShift = 2;
+static void foldConstantsIntoIntrinsics(MachineFunction &MF,
+                                        SPIRVGlobalRegistry *GR,
+                                        MachineIRBuilder MIB) {
+  SmallVector<MachineInstr *, 64> ToErase;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       if (!isSpvIntrinsic(MI, Intrinsic::spv_assign_name))
         continue;
-      unsigned NumOp = MI.getNumExplicitDefs() + AssignNameOperandShift;
-      while (MI.getOperand(NumOp).isReg()) {
-        MachineOperand &MOp = MI.getOperand(NumOp);
-        MachineInstr *ConstMI = MRI.getVRegDef(MOp.getReg());
-        assert(ConstMI->getOpcode() == TargetOpcode::G_CONSTANT);
-        MI.removeOperand(NumOp);
-        MI.addOperand(MachineOperand::CreateImm(
-            ConstMI->getOperand(1).getCImm()->getZExtValue()));
-        Register DefReg = ConstMI->getOperand(0).getReg();
-        if (MRI.use_empty(DefReg) && !TrackedConstRegs.contains(DefReg))
-          ToErase.push_back(ConstMI);
+      const MDNode *MD = MI.getOperand(2).getMetadata();
+      StringRef ValueName = cast<MDString>(MD->getOperand(0))->getString();
+      if (ValueName.size() > 0) {
+        MIB.setInsertPt(*MI.getParent(), MI);
+        buildOpName(MI.getOperand(1).getReg(), ValueName, MIB);
       }
+      ToErase.push_back(&MI);
     }
+    for (MachineInstr *MI : ToErase) {
+      GR->invalidateMachineInstr(MI);
+      MI->eraseFromParent();
+    }
+    ToErase.clear();
   }
-  for (MachineInstr *MI : ToErase)
-    MI->eraseFromParent();
 }
 
 static MachineInstr *findAssignTypeInstr(Register Reg,
@@ -184,39 +192,53 @@ static void buildOpBitcast(SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
         .addUse(OpReg);
 }
 
-// We do instruction selections early instead of calling MIB.buildBitcast()
-// generating the general op code G_BITCAST. When MachineVerifier validates
-// G_BITCAST we see a check of a kind: if Source Type is equal to Destination
-// Type then report error "bitcast must change the type". This doesn't take into
-// account the notion of a typed pointer that is important for SPIR-V where a
-// user may and should use bitcast between pointers with different pointee types
-// (https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpBitcast).
-// It's important for correct lowering in SPIR-V, because interpretation of the
-// data type is not left to instructions that utilize the pointer, but encoded
-// by the pointer declaration, and the SPIRV target can and must handle the
-// declaration and use of pointers that specify the type of data they point to.
-// It's not feasible to improve validation of G_BITCAST using just information
-// provided by low level types of source and destination. Therefore we don't
-// produce G_BITCAST as the general op code with semantics different from
-// OpBitcast, but rather lower to OpBitcast immediately. As for now, the only
-// difference would be that CombinerHelper couldn't transform known patterns
-// around G_BUILD_VECTOR. See discussion
-// in https://github.com/llvm/llvm-project/pull/110270 for even more context.
-static void selectOpBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
-                             MachineIRBuilder MIB) {
+// We lower G_BITCAST to OpBitcast here to avoid a MachineVerifier error.
+// The verifier checks if the source and destination LLTs of a G_BITCAST are
+// different, but this check is too strict for SPIR-V's typed pointers, which
+// may have the same LLT but different SPIRVType (e.g. pointers to different
+// pointee types). By lowering to OpBitcast here, we bypass the verifier's
+// check. See discussion in https://github.com/llvm/llvm-project/pull/110270
+// for more context.
+//
+// We also handle the llvm.spv.bitcast intrinsic here. If the source and
+// destination SPIR-V types are the same, we lower it to a COPY to enable
+// further optimizations like copy propagation.
+static void lowerBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
+                          MachineIRBuilder MIB) {
   SmallVector<MachineInstr *, 16> ToErase;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
+      if (isSpvIntrinsic(MI, Intrinsic::spv_bitcast)) {
+        Register DstReg = MI.getOperand(0).getReg();
+        Register SrcReg = MI.getOperand(2).getReg();
+        SPIRVType *DstType = GR->getSPIRVTypeForVReg(DstReg);
+        assert(
+            DstType &&
+            "Expected destination SPIR-V type to have been assigned already.");
+        SPIRVType *SrcType = GR->getSPIRVTypeForVReg(SrcReg);
+        assert(SrcType &&
+               "Expected source SPIR-V type to have been assigned already.");
+        if (DstType == SrcType) {
+          MIB.setInsertPt(*MI.getParent(), MI);
+          MIB.buildCopy(DstReg, SrcReg);
+          ToErase.push_back(&MI);
+          continue;
+        }
+      }
+
       if (MI.getOpcode() != TargetOpcode::G_BITCAST)
         continue;
+
       MIB.setInsertPt(*MI.getParent(), MI);
       buildOpBitcast(GR, MIB, MI.getOperand(0).getReg(),
                      MI.getOperand(1).getReg());
       ToErase.push_back(&MI);
     }
   }
-  for (MachineInstr *MI : ToErase)
+  for (MachineInstr *MI : ToErase) {
+    GR->invalidateMachineInstr(MI);
     MI->eraseFromParent();
+  }
 }
 
 static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
@@ -227,23 +249,20 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   SmallVector<MachineInstr *, 10> ToErase;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (!isSpvIntrinsic(MI, Intrinsic::spv_bitcast) &&
-          !isSpvIntrinsic(MI, Intrinsic::spv_ptrcast))
+      if (!isSpvIntrinsic(MI, Intrinsic::spv_ptrcast))
         continue;
       assert(MI.getOperand(2).isReg());
       MIB.setInsertPt(*MI.getParent(), MI);
       ToErase.push_back(&MI);
-      if (isSpvIntrinsic(MI, Intrinsic::spv_bitcast)) {
-        MIB.buildBitcast(MI.getOperand(0).getReg(), MI.getOperand(2).getReg());
-        continue;
-      }
       Register Def = MI.getOperand(0).getReg();
       Register Source = MI.getOperand(2).getReg();
       Type *ElemTy = getMDOperandAsType(MI.getOperand(3).getMetadata(), 0);
-      SPIRVType *BaseTy = GR->getOrCreateSPIRVType(ElemTy, MIB);
-      SPIRVType *AssignedPtrType = GR->getOrCreateSPIRVPointerType(
-          BaseTy, MI, *MF.getSubtarget<SPIRVSubtarget>().getInstrInfo(),
-          addressSpaceToStorageClass(MI.getOperand(4).getImm(), *ST));
+      auto SC =
+          isa<FunctionType>(ElemTy)
+              ? SPIRV::StorageClass::CodeSectionINTEL
+              : addressSpaceToStorageClass(MI.getOperand(4).getImm(), *ST);
+      SPIRVType *AssignedPtrType =
+          GR->getOrCreateSPIRVPointerType(ElemTy, MI, SC);
 
       // If the ptrcast would be redundant, replace all uses with the source
       // register.
@@ -254,13 +273,16 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           ToErase.push_back(AssignMI);
         MRI->replaceRegWith(Def, Source);
       } else {
-        GR->assignSPIRVTypeToVReg(AssignedPtrType, Def, MF);
+        if (!GR->getSPIRVTypeForVReg(Def, &MF))
+          GR->assignSPIRVTypeToVReg(AssignedPtrType, Def, MF);
         MIB.buildBitcast(Def, Source);
       }
     }
   }
-  for (MachineInstr *MI : ToErase)
+  for (MachineInstr *MI : ToErase) {
+    GR->invalidateMachineInstr(MI);
     MI->eraseFromParent();
+  }
 }
 
 // Translating GV, IRTranslator sometimes generates following IR:
@@ -291,7 +313,8 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
       case TargetOpcode::G_CONSTANT: {
         MIB.setInsertPt(*MI->getParent(), MI);
         Type *Ty = MI->getOperand(1).getCImm()->getType();
-        SpvType = GR->getOrCreateSPIRVType(Ty, MIB);
+        SpvType = GR->getOrCreateSPIRVType(
+            Ty, MIB, SPIRV::AccessQualifier::ReadWrite, true);
         break;
       }
       case TargetOpcode::G_GLOBAL_VALUE: {
@@ -300,7 +323,8 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
         Type *ElementTy = toTypedPointer(GR->getDeducedGlobalValueType(Global));
         auto *Ty = TypedPointerType::get(ElementTy,
                                          Global->getType()->getAddressSpace());
-        SpvType = GR->getOrCreateSPIRVType(Ty, MIB);
+        SpvType = GR->getOrCreateSPIRVType(
+            Ty, MIB, SPIRV::AccessQualifier::ReadWrite, true);
         break;
       }
       case TargetOpcode::G_ANYEXT:
@@ -316,8 +340,8 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
               unsigned NumElements = GR->getScalarOrVectorComponentCount(Def);
               SpvType = GR->getOrCreateSPIRVIntegerType(ExpectedBW, MIB);
               if (NumElements > 1)
-                SpvType =
-                    GR->getOrCreateSPIRVVectorType(SpvType, NumElements, MIB);
+                SpvType = GR->getOrCreateSPIRVVectorType(SpvType, NumElements,
+                                                         MIB, true);
             }
           }
         }
@@ -349,9 +373,8 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
                 RegType.getAddressSpace()) {
           const SPIRVSubtarget &ST =
               MI->getParent()->getParent()->getSubtarget<SPIRVSubtarget>();
-          SpvType = GR->getOrCreateSPIRVPointerType(
-              GR->getPointeeType(SpvType), *MI, *ST.getInstrInfo(),
-              addressSpaceToStorageClass(RegType.getAddressSpace(), ST));
+          auto TSC = addressSpaceToStorageClass(RegType.getAddressSpace(), ST);
+          SpvType = GR->changePointerStorageClass(SpvType, TSC, *MI);
         }
         GR->assignSPIRVTypeToVReg(SpvType, Reg, MIB.getMF());
       }
@@ -365,39 +388,32 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
 
 // To support current approach and limitations wrt. bit width here we widen a
 // scalar register with a bit width greater than 1 to valid sizes and cap it to
-// 64 width.
-static void widenScalarLLTNextPow2(Register Reg, MachineRegisterInfo &MRI) {
+// 128 width.
+static unsigned widenBitWidthToNextPow2(unsigned BitWidth) {
+  if (BitWidth == 1)
+    return 1; // No need to widen 1-bit values
+  return std::min(std::max(1u << Log2_32_Ceil(BitWidth), 8u), 128u);
+}
+
+static void widenScalarType(Register Reg, MachineRegisterInfo &MRI) {
   LLT RegType = MRI.getType(Reg);
   if (!RegType.isScalar())
     return;
-  unsigned Sz = RegType.getScalarSizeInBits();
-  if (Sz == 1)
-    return;
-  unsigned NewSz = std::min(std::max(1u << Log2_32_Ceil(Sz), 8u), 64u);
-  if (NewSz != Sz)
-    MRI.setType(Reg, LLT::scalar(NewSz));
+  unsigned CurrentWidth = RegType.getScalarSizeInBits();
+  unsigned NewWidth = widenBitWidthToNextPow2(CurrentWidth);
+  if (NewWidth != CurrentWidth)
+    MRI.setType(Reg, LLT::scalar(NewWidth));
 }
 
-static std::pair<Register, unsigned>
-createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
-               const SPIRVGlobalRegistry &GR) {
-  if (!SpvType)
-    SpvType = GR.getSPIRVTypeForVReg(SrcReg);
-  const TargetRegisterClass *RC = GR.getRegClass(SpvType);
-  Register Reg = MRI.createGenericVirtualRegister(GR.getRegType(SpvType));
-  MRI.setRegClass(Reg, RC);
-  unsigned GetIdOp = SPIRV::GET_ID;
-  if (RC == &SPIRV::fIDRegClass)
-    GetIdOp = SPIRV::GET_fID;
-  else if (RC == &SPIRV::pIDRegClass)
-    GetIdOp = SPIRV::GET_pID;
-  else if (RC == &SPIRV::vfIDRegClass)
-    GetIdOp = SPIRV::GET_vfID;
-  else if (RC == &SPIRV::vpIDRegClass)
-    GetIdOp = SPIRV::GET_vpID;
-  else if (RC == &SPIRV::vIDRegClass)
-    GetIdOp = SPIRV::GET_vID;
-  return {Reg, GetIdOp};
+static void widenCImmType(MachineOperand &MOP) {
+  const ConstantInt *CImmVal = MOP.getCImm();
+  unsigned CurrentWidth = CImmVal->getBitWidth();
+  unsigned NewWidth = widenBitWidthToNextPow2(CurrentWidth);
+  if (NewWidth != CurrentWidth) {
+    // Replace the immediate value with the widened version
+    MOP.setCImm(ConstantInt::get(CImmVal->getType()->getContext(),
+                                 CImmVal->getValue().zextOrTrunc(NewWidth)));
+  }
 }
 
 static void setInsertPtAfterDef(MachineIRBuilder &MIB, MachineInstr *Def) {
@@ -411,63 +427,41 @@ static void setInsertPtAfterDef(MachineIRBuilder &MIB, MachineInstr *Def) {
   MIB.setInsertPt(MBB, DefIt);
 }
 
-// Insert ASSIGN_TYPE instuction between Reg and its definition, set NewReg as
-// a dst of the definition, assign SPIRVType to both registers. If SpvType is
-// provided, use it as SPIRVType in ASSIGN_TYPE, otherwise create it from Ty.
-// It's used also in SPIRVBuiltins.cpp.
-// TODO: maybe move to SPIRVUtils.
 namespace llvm {
-Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpvType,
-                           SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
-                           MachineRegisterInfo &MRI) {
+void updateRegType(Register Reg, Type *Ty, SPIRVType *SpvType,
+                   SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
+                   MachineRegisterInfo &MRI) {
   assert((Ty || SpvType) && "Either LLVM or SPIRV type is expected.");
   MachineInstr *Def = MRI.getVRegDef(Reg);
   setInsertPtAfterDef(MIB, Def);
-  SpvType = SpvType ? SpvType : GR->getOrCreateSPIRVType(Ty, MIB);
-  Register NewReg = MRI.createGenericVirtualRegister(MRI.getType(Reg));
-  if (auto *RC = MRI.getRegClassOrNull(Reg)) {
-    MRI.setRegClass(NewReg, RC);
-  } else {
-    auto RegClass = GR->getRegClass(SpvType);
-    MRI.setRegClass(NewReg, RegClass);
-    MRI.setRegClass(Reg, RegClass);
-  }
+  if (!SpvType)
+    SpvType = GR->getOrCreateSPIRVType(Ty, MIB,
+                                       SPIRV::AccessQualifier::ReadWrite, true);
+  if (!MRI.getRegClassOrNull(Reg))
+    MRI.setRegClass(Reg, GR->getRegClass(SpvType));
+  if (!MRI.getType(Reg).isValid())
+    MRI.setType(Reg, GR->getRegType(SpvType));
   GR->assignSPIRVTypeToVReg(SpvType, Reg, MIB.getMF());
-  // This is to make it convenient for Legalizer to get the SPIRVType
-  // when processing the actual MI (i.e. not pseudo one).
-  GR->assignSPIRVTypeToVReg(SpvType, NewReg, MIB.getMF());
-  // Copy MIFlags from Def to ASSIGN_TYPE instruction. It's required to keep
-  // the flags after instruction selection.
-  const uint32_t Flags = Def->getFlags();
-  MIB.buildInstr(SPIRV::ASSIGN_TYPE)
-      .addDef(Reg)
-      .addUse(NewReg)
-      .addUse(GR->getSPIRVTypeID(SpvType))
-      .setMIFlags(Flags);
-  for (unsigned I = 0, E = Def->getNumDefs(); I != E; ++I) {
-    MachineOperand &MO = Def->getOperand(I);
-    if (MO.getReg() == Reg) {
-      MO.setReg(NewReg);
-      break;
-    }
-  }
-  return NewReg;
 }
 
 void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
-                  MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR) {
+                  MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR,
+                  SPIRVType *KnownResType) {
   MIB.setInsertPt(*MI.getParent(), MI.getIterator());
   for (auto &Op : MI.operands()) {
     if (!Op.isReg() || Op.isDef())
       continue;
     Register OpReg = Op.getReg();
     SPIRVType *SpvType = GR->getSPIRVTypeForVReg(OpReg);
-    auto IdOpInfo = createNewIdReg(SpvType, OpReg, MRI, *GR);
-    MIB.buildInstr(IdOpInfo.second).addDef(IdOpInfo.first).addUse(OpReg);
-    const TargetRegisterClass *RC = GR->getRegClass(SpvType);
-    if (RC != MRI.getRegClassOrNull(OpReg))
-      MRI.setRegClass(OpReg, RC);
-    Op.setReg(IdOpInfo.first);
+    if (!SpvType && KnownResType) {
+      SpvType = KnownResType;
+      GR->assignSPIRVTypeToVReg(KnownResType, OpReg, *MI.getMF());
+    }
+    assert(SpvType);
+    if (!MRI.getRegClassOrNull(OpReg))
+      MRI.setRegClass(OpReg, GR->getRegClass(SpvType));
+    if (!MRI.getType(OpReg).isValid())
+      MRI.setType(OpReg, GR->getRegType(SpvType));
   }
 }
 } // namespace llvm
@@ -486,8 +480,9 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
 
   bool IsExtendedInts =
       ST->canUseExtension(
-          SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers) ||
-      ST->canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions);
+          SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers) ||
+      ST->canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions) ||
+      ST->canUseExtension(SPIRV::Extension::SPV_INTEL_int4);
 
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     if (MBB->empty())
@@ -500,27 +495,28 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       unsigned MIOp = MI.getOpcode();
 
       if (!IsExtendedInts) {
-        // validate bit width of scalar registers
-        for (const auto &MOP : MI.operands())
+        // validate bit width of scalar registers and constant immediates
+        for (auto &MOP : MI.operands()) {
           if (MOP.isReg())
-            widenScalarLLTNextPow2(MOP.getReg(), MRI);
+            widenScalarType(MOP.getReg(), MRI);
+          else if (MOP.isCImm())
+            widenCImmType(MOP);
+        }
       }
 
       if (isSpvIntrinsic(MI, Intrinsic::spv_assign_ptr_type)) {
         Register Reg = MI.getOperand(1).getReg();
         MIB.setInsertPt(*MI.getParent(), MI.getIterator());
         Type *ElementTy = getMDOperandAsType(MI.getOperand(2).getMetadata(), 0);
-        SPIRVType *BaseTy = GR->getOrCreateSPIRVType(ElementTy, MIB);
         SPIRVType *AssignedPtrType = GR->getOrCreateSPIRVPointerType(
-            BaseTy, MI, *MF.getSubtarget<SPIRVSubtarget>().getInstrInfo(),
+            ElementTy, MI,
             addressSpaceToStorageClass(MI.getOperand(3).getImm(), *ST));
         MachineInstr *Def = MRI.getVRegDef(Reg);
         assert(Def && "Expecting an instruction that defines the register");
         // G_GLOBAL_VALUE already has type info.
-        if (Def->getOpcode() != TargetOpcode::G_GLOBAL_VALUE &&
-            Def->getOpcode() != SPIRV::ASSIGN_TYPE)
-          insertAssignInstr(Reg, nullptr, AssignedPtrType, GR, MIB,
-                            MF.getRegInfo());
+        if (Def->getOpcode() != TargetOpcode::G_GLOBAL_VALUE)
+          updateRegType(Reg, nullptr, AssignedPtrType, GR, MIB,
+                        MF.getRegInfo());
         ToErase.push_back(&MI);
       } else if (isSpvIntrinsic(MI, Intrinsic::spv_assign_type)) {
         Register Reg = MI.getOperand(1).getReg();
@@ -528,9 +524,8 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         MachineInstr *Def = MRI.getVRegDef(Reg);
         assert(Def && "Expecting an instruction that defines the register");
         // G_GLOBAL_VALUE already has type info.
-        if (Def->getOpcode() != TargetOpcode::G_GLOBAL_VALUE &&
-            Def->getOpcode() != SPIRV::ASSIGN_TYPE)
-          insertAssignInstr(Reg, Ty, nullptr, GR, MIB, MF.getRegInfo());
+        if (Def->getOpcode() != TargetOpcode::G_GLOBAL_VALUE)
+          updateRegType(Reg, Ty, nullptr, GR, MIB, MF.getRegInfo());
         ToErase.push_back(&MI);
       } else if (MIOp == TargetOpcode::FAKE_USE && MI.getNumOperands() > 0) {
         MachineInstr *MdMI = MI.getPrevNode();
@@ -555,20 +550,9 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                  MIOp == TargetOpcode::G_FCONSTANT ||
                  MIOp == TargetOpcode::G_BUILD_VECTOR) {
         // %rc = G_CONSTANT ty Val
-        // ===>
-        // %cty = OpType* ty
-        // %rctmp = G_CONSTANT ty Val
-        // %rc = ASSIGN_TYPE %rctmp, %cty
+        // Ensure %rc has a valid SPIR-V type assigned in the Global Registry.
         Register Reg = MI.getOperand(0).getReg();
-        bool NeedAssignType = true;
-        if (MRI.hasOneUse(Reg)) {
-          MachineInstr &UseMI = *MRI.use_instr_begin(Reg);
-          if (isSpvIntrinsic(UseMI, Intrinsic::spv_assign_type) ||
-              isSpvIntrinsic(UseMI, Intrinsic::spv_assign_name))
-            continue;
-          if (UseMI.getOpcode() == SPIRV::ASSIGN_TYPE)
-            NeedAssignType = false;
-        }
+        bool NeedAssignType = GR->getSPIRVTypeForVReg(Reg) == nullptr;
         Type *Ty = nullptr;
         if (MIOp == TargetOpcode::G_CONSTANT) {
           auto TargetExtIt = TargetExtConstTypes.find(&MI);
@@ -586,7 +570,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           // pointers/PtrCast-null-in-OpSpecConstantOp.ll).
           Register PrimaryReg = GR->find(OpCI, &MF);
           if (!PrimaryReg.isValid()) {
-            GR->add(OpCI, &MF, Reg);
+            GR->add(OpCI, &MI);
           } else if (PrimaryReg != Reg &&
                      MRI.getType(Reg) == MRI.getType(PrimaryReg)) {
             auto *RCReg = MRI.getRegClassOrNull(Reg);
@@ -610,11 +594,9 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           } else if (ElemMI->getOpcode() == TargetOpcode::G_FCONSTANT) {
             ElemTy = ElemMI->getOperand(1).getFPImm()->getType();
           } else {
-            // There may be a case when we already know Reg's type.
-            MachineInstr *NextMI = MI.getNextNode();
-            if (!NextMI || NextMI->getOpcode() != SPIRV::ASSIGN_TYPE ||
-                NextMI->getOperand(1).getReg() != Reg)
-              llvm_unreachable("Unexpected opcode");
+            if (const SPIRVType *ElemSpvType =
+                    GR->getSPIRVTypeForVReg(MI.getOperand(1).getReg(), &MF))
+              ElemTy = const_cast<Type *>(GR->getTypeForSPIRVType(ElemSpvType));
           }
           if (ElemTy)
             Ty = VectorType::get(
@@ -624,7 +606,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             NeedAssignType = false;
         }
         if (NeedAssignType)
-          insertAssignInstr(Reg, Ty, nullptr, GR, MIB, MRI);
+          updateRegType(Reg, Ty, nullptr, GR, MIB, MRI);
       } else if (MIOp == TargetOpcode::G_GLOBAL_VALUE) {
         propagateSPIRVType(&MI, GR, MRI, MIB);
       }
@@ -637,8 +619,9 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   }
   for (MachineInstr *MI : ToErase) {
     auto It = RegsAlreadyAddedToDT.find(MI);
-    if (RegsAlreadyAddedToDT.contains(MI))
+    if (It != RegsAlreadyAddedToDT.end())
       MRI.replaceRegWith(MI->getOperand(0).getReg(), It->second);
+    GR->invalidateMachineInstr(MI);
     MI->eraseFromParent();
   }
 
@@ -661,9 +644,6 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   }
 }
 
-// Defined in SPIRVLegalizerInfo.cpp.
-extern bool isTypeFoldingSupported(unsigned Opcode);
-
 static void processInstrsWithTypeFolding(MachineFunction &MF,
                                          SPIRVGlobalRegistry *GR,
                                          MachineIRBuilder MIB) {
@@ -671,7 +651,7 @@ static void processInstrsWithTypeFolding(MachineFunction &MF,
   for (MachineBasicBlock &MBB : MF)
     for (MachineInstr &MI : MBB)
       if (isTypeFoldingSupported(MI.getOpcode()))
-        processInstr(MI, MIB, MRI, GR);
+        processInstr(MI, MIB, MRI, GR, nullptr);
 }
 
 static Register
@@ -721,7 +701,7 @@ insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       auto AsmTargetMIB =
           MIRBuilder.buildInstr(SPIRV::OpAsmTargetINTEL).addDef(AsmTargetReg);
       addStringImm(ST.getTargetTripleAsStr(), AsmTargetMIB);
-      GR->add(AsmTargetMIB.getInstr(), &MF, AsmTargetReg);
+      GR->add(AsmTargetMIB.getInstr(), AsmTargetMIB);
     }
 
     // create types
@@ -729,9 +709,11 @@ insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     FunctionType *FTy = cast<FunctionType>(getMDOperandAsType(IAMD, 0));
     SmallVector<SPIRVType *, 4> ArgTypes;
     for (const auto &ArgTy : FTy->params())
-      ArgTypes.push_back(GR->getOrCreateSPIRVType(ArgTy, MIRBuilder));
+      ArgTypes.push_back(GR->getOrCreateSPIRVType(
+          ArgTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true));
     SPIRVType *RetType =
-        GR->getOrCreateSPIRVType(FTy->getReturnType(), MIRBuilder);
+        GR->getOrCreateSPIRVType(FTy->getReturnType(), MIRBuilder,
+                                 SPIRV::AccessQualifier::ReadWrite, true);
     SPIRVType *FuncType = GR->getOrCreateOpTypeFunctionWithArgs(
         FTy, RetType, ArgTypes, MIRBuilder);
 
@@ -750,7 +732,7 @@ insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     addStringImm(cast<MDString>(I1->getOperand(2).getMetadata()->getOperand(0))
                      ->getString(),
                  AsmMIB);
-    GR->add(AsmMIB.getInstr(), &MF, AsmReg);
+    GR->add(AsmMIB.getInstr(), AsmMIB);
 
     // calls the inline assembly instruction
     unsigned ExtraInfo = I2->getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
@@ -764,7 +746,8 @@ insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       DefReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
       MRI.setRegClass(DefReg, &SPIRV::iIDRegClass);
       SPIRVType *VoidType = GR->getOrCreateSPIRVType(
-          Type::getVoidTy(MF.getFunction().getContext()), MIRBuilder);
+          Type::getVoidTy(MF.getFunction().getContext()), MIRBuilder,
+          SPIRV::AccessQualifier::ReadWrite, true);
       GR->assignSPIRVTypeToVReg(VoidType, DefReg, MF);
     }
 
@@ -775,8 +758,10 @@ insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     for (unsigned IntrIdx = 3; IntrIdx < I1->getNumOperands(); ++IntrIdx)
       AsmCall.addUse(I1->getOperand(IntrIdx).getReg());
   }
-  for (MachineInstr *MI : ToProcess)
+  for (MachineInstr *MI : ToProcess) {
+    GR->invalidateMachineInstr(MI);
     MI->eraseFromParent();
+  }
 }
 
 static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
@@ -801,20 +786,52 @@ static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   insertInlineAsmProcess(MF, GR, ST, MIRBuilder, ToProcess);
 }
 
-static void insertSpirvDecorations(MachineFunction &MF, MachineIRBuilder MIB) {
+static uint32_t convertFloatToSPIRVWord(float F) {
+  union {
+    float F;
+    uint32_t Spir;
+  } FPMaxError;
+  FPMaxError.F = F;
+  return FPMaxError.Spir;
+}
+
+static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
+                                   MachineIRBuilder MIB) {
+  const SPIRVSubtarget &ST = cast<SPIRVSubtarget>(MIB.getMF().getSubtarget());
   SmallVector<MachineInstr *, 10> ToErase;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (!isSpvIntrinsic(MI, Intrinsic::spv_assign_decoration))
+      if (!isSpvIntrinsic(MI, Intrinsic::spv_assign_decoration) &&
+          !isSpvIntrinsic(MI, Intrinsic::spv_assign_aliasing_decoration) &&
+          !isSpvIntrinsic(MI, Intrinsic::spv_assign_fpmaxerror_decoration))
         continue;
       MIB.setInsertPt(*MI.getParent(), MI.getNextNode());
-      buildOpSpirvDecorations(MI.getOperand(1).getReg(), MIB,
-                              MI.getOperand(2).getMetadata());
+      if (isSpvIntrinsic(MI, Intrinsic::spv_assign_decoration)) {
+        buildOpSpirvDecorations(MI.getOperand(1).getReg(), MIB,
+                                MI.getOperand(2).getMetadata(), ST);
+      } else if (isSpvIntrinsic(MI,
+                                Intrinsic::spv_assign_fpmaxerror_decoration)) {
+        ConstantFP *OpV = mdconst::dyn_extract<ConstantFP>(
+            MI.getOperand(2).getMetadata()->getOperand(0));
+        uint32_t OpValue =
+            convertFloatToSPIRVWord(OpV->getValueAPF().convertToFloat());
+
+        buildOpDecorate(MI.getOperand(1).getReg(), MIB,
+                        SPIRV::Decoration::FPMaxErrorDecorationINTEL,
+                        {OpValue});
+      } else {
+        GR->buildMemAliasingOpDecorate(MI.getOperand(1).getReg(), MIB,
+                                       MI.getOperand(2).getImm(),
+                                       MI.getOperand(3).getMetadata());
+      }
+
       ToErase.push_back(&MI);
     }
   }
-  for (MachineInstr *MI : ToErase)
+  for (MachineInstr *MI : ToErase) {
+    GR->invalidateMachineInstr(MI);
     MI->eraseFromParent();
+  }
 }
 
 // LLVM allows the switches to use registers as cases, while SPIR-V required
@@ -853,7 +870,8 @@ static void processSwitchesConstants(MachineFunction &MF,
 
 // Some instructions are used during CodeGen but should never be emitted.
 // Cleaning up those.
-static void cleanupHelperInstructions(MachineFunction &MF) {
+static void cleanupHelperInstructions(MachineFunction &MF,
+                                      SPIRVGlobalRegistry *GR) {
   SmallVector<MachineInstr *, 8> ToEraseMI;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
@@ -863,8 +881,10 @@ static void cleanupHelperInstructions(MachineFunction &MF) {
     }
   }
 
-  for (MachineInstr *MI : ToEraseMI)
+  for (MachineInstr *MI : ToEraseMI) {
+    GR->invalidateMachineInstr(MI);
     MI->eraseFromParent();
+  }
 }
 
 // Find all usages of G_BLOCK_ADDR in our intrinsics and replace those
@@ -966,6 +986,7 @@ static void processBlockAddr(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           ConstantExpr::getIntToPtr(Replacement, BA->getType()));
       BA->destroyConstant();
     }
+    GR->invalidateMachineInstr(BlockAddrI);
     BlockAddrI->eraseFromParent();
   }
 }
@@ -997,8 +1018,7 @@ static void removeImplicitFallthroughs(MachineFunction &MF,
     if (!isImplicitFallthrough(MBB))
       continue;
 
-    assert(std::distance(MBB.successors().begin(), MBB.successors().end()) ==
-           1);
+    assert(MBB.succ_size() == 1);
     MIB.setInsertPt(MBB, MBB.end());
     MIB.buildBr(**MBB.successors().begin());
   }
@@ -1013,21 +1033,20 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
   // a registry of target extension constants
   DenseMap<MachineInstr *, Type *> TargetExtConstTypes;
   // to keep record of tracked constants
-  SmallSet<Register, 4> TrackedConstRegs;
-  addConstantsToTrack(MF, GR, ST, TargetExtConstTypes, TrackedConstRegs);
-  foldConstantsIntoIntrinsics(MF, TrackedConstRegs);
+  addConstantsToTrack(MF, GR, ST, TargetExtConstTypes);
+  foldConstantsIntoIntrinsics(MF, GR, MIB);
   insertBitcasts(MF, GR, MIB);
   generateAssignInstrs(MF, GR, MIB, TargetExtConstTypes);
 
   processSwitchesConstants(MF, GR, MIB);
   processBlockAddr(MF, GR, MIB);
-  cleanupHelperInstructions(MF);
+  cleanupHelperInstructions(MF, GR);
 
   processInstrsWithTypeFolding(MF, GR, MIB);
   removeImplicitFallthroughs(MF, MIB);
-  insertSpirvDecorations(MF, MIB);
+  insertSpirvDecorations(MF, GR, MIB);
   insertInlineAsm(MF, GR, ST, MIB);
-  selectOpBitcasts(MF, GR, MIB);
+  lowerBitcasts(MF, GR, MIB);
 
   return true;
 }

@@ -25,19 +25,23 @@ on:
         description: 'Upload documentation'
         required: false
         type: boolean
+    secrets:
+      WWW_RELEASES_TOKEN:
+        description: "Secret used to create a PR with the documentation changes."
+        required: false
 
 jobs:
   release-documentation:
     name: Build and Upload Release Documentation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       upload: ${{ inputs.upload && !contains(inputs.release-version, 'rc') }}
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       - name: Setup Python env
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           cache: 'pip'
           cache-dependency-path: './llvm/docs/requirements.txt'
@@ -59,14 +63,14 @@ jobs:
           ./llvm/utils/release/build-docs.sh -release "${{ inputs.release-version }}" -no-doxygen
 
       - name: Create Release Notes Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # 5.0.0
         with:
           name: release-notes
           path: docs-build/html-export/
 
       - name: Clone www-releases
         if: env.upload
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           repository: ${{ github.repository_owner }}/www-releases
           ref: main
@@ -88,4 +92,4 @@ jobs:
           git config user.name "llvmbot"
           git commit -a -m "Add ${{ inputs.release-version }} documentation"
           git push --force  "https://$GH_TOKEN@github.com/llvmbot/www-releases.git" HEAD:refs/heads/${{ inputs.release-version }}
-          gh pr create -f -B main -H ${{ inputs.release-version }} -R llvmbot/www-releases
+          gh pr create -f -B main -H llvmbot:${{ inputs.release-version }}

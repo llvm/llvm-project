@@ -25,9 +25,11 @@
 #include "mlir/Dialect/OpenACC/OpenACCOpsInterfaces.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.h.inc"
 #include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include <variant>
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/OpenACC/OpenACCOpsTypes.h.inc"
@@ -44,10 +46,10 @@
   mlir::acc::CopyinOp, mlir::acc::CreateOp, mlir::acc::PresentOp,              \
       mlir::acc::NoCreateOp, mlir::acc::AttachOp, mlir::acc::DevicePtrOp,      \
       mlir::acc::GetDevicePtrOp, mlir::acc::PrivateOp,                         \
-      mlir::acc::FirstprivateOp, mlir::acc::UpdateDeviceOp,                    \
-      mlir::acc::UseDeviceOp, mlir::acc::ReductionOp,                          \
-      mlir::acc::DeclareDeviceResidentOp, mlir::acc::DeclareLinkOp,            \
-      mlir::acc::CacheOp
+      mlir::acc::FirstprivateOp, mlir::acc::FirstprivateMapInitialOp,          \
+      mlir::acc::UpdateDeviceOp, mlir::acc::UseDeviceOp,                       \
+      mlir::acc::ReductionOp, mlir::acc::DeclareDeviceResidentOp,              \
+      mlir::acc::DeclareLinkOp, mlir::acc::CacheOp
 #define ACC_DATA_EXIT_OPS                                                      \
   mlir::acc::CopyoutOp, mlir::acc::DeleteOp, mlir::acc::DetachOp,              \
       mlir::acc::UpdateHostOp
@@ -57,11 +59,10 @@
 #define ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS                                     \
   ACC_COMPUTE_CONSTRUCT_OPS, mlir::acc::LoopOp
 #define ACC_DATA_CONSTRUCT_STRUCTURED_OPS                                      \
-  mlir::acc::DataOp, mlir::acc::DeclareOp
+  mlir::acc::DataOp, mlir::acc::DeclareOp, mlir::acc::HostDataOp
 #define ACC_DATA_CONSTRUCT_UNSTRUCTURED_OPS                                    \
   mlir::acc::EnterDataOp, mlir::acc::ExitDataOp, mlir::acc::UpdateOp,          \
-      mlir::acc::HostDataOp, mlir::acc::DeclareEnterOp,                        \
-      mlir::acc::DeclareExitOp
+      mlir::acc::DeclareEnterOp, mlir::acc::DeclareExitOp
 #define ACC_DATA_CONSTRUCT_OPS                                                 \
   ACC_DATA_CONSTRUCT_STRUCTURED_OPS, ACC_DATA_CONSTRUCT_UNSTRUCTURED_OPS
 #define ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS                                     \
@@ -83,16 +84,31 @@ namespace acc {
 /// combined and the final mapping value would be 5 (4 | 1).
 enum OpenACCExecMapping { NONE = 0, VECTOR = 1, WORKER = 2, GANG = 4 };
 
-/// Used to obtain the `varPtr` from a data clause operation.
+/// Used to obtain the `var` from a data clause operation.
 /// Returns empty value if not a data clause operation or is a data exit
-/// operation with no `varPtr`.
-mlir::Value getVarPtr(mlir::Operation *accDataClauseOp);
+/// operation with no `var`.
+mlir::Value getVar(mlir::Operation *accDataClauseOp);
 
-/// Used to obtain the `accPtr` from a data clause operation.
-/// When a data entry operation, it obtains its result `accPtr` value.
-/// If a data exit operation, it obtains its operand `accPtr` value.
+/// Used to obtain the `var` from a data clause operation if it implements
+/// `PointerLikeType`.
+mlir::TypedValue<mlir::acc::PointerLikeType>
+getVarPtr(mlir::Operation *accDataClauseOp);
+
+/// Used to obtains the `varType` from a data clause operation which records
+/// the type of variable. When `var` is `PointerLikeType`, this returns
+/// the type of the pointer target.
+mlir::Type getVarType(mlir::Operation *accDataClauseOp);
+
+/// Used to obtain the `accVar` from a data clause operation.
+/// When a data entry operation, it obtains its result `accVar` value.
+/// If a data exit operation, it obtains its operand `accVar` value.
 /// Returns empty value if not a data clause operation.
-mlir::Value getAccPtr(mlir::Operation *accDataClauseOp);
+mlir::Value getAccVar(mlir::Operation *accDataClauseOp);
+
+/// Used to obtain the `accVar` from a data clause operation if it implements
+/// `PointerLikeType`.
+mlir::TypedValue<mlir::acc::PointerLikeType>
+getAccPtr(mlir::Operation *accDataClauseOp);
 
 /// Used to obtain the `varPtrPtr` from a data clause operation.
 /// Returns empty value if not a data clause operation.
@@ -136,6 +152,21 @@ mlir::ValueRange getDataOperands(mlir::Operation *accOp);
 /// Used to get a mutable range iterating over the data operands.
 mlir::MutableOperandRange getMutableDataOperands(mlir::Operation *accOp);
 
+/// Used to get the recipe attribute from a data clause operation.
+mlir::SymbolRefAttr getRecipe(mlir::Operation *accOp);
+
+/// Used to check whether the provided `type` implements the `PointerLikeType`
+/// interface.
+inline bool isPointerLikeType(mlir::Type type) {
+  return mlir::isa<mlir::acc::PointerLikeType>(type);
+}
+
+/// Used to check whether the provided `type` implements the `MappableType`
+/// interface.
+inline bool isMappableType(mlir::Type type) {
+  return mlir::isa<mlir::acc::MappableType>(type);
+}
+
 /// Used to obtain the attribute name for declare.
 static constexpr StringLiteral getDeclareAttrName() {
   return StringLiteral("acc.declare");
@@ -146,7 +177,31 @@ static constexpr StringLiteral getDeclareActionAttrName() {
 }
 
 static constexpr StringLiteral getRoutineInfoAttrName() {
-  return StringLiteral("acc.routine_info");
+  return RoutineInfoAttr::name;
+}
+
+static constexpr StringLiteral getSpecializedRoutineAttrName() {
+  return SpecializedRoutineAttr::name;
+}
+
+/// Used to check whether the current operation is marked with
+/// `acc routine`. The operation passed in should be a function.
+inline bool isAccRoutine(mlir::Operation *op) {
+  return op->hasAttr(mlir::acc::getRoutineInfoAttrName());
+}
+
+/// Used to check whether this is a specialized accelerator version of
+/// `acc routine` function.
+inline bool isSpecializedAccRoutine(mlir::Operation *op) {
+  return op->hasAttr(mlir::acc::getSpecializedRoutineAttrName());
+}
+
+static constexpr StringLiteral getFromDefaultClauseAttrName() {
+  return StringLiteral("acc.from_default");
+}
+
+static constexpr StringLiteral getVarNameAttrName() {
+  return VarNameAttr::name;
 }
 
 static constexpr StringLiteral getCombinedConstructsAttrName() {

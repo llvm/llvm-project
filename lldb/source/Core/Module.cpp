@@ -52,9 +52,6 @@
 #include "lldb/Host/windows/PosixApi.h"
 #endif
 
-#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
-#include "Plugins/Language/ObjC/ObjCLanguage.h"
-
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DJB.h"
@@ -130,8 +127,10 @@ Module *Module::GetAllocatedModuleAtIndex(size_t idx) {
   return nullptr;
 }
 
+static std::atomic<lldb::user_id_t> g_unique_id = 1;
+
 Module::Module(const ModuleSpec &module_spec)
-    : m_unwind_table(*this), m_file_has_changed(false),
+    : UserID(g_unique_id++), m_unwind_table(*this), m_file_has_changed(false),
       m_first_file_changed_log(false) {
   // Scope for locker below...
   {
@@ -236,7 +235,8 @@ Module::Module(const ModuleSpec &module_spec)
 Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
                ConstString object_name, lldb::offset_t object_offset,
                const llvm::sys::TimePoint<> &object_mod_time)
-    : m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)),
+    : UserID(g_unique_id++),
+      m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)),
       m_arch(arch), m_file(file_spec), m_object_name(object_name),
       m_object_offset(object_offset), m_object_mod_time(object_mod_time),
       m_unwind_table(*this), m_file_has_changed(false),
@@ -257,7 +257,7 @@ Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
 }
 
 Module::Module()
-    : m_unwind_table(*this), m_file_has_changed(false),
+    : UserID(g_unique_id++), m_unwind_table(*this), m_file_has_changed(false),
       m_first_file_changed_log(false) {
   std::lock_guard<std::recursive_mutex> guard(
       GetAllocationModuleCollectionMutex());
@@ -483,6 +483,9 @@ uint32_t Module::ResolveSymbolContextForAddress(
       symfile->SetLoadDebugInfoEnabled();
       resolved_flags |=
           symfile->ResolveSymbolContext(so_addr, resolve_scope, sc);
+
+      if ((resolve_scope & eSymbolContextLineEntry) && sc.line_entry.IsValid())
+        sc.line_entry.ApplyFileMappings(sc.target_sp);
     }
 
     // Resolve the symbol if requested, but don't re-look it up if we've
@@ -638,102 +641,96 @@ void Module::FindCompileUnits(const FileSpec &path,
   }
 }
 
-Module::LookupInfo::LookupInfo(ConstString name,
+Module::LookupInfo::LookupInfo(const LookupInfo &lookup_info,
+                               ConstString lookup_name)
+    : m_name(lookup_info.GetName()), m_lookup_name(lookup_name),
+      m_language(lookup_info.GetLanguageType()),
+      m_name_type_mask(lookup_info.GetNameTypeMask()) {}
+
+Module::LookupInfo::LookupInfo(ConstString name, ConstString lookup_name,
                                FunctionNameType name_type_mask,
-                               LanguageType language)
-    : m_name(name), m_lookup_name(), m_language(language) {
-  const char *name_cstr = name.GetCString();
-  llvm::StringRef basename;
-  llvm::StringRef context;
+                               LanguageType lang_type)
+    : m_name(name), m_lookup_name(lookup_name), m_language(lang_type) {
+  std::optional<ConstString> basename;
+  Language *lang = Language::FindPlugin(lang_type);
 
   if (name_type_mask & eFunctionNameTypeAuto) {
-    if (CPlusPlusLanguage::IsCPPMangledName(name_cstr))
-      m_name_type_mask = eFunctionNameTypeFull;
-    else if ((language == eLanguageTypeUnknown ||
-              Language::LanguageIsObjC(language)) &&
-             ObjCLanguage::IsPossibleObjCMethodName(name_cstr))
-      m_name_type_mask = eFunctionNameTypeFull;
-    else if (Language::LanguageIsC(language)) {
-      m_name_type_mask = eFunctionNameTypeFull;
-    } else {
-      if ((language == eLanguageTypeUnknown ||
-           Language::LanguageIsObjC(language)) &&
-          ObjCLanguage::IsPossibleObjCSelector(name_cstr))
-        m_name_type_mask |= eFunctionNameTypeSelector;
-
-      CPlusPlusLanguage::MethodName cpp_method(name);
-      basename = cpp_method.GetBasename();
-      if (basename.empty()) {
-        if (CPlusPlusLanguage::ExtractContextAndIdentifier(name_cstr, context,
-                                                           basename))
-          m_name_type_mask |= (eFunctionNameTypeMethod | eFunctionNameTypeBase);
-        else
-          m_name_type_mask |= eFunctionNameTypeFull;
-      } else {
-        m_name_type_mask |= (eFunctionNameTypeMethod | eFunctionNameTypeBase);
+    if (lang) {
+      auto info = lang->GetFunctionNameInfo(name);
+      if (info.first != eFunctionNameTypeNone) {
+        m_name_type_mask |= info.first;
+        if (!basename && info.second)
+          basename = info.second;
       }
     }
+
+    // NOTE: There are several ways to get here, but this is a fallback path in
+    // case the above does not succeed at extracting any useful information from
+    // the loaded language plugins.
+    if (m_name_type_mask == eFunctionNameTypeNone)
+      m_name_type_mask = eFunctionNameTypeFull;
+
   } else {
     m_name_type_mask = name_type_mask;
-    if (name_type_mask & eFunctionNameTypeMethod ||
-        name_type_mask & eFunctionNameTypeBase) {
-      // If they've asked for a CPP method or function name and it can't be
-      // that, we don't even need to search for CPP methods or names.
-      CPlusPlusLanguage::MethodName cpp_method(name);
-      if (cpp_method.IsValid()) {
-        basename = cpp_method.GetBasename();
-
-        if (!cpp_method.GetQualifiers().empty()) {
-          // There is a "const" or other qualifier following the end of the
-          // function parens, this can't be a eFunctionNameTypeBase
-          m_name_type_mask &= ~(eFunctionNameTypeBase);
-          if (m_name_type_mask == eFunctionNameTypeNone)
-            return;
-        }
-      } else {
-        // If the CPP method parser didn't manage to chop this up, try to fill
-        // in the base name if we can. If a::b::c is passed in, we need to just
-        // look up "c", and then we'll filter the result later.
-        CPlusPlusLanguage::ExtractContextAndIdentifier(name_cstr, context,
-                                                       basename);
-      }
-    }
-
-    if (name_type_mask & eFunctionNameTypeSelector) {
-      if (!ObjCLanguage::IsPossibleObjCSelector(name_cstr)) {
-        m_name_type_mask &= ~(eFunctionNameTypeSelector);
-        if (m_name_type_mask == eFunctionNameTypeNone)
-          return;
-      }
-    }
-
-    // Still try and get a basename in case someone specifies a name type mask
-    // of eFunctionNameTypeFull and a name like "A::func"
-    if (basename.empty()) {
-      if (name_type_mask & eFunctionNameTypeFull &&
-          !CPlusPlusLanguage::IsCPPMangledName(name_cstr)) {
-        CPlusPlusLanguage::MethodName cpp_method(name);
-        basename = cpp_method.GetBasename();
-        if (basename.empty())
-          CPlusPlusLanguage::ExtractContextAndIdentifier(name_cstr, context,
-                                                         basename);
+    if (lang) {
+      auto info = lang->GetFunctionNameInfo(name);
+      if (info.first & m_name_type_mask) {
+        // If the user asked for FunctionNameTypes that aren't possible,
+        // then filter those out. (e.g. asking for Selectors on
+        // C++ symbols, or even if the symbol given can't be a selector in
+        // ObjC)
+        m_name_type_mask &= info.first;
+        basename = info.second;
+      } else if (name_type_mask & eFunctionNameTypeFull &&
+                 info.first != eFunctionNameTypeNone && !basename &&
+                 info.second) {
+        // Still try and get a basename in case someone specifies a name type
+        // mask of eFunctionNameTypeFull and a name like "A::func"
+        basename = info.second;
       }
     }
   }
 
-  if (!basename.empty()) {
-    // The name supplied was a partial C++ path like "a::count". In this case
-    // we want to do a lookup on the basename "count" and then make sure any
-    // matching results contain "a::count" so that it would match "b::a::count"
-    // and "a::count". This is why we set "match_name_after_lookup" to true
-    m_lookup_name.SetString(basename);
+  if (basename) {
+    // The name supplied was incomplete for lookup purposes. For example, in C++
+    // we may have gotten something like "a::count". In this case, we want to do
+    // a lookup on the basename "count" and then make sure any matching results
+    // contain "a::count" so that it would match "b::a::count" and "a::count".
+    // This is why we set match_name_after_lookup to true.
+    m_lookup_name.SetString(*basename);
     m_match_name_after_lookup = true;
-  } else {
-    // The name is already correct, just use the exact name as supplied, and we
-    // won't need to check if any matches contain "name"
-    m_lookup_name = name;
-    m_match_name_after_lookup = false;
   }
+}
+
+std::vector<Module::LookupInfo> Module::LookupInfo::MakeLookupInfos(
+    ConstString name, lldb::FunctionNameType name_type_mask,
+    lldb::LanguageType lang_type, ConstString lookup_name_override) {
+  std::vector<LanguageType> lang_types;
+  if (lang_type != eLanguageTypeUnknown) {
+    lang_types.push_back(lang_type);
+  } else {
+    // If the language type was not specified, look up in every language
+    // available.
+    Language::ForEach([&](Language *lang) {
+      auto lang_type = lang->GetLanguageType();
+      if (!llvm::is_contained(lang_types, lang_type))
+        lang_types.push_back(lang_type);
+      return IterationAction::Continue;
+    });
+
+    if (lang_types.empty())
+      lang_types = {eLanguageTypeObjC, eLanguageTypeC_plus_plus};
+  }
+
+  ConstString lookup_name = lookup_name_override ? lookup_name_override : name;
+
+  std::vector<Module::LookupInfo> infos;
+  infos.reserve(lang_types.size());
+  for (LanguageType lang_type : lang_types) {
+    Module::LookupInfo info(name, lookup_name, name_type_mask, lang_type);
+    infos.push_back(info);
+  }
+  return infos;
 }
 
 bool Module::LookupInfo::NameMatchesLookupInfo(
@@ -791,7 +788,8 @@ void Module::LookupInfo::Prune(SymbolContextList &sc_list,
   // "func" and specified eFunctionNameTypeFull, but we might have found
   // "a::func()", "a::b::func()", "c::func()", "func()" and "func". Only
   // "func()" and "func" should end up matching.
-  if (m_name_type_mask == eFunctionNameTypeFull) {
+  auto *lang = Language::FindPlugin(eLanguageTypeC_plus_plus);
+  if (lang && m_name_type_mask == eFunctionNameTypeFull) {
     SymbolContext sc;
     size_t i = start_idx;
     while (i < sc_list.GetSize()) {
@@ -802,20 +800,21 @@ void Module::LookupInfo::Prune(SymbolContextList &sc_list,
       ConstString mangled_name(sc.GetFunctionName(Mangled::ePreferMangled));
       ConstString full_name(sc.GetFunctionName());
       if (mangled_name != m_name && full_name != m_name) {
-        CPlusPlusLanguage::MethodName cpp_method(full_name);
-        if (cpp_method.IsValid()) {
-          if (cpp_method.GetContext().empty()) {
-            if (cpp_method.GetBasename().compare(m_name) != 0) {
+        std::unique_ptr<Language::MethodName> cpp_method =
+            lang->GetMethodName(full_name);
+        if (cpp_method->IsValid()) {
+          if (cpp_method->GetContext().empty()) {
+            if (cpp_method->GetBasename().compare(m_name) != 0) {
               sc_list.RemoveContextAtIndex(i);
               continue;
             }
           } else {
             std::string qualified_name;
             llvm::StringRef anon_prefix("(anonymous namespace)");
-            if (cpp_method.GetContext() == anon_prefix)
-              qualified_name = cpp_method.GetBasename().str();
+            if (cpp_method->GetContext() == anon_prefix)
+              qualified_name = cpp_method->GetBasename().str();
             else
-              qualified_name = cpp_method.GetScopeQualifiedName();
+              qualified_name = cpp_method->GetScopeQualifiedName();
             if (qualified_name != m_name.GetCString()) {
               sc_list.RemoveContextAtIndex(i);
               continue;
@@ -828,22 +827,21 @@ void Module::LookupInfo::Prune(SymbolContextList &sc_list,
   }
 }
 
-void Module::FindFunctions(const Module::LookupInfo &lookup_info,
+void Module::FindFunctions(llvm::ArrayRef<Module::LookupInfo> lookup_infos,
                            const CompilerDeclContext &parent_decl_ctx,
                            const ModuleFunctionSearchOptions &options,
                            SymbolContextList &sc_list) {
-  // Find all the functions (not symbols, but debug information functions...
-  if (SymbolFile *symbols = GetSymbolFile()) {
+  for (auto &lookup_info : lookup_infos) {
+    SymbolFile *symbols = GetSymbolFile();
+    if (!symbols)
+      continue;
+
     symbols->FindFunctions(lookup_info, parent_decl_ctx,
                            options.include_inlines, sc_list);
-    // Now check our symbol table for symbols that are code symbols if
-    // requested
-    if (options.include_symbols) {
-      if (Symtab *symtab = symbols->GetSymtab()) {
+    if (options.include_symbols)
+      if (Symtab *symtab = symbols->GetSymtab())
         symtab->FindFunctionSymbols(lookup_info.GetLookupName(),
                                     lookup_info.GetNameTypeMask(), sc_list);
-      }
-    }
   }
 }
 
@@ -852,13 +850,16 @@ void Module::FindFunctions(ConstString name,
                            FunctionNameType name_type_mask,
                            const ModuleFunctionSearchOptions &options,
                            SymbolContextList &sc_list) {
-  const size_t old_size = sc_list.GetSize();
-  LookupInfo lookup_info(name, name_type_mask, eLanguageTypeUnknown);
-  FindFunctions(lookup_info, parent_decl_ctx, options, sc_list);
-  if (name_type_mask & eFunctionNameTypeAuto) {
-    const size_t new_size = sc_list.GetSize();
-    if (old_size < new_size)
-      lookup_info.Prune(sc_list, old_size);
+  std::vector<LookupInfo> lookup_infos =
+      LookupInfo::MakeLookupInfos(name, name_type_mask, eLanguageTypeUnknown);
+  for (auto &lookup_info : lookup_infos) {
+    const size_t old_size = sc_list.GetSize();
+    FindFunctions(lookup_info, parent_decl_ctx, options, sc_list);
+    if (name_type_mask & eFunctionNameTypeAuto) {
+      const size_t new_size = sc_list.GetSize();
+      if (old_size < new_size)
+        lookup_info.Prune(sc_list, old_size);
+    }
   }
 }
 
@@ -919,9 +920,8 @@ void Module::FindFunctions(const RegularExpression &regex,
               const SymbolContext &sc = sc_list[i];
               if (sc.block)
                 continue;
-              file_addr_to_index[sc.function->GetAddressRange()
-                                     .GetBaseAddress()
-                                     .GetFileAddress()] = i;
+              file_addr_to_index[sc.function->GetAddress().GetFileAddress()] =
+                  i;
             }
 
             FileAddrToIndexMap::const_iterator end = file_addr_to_index.end();
@@ -989,8 +989,7 @@ DebuggersOwningModuleRequestingInterruption(Module &module) {
   for (auto debugger_sp : requestors) {
     if (!debugger_sp->InterruptRequested())
       continue;
-    if (debugger_sp->GetTargetList()
-        .AnyTargetContainsModule(module))
+    if (debugger_sp->GetTargetList().AnyTargetContainsModule(module))
       interruptors.push_back(debugger_sp);
   }
   return interruptors;
@@ -1023,9 +1022,9 @@ SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
   return m_symfile_up ? m_symfile_up->GetSymbolFile() : nullptr;
 }
 
-Symtab *Module::GetSymtab() {
-  if (SymbolFile *symbols = GetSymbolFile())
-    return symbols->GetSymtab();
+Symtab *Module::GetSymtab(bool can_create) {
+  if (SymbolFile *symbols = GetSymbolFile(can_create))
+    return symbols->GetSymtab(can_create);
   return nullptr;
 }
 
@@ -1214,10 +1213,12 @@ ObjectFile *Module::GetObjectFile() {
         m_did_load_objfile = true;
         // FindPlugin will modify its data_sp argument. Do not let it
         // modify our m_data_sp member.
-        auto data_sp = m_data_sp;
+        DataExtractorSP extractor_sp;
+        if (m_data_sp)
+          extractor_sp = std::make_shared<DataExtractor>(m_data_sp);
         m_objfile_sp = ObjectFile::FindPlugin(
             shared_from_this(), &m_file, m_object_offset,
-            file_size - m_object_offset, data_sp, data_offset);
+            file_size - m_object_offset, extractor_sp, data_offset);
         if (m_objfile_sp) {
           // Once we get the object file, update our module with the object
           // file's architecture since it might differ in vendor/os if some
@@ -1486,7 +1487,9 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
             scripting_fspec.Dump(scripting_stream.AsRawOstream());
             LoadScriptOptions options;
             bool did_load = script_interpreter->LoadScriptingModule(
-                scripting_stream.GetData(), options, error);
+                scripting_stream.GetData(), options, error,
+                /*module_sp*/ nullptr, /*extra_path*/ {},
+                target->shared_from_this());
             if (!did_load)
               return false;
           }
@@ -1575,7 +1578,9 @@ void Module::RegisterXcodeSDK(llvm::StringRef sdk_name,
 
   if (!sdk_path_or_err) {
     Debugger::ReportError("Error while searching for Xcode SDK: " +
-                          toString(sdk_path_or_err.takeError()));
+                              toString(sdk_path_or_err.takeError()),
+                          /*debugger_id=*/std::nullopt,
+                          GetDiagnosticOnceFlag(sdk_name));
     return;
   }
 

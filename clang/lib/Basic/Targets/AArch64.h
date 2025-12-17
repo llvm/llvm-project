@@ -44,13 +44,16 @@ static const unsigned ARM64AddrSpaceMap[] = {
     static_cast<unsigned>(AArch64AddrSpace::ptr32_uptr),
     static_cast<unsigned>(AArch64AddrSpace::ptr64),
     0, // hlsl_groupshared
+    0, // hlsl_constant
+    0, // hlsl_private
+    0, // hlsl_device
+    0, // hlsl_input
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
 };
 
 class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
-  virtual void setDataLayout() = 0;
   static const TargetInfo::GCCRegAlias GCCRegAliases[];
   static const char *const GCCRegNames[];
 
@@ -62,6 +65,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
 
   unsigned FPU = FPUMode;
   bool HasCRC = false;
+  bool HasCSSC = false;
   bool HasAES = false;
   bool HasSHA2 = false;
   bool HasSHA3 = false;
@@ -70,7 +74,6 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasDotProd = false;
   bool HasFP16FML = false;
   bool HasMTE = false;
-  bool HasTME = false;
   bool HasPAuth = false;
   bool HasLS64 = false;
   bool HasRandGen = false;
@@ -82,7 +85,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasSVE2SHA3 = false;
   bool HasSVE2SM4 = false;
   bool HasSVEB16B16 = false;
-  bool HasSVE2BitPerm = false;
+  bool HasSVEBitPerm = false;
   bool HasMatmulFP64 = false;
   bool HasMatmulFP32 = false;
   bool HasLSE = false;
@@ -103,6 +106,15 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasSMEF16F16 = false;
   bool HasSMEB16B16 = false;
   bool HasSME2p1 = false;
+  bool HasFP8 = false;
+  bool HasFP8FMA = false;
+  bool HasFP8DOT2 = false;
+  bool HasFP8DOT4 = false;
+  bool HasSSVE_FP8DOT2 = false;
+  bool HasSSVE_FP8DOT4 = false;
+  bool HasSSVE_FP8FMA = false;
+  bool HasSME_F8F32 = false;
+  bool HasSME_F8F16 = false;
   bool HasSB = false;
   bool HasPredRes = false;
   bool HasSSBS = false;
@@ -121,6 +133,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
 
   const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
 
+protected:
   std::string ABI;
 
 public:
@@ -131,19 +144,18 @@ public:
 
   bool validateBranchProtection(StringRef Spec, StringRef Arch,
                                 BranchProtectionInfo &BPI,
+                                const LangOptions &LO,
                                 StringRef &Err) const override;
 
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool setCPU(const std::string &Name) override;
 
-  unsigned getFMVPriority(ArrayRef<StringRef> Features) const override;
+  llvm::APInt getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   bool useFP16ConversionIntrinsics() const override {
     return false;
   }
-
-  void setArchFeatures();
 
   void getTargetDefinesARMV81A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
@@ -177,13 +189,16 @@ public:
                                MacroBuilder &Builder) const;
   void getTargetDefinesARMV96A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
+  void getTargetDefinesARMV97A(const LangOptions &Opts,
+                               MacroBuilder &Builder) const;
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts) const override;
+  getVScaleRange(const LangOptions &LangOpts, ArmStreamingKind Mode,
+                 llvm::StringMap<bool> *FeatureMap = nullptr) const override;
   bool doesFeatureAffectCodeGen(StringRef Name) const override;
   bool validateCpuSupports(StringRef FeatureStr) const override;
   bool hasFeature(StringRef Feature) const override;
@@ -226,6 +241,11 @@ public:
   bool validatePointerAuthKey(const llvm::APSInt &value) const override;
 
   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(256, 64);
+  }
+
   bool hasInt128Type() const override;
 
   bool hasBitIntType() const override { return true; }
@@ -253,10 +273,18 @@ public:
   AArch64leTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
 
   void getTargetDefines(const LangOptions &Opts,
-                            MacroBuilder &Builder) const override;
-private:
-  void setDataLayout() override;
+                        MacroBuilder &Builder) const override;
 };
+
+template <>
+inline bool
+LinuxTargetInfo<AArch64leTargetInfo>::setABI(const std::string &Name) {
+  if (Name == "pauthtest") {
+    ABI = Name;
+    return true;
+  }
+  return AArch64leTargetInfo::setABI(Name);
+}
 
 class LLVM_LIBRARY_VISIBILITY WindowsARM64TargetInfo
     : public WindowsTargetInfo<AArch64leTargetInfo> {
@@ -265,8 +293,6 @@ class LLVM_LIBRARY_VISIBILITY WindowsARM64TargetInfo
 public:
   WindowsARM64TargetInfo(const llvm::Triple &Triple,
                          const TargetOptions &Opts);
-
-  void setDataLayout() override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override;
 
@@ -301,9 +327,20 @@ public:
   AArch64beTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
+};
 
-private:
-  void setDataLayout() override;
+void getAppleMachOAArch64Defines(MacroBuilder &Builder, const LangOptions &Opts,
+                                 const llvm::Triple &Triple);
+
+class LLVM_LIBRARY_VISIBILITY AppleMachOAArch64TargetInfo
+    : public AppleMachOTargetInfo<AArch64leTargetInfo> {
+public:
+  AppleMachOAArch64TargetInfo(const llvm::Triple &Triple,
+                              const TargetOptions &Opts);
+
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY DarwinAArch64TargetInfo

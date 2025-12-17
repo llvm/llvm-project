@@ -6,35 +6,29 @@ define i32 @foo.1(i32 %arg, ptr %arg1) {
 ; CHECK-SAME: i32 [[ARG:%.*]], ptr [[ARG1:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*]]:
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x ptr], align 16
-; CHECK-NEXT:    store ptr blockaddress(@foo.1, %[[BB8:.*]]), ptr [[ALLOCA]], align 16
+; CHECK-NEXT:    store ptr blockaddress(@foo.1, %[[BB2:.*]]), ptr [[ALLOCA]], align 16
 ; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ALLOCA]], i64 0, i64 1
 ; CHECK-NEXT:    store ptr blockaddress(@foo.1, %[[BB16:.*]]), ptr [[GETELEMENTPTR]], align 8
-; CHECK-NEXT:    br label %[[PREFBB2:.*]]
-; CHECK:       [[PREFBB2]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[PHI14:%.*]], %[[BB13:.*]] ]
-; CHECK-NEXT:    [[PHI3:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[PHI15:%.*]], %[[BB13]] ]
-; CHECK-NEXT:    switch i32 [[PHI]], label %[[BB13]] [
-; CHECK-NEXT:      i32 0, label %[[PREFBB18:.*]]
-; CHECK-NEXT:      i32 1, label %[[BB8]]
+; CHECK-NEXT:    br label %[[BB2]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[BB]] ], [ 2, %[[BB18:.*]] ]
+; CHECK-NEXT:    [[PHI3:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[ARG]], %[[BB18]] ]
+; CHECK-NEXT:    switch i32 [[PHI]], label %[[BB2_UNREACHABLEDEFAULT:.*]] [
+; CHECK-NEXT:      i32 0, label %[[BB18]]
 ; CHECK-NEXT:      i32 2, label %[[PREFBB11:.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       [[BB8]]:
-; CHECK-NEXT:    [[PHI10:%.*]] = phi i32 [ [[ARG]], %[[PREFBB18]] ], [ [[PHI3]], %[[PREFBB2]] ]
-; CHECK-NEXT:    br label %[[BB13]]
 ; CHECK:       [[PREFBB11]]:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @wombat(i32 noundef [[PHI3]])
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[PHI3]], 1
-; CHECK-NEXT:    br label %[[PREFBB18]]
-; CHECK:       [[BB13]]:
-; CHECK-NEXT:    [[PHI14]] = phi i32 [ [[PHI]], %[[PREFBB2]] ], [ 2, %[[BB8]] ]
-; CHECK-NEXT:    [[PHI15]] = phi i32 [ [[PHI3]], %[[PREFBB2]] ], [ [[PHI10]], %[[BB8]] ]
-; CHECK-NEXT:    br label %[[PREFBB2]]
+; CHECK-NEXT:    br label %[[BB18]]
+; CHECK:       [[BB2_UNREACHABLEDEFAULT]]:
+; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB16]]:
 ; CHECK-NEXT:    [[CALL17:%.*]] = call i32 @wombat(i32 noundef [[ARG]])
 ; CHECK-NEXT:    ret i32 0
-; CHECK:       [[PREFBB18]]:
+; CHECK:       [[BB18]]:
 ; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[ARG1]], align 8
-; CHECK-NEXT:    indirectbr ptr [[LOAD]], [label %[[BB8]], label %bb16]
+; CHECK-NEXT:    indirectbr ptr [[LOAD]], [label %[[BB2]], label %bb16]
 ;
 bb:
   %alloca = alloca [2 x ptr], align 16

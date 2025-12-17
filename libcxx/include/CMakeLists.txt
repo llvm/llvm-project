@@ -25,6 +25,7 @@ set(files
   __algorithm/find_segment_if.h
   __algorithm/for_each.h
   __algorithm/for_each_n.h
+  __algorithm/for_each_n_segment.h
   __algorithm/for_each_segment.h
   __algorithm/generate.h
   __algorithm/generate_n.h
@@ -64,6 +65,7 @@ set(files
   __algorithm/next_permutation.h
   __algorithm/none_of.h
   __algorithm/nth_element.h
+  __algorithm/out_value_result.h
   __algorithm/partial_sort.h
   __algorithm/partial_sort_copy.h
   __algorithm/partition.h
@@ -73,6 +75,7 @@ set(files
   __algorithm/prev_permutation.h
   __algorithm/pstl.h
   __algorithm/push_heap.h
+  __algorithm/radix_sort.h
   __algorithm/ranges_adjacent_find.h
   __algorithm/ranges_all_of.h
   __algorithm/ranges_any_of.h
@@ -191,6 +194,7 @@ set(files
   __algorithm/simd_utils.h
   __algorithm/sort.h
   __algorithm/sort_heap.h
+  __algorithm/specialized_algorithms.h
   __algorithm/stable_partition.h
   __algorithm/stable_sort.h
   __algorithm/swap_ranges.h
@@ -213,6 +217,7 @@ set(files
   __atomic/check_memory_order.h
   __atomic/contention_t.h
   __atomic/fence.h
+  __atomic/floating_point_helper.h
   __atomic/is_always_lock_free.h
   __atomic/kill_dependency.h
   __atomic/memory_order.h
@@ -255,8 +260,10 @@ set(files
   __chrono/exception.h
   __chrono/file_clock.h
   __chrono/formatter.h
+  __chrono/gps_clock.h
   __chrono/hh_mm_ss.h
   __chrono/high_resolution_clock.h
+  __chrono/is_clock.h
   __chrono/leap_second.h
   __chrono/literals.h
   __chrono/local_info.h
@@ -269,11 +276,13 @@ set(files
   __chrono/steady_clock.h
   __chrono/sys_info.h
   __chrono/system_clock.h
+  __chrono/tai_clock.h
   __chrono/time_point.h
   __chrono/time_zone.h
   __chrono/time_zone_link.h
   __chrono/tzdb.h
   __chrono/tzdb_list.h
+  __chrono/utc_clock.h
   __chrono/weekday.h
   __chrono/year.h
   __chrono/year_month.h
@@ -320,6 +329,8 @@ set(files
   __configuration/abi.h
   __configuration/availability.h
   __configuration/compiler.h
+  __configuration/experimental.h
+  __configuration/hardening.h
   __configuration/language.h
   __configuration/platform.h
   __coroutine/coroutine_handle.h
@@ -360,14 +371,22 @@ set(files
   __filesystem/space_info.h
   __filesystem/u8path.h
   __flat_map/flat_map.h
+  __flat_map/flat_multimap.h
   __flat_map/key_value_iterator.h
+  __flat_map/sorted_equivalent.h
   __flat_map/sorted_unique.h
+  __flat_map/utils.h
+  __flat_set/flat_multiset.h
+  __flat_set/flat_set.h
+  __flat_set/ra_iterator.h
+  __flat_set/utils.h
   __format/buffer.h
   __format/concepts.h
   __format/container_adaptor.h
   __format/enable_insertable.h
   __format/escaped_output_table.h
   __format/extended_grapheme_cluster_table.h
+  __format/fmt_pair_like.h
   __format/format_arg.h
   __format/format_arg_store.h
   __format/format_args.h
@@ -390,6 +409,7 @@ set(files
   __format/indic_conjunct_break_table.h
   __format/parser_std_format_spec.h
   __format/range_default_formatter.h
+  __format/range_format.h
   __format/range_formatter.h
   __format/unicode.h
   __format/width_estimation_table.h
@@ -483,6 +503,7 @@ set(files
   __iterator/ostreambuf_iterator.h
   __iterator/permutable.h
   __iterator/prev.h
+  __iterator/product_iterator.h
   __iterator/projected.h
   __iterator/ranges_iterator_traits.h
   __iterator/readable_traits.h
@@ -495,19 +516,31 @@ set(files
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
   __locale
+  __locale_dir/check_grouping.h
+  __locale_dir/get_c_locale.h
   __locale_dir/locale_base_api.h
-  __locale_dir/locale_base_api/android.h
-  __locale_dir/locale_base_api/bsd_locale_defaults.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
-  __locale_dir/locale_base_api/fuchsia.h
   __locale_dir/locale_base_api/ibm.h
-  __locale_dir/locale_base_api/musl.h
   __locale_dir/locale_base_api/openbsd.h
+  __locale_dir/messages.h
+  __locale_dir/money.h
+  __locale_dir/num.h
   __locale_dir/pad_and_output.h
+  __locale_dir/scan_keyword.h
   __locale_dir/support/apple.h
   __locale_dir/support/bsd_like.h
   __locale_dir/support/freebsd.h
+  __locale_dir/support/fuchsia.h
+  __locale_dir/support/linux.h
+  __locale_dir/support/netbsd.h
+  __locale_dir/support/newlib.h
+  __locale_dir/support/no_locale/characters.h
+  __locale_dir/support/no_locale/strtonum.h
   __locale_dir/support/windows.h
+  __locale_dir/time.h
+  __locale_dir/wbuffer_convert.h
+  __locale_dir/wstring_convert.h
+  __log_hardening_failure
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
@@ -529,6 +562,7 @@ set(files
   __math/traits.h
   __math/trigonometric_functions.h
   __mbstate_t.h
+  __mdspan/aligned_accessor.h
   __mdspan/default_accessor.h
   __mdspan/extents.h
   __mdspan/layout_left.h
@@ -537,7 +571,6 @@ set(files
   __mdspan/mdspan.h
   __memory/addressof.h
   __memory/align.h
-  __memory/aligned_alloc.h
   __memory/allocate_at_least.h
   __memory/allocation_guard.h
   __memory/allocator.h
@@ -547,16 +580,18 @@ set(files
   __memory/array_cookie.h
   __memory/assume_aligned.h
   __memory/auto_ptr.h
-  __memory/builtin_new_allocator.h
   __memory/compressed_pair.h
   __memory/concepts.h
   __memory/construct_at.h
+  __memory/destroy.h
   __memory/destruct_n.h
   __memory/inout_ptr.h
+  __memory/is_sufficiently_aligned.h
   __memory/noexcept_move_assign_container.h
   __memory/out_ptr.h
   __memory/pointer_traits.h
   __memory/ranges_construct_at.h
+  __memory/ranges_destroy.h
   __memory/ranges_uninitialized_algorithms.h
   __memory/raw_storage_iterator.h
   __memory/shared_count.h
@@ -601,6 +636,7 @@ set(files
   __numeric/midpoint.h
   __numeric/partial_sum.h
   __numeric/pstl.h
+  __numeric/ranges_iota.h
   __numeric/reduce.h
   __numeric/saturation_arithmetic.h
   __numeric/transform_exclusive_scan.h
@@ -664,6 +700,7 @@ set(files
   __random/uniform_real_distribution.h
   __random/weibull_distribution.h
   __ranges/access.h
+  __ranges/adjacent_view.h
   __ranges/all.h
   __ranges/as_rvalue_view.h
   __ranges/chunk_by_view.h
@@ -675,6 +712,7 @@ set(files
   __ranges/data.h
   __ranges/drop_view.h
   __ranges/drop_while_view.h
+  __ranges/elements_of.h
   __ranges/elements_view.h
   __ranges/empty.h
   __ranges/empty_view.h
@@ -685,6 +723,7 @@ set(files
   __ranges/iota_view.h
   __ranges/istream_view.h
   __ranges/join_view.h
+  __ranges/join_with_view.h
   __ranges/lazy_split_view.h
   __ranges/movable_box.h
   __ranges/non_propagating_cache.h
@@ -705,6 +744,7 @@ set(files
   __ranges/transform_view.h
   __ranges/view_interface.h
   __ranges/views.h
+  __ranges/zip_transform_view.h
   __ranges/zip_view.h
   __split_buffer
   __std_mbstate_t.h
@@ -745,23 +785,18 @@ set(files
   __tree
   __tuple/find_index.h
   __tuple/ignore.h
-  __tuple/make_tuple_types.h
   __tuple/sfinae_helpers.h
   __tuple/tuple_element.h
-  __tuple/tuple_indices.h
   __tuple/tuple_like.h
-  __tuple/tuple_like_ext.h
   __tuple/tuple_like_no_subrange.h
   __tuple/tuple_size.h
-  __tuple/tuple_types.h
+  __tuple/tuple_transform.h
   __type_traits/add_cv_quals.h
-  __type_traits/add_lvalue_reference.h
   __type_traits/add_pointer.h
-  __type_traits/add_rvalue_reference.h
+  __type_traits/add_reference.h
   __type_traits/aligned_storage.h
   __type_traits/aligned_union.h
   __type_traits/alignment_of.h
-  __type_traits/can_extract_key.h
   __type_traits/common_reference.h
   __type_traits/common_type.h
   __type_traits/conditional.h
@@ -779,6 +814,7 @@ set(files
   __type_traits/extent.h
   __type_traits/has_unique_object_representation.h
   __type_traits/has_virtual_destructor.h
+  __type_traits/integer_traits.h
   __type_traits/integral_constant.h
   __type_traits/invoke.h
   __type_traits/is_abstract.h
@@ -789,7 +825,6 @@ set(files
   __type_traits/is_array.h
   __type_traits/is_assignable.h
   __type_traits/is_base_of.h
-  __type_traits/is_bounded_array.h
   __type_traits/is_callable.h
   __type_traits/is_char_like_type.h
   __type_traits/is_class.h
@@ -808,6 +843,7 @@ set(files
   __type_traits/is_floating_point.h
   __type_traits/is_function.h
   __type_traits/is_fundamental.h
+  __type_traits/is_generic_transparent_comparator.h
   __type_traits/is_implicit_lifetime.h
   __type_traits/is_implicitly_default_constructible.h
   __type_traits/is_integral.h
@@ -815,7 +851,6 @@ set(files
   __type_traits/is_member_pointer.h
   __type_traits/is_nothrow_assignable.h
   __type_traits/is_nothrow_constructible.h
-  __type_traits/is_nothrow_convertible.h
   __type_traits/is_nothrow_destructible.h
   __type_traits/is_null_pointer.h
   __type_traits/is_object.h
@@ -829,7 +864,6 @@ set(files
   __type_traits/is_same.h
   __type_traits/is_scalar.h
   __type_traits/is_signed.h
-  __type_traits/is_signed_integer.h
   __type_traits/is_specialization.h
   __type_traits/is_standard_layout.h
   __type_traits/is_swappable.h
@@ -840,23 +874,26 @@ set(files
   __type_traits/is_trivially_destructible.h
   __type_traits/is_trivially_lexicographically_comparable.h
   __type_traits/is_trivially_relocatable.h
-  __type_traits/is_unbounded_array.h
   __type_traits/is_union.h
+  __type_traits/is_unqualified.h
   __type_traits/is_unsigned.h
-  __type_traits/is_unsigned_integer.h
   __type_traits/is_valid_expansion.h
   __type_traits/is_void.h
   __type_traits/is_volatile.h
+  __type_traits/is_within_lifetime.h
   __type_traits/lazy.h
   __type_traits/make_32_64_or_128_bit.h
   __type_traits/make_const_lvalue_ref.h
   __type_traits/make_signed.h
+  __type_traits/make_transparent.h
   __type_traits/make_unsigned.h
   __type_traits/maybe_const.h
   __type_traits/nat.h
   __type_traits/negation.h
   __type_traits/promote.h
   __type_traits/rank.h
+  __type_traits/reference_constructs_from_temporary.h
+  __type_traits/reference_converts_from_temporary.h
   __type_traits/remove_all_extents.h
   __type_traits/remove_const.h
   __type_traits/remove_const_ref.h
@@ -880,6 +917,8 @@ set(files
   __utility/cmp.h
   __utility/convert_to_integral.h
   __utility/declval.h
+  __utility/default_three_way_comparator.h
+  __utility/element_count.h
   __utility/empty.h
   __utility/exception_guard.h
   __utility/exchange.h
@@ -889,6 +928,7 @@ set(files
   __utility/integer_sequence.h
   __utility/is_pointer_in_range.h
   __utility/is_valid_range.h
+  __utility/lazy_synth_three_way_comparator.h
   __utility/move.h
   __utility/no_destroy.h
   __utility/pair.h
@@ -900,6 +940,7 @@ set(files
   __utility/small_buffer.h
   __utility/swap.h
   __utility/to_underlying.h
+  __utility/try_key_extraction.h
   __utility/unreachable.h
   __variant/monostate.h
   __vector/comparison.h
@@ -911,6 +952,7 @@ set(files
   __vector/vector_bool.h
   __vector/vector_bool_formatter.h
   __verbose_abort
+  __verbose_trap
   algorithm
   any
   array
@@ -980,6 +1022,7 @@ set(files
   fenv.h
   filesystem
   flat_map
+  flat_set
   float.h
   format
   forward_list
@@ -1003,7 +1046,6 @@ set(files
   mdspan
   memory
   memory_resource
-  module.modulemap
   mutex
   new
   numbers
@@ -1025,7 +1067,6 @@ set(files
   sstream
   stack
   stdatomic.h
-  stdbool.h
   stddef.h
   stdexcept
   stdio.h
@@ -1060,7 +1101,6 @@ set(files
   __cxx03/__algorithm/all_of.h
   __cxx03/__algorithm/any_of.h
   __cxx03/__algorithm/binary_search.h
-  __cxx03/__algorithm/clamp.h
   __cxx03/__algorithm/comp.h
   __cxx03/__algorithm/comp_ref_type.h
   __cxx03/__algorithm/copy.h
@@ -1080,19 +1120,11 @@ set(files
   __cxx03/__algorithm/find_if.h
   __cxx03/__algorithm/find_if_not.h
   __cxx03/__algorithm/find_segment_if.h
-  __cxx03/__algorithm/fold.h
   __cxx03/__algorithm/for_each.h
-  __cxx03/__algorithm/for_each_n.h
   __cxx03/__algorithm/for_each_segment.h
   __cxx03/__algorithm/generate.h
   __cxx03/__algorithm/generate_n.h
   __cxx03/__algorithm/half_positive.h
-  __cxx03/__algorithm/in_found_result.h
-  __cxx03/__algorithm/in_fun_result.h
-  __cxx03/__algorithm/in_in_out_result.h
-  __cxx03/__algorithm/in_in_result.h
-  __cxx03/__algorithm/in_out_out_result.h
-  __cxx03/__algorithm/in_out_result.h
   __cxx03/__algorithm/includes.h
   __cxx03/__algorithm/inplace_merge.h
   __cxx03/__algorithm/is_heap.h
@@ -1104,7 +1136,6 @@ set(files
   __cxx03/__algorithm/iter_swap.h
   __cxx03/__algorithm/iterator_operations.h
   __cxx03/__algorithm/lexicographical_compare.h
-  __cxx03/__algorithm/lexicographical_compare_three_way.h
   __cxx03/__algorithm/lower_bound.h
   __cxx03/__algorithm/make_heap.h
   __cxx03/__algorithm/make_projected.h
@@ -1113,7 +1144,6 @@ set(files
   __cxx03/__algorithm/merge.h
   __cxx03/__algorithm/min.h
   __cxx03/__algorithm/min_element.h
-  __cxx03/__algorithm/min_max_result.h
   __cxx03/__algorithm/minmax.h
   __cxx03/__algorithm/minmax_element.h
   __cxx03/__algorithm/mismatch.h
@@ -1129,99 +1159,7 @@ set(files
   __cxx03/__algorithm/partition_point.h
   __cxx03/__algorithm/pop_heap.h
   __cxx03/__algorithm/prev_permutation.h
-  __cxx03/__algorithm/pstl.h
   __cxx03/__algorithm/push_heap.h
-  __cxx03/__algorithm/ranges_adjacent_find.h
-  __cxx03/__algorithm/ranges_all_of.h
-  __cxx03/__algorithm/ranges_any_of.h
-  __cxx03/__algorithm/ranges_binary_search.h
-  __cxx03/__algorithm/ranges_clamp.h
-  __cxx03/__algorithm/ranges_contains.h
-  __cxx03/__algorithm/ranges_contains_subrange.h
-  __cxx03/__algorithm/ranges_copy.h
-  __cxx03/__algorithm/ranges_copy_backward.h
-  __cxx03/__algorithm/ranges_copy_if.h
-  __cxx03/__algorithm/ranges_copy_n.h
-  __cxx03/__algorithm/ranges_count.h
-  __cxx03/__algorithm/ranges_count_if.h
-  __cxx03/__algorithm/ranges_ends_with.h
-  __cxx03/__algorithm/ranges_equal.h
-  __cxx03/__algorithm/ranges_equal_range.h
-  __cxx03/__algorithm/ranges_fill.h
-  __cxx03/__algorithm/ranges_fill_n.h
-  __cxx03/__algorithm/ranges_find.h
-  __cxx03/__algorithm/ranges_find_end.h
-  __cxx03/__algorithm/ranges_find_first_of.h
-  __cxx03/__algorithm/ranges_find_if.h
-  __cxx03/__algorithm/ranges_find_if_not.h
-  __cxx03/__algorithm/ranges_find_last.h
-  __cxx03/__algorithm/ranges_for_each.h
-  __cxx03/__algorithm/ranges_for_each_n.h
-  __cxx03/__algorithm/ranges_generate.h
-  __cxx03/__algorithm/ranges_generate_n.h
-  __cxx03/__algorithm/ranges_includes.h
-  __cxx03/__algorithm/ranges_inplace_merge.h
-  __cxx03/__algorithm/ranges_is_heap.h
-  __cxx03/__algorithm/ranges_is_heap_until.h
-  __cxx03/__algorithm/ranges_is_partitioned.h
-  __cxx03/__algorithm/ranges_is_permutation.h
-  __cxx03/__algorithm/ranges_is_sorted.h
-  __cxx03/__algorithm/ranges_is_sorted_until.h
-  __cxx03/__algorithm/ranges_iterator_concept.h
-  __cxx03/__algorithm/ranges_lexicographical_compare.h
-  __cxx03/__algorithm/ranges_lower_bound.h
-  __cxx03/__algorithm/ranges_make_heap.h
-  __cxx03/__algorithm/ranges_max.h
-  __cxx03/__algorithm/ranges_max_element.h
-  __cxx03/__algorithm/ranges_merge.h
-  __cxx03/__algorithm/ranges_min.h
-  __cxx03/__algorithm/ranges_min_element.h
-  __cxx03/__algorithm/ranges_minmax.h
-  __cxx03/__algorithm/ranges_minmax_element.h
-  __cxx03/__algorithm/ranges_mismatch.h
-  __cxx03/__algorithm/ranges_move.h
-  __cxx03/__algorithm/ranges_move_backward.h
-  __cxx03/__algorithm/ranges_next_permutation.h
-  __cxx03/__algorithm/ranges_none_of.h
-  __cxx03/__algorithm/ranges_nth_element.h
-  __cxx03/__algorithm/ranges_partial_sort.h
-  __cxx03/__algorithm/ranges_partial_sort_copy.h
-  __cxx03/__algorithm/ranges_partition.h
-  __cxx03/__algorithm/ranges_partition_copy.h
-  __cxx03/__algorithm/ranges_partition_point.h
-  __cxx03/__algorithm/ranges_pop_heap.h
-  __cxx03/__algorithm/ranges_prev_permutation.h
-  __cxx03/__algorithm/ranges_push_heap.h
-  __cxx03/__algorithm/ranges_remove.h
-  __cxx03/__algorithm/ranges_remove_copy.h
-  __cxx03/__algorithm/ranges_remove_copy_if.h
-  __cxx03/__algorithm/ranges_remove_if.h
-  __cxx03/__algorithm/ranges_replace.h
-  __cxx03/__algorithm/ranges_replace_copy.h
-  __cxx03/__algorithm/ranges_replace_copy_if.h
-  __cxx03/__algorithm/ranges_replace_if.h
-  __cxx03/__algorithm/ranges_reverse.h
-  __cxx03/__algorithm/ranges_reverse_copy.h
-  __cxx03/__algorithm/ranges_rotate.h
-  __cxx03/__algorithm/ranges_rotate_copy.h
-  __cxx03/__algorithm/ranges_sample.h
-  __cxx03/__algorithm/ranges_search.h
-  __cxx03/__algorithm/ranges_search_n.h
-  __cxx03/__algorithm/ranges_set_difference.h
-  __cxx03/__algorithm/ranges_set_intersection.h
-  __cxx03/__algorithm/ranges_set_symmetric_difference.h
-  __cxx03/__algorithm/ranges_set_union.h
-  __cxx03/__algorithm/ranges_shuffle.h
-  __cxx03/__algorithm/ranges_sort.h
-  __cxx03/__algorithm/ranges_sort_heap.h
-  __cxx03/__algorithm/ranges_stable_partition.h
-  __cxx03/__algorithm/ranges_stable_sort.h
-  __cxx03/__algorithm/ranges_starts_with.h
-  __cxx03/__algorithm/ranges_swap_ranges.h
-  __cxx03/__algorithm/ranges_transform.h
-  __cxx03/__algorithm/ranges_unique.h
-  __cxx03/__algorithm/ranges_unique_copy.h
-  __cxx03/__algorithm/ranges_upper_bound.h
   __cxx03/__algorithm/remove.h
   __cxx03/__algorithm/remove_copy.h
   __cxx03/__algorithm/remove_copy_if.h
@@ -1234,15 +1172,12 @@ set(files
   __cxx03/__algorithm/reverse_copy.h
   __cxx03/__algorithm/rotate.h
   __cxx03/__algorithm/rotate_copy.h
-  __cxx03/__algorithm/sample.h
   __cxx03/__algorithm/search.h
   __cxx03/__algorithm/search_n.h
   __cxx03/__algorithm/set_difference.h
   __cxx03/__algorithm/set_intersection.h
   __cxx03/__algorithm/set_symmetric_difference.h
   __cxx03/__algorithm/set_union.h
-  __cxx03/__algorithm/shift_left.h
-  __cxx03/__algorithm/shift_right.h
   __cxx03/__algorithm/shuffle.h
   __cxx03/__algorithm/sift_down.h
   __cxx03/__algorithm/simd_utils.h
@@ -1266,7 +1201,6 @@ set(files
   __cxx03/__atomic/atomic_flag.h
   __cxx03/__atomic/atomic_init.h
   __cxx03/__atomic/atomic_lock_free.h
-  __cxx03/__atomic/atomic_ref.h
   __cxx03/__atomic/atomic_sync.h
   __cxx03/__atomic/check_memory_order.h
   __cxx03/__atomic/contention_t.h
@@ -1276,100 +1210,19 @@ set(files
   __cxx03/__atomic/kill_dependency.h
   __cxx03/__atomic/memory_order.h
   __cxx03/__atomic/to_gcc_order.h
-  __cxx03/__bit/bit_cast.h
-  __cxx03/__bit/bit_ceil.h
-  __cxx03/__bit/bit_floor.h
-  __cxx03/__bit/bit_log2.h
-  __cxx03/__bit/bit_width.h
   __cxx03/__bit/blsr.h
-  __cxx03/__bit/byteswap.h
   __cxx03/__bit/countl.h
   __cxx03/__bit/countr.h
-  __cxx03/__bit/endian.h
-  __cxx03/__bit/has_single_bit.h
   __cxx03/__bit/invert_if.h
   __cxx03/__bit/popcount.h
   __cxx03/__bit/rotate.h
   __cxx03/__bit_reference
-  __cxx03/__charconv/chars_format.h
-  __cxx03/__charconv/from_chars_integral.h
-  __cxx03/__charconv/from_chars_result.h
-  __cxx03/__charconv/tables.h
-  __cxx03/__charconv/to_chars.h
-  __cxx03/__charconv/to_chars_base_10.h
-  __cxx03/__charconv/to_chars_floating_point.h
-  __cxx03/__charconv/to_chars_integral.h
-  __cxx03/__charconv/to_chars_result.h
-  __cxx03/__charconv/traits.h
-  __cxx03/__chrono/calendar.h
-  __cxx03/__chrono/concepts.h
   __cxx03/__chrono/convert_to_timespec.h
-  __cxx03/__chrono/convert_to_tm.h
-  __cxx03/__chrono/day.h
   __cxx03/__chrono/duration.h
-  __cxx03/__chrono/exception.h
-  __cxx03/__chrono/file_clock.h
-  __cxx03/__chrono/formatter.h
-  __cxx03/__chrono/hh_mm_ss.h
   __cxx03/__chrono/high_resolution_clock.h
-  __cxx03/__chrono/leap_second.h
-  __cxx03/__chrono/literals.h
-  __cxx03/__chrono/local_info.h
-  __cxx03/__chrono/month.h
-  __cxx03/__chrono/month_weekday.h
-  __cxx03/__chrono/monthday.h
-  __cxx03/__chrono/ostream.h
-  __cxx03/__chrono/parser_std_format_spec.h
-  __cxx03/__chrono/statically_widen.h
   __cxx03/__chrono/steady_clock.h
-  __cxx03/__chrono/sys_info.h
   __cxx03/__chrono/system_clock.h
   __cxx03/__chrono/time_point.h
-  __cxx03/__chrono/time_zone.h
-  __cxx03/__chrono/time_zone_link.h
-  __cxx03/__chrono/tzdb.h
-  __cxx03/__chrono/tzdb_list.h
-  __cxx03/__chrono/weekday.h
-  __cxx03/__chrono/year.h
-  __cxx03/__chrono/year_month.h
-  __cxx03/__chrono/year_month_day.h
-  __cxx03/__chrono/year_month_weekday.h
-  __cxx03/__chrono/zoned_time.h
-  __cxx03/__compare/common_comparison_category.h
-  __cxx03/__compare/compare_partial_order_fallback.h
-  __cxx03/__compare/compare_strong_order_fallback.h
-  __cxx03/__compare/compare_three_way.h
-  __cxx03/__compare/compare_three_way_result.h
-  __cxx03/__compare/compare_weak_order_fallback.h
-  __cxx03/__compare/is_eq.h
-  __cxx03/__compare/ordering.h
-  __cxx03/__compare/partial_order.h
-  __cxx03/__compare/strong_order.h
-  __cxx03/__compare/synth_three_way.h
-  __cxx03/__compare/three_way_comparable.h
-  __cxx03/__compare/weak_order.h
-  __cxx03/__concepts/arithmetic.h
-  __cxx03/__concepts/assignable.h
-  __cxx03/__concepts/boolean_testable.h
-  __cxx03/__concepts/class_or_enum.h
-  __cxx03/__concepts/common_reference_with.h
-  __cxx03/__concepts/common_with.h
-  __cxx03/__concepts/constructible.h
-  __cxx03/__concepts/convertible_to.h
-  __cxx03/__concepts/copyable.h
-  __cxx03/__concepts/derived_from.h
-  __cxx03/__concepts/destructible.h
-  __cxx03/__concepts/different_from.h
-  __cxx03/__concepts/equality_comparable.h
-  __cxx03/__concepts/invocable.h
-  __cxx03/__concepts/movable.h
-  __cxx03/__concepts/predicate.h
-  __cxx03/__concepts/regular.h
-  __cxx03/__concepts/relation.h
-  __cxx03/__concepts/same_as.h
-  __cxx03/__concepts/semiregular.h
-  __cxx03/__concepts/swappable.h
-  __cxx03/__concepts/totally_ordered.h
   __cxx03/__condition_variable/condition_variable.h
   __cxx03/__config
   __cxx03/__configuration/abi.h
@@ -1378,10 +1231,6 @@ set(files
   __cxx03/__configuration/config_site_shim.h
   __cxx03/__configuration/language.h
   __cxx03/__configuration/platform.h
-  __cxx03/__coroutine/coroutine_handle.h
-  __cxx03/__coroutine/coroutine_traits.h
-  __cxx03/__coroutine/noop_coroutine_handle.h
-  __cxx03/__coroutine/trivial_awaitables.h
   __cxx03/__debug_utils/randomize_range.h
   __cxx03/__debug_utils/sanitizers.h
   __cxx03/__debug_utils/strict_weak_ordering_check.h
@@ -1390,81 +1239,18 @@ set(files
   __cxx03/__exception/nested_exception.h
   __cxx03/__exception/operations.h
   __cxx03/__exception/terminate.h
-  __cxx03/__expected/bad_expected_access.h
-  __cxx03/__expected/expected.h
-  __cxx03/__expected/unexpect.h
-  __cxx03/__expected/unexpected.h
-  __cxx03/__filesystem/copy_options.h
-  __cxx03/__filesystem/directory_entry.h
-  __cxx03/__filesystem/directory_iterator.h
-  __cxx03/__filesystem/directory_options.h
-  __cxx03/__filesystem/file_status.h
-  __cxx03/__filesystem/file_time_type.h
-  __cxx03/__filesystem/file_type.h
-  __cxx03/__filesystem/filesystem_error.h
-  __cxx03/__filesystem/operations.h
-  __cxx03/__filesystem/path.h
-  __cxx03/__filesystem/path_iterator.h
-  __cxx03/__filesystem/perm_options.h
-  __cxx03/__filesystem/perms.h
-  __cxx03/__filesystem/recursive_directory_iterator.h
-  __cxx03/__filesystem/space_info.h
-  __cxx03/__filesystem/u8path.h
-  __cxx03/__format/buffer.h
-  __cxx03/__format/concepts.h
-  __cxx03/__format/container_adaptor.h
-  __cxx03/__format/enable_insertable.h
-  __cxx03/__format/escaped_output_table.h
-  __cxx03/__format/extended_grapheme_cluster_table.h
-  __cxx03/__format/format_arg.h
-  __cxx03/__format/format_arg_store.h
-  __cxx03/__format/format_args.h
-  __cxx03/__format/format_context.h
-  __cxx03/__format/format_error.h
-  __cxx03/__format/format_functions.h
-  __cxx03/__format/format_parse_context.h
-  __cxx03/__format/format_string.h
-  __cxx03/__format/format_to_n_result.h
-  __cxx03/__format/formatter.h
-  __cxx03/__format/formatter_bool.h
-  __cxx03/__format/formatter_char.h
-  __cxx03/__format/formatter_floating_point.h
-  __cxx03/__format/formatter_integer.h
-  __cxx03/__format/formatter_integral.h
-  __cxx03/__format/formatter_output.h
-  __cxx03/__format/formatter_pointer.h
-  __cxx03/__format/formatter_string.h
-  __cxx03/__format/formatter_tuple.h
-  __cxx03/__format/indic_conjunct_break_table.h
-  __cxx03/__format/parser_std_format_spec.h
-  __cxx03/__format/range_default_formatter.h
-  __cxx03/__format/range_formatter.h
-  __cxx03/__format/unicode.h
-  __cxx03/__format/width_estimation_table.h
-  __cxx03/__format/write_escaped.h
   __cxx03/__functional/binary_function.h
   __cxx03/__functional/binary_negate.h
   __cxx03/__functional/bind.h
-  __cxx03/__functional/bind_back.h
-  __cxx03/__functional/bind_front.h
   __cxx03/__functional/binder1st.h
   __cxx03/__functional/binder2nd.h
-  __cxx03/__functional/boyer_moore_searcher.h
-  __cxx03/__functional/compose.h
-  __cxx03/__functional/default_searcher.h
-  __cxx03/__functional/function.h
   __cxx03/__functional/hash.h
   __cxx03/__functional/identity.h
-  __cxx03/__functional/invoke.h
-  __cxx03/__functional/is_transparent.h
   __cxx03/__functional/mem_fn.h
   __cxx03/__functional/mem_fun_ref.h
-  __cxx03/__functional/not_fn.h
   __cxx03/__functional/operations.h
-  __cxx03/__functional/perfect_forward.h
   __cxx03/__functional/pointer_to_binary_function.h
   __cxx03/__functional/pointer_to_unary_function.h
-  __cxx03/__functional/ranges_operations.h
   __cxx03/__functional/reference_wrapper.h
   __cxx03/__functional/unary_function.h
   __cxx03/__functional/unary_negate.h
@@ -1473,24 +1259,19 @@ set(files
   __cxx03/__fwd/bit_reference.h
   __cxx03/__fwd/complex.h
   __cxx03/__fwd/deque.h
-  __cxx03/__fwd/format.h
   __cxx03/__fwd/fstream.h
   __cxx03/__fwd/functional.h
   __cxx03/__fwd/ios.h
   __cxx03/__fwd/istream.h
-  __cxx03/__fwd/mdspan.h
   __cxx03/__fwd/memory.h
-  __cxx03/__fwd/memory_resource.h
   __cxx03/__fwd/ostream.h
   __cxx03/__fwd/pair.h
   __cxx03/__fwd/queue.h
-  __cxx03/__fwd/span.h
   __cxx03/__fwd/sstream.h
   __cxx03/__fwd/stack.h
   __cxx03/__fwd/streambuf.h
   __cxx03/__fwd/string.h
   __cxx03/__fwd/string_view.h
-  __cxx03/__fwd/subrange.h
   __cxx03/__fwd/tuple.h
   __cxx03/__fwd/vector.h
   __cxx03/__hash_table
@@ -1500,43 +1281,21 @@ set(files
   __cxx03/__iterator/aliasing_iterator.h
   __cxx03/__iterator/back_insert_iterator.h
   __cxx03/__iterator/bounded_iter.h
-  __cxx03/__iterator/common_iterator.h
-  __cxx03/__iterator/concepts.h
-  __cxx03/__iterator/counted_iterator.h
-  __cxx03/__iterator/cpp17_iterator_concepts.h
-  __cxx03/__iterator/data.h
-  __cxx03/__iterator/default_sentinel.h
   __cxx03/__iterator/distance.h
-  __cxx03/__iterator/empty.h
   __cxx03/__iterator/erase_if_container.h
   __cxx03/__iterator/front_insert_iterator.h
-  __cxx03/__iterator/incrementable_traits.h
-  __cxx03/__iterator/indirectly_comparable.h
   __cxx03/__iterator/insert_iterator.h
   __cxx03/__iterator/istream_iterator.h
   __cxx03/__iterator/istreambuf_iterator.h
-  __cxx03/__iterator/iter_move.h
-  __cxx03/__iterator/iter_swap.h
   __cxx03/__iterator/iterator.h
   __cxx03/__iterator/iterator_traits.h
-  __cxx03/__iterator/iterator_with_data.h
-  __cxx03/__iterator/mergeable.h
   __cxx03/__iterator/move_iterator.h
-  __cxx03/__iterator/move_sentinel.h
   __cxx03/__iterator/next.h
   __cxx03/__iterator/ostream_iterator.h
   __cxx03/__iterator/ostreambuf_iterator.h
-  __cxx03/__iterator/permutable.h
   __cxx03/__iterator/prev.h
-  __cxx03/__iterator/projected.h
-  __cxx03/__iterator/ranges_iterator_traits.h
-  __cxx03/__iterator/readable_traits.h
-  __cxx03/__iterator/reverse_access.h
   __cxx03/__iterator/reverse_iterator.h
   __cxx03/__iterator/segmented_iterator.h
-  __cxx03/__iterator/size.h
-  __cxx03/__iterator/sortable.h
-  __cxx03/__iterator/unreachable_sentinel.h
   __cxx03/__iterator/wrap_iter.h
   __cxx03/__locale
   __cxx03/__locale_dir/locale_base_api.h
@@ -1567,16 +1326,9 @@ set(files
   __cxx03/__math/remainder.h
   __cxx03/__math/roots.h
   __cxx03/__math/rounding_functions.h
-  __cxx03/__math/special_functions.h
   __cxx03/__math/traits.h
   __cxx03/__math/trigonometric_functions.h
   __cxx03/__mbstate_t.h
-  __cxx03/__mdspan/default_accessor.h
-  __cxx03/__mdspan/extents.h
-  __cxx03/__mdspan/layout_left.h
-  __cxx03/__mdspan/layout_right.h
-  __cxx03/__mdspan/layout_stride.h
-  __cxx03/__mdspan/mdspan.h
   __cxx03/__memory/addressof.h
   __cxx03/__memory/align.h
   __cxx03/__memory/aligned_alloc.h
@@ -1590,14 +1342,9 @@ set(files
   __cxx03/__memory/auto_ptr.h
   __cxx03/__memory/builtin_new_allocator.h
   __cxx03/__memory/compressed_pair.h
-  __cxx03/__memory/concepts.h
   __cxx03/__memory/construct_at.h
   __cxx03/__memory/destruct_n.h
-  __cxx03/__memory/inout_ptr.h
-  __cxx03/__memory/out_ptr.h
   __cxx03/__memory/pointer_traits.h
-  __cxx03/__memory/ranges_construct_at.h
-  __cxx03/__memory/ranges_uninitialized_algorithms.h
   __cxx03/__memory/raw_storage_iterator.h
   __cxx03/__memory/shared_ptr.h
   __cxx03/__memory/swap_allocator.h
@@ -1606,54 +1353,18 @@ set(files
   __cxx03/__memory/uninitialized_algorithms.h
   __cxx03/__memory/unique_ptr.h
   __cxx03/__memory/uses_allocator.h
-  __cxx03/__memory/uses_allocator_construction.h
   __cxx03/__memory/voidify.h
-  __cxx03/__memory_resource/memory_resource.h
-  __cxx03/__memory_resource/monotonic_buffer_resource.h
-  __cxx03/__memory_resource/polymorphic_allocator.h
-  __cxx03/__memory_resource/pool_options.h
-  __cxx03/__memory_resource/synchronized_pool_resource.h
-  __cxx03/__memory_resource/unsynchronized_pool_resource.h
   __cxx03/__mutex/lock_guard.h
   __cxx03/__mutex/mutex.h
   __cxx03/__mutex/once_flag.h
   __cxx03/__mutex/tag_types.h
   __cxx03/__mutex/unique_lock.h
-  __cxx03/__node_handle
   __cxx03/__numeric/accumulate.h
   __cxx03/__numeric/adjacent_difference.h
-  __cxx03/__numeric/exclusive_scan.h
-  __cxx03/__numeric/gcd_lcm.h
-  __cxx03/__numeric/inclusive_scan.h
   __cxx03/__numeric/inner_product.h
   __cxx03/__numeric/iota.h
-  __cxx03/__numeric/midpoint.h
   __cxx03/__numeric/partial_sum.h
-  __cxx03/__numeric/pstl.h
-  __cxx03/__numeric/reduce.h
-  __cxx03/__numeric/saturation_arithmetic.h
-  __cxx03/__numeric/transform_exclusive_scan.h
-  __cxx03/__numeric/transform_inclusive_scan.h
-  __cxx03/__numeric/transform_reduce.h
   __cxx03/__ostream/basic_ostream.h
-  __cxx03/__ostream/print.h
-  __cxx03/__pstl/backend.h
-  __cxx03/__pstl/backend_fwd.h
-  __cxx03/__pstl/backends/default.h
-  __cxx03/__pstl/backends/libdispatch.h
-  __cxx03/__pstl/backends/serial.h
-  __cxx03/__pstl/backends/std_thread.h
-  __cxx03/__pstl/cpu_algos/any_of.h
-  __cxx03/__pstl/cpu_algos/cpu_traits.h
-  __cxx03/__pstl/cpu_algos/fill.h
-  __cxx03/__pstl/cpu_algos/find_if.h
-  __cxx03/__pstl/cpu_algos/for_each.h
-  __cxx03/__pstl/cpu_algos/merge.h
-  __cxx03/__pstl/cpu_algos/stable_sort.h
-  __cxx03/__pstl/cpu_algos/transform.h
-  __cxx03/__pstl/cpu_algos/transform_reduce.h
-  __cxx03/__pstl/dispatch.h
-  __cxx03/__pstl/handle_exception.h
   __cxx03/__random/bernoulli_distribution.h
   __cxx03/__random/binomial_distribution.h
   __cxx03/__random/cauchy_distribution.h
@@ -1688,62 +1399,11 @@ set(files
   __cxx03/__random/student_t_distribution.h
   __cxx03/__random/subtract_with_carry_engine.h
   __cxx03/__random/uniform_int_distribution.h
-  __cxx03/__random/uniform_random_bit_generator.h
   __cxx03/__random/uniform_real_distribution.h
   __cxx03/__random/weibull_distribution.h
-  __cxx03/__ranges/access.h
-  __cxx03/__ranges/all.h
-  __cxx03/__ranges/as_rvalue_view.h
-  __cxx03/__ranges/chunk_by_view.h
-  __cxx03/__ranges/common_view.h
-  __cxx03/__ranges/concepts.h
-  __cxx03/__ranges/container_compatible_range.h
-  __cxx03/__ranges/counted.h
-  __cxx03/__ranges/dangling.h
-  __cxx03/__ranges/data.h
-  __cxx03/__ranges/drop_view.h
-  __cxx03/__ranges/drop_while_view.h
-  __cxx03/__ranges/elements_view.h
-  __cxx03/__ranges/empty.h
-  __cxx03/__ranges/empty_view.h
-  __cxx03/__ranges/enable_borrowed_range.h
-  __cxx03/__ranges/enable_view.h
-  __cxx03/__ranges/filter_view.h
-  __cxx03/__ranges/from_range.h
-  __cxx03/__ranges/iota_view.h
-  __cxx03/__ranges/istream_view.h
-  __cxx03/__ranges/join_view.h
-  __cxx03/__ranges/lazy_split_view.h
-  __cxx03/__ranges/movable_box.h
-  __cxx03/__ranges/non_propagating_cache.h
-  __cxx03/__ranges/owning_view.h
-  __cxx03/__ranges/range_adaptor.h
-  __cxx03/__ranges/rbegin.h
-  __cxx03/__ranges/ref_view.h
-  __cxx03/__ranges/rend.h
-  __cxx03/__ranges/repeat_view.h
-  __cxx03/__ranges/reverse_view.h
-  __cxx03/__ranges/single_view.h
-  __cxx03/__ranges/size.h
-  __cxx03/__ranges/split_view.h
-  __cxx03/__ranges/subrange.h
-  __cxx03/__ranges/take_view.h
-  __cxx03/__ranges/take_while_view.h
-  __cxx03/__ranges/to.h
-  __cxx03/__ranges/transform_view.h
-  __cxx03/__ranges/view_interface.h
-  __cxx03/__ranges/views.h
-  __cxx03/__ranges/zip_view.h
   __cxx03/__split_buffer
   __cxx03/__std_clang_module
   __cxx03/__std_mbstate_t.h
-  __cxx03/__stop_token/atomic_unique_lock.h
-  __cxx03/__stop_token/intrusive_list_view.h
-  __cxx03/__stop_token/intrusive_shared_ptr.h
-  __cxx03/__stop_token/stop_callback.h
-  __cxx03/__stop_token/stop_source.h
-  __cxx03/__stop_token/stop_state.h
-  __cxx03/__stop_token/stop_token.h
   __cxx03/__string/char_traits.h
   __cxx03/__string/constexpr_c_functions.h
   __cxx03/__string/extern_template_lists.h
@@ -1758,9 +1418,7 @@ set(files
   __cxx03/__system_error/error_code.h
   __cxx03/__system_error/error_condition.h
   __cxx03/__system_error/system_error.h
-  __cxx03/__thread/formatter.h
   __cxx03/__thread/id.h
-  __cxx03/__thread/jthread.h
   __cxx03/__thread/poll_with_backoff.h
   __cxx03/__thread/support.h
   __cxx03/__thread/support/c11.h
@@ -1772,7 +1430,6 @@ set(files
   __cxx03/__thread/timed_backoff_policy.h
   __cxx03/__tree
   __cxx03/__tuple/find_index.h
-  __cxx03/__tuple/ignore.h
   __cxx03/__tuple/make_tuple_types.h
   __cxx03/__tuple/sfinae_helpers.h
   __cxx03/__tuple/tuple_element.h
@@ -1792,7 +1449,6 @@ set(files
   __cxx03/__type_traits/aligned_union.h
   __cxx03/__type_traits/alignment_of.h
   __cxx03/__type_traits/can_extract_key.h
-  __cxx03/__type_traits/common_reference.h
   __cxx03/__type_traits/common_type.h
   __cxx03/__type_traits/conditional.h
   __cxx03/__type_traits/conjunction.h
@@ -1805,12 +1461,10 @@ set(files
   __cxx03/__type_traits/disjunction.h
   __cxx03/__type_traits/enable_if.h
   __cxx03/__type_traits/extent.h
-  __cxx03/__type_traits/has_unique_object_representation.h
   __cxx03/__type_traits/has_virtual_destructor.h
   __cxx03/__type_traits/integral_constant.h
   __cxx03/__type_traits/invoke.h
   __cxx03/__type_traits/is_abstract.h
-  __cxx03/__type_traits/is_aggregate.h
   __cxx03/__type_traits/is_allocator.h
   __cxx03/__type_traits/is_always_bitcastable.h
   __cxx03/__type_traits/is_arithmetic.h
@@ -1842,7 +1496,6 @@ set(files
   __cxx03/__type_traits/is_member_pointer.h
   __cxx03/__type_traits/is_nothrow_assignable.h
   __cxx03/__type_traits/is_nothrow_constructible.h
-  __cxx03/__type_traits/is_nothrow_convertible.h
   __cxx03/__type_traits/is_nothrow_destructible.h
   __cxx03/__type_traits/is_null_pointer.h
   __cxx03/__type_traits/is_object.h
@@ -1902,18 +1555,13 @@ set(files
   __cxx03/__type_traits/unwrap_ref.h
   __cxx03/__type_traits/void_t.h
   __cxx03/__undef_macros
-  __cxx03/__utility/as_const.h
   __cxx03/__utility/as_lvalue.h
   __cxx03/__utility/auto_cast.h
-  __cxx03/__utility/cmp.h
   __cxx03/__utility/convert_to_integral.h
   __cxx03/__utility/declval.h
   __cxx03/__utility/empty.h
   __cxx03/__utility/exception_guard.h
-  __cxx03/__utility/exchange.h
   __cxx03/__utility/forward.h
-  __cxx03/__utility/forward_like.h
-  __cxx03/__utility/in_place.h
   __cxx03/__utility/integer_sequence.h
   __cxx03/__utility/is_pointer_in_range.h
   __cxx03/__utility/is_valid_range.h
@@ -1926,16 +1574,13 @@ set(files
   __cxx03/__utility/rel_ops.h
   __cxx03/__utility/small_buffer.h
   __cxx03/__utility/swap.h
-  __cxx03/__utility/to_underlying.h
   __cxx03/__utility/unreachable.h
   __cxx03/__variant/monostate.h
   __cxx03/__verbose_abort
+  __cxx03/__verbose_trap
   __cxx03/algorithm
-  __cxx03/any
   __cxx03/array
   __cxx03/atomic
-  __cxx03/barrier
-  __cxx03/bit
   __cxx03/bitset
   __cxx03/cassert
   __cxx03/ccomplex
@@ -1943,7 +1588,6 @@ set(files
   __cxx03/cerrno
   __cxx03/cfenv
   __cxx03/cfloat
-  __cxx03/charconv
   __cxx03/chrono
   __cxx03/cinttypes
   __cxx03/ciso646
@@ -1951,12 +1595,8 @@ set(files
   __cxx03/clocale
   __cxx03/cmath
   __cxx03/codecvt
-  __cxx03/compare
   __cxx03/complex
-  __cxx03/complex.h
-  __cxx03/concepts
   __cxx03/condition_variable
-  __cxx03/coroutine
   __cxx03/csetjmp
   __cxx03/csignal
   __cxx03/cstdarg
@@ -1968,99 +1608,56 @@ set(files
   __cxx03/cstring
   __cxx03/ctgmath
   __cxx03/ctime
-  __cxx03/ctype.h
   __cxx03/cuchar
   __cxx03/cwchar
   __cxx03/cwctype
   __cxx03/deque
-  __cxx03/errno.h
   __cxx03/exception
-  __cxx03/execution
-  __cxx03/expected
   __cxx03/experimental/__config
-  __cxx03/experimental/__simd/aligned_tag.h
-  __cxx03/experimental/__simd/declaration.h
-  __cxx03/experimental/__simd/reference.h
-  __cxx03/experimental/__simd/scalar.h
-  __cxx03/experimental/__simd/simd.h
-  __cxx03/experimental/__simd/simd_mask.h
-  __cxx03/experimental/__simd/traits.h
-  __cxx03/experimental/__simd/utility.h
-  __cxx03/experimental/__simd/vec_ext.h
-  __cxx03/experimental/iterator
-  __cxx03/experimental/memory
-  __cxx03/experimental/propagate_const
-  __cxx03/experimental/simd
-  __cxx03/experimental/type_traits
   __cxx03/experimental/utility
   __cxx03/ext/__hash
   __cxx03/ext/hash_map
   __cxx03/ext/hash_set
-  __cxx03/fenv.h
-  __cxx03/filesystem
-  __cxx03/float.h
-  __cxx03/format
   __cxx03/forward_list
   __cxx03/fstream
   __cxx03/functional
   __cxx03/future
-  __cxx03/initializer_list
-  __cxx03/inttypes.h
   __cxx03/iomanip
   __cxx03/ios
   __cxx03/iosfwd
   __cxx03/iostream
   __cxx03/istream
   __cxx03/iterator
-  __cxx03/latch
   __cxx03/limits
   __cxx03/list
   __cxx03/locale
   __cxx03/locale.h
   __cxx03/map
   __cxx03/math.h
-  __cxx03/mdspan
   __cxx03/memory
-  __cxx03/memory_resource
   __cxx03/module.modulemap
   __cxx03/mutex
   __cxx03/new
-  __cxx03/numbers
   __cxx03/numeric
-  __cxx03/optional
   __cxx03/ostream
-  __cxx03/print
   __cxx03/queue
   __cxx03/random
-  __cxx03/ranges
   __cxx03/ratio
   __cxx03/regex
-  __cxx03/scoped_allocator
-  __cxx03/semaphore
   __cxx03/set
-  __cxx03/shared_mutex
-  __cxx03/source_location
-  __cxx03/span
   __cxx03/sstream
   __cxx03/stack
   __cxx03/stdatomic.h
-  __cxx03/stdbool.h
-  __cxx03/stddef.h
   __cxx03/stdexcept
   __cxx03/stdint.h
-  __cxx03/stdio.h
   __cxx03/stdlib.h
-  __cxx03/stop_token
   __cxx03/streambuf
   __cxx03/string
   __cxx03/string.h
   __cxx03/string_view
   __cxx03/strstream
-  __cxx03/syncstream
   __cxx03/system_error
-  __cxx03/tgmath.h
   __cxx03/thread
-  __cxx03/tuple
   __cxx03/type_traits
   __cxx03/typeindex
   __cxx03/typeinfo
@@ -2069,18 +1666,24 @@ set(files
   __cxx03/unordered_set
   __cxx03/utility
   __cxx03/valarray
-  __cxx03/variant
   __cxx03/vector
   __cxx03/version
   __cxx03/wchar.h
-  __cxx03/wctype.h
   )
 
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
 configure_file("${LIBCXX_ASSERTION_HANDLER_FILE}" "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler" COPYONLY)
 
+# We generate the modulemap file so that we can include __config_site in it. For now, we don't know how to
+# make __config_site modular when per-target runtime directories are used.
+if (NOT LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+  set(LIBCXX_CONFIG_SITE_MODULE_ENTRY "textual header \"__config_site\"")
+endif()
+configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap" @ONLY)
+
 set(_all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
-                  "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler")
+                  "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler"
+                  "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap")
 foreach(f ${files})
   set(src "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
   set(dst "${LIBCXX_GENERATED_INCLUDE_DIR}/${f}")
@@ -2103,12 +1706,17 @@ list(APPEND _all_includes "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp")
 add_custom_target(generate-cxx-headers ALL DEPENDS ${_all_includes})
 
 add_library(cxx-headers INTERFACE)
-target_link_libraries(cxx-headers INTERFACE libcxx-libc-headers libcxx-abi-headers)
+target_link_libraries(cxx-headers INTERFACE runtimes-libc-headers libcxx-abi-headers)
 add_dependencies(cxx-headers generate-cxx-headers)
 # It's important that the arch directory be included first so that its header files
 # which interpose on the default include dir be included instead of the default ones.
 target_include_directories(cxx-headers INTERFACE ${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}
                                                  ${LIBCXX_GENERATED_INCLUDE_DIR})
+
+# Make sure to map the generated include directory back to libc++'s actual source directory when generating
+# debug information. Otherwise, the debug information will refer to generated headers which are created during
+# the build and generally not persistent.
+target_add_compile_flags_if_supported(cxx-headers INTERFACE "-fdebug-prefix-map=${LIBCXX_GENERATED_INCLUDE_DIR}=${LIBCXX_SOURCE_DIR}/include")
 
 if (LIBCXX_INSTALL_HEADERS)
   foreach(file ${files})
@@ -2138,12 +1746,16 @@ if (LIBCXX_INSTALL_HEADERS)
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)
 
+  # Install the generated modulemap file to the generic include dir.
+  install(FILES "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap"
+    DESTINATION "${LIBCXX_INSTALL_INCLUDE_DIR}"
+    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    COMPONENT cxx-headers)
+
   if (NOT CMAKE_CONFIGURATION_TYPES)
     add_custom_target(install-cxx-headers
-                      DEPENDS cxx-headers
-                      COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=cxx-headers
-                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+      DEPENDS cxx-headers
+      COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component cxx-headers)
     # Stripping is a no-op for headers
     add_custom_target(install-cxx-headers-stripped DEPENDS install-cxx-headers)
   endif()

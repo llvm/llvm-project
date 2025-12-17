@@ -22,6 +22,10 @@ static int getInstSeqCost(RISCVMatInt::InstSeq &Res, bool HasRVC) {
     // Assume instructions that aren't listed aren't compressible.
     bool Compressed = false;
     switch (Instr.getOpcode()) {
+    case RISCV::QC_E_LI:
+      // One 48-bit instruction takes the space of 1.5 regular instructions.
+      Cost += 150;
+      continue;
     case RISCV::SLLI:
     case RISCV::SRLI:
       Compressed = true;
@@ -57,6 +61,50 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
     return;
   }
 
+  if (!IsRV64 && STI.hasFeature(RISCV::FeatureVendorXqcili)) {
+    bool FitsOneStandardInst = ((Val & 0xFFF) == 0) || isInt<12>(Val);
+
+    // 20-bit signed immediates that don't fit into `ADDI` or `LUI` should use
+    // `QC.LI` (a single 32-bit instruction).
+    if (!FitsOneStandardInst && isInt<20>(Val)) {
+      Res.emplace_back(RISCV::QC_LI, Val);
+      return;
+    }
+
+    // 32-bit signed immediates that don't fit into `ADDI`, `LUI` or `QC.LI`
+    // should use `QC.E.LI` (a single 48-bit instruction).
+    if (!FitsOneStandardInst && isInt<32>(Val)) {
+      Res.emplace_back(RISCV::QC_E_LI, Val);
+      return;
+    }
+  }
+
+  if (STI.hasFeature(RISCV::FeatureStdExtP)) {
+    // Check if the immediate is packed i8 or i10
+    int32_t Bit63To32 = Val >> 32;
+    int32_t Bit31To0 = Val;
+    int16_t Bit31To16 = Bit31To0 >> 16;
+    int16_t Bit15To0 = Bit31To0;
+    int8_t Bit15To8 = Bit15To0 >> 8;
+    int8_t Bit7To0 = Bit15To0;
+    if (Bit63To32 == Bit31To0) {
+      if (IsRV64 && isInt<10>(Bit63To32)) {
+        Res.emplace_back(RISCV::PLI_W, Bit63To32);
+        return;
+      }
+      if (Bit31To16 == Bit15To0) {
+        if (isInt<10>(Bit31To16)) {
+          Res.emplace_back(RISCV::PLI_H, Bit31To16);
+          return;
+        }
+        if (Bit15To8 == Bit7To0) {
+          Res.emplace_back(RISCV::PLI_B, Bit15To8);
+          return;
+        }
+      }
+    }
+  }
+
   if (isInt<32>(Val)) {
     // Depending on the active bits in the immediate Value v, the following
     // instruction sequences are emitted:
@@ -72,7 +120,15 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
       Res.emplace_back(RISCV::LUI, Hi20);
 
     if (Lo12 || Hi20 == 0) {
-      unsigned AddiOpc = (IsRV64 && Hi20) ? RISCV::ADDIW : RISCV::ADDI;
+      unsigned AddiOpc = RISCV::ADDI;
+      if (IsRV64 && Hi20) {
+        // Use ADDIW rather than ADDI only when necessary for correctness. As
+        // noted in RISCVOptWInstrs, this helps reduce test differences vs
+        // RV32 without being a pessimization.
+        int64_t LuiRes = SignExtend64<32>(Hi20 << 12);
+        if (!isInt<32>(LuiRes + Lo12))
+          AddiOpc = RISCV::ADDIW;
+      }
       Res.emplace_back(AddiOpc, Lo12);
     }
     return;
@@ -81,18 +137,18 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
   assert(IsRV64 && "Can't emit >32-bit imm for non-RV64 target");
 
   // In the worst case, for a full 64-bit constant, a sequence of 8 instructions
-  // (i.e., LUI+ADDIW+SLLI+ADDI+SLLI+ADDI+SLLI+ADDI) has to be emitted. Note
-  // that the first two instructions (LUI+ADDIW) can contribute up to 32 bits
+  // (i.e., LUI+ADDI+SLLI+ADDI+SLLI+ADDI+SLLI+ADDI) has to be emitted. Note
+  // that the first two instructions (LUI+ADDI) can contribute up to 32 bits
   // while the following ADDI instructions contribute up to 12 bits each.
   //
   // On the first glance, implementing this seems to be possible by simply
-  // emitting the most significant 32 bits (LUI+ADDIW) followed by as many left
-  // shift (SLLI) and immediate additions (ADDI) as needed. However, due to the
-  // fact that ADDI performs a sign extended addition, doing it like that would
-  // only be possible when at most 11 bits of the ADDI instructions are used.
-  // Using all 12 bits of the ADDI instructions, like done by GAS, actually
-  // requires that the constant is processed starting with the least significant
-  // bit.
+  // emitting the most significant 32 bits (LUI+ADDI(W)) followed by as many
+  // left shift (SLLI) and immediate additions (ADDI) as needed. However, due to
+  // the fact that ADDI performs a sign extended addition, doing it like that
+  // would only be possible when at most 11 bits of the ADDI instructions are
+  // used. Using all 12 bits of the ADDI instructions, like done by GAS,
+  // actually requires that the constant is processed starting with the least
+  // significant bit.
   //
   // In the following, constants are processed from LSB to MSB but instruction
   // emission is performed from MSB to LSB by recursively calling
@@ -115,7 +171,7 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
     Val >>= ShiftAmount;
 
     // If the remaining bits don't fit in 12 bits, we might be able to reduce
-    // the // shift amount in order to use LUI which will zero the lower 12
+    // the shift amount in order to use LUI which will zero the lower 12
     // bits.
     if (ShiftAmount > 12 && !isInt<12>(Val)) {
       if (isInt<32>((uint64_t)Val << 12)) {
@@ -128,17 +184,17 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
         // Reduce the shift amount and add zeros to the LSBs so it will match
         // LUI, then shift left with SLLI.UW to clear the upper 32 set bits.
         ShiftAmount -= 12;
-        Val = ((uint64_t)Val << 12) | (0xffffffffull << 32);
+        Val = SignExtend64<32>((uint64_t)Val << 12);
         Unsigned = true;
       }
     }
 
     // Try to use SLLI_UW for Val when it is uint32 but not int32.
-    if (isUInt<32>((uint64_t)Val) && !isInt<32>((uint64_t)Val) &&
+    if (isUInt<32>(Val) && !isInt<32>(Val) &&
         STI.hasFeature(RISCV::FeatureStdExtZba)) {
       // Use LUI+ADDI or LUI to compose, then clear the upper 32 bits with
       // SLLI_UW.
-      Val = ((uint64_t)Val) | (0xffffffffull << 32);
+      Val = SignExtend64<32>((uint64_t)Val);
       Unsigned = true;
     }
   }
@@ -175,7 +231,7 @@ static unsigned extractRotateInfo(int64_t Val) {
 
 static void generateInstSeqLeadingZeros(int64_t Val, const MCSubtargetInfo &STI,
                                         RISCVMatInt::InstSeq &Res) {
-  assert(Val > 0 && "Expected postive val");
+  assert(Val > 0 && "Expected positive val");
 
   unsigned LeadingZeros = llvm::countl_zero((uint64_t)Val);
   uint64_t ShiftedVal = (uint64_t)Val << LeadingZeros;
@@ -209,8 +265,8 @@ static void generateInstSeqLeadingZeros(int64_t Val, const MCSubtargetInfo &STI,
   // If we have exactly 32 leading zeros and Zba, we can try using zext.w at
   // the end of the sequence.
   if (LeadingZeros == 32 && STI.hasFeature(RISCV::FeatureStdExtZba)) {
-    // Try replacing upper bits with 1.
-    uint64_t LeadingOnesVal = Val | maskLeadingOnes<uint64_t>(LeadingZeros);
+    // Bit 31 is set, so sign extend to fill the upper bits with 1s.
+    uint64_t LeadingOnesVal = SignExtend64<32>(Val);
     TmpSeq.clear();
     generateInstSeqImpl(LeadingOnesVal, STI, TmpSeq);
 
@@ -314,8 +370,9 @@ InstSeq generateInstSeq(int64_t Val, const MCSubtargetInfo &STI) {
 
   // Perform optimization with BSETI in the Zbs extension.
   if (Res.size() > 2 && STI.hasFeature(RISCV::FeatureStdExtZbs)) {
-    // Create a simm32 value for LUI+ADDIW by forcing the upper 33 bits to zero.
-    // Xor that with original value to get which bits should be set by BSETI.
+    // Create a simm32 value for LUI+ADDI(W) by forcing the upper 33 bits to
+    // zero. Xor that with original value to get which bits should be set by
+    // BSETI.
     uint64_t Lo = Val & 0x7fffffff;
     uint64_t Hi = Val ^ Lo;
     assert(Hi != 0);
@@ -331,12 +388,19 @@ InstSeq generateInstSeq(int64_t Val, const MCSubtargetInfo &STI) {
       } while (Hi != 0);
       Res = TmpSeq;
     }
+
+    // Fold LI 1 + SLLI into BSETI.
+    if (Res[0].getOpcode() == RISCV::ADDI && Res[0].getImm() == 1 &&
+        Res[1].getOpcode() == RISCV::SLLI) {
+      Res.erase(Res.begin());                                 // Remove ADDI.
+      Res.front() = Inst(RISCV::BSETI, Res.front().getImm()); // Patch SLLI.
+    }
   }
 
   // Perform optimization with BCLRI in the Zbs extension.
   if (Res.size() > 2 && STI.hasFeature(RISCV::FeatureStdExtZbs)) {
-    // Create a simm32 value for LUI+ADDIW by forcing the upper 33 bits to one.
-    // Xor that with original value to get which bits should be cleared by
+    // Create a simm32 value for LUI+ADDI(W) by forcing the upper 33 bits to
+    // one. Xor that with original value to get which bits should be cleared by
     // BCLRI.
     uint64_t Lo = Val | 0xffffffff80000000;
     uint64_t Hi = Val ^ Lo;
@@ -501,8 +565,7 @@ InstSeq generateTwoRegInstSeq(int64_t Val, const MCSubtargetInfo &STI,
 int getIntMatCost(const APInt &Val, unsigned Size, const MCSubtargetInfo &STI,
                   bool CompressionCost, bool FreeZeroes) {
   bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
-  bool HasRVC = CompressionCost && (STI.hasFeature(RISCV::FeatureStdExtC) ||
-                                    STI.hasFeature(RISCV::FeatureStdExtZca));
+  bool HasRVC = CompressionCost && STI.hasFeature(RISCV::FeatureStdExtZca);
   int PlatRegSize = IsRV64 ? 64 : 32;
 
   // Split the constant into platform register sized chunks, and calculate cost
@@ -523,6 +586,11 @@ OpndKind Inst::getOpndKind() const {
   default:
     llvm_unreachable("Unexpected opcode!");
   case RISCV::LUI:
+  case RISCV::QC_LI:
+  case RISCV::QC_E_LI:
+  case RISCV::PLI_B:
+  case RISCV::PLI_H:
+  case RISCV::PLI_W:
     return RISCVMatInt::Imm;
   case RISCV::ADD_UW:
     return RISCVMatInt::RegX0;

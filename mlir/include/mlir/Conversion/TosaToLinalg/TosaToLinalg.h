@@ -39,8 +39,7 @@ void addTosaToLinalgPasses(
         TosaToLinalgNamedOptions(),
     // Note: Default to 'none' level unless otherwise specified.
     std::optional<tosa::TosaValidationOptions> validationOptions =
-        tosa::TosaValidationOptions{
-            {"none"}, false, tosa::TosaLevelEnum::None});
+        tosa::TosaValidationOptions{false, false});
 
 /// Populates TOSA to linalg pipelines
 /// Currently, this includes only the "tosa-to-linalg-pipeline".
@@ -52,7 +51,8 @@ void populateTosaToLinalgConversionPatterns(const TypeConverter &converter,
 
 /// Populates conversion passes from TOSA dialect to Linalg named operations.
 void populateTosaToLinalgNamedConversionPatterns(
-    RewritePatternSet *patterns, const TosaToLinalgNamedOptions &options);
+    const TypeConverter &converter, RewritePatternSet *patterns,
+    const TosaToLinalgNamedOptions &options);
 
 } // namespace tosa
 } // namespace mlir

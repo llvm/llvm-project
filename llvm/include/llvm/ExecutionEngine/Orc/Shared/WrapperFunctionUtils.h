@@ -47,7 +47,7 @@ public:
   ///
   /// Warning: This should only be used by clients writing wrapper-function
   /// caller utilities (like TargetProcessControl).
-  WrapperFunctionResult(CWrapperFunctionResult R) : R(R) {
+  explicit WrapperFunctionResult(CWrapperFunctionResult R) : R(R) {
     // Reset R.
     init(R);
   }
@@ -527,7 +527,7 @@ public:
   /// Handle a call to an async wrapper function.
   template <typename HandlerT, typename SendResultT>
   static void handleAsync(const char *ArgData, size_t ArgSize,
-                          HandlerT &&Handler, SendResultT &&SendResult) {
+                          SendResultT &&SendResult, HandlerT &&Handler) {
     using WFAHH = detail::WrapperFunctionAsyncHandlerHelper<
         std::remove_reference_t<HandlerT>, ResultSerializer, SPSTagTs...>;
     WFAHH::applyAsync(std::forward<HandlerT>(Handler),
@@ -586,12 +586,12 @@ public:
 ///   @code{.cpp}
 ///   class MyClass {
 ///   public:
-///     void myMethod(uint32_t, bool) { ... }
+///     std::string myMethod(uint32_t, bool) { ... }
 ///   };
 ///
 ///   // SPS Method signature -- note MyClass object address as first argument.
 ///   using SPSMyMethodWrapperSignature =
-///     SPSTuple<SPSExecutorAddr, uint32_t, bool>;
+///     SPSString(SPSExecutorAddr, uint32_t, bool);
 ///
 ///   WrapperFunctionResult
 ///   myMethodCallWrapper(const char *ArgData, size_t ArgSize) {

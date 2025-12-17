@@ -429,7 +429,9 @@ define <16 x float> @testf16_inp_mask(<16 x float> %a, i16 %mask)  {
 ; WIN64-KNL-NEXT:    kmovw %edx, %k1
 ; WIN64-KNL-NEXT:    callq func_float16_mask
 ; WIN64-KNL-NEXT:    nop
+; WIN64-KNL-NEXT:    .seh_startepilogue
 ; WIN64-KNL-NEXT:    addq $40, %rsp
+; WIN64-KNL-NEXT:    .seh_endepilogue
 ; WIN64-KNL-NEXT:    retq
 ; WIN64-KNL-NEXT:    .seh_endproc
 ;
@@ -443,7 +445,9 @@ define <16 x float> @testf16_inp_mask(<16 x float> %a, i16 %mask)  {
 ; WIN64-SKX-NEXT:    kmovd %edx, %k1
 ; WIN64-SKX-NEXT:    callq func_float16_mask
 ; WIN64-SKX-NEXT:    nop
+; WIN64-SKX-NEXT:    .seh_startepilogue
 ; WIN64-SKX-NEXT:    addq $40, %rsp
+; WIN64-SKX-NEXT:    .seh_endepilogue
 ; WIN64-SKX-NEXT:    retq
 ; WIN64-SKX-NEXT:    .seh_endproc
 ;

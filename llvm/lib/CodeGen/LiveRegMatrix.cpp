@@ -76,7 +76,7 @@ void LiveRegMatrixWrapperLegacy::releaseMemory() { LRM.releaseMemory(); }
 
 void LiveRegMatrix::releaseMemory() {
   for (unsigned i = 0, e = Matrix.size(); i != e; ++i) {
-    Matrix[i].clear();
+    Matrix[static_cast<MCRegUnit>(i)].clear();
     // No need to clear Queries here, since LiveIntervalUnion::Query doesn't
     // have anything important to clear and LiveRegMatrix's runOnFunction()
     // does a std::unique_ptr::reset anyways.
@@ -89,7 +89,7 @@ static bool foreachUnit(const TargetRegisterInfo *TRI,
                         Callable Func) {
   if (VRegInterval.hasSubRanges()) {
     for (MCRegUnitMaskIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-      unsigned Unit = (*Units).first;
+      MCRegUnit Unit = (*Units).first;
       LaneBitmask Mask = (*Units).second;
       for (const LiveInterval::SubRange &S : VRegInterval.subranges()) {
         if ((S.LaneMask & Mask).any()) {
@@ -115,7 +115,7 @@ void LiveRegMatrix::assign(const LiveInterval &VirtReg, MCRegister PhysReg) {
   VRM->assignVirt2Phys(VirtReg.reg(), PhysReg);
 
   foreachUnit(
-      TRI, VirtReg, PhysReg, [&](unsigned Unit, const LiveRange &Range) {
+      TRI, VirtReg, PhysReg, [&](MCRegUnit Unit, const LiveRange &Range) {
         LLVM_DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI) << ' ' << Range);
         Matrix[Unit].unify(VirtReg, Range);
         return false;
@@ -132,7 +132,7 @@ void LiveRegMatrix::unassign(const LiveInterval &VirtReg) {
   VRM->clearVirt(VirtReg.reg());
 
   foreachUnit(TRI, VirtReg, PhysReg,
-              [&](unsigned Unit, const LiveRange &Range) {
+              [&](MCRegUnit Unit, const LiveRange &Range) {
                 LLVM_DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI));
                 Matrix[Unit].extract(VirtReg, Range);
                 return false;
@@ -165,7 +165,8 @@ bool LiveRegMatrix::checkRegMaskInterference(const LiveInterval &VirtReg,
   // The BitVector is indexed by PhysReg, not register unit.
   // Regmask interference is more fine grained than regunits.
   // For example, a Win64 call can clobber %ymm8 yet preserve %xmm8.
-  return !RegMaskUsable.empty() && (!PhysReg || !RegMaskUsable.test(PhysReg));
+  return !RegMaskUsable.empty() &&
+         (!PhysReg || !RegMaskUsable.test(PhysReg.id()));
 }
 
 bool LiveRegMatrix::checkRegUnitInterference(const LiveInterval &VirtReg,
@@ -174,17 +175,17 @@ bool LiveRegMatrix::checkRegUnitInterference(const LiveInterval &VirtReg,
     return false;
   CoalescerPair CP(VirtReg.reg(), PhysReg, *TRI);
 
-  bool Result = foreachUnit(TRI, VirtReg, PhysReg, [&](unsigned Unit,
-                                                       const LiveRange &Range) {
-    const LiveRange &UnitRange = LIS->getRegUnit(Unit);
-    return Range.overlaps(UnitRange, CP, *LIS->getSlotIndexes());
-  });
+  bool Result = foreachUnit(
+      TRI, VirtReg, PhysReg, [&](MCRegUnit Unit, const LiveRange &Range) {
+        const LiveRange &UnitRange = LIS->getRegUnit(Unit);
+        return Range.overlaps(UnitRange, CP, *LIS->getSlotIndexes());
+      });
   return Result;
 }
 
 LiveIntervalUnion::Query &LiveRegMatrix::query(const LiveRange &LR,
-                                               MCRegister RegUnit) {
-  LiveIntervalUnion::Query &Q = Queries[RegUnit];
+                                               MCRegUnit RegUnit) {
+  LiveIntervalUnion::Query &Q = Queries[static_cast<unsigned>(RegUnit)];
   Q.init(UserTag, LR, Matrix[RegUnit]);
   return Q;
 }
@@ -205,7 +206,7 @@ LiveRegMatrix::checkInterference(const LiveInterval &VirtReg,
 
   // Check the matrix for virtual register interference.
   bool Interference = foreachUnit(TRI, VirtReg, PhysReg,
-                                  [&](MCRegister Unit, const LiveRange &LR) {
+                                  [&](MCRegUnit Unit, const LiveRange &LR) {
                                     return query(LR, Unit).checkInterference();
                                   });
   if (Interference)

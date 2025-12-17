@@ -147,7 +147,8 @@ protected:
   std::unique_ptr<BasicAAResult> BAR;
   std::unique_ptr<AAResults> AAR;
 
-  AliasAnalysisTest() : M("AliasAnalysisTest", C), TLI(TLII) {}
+  AliasAnalysisTest()
+      : M("AliasAnalysisTest", C), TLII(M.getTargetTriple()), TLI(TLII) {}
 
   AAResults &getAAResults(Function &F) {
     // Reset the Function AA results first to clear out any references.
@@ -186,6 +187,14 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
       AtomicRMWInst::Xchg, Addr, ConstantInt::get(IntType, 1), Alignment,
       AtomicOrdering::Monotonic, SyncScope::System, BB);
 
+  FunctionType *FooBarTy = FunctionType::get(Type::getVoidTy(C), {}, false);
+  Function::Create(FooBarTy, Function::ExternalLinkage, "foo", &M);
+  auto *BarF = Function::Create(FooBarTy, Function::ExternalLinkage, "bar", &M);
+  BarF->setDoesNotAccessMemory();
+
+  const Instruction *Foo = CallInst::Create(M.getFunction("foo"), {}, BB);
+  const Instruction *Bar = CallInst::Create(M.getFunction("bar"), {}, BB);
+
   ReturnInst::Create(C, nullptr, BB);
 
   auto &AA = getAAResults(*F);
@@ -203,6 +212,13 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
   EXPECT_EQ(AA.getModRefInfo(CmpXChg1, std::nullopt), ModRefInfo::ModRef);
   EXPECT_EQ(AA.getModRefInfo(AtomicRMW, MemoryLocation()), ModRefInfo::ModRef);
   EXPECT_EQ(AA.getModRefInfo(AtomicRMW, std::nullopt), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(Store1, Load1), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(Store1, Store1), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(Store1, Add1), ModRefInfo::NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(Store1, Foo), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(Store1, Bar), ModRefInfo::NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(Foo, Bar), ModRefInfo::NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(Foo, Foo), ModRefInfo::ModRef);
 }
 
 static Instruction *getInstructionByName(Function &F, StringRef Name) {
@@ -216,18 +232,18 @@ TEST_F(AliasAnalysisTest, BatchAAPhiCycles) {
   LLVMContext C;
   SMDiagnostic Err;
   std::unique_ptr<Module> M = parseAssemblyString(R"(
-    define void @f(i8* noalias %a, i1 %c) {
+    define void @f(ptr noalias %a, i1 %c) {
     entry:
       br label %loop
 
     loop:
-      %phi = phi i8* [ null, %entry ], [ %a2, %loop ]
+      %phi = phi ptr [ null, %entry ], [ %a2, %loop ]
       %offset1 = phi i64 [ 0, %entry ], [ %offset2, %loop]
       %offset2 = add i64 %offset1, 1
-      %a1 = getelementptr i8, i8* %a, i64 %offset1
-      %a2 = getelementptr i8, i8* %a, i64 %offset2
-      %s1 = select i1 %c, i8* %a1, i8* %phi
-      %s2 = select i1 %c, i8* %a2, i8* %a1
+      %a1 = getelementptr i8, ptr %a, i64 %offset1
+      %a2 = getelementptr i8, ptr %a, i64 %offset2
+      %s1 = select i1 %c, ptr %a1, ptr %phi
+      %s2 = select i1 %c, ptr %a2, ptr %a1
       br label %loop
     }
   )", Err, C);
@@ -264,15 +280,15 @@ TEST_F(AliasAnalysisTest, BatchAAPhiAssumption) {
   LLVMContext C;
   SMDiagnostic Err;
   std::unique_ptr<Module> M = parseAssemblyString(R"(
-    define void @f(i8* %a.base, i8* %b.base, i1 %c) {
+    define void @f(ptr %a.base, ptr %b.base, i1 %c) {
     entry:
       br label %loop
 
     loop:
-      %a = phi i8* [ %a.next, %loop ], [ %a.base, %entry ]
-      %b = phi i8* [ %b.next, %loop ], [ %b.base, %entry ]
-      %a.next = getelementptr i8, i8* %a, i64 1
-      %b.next = getelementptr i8, i8* %b, i64 1
+      %a = phi ptr [ %a.next, %loop ], [ %a.base, %entry ]
+      %b = phi ptr [ %b.next, %loop ], [ %b.base, %entry ]
+      %a.next = getelementptr i8, ptr %a, i64 1
+      %b.next = getelementptr i8, ptr %b, i64 1
       br label %loop
     }
   )", Err, C);
@@ -302,16 +318,16 @@ TEST_F(AliasAnalysisTest, PartialAliasOffset) {
   LLVMContext C;
   SMDiagnostic Err;
   std::unique_ptr<Module> M = parseAssemblyString(R"(
-    define void @foo(float* %arg, i32 %i) {
+    define void @foo(ptr %arg, i32 %i) {
     bb:
       %i2 = zext i32 %i to i64
-      %i3 = getelementptr inbounds float, float* %arg, i64 %i2
-      %i4 = bitcast float* %i3 to <2 x float>*
-      %L1 = load <2 x float>, <2 x float>* %i4, align 16
+      %i3 = getelementptr inbounds float, ptr %arg, i64 %i2
+      %i4 = bitcast ptr %i3 to ptr
+      %L1 = load <2 x float>, ptr %i4, align 16
       %i7 = add nuw nsw i32 %i, 1
       %i8 = zext i32 %i7 to i64
-      %i9 = getelementptr inbounds float, float* %arg, i64 %i8
-      %L2 = load float, float* %i9, align 4
+      %i9 = getelementptr inbounds float, ptr %arg, i64 %i8
+      %L2 = load float, ptr %i9, align 4
       ret void
     }
   )",
@@ -337,11 +353,11 @@ TEST_F(AliasAnalysisTest, PartialAliasOffsetSign) {
   LLVMContext C;
   SMDiagnostic Err;
   std::unique_ptr<Module> M = parseAssemblyString(R"(
-    define void @f(i64* %p) {
-      %L1 = load i64, i64* %p
-      %p.i8 = bitcast i64* %p to i8*
-      %q = getelementptr i8,  i8* %p.i8, i32 1
-      %L2 = load i8, i8* %q
+    define void @f(ptr %p) {
+      %L1 = load i64, ptr %p
+      %p.i8 = bitcast ptr %p to ptr
+      %q = getelementptr i8,  ptr %p.i8, i32 1
+      %L2 = load i8, ptr %q
       ret void
     }
   )",
@@ -372,10 +388,10 @@ protected:
 
 public:
   AAPassInfraTest()
-      : M(parseAssemblyString("define i32 @f(i32* %x, i32* %y) {\n"
+      : M(parseAssemblyString("define i32 @f(ptr %x, ptr %y) {\n"
                               "entry:\n"
-                              "  %lx = load i32, i32* %x\n"
-                              "  %ly = load i32, i32* %y\n"
+                              "  %lx = load i32, ptr %x\n"
+                              "  %ly = load i32, ptr %y\n"
                               "  %sum = add i32 %lx, %ly\n"
                               "  ret i32 %sum\n"
                               "}\n",

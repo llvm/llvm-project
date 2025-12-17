@@ -97,6 +97,41 @@ core.DivideZero (C, C++, ObjC)
 .. literalinclude:: checkers/dividezero_example.c
     :language: c
 
+.. _core-FixedAddressDereference:
+
+core.FixedAddressDereference (C, C++, ObjC)
+"""""""""""""""""""""""""""""""""""""""""""
+Check for dereferences of fixed addresses.
+
+A pointer contains a fixed address if it was set to a hard-coded value or it
+becomes otherwise obvious that at that point it can have only a single fixed
+numerical value.
+
+.. code-block:: c
+
+ void test1() {
+   int *p = (int *)0x020;
+   int x = p[0]; // warn
+ }
+
+ void test2(int *p) {
+   if (p == (int *)-1)
+     *p = 0; // warn
+ }
+
+ void test3() {
+   int (*p_function)(char, char);
+   p_function = (int (*)(char, char))0x04080;
+   int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
+ }
+
+If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
+to true (the default value), then this checker never reports dereference of
+pointers with a specified address space. If the option is set to false, then
+reports from the specific x86 address spaces 256, 257 and 258 are still
+suppressed, but fixed address dereferences from other address spaces are
+reported.
+
 .. _core-NonNullParamChecker:
 
 core.NonNullParamChecker (C, C++, ObjC)
@@ -117,19 +152,6 @@ Check for null pointers passed as arguments to a function whose arguments are re
 core.NullDereference (C, C++, ObjC)
 """""""""""""""""""""""""""""""""""
 Check for dereferences of null pointers.
-
-This checker specifically does
-not report null pointer dereferences for x86 and x86-64 targets when the
-address space is 256 (x86 GS Segment), 257 (x86 FS Segment), or 258 (x86 SS
-segment). See `X86/X86-64 Language Extensions
-<https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments>`__
-for reference.
-
-The ``SuppressAddressSpaces`` option suppresses
-warnings for null dereferences of all pointers with address spaces. You can
-disable this behavior with the option
-``-analyzer-config core.NullDereference:SuppressAddressSpaces=false``.
-*Defaults to true*.
 
 .. code-block:: objc
 
@@ -168,6 +190,63 @@ disable this behavior with the option
  void test() {
    MyClass *obj = 0;
    obj->x = 1; // warn
+ }
+
+Null pointer dereferences of pointers with address spaces are not always defined
+as error. Specifically on x86/x86-64 target if the pointer address space is
+256 (x86 GS Segment), 257 (x86 FS Segment), or 258 (x86 SS Segment), a null
+dereference is not defined as error. See `X86/X86-64 Language Extensions
+<https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments>`__
+for reference.
+
+If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
+to true (the default value), then this checker never reports dereference of
+pointers with a specified address space. If the option is set to false, then
+reports from the specific x86 address spaces 256, 257 and 258 are still
+suppressed, but null dereferences from other address spaces are reported.
+
+.. _core-NullPointerArithm:
+
+core.NullPointerArithm (C, C++)
+"""""""""""""""""""""""""""""""
+Check for undefined arithmetic operations with null pointers.
+
+The checker can detect the following cases:
+
+  - ``p + x`` and ``x + p`` where ``p`` is a null pointer and ``x`` is a nonzero
+    integer value.
+  - ``p - x`` where ``p`` is a null pointer and ``x`` is a nonzero integer
+    value.
+  - ``p1 - p2`` where one of ``p1`` and ``p2`` is null and the other a
+    non-null pointer.
+
+Result of these operations is undefined according to the standard.
+In the above listed cases, the checker will warn even if the expression
+described to be "nonzero" or "non-null" has unknown value, because it is likely
+that it can have non-zero value during the program execution.
+
+.. code-block:: c
+
+ void test1(int *p, int offset) {
+   if (p)
+     return;
+
+   int *p1 = p + offset; // warn: 'p' is null, 'offset' is unknown but likely non-zero
+ }
+
+ void test2(int *p, int offset) {
+   if (p) { } // this indicates that it is possible for 'p' to be null
+   if (offset == 0)
+     return;
+
+   int *p1 = p - offset; // warn: 'p' is null, 'offset' is known to be non-zero
+ }
+
+ void test3(char *p1, char *p2) {
+   if (p1)
+     return;
+
+   int a = p1 - p2; // warn: 'p1' is null, 'p2' can be likely non-null
  }
 
 .. _core-StackAddressEscape:
@@ -476,6 +555,9 @@ cplusplus.NewDelete (C++)
 """""""""""""""""""""""""
 Check for double-free and use-after-free problems. Traces memory managed by new/delete.
 
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
+
 .. literalinclude:: checkers/newdelete_example.cpp
     :language: cpp
 
@@ -484,6 +566,9 @@ Check for double-free and use-after-free problems. Traces memory managed by new/
 cplusplus.NewDeleteLeaks (C++)
 """"""""""""""""""""""""""""""
 Check for memory leaks. Traces memory managed by new/delete.
+
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
 
 .. code-block:: cpp
 
@@ -536,6 +621,42 @@ Do not attempt to create a std::string from a null pointer
      std::string msg(p); // warn: The parameter must not be null
    }
  }
+
+.. _cplusplus-PureVirtualCall:
+
+cplusplus.PureVirtualCall (C++)
+"""""""""""""""""""""""""""""""
+
+When `virtual methods are called during construction and destruction
+<https://en.cppreference.com/w/cpp/language/virtual#During_construction_and_destruction>`__
+the polymorphism is restricted to the class that's being constructed or
+destructed because the more derived contexts are either not yet initialized or
+already destructed.
+
+This checker reports situations where this restricted polymorphism causes a
+call to a pure virtual method, which is undefined behavior. (See also the
+related checker :ref:`optin-cplusplus-VirtualCall` which reports situations
+where the restricted polymorphism affects a call and the called method is not
+pure virtual – but may be still surprising for the programmer.)
+
+.. code-block:: cpp
+
+ struct A {
+   virtual int getKind() = 0;
+
+   A() {
+     // warn: This calls the pure virtual method A::getKind().
+     log << "Constructing " << getKind();
+   }
+   virtual ~A() {
+     releaseResources();
+   }
+   void releaseResources() {
+     // warn: This can call the pure virtual method A::getKind() when this is
+     // called from the destructor.
+     callSomeFunction(getKind());
+   }
+ };
 
 .. _deadcode-checkers:
 
@@ -696,7 +817,11 @@ enumerators at all.
 **Limitations**
 
 This checker does not accept the coding pattern where an enum type is used to
-store combinations of flag values:
+store combinations of flag values.
+Such enums should be annotated with the `__attribute__((flag_enum))` or by the
+`[[clang::flag_enum]]` attribute to signal this intent. Refer to the
+`documentation <https://clang.llvm.org/docs/AttributeReference.html#flag-enum>`_
+of this Clang attribute.
 
 .. code-block:: cpp
 
@@ -827,24 +952,40 @@ This checker has several options which can be set from command line (e.g.
 
 optin.cplusplus.VirtualCall (C++)
 """""""""""""""""""""""""""""""""
-Check virtual function calls during construction or destruction.
+
+When `virtual methods are called during construction and destruction
+<https://en.cppreference.com/w/cpp/language/virtual#During_construction_and_destruction>`__
+the polymorphism is restricted to the class that's being constructed or
+destructed because the more derived contexts are either not yet initialized or
+already destructed.
+
+Although this behavior is well-defined, it can surprise the programmer and
+cause unintended behavior, so this checker reports calls that appear to be
+virtual calls but can be affected by this restricted polymorphism.
+
+Note that situations where this restricted polymorphism causes a call to a pure
+virtual method (which is definitely invalid, triggers undefined behavior) are
+**reported by another checker:** :ref:`cplusplus-PureVirtualCall` and **this
+checker does not report them**.
 
 .. code-block:: cpp
 
- class A {
- public:
-   A() {
-     f(); // warn
-   }
-   virtual void f();
- };
+ struct A {
+   virtual int getKind();
 
- class A {
- public:
-   ~A() {
-     this->f(); // warn
+   A() {
+     // warn: This calls A::getKind() even if we are constructing an instance
+     // of a different class that is derived from A.
+     log << "Constructing " << getKind();
    }
-   virtual void f();
+   virtual ~A() {
+     releaseResources();
+   }
+   void releaseResources() {
+     // warn: This can be called within ~A() and calls A::getKind() even if
+     // we are destructing a class that is derived from A.
+     callSomeFunction(getKind());
+   }
  };
 
 .. _optin-mpi-MPI-Checker:
@@ -1006,7 +1147,16 @@ To override this threshold to e.g. 4 bytes, use the
 
 optin.portability.UnixAPI
 """""""""""""""""""""""""
-Finds implementation-defined behavior in UNIX/Posix functions.
+Reports situations where 0 is passed as the "size" argument of various
+allocation functions ( ``calloc``, ``malloc``, ``realloc``, ``reallocf``,
+``alloca``, ``__builtin_alloca``, ``__builtin_alloca_with_align``, ``valloc``).
+
+Note that similar functionality is also supported by :ref:`unix-Malloc` which
+reports code that *uses* memory allocated with size zero.
+
+(The name of this checker is motivated by the fact that it was originally
+introduced with the vague goal that it "Finds implementation-defined behavior
+in UNIX/Posix functions.")
 
 
 optin.taint
@@ -1263,6 +1413,9 @@ You can silence this warning either by bound checking the ``size`` parameter, or
 by explicitly marking the ``size`` parameter as sanitized. See the
 :ref:`optin-taint-GenericTaint` checker for an example.
 
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
+
 .. code-block:: c
 
   void vulnerable(void) {
@@ -1323,10 +1476,69 @@ security
 
 Security related checkers.
 
+.. _security-ArrayBound:
+
+security.ArrayBound (C, C++)
+""""""""""""""""""""""""""""
+Report out of bounds access to memory that is before the start or after the end
+of the accessed region (array, heap-allocated region, string literal etc.).
+This usually means incorrect indexing, but the checker also detects access via
+the operators ``*`` and ``->``.
+
+.. code-block:: c
+
+ void test_underflow(int x) {
+   int buf[100][100];
+   if (x < 0)
+     buf[0][x] = 1; // warn
+ }
+
+ void test_overflow() {
+   int buf[100];
+   int *p = buf + 100;
+   *p = 1; // warn
+ }
+
+If checkers like :ref:`unix-Malloc` or :ref:`cplusplus-NewDelete` are enabled
+to model the behavior of ``malloc()``, ``operator new`` and similar
+allocators), then this checker can also reports out of bounds access to
+dynamically allocated memory:
+
+.. code-block:: cpp
+
+ int *test_dynamic() {
+   int *mem = new int[100];
+   mem[-1] = 42; // warn
+   return mem;
+ }
+
+In uncertain situations (when the checker can neither prove nor disprove that
+overflow occurs), the checker assumes that the the index (more precisely, the
+memory offeset) is within bounds.
+
+However, if :ref:`optin-taint-GenericTaint` is enabled and the index/offset is
+tainted (i.e. it is influenced by an untrusted source), then this checker
+reports the potential out of bounds access:
+
+.. code-block:: c
+
+ void test_with_tainted_index() {
+   char s[] = "abc";
+   int x = getchar();
+   char c = s[x]; // warn: potential out of bounds access with tainted index
+ }
+
+.. note::
+
+  This checker is an improved and renamed version of the checker that was
+  previously known as ``alpha.security.ArrayBoundV2``. The old checker
+  ``alpha.security.ArrayBound`` was removed when the (previously
+  "experimental") V2 variant became stable enough for regular use.
+
 .. _security-cert-env-InvalidPtr:
 
 security.cert.env.InvalidPtr
-""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""
 
 Corresponds to SEI CERT Rules `ENV31-C <https://wiki.sei.cmu.edu/confluence/display/c/ENV31-C.+Do+not+rely+on+an+environment+pointer+following+an+operation+that+may+invalidate+it>`_ and `ENV34-C <https://wiki.sei.cmu.edu/confluence/display/c/ENV34-C.+Do+not+store+pointers+returned+by+certain+functions>`_.
 
@@ -1451,6 +1663,23 @@ Warn on uses of the 'bzero' function.
  void test() {
    bzero(ptr, n); // warn
  }
+
+.. _security-insecureAPI-decodeValueOfObjCType:
+
+security.insecureAPI.decodeValueOfObjCType (C)
+""""""""""""""""""""""""""""""""""""""""""""""
+Warn on uses of the Objective-C method ``-decodeValueOfObjCType:at:``.
+
+.. code-block:: objc
+
+  void test(NSCoder *decoder) {
+    unsigned int x;
+    [decoder decodeValueOfObjCType:"I" at:&x]; // warn
+  }
+
+This diagnostic is emitted only on Apple platforms where the safer
+``-decodeValueOfObjCType:at:size:`` alternative is available
+(iOS 11+, macOS 10.13+, tvOS 11+, watchOS 4.0+).
 
 .. _security-insecureAPI-getpw:
 
@@ -1691,6 +1920,27 @@ this) and always check the return value of these calls.
 
 This check corresponds to SEI CERT Rule `POS36-C <https://wiki.sei.cmu.edu/confluence/display/c/POS36-C.+Observe+correct+revocation+order+while+relinquishing+privileges>`_.
 
+.. _security-VAList:
+
+security.VAList (C, C++)
+""""""""""""""""""""""""
+Reports use of uninitialized (or already released) ``va_list`` objects and
+situations where a ``va_start`` call is not followed by ``va_end``.
+
+.. code-block:: c
+
+ int test_use_after_release(int x, ...) {
+   va_list va;
+   va_start(va, x);
+   va_end(va);
+   return va_arg(va, int); // warn: va is uninitialized
+ }
+
+ void test_leak(int x, ...) {
+   va_list va;
+   va_start(va, x);
+ } // warn: va is leaked
+
 .. _unix-checkers:
 
 unix
@@ -1857,6 +2107,9 @@ unix.Malloc (C)
 """""""""""""""
 Check for memory leaks, double free, and use-after-free problems. Traces memory managed by malloc()/free().
 
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
+
 .. literalinclude:: checkers/unix_malloc_example.c
     :language: c
 
@@ -1865,6 +2118,9 @@ Check for memory leaks, double free, and use-after-free problems. Traces memory 
 unix.MallocSizeof (C)
 """""""""""""""""""""
 Check for dubious ``malloc`` arguments involving ``sizeof``.
+
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
 
 .. code-block:: c
 
@@ -1880,6 +2136,9 @@ Check for dubious ``malloc`` arguments involving ``sizeof``.
 unix.MismatchedDeallocator (C, C++)
 """""""""""""""""""""""""""""""""""
 Check for mismatched deallocators.
+
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
 
 .. literalinclude:: checkers/mismatched_deallocator_example.cpp
     :language: c
@@ -2546,7 +2805,7 @@ Check for proper uses of CFNumber APIs.
 
  CFNumberRef test(unsigned char x) {
    return CFNumberCreate(0, kCFNumberSInt16Type, &x);
-    // warn: 8 bit integer is used to initialize a 16 bit integer
+    // warn: 8-bit integer is used to initialize a 16-bit integer
  }
 
 .. _osx-coreFoundation-CFRetainRelease:
@@ -2755,18 +3014,6 @@ the locking/unlocking of ``mtx_t`` mutexes.
    mtx_lock(&mtx1); // warn: This lock has already been acquired
  }
 
-.. _alpha-core-CastSize:
-
-alpha.core.CastSize (C)
-"""""""""""""""""""""""
-Check when casting a malloc'ed type ``T``, whether the size is a multiple of the size of ``T``.
-
-.. code-block:: c
-
- void test() {
-   int *x = (int *) malloc(11); // warn
- }
-
 .. _alpha-core-CastToStruct:
 
 alpha.core.CastToStruct (C, C++)
@@ -2908,6 +3155,23 @@ Either the comparison is useless or there is division by zero.
    var = 77 / x;
    if (x == 0) { } // warn
  }
+
+.. _alpha-core-StoreToImmutable:
+
+alpha.core.StoreToImmutable (C, C++)
+""""""""""""""""""""""""""""""""""""
+Check for writes to immutable memory regions. This implements part of SEI CERT Rule ENV30-C.
+
+This checker detects attempts to write to memory regions that are marked as immutable,
+including const variables, string literals, and other const-qualified memory.
+
+.. literalinclude:: checkers/storetoimmutable_example.cpp
+    :language: cpp
+
+**Solution**
+
+Avoid writing to const-qualified memory regions. If you need to modify the data,
+remove the const qualifier from the original declaration or use a mutable copy.
 
 alpha.cplusplus
 ^^^^^^^^^^^^^^^
@@ -3198,78 +3462,6 @@ Warns against using one vs. many plural pattern in code when generating localize
 alpha.security
 ^^^^^^^^^^^^^^
 
-.. _alpha-security-ArrayBound:
-
-alpha.security.ArrayBound (C)
-"""""""""""""""""""""""""""""
-Warn about buffer overflows (older checker).
-
-.. code-block:: c
-
- void test() {
-   char *s = "";
-   char c = s[1]; // warn
- }
-
- struct seven_words {
-   int c[7];
- };
-
- void test() {
-   struct seven_words a, *p;
-   p = &a;
-   p[0] = a;
-   p[1] = a;
-   p[2] = a; // warn
- }
-
- // note: requires unix.Malloc or
- // alpha.unix.MallocWithAnnotations checks enabled.
- void test() {
-   int *p = malloc(12);
-   p[3] = 4; // warn
- }
-
- void test() {
-   char a[2];
-   int *b = (int*)a;
-   b[1] = 3; // warn
- }
-
-.. _alpha-security-ArrayBoundV2:
-
-alpha.security.ArrayBoundV2 (C)
-"""""""""""""""""""""""""""""""
-Warn about buffer overflows (newer checker).
-
-.. code-block:: c
-
- void test() {
-   char *s = "";
-   char c = s[1]; // warn
- }
-
- void test() {
-   int buf[100];
-   int *p = buf;
-   p = p + 99;
-   p[1] = 1; // warn
- }
-
- // note: compiler has internal check for this.
- // Use -Wno-array-bounds to suppress compiler warning.
- void test() {
-   int buf[100][100];
-   buf[0][-1] = 1; // warn
- }
-
- // note: requires optin.taint check turned on.
- void test() {
-   char s[] = "abc";
-   int x = getchar();
-   char c = s[x]; // warn: index is tainted
- }
-
 .. _alpha-security-ReturnPtrRange:
 
 alpha.security.ReturnPtrRange (C)
@@ -3289,12 +3481,6 @@ Check for an out-of-bound pointer being returned to callers.
    int x;
    return x; // warn: undefined or garbage returned
  }
-
-
-alpha.security.cert
-^^^^^^^^^^^^^^^^^^^
-
-SEI CERT checkers which tries to find errors based on their `C coding rules <https://wiki.sei.cmu.edu/confluence/display/c/2+Rules>`_.
 
 alpha.unix
 ^^^^^^^^^^
@@ -3436,6 +3622,24 @@ Limitations:
 alpha.WebKit
 ^^^^^^^^^^^^
 
+alpha.webkit.ForwardDeclChecker
+"""""""""""""""""""""""""""""""
+Check for local variables, member variables, and function arguments that are forward declared.
+
+.. code-block:: cpp
+
+ struct Obj;
+ Obj* provide();
+
+ struct Foo {
+   Obj* ptr; // warn
+ };
+
+  void foo() {
+    Obj* obj = provide(); // warn
+    consume(obj); // warn
+  }
+
 .. _alpha-webkit-NoUncheckedPtrMemberChecker:
 
 alpha.webkit.MemoryUnsafeCastChecker
@@ -3481,6 +3685,33 @@ Raw pointers and references to an object which supports CheckedPtr or CheckedRef
  };
 
 See `WebKit Guidelines for Safer C++ Programming <https://github.com/WebKit/WebKit/wiki/Safer-CPP-Guidelines>`_ for details.
+
+alpha.webkit.NoUnretainedMemberChecker
+""""""""""""""""""""""""""""""""""""""""
+Raw pointers and references to a NS or CF object can't be used as class members or ivars. Only RetainPtr is allowed for CF types regardless of whether ARC is enabled or disabled. Only RetainPtr or OSObjectPtr is allowed for NS types when ARC is disabled.
+
+.. code-block:: cpp
+
+ struct Foo {
+   NSObject *ptr; // warn
+   dispatch_queue_t queue; // warn
+   // ...
+ };
+
+See `WebKit Guidelines for Safer C++ Programming <https://github.com/WebKit/WebKit/wiki/Safer-CPP-Guidelines>`_ for details.
+
+alpha.webkit.UnretainedLambdaCapturesChecker
+""""""""""""""""""""""""""""""""""""""""""""
+Raw pointers and references to NS or CF types can't be captured in lambdas. Only RetainPtr is allowed for CF types regardless of whether ARC is enabled or disabled, and only RetainPtr or OSObjectPtr is allowed for NS types when ARC is disabled.
+
+.. code-block:: cpp
+
+ void foo(NSObject *a, NSObject *b, dispatch_queue_t c) {
+   [&, a](){ // warn about 'a'
+     do_something(b); // warn about 'b'
+     dispatch_queue_get_specific(c, "some"); // warn about 'c'
+   };
+ };
 
 .. _alpha-webkit-UncountedCallArgsChecker:
 
@@ -3577,6 +3808,12 @@ The goal of this rule is to make sure that lifetime of any dynamically allocated
 
 The rules of when to use and not to use CheckedPtr / CheckedRef are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
 
+alpha.webkit.UnretainedCallArgsChecker
+""""""""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure that lifetime of any dynamically allocated NS or CF objects passed as a call argument keeps its memory region past the end of the call. This applies to call to any function, method, lambda, function pointer or functor. NS or CF objects aren't supposed to be allocated on stack so we check arguments for parameters of raw pointers and references to unretained types.
+
+The rules of when to use and not to use RetainPtr or OSObjectPtr are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
+
 alpha.webkit.UncountedLocalVarsChecker
 """"""""""""""""""""""""""""""""""""""
 The goal of this rule is to make sure that any uncounted local variable is backed by a ref-counted object with lifetime that is strictly larger than the scope of the uncounted local variable. To be on the safe side we require the scope of an uncounted variable to be embedded in the scope of ref-counted object that backs it.
@@ -3662,6 +3899,73 @@ Here are some examples of situations that we warn about as they *might* be poten
       // The scope of uncounted is not EMBEDDED in the scope of counted.
       RefCountable* uncounted = counted.get(); // warn
     }
+
+alpha.webkit.UnretainedLocalVarsChecker
+"""""""""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure that any NS or CF local variable is backed by a RetainPtr or OSObjectPtr with lifetime that is strictly larger than the scope of the unretained local variable. To be on the safe side we require the scope of an unretained variable to be embedded in the scope of RetainPtr or OSObjectPtr object that backs it.
+
+The rules of when to use and not to use RetainPtr or OSObjectPtr are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
+
+These are examples of cases that we consider safe:
+
+  .. code-block:: cpp
+
+    void foo1() {
+      RetainPtr<NSObject> retained;
+      // The scope of unretained is EMBEDDED in the scope of retained.
+      {
+        NSObject* unretained = retained.get(); // ok
+      }
+    }
+
+    void foo2(RetainPtr<NSObject> retained_param) {
+      NSObject* unretained = retained_param.get(); // ok
+    }
+
+    void FooClass::foo_method() {
+      NSObject* unretained = this; // ok
+    }
+
+Here are some examples of situations that we warn about as they *might* be potentially unsafe. The logic is that either we're able to guarantee that a local variable is safe or it's considered unsafe.
+
+  .. code-block:: cpp
+
+    void foo1() {
+      NSObject* unretained = [[NSObject alloc] init]; // warn
+    }
+
+    NSObject* global_unretained;
+    void foo2() {
+      NSObject* unretained = global_unretained; // warn
+    }
+
+    void foo3() {
+      RetainPtr<NSObject> retained;
+      // The scope of unretained is not EMBEDDED in the scope of retained.
+      NSObject* unretained = retained.get(); // warn
+    }
+
+webkit.RetainPtrCtorAdoptChecker
+""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure the constructors of RetainPtr and OSObjectPtr as well as adoptNS, adoptCF, and adoptOSObject are used correctly.
+When creating a RetainPtr or OSObjectPtr with +1 semantics, adoptNS, adoptCF, or adoptOSObject should be used, and in +0 semantics, RetainPtr or OSObjectPtr constructor should be used.
+Warn otherwise.
+
+These are examples of cases that we consider correct:
+
+  .. code-block:: cpp
+
+    RetainPtr ptr = adoptNS([[NSObject alloc] init]); // ok
+    RetainPtr ptr = CGImageGetColorSpace(image); // ok
+    OSObjectPtr ptr = adoptOSObject(dispatch_queue_create("some queue", nullptr)); // ok
+
+Here are some examples of cases that we consider incorrect use of RetainPtr constructor and adoptCF
+
+  .. code-block:: cpp
+
+    RetainPtr ptr = [[NSObject alloc] init]; // warn
+    auto ptr = adoptCF(CGImageGetColorSpace(image)); // warn
+    OSObjectPtr ptr = dispatch_queue_create("some queue", nullptr); // warn
 
 Debug Checkers
 ---------------

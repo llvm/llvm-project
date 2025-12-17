@@ -1,10 +1,10 @@
 # REQUIRES: asserts
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-jitlink -noexec -abs __ImageBase=0xfff00000 \
-# RUN: --debug-only=jitlink \
-# RUN: -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
-# RUN: %t 2>&1 | FileCheck %s
-# 
+# RUN: llvm-jitlink -num-threads=0 -debug-only=jitlink -noexec \
+# RUN:              -abs __ImageBase=0xfff00000 -slab-allocate 100Kb \
+# RUN:              -slab-address 0xfff00000 -slab-page-size 4096 %t 2>&1 \
+# RUN:              | FileCheck %s
+#
 # Check duplicate undefined external symbols are handled correctly.
 #
 # CHECK: Creating graph symbols...

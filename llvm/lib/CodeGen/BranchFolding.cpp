@@ -24,6 +24,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -41,6 +42,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
@@ -88,38 +90,61 @@ TailMergeSize("tail-merge-size",
 namespace {
 
   /// BranchFolderPass - Wrap branch folder in a machine function pass.
-  class BranchFolderPass : public MachineFunctionPass {
-  public:
-    static char ID;
+class BranchFolderLegacy : public MachineFunctionPass {
+public:
+  static char ID;
 
-    explicit BranchFolderPass(): MachineFunctionPass(ID) {}
+  explicit BranchFolderLegacy() : MachineFunctionPass(ID) {}
 
-    bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-      AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
-      AU.addRequired<ProfileSummaryInfoWrapperPass>();
-      AU.addRequired<TargetPassConfig>();
-      MachineFunctionPass::getAnalysisUsage(AU);
-    }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+    AU.addRequired<ProfileSummaryInfoWrapperPass>();
+    AU.addRequired<TargetPassConfig>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoPHIs);
-    }
-  };
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoPHIs();
+  }
+};
 
 } // end anonymous namespace
 
-char BranchFolderPass::ID = 0;
+char BranchFolderLegacy::ID = 0;
 
-char &llvm::BranchFolderPassID = BranchFolderPass::ID;
+char &llvm::BranchFolderPassID = BranchFolderLegacy::ID;
 
-INITIALIZE_PASS(BranchFolderPass, DEBUG_TYPE,
-                "Control Flow Optimizer", false, false)
+INITIALIZE_PASS(BranchFolderLegacy, DEBUG_TYPE, "Control Flow Optimizer", false,
+                false)
 
-bool BranchFolderPass::runOnMachineFunction(MachineFunction &MF) {
+PreservedAnalyses BranchFolderPass::run(MachineFunction &MF,
+                                        MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  bool EnableTailMerge =
+      !MF.getTarget().requiresStructuredCFG() && this->EnableTailMerge;
+
+  auto &MBPI = MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
+  auto *PSI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+                  .getCachedResult<ProfileSummaryAnalysis>(
+                      *MF.getFunction().getParent());
+  if (!PSI)
+    report_fatal_error(
+        "ProfileSummaryAnalysis is required for BranchFoldingPass", false);
+
+  auto &MBFI = MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  MBFIWrapper MBBFreqInfo(MBFI);
+  BranchFolder Folder(EnableTailMerge, /*CommonHoist=*/true, MBBFreqInfo, MBPI,
+                      PSI);
+  if (!Folder.OptimizeFunction(MF, MF.getSubtarget().getInstrInfo(),
+                               MF.getSubtarget().getRegisterInfo()))
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses();
+}
+
+bool BranchFolderLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
@@ -165,10 +190,10 @@ void BranchFolder::RemoveDeadBlock(MachineBasicBlock *MBB) {
   // Avoid matching if this pointer gets reused.
   TriedMerging.erase(MBB);
 
-  // Update call site info.
+  // Update call info.
   for (const MachineInstr &MI : *MBB)
-    if (MI.shouldUpdateCallSiteInfo())
-      MF->eraseCallSiteInfo(&MI);
+    if (MI.shouldUpdateAdditionalCallInfo())
+      MF->eraseAdditionalCallInfo(&MI);
 
   // Remove the block.
   MF->erase(MBB);
@@ -264,7 +289,7 @@ static unsigned HashMachineInstr(const MachineInstr &MI) {
     unsigned OperandHash = 0;
     switch (Op.getType()) {
     case MachineOperand::MO_Register:
-      OperandHash = Op.getReg();
+      OperandHash = Op.getReg().id();
       break;
     case MachineOperand::MO_Immediate:
       OperandHash = Op.getImm();
@@ -381,7 +406,7 @@ void BranchFolder::replaceTailWithBranchTo(MachineBasicBlock::iterator OldInst,
       // full registers:
       assert(P.LaneMask == LaneBitmask::getAll() &&
              "Can only handle full register.");
-      MCPhysReg Reg = P.PhysReg;
+      MCRegister Reg = P.PhysReg;
       if (!LiveRegs.available(*MRI, Reg))
         continue;
       DebugLoc DL;
@@ -838,7 +863,7 @@ void BranchFolder::mergeCommonTails(unsigned commonTailIndex) {
             "Reached BB end within common tail");
       }
       assert(MI.isIdenticalTo(*Pos) && "Expected matching MIIs!");
-      DL = DILocation::getMergedLocation(DL, Pos->getDebugLoc());
+      DL = DebugLoc::getMergedLocation(DL, Pos->getDebugLoc());
       NextCommonInsts[i] = ++Pos;
     }
     MI.setDebugLoc(DL);
@@ -909,7 +934,13 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
 
   // Sort by hash value so that blocks with identical end sequences sort
   // together.
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+  // If origin-tracking is enabled then MergePotentialElt is no longer a POD
+  // type, so we need std::sort instead.
+  std::sort(MergePotentials.begin(), MergePotentials.end());
+#else
   array_pod_sort(MergePotentials.begin(), MergePotentials.end());
+#endif
 
   // Walk through equivalence sets looking for actual exact matches.
   while (MergePotentials.size() > 1) {
@@ -1268,15 +1299,6 @@ static bool IsBetterFallthrough(MachineBasicBlock *MBB1,
   return MBB2I->isCall() && !MBB1I->isCall();
 }
 
-/// getBranchDebugLoc - Find and return, if any, the DebugLoc of the branch
-/// instructions on the block.
-static DebugLoc getBranchDebugLoc(MachineBasicBlock &MBB) {
-  MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
-  if (I != MBB.end() && I->isBranch())
-    return I->getDebugLoc();
-  return DebugLoc();
-}
-
 static void copyDebugInfoToPredecessor(const TargetInstrInfo *TII,
                                        MachineBasicBlock &MBB,
                                        MachineBasicBlock &PredMBB) {
@@ -1403,11 +1425,11 @@ ReoptimizeBlock:
     // destination, remove the branch, replacing it with an unconditional one or
     // a fall-through.
     if (PriorTBB && PriorTBB == PriorFBB) {
-      DebugLoc dl = getBranchDebugLoc(PrevBB);
+      DebugLoc Dl = PrevBB.findBranchDebugLoc();
       TII->removeBranch(PrevBB);
       PriorCond.clear();
       if (PriorTBB != MBB)
-        TII->insertBranch(PrevBB, PriorTBB, nullptr, PriorCond, dl);
+        TII->insertBranch(PrevBB, PriorTBB, nullptr, PriorCond, Dl);
       MadeChange = true;
       ++NumBranchOpts;
       goto ReoptimizeBlock;
@@ -1461,9 +1483,9 @@ ReoptimizeBlock:
     // If the prior block branches somewhere else on the condition and here if
     // the condition is false, remove the uncond second branch.
     if (PriorFBB == MBB) {
-      DebugLoc dl = getBranchDebugLoc(PrevBB);
+      DebugLoc Dl = PrevBB.findBranchDebugLoc();
       TII->removeBranch(PrevBB);
-      TII->insertBranch(PrevBB, PriorTBB, nullptr, PriorCond, dl);
+      TII->insertBranch(PrevBB, PriorTBB, nullptr, PriorCond, Dl);
       MadeChange = true;
       ++NumBranchOpts;
       goto ReoptimizeBlock;
@@ -1475,9 +1497,9 @@ ReoptimizeBlock:
     if (PriorTBB == MBB) {
       SmallVector<MachineOperand, 4> NewPriorCond(PriorCond);
       if (!TII->reverseBranchCondition(NewPriorCond)) {
-        DebugLoc dl = getBranchDebugLoc(PrevBB);
+        DebugLoc Dl = PrevBB.findBranchDebugLoc();
         TII->removeBranch(PrevBB);
-        TII->insertBranch(PrevBB, PriorFBB, nullptr, NewPriorCond, dl);
+        TII->insertBranch(PrevBB, PriorFBB, nullptr, NewPriorCond, Dl);
         MadeChange = true;
         ++NumBranchOpts;
         goto ReoptimizeBlock;
@@ -1513,9 +1535,9 @@ ReoptimizeBlock:
           LLVM_DEBUG(dbgs() << "\nMoving MBB: " << *MBB
                             << "To make fallthrough to: " << *PriorTBB << "\n");
 
-          DebugLoc dl = getBranchDebugLoc(PrevBB);
+          DebugLoc Dl = PrevBB.findBranchDebugLoc();
           TII->removeBranch(PrevBB);
-          TII->insertBranch(PrevBB, MBB, nullptr, NewPriorCond, dl);
+          TII->insertBranch(PrevBB, MBB, nullptr, NewPriorCond, Dl);
 
           // Move this block to the end of the function.
           MBB->moveAfter(&MF.back());
@@ -1576,9 +1598,9 @@ ReoptimizeBlock:
     if (CurTBB && CurFBB && CurFBB == MBB && CurTBB != MBB) {
       SmallVector<MachineOperand, 4> NewCond(CurCond);
       if (!TII->reverseBranchCondition(NewCond)) {
-        DebugLoc dl = getBranchDebugLoc(*MBB);
+        DebugLoc Dl = MBB->findBranchDebugLoc();
         TII->removeBranch(*MBB);
-        TII->insertBranch(*MBB, CurFBB, CurTBB, NewCond, dl);
+        TII->insertBranch(*MBB, CurFBB, CurTBB, NewCond, Dl);
         MadeChange = true;
         ++NumBranchOpts;
         goto ReoptimizeBlock;
@@ -1590,7 +1612,7 @@ ReoptimizeBlock:
     if (CurTBB && CurCond.empty() && !CurFBB &&
         IsBranchOnlyBlock(MBB) && CurTBB != MBB &&
         !MBB->hasAddressTaken() && !MBB->isEHPad()) {
-      DebugLoc dl = getBranchDebugLoc(*MBB);
+      DebugLoc Dl = MBB->findBranchDebugLoc();
       // This block may contain just an unconditional branch.  Because there can
       // be 'non-branch terminators' in the block, try removing the branch and
       // then seeing if the block is empty.
@@ -1624,9 +1646,9 @@ ReoptimizeBlock:
               assert(!PriorFBB && "Machine CFG out of date!");
               PriorFBB = MBB;
             }
-            DebugLoc pdl = getBranchDebugLoc(PrevBB);
+            DebugLoc PrevDl = PrevBB.findBranchDebugLoc();
             TII->removeBranch(PrevBB);
-            TII->insertBranch(PrevBB, PriorTBB, PriorFBB, PriorCond, pdl);
+            TII->insertBranch(PrevBB, PriorTBB, PriorFBB, PriorCond, PrevDl);
           }
 
           // Iterate through all the predecessors, revectoring each in-turn.
@@ -1659,10 +1681,11 @@ ReoptimizeBlock:
               bool NewCurUnAnalyzable = TII->analyzeBranch(
                   *PMBB, NewCurTBB, NewCurFBB, NewCurCond, true);
               if (!NewCurUnAnalyzable && NewCurTBB && NewCurTBB == NewCurFBB) {
-                DebugLoc pdl = getBranchDebugLoc(*PMBB);
+                DebugLoc PrevDl = PMBB->findBranchDebugLoc();
                 TII->removeBranch(*PMBB);
                 NewCurCond.clear();
-                TII->insertBranch(*PMBB, NewCurTBB, nullptr, NewCurCond, pdl);
+                TII->insertBranch(*PMBB, NewCurTBB, nullptr, NewCurCond,
+                                  PrevDl);
                 MadeChange = true;
                 ++NumBranchOpts;
               }
@@ -1681,7 +1704,7 @@ ReoptimizeBlock:
       }
 
       // Add the branch back if the block is more than just an uncond branch.
-      TII->insertBranch(*MBB, CurTBB, nullptr, CurCond, dl);
+      TII->insertBranch(*MBB, CurTBB, nullptr, CurCond, Dl);
     }
   }
 
@@ -1764,10 +1787,18 @@ ReoptimizeBlock:
       // below were performed for EH "FallThrough" blocks.  Therefore, even if
       // that appears not to be happening anymore, we should assume that it is
       // possible and not remove the "!FallThrough()->isEHPad" condition below.
+      //
+      // Similarly, the analyzeBranch call does not consider callbr, which also
+      // introduces the possibility of infinite rotation, as there may be
+      // multiple successors of PrevBB. Thus we check such case by
+      // FallThrough->isInlineAsmBrIndirectTarget().
+      // NOTE: Checking if PrevBB contains callbr is more precise, but much
+      // more expensive.
       MachineBasicBlock *PrevTBB = nullptr, *PrevFBB = nullptr;
       SmallVector<MachineOperand, 4> PrevCond;
-      if (FallThrough != MF.end() &&
-          !FallThrough->isEHPad() &&
+
+      if (FallThrough != MF.end() && !FallThrough->isEHPad() &&
+          !FallThrough->isInlineAsmBrIndirectTarget() &&
           !TII->analyzeBranch(PrevBB, PrevTBB, PrevFBB, PrevCond, true) &&
           PrevBB.isSuccessor(&*FallThrough)) {
         MBB->moveAfter(&MF.back());
@@ -1948,6 +1979,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   MachineBasicBlock::iterator FIB = FBB->begin();
   MachineBasicBlock::iterator TIE = TBB->end();
   MachineBasicBlock::iterator FIE = FBB->end();
+  MachineFunction &MF = *TBB->getParent();
   while (TIB != TIE && FIB != FIE) {
     // Skip dbg_value instructions. These do not count.
     TIB = skipDebugInstructionsForward(TIB, TIE, false);
@@ -1960,6 +1992,10 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
 
     if (TII->isPredicated(*TIB))
       // Hard to reason about register liveness with predicated instruction.
+      break;
+
+    if (!TII->isSafeToMove(*TIB, TBB, MF))
+      // Don't hoist the instruction if it isn't safe to move.
       break;
 
     bool IsSafe = true;
@@ -2054,7 +2090,74 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   if (!HasDups)
     return false;
 
-  MBB->splice(Loc, TBB, TBB->begin(), TIB);
+  // Hoist the instructions from [T.begin, TIB) and then delete [F.begin, FIB).
+  // If we're hoisting from a single block then just splice. Else step through
+  // and merge the debug locations.
+  if (TBB == FBB) {
+    MBB->splice(Loc, TBB, TBB->begin(), TIB);
+  } else {
+    // Merge the debug locations, and hoist and kill the debug instructions from
+    // both branches. FIXME: We could probably try harder to preserve some debug
+    // instructions (but at least this isn't producing wrong locations).
+    MachineInstrBuilder MIRBuilder(*MBB->getParent(), Loc);
+    auto HoistAndKillDbgInstr = [MBB, Loc](MachineBasicBlock::iterator DI) {
+      assert(DI->isDebugInstr() && "Expected a debug instruction");
+      if (DI->isDebugRef()) {
+        const TargetInstrInfo *TII =
+            MBB->getParent()->getSubtarget().getInstrInfo();
+        const MCInstrDesc &DBGV = TII->get(TargetOpcode::DBG_VALUE);
+        DI = BuildMI(*MBB->getParent(), DI->getDebugLoc(), DBGV, false, 0,
+                     DI->getDebugVariable(), DI->getDebugExpression());
+        MBB->insert(Loc, &*DI);
+        return;
+      }
+      // Deleting a DBG_PHI results in an undef at the referenced DBG_INSTR_REF.
+      if (DI->isDebugPHI()) {
+        DI->eraseFromParent();
+        return;
+      }
+      // Move DBG_LABELs without modifying them. Set DBG_VALUEs undef.
+      if (!DI->isDebugLabel())
+        DI->setDebugValueUndef();
+      DI->moveBefore(&*Loc);
+    };
+
+    // TIB and FIB point to the end of the regions to hoist/merge in TBB and
+    // FBB.
+    MachineBasicBlock::iterator FE = FIB;
+    MachineBasicBlock::iterator FI = FBB->begin();
+    for (MachineBasicBlock::iterator TI :
+         make_early_inc_range(make_range(TBB->begin(), TIB))) {
+      // Hoist and kill debug instructions from FBB. After this loop FI points
+      // to the next non-debug instruction to hoist (checked in assert after the
+      // TBB debug instruction handling code).
+      while (FI != FE && FI->isDebugInstr())
+        HoistAndKillDbgInstr(FI++);
+
+      // Kill debug instructions before moving.
+      if (TI->isDebugInstr()) {
+        HoistAndKillDbgInstr(TI);
+        continue;
+      }
+
+      // FI and TI now point to identical non-debug instructions.
+      assert(FI != FE && "Unexpected end of FBB range");
+      // Pseudo probes are excluded from the range when identifying foldable
+      // instructions, so we don't expect to see one now.
+      assert(!TI->isPseudoProbe() && "Unexpected pseudo probe in range");
+      // NOTE: The loop above checks CheckKillDead but we can't do that here as
+      // it modifies some kill markers after the check.
+      assert(TI->isIdenticalTo(*FI, MachineInstr::CheckDefs) &&
+             "Expected non-debug lockstep");
+
+      // Merge debug locs on hoisted instructions.
+      TI->setDebugLoc(
+          DILocation::getMergedLocation(TI->getDebugLoc(), FI->getDebugLoc()));
+      TI->moveBefore(&*Loc);
+      ++FI;
+    }
+  }
+
   FBB->erase(FBB->begin(), FIB);
 
   if (UpdateLiveIns)

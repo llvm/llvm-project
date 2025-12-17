@@ -20,7 +20,6 @@ endif()
 #       to clean up previous inconsistencies.
 
 set(SOURCES
-  ARCMigrate.cpp
   BuildSystem.cpp
   CIndex.cpp
   CIndexCXX.cpp
@@ -43,6 +42,7 @@ set(SOURCES
   Indexing.cpp
   FatalErrorHandler.cpp
   Rewrite.cpp
+  Obsolete.cpp
 
   ADDITIONAL_HEADERS
   CIndexDiagnostic.h
@@ -65,15 +65,12 @@ set(LIBS
   clangFrontend
   clangIndex
   clangLex
+  clangOptions
   clangRewrite
   clangSema
   clangSerialization
   clangTooling
 )
-
-if (CLANG_ENABLE_ARCMT)
-  list(APPEND LIBS clangARCMigrate)
-endif ()
 
 if (HAVE_LIBDL)
   list(APPEND LIBS ${CMAKE_DL_LIBS})
@@ -97,7 +94,7 @@ if(MSVC)
   set(LLVM_EXPORTED_SYMBOL_FILE)
 endif()
 
-if (UNIX AND NOT APPLE AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND NOT APPLE AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "AIX" AND NOT CYGWIN)
   set(LLVM_EXPORTED_SYMBOL_FILE)
   set(USE_VERSION_SCRIPT ${LLVM_HAVE_LINK_VERSION_SCRIPT})
 endif()
@@ -111,7 +108,7 @@ if (LLVM_EXPORTED_SYMBOL_FILE)
                      DEPENDS ${LIBCLANG_VERSION_SCRIPT_FILE})
 endif()
 
-if(LLVM_ENABLE_PIC OR (WIN32 AND NOT LIBCLANG_BUILD_STATIC))
+if(LLVM_ENABLE_PIC OR ((WIN32 OR CYGWIN) AND NOT LIBCLANG_BUILD_STATIC))
   set(ENABLE_SHARED SHARED)
 endif()
 
@@ -129,7 +126,7 @@ else()
   set(output_name "clang")
 endif()
 
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
     set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
     # libclang requires headers which need _ALL_SOURCE to build on AIX
     remove_definitions("-D_XOPEN_SOURCE=700")
@@ -190,7 +187,7 @@ if(ENABLE_SHARED)
     endif()
   endif()
   if (USE_VERSION_SCRIPT)
-    if (${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+    if ("${CMAKE_SYSTEM_NAME}" MATCHES "SunOS")
       include(CheckLinkerFlag)
       # The Solaris 11.4 linker supports a subset of GNU ld version scripts,
       # but requires a special option to enable it.
@@ -208,9 +205,6 @@ if(ENABLE_SHARED)
       target_link_options(libclang PRIVATE "-Wl,--version-script,${CMAKE_CURRENT_SOURCE_DIR}/libclang.map")
     endif()
     # Ensure that libclang.so gets rebuilt when the linker script changes.
-    set_property(SOURCE ARCMigrate.cpp APPEND PROPERTY
-                 OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libclang.map)
-
     set_target_properties(libclang PROPERTIES
                           VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX}
                           ${LIBCLANG_SOVERSION_ARG})

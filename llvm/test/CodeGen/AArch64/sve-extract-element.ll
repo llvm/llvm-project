@@ -12,6 +12,26 @@ define i8 @test_lane0_16xi8(<vscale x 16 x i8> %a) #0 {
   ret i8 %b
 }
 
+define i32 @test_lane0_16xi8_zext_i32(<vscale x 16 x i8> %a) #0 {
+; CHECK-LABEL: test_lane0_16xi8_zext_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w0, v0.b[0]
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 16 x i8> %a, i32 0
+  %c = zext i8 %b to i32
+  ret i32 %c
+}
+
+define i64 @test_lane0_16xi8_zext_i64(<vscale x 16 x i8> %a) #0 {
+; CHECK-LABEL: test_lane0_16xi8_zext_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w0, v0.b[0]
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 16 x i8> %a, i32 0
+  %c = zext i8 %b to i64
+  ret i64 %c
+}
+
 define i8 @test_lane15_16xi8(<vscale x 16 x i8> %a) #0 {
 ; CHECK-LABEL: test_lane15_16xi8:
 ; CHECK:       // %bb.0:
@@ -19,6 +39,26 @@ define i8 @test_lane15_16xi8(<vscale x 16 x i8> %a) #0 {
 ; CHECK-NEXT:    ret
   %b = extractelement <vscale x 16 x i8> %a, i32 15
   ret i8 %b
+}
+
+define i32 @test_lane15_16xi8_zext_i32(<vscale x 16 x i8> %a) #0 {
+; CHECK-LABEL: test_lane15_16xi8_zext_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w0, v0.b[15]
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 16 x i8> %a, i32 15
+  %c = zext i8 %b to i32
+  ret i32 %c
+}
+
+define i64 @test_lane15_16xi8_zext_i64(<vscale x 16 x i8> %a) #0 {
+; CHECK-LABEL: test_lane15_16xi8_zext_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w0, v0.b[15]
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 16 x i8> %a, i32 15
+  %c = zext i8 %b to i64
+  ret i64 %c
 }
 
 define i8 @test_lane16_16xi8(<vscale x 16 x i8> %a) #0 {
@@ -31,6 +71,32 @@ define i8 @test_lane16_16xi8(<vscale x 16 x i8> %a) #0 {
   ret i8 %b
 }
 
+; FIXME: FMOV+AND -> UMOV.
+define i32 @test_lane16_16xi8_zext_i32(<vscale x 16 x i8> %a) #0 {
+; CHECK-LABEL: test_lane16_16xi8_zext_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.b, z0.b[16]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0xff
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 16 x i8> %a, i32 16
+  %c = zext i8 %b to i32
+  ret i32 %c
+}
+
+; FIXME: FMOV+AND -> UMOV.
+define i64 @test_lane16_16xi8_zext_i64(<vscale x 16 x i8> %a) #0 {
+; CHECK-LABEL: test_lane16_16xi8_zext_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.b, z0.b[16]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and x0, x8, #0xff
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 16 x i8> %a, i32 16
+  %c = zext i8 %b to i64
+  ret i64 %c
+}
+
 define i16 @test_lane0_8xi16(<vscale x 8 x i16> %a) #0 {
 ; CHECK-LABEL: test_lane0_8xi16:
 ; CHECK:       // %bb.0:
@@ -38,6 +104,26 @@ define i16 @test_lane0_8xi16(<vscale x 8 x i16> %a) #0 {
 ; CHECK-NEXT:    ret
   %b = extractelement <vscale x 8 x i16> %a, i32 0
   ret i16 %b
+}
+
+define i32 @test_lane0_8xi16_zext_i32(<vscale x 8 x i16> %a) #0 {
+; CHECK-LABEL: test_lane0_8xi16_zext_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w0, v0.h[0]
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 8 x i16> %a, i32 0
+  %c = zext i16 %b to i32
+  ret i32 %c
+}
+
+define i64 @test_lane0_8xi16_zext_i64(<vscale x 8 x i16> %a) #0 {
+; CHECK-LABEL: test_lane0_8xi16_zext_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w0, v0.h[0]
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 8 x i16> %a, i32 0
+  %c = zext i16 %b to i64
+  ret i64 %c
 }
 
 define i16 @test_lane7_8xi16(<vscale x 8 x i16> %a) #0 {
@@ -49,6 +135,26 @@ define i16 @test_lane7_8xi16(<vscale x 8 x i16> %a) #0 {
   ret i16 %b
 }
 
+define i32 @test_lane7_8xi16_zext_i32(<vscale x 8 x i16> %a) #0 {
+; CHECK-LABEL: test_lane7_8xi16_zext_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w0, v0.h[7]
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 8 x i16> %a, i32 7
+  %c = zext i16 %b to i32
+  ret i32 %c
+}
+
+define i64 @test_lane7_8xi16_zext_i64(<vscale x 8 x i16> %a) #0 {
+; CHECK-LABEL: test_lane7_8xi16_zext_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w0, v0.h[7]
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 8 x i16> %a, i32 7
+  %c = zext i16 %b to i64
+  ret i64 %c
+}
+
 define i16 @test_lane8_8xi16(<vscale x 8 x i16> %a) #0 {
 ; CHECK-LABEL: test_lane8_8xi16:
 ; CHECK:       // %bb.0:
@@ -57,6 +163,32 @@ define i16 @test_lane8_8xi16(<vscale x 8 x i16> %a) #0 {
 ; CHECK-NEXT:    ret
   %b = extractelement <vscale x 8 x i16> %a, i32 8
   ret i16 %b
+}
+
+; FIXME: FMOV+AND -> UMOV.
+define i32 @test_lane8_8xi16_zext_i32(<vscale x 8 x i16> %a) #0 {
+; CHECK-LABEL: test_lane8_8xi16_zext_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.h, z0.h[8]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0xffff
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 8 x i16> %a, i32 8
+  %c = zext i16 %b to i32
+  ret i32 %c
+}
+
+; FIXME: FMOV+AND -> UMOV.
+define i64 @test_lane8_8xi16_zext_i64(<vscale x 8 x i16> %a) #0 {
+; CHECK-LABEL: test_lane8_8xi16_zext_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.h, z0.h[8]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and x0, x8, #0xffff
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 8 x i16> %a, i32 8
+  %c = zext i16 %b to i64
+  ret i64 %c
 }
 
 define i32 @test_lane0_4xi32(<vscale x 4 x i32> %a) #0 {
@@ -523,9 +655,8 @@ define double @test_lanex_2xf64(<vscale x 2 x double> %a, i32 %x) #0 {
 define i32 @test_undef_lane_4xi32(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: test_undef_lane_4xi32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %b = extractelement <vscale x 4 x i32> %a, i32 undef
+  %b = extractelement <vscale x 4 x i32> %a, i32 poison
   ret i32 %b
 }
 
@@ -533,7 +664,7 @@ define i8 @extract_of_insert_undef_16xi8(i8 %a) #0 {
 ; CHECK-LABEL: extract_of_insert_undef_16xi8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
-  %b = insertelement <vscale x 16 x i8> undef, i8 %a, i32 0
+  %b = insertelement <vscale x 16 x i8> poison, i8 %a, i32 0
   %c = extractelement <vscale x 16 x i8> %b, i32 0
   ret i8 %c
 }
@@ -582,8 +713,8 @@ define i64 @test_lanex_splat_2xi64(i64 %x, i32 %y) #0 {
 ; CHECK-LABEL: test_lanex_splat_2xi64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 2 x i64> undef, i64 %x, i32 0
-  %b = shufflevector <vscale x 2 x i64> %a, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %a = insertelement <vscale x 2 x i64> poison, i64 %x, i32 0
+  %b = shufflevector <vscale x 2 x i64> %a, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
   %c = extractelement <vscale x 2 x i64> %b, i32 %y
   ret i64 %c
 }

@@ -7,6 +7,7 @@ set(link_libs
   clangBasic
   clangCodeGen
   clangDriver
+  clangOptions
   clangExtractAPI
   clangFrontend
   clangRewriteFrontend
@@ -15,16 +16,22 @@ set(link_libs
 set(deps)
 
 if(CLANG_ENABLE_CIR)
+  list(APPEND deps
+    MLIRBuiltinOpsIncGen
+  )
   list(APPEND link_libs
     clangCIRFrontendAction
+    MLIRCIRTransforms
     MLIRIR
+    MLIRPass
     )
-endif()
+  list(APPEND deps
+    MLIRBuiltinLocationAttributesIncGen
+    MLIRBuiltinTypeInterfacesIncGen
+    )
 
-if(CLANG_ENABLE_ARCMT)
-  list(APPEND link_libs
-    clangARCMigrate
-    )
+  include_directories(${LLVM_MAIN_SRC_DIR}/../mlir/include)
+  include_directories(${CMAKE_BINARY_DIR}/tools/mlir/include)
 endif()
 
 if(CLANG_ENABLE_STATIC_ANALYZER)

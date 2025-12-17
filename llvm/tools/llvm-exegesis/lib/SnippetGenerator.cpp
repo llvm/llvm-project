@@ -21,8 +21,16 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Program.h"
 
+#define DEBUG_TYPE "snippet-generator"
+
 namespace llvm {
 namespace exegesis {
+
+static cl::opt<unsigned>
+    RandomGeneratorSeed("random-generator-seed",
+                        cl::desc("The seed value to use for the random number "
+                                 "generator when generating snippets."),
+                        cl::init(0));
 
 std::vector<CodeTemplate> getSingleton(CodeTemplate &&CT) {
   std::vector<CodeTemplate> Result;
@@ -47,9 +55,9 @@ Error SnippetGenerator::generateConfigurations(
   // using the scratch register and its aliasing registers.
   if (Variant.getInstr().hasMemoryOperands()) {
     const auto &ET = State.getExegesisTarget();
-    unsigned ScratchSpacePointerInReg =
+    MCRegister ScratchSpacePointerInReg =
         ET.getScratchMemoryRegister(State.getTargetMachine().getTargetTriple());
-    if (ScratchSpacePointerInReg == 0)
+    if (!ScratchSpacePointerInReg.isValid())
       return make_error<Failure>(
           "Infeasible : target does not support memory instructions");
     const auto &ScratchRegAliases =
@@ -58,7 +66,7 @@ Error SnippetGenerator::generateConfigurations(
     // FIXME: We could make a copy of the scratch register.
     for (const auto &Op : Variant.getInstr().Operands) {
       if (Op.isDef() && Op.isImplicitReg() &&
-          ScratchRegAliases.test(Op.getImplicitReg()))
+          ScratchRegAliases.test(Op.getImplicitReg().id()))
         return make_error<Failure>(
             "Infeasible : memory instruction uses scratch memory register");
     }
@@ -114,38 +122,38 @@ std::vector<RegisterValue> SnippetGenerator::computeRegisterInitialValues(
   // If target always expects a scratch memory register as live input,
   // mark it as defined.
   const ExegesisTarget &Target = State.getExegesisTarget();
-  unsigned ScratchMemoryReg = Target.getScratchMemoryRegister(
+  MCRegister ScratchMemoryReg = Target.getScratchMemoryRegister(
       State.getTargetMachine().getTargetTriple());
-  DefinedRegs.set(ScratchMemoryReg);
+  DefinedRegs.set(ScratchMemoryReg.id());
   std::vector<RegisterValue> RIV;
   for (const InstructionTemplate &IT : Instructions) {
     // Returns the register that this Operand sets or uses, or 0 if this is not
     // a register.
-    const auto GetOpReg = [&IT](const Operand &Op) -> unsigned {
+    const auto GetOpReg = [&IT](const Operand &Op) -> MCRegister {
       if (Op.isMemory())
-        return 0;
+        return MCRegister();
       if (Op.isImplicitReg())
         return Op.getImplicitReg();
       if (Op.isExplicit() && IT.getValueFor(Op).isReg())
         return IT.getValueFor(Op).getReg();
-      return 0;
+      return MCRegister();
     };
     // Collect used registers that have never been def'ed.
     for (const Operand &Op : IT.getInstr().Operands) {
       if (Op.isUse()) {
-        const unsigned Reg = GetOpReg(Op);
-        if (Reg > 0 && !DefinedRegs.test(Reg)) {
+        const MCRegister Reg = GetOpReg(Op);
+        if (Reg && !DefinedRegs.test(Reg.id())) {
           RIV.push_back(RegisterValue::zero(Reg));
-          DefinedRegs.set(Reg);
+          DefinedRegs.set(Reg.id());
         }
       }
     }
     // Mark defs as having been def'ed.
     for (const Operand &Op : IT.getInstr().Operands) {
       if (Op.isDef()) {
-        const unsigned Reg = GetOpReg(Op);
-        if (Reg > 0)
-          DefinedRegs.set(Reg);
+        const MCRegister Reg = GetOpReg(Op);
+        if (Reg)
+          DefinedRegs.set(Reg.id());
       }
     }
   }
@@ -188,7 +196,11 @@ generateUnconstrainedCodeTemplates(const InstructionTemplate &Variant,
 
 std::mt19937 &randomGenerator() {
   static std::random_device RandomDevice;
-  static std::mt19937 RandomGenerator(RandomDevice());
+  unsigned RandomSeed = RandomGeneratorSeed.getNumOccurrences()
+                            ? RandomGeneratorSeed
+                            : RandomDevice();
+  LLVM_DEBUG(dbgs() << "Using random seed " << RandomSeed << ".\n");
+  static std::mt19937 RandomGenerator(RandomSeed);
   return RandomGenerator;
 }
 
@@ -276,6 +288,10 @@ static Error randomizeMCOperand(const LLVMState &State,
     AssignedValue = MCOperand::createReg(randomBit(AllowedRegs));
     break;
   }
+  /// Omit pc-relative operands to imm value based on the instruction
+  case MCOI::OperandType::OPERAND_PCREL:
+    return State.getExegesisTarget().randomizeTargetMCOperand(
+        Instr, Var, AssignedValue, ForbiddenRegs);
   default:
     break;
   }

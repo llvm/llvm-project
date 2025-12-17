@@ -20,6 +20,7 @@ endif()
 
 add_subdirectory(src)
 add_subdirectory(utils)
+add_subdirectory(shared)
 
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()

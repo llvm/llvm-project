@@ -8,7 +8,7 @@
 ; GCN: WaveLimiterHint : 1
 define amdgpu_kernel void @test_membound(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1) {
 ; CHECK-LABEL: define amdgpu_kernel void @test_membound(
-; CHECK-SAME: ptr addrspace(1) nocapture readonly [[ARG:%.*]], ptr addrspace(1) nocapture [[ARG1:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], ptr addrspace(1) captures(none) [[ARG1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP]] to i64
@@ -42,7 +42,7 @@ bb:
 ; GCN: MemoryBound: 1
 define amdgpu_kernel void @test_membound_1(ptr addrspace(1) nocapture readonly %ptr.0,
 ; CHECK-LABEL: define amdgpu_kernel void @test_membound_1(
-; CHECK-SAME: ptr addrspace(1) nocapture readonly [[PTR_0:%.*]], ptr addrspace(1) nocapture [[PTR_1:%.*]], <2 x double> [[ARG_0:%.*]], i32 [[ARG_1:%.*]], <4 x double> [[ARG_2:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[PTR_0:%.*]], ptr addrspace(1) captures(none) [[PTR_1:%.*]], <2 x double> [[ARG_0:%.*]], i32 [[ARG_1:%.*]], <4 x double> [[ARG_2:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[BB_ENTRY:.*:]]
 ; CHECK-NEXT:    [[ID_32:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[ID_0:%.*]] = zext i32 [[ID_32]] to i64
@@ -167,7 +167,7 @@ bb.ret:
 ; GCN: WaveLimiterHint : 1
 define amdgpu_kernel void @test_large_stride(ptr addrspace(1) nocapture %arg) {
 ; CHECK-LABEL: define amdgpu_kernel void @test_large_stride(
-; CHECK-SAME: ptr addrspace(1) nocapture [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ptr addrspace(1) captures(none) [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG]], i64 4096
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[TMP]], align 4
@@ -210,7 +210,7 @@ bb:
 ; GCN: WaveLimiterHint : 1
 define amdgpu_kernel void @test_indirect(ptr addrspace(1) nocapture %arg) {
 ; CHECK-LABEL: define amdgpu_kernel void @test_indirect(
-; CHECK-SAME: ptr addrspace(1) nocapture [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: ptr addrspace(1) captures(none) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG]], i64 2
@@ -315,7 +315,7 @@ bb2:                                              ; preds = %bb1
 
 define void @test_membound_func(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1) {
 ; CHECK-LABEL: define void @test_membound_func(
-; CHECK-SAME: ptr addrspace(1) nocapture readonly [[ARG:%.*]], ptr addrspace(1) nocapture [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], ptr addrspace(1) captures(none) [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP]] to i64
@@ -350,8 +350,8 @@ bb:
 ; GCN: WaveLimiterHint : 1
 define amdgpu_kernel void @kernel_call_test_membound_func(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1) {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_call_test_membound_func(
-; CHECK-SAME: ptr addrspace(1) nocapture readonly [[ARG:%.*]], ptr addrspace(1) nocapture [[ARG1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @test_membound_func(ptr addrspace(1) nocapture readonly [[ARG]], ptr addrspace(1) nocapture [[ARG1]])
+; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], ptr addrspace(1) captures(none) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @test_membound_func(ptr addrspace(1) readonly captures(none) [[ARG]], ptr addrspace(1) captures(none) [[ARG1]])
 ; CHECK-NEXT:    ret void
 ;
   call void @test_membound_func(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1)
@@ -364,8 +364,8 @@ define amdgpu_kernel void @kernel_call_test_membound_func(ptr addrspace(1) nocap
 ; GCN: WaveLimiterHint : 0
 define amdgpu_kernel void @kernel_indirect_call(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1, ptr %fptr) {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_indirect_call(
-; CHECK-SAME: ptr addrspace(1) nocapture readonly [[ARG:%.*]], ptr addrspace(1) nocapture [[ARG1:%.*]], ptr [[FPTR:%.*]]) {
-; CHECK-NEXT:    call void [[FPTR]](ptr addrspace(1) nocapture readonly [[ARG]], ptr addrspace(1) nocapture [[ARG1]])
+; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], ptr addrspace(1) captures(none) [[ARG1:%.*]], ptr [[FPTR:%.*]]) {
+; CHECK-NEXT:    call void [[FPTR]](ptr addrspace(1) readonly captures(none) [[ARG]], ptr addrspace(1) captures(none) [[ARG1]])
 ; CHECK-NEXT:    ret void
 ;
   call void %fptr(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1)
@@ -376,7 +376,7 @@ declare void @extern()
 
 define void @maybe_recursive_test_membound_func(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1) {
 ; CHECK-LABEL: define void @maybe_recursive_test_membound_func(
-; CHECK-SAME: ptr addrspace(1) nocapture readonly [[ARG:%.*]], ptr addrspace(1) nocapture [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], ptr addrspace(1) captures(none) [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP]] to i64
@@ -413,8 +413,8 @@ bb:
 ; GCN: WaveLimiterHint : 1
 define amdgpu_kernel void @kernel_call_maybe_recursive_test_membound_func(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1, ptr %fptr) {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_call_maybe_recursive_test_membound_func(
-; CHECK-SAME: ptr addrspace(1) nocapture readonly [[ARG:%.*]], ptr addrspace(1) nocapture [[ARG1:%.*]], ptr [[FPTR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @maybe_recursive_test_membound_func(ptr addrspace(1) nocapture readonly [[ARG]], ptr addrspace(1) nocapture [[ARG1]])
+; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], ptr addrspace(1) captures(none) [[ARG1:%.*]], ptr [[FPTR:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @maybe_recursive_test_membound_func(ptr addrspace(1) readonly captures(none) [[ARG]], ptr addrspace(1) captures(none) [[ARG1]])
 ; CHECK-NEXT:    ret void
 ;
   call void @maybe_recursive_test_membound_func(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1)
@@ -423,14 +423,14 @@ define amdgpu_kernel void @kernel_call_maybe_recursive_test_membound_func(ptr ad
 
 define void @mutually_recursive_test_membound_func_0(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1) {
 ; CHECK-LABEL: define void @mutually_recursive_test_membound_func_0(
-; CHECK-SAME: ptr addrspace(1) nocapture readonly [[ARG:%.*]], ptr addrspace(1) nocapture [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], ptr addrspace(1) captures(none) [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[ARG]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP3]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[ARG1]], i64 [[TMP2]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr addrspace(1) [[TMP5]], align 16
-; CHECK-NEXT:    call void @mutually_recursive_test_membound_func_0(ptr addrspace(1) nocapture readonly [[ARG]], ptr addrspace(1) nocapture [[ARG1]])
+; CHECK-NEXT:    call void @mutually_recursive_test_membound_func_0(ptr addrspace(1) readonly captures(none) [[ARG]], ptr addrspace(1) captures(none) [[ARG1]])
 ; CHECK-NEXT:    ret void
 ;
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -445,7 +445,7 @@ define void @mutually_recursive_test_membound_func_0(ptr addrspace(1) nocapture 
 
 define void @mutually_recursive_test_membound_func_1(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1) {
 ; CHECK-LABEL: define void @mutually_recursive_test_membound_func_1(
-; CHECK-SAME: ptr addrspace(1) nocapture readonly [[ARG:%.*]], ptr addrspace(1) nocapture [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], ptr addrspace(1) captures(none) [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw i64 [[TMP2]], 1
@@ -453,7 +453,7 @@ define void @mutually_recursive_test_membound_func_1(ptr addrspace(1) nocapture 
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP7]], align 16
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[ARG1]], i64 [[TMP6]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr addrspace(1) [[TMP9]], align 16
-; CHECK-NEXT:    call void @mutually_recursive_test_membound_func_1(ptr addrspace(1) nocapture readonly [[ARG]], ptr addrspace(1) nocapture [[ARG1]])
+; CHECK-NEXT:    call void @mutually_recursive_test_membound_func_1(ptr addrspace(1) readonly captures(none) [[ARG]], ptr addrspace(1) captures(none) [[ARG1]])
 ; CHECK-NEXT:    ret void
 ;
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -472,8 +472,8 @@ define void @mutually_recursive_test_membound_func_1(ptr addrspace(1) nocapture 
 ; GCN: WaveLimiterHint : 1
 define amdgpu_kernel void @kernel_call_mutually_recursive_test_membound_func_0(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1, ptr %fptr) {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_call_mutually_recursive_test_membound_func_0(
-; CHECK-SAME: ptr addrspace(1) nocapture readonly [[ARG:%.*]], ptr addrspace(1) nocapture [[ARG1:%.*]], ptr [[FPTR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @mutually_recursive_test_membound_func_0(ptr addrspace(1) nocapture readonly [[ARG]], ptr addrspace(1) nocapture [[ARG1]])
+; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], ptr addrspace(1) captures(none) [[ARG1:%.*]], ptr [[FPTR:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @mutually_recursive_test_membound_func_0(ptr addrspace(1) readonly captures(none) [[ARG]], ptr addrspace(1) captures(none) [[ARG1]])
 ; CHECK-NEXT:    ret void
 ;
   call void @mutually_recursive_test_membound_func_0(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1)

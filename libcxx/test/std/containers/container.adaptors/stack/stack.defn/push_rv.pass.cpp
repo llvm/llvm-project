@@ -18,18 +18,17 @@
 #include "test_macros.h"
 #include "MoveOnly.h"
 
-int main(int, char**)
-{
-    std::stack<MoveOnly> q;
-    q.push(MoveOnly(1));
-    assert(q.size() == 1);
-    assert(q.top() == MoveOnly(1));
-    q.push(MoveOnly(2));
-    assert(q.size() == 2);
-    assert(q.top() == MoveOnly(2));
-    q.push(MoveOnly(3));
-    assert(q.size() == 3);
-    assert(q.top() == MoveOnly(3));
+int main(int, char**) {
+  std::stack<MoveOnly> q;
+  q.push(MoveOnly(1));
+  assert(q.size() == 1);
+  assert(q.top() == MoveOnly(1));
+  q.push(MoveOnly(2));
+  assert(q.size() == 2);
+  assert(q.top() == MoveOnly(2));
+  q.push(MoveOnly(3));
+  assert(q.size() == 3);
+  assert(q.top() == MoveOnly(3));
 
   return 0;
 }

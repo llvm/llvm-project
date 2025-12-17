@@ -33,19 +33,17 @@ namespace opts {
 
 extern cl::OptionCategory BoltCategory;
 
-llvm::cl::opt<bool> InsertRetpolines("insert-retpolines",
-                                     cl::desc("run retpoline insertion pass"),
-                                     cl::cat(BoltCategory));
+static llvm::cl::opt<bool>
+    InsertRetpolines("insert-retpolines",
+                     cl::desc("run retpoline insertion pass"),
+                     cl::cat(BoltCategory));
 
-llvm::cl::opt<bool>
-RetpolineLfence("retpoline-lfence",
-  cl::desc("determine if lfence instruction should exist in the retpoline"),
-  cl::init(true),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+static llvm::cl::opt<bool> RetpolineLfence(
+    "retpoline-lfence",
+    cl::desc("determine if lfence instruction should exist in the retpoline"),
+    cl::init(true), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
 
-cl::opt<RetpolineInsertion::AvailabilityOptions> R11Availability(
+static cl::opt<RetpolineInsertion::AvailabilityOptions> R11Availability(
     "r11-availability",
     cl::desc("determine the availability of r11 before indirect branches"),
     cl::init(RetpolineInsertion::AvailabilityOptions::NEVER),
@@ -80,7 +78,7 @@ BinaryFunction *createNewRetpoline(BinaryContext &BC,
                                    const IndirectBranchInfo &BrInfo,
                                    bool R11Available) {
   auto &MIB = *BC.MIB;
-  MCContext &Ctx = *BC.Ctx.get();
+  MCContext &Ctx = *BC.Ctx;
   LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Creating a new retpoline function["
                     << RetpolineTag << "]\n");
 
@@ -197,7 +195,7 @@ std::string createRetpolineFunctionTag(BinaryContext &BC,
 
   TagOS << "+";
   if (MemRef.DispExpr)
-    MemRef.DispExpr->print(TagOS, BC.AsmInfo.get());
+    BC.AsmInfo->printExpr(TagOS, *MemRef.DispExpr);
   else
     TagOS << MemRef.DispImm;
 

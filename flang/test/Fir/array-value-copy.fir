@@ -333,8 +333,7 @@ func.func @array_of_types() {
     %c1_i64 = arith.constant 1 : i64
     %9 = arith.subi %8, %c1_i64 : i64
     %10 = fir.coordinate_of %1, %9 : (!fir.ref<!fir.array<10x!fir.type<_QTd{i:!fir.array<10xi32>}>>>, i64) -> !fir.ref<!fir.type<_QTd{i:!fir.array<10xi32>}>>
-    %11 = fir.field_index i, !fir.type<_QTd{i:!fir.array<10xi32>}>
-    %12 = fir.coordinate_of %10, %11 : (!fir.ref<!fir.type<_QTd{i:!fir.array<10xi32>}>>, !fir.field) -> !fir.ref<!fir.array<10xi32>>
+    %12 = fir.coordinate_of %10, i : (!fir.ref<!fir.type<_QTd{i:!fir.array<10xi32>}>>) -> !fir.ref<!fir.array<10xi32>>
     %c10 = arith.constant 10 : index
     %13 = arith.addi %c1_0, %c10 : index
     %14 = arith.subi %13, %c1_0 : index
@@ -363,7 +362,7 @@ func.func @array_of_types() {
 
 // CHECK-LABEL: func @array_of_types() {
 // CHECK:         %{{.*}} = fir.do_loop %{{.*}} = %{{.*}}  to %{{.*}}  step %{{.*}}  -> index {
-// CHECK:           %{{.*}} = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%arg2 = %17) -> (!fir.array<10xi32>) {
+// CHECK:           %{{.*}} = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<10xi32>) {
 // CHECK-NOT:         %{{.*}} = fir.array_update
 // CHECK:             %[[COOR0:.*]] = fir.array_coor %{{.*}}(%{{.*}}) [%{{.*}}] %{{.*}} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<i32>
 // CHECK:             fir.store %{{.*}} to %[[COOR0]] : !fir.ref<i32>
@@ -482,11 +481,9 @@ func.func @array_fetch_derived_type(%0 : !fir.ref<!fir.array<10x!fir.type<_QTu{m
 // CHECK-LABEL: func @array_fetch_derived_type(
 // CHECK-SAME:                                 %[[ARR0:.*]]: !fir.ref<!fir.array<10x!fir.type<_QTu{mt:!fir.type<_QTt{mem:i32}>}>>>) {
 // CHECK:         %{{.*}} = fir.do_loop
-// CHECK:           %[[FIELD_MT:.*]] = fir.field_index mt, !fir.type<_QTu{mt:!fir.type<_QTt{mem:i32}>}>
-// CHECK:           %[[FIELD_MEM:.*]] = fir.field_index mem, !fir.type<_QTt{mem:i32}>
 // CHECK-NOT:       %{{.*}} = fir.array_fetch
 // CHECK:           %[[COOR0:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<10x!fir.type<_QTu{mt:!fir.type<_QTt{mem:i32}>}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QTu{mt:!fir.type<_QTt{mem:i32}>}>>
-// CHECK:           %[[COOR_OF:.*]] = fir.coordinate_of %[[COOR0]], %[[FIELD_MT]], %[[FIELD_MEM]] : (!fir.ref<!fir.type<_QTu{mt:!fir.type<_QTt{mem:i32}>}>>, !fir.field, !fir.field) -> !fir.ref<i32>
+// CHECK:           %[[COOR_OF:.*]] = fir.coordinate_of %[[COOR0]], mt, mem : (!fir.ref<!fir.type<_QTu{mt:!fir.type<_QTt{mem:i32}>}>>) -> !fir.ref<i32>
 // CHECK:           %{{.*}} = fir.load %[[COOR_OF]] : !fir.ref<i32>
 
 // -----

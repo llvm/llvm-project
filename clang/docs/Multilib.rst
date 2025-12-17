@@ -122,6 +122,73 @@ subclass and a suitable base multilib variant is present then the
 It is the responsibility of layered multilib authors to ensure that headers and
 libraries in each layer are complete enough to mask any incompatibilities.
 
+Multilib custom flags
+=====================
+
+Introduction
+------------
+
+The multilib mechanism supports library variants that correspond to target,
+code generation or language command-line flags. Examples include ``--target``,
+``-mcpu``, ``-mfpu``, ``-mbranch-protection``, ``-fno-rtti``. However, some library
+variants are particular to features that do not correspond to any command-line
+option. Multithreading and semihosting, for instance, have no associated
+compiler option.
+
+In order to support the selection of variants for which no compiler option
+exists, the multilib specification includes the concept of *custom flags*.
+These flags have no impact on code generation and are only used in the multilib
+processing.
+
+Multilib custom flags follow this format in the driver invocation:
+
+::
+
+  -fmultilib-flag=<value>
+
+They are fed into the multilib system alongside the remaining flags.
+
+Custom flag declarations
+------------------------
+
+Custom flags can be declared in the YAML file under the *Flags* section.
+
+.. code-block:: yaml
+
+  Flags:
+  - Name: multithreaded
+    Values:
+    - Name: no-multithreaded
+      MacroDefines: [__SINGLE_THREAD__]
+    - Name: multithreaded
+    Default: no-multithreaded
+
+* Name: the name to categorize a flag.
+* Values: a list of flag Values (defined below).
+* Default: it specifies the name of the value this flag should take if not
+  specified in the command-line invocation. It must be one value from the Values
+  field.
+
+Each flag *Value* is defined as:
+
+* Name: name of the value. This is the string to be used in
+  ``-fmultilib-flag=<string>``.
+* MacroDefines: a list of strings to be used as macro definitions. Each string
+  is fed into the driver as ``-D<string>``.
+
+The namespace of flag values is common across all flags. This means that flag
+value names must be unique.
+
+Usage of custom flags in the *Variants* specifications
+------------------------------------------------------
+
+Library variants should list their requirement on one or more custom flags like
+they do for any other flag. Each requirement must be listed as
+``-fmultilib-flag=<value>``.
+
+A variant that does not specify a requirement on one particular flag can be
+matched against any value of that flag.
+
 Stability
 =========
 
@@ -221,6 +288,23 @@ For a more comprehensive example see
   - Match: --target=thumbv([7-9]|[1-9][0-9]+).*
     # Flags is a list of one or more strings.
     Flags: [--target=thumbv7m-none-eabi]
+
+  # Custom flag declarations. Each item is a different declaration.
+  Flags:
+    # Name of the flag
+  - Name: multithreaded
+    # List of custom flag values
+    Values:
+      # Name of the custom flag value. To be used in -fmultilib-flag=<string>.
+    - Name: no-multithreaded
+      # Macro definitions. Useful for defining extra macros for building the
+      # associated library variant(s).
+      MacroDefines: [__SINGLE_THREAD__]
+    - Name: multithreaded
+    # Default flag value. If no value for this flag declaration is used in the
+    # command-line, the multilib system will use this one. Must be equal to one
+    # of the flag value names from this flag declaration.
+    Default: no-multithreaded
 
 Design principles
 =================

@@ -1,11 +1,19 @@
 # RUN: env MLIR_RUNNER_UTILS=%mlir_runner_utils MLIR_C_RUNNER_UTILS=%mlir_c_runner_utils %PYTHON %s 2>&1 | FileCheck %s
 # REQUIRES: host-supports-jit
 import gc, sys, os, tempfile
+from textwrap import dedent
 from mlir.ir import *
 from mlir.passmanager import *
 from mlir.execution_engine import *
 from mlir.runtime import *
-from ml_dtypes import bfloat16, float8_e5m2
+
+try:
+    from ml_dtypes import bfloat16, float8_e5m2
+
+    HAS_ML_DTYPES = True
+except ModuleNotFoundError:
+    HAS_ML_DTYPES = False
+
 
 MLIR_RUNNER_UTILS = os.getenv(
     "MLIR_RUNNER_UTILS", "../../../../lib/libmlir_runner_utils.so"
@@ -13,6 +21,7 @@ MLIR_RUNNER_UTILS = os.getenv(
 MLIR_C_RUNNER_UTILS = os.getenv(
     "MLIR_C_RUNNER_UTILS", "../../../../lib/libmlir_c_runner_utils.so"
 )
+
 
 # Log everything to stderr and flush so that we have a unified stream to match
 # errors/info emitted by MLIR to stderr.
@@ -62,6 +71,7 @@ def testInvalidModule():
     func.func @foo() { return }
     """
         )
+        # CHECK: error: cannot be converted to LLVM IR: missing `LLVMTranslationDialectInterface` registration for dialect for op: func.func
         # CHECK: Got RuntimeError:  Failure while creating the ExecutionEngine.
         try:
             execution_engine = ExecutionEngine(module)
@@ -306,7 +316,7 @@ def testUnrankedMemRefWithOffsetCallback():
         log(arr)
 
     with Context():
-        # The module takes a subview of the argument memref, casts it to an unranked memref and 
+        # The module takes a subview of the argument memref, casts it to an unranked memref and
         # calls the callback with it.
         module = Module.parse(
             r"""
@@ -329,6 +339,7 @@ func.func private @some_callback_into_python(memref<*xf32>) attributes {llvm.emi
             "callback_memref",
             ctypes.pointer(ctypes.pointer(get_ranked_memref_descriptor(inp_arr))),
         )
+
 
 run(testUnrankedMemRefWithOffsetCallback)
 
@@ -559,12 +570,15 @@ def testBF16Memref():
         execution_engine.invoke("main", arg1_memref_ptr, arg2_memref_ptr)
 
         # test to-numpy utility
-        # CHECK: [0.5]
-        npout = ranked_memref_to_numpy(arg2_memref_ptr[0])
-        log(npout)
+        x = ranked_memref_to_numpy(arg2_memref_ptr[0])
+        assert len(x) == 1
+        assert x[0] == 0.5
 
 
-run(testBF16Memref)
+if HAS_ML_DTYPES:
+    run(testBF16Memref)
+else:
+    log("TEST: testBF16Memref")
 
 
 # Test f8E5M2 memrefs
@@ -598,12 +612,15 @@ def testF8E5M2Memref():
         execution_engine.invoke("main", arg1_memref_ptr, arg2_memref_ptr)
 
         # test to-numpy utility
-        # CHECK: [0.5]
-        npout = ranked_memref_to_numpy(arg2_memref_ptr[0])
-        log(npout)
+        x = ranked_memref_to_numpy(arg2_memref_ptr[0])
+        assert len(x) == 1
+        assert x[0] == 0.5
 
 
-run(testF8E5M2Memref)
+if HAS_ML_DTYPES:
+    run(testF8E5M2Memref)
+else:
+    log("TEST: testF8E5M2Memref")
 
 
 #  Test addition of two 2d_memref
@@ -772,15 +789,26 @@ def testDumpToObjectFile():
     try:
         with Context():
             module = Module.parse(
-                """
-        module {
-        func.func @main() attributes { llvm.emit_c_interface } {
-          return
-        }
-      }"""
+                dedent(
+                    """
+                    func.func private @printF32(f32)
+                    func.func @main(%arg0: f32) attributes { llvm.emit_c_interface } {
+                      call @printF32(%arg0) : (f32) -> ()
+                      return
+                    }
+                    """
+                )
             )
 
-            execution_engine = ExecutionEngine(lowerToLLVM(module), opt_level=3)
+            execution_engine = ExecutionEngine(
+                lowerToLLVM(module),
+                opt_level=3,
+                # Loading MLIR_C_RUNNER_UTILS is necessary even though we don't actually run the code (i.e., call printF32)
+                # because RTDyldObjectLinkingLayer::emit will try to resolve symbols before dumping
+                # (see the jitLinkForORC call at the bottom there).
+                shared_libs=[MLIR_C_RUNNER_UTILS],
+                enable_pic=True,
+            )
 
             # CHECK: Object file exists: True
             print(f"Object file exists: {os.path.exists(object_path)}")

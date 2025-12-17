@@ -47,12 +47,16 @@ BreakFunctionNames("break-funcs",
   cl::cat(BoltCategory));
 
 static cl::list<std::string>
-FunctionPadSpec("pad-funcs",
-  cl::CommaSeparated,
-  cl::desc("list of functions to pad with amount of bytes"),
-  cl::value_desc("func1:pad1,func2:pad2,func3:pad3,..."),
-  cl::Hidden,
-  cl::cat(BoltCategory));
+    FunctionPadSpec("pad-funcs", cl::CommaSeparated,
+                    cl::desc("list of functions to pad with amount of bytes"),
+                    cl::value_desc("func1:pad1,func2:pad2,func3:pad3,..."),
+                    cl::Hidden, cl::cat(BoltCategory));
+
+static cl::list<std::string> FunctionPadBeforeSpec(
+    "pad-funcs-before", cl::CommaSeparated,
+    cl::desc("list of functions to pad with amount of bytes"),
+    cl::value_desc("func1:pad1,func2:pad2,func3:pad3,..."), cl::Hidden,
+    cl::cat(BoltCategory));
 
 static cl::opt<bool> MarkFuncs(
     "mark-funcs",
@@ -70,11 +74,11 @@ X86AlignBranchBoundaryHotOnly("x86-align-branch-boundary-hot-only",
   cl::init(true),
   cl::cat(BoltOptCategory));
 
-size_t padFunction(const BinaryFunction &Function) {
-  static std::map<std::string, size_t> FunctionPadding;
-
-  if (FunctionPadding.empty() && !FunctionPadSpec.empty()) {
-    for (std::string &Spec : FunctionPadSpec) {
+size_t padFunction(std::map<std::string, size_t> &FunctionPadding,
+                   const cl::list<std::string> &Spec,
+                   const BinaryFunction &Function) {
+  if (FunctionPadding.empty() && !Spec.empty()) {
+    for (const std::string &Spec : Spec) {
       size_t N = Spec.find(':');
       if (N == std::string::npos)
         continue;
@@ -92,6 +96,15 @@ size_t padFunction(const BinaryFunction &Function) {
   }
 
   return 0;
+}
+
+size_t padFunctionBefore(const BinaryFunction &Function) {
+  static std::map<std::string, size_t> CacheFunctionPadding;
+  return padFunction(CacheFunctionPadding, FunctionPadBeforeSpec, Function);
+}
+size_t padFunctionAfter(const BinaryFunction &Function) {
+  static std::map<std::string, size_t> CacheFunctionPadding;
+  return padFunction(CacheFunctionPadding, FunctionPadSpec, Function);
 }
 
 } // namespace opts
@@ -164,7 +177,8 @@ private:
   /// Note that it does not automatically result in the insertion of the EOS
   /// marker in the line table program, but provides one to the DWARF generator
   /// when it needs it.
-  void emitLineInfoEnd(const BinaryFunction &BF, MCSymbol *FunctionEndSymbol);
+  void emitLineInfoEnd(const BinaryFunction &BF, MCSymbol *FunctionEndSymbol,
+                       const DWARFUnit &Unit);
 
   /// Emit debug line info for unprocessed functions from CUs that include
   /// emitted functions.
@@ -218,7 +232,7 @@ void BinaryEmitter::emitAll(StringRef OrgSecPrefix) {
 }
 
 void BinaryEmitter::emitFunctions() {
-  auto emit = [&](const std::vector<BinaryFunction *> &Functions) {
+  auto emit = [&](const BinaryFunctionListType &Functions) {
     const bool HasProfile = BC.NumProfiledFuncs > 0;
     const bool OriginalAllowAutoPadding = Streamer.getAllowAutoPadding();
     for (BinaryFunction *Function : Functions) {
@@ -268,11 +282,7 @@ void BinaryEmitter::emitFunctions() {
   }
 
   // Emit functions in sorted order.
-  std::vector<BinaryFunction *> SortedFunctions = BC.getSortedFunctions();
-  emit(SortedFunctions);
-
-  // Emit functions added by BOLT.
-  emit(BC.getInjectedBinaryFunctions());
+  emit(BC.getOutputBinaryFunctions());
 
   // Mark the end of hot text.
   if (opts::HotText) {
@@ -319,6 +329,31 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
     Streamer.emitCodeAlignment(Function.getAlign(), &*BC.STI);
   }
 
+  if (size_t Padding = opts::padFunctionBefore(Function)) {
+    // Handle padFuncsBefore after the above alignment logic but before
+    // symbol addresses are decided.
+    if (!BC.HasRelocations) {
+      BC.errs() << "BOLT-ERROR: -pad-before-funcs is not supported in "
+                << "non-relocation mode\n";
+      exit(1);
+    }
+
+    // Preserve Function.getMinAlign().
+    if (!isAligned(Function.getMinAlign(), Padding)) {
+      BC.errs() << "BOLT-ERROR: user-requested " << Padding
+                << " padding bytes before function " << Function
+                << " is not a multiple of the minimum function alignment ("
+                << Function.getMinAlign().value() << ").\n";
+      exit(1);
+    }
+
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: padding before function " << Function
+                      << " with " << Padding << " bytes\n");
+
+    // Since the padding is not executed, it can be null bytes.
+    Streamer.emitFill(Padding, 0);
+  }
+
   MCContext &Context = Streamer.getContext();
   const MCAsmInfo *MAI = Context.getAsmInfo();
 
@@ -335,8 +370,10 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
     Streamer.emitLabel(StartSymbol);
   }
 
+  const bool NeedsFDE =
+      Function.hasCFI() && !(Function.isPatch() && Function.isAnonymous());
   // Emit CFI start
-  if (Function.hasCFI()) {
+  if (NeedsFDE) {
     Streamer.emitCFIStartProc(/*IsSimple=*/false);
     if (Function.getPersonalityFunction() != nullptr)
       Streamer.emitCFIPersonality(Function.getPersonalityFunction(),
@@ -373,7 +410,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
   emitFunctionBody(Function, FF, /*EmitCodeOnly=*/false);
 
   // Emit padding if requested.
-  if (size_t Padding = opts::padFunction(Function)) {
+  if (size_t Padding = opts::padFunctionAfter(Function)) {
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: padding function " << Function << " with "
                       << Padding << " bytes\n");
     Streamer.emitFill(Padding, MAI->getTextAlignFillValue());
@@ -383,7 +420,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
     Streamer.emitBytes(BC.MIB->getTrapFillValue());
 
   // Emit CFI end
-  if (Function.hasCFI())
+  if (NeedsFDE)
     Streamer.emitCFIEndProc();
 
   MCSymbol *EndSymbol = Function.getFunctionEndLabel(FF.getFragmentNum());
@@ -396,8 +433,9 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
     Streamer.emitELFSize(StartSymbol, SizeExpr);
   }
 
-  if (opts::UpdateDebugSections && Function.getDWARFUnit())
-    emitLineInfoEnd(Function, EndSymbol);
+  if (opts::UpdateDebugSections && !Function.getDWARFUnits().empty())
+    for (const auto &[_, Unit] : Function.getDWARFUnits())
+      emitLineInfoEnd(Function, EndSymbol, *Unit);
 
   // Exception handling info for the function.
   emitLSDA(Function, FF);
@@ -446,7 +484,7 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         // A symbol to be emitted before the instruction to mark its location.
         MCSymbol *InstrLabel = BC.MIB->getInstLabel(Instr);
 
-        if (opts::UpdateDebugSections && BF.getDWARFUnit()) {
+        if (opts::UpdateDebugSections && !BF.getDWARFUnits().empty()) {
           LastLocSeen = emitLineInfo(BF, Instr.getLoc(), LastLocSeen,
                                      FirstInstr, InstrLabel);
           FirstInstr = false;
@@ -639,74 +677,100 @@ void BinaryEmitter::emitConstantIslands(BinaryFunction &BF, bool EmitColdPart,
 SMLoc BinaryEmitter::emitLineInfo(const BinaryFunction &BF, SMLoc NewLoc,
                                   SMLoc PrevLoc, bool FirstInstr,
                                   MCSymbol *&InstrLabel) {
-  DWARFUnit *FunctionCU = BF.getDWARFUnit();
-  const DWARFDebugLine::LineTable *FunctionLineTable = BF.getDWARFLineTable();
-  assert(FunctionCU && "cannot emit line info for function without CU");
-
-  DebugLineTableRowRef RowReference = DebugLineTableRowRef::fromSMLoc(NewLoc);
-
-  // Check if no new line info needs to be emitted.
-  if (RowReference == DebugLineTableRowRef::NULL_ROW ||
+  if (NewLoc.getPointer() == nullptr ||
       NewLoc.getPointer() == PrevLoc.getPointer())
     return PrevLoc;
+  const ClusteredRows *Cluster = ClusteredRows::fromSMLoc(NewLoc);
 
-  unsigned CurrentFilenum = 0;
-  const DWARFDebugLine::LineTable *CurrentLineTable = FunctionLineTable;
+  auto addToLineTable = [&](DebugLineTableRowRef RowReference,
+                            const DWARFUnit &TargetCU, unsigned Flags,
+                            MCSymbol &InstrLabel,
+                            const DWARFDebugLine::Row &CurrentRow) {
+    const uint64_t TargetUnitIndex = TargetCU.getOffset();
+    unsigned TargetFilenum = CurrentRow.File;
+    const uint32_t CurrentUnitIndex = RowReference.DwCompileUnitIndex;
+    // If the CU id from the current instruction location does not
+    // match the target CU id, it means that we have come across some
+    // inlined code (by BOLT).  We must look up the CU for the instruction's
+    // original function and get the line table from that.
+    if (TargetUnitIndex != CurrentUnitIndex) {
+      // Add filename from the inlined function to the current CU.
+      TargetFilenum = BC.addDebugFilenameToUnit(
+          TargetUnitIndex, CurrentUnitIndex, CurrentRow.File);
+    }
+    BC.Ctx->setCurrentDwarfLoc(TargetFilenum, CurrentRow.Line,
+                               CurrentRow.Column, Flags, CurrentRow.Isa,
+                               CurrentRow.Discriminator);
+    const MCDwarfLoc &DwarfLoc = BC.Ctx->getCurrentDwarfLoc();
+    BC.Ctx->clearDwarfLocSeen();
+    const MCLineSection::MCLineDivisionMap &MapLineEntries =
+        BC.getDwarfLineTable(TargetUnitIndex)
+            .getMCLineSections()
+            .getMCLineEntries();
+    const auto *It = MapLineEntries.find(Streamer.getCurrentSectionOnly());
+    MCDwarfLineEntry NewLineEntry = MCDwarfLineEntry(&InstrLabel, DwarfLoc);
 
-  // If the CU id from the current instruction location does not
-  // match the CU id from the current function, it means that we
-  // have come across some inlined code.  We must look up the CU
-  // for the instruction's original function and get the line table
-  // from that.
-  const uint64_t FunctionUnitIndex = FunctionCU->getOffset();
-  const uint32_t CurrentUnitIndex = RowReference.DwCompileUnitIndex;
-  if (CurrentUnitIndex != FunctionUnitIndex) {
-    CurrentLineTable = BC.DwCtx->getLineTableForUnit(
-        BC.DwCtx->getCompileUnitForOffset(CurrentUnitIndex));
-    // Add filename from the inlined function to the current CU.
-    CurrentFilenum = BC.addDebugFilenameToUnit(
-        FunctionUnitIndex, CurrentUnitIndex,
-        CurrentLineTable->Rows[RowReference.RowIndex - 1].File);
-  }
+    // Check if line table exists and has entries before doing comparison.
+    if (It != MapLineEntries.end() && !It->second.empty()) {
+      // Check if the new line entry has the same debug info as the last one
+      // to avoid duplicates. We don't compare labels since different
+      // instructions can have the same line info.
+      const auto &LastEntry = It->second.back();
+      if (LastEntry.getFileNum() == NewLineEntry.getFileNum() &&
+          LastEntry.getLine() == NewLineEntry.getLine() &&
+          LastEntry.getColumn() == NewLineEntry.getColumn() &&
+          LastEntry.getFlags() == NewLineEntry.getFlags() &&
+          LastEntry.getIsa() == NewLineEntry.getIsa() &&
+          LastEntry.getDiscriminator() == NewLineEntry.getDiscriminator())
+        return;
+    }
 
-  const DWARFDebugLine::Row &CurrentRow =
-      CurrentLineTable->Rows[RowReference.RowIndex - 1];
-  if (!CurrentFilenum)
-    CurrentFilenum = CurrentRow.File;
-
-  unsigned Flags = (DWARF2_FLAG_IS_STMT * CurrentRow.IsStmt) |
-                   (DWARF2_FLAG_BASIC_BLOCK * CurrentRow.BasicBlock) |
-                   (DWARF2_FLAG_PROLOGUE_END * CurrentRow.PrologueEnd) |
-                   (DWARF2_FLAG_EPILOGUE_BEGIN * CurrentRow.EpilogueBegin);
-
-  // Always emit is_stmt at the beginning of function fragment.
-  if (FirstInstr)
-    Flags |= DWARF2_FLAG_IS_STMT;
-
-  BC.Ctx->setCurrentDwarfLoc(CurrentFilenum, CurrentRow.Line, CurrentRow.Column,
-                             Flags, CurrentRow.Isa, CurrentRow.Discriminator);
-  const MCDwarfLoc &DwarfLoc = BC.Ctx->getCurrentDwarfLoc();
-  BC.Ctx->clearDwarfLocSeen();
+    BC.getDwarfLineTable(TargetUnitIndex)
+        .getMCLineSections()
+        .addLineEntry(NewLineEntry, Streamer.getCurrentSectionOnly());
+  };
 
   if (!InstrLabel)
     InstrLabel = BC.Ctx->createTempSymbol();
+  for (DebugLineTableRowRef RowReference : Cluster->getRows()) {
+    const DWARFDebugLine::LineTable *CurrentLineTable =
+        BC.DwCtx->getLineTableForUnit(
+            BC.DwCtx->getCompileUnitForOffset(RowReference.DwCompileUnitIndex));
+    const DWARFDebugLine::Row &CurrentRow =
+        CurrentLineTable->Rows[RowReference.RowIndex - 1];
+    unsigned Flags = (DWARF2_FLAG_IS_STMT * CurrentRow.IsStmt) |
+                     (DWARF2_FLAG_BASIC_BLOCK * CurrentRow.BasicBlock) |
+                     (DWARF2_FLAG_PROLOGUE_END * CurrentRow.PrologueEnd) |
+                     (DWARF2_FLAG_EPILOGUE_BEGIN * CurrentRow.EpilogueBegin);
 
-  BC.getDwarfLineTable(FunctionUnitIndex)
-      .getMCLineSections()
-      .addLineEntry(MCDwarfLineEntry(InstrLabel, DwarfLoc),
-                    Streamer.getCurrentSectionOnly());
+    // Always emit is_stmt at the beginning of function fragment.
+    if (FirstInstr)
+      Flags |= DWARF2_FLAG_IS_STMT;
+    const auto &FunctionDwarfUnits = BF.getDWARFUnits();
+    auto It = FunctionDwarfUnits.find(RowReference.DwCompileUnitIndex);
+    if (It != FunctionDwarfUnits.end()) {
+      addToLineTable(RowReference, *It->second, Flags, *InstrLabel, CurrentRow);
+      continue;
+    }
+    // This rows is from CU that did not contain the original function.
+    // This might happen if BOLT moved/inlined that instruction from other CUs.
+    // In this case, we need to insert it to all CUs that the function
+    // originally beloned to.
+    for (const auto &[_, Unit] : BF.getDWARFUnits()) {
+      addToLineTable(RowReference, *Unit, Flags, *InstrLabel, CurrentRow);
+    }
+  }
 
   return NewLoc;
 }
 
 void BinaryEmitter::emitLineInfoEnd(const BinaryFunction &BF,
-                                    MCSymbol *FunctionEndLabel) {
-  DWARFUnit *FunctionCU = BF.getDWARFUnit();
-  assert(FunctionCU && "DWARF unit expected");
+                                    MCSymbol *FunctionEndLabel,
+                                    const DWARFUnit &Unit) {
   BC.Ctx->setCurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_END_SEQUENCE, 0, 0);
   const MCDwarfLoc &DwarfLoc = BC.Ctx->getCurrentDwarfLoc();
   BC.Ctx->clearDwarfLocSeen();
-  BC.getDwarfLineTable(FunctionCU->getOffset())
+  BC.getDwarfLineTable(Unit.getOffset())
       .getMCLineSections()
       .addLineEntry(MCDwarfLineEntry(FunctionEndLabel, DwarfLoc),
                     Streamer.getCurrentSectionOnly());
@@ -771,52 +835,50 @@ void BinaryEmitter::emitJumpTable(const JumpTable &JT, MCSection *HotSection,
     Streamer.switchSection(JT.Count > 0 ? HotSection : ColdSection);
     Streamer.emitValueToAlignment(Align(JT.EntrySize));
   }
-  MCSymbol *LastLabel = nullptr;
+  MCSymbol *JTLabel = nullptr;
   uint64_t Offset = 0;
   for (MCSymbol *Entry : JT.Entries) {
     auto LI = JT.Labels.find(Offset);
-    if (LI != JT.Labels.end()) {
-      LLVM_DEBUG({
-        dbgs() << "BOLT-DEBUG: emitting jump table " << LI->second->getName()
-               << " (originally was at address 0x"
-               << Twine::utohexstr(JT.getAddress() + Offset)
-               << (Offset ? ") as part of larger jump table\n" : ")\n");
-      });
-      if (!LabelCounts.empty()) {
-        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: jump table count: "
-                          << LabelCounts[LI->second] << '\n');
-        if (LabelCounts[LI->second] > 0)
-          Streamer.switchSection(HotSection);
-        else
-          Streamer.switchSection(ColdSection);
-        Streamer.emitValueToAlignment(Align(JT.EntrySize));
-      }
-      // Emit all labels registered at the address of this jump table
-      // to sync with our global symbol table.  We may have two labels
-      // registered at this address if one label was created via
-      // getOrCreateGlobalSymbol() (e.g. LEA instructions referencing
-      // this location) and another via getOrCreateJumpTable().  This
-      // creates a race where the symbols created by these two
-      // functions may or may not be the same, but they are both
-      // registered in our symbol table at the same address. By
-      // emitting them all here we make sure there is no ambiguity
-      // that depends on the order that these symbols were created, so
-      // whenever this address is referenced in the binary, it is
-      // certain to point to the jump table identified at this
-      // address.
-      if (BinaryData *BD = BC.getBinaryDataByName(LI->second->getName())) {
-        for (MCSymbol *S : BD->getSymbols())
-          Streamer.emitLabel(S);
-      } else {
-        Streamer.emitLabel(LI->second);
-      }
-      LastLabel = LI->second;
+    if (LI == JT.Labels.end())
+      goto emitEntry;
+    JTLabel = LI->second;
+    LLVM_DEBUG({
+      dbgs() << "BOLT-DEBUG: emitting jump table " << JTLabel->getName()
+             << " (originally was at address 0x"
+             << Twine::utohexstr(JT.getAddress() + Offset)
+             << (Offset ? ") as part of larger jump table\n" : ")\n");
+    });
+    if (!LabelCounts.empty()) {
+      const uint64_t JTCount = LabelCounts[JTLabel];
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: jump table count: " << JTCount << '\n');
+      Streamer.switchSection(JTCount ? HotSection : ColdSection);
+      Streamer.emitValueToAlignment(Align(JT.EntrySize));
     }
+    // Emit all labels registered at the address of this jump table
+    // to sync with our global symbol table.  We may have two labels
+    // registered at this address if one label was created via
+    // getOrCreateGlobalSymbol() (e.g. LEA instructions referencing
+    // this location) and another via getOrCreateJumpTable().  This
+    // creates a race where the symbols created by these two
+    // functions may or may not be the same, but they are both
+    // registered in our symbol table at the same address. By
+    // emitting them all here we make sure there is no ambiguity
+    // that depends on the order that these symbols were created, so
+    // whenever this address is referenced in the binary, it is
+    // certain to point to the jump table identified at this
+    // address.
+    if (BinaryData *BD = BC.getBinaryDataByName(JTLabel->getName())) {
+      for (MCSymbol *S : BD->getSymbols())
+        Streamer.emitLabel(S);
+    } else {
+      Streamer.emitLabel(JTLabel);
+    }
+  emitEntry:
     if (JT.Type == JumpTable::JTT_NORMAL) {
       Streamer.emitSymbolValue(Entry, JT.OutputEntrySize);
     } else { // JTT_PIC
       const MCSymbolRefExpr *JTExpr =
-          MCSymbolRefExpr::create(LastLabel, Streamer.getContext());
+          MCSymbolRefExpr::create(JTLabel, Streamer.getContext());
       const MCSymbolRefExpr *E =
           MCSymbolRefExpr::create(Entry, Streamer.getContext());
       const MCBinaryExpr *Value =
@@ -1077,36 +1139,40 @@ void BinaryEmitter::emitDebugLineInfoForOriginalFunctions() {
     if (Function.isEmitted())
       continue;
 
-    const DWARFDebugLine::LineTable *LineTable = Function.getDWARFLineTable();
-    if (!LineTable)
-      continue; // nothing to update for this function
+    // Loop through all CUs in the function
+    for (const auto &[_, Unit] : Function.getDWARFUnits()) {
+      const DWARFDebugLine::LineTable *LineTable =
+          Function.getDWARFLineTableForUnit(Unit);
+      if (!LineTable)
+        continue; // nothing to update for this unit
 
-    const uint64_t Address = Function.getAddress();
-    std::vector<uint32_t> Results;
-    if (!LineTable->lookupAddressRange(
-            {Address, object::SectionedAddress::UndefSection},
-            Function.getSize(), Results))
-      continue;
+      const uint64_t Address = Function.getAddress();
+      std::vector<uint32_t> Results;
+      if (!LineTable->lookupAddressRange(
+              {Address, object::SectionedAddress::UndefSection},
+              Function.getSize(), Results))
+        continue;
 
-    if (Results.empty())
-      continue;
+      if (Results.empty())
+        continue;
 
-    // The first row returned could be the last row matching the start address.
-    // Find the first row with the same address that is not the end of the
-    // sequence.
-    uint64_t FirstRow = Results.front();
-    while (FirstRow > 0) {
-      const DWARFDebugLine::Row &PrevRow = LineTable->Rows[FirstRow - 1];
-      if (PrevRow.Address.Address != Address || PrevRow.EndSequence)
-        break;
-      --FirstRow;
+      // The first row returned could be the last row matching the start
+      // address. Find the first row with the same address that is not the end
+      // of the sequence.
+      uint64_t FirstRow = Results.front();
+      while (FirstRow > 0) {
+        const DWARFDebugLine::Row &PrevRow = LineTable->Rows[FirstRow - 1];
+        if (PrevRow.Address.Address != Address || PrevRow.EndSequence)
+          break;
+        --FirstRow;
+      }
+
+      const uint64_t EndOfSequenceAddress =
+          Function.getAddress() + Function.getMaxSize();
+      BC.getDwarfLineTable(Unit->getOffset())
+          .addLineTableSequence(LineTable, FirstRow, Results.back(),
+                                EndOfSequenceAddress);
     }
-
-    const uint64_t EndOfSequenceAddress =
-        Function.getAddress() + Function.getMaxSize();
-    BC.getDwarfLineTable(Function.getDWARFUnit()->getOffset())
-        .addLineTableSequence(LineTable, FirstRow, Results.back(),
-                              EndOfSequenceAddress);
   }
 
   // For units that are completely unprocessed, use original debug line contents

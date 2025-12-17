@@ -23,65 +23,6 @@ namespace llvm {
   // Forward delcarations
   class XCoreSubtarget;
 
-  namespace XCoreISD {
-    enum NodeType : unsigned {
-      // Start the numbering where the builtin ops and target ops leave off.
-      FIRST_NUMBER = ISD::BUILTIN_OP_END,
-
-      // Branch and link (call)
-      BL,
-
-      // pc relative address
-      PCRelativeWrapper,
-
-      // dp relative address
-      DPRelativeWrapper,
-
-      // cp relative address
-      CPRelativeWrapper,
-
-      // Load word from stack
-      LDWSP,
-
-      // Store word to stack
-      STWSP,
-
-      // Corresponds to retsp instruction
-      RETSP,
-
-      // Corresponds to LADD instruction
-      LADD,
-
-      // Corresponds to LSUB instruction
-      LSUB,
-
-      // Corresponds to LMUL instruction
-      LMUL,
-
-      // Corresponds to MACCU instruction
-      MACCU,
-
-      // Corresponds to MACCS instruction
-      MACCS,
-
-      // Corresponds to CRC8 instruction
-      CRC8,
-
-      // Jumptable branch.
-      BR_JT,
-
-      // Jumptable branch using long branches for each entry.
-      BR_JT32,
-
-      // Offset from frame pointer to the first (possible) on-stack argument
-      FRAME_TO_ARGS_OFFSET,
-
-      // Exception handler return. The stack is restored to the first
-      // followed by a jump to the second argument.
-      EH_RETURN,
-    };
-  }
-
   //===--------------------------------------------------------------------===//
   // TargetLowering Implementation
   //===--------------------------------------------------------------------===//
@@ -108,10 +49,6 @@ namespace llvm {
     ///
     void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue>&Results,
                             SelectionDAG &DAG) const override;
-
-    /// getTargetNodeName - This method returns the name of a target specific
-    //  DAG node.
-    const char *getTargetNodeName(unsigned Opcode) const override;
 
     MachineBasicBlock *
     EmitInstrWithCustomInserter(MachineInstr &MI,
@@ -217,7 +154,7 @@ namespace llvm {
     bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                         bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &ArgsFlags,
-                        LLVMContext &Context) const override;
+                        LLVMContext &Context, const Type *RetTy) const override;
   };
 }
 

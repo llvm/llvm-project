@@ -217,9 +217,13 @@ declare void @g.f1()
 ; CHECK: @g.sanitize_address_dyninit = global i32 0, sanitize_address_dyninit
 ; CHECK: @g.sanitize_multiple = global i32 0, sanitize_memtag, sanitize_address_dyninit
 
+@ds = external global i32
+
 ; ptrauth constant
 @auth_var = global ptr ptrauth (ptr @g1, i32 0, i64 65535, ptr null)
 ; CHECK: @auth_var = global ptr ptrauth (ptr @g1, i32 0, i64 65535)
+@auth_var.ds = global ptr ptrauth (ptr @g1, i32 0, i64 65535, ptr null, ptr @ds)
+; CHECK: @auth_var.ds = global ptr ptrauth (ptr @g1, i32 0, i64 65535, ptr null, ptr @ds)
 
 ;; Aliases
 ; Format: @<Name> = [Linkage] [Visibility] [DLLStorageClass] [ThreadLocal]
@@ -516,6 +520,58 @@ declare cc96 void @f.cc96()
 ; CHECK: declare amdgpu_es void @f.cc96()
 declare amdgpu_es void @f.amdgpu_es()
 ; CHECK: declare amdgpu_es void @f.amdgpu_es()
+declare cc112 void @f.cc112()
+; CHECK: declare riscv_vls_cc(32) void @f.cc112()
+declare cc113 void @f.cc113()
+; CHECK: declare riscv_vls_cc(64) void @f.cc113()
+declare cc114 void @f.cc114()
+; CHECK: declare riscv_vls_cc(128) void @f.cc114()
+declare cc115 void @f.cc115()
+; CHECK: declare riscv_vls_cc(256) void @f.cc115()
+declare cc116 void @f.cc116()
+; CHECK: declare riscv_vls_cc(512) void @f.cc116()
+declare cc117 void @f.cc117()
+; CHECK: declare riscv_vls_cc(1024) void @f.cc117()
+declare cc118 void @f.cc118()
+; CHECK: declare riscv_vls_cc(2048) void @f.cc118()
+declare cc119 void @f.cc119()
+; CHECK: declare riscv_vls_cc(4096) void @f.cc119()
+declare cc120 void @f.cc120()
+; CHECK: declare riscv_vls_cc(8192) void @f.cc120()
+declare cc121 void @f.cc121()
+; CHECK: declare riscv_vls_cc(16384) void @f.cc121()
+declare cc122 void @f.cc122()
+; CHECK: declare riscv_vls_cc(32768) void @f.cc122()
+declare cc123 void @f.cc123()
+; CHECK: declare riscv_vls_cc(65536) void @f.cc123()
+declare riscv_vls_cc(32) void @riscv_vls_cc_32()
+; CHECK: declare riscv_vls_cc(32) void @riscv_vls_cc_32()
+declare riscv_vls_cc(64) void @riscv_vls_cc_64()
+; CHECK: declare riscv_vls_cc(64) void @riscv_vls_cc_64()
+declare riscv_vls_cc(128) void @riscv_vls_cc_128()
+; CHECK: declare riscv_vls_cc(128) void @riscv_vls_cc_128()
+declare riscv_vls_cc(256) void @riscv_vls_cc_256()
+; CHECK: declare riscv_vls_cc(256) void @riscv_vls_cc_256()
+declare riscv_vls_cc(512) void @riscv_vls_cc_512()
+; CHECK: declare riscv_vls_cc(512) void @riscv_vls_cc_512()
+declare riscv_vls_cc(1024) void @riscv_vls_cc_1024()
+; CHECK: declare riscv_vls_cc(1024) void @riscv_vls_cc_1024()
+declare riscv_vls_cc(2048) void @riscv_vls_cc_2048()
+; CHECK: declare riscv_vls_cc(2048) void @riscv_vls_cc_2048()
+declare riscv_vls_cc(4096) void @riscv_vls_cc_4096()
+; CHECK: declare riscv_vls_cc(4096) void @riscv_vls_cc_4096()
+declare riscv_vls_cc(8192) void @riscv_vls_cc_8192()
+; CHECK: declare riscv_vls_cc(8192) void @riscv_vls_cc_8192()
+declare riscv_vls_cc(16384) void @riscv_vls_cc_16384()
+; CHECK: declare riscv_vls_cc(16384) void @riscv_vls_cc_16384()
+declare riscv_vls_cc(32768) void @riscv_vls_cc_32768()
+; CHECK: declare riscv_vls_cc(32768) void @riscv_vls_cc_32768()
+declare riscv_vls_cc(65536) void @riscv_vls_cc_65536()
+; CHECK: declare riscv_vls_cc(65536) void @riscv_vls_cc_65536()
+declare cc124 void @f.cc124(i1)
+; CHECK: declare amdgpu_gfx_whole_wave void @f.cc124(i1)
+declare amdgpu_gfx_whole_wave void @f.amdgpu_gfx_whole_wave(i1)
+; CHECK: declare amdgpu_gfx_whole_wave void @f.amdgpu_gfx_whole_wave(i1)
 declare cc1023 void @f.cc1023()
 ; CHECK: declare cc1023 void @f.cc1023()
 
@@ -559,7 +615,7 @@ declare void @f.param.sret(ptr sret(i8))
 declare void @f.param.noalias(ptr noalias)
 ; CHECK: declare void @f.param.noalias(ptr noalias)
 declare void @f.param.nocapture(ptr nocapture)
-; CHECK: declare void @f.param.nocapture(ptr nocapture)
+; CHECK: declare void @f.param.nocapture(ptr captures(none))
 declare void @f.param.nest(ptr nest)
 ; CHECK: declare void @f.param.nest(ptr nest)
 declare ptr @f.param.returned(ptr returned)
@@ -874,6 +930,12 @@ define void @fp_atomics(ptr %word) {
 
 ; CHECK: %atomicrmw.fmin = atomicrmw fmin ptr %word, float 1.000000e+00 monotonic
   %atomicrmw.fmin = atomicrmw fmin ptr %word, float 1.0 monotonic
+
+; CHECK: %atomicrmw.fmaximum = atomicrmw fmaximum ptr %word, float 1.000000e+00 monotonic
+  %atomicrmw.fmaximum = atomicrmw fmaximum ptr %word, float 1.0 monotonic
+
+; CHECK: %atomicrmw.fminimum = atomicrmw fminimum ptr %word, float 1.000000e+00 monotonic
+  %atomicrmw.fminimum = atomicrmw fminimum ptr %word, float 1.0 monotonic
 
   ret void
 }
@@ -1660,7 +1722,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #54
+  ; CHECK: call void @f.nobuiltin() #55
 
   call fastcc noalias ptr @f.noalias() noinline
   ; CHECK: call fastcc noalias ptr @f.noalias() #12
@@ -2093,6 +2155,9 @@ declare void @f.sanitize_realtime() sanitize_realtime
 declare void @f.sanitize_realtime_blocking() sanitize_realtime_blocking
 ; CHECK: declare void @f.sanitize_realtime_blocking() #53
 
+declare void @f.sanitize_alloc_token() sanitize_alloc_token
+; CHECK: declare void @f.sanitize_alloc_token() #54
+
 ; CHECK: declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
 declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
 
@@ -2226,7 +2291,8 @@ define float @nofpclass_callsites(float %arg, { float } %arg1) {
 ; CHECK: attributes #51 = { sanitize_numerical_stability }
 ; CHECK: attributes #52 = { sanitize_realtime }
 ; CHECK: attributes #53 = { sanitize_realtime_blocking }
-; CHECK: attributes #54 = { builtin }
+; CHECK: attributes #54 = { sanitize_alloc_token }
+; CHECK: attributes #55 = { builtin }
 
 ;; Metadata
 

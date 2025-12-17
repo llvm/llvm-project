@@ -132,27 +132,18 @@ struct E {
 #endif
 } // namespace cwg2627
 
-namespace cwg2628 { // cwg2628: no
-                   // this was reverted for the 16.x release
-                   // due to regressions, see the issue for more details:
-                   // https://github.com/llvm/llvm-project/issues/60777
+namespace cwg2628 { // cwg2628: 20
 #if __cplusplus >= 202002L
 template <bool A = false, bool B = false>
 struct foo {
-  // The expected notes below should be removed when cwg2628 is fully implemented again
-  constexpr foo() requires (!A && !B) = delete; // #cwg2628-ctor-1
-  constexpr foo() requires (A || B) = delete; //  #cwg2628-ctor-2
+  constexpr foo() requires (!A && !B) = delete; // #cwg2628-ctor
+  constexpr foo() requires (A || B) = delete;
 };
 
 void f() {
-  // The FIXME's below should be the expected errors when cwg2628 is
-  // fully implemented again.
   foo fooable; // #cwg2628-fooable
-  // since-cxx20-error@-1 {{ambiguous deduction for template arguments of 'foo'}}
-  //   since-cxx20-note@#cwg2628-ctor-1 {{candidate function [with A = false, B = false]}}
-  //   since-cxx20-note@#cwg2628-ctor-2 {{candidate function [with A = false, B = false]}}
-  // FIXME-since-cxx20-error@#cwg2628-fooable {{call to deleted}} 
-  //   FIXME-since-cxx20-note@#cwg2628-ctor {{marked deleted here}} 
+  // since-cxx20-error@#cwg2628-fooable {{call to deleted}}
+  //   since-cxx20-note@#cwg2628-ctor {{marked deleted here}}
 }
 #endif
 } // namespace cwg2628
@@ -192,17 +183,17 @@ T get_T();
 
 void use() {
   UnaryC auto [a, b] = get_S();
-  // since-cxx20-error@-1 {{decomposition declaration cannot be declared with constrained 'auto'}}
+  // since-cxx20-error@-1 {{structured binding declaration cannot be declared with constrained 'auto'}}
   BinaryC<int> auto [c, d] = get_S();
-  // since-cxx20-error@-1 {{decomposition declaration cannot be declared with constrained 'auto'}}
+  // since-cxx20-error@-1 {{structured binding declaration cannot be declared with constrained 'auto'}}
 }
 
 template<typename T>
 void TemplUse() {
   UnaryC auto [a, b] = get_T<T>();
-  // since-cxx20-error@-1 {{decomposition declaration cannot be declared with constrained 'auto'}}
+  // since-cxx20-error@-1 {{structured binding declaration cannot be declared with constrained 'auto'}}
   BinaryC<T> auto [c, d] = get_T<T>();
-  // since-cxx20-error@-1 {{decomposition declaration cannot be declared with constrained 'auto'}}
+  // since-cxx20-error@-1 {{structured binding declaration cannot be declared with constrained 'auto'}}
 }
 #endif
 } // namespace cwg2635
@@ -229,7 +220,6 @@ int x = cwg2640_a\N{abc});
 int y = cwg2640_a\N{LOTUS});
 // expected-error@-1 {{character <U+1FAB7> not allowed in an identifier}}
 // expected-error@-2 {{use of undeclared identifier 'cwg2640_a🪷'}}
-// expected-error@-3 {{extraneous ')' before ';'}}
 } // namespace cwg2640
 
 // cwg2642: na
@@ -301,12 +291,12 @@ static_assert(__is_same(decltype(i), I<char, 4>));
 
 J j = { "ghi" };
 // since-cxx20-error@-1 {{no viable constructor or deduction guide}}
-//   since-cxx20-note@#cwg2681-J {{candidate template ignored: could not match 'J<N>' against 'const char *'}}
-//   since-cxx20-note@#cwg2681-J {{implicit deduction guide declared as 'template <size_t N> J(J<N>) -> J<N>'}}
+//   since-cxx20-note@#cwg2681-J {{candidate template ignored: could not match 'cwg2681::J<N>' against 'const char *'}}
+//   since-cxx20-note@#cwg2681-J {{implicit deduction guide declared as 'template <size_t N> J(cwg2681::J<N>) -> cwg2681::J<N>'}}
 //   since-cxx20-note@#cwg2681-J {{candidate template ignored: could not match 'const unsigned char' against 'const char'}}
-//   since-cxx20-note@#cwg2681-J {{implicit deduction guide declared as 'template <size_t N> J(const unsigned char (&)[N]) -> J<N>'}}
+//   since-cxx20-note@#cwg2681-J {{implicit deduction guide declared as 'template <size_t N> J(const unsigned char (&)[N]) -> cwg2681::J<N>'}}
 //   since-cxx20-note@#cwg2681-J {{candidate function template not viable: requires 0 arguments, but 1 was provided}}
-//   since-cxx20-note@#cwg2681-J {{implicit deduction guide declared as 'template <size_t N> J() -> J<N>'}}
+//   since-cxx20-note@#cwg2681-J {{implicit deduction guide declared as 'template <size_t N> J() -> cwg2681::J<N>'}}
 #endif
 } // namespace cwg2681
 
@@ -345,7 +335,7 @@ struct S{
 
 void test() {
     (&S::f)(1);
-    // since-cxx23-error@-1 {{called object type 'void (cwg2687::S::*)(int)' is not a function or function pointer}}
+    // since-cxx23-error@-1 {{called object type 'void (S::*)(int)' is not a function or function pointer}}
     (&S::g)(1);
     (&S::h)(S(), 1);
 }
@@ -355,14 +345,19 @@ void test() {
 namespace cwg2692 { // cwg2692: 19
 #if __cplusplus >= 202302L
 
- struct A {
+struct A {
     static void f(A); // #cwg2692-1
     void f(this A); // #cwg2692-2
 
-    void g();
-  };
+    template <typename T>
+    static void g(T); // #cwg2692-3
+    template <typename T>
+    void g(this T); // #cwg2692-4
 
-  void A::g() {
+    void test();
+};
+
+void A::test() {
     (&A::f)(A());
     // since-cxx23-error@-1 {{call to 'f' is ambiguous}}
     //   since-cxx23-note@#cwg2692-1 {{candidate function}}
@@ -371,6 +366,16 @@ namespace cwg2692 { // cwg2692: 19
     // since-cxx23-error@-1 {{no matching function for call to 'f'}}
     //   since-cxx23-note@#cwg2692-1 {{candidate function not viable: requires 1 argument, but 0 were provided}}
     //   since-cxx23-note@#cwg2692-2 {{candidate function not viable: requires 1 argument, but 0 were provided}}
-  }
+
+
+    (&A::g)(A());
+    // since-cxx23-error@-1 {{call to 'g' is ambiguous}}
+    //   since-cxx23-note@#cwg2692-3 {{candidate function}}
+    //   since-cxx23-note@#cwg2692-4 {{candidate function}}
+    (&A::g<A>)();
+    // since-cxx23-error@-1 {{no matching function for call to 'g'}}
+    //   since-cxx23-note@#cwg2692-3 {{candidate function template not viable: requires 1 argument, but 0 were provided}}
+    //   since-cxx23-note@#cwg2692-4 {{candidate function [with T = cwg2692::A] not viable: requires 1 argument, but 0 were provided}}
+}
 #endif
 } // namespace cwg2692

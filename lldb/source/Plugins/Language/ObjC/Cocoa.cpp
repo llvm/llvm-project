@@ -1049,8 +1049,9 @@ public:
 
   bool MightHaveChildren() override { return false; }
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
-    return UINT32_MAX;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   }
 };
 
@@ -1226,7 +1227,7 @@ bool lldb_private::formatters::ObjCSELSummaryProvider(
 time_t lldb_private::formatters::GetOSXEpoch() {
   static time_t epoch = 0;
   if (!epoch) {
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(_AIX)
     tzset();
     tm tm_epoch;
     tm_epoch.tm_sec = 0;

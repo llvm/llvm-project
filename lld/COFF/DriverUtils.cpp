@@ -17,7 +17,6 @@
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -28,14 +27,11 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/WindowsManifest/WindowsManifestMerger.h"
-#include <limits>
 #include <memory>
 #include <optional>
 
@@ -147,18 +143,6 @@ void LinkerDriver::parseSubsystem(StringRef arg, WindowsSubsystem *sys,
 
 // Parse a string of the form of "<from>=<to>".
 // Results are directly written to Config.
-void LinkerDriver::parseAlternateName(StringRef s) {
-  auto [from, to] = s.split('=');
-  if (from.empty() || to.empty())
-    Fatal(ctx) << "/alternatename: invalid argument: " << s;
-  auto it = ctx.config.alternateNames.find(from);
-  if (it != ctx.config.alternateNames.end() && it->second != to)
-    Fatal(ctx) << "/alternatename: conflicts: " << s;
-  ctx.config.alternateNames.insert(it, std::make_pair(from, to));
-}
-
-// Parse a string of the form of "<from>=<to>".
-// Results are directly written to Config.
 void LinkerDriver::parseMerge(StringRef s) {
   auto [from, to] = s.split('=');
   if (from.empty() || to.empty())
@@ -230,20 +214,57 @@ void LinkerDriver::parseSection(StringRef s) {
   ctx.config.section[name] = parseSectionAttributes(ctx, attrs);
 }
 
-// Parses /aligncomm option argument.
-void LinkerDriver::parseAligncomm(StringRef s) {
-  auto [name, align] = s.split(',');
-  if (name.empty() || align.empty()) {
-    Err(ctx) << "/aligncomm: invalid argument: " << s;
-    return;
+// Parses /sectionlayout: option argument.
+void LinkerDriver::parseSectionLayout(StringRef path) {
+  if (path.starts_with("@"))
+    path = path.substr(1);
+  std::unique_ptr<MemoryBuffer> layoutFile =
+      CHECK(MemoryBuffer::getFile(path), "could not open " + path);
+  StringRef content = layoutFile->getBuffer();
+  int index = 0;
+
+  while (!content.empty()) {
+    size_t pos = content.find_first_of("\r\n");
+    StringRef line;
+
+    if (pos == StringRef::npos) {
+      line = content;
+      content = StringRef();
+    } else {
+      line = content.substr(0, pos);
+      content = content.substr(pos).ltrim("\r\n");
+    }
+
+    line = line.trim();
+    if (line.empty())
+      continue;
+
+    StringRef sectionName = line.split(' ').first;
+
+    if (ctx.config.sectionOrder.count(sectionName.str())) {
+      Warn(ctx) << "duplicate section '" << sectionName.str()
+                << "' in section layout file, ignoring";
+      continue;
+    }
+
+    ctx.config.sectionOrder[sectionName.str()] = index++;
   }
-  int v;
-  if (align.getAsInteger(0, v)) {
-    Err(ctx) << "/aligncomm: invalid argument: " << s;
-    return;
-  }
-  ctx.config.alignComm[std::string(name)] =
-      std::max(ctx.config.alignComm[std::string(name)], 1 << v);
+}
+
+void LinkerDriver::parseDosStub(StringRef path) {
+  std::unique_ptr<MemoryBuffer> stub =
+      CHECK(MemoryBuffer::getFile(path), "could not open " + path);
+  size_t bufferSize = stub->getBufferSize();
+  const char *bufferStart = stub->getBufferStart();
+  // MS link.exe compatibility:
+  // 1. stub must be greater than or equal to 64 bytes
+  // 2. stub must start with a valid dos signature 'MZ'
+  if (bufferSize < 64)
+    Err(ctx) << "/stub: stub must be greater than or equal to 64 bytes: "
+             << path;
+  if (bufferStart[0] != 'M' || bufferStart[1] != 'Z')
+    Err(ctx) << "/stub: invalid DOS signature: " << path;
+  ctx.config.dosStub = std::move(stub);
 }
 
 // Parses /functionpadmin option argument.
@@ -344,6 +365,22 @@ void LinkerDriver::parseSwaprun(StringRef arg) {
   } while (!arg.empty());
 }
 
+void LinkerDriver::parseSameAddress(StringRef arg) {
+  auto mangledName = getArm64ECMangledFunctionName(arg);
+  Symbol *sym = ctx.symtab.addUndefined(mangledName ? *mangledName : arg);
+
+  // MSVC appears to generate thunks even for non-hybrid ARM64EC images.
+  // As a side effect, the native symbol is pulled in. Since this is used
+  // in the CRT for thread-local constructors, it results in the image
+  // containing unnecessary native code. As these thunks don't appear to
+  // be useful, we limit this behavior to actual hybrid targets. This may
+  // change if compatibility becomes necessary.
+  if (ctx.config.machine != ARM64X)
+    return;
+  Symbol *nativeSym = ctx.hybridSymtab->addUndefined(arg);
+  ctx.config.sameAddresses.emplace_back(sym, nativeSym);
+}
+
 // An RAII temporary file class that automatically removes a temporary file.
 namespace {
 class TemporaryFile {
@@ -403,7 +440,7 @@ std::string LinkerDriver::createDefaultXml() {
      << "<assembly xmlns=\"urn:schemas-microsoft-com:asm.v1\"\n"
      << "          manifestVersion=\"1.0\">\n";
   if (ctx.config.manifestUAC) {
-    os << "  <trustInfo>\n"
+    os << "  <trustInfo xmlns=\"urn:schemas-microsoft-com:asm.v3\">\n"
        << "    <security>\n"
        << "      <requestedPrivileges>\n"
        << "         <requestedExecutionLevel level=" << ctx.config.manifestLevel
@@ -429,7 +466,7 @@ LinkerDriver::createManifestXmlWithInternalMt(StringRef defaultXml) {
       MemoryBuffer::getMemBufferCopy(defaultXml);
 
   windows_manifest::WindowsManifestMerger merger;
-  if (auto e = merger.merge(*defaultXmlCopy.get()))
+  if (auto e = merger.merge(*defaultXmlCopy))
     Fatal(ctx) << "internal manifest tool failed on default xml: "
                << toString(std::move(e));
 
@@ -442,7 +479,7 @@ LinkerDriver::createManifestXmlWithInternalMt(StringRef defaultXml) {
                  << toString(std::move(e));
   }
 
-  return std::string(merger.getMergedManifest().get()->getBuffer());
+  return std::string(merger.getMergedManifest()->getBuffer());
 }
 
 std::string
@@ -640,142 +677,6 @@ err:
   llvm_unreachable("");
 }
 
-// Convert stdcall/fastcall style symbols into unsuffixed symbols,
-// with or without a leading underscore. (MinGW specific.)
-static StringRef killAt(StringRef sym, bool prefix) {
-  if (sym.empty())
-    return sym;
-  // Strip any trailing stdcall suffix
-  sym = sym.substr(0, sym.find('@', 1));
-  if (!sym.starts_with("@")) {
-    if (prefix && !sym.starts_with("_"))
-      return saver().save("_" + sym);
-    return sym;
-  }
-  // For fastcall, remove the leading @ and replace it with an
-  // underscore, if prefixes are used.
-  sym = sym.substr(1);
-  if (prefix)
-    sym = saver().save("_" + sym);
-  return sym;
-}
-
-static StringRef exportSourceName(ExportSource s) {
-  switch (s) {
-  case ExportSource::Directives:
-    return "source file (directives)";
-  case ExportSource::Export:
-    return "/export";
-  case ExportSource::ModuleDefinition:
-    return "/def";
-  default:
-    llvm_unreachable("unknown ExportSource");
-  }
-}
-
-// Performs error checking on all /export arguments.
-// It also sets ordinals.
-void LinkerDriver::fixupExports() {
-  llvm::TimeTraceScope timeScope("Fixup exports");
-  // Symbol ordinals must be unique.
-  std::set<uint16_t> ords;
-  for (Export &e : ctx.config.exports) {
-    if (e.ordinal == 0)
-      continue;
-    if (!ords.insert(e.ordinal).second)
-      Fatal(ctx) << "duplicate export ordinal: " << e.name;
-  }
-
-  for (Export &e : ctx.config.exports) {
-    if (!e.exportAs.empty()) {
-      e.exportName = e.exportAs;
-      continue;
-    }
-
-    StringRef sym =
-        !e.forwardTo.empty() || e.extName.empty() ? e.name : e.extName;
-    if (ctx.config.machine == I386 && sym.starts_with("_")) {
-      // In MSVC mode, a fully decorated stdcall function is exported
-      // as-is with the leading underscore (with type IMPORT_NAME).
-      // In MinGW mode, a decorated stdcall function gets the underscore
-      // removed, just like normal cdecl functions.
-      if (ctx.config.mingw || !sym.contains('@')) {
-        e.exportName = sym.substr(1);
-        continue;
-      }
-    }
-    if (isArm64EC(ctx.config.machine) && !e.data && !e.constant) {
-      if (std::optional<std::string> demangledName =
-              getArm64ECDemangledFunctionName(sym)) {
-        e.exportName = saver().save(*demangledName);
-        continue;
-      }
-    }
-    e.exportName = sym;
-  }
-
-  if (ctx.config.killAt && ctx.config.machine == I386) {
-    for (Export &e : ctx.config.exports) {
-      e.name = killAt(e.name, true);
-      e.exportName = killAt(e.exportName, false);
-      e.extName = killAt(e.extName, true);
-      e.symbolName = killAt(e.symbolName, true);
-    }
-  }
-
-  // Uniquefy by name.
-  DenseMap<StringRef, std::pair<Export *, unsigned>> map(
-      ctx.config.exports.size());
-  std::vector<Export> v;
-  for (Export &e : ctx.config.exports) {
-    auto pair = map.insert(std::make_pair(e.exportName, std::make_pair(&e, 0)));
-    bool inserted = pair.second;
-    if (inserted) {
-      pair.first->second.second = v.size();
-      v.push_back(e);
-      continue;
-    }
-    Export *existing = pair.first->second.first;
-    if (e == *existing || e.name != existing->name)
-      continue;
-    // If the existing export comes from .OBJ directives, we are allowed to
-    // overwrite it with /DEF: or /EXPORT without any warning, as MSVC link.exe
-    // does.
-    if (existing->source == ExportSource::Directives) {
-      *existing = e;
-      v[pair.first->second.second] = e;
-      continue;
-    }
-    if (existing->source == e.source) {
-      Warn(ctx) << "duplicate " << exportSourceName(existing->source)
-                << " option: " << e.name;
-    } else {
-      Warn(ctx) << "duplicate export: " << e.name << " first seen in "
-                << exportSourceName(existing->source) << ", now in "
-                << exportSourceName(e.source);
-    }
-  }
-  ctx.config.exports = std::move(v);
-
-  // Sort by name.
-  llvm::sort(ctx.config.exports, [](const Export &a, const Export &b) {
-    return a.exportName < b.exportName;
-  });
-}
-
-void LinkerDriver::assignExportOrdinals() {
-  // Assign unique ordinals if default (= 0).
-  uint32_t max = 0;
-  for (Export &e : ctx.config.exports)
-    max = std::max(max, (uint32_t)e.ordinal);
-  for (Export &e : ctx.config.exports)
-    if (e.ordinal == 0)
-      e.ordinal = ++max;
-  if (max > std::numeric_limits<uint16_t>::max())
-    Fatal(ctx) << "too many exported symbols (got " << max << ", max "
-               << Twine(std::numeric_limits<uint16_t>::max()) << ")";
-}
-
 // Parses a string in the form of "key=value" and check
 // if value matches previous values for the same key.
 void LinkerDriver::checkFailIfMismatch(StringRef arg, InputFile *source) {
@@ -960,6 +861,9 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
       Warn(ctx) << "ignoring unknown argument '" << arg->getAsString(args)
                 << "', did you mean '" << nearest << "'";
   }
+
+  if (args.hasArg(OPT_link))
+    Warn(ctx) << "ignoring /link, did you pass it multiple times?";
 
   if (args.hasArg(OPT_lib))
     Warn(ctx) << "ignoring /lib since it's not the first argument";

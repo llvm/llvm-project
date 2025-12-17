@@ -1,4 +1,4 @@
-//===--- LexerUtils.cpp - clang-tidy---------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "LexerUtils.h"
-#include "clang/AST/AST.h"
 #include "clang/Basic/SourceManager.h"
 #include <optional>
 #include <utility>
@@ -17,25 +16,16 @@ namespace clang::tidy::utils::lexer {
 std::pair<Token, SourceLocation>
 getPreviousTokenAndStart(SourceLocation Location, const SourceManager &SM,
                          const LangOptions &LangOpts, bool SkipComments) {
+  const std::optional<Token> Tok =
+      Lexer::findPreviousToken(Location, SM, LangOpts, !SkipComments);
+
+  if (Tok.has_value()) {
+    return {*Tok, Lexer::GetBeginningOfToken(Tok->getLocation(), SM, LangOpts)};
+  }
+
   Token Token;
   Token.setKind(tok::unknown);
-
-  Location = Location.getLocWithOffset(-1);
-  if (Location.isInvalid())
-    return {Token, Location};
-
-  const auto StartOfFile = SM.getLocForStartOfFile(SM.getFileID(Location));
-  while (Location != StartOfFile) {
-    Location = Lexer::GetBeginningOfToken(Location, SM, LangOpts);
-    if (!Lexer::getRawToken(Location, Token, SM, LangOpts) &&
-        (!SkipComments || !Token.is(tok::comment))) {
-      break;
-    }
-    if (Location == StartOfFile)
-      return {Token, Location};
-    Location = Location.getLocWithOffset(-1);
-  }
-  return {Token, Location};
+  return {Token, SourceLocation()};
 }
 
 Token getPreviousToken(SourceLocation Location, const SourceManager &SM,
@@ -51,7 +41,7 @@ SourceLocation findPreviousTokenStart(SourceLocation Start,
   if (Start.isInvalid() || Start.isMacroID())
     return {};
 
-  SourceLocation BeforeStart = Start.getLocWithOffset(-1);
+  const SourceLocation BeforeStart = Start.getLocWithOffset(-1);
   if (BeforeStart.isInvalid() || BeforeStart.isMacroID())
     return {};
 
@@ -66,7 +56,7 @@ SourceLocation findPreviousTokenKind(SourceLocation Start,
     return {};
 
   while (true) {
-    SourceLocation L = findPreviousTokenStart(Start, SM, LangOpts);
+    const SourceLocation L = findPreviousTokenStart(Start, SM, LangOpts);
     if (L.isInvalid() || L.isMacroID())
       return {};
 
@@ -84,29 +74,6 @@ SourceLocation findPreviousTokenKind(SourceLocation Start,
 SourceLocation findNextTerminator(SourceLocation Start, const SourceManager &SM,
                                   const LangOptions &LangOpts) {
   return findNextAnyTokenKind(Start, SM, LangOpts, tok::comma, tok::semi);
-}
-
-std::optional<Token>
-findNextTokenIncludingComments(SourceLocation Start, const SourceManager &SM,
-                               const LangOptions &LangOpts) {
-  // `Lexer::findNextToken` will ignore comment
-  if (Start.isMacroID())
-    return std::nullopt;
-  Start = Lexer::getLocForEndOfToken(Start, 0, SM, LangOpts);
-  // Break down the source location.
-  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Start);
-  bool InvalidTemp = false;
-  StringRef File = SM.getBufferData(LocInfo.first, &InvalidTemp);
-  if (InvalidTemp)
-    return std::nullopt;
-  // Lex from the start of the given location.
-  Lexer L(SM.getLocForStartOfFile(LocInfo.first), LangOpts, File.begin(),
-          File.data() + LocInfo.second, File.end());
-  L.SetCommentRetentionState(true);
-  // Find the token.
-  Token Tok;
-  L.LexFromRawLexer(Tok);
-  return Tok;
 }
 
 std::optional<Token>
@@ -155,8 +122,9 @@ std::optional<Token> getQualifyingToken(tok::TokenKind TK,
   assert((TK == tok::kw_const || TK == tok::kw_volatile ||
           TK == tok::kw_restrict) &&
          "TK is not a qualifier keyword");
-  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Range.getBegin());
-  StringRef File = SM.getBufferData(LocInfo.first);
+  const std::pair<FileID, unsigned> LocInfo =
+      SM.getDecomposedLoc(Range.getBegin());
+  const StringRef File = SM.getBufferData(LocInfo.first);
   Lexer RawLexer(SM.getLocForStartOfFile(LocInfo.first), Context.getLangOpts(),
                  File.begin(), File.data() + LocInfo.second, File.end());
   std::optional<Token> LastMatchBeforeTemplate;
@@ -201,7 +169,6 @@ static bool breakAndReturnEndPlus1Token(const Stmt &S) {
 static SourceLocation getSemicolonAfterStmtEndLoc(const SourceLocation &EndLoc,
                                                   const SourceManager &SM,
                                                   const LangOptions &LangOpts) {
-
   if (EndLoc.isMacroID()) {
     // Assuming EndLoc points to a function call foo within macro F.
     // This method is supposed to return location of the semicolon within
@@ -237,7 +204,6 @@ static SourceLocation getSemicolonAfterStmtEndLoc(const SourceLocation &EndLoc,
 
 SourceLocation getUnifiedEndLoc(const Stmt &S, const SourceManager &SM,
                                 const LangOptions &LangOpts) {
-
   const Stmt *LastChild = &S;
   while (!LastChild->children().empty() && !breakAndReturnEnd(*LastChild) &&
          !breakAndReturnEndPlus1Token(*LastChild)) {

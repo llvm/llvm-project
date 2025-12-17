@@ -296,8 +296,9 @@ class MxMOVEMEncoding<MxEncMemOp opnd_enc, bit size, bit direction,
 
 let mayStore = 1 in
 class MxMOVEM_MR<MxType TYPE, bit SIZE_ENC,
-                 MxOperand MEMOp, MxEncMemOp MEM_ENC>
-    : MxInst<(outs), (ins MEMOp:$dst, MxMoveMask:$mask),
+                 MxOperand MEMOp, MxEncMemOp MEM_ENC,
+                 MxOp MASKOp>
+    : MxInst<(outs), (ins MEMOp:$dst, MASKOp:$mask),
              "movem."#TYPE.Prefix#"\t$mask, $dst", []> {
   let Inst = MxMOVEMEncoding<MEM_ENC, SIZE_ENC, MxMOVEM_MR, "mask">.Value;
 }
@@ -307,13 +308,15 @@ foreach AM = MxMoveSupportedAMs in {
   def MOVM # TYPE.Size # AM # m # TYPE.Postfix
       : MxMOVEM_MR<TYPE, !if(!eq(TYPE, MxType16), MxMOVEM_W, MxMOVEM_L),
                    !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#AM).Op,
-                   !cast<MxEncMemOp>("MxMoveDstOpEnc_"#AM)>;
+                   !cast<MxEncMemOp>("MxMoveDstOpEnc_"#AM),
+                   !if(!eq(AM, "e"), MxInverseMoveMask, MxMoveMask)>;
 } // foreach AM
 
 let mayLoad = 1 in
 class MxMOVEM_RM<MxType TYPE, bit SIZE_ENC,
-                 MxOperand MEMOp, MxEncMemOp MEM_ENC>
-    : MxInst<(outs), (ins MxMoveMask:$mask, MEMOp:$src),
+                 MxOperand MEMOp, MxEncMemOp MEM_ENC,
+                 MxOp MASKOp>
+    : MxInst<(outs), (ins MASKOp:$mask, MEMOp:$src),
              "movem."#TYPE.Prefix#"\t$src, $mask", []> {
   let Inst = MxMOVEMEncoding<MEM_ENC, SIZE_ENC, MxMOVEM_RM, "mask">.Value;
 }
@@ -323,7 +326,8 @@ foreach AM = MxMoveSupportedAMs in {
   def MOVM # TYPE.Size # m # AM # TYPE.Postfix
       : MxMOVEM_RM<TYPE, !if(!eq(TYPE, MxType16), MxMOVEM_W, MxMOVEM_L),
                    !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#AM).Op,
-                   !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM)>;
+                   !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM),
+                   !if(!eq(AM, "e"), MxInverseMoveMask, MxMoveMask)>;
 } // foreach AM
 
 // Pseudo versions. These a required by virtual register spill/restore since
@@ -337,41 +341,32 @@ class MxMOVEM_RM_Pseudo<MxType TYPE, MxOperand MEMOp>
     : MxPseudo<(outs TYPE.ROp:$dst), (ins MEMOp:$src)>;
 
 // Mem <- Reg
-def MOVM8jm_P  : MxMOVEM_MR_Pseudo<MxType8d,  MxType8.JOp>;
 def MOVM16jm_P : MxMOVEM_MR_Pseudo<MxType16r, MxType16.JOp>;
 def MOVM32jm_P : MxMOVEM_MR_Pseudo<MxType32r, MxType32.JOp>;
 
-def MOVM8pm_P  : MxMOVEM_MR_Pseudo<MxType8d,  MxType8.POp>;
 def MOVM16pm_P : MxMOVEM_MR_Pseudo<MxType16r, MxType16.POp>;
 def MOVM32pm_P : MxMOVEM_MR_Pseudo<MxType32r, MxType32.POp>;
 
 // Reg <- Mem
-def MOVM8mj_P  : MxMOVEM_RM_Pseudo<MxType8d,  MxType8.JOp>;
 def MOVM16mj_P : MxMOVEM_RM_Pseudo<MxType16r, MxType16.JOp>;
 def MOVM32mj_P : MxMOVEM_RM_Pseudo<MxType32r, MxType32.JOp>;
 
-def MOVM8mp_P  : MxMOVEM_RM_Pseudo<MxType8d,  MxType8.POp>;
 def MOVM16mp_P : MxMOVEM_RM_Pseudo<MxType16r, MxType16.POp>;
 def MOVM32mp_P : MxMOVEM_RM_Pseudo<MxType32r, MxType32.POp>;
 
 
 //===----------------------------------------------------------------------===//
 // MOVE to/from SR/CCR
-//
-// A special care must be taken working with to/from CCR since it is basically
-// word-size SR register truncated for user mode thus it only supports word-size
-// instructions. Plus the original M68000 does not support moves from CCR. So in
-// order to use CCR effectively one MUST use proper byte-size pseudo instructi-
-// ons that will be resolved sometime after RA pass.
 //===----------------------------------------------------------------------===//
 
+/// Move to CCR
 /// --------------------------------------------------
 ///  F  E  D  C  B  A  9  8  7  6 | 5  4  3 | 2  1  0
 /// --------------------------------------------------
 ///                               | EFFECTIVE ADDRESS
 ///  0  1  0  0  0  1  0  0  1  1 |   MODE  |   REG
 /// --------------------------------------------------
-let Defs = [CCR] in
+let Defs = [CCR] in {
 class MxMoveToCCR<MxOperand MEMOp, MxEncMemOp SRC_ENC>
     : MxInst<(outs CCRC:$dst), (ins MEMOp:$src), "move.w\t$src, $dst", []> {
   let Inst = (ascend
@@ -382,6 +377,7 @@ class MxMoveToCCR<MxOperand MEMOp, MxEncMemOp SRC_ENC>
 
 class MxMoveToCCRPseudo<MxOperand MEMOp>
     : MxPseudo<(outs CCRC:$dst), (ins MEMOp:$src)>;
+} // let Defs = [CCR]
 
 let mayLoad = 1 in
 foreach AM = MxMoveSupportedAMs in {
@@ -392,7 +388,6 @@ foreach AM = MxMoveSupportedAMs in {
 
 // Only data register is allowed.
 def MOV16cd : MxMoveToCCR<MxOp16AddrMode_d.Op, MxMoveSrcOpEnc_d>;
-def MOV8cd  : MxMoveToCCRPseudo<MxOp8AddrMode_d.Op>;
 
 /// Move from CCR
 /// --------------------------------------------------
@@ -434,7 +429,62 @@ foreach AM = MxMoveSupportedAMs in {
 
 // Only data register is allowed.
 def MOV16dc : MxMoveFromCCR_R;
-def MOV8dc  : MxMoveFromCCR_RPseudo<MxOp8AddrMode_d.Op>;
+
+/// Move to SR
+/// --------------------------------------------------
+///  F  E  D  C  B  A  9  8  7  6 | 5  4  3 | 2  1  0
+/// --------------------------------------------------
+///                               | EFFECTIVE ADDRESS
+///  0  1  0  0  0  1  1  0  1  1 |   MODE  |   REG
+/// --------------------------------------------------
+let Defs = [SR] in {
+class MxMoveToSR<MxOperand MEMOp, MxEncMemOp SRC_ENC>
+    : MxInst<(outs SRC:$dst), (ins MEMOp:$src), "move.w\t$src, $dst", []> {
+  let Inst = (ascend
+    (descend 0b0100011011, SRC_ENC.EA),
+    SRC_ENC.Supplement
+  );
+}
+} // let Defs = [SR]
+
+let mayLoad = 1 in
+foreach AM = MxMoveSupportedAMs in {
+  def MOV16s # AM : MxMoveToSR<!cast<MxOpBundle>("MxOp16AddrMode_"#AM).Op,
+                                !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM)>;
+} // foreach AM
+
+def MOV16sd : MxMoveToSR<MxOp16AddrMode_d.Op, MxMoveSrcOpEnc_d>;
+
+/// Move from SR
+/// --------------------------------------------------
+///  F  E  D  C  B  A  9  8  7  6 | 5  4  3 | 2  1  0
+/// --------------------------------------------------
+///                               | EFFECTIVE ADDRESS
+///  0  1  0  0  0  0  0  0  1  1 |   MODE  |   REG
+/// --------------------------------------------------
+let Uses = [SR] in {
+class MxMoveFromSR_R
+    : MxInst<(outs MxDRD16:$dst), (ins SRC:$src), "move.w\t$src, $dst", []> {
+  let Inst = (descend 0b0100000011, MxEncAddrMode_d<"dst">.EA);
+}
+
+class MxMoveFromSR_M<MxOperand MEMOp, MxEncMemOp DST_ENC>
+    : MxInst<(outs), (ins MEMOp:$dst, SRC:$src), "move.w\t$src, $dst", []> {
+  let Inst = (ascend
+    (descend 0b0100000011, DST_ENC.EA),
+    DST_ENC.Supplement
+  );
+}
+} // let Uses = [SR]
+
+let mayStore = 1 in
+foreach AM = MxMoveSupportedAMs in {
+  def MOV16 # AM # s
+    : MxMoveFromSR_M<!cast<MxOpBundle>("MxOp16AddrMode_"#AM).Op,
+                      !cast<MxEncMemOp>("MxMoveDstOpEnc_"#AM)>;
+} // foreach AM
+
+def MOV16ds : MxMoveFromSR_R;
 
 //===----------------------------------------------------------------------===//
 // LEA
@@ -641,18 +691,22 @@ def: Pat<(MxExtLoadi16i8 MxCP_ARID:$src),
           (EXTRACT_SUBREG (MOVZXd32p8 MxARID8:$src), MxSubRegIndex16Lo)>;
 def: Pat<(MxExtLoadi16i8 MxCP_ARII:$src),
           (EXTRACT_SUBREG (MOVZXd32f8 MxARII8:$src), MxSubRegIndex16Lo)>;
+def: Pat<(MxExtLoadi16i8 MxCP_PCD:$src),
+          (EXTRACT_SUBREG (MOVZXd32q8 MxPCD8:$src), MxSubRegIndex16Lo)>;
 
 // i32 <- anyext i8
 def: Pat<(i32 (anyext i8:$src)), (MOVZXd32d8 MxDRD8:$src)>;
 def: Pat<(MxExtLoadi32i8 MxCP_ARI :$src), (MOVZXd32j8 MxARI8 :$src)>;
 def: Pat<(MxExtLoadi32i8 MxCP_ARID:$src), (MOVZXd32p8 MxARID8:$src)>;
 def: Pat<(MxExtLoadi32i8 MxCP_ARII:$src), (MOVZXd32f8 MxARII8:$src)>;
+def: Pat<(MxExtLoadi32i8 MxCP_PCD:$src), (MOVZXd32q8 MxPCD8:$src)>;
 
 // i32 <- anyext i16
 def: Pat<(i32 (anyext i16:$src)), (MOVZXd32d16 MxDRD16:$src)>;
 def: Pat<(MxExtLoadi32i16 MxCP_ARI :$src), (MOVZXd32j16 MxARI16 :$src)>;
 def: Pat<(MxExtLoadi32i16 MxCP_ARID:$src), (MOVZXd32p16 MxARID16:$src)>;
 def: Pat<(MxExtLoadi32i16 MxCP_ARII:$src), (MOVZXd32f16 MxARII16:$src)>;
+def: Pat<(MxExtLoadi32i16 MxCP_PCD:$src), (MOVZXd32q16 MxPCD16:$src)>;
 
 // trunc patterns
 def : Pat<(i16 (trunc i32:$src)),

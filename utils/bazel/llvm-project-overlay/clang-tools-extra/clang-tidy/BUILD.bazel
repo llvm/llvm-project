@@ -23,6 +23,11 @@ bool_flag(
     build_setting_default = True,
 )
 
+bool_flag(
+    name = "enable_custom_checks",
+    build_setting_default = True,
+)
+
 config_setting(
     name = "static_analyzer_enabled",
     flag_values = {
@@ -30,17 +35,32 @@ config_setting(
     },
 )
 
+config_setting(
+    name = "custom_checks_enabled",
+    flag_values = {
+        ":enable_custom_checks": "true",
+    },
+)
+
 expand_template(
     name = "config",
     out = "clang-tidy-config.h",
-    substitutions = select({
-        ":static_analyzer_enabled": {
-            "#cmakedefine01 CLANG_TIDY_ENABLE_STATIC_ANALYZER": "#define CLANG_TIDY_ENABLE_STATIC_ANALYZER 1",
-        },
-        "//conditions:default": {
-            "#cmakedefine01 CLANG_TIDY_ENABLE_STATIC_ANALYZER": "#define CLANG_TIDY_ENABLE_STATIC_ANALYZER 0",
-        },
-    }),
+    substitutions =
+        select({
+            ":custom_checks_enabled": {
+                "#cmakedefine01 CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS": "#define CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS 1",
+            },
+            "//conditions:default": {
+                "#cmakedefine01 CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS": "#define CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS 0",
+            },
+        }) | select({
+            ":static_analyzer_enabled": {
+                "#cmakedefine01 CLANG_TIDY_ENABLE_STATIC_ANALYZER": "#define CLANG_TIDY_ENABLE_STATIC_ANALYZER 1",
+            },
+            "//conditions:default": {
+                "#cmakedefine01 CLANG_TIDY_ENABLE_STATIC_ANALYZER": "#define CLANG_TIDY_ENABLE_STATIC_ANALYZER 0",
+            },
+        }),
     template = "clang-tidy-config.h.cmake",
     visibility = ["//visibility:private"],
 )
@@ -140,6 +160,7 @@ clang_tidy_library(
     name = "google",
     deps = [
         ":lib",
+        ":modernize",
         ":readability",
         ":utils",
     ],
@@ -150,6 +171,8 @@ clang_tidy_library(
     deps = [
         ":google",
         ":lib",
+        ":misc",
+        ":utils",
     ],
 )
 
@@ -160,6 +183,7 @@ clang_tidy_library(
         ":readability",
         ":utils",
         "//clang:tooling",
+        "//clang:transformer",
     ],
 )
 
@@ -177,6 +201,7 @@ clang_tidy_library(
     deps = [
         ":lib",
         ":utils",
+        "//clang:analysis",
         "//clang:tooling",
         "//clang:transformer",
     ],
@@ -200,6 +225,15 @@ clang_tidy_library(
     deps = [
         ":lib",
         ":utils",
+    ],
+)
+
+clang_tidy_library(
+    name = "custom",
+    deps = [
+        ":lib",
+        "//clang:ast_matchers_dynamic",
+        "//clang-tools-extra/clang-query:lib",
     ],
 )
 
@@ -257,6 +291,7 @@ clang_tidy_library(
 clang_tidy_library(
     name = "zircon",
     deps = [
+        ":fuchsia",
         ":lib",
         ":utils",
     ],
@@ -282,6 +317,7 @@ clang_tidy_library(
         ":lib",
         ":utils",
         "//clang:analysis",
+        "//clang:sema",
         "//clang:tooling",
         "//clang:transformer",
     ],
@@ -305,6 +341,7 @@ clang_tidy_library(
         ":google",
         ":lib",
         ":misc",
+        ":modernize",
         ":performance",
         ":readability",
         ":utils",
@@ -356,6 +393,9 @@ CHECKS = [
     ":zircon",
 ] + select({
     ":static_analyzer_enabled": [":mpi"],
+    "//conditions:default": [],
+}) + select({
+    ":custom_checks_enabled": [":custom"],
     "//conditions:default": [],
 })
 

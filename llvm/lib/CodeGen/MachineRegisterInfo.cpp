@@ -83,8 +83,6 @@ constrainRegClass(MachineRegisterInfo &MRI, Register Reg,
 
 const TargetRegisterClass *MachineRegisterInfo::constrainRegClass(
     Register Reg, const TargetRegisterClass *RC, unsigned MinNumRegs) {
-  if (Reg.isPhysical())
-    return nullptr;
   return ::constrainRegClass(*this, Reg, getRegClass(Reg), RC, MinNumRegs);
 }
 
@@ -122,8 +120,8 @@ bool
 MachineRegisterInfo::recomputeRegClass(Register Reg) {
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   const TargetRegisterClass *OldRC = getRegClass(Reg);
-  const TargetRegisterClass *NewRC =
-      getTargetRegisterInfo()->getLargestLegalSuperClass(OldRC, *MF);
+  const TargetRegisterInfo *TRI = getTargetRegisterInfo();
+  const TargetRegisterClass *NewRC = TRI->getLargestLegalSuperClass(OldRC, *MF);
 
   // Stop early if there is no room to grow.
   if (NewRC == OldRC)
@@ -134,8 +132,7 @@ MachineRegisterInfo::recomputeRegClass(Register Reg) {
     // Apply the effect of the given operand to NewRC.
     MachineInstr *MI = MO.getParent();
     unsigned OpNo = &MO - &MI->getOperand(0);
-    NewRC = MI->getRegClassConstraintEffect(OpNo, NewRC, TII,
-                                            getTargetRegisterInfo());
+    NewRC = MI->getRegClassConstraintEffect(OpNo, NewRC, TII, TRI);
     if (!NewRC || NewRC == OldRC)
       return false;
   }
@@ -433,6 +430,16 @@ bool MachineRegisterInfo::hasOneNonDBGUser(Register RegNo) const {
   return hasSingleElement(use_nodbg_instructions(RegNo));
 }
 
+MachineOperand *MachineRegisterInfo::getOneNonDBGUse(Register RegNo) const {
+  auto RegNoDbgUses = use_nodbg_operands(RegNo);
+  return hasSingleElement(RegNoDbgUses) ? &*RegNoDbgUses.begin() : nullptr;
+}
+
+MachineInstr *MachineRegisterInfo::getOneNonDBGUser(Register RegNo) const {
+  auto RegNoDbgUsers = use_nodbg_instructions(RegNo);
+  return hasSingleElement(RegNoDbgUsers) ? &*RegNoDbgUsers.begin() : nullptr;
+}
+
 bool MachineRegisterInfo::hasAtMostUserInstrs(Register Reg,
                                               unsigned MaxUsers) const {
   return hasNItemsOrLess(use_instr_nodbg_begin(Reg), use_instr_nodbg_end(),
@@ -526,7 +533,7 @@ void MachineRegisterInfo::freezeReservedRegs() {
 }
 
 bool MachineRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
-  assert(Register::isPhysicalRegister(PhysReg));
+  assert(PhysReg.isPhysical());
 
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   if (TRI->isConstantPhysReg(PhysReg))
@@ -584,7 +591,7 @@ static bool isNoReturnDef(const MachineOperand &MO) {
 
 bool MachineRegisterInfo::isPhysRegModified(MCRegister PhysReg,
                                             bool SkipNoReturnDef) const {
-  if (UsedPhysRegMask.test(PhysReg))
+  if (UsedPhysRegMask.test(PhysReg.id()))
     return true;
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   for (MCRegAliasIterator AI(PhysReg, TRI, true); AI.isValid(); ++AI) {
@@ -599,7 +606,7 @@ bool MachineRegisterInfo::isPhysRegModified(MCRegister PhysReg,
 
 bool MachineRegisterInfo::isPhysRegUsed(MCRegister PhysReg,
                                         bool SkipRegMaskTest) const {
-  if (!SkipRegMaskTest && UsedPhysRegMask.test(PhysReg))
+  if (!SkipRegMaskTest && UsedPhysRegMask.test(PhysReg.id()))
     return true;
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   for (MCRegAliasIterator AliasReg(PhysReg, TRI, true); AliasReg.isValid();
@@ -658,7 +665,7 @@ void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {
   IsUpdatedCSRsInitialized = true;
 }
 
-bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
+bool MachineRegisterInfo::isReservedRegUnit(MCRegUnit Unit) const {
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
     if (all_of(TRI->superregs_inclusive(*Root),

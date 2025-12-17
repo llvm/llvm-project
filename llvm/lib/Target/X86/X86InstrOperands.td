@@ -6,9 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+def x86_ptr_rc : RegClassByHwMode<
+  [X86_32, X86_64, X86_64_X32],
+  [GR32, GR64, LOW32_ADDR_ACCESS]>;
+
 // A version of ptr_rc which excludes SP, ESP, and RSP. This is used for
 // the index operand of an address, to conform to x86 encoding restrictions.
-def ptr_rc_nosp : PointerLikeRegClass<1>;
+def ptr_rc_nosp : RegClassByHwMode<
+  [X86_32, X86_64, X86_64_X32],
+  [GR32_NOSP, GR64_NOSP, GR32_NOSP]>;
 
 // *mem - Operand definitions for the funky X86 addressing mode operands.
 //
@@ -25,20 +31,18 @@ let RenderMethod = "addMemOperands", SuperClasses = [X86MemAsmOperand] in {
   def X86Mem256AsmOperand : AsmOperandClass { let Name = "Mem256"; }
   def X86Mem512AsmOperand : AsmOperandClass { let Name = "Mem512"; }
   // Gather mem operands
+  def X86Mem32_RC128Operand  : AsmOperandClass { let Name = "Mem32_RC128"; }
   def X86Mem64_RC128Operand  : AsmOperandClass { let Name = "Mem64_RC128"; }
-  def X86Mem128_RC128Operand : AsmOperandClass { let Name = "Mem128_RC128"; }
-  def X86Mem256_RC128Operand : AsmOperandClass { let Name = "Mem256_RC128"; }
-  def X86Mem128_RC256Operand : AsmOperandClass { let Name = "Mem128_RC256"; }
-  def X86Mem256_RC256Operand : AsmOperandClass { let Name = "Mem256_RC256"; }
+  def X86Mem32_RC256Operand  : AsmOperandClass { let Name = "Mem32_RC256"; }
+  def X86Mem64_RC256Operand  : AsmOperandClass { let Name = "Mem64_RC256"; }
 
+  def X86Mem32_RC128XOperand  : AsmOperandClass { let Name = "Mem32_RC128X"; }
   def X86Mem64_RC128XOperand  : AsmOperandClass { let Name = "Mem64_RC128X"; }
-  def X86Mem128_RC128XOperand : AsmOperandClass { let Name = "Mem128_RC128X"; }
-  def X86Mem256_RC128XOperand : AsmOperandClass { let Name = "Mem256_RC128X"; }
-  def X86Mem128_RC256XOperand : AsmOperandClass { let Name = "Mem128_RC256X"; }
-  def X86Mem256_RC256XOperand : AsmOperandClass { let Name = "Mem256_RC256X"; }
-  def X86Mem512_RC256XOperand : AsmOperandClass { let Name = "Mem512_RC256X"; }
-  def X86Mem256_RC512Operand  : AsmOperandClass { let Name = "Mem256_RC512"; }
-  def X86Mem512_RC512Operand  : AsmOperandClass { let Name = "Mem512_RC512"; }
+  def X86Mem32_RC256XOperand  : AsmOperandClass { let Name = "Mem32_RC256X"; }
+  def X86Mem64_RC256XOperand  : AsmOperandClass { let Name = "Mem64_RC256X"; }
+  def X86Mem32_RC512Operand   : AsmOperandClass { let Name = "Mem32_RC512"; }
+  def X86Mem64_RC512Operand   : AsmOperandClass { let Name = "Mem64_RC512"; }
+
   def X86Mem512_GR16Operand : AsmOperandClass { let Name = "Mem512_GR16"; }
   def X86Mem512_GR32Operand : AsmOperandClass { let Name = "Mem512_GR32"; }
   def X86Mem512_GR64Operand : AsmOperandClass { let Name = "Mem512_GR64"; }
@@ -55,7 +59,7 @@ class X86MemOperand<string printMethod,
                     AsmOperandClass parserMatchClass = X86MemAsmOperand,
                     int size = 0> : Operand<iPTR> {
   let PrintMethod = printMethod;
-  let MIOperandInfo = (ops ptr_rc, i8imm, ptr_rc_nosp, i32imm, SEGMENT_REG);
+  let MIOperandInfo = (ops x86_ptr_rc, i8imm, ptr_rc_nosp, i32imm, SEGMENT_REG);
   let ParserMatchClass = parserMatchClass;
   let OperandType = "OPERAND_MEMORY";
   int Size = size;
@@ -65,7 +69,7 @@ class X86MemOperand<string printMethod,
 class X86VMemOperand<RegisterClass RC, string printMethod,
                      AsmOperandClass parserMatchClass, int size = 0>
     : X86MemOperand<printMethod, parserMatchClass, size> {
-  let MIOperandInfo = (ops ptr_rc, i8imm, RC, i32imm, SEGMENT_REG);
+  let MIOperandInfo = (ops x86_ptr_rc, i8imm, RC, i32imm, SEGMENT_REG);
 }
 
 def anymem : X86MemOperand<"printMemReference">;
@@ -97,20 +101,17 @@ def i512mem_GR32 : X86MemOperand<"printzmmwordmem", X86Mem512_GR32Operand, 512>;
 def i512mem_GR64 : X86MemOperand<"printzmmwordmem", X86Mem512_GR64Operand, 512>;
 
 // Gather mem operands
+def vx32mem  : X86VMemOperand<VR128,  "printdwordmem",  X86Mem32_RC128Operand, 32>;
 def vx64mem  : X86VMemOperand<VR128,  "printqwordmem",  X86Mem64_RC128Operand, 64>;
-def vx128mem : X86VMemOperand<VR128,  "printxmmwordmem", X86Mem128_RC128Operand, 128>;
-def vx256mem : X86VMemOperand<VR128,  "printymmwordmem", X86Mem256_RC128Operand, 256>;
-def vy128mem : X86VMemOperand<VR256,  "printxmmwordmem", X86Mem128_RC256Operand, 128>;
-def vy256mem : X86VMemOperand<VR256,  "printymmwordmem", X86Mem256_RC256Operand, 256>;
+def vy32mem  : X86VMemOperand<VR256,  "printdwordmem",  X86Mem32_RC256Operand, 32>;
+def vy64mem  : X86VMemOperand<VR256,  "printqwordmem",  X86Mem64_RC256Operand, 64>;
 
+def vx32xmem  : X86VMemOperand<VR128X, "printdwordmem",  X86Mem32_RC128XOperand, 32>;
 def vx64xmem  : X86VMemOperand<VR128X, "printqwordmem",  X86Mem64_RC128XOperand, 64>;
-def vx128xmem : X86VMemOperand<VR128X, "printxmmwordmem", X86Mem128_RC128XOperand, 128>;
-def vx256xmem : X86VMemOperand<VR128X, "printymmwordmem", X86Mem256_RC128XOperand, 256>;
-def vy128xmem : X86VMemOperand<VR256X, "printxmmwordmem", X86Mem128_RC256XOperand, 128>;
-def vy256xmem : X86VMemOperand<VR256X, "printymmwordmem", X86Mem256_RC256XOperand, 256>;
-def vy512xmem : X86VMemOperand<VR256X, "printzmmwordmem", X86Mem512_RC256XOperand, 512>;
-def vz256mem  : X86VMemOperand<VR512,  "printymmwordmem", X86Mem256_RC512Operand, 256>;
-def vz512mem  : X86VMemOperand<VR512,  "printzmmwordmem", X86Mem512_RC512Operand, 512>;
+def vy32xmem  : X86VMemOperand<VR256X, "printdwordmem",  X86Mem32_RC256XOperand, 32>;
+def vy64xmem  : X86VMemOperand<VR256X, "printqwordmem",  X86Mem64_RC256XOperand, 64>;
+def vz32mem   : X86VMemOperand<VR512,  "printdwordmem",  X86Mem32_RC512Operand,  32>;
+def vz64mem   : X86VMemOperand<VR512,  "printqwordmem",  X86Mem64_RC512Operand,  64>;
 
 def shmem : X86MemOperand<"printwordmem", X86Mem16AsmOperand>;
 def ssmem : X86MemOperand<"printdwordmem", X86Mem32AsmOperand>;
@@ -118,8 +119,14 @@ def sdmem : X86MemOperand<"printqwordmem", X86Mem64AsmOperand>;
 
 // A version of i8mem for use on x86-64 and x32 that uses a NOREX GPR instead
 // of a plain GPR, so that it doesn't potentially require a REX prefix.
-def ptr_rc_norex : PointerLikeRegClass<2>;
-def ptr_rc_norex_nosp : PointerLikeRegClass<3>;
+def ptr_rc_norex : RegClassByHwMode<
+  [X86_32, X86_64, X86_64_X32],
+  [GR32_NOREX, GR64_NOREX, GR32_NOREX]>;
+
+def ptr_rc_norex_nosp : RegClassByHwMode<
+  [X86_32, X86_64, X86_64_X32],
+  [GR32_NOREX_NOSP, GR64_NOREX_NOSP, GR32_NOREX_NOSP]>;
+
 
 def i8mem_NOREX : X86MemOperand<"printbytemem", X86Mem8AsmOperand, 8> {
   let MIOperandInfo = (ops ptr_rc_norex, i8imm, ptr_rc_norex_nosp, i32imm,
@@ -128,7 +135,9 @@ def i8mem_NOREX : X86MemOperand<"printbytemem", X86Mem8AsmOperand, 8> {
 
 // GPRs available for tailcall.
 // It represents GR32_TC, GR64_TC or GR64_TCW64.
-def ptr_rc_tailcall : PointerLikeRegClass<4>;
+def ptr_rc_tailcall : RegClassByHwMode<
+  [X86_32, X86_64, X86_64_X32],
+  [GR32_TC, GR64_TC, GR64_TC]>;
 
 // Special i32mem for addresses of load folding tail calls. These are not
 // allowed to use callee-saved registers since they must be scheduled
@@ -146,9 +155,20 @@ def i64mem_TC : X86MemOperand<"printqwordmem", X86Mem64AsmOperand, 64> {
                        ptr_rc_tailcall, i32imm, SEGMENT_REG);
 }
 
+def i64mem_w64TC : X86MemOperand<"printqwordmem", X86Mem64AsmOperand, 64> {
+  let MIOperandInfo = (ops GR64_TCW64, i8imm,
+                       GR64_TCW64, i32imm, SEGMENT_REG);
+}
+
 // Special parser to detect 16-bit mode to select 16-bit displacement.
-def X86AbsMem16AsmOperand : AsmOperandClass {
-  let Name = "AbsMem16";
+def X86AbsMemMode16AsmOperand : AsmOperandClass {
+  let Name = "AbsMemMode16";
+  let RenderMethod = "addAbsMemOperands";
+  let SuperClasses = [X86AbsMemAsmOperand];
+}
+
+def X86AbsMem8AsmOperand : AsmOperandClass {
+  let Name = "AbsMem8";
   let RenderMethod = "addAbsMemOperands";
   let SuperClasses = [X86AbsMemAsmOperand];
 }
@@ -162,6 +182,9 @@ class BranchTargetOperand<ValueType ty> : Operand<ty> {
 
 def i32imm_brtarget : BranchTargetOperand<i32>;
 def i16imm_brtarget : BranchTargetOperand<i16>;
+def i8imm_brtarget : BranchTargetOperand<i8> {
+  let ParserMatchClass = X86AbsMem8AsmOperand;
+}
 
 // 64-bits but only 32 bits are significant, and those bits are treated as being
 // pc relative.
@@ -170,7 +193,7 @@ def i64i32imm_brtarget : BranchTargetOperand<i64>;
 def brtarget : BranchTargetOperand<OtherVT>;
 def brtarget8 : BranchTargetOperand<OtherVT>;
 def brtarget16 : BranchTargetOperand<OtherVT> {
-  let ParserMatchClass = X86AbsMem16AsmOperand;
+  let ParserMatchClass = X86AbsMemMode16AsmOperand;
 }
 def brtarget32 : BranchTargetOperand<OtherVT>;
 
@@ -261,12 +284,12 @@ let RenderMethod = "addMemOffsOperands" in {
 
 class X86SrcIdxOperand<string printMethod, AsmOperandClass parserMatchClass>
     : X86MemOperand<printMethod, parserMatchClass> {
-  let MIOperandInfo = (ops ptr_rc, SEGMENT_REG);
+  let MIOperandInfo = (ops x86_ptr_rc, SEGMENT_REG);
 }
 
 class X86DstIdxOperand<string printMethod, AsmOperandClass parserMatchClass>
     : X86MemOperand<printMethod, parserMatchClass> {
-  let MIOperandInfo = (ops ptr_rc);
+  let MIOperandInfo = (ops x86_ptr_rc);
 }
 
 def srcidx8  : X86SrcIdxOperand<"printSrcIdx8",  X86SrcIdx8Operand>;
@@ -461,6 +484,18 @@ def i64u8imm : Operand<i64> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
+def lea64_8mem : Operand<i8> {
+  let PrintMethod = "printMemReference";
+  let MIOperandInfo = (ops GR64, i8imm, GR64_NOSP, i8imm, SEGMENT_REG);
+  let ParserMatchClass = X86MemAsmOperand;
+}
+
+def lea64_16mem : Operand<i16> {
+  let PrintMethod = "printMemReference";
+  let MIOperandInfo = (ops GR64, i8imm, GR64_NOSP, i16imm, SEGMENT_REG);
+  let ParserMatchClass = X86MemAsmOperand;
+}
+
 def lea64_32mem : Operand<i32> {
   let PrintMethod = "printMemReference";
   let MIOperandInfo = (ops GR64, i8imm, GR64_NOSP, i32imm, SEGMENT_REG);
@@ -500,11 +535,4 @@ def VK8Pair : RegisterOperand<VK8PAIR, "printVKPair"> {
 
 def VK16Pair : RegisterOperand<VK16PAIR, "printVKPair"> {
   let ParserMatchClass = VK16PairAsmOperand;
-}
-
-let RenderMethod = "addTILEPairOperands" in
-  def TILEPairAsmOperand : AsmOperandClass { let Name = "TILEPair"; }
-
-def TILEPair : RegisterOperand<TILEPAIR, "printTILEPair"> {
-  let ParserMatchClass = TILEPairAsmOperand;
 }

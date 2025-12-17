@@ -14,7 +14,10 @@
 #define LLVM_LIB_CODEGEN_ASMPRINTER_PSEUDOPROBEPRINTER_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/CodeGen/AsmPrinterHandler.h"
+
+#ifndef NDEBUG
+#include "llvm/ADT/DenseSet.h"
+#endif
 
 namespace llvm {
 
@@ -26,6 +29,13 @@ class PseudoProbeHandler {
   AsmPrinter *Asm;
   // Name to GUID map, used as caching/memoization for speed.
   DenseMap<StringRef, uint64_t> NameGuidMap;
+
+#ifndef NDEBUG
+  // All GUID in llvm.pseudo_probe_desc.
+  DenseSet<uint64_t> DescGuidSet;
+
+  void verifyGuidExistenceInDesc(uint64_t Guid, StringRef FuncName);
+#endif
 
 public:
   PseudoProbeHandler(AsmPrinter *A) : Asm(A) {};

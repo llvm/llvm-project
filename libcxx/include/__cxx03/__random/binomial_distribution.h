@@ -60,14 +60,8 @@ private:
 
 public:
   // constructors and reset functions
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI binomial_distribution() : binomial_distribution(1) {}
-  _LIBCPP_HIDE_FROM_ABI explicit binomial_distribution(result_type __t, double __p = 0.5)
-      : __p_(param_type(__t, __p)) {}
-#else
   _LIBCPP_HIDE_FROM_ABI explicit binomial_distribution(result_type __t = 1, double __p = 0.5)
       : __p_(param_type(__t, __p)) {}
-#endif
   _LIBCPP_HIDE_FROM_ABI explicit binomial_distribution(const param_type& __p) : __p_(__p) {}
   _LIBCPP_HIDE_FROM_ABI void reset() {}
 

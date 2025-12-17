@@ -81,12 +81,15 @@ CMake invocation at ``<monorepo>/llvm``:
 .. code-block:: bash
 
   $ mkdir build
-  $ cmake -G Ninja -S llvm -B build -DLLVM_ENABLE_PROJECTS="clang"                      \  # Configure
-                                    -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
-                                    -DLLVM_RUNTIME_TARGETS="<target-triple>"
-  $ ninja -C build runtimes                                                                # Build
-  $ ninja -C build check-runtimes                                                          # Test
-  $ ninja -C build install-runtimes                                                        # Install
+  $ # Configure
+  $ cmake -G Ninja -S llvm -B build                                       \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo                               \
+          -DLLVM_ENABLE_PROJECTS="clang"                                  \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;compiler-rt" \
+          -DLLVM_RUNTIME_TARGETS="<target-triple>"
+  $ ninja -C build runtimes          # Build
+  $ ninja -C build check-runtimes    # Test
+  $ ninja -C build install-runtimes  # Install
 
 .. note::
   - This type of build is also commonly called a "Runtimes build", but we would like to move
@@ -162,10 +165,10 @@ General purpose options
 
 .. option:: LIBCXX_ENABLE_FILESYSTEM:BOOL
 
-   **Default**: ``ON`` except on Windows when using MSVC.
+   **Default**: ``ON``
 
    This option can be used to enable or disable the filesystem components on
-   platforms that may not support them. For example on Windows when using MSVC.
+   platforms that may not support them.
 
 .. option:: LIBCXX_ENABLE_WIDE_CHARACTERS:BOOL
 
@@ -376,6 +379,12 @@ newer (19.14) is required.
 
 Libc++ also supports being built with clang targeting MinGW environments.
 
+Libc++ supports Windows 7 or newer. However, the minimum runtime version
+of the build is determined by the ``_WIN32_WINNT`` define, which in many
+SDKs defaults to the latest version. To build a version that runs on an
+older version, define e.g. ``_WIN32_WINNT=0x601`` while building libc++,
+to target Windows 7.
+
 CMake + Visual Studio
 ---------------------
 
@@ -443,7 +452,7 @@ e.g. the ``mingw-w64-x86_64-clang`` package), together with CMake and ninja.
           -DCMAKE_C_COMPILER=clang                                                    \
           -DCMAKE_CXX_COMPILER=clang++                                                \
           -DLLVM_ENABLE_LLD=ON                                                        \
-          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"                                   \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"                         \
           -DLIBCXXABI_ENABLE_SHARED=OFF                                               \
           -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON
   > ninja -C build cxx
@@ -582,3 +591,50 @@ situations will give the same result:
   $ clang++ -stdlib=libc++ helloworld.cpp -lcxxrt
 
 .. _`libcxxrt`: https://github.com/libcxxrt/libcxxrt
+
+libc++'s ABI guarantees
+=======================
+
+Libc++ provides several ABI guarantees, which are documented :ref:`here <ABIGuarantees>`.
+
+Availability Markup
+===================
+
+Libc++ is shipped by various vendors. In particular, it is used as a system library on macOS, iOS and other Apple
+platforms. In order for users to be able to compile a binary that is intended to be deployed to an older version of a
+platform, Clang provides `availability attributes <https://clang.llvm.org/docs/AttributeReference.html#availability>`_.
+These attributes can be placed on declarations and are used to describe the life cycle of a symbol in the library.
+
+The main goal is to ensure a compile-time error if a symbol that hasn't been introduced in a previously released library
+is used in a program that targets that previously released library. Normally, this would be a load-time error when one
+tries to launch the program against the older library.
+
+For example, the filesystem library was introduced in the dylib in LLVM 9. On Apple platforms, this corresponds to
+macOS 10.15. If a user compiles on a macOS 10.15 host but targets macOS 10.13 with their program, the compiler would
+normally not complain (because the required declarations are in the headers), but the dynamic loader would fail to find
+the symbols when actually trying to launch the program on macOS 10.13. To turn this into a compile-time issue instead,
+declarations are annotated with when they were introduced, and the compiler can produce a diagnostic if the program
+references something that isn't available on the deployment target.
+
+This mechanism is general in nature, and any vendor can add their markup to the library (see below). Whenever a new
+feature is added that requires support in the shared library, two macros are added below to allow marking the feature as
+unavailable:
+
+1. A macro named ``_LIBCPP_AVAILABILITY_HAS_<feature>`` which must be defined to ``_LIBCPP_INTRODUCED_IN_<version>`` for
+   the appropriate LLVM version.
+
+2. A macro named ``_LIBCPP_AVAILABILITY_<feature>``, which must be defined to ``_LIBCPP_INTRODUCED_IN_<version>_MARKUP``
+   for the appropriate LLVM version.
+
+When vendors decide to ship the feature as part of their shared library, they can update the
+``_LIBCPP_INTRODUCED_IN_<version>`` macro (and the markup counterpart) based on the platform version they shipped that
+version of LLVM in. The library will then use this markup to provide an optimal user experience on these platforms.
+
+Furthermore, many features in the standard library have corresponding feature-test macros. The
+``_LIBCPP_AVAILABILITY_HAS_<feature>`` macros are checked by the corresponding feature-test macros generated by
+``generate_feature_test_macro_components.py`` to ensure that the library doesn't announce a feature as being implemented
+if it is unavailable on the deployment target.
+
+Note that this mechanism is disabled by default in the "upstream" libc++. Availability annotations are only meaningful
+when shipping libc++ inside a platform (i.e. as a system library), and so vendors that want them should turn those
+annotations on at CMake configuration time.

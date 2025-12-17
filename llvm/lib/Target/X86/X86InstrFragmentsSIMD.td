@@ -71,6 +71,8 @@ def X86fhadd   : SDNode<"X86ISD::FHADD",     SDTFPBinOp>;
 def X86fhsub   : SDNode<"X86ISD::FHSUB",     SDTFPBinOp>;
 def X86hadd    : SDNode<"X86ISD::HADD",      SDTIntBinOp>;
 def X86hsub    : SDNode<"X86ISD::HSUB",      SDTIntBinOp>;
+def X86hadds   : SDNode<"X86ISD::HADDS",     SDTIntBinOp>;
+def X86hsubs   : SDNode<"X86ISD::HSUBS",     SDTIntBinOp>;
 def X86comi    : SDNode<"X86ISD::COMI",      SDTX86FCmp>;
 def X86ucomi   : SDNode<"X86ISD::UCOMI",     SDTX86FCmp>;
 def X86comi512       : SDNode<"X86ISD::COMX",      SDTX86FCmp>;
@@ -406,16 +408,6 @@ def X86VAlign  : SDNode<"X86ISD::VALIGN", SDTShuff3OpI>;
 
 def X86VShld   : SDNode<"X86ISD::VSHLD", SDTShuff3OpI>;
 def X86VShrd   : SDNode<"X86ISD::VSHRD", SDTShuff3OpI>;
-def X86VShldv  : SDNode<"X86ISD::VSHLDV",
-                        SDTypeProfile<1, 3, [SDTCisVec<0>,
-                                             SDTCisSameAs<0,1>,
-                                             SDTCisSameAs<0,2>,
-                                             SDTCisSameAs<0,3>]>>;
-def X86VShrdv  : SDNode<"X86ISD::VSHRDV",
-                        SDTypeProfile<1, 3, [SDTCisVec<0>,
-                                             SDTCisSameAs<0,1>,
-                                             SDTCisSameAs<0,2>,
-                                             SDTCisSameAs<0,3>]>>;
 
 def X86Conflict : SDNode<"X86ISD::CONFLICT", SDTIntUnaryOp>;
 
@@ -914,13 +906,13 @@ def X86vfpround2Rnd : SDNode<"X86ISD::VFPROUND2_RND",
                                            SDTCisSameAs<1, 2>,
                                            SDTCisVT<3, i32>]>>;
 // 3op
-def X86vcvtne2ph2bf8 : SDNode<"X86ISD::VCVTNE2PH2BF8",
+def X86vcvt2ph2bf8 : SDNode<"X86ISD::VCVT2PH2BF8",
                               SDTAVX10CONVERT_I82F16>;
-def X86vcvtne2ph2bf8s : SDNode<"X86ISD::VCVTNE2PH2BF8S",
+def X86vcvt2ph2bf8s : SDNode<"X86ISD::VCVT2PH2BF8S",
                                SDTAVX10CONVERT_I82F16>;
-def X86vcvtne2ph2hf8 : SDNode<"X86ISD::VCVTNE2PH2HF8",
+def X86vcvt2ph2hf8 : SDNode<"X86ISD::VCVT2PH2HF8",
                               SDTAVX10CONVERT_I82F16>;
-def X86vcvtne2ph2hf8s : SDNode<"X86ISD::VCVTNE2PH2HF8S",
+def X86vcvt2ph2hf8s : SDNode<"X86ISD::VCVT2PH2HF8S",
                                SDTAVX10CONVERT_I82F16>;
 // 2op no broadcast
 def X86vcvthf82ph : SDNode<"X86ISD::VCVTHF82PH",
@@ -934,13 +926,13 @@ def X86vcvtbiasph2hf8 : SDNode<"X86ISD::VCVTBIASPH2HF8",
                                SDTAVX10CONVERT_2I8F16>;
 def X86vcvtbiasph2hf8s : SDNode<"X86ISD::VCVTBIASPH2HF8S",
                                 SDTAVX10CONVERT_2I8F16>;
-def X86vcvtneph2bf8 : SDNode<"X86ISD::VCVTNEPH2BF8",
+def X86vcvtph2bf8 : SDNode<"X86ISD::VCVTPH2BF8",
                              SDTAVX10CONVERT_I8F16>;
-def X86vcvtneph2bf8s : SDNode<"X86ISD::VCVTNEPH2BF8S",
+def X86vcvtph2bf8s : SDNode<"X86ISD::VCVTPH2BF8S",
                               SDTAVX10CONVERT_I8F16>;
-def X86vcvtneph2hf8 : SDNode<"X86ISD::VCVTNEPH2HF8",
+def X86vcvtph2hf8 : SDNode<"X86ISD::VCVTPH2HF8",
                              SDTAVX10CONVERT_I8F16>;
-def X86vcvtneph2hf8s : SDNode<"X86ISD::VCVTNEPH2HF8S",
+def X86vcvtph2hf8s : SDNode<"X86ISD::VCVTPH2HF8S",
                               SDTAVX10CONVERT_I8F16>;
 
 def X86vmcvtbiasph2bf8 : SDNode<"X86ISD::VMCVTBIASPH2BF8",
@@ -951,13 +943,13 @@ def X86vmcvtbiasph2hf8 : SDNode<"X86ISD::VMCVTBIASPH2HF8",
                          SDTAVX10CONVERT_2I8F16_MASK>;
 def X86vmcvtbiasph2hf8s : SDNode<"X86ISD::VMCVTBIASPH2HF8S",
                           SDTAVX10CONVERT_2I8F16_MASK>;
-def X86vmcvtneph2bf8 : SDNode<"X86ISD::VMCVTNEPH2BF8",
+def X86vmcvtph2bf8 : SDNode<"X86ISD::VMCVTPH2BF8",
                        SDTAVX10CONVERT_I8F16_MASK>;
-def X86vmcvtneph2bf8s : SDNode<"X86ISD::VMCVTNEPH2BF8S",
+def X86vmcvtph2bf8s : SDNode<"X86ISD::VMCVTPH2BF8S",
                         SDTAVX10CONVERT_I8F16_MASK>;
-def X86vmcvtneph2hf8 : SDNode<"X86ISD::VMCVTNEPH2HF8",
+def X86vmcvtph2hf8 : SDNode<"X86ISD::VMCVTPH2HF8",
                        SDTAVX10CONVERT_I8F16_MASK>;
-def X86vmcvtneph2hf8s : SDNode<"X86ISD::VMCVTNEPH2HF8S",
+def X86vmcvtph2hf8s : SDNode<"X86ISD::VMCVTPH2HF8S",
                         SDTAVX10CONVERT_I8F16_MASK>;
 
 //===----------------------------------------------------------------------===//
@@ -1008,13 +1000,23 @@ def alignedstore : PatFrag<(ops node:$val, node:$ptr),
                            (store node:$val, node:$ptr), [{
   auto *St = cast<StoreSDNode>(N);
   return St->getAlign() >= St->getMemoryVT().getStoreSize();
-}]>;
+}]> {
+  let GISelPredicateCode = [{
+    auto &LdSt = cast<GLoadStore>(MI);
+    return LdSt.getAlign() >= LdSt.getMemSize().getValue();
+  }];
+}
 
 // Like 'load', but always requires vector size alignment.
 def alignedload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
   auto *Ld = cast<LoadSDNode>(N);
   return Ld->getAlign() >= Ld->getMemoryVT().getStoreSize();
-}]>;
+}]> {
+  let GISelPredicateCode = [{
+    auto &LdSt = cast<GLoadStore>(MI);
+    return LdSt.getAlign() >= LdSt.getMemSize().getValue();
+  }];
+}
 
 // 128-bit aligned load pattern fragments
 // NOTE: all 128-bit integer vector loads are promoted to v2i64

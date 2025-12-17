@@ -211,7 +211,7 @@ public:
   void dumpAccessSpecifier(AccessSpecifier AS);
   void dumpCleanupObject(const ExprWithCleanups::CleanupObject &C);
   void dumpTemplateSpecializationKind(TemplateSpecializationKind TSK);
-  void dumpNestedNameSpecifier(const NestedNameSpecifier *NNS);
+  void dumpNestedNameSpecifier(NestedNameSpecifier NNS);
   void dumpConceptReference(const ConceptReference *R);
   void dumpTemplateArgument(const TemplateArgument &TA);
   void dumpBareTemplateName(TemplateName TN);
@@ -249,11 +249,13 @@ public:
   void VisitDeclarationTemplateArgument(const TemplateArgument &TA);
   void VisitNullPtrTemplateArgument(const TemplateArgument &TA);
   void VisitIntegralTemplateArgument(const TemplateArgument &TA);
+  void VisitStructuralValueTemplateArgument(const TemplateArgument &TA);
   void VisitTemplateTemplateArgument(const TemplateArgument &TA);
   void VisitTemplateExpansionTemplateArgument(const TemplateArgument &TA);
   void VisitExpressionTemplateArgument(const TemplateArgument &TA);
   void VisitPackTemplateArgument(const TemplateArgument &TA);
 
+  void VisitLoopControlStmt(const LoopControlStmt *L);
   void VisitIfStmt(const IfStmt *Node);
   void VisitSwitchStmt(const SwitchStmt *Node);
   void VisitWhileStmt(const WhileStmt *Node);
@@ -407,6 +409,7 @@ public:
   void
   VisitLifetimeExtendedTemporaryDecl(const LifetimeExtendedTemporaryDecl *D);
   void VisitHLSLBufferDecl(const HLSLBufferDecl *D);
+  void VisitHLSLRootSignatureDecl(const HLSLRootSignatureDecl *D);
   void VisitHLSLOutArgExpr(const HLSLOutArgExpr *E);
   void VisitOpenACCConstructStmt(const OpenACCConstructStmt *S);
   void VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S);
@@ -419,9 +422,16 @@ public:
   void VisitOpenACCInitConstruct(const OpenACCInitConstruct *S);
   void VisitOpenACCSetConstruct(const OpenACCSetConstruct *S);
   void VisitOpenACCShutdownConstruct(const OpenACCShutdownConstruct *S);
+  void VisitOpenACCUpdateConstruct(const OpenACCUpdateConstruct *S);
+  void VisitOpenACCAtomicConstruct(const OpenACCAtomicConstruct *S);
+  void VisitOpenACCCacheConstruct(const OpenACCCacheConstruct *S);
   void VisitOpenACCAsteriskSizeExpr(const OpenACCAsteriskSizeExpr *S);
+  void VisitOpenACCDeclareDecl(const OpenACCDeclareDecl *D);
+  void VisitOpenACCRoutineDecl(const OpenACCRoutineDecl *D);
+  void VisitOpenACCRoutineDeclAttr(const OpenACCRoutineDeclAttr *A);
   void VisitEmbedExpr(const EmbedExpr *S);
   void VisitAtomicExpr(const AtomicExpr *AE);
+  void VisitConvertVectorExpr(const ConvertVectorExpr *S);
 };
 
 } // namespace clang

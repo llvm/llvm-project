@@ -1,5 +1,6 @@
 # RUN: yaml2obj %s -o %t
 # RUN: not ld.lld %t -o /dev/null 2>&1 | FileCheck %s
+# RUN: ld.lld %t -o /dev/null --noinhibit-exec 2>&1 | FileCheck %s
 
 ## In current lld implementation, we do not accept sh_addralign
 ## larger than UINT32_MAX.

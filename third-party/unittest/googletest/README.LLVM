@@ -19,3 +19,6 @@ Modified as follows:
 * Added StringRef support to include/gtest/internal/custom/gtest-printers.h.
 * Added LLVM printable value support to include/gtest/gtest-message.h and
   include/gtest/gtest-printers.h.
+* Modified `PrintTo(char16_t c, ::std::ostream* os)` and
+ `PrintTo(char16_t c, ::std::ostream* os)` in include/gtest/gtest-printers.h.
+  to work around https://github.com/google/googletest/issues/4762

@@ -10,10 +10,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/StructuralHash.h"
 #include "llvm/SandboxIR/Instruction.h"
-#include <sstream>
 
 using namespace llvm::sandboxir;
 
@@ -175,7 +173,7 @@ void EraseFromParent::revert(Tracker &Tracker) {
   // Place the bottom-most instruction first.
   auto [Operands, BotLLVMI] = InstrData[0];
   if (auto *NextLLVMI = dyn_cast<llvm::Instruction *>(NextLLVMIOrBB)) {
-    BotLLVMI->insertBefore(NextLLVMI);
+    BotLLVMI->insertBefore(NextLLVMI->getIterator());
   } else {
     auto *LLVMBB = cast<llvm::BasicBlock *>(NextLLVMIOrBB);
     BotLLVMI->insertInto(LLVMBB, LLVMBB->end());
@@ -185,7 +183,7 @@ void EraseFromParent::revert(Tracker &Tracker) {
 
   // Go over the rest of the instructions and stack them on top.
   for (auto [Operands, LLVMI] : drop_begin(InstrData)) {
-    LLVMI->insertBefore(BotLLVMI);
+    LLVMI->insertBefore(BotLLVMI->getIterator());
     for (auto [OpNum, Op] : enumerate(Operands))
       LLVMI->setOperand(OpNum, Op);
     BotLLVMI = LLVMI;
@@ -347,13 +345,14 @@ void Tracker::save() {
 
 void Tracker::revert() {
   assert(State == TrackerState::Record && "Forgot to save()!");
-  State = TrackerState::Disabled;
+  State = TrackerState::Reverting;
   for (auto &Change : reverse(Changes))
     Change->revert(*this);
   Changes.clear();
 #if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
   SnapshotChecker.expectNoDiff();
 #endif
+  State = TrackerState::Disabled;
 }
 
 void Tracker::accept() {

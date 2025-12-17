@@ -143,6 +143,36 @@ module @ir attributes { test.apply_constraint_4 } {
 
 // -----
 
+// Test returning a type from a native constraint.
+module @patterns {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
+    %new_type:2 = pdl_interp.apply_constraint "op_multiple_returns_failure"(%root : !pdl.operation) : !pdl.type, !pdl.type -> ^pat2, ^end
+
+  ^pat2:
+    pdl_interp.record_match @rewriters::@success(%root, %new_type#0 : !pdl.operation, !pdl.type) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    pdl_interp.func @success(%root : !pdl.operation, %new_type : !pdl.type) {
+      %op = pdl_interp.create_operation "test.replaced_by_pattern" -> (%new_type : !pdl.type)
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.apply_constraint_multi_result_failure
+// CHECK-NOT: "test.replaced_by_pattern"
+// CHECK: "test.success_op"
+module @ir attributes { test.apply_constraint_multi_result_failure } {
+  "test.success_op"() : () -> ()
+}
+
+// -----
+
 // Test success and failure cases of native constraints with pdl.range results.
 module @patterns {
   pdl_interp.func @matcher(%root : !pdl.operation) {

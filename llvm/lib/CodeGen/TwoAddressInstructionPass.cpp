@@ -181,7 +181,7 @@ class TwoAddressInstructionImpl {
   void processCopy(MachineInstr *MI);
 
   using TiedPairList = SmallVector<std::pair<unsigned, unsigned>, 4>;
-  using TiedOperandMap = SmallDenseMap<unsigned, TiedPairList>;
+  using TiedOperandMap = SmallDenseMap<Register, TiedPairList>;
 
   bool collectTiedOperands(MachineInstr *MI, TiedOperandMap&);
   void processTiedPairs(MachineInstr *MI, TiedPairList&, unsigned &Dist);
@@ -489,6 +489,9 @@ MachineInstr *TwoAddressInstructionImpl::findOnlyInterestingUse(
     bool &IsDstPhys) const {
   MachineOperand *UseOp = nullptr;
   for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
+    if (MO.isUndef())
+      continue;
+
     MachineInstr *MI = MO.getParent();
     if (MI->getParent() != MBB)
       return nullptr;
@@ -621,7 +624,7 @@ void TwoAddressInstructionImpl::removeClobberedSrcRegMap(MachineInstr *MI) {
 // Returns true if Reg is equal or aliased to at least one register in Set.
 bool TwoAddressInstructionImpl::regOverlapsSet(
     const SmallVectorImpl<Register> &Set, Register Reg) const {
-  for (unsigned R : Set)
+  for (Register R : Set)
     if (TRI->regsOverlap(R, Reg))
       return true;
 
@@ -791,29 +794,36 @@ bool TwoAddressInstructionImpl::convertInstTo3Addr(
   if (!NewMI)
     return false;
 
-  LLVM_DEBUG(dbgs() << "2addr: CONVERTING 2-ADDR: " << *mi);
-  LLVM_DEBUG(dbgs() << "2addr:         TO 3-ADDR: " << *NewMI);
-
-  // If the old instruction is debug value tracked, an update is required.
-  if (auto OldInstrNum = mi->peekDebugInstrNum()) {
-    assert(mi->getNumExplicitDefs() == 1);
-    assert(NewMI->getNumExplicitDefs() == 1);
-
-    // Find the old and new def location.
-    unsigned OldIdx = mi->defs().begin()->getOperandNo();
-    unsigned NewIdx = NewMI->defs().begin()->getOperandNo();
-
-    // Record that one def has been replaced by the other.
-    unsigned NewInstrNum = NewMI->getDebugInstrNum();
-    MF->makeDebugValueSubstitution(std::make_pair(OldInstrNum, OldIdx),
-                                   std::make_pair(NewInstrNum, NewIdx));
-  }
-
-  MBB->erase(mi); // Nuke the old inst.
-
   for (MachineInstr &MI : MIS)
     DistanceMap.insert(std::make_pair(&MI, Dist++));
-  Dist--;
+
+  if (&*mi == NewMI) {
+    LLVM_DEBUG(dbgs() << "2addr: CONVERTED IN-PLACE TO 3-ADDR: " << *mi);
+  } else {
+    LLVM_DEBUG({
+      dbgs() << "2addr: CONVERTING 2-ADDR: " << *mi;
+      dbgs() << "2addr:         TO 3-ADDR: " << *NewMI;
+    });
+
+    // If the old instruction is debug value tracked, an update is required.
+    if (auto OldInstrNum = mi->peekDebugInstrNum()) {
+      assert(mi->getNumExplicitDefs() == 1);
+      assert(NewMI->getNumExplicitDefs() == 1);
+
+      // Find the old and new def location.
+      unsigned OldIdx = mi->defs().begin()->getOperandNo();
+      unsigned NewIdx = NewMI->defs().begin()->getOperandNo();
+
+      // Record that one def has been replaced by the other.
+      unsigned NewInstrNum = NewMI->getDebugInstrNum();
+      MF->makeDebugValueSubstitution(std::make_pair(OldInstrNum, OldIdx),
+                                     std::make_pair(NewInstrNum, NewIdx));
+    }
+
+    MBB->erase(mi); // Nuke the old inst.
+    Dist--;
+  }
+
   mi = NewMI;
   nmi = std::next(mi);
 
@@ -851,10 +861,9 @@ void TwoAddressInstructionImpl::scanUses(Register DstReg) {
   }
 
   if (!VirtRegPairs.empty()) {
-    unsigned ToReg = VirtRegPairs.back();
-    VirtRegPairs.pop_back();
+    Register ToReg = VirtRegPairs.pop_back_val();
     while (!VirtRegPairs.empty()) {
-      unsigned FromReg = VirtRegPairs.pop_back_val();
+      Register FromReg = VirtRegPairs.pop_back_val();
       bool isNew = DstRegMap.insert(std::make_pair(FromReg, ToReg)).second;
       if (!isNew)
         assert(DstRegMap[FromReg] == ToReg &&"Can't map to two dst registers!");
@@ -1327,6 +1336,9 @@ bool TwoAddressInstructionImpl::tryInstructionTransform(
 
   bool Commuted = tryInstructionCommute(&MI, DstIdx, SrcIdx, regBKilled, Dist);
 
+  // Give targets a chance to convert bundled instructions.
+  bool ConvertibleTo3Addr = MI.isConvertibleTo3Addr(MachineInstr::AnyInBundle);
+
   // If the instruction is convertible to 3 Addr, instead
   // of returning try 3 Addr transformation aggressively and
   // use this variable to check later. Because it might be better.
@@ -1335,7 +1347,7 @@ bool TwoAddressInstructionImpl::tryInstructionTransform(
   //   addl     %esi, %edi
   //   movl     %edi, %eax
   //   ret
-  if (Commuted && !MI.isConvertibleTo3Addr())
+  if (Commuted && !ConvertibleTo3Addr)
     return false;
 
   if (shouldOnlyCommute)
@@ -1355,7 +1367,7 @@ bool TwoAddressInstructionImpl::tryInstructionTransform(
     regBKilled = isKilled(MI, regB, true);
   }
 
-  if (MI.isConvertibleTo3Addr()) {
+  if (ConvertibleTo3Addr) {
     // This instruction is potentially convertible to a true
     // three-address instruction.  Check if it is profitable.
     if (!regBKilled || isProfitableToConv3Addr(regA, regB)) {
@@ -1399,9 +1411,8 @@ bool TwoAddressInstructionImpl::tryInstructionTransform(
       if (UnfoldMCID.getNumDefs() == 1) {
         // Unfold the load.
         LLVM_DEBUG(dbgs() << "2addr:   UNFOLDING: " << MI);
-        const TargetRegisterClass *RC =
-          TRI->getAllocatableClass(
-            TII->getRegClass(UnfoldMCID, LoadRegIndex, TRI, *MF));
+        const TargetRegisterClass *RC = TRI->getAllocatableClass(
+            TII->getRegClass(UnfoldMCID, LoadRegIndex));
         Register Reg = MRI->createVirtualRegister(RC);
         SmallVector<MachineInstr *, 2> NewMIs;
         if (!TII->unfoldMemoryOperand(*MF, MI, Reg,
@@ -1559,7 +1570,7 @@ void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
 
   bool RemovedKillFlag = false;
   bool AllUsesCopied = true;
-  unsigned LastCopiedReg = 0;
+  Register LastCopiedReg;
   SlotIndex LastCopyIdx;
   Register RegB = 0;
   unsigned SubRegB = 0;
@@ -1664,6 +1675,17 @@ void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
     // by SubRegB is compatible with RegA with no subregister. So regardless of
     // whether the dest oper writes a subreg, the source oper should not.
     MO.setSubReg(0);
+
+    // Update uses of RegB to uses of RegA inside the bundle.
+    if (MI->isBundle()) {
+      for (MachineOperand &MO : mi_bundle_ops(*MI)) {
+        if (MO.isReg() && MO.getReg() == RegB) {
+          assert(MO.getSubReg() == 0 && SubRegB == 0 &&
+                 "tied subregister uses in bundled instructions not supported");
+          MO.setReg(RegA);
+        }
+      }
+    }
   }
 
   if (AllUsesCopied) {
@@ -1835,8 +1857,7 @@ bool TwoAddressInstructionImpl::run() {
   MRI->leaveSSA();
 
   // This pass will rewrite the tied-def to meet the RegConstraint.
-  MF->getProperties()
-      .set(MachineFunctionProperties::Property::TiedOpsRewritten);
+  MF->getProperties().setTiedOpsRewritten();
 
   TiedOperandMap TiedOperands;
   for (MachineBasicBlock &MBBI : *MF) {

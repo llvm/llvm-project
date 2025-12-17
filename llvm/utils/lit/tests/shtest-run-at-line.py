@@ -17,9 +17,9 @@
 
 #       CHECK: Command Output (stderr)
 #  CHECK-NEXT: --
-#  CHECK-NEXT: {{^}}RUN: at line 4: true{{$}}
+#  CHECK-NEXT: {{^}}true # RUN: at line 4{{$}}
 #  CHECK-NEXT: true
-#  CHECK-NEXT: {{^}}RUN: at line 5: false{{$}}
+#  CHECK-NEXT: {{^}}false # RUN: at line 5{{$}}
 #  CHECK-NEXT: false
 # CHECK-EMPTY:
 #  CHECK-NEXT: --
@@ -29,7 +29,7 @@
 #       CHECK: Command Output (stderr)
 #  CHECK-NEXT: --
 #  CHECK-NEXT: {{^}}RUN: at line 2 has no command after substitutions{{$}}
-#  CHECK-NEXT: {{^}}RUN: at line 3: false{{$}}
+#  CHECK-NEXT: {{^}}false # RUN: at line 3{{$}}
 #  CHECK-NEXT: false
 # CHECK-EMPTY:
 #  CHECK-NEXT: --
@@ -42,9 +42,9 @@
 
 #       CHECK: Command Output (stderr)
 #  CHECK-NEXT: --
-#  CHECK-NEXT: {{^}}RUN: at line 4: echo 'foo bar' | FileCheck
+#  CHECK-NEXT: {{^}}echo 'foo bar' | FileCheck {{.*}} # RUN: at line 4 
 #   CHECK-NOT: RUN
-#       CHECK: {{^}}RUN: at line 6: echo 'foo baz' | FileCheck
+#       CHECK: {{^}}echo 'foo baz' | FileCheck {{.*}} # RUN: at line 6 
 #   CHECK-NOT: RUN
 #       CHECK: --
 
@@ -52,9 +52,9 @@
 
 #      CHECK: Command Output (stderr)
 # CHECK-NEXT: --
-# CHECK-NEXT: {{^}}RUN: at line 1: echo abc |
+# CHECK-NEXT: {{^}}echo abc |
 # CHECK-NEXT: FileCheck {{.*}} &&
-# CHECK-NEXT: false
+# CHECK-NEXT: false # RUN: at line 1
 #  CHECK-NOT: RUN
 
 

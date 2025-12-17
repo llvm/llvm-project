@@ -75,16 +75,16 @@ public:
 
 // Options
 static StringRef ToolName;
-static StringRef OutputFilename = "-";
-static StringRef Filename;
+static std::string OutputFilename = "-";
+static std::string Filename;
 static bool ShowCGDataVersion;
 static bool SkipTrim;
 static CGDataAction Action;
 static std::optional<CGDataFormat> OutputFormat;
 static std::vector<std::string> InputFilenames;
 
-static void exitWithError(Twine Message, std::string Whence = "",
-                          std::string Hint = "") {
+static void exitWithError(Twine Message, StringRef Whence = "",
+                          StringRef Hint = "") {
   WithColor::error();
   if (!Whence.empty())
     errs() << Whence << ": ";
@@ -97,16 +97,16 @@ static void exitWithError(Twine Message, std::string Whence = "",
 static void exitWithError(Error E, StringRef Whence = "") {
   if (E.isA<CGDataError>()) {
     handleAllErrors(std::move(E), [&](const CGDataError &IPE) {
-      exitWithError(IPE.message(), std::string(Whence));
+      exitWithError(IPE.message(), Whence);
     });
     return;
   }
 
-  exitWithError(toString(std::move(E)), std::string(Whence));
+  exitWithError(toString(std::move(E)), Whence);
 }
 
 static void exitWithErrorCode(std::error_code EC, StringRef Whence = "") {
-  exitWithError(EC.message(), std::string(Whence));
+  exitWithError(EC.message(), Whence);
 }
 
 static int convert_main(int argc, const char *argv[]) {
@@ -361,6 +361,9 @@ static void parseArgs(int argc, char **argv) {
   default:
     llvm_unreachable("unrecognized action");
   }
+
+  IndexedCodeGenDataLazyLoading =
+      Args.hasArg(OPT_indexed_codegen_data_lazy_loading);
 }
 
 int llvm_cgdata_main(int argc, char **argvNonConst, const llvm::ToolContext &) {

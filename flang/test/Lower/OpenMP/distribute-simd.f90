@@ -7,7 +7,7 @@
 subroutine distribute_simd_aligned(A)
   use iso_c_binding
   type(c_ptr) :: A
-  
+
   !$omp teams
 
   ! CHECK:      omp.distribute
@@ -57,3 +57,22 @@ subroutine distribute_simd_simdlen()
 
   !$omp end teams
 end subroutine distribute_simd_simdlen
+
+! CHECK-LABEL: func.func @_QPdistribute_simd_private(
+subroutine distribute_simd_private()
+  integer, allocatable :: tmp
+  ! CHECK:      omp.teams
+  !$omp teams
+  ! CHECK:      omp.distribute
+  ! CHECK:      omp.simd
+  ! CHECK-SAME: private(@[[PRIV_BOX_SYM:.*]] %{{.*}} -> %[[PRIV_BOX:.*]], @[[PRIV_IVAR_SYM:.*]] %{{.*}} -> %[[PRIV_IVAR:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<i32>)
+  ! CHECK-NEXT: omp.loop_nest (%[[IVAR:.*]]) : i32
+  !$omp distribute simd private(tmp)
+  do index_ = 1, 10
+  ! CHECK:      %[[PRIV_BOX_DECL:.*]]:2 = hlfir.declare %[[PRIV_BOX]]
+  ! CHECK:      %[[PRIV_IVAR_DECL:.*]]:2 = hlfir.declare %[[PRIV_IVAR]]
+  ! CHECK:      hlfir.assign %[[IVAR]] to %[[PRIV_IVAR_DECL]]#0
+  end do
+  !$omp end distribute simd
+  !$omp end teams
+end subroutine distribute_simd_private

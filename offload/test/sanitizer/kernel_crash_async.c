@@ -36,4 +36,4 @@ int main(void) {
 // TRACE: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l29)
 // TRACE:     launchKernel
 //
-// CHECK: Kernel {{[0-9]}}: {{.*}} (__omp_offloading_{{.*}}_main_l29)
+// CHECK: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l29)

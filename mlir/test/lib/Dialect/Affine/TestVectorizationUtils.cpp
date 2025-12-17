@@ -101,8 +101,7 @@ void VectorizerTestPass::testVectorShapeRatio(llvm::raw_ostream &outs) {
   using affine::matcher::Op;
   SmallVector<int64_t, 8> shape(clTestVectorShapeRatio.begin(),
                                 clTestVectorShapeRatio.end());
-  auto subVectorType =
-      VectorType::get(shape, FloatType::getF32(f.getContext()));
+  auto subVectorType = VectorType::get(shape, Float32Type::get(f.getContext()));
   // Only filter operations that operate on a strict super-vector and have one
   // return. This makes testing easier.
   auto filter = [&](Operation &op) {
@@ -155,7 +154,10 @@ void VectorizerTestPass::testBackwardSlicing(llvm::raw_ostream &outs) {
   patternTestSlicingOps().match(f, &matches);
   for (auto m : matches) {
     SetVector<Operation *> backwardSlice;
-    getBackwardSlice(m.getMatchedOperation(), &backwardSlice);
+    LogicalResult result =
+        getBackwardSlice(m.getMatchedOperation(), &backwardSlice);
+    assert(result.succeeded() && "expected a backward slice");
+    (void)result;
     outs << "\nmatched: " << *m.getMatchedOperation()
          << " backward static slice: ";
     for (auto *op : backwardSlice)
@@ -240,7 +242,6 @@ void VectorizerTestPass::testVecAffineLoopNest(llvm::raw_ostream &outs) {
   strategy.vectorSizes.push_back(4 /*vectorization factor*/);
   strategy.loopToVectorDim[outermostLoop] = 0;
 
-  ReductionLoopMap reductionLoops;
   SmallVector<LoopReduction, 2> reductions;
   if (!isLoopParallel(outermostLoop, &reductions)) {
     outs << "Outermost loop cannot be parallel\n";

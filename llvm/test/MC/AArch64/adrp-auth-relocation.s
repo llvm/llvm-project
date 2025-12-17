@@ -9,4 +9,4 @@ adrp x0, :got_auth:sym
 sym:
 
 // CHECK: R_AARCH64_AUTH_ADR_GOT_PAGE sym
-// CHECK-ILP32: error: ILP32 ADRP AUTH relocation not supported (LP64 eqv: AUTH_ADR_GOT_PAGE)
+// CHECK-ILP32: error: ADRP AUTH relocation is not supported in ILP32

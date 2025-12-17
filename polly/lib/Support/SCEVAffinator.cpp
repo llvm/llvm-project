@@ -502,7 +502,7 @@ PWACtx SCEVAffinator::visitUDivExpr(const SCEVUDivExpr *Expr) {
   }
 
   // TODO: One can represent the dividend as piece-wise function to be more
-  //       precise but therefor a heuristic is needed.
+  //       precise but therefore a heuristic is needed.
 
   // Assume a non-negative dividend.
   takeNonNegativeAssumption(DividendPWAC, RecordedAssumptions);

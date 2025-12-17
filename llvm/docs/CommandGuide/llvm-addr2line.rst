@@ -36,6 +36,9 @@ Here are some of those differences:
 -  ``llvm-addr2line`` parses options from the environment variable
    ``LLVM_ADDR2LINE_OPTS`` instead of from ``LLVM_SYMBOLIZER_OPTS``.
 
+- ``llvm-addr2line`` accepts an address with a '+' prefix, e.g. `+0x00777fff`.
+  This is treated as a symbol name by ``llvm-symbolizer``.
+
 SEE ALSO
 --------
 

@@ -7,7 +7,7 @@
 
 define i32 @test(ptr addrspace(1) nocapture %moves) {
 ; CHECK-LABEL: define i32 @test
-; CHECK-SAME: (ptr addrspace(1) nocapture [[MOVES:%.*]]) {
+; CHECK-SAME: (ptr addrspace(1) captures(none) [[MOVES:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[MOVES]], i64 26
 ; CHECK-NEXT:    store i64 0, ptr addrspace(1) [[GEP]], align 1

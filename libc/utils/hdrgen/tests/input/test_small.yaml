@@ -1,36 +1,15 @@
-header: test_header.h
+header: test_small.h
+header_template: test_small.h.def
+merge_yaml_files:
+  - merge1.yaml
+  - merge2.yaml
 macros:
-  - macro_name: MACRO_A
-    macro_value: 1
-  - macro_name: MACRO_B
-    macro_value: 2
-types:
-  - type_name: type_a
-  - type_name: type_b
-enums:
-  - name: enum_a
-    value: value_1
-  - name: enum_b
-    value: value_2
-objects:
-  - object_name: object_1
-    object_type: obj
-  - object_name: object_2
-    object_type: obj
+  - macro_name: MACRO_C
+  - macro_name: MACRO_D
+    macro_header: test_small-macros.h
+  - macro_name: MACRO_E
+    macro_header: test_more-macros.h
 functions:
-  - name: func_a
-    return_type: void
-    arguments: []
-    standards:
-      - stdc
-    attributes:
-      - CONST_FUNC_A
-  - name: func_b
-    return_type: float128
-    arguments: []
-    standards:
-      - stdc
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: func_c
     return_type: _Float16
     arguments:
@@ -62,5 +41,3 @@ functions:
       - type: float
     standards:
       - stdc
-
-

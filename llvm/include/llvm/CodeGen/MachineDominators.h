@@ -21,9 +21,9 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/GenericDomTree.h"
 #include <cassert>
-#include <memory>
 #include <optional>
 
 namespace llvm {
@@ -32,14 +32,9 @@ class MachineFunction;
 class Module;
 class raw_ostream;
 
-template <>
-inline void DominatorTreeBase<MachineBasicBlock, false>::addRoot(
-    MachineBasicBlock *MBB) {
-  this->Roots.push_back(MBB);
-}
-
-extern template class DomTreeNodeBase<MachineBasicBlock>;
-extern template class DominatorTreeBase<MachineBasicBlock, false>; // DomTree
+extern template class LLVM_TEMPLATE_ABI DomTreeNodeBase<MachineBasicBlock>;
+extern template class LLVM_TEMPLATE_ABI
+    DominatorTreeBase<MachineBasicBlock, false>; // DomTree
 
 using MachineDomTreeNode = DomTreeNodeBase<MachineBasicBlock>;
 
@@ -48,24 +43,24 @@ using MBBDomTree = DomTreeBase<MachineBasicBlock>;
 using MBBUpdates = ArrayRef<llvm::cfg::Update<MachineBasicBlock *>>;
 using MBBDomTreeGraphDiff = GraphDiff<MachineBasicBlock *, false>;
 
-extern template void Calculate<MBBDomTree>(MBBDomTree &DT);
-extern template void CalculateWithUpdates<MBBDomTree>(MBBDomTree &DT,
-                                                      MBBUpdates U);
+extern template LLVM_TEMPLATE_ABI void Calculate<MBBDomTree>(MBBDomTree &DT);
+extern template LLVM_TEMPLATE_ABI void
+CalculateWithUpdates<MBBDomTree>(MBBDomTree &DT, MBBUpdates U);
 
-extern template void InsertEdge<MBBDomTree>(MBBDomTree &DT,
-                                            MachineBasicBlock *From,
-                                            MachineBasicBlock *To);
+extern template LLVM_TEMPLATE_ABI void
+InsertEdge<MBBDomTree>(MBBDomTree &DT, MachineBasicBlock *From,
+                       MachineBasicBlock *To);
 
-extern template void DeleteEdge<MBBDomTree>(MBBDomTree &DT,
-                                            MachineBasicBlock *From,
-                                            MachineBasicBlock *To);
+extern template LLVM_TEMPLATE_ABI void
+DeleteEdge<MBBDomTree>(MBBDomTree &DT, MachineBasicBlock *From,
+                       MachineBasicBlock *To);
 
-extern template void ApplyUpdates<MBBDomTree>(MBBDomTree &DT,
-                                              MBBDomTreeGraphDiff &,
-                                              MBBDomTreeGraphDiff *);
+extern template LLVM_TEMPLATE_ABI void
+ApplyUpdates<MBBDomTree>(MBBDomTree &DT, MBBDomTreeGraphDiff &,
+                         MBBDomTreeGraphDiff *);
 
-extern template bool Verify<MBBDomTree>(const MBBDomTree &DT,
-                                        MBBDomTree::VerificationLevel VL);
+extern template LLVM_TEMPLATE_ABI bool
+Verify<MBBDomTree>(const MBBDomTree &DT, MBBDomTree::VerificationLevel VL);
 } // namespace DomTreeBuilder
 
 //===-------------------------------------
@@ -81,8 +76,8 @@ public:
   explicit MachineDominatorTree(MachineFunction &MF) { recalculate(MF); }
 
   /// Handle invalidation explicitly.
-  bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
-                  MachineFunctionAnalysisManager::Invalidator &);
+  LLVM_ABI bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+                           MachineFunctionAnalysisManager::Invalidator &);
 
   using Base::dominates;
 
@@ -107,12 +102,12 @@ class MachineDominatorTreeAnalysis
     : public AnalysisInfoMixin<MachineDominatorTreeAnalysis> {
   friend AnalysisInfoMixin<MachineDominatorTreeAnalysis>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = MachineDominatorTree;
 
-  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &);
+  LLVM_ABI Result run(MachineFunction &MF, MachineFunctionAnalysisManager &);
 };
 
 /// \brief Machine function pass which print \c MachineDominatorTree.
@@ -122,13 +117,13 @@ class MachineDominatorTreePrinterPass
 
 public:
   explicit MachineDominatorTreePrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
 };
 
 /// \brief Analysis pass which computes a \c MachineDominatorTree.
-class MachineDominatorTreeWrapperPass : public MachineFunctionPass {
+class LLVM_ABI MachineDominatorTreeWrapperPass : public MachineFunctionPass {
   // MachineFunctionPass may verify the analysis result without running pass,
   // e.g. when `F.hasAvailableExternallyLinkage` is true.
   std::optional<MachineDominatorTree> DT;

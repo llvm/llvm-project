@@ -4,9 +4,9 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64,NOZBS64
 ; RUN: llc -mtriple=riscv32 -mattr=+zbb,+zbs -verify-machineinstrs < %s \
-; RUN:   | FileCheck %s --check-prefixes=CHECK,RV32,ZBS
+; RUN:   | FileCheck %s --check-prefixes=CHECK,RV32,ZBS,ZBS32
 ; RUN: llc -mtriple=riscv64 -mattr=+zbb,+zbs -verify-machineinstrs < %s \
-; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64,ZBS
+; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64,ZBS,ZBS64
 
 define i32 @and0xabcdefff(i32 %x) {
 ; CHECK-LABEL: and0xabcdefff:
@@ -97,7 +97,7 @@ define i32 @addorlow16(i32 %x) {
 ; RV64-LABEL: addorlow16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a1, 16
-; RV64-NEXT:    addiw a1, a1, -1
+; RV64-NEXT:    addi a1, a1, -1
 ; RV64-NEXT:    addw a0, a0, a1
 ; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
@@ -107,19 +107,12 @@ define i32 @addorlow16(i32 %x) {
 }
 
 define i32 @andxorlow16(i32 %x) {
-; RV32-LABEL: andxorlow16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, 16
-; RV32-NEXT:    addi a1, a1, -1
-; RV32-NEXT:    andn a0, a1, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: andxorlow16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    lui a1, 16
-; RV64-NEXT:    addiw a1, a1, -1
-; RV64-NEXT:    andn a0, a1, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: andxorlow16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 16
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    andn a0, a1, a0
+; CHECK-NEXT:    ret
   %and = and i32 %x, 65535
   %xor = xor i32 %and, 65535
   ret i32 %xor
@@ -301,8 +294,8 @@ define i64 @andimm64(i64 %x) {
   ret i64 %and
 }
 
-define i64 @andimm64srli(i64 %x) {
-; RV32-LABEL: andimm64srli:
+define i64 @orimm64srli(i64 %x) {
+; RV32-LABEL: orimm64srli:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a2, 1040384
 ; RV32-NEXT:    orn a0, a0, a2
@@ -310,7 +303,7 @@ define i64 @andimm64srli(i64 %x) {
 ; RV32-NEXT:    or a1, a1, a2
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: andimm64srli:
+; RV64-LABEL: orimm64srli:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a1, 983040
 ; RV64-NEXT:    srli a1, a1, 3
@@ -318,4 +311,108 @@ define i64 @andimm64srli(i64 %x) {
 ; RV64-NEXT:    ret
   %or = or i64 %x, -2305843009180139521
   ret i64 %or
+}
+
+define i64 @andnofff(i64 %x) {
+; RV32-LABEL: andnofff:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lui a2, 1044480
+; RV32-NEXT:    and a1, a1, a2
+; RV32-NEXT:    zext.b a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: andnofff:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a1, 1048560
+; RV64-NEXT:    srli a1, a1, 8
+; RV64-NEXT:    andn a0, a0, a1
+; RV64-NEXT:    ret
+  %and = and i64 %x, -72057594037927681
+  ret i64 %and
+}
+
+define i64 @ornofff(i64 %x) {
+; NOZBS32-LABEL: ornofff:
+; NOZBS32:       # %bb.0:
+; NOZBS32-NEXT:    lui a2, 524288
+; NOZBS32-NEXT:    or a1, a1, a2
+; NOZBS32-NEXT:    ori a0, a0, 2047
+; NOZBS32-NEXT:    ret
+;
+; NOZBS64-LABEL: ornofff:
+; NOZBS64:       # %bb.0:
+; NOZBS64-NEXT:    lui a1, 1048575
+; NOZBS64-NEXT:    srli a1, a1, 1
+; NOZBS64-NEXT:    orn a0, a0, a1
+; NOZBS64-NEXT:    ret
+;
+; ZBS32-LABEL: ornofff:
+; ZBS32:       # %bb.0:
+; ZBS32-NEXT:    ori a0, a0, 2047
+; ZBS32-NEXT:    bseti a1, a1, 31
+; ZBS32-NEXT:    ret
+;
+; ZBS64-LABEL: ornofff:
+; ZBS64:       # %bb.0:
+; ZBS64-NEXT:    ori a0, a0, 2047
+; ZBS64-NEXT:    bseti a0, a0, 63
+; ZBS64-NEXT:    ret
+  %or = or i64 %x, -9223372036854773761
+  ret i64 %or
+}
+
+define i64 @xornofff(i64 %x) {
+; RV32-LABEL: xornofff:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lui a2, 983040
+; RV32-NEXT:    xor a1, a1, a2
+; RV32-NEXT:    xori a0, a0, 255
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: xornofff:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a1, 1048575
+; RV64-NEXT:    srli a1, a1, 4
+; RV64-NEXT:    xnor a0, a0, a1
+; RV64-NEXT:    ret
+  %xor = xor i64 %x, -1152921504606846721
+  ret i64 %xor
+}
+
+define i64 @and_or_or(i64 %x, i64 %y) {
+; RV32-LABEL: and_or_or:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ori a1, a1, -2
+; RV32-NEXT:    ori a0, a0, 1
+; RV32-NEXT:    ori a3, a3, 1
+; RV32-NEXT:    ori a2, a2, -2
+; RV32-NEXT:    and a0, a0, a2
+; RV32-NEXT:    and a1, a1, a3
+; RV32-NEXT:    ret
+;
+; NOZBS64-LABEL: and_or_or:
+; NOZBS64:       # %bb.0:
+; NOZBS64-NEXT:    li a2, -1
+; NOZBS64-NEXT:    slli a2, a2, 33
+; NOZBS64-NEXT:    addi a2, a2, 1
+; NOZBS64-NEXT:    or a0, a0, a2
+; NOZBS64-NEXT:    li a2, 1
+; NOZBS64-NEXT:    slli a2, a2, 33
+; NOZBS64-NEXT:    addi a2, a2, -2
+; NOZBS64-NEXT:    or a1, a1, a2
+; NOZBS64-NEXT:    and a0, a0, a1
+; NOZBS64-NEXT:    ret
+;
+; ZBS64-LABEL: and_or_or:
+; ZBS64:       # %bb.0:
+; ZBS64-NEXT:    bseti a2, zero, 33
+; ZBS64-NEXT:    addi a2, a2, -2
+; ZBS64-NEXT:    orn a0, a0, a2
+; ZBS64-NEXT:    or a1, a1, a2
+; ZBS64-NEXT:    and a0, a0, a1
+; ZBS64-NEXT:    ret
+  %a = or i64 %x, -8589934591
+  %b = or i64 %y, 8589934590
+  %c = and i64 %a, %b
+  ret i64 %c
 }

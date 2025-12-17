@@ -13,6 +13,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -20,6 +21,7 @@
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Expression/Expression.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/ObjectFileJIT.h"
 #include "lldb/Host/HostInfo.h"
@@ -36,6 +38,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/lldb-defines.h"
 
 #include <optional>
 
@@ -52,17 +55,19 @@ IRExecutionUnit::IRExecutionUnit(std::unique_ptr<llvm::LLVMContext> &context_up,
       m_cpu_features(cpu_features), m_name(name), m_sym_ctx(sym_ctx),
       m_did_jit(false), m_function_load_addr(LLDB_INVALID_ADDRESS),
       m_function_end_load_addr(LLDB_INVALID_ADDRESS),
-      m_reported_allocations(false) {}
+      m_reported_allocations(false), m_preferred_modules() {}
 
 lldb::addr_t IRExecutionUnit::WriteNow(const uint8_t *bytes, size_t size,
                                        Status &error) {
   const bool zero_memory = false;
-  lldb::addr_t allocation_process_addr =
+  auto address_or_error =
       Malloc(size, 8, lldb::ePermissionsWritable | lldb::ePermissionsReadable,
-             eAllocationPolicyMirror, zero_memory, error);
-
-  if (!error.Success())
+             eAllocationPolicyMirror, zero_memory);
+  if (!address_or_error) {
+    error = Status::FromError(address_or_error.takeError());
     return LLDB_INVALID_ADDRESS;
+  }
+  lldb::addr_t allocation_process_addr = *address_or_error;
 
   WriteMemory(allocation_process_addr, bytes, size, error);
 
@@ -538,62 +543,7 @@ lldb::SectionType IRExecutionUnit::GetSectionTypeFromSectionName(
     else if (name.starts_with("__debug_") || name.starts_with(".debug_")) {
       const uint32_t name_idx = name[0] == '_' ? 8 : 7;
       llvm::StringRef dwarf_name(name.substr(name_idx));
-      switch (dwarf_name[0]) {
-      case 'a':
-        if (dwarf_name == "abbrev")
-          sect_type = lldb::eSectionTypeDWARFDebugAbbrev;
-        else if (dwarf_name == "aranges")
-          sect_type = lldb::eSectionTypeDWARFDebugAranges;
-        else if (dwarf_name == "addr")
-          sect_type = lldb::eSectionTypeDWARFDebugAddr;
-        break;
-
-      case 'f':
-        if (dwarf_name == "frame")
-          sect_type = lldb::eSectionTypeDWARFDebugFrame;
-        break;
-
-      case 'i':
-        if (dwarf_name == "info")
-          sect_type = lldb::eSectionTypeDWARFDebugInfo;
-        break;
-
-      case 'l':
-        if (dwarf_name == "line")
-          sect_type = lldb::eSectionTypeDWARFDebugLine;
-        else if (dwarf_name == "loc")
-          sect_type = lldb::eSectionTypeDWARFDebugLoc;
-        else if (dwarf_name == "loclists")
-          sect_type = lldb::eSectionTypeDWARFDebugLocLists;
-        break;
-
-      case 'm':
-        if (dwarf_name == "macinfo")
-          sect_type = lldb::eSectionTypeDWARFDebugMacInfo;
-        break;
-
-      case 'p':
-        if (dwarf_name == "pubnames")
-          sect_type = lldb::eSectionTypeDWARFDebugPubNames;
-        else if (dwarf_name == "pubtypes")
-          sect_type = lldb::eSectionTypeDWARFDebugPubTypes;
-        break;
-
-      case 's':
-        if (dwarf_name == "str")
-          sect_type = lldb::eSectionTypeDWARFDebugStr;
-        else if (dwarf_name == "str_offsets")
-          sect_type = lldb::eSectionTypeDWARFDebugStrOffsets;
-        break;
-
-      case 'r':
-        if (dwarf_name == "ranges")
-          sect_type = lldb::eSectionTypeDWARFDebugRanges;
-        break;
-
-      default:
-        break;
-      }
+      sect_type = ObjectFile::GetDWARFSectionTypeFromName(dwarf_name);
     } else if (name.starts_with("__apple_") || name.starts_with(".apple_"))
       sect_type = lldb::eSectionTypeInvalid;
     else if (name == "__objc_imageinfo")
@@ -698,7 +648,7 @@ void IRExecutionUnit::CollectCandidateCPlusPlusNames(
 
 class LoadAddressResolver {
 public:
-  LoadAddressResolver(Target *target, bool &symbol_was_missing_weak)
+  LoadAddressResolver(Target &target, bool &symbol_was_missing_weak)
       : m_target(target), m_symbol_was_missing_weak(symbol_was_missing_weak) {}
 
   std::optional<lldb::addr_t> Resolve(SymbolContextList &sc_list) {
@@ -720,21 +670,21 @@ public:
 
       // First try the symbol.
       if (candidate_sc.symbol) {
-        load_address = candidate_sc.symbol->ResolveCallableAddress(*m_target);
+        load_address = candidate_sc.symbol->ResolveCallableAddress(m_target);
         if (load_address == LLDB_INVALID_ADDRESS) {
           Address addr = candidate_sc.symbol->GetAddress();
-          load_address = m_target->GetProcessSP()
-                             ? addr.GetLoadAddress(m_target)
+          load_address = m_target.GetProcessSP()
+                             ? addr.GetLoadAddress(&m_target)
                              : addr.GetFileAddress();
         }
       }
 
       // If that didn't work, try the function.
       if (load_address == LLDB_INVALID_ADDRESS && candidate_sc.function) {
-        Address addr =
-            candidate_sc.function->GetAddressRange().GetBaseAddress();
-        load_address = m_target->GetProcessSP() ? addr.GetLoadAddress(m_target)
-                                                : addr.GetFileAddress();
+        Address addr = candidate_sc.function->GetAddress();
+        load_address = m_target.GetProcessSP()
+                           ? addr.GetCallableLoadAddress(&m_target)
+                           : addr.GetFileAddress();
       }
 
       // We found a load address.
@@ -765,10 +715,49 @@ public:
   }
 
 private:
-  Target *m_target;
+  Target &m_target;
   bool &m_symbol_was_missing_weak;
   lldb::addr_t m_best_internal_load_address = LLDB_INVALID_ADDRESS;
 };
+
+/// Returns address of the function referred to by the special function call
+/// label \c label.
+static llvm::Expected<lldb::addr_t>
+ResolveFunctionCallLabel(FunctionCallLabel &label,
+                         const lldb_private::SymbolContext &sc,
+                         bool &symbol_was_missing_weak) {
+  symbol_was_missing_weak = false;
+
+  if (!sc.target_sp)
+    return llvm::createStringError("target not available.");
+
+  auto module_sp = sc.target_sp->GetImages().FindModule(label.module_id);
+  if (!module_sp)
+    return llvm::createStringError(
+        llvm::formatv("failed to find module by UID {0}", label.module_id));
+
+  auto *symbol_file = module_sp->GetSymbolFile();
+  if (!symbol_file)
+    return llvm::createStringError(
+        llvm::formatv("no SymbolFile found on module {0:x}.", module_sp.get()));
+
+  auto sc_or_err = symbol_file->ResolveFunctionCallLabel(label);
+  if (!sc_or_err)
+    return llvm::joinErrors(
+        llvm::createStringError("failed to resolve function by UID:"),
+        sc_or_err.takeError());
+
+  SymbolContextList sc_list;
+  sc_list.Append(*sc_or_err);
+
+  LoadAddressResolver resolver(*sc.target_sp, symbol_was_missing_weak);
+  lldb::addr_t resolved_addr =
+      resolver.Resolve(sc_list).value_or(LLDB_INVALID_ADDRESS);
+  if (resolved_addr == LLDB_INVALID_ADDRESS)
+    return llvm::createStringError("couldn't resolve address for function");
+
+  return resolved_addr;
+}
 
 lldb::addr_t
 IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
@@ -783,10 +772,13 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
   }
 
   ModuleList non_local_images = target->GetImages();
-  // We'll process module_sp separately, before the other modules.
+  // We'll process module_sp and any preferred modules separately, before the
+  // other modules.
   non_local_images.Remove(sc.module_sp);
+  for (size_t i = 0; i < m_preferred_modules.GetSize(); ++i)
+    non_local_images.Remove(m_preferred_modules.GetModuleAtIndex(i));
 
-  LoadAddressResolver resolver(target, symbol_was_missing_weak);
+  LoadAddressResolver resolver(*target, symbol_was_missing_weak);
 
   ModuleFunctionSearchOptions function_options;
   function_options.include_symbols = true;
@@ -795,14 +787,24 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
   for (const ConstString &name : names) {
     // The lookup order here is as follows:
     // 1) Functions in `sc.module_sp`
-    // 2) Functions in the other modules
-    // 3) Symbols in `sc.module_sp`
-    // 4) Symbols in the other modules
+    // 2) Functions in the preferred modules list
+    // 3) Functions in the other modules
+    // 4) Symbols in `sc.module_sp`
+    // 5) Symbols in the preferred modules list
+    // 6) Symbols in the other modules
     if (sc.module_sp) {
       SymbolContextList sc_list;
       sc.module_sp->FindFunctions(name, CompilerDeclContext(),
                                   lldb::eFunctionNameTypeFull, function_options,
                                   sc_list);
+      if (auto load_addr = resolver.Resolve(sc_list))
+        return *load_addr;
+    }
+
+    {
+      SymbolContextList sc_list;
+      m_preferred_modules.FindFunctions(name, lldb::eFunctionNameTypeFull,
+                                        function_options, sc_list);
       if (auto load_addr = resolver.Resolve(sc_list))
         return *load_addr;
     }
@@ -819,6 +821,14 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
       SymbolContextList sc_list;
       sc.module_sp->FindSymbolsWithNameAndType(name, lldb::eSymbolTypeAny,
                                                sc_list);
+      if (auto load_addr = resolver.Resolve(sc_list))
+        return *load_addr;
+    }
+
+    {
+      SymbolContextList sc_list;
+      m_preferred_modules.FindSymbolsWithNameAndType(name, lldb::eSymbolTypeAny,
+                                                     sc_list);
       if (auto load_addr = resolver.Resolve(sc_list))
         return *load_addr;
     }
@@ -884,6 +894,34 @@ lldb::addr_t IRExecutionUnit::FindInUserDefinedSymbols(
 
 lldb::addr_t IRExecutionUnit::FindSymbol(lldb_private::ConstString name,
                                          bool &missing_weak) {
+  if (name.GetStringRef().starts_with(FunctionCallLabelPrefix)) {
+    auto label_or_err = FunctionCallLabel::fromString(name);
+    if (!label_or_err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), label_or_err.takeError(),
+                     "failed to create FunctionCallLabel from '{1}': {0}",
+                     name.GetStringRef());
+      return LLDB_INVALID_ADDRESS;
+    }
+
+    if (auto addr_or_err =
+            ResolveFunctionCallLabel(*label_or_err, m_sym_ctx, missing_weak)) {
+      return *addr_or_err;
+    } else {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), addr_or_err.takeError(),
+                     "Failed to resolve function call label '{1}': {0}",
+                     name.GetStringRef());
+
+      // Fall back to lookup by name despite error in resolving the label.
+      // May happen in practice if the definition of a function lives in
+      // a different lldb_private::Module than it's declaration. Meaning
+      // we couldn't pin-point it using the information encoded in the label.
+      name.SetString(label_or_err->lookup_name);
+    }
+  }
+
+  // TODO: now with function call labels, do we still need to
+  // generate alternate manglings?
+
   std::vector<ConstString> candidate_C_names;
   std::vector<ConstString> candidate_CPlusPlus_names;
 
@@ -1082,9 +1120,12 @@ bool IRExecutionUnit::CommitOneAllocation(lldb::ProcessSP &process_sp,
     break;
   default:
     const bool zero_memory = false;
-    record.m_process_address =
-        Malloc(record.m_size, record.m_alignment, record.m_permissions,
-               eAllocationPolicyProcessOnly, zero_memory, error);
+    if (auto address_or_error =
+            Malloc(record.m_size, record.m_alignment, record.m_permissions,
+                   eAllocationPolicyProcessOnly, zero_memory))
+      record.m_process_address = *address_or_error;
+    else
+      error = Status::FromError(address_or_error.takeError());
     break;
   }
 

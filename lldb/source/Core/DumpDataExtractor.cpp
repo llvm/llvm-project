@@ -136,10 +136,10 @@ static lldb::offset_t DumpInstructions(const DataExtractor &DE, Stream *s,
       lldb::addr_t addr = base_addr + start_offset;
       lldb_private::Address so_addr;
       bool data_from_file = true;
-      if (target_sp->GetSectionLoadList().ResolveLoadAddress(addr, so_addr)) {
+      if (target_sp->ResolveLoadAddress(addr, so_addr)) {
         data_from_file = false;
       } else {
-        if (target_sp->GetSectionLoadList().IsEmpty() ||
+        if (!target_sp->HasLoadedSections() ||
             !target_sp->GetImages().ResolveFileAddress(addr, so_addr))
           so_addr.SetRawAddress(addr);
       }
@@ -157,7 +157,8 @@ static lldb::offset_t DumpInstructions(const DataExtractor &DE, Stream *s,
         exe_scope->CalculateExecutionContext(exe_ctx);
         disassembler_sp->GetInstructionList().Dump(
             s, show_address, show_bytes, show_control_flow_kind, &exe_ctx);
-      }
+      } else if (number_of_instructions)
+        s->Printf("failed to decode instructions at 0x%" PRIx64 ".", addr);
     }
   } else
     s->Printf("invalid target");
@@ -318,14 +319,15 @@ static void printMemoryTags(const DataExtractor &DE, Stream *s,
 }
 
 static const llvm::fltSemantics &GetFloatSemantics(const TargetSP &target_sp,
-                                                   size_t byte_size) {
+                                                   size_t byte_size,
+                                                   lldb::Format format) {
   if (target_sp) {
     auto type_system_or_err =
       target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC);
     if (!type_system_or_err)
       llvm::consumeError(type_system_or_err.takeError());
     else if (auto ts = *type_system_or_err)
-      return ts->GetFloatTypeSemantics(byte_size);
+      return ts->GetFloatTypeSemantics(byte_size, format);
   }
   // No target, just make a reasonable guess
   switch(byte_size) {
@@ -335,7 +337,13 @@ static const llvm::fltSemantics &GetFloatSemantics(const TargetSP &target_sp,
       return llvm::APFloat::IEEEsingle();
     case 8:
       return llvm::APFloat::IEEEdouble();
-  }
+    case 16:
+      if (format == eFormatFloat128) {
+        return llvm::APFloat::IEEEquad();
+      }
+      // Otherwise it's ambigious whether a 16-byte float is a float128 or a
+      // target-specific long double.
+    }
   return llvm::APFloat::Bogus();
 }
 
@@ -653,6 +661,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       }
     } break;
 
+    case eFormatFloat128:
     case eFormatFloat: {
       TargetSP target_sp;
       if (exe_scope)
@@ -666,7 +675,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       const unsigned format_precision = 0;
 
       const llvm::fltSemantics &semantics =
-          GetFloatSemantics(target_sp, item_byte_size);
+          GetFloatSemantics(target_sp, item_byte_size, item_format);
 
       // Recalculate the byte size in case of a difference. This is possible
       // when item_byte_size is 16 (128-bit), because you could get back the
@@ -707,8 +716,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
         TargetSP target_sp(exe_scope->CalculateTarget());
         lldb_private::Address so_addr;
         if (target_sp) {
-          if (target_sp->GetSectionLoadList().ResolveLoadAddress(addr,
-                                                                 so_addr)) {
+          if (target_sp->ResolveLoadAddress(addr, so_addr)) {
             s->PutChar(' ');
             so_addr.Dump(s, exe_scope, Address::DumpStyleResolvedDescription,
                          Address::DumpStyleModuleWithFileAddress);
@@ -719,8 +727,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
             if (ProcessSP process_sp = exe_scope->CalculateProcess()) {
               if (ABISP abi_sp = process_sp->GetABI()) {
                 addr_t addr_fixed = abi_sp->FixCodeAddress(addr);
-                if (target_sp->GetSectionLoadList().ResolveLoadAddress(
-                        addr_fixed, so_addr)) {
+                if (target_sp->ResolveLoadAddress(addr_fixed, so_addr)) {
                   s->PutChar(' ');
                   s->Printf("(0x%*.*" PRIx64 ")", (int)(2 * item_byte_size),
                             (int)(2 * item_byte_size), addr_fixed);

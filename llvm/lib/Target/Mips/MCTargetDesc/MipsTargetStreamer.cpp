@@ -12,11 +12,13 @@
 
 #include "MipsTargetStreamer.h"
 #include "MCTargetDesc/MipsABIInfo.h"
+#include "MCTargetDesc/MipsMCAsmInfo.h"
+#include "MipsBaseInfo.h"
 #include "MipsELFStreamer.h"
 #include "MipsInstPrinter.h"
-#include "MipsMCExpr.h"
 #include "MipsMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
@@ -24,7 +26,6 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
@@ -49,6 +50,13 @@ MipsTargetStreamer::MipsTargetStreamer(MCStreamer &S)
     : MCTargetStreamer(S), GPReg(Mips::GP), ModuleDirectiveAllowed(true) {
   GPRInfoSet = FPRInfoSet = FrameInfoSet = false;
 }
+
+void MipsTargetStreamer::emitGPRel32Value(const MCExpr *) {}
+void MipsTargetStreamer::emitGPRel64Value(const MCExpr *) {}
+void MipsTargetStreamer::emitDTPRel32Value(const MCExpr *) {}
+void MipsTargetStreamer::emitDTPRel64Value(const MCExpr *) {}
+void MipsTargetStreamer::emitTPRel32Value(const MCExpr *) {}
+void MipsTargetStreamer::emitTPRel64Value(const MCExpr *) {}
 void MipsTargetStreamer::emitDirectiveSetMicroMips() {}
 void MipsTargetStreamer::emitDirectiveSetNoMicroMips() {}
 void MipsTargetStreamer::setUsesMicroMips() {}
@@ -81,8 +89,8 @@ void MipsTargetStreamer::emitDirectiveNaNLegacy() {}
 void MipsTargetStreamer::emitDirectiveOptionPic0() {}
 void MipsTargetStreamer::emitDirectiveOptionPic2() {}
 void MipsTargetStreamer::emitDirectiveInsn() { forbidModuleDirective(); }
-void MipsTargetStreamer::emitFrame(unsigned StackReg, unsigned StackSize,
-                                   unsigned ReturnReg) {}
+void MipsTargetStreamer::emitFrame(MCRegister StackReg, unsigned StackSize,
+                                   MCRegister ReturnReg) {}
 void MipsTargetStreamer::emitMask(unsigned CPUBitmask, int CPUTopSavedRegOff) {}
 void MipsTargetStreamer::emitFMask(unsigned FPUBitmask, int FPUTopSavedRegOff) {
 }
@@ -118,9 +126,9 @@ void MipsTargetStreamer::emitDirectiveSetDspr2() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetNoDsp() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetMips3D() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetNoMips3D() { forbidModuleDirective(); }
-void MipsTargetStreamer::emitDirectiveCpAdd(unsigned RegNo) {}
-void MipsTargetStreamer::emitDirectiveCpLoad(unsigned RegNo) {}
-void MipsTargetStreamer::emitDirectiveCpLocal(unsigned RegNo) {
+void MipsTargetStreamer::emitDirectiveCpAdd(MCRegister Reg) {}
+void MipsTargetStreamer::emitDirectiveCpLoad(MCRegister Reg) {}
+void MipsTargetStreamer::emitDirectiveCpLocal(MCRegister Reg) {
   // .cplocal $reg
   // This directive forces to use the alternate register for context pointer.
   // For example
@@ -133,17 +141,17 @@ void MipsTargetStreamer::emitDirectiveCpLocal(unsigned RegNo) {
   if (!getABI().IsN32() && !getABI().IsN64())
     return;
 
-  GPReg = RegNo;
+  GPReg = Reg;
 
   forbidModuleDirective();
 }
 bool MipsTargetStreamer::emitDirectiveCpRestore(
-    int Offset, function_ref<unsigned()> GetATReg, SMLoc IDLoc,
+    int Offset, function_ref<MCRegister()> GetATReg, SMLoc IDLoc,
     const MCSubtargetInfo *STI) {
   forbidModuleDirective();
   return true;
 }
-void MipsTargetStreamer::emitDirectiveCpsetup(unsigned RegNo, int RegOrOffset,
+void MipsTargetStreamer::emitDirectiveCpsetup(MCRegister Reg, int RegOrOffset,
                                               const MCSymbol &Sym, bool IsReg) {
 }
 void MipsTargetStreamer::emitDirectiveCpreturn(unsigned SaveLocation,
@@ -173,7 +181,7 @@ void MipsTargetStreamer::emitDirectiveSetNoOddSPReg() {
   forbidModuleDirective();
 }
 
-void MipsTargetStreamer::emitR(unsigned Opcode, unsigned Reg0, SMLoc IDLoc,
+void MipsTargetStreamer::emitR(unsigned Opcode, MCRegister Reg0, SMLoc IDLoc,
                                const MCSubtargetInfo *STI) {
   MCInst TmpInst;
   TmpInst.setOpcode(Opcode);
@@ -182,7 +190,7 @@ void MipsTargetStreamer::emitR(unsigned Opcode, unsigned Reg0, SMLoc IDLoc,
   getStreamer().emitInstruction(TmpInst, *STI);
 }
 
-void MipsTargetStreamer::emitRX(unsigned Opcode, unsigned Reg0, MCOperand Op1,
+void MipsTargetStreamer::emitRX(unsigned Opcode, MCRegister Reg0, MCOperand Op1,
                                 SMLoc IDLoc, const MCSubtargetInfo *STI) {
   MCInst TmpInst;
   TmpInst.setOpcode(Opcode);
@@ -192,13 +200,14 @@ void MipsTargetStreamer::emitRX(unsigned Opcode, unsigned Reg0, MCOperand Op1,
   getStreamer().emitInstruction(TmpInst, *STI);
 }
 
-void MipsTargetStreamer::emitRI(unsigned Opcode, unsigned Reg0, int32_t Imm,
+void MipsTargetStreamer::emitRI(unsigned Opcode, MCRegister Reg0, int32_t Imm,
                                 SMLoc IDLoc, const MCSubtargetInfo *STI) {
   emitRX(Opcode, Reg0, MCOperand::createImm(Imm), IDLoc, STI);
 }
 
-void MipsTargetStreamer::emitRR(unsigned Opcode, unsigned Reg0, unsigned Reg1,
-                                SMLoc IDLoc, const MCSubtargetInfo *STI) {
+void MipsTargetStreamer::emitRR(unsigned Opcode, MCRegister Reg0,
+                                MCRegister Reg1, SMLoc IDLoc,
+                                const MCSubtargetInfo *STI) {
   emitRX(Opcode, Reg0, MCOperand::createReg(Reg1), IDLoc, STI);
 }
 
@@ -212,8 +221,8 @@ void MipsTargetStreamer::emitII(unsigned Opcode, int16_t Imm1, int16_t Imm2,
   getStreamer().emitInstruction(TmpInst, *STI);
 }
 
-void MipsTargetStreamer::emitRRX(unsigned Opcode, unsigned Reg0, unsigned Reg1,
-                                 MCOperand Op2, SMLoc IDLoc,
+void MipsTargetStreamer::emitRRX(unsigned Opcode, MCRegister Reg0,
+                                 MCRegister Reg1, MCOperand Op2, SMLoc IDLoc,
                                  const MCSubtargetInfo *STI) {
   MCInst TmpInst;
   TmpInst.setOpcode(Opcode);
@@ -224,14 +233,15 @@ void MipsTargetStreamer::emitRRX(unsigned Opcode, unsigned Reg0, unsigned Reg1,
   getStreamer().emitInstruction(TmpInst, *STI);
 }
 
-void MipsTargetStreamer::emitRRR(unsigned Opcode, unsigned Reg0, unsigned Reg1,
-                                 unsigned Reg2, SMLoc IDLoc,
+void MipsTargetStreamer::emitRRR(unsigned Opcode, MCRegister Reg0,
+                                 MCRegister Reg1, MCRegister Reg2, SMLoc IDLoc,
                                  const MCSubtargetInfo *STI) {
   emitRRX(Opcode, Reg0, Reg1, MCOperand::createReg(Reg2), IDLoc, STI);
 }
 
-void MipsTargetStreamer::emitRRRX(unsigned Opcode, unsigned Reg0, unsigned Reg1,
-                                  unsigned Reg2, MCOperand Op3, SMLoc IDLoc,
+void MipsTargetStreamer::emitRRRX(unsigned Opcode, MCRegister Reg0,
+                                  MCRegister Reg1, MCRegister Reg2,
+                                  MCOperand Op3, SMLoc IDLoc,
                                   const MCSubtargetInfo *STI) {
   MCInst TmpInst;
   TmpInst.setOpcode(Opcode);
@@ -243,14 +253,14 @@ void MipsTargetStreamer::emitRRRX(unsigned Opcode, unsigned Reg0, unsigned Reg1,
   getStreamer().emitInstruction(TmpInst, *STI);
 }
 
-void MipsTargetStreamer::emitRRI(unsigned Opcode, unsigned Reg0, unsigned Reg1,
-                                 int16_t Imm, SMLoc IDLoc,
+void MipsTargetStreamer::emitRRI(unsigned Opcode, MCRegister Reg0,
+                                 MCRegister Reg1, int16_t Imm, SMLoc IDLoc,
                                  const MCSubtargetInfo *STI) {
   emitRRX(Opcode, Reg0, Reg1, MCOperand::createImm(Imm), IDLoc, STI);
 }
 
-void MipsTargetStreamer::emitRRIII(unsigned Opcode, unsigned Reg0,
-                                   unsigned Reg1, int16_t Imm0, int16_t Imm1,
+void MipsTargetStreamer::emitRRIII(unsigned Opcode, MCRegister Reg0,
+                                   MCRegister Reg1, int16_t Imm0, int16_t Imm1,
                                    int16_t Imm2, SMLoc IDLoc,
                                    const MCSubtargetInfo *STI) {
   MCInst TmpInst;
@@ -264,14 +274,14 @@ void MipsTargetStreamer::emitRRIII(unsigned Opcode, unsigned Reg0,
   getStreamer().emitInstruction(TmpInst, *STI);
 }
 
-void MipsTargetStreamer::emitAddu(unsigned DstReg, unsigned SrcReg,
-                                  unsigned TrgReg, bool Is64Bit,
+void MipsTargetStreamer::emitAddu(MCRegister DstReg, MCRegister SrcReg,
+                                  MCRegister TrgReg, bool Is64Bit,
                                   const MCSubtargetInfo *STI) {
   emitRRR(Is64Bit ? Mips::DADDu : Mips::ADDu, DstReg, SrcReg, TrgReg, SMLoc(),
           STI);
 }
 
-void MipsTargetStreamer::emitDSLL(unsigned DstReg, unsigned SrcReg,
+void MipsTargetStreamer::emitDSLL(MCRegister DstReg, MCRegister SrcReg,
                                   int16_t ShiftAmount, SMLoc IDLoc,
                                   const MCSubtargetInfo *STI) {
   if (ShiftAmount >= 32) {
@@ -313,8 +323,8 @@ void MipsTargetStreamer::emitGPRestore(int Offset, SMLoc IDLoc,
 
 /// Emit a store instruction with an immediate offset.
 void MipsTargetStreamer::emitStoreWithImmOffset(
-    unsigned Opcode, unsigned SrcReg, unsigned BaseReg, int64_t Offset,
-    function_ref<unsigned()> GetATReg, SMLoc IDLoc,
+    unsigned Opcode, MCRegister SrcReg, MCRegister BaseReg, int64_t Offset,
+    function_ref<MCRegister()> GetATReg, SMLoc IDLoc,
     const MCSubtargetInfo *STI) {
   if (isInt<16>(Offset)) {
     emitRRI(Opcode, SrcReg, BaseReg, Offset, IDLoc, STI);
@@ -325,7 +335,7 @@ void MipsTargetStreamer::emitStoreWithImmOffset(
   //                      add $at, $at, $8
   //                      sw $8, %lo(offset)($at)
 
-  unsigned ATReg = GetATReg();
+  MCRegister ATReg = GetATReg();
   if (!ATReg)
     return;
 
@@ -349,10 +359,9 @@ void MipsTargetStreamer::emitStoreWithImmOffset(
 /// permitted to be the same register iff DstReg is distinct from BaseReg and
 /// DstReg is a GPR. It is the callers responsibility to identify such cases
 /// and pass the appropriate register in TmpReg.
-void MipsTargetStreamer::emitLoadWithImmOffset(unsigned Opcode, unsigned DstReg,
-                                               unsigned BaseReg, int64_t Offset,
-                                               unsigned TmpReg, SMLoc IDLoc,
-                                               const MCSubtargetInfo *STI) {
+void MipsTargetStreamer::emitLoadWithImmOffset(
+    unsigned Opcode, MCRegister DstReg, MCRegister BaseReg, int64_t Offset,
+    MCRegister TmpReg, SMLoc IDLoc, const MCSubtargetInfo *STI) {
   if (isInt<16>(Offset)) {
     emitRRI(Opcode, DstReg, BaseReg, Offset, IDLoc, STI);
     return;
@@ -384,6 +393,48 @@ void MipsTargetStreamer::emitLoadWithImmOffset(unsigned Opcode, unsigned DstReg,
 MipsTargetAsmStreamer::MipsTargetAsmStreamer(MCStreamer &S,
                                              formatted_raw_ostream &OS)
     : MipsTargetStreamer(S), OS(OS) {}
+
+void MipsTargetAsmStreamer::emitDTPRel32Value(const MCExpr *Value) {
+  auto *MAI = getStreamer().getContext().getAsmInfo();
+  OS << "\t.dtprelword\t";
+  MAI->printExpr(OS, *Value);
+  OS << '\n';
+}
+
+void MipsTargetAsmStreamer::emitDTPRel64Value(const MCExpr *Value) {
+  auto *MAI = getStreamer().getContext().getAsmInfo();
+  OS << "\t.dtpreldword\t";
+  MAI->printExpr(OS, *Value);
+  OS << '\n';
+}
+
+void MipsTargetAsmStreamer::emitTPRel32Value(const MCExpr *Value) {
+  auto *MAI = getStreamer().getContext().getAsmInfo();
+  OS << "\t.tprelword\t";
+  MAI->printExpr(OS, *Value);
+  OS << '\n';
+}
+
+void MipsTargetAsmStreamer::emitTPRel64Value(const MCExpr *Value) {
+  auto *MAI = getStreamer().getContext().getAsmInfo();
+  OS << "\t.tpreldword\t";
+  MAI->printExpr(OS, *Value);
+  OS << '\n';
+}
+
+void MipsTargetAsmStreamer::emitGPRel32Value(const MCExpr *Value) {
+  auto *MAI = getStreamer().getContext().getAsmInfo();
+  OS << "\t.gpword\t";
+  MAI->printExpr(OS, *Value);
+  OS << '\n';
+}
+
+void MipsTargetAsmStreamer::emitGPRel64Value(const MCExpr *Value) {
+  auto *MAI = getStreamer().getContext().getAsmInfo();
+  OS << "\t.gpdword\t";
+  MAI->printExpr(OS, *Value);
+  OS << '\n';
+}
 
 void MipsTargetAsmStreamer::emitDirectiveSetMicroMips() {
   OS << "\t.set\tmicromips\n";
@@ -519,8 +570,8 @@ void MipsTargetAsmStreamer::emitDirectiveInsn() {
   OS << "\t.insn\n";
 }
 
-void MipsTargetAsmStreamer::emitFrame(unsigned StackReg, unsigned StackSize,
-                                      unsigned ReturnReg) {
+void MipsTargetAsmStreamer::emitFrame(MCRegister StackReg, unsigned StackSize,
+                                      MCRegister ReturnReg) {
   OS << "\t.frame\t$"
      << StringRef(MipsInstPrinter::getRegisterName(StackReg)).lower() << ","
      << StackSize << ",$"
@@ -678,38 +729,38 @@ void MipsTargetAsmStreamer::emitFMask(unsigned FPUBitmask,
   OS << "," << FPUTopSavedRegOff << '\n';
 }
 
-void MipsTargetAsmStreamer::emitDirectiveCpAdd(unsigned RegNo) {
+void MipsTargetAsmStreamer::emitDirectiveCpAdd(MCRegister Reg) {
   OS << "\t.cpadd\t$"
-     << StringRef(MipsInstPrinter::getRegisterName(RegNo)).lower() << "\n";
+     << StringRef(MipsInstPrinter::getRegisterName(Reg)).lower() << "\n";
   forbidModuleDirective();
 }
 
-void MipsTargetAsmStreamer::emitDirectiveCpLoad(unsigned RegNo) {
+void MipsTargetAsmStreamer::emitDirectiveCpLoad(MCRegister Reg) {
   OS << "\t.cpload\t$"
-     << StringRef(MipsInstPrinter::getRegisterName(RegNo)).lower() << "\n";
+     << StringRef(MipsInstPrinter::getRegisterName(Reg)).lower() << "\n";
   forbidModuleDirective();
 }
 
-void MipsTargetAsmStreamer::emitDirectiveCpLocal(unsigned RegNo) {
+void MipsTargetAsmStreamer::emitDirectiveCpLocal(MCRegister Reg) {
   OS << "\t.cplocal\t$"
-     << StringRef(MipsInstPrinter::getRegisterName(RegNo)).lower() << "\n";
-  MipsTargetStreamer::emitDirectiveCpLocal(RegNo);
+     << StringRef(MipsInstPrinter::getRegisterName(Reg)).lower() << "\n";
+  MipsTargetStreamer::emitDirectiveCpLocal(Reg);
 }
 
 bool MipsTargetAsmStreamer::emitDirectiveCpRestore(
-    int Offset, function_ref<unsigned()> GetATReg, SMLoc IDLoc,
+    int Offset, function_ref<MCRegister()> GetATReg, SMLoc IDLoc,
     const MCSubtargetInfo *STI) {
   MipsTargetStreamer::emitDirectiveCpRestore(Offset, GetATReg, IDLoc, STI);
   OS << "\t.cprestore\t" << Offset << "\n";
   return true;
 }
 
-void MipsTargetAsmStreamer::emitDirectiveCpsetup(unsigned RegNo,
+void MipsTargetAsmStreamer::emitDirectiveCpsetup(MCRegister Reg,
                                                  int RegOrOffset,
                                                  const MCSymbol &Sym,
                                                  bool IsReg) {
   OS << "\t.cpsetup\t$"
-     << StringRef(MipsInstPrinter::getRegisterName(RegNo)).lower() << ", ";
+     << StringRef(MipsInstPrinter::getRegisterName(Reg)).lower() << ", ";
 
   if (IsReg)
     OS << "$"
@@ -879,7 +930,7 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
 }
 
 void MipsTargetELFStreamer::emitLabel(MCSymbol *S) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
   getStreamer().getAssembler().registerSymbol(*Symbol);
   uint8_t Type = Symbol->getType();
   if (Type != ELF::STT_FUNC)
@@ -917,7 +968,7 @@ void MipsTargetELFStreamer::finish() {
 
       Align Alignment = Section.getAlign();
       S.switchSection(&Section);
-      if (Section.useCodeAlign())
+      if (getContext().getAsmInfo()->useCodeAlign(Section))
         S.emitCodeAlignment(Alignment, &STI, Alignment.value());
       else
         S.emitValueToAlignment(Alignment, 0, 1, Alignment.value());
@@ -963,11 +1014,11 @@ void MipsTargetELFStreamer::finish() {
 }
 
 void MipsTargetELFStreamer::emitAssignment(MCSymbol *S, const MCExpr *Value) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
   // If on rhs is micromips symbol then mark Symbol as microMips.
   if (Value->getKind() != MCExpr::SymbolRef)
     return;
-  const auto &RhsSym = cast<MCSymbolELF>(
+  auto &RhsSym = static_cast<const MCSymbolELF &>(
       static_cast<const MCSymbolRefExpr *>(Value)->getSymbol());
 
   if (!(RhsSym.getOther() & ELF::STO_MIPS_MICROMIPS))
@@ -978,6 +1029,49 @@ void MipsTargetELFStreamer::emitAssignment(MCSymbol *S, const MCExpr *Value) {
 
 MCELFStreamer &MipsTargetELFStreamer::getStreamer() {
   return static_cast<MCELFStreamer &>(Streamer);
+}
+
+void MipsTargetELFStreamer::emitGPRel32Value(const MCExpr *Value) {
+  auto &S = getStreamer();
+  S.ensureHeadroom(4);
+  S.addFixup(Value, Mips::fixup_Mips_GPREL32);
+  S.appendContents(4, 0);
+}
+
+void MipsTargetELFStreamer::emitGPRel64Value(const MCExpr *Value) {
+  auto &S = getStreamer();
+  S.ensureHeadroom(8);
+  // fixup_Mips_GPREL32 desginates R_MIPS_GPREL32+R_MIPS_64 on MIPS64.
+  S.addFixup(Value, Mips::fixup_Mips_GPREL32);
+  S.appendContents(8, 0);
+}
+
+void MipsTargetELFStreamer::emitDTPRel32Value(const MCExpr *Value) {
+  auto &S = getStreamer();
+  S.ensureHeadroom(4);
+  S.addFixup(Value, Mips::fixup_Mips_DTPREL32);
+  S.appendContents(4, 0);
+}
+
+void MipsTargetELFStreamer::emitDTPRel64Value(const MCExpr *Value) {
+  auto &S = getStreamer();
+  S.ensureHeadroom(8);
+  S.addFixup(Value, Mips::fixup_Mips_DTPREL64);
+  S.appendContents(8, 0);
+}
+
+void MipsTargetELFStreamer::emitTPRel32Value(const MCExpr *Value) {
+  auto &S = getStreamer();
+  S.ensureHeadroom(4);
+  S.addFixup(Value, Mips::fixup_Mips_TPREL32);
+  S.appendContents(4, 0);
+}
+
+void MipsTargetELFStreamer::emitTPRel64Value(const MCExpr *Value) {
+  auto &S = getStreamer();
+  S.ensureHeadroom(8);
+  S.addFixup(Value, Mips::fixup_Mips_TPREL64);
+  S.appendContents(8, 0);
 }
 
 void MipsTargetELFStreamer::emitDirectiveSetMicroMips() {
@@ -1024,9 +1118,7 @@ void MipsTargetELFStreamer::emitDirectiveEnd(StringRef Name) {
   Sec->setAlignment(Align(4));
 
   MCSymbol *Sym = Context.getOrCreateSymbol(Name);
-  const MCSymbolRefExpr *ExprRef =
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Context);
-
+  const auto *ExprRef = MCSymbolRefExpr::create(Sym, Context);
   OS.emitValueImpl(ExprRef, 4);
 
   OS.emitIntValue(GPRInfoSet ? GPRBitMask : 0, 4); // reg_mask
@@ -1049,8 +1141,7 @@ void MipsTargetELFStreamer::emitDirectiveEnd(StringRef Name) {
   MCSymbol *CurPCSym = Context.createTempSymbol();
   OS.emitLabel(CurPCSym);
   const MCExpr *Size = MCBinaryExpr::createSub(
-      MCSymbolRefExpr::create(CurPCSym, MCSymbolRefExpr::VK_None, Context),
-      ExprRef, Context);
+      MCSymbolRefExpr::create(CurPCSym, Context), ExprRef, Context);
 
   // The ELFObjectWriter can determine the absolute size as it has access to
   // the layout information of the assembly file, so a size expression rather
@@ -1113,8 +1204,8 @@ void MipsTargetELFStreamer::emitDirectiveInsn() {
   MEF.createPendingLabelRelocs();
 }
 
-void MipsTargetELFStreamer::emitFrame(unsigned StackReg, unsigned StackSize,
-                                      unsigned ReturnReg_) {
+void MipsTargetELFStreamer::emitFrame(MCRegister StackReg, unsigned StackSize,
+                                      MCRegister ReturnReg_) {
   MCContext &Context = getStreamer().getAssembler().getContext();
   const MCRegisterInfo *RegInfo = Context.getRegisterInfo();
 
@@ -1138,18 +1229,18 @@ void MipsTargetELFStreamer::emitFMask(unsigned FPUBitmask,
   FPROffset = FPUTopSavedRegOff;
 }
 
-void MipsTargetELFStreamer::emitDirectiveCpAdd(unsigned RegNo) {
+void MipsTargetELFStreamer::emitDirectiveCpAdd(MCRegister Reg) {
   // .cpadd $reg
   // This directive inserts code to add $gp to the argument's register
   // when support for position independent code is enabled.
   if (!Pic)
     return;
 
-  emitAddu(RegNo, RegNo, GPReg, getABI().IsN64(), &STI);
+  emitAddu(Reg, Reg, GPReg, getABI().IsN64(), &STI);
   forbidModuleDirective();
 }
 
-void MipsTargetELFStreamer::emitDirectiveCpLoad(unsigned RegNo) {
+void MipsTargetELFStreamer::emitDirectiveCpLoad(MCRegister Reg) {
   // .cpload $reg
   // This directive expands to:
   // lui   $gp, %hi(_gp_disp)
@@ -1174,11 +1265,7 @@ void MipsTargetELFStreamer::emitDirectiveCpLoad(unsigned RegNo) {
   MCInst TmpInst;
   TmpInst.setOpcode(Mips::LUi);
   TmpInst.addOperand(MCOperand::createReg(GPReg));
-  const MCExpr *HiSym = MipsMCExpr::create(
-      MipsMCExpr::MEK_HI,
-      MCSymbolRefExpr::create("_gp_disp", MCSymbolRefExpr::VK_None,
-                              MCA.getContext()),
-      MCA.getContext());
+  auto *HiSym = MCSpecifierExpr::create(GP_Disp, Mips::S_HI, MCA.getContext());
   TmpInst.addOperand(MCOperand::createExpr(HiSym));
   getStreamer().emitInstruction(TmpInst, STI);
 
@@ -1187,11 +1274,7 @@ void MipsTargetELFStreamer::emitDirectiveCpLoad(unsigned RegNo) {
   TmpInst.setOpcode(Mips::ADDiu);
   TmpInst.addOperand(MCOperand::createReg(GPReg));
   TmpInst.addOperand(MCOperand::createReg(GPReg));
-  const MCExpr *LoSym = MipsMCExpr::create(
-      MipsMCExpr::MEK_LO,
-      MCSymbolRefExpr::create("_gp_disp", MCSymbolRefExpr::VK_None,
-                              MCA.getContext()),
-      MCA.getContext());
+  auto *LoSym = MCSpecifierExpr::create(GP_Disp, Mips::S_LO, MCA.getContext());
   TmpInst.addOperand(MCOperand::createExpr(LoSym));
   getStreamer().emitInstruction(TmpInst, STI);
 
@@ -1200,19 +1283,19 @@ void MipsTargetELFStreamer::emitDirectiveCpLoad(unsigned RegNo) {
   TmpInst.setOpcode(Mips::ADDu);
   TmpInst.addOperand(MCOperand::createReg(GPReg));
   TmpInst.addOperand(MCOperand::createReg(GPReg));
-  TmpInst.addOperand(MCOperand::createReg(RegNo));
+  TmpInst.addOperand(MCOperand::createReg(Reg));
   getStreamer().emitInstruction(TmpInst, STI);
 
   forbidModuleDirective();
 }
 
-void MipsTargetELFStreamer::emitDirectiveCpLocal(unsigned RegNo) {
+void MipsTargetELFStreamer::emitDirectiveCpLocal(MCRegister Reg) {
   if (Pic)
-    MipsTargetStreamer::emitDirectiveCpLocal(RegNo);
+    MipsTargetStreamer::emitDirectiveCpLocal(Reg);
 }
 
 bool MipsTargetELFStreamer::emitDirectiveCpRestore(
-    int Offset, function_ref<unsigned()> GetATReg, SMLoc IDLoc,
+    int Offset, function_ref<MCRegister()> GetATReg, SMLoc IDLoc,
     const MCSubtargetInfo *STI) {
   MipsTargetStreamer::emitDirectiveCpRestore(Offset, GetATReg, IDLoc, STI);
   // .cprestore offset
@@ -1232,7 +1315,7 @@ bool MipsTargetELFStreamer::emitDirectiveCpRestore(
   return true;
 }
 
-void MipsTargetELFStreamer::emitDirectiveCpsetup(unsigned RegNo,
+void MipsTargetELFStreamer::emitDirectiveCpsetup(MCRegister Reg,
                                                  int RegOrOffset,
                                                  const MCSymbol &Sym,
                                                  bool IsReg) {
@@ -1254,12 +1337,12 @@ void MipsTargetELFStreamer::emitDirectiveCpsetup(unsigned RegNo,
     emitRRI(Mips::SD, GPReg, Mips::SP, RegOrOffset, SMLoc(), &STI);
   }
 
-  const MipsMCExpr *HiExpr = MipsMCExpr::createGpOff(
-      MipsMCExpr::MEK_HI, MCSymbolRefExpr::create(&Sym, MCA.getContext()),
-      MCA.getContext());
-  const MipsMCExpr *LoExpr = MipsMCExpr::createGpOff(
-      MipsMCExpr::MEK_LO, MCSymbolRefExpr::create(&Sym, MCA.getContext()),
-      MCA.getContext());
+  auto *HiExpr =
+      Mips::createGpOff(MCSymbolRefExpr::create(&Sym, MCA.getContext()),
+                        Mips::S_HI, MCA.getContext());
+  auto *LoExpr =
+      Mips::createGpOff(MCSymbolRefExpr::create(&Sym, MCA.getContext()),
+                        Mips::S_LO, MCA.getContext());
 
   // lui $gp, %hi(%neg(%gp_rel(funcSym)))
   emitRX(Mips::LUi, GPReg, MCOperand::createExpr(HiExpr), SMLoc(), &STI);
@@ -1270,9 +1353,9 @@ void MipsTargetELFStreamer::emitDirectiveCpsetup(unsigned RegNo,
 
   // (d)addu  $gp, $gp, $funcreg
   if (getABI().IsN32())
-    emitRRR(Mips::ADDu, GPReg, GPReg, RegNo, SMLoc(), &STI);
+    emitRRR(Mips::ADDu, GPReg, GPReg, Reg, SMLoc(), &STI);
   else
-    emitRRR(Mips::DADDu, GPReg, GPReg, RegNo, SMLoc(), &STI);
+    emitRRR(Mips::DADDu, GPReg, GPReg, Reg, SMLoc(), &STI);
 }
 
 void MipsTargetELFStreamer::emitDirectiveCpreturn(unsigned SaveLocation,

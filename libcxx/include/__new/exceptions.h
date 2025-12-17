@@ -17,8 +17,13 @@
 #  pragma GCC system_header
 #endif
 
-// purposefully not using versioning namespace
-namespace std {
+// <vcruntime_exception.h> defines its own std::bad_alloc type,
+// which we use in order to be ABI-compatible with other STLs on Windows.
+#if defined(_LIBCPP_ABI_VCRUNTIME)
+#  include <vcruntime_exception.h>
+#endif
+
+_LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 #if !defined(_LIBCPP_ABI_VCRUNTIME)
 
 class _LIBCPP_EXPORTED_FROM_ABI bad_alloc : public exception {
@@ -69,6 +74,6 @@ public:
   _LIBCPP_VERBOSE_ABORT("bad_array_new_length was thrown in -fno-exceptions mode");
 #endif
 }
-} // namespace std
+_LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
 #endif // _LIBCPP___NEW_EXCEPTIONS_H

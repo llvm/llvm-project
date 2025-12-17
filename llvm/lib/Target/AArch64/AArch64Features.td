@@ -370,24 +370,29 @@ def FeatureSVEAES : ExtensionWithMArch<"sve-aes", "SVEAES",
 def FeatureAliasSVE2AES : ExtensionWithMArch<"sve2-aes", "SVE2AES",
   "", "Shorthand for +sve2+sve-aes", [FeatureSVE2, FeatureSVEAES]>;
 
-def FeatureSVE2SM4 : ExtensionWithMArch<"sve2-sm4", "SVE2SM4", "FEAT_SVE_SM4",
-  "Enable SM4 SVE2 instructions", [FeatureSVE2, FeatureSM4]>;
+def FeatureSVESM4 : ExtensionWithMArch<"sve-sm4", "SVESM4", "FEAT_SVE_SM4",
+  "Enable SVE SM4 instructions", [FeatureSM4]>;
 
-def FeatureSVE2SHA3 : ExtensionWithMArch<"sve2-sha3", "SVE2SHA3", "FEAT_SVE_SHA3",
-  "Enable SHA3 SVE2 instructions", [FeatureSVE2, FeatureSHA3]>;
+def FeatureAliasSVE2SM4 : ExtensionWithMArch<"sve2-sm4", "SVE2SM4",
+  "", "Shorthand for +sve2+sve-sm4", [FeatureSVE2, FeatureSVESM4]>;
 
-def FeatureSVE2BitPerm : ExtensionWithMArch<"sve2-bitperm", "SVE2BitPerm",
-  "FEAT_SVE_BitPerm",
-  "Enable bit permutation SVE2 instructions", [FeatureSVE2]>;
+def FeatureSVESHA3 : ExtensionWithMArch<"sve-sha3", "SVESHA3", "FEAT_SVE_SHA3",
+  "Enable SVE SHA3 instructions", [FeatureSHA3]>;
+
+def FeatureAliasSVE2SHA3 : ExtensionWithMArch<"sve2-sha3", "SVE2SHA3",
+  "", "Shorthand for +sve2+sve-sha3", [FeatureSVE2, FeatureSVESHA3]>;
+
+def FeatureSVEBitPerm : ExtensionWithMArch<"sve-bitperm", "SVEBitPerm",
+  "FEAT_SVE_BitPerm",  "Enable bit permutation SVE2 instructions">;
+
+def FeatureAliasSVE2BitPerm : ExtensionWithMArch<"sve2-bitperm", "SVE2BitPerm",
+  "",  "Shorthand for +sve2+sve-bitperm", [FeatureSVE2, FeatureSVEBitPerm]>;
 
 def FeatureTRBE : Extension<"trbe", "TRBE", "FEAT_TRBE",
   "Enable Trace Buffer Extension">;
 
 def FeatureETE : Extension<"ete", "ETE", "FEAT_ETE",
   "Enable Embedded Trace Extension", [FeatureTRBE]>;
-
-def FeatureTME : ExtensionWithMArch<"tme", "TME", "FEAT_TME",
-  "Enable Transactional Memory Extension">;
 
 //===----------------------------------------------------------------------===//
 //  Armv9.1 Architecture Extensions
@@ -471,13 +476,13 @@ def FeatureD128 : ExtensionWithMArch<"d128", "D128",
 //===----------------------------------------------------------------------===//
 
 def FeatureFAMINMAX: ExtensionWithMArch<"faminmax", "FAMINMAX", "FEAT_FAMINMAX",
- "Enable FAMIN and FAMAX instructions">;
+ "Enable FAMIN and FAMAX instructions", [FeatureNEON]>;
 
 def FeatureLUT: ExtensionWithMArch<"lut", "LUT", "FEAT_LUT",
- "Enable Lookup Table instructions">;
+ "Enable Lookup Table instructions", [FeatureNEON]>;
 
 def FeatureFP8 : ExtensionWithMArch<"fp8", "FP8", "FEAT_FP8",
-  "Enable FP8 instructions", [FeatureFAMINMAX, FeatureLUT, FeatureBF16]>;
+  "Enable FP8 instructions", [FeatureNEON]>;
 
 def FeatureFP8FMA : ExtensionWithMArch<"fp8fma", "FP8FMA", "FEAT_FP8FMA",
   "Enable Armv9.5-A FP8 multiply-add instructions", [FeatureFP8]>;
@@ -486,16 +491,16 @@ def FeatureSSVE_FP8FMA : ExtensionWithMArch<"ssve-fp8fma", "SSVE_FP8FMA", "FEAT_
   "Enable SVE2 FP8 multiply-add instructions", [FeatureSME2, FeatureFP8]>;
 
 def FeatureFP8DOT4: ExtensionWithMArch<"fp8dot4", "FP8DOT4", "FEAT_FP8DOT4",
-  "Enable FP8 4-way dot instructions", [FeatureFP8FMA]>;
+  "Enable FP8 4-way dot instructions", [FeatureFP8]>;
 
 def FeatureFP8DOT2: ExtensionWithMArch<"fp8dot2", "FP8DOT2", "FEAT_FP8DOT2",
-  "Enable FP8 2-way dot instructions", [FeatureFP8DOT4]>;
+  "Enable FP8 2-way dot instructions", [FeatureFP8]>;
 
 def FeatureSSVE_FP8DOT4 : ExtensionWithMArch<"ssve-fp8dot4", "SSVE_FP8DOT4", "FEAT_SSVE_FP8DOT4",
-  "Enable SVE2 FP8 4-way dot product instructions", [FeatureSSVE_FP8FMA]>;
+  "Enable SVE2 FP8 4-way dot product instructions", [FeatureSME2, FeatureFP8]>;
 
 def FeatureSSVE_FP8DOT2 : ExtensionWithMArch<"ssve-fp8dot2", "SSVE_FP8DOT2", "FEAT_SSVE_FP8DOT2",
-  "Enable SVE2 FP8 2-way dot product instructions", [FeatureSSVE_FP8DOT4]>;
+  "Enable SVE2 FP8 2-way dot product instructions", [FeatureSME2, FeatureFP8]>;
 
 def FeatureSME_LUTv2 : ExtensionWithMArch<"sme-lutv2", "SME_LUTv2", "FEAT_SME_LUTv2",
   "Enable Scalable Matrix Extension (SME) LUTv2 instructions", [FeatureSME2]>;
@@ -504,7 +509,7 @@ def FeatureSMEF8F32 : ExtensionWithMArch<"sme-f8f32", "SMEF8F32", "FEAT_SME_F8F3
   "Enable Scalable Matrix Extension (SME) F8F32 instructions", [FeatureSME2, FeatureFP8]>;
 
 def FeatureSMEF8F16 : ExtensionWithMArch<"sme-f8f16", "SMEF8F16", "FEAT_SME_F8F16",
-  "Enable Scalable Matrix Extension (SME) F8F16 instructions", [FeatureSMEF8F32]>;
+  "Enable Scalable Matrix Extension (SME) F8F16 instructions", [FeatureSME2, FeatureFP8]>;
 
 def FeatureCPA : ExtensionWithMArch<"cpa", "CPA", "FEAT_CPA",
   "Enable Armv9.5-A Checked Pointer Arithmetic">;
@@ -565,6 +570,74 @@ def FeaturePCDPHINT: ExtensionWithMArch<"pcdphint", "PCDPHINT", "FEAT_PCDPHINT",
 def FeaturePoPS: ExtensionWithMArch<"pops", "PoPS", "FEAT_PoPS",
   "Enable Armv9.6-A Point Of Physical Storage (PoPS) DC instructions">;
 
+def FeatureSSVE_BitPerm : ExtensionWithMArch<"ssve-bitperm", "SSVE_BitPerm", "FEAT_SSVE_BitPerm",
+  "Enable Armv9.6-A SVE BitPerm support in streaming SVE mode", [FeatureSME2, FeatureSVEBitPerm]>;
+
+def FeatureSME_MOP4: ExtensionWithMArch<"sme-mop4", "SME_MOP4", "FEAT_SME_MOP4",
+  "Enable SME Quarter-tile outer product instructions", [FeatureSME2]>;
+
+def FeatureSME_TMOP: ExtensionWithMArch<"sme-tmop", "SME_TMOP", "FEAT_SME_TMOP",
+  "Enable SME Structured sparsity outer product instructions.", [FeatureSME2]>;
+
+def FeatureSSVE_FEXPA : ExtensionWithMArch<"ssve-fexpa", "SSVE_FEXPA", "FEAT_SSVE_FEXPA",
+  "Enable SVE FEXPA instruction in Streaming SVE mode", [FeatureSME2]>;
+
+//===----------------------------------------------------------------------===//
+//  Armv9.7 Architecture Extensions
+//===----------------------------------------------------------------------===//
+
+def FeatureCMH : ExtensionWithMArch<"cmh", "CMH", "FEAT_CMH",
+  "Enable Armv9.7-A Contention Management Hints">;
+
+def FeatureLSCP : ExtensionWithMArch<"lscp", "LSCP", "FEAT_LSCP",
+  "Enable Armv9.7-A Load-acquire and store-release pair extension">;
+
+def FeatureTLBID: ExtensionWithMArch<"tlbid", "TLBID", "FEAT_TLBID",
+  "Enable Armv9.7-A TLBI Domains extension">;
+
+def FeatureMPAMv2: ExtensionWithMArch<"mpamv2", "MPAMv2", "FEAT_MPAMv2",
+  "Enable Armv9.7-A MPAMv2 Lookaside Buffer Invalidate instructions">;
+
+def FeatureMTETC: ExtensionWithMArch<"mtetc", "MTETC", "FEAT_MTETC",
+  "Enable Virtual Memory Tagging Extension">;
+
+def FeatureGCIE: ExtensionWithMArch<"gcie", "GCIE", "FEAT_GCIE",
+  "Enable GICv5 (Generic Interrupt Controller) CPU Interface Extension">;
+
+def FeatureSVE2p3 : ExtensionWithMArch<"sve2p3", "SVE2p3", "FEAT_SVE2p3",
+  "Enable Armv9.7-A Scalable Vector Extension 2.3 instructions", [FeatureSVE2p2]>;
+
+def FeatureSME2p3 : ExtensionWithMArch<"sme2p3", "SME2p3", "FEAT_SME2p3",
+  "Enable Armv9.7-A Scalable Matrix Extension 2.3 instructions", [FeatureSME2p2]>;
+
+def FeatureSVE_B16MM : ExtensionWithMArch<"sve-b16mm", "SVE_B16MM", "FEAT_SVE_B16MM",
+  "Enable Armv9.7-A SVE non-widening BFloat16 matrix multiply-accumulate", [FeatureSVE]>;
+
+def FeatureF16MM : ExtensionWithMArch<"f16mm", "F16MM", "FEAT_F16MM",
+  "Enable Armv9.7-A non-widening half-precision matrix multiply-accumulate", [FeatureFullFP16]>;
+
+def FeatureF16F32DOT : ExtensionWithMArch<"f16f32dot", "F16F32DOT", "FEAT_F16F32DOT",
+  "Enable Armv9.7-A Advanced SIMD half-precision dot product accumulate to single-precision", [FeatureNEON, FeatureFullFP16]>;
+
+def FeatureF16F32MM : ExtensionWithMArch<"f16f32mm", "F16F32MM", "FEAT_F16F32MM",
+  "Enable Armv9.7-A Advanced SIMD half-precision matrix multiply-accumulate to single-precision", [FeatureNEON, FeatureFullFP16]>;
+
+//===----------------------------------------------------------------------===//
+//  Future Architecture Technologies
+//===----------------------------------------------------------------------===//
+
+def FeatureMOPS_GO: ExtensionWithMArch<"mops-go", "MOPS_GO", "FEAT_MOPS_GO",
+  "Enable memset acceleration granule only">;
+
+def FeatureBTIE: ExtensionWithMArch<"btie", "BTIE", "FEAT_BTIE",
+  "Enable Enhanced Branch Target Identification extension">;
+
+def FeatureS1POE2: ExtensionWithMArch<"poe2", "POE2", "FEAT_S1POE2",
+  "Enable Stage 1 Permission Overlays Extension 2 instructions">;
+
+def FeatureTEV: ExtensionWithMArch<"tev", "TEV", "FEAT_TEV",
+  "Enable TIndex Exception-like Vector instructions">;
+
 //===----------------------------------------------------------------------===//
 //  Other Features
 //===----------------------------------------------------------------------===//
@@ -596,22 +669,36 @@ def FeatureExperimentalZeroingPseudos
 def FeatureNoSVEFPLD1R : SubtargetFeature<"no-sve-fp-ld1r",
   "NoSVEFPLD1R", "true", "Avoid using LD1RX instructions for FP">;
 
-def FeatureZCRegMove : SubtargetFeature<"zcm", "HasZeroCycleRegMove", "true",
-                                        "Has zero-cycle register moves">;
+def FeatureZCRegMoveGPR64 : SubtargetFeature<"zcm-gpr64", "HasZeroCycleRegMoveGPR64", "true",
+                                        "Has zero-cycle register moves for GPR64 registers">;
 
-def FeatureZCZeroingGP : SubtargetFeature<"zcz-gp", "HasZeroCycleZeroingGP", "true",
-                                        "Has zero-cycle zeroing instructions for generic registers">;
+def FeatureZCRegMoveGPR32 : SubtargetFeature<"zcm-gpr32", "HasZeroCycleRegMoveGPR32", "true",
+                                        "Has zero-cycle register moves for GPR32 registers">;
+
+def FeatureZCRegMoveFPR128 : SubtargetFeature<"zcm-fpr128", "HasZeroCycleRegMoveFPR128", "true",
+                                        "Has zero-cycle register moves for FPR128 registers">;
+
+def FeatureZCRegMoveFPR64 : SubtargetFeature<"zcm-fpr64", "HasZeroCycleRegMoveFPR64", "true",
+                                        "Has zero-cycle register moves for FPR64 registers">;
+
+def FeatureZCRegMoveFPR32 : SubtargetFeature<"zcm-fpr32", "HasZeroCycleRegMoveFPR32", "true",
+                                        "Has zero-cycle register moves for FPR32 registers">;
+
+def FeatureZCZeroingGPR64 : SubtargetFeature<"zcz-gpr64", "HasZeroCycleZeroingGPR64", "true",
+                                        "Has zero-cycle zeroing instructions for GPR64 registers">;
+
+def FeatureZCZeroingGPR32 : SubtargetFeature<"zcz-gpr32", "HasZeroCycleZeroingGPR32", "true",
+                                        "Has zero-cycle zeroing instructions for GPR32 registers">;
+
+def FeatureZCZeroingFPR128 : SubtargetFeature<"zcz-fpr128", "HasZeroCycleZeroingFPR128", "true",
+                                        "Has zero-cycle zeroing instructions for FPR128 registers">;
 
 // It is generally beneficial to rewrite "fmov s0, wzr" to "movi d0, #0".
 // as movi is more efficient across all cores. Newer cores can eliminate
 // fmovs early and there is no difference with movi, but this not true for
 // all implementations.
-def FeatureNoZCZeroingFP : SubtargetFeature<"no-zcz-fp", "HasZeroCycleZeroingFP", "false",
-                                        "Has no zero-cycle zeroing instructions for FP registers">;
-
-def FeatureZCZeroing : SubtargetFeature<"zcz", "HasZeroCycleZeroing", "true",
-                                        "Has zero-cycle zeroing instructions",
-                                        [FeatureZCZeroingGP]>;
+def FeatureNoZCZeroingFPR64 : SubtargetFeature<"no-zcz-fpr64", "HasZeroCycleZeroingFPR64", "false",
+                                        "Has no zero-cycle zeroing instructions for FPR64 registers">;
 
 /// ... but the floating-point version doesn't quite work in rare cases on older
 /// CPUs.
@@ -623,6 +710,11 @@ def FeatureStrictAlign : SubtargetFeature<"strict-align",
                                           "RequiresStrictAlign", "true",
                                           "Disallow all unaligned memory "
                                           "access">;
+
+def FeatureExecuteOnly : SubtargetFeature<"execute-only",
+                                          "GenExecuteOnly", "true",
+                                          "Enable the generation of "
+                                          "execute only code.">;
 
 foreach i = {1-7,9-15,18,20-28} in
     def FeatureReserveX#i : SubtargetFeature<"reserve-x"#i, "ReserveXRegister["#i#"]", "true",
@@ -697,9 +789,13 @@ def FeatureFuseArithmeticLogic : SubtargetFeature<
     "fuse-arith-logic", "HasFuseArithmeticLogic", "true",
     "CPU fuses arithmetic and logic operations">;
 
-def FeatureFuseCCSelect : SubtargetFeature<
-    "fuse-csel", "HasFuseCCSelect", "true",
-    "CPU fuses conditional select operations">;
+def FeatureFuseCmpCSel : SubtargetFeature<
+    "fuse-csel", "HasFuseCmpCSel", "true",
+    "CPU can fuse CMP and CSEL operations">;
+
+def FeatureFuseCmpCSet : SubtargetFeature<
+    "fuse-cset", "HasFuseCmpCSet", "true",
+    "CPU can fuse CMP and CSET operations">;
 
 def FeatureFuseCryptoEOR : SubtargetFeature<
     "fuse-crypto-eor", "HasFuseCryptoEOR", "true",
@@ -794,9 +890,38 @@ def FeatureLdpAlignedOnly : SubtargetFeature<"ldp-aligned-only", "HasLdpAlignedO
 def FeatureStpAlignedOnly : SubtargetFeature<"stp-aligned-only", "HasStpAlignedOnly",
     "true", "In order to emit stp, first check if the store will be aligned to 2 * element_size">;
 
-def FeatureUseFixedOverScalableIfEqualCost: SubtargetFeature<"use-fixed-over-scalable-if-equal-cost",
+def FeatureUseFixedOverScalableIfEqualCost : SubtargetFeature<"use-fixed-over-scalable-if-equal-cost",
   "UseFixedOverScalableIfEqualCost", "true",
   "Prefer fixed width loop vectorization over scalable if the cost-model assigns equal costs">;
+
+def FeatureDisableMaximizeScalableBandwidth : SubtargetFeature< "disable-maximize-scalable-bandwidth",
+    "DisableMaximizeScalableBandwidth", "true",
+    "Determine the maximum scalable vector length for a loop by the "
+    "largest scalar type rather than the smallest">;
+
+// For performance reasons we prefer to use ldapr to ldapur on certain cores.
+def FeatureAvoidLDAPUR : SubtargetFeature<"avoid-ldapur", "AvoidLDAPUR", "true",
+  "Prefer add+ldapr to offset ldapur">;
+
+// Some INC/DEC forms have better latency and throughput than ADDVL.
+def FeatureDisableFastIncVL : SubtargetFeature<"disable-fast-inc-vl",
+                                               "HasDisableFastIncVL", "true",
+                                               "Do not prefer INC/DEC, ALL, { 1, 2, 4 } over ADDVL">;
+
+// On most processors we want to avoid moving from WZR to vector registers
+// (relying on materializing 0 to a FPR and moving from there instead),
+// but on some (in-order) cores it's preferable to avoid the extra instruction instead.
+def FeatureUseWzrToVecMove : SubtargetFeature<"use-wzr-to-vec-move",
+                                              "UseWzrToVecMove", "true",
+                                              "Move from WZR to insert 0 into vector registers">;
+
+def FeatureDisableUnpredicatedLdStLower : SubtargetFeature<
+    "disable-unpredicated-ld-st-lower", "DisableUnpredicatedLdStLower",
+    "true", "Disable lowering unpredicated loads/stores as LDR/STR">;
+
+def FeatureAggressiveInterleaving : SubtargetFeature<"aggressive-interleaving",
+                                                     "AggressiveInterleaving", "true",
+                                                     "Make use of aggressive interleaving during vectorization">;
 
 //===----------------------------------------------------------------------===//
 // Architectures.
@@ -848,8 +973,8 @@ def HasV8_6aOps : Architecture64<8, 6, "a", "v8.6a",
     FeatureEnhancedCounterVirtualization, FeatureMatMulInt8],
   !listconcat(HasV8_5aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8])>;
 def HasV8_7aOps : Architecture64<8, 7, "a", "v8.7a",
-  [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX, FeatureSPE_EEF],
-  !listconcat(HasV8_6aOps.DefaultExts, [FeatureWFxT])>;
+  [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX],
+  !listconcat(HasV8_6aOps.DefaultExts, [FeatureWFxT, FeatureSPE_EEF])>;
 def HasV8_8aOps : Architecture64<8, 8, "a", "v8.8a",
   [HasV8_7aOps, FeatureHBC, FeatureMOPS, FeatureNMI],
   !listconcat(HasV8_7aOps.DefaultExts, [FeatureMOPS, FeatureHBC])>;
@@ -864,24 +989,29 @@ def HasV9_0aOps : Architecture64<9, 0, "a", "v9a",
     FeatureSVE2])>;
 def HasV9_1aOps : Architecture64<9, 1, "a", "v9.1a",
   [HasV8_6aOps, HasV9_0aOps],
-  !listconcat(HasV9_0aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8, FeatureRME])>;
+  !listconcat(HasV9_0aOps.DefaultExts, HasV8_6aOps.DefaultExts,
+              [FeatureRME])>;
 def HasV9_2aOps : Architecture64<9, 2, "a", "v9.2a",
   [HasV8_7aOps, HasV9_1aOps],
-  !listconcat(HasV9_1aOps.DefaultExts, [FeatureMEC, FeatureWFxT])>;
+  !listconcat(HasV9_1aOps.DefaultExts, HasV8_7aOps.DefaultExts,
+              [FeatureMEC])>;
 def HasV9_3aOps : Architecture64<9, 3, "a", "v9.3a",
   [HasV8_8aOps, HasV9_2aOps],
-  !listconcat(HasV9_2aOps.DefaultExts, [FeatureMOPS, FeatureHBC])>;
+  !listconcat(HasV9_2aOps.DefaultExts, HasV8_8aOps.DefaultExts, [])>;
 def HasV9_4aOps : Architecture64<9, 4, "a", "v9.4a",
   [HasV8_9aOps, HasV9_3aOps],
-  !listconcat(HasV9_3aOps.DefaultExts, [FeatureSPECRES2, FeatureCSSC,
-    FeatureRASv2, FeatureSVE2p1])>;
+  !listconcat(HasV9_3aOps.DefaultExts, HasV8_9aOps.DefaultExts,
+              [FeatureSVE2p1])>;
 def HasV9_5aOps : Architecture64<9, 5, "a", "v9.5a",
   [HasV9_4aOps, FeatureCPA],
   !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA,  FeatureLUT, FeatureFAMINMAX])>;
 def HasV9_6aOps : Architecture64<9, 6, "a", "v9.6a",
-  [HasV9_5aOps, FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2, FeatureLSUI, FeatureOCCMO],
-  !listconcat(HasV9_5aOps.DefaultExts, [FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2,
+  [HasV9_5aOps, FeatureCMPBR, FeatureLSUI, FeatureOCCMO],
+  !listconcat(HasV9_5aOps.DefaultExts, [FeatureCMPBR,
     FeatureLSUI, FeatureOCCMO])>;
+def HasV9_7aOps : Architecture64<9, 7, "a", "v9.7a",
+  [HasV9_6aOps, FeatureSVE2p3, FeatureFPRCVT],
+  !listconcat(HasV9_6aOps.DefaultExts, [FeatureSVE2p3, FeatureFPRCVT])>;
 def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   [ //v8.1
     FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,

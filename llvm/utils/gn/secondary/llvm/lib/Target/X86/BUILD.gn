@@ -90,7 +90,6 @@ static_library("LLVMX86CodeGen") {
     "X86CmovConversion.cpp",
     "X86CodeGenPassBuilder.cpp",
     "X86CompressEVEX.cpp",
-    "X86DiscriminateMemOps.cpp",
     "X86DomainReassignment.cpp",
     "X86DynAllocaExpander.cpp",
     "X86ExpandPseudo.cpp",
@@ -110,7 +109,6 @@ static_library("LLVMX86CodeGen") {
     "X86ISelLoweringCall.cpp",
     "X86IndirectBranchTracking.cpp",
     "X86IndirectThunks.cpp",
-    "X86InsertPrefetch.cpp",
     "X86InsertWait.cpp",
     "X86InstCombineIntrinsic.cpp",
     "X86InstrFMA3Info.cpp",
@@ -136,13 +134,14 @@ static_library("LLVMX86CodeGen") {
     "X86SpeculativeExecutionSideEffectSuppression.cpp",
     "X86SpeculativeLoadHardening.cpp",
     "X86Subtarget.cpp",
+    "X86SuppressAPXForReloc.cpp",
     "X86TargetMachine.cpp",
     "X86TargetObjectFile.cpp",
     "X86TargetTransformInfo.cpp",
     "X86TileConfig.cpp",
     "X86VZeroUpper.cpp",
     "X86WinEHState.cpp",
-    "X86WinFixupBufferSecurityCheck.cpp",
+    "X86WinEHUnwindV2.cpp",
   ]
 }
 

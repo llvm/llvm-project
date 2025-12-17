@@ -49,9 +49,9 @@ module m4
   type :: t1
     private
     sequence
-    !WARNING: PRIVATE should not appear more than once in derived type components
+    !WARNING: PRIVATE should not appear more than once in derived type components [-Wredundant-attribute]
     private
-    !WARNING: SEQUENCE should not appear more than once in derived type components
+    !WARNING: SEQUENCE should not appear more than once in derived type components [-Wredundant-attribute]
     sequence
     real :: t1Field
   end type
@@ -68,7 +68,7 @@ module m4
   !ERROR: A sequence type may not have a CONTAINS statement
   contains
   end type
-  !WARNING: A sequence type should have at least one component
+  !WARNING: A sequence type should have at least one component [-Wempty-sequence-type]
   type :: emptyType
     sequence
   end type emptyType
@@ -85,7 +85,7 @@ module m4
     class(*), allocatable :: typeStarField
     !ERROR: A sequence type data component must either be of an intrinsic type or a derived sequence type
     type(plainType) :: testField1
-    !WARNING: A sequence type data component that is a pointer to a non-sequence type is not standard
+    !WARNING: A sequence type data component that is a pointer to a non-sequence type is not standard [-Wpointer-in-seq-type]
     type(plainType), pointer :: testField1p
     type(sequenceType) :: testField2
     procedure(real), pointer, nopass :: procField

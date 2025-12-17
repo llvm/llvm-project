@@ -99,14 +99,16 @@ Symbols:
 # ELF64-NEXT:  C (compressed), x (unknown), o (OS specific), E (exclude),
 # ELF64-NEXT:  R (retain), l (large), p (processor specific)
 
-## For an EM_ARM target we print "y" for the SHF_ARM_PURECODE section flag.
+## For an EM_ARM or EM_AARCH64 target we print "y" for the PURECODE section flag.
 ## Check we mention it in the flag key.
 
 # RUN: yaml2obj -DMACHINE=EM_ARM %s -o %t-arm.o
-# RUN: llvm-readelf -S %t-arm.o | FileCheck %s --check-prefix=ARM --strict-whitespace --match-full-lines
+# RUN: llvm-readelf -S %t-arm.o | FileCheck %s --check-prefix=PURECODE --strict-whitespace --match-full-lines
+# RUN: yaml2obj -DMACHINE=EM_AARCH64 %s -o %t-aarch64.o
+# RUN: llvm-readelf -S %t-aarch64.o | FileCheck %s --check-prefix=PURECODE --strict-whitespace --match-full-lines
 
-#      ARM:Key to Flags:
-# ARM-NEXT:  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),
-# ARM-NEXT:  L (link order), O (extra OS processing required), G (group), T (TLS),
-# ARM-NEXT:  C (compressed), x (unknown), o (OS specific), E (exclude),
-# ARM-NEXT:  R (retain), y (purecode), p (processor specific)
+#      PURECODE:Key to Flags:
+# PURECODE-NEXT:  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),
+# PURECODE-NEXT:  L (link order), O (extra OS processing required), G (group), T (TLS),
+# PURECODE-NEXT:  C (compressed), x (unknown), o (OS specific), E (exclude),
+# PURECODE-NEXT:  R (retain), y (purecode), p (processor specific)

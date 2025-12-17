@@ -82,6 +82,16 @@ OperatingSystemPythonInterface::GetRegisterContextForTID(lldb::tid_t tid) {
   return obj->GetAsString()->GetValue().str();
 }
 
+std::optional<bool> OperatingSystemPythonInterface::DoesPluginReportAllThreads() {
+  Status error;
+  StructuredData::ObjectSP obj = Dispatch("does_plugin_report_all_threads", error);
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
+    return {};
+
+  return obj->GetAsBoolean()->GetValue();
+}
+
 void OperatingSystemPythonInterface::Initialize() {
   const std::vector<llvm::StringRef> ci_usages = {
       "settings set target.process.python-os-plugin-path <script-path>",

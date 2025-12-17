@@ -17,9 +17,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Regex.h"
 
-#include <algorithm>
-#include <optional>
-
 #define DEBUG_TYPE "format-qualifier-alignment-fixer"
 
 namespace clang {
@@ -132,8 +129,10 @@ static void rotateTokens(const SourceManager &SourceMgr,
   // Then move through the other tokens.
   auto *Tok = Begin;
   while (Tok != End) {
-    if (!NewText.empty() && !endsWithSpace(NewText))
+    if (!NewText.empty() && !endsWithSpace(NewText) &&
+        Tok->isNot(tok::coloncolon)) {
       NewText += " ";
+    }
 
     NewText += Tok->TokenText;
     Tok = Tok->Next;
@@ -183,8 +182,11 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
   // We only need to think about streams that begin with a qualifier.
   if (Tok->isNot(QualifierType))
     return Tok;
+
+  const auto *Next = Tok->getNextNonComment();
+
   // Don't concern yourself if nothing follows the qualifier.
-  if (!Tok->Next)
+  if (!Next)
     return Tok;
 
   // Skip qualifiers to the left to find what preceeds the qualifiers.
@@ -248,9 +250,15 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
   }();
 
   // Find the last qualifier to the right.
-  const FormatToken *LastQual = Tok;
-  while (isQualifier(LastQual->getNextNonComment()))
-    LastQual = LastQual->getNextNonComment();
+  const auto *LastQual = Tok;
+  for (; isQualifier(Next); Next = Next->getNextNonComment())
+    LastQual = Next;
+
+  if (!LastQual || !Next ||
+      (LastQual->isOneOf(tok::kw_const, tok::kw_volatile) &&
+       Next->isOneOf(Keywords.kw_override, Keywords.kw_final))) {
+    return Tok;
+  }
 
   // If this qualifier is to the right of a type or pointer do a partial sort
   // and return.
@@ -386,7 +394,8 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
   // For left qualifiers preceeded by nothing, a template declaration, or *,&,&&
   // we only perform sorting.
   if (!TypeToken || TypeToken->isPointerOrReference() ||
-      TypeToken->ClosesRequiresClause || TypeToken->ClosesTemplateDeclaration) {
+      TypeToken->ClosesRequiresClause || TypeToken->ClosesTemplateDeclaration ||
+      TypeToken->is(tok::r_square)) {
 
     // Don't sort past a non-configured qualifier token.
     const FormatToken *FirstQual = Tok;
@@ -411,6 +420,14 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
   // The case `const long long volatile int` -> `const volatile long long int`
   // The case `long volatile long int const` -> `const volatile long long int`
   if (TypeToken->isTypeName(LangOpts)) {
+    for (const auto *Prev = TypeToken->Previous;
+         Prev && Prev->is(tok::coloncolon); Prev = Prev->Previous) {
+      TypeToken = Prev;
+      Prev = Prev->Previous;
+      if (!(Prev && Prev->is(tok::identifier)))
+        break;
+      TypeToken = Prev;
+    }
     const FormatToken *LastSimpleTypeSpecifier = TypeToken;
     while (isConfiguredQualifierOrType(
         LastSimpleTypeSpecifier->getPreviousNonComment(),
@@ -500,7 +517,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
 
     // Don't change declarations such as
     // `foo(struct Foo const a);` -> `foo(struct Foo const a);`
-    if (!Previous || !Previous->isOneOf(tok::kw_struct, tok::kw_class)) {
+    if (!Previous || Previous->isNoneOf(tok::kw_struct, tok::kw_class)) {
       insertQualifierBefore(SourceMgr, Fixes, TypeToken, Qualifier);
       removeToken(SourceMgr, Fixes, Tok);
     }
@@ -563,7 +580,7 @@ void LeftRightQualifierAlignmentFixer::fixQualifierAlignment(
 
     for (const auto *Tok = First; Tok && Tok != Last && Tok->Next;
          Tok = Tok->Next) {
-      if (Tok->MustBreakBefore)
+      if (Tok->MustBreakBefore && Tok != First)
         break;
       if (Tok->is(tok::comment))
         continue;
@@ -627,15 +644,26 @@ bool isConfiguredQualifierOrType(const FormatToken *Tok,
 // If a token is an identifier and it's upper case, it could
 // be a macro and hence we need to be able to ignore it.
 bool isPossibleMacro(const FormatToken *Tok) {
-  if (!Tok)
-    return false;
+  assert(Tok);
   if (Tok->isNot(tok::identifier))
     return false;
-  if (Tok->TokenText.upper() == Tok->TokenText.str()) {
-    // T,K,U,V likely could be template arguments
-    return Tok->TokenText.size() != 1;
-  }
-  return false;
+
+  const auto Text = Tok->TokenText;
+  assert(!Text.empty());
+
+  // T,K,U,V likely could be template arguments
+  if (Text.size() == 1)
+    return false;
+
+  // It's unlikely that qualified names are object-like macros.
+  const auto *Prev = Tok->getPreviousNonComment();
+  if (Prev && Prev->is(tok::coloncolon))
+    return false;
+  const auto *Next = Tok->getNextNonComment();
+  if (Next && Next->is(tok::coloncolon))
+    return false;
+
+  return Text == Text.upper();
 }
 
 } // namespace format

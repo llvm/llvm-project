@@ -387,8 +387,8 @@ void X86AvoidSFBPass::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
   MachineMemOperand *LMMO = *LoadInst->memoperands_begin();
   MachineMemOperand *SMMO = *StoreInst->memoperands_begin();
 
-  Register Reg1 = MRI->createVirtualRegister(
-      TII->getRegClass(TII->get(NLoadOpcode), 0, TRI, *(MBB->getParent())));
+  Register Reg1 =
+      MRI->createVirtualRegister(TII->getRegClass(TII->get(NLoadOpcode), 0));
   MachineInstr *NewLoad =
       BuildMI(*MBB, LoadInst, LoadInst->getDebugLoc(), TII->get(NLoadOpcode),
               Reg1)
@@ -533,7 +533,7 @@ void X86AvoidSFBPass::findPotentiallylBlockedCopies(MachineFunction &MF) {
     for (auto &MI : MBB) {
       if (!isPotentialBlockedMemCpyLd(MI.getOpcode()))
         continue;
-      int DefVR = MI.getOperand(0).getReg();
+      Register DefVR = MI.getOperand(0).getReg();
       if (!MRI->hasOneNonDBGUse(DefVR))
         continue;
       for (MachineOperand &StoreMO :
@@ -553,8 +553,7 @@ void X86AvoidSFBPass::findPotentiallylBlockedCopies(MachineFunction &MF) {
 }
 
 unsigned X86AvoidSFBPass::getRegSizeInBytes(MachineInstr *LoadInst) {
-  const auto *TRC = TII->getRegClass(TII->get(LoadInst->getOpcode()), 0, TRI,
-                              *LoadInst->getParent()->getParent());
+  const auto *TRC = TII->getRegClass(TII->get(LoadInst->getOpcode()), 0);
   return TRI->getRegSizeInBits(*TRC) / 8;
 }
 
@@ -625,13 +624,10 @@ static bool isBlockingStore(int64_t LoadDispImm, unsigned LoadSize,
 static void
 updateBlockingStoresDispSizeMap(DisplacementSizeMap &BlockingStoresDispSizeMap,
                                 int64_t DispImm, unsigned Size) {
-  if (BlockingStoresDispSizeMap.count(DispImm)) {
-    // Choose the smallest blocking store starting at this displacement.
-    if (BlockingStoresDispSizeMap[DispImm] > Size)
-      BlockingStoresDispSizeMap[DispImm] = Size;
-
-  } else
-    BlockingStoresDispSizeMap[DispImm] = Size;
+  auto [It, Inserted] = BlockingStoresDispSizeMap.try_emplace(DispImm, Size);
+  // Choose the smallest blocking store starting at this displacement.
+  if (!Inserted && It->second > Size)
+    It->second = Size;
 }
 
 // Remove blocking stores contained in each other.

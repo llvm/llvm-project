@@ -7,37 +7,66 @@
 //===----------------------------------------------------------------------===//
 
 #include "Context.h"
+#include "Boolean.h"
 #include "ByteCodeEmitter.h"
 #include "Compiler.h"
 #include "EvalEmitter.h"
-#include "Interp.h"
+#include "Integral.h"
 #include "InterpFrame.h"
+#include "InterpHelpers.h"
 #include "InterpStack.h"
+#include "Pointer.h"
 #include "PrimType.h"
 #include "Program.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/TargetInfo.h"
 
 using namespace clang;
 using namespace clang::interp;
 
-Context::Context(ASTContext &Ctx) : Ctx(Ctx), P(new Program(*this)) {}
+Context::Context(ASTContext &Ctx) : Ctx(Ctx), P(new Program(*this)) {
+  this->ShortWidth = Ctx.getTargetInfo().getShortWidth();
+  this->IntWidth = Ctx.getTargetInfo().getIntWidth();
+  this->LongWidth = Ctx.getTargetInfo().getLongWidth();
+  this->LongLongWidth = Ctx.getTargetInfo().getLongLongWidth();
+  assert(Ctx.getTargetInfo().getCharWidth() == 8 &&
+         "We're assuming 8 bit chars");
+}
 
 Context::~Context() {}
 
 bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   assert(Stk.empty());
-  Function *Func = P->getFunction(FD);
-  if (!Func || !Func->hasBody())
-    Func = Compiler<ByteCodeEmitter>(*this, *P).compileFunc(FD);
 
+  // Get a function handle.
+  const Function *Func = getOrCreateFunction(FD);
   if (!Func)
     return false;
 
-  if (!Run(Parent, Func))
+  // Compile the function.
+  Compiler<ByteCodeEmitter>(*this, *P).compileFunc(
+      FD, const_cast<Function *>(Func));
+
+  if (!Func->isValid())
     return false;
 
-  return Func->isConstexpr();
+  ++EvalID;
+  // And run it.
+  return Run(Parent, Func);
+}
+
+void Context::isPotentialConstantExprUnevaluated(State &Parent, const Expr *E,
+                                                 const FunctionDecl *FD) {
+  assert(Stk.empty());
+  ++EvalID;
+  size_t StackSizeBefore = Stk.size();
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  if (!C.interpretCall(FD, E)) {
+    C.cleanup();
+    Stk.clearTo(StackSizeBefore);
+  }
 }
 
 bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
@@ -55,7 +84,8 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   }
 
   if (!Recursing) {
-    assert(Stk.empty());
+    // We *can* actually get here with a non-empty stack, since
+    // things like InterpState::noteSideEffect() exist.
     C.cleanup();
 #ifndef NDEBUG
     // Make sure we don't rely on some value being still alive in
@@ -64,7 +94,7 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
 #endif
   }
 
-  Result = Res.toAPValue();
+  Result = Res.stealAPValue();
 
   return true;
 }
@@ -94,12 +124,12 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result,
 #endif
   }
 
-  Result = Res.toAPValue();
+  Result = Res.stealAPValue();
   return true;
 }
 
 bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
-                                    APValue &Result) {
+                                    const Expr *Init, APValue &Result) {
   ++EvalID;
   bool Recursing = !Stk.empty();
   size_t StackSizeBefore = Stk.size();
@@ -108,7 +138,7 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   bool CheckGlobalInitialized =
       shouldBeGloballyIndexed(VD) &&
       (VD->getType()->isRecordType() || VD->getType()->isArrayType());
-  auto Res = C.interpretDecl(VD, CheckGlobalInitialized);
+  auto Res = C.interpretDecl(VD, Init, CheckGlobalInitialized);
   if (Res.isInvalid()) {
     C.cleanup();
     Stk.clearTo(StackSizeBefore);
@@ -126,69 +156,271 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
 #endif
   }
 
-  Result = Res.toAPValue();
+  Result = Res.stealAPValue();
+  return true;
+}
+
+template <typename ResultT>
+bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
+                                 const Expr *PtrExpr, ResultT &Result) {
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  // Evaluate size value.
+  APValue SizeValue;
+  if (!evaluateAsRValue(Parent, SizeExpr, SizeValue))
+    return false;
+
+  if (!SizeValue.isInt())
+    return false;
+  uint64_t Size = SizeValue.getInt().getZExtValue();
+
+  auto PtrRes = C.interpretAsPointer(PtrExpr, [&](const Pointer &Ptr) {
+    if (Size == 0) {
+      if constexpr (std::is_same_v<ResultT, APValue>)
+        Result = APValue(APValue::UninitArray{}, 0, 0);
+      return true;
+    }
+
+    if (!Ptr.isLive() || !Ptr.getFieldDesc()->isPrimitiveArray())
+      return false;
+
+    // Must be char.
+    if (Ptr.getFieldDesc()->getElemSize() != 1 /*bytes*/)
+      return false;
+
+    if (Size > Ptr.getNumElems()) {
+      Parent.FFDiag(SizeExpr, diag::note_constexpr_access_past_end) << AK_Read;
+      Size = Ptr.getNumElems();
+    }
+
+    if constexpr (std::is_same_v<ResultT, APValue>) {
+      QualType CharTy = PtrExpr->getType()->getPointeeType();
+      Result = APValue(APValue::UninitArray{}, Size, Size);
+      for (uint64_t I = 0; I != Size; ++I) {
+        if (std::optional<APValue> ElemVal =
+                Ptr.atIndex(I).toRValue(*this, CharTy))
+          Result.getArrayInitializedElt(I) = *ElemVal;
+        else
+          return false;
+      }
+    } else {
+      assert((std::is_same_v<ResultT, std::string>));
+      if (Size < Result.max_size())
+        Result.resize(Size);
+      Result.assign(reinterpret_cast<const char *>(Ptr.getRawAddress()), Size);
+    }
+
+    return true;
+  });
+
+  if (PtrRes.isInvalid()) {
+    C.cleanup();
+    Stk.clear();
+    return false;
+  }
+
+  return true;
+}
+
+bool Context::evaluateCharRange(State &Parent, const Expr *SizeExpr,
+                                const Expr *PtrExpr, APValue &Result) {
+  assert(SizeExpr);
+  assert(PtrExpr);
+
+  return evaluateStringRepr(Parent, SizeExpr, PtrExpr, Result);
+}
+
+bool Context::evaluateCharRange(State &Parent, const Expr *SizeExpr,
+                                const Expr *PtrExpr, std::string &Result) {
+  assert(SizeExpr);
+  assert(PtrExpr);
+
+  return evaluateStringRepr(Parent, SizeExpr, PtrExpr, Result);
+}
+
+bool Context::evaluateString(State &Parent, const Expr *E,
+                             std::string &Result) {
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+    const Descriptor *FieldDesc = Ptr.getFieldDesc();
+    if (!FieldDesc->isPrimitiveArray())
+      return false;
+
+    if (!Ptr.isConst())
+      return false;
+
+    unsigned N = Ptr.getNumElems();
+
+    if (Ptr.elemSize() == 1 /* bytes */) {
+      const char *Chars = reinterpret_cast<const char *>(Ptr.getRawAddress());
+      unsigned Length = strnlen(Chars, N);
+      // Wasn't null terminated.
+      if (N == Length)
+        return false;
+      Result.assign(Chars, Length);
+      return true;
+    }
+
+    PrimType ElemT = FieldDesc->getPrimType();
+    for (unsigned I = Ptr.getIndex(); I != N; ++I) {
+      INT_TYPE_SWITCH(ElemT, {
+        auto Elem = Ptr.elem<T>(I);
+        if (Elem.isZero())
+          return true;
+        Result.push_back(static_cast<char>(Elem));
+      });
+    }
+    // We didn't find a 0 byte.
+    return false;
+  });
+
+  if (PtrRes.isInvalid()) {
+    C.cleanup();
+    Stk.clear();
+    return false;
+  }
+  return true;
+}
+
+bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+    const Descriptor *FieldDesc = Ptr.getFieldDesc();
+    if (!FieldDesc->isPrimitiveArray())
+      return false;
+
+    if (Ptr.isDummy() || Ptr.isUnknownSizeArray())
+      return false;
+
+    unsigned N = Ptr.getNumElems();
+    if (Ptr.elemSize() == 1) {
+      Result = strnlen(reinterpret_cast<const char *>(Ptr.getRawAddress()), N);
+      return Result != N;
+    }
+
+    PrimType ElemT = FieldDesc->getPrimType();
+    Result = 0;
+    for (unsigned I = Ptr.getIndex(); I != N; ++I) {
+      INT_TYPE_SWITCH(ElemT, {
+        auto Elem = Ptr.elem<T>(I);
+        if (Elem.isZero())
+          return true;
+        ++Result;
+      });
+    }
+    // We didn't find a 0 byte.
+    return false;
+  });
+
+  if (PtrRes.isInvalid()) {
+    C.cleanup();
+    Stk.clear();
+    return false;
+  }
   return true;
 }
 
 const LangOptions &Context::getLangOpts() const { return Ctx.getLangOpts(); }
 
-std::optional<PrimType> Context::classify(QualType T) const {
-  if (T->isBooleanType())
-    return PT_Bool;
-
-  // We map these to primitive arrays.
-  if (T->isAnyComplexType() || T->isVectorType())
-    return std::nullopt;
-
-  if (T->isSignedIntegerOrEnumerationType()) {
-    switch (Ctx.getIntWidth(T)) {
-    case 64:
-      return PT_Sint64;
-    case 32:
-      return PT_Sint32;
-    case 16:
-      return PT_Sint16;
-    case 8:
-      return PT_Sint8;
-    default:
-      return PT_IntAPS;
-    }
+static PrimType integralTypeToPrimTypeS(unsigned BitWidth) {
+  switch (BitWidth) {
+  case 64:
+    return PT_Sint64;
+  case 32:
+    return PT_Sint32;
+  case 16:
+    return PT_Sint16;
+  case 8:
+    return PT_Sint8;
+  default:
+    return PT_IntAPS;
   }
+  llvm_unreachable("Unhandled BitWidth");
+}
 
-  if (T->isUnsignedIntegerOrEnumerationType()) {
-    switch (Ctx.getIntWidth(T)) {
-    case 64:
-      return PT_Uint64;
-    case 32:
-      return PT_Uint32;
-    case 16:
-      return PT_Uint16;
-    case 8:
-      return PT_Uint8;
-    case 1:
-      // Might happen for enum types.
+static PrimType integralTypeToPrimTypeU(unsigned BitWidth) {
+  switch (BitWidth) {
+  case 64:
+    return PT_Uint64;
+  case 32:
+    return PT_Uint32;
+  case 16:
+    return PT_Uint16;
+  case 8:
+    return PT_Uint8;
+  default:
+    return PT_IntAP;
+  }
+  llvm_unreachable("Unhandled BitWidth");
+}
+
+OptPrimType Context::classify(QualType T) const {
+
+  if (const auto *BT = dyn_cast<BuiltinType>(T.getCanonicalType())) {
+    auto Kind = BT->getKind();
+    if (Kind == BuiltinType::Bool)
       return PT_Bool;
-    default:
-      return PT_IntAP;
-    }
+    if (Kind == BuiltinType::NullPtr)
+      return PT_Ptr;
+    if (Kind == BuiltinType::BoundMember)
+      return PT_MemberPtr;
+
+    // Just trying to avoid the ASTContext::getIntWidth call below.
+    if (Kind == BuiltinType::Short)
+      return integralTypeToPrimTypeS(this->ShortWidth);
+    if (Kind == BuiltinType::UShort)
+      return integralTypeToPrimTypeU(this->ShortWidth);
+
+    if (Kind == BuiltinType::Int)
+      return integralTypeToPrimTypeS(this->IntWidth);
+    if (Kind == BuiltinType::UInt)
+      return integralTypeToPrimTypeU(this->IntWidth);
+    if (Kind == BuiltinType::Long)
+      return integralTypeToPrimTypeS(this->LongWidth);
+    if (Kind == BuiltinType::ULong)
+      return integralTypeToPrimTypeU(this->LongWidth);
+    if (Kind == BuiltinType::LongLong)
+      return integralTypeToPrimTypeS(this->LongLongWidth);
+    if (Kind == BuiltinType::ULongLong)
+      return integralTypeToPrimTypeU(this->LongLongWidth);
+
+    if (Kind == BuiltinType::SChar || Kind == BuiltinType::Char_S)
+      return integralTypeToPrimTypeS(8);
+    if (Kind == BuiltinType::UChar || Kind == BuiltinType::Char_U ||
+        Kind == BuiltinType::Char8)
+      return integralTypeToPrimTypeU(8);
+
+    if (BT->isSignedInteger())
+      return integralTypeToPrimTypeS(Ctx.getIntWidth(T));
+    if (BT->isUnsignedInteger())
+      return integralTypeToPrimTypeU(Ctx.getIntWidth(T));
+
+    if (BT->isFloatingPoint())
+      return PT_Float;
   }
 
-  if (T->isNullPtrType())
+  if (T->isPointerOrReferenceType())
     return PT_Ptr;
 
-  if (T->isFloatingType())
-    return PT_Float;
-
-  if (T->isSpecificBuiltinType(BuiltinType::BoundMember) ||
-      T->isMemberPointerType())
+  if (T->isMemberPointerType())
     return PT_MemberPtr;
 
-  if (T->isFunctionPointerType() || T->isFunctionReferenceType() ||
-      T->isFunctionType() || T->isBlockPointerType())
-    return PT_FnPtr;
+  if (const auto *BT = T->getAs<BitIntType>()) {
+    if (BT->isSigned())
+      return integralTypeToPrimTypeS(BT->getNumBits());
+    return integralTypeToPrimTypeU(BT->getNumBits());
+  }
 
-  if (T->isPointerOrReferenceType() || T->isObjCObjectPointerType())
-    return PT_Ptr;
+  if (const auto *D = T->getAsEnumDecl()) {
+    if (!D->isComplete())
+      return std::nullopt;
+    return classify(D->getIntegerType());
+  }
 
   if (const auto *AT = T->getAs<AtomicType>())
     return classify(AT->getValueType());
@@ -196,9 +428,13 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (const auto *DT = dyn_cast<DecltypeType>(T))
     return classify(DT->getUnderlyingType());
 
+  if (T->isObjCObjectPointerType() || T->isBlockPointerType())
+    return PT_Ptr;
+
   if (T->isFixedPointType())
     return PT_FixedPoint;
 
+  // Vector and complex types get here.
   return std::nullopt;
 }
 
@@ -213,20 +449,11 @@ const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
 }
 
 bool Context::Run(State &Parent, const Function *Func) {
-
-  {
-    InterpState State(Parent, *P, Stk, *this);
-    State.Current = new InterpFrame(State, Func, /*Caller=*/nullptr, CodePtr(),
-                                    Func->getArgSize());
-    if (Interpret(State)) {
-      assert(Stk.empty());
-      return true;
-    }
-
-    // State gets destroyed here, so the Stk.clear() below doesn't accidentally
-    // remove values the State's destructor might access.
+  InterpState State(Parent, *P, Stk, *this, Func);
+  if (Interpret(State)) {
+    assert(Stk.empty());
+    return true;
   }
-
   Stk.clear();
   return false;
 }
@@ -269,20 +496,146 @@ Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
   return nullptr;
 }
 
-const Function *Context::getOrCreateFunction(const FunctionDecl *FD) {
-  assert(FD);
-  const Function *Func = P->getFunction(FD);
-  bool IsBeingCompiled = Func && Func->isDefined() && !Func->isFullyCompiled();
-  bool WasNotDefined = Func && !Func->isConstexpr() && !Func->isDefined();
-
-  if (IsBeingCompiled)
+const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
+  assert(FuncDecl);
+  if (const Function *Func = P->getFunction(FuncDecl))
     return Func;
 
-  if (!Func || WasNotDefined) {
-    if (auto F = Compiler<ByteCodeEmitter>(*this, *P).compileFunc(FD))
-      Func = F;
+  // Manually created functions that haven't been assigned proper
+  // parameters yet.
+  if (!FuncDecl->param_empty() && !FuncDecl->param_begin())
+    return nullptr;
+
+  bool IsLambdaStaticInvoker = false;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl);
+      MD && MD->isLambdaStaticInvoker()) {
+    // For a lambda static invoker, we might have to pick a specialized
+    // version if the lambda is generic. In that case, the picked function
+    // will *NOT* be a static invoker anymore. However, it will still
+    // be a non-static member function, this (usually) requiring an
+    // instance pointer. We suppress that later in this function.
+    IsLambdaStaticInvoker = true;
+  }
+  // Set up argument indices.
+  unsigned ParamOffset = 0;
+  SmallVector<PrimType, 8> ParamTypes;
+  SmallVector<unsigned, 8> ParamOffsets;
+  llvm::DenseMap<unsigned, Function::ParamDescriptor> ParamDescriptors;
+
+  // If the return is not a primitive, a pointer to the storage where the
+  // value is initialized in is passed as the first argument. See 'RVO'
+  // elsewhere in the code.
+  QualType Ty = FuncDecl->getReturnType();
+  bool HasRVO = false;
+  if (!Ty->isVoidType() && !canClassify(Ty)) {
+    HasRVO = true;
+    ParamTypes.push_back(PT_Ptr);
+    ParamOffsets.push_back(ParamOffset);
+    ParamOffset += align(primSize(PT_Ptr));
   }
 
+  // If the function decl is a member decl, the next parameter is
+  // the 'this' pointer. This parameter is pop()ed from the
+  // InterpStack when calling the function.
+  bool HasThisPointer = false;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl)) {
+    if (!IsLambdaStaticInvoker) {
+      HasThisPointer = MD->isInstance();
+      if (MD->isImplicitObjectMemberFunction()) {
+        ParamTypes.push_back(PT_Ptr);
+        ParamOffsets.push_back(ParamOffset);
+        ParamOffset += align(primSize(PT_Ptr));
+      }
+    }
+
+    if (isLambdaCallOperator(MD)) {
+      // The parent record needs to be complete, we need to know about all
+      // the lambda captures.
+      if (!MD->getParent()->isCompleteDefinition())
+        return nullptr;
+      llvm::DenseMap<const ValueDecl *, FieldDecl *> LC;
+      FieldDecl *LTC;
+
+      MD->getParent()->getCaptureFields(LC, LTC);
+
+      if (MD->isStatic() && !LC.empty()) {
+        // Static lambdas cannot have any captures. If this one does,
+        // it has already been diagnosed and we can only ignore it.
+        return nullptr;
+      }
+    }
+  }
+
+  // Assign descriptors to all parameters.
+  // Composite objects are lowered to pointers.
+  const auto *FuncProto = FuncDecl->getType()->getAs<FunctionProtoType>();
+  for (auto [ParamIndex, PD] : llvm::enumerate(FuncDecl->parameters())) {
+    bool IsConst = PD->getType().isConstQualified();
+    bool IsVolatile = PD->getType().isVolatileQualified();
+
+    if (!getASTContext().hasSameType(PD->getType(),
+                                     FuncProto->getParamType(ParamIndex)))
+      return nullptr;
+
+    OptPrimType T = classify(PD->getType());
+    PrimType PT = T.value_or(PT_Ptr);
+    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
+                                           IsConst, /*IsTemporary=*/false,
+                                           /*IsMutable=*/false, IsVolatile);
+
+    ParamDescriptors.insert({ParamOffset, {PT, Desc}});
+    ParamOffsets.push_back(ParamOffset);
+    ParamOffset += align(primSize(PT));
+    ParamTypes.push_back(PT);
+  }
+
+  // Create a handle over the emitted code.
+  assert(!P->getFunction(FuncDecl));
+  const Function *Func = P->createFunction(
+      FuncDecl, ParamOffset, std::move(ParamTypes), std::move(ParamDescriptors),
+      std::move(ParamOffsets), HasThisPointer, HasRVO, IsLambdaStaticInvoker);
+  return Func;
+}
+
+const Function *Context::getOrCreateObjCBlock(const BlockExpr *E) {
+  const BlockDecl *BD = E->getBlockDecl();
+  // Set up argument indices.
+  unsigned ParamOffset = 0;
+  SmallVector<PrimType, 8> ParamTypes;
+  SmallVector<unsigned, 8> ParamOffsets;
+  llvm::DenseMap<unsigned, Function::ParamDescriptor> ParamDescriptors;
+
+  // Assign descriptors to all parameters.
+  // Composite objects are lowered to pointers.
+  for (const ParmVarDecl *PD : BD->parameters()) {
+    bool IsConst = PD->getType().isConstQualified();
+    bool IsVolatile = PD->getType().isVolatileQualified();
+
+    OptPrimType T = classify(PD->getType());
+    PrimType PT = T.value_or(PT_Ptr);
+    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
+                                           IsConst, /*IsTemporary=*/false,
+                                           /*IsMutable=*/false, IsVolatile);
+    ParamDescriptors.insert({ParamOffset, {PT, Desc}});
+    ParamOffsets.push_back(ParamOffset);
+    ParamOffset += align(primSize(PT));
+    ParamTypes.push_back(PT);
+  }
+
+  if (BD->hasCaptures())
+    return nullptr;
+
+  // Create a handle over the emitted code.
+  Function *Func =
+      P->createFunction(E, ParamOffset, std::move(ParamTypes),
+                        std::move(ParamDescriptors), std::move(ParamOffsets),
+                        /*HasThisPointer=*/false, /*HasRVO=*/false,
+                        /*IsLambdaStaticInvoker=*/false);
+
+  assert(Func);
+  Func->setDefined(true);
+  // We don't compile the BlockDecl code at all right now.
+  Func->setIsFullyCompiled(true);
   return Func;
 }
 
@@ -319,4 +672,10 @@ unsigned Context::collectBaseOffset(const RecordDecl *BaseDecl,
 
 const Record *Context::getRecord(const RecordDecl *D) const {
   return P->getOrCreateRecord(D);
+}
+
+bool Context::isUnevaluatedBuiltin(unsigned ID) {
+  return ID == Builtin::BI__builtin_classify_type ||
+         ID == Builtin::BI__builtin_os_log_format_buffer_size ||
+         ID == Builtin::BI__builtin_constant_p || ID == Builtin::BI__noop;
 }

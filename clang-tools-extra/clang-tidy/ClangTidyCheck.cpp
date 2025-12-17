@@ -1,4 +1,4 @@
-//===--- ClangTidyCheck.cpp - clang-tidy ------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -62,11 +62,6 @@ ClangTidyCheck::OptionsView::get(StringRef LocalName) const {
   return std::nullopt;
 }
 
-static const llvm::StringSet<> DeprecatedGlobalOptions{
-    "StrictMode",
-    "IgnoreMacros",
-};
-
 static ClangTidyOptions::OptionMap::const_iterator
 findPriorityOption(const ClangTidyOptions::OptionMap &Options,
                    StringRef NamePrefix, StringRef LocalName,
@@ -78,13 +73,6 @@ findPriorityOption(const ClangTidyOptions::OptionMap &Options,
   }
   auto IterLocal = Options.find((NamePrefix + LocalName).str());
   auto IterGlobal = Options.find(LocalName);
-  // FIXME: temporary solution for deprecation warnings, should be removed
-  // after 22.x. Warn configuration deps on deprecation global options.
-  if (IterLocal == Options.end() && IterGlobal != Options.end() &&
-      DeprecatedGlobalOptions.contains(LocalName))
-    Context->configurationDiag(
-        "global option '%0' is deprecated, please use '%1%0' instead.")
-        << LocalName << NamePrefix;
   if (IterLocal == Options.end())
     return IterGlobal;
   if (IterGlobal == Options.end())
@@ -102,12 +90,10 @@ ClangTidyCheck::OptionsView::getLocalOrGlobal(StringRef LocalName) const {
   return std::nullopt;
 }
 
-static std::optional<bool> getAsBool(StringRef Value,
-                                     const llvm::Twine &LookupName) {
-
+static std::optional<bool> getAsBool(StringRef Value) {
   if (std::optional<bool> Parsed = llvm::yaml::parseBool(Value))
     return Parsed;
-  // To maintain backwards compatability, we support parsing numbers as
+  // To maintain backwards compatibility, we support parsing numbers as
   // booleans, even though its not supported in YAML.
   long long Number = 0;
   if (!Value.getAsInteger(10, Number))
@@ -119,7 +105,7 @@ template <>
 std::optional<bool>
 ClangTidyCheck::OptionsView::get<bool>(StringRef LocalName) const {
   if (std::optional<StringRef> ValueOr = get(LocalName)) {
-    if (auto Result = getAsBool(*ValueOr, NamePrefix + LocalName))
+    if (auto Result = getAsBool(*ValueOr))
       return Result;
     diagnoseBadBooleanOption(NamePrefix + LocalName, *ValueOr);
   }
@@ -131,7 +117,7 @@ std::optional<bool>
 ClangTidyCheck::OptionsView::getLocalOrGlobal<bool>(StringRef LocalName) const {
   auto Iter = findPriorityOption(CheckOptions, NamePrefix, LocalName, Context);
   if (Iter != CheckOptions.end()) {
-    if (auto Result = getAsBool(Iter->getValue().Value, Iter->getKey()))
+    if (auto Result = getAsBool(Iter->getValue().Value))
       return Result;
     diagnoseBadBooleanOption(Iter->getKey(), Iter->getValue().Value);
   }
@@ -163,9 +149,10 @@ void ClangTidyCheck::OptionsView::store<bool>(
   store(Options, LocalName, Value ? StringRef("true") : StringRef("false"));
 }
 
-std::optional<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
-    StringRef LocalName, ArrayRef<NameAndValue> Mapping, bool CheckGlobal,
-    bool IgnoreCase) const {
+std::optional<int64_t>
+ClangTidyCheck::OptionsView::getEnumInt(StringRef LocalName,
+                                        ArrayRef<NameAndValue> Mapping,
+                                        bool CheckGlobal) const {
   if (!CheckGlobal && Context->getOptionsCollector())
     Context->getOptionsCollector()->insert((NamePrefix + LocalName).str());
   auto Iter = CheckGlobal ? findPriorityOption(CheckOptions, NamePrefix,
@@ -174,21 +161,19 @@ std::optional<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
   if (Iter == CheckOptions.end())
     return std::nullopt;
 
-  StringRef Value = Iter->getValue().Value;
+  const StringRef Value = Iter->getValue().Value;
   StringRef Closest;
   unsigned EditDistance = 3;
   for (const auto &NameAndEnum : Mapping) {
-    if (IgnoreCase) {
-      if (Value.equals_insensitive(NameAndEnum.second))
-        return NameAndEnum.first;
-    } else if (Value == NameAndEnum.second) {
+    if (Value == NameAndEnum.second) {
       return NameAndEnum.first;
-    } else if (Value.equals_insensitive(NameAndEnum.second)) {
+    }
+    if (Value.equals_insensitive(NameAndEnum.second)) {
       Closest = NameAndEnum.second;
       EditDistance = 0;
       continue;
     }
-    unsigned Distance =
+    const unsigned Distance =
         Value.edit_distance(NameAndEnum.second, true, EditDistance);
     if (Distance < EditDistance) {
       EditDistance = Distance;

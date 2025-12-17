@@ -1,6 +1,6 @@
 // Check that the stack trace debugging API works and returns correct
 // malloc and free stacks.
-// RUN: %clangxx_asan -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan -O0 %if MSVC %{ /wd4477 %} %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 // FIXME: Figure out why allocation/free stack traces may be too short on ARM.
 // REQUIRES: stable-runtime

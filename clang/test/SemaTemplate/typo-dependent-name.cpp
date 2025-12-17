@@ -20,7 +20,7 @@ struct X : Base<T> {
   bool f(T other) {
     // A pair of comparisons; 'inner' is a dependent name so can't be assumed
     // to be a template.
-    return this->inner < other > ::z; // expected-warning {{comparisons like 'X<=Y<=Z' don't have their mathematical meaning}}
+    return this->inner < other > ::z; // expected-error {{chained comparison 'X < Y > Z' does not behave the same as a mathematical expression}}
   }
 };
 

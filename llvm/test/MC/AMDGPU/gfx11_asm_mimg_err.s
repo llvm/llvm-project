@@ -517,3 +517,9 @@ image_sample_o v[5:6], v[1:2], null, s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D
 
 image_sample_o v[5:6], v[1:2], s[8:15], null dmask:0x3 dim:SQ_RSRC_IMG_1D
 // NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_bvh_intersect_ray v[4:7], v[9:19], null
+// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_bvh64_intersect_ray v[4:7], v[9:20], null
+// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

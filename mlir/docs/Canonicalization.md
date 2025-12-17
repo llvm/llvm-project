@@ -55,7 +55,7 @@ Some important things to think about w.r.t. canonicalization patterns:
 *   It is always good to eliminate operations entirely when possible, e.g. by
     folding known identities (like "x + 0 = x").
 
-*   Pattens with expensive running time (i.e. have O(n) complexity) or
+*   Patterns with expensive running time (i.e. have O(n) complexity) or
     complicated cost models don't belong to canonicalization: since the
     algorithm is executed iteratively until fixed-point we want patterns that
     execute quickly (in particular their matching phase).
@@ -71,7 +71,7 @@ For example, a pattern that transform
       outs(%init1 : tensor<2x1x3xf32>)
       dimensions = [1, 0, 2]
   %out = linalg.transpose
-      ins(%tranpose: tensor<2x1x3xf32>)
+      ins(%transpose: tensor<2x1x3xf32>)
       outs(%init2 : tensor<3x1x2xf32>)
       permutation = [2, 1, 0]
 ```
@@ -275,3 +275,8 @@ Operation *MyDialect::materializeConstant(OpBuilder &builder, Attribute value,
   ...
 }
 ```
+
+### When to use the `fold` method vs `RewriterPattern`s for canonicalizations
+
+A canonicalization should always be implemented as a `fold` method if it can
+be, otherwise it should be implemented as a `RewritePattern`.

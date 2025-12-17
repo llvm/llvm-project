@@ -2,6 +2,8 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare void @use(i32)
+declare void @use_i16(i8)
+declare void @use_2xi16(<2 x i16>)
 declare void @use_i8(i8)
 declare void @use_i1(i1)
 
@@ -388,10 +390,9 @@ define i8 @xor_shl(i8 %x, i8 %y, i8 %zarg, i8 %shamt) {
 ; CHECK-LABEL: define {{[^@]+}}@xor_shl
 ; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[ZARG:%.*]], i8 [[SHAMT:%.*]]) {
 ; CHECK-NEXT:    [[Z:%.*]] = sdiv i8 42, [[ZARG]]
-; CHECK-NEXT:    [[SX:%.*]] = shl i8 [[X]], [[SHAMT]]
-; CHECK-NEXT:    [[SY:%.*]] = shl i8 [[Y]], [[SHAMT]]
-; CHECK-NEXT:    [[A:%.*]] = xor i8 [[Z]], [[SX]]
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], [[SY]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i8 [[TMP1]], [[SHAMT]]
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP2]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %z = sdiv i8 42, %zarg ; thwart complexity-based canonicalization
@@ -406,10 +407,9 @@ define i8 @and_lshr(i8 %x, i8 %y, i8 %zarg, i8 %shamt) {
 ; CHECK-LABEL: define {{[^@]+}}@and_lshr
 ; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[ZARG:%.*]], i8 [[SHAMT:%.*]]) {
 ; CHECK-NEXT:    [[Z:%.*]] = sdiv i8 42, [[ZARG]]
-; CHECK-NEXT:    [[SX:%.*]] = lshr i8 [[X]], [[SHAMT]]
-; CHECK-NEXT:    [[SY:%.*]] = lshr i8 [[Y]], [[SHAMT]]
-; CHECK-NEXT:    [[A:%.*]] = and i8 [[Z]], [[SX]]
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[SY]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], [[SHAMT]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[TMP2]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %z = sdiv i8 42, %zarg ; thwart complexity-based canonicalization
@@ -432,6 +432,51 @@ define i8 @or_lshr(i8 %x, i8 %y, i8 %z, i8 %shamt) {
   %sy = lshr i8 %y, %shamt
   %a = or i8 %sx, %z
   %r = or i8 %sy, %a
+  ret i8 %r
+}
+
+define i8 @or_lshr_commuted1(i8 %x, i8 %y, i8 %z, i8 %shamt) {
+; CHECK-LABEL: define {{[^@]+}}@or_lshr_commuted1
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]], i8 [[SHAMT:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], [[SHAMT]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[TMP2]], [[Z]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = lshr i8 %x, %shamt
+  %sy = lshr i8 %y, %shamt
+  %a = or i8 %z, %sx
+  %r = or i8 %sy, %a
+  ret i8 %r
+}
+
+define i8 @or_lshr_commuted2(i8 %x, i8 %y, i8 %z, i8 %shamt) {
+; CHECK-LABEL: define {{[^@]+}}@or_lshr_commuted2
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]], i8 [[SHAMT:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], [[SHAMT]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[TMP2]], [[Z]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = lshr i8 %x, %shamt
+  %sy = lshr i8 %y, %shamt
+  %a = or i8 %z, %sx
+  %r = or i8 %a, %sy
+  ret i8 %r
+}
+
+define i8 @or_lshr_commuted3(i8 %x, i8 %y, i8 %z, i8 %shamt) {
+; CHECK-LABEL: define {{[^@]+}}@or_lshr_commuted3
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]], i8 [[SHAMT:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], [[SHAMT]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[TMP2]], [[Z]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = lshr i8 %x, %shamt
+  %sy = lshr i8 %y, %shamt
+  %a = or i8 %sx, %z
+  %r = or i8 %a, %sy
   ret i8 %r
 }
 
@@ -4207,8 +4252,8 @@ define i16 @and_zext_zext(i8 %x, i4 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@and_zext_zext
 ; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[Y]] to i8
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[X]], [[TMP1]]
-; CHECK-NEXT:    [[R:%.*]] = zext nneg i8 [[TMP2]] to i16
+; CHECK-NEXT:    [[R1:%.*]] = and i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = zext nneg i8 [[R1]] to i16
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %zx = zext i8 %x to i16
@@ -4217,12 +4262,41 @@ define i16 @and_zext_zext(i8 %x, i4 %y) {
   ret i16 %r
 }
 
+define i16 @and_zext_zext_2(i8 %x, i8 %y) {
+; CHECK-LABEL: define {{[^@]+}}@and_zext_zext_2
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = and i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[R1]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %zx = zext i8 %x to i16
+  %zy = zext i8 %y to i16
+  %r = and i16 %zx, %zy
+  ret i16 %r
+}
+
+define i16 @and_zext_zext_2_use1(i8 %x, i8 %y) {
+; CHECK-LABEL: define {{[^@]+}}@and_zext_zext_2_use1
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    call void @use_i16(i16 [[ZX]])
+; CHECK-NEXT:    [[R1:%.*]] = and i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[R1]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %zx = zext i8 %x to i16
+  call void @use_i16(i16 %zx)
+  %zy = zext i8 %y to i16
+  %r = and i16 %zx, %zy
+  ret i16 %r
+}
+
 define i16 @or_zext_zext(i8 %x, i4 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@or_zext_zext
 ; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[Y]] to i8
-; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[X]], [[TMP1]]
-; CHECK-NEXT:    [[R:%.*]] = zext i8 [[TMP2]] to i16
+; CHECK-NEXT:    [[R1:%.*]] = or i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[R1]] to i16
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %zx = zext i8 %x to i16
@@ -4231,12 +4305,68 @@ define i16 @or_zext_zext(i8 %x, i4 %y) {
   ret i16 %r
 }
 
+define i16 @or_zext_zext_2(i8 %x, i8 %y) {
+; CHECK-LABEL: define {{[^@]+}}@or_zext_zext_2
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = or i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[R1]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %zx = zext i8 %x to i16
+  %zy = zext i8 %y to i16
+  %r = or i16 %zy, %zx
+  ret i16 %r
+}
+
+define i16 @or_zext_zext_2_use1(i8 %x, i8 %y) {
+; CHECK-LABEL: define {{[^@]+}}@or_zext_zext_2_use1
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    call void @use_i16(i16 [[ZX]])
+; CHECK-NEXT:    [[R1:%.*]] = or i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[R1]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %zx = zext i8 %x to i16
+  call void @use_i16(i16 %zx)
+  %zy = zext i8 %y to i16
+  %r = or i16 %zy, %zx
+  ret i16 %r
+}
+
+define i16 @or_disjoint_zext_zext(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@or_disjoint_zext_zext
+; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[Y]] to i8
+; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[R1]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %zx = zext i8 %x to i16
+  %zy = zext i4 %y to i16
+  %r = or disjoint i16 %zy, %zx
+  ret i16 %r
+}
+
+define i16 @or_disjoint_zext_zext_2(i8 %x, i8 %y) {
+; CHECK-LABEL: define {{[^@]+}}@or_disjoint_zext_zext_2
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[R1]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %zx = zext i8 %x to i16
+  %zy = zext i8 %y to i16
+  %r = or disjoint i16 %zy, %zx
+  ret i16 %r
+}
+
 define <2 x i16> @xor_zext_zext(<2 x i8> %x, <2 x i4> %y) {
 ; CHECK-LABEL: define {{[^@]+}}@xor_zext_zext
 ; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i4> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i4> [[Y]] to <2 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i8> [[X]], [[TMP1]]
-; CHECK-NEXT:    [[R:%.*]] = zext <2 x i8> [[TMP2]] to <2 x i16>
+; CHECK-NEXT:    [[R1:%.*]] = xor <2 x i8> [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i8> [[R1]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %zx = zext <2 x i8> %x to <2 x i16>
@@ -4245,12 +4375,41 @@ define <2 x i16> @xor_zext_zext(<2 x i8> %x, <2 x i4> %y) {
   ret <2 x i16> %r
 }
 
+define <2 x i16> @xor_zext_zext_2(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: define {{[^@]+}}@xor_zext_zext_2
+; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = xor <2 x i8> [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i8> [[R1]] to <2 x i16>
+; CHECK-NEXT:    ret <2 x i16> [[R]]
+;
+  %zx = zext <2 x i8> %x to <2 x i16>
+  %zy = zext <2 x i8> %y to <2 x i16>
+  %r = xor <2 x i16> %zx, %zy
+  ret <2 x i16> %r
+}
+
+define <2 x i16> @xor_zext_zext_2_use1(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: define {{[^@]+}}@xor_zext_zext_2_use1
+; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    [[ZX:%.*]] = zext <2 x i8> [[X]] to <2 x i16>
+; CHECK-NEXT:    call void @use_2xi16(<2 x i16> [[ZX]])
+; CHECK-NEXT:    [[R1:%.*]] = xor <2 x i8> [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i8> [[R1]] to <2 x i16>
+; CHECK-NEXT:    ret <2 x i16> [[R]]
+;
+  %zx = zext <2 x i8> %x to <2 x i16>
+  call void @use_2xi16(<2 x i16> %zx)
+  %zy = zext <2 x i8> %y to <2 x i16>
+  %r = xor <2 x i16> %zx, %zy
+  ret <2 x i16> %r
+}
+
 define i16 @and_sext_sext(i8 %x, i4 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@and_sext_sext
 ; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i4 [[Y]] to i8
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[X]], [[TMP1]]
-; CHECK-NEXT:    [[R:%.*]] = sext i8 [[TMP2]] to i16
+; CHECK-NEXT:    [[R1:%.*]] = and i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = sext i8 [[R1]] to i16
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %sx = sext i8 %x to i16
@@ -4259,12 +4418,41 @@ define i16 @and_sext_sext(i8 %x, i4 %y) {
   ret i16 %r
 }
 
+define i16 @and_sext_sext_2(i8 %x, i8 %y) {
+; CHECK-LABEL: define {{[^@]+}}@and_sext_sext_2
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = and i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = sext i8 [[R1]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %sx = sext i8 %x to i16
+  %sy = sext i8 %y to i16
+  %r = and i16 %sy, %sx
+  ret i16 %r
+}
+
+define i16 @and_sext_sext_2_use1(i8 %x, i8 %y) {
+; CHECK-LABEL: define {{[^@]+}}@and_sext_sext_2_use1
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i16
+; CHECK-NEXT:    call void @use_i16(i16 [[SX]])
+; CHECK-NEXT:    [[R1:%.*]] = and i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = sext i8 [[R1]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %sx = sext i8 %x to i16
+  call void @use_i16(i16 %sx)
+  %sy = sext i8 %y to i16
+  %r = and i16 %sy, %sx
+  ret i16 %r
+}
+
 define i16 @or_sext_sext(i8 %x, i4 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@or_sext_sext
 ; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i4 [[Y]] to i8
-; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[X]], [[TMP1]]
-; CHECK-NEXT:    [[R:%.*]] = sext i8 [[TMP2]] to i16
+; CHECK-NEXT:    [[R1:%.*]] = or i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = sext i8 [[R1]] to i16
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %sx = sext i8 %x to i16
@@ -4273,16 +4461,101 @@ define i16 @or_sext_sext(i8 %x, i4 %y) {
   ret i16 %r
 }
 
-define i16 @xor_sext_sext(i8 %x, i4 %y) {
-; CHECK-LABEL: define {{[^@]+}}@xor_sext_sext
+define i16 @or_sext_sext_2(i8 %x, i8 %y) {
+; CHECK-LABEL: define {{[^@]+}}@or_sext_sext_2
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = or i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = sext i8 [[R1]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %sx = sext i8 %x to i16
+  %sy = sext i8 %y to i16
+  %r = or i16 %sx, %sy
+  ret i16 %r
+}
+
+define i16 @or_sext_sext_2_use1(i8 %x, i8 %y) {
+; CHECK-LABEL: define {{[^@]+}}@or_sext_sext_2_use1
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i16
+; CHECK-NEXT:    call void @use_i16(i16 [[SX]])
+; CHECK-NEXT:    [[R1:%.*]] = or i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = sext i8 [[R1]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %sx = sext i8 %x to i16
+  call void @use_i16(i16 %sx)
+  %sy = sext i8 %y to i16
+  %r = or i16 %sx, %sy
+  ret i16 %r
+}
+
+define i16 @or_disjoint_sext_sext(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@or_disjoint_sext_sext
 ; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i4 [[Y]] to i8
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[X]], [[TMP1]]
-; CHECK-NEXT:    [[R:%.*]] = sext i8 [[TMP2]] to i16
+; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = sext i8 [[R1]] to i16
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %sx = sext i8 %x to i16
   %sy = sext i4 %y to i16
+  %r = or disjoint i16 %sx, %sy
+  ret i16 %r
+}
+
+define i16 @or_disjoint_sext_sext_2(i8 %x, i8 %y) {
+; CHECK-LABEL: define {{[^@]+}}@or_disjoint_sext_sext_2
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = sext i8 [[R1]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %sx = sext i8 %x to i16
+  %sy = sext i8 %y to i16
+  %r = or disjoint i16 %sx, %sy
+  ret i16 %r
+}
+
+define i16 @xor_sext_sext(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@xor_sext_sext
+; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i4 [[Y]] to i8
+; CHECK-NEXT:    [[R1:%.*]] = xor i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = sext i8 [[R1]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %sx = sext i8 %x to i16
+  %sy = sext i4 %y to i16
+  %r = xor i16 %sx, %sy
+  ret i16 %r
+}
+
+define i16 @xor_sext_sext_2(i8 %x, i8 %y) {
+; CHECK-LABEL: define {{[^@]+}}@xor_sext_sext_2
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = xor i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = sext i8 [[R1]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %sx = sext i8 %x to i16
+  %sy = sext i8 %y to i16
+  %r = xor i16 %sx, %sy
+  ret i16 %r
+}
+
+define i16 @xor_sext_sext_2_use1(i8 %x, i8 %y) {
+; CHECK-LABEL: define {{[^@]+}}@xor_sext_sext_2_use1
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i16
+; CHECK-NEXT:    call void @use_i16(i16 [[SX]])
+; CHECK-NEXT:    [[R1:%.*]] = xor i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = sext i8 [[R1]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %sx = sext i8 %x to i16
+  call void @use_i16(i16 %sx)
+  %sy = sext i8 %y to i16
   %r = xor i16 %sx, %sy
   ret i16 %r
 }
@@ -4321,6 +4594,24 @@ define i32 @and_zext_zext_use1(i8 %x, i4 %y) {
   ret i32 %r
 }
 
+define i32 @and_zext_zext_use2(i8 %x, i8 %y) {
+; CHECK-LABEL: define {{[^@]+}}@and_zext_zext_use2
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X]] to i32
+; CHECK-NEXT:    call void @use(i32 [[ZX]])
+; CHECK-NEXT:    [[ZY:%.*]] = zext i8 [[Y]] to i32
+; CHECK-NEXT:    call void @use(i32 [[ZY]])
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[ZX]], [[ZY]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %zx = zext i8 %x to i32
+  call void @use(i32 %zx)
+  %zy = zext i8 %y to i32
+  call void @use(i32 %zy)
+  %r = and i32 %zx, %zy
+  ret i32 %r
+}
+
 ; negative test - don't create an extra instruction
 
 define i32 @or_sext_sext_use1(i8 %x, i4 %y) {
@@ -4334,6 +4625,24 @@ define i32 @or_sext_sext_use1(i8 %x, i4 %y) {
 ;
   %sx = sext i8 %x to i32
   %sy = sext i4 %y to i32
+  call void @use(i32 %sy)
+  %r = or i32 %sx, %sy
+  ret i32 %r
+}
+
+define i32 @or_sext_sext_use2(i8 %x, i8 %y) {
+; CHECK-LABEL: define {{[^@]+}}@or_sext_sext_use2
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i32
+; CHECK-NEXT:    call void @use(i32 [[SX]])
+; CHECK-NEXT:    [[SY:%.*]] = sext i8 [[Y]] to i32
+; CHECK-NEXT:    call void @use(i32 [[SY]])
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[SX]], [[SY]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sx = sext i8 %x to i32
+  call void @use(i32 %sx)
+  %sy = sext i8 %y to i32
   call void @use(i32 %sy)
   %r = or i32 %sx, %sy
   ret i32 %r

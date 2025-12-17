@@ -546,7 +546,6 @@ define void @testw(i16 inreg %x) nounwind minsize {
 ; CHECK-WIN32-64-LABEL: testw:
 ; CHECK-WIN32-64:       # %bb.0:
 ; CHECK-WIN32-64-NEXT:    subq $40, %rsp
-; CHECK-WIN32-64-NEXT:    # kill: def $cx killed $cx def $ecx
 ; CHECK-WIN32-64-NEXT:    testw $2049, %cx # imm = 0x801
 ; CHECK-WIN32-64-NEXT:    jne .LBB12_2
 ; CHECK-WIN32-64-NEXT:  # %bb.1: # %yes

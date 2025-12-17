@@ -34,12 +34,12 @@ define i32 @PR95271(ptr %p) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lw a0, 0(a0)
 ; RV64I-NEXT:    lui a1, 349525
-; RV64I-NEXT:    addiw a1, a1, 1365
+; RV64I-NEXT:    addi a1, a1, 1365
 ; RV64I-NEXT:    addi a2, a0, 1
 ; RV64I-NEXT:    srli a2, a2, 1
 ; RV64I-NEXT:    and a1, a2, a1
 ; RV64I-NEXT:    lui a2, 209715
-; RV64I-NEXT:    addiw a2, a2, 819
+; RV64I-NEXT:    addi a2, a2, 819
 ; RV64I-NEXT:    addiw a0, a0, 1
 ; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    and a1, a0, a2

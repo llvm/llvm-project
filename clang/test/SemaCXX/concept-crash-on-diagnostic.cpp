@@ -36,3 +36,41 @@ void function() {
 // expected-note@#4 {{candidate template ignored: constraints not satisfied [with IteratorL = Object *, IteratorR = Object *]}}
 // We don't know exactly the substituted type for `lhs == rhs`, thus a placeholder 'expr-type' is emitted.
 // expected-note@#3 {{because 'convertible_to<expr-type, bool>' would be invalid}}
+
+namespace GH131530 {
+
+class foo {
+  struct bar {}; // expected-note {{implicitly declared private}}
+};
+
+template <typename T>
+concept is_foo_concept = __is_same(foo::bar, T);
+// expected-error@-1 {{'bar' is a private member of 'GH131530::foo'}}
+
+}
+
+namespace GH138820 {
+int a;
+template<typename T>
+concept atomicish = requires() {
+  {    // expected-note {{to match this '{'}}
+    a
+   ... // expected-error {{expected '}'}}
+  };
+};
+atomicish<int> f(); // expected-error {{expected 'auto' or 'decltype(auto)' after concept name}}
+} // namespace GH138820
+
+namespace GH138823 {
+  template <typename T> void foo();
+  template <class... Ts>
+  concept ConceptA = requires { foo<Ts>(); };
+  // expected-error@-1 {{expression contains unexpanded parameter pack 'Ts'}}
+
+  template <class>
+  concept ConceptB = ConceptA<int>;
+
+  template <ConceptB Foo> void bar(Foo);
+
+  void test() { bar(1); }
+}

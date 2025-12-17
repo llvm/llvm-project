@@ -29,54 +29,120 @@ const char *HeaderDesc::getName() const {
   llvm_unreachable("Unknown HeaderDesc::HeaderID enum");
 }
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-    {"not a builtin function", nullptr, nullptr, nullptr, HeaderDesc::NO_HEADER,
-     ALL_LANGUAGES},
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define LANGBUILTIN(ID, TYPE, ATTRS, LANGS)                                    \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, LANGS},
-#define LIBBUILTIN(ID, TYPE, ATTRS, HEADER, LANGS)                             \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, LANGS},
-#include "clang/Basic/Builtins.inc"
-};
+static constexpr unsigned NumBuiltins = Builtin::FirstTSBuiltin;
 
-const Builtin::Info &Builtin::Context::getRecord(unsigned ID) const {
-  if (ID < Builtin::FirstTSBuiltin)
-    return BuiltinInfo[ID];
-  assert(((ID - Builtin::FirstTSBuiltin) <
-          (TSRecords.size() + AuxTSRecords.size())) &&
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/Builtins.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+    Builtin::Info{}, // No-builtin info entry.
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/Builtins.inc"
+#undef GET_BUILTIN_INFOS
+};
+static_assert(std::size(BuiltinInfos) == NumBuiltins);
+
+std::pair<const Builtin::InfosShard &, const Builtin::Info &>
+Builtin::Context::getShardAndInfo(unsigned ID) const {
+  assert((ID < (Builtin::FirstTSBuiltin + NumTargetBuiltins +
+                NumAuxTargetBuiltins)) &&
          "Invalid builtin ID!");
-  if (isAuxBuiltinID(ID))
-    return AuxTSRecords[getAuxBuiltinID(ID) - Builtin::FirstTSBuiltin];
-  return TSRecords[ID - Builtin::FirstTSBuiltin];
+
+  ArrayRef<InfosShard> Shards = BuiltinShards;
+  if (isAuxBuiltinID(ID)) {
+    Shards = AuxTargetShards;
+    ID = getAuxBuiltinID(ID) - Builtin::FirstTSBuiltin;
+  } else if (ID >= Builtin::FirstTSBuiltin) {
+    Shards = TargetShards;
+    ID -= Builtin::FirstTSBuiltin;
+  }
+
+  // Loop over the shards to find the one matching this ID. We don't expect to
+  // have many shards and so its better to search linearly than with a binary
+  // search.
+  for (const auto &Shard : Shards) {
+    if (ID < Shard.Infos.size()) {
+      return {Shard, Shard.Infos[ID]};
+    }
+
+    ID -= Shard.Infos.size();
+  }
+  llvm_unreachable("Invalid target builtin shard structure!");
 }
+
+std::string Builtin::Info::getName(const Builtin::InfosShard &Shard) const {
+  return (Twine(Shard.NamePrefix) + (*Shard.Strings)[Offsets.Name]).str();
+}
+
+/// Return the identifier name for the specified builtin,
+/// e.g. "__builtin_abs".
+std::string Builtin::Context::getName(unsigned ID) const {
+  const auto &[Shard, I] = getShardAndInfo(ID);
+  return I.getName(Shard);
+}
+
+std::string Builtin::Context::getQuotedName(unsigned ID) const {
+  const auto &[Shard, I] = getShardAndInfo(ID);
+  return (Twine("'") + Shard.NamePrefix + (*Shard.Strings)[I.Offsets.Name] +
+          "'")
+      .str();
+}
+
+const char *Builtin::Context::getTypeString(unsigned ID) const {
+  const auto &[Shard, I] = getShardAndInfo(ID);
+  return (*Shard.Strings)[I.Offsets.Type].data();
+}
+
+const char *Builtin::Context::getAttributesString(unsigned ID) const {
+  const auto &[Shard, I] = getShardAndInfo(ID);
+  return (*Shard.Strings)[I.Offsets.Attributes].data();
+}
+
+const char *Builtin::Context::getRequiredFeatures(unsigned ID) const {
+  const auto &[Shard, I] = getShardAndInfo(ID);
+  return (*Shard.Strings)[I.Offsets.Features].data();
+}
+
+Builtin::Context::Context() : BuiltinShards{{&BuiltinStrings, BuiltinInfos}} {}
 
 void Builtin::Context::InitializeTarget(const TargetInfo &Target,
                                         const TargetInfo *AuxTarget) {
-  assert(TSRecords.empty() && "Already initialized target?");
-  TSRecords = Target.getTargetBuiltins();
-  if (AuxTarget)
-    AuxTSRecords = AuxTarget->getTargetBuiltins();
+  assert(TargetShards.empty() && "Already initialized target?");
+  assert(NumTargetBuiltins == 0 && "Already initialized target?");
+  TargetShards = Target.getTargetBuiltins();
+  for (const auto &Shard : TargetShards)
+    NumTargetBuiltins += Shard.Infos.size();
+  if (AuxTarget) {
+    AuxTargetShards = AuxTarget->getTargetBuiltins();
+    for (const auto &Shard : AuxTargetShards)
+      NumAuxTargetBuiltins += Shard.Infos.size();
+  }
 }
 
 bool Builtin::Context::isBuiltinFunc(llvm::StringRef FuncName) {
   bool InStdNamespace = FuncName.consume_front("std-");
-  for (unsigned i = Builtin::NotBuiltin + 1; i != Builtin::FirstTSBuiltin;
-       ++i) {
-    if (FuncName == BuiltinInfo[i].Name &&
-        (bool)strchr(BuiltinInfo[i].Attributes, 'z') == InStdNamespace)
-      return strchr(BuiltinInfo[i].Attributes, 'f') != nullptr;
-  }
+  for (const auto &Shard : {InfosShard{&BuiltinStrings, BuiltinInfos}})
+    if (llvm::StringRef FuncNameSuffix = FuncName;
+        FuncNameSuffix.consume_front(Shard.NamePrefix))
+      for (const auto &I : Shard.Infos)
+        if (FuncNameSuffix == (*Shard.Strings)[I.Offsets.Name] &&
+            (bool)strchr((*Shard.Strings)[I.Offsets.Attributes].data(), 'z') ==
+                InStdNamespace)
+          return strchr((*Shard.Strings)[I.Offsets.Attributes].data(), 'f') !=
+                 nullptr;
 
   return false;
 }
 
 /// Is this builtin supported according to the given language options?
-static bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
+static bool builtinIsSupported(const llvm::StringTable &Strings,
+                               const Builtin::Info &BuiltinInfo,
                                const LangOptions &LangOpts) {
+  auto AttributesStr = Strings[BuiltinInfo.Offsets.Attributes];
+
   /* Builtins Unsupported */
-  if (LangOpts.NoBuiltin && strchr(BuiltinInfo.Attributes, 'f') != nullptr)
+  if (LangOpts.NoBuiltin && strchr(AttributesStr.data(), 'f') != nullptr)
     return false;
   /* CorBuiltins Unsupported */
   if (!LangOpts.Coroutines && (BuiltinInfo.Langs & COR_LANG))
@@ -99,7 +165,7 @@ static bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
   /* OpenCLC Unsupported */
   if (!LangOpts.OpenCL && (BuiltinInfo.Langs & ALL_OCL_LANGUAGES))
     return false;
-  /* OopenCL GAS Unsupported */
+  /* OpenCL GAS Unsupported */
   if (!LangOpts.OpenCLGenericAddressSpace && (BuiltinInfo.Langs & OCL_GAS))
     return false;
   /* OpenCL Pipe Unsupported */
@@ -123,31 +189,136 @@ static bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
   if (!LangOpts.CPlusPlus && BuiltinInfo.Langs == CXX_LANG)
     return false;
   /* consteval Unsupported */
-  if (!LangOpts.CPlusPlus20 && strchr(BuiltinInfo.Attributes, 'G') != nullptr)
+  if (!LangOpts.CPlusPlus20 && strchr(AttributesStr.data(), 'G') != nullptr)
+    return false;
+  /* C23 unsupported */
+  if (!LangOpts.C23 && BuiltinInfo.Langs == C23_LANG)
     return false;
   return true;
+}
+
+static bool isBuiltinConstForTriple(unsigned BuiltinID, llvm::Triple Trip) {
+  // There's a special case with the fma builtins where they are always const
+  // if the target environment is GNU or the target is OS is Windows and we're
+  // targeting the MSVCRT.dll environment.
+  // FIXME: This list can be become outdated. Need to find a way to get it some
+  // other way.
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_fma:
+  case Builtin::BI__builtin_fmaf:
+  case Builtin::BI__builtin_fmal:
+  case Builtin::BI__builtin_fmaf16:
+  case Builtin::BIfma:
+  case Builtin::BIfmaf:
+  case Builtin::BIfmal: {
+    if (Trip.isGNUEnvironment() || Trip.isOSMSVCRT())
+      return true;
+    break;
+  }
+  default:
+    break;
+  }
+
+  return false;
+}
+
+bool Builtin::Context::shouldGenerateFPMathIntrinsic(
+    unsigned BuiltinID, llvm::Triple Trip, std::optional<bool> ErrnoOverwritten,
+    bool MathErrnoEnabled, bool HasOptNoneAttr,
+    bool IsOptimizationEnabled) const {
+
+  // True if we are compiling at -O2 and errno has been disabled
+  // using the '#pragma float_control(precise, off)', and
+  // attribute opt-none hasn't been seen.
+  bool ErrnoOverridenToFalseWithOpt = ErrnoOverwritten.has_value() &&
+                                      !ErrnoOverwritten.value() &&
+                                      !HasOptNoneAttr && IsOptimizationEnabled;
+
+  // There are LLVM math intrinsics/instructions corresponding to math library
+  // functions except the LLVM op will never set errno while the math library
+  // might. Also, math builtins have the same semantics as their math library
+  // twins. Thus, we can transform math library and builtin calls to their
+  // LLVM counterparts if the call is marked 'const' (known to never set errno).
+  // In case FP exceptions are enabled, the experimental versions of the
+  // intrinsics model those.
+  bool ConstAlways =
+      isConst(BuiltinID) || isBuiltinConstForTriple(BuiltinID, Trip);
+
+  bool ConstWithoutErrnoAndExceptions =
+      isConstWithoutErrnoAndExceptions(BuiltinID);
+  bool ConstWithoutExceptions = isConstWithoutExceptions(BuiltinID);
+
+  // ConstAttr is enabled in fast-math mode. In fast-math mode, math-errno is
+  // disabled.
+  // Math intrinsics are generated only when math-errno is disabled. Any pragmas
+  // or attributes that affect math-errno should prevent or allow math
+  // intrinsics to be generated. Intrinsics are generated:
+  //   1- In fast math mode, unless math-errno is overriden
+  //      via '#pragma float_control(precise, on)', or via an
+  //      'attribute__((optnone))'.
+  //   2- If math-errno was enabled on command line but overriden
+  //      to false via '#pragma float_control(precise, off))' and
+  //      'attribute__((optnone))' hasn't been used.
+  //   3- If we are compiling with optimization and errno has been disabled
+  //      via '#pragma float_control(precise, off)', and
+  //      'attribute__((optnone))' hasn't been used.
+
+  bool ConstWithoutErrnoOrExceptions =
+      ConstWithoutErrnoAndExceptions || ConstWithoutExceptions;
+  bool GenerateIntrinsics =
+      (ConstAlways && !HasOptNoneAttr) ||
+      (!MathErrnoEnabled &&
+       !(ErrnoOverwritten.has_value() && ErrnoOverwritten.value()) &&
+       !HasOptNoneAttr);
+  if (!GenerateIntrinsics) {
+    GenerateIntrinsics =
+        ConstWithoutErrnoOrExceptions && !ConstWithoutErrnoAndExceptions;
+    if (!GenerateIntrinsics)
+      GenerateIntrinsics =
+          ConstWithoutErrnoOrExceptions &&
+          (!MathErrnoEnabled &&
+           !(ErrnoOverwritten.has_value() && ErrnoOverwritten.value()) &&
+           !HasOptNoneAttr);
+    if (!GenerateIntrinsics)
+      GenerateIntrinsics =
+          ConstWithoutErrnoOrExceptions && ErrnoOverridenToFalseWithOpt;
+  }
+
+  return GenerateIntrinsics;
 }
 
 /// initializeBuiltins - Mark the identifiers for all the builtins with their
 /// appropriate builtin ID # and mark any non-portable builtin identifiers as
 /// such.
 void Builtin::Context::initializeBuiltins(IdentifierTable &Table,
-                                          const LangOptions& LangOpts) {
-  // Step #1: mark all target-independent builtins with their ID's.
-  for (unsigned i = Builtin::NotBuiltin + 1; i != Builtin::FirstTSBuiltin; ++i)
-    if (builtinIsSupported(BuiltinInfo[i], LangOpts)) {
-      Table.get(BuiltinInfo[i].Name).setBuiltinID(i);
-    }
+                                          const LangOptions &LangOpts) {
+  {
+    unsigned ID = 0;
+    // Step #1: mark all target-independent builtins with their ID's.
+    for (const auto &Shard : BuiltinShards)
+      for (const auto &I : Shard.Infos) {
+        // If this is a real builtin (ID != 0) and is supported, add it.
+        if (ID != 0 && builtinIsSupported(*Shard.Strings, I, LangOpts))
+          Table.get(I.getName(Shard)).setBuiltinID(ID);
+        ++ID;
+      }
+    assert(ID == FirstTSBuiltin && "Should have added all non-target IDs!");
 
-  // Step #2: Register target-specific builtins.
-  for (unsigned i = 0, e = TSRecords.size(); i != e; ++i)
-    if (builtinIsSupported(TSRecords[i], LangOpts))
-      Table.get(TSRecords[i].Name).setBuiltinID(i + Builtin::FirstTSBuiltin);
+    // Step #2: Register target-specific builtins.
+    for (const auto &Shard : TargetShards)
+      for (const auto &I : Shard.Infos) {
+        if (builtinIsSupported(*Shard.Strings, I, LangOpts))
+          Table.get(I.getName(Shard)).setBuiltinID(ID);
+        ++ID;
+      }
 
-  // Step #3: Register target-specific builtins for AuxTarget.
-  for (unsigned i = 0, e = AuxTSRecords.size(); i != e; ++i)
-    Table.get(AuxTSRecords[i].Name)
-        .setBuiltinID(i + Builtin::FirstTSBuiltin + TSRecords.size());
+    // Step #3: Register target-specific builtins for AuxTarget.
+    for (const auto &Shard : AuxTargetShards)
+      for (const auto &I : Shard.Infos) {
+        Table.get(I.getName(Shard)).setBuiltinID(ID);
+        ++ID;
+      }
+  }
 
   // Step #4: Unregister any builtins specified by -fno-builtin-foo.
   for (llvm::StringRef Name : LangOpts.NoBuiltinFuncs) {
@@ -163,12 +334,8 @@ void Builtin::Context::initializeBuiltins(IdentifierTable &Table,
   }
 }
 
-std::string Builtin::Context::getQuotedName(unsigned ID) const {
-  return (llvm::Twine("'") + getName(ID) + "'").str();
-}
-
 unsigned Builtin::Context::getRequiredVectorWidth(unsigned ID) const {
-  const char *WidthPos = ::strchr(getRecord(ID).Attributes, 'V');
+  const char *WidthPos = ::strchr(getAttributesString(ID), 'V');
   if (!WidthPos)
     return 0;
 
@@ -191,7 +358,7 @@ bool Builtin::Context::isLike(unsigned ID, unsigned &FormatIdx,
   assert(::toupper(Fmt[0]) == Fmt[1] &&
          "Format string is not in the form \"xX\"");
 
-  const char *Like = ::strpbrk(getRecord(ID).Attributes, Fmt);
+  const char *Like = ::strpbrk(getAttributesString(ID), Fmt);
   if (!Like)
     return false;
 
@@ -216,30 +383,60 @@ bool Builtin::Context::isScanfLike(unsigned ID, unsigned &FormatIdx,
   return isLike(ID, FormatIdx, HasVAListArg, "sS");
 }
 
-bool Builtin::Context::performsCallback(unsigned ID,
-                                        SmallVectorImpl<int> &Encoding) const {
-  const char *CalleePos = ::strchr(getRecord(ID).Attributes, 'C');
-  if (!CalleePos)
-    return false;
-
-  ++CalleePos;
-  assert(*CalleePos == '<' &&
-         "Callback callee specifier must be followed by a '<'");
-  ++CalleePos;
+static void parseCommaSeparatedIndices(const char *CurrPos,
+                                       llvm::SmallVectorImpl<int> &Indxs) {
+  assert(*CurrPos == '<' && "Expected '<' to start index list");
+  ++CurrPos;
 
   char *EndPos;
-  int CalleeIdx = ::strtol(CalleePos, &EndPos, 10);
-  assert(CalleeIdx >= 0 && "Callee index is supposed to be positive!");
-  Encoding.push_back(CalleeIdx);
+  int PosIdx = ::strtol(CurrPos, &EndPos, 10);
+  assert(PosIdx >= 0 && "Index is supposed to be positive!");
+  Indxs.push_back(PosIdx);
 
   while (*EndPos == ',') {
     const char *PayloadPos = EndPos + 1;
 
     int PayloadIdx = ::strtol(PayloadPos, &EndPos, 10);
-    Encoding.push_back(PayloadIdx);
+    Indxs.push_back(PayloadIdx);
   }
 
-  assert(*EndPos == '>' && "Callback callee specifier must end with a '>'");
+  assert(*EndPos == '>' && "Index list must end with '>'");
+}
+
+bool Builtin::Context::isNonNull(unsigned ID, llvm::SmallVectorImpl<int> &Indxs,
+                                 Info::NonNullMode &Mode) const {
+
+  const char *AttrPos = ::strchr(getAttributesString(ID), 'N');
+  if (!AttrPos)
+    return false;
+
+  ++AttrPos;
+  assert(*AttrPos == ':' && "Format specifier must be followed by a ':'");
+  ++AttrPos;
+  if (*AttrPos == '0')
+    Mode = Info::NonNullMode::NonOptimizing;
+  else if (*AttrPos == '1')
+    Mode = Info::NonNullMode::Optimizing;
+  else
+    llvm_unreachable("Unrecognized NonNull optimization mode");
+  ++AttrPos; // skip mode
+  assert(*AttrPos == ':' && "Mode must be followed by a ':'");
+  ++AttrPos;
+
+  parseCommaSeparatedIndices(AttrPos, Indxs);
+
+  return true;
+}
+
+bool Builtin::Context::performsCallback(unsigned ID,
+                                        SmallVectorImpl<int> &Encoding) const {
+  const char *CalleePos = ::strchr(getAttributesString(ID), 'C');
+  if (!CalleePos)
+    return false;
+
+  ++CalleePos;
+  parseCommaSeparatedIndices(CalleePos, Encoding);
+
   return true;
 }
 

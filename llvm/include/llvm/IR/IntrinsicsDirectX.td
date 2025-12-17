@@ -24,26 +24,62 @@ def int_dx_flattened_thread_id_in_group : Intrinsic<[llvm_i32_ty], [], [IntrNoMe
 def int_dx_resource_handlefrombinding
     : DefaultAttrsIntrinsic<
           [llvm_any_ty],
-          [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty],
+          [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty],
+          [IntrNoMem]>;
+
+// Create resource handle with implicit binding in given register space.
+// Returns a `target("dx.")` type appropriate for the kind of resource and
+// the range size and index of the binding.
+def int_dx_resource_handlefromimplicitbinding
+    : DefaultAttrsIntrinsic<
+          [llvm_any_ty],
+          [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty],
           [IntrNoMem]>;
 
 def int_dx_resource_getpointer
     : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty, llvm_i32_ty],
                             [IntrNoMem]>;
+
+def int_dx_resource_nonuniformindex
+    : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
+
 def int_dx_resource_load_typedbuffer
-    : DefaultAttrsIntrinsic<[llvm_any_ty], [llvm_any_ty, llvm_i32_ty],
-                            [IntrReadMem]>;
-def int_dx_resource_loadchecked_typedbuffer
     : DefaultAttrsIntrinsic<[llvm_any_ty, llvm_i1_ty],
                             [llvm_any_ty, llvm_i32_ty], [IntrReadMem]>;
 def int_dx_resource_store_typedbuffer
-    : DefaultAttrsIntrinsic<[], [llvm_any_ty, llvm_i32_ty, llvm_anyvector_ty],
+    : DefaultAttrsIntrinsic<[], [llvm_any_ty, llvm_i32_ty, llvm_any_ty],
                             [IntrWriteMem]>;
+def int_dx_resource_load_rawbuffer
+    : DefaultAttrsIntrinsic<[llvm_any_ty, llvm_i1_ty],
+                            [llvm_any_ty, llvm_i32_ty, llvm_i32_ty],
+                            [IntrReadMem]>;
+def int_dx_resource_store_rawbuffer
+    : DefaultAttrsIntrinsic<
+          [], [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, llvm_any_ty],
+          [IntrWriteMem]>;
+
+// dx.resource.load.cbufferrow encodes the number of elements returned in the
+// function name. The total size of the return should always be 128 bits.
+def int_dx_resource_load_cbufferrow_8
+    : DefaultAttrsIntrinsic<
+          [llvm_any_ty, llvm_any_ty, llvm_any_ty, llvm_any_ty,
+           llvm_any_ty, llvm_any_ty, llvm_any_ty, llvm_any_ty],
+          [llvm_any_ty, llvm_i32_ty], [IntrReadMem]>;
+def int_dx_resource_load_cbufferrow_4
+    : DefaultAttrsIntrinsic<
+          [llvm_any_ty, llvm_any_ty, llvm_any_ty, llvm_any_ty],
+          [llvm_any_ty, llvm_i32_ty], [IntrReadMem]>;
+def int_dx_resource_load_cbufferrow_2
+    : DefaultAttrsIntrinsic<[llvm_any_ty, llvm_any_ty],
+                            [llvm_any_ty, llvm_i32_ty], [IntrReadMem]>;
 
 def int_dx_resource_updatecounter
     : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_i8_ty],
                             [IntrInaccessibleMemOrArgMemOnly]>;
-    
+
+def int_dx_resource_getdimensions_x
+    : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty], [IntrReadMem]>;
+
 // Cast between target extension handle types and dxil-style opaque handles
 def int_dx_resource_casthandle : Intrinsic<[llvm_any_ty], [llvm_any_ty]>;
 
@@ -56,18 +92,27 @@ def int_dx_nclamp : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>,
 def int_dx_cross : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
 def int_dx_saturate : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 
-def int_dx_dot2 :
-    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-    [llvm_anyfloat_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
-    [IntrNoMem, Commutative] >;
-def int_dx_dot3 :
-    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-    [llvm_anyfloat_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
-    [IntrNoMem, Commutative] >;
-def int_dx_dot4 :
-    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-    [llvm_anyfloat_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
-    [IntrNoMem, Commutative] >;
+def int_dx_dot2 : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
+                                        [
+                                          llvm_anyfloat_ty, LLVMMatchType<0>,
+                                          LLVMMatchType<0>, LLVMMatchType<0>
+                                        ],
+                                        [IntrNoMem, Commutative]>;
+def int_dx_dot3 : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
+                                        [
+                                          llvm_anyfloat_ty, LLVMMatchType<0>,
+                                          LLVMMatchType<0>, LLVMMatchType<0>,
+                                          LLVMMatchType<0>, LLVMMatchType<0>
+                                        ],
+                                        [IntrNoMem, Commutative]>;
+def int_dx_dot4 : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
+                                        [
+                                          llvm_anyfloat_ty, LLVMMatchType<0>,
+                                          LLVMMatchType<0>, LLVMMatchType<0>,
+                                          LLVMMatchType<0>, LLVMMatchType<0>,
+                                          LLVMMatchType<0>, LLVMMatchType<0>
+                                        ],
+                                        [IntrNoMem, Commutative]>;
 def int_dx_fdot :
     DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
     [llvm_anyfloat_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
@@ -80,6 +125,10 @@ def int_dx_udot :
     DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
     [llvm_anyint_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
     [IntrNoMem, Commutative] >;
+def int_dx_dot2add :
+    DefaultAttrsIntrinsic<[llvm_float_ty],
+    [llvm_float_ty, llvm_half_ty, llvm_half_ty, llvm_half_ty, llvm_half_ty],
+    [IntrNoMem, Commutative]>;
 def int_dx_dot4add_i8packed : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 def int_dx_dot4add_u8packed : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 
@@ -88,11 +137,15 @@ def int_dx_degrees : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty
 
 def int_dx_isinf : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
     [llvm_anyfloat_ty], [IntrNoMem]>;
+def int_dx_isnan : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+    [llvm_anyfloat_ty], [IntrNoMem]>;
+
+def int_dx_legacyf16tof32 : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_float_ty>],
+    [llvm_anyint_ty], [IntrNoMem]>;
 
 def int_dx_lerp : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty, LLVMMatchType<0>,LLVMMatchType<0>],
     [IntrNoMem]>;
 
-def int_dx_length : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>], [llvm_anyfloat_ty], [IntrNoMem]>;
 def int_dx_imad : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
 def int_dx_umad : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
 def int_dx_normalize : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty], [IntrNoMem]>;
@@ -101,16 +154,42 @@ def int_dx_wave_active_countbits : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i1
 def int_dx_wave_all : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_i1_ty], [IntrConvergent, IntrNoMem]>;
 def int_dx_wave_any : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_i1_ty], [IntrConvergent, IntrNoMem]>;
 def int_dx_wave_getlaneindex : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrConvergent, IntrNoMem]>;
+def int_dx_wave_reduce_max : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
+def int_dx_wave_reduce_umax : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
+def int_dx_wave_reduce_min : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
+def int_dx_wave_reduce_umin : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
+def int_dx_wave_reduce_sum : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
+def int_dx_wave_reduce_usum : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
 def int_dx_wave_is_first_lane : DefaultAttrsIntrinsic<[llvm_i1_ty], [], [IntrConvergent]>;
 def int_dx_wave_readlane : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+def int_dx_wave_get_lane_count
+    : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrConvergent]>;
 def int_dx_sign : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_any_ty], [IntrNoMem]>;
 def int_dx_step : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty, LLVMMatchType<0>], [IntrNoMem]>;
-def int_dx_splitdouble : DefaultAttrsIntrinsic<[llvm_anyint_ty, LLVMMatchType<0>], 
+def int_dx_splitdouble : DefaultAttrsIntrinsic<[llvm_anyint_ty, LLVMMatchType<0>],
     [LLVMScalarOrSameVectorWidth<0, llvm_double_ty>], [IntrNoMem]>;
 def int_dx_radians : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 def int_dx_discard : DefaultAttrsIntrinsic<[], [llvm_i1_ty], []>;
+def int_dx_ddx_coarse : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
+def int_dx_ddy_coarse : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
+def int_dx_ddx_fine : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
+def int_dx_ddy_fine : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 def int_dx_firstbituhigh : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_anyint_ty], [IntrNoMem]>;
 def int_dx_firstbitshigh : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_anyint_ty], [IntrNoMem]>;
+def int_dx_firstbitlow : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_anyint_ty], [IntrNoMem]>;
 
-def int_dx_group_memory_barrier_with_group_sync : DefaultAttrsIntrinsic<[], [], []>;
+def int_dx_group_memory_barrier_with_group_sync
+    : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+
+def int_dx_load_input
+    : DefaultAttrsIntrinsic<[llvm_any_ty],
+                            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i8_ty,
+                             llvm_i32_ty],
+                            [IntrConvergent]>;
+
+def int_dx_store_output
+    : DefaultAttrsIntrinsic<[],
+                            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i8_ty,
+                             llvm_i32_ty, llvm_any_ty],
+                            [IntrConvergent]>;
 }

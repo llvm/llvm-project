@@ -3,7 +3,7 @@
 
 define void @test_inc_eq(ptr nocapture %a, ptr nocapture readonly %b, ptr nocapture readonly %c, i32 %N) {
 ; CHECK-LABEL: define void @test_inc_eq(
-; CHECK-SAME: ptr nocapture [[A:%.*]], ptr nocapture readonly [[B:%.*]], ptr nocapture readonly [[C:%.*]], i32 [[N:%.*]]) {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[C:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP16:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP16]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -78,7 +78,7 @@ define void @test_inc_eq(ptr nocapture %a, ptr nocapture readonly %b, ptr nocapt
 ; CHECK:       for.inc.postloop:
 ; CHECK-NEXT:    [[INC_POSTLOOP]] = add nuw nsw i32 [[I_017_POSTLOOP]], 1
 ; CHECK-NEXT:    [[EXITCOND_POSTLOOP:%.*]] = icmp eq i32 [[INC_POSTLOOP]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_POSTLOOP]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], label [[FOR_BODY_POSTLOOP]], !llvm.loop [[LOOP0:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[EXITCOND_POSTLOOP]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], label [[FOR_BODY_POSTLOOP]], !llvm.loop [[LOOP0:![0-9]+]], !loop_constrainer.loop.clone [[META5:![0-9]+]]
 ;
 entry:
   %cmp16 = icmp sgt i32 %N, 0
@@ -118,7 +118,7 @@ for.inc:
 
 define void @test_inc_ne(ptr nocapture %a, ptr nocapture readonly %b, ptr nocapture readonly %c, i32 %N) {
 ; CHECK-LABEL: define void @test_inc_ne(
-; CHECK-SAME: ptr nocapture [[A:%.*]], ptr nocapture readonly [[B:%.*]], ptr nocapture readonly [[C:%.*]], i32 [[N:%.*]]) {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[C:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP16:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP16]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -192,7 +192,7 @@ define void @test_inc_ne(ptr nocapture %a, ptr nocapture readonly %b, ptr nocapt
 ; CHECK:       for.inc.postloop:
 ; CHECK-NEXT:    [[INC_POSTLOOP]] = add nuw nsw i32 [[I_017_POSTLOOP]], 1
 ; CHECK-NEXT:    [[EXITCOND_POSTLOOP:%.*]] = icmp ne i32 [[INC_POSTLOOP]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_POSTLOOP]], label [[FOR_BODY_POSTLOOP]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP6:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[EXITCOND_POSTLOOP]], label [[FOR_BODY_POSTLOOP]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP6:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 entry:
   %cmp16 = icmp sgt i32 %N, 0
@@ -232,7 +232,7 @@ for.inc:
 
 define void @test_inc_slt(ptr nocapture %a, ptr nocapture readonly %b, ptr nocapture readonly %c, i32 %N) {
 ; CHECK-LABEL: define void @test_inc_slt(
-; CHECK-SAME: ptr nocapture [[A:%.*]], ptr nocapture readonly [[B:%.*]], ptr nocapture readonly [[C:%.*]], i32 [[N:%.*]]) {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[C:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP16:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP16]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -307,7 +307,7 @@ define void @test_inc_slt(ptr nocapture %a, ptr nocapture readonly %b, ptr nocap
 ; CHECK:       for.inc.postloop:
 ; CHECK-NEXT:    [[INC_POSTLOOP]] = add nuw nsw i32 [[I_017_POSTLOOP]], 1
 ; CHECK-NEXT:    [[EXITCOND_POSTLOOP:%.*]] = icmp slt i32 [[INC_POSTLOOP]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_POSTLOOP]], label [[FOR_BODY_POSTLOOP]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP7:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[EXITCOND_POSTLOOP]], label [[FOR_BODY_POSTLOOP]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP7:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 entry:
   %cmp16 = icmp sgt i32 %N, 0
@@ -347,7 +347,7 @@ for.inc:
 
 define void @test_inc_ult(ptr nocapture %a, ptr nocapture readonly %b, ptr nocapture readonly %c, i32 %N) {
 ; CHECK-LABEL: define void @test_inc_ult(
-; CHECK-SAME: ptr nocapture [[A:%.*]], ptr nocapture readonly [[B:%.*]], ptr nocapture readonly [[C:%.*]], i32 [[N:%.*]]) {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[C:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP16:%.*]] = icmp ugt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP16]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -421,7 +421,7 @@ define void @test_inc_ult(ptr nocapture %a, ptr nocapture readonly %b, ptr nocap
 ; CHECK:       for.inc.postloop:
 ; CHECK-NEXT:    [[INC_POSTLOOP]] = add nuw nsw i32 [[I_017_POSTLOOP]], 1
 ; CHECK-NEXT:    [[EXITCOND_POSTLOOP:%.*]] = icmp ult i32 [[INC_POSTLOOP]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_POSTLOOP]], label [[FOR_BODY_POSTLOOP]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP8:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[EXITCOND_POSTLOOP]], label [[FOR_BODY_POSTLOOP]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP8:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 entry:
   %cmp16 = icmp ugt i32 %N, 0
@@ -461,7 +461,7 @@ for.inc:
 
 define void @signed_var_imm_dec_sgt(ptr nocapture %a, ptr nocapture readonly %b, ptr nocapture readonly %c, i32 %M) {
 ; CHECK-LABEL: define void @signed_var_imm_dec_sgt(
-; CHECK-SAME: ptr nocapture [[A:%.*]], ptr nocapture readonly [[B:%.*]], ptr nocapture readonly [[C:%.*]], i32 [[M:%.*]]) {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[C:%.*]], i32 [[M:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP14:%.*]] = icmp slt i32 [[M]], 1024
 ; CHECK-NEXT:    br i1 [[CMP14]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -535,7 +535,7 @@ define void @signed_var_imm_dec_sgt(ptr nocapture %a, ptr nocapture readonly %b,
 ; CHECK-NEXT:    [[DEC_PRELOOP]] = add nsw i32 [[IV_PRELOOP]], -1
 ; CHECK-NEXT:    [[CMP_PRELOOP:%.*]] = icmp sgt i32 [[DEC_PRELOOP]], [[M]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp sgt i32 [[DEC_PRELOOP]], [[EXIT_PRELOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[FOR_BODY_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP9:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[TMP11]], label [[FOR_BODY_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP9:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ; CHECK:       preloop.exit.selector:
 ; CHECK-NEXT:    [[DEC_PRELOOP_LCSSA:%.*]] = phi i32 [ [[DEC_PRELOOP]], [[FOR_INC_PRELOOP]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp sgt i32 [[DEC_PRELOOP_LCSSA]], [[M]]
@@ -565,7 +565,7 @@ define void @signed_var_imm_dec_sgt(ptr nocapture %a, ptr nocapture readonly %b,
 ; CHECK-NEXT:    store i32 [[STOREMERGE_POSTLOOP]], ptr [[ARRAYIDX3_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[DEC_POSTLOOP]] = add nsw i32 [[IV_POSTLOOP]], -1
 ; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp sgt i32 [[DEC_POSTLOOP]], [[M]]
-; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[FOR_BODY_POSTLOOP]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP10:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[FOR_BODY_POSTLOOP]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP10:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 entry:
   %cmp14 = icmp slt i32 %M, 1024
@@ -600,7 +600,7 @@ for.inc:                                          ; preds = %for.body, %if.else
 
 define void @signed_var_imm_dec_sge(ptr nocapture %a, ptr nocapture readonly %b, ptr nocapture readonly %c, i32 %M) {
 ; CHECK-LABEL: define void @signed_var_imm_dec_sge(
-; CHECK-SAME: ptr nocapture [[A:%.*]], ptr nocapture readonly [[B:%.*]], ptr nocapture readonly [[C:%.*]], i32 [[M:%.*]]) {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[C:%.*]], i32 [[M:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP14:%.*]] = icmp sgt i32 [[M]], 1024
 ; CHECK-NEXT:    br i1 [[CMP14]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
@@ -675,7 +675,7 @@ define void @signed_var_imm_dec_sge(ptr nocapture %a, ptr nocapture readonly %b,
 ; CHECK-NEXT:    [[DEC_PRELOOP]] = add nsw i32 [[IV_PRELOOP]], -1
 ; CHECK-NEXT:    [[CMP_PRELOOP:%.*]] = icmp sgt i32 [[IV_PRELOOP]], [[M]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp sgt i32 [[IV_PRELOOP]], [[EXIT_PRELOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[FOR_BODY_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP11:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[TMP11]], label [[FOR_BODY_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP11:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ; CHECK:       preloop.exit.selector:
 ; CHECK-NEXT:    [[DEC_PRELOOP_LCSSA:%.*]] = phi i32 [ [[DEC_PRELOOP]], [[FOR_INC_PRELOOP]] ]
 ; CHECK-NEXT:    [[IV_PRELOOP_LCSSA:%.*]] = phi i32 [ [[IV_PRELOOP]], [[FOR_INC_PRELOOP]] ]
@@ -706,7 +706,7 @@ define void @signed_var_imm_dec_sge(ptr nocapture %a, ptr nocapture readonly %b,
 ; CHECK-NEXT:    store i32 [[STOREMERGE_POSTLOOP]], ptr [[ARRAYIDX3_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[DEC_POSTLOOP]] = add nsw i32 [[IV_POSTLOOP]], -1
 ; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp sgt i32 [[IV_POSTLOOP]], [[M]]
-; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[FOR_BODY_POSTLOOP]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP12:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[FOR_BODY_POSTLOOP]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP12:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 entry:
   %cmp14 = icmp sgt i32 %M, 1024
@@ -741,7 +741,7 @@ for.inc:                                          ; preds = %for.body, %if.else
 
 define void @signed_var_imm_dec_slt(ptr nocapture %a, ptr nocapture readonly %b, ptr nocapture readonly %c, i32 %M) {
 ; CHECK-LABEL: define void @signed_var_imm_dec_slt(
-; CHECK-SAME: ptr nocapture [[A:%.*]], ptr nocapture readonly [[B:%.*]], ptr nocapture readonly [[C:%.*]], i32 [[M:%.*]]) {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[C:%.*]], i32 [[M:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP14:%.*]] = icmp sgt i32 [[M]], 1024
 ; CHECK-NEXT:    br i1 [[CMP14]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
@@ -805,7 +805,7 @@ for.inc:                                          ; preds = %for.body, %if.else
 
 define void @signed_var_imm_dec_ne(ptr nocapture %a, ptr nocapture readonly %b, ptr nocapture readonly %c, i32 %M) {
 ; CHECK-LABEL: define void @signed_var_imm_dec_ne(
-; CHECK-SAME: ptr nocapture [[A:%.*]], ptr nocapture readonly [[B:%.*]], ptr nocapture readonly [[C:%.*]], i32 [[M:%.*]]) {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[C:%.*]], i32 [[M:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP14:%.*]] = icmp slt i32 [[M]], 1024
 ; CHECK-NEXT:    br i1 [[CMP14]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -879,7 +879,7 @@ define void @signed_var_imm_dec_ne(ptr nocapture %a, ptr nocapture readonly %b, 
 ; CHECK-NEXT:    [[DEC_PRELOOP]] = add nsw i32 [[IV_PRELOOP]], -1
 ; CHECK-NEXT:    [[CMP_PRELOOP:%.*]] = icmp ne i32 [[DEC_PRELOOP]], [[M]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp sgt i32 [[DEC_PRELOOP]], [[EXIT_PRELOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[FOR_BODY_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP13:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[TMP11]], label [[FOR_BODY_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP13:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ; CHECK:       preloop.exit.selector:
 ; CHECK-NEXT:    [[DEC_PRELOOP_LCSSA:%.*]] = phi i32 [ [[DEC_PRELOOP]], [[FOR_INC_PRELOOP]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp sgt i32 [[DEC_PRELOOP_LCSSA]], [[M]]
@@ -909,7 +909,7 @@ define void @signed_var_imm_dec_ne(ptr nocapture %a, ptr nocapture readonly %b, 
 ; CHECK-NEXT:    store i32 [[STOREMERGE_POSTLOOP]], ptr [[ARRAYIDX3_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[DEC_POSTLOOP]] = add nsw i32 [[IV_POSTLOOP]], -1
 ; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp ne i32 [[DEC_POSTLOOP]], [[M]]
-; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[FOR_BODY_POSTLOOP]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP14:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[FOR_BODY_POSTLOOP]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP14:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 entry:
   %cmp14 = icmp slt i32 %M, 1024
@@ -944,7 +944,7 @@ for.inc:                                          ; preds = %for.body, %if.else
 
 define void @signed_var_imm_dec_eq(ptr nocapture %a, ptr nocapture readonly %b, ptr nocapture readonly %c, i32 %M) {
 ; CHECK-LABEL: define void @signed_var_imm_dec_eq(
-; CHECK-SAME: ptr nocapture [[A:%.*]], ptr nocapture readonly [[B:%.*]], ptr nocapture readonly [[C:%.*]], i32 [[M:%.*]]) {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[C:%.*]], i32 [[M:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP14:%.*]] = icmp slt i32 [[M]], 1024
 ; CHECK-NEXT:    br i1 [[CMP14]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -1020,7 +1020,7 @@ define void @signed_var_imm_dec_eq(ptr nocapture %a, ptr nocapture readonly %b, 
 ; CHECK-NEXT:    [[CMP_PRELOOP:%.*]] = icmp eq i32 [[DEC_PRELOOP]], [[M]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp sgt i32 [[DEC_PRELOOP]], [[EXIT_PRELOOP_AT]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = xor i1 [[TMP12]], true
-; CHECK-NEXT:    br i1 [[TMP13]], label [[PRELOOP_EXIT_SELECTOR:%.*]], label [[FOR_BODY_PRELOOP]], !llvm.loop [[LOOP15:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[TMP13]], label [[PRELOOP_EXIT_SELECTOR:%.*]], label [[FOR_BODY_PRELOOP]], !llvm.loop [[LOOP15:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ; CHECK:       preloop.exit.selector:
 ; CHECK-NEXT:    [[DEC_PRELOOP_LCSSA:%.*]] = phi i32 [ [[DEC_PRELOOP]], [[FOR_INC_PRELOOP]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp sgt i32 [[DEC_PRELOOP_LCSSA]], [[M]]
@@ -1050,7 +1050,7 @@ define void @signed_var_imm_dec_eq(ptr nocapture %a, ptr nocapture readonly %b, 
 ; CHECK-NEXT:    store i32 [[STOREMERGE_POSTLOOP]], ptr [[ARRAYIDX3_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[DEC_POSTLOOP]] = add nsw i32 [[IV_POSTLOOP]], -1
 ; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp eq i32 [[DEC_POSTLOOP]], [[M]]
-; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], label [[FOR_BODY_POSTLOOP]], !llvm.loop [[LOOP16:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], label [[FOR_BODY_POSTLOOP]], !llvm.loop [[LOOP16:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 entry:
   %cmp14 = icmp slt i32 %M, 1024

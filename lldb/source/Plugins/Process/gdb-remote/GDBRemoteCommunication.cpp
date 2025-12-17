@@ -7,21 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "GDBRemoteCommunication.h"
-
-#include <climits>
-#include <cstring>
-#include <future>
-#include <sys/stat.h>
-
+#include "ProcessGDBRemoteLog.h"
 #include "lldb/Host/Config.h"
-#include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/Socket.h"
-#include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
 #include "lldb/Target/Platform.h"
@@ -31,20 +23,16 @@
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_ZLIB
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include <climits>
+#include <cstring>
+#include <sys/stat.h>
+#include <variant>
 
-#include "ProcessGDBRemoteLog.h"
-
-#if defined(__APPLE__)
-#define DEBUGSERVER_BASENAME "debugserver"
-#elif defined(_WIN32)
-#define DEBUGSERVER_BASENAME "lldb-server.exe"
-#else
-#define DEBUGSERVER_BASENAME "lldb-server"
-#endif
-
-#if defined(HAVE_LIBCOMPRESSION)
+#if HAVE_LIBCOMPRESSION
 #include <compression.h>
 #endif
 
@@ -66,7 +54,7 @@ GDBRemoteCommunication::GDBRemoteCommunication()
 #endif
       m_echo_number(0), m_supports_qEcho(eLazyBoolCalculate), m_history(512),
       m_send_acks(true), m_is_platform(false),
-      m_compression_type(CompressionType::None), m_listen_url() {
+      m_compression_type(CompressionType::None) {
 }
 
 // Destructor
@@ -75,7 +63,7 @@ GDBRemoteCommunication::~GDBRemoteCommunication() {
     Disconnect();
   }
 
-#if defined(HAVE_LIBCOMPRESSION)
+#if HAVE_LIBCOMPRESSION
   if (m_decompression_scratch)
     free (m_decompression_scratch);
 #endif
@@ -358,8 +346,9 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
             disconnected = true;
             Disconnect();
           }
+        } else {
+          timed_out = true;
         }
-        timed_out = true;
         break;
       case eConnectionStatusSuccess:
         // printf ("status = success but error = %s\n",
@@ -512,7 +501,7 @@ bool GDBRemoteCommunication::DecompressPacket() {
     }
   }
 
-#if defined(HAVE_LIBCOMPRESSION)
+#if HAVE_LIBCOMPRESSION
   if (m_compression_type == CompressionType::ZlibDeflate ||
       m_compression_type == CompressionType::LZFSE ||
       m_compression_type == CompressionType::LZ4 ||
@@ -786,9 +775,14 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
 
       // Copy the packet from m_bytes to packet_str expanding the run-length
       // encoding in the process.
-      std ::string packet_str =
+      auto maybe_packet_str =
           ExpandRLE(m_bytes.substr(content_start, content_end - content_start));
-      packet = StringExtractorGDBRemote(packet_str);
+      if (!maybe_packet_str) {
+        m_bytes.erase(0, total_length);
+        packet.Clear();
+        return GDBRemoteCommunication::PacketType::Invalid;
+      }
+      packet = StringExtractorGDBRemote(*maybe_packet_str);
 
       if (m_bytes[0] == '$' || m_bytes[0] == '%') {
         assert(checksum_idx < m_bytes.size());
@@ -833,419 +827,185 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
   return GDBRemoteCommunication::PacketType::Invalid;
 }
 
-Status GDBRemoteCommunication::StartListenThread(const char *hostname,
-                                                 uint16_t port) {
-  if (m_listen_thread.IsJoinable())
-    return Status::FromErrorString("listen thread already running");
-
-  char listen_url[512];
-  if (hostname && hostname[0])
-    snprintf(listen_url, sizeof(listen_url), "listen://%s:%i", hostname, port);
-  else
-    snprintf(listen_url, sizeof(listen_url), "listen://%i", port);
-  m_listen_url = listen_url;
-  SetConnection(std::make_unique<ConnectionFileDescriptor>());
-  llvm::Expected<HostThread> listen_thread = ThreadLauncher::LaunchThread(
-      listen_url, [this] { return GDBRemoteCommunication::ListenThread(); });
-  if (!listen_thread)
-    return Status::FromError(listen_thread.takeError());
-  m_listen_thread = *listen_thread;
-
-  return Status();
-}
-
-bool GDBRemoteCommunication::JoinListenThread() {
-  if (m_listen_thread.IsJoinable())
-    m_listen_thread.Join(nullptr);
-  return true;
-}
-
-lldb::thread_result_t GDBRemoteCommunication::ListenThread() {
-  Status error;
-  ConnectionFileDescriptor *connection =
-      (ConnectionFileDescriptor *)GetConnection();
-
-  if (connection) {
-    // Do the listen on another thread so we can continue on...
-    if (connection->Connect(
-            m_listen_url.c_str(),
-            [this](llvm::StringRef port_str) {
-              uint16_t port = 0;
-              llvm::to_integer(port_str, port, 10);
-              m_port_promise.set_value(port);
-            },
-            &error) != eConnectionStatusSuccess)
-      SetConnection(nullptr);
-  }
-  return {};
-}
-
-FileSpec GDBRemoteCommunication::GetDebugserverPath(Platform *platform) {
-  Log *log = GetLog(GDBRLog::Process);
-  // If we locate debugserver, keep that located version around
-  static FileSpec g_debugserver_file_spec;
-  FileSpec debugserver_file_spec;
-
-  Environment host_env = Host::GetEnvironment();
-
-  // Always check to see if we have an environment override for the path to the
-  // debugserver to use and use it if we do.
-  std::string env_debugserver_path = host_env.lookup("LLDB_DEBUGSERVER_PATH");
-  if (!env_debugserver_path.empty()) {
-    debugserver_file_spec.SetFile(env_debugserver_path,
-                                  FileSpec::Style::native);
-    LLDB_LOGF(log,
-              "GDBRemoteCommunication::%s() gdb-remote stub exe path set "
-              "from environment variable: %s",
-              __FUNCTION__, env_debugserver_path.c_str());
-  } else
-    debugserver_file_spec = g_debugserver_file_spec;
-  bool debugserver_exists =
-      FileSystem::Instance().Exists(debugserver_file_spec);
-  if (!debugserver_exists) {
-    // The debugserver binary is in the LLDB.framework/Resources directory.
-    debugserver_file_spec = HostInfo::GetSupportExeDir();
-    if (debugserver_file_spec) {
-      debugserver_file_spec.AppendPathComponent(DEBUGSERVER_BASENAME);
-      debugserver_exists = FileSystem::Instance().Exists(debugserver_file_spec);
-      if (debugserver_exists) {
-        LLDB_LOGF(log,
-                  "GDBRemoteCommunication::%s() found gdb-remote stub exe '%s'",
-                  __FUNCTION__, debugserver_file_spec.GetPath().c_str());
-
-        g_debugserver_file_spec = debugserver_file_spec;
-      } else {
-        if (platform)
-          debugserver_file_spec =
-              platform->LocateExecutable(DEBUGSERVER_BASENAME);
-        else
-          debugserver_file_spec.Clear();
-        if (debugserver_file_spec) {
-          // Platform::LocateExecutable() wouldn't return a path if it doesn't
-          // exist
-          debugserver_exists = true;
-        } else {
-          LLDB_LOGF(log,
-                    "GDBRemoteCommunication::%s() could not find "
-                    "gdb-remote stub exe '%s'",
-                    __FUNCTION__, debugserver_file_spec.GetPath().c_str());
-        }
-        // Don't cache the platform specific GDB server binary as it could
-        // change from platform to platform
-        g_debugserver_file_spec.Clear();
-      }
-    }
-  }
-  return debugserver_file_spec;
-}
-
 Status GDBRemoteCommunication::StartDebugserverProcess(
-    const char *url, Platform *platform, ProcessLaunchInfo &launch_info,
-    uint16_t *port, const Args *inferior_args, shared_fd_t pass_comm_fd) {
+    std::variant<llvm::StringRef, shared_fd_t> comm,
+    ProcessLaunchInfo &launch_info, const Args *inferior_args) {
   Log *log = GetLog(GDBRLog::Process);
-  LLDB_LOGF(log, "GDBRemoteCommunication::%s(url=%s, port=%" PRIu16 ")",
-            __FUNCTION__, url ? url : "<empty>", port ? *port : uint16_t(0));
 
-  Status error;
-  FileSpec &debugserver_file_spec = launch_info.GetExecutableFile();
-  if ((debugserver_file_spec = GetDebugserverPath(platform))) {
-    std::string debugserver_path = debugserver_file_spec.GetPath();
-
-    Args &debugserver_args = launch_info.GetArguments();
-    debugserver_args.Clear();
-
-    // Start args with "debugserver /file/path -r --"
-    debugserver_args.AppendArgument(llvm::StringRef(debugserver_path));
+  Args &debugserver_args = launch_info.GetArguments();
 
 #if !defined(__APPLE__)
-    // First argument to lldb-server must be mode in which to run.
-    debugserver_args.AppendArgument(llvm::StringRef("gdbserver"));
+  // First argument to lldb-server must be mode in which to run.
+  debugserver_args.AppendArgument("gdbserver");
 #endif
 
-    // If a url is supplied then use it
-    if (url && url[0])
-      debugserver_args.AppendArgument(llvm::StringRef(url));
+  // use native registers, not the GDB registers
+  debugserver_args.AppendArgument("--native-regs");
 
-    if (pass_comm_fd != SharedSocket::kInvalidFD) {
-      StreamString fd_arg;
-      fd_arg.Printf("--fd=%" PRIi64, (int64_t)pass_comm_fd);
-      debugserver_args.AppendArgument(fd_arg.GetString());
-      // Send "pass_comm_fd" down to the inferior so it can use it to
-      // communicate back with this process. Ignored on Windows.
-#ifndef _WIN32
-      launch_info.AppendDuplicateFileAction((int)pass_comm_fd,
-                                            (int)pass_comm_fd);
-#endif
-    }
+  if (launch_info.GetLaunchInSeparateProcessGroup())
+    debugserver_args.AppendArgument("--setsid");
 
-    // use native registers, not the GDB registers
-    debugserver_args.AppendArgument(llvm::StringRef("--native-regs"));
+  llvm::SmallString<128> named_pipe_path;
+  // socket_pipe is used by debug server to communicate back either
+  // TCP port or domain socket name which it listens on. However, we're not
+  // interested in the actualy value here.
+  // The only reason for using the pipe is to serve as a synchronization point -
+  // once data is written to the pipe, debug server is up and running.
+  Pipe socket_pipe;
 
-    if (launch_info.GetLaunchInSeparateProcessGroup()) {
-      debugserver_args.AppendArgument(llvm::StringRef("--setsid"));
-    }
-
-    llvm::SmallString<128> named_pipe_path;
-    // socket_pipe is used by debug server to communicate back either
-    // TCP port or domain socket name which it listens on.
-    // The second purpose of the pipe to serve as a synchronization point -
-    // once data is written to the pipe, debug server is up and running.
-    Pipe socket_pipe;
-
-    // port is null when debug server should listen on domain socket - we're
-    // not interested in port value but rather waiting for debug server to
-    // become available.
-    if (pass_comm_fd == SharedSocket::kInvalidFD) {
-      if (url) {
-// Create a temporary file to get the stdout/stderr and redirect the output of
-// the command into this file. We will later read this file if all goes well
-// and fill the data into "command_output_ptr"
-#if defined(__APPLE__)
-        // Binding to port zero, we need to figure out what port it ends up
-        // using using a named pipe...
-        error = socket_pipe.CreateWithUniqueName("debugserver-named-pipe",
-                                                 false, named_pipe_path);
-        if (error.Fail()) {
-          LLDB_LOGF(log,
-                    "GDBRemoteCommunication::%s() "
-                    "named pipe creation failed: %s",
-                    __FUNCTION__, error.AsCString());
-          return error;
-        }
-        debugserver_args.AppendArgument(llvm::StringRef("--named-pipe"));
-        debugserver_args.AppendArgument(named_pipe_path);
-#else
-        // Binding to port zero, we need to figure out what port it ends up
-        // using using an unnamed pipe...
-        error = socket_pipe.CreateNew(true);
-        if (error.Fail()) {
-          LLDB_LOGF(log,
-                    "GDBRemoteCommunication::%s() "
-                    "unnamed pipe creation failed: %s",
-                    __FUNCTION__, error.AsCString());
-          return error;
-        }
-        pipe_t write = socket_pipe.GetWritePipe();
-        debugserver_args.AppendArgument(llvm::StringRef("--pipe"));
-        debugserver_args.AppendArgument(llvm::to_string(write));
-        launch_info.AppendCloseFileAction(socket_pipe.GetReadFileDescriptor());
-#endif
-      } else {
-        // No host and port given, so lets listen on our end and make the
-        // debugserver connect to us..
-        error = StartListenThread("127.0.0.1", 0);
-        if (error.Fail()) {
-          LLDB_LOGF(log,
-                    "GDBRemoteCommunication::%s() unable to start listen "
-                    "thread: %s",
-                    __FUNCTION__, error.AsCString());
-          return error;
-        }
-
-        // Wait for 10 seconds to resolve the bound port
-        std::future<uint16_t> port_future = m_port_promise.get_future();
-        uint16_t port_ = port_future.wait_for(std::chrono::seconds(10)) ==
-                                 std::future_status::ready
-                             ? port_future.get()
-                             : 0;
-        if (port_ > 0) {
-          char port_cstr[32];
-          snprintf(port_cstr, sizeof(port_cstr), "127.0.0.1:%i", port_);
-          // Send the host and port down that debugserver and specify an option
-          // so that it connects back to the port we are listening to in this
-          // process
-          debugserver_args.AppendArgument(llvm::StringRef("--reverse-connect"));
-          debugserver_args.AppendArgument(llvm::StringRef(port_cstr));
-          if (port)
-            *port = port_;
-        } else {
-          LLDB_LOGF(log, "GDBRemoteCommunication::%s() failed: %s",
-                    __FUNCTION__, error.AsCString());
-          return Status::FromErrorString(
-              "failed to bind to port 0 on 127.0.0.1");
-        }
-      }
-    }
-
-    Environment host_env = Host::GetEnvironment();
-    std::string env_debugserver_log_file =
-        host_env.lookup("LLDB_DEBUGSERVER_LOG_FILE");
-    if (!env_debugserver_log_file.empty()) {
-      debugserver_args.AppendArgument(
-          llvm::formatv("--log-file={0}", env_debugserver_log_file).str());
-    }
-
-#if defined(__APPLE__)
-    const char *env_debugserver_log_flags =
-        getenv("LLDB_DEBUGSERVER_LOG_FLAGS");
-    if (env_debugserver_log_flags) {
-      debugserver_args.AppendArgument(
-          llvm::formatv("--log-flags={0}", env_debugserver_log_flags).str());
-    }
-#else
-    std::string env_debugserver_log_channels =
-        host_env.lookup("LLDB_SERVER_LOG_CHANNELS");
-    if (!env_debugserver_log_channels.empty()) {
-      debugserver_args.AppendArgument(
-          llvm::formatv("--log-channels={0}", env_debugserver_log_channels)
-              .str());
-    }
-#endif
-
-    // Add additional args, starting with LLDB_DEBUGSERVER_EXTRA_ARG_1 until an
-    // env var doesn't come back.
-    uint32_t env_var_index = 1;
-    bool has_env_var;
-    do {
-      char env_var_name[64];
-      snprintf(env_var_name, sizeof(env_var_name),
-               "LLDB_DEBUGSERVER_EXTRA_ARG_%" PRIu32, env_var_index++);
-      std::string extra_arg = host_env.lookup(env_var_name);
-      has_env_var = !extra_arg.empty();
-
-      if (has_env_var) {
-        debugserver_args.AppendArgument(llvm::StringRef(extra_arg));
-        LLDB_LOGF(log,
-                  "GDBRemoteCommunication::%s adding env var %s contents "
-                  "to stub command line (%s)",
-                  __FUNCTION__, env_var_name, extra_arg.c_str());
-      }
-    } while (has_env_var);
-
-    if (inferior_args && inferior_args->GetArgumentCount() > 0) {
-      debugserver_args.AppendArgument(llvm::StringRef("--"));
-      debugserver_args.AppendArguments(*inferior_args);
-    }
-
-    // Copy the current environment to the gdbserver/debugserver instance
-    launch_info.GetEnvironment() = host_env;
-
-    // Close STDIN, STDOUT and STDERR.
-    launch_info.AppendCloseFileAction(STDIN_FILENO);
-    launch_info.AppendCloseFileAction(STDOUT_FILENO);
-    launch_info.AppendCloseFileAction(STDERR_FILENO);
-
-    // Redirect STDIN, STDOUT and STDERR to "/dev/null".
-    launch_info.AppendSuppressFileAction(STDIN_FILENO, true, false);
-    launch_info.AppendSuppressFileAction(STDOUT_FILENO, false, true);
-    launch_info.AppendSuppressFileAction(STDERR_FILENO, false, true);
-
-    if (log) {
-      StreamString string_stream;
-      Platform *const platform = nullptr;
-      launch_info.Dump(string_stream, platform);
-      LLDB_LOGF(log, "launch info for gdb-remote stub:\n%s",
-                string_stream.GetData());
-    }
-    error = Host::LaunchProcess(launch_info);
-
-    if (error.Success() &&
-        (launch_info.GetProcessID() != LLDB_INVALID_PROCESS_ID) &&
-        pass_comm_fd == SharedSocket::kInvalidFD) {
-      if (named_pipe_path.size() > 0) {
-        error = socket_pipe.OpenAsReader(named_pipe_path, false);
-        if (error.Fail())
-          LLDB_LOGF(log,
-                    "GDBRemoteCommunication::%s() "
-                    "failed to open named pipe %s for reading: %s",
-                    __FUNCTION__, named_pipe_path.c_str(), error.AsCString());
-      }
-
-      if (socket_pipe.CanWrite())
-        socket_pipe.CloseWriteFileDescriptor();
-      if (socket_pipe.CanRead()) {
-        // The port number may be up to "65535\0".
-        char port_cstr[6] = {0};
-        size_t num_bytes = sizeof(port_cstr);
-        // Read port from pipe with 10 second timeout.
-        error = socket_pipe.ReadWithTimeout(
-            port_cstr, num_bytes, std::chrono::seconds{10}, num_bytes);
-        if (error.Success() && (port != nullptr)) {
-          assert(num_bytes > 0 && port_cstr[num_bytes - 1] == '\0');
-          uint16_t child_port = 0;
-          // FIXME: improve error handling
-          llvm::to_integer(port_cstr, child_port);
-          if (*port == 0 || *port == child_port) {
-            *port = child_port;
-            LLDB_LOGF(log,
-                      "GDBRemoteCommunication::%s() "
-                      "debugserver listens %u port",
-                      __FUNCTION__, *port);
-          } else {
-            LLDB_LOGF(log,
-                      "GDBRemoteCommunication::%s() "
-                      "debugserver listening on port "
-                      "%d but requested port was %d",
-                      __FUNCTION__, (uint32_t)child_port, (uint32_t)(*port));
-          }
-        } else {
-          LLDB_LOGF(log,
-                    "GDBRemoteCommunication::%s() "
-                    "failed to read a port value from pipe %s: %s",
-                    __FUNCTION__, named_pipe_path.c_str(), error.AsCString());
-        }
-        socket_pipe.Close();
-      }
-
-      if (named_pipe_path.size() > 0) {
-        const auto err = socket_pipe.Delete(named_pipe_path);
-        if (err.Fail()) {
-          LLDB_LOGF(log,
-                    "GDBRemoteCommunication::%s failed to delete pipe %s: %s",
-                    __FUNCTION__, named_pipe_path.c_str(), err.AsCString());
-        }
-      }
-
-      // Make sure we actually connect with the debugserver...
-      JoinListenThread();
-    }
+  // If a url is supplied then use it
+  if (shared_fd_t *comm_fd = std::get_if<shared_fd_t>(&comm)) {
+    LLDB_LOG(log, "debugserver communicates over fd {0}", comm_fd);
+    assert(*comm_fd != SharedSocket::kInvalidFD);
+    debugserver_args.AppendArgument(llvm::formatv("--fd={0}", *comm_fd).str());
+    // Send "comm_fd" down to the inferior so it can use it to communicate back
+    // with this process.
+    launch_info.AppendDuplicateFileAction((int64_t)*comm_fd, (int64_t)*comm_fd);
   } else {
-    error = Status::FromErrorString("unable to locate " DEBUGSERVER_BASENAME);
+    llvm::StringRef url = std::get<llvm::StringRef>(comm);
+    LLDB_LOG(log, "debugserver listens on: {0}", url);
+    debugserver_args.AppendArgument(url);
+
+#if defined(__APPLE__)
+    // Using a named pipe as debugserver does not support --pipe.
+    Status error = socket_pipe.CreateWithUniqueName("debugserver-named-pipe",
+                                                    named_pipe_path);
+    if (error.Fail()) {
+      LLDB_LOG(log, "named pipe creation failed: {0}", error);
+      return error;
+    }
+    debugserver_args.AppendArgument(llvm::StringRef("--named-pipe"));
+    debugserver_args.AppendArgument(named_pipe_path);
+#else
+    // Using an unnamed pipe as it's simpler.
+    Status error = socket_pipe.CreateNew();
+    if (error.Fail()) {
+      LLDB_LOG(log, "unnamed pipe creation failed: {0}", error);
+      return error;
+    }
+    pipe_t write = socket_pipe.GetWritePipe();
+    debugserver_args.AppendArgument(llvm::StringRef("--pipe"));
+    debugserver_args.AppendArgument(llvm::to_string(write));
+    launch_info.AppendDuplicateFileAction((int64_t)write, (int64_t)write);
+#endif
   }
 
+  Environment host_env = Host::GetEnvironment();
+  std::string env_debugserver_log_file =
+      host_env.lookup("LLDB_DEBUGSERVER_LOG_FILE");
+  if (!env_debugserver_log_file.empty()) {
+    debugserver_args.AppendArgument(
+        llvm::formatv("--log-file={0}", env_debugserver_log_file).str());
+  }
+
+#if defined(__APPLE__)
+  const char *env_debugserver_log_flags = getenv("LLDB_DEBUGSERVER_LOG_FLAGS");
+  if (env_debugserver_log_flags) {
+    debugserver_args.AppendArgument(
+        llvm::formatv("--log-flags={0}", env_debugserver_log_flags).str());
+  }
+#else
+  std::string env_debugserver_log_channels =
+      host_env.lookup("LLDB_SERVER_LOG_CHANNELS");
+  if (!env_debugserver_log_channels.empty()) {
+    debugserver_args.AppendArgument(
+        llvm::formatv("--log-channels={0}", env_debugserver_log_channels)
+            .str());
+  }
+#endif
+
+  // Add additional args, starting with LLDB_DEBUGSERVER_EXTRA_ARG_1 until an
+  // env var doesn't come back.
+  uint32_t env_var_index = 1;
+  bool has_env_var;
+  do {
+    char env_var_name[64];
+    snprintf(env_var_name, sizeof(env_var_name),
+             "LLDB_DEBUGSERVER_EXTRA_ARG_%" PRIu32, env_var_index++);
+    std::string extra_arg = host_env.lookup(env_var_name);
+    has_env_var = !extra_arg.empty();
+
+    if (has_env_var) {
+      debugserver_args.AppendArgument(llvm::StringRef(extra_arg));
+      LLDB_LOGF(log,
+                "GDBRemoteCommunication::%s adding env var %s contents "
+                "to stub command line (%s)",
+                __FUNCTION__, env_var_name, extra_arg.c_str());
+    }
+  } while (has_env_var);
+
+  if (inferior_args && inferior_args->GetArgumentCount() > 0) {
+    debugserver_args.AppendArgument(llvm::StringRef("--"));
+    debugserver_args.AppendArguments(*inferior_args);
+  }
+
+  // Copy the current environment to the gdbserver/debugserver instance
+  launch_info.GetEnvironment() = host_env;
+
+  // Close STDIN, STDOUT and STDERR.
+  launch_info.AppendCloseFileAction(STDIN_FILENO);
+  launch_info.AppendCloseFileAction(STDOUT_FILENO);
+  launch_info.AppendCloseFileAction(STDERR_FILENO);
+
+  // Redirect STDIN, STDOUT and STDERR to "/dev/null".
+  launch_info.AppendSuppressFileAction(STDIN_FILENO, true, false);
+  launch_info.AppendSuppressFileAction(STDOUT_FILENO, false, true);
+  launch_info.AppendSuppressFileAction(STDERR_FILENO, false, true);
+
+  if (log) {
+    StreamString string_stream;
+    Platform *const platform = nullptr;
+    launch_info.Dump(string_stream, platform);
+    LLDB_LOG(log, "launch info for gdb-remote stub:\n{0}",
+             string_stream.GetData());
+  }
+  if (Status error = Host::LaunchProcess(launch_info); error.Fail()) {
+    LLDB_LOG(log, "launch failed: {0}", error);
+    return error;
+  }
+
+  if (std::holds_alternative<shared_fd_t>(comm))
+    return Status();
+
+  Status error;
+  if (named_pipe_path.size() > 0) {
+    error = socket_pipe.OpenAsReader(named_pipe_path);
+    if (error.Fail()) {
+      LLDB_LOG(log, "failed to open named pipe {0} for reading: {1}",
+               named_pipe_path, error);
+    }
+  }
+
+  if (socket_pipe.CanWrite())
+    socket_pipe.CloseWriteFileDescriptor();
+  assert(socket_pipe.CanRead());
+
+  // Read data from the pipe -- and ignore it (see comment above).
+  while (error.Success()) {
+    char buf[10];
+    if (llvm::Expected<size_t> num_bytes =
+            socket_pipe.Read(buf, std::size(buf), std::chrono::seconds(10))) {
+      if (*num_bytes == 0)
+        break;
+    } else {
+      error = Status::FromError(num_bytes.takeError());
+    }
+  }
   if (error.Fail()) {
-    LLDB_LOGF(log, "GDBRemoteCommunication::%s() failed: %s", __FUNCTION__,
-              error.AsCString());
+    LLDB_LOG(log, "failed to synchronize on pipe {0}: {1}", named_pipe_path,
+             error);
+  }
+  socket_pipe.Close();
+
+  if (named_pipe_path.size() > 0) {
+    if (Status err = socket_pipe.Delete(named_pipe_path); err.Fail())
+      LLDB_LOG(log, "failed to delete pipe {0}: {1}", named_pipe_path, err);
   }
 
   return error;
 }
 
 void GDBRemoteCommunication::DumpHistory(Stream &strm) { m_history.Dump(strm); }
-
-llvm::Error
-GDBRemoteCommunication::ConnectLocally(GDBRemoteCommunication &client,
-                                       GDBRemoteCommunication &server) {
-  const int backlog = 5;
-  TCPSocket listen_socket(true);
-  if (llvm::Error error =
-          listen_socket.Listen("localhost:0", backlog).ToError())
-    return error;
-
-  llvm::SmallString<32> remote_addr;
-  llvm::raw_svector_ostream(remote_addr)
-      << "connect://localhost:" << listen_socket.GetLocalPortNumber();
-
-  std::unique_ptr<ConnectionFileDescriptor> conn_up(
-      new ConnectionFileDescriptor());
-  Status status;
-  if (conn_up->Connect(remote_addr, &status) != lldb::eConnectionStatusSuccess)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Unable to connect: %s", status.AsCString());
-
-  // The connection was already established above, so a short timeout is
-  // sufficient.
-  Socket *accept_socket = nullptr;
-  if (Status accept_status =
-          listen_socket.Accept(std::chrono::seconds(1), accept_socket);
-      accept_status.Fail())
-    return accept_status.takeError();
-
-  client.SetConnection(std::move(conn_up));
-  server.SetConnection(
-      std::make_unique<ConnectionFileDescriptor>(accept_socket));
-  return llvm::Error::success();
-}
 
 GDBRemoteCommunication::ScopedTimeout::ScopedTimeout(
     GDBRemoteCommunication &gdb_comm, std::chrono::seconds timeout)
@@ -1301,17 +1061,22 @@ void llvm::format_provider<GDBRemoteCommunication::PacketResult>::format(
   }
 }
 
-std::string GDBRemoteCommunication::ExpandRLE(std::string packet) {
+std::optional<std::string>
+GDBRemoteCommunication::ExpandRLE(std::string packet) {
   // Reserve enough byte for the most common case (no RLE used).
   std::string decoded;
   decoded.reserve(packet.size());
   for (std::string::const_iterator c = packet.begin(); c != packet.end(); ++c) {
     if (*c == '*') {
+      if (decoded.empty())
+        return std::nullopt;
       // '*' indicates RLE. Next character will give us the repeat count and
       // previous character is what is to be repeated.
       char char_to_repeat = decoded.back();
       // Number of time the previous character is repeated.
-      int repeat_count = *++c + 3 - ' ';
+      if (++c == packet.end())
+        return std::nullopt;
+      int repeat_count = *c + 3 - ' ';
       // We have the char_to_repeat and repeat_count. Now push it in the
       // packet.
       for (int i = 0; i < repeat_count; ++i)
@@ -1319,7 +1084,9 @@ std::string GDBRemoteCommunication::ExpandRLE(std::string packet) {
     } else if (*c == 0x7d) {
       // 0x7d is the escape character.  The next character is to be XOR'd with
       // 0x20.
-      char escapee = *++c ^ 0x20;
+      if (++c == packet.end())
+        return std::nullopt;
+      char escapee = *c ^ 0x20;
       decoded.push_back(escapee);
     } else {
       decoded.push_back(*c);

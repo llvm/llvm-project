@@ -58,11 +58,38 @@ static void testToLLVMIR(MlirContext ctx) {
   LLVMContextDispose(llvmCtx);
 }
 
+// CHECK-LABEL: testTypeToFromLLVMIRTranslator
+static void testTypeToFromLLVMIRTranslator(MlirContext ctx) {
+  fprintf(stderr, "testTypeToFromLLVMIRTranslator\n");
+  LLVMContextRef llvmCtx = LLVMContextCreate();
+
+  LLVMTypeRef llvmTy = LLVMInt32TypeInContext(llvmCtx);
+  MlirTypeFromLLVMIRTranslator fromLLVMTranslator =
+      mlirTypeFromLLVMIRTranslatorCreate(ctx);
+  MlirType mlirTy =
+      mlirTypeFromLLVMIRTranslatorTranslateType(fromLLVMTranslator, llvmTy);
+  // CHECK: i32
+  mlirTypeDump(mlirTy);
+
+  MlirTypeToLLVMIRTranslator toLLVMTranslator =
+      mlirTypeToLLVMIRTranslatorCreate(llvmCtx);
+  LLVMTypeRef llvmTy2 =
+      mlirTypeToLLVMIRTranslatorTranslateType(toLLVMTranslator, mlirTy);
+  // CHECK: i32
+  LLVMDumpType(llvmTy2);
+  fprintf(stderr, "\n");
+
+  mlirTypeFromLLVMIRTranslatorDestroy(fromLLVMTranslator);
+  mlirTypeToLLVMIRTranslatorDestroy(toLLVMTranslator);
+  LLVMContextDispose(llvmCtx);
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   mlirDialectHandleRegisterDialect(mlirGetDialectHandle__llvm__(), ctx);
   mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("llvm"));
   testToLLVMIR(ctx);
+  testTypeToFromLLVMIRTranslator(ctx);
   mlirContextDestroy(ctx);
   return 0;
 }

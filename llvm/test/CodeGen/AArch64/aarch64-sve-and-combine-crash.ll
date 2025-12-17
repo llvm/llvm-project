@@ -15,7 +15,7 @@ define <vscale x 4 x i32> @test(<vscale x 8 x i16> %in1, <vscale x 4 x i32> %in2
 ; CHECK-NEXT:    ret
 entry:
   %i1 = call <vscale x 4 x i32> @llvm.aarch64.sve.uunpkhi.nxv4i32(<vscale x 8 x i16> %in1)
-  %i2 = shufflevector <vscale x 4 x i32> %in2, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %i2 = shufflevector <vscale x 4 x i32> %in2, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %i3 = and <vscale x 4 x i32> %i1, %i2
   ret <vscale x 4 x i32> %i3
 }

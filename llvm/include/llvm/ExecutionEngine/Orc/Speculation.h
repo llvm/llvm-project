@@ -17,9 +17,9 @@
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include <mutex>
-#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -38,7 +38,7 @@ public:
   using AliaseeDetails = std::pair<SymbolStringPtr, JITDylib *>;
   using Alias = SymbolStringPtr;
   using ImapTy = DenseMap<Alias, AliaseeDetails>;
-  void trackImpls(SymbolAliasMap ImplMaps, JITDylib *SrcJD);
+  LLVM_ABI void trackImpls(SymbolAliasMap ImplMaps, JITDylib *SrcJD);
 
 private:
   // FIX ME: find a right way to distinguish the pre-compile Symbols, and update
@@ -129,7 +129,7 @@ public:
   /// Define symbols for this Speculator object (__orc_speculator) and the
   /// speculation runtime entry point symbol (__orc_speculate_for) in the
   /// given JITDylib.
-  Error addSpeculationRuntime(JITDylib &JD, MangleAndInterner &Mangle);
+  LLVM_ABI Error addSpeculationRuntime(JITDylib &JD, MangleAndInterner &Mangle);
 
   // Speculatively compile likely functions for the given Stub Address.
   // destination of __orc_speculate_for jump
@@ -168,7 +168,7 @@ private:
   StubAddrLikelies GlobalSpecMap;
 };
 
-class IRSpeculationLayer : public IRLayer {
+class LLVM_ABI IRSpeculationLayer : public IRLayer {
 public:
   using IRlikiesStrRef =
       std::optional<DenseMap<StringRef, DenseSet<StringRef>>>;

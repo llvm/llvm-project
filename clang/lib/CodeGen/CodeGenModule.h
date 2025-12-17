@@ -17,6 +17,7 @@
 #include "CodeGenTypeCache.h"
 #include "CodeGenTypes.h"
 #include "SanitizerMetadata.h"
+#include "TrapReasonBuilder.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclOpenMP.h"
@@ -100,6 +101,50 @@ class TargetCodeGenInfo;
 enum ForDefinition_t : bool {
   NotForDefinition = false,
   ForDefinition = true
+};
+
+/// The Counter with an optional additional Counter for
+/// branches. `Skipped` counter can be calculated with `Executed` and
+/// a common Counter (like `Parent`) as `(Parent-Executed)`.
+///
+/// In SingleByte mode, Counters are binary. Subtraction is not
+/// applicable (but addition is capable). In this case, both
+/// `Executed` and `Skipped` counters are required.  `Skipped` is
+/// `None` by default. It is allocated in the coverage mapping.
+///
+/// There might be cases that `Parent` could be induced with
+/// `(Executed+Skipped)`. This is not always applicable.
+class CounterPair {
+public:
+  /// Optional value.
+  class ValueOpt {
+  private:
+    static constexpr uint32_t None = (1u << 31); /// None is allocated.
+    static constexpr uint32_t Mask = None - 1;
+
+    uint32_t Val;
+
+  public:
+    ValueOpt() : Val(None) {}
+
+    ValueOpt(unsigned InitVal) {
+      assert(!(InitVal & ~Mask));
+      Val = InitVal;
+    }
+
+    bool hasValue() const { return !(Val & None); }
+
+    operator uint32_t() const { return Val; }
+  };
+
+  ValueOpt Executed;
+  ValueOpt Skipped; /// May be None.
+
+  /// Initialized with Skipped=None.
+  CounterPair(unsigned Val) : Executed(Val) {}
+
+  // FIXME: Should work with {None, None}
+  CounterPair() : Executed(0) {}
 };
 
 struct OrderGlobalInitsOrStermFinalizers {
@@ -603,6 +648,9 @@ private:
   /// void @llvm.lifetime.end(i64 %size, i8* nocapture <ptr>)
   llvm::Function *LifetimeEndFn = nullptr;
 
+  /// void @llvm.fake.use(...)
+  llvm::Function *FakeUseFn = nullptr;
+
   std::unique_ptr<SanitizerMetadata> SanitizerMD;
 
   llvm::MapVector<const Decl *, bool> DeferredEmptyCoverageMappingDecls;
@@ -629,6 +677,13 @@ private:
   std::optional<PointerAuthQualifier>
   computeVTPointerAuthentication(const CXXRecordDecl *ThisClass);
 
+  AtomicOptions AtomicOpts;
+
+  // A set of functions which should be hot-patched; see
+  // -fms-hotpatch-functions-file (and -list). This will nearly always be empty.
+  // The list is sorted for binary-searching.
+  std::vector<std::string> MSHotPatchFunctions;
+
 public:
   CodeGenModule(ASTContext &C, IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                 const HeaderSearchOptions &headersearchopts,
@@ -643,6 +698,12 @@ public:
 
   /// Finalize LLVM code generation.
   void Release();
+
+  /// Get the current Atomic options.
+  AtomicOptions getAtomicOpts() { return AtomicOpts; }
+
+  /// Set the current Atomic options.
+  void setAtomicOpts(AtomicOptions AO) { AtomicOpts = AO; }
 
   /// Return true if we should emit location information for expressions.
   bool getExpressionLocationsEnabled() const;
@@ -1018,9 +1079,8 @@ public:
 
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool ForEH = false) {
-    return (ForEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
-           !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
-             (getTriple().isNVPTX() || getTriple().isAMDGPU()));
+    return (ForEH || getLangOpts().RTTI) &&
+           (!getLangOpts().isTargetDevice() || !getTriple().isGPU());
   }
 
   /// Get the address of the RTTI descriptor for the given type.
@@ -1126,9 +1186,8 @@ public:
   ///
   /// \param GlobalName If provided, the name to use for the global (if one is
   /// created).
-  ConstantAddress
-  GetAddrOfConstantCString(const std::string &Str,
-                           const char *GlobalName = nullptr);
+  ConstantAddress GetAddrOfConstantCString(const std::string &Str,
+                                           StringRef GlobalName = ".str");
 
   /// Returns a pointer to a constant global variable for the given file-scope
   /// compound literal expression.
@@ -1181,6 +1240,8 @@ public:
                                         unsigned BuiltinID);
 
   llvm::Function *getIntrinsic(unsigned IID, ArrayRef<llvm::Type *> Tys = {});
+
+  void AddCXXGlobalInit(llvm::Function *F) { CXXGlobalInits.push_back(F); }
 
   /// Emit code for a single top level declaration.
   void EmitTopLevelDecl(Decl *D);
@@ -1280,6 +1341,7 @@ public:
 
   llvm::Function *getLLVMLifetimeStartFn();
   llvm::Function *getLLVMLifetimeEndFn();
+  llvm::Function *getLLVMFakeUseFn();
 
   // Make sure that this type is translated.
   void UpdateCompletedType(const TagDecl *TD);
@@ -1485,6 +1547,7 @@ public:
   void EmitGlobal(GlobalDecl D);
 
   bool TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D);
+  void EmitDefinitionAsAlias(GlobalDecl Alias, GlobalDecl Target);
 
   llvm::GlobalValue *GetGlobalValue(StringRef Ref);
 
@@ -1509,6 +1572,13 @@ public:
   /// Emit a code for declare mapper construct.
   void EmitOMPDeclareMapper(const OMPDeclareMapperDecl *D,
                             CodeGenFunction *CGF = nullptr);
+
+  // Emit code for the OpenACC Declare declaration.
+  void EmitOpenACCDeclare(const OpenACCDeclareDecl *D,
+                          CodeGenFunction *CGF = nullptr);
+  // Emit code for the OpenACC Routine declaration.
+  void EmitOpenACCRoutine(const OpenACCRoutineDecl *D,
+                          CodeGenFunction *CGF = nullptr);
 
   /// Emit a code for requires directive.
   /// \param D Requires declaration
@@ -1552,7 +1622,10 @@ public:
   llvm::ConstantInt *CreateCrossDsoCfiTypeId(llvm::Metadata *MD);
 
   /// Generate a KCFI type identifier for T.
-  llvm::ConstantInt *CreateKCFITypeId(QualType T);
+  llvm::ConstantInt *CreateKCFITypeId(QualType T, StringRef Salt);
+
+  /// Create a metadata identifier for the given function type.
+  llvm::Metadata *CreateMetadataIdentifierForFnType(QualType T);
 
   /// Create a metadata identifier for the given type. This may either be an
   /// MDString (for external identifiers) or a distinct unnamed MDNode (for
@@ -1569,8 +1642,15 @@ public:
   llvm::Metadata *CreateMetadataIdentifierGeneralized(QualType T);
 
   /// Create and attach type metadata to the given function.
-  void CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
+  void createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
                                           llvm::Function *F);
+
+  /// Create and attach type metadata if the function is a potential indirect
+  /// call target to support call graph section.
+  void createIndirectFunctionTypeMD(const FunctionDecl *FD, llvm::Function *F);
+
+  /// Create and attach type metadata to the given call.
+  void createCalleeTypeMetadataForIcall(const QualType &QT, llvm::CallBase *CB);
 
   /// Set type metadata to the given function.
   void setKCFIType(const FunctionDecl *FD, llvm::Function *F);
@@ -1746,6 +1826,20 @@ public:
     return !getLangOpts().CPlusPlus;
   }
 
+  // Helper to get the alignment for a variable.
+  unsigned getVtableGlobalVarAlignment(const VarDecl *D = nullptr) {
+    LangAS AS = GetGlobalVarAddressSpace(D);
+    unsigned PAlign = getItaniumVTableContext().isRelativeLayout()
+                          ? 32
+                          : getTarget().getPointerAlign(AS);
+    return PAlign;
+  }
+
+  /// Helper function to construct a TrapReasonBuilder
+  TrapReasonBuilder BuildTrapReason(unsigned DiagID, TrapReason &TR) {
+    return TrapReasonBuilder(&getDiags(), DiagID, TR);
+  }
+
 private:
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;
 
@@ -1764,6 +1858,15 @@ private:
   // will be for an ifunc (llvm::GlobalIFunc) if the current target supports
   // that feature and for a regular function (llvm::GlobalValue) otherwise.
   llvm::Constant *GetOrCreateMultiVersionResolver(GlobalDecl GD);
+
+  // Set attributes to a resolver function generated by Clang.
+  // GD is either the cpu_dispatch declaration or an arbitrarily chosen
+  // function declaration that triggered the implicit generation of this
+  // resolver function.
+  //
+  /// NOTE: This should only be called for definitions.
+  void setMultiVersionResolverAttributes(llvm::Function *Resolver,
+                                         GlobalDecl GD);
 
   // In scenarios where a function is not known to be a multiversion function
   // until a later declaration, it is sometimes necessary to change the
@@ -1788,8 +1891,6 @@ private:
   void EmitMultiVersionFunctionDefinition(GlobalDecl GD, llvm::GlobalValue *GV);
 
   void EmitGlobalVarDefinition(const VarDecl *D, bool IsTentative = false);
-  void EmitExternalVarDeclaration(const VarDecl *D);
-  void EmitExternalFunctionDeclaration(const FunctionDecl *D);
   void EmitAliasDefinition(GlobalDecl GD);
   void emitIFuncDefinition(GlobalDecl GD);
   void emitCPUDispatchDefinition(GlobalDecl GD);
@@ -1907,6 +2008,11 @@ private:
   /// Emit the llvm.gcov metadata used to tell LLVM where to emit the .gcno and
   /// .gcda files in a way that persists in .bc files.
   void EmitCoverageFile();
+
+  /// Given a sycl_kernel_entry_point attributed function, emit the
+  /// corresponding SYCL kernel caller offload entry point function.
+  void EmitSYCLKernelCaller(const FunctionDecl *KernelEntryPointFn,
+                            ASTContext &Ctx);
 
   /// Determine whether the definition must be emitted; if this returns \c
   /// false, the definition can be emitted lazily if it's used.

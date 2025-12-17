@@ -775,7 +775,6 @@ define <2 x i32> @test_vdup_lane_s32(<2 x i32> %v1) #0 {
 define <16 x i8> @test_vdupq_lane_s8(<8 x i8> %v1) #0 {
 ; CHECK-LABEL: test_vdupq_lane_s8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    @ kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    vdup.8 q0, d0[5]
 ; CHECK-NEXT:    bx lr
   %shuffle = shufflevector <8 x i8> %v1, <8 x i8> undef, <16 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
@@ -785,7 +784,6 @@ define <16 x i8> @test_vdupq_lane_s8(<8 x i8> %v1) #0 {
 define <8 x i16> @test_vdupq_lane_s16(<4 x i16> %v1) #0 {
 ; CHECK-LABEL: test_vdupq_lane_s16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    @ kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    vdup.16 q0, d0[2]
 ; CHECK-NEXT:    bx lr
   %shuffle = shufflevector <4 x i16> %v1, <4 x i16> undef, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
@@ -795,7 +793,6 @@ define <8 x i16> @test_vdupq_lane_s16(<4 x i16> %v1) #0 {
 define <4 x i32> @test_vdupq_lane_s32(<2 x i32> %v1) #0 {
 ; CHECK-LABEL: test_vdupq_lane_s32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    @ kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    vdup.32 q0, d0[1]
 ; CHECK-NEXT:    bx lr
   %shuffle = shufflevector <2 x i32> %v1, <2 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>

@@ -7,7 +7,7 @@
 
 define double @fmul_double_4_factors_seq(ptr nocapture noundef readonly %x) {
 ; CHECK-LABEL: define double @fmul_double_4_factors_seq(
-; CHECK-SAME: ptr nocapture noundef readonly [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr noundef readonly captures(none) [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[X]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nsz arcp contract afn double @llvm.vector.reduce.fmul.v4f64(double 1.000000e+00, <4 x double> [[TMP0]])
@@ -29,7 +29,7 @@ entry:
 
 define double @fmul_double_8_factors_nonseq(ptr nocapture noundef readonly %x) {
 ; CHECK-LABEL: define double @fmul_double_8_factors_nonseq(
-; CHECK-SAME: ptr nocapture noundef readonly [[X:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noundef readonly captures(none) [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[X]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds double, ptr [[X]], i64 2
@@ -85,7 +85,7 @@ entry:
 
 define float @fmul_float_16_factors_nonseq(float noundef %m, ptr nocapture noundef readonly %x) {
 ; CHECK-LABEL: define float @fmul_float_16_factors_nonseq(
-; CHECK-SAME: float noundef [[M:%.*]], ptr nocapture noundef readonly [[X:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: float noundef [[M:%.*]], ptr noundef readonly captures(none) [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[X]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 2

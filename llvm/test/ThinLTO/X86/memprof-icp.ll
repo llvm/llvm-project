@@ -69,9 +69,10 @@
 
 ; RUN: split-file %s %t
 
-;; For now explicitly turn on this handling, which is off by default.
-; RUN: opt -thinlto-bc %t/main.ll -enable-memprof-indirect-call-support=true >%t/main.o
-; RUN: opt -thinlto-bc %t/foo.ll -enable-memprof-indirect-call-support=true >%t/foo.o
+; RUN: opt -thinlto-bc %t/main.ll >%t/main.o
+;; Check that -module-summary-max-indirect-edges correctly overrides
+;; -icp-max-prom with a higher max when building summary.
+; RUN: opt -thinlto-bc -icp-max-prom=1 -module-summary-max-indirect-edges=2 %t/foo.ll >%t/foo.o
 
 ;; Check that we get the synthesized callsite records. There should be 2, one
 ;; for each profiled target in the VP metadata. They will have the same stackIds
@@ -83,12 +84,14 @@
 ;; -enable-memprof-indirect-call-support flag is false.
 ; RUN: opt -thinlto-bc %t/foo.ll -enable-memprof-indirect-call-support=false >%t/foo.noicp.o
 ; RUN: llvm-dis %t/foo.noicp.o -o - | FileCheck %s --implicit-check-not "stackIds: (16345663650247127235)"
-;; Currently this should be off by default as well.
-; RUN: opt -thinlto-bc %t/foo.ll -o - | llvm-dis -o - | FileCheck %s --implicit-check-not "stackIds: (16345663650247127235)"
 
 ;; First perform in-process ThinLTO
 ; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \
 ; RUN:	-enable-memprof-indirect-call-support=true \
+;; Check that -module-summary-max-indirect-edges correctly overrides
+;; -icp-max-prom with a higher max when performing memprof ICP.
+; RUN:	-icp-max-prom=1 \
+; RUN:	-module-summary-max-indirect-edges=2 \
 ; RUN:  -supports-hot-cold-new \
 ; RUN:  -r=%t/foo.o,_Z3fooR2B0j,plx \
 ; RUN:  -r=%t/foo.o,_ZN2B03barEj.abc,plx \
@@ -232,6 +235,7 @@
 ; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \
 ; RUN:	-import-instr-limit=0 \
 ; RUN:	-memprof-require-definition-for-promotion \
+; RUN:	-icp-allow-decls=false \
 ; RUN:	-enable-memprof-indirect-call-support=true \
 ; RUN:  -supports-hot-cold-new \
 ; RUN:  -r=%t/foo.o,_Z3fooR2B0j,plx \

@@ -24,11 +24,13 @@
 using namespace lldb;
 using namespace lldb_private;
 
-BreakpointResolverName::BreakpointResolverName(const BreakpointSP &bkpt,
-    const char *name_cstr, FunctionNameType name_type_mask,
-    LanguageType language, Breakpoint::MatchType type, lldb::addr_t offset,
+BreakpointResolverName::BreakpointResolverName(
+    const BreakpointSP &bkpt, const char *name_cstr,
+    FunctionNameType name_type_mask, LanguageType language,
+    Breakpoint::MatchType type, lldb::addr_t offset, bool offset_is_insn_count,
     bool skip_prologue)
-    : BreakpointResolver(bkpt, BreakpointResolver::NameResolver, offset),
+    : BreakpointResolver(bkpt, BreakpointResolver::NameResolver, offset,
+                         offset_is_insn_count),
       m_match_type(type), m_language(language), m_skip_prologue(skip_prologue) {
   if (m_match_type == Breakpoint::Regexp) {
     m_regex = RegularExpression(name_cstr);
@@ -81,7 +83,7 @@ BreakpointResolverName::BreakpointResolverName(const BreakpointSP &bkpt,
 BreakpointResolverName::BreakpointResolverName(
     const BreakpointResolverName &rhs)
     : BreakpointResolver(rhs.GetBreakpoint(), BreakpointResolver::NameResolver,
-                         rhs.GetOffset()),
+                         rhs.GetOffset(), rhs.GetOffsetIsInsnCount()),
       m_lookups(rhs.m_lookups), m_class_name(rhs.m_class_name),
       m_regex(rhs.m_regex), m_match_type(rhs.m_match_type),
       m_language(rhs.m_language), m_skip_prologue(rhs.m_skip_prologue) {}
@@ -124,14 +126,14 @@ BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
     return std::make_shared<BreakpointResolverName>(
         nullptr, RegularExpression(regex_text), language, offset,
         skip_prologue);
-  } else {
-    StructuredData::Array *names_array;
-    success = options_dict.GetValueForKeyAsArray(
-        GetKey(OptionNames::SymbolNameArray), names_array);
-    if (!success) {
-      error = Status::FromErrorString("BRN::CFSD: Missing symbol names entry.");
-      return nullptr;
-    }
+  }
+  StructuredData::Array *names_array;
+  success = options_dict.GetValueForKeyAsArray(
+      GetKey(OptionNames::SymbolNameArray), names_array);
+  if (!success) {
+    error = Status::FromErrorString("BRN::CFSD: Missing symbol names entry.");
+    return nullptr;
+  }
     StructuredData::Array *names_mask_array;
     success = options_dict.GetValueForKeyAsArray(
         GetKey(OptionNames::NameMaskArray), names_mask_array);
@@ -177,12 +179,12 @@ BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
     std::shared_ptr<BreakpointResolverName> resolver_sp =
         std::make_shared<BreakpointResolverName>(
             nullptr, names[0].c_str(), name_masks[0], language,
-            Breakpoint::MatchType::Exact, offset, skip_prologue);
+            Breakpoint::MatchType::Exact, offset,
+            /*offset_is_insn_count = */ false, skip_prologue);
     for (size_t i = 1; i < num_elem; i++) {
       resolver_sp->AddNameLookup(ConstString(names[i]), name_masks[i]);
     }
     return resolver_sp;
-  }
 }
 
 StructuredData::ObjectSP BreakpointResolverName::SerializeToStructuredData() {
@@ -196,10 +198,10 @@ StructuredData::ObjectSP BreakpointResolverName::SerializeToStructuredData() {
     StructuredData::ArraySP names_sp(new StructuredData::Array());
     StructuredData::ArraySP name_masks_sp(new StructuredData::Array());
     for (auto lookup : m_lookups) {
-      names_sp->AddItem(StructuredData::StringSP(
-          new StructuredData::String(lookup.GetName().GetStringRef())));
-      name_masks_sp->AddItem(StructuredData::UnsignedIntegerSP(
-          new StructuredData::UnsignedInteger(lookup.GetNameTypeMask())));
+      names_sp->AddItem(std::make_shared<StructuredData::String>(
+          lookup.GetName().GetStringRef()));
+      name_masks_sp->AddItem(std::make_shared<StructuredData::UnsignedInteger>(
+          lookup.GetNameTypeMask()));
     }
     options_dict_sp->AddItem(GetKey(OptionNames::SymbolNameArray), names_sp);
     options_dict_sp->AddItem(GetKey(OptionNames::NameMaskArray), name_masks_sp);
@@ -216,22 +218,23 @@ StructuredData::ObjectSP BreakpointResolverName::SerializeToStructuredData() {
 
 void BreakpointResolverName::AddNameLookup(ConstString name,
                                            FunctionNameType name_type_mask) {
-
-  Module::LookupInfo lookup(name, name_type_mask, m_language);
-  m_lookups.emplace_back(lookup);
+  std::vector<Module::LookupInfo> infos =
+      Module::LookupInfo::MakeLookupInfos(name, name_type_mask, m_language);
+  llvm::append_range(m_lookups, infos);
 
   auto add_variant_funcs = [&](Language *lang) {
     for (Language::MethodNameVariant variant :
          lang->GetMethodNameVariants(name)) {
       // FIXME: Should we be adding variants that aren't of type Full?
       if (variant.GetType() & lldb::eFunctionNameTypeFull) {
-        Module::LookupInfo variant_lookup(name, variant.GetType(),
-                                          lang->GetLanguageType());
-        variant_lookup.SetLookupName(variant.GetName());
-        m_lookups.emplace_back(variant_lookup);
+        std::vector<Module::LookupInfo> variant_lookups =
+            Module::LookupInfo::MakeLookupInfos(name, variant.GetType(),
+                                                lang->GetLanguageType(),
+                                                variant.GetName());
+        llvm::append_range(m_lookups, variant_lookups);
       }
     }
-    return true;
+    return IterationAction::Continue;
   };
 
   if (Language *lang = Language::FindPlugin(m_language)) {
@@ -339,7 +342,7 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
       if (!sc.block->GetStartAddress(break_addr))
         break_addr.Clear();
     } else if (sc.function) {
-      break_addr = sc.function->GetAddressRange().GetBaseAddress();
+      break_addr = sc.function->GetAddress();
       if (m_skip_prologue && break_addr.IsValid()) {
         const uint32_t prologue_byte_size = sc.function->GetPrologueByteSize();
         if (prologue_byte_size)
@@ -399,14 +402,22 @@ void BreakpointResolverName::GetDescription(Stream *s) {
   if (m_match_type == Breakpoint::Regexp)
     s->Printf("regex = '%s'", m_regex.GetText().str().c_str());
   else {
-    size_t num_names = m_lookups.size();
-    if (num_names == 1)
-      s->Printf("name = '%s'", m_lookups[0].GetName().GetCString());
+    // Since there may be many lookups objects for the same name breakpoint (one
+    // per language available), unique them by name, and operate on those unique
+    // names.
+    std::vector<ConstString> unique_lookups;
+    for (auto &lookup : m_lookups) {
+      if (!llvm::is_contained(unique_lookups, lookup.GetName()))
+        unique_lookups.push_back(lookup.GetName());
+    }
+    if (unique_lookups.size() == 1)
+      s->Printf("name = '%s'", unique_lookups[0].GetCString());
     else {
+      size_t num_names = unique_lookups.size();
       s->Printf("names = {");
       for (size_t i = 0; i < num_names; i++) {
         s->Printf("%s'%s'", (i == 0 ? "" : ", "),
-                  m_lookups[i].GetName().GetCString());
+                  unique_lookups[i].GetCString());
       }
       s->Printf("}");
     }
