@@ -3424,7 +3424,7 @@ mlir::LogicalResult CIRToLLVMResumeFlatOpLowering::matchAndRewrite(
   // %lpad.val = insertvalue { ptr, i32 } poison, ptr %exception_ptr, 0
   // %lpad.val2 = insertvalue { ptr, i32 } %lpad.val, i32 %selector, 1
   // resume { ptr, i32 } %lpad.val2
-  auto llvmLandingPadStructTy = getLLVMLandingPadStructTy(rewriter);
+  mlir::Type llvmLandingPadStructTy = getLLVMLandingPadStructTy(rewriter);
   mlir::Value poison = mlir::LLVM::PoisonOp::create(rewriter, op.getLoc(),
                                                     llvmLandingPadStructTy);
 
