@@ -75,7 +75,7 @@ static Value *getMaskVecValue(CodeGenFunction &CGF, Value *Mask,
   return MaskVec;
 }
 
-// Emit rounding for the value X according to the rounding RoundingControl.
+/// Emit rounding for the value \p X according to the rounding \p RoundingControl based on bits 0 and 1.
 static Value *emitX86RoundImmediate(CodeGenFunction &CGF, Value *X,
                            unsigned RoundingControl) {
   unsigned RoundingMask = 0b11;
