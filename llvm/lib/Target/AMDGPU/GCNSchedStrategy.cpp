@@ -91,6 +91,11 @@ static cl::opt<bool> PrintMaxRPRegUsageAfterScheduler(
     cl::init(false));
 #endif
 
+static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
+    "amdgpu-disable-rewrite-mfma-form-sched-stage", cl::Hidden,
+    cl::desc("Disable rewrie mfma rewrite scheduling stage."),
+    cl::init(false));
+
 const unsigned ScheduleMetrics::ScaleFactor = 100;
 
 GCNSchedStrategy::GCNSchedStrategy(const MachineSchedContext *C)
@@ -1287,6 +1292,9 @@ void RewriteMFMAFormStage::findReachingUses(
 }
 
 bool RewriteMFMAFormStage::initGCNSchedStage() {
+  if (DisableRewriteMFMAFormSchedStage)
+    return false;
+
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   if (!ST.hasGFX90AInsts() || MFI.getMinWavesPerEU() > 1)
     return false;
@@ -2025,10 +2033,13 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
     const std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands,
     const DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
     const SmallPtrSetImpl<MachineInstr *> &CopyForDef) {
-  MachineBlockFrequencyInfo *MBFI = DAG.MBFI;
+  MachineBranchProbabilityInfo MBPI;
+  MachineBlockFrequencyInfo MBFI;
+
+  MBFI.calculate(MF, MBPI, *DAG.MLI);
   int64_t BestSpillCost = 0;
   int64_t Cost = 0;
-  uint64_t EntryFreq = MBFI->getEntryFreq().getFrequency();
+  uint64_t EntryFreq = MBFI.getEntryFreq().getFrequency();
 
   for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
     if (!RegionsWithExcessArchVGPR[Region])
@@ -2045,7 +2056,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
     unsigned SpillCostAfter = PressureAfter.getVGPRSpills(MF);
 
     uint64_t BlockFreq =
-        MBFI->getBlockFreq(DAG.Regions[Region].first->getParent())
+        MBFI.getBlockFreq(DAG.Regions[Region].first->getParent())
             .getFrequency();
 
     bool RelativeFreqIsDenom = EntryFreq > BlockFreq;
@@ -2086,7 +2097,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
     auto DefReg = DefMI->getOperand(0).getReg();
     uint64_t DefFreq =
         EntryFreq
-            ? MBFI->getBlockFreq(DefMI->getParent()).getFrequency() / EntryFreq
+            ? MBFI.getBlockFreq(DefMI->getParent()).getFrequency() / EntryFreq
             : 1;
 
     const TargetRegisterClass *RC = DAG.MRI.getRegClass(DefReg);
@@ -2096,7 +2107,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
   // Account for CopyForUse copies in each block that the register is used.
   for (auto &[UseBlock, UseRegs] : CopyForUse) {
     uint64_t UseFreq =
-        EntryFreq ? MBFI->getBlockFreq(UseBlock).getFrequency() / EntryFreq : 1;
+        EntryFreq ? MBFI.getBlockFreq(UseBlock).getFrequency() / EntryFreq : 1;
 
     for (Register UseReg : UseRegs) {
       const TargetRegisterClass *RC = DAG.MRI.getRegClass(UseReg);
@@ -2350,7 +2361,7 @@ bool RewriteMFMAFormStage::rewrite(
       // Since we know this use has only one reaching def, we can replace the
       // use reg.
       RU->setReg(NewUseReg);
-      // Track the copy source operand for replacement.
+      // Track the copy source operand for r eplacement.
       DstRegSet.insert(&VGPRCopy->getOperand(1));
     }
 
