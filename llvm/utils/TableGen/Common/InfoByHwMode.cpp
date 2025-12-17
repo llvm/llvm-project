@@ -18,6 +18,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <string>
 
@@ -32,10 +33,12 @@ std::string llvm::getModeName(unsigned Mode) {
 ValueTypeByHwMode::ValueTypeByHwMode(const Record *R, const CodeGenHwModes &CGH)
     : InfoByHwMode<llvm::MVT>(R) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
-  for (const HwModeSelect::PairType &P : MS.Items) {
-    auto I = Map.try_emplace(P.first, MVT(llvm::getValueType(P.second)));
-    assert(I.second && "Duplicate entry?");
-    (void)I;
+  for (auto [ModeID, VT] : MS.Items) {
+    assert(VT && VT->isSubClassOf("ValueType"));
+    if (!Map.try_emplace(ModeID, MVT(llvm::getValueType(VT))).second)
+      PrintFatalError(R->getLoc(), "duplicate ValueType entry for HwMode " +
+                                       CGH.getModeName(ModeID, true) + ": " +
+                                       VT->getName());
   }
   if (R->isSubClassOf("PtrValueType"))
     PtrAddrSpace = R->getValueAsInt("AddrSpace");
@@ -143,10 +146,12 @@ RegSizeInfoByHwMode::RegSizeInfoByHwMode(const Record *R,
                                          const CodeGenHwModes &CGH)
     : InfoByHwMode<llvm::RegSizeInfo>(R) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
-  for (const HwModeSelect::PairType &P : MS.Items) {
-    auto I = Map.try_emplace(P.first, RegSizeInfo(P.second));
-    assert(I.second && "Duplicate entry?");
-    (void)I;
+  for (auto [ModeID, RegInfo] : MS.Items) {
+    assert(RegInfo && RegInfo->isSubClassOf("RegInfo"));
+    if (!Map.try_emplace(ModeID, RegSizeInfo(RegInfo)).second)
+      PrintFatalError(R->getLoc(), "duplicate RegInfo entry for HwMode " +
+                                       CGH.getModeName(ModeID, true) + ": " +
+                                       RegInfo->getName());
   }
 }
 
@@ -198,7 +203,9 @@ RegClassByHwMode::RegClassByHwMode(const Record *R, const CodeGenHwModes &CGH,
            "Register class must subclass RegisterClass");
     const CodeGenRegisterClass *RegClass = RegBank.getRegClass(RegClassRec);
     if (!Map.try_emplace(ModeID, RegClass).second)
-      llvm_unreachable("duplicate entry");
+      PrintFatalError(R->getLoc(), "duplicate RegisterClass entry for HwMode " +
+                                       CGH.getModeName(ModeID, true) + ": " +
+                                       RegClass->getName());
   }
 }
 
@@ -211,10 +218,12 @@ SubRegRangeByHwMode::SubRegRangeByHwMode(const Record *R,
                                          const CodeGenHwModes &CGH)
     : InfoByHwMode<llvm::SubRegRange>(R) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
-  for (const HwModeSelect::PairType &P : MS.Items) {
-    auto I = Map.try_emplace(P.first, SubRegRange(P.second));
-    assert(I.second && "Duplicate entry?");
-    (void)I;
+  for (auto [ModeID, Range] : MS.Items) {
+    assert(Range && Range->isSubClassOf("SubRegRange"));
+    if (!Map.try_emplace(ModeID, SubRegRange(Range)).second)
+      PrintFatalError(R->getLoc(), "duplicate SubRegRange entry for HwMode " +
+                                       CGH.getModeName(ModeID, true) + ": " +
+                                       Range->getName());
   }
 }
 
@@ -222,12 +231,14 @@ EncodingInfoByHwMode::EncodingInfoByHwMode(const Record *R,
                                            const CodeGenHwModes &CGH)
     : InfoByHwMode<const llvm::Record *>(R) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
-  for (const HwModeSelect::PairType &P : MS.Items) {
-    assert(P.second && P.second->isSubClassOf("InstructionEncoding") &&
+  for (auto [ModeID, Encoding] : MS.Items) {
+    assert(Encoding && Encoding->isSubClassOf("InstructionEncoding") &&
            "Encoding must subclass InstructionEncoding");
-    auto I = Map.try_emplace(P.first, P.second);
-    assert(I.second && "Duplicate entry?");
-    (void)I;
+    if (!Map.try_emplace(ModeID, Encoding).second)
+      PrintFatalError(R->getLoc(),
+                      "duplicate InstructionEncoding entry for HwMode " +
+                          CGH.getModeName(ModeID, true) + ": " +
+                          Encoding->getName());
   }
 }
 

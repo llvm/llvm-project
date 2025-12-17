@@ -156,6 +156,22 @@ constexpr K firstbithigh_impl(T X) {
   return FBH;
 }
 
+template <typename T> constexpr T ddx_impl(T input) {
+#if (__has_builtin(__builtin_spirv_ddx))
+  return __builtin_spirv_ddx(input);
+#else
+  return __builtin_hlsl_elementwise_ddx_coarse(input);
+#endif
+}
+
+template <typename T> constexpr T ddy_impl(T input) {
+#if (__has_builtin(__builtin_spirv_ddy))
+  return __builtin_spirv_ddy(input);
+#else
+  return __builtin_hlsl_elementwise_ddy_coarse(input);
+#endif
+}
+
 template <typename T> constexpr T fwidth_impl(T input) {
 #if (__has_builtin(__builtin_spirv_fwidth))
   return __builtin_spirv_fwidth(input);
