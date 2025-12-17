@@ -846,7 +846,7 @@ struct LoadOfToBuffer : public OpRewritePattern<memref::LoadOp> {
   LogicalResult matchAndRewrite(memref::LoadOp load,
                                 PatternRewriter &rewriter) const override {
     auto toBuffer = load.getMemref().getDefiningOp<ToBufferOp>();
-    if (!toBuffer)
+    if (!toBuffer || !toBuffer.getReadOnly())
       return failure();
 
     rewriter.replaceOpWithNewOp<tensor::ExtractOp>(load, toBuffer.getTensor(),
