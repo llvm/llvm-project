@@ -75,9 +75,10 @@ static Value *getMaskVecValue(CodeGenFunction &CGF, Value *Mask,
   return MaskVec;
 }
 
-/// Emit rounding for the value \p X according to the rounding \p RoundingControl based on bits 0 and 1.
+/// Emit rounding for the value \p X according to the rounding \p
+/// RoundingControl based on bits 0 and 1.
 static Value *emitX86RoundImmediate(CodeGenFunction &CGF, Value *X,
-                           unsigned RoundingControl) {
+                                    unsigned RoundingControl) {
   unsigned RoundingMask = 0b11;
   unsigned RoundingMode = RoundingControl & RoundingMask;
 
@@ -904,15 +905,24 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     unsigned UseMXCSR = MXCSRMask & M;
 
     if (UseMXCSR) {
-      
+
       Intrinsic::ID ID = Intrinsic::not_intrinsic;
 
       switch (BuiltinID) {
-        case X86::BI__builtin_ia32_roundps:     ID = Intrinsic::x86_sse41_round_ps; break;
-        case X86::BI__builtin_ia32_roundps256:  ID = Intrinsic::x86_avx_round_ps_256; break;
-        case X86::BI__builtin_ia32_roundpd:     ID = Intrinsic::x86_sse41_round_pd; break;
-        case X86::BI__builtin_ia32_roundpd256:  ID = Intrinsic::x86_avx_round_pd_256; break;
-        default: llvm_unreachable("must return from switch");
+      case X86::BI__builtin_ia32_roundps:
+        ID = Intrinsic::x86_sse41_round_ps;
+        break;
+      case X86::BI__builtin_ia32_roundps256:
+        ID = Intrinsic::x86_avx_round_ps_256;
+        break;
+      case X86::BI__builtin_ia32_roundpd:
+        ID = Intrinsic::x86_sse41_round_pd;
+        break;
+      case X86::BI__builtin_ia32_roundpd256:
+        ID = Intrinsic::x86_avx_round_pd_256;
+        break;
+      default:
+        llvm_unreachable("must return from switch");
       }
 
       Function *F = CGM.getIntrinsic(ID);
@@ -932,9 +942,14 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
       Intrinsic::ID ID = Intrinsic::not_intrinsic;
 
       switch (BuiltinID) {
-        case X86::BI__builtin_ia32_roundss:    ID = Intrinsic::x86_sse41_round_ss; break;
-        case X86::BI__builtin_ia32_roundsd:    ID = Intrinsic::x86_sse41_round_sd; break;
-        default: llvm_unreachable("must return from switch");
+      case X86::BI__builtin_ia32_roundss:
+        ID = Intrinsic::x86_sse41_round_ss;
+        break;
+      case X86::BI__builtin_ia32_roundsd:
+        ID = Intrinsic::x86_sse41_round_sd;
+        break;
+      default:
+        llvm_unreachable("must return from switch");
       }
 
       Function *F = CGM.getIntrinsic(ID);
