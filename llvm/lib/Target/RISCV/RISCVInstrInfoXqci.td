@@ -537,7 +537,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCommutable = 1 in
 class QCISELECTIICC<bits<3> funct3, string opcodestr>
     : RVInstR4<0b00, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
                (ins GPRNoX0:$rd, GPRNoX0:$rs1, simm5:$simm1, simm5:$simm2),
-               opcodestr, "$rd, $rs1, $simm1, $simm2"> {
+               opcodestr, "$rd, $rs1, $simm1, $simm2">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
   bits<5> simm1;
   bits<5> simm2;
@@ -550,7 +551,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCommutable = 1 in
 class QCISELECTICC<bits<3> funct3, string opcodestr>
     : RVInstR4<0b01, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
                (ins GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, simm5:$simm2),
-               opcodestr, "$rd, $rs1, $rs2, $simm2"> {
+               opcodestr, "$rd, $rs1, $rs2, $simm2">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
   bits<5> simm2;
 
@@ -561,7 +563,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCISELECTCCI<bits<3> funct3, string opcodestr>
     : RVInstR4<0b10, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
                (ins GPRNoX0:$rd, simm5:$imm, GPRNoX0:$rs2, GPRNoX0:$rs3),
-               opcodestr, "$rd, $imm, $rs2, $rs3"> {
+               opcodestr, "$rd, $imm, $rs2, $rs3">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
   bits<5> imm;
 
@@ -572,7 +575,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCISELECTICCI<bits<3> funct3, string opcodestr>
     : RVInstR4<0b11, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
                (ins GPRNoX0:$rd, simm5:$imm, GPRNoX0:$rs2, simm5:$simm2),
-               opcodestr, "$rd, $imm, $rs2, $simm2"> {
+               opcodestr, "$rd, $imm, $rs2, $simm2">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
   bits<5> imm;
   bits<5> simm2;
@@ -617,7 +621,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCommutable = 1 in
 class QCIMVCC<bits<3> funct3, string opcodestr>
     : RVInstR4<0b00, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
                (ins GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, GPRNoX0:$rs3),
-               opcodestr, "$rd, $rs1, $rs2, $rs3"> {
+               opcodestr, "$rd, $rs1, $rs2, $rs3">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
 }
 
@@ -625,7 +630,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCommutable = 1 in
 class QCIMVCCI<bits<3> funct3, string opcodestr, DAGOperand immType>
     : RVInstR4<0b10, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
                (ins GPRNoX0:$rd, GPRNoX0:$rs1, immType:$imm, GPRNoX0:$rs3),
-               opcodestr, "$rd, $rs1, $imm, $rs3"> {
+               opcodestr, "$rd, $rs1, $imm, $rs3">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]> {
   bits<5> imm;
   
   let Constraints = "$rd = $rd_wb";
@@ -961,7 +967,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_BREV32 : QCIRVInstI<0b0110, "qc.brev32">;
   def QC_C_BEXTI  : QCI_RVInst16CB_BM<0b00, "qc.c.bexti">,
                     Sched<[WriteIALU, ReadIALU]>;
-  def QC_C_BSETI  : QCI_RVInst16CB_BM<0b01, "qc.c.bseti">, Sched<[WriteIALU]>;
+  def QC_C_BSETI  : QCI_RVInst16CB_BM<0b01, "qc.c.bseti">,
+                    Sched<[WriteIALU, ReadIALU]>;
   def QC_C_EXTU : RVInst16CI<0b000, 0b10, (outs GPRNoX0:$rd_wb),
                              (ins GPRNoX0:$rd, uimm5ge6_plus1:$width),
                              "qc.c.extu", "$rd, $width">,
@@ -1011,22 +1018,14 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 } // Predicates = [HasVendorXqciac, IsRV32]
 
 let Predicates = [HasVendorXqcics, IsRV32] in {
-  def QC_SELECTIIEQ : QCISELECTIICC <0b010, "qc.selectiieq">,
-                      Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-  def QC_SELECTIINE : QCISELECTIICC <0b011, "qc.selectiine">,
-                      Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-  def QC_SELECTIEQ  : QCISELECTICC  <0b010, "qc.selectieq">,
-                      Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
-  def QC_SELECTINE  : QCISELECTICC  <0b011, "qc.selectine">,
-                      Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
-  def QC_SELECTEQI  : QCISELECTCCI  <0b010, "qc.selecteqi">,
-                      Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
-  def QC_SELECTNEI  : QCISELECTCCI  <0b011, "qc.selectnei">,
-                      Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
-  def QC_SELECTIEQI : QCISELECTICCI <0b010, "qc.selectieqi">,
-                      Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-  def QC_SELECTINEI : QCISELECTICCI <0b011, "qc.selectinei">,
-                      Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+  def QC_SELECTIIEQ : QCISELECTIICC <0b010, "qc.selectiieq">;
+  def QC_SELECTIINE : QCISELECTIICC <0b011, "qc.selectiine">;
+  def QC_SELECTIEQ  : QCISELECTICC  <0b010, "qc.selectieq">;
+  def QC_SELECTINE  : QCISELECTICC  <0b011, "qc.selectine">;
+  def QC_SELECTEQI  : QCISELECTCCI  <0b010, "qc.selecteqi">;
+  def QC_SELECTNEI  : QCISELECTCCI  <0b011, "qc.selectnei">;
+  def QC_SELECTIEQI : QCISELECTICCI <0b010, "qc.selectieqi">;
+  def QC_SELECTINEI : QCISELECTICCI <0b011, "qc.selectinei">;
 } // Predicates = [HasVendorXqcics, IsRV32]
 
 let Predicates = [HasVendorXqcilsm, IsRV32] in {
@@ -1079,31 +1078,19 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
     let Inst{6-5} = 0b00;
   }
 
-  def QC_MVEQ    : QCIMVCC<0b000, "qc.mveq">,
-                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
-  def QC_MVNE    : QCIMVCC<0b001, "qc.mvne">,
-                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
-  def QC_MVLT    : QCIMVCC<0b100, "qc.mvlt">,
-                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
-  def QC_MVGE    : QCIMVCC<0b101, "qc.mvge">,
-                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
-  def QC_MVLTU   : QCIMVCC<0b110, "qc.mvltu">,
-                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
-  def QC_MVGEU   : QCIMVCC<0b111, "qc.mvgeu">,
-                   Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]>;
+  def QC_MVEQ    : QCIMVCC<0b000, "qc.mveq">;
+  def QC_MVNE    : QCIMVCC<0b001, "qc.mvne">;
+  def QC_MVLT    : QCIMVCC<0b100, "qc.mvlt">;
+  def QC_MVGE    : QCIMVCC<0b101, "qc.mvge">;
+  def QC_MVLTU   : QCIMVCC<0b110, "qc.mvltu">;
+  def QC_MVGEU   : QCIMVCC<0b111, "qc.mvgeu">;
 
-  def QC_MVEQI   : QCIMVCCI<0b000, "qc.mveqi", simm5>,
-                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-  def QC_MVNEI   : QCIMVCCI<0b001, "qc.mvnei", simm5>,
-                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-  def QC_MVLTI   : QCIMVCCI<0b100, "qc.mvlti", simm5>,
-                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-  def QC_MVGEI   : QCIMVCCI<0b101, "qc.mvgei", simm5>,
-                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-  def QC_MVLTUI  : QCIMVCCI<0b110, "qc.mvltui", uimm5>,
-                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-  def QC_MVGEUI  : QCIMVCCI<0b111, "qc.mvgeui", uimm5>,
-                   Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+  def QC_MVEQI   : QCIMVCCI<0b000, "qc.mveqi", simm5>;
+  def QC_MVNEI   : QCIMVCCI<0b001, "qc.mvnei", simm5>;
+  def QC_MVLTI   : QCIMVCCI<0b100, "qc.mvlti", simm5>;
+  def QC_MVGEI   : QCIMVCCI<0b101, "qc.mvgei", simm5>;
+  def QC_MVLTUI  : QCIMVCCI<0b110, "qc.mvltui", uimm5>;
+  def QC_MVGEUI  : QCIMVCCI<0b111, "qc.mvgeui", uimm5>;
 } // Predicates = [HasVendorXqcicm, IsRV32]
 
 let Predicates = [HasVendorXqciint, IsRV32], hasSideEffects = 1 in {
