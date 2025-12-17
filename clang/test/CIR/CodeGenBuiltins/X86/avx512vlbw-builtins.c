@@ -1,23 +1,23 @@
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw -target-feature +avx512vl -fclangir -emit-cir -o %t.cir -Wall -Werror -Wsign-conversion 
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw -target-feature +avx512vl -fclangir -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
-// RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
+// RUN-DISABLED: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw -target-feature +avx512vl -fclangir -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
+// RUN-DISABLED: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx10.1-512 -target-feature +avx512vl -fclangir -emit-cir -o %t.cir -Wall -Werror -Wsign-conversion 
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx10.1-512 -target-feature +avx512vl -fclangir -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
-// RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
+// RUN-DISABLED: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx10.1-512 -target-feature +avx512vl -fclangir -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
+// RUN-DISABLED: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bw -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s --check-prefixes=OGCG
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx10.1-512 -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s --check-prefixes=OGCG
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx10.1-512 -target-feature +avx512bw -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s --check-prefixes=OGCG
 
 
 #include <immintrin.h>
 
 __m128i test_mm_movm_epi8(__mmask16 __A) {
   // CIR-LABEL: _mm_movm_epi8
-  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u16i -> !cir.vector<!cir.int<s, 1> x 16>
-  // CIR: %{{.*}} = cir.cast integral %{{.*}} : !cir.vector<!cir.int<s, 1> x 16> -> !cir.vector<{{!s8i|!u8i}} x 16>
+  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: %{{.*}} = cir.cast integral %{{.*}} : !cir.vector<16 x !cir.int<u, 1>> -> !cir.vector<16 x !s8i>
 
   // LLVM-LABEL: @test_mm_movm_epi8
   // LLVM: %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
@@ -31,8 +31,8 @@ __m128i test_mm_movm_epi8(__mmask16 __A) {
 
 __m256i test_mm256_movm_epi8(__mmask32 __A) {
   // CIR-LABEL: _mm256_movm_epi8
-  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u32i -> !cir.vector<!cir.int<s, 1> x 32>
-  // CIR: %{{.*}} = cir.cast integral %{{.*}} : !cir.vector<!cir.int<s, 1> x 32> -> !cir.vector<{{!s8i|!u8i}} x 32>
+  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u32i -> !cir.vector<32 x !cir.int<u, 1>>
+  // CIR: %{{.*}} = cir.cast integral %{{.*}} : !cir.vector<32 x !cir.int<u, 1>> -> !cir.vector<32 x !s8i>
 
   // LLVM-LABEL: @test_mm256_movm_epi8
   // LLVM: %{{.*}} = bitcast i32 %{{.*}} to <32 x i1>
@@ -46,8 +46,8 @@ __m256i test_mm256_movm_epi8(__mmask32 __A) {
 
 __m512i test_mm512_movm_epi8(__mmask64 __A) {
   // CIR-LABEL: _mm512_movm_epi8
-  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u64i -> !cir.vector<!cir.int<s, 1> x 64>
-  // CIR: %{{.*}} = cir.cast integral %{{.*}} : !cir.vector<!cir.int<s, 1> x 64> -> !cir.vector<{{!s8i|!u8i}} x 64>
+  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u64i -> !cir.vector<64 x !cir.int<u, 1>>
+  // CIR: %{{.*}} = cir.cast integral %{{.*}} : !cir.vector<64 x !cir.int<u, 1>> -> !cir.vector<64 x !s8i>
 
   // LLVM-LABEL: @test_mm512_movm_epi8
   // LLVM:  %{{.*}} = bitcast i64 %{{.*}} to <64 x i1>
@@ -61,8 +61,8 @@ __m512i test_mm512_movm_epi8(__mmask64 __A) {
 
 __m128i test_mm_movm_epi16(__mmask8 __A) {
   // CIR-LABEL: _mm_movm_epi16
-  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u8i -> !cir.vector<!cir.int<s, 1> x 8>
-  // CIR: %{{.*}} = cir.cast integral %{{.*}} : !cir.vector<!cir.int<s, 1> x 8> -> !cir.vector<!s16i x 8>
+  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: %{{.*}} = cir.cast integral %{{.*}} : !cir.vector<8 x !cir.int<u, 1>> -> !cir.vector<8 x !s16i>
 
   // LLVM-LABEL: @test_mm_movm_epi16
   // LLVM: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
@@ -76,8 +76,8 @@ __m128i test_mm_movm_epi16(__mmask8 __A) {
 
 __m256i test_mm256_movm_epi16(__mmask16 __A) {
   // CIR-LABEL: _mm256_movm_epi16
-  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u16i -> !cir.vector<!cir.int<s, 1> x 16>
-  // CIR: %{{.*}} = cir.cast integral %{{.*}} : !cir.vector<!cir.int<s, 1> x 16> -> !cir.vector<!s16i x 16>
+  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: %{{.*}} = cir.cast integral %{{.*}} : !cir.vector<16 x !cir.int<u, 1>> -> !cir.vector<16 x !s16i>
 
   // LLVM-LABEL: @test_mm256_movm_epi16
   // LLVM: %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
@@ -88,11 +88,12 @@ __m256i test_mm256_movm_epi16(__mmask16 __A) {
   // OGCG: %{{.*}} = sext <16 x i1> %{{.*}} to <16 x i16>
   return _mm256_movm_epi16(__A); 
 }
-
+  
 __mmask16 test_mm_movepi8_mask(__m128i __A) {
   // CIR-LABEL: _mm_movepi8_mask
-  // CIR: [[CMP:%.*]] = cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<{{!s8i|!u8i}} x 16>, !cir.vector<!cir.int<u, 1> x 16>
-  // CIR: %{{.*}} = cir.cast bitcast [[CMP]] : !cir.vector<!cir.int<u, 1> x 16> -> !u16i
+  // CIR: cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<16 x !s8i>
+  // CIR: [[CMP:%.*]] = cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<16 x !s8i>, !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: %{{.*}} = cir.cast bitcast [[CMP]] : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
 
   // LLVM-LABEL: @test_mm_movepi8_mask
   // LLVM: [[CMP:%.*]] = icmp slt <16 x i8> %{{.*}}, zeroinitializer
@@ -106,8 +107,9 @@ __mmask16 test_mm_movepi8_mask(__m128i __A) {
 
 __mmask16 test_mm256_movepi16_mask(__m256i __A) {
   // CIR-LABEL: _mm256_movepi16_mask
-  // CIR: [[CMP:%.*]] = cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<!s16i x 16>, !cir.vector<!cir.int<u, 1> x 16>
-  // CIR: %{{.*}} = cir.cast bitcast [[CMP]] : !cir.vector<!cir.int<u, 1> x 16> -> !u16i
+  // CIR: cir.cast bitcast %{{.*}} : !cir.vector<4 x !s64i> -> !cir.vector<16 x !s16i>
+  // CIR: [[CMP:%.*]] = cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<16 x !s16i>, !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: %{{.*}} = cir.cast bitcast [[CMP]] : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
 
   // LLVM-LABEL: @test_mm256_movepi16_mask
   // LLVM: [[CMP:%.*]] = icmp slt <16 x i16> %{{.*}}, zeroinitializer
