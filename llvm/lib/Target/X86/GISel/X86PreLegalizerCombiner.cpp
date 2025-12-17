@@ -80,7 +80,7 @@ X86PreLegalizerCombinerImpl::X86PreLegalizerCombinerImpl(
     const X86PreLegalizerCombinerImplRuleConfig &RuleConfig,
     const X86Subtarget &STI, MachineDominatorTree *MDT, const LegalizerInfo *LI)
     : Combiner(MF, CInfo, TPC, &VT, CSEInfo),
-      Helper(Observer, B, /*IsPreLegalize*/ true, &VT, MDT, LI),
+      Helper(Observer, B, /*IsPreLegalize=*/ true, &VT, MDT, LI),
       RuleConfig(RuleConfig), STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "X86GenPreLegalizeGICombiner.inc"
@@ -151,8 +151,8 @@ bool X86PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
       &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
   MachineDominatorTree *MDT =
       &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
-                     /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(),
+  CombinerInfo CInfo(/*AllowIllegalOps=*/ true, /*ShouldLegalizeIllegal=*/ false,
+                     /*LegalizerInfo=*/LI, EnableOpt, F.hasOptSize(),
                      F.hasMinSize());
   // Disable fixed-point iteration to reduce compile-time
   CInfo.MaxIterations = 1;
