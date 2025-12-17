@@ -10,11 +10,29 @@
 #define LLVM_ASMPARSER_ASMPARSERCONTEXT_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/IntervalMap.h"
 #include "llvm/AsmParser/FileLoc.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Value.h"
 #include <optional>
 
 namespace llvm {
+struct FileLocIntervalInfo {
+  // Overriding 'adjacent' to return false prevents the map
+  // from merging [10, 20] and [21, 30] even if values match.
+  static bool adjacent(const llvm::FileLoc &A, const llvm::FileLoc &B) {
+    return false;
+  }
+  static bool startLess(const llvm::FileLoc &X, const llvm::FileLoc &A) {
+    return X < A;
+  }
+  static bool stopLess(const llvm::FileLoc &B, const llvm::FileLoc &X) {
+    return B <= X;
+  }
+  static bool nonEmpty(const llvm::FileLoc &A, const llvm::FileLoc &B) {
+    return A < B;
+  }
+};
 
 /// Registry of file location information for LLVM IR constructs.
 ///
@@ -29,9 +47,28 @@ namespace llvm {
 /// This information is optionally emitted by the LLParser while
 /// it reads LLVM textual IR.
 class AsmParserContext {
+  using FMap =
+      IntervalMap<FileLoc, Function *,
+                  IntervalMapImpl::NodeSizer<FileLoc, Function *>::LeafSize,
+                  FileLocIntervalInfo>;
+
   DenseMap<Function *, FileLocRange> Functions;
+  FMap::Allocator FAllocator;
+  FMap FunctionsInverse = FMap(FAllocator);
   DenseMap<BasicBlock *, FileLocRange> Blocks;
+  using BBMap =
+      IntervalMap<FileLoc, BasicBlock *,
+                  IntervalMapImpl::NodeSizer<FileLoc, BasicBlock *>::LeafSize,
+                  FileLocIntervalInfo>;
+  BBMap::Allocator BBAllocator;
+  BBMap BlocksInverse = BBMap(BBAllocator);
   DenseMap<Instruction *, FileLocRange> Instructions;
+  using IMap =
+      IntervalMap<FileLoc, Instruction *,
+                  IntervalMapImpl::NodeSizer<FileLoc, Instruction *>::LeafSize,
+                  FileLocIntervalInfo>;
+  IMap::Allocator IAllocator;
+  IMap InstructionsInverse = IMap(IAllocator);
 
 public:
   LLVM_ABI std::optional<FileLocRange>

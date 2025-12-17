@@ -29,6 +29,7 @@ struct FileLoc {
     return Line < RHS.Line || (Line == RHS.Line && Col < RHS.Col);
   }
 
+  FileLoc() : Line(0), Col(0) {}
   FileLoc(unsigned L, unsigned C) : Line(L), Col(C) {}
   FileLoc(std::pair<unsigned, unsigned> LC) : Line(LC.first), Col(LC.second) {}
 };
