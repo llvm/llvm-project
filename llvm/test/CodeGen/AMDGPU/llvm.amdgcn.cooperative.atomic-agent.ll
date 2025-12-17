@@ -88,7 +88,6 @@ define i32 @test_flat_amdgcn_cooperative_atomic_load_32x4B_acquire(ptr noundef r
 ; GFX1250-NEXT:    flat_load_b32 v0, v[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call i32 @llvm.amdgcn.cooperative.atomic.load.32x4B.p0(ptr %addr, i32 2, metadata !0)
@@ -103,7 +102,6 @@ define <2 x i32> @test_flat_amdgcn_cooperative_atomic_load_16x8B_acquire(ptr nou
 ; GFX1250-NEXT:    flat_load_b64 v[0:1], v[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <2 x i32> @llvm.amdgcn.cooperative.atomic.load.16x8B.p0(ptr %addr, i32 2, metadata !0)
@@ -118,7 +116,6 @@ define <4 x i32> @test_flat_amdgcn_cooperative_atomic_load_8x16B_acquire(ptr nou
 ; GFX1250-NEXT:    flat_load_b128 v[0:3], v[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <4 x i32> @llvm.amdgcn.cooperative.atomic.load.8x16B.p0(ptr %addr, i32 2, metadata !0)
@@ -179,7 +176,6 @@ define i32 @test_flat_amdgcn_cooperative_atomic_load_32x4B_seq_cst(ptr noundef r
 ; GFX1250-NEXT:    flat_load_b32 v0, v[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call i32 @llvm.amdgcn.cooperative.atomic.load.32x4B.p0(ptr %addr, i32 5, metadata !0)
@@ -195,7 +191,6 @@ define <2 x i32> @test_flat_amdgcn_cooperative_atomic_load_16x8B_seq_cst(ptr nou
 ; GFX1250-NEXT:    flat_load_b64 v[0:1], v[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <2 x i32> @llvm.amdgcn.cooperative.atomic.load.16x8B.p0(ptr %addr, i32 5, metadata !0)
@@ -211,7 +206,6 @@ define <4 x i32> @test_flat_amdgcn_cooperative_atomic_load_8x16B_seq_cst(ptr nou
 ; GFX1250-NEXT:    flat_load_b128 v[0:3], v[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <4 x i32> @llvm.amdgcn.cooperative.atomic.load.8x16B.p0(ptr %addr, i32 5, metadata !0)
@@ -349,7 +343,7 @@ define i32 @test_one_as_flat_amdgcn_cooperative_atomic_load_32x4B_acquire(ptr no
 ; GFX1250-NEXT:    flat_load_b32 v0, v[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call i32 @llvm.amdgcn.cooperative.atomic.load.32x4B.p0(ptr %addr, i32 2, metadata !1)
@@ -364,7 +358,7 @@ define <2 x i32> @test_one_as_flat_amdgcn_cooperative_atomic_load_16x8B_acquire(
 ; GFX1250-NEXT:    flat_load_b64 v[0:1], v[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <2 x i32> @llvm.amdgcn.cooperative.atomic.load.16x8B.p0(ptr %addr, i32 2, metadata !1)
@@ -379,7 +373,7 @@ define <4 x i32> @test_one_as_flat_amdgcn_cooperative_atomic_load_8x16B_acquire(
 ; GFX1250-NEXT:    flat_load_b128 v[0:3], v[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <4 x i32> @llvm.amdgcn.cooperative.atomic.load.8x16B.p0(ptr %addr, i32 2, metadata !1)
@@ -440,7 +434,7 @@ define i32 @test_one_as_flat_amdgcn_cooperative_atomic_load_32x4B_seq_cst(ptr no
 ; GFX1250-NEXT:    flat_load_b32 v0, v[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call i32 @llvm.amdgcn.cooperative.atomic.load.32x4B.p0(ptr %addr, i32 5, metadata !1)
@@ -456,7 +450,7 @@ define <2 x i32> @test_one_as_flat_amdgcn_cooperative_atomic_load_16x8B_seq_cst(
 ; GFX1250-NEXT:    flat_load_b64 v[0:1], v[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <2 x i32> @llvm.amdgcn.cooperative.atomic.load.16x8B.p0(ptr %addr, i32 5, metadata !1)
@@ -472,7 +466,7 @@ define <4 x i32> @test_one_as_flat_amdgcn_cooperative_atomic_load_8x16B_seq_cst(
 ; GFX1250-NEXT:    flat_load_b128 v[0:3], v[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <4 x i32> @llvm.amdgcn.cooperative.atomic.load.8x16B.p0(ptr %addr, i32 5, metadata !1)
