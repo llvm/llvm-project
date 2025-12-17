@@ -1501,8 +1501,8 @@ correctness and to understand it so that they can answer questions during code
 review. Reviewing and maintaining generated code that the original contributor
 does not understand is not a good use of limited project resources.
 
-The one exception we reserve is for GitHub issues labelled with they
-"good first issue" label. These are issues are selected by LLVM contributors
+The one exception we reserve is for GitHub issues labelled with the
+"good first issue" label. These issues are selected by LLVM contributors
 to help newcomers get familiar with the code base. Thus, it makes no sense to
-fix them using AI tools. **Using AI tools to fix issues labelles as
+fix them using AI tools. **Using AI tools to fix issues labelled as
 "good first issues" is forbidden**.
