@@ -296,12 +296,11 @@ bool PointerReplacer::collectUsers() {
       /// TODO: Handle poison and null pointers for PHI and select.
       // If all incoming values are available, mark this PHI as
       // replacable and push it's users into the worklist.
-      bool IsReplaceable = all_of(PHI->incoming_values(), [](Value *V) {
-        return isa<Instruction>(V);
-      });
+      bool IsReplaceable = all_of(PHI->incoming_values(),
+                                  [](Value *V) { return isa<Instruction>(V); });
       if (IsReplaceable && all_of(PHI->incoming_values(), [&](Value *V) {
-        return isAvailable(cast<Instruction>(V));
-      })) {
+            return isAvailable(cast<Instruction>(V));
+          })) {
         UsersToReplace.insert(PHI);
         PushUsersToWorklist(PHI);
         continue;
