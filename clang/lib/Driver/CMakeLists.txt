@@ -100,8 +100,6 @@ add_clang_library(clangDriver
   LINK_LIBS
   clangBasic
   clangFrontend
-  clangSerialization
-  clangLex
   clangOptions
   ${system_libs}
   )
