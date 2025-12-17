@@ -125,6 +125,33 @@ class SMX60IsWorstCaseMXSEW<string mx, int sew, list<string> MxList, bit isF = 0
 defvar SMX60VLEN = 256;
 defvar SMX60DLEN = !div(SMX60VLEN, 2);
 
+class SMX60GetLMulCycles<string mx> {
+  int c = !cond(
+    !eq(mx, "M1") : 1,
+    !eq(mx, "M2") : 2,
+    !eq(mx, "M4") : 4,
+    !eq(mx, "M8") : 8,
+    !eq(mx, "MF2") : 1,
+    !eq(mx, "MF4") : 1,
+    !eq(mx, "MF8") : 1
+  );
+}
+
+class SMX60GetVLMAX<string mx, int sew> {
+  defvar LMUL = SMX60GetLMulCycles<mx>.c;
+  int val = !cond(
+    !eq(mx, "MF2") : !div(!div(SMX60VLEN, 2), sew),
+    !eq(mx, "MF4") : !div(!div(SMX60VLEN, 4), sew),
+    !eq(mx, "MF8") : !div(!div(SMX60VLEN, 8), sew),
+    true: !div(!mul(SMX60VLEN, LMUL), sew)
+  );
+}
+
+// Latency for segmented loads and stores are calculated as vl * nf.
+class SMX60SegmentedLdStCycles<string mx, int sew, int nf> {
+  int c = !mul(SMX60GetVLMAX<mx, sew>.val, nf);
+}
+
 def SpacemitX60Model : SchedMachineModel {
   let IssueWidth        = 2; // dual-issue
   let MicroOpBufferSize = 0; // in-order
@@ -367,23 +394,43 @@ foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
   // Unit-stride loads and stores
-  defm "" : LMULWriteResMX<"WriteVLDE", [SMX60_VLS], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVLDFF", [SMX60_VLS], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSTE", [SMX60_VLS], mx, IsWorstCase>;
+  defvar VLDELatAndOcc = ConstValueUntilLMULThenDoubleBase<"M2", 3, 4, mx>.c;
+  let Latency = VLDELatAndOcc, ReleaseAtCycles = [VLDELatAndOcc] in {
+    defm "" : LMULWriteResMX<"WriteVLDE", [SMX60_VLS], mx, IsWorstCase>;
+  }
+  defvar VSTELatAndOcc = GetLMULValue<[2, 2, 2, 3, 4, 8, 19], mx>.c;
+  let Latency = VSTELatAndOcc, ReleaseAtCycles = [VSTELatAndOcc] in {
+    defm "" : LMULWriteResMX<"WriteVSTE", [SMX60_VLS], mx, IsWorstCase>;
+  }
+  defvar VLDFFLatAndOcc = GetLMULValue<[4, 4, 4, 5, 7, 11, 19], mx>.c;
+  let Latency = VLDFFLatAndOcc, ReleaseAtCycles = [VLDFFLatAndOcc] in {
+    defm "" : LMULWriteResMX<"WriteVLDFF", [SMX60_VLS], mx, IsWorstCase>;
+  }
 
   // Mask loads and stores
-  defm "" : LMULWriteResMX<"WriteVLDM", [SMX60_VLS], mx, IsWorstCase=!eq(mx, "M1")>;
-  defm "" : LMULWriteResMX<"WriteVSTM", [SMX60_VLS], mx, IsWorstCase=!eq(mx, "M1")>;
+  let ReleaseAtCycles = [2] in {
+    defm "" : LMULWriteResMX<"WriteVLDM", [SMX60_VLS], mx, IsWorstCase>;
+  }
+  let Latency = 2, ReleaseAtCycles = [2] in {
+    defm "" : LMULWriteResMX<"WriteVSTM", [SMX60_VLS], mx, IsWorstCase>;
+  }
 
   // Strided and indexed loads and stores
   foreach eew = [8, 16, 32, 64] in {
-    defm "" : LMULWriteResMX<"WriteVLDS"  # eew, [SMX60_VLS], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVLDUX" # eew, [SMX60_VLS], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVLDOX" # eew, [SMX60_VLS], mx, IsWorstCase>;
+    defvar StridedLdStLatAndOcc = SMX60GetVLMAX<mx, eew>.val;
+    let Latency = StridedLdStLatAndOcc, ReleaseAtCycles = [StridedLdStLatAndOcc] in {
+      defm "" : LMULWriteResMX<"WriteVLDS"  # eew, [SMX60_VLS], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVSTS"  # eew, [SMX60_VLS], mx, IsWorstCase>;
+    }
 
-    defm "" : LMULWriteResMX<"WriteVSTS"  # eew, [SMX60_VLS], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVSTUX" # eew, [SMX60_VLS], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVSTOX" # eew, [SMX60_VLS], mx, IsWorstCase>;
+    defvar IndexedLdStLatAndOcc = !div(SMX60GetVLMAX<mx, eew>.val, 2);
+    let Latency = IndexedLdStLatAndOcc, ReleaseAtCycles = [IndexedLdStLatAndOcc] in {
+      defm "" : LMULWriteResMX<"WriteVLDUX" # eew, [SMX60_VLS], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVLDOX" # eew, [SMX60_VLS], mx, IsWorstCase>;
+
+      defm "" : LMULWriteResMX<"WriteVSTUX" # eew, [SMX60_VLS], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVSTOX" # eew, [SMX60_VLS], mx, IsWorstCase>;
+    }
   }
 }
 
@@ -393,30 +440,39 @@ foreach mx = SchedMxList in {
     foreach eew = [8, 16, 32, 64] in {
       defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-      // Unit-stride segmented
-      defm "" : LMULWriteResMX<"WriteVLSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
-      defm "" : LMULWriteResMX<"WriteVLSEGFF" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
-      defm "" : LMULWriteResMX<"WriteVSSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
+      defvar SegmentedLdStLatAndOcc = SMX60SegmentedLdStCycles<mx, eew, nf>.c;
+      let Latency = SegmentedLdStLatAndOcc, ReleaseAtCycles = [SegmentedLdStLatAndOcc] in {
+        // Unit-stride segmented
+        defm "" : LMULWriteResMX<"WriteVLSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
+        defm "" : LMULWriteResMX<"WriteVLSEGFF" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
+        defm "" : LMULWriteResMX<"WriteVSSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
 
-      // Strided/indexed segmented
-      defm "" : LMULWriteResMX<"WriteVLSSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
-      defm "" : LMULWriteResMX<"WriteVSSSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
+        // Strided/indexed segmented
+        defm "" : LMULWriteResMX<"WriteVLSSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
+        defm "" : LMULWriteResMX<"WriteVSSSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
 
-      // Indexed segmented
-      defm "" : LMULWriteResMX<"WriteVLOXSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
-      defm "" : LMULWriteResMX<"WriteVLUXSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
-      defm "" : LMULWriteResMX<"WriteVSUXSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
-      defm "" : LMULWriteResMX<"WriteVSOXSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
+        // Indexed segmented
+        defm "" : LMULWriteResMX<"WriteVLOXSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
+        defm "" : LMULWriteResMX<"WriteVLUXSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
+        defm "" : LMULWriteResMX<"WriteVSUXSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
+        defm "" : LMULWriteResMX<"WriteVSOXSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
+      }
     }
   }
 }
 
 // Whole register move/load/store
 foreach LMul = [1, 2, 4, 8] in {
-  def : WriteRes<!cast<SchedWrite>("WriteVLD" # LMul # "R"), [SMX60_VLS]>;
-  def : WriteRes<!cast<SchedWrite>("WriteVST" # LMul # "R"), [SMX60_VLS]>;
+  defvar WholeRegLdStLatAndOcc = !if(!eq(LMul, 1), 3, !mul(LMul, 2));
+  let Latency = WholeRegLdStLatAndOcc, ReleaseAtCycles = [WholeRegLdStLatAndOcc] in {
+    def : WriteRes<!cast<SchedWrite>("WriteVLD" # LMul # "R"), [SMX60_VLS]>;
+    def : WriteRes<!cast<SchedWrite>("WriteVST" # LMul # "R"), [SMX60_VLS]>;
+  }
 
-  def : WriteRes<!cast<SchedWrite>("WriteVMov" # LMul # "V"), [SMX60_VIEU]>;
+  defvar VMovLatAndOcc = !if(!eq(LMul, 1), 4, !mul(LMul, 2));
+  let Latency = VMovLatAndOcc, ReleaseAtCycles = [VMovLatAndOcc] in {
+    def : WriteRes<!cast<SchedWrite>("WriteVMov" # LMul # "V"), [SMX60_VIEU]>;
+  }
 }
 
 // 11. Vector Integer Arithmetic Instructions
@@ -1127,7 +1183,7 @@ def : ReadAdvance<ReadVST2R, 0>;
 def : ReadAdvance<ReadVST4R, 0>;
 def : ReadAdvance<ReadVST8R, 0>;
 
-// 12. Vector Integer Arithmetic Instructions
+// 11. Vector Integer Arithmetic Instructions
 defm : LMULReadAdvance<"ReadVIALUV", 0>;
 defm : LMULReadAdvance<"ReadVIALUX", 0>;
 defm : LMULReadAdvanceW<"ReadVIWALUV", 0>;
@@ -1158,7 +1214,7 @@ defm : LMULReadAdvance<"ReadVIMergeX", 0>;
 defm : LMULReadAdvance<"ReadVIMovV", 0>;
 defm : LMULReadAdvance<"ReadVIMovX", 0>;
 
-// 13. Vector Fixed-Point Arithmetic Instructions
+// 12. Vector Fixed-Point Arithmetic Instructions
 defm "" : LMULReadAdvance<"ReadVSALUV", 0>;
 defm "" : LMULReadAdvance<"ReadVSALUX", 0>;
 defm "" : LMULReadAdvance<"ReadVAALUV", 0>;
@@ -1170,7 +1226,7 @@ defm "" : LMULReadAdvance<"ReadVSShiftX", 0>;
 defm "" : LMULReadAdvanceW<"ReadVNClipV", 0>;
 defm "" : LMULReadAdvanceW<"ReadVNClipX", 0>;
 
-// 14. Vector Floating-Point Instructions
+// 13. Vector Floating-Point Instructions
 defm "" : LMULSEWReadAdvanceF<"ReadVFALUV", 0>;
 defm "" : LMULSEWReadAdvanceF<"ReadVFALUF", 0>;
 defm "" : LMULSEWReadAdvanceFW<"ReadVFWALUV", 0>;
@@ -1206,7 +1262,7 @@ defm "" : LMULSEWReadAdvanceFW<"ReadVFNCvtIToFV", 0>;
 defm "" : LMULReadAdvanceW<"ReadVFNCvtFToIV", 0>;
 defm "" : LMULSEWReadAdvanceFW<"ReadVFNCvtFToFV", 0>;
 
-// 15. Vector Reduction Operations
+// 14. Vector Reduction Operations
 def : ReadAdvance<ReadVIRedV, 0>;
 def : ReadAdvance<ReadVIRedV0, 0>;
 def : ReadAdvance<ReadVIWRedV, 0>;
@@ -1220,14 +1276,14 @@ def : ReadAdvance<ReadVFWRedV0, 0>;
 def : ReadAdvance<ReadVFWRedOV, 0>;
 def : ReadAdvance<ReadVFWRedOV0, 0>;
 
-// 16. Vector Mask Instructions
+// 15. Vector Mask Instructions
 defm "" : LMULReadAdvance<"ReadVMALUV", 0>;
 defm "" : LMULReadAdvance<"ReadVMPopV", 0>;
 defm "" : LMULReadAdvance<"ReadVMFFSV", 0>;
 defm "" : LMULReadAdvance<"ReadVMSFSV", 0>;
 defm "" : LMULReadAdvance<"ReadVIotaV", 0>;
 
-// 17. Vector Permutation Instructions
+// 16. Vector Permutation Instructions
 def : ReadAdvance<ReadVMovXS, 0>;
 def : ReadAdvance<ReadVMovSX_V, 0>;
 def : ReadAdvance<ReadVMovSX_X, 0>;

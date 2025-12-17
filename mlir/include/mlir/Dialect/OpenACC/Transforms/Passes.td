@@ -136,4 +136,62 @@ def ACCImplicitRoutine : Pass<"acc-implicit-routine", "mlir::ModuleOp"> {
   ];
 }
 
+def ACCLegalizeSerial : Pass<"acc-legalize-serial", "mlir::func::FuncOp"> {
+  let summary = "Legalize OpenACC serial constructs";
+  let description = [{
+    This pass converts `acc.serial` constructs into `acc.parallel` constructs
+    with `num_gangs(1)`, `num_workers(1)`, and `vector_length(1)`.
+
+    This transformation simplifies processing of acc regions by unifying the
+    handling of serial and parallel constructs. Since an OpenACC serial region
+    executes sequentially (like a parallel region with a single gang, worker,
+    and vector), this conversion is semantically equivalent while enabling code
+    reuse in later compilation stages.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect",
+      "mlir::arith::ArithDialect"];
+}
+
+
+def ACCLoopTiling : Pass<"acc-loop-tiling", "mlir::func::FuncOp"> {
+  let summary = "Tile OpenACC loops with tile clauses";
+  let description = [{
+    This pass implements loop tiling transformations for OpenACC loops that
+    have tile clauses. The pass transforms loops with `tile(size1, size2, ...)`
+    clauses into tiled loop nests.
+
+    For a 2-level nested loop with tile(T1, T2), the transformation produces:
+    - Outer tile loops that iterate over tiles
+    - Inner element loops that iterate within each tile
+
+    Example transformation:
+    ```
+    // Before:
+    #pragma acc loop tile(32, 32)
+    for (i = 0; i < N; i++)
+      for (j = 0; j < M; j++)
+        A[i][j] = ...
+
+    // After:
+    for (i = 0; i < N; i += 32)           // tile loop 1
+      for (j = 0; j < M; j += 32)         // tile loop 2
+        for (ii = i; ii < min(N, i+32); ii++)    // element loop 1
+          for (jj = j; jj < min(M, j+32); jj++)  // element loop 2
+            A[ii][jj] = ...
+    ```
+
+    The pass handles:
+    - Constant tile sizes
+    - Wildcard tile sizes ('*') which use a default tile size
+    - Collapsed loops with tile counts exceeding collapse count
+    - Proper handling of loop attributes (gang, worker, vector)
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect",
+      "mlir::arith::ArithDialect"];
+  let options = [
+    Option<"defaultTileSize", "default-tile-size", "int32_t", "32",
+           "Default tile size to use for wildcard ('*') tile sizes">
+  ];
+}
+
 #endif // MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES

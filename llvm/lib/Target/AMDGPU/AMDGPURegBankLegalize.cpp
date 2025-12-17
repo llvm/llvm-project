@@ -435,14 +435,16 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
     unsigned Opc = MI->getOpcode();
     // Insert point for use operands needs some calculation.
     if (Opc == AMDGPU::G_PHI) {
-      RBLHelper.applyMappingPHI(*MI);
+      if (!RBLHelper.applyMappingPHI(*MI))
+        return false;
       continue;
     }
 
     // Opcodes that support pretty much all combinations of reg banks and LLTs
     // (except S1). There is no point in writing rules for them.
     if (Opc == AMDGPU::G_BUILD_VECTOR || Opc == AMDGPU::G_UNMERGE_VALUES ||
-        Opc == AMDGPU::G_MERGE_VALUES || Opc == AMDGPU::G_BITCAST) {
+        Opc == AMDGPU::G_MERGE_VALUES || Opc == AMDGPU::G_CONCAT_VECTORS ||
+        Opc == AMDGPU::G_BITCAST) {
       RBLHelper.applyMappingTrivial(*MI);
       continue;
     }
@@ -466,7 +468,8 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
       // S1 rules are in RegBankLegalizeRules.
     }
 
-    RBLHelper.findRuleAndApplyMapping(*MI);
+    if (!RBLHelper.findRuleAndApplyMapping(*MI))
+      return false;
   }
 
   // Sgpr S1 clean up combines:

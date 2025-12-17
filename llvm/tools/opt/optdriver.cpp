@@ -657,6 +657,13 @@ optMain(int argc, char **argv,
     return 1;
   }
 
+  TargetOptions CodeGenFlagsOptions;
+  const TargetOptions *Options = TM ? &TM->Options : &CodeGenFlagsOptions;
+  if (!TM) {
+    CodeGenFlagsOptions =
+        codegen::InitTargetOptionsFromCodeGenFlags(ModuleTriple);
+  }
+
   // Override function attributes based on CPUStr, FeaturesStr, and command line
   // flags.
   codegen::setFunctionAttributes(CPUStr, FeaturesStr, *M);
@@ -674,13 +681,8 @@ optMain(int argc, char **argv,
       M->addModuleFlag(Module::Error, "UnifiedLTO", 1);
   }
 
-  VectorLibrary VecLib = codegen::getVectorLibrary();
   // Add an appropriate TargetLibraryInfo pass for the module's triple.
-  TargetLibraryInfoImpl TLII(ModuleTriple, VecLib);
-
-  RTLIB::RuntimeLibcallsInfo RTLCI(ModuleTriple, codegen::getExceptionModel(),
-                                   codegen::getFloatABIForCalls(),
-                                   codegen::getEABIVersion(), ABIName, VecLib);
+  TargetLibraryInfoImpl TLII(ModuleTriple, Options->VecLib);
 
   // The -disable-simplify-libcalls flag actually disables all builtin optzns.
   if (DisableSimplifyLibCalls)
@@ -756,7 +758,7 @@ optMain(int argc, char **argv,
     // string. Hand off the rest of the functionality to the new code for that
     // layer.
     if (!runPassPipeline(
-            argv[0], *M, TM.get(), &TLII, RTLCI, Out.get(), ThinLinkOut.get(),
+            argv[0], *M, TM.get(), &TLII, Out.get(), ThinLinkOut.get(),
             RemarksFile.get(), Pipeline, PluginList, PassBuilderCallbacks, OK,
             VK, /* ShouldPreserveAssemblyUseListOrder */ false,
             /* ShouldPreserveBitcodeUseListOrder */ true, EmitSummaryIndex,
@@ -804,6 +806,9 @@ optMain(int argc, char **argv,
       (VerifyDebugInfoPreserve && !VerifyEachDebugInfoPreserve);
 
   Passes.add(new TargetLibraryInfoWrapperPass(TLII));
+  Passes.add(new RuntimeLibraryInfoWrapper(
+      ModuleTriple, Options->ExceptionModel, Options->FloatABIType,
+      Options->EABIVersion, Options->MCOptions.ABIName, Options->VecLib));
 
   // Add internal analysis passes from the target machine.
   Passes.add(createTargetTransformInfoWrapperPass(TM ? TM->getTargetIRAnalysis()
