@@ -91,8 +91,13 @@ void populateVectorContractToFMAPatterns(RewritePatternSet &patterns);
 void populateVectorContractToPackedTypeDotProductPatterns(
     RewritePatternSet &patterns);
 
+// A set of patterns for lowering 32-bit packed BF16 vector contraction
+// operations to vector fused multiply-add (FMA) operations, following
+// the emulation-based approach using BF16 packed operations.
+void populateVectorContractBF16ToFMAPatterns(RewritePatternSet &patterns);
+
 // Performs forward scheduling of vector producer ops to minimize their live
-// range by placing them at their earliest legal use site
+// range by placing them at their earliest legal use site.
 void populateSinkVectorProducerOpsPatterns(RewritePatternSet &patterns);
 
 //===----------------------------------------------------------------------===//
