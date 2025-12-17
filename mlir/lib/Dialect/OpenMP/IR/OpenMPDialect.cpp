@@ -33,6 +33,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/InterleavedRange.h"
+#include "llvm/Support/LogicalResult.h"
 #include <cstddef>
 #include <iterator>
 #include <optional>
@@ -1083,6 +1084,31 @@ static ParseResult parseTargetOpRegion(
   return parseBlockArgRegion(parser, region, args);
 }
 
+static ParseResult parseTargetJitOpRegion(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &hasDeviceAddrVars,
+    SmallVectorImpl<Type> &hasDeviceAddrTypes,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &hostEvalVars,
+    SmallVectorImpl<Type> &hostEvalTypes,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &inReductionVars,
+    SmallVectorImpl<Type> &inReductionTypes,
+    DenseBoolArrayAttr &inReductionByref, ArrayAttr &inReductionSyms,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &mapVars,
+    SmallVectorImpl<Type> &mapTypes,
+    llvm::SmallVectorImpl<OpAsmParser::UnresolvedOperand> &privateVars,
+    llvm::SmallVectorImpl<Type> &privateTypes, ArrayAttr &privateSyms,
+    UnitAttr &privateNeedsBarrier, DenseI64ArrayAttr &privateMaps) {
+  AllRegionParseArgs args;
+  args.hasDeviceAddrArgs.emplace(hasDeviceAddrVars, hasDeviceAddrTypes);
+  args.hostEvalArgs.emplace(hostEvalVars, hostEvalTypes);
+  args.inReductionArgs.emplace(inReductionVars, inReductionTypes,
+                               inReductionByref, inReductionSyms);
+  args.mapArgs.emplace(mapVars, mapTypes);
+  args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
+                           privateNeedsBarrier, &privateMaps);
+  return ParseResult();
+}
+
 static ParseResult parseInReductionPrivateRegion(
     OpAsmParser &parser, Region &region,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &inReductionVars,
@@ -1345,6 +1371,24 @@ static void printTargetOpRegion(
   args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
                            privateNeedsBarrier, privateMaps);
   printBlockArgRegion(p, op, region, args);
+}
+
+static void printTargetJitOpRegion(
+    OpAsmPrinter &p, Operation *op, ValueRange hasDeviceAddrVars,
+    TypeRange hasDeviceAddrTypes, ValueRange hostEvalVars,
+    TypeRange hostEvalTypes, ValueRange inReductionVars,
+    TypeRange inReductionTypes, DenseBoolArrayAttr inReductionByref,
+    ArrayAttr inReductionSyms, ValueRange mapVars, TypeRange mapTypes,
+    ValueRange privateVars, TypeRange privateTypes, ArrayAttr privateSyms,
+    UnitAttr privateNeedsBarrier, DenseI64ArrayAttr privateMaps) {
+  AllRegionPrintArgs args;
+  args.hasDeviceAddrArgs.emplace(hasDeviceAddrVars, hasDeviceAddrTypes);
+  args.hostEvalArgs.emplace(hostEvalVars, hostEvalTypes);
+  args.inReductionArgs.emplace(inReductionVars, inReductionTypes,
+                               inReductionByref, inReductionSyms);
+  args.mapArgs.emplace(mapVars, mapTypes);
+  args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
+                           privateNeedsBarrier, privateMaps);
 }
 
 static void printInReductionPrivateRegion(
@@ -2191,6 +2235,24 @@ LogicalResult TargetUpdateOp::verify() {
 // TargetOp
 //===----------------------------------------------------------------------===//
 
+void TargetJitOp::build(OpBuilder &builder, OperationState &state,
+                        const TargetOperands &clauses) {
+  MLIRContext *ctx = builder.getContext();
+  // TODO Store clauses in op: allocateVars, allocatorVars, inReductionVars,
+  // inReductionByref, inReductionSyms.
+  TargetJitOp::build(
+      builder, state, /*allocate_vars=*/{}, /*allocator_vars=*/{}, clauses.bare,
+      makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
+      clauses.device, clauses.hasDeviceAddrVars, clauses.hostEvalVars,
+      clauses.ifExpr,
+      /*in_reduction_vars=*/{}, /*in_reduction_byref=*/nullptr,
+      /*in_reduction_syms=*/nullptr, clauses.isDevicePtrVars, clauses.mapVars,
+      clauses.nowait, clauses.privateVars,
+      makeArrayAttr(ctx, clauses.privateSyms), clauses.privateNeedsBarrier,
+      clauses.threadLimit,
+      /*private_maps=*/nullptr, /*jit_code=*/nullptr);
+}
+
 void TargetOp::build(OpBuilder &builder, OperationState &state,
                      const TargetOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
@@ -2205,7 +2267,7 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
                   clauses.mapVars, clauses.nowait, clauses.privateVars,
                   makeArrayAttr(ctx, clauses.privateSyms),
                   clauses.privateNeedsBarrier, clauses.threadLimit,
-                  /*private_maps=*/nullptr);
+                  /*private_maps=*/nullptr, /*jit_code=*/nullptr);
 }
 
 LogicalResult TargetOp::verify() {
@@ -2360,6 +2422,34 @@ Operation *TargetOp::getInnermostCapturedOmpOp() {
       });
 }
 
+Operation *TargetJitOp::getInnermostCapturedOmpOp() {
+  auto *ompDialect = getContext()->getLoadedDialect<omp::OpenMPDialect>();
+
+  // Only allow OpenMP terminators and non-OpenMP ops that have known memory
+  // effects, but don't include a memory write effect.
+  return findCapturedOmpOp(
+      *this, /*checkSingleMandatoryExec=*/true, [&](Operation *sibling) {
+        if (!sibling)
+          return false;
+
+        if (ompDialect == sibling->getDialect())
+          return sibling->hasTrait<OpTrait::IsTerminator>();
+
+        if (auto memOp = dyn_cast<MemoryEffectOpInterface>(sibling)) {
+          SmallVector<SideEffects::EffectInstance<MemoryEffects::Effect>, 4>
+              effects;
+          memOp.getEffects(effects);
+          return !llvm::any_of(
+              effects, [&](MemoryEffects::EffectInstance &effect) {
+                return isa<MemoryEffects::Write>(effect.getEffect()) &&
+                       isa<SideEffects::AutomaticAllocationScopeResource>(
+                           effect.getResource());
+              });
+        }
+        return true;
+      });
+}
+
 /// Check if we can promote SPMD kernel to No-Loop kernel.
 static bool canPromoteToNoLoop(Operation *capturedOp, TeamsOp teamsOp,
                                WsloopOp *wsLoopOp) {
@@ -2383,6 +2473,111 @@ static bool canPromoteToNoLoop(Operation *capturedOp, TeamsOp teamsOp,
     return false;
   return ompFlags.getAssumeTeamsOversubscription() &&
          ompFlags.getAssumeThreadsOversubscription();
+}
+
+TargetRegionFlags TargetJitOp::getKernelExecFlags(Operation *capturedOp) {
+  // A non-null captured op is only valid if it resides inside of a TargetOp
+  // and is the result of calling getInnermostCapturedOmpOp() on it.
+  TargetJitOp targetOp =
+      capturedOp ? capturedOp->getParentOfType<TargetJitOp>() : nullptr;
+  assert((!capturedOp ||
+          (targetOp && targetOp.getInnermostCapturedOmpOp() == capturedOp)) &&
+         "unexpected captured op");
+
+  // If it's not capturing a loop, it's a default target region.
+  if (!isa_and_present<LoopNestOp>(capturedOp))
+    return TargetRegionFlags::generic;
+
+  // Get the innermost non-simd loop wrapper.
+  SmallVector<LoopWrapperInterface> loopWrappers;
+  cast<LoopNestOp>(capturedOp).gatherWrappers(loopWrappers);
+  assert(!loopWrappers.empty());
+
+  LoopWrapperInterface *innermostWrapper = loopWrappers.begin();
+  if (isa<SimdOp>(innermostWrapper))
+    innermostWrapper = std::next(innermostWrapper);
+
+  auto numWrappers = std::distance(innermostWrapper, loopWrappers.end());
+  if (numWrappers != 1 && numWrappers != 2)
+    return TargetRegionFlags::generic;
+
+  // Detect target-teams-distribute-parallel-wsloop[-simd].
+  if (numWrappers == 2) {
+    WsloopOp *wsloopOp = dyn_cast<WsloopOp>(innermostWrapper);
+    if (!wsloopOp)
+      return TargetRegionFlags::generic;
+
+    innermostWrapper = std::next(innermostWrapper);
+    if (!isa<DistributeOp>(innermostWrapper))
+      return TargetRegionFlags::generic;
+
+    Operation *parallelOp = (*innermostWrapper)->getParentOp();
+    if (!isa_and_present<ParallelOp>(parallelOp))
+      return TargetRegionFlags::generic;
+
+    TeamsOp teamsOp = dyn_cast<TeamsOp>(parallelOp->getParentOp());
+    if (!teamsOp)
+      return TargetRegionFlags::generic;
+
+    if (teamsOp->getParentOp() == targetOp.getOperation()) {
+      TargetRegionFlags result =
+          TargetRegionFlags::spmd | TargetRegionFlags::trip_count;
+      if (canPromoteToNoLoop(capturedOp, teamsOp, wsloopOp))
+        result = result | TargetRegionFlags::no_loop;
+      return result;
+    }
+  }
+  // Detect target-teams-distribute[-simd] and target-teams-loop.
+  else if (isa<DistributeOp, LoopOp>(innermostWrapper)) {
+    Operation *teamsOp = (*innermostWrapper)->getParentOp();
+    if (!isa_and_present<TeamsOp>(teamsOp))
+      return TargetRegionFlags::generic;
+
+    if (teamsOp->getParentOp() != targetOp.getOperation())
+      return TargetRegionFlags::generic;
+
+    if (isa<LoopOp>(innermostWrapper))
+      return TargetRegionFlags::spmd | TargetRegionFlags::trip_count;
+
+    // Find single immediately nested captured omp.parallel and add spmd flag
+    // (generic-spmd case).
+    //
+    // TODO: This shouldn't have to be done here, as it is too easy to break.
+    // The openmp-opt pass should be updated to be able to promote kernels like
+    // this from "Generic" to "Generic-SPMD". However, the use of the
+    // `kmpc_distribute_static_loop` family of functions produced by the
+    // OMPIRBuilder for these kernels prevents that from working.
+    Dialect *ompDialect = targetOp->getDialect();
+    Operation *nestedCapture = findCapturedOmpOp(
+        capturedOp, /*checkSingleMandatoryExec=*/false,
+        [&](Operation *sibling) {
+          return sibling && (ompDialect != sibling->getDialect() ||
+                             sibling->hasTrait<OpTrait::IsTerminator>());
+        });
+
+    TargetRegionFlags result =
+        TargetRegionFlags::generic | TargetRegionFlags::trip_count;
+
+    if (!nestedCapture)
+      return result;
+
+    while (nestedCapture->getParentOp() != capturedOp)
+      nestedCapture = nestedCapture->getParentOp();
+
+    return isa<ParallelOp>(nestedCapture) ? result | TargetRegionFlags::spmd
+                                          : result;
+  }
+  // Detect target-parallel-wsloop[-simd].
+  else if (isa<WsloopOp>(innermostWrapper)) {
+    Operation *parallelOp = (*innermostWrapper)->getParentOp();
+    if (!isa_and_present<ParallelOp>(parallelOp))
+      return TargetRegionFlags::generic;
+
+    if (parallelOp->getParentOp() == targetOp.getOperation())
+      return TargetRegionFlags::spmd;
+  }
+
+  return TargetRegionFlags::generic;
 }
 
 TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {

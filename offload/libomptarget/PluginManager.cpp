@@ -532,6 +532,14 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
     Device.setHasPendingImages(false);
   }
 
+  if (Device.RTL->get_dummy_function(DeviceId, &Device.DummyKernel) !=
+      OFFLOAD_SUCCESS) {
+    REPORT("Failed to get dummy function\n");
+  } else {
+    DP("Generated dummy function for device %d %p: %p\n", DeviceId, &Device,
+       Device.DummyKernel);
+  }
+
   if (Rc != OFFLOAD_SUCCESS)
     return Rc;
 

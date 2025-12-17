@@ -25,6 +25,7 @@ include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/IR/BuiltinAttributes.td"
 
 //===----------------------------------------------------------------------===//
 // 2.19.4 Data-Sharing Attribute Clauses
@@ -1449,7 +1450,6 @@ def TargetUpdateOp: OpenMP_Op<"target_update", traits = [
 
 def TargetOp : OpenMP_Op<"target", traits = [
     AttrSizedOperandSegments, BlockArgOpenMPOpInterface, IsolatedFromAbove,
-    OutlineableOpenMPOpInterface
   ], clauses = [
     // TODO: Complete clause list (defaultmap, uses_allocators).
     OpenMP_AllocateClause, OpenMP_BareClause, OpenMP_DependClause,
@@ -1476,7 +1476,7 @@ def TargetOp : OpenMP_Op<"target", traits = [
   }] # clausesDescription;
 
   let arguments = !con(clausesArgs,
-                       (ins OptionalAttr<DenseI64ArrayAttr>:$private_maps));
+                       (ins OptionalAttr<DenseI64ArrayAttr>:$private_maps, OptionalAttr<Builtin_StringAttr>:$jit_code));
 
   let builders = [
     OpBuilder<(ins CArg<"const TargetOperands &">:$clauses)>
@@ -1529,6 +1529,74 @@ def TargetOp : OpenMP_Op<"target", traits = [
 
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
+}
+
+def TargetJitOp : OpenMP_Op<"target_jit", traits = [
+    AttrSizedOperandSegments, BlockArgOpenMPOpInterface
+  ], clauses = [
+    // TODO: Complete clause list (defaultmap, uses_allocators).
+    OpenMP_AllocateClause, OpenMP_BareClause, OpenMP_DependClause,
+    OpenMP_DeviceClause, OpenMP_HasDeviceAddrClause, OpenMP_HostEvalClause,
+    OpenMP_IfClause, OpenMP_InReductionClause, OpenMP_IsDevicePtrClause,
+    OpenMP_MapClauseSkip<assemblyFormat = true>, OpenMP_NowaitClause,
+    OpenMP_PrivateClause, OpenMP_ThreadLimitClause
+  ], singleRegion = true> {
+  let summary = "target construct";
+  let description = [{
+  }] # clausesDescription;
+
+  let arguments = !con(clausesArgs,
+                       (ins OptionalAttr<DenseI64ArrayAttr>:$private_maps, OptionalAttr<Builtin_StringAttr>:$jit_code));
+
+  let builders = [
+    OpBuilder<(ins CArg<"const TargetOperands &">:$clauses)>
+  ];
+
+  let extraClassDeclaration = [{
+    mlir::Value getMappedValueForPrivateVar(unsigned privVarIdx) {
+      std::optional<DenseI64ArrayAttr> privateMapIdices = getPrivateMapsAttr();
+
+      if (!privateMapIdices.has_value())
+        return {};
+
+      int64_t mapInfoOpIdx = (*privateMapIdices)[privVarIdx];
+
+      if (mapInfoOpIdx == -1)
+        return {};
+
+      return getMapVars()[mapInfoOpIdx];
+    }
+
+    /// Returns the innermost OpenMP dialect operation captured by this target
+    /// construct. For an operation to be detected as captured, it must be
+    /// inside a (possibly multi-level) nest of OpenMP dialect operation's
+    /// regions where none of these levels contain other operations considered
+    /// not-allowed for these purposes (i.e. only terminator operations are
+    /// allowed from the OpenMP dialect, and other dialect's operations are
+    /// allowed as long as they don't have a memory write effect).
+    ///
+    /// If there are omp.loop_nest operations in the sequence of nested
+    /// operations, the top level one will be the one captured.
+    Operation *getInnermostCapturedOmpOp();
+
+    /// Infers the kernel type (Generic, SPMD or Generic-SPMD) based on the
+    /// contents of the target region.
+    ///
+    /// \param capturedOp result of a still valid (no modifications made to any
+    /// nested operations) previous call to `getInnermostCapturedOmpOp()`.
+    static ::mlir::omp::TargetRegionFlags
+    getKernelExecFlags(Operation *capturedOp);
+  }] # clausesExtraClassDeclaration;
+
+  let assemblyFormat = clausesAssemblyFormat # [{
+    custom<TargetOpRegion>(
+        $region, $has_device_addr_vars, type($has_device_addr_vars),
+        $host_eval_vars, type($host_eval_vars), $in_reduction_vars,
+        type($in_reduction_vars), $in_reduction_byref, $in_reduction_syms,
+        $map_vars, type($map_vars), $private_vars, type($private_vars),
+        $private_syms, $private_needs_barrier, $private_maps) attr-dict
+  }];
+
 }
 
 

@@ -320,6 +320,68 @@ static KernelArgsTy *upgradeKernelArgs(KernelArgsTy *KernelArgs,
 }
 
 template <typename TargetAsyncInfoTy>
+static inline int targetJitKernel(ident_t *Loc, int64_t DeviceId, void *HostPtr,
+                                  void *JitCode, JitKernelArgsTy *KernelArgs) {
+  assert(PM && "Runtime not initialized");
+  static_assert(std::is_convertible_v<TargetAsyncInfoTy &, AsyncInfoTy &>,
+                "Target AsyncInfoTy must be convertible to AsyncInfoTy.");
+  DP("Entering target jit region for device %" PRId64
+     " with entry point " DPxMOD "\n",
+     DeviceId, DPxPTR(HostPtr));
+
+  if (checkDevice(DeviceId, Loc)) {
+    DP("Not offloading to device %" PRId64 "\n", DeviceId);
+    return OMP_TGT_FAIL;
+  }
+
+  // Auto-upgrade kernel args version 1 to 2.
+  assert(KernelArgs->Version == OMP_KERNEL_ARG_VERSION);
+
+  TIMESCOPE_WITH_DETAILS_AND_IDENT(
+      "Runtime: target jit exe",
+      ";NumArgs=" + std::to_string(KernelArgs->NumArgs), Loc);
+
+  if (getInfoLevel() & OMP_INFOTYPE_KERNEL_ARGS)
+    printKernelArguments(Loc, DeviceId, KernelArgs->NumArgs,
+                         KernelArgs->ArgSizes, KernelArgs->ArgTypes,
+                         KernelArgs->ArgNames, "Entering OpenMP kernel");
+#ifdef OMPTARGET_DEBUG
+  for (uint32_t I = 0; I < KernelArgs->NumArgs; ++I) {
+    DP("Entry %2d: Base=" DPxMOD ", Begin=" DPxMOD ", Size=%" PRId64
+       ", Type=0x%" PRIx64 ", Name=%s\n",
+       I, DPxPTR(KernelArgs->ArgBasePtrs[I]), DPxPTR(KernelArgs->ArgPtrs[I]),
+       KernelArgs->ArgSizes[I], KernelArgs->ArgTypes[I],
+       (KernelArgs->ArgNames)
+           ? getNameFromMapping(KernelArgs->ArgNames[I]).c_str()
+           : "unknown");
+  }
+#endif
+
+  auto DeviceOrErr = PM->getDevice(DeviceId);
+  if (!DeviceOrErr)
+    FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
+
+  TargetAsyncInfoTy TargetAsyncInfo(*DeviceOrErr);
+  AsyncInfoTy &AsyncInfo = TargetAsyncInfo;
+  /// RAII to establish tool anchors before and after target region
+  OMPT_IF_BUILT(InterfaceRAII TargetRAII(
+                    RegionInterface.getCallbacks<ompt_target>(), DeviceId,
+                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
+
+  int Rc = OFFLOAD_SUCCESS;
+  Rc = targetJit(Loc, *DeviceOrErr, HostPtr, JitCode, *KernelArgs, AsyncInfo);
+  { // required to show synchronization
+    TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime: synchronize", "", Loc);
+    if (Rc == OFFLOAD_SUCCESS)
+      Rc = AsyncInfo.synchronize();
+
+    handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
+    assert(Rc == OFFLOAD_SUCCESS && "__tgt_target_kernel unexpected failure!");
+  }
+  return OMP_TGT_SUCCESS;
+}
+
+template <typename TargetAsyncInfoTy>
 static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                                int32_t ThreadLimit, void *HostPtr,
                                KernelArgsTy *KernelArgs) {
@@ -410,6 +472,17 @@ EXTERN int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
         Loc, DeviceId, NumTeams, ThreadLimit, HostPtr, KernelArgs);
   return targetKernel<AsyncInfoTy>(Loc, DeviceId, NumTeams, ThreadLimit,
                                    HostPtr, KernelArgs);
+}
+
+EXTERN int __tgt_target_jit_kernel(ident_t *Loc, int64_t DeviceId,
+                                   void *HostPtr, void *JitCode,
+                                   JitKernelArgsTy *KernelArgs) {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
+  if (KernelArgs->Flags.NoWait)
+    return targetJitKernel<TaskAsyncInfoWrapperTy>(Loc, DeviceId, HostPtr,
+                                                   JitCode, KernelArgs);
+  return targetJitKernel<AsyncInfoTy>(Loc, DeviceId, HostPtr, JitCode,
+                                      KernelArgs);
 }
 
 /// Activates the record replay mechanism.

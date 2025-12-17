@@ -95,9 +95,10 @@ def LowerWorkshare : Pass<"lower-workshare", "::mlir::ModuleOp"> {
 
 def LowerWorkdistribute : Pass<"lower-workdistribute", "::mlir::ModuleOp"> {
   let summary = "Lower workdistribute construct";
+  let dependentDialects = ["mlir::func::FuncDialect"];
 }
 
-def LowerWorkdistributeToStableHlo : Pass<"lower-workdistribute-to-stablehlo", "::mlir::ModuleOp"> {
+def LowerWorkdistributeToJit : Pass<"lower-workdistribute-to-jit", "::mlir::ModuleOp"> {
   let summary = "Lower workdistributedwi construct";
 }
 

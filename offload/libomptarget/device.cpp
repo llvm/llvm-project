@@ -298,6 +298,14 @@ int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
   return OFFLOAD_SUCCESS;
 }
 
+int32_t
+DeviceTy::delegatedLaunchKernel(void *TgtEntryPtr,
+                                std::function<int64_t(void *)> &DelegatedLaunch,
+                                AsyncInfoTy &AsyncInfo) {
+  return RTL->delegated_launch_kernel(RTLDeviceID, TgtEntryPtr, DelegatedLaunch,
+                                      AsyncInfo);
+}
+
 // Run region on device
 int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
                                ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,

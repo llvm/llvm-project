@@ -39,6 +39,14 @@
 
 using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
 
+static constexpr char JitCodeExecutorName[] = "__botw_jit_code";
+extern "C" int64_t (*JitCodeExecutor)(void *JitCode, int64_t NumArgs,
+                                      void **TgtArgs, ptrdiff_t *TgtOffsets,
+                                      void *DeviceArgs, int64_t NumHostArgs,
+                                      void **ArgBasePtrs, void **ArgPtrs,
+                                      int64_t *ArgSizes, int64_t *ArgTypes,
+                                      void **ArgNames);
+
 /// Struct for the data required to handle plugins
 struct PluginManager {
   /// Type of the devices container. We hand out DeviceTy& to queries which are

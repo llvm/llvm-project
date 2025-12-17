@@ -35,7 +35,10 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Support/raw_ostream.h"
+#include <llvm/Support/DebugLog.h>
 #include <mlir/Dialect/Arith/IR/Arith.h>
+#include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/Dialect/LLVMIR/LLVMTypes.h>
 #include <mlir/Dialect/Utils/IndexingUtils.h>
 #include <mlir/IR/BlockSupport.h>
@@ -45,12 +48,12 @@
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <mlir/Support/LLVM.h>
-#include <llvm/Support/DebugLog.h>
+#include <mlir/Support/WalkResult.h>
 #include <optional>
 #include <variant>
 
 namespace flangomp {
-#define GEN_PASS_DEF_LOWERWORKDISTRIBUTETOSTABLEHLO
+#define GEN_PASS_DEF_LOWERWORKDISTRIBUTETOJIT
 #include "flang/Optimizer/OpenMP/Passes.h.inc"
 } // namespace flangomp
 
@@ -59,13 +62,63 @@ namespace flangomp {
 using namespace mlir;
 
 namespace {
-class LowerWorkdistributeToStableHloPass
-    : public flangomp::impl::LowerWorkdistributeToStableHloBase<LowerWorkdistributeToStableHloPass> {
+class LowerWorkdistributeToJitPass
+    : public flangomp::impl::LowerWorkdistributeToJitBase<
+          LowerWorkdistributeToJitPass> {
 public:
   void runOnOperation() override {
     MLIRContext &context = getContext();
     auto moduleOp = getOperation();
-    LDBG() << moduleOp;
+
+    SmallVector<omp::TargetOp> targetOps;
+    moduleOp.walk(
+        [&](omp::TargetOp targetOp) { targetOps.push_back(targetOp); });
+    for (auto targetOp : targetOps) {
+      if (targetOp
+              ->walk(
+                  [](omp::WorkdistributeOp) { return WalkResult::interrupt(); })
+              .wasInterrupted() == false) {
+        LDBG() << "Ignoring non-workdistribute target op:\n" << *targetOp;
+        continue;
+      }
+
+      std::string str;
+      {
+        OpBuilder b(&context);
+        b.setInsertionPointToStart(moduleOp.getBody());
+        auto f = func::FuncOp::create(
+            b, targetOp.getLoc(), "kernel",
+            FunctionType::get(&context,
+                              targetOp.getRegion().begin()->getArgumentTypes(),
+                              {}));
+        b.cloneRegionBefore(targetOp.getRegion(), f.getRegion(),
+                            f.getRegion().begin());
+
+        llvm::raw_string_ostream os(str);
+        os << *f;
+        f->erase();
+      }
+
+      OpBuilder b(targetOp);
+      auto targetJitOp = omp::TargetJitOp::create(
+          b, targetOp.getLoc(), targetOp.getAllocateVars(),
+          targetOp.getAllocatorVars(), targetOp.getBareAttr(),
+          targetOp.getDependKindsAttr(), targetOp.getDependVars(),
+          targetOp.getDevice(), targetOp.getHasDeviceAddrVars(),
+          targetOp.getHostEvalVars(), targetOp.getIfExpr(),
+          targetOp.getInReductionVars(), targetOp.getInReductionByrefAttr(),
+          targetOp.getInReductionSymsAttr(), targetOp.getIsDevicePtrVars(),
+          targetOp.getMapVars(), targetOp.getNowaitAttr(),
+          targetOp.getPrivateVars(), targetOp.getPrivateSymsAttr(),
+          targetOp.getPrivateNeedsBarrierAttr(), targetOp.getThreadLimit(),
+          targetOp.getPrivateMapsAttr(),
+          /*jit_code=*/StringAttr::get(&context, str.c_str()));
+      targetJitOp.getRegion().takeBody(targetOp.getRegion());
+      targetJitOp.getRegion().begin()->clear();
+      b.setInsertionPointToStart(&*targetJitOp.getRegion().begin());
+      omp::TerminatorOp::create(b, targetOp->getLoc());
+      targetOp->erase();
+    }
   }
 };
 } // namespace

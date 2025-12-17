@@ -92,6 +92,9 @@ __OMP_STRUCT_TYPE(Ident, ident_t, false, Int32, Int32, Int32, Int32, Int8Ptr)
 __OMP_STRUCT_TYPE(KernelArgs, __tgt_kernel_arguments, false, Int32, Int32, VoidPtrPtr,
 		  VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr,
 		  Int64, Int64, Int32Arr3Ty, Int32Arr3Ty, Int32)
+__OMP_STRUCT_TYPE(JitKernelArgs, __tgt_jit_kernel_arguments, false, Int32, Int32, VoidPtrPtr,
+		  VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr,
+		  Int64)
 __OMP_STRUCT_TYPE(AsyncInfo, __tgt_async_info, false, Int8Ptr)
 __OMP_STRUCT_TYPE(DependInfo, kmp_dep_info, false, SizeTy, SizeTy, Int8)
 __OMP_STRUCT_TYPE(Task, kmp_task_ompbuilder_t, false, VoidPtr, VoidPtr, Int32, VoidPtr, VoidPtr)
@@ -441,6 +444,8 @@ __OMP_RTL(__tgt_target_teams_nowait_mapper, false, Int32, IdentPtr, Int64,
           VoidPtrPtr, VoidPtrPtr, Int32, Int32, Int32, VoidPtr, Int32, VoidPtr)
 __OMP_RTL(__tgt_target_kernel, false, Int32, IdentPtr, Int64, Int32, Int32,
           VoidPtr, KernelArgsPtr)
+__OMP_RTL(__tgt_target_jit_kernel, false, Int32, IdentPtr, Int64,
+          VoidPtr, VoidPtr, KernelArgsPtr)
 __OMP_RTL(__tgt_target_kernel_nowait, false, Int32, IdentPtr, Int64, Int32,
           Int32, VoidPtr, KernelArgsPtr, Int32, VoidPtr, Int32, VoidPtr)
 __OMP_RTL(__tgt_target_data_begin_mapper, false, Void, IdentPtr, Int64, Int32, VoidPtrPtr,

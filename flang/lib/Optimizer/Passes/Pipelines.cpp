@@ -16,8 +16,9 @@
 static llvm::cl::opt<bool> forceNoAlias("force-no-alias", llvm::cl::Hidden,
                                         llvm::cl::init(true));
 
-static llvm::cl::opt<bool> useStableHlo("use-stablehlo", llvm::cl::Hidden,
-                                        llvm::cl::init(false));
+static llvm::cl::opt<bool> jitWorkdistribute("jit-workdistribute",
+                                             llvm::cl::Hidden,
+                                             llvm::cl::init(false));
 
 namespace fir {
 
@@ -260,10 +261,9 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
         pm, hlfir::createSimplifyHLFIRIntrinsics);
   }
 
-  if (useStableHlo) {
-    pm.addPass(flangomp::createLowerWorkdistributeToStableHlo());
+  if (jitWorkdistribute) {
+    pm.addPass(flangomp::createLowerWorkdistributeToJit());
   }
-
 
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, hlfir::createInlineElementals);

@@ -11,6 +11,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_PLUGININTERFACE_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_PLUGININTERFACE_H
 
+#include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -51,6 +52,7 @@
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
+using DelegatedLaunchTy = std::function<int32_t(void *)>;
 namespace omp {
 namespace target {
 
@@ -63,6 +65,14 @@ struct RecordReplayTy;
 template <typename ResourceRef> class GenericDeviceResourceManagerTy;
 
 namespace Plugin {
+
+struct DelegatedLaunchArgs {
+  enum class DeviceTyTy { CUDA, AMD, HOST };
+  DeviceTyTy DeviceTy;
+  void *Device;
+  void *Stream;
+};
+
 /// Create a success error. This is the same as calling Error::success(), but
 /// it is recommended to use this one for consistency with Plugin::error() and
 /// Plugin::check().
@@ -353,6 +363,17 @@ struct GenericKernelTy {
   Error init(GenericDeviceTy &GenericDevice, DeviceImageTy &Image);
   virtual Error initImpl(GenericDeviceTy &GenericDevice,
                          DeviceImageTy &Image) = 0;
+
+  Error delegatedLaunch(GenericDeviceTy &GenericDevice,
+                        std::function<int64_t(void *)> &DelegatedLaunch,
+                        AsyncInfoWrapperTy &AsyncInfoWrapper) const;
+  virtual Error
+  delegatedLaunchImpl(GenericDeviceTy &GenericDevice,
+                      std::function<int64_t(void *)> &DelegatedLaunch,
+                      AsyncInfoWrapperTy &AsyncInfoWrapper) const {
+    DP("UNIMPLEMENTED DELEGATED LAUNCH\n");
+    llvm_unreachable("unsupported");
+  }
 
   /// Launch the kernel on the specific device. The device must be the same
   /// one used to initialize the kernel.
@@ -947,6 +968,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                              AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
   /// Run the kernel associated with \p EntryPtr
+  Error delegatedLaunchKernel(void *EntryPtr,
+                              std::function<int64_t(void *)> &DelegatedLaunch,
+                              __tgt_async_info *AsyncInfo);
+
+  /// Run the kernel associated with \p EntryPtr
   Error launchKernel(void *EntryPtr, void **ArgPtrs, ptrdiff_t *ArgOffsets,
                      KernelArgsTy &KernelArgs, __tgt_async_info *AsyncInfo);
 
@@ -1418,6 +1444,8 @@ public:
                                    void *VAddr, bool isRecord, bool SaveOutput,
                                    uint64_t &ReqPtrArgOffset);
 
+  int32_t get_dummy_function(int32_t DeviceId, void **KernelPtr);
+
   /// Loads the associated binary into the plugin and returns a handle to it.
   int32_t load_binary(int32_t DeviceId, __tgt_device_image *TgtImage,
                       __tgt_device_binary *Binary);
@@ -1469,6 +1497,11 @@ public:
   /// Places a fence between previous data movements and following data
   /// movements if necessary on the device
   int32_t data_fence(int32_t DeviceId, __tgt_async_info *AsyncInfo);
+
+  int32_t
+  delegated_launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
+                          std::function<int64_t(void *)> &DelegatedLaunch,
+                          __tgt_async_info *AsyncInfoPtr);
 
   /// Begin executing a kernel on the given device.
   int32_t launch_kernel(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,

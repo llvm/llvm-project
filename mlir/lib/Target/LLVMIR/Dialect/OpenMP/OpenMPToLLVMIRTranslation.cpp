@@ -16,6 +16,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenMPCommon.h"
@@ -5073,10 +5074,11 @@ convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
   return success();
 }
 
+template <typename T>
 static void getTargetEntryUniqueInfo(llvm::TargetRegionEntryInfo &targetInfo,
-                                     omp::TargetOp targetOp,
+                                     T targetOp,
                                      llvm::StringRef parentName = "") {
-  auto fileLoc = targetOp.getLoc()->findInstanceOf<FileLineColLoc>();
+  auto fileLoc = targetOp.getLoc()->template findInstanceOf<FileLineColLoc>();
 
   assert(fileLoc && "No file found from location");
   StringRef fileName = fileLoc.getFilename().getValue();
@@ -5281,10 +5283,10 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
 ///
 /// Loop bounds and steps are only optionally populated, if output vectors are
 /// provided.
+template <typename T>
 static void
-extractHostEvalClauses(omp::TargetOp targetOp, Value &numThreads,
-                       Value &numTeamsLower, Value &numTeamsUpper,
-                       Value &threadLimit,
+extractHostEvalClauses(T targetOp, Value &numThreads, Value &numTeamsLower,
+                       Value &numTeamsUpper, Value &threadLimit,
                        llvm::SmallVectorImpl<Value> *lowerBounds = nullptr,
                        llvm::SmallVectorImpl<Value> *upperBounds = nullptr,
                        llvm::SmallVectorImpl<Value> *steps = nullptr) {
@@ -5403,8 +5405,9 @@ static uint64_t getReductionDataSize(OpTy &op) {
 /// These default values must be set before the creation of the outlined LLVM
 /// function for the target region, so that they can be used to initialize the
 /// corresponding global `ConfigurationEnvironmentTy` structure.
+template <typename T>
 static void
-initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
+initTargetDefaultAttrs(T targetOp, Operation *capturedOp,
                        llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs &attrs,
                        bool isTargetDevice, bool isGPU) {
   // TODO: Handle constant 'if' clauses.
@@ -5529,10 +5532,11 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
 /// This function must be called only when compiling for the host. Also, it will
 /// only provide correct results if it's called after the body of \c targetOp
 /// has been fully generated.
+template <typename T>
 static void
 initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
-                       LLVM::ModuleTranslation &moduleTranslation,
-                       omp::TargetOp targetOp, Operation *capturedOp,
+                       LLVM::ModuleTranslation &moduleTranslation, T targetOp,
+                       Operation *capturedOp,
                        llvm::OpenMPIRBuilder::TargetKernelRuntimeAttrs &attrs) {
   omp::LoopNestOp loopOp = castOrGetParentOfType<omp::LoopNestOp>(capturedOp);
   unsigned numLoops = loopOp ? loopOp.getNumLoops() : 0;
@@ -5592,10 +5596,11 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
   }
 }
 
+template <typename T>
 static LogicalResult
 convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                  LLVM::ModuleTranslation &moduleTranslation) {
-  auto targetOp = cast<omp::TargetOp>(opInst);
+  auto targetOp = cast<T>(opInst);
   // The current debug location already has the DISubprogram for the outlined
   // function that will be created for the target op. We save it here so that
   // we can set it on the outlined function.
@@ -5830,14 +5835,14 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::TargetKernelRuntimeAttrs runtimeAttrs;
   llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs defaultAttrs;
   Operation *targetCapturedOp = targetOp.getInnermostCapturedOmpOp();
-  initTargetDefaultAttrs(targetOp, targetCapturedOp, defaultAttrs,
-                         isTargetDevice, isGPU);
+  initTargetDefaultAttrs<T>(targetOp, targetCapturedOp, defaultAttrs,
+                            isTargetDevice, isGPU);
 
   // Collect host-evaluated values needed to properly launch the kernel from the
   // host.
   if (!isTargetDevice)
-    initTargetRuntimeAttrs(builder, moduleTranslation, targetOp,
-                           targetCapturedOp, runtimeAttrs);
+    initTargetRuntimeAttrs<T>(builder, moduleTranslation, targetOp,
+                              targetCapturedOp, runtimeAttrs);
 
   // Pass host-evaluated values as parameters to the kernel / host fallback,
   // except if they are constants. In any case, map the MLIR block argument to
@@ -5889,11 +5894,17 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   if (Value targetIfCond = targetOp.getIfExpr())
     ifCond = moduleTranslation.lookupValue(targetIfCond);
 
+  llvm::Value *jitCode = nullptr;
+  if (std::optional<StringAttr> jitCodeAttr = targetOp.getJitCode())
+    jitCode =
+        builder.CreateGlobalString(jitCodeAttr->getValue(), "omp_jit_code");
+
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTarget(
           ompLoc, isOffloadEntry, allocaIP, builder.saveIP(), info, entryInfo,
           defaultAttrs, runtimeAttrs, ifCond, kernelInput, genMapInfoCB, bodyCB,
-          argAccessorCB, customMapperCB, dds, targetOp.getNowait());
+          argAccessorCB, customMapperCB, dds, targetOp.getNowait(),
+          builder.getInt1(true), jitCode);
 
   if (failed(handleError(afterIP, opInst)))
     return failure();
@@ -6253,7 +6264,12 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
             return convertOmpTargetData(op, builder, moduleTranslation);
           })
           .Case([&](omp::TargetOp) {
-            return convertOmpTarget(*op, builder, moduleTranslation);
+            return convertOmpTarget<omp::TargetOp>(*op, builder,
+                                                   moduleTranslation);
+          })
+          .Case([&](omp::TargetJitOp) {
+            return convertOmpTarget<omp::TargetJitOp>(*op, builder,
+                                                      moduleTranslation);
           })
           .Case([&](omp::DistributeOp) {
             return convertOmpDistribute(*op, builder, moduleTranslation);
@@ -6315,13 +6331,14 @@ static LogicalResult
 convertTargetOpsInNest(Operation *op, llvm::IRBuilderBase &builder,
                        LLVM::ModuleTranslation &moduleTranslation) {
   if (isa<omp::TargetOp>(op))
-    return convertOmpTarget(*op, builder, moduleTranslation);
+    return convertOmpTarget<omp::TargetOp>(*op, builder, moduleTranslation);
   if (isa<omp::TargetDataOp>(op))
     return convertOmpTargetData(op, builder, moduleTranslation);
   bool interrupted =
       op->walk<WalkOrder::PreOrder>([&](Operation *oper) {
           if (isa<omp::TargetOp>(oper)) {
-            if (failed(convertOmpTarget(*oper, builder, moduleTranslation)))
+            if (failed(convertOmpTarget<omp::TargetOp>(*oper, builder,
+                                                       moduleTranslation)))
               return WalkResult::interrupt();
             return WalkResult::skip();
           }

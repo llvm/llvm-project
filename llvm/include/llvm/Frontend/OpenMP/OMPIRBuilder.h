@@ -2202,6 +2202,13 @@ public:
                                           Value *NumThreads, Value *HostPtr,
                                           ArrayRef<Value *> KernelArgs);
 
+  LLVM_ABI InsertPointTy emitTargetJitKernel(const LocationDescription &Loc,
+                                             InsertPointTy AllocaIP,
+                                             Value *&Return, Value *Ident,
+                                             Value *DeviceID, Value *HostPtr,
+                                             Value *JitCode,
+                                             ArrayRef<Value *> KernelArgs);
+
   /// Generate a flush runtime call.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.
@@ -2432,6 +2439,24 @@ public:
     Value *LoopTripCount = nullptr;
   };
 
+  struct TargetJitKernelArgs {
+    /// Number of arguments passed to the runtime library.
+    unsigned NumTargetItems = 0;
+    /// Arguments passed to the runtime library
+    TargetDataRTArgs RTArgs;
+    /// True if the kernel has 'no wait' clause.
+    bool HasNoWait = false;
+    /// Code
+    Value *JitCode;
+
+    // Constructors for TargetKernelArgs.
+    TargetJitKernelArgs() = default;
+    TargetJitKernelArgs(unsigned NumTargetItems, TargetDataRTArgs RTArgs,
+                        bool HasNoWait, Value *JitCode)
+        : NumTargetItems(NumTargetItems), RTArgs(RTArgs), HasNoWait(HasNoWait),
+          JitCode(JitCode) {}
+  };
+
   /// Data structure that contains the needed information to construct the
   /// kernel args vector.
   struct TargetKernelArgs {
@@ -2468,6 +2493,10 @@ public:
   LLVM_ABI static void getKernelArgsVector(TargetKernelArgs &KernelArgs,
                                            IRBuilderBase &Builder,
                                            SmallVector<Value *> &ArgsVector);
+
+  LLVM_ABI static void getJitKernelArgsVector(TargetJitKernelArgs &KernelArgs,
+                                              IRBuilderBase &Builder,
+                                              SmallVector<Value *> &ArgsVector);
 
   /// Struct that keeps the information that should be kept throughout
   /// a 'target data' region.
@@ -2590,6 +2619,12 @@ public:
       const LocationDescription &Loc, Value *OutlinedFnID,
       EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetKernelArgs &Args,
       Value *DeviceID, Value *RTLoc, InsertPointTy AllocaIP);
+
+  LLVM_ABI InsertPointOrErrorTy
+  emitJitKernelLaunch(const LocationDescription &Loc, Value *OutlinedFnID,
+                      EmitFallbackCallbackTy EmitTargetCallFallbackCB,
+                      TargetJitKernelArgs &Args, Value *DeviceID, Value *RTLoc,
+                      InsertPointTy AllocaIP);
 
   /// Callback type for generating the bodies of device directives that require
   /// outer target tasks (e.g. in case of having `nowait` or `depend` clauses).
@@ -3255,7 +3290,8 @@ public:
       TargetBodyGenCallbackTy BodyGenCB,
       TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
       CustomMapperCallbackTy CustomMapperCB,
-      const SmallVector<DependData> &Dependencies, bool HasNowait = false);
+      const SmallVector<DependData> &Dependencies, bool HasNowait = false,
+      Value *JitCond = nullptr, Value *JitCode = nullptr);
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call

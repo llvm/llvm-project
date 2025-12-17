@@ -569,6 +569,11 @@ struct AMDGPUKernelTy : public GenericKernelTy {
     return Plugin::success();
   }
 
+  Error
+  delegatedLaunchImpl(GenericDeviceTy &GenericDevice,
+                      std::function<int64_t(void *)> &DelegatedLaunch,
+                      AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
+
   /// Launch the AMDGPU kernel function.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
                    uint32_t NumBlocks[3], KernelArgsTy &KernelArgs,
@@ -3709,6 +3714,25 @@ private:
   /// The device representing all HSA host agents.
   AMDHostDeviceTy *HostDevice;
 };
+
+Error AMDGPUKernelTy::delegatedLaunchImpl(
+    GenericDeviceTy &GenericDevice,
+    std::function<int64_t(void *)> &DelegatedLaunch,
+    AsyncInfoWrapperTy &AsyncInfoWrapper) const {
+  AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(GenericDevice);
+
+  AMDGPUStreamTy *Stream = nullptr;
+  if (auto Err = AMDGPUDevice.getStream(AsyncInfoWrapper, Stream))
+    return Err;
+
+  // TODO get the amd device?
+  Plugin::DelegatedLaunchArgs DLA{Plugin::DelegatedLaunchArgs::DeviceTyTy::AMD,
+                                  nullptr, Stream};
+  auto Res = DelegatedLaunch(&DLA);
+  if (Res)
+    return Plugin::check(Res, "error in delegated launch: %s");
+  return Plugin::success();
+}
 
 Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  uint32_t NumThreads[3], uint32_t NumBlocks[3],

@@ -34,6 +34,7 @@
 #include "llvm/Object/ObjectFile.h"
 
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -2012,6 +2013,124 @@ static int processDataAfter(ident_t *Loc, int64_t DeviceId, void *HostPtr,
   return OFFLOAD_SUCCESS;
 }
 } // namespace
+
+extern "C" int64_t (*JitCodeExecutor)(void *JitCode, int64_t NumArgs,
+                                      void **TgtArgs, ptrdiff_t *TgtOffsets,
+                                      void *DeviceArgs, int64_t NumHostArgs,
+                                      void **ArgBasePtrs, void **ArgPtrs,
+                                      int64_t *ArgSizes, int64_t *ArgTypes,
+                                      void **ArgNames) = nullptr;
+
+int targetJit(ident_t *Loc, DeviceTy &Device, void *HostPtr, void *JitCode,
+              JitKernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo) {
+
+  if (!JitCodeExecutor) {
+    DP("%s required and we could not load it.\n", JitCodeExecutorName);
+    abort();
+  }
+
+  int32_t DeviceId = Device.DeviceID;
+
+  if (!Device.DummyKernel) {
+    DP("Dummy kernel for device %d %p does not exist: %p\n", DeviceId, &Device,
+       Device.DummyKernel);
+    abort();
+  }
+
+  TableMap *TM = getTableMap(HostPtr);
+  // No map for this host pointer found!
+  if (!TM) {
+    REPORT("Host ptr " DPxMOD " does not have a matching target pointer.\n",
+           DPxPTR(HostPtr));
+    return OFFLOAD_FAIL;
+  }
+
+  // get target table.
+  __tgt_target_table *TargetTable = nullptr;
+  {
+    std::lock_guard<std::mutex> TrlTblLock(PM->TrlTblMtx);
+    assert(TM->Table->TargetsTable.size() > (size_t)DeviceId &&
+           "Not expecting a device ID outside the table's bounds!");
+    TargetTable = TM->Table->TargetsTable[DeviceId];
+  }
+  assert(TargetTable && "Global data has not been mapped\n");
+
+  // We need to keep bases and offsets separate. Sometimes (e.g. in OpenCL) we
+  // need to manifest base pointers prior to launching a kernel. Even if we have
+  // mapped an object only partially, e.g. A[N:M], although the kernel is
+  // expected to access elements starting at address &A[N] and beyond, we still
+  // need to manifest the base of the array &A[0]. In other cases, e.g. the COI
+  // API, we need the begin address itself, i.e. &A[N], as the API operates on
+  // begin addresses, not bases. That's why we pass args and offsets as two
+  // separate entities so that each plugin can do what it needs. This behavior
+  // was introduced via https://reviews.llvm.org/D33028 and commit 1546d319244c.
+  SmallVector<void *> TgtArgs;
+  SmallVector<ptrdiff_t> TgtOffsets;
+
+  PrivateArgumentManagerTy PrivateArgumentManager(Device, AsyncInfo);
+
+  int NumClangLaunchArgs = KernelArgs.NumArgs;
+  int Ret = OFFLOAD_SUCCESS;
+  if (NumClangLaunchArgs) {
+    // Process data, such as data mapping, before launching the kernel
+    Ret = processDataBefore(Loc, DeviceId, HostPtr, NumClangLaunchArgs,
+                            KernelArgs.ArgBasePtrs, KernelArgs.ArgPtrs,
+                            KernelArgs.ArgSizes, KernelArgs.ArgTypes,
+                            KernelArgs.ArgNames, KernelArgs.ArgMappers, TgtArgs,
+                            TgtOffsets, PrivateArgumentManager, AsyncInfo);
+    if (Ret != OFFLOAD_SUCCESS) {
+      REPORT("Failed to process data before launching the kernel.\n");
+      return OFFLOAD_FAIL;
+    }
+
+    // Clang might pass more values via the ArgPtrs to the runtime that we pass
+    // on to the kernel.
+    // TODO: Next time we adjust the KernelArgsTy we should introduce a new
+    // NumKernelArgs field.
+    KernelArgs.NumArgs = TgtArgs.size();
+  }
+
+  void *TgtEntryPtr = TargetTable->EntriesBegin[TM->Index].Address;
+  DP("Launching target jit execution %s with pointer " DPxMOD " (index=%d).\n",
+     TargetTable->EntriesBegin[TM->Index].SymbolName, DPxPTR(TgtEntryPtr),
+     TM->Index);
+
+  {
+    assert(KernelArgs.NumArgs == TgtArgs.size() && "Argument count mismatch!");
+    TIMESCOPE_WITH_DETAILS_AND_IDENT(
+        "Kernel Target", "NumArguments=" + std::to_string(KernelArgs.NumArgs),
+        Loc);
+    std::function<int64_t(void *)> Launch = [&](void *DeviceArgs) -> int64_t {
+      return JitCodeExecutor(JitCode, (int64_t)TgtArgs.size(), TgtArgs.data(),
+                             TgtOffsets.data(), DeviceArgs, NumClangLaunchArgs,
+                             KernelArgs.ArgBasePtrs, KernelArgs.ArgPtrs,
+                             KernelArgs.ArgSizes, KernelArgs.ArgTypes,
+                             KernelArgs.ArgNames);
+    };
+    Device.delegatedLaunchKernel(Device.DummyKernel, Launch, AsyncInfo);
+  }
+
+  if (Ret != OFFLOAD_SUCCESS) {
+    REPORT("Executing target region abort target.\n");
+    return OFFLOAD_FAIL;
+  }
+
+  if (NumClangLaunchArgs) {
+    // Transfer data back and deallocate target memory for (first-)private
+    // variables
+    Ret = processDataAfter(Loc, DeviceId, HostPtr, NumClangLaunchArgs,
+                           KernelArgs.ArgBasePtrs, KernelArgs.ArgPtrs,
+                           KernelArgs.ArgSizes, KernelArgs.ArgTypes,
+                           KernelArgs.ArgNames, KernelArgs.ArgMappers,
+                           PrivateArgumentManager, AsyncInfo);
+    if (Ret != OFFLOAD_SUCCESS) {
+      REPORT("Failed to process data after launching the kernel.\n");
+      return OFFLOAD_FAIL;
+    }
+  }
+
+  return OFFLOAD_SUCCESS;
+}
 
 /// performs the same actions as data_begin in case arg_num is
 /// non-zero and initiates run of the offloaded region on the target platform;

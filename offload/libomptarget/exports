@@ -27,6 +27,7 @@ VERS1.0 {
     __tgt_target_nowait_mapper;
     __tgt_target_teams_nowait_mapper;
     __tgt_target_kernel;
+    __tgt_target_jit_kernel;
     __tgt_target_kernel_nowait;
     __tgt_target_nowait_query;
     __tgt_target_kernel_replay;

@@ -15,6 +15,7 @@
 
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
+#include <dlfcn.h>
 
 #ifdef OMPT_SUPPORT
 extern void llvm::omp::target::ompt::connectLibrary();
@@ -46,6 +47,15 @@ void initRuntime() {
 
     // RTL initialization is complete
     RTLAlive = true;
+  }
+
+  JitCodeExecutor = reinterpret_cast<decltype(JitCodeExecutor)>(
+      dlsym(RTLD_DEFAULT, JitCodeExecutorName));
+  const char *Err = dlerror();
+  if (Err) {
+    DP("Could not load %s", JitCodeExecutorName);
+    DP("dlsym error: %s\n", Err);
+    JitCodeExecutor = nullptr;
   }
 }
 

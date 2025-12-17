@@ -117,6 +117,10 @@ struct DeviceTy {
                        ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
                        AsyncInfoTy &AsyncInfo);
 
+  int32_t delegatedLaunchKernel(void *TgtEntryPtr,
+                                std::function<int64_t(void *)> &DelegatedLaunch,
+                                AsyncInfoTy &AsyncInfo);
+
   /// Synchronize device/queue/event based on \p AsyncInfo and return
   /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails.
   int32_t synchronize(AsyncInfoTy &AsyncInfo);
@@ -181,6 +185,9 @@ private:
 
   /// Flag to indicate pending images (true after construction).
   bool HasPendingImages = true;
+
+public:
+  void *DummyKernel = nullptr;
 };
 
 #endif

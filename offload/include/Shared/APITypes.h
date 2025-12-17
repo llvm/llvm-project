@@ -117,6 +117,29 @@ static_assert(sizeof(KernelArgsTy) ==
                    4 * sizeof(void **) + 2 * sizeof(int64_t *)),
               "Invalid struct size");
 
+struct JitKernelArgsTy {
+  uint32_t Version = 0; // Version of this struct for ABI compatibility.
+  uint32_t NumArgs = 0; // Number of arguments in each input pointer.
+  void **ArgBasePtrs =
+      nullptr;                 // Base pointer of each argument (e.g. a struct).
+  void **ArgPtrs = nullptr;    // Pointer to the argument data.
+  int64_t *ArgSizes = nullptr; // Size of the argument data in bytes.
+  int64_t *ArgTypes = nullptr; // Type of the data (e.g. to / from).
+  void **ArgNames = nullptr;   // Name of the data for debugging, possibly null.
+  void **ArgMappers = nullptr; // User-defined mappers, possibly null.
+  struct {
+    uint64_t NoWait : 1; // Was this kernel spawned with a `nowait` clause.
+    uint64_t IsCUDA : 1; // Was this kernel spawned via CUDA.
+    uint64_t Unused : 62;
+  } Flags = {0, 0, 0};
+};
+static_assert(sizeof(KernelArgsTy().Flags) == sizeof(uint64_t),
+              "Invalid struct size");
+static_assert(sizeof(KernelArgsTy) ==
+                  (8 * sizeof(int32_t) + 3 * sizeof(int64_t) +
+                   4 * sizeof(void **) + 2 * sizeof(int64_t *)),
+              "Invalid struct size");
+
 /// Flat array of kernel launch parameters and their total size.
 struct KernelLaunchParamsTy {
   /// Size of the Data array.

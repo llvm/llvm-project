@@ -522,6 +522,26 @@ void OpenMPIRBuilderConfig::setHasRequiresDynamicAllocators(bool Value) {
 // OpenMPIRBuilder
 //===----------------------------------------------------------------------===//
 
+void OpenMPIRBuilder::getJitKernelArgsVector(TargetJitKernelArgs &KernelArgs,
+                                             IRBuilderBase &Builder,
+                                             SmallVector<Value *> &ArgsVector) {
+  Value *Version = Builder.getInt32(OMP_KERNEL_ARG_VERSION);
+  Value *PointerNum = Builder.getInt32(KernelArgs.NumTargetItems);
+  Value *Flags = Builder.getInt64(KernelArgs.HasNoWait);
+
+  ArgsVector = {
+      Version,
+      PointerNum,
+      KernelArgs.RTArgs.BasePointersArray,
+      KernelArgs.RTArgs.PointersArray,
+      KernelArgs.RTArgs.SizesArray,
+      KernelArgs.RTArgs.MapTypesArray,
+      KernelArgs.RTArgs.MapNamesArray,
+      KernelArgs.RTArgs.MappersArray,
+      Flags,
+  };
+}
+
 void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
                                           IRBuilderBase &Builder,
                                           SmallVector<Value *> &ArgsVector) {
@@ -1180,6 +1200,86 @@ OpenMPIRBuilder::createCancellationPoint(const LocationDescription &Loc,
   Builder.SetInsertPoint(UI->getParent());
   UI->eraseFromParent();
 
+  return Builder.saveIP();
+}
+
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetJitKernel(
+    const LocationDescription &Loc, InsertPointTy AllocaIP, Value *&Return,
+    Value *Ident, Value *DeviceID, Value *HostPtr, Value *JitCode,
+    ArrayRef<Value *> KernelArgs) {
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  Builder.restoreIP(AllocaIP);
+  auto *KernelArgsPtr =
+      Builder.CreateAlloca(OpenMPIRBuilder::KernelArgs, nullptr, "kernel_args");
+  updateToLocation(Loc);
+
+  for (unsigned I = 0, Size = KernelArgs.size(); I != Size; ++I) {
+    llvm::Value *Arg =
+        Builder.CreateStructGEP(OpenMPIRBuilder::KernelArgs, KernelArgsPtr, I);
+    Builder.CreateAlignedStore(
+        KernelArgs[I], Arg,
+        M.getDataLayout().getPrefTypeAlign(KernelArgs[I]->getType()));
+  }
+
+  SmallVector<Value *> OffloadingArgs{Ident, DeviceID, HostPtr, JitCode,
+                                      KernelArgsPtr};
+
+  Return = Builder.CreateCall(
+      getOrCreateRuntimeFunction(M, OMPRTL___tgt_target_jit_kernel),
+      OffloadingArgs);
+
+  return Builder.saveIP();
+}
+
+OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitJitKernelLaunch(
+    const LocationDescription &Loc, Value *OutlinedFnID,
+    EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetJitKernelArgs &Args,
+    Value *DeviceID, Value *RTLoc, InsertPointTy AllocaIP) {
+
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  // On top of the arrays that were filled up, the target offloading call
+  // takes as arguments the device id as well as the host pointer. The host
+  // pointer is used by the runtime library to identify the current target
+  // region, so it only has to be unique and not necessarily point to
+  // anything. It could be the pointer to the outlined function that
+  // implements the target region, but we aren't using that so that the
+  // compiler doesn't need to keep that, and could therefore inline the host
+  // function if proven worthwhile during optimization.
+
+  // From this point on, we need to have an ID of the target region defined.
+  assert(OutlinedFnID && "Invalid outlined function ID!");
+  (void)OutlinedFnID;
+
+  // Return value of the runtime offloading call.
+  Value *Return = nullptr;
+
+  // Arguments for the target kernel.
+  SmallVector<Value *> ArgsVector;
+  getJitKernelArgsVector(Args, Builder, ArgsVector);
+
+  Builder.restoreIP(emitTargetJitKernel(Builder, AllocaIP, Return, RTLoc,
+                                        DeviceID, OutlinedFnID, Args.JitCode,
+                                        ArgsVector));
+
+  BasicBlock *OffloadFailedBlock =
+      BasicBlock::Create(Builder.getContext(), "omp_offload.failed");
+  BasicBlock *OffloadContBlock =
+      BasicBlock::Create(Builder.getContext(), "omp_offload.cont");
+  Value *Failed = Builder.CreateIsNotNull(Return);
+  Builder.CreateCondBr(Failed, OffloadFailedBlock, OffloadContBlock);
+
+  auto CurFn = Builder.GetInsertBlock()->getParent();
+  emitBlock(OffloadFailedBlock, CurFn);
+  InsertPointOrErrorTy AfterIP = EmitTargetCallFallbackCB(Builder.saveIP());
+  if (!AfterIP)
+    return AfterIP.takeError();
+  Builder.restoreIP(*AfterIP);
+  emitBranch(OffloadContBlock);
+  emitBlock(OffloadContBlock, CurFn, /*IsFinished=*/true);
   return Builder.saveIP();
 }
 
@@ -8224,7 +8324,7 @@ static void emitTargetCall(
     OpenMPIRBuilder::GenMapInfoCallbackTy GenMapInfoCB,
     OpenMPIRBuilder::CustomMapperCallbackTy CustomMapperCB,
     const SmallVector<llvm::OpenMPIRBuilder::DependData> &Dependencies,
-    bool HasNoWait) {
+    bool HasNoWait, Value *JitCond, Value *JitCode) {
   // Generate a function call to the host fallback implementation of the target
   // region. This is called by the host when no offload entry was generated for
   // the target region and when the offloading call fails at runtime.
@@ -8293,7 +8393,43 @@ static void emitTargetCall(
     return Error::success();
   };
 
-  auto &&EmitTargetCallThen =
+  auto &&EmitTargetJitCallThen =
+      [&](OpenMPIRBuilder::InsertPointTy AllocaIP,
+          OpenMPIRBuilder::InsertPointTy CodeGenIP) -> Error {
+    Info.HasNoWait = HasNoWait;
+    OpenMPIRBuilder::MapInfosTy &MapInfo = GenMapInfoCB(Builder.saveIP());
+    OpenMPIRBuilder::TargetDataRTArgs RTArgs;
+    if (Error Err = OMPBuilder.emitOffloadingArraysAndArgs(
+            AllocaIP, Builder.saveIP(), Info, RTArgs, MapInfo, CustomMapperCB,
+            /*IsNonContiguous=*/true,
+            /*ForEndCall=*/false))
+      return Err;
+
+    unsigned NumTargetItems = Info.NumberOfPtrs;
+    // TODO: Use correct device ID
+    Value *DeviceID = Builder.getInt64(OMP_DEVICEID_UNDEF);
+    uint32_t SrcLocStrSize;
+    Constant *SrcLocStr = OMPBuilder.getOrCreateDefaultSrcLocStr(SrcLocStrSize);
+    Value *RTLoc = OMPBuilder.getOrCreateIdent(SrcLocStr, SrcLocStrSize,
+                                               llvm::omp::IdentFlag(0), 0);
+
+    OpenMPIRBuilder::TargetJitKernelArgs KArgs =
+        OpenMPIRBuilder::TargetJitKernelArgs(NumTargetItems, RTArgs, HasNoWait,
+                                             JitCode);
+
+    OpenMPIRBuilder::InsertPointTy AfterIP = cantFail([&]() {
+      if (RequiresOuterTargetTask)
+        llvm_unreachable("JIT target with task unsupported");
+
+      return OMPBuilder.emitJitKernelLaunch(Builder, OutlinedFnID,
+                                            EmitTargetCallFallbackCB, KArgs,
+                                            DeviceID, RTLoc, AllocaIP);
+    }());
+
+    Builder.restoreIP(AfterIP);
+    return Error::success();
+  };
+  auto &&EmitTargetJitCallElse =
       [&](OpenMPIRBuilder::InsertPointTy AllocaIP,
           OpenMPIRBuilder::InsertPointTy CodeGenIP) -> Error {
     Info.HasNoWait = HasNoWait;
@@ -8385,6 +8521,13 @@ static void emitTargetCall(
     Builder.restoreIP(AfterIP);
     return Error::success();
   };
+  auto &&EmitTargetCallThen =
+      [&](OpenMPIRBuilder::InsertPointTy AllocaIP,
+          OpenMPIRBuilder::InsertPointTy CodeGenIP) -> Error {
+    cantFail(OMPBuilder.emitIfClause(JitCond, EmitTargetJitCallThen,
+                                     EmitTargetJitCallElse, AllocaIP));
+    return Error::success();
+  };
 
   // If we don't have an ID for the target region, it means an offload entry
   // wasn't created. In this case we just run the host fallback directly and
@@ -8394,14 +8537,24 @@ static void emitTargetCall(
     return;
   }
 
-  // If there's no 'if' clause, only generate the kernel launch code path.
-  if (!IfCond) {
+  if (IfCond && JitCond && JitCode) {
+    cantFail(OMPBuilder.emitIfClause(IfCond, EmitTargetCallThen,
+                                     EmitTargetCallElse, AllocaIP));
+    return;
+  }
+
+  if (IfCond) {
+    cantFail(OMPBuilder.emitIfClause(IfCond, EmitTargetJitCallElse,
+                                     EmitTargetCallElse, AllocaIP));
+    return;
+  }
+
+  if (JitCond && JitCode) {
     cantFail(EmitTargetCallThen(AllocaIP, Builder.saveIP()));
     return;
   }
 
-  cantFail(OMPBuilder.emitIfClause(IfCond, EmitTargetCallThen,
-                                   EmitTargetCallElse, AllocaIP));
+  cantFail(EmitTargetJitCallElse(AllocaIP, Builder.saveIP()));
 }
 
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTarget(
@@ -8414,7 +8567,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTarget(
     OpenMPIRBuilder::TargetBodyGenCallbackTy CBFunc,
     OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
     CustomMapperCallbackTy CustomMapperCB,
-    const SmallVector<DependData> &Dependencies, bool HasNowait) {
+    const SmallVector<DependData> &Dependencies, bool HasNowait, Value *JitCond,
+    Value *JitCode) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -8437,7 +8591,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTarget(
   if (!Config.isTargetDevice())
     emitTargetCall(*this, Builder, AllocaIP, Info, DefaultAttrs, RuntimeAttrs,
                    IfCond, OutlinedFn, OutlinedFnID, Inputs, GenMapInfoCB,
-                   CustomMapperCB, Dependencies, HasNowait);
+                   CustomMapperCB, Dependencies, HasNowait, JitCond, JitCode);
   return Builder.saveIP();
 }
 

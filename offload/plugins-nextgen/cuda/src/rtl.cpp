@@ -152,6 +152,11 @@ struct CUDAKernelTy : public GenericKernelTy {
     return Plugin::success();
   }
 
+  Error
+  delegatedLaunchImpl(GenericDeviceTy &GenericDevice,
+                      std::function<int64_t(void *)> &DelegatedLaunch,
+                      AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
+
   /// Launch the CUDA kernel function.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
                    uint32_t NumBlocks[3], KernelArgsTy &KernelArgs,
@@ -1418,6 +1423,33 @@ private:
   /// simultaneously.
   uint32_t HardwareParallelism = 0;
 };
+
+Error CUDAKernelTy::delegatedLaunchImpl(
+    GenericDeviceTy &GenericDevice,
+    std::function<int64_t(void *)> &DelegatedLaunch,
+    AsyncInfoWrapperTy &AsyncInfoWrapper) const {
+  CUDADeviceTy &CUDADevice = static_cast<CUDADeviceTy &>(GenericDevice);
+
+  CUstream Stream;
+  if (auto Err = CUDADevice.getStream(AsyncInfoWrapper, Stream))
+    return Err;
+
+  Plugin::DelegatedLaunchArgs DLA{Plugin::DelegatedLaunchArgs::DeviceTyTy::CUDA,
+                                  &CUDADevice, Stream};
+  CUresult Res = (CUresult)DelegatedLaunch(&DLA);
+
+  // Register a callback to indicate when the kernel is complete.
+  if (GenericDevice.getRPCServer())
+    cuLaunchHostFunc(
+        Stream,
+        [](void *Data) {
+          GenericPluginTy &Plugin = *reinterpret_cast<GenericPluginTy *>(Data);
+          Plugin.getRPCServer().Thread->finish();
+        },
+        &GenericDevice.Plugin);
+
+  return Plugin::check(Res, "error in cuLaunchKernel for '%s': %s", getName());
+}
 
 Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                uint32_t NumThreads[3], uint32_t NumBlocks[3],
