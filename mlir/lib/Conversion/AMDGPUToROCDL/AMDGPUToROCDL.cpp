@@ -3340,6 +3340,12 @@ void mlir::populateAMDGPUTypeAndAttributeConversions(
   auto addUnrealizedCast = [](OpBuilder &builder, TypeRange types,
                               ValueRange inputs,
                               Location loc) -> SmallVector<Value> {
+    if (inputs.size() != 1)
+      return {};
+
+    if (!isa<TDMDescriptorType>(inputs[0].getType()))
+      return {};
+
     auto cast = UnrealizedConversionCastOp::create(builder, loc, types, inputs);
     return cast.getResults();
   };
