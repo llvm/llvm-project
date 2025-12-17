@@ -189,6 +189,21 @@ end
   `PROCEDURE(), POINTER, NOPASS` derived type components.
   Such procedures may *not* be referenced as implicitly typed functions
   without first being associated with a function pointer.
+* Some intrinsic functions (`COUNT`, `LBOUND`, `LCOBOUND`, `TRANSFER`,
+  `UBOUND`, and `UCOBOUND`) have arguments (usually `DIM=`) that are documented
+  as not allowing `OPTIONAL` dummy arguments to appear as their values.
+  This prohibition appeared on the `DIM=` arguments of more
+  intrinsic functions in earlier revisions of the ISO standard.
+  (Perhaps these are meant to avoid misunderstanding these arguments,
+  which appear in square brackets in the synopses, as if their dynamic
+  presence at runtime could affect the semantics of the intrinsic in
+  the same way as the static presence or absence of the argument does
+  at compilation time, which would not be possible.)
+  No compiler seems to enforce this requirement.
+  We interpret it
+  to mean that an `OPTIONAL` dummy argument may appear but must be present
+  during execution, just as a pointer argument must be associated or an
+  allocatable argument must be allocated.
 
 ## Extensions, deletions, and legacy features supported by default
 
