@@ -47,7 +47,7 @@ static mlir::Value genVscaleTimesFactor(mlir::Location loc,
                                         CIRGenBuilderTy builder,
                                         mlir::Type cirTy,
                                         int32_t scalingFactor) {
-  auto vscale = emitIntrinsicCallOp(builder, loc, "vscale", cirTy);
+  mlir::Value vscale = emitIntrinsicCallOp(builder, loc, "vscale", cirTy);
   return builder.createNUWAMul(loc, vscale,
                                builder.getUInt64(scalingFactor, loc));
 }
@@ -65,11 +65,11 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
 
   assert(!cir::MissingFeatures::aarch64SVEIntrinsics());
 
+  mlir::Location loc = getLoc(expr->getExprLoc());
+
   switch (builtinID) {
   default:
     return std::nullopt;
-
-    mlir::Location loc = getLoc(expr->getExprLoc());
 
   case SVE::BI__builtin_sve_svreinterpret_b:
   case SVE::BI__builtin_sve_svreinterpret_c:

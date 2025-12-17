@@ -457,9 +457,9 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   let builders = [
     TypeBuilderWithInferredContext<(ins
       "mlir::Type":$element_type, "uint64_t":$size, CArg<"bool",
-      "false">:$isScalable
+      "false">:$is_scalable
     ), [{
-        return $_get(element_type.getContext(), element_type, size, isScalable);
+        return $_get(element_type.getContext(), element_type, size, is_scalable);
     }]>,
   ];
 
