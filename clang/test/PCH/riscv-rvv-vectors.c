@@ -1,3 +1,4 @@
+// REQUIRES: riscv-registered-target
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 
