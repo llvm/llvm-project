@@ -6252,15 +6252,11 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
 /// canonicalization.
 static SDValue PerformSELECTShiftCombine(SDNode *N,
                                          TargetLowering::DAGCombinerInfo &DCI) {
-  using namespace SDPatternMatch;
-  unsigned BitWidth = N->getValueType(0).getSizeInBits();
-
-  // Don't optimize i8 shifts. i8 values are stored in 16-bit registers in PTX,
-  // and shift instructions clamp at register width (16), not logical type width
-  // (8). The guard must remain to ensure correct behavior.
-  if (BitWidth < 16)
+  if (!DCI.isAfterLegalizeDAG())
     return SDValue();
 
+  using namespace SDPatternMatch;
+  unsigned BitWidth = N->getValueType(0).getSizeInBits();
   SDValue ShiftAmt, ShiftOp;
 
   // Match logical shifts where the shift amount in the guard matches the shift
