@@ -4072,7 +4072,7 @@ struct OmpPreferType {
 //    TARGETSYNC
 // There can be at most only two interop-type.
 struct OmpInteropType {
-  ENUM_CLASS(Value, Target, TargetSync)
+  ENUM_CLASS(Value, Target, Targetsync)
   WRAPPER_CLASS_BOILERPLATE(OmpInteropType, Value);
 };
 
@@ -4899,8 +4899,8 @@ struct OmpSelfMapsClause {
 // severity-clause ->
 //    SEVERITY(warning|fatal)
 struct OmpSeverityClause {
-  ENUM_CLASS(Severity, Fatal, Warning);
-  WRAPPER_CLASS_BOILERPLATE(OmpSeverityClause, Severity);
+  ENUM_CLASS(SevLevel, Fatal, Warning);
+  WRAPPER_CLASS_BOILERPLATE(OmpSeverityClause, SevLevel);
 };
 
 // Ref: [5.0:232-234], [5.1:264-266], [5.2:137]

@@ -1,6 +1,6 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -Wexperimental-lifetime-safety-suggestions  -Wexperimental-lifetime-safety -I%t -verify %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -Wexperimental-lifetime-safety-suggestions -Wexperimental-lifetime-safety -Wno-dangling -I%t -verify %t/test_source.cpp
 
 View definition_before_header(View a);
 
@@ -8,10 +8,14 @@ View definition_before_header(View a);
 #ifndef TEST_HEADER_H
 #define TEST_HEADER_H
 
-struct MyObj {
+struct View;
+
+struct [[gsl::Owner]] MyObj {
   int id;
   ~MyObj() {}  // Non-trivial destructor
   MyObj operator+(MyObj);
+
+  View getView() const [[clang::lifetimebound]];
 };
 
 struct [[gsl::Pointer()]] View {
@@ -71,6 +75,47 @@ int* return_pointer_directly(int* a) {
 
 MyObj* return_pointer_object(MyObj* a) {
   return a;                                // expected-note {{param returned here}} 
+
+MyObj& return_reference(MyObj& a, // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+                        MyObj& b, // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+                        bool c) {
+  if(c) {
+    return a; // expected-note {{param returned here}}
+  }
+  return b;   // expected-note {{param returned here}}   
+}
+
+const MyObj& return_reference_const(const MyObj& a) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return a; // expected-note {{param returned here}}
+}
+
+MyObj* return_ptr_to_ref(MyObj& a) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return &a; // expected-note {{param returned here}}
+}
+
+// FIXME: Dereference does not propagate loans.
+MyObj& return_ref_to_ptr(MyObj* a) {
+  return *a;
+}
+
+View return_view_from_reference(MyObj& p) {  // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return p;  // expected-note {{param returned here}}
+}
+
+struct Container {  
+  MyObj data;
+  const MyObj& getData() [[clang::lifetimebound]] { return data; }
+};
+// FIXME: c.data does not forward loans
+View return_struct_field(const Container& c) {
+  return c.data;
+}
+View return_struct_lifetimebound_getter(Container& c) {  // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return c.getData().getView();  // expected-note {{param returned here}}
+}
+
+View return_view_from_reference_lifetimebound_member(MyObj& p) {  // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return p.getView();  // expected-note {{param returned here}}
 }
 
 
@@ -139,19 +184,6 @@ void test_get_on_temporary() {
 void test_getView_on_temporary() {
   View sv = ViewProvider{1}.getView();
   (void)sv;
-}
-
-// FIXME: Fails to generate lifetime suggestion for reference types as these are not handled currently.
-MyObj& return_reference(MyObj& a, MyObj& b, bool c) {
-  if (c) {
-    return a;   
-  }
-  return b;     
-}
-
-// FIXME: Fails to generate lifetime suggestion for reference types as these are not handled currently.
-View return_view_from_reference(MyObj& p) {
-  return p; 
 }
 
 //===----------------------------------------------------------------------===//
