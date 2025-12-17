@@ -47,7 +47,7 @@ public:
   ///
   /// Warning: This should only be used by clients writing wrapper-function
   /// caller utilities (like TargetProcessControl).
-  WrapperFunctionResult(CWrapperFunctionResult R) : R(R) {
+  explicit WrapperFunctionResult(CWrapperFunctionResult R) : R(R) {
     // Reset R.
     init(R);
   }
