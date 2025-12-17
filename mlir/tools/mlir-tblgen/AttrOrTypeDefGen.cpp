@@ -32,9 +32,9 @@ using llvm::RecordKeeper;
 
 /// Find all the AttrOrTypeDef for the specified dialect. If no dialect
 /// specified and can only find one dialect's defs, use that.
-static void collectAllDefs(StringRef selectedDialect,
-                           ArrayRef<const Record *> records,
-                           SmallVectorImpl<AttrOrTypeDef> &resultDefs) {
+void mlir::tblgen::collectAllDefs(StringRef selectedDialect,
+                                  ArrayRef<const Record *> records,
+                                  SmallVectorImpl<AttrOrTypeDef> &resultDefs) {
   // Nothing to do if no defs were found.
   if (records.empty())
     return;
@@ -804,42 +804,6 @@ void DefGen::emitStorageClass() {
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// This struct is the base generator used when processing tablegen interfaces.
-class DefGenerator {
-public:
-  bool emitDecls(StringRef selectedDialect);
-  bool emitDefs(StringRef selectedDialect);
-
-protected:
-  DefGenerator(ArrayRef<const Record *> defs, raw_ostream &os,
-               StringRef defType, StringRef valueType, bool isAttrGenerator)
-      : defRecords(defs), os(os), defType(defType), valueType(valueType),
-        isAttrGenerator(isAttrGenerator) {
-    // Sort by occurrence in file.
-    llvm::sort(defRecords, [](const Record *lhs, const Record *rhs) {
-      return lhs->getID() < rhs->getID();
-    });
-  }
-
-  /// Emit the list of def type names.
-  void emitTypeDefList(ArrayRef<AttrOrTypeDef> defs);
-  /// Emit the code to dispatch between different defs during parsing/printing.
-  void emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs);
-
-  /// The set of def records to emit.
-  std::vector<const Record *> defRecords;
-  /// The attribute or type class to emit.
-  /// The stream to emit to.
-  raw_ostream &os;
-  /// The prefix of the tablegen def name, e.g. Attr or Type.
-  StringRef defType;
-  /// The C++ base value type of the def, e.g. Attribute or Type.
-  StringRef valueType;
-  /// Flag indicating if this generator is for Attributes. False if the
-  /// generator is for types.
-  bool isAttrGenerator;
-};
-
 /// A specialized generator for AttrDefs.
 struct AttrDefGenerator : public DefGenerator {
   AttrDefGenerator(const RecordKeeper &records, raw_ostream &os)
