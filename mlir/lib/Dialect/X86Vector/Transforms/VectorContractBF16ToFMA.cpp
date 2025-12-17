@@ -41,24 +41,8 @@ static bool validateVectorContractOperands(Value prodOp) {
     if (readOp.hasOutOfBoundsDim())
       return false;
 
-    AffineMap map = readOp.getPermutationMap();
-
-    // Must be a projected permutation (no skewing, no sums).
-    if (!map.isProjectedPermutation())
+    if (!readOp.getPermutationMap().isMinorIdentity())
       return false;
-
-    // The minor (vector) dimensions must be identity.
-    int64_t vectorRank = readOp.getVectorType().getRank();
-    int64_t numResults = map.getNumResults();
-
-    // The last `vectorRank` results must be (d0, d1, ..., d{vectorRank-1})
-    for (int64_t i = 0; i < vectorRank; ++i) {
-      AffineExpr expr = map.getResult(numResults - vectorRank + i);
-
-      auto dimExpr = llvm::dyn_cast<AffineDimExpr>(expr);
-      if (!dimExpr || dimExpr.getPosition() != i)
-        return false;
-    }
   }
 
   Value srcBuff;
