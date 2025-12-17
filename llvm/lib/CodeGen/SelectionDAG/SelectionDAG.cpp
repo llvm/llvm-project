@@ -2791,6 +2791,7 @@ bool SelectionDAG::SignBitIsZero(SDValue Op, unsigned Depth) const {
   return MaskedValueIsZero(Op, APInt::getSignMask(BitWidth), Depth);
 }
 
+// TODO: Should have argument to specify if sign bit of nan is ignorable.
 bool SelectionDAG::SignBitIsZeroFP(SDValue Op, unsigned Depth) const {
   if (Depth >= MaxRecursionDepth)
     return false; // Limit search depth.
@@ -2812,6 +2813,20 @@ bool SelectionDAG::SignBitIsZeroFP(SDValue Op, unsigned Depth) const {
   case ISD::FEXP2:
   case ISD::FEXP10:
     return Op->getFlags().hasNoNaNs();
+  case ISD::FMINNUM:
+  case ISD::FMINNUM_IEEE:
+  case ISD::FMINIMUM:
+  case ISD::FMINIMUMNUM:
+    return SignBitIsZeroFP(Op.getOperand(1), Depth + 1) &&
+           SignBitIsZeroFP(Op.getOperand(0), Depth + 1);
+  case ISD::FMAXNUM:
+  case ISD::FMAXNUM_IEEE:
+  case ISD::FMAXIMUM:
+  case ISD::FMAXIMUMNUM:
+    // TODO: If we can ignore the sign bit of nans, only one side being known 0
+    // is sufficient.
+    return SignBitIsZeroFP(Op.getOperand(1), Depth + 1) &&
+           SignBitIsZeroFP(Op.getOperand(0), Depth + 1);
   default:
     return false;
   }
