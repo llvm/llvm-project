@@ -116,7 +116,7 @@ There are multiple ABI flags that change the symbols exported from the built lib
 
 ``_LIBCPP_ABI_DO_NOT_EXPORT_ALIGN``
 -------------------------------------------------
-This removes ``align()``. In the past ``align()`` is not an inline function, but now it changed to an inline function for performance.
+This removes ``std::align()`` from the built library. In the past, ``std::align()`` was defined in the built library, but nowadays it is an inline function defined in the headers for performance reasons.
 
 ``_LIBCPP_ABI_DO_NOT_EXPORT_BASIC_STRING_COMMON``
 -------------------------------------------------

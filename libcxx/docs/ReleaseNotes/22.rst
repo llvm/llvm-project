@@ -83,7 +83,7 @@ Improvements and New Features
   iterators, resulting in a performance improvement for ``std::deque<short>`` and
   ``std::join_view<vector<vector<short>>>`` iterators.
 
-- The performance of ``align`` has been improved about 2x by making it an inline function.
+- The performance of ``align`` has been improved by making it an inline function, which allows the compiler to better optimize calls to it.
 
 - The ``num_get::do_get`` integral overloads have been optimized, resulting in a performance improvement of up to 2.8x.
 
