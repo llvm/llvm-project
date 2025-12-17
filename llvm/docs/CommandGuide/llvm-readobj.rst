@@ -181,13 +181,17 @@ The following options are implemented only for the ELF file format.
  When pgo analysis maps are present, all analyses are printed as their raw
  value.
 
-.. option:: --pretty-pgo-analysis-map
+ .. option:: --call-graph-info
 
- When pgo analysis maps are present in the basic block address map section(s),
- analyses with special formats (i.e. BlockFrequency, BranchProbability, etc)
- are printed using the same format as their respective analysis pass.
+  Display the call graph section entries i.e. for each function
+  its identifying information, each of its direct callees' information
+  and for each indirect callee a 64 bit number representing the callee's
+  function signature. This information can be used to reconstruct
+  the program call graph.
 
- Requires :option:`--bb-addr-map` to have an effect.
+.. option:: --cg-profile
+
+ Display the callgraph profile section.
 
 .. option:: --dependent-libraries
 
@@ -205,22 +209,6 @@ The following options are implemented only for the ELF file format.
 
  Display the dynamic table.
 
-.. option:: --call-graph-info
-
-  Display the call graph section entries i.e. for each function
-  its identifying information, each of its direct callees' information
-  and for each indirect callee a 64 bit number representing the callee's
-  function signature. This information can be used to reconstruct
-  the program call graph.
-
-.. option:: --cg-profile
-
- Display the callgraph profile section.
-
-.. option:: --histogram, -I
-
- Display a bucket list histogram for dynamic symbol hash tables.
-
 .. option:: --elf-linker-options
 
  Display the linker options section.
@@ -232,21 +220,21 @@ The following options are implemented only for the ELF file format.
  structured format. ``GNU`` output mimics the equivalent GNU :program:`readelf`
  output. ``JSON`` is JSON formatted output intended for machine consumption.
 
-.. option:: --section-groups, -g
-
- Display section groups.
-
 .. option:: --gnu-hash-table
 
  Display the GNU hash table for dynamic symbols.
-
-.. option:: --hash-symbols
+ 
+ .. option:: --hash-symbols
 
  Display the expanded hash table with dynamic symbol data.
 
 .. option:: --hash-table
 
  Display the hash table for dynamic symbols.
+
+.. option:: --histogram, -I
+
+ Display a bucket list histogram for dynamic symbol hash tables.
 
 .. option:: --memtag
 
@@ -258,6 +246,14 @@ The following options are implemented only for the ELF file format.
 
  Display all notes.
 
+.. option:: --pretty-pgo-analysis-map
+
+ When pgo analysis maps are present in the basic block address map section(s),
+ analyses with special formats (i.e. BlockFrequency, BranchProbability, etc)
+ are printed using the same format as their respective analysis pass.
+
+ Requires :option:`--bb-addr-map` to have an effect.
+
 .. option:: --pretty-print
 
  When used with :option:`--elf-output-style`, JSON output will be formatted in
@@ -266,6 +262,10 @@ The following options are implemented only for the ELF file format.
 .. option:: --program-headers, --segments, -l
 
  Display the program headers.
+
+.. option:: --section-groups, -g
+
+ Display section groups.
 
 .. option:: --section-mapping
 
