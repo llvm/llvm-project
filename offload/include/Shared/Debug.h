@@ -46,6 +46,7 @@
 #include <cstdlib>
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/circular_raw_ostream.h"
 
 /// 32-Bit field data attributes controlling information presented to the user.
@@ -605,6 +606,12 @@ static inline odbg_ostream reportErrorStream() {
       FAILURE_MESSAGE(__VA_ARGS__);                                            \
     }                                                                          \
   } while (false)
+
+// Define default format for pointers
+static inline raw_ostream &operator<<(raw_ostream &Os, void *Ptr) {
+  Os << ::llvm::format(DPxMOD, DPxPTR(Ptr));
+  return Os;
+}
 
 #else
 #define DP(...)                                                                \

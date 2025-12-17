@@ -29,6 +29,7 @@
 #include "ToolChains/Haiku.h"
 #include "ToolChains/Hexagon.h"
 #include "ToolChains/Hurd.h"
+#include "ToolChains/LFILinux.h"
 #include "ToolChains/Lanai.h"
 #include "ToolChains/Linux.h"
 #include "ToolChains/MSP430.h"
@@ -6964,6 +6965,8 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         TC = std::make_unique<toolchains::OHOS>(*this, Target, Args);
       else if (Target.isWALI())
         TC = std::make_unique<toolchains::WebAssembly>(*this, Target, Args);
+      else if (Target.isLFI())
+        TC = std::make_unique<toolchains::LFILinux>(*this, Target, Args);
       else
         TC = std::make_unique<toolchains::Linux>(*this, Target, Args);
       break;

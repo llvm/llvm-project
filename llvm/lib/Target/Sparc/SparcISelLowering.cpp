@@ -1854,18 +1854,18 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FSIN , MVT::f128, Expand);
   setOperationAction(ISD::FCOS , MVT::f128, Expand);
   setOperationAction(ISD::FSINCOS, MVT::f128, Expand);
-  setOperationAction(ISD::FREM , MVT::f128, Expand);
+  setOperationAction(ISD::FREM, MVT::f128, LibCall);
   setOperationAction(ISD::FMA  , MVT::f128, Expand);
   setOperationAction(ISD::FSIN , MVT::f64, Expand);
   setOperationAction(ISD::FCOS , MVT::f64, Expand);
   setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
-  setOperationAction(ISD::FREM , MVT::f64, Expand);
+  setOperationAction(ISD::FREM, MVT::f64, LibCall);
   setOperationAction(ISD::FMA, MVT::f64,
                      Subtarget->isUA2007() ? Legal : Expand);
   setOperationAction(ISD::FSIN , MVT::f32, Expand);
   setOperationAction(ISD::FCOS , MVT::f32, Expand);
   setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
-  setOperationAction(ISD::FREM , MVT::f32, Expand);
+  setOperationAction(ISD::FREM, MVT::f32, LibCall);
   setOperationAction(ISD::FMA, MVT::f32,
                      Subtarget->isUA2007() ? Legal : Expand);
   setOperationAction(ISD::ROTL , MVT::i32, Expand);
