@@ -540,6 +540,7 @@ protected:
   class ArrayOrMatrixSubscriptExprBitfields {
     friend class ArraySubscriptExpr;
     friend class MatrixSubscriptExpr;
+    friend class MatrixSingleSubscriptExpr;
 
     LLVM_PREFERRED_TYPE(ExprBitfields)
     unsigned : NumExprBits;

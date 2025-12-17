@@ -5485,6 +5485,15 @@ recurse:
     break;
   }
 
+  case Expr::MatrixSingleSubscriptExprClass: {
+    NotPrimaryExpr();
+    const MatrixSingleSubscriptExpr *ME = cast<MatrixSingleSubscriptExpr>(E);
+    Out << "ix";
+    mangleExpression(ME->getBase());
+    mangleExpression(ME->getRowIdx());
+    break;
+  }
+
   case Expr::MatrixSubscriptExprClass: {
     NotPrimaryExpr();
     const MatrixSubscriptExpr *ME = cast<MatrixSubscriptExpr>(E);

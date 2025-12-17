@@ -2083,6 +2083,11 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       Bldr.addNodes(Dst);
       break;
 
+    case Stmt::MatrixSingleSubscriptExprClass:
+      llvm_unreachable(
+          "Support for MatrixSingleSubscriptExprClass is not implemented.");
+      break;
+
     case Stmt::MatrixSubscriptExprClass:
       llvm_unreachable("Support for MatrixSubscriptExpr is not implemented.");
       break;
