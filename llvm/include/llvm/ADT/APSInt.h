@@ -42,7 +42,7 @@ public:
   /// constructed APSInt is determined automatically.
   ///
   /// \param Str the string to be interpreted.
-  LLVM_ABI explicit APSInt(StringRef Str);
+  explicit APSInt(StringRef Str);
 
   /// Determine sign of this APSInt.
   ///

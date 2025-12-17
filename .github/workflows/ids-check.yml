@@ -44,7 +44,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt install -y clang-19 ninja-build libclang-19-dev
-          pip install --require-hashes -r ./llvm/utils/git/requirements.txt
+          pip install --require-hashes -r ${{ github.workspace }}/llvm-project/llvm/utils/git/requirements.txt
 
       - name: Configure and build minimal LLVM for use by ids
         run: |
