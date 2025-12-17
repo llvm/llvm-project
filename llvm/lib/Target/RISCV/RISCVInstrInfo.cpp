@@ -5191,7 +5191,8 @@ bool RISCVInstrInfo::isHighLatencyDef(int Opc) const {
   }
 }
 
-bool RISCVInstrInfo::isVRegCopy(const MachineInstr *MI, unsigned LMUL) const {
+bool RISCVInstrInfo::isVRegCopy(const MachineInstr *MI, unsigned LMul,
+                                bool Fractional) const {
   if (MI->getOpcode() != TargetOpcode::COPY)
     return false;
   const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
@@ -5202,21 +5203,15 @@ bool RISCVInstrInfo::isVRegCopy(const MachineInstr *MI, unsigned LMUL) const {
                                       ? MRI.getRegClass(DstReg)
                                       : TRI->getMinimalPhysRegClass(DstReg);
 
-  switch (LMUL) {
-  case 1:
-    return RISCV::VRRegClass.hasSubClassEq(RC);
-  case 2:
-    return RISCV::VRM2RegClass.hasSubClassEq(RC);
-  case 4:
-    return RISCV::VRM4RegClass.hasSubClassEq(RC);
-  case 8:
-    return RISCV::VRM8RegClass.hasSubClassEq(RC);
-  case 0:
-    // Wildcard: return true as long as this is a vector register class.
-    // TODO: Perhaps we could distinguish segment register classes (e.g. VRN3M2)
-    // in the future.
-    return RISCVRegisterInfo::isRVVRegClass(RC);
-  default:
+  if (!RISCVRegisterInfo::isRVVRegClass(RC))
     return false;
-  }
+
+  if (!LMul)
+    return true;
+
+  // TODO: Perhaps we could distinguish segment register classes (e.g. VRN3M2)
+  // in the future.
+  auto [RCLMul, RCFractional] =
+      RISCVVType::decodeVLMUL(RISCVRI::getLMul(RC->TSFlags));
+  return RCLMul == LMul && RCFractional == Fractional;
 }

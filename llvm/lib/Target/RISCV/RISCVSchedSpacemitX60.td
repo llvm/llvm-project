@@ -1052,6 +1052,16 @@ def SMX60CopySchedWriteVariant : SchedWriteVariant<[
   SchedVar<SchedPredicate<[{ TII->isVRegCopy(MI, /*LMUL=*/2) }]>, [SMX60WriteVCOPY_M2]>,
   SchedVar<SchedPredicate<[{ TII->isVRegCopy(MI, /*LMUL=*/4) }]>, [SMX60WriteVCOPY_M4]>,
   SchedVar<SchedPredicate<[{ TII->isVRegCopy(MI, /*LMUL=*/8) }]>, [SMX60WriteVCOPY_M8]>,
+  SchedVar<SchedPredicate<[{ TII->isVRegCopy(MI, /*LMUL=*/2,
+                                             /*Fractional=*/true) }]>,
+                          [SMX60WriteVCOPY_MF2]>,
+  SchedVar<SchedPredicate<[{ TII->isVRegCopy(MI, /*LMUL=*/4,
+                                             /*Fractional=*/true) }]>,
+                          [SMX60WriteVCOPY_MF4]>,
+  SchedVar<SchedPredicate<[{ TII->isVRegCopy(MI, /*LMUL=*/8,
+                                             /*Fractional=*/true) }]>,
+                          [SMX60WriteVCOPY_MF8]>,
+  // Every other types of vector register classes are default to M1.
   SchedVar<SchedPredicate<[{ TII->isVRegCopy(MI) }]>,             [SMX60WriteVCOPY_M1]>,
   SchedVar<NoSchedPred,                                           [WriteIALU]>
 ]>;
