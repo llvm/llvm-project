@@ -48,14 +48,14 @@ message trailer like Assisted-by: <name of code assistant>. This transparency
 helps the community develop best practices and understand the role of these new
 tools.
 
-## Extractive Changes
+## Extractive Contributions
 
 The reason for our "human-in-the-loop" contribution policy is that sending
 patches, PRs, RFCs, and comments to LLVM, is not free -- it takes a lot of
 maintainer time and energy to review those contributions! Sending the
 unreviewed output of an LLM to open source project maintainers *extracts* work
-from them in the form of code and design review, so we call this kind of
-contribution an *"extractive change"*.
+from them in the form of design and code review, so we call this kind of
+contribution an "extractive contribution".
 
 Our **golden rule** is that a contribution should be worth more to the project
 than the time it takes to review it. These ideas are captured by this quote
@@ -74,19 +74,23 @@ from the book [Working in Public][public] by Nadia Eghbal:
 
 Prior to the advent of LLMs, open source project maintainers would often review
 any and all changes send to the project simply because posting a change for
-review was a sign of interest from a potential long-term contributor. Reviewing
-changes from new contributors is part of growing the next generation of
-contributors and sustaining the project. While new tools enable more
-development, it shifts effort from the implementor to the reviewer, and our
-policy exists to ensure that we value and do not squander maintainer time.
+review was a sign of interest from a potential long-term contributor. While new
+tools enable more development, it shifts effort from the implementor to the
+reviewer, and our policy exists to ensure that we value and do not squander
+maintainer time.
 
-We encourage contributions that help sustain the project. We want the LLVM
-project to be welcoming and open to aspiring compiler engineers who are willing
-to invest time and effort to learn and grow, because growing our contributor
-base and recruiting new maintainers helps sustain the project over the long
-term. We therefore automatically post a greeting comment to pull requests from
-new contributors and encourage maintainers to spend their time to help new
-contributors learn.
+Reviewing changes from new contributors is part of growing the next generation
+of contributors and sustaining the project. We want the LLVM project to be
+welcoming and open to aspiring compiler engineers who are willing to invest
+time and effort to learn and grow, because growing our contributor base and
+recruiting new maintainers helps sustain the project over the long term. Being
+open to contributions and [liberally granting commit access][commit-access]
+is a big part of how LLVM has grown and successfully been adopted all across
+the industry.  We therefore automatically post a greeting comment to pull
+requests from new contributors and encourage maintainers to spend their time to
+help new contributors learn.
+
+[commit-access]: http://localhost:8000/DeveloperPolicy.html#obtaining-commit-access
 
 ## Handling Violations
 
