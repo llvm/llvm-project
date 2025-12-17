@@ -64,4 +64,24 @@
   ((__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[0]) == 0xfe &&            \
    (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[1] & 0xc0) == 0xc0)
 
+#define IN6_IS_ADDR_MC_NODELOCAL(a)                                            \
+  (IN6_IS_ADDR_MULTICAST(a) &&                                                 \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[1] & 0xf) == 0x1)
+
+#define IN6_IS_ADDR_MC_LINKLOCAL(a)                                            \
+  (IN6_IS_ADDR_MULTICAST(a) &&                                                 \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[1] & 0xf) == 0x2)
+
+#define IN6_IS_ADDR_MC_SITELOCAL(a)                                            \
+  (IN6_IS_ADDR_MULTICAST(a) &&                                                 \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[1] & 0xf) == 0x5)
+
+#define IN6_IS_ADDR_MC_ORGLOCAL(a)                                             \
+  (IN6_IS_ADDR_MULTICAST(a) &&                                                 \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[1] & 0xf) == 0x8)
+
+#define IN6_IS_ADDR_MC_GLOBAL(a)                                               \
+  (IN6_IS_ADDR_MULTICAST(a) &&                                                 \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[1] & 0xf) == 0xe)
+
 #endif // LLVM_LIBC_MACROS_NETINET_IN_MACROS_H
