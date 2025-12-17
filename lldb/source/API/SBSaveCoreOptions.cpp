@@ -81,7 +81,7 @@ SBError SBSaveCoreOptions::SetProcess(lldb::SBProcess process) {
   return m_opaque_up->SetProcess(process.GetSP());
 }
 
-SBProcess SBSaveCoreOptions::GetProcess() {
+SBProcess SBSaveCoreOptions::GetProcess() const {
   LLDB_INSTRUMENT_VA(this);
   return SBProcess(m_opaque_up->GetProcess());
 }

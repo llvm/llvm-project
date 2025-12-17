@@ -84,7 +84,7 @@ public:
   ///
   /// \return
   ///   The set process, or an invalid SBProcess if no process is set.
-  SBProcess GetProcess();
+  SBProcess GetProcess() const;
 
   /// Add a thread to save in the core file.
   ///

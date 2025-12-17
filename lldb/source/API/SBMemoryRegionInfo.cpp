@@ -160,7 +160,7 @@ int SBMemoryRegionInfo::GetPageSize() {
   return m_opaque_up->GetPageSize();
 }
 
-bool SBMemoryRegionInfo::GetDescription(SBStream &description) {
+bool SBMemoryRegionInfo::GetDescription(SBStream &description) const {
   LLDB_INSTRUMENT_VA(this, description);
 
   Stream &strm = description.ref();
