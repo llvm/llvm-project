@@ -339,7 +339,8 @@ Error processModule(Module &M, raw_ostream &OS) {
     if (!FunctionName.empty()) {
       // Process single function
       const Function *F = [&]() -> const Function * {
-        if (auto *ExactMatch = M.getFunction(FunctionName)) return ExactMatch;
+        if (auto *ExactMatch = M.getFunction(FunctionName))
+          return ExactMatch;
         const auto Demangled = llvm::demangle(FunctionName);
         auto It = llvm::find_if(M, [&](const Function &Func) {
           return llvm::demangle(Func.getName().str()) == Demangled;
@@ -739,14 +740,16 @@ int main(int argc, char **argv) {
       if (!FunctionName.empty()) {
         // Process single function
         const Function *F = [&]() -> const Function * {
-          if (auto *ExactMatch = M->getFunction(FunctionName)) return ExactMatch;
+          if (auto *ExactMatch = M->getFunction(FunctionName))
+            return ExactMatch;
 
           const auto Demangled = llvm::demangle(FunctionName);
           auto It = llvm::find_if(*M, [&](const Function &Func) {
             return llvm::demangle(Func.getName().str()) == Demangled;
           });
 
-          return (It != M->end()) ? &*It : nullptr;  // Change M.end() to M->end()
+          return (It != M->end()) ? &*It
+                                  : nullptr; // Change M.end() to M->end()
         }();
 
         if (!F) {
