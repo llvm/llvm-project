@@ -2643,12 +2643,29 @@ cc_library(
         ":LLVMDialect",
         ":LinalgDialect",
         ":LinalgInterfaces",
+        ":MemRefUtils",
         ":Pass",
         ":TransformUtils",
         ":VectorDialect",
         ":VectorUtils",
         ":X86VectorDialect",
+        ":X86VectorUtils",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "X86VectorUtils",
+    srcs = glob(["lib/Dialect/X86Vector/Utils/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/X86Vector/Utils/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":AffineDialect",
+        ":DialectUtils",
+        ":FuncDialect",
+        ":IR",
+        ":LinalgDialect",
+        ":VectorDialect",
     ],
 )
 
