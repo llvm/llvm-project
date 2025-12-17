@@ -33,6 +33,16 @@ struct AbsFOpToAPFloatConversion final : OpRewritePattern<math::AbsFOp> {
 
   LogicalResult matchAndRewrite(math::AbsFOp op,
                                 PatternRewriter &rewriter) const override {
+    // Cast operands to 64-bit integers.
+    auto operand = op.getOperand();
+    auto floatTy = dyn_cast<FloatType>(operand.getType());
+    if (!floatTy)
+      return rewriter.notifyMatchFailure(op,
+                                         "only scalar FloatTypes supported");
+    if (floatTy.getIntOrFloatBitWidth() > 64) {
+      return rewriter.notifyMatchFailure(op,
+                                         "bitwidth > 64 bits is not supported");
+    }
     // Get APFloat function from runtime library.
     auto i32Type = IntegerType::get(symTable->getContext(), 32);
     auto i64Type = IntegerType::get(symTable->getContext(), 64);
@@ -42,13 +52,6 @@ struct AbsFOpToAPFloatConversion final : OpRewritePattern<math::AbsFOp> {
       return fn;
     Location loc = op.getLoc();
     rewriter.setInsertionPoint(op);
-    // Cast operands to 64-bit integers.
-    auto operand = op.getOperand();
-    auto floatTy = cast<FloatType>(operand.getType());
-    if (floatTy.getIntOrFloatBitWidth() > 64) {
-      return rewriter.notifyMatchFailure(op,
-                                         "bitwidth > 64 bits is not supported");
-    }
     auto intWType = rewriter.getIntegerType(floatTy.getWidth());
     Value operandBits = arith::ExtUIOp::create(
         rewriter, loc, i64Type,
@@ -82,6 +85,16 @@ struct IsOpToAPFloatConversion final : OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
+    // Cast operands to 64-bit integers.
+    auto operand = op.getOperand();
+    auto floatTy = dyn_cast<FloatType>(operand.getType());
+    if (!floatTy)
+      return rewriter.notifyMatchFailure(op,
+                                         "only scalar FloatTypes supported");
+    if (floatTy.getIntOrFloatBitWidth() > 64) {
+      return rewriter.notifyMatchFailure(op,
+                                         "bitwidth > 64 bits is not supported");
+    }
     // Get APFloat function from runtime library.
     auto i1 = IntegerType::get(symTable->getContext(), 1);
     auto i32Type = IntegerType::get(symTable->getContext(), 32);
@@ -94,13 +107,6 @@ struct IsOpToAPFloatConversion final : OpRewritePattern<OpTy> {
       return fn;
     Location loc = op.getLoc();
     rewriter.setInsertionPoint(op);
-    // Cast operands to 64-bit integers.
-    auto operand = op.getOperand();
-    auto floatTy = cast<FloatType>(operand.getType());
-    if (floatTy.getIntOrFloatBitWidth() > 64) {
-      return rewriter.notifyMatchFailure(op,
-                                         "bitwidth > 64 bits is not supported");
-    }
     auto intWType = rewriter.getIntegerType(floatTy.getWidth());
     Value operandBits = arith::ExtUIOp::create(
         rewriter, loc, i64Type,
@@ -125,6 +131,15 @@ struct FmaOpToAPFloatConversion final : OpRewritePattern<math::FmaOp> {
 
   LogicalResult matchAndRewrite(math::FmaOp op,
                                 PatternRewriter &rewriter) const override {
+    // Cast operands to 64-bit integers.
+    auto floatTy = cast<FloatType>(op.getResult().getType());
+    if (!floatTy)
+      return rewriter.notifyMatchFailure(op,
+                                         "only scalar FloatTypes supported");
+    if (floatTy.getIntOrFloatBitWidth() > 64) {
+      return rewriter.notifyMatchFailure(op,
+                                         "bitwidth > 64 bits is not supported");
+    }
 
     auto i32Type = IntegerType::get(symTable->getContext(), 32);
     auto i64Type = IntegerType::get(symTable->getContext(), 64);
@@ -136,12 +151,6 @@ struct FmaOpToAPFloatConversion final : OpRewritePattern<math::FmaOp> {
     Location loc = op.getLoc();
     rewriter.setInsertionPoint(op);
 
-    // Cast operands to 64-bit integers.
-    auto floatTy = cast<FloatType>(op.getResult().getType());
-    if (floatTy.getIntOrFloatBitWidth() > 64) {
-      return rewriter.notifyMatchFailure(op,
-                                         "bitwidth > 64 bits is not supported");
-    }
     auto intWType = rewriter.getIntegerType(floatTy.getWidth());
     auto int64Type = rewriter.getI64Type();
     Value operand = arith::ExtUIOp::create(
