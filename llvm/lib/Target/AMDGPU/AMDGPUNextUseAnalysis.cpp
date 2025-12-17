@@ -39,9 +39,8 @@ bool AMDGPUNextUseAnalysis::isBackedge(MachineBasicBlock *From,
 }
 
 // Calculate the shortest distance between two blocks using Dijkstra algorithm.
-std::pair<SmallVector<MachineBasicBlock *>, double>
-AMDGPUNextUseAnalysis::getShortestPath(MachineBasicBlock *FromMBB,
-                                       MachineBasicBlock *ToMBB) {
+double AMDGPUNextUseAnalysis::getShortestPath(MachineBasicBlock *FromMBB,
+                                              MachineBasicBlock *ToMBB) {
   assert(FromMBB != ToMBB && "The basic blocks should be different.\n");
   DenseSet<MachineBasicBlock *> Visited;
   struct Data {
@@ -68,20 +67,8 @@ AMDGPUNextUseAnalysis::getShortestPath(MachineBasicBlock *FromMBB,
       continue;
 
     if (CurMBB == ToMBB) {
-      // We found the destination node, build the path ToMBB->...->FromMBB
-      SmallVector<MachineBasicBlock *> Path;
-      MachineBasicBlock *PathMBB = ToMBB;
-      while (PathMBB != nullptr) {
-        Path.push_back(PathMBB);
-        if (PathMBB == FromMBB)
-          break;
-        auto It = MBBData.find(PathMBB);
-        PathMBB = It != MBBData.end() ? It->second.BestPred : nullptr;
-      }
-      assert(Path.back() == FromMBB && "Incomplete path!");
       auto *Pred = MBBData[CurMBB].BestPred;
-      return {Path, MBBData[Pred].ShortestDistance -
-                        MBBData[FromMBB].ShortestDistance};
+      return MBBData[Pred].ShortestDistance - MBBData[FromMBB].ShortestDistance;
     }
 
     auto Pair = MBBData.try_emplace(
@@ -145,7 +132,7 @@ AMDGPUNextUseAnalysis::getShortestPath(MachineBasicBlock *FromMBB,
       Worklist.push(Succ);
     }
   }
-  return {{}, std::numeric_limits<double>::max()};
+  return std::numeric_limits<double>::max();
 }
 
 void AMDGPUNextUseAnalysis::calculateShortestPaths(MachineFunction &MF) {
@@ -252,25 +239,11 @@ AMDGPUNextUseAnalysis::getNestedLoopDistanceAndExitingLatch(
   MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
   MachineLoop *UseLoop = MLI->getLoopFor(UseMBB);
 
-  auto GetEffectiveLoopDepth = [&](MachineBasicBlock *BB) -> double {
-    MachineLoop *LoopBB = MLI->getLoopFor(BB);
-    double LoopDepth = 0.0;
-    for (MachineLoop *TmpLoop = LoopBB,
-                     *End = LoopBB->getOutermostLoop()->getParentLoop();
-         TmpLoop != End; TmpLoop = TmpLoop->getParentLoop()) {
-      if (TmpLoop->contains(UseLoop))
-        continue;
-      LoopDepth++;
-    }
-    return LoopDepth;
-  };
-
   auto GetLoopDistance =
       [&](MachineLoop *ML) -> std::pair<double, MachineBasicBlock *> {
     double ShortestDistance = 0.0;
-    double TmpDist = 0.0;
+    double LoopDistance = 0.0;
     MachineBasicBlock *ExitingLatch = nullptr;
-    double EffectiveLoopDepth = GetEffectiveLoopDepth(CurMBB);
     double UseLoopDepth = !IsUseOutsideOfTheCurrentLoopNest
                               ? static_cast<double>(MLI->getLoopDepth(UseMBB))
                               : 0.0;
@@ -282,19 +255,9 @@ AMDGPUNextUseAnalysis::getNestedLoopDistanceAndExitingLatch(
                     UseLoopDepth));
       return std::make_pair(ShortestDistance, ML->getLoopLatch());
     }
-    std::tie(TmpDist, ExitingLatch) =
+    std::tie(LoopDistance, ExitingLatch) =
         getLoopDistanceAndExitingLatch(ML->getHeader());
-    for (MachineBasicBlock *MBB :
-         getShortestPathFromTable(ML->getHeader(), ExitingLatch)) {
-      if (UseLoopDepth == 0.0 && EffectiveLoopDepth != 0.0)
-        ShortestDistance += static_cast<double>(MBB->size()) *
-                            std::pow(LoopWeight, GetEffectiveLoopDepth(MBB));
-      else
-        ShortestDistance +=
-            static_cast<double>(MBB->size()) *
-            std::pow(LoopWeight, (static_cast<double>(MLI->getLoopDepth(MBB)) -
-                                  UseLoopDepth));
-    }
+    ShortestDistance = LoopDistance * LoopWeight;
     return std::make_pair(ShortestDistance, ExitingLatch);
   };
 
@@ -469,7 +432,7 @@ void AMDGPUNextUseAnalysis::dumpShortestPaths() const {
   for (const auto &P : ShortestPathTable) {
     MachineBasicBlock *From = P.first.first;
     MachineBasicBlock *To = P.first.second;
-    auto [ShortestPath, Dist] = P.second;
+    double Dist = P.second;
     errs() << "From: " << From->getName() << "-> To:" << To->getName() << " = "
            << Dist << "\n";
   }
