@@ -681,7 +681,6 @@ private:
 public:
   struct CXXRecordDeclRelocationInfo {
     unsigned IsRelocatable;
-    unsigned IsReplaceable;
   };
   std::optional<CXXRecordDeclRelocationInfo>
   getRelocationInfoForCXXRecord(const CXXRecordDecl *) const;
@@ -2809,6 +2808,10 @@ public:
   /// only meaningful for targets that allocate C++ exceptions in a system
   /// runtime, such as those using the Itanium C++ ABI.
   CharUnits getExnObjectAlignment() const;
+
+  /// Return whether unannotated records are treated as if they have
+  /// [[gnu::ms_struct]].
+  bool defaultsToMsStruct() const;
 
   /// Get or compute information about the layout of the specified
   /// record (struct/union/class) \p D, which indicates its size and field

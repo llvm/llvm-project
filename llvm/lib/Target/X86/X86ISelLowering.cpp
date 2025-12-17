@@ -388,10 +388,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i8   , Legal);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1   , Expand);
 
-  setOperationAction(ISD::FREM             , MVT::f32  , Expand);
-  setOperationAction(ISD::FREM             , MVT::f64  , Expand);
-  setOperationAction(ISD::FREM             , MVT::f80  , Expand);
-  setOperationAction(ISD::FREM             , MVT::f128 , Expand);
+  setOperationAction(ISD::FREM, MVT::f32, LibCall);
+  setOperationAction(ISD::FREM, MVT::f64, LibCall);
+  setOperationAction(ISD::FREM, MVT::f80, LibCall);
+  setOperationAction(ISD::FREM, MVT::f128, LibCall);
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasX87()) {
     setOperationAction(ISD::GET_ROUNDING   , MVT::i32  , Custom);
@@ -2642,7 +2642,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
           ISD::FTANH,  ISD::STRICT_FTANH,
           // TODO: Add ISD:::STRICT_FMODF too once implemented.
           ISD::FMODF})
-      if (isOperationExpand(Op, MVT::f32))
+     if (isOperationExpandOrLibCall(Op, MVT::f32))
         setOperationAction(Op, MVT::f32, Promote);
   // clang-format on
 
@@ -2860,12 +2860,13 @@ bool X86::mayFoldIntoZeroExtend(SDValue Op) {
 }
 
 // Return true if its cheap to bitcast this to a vector type.
-static bool mayFoldIntoVector(SDValue Op, const X86Subtarget &Subtarget) {
+static bool mayFoldIntoVector(SDValue Op, const X86Subtarget &Subtarget,
+                              bool AssumeSingleUse = false) {
   if (peekThroughBitcasts(Op).getValueType().isVector())
     return true;
   if (isa<ConstantSDNode>(Op) || isa<ConstantFPSDNode>(Op))
     return true;
-  return X86::mayFoldLoad(Op, Subtarget, /*AssumeSingleUse=*/false,
+  return X86::mayFoldLoad(Op, Subtarget, AssumeSingleUse,
                           /*IgnoreAlignment=*/true);
 }
 
@@ -7448,8 +7449,20 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
       return (0 <= BaseIdx && BaseIdx < (int)NumElems && LoadMask[BaseIdx] &&
               Loads[BaseIdx] == Ld && ByteOffsets[BaseIdx] == 0);
     }
-    return DAG.areNonVolatileConsecutiveLoads(Ld, Base, BaseSizeInBytes,
-                                              EltIdx - FirstLoadedElt);
+    int Stride = EltIdx - FirstLoadedElt;
+    if (DAG.areNonVolatileConsecutiveLoads(Ld, Base, BaseSizeInBytes, Stride))
+      return true;
+    // Try again using the memory load size (we might have broken a large load
+    // into smaller elements), ensure the stride is the full memory load size
+    // apart and a whole number of elements fit in each memory load.
+    unsigned BaseMemSizeInBits = Base->getMemoryVT().getSizeInBits();
+    if (((Stride * BaseSizeInBits) % BaseMemSizeInBits) == 0 &&
+        (BaseMemSizeInBits % BaseSizeInBits) == 0) {
+      unsigned Scale = BaseMemSizeInBits / BaseSizeInBits;
+      return DAG.areNonVolatileConsecutiveLoads(Ld, Base, BaseMemSizeInBits / 8,
+                                                Stride / Scale);
+    }
+    return false;
   };
 
   // Consecutive loads can contain UNDEFS but not ZERO elements.
@@ -8851,6 +8864,7 @@ static SDValue lowerBuildVectorToBitOp(BuildVectorSDNode *Op, const SDLoc &DL,
                                        SelectionDAG &DAG) {
   MVT VT = Op->getSimpleValueType(0);
   unsigned NumElems = VT.getVectorNumElements();
+  unsigned ElemSize = VT.getScalarSizeInBits();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // Check that all elements have the same opcode.
@@ -8860,7 +8874,7 @@ static SDValue lowerBuildVectorToBitOp(BuildVectorSDNode *Op, const SDLoc &DL,
     if (Opcode != Op->getOperand(i).getOpcode())
       return SDValue();
 
-  // TODO: We may be able to add support for other Ops (ADD/SUB + shifts).
+  // TODO: We may be able to add support for other Ops (e.g. ADD/SUB).
   bool IsShift = false;
   switch (Opcode) {
   default:
@@ -8882,34 +8896,54 @@ static SDValue lowerBuildVectorToBitOp(BuildVectorSDNode *Op, const SDLoc &DL,
     break;
   }
 
+  // Collect elements.
+  bool RHSAllConst = true;
   SmallVector<SDValue, 4> LHSElts, RHSElts;
   for (SDValue Elt : Op->ops()) {
     SDValue LHS = Elt.getOperand(0);
     SDValue RHS = Elt.getOperand(1);
-
-    // We expect the canonicalized RHS operand to be the constant.
-    if (!isa<ConstantSDNode>(RHS))
-      return SDValue();
-
-    // Extend shift amounts.
-    if (RHS.getValueSizeInBits() != VT.getScalarSizeInBits()) {
-      if (!IsShift)
-        return SDValue();
-      RHS = DAG.getZExtOrTrunc(RHS, DL, VT.getScalarType());
-    }
-
+    RHSAllConst &= isa<ConstantSDNode>(RHS);
     LHSElts.push_back(LHS);
     RHSElts.push_back(RHS);
   }
 
-  // Limit to shifts by uniform immediates.
-  // TODO: Only accept vXi8/vXi64 special cases?
-  // TODO: Permit non-uniform XOP/AVX2/MULLO cases?
-  if (IsShift && any_of(RHSElts, [&](SDValue V) { return RHSElts[0] != V; }))
+  // Canonicalize shift amounts.
+  if (IsShift) {
+    // We expect the canonicalized RHS operand to be the constant.
+    // TODO: Permit non-constant XOP/AVX2 cases?
+    if (!RHSAllConst)
+      return SDValue();
+
+    // Extend shift amounts.
+    for (SDValue &Op1 : RHSElts)
+      if (Op1.getValueSizeInBits() != ElemSize)
+        Op1 = DAG.getZExtOrTrunc(Op1, DL, VT.getScalarType());
+
+    // Limit to shifts by uniform immediates.
+    // TODO: Only accept vXi8/vXi64 special cases?
+    // TODO: Permit non-uniform XOP/AVX2/MULLO cases?
+    if (any_of(RHSElts, [&](SDValue V) { return RHSElts[0] != V; }))
+      return SDValue();
+  }
+  assert(all_of(llvm::concat<SDValue>(LHSElts, RHSElts),
+                [ElemSize](SDValue V) {
+                  return V.getValueSizeInBits() == ElemSize;
+                }) &&
+         "Element size mismatch");
+
+  // To avoid an increase in GPR->FPU instructions, LHS/RHS must be foldable as
+  // a load or RHS must be constant.
+  SDValue LHS = EltsFromConsecutiveLoads(VT, LHSElts, DL, DAG, Subtarget,
+                                         /*IsAfterLegalize=*/true);
+  SDValue RHS = EltsFromConsecutiveLoads(VT, RHSElts, DL, DAG, Subtarget,
+                                         /*IsAfterLegalize=*/true);
+  if (!LHS && !RHS && !RHSAllConst)
     return SDValue();
 
-  SDValue LHS = DAG.getBuildVector(VT, DL, LHSElts);
-  SDValue RHS = DAG.getBuildVector(VT, DL, RHSElts);
+  if (!LHS)
+    LHS = DAG.getBuildVector(VT, DL, LHSElts);
+  if (!RHS)
+    RHS = DAG.getBuildVector(VT, DL, RHSElts);
   SDValue Res = DAG.getNode(Opcode, DL, VT, LHS, RHS);
 
   if (!IsShift)
@@ -23110,12 +23144,9 @@ static SDValue combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y,
     return SDValue();
 
   // Don't perform this combine if constructing the vector will be expensive.
-  auto IsVectorBitCastCheap = [](SDValue X) {
-    X = peekThroughBitcasts(X);
-    return isa<ConstantSDNode>(X) || X.getValueType().isVector() ||
-           X.getOpcode() == ISD::LOAD;
-  };
-  if ((!IsVectorBitCastCheap(X) || !IsVectorBitCastCheap(Y)) &&
+  // TODO: Drop AssumeSingleUse = true override.
+  if ((!mayFoldIntoVector(X, Subtarget, /*AssumeSingleUse=*/true) ||
+       !mayFoldIntoVector(Y, Subtarget, /*AssumeSingleUse=*/true)) &&
       !IsOrXorXorTreeCCZero)
     return SDValue();
 
@@ -50515,9 +50546,11 @@ static SDValue combineHorizOpWithShuffle(SDNode *N, SelectionDAG &DAG,
       }
       if ((Op00 == Op10) && (Op01 == Op11)) {
         const int Map[4] = {0, 2, 1, 3};
-        SmallVector<int, 4> ShuffleMask(
-            {Map[ScaledMask0[0]], Map[ScaledMask1[0]], Map[ScaledMask0[1]],
-             Map[ScaledMask1[1]]});
+        int ShuffleMask[] = {ScaledMask0[0], ScaledMask1[0], ScaledMask0[1],
+                             ScaledMask1[1]};
+        for (int &M : ShuffleMask)
+          if (0 <= M)
+            M = Map[M];
         MVT ShufVT = VT.isFloatingPoint() ? MVT::v4f64 : MVT::v4i64;
         SDValue Res = DAG.getNode(Opcode, DL, VT, DAG.getBitcast(SrcVT, Op00),
                                   DAG.getBitcast(SrcVT, Op01));
@@ -54066,6 +54099,28 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
                                    St->getMemOperand());
   }
 
+  // All code below attempts to move stores to FPU, early out if we can't.
+  const Function &F = DAG.getMachineFunction().getFunction();
+  bool NoImplicitFloatOps = F.hasFnAttribute(Attribute::NoImplicitFloat);
+  if (Subtarget.useSoftFloat() || NoImplicitFloatOps)
+    return SDValue();
+
+  // If we are storing a larger than legal scalar integer, see if we can cheaply
+  // handle this as a vector store, either because it already bitcasts to a
+  // vector type or the operation is likely to expand to a vector type
+  // (legalization can scalarize back if it the op failed).
+  if (VT == MVT::i256 || VT == MVT::i512) {
+    MVT VecVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
+    if (TLI.isTypeLegal(VecVT) && ISD::isNormalStore(St) &&
+        (mayFoldIntoVector(StoredVal, Subtarget) ||
+         (DCI.isBeforeLegalize() &&
+          TLI.getOperationAction(StoredVal.getOpcode(), VT) ==
+              TargetLowering::LegalizeAction::Custom)))
+      return DAG.getStore(St->getChain(), dl, DAG.getBitcast(VecVT, StoredVal),
+                          St->getBasePtr(), St->getPointerInfo(),
+                          St->getBaseAlign(), St->getMemOperand()->getFlags());
+  }
+
   // Turn load->store of MMX types into GPR load/stores.  This avoids clobbering
   // the FP state in cases where an emms may be missing.
   // A preferable solution to the general problem is to figure out the right
@@ -54075,12 +54130,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   if (VT.getSizeInBits() != 64)
     return SDValue();
 
-  const Function &F = DAG.getMachineFunction().getFunction();
-  bool NoImplicitFloatOps = F.hasFnAttribute(Attribute::NoImplicitFloat);
-  bool F64IsLegal =
-      !Subtarget.useSoftFloat() && !NoImplicitFloatOps && Subtarget.hasSSE2();
-
-  if (!F64IsLegal || Subtarget.is64Bit())
+  if (!Subtarget.hasSSE2() || Subtarget.is64Bit())
     return SDValue();
 
   if (VT == MVT::i64 && isa<LoadSDNode>(St->getValue()) &&
@@ -59603,6 +59653,10 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case ISD::ADD:
     case ISD::SUB:
     case ISD::MUL:
+    case ISD::SMIN:
+    case ISD::SMAX:
+    case ISD::UMIN:
+    case ISD::UMAX:
       // TODO: Add more integer binops?
       if (!IsSplat && ((VT.is256BitVector() && Subtarget.hasInt256()) ||
                        (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
@@ -59623,6 +59677,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case ISD::FADD:
     case ISD::FSUB:
     case ISD::FMUL:
+    case X86ISD::FMAX:
+    case X86ISD::FMIN:
       if (!IsSplat && (VT.is256BitVector() ||
                        (VT.is512BitVector() && Subtarget.useAVX512Regs()))) {
         SDValue Concat0 = CombineSubOperand(VT, Ops, 0);

@@ -66,6 +66,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaBase.h"
 #include "clang/Sema/SemaConcept.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "clang/Sema/Weak.h"
 #include "llvm/ADT/APInt.h"
@@ -4366,7 +4367,6 @@ public:
                                        bool IsFinalSpelledSealed,
                                        bool IsAbstract,
                                        SourceLocation TriviallyRelocatable,
-                                       SourceLocation Replaceable,
                                        SourceLocation LBraceLoc);
 
   /// ActOnTagFinishDefinition - Invoked once we have finished parsing
@@ -4375,7 +4375,7 @@ public:
                                 SourceRange BraceRange);
 
   ASTContext::CXXRecordDeclRelocationInfo
-  CheckCXX2CRelocatableAndReplaceable(const clang::CXXRecordDecl *D);
+  CheckCXX2CRelocatable(const clang::CXXRecordDecl *D);
 
   void ActOnTagFinishSkippedDefinition(SkippedDefinitionContext Context);
 
@@ -7944,6 +7944,10 @@ public:
   /// implicit casts if necessary.
   ExprResult prepareVectorSplat(QualType VectorTy, Expr *SplattedExpr);
 
+  /// Prepare `SplattedExpr` for a matrix splat operation, adding
+  /// implicit casts if necessary.
+  ExprResult prepareMatrixSplat(QualType MatrixTy, Expr *SplattedExpr);
+
   // CheckExtVectorCast - check type constraints for extended vectors.
   // Since vectors are an extension, there are no C standard reference for this.
   // We allow casting between vectors and integer datatypes of the same size,
@@ -8733,12 +8737,6 @@ public:
   // overload resolution, can we move to ASTContext?
   bool IsCXXTriviallyRelocatableType(QualType T);
   bool IsCXXTriviallyRelocatableType(const CXXRecordDecl &RD);
-
-  //// Determines if a type is replaceable
-  /// according to the C++26 rules.
-  // FIXME: This is in Sema because it requires
-  // overload resolution, can we move to ASTContext?
-  bool IsCXXReplaceableType(QualType T);
 
   /// Check the operands of ?: under C++ semantics.
   ///

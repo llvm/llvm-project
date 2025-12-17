@@ -7288,20 +7288,27 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
       CheckCompletedMemberFunction(MD);
   }
 
-  // ms_struct is a request to use the same ABI rules as MSVC.  Check
-  // whether this class uses any C++ features that are implemented
-  // completely differently in MSVC, and if so, emit a diagnostic.
-  // That diagnostic defaults to an error, but we allow projects to
-  // map it down to a warning (or ignore it).  It's a fairly common
-  // practice among users of the ms_struct pragma to mass-annotate
-  // headers, sweeping up a bunch of types that the project doesn't
-  // really rely on MSVC-compatible layout for.  We must therefore
-  // support "ms_struct except for C++ stuff" as a secondary ABI.
+  // {ms,gcc}_struct is a request to change ABI rules to either follow
+  // Microsoft or Itanium C++ ABI. However, even if these attributes are
+  // present, we do not layout classes following foreign ABI rules, but
+  // instead enter a special "compatibility mode", which only changes
+  // alignments of fundamental types and layout of bit fields.
+  // Check whether this class uses any C++ features that are implemented
+  // completely differently in the requested ABI, and if so, emit a
+  // diagnostic. That diagnostic defaults to an error, but we allow
+  // projects to map it down to a warning (or ignore it). It's a fairly
+  // common practice among users of the ms_struct pragma to
+  // mass-annotate headers, sweeping up a bunch of types that the
+  // project doesn't really rely on MSVC-compatible layout for. We must
+  // therefore support "ms_struct except for C++ stuff" as a secondary
+  // ABI.
   // Don't emit this diagnostic if the feature was enabled as a
   // language option (as opposed to via a pragma or attribute), as
   // the option -mms-bitfields otherwise essentially makes it impossible
   // to build C++ code, unless this diagnostic is turned off.
-  if (Record->isMsStruct(Context) && !Context.getLangOpts().MSBitfields &&
+  if (Context.getLangOpts().getLayoutCompatibility() ==
+          LangOptions::LayoutCompatibilityKind::Default &&
+      Record->isMsStruct(Context) != Context.defaultsToMsStruct() &&
       (Record->isPolymorphic() || Record->getNumBases())) {
     Diag(Record->getLocation(), diag::warn_cxx_ms_struct);
   }
