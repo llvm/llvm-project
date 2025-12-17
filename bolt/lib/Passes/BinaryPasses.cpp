@@ -573,6 +573,19 @@ Error PopulateOutputFunctions::runOnFunctions(BinaryContext &BC) {
   llvm::copy(BC.getInjectedBinaryFunctions(),
              std::back_inserter(OutputFunctions));
 
+  // Place hot text movers in front.
+  if (opts::HotText) {
+    std::stable_partition(
+        OutputFunctions.begin(), OutputFunctions.end(),
+        [](const BinaryFunction *A) { return opts::isHotTextMover(*A); });
+  }
+
+  if (opts::HotFunctionsAtEnd) {
+    std::stable_partition(
+        OutputFunctions.begin(), OutputFunctions.end(),
+        [](const BinaryFunction *A) { return !A->hasValidIndex(); });
+  }
+
   return Error::success();
 }
 
