@@ -7,17 +7,6 @@
 
 # WARN: warning: '[[FILE]]': unknown format version value [1] in SHT_LLVM_CALL_GRAPH type section
 
-## YAML content was generated from this assembly using obj2yaml.
-##    .text
-##    .globl _Z3foov
-##    .type _Z3foov,@function
-##    _Z3foov:
-##     callq _Z3foov@PLT
-##
-##    .section	.llvm.callgraph,"o",@llvm_call_graph,.text
-##    .byte	1  #< Invalid format version number: the only supported version is 0.
-##    .text
-
 --- !ELF
 FileHeader:
   Class:           ELFCLASS64

@@ -11,57 +11,6 @@
 # WARN: warning: '[[FILE]]': unknown relocation at offset 29
 # WARN: warning: '[[FILE]]': unknown relocation at offset 56
 
-## YAML content was generated from this assembly using obj2yaml.
-##    .text
-##    
-##    .globl foo
-##    .type foo,@function
-##    foo:                  #< foo is at 0.
-##    .Lfoo_begin:
-##     callq foo            #< direct call is at 5. target is foo (0).
-##     retq
-##    
-##    .globl bar
-##    .type bar,@function
-##    bar:                  #< bar is at 6.
-##     callq	*-40(%rbp)    #< indirect call is at 9.
-##     retq
-##    
-##    .globl baz
-##    .type baz,@function
-##    baz:                  #< baz is at 10 (a).
-##     retq
-##    
-##    .globl qux
-##    .type qux,@function
-##    qux:                  #< qux is at 11 (b).
-##     retq
-##    
-##    .section	.llvm.callgraph,"o",@llvm_call_graph,.text
-##    .byte	0       #< Format version number.
-##    .byte	3       #< Flag IsIndirectTarget true
-##    .quad	0       #< foo()'s address.
-##    .quad	0       #< TypeID: unknown.
-##    .byte   1       #< Count of direct callees.
-##    .quad   5       #< Direct callee foo's address>
-##    
-##    .byte	0       #< Format version number.
-##    .byte   5       #< Flag IsIndirectTarget true
-##    .quad	6       #< bar()'s address.
-##    .quad	0       #< TypeID: unknown.
-##    .byte	1       #< Count of indirect target type IDs
-##    .quad   16      #< Indirect call type id.
-##    
-##    
-##    .byte	0       #< Format version number.
-##    .byte   1       #< Flag IsIndirectTarget true
-##    .quad	10      #< baz()'s address.
-##    .quad   32      #< Indirect target type id.
-##    
-##    # No call graph section entry for qux. 
-##    
-##    .text
-
 --- !ELF
 FileHeader:
   Class: ELFCLASS64

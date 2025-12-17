@@ -7,24 +7,6 @@
 
 # WARN: warning: '[[FILE]]': unable to decode LEB128 at offset 0x00000012: malformed uleb128, extends past end
 
-## YAML content was generated from this assembly using obj2yaml.
-##    .text
-##
-##    .globl foo
-##    .type foo,@function
-##    foo:                  #< foo is at 0.
-##    .Lfoo_begin:
-##     callq foo            #< direct call is at 5. target is foo (0).
-##     retq
-##
-##    .section	.llvm.callgraph,"o",@llvm_call_graph,.text
-##    .byte	0   #< Format version number.
-##    .byte	3   #< Flag IsIndirectTarget true and has direct calls
-##    .quad 0   #< Function entry address.
-##    .quad 0   #< TypeID: unknown. 
-##    # Missing direct callees info
-##    .text
-
 --- !ELF
 FileHeader:
   Class:           ELFCLASS64

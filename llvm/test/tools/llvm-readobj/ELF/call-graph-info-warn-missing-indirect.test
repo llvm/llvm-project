@@ -7,22 +7,6 @@
 
 # WARN: warning: '[[FILE]]': unexpected end of data at offset 0x13 while reading [0x13, 0x1b)
 
-## YAML content was generated from this assembly using obj2yaml.
-##    .text
-##    .globl _Z3foov
-##    .type _Z3foov,@function
-##    _Z3foov:
-##     callq _Z3foov@PLT
-##
-##    .section	.llvm.callgraph,"o",@llvm_call_graph,.text
-##    .byte 0  #< Format version number.
-##    .byte 4  #< Flags
-##    .quad 0  #< Function entry address.
-##    .quad 0  #< Type ID
-##    .byte 1  #< Indirect call site count that follows.
-##             #< Missing indirect call entries here.
-##    .text
-
 --- !ELF
 FileHeader:
   Class:           ELFCLASS64

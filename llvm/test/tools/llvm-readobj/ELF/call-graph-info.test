@@ -4,43 +4,6 @@
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines --check-prefix=LLVM -DFILE=%t
 # RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines --check-prefix=JSON -DFILE=%t
 
-## Yaml input is obtained by compiling the below source to object with:
-##   clang -fexperimental-call-graph-section test.c -o test.o
-## then to yaml with:
-##   obj2yaml test.o > test.yaml
-## Remove ProgramHeaders if obj2yaml fails.
-
-## The content of the .callgraph section is fixed with this yaml in raw format.
-
-## Source:
-##   void foo() {}
-##
-##   void bar() {}
-##
-##   int baz(char a) {
-##     return 0;
-##   }
-##
-##   int main() {
-##     // Indirect calls.
-##     void (*fp_foo)() = foo;
-##     fp_foo();
-##
-##     void (*fp_bar)() = bar;
-##     fp_bar();
-##
-##     char a;
-##     int (*fp_baz)(char) = baz;
-##     fp_baz(a);
-##
-##     // Direct calls.
-##     foo();
-##     bar();
-##     baz(a);
-##
-##     return 0;
-##   }
-
 ## We do not support GNU format console output for --call-graph-info as it is an LLVM only info.
 # CHECK-NOT: .
 
