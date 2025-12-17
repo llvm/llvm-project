@@ -4,8 +4,10 @@
 ! RUN: %flang -Ofast -### %s -o %t 2>&1 | FileCheck %s -check-prefix=OFAST
 ! RUN: %flang -Ofast -fprotect-parens -### %s -o %t 2>&1 | FileCheck %s -check-prefix=OFAST-PROTECT
 
-! PROTECT: "-fprotect-parens"
+! Note: -fprotect-parens is not passed to the frontend, because it's the
+! default. Only -fno-protect-parens is passed to turn off the default.
+! PROTECT-NOT: "-f{{.*}}protect-parens"
 ! NO-PROTECT: "-fno-protect-parens"
-! DEFAULT: "-fprotect-parens"
+! DEFAULT-NOT: "-f{{.*}}protect-parens"
 ! OFAST: "-fno-protect-parens"
-! OFAST-PROTECT: "-fprotect-parens"
+! OFAST-PROTECT-NOT: "-f{{.*}}protect-parens"

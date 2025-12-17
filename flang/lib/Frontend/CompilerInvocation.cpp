@@ -276,10 +276,8 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::options::OPT_fno_debug_pass_manager, false))
     opts.DebugPassManager = 1;
 
-  if (args.hasFlag(clang::options::OPT_fprotect_parens,
+  if (!args.hasFlag(clang::options::OPT_fprotect_parens,
                    clang::options::OPT_fno_protect_parens, true))
-    opts.ProtectParens = 1;
-  else
     opts.ProtectParens = 0;
 
   if (args.hasFlag(clang::options::OPT_fstack_arrays,
