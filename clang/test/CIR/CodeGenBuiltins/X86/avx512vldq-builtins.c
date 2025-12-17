@@ -109,10 +109,12 @@ __mmask8 test_mm_movepi64_mask(__m128i __A) {
   // LLVM-LABEL: @test_mm_movepi64_mask
   // LLVM: [[CMP:%.*]] = icmp slt <2 x i64> %{{.*}}, zeroinitializer
   // LLVM: [[SHUF:%.*]] = shufflevector <2 x i1> [[CMP]], <2 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  // LLVM: bitcast <8 x i1> [[SHUF]] to i8
 
   // OGCG-LABEL: @test_mm_movepi64_mask
   // OGCG: [[CMP:%.*]] = icmp slt <2 x i64> %{{.*}}, zeroinitializer
   // OGCG: [[SHUF:%.*]] = shufflevector <2 x i1> [[CMP]], <2 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  // OGCG: bitcast <8 x i1> [[SHUF]] to i8
   return _mm_movepi64_mask(__A); 
 }
 
