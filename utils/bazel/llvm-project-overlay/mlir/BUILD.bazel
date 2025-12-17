@@ -4310,8 +4310,8 @@ cc_library(
     deps = [
         ":AMDGPUToROCDL",
         ":AffineToStandard",
-        ":ArithToAMDGPU",
         ":ArithAndMathToAPFloat",
+        ":ArithToAMDGPU",
         ":ArithToArmSME",
         ":ArithToEmitC",
         ":ArithToLLVM",
