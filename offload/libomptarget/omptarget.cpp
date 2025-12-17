@@ -1311,7 +1311,7 @@ static int targetDataNonContiguous(ident_t *Loc, DeviceTy &Device,
       }
     }
   } else {
-    char *Ptr = (char *)ArgsBase + Offset;
+    void *Ptr = reinterpret_cast<void *>((char *)ArgsBase + Offset);
     ODBG(ODT_Mapping) << "Transfer of non-contiguous : host ptr " << Ptr
                       << " offset " << Offset << " len " << Size;
     Ret = targetDataContiguous(Loc, Device, ArgsBase, Ptr, Size, ArgType,
