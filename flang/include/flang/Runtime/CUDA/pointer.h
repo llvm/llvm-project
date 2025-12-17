@@ -20,14 +20,14 @@ extern "C" {
 int RTDECL(CUFPointerAllocate)(Descriptor &, int64_t *stream = nullptr,
     bool *pinned = nullptr, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
-    int sourceLine = 0);
+    int sourceLine = 0, bool deviceInit = false);
 
 /// Perform allocation of the descriptor with synchronization of it when
 /// necessary.
 int RTDECL(CUFPointerAllocateSync)(Descriptor &, int64_t *stream = nullptr,
     bool *pinned = nullptr, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
-    int sourceLine = 0);
+    int sourceLine = 0, bool deviceInit = false);
 
 /// Perform allocation of the descriptor without synchronization. Assign data
 /// from source.
