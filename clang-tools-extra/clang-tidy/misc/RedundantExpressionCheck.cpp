@@ -1398,10 +1398,9 @@ void RedundantExpressionCheck::check(const MatchFinder::MatchResult &Result) {
              : "operator has equivalent nested operands";
 
     const auto Diag = diag(Op->getExprLoc(), Message);
-    for (const auto &KeyValue : Result.Nodes.getMap()) {
+    for (const auto &KeyValue : Result.Nodes.getMap())
       if (StringRef(KeyValue.first).starts_with("duplicate"))
         Diag << KeyValue.second.getSourceRange();
-    }
   }
 
   if (const auto *NegateOperator =

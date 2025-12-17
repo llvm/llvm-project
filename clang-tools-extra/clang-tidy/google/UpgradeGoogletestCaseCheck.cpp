@@ -31,10 +31,9 @@ getNewMacroName(llvm::StringRef MacroName) {
       {"INSTANTIATE_TEST_CASE_P", "INSTANTIATE_TEST_SUITE_P"},
   };
 
-  for (auto &Mapping : ReplacementMap) {
+  for (auto &Mapping : ReplacementMap)
     if (MacroName == Mapping.first)
       return Mapping.second;
-  }
 
   return std::nullopt;
 }
@@ -217,10 +216,9 @@ static llvm::StringRef getNewMethodName(llvm::StringRef CurrentName) {
       {"test_case_to_run_count", "test_suite_to_run_count"},
       {"GetTestCase", "GetTestSuite"}};
 
-  for (auto &Mapping : ReplacementMap) {
+  for (auto &Mapping : ReplacementMap)
     if (CurrentName == Mapping.first)
       return Mapping.second;
-  }
 
   llvm_unreachable("Unexpected function name");
 }
