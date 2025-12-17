@@ -42,10 +42,12 @@ class Bitset {
   static constexpr unsigned NumWords =
       (NumBits + BitwordBits - 1) / BitwordBits;
 
+  static constexpr unsigned getLastWordIndex() { return NumWords - 1; }
+
   using StorageType = std::array<BitWord, NumWords>;
   StorageType Bits{};
 
-  constexpr void maskLastWord() { Bits[NumWords - 1] &= RemainderMask; }
+  constexpr void maskLastWord() { Bits[getLastWordIndex()] &= RemainderMask; }
 
 protected:
   constexpr Bitset(const std::array<uint64_t, (NumBits + 63) / 64> &B) {
@@ -114,10 +116,10 @@ public:
 
   constexpr bool all() const {
     constexpr const BitWord AllOnes = ~BitWord(0);
-    for (unsigned I = 0; I < NumWords - 1; ++I)
+    for (unsigned I = 0; I < getLastWordIndex(); ++I)
       if (Bits[I] != AllOnes)
         return false;
-    return Bits[NumWords - 1] == RemainderMask;
+    return Bits[getLastWordIndex()] == RemainderMask;
   }
 
   constexpr size_t count() const {
@@ -197,11 +199,11 @@ public:
     const unsigned WordShift = N / BitwordBits;
     const unsigned BitShift = N % BitwordBits;
     if (BitShift == 0) {
-      for (int I = NumWords - 1; I >= static_cast<int>(WordShift); --I)
+      for (int I = getLastWordIndex(); I >= static_cast<int>(WordShift); --I)
         Bits[I] = Bits[I - WordShift];
     } else {
       const unsigned CarryShift = BitwordBits - BitShift;
-      for (int I = NumWords - 1; I > static_cast<int>(WordShift); --I) {
+      for (int I = getLastWordIndex(); I > static_cast<int>(WordShift); --I) {
         Bits[I] = (Bits[I - WordShift] << BitShift) |
                   (Bits[I - WordShift - 1] >> CarryShift);
       }
@@ -236,7 +238,7 @@ public:
         Bits[I] = (Bits[I + WordShift] >> BitShift) |
                   (Bits[I + WordShift + 1] << CarryShift);
       }
-      Bits[NumWords - WordShift - 1] = Bits[NumWords - 1] >> BitShift;
+      Bits[NumWords - WordShift - 1] = Bits[getLastWordIndex()] >> BitShift;
     }
     for (unsigned I = NumWords - WordShift; I < NumWords; ++I)
       Bits[I] = 0;
