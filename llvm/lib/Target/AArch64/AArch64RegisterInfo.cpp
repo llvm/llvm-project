@@ -439,6 +439,17 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
       markSuperRegs(Reserved, i);
   }
 
+  if (MF.getSubtarget<AArch64Subtarget>().isLFI()) {
+    markSuperRegs(Reserved, AArch64::W28);
+    markSuperRegs(Reserved, AArch64::W27);
+    markSuperRegs(Reserved, AArch64::W26);
+    markSuperRegs(Reserved, AArch64::W25);
+    if (!MF.getProperties().hasNoVRegs()) {
+      markSuperRegs(Reserved, AArch64::LR);
+      markSuperRegs(Reserved, AArch64::W30);
+    }
+  }
+
   for (size_t i = 0; i < AArch64::GPR32commonRegClass.getNumRegs(); ++i) {
     if (MF.getSubtarget<AArch64Subtarget>().isXRegisterReserved(i))
       markSuperRegs(Reserved, AArch64::GPR32commonRegClass.getRegister(i));
