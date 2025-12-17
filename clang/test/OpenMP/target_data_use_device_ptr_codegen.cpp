@@ -22,18 +22,18 @@
 double *g;
 
 // CK1: @g ={{.*}} global ptr
-// CK1: [[MTYPE00:@.+]] = {{.*}}constant [2 x i64] [i64 67, i64 16384]
-// CK1: [[MTYPE01:@.+]] = {{.*}}constant [2 x i64] [i64 67, i64 16384]
-// CK1: [[MTYPE03:@.+]] = {{.*}}constant [2 x i64] [i64 67, i64 16384]
-// CK1: [[MTYPE04:@.+]] = {{.*}}constant [2 x i64] [i64 67, i64 16384]
-// CK1: [[MTYPE05:@.+]] = {{.*}}constant [2 x i64] [i64 67, i64 16384]
-// CK1: [[MTYPE06:@.+]] = {{.*}}constant [2 x i64] [i64 67, i64 16384]
-// CK1: [[MTYPE07:@.+]] = {{.*}}constant [2 x i64] [i64 67, i64 16384]
-// CK1: [[MTYPE08:@.+]] = {{.*}}constant [4 x i64] [i64 67, i64 16384, i64 3, i64 16384]
-// CK1: [[MTYPE09:@.+]] = {{.*}}constant [4 x i64] [i64 67, i64 16384, i64 67, i64 16384]
-// CK1: [[MTYPE10:@.+]] = {{.*}}constant [4 x i64] [i64 67, i64 16384, i64 67, i64 16384]
-// CK1: [[MTYPE11:@.+]] = {{.*}}constant [3 x i64] [i64 3, i64 16384, i64 64]
-// CK1: [[MTYPE12:@.+]] = {{.*}}constant [3 x i64] [i64 3, i64 16384, i64 64]
+// CK1: [[MTYPE00:@.+]] = {{.*}}constant [2 x i64] [i64 67, i64 32768]
+// CK1: [[MTYPE01:@.+]] = {{.*}}constant [2 x i64] [i64 67, i64 32768]
+// CK1: [[MTYPE03:@.+]] = {{.*}}constant [2 x i64] [i64 67, i64 32768]
+// CK1: [[MTYPE04:@.+]] = {{.*}}constant [2 x i64] [i64 67, i64 32768]
+// CK1: [[MTYPE05:@.+]] = {{.*}}constant [2 x i64] [i64 67, i64 32768]
+// CK1: [[MTYPE06:@.+]] = {{.*}}constant [2 x i64] [i64 67, i64 32768]
+// CK1: [[MTYPE07:@.+]] = {{.*}}constant [2 x i64] [i64 67, i64 32768]
+// CK1: [[MTYPE08:@.+]] = {{.*}}constant [4 x i64] [i64 67, i64 32768, i64 3, i64 32768]
+// CK1: [[MTYPE09:@.+]] = {{.*}}constant [4 x i64] [i64 67, i64 32768, i64 67, i64 32768]
+// CK1: [[MTYPE10:@.+]] = {{.*}}constant [4 x i64] [i64 67, i64 32768, i64 67, i64 32768]
+// CK1: [[MTYPE11:@.+]] = {{.*}}constant [3 x i64] [i64 3, i64 32768, i64 64]
+// CK1: [[MTYPE12:@.+]] = {{.*}}constant [3 x i64] [i64 3, i64 32768, i64 64]
 
 // CK1-LABEL: @_Z3foo
 template<typename T>
@@ -364,10 +364,10 @@ void bar(float *&a, int *&b) {
 #ifdef CK2
 
 // CK2: [[ST:%.+]] = type { ptr, ptr }
-// CK2: [[MTYPE00:@.+]] = {{.*}}constant [2 x i64] [i64 [[#0x43]], i64 [[#0x4000]]]
-// CK2: [[MTYPE01:@.+]] = {{.*}}constant [2 x i64] [i64 [[#0x43]], i64 [[#0x4000]]]
-// CK2: [[MTYPE02:@.+]] = {{.*}}constant [3 x i64] [i64 3, i64 [[#0x4000]], i64 [[#0x40]]]
-// CK2: [[MTYPE03:@.+]] = {{.*}}constant [3 x i64] [i64 [[#0x43]], i64 [[#0x4000]], i64 [[#0x40]]]
+// CK2: [[MTYPE00:@.+]] = {{.*}}constant [2 x i64] [i64 [[#0x43]], i64 [[#0x8000]]]
+// CK2: [[MTYPE01:@.+]] = {{.*}}constant [2 x i64] [i64 [[#0x43]], i64 [[#0x8000]]]
+// CK2: [[MTYPE02:@.+]] = {{.*}}constant [3 x i64] [i64 3, i64 [[#0x8000]], i64 [[#0x40]]]
+// CK2: [[MTYPE03:@.+]] = {{.*}}constant [3 x i64] [i64 [[#0x43]], i64 [[#0x8000]], i64 [[#0x40]]]
 
 template <typename T>
 struct ST {

@@ -39,15 +39,15 @@
 
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK27: [[SIZE01:@.+]] = private {{.*}}constant [2 x i64] [i64 0, i64 {{8|4}}]
-// CK27: [[MTYPE01:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 16384]
+// CK27: [[MTYPE01:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 32768]
 
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK27: [[SIZE02:@.+]] = private {{.*}}constant [2 x i64] [i64 0, i64  {{8|4}}]
-// CK27: [[MTYPE02:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 16384]
+// CK27: [[MTYPE02:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 32768]
 
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK27: [[SIZE03:@.+]] = private {{.*}}constant [2 x i64] [i64 0, i64  {{8|4}}]
-// CK27: [[MTYPE03:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 16384]
+// CK27: [[MTYPE03:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 32768]
 
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0

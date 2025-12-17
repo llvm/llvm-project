@@ -81,14 +81,14 @@ int main() {
 #endif
 //.
 // CHECK: @.offload_sizes = private unnamed_addr constant [7 x i64] [i64 4, i64 16, i64 4, i64 8, i64 4, i64 0, i64 4]
-// CHECK: @.offload_maptypes = private unnamed_addr constant [7 x i64] [i64 [[#0x43]], i64 [[#0x43]], i64 [[#0x3]], i64 [[#0x4000]], i64 [[#0x43]], i64 [[#0x43]], i64 [[#0x43]]]
+// CHECK: @.offload_maptypes = private unnamed_addr constant [7 x i64] [i64 [[#0x43]], i64 [[#0x43]], i64 [[#0x3]], i64 [[#0x8000]], i64 [[#0x43]], i64 [[#0x43]], i64 [[#0x43]]]
 // CHECK: @.offload_sizes.1 = private unnamed_addr constant [7 x i64] [i64 0, i64 4, i64 4, i64 0, i64 16, i64 4, i64 8]
-// CHECK: @.offload_maptypes.2 = private unnamed_addr constant [7 x i64] [i64 [[#0x0]], i64 [[#0x1000000000043]], i64 [[#0x1000000000053]], i64 [[#0x1000000000043]], i64 [[#0x43]], i64 [[#0x3]], i64 [[#0x4000]]]
+// CHECK: @.offload_maptypes.2 = private unnamed_addr constant [7 x i64] [i64 [[#0x0]], i64 [[#0x1000000000043]], i64 [[#0x1000000000053]], i64 [[#0x1000000000043]], i64 [[#0x43]], i64 [[#0x3]], i64 [[#0x8000]]]
 //.
 // OMP60: @.offload_sizes = private unnamed_addr constant [10 x i64] [i64 4, i64 16, i64 4, i64 8, i64 8, i64 4, i64 0, i64 4, i64 8, i64 8]
-// OMP60: @.offload_maptypes = private unnamed_addr constant [10 x i64] [i64 [[#0x43]], i64 [[#0x43]], i64 [[#0x3]], i64 [[#0x3]], i64 [[#0x4000]], i64 [[#0x43]], i64 [[#0x43]], i64 [[#0x43]], i64 [[#0x3]], i64 [[#0x4000]]]
+// OMP60: @.offload_maptypes = private unnamed_addr constant [10 x i64] [i64 [[#0x43]], i64 [[#0x43]], i64 [[#0x3]], i64 [[#0x3]], i64 [[#0x8000]], i64 [[#0x43]], i64 [[#0x43]], i64 [[#0x43]], i64 [[#0x3]], i64 [[#0x8000]]]
 // OMP60: @.offload_sizes.1 = private unnamed_addr constant [8 x i64] [i64 0, i64 4, i64 4, i64 0, i64 16, i64 4, i64 8, i64 8]
-// OMP60: @.offload_maptypes.2 = private unnamed_addr constant [8 x i64] [i64 [[#0x0]], i64 [[#0x1000000000043]], i64 [[#0x1000000000053]], i64 [[#0x1000000000043]], i64 [[#0x43]], i64 [[#0x3]], i64 [[#0x3]], i64 [[#0x4000]]]
+// OMP60: @.offload_maptypes.2 = private unnamed_addr constant [8 x i64] [i64 [[#0x0]], i64 [[#0x1000000000043]], i64 [[#0x1000000000053]], i64 [[#0x1000000000043]], i64 [[#0x43]], i64 [[#0x3]], i64 [[#0x3]], i64 [[#0x8000]]]
 //.
 // CHECK-LABEL: define dso_local noundef signext i32 @main(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {

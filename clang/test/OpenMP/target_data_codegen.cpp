@@ -38,7 +38,7 @@ double gc[100];
 // CK1: [[MTYPE03:@.+]] = {{.+}}constant [1 x i64] [i64 5]
 
 // CK1: [[SIZE04:@.+]] = {{.+}}constant [2 x i64] [i64 24, i64 {{4|8}}]
-// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 1, i64 [[#0x4000]]]
+// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 1, i64 [[#0x8000]]]
 
 // CK1: [[MTYPE05:@.+]] = {{.+}}constant [1 x i64] [i64 1025]
 
@@ -343,7 +343,7 @@ struct ST {
 };
 
 // CK2: [[SIZE00:@.+]] = {{.+}}constant [2 x i64] [i64 24, i64 {{4|8}}]
-// CK2: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 5, i64 [[#0x4000]]]
+// CK2: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 5, i64 [[#0x8000]]]
 
 // CK2-LABEL: _Z3bari
 int bar(int arg){
@@ -455,7 +455,7 @@ struct STT {
 };
 
 // CK4: [[SIZE00:@.+]] = {{.+}}constant [2 x i64] [i64 24, i64 {{4|8}}]
-// CK4: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 [[#0x405]], i64 [[#0x4000]]]
+// CK4: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 [[#0x405]], i64 [[#0x8000]]]
 
 // CK4-LABEL: _Z3bari
 int bar(int arg){
@@ -534,7 +534,7 @@ struct S2 {
 
 void test_close_modifier(int arg) {
   S2 *ps;
-// CK5: private unnamed_addr constant [3 x i64] [i64 1027, i64 1027, i64 16384]
+// CK5: private unnamed_addr constant [3 x i64] [i64 1027, i64 1027, i64 32768]
 //
 // &arg,               &arg,                 sizeof(arg),                 CLOSE | TOFROM
 // &ps->ps->ps->ps[0], &ps->ps->ps->ps[0].s, sizeof(ps->ps->ps->ps[0].s), CLOSE | TOFROM
@@ -639,12 +639,12 @@ void test_present_modifier(int arg) {
 // &ps1[0], &ps1->s, sizeof(ps1->s), FROM | TO
 // &ps1,    &ps1->s, sizeof(ps1),    ATTACH
 //
-// CK8-SAME: {{^}} [i64 3, i64 [[#0x4000]],
+// CK8-SAME: {{^}} [i64 3, i64 [[#0x8000]],
 //
 // &ps1->ps->ps->ps[0], &ps1->ps->ps->ps[0].s, sizeof(ps1->ps->ps->ps[0].s), PRESENT | FROM | TO
 // &ps1->ps->ps->ps,    &ps1->ps->ps->ps[0].s, sizeof(struct S2 *),          ATTACH
 //
-// CK8-SAME: {{^}} i64 [[#0x1003]], i64 [[#0x4000]],
+// CK8-SAME: {{^}} i64 [[#0x1003]], i64 [[#0x8000]],
 
 // arg
 //
@@ -657,12 +657,12 @@ void test_present_modifier(int arg) {
 // &ps2[0], &ps2->s, sizeof(ps2->s), PRESENT | FROM | TO
 // &ps2,    &ps2->s, sizeof(ps2),    ATTACH
 //
-// CK8-SAME: {{^}} i64 [[#0x1003]], i64 [[#0x4000]],
+// CK8-SAME: {{^}} i64 [[#0x1003]], i64 [[#0x8000]],
 //
 // &ps2->ps->ps->ps[0], &ps2->ps->ps->ps[0].s, sizeof(ps2->ps->ps->ps[0].s), FROM | TO
 // &ps2->ps->ps->ps,    &ps2->ps->ps->ps[0].s, sizeof(struct S2 *),          ATTACH
 //
-// CK8-SAME: {{^}} i64 3, i64 [[#0x4000]]]
+// CK8-SAME: {{^}} i64 3, i64 [[#0x8000]]]
 
 #pragma omp target data map(tofrom         \
   : ps1->s)      \

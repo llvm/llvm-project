@@ -39,7 +39,7 @@
 
 // CK28-LABEL: @.__omp_offloading_{{.*}}explicit_maps_pointer_references{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK28: [[SIZE01:@.+]] = private {{.*}}constant [2 x i64] [i64 400, i64 {{4|8}}]
-// CK28: [[MTYPE01:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 16384]
+// CK28: [[MTYPE01:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 32768]
 
 // CK28-LABEL: explicit_maps_pointer_references{{.*}}(
 void explicit_maps_pointer_references (int *p){

@@ -45,7 +45,7 @@ double gc[100];
 // CK1: [[MTYPE03:@.+]] = {{.+}}constant [1 x i64] [i64 5]
 
 // CK1: [[SIZE04:@.+]] = {{.+}}constant [2 x i64] [i64 24, i64 {{4|8}}]
-// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 1, i64 [[#0x4000]]]
+// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 1, i64 [[#0x8000]]]
 
 // CK1: [[MTYPE05:@.+]] = {{.+}}constant [1 x i64] [i64 1025]
 
@@ -332,7 +332,7 @@ struct ST {
 };
 
 // CK2: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 24, i64 {{4|8}}]
-// CK2: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 5, i64 [[#0x4000]]]
+// CK2: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 5, i64 [[#0x8000]]]
 
 // CK2-LABEL: _Z3bari
 int bar(int arg){
@@ -481,7 +481,7 @@ struct STT {
 };
 
 // CK5: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 24, i64 {{4|8}}]
-// CK5: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 [[#0x405]], i64 [[#0x4000]]]
+// CK5: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 [[#0x405]], i64 [[#0x8000]]]
 
 // CK5-LABEL: _Z3bari
 int bar(int arg){

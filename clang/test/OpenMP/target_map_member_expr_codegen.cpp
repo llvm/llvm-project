@@ -88,11 +88,11 @@ void foo() {
 // CHECK: @.offload_sizes = private unnamed_addr constant [4 x i64] [i64 12, i64 4, i64 4, i64 4]
 // CHECK: @.offload_maptypes = private unnamed_addr constant [4 x i64] [i64 [[#0x20]], i64 [[#0x1000000000203]], i64 [[#0x1000000000203]], i64 [[#0x1000000000203]]]
 // CHECK: @.offload_sizes.1 = private unnamed_addr constant [4 x i64] [i64 0, i64 8, i64 0, i64 8]
-// CHECK: @.offload_maptypes.2 = private unnamed_addr constant [4 x i64] [i64 [[#0x1]], i64 [[#0x4000]], i64 [[#0x2]], i64 [[#0x4000]]]
+// CHECK: @.offload_maptypes.2 = private unnamed_addr constant [4 x i64] [i64 [[#0x1]], i64 [[#0x8000]], i64 [[#0x2]], i64 [[#0x8000]]]
 // CHECK: @.offload_sizes.3 = private unnamed_addr constant [2 x i64] [i64 4, i64 40]
 // CHECK: @.offload_maptypes.4 = private unnamed_addr constant [2 x i64] [i64 [[#0x120]], i64 [[#0x223]]]
 // CHECK: @.offload_sizes.5 = private unnamed_addr constant [4 x i64] [i64 4, i64 8, i64 0, i64 8]
-// CHECK: @.offload_maptypes.6 = private unnamed_addr constant [4 x i64] [i64 [[#0x320]], i64 [[#0x223]], i64 [[#0x2]], i64 [[#0x4000]]]
+// CHECK: @.offload_maptypes.6 = private unnamed_addr constant [4 x i64] [i64 [[#0x320]], i64 [[#0x223]], i64 [[#0x2]], i64 [[#0x8000]]]
 //.
 // CHECK-LABEL: define {{[^@]+}}@_Z3foov
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {

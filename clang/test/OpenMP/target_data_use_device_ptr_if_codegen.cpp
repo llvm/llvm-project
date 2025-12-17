@@ -19,7 +19,7 @@
 #ifdef CK1
 
 // CK1: [[MYSIZE00:@.+]] = {{.*}}constant [2 x i64] [i64 4, i64 {{8|4}}]
-// CK1: [[MTYPE00:@.+]] = {{.*}}constant [2 x i64] [i64 67, i64 16384]
+// CK1: [[MTYPE00:@.+]] = {{.*}}constant [2 x i64] [i64 67, i64 32768]
 // CK1: [[MTYPE01:@.+]] = {{.*}}constant [1 x i64] [i64 288]
 // CK1: [[MTYPE02:@.+]] = {{.*}}constant [1 x i64] [i64 288]
 

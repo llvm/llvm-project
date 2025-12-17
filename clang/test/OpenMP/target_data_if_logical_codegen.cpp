@@ -38,7 +38,7 @@ int main() {
 
 //.
 // CHECK: @.offload_sizes = private unnamed_addr constant [2 x i64] [i64 4, i64 8]
-// CHECK: @.offload_maptypes = private unnamed_addr constant [2 x i64] [i64 [[#0x1]], i64 [[#0x4000]]]
+// CHECK: @.offload_maptypes = private unnamed_addr constant [2 x i64] [i64 [[#0x1]], i64 [[#0x8000]]]
 //.
 // CHECK-LABEL: define dso_local noundef i32 @_Z10if_logicalv(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {

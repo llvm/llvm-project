@@ -44,7 +44,7 @@
 
 // CK30-LABEL: @.__omp_offloading_{{.*}}map_with_deep_copy{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK30: [[SIZE00:@.+]] = private unnamed_addr constant [5 x i64] [i64 {{56|28}}, i64 4, i64 {{4|8}}, i64 4, i64 {{4|8}}]
-// CK30: [[MTYPE00:@.+]] = private unnamed_addr constant [5 x i64] [i64 [[#0x23]], i64 3, i64 [[#0x4000]], i64 3, i64 [[#0x4000]]]
+// CK30: [[MTYPE00:@.+]] = private unnamed_addr constant [5 x i64] [i64 [[#0x23]], i64 3, i64 [[#0x8000]], i64 3, i64 [[#0x8000]]]
 
 typedef struct {
   int *ptrBase;

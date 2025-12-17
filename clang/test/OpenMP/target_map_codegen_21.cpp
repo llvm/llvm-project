@@ -54,7 +54,7 @@
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}explicit_maps_globals{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK22: [[SIZE04:@.+]] = private {{.*}}constant [2 x i64] [i64 20, i64 {{4|8}}]
-// CK22: [[MTYPE04:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 16384]
+// CK22: [[MTYPE04:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 32768]
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}explicit_maps_globals{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK22: [[SIZE05:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
@@ -74,7 +74,7 @@
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}explicit_maps_globals{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK22: [[SIZE09:@.+]] = private {{.*}}constant [2 x i64] [i64 20, i64 {{4|8}}]
-// CK22: [[MTYPE09:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 16384]
+// CK22: [[MTYPE09:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 32768]
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}explicit_maps_globals{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK22: [[SIZE10:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
@@ -94,7 +94,7 @@
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}explicit_maps_globals{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK22: [[SIZE14:@.+]] = private {{.*}}constant [2 x i64] [i64 20, i64 {{4|8}}]
-// CK22: [[MTYPE14:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 16384]
+// CK22: [[MTYPE14:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 32768]
 
 int a;
 int c[100];

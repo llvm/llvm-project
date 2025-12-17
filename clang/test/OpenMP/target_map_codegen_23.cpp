@@ -62,51 +62,51 @@ struct SC{
 
 // CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_struct_fields{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK24: [[SIZE13:@.+]] = private {{.*}}constant [2 x i64] [i64 4, i64 {{4|8}}]
-// CK24: [[MTYPE13:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 16384]
+// CK24: [[MTYPE13:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 32768]
 
 // CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_struct_fields{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK24: [[SIZE14:@.+]] = private {{.*}}constant [2 x i64] [i64 {{48|56}}, i64 {{4|8}}]
-// CK24: [[MTYPE14:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 16384]
+// CK24: [[MTYPE14:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 32768]
 
 // CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_struct_fields{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK24: [[SIZE15:@.+]] = private {{.*}}constant [2 x i64] [i64 4, i64 {{4|8}}]
-// CK24: [[MTYPE15:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 16384]
+// CK24: [[MTYPE15:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 32768]
 
 // CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_struct_fields{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK24: [[SIZE16:@.+]] = private {{.*}}constant [3 x i64] [i64 0, i64 20, i64 {{4|8}}]
-// CK24: [[MTYPE16:@.+]] = private {{.*}}constant [3 x i64] [i64 32, i64 281474976710659, i64 16384]
+// CK24: [[MTYPE16:@.+]] = private {{.*}}constant [3 x i64] [i64 32, i64 281474976710659, i64 32768]
 
 // CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_struct_fields{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK24: [[SIZE17:@.+]] = private {{.*}}constant [3 x i64] [i64 0, i64 {{3560|2880}}, i64 {{4|8}}]
-// CK24: [[MTYPE17:@.+]] = private {{.*}}constant [3 x i64] [i64 544, i64 3, i64 16384]
+// CK24: [[MTYPE17:@.+]] = private {{.*}}constant [3 x i64] [i64 544, i64 3, i64 32768]
 
 // CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_struct_fields{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK24: [[SIZE18:@.+]] = private {{.*}}constant [2 x i64] [i64 4, i64 {{4|8}}]
-// CK24: [[MTYPE18:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 16384]
+// CK24: [[MTYPE18:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 32768]
 
 // CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_struct_fields{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK24: [[SIZE19:@.+]] = private unnamed_addr constant [3 x i64] [i64 0, i64 4, i64 {{4|8}}]
-// CK24: [[MTYPE19:@.+]] = private unnamed_addr constant [3 x i64] [i64 544, i64 3, i64 16384]
+// CK24: [[MTYPE19:@.+]] = private unnamed_addr constant [3 x i64] [i64 544, i64 3, i64 32768]
 
 // CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_struct_fields{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK24: [[SIZE20:@.+]] = private unnamed_addr constant [3 x i64] [i64 0, i64 4, i64 {{4|8}}]
-// CK24: [[MTYPE20:@.+]] = private unnamed_addr constant [3 x i64] [i64 544, i64 3, i64 16384]
+// CK24: [[MTYPE20:@.+]] = private unnamed_addr constant [3 x i64] [i64 544, i64 3, i64 32768]
 
 // CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_struct_fields{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK24: [[SIZE21:@.+]] = private unnamed_addr constant [3 x i64] [i64 0, i64 4, i64 {{4|8}}]
-// CK24: [[MTYPE21:@.+]] = private unnamed_addr constant [3 x i64] [i64 544, i64 3, i64 16384]
+// CK24: [[MTYPE21:@.+]] = private unnamed_addr constant [3 x i64] [i64 544, i64 3, i64 32768]
 
 // CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_struct_fields{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK24: [[SIZE22:@.+]] = private {{.*}}constant [3 x i64] [i64 0, i64 8, i64 {{4|8}}]
-// CK24: [[MTYPE22:@.+]] = private {{.*}}constant [3 x i64] [i64 32, i64 281474976710659, i64 16384]
+// CK24: [[MTYPE22:@.+]] = private {{.*}}constant [3 x i64] [i64 32, i64 281474976710659, i64 32768]
 
 // CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_struct_fields{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK24: [[SIZE23:@.+]] = private unnamed_addr constant [4 x i64] [i64 0, i64 0, i64 8, i64 {{4|8}}]
-// CK24: [[MTYPE23:@.+]] = private unnamed_addr constant [4 x i64] [i64 544, i64 0, i64 562949953421315, i64 16384]
+// CK24: [[MTYPE23:@.+]] = private unnamed_addr constant [4 x i64] [i64 544, i64 0, i64 562949953421315, i64 32768]
 
 // CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_struct_fields{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK24: [[SIZE24:@.+]] = private unnamed_addr constant [3 x i64] [i64 0, i64 4, i64 {{4|8}}]
-// CK24: [[MTYPE24:@.+]] = private unnamed_addr constant [3 x i64] [i64 544, i64 3, i64 16384]
+// CK24: [[MTYPE24:@.+]] = private unnamed_addr constant [3 x i64] [i64 544, i64 3, i64 32768]
 
 // CK24-LABEL: explicit_maps_struct_fields
 int explicit_maps_struct_fields(int a){

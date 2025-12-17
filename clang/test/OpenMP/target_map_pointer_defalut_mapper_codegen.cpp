@@ -47,7 +47,7 @@ void foo() {
 // &spp[0][0], &spp[0][0].f, sizeof(f),         MEMBER_OF_2 | TO | FROM | IMPLICIT, mapper_of_c
 // &spp[0],    &spp[0][0],   sizeof(void*),     ATTACH
 // CHECK: @.offload_sizes = private unnamed_addr constant [6 x i64] [i64 0, i64 0, i64 0, i64 0, i64 4, i64 8]
-// CHECK: @.offload_maptypes = private unnamed_addr constant [6 x i64] [i64 [[#0x220]], i64 0, i64 [[#0x2000000000003]], i64 [[#0x2000000000003]], i64 [[#0x2000000000203]], i64 [[#0x4000]]]
+// CHECK: @.offload_maptypes = private unnamed_addr constant [6 x i64] [i64 [[#0x220]], i64 0, i64 [[#0x2000000000003]], i64 [[#0x2000000000003]], i64 [[#0x2000000000203]], i64 [[#0x8000]]]
 
 // &sp[0], &sp[0],   sizeof(sp[0]), ALLOC | PARAM
 // &sp[0], &sp[0].e, sizeof(e),     MEMBER_OF_1 | TO | FROM
@@ -55,7 +55,7 @@ void foo() {
 // &sp[0], &sp[0].f, sizeof(f),     MEMBER_OF_1 | TO | FROM | IMPLICIT, mapper_of_c
 // &sp,    &sp[0],   sizeof(void*), ATTACH
 // CHECK: @.offload_sizes.1 = private unnamed_addr constant [5 x i64] [i64 0, i64 0, i64 0, i64 4, i64 8]
-// CHECK: @.offload_maptypes.2 = private unnamed_addr constant [5 x i64] [i64 [[#0x20]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]], i64 [[#0x1000000000203]], i64 [[#0x4000]]]
+// CHECK: @.offload_maptypes.2 = private unnamed_addr constant [5 x i64] [i64 [[#0x20]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]], i64 [[#0x1000000000203]], i64 [[#0x8000]]]
 
 // &sppp[0],       &sppp[0],         0,                     IMPLICIT | PARAM
 // &sppp[0][0][0], &sppp[0][0][0],   sizeof(sppp[0][0][0]), ALLOC
@@ -64,4 +64,4 @@ void foo() {
 // &sppp[0][0][0], &sppp[0][0][0].f, sizeof(f),             MEMBER_OF_2 | TO | FROM | IMPLICIT, mapper_of_c
 // &sppp[0][0],    &sppp[0][0][0],   sizeof(void*),         ATTACH
 // CHECK: @.offload_sizes.3 = private unnamed_addr constant [6 x i64] [i64 0, i64 0, i64 0, i64 0, i64 4, i64 8]
-// CHECK: @.offload_maptypes.4 = private unnamed_addr constant [6 x i64] [i64 [[#0x220]], i64 0, i64 [[#0x2000000000003]], i64 [[#0x2000000000003]], i64 [[#0x2000000000203]], i64 [[#0x4000]]]
+// CHECK: @.offload_maptypes.4 = private unnamed_addr constant [6 x i64] [i64 [[#0x220]], i64 0, i64 [[#0x2000000000003]], i64 [[#0x2000000000003]], i64 [[#0x2000000000203]], i64 [[#0x8000]]]

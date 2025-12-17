@@ -38,7 +38,7 @@ double gc[100];
 // CK1: [[MTYPE03:@.+]] = {{.+}}constant [1 x i64] zeroinitializer
 
 // CK1: [[SIZE04:@.+]] = {{.+}}constant [2 x i64] [i64 24, i64 {{4|8}}]
-// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 1, i64 [[#0x4000]]]
+// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 1, i64 [[#0x8000]]]
 
 // CK1-LABEL: _Z3fooi
 void foo(int arg) {
