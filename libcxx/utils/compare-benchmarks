@@ -87,8 +87,8 @@ def create_chart(data, metric, subtitle=None, series_names=None):
     return figure
 
 def produce_kpis(data, noise, extrema, series, series_names, meta_candidate, title):
-    addendum = f"{noise}% noise threshold, based on {len(data)} benchmarks"
-    top_addendum = f"by >= {extrema}%, {noise}% noise threshold, based on {len(data)} benchmarks"
+    addendum = f"{noise:.0%} noise threshold, based on {len(data)} benchmarks"
+    top_addendum = f"by >= {extrema:.0%}, {noise:.0%} noise threshold, based on {len(data)} benchmarks"
     headers = [title if title else '']
     columns = [[
         f'Benchmarks where {meta_candidate} is faster than {series_names[0]} ({addendum})',
