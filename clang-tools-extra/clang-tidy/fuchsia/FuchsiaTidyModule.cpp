@@ -9,7 +9,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
-#include "../google/UnnamedNamespaceInHeaderCheck.h"
+#include "../misc/AnonymousNamespaceInHeaderCheck.h"
 #include "../misc/MultipleInheritanceCheck.h"
 #include "DefaultArgumentsCallsCheck.h"
 #include "DefaultArgumentsDeclarationsCheck.h"
@@ -32,7 +32,7 @@ public:
         "fuchsia-default-arguments-calls");
     CheckFactories.registerCheck<DefaultArgumentsDeclarationsCheck>(
         "fuchsia-default-arguments-declarations");
-    CheckFactories.registerCheck<google::build::UnnamedNamespaceInHeaderCheck>(
+    CheckFactories.registerCheck<misc::AnonymousNamespaceInHeaderCheck>(
         "fuchsia-header-anon-namespaces");
     CheckFactories.registerCheck<misc::MultipleInheritanceCheck>(
         "fuchsia-multiple-inheritance");

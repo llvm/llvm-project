@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_UNNAMEDNAMESPACEINHEADERCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_UNNAMEDNAMESPACEINHEADERCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_ANONYMOUSNAMESPACEINHEADERCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_ANONYMOUSNAMESPACEINHEADERCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "../utils/FileExtensionsUtils.h"
 
-namespace clang::tidy::google::build {
+namespace clang::tidy::misc {
 
 /// Finds anonymous namespaces in headers.
 ///
@@ -22,9 +22,9 @@ namespace clang::tidy::google::build {
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/google/build-namespaces.html
-class UnnamedNamespaceInHeaderCheck : public ClangTidyCheck {
+class AnonymousNamespaceInHeaderCheck : public ClangTidyCheck {
 public:
-  UnnamedNamespaceInHeaderCheck(StringRef Name, ClangTidyContext *Context);
+  AnonymousNamespaceInHeaderCheck(StringRef Name, ClangTidyContext *Context);
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
