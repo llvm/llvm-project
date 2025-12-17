@@ -8864,6 +8864,7 @@ static SDValue lowerBuildVectorToBitOp(BuildVectorSDNode *Op, const SDLoc &DL,
                                        SelectionDAG &DAG) {
   MVT VT = Op->getSimpleValueType(0);
   unsigned NumElems = VT.getVectorNumElements();
+  unsigned ElemSize = VT.getScalarSizeInBits();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // Check that all elements have the same opcode.
@@ -8873,7 +8874,7 @@ static SDValue lowerBuildVectorToBitOp(BuildVectorSDNode *Op, const SDLoc &DL,
     if (Opcode != Op->getOperand(i).getOpcode())
       return SDValue();
 
-  // TODO: We may be able to add support for other Ops (ADD/SUB + shifts).
+  // TODO: We may be able to add support for other Ops (e.g. ADD/SUB).
   bool IsShift = false;
   switch (Opcode) {
   default:
@@ -8895,34 +8896,54 @@ static SDValue lowerBuildVectorToBitOp(BuildVectorSDNode *Op, const SDLoc &DL,
     break;
   }
 
+  // Collect elements.
+  bool RHSAllConst = true;
   SmallVector<SDValue, 4> LHSElts, RHSElts;
   for (SDValue Elt : Op->ops()) {
     SDValue LHS = Elt.getOperand(0);
     SDValue RHS = Elt.getOperand(1);
-
-    // We expect the canonicalized RHS operand to be the constant.
-    if (!isa<ConstantSDNode>(RHS))
-      return SDValue();
-
-    // Extend shift amounts.
-    if (RHS.getValueSizeInBits() != VT.getScalarSizeInBits()) {
-      if (!IsShift)
-        return SDValue();
-      RHS = DAG.getZExtOrTrunc(RHS, DL, VT.getScalarType());
-    }
-
+    RHSAllConst &= isa<ConstantSDNode>(RHS);
     LHSElts.push_back(LHS);
     RHSElts.push_back(RHS);
   }
 
-  // Limit to shifts by uniform immediates.
-  // TODO: Only accept vXi8/vXi64 special cases?
-  // TODO: Permit non-uniform XOP/AVX2/MULLO cases?
-  if (IsShift && any_of(RHSElts, [&](SDValue V) { return RHSElts[0] != V; }))
+  // Canonicalize shift amounts.
+  if (IsShift) {
+    // We expect the canonicalized RHS operand to be the constant.
+    // TODO: Permit non-constant XOP/AVX2 cases?
+    if (!RHSAllConst)
+      return SDValue();
+
+    // Extend shift amounts.
+    for (SDValue &Op1 : RHSElts)
+      if (Op1.getValueSizeInBits() != ElemSize)
+        Op1 = DAG.getZExtOrTrunc(Op1, DL, VT.getScalarType());
+
+    // Limit to shifts by uniform immediates.
+    // TODO: Only accept vXi8/vXi64 special cases?
+    // TODO: Permit non-uniform XOP/AVX2/MULLO cases?
+    if (any_of(RHSElts, [&](SDValue V) { return RHSElts[0] != V; }))
+      return SDValue();
+  }
+  assert(all_of(llvm::concat<SDValue>(LHSElts, RHSElts),
+                [ElemSize](SDValue V) {
+                  return V.getValueSizeInBits() == ElemSize;
+                }) &&
+         "Element size mismatch");
+
+  // To avoid an increase in GPR->FPU instructions, LHS/RHS must be foldable as
+  // a load or RHS must be constant.
+  SDValue LHS = EltsFromConsecutiveLoads(VT, LHSElts, DL, DAG, Subtarget,
+                                         /*IsAfterLegalize=*/true);
+  SDValue RHS = EltsFromConsecutiveLoads(VT, RHSElts, DL, DAG, Subtarget,
+                                         /*IsAfterLegalize=*/true);
+  if (!LHS && !RHS && !RHSAllConst)
     return SDValue();
 
-  SDValue LHS = DAG.getBuildVector(VT, DL, LHSElts);
-  SDValue RHS = DAG.getBuildVector(VT, DL, RHSElts);
+  if (!LHS)
+    LHS = DAG.getBuildVector(VT, DL, LHSElts);
+  if (!RHS)
+    RHS = DAG.getBuildVector(VT, DL, RHSElts);
   SDValue Res = DAG.getNode(Opcode, DL, VT, LHS, RHS);
 
   if (!IsShift)
