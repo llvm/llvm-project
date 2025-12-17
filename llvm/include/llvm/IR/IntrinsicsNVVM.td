@@ -3386,4 +3386,16 @@ def int_nvvm_tensormap_replace_fill_mode :
      ArgInfo<ArgIndex<1>, [ArgName<"fill_mode">, 
                            ImmArgPrinter<"printTensormapFillMode">]>]>;
 
+// Test intrinsic - TODO: Add the feature to existing intrinsics and remove these test intrinsics.
+// IIT_LongEncodingTable entry:   /* 25339 */ 4, 15, 0, 93, 2, 3, 4, 15, 7, 15, 8, 93, 2, 15, 9, 7, 15, 16, 93, 2, 14, 24, 3, 15, 24, 93, 2, 5, 8, 15, 32, 93, 3, 3, 10, 4, 10, 7, 0,
+def int_nvvm_test_anytype : Intrinsic<[llvm_i32_ty],
+  [AnyTypeOf<[llvm_i16_ty, llvm_i32_ty]>, LLVMMatchType<0>, AnyTypeOf<[llvm_anyint_ty, llvm_float_ty]>, AnyTypeOf<[llvm_ptr_ty, llvm_shared_ptr_ty]>,
+   AnyTypeOf<[llvm_i64_ty, llvm_double_ty]>, AnyTypeOf<[llvm_i16_ty, llvm_v4i32_ty, llvm_v4f32_ty]>],
+  [IntrNoMem]>;
+
+// IIT_LongEncodingTable entry:  /* 15435 */ 21, 1, 4, 15, 0, 93, 2, 3, 4, 5, 4, 0,
+def int_nvvm_test_return_type : Intrinsic<[llvm_i32_ty, AnyTypeOf<[llvm_i16_ty, llvm_i32_ty]>, llvm_i64_ty],
+[llvm_i32_ty],
+[IntrNoMem]>;
+
 } // let TargetPrefix = "nvvm"

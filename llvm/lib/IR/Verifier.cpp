@@ -3293,9 +3293,8 @@ void Verifier::visitFunction(const Function &F) {
   // Verify AnyTypeOf type constraints for intrinsic declarations.
   if (F.isIntrinsic()) {
     std::string ConstraintErrMsg;
-    if (!Intrinsic::verifyIntrinsicTypeConstraints(F.getIntrinsicID(),
-                                                   F.getFunctionType(),
-                                                   ConstraintErrMsg))
+    if (!Intrinsic::verifyIntrinsicTypeConstraints(
+            F.getIntrinsicID(), F.getFunctionType(), ConstraintErrMsg))
       CheckFailed("Intrinsic declaration '" + F.getName().str() +
                   "' violates type constraint: " + ConstraintErrMsg);
   }
