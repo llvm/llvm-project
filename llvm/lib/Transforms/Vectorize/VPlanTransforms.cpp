@@ -1151,9 +1151,12 @@ static VPValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
 
   SmallVector<Value *, 4> Ops;
   for (VPValue *Op : Operands) {
-    if (!Op->isLiveIn() || !Op->getLiveInIRValue())
+    if (!isa<VPLiveIn, VPSymbolicValue>(Op))
       return nullptr;
-    Ops.push_back(Op->getLiveInIRValue());
+    Value *V = Op->getUnderlyingValue();
+    if (!V)
+      return nullptr;
+    Ops.push_back(V);
   }
 
   auto FoldToIRValue = [&]() -> Value * {
@@ -1224,7 +1227,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   // Fold PredPHI LiveIn -> LiveIn.
   if (auto *PredPHI = dyn_cast<VPPredInstPHIRecipe>(Def)) {
     VPValue *Op = PredPHI->getOperand(0);
-    if (Op->isLiveIn())
+    if (isa<VPLiveIn>(Op))
       PredPHI->replaceAllUsesWith(Op);
   }
 
@@ -1504,7 +1507,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
 
   // Hoist an invariant increment Y of a phi X, by having X start at Y.
-  if (match(Def, m_c_Add(m_VPValue(X), m_VPValue(Y))) && Y->isLiveIn() &&
+  if (match(Def, m_c_Add(m_VPValue(X), m_VPValue(Y))) && isa<VPLiveIn>(Y) &&
       isa<VPPhi>(X)) {
     auto *Phi = cast<VPPhi>(X);
     if (Phi->getOperand(1) != Def && match(Phi->getOperand(0), m_ZeroInt()) &&
@@ -1664,8 +1667,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
               return false;
             // Non-constant live-ins require broadcasts, while constants do not
             // need explicit broadcasts.
-            bool LiveInNeedsBroadcast =
-                Op->isLiveIn() && !isa<Constant>(Op->getLiveInIRValue());
+            auto *LI = dyn_cast<VPLiveIn>(Op);
+            bool LiveInNeedsBroadcast = LI && !isa<Constant>(LI->getValue());
             auto *OpR = dyn_cast<VPReplicateRecipe>(Op);
             return LiveInNeedsBroadcast || (OpR && OpR->isSingleScalar());
           }))
@@ -2577,7 +2580,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         }
 
         VPBuilder Builder;
-        if (Op->isLiveIn())
+        if (isa<VPLiveIn>(Op))
           Builder.setInsertPoint(PH);
         else
           Builder.setInsertPoint(&R);
@@ -3874,7 +3877,7 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
     }
 
     VPValue *IncomingFromEarlyExit = ExitIRI->getOperand(EarlyExitIdx);
-    if (!IncomingFromEarlyExit->isLiveIn()) {
+    if (!isa<VPLiveIn>(IncomingFromEarlyExit)) {
       // Update the incoming value from the early exit.
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
           VPInstruction::FirstActiveLane, {CondToEarlyExit},
@@ -4044,7 +4047,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   auto ExtendAndReplaceConstantOp = [&Ctx](VPWidenCastRecipe *ExtA,
                                            VPWidenCastRecipe *&ExtB,
                                            VPValue *&ValB, VPWidenRecipe *Mul) {
-    if (!ExtA || ExtB || !ValB->isLiveIn())
+    if (!ExtA || ExtB || !isa<VPLiveIn>(ValB))
       return;
     Type *NarrowTy = Ctx.Types.inferScalarType(ExtA->getOperand(0));
     Instruction::CastOps ExtOpc = ExtA->getOpcode();
@@ -4184,8 +4187,7 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
   auto *VectorPreheader = Plan.getVectorPreheader();
   for (VPValue *VPV : VPValues) {
     if (vputils::onlyScalarValuesUsed(VPV) ||
-        (VPV->isLiveIn() && VPV->getLiveInIRValue() &&
-         isa<Constant>(VPV->getLiveInIRValue())))
+        (isa<VPLiveIn>(VPV) && isa<Constant>(cast<VPLiveIn>(VPV)->getValue())))
       continue;
 
     // Add explicit broadcast at the insert point that dominates all users.
@@ -4488,7 +4490,7 @@ void VPlanTransforms::materializeConstantVectorTripCount(
   if (!Plan.hasScalarTail() ||
       Plan.getMiddleBlock()->getSingleSuccessor() ==
           Plan.getScalarPreheader() ||
-      !TC->isLiveIn())
+      !isa<VPLiveIn>(TC))
     return;
 
   // Materialize vector trip counts for constants early if it can simply
@@ -4496,7 +4498,7 @@ void VPlanTransforms::materializeConstantVectorTripCount(
   // TODO: Compute vector trip counts for loops requiring a scalar epilogue and
   // tail-folded loops.
   ScalarEvolution &SE = *PSE.getSE();
-  auto *TCScev = SE.getSCEV(TC->getLiveInIRValue());
+  auto *TCScev = SE.getSCEV(cast<VPLiveIn>(TC)->getValue());
   if (!isa<SCEVConstant>(TCScev))
     return;
   const SCEV *VFxUF = SE.getElementCount(TCScev->getType(), BestVF * BestUF);
@@ -4617,10 +4619,11 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
                                                  bool TailByMasking,
                                                  bool RequiresScalarEpilogue) {
   VPValue &VectorTC = Plan.getVectorTripCount();
-  assert(VectorTC.isLiveIn() && "vector-trip-count must be a live-in");
+  assert(isa<VPSymbolicValue>(VectorTC) &&
+         "vector-trip-count must be a live-in");
   // There's nothing to do if there are no users of the vector trip count or its
   // IR value has already been set.
-  if (VectorTC.getNumUsers() == 0 || VectorTC.getLiveInIRValue())
+  if (VectorTC.getNumUsers() == 0 || VectorTC.getUnderlyingValue())
     return;
 
   VPValue *TC = Plan.getTripCount();
@@ -4807,7 +4810,7 @@ static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
 
 /// Returns true if \p VPValue is a narrow VPValue.
 static bool isAlreadyNarrow(VPValue *VPV) {
-  if (VPV->isLiveIn())
+  if (isa<VPLiveIn>(VPV))
     return true;
   auto *RepR = dyn_cast<VPReplicateRecipe>(VPV);
   return RepR && RepR->isSingleScalar();

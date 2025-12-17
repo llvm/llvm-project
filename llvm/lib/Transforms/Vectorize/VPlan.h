@@ -528,15 +528,15 @@ protected:
 /// VPSingleDef is a base class for recipes for modeling a sequence of one or
 /// more output IR that define a single result VPValue.
 /// Note that VPRecipeBase must be inherited from before VPValue.
-class VPSingleDefRecipe : public VPRecipeBase, public VPValue {
+class VPSingleDefRecipe : public VPRecipeBase, public VPDefValue {
 public:
   VPSingleDefRecipe(const unsigned char SC, ArrayRef<VPValue *> Operands,
                     DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeBase(SC, Operands, DL), VPValue(this) {}
+      : VPRecipeBase(SC, Operands, DL), VPDefValue(this) {}
 
   VPSingleDefRecipe(const unsigned char SC, ArrayRef<VPValue *> Operands,
                     Value *UV, DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeBase(SC, Operands, DL), VPValue(this, UV) {}
+      : VPRecipeBase(SC, Operands, DL), VPDefValue(this, UV) {}
 
   static inline bool classof(const VPRecipeBase *R) {
     switch (R->getVPDefID()) {
@@ -1715,9 +1715,9 @@ public:
       : VPRecipeWithIRFlags(VPDef::VPWidenCallSC, CallArguments, Flags, DL),
         VPIRMetadata(Metadata), Variant(Variant) {
     setUnderlyingValue(UV);
-    assert(
-        isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
-        "last operand must be the called function");
+    assert(isa<Function>(
+               cast<VPLiveIn>(getOperand(getNumOperands() - 1))->getValue()) &&
+           "last operand must be the called function");
   }
 
   ~VPWidenCallRecipe() override = default;
@@ -1737,7 +1737,8 @@ public:
                               VPCostContext &Ctx) const override;
 
   Function *getCalledScalarFunction() const {
-    return cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
+    return cast<Function>(
+        cast<VPLiveIn>(getOperand(getNumOperands() - 1))->getValue());
   }
 
   operand_range args() { return drop_end(operands()); }
@@ -2264,7 +2265,7 @@ public:
   /// Returns the scalar type of the induction.
   Type *getScalarType() const {
     return Trunc ? Trunc->getType()
-                 : getStartValue()->getLiveInIRValue()->getType();
+                 : cast<VPLiveIn>(getStartValue())->getValue()->getType();
   }
 
   /// Returns the VPValue representing the value of this induction at
@@ -2628,7 +2629,7 @@ protected:
       if (Instruction *Inst = IG->getMember(I)) {
         if (Inst->getType()->isVoidTy())
           continue;
-        new VPValue(Inst, this);
+        new VPDefValue(this, Inst);
       }
 
     for (auto *SV : StoredValues)
@@ -3132,7 +3133,8 @@ public:
     assert(Red->getRecurrenceKind() == RecurKind::Add &&
            "Expected an add reduction");
     assert(getNumOperands() >= 3 && "Expected at least three operands");
-    [[maybe_unused]] auto *SubConst = dyn_cast<ConstantInt>(getOperand(2)->getLiveInIRValue());
+    [[maybe_unused]] auto *SubConst =
+        dyn_cast<ConstantInt>(cast<VPLiveIn>(getOperand(2))->getValue());
     assert(SubConst && SubConst->getValue() == 0 &&
            Sub->getOpcode() == Instruction::Sub && "Expected a negating sub");
   }
@@ -3350,13 +3352,13 @@ public:
 /// A recipe for widening load operations, using the address to load from and an
 /// optional mask.
 struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPWidenMemoryRecipe,
-                                                   public VPValue {
+                                                   public VPDefValue {
   VPWidenLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
                     bool Consecutive, bool Reverse,
                     const VPIRMetadata &Metadata, DebugLoc DL)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadSC, Load, {Addr}, Consecutive,
                             Reverse, Metadata, DL),
-        VPValue(this, &Load) {
+        VPDefValue(this, &Load) {
     setMask(Mask);
   }
 
@@ -3391,13 +3393,14 @@ protected:
 /// A recipe for widening load operations with vector-predication intrinsics,
 /// using the address to load from, the explicit vector length and an optional
 /// mask.
-struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
+struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe,
+                                    public VPDefValue {
   VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue *Addr, VPValue &EVL,
                        VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadEVLSC, L.getIngredient(),
                             {Addr, &EVL}, L.isConsecutive(), L.isReverse(), L,
                             L.getDebugLoc()),
-        VPValue(this, &getIngredient()) {
+        VPDefValue(this, &getIngredient()) {
     setMask(Mask);
   }
 
@@ -3582,7 +3585,7 @@ public:
 
   /// Returns the scalar type of the induction.
   Type *getScalarType() const {
-    return getStartValue()->getLiveInIRValue()->getType();
+    return cast<VPLiveIn>(getStartValue())->getValue()->getType();
   }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
@@ -3773,7 +3776,7 @@ public:
   }
 
   Type *getScalarType() const {
-    return getStartValue()->getLiveInIRValue()->getType();
+    return cast<VPLiveIn>(getStartValue())->getValue()->getType();
   }
 
   VPValue *getStartValue() const { return getOperand(0); }
@@ -4330,20 +4333,20 @@ class VPlan {
 
   /// Represents the backedge taken count of the original loop, for folding
   /// the tail. It equals TripCount - 1.
-  VPValue *BackedgeTakenCount = nullptr;
+  VPSymbolicValue *BackedgeTakenCount = nullptr;
 
   /// Represents the vector trip count.
-  VPValue VectorTripCount;
+  VPSymbolicValue VectorTripCount;
 
   /// Represents the vectorization factor of the loop.
-  VPValue VF;
+  VPSymbolicValue VF;
 
   /// Represents the loop-invariant VF * UF of the vector loop region.
-  VPValue VFxUF;
+  VPSymbolicValue VFxUF;
 
   /// Contains all the external definitions created for this VPlan, as a mapping
-  /// from IR Values to VPValues.
-  SmallMapVector<Value *, VPValue *, 16> LiveIns;
+  /// from IR Values to VPLiveIns.
+  SmallMapVector<Value *, VPLiveIn *, 16> LiveIns;
 
   /// Blocks allocated and owned by the VPlan. They will be deleted once the
   /// VPlan is destroyed.
@@ -4469,7 +4472,7 @@ public:
   /// The backedge taken count of the original loop.
   VPValue *getOrCreateBackedgeTakenCount() {
     if (!BackedgeTakenCount)
-      BackedgeTakenCount = new VPValue();
+      BackedgeTakenCount = new VPSymbolicValue();
     return BackedgeTakenCount;
   }
   VPValue *getBackedgeTakenCount() const { return BackedgeTakenCount; }
@@ -4538,43 +4541,42 @@ public:
 
   /// Gets the live-in VPValue for \p V or adds a new live-in (if none exists
   ///  yet) for \p V.
-  VPValue *getOrAddLiveIn(Value *V) {
+  VPLiveIn *getOrAddLiveIn(Value *V) {
     assert(V && "Trying to get or add the VPValue of a null Value");
     auto [It, Inserted] = LiveIns.try_emplace(V);
-    if (Inserted) {
-      VPValue *VPV = new VPValue(V);
-      assert(VPV->isLiveIn() && "VPV must be a live-in.");
-      It->second = VPV;
-    }
+    if (Inserted)
+      It->second = new VPLiveIn(V);
 
-    assert(It->second->isLiveIn() && "Only live-ins should be in mapping");
+    assert(isa<VPLiveIn>(It->second) && "Only VPLiveIns should be in mapping");
     return It->second;
   }
 
-  /// Return a VPValue wrapping i1 true.
-  VPValue *getTrue() { return getConstantInt(1, 1); }
+  /// Return a VPLiveIn wrapping i1 true.
+  VPLiveIn *getTrue() { return getConstantInt(1, 1); }
 
-  /// Return a VPValue wrapping i1 false.
-  VPValue *getFalse() { return getConstantInt(1, 0); }
+  /// Return a VPLiveIn wrapping i1 false.
+  VPLiveIn *getFalse() { return getConstantInt(1, 0); }
 
-  /// Return a VPValue wrapping a ConstantInt with the given type and value.
-  VPValue *getConstantInt(Type *Ty, uint64_t Val, bool IsSigned = false) {
+  /// Return a VPLiveIn wrapping a ConstantInt with the given type and value.
+  VPLiveIn *getConstantInt(Type *Ty, uint64_t Val, bool IsSigned = false) {
     return getOrAddLiveIn(ConstantInt::get(Ty, Val, IsSigned));
   }
 
-  /// Return a VPValue wrapping a ConstantInt with the given bitwidth and value.
-  VPValue *getConstantInt(unsigned BitWidth, uint64_t Val,
-                          bool IsSigned = false) {
+  /// Return a VPLiveIn wrapping a ConstantInt with the given bitwidth and
+  /// value.
+  VPLiveIn *getConstantInt(unsigned BitWidth, uint64_t Val,
+                           bool IsSigned = false) {
     return getConstantInt(APInt(BitWidth, Val, IsSigned));
   }
 
-  /// Return a VPValue wrapping a ConstantInt with the given APInt value.
-  VPValue *getConstantInt(const APInt &Val) {
+  /// Return a VPLiveIn wrapping a ConstantInt with the given APInt value.
+  VPLiveIn *getConstantInt(const APInt &Val) {
     return getOrAddLiveIn(ConstantInt::get(getContext(), Val));
   }
 
-  /// Return the live-in VPValue for \p V, if there is one or nullptr otherwise.
-  VPValue *getLiveIn(Value *V) const { return LiveIns.lookup(V); }
+  /// Return the live-in VPLiveIn for \p V, if there is one or nullptr
+  /// otherwise.
+  VPLiveIn *getLiveIn(Value *V) const { return LiveIns.lookup(V); }
 
   /// Return the list of live-in VPValues available in the VPlan.
   auto getLiveIns() const { return LiveIns.values(); }

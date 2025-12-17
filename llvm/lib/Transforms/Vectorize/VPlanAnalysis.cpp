@@ -36,8 +36,8 @@ VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan) : Ctx(Plan.getContext()) {
   // If there's no canonical IV, retrieve the type from the trip count
   // expression.
   auto *TC = Plan.getTripCount();
-  if (TC->isLiveIn()) {
-    CanonicalIVTy = TC->getLiveInIRValue()->getType();
+  if (auto *TCLI = dyn_cast<VPLiveIn>(TC)) {
+    CanonicalIVTy = TCLI->getType();
     return;
   }
   CanonicalIVTy = cast<VPExpandSCEVRecipe>(TC)->getSCEV()->getType();
@@ -169,7 +169,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenRecipe *R) {
   case Instruction::ExtractValue: {
     assert(R->getNumOperands() == 2 && "expected single level extractvalue");
     auto *StructTy = cast<StructType>(inferScalarType(R->getOperand(0)));
-    auto *CI = cast<ConstantInt>(R->getOperand(1)->getLiveInIRValue());
+    auto *CI = cast<ConstantInt>(cast<VPLiveIn>(R->getOperand(1))->getValue());
     return StructTy->getTypeAtIndex(CI->getZExtValue());
   }
   default:
@@ -222,7 +222,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPReplicateRecipe *R) {
   switch (Opcode) {
   case Instruction::Call: {
     unsigned CallIdx = R->getNumOperands() - (R->isPredicated() ? 2 : 1);
-    return cast<Function>(R->getOperand(CallIdx)->getLiveInIRValue())
+    return cast<Function>(cast<VPLiveIn>(R->getOperand(CallIdx))->getValue())
         ->getReturnType();
   }
   case Instruction::Select: {
@@ -264,9 +264,10 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
   if (Type *CachedTy = CachedTypes.lookup(V))
     return CachedTy;
 
-  if (V->isLiveIn()) {
-    if (auto *IRValue = V->getLiveInIRValue())
-      return IRValue->getType();
+  if (auto *LI = dyn_cast<VPLiveIn>(V))
+    return LI->getType();
+
+  if (isa<VPSymbolicValue>(V)) {
     // All VPValues without any underlying IR value (like the vector trip count
     // or the backedge-taken count) have the same type as the canonical IV.
     return CanonicalIVTy;
@@ -447,8 +448,8 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
         // FIXME: Might need some motivation why these values are ignored. If
         // for example an argument is used inside the loop it will increase the
         // register pressure (so shouldn't we add it to LoopInvariants).
-        if (!DefR && (!U->getLiveInIRValue() ||
-                      !isa<Instruction>(U->getLiveInIRValue())))
+        auto *LI = dyn_cast<VPLiveIn>(U);
+        if (!DefR && (!LI || !isa<Instruction>(LI->getValue())))
           continue;
 
         // If this recipe is outside the loop then record it and continue.

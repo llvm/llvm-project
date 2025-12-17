@@ -106,13 +106,11 @@ template <typename Pred, unsigned BitWidth = 0> struct int_pred_ty {
   int_pred_ty() : P() {}
 
   bool match(VPValue *VPV) const {
-    if (!VPV->isLiveIn())
+    auto *LI = dyn_cast<VPLiveIn>(VPV);
+    if (!LI)
       return false;
-    Value *V = VPV->getLiveInIRValue();
-    if (!V)
-      return false;
-    assert(!V->getType()->isVectorTy() && "Unexpected vector live-in");
-    const auto *CI = dyn_cast<ConstantInt>(V);
+    assert(!LI->getType()->isVectorTy() && "Unexpected vector live-in");
+    const auto *CI = dyn_cast<ConstantInt>(LI->getValue());
     if (!CI)
       return false;
 
@@ -182,13 +180,11 @@ struct bind_apint {
   bind_apint(const APInt *&Res) : Res(Res) {}
 
   bool match(VPValue *VPV) const {
-    if (!VPV->isLiveIn())
+    auto *LI = dyn_cast<VPLiveIn>(VPV);
+    if (!LI)
       return false;
-    Value *V = VPV->getLiveInIRValue();
-    if (!V)
-      return false;
-    assert(!V->getType()->isVectorTy() && "Unexpected vector live-in");
-    const auto *CI = dyn_cast<ConstantInt>(V);
+    assert(!LI->getType()->isVectorTy() && "Unexpected vector live-in");
+    const auto *CI = dyn_cast<ConstantInt>(LI->getValue());
     if (!CI)
       return false;
     Res = &CI->getValue();
@@ -901,8 +897,7 @@ m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3) {
 
 struct live_in_vpvalue {
   template <typename ITy> bool match(ITy *V) const {
-    VPValue *Val = dyn_cast<VPValue>(V);
-    return Val && Val->isLiveIn();
+    return isa<VPLiveIn, VPSymbolicValue>(V);
   }
 };
 
