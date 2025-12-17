@@ -390,10 +390,10 @@ bool Filler::needsUnimp(MachineBasicBlock::iterator I, unsigned &StructSize)
   return true;
 }
 
-static bool combineRestoreADD(MachineBasicBlock::iterator RestoreMI,
+static bool combineRestoreADD(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator RestoreMI,
                               MachineBasicBlock::iterator AddMI,
-                              const TargetInstrInfo *TII)
-{
+                              const TargetInstrInfo *TII) {
   // Before:  add  <op0>, <op1>, %i[0-7]
   //          restore %g0, %g0, %i[0-7]
   //
@@ -401,6 +401,21 @@ static bool combineRestoreADD(MachineBasicBlock::iterator RestoreMI,
 
   Register reg = AddMI->getOperand(0).getReg();
   if (reg < SP::I0 || reg > SP::I7)
+    return false;
+
+  // Check whether it uses %o7 as its source and the corresponding branch
+  // instruction is a call.
+  MachineBasicBlock::iterator LastInst = MBB.getFirstTerminator();
+  bool IsCall = LastInst != MBB.end() && LastInst->isCall();
+
+  // Check whether it uses %o7 as its source.
+  if (IsCall && AddMI->getOpcode() == SP::ADDrr &&
+      (AddMI->getOperand(1).getReg() == SP::O7 ||
+       AddMI->getOperand(2).getReg() == SP::O7))
+    return false;
+
+  if (IsCall && AddMI->getOpcode() == SP::ADDri &&
+      AddMI->getOperand(1).getReg() == SP::O7)
     return false;
 
   // Erase RESTORE.
@@ -417,10 +432,10 @@ static bool combineRestoreADD(MachineBasicBlock::iterator RestoreMI,
   return true;
 }
 
-static bool combineRestoreOR(MachineBasicBlock::iterator RestoreMI,
+static bool combineRestoreOR(MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator RestoreMI,
                              MachineBasicBlock::iterator OrMI,
-                             const TargetInstrInfo *TII)
-{
+                             const TargetInstrInfo *TII) {
   // Before:  or  <op0>, <op1>, %i[0-7]
   //          restore %g0, %g0, %i[0-7]
   //    and <op0> or <op1> is zero,
@@ -440,6 +455,20 @@ static bool combineRestoreOR(MachineBasicBlock::iterator RestoreMI,
   if (OrMI->getOpcode() == SP::ORri
       && OrMI->getOperand(1).getReg() != SP::G0
       && (!OrMI->getOperand(2).isImm() || OrMI->getOperand(2).getImm() != 0))
+    return false;
+
+  // Check whether it uses %o7 as its source and the corresponding branch
+  // instruction is a call.
+  MachineBasicBlock::iterator LastInst = MBB.getFirstTerminator();
+  bool IsCall = LastInst != MBB.end() && LastInst->isCall();
+
+  if (IsCall && OrMI->getOpcode() == SP::ORrr &&
+      (OrMI->getOperand(1).getReg() == SP::O7 ||
+       OrMI->getOperand(2).getReg() == SP::O7))
+    return false;
+
+  if (IsCall && OrMI->getOpcode() == SP::ORrr &&
+      OrMI->getOperand(1).getReg() == SP::O7)
     return false;
 
   // Erase RESTORE.
@@ -520,9 +549,13 @@ bool Filler::tryCombineRestoreWithPrevInst(MachineBasicBlock &MBB,
   switch (PrevInst->getOpcode()) {
   default: break;
   case SP::ADDrr:
-  case SP::ADDri: return combineRestoreADD(MBBI, PrevInst, TII); break;
+  case SP::ADDri:
+    return combineRestoreADD(MBB, MBBI, PrevInst, TII);
+    break;
   case SP::ORrr:
-  case SP::ORri:  return combineRestoreOR(MBBI, PrevInst, TII); break;
+  case SP::ORri:
+    return combineRestoreOR(MBB, MBBI, PrevInst, TII);
+    break;
   case SP::SETHIi: return combineRestoreSETHIi(MBBI, PrevInst, TII); break;
   }
   // It cannot combine with the previous instruction.

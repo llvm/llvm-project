@@ -1590,7 +1590,7 @@ let Uses = [O6], isCall = 1, hasDelaySlot = 1 in
 // Instructions for tail calls.
 //===----------------------------------------------------------------------===//
 let isCodeGenOnly = 1, isReturn = 1,  hasDelaySlot = 1,
-    isTerminator = 1, isBarrier = 1 in {
+    isTerminator = 1, isBarrier = 1, isCall = 1 in {
   def TAIL_CALL : InstSP<(outs), (ins calltarget:$disp, variable_ops),
                          "call $disp",
                          [(tailcall tglobaladdr:$disp)]> {
@@ -1604,7 +1604,7 @@ def : Pat<(tailcall (iPTR texternalsym:$dst)),
           (TAIL_CALL texternalsym:$dst)>;
 
 let isCodeGenOnly = 1, isReturn = 1,  hasDelaySlot = 1,  isTerminator = 1,
-    isBarrier = 1, rd = 0 in {
+    isBarrier = 1, isCall = 1, rd = 0 in {
   def TAIL_CALLri : F3_2<2, 0b111000,
                          (outs), (ins (MEMri $rs1, $simm13):$addr, variable_ops),
                          "jmp $addr",
