@@ -2665,7 +2665,10 @@ cc_library(
         ":FuncDialect",
         ":IR",
         ":LinalgDialect",
+        ":LinalgInterfaces",
+        ":Support",
         ":VectorDialect",
+        "//llvm:Support",
     ],
 )
 
