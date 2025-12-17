@@ -1086,15 +1086,35 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   }
 
   // -fdefault* family
-  if (args.hasArg(clang::options::OPT_fdefault_real_8)) {
-    res.getDefaultKinds().set_defaultRealKind(8);
-    res.getDefaultKinds().set_doublePrecisionKind(16);
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::options::OPT_fdefault_real_8,
+                          clang::options::OPT_fdefault_real_4)) {
+    const llvm::opt::Option &opt = arg->getOption();
+    if (opt.matches(clang::options::OPT_fdefault_real_8)) {
+      res.getDefaultKinds().set_defaultRealKind(8);
+      res.getDefaultKinds().set_doublePrecisionKind(16);
+    } else if (opt.matches(clang::options::OPT_fdefault_real_4)) {
+      res.getDefaultKinds().set_defaultRealKind(4);
+      res.getDefaultKinds().set_doublePrecisionKind(8);
+    }
   }
-  if (args.hasArg(clang::options::OPT_fdefault_integer_8)) {
-    res.getDefaultKinds().set_defaultIntegerKind(8);
-    res.getDefaultKinds().set_subscriptIntegerKind(8);
-    res.getDefaultKinds().set_sizeIntegerKind(8);
-    res.getDefaultKinds().set_defaultLogicalKind(8);
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::options::OPT_fdefault_integer_8,
+                          clang::options::OPT_fdefault_integer_4)) {
+    const llvm::opt::Option &opt = arg->getOption();
+    if (opt.matches(clang::options::OPT_fdefault_integer_8)) {
+      res.getDefaultKinds().set_defaultIntegerKind(8);
+      res.getDefaultKinds().set_subscriptIntegerKind(8);
+      res.getDefaultKinds().set_sizeIntegerKind(8);
+      res.getDefaultKinds().set_defaultLogicalKind(8);
+    } else if (opt.matches(clang::options::OPT_fdefault_integer_4)) {
+      // Note that the subscript integer kind is set to 8 here. If a
+      // default-integer-kind is not provided, it is also set to 8.
+      res.getDefaultKinds().set_defaultIntegerKind(4);
+      res.getDefaultKinds().set_subscriptIntegerKind(8);
+      res.getDefaultKinds().set_sizeIntegerKind(4);
+      res.getDefaultKinds().set_defaultLogicalKind(4);
+    }
   }
   if (args.hasArg(clang::options::OPT_fdefault_double_8)) {
     if (!args.hasArg(clang::options::OPT_fdefault_real_8)) {
