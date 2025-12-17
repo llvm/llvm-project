@@ -9,7 +9,7 @@ ask other project members to review it.** The contributor is always the author
 and is fully accountable for their contributions. Contributors should be
 sufficiently confident that the contribution is high enough quality that asking
 for a review is a good use of scarce maintainer time, and they should be **able
-to answer quesions about their work** during review.
+to answer questions about their work** during review.
 
 We expect that new contributors will be less confident in their contributions,
 and our guidance to them is to **start with small contributions** that they can
@@ -46,8 +46,8 @@ to, the following kinds of contributions:
 
 ## Extractive Contributions
 
-The reason for our "human-in-the-loop" contribution policy is that sending
-patches, PRs, RFCs, and comments to LLVM, is not free -- it takes a lot of
+The reason for our "human-in-the-loop" contribution policy is that processing
+patches, PRs, RFCs, and comments to LLVM is not free -- it takes a lot of
 maintainer time and energy to review those contributions! Sending the
 unreviewed output of an LLM to open source project maintainers *extracts* work
 from them in the form of design and code review, so we call this kind of
@@ -69,7 +69,7 @@ from the book [Working in Public][public] by Nadia Eghbal:
 > review, given the potential upside.\" \-- Nadia Eghbal
 
 Prior to the advent of LLMs, open source project maintainers would often review
-any and all changes send to the project simply because posting a change for
+any and all changes sent to the project simply because posting a change for
 review was a sign of interest from a potential long-term contributor. While new
 tools enable more development, it shifts effort from the implementor to the
 reviewer, and our policy exists to ensure that we value and do not squander
@@ -100,7 +100,7 @@ applicable, and refrain from further engagement:
     our developer policy on AI-generated contributions:
     http://llvm.org/docs/AIToolPolicy.html
 
-Other reviewers should use the label prioritize their review time.
+Other reviewers should use the label to prioritize their review time.
 
 The best ways to make a change less extractive and more valuable are to reduce
 its size or complexity or to increase its usefulness to the community. These
