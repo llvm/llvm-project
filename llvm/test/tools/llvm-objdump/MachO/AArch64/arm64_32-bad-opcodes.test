@@ -1,0 +1,7 @@
+## Test invalid instruction handling for arm64_32 architecture.
+
+RUN: llvm-objdump -d %p/Inputs/bad-opcodes.obj.macho-arm64_32 | FileCheck %s
+
+CHECK: file format mach-o arm64 (ilp32)
+CHECK: <unknown>
+CHECK: udf	#0x0
