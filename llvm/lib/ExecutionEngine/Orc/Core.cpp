@@ -1912,7 +1912,7 @@ void ExecutionSession::runJITDispatchHandler(SendResultFunction SendResult,
   if (F)
     (*F)(std::move(SendResult), ArgBuffer.data(), ArgBuffer.size());
   else
-    SendResult(shared::WrapperFunctionResult::createOutOfBandError(
+    SendResult(shared::WrapperFunctionBuffer::createOutOfBandError(
         ("No function registered for tag " +
          formatv("{0:x16}", HandlerFnTagAddr))
             .str()));
