@@ -325,51 +325,51 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     // SVE types
     case BuiltinType::SveInt8:
       resultType =
-          cir::VectorType::get(builder.getSInt8Ty(), 16, /*isScalable=*/true);
+          cir::VectorType::get(builder.getSInt8Ty(), 16, /*is_scalable=*/true);
       break;
     case BuiltinType::SveUint8:
       resultType =
-          cir::VectorType::get(builder.getUInt8Ty(), 16, /*isScalable=*/true);
+          cir::VectorType::get(builder.getUInt8Ty(), 16, /*is_scalable=*/true);
       break;
     case BuiltinType::SveInt16:
       resultType =
-          cir::VectorType::get(builder.getSInt16Ty(), 8, /*isScalable=*/true);
+          cir::VectorType::get(builder.getSInt16Ty(), 8, /*is_scalable=*/true);
       break;
     case BuiltinType::SveUint16:
       resultType =
-          cir::VectorType::get(builder.getUInt16Ty(), 8, /*isScalable=*/true);
+          cir::VectorType::get(builder.getUInt16Ty(), 8, /*is_scalable=*/true);
       break;
     case BuiltinType::SveFloat16:
       resultType = cir::VectorType::get(builder.getFp16Ty(), 8,
-                                        /*isScalable=*/true);
+                                        /*is_scalable=*/true);
       break;
     case BuiltinType::SveBFloat16:
       resultType = cir::VectorType::get(builder.getFp16Ty(), 8,
-                                        /*isScalable=*/true);
+                                        /*is_scalable=*/true);
       break;
     case BuiltinType::SveInt32:
       resultType =
-          cir::VectorType::get(builder.getSInt32Ty(), 4, /*isScalable=*/true);
+          cir::VectorType::get(builder.getSInt32Ty(), 4, /*is_scalable=*/true);
       break;
     case BuiltinType::SveUint32:
       resultType =
-          cir::VectorType::get(builder.getUInt32Ty(), 4, /*isScalable=*/true);
+          cir::VectorType::get(builder.getUInt32Ty(), 4, /*is_scalable=*/true);
       break;
     case BuiltinType::SveFloat32:
       resultType = cir::VectorType::get(builder.getSingleTy(), 4,
-                                        /*isScalable=*/true);
+                                        /*is_scalable=*/true);
       break;
     case BuiltinType::SveInt64:
       resultType =
-          cir::VectorType::get(builder.getSInt64Ty(), 2, /*isScalable=*/true);
+          cir::VectorType::get(builder.getSInt64Ty(), 2, /*is_scalable=*/true);
       break;
     case BuiltinType::SveUint64:
       resultType =
-          cir::VectorType::get(builder.getUInt64Ty(), 2, /*isScalable=*/true);
+          cir::VectorType::get(builder.getUInt64Ty(), 2, /*is_scalable=*/true);
       break;
     case BuiltinType::SveFloat64:
       resultType = cir::VectorType::get(builder.getDoubleTy(), 2,
-                                        /*isScalable=*/true);
+                                        /*is_scalable=*/true);
       break;
 
     // Unsigned integral types.
