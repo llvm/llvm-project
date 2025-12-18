@@ -12,6 +12,13 @@
 TEST(LlvmLibcNetinetInTest, IN6Macro) {
   char buff[16] = {};
 
+  EXPECT_TRUE(IN6_IS_ADDR_UNSPECIFIED(buff));
+  for (int i = 0; i < 16; ++i) {
+    buff[i] = 1;
+    EXPECT_FALSE(IN6_IS_ADDR_UNSPECIFIED(buff));
+    buff[i] = 0;
+  }
+
   buff[0] = 0xfe;
   buff[1] = 0x80;
   EXPECT_TRUE(IN6_IS_ADDR_LINKLOCAL(buff));
