@@ -10,27 +10,21 @@ def NoDefaultMethod : DialectInterface<"NoDefaultMethod"> {
   let cppNamespace = "::mlir::example";
 
   let methods = [
-      InterfaceMethod<
-      /*desc=*/        "Check if it's an example dialect",
-      /*returnType=*/  "bool",
-      /*methodName=*/  "isExampleDialect",
-      /*args=*/        (ins)
-      >,
-      InterfaceMethod<
-      /*desc=*/        "second method to check if multiple methods supported",
-      /*returnType=*/  "unsigned",
-      /*methodName=*/  "supportSecondMethod",
-      /*args=*/        (ins "::mlir::Type":$type)
+    InterfaceMethod<
+      "Check if it's an example dialect", "bool", "isExampleDialect", (ins)
+    >,
+    InterfaceMethod<
+      "second method to check if multiple methods supported",
+      "unsigned", "supportSecondMethod", (ins "::mlir::Type":$type)
       >
-
   ];
 }
 
 // DECL:   class NoDefaultMethod : public {{.*}}DialectInterface::Base<NoDefaultMethod>
 // DECL:   public:
+/// DECL:   NoDefaultMethod(::mlir::Dialect *dialect) : Base(dialect) {}
 // DECL:   virtual bool isExampleDialect() const {}
 // DECL:   virtual unsigned supportSecondMethod(::mlir::Type type) const {}
-// DECL:   NoDefaultMethod(::mlir::Dialect *dialect) : Base(dialect) {}
 
 def WithDefaultMethodInterface : DialectInterface<"WithDefaultMethodInterface"> {
   let description = [{
@@ -41,21 +35,15 @@ def WithDefaultMethodInterface : DialectInterface<"WithDefaultMethodInterface"> 
 
   let methods = [
       InterfaceMethod<
-      /*desc=*/        "Check if it's an example dialect",
-      /*returnType=*/  "bool",
-      /*methodName=*/  "isExampleDialect",
-      /*args=*/        (ins),
-      /*methodBody=*/  [{
+        "Check if it's an example dialect", "bool", "isExampleDialect", (ins),
+        [{
           return true;
-         }]
+        }]
       >,
       InterfaceMethod<
-      /*desc=*/        "second method to check if multiple methods supported",
-      /*returnType=*/  "unsigned",
-      /*methodName=*/  "supportSecondMethod",
-      /*args=*/        (ins "::mlir::Type":$type)
+        "second method to check if multiple methods supported",
+        "unsigned", "supportSecondMethod", (ins "::mlir::Type":$type)
       >
-
   ];
 }
 
@@ -63,9 +51,9 @@ def WithDefaultMethodInterface : DialectInterface<"WithDefaultMethodInterface"> 
 // DECL-NEXT:   return true;
 // DECL-NEXT:   }
 
-def PureVirtualInterface : DialectInterface<"PureVirtualInterface"> {
+def OnlyDeclarationInterface : DialectInterface<"OnlyDeclarationInterface"> {
   let description = [{
-    This is an example dialect interface with pure virtual methods.
+    This is an example dialect interface with only declarations.
   }];
 
   let cppNamespace = "::mlir::example";
@@ -74,33 +62,13 @@ def PureVirtualInterface : DialectInterface<"PureVirtualInterface"> {
       AliasDeclaration<"FirstAlias", "unsigned">];
 
   let methods = [
-      PureVirtualInterfaceMethod<
-      /*desc=*/        "Check if it's an example dialect",
-      /*returnType=*/  "bool",
-      /*methodName=*/  "isExampleDialect",
-      /*args=*/        (ins)
-      >,
-      InterfaceMethod<
-      /*desc=*/        "second method to check if multiple methods supported",
-      /*returnType=*/  "FirstAlias",
-      /*methodName=*/  "supportSecondMethod",
-      /*args=*/        (ins "::mlir::Type":$type)
-      >,
       InterfaceMethodDeclaration<
-      /*desc=*/        "a method declaration",
-      /*returnType=*/  "::mlir::Type",
-      /*methodName=*/  "exampleMethodDeclaration",
-      /*args=*/        (ins "::mlir::Type":$type)
+        "a method declaration", "FirstAlias", "exampleMethodDeclaration", 
+        (ins "::mlir::Type":$type)
       >
   ];
 }
 
-// DECL:   class PureVirtualInterface : public {{.*}}DialectInterface::Base<PureVirtualInterface>
-// DECL:   public:
+// DECL:   class OnlyDeclarationInterface : public {{.*}}DialectInterface::Base<OnlyDeclarationInterface>
 // DECL:   using FirstAlias = unsigned;
-// DECL:   virtual bool isExampleDialect() const = 0;
-// DECL:   virtual FirstAlias supportSecondMethod(::mlir::Type type) const {}
-// DECL:   virtual ::mlir::Type exampleMethodDeclaration(::mlir::Type type) const;
-// DECL:   protected:
-// DECL-NEXT:   PureVirtualInterface(::mlir::Dialect *dialect) : Base(dialect) {}
-
+// DECL:   virtual FirstAlias exampleMethodDeclaration(::mlir::Type type) const;
