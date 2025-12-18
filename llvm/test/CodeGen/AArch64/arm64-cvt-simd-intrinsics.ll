@@ -4,7 +4,7 @@
 
 
 ;
-; Intriniscs (bitcast)
+; Intrinsics (bitcast)
 ;
 
 define float @fcvtas_1s1d_simd(double %A) nounwind {
