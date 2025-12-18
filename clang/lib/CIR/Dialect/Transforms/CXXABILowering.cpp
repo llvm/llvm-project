@@ -46,6 +46,7 @@ public:
         dataLayout(&dataLayout), lowerModule(&lowerModule) {}
 };
 
+// TODO(cir): Use TableGen to generate these patterns.
 #define CIR_CXXABI_LOWERING_PATTERN(name, operation)                           \
   struct name : CIROpCXXABILoweringPattern<operation> {                        \
     using CIROpCXXABILoweringPattern<operation>::CIROpCXXABILoweringPattern;   \

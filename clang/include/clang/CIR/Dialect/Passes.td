@@ -82,7 +82,7 @@ def GotoSolver : Pass<"cir-goto-solver"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
-def CXXABILowering : Pass<"cir-cxxabi-lowering"> {
+def CXXABILowering : Pass<"cir-cxxabi-lowering", "mlir::ModuleOp"> {
   let summary = "Lower abstract C++ operations to target-specific ABI form";
   let description = [{
     This pass lowers high-level operations that represent C++ constructs in a
