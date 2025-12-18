@@ -1,6 +1,3 @@
-import * as fs from "node:fs/promises";
-import * as os from "node:os";
-import * as path from "node:path";
 import { AdbClient } from "./adb-client";
 import Env from "./env";
 
@@ -47,11 +44,6 @@ export class ApkDebugSession {
         };
 
         await this.waitLldbServerReachable(adb, addId);
-
-        // In this early version, we save session data for debugging purposes.
-        // But this is temporay and will be removed in future versions.
-        // TODO: remove or put this data in a log.
-        await this.saveSessionData();
     }
 
     async stop() {
@@ -181,44 +173,6 @@ export class ApkDebugSession {
             } catch {}
             await new Promise(resolve => setTimeout(resolve, 100));
         }
-    }
-
-    private async getDataFolder(): Promise<string | undefined> {
-        const home = os.homedir();
-        try {
-            await fs.access(home, fs.constants.R_OK | fs.constants.W_OK);
-            const dataFolder = path.join(home, ".lldb", "android");
-            await fs.mkdir(dataFolder, { recursive: true });
-            return dataFolder;
-        } catch {}
-        return undefined;
-    }
-
-    private async saveSessionData() {
-        if (this.runningSession === undefined)
-            return;
-        const dir = await this.getDataFolder();
-        if (dir === undefined)
-            return;
-        const pid = await this.runningSession.adb.getPid(this.runningSession.addId);
-        fs.writeFile(path.join(dir, `last-env`),
-            `ANDROID_DEVICE_ID=${this.runningSession.adb.getDeviceId()}\n` +
-            `ANDROID_APP_ID=${this.runningSession.addId}\n` +
-            `ANDROID_PID=${pid}\n`);
-        fs.writeFile(path.join(dir, `last-start-commands`),
-            `platform select remote-android\n` +
-            `command alias a0 platform connect unix-abstract-connect:///${this.runningSession.addId}/lldb-platform.sock\n` +
-            `command alias a1 process attach --pid ${pid}\n` +
-            `command alias a1n process attach --name ${this.runningSession.addId}\n` +
-            `command alias a2 process handle SIGSEGV -n false -p true -s false\n` +
-            `command alias a3 process handle SIGBUS -n false -p true -s false\n` +
-            `command alias a4 process handle SIGCHLD -n false -p true -s false\n` +
-            `a0\n` +
-            `a1\n` +
-            `a2\n` +
-            `a3\n` +
-            `a4\n`
-        );
     }
 }
 

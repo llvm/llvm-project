@@ -52,6 +52,17 @@ namespace Env {
         }
         return undefined;
     }
+
+    async function getDataFolder(): Promise<string | undefined> {
+        const home = os.homedir();
+        try {
+            await fs.access(home, fs.constants.R_OK | fs.constants.W_OK);
+            const dataFolder = path.join(home, ".lldb", "android");
+            await fs.mkdir(dataFolder, { recursive: true });
+            return dataFolder;
+        } catch {}
+        return undefined;
+    }    
 }
 
 export default Env;
