@@ -116,9 +116,9 @@ define <8 x i16> @combine_zero_v8i16(<8 x i16> %a0) {
 define i32 @combine_dec_i32(i32 %a0) {
 ; CHECK-LABEL: combine_dec_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    subl $1, %edi
-; CHECK-NEXT:    cmovael %edi, %eax
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cmpl $1, %edi
+; CHECK-NEXT:    adcl $-1, %eax
 ; CHECK-NEXT:    retq
   %1 = call i32 @llvm.usub.sat.i32(i32 %a0, i32 1)
   ret i32 %1

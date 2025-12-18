@@ -48,3 +48,31 @@ void parallel_with_operations() {
   // CHECK-NEXT: omp.terminator
   // CHECK-NEXT: }
 }
+void proc_bind_parallel() {
+  // CHECK: cir.func{{.*}}@proc_bind_parallel
+#pragma omp parallel proc_bind(master)
+  {}
+  // CHECK-NEXT: omp.parallel proc_bind(master) {
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+#pragma omp parallel proc_bind(close)
+  {}
+  // CHECK-NEXT: omp.parallel proc_bind(close) {
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+#pragma omp parallel proc_bind(spread)
+  {}
+  // CHECK-NEXT: omp.parallel proc_bind(spread) {
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+#pragma omp parallel proc_bind(primary)
+  {}
+  // CHECK-NEXT: omp.parallel proc_bind(primary) {
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+#pragma omp parallel proc_bind(default)
+  {}
+  // CHECK-NEXT: omp.parallel {
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+}
