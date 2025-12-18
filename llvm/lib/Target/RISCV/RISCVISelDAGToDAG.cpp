@@ -1024,7 +1024,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
   switch (Opcode) {
   case ISD::Constant: {
-    assert((VT == Subtarget->getXLenVT() || VT == MVT::i32) && "Unexpected VT");
+    assert(VT == Subtarget->getXLenVT() && "Unexpected VT");
     auto *ConstNode = cast<ConstantSDNode>(Node);
     if (ConstNode->isZero()) {
       SDValue New =
@@ -1049,7 +1049,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     else if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
       Imm = SignExtend64<32>(Imm);
 
-    if (Subtarget->enablePExtCodeGen() && isApplicableToPLI(Imm) &&
+    if (Subtarget->hasStdExtP() && isApplicableToPLI(Imm) &&
         hasAllWUsers(Node)) {
       // If it's 4 packed 8-bit integers or 2 packed signed 16-bit integers, we
       // can simply copy lower 32 bits to higher 32 bits to make it able to

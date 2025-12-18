@@ -201,12 +201,15 @@ class VPatBinarySDNode_VF_RM<SDPatternOperator vop,
 
 multiclass VPatBinaryFPSDNode_VV_VF<SDPatternOperator vop, string instruction_name,
                                     bit isSEWAware = 0> {
-  foreach vti = AllFloatVectors in {
+  foreach vti = AllFloatAndBF16Vectors in {
     let Predicates = GetVTypePredicates<vti>.Predicates in {
-      def : VPatBinarySDNode_VV<vop, instruction_name,
+      def : VPatBinarySDNode_VV<vop, instruction_name #
+                                     !if(!eq(vti.Scalar, bf16), "_ALT", ""),
                                 vti.Vector, vti.Vector, vti.Log2SEW,
                                 vti.LMul, vti.AVL, vti.RegClass, isSEWAware>;
-      def : VPatBinarySDNode_VF<vop, instruction_name#"_V"#vti.ScalarSuffix,
+      def : VPatBinarySDNode_VF<vop, instruction_name#
+                                     !if(!eq(vti.Scalar, bf16), "_ALT", "")#
+                                     "_V"#vti.ScalarSuffix,
                                 vti.Vector, vti.Vector, vti.Scalar,
                                 vti.Log2SEW, vti.LMul, vti.AVL, vti.RegClass,
                                 vti.ScalarRegClass, isSEWAware>;
