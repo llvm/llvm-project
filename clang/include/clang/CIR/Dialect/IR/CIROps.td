@@ -2695,16 +2695,8 @@ def CIR_GetMemberOp : CIR_Op<"get_member"> {
 }
 
 //===----------------------------------------------------------------------===//
-
-
 // GetElementOp
-
-
 //===----------------------------------------------------------------------===//
-
-
-
-
 
 def CIR_GetElementOp : CIR_Op<"get_element"> {
   let summary = "Get the address of an array element";
