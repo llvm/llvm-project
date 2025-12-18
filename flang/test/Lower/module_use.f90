@@ -36,7 +36,7 @@ real function modCommon1Use()
   ! CHECK-DAG: fir.address_of(@named2_) : !fir.ref<!fir.array<4xi8>>
   ! CHECK-DAG: fir.address_of(@__BLNK__) : !fir.ref<!fir.array<4xi8>>
   ! CHECK-DAG: fir.address_of(@named1_) : !fir.ref<!fir.array<4xi8>>
-  modCommon1Use = x_blank + x_named1 + i_named2 
+  modCommon1Use = x_blank + x_named1 + i_named2
 end function
 
 

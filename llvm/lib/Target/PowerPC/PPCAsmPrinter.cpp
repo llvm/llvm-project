@@ -2702,7 +2702,7 @@ static bool isSpecialLLVMGlobalArrayToSkip(const GlobalVariable *GV) {
 
 static bool isSpecialLLVMGlobalArrayForStaticInit(const GlobalVariable *GV) {
   return StringSwitch<bool>(GV->getName())
-      .Cases("llvm.global_ctors", "llvm.global_dtors", true)
+      .Cases({"llvm.global_ctors", "llvm.global_dtors"}, true)
       .Default(false);
 }
 
@@ -2748,6 +2748,10 @@ static void tocDataChecks(unsigned PointerSize, const GlobalVariable *GV) {
 void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // Special LLVM global arrays have been handled at the initialization.
   if (isSpecialLLVMGlobalArrayToSkip(GV) || isSpecialLLVMGlobalArrayForStaticInit(GV))
+    return;
+
+  // Ignore non-emitted data.
+  if (GV->getSection() == "llvm.metadata")
     return;
 
   // If the Global Variable has the toc-data attribute, it needs to be emitted

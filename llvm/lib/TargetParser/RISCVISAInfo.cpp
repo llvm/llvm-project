@@ -14,7 +14,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <array>
 #include <atomic>
 #include <optional>
 #include <string>
@@ -749,10 +748,10 @@ Error RISCVISAInfo::checkDependency() {
   bool HasXqccmp = Exts.count("xqccmp") != 0;
 
   static constexpr StringLiteral XqciExts[] = {
-      {"xqcia"},   {"xqciac"},  {"xqcibi"},  {"xqcibm"},  {"xqcicli"},
-      {"xqcicm"},  {"xqcics"},  {"xqcicsr"}, {"xqciint"}, {"xqciio"},
-      {"xqcilb"},  {"xqcili"},  {"xqcilia"}, {"xqcilo"},  {"xqcilsm"},
-      {"xqcisim"}, {"xqcisls"}, {"xqcisync"}};
+      {"xqci"},    {"xqcia"},   {"xqciac"},  {"xqcibi"},  {"xqcibm"},
+      {"xqcicli"}, {"xqcicm"},  {"xqcics"},  {"xqcicsr"}, {"xqciint"},
+      {"xqciio"},  {"xqcilb"},  {"xqcili"},  {"xqcilia"}, {"xqcilo"},
+      {"xqcilsm"}, {"xqcisim"}, {"xqcisls"}, {"xqcisync"}};
   static constexpr StringLiteral ZcdOverlaps[] = {
       {"zcmt"}, {"zcmp"}, {"xqccmp"}, {"xqciac"}, {"xqcicm"}};
 
@@ -764,6 +763,12 @@ Error RISCVISAInfo::checkDependency() {
 
   if (HasZvl && !HasVector)
     return getExtensionRequiresError("zvl*b", "v' or 'zve*");
+
+  if (Exts.count("xsfvfbfexp16e") &&
+      !(Exts.count("zvfbfmin") || Exts.count("zvfbfa")))
+    return createStringError(errc::invalid_argument,
+                             "'xsfvfbfexp16e' requires 'zvfbfmin' or "
+                             "'zvfbfa' extension to also be specified");
 
   if (HasD && (HasC || Exts.count("zcd")))
     for (auto Ext : ZcdOverlaps)

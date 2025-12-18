@@ -11,6 +11,9 @@
 // paired instruction, leveraging hardware support for paired memory accesses.
 // Much of the pairing logic is adapted from the AArch64LoadStoreOpt pass.
 //
+// Post-allocation Zilsd decomposition: Fixes invalid LD/SD instructions if
+// register allocation didn't provide suitable consecutive registers.
+//
 // NOTE: The AArch64LoadStoreOpt pass performs additional optimizations such as
 // merging zero store instructions, promoting loads that read directly from a
 // preceding store, and merging base register updates with load/store
@@ -23,6 +26,7 @@
 
 #include "RISCV.h"
 #include "RISCVTargetMachine.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -38,6 +42,8 @@ using namespace llvm;
 // pairs.
 static cl::opt<unsigned> LdStLimit("riscv-load-store-scan-limit", cl::init(128),
                                    cl::Hidden);
+STATISTIC(NumLD2LW, "Number of LD instructions split back to LW");
+STATISTIC(NumSD2SW, "Number of SD instructions split back to SW");
 
 namespace {
 
@@ -64,6 +70,12 @@ struct RISCVLoadStoreOpt : public MachineFunctionPass {
   // Convert load/store pairs to single instructions.
   bool tryConvertToLdStPair(MachineBasicBlock::iterator First,
                             MachineBasicBlock::iterator Second);
+  bool tryConvertToXqcilsmLdStPair(MachineFunction *MF,
+                                   MachineBasicBlock::iterator First,
+                                   MachineBasicBlock::iterator Second);
+  bool tryConvertToMIPSLdStPair(MachineFunction *MF,
+                                MachineBasicBlock::iterator First,
+                                MachineBasicBlock::iterator Second);
 
   // Scan the instructions looking for a load/store that can be combined
   // with the current instruction into a load/store pair.
@@ -74,6 +86,13 @@ struct RISCVLoadStoreOpt : public MachineFunctionPass {
   MachineBasicBlock::iterator
   mergePairedInsns(MachineBasicBlock::iterator I,
                    MachineBasicBlock::iterator Paired, bool MergeForward);
+
+  // Post reg-alloc zilsd part
+  bool fixInvalidRegPairOp(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator &MBBI);
+  bool isValidZilsdRegPair(Register First, Register Second);
+  void splitLdSdIntoTwo(MachineBasicBlock &MBB,
+                        MachineBasicBlock::iterator &MBBI, bool IsLoad);
 
 private:
   AliasAnalysis *AA;
@@ -92,8 +111,6 @@ bool RISCVLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   if (skipFunction(Fn.getFunction()))
     return false;
   const RISCVSubtarget &Subtarget = Fn.getSubtarget<RISCVSubtarget>();
-  if (!Subtarget.useMIPSLoadStorePairs())
-    return false;
 
   bool MadeChange = false;
   TII = Subtarget.getInstrInfo();
@@ -103,18 +120,34 @@ bool RISCVLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   ModifiedRegUnits.init(*TRI);
   UsedRegUnits.init(*TRI);
 
-  for (MachineBasicBlock &MBB : Fn) {
-    LLVM_DEBUG(dbgs() << "MBB: " << MBB.getName() << "\n");
+  if (Subtarget.useMIPSLoadStorePairs() || Subtarget.hasVendorXqcilsm()) {
+    for (MachineBasicBlock &MBB : Fn) {
+      LLVM_DEBUG(dbgs() << "MBB: " << MBB.getName() << "\n");
 
-    for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-         MBBI != E;) {
-      if (TII->isPairableLdStInstOpc(MBBI->getOpcode()) &&
-          tryToPairLdStInst(MBBI))
-        MadeChange = true;
-      else
-        ++MBBI;
+      for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
+           MBBI != E;) {
+        if (TII->isPairableLdStInstOpc(MBBI->getOpcode()) &&
+            tryToPairLdStInst(MBBI))
+          MadeChange = true;
+        else
+          ++MBBI;
+      }
     }
   }
+
+  if (!Subtarget.is64Bit() && Subtarget.hasStdExtZilsd()) {
+    for (auto &MBB : Fn) {
+      for (auto MBBI = MBB.begin(), E = MBB.end(); MBBI != E;) {
+        if (fixInvalidRegPairOp(MBB, MBBI)) {
+          MadeChange = true;
+          // Iterator was updated by fixInvalidRegPairOp
+        } else {
+          ++MBBI;
+        }
+      }
+    }
+  }
+
   return MadeChange;
 }
 
@@ -141,14 +174,112 @@ bool RISCVLoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
   return false;
 }
 
-// Merge two adjacent load/store instructions into a paired instruction
-// (LDP/SDP/SWP/LWP) if the effective address is 8-byte aligned in case of
-// SWP/LWP 16-byte aligned in case of LDP/SDP. This function selects the
-// appropriate paired opcode, verifies that the memory operand is properly
-// aligned, and checks that the offset is valid. If all conditions are met, it
-// builds and inserts the paired instruction.
-bool RISCVLoadStoreOpt::tryConvertToLdStPair(
-    MachineBasicBlock::iterator First, MachineBasicBlock::iterator Second) {
+bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
+    MachineFunction *MF, MachineBasicBlock::iterator First,
+    MachineBasicBlock::iterator Second) {
+  unsigned Opc = First->getOpcode();
+  if ((Opc != RISCV::LW && Opc != RISCV::SW) || Second->getOpcode() != Opc)
+    return false;
+
+  const auto &FirstOp1 = First->getOperand(1);
+  const auto &SecondOp1 = Second->getOperand(1);
+  const auto &FirstOp2 = First->getOperand(2);
+  const auto &SecondOp2 = Second->getOperand(2);
+
+  // Require simple reg+imm addressing for both.
+  if (!FirstOp1.isReg() || !SecondOp1.isReg() || !FirstOp2.isImm() ||
+      !SecondOp2.isImm())
+    return false;
+
+  Register Base1 = FirstOp1.getReg();
+  Register Base2 = SecondOp1.getReg();
+
+  if (Base1 != Base2)
+    return false;
+
+  const MachineMemOperand *MMO = *First->memoperands_begin();
+  Align MMOAlign = MMO->getAlign();
+
+  if (MMOAlign < Align(4))
+    return false;
+
+  auto &FirstOp0 = First->getOperand(0);
+  auto &SecondOp0 = Second->getOperand(0);
+
+  int64_t Off1 = FirstOp2.getImm();
+  int64_t Off2 = SecondOp2.getImm();
+
+  if (Off2 < Off1) {
+    std::swap(FirstOp0, SecondOp0);
+    std::swap(Off1, Off2);
+  }
+
+  if (!isShiftedUInt<5, 2>(Off1) || (Off2 - Off1 != 4))
+    return false;
+
+  Register StartReg = FirstOp0.getReg();
+  Register NextReg = SecondOp0.getReg();
+
+  unsigned XqciOpc;
+  unsigned StartRegState;
+  unsigned NextRegState = 0;
+  bool AddNextReg = true;
+
+  if (Opc == RISCV::LW) {
+
+    if (StartReg == RISCV::X0)
+      return false;
+
+    // If the base reg gets overwritten by one of the loads bail out.
+    if (StartReg == Base1 || NextReg == Base1)
+      return false;
+
+    // The registers need to be consecutive.
+    if (NextReg != StartReg + 1)
+      return false;
+
+    XqciOpc = RISCV::QC_LWMI;
+    StartRegState = static_cast<unsigned>(RegState::Define);
+    NextRegState = static_cast<unsigned>(RegState::ImplicitDefine);
+  } else {
+    assert(Opc == RISCV::SW && "Expected a SW instruction");
+    if (StartReg == NextReg) {
+      XqciOpc = RISCV::QC_SETWMI;
+      StartRegState = getKillRegState(FirstOp0.isKill() || SecondOp0.isKill());
+      AddNextReg = false;
+    } else if (NextReg == StartReg + 1) {
+      XqciOpc = RISCV::QC_SWMI;
+      StartRegState = getKillRegState(FirstOp0.isKill());
+      NextRegState = RegState::Implicit | getKillRegState(SecondOp0.isKill());
+    } else {
+      return false;
+    }
+  }
+
+  DebugLoc DL =
+      First->getDebugLoc() ? First->getDebugLoc() : Second->getDebugLoc();
+  MachineInstrBuilder MIB = BuildMI(*MF, DL, TII->get(XqciOpc));
+  MIB.addReg(StartReg, StartRegState)
+      .addReg(Base1, getKillRegState(FirstOp1.isKill() || SecondOp1.isKill()))
+      .addImm(2)
+      .addImm(Off1)
+      .cloneMergedMemRefs({&*First, &*Second});
+
+  if (AddNextReg)
+    MIB.addReg(NextReg, NextRegState);
+
+  First->getParent()->insert(First, MIB);
+  First->removeFromParent();
+  Second->removeFromParent();
+
+  return true;
+}
+
+bool RISCVLoadStoreOpt::tryConvertToMIPSLdStPair(
+    MachineFunction *MF, MachineBasicBlock::iterator First,
+    MachineBasicBlock::iterator Second) {
+  // Try converting to SWP/LWP/LDP/SDP.
+  // SWP/LWP requires 8-byte alignment whereas LDP/SDP needs 16-byte alignment.
   unsigned PairOpc;
   Align RequiredAlignment;
   switch (First->getOpcode()) {
@@ -172,7 +303,6 @@ bool RISCVLoadStoreOpt::tryConvertToLdStPair(
     break;
   }
 
-  MachineFunction *MF = First->getMF();
   const MachineMemOperand *MMO = *First->memoperands_begin();
   Align MMOAlign = MMO->getAlign();
 
@@ -198,6 +328,24 @@ bool RISCVLoadStoreOpt::tryConvertToLdStPair(
   Second->removeFromParent();
 
   return true;
+}
+
+// Merge two adjacent load/store instructions into a paired instruction.
+// This function calls the vendor specific implementation that seelects the
+// appropriate paired opcode, verifies that the memory operand is properly
+// aligned, and checks that the offset is valid. If all conditions are met, it
+// builds and inserts the paired instruction.
+bool RISCVLoadStoreOpt::tryConvertToLdStPair(
+    MachineBasicBlock::iterator First, MachineBasicBlock::iterator Second) {
+  MachineFunction *MF = First->getMF();
+  const RISCVSubtarget &STI = MF->getSubtarget<RISCVSubtarget>();
+
+  // Try converting to QC_LWMI/QC_SWMI if the XQCILSM extension is enabled.
+  if (!STI.is64Bit() && STI.hasVendorXqcilsm())
+    return tryConvertToXqcilsmLdStPair(MF, First, Second);
+
+  // Else try to convert them into MIPS Paired Loads/Stores.
+  return tryConvertToMIPSLdStPair(MF, First, Second);
 }
 
 static bool mayAlias(MachineInstr &MIa,
@@ -393,6 +541,187 @@ RISCVLoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
   }
 
   return NextI;
+}
+
+//===----------------------------------------------------------------------===//
+// Post reg-alloc zilsd pass implementation
+//===----------------------------------------------------------------------===//
+
+bool RISCVLoadStoreOpt::isValidZilsdRegPair(Register First, Register Second) {
+  // Special case: First register can not be zero unless both registers are
+  // zeros.
+  // Spec says: LD instructions with destination x0 are processed as any other
+  // load, but the result is discarded entirely and x1 is not written. If using
+  // x0 as src of SD, the entire 64-bit operand is zero — i.e., register x1 is
+  // not accessed.
+  if (First == RISCV::X0)
+    return Second == RISCV::X0;
+
+  // Check if registers form a valid even/odd pair for Zilsd
+  unsigned FirstNum = TRI->getEncodingValue(First);
+  unsigned SecondNum = TRI->getEncodingValue(Second);
+
+  // Must be consecutive and first must be even
+  return (FirstNum % 2 == 0) && (SecondNum == FirstNum + 1);
+}
+
+void RISCVLoadStoreOpt::splitLdSdIntoTwo(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator &MBBI,
+                                         bool IsLoad) {
+  MachineInstr *MI = &*MBBI;
+  DebugLoc DL = MI->getDebugLoc();
+
+  const MachineOperand &FirstOp = MI->getOperand(0);
+  const MachineOperand &SecondOp = MI->getOperand(1);
+  const MachineOperand &BaseOp = MI->getOperand(2);
+  Register FirstReg = FirstOp.getReg();
+  Register SecondReg = SecondOp.getReg();
+  Register BaseReg = BaseOp.getReg();
+
+  // Handle both immediate and symbolic operands for offset
+  const MachineOperand &OffsetOp = MI->getOperand(3);
+  int BaseOffset;
+  if (OffsetOp.isImm())
+    BaseOffset = OffsetOp.getImm();
+  else
+    // For symbolic operands, extract the embedded offset
+    BaseOffset = OffsetOp.getOffset();
+
+  unsigned Opc = IsLoad ? RISCV::LW : RISCV::SW;
+  MachineInstrBuilder MIB1, MIB2;
+
+  // Create two separate instructions
+  if (IsLoad) {
+    // It's possible that first register is same as base register, when we split
+    // it becomes incorrect because base register is overwritten, e.g.
+    // X10, X13 = PseudoLD_RV32_OPT killed X10, 0
+    // =>
+    // X10 = LW X10, 0
+    // X13 = LW killed X10, 4
+    // we can just switch the order to resolve that:
+    // X13 = LW X10, 4
+    // X10 = LW killed X10, 0
+    if (FirstReg == BaseReg) {
+      MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
+                 .addReg(SecondReg,
+                         RegState::Define | getDeadRegState(SecondOp.isDead()))
+                 .addReg(BaseReg);
+      MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
+                 .addReg(FirstReg,
+                         RegState::Define | getDeadRegState(FirstOp.isDead()))
+                 .addReg(BaseReg, getKillRegState(BaseOp.isKill()));
+
+    } else {
+      MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
+                 .addReg(FirstReg,
+                         RegState::Define | getDeadRegState(FirstOp.isDead()))
+                 .addReg(BaseReg);
+
+      MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
+                 .addReg(SecondReg,
+                         RegState::Define | getDeadRegState(SecondOp.isDead()))
+                 .addReg(BaseReg, getKillRegState(BaseOp.isKill()));
+    }
+
+    ++NumLD2LW;
+    LLVM_DEBUG(dbgs() << "Split LD back to two LW instructions\n");
+  } else {
+    assert(
+        FirstReg != SecondReg &&
+        "First register and second register is impossible to be same register");
+    MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
+               .addReg(FirstReg, getKillRegState(FirstOp.isKill()))
+               .addReg(BaseReg);
+
+    MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
+               .addReg(SecondReg, getKillRegState(SecondOp.isKill()))
+               .addReg(BaseReg, getKillRegState(BaseOp.isKill()));
+
+    ++NumSD2SW;
+    LLVM_DEBUG(dbgs() << "Split SD back to two SW instructions\n");
+  }
+
+  // Add offset operands - preserve symbolic references
+  MIB1.add(OffsetOp);
+  if (OffsetOp.isImm())
+    MIB2.addImm(BaseOffset + 4);
+  else if (OffsetOp.isGlobal())
+    MIB2.addGlobalAddress(OffsetOp.getGlobal(), BaseOffset + 4,
+                          OffsetOp.getTargetFlags());
+  else if (OffsetOp.isCPI())
+    MIB2.addConstantPoolIndex(OffsetOp.getIndex(), BaseOffset + 4,
+                              OffsetOp.getTargetFlags());
+  else if (OffsetOp.isBlockAddress())
+    MIB2.addBlockAddress(OffsetOp.getBlockAddress(), BaseOffset + 4,
+                         OffsetOp.getTargetFlags());
+
+  // Copy memory operands if the original instruction had them
+  // FIXME: This is overly conservative; the new instruction accesses 4 bytes,
+  // not 8.
+  MIB1.cloneMemRefs(*MI);
+  MIB2.cloneMemRefs(*MI);
+
+  // Remove the original paired instruction and update iterator
+  MBBI = MBB.erase(MBBI);
+}
+
+bool RISCVLoadStoreOpt::fixInvalidRegPairOp(MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator &MBBI) {
+  MachineInstr *MI = &*MBBI;
+  unsigned Opcode = MI->getOpcode();
+
+  // Check if this is a Zilsd pseudo that needs fixing
+  if (Opcode != RISCV::PseudoLD_RV32_OPT && Opcode != RISCV::PseudoSD_RV32_OPT)
+    return false;
+
+  bool IsLoad = Opcode == RISCV::PseudoLD_RV32_OPT;
+
+  const MachineOperand &FirstOp = MI->getOperand(0);
+  const MachineOperand &SecondOp = MI->getOperand(1);
+  Register FirstReg = FirstOp.getReg();
+  Register SecondReg = SecondOp.getReg();
+
+  if (!isValidZilsdRegPair(FirstReg, SecondReg)) {
+    // Need to split back into two instructions
+    splitLdSdIntoTwo(MBB, MBBI, IsLoad);
+    return true;
+  }
+
+  // Registers are valid, convert to real LD/SD instruction
+  const MachineOperand &BaseOp = MI->getOperand(2);
+  Register BaseReg = BaseOp.getReg();
+  DebugLoc DL = MI->getDebugLoc();
+  // Handle both immediate and symbolic operands for offset
+  const MachineOperand &OffsetOp = MI->getOperand(3);
+
+  unsigned RealOpc = IsLoad ? RISCV::LD_RV32 : RISCV::SD_RV32;
+
+  // Create register pair from the two individual registers
+  unsigned RegPair = TRI->getMatchingSuperReg(FirstReg, RISCV::sub_gpr_even,
+                                              &RISCV::GPRPairRegClass);
+  // Create the real LD/SD instruction with register pair
+  MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(RealOpc));
+
+  if (IsLoad) {
+    // For LD, the register pair is the destination
+    MIB.addReg(RegPair, RegState::Define | getDeadRegState(FirstOp.isDead() &&
+                                                           SecondOp.isDead()));
+  } else {
+    // For SD, the register pair is the source
+    MIB.addReg(RegPair, getKillRegState(FirstOp.isKill() && SecondOp.isKill()));
+  }
+
+  MIB.addReg(BaseReg, getKillRegState(BaseOp.isKill()))
+      .add(OffsetOp)
+      .cloneMemRefs(*MI);
+
+  LLVM_DEBUG(dbgs() << "Converted pseudo to real instruction: " << *MIB
+                    << "\n");
+
+  // Remove the pseudo instruction and update iterator
+  MBBI = MBB.erase(MBBI);
+
+  return true;
 }
 
 // Returns an instance of the Load / Store Optimization pass.

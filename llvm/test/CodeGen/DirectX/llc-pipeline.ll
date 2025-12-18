@@ -5,6 +5,7 @@
 
 ; CHECK-LABEL: Pass Arguments:
 ; CHECK-NEXT: Target Library Information
+; CHECK-NEXT: Runtime Library Function Analysis
 ; CHECK-NEXT: DXIL Resource Type Analysis
 ; CHECK-NEXT: Target Transform Information
 ; CHECK-NEXT: Assumption Cache Tracker
@@ -15,10 +16,10 @@
 ; CHECK-NEXT: ModulePass Manager
 ; CHECK-NEXT:   DXIL Finalize Linkage
 ; CHECK-NEXT:   Dead Global Elimination
+; CHECK-NEXT:   DXIL CBuffer Access
 ; CHECK-NEXT:   FunctionPass Manager
 ; CHECK-NEXT:     DXIL Resource Access
 ; CHECK-NEXT:   DXIL Intrinsic Expansion
-; CHECK-NEXT:   DXIL CBuffer Access
 ; CHECK-NEXT:   DXIL Data Scalarization
 ; CHECK-NEXT:   FunctionPass Manager
 ; CHECK-NEXT:     Dominator Tree Construction
@@ -40,8 +41,8 @@
 ; CHECK-NEXT:   DXIL Resources Analysis
 ; CHECK-NEXT:   DXIL Module Metadata analysis
 ; CHECK-NEXT:   DXIL Shader Flag Analysis
-; CHECK-NEXT:   DXIL Translate Metadata
 ; CHECK-NEXT:   DXIL Root Signature Analysis
+; CHECK-NEXT:   DXIL Translate Metadata
 ; CHECK-NEXT:   DXIL Post Optimization Validation
 ; CHECK-NEXT:   DXIL Op Lowering
 ; CHECK-NEXT:   DXIL Prepare Module

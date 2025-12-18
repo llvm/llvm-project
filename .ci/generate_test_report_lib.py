@@ -3,7 +3,21 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Library to parse JUnit XML files and return a markdown report."""
 
+from typing import TypedDict, Optional
+import platform
+
 from junitparser import JUnitXml, Failure
+
+
+# This data structure should match the definition in llvm-zorg in
+# premerge/advisor/advisor_lib.py
+# TODO(boomanaiden154): Drop the Optional here and switch to str | None when
+# we require Python 3.10.
+class FailureExplanation(TypedDict):
+    name: str
+    explained: bool
+    reason: Optional[str]
+
 
 SEE_BUILD_FILE_STR = "Download the build's log file to see the details."
 UNRELATED_FAILURES_STR = (
@@ -41,11 +55,25 @@ def _parse_ninja_log(ninja_log: list[str]) -> list[tuple[str, str]]:
         # touch test/4.stamp
         #
         # index will point to the line that starts with Failed:. The progress
-        # indicator is the line before this ([4/5] test/4.stamp) and contains a pretty
-        # printed version of the target being built (test/4.stamp). We use this line
-        # and remove the progress information to get a succinct name for the target.
-        failing_action = ninja_log[index - 1].split("] ")[1]
+        # indicator is sometimes the line before this ([4/5] test/4.stamp) and
+        # will contain a pretty printed version of the target being built
+        # (test/4.stamp) when accurate. We instead parse the failed line rather
+        # than the progress indicator as the progress indicator may not be
+        # aligned with the failure.
+        failing_action = ninja_log[index].split("FAILED: ")[1]
         failure_log = []
+
+        # Parse the lines above the FAILED: string if the line does not come
+        # immediately after a progress indicator to ensure that we capture the
+        # entire failure message.
+        if not ninja_log[index - 1].startswith("["):
+            before_index = index - 1
+            while before_index > 0 and not ninja_log[before_index].startswith("["):
+                failure_log.append(ninja_log[before_index])
+                before_index = before_index - 1
+            failure_log.reverse()
+
+        # Parse the failure information, which comes after the FAILED: tag.
         while (
             index < len(ninja_log)
             and not ninja_log[index].startswith("[")
@@ -80,16 +108,29 @@ def find_failure_in_ninja_logs(ninja_logs: list[list[str]]) -> list[tuple[str, s
     return failures
 
 
-def _format_ninja_failures(ninja_failures: list[tuple[str, str]]) -> list[str]:
-    """Formats ninja failures into summary views for the report."""
+def _format_failures(
+    failures: list[tuple[str, str]], failure_explanations: dict[str, FailureExplanation]
+) -> list[str]:
+    """Formats failures into summary views for the report."""
     output = []
-    for build_failure in ninja_failures:
+    for build_failure in failures:
         failed_action, failure_message = build_failure
+        failure_explanation = None
+        if failed_action in failure_explanations:
+            failure_explanation = failure_explanations[failed_action]
+        output.append("<details>")
+        if failure_explanation:
+            output.extend(
+                [
+                    f"<summary>{failed_action} (Likely Already Failing)</summary>" "",
+                    failure_explanation["reason"],
+                    "",
+                ]
+            )
+        else:
+            output.extend([f"<summary>{failed_action}</summary>", ""])
         output.extend(
             [
-                "<details>",
-                f"<summary>{failed_action}</summary>",
-                "",
                 "```",
                 failure_message,
                 "```",
@@ -97,6 +138,7 @@ def _format_ninja_failures(ninja_failures: list[tuple[str, str]]) -> list[str]:
             ]
         )
     return output
+
 
 def get_failures(junit_objects) -> dict[str, list[tuple[str, str]]]:
     failures = {}
@@ -116,6 +158,17 @@ def get_failures(junit_objects) -> dict[str, list[tuple[str, str]]]:
     return failures
 
 
+def are_all_failures_explained(
+    failures: list[tuple[str, str]], failure_explanations: dict[str, FailureExplanation]
+) -> bool:
+    for failed_action, _ in failures:
+        if failed_action not in failure_explanations:
+            return False
+        else:
+            assert failure_explanations[failed_action]["explained"]
+    return True
+
+
 # Set size_limit to limit the byte size of the report. The default is 1MB as this
 # is the most that can be put into an annotation. If the generated report exceeds
 # this limit and failures are listed, it will be generated again without failures
@@ -129,11 +182,24 @@ def generate_report(
     ninja_logs: list[list[str]],
     size_limit=1024 * 1024,
     list_failures=True,
-):
+    failure_explanations_list: list[FailureExplanation] = [],
+) -> tuple[str, bool]:
     failures = get_failures(junit_objects)
     tests_run = 0
     tests_skipped = 0
     tests_failed = 0
+
+    failure_explanations: dict[str, FailureExplanation] = {}
+    for failure_explanation in failure_explanations_list:
+        if not failure_explanation["explained"]:
+            continue
+        failure_explanations[failure_explanation["name"]] = failure_explanation
+    all_failures_explained = True
+    if failures:
+        for _, failures_list in failures.items():
+            all_failures_explained &= are_all_failures_explained(
+                failures_list, failure_explanations
+            )
 
     for results in junit_objects:
         for testsuite in results:
@@ -147,13 +213,17 @@ def generate_report(
         if return_code == 0:
             report.extend(
                 [
-                    "The build succeeded and no tests ran. This is expected in some "
-                    "build configurations."
+                    ":white_check_mark: The build succeeded and no tests ran. "
+                    "This is expected in some build configurations."
                 ]
             )
         else:
             ninja_failures = find_failure_in_ninja_logs(ninja_logs)
+            all_failures_explained &= are_all_failures_explained(
+                ninja_failures, failure_explanations
+            )
             if not ninja_failures:
+                all_failures_explained = False
                 report.extend(
                     [
                         "The build failed before running any tests. Detailed "
@@ -173,14 +243,14 @@ def generate_report(
                         "",
                     ]
                 )
-                report.extend(_format_ninja_failures(ninja_failures))
+                report.extend(_format_failures(ninja_failures, failure_explanations))
                 report.extend(
                     [
                         "",
                         UNRELATED_FAILURES_STR,
                     ]
                 )
-        return "\n".join(report)
+        return ("\n".join(report), all_failures_explained)
 
     tests_passed = tests_run - tests_skipped - tests_failed
 
@@ -209,27 +279,17 @@ def generate_report(
 
         for testsuite_name, failures in failures.items():
             report.extend(["", f"### {testsuite_name}"])
-            for name, output in failures:
-                report.extend(
-                    [
-                        "<details>",
-                        f"<summary>{name}</summary>",
-                        "",
-                        "```",
-                        output,
-                        "```",
-                        "</details>",
-                    ]
-                )
+            report.extend(_format_failures(failures, failure_explanations))
     elif return_code != 0:
         # No tests failed but the build was in a failed state. Bring this to the user's
         # attention.
         ninja_failures = find_failure_in_ninja_logs(ninja_logs)
         if not ninja_failures:
+            all_failures_explained = False
             report.extend(
                 [
                     "",
-                    "All tests passed but another part of the build **failed**. "
+                    "All executed tests passed, but another part of the build **failed**. "
                     "Information about the build failure could not be automatically "
                     "obtained.",
                     "",
@@ -237,15 +297,22 @@ def generate_report(
                 ]
             )
         else:
+            all_failures_explained &= are_all_failures_explained(
+                ninja_failures, failure_explanations
+            )
             report.extend(
                 [
                     "",
-                    "All tests passed but another part of the build **failed**. Click on "
+                    "All executed tests passed, but another part of the build **failed**. Click on "
                     "a failure below to see the details.",
                     "",
                 ]
             )
-            report.extend(_format_ninja_failures(ninja_failures))
+            report.extend(_format_failures(ninja_failures, failure_explanations))
+    else:
+        report.extend(
+            ["", ":white_check_mark: The build succeeded and all tests passed."]
+        )
 
     if failures or return_code != 0:
         report.extend(["", UNRELATED_FAILURES_STR])
@@ -256,11 +323,12 @@ def generate_report(
             title,
             return_code,
             junit_objects,
+            ninja_logs,
             size_limit,
             list_failures=False,
         )
 
-    return report
+    return (report, all_failures_explained)
 
 
 def load_info_from_files(build_log_files):
@@ -282,3 +350,13 @@ def load_info_from_files(build_log_files):
 def generate_report_from_files(title, return_code, build_log_files):
     junit_objects, ninja_logs = load_info_from_files(build_log_files)
     return generate_report(title, return_code, junit_objects, ninja_logs)
+
+
+def compute_platform_title() -> str:
+    logo = ":window:" if platform.system() == "Windows" else ":penguin:"
+    # On Linux the machine value is x86_64 on Windows it is AMD64.
+    if platform.machine() == "x86_64" or platform.machine() == "AMD64":
+        arch = "x64"
+    else:
+        arch = platform.machine()
+    return f"{logo} {platform.system()} {arch} Test Results"

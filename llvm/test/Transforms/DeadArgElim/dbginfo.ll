@@ -21,14 +21,14 @@
 ; updated LLVM functions.
 
 ; Function Attrs: uwtable
-define void @_Z2f2v() #0 !dbg !4 {
+define void @_Z2f2v() !dbg !4 {
 entry:
   call void (i32, ...) @_ZL2f1iz(i32 1), !dbg !15
   ret void, !dbg !16
 }
 
 ; Function Attrs: nounwind uwtable
-define internal void @_ZL2f1iz(i32, ...) #1 !dbg !8 {
+define internal void @_ZL2f1iz(i32, ...) !dbg !8 {
 entry:
   call void @llvm.dbg.value(metadata i32 %0, metadata !17, metadata !18), !dbg !19
   ret void, !dbg !20
@@ -40,8 +40,6 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
-attributes #0 = { uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #2 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}

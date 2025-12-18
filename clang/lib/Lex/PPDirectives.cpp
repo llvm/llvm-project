@@ -1397,11 +1397,12 @@ void Preprocessor::HandleDirective(Token &Result) {
       return HandleIdentSCCSDirective(Result);
     case tok::pp_sccs:
       return HandleIdentSCCSDirective(Result);
-    case tok::pp_embed:
-      return HandleEmbedDirective(SavedHash.getLocation(), Result,
-                                  getCurrentFileLexer()
-                                      ? *getCurrentFileLexer()->getFileEntry()
-                                      : static_cast<FileEntry *>(nullptr));
+    case tok::pp_embed: {
+      if (PreprocessorLexer *CurrentFileLexer = getCurrentFileLexer())
+        if (OptionalFileEntryRef FERef = CurrentFileLexer->getFileEntry())
+          return HandleEmbedDirective(SavedHash.getLocation(), Result, *FERef);
+      return HandleEmbedDirective(SavedHash.getLocation(), Result, nullptr);
+    }
     case tok::pp_assert:
       //isExtension = true;  // FIXME: implement #assert
       break;
@@ -2093,10 +2094,11 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     return;
 
   if (FilenameTok.isNot(tok::header_name)) {
-    if (FilenameTok.is(tok::identifier) && PPOpts.SingleFileParseMode) {
+    if (FilenameTok.is(tok::identifier) &&
+        (PPOpts.SingleFileParseMode || PPOpts.SingleModuleParseMode)) {
       // If we saw #include IDENTIFIER and lexing didn't turn in into a header
-      // name, it was undefined. In 'single-file-parse' mode, just skip the
-      // directive without emitting diagnostics - the identifier might be
+      // name, it was undefined. In 'single-{file,module}-parse' mode, just skip
+      // the directive without emitting diagnostics - the identifier might be
       // normally defined in previously-skipped include directive.
       DiscardUntilEndOfDirective();
       return;
@@ -2404,10 +2406,15 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       (getLangOpts().CPlusPlusModules || getLangOpts().Modules) &&
       ModuleToImport && !ModuleToImport->isHeaderUnit();
 
+  if (MaybeTranslateInclude && (UsableHeaderUnit || UsableClangHeaderModule) &&
+      PPOpts.SingleModuleParseMode) {
+    Action = IncludeLimitReached;
+  }
   // Determine whether we should try to import the module for this #include, if
   // there is one. Don't do so if precompiled module support is disabled or we
   // are processing this module textually (because we're building the module).
-  if (MaybeTranslateInclude && (UsableHeaderUnit || UsableClangHeaderModule)) {
+  else if (MaybeTranslateInclude &&
+           (UsableHeaderUnit || UsableClangHeaderModule)) {
     // If this include corresponds to a module but that module is
     // unavailable, diagnose the situation and bail out.
     // FIXME: Remove this; loadModule does the same check (but produces
@@ -3442,6 +3449,13 @@ void Preprocessor::HandleIfdefDirective(Token &Result,
     CurPPLexer->pushConditionalLevel(DirectiveTok.getLocation(),
                                      /*wasskip*/false, /*foundnonskip*/false,
                                      /*foundelse*/false);
+  } else if (PPOpts.SingleModuleParseMode && !MI) {
+    // In 'single-module-parse mode' undefined identifiers trigger skipping of
+    // all the directive blocks. We lie here and set FoundNonSkipPortion so that
+    // even any \#else blocks get skipped.
+    SkipExcludedConditionalBlock(
+        HashToken.getLocation(), DirectiveTok.getLocation(),
+        /*FoundNonSkipPortion=*/true, /*FoundElse=*/false);
   } else if (!MI == isIfndef || RetainExcludedCB) {
     // Yes, remember that we are inside a conditional, then lex the next token.
     CurPPLexer->pushConditionalLevel(DirectiveTok.getLocation(),
@@ -3496,6 +3510,13 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
     // the directive blocks.
     CurPPLexer->pushConditionalLevel(IfToken.getLocation(), /*wasskip*/false,
                                      /*foundnonskip*/false, /*foundelse*/false);
+  } else if (PPOpts.SingleModuleParseMode && DER.IncludedUndefinedIds) {
+    // In 'single-module-parse mode' undefined identifiers trigger skipping of
+    // all the directive blocks. We lie here and set FoundNonSkipPortion so that
+    // even any \#else blocks get skipped.
+    SkipExcludedConditionalBlock(HashToken.getLocation(), IfToken.getLocation(),
+                                 /*FoundNonSkipPortion=*/true,
+                                 /*FoundElse=*/false);
   } else if (ConditionalTrue || RetainExcludedCB) {
     // Yes, remember that we are inside a conditional, then lex the next token.
     CurPPLexer->pushConditionalLevel(IfToken.getLocation(), /*wasskip*/false,
@@ -4018,7 +4039,7 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
       this->LookupEmbedFile(Filename, isAngled, true, LookupFromFile);
   if (!MaybeFileRef) {
     // could not find file
-    if (Callbacks && Callbacks->EmbedFileNotFound(OriginalFilename)) {
+    if (Callbacks && Callbacks->EmbedFileNotFound(Filename)) {
       return;
     }
     Diag(FilenameTok, diag::err_pp_file_not_found) << Filename;

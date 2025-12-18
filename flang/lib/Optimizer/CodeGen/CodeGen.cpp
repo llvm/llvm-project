@@ -680,6 +680,22 @@ struct CallOpConversion : public fir::FIROpConversion<fir::CallOp> {
     if (mlir::ArrayAttr resAttrs = call.getResAttrsAttr())
       llvmCall.setResAttrsAttr(resAttrs);
 
+    if (auto inlineAttr = call.getInlineAttrAttr()) {
+      llvmCall->removeAttr("inline_attr");
+      if (inlineAttr.getValue() == fir::FortranInlineEnum::no_inline) {
+        llvmCall.setNoInlineAttr(rewriter.getUnitAttr());
+      } else if (inlineAttr.getValue() == fir::FortranInlineEnum::inline_hint) {
+        llvmCall.setInlineHintAttr(rewriter.getUnitAttr());
+      } else if (inlineAttr.getValue() ==
+                 fir::FortranInlineEnum::always_inline) {
+        llvmCall.setAlwaysInlineAttr(rewriter.getUnitAttr());
+      }
+    }
+
+    if (std::optional<mlir::ArrayAttr> optionalAccessGroups =
+            call.getAccessGroups())
+      llvmCall.setAccessGroups(*optionalAccessGroups);
+
     if (memAttr)
       llvmCall.setMemoryEffectsAttr(
           mlir::cast<mlir::LLVM::MemoryEffectsAttr>(memAttr));
@@ -749,6 +765,44 @@ struct VolatileCastOpConversion
   }
 };
 
+/// Lower `fir.assumed_size_extent` to constant -1 of index type.
+struct AssumedSizeExtentOpConversion
+    : public fir::FIROpConversion<fir::AssumedSizeExtentOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::AssumedSizeExtentOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = op.getLoc();
+    mlir::Type ity = lowerTy().indexType();
+    auto cst = fir::genConstantIndex(loc, ity, rewriter, -1);
+    rewriter.replaceOp(op, cst.getResult());
+    return mlir::success();
+  }
+};
+
+/// Lower `fir.is_assumed_size_extent` to integer equality with -1.
+struct IsAssumedSizeExtentOpConversion
+    : public fir::FIROpConversion<fir::IsAssumedSizeExtentOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::IsAssumedSizeExtentOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = op.getLoc();
+    mlir::Value val = adaptor.getVal();
+    mlir::Type valTy = val.getType();
+    // Create constant -1 of the operand type.
+    auto negOneAttr = rewriter.getIntegerAttr(valTy, -1);
+    auto negOne =
+        mlir::LLVM::ConstantOp::create(rewriter, loc, valTy, negOneAttr);
+    auto cmp = mlir::LLVM::ICmpOp::create(
+        rewriter, loc, mlir::LLVM::ICmpPredicate::eq, val, negOne);
+    rewriter.replaceOp(op, cmp.getResult());
+    return mlir::success();
+  }
+};
+
 /// convert value of from-type to value of to-type
 struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
   using FIROpConversion::FIROpConversion;
@@ -762,6 +816,15 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto fromFirTy = convert.getValue().getType();
     auto toFirTy = convert.getRes().getType();
+
+    // Let more specialized conversions (e.g. FIR to memref
+    // converters) handle fir.convert when either side is a memref. This
+    // avoids interfering with descriptor-based flows such as fir.box /
+    // fir.box_addr and keeps this pattern focused on value conversions.
+    if (mlir::isa<mlir::MemRefType>(fromFirTy) ||
+        mlir::isa<mlir::MemRefType>(toFirTy))
+      return mlir::failure();
+
     auto fromTy = convertType(fromFirTy);
     auto toTy = convertType(toFirTy);
     mlir::Value op0 = adaptor.getOperands()[0];
@@ -1113,7 +1176,7 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
     mlir::Value size = genTypeSizeInBytes(loc, ity, rewriter, llvmObjectTy);
     if (auto scaleSize =
             fir::genAllocationScaleSize(loc, heap.getInType(), ity, rewriter))
-      size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, scaleSize);
+      size = mlir::LLVM::MulOp::create(rewriter, loc, ity, size, scaleSize);
     for (mlir::Value opnd : adaptor.getOperands())
       size = mlir::LLVM::MulOp::create(rewriter, loc, ity, size,
                                        integerCast(loc, rewriter, ity, opnd));
@@ -3352,6 +3415,9 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
         loadOp.setTBAATags(*optionalTag);
       else
         attachTBAATag(loadOp, load.getType(), load.getType(), nullptr);
+      if (std::optional<mlir::ArrayAttr> optionalAccessGroups =
+              load.getAccessGroups())
+        loadOp.setAccessGroups(*optionalAccessGroups);
       rewriter.replaceOp(load, loadOp.getResult());
     }
     return mlir::success();
@@ -3682,6 +3748,10 @@ struct StoreOpConversion : public fir::FIROpConversion<fir::StoreOp> {
 
       if (store.getNontemporal())
         storeOp.setNontemporal(true);
+
+      if (std::optional<mlir::ArrayAttr> optionalAccessGroups =
+              store.getAccessGroups())
+        storeOp.setAccessGroups(*optionalAccessGroups);
 
       newOp = storeOp;
     }
@@ -4360,6 +4430,7 @@ void fir::populateFIRToLLVMConversionPatterns(
       AllocaOpConversion, AllocMemOpConversion, BoxAddrOpConversion,
       BoxCharLenOpConversion, BoxDimsOpConversion, BoxEleSizeOpConversion,
       BoxIsAllocOpConversion, BoxIsArrayOpConversion, BoxIsPtrOpConversion,
+      AssumedSizeExtentOpConversion, IsAssumedSizeExtentOpConversion,
       BoxOffsetOpConversion, BoxProcHostOpConversion, BoxRankOpConversion,
       BoxTypeCodeOpConversion, BoxTypeDescOpConversion, CallOpConversion,
       CmpcOpConversion, VolatileCastOpConversion, ConvertOpConversion,

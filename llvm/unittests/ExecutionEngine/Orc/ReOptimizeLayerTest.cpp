@@ -26,7 +26,7 @@ using namespace llvm::jitlink;
 
 class ReOptimizeLayerTest : public testing::Test {
 public:
-  ~ReOptimizeLayerTest() {
+  ~ReOptimizeLayerTest() override {
     if (ES)
       if (auto Err = ES->endSession())
         ES->reportError(std::move(Err));
@@ -174,7 +174,7 @@ TEST_F(ReOptimizeLayerTest, BasicReOptimization) {
         });
         return Error::success();
       });
-  EXPECT_THAT_ERROR(ROLayer->reigsterRuntimeFunctions(*JD), Succeeded());
+  EXPECT_THAT_ERROR(ROLayer->registerRuntimeFunctions(*JD), Succeeded());
 
   auto Ctx = std::make_unique<LLVMContext>();
   auto M = std::make_unique<Module>("<main>", *Ctx);

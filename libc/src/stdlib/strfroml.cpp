@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/strfroml.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/macros/config.h"
+#include "src/stdio/printf_core/core_structs.h"
+#include "src/stdio/printf_core/error_mapper.h"
 #include "src/stdlib/str_from_util.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -24,9 +27,7 @@ LLVM_LIBC_FUNCTION(int, strfroml,
   // the length modifier has to be set to LenghtModifier::L
   section.length_modifier = printf_core::LengthModifier::L;
 
-  printf_core::WriteBuffer<printf_core::Mode<
-      printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>::value>
-      wb(s, (n > 0 ? n - 1 : 0));
+  printf_core::DropOverflowBuffer wb(s, (n > 0 ? n - 1 : 0));
   printf_core::Writer writer(wb);
 
   int result = 0;
@@ -41,7 +42,13 @@ LLVM_LIBC_FUNCTION(int, strfroml,
   if (n > 0)
     wb.buff[wb.buff_cur] = '\0';
 
-  return writer.get_chars_written();
+  if (writer.get_chars_written() >
+      static_cast<size_t>(cpp::numeric_limits<int>::max())) {
+    libc_errno =
+        printf_core::internal_error_to_errno(-printf_core::OVERFLOW_ERROR);
+    return -1;
+  }
+  return static_cast<int>(writer.get_chars_written());
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -687,7 +687,8 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
         "rv64i_xqcics0p2", "rv64i_xqcicsr0p4", "rv64i_xqciint0p10",
         "rv64i_xqciio0p1", "rv64i_xqcilb0p2", "rv64i_xqcili0p2",
         "rv64i_xqcilia0p2", "rv64i_xqcilo0p3", "rv64i_xqcilsm0p6",
-        "rv64i_xqcisim0p2", "rv64i_xqcisls0p2", "rv64i_xqcisync0p3"}) {
+        "rv64i_xqcisim0p2", "rv64i_xqcisls0p2", "rv64i_xqcisync0p3",
+        "rv64i_xqci0p13"}) {
     EXPECT_THAT(
         toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
         ::testing::EndsWith(" is only supported for 'rv32'"));
@@ -695,7 +696,8 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
 
   for (StringRef Input :
        {"rv32idc_xqciac0p3", "rv32i_zcd_xqciac0p3", "rv32idc_xqcicm0p2",
-        "rv32i_zcd_xqcicm0p2", "rv32idc_xqccmp0p3", "rv32i_zcd_xqccmp0p3"}) {
+        "rv32i_zcd_xqcicm0p2", "rv32idc_xqccmp0p3", "rv32i_zcd_xqccmp0p3",
+        "rv32idc_xqci0p13", "rv32i_zcd_xqci0p13"}) {
     EXPECT_THAT(
         toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
         ::testing::EndsWith("extension when 'd' extension is enabled"));
@@ -730,6 +732,11 @@ TEST(ParseArchString, MissingDepency) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "");
   }
+
+  EXPECT_EQ(toString(RISCVISAInfo::parseArchString("rv64i_xsfvfbfexp16e", true)
+                         .takeError()),
+            "'xsfvfbfexp16e' requires 'zvfbfmin' or 'zvfbfa' extension to also "
+            "be specified");
 }
 
 TEST(ParseArchString, RejectsUnrecognizedProfileNames) {
@@ -1162,6 +1169,11 @@ R"(All available -march extensions for RISC-V
     xsfmm64t             0.6
     xsfmmbase            0.6
     xsfvcp               1.0
+    xsfvfbfexp16e        0.5
+    xsfvfexp16e          0.5
+    xsfvfexp32e          0.5
+    xsfvfexpa            0.2
+    xsfvfexpa64e         0.2
     xsfvfnrclipxfqf      1.0
     xsfvfwmaccqqq        1.0
     xsfvqmaccdod         1.0
@@ -1184,7 +1196,7 @@ R"(All available -march extensions for RISC-V
     xwchc                2.2
 
 Experimental extensions
-    p                    0.15
+    p                    0.18
     zibi                 0.1
     zicfilp              1.0       This is a long dummy description
     zicfiss              1.0
@@ -1194,8 +1206,10 @@ Experimental extensions
     zvfofp8min           0.2
     zvkgs                0.7
     zvqdotq              0.0
+    smpmpmt              0.6
     svukte               0.3
     xqccmp               0.3
+    xqci                 0.13
     xqcia                0.7
     xqciac               0.3
     xqcibi               0.2

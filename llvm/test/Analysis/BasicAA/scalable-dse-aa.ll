@@ -10,12 +10,12 @@ define <vscale x 4 x float> @dead_scalable_store(ptr %0) {
 ; CHECK-NEXT:    [[GEP_0_48:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 48
 ; CHECK-NEXT:    [[GEP_ARR_16:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 16
 ; CHECK-NEXT:    [[GEP_ARR_48:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 48
-; CHECK-NEXT:    [[LOAD_0_16:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[GEP_0_16]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
-; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0_16]], ptr nonnull [[GEP_ARR_16]], i32 1, <vscale x 4 x i1> [[MASK]])
-; CHECK-NEXT:    [[LOAD_0_48:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[GEP_0_48]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
-; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0_48]], ptr nonnull [[GEP_ARR_48]], i32 1, <vscale x 4 x i1> [[MASK]])
-; CHECK-NEXT:    [[FADDOP0:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[GEP_ARR_16]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
-; CHECK-NEXT:    [[FADDOP1:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[GEP_ARR_48]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    [[LOAD_0_16:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[GEP_0_16]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0_16]], ptr align 1 [[GEP_ARR_16]], <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    [[LOAD_0_48:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[GEP_0_48]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0_48]], ptr align 1 [[GEP_ARR_48]], <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    [[FADDOP0:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[GEP_ARR_16]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    [[FADDOP1:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[GEP_ARR_48]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
 ; CHECK-NEXT:    [[FADD:%.*]] = fadd <vscale x 4 x float> [[FADDOP0]], [[FADDOP1]]
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[FADD]]
 ;
@@ -54,12 +54,12 @@ define <4 x float> @dead_scalable_store_fixed(ptr %0) {
 ; CHECK-NEXT:    [[GEP_0_48:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 48
 ; CHECK-NEXT:    [[GEP_ARR_16:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 16
 ; CHECK-NEXT:    [[GEP_ARR_48:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 48
-; CHECK-NEXT:    [[LOAD_0_16:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr nonnull [[GEP_0_16]], i32 1, <4 x i1> [[MASK]], <4 x float> zeroinitializer)
-; CHECK-NEXT:    call void @llvm.masked.store.v4f32.p0(<4 x float> [[LOAD_0_16]], ptr nonnull [[GEP_ARR_16]], i32 1, <4 x i1> [[MASK]])
-; CHECK-NEXT:    [[LOAD_0_48:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr nonnull [[GEP_0_48]], i32 1, <4 x i1> [[MASK]], <4 x float> zeroinitializer)
-; CHECK-NEXT:    call void @llvm.masked.store.v4f32.p0(<4 x float> [[LOAD_0_48]], ptr nonnull [[GEP_ARR_48]], i32 1, <4 x i1> [[MASK]])
-; CHECK-NEXT:    [[FADDOP0:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr nonnull [[GEP_ARR_16]], i32 1, <4 x i1> [[MASK]], <4 x float> zeroinitializer)
-; CHECK-NEXT:    [[FADDOP1:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr nonnull [[GEP_ARR_48]], i32 1, <4 x i1> [[MASK]], <4 x float> zeroinitializer)
+; CHECK-NEXT:    [[LOAD_0_16:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 1 [[GEP_0_16]], <4 x i1> [[MASK]], <4 x float> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.v4f32.p0(<4 x float> [[LOAD_0_16]], ptr align 1 [[GEP_ARR_16]], <4 x i1> [[MASK]])
+; CHECK-NEXT:    [[LOAD_0_48:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 1 [[GEP_0_48]], <4 x i1> [[MASK]], <4 x float> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.v4f32.p0(<4 x float> [[LOAD_0_48]], ptr align 1 [[GEP_ARR_48]], <4 x i1> [[MASK]])
+; CHECK-NEXT:    [[FADDOP0:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 1 [[GEP_ARR_16]], <4 x i1> [[MASK]], <4 x float> zeroinitializer)
+; CHECK-NEXT:    [[FADDOP1:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 1 [[GEP_ARR_48]], <4 x i1> [[MASK]], <4 x float> zeroinitializer)
 ; CHECK-NEXT:    [[FADD:%.*]] = fadd <4 x float> [[FADDOP0]], [[FADDOP1]]
 ; CHECK-NEXT:    ret <4 x float> [[FADD]]
 ;
@@ -101,14 +101,14 @@ define <vscale x 4 x float> @scalable_store_partial_overwrite(ptr %0) {
 ; CHECK-NEXT:    [[GEP_ARR_16:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 16
 ; CHECK-NEXT:    [[GEP_ARR_30:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 30
 ; CHECK-NEXT:    [[GEP_ARR_48:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 48
-; CHECK-NEXT:    [[LOAD_0_16:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[GEP_0_16]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
-; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0_16]], ptr nonnull [[GEP_ARR_16]], i32 1, <vscale x 4 x i1> [[MASK]])
-; CHECK-NEXT:    [[LOAD_0_30:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[GEP_0_30]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
-; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0_30]], ptr nonnull [[GEP_ARR_30]], i32 1, <vscale x 4 x i1> [[MASK]])
-; CHECK-NEXT:    [[LOAD_0_48:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[GEP_0_48]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
-; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0_48]], ptr nonnull [[GEP_ARR_48]], i32 1, <vscale x 4 x i1> [[MASK]])
-; CHECK-NEXT:    [[FADDOP0:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[GEP_ARR_16]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
-; CHECK-NEXT:    [[FADDOP1:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[GEP_ARR_48]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    [[LOAD_0_16:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[GEP_0_16]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0_16]], ptr align 1 [[GEP_ARR_16]], <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    [[LOAD_0_30:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[GEP_0_30]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0_30]], ptr align 1 [[GEP_ARR_30]], <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    [[LOAD_0_48:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[GEP_0_48]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0_48]], ptr align 1 [[GEP_ARR_48]], <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    [[FADDOP0:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[GEP_ARR_16]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    [[FADDOP1:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[GEP_ARR_48]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
 ; CHECK-NEXT:    [[FADD:%.*]] = fadd <vscale x 4 x float> [[FADDOP0]], [[FADDOP1]]
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[FADD]]
 ;
@@ -147,13 +147,13 @@ define <vscale x 4 x float> @dead_scalable_store_small_mask(ptr %0) {
 ; CHECK-NEXT:    [[GEP_0_46:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 46
 ; CHECK-NEXT:    [[GEP_ARR_16:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 16
 ; CHECK-NEXT:    [[GEP_ARR_46:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 46
-; CHECK-NEXT:    [[LOAD_0_16:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[GEP_0_16]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
-; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0_16]], ptr nonnull [[GEP_ARR_16]], i32 1, <vscale x 4 x i1> [[MASK]])
-; CHECK-NEXT:    [[LOAD_0_46:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[GEP_0_46]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
-; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0_46]], ptr nonnull [[GEP_ARR_46]], i32 1, <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    [[LOAD_0_16:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[GEP_0_16]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0_16]], ptr align 1 [[GEP_ARR_16]], <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    [[LOAD_0_46:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[GEP_0_46]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0_46]], ptr align 1 [[GEP_ARR_46]], <vscale x 4 x i1> [[MASK]])
 ; CHECK-NEXT:    [[SMALLMASK:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 2)
-; CHECK-NEXT:    [[FADDOP0:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[GEP_ARR_16]], i32 1, <vscale x 4 x i1> [[SMALLMASK]], <vscale x 4 x float> zeroinitializer)
-; CHECK-NEXT:    [[FADDOP1:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[GEP_ARR_46]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    [[FADDOP0:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[GEP_ARR_16]], <vscale x 4 x i1> [[SMALLMASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    [[FADDOP1:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[GEP_ARR_46]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
 ; CHECK-NEXT:    [[FADD:%.*]] = fadd <vscale x 4 x float> [[FADDOP0]], [[FADDOP1]]
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[FADD]]
 ;
@@ -188,9 +188,9 @@ define <vscale x 4 x float> @dead_scalar_store(ptr noalias %0, ptr %1) {
 ; CHECK-LABEL: define <vscale x 4 x float> @dead_scalar_store(
 ; CHECK-SAME: ptr noalias [[TMP0:%.*]], ptr [[TMP1:%.*]]) {
 ; CHECK-NEXT:    [[MASK:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i128(i128 0, i128 4)
-; CHECK-NEXT:    [[LOAD_0:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[TMP0]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
-; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0]], ptr nonnull [[TMP1]], i32 1, <vscale x 4 x i1> [[MASK]])
-; CHECK-NEXT:    [[RETVAL:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[TMP1]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    [[LOAD_0:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[TMP0]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0]], ptr align 1 [[TMP1]], <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    [[RETVAL:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[TMP1]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[RETVAL]]
 ;
   %mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i128(i128 0, i128 4)
@@ -210,9 +210,9 @@ define <4 x float> @dead_scalable_store_fixed_large_mask(ptr noalias %0, ptr %1)
 ; CHECK-NEXT:    [[MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 0, i32 7)
 ; CHECK-NEXT:    [[GEP_5:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i64 5
 ; CHECK-NEXT:    store i32 50, ptr [[GEP_5]], align 4
-; CHECK-NEXT:    [[LOAD_0:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr nonnull [[TMP0]], i32 1, <4 x i1> [[MASK]], <4 x float> zeroinitializer)
-; CHECK-NEXT:    call void @llvm.masked.store.v4f32.p0(<4 x float> [[LOAD_0]], ptr nonnull [[TMP1]], i32 1, <4 x i1> [[MASK]])
-; CHECK-NEXT:    [[RETVAL:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr nonnull [[TMP1]], i32 1, <4 x i1> [[MASK]], <4 x float> zeroinitializer)
+; CHECK-NEXT:    [[LOAD_0:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 1 [[TMP0]], <4 x i1> [[MASK]], <4 x float> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.v4f32.p0(<4 x float> [[LOAD_0]], ptr align 1 [[TMP1]], <4 x i1> [[MASK]])
+; CHECK-NEXT:    [[RETVAL:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 1 [[TMP1]], <4 x i1> [[MASK]], <4 x float> zeroinitializer)
 ; CHECK-NEXT:    ret <4 x float> [[RETVAL]]
 ;
   %mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 0, i32 7)
@@ -237,9 +237,9 @@ define <vscale x 4 x float> @mask_gt_minimum_num_elts(ptr noalias %0, ptr %1) {
 ; CHECK-NEXT:    store i32 10, ptr [[GEP_1_12]], align 4
 ; CHECK-NEXT:    [[GEP_1_28:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 28
 ; CHECK-NEXT:    store i32 20, ptr [[GEP_1_28]], align 4
-; CHECK-NEXT:    [[LOAD_0:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[TMP0]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
-; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0]], ptr nonnull [[TMP1]], i32 1, <vscale x 4 x i1> [[MASK]])
-; CHECK-NEXT:    [[RETVAL:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[TMP1]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    [[LOAD_0:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[TMP0]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0]], ptr align 1 [[TMP1]], <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    [[RETVAL:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[TMP1]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[RETVAL]]
 ;
   %mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 8)
@@ -260,9 +260,9 @@ define <vscale x 4 x float> @active_lane_mask_lt(ptr noalias %0, ptr %1) {
 ; CHECK-SAME: ptr noalias [[TMP0:%.*]], ptr [[TMP1:%.*]]) {
 ; CHECK-NEXT:    [[MASK:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 4, i32 2)
 ; CHECK-NEXT:    store i32 20, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[LOAD_0:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[TMP0]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
-; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0]], ptr nonnull [[TMP1]], i32 1, <vscale x 4 x i1> [[MASK]])
-; CHECK-NEXT:    [[RETVAL:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[TMP1]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    [[LOAD_0:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[TMP0]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0]], ptr align 1 [[TMP1]], <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    [[RETVAL:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[TMP1]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[RETVAL]]
 ;
   %mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 4, i32 2)
@@ -280,9 +280,9 @@ define <vscale x 4 x float> @active_lane_mask_eq(ptr noalias %0, ptr %1) {
 ; CHECK-SAME: ptr noalias [[TMP0:%.*]], ptr [[TMP1:%.*]]) {
 ; CHECK-NEXT:    [[MASK:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 2, i32 2)
 ; CHECK-NEXT:    store i32 20, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[LOAD_0:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[TMP0]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
-; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0]], ptr nonnull [[TMP1]], i32 1, <vscale x 4 x i1> [[MASK]])
-; CHECK-NEXT:    [[RETVAL:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[TMP1]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    [[LOAD_0:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[TMP0]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0]], ptr align 1 [[TMP1]], <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    [[RETVAL:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[TMP1]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[RETVAL]]
 ;
   %mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 2, i32 2)
@@ -300,9 +300,9 @@ define <vscale x 16 x i8> @scalar_stores_small_mask(ptr noalias %0, ptr %1) {
 ; CHECK-NEXT:    [[MASK:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i8(i8 0, i8 7)
 ; CHECK-NEXT:    [[GEP_1_8:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 8
 ; CHECK-NEXT:    store i8 120, ptr [[GEP_1_8]], align 1
-; CHECK-NEXT:    [[LOAD_0:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr nonnull [[TMP0]], i32 1, <vscale x 16 x i1> [[MASK]], <vscale x 16 x i8> zeroinitializer)
-; CHECK-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[LOAD_0]], ptr [[TMP1]], i32 1, <vscale x 16 x i1> [[MASK]])
-; CHECK-NEXT:    [[RETVAL:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP1]], i32 1, <vscale x 16 x i1> [[MASK]], <vscale x 16 x i8> zeroinitializer)
+; CHECK-NEXT:    [[LOAD_0:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP0]], <vscale x 16 x i1> [[MASK]], <vscale x 16 x i8> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[LOAD_0]], ptr align 1 [[TMP1]], <vscale x 16 x i1> [[MASK]])
+; CHECK-NEXT:    [[RETVAL:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP1]], <vscale x 16 x i1> [[MASK]], <vscale x 16 x i8> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[RETVAL]]
 ;
   %mask = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i8.i8(i8 0, i8 7)
@@ -323,9 +323,9 @@ define <vscale x 4 x float> @dead_scalar_store_offset(ptr noalias %0, ptr %1) {
 ; CHECK-NEXT:    [[MASK:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 1, i32 4)
 ; CHECK-NEXT:    [[GEP_1_12:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 12
 ; CHECK-NEXT:    store i32 40, ptr [[GEP_1_12]], align 4
-; CHECK-NEXT:    [[LOAD_0:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[TMP0]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
-; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0]], ptr nonnull [[TMP1]], i32 1, <vscale x 4 x i1> [[MASK]])
-; CHECK-NEXT:    [[RETVAL:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull [[TMP1]], i32 1, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    [[LOAD_0:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[TMP0]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD_0]], ptr align 1 [[TMP1]], <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    [[RETVAL:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 1 [[TMP1]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[RETVAL]]
 ;
   %mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 1, i32 4)

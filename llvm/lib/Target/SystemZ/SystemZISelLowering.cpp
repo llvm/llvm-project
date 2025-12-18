@@ -92,7 +92,7 @@ static MachineOperand earlyUseOperand(MachineOperand Op) {
 
 SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
                                              const SystemZSubtarget &STI)
-    : TargetLowering(TM), Subtarget(STI) {
+    : TargetLowering(TM, STI), Subtarget(STI) {
   MVT PtrVT = MVT::getIntegerVT(TM.getPointerSizeInBits(0));
 
   auto *Regs = STI.getSpecialRegisters();
@@ -587,7 +587,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FSIN, VT, Expand);
       setOperationAction(ISD::FCOS, VT, Expand);
       setOperationAction(ISD::FSINCOS, VT, Expand);
-      setOperationAction(ISD::FREM, VT, Expand);
+      setOperationAction(ISD::FREM, VT, LibCall);
       setOperationAction(ISD::FPOW, VT, Expand);
 
       // Special treatment.
@@ -1714,7 +1714,7 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
     }
     if (Constraint[1] == '@') {
       if (StringRef("{@cc}").compare(Constraint) == 0)
-        return std::make_pair(0u, &SystemZ::GR32BitRegClass);
+        return std::make_pair(SystemZ::CC, &SystemZ::CCRRegClass);
     }
   }
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
@@ -1765,10 +1765,6 @@ SDValue SystemZTargetLowering::LowerAsmOutputForConstraint(
   if (OpInfo.ConstraintVT.isVector() || !OpInfo.ConstraintVT.isInteger() ||
       OpInfo.ConstraintVT.getSizeInBits() < 8)
     report_fatal_error("Glue output operand is of invalid type");
-
-  MachineFunction &MF = DAG.getMachineFunction();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  MRI.addLiveIn(SystemZ::CC);
 
   if (Glue.getNode()) {
     Glue = DAG.getCopyFromReg(Chain, DL, SystemZ::CC, MVT::i32, Glue);
@@ -1974,6 +1970,28 @@ SDValue SystemZTargetLowering::joinRegisterPartsIntoValue(
   return SDValue();
 }
 
+// The first part of a split stack argument is at index I in Args (and
+// ArgLocs). Return the type of a part and the number of them by reference.
+template <class ArgTy>
+static bool analyzeArgSplit(const SmallVectorImpl<ArgTy> &Args,
+                            SmallVector<CCValAssign, 16> &ArgLocs, unsigned I,
+                            MVT &PartVT, unsigned &NumParts) {
+  if (!Args[I].Flags.isSplit())
+    return false;
+  assert(I < ArgLocs.size() && ArgLocs.size() == Args.size() &&
+         "ArgLocs havoc.");
+  PartVT = ArgLocs[I].getValVT();
+  NumParts = 1;
+  for (unsigned PartIdx = I + 1;; ++PartIdx) {
+    assert(PartIdx != ArgLocs.size() && "SplitEnd not found.");
+    assert(ArgLocs[PartIdx].getValVT() == PartVT && "Unsupported split.");
+    ++NumParts;
+    if (Args[PartIdx].Flags.isSplitEnd())
+      break;
+  }
+  return true;
+}
+
 SDValue SystemZTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
@@ -2078,16 +2096,26 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
                                    MachinePointerInfo()));
       // If the original argument was split (e.g. i128), we need
       // to load all parts of it here (using the same address).
-      unsigned ArgIndex = Ins[I].OrigArgIndex;
-      assert (Ins[I].PartOffset == 0);
-      while (I + 1 != E && Ins[I + 1].OrigArgIndex == ArgIndex) {
-        CCValAssign &PartVA = ArgLocs[I + 1];
-        unsigned PartOffset = Ins[I + 1].PartOffset;
-        SDValue Address = DAG.getNode(ISD::ADD, DL, PtrVT, ArgValue,
-                                      DAG.getIntPtrConstant(PartOffset, DL));
-        InVals.push_back(DAG.getLoad(PartVA.getValVT(), DL, Chain, Address,
-                                     MachinePointerInfo()));
-        ++I;
+      MVT PartVT;
+      unsigned NumParts;
+      if (analyzeArgSplit(Ins, ArgLocs, I, PartVT, NumParts)) {
+        // TODO: It is strange that while LowerCallTo() sets the PartOffset
+        // relative to the first split part LowerArguments() sets the offset
+        // from the beginning of the struct. So with {i32, i256}, the
+        // PartOffset for the i256 parts are differently handled. Try to
+        // remove that difference and use PartOffset directly here (instead
+        // of SplitBaseOffs).
+        unsigned SplitBaseOffs = Ins[I].PartOffset;
+        for (unsigned PartIdx = 1; PartIdx < NumParts; ++PartIdx) {
+          ++I;
+          CCValAssign &PartVA = ArgLocs[I];
+          unsigned PartOffset = Ins[I].PartOffset - SplitBaseOffs;
+          SDValue Address = DAG.getNode(ISD::ADD, DL, PtrVT, ArgValue,
+                                        DAG.getIntPtrConstant(PartOffset, DL));
+          InVals.push_back(DAG.getLoad(PartVA.getValVT(), DL, Chain, Address,
+                                       MachinePointerInfo()));
+          assert(PartOffset && "Offset should be non-zero.");
+        }
       }
     } else
       InVals.push_back(convertLocVTToValVT(DAG, DL, VA, Chain, ArgValue));
@@ -2323,18 +2351,13 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     if (VA.getLocInfo() == CCValAssign::Indirect) {
       // Store the argument in a stack slot and pass its address.
-      unsigned ArgIndex = Outs[I].OrigArgIndex;
       EVT SlotVT;
-      if (I + 1 != E && Outs[I + 1].OrigArgIndex == ArgIndex) {
-        // Allocate the full stack space for a promoted (and split) argument.
-        Type *OrigArgType = CLI.Args[Outs[I].OrigArgIndex].Ty;
-        EVT OrigArgVT = getValueType(MF.getDataLayout(), OrigArgType);
-        MVT PartVT = getRegisterTypeForCallingConv(Ctx, CLI.CallConv, OrigArgVT);
-        unsigned N = getNumRegistersForCallingConv(Ctx, CLI.CallConv, OrigArgVT);
-        SlotVT = EVT::getIntegerVT(Ctx, PartVT.getSizeInBits() * N);
-      } else {
+      MVT PartVT;
+      unsigned NumParts = 1;
+      if (analyzeArgSplit(Outs, ArgLocs, I, PartVT, NumParts))
+        SlotVT = EVT::getIntegerVT(Ctx, PartVT.getSizeInBits() * NumParts);
+      else
         SlotVT = Outs[I].VT;
-      }
       SDValue SpillSlot = DAG.CreateStackTemporary(SlotVT);
       int FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
       MemOpChains.push_back(
@@ -2342,18 +2365,19 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
                        MachinePointerInfo::getFixedStack(MF, FI)));
       // If the original argument was split (e.g. i128), we need
       // to store all parts of it here (and pass just one address).
-      assert (Outs[I].PartOffset == 0);
-      while (I + 1 != E && Outs[I + 1].OrigArgIndex == ArgIndex) {
-        SDValue PartValue = OutVals[I + 1];
-        unsigned PartOffset = Outs[I + 1].PartOffset;
+      assert(Outs[I].PartOffset == 0);
+      for (unsigned PartIdx = 1; PartIdx < NumParts; ++PartIdx) {
+        ++I;
+        SDValue PartValue = OutVals[I];
+        unsigned PartOffset = Outs[I].PartOffset;
         SDValue Address = DAG.getNode(ISD::ADD, DL, PtrVT, SpillSlot,
                                       DAG.getIntPtrConstant(PartOffset, DL));
         MemOpChains.push_back(
             DAG.getStore(Chain, DL, PartValue, Address,
                          MachinePointerInfo::getFixedStack(MF, FI)));
+        assert(PartOffset && "Offset should be non-zero.");
         assert((PartOffset + PartValue.getValueType().getStoreSize() <=
                 SlotVT.getStoreSize()) && "Not enough space for argument part!");
-        ++I;
       }
       ArgValue = SpillSlot;
     } else
@@ -2538,7 +2562,7 @@ bool SystemZTargetLowering::CanLowerReturn(
   // Special case that we cannot easily detect in RetCC_SystemZ since
   // i128 may not be a legal type.
   for (auto &Out : Outs)
-    if (Out.ArgVT == MVT::i128)
+    if (Out.ArgVT.isScalarInteger() && Out.ArgVT.getSizeInBits() > 64)
       return false;
 
   SmallVector<CCValAssign, 16> RetLocs;
@@ -7427,153 +7451,6 @@ SystemZTargetLowering::ReplaceNodeResults(SDNode *N,
   return LowerOperationWrapper(N, Results, DAG);
 }
 
-const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
-#define OPCODE(NAME) case SystemZISD::NAME: return "SystemZISD::" #NAME
-  switch ((SystemZISD::NodeType)Opcode) {
-    case SystemZISD::FIRST_NUMBER: break;
-    OPCODE(RET_GLUE);
-    OPCODE(CALL);
-    OPCODE(SIBCALL);
-    OPCODE(TLS_GDCALL);
-    OPCODE(TLS_LDCALL);
-    OPCODE(PCREL_WRAPPER);
-    OPCODE(PCREL_OFFSET);
-    OPCODE(ICMP);
-    OPCODE(FCMP);
-    OPCODE(STRICT_FCMP);
-    OPCODE(STRICT_FCMPS);
-    OPCODE(TM);
-    OPCODE(BR_CCMASK);
-    OPCODE(SELECT_CCMASK);
-    OPCODE(ADJDYNALLOC);
-    OPCODE(PROBED_ALLOCA);
-    OPCODE(POPCNT);
-    OPCODE(SMUL_LOHI);
-    OPCODE(UMUL_LOHI);
-    OPCODE(SDIVREM);
-    OPCODE(UDIVREM);
-    OPCODE(SADDO);
-    OPCODE(SSUBO);
-    OPCODE(UADDO);
-    OPCODE(USUBO);
-    OPCODE(ADDCARRY);
-    OPCODE(SUBCARRY);
-    OPCODE(GET_CCMASK);
-    OPCODE(MVC);
-    OPCODE(NC);
-    OPCODE(OC);
-    OPCODE(XC);
-    OPCODE(CLC);
-    OPCODE(MEMSET_MVC);
-    OPCODE(STPCPY);
-    OPCODE(STRCMP);
-    OPCODE(SEARCH_STRING);
-    OPCODE(IPM);
-    OPCODE(TBEGIN);
-    OPCODE(TBEGIN_NOFLOAT);
-    OPCODE(TEND);
-    OPCODE(BYTE_MASK);
-    OPCODE(ROTATE_MASK);
-    OPCODE(REPLICATE);
-    OPCODE(JOIN_DWORDS);
-    OPCODE(SPLAT);
-    OPCODE(MERGE_HIGH);
-    OPCODE(MERGE_LOW);
-    OPCODE(SHL_DOUBLE);
-    OPCODE(PERMUTE_DWORDS);
-    OPCODE(PERMUTE);
-    OPCODE(PACK);
-    OPCODE(PACKS_CC);
-    OPCODE(PACKLS_CC);
-    OPCODE(UNPACK_HIGH);
-    OPCODE(UNPACKL_HIGH);
-    OPCODE(UNPACK_LOW);
-    OPCODE(UNPACKL_LOW);
-    OPCODE(VSHL_BY_SCALAR);
-    OPCODE(VSRL_BY_SCALAR);
-    OPCODE(VSRA_BY_SCALAR);
-    OPCODE(VROTL_BY_SCALAR);
-    OPCODE(SHL_DOUBLE_BIT);
-    OPCODE(SHR_DOUBLE_BIT);
-    OPCODE(VSUM);
-    OPCODE(VACC);
-    OPCODE(VSCBI);
-    OPCODE(VAC);
-    OPCODE(VSBI);
-    OPCODE(VACCC);
-    OPCODE(VSBCBI);
-    OPCODE(VMAH);
-    OPCODE(VMALH);
-    OPCODE(VME);
-    OPCODE(VMLE);
-    OPCODE(VMO);
-    OPCODE(VMLO);
-    OPCODE(VICMPE);
-    OPCODE(VICMPH);
-    OPCODE(VICMPHL);
-    OPCODE(VICMPES);
-    OPCODE(VICMPHS);
-    OPCODE(VICMPHLS);
-    OPCODE(VFCMPE);
-    OPCODE(STRICT_VFCMPE);
-    OPCODE(STRICT_VFCMPES);
-    OPCODE(VFCMPH);
-    OPCODE(STRICT_VFCMPH);
-    OPCODE(STRICT_VFCMPHS);
-    OPCODE(VFCMPHE);
-    OPCODE(STRICT_VFCMPHE);
-    OPCODE(STRICT_VFCMPHES);
-    OPCODE(VFCMPES);
-    OPCODE(VFCMPHS);
-    OPCODE(VFCMPHES);
-    OPCODE(VFTCI);
-    OPCODE(VEXTEND);
-    OPCODE(STRICT_VEXTEND);
-    OPCODE(VROUND);
-    OPCODE(STRICT_VROUND);
-    OPCODE(VTM);
-    OPCODE(SCMP128HI);
-    OPCODE(UCMP128HI);
-    OPCODE(VFAE_CC);
-    OPCODE(VFAEZ_CC);
-    OPCODE(VFEE_CC);
-    OPCODE(VFEEZ_CC);
-    OPCODE(VFENE_CC);
-    OPCODE(VFENEZ_CC);
-    OPCODE(VISTR_CC);
-    OPCODE(VSTRC_CC);
-    OPCODE(VSTRCZ_CC);
-    OPCODE(VSTRS_CC);
-    OPCODE(VSTRSZ_CC);
-    OPCODE(TDC);
-    OPCODE(ATOMIC_SWAPW);
-    OPCODE(ATOMIC_LOADW_ADD);
-    OPCODE(ATOMIC_LOADW_SUB);
-    OPCODE(ATOMIC_LOADW_AND);
-    OPCODE(ATOMIC_LOADW_OR);
-    OPCODE(ATOMIC_LOADW_XOR);
-    OPCODE(ATOMIC_LOADW_NAND);
-    OPCODE(ATOMIC_LOADW_MIN);
-    OPCODE(ATOMIC_LOADW_MAX);
-    OPCODE(ATOMIC_LOADW_UMIN);
-    OPCODE(ATOMIC_LOADW_UMAX);
-    OPCODE(ATOMIC_CMP_SWAPW);
-    OPCODE(ATOMIC_CMP_SWAP);
-    OPCODE(ATOMIC_LOAD_128);
-    OPCODE(ATOMIC_STORE_128);
-    OPCODE(ATOMIC_CMP_SWAP_128);
-    OPCODE(LRV);
-    OPCODE(STRV);
-    OPCODE(VLER);
-    OPCODE(VSTER);
-    OPCODE(STCKF);
-    OPCODE(PREFETCH);
-    OPCODE(ADA_ENTRY);
-  }
-  return nullptr;
-#undef OPCODE
-}
-
 // Return true if VT is a vector whose elements are a whole number of bytes
 // in width. Also check for presence of vector support.
 bool SystemZTargetLowering::canTreatAsByteVector(EVT VT) const {
@@ -8824,14 +8701,16 @@ SmallVector<SDValue, 4> static simplifyAssumingCCVal(SDValue &Val, SDValue &CC,
 
     int CCValidVal = CCValid->getZExtValue();
     int CCMaskVal = CCMask->getZExtValue();
-    const auto &&TrueSDVals = simplifyAssumingCCVal(TrueVal, CC, DAG);
-    const auto &&FalseSDVals = simplifyAssumingCCVal(FalseVal, CC, DAG);
-    if (TrueSDVals.empty() || FalseSDVals.empty())
-      return {};
+    // Pruning search tree early - Moving CC test and combineCCMask ahead of
+    // recursive call to simplifyAssumingCCVal.
     SDValue Op4CCReg = Val.getOperand(4);
     if (Op4CCReg != CC)
       combineCCMask(Op4CCReg, CCValidVal, CCMaskVal, DAG);
     if (Op4CCReg != CC)
+      return {};
+    const auto &&TrueSDVals = simplifyAssumingCCVal(TrueVal, CC, DAG);
+    const auto &&FalseSDVals = simplifyAssumingCCVal(FalseVal, CC, DAG);
+    if (TrueSDVals.empty() || FalseSDVals.empty())
       return {};
     SmallVector<SDValue, 4> MergedSDVals;
     for (auto &CCVal : {0, 1, 2, 3})
@@ -8977,8 +8856,7 @@ SystemZTargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
         if (const auto *CB = dyn_cast<CallBase>(RHSVal)) {
           if (CB->isInlineAsm()) {
             const InlineAsm *IA = cast<InlineAsm>(CB->getCalledOperand());
-            return IA &&
-                   IA->getConstraintString().find("{@cc}") != std::string::npos;
+            return IA && IA->getConstraintString().contains("{@cc}");
           }
         }
       }
@@ -9009,7 +8887,12 @@ SDValue SystemZTargetLowering::combineBR_CCMASK(SDNode *N,
   int CCMaskVal = CCMask->getZExtValue();
   SDValue Chain = N->getOperand(0);
   SDValue CCReg = N->getOperand(4);
-  if (combineCCMask(CCReg, CCValidVal, CCMaskVal, DAG))
+  // If combineCMask was able to merge or simplify ccvalid or ccmask, re-emit
+  // the modified BR_CCMASK with the new values.
+  // In order to avoid conditional branches with full or empty cc masks, do not
+  // do this if ccmask is 0 or equal to ccvalid.
+  if (combineCCMask(CCReg, CCValidVal, CCMaskVal, DAG) && CCMaskVal != 0 &&
+      CCMaskVal != CCValidVal)
     return DAG.getNode(SystemZISD::BR_CCMASK, SDLoc(N), N->getValueType(0),
                        Chain,
                        DAG.getTargetConstant(CCValidVal, SDLoc(N), MVT::i32),
@@ -9096,6 +8979,13 @@ SDValue SystemZTargetLowering::combineSELECT_CCMASK(
       IsCombinedCCReg = true;
     }
   }
+  // If the condition is trivially false or trivially true after
+  // combineCCMask, just collapse this SELECT_CCMASK to the indicated value
+  // (possibly modified by constructCCSDValsFromSELECT).
+  if (CCMaskVal == 0)
+    return FalseVal;
+  if (CCMaskVal == CCValidVal)
+    return TrueVal;
 
   if (IsCombinedCCReg)
     return DAG.getNode(

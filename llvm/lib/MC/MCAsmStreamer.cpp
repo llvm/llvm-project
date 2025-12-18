@@ -295,7 +295,7 @@ public:
                              unsigned Flags, unsigned Isa,
                              unsigned Discriminator, StringRef FileName,
                              StringRef Location = {}) override;
-  virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) override;
+  void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) override;
 
   MCSymbol *getDwarfLineTableSymbol(unsigned CUID) override;
 
@@ -2452,7 +2452,7 @@ void MCAsmStreamer::emitInstruction(const MCInst &Inst,
 
   // Show the MCInst if enabled.
   if (ShowInst) {
-    Inst.dump_pretty(getCommentOS(), InstPrinter.get(), "\n ");
+    Inst.dump_pretty(getCommentOS(), InstPrinter.get(), "\n ", &getContext());
     getCommentOS() << "\n";
   }
 

@@ -1441,6 +1441,24 @@ void main() { Feeder<int>{}.feed<Cat<int>>(); }
 
 }
 
+namespace case9 {
+
+template <typename>
+concept a = requires { requires true; };
+template <typename T>
+concept b = a<typename T::EntitySpec>;
+template <typename T>
+concept c = requires { b<T>; };
+template <typename T>
+  requires c<T>
+struct s;
+template <typename> constexpr bool f() { return true; }
+template <typename T> constexpr bool d = f<T>();
+struct s2;
+static_assert(d<s<s2>>);
+
+}
+
 }
 
 namespace GH162125 {
@@ -1555,3 +1573,133 @@ namespace GH162770 {
   template<typename... Ts> auto comma = (..., Ts());
   auto b = comma<check<e{}>>;
 } // namespace GH162770
+
+namespace GH164750 {
+
+template <typename>
+struct a;
+template <typename>
+struct b;
+
+template <template <typename> typename c, typename d, typename>
+concept e = !__is_convertible_to(c<d>*, b<d>*);
+
+template <typename...>
+struct f;
+template <typename g, typename... h>
+struct f<g, h...> {
+    g i;
+};
+
+template <typename, typename>
+struct u;
+template <typename j, template <typename> typename k, typename l>
+    requires e<k, j, l>
+struct u<const k<j>*, l> {
+    u(const a<j>*);
+};
+template <typename j, template <typename> typename k, typename l>
+struct u<const k<j>*, l> {
+    u(const b<j>*);
+};
+
+template <typename>
+struct m;
+template <typename n, typename... o>
+struct m<n (*)(o...)> {
+    template <template <typename> typename j>
+    using p = j<o...>;
+};
+
+template <typename q, typename r>
+struct s {
+    template <typename... p>
+    struct D {
+        using v = f<u<r, p>...>;
+    };
+    template <typename... t>
+    s(t... p1) : x(p1...) {}
+    m<q>::template p<D>::v x;
+};
+template <typename w, typename... t>
+void fn1(w, t... p2) {
+    s<w, t...>(p2...);
+}
+int* fn2(int) { return nullptr; }
+void fn3() {
+    fn1(fn2, static_cast<const a<int>*>(nullptr));
+    fn1(fn2, static_cast<const b<int>*>(nullptr));
+}
+
+}
+
+namespace GH165238 {
+
+namespace std {
+template <typename, typename _Tp>
+concept output_iterator = requires(_Tp __t) { __t; };
+template <typename _Out> struct basic_format_context {
+  static_assert(output_iterator<_Out, int>);
+  using char_type = _Out;
+};
+template <typename> class basic_format_parse_context;
+template <typename, typename _Context, typename _Formatter,
+          typename = basic_format_parse_context<typename _Context::char_type>>
+concept __parsable_with = requires(_Formatter __f) { __f; };
+template <typename _Tp, typename _CharT,
+          typename _Context = basic_format_context<_CharT>>
+concept __formattable_impl = __parsable_with<_Tp, _Context, _Context>;
+template <typename _Tp, typename _CharT>
+concept formattable = __formattable_impl<_Tp, _CharT>;
+} // namespace std
+struct {
+  void operator()(std::formattable<char> auto);
+} call;
+void foo() { call(""); }
+
+}
+
+namespace GH170856 {
+
+template <unsigned N, unsigned M> struct symbol_text {
+  consteval symbol_text(const char txt[]) {}
+};
+template <unsigned N> symbol_text(const char (&)[N]) -> symbol_text<1, 1>;
+struct quantity_spec_interface_base {};
+template <symbol_text, auto...> struct named_unit;
+struct quantity_spec_interface : quantity_spec_interface_base {};
+struct : quantity_spec_interface {
+} thermodynamic_temperature;
+
+template <typename T>
+concept QuantitySpec = __is_convertible(T*, quantity_spec_interface_base*);
+template <typename, auto QS>
+concept QuantitySpecOf = QuantitySpec<decltype(QS)>;
+template <typename T, auto QS>
+concept PointOriginFor = QuantitySpecOf<decltype(QS), T::_quantity_spec_>;
+
+template <symbol_text Symbol, auto QS, auto PO>
+struct named_unit<Symbol, QS, PO> {
+  static constexpr auto _point_origin_ = PO;
+};
+template <auto QS> struct absolute_point_origin {
+  static constexpr auto _quantity_spec_ = QS;
+};
+template <auto> struct relative_point_origin {};
+template <class R>
+consteval PointOriginFor<R{}> auto default_point_origin(R) {
+  return R{}._point_origin_;
+}
+template <auto> class quantity_point;
+template <class R> struct point_ {
+  quantity_point<default_point_origin(R{})> operator0();
+};
+template <auto R> point_<decltype(R)> point;
+struct absolute_zero : absolute_point_origin<thermodynamic_temperature> {
+} absolute_zero;
+auto zeroth_kelvin = absolute_zero;
+struct : named_unit<"", thermodynamic_temperature, zeroth_kelvin> {
+} kelvin;
+struct ice_point : relative_point_origin<point<kelvin>> {};
+
+}

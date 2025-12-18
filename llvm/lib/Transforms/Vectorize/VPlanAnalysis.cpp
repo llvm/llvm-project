@@ -11,6 +11,7 @@
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanHelpers.h"
+#include "VPlanPatternMatch.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -19,6 +20,7 @@
 #include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
+using namespace VPlanPatternMatch;
 
 #define DEBUG_TYPE "vplan"
 
@@ -110,19 +112,18 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::AnyOf:
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
+  case VPInstruction::Unpack:
     return SetResultTyFromOp();
   case VPInstruction::ExtractLane:
     return inferScalarType(R->getOperand(1));
   case VPInstruction::FirstActiveLane:
+  case VPInstruction::LastActiveLane:
     return Type::getIntNTy(Ctx, 64);
-  case VPInstruction::ExtractLastElement:
-  case VPInstruction::ExtractLastLanePerPart:
-  case VPInstruction::ExtractPenultimateElement: {
-    Type *BaseTy = inferScalarType(R->getOperand(0));
-    if (auto *VecTy = dyn_cast<VectorType>(BaseTy))
-      return VecTy->getElementType();
-    return BaseTy;
-  }
+  case VPInstruction::ExtractLastLane:
+  case VPInstruction::ExtractPenultimateElement:
+    return inferScalarType(R->getOperand(0));
+  case VPInstruction::ExtractLastPart:
+    return inferScalarType(R->getOperand(0));
   case VPInstruction::LogicalAnd:
     assert(inferScalarType(R->getOperand(0))->isIntegerTy(1) &&
            inferScalarType(R->getOperand(1))->isIntegerTy(1) &&
@@ -131,6 +132,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::Broadcast:
   case VPInstruction::PtrAdd:
   case VPInstruction::WidePtrAdd:
+  case VPInstruction::Reverse:
     // Return the type based on first operand.
     return inferScalarType(R->getOperand(0));
   case VPInstruction::BranchOnCond:
@@ -287,10 +289,10 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
               [](const auto *R) { return R->getScalarType(); })
           .Case<VPReductionRecipe, VPPredInstPHIRecipe, VPWidenPHIRecipe,
                 VPScalarIVStepsRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
-                VPVectorEndPointerRecipe, VPWidenCanonicalIVRecipe,
-                VPPartialReductionRecipe>([this](const VPRecipeBase *R) {
-            return inferScalarType(R->getOperand(0));
-          })
+                VPVectorEndPointerRecipe, VPWidenCanonicalIVRecipe>(
+              [this](const VPRecipeBase *R) {
+                return inferScalarType(R->getOperand(0));
+              })
           // VPInstructionWithType must be handled before VPInstruction.
           .Case<VPInstructionWithType, VPWidenIntrinsicRecipe,
                 VPWidenCastRecipe>(
@@ -325,8 +327,7 @@ void llvm::collectEphemeralRecipesForVPlan(
            vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : *VPBB) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR || !match(RepR->getUnderlyingInstr(),
-                          PatternMatch::m_Intrinsic<Intrinsic::assume>()))
+      if (!RepR || !match(RepR, m_Intrinsic<Intrinsic::assume>()))
         continue;
       Worklist.push_back(RepR);
       EphRecipes.insert(RepR);
@@ -537,11 +538,14 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
       SmallMapVector<unsigned, unsigned, 4> RegUsage;
 
       for (auto *VPV : OpenIntervals) {
-        // Skip values that weren't present in the original loop.
-        // TODO: Remove after removing the legacy
+        // Skip artificial values or values that weren't present in the original
+        // loop.
+        // TODO: Remove skipping values that weren't present in the original
+        // loop after removing the legacy
         // LoopVectorizationCostModel::calculateRegisterUsage
         if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe,
-                VPBranchOnMaskRecipe>(VPV))
+                VPBranchOnMaskRecipe>(VPV) ||
+            match(VPV, m_ExtractLastPart(m_VPValue())))
           continue;
 
         if (VFs[J].isScalar() ||
@@ -560,11 +564,12 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
           // fewer lanes than the VF.
           unsigned ScaleFactor =
               vputils::getVFScaleFactor(VPV->getDefiningRecipe());
-          ElementCount VF = VFs[J].divideCoefficientBy(ScaleFactor);
-          LLVM_DEBUG(if (VF != VFs[J]) {
-            dbgs() << "LV(REG): Scaled down VF from " << VFs[J] << " to " << VF
-                   << " for " << *R << "\n";
-          });
+          ElementCount VF = VFs[J];
+          if (ScaleFactor > 1) {
+            VF = VFs[J].divideCoefficientBy(ScaleFactor);
+            LLVM_DEBUG(dbgs() << "LV(REG): Scaled down VF from " << VFs[J]
+                              << " to " << VF << " for " << *R << "\n";);
+          }
 
           Type *ScalarTy = TypeInfo.inferScalarType(VPV);
           unsigned ClassID = TTI.getRegisterClassForType(true, ScalarTy);

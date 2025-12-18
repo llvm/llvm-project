@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -27,6 +28,7 @@
 using namespace llvm;
 
 using testing::ElementsAre;
+using testing::ElementsAreArray;
 using testing::UnorderedElementsAre;
 
 namespace {
@@ -58,7 +60,7 @@ TEST(STLExtrasTest, EnumerateLValue) {
   // Test that a simple LValue can be enumerated and gives correct results with
   // multiple types, including the empty container.
   std::vector<char> foo = {'a', 'b', 'c'};
-  typedef std::pair<std::size_t, char> CharPairType;
+  using CharPairType = std::pair<std::size_t, char>;
   std::vector<CharPairType> CharResults;
 
   for (auto [index, value] : llvm::enumerate(foo)) {
@@ -70,7 +72,7 @@ TEST(STLExtrasTest, EnumerateLValue) {
                           CharPairType(2u, 'c')));
 
   // Test a const range of a different type.
-  typedef std::pair<std::size_t, int> IntPairType;
+  using IntPairType = std::pair<std::size_t, int>;
   std::vector<IntPairType> IntResults;
   const std::vector<int> bar = {1, 2, 3};
   for (auto [index, value] : llvm::enumerate(bar)) {
@@ -109,7 +111,7 @@ TEST(STLExtrasTest, EnumerateModifyLValue) {
 
 TEST(STLExtrasTest, EnumerateRValueRef) {
   // Test that an rvalue can be enumerated.
-  typedef std::pair<std::size_t, int> PairType;
+  using PairType = std::pair<std::size_t, int>;
   std::vector<PairType> Results;
 
   auto Enumerator = llvm::enumerate(std::vector<int>{1, 2, 3});
@@ -136,7 +138,7 @@ TEST(STLExtrasTest, EnumerateModifyRValue) {
   // Test that when enumerating an rvalue, modification still works (even if
   // this isn't terribly useful, it at least shows that we haven't snuck an
   // extra const in there somewhere.
-  typedef std::pair<std::size_t, char> PairType;
+  using PairType = std::pair<std::size_t, char>;
   std::vector<PairType> Results;
 
   for (auto X : llvm::enumerate(std::vector<char>{'1', '2', '3'})) {
@@ -699,6 +701,41 @@ TEST(STLExtrasTest, AppendValues) {
   EXPECT_THAT(Set, UnorderedElementsAre(1, 2, 3));
 }
 
+TEST(STLExtrasTest, AppendValuesReserve) {
+  // A vector wrapper that tracks reserve() calls.
+  struct TrackedVector : std::vector<int> {
+    using std::vector<int>::vector;
+    size_t LastReservedSize = 0;
+    unsigned ReserveCallCount = 0;
+
+    void reserve(size_t N) {
+      LastReservedSize = N;
+      ++ReserveCallCount;
+      std::vector<int>::reserve(N);
+    }
+  };
+
+  // When empty, reserve should be called.
+  TrackedVector Empty;
+  append_values(Empty, 1, 2, 3);
+  EXPECT_EQ(Empty.ReserveCallCount, 1u);
+  EXPECT_EQ(Empty.LastReservedSize, 3u);
+  EXPECT_THAT(Empty, ElementsAre(1, 2, 3));
+
+  // Appending more values to a now non-empty container should still not
+  // reserve.
+  append_values(Empty, 4, 5);
+  EXPECT_EQ(Empty.ReserveCallCount, 1u);
+  EXPECT_THAT(Empty, ElementsAre(1, 2, 3, 4, 5));
+
+  // When non-empty, reserve should NOT be called to avoid preventing
+  // exponential growth.
+  TrackedVector NonEmpty = {1, 2};
+  append_values(NonEmpty, 3, 4);
+  EXPECT_EQ(NonEmpty.ReserveCallCount, 0u);
+  EXPECT_THAT(NonEmpty, ElementsAre(1, 2, 3, 4));
+}
+
 TEST(STLExtrasTest, ADLTest) {
   some_namespace::some_struct s{{1, 2, 3, 4, 5}, ""};
   some_namespace::some_struct s2{{2, 4, 6, 8, 10}, ""};
@@ -772,48 +809,30 @@ TEST(STLExtrasTest, DropBeginTest) {
   SmallVector<int, 5> vec{0, 1, 2, 3, 4};
 
   for (int n = 0; n < 5; ++n) {
-    int i = n;
-    for (auto &v : drop_begin(vec, n)) {
-      EXPECT_EQ(v, i);
-      i += 1;
-    }
-    EXPECT_EQ(i, 5);
+    EXPECT_THAT(drop_begin(vec, n),
+                ElementsAreArray(ArrayRef(&vec[n], vec.size() - n)));
   }
 }
 
 TEST(STLExtrasTest, DropBeginDefaultTest) {
   SmallVector<int, 5> vec{0, 1, 2, 3, 4};
 
-  int i = 1;
-  for (auto &v : drop_begin(vec)) {
-    EXPECT_EQ(v, i);
-    i += 1;
-  }
-  EXPECT_EQ(i, 5);
+  EXPECT_THAT(drop_begin(vec), ElementsAre(1, 2, 3, 4));
 }
 
 TEST(STLExtrasTest, DropEndTest) {
   SmallVector<int, 5> vec{0, 1, 2, 3, 4};
 
   for (int n = 0; n < 5; ++n) {
-    int i = 0;
-    for (auto &v : drop_end(vec, n)) {
-      EXPECT_EQ(v, i);
-      i += 1;
-    }
-    EXPECT_EQ(i, 5 - n);
+    EXPECT_THAT(drop_end(vec, n),
+                ElementsAreArray(ArrayRef(vec.data(), vec.size() - n)));
   }
 }
 
 TEST(STLExtrasTest, DropEndDefaultTest) {
   SmallVector<int, 5> vec{0, 1, 2, 3, 4};
 
-  int i = 0;
-  for (auto &v : drop_end(vec)) {
-    EXPECT_EQ(v, i);
-    i += 1;
-  }
-  EXPECT_EQ(i, 4);
+  EXPECT_THAT(drop_end(vec), ElementsAre(0, 1, 2, 3));
 }
 
 TEST(STLExtrasTest, MapRangeTest) {
@@ -1239,6 +1258,25 @@ TEST(STLExtras, MoveRange) {
   llvm::move(Build(), std::back_inserter(V4));
   EXPECT_EQ(V4.size(), 4U);
   EXPECT_TRUE(llvm::all_of(V4, HasVal));
+}
+
+TEST(STLExtrasTest, AllOfAnyOfNoneOfConstexpr) {
+  // Verify constexpr evaluation works. Functional correctness is tested in
+  // runtime tests (e.g., MoveRange).
+  constexpr std::array<int, 3> Arr = {1, 2, 3};
+  static_assert(all_of(Arr, [](int X) { return X > 0; }));
+  static_assert(any_of(Arr, [](int X) { return X == 2; }));
+  static_assert(none_of(Arr, [](int X) { return X < 0; }));
+
+  // Verify constexpr works with C-style arrays.
+  constexpr int CArr[] = {1, 2};
+  static_assert(all_of(CArr, [](int X) { return X > 0; }));
+
+  // Verify empty range edge case.
+  constexpr std::array<int, 0> Empty = {};
+  static_assert(all_of(Empty, [](int) { return false; }));
+  static_assert(!any_of(Empty, [](int) { return true; }));
+  static_assert(none_of(Empty, [](int) { return true; }));
 }
 
 TEST(STLExtras, Unique) {
@@ -1707,6 +1745,30 @@ TEST(STLExtrasTest, ProductOf) {
   const std::vector<float> V3 = {1.0f, 2.0f};
   static_assert(std::is_same_v<decltype(product_of(V3)), float>);
   EXPECT_EQ(product_of(V3), 2.0f);
+}
+
+TEST(STLExtrasTest, ReverseConditionally) {
+  std::vector<char> foo = {'a', 'b', 'c'};
+
+  // Test backwards.
+  std::vector<char> ReverseResults;
+  for (char Value : llvm::reverse_conditionally(foo, /*ShouldReverse=*/true)) {
+    ReverseResults.emplace_back(Value);
+  }
+  EXPECT_THAT(ReverseResults, ElementsAre('c', 'b', 'a'));
+
+  // Test forwards.
+  std::vector<char> ForwardResults;
+  for (char Value : llvm::reverse_conditionally(foo, /*ShouldReverse=*/false)) {
+    ForwardResults.emplace_back(Value);
+  }
+  EXPECT_THAT(ForwardResults, ElementsAre('a', 'b', 'c'));
+
+  // Test modifying collection.
+  for (char &Value : llvm::reverse_conditionally(foo, /*ShouldReverse=*/true)) {
+    ++Value;
+  }
+  EXPECT_THAT(foo, ElementsAre('b', 'c', 'd'));
 }
 
 struct Foo;

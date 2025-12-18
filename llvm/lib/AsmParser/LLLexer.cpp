@@ -191,6 +191,8 @@ int LLLexer::getNextChar() {
 }
 
 lltok::Kind LLLexer::LexToken() {
+  // Set token end to next location, since the end is exclusive.
+  PrevTokEnd = CurPtr;
   while (true) {
     TokStart = CurPtr;
 
@@ -705,6 +707,8 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(write);
   KEYWORD(readwrite);
   KEYWORD(argmem);
+  KEYWORD(target_mem0);
+  KEYWORD(target_mem1);
   KEYWORD(inaccessiblemem);
   KEYWORD(errnomem);
   KEYWORD(argmemonly);
@@ -1003,6 +1007,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   DBGRECORDTYPEKEYWORD(declare);
   DBGRECORDTYPEKEYWORD(assign);
   DBGRECORDTYPEKEYWORD(label);
+  DBGRECORDTYPEKEYWORD(declare_value);
 #undef DBGRECORDTYPEKEYWORD
 
   if (Keyword.starts_with("DIFlag")) {

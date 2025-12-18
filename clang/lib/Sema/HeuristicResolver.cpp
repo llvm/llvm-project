@@ -450,7 +450,12 @@ QualType HeuristicResolverImpl::resolveExprToType(const Expr *E) {
   if (const auto *CE = dyn_cast<CallExpr>(E)) {
     if (QualType Resolved = resolveTypeOfCallExpr(CE); !Resolved.isNull())
       return Resolved;
+
+    // Don't proceed to try resolveExprToDecls(), it would just call
+    // resolveTypeOfCallExpr() again.
+    return E->getType();
   }
+
   // Similarly, unwrapping a unary dereference operation does not work via
   // resolveExprToDecls.
   if (const auto *UO = dyn_cast<UnaryOperator>(E->IgnoreParenCasts())) {

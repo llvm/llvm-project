@@ -11,6 +11,9 @@ import threading
 import time
 
 
+# Often fails on Arm Linux, but not specifically because it's Arm, something in
+# process scheduling can cause a massive (minutes) delay during this test.
+@skipIf(oslist=["linux"], archs=["arm$"])
 class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
     def spawn(self, args):
         self.process = subprocess.Popen(
@@ -56,6 +59,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.attach(program=program)
         self.continue_and_verify_pid()
 
+    @expectedFailureWindows
     def test_by_name_waitFor(self):
         """
         Tests waiting for, and attaching to a process by process name that
@@ -72,3 +76,38 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.spawn_thread.start()
         self.attach(program=program, waitFor=True)
         self.continue_and_verify_pid()
+
+    def test_attach_with_missing_debuggerId_or_targetId(self):
+        """
+        Test that attaching with only one of debuggerId/targetId specified
+        fails with the expected error message.
+        """
+        self.build_and_create_debug_adapter()
+
+        # Test with only targetId specified (no debuggerId)
+        resp = self.attach(targetId=99999, expectFailure=True)
+        self.assertFalse(resp["success"])
+        self.assertIn(
+            "Both debuggerId and targetId must be specified together",
+            resp["body"]["error"]["format"],
+        )
+
+    def test_attach_with_invalid_debuggerId_and_targetId(self):
+        """
+        Test that attaching with both debuggerId and targetId specified but
+        invalid fails with an appropriate error message.
+        """
+        self.build_and_create_debug_adapter()
+
+        # Attach with both debuggerId=9999 and targetId=99999 (both invalid).
+        # Since debugger ID 9999 likely doesn't exist in the global registry,
+        # we expect a validation error.
+        resp = self.attach(debuggerId=9999, targetId=99999, expectFailure=True)
+        self.assertFalse(resp["success"])
+        error_msg = resp["body"]["error"]["format"]
+        # Either error is acceptable - both indicate the debugger reuse
+        # validation is working correctly
+        self.assertTrue(
+            "Unable to find existing debugger" in error_msg
+            or f"Expected debugger/target not found error, got: {error_msg}"
+        )

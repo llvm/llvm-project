@@ -30,6 +30,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
@@ -60,10 +61,43 @@ private:
   /// is where the next operations will be introduced.
   CIRGenBuilderTy &builder;
 
+  /// A jump destination is an abstract label, branching to which may
+  /// require a jump out through normal cleanups.
+  struct JumpDest {
+    JumpDest() = default;
+    JumpDest(mlir::Block *block, EHScopeStack::stable_iterator depth = {},
+             unsigned index = 0)
+        : block(block) {}
+
+    bool isValid() const { return block != nullptr; }
+    mlir::Block *getBlock() const { return block; }
+    EHScopeStack::stable_iterator getScopeDepth() const { return scopeDepth; }
+    unsigned getDestIndex() const { return index; }
+
+    // This should be used cautiously.
+    void setScopeDepth(EHScopeStack::stable_iterator depth) {
+      scopeDepth = depth;
+    }
+
+  private:
+    mlir::Block *block = nullptr;
+    EHScopeStack::stable_iterator scopeDepth;
+    unsigned index;
+  };
+
 public:
   /// The GlobalDecl for the current function being compiled or the global
   /// variable currently being initialized.
   clang::GlobalDecl curGD;
+
+  /// Unified return block.
+  /// In CIR this is a function because each scope might have
+  /// its associated return block.
+  JumpDest returnBlock(mlir::Block *retBlock) {
+    return getJumpDestInCurrentScope(retBlock);
+  }
+
+  unsigned nextCleanupDestIndex = 1;
 
   /// The compiler-generated variable that holds the return value.
   std::optional<mlir::Value> fnRetAlloca;
@@ -86,6 +120,12 @@ public:
 
   /// Tracks function scope overall cleanup handling.
   EHScopeStack ehStack;
+
+  GlobalDecl curSEHParent;
+
+  /// A mapping from NRVO variables to the flags used to indicate
+  /// when the NRVO has been applied to this variable.
+  llvm::DenseMap<const VarDecl *, mlir::Value> nrvoFlags;
 
   llvm::DenseMap<const clang::ValueDecl *, clang::FieldDecl *>
       lambdaCaptureFields;
@@ -116,6 +156,9 @@ public:
   /// This is usually a cir::FuncOp, but it can also be a cir::GlobalOp for
   /// global initializers.
   mlir::Operation *curFn = nullptr;
+
+  /// Save Parameter Decl for coroutine.
+  llvm::SmallVector<const ParmVarDecl *> fnArgs;
 
   using DeclMapTy = llvm::DenseMap<const clang::Decl *, Address>;
   /// This keeps track of the CIR allocas or globals for local C
@@ -164,6 +207,22 @@ public:
     return convertType(getContext().getTypeDeclType(t));
   }
 
+  /// Get integer from a mlir::Value that is an int constant or a constant op.
+  static int64_t getSExtIntValueFromConstOp(mlir::Value val) {
+    auto constOp = val.getDefiningOp<cir::ConstantOp>();
+    assert(constOp && "getIntValueFromConstOp call with non ConstantOp");
+    return constOp.getIntValue().getSExtValue();
+  }
+
+  /// Get zero-extended integer from a mlir::Value that is an int constant or a
+  /// constant op.
+  static int64_t getZExtIntValueFromConstOp(mlir::Value val) {
+    auto constOp = val.getDefiningOp<cir::ConstantOp>();
+    assert(constOp &&
+           "getZeroExtendedIntValueFromConstOp call with non ConstantOp");
+    return constOp.getIntValue().getZExtValue();
+  }
+
   ///  Return the cir::TypeEvaluationKind of QualType \c type.
   static cir::TypeEvaluationKind getEvaluationKind(clang::QualType type);
 
@@ -183,6 +242,10 @@ public:
 
   const TargetInfo &getTarget() const { return cgm.getTarget(); }
   mlir::MLIRContext &getMLIRContext() { return cgm.getMLIRContext(); }
+
+  const TargetCIRGenInfo &getTargetHooks() const {
+    return cgm.getTargetCIRGenInfo();
+  }
 
   // ---------------------
   // Opaque value handling
@@ -455,12 +518,22 @@ public:
     VlaSizePair(mlir::Value num, QualType ty) : numElts(num), type(ty) {}
   };
 
+  /// Return the number of elements for a single dimension
+  /// for the given array type.
+  VlaSizePair getVLAElements1D(const VariableArrayType *vla);
+
   /// Returns an MLIR::Value+QualType pair that corresponds to the size,
   /// in non-variably-sized elements, of a variable length array type,
   /// plus that largest non-variably-sized element type.  Assumes that
   /// the type has already been emitted with emitVariablyModifiedType.
   VlaSizePair getVLASize(const VariableArrayType *type);
   VlaSizePair getVLASize(QualType type);
+
+  Address getAsNaturalAddressOf(Address addr, QualType pointeeTy);
+
+  mlir::Value getAsNaturalPointerTo(Address addr, QualType pointeeType) {
+    return getAsNaturalAddressOf(addr, pointeeType).getBasePointer();
+  }
 
   void finishFunction(SourceLocation endLoc);
 
@@ -481,6 +554,8 @@ public:
   /// this statement is not executed normally, it not containing a label means
   /// that we can just remove the code.
   bool containsLabel(const clang::Stmt *s, bool ignoreCaseStmts = false);
+
+  Address emitExtVectorElementLValue(LValue lv, mlir::Location loc);
 
   class ConstantEmission {
     // Cannot use mlir::TypedAttr directly here because of bit availability.
@@ -574,6 +649,24 @@ public:
     }
   };
 
+  /// The given basic block lies in the current EH scope, but may be a
+  /// target of a potentially scope-crossing jump; get a stable handle
+  /// to which we can perform this jump later.
+  /// CIRGen: this mostly tracks state for figuring out the proper scope
+  /// information, no actual branches are emitted.
+  JumpDest getJumpDestInCurrentScope(mlir::Block *target) {
+    return JumpDest(target, ehStack.getInnermostNormalCleanup(),
+                    nextCleanupDestIndex++);
+  }
+  /// IndirectBranch - The first time an indirect goto is seen we create a block
+  /// reserved for the indirect branch. Unlike before,the actual 'indirectbr'
+  /// is emitted at the end of the function, once all block destinations have
+  /// been resolved.
+  mlir::Block *indirectGotoBlock = nullptr;
+
+  void resolveBlockAddresses();
+  void finishIndirectBranch();
+
   /// Perform the usual unary conversions on the specified expression and
   /// compare the result against zero, returning an Int1Ty value.
   mlir::Value evaluateExprAsBool(const clang::Expr *e);
@@ -620,6 +713,12 @@ public:
     if (symbolTable.count(vd))
       return;
     symbolTable.insert(vd, addr.getPointer());
+  }
+
+  // Replaces the address of the local variable, if it exists.  Else does the
+  // same thing as setAddrOfLocalVar.
+  void replaceAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
+    localDeclMap.insert_or_assign(vd, addr);
   }
 
   // A class to allow reverting changes to a var-decl's registration to the
@@ -733,6 +832,11 @@ public:
     SourceLocExprScopeGuard sourceLocScope;
   };
 
+  struct CXXDefaultArgExprScope : SourceLocExprScopeGuard {
+    CXXDefaultArgExprScope(CIRGenFunction &cfg, const CXXDefaultArgExpr *e)
+        : SourceLocExprScopeGuard(e, cfg.curSourceLocExprScope) {}
+  };
+
   LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
   LValue makeNaturalAlignAddrLValue(mlir::Value val, QualType ty);
 
@@ -753,6 +857,11 @@ public:
       Address value, const CXXRecordDecl *derived,
       llvm::iterator_range<CastExpr::path_const_iterator> path,
       bool nullCheckValue, SourceLocation loc);
+
+  Address getAddressOfDerivedClass(
+      mlir::Location loc, Address baseAddr, const CXXRecordDecl *derived,
+      llvm::iterator_range<CastExpr::path_const_iterator> path,
+      bool nullCheckValue);
 
   /// Return the VTT parameter that should be passed to a base
   /// constructor/destructor with virtual bases.
@@ -845,6 +954,11 @@ public:
   clang::QualType buildFunctionArgList(clang::GlobalDecl gd,
                                        FunctionArgList &args);
 
+  /// Emit the function prologue: declare function arguments in the symbol
+  /// table.
+  void emitFunctionProlog(const FunctionArgList &args, mlir::Block *entryBB,
+                          const FunctionDecl *fd, SourceLocation bodyBeginLoc);
+
   /// Emit code for the start of a function.
   /// \param loc       The location to be associated with the function.
   /// \param startLoc  The location of the function body.
@@ -853,9 +967,23 @@ public:
                      FunctionArgList args, clang::SourceLocation loc,
                      clang::SourceLocation startLoc);
 
+  /// returns true if aggregate type has a volatile member.
+  bool hasVolatileMember(QualType t) {
+    if (const auto *rd = t->getAsRecordDecl())
+      return rd->hasVolatileMember();
+    return false;
+  }
+
+  void populateUnwindResumeBlock(bool isCleanup, cir::TryOp tryOp);
+  void populateEHCatchRegions(EHScopeStack::stable_iterator scope,
+                              cir::TryOp tryOp);
+
   /// The cleanup depth enclosing all the cleanups associated with the
   /// parameters.
   EHScopeStack::stable_iterator prologueCleanupDepth;
+
+  bool isCatchOrCleanupRequired();
+  void populateCatchHandlersIfRequired(cir::TryOp tryOp);
 
   /// Takes the old cleanup stack size and emits the cleanup blocks
   /// that have been added.
@@ -942,6 +1070,15 @@ public:
 
     LexicalScope *parentScope = nullptr;
 
+    // Holds the actual value for ScopeKind::Try
+    cir::TryOp tryOp = nullptr;
+
+    // On a coroutine body, the OnFallthrough sub stmt holds the handler
+    // (CoreturnStmt) for control flow falling off the body. Keep track
+    // of emitted co_return in this scope and allow OnFallthrough to be
+    // skipeed.
+    bool hasCoreturnStmt = false;
+
     // Only Regular is used at the moment. Support for other kinds will be
     // added as the relevant statements/expressions are upstreamed.
     enum Kind {
@@ -990,6 +1127,12 @@ public:
     }
 
     // ---
+    // Coroutine tracking
+    // ---
+    bool hasCoreturn() const { return hasCoreturnStmt; }
+    void setCoreturn() { hasCoreturnStmt = true; }
+
+    // ---
     // Kind
     // ---
     bool isGlobalInit() { return scopeKind == Kind::GlobalInit; }
@@ -997,10 +1140,14 @@ public:
     bool isSwitch() { return scopeKind == Kind::Switch; }
     bool isTernary() { return scopeKind == Kind::Ternary; }
     bool isTry() { return scopeKind == Kind::Try; }
-
+    cir::TryOp getClosestTryParent();
     void setAsGlobalInit() { scopeKind = Kind::GlobalInit; }
     void setAsSwitch() { scopeKind = Kind::Switch; }
     void setAsTernary() { scopeKind = Kind::Ternary; }
+    void setAsTry(cir::TryOp op) {
+      scopeKind = Kind::Try;
+      tryOp = op;
+    }
 
     // Lazy create cleanup block or return what's available.
     mlir::Block *getOrCreateCleanupBlock(mlir::OpBuilder &builder) {
@@ -1008,6 +1155,11 @@ public:
         return cleanupBlock;
       cleanupBlock = createCleanupBlock(builder);
       return cleanupBlock;
+    }
+
+    cir::TryOp getTry() {
+      assert(isTry());
+      return tryOp;
     }
 
     mlir::Block *getCleanupBlock(mlir::OpBuilder &builder) {
@@ -1028,44 +1180,69 @@ public:
     // ---
 
   private:
-    // `returnBlock`, `returnLoc`, and all the functions that deal with them
-    // will change and become more complicated when `switch` statements are
-    // upstreamed.  `case` statements within the `switch` are in the same scope
-    // but have their own regions.  Therefore the LexicalScope will need to
-    // keep track of multiple return blocks.
-    mlir::Block *returnBlock = nullptr;
-    std::optional<mlir::Location> returnLoc;
+    // On switches we need one return block per region, since cases don't
+    // have their own scopes but are distinct regions nonetheless.
 
-    // See the comment on `getOrCreateRetBlock`.
+    // TODO: This implementation should change once we have support for early
+    //       exits in MLIR structured control flow (llvm-project#161575)
+    llvm::SmallVector<mlir::Block *> retBlocks;
+    llvm::DenseMap<mlir::Block *, mlir::Location> retLocs;
+    llvm::DenseMap<cir::CaseOp, unsigned> retBlockInCaseIndex;
+    std::optional<unsigned> normalRetBlockIndex;
+
+    // There's usually only one ret block per scope, but this needs to be
+    // get or create because of potential unreachable return statements, note
+    // that for those, all source location maps to the first one found.
     mlir::Block *createRetBlock(CIRGenFunction &cgf, mlir::Location loc) {
-      assert(returnBlock == nullptr && "only one return block per scope");
-      // Create the cleanup block but don't hook it up just yet.
+      assert((isa_and_nonnull<cir::CaseOp>(
+                  cgf.builder.getBlock()->getParentOp()) ||
+              retBlocks.size() == 0) &&
+             "only switches can hold more than one ret block");
+
+      // Create the return block but don't hook it up just yet.
       mlir::OpBuilder::InsertionGuard guard(cgf.builder);
-      returnBlock =
-          cgf.builder.createBlock(cgf.builder.getBlock()->getParent());
-      updateRetLoc(returnBlock, loc);
-      return returnBlock;
+      auto *b = cgf.builder.createBlock(cgf.builder.getBlock()->getParent());
+      retBlocks.push_back(b);
+      updateRetLoc(b, loc);
+      return b;
     }
 
     cir::ReturnOp emitReturn(mlir::Location loc);
     void emitImplicitReturn();
 
   public:
-    mlir::Block *getRetBlock() { return returnBlock; }
-    mlir::Location getRetLoc(mlir::Block *b) { return *returnLoc; }
-    void updateRetLoc(mlir::Block *b, mlir::Location loc) { returnLoc = loc; }
+    llvm::ArrayRef<mlir::Block *> getRetBlocks() { return retBlocks; }
+    mlir::Location getRetLoc(mlir::Block *b) { return retLocs.at(b); }
+    void updateRetLoc(mlir::Block *b, mlir::Location loc) {
+      retLocs.insert_or_assign(b, loc);
+    }
 
-    // Create the return block for this scope, or return the existing one.
-    // This get-or-create logic is necessary to handle multiple return
-    // statements within the same scope, which can happen if some of them are
-    // dead code or if there is a `goto` into the middle of the scope.
     mlir::Block *getOrCreateRetBlock(CIRGenFunction &cgf, mlir::Location loc) {
-      if (returnBlock == nullptr) {
-        returnBlock = createRetBlock(cgf, loc);
-        return returnBlock;
+      // Check if we're inside a case region
+      if (auto caseOp = mlir::dyn_cast_if_present<cir::CaseOp>(
+              cgf.builder.getBlock()->getParentOp())) {
+        auto iter = retBlockInCaseIndex.find(caseOp);
+        if (iter != retBlockInCaseIndex.end()) {
+          // Reuse existing return block
+          mlir::Block *ret = retBlocks[iter->second];
+          updateRetLoc(ret, loc);
+          return ret;
+        }
+        // Create new return block
+        mlir::Block *ret = createRetBlock(cgf, loc);
+        retBlockInCaseIndex[caseOp] = retBlocks.size() - 1;
+        return ret;
       }
-      updateRetLoc(returnBlock, loc);
-      return returnBlock;
+
+      if (normalRetBlockIndex) {
+        mlir::Block *ret = retBlocks[*normalRetBlockIndex];
+        updateRetLoc(ret, loc);
+        return ret;
+      }
+
+      mlir::Block *ret = createRetBlock(cgf, loc);
+      normalRetBlockIndex = retBlocks.size() - 1;
+      return ret;
     }
 
     mlir::Block *getEntryBlock() { return entryBlock; }
@@ -1077,6 +1254,9 @@ public:
 
   static Destroyer destroyCXXObject;
 
+  void pushDestroy(QualType::DestructionKind dtorKind, Address addr,
+                   QualType type);
+
   void pushDestroy(CleanupKind kind, Address addr, QualType type,
                    Destroyer *destroyer);
 
@@ -1086,6 +1266,15 @@ public:
   /// CIR emit functions
   /// ----------------------
 public:
+  std::optional<mlir::Value>
+  emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
+                         ReturnValueSlot returnValue,
+                         llvm::Triple::ArchType arch);
+  std::optional<mlir::Value> emitAArch64SMEBuiltinExpr(unsigned builtinID,
+                                                       const CallExpr *expr);
+  std::optional<mlir::Value> emitAArch64SVEBuiltinExpr(unsigned builtinID,
+                                                       const CallExpr *expr);
+
   mlir::Value emitAlignmentAssumption(mlir::Value ptrValue, QualType ty,
                                       SourceLocation loc,
                                       SourceLocation assumptionLoc,
@@ -1131,14 +1320,16 @@ public:
   ///        occupied by some other object. More efficient code can often be
   ///        generated if not.
   void emitAggregateCopy(LValue dest, LValue src, QualType eltTy,
-                         AggValueSlot::Overlap_t mayOverlap);
+                         AggValueSlot::Overlap_t mayOverlap,
+                         bool isVolatile = false);
 
   /// Emit code to compute the specified expression which can have any type. The
   /// result is returned as an RValue struct. If this is an aggregate
   /// expression, the aggloc/agglocvolatile arguments indicate where the result
   /// should be returned.
   RValue emitAnyExpr(const clang::Expr *e,
-                     AggValueSlot aggSlot = AggValueSlot::ignored());
+                     AggValueSlot aggSlot = AggValueSlot::ignored(),
+                     bool ignoreResult = false);
 
   /// Emits the code necessary to evaluate an arbitrary expression into the
   /// given memory location.
@@ -1159,6 +1350,8 @@ public:
                               QualType &baseType, Address &addr);
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
 
+  LValue emitExtVectorElementExpr(const ExtVectorElementExpr *e);
+
   Address emitArrayToPointerDecay(const Expr *e,
                                   LValueBaseInfo *baseInfo = nullptr);
 
@@ -1166,6 +1359,9 @@ public:
 
   RValue emitAtomicExpr(AtomicExpr *e);
   void emitAtomicInit(Expr *init, LValue dest);
+  void emitAtomicStore(RValue rvalue, LValue dest, bool isInit);
+  void emitAtomicStore(RValue rvalue, LValue dest, cir::MemOrder order,
+                       bool isVolatile, bool isInit);
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
                                     mlir::OpBuilder::InsertPoint ip = {});
@@ -1192,10 +1388,38 @@ public:
 
   LValue emitBinaryOperatorLValue(const BinaryOperator *e);
 
+  cir::BrOp emitBranchThroughCleanup(mlir::Location loc, JumpDest dest);
+
   mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
 
   RValue emitBuiltinExpr(const clang::GlobalDecl &gd, unsigned builtinID,
                          const clang::CallExpr *e, ReturnValueSlot returnValue);
+
+  /// Returns a Value corresponding to the size of the given expression by
+  /// emitting a `cir.objsize` operation.
+  ///
+  /// \param e The expression whose object size to compute
+  /// \param type Determines the semantics of the object size computation.
+  ///   The type parameter is a 2-bit value where:
+  ///     bit 0 (type & 1): 0 = whole object, 1 = closest subobject
+  ///     bit 1 (type & 2): 0 = maximum size, 2 = minimum size
+  /// \param resType The result type for the size value
+  /// \param emittedE Optional pre-emitted pointer value. If non-null, we'll
+  ///   call `cir.objsize` on this value rather than emitting e.
+  /// \param isDynamic If true, allows runtime evaluation via dynamic mode
+  mlir::Value emitBuiltinObjectSize(const clang::Expr *e, unsigned type,
+                                    cir::IntType resType, mlir::Value emittedE,
+                                    bool isDynamic);
+
+  mlir::Value evaluateOrEmitBuiltinObjectSize(const clang::Expr *e,
+                                              unsigned type,
+                                              cir::IntType resType,
+                                              mlir::Value emittedE,
+                                              bool isDynamic);
+
+  int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
+
+  void instantiateIndirectGotoBlock();
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
@@ -1252,12 +1476,18 @@ public:
   mlir::LogicalResult emitCoroutineBody(const CoroutineBodyStmt &s);
   cir::CallOp emitCoroEndBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
   cir::CallOp emitCoroIDBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
+  cir::CallOp emitCoroAllocBuiltinCall(mlir::Location loc);
+  cir::CallOp emitCoroBeginBuiltinCall(mlir::Location loc,
+                                       mlir::Value coroframeAddr);
+  RValue emitCoroutineFrame();
 
   void emitDestroy(Address addr, QualType type, Destroyer *destroyer);
 
   void emitDestructorBody(FunctionArgList &args);
 
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
+
+  mlir::LogicalResult emitCoreturnStmt(const CoreturnStmt &s);
 
   void emitCXXConstructExpr(const clang::CXXConstructExpr *e,
                             AggValueSlot dest);
@@ -1299,6 +1529,10 @@ public:
   RValue emitCXXMemberCallExpr(const clang::CXXMemberCallExpr *e,
                                ReturnValueSlot returnValue);
 
+  Address emitCXXMemberDataPointerAddress(
+      const Expr *e, Address base, mlir::Value memberPtr,
+      const MemberPointerType *memberPtrType, LValueBaseInfo *baseInfo);
+
   RValue emitCXXMemberOrOperatorCall(
       const clang::CXXMethodDecl *md, const CIRGenCallee &callee,
       ReturnValueSlot returnValue, mlir::Value thisPtr,
@@ -1324,12 +1558,23 @@ public:
 
   RValue emitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *expr);
 
+  RValue emitNewOrDeleteBuiltinCall(const FunctionProtoType *type,
+                                    const CallExpr *callExpr,
+                                    OverloadedOperatorKind op);
+
   void emitCXXTemporary(const CXXTemporary *temporary, QualType tempType,
                         Address ptr);
 
   void emitCXXThrowExpr(const CXXThrowExpr *e);
 
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s);
+
+  mlir::LogicalResult emitCXXTryStmtUnderScope(const clang::CXXTryStmt &s);
+
+  void enterCXXTryStmt(const CXXTryStmt &s, cir::TryOp tryOp,
+                       bool isFnTryBlock = false);
+
+  void exitCXXTryStmt(const CXXTryStmt &s, bool isFnTryBlock = false);
 
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
                         clang::CXXCtorType ctorType, FunctionArgList &args);
@@ -1365,6 +1610,8 @@ public:
 
   mlir::LogicalResult emitGotoStmt(const clang::GotoStmt &s);
 
+  mlir::LogicalResult emitIndirectGotoStmt(const IndirectGotoStmt &s);
+
   void emitImplicitAssignmentOperatorBody(FunctionArgList &args);
 
   void emitInitializerForField(clang::FieldDecl *field, LValue lhs,
@@ -1380,8 +1627,12 @@ public:
 
   void emitReturnOfRValue(mlir::Location loc, RValue rv, QualType ty);
 
+  mlir::Value emitRuntimeCall(mlir::Location loc, cir::FuncOp callee,
+                              llvm::ArrayRef<mlir::Value> args = {});
+
   /// Emit the computation of the specified expression of scalar type.
-  mlir::Value emitScalarExpr(const clang::Expr *e);
+  mlir::Value emitScalarExpr(const clang::Expr *e,
+                             bool ignoreResultAssign = false);
 
   mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
                                       cir::UnaryOpKind kind, bool isPre);
@@ -1402,6 +1653,9 @@ public:
   void emitForwardingCallToLambda(const CXXMethodDecl *lambdaCallOperator,
                                   CallArgList &callArgs);
 
+  RValue emitCoawaitExpr(const CoawaitExpr &e,
+                         AggValueSlot aggSlot = AggValueSlot::ignored(),
+                         bool ignoreResult = false);
   /// Emit the computation of the specified expression of complex type,
   /// returning the result.
   mlir::Value emitComplexExpr(const Expr *e);
@@ -1461,11 +1715,15 @@ public:
 
   mlir::Value emitOpOnBoolExpr(mlir::Location loc, const clang::Expr *cond);
 
+  LValue emitPointerToDataMemberBinaryExpr(const BinaryOperator *e);
+
   mlir::LogicalResult emitLabel(const clang::LabelDecl &d);
   mlir::LogicalResult emitLabelStmt(const clang::LabelStmt &s);
 
   void emitLambdaDelegatingInvokeBody(const CXXMethodDecl *md);
   void emitLambdaStaticInvokeBody(const CXXMethodDecl *md);
+
+  void populateCatchHandlers(cir::TryOp tryOp);
 
   mlir::LogicalResult emitIfStmt(const clang::IfStmt &s);
 
@@ -1477,6 +1735,8 @@ public:
 
   /// Load a complex number from the specified l-value.
   mlir::Value emitLoadOfComplex(LValue src, SourceLocation loc);
+
+  RValue emitLoadOfExtVectorElementLValue(LValue lv);
 
   /// Given an expression that represents a value lvalue, this method emits
   /// the address of the lvalue, then loads the result as an rvalue,
@@ -1518,6 +1778,10 @@ public:
 
   LValue emitMemberExpr(const MemberExpr *e);
 
+  LValue emitOpaqueValueLValue(const OpaqueValueExpr *e);
+
+  LValue emitConditionalOperatorLValue(const AbstractConditionalOperator *expr);
+
   /// Given an expression with a pointer type, emit the value and compute our
   /// best estimate of the alignment of the pointee.
   ///
@@ -1549,14 +1813,17 @@ public:
   void emitScalarInit(const clang::Expr *init, mlir::Location loc,
                       LValue lvalue, bool capturedByInit = false);
 
+  mlir::Value emitScalarOrConstFoldImmArg(unsigned iceArguments, unsigned idx,
+                                          const Expr *argExpr);
+
   void emitStaticVarDecl(const VarDecl &d, cir::GlobalLinkageKind linkage);
 
   void emitStoreOfComplex(mlir::Location loc, mlir::Value v, LValue dest,
                           bool isInit);
 
   void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
-                         clang::QualType ty, bool isInit = false,
-                         bool isNontemporal = false);
+                         clang::QualType ty, LValueBaseInfo baseInfo,
+                         bool isInit = false, bool isNontemporal = false);
   void emitStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
 
   /// Store the specified rvalue into the specified
@@ -1573,6 +1840,10 @@ public:
   mlir::LogicalResult emitSwitchCase(const clang::SwitchCase &s,
                                      bool buildingTopLevelCase);
   mlir::LogicalResult emitSwitchStmt(const clang::SwitchStmt &s);
+
+  std::optional<mlir::Value>
+  emitTargetBuiltinExpr(unsigned builtinID, const clang::CallExpr *e,
+                        ReturnValueSlot &returnValue);
 
   /// Given a value and its clang type, returns the value casted to its memory
   /// representation.
@@ -1611,6 +1882,9 @@ public:
   void emitVariablyModifiedType(QualType ty);
 
   mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
+
+  std::optional<mlir::Value> emitX86BuiltinExpr(unsigned builtinID,
+                                                const CallExpr *expr);
 
   /// Given an assignment `*lhs = rhs`, emit a test that checks if \p rhs is
   /// nonnull, if 1\p LHS is marked _Nonnull.
@@ -1764,30 +2038,165 @@ public:
                         mlir::OpBuilder::InsertPoint ip = {});
 
   //===--------------------------------------------------------------------===//
+  //                         OpenMP Emission
+  //===--------------------------------------------------------------------===//
+public:
+  mlir::LogicalResult emitOMPScopeDirective(const OMPScopeDirective &s);
+  mlir::LogicalResult emitOMPErrorDirective(const OMPErrorDirective &s);
+  mlir::LogicalResult emitOMPParallelDirective(const OMPParallelDirective &s);
+  mlir::LogicalResult emitOMPTaskwaitDirective(const OMPTaskwaitDirective &s);
+  mlir::LogicalResult emitOMPTaskyieldDirective(const OMPTaskyieldDirective &s);
+  mlir::LogicalResult emitOMPBarrierDirective(const OMPBarrierDirective &s);
+  mlir::LogicalResult emitOMPMetaDirective(const OMPMetaDirective &s);
+  mlir::LogicalResult emitOMPCanonicalLoop(const OMPCanonicalLoop &s);
+  mlir::LogicalResult emitOMPSimdDirective(const OMPSimdDirective &s);
+  mlir::LogicalResult emitOMPTileDirective(const OMPTileDirective &s);
+  mlir::LogicalResult emitOMPUnrollDirective(const OMPUnrollDirective &s);
+  mlir::LogicalResult emitOMPFuseDirective(const OMPFuseDirective &s);
+  mlir::LogicalResult emitOMPForDirective(const OMPForDirective &s);
+  mlir::LogicalResult emitOMPForSimdDirective(const OMPForSimdDirective &s);
+  mlir::LogicalResult emitOMPSectionsDirective(const OMPSectionsDirective &s);
+  mlir::LogicalResult emitOMPSectionDirective(const OMPSectionDirective &s);
+  mlir::LogicalResult emitOMPSingleDirective(const OMPSingleDirective &s);
+  mlir::LogicalResult emitOMPMasterDirective(const OMPMasterDirective &s);
+  mlir::LogicalResult emitOMPCriticalDirective(const OMPCriticalDirective &s);
+  mlir::LogicalResult
+  emitOMPParallelForDirective(const OMPParallelForDirective &s);
+  mlir::LogicalResult
+  emitOMPParallelForSimdDirective(const OMPParallelForSimdDirective &s);
+  mlir::LogicalResult
+  emitOMPParallelMasterDirective(const OMPParallelMasterDirective &s);
+  mlir::LogicalResult
+  emitOMPParallelSectionsDirective(const OMPParallelSectionsDirective &s);
+  mlir::LogicalResult emitOMPTaskDirective(const OMPTaskDirective &s);
+  mlir::LogicalResult emitOMPTaskgroupDirective(const OMPTaskgroupDirective &s);
+  mlir::LogicalResult emitOMPFlushDirective(const OMPFlushDirective &s);
+  mlir::LogicalResult emitOMPDepobjDirective(const OMPDepobjDirective &s);
+  mlir::LogicalResult emitOMPScanDirective(const OMPScanDirective &s);
+  mlir::LogicalResult emitOMPOrderedDirective(const OMPOrderedDirective &s);
+  mlir::LogicalResult emitOMPAtomicDirective(const OMPAtomicDirective &s);
+  mlir::LogicalResult emitOMPTargetDirective(const OMPTargetDirective &s);
+  mlir::LogicalResult emitOMPTeamsDirective(const OMPTeamsDirective &s);
+  mlir::LogicalResult
+  emitOMPCancellationPointDirective(const OMPCancellationPointDirective &s);
+  mlir::LogicalResult emitOMPCancelDirective(const OMPCancelDirective &s);
+  mlir::LogicalResult
+  emitOMPTargetDataDirective(const OMPTargetDataDirective &s);
+  mlir::LogicalResult
+  emitOMPTargetEnterDataDirective(const OMPTargetEnterDataDirective &s);
+  mlir::LogicalResult
+  emitOMPTargetExitDataDirective(const OMPTargetExitDataDirective &s);
+  mlir::LogicalResult
+  emitOMPTargetParallelDirective(const OMPTargetParallelDirective &s);
+  mlir::LogicalResult
+  emitOMPTargetParallelForDirective(const OMPTargetParallelForDirective &s);
+  mlir::LogicalResult emitOMPTaskLoopDirective(const OMPTaskLoopDirective &s);
+  mlir::LogicalResult
+  emitOMPTaskLoopSimdDirective(const OMPTaskLoopSimdDirective &s);
+  mlir::LogicalResult
+  emitOMPMaskedTaskLoopDirective(const OMPMaskedTaskLoopDirective &s);
+  mlir::LogicalResult
+  emitOMPMaskedTaskLoopSimdDirective(const OMPMaskedTaskLoopSimdDirective &s);
+  mlir::LogicalResult
+  emitOMPMasterTaskLoopDirective(const OMPMasterTaskLoopDirective &s);
+  mlir::LogicalResult
+  emitOMPMasterTaskLoopSimdDirective(const OMPMasterTaskLoopSimdDirective &s);
+  mlir::LogicalResult
+  emitOMPParallelGenericLoopDirective(const OMPParallelGenericLoopDirective &s);
+  mlir::LogicalResult
+  emitOMPParallelMaskedDirective(const OMPParallelMaskedDirective &s);
+  mlir::LogicalResult emitOMPParallelMaskedTaskLoopDirective(
+      const OMPParallelMaskedTaskLoopDirective &s);
+  mlir::LogicalResult emitOMPParallelMaskedTaskLoopSimdDirective(
+      const OMPParallelMaskedTaskLoopSimdDirective &s);
+  mlir::LogicalResult emitOMPParallelMasterTaskLoopDirective(
+      const OMPParallelMasterTaskLoopDirective &s);
+  mlir::LogicalResult emitOMPParallelMasterTaskLoopSimdDirective(
+      const OMPParallelMasterTaskLoopSimdDirective &s);
+  mlir::LogicalResult
+  emitOMPDistributeDirective(const OMPDistributeDirective &s);
+  mlir::LogicalResult emitOMPDistributeParallelForDirective(
+      const OMPDistributeParallelForDirective &s);
+  mlir::LogicalResult emitOMPDistributeParallelForSimdDirective(
+      const OMPDistributeParallelForSimdDirective &s);
+  mlir::LogicalResult
+  emitOMPDistributeSimdDirective(const OMPDistributeSimdDirective &s);
+  mlir::LogicalResult emitOMPTargetParallelGenericLoopDirective(
+      const OMPTargetParallelGenericLoopDirective &s);
+  mlir::LogicalResult emitOMPTargetParallelForSimdDirective(
+      const OMPTargetParallelForSimdDirective &s);
+  mlir::LogicalResult
+  emitOMPTargetSimdDirective(const OMPTargetSimdDirective &s);
+  mlir::LogicalResult emitOMPTargetTeamsGenericLoopDirective(
+      const OMPTargetTeamsGenericLoopDirective &s);
+  mlir::LogicalResult
+  emitOMPTargetUpdateDirective(const OMPTargetUpdateDirective &s);
+  mlir::LogicalResult
+  emitOMPTeamsDistributeDirective(const OMPTeamsDistributeDirective &s);
+  mlir::LogicalResult
+  emitOMPTeamsDistributeSimdDirective(const OMPTeamsDistributeSimdDirective &s);
+  mlir::LogicalResult emitOMPTeamsDistributeParallelForSimdDirective(
+      const OMPTeamsDistributeParallelForSimdDirective &s);
+  mlir::LogicalResult emitOMPTeamsDistributeParallelForDirective(
+      const OMPTeamsDistributeParallelForDirective &s);
+  mlir::LogicalResult
+  emitOMPTeamsGenericLoopDirective(const OMPTeamsGenericLoopDirective &s);
+  mlir::LogicalResult
+  emitOMPTargetTeamsDirective(const OMPTargetTeamsDirective &s);
+  mlir::LogicalResult emitOMPTargetTeamsDistributeDirective(
+      const OMPTargetTeamsDistributeDirective &s);
+  mlir::LogicalResult emitOMPTargetTeamsDistributeParallelForDirective(
+      const OMPTargetTeamsDistributeParallelForDirective &s);
+  mlir::LogicalResult emitOMPTargetTeamsDistributeParallelForSimdDirective(
+      const OMPTargetTeamsDistributeParallelForSimdDirective &s);
+  mlir::LogicalResult emitOMPTargetTeamsDistributeSimdDirective(
+      const OMPTargetTeamsDistributeSimdDirective &s);
+  mlir::LogicalResult emitOMPInteropDirective(const OMPInteropDirective &s);
+  mlir::LogicalResult emitOMPDispatchDirective(const OMPDispatchDirective &s);
+  mlir::LogicalResult
+  emitOMPGenericLoopDirective(const OMPGenericLoopDirective &s);
+  mlir::LogicalResult emitOMPReverseDirective(const OMPReverseDirective &s);
+  mlir::LogicalResult
+  emitOMPInterchangeDirective(const OMPInterchangeDirective &s);
+  mlir::LogicalResult emitOMPAssumeDirective(const OMPAssumeDirective &s);
+  mlir::LogicalResult emitOMPMaskedDirective(const OMPMaskedDirective &s);
+  mlir::LogicalResult emitOMPStripeDirective(const OMPStripeDirective &s);
+
+  void emitOMPThreadPrivateDecl(const OMPThreadPrivateDecl &d);
+  void emitOMPGroupPrivateDecl(const OMPGroupPrivateDecl &d);
+  void emitOMPCapturedExpr(const OMPCapturedExprDecl &d);
+  void emitOMPAllocateDecl(const OMPAllocateDecl &d);
+  void emitOMPDeclareReduction(const OMPDeclareReductionDecl &d);
+  void emitOMPDeclareMapper(const OMPDeclareMapperDecl &d);
+  void emitOMPRequiresDecl(const OMPRequiresDecl &d);
+
+private:
+  template <typename Op>
+  void emitOpenMPClauses(Op &op, ArrayRef<const OMPClause *> clauses);
+
+  //===--------------------------------------------------------------------===//
   //                         OpenACC Emission
   //===--------------------------------------------------------------------===//
 private:
   template <typename Op>
   Op emitOpenACCOp(mlir::Location start, OpenACCDirectiveKind dirKind,
-                   SourceLocation dirLoc,
                    llvm::ArrayRef<const OpenACCClause *> clauses);
   // Function to do the basic implementation of an operation with an Associated
   // Statement.  Models AssociatedStmtConstruct.
   template <typename Op, typename TermOp>
-  mlir::LogicalResult emitOpenACCOpAssociatedStmt(
-      mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
-      SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
-      const Stmt *associatedStmt);
+  mlir::LogicalResult
+  emitOpenACCOpAssociatedStmt(mlir::Location start, mlir::Location end,
+                              OpenACCDirectiveKind dirKind,
+                              llvm::ArrayRef<const OpenACCClause *> clauses,
+                              const Stmt *associatedStmt);
 
   template <typename Op, typename TermOp>
   mlir::LogicalResult emitOpenACCOpCombinedConstruct(
       mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
-      SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
-      const Stmt *loopStmt);
+      llvm::ArrayRef<const OpenACCClause *> clauses, const Stmt *loopStmt);
 
   template <typename Op>
   void emitOpenACCClauses(Op &op, OpenACCDirectiveKind dirKind,
-                          SourceLocation dirLoc,
                           ArrayRef<const OpenACCClause *> clauses);
   // The second template argument doesn't need to be a template, since it should
   // always be an mlir::acc::LoopOp, but as this is a template anyway, we make
@@ -1797,7 +2206,7 @@ private:
   // instantiated 3x.
   template <typename ComputeOp, typename LoopOp>
   void emitOpenACCClauses(ComputeOp &op, LoopOp &loopOp,
-                          OpenACCDirectiveKind dirKind, SourceLocation dirLoc,
+                          OpenACCDirectiveKind dirKind,
                           ArrayRef<const OpenACCClause *> clauses);
 
   // The OpenACC LoopOp requires that we have auto, seq, or independent on all

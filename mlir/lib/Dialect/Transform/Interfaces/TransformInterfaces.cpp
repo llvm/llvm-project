@@ -47,8 +47,6 @@ static bool happensBefore(Operation *a, Operation *b) {
 // TransformState
 //===----------------------------------------------------------------------===//
 
-constexpr const Value transform::TransformState::kTopLevelValue;
-
 transform::TransformState::TransformState(
     Region *region, Operation *payloadRoot,
     const RaggedArray<MappedValue> &extraMappings,
@@ -1307,8 +1305,8 @@ void transform::TrackingListener::notifyOperationReplaced(
   // Check if there are any handles that must be updated.
   Value aliveHandle;
   if (config.skipHandleFn) {
-    auto it = llvm::find_if(opHandles,
-                            [&](Value v) { return !config.skipHandleFn(v); });
+    auto *it = llvm::find_if(opHandles,
+                             [&](Value v) { return !config.skipHandleFn(v); });
     if (it != opHandles.end())
       aliveHandle = *it;
   } else if (!opHandles.empty()) {
@@ -1497,8 +1495,7 @@ transform::detail::checkApplyToOne(Operation *transformOp,
 
 template <typename T>
 static SmallVector<T> castVector(ArrayRef<transform::MappedValue> range) {
-  return llvm::to_vector(llvm::map_range(
-      range, [](transform::MappedValue value) { return cast<T>(value); }));
+  return llvm::map_to_vector(range, llvm::CastTo<T>);
 }
 
 void transform::detail::setApplyToOneResults(
