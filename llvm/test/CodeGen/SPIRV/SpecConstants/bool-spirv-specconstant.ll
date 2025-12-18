@@ -24,6 +24,7 @@ entry:
   %selected = select i1 %3, i8 0, i8 1
   %frombool.i = zext i1 %3 to i8
   %sum = add i8 %frombool.i, %selected
+  store volatile i8 %sum, i8 addrspace(4)* %ptridx.ascast.i.i, align 1
   store i8 %selected, i8 addrspace(4)* %ptridx.ascast.i.i, align 1
   ret void
 }

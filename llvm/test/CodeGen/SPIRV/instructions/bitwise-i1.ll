@@ -25,17 +25,23 @@
 ; CHECK: OpLogicalOr %[[#Vec2Bool]]
 ; CHECK: OpLogicalNotEqual %[[#Vec2Bool]]
 
-define void @test1(i8 noundef %arg1, i8 noundef %arg2) {
+define void @test1(i8 noundef %arg1, i8 noundef %arg2, i8 addrspace(1)* %out) {
   %cond1 = and i8 %arg1, %arg2
+  store volatile i8 %cond1, i8 addrspace(1)* %out
   %cond2 = or i8 %arg1, %arg2
+  store volatile i8 %cond2, i8 addrspace(1)* %out
   %cond3 = xor i8 %arg1, %arg2
+  store volatile i8 %cond3, i8 addrspace(1)* %out
   ret void
 }
 
-define void @test1v(<2 x i8> noundef %arg1, <2 x i8> noundef %arg2) {
+define void @test1v(<2 x i8> noundef %arg1, <2 x i8> noundef %arg2, <2 x i8> addrspace(1)* %out) {
   %cond1 = and <2 x i8> %arg1, %arg2
+  store volatile <2 x i8> %cond1, <2 x i8> addrspace(1)* %out
   %cond2 = or <2 x i8> %arg1, %arg2
+  store volatile <2 x i8> %cond2, <2 x i8> addrspace(1)* %out
   %cond3 = xor <2 x i8> %arg1, %arg2
+  store volatile <2 x i8> %cond3, <2 x i8> addrspace(1)* %out
   ret void
 }
 
@@ -52,17 +58,23 @@ cleanup:
   ret void
 }
 
-define void @test3(i1 noundef %arg1, i1 noundef %arg2) {
+define void @test3(i1 noundef %arg1, i1 noundef %arg2, i1 addrspace(1)* %out) {
   %cond1 = and i1 %arg1, %arg2
+  store volatile i1 %cond1, i1 addrspace(1)* %out
   %cond2 = or i1 %arg1, %arg2
+  store volatile i1 %cond2, i1 addrspace(1)* %out
   %cond3 = xor i1 %arg1, %arg2
+  store volatile i1 %cond3, i1 addrspace(1)* %out
   ret void
 }
 
-define void @test3v(<2 x i1> noundef %arg1, <2 x i1> noundef %arg2) {
+define void @test3v(<2 x i1> noundef %arg1, <2 x i1> noundef %arg2, <2 x i1> addrspace(1)* %out) {
   %cond1 = and <2 x i1> %arg1, %arg2
+  store volatile <2 x i1> %cond1, <2 x i1> addrspace(1)* %out
   %cond2 = or <2 x i1> %arg1, %arg2
+  store volatile <2 x i1> %cond2, <2 x i1> addrspace(1)* %out
   %cond3 = xor <2 x i1> %arg1, %arg2
+  store volatile <2 x i1> %cond3, <2 x i1> addrspace(1)* %out
   ret void
 }
 

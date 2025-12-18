@@ -28,6 +28,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/COFFImportFile.h"
+#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -256,6 +257,24 @@ MemoryBufferRef LinkerDriver::takeBuffer(std::unique_ptr<MemoryBuffer> mb) {
   return mbref;
 }
 
+static InputFile *tryCreateFatLTOFile(COFFLinkerContext &ctx,
+                                      MemoryBufferRef mb, StringRef archiveName,
+                                      uint64_t offsetInArchive, bool lazy) {
+  if (ctx.config.fatLTOObjects) {
+    Expected<MemoryBufferRef> fatLTOData =
+        IRObjectFile::findBitcodeInMemBuffer(mb);
+
+    if (!errorToBool(fatLTOData.takeError())) {
+      return BitcodeFile::create(ctx, *fatLTOData, archiveName, offsetInArchive,
+                                 lazy);
+    }
+  }
+
+  InputFile *obj = ObjFile::create(ctx, mb, lazy);
+  obj->parentName = archiveName;
+  return obj;
+}
+
 void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
                              bool wholeArchive, bool lazy) {
   StringRef filename = mb->getBufferIdentifier();
@@ -289,7 +308,10 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
   case file_magic::bitcode:
     addFile(BitcodeFile::create(ctx, mbref, "", 0, lazy));
     break;
-  case file_magic::coff_object:
+  case file_magic::coff_object: {
+    addFile(tryCreateFatLTOFile(ctx, mbref, "", 0, lazy));
+    break;
+  }
   case file_magic::coff_import_library:
     addFile(ObjFile::create(ctx, mbref, lazy));
     break;
@@ -374,7 +396,8 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
 
   InputFile *obj;
   if (magic == file_magic::coff_object) {
-    obj = ObjFile::create(ctx, mb);
+    obj = tryCreateFatLTOFile(ctx, mb, parentName, offsetInArchive,
+                              /*lazy=*/false);
   } else if (magic == file_magic::bitcode) {
     obj = BitcodeFile::create(ctx, mb, parentName, offsetInArchive,
                               /*lazy=*/false);
@@ -2128,6 +2151,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /thinlto-remote-compiler-arg:<arg>
   config->dtltoCompilerArgs =
       args::getStrings(args, OPT_thinlto_remote_compiler_arg);
+
+  // Handle /fat-lto-objects
+  config->fatLTOObjects =
+      args.hasFlag(OPT_fat_lto_objects, OPT_fat_lto_objects_no, false);
 
   // Handle /dwodir
   config->dwoDir = args.getLastArgValue(OPT_dwodir);

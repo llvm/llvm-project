@@ -75,43 +75,76 @@ void setMatrixScalar(out float2x1 M, int index, float S) {
 // CHECK-NEXT:    [[MATRIX_ELEM5:%.*]] = extractelement <16 x i32> [[TMP0]], i32 15
 // CHECK-NEXT:    [[MATRIX_ROW_INS6:%.*]] = insertelement <4 x i32> [[MATRIX_ROW_INS4]], i32 [[MATRIX_ELEM5]], i32 3
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3]], !align [[META4]]
-// CHECK-NEXT:    store <4 x i32> [[MATRIX_ROW_INS6]], ptr [[TMP1]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i32>, ptr [[N_ADDR]], align 4
-// CHECK-NEXT:    [[MATRIX_ELEM7:%.*]] = extractelement <16 x i32> [[TMP2]], i32 2
+// CHECK-NEXT:    [[MATRIX_LOAD:%.*]] = load <16 x i32>, ptr [[TMP1]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[MATRIX_ROW_INS6]], i32 0
+// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i32> [[MATRIX_LOAD]], i32 [[TMP2]], i32 0
+// CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[MATRIX_ROW_INS6]], i32 1
+// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x i32> [[TMP3]], i32 [[TMP4]], i32 4
+// CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[MATRIX_ROW_INS6]], i32 2
+// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i32> [[TMP5]], i32 [[TMP6]], i32 8
+// CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[MATRIX_ROW_INS6]], i32 3
+// CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x i32> [[TMP7]], i32 [[TMP8]], i32 12
+// CHECK-NEXT:    store <16 x i32> [[TMP9]], ptr [[TMP1]], align 4
+// CHECK-NEXT:    [[TMP10:%.*]] = load <16 x i32>, ptr [[N_ADDR]], align 4
+// CHECK-NEXT:    [[MATRIX_ELEM7:%.*]] = extractelement <16 x i32> [[TMP10]], i32 2
 // CHECK-NEXT:    [[MATRIX_ROW_INS8:%.*]] = insertelement <4 x i32> poison, i32 [[MATRIX_ELEM7]], i32 0
-// CHECK-NEXT:    [[MATRIX_ELEM9:%.*]] = extractelement <16 x i32> [[TMP2]], i32 6
+// CHECK-NEXT:    [[MATRIX_ELEM9:%.*]] = extractelement <16 x i32> [[TMP10]], i32 6
 // CHECK-NEXT:    [[MATRIX_ROW_INS10:%.*]] = insertelement <4 x i32> [[MATRIX_ROW_INS8]], i32 [[MATRIX_ELEM9]], i32 1
-// CHECK-NEXT:    [[MATRIX_ELEM11:%.*]] = extractelement <16 x i32> [[TMP2]], i32 10
+// CHECK-NEXT:    [[MATRIX_ELEM11:%.*]] = extractelement <16 x i32> [[TMP10]], i32 10
 // CHECK-NEXT:    [[MATRIX_ROW_INS12:%.*]] = insertelement <4 x i32> [[MATRIX_ROW_INS10]], i32 [[MATRIX_ELEM11]], i32 2
-// CHECK-NEXT:    [[MATRIX_ELEM13:%.*]] = extractelement <16 x i32> [[TMP2]], i32 14
+// CHECK-NEXT:    [[MATRIX_ELEM13:%.*]] = extractelement <16 x i32> [[TMP10]], i32 14
 // CHECK-NEXT:    [[MATRIX_ROW_INS14:%.*]] = insertelement <4 x i32> [[MATRIX_ROW_INS12]], i32 [[MATRIX_ELEM13]], i32 3
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3]], !align [[META4]]
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <16 x i32>, ptr [[TMP3]], i32 0, i32 4
-// CHECK-NEXT:    store <4 x i32> [[MATRIX_ROW_INS14]], ptr [[TMP4]], align 4
-// CHECK-NEXT:    [[TMP5:%.*]] = load <16 x i32>, ptr [[N_ADDR]], align 4
-// CHECK-NEXT:    [[MATRIX_ELEM15:%.*]] = extractelement <16 x i32> [[TMP5]], i32 1
-// CHECK-NEXT:    [[MATRIX_ROW_INS16:%.*]] = insertelement <4 x i32> poison, i32 [[MATRIX_ELEM15]], i32 0
-// CHECK-NEXT:    [[MATRIX_ELEM17:%.*]] = extractelement <16 x i32> [[TMP5]], i32 5
-// CHECK-NEXT:    [[MATRIX_ROW_INS18:%.*]] = insertelement <4 x i32> [[MATRIX_ROW_INS16]], i32 [[MATRIX_ELEM17]], i32 1
-// CHECK-NEXT:    [[MATRIX_ELEM19:%.*]] = extractelement <16 x i32> [[TMP5]], i32 9
-// CHECK-NEXT:    [[MATRIX_ROW_INS20:%.*]] = insertelement <4 x i32> [[MATRIX_ROW_INS18]], i32 [[MATRIX_ELEM19]], i32 2
-// CHECK-NEXT:    [[MATRIX_ELEM21:%.*]] = extractelement <16 x i32> [[TMP5]], i32 13
-// CHECK-NEXT:    [[MATRIX_ROW_INS22:%.*]] = insertelement <4 x i32> [[MATRIX_ROW_INS20]], i32 [[MATRIX_ELEM21]], i32 3
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3]], !align [[META4]]
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <16 x i32>, ptr [[TMP6]], i32 0, i32 8
-// CHECK-NEXT:    store <4 x i32> [[MATRIX_ROW_INS22]], ptr [[TMP7]], align 4
-// CHECK-NEXT:    [[TMP8:%.*]] = load <16 x i32>, ptr [[N_ADDR]], align 4
-// CHECK-NEXT:    [[MATRIX_ELEM23:%.*]] = extractelement <16 x i32> [[TMP8]], i32 0
-// CHECK-NEXT:    [[MATRIX_ROW_INS24:%.*]] = insertelement <4 x i32> poison, i32 [[MATRIX_ELEM23]], i32 0
-// CHECK-NEXT:    [[MATRIX_ELEM25:%.*]] = extractelement <16 x i32> [[TMP8]], i32 4
-// CHECK-NEXT:    [[MATRIX_ROW_INS26:%.*]] = insertelement <4 x i32> [[MATRIX_ROW_INS24]], i32 [[MATRIX_ELEM25]], i32 1
-// CHECK-NEXT:    [[MATRIX_ELEM27:%.*]] = extractelement <16 x i32> [[TMP8]], i32 8
-// CHECK-NEXT:    [[MATRIX_ROW_INS28:%.*]] = insertelement <4 x i32> [[MATRIX_ROW_INS26]], i32 [[MATRIX_ELEM27]], i32 2
-// CHECK-NEXT:    [[MATRIX_ELEM29:%.*]] = extractelement <16 x i32> [[TMP8]], i32 12
-// CHECK-NEXT:    [[MATRIX_ROW_INS30:%.*]] = insertelement <4 x i32> [[MATRIX_ROW_INS28]], i32 [[MATRIX_ELEM29]], i32 3
-// CHECK-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3]], !align [[META4]]
-// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr <16 x i32>, ptr [[TMP9]], i32 0, i32 12
-// CHECK-NEXT:    store <4 x i32> [[MATRIX_ROW_INS30]], ptr [[TMP10]], align 4
+// CHECK-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3]], !align [[META4]]
+// CHECK-NEXT:    [[MATRIX_LOAD15:%.*]] = load <16 x i32>, ptr [[TMP11]], align 4
+// CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[MATRIX_ROW_INS14]], i32 0
+// CHECK-NEXT:    [[TMP13:%.*]] = insertelement <16 x i32> [[MATRIX_LOAD15]], i32 [[TMP12]], i32 1
+// CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[MATRIX_ROW_INS14]], i32 1
+// CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x i32> [[TMP13]], i32 [[TMP14]], i32 5
+// CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i32> [[MATRIX_ROW_INS14]], i32 2
+// CHECK-NEXT:    [[TMP17:%.*]] = insertelement <16 x i32> [[TMP15]], i32 [[TMP16]], i32 9
+// CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i32> [[MATRIX_ROW_INS14]], i32 3
+// CHECK-NEXT:    [[TMP19:%.*]] = insertelement <16 x i32> [[TMP17]], i32 [[TMP18]], i32 13
+// CHECK-NEXT:    store <16 x i32> [[TMP19]], ptr [[TMP11]], align 4
+// CHECK-NEXT:    [[TMP20:%.*]] = load <16 x i32>, ptr [[N_ADDR]], align 4
+// CHECK-NEXT:    [[MATRIX_ELEM16:%.*]] = extractelement <16 x i32> [[TMP20]], i32 1
+// CHECK-NEXT:    [[MATRIX_ROW_INS17:%.*]] = insertelement <4 x i32> poison, i32 [[MATRIX_ELEM16]], i32 0
+// CHECK-NEXT:    [[MATRIX_ELEM18:%.*]] = extractelement <16 x i32> [[TMP20]], i32 5
+// CHECK-NEXT:    [[MATRIX_ROW_INS19:%.*]] = insertelement <4 x i32> [[MATRIX_ROW_INS17]], i32 [[MATRIX_ELEM18]], i32 1
+// CHECK-NEXT:    [[MATRIX_ELEM20:%.*]] = extractelement <16 x i32> [[TMP20]], i32 9
+// CHECK-NEXT:    [[MATRIX_ROW_INS21:%.*]] = insertelement <4 x i32> [[MATRIX_ROW_INS19]], i32 [[MATRIX_ELEM20]], i32 2
+// CHECK-NEXT:    [[MATRIX_ELEM22:%.*]] = extractelement <16 x i32> [[TMP20]], i32 13
+// CHECK-NEXT:    [[MATRIX_ROW_INS23:%.*]] = insertelement <4 x i32> [[MATRIX_ROW_INS21]], i32 [[MATRIX_ELEM22]], i32 3
+// CHECK-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3]], !align [[META4]]
+// CHECK-NEXT:    [[MATRIX_LOAD24:%.*]] = load <16 x i32>, ptr [[TMP21]], align 4
+// CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i32> [[MATRIX_ROW_INS23]], i32 0
+// CHECK-NEXT:    [[TMP23:%.*]] = insertelement <16 x i32> [[MATRIX_LOAD24]], i32 [[TMP22]], i32 2
+// CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[MATRIX_ROW_INS23]], i32 1
+// CHECK-NEXT:    [[TMP25:%.*]] = insertelement <16 x i32> [[TMP23]], i32 [[TMP24]], i32 6
+// CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i32> [[MATRIX_ROW_INS23]], i32 2
+// CHECK-NEXT:    [[TMP27:%.*]] = insertelement <16 x i32> [[TMP25]], i32 [[TMP26]], i32 10
+// CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x i32> [[MATRIX_ROW_INS23]], i32 3
+// CHECK-NEXT:    [[TMP29:%.*]] = insertelement <16 x i32> [[TMP27]], i32 [[TMP28]], i32 14
+// CHECK-NEXT:    store <16 x i32> [[TMP29]], ptr [[TMP21]], align 4
+// CHECK-NEXT:    [[TMP30:%.*]] = load <16 x i32>, ptr [[N_ADDR]], align 4
+// CHECK-NEXT:    [[MATRIX_ELEM25:%.*]] = extractelement <16 x i32> [[TMP30]], i32 0
+// CHECK-NEXT:    [[MATRIX_ROW_INS26:%.*]] = insertelement <4 x i32> poison, i32 [[MATRIX_ELEM25]], i32 0
+// CHECK-NEXT:    [[MATRIX_ELEM27:%.*]] = extractelement <16 x i32> [[TMP30]], i32 4
+// CHECK-NEXT:    [[MATRIX_ROW_INS28:%.*]] = insertelement <4 x i32> [[MATRIX_ROW_INS26]], i32 [[MATRIX_ELEM27]], i32 1
+// CHECK-NEXT:    [[MATRIX_ELEM29:%.*]] = extractelement <16 x i32> [[TMP30]], i32 8
+// CHECK-NEXT:    [[MATRIX_ROW_INS30:%.*]] = insertelement <4 x i32> [[MATRIX_ROW_INS28]], i32 [[MATRIX_ELEM29]], i32 2
+// CHECK-NEXT:    [[MATRIX_ELEM31:%.*]] = extractelement <16 x i32> [[TMP30]], i32 12
+// CHECK-NEXT:    [[MATRIX_ROW_INS32:%.*]] = insertelement <4 x i32> [[MATRIX_ROW_INS30]], i32 [[MATRIX_ELEM31]], i32 3
+// CHECK-NEXT:    [[TMP31:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3]], !align [[META4]]
+// CHECK-NEXT:    [[MATRIX_LOAD33:%.*]] = load <16 x i32>, ptr [[TMP31]], align 4
+// CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i32> [[MATRIX_ROW_INS32]], i32 0
+// CHECK-NEXT:    [[TMP33:%.*]] = insertelement <16 x i32> [[MATRIX_LOAD33]], i32 [[TMP32]], i32 3
+// CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i32> [[MATRIX_ROW_INS32]], i32 1
+// CHECK-NEXT:    [[TMP35:%.*]] = insertelement <16 x i32> [[TMP33]], i32 [[TMP34]], i32 7
+// CHECK-NEXT:    [[TMP36:%.*]] = extractelement <4 x i32> [[MATRIX_ROW_INS32]], i32 2
+// CHECK-NEXT:    [[TMP37:%.*]] = insertelement <16 x i32> [[TMP35]], i32 [[TMP36]], i32 11
+// CHECK-NEXT:    [[TMP38:%.*]] = extractelement <4 x i32> [[MATRIX_ROW_INS32]], i32 3
+// CHECK-NEXT:    [[TMP39:%.*]] = insertelement <16 x i32> [[TMP37]], i32 [[TMP38]], i32 15
+// CHECK-NEXT:    store <16 x i32> [[TMP39]], ptr [[TMP31]], align 4
 // CHECK-NEXT:    ret void
 //
 void setMatrixConstIndex(out int4x4 M, int4x4 N ) {
