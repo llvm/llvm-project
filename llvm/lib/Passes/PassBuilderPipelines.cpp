@@ -418,7 +418,7 @@ static void addAnnotationRemarksPass(ModulePassManager &MPM) {
     MPM.addPass(createModuleToFunctionPassAdaptor(InstCountPass()));
     MPM.addPass(
         createModuleToFunctionPassAdaptor(FunctionPropertiesStatisticsPass()));
-  }    
+  }
 }
 
 // Helper to check if the current compilation phase is preparing for LTO
