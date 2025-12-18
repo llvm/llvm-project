@@ -838,8 +838,9 @@ func.func @fold_unit_dim_for_init_memref(%input: memref<1x1000xf32>) -> memref<1
 
 
 // -----
-// Test that nothing changes and no assertions are fired for memrefs with affine
-// maps while still changing the other operations.
+
+// Negative test with a memref with non-identity layout.
+// The output should be identical to the input.
 
 #accesses = [
   affine_map<(i, j, k, l, m) -> (i, k, m)>,
@@ -863,24 +864,21 @@ func.func @input_stays_same(%arg0 : memref<?x1x?xf32, strided<[?, 1, 1]>>, %arg1
   return %shape : memref<?x1x?x1x?xf32>
 }
 
-// CHECK-DAG:     #[[MAP1:.*]] = affine_map<(d0, d1, d2) -> (d0, 0, d2)>
-// CHECK-DAG:     #[[MAP2:.*]] = affine_map<(d0, d1, d2) -> ()>
-// CHECK-DAG:     #[[MAP3:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-// CHECK:     func @input_stays_same(
-// CHECK-SAME:  %[[ARG0:.*]]: memref<?x1x?xf32, strided<[?, 1, 1]>>,
-// CHECK-SAME:  %[[ARG1:.*]]: f32, %[[ARG2:.*]]: memref<?x1x?x1x?xf32>)
-// CHECK-SAME:  -> memref<?x1x?x1x?xf32> {
-// CHECK:      %[[OUT:.*]] = memref.collapse_shape %[[ARG2]] {{\[}}[0, 1], [2, 3], [4]]
-// CHECK-SAME:   : memref<?x1x?x1x?xf32> into memref<?x?x?xf32>
-// CHECK:      linalg.generic
-// CHECK-SAME:   {indexing_maps = [#[[MAP1]], #[[MAP2]], #[[MAP3]]],
-// CHECK-SAME:   iterator_types = ["parallel", "parallel", "parallel"]}
-// CHECK-SAME:   ins(%[[ARG0]], %[[ARG1]] : memref<?x1x?xf32, strided<[?, 1, 1]>>, f32)
-// CHECK-SAME:   outs(%[[OUT]] : memref<?x?x?xf32>) {
-// CHECK:      ^bb0(%{{.*}}: f32, %[[ARG:.*]]: f32, %{{.*}}: f32):
-// CHECK:       linalg.yield %[[ARG]] : f32
-// CHECK:      }
-// CHECK:      return %[[ARG2]] : memref<?x1x?x1x?xf32>
+// CHECK-DAG: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d2, d4)>
+// CHECK-DAG: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3, d4) -> ()>
+// CHECK-DAG: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d2, d1, d3, d4)>
+// CHECK:   func.func @input_stays_same(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<?x1x?xf32, strided<[?, 1, 1]>>
+// CHECK-SAME:      %[[ARG1:.*]]: f32
+// CHECK-SAME:      %[[ARG2:.*]]: memref<?x1x?x1x?xf32>) -> memref<?x1x?x1x?xf32>
+// CHECK:           linalg.generic
+// CHECK-SAME:        indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]]
+// CHECK-SAME:        iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel"]
+// CHECK-SAME:        ins(%[[ARG0]], %[[ARG1]] : memref<?x1x?xf32, strided<[?, 1, 1]>>, f32)
+// CHECK-SAME:        outs(%[[ARG2]] : memref<?x1x?x1x?xf32>)
+// CHECK:           ^bb0(%[[VAL_0:.*]]: f32, %[[VAL_1:.*]]: f32, %[[VAL_2:.*]]: f32):
+// CHECK:             linalg.yield %[[VAL_1]] : f32
+// CHECK:           return %[[ARG2]] : memref<?x1x?x1x?xf32>
 
 // -----
 
