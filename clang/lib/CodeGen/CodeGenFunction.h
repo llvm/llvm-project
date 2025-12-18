@@ -4517,6 +4517,7 @@ public:
   LValue EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                 bool Accessed = false);
   llvm::Value *EmitMatrixIndexExpr(const Expr *E);
+  LValue EmitMatrixSingleSubscriptExpr(const MatrixSingleSubscriptExpr *E);
   LValue EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E);
   LValue EmitArraySectionExpr(const ArraySectionExpr *E,
                               bool IsLowerBound = true);

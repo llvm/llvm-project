@@ -785,6 +785,7 @@ Bug Fixes in This Version
 - Fixed false-positive shadow diagnostics for lambdas in explicit object member functions. (#GH163731)
 - Fix an assertion failure when a ``target_clones`` attribute is only on the
   forward declaration of a multiversioned function. (#GH165517) (#GH129483)
+- Fix a crash caused by invalid format string in printf-like functions with ``-Wunsafe-buffer-usage-in-libc-call`` option enabled. (#GH170496)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

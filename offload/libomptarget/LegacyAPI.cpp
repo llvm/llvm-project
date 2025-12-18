@@ -20,6 +20,7 @@
 #ifdef OMPT_SUPPORT
 using namespace llvm::omp::target::ompt;
 #endif
+using namespace llvm::omp::target::debug;
 
 EXTERN void __tgt_target_data_begin(int64_t DeviceId, int32_t ArgNum,
                                     void **ArgsBase, void **Args,
@@ -182,10 +183,11 @@ EXTERN void __kmpc_push_target_tripcount_mapper(ident_t *Loc, int64_t DeviceId,
                                                 uint64_t LoopTripcount) {
   TIMESCOPE_WITH_IDENT(Loc);
   if (checkDevice(DeviceId, Loc)) {
-    DP("Not offloading to device %" PRId64 "\n", DeviceId);
+     ODBG(ODT_Interface) << "Not offloading to device " << PRId64 << " " << DeviceId;
     return;
   }
-  DP("WARNING: __kmpc_push_target_tripcount has been deprecated and is a noop");
+  ODBG(ODT_Interface) << "WARNING: " << __func__
+                      << " has been deprecated and is a noop";
 }
 
 EXTERN void __kmpc_push_target_tripcount(int64_t DeviceId,

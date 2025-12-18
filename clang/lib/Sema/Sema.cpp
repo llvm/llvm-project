@@ -2445,8 +2445,8 @@ static void markEscapingByrefs(const FunctionScopeInfo &FSI, Sema &S) {
 }
 
 Sema::PoppedFunctionScopePtr
-Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
-                           const Decl *D, QualType BlockType) {
+Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP, Decl *D,
+                           QualType BlockType) {
   assert(!FunctionScopes.empty() && "mismatched push/pop!");
 
   markEscapingByrefs(*FunctionScopes.back(), *this);

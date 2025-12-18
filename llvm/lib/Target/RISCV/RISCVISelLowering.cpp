@@ -570,6 +570,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, XLenVT, Custom);
     }
 
+    if (!Subtarget.hasStdExtD()) {
+      // FIXME: handle f16 fma when f64 is not legal. Using an f32 fma
+      // instruction runs into double rounding issues, so this is wrong.
+      // Normally we'd use an f64 fma, but without the D extension the f64 type
+      // is not legal. This should probably be a libcall.
+      AddPromotedToType(ISD::FMA, MVT::f16, MVT::f32);
+      AddPromotedToType(ISD::STRICT_FMA, MVT::f16, MVT::f32);
+    }
+
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
 
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Legal);
