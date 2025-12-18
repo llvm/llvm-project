@@ -657,8 +657,7 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       bool IsAlignedLoad = NumBits <= (LoadAlign * 8u);
       unsigned TotalNumElts = VectorTy->getNumElements();
       bool IsProperlyDivisible = TotalNumElts % NumLoadedElts == 0;
-      if (!isa<ConstantInt>(Index) &&
-          llvm::isPowerOf2_32(TotalNumElts) &&
+      if (!isa<ConstantInt>(Index) && llvm::isPowerOf2_32(TotalNumElts) &&
           llvm::isPowerOf2_32(SubVecTy->getNumElements()) &&
           IsProperlyDivisible && IsAlignedLoad) {
         IntegerType *NewElemTy = Builder.getIntNTy(NumBits);
