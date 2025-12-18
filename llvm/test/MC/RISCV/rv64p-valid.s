@@ -1,7 +1,7 @@
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-p -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-p -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj --triple=riscv64 -mattr=+experimental-p < %s \
-# RUN:     | llvm-objdump --triple=riscv64 --mattr=+experimental-p -M no-aliases --no-print-imm-hex -d -r - \
+# RUN:     | llvm-objdump --triple=riscv64 --mattr=+experimental-p --no-print-imm-hex -d -r - \
 # RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: cls a1, a2
