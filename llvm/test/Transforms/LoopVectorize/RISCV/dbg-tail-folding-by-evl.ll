@@ -47,18 +47,18 @@ define void @reverse_store(ptr %a, i64 %n) !dbg !4 {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  br label %for.body
+  br label %loop
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ %n, %entry ], [ %indvars.iv.next, %for.body ]
+loop:
+  %indvars.iv = phi i64 [ %n, %entry ], [ %indvars.iv.next, %loop ]
   %indvars.iv.next = add nsw i64 %indvars.iv, -1, !dbg !7
   %arrayidx = getelementptr inbounds nuw i64, ptr %a, i64 %indvars.iv.next, !dbg !8
   store i64 %indvars.iv.next, ptr %arrayidx, align 8, !dbg !9
   %cmp = icmp samesign ugt i64 %indvars.iv, 1, !dbg !10
-  br i1 %cmp, label %for.body, label %for.cond.cleanup, !dbg !11, !llvm.loop !12
+  br i1 %cmp, label %loop, label %for.cond.cleanup, !dbg !11, !llvm.loop !12
 }
 
 !llvm.dbg.cu = !{!0}
