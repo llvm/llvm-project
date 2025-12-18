@@ -267,5 +267,7 @@ Options
 .. option:: ReinitializationFunctions
 
   A semicolon-separated list of names of functions that reinitialize the
-  object. For member functions, the implicit object argument (``this``) is
-  considered to be reinitialized. Default value is an empty string.
+  object. For member functions, the implicit object argument (``*this``) is
+  considered to be reinitialized. For non-member or static member functions,
+  the first argument is considered to be reinitialized. Default value is an
+  empty string.

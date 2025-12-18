@@ -1,13 +1,13 @@
 // RUN: %check_clang_tidy -std=c++11 -check-suffixes=,CXX11 %s bugprone-use-after-move %t -- \
 // RUN:   -config='{CheckOptions: { \
 // RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection", \
-// RUN:     bugprone-use-after-move.ReinitializationFunctions: "::custom_reinitialization::Database<>::Reset" \
+// RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset" \
 // RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- \
 // RUN:   -config='{CheckOptions: { \
 // RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection", \
-// RUN:     bugprone-use-after-move.ReinitializationFunctions: "::custom_reinitialization::Database<>::Reset" \
+// RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset" \
 // RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 
@@ -1710,7 +1710,12 @@ namespace custom_reinitialization {
 
 template <class T = int>
 struct Database {
-  void Reset(T = T()) {}
+  template <class... Args>
+  void Reset(T = T(), Args &&...) {}
+  template <class... Args>
+  static void StaticReset(Database &, T = T(), Args &&...) {}
+  template <class... Args>
+  friend void FriendReset(Database &, T = T(), Args &&...) {}
   void Query(T = T()) {}
 };
 
@@ -1728,6 +1733,20 @@ void Run() {
   // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db2' used after it was moved
   // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
   db2.Reset();
-}
 
+  DB db3;
+  std::move(db3);
+  DB::StaticReset(db3);
+  db3.Query();
+
+  DB db4;
+  std::move(db4);
+  FriendReset(db4);
+  db4.Query();
+
+  DB db5;
+  std::move(db5);
+  db5.Reset(0, 1.5, "extra");
+  db5.Query();
+}
 } // namespace custom_reinitialization
