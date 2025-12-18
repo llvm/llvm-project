@@ -501,13 +501,9 @@ TEST_F(MemoryTest, TestReadCStringsFromMemory) {
   long_str.push_back('\0');
   std::string big_str(long_str.data());
 
-  const std::string expected_answers[4] = {"hello", "", "goodbye", big_str};
+  const std::vector<std::optional<std::string>> expected_answers = {
+      "hello", "", "goodbye", big_str, std::nullopt};
   for (auto [maybe_str, expected_answer] :
-       llvm::zip(expected_valid_strings, expected_answers)) {
-    EXPECT_TRUE(maybe_str);
-    EXPECT_EQ(*maybe_str, expected_answer);
-  }
-
-  // The last address should have produced an error.
-  EXPECT_FALSE(maybe_strings.back());
+       llvm::zip(expected_valid_strings, expected_answers))
+    EXPECT_EQ(maybe_str, expected_answer);
 }
