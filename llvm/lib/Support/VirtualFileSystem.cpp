@@ -2363,10 +2363,13 @@ RedirectingFileSystem::lookupPath(StringRef Path) const {
         lookupPathImpl(Start, End, Root.get(), Entries);
     if (UsageTrackingActive && Result && isa<RemapEntry>(Result->E))
       HasBeenUsed = true;
-    if (Result || Result.getError() != llvm::errc::no_such_file_or_directory) {
+    if (Result) {
       Result->Parents = std::move(Entries);
       return Result;
     }
+
+    if (Result.getError() != llvm::errc::no_such_file_or_directory)
+      return Result;
   }
   return make_error_code(llvm::errc::no_such_file_or_directory);
 }
