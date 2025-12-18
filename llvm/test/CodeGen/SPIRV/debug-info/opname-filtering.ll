@@ -1,4 +1,5 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-emit-op-names %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-ALL-NAMES
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; Verify that OpName is generated for Global Variables, Functions, Parameters,
@@ -24,12 +25,15 @@
 ; CHECK-DAG: OpName %[[#Body:]] "body"
 
 ; Verify that OpName is NOT generated for intermediate instructions
-; (arithmetic, etc.). This reduces file size and noise, and prevents
-; potential interference with optimizations where the presence of a Name
-; (user) might incorrectly keep a dead instruction alive in some test scenarios.
+; (arithmetic, etc.) by default. This reduces file size and noise, and prevents
+; potential interference with optimizations.
+; With --spirv-emit-op-names, we expect them to be generated.
 
-; CHECK-NOT: OpName %{{.*}} "add"
-; CHECK-NOT: OpName %{{.*}} "sub"
+; CHECK-DEFAULT-NOT: OpName %{{.*}} "add"
+; CHECK-DEFAULT-NOT: OpName %{{.*}} "sub"
+
+; CHECK-ALL-NAMES-DAG: OpName %{{.*}} "add"
+; CHECK-ALL-NAMES-DAG: OpName %{{.*}} "sub"
 
 @GlobalVar = global i32 0
 
