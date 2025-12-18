@@ -1,6 +1,7 @@
 import argparse
 import filecmp
 import os
+import stat
 import pathlib
 import re
 import shlex
@@ -120,7 +121,7 @@ def run_command(cmd, shell=False, **kwargs):
 
 def _remove_readonly(func, path, _):
     """Clear the readonly bit and reattempt the removal."""
-    os.chmod(path, os.stat.S_IWRITE)
+    os.chmod(path, stat.S_IWRITE)
     func(path)
 
 
@@ -131,7 +132,10 @@ def rmtree(path):
     Taken from official Python docs
     https://docs.python.org/3/library/shutil.html#rmtree-example
     """
-    shutil.rmtree(path, onexc=_remove_readonly)
+    try:
+        shutil.rmtree(path, onexc=_remove_readonly)
+    except Exception:
+        pass
 
 
 def checkout(giturl, sourcepath):
@@ -437,6 +441,8 @@ def run(
     clean = args.clean
     if cachefile is not None:
         cachefile = os.path.join(llvmsrcroot, args.cachefile)
+        if not os.path.isfile(cachefile):
+            raise Exception(f"--cachefile={cachefile} does not exist", file=sys.stderr)
 
     prevcachepath = os.path.join(workdir, "prevcache.cmake")
     prevscriptpath = os.path.join(workdir, "prevscript.py")
@@ -504,7 +510,7 @@ def run(
 
     if clean:
         if os.path.exists(workdir):
-            print("Deleting previous build state including sources")
+            print("Deleting previous build state including sources", file=sys.stderr)
 
         with w.step(f"clean"):
             rmtree(workdir)
@@ -514,14 +520,22 @@ def run(
             for p in clobberpaths:
                 if os.path.exists(os.path.join(workdir, p)):
                     print(
-                        "Deleting previous build artifacts; use --incremental to keep"
+                        "Deleting previous build artifacts; use --incremental to keep",
+                        file=sys.stderr,
                     )
                     break
 
         with w.step(f"clobber"):
             for d in clobberpaths:
                 rmtree(os.path.join(workdir, d))
-            os.path.unlink(prevcachepath)
+            try:
+                os.unlink(prevscriptpath)
+            except Exception:
+                pass
+            try:
+                os.unlink(prevcachepath)
+            except Exception:
+                pass
 
     os.makedirs(workdir, exist_ok=True)
     os.chdir(workdir)
