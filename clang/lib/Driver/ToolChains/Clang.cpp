@@ -7837,7 +7837,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                                options::OPT_fno_fat_lto_objects)) {
     if (IsUsingLTO && A->getOption().matches(options::OPT_ffat_lto_objects)) {
       assert(LTOMode == LTOK_Full || LTOMode == LTOK_Thin);
-      if (!Triple.isOSBinFormatELF()) {
+      if (!Triple.isOSBinFormatELF() && !Triple.isOSBinFormatCOFF()) {
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << A->getAsString(Args) << TC.getTripleString();
       }
