@@ -599,13 +599,6 @@ def err_drv_reduced_module_output_overrided : Warning<
   "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
   InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
 
-def remark_found_cxx20_module_usage : Remark<
-  "found C++20 module usage in file '%0'">,
-  InGroup<ModulesDriver>;
-def remark_performing_driver_managed_module_build : Remark<
-  "performing driver managed module build">,
-  InGroup<ModulesDriver>;
-
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
   InGroup<DiagGroup<"delayed-template-parsing-in-cxx20">>;
@@ -792,6 +785,9 @@ def err_cc1_round_trip_mismatch : Error<
 def err_cc1_unbounded_vscale_min : Error<
   "minimum vscale must be an unsigned integer greater than 0">;
 
+def err_conflicting_matrix_layout_flags: Error<
+  "-fmatrix-memory-layout=%0 conflicts with -mllvm -matrix-default-layout=%1">;
+
 def err_drv_using_omit_rtti_component_without_no_rtti : Error<
   "-fexperimental-omit-vtable-rtti call only be used with -fno-rtti">;
 
@@ -823,6 +819,8 @@ def err_drv_target_variant_invalid : Error<
 
 def err_drv_invalid_directx_shader_module : Error<
   "invalid profile : %0">;
+def err_drv_dxc_invalid_matrix_layout : Error<
+  "cannot specify /Zpr and /Zpc together">;
 def err_drv_dxc_missing_target_profile : Error<
   "target profile option (-T) is missing">;
 def err_drv_hlsl_unsupported_target : Error<
