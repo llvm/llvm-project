@@ -2537,8 +2537,11 @@ void objdump::parseInputMachO(StringRef Filename) {
   if (!BinaryOrErr) {
     if (Error E = isNotObjectErrorInvalidFileType(BinaryOrErr.takeError()))
       reportError(std::move(E), Filename);
-    else
-      outs() << Filename << ": is not an object file\n";
+    else {
+      WithColor::error(errs(), "llvm-objdump")
+          << "'" << Filename << "': is not an object file\n";
+      HadError = true;
+    }
     return;
   }
   Binary &Bin = *BinaryOrErr.get().getBinary();

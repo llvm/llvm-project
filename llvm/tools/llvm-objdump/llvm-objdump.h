@@ -72,6 +72,8 @@ extern bool SymbolTable;
 extern std::string TripleName;
 extern bool UnwindInfo;
 
+extern bool HadError;
+
 extern StringSet<> FoundSectionSet;
 
 class Dumper {
