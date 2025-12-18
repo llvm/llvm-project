@@ -29,6 +29,7 @@ jobs:
       with:
         repository: compnerd/ids
         path: ${{ github.workspace }}/ids
+        ref: b3bf35dd13d7ff244a6a6d106fe58d0eedb5743e # main
         fetch-depth: 0
 
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
