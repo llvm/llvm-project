@@ -90,6 +90,12 @@ void InitializePlatformInterceptors();
 #    define ASAN_INTERCEPT___CXA_ATEXIT 0
 #  endif
 
+#  if SANITIZER_AIX
+#    define ASAN_INTERCEPT_EXIT 1
+#  else
+#    define ASAN_INTERCEPT_EXIT 0
+#  endif
+
 #  if SANITIZER_NETBSD
 #    define ASAN_INTERCEPT_ATEXIT 1
 #  else

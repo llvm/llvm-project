@@ -778,6 +778,14 @@ static void AtCxaAtexit(void *unused) {
 }
 #endif
 
+#  if ASAN_INTERCEPT_EXIT
+INTERCEPTOR(void, exit, int status) {
+  AsanInitFromRtl();
+  StopInitOrderChecking();
+  REAL(exit)(status);
+}
+#  endif
+
 #if ASAN_INTERCEPT___CXA_ATEXIT
 INTERCEPTOR(int, __cxa_atexit, void (*func)(void *), void *arg,
             void *dso_handle) {
@@ -933,6 +941,10 @@ void InitializeAsanInterceptors() {
 #if ASAN_INTERCEPT_ATEXIT
   ASAN_INTERCEPT_FUNC(atexit);
 #endif
+
+#  if ASAN_INTERCEPT_EXIT
+  ASAN_INTERCEPT_FUNC(exit);
+#  endif
 
 #if ASAN_INTERCEPT_PTHREAD_ATFORK
   ASAN_INTERCEPT_FUNC(pthread_atfork);
