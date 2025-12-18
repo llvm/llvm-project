@@ -2800,7 +2800,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPCancelConstruct &) {
 void OmpStructureChecker::Enter(const parser::OpenMPCriticalConstruct &x) {
   const parser::OmpBeginDirective &beginSpec{x.BeginDir()};
   const std::optional<parser::OmpEndDirective> &endSpec{x.EndDir()};
-  PushContextAndClauseSets(beginSpec.DirName().source, beginSpec.DirName().v);
+  PushContextAndClauseSets(beginSpec.DirName().source, beginSpec.DirId());
 
   const auto &block{std::get<parser::Block>(x.t)};
   CheckNoBranching(
@@ -4246,6 +4246,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
   Directive dir{GetContext().directive};
   llvm::ArrayRef<Directive> leafs{llvm::omp::getLeafConstructsOrSelf(dir)};
   parser::OmpMapType::Value mapType{parser::OmpMapType::Value::Storage};
+  const parser::OmpObjectList &objects{DEREF(GetOmpObjectList(x))};
 
   if (auto *type{OmpGetUniqueModifier<parser::OmpMapType>(modifiers)}) {
     using Value = parser::OmpMapType::Value;
@@ -4325,7 +4326,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
     }};
 
     evaluate::ExpressionAnalyzer ea{context_};
-    for (auto &object : GetOmpObjectList(x)->v) {
+    auto restore{ea.AllowWholeAssumedSizeArray(true)};
+    for (auto &object : objects.v) {
       if (const parser::Designator *d{GetDesignatorFromObj(object)}) {
         if (auto &&expr{ea.Analyze(*d)}) {
           if (hasBasePointer(*expr)) {
@@ -4354,6 +4356,16 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
         "Duplicate map-type-modifier entry '%s' will be ignored"_warn_en_US,
         parser::ToUpperCaseLetters(
             parser::OmpMapTypeModifier::EnumToString((**maybeIter)->v)));
+  }
+
+  if (version < 60) {
+    for (const parser::OmpObject &object : objects.v) {
+      if (IsWholeAssumedSizeArray(object)) {
+        auto maybeSource{GetObjectSource(object)};
+        context_.Say(maybeSource.value_or(GetContext().clauseSource),
+            "Whole assumed-size arrays are not allowed on MAP clause"_err_en_US);
+      }
+    }
   }
 }
 
@@ -4688,7 +4700,9 @@ void OmpStructureChecker::CheckStructureComponent(
     if (const parser::DataRef *dataRef{
             std::get_if<parser::DataRef>(&designator.u)}) {
       if (!IsDataRefTypeParamInquiry(dataRef)) {
-        const auto expr{AnalyzeExpr(context_, designator)};
+        evaluate::ExpressionAnalyzer ea{context_};
+        auto restore{ea.AllowWholeAssumedSizeArray(true)};
+        const auto expr{ea.Analyze(designator)};
         if (expr.has_value() && evaluate::HasStructureComponent(expr.value())) {
           context_.Say(designator.source,
               "A variable that is part of another variable cannot appear on the %s clause"_err_en_US,
@@ -4789,6 +4803,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDeviceAddr &x) {
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(x.v, currSymbols);
   semantics::UnorderedSymbolSet listVars;
+  unsigned version{context_.langOptions().OpenMPVersion};
+
   for (auto [_, clause] :
       FindClauses(llvm::omp::Clause::OMPC_use_device_addr)) {
     const auto &useDeviceAddrClause{
@@ -4800,6 +4816,11 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDeviceAddr &x) {
         if (name->symbol) {
           useDeviceAddrNameList.push_back(*name);
         }
+      }
+      if (version < 60 && IsWholeAssumedSizeArray(ompObject)) {
+        auto maybeSource{GetObjectSource(ompObject)};
+        context_.Say(maybeSource.value_or(clause->source),
+            "Whole assumed-size arrays are not allowed on USE_DEVICE_ADDR clause"_err_en_US);
       }
     }
     CheckMultipleOccurrence(
@@ -5363,6 +5384,82 @@ void OmpStructureChecker::Enter(const parser::OmpClause::SelfMaps &x) {
   CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_self_maps);
 }
 
+void OmpStructureChecker::CheckDimsModifier(parser::CharBlock source,
+    size_t numValues, const parser::OmpDimsModifier &x) {
+  std::string name{OmpGetDescriptor<parser::OmpDimsModifier>().name.str()};
+
+  if (auto dimsVal{GetIntValue(x.v)}) {
+    if (*dimsVal > 0) {
+      if (static_cast<size_t>(*dimsVal) < numValues) {
+        context_.Say(source,
+            "The %s specifies %d dimensions but %zu values were provided"_err_en_US,
+            name, *dimsVal, numValues);
+      }
+    } else {
+      context_.Say(
+          source, "The argument to the %s should be positive"_err_en_US, name);
+    }
+  }
+  // The non-constant expression case is diagnosed elsewhere.
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::NumTeams &x) {
+  constexpr auto clauseId{llvm::omp::Clause::OMPC_num_teams};
+  CheckAllowedClause(clauseId);
+  parser::CharBlock source{GetContext().clauseSource};
+  auto &values{std::get<std::list<parser::ScalarIntExpr>>(x.v.t)};
+
+  if (OmpVerifyModifiers(x.v, clauseId, source, context_)) {
+    auto &modifiers{OmpGetModifiers(x.v)};
+    if (auto *dims{OmpGetUniqueModifier<parser::OmpDimsModifier>(modifiers)}) {
+      CheckDimsModifier(
+          OmpGetModifierSource(modifiers, dims), values.size(), *dims);
+    }
+  }
+
+  for (auto &val : values) {
+    RequiresPositiveParameter(clauseId, val);
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::NumThreads &x) {
+  constexpr auto clauseId{llvm::omp::Clause::OMPC_num_threads};
+  CheckAllowedClause(clauseId);
+  parser::CharBlock source{GetContext().clauseSource};
+  auto &values{std::get<std::list<parser::ScalarIntExpr>>(x.v.t)};
+
+  if (OmpVerifyModifiers(x.v, clauseId, source, context_)) {
+    auto &modifiers{OmpGetModifiers(x.v)};
+    if (auto *dims{OmpGetUniqueModifier<parser::OmpDimsModifier>(modifiers)}) {
+      CheckDimsModifier(
+          OmpGetModifierSource(modifiers, dims), values.size(), *dims);
+    }
+  }
+
+  for (auto &val : values) {
+    RequiresPositiveParameter(clauseId, val);
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::ThreadLimit &x) {
+  constexpr auto clauseId{llvm::omp::Clause::OMPC_thread_limit};
+  CheckAllowedClause(clauseId);
+  parser::CharBlock source{GetContext().clauseSource};
+  auto &values{std::get<std::list<parser::ScalarIntExpr>>(x.v.t)};
+
+  if (OmpVerifyModifiers(x.v, clauseId, source, context_)) {
+    auto &modifiers{OmpGetModifiers(x.v)};
+    if (auto *dims{OmpGetUniqueModifier<parser::OmpDimsModifier>(modifiers)}) {
+      CheckDimsModifier(
+          OmpGetModifierSource(modifiers, dims), values.size(), *dims);
+    }
+  }
+
+  for (auto &val : values) {
+    RequiresPositiveParameter(clauseId, val);
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
   bool isDependClauseOccured{false};
   int targetCount{0}, targetSyncCount{0};
@@ -5382,7 +5479,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
                     OmpGetRepeatableModifier<parser::OmpInteropType>(
                         modifiers)};
                 for (const auto &it : interopTypeModifier) {
-                  if (it->v == parser::OmpInteropType::Value::TargetSync) {
+                  if (it->v == parser::OmpInteropType::Value::Targetsync) {
                     ++targetSyncCount;
                   } else {
                     ++targetCount;
@@ -5569,11 +5666,8 @@ CHECK_SIMPLE_CLAUSE(UsesAllocators, OMPC_uses_allocators)
 CHECK_SIMPLE_CLAUSE(Weak, OMPC_weak)
 CHECK_SIMPLE_CLAUSE(Write, OMPC_write)
 
-CHECK_REQ_SCALAR_INT_CLAUSE(NumTeams, OMPC_num_teams)
-CHECK_REQ_SCALAR_INT_CLAUSE(NumThreads, OMPC_num_threads)
 CHECK_REQ_SCALAR_INT_CLAUSE(OmpxDynCgroupMem, OMPC_ompx_dyn_cgroup_mem)
 CHECK_REQ_SCALAR_INT_CLAUSE(Priority, OMPC_priority)
-CHECK_REQ_SCALAR_INT_CLAUSE(ThreadLimit, OMPC_thread_limit)
 
 CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(Collapse, OMPC_collapse)
 CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(Safelen, OMPC_safelen)
