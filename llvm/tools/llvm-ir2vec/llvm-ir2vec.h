@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the IR2VecTool and MIR2VecTool class definitions and
-/// implementations for the llvm-ir2vec embedding generation tool.
+/// This file contains the IR2VecTool and MIR2VecTool class definitions for
+/// the llvm-ir2vec embedding generation tool.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -90,180 +90,37 @@ private:
   const Vocabulary *Vocab = nullptr;
 
 public:
-  explicit IR2VecTool(Module &M) : M(M) {}
+  explicit IR2VecTool(Module &M);
 
   /// Initialize the IR2Vec vocabulary analysis
-  bool initializeVocabulary() {
-    // Register and run the IR2Vec vocabulary analysis
-    // The vocabulary file path is specified via --ir2vec-vocab-path global
-    // option
-    MAM.registerPass([&] { return PassInstrumentationAnalysis(); });
-    MAM.registerPass([&] { return IR2VecVocabAnalysis(); });
-    // This will throw an error if vocab is not found or invalid
-    Vocab = &MAM.getResult<IR2VecVocabAnalysis>(M);
-    return Vocab->isValid();
-  }
+  bool initializeVocabulary();
 
   /// Generate triplets for a single function
   /// Returns a TripletResult with:
   ///   - Triplets: vector of all (subject, object, relation) tuples
   ///   - MaxRelation: highest Arg relation ID used, or NextRelation if none
-  TripletResult generateTriplets(const Function &F) const {
-    if (F.isDeclaration())
-      return {};
-
-    TripletResult Result;
-    Result.MaxRelation = 0;
-
-    unsigned MaxRelation = NextRelation;
-    unsigned PrevOpcode = 0;
-    bool HasPrevOpcode = false;
-
-    for (const BasicBlock &BB : F) {
-      for (const auto &I : BB.instructionsWithoutDebug()) {
-        unsigned Opcode = Vocabulary::getIndex(I.getOpcode());
-        unsigned TypeID = Vocabulary::getIndex(I.getType()->getTypeID());
-
-        // Add "Next" relationship with previous instruction
-        if (HasPrevOpcode) {
-          Result.Triplets.push_back({PrevOpcode, Opcode, NextRelation});
-          LLVM_DEBUG(dbgs()
-                     << Vocabulary::getVocabKeyForOpcode(PrevOpcode + 1) << '\t'
-                     << Vocabulary::getVocabKeyForOpcode(Opcode + 1) << '\t'
-                     << "Next\n");
-        }
-
-        // Add "Type" relationship
-        Result.Triplets.push_back({Opcode, TypeID, TypeRelation});
-        LLVM_DEBUG(
-            dbgs() << Vocabulary::getVocabKeyForOpcode(Opcode + 1) << '\t'
-                   << Vocabulary::getVocabKeyForTypeID(I.getType()->getTypeID())
-                   << '\t' << "Type\n");
-
-        // Add "Arg" relationships
-        unsigned ArgIndex = 0;
-        for (const Use &U : I.operands()) {
-          unsigned OperandID = Vocabulary::getIndex(*U.get());
-          unsigned RelationID = ArgRelation + ArgIndex;
-          Result.Triplets.push_back({Opcode, OperandID, RelationID});
-
-          LLVM_DEBUG({
-            StringRef OperandStr = Vocabulary::getVocabKeyForOperandKind(
-                Vocabulary::getOperandKind(U.get()));
-            dbgs() << Vocabulary::getVocabKeyForOpcode(Opcode + 1) << '\t'
-                   << OperandStr << '\t' << "Arg" << ArgIndex << '\n';
-          });
-
-          ++ArgIndex;
-        }
-        // Only update MaxRelation if there were operands
-        if (ArgIndex > 0)
-          MaxRelation = std::max(MaxRelation, ArgRelation + ArgIndex - 1);
-        PrevOpcode = Opcode;
-        HasPrevOpcode = true;
-      }
-    }
-
-    Result.MaxRelation = MaxRelation;
-    return Result;
-  }
+  TripletResult generateTriplets(const Function &F) const;
 
   /// Get triplets for the entire module
-  TripletResult generateTriplets() const {
-    TripletResult Result;
-    Result.MaxRelation = NextRelation;
-
-    for (const Function &F : M.getFunctionDefs()) {
-      TripletResult FuncResult = generateTriplets(F);
-      Result.MaxRelation = std::max(Result.MaxRelation, FuncResult.MaxRelation);
-      Result.Triplets.insert(Result.Triplets.end(), FuncResult.Triplets.begin(),
-                             FuncResult.Triplets.end());
-    }
-
-    return Result;
-  }
+  TripletResult generateTriplets() const;
 
   /// Collect triplets for the module and dump output to stream
   /// Output format: MAX_RELATION=N header followed by relationships
-  void writeTripletsToStream(raw_ostream &OS) const {
-    auto Result = generateTriplets();
-    OS << "MAX_RELATION=" << Result.MaxRelation << '\n';
-    for (const auto &T : Result.Triplets)
-      OS << T.Head << '\t' << T.Tail << '\t' << T.Relation << '\n';
-  }
+  void writeTripletsToStream(raw_ostream &OS) const;
 
   /// Generate entity mappings for the entire vocabulary
   /// Returns EntityList containing all entity strings
-  static EntityList collectEntityMappings() {
-    auto EntityLen = Vocabulary::getCanonicalSize();
-    EntityList Result;
-    for (unsigned EntityID = 0; EntityID < EntityLen; ++EntityID)
-      Result.push_back(Vocabulary::getStringKey(EntityID).str());
-    return Result;
-  }
+  static EntityList collectEntityMappings();
 
   /// Dump entity ID to string mappings
-  static void writeEntitiesToStream(raw_ostream &OS) {
-    auto Entities = collectEntityMappings();
-    OS << Entities.size() << "\n";
-    for (unsigned EntityID = 0; EntityID < Entities.size(); ++EntityID)
-      OS << Entities[EntityID] << '\t' << EntityID << '\n';
-  }
+  static void writeEntitiesToStream(raw_ostream &OS);
 
   /// Generate embeddings for the entire module
-  void writeEmbeddingsToStream(raw_ostream &OS, EmbeddingLevel Level) const {
-    if (!Vocab->isValid()) {
-      WithColor::error(errs(), ToolName)
-          << "Vocabulary is not valid. IR2VecTool not initialized.\n";
-      return;
-    }
-
-    for (const Function &F : M.getFunctionDefs())
-      writeEmbeddingsToStream(F, OS, Level);
-  }
+  void writeEmbeddingsToStream(raw_ostream &OS, EmbeddingLevel Level) const;
 
   /// Generate embeddings for a single function
   void writeEmbeddingsToStream(const Function &F, raw_ostream &OS,
-                               EmbeddingLevel Level) const {
-    if (!Vocab || !Vocab->isValid()) {
-      WithColor::error(errs(), ToolName)
-          << "Vocabulary is not valid. IR2VecTool not initialized.\n";
-      return;
-    }
-    if (F.isDeclaration()) {
-      OS << "Function " << F.getName() << " is a declaration, skipping.\n";
-      return;
-    }
-
-    // Create embedder for this function
-    auto Emb = Embedder::create(IR2VecEmbeddingKind, F, *Vocab);
-    if (!Emb) {
-      WithColor::error(errs(), ToolName)
-          << "Failed to create embedder for function " << F.getName() << "\n";
-      return;
-    }
-
-    OS << "Function: " << F.getName() << "\n";
-
-    // Generate embeddings based on the specified level
-    switch (Level) {
-    case FunctionLevel:
-      Emb->getFunctionVector().print(OS);
-      break;
-    case BasicBlockLevel:
-      for (const BasicBlock &BB : F) {
-        OS << BB.getName() << ":";
-        Emb->getBBVector(BB).print(OS);
-      }
-      break;
-    case InstructionLevel:
-      for (const Instruction &I : instructions(F)) {
-        OS << I;
-        Emb->getInstVector(I).print(OS);
-      }
-      break;
-    }
-  }
+                               EmbeddingLevel Level) const;
 };
 
 } // namespace ir2vec
@@ -283,21 +140,10 @@ private:
   std::unique_ptr<MIRVocabulary> Vocab;
 
 public:
-  explicit MIR2VecTool(MachineModuleInfo &MMI) : MMI(MMI) {}
+  explicit MIR2VecTool(MachineModuleInfo &MMI);
 
   /// Initialize MIR2Vec vocabulary from file (for embeddings generation)
-  bool initializeVocabulary(const Module &M) {
-    MIR2VecVocabProvider Provider(MMI);
-    auto VocabOrErr = Provider.getVocabulary(M);
-    if (!VocabOrErr) {
-      WithColor::error(errs(), ToolName)
-          << "Failed to load MIR2Vec vocabulary - "
-          << toString(VocabOrErr.takeError()) << "\n";
-      return false;
-    }
-    Vocab = std::make_unique<MIRVocabulary>(std::move(*VocabOrErr));
-    return true;
-  }
+  bool initializeVocabulary(const Module &M);
 
   /// Initialize vocabulary with layout information only.
   /// This creates a minimal vocabulary with correct layout but no actual
@@ -308,215 +154,36 @@ public:
   ///
   /// FIXME: Use --target option to get target info directly, avoiding the need
   /// to parse machine functions for pre-training operations.
-  bool initializeVocabularyForLayout(const Module &M) {
-    for (const Function &F : M.getFunctionDefs()) {
-      MachineFunction *MF = MMI.getMachineFunction(F);
-      if (!MF)
-        continue;
-
-      const TargetInstrInfo &TII = *MF->getSubtarget().getInstrInfo();
-      const TargetRegisterInfo &TRI = *MF->getSubtarget().getRegisterInfo();
-      const MachineRegisterInfo &MRI = MF->getRegInfo();
-
-      auto VocabOrErr =
-          MIRVocabulary::createDummyVocabForTest(TII, TRI, MRI, 1);
-      if (!VocabOrErr) {
-        WithColor::error(errs(), ToolName)
-            << "Failed to create dummy vocabulary - "
-            << toString(VocabOrErr.takeError()) << "\n";
-        return false;
-      }
-      Vocab = std::make_unique<MIRVocabulary>(std::move(*VocabOrErr));
-      return true;
-    }
-
-    WithColor::error(errs(), ToolName)
-        << "No machine functions found to initialize vocabulary\n";
-    return false;
-  }
+  bool initializeVocabularyForLayout(const Module &M);
 
   /// Get triplets for a single machine function
   /// Returns TripletResult containing MaxRelation and vector of Triplets
-  TripletResult generateTriplets(const MachineFunction &MF) const {
-    TripletResult Result;
-    Result.MaxRelation = MIRNextRelation;
-
-    if (!Vocab) {
-      WithColor::error(errs(), ToolName)
-          << "MIR Vocabulary must be initialized for triplet generation.\n";
-      return Result;
-    }
-
-    unsigned PrevOpcode = 0;
-    bool HasPrevOpcode = false;
-    for (const MachineBasicBlock &MBB : MF) {
-      for (const MachineInstr &MI : MBB) {
-        // Skip debug instructions
-        if (MI.isDebugInstr())
-          continue;
-
-        // Get opcode entity ID
-        unsigned OpcodeID = Vocab->getEntityIDForOpcode(MI.getOpcode());
-
-        // Add "Next" relationship with previous instruction
-        if (HasPrevOpcode) {
-          Result.Triplets.push_back({PrevOpcode, OpcodeID, MIRNextRelation});
-          LLVM_DEBUG(dbgs()
-                     << Vocab->getStringKey(PrevOpcode) << '\t'
-                     << Vocab->getStringKey(OpcodeID) << '\t' << "Next\n");
-        }
-
-        // Add "Arg" relationships for operands
-        unsigned ArgIndex = 0;
-        for (const MachineOperand &MO : MI.operands()) {
-          auto OperandID = Vocab->getEntityIDForMachineOperand(MO);
-          unsigned RelationID = MIRArgRelation + ArgIndex;
-          Result.Triplets.push_back({OpcodeID, OperandID, RelationID});
-          LLVM_DEBUG({
-            std::string OperandStr = Vocab->getStringKey(OperandID);
-            dbgs() << Vocab->getStringKey(OpcodeID) << '\t' << OperandStr
-                   << '\t' << "Arg" << ArgIndex << '\n';
-          });
-
-          ++ArgIndex;
-        }
-
-        // Update MaxRelation if there were operands
-        if (ArgIndex > 0)
-          Result.MaxRelation =
-              std::max(Result.MaxRelation, MIRArgRelation + ArgIndex - 1);
-
-        PrevOpcode = OpcodeID;
-        HasPrevOpcode = true;
-      }
-    }
-
-    return Result;
-  }
+  TripletResult generateTriplets(const MachineFunction &MF) const;
 
   /// Get triplets for the entire module
   /// Returns TripletResult containing aggregated MaxRelation and all Triplets
-  TripletResult generateTriplets(const Module &M) const {
-    TripletResult Result;
-    Result.MaxRelation = MIRNextRelation;
-
-    for (const Function &F : M.getFunctionDefs()) {
-      MachineFunction *MF = MMI.getMachineFunction(F);
-      if (!MF) {
-        WithColor::warning(errs(), ToolName)
-            << "No MachineFunction for " << F.getName() << "\n";
-        continue;
-      }
-
-      TripletResult FuncResult = generateTriplets(*MF);
-      Result.MaxRelation = std::max(Result.MaxRelation, FuncResult.MaxRelation);
-      Result.Triplets.insert(Result.Triplets.end(), FuncResult.Triplets.begin(),
-                             FuncResult.Triplets.end());
-    }
-
-    return Result;
-  }
+  TripletResult generateTriplets(const Module &M) const;
 
   /// Collect triplets for the module and write to output stream
   /// Output format: MAX_RELATION=N header followed by relationships
-  void writeTripletsToStream(const Module &M, raw_ostream &OS) const {
-    auto Result = generateTriplets(M);
-    OS << "MAX_RELATION=" << Result.MaxRelation << '\n';
-    for (const auto &T : Result.Triplets)
-      OS << T.Head << '\t' << T.Tail << '\t' << T.Relation << '\n';
-  }
+  void writeTripletsToStream(const Module &M, raw_ostream &OS) const;
 
   /// Generate entity mappings for the entire vocabulary
-  EntityList collectEntityMappings() const {
-    if (!Vocab) {
-      WithColor::error(errs(), ToolName)
-          << "Vocabulary must be initialized for entity mappings.\n";
-      return {};
-    }
-
-    const unsigned EntityCount = Vocab->getCanonicalSize();
-    EntityList Result;
-    for (unsigned EntityID = 0; EntityID < EntityCount; ++EntityID)
-      Result.push_back(Vocab->getStringKey(EntityID));
-
-    return Result;
-  }
+  EntityList collectEntityMappings() const;
 
   /// Generate entity mappings and write to output stream
-  void writeEntitiesToStream(raw_ostream &OS) const {
-    auto Entities = collectEntityMappings();
-    if (Entities.empty())
-      return;
-
-    OS << Entities.size() << "\n";
-    for (unsigned EntityID = 0; EntityID < Entities.size(); ++EntityID)
-      OS << Entities[EntityID] << '\t' << EntityID << '\n';
-  }
+  void writeEntitiesToStream(raw_ostream &OS) const;
 
   /// Generate embeddings for all machine functions in the module
   void writeEmbeddingsToStream(const Module &M, raw_ostream &OS,
-                               EmbeddingLevel Level) const {
-    if (!Vocab) {
-      WithColor::error(errs(), ToolName) << "Vocabulary not initialized.\n";
-      return;
-    }
-
-    for (const Function &F : M.getFunctionDefs()) {
-      MachineFunction *MF = MMI.getMachineFunction(F);
-      if (!MF) {
-        WithColor::warning(errs(), ToolName)
-            << "No MachineFunction for " << F.getName() << "\n";
-        continue;
-      }
-
-      writeEmbeddingsToStream(*MF, OS, Level);
-    }
-  }
+                               EmbeddingLevel Level) const;
 
   /// Generate embeddings for a specific machine function
   void writeEmbeddingsToStream(MachineFunction &MF, raw_ostream &OS,
-                               EmbeddingLevel Level) const {
-    if (!Vocab) {
-      WithColor::error(errs(), ToolName) << "Vocabulary not initialized.\n";
-      return;
-    }
-
-    auto Emb = MIREmbedder::create(MIR2VecKind::Symbolic, MF, *Vocab);
-    if (!Emb) {
-      WithColor::error(errs(), ToolName)
-          << "Failed to create embedder for " << MF.getName() << "\n";
-      return;
-    }
-
-    OS << "MIR2Vec embeddings for machine function " << MF.getName() << ":\n";
-
-    // Generate embeddings based on the specified level
-    switch (Level) {
-    case FunctionLevel:
-      OS << "Function vector: ";
-      Emb->getMFunctionVector().print(OS);
-      break;
-    case BasicBlockLevel:
-      OS << "Basic block vectors:\n";
-      for (const MachineBasicBlock &MBB : MF) {
-        OS << "MBB " << MBB.getName() << ": ";
-        Emb->getMBBVector(MBB).print(OS);
-      }
-      break;
-    case InstructionLevel:
-      OS << "Instruction vectors:\n";
-      for (const MachineBasicBlock &MBB : MF) {
-        for (const MachineInstr &MI : MBB) {
-          OS << MI << " -> ";
-          Emb->getMInstVector(MI).print(OS);
-        }
-      }
-      break;
-    }
-  }
+                               EmbeddingLevel Level) const;
 
   /// Get the MIR vocabulary instance
-  const MIRVocabulary *getVocabulary() const { return Vocab.get(); }
+  const MIRVocabulary *getVocabulary() const;
 };
 
 /// Helper structure to hold MIR context
