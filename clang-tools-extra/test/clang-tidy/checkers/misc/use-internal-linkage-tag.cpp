@@ -81,6 +81,11 @@ struct {} VariableOfUnnamedType;
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: variable 'VariableOfUnnamedType' can be made static or moved into an anonymous namespace to enforce internal linkage
 // CHECK-FIXES: static struct {} VariableOfUnnamedType;
 
+#define MACRO struct ClassDefinedInMacro {};
+
+MACRO
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: struct 'ClassDefinedInMacro' can be moved into an anonymous namespace to enforce internal linkage
+
 extern "C" struct MarkedExternC { int i; };
 
 extern "C" {
