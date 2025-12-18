@@ -179,9 +179,9 @@ int llvm::compileModuleWithNewPM(
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
   } else {
-    ExitOnErr(
-        Target->buildCodeGenPipeline(MPM, *OS, DwoOut ? &DwoOut->os() : nullptr,
-                                     FileType, Opt, MMI.getContext(), &PIC, PB));
+    ExitOnErr(Target->buildCodeGenPipeline(
+        MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt,
+        MMI.getContext(), &PIC, PB));
   }
 
   // If user only wants to print the pipeline, print it before parsing the MIR.

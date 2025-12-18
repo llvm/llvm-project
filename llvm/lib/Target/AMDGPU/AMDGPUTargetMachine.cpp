@@ -141,8 +141,7 @@ class AMDGPUCodeGenPassBuilder
 public:
   AMDGPUCodeGenPassBuilder(GCNTargetMachine &TM,
                            const CGPassBuilderOption &Opts,
-                           PassInstrumentationCallbacks *PIC,
-                           PassBuilder &PB);
+                           PassInstrumentationCallbacks *PIC, PassBuilder &PB);
 
   void addIRPasses(PassManagerWrapper &PMW) const;
   void addCodeGenPrepare(PassManagerWrapper &PMW) const;
@@ -2400,7 +2399,7 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
 
   addMachineFunctionPass(GCNPreRALongBranchRegPass(), PMW);
 
-addRegAllocPassOrOpt(
+  addRegAllocPassOrOpt(
       PMW, []() { return RAGreedyPass({onlyAllocateSGPRs, "sgpr"}); });
 
   // Commit allocated register changes. This is mostly necessary because too

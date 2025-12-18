@@ -279,7 +279,7 @@ void X86TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "X86PassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 
-PB.registerRegClassFilterParsingCallback(
+  PB.registerRegClassFilterParsingCallback(
       [](StringRef FilterName) -> RegAllocFilterFunc {
         if (FilterName == "tile-reg") {
           return onlyAllocateTileRegisters;

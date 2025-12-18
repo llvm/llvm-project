@@ -1623,7 +1623,7 @@ Expected<CodeGenOptLevel> parseExpandIRInstsOptions(StringRef Param) {
 }
 
 Expected<bool> llvm::parseMachineSinkingPassOptions(StringRef Params,
-                                              const PassBuilder &) {
+                                                    const PassBuilder &) {
   return PassBuilder::parseSinglePassOption(Params, "enable-sink-fold",
                                             "MachineSinkingPass");
 }

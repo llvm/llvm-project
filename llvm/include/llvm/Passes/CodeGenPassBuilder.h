@@ -103,11 +103,11 @@
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/ObjCARC.h"
@@ -1205,9 +1205,9 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPassFromOpt(
 #include "llvm/Passes/MachinePassRegistry.def"
 
   if (!Matched)
-    return make_error<StringError>(
-        Twine("unknown register allocator pass: ") + PassOpt,
-        inconvertibleErrorCode());
+    return make_error<StringError>(Twine("unknown register allocator pass: ") +
+                                       PassOpt,
+                                   inconvertibleErrorCode());
 
   return Error::success();
 }
