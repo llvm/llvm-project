@@ -974,6 +974,7 @@ public:
     return false;
   }
 
+  void populateUnwindResumeBlock(bool isCleanup, cir::TryOp tryOp);
   void populateEHCatchRegions(EHScopeStack::stable_iterator scope,
                               cir::TryOp tryOp);
 
@@ -1072,6 +1073,12 @@ public:
     // Holds the actual value for ScopeKind::Try
     cir::TryOp tryOp = nullptr;
 
+    // On a coroutine body, the OnFallthrough sub stmt holds the handler
+    // (CoreturnStmt) for control flow falling off the body. Keep track
+    // of emitted co_return in this scope and allow OnFallthrough to be
+    // skipeed.
+    bool hasCoreturnStmt = false;
+
     // Only Regular is used at the moment. Support for other kinds will be
     // added as the relevant statements/expressions are upstreamed.
     enum Kind {
@@ -1118,6 +1125,12 @@ public:
       cleanup();
       restore();
     }
+
+    // ---
+    // Coroutine tracking
+    // ---
+    bool hasCoreturn() const { return hasCoreturnStmt; }
+    void setCoreturn() { hasCoreturnStmt = true; }
 
     // ---
     // Kind
@@ -1473,6 +1486,8 @@ public:
   void emitDestructorBody(FunctionArgList &args);
 
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
+
+  mlir::LogicalResult emitCoreturnStmt(const CoreturnStmt &s);
 
   void emitCXXConstructExpr(const clang::CXXConstructExpr *e,
                             AggValueSlot dest);
@@ -2154,6 +2169,10 @@ public:
   void emitOMPDeclareReduction(const OMPDeclareReductionDecl &d);
   void emitOMPDeclareMapper(const OMPDeclareMapperDecl &d);
   void emitOMPRequiresDecl(const OMPRequiresDecl &d);
+
+private:
+  template <typename Op>
+  void emitOpenMPClauses(Op &op, ArrayRef<const OMPClause *> clauses);
 
   //===--------------------------------------------------------------------===//
   //                         OpenACC Emission
