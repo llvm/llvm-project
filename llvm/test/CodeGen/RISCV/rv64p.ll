@@ -43,7 +43,7 @@ define i64 @pack_i64_imm() {
 define i64 @li_imm() {
 ; CHECK-LABEL: li_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pli.w a0, -1
+; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    ret
   ret i64 -1
 }

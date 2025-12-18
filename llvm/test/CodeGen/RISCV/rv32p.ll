@@ -30,7 +30,7 @@ define i64 @abs_i64(i64 %x) {
 define i32 @li_imm() {
 ; CHECK-LABEL: li_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pli.h a0, -1
+; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    ret
   ret i32 -1
 }
