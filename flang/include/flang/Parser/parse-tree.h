@@ -4395,6 +4395,14 @@ struct OmpCancellationConstructTypeClause {
   std::tuple<OmpDirectiveName, std::optional<ScalarLogicalExpr>> t;
 };
 
+// Ref: [6.0:262]
+//
+// combiner-clause ->                               // since 6.0
+//    COMBINER(combiner-expr)
+struct OmpCombinerClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpCombinerClause, OmpCombinerExpression);
+};
+
 // Ref: [5.2:214]
 //
 // contains-clause ->
