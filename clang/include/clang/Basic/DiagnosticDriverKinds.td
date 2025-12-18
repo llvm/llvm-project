@@ -277,7 +277,6 @@ def err_drv_malformed_sanitizer_metadata_ignorelist : Error<
   "malformed sanitizer metadata ignorelist: '%0'">;
 def err_drv_unsupported_static_sanitizer_darwin : Error<
   "static %0 runtime is not supported on darwin">;
-def err_drv_not_a_ubsan_sanitizer : Error<"not a UBSan sanitizer: '%0'">;
 def err_drv_duplicate_config : Error<
   "no more than one option '--config' is allowed">;
 def err_drv_cannot_open_config_file : Error<
