@@ -2014,7 +2014,6 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX2-NEXT:    andl $63, %ecx
 ; AVX2-NEXT:    vpextrb $10, %xmm0, (%rsp,%rcx)
 ; AVX2-NEXT:    movzbl 56(%rbp), %ecx
-; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
@@ -3273,7 +3272,6 @@ define <64 x i32> @test_compress_large(<64 x i1> %mask, <64 x i32> %vec, <64 x i
 ; AVX2-NEXT:    addl %r8d, %r9d
 ; AVX2-NEXT:    movzbl 16(%rbp), %ecx
 ; AVX2-NEXT:    vextractps $1, %xmm0, (%rsp,%r9,4)
-; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addl %r9d, %ecx
 ; AVX2-NEXT:    movzbl 24(%rbp), %edx

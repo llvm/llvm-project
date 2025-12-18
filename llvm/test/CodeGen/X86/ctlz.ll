@@ -224,7 +224,6 @@ define i8 @ctlz_i8_zero_test(i8 %n) {
 ; X86-NOCMOV-NEXT:    testb %al, %al
 ; X86-NOCMOV-NEXT:    je .LBB4_1
 ; X86-NOCMOV-NEXT:  # %bb.2: # %cond.false
-; X86-NOCMOV-NEXT:    movzbl %al, %eax
 ; X86-NOCMOV-NEXT:    bsrl %eax, %eax
 ; X86-NOCMOV-NEXT:    xorl $7, %eax
 ; X86-NOCMOV-NEXT:    # kill: def $al killed $al killed $eax
@@ -959,7 +958,6 @@ define i8 @ctlz_xor7_i8_false(i8 %x) {
 ; X86-NOCMOV-NEXT:    testb %al, %al
 ; X86-NOCMOV-NEXT:    je .LBB16_1
 ; X86-NOCMOV-NEXT:  # %bb.2: # %cond.false
-; X86-NOCMOV-NEXT:    movzbl %al, %eax
 ; X86-NOCMOV-NEXT:    bsrl %eax, %eax
 ; X86-NOCMOV-NEXT:    xorl $7, %eax
 ; X86-NOCMOV-NEXT:    xorb $7, %al

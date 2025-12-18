@@ -67,7 +67,6 @@ define i16 @cnt16(i16 %x) nounwind readnone {
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    shrl $8, %eax
 ; X86-NEXT:    addl %ecx, %eax
-; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
@@ -1840,7 +1839,6 @@ define i32 @popcount_i16_zext(i16 zeroext %x) {
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    shrl $8, %eax
 ; X86-NEXT:    addl %ecx, %eax
-; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-BASE-LABEL: popcount_i16_zext:

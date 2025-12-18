@@ -203,6 +203,7 @@
 ; CHECK-NEXT:       X86 vzeroupper inserter
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       X86 Byte/Word Instruction Fixup
+; CHECK-NEXT:       X86 Eliminate Redundant Zero Extension
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       X86 Atom pad short functions
 ; CHECK-NEXT:       X86 LEA Fixup

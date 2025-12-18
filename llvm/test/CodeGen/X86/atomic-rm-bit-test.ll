@@ -177,7 +177,6 @@ define zeroext i8 @atomic_shl1_xor_8_gpr_valz(ptr %v, i8 zeroext %c) nounwind {
 ; X86-NEXT:    lock cmpxchgb %cl, (%esi)
 ; X86-NEXT:    jne .LBB3_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    testl %eax, %edx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    popl %esi
@@ -198,7 +197,6 @@ define zeroext i8 @atomic_shl1_xor_8_gpr_valz(ptr %v, i8 zeroext %c) nounwind {
 ; X64-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; X64-NEXT:    jne .LBB3_1
 ; X64-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    testl %eax, %edx
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
@@ -233,7 +231,6 @@ define zeroext i8 @atomic_shl1_mask0_xor_8_gpr_valz(ptr %v, i8 zeroext %c) nounw
 ; X86-NEXT:    lock cmpxchgb %cl, (%esi)
 ; X86-NEXT:    jne .LBB4_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    movzbl %dl, %ecx
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    setae %al
@@ -255,7 +252,6 @@ define zeroext i8 @atomic_shl1_mask0_xor_8_gpr_valz(ptr %v, i8 zeroext %c) nounw
 ; X64-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; X64-NEXT:    jne .LBB4_1
 ; X64-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    movzbl %sil, %ecx
 ; X64-NEXT:    btl %ecx, %eax
 ; X64-NEXT:    setae %al
@@ -291,7 +287,6 @@ define zeroext i8 @atomic_shl1_mask01_xor_8_gpr_valz(ptr %v, i8 zeroext %c) noun
 ; X86-NEXT:    lock cmpxchgb %cl, (%edx)
 ; X86-NEXT:    jne .LBB5_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    testl %eax, %ebx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    popl %ebx
@@ -313,7 +308,6 @@ define zeroext i8 @atomic_shl1_mask01_xor_8_gpr_valz(ptr %v, i8 zeroext %c) noun
 ; X64-NEXT:    lock cmpxchgb %cl, (%rdi)
 ; X64-NEXT:    jne .LBB5_1
 ; X64-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    testl %eax, %edx
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
@@ -349,7 +343,6 @@ define zeroext i8 @atomic_shl1_and_8_gpr_brnz(ptr %v, i8 zeroext %c) nounwind {
 ; X86-NEXT:    lock cmpxchgb %ch, (%edx)
 ; X86-NEXT:    jne .LBB6_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    testl %eax, %ebx
 ; X86-NEXT:    je .LBB6_3
 ; X86-NEXT:  # %bb.4: # %if.then
@@ -378,7 +371,6 @@ define zeroext i8 @atomic_shl1_and_8_gpr_brnz(ptr %v, i8 zeroext %c) nounwind {
 ; X64-NEXT:    lock cmpxchgb %r8b, (%rdi)
 ; X64-NEXT:    jne .LBB6_1
 ; X64-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    testl %eax, %edx
 ; X64-NEXT:    je .LBB6_3
 ; X64-NEXT:  # %bb.4: # %if.then
@@ -512,7 +504,6 @@ define zeroext i8 @atomic_shl1_mask01_and_8_gpr_brnz(ptr %v, i8 zeroext %c) noun
 ; X86-NEXT:    testl %ecx, %ebx
 ; X86-NEXT:    je .LBB8_3
 ; X86-NEXT:  # %bb.4: # %if.then
-; X86-NEXT:    movzbl %ah, %eax
 ; X86-NEXT:    movzbl (%edx,%eax), %eax
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
@@ -538,7 +529,6 @@ define zeroext i8 @atomic_shl1_mask01_and_8_gpr_brnz(ptr %v, i8 zeroext %c) noun
 ; X64-NEXT:    lock cmpxchgb %r8b, (%rdi)
 ; X64-NEXT:    jne .LBB8_1
 ; X64-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    testl %eax, %edx
 ; X64-NEXT:    je .LBB8_3
 ; X64-NEXT:  # %bb.4: # %if.then

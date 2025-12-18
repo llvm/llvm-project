@@ -152,6 +152,10 @@ FunctionPass *createX86CmovConverterPass();
 /// the upper portions of registers, and to save code size.
 FunctionPass *createX86FixupBWInsts();
 
+/// Return a Machine IR pass that eliminates redundant zero-extension
+/// instructions where the upper bits are already known to be zero.
+FunctionPass *createX86EliminateRedundantZeroExtend();
+
 /// Return a Machine IR pass that reassigns instruction chains from one domain
 /// to another, when profitable.
 FunctionPass *createX86DomainReassignmentPass();
