@@ -19,11 +19,5 @@ void *MemmoveDeviceToHost(void *dst, const void *src, std::size_t count);
 
 void *MemmoveDeviceToDevice(void *dst, const void *src, std::size_t count);
 
-void *MemcpyHostToDevice(void *dst, const void *src, std::size_t count);
-
-void *MemcpyDeviceToHost(void *dst, const void *src, std::size_t count);
-
-void *MemcpyDeviceToDevice(void *dst, const void *src, std::size_t count);
-
 } // namespace Fortran::runtime::cuda
 #endif // FORTRAN_RUNTIME_CUDA_MEMMOVE_FUNCTION_H_
