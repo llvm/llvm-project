@@ -276,15 +276,16 @@ void RewriterBase::replaceUsesWithIf(ValueRange from, ValueRange to,
                                      function_ref<bool(OpOperand &)> functor,
                                      bool *allUsesReplaced) {
   assert(from.size() == to.size() && "incorrect number of replacements");
-  bool allReplaced = true;
-  for (auto it : llvm::zip_equal(from, to)) {
-    bool r;
-    replaceUsesWithIf(std::get<0>(it), std::get<1>(it), functor,
-                      /*allUsesReplaced=*/&r);
-    allReplaced &= r;
+  for (auto [fromVal, toVal] : llvm::zip_equal(from, to)) {
+    if (allUsesReplaced) {
+      bool r;
+      replaceUsesWithIf(fromVal, toVal, functor,
+                        /*allUsesReplaced=*/&r);
+      *allUsesReplaced &= r;
+    } else {
+      replaceUsesWithIf(fromVal, toVal, functor);
+    }
   }
-  if (allUsesReplaced)
-    *allUsesReplaced = allReplaced;
 }
 
 void RewriterBase::inlineBlockBefore(Block *source, Block *dest,
