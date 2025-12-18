@@ -26,6 +26,13 @@ Error L0ContextTy::init() {
     return Err;
   if (auto Err = HostMemAllocator.initHostPool(*this, Plugin.getOptions()))
     return Err;
+
+  ze_result_t RC;
+  CALL_ZE(RC, zeDriverGetExtensionFunctionAddress, zeDriver,
+          "zexKernelGetArgumentSize", (void **)&zexKernelGetArgumentSize);
+  if (RC != ZE_RESULT_SUCCESS)
+    zexKernelGetArgumentSize = nullptr;
+
   return Plugin::success();
 }
 

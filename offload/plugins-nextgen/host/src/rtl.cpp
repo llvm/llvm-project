@@ -103,6 +103,12 @@ struct GenELF64KernelTy : public GenericKernelTy {
     if (!SupportsFFI)
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "libffi is not available, cannot launch kernel");
+
+    // Cooperative kernel launch is not supported for host
+    if (KernelArgs.Flags.Cooperative)
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "cooperative kernel launch not supported for host");
+
     // Create a vector of ffi_types, one per argument.
     SmallVector<ffi_type *, 16> ArgTypes(KernelArgs.NumArgs, &ffi_type_pointer);
     ffi_type **ArgTypesPtr = (ArgTypes.size()) ? &ArgTypes[0] : nullptr;
