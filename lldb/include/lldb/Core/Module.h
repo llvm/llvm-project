@@ -301,29 +301,12 @@ public:
   ///     matches.
   void FindCompileUnits(const FileSpec &path, SymbolContextList &sc_list);
 
-  /// Find functions by lookup info.
-  ///
-  /// If the function is an inlined function, it will have a block,
-  /// representing the inlined function, and the function will be the
-  /// containing function.  If it is not inlined, then the block will be NULL.
-  ///
-  /// \param[in] lookup_info
-  ///     The lookup info of the function we are looking for.
-  ///
-  /// \param[out] sc_list
-  ///     A symbol context list that gets filled in with all of the
-  ///     matches.
-  void FindFunctions(const LookupInfo &lookup_info,
-                     const CompilerDeclContext &parent_decl_ctx,
-                     const ModuleFunctionSearchOptions &options,
-                     SymbolContextList &sc_list);
-
   /// Find functions by a vector of lookup infos.
   ///
   /// If the function is an inlined function, it will have a block,
   /// representing the inlined function, and the function will be the
   /// containing function.  If it is not inlined, then the block will be NULL.
-  void FindFunctions(const std::vector<LookupInfo> &lookup_infos,
+  void FindFunctions(llvm::ArrayRef<LookupInfo> lookup_infos,
                      const CompilerDeclContext &parent_decl_ctx,
                      const ModuleFunctionSearchOptions &options,
                      SymbolContextList &sc_list);
@@ -929,6 +912,9 @@ public:
   public:
     LookupInfo() = default;
 
+    /// Copies an existing LookupInfo with a different lookup name.
+    LookupInfo(const LookupInfo &lookup_info, ConstString lookup_name);
+
     /// Creates a vector of lookup infos for function name resolution.
     ///
     /// \param[in] name
@@ -945,27 +931,25 @@ public:
     ///     The language to create lookups for. If eLanguageTypeUnknown is
     ///     passed, creates one LookupInfo for each language plugin currently
     ///     available in LLDB. If a specific language is provided, creates only
-    //      a single LookupInfo for that language.
+    ///     a single LookupInfo for that language.
+    ///
+    /// \param[in] lookup_name_override
+    ///     Manually override the name used for lookup. This parameter is
+    ///     optional. If not provided, it will be set to the value of the name
+    ///     parameter.
     ///
     /// \return
     ///     A vector of LookupInfo objects, one per relevant language.
     static std::vector<LookupInfo>
     MakeLookupInfos(ConstString name, lldb::FunctionNameType name_type_mask,
-                    lldb::LanguageType lang_type);
+                    lldb::LanguageType lang_type,
+                    ConstString lookup_name_override = {});
 
     ConstString GetName() const { return m_name; }
 
-    void SetName(ConstString name) { m_name = name; }
-
     ConstString GetLookupName() const { return m_lookup_name; }
 
-    void SetLookupName(ConstString name) { m_lookup_name = name; }
-
     lldb::FunctionNameType GetNameTypeMask() const { return m_name_type_mask; }
-
-    void SetNameTypeMask(lldb::FunctionNameType mask) {
-      m_name_type_mask = mask;
-    }
 
     lldb::LanguageType GetLanguageType() const { return m_language; }
 
@@ -994,7 +978,8 @@ public:
     bool m_match_name_after_lookup = false;
 
   private:
-    LookupInfo(ConstString name, lldb::FunctionNameType name_type_mask,
+    LookupInfo(ConstString name, ConstString lookup_name,
+               lldb::FunctionNameType name_type_mask,
                lldb::LanguageType lang_type);
   };
 

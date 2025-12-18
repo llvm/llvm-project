@@ -203,29 +203,31 @@ llvm::StringRef ObjectFilePECOFF::GetPluginDescriptionStatic() {
 }
 
 ObjectFile *ObjectFilePECOFF::CreateInstance(
-    const lldb::ModuleSP &module_sp, DataBufferSP data_sp,
+    const lldb::ModuleSP &module_sp, DataExtractorSP extractor_sp,
     lldb::offset_t data_offset, const lldb_private::FileSpec *file_p,
     lldb::offset_t file_offset, lldb::offset_t length) {
   FileSpec file = file_p ? *file_p : FileSpec();
-  if (!data_sp) {
-    data_sp = MapFileData(file, length, file_offset);
+  if (!extractor_sp || !extractor_sp->HasData()) {
+    DataBufferSP data_sp = MapFileData(file, length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
+    extractor_sp = std::make_shared<DataExtractor>(data_sp);
   }
 
-  if (!ObjectFilePECOFF::MagicBytesMatch(data_sp))
+  if (!ObjectFilePECOFF::MagicBytesMatch(extractor_sp->GetSharedDataBuffer()))
     return nullptr;
 
   // Update the data to contain the entire file if it doesn't already
-  if (data_sp->GetByteSize() < length) {
-    data_sp = MapFileData(file, length, file_offset);
+  if (extractor_sp->GetByteSize() < length) {
+    DataBufferSP data_sp = MapFileData(file, length, file_offset);
     if (!data_sp)
       return nullptr;
+    extractor_sp = std::make_shared<DataExtractor>(data_sp);
   }
 
   auto objfile_up = std::make_unique<ObjectFilePECOFF>(
-      module_sp, data_sp, data_offset, file_p, file_offset, length);
+      module_sp, extractor_sp, data_offset, file_p, file_offset, length);
   if (!objfile_up || !objfile_up->ParseHeader())
     return nullptr;
 
@@ -430,12 +432,13 @@ bool ObjectFilePECOFF::CreateBinary() {
 }
 
 ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
-                                   DataBufferSP data_sp,
+                                   DataExtractorSP extractor_sp,
                                    lldb::offset_t data_offset,
                                    const FileSpec *file,
                                    lldb::offset_t file_offset,
                                    lldb::offset_t length)
-    : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset),
+    : ObjectFile(module_sp, file, file_offset, length, extractor_sp,
+                 data_offset),
       m_dos_header(), m_coff_header(), m_coff_header_opt(), m_sect_headers(),
       m_image_base(LLDB_INVALID_ADDRESS), m_entry_point_address(),
       m_deps_filespec() {}
@@ -444,7 +447,8 @@ ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
                                    WritableDataBufferSP header_data_sp,
                                    const lldb::ProcessSP &process_sp,
                                    addr_t header_addr)
-    : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
+    : ObjectFile(module_sp, process_sp, header_addr,
+                 std::make_shared<DataExtractor>(header_data_sp)),
       m_dos_header(), m_coff_header(), m_coff_header_opt(), m_sect_headers(),
       m_image_base(LLDB_INVALID_ADDRESS), m_entry_point_address(),
       m_deps_filespec() {}
