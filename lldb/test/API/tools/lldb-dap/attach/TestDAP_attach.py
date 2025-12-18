@@ -59,6 +59,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.attach(program=program)
         self.continue_and_verify_pid()
 
+    @skipIfWindows
     def test_by_name_waitFor(self):
         """
         Tests waiting for, and attaching to a process by process name that
