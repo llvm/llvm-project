@@ -1749,47 +1749,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
-  case Intrinsic::aarch64_range_prefetch_imm: {
-    auto &AddrVal = MI.getOperand(1);
-
-    int64_t IsWrite = MI.getOperand(2).getImm();
-    int64_t IsStream = MI.getOperand(3).getImm();
-    unsigned PrfOp = (IsStream << 2) | IsWrite;
-
-    int64_t Length = MI.getOperand(4).getImm();
-    int64_t Count = MI.getOperand(5).getImm() - 1;
-    int64_t Stride = MI.getOperand(6).getImm();
-
-    // Map ReuseDistance given in bytes to four bits representing decreasing
-    // powers of two in the range 512MiB (0b0001) to 32KiB (0b1111). Values
-    // are rounded up to the nearest power of 2, starting at 32KiB. Any value
-    // over the maximum is represented by 0 (distance not known).
-    uint64_t Distance = MI.getOperand(7).getImm();
-    if (Distance > 0) {
-      Distance = llvm::Log2_32_Ceil(Distance);
-      if (Distance < 15)
-        Distance = 15;
-      else if (Distance > 29)
-        Distance = 0;
-      else
-        Distance = 30 - Distance;
-    }
-
-    uint64_t Mask22 = (1ULL << 22) - 1;
-    uint64_t Mask16 = (1ULL << 16) - 1;
-    uint64_t Metadata = (Distance << 60) | ((Stride & Mask22) << 38) |
-                        ((Count & Mask16) << 22) | (Length & Mask22);
-
-    auto MetadataReg = MRI.createGenericVirtualRegister(LLT::scalar(64));
-    MIB.buildConstant(MetadataReg, Metadata);
-    MIB.buildInstr(AArch64::G_AARCH64_RANGE_PREFETCH)
-        .addImm(PrfOp)
-        .add(AddrVal)
-        .addUse(MetadataReg);
-    MI.eraseFromParent();
-    return true;
-  }
-  case Intrinsic::aarch64_range_prefetch_reg: {
+  case Intrinsic::aarch64_range_prefetch: {
     auto &AddrVal = MI.getOperand(1);
 
     int64_t IsWrite = MI.getOperand(2).getImm();

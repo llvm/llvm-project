@@ -6161,43 +6161,7 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getNode(AArch64ISD::PREFETCH, DL, MVT::Other, Chain,
                        DAG.getTargetConstant(PrfOp, DL, MVT::i32), Addr);
   }
-  case Intrinsic::aarch64_range_prefetch_imm: {
-    SDValue Chain = Op.getOperand(0);
-    SDValue Addr = Op.getOperand(2);
-
-    unsigned IsWrite = Op.getConstantOperandVal(3);
-    unsigned IsStream = Op.getConstantOperandVal(4);
-    unsigned PrfOp = (IsStream << 2) | IsWrite;
-
-    int64_t Length = Op.getConstantOperandVal(5);
-    uint64_t Count = Op.getConstantOperandVal(6) - 1;
-    int64_t Stride = Op.getConstantOperandVal(7);
-
-    // Map ReuseDistance given in bytes to four bits representing decreasing
-    // powers of two in the range 512MiB (0b0001) to 32KiB (0b1111). Values
-    // are rounded up to the nearest power of 2, starting at 32KiB. Any value
-    // over the maximum is represented by 0 (distance not known).
-    uint64_t Distance = Op.getConstantOperandVal(8);
-    if (Distance > 0) {
-      Distance = llvm::Log2_32_Ceil(Distance);
-      if (Distance < 15)
-        Distance = 15;
-      else if (Distance > 29)
-        Distance = 0;
-      else
-        Distance = 30 - Distance;
-    }
-
-    uint64_t Mask22 = (1ULL << 22) - 1;
-    uint64_t Mask16 = (1ULL << 16) - 1;
-    uint64_t Metadata = (Distance << 60) | ((Stride & Mask22) << 38) |
-                        ((Count & Mask16) << 22) | (Length & Mask22);
-
-    return DAG.getNode(AArch64ISD::RANGE_PREFETCH, DL, MVT::Other, Chain,
-                       DAG.getTargetConstant(PrfOp, DL, MVT::i32), Addr,
-                       DAG.getConstant(Metadata, DL, MVT::i64));
-  }
-  case Intrinsic::aarch64_range_prefetch_reg: {
+  case Intrinsic::aarch64_range_prefetch: {
     SDValue Chain = Op.getOperand(0);
     SDValue Addr = Op.getOperand(2);
 

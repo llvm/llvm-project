@@ -6701,35 +6701,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "isdata argument to llvm.aarch64.prefetch must be 0 or 1", Call);
     break;
   }
-  case Intrinsic::aarch64_range_prefetch_reg: {
+  case Intrinsic::aarch64_range_prefetch: {
     Check(cast<ConstantInt>(Call.getArgOperand(1))->getZExtValue() < 2,
-          "write argument to llvm.aarch64.range.prefetch.reg must be 0 or 1",
-          Call);
+          "write argument to llvm.aarch64.range.prefetch must be 0 or 1", Call);
     Check(cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue() < 2,
-          "stream argument to llvm.aarch64.range.prefetch.reg must be 0 or 1",
-          Call);
-    break;
-  }
-  case Intrinsic::aarch64_range_prefetch_imm: {
-    Check(cast<ConstantInt>(Call.getArgOperand(1))->getZExtValue() < 2,
-          "write argument to llvm.aarch64.range.prefetch.imm must be 0 or 1",
-          Call);
-    Check(cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue() < 2,
-          "stream argument to llvm.aarch64.range.prefetch.imm must be 0 or 1",
-          Call);
-    int Length = cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue();
-    Check(Length > -2049 && Length < 2041,
-          "length argument to llvm.aarch64.range.prefetch.imm must be -2048 - "
-          "2040",
-          Call);
-    int Count = cast<ConstantInt>(Call.getArgOperand(4))->getZExtValue();
-    Check(Count > 0 && Count < 65537,
-          "count argument to llvm.aarch64.range.prefetch.imm must be < 65537",
-          Call);
-    int Stride = cast<ConstantInt>(Call.getArgOperand(5))->getZExtValue();
-    Check(Stride > -2049 && Stride < 2041,
-          "stride argument to llvm.aarch64.range.prefetch.imm must be -2048 - "
-          "2040",
+          "stream argument to llvm.aarch64.range.prefetch must be 0 or 1",
           Call);
     break;
   }
