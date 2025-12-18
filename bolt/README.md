@@ -59,6 +59,35 @@ Start with cloning LLVM repo:
 `llvm-bolt` will be available under `bin/`. Add this directory to your path to
 ensure the rest of the commands in this tutorial work.
 
+### Testing changes during development
+
+During development, it is recommended to run both the in-tree tests (under
+[bolt/test](./test)) and the out-of-tree tests, which use binaries hosted in an
+[external](https://github.com/rafaelauler/bolt-tests) repository.
+
+Below are sample instructions to run both test suites. You may need to define
+additional CMake variables. The [docker-tests/Dockerfile ](./utils/docker-tests/Dockerfile)
+is provided which is another route to get a known good testing environment.
+
+```bash
+git clone https://github.com/llvm/llvm-project.git
+git clone https://github.com/rafaelauler/bolt-tests
+mkdir build
+cmake -G Ninja -S llvm-project/llvm -B build \
+       -DLLVM_TARGETS_TO_BUILD="AArch64;X86" \
+       -DCMAKE_BUILD_TYPE=Release \
+       -DBUILD_SHARED_LIBS=ON \
+       -DLLVM_BUILD_TOOLS=ON \
+       -DLLVM_ENABLE_ASSERTIONS=ON \
+       -DLLVM_ENABLE_PROJECTS="clang;bolt;clang-tools-extra;lld" \
+       -DLLVM_USE_LINKER=lld \
+       -DLLVM_CCACHE_BUILD=ON \
+       -DLLVM_EXTERNAL_PROJECTS="bolttests" \
+       -DLLVM_EXTERNAL_BOLTTESTS_SOURCE_DIR="$(pwd)/bolt-tests"
+
+ninja -C build check-bolt check-large-bolt
+```
+
 ## Optimizing BOLT's Performance
 
 BOLT runs many internal passes in parallel. If you foresee heavy usage of
