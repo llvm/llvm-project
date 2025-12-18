@@ -56,26 +56,28 @@ int RTDEF(CUFPointerAllocateSync)(Descriptor &desc, int64_t *stream,
 
 int RTDEF(CUFPointerAllocateSource)(Descriptor &pointer,
     const Descriptor &source, int64_t *stream, bool *pinned, bool hasStat,
-    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
+    const Descriptor *errMsg, const char *sourceFile, int sourceLine,
+    bool sourceIsDevice) {
   int stat{RTNAME(CUFPointerAllocate)(
       pointer, stream, pinned, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
     Terminator terminator{sourceFile, sourceLine};
-    Fortran::runtime::DoFromSourceAssign(
-        pointer, source, terminator, &MemmoveHostToDevice);
+    Fortran::runtime::DoFromSourceAssign(pointer, source, terminator,
+        sourceIsDevice ? &MemmoveDeviceToHost : &MemmoveHostToDevice);
   }
   return stat;
 }
 
 int RTDEF(CUFPointerAllocateSourceSync)(Descriptor &pointer,
     const Descriptor &source, int64_t *stream, bool *pinned, bool hasStat,
-    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
+    const Descriptor *errMsg, const char *sourceFile, int sourceLine,
+    bool sourceIsDevice) {
   int stat{RTNAME(CUFPointerAllocateSync)(
       pointer, stream, pinned, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
     Terminator terminator{sourceFile, sourceLine};
-    Fortran::runtime::DoFromSourceAssign(
-        pointer, source, terminator, &MemmoveHostToDevice);
+    Fortran::runtime::DoFromSourceAssign(pointer, source, terminator,
+        sourceIsDevice ? &MemmoveDeviceToHost : &MemmoveHostToDevice);
   }
   return stat;
 }

@@ -22,6 +22,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
@@ -150,22 +151,22 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeBool(MachineIRBuilder &MIRBuilder) {
 }
 
 unsigned SPIRVGlobalRegistry::adjustOpTypeIntWidth(unsigned Width) const {
-  if (Width > 64)
-    report_fatal_error("Unsupported integer width!");
   const SPIRVSubtarget &ST = cast<SPIRVSubtarget>(CurMF->getSubtarget());
   if (ST.canUseExtension(
-          SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers) ||
-      ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4))
+          SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers) ||
+      (Width == 4 && ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4)))
     return Width;
   if (Width <= 8)
-    Width = 8;
+    return 8;
   else if (Width <= 16)
-    Width = 16;
+    return 16;
   else if (Width <= 32)
-    Width = 32;
-  else
-    Width = 64;
-  return Width;
+    return 32;
+  else if (Width <= 64)
+    return 64;
+  else if (Width <= 128)
+    return 128;
+  reportFatalUsageError("Unsupported Integer width!");
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(unsigned Width,
@@ -182,11 +183,11 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(unsigned Width,
           .addImm(SPIRV::Capability::Int4TypeINTEL);
     } else if ((!isPowerOf2_32(Width) || Width < 8) &&
                ST.canUseExtension(
-                   SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers)) {
+                   SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers)) {
       MIRBuilder.buildInstr(SPIRV::OpExtension)
-          .addImm(SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers);
+          .addImm(SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers);
       MIRBuilder.buildInstr(SPIRV::OpCapability)
-          .addImm(SPIRV::Capability::ArbitraryPrecisionIntegersINTEL);
+          .addImm(SPIRV::Capability::ArbitraryPrecisionIntegersALTERA);
     }
     return MIRBuilder.buildInstr(SPIRV::OpTypeInt)
         .addDef(createTypeVReg(MIRBuilder))
@@ -224,14 +225,43 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeVoid(MachineIRBuilder &MIRBuilder) {
 }
 
 void SPIRVGlobalRegistry::invalidateMachineInstr(MachineInstr *MI) {
-  // TODO:
-  // - review other data structure wrt. possible issues related to removal
-  //   of a machine instruction during instruction selection.
+  // Other maps that may hold MachineInstr*:
+  // - VRegToTypeMap: We cannot remove the definitions of `MI` from
+  // VRegToTypeMap because some calls to invalidateMachineInstr are replacing MI
+  // with another instruction defining the same register. We expect that if MI
+  // is a type instruction, and it is still referenced in VRegToTypeMap, then
+  // those registers are dead or the VRegToTypeMap is out-of-date. We do not
+  // expect passes to ask for the SPIR-V type of a dead register. If the
+  // VRegToTypeMap is out-of-date already, then there was an error before. We
+  // cannot add an assert to verify this because the VRegToTypeMap can be
+  // out-of-date.
+  // - FunctionToInstr & FunctionToInstrRev: At this point, we should not be
+  // deleting functions. No need to update.
+  // - AliasInstMDMap: Would require a linear search, and the Intel Alias
+  // instruction are not instructions instruction selection will be able to
+  // remove.
+
+  const SPIRVSubtarget &ST = MI->getMF()->getSubtarget<SPIRVSubtarget>();
+  [[maybe_unused]] const SPIRVInstrInfo *TII = ST.getInstrInfo();
+  assert(!TII->isAliasingInstr(*MI) &&
+         "Cannot invalidate aliasing instructions.");
+  assert(MI->getOpcode() != SPIRV::OpFunction &&
+         "Cannot invalidate OpFunction.");
+
+  if (MI->getOpcode() == SPIRV::OpFunctionCall) {
+    if (const auto *F = dyn_cast<Function>(MI->getOperand(2).getGlobal())) {
+      auto It = ForwardCalls.find(F);
+      if (It != ForwardCalls.end()) {
+        It->second.erase(MI);
+        if (It->second.empty())
+          ForwardCalls.erase(It);
+      }
+    }
+  }
+
   const MachineFunction *MF = MI->getMF();
   auto It = LastInsertedTypeMap.find(MF);
-  if (It == LastInsertedTypeMap.end())
-    return;
-  if (It->second == MI)
+  if (It != LastInsertedTypeMap.end() && It->second == MI)
     LastInsertedTypeMap.erase(MF);
   // remove from the duplicate tracker to avoid incorrect reuse
   erase(MI);
@@ -314,7 +344,7 @@ Register SPIRVGlobalRegistry::createConstFP(const ConstantFP *CF,
   LLT LLTy = LLT::scalar(BitWidth);
   Register Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
   CurMF->getRegInfo().setRegClass(Res, &SPIRV::fIDRegClass);
-  assignFloatTypeToVReg(BitWidth, Res, I, TII);
+  assignSPIRVTypeToVReg(SpvType, Res, *CurMF);
 
   MachineInstr *DepMI = const_cast<MachineInstr *>(SpvType);
   MachineIRBuilder MIRBuilder(*DepMI->getParent(), DepMI->getIterator());
@@ -383,7 +413,7 @@ Register SPIRVGlobalRegistry::createConstInt(const ConstantInt *CI,
           MIB = MIRBuilder.buildInstr(SPIRV::OpConstantI)
                     .addDef(Res)
                     .addUse(getSPIRVTypeID(SpvType));
-          addNumImm(APInt(BitWidth, CI->getZExtValue()), MIB);
+          addNumImm(CI->getValue(), MIB);
         } else {
           MIB = MIRBuilder.buildInstr(SPIRV::OpConstantNull)
                     .addDef(Res)
@@ -853,10 +883,12 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
           .addUse(NumElementsVReg);
     });
   } else {
-    assert(ST.isShader() && "Runtime arrays are not allowed in non-shader "
-                            "SPIR-V modules.");
-    if (!ST.isShader())
+    if (!ST.isShader()) {
+      llvm::reportFatalUsageError(
+          "Runtime arrays are not allowed in non-shader "
+          "SPIR-V modules");
       return nullptr;
+    }
     ArrayType = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
       return MIRBuilder.buildInstr(SPIRV::OpTypeRuntimeArray)
           .addDef(createTypeVReg(MIRBuilder))
@@ -890,6 +922,17 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeStruct(
     const StructType *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccQual,
     StructOffsetDecorator Decorator, bool EmitIR) {
+  Type *OriginalElementType = nullptr;
+  uint64_t TotalSize = 0;
+  if (matchPeeledArrayPattern(Ty, OriginalElementType, TotalSize)) {
+    SPIRVType *ElementSPIRVType = findSPIRVType(
+        OriginalElementType, MIRBuilder, AccQual,
+        /* ExplicitLayoutRequired= */ Decorator != nullptr, EmitIR);
+    return getOpTypeArray(TotalSize, ElementSPIRVType, MIRBuilder,
+                          /*ExplicitLayoutRequired=*/Decorator != nullptr,
+                          EmitIR);
+  }
+
   const SPIRVSubtarget &ST =
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
   SmallVector<Register, 4> FieldTypes;
@@ -1410,6 +1453,18 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateVulkanBufferType(
   }
 
   SPIRVType *R = getOrCreateSPIRVPointerTypeInternal(BlockType, MIRBuilder, SC);
+  add(Key, R);
+  return R;
+}
+
+SPIRVType *
+SPIRVGlobalRegistry::getOrCreatePaddingType(MachineIRBuilder &MIRBuilder) {
+  auto Key = SPIRV::irhandle_padding();
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+  auto *T = Type::getInt8Ty(MIRBuilder.getContext());
+  SPIRVType *R = getOrCreateSPIRVIntegerType(8, MIRBuilder);
+  finishCreatingSPIRVType(T, R);
   add(Key, R);
   return R;
 }

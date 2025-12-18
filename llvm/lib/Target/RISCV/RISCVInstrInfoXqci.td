@@ -62,7 +62,7 @@ def UImm5Plus1AsmOperand : AsmOperandClass {
 }
 
 def uimm5_plus1 : RISCVOp, ImmLeaf<XLenVT,
-  [{return (isUInt<5>(Imm) && (Imm != 0)) || (Imm == 32);}]> {
+  [{return Imm >= 1 && Imm <= 32;}]> {
   let ParserMatchClass = UImm5Plus1AsmOperand;
   let EncoderMethod = "getImmOpValueMinus1";
   let DecoderMethod = "decodeUImmPlus1Operand<5>";
@@ -71,12 +71,12 @@ def uimm5_plus1 : RISCVOp, ImmLeaf<XLenVT,
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
-    return (isUInt<5>(Imm) && (Imm != 0)) || (Imm == 32);
+    return Imm >= 1 && Imm <= 32;
   }];
 }
 
 def uimm5ge6_plus1 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
-  [{return (Imm >= 6) && (isUInt<5>(Imm) || (Imm == 32));}]> {
+  [{return Imm >= 6 && Imm <= 32;}]> {
   let ParserMatchClass = UImmAsmOperand<5, "GE6Plus1">;
   let EncoderMethod = "getImmOpValueMinus1";
   let DecoderMethod = "decodeUImmPlus1OperandGE<5,6>";
@@ -85,7 +85,7 @@ def uimm5ge6_plus1 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
-    return (Imm >= 6) && (isUInt<5>(Imm) || (Imm == 32));
+    return Imm >= 6 && Imm <= 32;
   }];
 }
 
@@ -751,7 +751,7 @@ class QCIRVInstEIBase<bits<3> funct3, bits<2> funct2, dag outs,
   let Inst{6-0} = 0b0011111;
 }
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, canFoldAsLoad = 1 in
 class QCIRVInstEILoad<bits<3> funct3, bits<2> funct2, string opcodestr>
     : QCIRVInstEIBase<funct3, funct2, (outs GPR:$rd),
                       (ins GPRMem:$rs1, simm26:$imm), opcodestr,
@@ -834,6 +834,17 @@ class SFBQC_E_LI
                   bare_simm32:$imm), []> {
   let hasSideEffects = 0;
   let mayLoad = 0;
+  let mayStore = 0;
+  let Size = 10;
+  let Constraints = "$dst = $falsev";
+}
+
+class SFBQCLoad
+    : Pseudo<(outs GPR:$dst),
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
+                  simm26:$imm), []> {
+  let hasSideEffects = 0;
+  let mayLoad = 1;
   let mayStore = 0;
   let Size = 10;
   let Constraints = "$dst = $falsev";
@@ -1330,9 +1341,17 @@ def PseudoQC_E_SH : PseudoStore<"qc.e.sh">;
 def PseudoQC_E_SW : PseudoStore<"qc.e.sw">;
 } // Predicates = [HasVendorXqcilo, IsRV32]
 
-let Predicates = [HasShortForwardBranchOpt] in {
+let Predicates = [HasShortForwardBranchIALU] in {
 def PseudoCCQC_LI : SFBQC_LI;
 def PseudoCCQC_E_LI : SFBQC_E_LI;
+}
+
+let Predicates = [HasShortForwardBranchILoad] in {
+def PseudoCCQC_E_LB : SFBQCLoad;
+def PseudoCCQC_E_LH : SFBQCLoad;
+def PseudoCCQC_E_LW : SFBQCLoad;
+def PseudoCCQC_E_LHU : SFBQCLoad;
+def PseudoCCQC_E_LBU : SFBQCLoad;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1571,7 +1590,7 @@ def: Pat<(i32 (ctlz (not (i32 GPR:$rs1)))), (QC_CLO GPR:$rs1)>;
 let Predicates = [HasVendorXqciint, IsRV32] in
 def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;
 
-let Predicates = [HasVendorXqcicm, NoShortForwardBranchOpt, IsRV32] in {
+let Predicates = [HasVendorXqcicm, NoShortForwardBranch, IsRV32] in {
 def : QCIMVCCPat<SETEQ,  QC_MVEQ>;
 def : QCIMVCCPat<SETNE,  QC_MVNE>;
 def : QCIMVCCPat<SETLT,  QC_MVLT>;

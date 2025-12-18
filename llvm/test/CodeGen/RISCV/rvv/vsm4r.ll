@@ -4,11 +4,6 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+zvksed \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
 
-declare <vscale x 4 x i32> @llvm.riscv.vsm4r.vv.nxv4i32(
-  <vscale x 4 x i32>,
-  <vscale x 4 x i32>,
-  iXLen, iXLen);
-
 define <vscale x 4 x i32> @intrinsic_vsm4r_vv_nxv4i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vsm4r_vv_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
@@ -23,11 +18,6 @@ entry:
 
   ret <vscale x 4 x i32> %a
 }
-
-declare <vscale x 8 x i32> @llvm.riscv.vsm4r.vv.nxv8i32(
-  <vscale x 8 x i32>,
-  <vscale x 8 x i32>,
-  iXLen, iXLen);
 
 define <vscale x 8 x i32> @intrinsic_vsm4r_vv_nxv8i32(<vscale x 8 x i32> %0, <vscale x 8 x i32> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vsm4r_vv_nxv8i32:
@@ -44,11 +34,6 @@ entry:
   ret <vscale x 8 x i32> %a
 }
 
-declare <vscale x 16 x i32> @llvm.riscv.vsm4r.vv.nxv16i32(
-  <vscale x 16 x i32>,
-  <vscale x 16 x i32>,
-  iXLen, iXLen);
-
 define <vscale x 16 x i32> @intrinsic_vsm4r_vv_nxv16i32(<vscale x 16 x i32> %0, <vscale x 16 x i32> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vsm4r_vv_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
@@ -63,11 +48,6 @@ entry:
 
   ret <vscale x 16 x i32> %a
 }
-
-declare <vscale x 4 x i32> @llvm.riscv.vsm4r.vs.nxv4i32.nxv4i32(
-  <vscale x 4 x i32>,
-  <vscale x 4 x i32>,
-  iXLen, iXLen);
 
 define <vscale x 4 x i32> @intrinsic_vsm4r_vs_nxv4i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vsm4r_vs_nxv4i32:
@@ -84,11 +64,6 @@ entry:
   ret <vscale x 4 x i32> %a
 }
 
-declare <vscale x 8 x i32> @llvm.riscv.vsm4r.vs.nxv8i32.nxv4i32(
-  <vscale x 8 x i32>,
-  <vscale x 4 x i32>,
-  iXLen, iXLen);
-
 define <vscale x 8 x i32> @intrinsic_vsm4r_vs_nxv8i32(<vscale x 8 x i32> %0, <vscale x 4 x i32> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vsm4r_vs_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
@@ -103,11 +78,6 @@ entry:
 
   ret <vscale x 8 x i32> %a
 }
-
-declare <vscale x 16 x i32> @llvm.riscv.vsm4r.vs.nxv16i32.nxv4i32(
-  <vscale x 16 x i32>,
-  <vscale x 4 x i32>,
-  iXLen, iXLen);
 
 define <vscale x 16 x i32> @intrinsic_vsm4r_vs_nxv16i32(<vscale x 16 x i32> %0, <vscale x 4 x i32> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vsm4r_vs_nxv16i32:
