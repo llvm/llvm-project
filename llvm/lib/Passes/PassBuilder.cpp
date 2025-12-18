@@ -1622,20 +1622,6 @@ Expected<CodeGenOptLevel> parseExpandIRInstsOptions(StringRef Param) {
   return *Level;
 }
 
-Expected<RAGreedyPass::Options>
-parseRegAllocGreedyFilterFunc(PassBuilder &PB, StringRef Params) {
-  if (Params.empty() || Params == "all")
-    return RAGreedyPass::Options();
-
-  std::optional<RegAllocFilterFunc> Filter = PB.parseRegAllocFilter(Params);
-  if (Filter)
-    return RAGreedyPass::Options{*Filter, Params};
-
-  return make_error<StringError>(
-      formatv("invalid regallocgreedy register filter '{}'", Params).str(),
-      inconvertibleErrorCode());
-}
-
 Expected<bool> llvm::parseMachineSinkingPassOptions(StringRef Params,
                                               const PassBuilder &) {
   return PassBuilder::parseSinglePassOption(Params, "enable-sink-fold",

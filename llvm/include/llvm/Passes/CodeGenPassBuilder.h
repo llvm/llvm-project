@@ -107,6 +107,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/ObjCARC.h"
@@ -199,8 +200,8 @@ public:
   }
 
   Error buildPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
-                      raw_pwrite_stream *DwoOut,
-                      CodeGenFileType FileType) const;
+                      raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
+                      MCContext &Ctx) const;
 
   PassInstrumentationCallbacks *getPassInstrumentationCallbacks() const {
     return PIC;
@@ -509,8 +510,10 @@ protected:
   /// regalloc pass.
   void addRegAllocPass(PassManagerWrapper &PMW, bool Optimized) const;
   /// Read the --regalloc-npm-pipeline option to add the next pass in line.
-  /// Returns an error if parsing fails.
-  Error addRegAllocPassFromOpt(PassManagerWrapper &PMW) const;
+  /// If MatchPassTo is specified, ensures the pass matches the expected class.
+  /// Returns an error if parsing fails or validation fails.
+  Error addRegAllocPassFromOpt(PassManagerWrapper &PMW,
+                               StringRef MatchPassTo = StringRef{}) const;
   /// Add the next pass in the cli option or the pass specified if no pass is
   /// left in the option.
   template <typename RegAllocPassBuilderT>
@@ -574,7 +577,7 @@ private:
 template <typename Derived, typename TargetMachineT>
 Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
     ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType) const {
+    CodeGenFileType FileType, MCContext &Ctx) const {
   auto StartStopInfo = TargetPassConfig::getStartStopInfo(*PIC);
   if (!StartStopInfo)
     return StartStopInfo.takeError();
@@ -1172,7 +1175,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPassOrOpt(
 
 template <typename Derived, typename TargetMachineT>
 Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPassFromOpt(
-    PassManagerWrapper &PMW) const {
+    PassManagerWrapper &PMW, StringRef MatchPassTo) const {
   StringRef Pipeline = Opt.RegAllocPipeline;
   if (Pipeline.empty())
     return Error::success();
@@ -1187,6 +1190,12 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPassFromOpt(
   // Reuse the registered parser to parse the pass name.
 #define RA_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)          \
   if (PassBuilder::checkParametrizedPassName(PassOpt, NAME)) {                 \
+    if (!MatchPassTo.empty() && MatchPassTo != CLASS) {                        \
+      return make_error<StringError>(                                          \
+          Twine("expected ") + PIC->getPassNameForClassName(MatchPassTo) +     \
+              " in option --regalloc-npm",                                     \
+          inconvertibleErrorCode());                                           \
+    }                                                                          \
     auto Params = PassBuilder::parsePassParameters(PARSER, PassOpt, NAME, PB); \
     if (!Params)                                                               \
       return Params.takeError();                                               \
@@ -1212,23 +1221,17 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPassFromOpt(
 template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPass(
     PassManagerWrapper &PMW, bool Optimized) const {
-  // Use the specified -regalloc-npm-pipeline= option
-  if (Opt.RegAlloc > RegAllocType::Default) {
-    switch (Opt.RegAlloc) {
-    case RegAllocType::Fast:
-      addMachineFunctionPass(RegAllocFastPass(), PMW);
-      break;
-    case RegAllocType::Greedy:
-      addMachineFunctionPass(RAGreedyPass(), PMW);
-      break;
-    default:
-      reportFatalUsageError("register allocator not supported yet");
-    }
-    return;
+  // At O0 (not optimized), only regallocfast is allowed
+  StringRef MatchPassTo = Optimized ? StringRef{} : "RegAllocFastPass";
+
+  // Use the specified -regalloc-npm-pipeline= option if provided
+  if (auto Err = addRegAllocPassFromOpt(PMW, MatchPassTo)) {
+    report_fatal_error(std::move(Err));
   }
-  // -regalloc-npm-pipeline=default or unspecified, so pick based on the
-  // optimization level or ask the target for the regalloc pass.
-  derived().addTargetRegisterAllocator(PMW, Optimized);
+  // If no custom pipeline was specified, use the target's default allocator
+  if (Opt.RegAllocPipeline.empty()) {
+    derived().addTargetRegisterAllocator(PMW, Optimized);
+  }
 }
 
 template <typename Derived, typename TargetMachineT>
@@ -1321,6 +1324,9 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
     return;
   }
 
+  addMachineFunctionPass(StackSlotColoringPass(), PMW);
+
+  // Perform stack slot coloring and post-ra machine LICM.
   addMachineFunctionPass(StackSlotColoringPass(), PMW);
 
   // Allow targets to expand pseudo instructions depending on the choice of

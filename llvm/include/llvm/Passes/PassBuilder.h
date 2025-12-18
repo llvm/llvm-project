@@ -1005,18 +1005,18 @@ public:
 /// Common option used by multiple tools to print pipeline passes
 LLVM_ABI extern cl::opt<bool> PrintPipelinePasses;
 
-Expected<RAGreedyPass::Options>
+LLVM_ABI Expected<RAGreedyPass::Options>
 parseRegAllocGreedyFilterFunc(const PassBuilder &PB, StringRef Params);
 
-Expected<RegAllocFastPass::Options>
+LLVM_ABI Expected<RegAllocFastPass::Options>
 parseRegAllocFastPassOptions(const PassBuilder &PB, StringRef Params);
 
-Expected<bool> parseMachineSinkingPassOptions(StringRef Params,
-                                              const PassBuilder &);
-Expected<bool> parseMachineBlockPlacementPassOptions(StringRef Params,
-                                                     const PassBuilder &);
-Expected<bool> parseVirtRegRewriterPassOptions(StringRef Params,
-                                               const PassBuilder &);
+LLVM_ABI Expected<bool> parseMachineSinkingPassOptions(StringRef Params,
+                                                       const PassBuilder &);
+LLVM_ABI Expected<bool>
+parseMachineBlockPlacementPassOptions(StringRef Params, const PassBuilder &);
+LLVM_ABI Expected<bool> parseVirtRegRewriterPassOptions(StringRef Params,
+                                                        const PassBuilder &);
 }
 
 #endif

@@ -106,6 +106,7 @@ add_llvm_target(X86CodeGen ${sources}
   Instrumentation
   MC
   ObjCARC
+  Passes
   ProfileData
   Scalar
   SelectionDAG

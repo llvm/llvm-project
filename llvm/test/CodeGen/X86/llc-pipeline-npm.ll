@@ -136,6 +136,7 @@
 ; O2-NEXT: register-coalescer
 ; O2-NEXT: rename-independent-subregs
 ; O2-NEXT: machine-scheduler
+; O2-NEXT: greedy<tile-reg>
 ; O2-NEXT: greedy<all>
 ; O2-NEXT: virt-reg-rewriter
 ; O2-NEXT: stack-slot-coloring
@@ -309,6 +310,7 @@
 ; O3-WINDOWS-NEXT: register-coalescer
 ; O3-WINDOWS-NEXT: rename-independent-subregs
 ; O3-WINDOWS-NEXT: machine-scheduler
+; O3-WINDOWS-NEXT: greedy<tile-reg>
 ; O3-WINDOWS-NEXT: greedy<all>
 ; O3-WINDOWS-NEXT: virt-reg-rewriter
 ; O3-WINDOWS-NEXT: stack-slot-coloring

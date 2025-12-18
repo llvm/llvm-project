@@ -169,7 +169,6 @@ Error R600TargetMachine::buildCodeGenPipeline(
   R600CodeGenPassBuilder CGPB(*this, Opts, PIC, PB);
   return CGPB.buildPipeline(MPM, Out, DwoOut, FileType, Ctx);
 }
-}
 
 MachineFunctionInfo *R600TargetMachine::createMachineFunctionInfo(
     BumpPtrAllocator &Allocator, const Function &F,

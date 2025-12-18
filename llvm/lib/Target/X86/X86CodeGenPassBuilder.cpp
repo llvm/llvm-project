@@ -61,14 +61,15 @@ public:
 };
 
 Error X86CodeGenPassBuilder::addRegAssignmentOptimized(
-  PassManagerWrapper &PMW) const {
-if (EnableTileRAPass) {
-  addRegAllocPassOrOpt(PMW, []() {
-    return RAGreedyPass({onlyAllocateTileRegisters, "tile-reg"});
-  });
-  // TODO: addMachineFunctionPass(X86TileConfigPass(), PMW);
-}
-return Base::addRegAssignmentOptimized(PMW);
+    PassManagerWrapper &PMW) const {
+  if (EnableTileRAPass) {
+    if (auto Err = addRegAllocPassOrOpt(PMW, []() {
+          return RAGreedyPass({onlyAllocateTileRegisters, "tile-reg"});
+        }))
+      return Err;
+    // TODO: addMachineFunctionPass(X86TileConfigPass(), PMW);
+  }
+  return Base::addRegAssignmentOptimized(PMW);
 }
 
 void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
