@@ -44,34 +44,35 @@ settings. The options and their corresponding values are:
  - ``LowerCase`` - example: ``int i_Variable``
  - ``CamelCase`` - example: ``int IVariable``
 
-The check only works on kinds of identifiers which have been configured,
-so an empty config effectively disables it.
-The "default" option can be used to enable all kinds of identifiers,
-then optionally override specific kinds which are desired with a different case.
+The check only enforces style on kinds of identifiers which have been
+configured, so an empty config effectively disables it.
+The :option:`DefaultCase` option can be used to enforce style on all kinds of
+identifiers, then optionally overriden for specific kinds which are desired
+with a different case.
 
 For example using values of:
 
-    - DefaultCase of ``lower_case``
-    - MacroDefinitionCase of ``UPPER_CASE``
-    - TemplateParameterCase of ``CamelCase``
+  - DefaultCase of ``lower_case``
+  - MacroDefinitionCase of ``UPPER_CASE``
+  - TemplateParameterCase of ``CamelCase``
 
-Identifies and/or transforms names as follows:
+Identifies and transforms names as follows:
 
 Before:
 
 .. code-block:: c++
 
-    #define macroDefinition
-    template <typename typenameParameter>
-    int functionDeclaration(typenameParameter paramVal, int paramCount);
+  #define macroDefinition
+  template <typename typenameParameter>
+  int functionDeclaration(typenameParameter paramVal, int paramCount);
 
 After:
 
 .. code-block:: c++
 
-    #define MACRO_DEFINITION
-    template <typename TypenameParameter>
-    int function_declarations(TypenameParameter param_val, int param_count);
+  #define MACRO_DEFINITION
+  template <typename TypenameParameter>
+  int function_declarations(TypenameParameter param_val, int param_count);
 
 Options summary
 ---------------
