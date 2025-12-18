@@ -306,7 +306,7 @@ public:
     return Plugin::success();
   }
 
-  // add a new program to the device. Return a reference to the new program
+  // add a new program to the device. Return a reference to the new program.
   Expected<L0ProgramTy &> addProgram(int32_t ImageId,
                                      L0ProgramBuilderTy &Builder) {
     auto ImageOrErr = Builder.getELF();

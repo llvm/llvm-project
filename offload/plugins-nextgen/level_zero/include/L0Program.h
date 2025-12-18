@@ -36,13 +36,13 @@ struct ProgramDataTy {
 class L0ProgramBuilderTy {
   L0DeviceTy &Device;
   std::unique_ptr<MemoryBuffer> Image;
-  /// Handle multiple modules within a single target image
+  /// Handle multiple modules within a single target image.
   llvm::SmallVector<ze_module_handle_t> Modules;
 
-  /// Module that contains global data including device RTL
+  /// Module that contains global data including device RTL.
   ze_module_handle_t GlobalModule = nullptr;
 
-  /// Requires module link
+  /// Requires module link.
   bool RequiresModuleLink = false;
 
   /// Build a single module with the given image, build option, and format.
@@ -114,7 +114,7 @@ public:
     return static_cast<L0ProgramTy &>(Device);
   }
 
-  /// Loads the kernels names from all modules
+  /// Loads the kernels names from all modules.
   Error loadModuleKernels();
 
   /// Read data from the location in the device image which corresponds to the
