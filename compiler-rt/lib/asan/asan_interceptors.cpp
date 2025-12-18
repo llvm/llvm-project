@@ -284,7 +284,7 @@ INTERCEPTOR(int, pthread_create, void *thread, void *attr,
       result = REAL(pthread_create)(thread, attr, asan_thread_start, t);
 // AIX pthread_t is unsigned int.
 #    if SANITIZER_AIX
-      return result ? 0 : *(unsigned *)(thread);
+      return result ? 0 : *(unsigned*)(thread);
 #    else
       return result ? 0 : *(uptr *)(thread);
 #    endif

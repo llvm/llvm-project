@@ -17,45 +17,44 @@
 #if SANITIZER_AIX
 
 #  include <dlfcn.h>  // for dlsym()
-#  include <stddef.h> // for size_t
+#  include <stddef.h>  // for size_t
 
-#if SANITIZER_WORDSIZE == 64
-#define STRCPY_STR "___strcpy64"
-#define MEMCPY_STR "___memcpy64"
-#define MEMMOVE_STR "___memmove64"
-#else
-#define STRCPY_STR "___strcpy"
-#define MEMCPY_STR "___memcpy"
-#define MEMMOVE_STR "___memmove"
-#endif
+#  if SANITIZER_WORDSIZE == 64
+#    define STRCPY_STR "___strcpy64"
+#    define MEMCPY_STR "___memcpy64"
+#    define MEMMOVE_STR "___memmove64"
+#  else
+#    define STRCPY_STR "___strcpy"
+#    define MEMCPY_STR "___memcpy"
+#    define MEMMOVE_STR "___memmove"
+#  endif
 
 namespace __interception {
 
-char *___strcpy(char *, const char *) __asm__(STRCPY_STR);
-char *___memcpy(char *, const char *, size_t) __asm__(MEMCPY_STR);
-char *___memmove(char *, const char *, size_t) __asm__(MEMMOVE_STR);
+char* ___strcpy(char*, const char*) __asm__(STRCPY_STR);
+char* ___memcpy(char*, const char*, size_t) __asm__(MEMCPY_STR);
+char* ___memmove(char*, const char*, size_t) __asm__(MEMMOVE_STR);
 
-char* real_strcpy_wrapper(char *s1, const char *s2) {
+char* real_strcpy_wrapper(char* s1, const char* s2) {
   return (char*)___strcpy(s1, s2);
 }
 
-char* real_memcpy_wrapper(char *s1, const char *s2, size_t n) {
+char* real_memcpy_wrapper(char* s1, const char* s2, size_t n) {
   return (char*)___memcpy(s1, s2, n);
 }
 
-char* real_memmove_wrapper(char *s1, const char *s2, size_t n) {
+char* real_memmove_wrapper(char* s1, const char* s2, size_t n) {
   return (char*)___memmove(s1, s2, n);
 }
 
-
-static void *GetFuncAddr(const char *name, uptr wrapper_addr) {
+static void* GetFuncAddr(const char* name, uptr wrapper_addr) {
   // FIXME: if we are going to ship dynamic asan library, we may need to search
   // all the loaded modules with RTLD_DEFAULT if RTLD_NEXT failed.
   void *addr = dlsym(RTLD_NEXT, name);
 
   // AIX dlsym can only detect functions that are exported, so
   // some basic functions like memcpy return null. In this case, we fallback
-  // to a corresponding internal libc symbol (for example, ___memcpy) if it's 
+  // to a corresponding internal libc symbol (for example, ___memcpy) if it's
   // available, or the internal sanitizer function.
   if (!addr) {
     if (internal_strcmp(name, "strcpy") == 0)

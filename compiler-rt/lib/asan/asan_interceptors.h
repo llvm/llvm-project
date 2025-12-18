@@ -31,7 +31,7 @@ void InitializePlatformInterceptors();
 // really defined to replace libc functions.
 #if !SANITIZER_FUCHSIA
 
-// Sanitizer on AIX is currently unable to retrieve the address 
+// Sanitizer on AIX is currently unable to retrieve the address
 // of the real longjump (or an alternative thereto).
 // TOOD: Consider intercepting longjmpx on AIX.
 #  if !SANITIZER_AIX
@@ -43,9 +43,9 @@ void InitializePlatformInterceptors();
 // Use macro to describe if specific function should be
 // intercepted on a given platform.
 #  if !SANITIZER_WINDOWS
-  // Sanitizer on AIX is currently unable to retrieve the address 
-  // of the real _longjump (or an alternative thereto).
-  // TOOD: Consider intercepting _longjmpx on AIX.
+   // Sanitizer on AIX is currently unable to retrieve the address
+   // of the real _longjump (or an alternative thereto).
+   // TOOD: Consider intercepting _longjmpx on AIX.
 #    if !SANITIZER_AIX
 #      define ASAN_INTERCEPT__LONGJMP 1
 #    else
@@ -72,7 +72,7 @@ void InitializePlatformInterceptors();
 #    define ASAN_INTERCEPT_SWAPCONTEXT 0
 #  endif
 
-// Sanitizer on AIX is currently unable to retrieve the address 
+// Sanitizer on AIX is currently unable to retrieve the address
 // of the real siglongjump (or an alternative thereto).
 // TOOD: Consider intercepting sigsetjmpx on AIX.
 #  if !SANITIZER_WINDOWS && !SANITIZER_AIX
