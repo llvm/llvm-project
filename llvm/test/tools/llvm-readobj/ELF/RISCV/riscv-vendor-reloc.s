@@ -39,6 +39,20 @@
   .reloc ., R_RISCV_CUSTOM193, quux
   nop
 
+## Test 6: Unpaired R_RISCV_VENDOR followed by R_RISCV_CUSTOM* at a different
+## offset - should NOT be treated as a valid pair.
+  .reloc . - 1, R_RISCV_VENDOR, QUALCOMM
+  .reloc ., R_RISCV_CUSTOM193, barney
+  nop
+
+## Test 7: A non-R_RISCV_CUSTOM* relocation in between a vendor relocation pair
+## breaks the pairing - R_RISCV_VENDOR must be immediately before the
+## vendor-specific relocation per psABI.
+  .reloc ., R_RISCV_VENDOR, QUALCOMM
+  .reloc ., R_RISCV_32, snork
+  .reloc ., R_RISCV_CUSTOM193, zot
+  nop
+
 # GNU:      Relocation section '.rela.text'
 # GNU:      R_RISCV_VENDOR       {{.*}} QUALCOMM + 0
 # GNU-NEXT: R_RISCV_QC_ABS20_U   {{.*}} foo + 0
@@ -49,6 +63,13 @@
 # GNU-NEXT: R_RISCV_CUSTOM200    {{.*}} qux + 0
 # GNU-NEXT: R_RISCV_VENDOR       {{.*}} QUALCOMM + 0
 # GNU-NEXT: R_RISCV_QC_E_BRANCH  {{.*}} quux + 0
+## Test 6: Different offsets - not a valid pair
+# GNU-NEXT: R_RISCV_VENDOR       {{.*}} QUALCOMM + 0
+# GNU-NEXT: R_RISCV_CUSTOM193    {{.*}} barney + 0
+## Test 7: Intervening relocation - not a valid pair
+# GNU-NEXT: R_RISCV_VENDOR       {{.*}} QUALCOMM + 0
+# GNU-NEXT: R_RISCV_32           {{.*}} snork + 0
+# GNU-NEXT: R_RISCV_CUSTOM193    {{.*}} zot + 0
 
 # LLVM:      Relocations [
 # LLVM:        R_RISCV_VENDOR QUALCOMM 0x0
@@ -60,3 +81,10 @@
 # LLVM-NEXT:   R_RISCV_CUSTOM200 qux 0x0
 # LLVM-NEXT:   R_RISCV_VENDOR QUALCOMM 0x0
 # LLVM-NEXT:   R_RISCV_QC_E_BRANCH quux 0x0
+## Test 6: Different offsets - not a valid pair
+# LLVM-NEXT:   R_RISCV_VENDOR QUALCOMM 0x0
+# LLVM-NEXT:   R_RISCV_CUSTOM193 barney 0x0
+## Test 7: Intervening relocation - not a valid pair
+# LLVM-NEXT:   R_RISCV_VENDOR QUALCOMM 0x0
+# LLVM-NEXT:   R_RISCV_32 snork 0x0
+# LLVM-NEXT:   R_RISCV_CUSTOM193 zot 0x0

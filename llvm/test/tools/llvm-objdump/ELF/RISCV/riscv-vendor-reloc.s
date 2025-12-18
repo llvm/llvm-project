@@ -42,6 +42,20 @@
   .reloc ., R_RISCV_CUSTOM193, quux
   nop
 
+## Test 6: Unpaired R_RISCV_VENDOR followed by R_RISCV_CUSTOM* at a different
+## offset - should NOT be treated as a valid pair.
+  .reloc . - 1, R_RISCV_VENDOR, QUALCOMM
+  .reloc ., R_RISCV_CUSTOM193, barney
+  nop
+
+## Test 7: A non-R_RISCV_CUSTOM* relocation in between a vendor relocation pair
+## breaks the pairing - R_RISCV_VENDOR must be immediately before the
+## vendor-specific relocation per psABI.
+  .reloc ., R_RISCV_VENDOR, QUALCOMM
+  .reloc ., R_RISCV_32, snork
+  .reloc ., R_RISCV_CUSTOM193, zot
+  nop
+
 # RELOC:      RELOCATION RECORDS FOR [.text]:
 # RELOC:      R_RISCV_VENDOR       QUALCOMM
 # RELOC-NEXT: R_RISCV_QC_ABS20_U   foo
@@ -52,6 +66,13 @@
 # RELOC-NEXT: R_RISCV_CUSTOM200    qux
 # RELOC-NEXT: R_RISCV_VENDOR       QUALCOMM
 # RELOC-NEXT: R_RISCV_QC_E_BRANCH  quux
+## Test 6: Different offsets - not a valid pair
+# RELOC-NEXT: R_RISCV_VENDOR       QUALCOMM
+# RELOC-NEXT: R_RISCV_CUSTOM193    barney
+## Test 7: Intervening relocation - not a valid pair
+# RELOC-NEXT: R_RISCV_VENDOR       QUALCOMM
+# RELOC-NEXT: R_RISCV_32           snork
+# RELOC-NEXT: R_RISCV_CUSTOM193    zot
 
 # DISASM:      R_RISCV_VENDOR       QUALCOMM
 # DISASM-NEXT: R_RISCV_QC_ABS20_U   foo
@@ -62,3 +83,10 @@
 # DISASM-NEXT: R_RISCV_CUSTOM200    qux
 # DISASM:      R_RISCV_VENDOR       QUALCOMM
 # DISASM-NEXT: R_RISCV_QC_E_BRANCH  quux
+## Test 6: Different offsets - not a valid pair
+# DISASM:      R_RISCV_VENDOR       QUALCOMM
+# DISASM:      R_RISCV_CUSTOM193    barney
+## Test 7: Intervening relocation - not a valid pair
+# DISASM:      R_RISCV_VENDOR       QUALCOMM
+# DISASM-NEXT: R_RISCV_32           snork
+# DISASM:      R_RISCV_CUSTOM193    zot

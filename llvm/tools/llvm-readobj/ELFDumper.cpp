@@ -405,9 +405,12 @@ protected:
 
   // Used for tracking the current RISCV vendor name when printing relocations.
   // When an R_RISCV_VENDOR relocation is encountered, we record the symbol name
-  // so that subsequent R_RISCV_CUSTOM* relocations can be resolved to their
-  // vendor-specific names.
+  // and offset so that the immediately following R_RISCV_CUSTOM* relocation at
+  // the same offset can be resolved to its vendor-specific name. Per RISC-V
+  // psABI, R_RISCV_VENDOR must be placed immediately before the vendor-specific
+  // relocation and both must be at the same offset.
   std::string CurrentRISCVVendorSymbol;
+  uint64_t CurrentRISCVVendorOffset = 0;
 
   std::string getFullSymbolName(const Elf_Sym &Symbol, unsigned SymIndex,
                                 DataRegion<Elf_Word> ShndxTable,
@@ -3546,10 +3549,26 @@ void ELFDumper<ELFT>::printReloc(const Relocation<ELFT> &R, unsigned RelIndex,
     return;
   }
 
-  // Track RISCV vendor symbol name for resolving vendor-specific relocations.
-  if (Obj.getHeader().e_machine == ELF::EM_RISCV &&
-      R.Type == ELF::R_RISCV_VENDOR)
-    CurrentRISCVVendorSymbol = Target->Name;
+  // Track RISCV vendor symbol for resolving vendor-specific relocations.
+  // Per RISC-V psABI, R_RISCV_VENDOR must be placed immediately before the
+  // vendor-specific relocation at the same offset.
+  if (Obj.getHeader().e_machine == ELF::EM_RISCV) {
+    if (R.Type == ELF::R_RISCV_VENDOR) {
+      // Store vendor symbol name and offset for the next relocation.
+      CurrentRISCVVendorSymbol = Target->Name;
+      CurrentRISCVVendorOffset = R.Offset;
+    } else if (!CurrentRISCVVendorSymbol.empty()) {
+      // We have a pending vendor symbol. Clear it if this relocation doesn't
+      // form a valid pair: either the offset doesn't match or this is not a
+      // vendor-specific (CUSTOM) relocation.
+      if (R.Offset != CurrentRISCVVendorOffset ||
+          R.Type < ELF::R_RISCV_CUSTOM192 || R.Type > ELF::R_RISCV_CUSTOM255) {
+        CurrentRISCVVendorSymbol.clear();
+      }
+      // If it IS a valid CUSTOM relocation at matching offset,
+      // getRelocTypeName will use and clear the vendor symbol.
+    }
+  }
 
   printRelRelaReloc(R, *Target);
 }
