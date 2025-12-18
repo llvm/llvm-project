@@ -63,7 +63,7 @@ public:
   /// Registers reoptimize runtime dispatch handlers to given PlatformJD. The
   /// reoptimization request will not be handled if dispatch handler is not
   /// registered by using this function.
-  Error reigsterRuntimeFunctions(JITDylib &PlatformJD);
+  Error registerRuntimeFunctions(JITDylib &PlatformJD);
 
   /// Emits the given module. This should not be called by clients: it will be
   /// called by the JIT when a definition added via the add method is requested.
