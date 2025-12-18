@@ -234,9 +234,8 @@ static const FunctionDecl *resolveMocks(const FunctionDecl *Func) {
     if (const auto *MockedMethod = findMockedMethod(Method)) {
       // If mocked method overrides the real one, we can use its parameter
       // names, otherwise we're out of luck.
-      if (MockedMethod->size_overridden_methods() > 0) {
+      if (MockedMethod->size_overridden_methods() > 0)
         return *MockedMethod->begin_overridden_methods();
-      }
       return nullptr;
     }
   }

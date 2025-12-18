@@ -65,9 +65,8 @@ void MisplacedPointerArithmeticInAllocCheck::check(
 
   if (const auto *Call = dyn_cast<CallExpr>(AllocExpr)) {
     const NamedDecl *Func = Call->getDirectCallee();
-    if (!Func) {
+    if (!Func)
       Func = cast<NamedDecl>(Call->getCalleeDecl());
-    }
     CallName = Func->getName().str();
   } else {
     const auto *New = cast<CXXNewExpr>(AllocExpr);

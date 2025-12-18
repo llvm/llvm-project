@@ -85,9 +85,8 @@ static const Decl *findRVRefOverload(const FunctionDecl &FD,
   // 2. forward reference
   const DeclContext::lookup_result LookupResult =
       FD.getParent()->lookup(FD.getNameInfo().getName());
-  if (LookupResult.isSingleResult()) {
+  if (LookupResult.isSingleResult())
     return nullptr;
-  }
   for (const Decl *Overload : LookupResult) {
     if (Overload == &FD)
       continue;

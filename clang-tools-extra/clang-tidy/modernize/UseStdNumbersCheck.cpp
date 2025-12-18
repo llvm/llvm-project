@@ -259,32 +259,26 @@ struct MatchBuilder {
 
 static std::string getCode(const StringRef Constant, const bool IsFloat,
                            const bool IsLongDouble) {
-  if (IsFloat) {
+  if (IsFloat)
     return ("std::numbers::" + Constant + "_v<float>").str();
-  }
-  if (IsLongDouble) {
+  if (IsLongDouble)
     return ("std::numbers::" + Constant + "_v<long double>").str();
-  }
   return ("std::numbers::" + Constant).str();
 }
 
 static bool isRangeOfCompleteMacro(const clang::SourceRange &Range,
                                    const clang::SourceManager &SM,
                                    const clang::LangOptions &LO) {
-  if (!Range.getBegin().isMacroID()) {
+  if (!Range.getBegin().isMacroID())
     return false;
-  }
-  if (!clang::Lexer::isAtStartOfMacroExpansion(Range.getBegin(), SM, LO)) {
+  if (!clang::Lexer::isAtStartOfMacroExpansion(Range.getBegin(), SM, LO))
     return false;
-  }
 
-  if (!Range.getEnd().isMacroID()) {
+  if (!Range.getEnd().isMacroID())
     return false;
-  }
 
-  if (!clang::Lexer::isAtEndOfMacroExpansion(Range.getEnd(), SM, LO)) {
+  if (!clang::Lexer::isAtEndOfMacroExpansion(Range.getEnd(), SM, LO))
     return false;
-  }
 
   return true;
 }
@@ -377,9 +371,8 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
 
   for (const auto &[ConstantName, ConstantValue] : Constants) {
     const auto *const Match = Result.Nodes.getNodeAs<Expr>(ConstantName);
-    if (Match == nullptr) {
+    if (Match == nullptr)
       continue;
-    }
 
     const auto Range = Match->getSourceRange();
 
@@ -387,9 +380,8 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
 
     // We do not want to emit a diagnostic when we are matching a macro, but the
     // match inside of the macro does not cover the whole macro.
-    if (IsMacro && !isRangeOfCompleteMacro(Range, SM, LO)) {
+    if (IsMacro && !isRangeOfCompleteMacro(Range, SM, LO))
       continue;
-    }
 
     if (const auto PatternBindString = (ConstantName + "_pattern").str();
         Result.Nodes.getNodeAs<Expr>(PatternBindString) != nullptr) {
@@ -411,9 +403,8 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
 
   // We may have had no matches with literals, but a match with a pattern that
   // was a part of a macro which was therefore skipped.
-  if (MatchedLiterals.empty()) {
+  if (MatchedLiterals.empty())
     return;
-  }
 
   llvm::sort(MatchedLiterals, llvm::less_second());
 
@@ -424,9 +415,8 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
 
   // We do not want to emit a diagnostic when we are matching a macro, but the
   // match inside of the macro does not cover the whole macro.
-  if (IsMacro && !isRangeOfCompleteMacro(Range, SM, LO)) {
+  if (IsMacro && !isRangeOfCompleteMacro(Range, SM, LO))
     return;
-  }
 
   const auto Code = getCode(Constant, IsFloat, IsLongDouble);
   diag(Range.getBegin(),

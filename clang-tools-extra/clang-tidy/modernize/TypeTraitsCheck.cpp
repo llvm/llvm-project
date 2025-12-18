@@ -211,9 +211,8 @@ static bool checkTemplatedDecl(NestedNameSpecifier NNS,
   const auto *TST = NNS.getAsType()->getAs<TemplateSpecializationType>();
   if (!TST)
     return false;
-  if (const TemplateDecl *TD = TST->getTemplateName().getAsTemplateDecl()) {
+  if (const TemplateDecl *TD = TST->getTemplateName().getAsTemplateDecl())
     return isNamedDeclInStdTraitsSet(TD, Set);
-  }
   return false;
 }
 

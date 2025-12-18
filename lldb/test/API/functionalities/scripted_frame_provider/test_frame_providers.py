@@ -314,3 +314,69 @@ class PythonSourceFrameProvider(ScriptedFrameProvider):
             # Pass through original frames
             return index - 3
         return None
+
+
+class ValidPCNoModuleFrame(ScriptedFrame):
+    """Scripted frame with a valid PC but no associated module."""
+
+    def __init__(self, thread, idx, pc, function_name):
+        args = lldb.SBStructuredData()
+        super().__init__(thread, args)
+
+        self.idx = idx
+        self.pc = pc
+        self.function_name = function_name
+
+    def get_id(self):
+        """Return the frame index."""
+        return self.idx
+
+    def get_pc(self):
+        """Return the program counter."""
+        return self.pc
+
+    def get_function_name(self):
+        """Return the function name."""
+        return self.function_name
+
+    def is_artificial(self):
+        """Not artificial."""
+        return False
+
+    def is_hidden(self):
+        """Not hidden."""
+        return False
+
+    def get_register_context(self):
+        """No register context."""
+        return None
+
+
+class ValidPCNoModuleFrameProvider(ScriptedFrameProvider):
+    """
+    Provider that demonstrates frames with valid PC but no module.
+
+    This tests that backtrace output handles frames that have a valid
+    program counter but cannot be resolved to any loaded module.
+    """
+
+    def __init__(self, input_frames, args):
+        super().__init__(input_frames, args)
+
+    @staticmethod
+    def get_description():
+        """Return a description of this provider."""
+        return "Provider that prepends frames with valid PC but no module"
+
+    def get_frame_at_index(self, index):
+        """Return frames with valid PCs but no module information."""
+        if index == 0:
+            # Frame with valid PC (0x1234000) but no module
+            return ValidPCNoModuleFrame(self.thread, 0, 0x1234000, "unknown_function_1")
+        elif index == 1:
+            # Another frame with valid PC (0x5678000) but no module
+            return ValidPCNoModuleFrame(self.thread, 1, 0x5678000, "unknown_function_2")
+        elif index - 2 < len(self.input_frames):
+            # Pass through original frames
+            return index - 2
+        return None
