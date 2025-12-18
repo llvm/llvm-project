@@ -963,6 +963,36 @@ def CIR_ResumeOp : CIR_Op<"resume", [
   let hasLLVMLowering = false;
 }
 
+def CIR_ResumeFlatOp : CIR_Op<"resume.flat", [
+  ReturnLike, Terminator
+]> {
+  let summary = "A flattened version of `cir.resume`";
+  let description = [{
+    The `cir.resume.flat` operation is a region-less and simplified
+    version of the `cir.resume`.
+
+    Its representation is closer to LLVM IR dialect
+    than the C/C++ language feature.
+
+    This operation is used only after the CFG flatterning pass.
+
+    Examples:
+    ```mlir
+    cir.resume.flat %exception_ptr, %type_id
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_VoidPtrType:$exception_ptr,
+    CIR_UInt32:$type_id
+  );
+
+  let assemblyFormat = [{
+    $exception_ptr `,` $type_id
+    attr-dict
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // ScopeOp
 //===----------------------------------------------------------------------===//
@@ -1216,7 +1246,7 @@ def CIR_SwitchOp : CIR_Op<"switch", [
 
   let arguments = (ins 
     CIR_IntType:$condition,
-    UnitAttr:$allEnumCasesCovered
+    UnitAttr:$all_enum_cases_covered
   );
 
   let regions = (region AnyRegion:$body);
@@ -1229,7 +1259,7 @@ def CIR_SwitchOp : CIR_Op<"switch", [
 
   let assemblyFormat = [{
     `(` $condition `:` qualified(type($condition)) `)` 
-     (`allEnumCasesCovered` $allEnumCasesCovered^)?
+     (`all_enum_cases_covered` $all_enum_cases_covered^)?
     $body
     attr-dict
   }];
@@ -3031,6 +3061,8 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
 
   let results = (outs Optional<CIR_AnyType>:$result);
   let arguments = commonArgs;
+
+  let skipDefaultBuilders = 1;
 
   let builders = [
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee, "mlir::Type":$resType,
