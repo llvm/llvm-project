@@ -5351,8 +5351,9 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
         static_cast<uint64_t>(Data.getUnsigned(C, sizeof(typename ELFT::uint)));
     if (!C) {
       reportWarning(
-          createError("failed while reading call graph info function entry PC " +
-                      toString(C.takeError())),
+          createError(
+              "failed while reading call graph info function entry PC " +
+              toString(C.takeError())),
           FileName);
       return false;
     }
