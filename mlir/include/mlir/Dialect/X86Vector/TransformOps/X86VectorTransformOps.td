@@ -53,8 +53,8 @@ def ApplyShuffleVectorFMAOpsPatternsOp : Op<Transform_Dialect,
     "apply_patterns.x86vector.shuffle_vector_fma_ops",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Collect patterns to sink vector producer operations forward in a block to
-         place them immediately before their first use.
+    Collect patterns to shuffle FMAs with x86vector operations as operands 
+    such that FMAs are grouped with respect to odd/even packed index.
   }];
 
   let assemblyFormat = "attr-dict";
