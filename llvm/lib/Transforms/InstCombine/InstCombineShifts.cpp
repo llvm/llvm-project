@@ -288,8 +288,9 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
     // creating the subsequent shift op.
     unsigned WidestTyBitWidth = WidestTy->getScalarSizeInBits();
     ShAmtsDiff = Constant::replaceUndefsWith(
-        ShAmtsDiff, ConstantInt::get(ShAmtsDiff->getType()->getScalarType(),
-                                     -WidestTyBitWidth));
+        ShAmtsDiff,
+        ConstantInt::getSigned(ShAmtsDiff->getType()->getScalarType(),
+                               -(int)WidestTyBitWidth));
     auto *ExtendedNumHighBitsToClear = ConstantFoldCastOperand(
         Instruction::ZExt,
         ConstantExpr::getSub(ConstantInt::get(ShAmtsDiff->getType(),

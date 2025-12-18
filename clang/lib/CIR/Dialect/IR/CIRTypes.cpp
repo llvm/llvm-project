@@ -828,6 +828,75 @@ mlir::LogicalResult cir::VectorType::verify(
   return success();
 }
 
+mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
+
+  llvm::SMLoc odsLoc = odsParser.getCurrentLocation();
+  mlir::Builder odsBuilder(odsParser.getContext());
+  mlir::FailureOr<::mlir::Type> elementType;
+  mlir::FailureOr<uint64_t> size;
+  bool isScalabe = false;
+
+  // Parse literal '<'
+  if (odsParser.parseLess())
+    return {};
+
+  // Parse literal '[', if present, and set the scalability flag accordingly
+  if (odsParser.parseOptionalLSquare().succeeded())
+    isScalabe = true;
+
+  // Parse variable 'size'
+  size = mlir::FieldParser<uint64_t>::parse(odsParser);
+  if (mlir::failed(size)) {
+    odsParser.emitError(odsParser.getCurrentLocation(),
+                        "failed to parse CIR_VectorType parameter 'size' which "
+                        "is to be a `uint64_t`");
+    return {};
+  }
+
+  // Parse literal ']', which is expected when dealing with scalable
+  // dim sizes
+  if (isScalabe && odsParser.parseRSquare().failed()) {
+    odsParser.emitError(odsParser.getCurrentLocation(),
+                        "missing closing `]` for scalable dim size");
+    return {};
+  }
+
+  // Parse literal 'x'
+  if (odsParser.parseKeyword("x"))
+    return {};
+
+  // Parse variable 'elementType'
+  elementType = mlir::FieldParser<::mlir::Type>::parse(odsParser);
+  if (mlir::failed(elementType)) {
+    odsParser.emitError(odsParser.getCurrentLocation(),
+                        "failed to parse CIR_VectorType parameter "
+                        "'elementType' which is to be a `mlir::Type`");
+    return {};
+  }
+
+  // Parse literal '>'
+  if (odsParser.parseGreater())
+    return {};
+  return odsParser.getChecked<VectorType>(odsLoc, odsParser.getContext(),
+                                          mlir::Type((*elementType)),
+                                          uint64_t((*size)), isScalabe);
+}
+
+void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
+  mlir::Builder odsBuilder(getContext());
+  odsPrinter << "<";
+  if (this->getIsScalable())
+    odsPrinter << "[";
+
+  odsPrinter.printStrippedAttrOrType(getSize());
+  if (this->getIsScalable())
+    odsPrinter << "]";
+  odsPrinter << ' ' << "x";
+  odsPrinter << ' ';
+  odsPrinter.printStrippedAttrOrType(getElementType());
+  odsPrinter << ">";
+}
+
 //===----------------------------------------------------------------------===//
 // TargetAddressSpace definitions
 //===----------------------------------------------------------------------===//

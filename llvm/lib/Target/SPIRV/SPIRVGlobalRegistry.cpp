@@ -1469,6 +1469,27 @@ SPIRVGlobalRegistry::getOrCreatePaddingType(MachineIRBuilder &MIRBuilder) {
   return R;
 }
 
+SPIRVType *SPIRVGlobalRegistry::getOrCreateVulkanPushConstantType(
+    MachineIRBuilder &MIRBuilder, Type *T) {
+  const auto SC = SPIRV::StorageClass::PushConstant;
+
+  auto Key = SPIRV::irhandle_vkbuffer(T, SC, /* IsWritable= */ false);
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+
+  // We need to get the SPIR-V type for the element here, so we can add the
+  // decoration to it.
+  auto *BlockType = getOrCreateSPIRVType(
+      T, MIRBuilder, SPIRV::AccessQualifier::None,
+      /* ExplicitLayoutRequired= */ true, /* EmitIr= */ false);
+
+  buildOpDecorate(BlockType->defs().begin()->getReg(), MIRBuilder,
+                  SPIRV::Decoration::Block, {});
+  SPIRVType *R = BlockType;
+  add(Key, R);
+  return R;
+}
+
 SPIRVType *SPIRVGlobalRegistry::getOrCreateLayoutType(
     MachineIRBuilder &MIRBuilder, const TargetExtType *T, bool EmitIr) {
   auto Key = SPIRV::handle(T);

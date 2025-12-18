@@ -30,6 +30,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticComment.h"
+#include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
@@ -14597,10 +14598,10 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     if (getLangOpts().HLSL && HLSL().ActOnUninitializedVarDecl(Var))
       return;
 
-    // HLSL input variables are expected to be externally initialized, even
-    // when marked `static`.
+    // HLSL input & push-constant variables are expected to be externally
+    // initialized, even when marked `static`.
     if (getLangOpts().HLSL &&
-        Var->getType().getAddressSpace() == LangAS::hlsl_input)
+        hlsl::isInitializedByPipeline(Var->getType().getAddressSpace()))
       return;
 
     // C++03 [dcl.init]p9:

@@ -9,6 +9,8 @@
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Host/windows/PseudoConsole.h"
+#include "lldb/Host/windows/windows.h"
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
@@ -87,8 +89,12 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   error.Clear();
 
   STARTUPINFOEXW startupinfoex = {};
-  startupinfoex.StartupInfo.cb = sizeof(startupinfoex);
+  startupinfoex.StartupInfo.cb = sizeof(STARTUPINFOEXW);
   startupinfoex.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
+
+  HPCON hPC = launch_info.GetPTY().GetPseudoTerminalHandle();
+  bool use_pty =
+      hPC != INVALID_HANDLE_VALUE && launch_info.GetNumFileActions() == 0;
 
   HANDLE stdin_handle = GetStdioHandle(launch_info, STDIN_FILENO);
   HANDLE stdout_handle = GetStdioHandle(launch_info, STDOUT_FILENO);
@@ -120,13 +126,23 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   auto delete_attributelist = llvm::make_scope_exit(
       [&] { DeleteProcThreadAttributeList(startupinfoex.lpAttributeList); });
 
-  auto inherited_handles_or_err = GetInheritedHandles(
-      launch_info, startupinfoex, stdout_handle, stderr_handle, stdin_handle);
-  if (!inherited_handles_or_err) {
-    error = Status(inherited_handles_or_err.getError());
-    return HostProcess();
+  std::vector<HANDLE> inherited_handles;
+  if (use_pty) {
+    if (!UpdateProcThreadAttribute(startupinfoex.lpAttributeList, 0,
+                                   PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, hPC,
+                                   sizeof(hPC), NULL, NULL)) {
+      error = Status(::GetLastError(), eErrorTypeWin32);
+      return HostProcess();
+    }
+  } else {
+    auto inherited_handles_or_err = GetInheritedHandles(
+        launch_info, startupinfoex, stdout_handle, stderr_handle, stdin_handle);
+    if (!inherited_handles_or_err) {
+      error = Status(inherited_handles_or_err.getError());
+      return HostProcess();
+    }
+    inherited_handles = std::move(*inherited_handles_or_err);
   }
-  std::vector<HANDLE> inherited_handles = *inherited_handles_or_err;
 
   const char *hide_console_var =
       getenv("LLDB_LAUNCH_INFERIORS_WITHOUT_CONSOLE");
@@ -141,7 +157,7 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   if (launch_info.GetFlags().Test(eLaunchFlagDebug))
     flags |= DEBUG_ONLY_THIS_PROCESS;
 
-  if (launch_info.GetFlags().Test(eLaunchFlagDisableSTDIO))
+  if (launch_info.GetFlags().Test(eLaunchFlagDisableSTDIO) || use_pty)
     flags &= ~CREATE_NEW_CONSOLE;
 
   std::vector<wchar_t> environment =

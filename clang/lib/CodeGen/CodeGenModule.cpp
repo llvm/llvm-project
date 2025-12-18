@@ -6105,9 +6105,11 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
     getCUDARuntime().handleVarRegistration(D, *GV);
   }
 
-  if (LangOpts.HLSL && GetGlobalVarAddressSpace(D) == LangAS::hlsl_input) {
+  if (LangOpts.HLSL &&
+      hlsl::isInitializedByPipeline(GetGlobalVarAddressSpace(D))) {
     // HLSL Input variables are considered to be set by the driver/pipeline, but
-    // only visible to a single thread/wave.
+    // only visible to a single thread/wave. Push constants are also externally
+    // initialized, but constant, hence cross-wave visibility is not relevant.
     GV->setExternallyInitialized(true);
   } else {
     GV->setInitializer(Init);
@@ -6158,10 +6160,11 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
       !D->hasAttr<ConstInitAttr>())
     Linkage = llvm::GlobalValue::InternalLinkage;
 
-  // HLSL variables in the input address space maps like memory-mapped
-  // variables. Even if they are 'static', they are externally initialized and
-  // read/write by the hardware/driver/pipeline.
-  if (LangOpts.HLSL && GetGlobalVarAddressSpace(D) == LangAS::hlsl_input)
+  // HLSL variables in the input or push-constant address space maps are like
+  // memory-mapped variables. Even if they are 'static', they are externally
+  // initialized and read/write by the hardware/driver/pipeline.
+  if (LangOpts.HLSL &&
+      hlsl::isInitializedByPipeline(GetGlobalVarAddressSpace(D)))
     Linkage = llvm::GlobalValue::ExternalLinkage;
 
   GV->setLinkage(Linkage);

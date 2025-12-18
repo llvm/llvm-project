@@ -5169,6 +5169,14 @@ def HLSLVkExtBuiltinInput : InheritableAttr {
   let Documentation = [HLSLVkExtBuiltinInputDocs];
 }
 
+def HLSLVkPushConstant : InheritableAttr {
+  let Spellings = [CXX11<"vk", "push_constant">];
+  let Args = [];
+  let Subjects = SubjectList<[GlobalVar], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkPushConstantDocs];
+}
+
 def HLSLVkConstantId : InheritableAttr {
   let Spellings = [CXX11<"vk", "constant_id">];
   let Args = [IntArgument<"Id">];
