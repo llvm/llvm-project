@@ -335,49 +335,50 @@ void UseAfterMoveFinder::getReinits(
 
   // Matches different types of reinitialization.
   auto ReinitMatcher =
-      stmt(anyOf(
-               // Assignment. In addition to the overloaded assignment operator,
-               // test for built-in assignment as well, since template functions
-               // may be instantiated to use std::move() on built-in types.
-               binaryOperation(hasOperatorName("="), hasLHS(DeclRefMatcher)),
-               // Declaration. We treat this as a type of reinitialization too,
-               // so we don't need to treat it separately.
-               declStmt(hasDescendant(equalsNode(MovedVariable))),
-               // clear() and assign() on standard containers.
-               cxxMemberCallExpr(
-                   on(expr(DeclRefMatcher, StandardContainerTypeMatcher)),
-                   // To keep the matcher simple, we check for assign() calls
-                   // on all standard containers, even though only vector,
-                   // deque, forward_list and list have assign(). If assign()
-                   // is called on any of the other containers, this will be
-                   // flagged by a compile error anyway.
-                   callee(cxxMethodDecl(hasAnyName("clear", "assign")))),
-               // reset() on standard smart pointers.
-               cxxMemberCallExpr(
-                   on(expr(DeclRefMatcher, StandardResettableOwnerTypeMatcher)),
-                   callee(cxxMethodDecl(hasName("reset")))),
-               // Methods that have the [[clang::reinitializes]] attribute.
-               cxxMemberCallExpr(
-                   on(DeclRefMatcher),
-                   callee(cxxMethodDecl(hasAttr(clang::attr::Reinitializes)))),
-               // Methods that are specified in ReinitializationFunctions option.
-               cxxMemberCallExpr(
-                   on(DeclRefMatcher),
-                   callee(cxxMethodDecl(
-                       matchers::matchesAnyListedName(ReinitializationFunctions)))),
-               // Passing variable to a function as a non-const pointer.
-               callExpr(forEachArgumentWithParam(
-                   unaryOperator(hasOperatorName("&"),
-                                 hasUnaryOperand(DeclRefMatcher)),
-                   unless(parmVarDecl(hasType(pointsTo(isConstQualified())))))),
-               // Passing variable to a function as a non-const lvalue reference
-               // (unless that function is std::move()).
-               callExpr(forEachArgumentWithParam(
-                            traverse(TK_AsIs, DeclRefMatcher),
-                            unless(parmVarDecl(hasType(
-                                references(qualType(isConstQualified())))))),
-                        unless(callee(functionDecl(
-                            getNameMatcher(InvalidationFunctions)))))))
+      stmt(
+          anyOf(
+              // Assignment. In addition to the overloaded assignment operator,
+              // test for built-in assignment as well, since template functions
+              // may be instantiated to use std::move() on built-in types.
+              binaryOperation(hasOperatorName("="), hasLHS(DeclRefMatcher)),
+              // Declaration. We treat this as a type of reinitialization too,
+              // so we don't need to treat it separately.
+              declStmt(hasDescendant(equalsNode(MovedVariable))),
+              // clear() and assign() on standard containers.
+              cxxMemberCallExpr(
+                  on(expr(DeclRefMatcher, StandardContainerTypeMatcher)),
+                  // To keep the matcher simple, we check for assign() calls
+                  // on all standard containers, even though only vector,
+                  // deque, forward_list and list have assign(). If assign()
+                  // is called on any of the other containers, this will be
+                  // flagged by a compile error anyway.
+                  callee(cxxMethodDecl(hasAnyName("clear", "assign")))),
+              // reset() on standard smart pointers.
+              cxxMemberCallExpr(
+                  on(expr(DeclRefMatcher, StandardResettableOwnerTypeMatcher)),
+                  callee(cxxMethodDecl(hasName("reset")))),
+              // Methods that have the [[clang::reinitializes]] attribute.
+              cxxMemberCallExpr(
+                  on(DeclRefMatcher),
+                  callee(cxxMethodDecl(hasAttr(clang::attr::Reinitializes)))),
+              // Methods that are specified in ReinitializationFunctions option.
+              cxxMemberCallExpr(
+                  on(DeclRefMatcher),
+                  callee(cxxMethodDecl(matchers::matchesAnyListedName(
+                      ReinitializationFunctions)))),
+              // Passing variable to a function as a non-const pointer.
+              callExpr(forEachArgumentWithParam(
+                  unaryOperator(hasOperatorName("&"),
+                                hasUnaryOperand(DeclRefMatcher)),
+                  unless(parmVarDecl(hasType(pointsTo(isConstQualified())))))),
+              // Passing variable to a function as a non-const lvalue reference
+              // (unless that function is std::move()).
+              callExpr(forEachArgumentWithParam(
+                           traverse(TK_AsIs, DeclRefMatcher),
+                           unless(parmVarDecl(hasType(
+                               references(qualType(isConstQualified())))))),
+                       unless(callee(functionDecl(
+                           getNameMatcher(InvalidationFunctions)))))))
           .bind("reinit");
 
   Stmts->clear();
