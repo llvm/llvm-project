@@ -1620,8 +1620,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
         continue;
 
-      // Convert an unmasked scatter with an uniform address into
-      // extract-last-lane + scalar store.
+      // Convert an unmasked or header masked scatter with an uniform address
+      // into extract-last-lane + scalar store.
       // TODO: Add a profitability check comparing the cost of a scatter vs.
       // extract + scalar store.
       auto *WidenStoreR = dyn_cast<VPWidenStoreRecipe>(&R);
@@ -1631,14 +1631,25 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
                "Not consecutive memory recipes shouldn't be reversed");
         VPValue *Mask = WidenStoreR->getMask();
 
-        // Only convert the scatter to a scalar store if it is unmasked.
-        // TODO: Support converting scatter masked by the header mask to scalar
-        // store.
-        if (Mask)
+        // Convert the scatter to a scalar store if it is unmasked or header
+        // masked.
+        if (Mask && !vputils::isHeaderMask(Mask, Plan))
           continue;
 
-        auto *Extract = new VPInstruction(VPInstruction::ExtractLastLane,
-                                          {WidenStoreR->getOperand(1)});
+        VPInstruction *Extract;
+        if (!Mask) {
+          Extract = new VPInstruction(VPInstruction::ExtractLastLane,
+                                      {WidenStoreR->getOperand(1)});
+        } else {
+          // If the mask is the header mask, this mask contains at least one
+          // active lane. So it is safe to convert the scatter to a scalar
+          // store.
+          VPInstruction *Idx =
+              new VPInstruction(VPInstruction::LastActiveLane, Mask);
+          Idx->insertBefore(WidenStoreR);
+          Extract = new VPInstruction(VPInstruction::ExtractLane,
+                                      {Idx, WidenStoreR->getOperand(1)});
+        }
         Extract->insertBefore(WidenStoreR);
 
         // TODO: Sink the scalar store recipe to middle block if possible.
