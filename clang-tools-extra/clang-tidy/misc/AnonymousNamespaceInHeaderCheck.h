@@ -35,6 +35,6 @@ private:
   FileExtensionsSet HeaderFileExtensions;
 };
 
-} // namespace clang::tidy::google::build
+} // namespace clang::tidy::misc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_UNNAMEDNAMESPACEINHEADERCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_ANONYMOUSNAMESPACEINHEADERCHECK_H
