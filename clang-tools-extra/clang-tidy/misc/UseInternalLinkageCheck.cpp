@@ -98,6 +98,11 @@ AST_MATCHER(FunctionDecl, isAllocationOrDeallocationOverloadedFunction) {
 
 AST_MATCHER(TagDecl, hasNameForLinkage) { return Node.hasNameForLinkage(); }
 
+AST_MATCHER(CXXRecordDecl, isExplicitTemplateInstantiation) {
+  return Node.getTemplateSpecializationKind() ==
+         TSK_ExplicitInstantiationDefinition;
+}
+
 } // namespace
 
 UseInternalLinkageCheck::UseInternalLinkageCheck(StringRef Name,
@@ -139,11 +144,12 @@ void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
                      this);
   if (getLangOpts().CPlusPlus)
     Finder->addMatcher(
-        tagDecl(
-            Common, isDefinition(), hasNameForLinkage(),
-            hasDeclContext(anyOf(translationUnitDecl(), namespaceDecl())),
-            unless(anyOf(classTemplatePartialSpecializationDecl(),
-                         cxxRecordDecl(isExplicitTemplateSpecialization()))))
+        tagDecl(Common, isDefinition(), hasNameForLinkage(),
+                hasDeclContext(anyOf(translationUnitDecl(), namespaceDecl())),
+                unless(anyOf(
+                    classTemplatePartialSpecializationDecl(),
+                    cxxRecordDecl(anyOf(isExplicitTemplateSpecialization(),
+                                        isExplicitTemplateInstantiation())))))
             .bind("tag"),
         this);
 }

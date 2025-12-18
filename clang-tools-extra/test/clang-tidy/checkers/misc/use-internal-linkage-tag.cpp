@@ -10,6 +10,10 @@ class ClassDeclaredInHeader {};
 enum EnumDeclaredInHeader : int {};
 template <typename T> class TemplateDeclaredInHeader<T *> {};
 template <> class TemplateDeclaredInHeader<int> {};
+// This instantiation matches an 'extern template' declaration in the header.
+template class TemplateDeclaredInHeader<char>;
+// This instantiation has no associated 'extern template'.
+template class TemplateDeclaredInHeader<float>;
 
 struct StructWithNoDefinition;
 union UnionWithNoDefinition;

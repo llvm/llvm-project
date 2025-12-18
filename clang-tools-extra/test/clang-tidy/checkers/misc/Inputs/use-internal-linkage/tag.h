@@ -7,3 +7,5 @@ class ClassDeclaredInHeader;
 
 template <typename>
 class TemplateDeclaredInHeader {};
+
+extern template class TemplateDeclaredInHeader<char>;
