@@ -70,6 +70,8 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::EXTRACT_VECTOR_ELT:
       R = SoftenFloatRes_EXTRACT_VECTOR_ELT(N, ResNo); break;
     case ISD::FABS:        R = SoftenFloatRes_FABS(N); break;
+    case ISD::FCANONICALIZE:
+      R = SoftenFloatRes_FCANONICALIZE(N); break;
     case ISD::STRICT_FMINNUM:
     case ISD::FMINNUM:     R = SoftenFloatRes_FMINNUM(N); break;
     case ISD::STRICT_FMAXNUM:
@@ -309,6 +311,31 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FABS(SDNode *N) {
   SDValue Mask = DAG.getConstant(API, SDLoc(N), NVT);
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   return DAG.getNode(ISD::AND, SDLoc(N), NVT, Op, Mask);
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FCANONICALIZE(SDNode *N) {
+  SDLoc dl(N);
+
+  // This implements llvm.canonicalize.f* by multiplication with 1.0, as
+  // suggested in
+  // https://llvm.org/docs/LangRef.html#llvm-canonicalize-intrinsic.
+  // It uses strict_fp operations even outside a strict_fp context in order
+  // to guarantee that the canonicalization is not optimized away by later
+  // passes. The result chain introduced by that is intentionally ignored
+  // since no ordering requirement is intended here.
+
+  // Create strict multiplication by 1.0.
+  SDValue Operand = N->getOperand(0);
+  EVT VT = Operand.getValueType();
+  SDValue One = DAG.getConstantFP(1.0, dl, VT);
+  SDValue Chain = DAG.getEntryNode();
+  // Propagate existing flags on canonicalize, and additionally set
+  // NoFPExcept.
+  SDNodeFlags CanonicalizeFlags = N->getFlags();
+  CanonicalizeFlags.setNoFPExcept(true);
+  SDValue Mul = DAG.getNode(ISD::STRICT_FMUL, dl, {VT, MVT::Other},
+                            {Chain, Operand, One}, CanonicalizeFlags);
+  return BitConvertToInteger(Mul);
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FMINNUM(SDNode *N) {
