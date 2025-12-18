@@ -16,13 +16,13 @@ export class ApkDebugSession {
      * Component name is in the form "com.example.app/.MainActivity".
      * `wfd` stays for "waiting for debugger".
      */
-    async start(deviceId: string | undefined, componentName: string, wfd: boolean) {
+    async start(deviceSerial: string | undefined, componentName: string, wfd: boolean) {
         const addId = componentName.split('/')[0];
         const adb = new AdbClient();
-        if (deviceId !== undefined) {
-            adb.setDeviceId(deviceId);
+        if (deviceSerial !== undefined) {
+            adb.setDeviceSerial(deviceSerial);
         } else {
-            await adb.autoDetectDeviceId();
+            await adb.autoDetectDeviceSerial();
         }
         const arch = (await adb.shellCommandToString("uname -m")).trim();
         const lldbServerPath = await Env.getLldbServerPath(arch);
@@ -76,7 +76,7 @@ export class ApkDebugSession {
      * sessions run in parallel are rare.
      */
     private async cleanUpEarlierDebugSessions(adb: AdbClient, addId: string) {
-        const deviceId = adb.getDeviceId();
+        const deviceSerial = adb.getDeviceSerial();
 
         // stop the app
         await adb.shellCommand(`am force-stop ${addId}`);
@@ -92,10 +92,10 @@ export class ApkDebugSession {
     }
 
     private async cleanUpPortForwarding(adb: AdbClient, addId: string) {
-        const deviceId = adb.getDeviceId();
+        const deviceSerial = adb.getDeviceSerial();
         const list = await adb.getPortForwardingList();
         const filteredList = list.filter(item => {
-            if (item.device !== deviceId) {
+            if (item.device !== deviceSerial) {
                 return false;
             }
             const pattern1 = `localabstract:/${addId}`;

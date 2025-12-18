@@ -8,12 +8,12 @@ import Jdwp from './jdwp';
  * An ADB client has access to multiple Android devices.
  * Many functionalities exposed by this class need the target device
  * to be designated before invoking that functionality.
- * The target device can be selected by invoking setDeviceId() or autoDetectDeviceId().
+ * The target device can be selected by invoking setDeviceSerial() or autoDetectDeviceSerial().
  * This client expects the ADB daemon to be running on the local machine.
  */
 export class AdbClient {
 
-    private deviceId: string | undefined = undefined;
+    private deviceSerial: string | undefined = undefined;
 
     async getDeviceList(): Promise<string[]> {
         const connection = await this.createAdbConnection();
@@ -25,39 +25,39 @@ export class AdbClient {
         }
     }
 
-    async autoDetectDeviceId(): Promise<void> {
+    async autoDetectDeviceSerial(): Promise<void> {
         const connection = await this.createAdbConnection();
         try {
             const devices = await connection.getDeviceList();
             if (devices.length === 1) {
-                this.deviceId = devices[0];
+                this.deviceSerial = devices[0];
                 return;
             }
             if (devices.length === 0) {
                 throw new Error('No connected Android devices found');
             }
-            throw new Error('Multiple connected Android devices found, please specify a device ID');
+            throw new Error('Multiple connected Android devices found, please specify a device SN');
         } finally {
             connection.close();
         }
     }
 
-    setDeviceId(deviceId: string) {
-        this.deviceId = deviceId;
+    setDeviceSerial(deviceSerial: string) {
+        this.deviceSerial = deviceSerial;
     }
 
-    getDeviceId(): string {
-        if (this.deviceId === undefined) {
-            throw new Error('Device ID is not set');
+    getDeviceSerial(): string {
+        if (this.deviceSerial === undefined) {
+            throw new Error('Device SN is not set');
         }
-        return this.deviceId;
+        return this.deviceSerial;
     }
 
     async shellCommand(command: string): Promise<void> {
-        const deviceId = this.getDeviceId();
+        const deviceSerial = this.getDeviceSerial();
         const connection = await this.createAdbConnection();
         try {
-            await connection.setTargetDevice(deviceId);
+            await connection.setTargetDevice(deviceSerial);
             await connection.shellCommand(command);
         } finally {
             connection.close();
@@ -65,10 +65,10 @@ export class AdbClient {
     }
 
     async shellCommandToString(command: string): Promise<string> {
-        const deviceId = this.getDeviceId();
+        const deviceSerial = this.getDeviceSerial();
         const connection = await this.createAdbConnection();
         try {
-            await connection.setTargetDevice(deviceId);
+            await connection.setTargetDevice(deviceSerial);
             const output = await connection.shellCommandToString(command);
             return output;
         } finally {
@@ -77,13 +77,13 @@ export class AdbClient {
     }
 
     async shellCommandToStream(command: string, writer: (data: Uint8Array) => Promise<void>, abort: AbortSignal): Promise<void> {
-        const deviceId = this.getDeviceId();
+        const deviceSerial = this.getDeviceSerial();
         const connection = await this.createAdbConnection();
         abort.addEventListener('abort', () => {
             connection.close();
         });
         try {
-            await connection.setTargetDevice(deviceId);
+            await connection.setTargetDevice(deviceSerial);
             await connection.shellCommandToStream(command, writer);
         } finally {
             connection.close();
@@ -91,10 +91,10 @@ export class AdbClient {
     }
 
     async getPid(packageName: string): Promise<number> {
-        const deviceId = this.getDeviceId();
+        const deviceSerial = this.getDeviceSerial();
         const connection = await this.createAdbConnection();
         try {
-            await connection.setTargetDevice(deviceId);
+            await connection.setTargetDevice(deviceSerial);
             const pid = await connection.getPid(packageName);
             return pid;
         } finally {
@@ -103,10 +103,10 @@ export class AdbClient {
     }
 
     async addPortForwarding(remotePort: number | string, localPort: number = 0): Promise<number> {
-        const deviceId = this.getDeviceId();
+        const deviceSerial = this.getDeviceSerial();
         const connection = await this.createAdbConnection();
         try {
-            const port = await connection.addPortForwarding(deviceId, remotePort, localPort);
+            const port = await connection.addPortForwarding(deviceSerial, remotePort, localPort);
             return port;
         } finally {
             connection.close();
@@ -114,10 +114,10 @@ export class AdbClient {
     }
 
     async removePortForwarding(localPort: number): Promise<void> {
-        const deviceId = this.getDeviceId();
+        const deviceSerial = this.getDeviceSerial();
         const connection = await this.createAdbConnection();
         try {
-            await connection.removePortForwarding(deviceId, localPort);
+            await connection.removePortForwarding(deviceSerial, localPort);
         } finally {
             connection.close();
         }
@@ -156,10 +156,10 @@ export class AdbClient {
     }
 
     async pushData(data: Uint8Array, remoteFilePath: string): Promise<void> {
-        const deviceId = this.getDeviceId();
+        const deviceSerial = this.getDeviceSerial();
         const connection = await this.createAdbConnection();
         try {
-            await connection.setTargetDevice(deviceId);
+            await connection.setTargetDevice(deviceSerial);
             await connection.enterSyncMode();
             await connection.pushData(data, remoteFilePath);
         } finally {
@@ -168,10 +168,10 @@ export class AdbClient {
     }
 
     async pushFile(localFilePath: string, remoteFilePath: string): Promise<void> {
-        const deviceId = this.getDeviceId();
+        const deviceSerial = this.getDeviceSerial();
         const connection = await this.createAdbConnection();
         try {
-            await connection.setTargetDevice(deviceId);
+            await connection.setTargetDevice(deviceSerial);
             await connection.enterSyncMode();
             await connection.pushFile(localFilePath, remoteFilePath);
         } finally {

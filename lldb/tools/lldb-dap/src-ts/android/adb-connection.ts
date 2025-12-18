@@ -20,8 +20,8 @@ export class AdbConnection extends Connection {
         await this.write(data);
     }
 
-    async sendDeviceMessage(deviceId: string, packet: string): Promise<void> {
-        const msg = `host-serial:${deviceId}:${packet}`;
+    async sendDeviceMessage(deviceSerial: string, packet: string): Promise<void> {
+        const msg = `host-serial:${deviceSerial}:${packet}`;
         await this.sendAdbMessage(msg);
     }
 
@@ -58,6 +58,7 @@ export class AdbConnection extends Connection {
     }
 
     /**
+     * Return a list of device serial numbers connected to the ADB server.
      * The ADB server closes the connection after executing this command.
      */
     async getDeviceList(): Promise<string[]> {
@@ -78,8 +79,8 @@ export class AdbConnection extends Connection {
         return deviceList;
     }
 
-    async setTargetDevice(deviceId: string): Promise<void> {
-        await this.sendAdbMessage(`host:transport:${deviceId}`);
+    async setTargetDevice(deviceSerial: string): Promise<void> {
+        await this.sendAdbMessage(`host:transport:${deviceSerial}`);
         await this.readResponseStatus();
     }
 
@@ -136,12 +137,12 @@ export class AdbConnection extends Connection {
         return pid;
     }
 
-    async addPortForwarding(deviceId: string, remotePort: number | string, localPort: number = 0): Promise<number> {
+    async addPortForwarding(deviceSerial: string, remotePort: number | string, localPort: number = 0): Promise<number> {
         if (typeof remotePort === 'number') {
             remotePort = `tcp:${remotePort}`;
         }
         const message = `forward:tcp:${localPort};${remotePort}`;
-        await this.sendDeviceMessage(deviceId, message);
+        await this.sendDeviceMessage(deviceSerial, message);
         await this.readResponseStatus();
         await this.readResponseStatus();
         const result = await this.readAdbMessage();
@@ -153,9 +154,9 @@ export class AdbConnection extends Connection {
         return port;
     }
 
-    async removePortForwarding(deviceId: string, localPort: number): Promise<void> {
+    async removePortForwarding(deviceSerial: string, localPort: number): Promise<void> {
         const message = `killforward:tcp:${localPort}`;
-        await this.sendDeviceMessage(deviceId, message);
+        await this.sendDeviceMessage(deviceSerial, message);
         await this.readResponseStatus();
     }
 
