@@ -28,3 +28,22 @@ define i64 @abs_i64(i64 %x) {
   %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 true)
   ret i64 %abs
 }
+
+define i64 @pack_i64_imm() {
+; CHECK-LABEL: pack_i64_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 16432
+; CHECK-NEXT:    addi a0, a0, 513
+; CHECK-NEXT:    pack a0, a0, a0
+; CHECK-NEXT:    ret
+  ret i64 u0x0403020104030201
+}
+
+; Make sure we prefer li over pli
+define i64 @li_imm() {
+; CHECK-LABEL: li_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    ret
+  ret i64 -1
+}

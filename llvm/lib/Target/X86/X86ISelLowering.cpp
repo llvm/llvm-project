@@ -2762,13 +2762,14 @@ bool X86TargetLowering::useLoadStackGuardNode(const Module &M) const {
   return Subtarget.isTargetMachO() && Subtarget.is64Bit();
 }
 
-bool X86TargetLowering::useStackGuardXorFP() const {
+bool X86TargetLowering::useStackGuardMixCookie() const {
   // Currently only MSVC CRTs XOR the frame pointer into the stack guard value.
   return Subtarget.getTargetTriple().isOSMSVCRT() && !Subtarget.isTargetMachO();
 }
 
-SDValue X86TargetLowering::emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
-                                               const SDLoc &DL) const {
+SDValue X86TargetLowering::emitStackGuardMixCookie(SelectionDAG &DAG,
+                                                   SDValue Val, const SDLoc &DL,
+                                                   bool FailureBB) const {
   EVT PtrTy = getPointerTy(DAG.getDataLayout());
   unsigned XorOp = Subtarget.is64Bit() ? X86::XOR64_FP : X86::XOR32_FP;
   MachineSDNode *Node = DAG.getMachineNode(XorOp, DL, PtrTy, Val);
@@ -59683,7 +59684,9 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                        (VT.is512BitVector() && Subtarget.useAVX512Regs()))) {
         SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
         SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
-        if (Concat0 || Concat1)
+        if (Concat0 || Concat1 || llvm::all_of(Ops, [](SDValue Op) {
+              return Op.getOperand(0) == Op.getOperand(1);
+            }))
           return DAG.getNode(Opcode, DL, VT,
                              Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
                              Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1));

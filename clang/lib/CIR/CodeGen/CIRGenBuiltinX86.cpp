@@ -1228,12 +1228,32 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_palignr128:
   case X86::BI__builtin_ia32_palignr256:
   case X86::BI__builtin_ia32_palignr512:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI__builtin_ia32_alignd128:
   case X86::BI__builtin_ia32_alignd256:
   case X86::BI__builtin_ia32_alignd512:
   case X86::BI__builtin_ia32_alignq128:
   case X86::BI__builtin_ia32_alignq256:
-  case X86::BI__builtin_ia32_alignq512:
+  case X86::BI__builtin_ia32_alignq512: {
+    unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getSize();
+    unsigned shiftVal =
+        ops[2].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue() &
+        0xff;
+
+    // Mask the shift amount to width of a vector.
+    shiftVal &= numElts - 1;
+
+    SmallVector<mlir::Attribute, 16> indices;
+    mlir::Type i32Ty = builder.getSInt32Ty();
+    for (unsigned i = 0; i != numElts; ++i)
+      indices.push_back(cir::IntAttr::get(i32Ty, i + shiftVal));
+
+    return builder.createVecShuffle(getLoc(expr->getExprLoc()), ops[0], ops[1],
+                                    indices);
+  }
   case X86::BI__builtin_ia32_shuf_f32x4_256:
   case X86::BI__builtin_ia32_shuf_f64x2_256:
   case X86::BI__builtin_ia32_shuf_i32x4_256:
