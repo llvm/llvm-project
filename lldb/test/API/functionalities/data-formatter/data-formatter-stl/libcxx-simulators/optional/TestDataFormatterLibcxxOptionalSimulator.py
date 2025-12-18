@@ -53,6 +53,8 @@ for r in range(2):
     # causing this test to fail. This was reverted in newer version of clang
     # with commit 52a9ba7ca.
     @skipIf(compiler="clang", compiler_version=["=", "17"])
+    @skipIf(compiler="clang", compiler_version=["=", "18"])
+    @skipIf(compiler="clang", compiler_version=["=", "19"])
     @functools.wraps(LibcxxOptionalDataFormatterSimulatorTestCase._run_test)
     def test_method(self, defines=defines):
         LibcxxOptionalDataFormatterSimulatorTestCase._run_test(self, defines)

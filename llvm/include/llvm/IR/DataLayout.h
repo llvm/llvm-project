@@ -21,6 +21,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -92,6 +93,9 @@ public:
     /// of this would be CHERI capabilities where the validity bit is stored
     /// separately from the pointer address+bounds information.
     bool HasExternalState;
+    // Symbolic name of the address space.
+    std::string AddrSpaceName;
+
     LLVM_ABI bool operator==(const PointerSpec &Other) const;
   };
 
@@ -158,7 +162,8 @@ private:
   /// Sets or updates the specification for pointer in the given address space.
   void setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth, Align ABIAlign,
                       Align PrefAlign, uint32_t IndexBitWidth,
-                      bool HasUnstableRepr, bool HasExternalState);
+                      bool HasUnstableRepr, bool HasExternalState,
+                      StringRef AddrSpaceName);
 
   /// Internal helper to get alignment for integer of given bitwidth.
   LLVM_ABI Align getIntegerAlignment(uint32_t BitWidth, bool abi_or_pref) const;
@@ -173,11 +178,13 @@ private:
   Error parseAggregateSpec(StringRef Spec);
 
   /// Attempts to parse pointer specification ('p').
-  Error parsePointerSpec(StringRef Spec);
+  Error parsePointerSpec(StringRef Spec,
+                         SmallDenseSet<StringRef, 8> &AddrSpaceNames);
 
   /// Attempts to parse a single specification.
   Error parseSpecification(StringRef Spec,
-                           SmallVectorImpl<unsigned> &NonIntegralAddressSpaces);
+                           SmallVectorImpl<unsigned> &NonIntegralAddressSpaces,
+                           SmallDenseSet<StringRef, 8> &AddrSpaceNames);
 
   /// Attempts to parse a data layout string.
   Error parseLayoutString(StringRef LayoutString);
@@ -324,8 +331,12 @@ public:
     return false;
   }
 
-  /// Layout pointer alignment
+  /// Layout pointer alignment.
   LLVM_ABI Align getPointerABIAlignment(unsigned AS) const;
+
+  LLVM_ABI StringRef getAddressSpaceName(unsigned AS) const;
+
+  LLVM_ABI std::optional<unsigned> getNamedAddressSpace(StringRef Name) const;
 
   /// Return target's alignment for stack-based pointers
   /// FIXME: The defaults need to be removed once all of
@@ -590,7 +601,7 @@ public:
   ///
   /// This is the amount that alloca reserves for this type. For example,
   /// returns 12 or 16 for x86_fp80, depending on alignment.
-  TypeSize getTypeAllocSize(Type *Ty) const;
+  LLVM_ABI TypeSize getTypeAllocSize(Type *Ty) const;
 
   /// Returns the offset in bits between successive objects of the
   /// specified type, including alignment padding; always a multiple of 8.

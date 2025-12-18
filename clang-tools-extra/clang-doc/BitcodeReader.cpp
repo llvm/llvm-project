@@ -7,14 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "BitcodeReader.h"
-#include "llvm/ADT/IndexedMap.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 namespace clang {
 namespace doc {
+
+static llvm::ExitOnError ExitOnErr("clang-doc error: ");
 
 using Record = llvm::SmallVector<uint64_t, 1024>;
 
@@ -717,8 +719,8 @@ llvm::Error addReference(FriendInfo *Friend, Reference &&R, FieldId F) {
 
 template <typename T, typename ChildInfoType>
 static void addChild(T I, ChildInfoType &&R) {
-  llvm::errs() << "invalid child type for info";
-  exit(1);
+  ExitOnErr(llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                    "invalid child type for info"));
 }
 
 // Namespace children:
@@ -767,8 +769,9 @@ template <> void addChild(BaseRecordInfo *I, FunctionInfo &&R) {
 // parameters) or TemplateSpecializationInfo (for the specialization's
 // parameters).
 template <typename T> static void addTemplateParam(T I, TemplateParamInfo &&P) {
-  llvm::errs() << "invalid container for template parameter";
-  exit(1);
+  ExitOnErr(
+      llvm::createStringError(llvm::inconvertibleErrorCode(),
+                              "invalid container for template parameter"));
 }
 template <> void addTemplateParam(TemplateInfo *I, TemplateParamInfo &&P) {
   I->Params.emplace_back(std::move(P));
@@ -780,8 +783,8 @@ void addTemplateParam(TemplateSpecializationInfo *I, TemplateParamInfo &&P) {
 
 // Template info. These apply to either records or functions.
 template <typename T> static void addTemplate(T I, TemplateInfo &&P) {
-  llvm::errs() << "invalid container for template info";
-  exit(1);
+  ExitOnErr(llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                    "invalid container for template info"));
 }
 template <> void addTemplate(RecordInfo *I, TemplateInfo &&P) {
   I->Template.emplace(std::move(P));
@@ -799,8 +802,9 @@ template <> void addTemplate(FriendInfo *I, TemplateInfo &&P) {
 // Template specializations go only into template records.
 template <typename T>
 static void addTemplateSpecialization(T I, TemplateSpecializationInfo &&TSI) {
-  llvm::errs() << "invalid container for template specialization info";
-  exit(1);
+  ExitOnErr(llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      "invalid container for template specialization info"));
 }
 template <>
 void addTemplateSpecialization(TemplateInfo *I,
@@ -809,8 +813,8 @@ void addTemplateSpecialization(TemplateInfo *I,
 }
 
 template <typename T> static void addConstraint(T I, ConstraintInfo &&C) {
-  llvm::errs() << "invalid container for constraint info";
-  exit(1);
+  ExitOnErr(llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                    "invalid container for constraint info"));
 }
 template <> void addConstraint(TemplateInfo *I, ConstraintInfo &&C) {
   I->Constraints.emplace_back(std::move(C));
@@ -847,9 +851,11 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, T I) {
 
   while (true) {
     unsigned BlockOrCode = 0;
-    Cursor Res = skipUntilRecordOrBlock(BlockOrCode);
+    llvm::Expected<Cursor> C = skipUntilRecordOrBlock(BlockOrCode);
+    if (!C)
+      return C.takeError();
 
-    switch (Res) {
+    switch (*C) {
     case Cursor::BadBlock:
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "bad block found");
@@ -985,45 +991,39 @@ llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
   }
 }
 
-ClangDocBitcodeReader::Cursor
+llvm::Expected<ClangDocBitcodeReader::Cursor>
 ClangDocBitcodeReader::skipUntilRecordOrBlock(unsigned &BlockOrRecordID) {
   llvm::TimeTraceScope("Reducing infos", "skipUntilRecordOrBlock");
   BlockOrRecordID = 0;
 
   while (!Stream.AtEndOfStream()) {
-    Expected<unsigned> MaybeCode = Stream.ReadCode();
-    if (!MaybeCode) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeCode.takeError());
-      return Cursor::BadBlock;
-    }
+    Expected<unsigned> Code = Stream.ReadCode();
+    if (!Code)
+      return Code.takeError();
 
-    unsigned Code = MaybeCode.get();
-    if (Code >= static_cast<unsigned>(llvm::bitc::FIRST_APPLICATION_ABBREV)) {
-      BlockOrRecordID = Code;
+    if (*Code >= static_cast<unsigned>(llvm::bitc::FIRST_APPLICATION_ABBREV)) {
+      BlockOrRecordID = *Code;
       return Cursor::Record;
     }
-    switch (static_cast<llvm::bitc::FixedAbbrevIDs>(Code)) {
+    switch (static_cast<llvm::bitc::FixedAbbrevIDs>(*Code)) {
     case llvm::bitc::ENTER_SUBBLOCK:
       if (Expected<unsigned> MaybeID = Stream.ReadSubBlockID())
         BlockOrRecordID = MaybeID.get();
-      else {
-        // FIXME this drops the error on the floor.
-        consumeError(MaybeID.takeError());
-      }
+      else
+        return MaybeID.takeError();
       return Cursor::BlockBegin;
     case llvm::bitc::END_BLOCK:
       if (Stream.ReadBlockEnd())
-        return Cursor::BadBlock;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "error at end of block");
       return Cursor::BlockEnd;
     case llvm::bitc::DEFINE_ABBREV:
-      if (llvm::Error Err = Stream.ReadAbbrevRecord()) {
-        // FIXME this drops the error on the floor.
-        consumeError(std::move(Err));
-      }
+      if (llvm::Error Err = Stream.ReadAbbrevRecord())
+        return std::move(Err);
       continue;
     case llvm::bitc::UNABBREV_RECORD:
-      return Cursor::BadBlock;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "found unabbreviated record");
     case llvm::bitc::FIRST_APPLICATION_ABBREV:
       llvm_unreachable("Unexpected abbrev id.");
     }
@@ -1149,10 +1149,8 @@ ClangDocBitcodeReader::readBitcode() {
         return std::move(Err);
       continue;
     default:
-      if (llvm::Error Err = Stream.SkipBlock()) {
-        // FIXME this drops the error on the floor.
-        consumeError(std::move(Err));
-      }
+      if (llvm::Error Err = Stream.SkipBlock())
+        return std::move(Err);
       continue;
     }
   }

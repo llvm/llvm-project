@@ -131,6 +131,29 @@ private:
 
   RelocUnion reloc;
 };
+
+lldb::SectionSP MergeSections(lldb::SectionSP lhs, lldb::SectionSP rhs) {
+  assert(lhs && rhs);
+
+  lldb::ModuleSP lhs_module_parent = lhs->GetModule();
+  lldb::ModuleSP rhs_module_parent = rhs->GetModule();
+  assert(lhs_module_parent && rhs_module_parent);
+
+  // Do a sanity check, these should be the same.
+  if (lhs->GetFileAddress() != rhs->GetFileAddress())
+    lhs_module_parent->ReportWarning(
+        "Mismatch addresses for section {0} when "
+        "merging with {1}, expected: {2:x}, "
+        "actual: {3:x}",
+        lhs->GetTypeAsCString(),
+        rhs_module_parent->GetFileSpec().GetPathAsConstString().GetCString(),
+        lhs->GetByteSize(), rhs->GetByteSize());
+
+  // We want to take the greater of two sections. If LHS and RHS are both
+  // SHT_NOBITS, we should default to LHS. If RHS has a bigger section,
+  // indicating it has data that wasn't stripped, we should take that instead.
+  return rhs->GetFileSize() > lhs->GetFileSize() ? rhs : lhs;
+}
 } // end anonymous namespace
 
 ELFRelocation::ELFRelocation(unsigned type) {
@@ -365,21 +388,25 @@ void ObjectFileELF::Terminate() {
 }
 
 ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
-                                          DataBufferSP data_sp,
+                                          DataExtractorSP extractor_sp,
                                           lldb::offset_t data_offset,
                                           const lldb_private::FileSpec *file,
                                           lldb::offset_t file_offset,
                                           lldb::offset_t length) {
   bool mapped_writable = false;
-  if (!data_sp) {
-    data_sp = MapFileDataWritable(*file, length, file_offset);
-    if (!data_sp)
+  if (!extractor_sp || !extractor_sp->HasData()) {
+    DataBufferSP buffer_sp = MapFileDataWritable(*file, length, file_offset);
+    if (!buffer_sp)
       return nullptr;
+    extractor_sp = std::make_shared<DataExtractor>();
+    extractor_sp->SetData(buffer_sp, data_offset, buffer_sp->GetByteSize());
     data_offset = 0;
     mapped_writable = true;
   }
 
-  assert(data_sp);
+  assert(extractor_sp && extractor_sp->HasData());
+
+  DataBufferSP data_sp = extractor_sp->GetSharedDataBuffer();
 
   if (data_sp->GetByteSize() <= (llvm::ELF::EI_NIDENT + data_offset))
     return nullptr;
@@ -396,6 +423,7 @@ ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
     data_offset = 0;
     mapped_writable = true;
     magic = data_sp->GetBytes();
+    extractor_sp->SetData(data_sp);
   }
 
   // If we didn't map the data as writable take ownership of the buffer.
@@ -404,12 +432,14 @@ ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
                                                data_sp->GetByteSize());
     data_offset = 0;
     magic = data_sp->GetBytes();
+    extractor_sp->SetData(data_sp);
   }
 
   unsigned address_size = ELFHeader::AddressSizeInBytes(magic);
   if (address_size == 4 || address_size == 8) {
+    extractor_sp->SetAddressByteSize(address_size);
     std::unique_ptr<ObjectFileELF> objfile_up(new ObjectFileELF(
-        module_sp, data_sp, data_offset, file, file_offset, length));
+        module_sp, extractor_sp, data_offset, file, file_offset, length));
     ArchSpec spec = objfile_up->GetArchitecture();
     if (spec && objfile_up->SetModulesArchitecture(spec))
       return objfile_up.release();
@@ -696,10 +726,11 @@ size_t ObjectFileELF::GetModuleSpecifications(
 // ObjectFile protocol
 
 ObjectFileELF::ObjectFileELF(const lldb::ModuleSP &module_sp,
-                             DataBufferSP data_sp, lldb::offset_t data_offset,
-                             const FileSpec *file, lldb::offset_t file_offset,
-                             lldb::offset_t length)
-    : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset) {
+                             DataExtractorSP extractor_sp,
+                             lldb::offset_t data_offset, const FileSpec *file,
+                             lldb::offset_t file_offset, lldb::offset_t length)
+    : ObjectFile(module_sp, file, file_offset, length, extractor_sp,
+                 data_offset) {
   if (file)
     m_file = *file;
 }
@@ -708,7 +739,8 @@ ObjectFileELF::ObjectFileELF(const lldb::ModuleSP &module_sp,
                              DataBufferSP header_data_sp,
                              const lldb::ProcessSP &process_sp,
                              addr_t header_addr)
-    : ObjectFile(module_sp, process_sp, header_addr, header_data_sp) {}
+    : ObjectFile(module_sp, process_sp, header_addr,
+                 std::make_shared<DataExtractor>(header_data_sp)) {}
 
 bool ObjectFileELF::IsExecutable() const {
   return ((m_header.e_type & ET_EXEC) != 0) || (m_header.e_entry != 0);
@@ -782,7 +814,7 @@ ByteOrder ObjectFileELF::GetByteOrder() const {
 }
 
 uint32_t ObjectFileELF::GetAddressByteSize() const {
-  return m_data.GetAddressByteSize();
+  return m_data_nsp->GetAddressByteSize();
 }
 
 AddressClass ObjectFileELF::GetAddressClass(addr_t file_addr) {
@@ -823,7 +855,7 @@ size_t ObjectFileELF::SectionIndex(const SectionHeaderCollConstIter &I) const {
 
 bool ObjectFileELF::ParseHeader() {
   lldb::offset_t offset = 0;
-  return m_header.Parse(m_data, &offset);
+  return m_header.Parse(*m_data_nsp.get(), &offset);
 }
 
 UUID ObjectFileELF::GetUUID() {
@@ -859,7 +891,7 @@ UUID ObjectFileELF::GetUUID() {
         return UUID();
 
       core_notes_crc =
-          CalculateELFNotesSegmentsCRC32(m_program_headers, m_data);
+          CalculateELFNotesSegmentsCRC32(m_program_headers, *m_data_nsp.get());
 
       if (core_notes_crc) {
         // Use 8 bytes - first 4 bytes for *magic* prefix, mainly to make it
@@ -870,7 +902,7 @@ UUID ObjectFileELF::GetUUID() {
       }
     } else {
       if (!m_gnu_debuglink_crc)
-        m_gnu_debuglink_crc = calc_crc32(0, m_data);
+        m_gnu_debuglink_crc = calc_crc32(0, *m_data_nsp.get());
       if (m_gnu_debuglink_crc) {
         // Use 4 bytes of crc from the .gnu_debuglink section.
         u32le data(m_gnu_debuglink_crc);
@@ -1056,7 +1088,8 @@ size_t ObjectFileELF::GetProgramHeaderInfo(ProgramHeaderColl &program_headers,
 
 // ParseProgramHeaders
 bool ObjectFileELF::ParseProgramHeaders() {
-  return GetProgramHeaderInfo(m_program_headers, m_data, m_header) != 0;
+  return GetProgramHeaderInfo(m_program_headers, *m_data_nsp.get(), m_header) !=
+         0;
 }
 
 lldb_private::Status
@@ -1704,8 +1737,8 @@ ObjectFileELF::StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const {
 
 // ParseSectionHeaders
 size_t ObjectFileELF::ParseSectionHeaders() {
-  return GetSectionHeaderInfo(m_section_headers, m_data, m_header, m_uuid,
-                              m_gnu_debuglink_file, m_gnu_debuglink_crc,
+  return GetSectionHeaderInfo(m_section_headers, *m_data_nsp.get(), m_header,
+                              m_uuid, m_gnu_debuglink_file, m_gnu_debuglink_crc,
                               m_arch_spec);
 }
 
@@ -1737,7 +1770,7 @@ static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
       .Case(".ARM.exidx", eSectionTypeARMexidx)
       .Case(".ARM.extab", eSectionTypeARMextab)
       .Case(".ctf", eSectionTypeDebug)
-      .Cases(".data", ".tdata", eSectionTypeData)
+      .Cases({".data", ".tdata"}, eSectionTypeData)
       .Case(".eh_frame", eSectionTypeEHFrame)
       .Case(".gnu_debugaltlink", eSectionTypeDWARFGNUDebugAltLink)
       .Case(".gosymtab", eSectionTypeGoSymtab)
@@ -2026,10 +2059,10 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
     provider.AddSection(std::move(*InfoOr), std::move(section_sp));
   }
 
-  // For eTypeDebugInfo files, the Symbol Vendor will take care of updating the
-  // unified section list.
-  if (GetType() != eTypeDebugInfo)
-    unified_section_list = *m_sections_up;
+  // Merge the two adding any new sections, and overwriting any existing
+  // sections that are SHT_NOBITS
+  unified_section_list =
+      SectionList::Merge(unified_section_list, *m_sections_up, MergeSections);
 
   // If there's a .gnu_debugdata section, we'll try to read the .symtab that's
   // embedded in there and replace the one in the original object file (if any).
@@ -2081,10 +2114,11 @@ std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
   // Construct ObjectFileELF object from decompressed buffer
   DataBufferSP gdd_data_buf(
       new DataBufferHeap(uncompressedData.data(), uncompressedData.size()));
+  DataExtractorSP extractor_sp = std::make_shared<DataExtractor>(gdd_data_buf);
   auto fspec = GetFileSpec().CopyByAppendingPathComponent(
       llvm::StringRef("gnu_debugdata"));
   m_gnu_debug_data_object_file.reset(new ObjectFileELF(
-      GetModule(), gdd_data_buf, 0, &fspec, 0, gdd_data_buf->GetByteSize()));
+      GetModule(), extractor_sp, 0, &fspec, 0, gdd_data_buf->GetByteSize()));
 
   // This line is essential; otherwise a breakpoint can be set but not hit.
   m_gnu_debug_data_object_file->SetType(ObjectFile::eTypeDebugInfo);
@@ -2794,9 +2828,8 @@ static void ApplyELF64ABS64Relocation(Symtab *symtab, ELFRelocation &rel,
     // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
     WritableDataBuffer *data_buffer =
         llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
-    uint64_t *dst = reinterpret_cast<uint64_t *>(
-        data_buffer->GetBytes() + rel_section->GetFileOffset() +
-        ELFRelocation::RelocOffset64(rel));
+    void *const dst = data_buffer->GetBytes() + rel_section->GetFileOffset() +
+                      ELFRelocation::RelocOffset64(rel);
     uint64_t val_offset = value + ELFRelocation::RelocAddend64(rel);
     memcpy(dst, &val_offset, sizeof(uint64_t));
   }
@@ -2821,9 +2854,8 @@ static void ApplyELF64ABS32Relocation(Symtab *symtab, ELFRelocation &rel,
     // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
     WritableDataBuffer *data_buffer =
         llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
-    uint32_t *dst = reinterpret_cast<uint32_t *>(
-        data_buffer->GetBytes() + rel_section->GetFileOffset() +
-        ELFRelocation::RelocOffset32(rel));
+    void *const dst = data_buffer->GetBytes() + rel_section->GetFileOffset() +
+                      ELFRelocation::RelocOffset32(rel);
     memcpy(dst, &truncated_addr, sizeof(uint32_t));
   }
 }
@@ -3716,7 +3748,8 @@ ArchSpec ObjectFileELF::GetArchitecture() {
       if (H.p_type != PT_NOTE || H.p_offset == 0 || H.p_filesz == 0)
         continue;
       DataExtractor data;
-      if (data.SetData(m_data, H.p_offset, H.p_filesz) == H.p_filesz) {
+      if (data.SetData(*m_data_nsp.get(), H.p_offset, H.p_filesz) ==
+          H.p_filesz) {
         UUID uuid;
         RefineModuleDetailsFromNote(data, m_arch_spec, uuid);
       }
@@ -3871,10 +3904,10 @@ llvm::ArrayRef<ELFProgramHeader> ObjectFileELF::ProgramHeaders() {
 }
 
 DataExtractor ObjectFileELF::GetSegmentData(const ELFProgramHeader &H) {
-  // Try and read the program header from our cached m_data which can come from
-  // the file on disk being mmap'ed or from the initial part of the ELF file we
-  // read from memory and cached.
-  DataExtractor data = DataExtractor(m_data, H.p_offset, H.p_filesz);
+  // Try and read the program header from our cached m_data_nsp which can come
+  // from the file on disk being mmap'ed or from the initial part of the ELF
+  // file we read from memory and cached.
+  DataExtractor data = DataExtractor(*m_data_nsp.get(), H.p_offset, H.p_filesz);
   if (data.GetByteSize() == H.p_filesz)
     return data;
   if (IsInMemory()) {

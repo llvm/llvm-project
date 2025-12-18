@@ -215,7 +215,9 @@ An overview of all the command-line options:
                                        This option overrides the 'FormatStyle` option in
                                        .clang-tidy file, if any.
     --header-filter=<string>         - Regular expression matching the names of the
-                                       headers to output diagnostics from. Diagnostics
+                                       headers to output diagnostics from. The default
+                                       value is '.*', i.e. diagnostics from all non-system
+                                       headers are displayed by default. Diagnostics
                                        from the main file of each translation unit are
                                        always displayed.
                                        Can be used together with -line-filter.
@@ -329,6 +331,7 @@ An overview of all the command-line options:
                                    example, to place the correct user name in
                                    TODO() comments in the relevant check.
     WarningsAsErrors             - Same as '--warnings-as-errors'.
+    RemovedArgs                  - Same as '--removed-arg'
 
     The effective configuration can be inspected using --dump-config:
 
@@ -338,7 +341,7 @@ An overview of all the command-line options:
       WarningsAsErrors:    ''
       HeaderFileExtensions:         ['', 'h','hh','hpp','hxx']
       ImplementationFileExtensions: ['c','cc','cpp','cxx']
-      HeaderFilterRegex:   ''
+      HeaderFilterRegex:   '.*'
       FormatStyle:         none
       InheritParentConfig: true
       User:                user

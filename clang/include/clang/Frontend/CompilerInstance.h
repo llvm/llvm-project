@@ -913,7 +913,7 @@ public:
   /// The \c ThreadSafeConfig takes precedence over the \c DiagnosticConsumer
   /// and \c FileSystem of this instance (and disables \c FileManager sharing).
   std::unique_ptr<CompilerInstance> cloneForModuleCompile(
-      SourceLocation ImportLoc, Module *Module, StringRef ModuleFileName,
+      SourceLocation ImportLoc, const Module *Module, StringRef ModuleFileName,
       std::optional<ThreadSafeCloneConfig> ThreadSafeConfig = std::nullopt);
 
   /// Compile a module file for the given module, using the options
@@ -944,6 +944,12 @@ public:
 
   void addDependencyCollector(std::shared_ptr<DependencyCollector> Listener) {
     DependencyCollectors.push_back(std::move(Listener));
+  }
+
+  void clearDependencyCollectors() { DependencyCollectors.clear(); }
+
+  std::vector<std::shared_ptr<DependencyCollector>> &getDependencyCollectors() {
+    return DependencyCollectors;
   }
 
   void setExternalSemaSource(IntrusiveRefCntPtr<ExternalSemaSource> ESS);

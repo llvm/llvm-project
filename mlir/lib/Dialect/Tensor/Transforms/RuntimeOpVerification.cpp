@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Interfaces/RuntimeVerifiableOpInterface.h"
 
@@ -154,38 +155,82 @@ struct ExtractSliceOpInterface
     RankedTensorType sourceType = extractSliceOp.getSource().getType();
 
     // For each dimension, assert that:
-    // 0 <= offset < dim_size
-    // 0 <= offset + (size - 1) * stride < dim_size
+    // For empty slices (size == 0)   : 0 <= offset <= dim_size
+    // For non-empty slices (size > 0): 0 <= offset < dim_size
+    //                                  0 <= offset + (size - 1) * stride <
+    //                                  dim_size
     Value zero = arith::ConstantIndexOp::create(builder, loc, 0);
     Value one = arith::ConstantIndexOp::create(builder, loc, 1);
-    for (int64_t i = 0, e = sourceType.getRank(); i < e; ++i) {
+
+    for (int64_t i : llvm::seq<int64_t>(0, sourceType.getRank())) {
+
+      builder.setInsertionPoint(extractSliceOp);
+
       Value offset = getValueOrCreateConstantIndexOp(
           builder, loc, extractSliceOp.getMixedOffsets()[i]);
       Value size = getValueOrCreateConstantIndexOp(
           builder, loc, extractSliceOp.getMixedSizes()[i]);
       Value stride = getValueOrCreateConstantIndexOp(
           builder, loc, extractSliceOp.getMixedStrides()[i]);
-
-      // Verify that offset is in-bounds.
       Value dimSize = builder.createOrFold<tensor::DimOp>(
           loc, extractSliceOp.getSource(), i);
-      Value offsetInBounds =
-          generateInBoundsCheck(builder, loc, offset, zero, dimSize);
-      cf::AssertOp::create(builder, loc, offsetInBounds,
+
+      // Verify that offset is in-bounds (conditional on slice size).
+      Value sizeIsZero = arith::CmpIOp::create(
+          builder, loc, arith::CmpIPredicate::eq, size, zero);
+      auto offsetCheckIf = scf::IfOp::create(
+          builder, loc, sizeIsZero,
+          [&](OpBuilder &b, Location loc) {
+            // For empty slices, offset can be at the boundary: 0 <= offset <=
+            // dimSize.
+            Value offsetGEZero = arith::CmpIOp::create(
+                b, loc, arith::CmpIPredicate::sge, offset, zero);
+            Value offsetLEDimSize = arith::CmpIOp::create(
+                b, loc, arith::CmpIPredicate::sle, offset, dimSize);
+            Value emptyOffsetValid =
+                arith::AndIOp::create(b, loc, offsetGEZero, offsetLEDimSize);
+            scf::YieldOp::create(b, loc, emptyOffsetValid);
+          },
+          [&](OpBuilder &b, Location loc) {
+            // For non-empty slices, offset must be a valid index: 0 <= offset <
+            // dimSize.
+            Value offsetInBounds =
+                generateInBoundsCheck(b, loc, offset, zero, dimSize);
+            scf::YieldOp::create(b, loc, offsetInBounds);
+          });
+
+      Value offsetCondition = offsetCheckIf.getResult(0);
+      cf::AssertOp::create(builder, loc, offsetCondition,
                            generateErrorMessage(op, "offset " +
                                                         std::to_string(i) +
                                                         " is out-of-bounds"));
 
-      // Verify that slice does not run out-of-bounds.
-      Value sizeMinusOne = arith::SubIOp::create(builder, loc, size, one);
-      Value sizeMinusOneTimesStride =
-          arith::MulIOp::create(builder, loc, sizeMinusOne, stride);
-      Value lastPos =
-          arith::AddIOp::create(builder, loc, offset, sizeMinusOneTimesStride);
-      Value lastPosInBounds =
-          generateInBoundsCheck(builder, loc, lastPos, zero, dimSize);
+      // Verify that the slice endpoint is in-bounds (only for non-empty
+      // slices).
+      Value sizeIsNonZero = arith::CmpIOp::create(
+          builder, loc, arith::CmpIPredicate::sgt, size, zero);
+      auto ifOp = scf::IfOp::create(
+          builder, loc, sizeIsNonZero,
+          [&](OpBuilder &b, Location loc) {
+            // Verify that slice does not run out-of-bounds.
+            Value sizeMinusOne = arith::SubIOp::create(b, loc, size, one);
+            Value sizeMinusOneTimesStride =
+                arith::MulIOp::create(b, loc, sizeMinusOne, stride);
+            Value lastPos =
+                arith::AddIOp::create(b, loc, offset, sizeMinusOneTimesStride);
+            Value lastPosInBounds =
+                generateInBoundsCheck(b, loc, lastPos, zero, dimSize);
+            scf::YieldOp::create(b, loc, lastPosInBounds);
+          },
+          [&](OpBuilder &b, Location loc) {
+            Value trueVal =
+                arith::ConstantOp::create(b, loc, b.getBoolAttr(true));
+            scf::YieldOp::create(b, loc, trueVal);
+          });
+
+      Value finalCondition = ifOp.getResult(0);
       cf::AssertOp::create(
-          builder, loc, lastPosInBounds,
+          builder, loc, finalCondition,
           generateErrorMessage(
               op, "extract_slice runs out-of-bounds along dimension " +
                       std::to_string(i)));

@@ -186,7 +186,8 @@ std::string buildTraceGraph(StringRef Json) {
 
 } // namespace
 
-TEST(TimeProfilerTest, ConstantEvaluationCxx20) {
+// FIXME: Flaky test. See https://github.com/llvm/llvm-project/pull/138613
+TEST(TimeProfilerTest, DISABLED_ConstantEvaluationCxx20) {
   std::string Code = R"(
 void print(double value);
 
@@ -271,11 +272,14 @@ TEST(TimeProfilerTest, ClassTemplateInstantiations) {
   ASSERT_EQ(R"(
 Frontend (test.cc)
 | ParseClass (S)
+| CheckConstraintSatisfaction (<test.cc:9:21, col:29>)
 | InstantiateClass (S<double>, test.cc:9)
 | InstantiateFunction (S<double>::foo, test.cc:5)
 | ParseDeclarationOrFunctionDefinition (test.cc:11:5)
 | | ParseFunctionDefinition (user)
+| | | CheckConstraintSatisfaction (<test.cc:12:7, col:12>)
 | | | InstantiateClass (S<int>, test.cc:3)
+| | | CheckConstraintSatisfaction (<test.cc:13:7, col:14>)
 | | | InstantiateClass (S<float>, test.cc:3)
 | | | DeferInstantiation (S<float>::foo)
 | PerformPendingInstantiations

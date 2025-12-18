@@ -232,6 +232,7 @@ public:
   BatchAAResults *BatchAA = nullptr;
   AssumptionCache *AC = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
+  const TargetTransformInfo *TTI = nullptr;
 
   class SDAGSwitchLowering : public SwitchCG::SwitchLowering {
   public:
@@ -285,7 +286,7 @@ public:
         FuncInfo(funcinfo), SwiftError(swifterror) {}
 
   void init(GCFunctionInfo *gfi, BatchAAResults *BatchAA, AssumptionCache *AC,
-            const TargetLibraryInfo *li);
+            const TargetLibraryInfo *li, const TargetTransformInfo &TTI);
 
   /// Clear out the current SelectionDAG and the associated state and prepare
   /// this SelectionDAGBuilder object to be used for a new block. This doesn't
@@ -429,6 +430,10 @@ public:
   SDValue lowerRangeToAssertZExt(SelectionDAG &DAG, const Instruction &I,
                                  SDValue Op);
 
+  // Lower nofpclass attributes to AssertNoFPClass
+  SDValue lowerNoFPClassToAssertNoFPClass(SelectionDAG &DAG,
+                                          const Instruction &I, SDValue Op);
+
   void populateCallLoweringInfo(TargetLowering::CallLoweringInfo &CLI,
                                 const CallBase *Call, unsigned ArgIdx,
                                 unsigned NumArgs, SDValue Callee,
@@ -551,9 +556,11 @@ public:
 private:
   // These all get lowered before this pass.
   void visitInvoke(const InvokeInst &I);
-  void visitCallBr(const CallBrInst &I);
   void visitCallBrLandingPad(const CallInst &I);
   void visitResume(const ResumeInst &I);
+
+  void visitCallBr(const CallBrInst &I);
+  void visitCallBrIntrinsic(const CallBrInst &I);
 
   void visitUnary(const User &I, unsigned Opcode);
   void visitFNeg(const User &I) { visitUnary(I, ISD::FNEG); }
@@ -727,6 +734,17 @@ private:
                        MCSymbol *&BeginLabel);
   SDValue lowerEndEH(SDValue Chain, const InvokeInst *II,
                      const BasicBlock *EHPadBB, MCSymbol *BeginLabel);
+
+  std::pair<bool, bool> getTargetIntrinsicCallProperties(const CallBase &I);
+  SmallVector<SDValue, 8> getTargetIntrinsicOperands(
+      const CallBase &I, bool HasChain, bool OnlyLoad,
+      TargetLowering::IntrinsicInfo *TgtMemIntrinsicInfo = nullptr);
+  SDVTList getTargetIntrinsicVTList(const CallBase &I, bool HasChain);
+  SDValue getTargetNonMemIntrinsicNode(const Type &IntrinsicVT, bool HasChain,
+                                       ArrayRef<SDValue> Ops,
+                                       const SDVTList &VTs);
+  SDValue handleTargetIntrinsicRet(const CallBase &I, bool HasChain,
+                                   bool OnlyLoad, SDValue Result);
 };
 
 /// This struct represents the registers (physical or virtual)

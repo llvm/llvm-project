@@ -127,10 +127,7 @@ class ProcessAttachInfo : public ProcessInstanceInfo {
 public:
   ProcessAttachInfo() = default;
 
-  ProcessAttachInfo(const ProcessLaunchInfo &launch_info)
-      : m_resume_count(0), m_wait_for_launch(false), m_ignore_existing(true),
-        m_continue_once_attached(false), m_detach_on_error(true),
-        m_async(false) {
+  ProcessAttachInfo(const ProcessLaunchInfo &launch_info) {
     ProcessInfo::operator=(launch_info);
     SetProcessPluginName(launch_info.GetProcessPluginName());
     SetResumeCount(launch_info.GetResumeCount());
@@ -2537,6 +2534,52 @@ void PruneThreadPlans();
 
   void CalculateExecutionContext(ExecutionContext &exe_ctx) override;
 
+#ifdef _WIN32
+  /// Associates a ConPTY read and write HANDLEs with the process' STDIO
+  /// handling and configures an asynchronous reading of that ConPTY's stdout
+  /// HANDLE.
+  ///
+  /// This method installs a ConnectionGenericFile for the passed ConPTY and
+  /// starts a dedicated read thread. If the read thread starts successfully,
+  /// the method also ensures that an IOHandlerProcessSTDIOWindows is created to
+  /// manage user input to the process.
+  ///
+  /// When data is successfully read from the ConPTY, it is stored in
+  /// m_stdout_data. There is no differentiation between stdout and stderr.
+  ///
+  /// \param[in] pty
+  ///     The ConPTY to use for process STDIO communication. It's
+  ///     assumed to be valid.
+  ///
+  /// \see lldb_private::Process::STDIOReadThreadBytesReceived()
+  /// \see lldb_private::IOHandlerProcessSTDIOWindows
+  /// \see lldb_private::PseudoConsole
+  virtual void
+  SetPseudoConsoleHandle(const std::shared_ptr<PseudoConsole> &pty) {};
+#endif
+
+  /// Associates a file descriptor with the process' STDIO handling
+  /// and configures an asynchronous reading of that descriptor.
+  ///
+  /// This method installs a ConnectionFileDescriptor for the passed file
+  /// descriptor and starts a dedicated read thread. If the read thread starts
+  /// successfully, the method also ensures that an IOHandlerProcessSTDIO is
+  /// created to manage user input to the process.
+  ///
+  /// The descriptor's ownership is transferred to the underlying
+  /// ConnectionFileDescriptor.
+  ///
+  /// When data is successfully read from the file descriptor, it is stored in
+  /// m_stdout_data. There is no differentiation between stdout and stderr.
+  ///
+  /// \param[in] fd
+  ///     The file descriptor to use for process STDIO communication. It's
+  ///     assumed to be valid and will be managed by the newly created
+  ///     connection.
+  ///
+  /// \see lldb_private::Process::STDIOReadThreadBytesReceived()
+  /// \see lldb_private::IOHandlerProcessSTDIO
+  /// \see lldb_private::ConnectionFileDescriptor
   void SetSTDIOFileDescriptor(int file_descriptor);
 
   // Add a permanent region of memory that should never be read or written to.

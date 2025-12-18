@@ -595,7 +595,7 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.shlibSigCheck = !args.hasArg(OPT_no_shlib_sigcheck);
   ctx.arg.stripAll = args.hasArg(OPT_strip_all);
   ctx.arg.stripDebug = args.hasArg(OPT_strip_debug);
-  ctx.arg.stackFirst = args.hasArg(OPT_stack_first);
+  ctx.arg.stackFirst = args.hasFlag(OPT_stack_first, OPT_no_stack_first, true);
   ctx.arg.trace = args.hasArg(OPT_trace);
   ctx.arg.thinLTOCacheDir = args.getLastArgValue(OPT_thinlto_cache_dir);
   ctx.arg.thinLTOCachePolicy = CHECK(
@@ -1173,9 +1173,10 @@ struct WrappedSymbol {
   Symbol *wrap;
 };
 
-static Symbol *addUndefined(StringRef name) {
+static Symbol *addUndefined(StringRef name,
+                            const WasmSignature *signature = nullptr) {
   return symtab->addUndefinedFunction(name, std::nullopt, std::nullopt,
-                                      WASM_SYMBOL_UNDEFINED, nullptr, nullptr,
+                                      WASM_SYMBOL_UNDEFINED, nullptr, signature,
                                       false);
 }
 
@@ -1198,7 +1199,8 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
       continue;
 
     Symbol *real = addUndefined(saver().save("__real_" + name));
-    Symbol *wrap = addUndefined(saver().save("__wrap_" + name));
+    Symbol *wrap =
+        addUndefined(saver().save("__wrap_" + name), sym->getSignature());
     v.push_back({sym, real, wrap});
 
     // We want to tell LTO not to inline symbols to be overwritten

@@ -1125,6 +1125,8 @@ struct Elf64_Shdr {
   Elf64_Xword sh_entsize;
 };
 
+enum { PN_XNUM = 0xffff };
+
 // Special section indices.
 enum {
   SHN_UNDEF = 0,          // Undefined, missing, irrelevant, or meaningless
@@ -1708,8 +1710,8 @@ enum { VER_FLG_BASE = 0x1, VER_FLG_WEAK = 0x2, VER_FLG_INFO = 0x4 };
 
 // Special constants for the version table. (SHT_GNU_versym/.gnu.version)
 enum {
-  VER_NDX_LOCAL = 0,       // Unversioned local symbol
-  VER_NDX_GLOBAL = 1,      // Unversioned global symbol
+  VER_NDX_LOCAL = 0,       // Unversioned undefined or localized defined symbol
+  VER_NDX_GLOBAL = 1,      // Unversioned non-local defined symbol
   VERSYM_VERSION = 0x7fff, // Version Index mask
   VERSYM_HIDDEN = 0x8000   // Hidden bit (non-default version)
 };

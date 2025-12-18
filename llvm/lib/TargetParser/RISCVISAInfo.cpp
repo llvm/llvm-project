@@ -14,7 +14,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <array>
 #include <atomic>
 #include <optional>
 #include <string>
@@ -749,10 +748,10 @@ Error RISCVISAInfo::checkDependency() {
   bool HasXqccmp = Exts.count("xqccmp") != 0;
 
   static constexpr StringLiteral XqciExts[] = {
-      {"xqcia"},   {"xqciac"},  {"xqcibi"},  {"xqcibm"},  {"xqcicli"},
-      {"xqcicm"},  {"xqcics"},  {"xqcicsr"}, {"xqciint"}, {"xqciio"},
-      {"xqcilb"},  {"xqcili"},  {"xqcilia"}, {"xqcilo"},  {"xqcilsm"},
-      {"xqcisim"}, {"xqcisls"}, {"xqcisync"}};
+      {"xqci"},    {"xqcia"},   {"xqciac"},  {"xqcibi"},  {"xqcibm"},
+      {"xqcicli"}, {"xqcicm"},  {"xqcics"},  {"xqcicsr"}, {"xqciint"},
+      {"xqciio"},  {"xqcilb"},  {"xqcili"},  {"xqcilia"}, {"xqcilo"},
+      {"xqcilsm"}, {"xqcisim"}, {"xqcisls"}, {"xqcisync"}};
   static constexpr StringLiteral ZcdOverlaps[] = {
       {"zcmt"}, {"zcmp"}, {"xqccmp"}, {"xqciac"}, {"xqcicm"}};
 

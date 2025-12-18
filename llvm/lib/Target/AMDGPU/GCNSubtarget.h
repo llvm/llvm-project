@@ -166,6 +166,13 @@ protected:
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
+  bool HasCubeInsts = false;
+  bool HasLerpInst = false;
+  bool HasSadInsts = false;
+  bool HasQsadInsts = false;
+  bool HasCvtNormInsts = false;
+  bool HasCvtPkNormVOP2Insts = false;
+  bool HasCvtPkNormVOP3Insts = false;
   bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
@@ -282,6 +289,7 @@ protected:
   bool HasPointSampleAccel = false;
   bool HasLdsBarrierArriveAtomic = false;
   bool HasSetPrioIncWgInst = false;
+  bool HasSWakeupBarrier = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -290,6 +298,7 @@ protected:
   bool Has45BitNumRecordsBufferResource = false;
 
   bool HasClusters = false;
+  bool RequiresWaitsBeforeSystemScopeStores = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -445,30 +454,6 @@ public:
     return getGeneration() == SOUTHERN_ISLANDS;
   }
 
-  bool hasBFE() const {
-    return true;
-  }
-
-  bool hasBFI() const {
-    return true;
-  }
-
-  bool hasBFM() const {
-    return hasBFE();
-  }
-
-  bool hasBCNT(unsigned Size) const {
-    return true;
-  }
-
-  bool hasFFBL() const {
-    return true;
-  }
-
-  bool hasFFBH() const {
-    return true;
-  }
-
   bool hasMed3_16() const {
     return getGeneration() >= AMDGPUSubtarget::GFX9;
   }
@@ -482,10 +467,6 @@ public:
   }
 
   bool hasFmaMixBF16Insts() const { return HasFmaMixBF16Insts; }
-
-  bool hasCARRY() const {
-    return true;
-  }
 
   bool hasFMA() const {
     return FMA;
@@ -890,6 +871,20 @@ public:
   }
 
   bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
+
+  bool hasCubeInsts() const { return HasCubeInsts; }
+
+  bool hasLerpInst() const { return HasLerpInst; }
+
+  bool hasSadInsts() const { return HasSadInsts; }
+
+  bool hasQsadInsts() const { return HasQsadInsts; }
+
+  bool hasCvtNormInsts() const { return HasCvtNormInsts; }
+
+  bool hasCvtPkNormVOP2Insts() const { return HasCvtPkNormVOP2Insts; }
+
+  bool hasCvtPkNormVOP3Insts() const { return HasCvtPkNormVOP3Insts; }
 
   bool hasFP8E5M3Insts() const { return HasFP8E5M3Insts; }
 
@@ -1419,6 +1414,13 @@ public:
   /// \returns true if the target has instructions with xf32 format support.
   bool hasXF32Insts() const { return HasXF32Insts; }
 
+  /// \returns true if the target has packed f32 instructions that only read 32
+  /// bits from a scalar operand (SGPR or literal) and replicates the bits to
+  /// both channels.
+  bool hasPKF32InstsReplicatingLower32BitsOfScalarInput() const {
+    return getGeneration() == GFX12 && GFX1250Insts;
+  }
+
   bool hasBitOp3Insts() const { return HasBitOp3Insts; }
 
   bool hasPermlane16Swap() const { return HasPermlane16Swap; }
@@ -1583,6 +1585,9 @@ public:
   // \returns true if target has S_SETPRIO_INC_WG instruction.
   bool hasSetPrioIncWgInst() const { return HasSetPrioIncWgInst; }
 
+  // \returns true if target has S_WAKEUP_BARRIER instruction.
+  bool hasSWakeupBarrier() const { return HasSWakeupBarrier; }
+
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
   // of sign-extending. Note that GFX1250 has not only fixed the bug but also
   // extended VA to 57 bits.
@@ -1593,6 +1598,10 @@ public:
   bool needsKernArgPreloadProlog() const {
     return hasKernargPreload() && !GFX1250Insts;
   }
+
+  bool hasCondSubInsts() const { return GFX12Insts; }
+
+  bool hasSubClampInsts() const { return hasGFX10_3Insts(); }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
@@ -1839,12 +1848,21 @@ public:
     return GFX1250Insts && getGeneration() == GFX12;
   }
 
+  // src_flat_scratch_hi cannot be used as a source in SALU producing a 64-bit
+  // result.
+  bool hasFlatScratchHiInB64InstHazard() const {
+    return GFX1250Insts && getGeneration() == GFX12;
+  }
+
   /// \returns true if the subtarget supports clusters of workgroups.
   bool hasClusters() const { return HasClusters; }
 
-  /// \returns true if the subtarget requires a wait for xcnt before atomic
-  /// flat/global stores & rmw.
-  bool requiresWaitXCntBeforeAtomicStores() const { return GFX1250Insts; }
+  /// \returns true if the subtarget requires a wait for xcnt before VMEM
+  /// accesses that must never be repeated in the event of a page fault/re-try.
+  /// Atomic stores/rmw and all volatile accesses fall under this criteria.
+  bool requiresWaitXCntForSingleAccessInstructions() const {
+    return GFX1250Insts;
+  }
 
   /// \returns the number of significant bits in the immediate field of the
   /// S_NOP instruction.
@@ -1860,6 +1878,10 @@ public:
   /// num_records.
   bool has45BitNumRecordsBufferResource() const {
     return Has45BitNumRecordsBufferResource;
+  }
+
+  bool requiresWaitsBeforeSystemScopeStores() const {
+    return RequiresWaitsBeforeSystemScopeStores;
   }
 };
 

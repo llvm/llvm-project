@@ -38,7 +38,7 @@ contains
     allocate(negate, source=this)
     negate%a = -this%a
   end function
-  
+
   subroutine select_type1(a)
     class(p1), intent(in) :: a
 
@@ -275,7 +275,7 @@ contains
 ! CHECK-LABEL: func.func @_QMselect_type_lower_testPselect_type5(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<none> {fir.bindc_name = "a"})
 ! CHECK: fir.select_type %[[ARG0]] : !fir.class<none>
-! CHECK-SAME: [#fir.type_is<i8>, ^[[I8_BLK:.*]], #fir.type_is<i32>, ^[[I32_BLK:.*]], #fir.type_is<f32>, ^[[F32_BLK:.*]], #fir.type_is<!fir.logical<4>>, ^[[LOG_BLK:.*]], #fir.type_is<!fir.char<1,?>>, ^[[CHAR_BLK:.*]], unit, ^[[DEFAULT:.*]]] 
+! CHECK-SAME: [#fir.type_is<i8>, ^[[I8_BLK:.*]], #fir.type_is<i32>, ^[[I32_BLK:.*]], #fir.type_is<f32>, ^[[F32_BLK:.*]], #fir.type_is<!fir.logical<4>>, ^[[LOG_BLK:.*]], #fir.type_is<!fir.char<1,?>>, ^[[CHAR_BLK:.*]], unit, ^[[DEFAULT:.*]]]
 ! CHECK: ^[[I8_BLK]]
 ! CHECK: ^[[I32_BLK]]
 ! CHECK: ^[[F32_BLK]]
@@ -467,7 +467,7 @@ contains
 ! CHECK: %[[SELECTOR:.*]] = fir.rebox %[[ARG0]] : (!fir.class<!fir.array<?xnone>>) -> !fir.class<!fir.array<?xnone>>
 ! CHECK: fir.select_type %[[SELECTOR]] : !fir.class<!fir.array<?xnone>> [#fir.type_is<i32>, ^{{.*}}, #fir.type_is<f32>, ^{{.*}}, #fir.type_is<!fir.char<1,?>>, ^bb{{.*}}, unit, ^{{.*}}]
 ! CHECK: ^bb{{.*}}:
-! CHECK:  %[[BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?xi32>> 
+! CHECK:  %[[BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?xi32>>
 ! CHECK:  %[[C0:.*]] = arith.constant 0 : index
 ! CHECK:  %[[SELECTOR_DIMS:.*]]:3 = fir.box_dims %[[BOX]], %[[C0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 ! CHECK:  %[[ARRAY_LOAD:.*]] = fir.array_load %[[BOX]] : (!fir.box<!fir.array<?xi32>>) -> !fir.array<?xi32>
@@ -482,7 +482,7 @@ contains
 ! CHECK:  fir.array_merge_store %[[ARRAY_LOAD]], %[[LOOP_RES]] to %[[BOX]] : !fir.array<?xi32>, !fir.array<?xi32>, !fir.box<!fir.array<?xi32>>
 ! CHECK:  cf.br ^{{.*}}
 ! CHECK: ^bb{{.*}}:
-! CHECK:  %[[BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?xf32>> 
+! CHECK:  %[[BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?xf32>>
 ! CHECK:  %[[C0:.*]] = arith.constant 0 : index
 ! CHECK:  %[[SELECTOR_DIMS:.*]]:3 = fir.box_dims %[[BOX]], %[[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 ! CHECK:  %[[ARRAY_LOAD:.*]] = fir.array_load %[[BOX]] : (!fir.box<!fir.array<?xf32>>) -> !fir.array<?xf32>
@@ -497,7 +497,7 @@ contains
 ! CHECK:  fir.array_merge_store %[[ARRAY_LOAD]], %[[LOOP_RES]] to %[[BOX]] : !fir.array<?xf32>, !fir.array<?xf32>, !fir.box<!fir.array<?xf32>>
 ! CHECK:  cf.br ^{{.*}}
 ! CHECK: ^bb{{.*}}:
-! CHECK:  %[[BOX:.*]] = fir.convert %{{[0-9]+}} : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?x!fir.char<1,?>>> 
+! CHECK:  %[[BOX:.*]] = fir.convert %{{[0-9]+}} : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:  cf.br ^bb{{.*}}
 ! CHECK: ^bb{{.*}}:
 ! CHECK:  %[[EXACT_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>
@@ -517,7 +517,7 @@ contains
 ! CHECK:  %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[EXACT_BOX]], %[[C0]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, index) -> (index, index, index)
 ! CHECK:  %[[C1:.*]] = arith.constant 1 : index
 ! CHECK:  %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD_B]] : (index, index, index, !fir.field) -> !fir.slice<1>
-! CHECK:  %[[ARRAY_LOAD:.*]] = fir.array_load %[[EXACT_BOX]] [%[[SLICE]]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.slice<1>) -> !fir.array<?xi32> 
+! CHECK:  %[[ARRAY_LOAD:.*]] = fir.array_load %[[EXACT_BOX]] [%[[SLICE]]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.slice<1>) -> !fir.array<?xi32>
 ! CHECK:  %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %c{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) {
 ! CHECK:    %[[ARR_UP:.*]] = fir.array_update %[[ARG]], %{{.*}}, %[[IND]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
 ! CHECK:    fir.result %[[ARR_UP]] : !fir.array<?xi32>
@@ -599,7 +599,7 @@ contains
 ! CHECK: %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[EXACT_BOX]], %[[C0]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, index) -> (index, index, index)
 ! CHECK: %[[C1:.*]] = arith.constant 1 : index
 ! CHECK: %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD_B]] : (index, index, index, !fir.field) -> !fir.slice<1>
-! CHECK: %[[ARRAY_LOAD:.*]] = fir.array_load %[[EXACT_BOX]] [%[[SLICE]]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.slice<1>) -> !fir.array<?xi32> 
+! CHECK: %[[ARRAY_LOAD:.*]] = fir.array_load %[[EXACT_BOX]] [%[[SLICE]]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.slice<1>) -> !fir.array<?xi32>
 ! CHECK: %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %c{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) {
 ! CHECK:   %[[ARR_UP:.*]] = fir.array_update %[[ARG]], %{{.*}}, %[[IND]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
 ! CHECK:   fir.result %[[ARR_UP]] : !fir.array<?xi32>
@@ -607,7 +607,7 @@ contains
 ! CHECK: fir.array_merge_store %[[ARRAY_LOAD]], %[[DO_RES]] to %[[EXACT_BOX]][%[[SLICE]]] : !fir.array<?xi32>, !fir.array<?xi32>, !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.slice<1>
 ! CHECK: cf.br ^bb{{.*}}
 ! CHECK: ^bb{{.*}}:
-! CHECK: %[[EXACT_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>> 
+! CHECK: %[[EXACT_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>
 ! CHECK: %[[FIELD_A:.*]] = fir.field_index a, !fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
 ! CHECK: %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[EXACT_BOX]], %[[C0]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>, index) -> (index, index, index)

@@ -376,6 +376,8 @@ private:
     loadedMoldArg = builder.loadIfRef(loc, moldArg);
     return loadedMoldArg;
   }
+
+  bool shouldAllocateTempOnStack() const;
 };
 
 } // namespace
@@ -438,8 +440,14 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedScalar(
     builder.setInsertionPointToStart(&ifUnallocated.getElseRegion().front());
   }
 
-  mlir::Value valAlloc = builder.createHeapTemporary(loc, innerTy, /*name=*/{},
-                                                     /*shape=*/{}, lenParams);
+  bool shouldAllocateOnStack = shouldAllocateTempOnStack();
+  mlir::Value valAlloc =
+      (shouldAllocateOnStack)
+          ? builder.createTemporary(loc, innerTy, /*name=*/{},
+                                    /*shape=*/{}, lenParams)
+          : builder.createHeapTemporary(loc, innerTy, /*name=*/{},
+                                        /*shape=*/{}, lenParams);
+
   if (scalarInitValue)
     builder.createStoreWithConvert(loc, scalarInitValue, valAlloc);
   mlir::Value box = fir::EmboxOp::create(builder, loc, valType, valAlloc,
@@ -451,8 +459,9 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedScalar(
   fir::StoreOp lastOp =
       fir::StoreOp::create(builder, loc, box, allocatedPrivVarArg);
 
-  createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
-                      isDoConcurrent);
+  if (!shouldAllocateOnStack)
+    createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
+                        isDoConcurrent);
 
   if (ifUnallocated)
     builder.setInsertionPointAfter(ifUnallocated);
@@ -460,6 +469,14 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedScalar(
     builder.setInsertionPointAfter(lastOp);
 
   createYield(allocatedPrivVarArg);
+}
+
+bool PopulateInitAndCleanupRegionsHelper::shouldAllocateTempOnStack() const {
+  // On the GPU, always allocate on the stack since heap allocatins are very
+  // expensive.
+  auto offloadMod =
+      llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(*builder.getModule());
+  return offloadMod && offloadMod.getIsGPU();
 }
 
 void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
@@ -504,15 +521,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
   // Allocating on the heap in case the whole reduction/privatization is nested
   // inside of a loop
   auto temp = [&]() {
-    bool shouldAllocateOnStack = false;
-
-    // On the GPU, always allocate on the stack since heap allocatins are very
-    // expensive.
-    if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
-            *builder.getModule()))
-      shouldAllocateOnStack = offloadMod.getIsGPU();
-
-    if (shouldAllocateOnStack)
+    if (shouldAllocateTempOnStack())
       return createStackTempFromMold(loc, builder, source);
 
     auto [temp, needsDealloc] = createTempFromMold(loc, builder, source);

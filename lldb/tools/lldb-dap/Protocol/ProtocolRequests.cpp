@@ -8,6 +8,7 @@
 
 #include "Protocol/ProtocolRequests.h"
 #include "JSONUtils.h"
+#include "Protocol/ProtocolTypes.h"
 #include "lldb/lldb-defines.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
@@ -215,12 +216,13 @@ bool fromJSON(const json::Value &Params, InitializeRequestArguments &IRA,
   }
 
   return OM.map("adapterID", IRA.adapterID) &&
-         OM.map("clientID", IRA.clientID) &&
-         OM.map("clientName", IRA.clientName) && OM.map("locale", IRA.locale) &&
-         OM.map("linesStartAt1", IRA.linesStartAt1) &&
-         OM.map("columnsStartAt1", IRA.columnsStartAt1) &&
+         OM.mapOptional("clientID", IRA.clientID) &&
+         OM.mapOptional("clientName", IRA.clientName) &&
+         OM.mapOptional("locale", IRA.locale) &&
+         OM.mapOptional("linesStartAt1", IRA.linesStartAt1) &&
+         OM.mapOptional("columnsStartAt1", IRA.columnsStartAt1) &&
          OM.mapOptional("pathFormat", IRA.pathFormat) &&
-         OM.map("$__lldb_sourceInitFile", IRA.lldbExtSourceInitFile);
+         OM.mapOptional("$__lldb_sourceInitFile", IRA.lldbExtSourceInitFile);
 }
 
 bool fromJSON(const json::Value &Params, Configuration &C, json::Path P) {
@@ -316,7 +318,9 @@ bool fromJSON(const json::Value &Params, AttachRequestArguments &ARA,
          O.mapOptional("waitFor", ARA.waitFor) &&
          O.mapOptional("gdb-remote-port", ARA.gdbRemotePort) &&
          O.mapOptional("gdb-remote-hostname", ARA.gdbRemoteHostname) &&
-         O.mapOptional("coreFile", ARA.coreFile);
+         O.mapOptional("coreFile", ARA.coreFile) &&
+         O.mapOptional("targetId", ARA.targetId) &&
+         O.mapOptional("debuggerId", ARA.debuggerId);
 }
 
 bool fromJSON(const json::Value &Params, ContinueArguments &CA, json::Path P) {
@@ -511,7 +515,7 @@ bool fromJSON(const llvm::json::Value &Params, DisassembleArguments &DA,
   json::ObjectMapper O(Params, P);
   return O &&
          DecodeMemoryReference(Params, "memoryReference", DA.memoryReference, P,
-                               /*required=*/true) &&
+                               /*required=*/true, /*allow_empty*/ true) &&
          O.mapOptional("offset", DA.offset) &&
          O.mapOptional("instructionOffset", DA.instructionOffset) &&
          O.map("instructionCount", DA.instructionCount) &&
@@ -622,6 +626,114 @@ bool fromJSON(const llvm::json::Value &Params, ModuleSymbolsArguments &Args,
 llvm::json::Value toJSON(const ModuleSymbolsResponseBody &DGMSR) {
   json::Object result;
   result.insert({"symbols", DGMSR.symbols});
+  return result;
+}
+
+bool fromJSON(const json::Value &Params, ExceptionInfoArguments &Args,
+              json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("threadId", Args.threadId);
+}
+
+json::Value toJSON(const ExceptionInfoResponseBody &ERB) {
+  json::Object result{{"exceptionId", ERB.exceptionId},
+                      {"breakMode", ERB.breakMode}};
+
+  if (!ERB.description.empty())
+    result.insert({"description", ERB.description});
+  if (ERB.details.has_value())
+    result.insert({"details", *ERB.details});
+  return result;
+}
+
+static bool fromJSON(const llvm::json::Value &Params, EvaluateContext &C,
+                     llvm::json::Path P) {
+  auto rawContext = Params.getAsString();
+  if (!rawContext) {
+    P.report("expected a string");
+    return false;
+  }
+  C = StringSwitch<EvaluateContext>(*rawContext)
+          .Case("watch", EvaluateContext::eEvaluateContextWatch)
+          .Case("repl", EvaluateContext::eEvaluateContextRepl)
+          .Case("hover", EvaluateContext::eEvaluateContextHover)
+          .Case("clipboard", EvaluateContext::eEvaluateContextClipboard)
+          .Case("variables", EvaluateContext::eEvaluateContextVariables)
+          .Default(eEvaluateContextUnknown);
+  return true;
+}
+
+bool fromJSON(const llvm::json::Value &Params, EvaluateArguments &Args,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("expression", Args.expression) &&
+         O.mapOptional("frameId", Args.frameId) &&
+         O.mapOptional("line", Args.line) &&
+         O.mapOptional("column", Args.column) &&
+         O.mapOptional("source", Args.source) &&
+         O.mapOptional("context", Args.context) &&
+         O.mapOptional("format", Args.format);
+}
+
+llvm::json::Value toJSON(const EvaluateResponseBody &Body) {
+  json::Object result{{"result", Body.result},
+                      {"variablesReference", Body.variablesReference}};
+
+  if (!Body.type.empty())
+    result.insert({"type", Body.type});
+  if (Body.presentationHint)
+    result.insert({"presentationHint", Body.presentationHint});
+  if (Body.namedVariables)
+    result.insert({"namedVariables", Body.namedVariables});
+  if (Body.indexedVariables)
+    result.insert({"indexedVariables", Body.indexedVariables});
+  if (!Body.memoryReference.empty())
+    result.insert({"memoryReference", Body.memoryReference});
+  if (Body.valueLocationReference != LLDB_DAP_INVALID_VALUE_LOC)
+    result.insert({"valueLocationReference", Body.valueLocationReference});
+
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, PauseArguments &Args,
+              llvm::json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("threadId", Args.threadId);
+}
+
+bool fromJSON(const llvm::json::Value &Params, LocationsArguments &Args,
+              llvm::json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("locationReference", Args.locationReference);
+}
+
+llvm::json::Value toJSON(const LocationsResponseBody &Body) {
+  assert(Body.line != LLDB_INVALID_LINE_NUMBER);
+  json::Object result{{"source", Body.source}, {"line", Body.line}};
+
+  if (Body.column != 0 && Body.column != LLDB_INVALID_COLUMN_NUMBER)
+    result.insert({"column", Body.column});
+  if (Body.endLine != 0 && Body.endLine != LLDB_INVALID_LINE_NUMBER)
+    result.insert({"endLine", Body.endLine});
+  if (Body.endColumn != 0 && Body.endColumn != LLDB_INVALID_COLUMN_NUMBER)
+    result.insert({"endColumn", Body.endColumn});
+
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, CompileUnitsArguments &Args,
+              llvm::json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("moduleId", Args.moduleId);
+}
+
+llvm::json::Value toJSON(const CompileUnitsResponseBody &Body) {
+  json::Object result{{"compileUnits", Body.compileUnits}};
+  return result;
+}
+
+llvm::json::Value toJSON(const TestGetTargetBreakpointsResponseBody &Body) {
+  json::Object result{{"breakpoints", Body.breakpoints}};
   return result;
 }
 

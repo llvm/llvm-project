@@ -1214,9 +1214,13 @@ defm vfsgnjx : RVVFloatingBinBuiltinSet<HasBF=1>;
 defm vfneg_v : RVVPseudoVFUnaryBuiltin<"vfsgnjn", "fd">;
 let RequiredFeatures = ["zvfh"] in
   defm vfneg_v : RVVPseudoVFUnaryBuiltin<"vfsgnjn", "x">;
+let RequiredFeatures = ["zvfbfa"] in
+  defm vfneg_v : RVVPseudoVFUnaryBuiltin<"vfsgnjn", "y">;
 defm vfabs_v : RVVPseudoVFUnaryBuiltin<"vfsgnjx", "fd">;
 let RequiredFeatures = ["zvfh"] in
   defm vfabs_v : RVVPseudoVFUnaryBuiltin<"vfsgnjx", "x">;
+let RequiredFeatures = ["zvfbfa"] in
+  defm vfabs_v : RVVPseudoVFUnaryBuiltin<"vfsgnjx", "y">;
 
 // 13.13. Vector Floating-Point Compare Instructions
 let MaskedPolicyScheme = HasPassthruOperand,
