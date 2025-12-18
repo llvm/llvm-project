@@ -446,7 +446,7 @@ define i32 @unfold4(i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z, i32 %j) noun
 ; CHECK:       .exit.thread:
 ; CHECK-NEXT:    br label [[DOTEXIT_THREAD5]]
 ; CHECK:       .exit.thread5:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[J]], [[DOTEXIT_THREAD]] ], [ [[ADD3]], [[DOTEXIT]] ], [ [[ADD3]], [[COND_FALSE_I]] ], [ [[ADD3]], [[COND_FALSE_10_I]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[J]], [[DOTEXIT_THREAD]] ], [ [[ADD3]], [[DOTEXIT]] ], [ [[ADD3]], [[COND_FALSE_10_I]] ], [ [[ADD3]], [[COND_FALSE_I]] ]
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:

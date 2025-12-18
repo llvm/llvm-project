@@ -737,7 +737,8 @@ bool LoongArchOptWInstrs::removeSExtWInstrs(MachineFunction &MF,
         continue;
 
       Register DstReg = MI.getOperand(0).getReg();
-      if (!MRI.constrainRegClass(SrcReg, MRI.getRegClass(DstReg)))
+      if (!SrcReg.isVirtual() ||
+          !MRI.constrainRegClass(SrcReg, MRI.getRegClass(DstReg)))
         continue;
 
       // Convert Fixable instructions to their W versions.

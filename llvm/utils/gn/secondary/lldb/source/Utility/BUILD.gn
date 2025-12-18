@@ -46,7 +46,6 @@ static_library("Utility") {
     "StreamString.cpp",
     "StringExtractor.cpp",
     "StringExtractorGDBRemote.cpp",
-    "StringLexer.cpp",
     "StringList.cpp",
     "StructuredData.cpp",
     "TildeExpressionResolver.cpp",

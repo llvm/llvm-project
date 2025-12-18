@@ -1036,16 +1036,17 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // If only the lower 8 bits are used, try to convert this to a simm6 by
     // sign-extending bit 7. This is neutral without the C extension, and
     // allows C.LI to be used if C is present.
-    if (isUInt<8>(Imm) && isInt<6>(SignExtend64<8>(Imm)) && hasAllBUsers(Node))
+    if (!isInt<8>(Imm) && isUInt<8>(Imm) && isInt<6>(SignExtend64<8>(Imm)) &&
+        hasAllBUsers(Node))
       Imm = SignExtend64<8>(Imm);
     // If the upper XLen-16 bits are not used, try to convert this to a simm12
     // by sign extending bit 15.
-    if (isUInt<16>(Imm) && isInt<12>(SignExtend64<16>(Imm)) &&
-        hasAllHUsers(Node))
+    else if (!isInt<16>(Imm) && isUInt<16>(Imm) &&
+             isInt<12>(SignExtend64<16>(Imm)) && hasAllHUsers(Node))
       Imm = SignExtend64<16>(Imm);
     // If the upper 32-bits are not used try to convert this into a simm32 by
     // sign extending bit 32.
-    if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
+    else if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
       Imm = SignExtend64<32>(Imm);
 
     if (Subtarget->enablePExtCodeGen() && isApplicableToPLI(Imm) &&
