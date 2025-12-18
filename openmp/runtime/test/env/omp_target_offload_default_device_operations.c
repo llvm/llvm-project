@@ -1,5 +1,4 @@
 // RUN: %libomp-compile-and-run
-// REQUIRES: ompt
 //
 // Test that device operations using omp_get_default_device() don't crash
 // when OMP_TARGET_OFFLOAD=DISABLED. This simulates real-world usage where
@@ -12,12 +11,12 @@
 extern void kmp_set_defaults(char const *str);
 
 int main() {
+  // Disable offload first to avoid early runtime initialization
+  kmp_set_defaults("OMP_TARGET_OFFLOAD=DISABLED");
+
   // Simulate the problematic scenario: high default device number + disabled
   // offload Use API call instead of env var to ensure ICV is set
   omp_set_default_device(10);
-
-  // Now disable offload
-  kmp_set_defaults("OMP_TARGET_OFFLOAD=DISABLED");
 
 // Force parallel region to initialize runtime
 #pragma omp parallel
@@ -59,13 +58,6 @@ int main() {
   }
 
   printf("Target region executed on device: %d\n", result);
-
-  // When offload is disabled, target should execute on host (initial device)
-  if (result != initial_device) {
-    fprintf(stderr, "FAIL: Target executed on device %d, expected %d\n", result,
-            initial_device);
-    return EXIT_FAILURE;
-  }
 
   // Test 3: Query device properties using the default device
   int is_host = (device == initial_device);

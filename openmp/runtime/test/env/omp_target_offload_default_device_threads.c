@@ -1,5 +1,4 @@
 // RUN: %libomp-compile-and-run
-// REQUIRES: ompt
 //
 // Test that omp_get_default_device() consistently returns the initial device
 // across multiple threads when OMP_TARGET_OFFLOAD=DISABLED.

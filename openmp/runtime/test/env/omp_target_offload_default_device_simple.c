@@ -1,5 +1,4 @@
 // RUN: %libomp-compile-and-run
-// REQUIRES: ompt
 //
 // Simple smoke test to verify omp_get_default_device() returns initial device
 // when OMP_TARGET_OFFLOAD=DISABLED with OMP_DEFAULT_DEVICE=2.
@@ -12,12 +11,12 @@
 extern void kmp_set_defaults(char const *str);
 
 int main() {
-  // Key to reproducing bug: Set default device BEFORE disabling offload
+  // Disable offload first to avoid early runtime initialization
+  kmp_set_defaults("OMP_TARGET_OFFLOAD=DISABLED");
+
+  // Key to reproducing bug: Set default device to non-zero value
   // This ensures the ICV contains a non-zero value
   omp_set_default_device(2);
-
-  // Now disable offload
-  kmp_set_defaults("OMP_TARGET_OFFLOAD=DISABLED");
 
 // Initialize runtime
 #pragma omp parallel

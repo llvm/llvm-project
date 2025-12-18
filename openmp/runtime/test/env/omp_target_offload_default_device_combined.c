@@ -1,5 +1,4 @@
 // RUN: %libomp-compile-and-run
-// REQUIRES: ompt
 //
 // Test that omp_get_default_device() returns the initial device (0) when
 // OMP_TARGET_OFFLOAD=DISABLED, with both OMP_DEFAULT_DEVICE environment

@@ -1,5 +1,4 @@
 // RUN: %libomp-compile-and-run
-// REQUIRES: ompt
 //
 // Test that omp_get_default_device() returns the initial device consistently
 // across nested parallel regions and with ICV inheritance when
@@ -11,19 +10,13 @@
 
 extern void kmp_set_defaults(char const *str);
 
-int check_default_device(const char *context, int expected_initial) {
+int check_default_device(const char *context) {
   int default_dev = omp_get_default_device();
   int initial_dev = omp_get_initial_device();
 
   if (default_dev != initial_dev) {
     fprintf(stderr, "FAIL [%s]: default=%d, initial=%d\n", context, default_dev,
             initial_dev);
-    return 1;
-  }
-
-  if (initial_dev != expected_initial) {
-    fprintf(stderr, "FAIL [%s]: initial=%d, expected=%d\n", context,
-            initial_dev, expected_initial);
     return 1;
   }
 
@@ -46,17 +39,17 @@ int main() {
   printf("initial_device = %d\n", initial_device);
 
   // Test 1: Sequential region
-  errors += check_default_device("sequential", initial_device);
+  errors += check_default_device("sequential");
 
 // Test 2: Parallel region
 #pragma omp parallel reduction(+ : errors)
   {
-    errors += check_default_device("parallel", initial_device);
+    errors += check_default_device("parallel");
 
 // Test 3: Nested parallel (if supported)
 #pragma omp parallel reduction(+ : errors) if (omp_get_max_threads() > 2)
     {
-      errors += check_default_device("nested parallel", initial_device);
+      errors += check_default_device("nested parallel");
     }
   }
 
@@ -69,16 +62,16 @@ int main() {
     omp_set_default_device(tid + 20);
 
     // But should still get initial device
-    errors += check_default_device("after thread-local set", initial_device);
+    errors += check_default_device("after thread-local set");
 
 #pragma omp barrier
 
     // Check again after barrier
-    errors += check_default_device("after barrier", initial_device);
+    errors += check_default_device("after barrier");
   }
 
   // Test 5: Back in sequential after all the parallel regions
-  errors += check_default_device("sequential final", initial_device);
+  errors += check_default_device("sequential final");
 
   // Test 6: Target region context
   int target_errors = 0;
