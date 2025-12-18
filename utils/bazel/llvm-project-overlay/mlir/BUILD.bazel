@@ -4310,8 +4310,8 @@ cc_library(
     deps = [
         ":AMDGPUToROCDL",
         ":AffineToStandard",
+        ":ArithAndMathToAPFloat",
         ":ArithToAMDGPU",
-        ":ArithToAPFloat",
         ":ArithToArmSME",
         ":ArithToEmitC",
         ":ArithToLLVM",
@@ -8520,9 +8520,14 @@ cc_library(
 )
 
 cc_library(
-    name = "ArithToAPFloat",
-    srcs = glob(["lib/Conversion/ArithToAPFloat/*.cpp"]),
-    hdrs = glob(["include/mlir/Conversion/ArithToAPFloat/*.h"]),
+    name = "ArithAndMathToAPFloat",
+    srcs = glob([
+        "lib/Conversion/ArithAndMathToAPFloat/*.cpp",
+        "lib/Conversion/ArithAndMathToAPFloat/*.h",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/ArithAndMathToAPFloat/*.h",
+    ]),
     includes = ["include"],
     deps = [
         ":ArithDialect",
@@ -8533,6 +8538,8 @@ cc_library(
         ":FuncDialect",
         ":FuncUtils",
         ":IR",
+        ":MathDialect",
+        ":MathTransforms",
         ":Pass",
         ":TransformUtils",
         ":VectorDialect",
