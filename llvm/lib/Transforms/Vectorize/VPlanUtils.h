@@ -122,12 +122,7 @@ public:
            NewBlock->getPredecessors().empty() &&
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
-    SmallVector<VPBlockBase *> Succs(BlockPtr->successors());
-    for (VPBlockBase *Succ : Succs) {
-      Succ->replacePredecessor(BlockPtr, NewBlock);
-      NewBlock->appendSuccessor(Succ);
-    }
-    BlockPtr->clearSuccessors();
+    transferSuccessors(BlockPtr, NewBlock);
     connectBlocks(BlockPtr, NewBlock);
   }
 
@@ -208,6 +203,14 @@ public:
     New->setPredecessors(Old->getPredecessors());
     New->setSuccessors(Old->getSuccessors());
     Old->clearPredecessors();
+    Old->clearSuccessors();
+  }
+
+  /// Transfer successors from \p Old to \p New. \p New must have no successors.
+  static void transferSuccessors(VPBlockBase *Old, VPBlockBase *New) {
+    for (auto *Succ : Old->getSuccessors())
+      Succ->replacePredecessor(Old, New);
+    New->setSuccessors(Old->getSuccessors());
     Old->clearSuccessors();
   }
 
