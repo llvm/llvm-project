@@ -36,6 +36,18 @@ mlir::Value CIRGenBuilderTy::getArrayElement(mlir::Location arrayLocBegin,
                                              mlir::Value arrayPtr,
                                              mlir::Type eltTy, mlir::Value idx,
                                              bool shouldDecay) {
+  auto arrayPtrTy = mlir::dyn_cast<cir::PointerType>(arrayPtr.getType());
+  assert(arrayPtrTy && "expected pointer type");
+  // If the array pointer is not decayed, emit a GetElementOp.
+  auto arrayTy = mlir::dyn_cast<cir::ArrayType>(arrayPtrTy.getPointee());
+
+  if (shouldDecay && arrayTy && arrayTy == eltTy) {
+    auto eltPtrTy =
+        getPointerTo(arrayTy.getElementType(), arrayPtrTy.getAddrSpace());
+    return cir::GetElementOp::create(arrayLocEnd, eltPtrTy, arrayPtr, idx);
+  }
+
+  // If we don't have sufficient type information, emit a PtrStrideOp.
   mlir::Value basePtr = arrayPtr;
   if (shouldDecay)
     basePtr = maybeBuildArrayDecay(arrayLocBegin, arrayPtr, eltTy);
