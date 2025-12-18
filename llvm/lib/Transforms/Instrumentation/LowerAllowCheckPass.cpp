@@ -156,7 +156,7 @@ static bool lowerAllowChecks(Function &F, const BlockFrequencyInfo &BFI,
 
   for (auto [I, V] : ReplaceWithValue) {
     ++NumChecksTotal;
-    if (!V) // If the final value is false, the check is considered removed
+    if (!V) // If the final value is false, the check is considered removed.
       ++NumChecksRemoved;
     I->replaceAllUsesWith(ConstantInt::getBool(I->getType(), V));
     I->eraseFromParent();
