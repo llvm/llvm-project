@@ -17,6 +17,7 @@
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -258,6 +259,7 @@ IndexRecordWriter::beginRecord(StringRef Filename, uint64_t RecordHash,
   if (OutRecordFile)
     *OutRecordFile = RecordName;
 
+  auto BypassSandbox = sandbox::scopedDisable();
   if (std::error_code EC =
           fs::access(RecordPath.c_str(), fs::AccessMode::Exist)) {
     if (EC != errc::no_such_file_or_directory) {
@@ -300,6 +302,8 @@ IndexRecordWriter::endRecord(std::string &Error,
   if (!State.Decls.empty()) {
     writeDecls(State.Stream, State.Decls, State.Occurrences, GetSymbolForDecl);
   }
+
+  auto BypassSandbox = sys::sandbox::scopedDisable();
 
   if (std::error_code EC = sys::fs::create_directory(sys::path::parent_path(State.RecordPath))) {
     llvm::raw_string_ostream Err(Error);

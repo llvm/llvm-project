@@ -18,6 +18,7 @@
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
@@ -242,6 +243,8 @@ std::optional<bool> IndexUnitWriter::isUnitUpToDateForOutputFile(
   SmallString<256> UnitPath;
   getUnitPathForOutputFile(FilePath, UnitPath);
 
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   llvm::sys::fs::file_status UnitStat;
   if (std::error_code EC = llvm::sys::fs::status(UnitPath.c_str(), UnitStat)) {
     if (EC != llvm::errc::no_such_file_or_directory && EC != llvm::errc::delete_pending) {
@@ -337,21 +340,11 @@ static void writeVersionInfo(BitstreamWriter &Stream) {
 bool IndexUnitWriter::write(std::string &Error) {
   using namespace llvm::sys;
 
+  auto BypassSandbox = sandbox::scopedDisable();
+
   // Determine the working directory.
   SmallString<128> CWDPath;
-  if (!FileMgr.getFileSystemOpts().WorkingDir.empty()) {
-    CWDPath = FileMgr.getFileSystemOpts().WorkingDir;
-    if (!path::is_absolute(CWDPath)) {
-      fs::make_absolute(CWDPath);
-    }
-  } else {
-    std::error_code EC = sys::fs::current_path(CWDPath);
-    if (EC) {
-      llvm::raw_string_ostream Err(Error);
-      Err << "failed to determine current working directory: " << EC.message();
-      return true;
-    }
-  }
+  FileMgr.makeAbsolutePath(CWDPath);
   WorkDir = std::string(CWDPath.str());
 
   SmallString<512> Buffer;

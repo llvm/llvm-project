@@ -41,6 +41,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrefixMapper.h"
@@ -459,6 +460,7 @@ static void writeResponseFile(raw_ostream &OS,
 
 static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
                             SmallVectorImpl<const char *> &NewArgs,
+                            llvm::vfs::FileSystem &VFS,
                             DiagnosticsEngine &Diag,
                             const llvm::opt::ArgList &Args,
                             const CASOptions &CASOpts,
@@ -469,16 +471,17 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
   });
 
   StringRef WorkingDirectory;
-  SmallString<128> WorkingDirectoryBuf;
+  std::string WorkingDirectoryBuf;
   if (auto *Arg =
           Args.getLastArg(clang::options::OPT_working_directory)) {
     WorkingDirectory = Arg->getValue();
   } else {
-    if (llvm::Error E = llvm::errorCodeToError(
-            llvm::sys::fs::current_path(WorkingDirectoryBuf))) {
+    auto CWD = VFS.getCurrentWorkingDirectory();
+    if (Error E = llvm::errorCodeToError(CWD.getError())) {
       Diag.Report(diag::err_cas_depscan_failed) << std::move(E);
       return 1;
     }
+    WorkingDirectoryBuf = std::move(*CWD);
     WorkingDirectory = WorkingDirectoryBuf;
   }
 
@@ -555,7 +558,10 @@ int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
       std::make_unique<TextDiagnosticPrinter>(llvm::errs(), *DiagOpts, false);
   DiagnosticsEngine Diags(new DiagnosticIDs(), *DiagOpts);
   Diags.setClient(DiagsConsumer.get(), /*ShouldOwnClient=*/false);
-  auto VFS = llvm::vfs::getRealFileSystem();
+  auto VFS = [] {
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    return llvm::vfs::getRealFileSystem();
+  }();
   ProcessWarningOptions(Diags, *DiagOpts, *VFS);
   if (Diags.hasErrorOccurred())
     return 1;
@@ -593,8 +599,8 @@ int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
   CompilerInvocation::ParseCASArgs(CASOpts, ParsedCC1Args, Diags);
   CASOpts.ensurePersistentCAS();
 
-  if (int Ret = scanAndUpdateCC1(Argv0, CC1Args->getValues(), NewArgs, Diags,
-                                 Args, CASOpts, RootID))
+  if (int Ret = scanAndUpdateCC1(Argv0, CC1Args->getValues(), NewArgs, *VFS,
+                                 Diags, Args, CASOpts, RootID))
     return Ret;
 
   // FIXME: Use OutputBackend to OnDisk only now.
@@ -981,8 +987,10 @@ int ScanServer::listen() {
       // Is this safe to reuse? Or does DependendencyScanningWorkerFileSystem
       // make some bad assumptions about relative paths?
       if (!Tool) {
-        llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> UnderlyingFS =
-            llvm::vfs::createPhysicalFileSystem();
+        auto UnderlyingFS = [] {
+          auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+          return llvm::vfs::createPhysicalFileSystem();
+        }();
         UnderlyingFS = llvm::cas::createCASProvidingFileSystem(
             CAS, std::move(UnderlyingFS));
         Tool.emplace(Service, std::move(UnderlyingFS));
@@ -1118,8 +1126,10 @@ scanAndUpdateCC1Inline(const char *Exec, ArrayRef<const char *> InputArgs,
   dependencies::DependencyScanningService Service(
       dependencies::ScanningMode::DependencyDirectivesScan,
       dependencies::ScanningOutputFormat::IncludeTree, CASOpts, DB, Cache);
-  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> UnderlyingFS =
-      llvm::vfs::createPhysicalFileSystem();
+  auto UnderlyingFS = [] {
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    return llvm::vfs::createPhysicalFileSystem();
+  }();
   UnderlyingFS =
       llvm::cas::createCASProvidingFileSystem(DB, std::move(UnderlyingFS));
   tooling::DependencyScanningTool Tool(Service, std::move(UnderlyingFS));

@@ -15,6 +15,8 @@
 #include "llvm/CAS/TreePath.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
+
 #include <mutex>
 
 using namespace llvm;
@@ -254,6 +256,7 @@ void CachingOnDiskFileSystemImpl::initializeWorkingDirectory() {
   WorkingDirectory.Entry = &Cache->getRoot(RootPath);
   WorkingDirectory.Path = WorkingDirectory.Entry->getTreePath().str();
 
+  auto BypassSandbox = sys::sandbox::scopedDisable();
   SmallString<128> CWD;
   if (std::error_code EC = llvm::sys::fs::current_path(CWD)) {
     (void)EC;
@@ -540,6 +543,8 @@ CachingOnDiskFileSystemImpl::getDirectoryIterator(const Twine &Path) {
 Expected<FileSystemCache::DirectoryEntry *>
 CachingOnDiskFileSystemImpl::preloadRealPath(DirectoryEntry &From,
                                              StringRef Remaining) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   PathStorage RemainingStorage(Remaining);
   SmallString<256> ExpectedRealTreePath;
   ExpectedRealTreePath = From.getTreePath();
