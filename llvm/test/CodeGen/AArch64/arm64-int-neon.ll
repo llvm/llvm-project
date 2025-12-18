@@ -3,15 +3,7 @@
 ; RUN: llc < %s -mtriple aarch64-unknown-unknown -global-isel -global-isel-abort=2 -mattr=+fprcvt,+fullfp16 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 
-; CHECK-GI:       warning: Instruction selection used fallback path for test_sqrshl_s32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_sqrshl_s64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_sqshl_s32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_sqshl_s64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqrshl_s32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqrshl_s64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqshl_s32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqshl_s64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqadd_s32
+; CHECK-GI:  warning: Instruction selection used fallback path for test_uqadd_s32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqadd_s64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqsub_s32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqsub_s64

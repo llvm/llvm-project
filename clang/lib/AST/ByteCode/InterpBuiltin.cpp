@@ -2757,6 +2757,65 @@ static bool interp__builtin_ia32_addsub(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_ia32_pclmulqdq(InterpState &S, CodePtr OpPC,
+                                           const CallExpr *Call) {
+  // PCLMULQDQ: carry-less multiplication of selected 64-bit halves
+  // imm8 bit 0: selects lower (0) or upper (1) 64 bits of first operand
+  // imm8 bit 4: selects lower (0) or upper (1) 64 bits of second operand
+  assert(Call->getArg(0)->getType()->isVectorType() &&
+         Call->getArg(1)->getType()->isVectorType());
+
+  // Extract imm8 argument
+  APSInt Imm8 = popToAPSInt(S, Call->getArg(2));
+  bool SelectUpperA = (Imm8 & 0x01) != 0;
+  bool SelectUpperB = (Imm8 & 0x10) != 0;
+
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
+  PrimType ElemT = *S.getContext().classify(VT->getElementType());
+  unsigned NumElems = VT->getNumElements();
+  const auto *DestVT = Call->getType()->castAs<VectorType>();
+  PrimType DestElemT = *S.getContext().classify(DestVT->getElementType());
+  bool DestUnsigned = Call->getType()->isUnsignedIntegerOrEnumerationType();
+
+  // Process each 128-bit lane (2 elements at a time)
+  for (unsigned Lane = 0; Lane < NumElems; Lane += 2) {
+    APSInt A0, A1, B0, B1;
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+      A0 = LHS.elem<T>(Lane + 0).toAPSInt();
+      A1 = LHS.elem<T>(Lane + 1).toAPSInt();
+      B0 = RHS.elem<T>(Lane + 0).toAPSInt();
+      B1 = RHS.elem<T>(Lane + 1).toAPSInt();
+    });
+
+    // Select the appropriate 64-bit values based on imm8
+    APInt A = SelectUpperA ? A1 : A0;
+    APInt B = SelectUpperB ? B1 : B0;
+
+    // Extend both operands to 128 bits for carry-less multiplication
+    APInt A128 = A.zext(128);
+    APInt B128 = B.zext(128);
+
+    // Use APIntOps::clmul for carry-less multiplication
+    APInt Result = llvm::APIntOps::clmul(A128, B128);
+
+    // Split the 128-bit result into two 64-bit halves
+    APSInt ResultLow(Result.extractBits(64, 0), DestUnsigned);
+    APSInt ResultHigh(Result.extractBits(64, 64), DestUnsigned);
+
+    INT_TYPE_SWITCH_NO_BOOL(DestElemT, {
+      Dst.elem<T>(Lane + 0) = static_cast<T>(ResultLow);
+      Dst.elem<T>(Lane + 1) = static_cast<T>(ResultHigh);
+    });
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
 static bool interp__builtin_elementwise_triop_fp(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APFloat(const APFloat &, const APFloat &,
@@ -2872,39 +2931,6 @@ static bool interp__builtin_select_scalar(InterpState &S,
     Dst.elem<Floating>(0) = A.elem<Floating>(0);
 
   Dst.initializeAllElements();
-  return true;
-}
-
-static bool interp__builtin_blend(InterpState &S, CodePtr OpPC,
-                                  const CallExpr *Call) {
-  APSInt Mask = popToAPSInt(S, Call->getArg(2));
-  const Pointer &TrueVec = S.Stk.pop<Pointer>();
-  const Pointer &FalseVec = S.Stk.pop<Pointer>();
-  const Pointer &Dst = S.Stk.peek<Pointer>();
-
-  assert(FalseVec.getNumElems() == TrueVec.getNumElems());
-  assert(FalseVec.getNumElems() == Dst.getNumElems());
-  unsigned NumElems = FalseVec.getNumElems();
-  PrimType ElemT = FalseVec.getFieldDesc()->getPrimType();
-  PrimType DstElemT = Dst.getFieldDesc()->getPrimType();
-
-  for (unsigned I = 0; I != NumElems; ++I) {
-    bool MaskBit = Mask[I % 8];
-    if (ElemT == PT_Float) {
-      assert(DstElemT == PT_Float);
-      Dst.elem<Floating>(I) =
-          MaskBit ? TrueVec.elem<Floating>(I) : FalseVec.elem<Floating>(I);
-    } else {
-      assert(DstElemT == ElemT);
-      INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
-        Dst.elem<T>(I) =
-            static_cast<T>(MaskBit ? TrueVec.elem<T>(I).toAPSInt()
-                                   : FalseVec.elem<T>(I).toAPSInt());
-      });
-    }
-  }
-  Dst.initializeAllElements();
-
   return true;
 }
 
@@ -3863,6 +3889,100 @@ static bool interp__builtin_ia32_multishiftqb(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp_builtin_ia32_gfni_affine(InterpState &S, CodePtr OpPC,
+                                            const CallExpr *Call,
+                                            bool Inverse) {
+  assert(Call->getNumArgs() == 3);
+  QualType XType = Call->getArg(0)->getType();
+  QualType AType = Call->getArg(1)->getType();
+  QualType ImmType = Call->getArg(2)->getType();
+  if (!XType->isVectorType() || !AType->isVectorType() ||
+      !ImmType->isIntegerType()) {
+    return false;
+  }
+
+  Pointer X, A;
+  APSInt Imm = popToAPSInt(S, Call->getArg(2));
+  A = S.Stk.pop<Pointer>();
+  X = S.Stk.pop<Pointer>();
+
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  const auto *AVecT = AType->castAs<VectorType>();
+  assert(XType->castAs<VectorType>()->getNumElements() ==
+         AVecT->getNumElements());
+  unsigned NumBytesInQWord = 8;
+  unsigned NumBytes = AVecT->getNumElements();
+  unsigned NumBitsInQWord = 64;
+  unsigned NumQWords = NumBytes / NumBytesInQWord;
+  unsigned NumBitsInByte = 8;
+  PrimType AElemT = *S.getContext().classify(AVecT->getElementType());
+
+  // computing A*X + Imm
+  for (unsigned QWordIdx = 0; QWordIdx != NumQWords; ++QWordIdx) {
+    // Extract the QWords from X, A
+    APInt XQWord(NumBitsInQWord, 0);
+    APInt AQWord(NumBitsInQWord, 0);
+    for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+      unsigned Idx = QWordIdx * NumBytesInQWord + ByteIdx;
+      uint8_t XByte;
+      uint8_t AByte;
+      INT_TYPE_SWITCH(AElemT, {
+        XByte = static_cast<uint8_t>(X.elem<T>(Idx));
+        AByte = static_cast<uint8_t>(A.elem<T>(Idx));
+      });
+
+      XQWord.insertBits(APInt(NumBitsInByte, XByte), ByteIdx * NumBitsInByte);
+      AQWord.insertBits(APInt(NumBitsInByte, AByte), ByteIdx * NumBitsInByte);
+    }
+
+    for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+      unsigned Idx = QWordIdx * NumBytesInQWord + ByteIdx;
+      uint8_t XByte =
+          XQWord.lshr(ByteIdx * NumBitsInByte).getLoBits(8).getZExtValue();
+      INT_TYPE_SWITCH(AElemT, {
+        Dst.elem<T>(Idx) = T::from(GFNIAffine(XByte, AQWord, Imm, Inverse));
+      });
+    }
+  }
+  Dst.initializeAllElements();
+  return true;
+}
+
+static bool interp__builtin_ia32_gfni_mul(InterpState &S, CodePtr OpPC,
+                                          const CallExpr *Call) {
+  assert(Call->getNumArgs() == 2);
+
+  QualType AType = Call->getArg(0)->getType();
+  QualType BType = Call->getArg(1)->getType();
+  if (!AType->isVectorType() || !BType->isVectorType()) {
+    return false;
+  }
+
+  Pointer A, B;
+  B = S.Stk.pop<Pointer>();
+  A = S.Stk.pop<Pointer>();
+
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  const auto *AVecT = AType->castAs<VectorType>();
+  assert(AVecT->getNumElements() ==
+         BType->castAs<VectorType>()->getNumElements());
+
+  PrimType AElemT = *S.getContext().classify(AVecT->getElementType());
+  unsigned NumBytes = A.getNumElems();
+
+  for (unsigned ByteIdx = 0; ByteIdx != NumBytes; ++ByteIdx) {
+    uint8_t AByte, BByte;
+    INT_TYPE_SWITCH(AElemT, {
+      AByte = static_cast<uint8_t>(A.elem<T>(ByteIdx));
+      BByte = static_cast<uint8_t>(B.elem<T>(ByteIdx));
+      Dst.elem<T>(ByteIdx) = T::from(GFNIMul(AByte, BByte));
+    });
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -4253,6 +4373,30 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call, [](const APSInt &A, const APSInt &B) {
           return APInt(sizeof(unsigned char) * 8, (A | B) == 0);
+        });
+
+  case clang::X86::BI__builtin_ia32_kshiftliqi:
+  case clang::X86::BI__builtin_ia32_kshiftlihi:
+  case clang::X86::BI__builtin_ia32_kshiftlisi:
+  case clang::X86::BI__builtin_ia32_kshiftlidi:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
+          unsigned Amt = RHS.getZExtValue() & 0xFF;
+          if (Amt >= LHS.getBitWidth())
+            return APInt::getZero(LHS.getBitWidth());
+          return LHS.shl(Amt);
+        });
+
+  case clang::X86::BI__builtin_ia32_kshiftriqi:
+  case clang::X86::BI__builtin_ia32_kshiftrihi:
+  case clang::X86::BI__builtin_ia32_kshiftrisi:
+  case clang::X86::BI__builtin_ia32_kshiftridi:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
+          unsigned Amt = RHS.getZExtValue() & 0xFF;
+          if (Amt >= LHS.getBitWidth())
+            return APInt::getZero(LHS.getBitWidth());
+          return LHS.lshr(Amt);
         });
 
   case clang::X86::BI__builtin_ia32_lzcnt_u16:
@@ -4702,6 +4846,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return llvm::APIntOps::muluExtended(LoLHS, LoRHS);
         });
 
+  case clang::X86::BI__builtin_ia32_pclmulqdq128:
+  case clang::X86::BI__builtin_ia32_pclmulqdq256:
+  case clang::X86::BI__builtin_ia32_pclmulqdq512:
+    return interp__builtin_ia32_pclmulqdq(S, OpPC, Call);
+
   case Builtin::BI__builtin_elementwise_fma:
     return interp__builtin_elementwise_triop_fp(
         S, OpPC, Call,
@@ -4772,7 +4921,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pblendw256:
   case clang::X86::BI__builtin_ia32_pblendd128:
   case clang::X86::BI__builtin_ia32_pblendd256:
-    return interp__builtin_blend(S, OpPC, Call);
+    return interp__builtin_ia32_shuffle_generic(
+      S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
+        // Bit index for mask.
+        unsigned MaskBit = (ShuffleMask >> (DstIdx % 8)) & 0x1;
+        unsigned SrcVecIdx = MaskBit ? 1 : 0;  // 1 = TrueVec, 0 = FalseVec
+        return std::pair<unsigned, int>{SrcVecIdx, static_cast<int>(DstIdx)};
+      });
+
+
 
   case clang::X86::BI__builtin_ia32_blendvpd:
   case clang::X86::BI__builtin_ia32_blendvpd256:
@@ -4881,6 +5038,21 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return std::pair<unsigned, int>{SrcIdx,
                                           static_cast<int>(LaneOffset + Index)};
         });
+
+  case X86::BI__builtin_ia32_vgf2p8affineinvqb_v16qi:
+  case X86::BI__builtin_ia32_vgf2p8affineinvqb_v32qi:
+  case X86::BI__builtin_ia32_vgf2p8affineinvqb_v64qi:
+    return interp_builtin_ia32_gfni_affine(S, OpPC, Call, true);
+  case X86::BI__builtin_ia32_vgf2p8affineqb_v16qi:
+  case X86::BI__builtin_ia32_vgf2p8affineqb_v32qi:
+  case X86::BI__builtin_ia32_vgf2p8affineqb_v64qi:
+    return interp_builtin_ia32_gfni_affine(S, OpPC, Call, false);
+
+  case X86::BI__builtin_ia32_vgf2p8mulb_v16qi:
+  case X86::BI__builtin_ia32_vgf2p8mulb_v32qi:
+  case X86::BI__builtin_ia32_vgf2p8mulb_v64qi:
+    return interp__builtin_ia32_gfni_mul(S, OpPC, Call);
+
   case X86::BI__builtin_ia32_insertps128:
     return interp__builtin_ia32_shuffle_generic(
         S, OpPC, Call, [](unsigned DstIdx, unsigned Mask) {
@@ -4993,6 +5165,29 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           unsigned SrcIdx = (ShuffleMask >> 6) & 0x1;
           return std::pair<unsigned, int>{SrcIdx, Offset};
         });
+  case X86::BI__builtin_ia32_vperm2f128_pd256:
+  case X86::BI__builtin_ia32_vperm2f128_ps256:
+  case X86::BI__builtin_ia32_vperm2f128_si256:
+  case X86::BI__builtin_ia32_permti256: {
+    unsigned NumElements =
+        Call->getArg(0)->getType()->getAs<VectorType>()->getNumElements();
+    unsigned PreservedBitsCnt = NumElements >> 2;
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call,
+        [PreservedBitsCnt](unsigned DstIdx, unsigned ShuffleMask) {
+          unsigned ControlBitsCnt = DstIdx >> PreservedBitsCnt << 2;
+          unsigned ControlBits = ShuffleMask >> ControlBitsCnt;
+
+          if (ControlBits & 0b1000)
+            return std::make_pair(0u, -1);
+
+          unsigned SrcVecIdx = (ControlBits & 0b10) >> 1;
+          unsigned PreservedBitsMask = (1 << PreservedBitsCnt) - 1;
+          int SrcIdx = ((ControlBits & 0b1) << PreservedBitsCnt) |
+                       (DstIdx & PreservedBitsMask);
+          return std::make_pair(SrcVecIdx, SrcIdx);
+        });
+  }
   case X86::BI__builtin_ia32_pshufb128:
   case X86::BI__builtin_ia32_pshufb256:
   case X86::BI__builtin_ia32_pshufb512:
@@ -5090,6 +5285,16 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           unsigned BitIndex = (DstIdx * BitsPerElem) % MaskBits;
           unsigned Index = (Control >> BitIndex) & IndexMask;
           return std::make_pair(0, static_cast<int>(LaneOffset + Index));
+        });
+
+  case X86::BI__builtin_ia32_permdf256:
+  case X86::BI__builtin_ia32_permdi256:
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call, [](unsigned DstIdx, unsigned Control) {
+          // permute4x64 operates on 4 64-bit elements
+          // For element i (0-3), extract bits [2*i+1:2*i] from Control
+          unsigned Index = (Control >> (2 * DstIdx)) & 0x3;
+          return std::make_pair(0, static_cast<int>(Index));
         });
 
   case X86::BI__builtin_ia32_vpmultishiftqb128:

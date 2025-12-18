@@ -1016,6 +1016,7 @@ cc_library(
         ":ast",
         ":ast_matchers",
         ":basic",
+        ":format",
         ":lex",
         ":support",
         "//llvm:Support",
@@ -1228,6 +1229,7 @@ cc_library(
         ":ast",
         ":ast_matchers",
         ":basic",
+        ":dependency_scanning",
         ":driver",
         ":format",
         ":frontend",
@@ -1316,19 +1318,17 @@ cc_library(
 )
 
 cc_library(
-    name = "tooling_dependency_scanning",
+    name = "dependency_scanning",
     srcs = glob([
-        "lib/Tooling/DependencyScanning/**/*.h",
-        "lib/Tooling/DependencyScanning/**/*.cpp",
+        "lib/DependencyScanning/**/*.cpp",
     ]),
-    hdrs = glob(["include/clang/Tooling/DependencyScanning/**/*.h"]),
+    hdrs = glob(["include/clang/DependencyScanning/**/*.h"]),
     deps = [
         ":basic",
         ":driver",
         ":frontend",
         ":lex",
         ":serialization",
-        ":tooling",
         "//llvm:Support",
         "//llvm:TargetParser",
     ],
@@ -2453,10 +2453,10 @@ cc_library(
     srcs = glob(["tools/clang-scan-deps/*.cpp"]),
     deps = [
         ":ScanDepsTableGen",
+        ":dependency_scanning",
         ":driver",
         ":frontend",
         ":tooling",
-        ":tooling_dependency_scanning",
         "//llvm:Support",
         "//llvm:TargetParser",
     ],

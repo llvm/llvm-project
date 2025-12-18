@@ -10,7 +10,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import TestBase
 from lldbsuite.test import lldbutil
 
-@skipIf(oslist=["linux"], archs=["arm$"])
 class ScriptedFrameProviderTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -25,11 +24,11 @@ class ScriptedFrameProviderTestCase(TestBase):
             self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
         )
 
-        # Import the test frame provider
+        # Import the test frame provider.
         script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
         self.runCmd("command script import " + script_path)
 
-        # Attach the Replace provider
+        # Attach the Replace provider.
         error = lldb.SBError()
         provider_id = target.RegisterScriptedFrameProvider(
             "test_frame_providers.ReplaceFrameProvider",
@@ -39,10 +38,10 @@ class ScriptedFrameProviderTestCase(TestBase):
         self.assertTrue(error.Success(), f"Failed to register provider: {error}")
         self.assertNotEqual(provider_id, 0, "Provider ID should be non-zero")
 
-        # Verify we have exactly 3 synthetic frames
+        # Verify we have exactly 3 synthetic frames.
         self.assertEqual(thread.GetNumFrames(), 3, "Should have 3 synthetic frames")
 
-        # Verify frame indices and PCs (dictionary-based frames don't have custom function names)
+        # Verify frame indices and PCs (dictionary-based frames don't have custom function names).
         frame0 = thread.GetFrameAtIndex(0)
         self.assertIsNotNone(frame0)
         self.assertEqual(frame0.GetPC(), 0x1000)
@@ -62,13 +61,13 @@ class ScriptedFrameProviderTestCase(TestBase):
             self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
         )
 
-        # Get original frame count and PC
+        # Get original frame count and PC.
         original_frame_count = thread.GetNumFrames()
         self.assertGreaterEqual(
             original_frame_count, 2, "Should have at least 2 real frames"
         )
 
-        # Import and attach Prepend provider
+        # Import and attach Prepend provider.
         script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
         self.runCmd("command script import " + script_path)
 
@@ -81,18 +80,18 @@ class ScriptedFrameProviderTestCase(TestBase):
         self.assertTrue(error.Success(), f"Failed to register provider: {error}")
         self.assertNotEqual(provider_id, 0, "Provider ID should be non-zero")
 
-        # Verify we have 2 more frames
+        # Verify we have 2 more frames.
         new_frame_count = thread.GetNumFrames()
         self.assertEqual(new_frame_count, original_frame_count + 2)
 
-        # Verify first 2 frames are synthetic (check PCs, not function names)
+        # Verify first 2 frames are synthetic (check PCs, not function names).
         frame0 = thread.GetFrameAtIndex(0)
         self.assertEqual(frame0.GetPC(), 0x9000)
 
         frame1 = thread.GetFrameAtIndex(1)
         self.assertEqual(frame1.GetPC(), 0xA000)
 
-        # Verify frame 2 is the original real frame 0
+        # Verify frame 2 is the original real frame 0.
         frame2 = thread.GetFrameAtIndex(2)
         self.assertIn("thread_func", frame2.GetFunctionName())
 
@@ -103,10 +102,10 @@ class ScriptedFrameProviderTestCase(TestBase):
             self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
         )
 
-        # Get original frame count
+        # Get original frame count.
         original_frame_count = thread.GetNumFrames()
 
-        # Import and attach Append provider
+        # Import and attach Append provider.
         script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
         self.runCmd("command script import " + script_path)
 
@@ -119,11 +118,11 @@ class ScriptedFrameProviderTestCase(TestBase):
         self.assertTrue(error.Success(), f"Failed to register provider: {error}")
         self.assertNotEqual(provider_id, 0, "Provider ID should be non-zero")
 
-        # Verify we have 1 more frame
+        # Verify we have 1 more frame.
         new_frame_count = thread.GetNumFrames()
         self.assertEqual(new_frame_count, original_frame_count + 1)
 
-        # Verify first frames are still real
+        # Verify first frames are still real.
         frame0 = thread.GetFrameAtIndex(0)
         self.assertIn("thread_func", frame0.GetFunctionName())
 
@@ -137,7 +136,7 @@ class ScriptedFrameProviderTestCase(TestBase):
             self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
         )
 
-        # Import the provider that returns ScriptedFrame objects
+        # Import the provider that returns ScriptedFrame objects.
         script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
         self.runCmd("command script import " + script_path)
 
@@ -150,12 +149,12 @@ class ScriptedFrameProviderTestCase(TestBase):
         self.assertTrue(error.Success(), f"Failed to register provider: {error}")
         self.assertNotEqual(provider_id, 0, "Provider ID should be non-zero")
 
-        # Verify we have 5 frames
+        # Verify we have 5 frames.
         self.assertEqual(
             thread.GetNumFrames(), 5, "Should have 5 custom scripted frames"
         )
 
-        # Verify frame properties from CustomScriptedFrame
+        # Verify frame properties from CustomScriptedFrame.
         frame0 = thread.GetFrameAtIndex(0)
         self.assertIsNotNone(frame0)
         self.assertEqual(frame0.GetFunctionName(), "custom_scripted_frame_0")
@@ -179,17 +178,17 @@ class ScriptedFrameProviderTestCase(TestBase):
             self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
         )
 
-        # We should have at least 2 threads (worker threads) at the breakpoint
+        # We should have at least 2 threads (worker threads) at the breakpoint.
         num_threads = process.GetNumThreads()
         self.assertGreaterEqual(
             num_threads, 2, "Should have at least 2 threads at breakpoint"
         )
 
-        # Import the test frame provider
+        # Import the test frame provider.
         script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
         self.runCmd("command script import " + script_path)
 
-        # Collect original thread info before applying provider
+        # Collect original thread info before applying provider.
         thread_info = {}
         for i in range(num_threads):
             t = process.GetThreadAtIndex(i)
@@ -198,7 +197,7 @@ class ScriptedFrameProviderTestCase(TestBase):
                 "pc": t.GetFrameAtIndex(0).GetPC(),
             }
 
-        # Register the ThreadFilterFrameProvider which only applies to thread ID 1
+        # Register the ThreadFilterFrameProvider which only applies to thread ID 1.
         error = lldb.SBError()
         provider_id = target.RegisterScriptedFrameProvider(
             "test_frame_providers.ThreadFilterFrameProvider",
@@ -208,9 +207,9 @@ class ScriptedFrameProviderTestCase(TestBase):
         self.assertTrue(error.Success(), f"Failed to register provider: {error}")
         self.assertNotEqual(provider_id, 0, "Provider ID should be non-zero")
 
-        # Check each thread
+        # Check each thread.
         thread_id_1_found = False
-        # On ARM32, FixCodeAddress clears bit 0, so synthetic PCs get modified
+        # On ARM32, FixCodeAddress clears bit 0, so synthetic PCs get modified.
         is_arm_32bit = lldbplatformutil.getArchitecture() == "arm"
         expected_synthetic_pc = 0xFFFE if is_arm_32bit else 0xFFFF
 
@@ -219,7 +218,7 @@ class ScriptedFrameProviderTestCase(TestBase):
             thread_id = t.GetIndexID()
 
             if thread_id == 1:
-                # Thread with ID 1 should have synthetic frame
+                # Thread with ID 1 should have synthetic frame.
                 thread_id_1_found = True
                 self.assertEqual(
                     t.GetNumFrames(),
@@ -232,7 +231,7 @@ class ScriptedFrameProviderTestCase(TestBase):
                     f"Thread with ID 1 should have synthetic PC {expected_synthetic_pc:#x}",
                 )
             else:
-                # Other threads should keep their original frames
+                # Other threads should keep their original frames.
                 self.assertEqual(
                     t.GetNumFrames(),
                     thread_info[thread_id]["frame_count"],
@@ -244,7 +243,7 @@ class ScriptedFrameProviderTestCase(TestBase):
                     f"Thread with ID {thread_id} should have its original PC",
                 )
 
-        # We should have found at least one thread with ID 1
+        # We should have found at least one thread with ID 1.
         self.assertTrue(
             thread_id_1_found,
             "Should have found a thread with ID 1 to test filtering",
@@ -257,15 +256,15 @@ class ScriptedFrameProviderTestCase(TestBase):
             self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
         )
 
-        # Import the test frame providers
+        # Import the test frame providers.
         script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
         self.runCmd("command script import " + script_path)
 
-        # Get original frame count
+        # Get original frame count.
         original_frame_count = thread.GetNumFrames()
         original_pc = thread.GetFrameAtIndex(0).GetPC()
 
-        # Register the first provider and get its ID
+        # Register the first provider and get its ID.
         error = lldb.SBError()
         provider_id_1 = target.RegisterScriptedFrameProvider(
             "test_frame_providers.ReplaceFrameProvider",
@@ -274,13 +273,13 @@ class ScriptedFrameProviderTestCase(TestBase):
         )
         self.assertTrue(error.Success(), f"Failed to register provider 1: {error}")
 
-        # Verify first provider is active (3 synthetic frames)
+        # Verify first provider is active (3 synthetic frames).
         self.assertEqual(thread.GetNumFrames(), 3, "Should have 3 synthetic frames")
         self.assertEqual(
             thread.GetFrameAtIndex(0).GetPC(), 0x1000, "Should have first provider's PC"
         )
 
-        # Register a second provider and get its ID
+        # Register a second provider and get its ID.
         provider_id_2 = target.RegisterScriptedFrameProvider(
             "test_frame_providers.PrependFrameProvider",
             lldb.SBStructuredData(),
@@ -299,10 +298,10 @@ class ScriptedFrameProviderTestCase(TestBase):
             result, f"Should successfully remove provider with ID {provider_id_1}"
         )
 
-        # After removing the first provider, the second provider should still be active
-        # The PrependFrameProvider adds 2 frames before the real stack
+        # After removing the first provider, the second provider should still be
+        # active. The PrependFrameProvider adds 2 frames before the real stack.
         # Since ReplaceFrameProvider had 3 frames, and we removed it, we should now
-        # have the original frames (from real stack) with PrependFrameProvider applied
+        # have the original frames (from real stack) with PrependFrameProvider applied.
         new_frame_count = thread.GetNumFrames()
         self.assertEqual(
             new_frame_count,
@@ -310,7 +309,7 @@ class ScriptedFrameProviderTestCase(TestBase):
             "Should have original frames + 2 prepended frames",
         )
 
-        # First two frames should be from PrependFrameProvider
+        # First two frames should be from PrependFrameProvider.
         self.assertEqual(
             thread.GetFrameAtIndex(0).GetPC(),
             0x9000,
@@ -322,13 +321,13 @@ class ScriptedFrameProviderTestCase(TestBase):
             "Second frame should be from PrependFrameProvider",
         )
 
-        # Remove the second provider
+        # Remove the second provider.
         result = target.RemoveScriptedFrameProvider(provider_id_2)
         self.assertSuccess(
             result, f"Should successfully remove provider with ID {provider_id_2}"
         )
 
-        # After removing both providers, frames should be back to original
+        # After removing both providers, frames should be back to original.
         self.assertEqual(
             thread.GetNumFrames(),
             original_frame_count,
@@ -340,7 +339,7 @@ class ScriptedFrameProviderTestCase(TestBase):
             "Should restore original PC",
         )
 
-        # Try to remove a provider that doesn't exist
+        # Try to remove a provider that doesn't exist.
         result = target.RemoveScriptedFrameProvider(999999)
         self.assertTrue(result.Fail(), "Should fail to remove non-existent provider")
 
@@ -364,19 +363,19 @@ class ScriptedFrameProviderTestCase(TestBase):
             self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
         )
 
-        # Get original frame count and PC
+        # Get original frame count and PC.
         original_frame_count = thread.GetNumFrames()
         original_pc = thread.GetFrameAtIndex(0).GetPC()
         self.assertGreaterEqual(
             original_frame_count, 2, "Should have at least 2 real frames"
         )
 
-        # Import the provider that accesses input frames in __init__
+        # Import the provider that accesses input frames in __init__.
         script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
         self.runCmd("command script import " + script_path)
 
-        # Register the CircularDependencyTestProvider
-        # Before the fix, this would crash or hang due to circular dependency
+        # Register the CircularDependencyTestProvider.
+        # Before the fix, this would crash or hang due to circular dependency.
         error = lldb.SBError()
         provider_id = target.RegisterScriptedFrameProvider(
             "test_frame_providers.CircularDependencyTestProvider",
@@ -388,8 +387,8 @@ class ScriptedFrameProviderTestCase(TestBase):
         self.assertTrue(error.Success(), f"Failed to register provider: {error}")
         self.assertNotEqual(provider_id, 0, "Provider ID should be non-zero")
 
-        # Verify the provider worked correctly
-        # Should have 1 synthetic frame + all original frames
+        # Verify the provider worked correctly,
+        # Should have 1 synthetic frame + all original frames.
         new_frame_count = thread.GetNumFrames()
         self.assertEqual(
             new_frame_count,
@@ -397,11 +396,11 @@ class ScriptedFrameProviderTestCase(TestBase):
             "Should have original frames + 1 synthetic frame",
         )
 
-        # On ARM32, FixCodeAddress clears bit 0, so synthetic PCs get modified
+        # On ARM32, FixCodeAddress clears bit 0, so synthetic PCs get modified.
         is_arm_32bit = lldbplatformutil.getArchitecture() == "arm"
         expected_synthetic_pc = 0xDEADBEEE if is_arm_32bit else 0xDEADBEEF
 
-        # First frame should be synthetic
+        # First frame should be synthetic.
         frame0 = thread.GetFrameAtIndex(0)
         self.assertIsNotNone(frame0)
         self.assertEqual(
@@ -410,7 +409,7 @@ class ScriptedFrameProviderTestCase(TestBase):
             f"First frame should be synthetic frame with PC {expected_synthetic_pc:#x}",
         )
 
-        # Second frame should be the original first frame
+        # Second frame should be the original first frame.
         frame1 = thread.GetFrameAtIndex(1)
         self.assertIsNotNone(frame1)
         self.assertEqual(
@@ -419,10 +418,223 @@ class ScriptedFrameProviderTestCase(TestBase):
             "Second frame should be original first frame",
         )
 
-        # Verify we can still call methods on frames (no circular dependency!)
+        # Verify we can still call methods on frames (no circular dependency!).
         for i in range(min(3, new_frame_count)):
             frame = thread.GetFrameAtIndex(i)
             self.assertIsNotNone(frame)
-            # These calls should not trigger circular dependency
+            # These calls should not trigger circular dependency.
             pc = frame.GetPC()
             self.assertNotEqual(pc, 0, f"Frame {i} should have valid PC")
+
+    def test_python_source_frames(self):
+        """Test that frames can point to Python source files and display properly."""
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
+        )
+
+        # Get original frame count.
+        original_frame_count = thread.GetNumFrames()
+        self.assertGreaterEqual(
+            original_frame_count, 2, "Should have at least 2 real frames"
+        )
+
+        # Import the provider.
+        script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
+        self.runCmd("command script import " + script_path)
+
+        # Register the PythonSourceFrameProvider.
+        error = lldb.SBError()
+        provider_id = target.RegisterScriptedFrameProvider(
+            "test_frame_providers.PythonSourceFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertTrue(error.Success(), f"Failed to register provider: {error}")
+        self.assertNotEqual(provider_id, 0, "Provider ID should be non-zero")
+
+        # Verify we have 3 more frames (Python frames).
+        new_frame_count = thread.GetNumFrames()
+        self.assertEqual(
+            new_frame_count,
+            original_frame_count + 3,
+            "Should have original frames + 3 Python frames",
+        )
+
+        # Verify first three frames are Python source frames.
+        frame0 = thread.GetFrameAtIndex(0)
+        self.assertIsNotNone(frame0)
+        self.assertEqual(
+            frame0.GetFunctionName(),
+            "compute_fibonacci",
+            "First frame should be compute_fibonacci",
+        )
+        self.assertTrue(frame0.IsSynthetic(), "Frame should be marked as synthetic")
+        # PC-less frames should show invalid address and not crash.
+        self.assertEqual(
+            frame0.GetPC(),
+            lldb.LLDB_INVALID_ADDRESS,
+            "PC-less frame should have LLDB_INVALID_ADDRESS",
+        )
+
+        self.assertEqual(
+            frame0.GetFP(),
+            lldb.LLDB_INVALID_ADDRESS,
+            "PC-less frame FP should return LLDB_INVALID_ADDRESS",
+        )
+        self.assertEqual(
+            frame0.GetSP(),
+            lldb.LLDB_INVALID_ADDRESS,
+            "PC-less frame SP should return LLDB_INVALID_ADDRESS",
+        )
+        self.assertEqual(
+            frame0.GetCFA(),
+            0,
+            "PC-less frame CFA should return 0",
+        )
+
+        frame1 = thread.GetFrameAtIndex(1)
+        self.assertIsNotNone(frame1)
+        self.assertEqual(
+            frame1.GetFunctionName(),
+            "process_data",
+            "Second frame should be process_data",
+        )
+        self.assertTrue(frame1.IsSynthetic(), "Frame should be marked as synthetic")
+
+        frame2 = thread.GetFrameAtIndex(2)
+        self.assertIsNotNone(frame2)
+        self.assertEqual(frame2.GetFunctionName(), "main", "Third frame should be main")
+        self.assertTrue(frame2.IsSynthetic(), "Frame should be marked as synthetic")
+
+        # Verify line entry information is present.
+        line_entry0 = frame0.GetLineEntry()
+        self.assertTrue(line_entry0.IsValid(), "Frame 0 should have a valid line entry")
+        self.assertEqual(line_entry0.GetLine(), 7, "Frame 0 should point to line 7")
+        file_spec0 = line_entry0.GetFileSpec()
+        self.assertTrue(file_spec0.IsValid(), "Frame 0 should have valid file spec")
+        self.assertEqual(
+            file_spec0.GetFilename(),
+            "python_helper.py",
+            "Frame 0 should point to python_helper.py",
+        )
+
+        line_entry1 = frame1.GetLineEntry()
+        self.assertTrue(line_entry1.IsValid(), "Frame 1 should have a valid line entry")
+        self.assertEqual(line_entry1.GetLine(), 16, "Frame 1 should point to line 16")
+
+        line_entry2 = frame2.GetLineEntry()
+        self.assertTrue(line_entry2.IsValid(), "Frame 2 should have a valid line entry")
+        self.assertEqual(line_entry2.GetLine(), 27, "Frame 2 should point to line 27")
+
+        # Verify the frames display properly in backtrace.
+        # This tests that PC-less frames don't show 0xffffffffffffffff.
+        self.runCmd("bt")
+        output = self.res.GetOutput()
+
+        # Should show function names.
+        self.assertIn("compute_fibonacci", output)
+        self.assertIn("process_data", output)
+        self.assertIn("main", output)
+
+        # Should show Python file.
+        self.assertIn("python_helper.py", output)
+
+        # Should show line numbers.
+        self.assertIn(":7", output)  # compute_fibonacci line.
+        self.assertIn(":16", output)  # process_data line.
+        self.assertIn(":27", output)  # main line.
+
+        # Should NOT show invalid address (0xffffffffffffffff).
+        self.assertNotIn("0xffffffffffffffff", output.lower())
+
+        # Verify frame 3 is the original real frame 0.
+        frame3 = thread.GetFrameAtIndex(3)
+        self.assertIsNotNone(frame3)
+        self.assertIn("thread_func", frame3.GetFunctionName())
+
+    def test_valid_pc_no_module_frames(self):
+        """Test that frames with valid PC but no module display correctly in backtrace."""
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
+        )
+
+        # Get original frame count.
+        original_frame_count = thread.GetNumFrames()
+        self.assertGreaterEqual(
+            original_frame_count, 2, "Should have at least 2 real frames"
+        )
+
+        # Import the provider.
+        script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
+        self.runCmd("command script import " + script_path)
+
+        # Register the ValidPCNoModuleFrameProvider.
+        error = lldb.SBError()
+        provider_id = target.RegisterScriptedFrameProvider(
+            "test_frame_providers.ValidPCNoModuleFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertTrue(error.Success(), f"Failed to register provider: {error}")
+        self.assertNotEqual(provider_id, 0, "Provider ID should be non-zero")
+
+        # Verify we have 2 more frames (the synthetic frames).
+        new_frame_count = thread.GetNumFrames()
+        self.assertEqual(
+            new_frame_count,
+            original_frame_count + 2,
+            "Should have original frames + 2 synthetic frames",
+        )
+
+        # Verify first two frames have valid PCs and function names.
+        frame0 = thread.GetFrameAtIndex(0)
+        self.assertIsNotNone(frame0)
+        self.assertEqual(
+            frame0.GetFunctionName(),
+            "unknown_function_1",
+            "First frame should be unknown_function_1",
+        )
+        self.assertTrue(frame0.IsSynthetic(), "Frame should be marked as synthetic")
+        self.assertEqual(
+            frame0.GetPC(), 0x1234000, "First frame should have PC 0x1234000"
+        )
+
+        frame1 = thread.GetFrameAtIndex(1)
+        self.assertIsNotNone(frame1)
+        self.assertEqual(
+            frame1.GetFunctionName(),
+            "unknown_function_2",
+            "Second frame should be unknown_function_2",
+        )
+        self.assertTrue(frame1.IsSynthetic(), "Frame should be marked as synthetic")
+        self.assertEqual(
+            frame1.GetPC(), 0x5678000, "Second frame should have PC 0x5678000"
+        )
+
+        # Verify the frames display properly in backtrace.
+        # The backtrace should show the PC values without crashing or displaying
+        # invalid addresses like 0xffffffffffffffff.
+        self.runCmd("bt")
+        output = self.res.GetOutput()
+
+        # Should show function names.
+        self.assertIn("unknown_function_1", output)
+        self.assertIn("unknown_function_2", output)
+
+        # Should show PC addresses in hex format.
+        self.assertIn("0x0000000001234000", output)
+        self.assertIn("0x0000000005678000", output)
+
+        # Verify PC and function name are properly separated by space.
+        self.assertIn("0x0000000001234000 unknown_function_1", output)
+        self.assertIn("0x0000000005678000 unknown_function_2", output)
+
+        # Should NOT show invalid address.
+        self.assertNotIn("0xffffffffffffffff", output.lower())
+
+        # Verify frame 2 is the original real frame 0.
+        frame2 = thread.GetFrameAtIndex(2)
+        self.assertIsNotNone(frame2)
+        self.assertIn("thread_func", frame2.GetFunctionName())

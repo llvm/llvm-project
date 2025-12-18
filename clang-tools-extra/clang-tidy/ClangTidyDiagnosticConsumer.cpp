@@ -526,7 +526,8 @@ void ClangTidyDiagnosticConsumer::forwardDiagnostic(const Diagnostic &Info) {
       Builder << Qualifiers::fromOpaqueValue(Info.getRawArg(Index));
       break;
     case clang::DiagnosticsEngine::ak_qualtype:
-      Builder << QualType::getFromOpaquePtr((void *)Info.getRawArg(Index));
+      Builder << QualType::getFromOpaquePtr(
+          reinterpret_cast<void *>(Info.getRawArg(Index)));
       break;
     case clang::DiagnosticsEngine::ak_declarationname:
       Builder << DeclarationName::getFromOpaqueInteger(Info.getRawArg(Index));
@@ -689,17 +690,15 @@ void ClangTidyDiagnosticConsumer::removeIncompatibleErrors() {
   std::vector<
       std::pair<ClangTidyError *, llvm::StringMap<tooling::Replacements> *>>
       ErrorFixes;
-  for (auto &Error : Errors) {
+  for (auto &Error : Errors)
     if (const auto *Fix = getFixIt(Error, GetFixesFromNotes))
       ErrorFixes.emplace_back(
           &Error, const_cast<llvm::StringMap<tooling::Replacements> *>(Fix));
-  }
   for (const auto &ErrorAndFix : ErrorFixes) {
     int Size = 0;
-    for (const auto &FileAndReplaces : *ErrorAndFix.second) {
+    for (const auto &FileAndReplaces : *ErrorAndFix.second)
       for (const auto &Replace : FileAndReplaces.second)
         Size += Replace.getLength();
-    }
     Sizes.push_back(Size);
   }
 
