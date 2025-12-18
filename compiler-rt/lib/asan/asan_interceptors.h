@@ -33,7 +33,7 @@ void InitializePlatformInterceptors();
 
 // Sanitizer on AIX is currently unable to retrieve the address
 // of the real longjump (or an alternative thereto).
-// TOOD: Consider intercepting longjmpx on AIX.
+// TODO: Consider intercepting longjmpx on AIX.
 #  if !SANITIZER_AIX
 #    define ASAN_INTERCEPT_LONGJMP 1
 #  else
@@ -45,7 +45,7 @@ void InitializePlatformInterceptors();
 #  if !SANITIZER_WINDOWS
    // Sanitizer on AIX is currently unable to retrieve the address
    // of the real _longjump (or an alternative thereto).
-   // TOOD: Consider intercepting _longjmpx on AIX.
+   // TODO: Consider intercepting _longjmpx on AIX.
 #    if !SANITIZER_AIX
 #      define ASAN_INTERCEPT__LONGJMP 1
 #    else
@@ -74,7 +74,7 @@ void InitializePlatformInterceptors();
 
 // Sanitizer on AIX is currently unable to retrieve the address
 // of the real siglongjump (or an alternative thereto).
-// TOOD: Consider intercepting sigsetjmpx on AIX.
+// TODO: Consider intercepting sigsetjmpx on AIX.
 #  if !SANITIZER_WINDOWS && !SANITIZER_AIX
 #    define ASAN_INTERCEPT_SIGLONGJMP 1
 #  else
