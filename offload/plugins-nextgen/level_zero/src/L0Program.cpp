@@ -31,7 +31,7 @@ Error L0GlobalHandlerTy::getGlobalMetadataFromDevice(GenericDeviceTy &Device,
   const char *GlobalName = DeviceGlobal.getName().data();
 
   L0ProgramTy &Program = L0ProgramTy::makeL0Program(Image);
-  auto AddrOrErr = Program.getOffloadVarDeviceAddr(GlobalName);
+  auto AddrOrErr = Program.getSymbolDeviceAddr(GlobalName);
   if (!AddrOrErr)
     return AddrOrErr.takeError();
 
@@ -476,26 +476,27 @@ Error L0ProgramTy::buildModules(const std::string_view BuildOptions) {
   return Plugin::error(ErrorCode::UNKNOWN, "Failed to create program modules.");
 }
 
-Expected<void *> L0ProgramTy::getOffloadVarDeviceAddr(const char *CName) const {
+Expected<void *> L0ProgramTy::getSymbolDeviceAddr(const char *CName) const {
   DP("Looking up OpenMP global variable '%s'.\n", CName);
 
   if (!GlobalModule || !CName)
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "Invalid arguments to getOffloadVarDeviceAddr");
+                         "Invalid arguments to getSymbolDeviceAddr");
 
-  std::string Name(CName);
   size_t SizeDummy = 0;
   void *DevicePtr = nullptr;
   ze_result_t RC;
   for (auto Module : Modules) {
-    CALL_ZE(RC, zeModuleGetGlobalPointer, Module, Name.c_str(), &SizeDummy,
+    CALL_ZE(RC, zeModuleGetGlobalPointer, Module, CName, &SizeDummy,
             &DevicePtr);
+    if (RC == ZE_RESULT_SUCCESS && DevicePtr)
+      return DevicePtr;
+    CALL_ZE(RC, zeModuleGetFunctionPointer, Module, CName, &DevicePtr);
     if (RC == ZE_RESULT_SUCCESS && DevicePtr)
       return DevicePtr;
   }
   return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                       "Global variable '%s' not found on device",
-                       Name.c_str());
+                       "Symbol '%s' not found on device", CName);
 }
 
 Error L0ProgramTy::readGlobalVariable(const char *Name, size_t Size,
