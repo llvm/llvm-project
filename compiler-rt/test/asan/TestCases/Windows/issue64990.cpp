@@ -1,5 +1,5 @@
 // Repro for the issue #64990: Asan with Windows EH generates __asan_xxx runtime calls without required funclet tokens
-// RUN: %clang_cl_asan %Od %if MSVC %{ /Oi %} %s -EHsc %Fe%t
+// RUN: %clang_cl_asan %Od %if MSVC %{ /Oi %} %else %{ -Wno-fortify-source %} %s -EHsc %Fe%t
 // RUN: not %run %t 2>&1 | FileCheck %s
 
 // UNSUPPORTED: target={{.*-windows-gnu}}
