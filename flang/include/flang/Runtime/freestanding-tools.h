@@ -181,9 +181,9 @@ using MemcpyFct = void *(*)(void *, const void *, std::size_t);
     void *dest, const void *src, std::size_t count) {
   return Fortran::runtime::memmove(dest, src, count);
 }
-[[maybe_unused]] static RT_API_ATTRS void MemcpyWrapper(
+[[maybe_unused]] static RT_API_ATTRS void *MemcpyWrapper(
     void *dest, const void *src, std::size_t count) {
-  Fortran::runtime::memcpy(dest, src, count);
+  return Fortran::runtime::memcpy(dest, src, count);
 }
 #endif
 
