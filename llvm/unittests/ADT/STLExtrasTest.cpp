@@ -1777,4 +1777,15 @@ struct Bar {};
 static_assert(is_incomplete_v<Foo>, "Foo is incomplete");
 static_assert(!is_incomplete_v<Bar>, "Bar is defined");
 
+TEST(STLExtrasTest, Defer) {
+  std::unordered_map<int, int> Cache;
+  const auto [It, Inserted]{Cache.try_emplace(1, defer{[] { return 10; }})};
+  ASSERT_TRUE(Inserted);
+  ASSERT_EQ(It->second, 10);
+  Cache.try_emplace(1, defer{[] {
+                      assert(false && "this should never be executed");
+                      return 0;
+                    }});
+}
+
 } // namespace

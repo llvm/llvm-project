@@ -2641,6 +2641,30 @@ template <typename T> using has_sizeof = decltype(sizeof(T));
 template <typename T>
 constexpr bool is_incomplete_v = !is_detected<detail::has_sizeof, T>::value;
 
+/// A utility for working with maps that allows concisely expressing "perform
+/// and cache this expensive computation only if it isn't already cached".
+/// Use it like so:
+///
+/// ```cpp
+/// std::unordered_map<K, V> Cache;
+/// auto& Value = Cache.try_emplace(
+///     Key, llvm::defer {[] { /* heavy work */ }}).first->second;
+/// ```
+template <typename FnT> class defer {
+public:
+  constexpr defer(FnT &&F LLVM_LIFETIME_BOUND) : Fn(std::forward<FnT>(F)) {}
+
+  template <typename T> constexpr operator T() {
+    return std::forward<FnT>(Fn)();
+  }
+
+private:
+  FnT &&Fn;
+};
+
+// Silence -Wctad-maybe-unsupported.
+template <typename FnT> defer(FnT &&) -> defer<FnT>;
+
 } // end namespace llvm
 
 namespace std {
