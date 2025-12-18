@@ -160,26 +160,22 @@ Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty) {
 void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate,
                                     bool DeletePHIIfEmpty) {
   unsigned NumOps = getNumIncomingValues();
-  unsigned NewNumOps = 0;
-  for (unsigned Idx = 0; Idx < NumOps; ++Idx) {
-    if (Predicate(Idx))
-      continue;
-
-    if (Idx != NewNumOps) {
-      setIncomingValue(NewNumOps, getIncomingValue(Idx));
-      setIncomingBlock(NewNumOps, getIncomingBlock(Idx));
+  unsigned Idx = 0;
+  while (Idx < NumOps) {
+    if (Predicate(Idx)) {
+      unsigned LastIdx = NumOps - 1;
+      if (Idx != LastIdx) {
+        setIncomingValue(Idx, getIncomingValue(LastIdx));
+        setIncomingBlock(Idx, getIncomingBlock(LastIdx));
+      }
+      getOperandUse(LastIdx).set(nullptr);
+      NumOps--;
+    } else {
+      Idx++;
     }
-    ++NewNumOps;
   }
 
-  if (NewNumOps == NumOps)
-    return;
-
-  // Remove operands.
-  for (unsigned Idx = NewNumOps; Idx < NumOps; ++Idx)
-    getOperandUse(Idx).set(nullptr);
-
-  setNumHungOffUseOperands(NewNumOps);
+  setNumHungOffUseOperands(NumOps);
 
   // If the PHI node is dead, because it has zero entries, nuke it now.
   if (getNumOperands() == 0 && DeletePHIIfEmpty) {
