@@ -451,7 +451,7 @@ INTERCEPTOR(void, longjmp, void *env, int val) {
 }
 #  endif
 
-#  if ASAN_INTERCEPT__LONGJMP
+#if ASAN_INTERCEPT__LONGJMP
 INTERCEPTOR(void, _longjmp, void *env, int val) {
   __asan_handle_no_return();
   REAL(_longjmp)(env, val);
@@ -785,7 +785,7 @@ static void AtCxaAtexit(void *unused) {
 }
 #endif
 
-#  if ASAN_INTERCEPT___CXA_ATEXIT
+#if ASAN_INTERCEPT___CXA_ATEXIT
 INTERCEPTOR(int, __cxa_atexit, void (*func)(void *), void *arg,
             void *dso_handle) {
   if (SANITIZER_APPLE && UNLIKELY(!AsanInited()))
@@ -943,7 +943,7 @@ void InitializeAsanInterceptors() {
   ASAN_INTERCEPT_FUNC(atexit);
 #endif
 
-#  if ASAN_INTERCEPT_PTHREAD_ATFORK
+#if ASAN_INTERCEPT_PTHREAD_ATFORK
   ASAN_INTERCEPT_FUNC(pthread_atfork);
 #endif
 
