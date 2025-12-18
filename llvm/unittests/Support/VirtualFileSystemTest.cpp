@@ -2728,6 +2728,33 @@ TEST_F(VFSFromYAMLTest, GetRealPath) {
             errc::no_such_file_or_directory);
 }
 
+TEST_F(VFSFromYAMLTest, ErrorMap) {
+  auto Lower = makeIntrusiveRefCnt<DummyFileSystem>();
+  Lower->addDirectory("/dir");
+  Lower->addRegularFile("/foo");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLString(
+      "{ 'use-external-names': false,\n"
+      "  'case-sensitive': false,\n"
+      "  'roots': [\n"
+      "{\n"
+      "  'type': 'directory',\n"
+      "  'name': '/root',\n"
+      "  'contents': [ {\n"
+      "                  'type': 'file',\n"
+      "                  'name': 'bar',\n"
+      "                  'external-contents': '/foo'\n"
+      "                }\n"
+      "              ]\n"
+      "}\n"
+      "]\n"
+      "}",
+      Lower);
+  ASSERT_NE(FS.get(), nullptr);
+
+  // Lookup a file location that doesn't exist.
+  ASSERT_FALSE(FS->status("/root/bar/file"));
+}
+
 TEST_F(VFSFromYAMLTest, WorkingDirectory) {
   auto Lower = makeIntrusiveRefCnt<DummyFileSystem>();
   Lower->addDirectory("//root/");
