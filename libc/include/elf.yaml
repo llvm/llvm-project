@@ -53,6 +53,8 @@ macros:
     macro_value: 2
   - macro_name: ELFOSABI_NONE
     macro_value: 0
+  - macro_name: ELFOSABI_LINUX
+    macro_value: 3
   - macro_name: ET_NONE
     macro_value: 0
   - macro_name: ET_REL
@@ -73,6 +75,16 @@ macros:
     macro_value: '0xffff'
   - macro_name: EM_NONE
     macro_value: 0
+  - macro_name: EM_386
+    macro_value: 3
+  - macro_name: EM_ARM
+    macro_value: 40
+  - macro_name: EM_X86_64
+    macro_value: 62
+  - macro_name: EM_AARCH64
+    macro_value: 183
+  - macro_name: EM_RISCV
+    macro_value: 243
   - macro_name: EV_NONE
     macro_value: 0
   - macro_name: EV_CURRENT

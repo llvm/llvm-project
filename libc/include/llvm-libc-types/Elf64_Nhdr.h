@@ -15,6 +15,6 @@ typedef struct {
   Elf64_Word n_namesz;
   Elf64_Word n_descsz;
   Elf64_Word n_type;
-} Elf64_Note;
+} Elf64_Nhdr;
 
 #endif // LLVM_LIBC_TYPES_ELF64_NHDR_H
