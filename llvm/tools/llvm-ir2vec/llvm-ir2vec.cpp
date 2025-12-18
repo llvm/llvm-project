@@ -179,10 +179,10 @@ TripletResult IR2VecTool::generateTriplets(const Function &F) const {
       // Add "Next" relationship with previous instruction
       if (HasPrevOpcode) {
         Result.Triplets.push_back({PrevOpcode, Opcode, NextRelation});
-        LLVM_DEBUG(dbgs()
-                   << Vocabulary::getVocabKeyForOpcode(PrevOpcode + 1) << '\t'
-                   << Vocabulary::getVocabKeyForOpcode(Opcode + 1) << '\t'
-                   << "Next\n");
+        LLVM_DEBUG(dbgs() << Vocabulary::getVocabKeyForOpcode(PrevOpcode + 1)
+                          << '\t'
+                          << Vocabulary::getVocabKeyForOpcode(Opcode + 1)
+                          << '\t' << "Next\n");
       }
 
       // Add "Type" relationship
@@ -368,8 +368,7 @@ bool MIR2VecTool::initializeVocabularyForLayout(const Module &M) {
     const TargetRegisterInfo &TRI = *MF->getSubtarget().getRegisterInfo();
     const MachineRegisterInfo &MRI = MF->getRegInfo();
 
-    auto VocabOrErr =
-        MIRVocabulary::createDummyVocabForTest(TII, TRI, MRI, 1);
+    auto VocabOrErr = MIRVocabulary::createDummyVocabForTest(TII, TRI, MRI, 1);
     if (!VocabOrErr) {
       WithColor::error(errs(), ToolName)
           << "Failed to create dummy vocabulary - "
@@ -409,9 +408,8 @@ TripletResult MIR2VecTool::generateTriplets(const MachineFunction &MF) const {
       // Add "Next" relationship with previous instruction
       if (HasPrevOpcode) {
         Result.Triplets.push_back({PrevOpcode, OpcodeID, MIRNextRelation});
-        LLVM_DEBUG(dbgs()
-                   << Vocab->getStringKey(PrevOpcode) << '\t'
-                   << Vocab->getStringKey(OpcodeID) << '\t' << "Next\n");
+        LLVM_DEBUG(dbgs() << Vocab->getStringKey(PrevOpcode) << '\t'
+                          << Vocab->getStringKey(OpcodeID) << '\t' << "Next\n");
       }
 
       // Add "Arg" relationships for operands
@@ -422,8 +420,8 @@ TripletResult MIR2VecTool::generateTriplets(const MachineFunction &MF) const {
         Result.Triplets.push_back({OpcodeID, OperandID, RelationID});
         LLVM_DEBUG({
           std::string OperandStr = Vocab->getStringKey(OperandID);
-          dbgs() << Vocab->getStringKey(OpcodeID) << '\t' << OperandStr
-                 << '\t' << "Arg" << ArgIndex << '\n';
+          dbgs() << Vocab->getStringKey(OpcodeID) << '\t' << OperandStr << '\t'
+                 << "Arg" << ArgIndex << '\n';
         });
 
         ++ArgIndex;
