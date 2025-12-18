@@ -3339,11 +3339,12 @@ public:
   /// Emit a check that \p Base points into an array object, which
   /// we can access at index \p Index. \p Accessed should be \c false if we
   /// this expression is used as an lvalue, for instance in "&Arr[Idx]".
-  void EmitBoundsCheck(const Expr *E, const Expr *Base, llvm::Value *Index,
-                       QualType IndexType, bool Accessed);
-  void EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
-                           llvm::Value *Index, QualType IndexType,
-                           QualType IndexedType, bool Accessed);
+  void EmitBoundsCheck(const Expr *ArrayExpr, const Expr *ArrayExprBase,
+                       llvm::Value *Index, QualType IndexType, bool Accessed);
+  void EmitBoundsCheckImpl(const Expr *ArrayExpr, QualType ArrayBaseType,
+                           llvm::Value *IndexVal, QualType IndexType,
+                           llvm::Value *BoundsVal, QualType BoundsType,
+                           bool Accessed);
 
   /// Returns debug info, with additional annotation if
   /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[Ordinal] is enabled for
@@ -3372,9 +3373,9 @@ public:
 
   // Emit bounds checking for flexible array and pointer members with the
   // counted_by attribute.
-  void EmitCountedByBoundsChecking(const Expr *E, llvm::Value *Idx,
-                                   Address Addr, QualType IdxTy,
-                                   QualType ArrayTy, bool Accessed,
+  void EmitCountedByBoundsChecking(const Expr *ArrayExpr, QualType ArrayType,
+                                   Address ArrayInst, QualType IndexType,
+                                   llvm::Value *IndexVal, bool Accessed,
                                    bool FlexibleArray);
 
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
@@ -3621,6 +3622,7 @@ public:
   void EmitDefaultStmt(const DefaultStmt &S, ArrayRef<const Attr *> Attrs);
   void EmitCaseStmt(const CaseStmt &S, ArrayRef<const Attr *> Attrs);
   void EmitCaseStmtRange(const CaseStmt &S, ArrayRef<const Attr *> Attrs);
+  void EmitDeferStmt(const DeferStmt &S);
   void EmitAsmStmt(const AsmStmt &S);
 
   const BreakContinue *GetDestForLoopControlStmt(const LoopControlStmt &S);
@@ -4412,6 +4414,7 @@ public:
   LValue EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                 bool Accessed = false);
   llvm::Value *EmitMatrixIndexExpr(const Expr *E);
+  LValue EmitMatrixSingleSubscriptExpr(const MatrixSingleSubscriptExpr *E);
   LValue EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E);
   LValue EmitArraySectionExpr(const ArraySectionExpr *E,
                               bool IsLowerBound = true);
