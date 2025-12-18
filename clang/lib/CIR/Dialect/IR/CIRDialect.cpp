@@ -2536,18 +2536,6 @@ LogicalResult cir::GetMemberOp::verify() {
 
   return mlir::success();
 }
-
-//===----------------------------------------------------------------------===//
-// GetElementOp Definitions
-//===----------------------------------------------------------------------===//
-
-LogicalResult cir::GetElementOp::verify() {
-  auto arrayTy = mlir::cast<cir::ArrayType>(getBaseType().getPointee());
-  if (getElementType() != arrayTy.getElementType())
-    return emitError() << "element type mismatch";
-  return mlir::success();
-}
-
 //===----------------------------------------------------------------------===//
 // VecCreateOp
 //===----------------------------------------------------------------------===//

@@ -168,7 +168,7 @@ int test6(void) {
 // CIR: cir.func {{.*}} @test6() -> !s32i
 // CIR:   %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
 // CIR:   %[[ARR:.*]] = cir.get_global @arr : !cir.ptr<!cir.array<!s32i x 3>>
-// CIR:   %[[ELE_PTR:.*]] = cir.get_element %[[ARR]][%[[TWO]]] : (!cir.ptr<!cir.array<!s32i x 3>>, !s32i) -> !cir.ptr<!s32i>
+// CIR:   %[[ELE_PTR:.*]] = cir.get_element %[[ARR]][%[[TWO]] : !s32i] : !cir.ptr<!cir.array<!s32i x 3>> -> !cir.ptr<!s32i>
 // CIR:   %[[ELE:.*]] = cir.load{{.*}} %[[ELE_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR:   %[[IS_CONSTANT:.*]] = cir.is_constant %[[ELE]] : !s32i -> !cir.bool
 

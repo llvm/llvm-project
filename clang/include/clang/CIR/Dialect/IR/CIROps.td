@@ -2698,7 +2698,12 @@ def CIR_GetMemberOp : CIR_Op<"get_member"> {
 // GetElementOp
 //===----------------------------------------------------------------------===//
 
-def CIR_GetElementOp : CIR_Op<"get_element"> {
+def CIR_GetElementOp : CIR_Op<"get_element", [
+  TypesMatchWith<
+      "type of 'result' matches element type of 'base'", "base", "result",
+      "cir::PointerType::get(mlir::cast<cir::ArrayType>(mlir::cast<cir::"
+      "PointerType>($_self).getPointee()).getElementType())">
+]> {
   let summary = "Get the address of an array element";
 
   let description = [{
@@ -2727,26 +2732,23 @@ def CIR_GetElementOp : CIR_Op<"get_element"> {
     Arg<CIR_PtrToArray, "the base address of the array ">:$base,
     Arg<CIR_AnyFundamentalIntType, "the index of the element">:$index
   );
-
-  let results = (outs CIR_PointerType:$result);
+  let results = (outs CIR_PointerType : $result);
 
   let assemblyFormat = [{
-    $base `[` $index `]` `:` `(` qualified(type($base)) `,` qualified(type($index)) `)`
-    `->` qualified(type($result)) attr-dict
+    $base`[` $index `:` type($index) `]` attr-dict
+      `:` qualified(type($base)) `->` qualified(type($result))
   }];
 
   let extraClassDeclaration = [{
     // Get the type of the element of the array.
     mlir::Type getElementType() {
       return getType().getPointee();
-    }
+}
 
     cir::PointerType getBaseType() {
       return mlir::cast<cir::PointerType>(getBase().getType());
     }
   }];
-
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
