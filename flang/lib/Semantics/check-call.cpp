@@ -343,8 +343,8 @@ static bool DefersSameTypeParameters(
 
 // List of intrinsics that are skipped when checking for device actual
 // arguments.
-static const llvm::StringSet<> cudaSkippedIntrinsics = {"__builtin_c_f_pointer",
-    "__builtin_c_loc"};
+static const llvm::StringSet<> cudaSkippedIntrinsics = {
+    "__builtin_c_f_pointer", "__builtin_c_loc"};
 // List of intrinsics that can have a device actual argument if it is an
 // allocatable or pointer.
 static const llvm::StringSet<> cudaAllowedIntrinsics = {"size", "lbound",
@@ -1173,7 +1173,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         // intrinsics.
         if (!actualLastSymbol || !IsAllocatableOrPointer(*actualLastSymbol) ||
             (IsAllocatableOrPointer(*actualLastSymbol) &&
-            !cudaAllowedIntrinsics.contains(intrinsic->name))) {
+                !cudaAllowedIntrinsics.contains(intrinsic->name))) {
           messages.Say(
               "Actual argument %s associated with host intrinsic %s is on the device"_err_en_US,
               actualLastSymbol->name(), intrinsic->name);
