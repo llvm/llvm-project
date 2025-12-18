@@ -332,8 +332,8 @@ def run(
         script can compute it from __file__.
     parser
         Use this argparse.ArgumentParser instead of creating a new one. Allows
-        adding additional command line switched in addition to the pre-defined
-        ones. Build script are encouraged to apply the pre-defined switches.
+        adding additional command line switches in addition to the pre-defined
+        ones. Build scripts are encouraged to apply the pre-defined switches.
     clobberpaths
         Directories relative to workdir that need to be deleted if the build
         configuration changes (due to changes of CMakeLists.txt or changes of
