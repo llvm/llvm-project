@@ -304,20 +304,20 @@ def getCompilerVersion():
 def getWindowsVersion():
     """Returns a string that represents the Windows version.
 
-    The string is a concatenation of the following, eparated by a dot:
+    The string is a concatenation of the following, separated by a dot:
       - The major version number.
       - The build number.
 
     Example:
-      - Windows 11 version 24H2 -> "10.26100"
-      - Windows 10 version 1809 -> "10.17763"
+      - Windows 11 version 24H2 -> "10.0.26100"
+      - Windows 10 version 1809 -> "10.0.17763"
     """
     import sys
 
     if sys.platform != "win32":
         return "unknown"
     windows_version = sys.getwindowsversion()
-    return f"{windows_version.major}.{windows_version.build}"
+    return f"{windows_version.major}.{windows_version.minor}.{windows_version.build}"
 
 
 def getDwarfVersion():
@@ -345,7 +345,7 @@ def getDwarfVersion():
 def isExpectedVersion(
     actual_version: str, required_version: str, operator: str
 ) -> bool:
-    """Returns True if actual_version matches the required_version given the operator.
+    """Returns True iff actual_version matches the required_version given the operator.
     Any operator other than the following defaults to an equality test:
         '>', '>=', "=>", '<', '<=', '=<', '!=', "!" or 'not'
 
