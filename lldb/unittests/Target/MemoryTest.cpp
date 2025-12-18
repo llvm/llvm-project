@@ -458,7 +458,7 @@ public:
 
   size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                       Status &error) override {
-    memcpy(buf, memory+vm_addr, size);
+    memcpy(buf, memory + vm_addr, size);
     return size;
   }
   StringReaderProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp)
@@ -495,7 +495,8 @@ TEST_F(MemoryTest, TestReadCStringsFromMemory) {
   std::string big_str(long_str.data());
 
   const std::string expected_answers[4] = {"hello", "", "goodbye", big_str};
-  for (auto [maybe_str, expected_answer] : llvm::zip(maybe_strings, expected_answers)) {
+  for (auto [maybe_str, expected_answer] :
+       llvm::zip(maybe_strings, expected_answers)) {
     EXPECT_TRUE(maybe_str);
     EXPECT_EQ(*maybe_str, expected_answer);
   }
