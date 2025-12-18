@@ -12,6 +12,12 @@
 // useful for targets like x86_64 that cannot lower fp convertions
 // with more than 128 bits.
 //
+// This pass also expands div/rem instructions with a bitwidth above a
+// threshold into a call to auto-generated functions.  This is useful
+// for targets like x86_64 that cannot lower divisions with more than
+// 128 bits or targets like x86_32 that cannot lower divisions with
+// more than 64 bits.
+//
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ExpandFp.h"
@@ -29,13 +35,14 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/IntegerDivision.h"
+#include <llvm/Support/Casting.h>
 #include <optional>
 
 #define DEBUG_TYPE "expand-fp"
@@ -48,7 +55,28 @@ static cl::opt<unsigned>
                         cl::desc("fp convert instructions on integers with "
                                  "more than <N> bits are expanded."));
 
+static cl::opt<unsigned>
+    ExpandDivRemBits("expand-div-rem-bits", cl::Hidden,
+                     cl::init(llvm::IntegerType::MAX_INT_BITS),
+                     cl::desc("div and rem instructions on integers with "
+                              "more than <N> bits are expanded."));
+
 namespace {
+bool isConstantPowerOfTwo(llvm::Value *V, bool SignedOp) {
+  auto *C = dyn_cast<ConstantInt>(V);
+  if (!C)
+    return false;
+
+  APInt Val = C->getValue();
+  if (SignedOp && Val.isNegative())
+    Val = -Val;
+  return Val.isPowerOf2();
+}
+
+bool isSigned(unsigned int Opcode) {
+  return Opcode == Instruction::SDiv || Opcode == Instruction::SRem;
+}
+
 /// This class implements a precise expansion of the frem instruction.
 /// The generated code is based on the fmod implementation in the AMD device
 /// libs.
@@ -74,11 +102,38 @@ class FRemExpander {
   /// Constant 1 of type \p ExTy.
   Value *One;
 
+  /// The frem argument/return types that can be expanded by this class.
+  // TODO: The expansion could work for other floating point types
+  // as well, but this would require additional testing.
+  static constexpr std::array<MVT, 3> ExpandableTypes{MVT::f16, MVT::f32,
+                                                      MVT::f64};
+
 public:
   static bool canExpandType(Type *Ty) {
-    // TODO The expansion should work for other floating point types
-    // as well, but this would require additional testing.
-    return Ty->isIEEELikeFPTy() && !Ty->isBFloatTy() && !Ty->isFP128Ty();
+    EVT VT = EVT::getEVT(Ty);
+    assert(VT.isSimple() && "Can expand only simple types");
+
+    return is_contained(ExpandableTypes, VT.getSimpleVT());
+  }
+
+  static bool shouldExpandFremType(const TargetLowering &TLI, EVT VT) {
+    assert(!VT.isVector() && "Cannot handle vector type; must scalarize first");
+    return TLI.getOperationAction(ISD::FREM, VT) ==
+           TargetLowering::LegalizeAction::Expand;
+  }
+
+  static bool shouldExpandFremType(const TargetLowering &TLI, Type *Ty) {
+    // Consider scalar type for simplicity.  It seems unlikely that a
+    // vector type can be legalized without expansion if the scalar
+    // type cannot.
+    return shouldExpandFremType(TLI, EVT::getEVT(Ty->getScalarType()));
+  }
+
+  /// Return true if the pass should expand frem instructions of any type
+  /// for the target represented by \p TLI.
+  static bool shouldExpandAnyFremType(const TargetLowering &TLI) {
+    return any_of(ExpandableTypes,
+                  [&](MVT V) { return shouldExpandFremType(TLI, EVT(V)); });
   }
 
   static FRemExpander create(IRBuilder<> &B, Type *Ty) {
@@ -811,7 +866,7 @@ static void expandIToFP(Instruction *IToFP) {
   Value *Sub24 = Builder.CreateAdd(
       FloatWidth == 128 ? Call : Cast,
       ConstantInt::getSigned(Builder.getIntNTy(BitWidthNew),
-                             -(BitWidth - FPMantissaWidth - 1)));
+                             -(int)(BitWidth - FPMantissaWidth - 1)));
   Value *ShProm25 = Builder.CreateZExt(Sub24, IntTy);
   Value *Shl26 = Builder.CreateShl(IsSigned ? Sub : IntVal,
                                    FloatWidth == 128 ? Sub24 : ShProm25);
@@ -853,7 +908,7 @@ static void expandIToFP(Instruction *IToFP) {
   } else {
     Value *Conv28 = Builder.CreateTrunc(Shr, Builder.getInt32Ty());
     And29 = Builder.CreateAnd(
-        Conv28, ConstantInt::getSigned(Builder.getInt32Ty(), 0x80000000));
+        Conv28, ConstantInt::get(Builder.getContext(), APInt::getSignMask(32)));
   }
   unsigned TempMod = FPMantissaWidth % 32;
   Value *And34 = nullptr;
@@ -952,37 +1007,6 @@ static void scalarize(Instruction *I,
   I->eraseFromParent();
 }
 
-// This covers all floating point types; more than we need here.
-// TODO Move somewhere else for general use?
-/// Return the Libcall for a frem instruction of
-/// type \p Ty.
-static RTLIB::Libcall fremToLibcall(Type *Ty) {
-  assert(Ty->isFloatingPointTy());
-  if (Ty->isFloatTy() || Ty->is16bitFPTy())
-    return RTLIB::REM_F32;
-  if (Ty->isDoubleTy())
-    return RTLIB::REM_F64;
-  if (Ty->isFP128Ty())
-    return RTLIB::REM_F128;
-  if (Ty->isX86_FP80Ty())
-    return RTLIB::REM_F80;
-  if (Ty->isPPC_FP128Ty())
-    return RTLIB::REM_PPCF128;
-
-  llvm_unreachable("Unknown floating point type");
-}
-
-/* Return true if, according to \p LibInfo, the target either directly
-   supports the frem instruction for the \p Ty, has a custom lowering,
-   or uses a libcall. */
-static bool targetSupportsFrem(const TargetLowering &TLI,
-                               const LibcallLoweringInfo &Libcalls, Type *Ty) {
-  if (!TLI.isOperationExpand(ISD::FREM, EVT::getEVT(Ty)))
-    return true;
-
-  return Libcalls.getLibcallName(fremToLibcall(Ty->getScalarType()));
-}
-
 static void addToWorklist(Instruction &I,
                           SmallVector<Instruction *, 4> &Worklist) {
   if (I.getOperand(0)->getType()->isVectorTy())
@@ -1000,7 +1024,17 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
   if (ExpandFpConvertBits != llvm::IntegerType::MAX_INT_BITS)
     MaxLegalFpConvertBitWidth = ExpandFpConvertBits;
 
-  if (MaxLegalFpConvertBitWidth >= llvm::IntegerType::MAX_INT_BITS)
+  unsigned MaxLegalDivRemBitWidth = TLI.getMaxDivRemBitWidthSupported();
+  if (ExpandDivRemBits != llvm::IntegerType::MAX_INT_BITS)
+    MaxLegalDivRemBitWidth = ExpandDivRemBits;
+
+  bool DisableExpandLargeFp =
+      MaxLegalFpConvertBitWidth >= llvm::IntegerType::MAX_INT_BITS;
+  bool DisableExpandLargeDivRem =
+      MaxLegalDivRemBitWidth >= llvm::IntegerType::MAX_INT_BITS;
+  bool DisableFrem = !FRemExpander::shouldExpandAnyFremType(TLI);
+
+  if (DisableExpandLargeFp && DisableFrem && DisableExpandLargeDivRem)
     return false;
 
   auto ShouldHandleInst = [&](Instruction &I) {
@@ -1011,21 +1045,27 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
 
     switch (I.getOpcode()) {
     case Instruction::FRem:
-      return !targetSupportsFrem(TLI, Libcalls, Ty) &&
-             FRemExpander::canExpandType(Ty->getScalarType());
-
+      return !DisableFrem && FRemExpander::shouldExpandFremType(TLI, Ty);
     case Instruction::FPToUI:
-    case Instruction::FPToSI: {
-      auto *IntTy = cast<IntegerType>(Ty->getScalarType());
-      return IntTy->getIntegerBitWidth() > MaxLegalFpConvertBitWidth;
-    }
-
+    case Instruction::FPToSI:
+      return !DisableExpandLargeFp &&
+             cast<IntegerType>(Ty->getScalarType())->getIntegerBitWidth() >
+                 MaxLegalFpConvertBitWidth;
     case Instruction::UIToFP:
-    case Instruction::SIToFP: {
-      auto *IntTy =
-          cast<IntegerType>(I.getOperand(0)->getType()->getScalarType());
-      return IntTy->getIntegerBitWidth() > MaxLegalFpConvertBitWidth;
-    }
+    case Instruction::SIToFP:
+      return !DisableExpandLargeFp &&
+             cast<IntegerType>(I.getOperand(0)->getType()->getScalarType())
+                     ->getIntegerBitWidth() > MaxLegalFpConvertBitWidth;
+    case Instruction::UDiv:
+    case Instruction::SDiv:
+    case Instruction::URem:
+    case Instruction::SRem:
+      return !DisableExpandLargeDivRem &&
+             cast<IntegerType>(Ty->getScalarType())->getIntegerBitWidth() >
+                 MaxLegalDivRemBitWidth
+             // The backend has peephole optimizations for powers of two.
+             // TODO: We don't consider vectors here.
+             && !isConstantPowerOfTwo(I.getOperand(1), isSigned(I.getOpcode()));
     }
 
     return false;
@@ -1068,6 +1108,15 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     case Instruction::UIToFP:
     case Instruction::SIToFP:
       expandIToFP(I);
+      break;
+
+    case Instruction::UDiv:
+    case Instruction::SDiv:
+      expandDivision(cast<BinaryOperator>(I));
+      break;
+    case Instruction::URem:
+    case Instruction::SRem:
+      expandRemainder(cast<BinaryOperator>(I));
       break;
     }
   }

@@ -245,7 +245,7 @@ static cl::opt<bool> SimplifyRODataLoads(
     "simplify-rodata-loads",
     cl::desc("simplify loads from read-only sections by replacing the memory "
              "operand with the constant found in the corresponding section"),
-    cl::cat(BoltOptCategory));
+    cl::init(true), cl::cat(BoltOptCategory));
 
 static cl::list<std::string>
 SpecializeMemcpy1("memcpy1-spec",
@@ -442,9 +442,11 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
       std::make_unique<JTFootprintReduction>(PrintJTFootprintReduction),
       opts::JTFootprintReductionFlag);
 
-  Manager.registerPass(
-      std::make_unique<SimplifyRODataLoads>(PrintSimplifyROLoads),
-      opts::SimplifyRODataLoads);
+  if (!BC.isRISCV()) {
+    Manager.registerPass(
+        std::make_unique<SimplifyRODataLoads>(PrintSimplifyROLoads),
+        opts::SimplifyRODataLoads);
+  }
 
   Manager.registerPass(std::make_unique<RegReAssign>(PrintRegReAssign),
                        opts::RegReAssign);
@@ -483,6 +485,9 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   // also happen after any changes to the call graph are made, e.g. inlining.
   Manager.registerPass(
       std::make_unique<ReorderFunctions>(PrintReorderedFunctions));
+
+  // Produce the list of functions for the output file in a sorted order.
+  Manager.registerPass(std::make_unique<PopulateOutputFunctions>());
 
   // This is the second run of the SplitFunctions pass required by certain
   // splitting strategies (e.g. cdsplit). Running the SplitFunctions pass again
