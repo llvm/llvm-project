@@ -294,13 +294,29 @@ struct TestXeGPUPropagateLayouts
   }
 
   TestXeGPUPropagateLayouts() = default;
-  TestXeGPUPropagateLayouts(const TestXeGPUPropagateLayouts &pass) = default;
+  TestXeGPUPropagateLayouts(const TestXeGPUPropagateLayouts &pass)
+      : PassWrapper(pass) {}
+
+  Option<std::string> layoutKind{
+      *this, "layout-kind",
+      llvm::cl::desc("Propagate `subgroup` / `inst` / `lane` level of xegpu "
+                     "layouts."),
+      llvm::cl::init("lane")};
 
   void runOnOperation() override {
     OpBuilder builder(getOperation());
-    if (xegpu::propagateLayouts(OpBuilder(getOperation()), getOperation(),
-                                LayoutKind::Lane)
-            .failed()) {
+    LayoutKind kind;
+    if (layoutKind == "subgroup")
+      kind = LayoutKind::Subgroup;
+    else if (layoutKind == "inst")
+      kind = LayoutKind::InstData;
+    else if (layoutKind == "lane")
+      kind = LayoutKind::Lane;
+    else {
+      signalPassFailure();
+      return;
+    }
+    if (xegpu::propagateLayouts(builder, getOperation(), kind).failed()) {
       signalPassFailure();
     }
   }
