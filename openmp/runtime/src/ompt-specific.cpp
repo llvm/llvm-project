@@ -346,14 +346,30 @@ void __ompt_lw_taskteam_unlink(kmp_info_t *thr) {
 // task support
 //----------------------------------------------------------
 
-ompt_data_t *__ompt_get_task_data() {
+ompt_data_t *__ompt_get_generating_task() {
   kmp_info_t *thr = ompt_get_thread();
-  ompt_data_t *task_data = thr ? OMPT_CUR_TASK_DATA(thr) : NULL;
-  return task_data;
+  if (thr) {
+    kmp_taskdata_t *taskdata = thr->th.th_current_task;
+    if (taskdata == NULL)
+      return NULL;
+    if (taskdata->td_flags.target)
+      return &(taskdata->td_parent->ompt_task_info.task_data);
+    else
+      return &(taskdata->ompt_task_info.task_data);
+  }
+  return NULL;
 }
 
-ompt_data_t *__ompt_get_target_task_data() {
-  return &__kmp_threads[__kmp_get_gtid()]->th.ompt_thread_info.target_task_data;
+ompt_task_info_t *__ompt_get_task_info_target() {
+  kmp_info_t *thr = ompt_get_thread();
+  if (thr) {
+    kmp_taskdata_t *taskdata = thr->th.th_current_task;
+    if (taskdata == NULL)
+      return NULL;
+    if (taskdata->td_flags.target)
+      return &taskdata->ompt_task_info;
+  }
+  return NULL;
 }
 
 int __ompt_get_task_info_internal(int ancestor_level, int *type,
