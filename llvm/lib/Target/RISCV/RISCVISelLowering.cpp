@@ -91,8 +91,10 @@ static cl::opt<bool>
 static const unsigned ZvfbfaVPOps[] = {
     ISD::VP_FNEG, ISD::VP_FABS, ISD::VP_FCOPYSIGN};
 static const unsigned ZvfbfaOps[] = {
-    ISD::FNEG, ISD::FABS, ISD::FCOPYSIGN, ISD::SPLAT_VECTOR,
-    ISD::FADD, ISD::FSUB, ISD::FMUL};
+    ISD::FNEG,    ISD::FABS,        ISD::FCOPYSIGN,   ISD::SPLAT_VECTOR,
+    ISD::FADD,    ISD::FSUB,        ISD::FMUL,        ISD::FMINNUM,
+    ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM, ISD::FMINIMUM,
+    ISD::FMAXIMUM};
 
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                          const RISCVSubtarget &STI)
@@ -568,6 +570,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FCOPYSIGN, MVT::f16, Custom);
       setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, XLenVT, Custom);
       setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, XLenVT, Custom);
+    }
+
+    if (!Subtarget.hasStdExtD()) {
+      // FIXME: handle f16 fma when f64 is not legal. Using an f32 fma
+      // instruction runs into double rounding issues, so this is wrong.
+      // Normally we'd use an f64 fma, but without the D extension the f64 type
+      // is not legal. This should probably be a libcall.
+      AddPromotedToType(ISD::FMA, MVT::f16, MVT::f32);
+      AddPromotedToType(ISD::STRICT_FMA, MVT::f16, MVT::f32);
     }
 
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
@@ -1089,11 +1100,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VECREDUCE_FMAXIMUM};
 
     // TODO: Make more of these ops legal.
-    static const unsigned ZvfbfaPromoteOps[] = {ISD::FMINNUM,
-                                                ISD::FMAXNUM,
-                                                ISD::FMINIMUMNUM,
-                                                ISD::FMAXIMUMNUM,
-                                                ISD::FDIV,
+    static const unsigned ZvfbfaPromoteOps[] = {ISD::FDIV,
                                                 ISD::FMA,
                                                 ISD::FSQRT,
                                                 ISD::FCEIL,
@@ -1105,8 +1112,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                                 ISD::FNEARBYINT,
                                                 ISD::IS_FPCLASS,
                                                 ISD::SETCC,
-                                                ISD::FMAXIMUM,
-                                                ISD::FMINIMUM,
                                                 ISD::STRICT_FADD,
                                                 ISD::STRICT_FSUB,
                                                 ISD::STRICT_FMUL,
@@ -1299,6 +1304,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                           ISD::VECTOR_INTERLEAVE, ISD::VECTOR_REVERSE,
                           ISD::VECTOR_SPLICE, ISD::VECTOR_COMPRESS},
                          VT, Custom);
+      setOperationAction(
+          {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMAXIMUMNUM, ISD::FMINIMUMNUM}, VT,
+          Legal);
+      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, VT, Custom);
       setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
       setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
 
@@ -21882,10 +21891,17 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     unsigned Stride = SEW / 8 * NF;
     unsigned Offset = SEW / 8 * Idx;
 
+    SDValue Passthru = Tuple.getOperand(2);
+    if (Passthru.isUndef())
+      Passthru = DAG.getUNDEF(VT);
+    else
+      Passthru = DAG.getNode(RISCVISD::TUPLE_EXTRACT, DL, VT, Passthru,
+                             N->getOperand(1));
+
     SDValue Ops[] = {
         /*Chain=*/Tuple.getOperand(0),
         /*IntID=*/DAG.getTargetConstant(Intrinsic::riscv_vlse_mask, DL, XLenVT),
-        /*Passthru=*/Tuple.getOperand(2),
+        /*Passthru=*/Passthru,
         /*Ptr=*/
         DAG.getNode(ISD::ADD, DL, XLenVT, Tuple.getOperand(3),
                     DAG.getConstant(Offset, DL, XLenVT)),
