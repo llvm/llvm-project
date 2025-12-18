@@ -42,4 +42,18 @@ TEST(LlvmLibcNetinetInTest, IN6Macro) {
   buff[0] = 0xff;
   buff[1] = 0x80;
   EXPECT_FALSE(IN6_IS_ADDR_SITELOCAL(buff));
+
+  buff[0] = 0xff;
+  buff[1] = 0x1;
+  EXPECT_TRUE(IN6_IS_ADDR_MC_NODELOCAL(buff));
+  buff[1] = 0x2;
+  EXPECT_TRUE(IN6_IS_ADDR_MC_LINKLOCAL(buff));
+  buff[1] = 0x5;
+  EXPECT_TRUE(IN6_IS_ADDR_MC_SITELOCAL(buff));
+  buff[1] = 0x8;
+  EXPECT_TRUE(IN6_IS_ADDR_MC_ORGLOCAL(buff));
+  buff[1] = 0xe;
+  EXPECT_TRUE(IN6_IS_ADDR_MC_GLOBAL(buff));
+  buff[1] = 0;
+  buff[0] = 0;
 }
