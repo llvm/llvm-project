@@ -287,8 +287,7 @@ define i1 @test_ne_11_and_15_add_10_multiuse(i8 %a) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[A:%.*]], 10
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ADD]], 15
 ; CHECK-NEXT:    call void @use.i8(i8 [[AND]])
-; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[A]], 15
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP0]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 11
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
