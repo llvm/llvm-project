@@ -12,6 +12,40 @@ RWByteAddressBuffer RWBuf : register(u0);
 // DXIL: @Buf = internal global %"class.hlsl::ByteAddressBuffer" poison
 // DXIL: @RWBuf = internal global %"class.hlsl::RWByteAddressBuffer" poison
 
+export uint TestLoad() {
+    uint u = Buf.Load(0);
+    uint2 v = Buf.Load2(0);
+    float f = Buf.Load<float>(4);
+    //float4 v = RWBuf.Load<float4>(8);
+    return u;
+}
+
+// CHECK: define {{.*}} i32 @TestLoad()()
+// CHECK: call {{.*}} i32 @hlsl::ByteAddressBuffer::Load(unsigned int)(ptr {{.*}} @Buf, i32 noundef 0)
+// CHECK: ret i32
+
+export uint TestLoadWithStatus() {
+    uint s1;
+    uint u = Buf.Load(0, s1);
+    return u;
+}
+
+// CHECK: define {{.*}} i32 @TestLoadWithStatus()()
+// CHECK: call {{.*}} i32 @hlsl::ByteAddressBuffer::Load(unsigned int, unsigned int&)(ptr {{.*}} @Buf, i32 noundef 0, ptr {{.*}} %tmp)
+// CHECK: ret i32
+
+export void TestStore() {
+    uint u0;
+    //float f0;
+    RWBuf.Store(0, u0);
+    //RWBuf.Store<float>(0, f0);
+    return;
+}
+
+// CHECK: define void @TestStore()()
+// CHECK: call void @hlsl::RWByteAddressBuffer::Store(unsigned int, unsigned int)(ptr {{.*}} @RWBuf, i32 noundef 0, i32 noundef %{{.*}})
+// CHECK: ret void
+
 export uint TestGetDimensions() {
     uint dim1, dim2;
     Buf.GetDimensions(dim1);

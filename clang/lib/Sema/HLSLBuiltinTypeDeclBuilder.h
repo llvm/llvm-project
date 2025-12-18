@@ -87,6 +87,8 @@ public:
 
   // Builtin types methods
   BuiltinTypeDeclBuilder &addLoadMethods();
+  BuiltinTypeDeclBuilder &addByteAddressBufferLoadMethods();
+  BuiltinTypeDeclBuilder &addByteAddressBufferStoreMethods();
   BuiltinTypeDeclBuilder &addIncrementCounterMethod();
   BuiltinTypeDeclBuilder &addDecrementCounterMethod();
   BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,

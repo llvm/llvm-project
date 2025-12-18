@@ -536,6 +536,64 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     return LoadedValue;
   }
+  case Builtin::BI__builtin_hlsl_byteaddressbuffer_load: {
+    Value *HandleOp = EmitScalarExpr(E->getArg(0));
+    Value *ByteOffsetOp = EmitScalarExpr(E->getArg(1));
+    Value *ElementOffset = llvm::PoisonValue::get(Builder.getInt32Ty());
+
+    llvm::Type *DataTy = ConvertType(E->getType());
+    llvm::Type *RetTy = llvm::StructType::get(Builder.getContext(),
+                                              {DataTy, Builder.getInt1Ty()});
+
+    SmallVector<Value *, 3> Args = {HandleOp, ByteOffsetOp, ElementOffset};
+
+    Value *ResRet = Builder.CreateIntrinsic(
+        RetTy, Intrinsic::dx_resource_load_rawbuffer, Args);
+    return Builder.CreateExtractValue(ResRet, {0}, "ld.value");
+  }
+  case Builtin::BI__builtin_hlsl_byteaddressbuffer_load_with_status: {
+    Value *HandleOp = EmitScalarExpr(E->getArg(0));
+    Value *ByteOffsetOp = EmitScalarExpr(E->getArg(1));
+    Value *ElementOffset = llvm::PoisonValue::get(Builder.getInt32Ty());
+
+    // Get the *address* of the status argument to write to it by reference
+    LValue StatusLVal = EmitLValue(E->getArg(2));
+    Address StatusAddr = StatusLVal.getAddress();
+
+    assert(CGM.getTarget().getTriple().getArch() == llvm::Triple::dxil &&
+           "Only DXIL currently implements load with status");
+
+    llvm::Type *DataTy = ConvertType(E->getType());
+    llvm::Type *RetTy = llvm::StructType::get(Builder.getContext(),
+                                              {DataTy, Builder.getInt1Ty()});
+
+    SmallVector<Value *, 3> Args = {HandleOp, ByteOffsetOp, ElementOffset};
+
+    // The load intrinsics give us a (T value, i1 status) pair -
+    // shepherd these into the return value and out reference respectively.
+    Value *ResRet = Builder.CreateIntrinsic(
+        RetTy, Intrinsic::dx_resource_load_rawbuffer, Args, {}, "ld.struct");
+    Value *LoadedValue = Builder.CreateExtractValue(ResRet, {0}, "ld.value");
+    Value *StatusBit = Builder.CreateExtractValue(ResRet, {1}, "ld.status");
+    Value *ExtendedStatus =
+        Builder.CreateZExt(StatusBit, Builder.getInt32Ty(), "ld.status.ext");
+    Builder.CreateStore(ExtendedStatus, StatusAddr);
+
+    return LoadedValue;
+  }
+  case Builtin::BI__builtin_hlsl_byteaddressbuffer_store: {
+    Value *HandleOp = EmitScalarExpr(E->getArg(0));
+    Value *ByteOffsetOp = EmitScalarExpr(E->getArg(1));
+    Value *ValueOp = EmitScalarExpr(E->getArg(2));
+    Value *ElementOffset = llvm::PoisonValue::get(Builder.getInt32Ty());
+
+    SmallVector<Value *, 4> Args = {HandleOp, ByteOffsetOp, ElementOffset,
+                                    ValueOp};
+
+    return Builder.CreateIntrinsic(Intrinsic::dx_resource_store_rawbuffer,
+                                   {HandleOp->getType(), ValueOp->getType()},
+                                   Args);
+  }
   case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
     llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
     return llvm::PoisonValue::get(HandleTy);

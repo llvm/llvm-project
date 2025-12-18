@@ -152,9 +152,16 @@ RESOURCE Buffer;
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]'
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
+// Load method
+
+// CHECK-SRV: CXXMethodDecl {{.*}} Load 'unsigned int (unsigned int)'
+// CHECK-SRV: CXXMethodDecl {{.*}} Load 'unsigned int (unsigned int, out unsigned int)
+
+// Store method
+
 // GetDimensions method
 
-// CHECK-NEXT: CXXMethodDecl {{.*}} GetDimensions 'void (out unsigned int)'
+// CHECK: CXXMethodDecl {{.*}} GetDimensions 'void (out unsigned int)'
 // CHECK-NEXT: ParmVarDecl {{.*}} dim 'unsigned int &__restrict'
 // CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
 // CHECK-NEXT: CompoundStmt
