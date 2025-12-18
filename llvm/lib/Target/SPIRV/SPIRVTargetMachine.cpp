@@ -216,8 +216,7 @@ void SPIRVPassConfig::addISelPrepare() {
   addPass(createSPIRVLegalizeImplicitBindingPass());
   addPass(createSPIRVLegalizeZeroSizeArraysPass(&TM));
   addPass(createSPIRVCBufferAccessLegacyPass());
-  addPass(
-      createSPIRVPushConstantAccessLegacyPass(&TM));
+  addPass(createSPIRVPushConstantAccessLegacyPass(&TM));
   addPass(createSPIRVEmitIntrinsicsPass(&TM));
   if (TM.getSubtargetImpl()->isLogicalSPIRV())
     addPass(createSPIRVLegalizePointerCastPass(&TM));

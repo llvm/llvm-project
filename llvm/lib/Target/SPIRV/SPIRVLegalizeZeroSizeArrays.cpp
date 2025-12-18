@@ -116,7 +116,7 @@ Type *SPIRVLegalizeZeroSizeArraysImpl::legalizeType(Type *Ty) {
 
   Type *LegalizedTy = Ty;
 
-  if (ArrayType *ArrTy = dyn_cast<ArrayType>(Ty)) {
+  if (isa<ArrayType>(Ty)) {
     LegalizedTy = PointerType::get(
         Ty->getContext(),
         storageClassToAddressSpace(SPIRV::StorageClass::Generic));
