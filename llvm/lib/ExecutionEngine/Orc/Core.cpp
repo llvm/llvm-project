@@ -377,18 +377,18 @@ void ReExportsMaterializationUnit::materialize(
     SymbolAliasMap QueryAliases;
 
     // Collect as many aliases as we can without including a chain.
-    for (auto &KV : RequestedAliases) {
+    for (auto &[Alias, AliasInfo] : RequestedAliases) {
       // Chain detected. Skip this symbol for this round.
-      if (&SrcJD == &TgtJD && (QueryAliases.count(KV.second.Aliasee) ||
-                               RequestedAliases.count(KV.second.Aliasee)))
+      if (&SrcJD == &TgtJD && (QueryAliases.count(AliasInfo.Aliasee) ||
+                               RequestedAliases.count(AliasInfo.Aliasee)))
         continue;
 
-      ResponsibilitySymbols.insert(KV.first);
-      QuerySymbols.add(KV.second.Aliasee,
-                       KV.second.AliasFlags.hasMaterializationSideEffectsOnly()
+      ResponsibilitySymbols.insert(Alias);
+      QuerySymbols.add(AliasInfo.Aliasee,
+                       AliasInfo.AliasFlags.hasMaterializationSideEffectsOnly()
                            ? SymbolLookupFlags::WeaklyReferencedSymbol
                            : SymbolLookupFlags::RequiredSymbol);
-      QueryAliases[KV.first] = std::move(KV.second);
+      QueryAliases[Alias] = std::move(AliasInfo);
     }
 
     // Remove the aliases collected this round from the RequestedAliases map.
@@ -713,12 +713,7 @@ JITDylib::defineMaterializing(MaterializationResponsibility &FromMR,
     std::vector<NonOwningSymbolStringPtr> AddedSyms;
     std::vector<NonOwningSymbolStringPtr> RejectedWeakDefs;
 
-    for (auto SFItr = SymbolFlags.begin(), SFEnd = SymbolFlags.end();
-         SFItr != SFEnd; ++SFItr) {
-
-      auto &Name = SFItr->first;
-      auto &Flags = SFItr->second;
-
+    for (auto &[Name, Flags] : SymbolFlags) {
       auto EntryItr = Symbols.find(Name);
 
       // If the entry already exists...
@@ -1917,7 +1912,7 @@ void ExecutionSession::runJITDispatchHandler(SendResultFunction SendResult,
   if (F)
     (*F)(std::move(SendResult), ArgBuffer.data(), ArgBuffer.size());
   else
-    SendResult(shared::WrapperFunctionResult::createOutOfBandError(
+    SendResult(shared::WrapperFunctionBuffer::createOutOfBandError(
         ("No function registered for tag " +
          formatv("{0:x16}", HandlerFnTagAddr))
             .str()));

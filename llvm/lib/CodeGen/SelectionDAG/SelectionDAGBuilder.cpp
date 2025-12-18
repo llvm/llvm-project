@@ -45,6 +45,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/SwiftErrorValueTracking.h"
@@ -3125,8 +3126,8 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
       MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI), Align,
       MachineMemOperand::MOVolatile);
 
-  if (TLI.useStackGuardXorFP())
-    GuardVal = TLI.emitStackGuardXorFP(DAG, GuardVal, dl);
+  if (TLI.useStackGuardMixCookie())
+    GuardVal = TLI.emitStackGuardMixCookie(DAG, GuardVal, dl, false);
 
   // If we're using function-based instrumentation, call the guard check
   // function
@@ -3234,8 +3235,8 @@ void SelectionDAGBuilder::visitSPDescriptorFailure(
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI), Align,
         MachineMemOperand::MOVolatile);
 
-    if (TLI.useStackGuardXorFP())
-      GuardVal = TLI.emitStackGuardXorFP(DAG, GuardVal, dl);
+    if (TLI.useStackGuardMixCookie())
+      GuardVal = TLI.emitStackGuardMixCookie(DAG, GuardVal, dl, true);
 
     // The target provides a guard check function to validate the guard value.
     // Generate a call to that function with the content of the guard slot as
@@ -3504,16 +3505,46 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
                           DAG.getBasicBlock(Return)));
 }
 
+/// The intrinsics currently supported by callbr are implicit control flow
+/// intrinsics such as amdgcn.kill.
+/// - they should be called (no "dontcall-" attributes)
+/// - they do not touch memory on the target (= !TLI.getTgtMemIntrinsic())
+/// - they do not need custom argument handling (no
+/// TLI.CollectTargetIntrinsicOperands())
+void SelectionDAGBuilder::visitCallBrIntrinsic(const CallBrInst &I) {
+  TargetLowering::IntrinsicInfo Info;
+  assert(!DAG.getTargetLoweringInfo().getTgtMemIntrinsic(
+             Info, I, DAG.getMachineFunction(), I.getIntrinsicID()) &&
+         "Intrinsic touches memory");
+
+  auto [HasChain, OnlyLoad] = getTargetIntrinsicCallProperties(I);
+
+  SmallVector<SDValue, 8> Ops =
+      getTargetIntrinsicOperands(I, HasChain, OnlyLoad);
+  SDVTList VTs = getTargetIntrinsicVTList(I, HasChain);
+
+  // Create the node.
+  SDValue Result =
+      getTargetNonMemIntrinsicNode(*I.getType(), HasChain, Ops, VTs);
+  Result = handleTargetIntrinsicRet(I, HasChain, OnlyLoad, Result);
+
+  setValue(&I, Result);
+}
+
 void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
   MachineBasicBlock *CallBrMBB = FuncInfo.MBB;
 
-  // Deopt bundles are lowered in LowerCallSiteWithDeoptBundle, and we don't
-  // have to do anything here to lower funclet bundles.
-  failForInvalidBundles(I, "callbrs",
-                        {LLVMContext::OB_deopt, LLVMContext::OB_funclet});
-
-  assert(I.isInlineAsm() && "Only know how to handle inlineasm callbr");
-  visitInlineAsm(I);
+  if (I.isInlineAsm()) {
+    // Deopt bundles are lowered in LowerCallSiteWithDeoptBundle, and we don't
+    // have to do anything here to lower funclet bundles.
+    failForInvalidBundles(I, "callbrs",
+                          {LLVMContext::OB_deopt, LLVMContext::OB_funclet});
+    visitInlineAsm(I);
+  } else {
+    assert(!I.hasOperandBundles() &&
+           "Can't have operand bundles for intrinsics");
+    visitCallBrIntrinsic(I);
+  }
   CopyToExportRegsIfNeeded(&I);
 
   // Retrieve successors.
@@ -3523,18 +3554,25 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
 
   // Update successor info.
   addSuccessorWithProb(CallBrMBB, Return, BranchProbability::getOne());
-  for (BasicBlock *Dest : I.getIndirectDests()) {
-    MachineBasicBlock *Target = FuncInfo.getMBB(Dest);
-    Target->setIsInlineAsmBrIndirectTarget();
-    // If we introduce a type of asm goto statement that is permitted to use an
-    // indirect call instruction to jump to its labels, then we should add a
-    // call to Target->setMachineBlockAddressTaken() here, to mark the target
-    // block as requiring a BTI.
+  // TODO: For most of the cases where there is an intrinsic callbr, we're
+  // having exactly one indirect target, which will be unreachable. As soon as
+  // this changes, we might need to enhance
+  // Target->setIsInlineAsmBrIndirectTarget or add something similar for
+  // intrinsic indirect branches.
+  if (I.isInlineAsm()) {
+    for (BasicBlock *Dest : I.getIndirectDests()) {
+      MachineBasicBlock *Target = FuncInfo.getMBB(Dest);
+      Target->setIsInlineAsmBrIndirectTarget();
+      // If we introduce a type of asm goto statement that is permitted to use
+      // an indirect call instruction to jump to its labels, then we should add
+      // a call to Target->setMachineBlockAddressTaken() here, to mark the
+      // target block as requiring a BTI.
 
-    Target->setLabelMustBeEmitted();
-    // Don't add duplicate machine successors.
-    if (Dests.insert(Dest).second)
-      addSuccessorWithProb(CallBrMBB, Target, BranchProbability::getZero());
+      Target->setLabelMustBeEmitted();
+      // Don't add duplicate machine successors.
+      if (Dests.insert(Dest).second)
+        addSuccessorWithProb(CallBrMBB, Target, BranchProbability::getZero());
+    }
   }
   CallBrMBB->normalizeSuccProbs();
 
@@ -4583,17 +4621,9 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
   if (AllocSize.getValueType() != IntPtr)
     AllocSize = DAG.getZExtOrTrunc(AllocSize, dl, IntPtr);
 
-  if (TySize.isScalable())
-    AllocSize = DAG.getNode(ISD::MUL, dl, IntPtr, AllocSize,
-                            DAG.getVScale(dl, IntPtr,
-                                          APInt(IntPtr.getScalarSizeInBits(),
-                                                TySize.getKnownMinValue())));
-  else {
-    SDValue TySizeValue =
-        DAG.getConstant(TySize.getFixedValue(), dl, MVT::getIntegerVT(64));
-    AllocSize = DAG.getNode(ISD::MUL, dl, IntPtr, AllocSize,
-                            DAG.getZExtOrTrunc(TySizeValue, dl, IntPtr));
-  }
+  AllocSize = DAG.getNode(
+      ISD::MUL, dl, IntPtr, AllocSize,
+      DAG.getZExtOrTrunc(DAG.getTypeSize(dl, MVT::i64, TySize), dl, IntPtr));
 
   // Handle alignment.  If the requested alignment is less than or equal to
   // the stack alignment, ignore it.  If the size is greater than or equal to
@@ -5063,6 +5093,8 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   auto MMOFlags = MachineMemOperand::MOLoad;
   if (I.hasMetadata(LLVMContext::MD_nontemporal))
     MMOFlags |= MachineMemOperand::MONonTemporal;
+  if (I.hasMetadata(LLVMContext::MD_invariant_load))
+    MMOFlags |= MachineMemOperand::MOInvariant;
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MMOFlags,
@@ -5372,6 +5404,14 @@ SmallVector<SDValue, 8> SelectionDAGBuilder::getTargetIntrinsicOperands(
       Ops.push_back(
           DAG.getTargetConstantFP(*cast<ConstantFP>(Arg), SDLoc(), VT));
     }
+  }
+
+  if (std::optional<OperandBundleUse> Bundle =
+          I.getOperandBundle(LLVMContext::OB_deactivation_symbol)) {
+    auto *Sym = Bundle->Inputs[0].get();
+    SDValue SDSym = getValue(Sym);
+    SDSym = DAG.getDeactivationSymbol(cast<GlobalValue>(Sym));
+    Ops.push_back(SDSym);
   }
 
   if (std::optional<OperandBundleUse> Bundle =
@@ -7424,8 +7464,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                         MachinePointerInfo(Global, 0), Align,
                         MachineMemOperand::MOVolatile);
     }
-    if (TLI.useStackGuardXorFP())
-      Res = TLI.emitStackGuardXorFP(DAG, Res, sdl);
+    if (TLI.useStackGuardMixCookie())
+      Res = TLI.emitStackGuardMixCookie(DAG, Res, sdl, false);
     DAG.setRoot(Chain);
     setValue(&I, Res);
     return;
@@ -8387,13 +8427,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I,
              DAG.getNode(ISD::LOOP_DEPENDENCE_WAR_MASK, sdl,
                          EVT::getEVT(I.getType()), getValue(I.getOperand(0)),
-                         getValue(I.getOperand(1)), getValue(I.getOperand(2))));
+                         getValue(I.getOperand(1)), getValue(I.getOperand(2)),
+                         DAG.getConstant(0, sdl, MVT::i64)));
     return;
   case Intrinsic::loop_dependence_raw_mask:
     setValue(&I,
              DAG.getNode(ISD::LOOP_DEPENDENCE_RAW_MASK, sdl,
                          EVT::getEVT(I.getType()), getValue(I.getOperand(0)),
-                         getValue(I.getOperand(1)), getValue(I.getOperand(2))));
+                         getValue(I.getOperand(1)), getValue(I.getOperand(2)),
+                         DAG.getConstant(0, sdl, MVT::i64)));
     return;
   }
 }
@@ -9114,6 +9156,11 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
     ConvControlToken = getValue(Token);
   }
 
+  GlobalValue *DeactivationSymbol = nullptr;
+  if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_deactivation_symbol)) {
+    DeactivationSymbol = cast<GlobalValue>(Bundle->Inputs[0].get());
+  }
+
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(getCurSDLoc())
       .setChain(getRoot())
@@ -9123,7 +9170,8 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
       .setIsPreallocated(
           CB.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0)
       .setCFIType(CFIType)
-      .setConvergenceControlToken(ConvControlToken);
+      .setConvergenceControlToken(ConvControlToken)
+      .setDeactivationSymbol(DeactivationSymbol);
 
   // Set the pointer authentication info if we have it.
   if (PAI) {
@@ -9513,6 +9561,8 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
     // Check for well-known libc/libm calls.  If the function is internal, it
     // can't be a library call.  Don't do the check if marked as nobuiltin for
     // some reason.
+    // This code should not handle libcalls that are already canonicalized to
+    // intrinsics by the middle-end.
     LibFunc Func;
     if (!I.isNoBuiltin() && !F->hasLocalLinkage() && F->hasName() &&
         LibInfo->getLibFunc(*F, Func) && LibInfo->hasOptimizedCodeGen(Func)) {
@@ -9538,31 +9588,8 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
       case LibFunc_fabs:
       case LibFunc_fabsf:
       case LibFunc_fabsl:
+        // TODO: Remove this, already canonicalized by the middle-end.
         if (visitUnaryFloatCall(I, ISD::FABS))
-          return;
-        break;
-      case LibFunc_fmin:
-      case LibFunc_fminf:
-      case LibFunc_fminl:
-        if (visitBinaryFloatCall(I, ISD::FMINNUM))
-          return;
-        break;
-      case LibFunc_fmax:
-      case LibFunc_fmaxf:
-      case LibFunc_fmaxl:
-        if (visitBinaryFloatCall(I, ISD::FMAXNUM))
-          return;
-        break;
-      case LibFunc_fminimum_num:
-      case LibFunc_fminimum_numf:
-      case LibFunc_fminimum_numl:
-        if (visitBinaryFloatCall(I, ISD::FMINIMUMNUM))
-          return;
-        break;
-      case LibFunc_fmaximum_num:
-      case LibFunc_fmaximum_numf:
-      case LibFunc_fmaximum_numl:
-        if (visitBinaryFloatCall(I, ISD::FMAXIMUMNUM))
           return;
         break;
       case LibFunc_sin:
@@ -9632,42 +9659,6 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
       case LibFunc_sqrtf_finite:
       case LibFunc_sqrtl_finite:
         if (visitUnaryFloatCall(I, ISD::FSQRT))
-          return;
-        break;
-      case LibFunc_floor:
-      case LibFunc_floorf:
-      case LibFunc_floorl:
-        if (visitUnaryFloatCall(I, ISD::FFLOOR))
-          return;
-        break;
-      case LibFunc_nearbyint:
-      case LibFunc_nearbyintf:
-      case LibFunc_nearbyintl:
-        if (visitUnaryFloatCall(I, ISD::FNEARBYINT))
-          return;
-        break;
-      case LibFunc_ceil:
-      case LibFunc_ceilf:
-      case LibFunc_ceill:
-        if (visitUnaryFloatCall(I, ISD::FCEIL))
-          return;
-        break;
-      case LibFunc_rint:
-      case LibFunc_rintf:
-      case LibFunc_rintl:
-        if (visitUnaryFloatCall(I, ISD::FRINT))
-          return;
-        break;
-      case LibFunc_round:
-      case LibFunc_roundf:
-      case LibFunc_roundl:
-        if (visitUnaryFloatCall(I, ISD::FROUND))
-          return;
-        break;
-      case LibFunc_trunc:
-      case LibFunc_truncf:
-      case LibFunc_truncl:
-        if (visitUnaryFloatCall(I, ISD::FTRUNC))
           return;
         break;
       case LibFunc_log2:
@@ -9743,7 +9734,7 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
       {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
        LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated,
        LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi,
-       LLVMContext::OB_convergencectrl});
+       LLVMContext::OB_convergencectrl, LLVMContext::OB_deactivation_symbol});
 
   SDValue Callee = getValue(I.getCalledOperand());
 

@@ -155,22 +155,20 @@ private:
     }
 
     template <typename Pred> void remove(Pred &&Remove) {
+      std::vector<hash_code> HashesToErase;
       for (auto &[Hash, SNs] : CanonicalSNs) {
-        bool Found = false;
-        for (size_t I = 0; I != SNs.size(); ++I) {
+        for (size_t I = 0; I != SNs.size();) {
           if (Remove(SNs[I])) {
             std::swap(SNs[I], SNs.back());
             SNs.pop_back();
-            Found = true;
-            break;
-          }
+          } else
+            ++I;
         }
-        if (Found) {
-          if (SNs.empty())
-            CanonicalSNs.erase(Hash);
-          break;
-        }
+        if (SNs.empty())
+          HashesToErase.push_back(Hash);
       }
+      for (auto Hash : HashesToErase)
+        CanonicalSNs.erase(Hash);
     }
 
   private:
@@ -340,9 +338,9 @@ public:
     // incorporate NewSNs.
     std::vector<std::unique_ptr<SuperNode>> ReadyNodes, FailedNodes;
     processReadyOrFailed(ModifiedPendingSNs, ReadyNodes, FailedNodes,
-                         SuperNodeDeps, ElemToPendingSN, FailedSNs);
+                         SuperNodeDeps, FailedSNs, &ElemToPendingSN);
     processReadyOrFailed(NewSNs, ReadyNodes, FailedNodes, SuperNodeDeps,
-                         ElemToNewSN, FailedSNs);
+                         FailedSNs, nullptr);
 
     CoalesceToPendingSNs.coalesce(ModifiedPendingSNs, ElemToPendingSN);
     CoalesceToPendingSNs.coalesce(NewSNs, ElemToPendingSN);
@@ -396,9 +394,14 @@ public:
         ++I;
     }
 
+    CoalesceToPendingSNs.remove([&](SuperNode *SN) {
+      for (auto &E : FailedSNs)
+        if (E.get() == SN)
+          return true;
+      return false;
+    });
+
     for (auto &SN : FailedSNs) {
-      CoalesceToPendingSNs.remove(
-          [&](SuperNode *SNC) { return SNC == SN.get(); });
       for (auto &[Container, Elems] : SN->Defs) {
         assert(ElemToPendingSN.count(Container));
         auto &CElems = ElemToPendingSN[Container];
@@ -500,7 +503,7 @@ private:
         if (I == SN->Deps.end())
           continue;
         for (auto &[DefElem, DefSN] : DefElems)
-          if (I->second.erase(DefElem))
+          if (I->second.erase(DefElem) && DefSN != SN.get())
             SNDeps.insert(DefSN);
         if (I->second.empty())
           SN->Deps.erase(I);
@@ -511,11 +514,13 @@ private:
   // Compute transitive closure of deps for each node.
   static void propagateSuperNodeDeps(SuperNodeDepsMap &SuperNodeDeps) {
     for (auto &[SN, Deps] : SuperNodeDeps) {
-      DenseSet<SuperNode *> Reachable({SN});
+      DenseSet<SuperNode *> Reachable;
       SmallVector<SuperNode *> Worklist(Deps.begin(), Deps.end());
 
       while (!Worklist.empty()) {
         auto *DepSN = Worklist.pop_back_val();
+        if (DepSN == SN)
+          continue;
         if (!Reachable.insert(DepSN).second)
           continue;
         auto I = SuperNodeDeps.find(DepSN);
@@ -537,9 +542,11 @@ private:
       if (I == SuperNodeDeps.end())
         continue;
 
-      for (auto *DepSN : I->second)
+      for (auto *DepSN : I->second) {
+        assert(DepSN != SN.get() && "Unexpected self-dependence for SN");
         for (auto &[Container, Elems] : DepSN->Deps)
           SN->Deps[Container].insert(Elems.begin(), Elems.end());
+      }
     }
   }
 
@@ -584,8 +591,11 @@ private:
                             std::vector<std::unique_ptr<SuperNode>> &Ready,
                             std::vector<std::unique_ptr<SuperNode>> &Failed,
                             SuperNodeDepsMap &SuperNodeDeps,
-                            ElemToSuperNodeMap &ElemToSNs,
-                            std::vector<SuperNode *> FailedSNs) {
+                            const std::vector<SuperNode *> &FailedSNs,
+                            ElemToSuperNodeMap *ElemToSNs) {
+
+    SmallVector<SuperNode *> ToRemoveFromElemToSNs;
+
     for (size_t I = 0; I != SNs.size();) {
       auto &SN = SNs[I];
 
@@ -602,12 +612,23 @@ private:
       bool SNReady = SN->Deps.empty();
 
       if (SNReady || SNFailed) {
+        if (ElemToSNs)
+          ToRemoveFromElemToSNs.push_back(SN.get());
         auto &NodeList = SNFailed ? Failed : Ready;
         NodeList.push_back(std::move(SN));
         std::swap(SN, SNs.back());
         SNs.pop_back();
       } else
         ++I;
+    }
+
+    // Update ElemToSNs (if passed) to remove elements pointing at SN.
+    for (auto *SN : ToRemoveFromElemToSNs) {
+      for (auto &[Container, Elems] : SN->defs()) {
+        auto &Row = (*ElemToSNs)[Container];
+        for (auto &Elem : Elems)
+          Row.erase(Elem);
+      }
     }
   }
 

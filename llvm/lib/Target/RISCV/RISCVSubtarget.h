@@ -186,7 +186,7 @@ public:
   }
 
   bool hasCLZLike() const {
-    return HasStdExtZbb || HasStdExtP || HasVendorXTHeadBb ||
+    return HasStdExtZbb || HasVendorXTHeadBb ||
            (HasVendorXCVbitmanip && !IsRV64);
   }
   bool hasCTZLike() const {
@@ -196,7 +196,7 @@ public:
     return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
   }
   bool hasREV8Like() const {
-    return HasStdExtZbb || HasStdExtZbkb || HasStdExtP || HasVendorXTHeadBb;
+    return HasStdExtZbb || HasStdExtZbkb || HasVendorXTHeadBb;
   }
 
   bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
@@ -208,7 +208,7 @@ public:
   bool hasConditionalMoveFusion() const {
     // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
     return (hasConditionalCompressedMoveFusion() && hasStdExtZca()) ||
-           hasShortForwardBranchOpt();
+           hasShortForwardBranchIALU();
   }
 
   bool hasShlAdd(int64_t ShAmt) const {
@@ -328,7 +328,7 @@ public:
     }
   }
 
-  bool enablePExtCodeGen() const;
+  bool enablePExtSIMDCodeGen() const;
 
   // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
   // vector hardware implementation which may be less than VLEN.

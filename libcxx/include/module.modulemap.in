@@ -829,6 +829,7 @@ module std [system] {
     module simd_utils                             { header "__algorithm/simd_utils.h" }
     module sort_heap                              { header "__algorithm/sort_heap.h" }
     module sort                                   { header "__algorithm/sort.h" }
+    module specialized_algorithms                 { header "__algorithm/specialized_algorithms.h" }
     module stable_partition                       { header "__algorithm/stable_partition.h" }
     module stable_sort {
       header "__algorithm/stable_sort.h"
@@ -1577,12 +1578,14 @@ module std [system] {
     }
 
     module support_impl {
+      textual header "__locale_dir/support/aix.h"
       textual header "__locale_dir/support/apple.h"
       textual header "__locale_dir/support/bsd_like.h"
       textual header "__locale_dir/support/freebsd.h"
       textual header "__locale_dir/support/fuchsia.h"
       textual header "__locale_dir/support/linux.h"
       textual header "__locale_dir/support/netbsd.h"
+      textual header "__locale_dir/support/newlib.h"
       textual header "__locale_dir/support/no_locale/characters.h"
       textual header "__locale_dir/support/no_locale/strtonum.h"
       textual header "__locale_dir/support/windows.h"
@@ -1591,7 +1594,6 @@ module std [system] {
     module locale_base_api {
       textual header "__locale_dir/locale_base_api/bsd_locale_fallbacks.h"
       textual header "__locale_dir/locale_base_api/ibm.h"
-      textual header "__locale_dir/locale_base_api/musl.h"
       textual header "__locale_dir/locale_base_api/openbsd.h"
     }
     export *
@@ -1629,7 +1631,6 @@ module std [system] {
   module memory {
     module addressof                          { header "__memory/addressof.h" }
     module align                              { header "__memory/align.h" }
-    module aligned_alloc                      { header "__memory/aligned_alloc.h" }
     module allocate_at_least                  { header "__memory/allocate_at_least.h" }
     module allocation_guard                   { header "__memory/allocation_guard.h" }
     module allocator {
@@ -1661,7 +1662,10 @@ module std [system] {
     }
     module raw_storage_iterator               { header "__memory/raw_storage_iterator.h" }
     module shared_count                       { header "__memory/shared_count.h" }
-    module shared_ptr                         { header "__memory/shared_ptr.h" }
+    module shared_ptr                         {
+      header "__memory/shared_ptr.h"
+      export std.functional.hash
+    }
     module swap_allocator                     { header "__memory/swap_allocator.h" }
     module temp_value                         { header "__memory/temp_value.h" }
     module temporary_buffer                   {
@@ -1674,6 +1678,7 @@ module std [system] {
     }
     module unique_ptr {
       header "__memory/unique_ptr.h"
+      export std.functional.hash
     }
     module unique_temporary_buffer {
       header "__memory/unique_temporary_buffer.h"
@@ -1846,6 +1851,7 @@ module std [system] {
 
   module ranges {
     module access                         { header "__ranges/access.h" }
+    module adjacent_view                  { header "__ranges/adjacent_view.h" }
     module all                            {
       header "__ranges/all.h"
       export std.ranges.ref_view
@@ -1877,6 +1883,7 @@ module std [system] {
       header "__ranges/drop_while_view.h"
       export std.functional.bind_back
     }
+    module elements_of                    { header "__ranges/elements_of.h" }
     module elements_view                  { header "__ranges/elements_view.h" }
     module empty                          { header "__ranges/empty.h" }
     module empty_view                     { header "__ranges/empty_view.h" }
@@ -2114,6 +2121,7 @@ module std [system] {
     module tuple_like_no_subrange   { header "__tuple/tuple_like_no_subrange.h" }
     module tuple_like               { header "__tuple/tuple_like.h" }
     module tuple_size               { header "__tuple/tuple_size.h" }
+    module tuple_trasnform          { header "__tuple/tuple_transform.h" }
 
     header "tuple"
     export *
@@ -2392,6 +2400,7 @@ module std [system] {
 
     header "coroutine"
     export *
+    export std.functional.hash
   }
 } // module std
 

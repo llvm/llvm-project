@@ -193,23 +193,20 @@ define void @zt0_new_caller_zt0_new_callee(ptr %callee) "aarch64_new_zt0" nounwi
 ; CHECK-NEWLOWERING-LABEL: zt0_new_caller_zt0_new_callee:
 ; CHECK-NEWLOWERING:       // %bb.0:
 ; CHECK-NEWLOWERING-NEXT:    sub sp, sp, #80
-; CHECK-NEWLOWERING-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEWLOWERING-NEXT:    str x30, [sp, #64] // 8-byte Spill
 ; CHECK-NEWLOWERING-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEWLOWERING-NEXT:    cbz x8, .LBB6_2
 ; CHECK-NEWLOWERING-NEXT:  // %bb.1:
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_tpidr2_save
 ; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEWLOWERING-NEXT:    zero { zt0 }
 ; CHECK-NEWLOWERING-NEXT:  .LBB6_2:
 ; CHECK-NEWLOWERING-NEXT:    smstart za
-; CHECK-NEWLOWERING-NEXT:    zero { zt0 }
-; CHECK-NEWLOWERING-NEXT:    mov x19, sp
-; CHECK-NEWLOWERING-NEXT:    str zt0, [x19]
+; CHECK-NEWLOWERING-NEXT:    mov x8, sp
+; CHECK-NEWLOWERING-NEXT:    str zt0, [x8]
 ; CHECK-NEWLOWERING-NEXT:    smstop za
 ; CHECK-NEWLOWERING-NEXT:    blr x0
-; CHECK-NEWLOWERING-NEXT:    smstart za
-; CHECK-NEWLOWERING-NEXT:    ldr zt0, [x19]
-; CHECK-NEWLOWERING-NEXT:    smstop za
-; CHECK-NEWLOWERING-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEWLOWERING-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
 ; CHECK-NEWLOWERING-NEXT:    add sp, sp, #80
 ; CHECK-NEWLOWERING-NEXT:    ret
   call void %callee() "aarch64_new_zt0";
@@ -246,21 +243,20 @@ define i64 @zt0_new_caller_abi_routine_callee() "aarch64_new_zt0" nounwind {
 ; CHECK-NEWLOWERING-LABEL: zt0_new_caller_abi_routine_callee:
 ; CHECK-NEWLOWERING:       // %bb.0:
 ; CHECK-NEWLOWERING-NEXT:    sub sp, sp, #80
-; CHECK-NEWLOWERING-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEWLOWERING-NEXT:    str x30, [sp, #64] // 8-byte Spill
 ; CHECK-NEWLOWERING-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEWLOWERING-NEXT:    cbz x8, .LBB7_2
 ; CHECK-NEWLOWERING-NEXT:  // %bb.1:
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_tpidr2_save
 ; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEWLOWERING-NEXT:    zero { zt0 }
 ; CHECK-NEWLOWERING-NEXT:  .LBB7_2:
 ; CHECK-NEWLOWERING-NEXT:    smstart za
-; CHECK-NEWLOWERING-NEXT:    zero { zt0 }
-; CHECK-NEWLOWERING-NEXT:    mov x19, sp
-; CHECK-NEWLOWERING-NEXT:    str zt0, [x19]
-; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_state
-; CHECK-NEWLOWERING-NEXT:    ldr zt0, [x19]
+; CHECK-NEWLOWERING-NEXT:    mov x8, sp
+; CHECK-NEWLOWERING-NEXT:    str zt0, [x8]
 ; CHECK-NEWLOWERING-NEXT:    smstop za
-; CHECK-NEWLOWERING-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_state
+; CHECK-NEWLOWERING-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
 ; CHECK-NEWLOWERING-NEXT:    add sp, sp, #80
 ; CHECK-NEWLOWERING-NEXT:    ret
   %res = call {i64, i64} @__arm_sme_state()
@@ -302,9 +298,9 @@ define void @zt0_new_caller(ptr %callee) "aarch64_new_zt0" nounwind {
 ; CHECK-NEWLOWERING-NEXT:  // %bb.1:
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_tpidr2_save
 ; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEWLOWERING-NEXT:    zero { zt0 }
 ; CHECK-NEWLOWERING-NEXT:  .LBB8_2:
 ; CHECK-NEWLOWERING-NEXT:    smstart za
-; CHECK-NEWLOWERING-NEXT:    zero { zt0 }
 ; CHECK-NEWLOWERING-NEXT:    blr x0
 ; CHECK-NEWLOWERING-NEXT:    smstop za
 ; CHECK-NEWLOWERING-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -343,9 +339,9 @@ define void @new_za_zt0_caller(ptr %callee) "aarch64_new_za" "aarch64_new_zt0" n
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_tpidr2_save
 ; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEWLOWERING-NEXT:    zero {za}
+; CHECK-NEWLOWERING-NEXT:    zero { zt0 }
 ; CHECK-NEWLOWERING-NEXT:  .LBB9_2:
 ; CHECK-NEWLOWERING-NEXT:    smstart za
-; CHECK-NEWLOWERING-NEXT:    zero { zt0 }
 ; CHECK-NEWLOWERING-NEXT:    blr x0
 ; CHECK-NEWLOWERING-NEXT:    smstop za
 ; CHECK-NEWLOWERING-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -356,20 +352,13 @@ define void @new_za_zt0_caller(ptr %callee) "aarch64_new_za" "aarch64_new_zt0" n
 
 ; Expect clear ZA on entry
 define void @new_za_shared_zt0_caller(ptr %callee) "aarch64_new_za" "aarch64_in_zt0" nounwind {
-; CHECK-LABEL: new_za_shared_zt0_caller:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    zero {za}
-; CHECK-NEXT:    blr x0
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-;
-; CHECK-NEWLOWERING-LABEL: new_za_shared_zt0_caller:
-; CHECK-NEWLOWERING:       // %bb.0:
-; CHECK-NEWLOWERING-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEWLOWERING-NEXT:    blr x0
-; CHECK-NEWLOWERING-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEWLOWERING-NEXT:    ret
+; CHECK-COMMON-LABEL: new_za_shared_zt0_caller:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    zero {za}
+; CHECK-COMMON-NEXT:    blr x0
+; CHECK-COMMON-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    ret
   call void %callee() "aarch64_inout_za" "aarch64_in_zt0";
   ret void;
 }
@@ -389,37 +378,57 @@ define void @shared_za_new_zt0(ptr %callee) "aarch64_inout_za" "aarch64_new_zt0"
 
 
 define void @zt0_multiple_private_za_calls(ptr %callee) "aarch64_in_zt0" nounwind {
-; CHECK-COMMON-LABEL: zt0_multiple_private_za_calls:
-; CHECK-COMMON:       // %bb.0:
-; CHECK-COMMON-NEXT:    sub sp, sp, #96
-; CHECK-COMMON-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
-; CHECK-COMMON-NEXT:    mov x20, sp
-; CHECK-COMMON-NEXT:    mov x19, x0
-; CHECK-COMMON-NEXT:    str x30, [sp, #64] // 8-byte Spill
-; CHECK-COMMON-NEXT:    str zt0, [x20]
-; CHECK-COMMON-NEXT:    smstop za
-; CHECK-COMMON-NEXT:    blr x0
-; CHECK-COMMON-NEXT:    smstart za
-; CHECK-COMMON-NEXT:    ldr zt0, [x20]
-; CHECK-COMMON-NEXT:    str zt0, [x20]
-; CHECK-COMMON-NEXT:    smstop za
-; CHECK-COMMON-NEXT:    blr x19
-; CHECK-COMMON-NEXT:    smstart za
-; CHECK-COMMON-NEXT:    ldr zt0, [x20]
-; CHECK-COMMON-NEXT:    str zt0, [x20]
-; CHECK-COMMON-NEXT:    smstop za
-; CHECK-COMMON-NEXT:    blr x19
-; CHECK-COMMON-NEXT:    smstart za
-; CHECK-COMMON-NEXT:    ldr zt0, [x20]
-; CHECK-COMMON-NEXT:    str zt0, [x20]
-; CHECK-COMMON-NEXT:    smstop za
-; CHECK-COMMON-NEXT:    blr x19
-; CHECK-COMMON-NEXT:    smstart za
-; CHECK-COMMON-NEXT:    ldr zt0, [x20]
-; CHECK-COMMON-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
-; CHECK-COMMON-NEXT:    add sp, sp, #96
-; CHECK-COMMON-NEXT:    ret
+; CHECK-LABEL: zt0_multiple_private_za_calls:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #96
+; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    mov x20, sp
+; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
+; CHECK-NEXT:    str zt0, [x20]
+; CHECK-NEXT:    smstop za
+; CHECK-NEXT:    blr x0
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    ldr zt0, [x20]
+; CHECK-NEXT:    str zt0, [x20]
+; CHECK-NEXT:    smstop za
+; CHECK-NEXT:    blr x19
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    ldr zt0, [x20]
+; CHECK-NEXT:    str zt0, [x20]
+; CHECK-NEXT:    smstop za
+; CHECK-NEXT:    blr x19
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    ldr zt0, [x20]
+; CHECK-NEXT:    str zt0, [x20]
+; CHECK-NEXT:    smstop za
+; CHECK-NEXT:    blr x19
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    ldr zt0, [x20]
+; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
+; CHECK-NEXT:    add sp, sp, #96
+; CHECK-NEXT:    ret
+;
+; CHECK-NEWLOWERING-LABEL: zt0_multiple_private_za_calls:
+; CHECK-NEWLOWERING:       // %bb.0:
+; CHECK-NEWLOWERING-NEXT:    sub sp, sp, #96
+; CHECK-NEWLOWERING-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEWLOWERING-NEXT:    mov x20, sp
+; CHECK-NEWLOWERING-NEXT:    mov x19, x0
+; CHECK-NEWLOWERING-NEXT:    str x30, [sp, #64] // 8-byte Spill
+; CHECK-NEWLOWERING-NEXT:    str zt0, [x20]
+; CHECK-NEWLOWERING-NEXT:    smstop za
+; CHECK-NEWLOWERING-NEXT:    blr x0
+; CHECK-NEWLOWERING-NEXT:    blr x19
+; CHECK-NEWLOWERING-NEXT:    blr x19
+; CHECK-NEWLOWERING-NEXT:    blr x19
+; CHECK-NEWLOWERING-NEXT:    smstart za
+; CHECK-NEWLOWERING-NEXT:    ldr zt0, [x20]
+; CHECK-NEWLOWERING-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEWLOWERING-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
+; CHECK-NEWLOWERING-NEXT:    add sp, sp, #96
+; CHECK-NEWLOWERING-NEXT:    ret
   call void %callee()
   call void %callee()
   call void %callee()

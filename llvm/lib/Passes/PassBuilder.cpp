@@ -91,8 +91,7 @@
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/EdgeBundles.h"
-#include "llvm/CodeGen/ExpandFp.h"
-#include "llvm/CodeGen/ExpandLargeDivRem.h"
+#include "llvm/CodeGen/ExpandIRInsts.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/ExpandReductions.h"
@@ -1590,24 +1589,31 @@ parseBoundsCheckingOptions(StringRef Params) {
       Options.Rt = {
           /*MinRuntime=*/false,
           /*MayReturn=*/true,
+          /*HandlerPreserveAllRegs=*/false,
       };
     } else if (ParamName == "rt-abort") {
       Options.Rt = {
           /*MinRuntime=*/false,
           /*MayReturn=*/false,
+          /*HandlerPreserveAllRegs=*/false,
       };
     } else if (ParamName == "min-rt") {
       Options.Rt = {
           /*MinRuntime=*/true,
           /*MayReturn=*/true,
+          /*HandlerPreserveAllRegs=*/false,
       };
     } else if (ParamName == "min-rt-abort") {
       Options.Rt = {
           /*MinRuntime=*/true,
           /*MayReturn=*/false,
+          /*HandlerPreserveAllRegs=*/false,
       };
     } else if (ParamName == "merge") {
       Options.Merge = true;
+    } else if (ParamName == "handler-preserve-all-regs") {
+      if (Options.Rt)
+        Options.Rt->HandlerPreserveAllRegs = true;
     } else {
       StringRef ParamEQ;
       StringRef Val;
@@ -1626,7 +1632,7 @@ parseBoundsCheckingOptions(StringRef Params) {
   return Options;
 }
 
-Expected<CodeGenOptLevel> parseExpandFpOptions(StringRef Param) {
+Expected<CodeGenOptLevel> parseExpandIRInstsOptions(StringRef Param) {
   if (Param.empty())
     return CodeGenOptLevel::None;
 
@@ -1635,13 +1641,13 @@ Expected<CodeGenOptLevel> parseExpandFpOptions(StringRef Param) {
 
   uint8_t N;
   if (!Prefix.empty() || Digit.getAsInteger(10, N))
-    return createStringError("invalid expand-fp pass parameter '%s'",
+    return createStringError("invalid expand-ir-insts pass parameter '%s'",
                              Param.str().c_str());
 
   std::optional<CodeGenOptLevel> Level = CodeGenOpt::getLevel(N);
   if (!Level.has_value())
     return createStringError(
-        "invalid optimization level for expand-fp pass: %s",
+        "invalid optimization level for expand-ir-insts pass: %s",
         Digit.str().c_str());
 
   return *Level;
