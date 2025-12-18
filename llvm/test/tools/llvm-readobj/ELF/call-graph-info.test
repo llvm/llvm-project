@@ -450,3 +450,58 @@ Symbols:
   - Name:  baz
   - Name:  caller
 ...
+
+## Check ARM 32-bit Thumb address handling for --call-graph-info.
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t3 2>&1 | FileCheck %s --match-full-lines --check-prefix=LLVM_ARM_THUMB -DFILE=%t3
+
+# LLVM_ARM_THUMB:      CallGraph [
+# LLVM_ARM_THUMB-NEXT:   Function {
+# LLVM_ARM_THUMB-NEXT:     Name: foo
+# LLVM_ARM_THUMB-NEXT:     Version: 0
+# LLVM_ARM_THUMB-NEXT:     IsIndirectTarget: No
+# LLVM_ARM_THUMB-NEXT:     TypeId: 0x123456789ABCDEF0
+# LLVM_ARM_THUMB-NEXT:     NumDirectCallees: 0
+# LLVM_ARM_THUMB-NEXT:     DirectCallees [
+# LLVM_ARM_THUMB-NEXT:     ]
+# LLVM_ARM_THUMB-NEXT:     NumIndirectTargetTypeIDs: 0
+# LLVM_ARM_THUMB-NEXT:     IndirectTypeIDs: []
+# LLVM_ARM_THUMB-NEXT:   }
+# LLVM_ARM_THUMB-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS32
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_ARM
+Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+    Size:   0x100
+  - Name:   .llvm.callgraph
+    Type:   SHT_LLVM_CALL_GRAPH
+    Flags:  [ SHF_LINK_ORDER ]
+    Link:   .text
+    ContentArray: [
+      # --- foo+1 (Thumb address) ---
+      0x00, # Version
+      0x00, # Flags
+      0x01, 0x00, 0x00, 0x00, # FunctionEntryPC: 0x1 (relative to foo)
+      0xF0, 0xDE, 0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12 # FunctionTypeID: 0x123456789ABCDEF0
+    ]
+  - Name:   .rela.llvm.callgraph
+    Type:   SHT_RELA
+    Flags:  [ SHF_INFO_LINK ]
+    Info:   .llvm.callgraph
+    Relocations:
+      - Offset:  0x2 # Offset to FunctionEntryPC
+        Symbol:  foo
+        Type:    R_ARM_ABS32
+Symbols:
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x0 
+...
+
