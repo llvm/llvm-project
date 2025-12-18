@@ -478,6 +478,16 @@ unsigned SystemZTTIImpl::getMinPrefetchStride(unsigned NumMemAccesses,
   return ST->hasMiscellaneousExtensions3() ? 8192 : 2048;
 }
 
+unsigned SystemZTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+  // Enable vectorization of (LoopVectorizer) epilogue loop after VF 16 main
+  // loop. This can be highly beneficial when the original loop handles bytes
+  // (i8) and most of the time is not spent in the main vectorized loop
+  // (x264/mc_chroma).
+  if (VF == ElementCount::getFixed(16))
+    return 2;
+  return 1;
+}
+
 bool SystemZTTIImpl::hasDivRemOp(Type *DataType, bool IsSigned) const {
   EVT VT = TLI->getValueType(DL, DataType);
   return (VT.isScalarInteger() && TLI->isTypeLegal(VT));
