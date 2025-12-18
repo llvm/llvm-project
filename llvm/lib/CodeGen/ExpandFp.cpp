@@ -12,6 +12,12 @@
 // useful for targets like x86_64 that cannot lower fp convertions
 // with more than 128 bits.
 //
+// This pass also expands div/rem instructions with a bitwidth above a
+// threshold into a call to auto-generated functions.  This is useful
+// for targets like x86_64 that cannot lower divisions with more than
+// 128 bits or targets like x86_32 that cannot lower divisions with
+// more than 64 bits.
+//
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ExpandFp.h"
@@ -35,6 +41,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/IntegerDivision.h"
+#include <llvm/Support/Casting.h>
 #include <optional>
 
 #define DEBUG_TYPE "expand-fp"
@@ -47,7 +55,28 @@ static cl::opt<unsigned>
                         cl::desc("fp convert instructions on integers with "
                                  "more than <N> bits are expanded."));
 
+static cl::opt<unsigned>
+    ExpandDivRemBits("expand-div-rem-bits", cl::Hidden,
+                     cl::init(llvm::IntegerType::MAX_INT_BITS),
+                     cl::desc("div and rem instructions on integers with "
+                              "more than <N> bits are expanded."));
+
 namespace {
+bool isConstantPowerOfTwo(llvm::Value *V, bool SignedOp) {
+  auto *C = dyn_cast<ConstantInt>(V);
+  if (!C)
+    return false;
+
+  APInt Val = C->getValue();
+  if (SignedOp && Val.isNegative())
+    Val = -Val;
+  return Val.isPowerOf2();
+}
+
+bool isSigned(unsigned int Opcode) {
+  return Opcode == Instruction::SDiv || Opcode == Instruction::SRem;
+}
+
 /// This class implements a precise expansion of the frem instruction.
 /// The generated code is based on the fmod implementation in the AMD device
 /// libs.
@@ -995,11 +1024,17 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
   if (ExpandFpConvertBits != llvm::IntegerType::MAX_INT_BITS)
     MaxLegalFpConvertBitWidth = ExpandFpConvertBits;
 
+  unsigned MaxLegalDivRemBitWidth = TLI.getMaxDivRemBitWidthSupported();
+  if (ExpandDivRemBits != llvm::IntegerType::MAX_INT_BITS)
+    MaxLegalDivRemBitWidth = ExpandDivRemBits;
+
   bool DisableExpandLargeFp =
       MaxLegalFpConvertBitWidth >= llvm::IntegerType::MAX_INT_BITS;
+  bool DisableExpandLargeDivRem =
+      MaxLegalDivRemBitWidth >= llvm::IntegerType::MAX_INT_BITS;
   bool DisableFrem = !FRemExpander::shouldExpandAnyFremType(TLI);
 
-  if (DisableExpandLargeFp && DisableFrem)
+  if (DisableExpandLargeFp && DisableFrem && DisableExpandLargeDivRem)
     return false;
 
   auto ShouldHandleInst = [&](Instruction &I) {
@@ -1021,6 +1056,16 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
       return !DisableExpandLargeFp &&
              cast<IntegerType>(I.getOperand(0)->getType()->getScalarType())
                      ->getIntegerBitWidth() > MaxLegalFpConvertBitWidth;
+    case Instruction::UDiv:
+    case Instruction::SDiv:
+    case Instruction::URem:
+    case Instruction::SRem:
+      return !DisableExpandLargeDivRem &&
+             cast<IntegerType>(Ty->getScalarType())->getIntegerBitWidth() >
+                 MaxLegalDivRemBitWidth
+             // The backend has peephole optimizations for powers of two.
+             // TODO: We don't consider vectors here.
+             && !isConstantPowerOfTwo(I.getOperand(1), isSigned(I.getOpcode()));
     }
 
     return false;
@@ -1063,6 +1108,15 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     case Instruction::UIToFP:
     case Instruction::SIToFP:
       expandIToFP(I);
+      break;
+
+    case Instruction::UDiv:
+    case Instruction::SDiv:
+      expandDivision(cast<BinaryOperator>(I));
+      break;
+    case Instruction::URem:
+    case Instruction::SRem:
+      expandRemainder(cast<BinaryOperator>(I));
       break;
     }
   }
