@@ -60,7 +60,7 @@ extern "C" _LIBSYCL_EXPORT BOOL WINAPI DllMain(HINSTANCE hinstDLL,
 #else
 // Setting low priority on destructor ensures it runs after all other global
 // destructors. Priorities 0-100 are reserved by the compiler. The priority
-// value 110 allows SYCL users to run their destructors after runtime library
+// value 110 allows SYCL users to run their destructors after libsycl
 // deinitialization.
 __attribute__((destructor(110))) static void syclUnload() { shutdown(); }
 #endif

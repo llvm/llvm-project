@@ -55,14 +55,15 @@ struct OffloadTopology {
 
   /// Returns all devices associated with specific platform.
   ///
-  /// \param PlatformId platform_id is index into Platforms.
+  /// \param PlatformId platform_id is index into MPlatforms.
   ///
   /// \returns minimal span-like view to devices associated with specified
   /// platform.
   range_view<const ol_device_handle_t>
   devicesForPlatform(size_t PlatformId) const {
-    if (PlatformId >= MDevRangePerPlatformId.size())
+    if (PlatformId >= MDevRangePerPlatformId.size()) {
       return {nullptr, 0};
+    }
     return MDevRangePerPlatformId[PlatformId];
   }
 
@@ -104,9 +105,10 @@ private:
   std::vector<ol_device_handle_t> MDevices; // sorted by platform
 
   // Vector holding range of devices for each platform (index is platform index
-  // within Platforms)
+  // within MPlatforms)
   std::vector<range_view<const ol_device_handle_t>>
-      MDevRangePerPlatformId; // PlatformDevices.size() == Platforms.size()
+      MDevRangePerPlatformId; // MDevRangePerPlatformId.size() ==
+                              // MPlatforms.size()
 };
 
 // Initialize the topologies by calling olIterateDevices.

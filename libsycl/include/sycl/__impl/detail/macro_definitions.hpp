@@ -14,7 +14,11 @@
 #ifndef _LIBSYCL___IMPL_DETAIL_MACRO_DEFINITIONS_HPP
 #define _LIBSYCL___IMPL_DETAIL_MACRO_DEFINITIONS_HPP
 
+#if defined(_MSC_VER)
+static_assert(_MSVC_LANG >= 201703L, "Libsycl requires C++17 or later.");
+#else
 static_assert(__cplusplus >= 201703L, "Libsycl requires C++17 or later.");
+#endif
 
 #ifndef __SYCL2020_DEPRECATED
 #  if SYCL_LANGUAGE_VERSION == 202012L &&                                      \

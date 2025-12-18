@@ -33,6 +33,8 @@ class platform_impl;
 /// platform on which kernel functions may be executed.
 class _LIBSYCL_EXPORT platform {
 public:
+  // The platform class provides the common reference semantics (SYCL
+  // 2020 4.5.2).
   platform(const platform &rhs) = default;
 
   platform(platform &&rhs) = default;
@@ -41,9 +43,13 @@ public:
 
   platform &operator=(platform &&rhs) = default;
 
-  bool operator==(const platform &rhs) const { return &impl == &rhs.impl; }
+  friend bool operator==(const platform &lhs, const platform &rhs) {
+    return lhs.impl == rhs.impl;
+  }
 
-  bool operator!=(const platform &rhs) const { return !(*this == rhs); }
+  friend bool operator!=(const platform &lhs, const platform &rhs) {
+    return !(lhs == rhs);
+  }
 
   /// Returns the backend associated with this platform.
   ///

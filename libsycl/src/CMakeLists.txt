@@ -11,14 +11,6 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
               $<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:_LIBSYCL_BUILDING_LIBRARY>)
   cxx_add_warning_flags(${LIB_OBJ_NAME} ${LIBSYCL_ENABLE_WERROR} ${LIBSYCL_ENABLE_PEDANTIC})
 
-  target_include_directories(
-    ${LIB_OBJ_NAME}
-    PRIVATE
-      ${CMAKE_CURRENT_SOURCE_DIR}
-      ${LIBSYCL_BUILD_INCLUDE_DIR}
-      ${CMAKE_CURRENT_BINARY_DIR}/../../offload/liboffload/API
-  )
-
   add_library(${LIB_TARGET_NAME} SHARED
               $<TARGET_OBJECTS:${LIB_OBJ_NAME}>)
 
@@ -27,7 +19,17 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
     LLVMOffload
   )
 
-  set_target_properties(${LIB_TARGET_NAME} PROPERTIES LINKER_LANGUAGE CXX)
+  target_include_directories(
+    ${LIB_OBJ_NAME}
+    PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}
+      ${LIBSYCL_BUILD_INCLUDE_DIR}
+      $<TARGET_PROPERTY:LLVMOffload,INTERFACE_INCLUDE_DIRECTORIES>
+  )
+
+  set_target_properties(${LIB_TARGET_NAME} PROPERTIES
+                        LINKER_LANGUAGE CXX
+                        POSITION_INDEPENDENT_CODE TRUE)
 
   if (CMAKE_SYSTEM_NAME STREQUAL Windows)
     # Install stripped PDB
@@ -47,7 +49,7 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
     target_compile_options(${LIB_OBJ_NAME} PUBLIC /EHsc)
   else()
     target_compile_options(${LIB_OBJ_NAME} PUBLIC
-                           -fvisibility=hidden -fvisibility-inlines-hidden -fPIC)
+                           -fvisibility=hidden -fvisibility-inlines-hidden)
 
     if (UNIX AND NOT APPLE)
       set(linker_script "${CMAKE_CURRENT_SOURCE_DIR}/ld-version-script.txt")
