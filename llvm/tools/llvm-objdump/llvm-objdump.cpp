@@ -646,13 +646,43 @@ static bool hasMappingSymbols(const ObjectFile &Obj) {
          isRISCVElf(Obj);
 }
 
+/// Get relocation type name, resolving RISCV vendor-specific relocations
+/// when preceded by R_RISCV_VENDOR.
+static StringRef getRelocTypeName(const RelocationRef &Rel,
+                                  SmallVectorImpl<char> &RelocName,
+                                  std::string &CurrentRISCVVendorSymbol) {
+  Rel.getTypeName(RelocName);
+  const ObjectFile *Obj = Rel.getObject();
+  if (!isRISCVElf(*Obj))
+    return StringRef(RelocName.data(), RelocName.size());
+
+  uint64_t Type = Rel.getType();
+  if (Type == ELF::R_RISCV_VENDOR) {
+    symbol_iterator SI = Rel.getSymbol();
+    if (SI != Obj->symbol_end()) {
+      if (Expected<StringRef> SymName = SI->getName())
+        CurrentRISCVVendorSymbol = SymName->str();
+    }
+  } else if (Type >= ELF::R_RISCV_CUSTOM192 &&
+             Type <= ELF::R_RISCV_CUSTOM255 &&
+             !CurrentRISCVVendorSymbol.empty()) {
+    StringRef VendorRelocName =
+        object::getRISCVVendorRelocationTypeName(Type, CurrentRISCVVendorSymbol);
+    CurrentRISCVVendorSymbol.clear();
+    if (VendorRelocName != "Unknown")
+      return VendorRelocName;
+  }
+  return StringRef(RelocName.data(), RelocName.size());
+}
+
 static void printRelocation(formatted_raw_ostream &OS, StringRef FileName,
                             const RelocationRef &Rel, uint64_t Address,
-                            bool Is64Bits) {
+                            bool Is64Bits,
+                            std::string &CurrentRISCVVendorSymbol) {
   StringRef Fmt = Is64Bits ? "%016" PRIx64 ":  " : "%08" PRIx64 ":  ";
-  SmallString<16> Name;
+  SmallString<16> RelocName;
   SmallString<32> Val;
-  Rel.getTypeName(Name);
+  StringRef Name = getRelocTypeName(Rel, RelocName, CurrentRISCVVendorSymbol);
   if (Error E = getRelocationValueString(Rel, SymbolDescription, Val))
     reportError(std::move(E), FileName);
   OS << (Is64Bits || !LeadingAddr ? "\t\t" : "\t\t\t");
@@ -2026,6 +2056,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
     std::vector<RelocationRef> Rels = RelocMap[Section];
     std::vector<RelocationRef>::const_iterator RelCur = Rels.begin();
     std::vector<RelocationRef>::const_iterator RelEnd = Rels.end();
+    std::string CurrentRISCVVendorSymbol;
 
     // Loop over each chunk of code between two points where at least
     // one symbol is defined.
@@ -2593,7 +2624,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           while (findRel()) {
             // When --adjust-vma is used, update the address printed.
             printRelocation(FOS, Obj.getFileName(), *RelCur,
-                            SectionAddr + RelOffset + VMAAdjustment, Is64Bits);
+                            SectionAddr + RelOffset + VMAAdjustment, Is64Bits,
+                            CurrentRISCVVendorSymbol);
             LEP.printAfterOtherLine(FOS, true);
             ++RelCur;
           }
@@ -2785,20 +2817,21 @@ void Dumper::printRelocations() {
           continue;
         }
       }
+      std::string CurrentRISCVVendorSymbol;
       for (const RelocationRef &Reloc : Section.relocations()) {
         uint64_t Address = Reloc.getOffset();
         SmallString<32> RelocName;
         SmallString<32> ValueStr;
         if (Address < StartAddress || Address > StopAddress || getHidden(Reloc))
           continue;
-        Reloc.getTypeName(RelocName);
+        StringRef Name =
+            getRelocTypeName(Reloc, RelocName, CurrentRISCVVendorSymbol);
         if (Error E =
                 getRelocationValueString(Reloc, SymbolDescription, ValueStr))
           reportUniqueWarning(std::move(E));
 
         outs() << format(Fmt.data(), Address) << " "
-               << left_justify(RelocName, TypePadding) << " " << ValueStr
-               << "\n";
+               << left_justify(Name, TypePadding) << " " << ValueStr << "\n";
       }
     }
   }

@@ -295,6 +295,7 @@ protected:
                   const Elf_Shdr &Sec, const Elf_Shdr *SymTab);
   void printDynamicReloc(const Relocation<ELFT> &R);
   void printDynamicRelocationsHelper();
+  StringRef getRelocTypeName(uint32_t Type, SmallString<32> &RelocName);
   void printRelocationsHelper(const Elf_Shdr &Sec);
   void forEachRelocationDo(
       const Elf_Shdr &Sec,
@@ -401,6 +402,12 @@ protected:
   const Elf_Shdr *SymbolVersionSection = nullptr;   // .gnu.version
   const Elf_Shdr *SymbolVersionNeedSection = nullptr; // .gnu.version_r
   const Elf_Shdr *SymbolVersionDefSection = nullptr; // .gnu.version_d
+
+  // Used for tracking the current RISCV vendor name when printing relocations.
+  // When an R_RISCV_VENDOR relocation is encountered, we record the symbol name
+  // so that subsequent R_RISCV_CUSTOM* relocations can be resolved to their
+  // vendor-specific names.
+  std::string CurrentRISCVVendorSymbol;
 
   std::string getFullSymbolName(const Elf_Sym &Symbol, unsigned SymIndex,
                                 DataRegion<Elf_Word> ShndxTable,
@@ -3532,12 +3539,42 @@ template <class ELFT>
 void ELFDumper<ELFT>::printReloc(const Relocation<ELFT> &R, unsigned RelIndex,
                                  const Elf_Shdr &Sec, const Elf_Shdr *SymTab) {
   Expected<RelSymbol<ELFT>> Target = getRelocationTarget(R, SymTab);
-  if (!Target)
+  if (!Target) {
     reportUniqueWarning("unable to print relocation " + Twine(RelIndex) +
                         " in " + describe(Sec) + ": " +
                         toString(Target.takeError()));
-  else
-    printRelRelaReloc(R, *Target);
+    return;
+  }
+
+  // Track RISCV vendor symbol name for resolving vendor-specific relocations.
+  if (Obj.getHeader().e_machine == ELF::EM_RISCV &&
+      R.Type == ELF::R_RISCV_VENDOR)
+    CurrentRISCVVendorSymbol = Target->Name;
+
+  printRelRelaReloc(R, *Target);
+}
+
+template <class ELFT>
+StringRef ELFDumper<ELFT>::getRelocTypeName(uint32_t Type,
+                                            SmallString<32> &RelocName) {
+  Obj.getRelocationTypeName(Type, RelocName);
+
+  // For RISCV vendor-specific relocations, use the vendor-specific name
+  // if we have a vendor symbol from a preceding R_RISCV_VENDOR relocation.
+  // Per RISC-V psABI, R_RISCV_VENDOR must be placed immediately before the
+  // vendor-specific relocation, so we consume the vendor symbol after use.
+  if (Obj.getHeader().e_machine == ELF::EM_RISCV &&
+      Type >= ELF::R_RISCV_CUSTOM192 && Type <= ELF::R_RISCV_CUSTOM255 &&
+      !CurrentRISCVVendorSymbol.empty()) {
+    StringRef VendorRelocName =
+        getRISCVVendorRelocationTypeName(Type, CurrentRISCVVendorSymbol);
+    CurrentRISCVVendorSymbol.clear();
+    // Only use the vendor-specific name if the vendor is known.
+    // Otherwise, keep the generic R_RISCV_CUSTOM* name.
+    if (VendorRelocName != "Unknown")
+      return VendorRelocName;
+  }
+  return RelocName;
 }
 
 template <class ELFT>
@@ -3907,8 +3944,7 @@ void GNUELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
   Fields[1].Str = to_string(format_hex_no_prefix(R.Info, Width));
 
   SmallString<32> RelocName;
-  this->Obj.getRelocationTypeName(R.Type, RelocName);
-  Fields[2].Str = RelocName.c_str();
+  Fields[2].Str = this->getRelocTypeName(R.Type, RelocName);
 
   if (RelSym.Sym)
     Fields[3].Str =
@@ -7576,12 +7612,12 @@ void LLVMELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
   if (RelSym.Sym && RelSym.Name.empty())
     SymbolName = "<null>";
   SmallString<32> RelocName;
-  this->Obj.getRelocationTypeName(R.Type, RelocName);
+  StringRef RelocTypeName = this->getRelocTypeName(R.Type, RelocName);
 
   if (opts::ExpandRelocs) {
-    printExpandedRelRelaReloc(R, SymbolName, RelocName);
+    printExpandedRelRelaReloc(R, SymbolName, RelocTypeName);
   } else {
-    printDefaultRelRelaReloc(R, SymbolName, RelocName);
+    printDefaultRelRelaReloc(R, SymbolName, RelocTypeName);
   }
 }
 
