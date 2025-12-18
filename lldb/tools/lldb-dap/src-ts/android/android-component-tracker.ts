@@ -24,7 +24,6 @@ export class AndroidComponentTracker {
 
     /**
      * Component name is in the form "com.example.app/.MainActivity".
-     * TODO: allow selecting the deviceId
      */
     constructor(session: vscode.DebugSession, componentName: string) {
         this.componentName = componentName;
@@ -47,9 +46,8 @@ export class AndroidComponentTracker {
         return parts[1];
     }
 
-    async startDebugSession() {
-        // TODO: allow selecting the deviceId
-        await this.apkDebugSession.start(undefined, this.componentName, true);
+    async startDebugSession(deviceSerial: string | undefined) {
+        await this.apkDebugSession.start(deviceSerial, this.componentName, true);
     }
 
     async stopDebugSession() {

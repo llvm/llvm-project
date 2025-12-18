@@ -287,6 +287,12 @@
             "type": "string",
             "description": "If non-empty, defines which Android activity to be launched and debugged. The name must have the format `package/name`. For example, `com.example.app/.MainActivity`.",
             "default": ""
+          },
+          "lldb-dap.androidDevice": {
+            "order": 9,
+            "type": "string",
+            "description": "If non-empty, defines the name or serial number of the Android device or emulator used for debugging.",
+            "default": ""
           }
         }
       }
@@ -689,6 +695,11 @@
               "androidComponent": {
                 "type": "string",
                 "description": "If non-empty, defines which Android activity to be launched and debugged. The name must have the format `package/name`. For example, `com.example.app/.MainActivity`.",
+                "default": ""
+              },
+              "androidDevice": {
+                "type": "string",
+                "description": "If non-empty, defines the name or serial number of the Android device or emulator used for debugging.",
                 "default": ""
               }
             }

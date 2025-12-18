@@ -335,7 +335,7 @@ export class LLDBDapDescriptorFactory
       );
       const tracker = new AndroidComponentTracker(session, session.configuration.androidComponent);
       // TODO: handled exceptions
-      await tracker.startDebugSession();
+      await tracker.startDebugSession(session.configuration.androidDeviceSerial);
     }
 
     // Use a server connection if the debugAdapterPort is provided

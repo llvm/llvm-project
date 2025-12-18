@@ -53,6 +53,18 @@ export class AdbClient {
         return this.deviceSerial;
     }
 
+    async getDeviceName(): Promise<string> {
+        let emulatorName = await this.shellCommandToString("getprop ro.boot.qemu.avd_name");
+        emulatorName = emulatorName.trim();
+        if (emulatorName)
+            return emulatorName;
+        let deviceName = await this.shellCommandToString("settings get global device_name");
+        deviceName = deviceName.trim();
+        if (deviceName)
+            return deviceName;
+        return this.getDeviceSerial();
+    }
+
     async shellCommand(command: string): Promise<void> {
         const deviceSerial = this.getDeviceSerial();
         const connection = await this.createAdbConnection();

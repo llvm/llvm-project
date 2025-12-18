@@ -7,6 +7,7 @@ import { LogFilePathProvider } from "./logging";
 import { ErrorWithNotification } from "./ui/error-with-notification";
 import { ConfigureButton } from "./ui/show-error-message";
 import { ApkDebugConfiguration } from "./android/apk-debug-configuration";
+import { AndroidConfigurationBuilder } from "./android/android-configuration-builder";
 
 const exec = util.promisify(child_process.execFile);
 
@@ -238,9 +239,12 @@ export class LLDBDapConfigurationProvider
           !debugConfiguration.launchCommands ||
           debugConfiguration.launchCommands.length === 0
         ) {
-          // TODO: manage deviceId
+          if (!debugConfiguration.androidDeviceSerial) {
+            debugConfiguration.androidDeviceSerial = await AndroidConfigurationBuilder.resolveDeviceSerial(debugConfiguration.androidDevice);
+            console.log(`Android device serial number: ${debugConfiguration.androidDeviceSerial}`);
+          }
           debugConfiguration.launchCommands =
-            ApkDebugConfiguration.getLldbLaunchCommands(undefined, debugConfiguration.androidComponent);
+            ApkDebugConfiguration.getLldbLaunchCommands(debugConfiguration.androidDeviceSerial, debugConfiguration.androidComponent);
         }
       }
 
