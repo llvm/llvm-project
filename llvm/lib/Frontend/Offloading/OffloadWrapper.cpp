@@ -916,15 +916,20 @@ private:
   std::pair<Constant *, Constant *>
   initOffloadEntriesPerImage(StringRef Entries, const Twine &OffloadKindTag) {
     SmallVector<Constant *> EntriesInits;
-    std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
-        Entries, /*BufferName*/ "", /*RequiresNullTerminator*/ false);
-    for (line_iterator LI(*MB); !LI.is_at_eof(); ++LI) {
-      GlobalVariable *GV =
-          emitOffloadingEntry(M, /*Kind*/ OffloadKind::OFK_SYCL,
-                              Constant::getNullValue(PointerType::getUnqual(C)),
-                              /*Name*/ *LI, /*Size*/ 0,
-                              /*Flags*/ 0, /*Data*/ 0);
+    const char *Current = Entries.data();
+    const char *End = Current + Entries.size();
+    while (Current < End) {
+      StringRef Name(Current);
+      if (Name.empty()) {
+        ++Current;
+        continue;
+      }
+      GlobalVariable *GV = emitOffloadingEntry(
+          M, /*Kind*/ OffloadKind::OFK_SYCL,
+          Constant::getNullValue(PointerType::getUnqual(C)), Name, /*Size*/ 0,
+          /*Flags*/ 0, /*Data*/ 0);
       EntriesInits.push_back(GV->getInitializer());
+      Current += Name.size() + 1;
     }
 
     Constant *Arr = ConstantArray::get(

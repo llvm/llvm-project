@@ -496,12 +496,12 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
     if (!ModOrErr)
       return ModOrErr.takeError();
 
-    SmallVector<StringRef> Symbols;
+    std::string SymbolData;
     for (Function &F : **ModOrErr) {
       if (isKernel(F))
-        Symbols.push_back(F.getName());
+        SymbolData.append(F.getName().data(), F.getName().size() + 1);
     }
-    SymbolTable.emplace_back(llvm::join(Symbols.begin(), Symbols.end(), "\n"));
+    SymbolTable.emplace_back(std::move(SymbolData));
   }
 
   bool IsAOTCompileNeeded = IsIntelOffloadArch(
@@ -541,13 +541,7 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
         return createFileError(File, EC);
     }
     OffloadingImage TheImage{};
-    // TODO: TheImageKind should be
-    // `IsAOTCompileNeeded ? IMG_Object : IMG_SPIRV;`
-    // For that we need to update SYCL Runtime to align with the ImageKind enum.
-    // Temporarily it is initalized to IMG_None, because in that case, SYCL
-    // Runtime has a heuristic to understand what the Image Kind is, so at least
-    // it works.
-    TheImage.TheImageKind = IMG_None;
+    TheImage.TheImageKind = IsAOTCompileNeeded ? IMG_Object : IMG_SPIRV;
     TheImage.TheOffloadKind = OFK_SYCL;
     TheImage.StringData["triple"] =
         Args.MakeArgString(Args.getLastArgValue(OPT_triple_EQ));
