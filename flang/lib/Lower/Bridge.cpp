@@ -3283,14 +3283,10 @@ private:
                     std::get<Fortran::parser::DataRef>(p.value().u))};
                 Fortran::lower::StatementContext stmtCtx;
                 mlir::Location loc = genLocation(dir.source);
-                mlir::Value memRef{Fortran::lower::convertExprToHLFIR(
-                                       loc, *this, expr, localSymbols, stmtCtx)
-                                       .getBase()};
-                if (mlir::isa<fir::BaseBoxType>(
-                        fir::unwrapRefType(memRef.getType()))) {
-                  memRef = fir::BoxAddrOp::create(
-                      *builder, loc, builder->loadIfRef(loc, memRef));
-                }
+                hlfir::Entity var = Fortran::lower::convertExprToHLFIR(
+                    loc, *this, expr, localSymbols, stmtCtx);
+                mlir::Value memRef =
+                    hlfir::genVariableRawAddress(loc, *builder, var);
 
                 // TODO: Don't use default value, instead get the following
                 //       info from the directive

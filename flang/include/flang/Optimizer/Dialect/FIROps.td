@@ -364,17 +364,18 @@ def fir_PrefetchOp : fir_Op<"prefetch", [MemoryEffects<[MemAlloc<DefaultResource
       // ...
       fir.load %a : !fir.ref<i32> // use the prefetched value
     ```
+    Here,
+    `memref'      : address to be prefetched
+    `rw'          : rw specifier >
+                     represented as read (default) or write with values
+                     0 and 1, respectively
+    `localityHint': temporal locality specifier >
+                     value ranging from 0 - no locality to 3 - extremely local
+    `cacheType'   : cache type specifier >
+                     represented as instruction or data (default) with values
+                     0 and 1, respectively
   }];
 
-  /// `memref' is the address to be prefetched
-  /// `rw'          : rw specifier >
-  ///                  represented as read (default) or write with values
-  ///                  0 and 1, respectively
-  /// `localityHint': temporal locality specifier >
-  ///                  value ranging from 0 - no locality to 3 - extremely local
-  /// `cacheType'   : cache type specifier >
-  ///                  represented as instruction or data (default) with values
-  ///                  0 and 1, respectively
   /// NOTE: The numerical values used here is in reference to the LLVM LangRef
   let arguments =
       (ins AnyReferenceLike : $memref, UnitAttr : $rw,
