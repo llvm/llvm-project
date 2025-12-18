@@ -274,9 +274,11 @@ static Error randomizeMCOperand(const LLVMState &State,
     break;
   case MCOI::OperandType::OPERAND_REGISTER: {
     assert(Op.isReg());
-    const BitVector &AllowedRegs = Op.getRegisterAliasing().sourceBits();
+    auto AllowedRegs = Op.getRegisterAliasing().sourceBits();
     assert(AllowedRegs.size() == ForbiddenRegs.size());
-    if (AllowedRegs.subsetOf(ForbiddenRegs))
+    for (auto I : ForbiddenRegs.set_bits())
+      AllowedRegs.reset(I);
+    if (!AllowedRegs.any())
       return make_error<Failure>(
           Twine("no available registers:\ncandidates:\n")
               .concat(debugString(State.getRegInfo(),
