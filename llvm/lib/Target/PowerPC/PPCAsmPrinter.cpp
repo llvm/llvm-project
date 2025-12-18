@@ -3272,17 +3272,6 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
 }
 
 bool PPCAIXAsmPrinter::doFinalization(Module &M) {
-  // Do streamer related finalization for DWARF.
-  if (hasDebugInfo()) {
-    // Emit section end. This is used to tell the debug line section where the
-    // end is for a text section if we don't use .loc to represent the debug
-    // line.
-    auto *Sec = OutContext.getObjectFileInfo()->getTextSection();
-    OutStreamer->switchSectionNoPrint(Sec);
-    MCSymbol *Sym = Sec->getEndSymbol(OutContext);
-    OutStreamer->emitLabel(Sym);
-  }
-
   for (MCSymbol *Sym : ExtSymSDNodeSymbols)
     OutStreamer->emitSymbolAttribute(Sym, MCSA_Extern);
   return PPCAsmPrinter::doFinalization(M);
