@@ -14,6 +14,7 @@
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticDriver.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LLVM.h"
@@ -26,10 +27,8 @@
 #include "clang/Basic/Version.h"
 #include "clang/Basic/XRayInstr.h"
 #include "clang/Config/config.h"
-#include "clang/Driver/Driver.h"
 #include "clang/Frontend/CommandLineSourceLoc.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MigratorOptions.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
@@ -96,7 +95,6 @@
 #include <vector>
 
 using namespace clang;
-using namespace driver;
 using namespace options;
 using namespace llvm::opt;
 
@@ -703,52 +701,6 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
 // Deserialization (from args)
 //===----------------------------------------------------------------------===//
 
-static unsigned getOptimizationLevel(ArgList &Args, InputKind IK,
-                                     DiagnosticsEngine &Diags) {
-  unsigned DefaultOpt = 0;
-  if ((IK.getLanguage() == Language::OpenCL ||
-       IK.getLanguage() == Language::OpenCLCXX) &&
-      !Args.hasArg(OPT_cl_opt_disable))
-    DefaultOpt = 2;
-
-  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    if (A->getOption().matches(options::OPT_O0))
-      return 0;
-
-    if (A->getOption().matches(options::OPT_Ofast))
-      return 3;
-
-    assert(A->getOption().matches(options::OPT_O));
-
-    StringRef S(A->getValue());
-    if (S == "s" || S == "z")
-      return 2;
-
-    if (S == "g")
-      return 1;
-
-    return getLastArgIntValue(Args, OPT_O, DefaultOpt, Diags);
-  }
-
-  return DefaultOpt;
-}
-
-static unsigned getOptimizationLevelSize(ArgList &Args) {
-  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    if (A->getOption().matches(options::OPT_O)) {
-      switch (A->getValue()[0]) {
-      default:
-        return 0;
-      case 's':
-        return 1;
-      case 'z':
-        return 2;
-      }
-    }
-  }
-  return 0;
-}
-
 static void GenerateArg(ArgumentConsumer Consumer,
                         llvm::opt::OptSpecifier OptSpecifier) {
   Option Opt = getDriverOptTable().getOption(OptSpecifier);
@@ -898,10 +850,9 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
   // Compares two lists of arguments.
   auto Equal = [](const ArrayRef<const char *> A,
                   const ArrayRef<const char *> B) {
-    return std::equal(A.begin(), A.end(), B.begin(), B.end(),
-                      [](const char *AElem, const char *BElem) {
-                        return StringRef(AElem) == StringRef(BElem);
-                      });
+    return llvm::equal(A, B, [](const char *AElem, const char *BElem) {
+      return StringRef(AElem) == StringRef(BElem);
+    });
   };
 
   // If we generated different arguments from what we assume are two
@@ -1859,17 +1810,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                                           const LangOptions &LangOptsRef) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
-  unsigned OptimizationLevel = getOptimizationLevel(Args, IK, Diags);
-  // TODO: This could be done in Driver
-  unsigned MaxOptLevel = 3;
-  if (OptimizationLevel > MaxOptLevel) {
-    // If the optimization level is not supported, fall back on the default
-    // optimization
-    Diags.Report(diag::warn_drv_optimization_value)
-        << Args.getLastArg(OPT_O)->getAsString(Args) << "-O" << MaxOptLevel;
-    OptimizationLevel = MaxOptLevel;
-  }
-  Opts.OptimizationLevel = OptimizationLevel;
+  Opts.OptimizationLevel = getOptimizationLevel(Args, IK, Diags);
 
   // The key paths of codegen options defined in Options.td start with
   // "CodeGenOpts.". Let's provide the expected variable name and type.
@@ -2728,6 +2669,61 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   return Diags->getNumErrors() == NumErrorsBefore;
 }
 
+unsigned clang::getOptimizationLevel(const ArgList &Args, InputKind IK,
+                                     DiagnosticsEngine &Diags) {
+  unsigned DefaultOpt = 0;
+  if ((IK.getLanguage() == Language::OpenCL ||
+       IK.getLanguage() == Language::OpenCLCXX) &&
+      !Args.hasArg(OPT_cl_opt_disable))
+    DefaultOpt = 2;
+
+  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+    if (A->getOption().matches(options::OPT_O0))
+      return 0;
+
+    if (A->getOption().matches(options::OPT_Ofast))
+      return 3;
+
+    assert(A->getOption().matches(options::OPT_O));
+
+    StringRef S(A->getValue());
+    if (S == "s" || S == "z")
+      return 2;
+
+    if (S == "g")
+      return 1;
+
+    DefaultOpt = getLastArgIntValue(Args, OPT_O, DefaultOpt, Diags);
+  }
+
+  unsigned MaxOptLevel = 3;
+  if (DefaultOpt > MaxOptLevel) {
+    // If the optimization level is not supported, fall back on the default
+    // optimization
+    Diags.Report(diag::warn_drv_optimization_value)
+        << Args.getLastArg(OPT_O)->getAsString(Args) << "-O" << MaxOptLevel;
+    DefaultOpt = MaxOptLevel;
+  }
+
+  return DefaultOpt;
+}
+
+unsigned clang::getOptimizationLevelSize(const ArgList &Args) {
+  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+    if (A->getOption().matches(options::OPT_O)) {
+      switch (A->getValue()[0]) {
+      default:
+        return 0;
+      case 's':
+        return 1;
+      case 'z':
+        return 2;
+      }
+    }
+  }
+  return 0;
+}
+
 /// Parse the argument to the -ftest-module-file-extension
 /// command-line argument.
 ///
@@ -3274,13 +3270,6 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   Opts.DashX = DashX;
 
   return Diags.getNumErrors() == NumErrorsBefore;
-}
-
-std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
-                                                 void *MainAddr) {
-  std::string ClangExecutable =
-      llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
-  return Driver::GetResourcesPath(ClangExecutable);
 }
 
 static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
@@ -3959,22 +3948,17 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
                 std::to_string(*Opts.AllocTokenMax));
 
   if (Opts.AllocTokenMode) {
-    StringRef S;
-    switch (*Opts.AllocTokenMode) {
-    case llvm::AllocTokenMode::Increment:
-      S = "increment";
-      break;
-    case llvm::AllocTokenMode::Random:
-      S = "random";
-      break;
-    case llvm::AllocTokenMode::TypeHash:
-      S = "typehash";
-      break;
-    case llvm::AllocTokenMode::TypeHashPointerSplit:
-      S = "typehashpointersplit";
-      break;
-    }
+    StringRef S = llvm::getAllocTokenModeAsString(*Opts.AllocTokenMode);
     GenerateArg(Consumer, OPT_falloc_token_mode_EQ, S);
+  }
+  // Generate args for matrix types.
+  if (Opts.MatrixTypes) {
+    if (Opts.getDefaultMatrixMemoryLayout() ==
+        LangOptions::MatrixMemoryLayout::MatrixColMajor)
+      GenerateArg(Consumer, OPT_fmatrix_memory_layout_EQ, "column-major");
+    if (Opts.getDefaultMatrixMemoryLayout() ==
+        LangOptions::MatrixMemoryLayout::MatrixRowMajor)
+      GenerateArg(Consumer, OPT_fmatrix_memory_layout_EQ, "row-major");
   }
 }
 
@@ -4304,8 +4288,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   // Set the flag to prevent the implementation from emitting device exception
   // handling code for those requiring so.
-  if ((Opts.OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN())) ||
-      Opts.OpenCLCPlusPlus) {
+  if ((Opts.OpenMPIsTargetDevice && T.isGPU()) || Opts.OpenCLCPlusPlus) {
 
     Opts.Exceptions = 0;
     Opts.CXXExceptions = 0;
@@ -4569,6 +4552,27 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Opts.AllocTokenMode = Mode;
     else
       Diags.Report(diag::err_drv_invalid_value) << Arg->getAsString(Args) << S;
+  }
+
+  // Enable options for matrix types.
+  if (Opts.MatrixTypes) {
+    if (const Arg *A = Args.getLastArg(OPT_fmatrix_memory_layout_EQ)) {
+      StringRef ClangValue = A->getValue();
+      if (ClangValue == "row-major")
+        Opts.setDefaultMatrixMemoryLayout(
+            LangOptions::MatrixMemoryLayout::MatrixRowMajor);
+      else
+        Opts.setDefaultMatrixMemoryLayout(
+            LangOptions::MatrixMemoryLayout::MatrixColMajor);
+
+      for (Arg *A : Args.filtered(options::OPT_mllvm)) {
+        StringRef OptValue = A->getValue();
+        if (OptValue.consume_front("-matrix-default-layout=") &&
+            ClangValue != OptValue)
+          Diags.Report(diag::err_conflicting_matrix_layout_flags)
+              << ClangValue << OptValue;
+      }
+    }
   }
 
   // Validate options for HLSL
@@ -5322,6 +5326,7 @@ void CompilerInvocationBase::visitPathsImpl(
 
     RETURN_IF(Input.File);
   }
+  // TODO: Also report output files such as FrontendOpts.OutputFile;
   RETURN_IF(FrontendOpts.CodeCompletionAt.FileName);
   RETURN_IF_MANY(FrontendOpts.ModuleMapFiles);
   RETURN_IF_MANY(FrontendOpts.ModuleFiles);

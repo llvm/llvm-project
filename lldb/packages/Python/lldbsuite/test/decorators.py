@@ -953,6 +953,19 @@ def skipUnlessHasCallSiteInfo(func):
     return skipTestIfFn(is_compiler_clang_with_call_site_info)(func)
 
 
+def skipUnlessCompilerIsClang(func):
+    """Decorate the item to skip test unless the compiler is clang."""
+
+    def is_compiler_clang():
+        compiler_path = lldbplatformutil.getCompiler()
+        compiler = os.path.basename(compiler_path)
+        if not compiler.startswith("clang"):
+            return "Test requires clang as compiler"
+        return None
+
+    return skipTestIfFn(is_compiler_clang)(func)
+
+
 def skipUnlessThreadSanitizer(func):
     """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
 
@@ -1058,6 +1071,16 @@ def skipUnlessAddressSanitizer(func):
 
     return skipTestIfFn(is_compiler_with_address_sanitizer)(func)
 
+
+def skipUnlessBoundsSafety(func):
+    """Decorate the item to skip test unless Clang -fbounds-safety is supported."""
+
+    def is_compiler_with_bounds_safety():
+        if not _compiler_supports(lldbplatformutil.getCompiler(), "-fbounds-safety"):
+            return "Compiler cannot compile with -fbounds-safety"
+        return None
+
+    return skipTestIfFn(is_compiler_with_bounds_safety)(func)
 
 def skipIfAsan(func):
     """Skip this test if the environment is set up to run LLDB *itself* under ASAN."""

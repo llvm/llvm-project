@@ -3230,11 +3230,19 @@ mlir::ParseResult fir::DTEntryOp::parse(mlir::OpAsmParser &parser,
       parser.parseAttribute(calleeAttr, fir::DTEntryOp::getProcAttrNameStr(),
                             result.attributes))
     return mlir::failure();
+
+  // Optional "deferred" keyword.
+  if (succeeded(parser.parseOptionalKeyword("deferred"))) {
+    result.addAttribute(fir::DTEntryOp::getDeferredAttrNameStr(),
+                        parser.getBuilder().getUnitAttr());
+  }
   return mlir::success();
 }
 
 void fir::DTEntryOp::print(mlir::OpAsmPrinter &p) {
   p << ' ' << getMethodAttr() << ", " << getProcAttr();
+  if ((*this)->getAttr(fir::DTEntryOp::getDeferredAttrNameStr()))
+    p << " deferred";
 }
 
 //===----------------------------------------------------------------------===//
@@ -4285,7 +4293,7 @@ llvm::LogicalResult fir::StoreOp::verify() {
 
 void fir::StoreOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
                          mlir::Value value, mlir::Value memref) {
-  build(builder, result, value, memref, {});
+  build(builder, result, value, memref, {}, {}, {});
 }
 
 void fir::StoreOp::getEffects(

@@ -7,21 +7,21 @@ define i32 @int_va_arg(i32 %a, ...) local_unnamed_addr  {
 ; CHECK-NEXT:    addi 11, 1, 28
 ; CHECK-NEXT:    stw 4, 28(1)
 ; CHECK-NEXT:    addi 4, 1, 32
-; CHECK-NEXT:    stw 6, 36(1)
+; CHECK-NEXT:    stw 5, 32(1)
 ; CHECK-NEXT:    stw 11, -4(1)
 ; CHECK-NEXT:    stw 11, -8(1)
 ; CHECK-NEXT:    stw 4, -4(1)
-; CHECK-NEXT:    lwz 6, 28(1)
+; CHECK-NEXT:    lwz 5, 28(1)
 ; CHECK-NEXT:    stw 4, -8(1)
-; CHECK-NEXT:    add 3, 6, 3
+; CHECK-NEXT:    add 3, 5, 3
 ; CHECK-NEXT:    lwz 4, 28(1)
 ; CHECK-NEXT:    slwi 4, 4, 1
-; CHECK-NEXT:    stw 7, 40(1)
+; CHECK-NEXT:    stw 6, 36(1)
 ; CHECK-NEXT:    add 3, 3, 4
+; CHECK-NEXT:    stw 7, 40(1)
 ; CHECK-NEXT:    stw 8, 44(1)
 ; CHECK-NEXT:    stw 9, 48(1)
 ; CHECK-NEXT:    stw 10, 52(1)
-; CHECK-NEXT:    stw 5, 32(1)
 ; CHECK-NEXT:    blr
 entry:
   %arg1 = alloca ptr, align 4
@@ -108,24 +108,18 @@ entry:
 define double @double_va_arg(double %a, ...) local_unnamed_addr  {
 ; CHECK-LABEL: double_va_arg:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    stw 5, -16(1)
-; CHECK-NEXT:    addi 3, 1, 32
-; CHECK-NEXT:    stw 6, -12(1)
-; CHECK-NEXT:    lfd 0, -16(1)
-; CHECK-NEXT:    stw 5, -24(1)
-; CHECK-NEXT:    fadd 0, 0, 1
-; CHECK-NEXT:    stw 6, -20(1)
-; CHECK-NEXT:    lfd 1, -24(1)
-; CHECK-NEXT:    fadd 1, 1, 1
-; CHECK-NEXT:    stw 7, 40(1)
-; CHECK-NEXT:    fadd 1, 0, 1
 ; CHECK-NEXT:    stw 5, 32(1)
+; CHECK-NEXT:    addi 3, 1, 32
 ; CHECK-NEXT:    stw 6, 36(1)
+; CHECK-NEXT:    lfd 0, 32(1)
+; CHECK-NEXT:    fadd 1, 0, 1
+; CHECK-NEXT:    fadd 0, 0, 0
+; CHECK-NEXT:    stw 7, 40(1)
 ; CHECK-NEXT:    stw 8, 44(1)
+; CHECK-NEXT:    fadd 1, 1, 0
 ; CHECK-NEXT:    stw 9, 48(1)
 ; CHECK-NEXT:    stw 10, 52(1)
 ; CHECK-NEXT:    stw 3, -4(1)
-; CHECK-NEXT:    stw 3, -8(1)
 ; CHECK-NEXT:    blr
 entry:
   %arg1 = alloca ptr, align 4
@@ -155,31 +149,24 @@ entry:
 define double @double_stack_va_arg(double %one, double %two, double %three, double %four, double %five, double %six, double %seven, double %eight, double %nine, double %ten, double %eleven, double %twelve, double %thirteen, ...) local_unnamed_addr  {
 ; CHECK-LABEL: double_stack_va_arg:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fadd 0, 1, 2
+; CHECK-NEXT:    fadd 1, 1, 2
+; CHECK-NEXT:    lfd 0, 128(1)
 ; CHECK-NEXT:    addi 3, 1, 128
-; CHECK-NEXT:    lwz 4, 132(1)
-; CHECK-NEXT:    fadd 0, 0, 3
+; CHECK-NEXT:    fadd 1, 1, 3
 ; CHECK-NEXT:    stw 3, -4(1)
-; CHECK-NEXT:    fadd 0, 0, 4
-; CHECK-NEXT:    lwz 3, 128(1)
-; CHECK-NEXT:    fadd 0, 0, 5
-; CHECK-NEXT:    stw 3, -16(1)
-; CHECK-NEXT:    fadd 0, 0, 6
-; CHECK-NEXT:    stw 4, -12(1)
-; CHECK-NEXT:    fadd 0, 0, 7
-; CHECK-NEXT:    lfd 1, -16(1)
-; CHECK-NEXT:    fadd 0, 0, 8
-; CHECK-NEXT:    stw 3, -24(1)
-; CHECK-NEXT:    fadd 0, 0, 9
-; CHECK-NEXT:    stw 4, -20(1)
-; CHECK-NEXT:    fadd 0, 0, 10
-; CHECK-NEXT:    fadd 0, 0, 11
-; CHECK-NEXT:    fadd 0, 0, 12
-; CHECK-NEXT:    fadd 0, 0, 13
-; CHECK-NEXT:    fadd 0, 0, 1
-; CHECK-NEXT:    lfd 1, -24(1)
-; CHECK-NEXT:    fadd 1, 1, 1
-; CHECK-NEXT:    fadd 1, 0, 1
+; CHECK-NEXT:    fadd 1, 1, 4
+; CHECK-NEXT:    fadd 1, 1, 5
+; CHECK-NEXT:    fadd 1, 1, 6
+; CHECK-NEXT:    fadd 1, 1, 7
+; CHECK-NEXT:    fadd 1, 1, 8
+; CHECK-NEXT:    fadd 1, 1, 9
+; CHECK-NEXT:    fadd 1, 1, 10
+; CHECK-NEXT:    fadd 1, 1, 11
+; CHECK-NEXT:    fadd 1, 1, 12
+; CHECK-NEXT:    fadd 1, 1, 13
+; CHECK-NEXT:    fadd 1, 1, 0
+; CHECK-NEXT:    fadd 0, 0, 0
+; CHECK-NEXT:    fadd 1, 1, 0
 ; CHECK-NEXT:    blr
 entry:
   %arg1 = alloca ptr, align 4

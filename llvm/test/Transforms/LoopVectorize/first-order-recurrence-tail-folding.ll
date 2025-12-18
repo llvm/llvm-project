@@ -68,7 +68,7 @@ define i32 @FOR_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC1-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF2IC1:       [[MIDDLE_BLOCK]]:
 ; VF2IC1-NEXT:    [[TMP25:%.*]] = xor <2 x i1> [[TMP2]], splat (i1 true)
-; VF2IC1-NEXT:    [[TMP26:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP25]], i1 true)
+; VF2IC1-NEXT:    [[TMP26:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP25]], i1 false)
 ; VF2IC1-NEXT:    [[TMP27:%.*]] = sub i64 [[TMP26]], 1
 ; VF2IC1-NEXT:    [[TMP28:%.*]] = sub i64 [[TMP27]], 1
 ; VF2IC1-NEXT:    [[TMP29:%.*]] = extractelement <2 x i32> [[TMP12]], i64 [[TMP28]]
@@ -187,9 +187,9 @@ define i32 @FOR_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC2:       [[MIDDLE_BLOCK]]:
 ; VF2IC2-NEXT:    [[TMP49:%.*]] = xor <2 x i1> [[TMP4]], splat (i1 true)
 ; VF2IC2-NEXT:    [[TMP50:%.*]] = xor <2 x i1> [[TMP5]], splat (i1 true)
-; VF2IC2-NEXT:    [[TMP51:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP50]], i1 true)
+; VF2IC2-NEXT:    [[TMP51:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP50]], i1 false)
 ; VF2IC2-NEXT:    [[TMP52:%.*]] = add i64 2, [[TMP51]]
-; VF2IC2-NEXT:    [[TMP53:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP49]], i1 true)
+; VF2IC2-NEXT:    [[TMP53:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP49]], i1 false)
 ; VF2IC2-NEXT:    [[TMP54:%.*]] = add i64 0, [[TMP53]]
 ; VF2IC2-NEXT:    [[TMP55:%.*]] = icmp ne i64 [[TMP53]], 2
 ; VF2IC2-NEXT:    [[TMP56:%.*]] = select i1 [[TMP55]], i64 [[TMP54]], i64 [[TMP52]]
@@ -362,7 +362,7 @@ define i32 @FOR_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC1-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF2IC1:       [[MIDDLE_BLOCK]]:
 ; VF2IC1-NEXT:    [[TMP25:%.*]] = xor <2 x i1> [[TMP2]], splat (i1 true)
-; VF2IC1-NEXT:    [[TMP26:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP25]], i1 true)
+; VF2IC1-NEXT:    [[TMP26:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP25]], i1 false)
 ; VF2IC1-NEXT:    [[TMP27:%.*]] = sub i64 [[TMP26]], 1
 ; VF2IC1-NEXT:    [[TMP28:%.*]] = extractelement <2 x i32> [[TMP12]], i64 [[TMP27]]
 ; VF2IC1-NEXT:    br label %[[FOR_END:.*]]
@@ -477,9 +477,9 @@ define i32 @FOR_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC2:       [[MIDDLE_BLOCK]]:
 ; VF2IC2-NEXT:    [[TMP49:%.*]] = xor <2 x i1> [[TMP4]], splat (i1 true)
 ; VF2IC2-NEXT:    [[TMP50:%.*]] = xor <2 x i1> [[TMP5]], splat (i1 true)
-; VF2IC2-NEXT:    [[TMP51:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP50]], i1 true)
+; VF2IC2-NEXT:    [[TMP51:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP50]], i1 false)
 ; VF2IC2-NEXT:    [[TMP52:%.*]] = add i64 2, [[TMP51]]
-; VF2IC2-NEXT:    [[TMP53:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP49]], i1 true)
+; VF2IC2-NEXT:    [[TMP53:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP49]], i1 false)
 ; VF2IC2-NEXT:    [[TMP54:%.*]] = add i64 0, [[TMP53]]
 ; VF2IC2-NEXT:    [[TMP55:%.*]] = icmp ne i64 [[TMP53]], 2
 ; VF2IC2-NEXT:    [[TMP56:%.*]] = select i1 [[TMP55]], i64 [[TMP54]], i64 [[TMP52]]
@@ -645,7 +645,7 @@ define i32 @FOR_and_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC1-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF2IC1:       [[MIDDLE_BLOCK]]:
 ; VF2IC1-NEXT:    [[TMP25:%.*]] = xor <2 x i1> [[TMP2]], splat (i1 true)
-; VF2IC1-NEXT:    [[TMP26:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP25]], i1 true)
+; VF2IC1-NEXT:    [[TMP26:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP25]], i1 false)
 ; VF2IC1-NEXT:    [[TMP27:%.*]] = sub i64 [[TMP26]], 1
 ; VF2IC1-NEXT:    [[TMP28:%.*]] = sub i64 [[TMP27]], 1
 ; VF2IC1-NEXT:    [[TMP29:%.*]] = extractelement <2 x i32> [[TMP12]], i64 [[TMP28]]
@@ -766,9 +766,9 @@ define i32 @FOR_and_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC2:       [[MIDDLE_BLOCK]]:
 ; VF2IC2-NEXT:    [[TMP49:%.*]] = xor <2 x i1> [[TMP4]], splat (i1 true)
 ; VF2IC2-NEXT:    [[TMP50:%.*]] = xor <2 x i1> [[TMP5]], splat (i1 true)
-; VF2IC2-NEXT:    [[TMP51:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP50]], i1 true)
+; VF2IC2-NEXT:    [[TMP51:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP50]], i1 false)
 ; VF2IC2-NEXT:    [[TMP52:%.*]] = add i64 2, [[TMP51]]
-; VF2IC2-NEXT:    [[TMP53:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP49]], i1 true)
+; VF2IC2-NEXT:    [[TMP53:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP49]], i1 false)
 ; VF2IC2-NEXT:    [[TMP54:%.*]] = add i64 0, [[TMP53]]
 ; VF2IC2-NEXT:    [[TMP55:%.*]] = icmp ne i64 [[TMP53]], 2
 ; VF2IC2-NEXT:    [[TMP56:%.*]] = select i1 [[TMP55]], i64 [[TMP54]], i64 [[TMP52]]

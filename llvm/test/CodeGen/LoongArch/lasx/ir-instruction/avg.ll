@@ -131,22 +131,13 @@ entry:
 }
 
 define void @xvavg_du(ptr %res, ptr %a, ptr %b) nounwind {
-; LA32-LABEL: xvavg_du:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    xvld $xr1, $a2, 0
-; LA32-NEXT:    xvadd.d $xr0, $xr0, $xr1
-; LA32-NEXT:    xvsrli.d $xr0, $xr0, 1
-; LA32-NEXT:    xvst $xr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: xvavg_du:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a1, 0
-; LA64-NEXT:    xvld $xr1, $a2, 0
-; LA64-NEXT:    xvavg.du $xr0, $xr0, $xr1
-; LA64-NEXT:    xvst $xr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: xvavg_du:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvavg.du $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <4 x i64>, ptr %a
   %vb = load <4 x i64>, ptr %b
@@ -298,8 +289,8 @@ define void @xvavgr_du(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    xvld $xr0, $a1, 0
 ; LA32-NEXT:    xvld $xr1, $a2, 0
 ; LA32-NEXT:    xvadd.d $xr0, $xr0, $xr1
-; LA32-NEXT:    xvaddi.du $xr0, $xr0, 1
-; LA32-NEXT:    xvsrli.d $xr0, $xr0, 1
+; LA32-NEXT:    xvrepli.d $xr1, 1
+; LA32-NEXT:    xvavg.du $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvst $xr0, $a0, 0
 ; LA32-NEXT:    ret
 ;

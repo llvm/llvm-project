@@ -850,7 +850,7 @@ void CopyOp::getCanonicalizationPatterns(RewritePatternSet &results,
 /// If the source/target of a CopyOp is a CastOp that does not modify the shape
 /// and element type, the cast can be skipped. Such CastOps only cast the layout
 /// of the type.
-static LogicalResult FoldCopyOfCast(CopyOp op) {
+static LogicalResult foldCopyOfCast(CopyOp op) {
   for (OpOperand &operand : op->getOpOperands()) {
     auto castOp = operand.get().getDefiningOp<memref::CastOp>();
     if (castOp && memref::CastOp::canFoldIntoConsumerOp(castOp)) {
@@ -865,7 +865,7 @@ LogicalResult CopyOp::fold(FoldAdaptor adaptor,
                            SmallVectorImpl<OpFoldResult> &results) {
 
   /// copy(memrefcast) -> copy
-  return FoldCopyOfCast(*this);
+  return foldCopyOfCast(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1072,13 +1072,6 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
     assert(subview.isDynamicSize(sourceIndex) &&
            "expected dynamic subview size");
     return subview.getDynamicSize(sourceIndex);
-  }
-
-  if (auto sizeInterface =
-          dyn_cast_or_null<OffsetSizeAndStrideOpInterface>(definingOp)) {
-    assert(sizeInterface.isDynamicSize(unsignedIndex) &&
-           "Expected dynamic subview size");
-    return sizeInterface.getDynamicSize(unsignedIndex);
   }
 
   // dim(memrefcast) -> dim
