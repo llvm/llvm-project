@@ -42,15 +42,12 @@ define void @reverse_store(ptr %a, i64 %n) !dbg !4 {
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG10:![0-9]+]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP:.*]], !dbg [[DBG10]]
-; CHECK:       [[FOR_COND_CLEANUP]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]], !dbg [[DBG10]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
-
-for.cond.cleanup:
-  ret void
 
 loop:
   %iv = phi i64 [ %n, %entry ], [ %iv.next, %loop ]
@@ -58,7 +55,10 @@ loop:
   %arrayidx = getelementptr inbounds nuw i64, ptr %a, i64 %iv.next, !dbg !8
   store i64 %iv.next, ptr %arrayidx, align 8, !dbg !9
   %cmp = icmp samesign ugt i64 %iv, 1, !dbg !10
-  br i1 %cmp, label %loop, label %for.cond.cleanup, !dbg !11, !llvm.loop !12
+  br i1 %cmp, label %loop, label %exit, !dbg !11, !llvm.loop !12
+
+exit:
+  ret void
 }
 
 !llvm.dbg.cu = !{!0}
