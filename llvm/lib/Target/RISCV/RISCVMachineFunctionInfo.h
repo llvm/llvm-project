@@ -154,8 +154,8 @@ public:
   void setArgumentStackSize(unsigned size) { ArgumentStackSize = size; }
 
   void addIncomingByValArgs(SDValue Val) { IncomingByValArgs.push_back(Val); }
-  SDValue &getIncomingByValArgs(int Idx) { return IncomingByValArgs[Idx]; }
-  unsigned getIncomingByValArgsSize() { return IncomingByValArgs.size(); }
+  SDValue getIncomingByValArgs(int Idx) { return IncomingByValArgs[Idx]; }
+  unsigned getIncomingByValArgsSize() const { return IncomingByValArgs.size(); }
 
   enum class PushPopKind { None = 0, StdExtZcmp, VendorXqccmp };
 

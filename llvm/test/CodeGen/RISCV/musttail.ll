@@ -118,7 +118,7 @@ define i32 @more_args_tail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %
 
 ; Again, this isn't valid for musttail, but can be tail-called in practice
 ; because the stack size is the same.
-define i32 @different_args_tail_32bit(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4) {
+define i32 @different_args_tail_32bit(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4) nounwind {
 ; RV32-LABEL: different_args_tail_32bit:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    li a0, 8
@@ -138,9 +138,7 @@ define i32 @different_args_tail_32bit(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4) {
 ; RV64-LABEL: different_args_tail_32bit:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -32
-; RV64-NEXT:    .cfi_def_cfa_offset 32
 ; RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    li a0, 9
 ; RV64-NEXT:    li t0, 8
 ; RV64-NEXT:    li a1, 1
@@ -155,21 +153,17 @@ define i32 @different_args_tail_32bit(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4) {
 ; RV64-NEXT:    li a0, 0
 ; RV64-NEXT:    call many_args_callee
 ; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 32
-; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %ret = tail call i32 @many_args_callee(i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9)
   ret i32 %ret
 }
 
-define i32 @different_args_tail_64bit(i128 %0, i128 %1, i128 %2, i128 %3, i128 %4) {
+define i32 @different_args_tail_64bit(i128 %0, i128 %1, i128 %2, i128 %3, i128 %4) nounwind {
 ; RV32-LABEL: different_args_tail_64bit:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    li a0, 9
 ; RV32-NEXT:    li t0, 8
 ; RV32-NEXT:    li a1, 1
@@ -184,9 +178,7 @@ define i32 @different_args_tail_64bit(i128 %0, i128 %1, i128 %2, i128 %3, i128 %
 ; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    call many_args_callee
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: different_args_tail_64bit:
@@ -210,13 +202,11 @@ define i32 @different_args_tail_64bit(i128 %0, i128 %1, i128 %2, i128 %3, i128 %
 
 ; Here, the caller requires less stack space for it's arguments than the
 ; callee, so it would not ba valid to do a tail-call.
-define i32 @fewer_args_tail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4) {
+define i32 @fewer_args_tail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4) nounwind {
 ; RV32-LABEL: fewer_args_tail:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    li a0, 9
 ; RV32-NEXT:    li t0, 8
 ; RV32-NEXT:    li a1, 1
@@ -231,17 +221,13 @@ define i32 @fewer_args_tail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4) {
 ; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    call many_args_callee
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: fewer_args_tail:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -32
-; RV64-NEXT:    .cfi_def_cfa_offset 32
 ; RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    li a0, 9
 ; RV64-NEXT:    li t0, 8
 ; RV64-NEXT:    li a1, 1
@@ -256,9 +242,7 @@ define i32 @fewer_args_tail(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4) {
 ; RV64-NEXT:    li a0, 0
 ; RV64-NEXT:    call many_args_callee
 ; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 32
-; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %ret = tail call i32 @many_args_callee(i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9)
   ret i32 %ret
