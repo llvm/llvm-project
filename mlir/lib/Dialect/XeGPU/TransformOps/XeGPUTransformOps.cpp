@@ -350,26 +350,23 @@ transform::SetOpLayoutAttrOp::apply(transform::TransformRewriter &rewriter,
         getContext(), layout, DenseI64ArrayAttr::get(getContext(), sliceDims));
   }
 
-  // Set layout attribute for the op result or operand
+  // Set layout attribute
   if (resultTarget) {
+    // for the op result
     xegpu::setDistributeLayoutAttr(target->getResult(index), layout);
   } else if (operandTarget) {
+    // or operand
     xegpu::setDistributeLayoutAttr(target->getOpOperand(index), layout);
   } else {
-    // Set anchor layout if requested.
-    // TODO use AnchorLayoutInterface when available.
-    if (!isa<xegpu::LoadNdOp>(target)) {
+    // or anchor layout.
+    auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(target);
+    if (!anchorOp) {
       auto diag = emitSilenceableFailure(getLoc())
                   << "Cannot set anchor layout to op: " << target->getName();
       diag.attachNote(target->getLoc()) << "target op";
       return diag;
     }
-    auto loadOp = dyn_cast<xegpu::LoadNdOp>(target);
-    if (loadOp)
-      loadOp.setLayoutAttr(layout);
-    auto prefetchOp = dyn_cast<xegpu::PrefetchOp>(target);
-    if (prefetchOp)
-      prefetchOp.setLayoutAttr(layout);
+    anchorOp.setAnchorLayout(layout);
   }
   return DiagnosedSilenceableFailure::success();
 }
