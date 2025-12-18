@@ -1215,10 +1215,10 @@ std::pair<Value *, const TensorShape *> Ripple::getTensorUse(const Use &U) {
   return RepAndShape;
 }
 
-const TensorShape &Ripple::getRippleShape(const Value *V,
-                                          bool ShapePropagation) const {
+const TensorShape &Ripple::getRippleShape(const Value *V, bool ShapePropagation,
+                                          bool DefaultToIgnored) const {
   if (const Instruction *I = dyn_cast<Instruction>(V)) {
-    return getRippleShape(I);
+    return getRippleShape(I, DefaultToIgnored);
   } else if (const Constant *C = dyn_cast<Constant>(V)) {
     return getRippleShape(C, ShapePropagation);
   } else if (const Argument *A = dyn_cast<Argument>(V)) {
@@ -1257,10 +1257,13 @@ const TensorShape &Ripple::getRippleShape(const Argument *A,
       "Taking the Ripple shape of a vector function Argument is ill-defined");
 }
 
-const TensorShape &Ripple::getRippleShape(const Instruction *I) const {
+const TensorShape &Ripple::getRippleShape(const Instruction *I,
+                                          bool DefaultToIgnored) const {
   auto Shape = InstructionRippleShapes.find(I);
   if (Shape != InstructionRippleShapes.end()) {
     return Shape->second;
+  } else if (DefaultToIgnored) {
+    return ShapeIgnoredByRipple;
   } else {
     std::string ErrorStr;
     raw_string_ostream OS(ErrorStr);
@@ -1649,6 +1652,10 @@ PreservedAnalyses Ripple::run() {
 
   auto abortDiagnosticAndRippleCleanup =
       [&](ProcessingStatus Status) -> PreservedAnalyses {
+    if (Status != ProcessingStatus::Success &&
+        Status != ProcessingStatus::WaitingForSpecialization)
+      emitRippleRemarks(/*ShapePropagationFailure*/ Status ==
+                        ProcessingStatus::ShapePropagationFailure);
     DiagnosticInfoRippleWithLoc Diag(
         DS_Error, F, F.getSubprogram(),
         "Ripple failed to vectorize this function");
@@ -9814,6 +9821,13 @@ Error Ripple::checkBlockShapeUsage(const Function &F) {
 
 OptimizationRemarkEmitter &Ripple::getORE() { return Ripple::ORE; }
 
+bool Ripple::allInstructionOperandsHaveRippleShapes(const CallInst &CI) const {
+  return all_of(CI.args(), [&](auto &Use) {
+    return !isa<Instruction>(Use) ||
+           InstructionRippleShapes.count(cast<Instruction>(Use));
+  });
+}
+
 bool Ripple::rippleVectorizeCall(const CallInst &CI) const {
   return none_of(CI.args(),
                  [](auto &Use) { return Use->getType()->isVectorTy(); }) &&
@@ -9821,7 +9835,7 @@ bool Ripple::rippleVectorizeCall(const CallInst &CI) const {
                 [&](auto &Use) { return getRippleShape(Use).isVector(); });
 }
 
-void Ripple::emitRippleRemarks() {
+void Ripple::emitRippleRemarks(bool ShapePropagationFailure) {
   if (!ORE.enabled())
     return;
 
@@ -9838,28 +9852,6 @@ void Ripple::emitRippleRemarks() {
       return a->getLine() < b->getLine();
     return a->getColumn() < b->getColumn();
   };
-
-  MapVector<DILocation *, Instruction *> UniqueLastDILocation;
-  for (auto &I : instructions(F)) {
-    DILocation *DIL = I.getDebugLoc();
-    bool VectorCall =
-        isa<CallInst>(I) && rippleVectorizeCall(cast<CallInst>(I));
-    if (DIL && DIL->getLine() > 0 &&
-        (getRippleShape(&I).isVector() || VectorCall)) {
-      auto [KeyValPair, Inserted] = UniqueLastDILocation.try_emplace(DIL, &I);
-      // Keep CallInst because this information is more important than any
-      // implicit cast that may occur at this position
-      if (!isa<CallInst>(KeyValPair->second))
-        KeyValPair->second = &I;
-    }
-  }
-  // Sort them so that we emit the remarks in a file > line > column order
-  auto UniqDILocs(UniqueLastDILocation.takeVector());
-  llvm::sort(
-      UniqDILocs,
-      [sortDILocationByFileLineColumn](auto &PairA, auto &PairB) -> bool {
-        return sortDILocationByFileLineColumn(PairA.first, PairB.first);
-      });
 
   auto PrintProtoShape =
       [&](
@@ -9911,7 +9903,8 @@ void Ripple::emitRippleRemarks() {
       const TensorShape *ReturnShape = nullptr;
       for (const auto &I : instructions(F))
         if (auto *Return = dyn_cast<ReturnInst>(&I)) {
-          ReturnShape = &getRippleShape(Return);
+          ReturnShape = &getRippleShape(
+              Return, /*DefaultToIgnored*/ ShapePropagationFailure);
           break;
         }
 
@@ -9923,6 +9916,38 @@ void Ripple::emitRippleRemarks() {
       return R;
     });
   }
+
+  MapVector<DILocation *, Instruction *> UniqueLastDILocation;
+  for (auto &I : instructions(F)) {
+    DILocation *DIL = I.getDebugLoc();
+    bool VectorCall =
+        isa<CallInst>(I) &&
+        (!ShapePropagationFailure ||
+         allInstructionOperandsHaveRippleShapes(cast<CallInst>(I))) &&
+        rippleVectorizeCall(cast<CallInst>(I));
+    if (DIL && DIL->getLine() > 0 &&
+        (getRippleShape(&I, /*DefaultToIgnore*/ ShapePropagationFailure)
+             .isVector() ||
+         VectorCall)) {
+      auto [KeyValPair, Inserted] = UniqueLastDILocation.try_emplace(DIL, &I);
+      // Keep CallInst because this information is more important than any
+      // implicit cast that may occur at this position
+      if (!isa<CallInst>(KeyValPair->second))
+        KeyValPair->second = &I;
+    }
+  }
+
+  // We made sure that only instructions with a valid ripple shape were pushed
+  // to UniqueLastDILocation; we can process these instructions as usual
+
+  // Sort them so that we emit the remarks in a file > line > column order
+  auto UniqDILocs(UniqueLastDILocation.takeVector());
+  llvm::sort(
+      UniqDILocs,
+      [sortDILocationByFileLineColumn](auto &PairA, auto &PairB) -> bool {
+        return sortDILocationByFileLineColumn(PairA.first, PairB.first);
+      });
+
   for (auto &P : UniqDILocs) {
     Instruction *I = P.second;
     if (isa<BranchInst>(I) || isa<SwitchInst>(I)) {

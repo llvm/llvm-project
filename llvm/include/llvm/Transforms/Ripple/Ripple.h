@@ -1169,8 +1169,11 @@ public:
   /// or Arguments.
   /// @param ShapePropagation When true, during shape propagation, returns
   /// ShapeIgnoredByRipple for Constants and Arguments having vector types
+  /// @param DefaultToIgnored Set to true when wanting to query shapes after a
+  /// failure to @ref propagateShapes (e.g., for remark generation)
   const TensorShape &getRippleShape(const Value *V,
-                                    bool ShapePropagation = false) const;
+                                    bool ShapePropagation = false,
+                                    bool DefaultToIgnored = false) const;
 
   /// @brief Sets a tensor shape to a value
   /// @return true if the shape of v was modified
@@ -1558,7 +1561,10 @@ private:
   /// The shape of an instruction is the result of propagating tensor shapes
   /// throughout the function. Hence an instruction with scalar type may have a
   /// tensor shape.
-  const TensorShape &getRippleShape(const Instruction *I) const;
+  /// @param DefaultToIgnored Set to true when wanting to query shapes after a
+  /// failure to @ref propagateShapes (e.g., for remark generation)
+  const TensorShape &getRippleShape(const Instruction *I,
+                                    bool DefaultToIgnored = false) const;
 
   /// @brief Only scalar constant can be queried for shape (Scalar)
   /// @param ShapePropagation When true, during shape propagation, returns
@@ -2091,8 +2097,17 @@ private:
   /// arguments.
   bool rippleVectorizeCall(const CallInst &CI) const;
 
+  /// @brief Checks that all instruction operands have valid ripple shapes
+  ///
+  /// Useful to check if we can safely process a CallInst after a failure of
+  /// @ref propagateShapes.
+  bool allInstructionOperandsHaveRippleShapes(const CallInst &CI) const;
+
   /// @brief Emit optimization remarks for the Ripple pass
-  void emitRippleRemarks();
+  /// @param ShapePropagationFailure Set to true after a failure to @ref
+  /// propagateShapes in order to avoid a compiler crash: by default we expect
+  /// that all instruction to have a valid tensor shape
+  void emitRippleRemarks(bool ShapePropagationFailure = false);
 
   /// @brief Returns the tensor shapes of the intrinsic arguments and the
   /// intrinsic return type
