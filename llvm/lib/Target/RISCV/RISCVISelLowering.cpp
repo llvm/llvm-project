@@ -22554,25 +22554,17 @@ static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
       MPI.getWithOffset(4), MachineMemOperand::MOLoad, 4, Align(8));
 
   // For big-endian, the high part is at offset 0 and the low part at offset 4.
-  if (!Subtarget.isLittleEndian()) {
-    BuildMI(*BB, MI, DL, TII.get(RISCV::LW), HiReg)
-        .addFrameIndex(FI)
-        .addImm(0)
-        .addMemOperand(MMOLo);
-    BuildMI(*BB, MI, DL, TII.get(RISCV::LW), LoReg)
-        .addFrameIndex(FI)
-        .addImm(4)
-        .addMemOperand(MMOHi);
-  } else {
-    BuildMI(*BB, MI, DL, TII.get(RISCV::LW), LoReg)
-        .addFrameIndex(FI)
-        .addImm(0)
-        .addMemOperand(MMOLo);
-    BuildMI(*BB, MI, DL, TII.get(RISCV::LW), HiReg)
-        .addFrameIndex(FI)
-        .addImm(4)
-        .addMemOperand(MMOHi);
-  }
+  if (!Subtarget.isLittleEndian())
+    std::swap(LoReg, HiReg);
+
+  BuildMI(*BB, MI, DL, TII.get(RISCV::LW), LoReg)
+      .addFrameIndex(FI)
+      .addImm(0)
+      .addMemOperand(MMOLo);
+  BuildMI(*BB, MI, DL, TII.get(RISCV::LW), HiReg)
+      .addFrameIndex(FI)
+      .addImm(4)
+      .addMemOperand(MMOHi);
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }
@@ -22589,6 +22581,8 @@ static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
   Register DstReg = MI.getOperand(0).getReg();
   Register LoReg = MI.getOperand(1).getReg();
   Register HiReg = MI.getOperand(2).getReg();
+  bool KillLo = MI.getOperand(1).isKill();
+  bool KillHi = MI.getOperand(2).isKill();
 
   const TargetRegisterClass *DstRC = &RISCV::FPR64RegClass;
   int FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF64FrameIndex(MF);
@@ -22602,28 +22596,20 @@ static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
   // For big-endian, store the high part at offset 0 and the low part at
   // offset 4.
   if (!Subtarget.isLittleEndian()) {
-    BuildMI(*BB, MI, DL, TII.get(RISCV::SW))
-        .addReg(HiReg, getKillRegState(MI.getOperand(2).isKill()))
-        .addFrameIndex(FI)
-        .addImm(0)
-        .addMemOperand(MMOLo);
-    BuildMI(*BB, MI, DL, TII.get(RISCV::SW))
-        .addReg(LoReg, getKillRegState(MI.getOperand(1).isKill()))
-        .addFrameIndex(FI)
-        .addImm(4)
-        .addMemOperand(MMOHi);
-  } else {
-    BuildMI(*BB, MI, DL, TII.get(RISCV::SW))
-        .addReg(LoReg, getKillRegState(MI.getOperand(1).isKill()))
-        .addFrameIndex(FI)
-        .addImm(0)
-        .addMemOperand(MMOLo);
-    BuildMI(*BB, MI, DL, TII.get(RISCV::SW))
-        .addReg(HiReg, getKillRegState(MI.getOperand(2).isKill()))
-        .addFrameIndex(FI)
-        .addImm(4)
-        .addMemOperand(MMOHi);
+    std::swap(LoReg, HiReg);
+    std::swap(KillLo, KillHi);
   }
+
+  BuildMI(*BB, MI, DL, TII.get(RISCV::SW))
+      .addReg(LoReg, getKillRegState(KillLo))
+      .addFrameIndex(FI)
+      .addImm(0)
+      .addMemOperand(MMOLo);
+  BuildMI(*BB, MI, DL, TII.get(RISCV::SW))
+      .addReg(HiReg, getKillRegState(KillHi))
+      .addFrameIndex(FI)
+      .addImm(4)
+      .addMemOperand(MMOHi);
   TII.loadRegFromStackSlot(*BB, MI, DstReg, FI, DstRC, Register());
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
