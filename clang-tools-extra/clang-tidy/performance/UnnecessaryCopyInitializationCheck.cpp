@@ -43,9 +43,8 @@ static std::optional<SourceLocation> firstLocAfterNewLine(SourceLocation Loc,
                                                           SourceManager &SM) {
   bool Invalid = false;
   const char *TextAfter = SM.getCharacterData(Loc, &Invalid);
-  if (Invalid) {
+  if (Invalid)
     return std::nullopt;
-  }
   const size_t Offset = std::strcspn(TextAfter, "\n");
   return Loc.getLocWithOffset(TextAfter[Offset] == '\0' ? Offset : Offset + 1);
 }
@@ -160,9 +159,8 @@ static bool isInitializingVariableImmutable(
 
   // The reference or pointer is not declared and hence not initialized anywhere
   // in the function. We assume its pointee is not modified then.
-  if (!InitializingVar.isLocalVarDecl() || !InitializingVar.hasInit()) {
+  if (!InitializingVar.isLocalVarDecl() || !InitializingVar.hasInit())
     return true;
-  }
 
   auto Matches =
       match(initializerReturnsReferenceToConst(ExcludedContainerTypes),
@@ -217,12 +215,10 @@ static bool differentReplacedTemplateParams(const QualType &VarType,
 
 static QualType constructorArgumentType(const VarDecl *OldVar,
                                         const BoundNodes &Nodes) {
-  if (OldVar) {
+  if (OldVar)
     return OldVar->getType();
-  }
-  if (const auto *FuncDecl = Nodes.getNodeAs<FunctionDecl>(FunctionDeclId)) {
+  if (const auto *FuncDecl = Nodes.getNodeAs<FunctionDecl>(FunctionDeclId))
     return FuncDecl->getReturnType();
-  }
   const auto *MethodDecl = Nodes.getNodeAs<CXXMethodDecl>(MethodDeclId);
   return MethodDecl->getReturnType();
 }

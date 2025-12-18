@@ -218,8 +218,7 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
   if (auto Err = MemAllocator.initDevicePools(*this, Options))
     return Err;
   l0Context.getHostMemAllocator().updateMaxAllocSize(*this);
-  if (getDebugLevel() > 0)
-    reportDeviceInfo();
+  reportDeviceInfo();
   return Plugin::success();
 }
 

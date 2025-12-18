@@ -34,6 +34,38 @@ public:
                      clause->getClauseKind());
   }
 
+  void VisitOMPProcBindClause(const OMPProcBindClause *clause) {
+    if constexpr (std::is_same_v<OpTy, mlir::omp::ParallelOp>) {
+      mlir::omp::ClauseProcBindKind kind;
+      switch (clause->getProcBindKind()) {
+      case llvm::omp::ProcBindKind::OMP_PROC_BIND_master:
+        kind = mlir::omp::ClauseProcBindKind::Master;
+        break;
+      case llvm::omp::ProcBindKind::OMP_PROC_BIND_close:
+        kind = mlir::omp::ClauseProcBindKind::Close;
+        break;
+      case llvm::omp::ProcBindKind::OMP_PROC_BIND_spread:
+        kind = mlir::omp::ClauseProcBindKind::Spread;
+        break;
+      case llvm::omp::ProcBindKind::OMP_PROC_BIND_primary:
+        kind = mlir::omp::ClauseProcBindKind::Primary;
+        break;
+      case llvm::omp::ProcBindKind::OMP_PROC_BIND_default:
+        // 'default' in the classic-codegen does no runtime call/doesn't
+        // really do anything. So this is a no-op, and thus shouldn't change
+        // the IR.
+        return;
+      case llvm::omp::ProcBindKind::OMP_PROC_BIND_unknown:
+        llvm_unreachable("unknown proc-bind kind");
+      }
+      operation.setProcBindKind(kind);
+    } else {
+      cgf.cgm.errorNYI(
+          clause->getBeginLoc(),
+          "OMPProcBindClause unimplemented on this directive kind");
+    }
+  }
+
   void emitClauses(ArrayRef<const OMPClause *> clauses) {
     for (const auto *c : clauses)
       this->Visit(c);

@@ -1243,7 +1243,7 @@ TEST_F(VPRecipeTest, CastVPWidenStoreEVLRecipeToVPUser) {
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPWidenStoreRecipe BaseStore(*Store, Addr, StoredVal, Mask, true, false, {},
                                {});
-  VPWidenStoreEVLRecipe Recipe(BaseStore, Addr, *EVL, Mask);
+  VPWidenStoreEVLRecipe Recipe(BaseStore, Addr, StoredVal, *EVL, Mask);
 
   checkVPRecipeCastImpl<VPWidenStoreEVLRecipe, VPUser, VPIRMetadata>(&Recipe);
 

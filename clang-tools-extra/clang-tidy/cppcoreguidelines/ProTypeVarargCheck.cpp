@@ -120,9 +120,8 @@ public:
 
   void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
                     SourceRange Range, const MacroArgs *Args) override {
-    if (MacroNameTok.getIdentifierInfo()->getName() == "va_arg") {
+    if (MacroNameTok.getIdentifierInfo()->getName() == "va_arg")
       Check->diag(MacroNameTok.getLocation(), VaArgWarningMessage);
-    }
   }
 
 private:
@@ -182,9 +181,8 @@ void ProTypeVarargCheck::check(const MatchFinder::MatchResult &Result) {
     diag(Matched->getExprLoc(), "do not call c-style vararg functions");
   }
 
-  if (const auto *Matched = Result.Nodes.getNodeAs<Expr>("va_use")) {
+  if (const auto *Matched = Result.Nodes.getNodeAs<Expr>("va_use"))
     diag(Matched->getExprLoc(), VaArgWarningMessage);
-  }
 
   if (const auto *Matched = Result.Nodes.getNodeAs<VarDecl>("va_list")) {
     auto SR = Matched->getSourceRange();

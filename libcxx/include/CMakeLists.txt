@@ -527,6 +527,7 @@ set(files
   __locale_dir/num.h
   __locale_dir/pad_and_output.h
   __locale_dir/scan_keyword.h
+  __locale_dir/support/aix.h
   __locale_dir/support/apple.h
   __locale_dir/support/bsd_like.h
   __locale_dir/support/freebsd.h

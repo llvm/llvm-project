@@ -103,10 +103,9 @@ static std::string
 toCommaSeparatedString(const R &OrderedDecls,
                        const SmallPtrSetImpl<const T *> &DeclsToInit) {
   SmallVector<StringRef, 16> Names;
-  for (const T *Decl : OrderedDecls) {
+  for (const T *Decl : OrderedDecls)
     if (DeclsToInit.contains(Decl))
       Names.emplace_back(getName(Decl));
-  }
   return llvm::join(Names.begin(), Names.end(), ", ");
 }
 
@@ -254,9 +253,8 @@ getInitializationsInOrder(const CXXRecordDecl &ClassDecl,
   Decls.clear();
   for (const auto &Base : ClassDecl.bases()) {
     // Decl may be null if the base class is a template parameter.
-    if (const NamedDecl *Decl = getCanonicalRecordDecl(Base.getType())) {
+    if (const NamedDecl *Decl = getCanonicalRecordDecl(Base.getType()))
       Decls.emplace_back(Decl);
-    }
   }
   forEachField(ClassDecl, ClassDecl.fields(),
                [&](const FieldDecl *F) { Decls.push_back(F); });
@@ -377,9 +375,8 @@ static bool isIncompleteOrZeroLengthArrayType(const ASTContext &Context,
 }
 
 static bool isEmpty(const ASTContext &Context, const QualType &Type) {
-  if (const CXXRecordDecl *ClassDecl = Type->getAsCXXRecordDecl()) {
+  if (const CXXRecordDecl *ClassDecl = Type->getAsCXXRecordDecl())
     return ClassDecl->isEmpty();
-  }
   return isIncompleteOrZeroLengthArrayType(Context, Type);
 }
 
@@ -570,10 +567,9 @@ void ProTypeMemberInitCheck::checkMissingBaseClassInitializer(
     if (Ctor->isImplicit())
       return;
 
-    for (const CXXCtorInitializer *Init : Ctor->inits()) {
+    for (const CXXCtorInitializer *Init : Ctor->inits())
       if (Init->isBaseInitializer() && Init->isWritten())
         BasesToInit.erase(Init->getBaseClass()->getAsCXXRecordDecl());
-    }
   }
 
   if (BasesToInit.empty())

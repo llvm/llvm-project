@@ -14385,6 +14385,32 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(ResultElements, E);
   }
+  case X86::BI__builtin_ia32_vperm2f128_pd256:
+  case X86::BI__builtin_ia32_vperm2f128_ps256:
+  case X86::BI__builtin_ia32_vperm2f128_si256:
+  case X86::BI__builtin_ia32_permti256: {
+    unsigned NumElements =
+        E->getArg(0)->getType()->getAs<VectorType>()->getNumElements();
+    unsigned PreservedBitsCnt = NumElements >> 2;
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [PreservedBitsCnt](unsigned DstIdx, unsigned ShuffleMask) {
+              unsigned ControlBitsCnt = DstIdx >> PreservedBitsCnt << 2;
+              unsigned ControlBits = ShuffleMask >> ControlBitsCnt;
+
+              if (ControlBits & 0b1000)
+                return std::make_pair(0u, -1);
+
+              unsigned SrcVecIdx = (ControlBits & 0b10) >> 1;
+              unsigned PreservedBitsMask = (1 << PreservedBitsCnt) - 1;
+              int SrcIdx = ((ControlBits & 0b1) << PreservedBitsCnt) |
+                           (DstIdx & PreservedBitsMask);
+              return std::make_pair(SrcVecIdx, SrcIdx);
+            }))
+      return false;
+    return Success(R, E);
+  }
   }
 }
 

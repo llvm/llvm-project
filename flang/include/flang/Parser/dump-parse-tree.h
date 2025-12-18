@@ -562,6 +562,7 @@ public:
   NODE(parser, OmpClauseList)
   NODE(parser, OmpCloseModifier)
   NODE_ENUM(OmpCloseModifier, Value)
+  NODE(parser, OmpCombinerClause)
   NODE(parser, OmpCombinerExpression)
   NODE(parser, OmpContainsClause)
   NODE(parser, OmpContextSelectorSpecification)

@@ -135,10 +135,9 @@ void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {
       if (R->isLambda())
         return;
       // Don't warn when the type is not copyable.
-      for (const auto *Ctor : R->ctors()) {
+      for (const auto *Ctor : R->ctors())
         if (Ctor->isCopyConstructor() && Ctor->isDeleted())
           return;
-      }
     }
 
     if (!IsConstArg && IsTriviallyCopyable && !CheckTriviallyCopyableMove)

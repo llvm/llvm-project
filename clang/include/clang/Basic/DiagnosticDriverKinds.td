@@ -93,6 +93,12 @@ def err_drv_hipspv_no_hip_path : Error<
   "'--hip-path' must be specified when offloading to SPIR-V unless '-nogpuinc' "
   "is given">;
 
+def err_drv_no_spv_tools : Error<"cannot find SPIR-V Tools binary '%0', which "
+                                 "is required for SPIR-V compilation. "
+                                 "It can be obtained from your system package "
+                                 "manager or from KhronosGroup/SPIRV-Tools "
+                                 "on GitHub">;
+
 def err_drv_undetermined_gpu_arch : Error<
   "cannot determine %0 architecture: %1; consider passing it via '%2'; "
   "environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool "
