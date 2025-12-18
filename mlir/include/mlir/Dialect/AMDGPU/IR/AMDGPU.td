@@ -1013,7 +1013,7 @@ def SMFMACOutTypes : AnyTypeOf<[
     VectorOfLengthAndType<[4, 16], [I32]>
 ]>;
 
-def SparseMFMAIdxTypes : AnyTypeOf<[
+def SMFMACIdxTypes : AnyTypeOf<[
     FixedVectorOfLengthAndType<[4], [I8]>,
     FixedVectorOfLengthAndType<[2], [I16]>
 ]>;
@@ -1176,7 +1176,7 @@ def AMDGPU_SparseMFMAOp :
                    SMFMACSparseInTypes:$sourceA,
                    SMFMACDenseInTypes:$sourceB,
                    SMFMACOutTypes:$destC,
-                   SparseMFMAIdxTypes:$sparseIdx,
+                   SMFMACIdxTypes:$sparseIdx,
                    DefaultValuedAttr<I32Attr, "0">:$cbsz,
                    DefaultValuedAttr<I32Attr, "0">:$abid)>,
     Results<(outs SMFMACOutTypes: $destD)> {
