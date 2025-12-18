@@ -303,16 +303,17 @@ def getCompilerVersion():
 
 def getWindowsVersion():
     """Returns a string that represents the Windows version.
-    
+
     The string is a concatenation of the following, eparated by a dot:
       - The major version number.
       - The build number.
-    
+
     Example:
       - Windows 11 version 24H2 -> "10.26100"
       - Windows 10 version 1809 -> "10.17763"
     """
     import sys
+
     if sys.platform != "win32":
         return "unknown"
     windows_version = sys.getwindowsversion()
