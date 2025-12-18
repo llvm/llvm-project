@@ -23,7 +23,7 @@ static const llvm::StringRef RenameCaseToSuiteMessage =
 
 static std::optional<llvm::StringRef>
 getNewMacroName(llvm::StringRef MacroName) {
-  llvm::StringMap<llvm::StringRef> ReplacementMap = {
+  static const llvm::StringMap<llvm::StringRef> ReplacementMap = {
       {"TYPED_TEST_CASE", "TYPED_TEST_SUITE"},
       {"TYPED_TEST_CASE_P", "TYPED_TEST_SUITE_P"},
       {"REGISTER_TYPED_TEST_CASE_P", "REGISTER_TYPED_TEST_SUITE_P"},
@@ -202,7 +202,7 @@ void UpgradeGoogletestCaseCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 static llvm::StringRef getNewMethodName(llvm::StringRef CurrentName) {
-  llvm::StringMap<llvm::StringRef> ReplacementMap = {
+  static const llvm::StringMap<llvm::StringRef> ReplacementMap = {
       {"SetUpTestCase", "SetUpTestSuite"},
       {"TearDownTestCase", "TearDownTestSuite"},
       {"test_case_name", "test_suite_name"},
