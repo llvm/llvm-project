@@ -652,7 +652,7 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       // Extracting subvector with dynamic index has very large expansion in
       // the amdgpu backend. Limit to pow2.
       FixedVectorType *VectorTy = AA.Vector.Ty;
-      uint64_t NumBits = DL.getTypeStoreSize(SubVecTy) * 8u;
+      TypeSize NumBits = DL.getTypeStoreSize(SubVecTy) * 8u;
       uint64_t LoadAlign = cast<LoadInst>(Inst)->getAlign().value();
       bool IsAlignedLoad = NumBits <= (LoadAlign * 8u);
       unsigned TotalNumElts = VectorTy->getNumElements();
