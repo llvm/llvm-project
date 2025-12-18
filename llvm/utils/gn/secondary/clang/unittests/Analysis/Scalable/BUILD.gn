@@ -15,5 +15,6 @@ unittest("ClangScalableAnalysisTests") {
     "ASTEntityMappingTest.cpp",
     "BuildNamespaceTest.cpp",
     "EntityNameTest.cpp",
+    "SummaryNameTest.cpp",
   ]
 }
