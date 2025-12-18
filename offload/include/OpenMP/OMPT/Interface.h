@@ -25,23 +25,12 @@
 
 #define OMPT_IF_BUILT(stmt) stmt
 
-#define TargetTaskData                                                         \
-  ((OmptTaskInfoPtr == &OmptTaskInfo) ? nullptr                                \
-                                      : (&(OmptTaskInfoPtr->task_data)))
-#define TargetData (OmptTaskInfoPtr->target_data)
-
-/// Prefix of ompt_task_info_t struct from libomp
-typedef struct ompt_task_info_t {
-  ompt_data_t task_data;
-  ompt_data_t target_data;
-} ompt_task_info_t;
-
 /// Callbacks for target regions require task_data representing the
 /// encountering task.
 /// Callbacks for target regions and target data ops require
 /// target_task_data representing the target task region.
 typedef ompt_data_t *(*ompt_get_task_data_t)();
-typedef ompt_task_info_t *(*ompt_get_task_info_target_t)();
+typedef ompt_data_t *(*ompt_get_target_task_data_t)();
 
 namespace llvm {
 namespace omp {
@@ -51,7 +40,7 @@ namespace ompt {
 /// Function pointers that will be used to track task_data and
 /// target_task_data.
 static ompt_get_task_data_t ompt_get_task_data_fn;
-static ompt_get_task_info_target_t ompt_get_task_info_target_fn;
+static ompt_get_target_task_data_t ompt_get_target_task_data_fn;
 
 /// Used to maintain execution state for this thread
 class Interface {
@@ -227,16 +216,16 @@ public:
 
 private:
   /// Target operations id
-  ompt_id_t HostOpId{0};
+  ompt_id_t HostOpId = 0;
+
+  /// Target region data
+  ompt_data_t TargetData = ompt_data_none;
 
   /// Task data representing the encountering task
-  ompt_data_t *TaskData{nullptr};
+  ompt_data_t *TaskData = nullptr;
 
-  /// TaskInfo contains target_data and task_data
-  ompt_task_info_t OmptTaskInfo{ompt_data_none, ompt_data_none};
-
-  /// Ptr to TaskInfo in OpenMP runtime in case of deferred target tasks
-  ompt_task_info_t *OmptTaskInfoPtr{&OmptTaskInfo};
+  /// Target task data representing the target task region
+  ompt_data_t *TargetTaskData = nullptr;
 
   /// Used for marking begin of a data operation
   void beginTargetDataOperation();
