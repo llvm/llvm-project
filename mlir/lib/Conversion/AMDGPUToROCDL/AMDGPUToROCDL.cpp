@@ -1477,9 +1477,13 @@ struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
       return op.emitOpError(
           "no intrinsic matching sparse MFMA on the given chipset");
 
+    // Bitcast sparse indices from vector<4xi8> or vector<2xi16> to i32.
+    Value sparseIdx = LLVM::BitcastOp::create(
+        rewriter, loc, rewriter.getI32Type(), adaptor.getSparseIdx());
+
     OperationState loweredOp(loc, maybeIntrinsic.value());
     loweredOp.addTypes(outType);
-    loweredOp.addOperands({a, b, c, adaptor.getSparseIdx(),
+    loweredOp.addOperands({a, b, c, sparseIdx,
                            createI32Constant(rewriter, loc, op.getCbsz()),
                            createI32Constant(rewriter, loc, op.getAbid())});
     Value lowered = rewriter.create(loweredOp)->getResult(0);

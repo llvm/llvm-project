@@ -1013,6 +1013,11 @@ def SMFMACOutTypes : AnyTypeOf<[
     VectorOfLengthAndType<[4, 16], [I32]>
 ]>;
 
+def SparseMFMAIdxTypes : AnyTypeOf<[
+    FixedVectorOfLengthAndType<[4], [I8]>,
+    FixedVectorOfLengthAndType<[2], [I16]>
+]>;
+
 // scaled_mfma
 def ScaledMFMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[32], [F8E5M2, F8E4M3FN]>,
                                    VectorOfLengthAndType<[32], [F6E2M3FN, F6E3M2FN, F4E2M1FN]>]>;
@@ -1171,7 +1176,7 @@ def AMDGPU_SparseMFMAOp :
                    SMFMACSparseInTypes:$sourceA,
                    SMFMACDenseInTypes:$sourceB,
                    SMFMACOutTypes:$destC,
-                   I32:$sparseIdx,
+                   SparseMFMAIdxTypes:$sparseIdx,
                    DefaultValuedAttr<I32Attr, "0">:$cbsz,
                    DefaultValuedAttr<I32Attr, "0">:$abid)>,
     Results<(outs SMFMACOutTypes: $destD)> {
@@ -1190,10 +1195,10 @@ def AMDGPU_SparseMFMAOp :
       - M=N=16, K=64 and M=N=32, K=32 for f16 and bf16 sources
       - M=N=16, K=128 and M=N=32, K=64 for i8 and fp8 sources
 
-    The `sparseIdx` parameter (i32) contains packed indices identifying the
-    positions of non-zero elements in the 2:4 sparse matrix A. For 16-bit data,
-    this uses four groups of 8-bit indices; for 8-bit data, 2 groups of 16-bit
-    indices.
+    The `sparseIdx` parameter contains packed indices identifying the positions
+    of non-zero elements in the 2:4 sparse matrix A. For 16-bit source data,
+    use `vector<4xi8>` (four 8-bit indices). For 8-bit source data, use
+    `vector<2xi16>` (two 16-bit indices).
 
     The `cbsz` and `abid` parameters are repurposed to select the index set.
     If `cbsz == 0`, then `abid[1:0]` selects which index set to use. 
@@ -1201,20 +1206,20 @@ def AMDGPU_SparseMFMAOp :
 
     Example:
     ```mlir
-      %0 = amdgpu.sparse_mfma 16x16x32 %matA * %matB + %matC sparse(%idx)
+      %0 = amdgpu.sparse_mfma 16x16x32 %matA * %matB + %matC sparse(%idx : vector<4xi8>)
         : vector<4xf16>, vector<8xf16>, vector<4xf32>
 
-      %1 = amdgpu.sparse_mfma 16x16x64 %matA * %matB + %matC sparse(%idx)
-        : vector<8xf16>, vector<16xf16>, vector<4xf32>
+      %1 = amdgpu.sparse_mfma 16x16x64 %matA * %matB + %matC sparse(%idx : vector<2xi16>)
+        : vector<8xi8>, vector<16xi8>, vector<4xi32>
 
-      %2 = amdgpu.sparse_mfma 16x16x128 %matA * %matB + %matC sparse(%idx)
+      %2 = amdgpu.sparse_mfma 16x16x64 %matA * %matB + %matC sparse(%idx : vector<2xi16>)
         { cbsz = 0 : i32, abid = 1 : i32 }
-        : vector<4xi32>, vector<8xi32>, vector<4xi32>
+        : vector<8xf8E4M3FNUZ>, vector<16xf8E4M3FNUZ>, vector<4xf32>
     ```
   }];
   let assemblyFormat = [{
     custom<MNKDimensionList>($m, $n, $k) $sourceA `*` $sourceB `+` $destC
-    `sparse` `(` $sparseIdx `)`
+    `sparse` `(` $sparseIdx `:` type($sparseIdx) `)`
     attr-dict
     `:` type($sourceA) `,` type($sourceB) `,` type($destC)
   }];

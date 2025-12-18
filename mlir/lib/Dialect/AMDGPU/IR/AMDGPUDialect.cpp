@@ -671,6 +671,24 @@ LogicalResult SparseMFMAOp::verify() {
   if (getCbsz() == 0 && !is8BitSource && getAbid() > 3)
     return emitOpError("ABID must be between 0 and 3 for 16-bit source data");
 
+  // Validate sparseIdx type matches source element type.
+  auto sparseIdxType = cast<VectorType>(getSparseIdx().getType());
+  if (is8BitSource) {
+    // 8-bit source data requires vector<2xi16> sparse indices.
+    if (sparseIdxType.getNumElements() != 2 ||
+        !sparseIdxType.getElementType().isInteger(16))
+      return emitOpError("expected vector<2xi16> sparse indices for 8-bit "
+                         "source data, but got ")
+             << sparseIdxType;
+  } else {
+    // 16-bit source data requires vector<4xi8> sparse indices.
+    if (sparseIdxType.getNumElements() != 4 ||
+        !sparseIdxType.getElementType().isInteger(8))
+      return emitOpError("expected vector<4xi8> sparse indices for 16-bit "
+                         "source data, but got ")
+             << sparseIdxType;
+  }
+
   int64_t expectedSourceElems = (getM() * getK()) / waveSize;
   if (denseLen != expectedSourceElems)
     return emitOpError("expected " + Twine(expectedSourceElems) +
