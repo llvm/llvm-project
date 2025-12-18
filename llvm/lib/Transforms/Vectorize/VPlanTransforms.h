@@ -660,6 +660,11 @@ struct VPlanTransforms {
   static void narrowInductionTruncates(VPlan &Plan, VFRange &Range,
                                        const TargetTransformInfo &TTI,
                                        PredicatedScalarEvolution &PSE);
+
+  /// Convert the scatter to extract-last-active-lane + scalar store if
+  /// profitable.
+  static void narrowScatters(VPlan &Plan, VPCostContext &Ctx, VFRange &Range,
+                             bool FoldTailWithEVL);
 };
 
 } // namespace llvm
