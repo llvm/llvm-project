@@ -164,27 +164,6 @@ static mlir::Value emitX86CompressExpand(CIRGenBuilderTy &builder,
                              mlir::ValueRange{source, mask, maskValue});
 }
 
-static mlir::Value getBoolMaskVecValue(CIRGenBuilderTy &builder,
-                                       mlir::Location loc, mlir::Value mask,
-                                       unsigned numElems) {
-
-  cir::BoolType boolTy = builder.getBoolTy();
-  auto maskTy = cir::VectorType::get(
-      boolTy, cast<cir::IntType>(mask.getType()).getWidth());
-  mlir::Value maskVec = builder.createBitcast(mask, maskTy);
-
-  if (numElems < 8) {
-    SmallVector<mlir::Attribute> indices;
-    indices.reserve(numElems);
-    mlir::Type i32Ty = builder.getSInt32Ty();
-    for (auto i : llvm::seq<unsigned>(0, numElems))
-      indices.push_back(cir::IntAttr::get(i32Ty, i));
-
-    maskVec = builder.createVecShuffle(loc, maskVec, maskVec, indices);
-  }
-  return maskVec;
-}
-
 static mlir::Value emitX86Select(CIRGenBuilderTy &builder, mlir::Location loc,
                                  mlir::Value mask, mlir::Value op0,
                                  mlir::Value op1) {
@@ -193,10 +172,10 @@ static mlir::Value emitX86Select(CIRGenBuilderTy &builder, mlir::Location loc,
   if (constOp && constOp.isAllOnesValue())
     return op0;
 
-  mask = getBoolMaskVecValue(builder, loc, mask,
-                             cast<cir::VectorType>(op0.getType()).getSize());
+  mask = getMaskVecValue(builder, loc, mask,
+                         cast<cir::VectorType>(op0.getType()).getSize());
 
-  return builder.createSelect(loc, mask, op0, op1);
+  return cir::VecTernaryOp::create(builder, loc, mask, op0, op1);
 }
 
 static mlir::Value emitX86MaskAddLogic(CIRGenBuilderTy &builder,

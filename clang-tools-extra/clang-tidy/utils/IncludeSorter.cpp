@@ -17,10 +17,9 @@ namespace utils {
 
 static StringRef removeFirstSuffix(StringRef Str,
                                    ArrayRef<const char *> Suffixes) {
-  for (const StringRef Suffix : Suffixes) {
+  for (const StringRef Suffix : Suffixes)
     if (Str.consume_back(Suffix))
       return Str;
-  }
   return Str;
 }
 
@@ -45,9 +44,8 @@ static StringRef makeCanonicalName(StringRef Str,
     // Objective-C categories have a `+suffix` format, but should be grouped
     // with the file they are a category of.
     size_t StartIndex = Canonical.find_last_of('/');
-    if (StartIndex == StringRef::npos) {
+    if (StartIndex == StringRef::npos)
       StartIndex = 0;
-    }
     return Canonical.substr(0, Canonical.find_first_of('+', StartIndex));
   }
   return removeFirstSuffix(
@@ -87,9 +85,8 @@ determineIncludeKind(StringRef CanonicalFile, StringRef IncludeFile,
     if (FileCopy.consume_front(Parts.first) &&
         FileCopy.consume_back(Parts.second)) {
       // Determine the kind of this inclusion.
-      if (FileCopy == "/internal/" || FileCopy == "/proto/") {
+      if (FileCopy == "/internal/" || FileCopy == "/proto/")
         return IncludeSorter::IK_MainTUInclude;
-      }
     }
   }
   if (Style == IncludeSorter::IS_Google_ObjC) {
@@ -108,12 +105,10 @@ static int compareHeaders(StringRef LHS, StringRef RHS,
     const std::pair<const char *, const char *> &Mismatch =
         std::mismatch(LHS.begin(), LHS.end(), RHS.begin(), RHS.end());
     if ((Mismatch.first != LHS.end()) && (Mismatch.second != RHS.end())) {
-      if ((*Mismatch.first == '.') && (*Mismatch.second == '+')) {
+      if ((*Mismatch.first == '.') && (*Mismatch.second == '+'))
         return -1;
-      }
-      if ((*Mismatch.first == '+') && (*Mismatch.second == '.')) {
+      if ((*Mismatch.first == '+') && (*Mismatch.second == '.'))
         return 1;
-      }
     }
   }
   return LHS.compare(RHS);
@@ -175,9 +170,8 @@ IncludeSorter::createIncludeInsertion(StringRef FileName, bool IsAngled) {
         const auto &Location = IncludeLocations[IncludeEntry][0];
         return FixItHint::CreateInsertion(Location.getBegin(), IncludeStmt);
       }
-      if (FileName == IncludeEntry) {
+      if (FileName == IncludeEntry)
         return std::nullopt;
-      }
     }
     // FileName comes after all include entries in bucket, insert it after
     // last.
@@ -200,9 +194,8 @@ IncludeSorter::createIncludeInsertion(StringRef FileName, bool IsAngled) {
         break;
     }
   }
-  if (NonEmptyKind == IK_InvalidInclude) {
+  if (NonEmptyKind == IK_InvalidInclude)
     return std::nullopt;
-  }
 
   if (NonEmptyKind < IncludeKind) {
     // Create a block after.

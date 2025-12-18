@@ -228,10 +228,9 @@ void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     SourceLocation FixitLoc = FixItRange.getBegin();
-    for (const SourceRange &Range : RemoveQualifiersRange) {
+    for (const SourceRange &Range : RemoveQualifiersRange)
       if (Range.getBegin() < FixitLoc)
         FixitLoc = Range.getBegin();
-    }
 
     const std::string ReplStr = [&] {
       const StringRef PtrConst = isPointerConst(Var->getType()) ? "const " : "";
@@ -249,9 +248,8 @@ void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
         << IsLocalConst << IsLocalVolatile << IsLocalRestrict << Var->getName()
         << ReplStr;
 
-    for (const SourceRange &Range : RemoveQualifiersRange) {
+    for (const SourceRange &Range : RemoveQualifiersRange)
       Diag << FixItHint::CreateRemoval(CharSourceRange::getCharRange(Range));
-    }
 
     Diag << FixItHint::CreateReplacement(FixItRange, ReplStr);
     return;
