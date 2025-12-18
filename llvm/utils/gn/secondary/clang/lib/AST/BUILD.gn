@@ -75,6 +75,7 @@ static_library("AST") {
     "ByteCode/Floating.cpp",
     "ByteCode/Function.cpp",
     "ByteCode/FunctionPointer.cpp",
+    "ByteCode/InitMap.cpp",
     "ByteCode/Interp.cpp",
     "ByteCode/InterpBlock.cpp",
     "ByteCode/InterpBuiltin.cpp",
