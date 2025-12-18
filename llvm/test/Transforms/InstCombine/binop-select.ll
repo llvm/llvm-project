@@ -575,9 +575,8 @@ define i32 @OrSelectIcmpNonZero(i32 %a, i32 %b) {
 define i8 @orSelectOrNoCommonBits1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @orSelectOrNoCommonBits1(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = or i8 [[ARG0:%.*]], 4
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = or i8 [[V2]], 1
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 5, i8 1
+; CHECK-NEXT:    [[V3:%.*]] = or i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -605,9 +604,8 @@ define i8 @orSelectOrNoCommonBits2(i8 %arg0, i8 %arg1) {
 define i8 @orSelectOrSubset1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @orSelectOrSubset1(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = or i8 [[ARG0:%.*]], 2
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = or i8 [[V2]], 13
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 15, i8 13
+; CHECK-NEXT:    [[V3:%.*]] = or i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -620,9 +618,8 @@ define i8 @orSelectOrSubset1(i8 %arg0, i8 %arg1) {
 define i8 @orSelectOrSubset2(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @orSelectOrSubset2(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = or i8 [[ARG0:%.*]], 4
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = or i8 [[V2]], 11
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 15, i8 11
+; CHECK-NEXT:    [[V3:%.*]] = or i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -635,9 +632,8 @@ define i8 @orSelectOrSubset2(i8 %arg0, i8 %arg1) {
 define i8 @orSelectOrSomeCommon1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @orSelectOrSomeCommon1(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = or i8 [[ARG0:%.*]], 10
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = or i8 [[V2]], 5
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 15, i8 5
+; CHECK-NEXT:    [[V3:%.*]] = or i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -650,9 +646,8 @@ define i8 @orSelectOrSomeCommon1(i8 %arg0, i8 %arg1) {
 define i8 @orSelectOrSomeCommon2(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @orSelectOrSomeCommon2(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = or i8 [[ARG0:%.*]], 4
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = or i8 [[V2]], 11
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 15, i8 11
+; CHECK-NEXT:    [[V3:%.*]] = or i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -774,9 +769,8 @@ define i8 @andSelectandSame(i8 %arg0, i8 %arg1) {
 define i8 @xorSelectxorNoCommonBits1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @xorSelectxorNoCommonBits1(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = xor i8 [[ARG0:%.*]], 4
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = xor i8 [[V2]], 1
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 5, i8 1
+; CHECK-NEXT:    [[V3:%.*]] = xor i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -804,9 +798,8 @@ define i8 @xorSelectxorNoCommonBits2(i8 %arg0, i8 %arg1) {
 define i8 @xorSelectxorSubset1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @xorSelectxorSubset1(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = xor i8 [[ARG0:%.*]], 11
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = xor i8 [[V2]], 13
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 6, i8 13
+; CHECK-NEXT:    [[V3:%.*]] = xor i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -819,9 +812,8 @@ define i8 @xorSelectxorSubset1(i8 %arg0, i8 %arg1) {
 define i8 @xorSelectxorSubset2(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @xorSelectxorSubset2(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = xor i8 [[ARG0:%.*]], 13
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = xor i8 [[V2]], 11
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 6, i8 11
+; CHECK-NEXT:    [[V3:%.*]] = xor i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -834,9 +826,8 @@ define i8 @xorSelectxorSubset2(i8 %arg0, i8 %arg1) {
 define i8 @xorSelectxorSomeCommon1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @xorSelectxorSomeCommon1(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = xor i8 [[ARG0:%.*]], 11
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = xor i8 [[V2]], 5
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 14, i8 5
+; CHECK-NEXT:    [[V3:%.*]] = xor i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -849,9 +840,8 @@ define i8 @xorSelectxorSomeCommon1(i8 %arg0, i8 %arg1) {
 define i8 @xorSelectxorSomeCommon2(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @xorSelectxorSomeCommon2(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = xor i8 [[ARG0:%.*]], 5
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = xor i8 [[V2]], 11
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 14, i8 11
+; CHECK-NEXT:    [[V3:%.*]] = xor i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -879,9 +869,8 @@ define i8 @xorSelectxorSame(i8 %arg0, i8 %arg1) {
 define i8 @addSelectaddNoCommonBits1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @addSelectaddNoCommonBits1(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = add i8 [[ARG0:%.*]], 4
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = add i8 [[V2]], 1
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 5, i8 1
+; CHECK-NEXT:    [[V3:%.*]] = add i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -909,9 +898,8 @@ define i8 @addSelectaddNoCommonBits2(i8 %arg0, i8 %arg1) {
 define i8 @addSelectaddSubset1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @addSelectaddSubset1(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = add i8 [[ARG0:%.*]], 11
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = add i8 [[V2]], 13
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 24, i8 13
+; CHECK-NEXT:    [[V3:%.*]] = add i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -924,9 +912,8 @@ define i8 @addSelectaddSubset1(i8 %arg0, i8 %arg1) {
 define i8 @addSelectaddSubset2(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @addSelectaddSubset2(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = add i8 [[ARG0:%.*]], 13
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = add i8 [[V2]], 11
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 24, i8 11
+; CHECK-NEXT:    [[V3:%.*]] = add i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -939,9 +926,8 @@ define i8 @addSelectaddSubset2(i8 %arg0, i8 %arg1) {
 define i8 @addSelectaddSomeCommon1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @addSelectaddSomeCommon1(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = add i8 [[ARG0:%.*]], 11
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = add i8 [[V2]], 5
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 16, i8 5
+; CHECK-NEXT:    [[V3:%.*]] = add i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -954,9 +940,8 @@ define i8 @addSelectaddSomeCommon1(i8 %arg0, i8 %arg1) {
 define i8 @addSelectaddSomeCommon2(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @addSelectaddSomeCommon2(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = add i8 [[ARG0:%.*]], 5
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = add i8 [[V2]], 11
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 16, i8 11
+; CHECK-NEXT:    [[V3:%.*]] = add i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -969,9 +954,8 @@ define i8 @addSelectaddSomeCommon2(i8 %arg0, i8 %arg1) {
 define i8 @addSelectaddSame(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @addSelectaddSame(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = add i8 [[ARG0:%.*]], 42
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = add i8 [[V2]], 42
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 84, i8 42
+; CHECK-NEXT:    [[V3:%.*]] = add i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -985,9 +969,8 @@ define i8 @addSelectaddSame(i8 %arg0, i8 %arg1) {
 define i8 @subSelectsubNoCommonBits1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @subSelectsubNoCommonBits1(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = add i8 [[ARG0:%.*]], -4
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = add i8 [[V2]], -1
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 -5, i8 -1
+; CHECK-NEXT:    [[V3:%.*]] = add i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -1015,9 +998,8 @@ define i8 @subSelectsubNoCommonBits2(i8 %arg0, i8 %arg1) {
 define i8 @subSelectsubSubset1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @subSelectsubSubset1(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = add i8 [[ARG0:%.*]], -11
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = add i8 [[V2]], -13
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 -24, i8 -13
+; CHECK-NEXT:    [[V3:%.*]] = add i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -1030,9 +1012,8 @@ define i8 @subSelectsubSubset1(i8 %arg0, i8 %arg1) {
 define i8 @subSelectsubSubset2(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @subSelectsubSubset2(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = add i8 [[ARG0:%.*]], -13
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = add i8 [[V2]], -11
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 -24, i8 -11
+; CHECK-NEXT:    [[V3:%.*]] = add i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -1045,9 +1026,8 @@ define i8 @subSelectsubSubset2(i8 %arg0, i8 %arg1) {
 define i8 @subSelectsubSomeCommon1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @subSelectsubSomeCommon1(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = add i8 [[ARG0:%.*]], -11
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = add i8 [[V2]], -5
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 -16, i8 -5
+; CHECK-NEXT:    [[V3:%.*]] = add i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -1060,9 +1040,8 @@ define i8 @subSelectsubSomeCommon1(i8 %arg0, i8 %arg1) {
 define i8 @subSelectsubSomeCommon2(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @subSelectsubSomeCommon2(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = add i8 [[ARG0:%.*]], -5
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = add i8 [[V2]], -11
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 -16, i8 -11
+; CHECK-NEXT:    [[V3:%.*]] = add i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -1075,9 +1054,8 @@ define i8 @subSelectsubSomeCommon2(i8 %arg0, i8 %arg1) {
 define i8 @subSelectsubSame(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @subSelectsubSame(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = add i8 [[ARG0:%.*]], -42
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = add i8 [[V2]], -42
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 -84, i8 -42
+; CHECK-NEXT:    [[V3:%.*]] = add i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -1117,9 +1095,8 @@ define i8 @mulSelectmulNoCommonBits2(i8 %arg0, i8 %arg1) {
 define i8 @mulSelectmulmulset1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @mulSelectmulmulset1(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = mul i8 [[ARG0:%.*]], 11
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = mul i8 [[V2]], 13
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 -113, i8 13
+; CHECK-NEXT:    [[V3:%.*]] = mul i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -1132,9 +1109,8 @@ define i8 @mulSelectmulmulset1(i8 %arg0, i8 %arg1) {
 define i8 @mulSelectmulmulset2(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @mulSelectmulmulset2(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = mul i8 [[ARG0:%.*]], 13
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = mul i8 [[V2]], 11
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 -113, i8 11
+; CHECK-NEXT:    [[V3:%.*]] = mul i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -1147,9 +1123,8 @@ define i8 @mulSelectmulmulset2(i8 %arg0, i8 %arg1) {
 define i8 @mulSelectmulSomeCommon1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @mulSelectmulSomeCommon1(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = mul i8 [[ARG0:%.*]], 11
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = mul i8 [[V2]], 5
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 55, i8 5
+; CHECK-NEXT:    [[V3:%.*]] = mul i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -1162,9 +1137,8 @@ define i8 @mulSelectmulSomeCommon1(i8 %arg0, i8 %arg1) {
 define i8 @mulSelectmulSomeCommon2(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @mulSelectmulSomeCommon2(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = mul i8 [[ARG0:%.*]], 5
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = mul i8 [[V2]], 11
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 55, i8 11
+; CHECK-NEXT:    [[V3:%.*]] = mul i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -1177,9 +1151,8 @@ define i8 @mulSelectmulSomeCommon2(i8 %arg0, i8 %arg1) {
 define i8 @mulSelectmulSame(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @mulSelectmulSame(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = mul i8 [[ARG0:%.*]], 42
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = mul i8 [[V2]], 42
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 -28, i8 42
+; CHECK-NEXT:    [[V3:%.*]] = mul i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -1219,9 +1192,10 @@ define i8 @udivSelectudivNoCommonBits2(i8 %arg0, i8 %arg1) {
 define i8 @udivSelectudivudivset1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @udivSelectudivudivset1(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = udiv i8 [[ARG0:%.*]], 11
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = udiv i8 [[V2]], 13
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[V4:%.*]], -114
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i8
+; CHECK-NEXT:    [[V5:%.*]] = udiv i8 [[V4]], 13
+; CHECK-NEXT:    [[V3:%.*]] = select i1 [[V0]], i8 [[TMP2]], i8 [[V5]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -1234,9 +1208,10 @@ define i8 @udivSelectudivudivset1(i8 %arg0, i8 %arg1) {
 define i8 @udivSelectudivudivset2(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @udivSelectudivudivset2(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = udiv i8 [[ARG0:%.*]], 13
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = udiv i8 [[V2]], 11
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[V4:%.*]], -114
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i8
+; CHECK-NEXT:    [[V5:%.*]] = udiv i8 [[V4]], 11
+; CHECK-NEXT:    [[V3:%.*]] = select i1 [[V0]], i8 [[TMP2]], i8 [[V5]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -1248,10 +1223,10 @@ define i8 @udivSelectudivudivset2(i8 %arg0, i8 %arg1) {
 
 define i8 @udivSelectudivSomeCommon1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @udivSelectudivSomeCommon1(
-; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = udiv i8 [[ARG0:%.*]], 11
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = udiv i8 [[V2]], 5
+; CHECK-NEXT:    [[ARG1:%.*]] = freeze i8 [[ARG2:%.*]]
+; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1]], -1
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 55, i8 5
+; CHECK-NEXT:    [[V3:%.*]] = udiv i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -1263,10 +1238,10 @@ define i8 @udivSelectudivSomeCommon1(i8 %arg0, i8 %arg1) {
 
 define i8 @udivSelectudivSomeCommon2(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @udivSelectudivSomeCommon2(
-; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = udiv i8 [[ARG0:%.*]], 5
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    [[V3:%.*]] = udiv i8 [[V2]], 11
+; CHECK-NEXT:    [[ARG1:%.*]] = freeze i8 [[ARG2:%.*]]
+; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1]], -1
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 55, i8 11
+; CHECK-NEXT:    [[V3:%.*]] = udiv i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
@@ -1288,4 +1263,22 @@ define i8 @udivSelectudivSame(i8 %arg0, i8 %arg1) {
   %v2 = select i1 %v0, i8 %v1, i8 %arg0
   %v3 = udiv i8 %v2, 42
   ret i8 %v3
+}
+
+
+define i8 @orSelectOrUses(i8 %arg0, i8 %arg1) {
+; CHECK-LABEL: @orSelectOrUses(
+; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
+; CHECK-NEXT:    [[V1:%.*]] = or i8 [[ARG0:%.*]], 4
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 5, i8 1
+; CHECK-NEXT:    [[V3:%.*]] = or i8 [[ARG0]], [[V3_V]]
+; CHECK-NEXT:    [[RES:%.*]] = add i8 [[V1]], [[V3]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %v0 = icmp eq i8 %arg1, -1
+  %v1 = or i8 %arg0, 4
+  %v2 = select i1 %v0, i8 %v1, i8 %arg0
+  %v3 = or i8 %v2, 1
+  %res = add i8 %v1, %v3
+  ret i8 %res
 }

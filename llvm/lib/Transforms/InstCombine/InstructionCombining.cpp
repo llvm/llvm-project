@@ -1822,10 +1822,23 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   Value *NewTV = simplifyOperationIntoSelectOperand(Op, SI, /*IsTrueArm=*/true);
   Value *NewFV =
       simplifyOperationIntoSelectOperand(Op, SI, /*IsTrueArm=*/false);
-  if (!NewTV && !NewFV)
-    return nullptr;
 
   if (SimplifyBothArms && !(NewTV && NewFV))
+    return nullptr;
+
+  // Addressing a special case here, when a possible associative simplification
+  // is "abstracted" by a select instruction. When this pattern occurs it is
+  // worth to fold both arms of the select regardless of possible
+  // simplifications. Like the bellow case:
+  //   %1 = or i8 %in, C1
+  //   %2 = select i1 %cond, i8 %1, i8 %in
+  //   %3 = or i8 %2, C2
+  Value *Input;
+  if (!NewTV && !NewFV &&
+      (!Op.isBinaryOp() || !match(&Op, m_c_BinOp(m_Value(), m_ConstantInt())) ||
+       !(match(SI, m_c_Select(m_Value(Input),
+                              m_c_BinOp(Op.getOpcode(), m_Deferred(Input),
+                                        m_ConstantInt()))))))
     return nullptr;
 
   // Create an instruction for the arm that did not fold.
