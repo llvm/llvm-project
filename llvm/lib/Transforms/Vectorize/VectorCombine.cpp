@@ -2491,14 +2491,16 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   ReducedInstCount |= MergeInner(Y, 0, NewMask1, CostKind);
   ReducedInstCount |= MergeInner(Z, NumSrcElts, NewMask0, CostKind);
   ReducedInstCount |= MergeInner(W, NumSrcElts, NewMask1, CostKind);
+  bool SingleSrcBinOp = (X == Y) && (Z == W) && (NewMask0 == NewMask1);
+  ReducedInstCount |= SingleSrcBinOp;
 
   auto *ShuffleCmpTy =
       FixedVectorType::get(BinOpTy->getElementType(), ShuffleDstTy);
-  InstructionCost NewCost =
-      TTI.getShuffleCost(SK0, ShuffleCmpTy, BinOpTy, NewMask0, CostKind, 0,
-                         nullptr, {X, Z}) +
-      TTI.getShuffleCost(SK1, ShuffleCmpTy, BinOpTy, NewMask1, CostKind, 0,
-                         nullptr, {Y, W});
+  InstructionCost NewCost = TTI.getShuffleCost(
+      SK0, ShuffleCmpTy, BinOpTy, NewMask0, CostKind, 0, nullptr, {X, Z});
+  if (!SingleSrcBinOp)
+    NewCost += TTI.getShuffleCost(SK1, ShuffleCmpTy, BinOpTy, NewMask1,
+                                  CostKind, 0, nullptr, {Y, W});
 
   if (PredLHS == CmpInst::BAD_ICMP_PREDICATE) {
     NewCost +=
@@ -2520,7 +2522,8 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
     return false;
 
   Value *Shuf0 = Builder.CreateShuffleVector(X, Z, NewMask0);
-  Value *Shuf1 = Builder.CreateShuffleVector(Y, W, NewMask1);
+  Value *Shuf1 =
+      SingleSrcBinOp ? Shuf0 : Builder.CreateShuffleVector(Y, W, NewMask1);
   Value *NewBO = PredLHS == CmpInst::BAD_ICMP_PREDICATE
                      ? Builder.CreateBinOp(
                            cast<BinaryOperator>(LHS)->getOpcode(), Shuf0, Shuf1)
