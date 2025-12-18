@@ -72,7 +72,6 @@
 # LLVM_NONRELOC-NEXT:     }
 # LLVM_NONRELOC-NEXT:   ]
 
-
 # JSON_NONRELOC:     "CallGraph": [
 # JSON_NONRELOC-NEXT:      {
 # JSON_NONRELOC-NEXT:        "Function": {
@@ -228,7 +227,7 @@ Symbols:
     Value:    0x17C0
 ...
 
-## Tests how --call-graph-info prints the call graph information.
+## Check relocatable object file handling.
 # RUN: yaml2obj --docnum=2 %s -o %t2
 # RUN: llvm-readelf --call-graph-info %t2 2>&1 | FileCheck %s --match-full-lines --allow-empty -check-prefix=GNU_RELOC -DFILE=%t2
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t2 2>&1 | FileCheck %s --match-full-lines --check-prefix=LLVM_RELOC -DFILE=%t2
@@ -451,9 +450,10 @@ Symbols:
   - Name:  caller
 ...
 
-## Check ARM 32-bit Thumb address handling for --call-graph-info.
+## Check ARM 32-bit Thumb address handling.
 # RUN: yaml2obj --docnum=3 %s -o %t3
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t3 2>&1 | FileCheck %s --match-full-lines --check-prefix=LLVM_ARM_THUMB -DFILE=%t3
+# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t3 2>&1 | FileCheck %s --match-full-lines --check-prefix=JSON_ARM_THUMB -DFILE=%t3
 
 # LLVM_ARM_THUMB:      CallGraph [
 # LLVM_ARM_THUMB-NEXT:   Function {
@@ -468,6 +468,22 @@ Symbols:
 # LLVM_ARM_THUMB-NEXT:     IndirectTypeIDs: []
 # LLVM_ARM_THUMB-NEXT:   }
 # LLVM_ARM_THUMB-NEXT: ]
+
+# JSON_ARM_THUMB:       "CallGraph": [
+# JSON_ARM_THUMB-NEXT:    {
+# JSON_ARM_THUMB-NEXT:      "Function": {
+# JSON_ARM_THUMB-NEXT:        "Name": "foo",
+# JSON_ARM_THUMB-NEXT:        "Version": 0,
+# JSON_ARM_THUMB-NEXT:        "IsIndirectTarget": false,
+# JSON_ARM_THUMB-NEXT:        "TypeId": 1311768467463790320,
+# JSON_ARM_THUMB-NEXT:        "NumDirectCallees": 0,
+# JSON_ARM_THUMB-NEXT:        "DirectCallees": [],
+# JSON_ARM_THUMB-NEXT:        "NumIndirectTargetTypeIDs": 0,
+# JSON_ARM_THUMB-NEXT:        "IndirectTypeIDs": []
+# JSON_ARM_THUMB-NEXT:      }
+# JSON_ARM_THUMB-NEXT:    }
+# JSON_ARM_THUMB-NEXT:  ]
+
 
 --- !ELF
 FileHeader:
