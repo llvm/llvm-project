@@ -466,10 +466,13 @@ operator=(const ExecutionContext &exe_ctx) {
   else
     m_tid = LLDB_INVALID_THREAD_ID;
   lldb::StackFrameSP frame_sp(exe_ctx.GetFrameSP());
-  if (frame_sp)
+  if (frame_sp) {
     m_stack_id = frame_sp->GetStackID();
-  else
+    m_frame_list_wp = frame_sp->GetContainingStackFrameList();
+  } else {
     m_stack_id.Clear();
+    m_frame_list_wp.reset();
+  }
   return *this;
 }
 
@@ -511,6 +514,7 @@ void ExecutionContextRef::SetThreadSP(const lldb::ThreadSP &thread_sp) {
 void ExecutionContextRef::SetFrameSP(const lldb::StackFrameSP &frame_sp) {
   if (frame_sp) {
     m_stack_id = frame_sp->GetStackID();
+    m_frame_list_wp = frame_sp->GetContainingStackFrameList();
     SetThreadSP(frame_sp->GetThread());
   } else {
     ClearFrame();
@@ -638,6 +642,15 @@ lldb::ThreadSP ExecutionContextRef::GetThreadSP() const {
 
 lldb::StackFrameSP ExecutionContextRef::GetFrameSP() const {
   if (m_stack_id.IsValid()) {
+    // Try the remembered frame list first to avoid circular dependencies
+    // during frame provider initialization.
+    if (auto frame_list_sp = m_frame_list_wp.lock()) {
+      if (auto frame_sp = frame_list_sp->GetFrameWithStackID(m_stack_id))
+        return frame_sp;
+    }
+
+    // Fallback: ask the thread, which might re-trigger the frame provider
+    // initialization.
     lldb::ThreadSP thread_sp(GetThreadSP());
     if (thread_sp)
       return thread_sp->GetFrameWithStackID(m_stack_id);

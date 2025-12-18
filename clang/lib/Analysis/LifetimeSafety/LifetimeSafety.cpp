@@ -33,6 +33,21 @@
 namespace clang::lifetimes {
 namespace internal {
 
+#ifndef NDEBUG
+static void DebugOnlyFunction(AnalysisDeclContext &AC, const CFG &Cfg,
+                              FactManager &FactMgr) {
+  std::string Name;
+  if (const Decl *D = AC.getDecl()) {
+    if (const auto *ND = dyn_cast<NamedDecl>(D))
+      Name = ND->getQualifiedNameAsString();
+  };
+  DEBUG_WITH_TYPE(Name.c_str(), AC.getDecl()->dumpColor());
+  DEBUG_WITH_TYPE(Name.c_str(), Cfg.dump(AC.getASTContext().getLangOpts(),
+                                         /*ShowColors=*/true));
+  DEBUG_WITH_TYPE(Name.c_str(), FactMgr.dump(Cfg, AC));
+}
+#endif
+
 LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                                LifetimeSafetyReporter *Reporter)
     : AC(AC), Reporter(Reporter) {}
@@ -43,11 +58,18 @@ void LifetimeSafetyAnalysis::run() {
   const CFG &Cfg = *AC.getCFG();
   DEBUG_WITH_TYPE("PrintCFG", Cfg.dump(AC.getASTContext().getLangOpts(),
                                        /*ShowColors=*/true));
-  FactMgr.init(Cfg);
 
-  FactsGenerator FactGen(FactMgr, AC);
+  FactMgr = std::make_unique<FactManager>(AC, Cfg);
+
+  FactsGenerator FactGen(*FactMgr, AC);
   FactGen.run();
-  DEBUG_WITH_TYPE("LifetimeFacts", FactMgr.dump(Cfg, AC));
+
+  DEBUG_WITH_TYPE("LifetimeFacts", FactMgr->dump(Cfg, AC));
+
+  // Debug print facts for a specific function using
+  // -debug-only=EnableFilterByFunctionName,YourFunctionNameFoo
+  DEBUG_WITH_TYPE("EnableFilterByFunctionName",
+                  DebugOnlyFunction(AC, Cfg, *FactMgr));
 
   /// TODO(opt): Consider optimizing individual blocks before running the
   /// dataflow analysis.
@@ -61,14 +83,14 @@ void LifetimeSafetyAnalysis::run() {
   /// 3. Collapse ExpireFacts belonging to same source location into a single
   ///    Fact.
   LoanPropagation = std::make_unique<LoanPropagationAnalysis>(
-      Cfg, AC, FactMgr, Factory.OriginMapFactory, Factory.LoanSetFactory);
+      Cfg, AC, *FactMgr, Factory.OriginMapFactory, Factory.LoanSetFactory);
 
   LiveOrigins = std::make_unique<LiveOriginsAnalysis>(
-      Cfg, AC, FactMgr, Factory.LivenessMapFactory);
+      Cfg, AC, *FactMgr, Factory.LivenessMapFactory);
   DEBUG_WITH_TYPE("LiveOrigins",
-                  LiveOrigins->dump(llvm::dbgs(), FactMgr.getTestPoints()));
+                  LiveOrigins->dump(llvm::dbgs(), FactMgr->getTestPoints()));
 
-  runLifetimeChecker(*LoanPropagation, *LiveOrigins, FactMgr, AC, Reporter);
+  runLifetimeChecker(*LoanPropagation, *LiveOrigins, *FactMgr, AC, Reporter);
 }
 
 void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,

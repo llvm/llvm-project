@@ -16,7 +16,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/YAMLParser.h"
@@ -318,8 +317,8 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
   if (!EOL)
     EOL = Begin + strlen(Begin);
 
-  const char *PosList[] = {strchr(Begin, '='), strchr(Begin, ';'),
-                           strchr(Begin, ','), strchr(Begin, ')'), EOL};
+  const char *const PosList[] = {strchr(Begin, '='), strchr(Begin, ';'),
+                                 strchr(Begin, ','), strchr(Begin, ')'), EOL};
   for (const auto &Pos : PosList) {
     if (Pos > Begin)
       EOL = std::min(EOL, Pos);
@@ -1363,9 +1362,8 @@ IdentifierNamingCheck::getFailureInfo(
   if (StringRef(Fixup) == Name) {
     if (!IgnoreFailedSplit) {
       LLVM_DEBUG(Location.print(llvm::dbgs(), SM);
-                 llvm::dbgs()
-                 << llvm::formatv(": unable to split words for {0} '{1}'\n",
-                                  KindName, Name));
+                 llvm::dbgs() << ": unable to split words for " << KindName
+                              << " '" << Name << "'\n");
     }
     return std::nullopt;
   }

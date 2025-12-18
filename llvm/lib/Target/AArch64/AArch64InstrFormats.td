@@ -10,6 +10,20 @@
 //  Describe AArch64 instructions format here
 //
 
+// Helper class to convert vector element types to integers.
+class ChangeElementTypeToInteger<ValueType InVT> {
+  ValueType VT = !cond(
+    !eq(InVT, v2f32): v2i32,
+    !eq(InVT, v4f32): v4i32,
+    // TODO: Other types.
+    true : untyped);
+}
+
+class VTPair<ValueType A, ValueType B> {
+  ValueType VT0 = A;
+  ValueType VT1 = B;
+}
+
 // Format specifies the encoding used by the instruction.  This is part of the
 // ad-hoc solution used to emit machine instruction encodings by our machine
 // code emitter.
@@ -1385,6 +1399,8 @@ def gi_arith_extended_reg32to64_i64 :
     GIComplexPatternEquiv<arith_extended_reg32to64_i64>;
 
 def arith_uxtx : ComplexPattern<i64, 2, "SelectArithUXTXRegister", []>;
+
+def add_uxtx : ComplexPattern<i64, 2, "SelectAddUXTXRegister", []>;
 
 // Floating-point immediate.
 
@@ -4386,7 +4402,7 @@ multiclass BaseLoadUnscaleV84<string asm, bits<2> sz, bits<2> opc,
                               DAGOperand regtype > {
   def i : BaseLoadStoreUnscale<sz, 0, opc, (outs regtype:$Rt),
                                (ins GPR64sp:$Rn, simm9:$offset), asm, []>,
-          Sched<[WriteST]> {
+          Sched<[WriteLD]> {
     let Inst{29} = 0;
     let Inst{24} = 1;
   }
@@ -7700,16 +7716,21 @@ multiclass SIMDThreeScalarD<bit U, bits<5> opc, string asm,
 }
 
 multiclass SIMDThreeScalarBHSD<bit U, bits<5> opc, string asm,
-                               SDPatternOperator OpNode, SDPatternOperator SatOp> {
+                               SDPatternOperator OpNode, SDPatternOperator G_OpNode, SDPatternOperator SatOp> {
   def v1i64  : BaseSIMDThreeScalar<U, 0b111, opc, FPR64, asm,
     [(set (v1i64 FPR64:$Rd), (SatOp (v1i64 FPR64:$Rn), (v1i64 FPR64:$Rm)))]>;
   def v1i32  : BaseSIMDThreeScalar<U, 0b101, opc, FPR32, asm, []>;
   def v1i16  : BaseSIMDThreeScalar<U, 0b011, opc, FPR16, asm, []>;
   def v1i8   : BaseSIMDThreeScalar<U, 0b001, opc, FPR8 , asm, []>;
 
-  def : Pat<(i64 (OpNode (i64 FPR64:$Rn), (i64 FPR64:$Rm))),
+  def : Pat<(i64 (G_OpNode (i64 FPR64:$Rn), (i64 FPR64:$Rm))),
             (!cast<Instruction>(NAME#"v1i64") FPR64:$Rn, FPR64:$Rm)>;
-  def : Pat<(i32 (OpNode (i32 FPR32:$Rn), (i32 FPR32:$Rm))),
+  def : Pat<(i32 (G_OpNode (i32 FPR32:$Rn), (i32 FPR32:$Rm))),
+            (!cast<Instruction>(NAME#"v1i32") FPR32:$Rn, FPR32:$Rm)>;
+
+  def : Pat<(f64 (OpNode FPR64:$Rn, FPR64:$Rm)),
+            (!cast<Instruction>(NAME#"v1i64") FPR64:$Rn, FPR64:$Rm)>;
+  def : Pat<(f32 (OpNode FPR32:$Rn, FPR32:$Rm)),
             (!cast<Instruction>(NAME#"v1i32") FPR32:$Rn, FPR32:$Rm)>;
 }
 
@@ -7795,7 +7816,7 @@ multiclass SIMDThreeScalarMixedHS<bit U, bits<5> opc, string asm,
   def i32  : BaseSIMDThreeScalarMixed<U, 0b10, opc,
                                       (outs FPR64:$Rd),
                                       (ins FPR32:$Rn, FPR32:$Rm), asm, "",
-            [(set (i64 FPR64:$Rd), (OpNode (i32 FPR32:$Rn), (i32 FPR32:$Rm)))]>;
+            [(set (f64 FPR64:$Rd), (OpNode FPR32:$Rn, FPR32:$Rm))]>;
 }
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in
@@ -8947,36 +8968,6 @@ multiclass SIMDThreeSameVectorBFDot<bit U, string asm> {
                                            v4f32, v8bf16>;
 }
 
-class BaseSIMDThreeSameVectorBF16DotI<bit Q, bit U, string asm,
-                                      string dst_kind, string lhs_kind,
-                                      string rhs_kind,
-                                      RegisterOperand RegType,
-                                      ValueType AccumType,
-                                      ValueType InputType>
-  : BaseSIMDIndexedTied<Q, U, 0b0, 0b01, 0b1111,
-                        RegType, RegType, V128, VectorIndexS,
-                        asm, "", dst_kind, lhs_kind, rhs_kind,
-        [(set (AccumType RegType:$dst),
-              (AccumType (int_aarch64_neon_bfdot
-                                 (AccumType RegType:$Rd),
-                                 (InputType RegType:$Rn),
-                                 (InputType (bitconvert (AccumType
-                                    (AArch64duplane32 (v4f32 V128:$Rm),
-                                        VectorIndexS:$idx)))))))]> {
-
-  bits<2> idx;
-  let Inst{21}    = idx{0};  // L
-  let Inst{11}    = idx{1};  // H
-}
-
-multiclass SIMDThreeSameVectorBF16DotI<bit U, string asm> {
-
-  def v4bf16  : BaseSIMDThreeSameVectorBF16DotI<0, U, asm, ".2s", ".4h",
-                                               ".2h", V64, v2f32, v4bf16>;
-  def v8bf16 : BaseSIMDThreeSameVectorBF16DotI<1, U, asm, ".4s", ".8h",
-                                              ".2h", V128, v4f32, v8bf16>;
-}
-
 let mayRaiseFPException = 1, Uses = [FPCR] in
 class SIMDBF16MLAL<bit Q, string asm, SDPatternOperator OpNode>
   : BaseSIMDThreeSameVectorTied<Q, 0b1, 0b110, 0b11111, V128, asm, ".4s",
@@ -9048,6 +9039,40 @@ class BF16ToSinglePrecision<string asm>
   let Inst{4-0}   = Rd;
 }
 } // End of let mayStore = 0, mayLoad = 0, hasSideEffects = 0
+
+multiclass BaseSIMDThreeSameVectorBF16DotI<bit Q, bit U, string asm,
+                                           string dst_kind, string lhs_kind,
+                                           string rhs_kind,
+                                           RegisterOperand RegType,
+                                           ValueType AccumType,
+                                           ValueType InputType> {
+  let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
+    def NAME : BaseSIMDIndexedTied<Q, U, 0b0, 0b01, 0b1111, RegType, RegType, V128, VectorIndexS,
+                                   asm, "", dst_kind, lhs_kind, rhs_kind, []>
+    {
+      bits<2> idx;
+      let Inst{21} = idx{0};  // L
+      let Inst{11} = idx{1};  // H
+    }
+  }
+
+  foreach DupTypes = [VTPair<AccumType, v4f32>,
+                      VTPair<ChangeElementTypeToInteger<AccumType>.VT, v4i32>] in {
+    def : Pat<(AccumType (int_aarch64_neon_bfdot
+                (AccumType RegType:$Rd), (InputType RegType:$Rn),
+                (InputType (bitconvert
+                  (DupTypes.VT0 (AArch64duplane32 (DupTypes.VT1
+                    (bitconvert (v8bf16 V128:$Rm))), VectorIndexS:$Idx)))))),
+              (!cast<Instruction>(NAME) $Rd, $Rn, $Rm, VectorIndexS:$Idx)>;
+  }
+}
+
+multiclass SIMDThreeSameVectorBF16DotI<bit U, string asm> {
+  defm v4bf16 : BaseSIMDThreeSameVectorBF16DotI<0, U, asm, ".2s", ".4h",
+                                               ".2h", V64, v2f32, v4bf16>;
+  defm v8bf16 : BaseSIMDThreeSameVectorBF16DotI<1, U, asm, ".4s", ".8h",
+                                              ".2h", V128, v4f32, v8bf16>;
+}
 
 //----------------------------------------------------------------------------
 class BaseSIMDThreeSameVectorIndexB<bit Q, bit U, bits<2> sz, bits<4> opc,
@@ -9800,7 +9825,8 @@ multiclass SIMDIndexedLongSD<bit U, bits<4> opc, string asm,
 
 multiclass SIMDIndexedLongSQDMLXSDTied<bit U, bits<4> opc, string asm,
                                        SDPatternOperator VecAcc,
-                                       SDPatternOperator ScalAcc> {
+                                       SDPatternOperator ScalAcc,
+                                       SDPatternOperator G_ScalAcc> {
   def v4i16_indexed : BaseSIMDIndexedTied<0, U, 0, 0b01, opc,
                                       V128, V64,
                                       V128_lo, VectorIndexH,
@@ -9869,7 +9895,7 @@ multiclass SIMDIndexedLongSQDMLXSDTied<bit U, bits<4> opc, string asm,
     let Inst{20} = idx{0};
   }
 
-  def : Pat<(i32 (ScalAcc (i32 FPR32Op:$Rd),
+  def : Pat<(i32 (G_ScalAcc (i32 FPR32Op:$Rd),
                           (i32 (vector_extract
                                     (v4i32 (int_aarch64_neon_sqdmull
                                                 (v4i16 V64:$Rn),
@@ -9881,7 +9907,19 @@ multiclass SIMDIndexedLongSQDMLXSDTied<bit U, bits<4> opc, string asm,
                         (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rm, dsub),
                         (i64 0))>;
 
-  def : Pat<(i32 (ScalAcc (i32 FPR32Op:$Rd),
+  def : Pat<(f32 (ScalAcc FPR32Op:$Rd,
+                    (bitconvert (i32 (vector_extract
+                                      (v4i32 (int_aarch64_neon_sqdmull
+                                                (v4i16 V64:$Rn),
+                                                (v4i16 V64:$Rm))),
+                                      (i64 0)))))),
+            (!cast<Instruction>(NAME # v1i32_indexed)
+                        FPR32Op:$Rd,
+                        (f16 (EXTRACT_SUBREG V64:$Rn, hsub)),
+                        (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rm, dsub),
+                        (i64 0))>;
+
+  def : Pat<(i32 (G_ScalAcc (i32 FPR32Op:$Rd),
                           (i32 (vector_extract
                                     (v4i32 (int_aarch64_neon_sqdmull
                                                 (v4i16 V64:$Rn),
@@ -9894,15 +9932,27 @@ multiclass SIMDIndexedLongSQDMLXSDTied<bit U, bits<4> opc, string asm,
                         V128_lo:$Rm,
                         VectorIndexH:$idx)>;
 
+  def : Pat<(f32 (ScalAcc FPR32Op:$Rd,
+                          (bitconvert (i32 (vector_extract
+                                    (v4i32 (int_aarch64_neon_sqdmull
+                                                (v4i16 V64:$Rn),
+                                                (dup_v8i16 (v8i16 V128_lo:$Rm),
+                                                            VectorIndexH:$idx))),
+                                    (i64 0)))))),
+            (!cast<Instruction>(NAME # v1i32_indexed)
+                        FPR32Op:$Rd,
+                        (f16 (EXTRACT_SUBREG V64:$Rn, hsub)),
+                        V128_lo:$Rm,
+                        VectorIndexH:$idx)>;
+
   def v1i64_indexed : BaseSIMDIndexedTied<1, U, 1, 0b10, opc,
                                       FPR64Op, FPR32Op, V128, VectorIndexS,
                                       asm, ".s", "", "", ".s",
-    [(set (i64 FPR64Op:$dst),
-          (ScalAcc (i64 FPR64Op:$Rd),
-                   (i64 (int_aarch64_neon_sqdmulls_scalar
-                            (i32 FPR32Op:$Rn),
-                            (i32 (vector_extract (v4i32 V128:$Rm),
-                                                 VectorIndexS:$idx))))))]> {
+    [(set (f64 FPR64Op:$dst),
+          (ScalAcc FPR64Op:$Rd,
+                   (AArch64sqdmull FPR32Op:$Rn,
+                            (bitconvert (i32 (vector_extract (v4i32 V128:$Rm),
+                                                VectorIndexS:$idx))))))]> {
 
     bits<2> idx;
     let Inst{11} = idx{1};

@@ -541,10 +541,7 @@ struct StringRead {
 
   static bool skip() {
     // Huge does not give us anything that Large doesn't have. Skip it.
-    if (Length() == ::Length::Huge) {
-      return true;
-    }
-    return false;
+    return Length() == ::Length::Huge;
   }
 
   std::string name() const { return "BM_StringRead" + Temperature::name() + Depth::name() + Length::name(); }
@@ -585,14 +582,6 @@ void sanityCheckGeneratedStrings() {
   }
 }
 
-// Some small codegen thunks to easily see generated code.
-bool StringEqString(const std::string& a, const std::string& b) { return a == b; }
-bool StringEqCStr(const std::string& a, const char* b) { return a == b; }
-bool CStrEqString(const char* a, const std::string& b) { return a == b; }
-bool StringEqCStrLiteralEmpty(const std::string& a) { return a == ""; }
-bool StringEqCStrLiteralSmall(const std::string& a) { return a == SmallStringLiteral; }
-bool StringEqCStrLiteralLarge(const std::string& a) { return a == LargeStringLiteral; }
-
 int main(int argc, char** argv) {
   benchmark::Initialize(&argc, argv);
   if (benchmark::ReportUnrecognizedArguments(argc, argv))
@@ -615,16 +604,4 @@ int main(int argc, char** argv) {
   makeCartesianProductBenchmark<StringRelationalLiteral, AllRelations, AllLengths, AllLengths, AllDiffTypes>();
   makeCartesianProductBenchmark<StringRead, AllTemperatures, AllDepths, AllLengths>();
   benchmark::RunSpecifiedBenchmarks();
-
-  if (argc < 0) {
-    // ODR-use the functions to force them being generated in the binary.
-    auto functions = std::make_tuple(
-        StringEqString,
-        StringEqCStr,
-        CStrEqString,
-        StringEqCStrLiteralEmpty,
-        StringEqCStrLiteralSmall,
-        StringEqCStrLiteralLarge);
-    printf("%p", &functions);
-  }
 }

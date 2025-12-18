@@ -4,6 +4,11 @@
 # RUN: not llvm-mc -triple powerpc64le-unknown-unknown < %s 2> %t
 # RUN: FileCheck < %t %s
 
+# From ISAFuture
+
+# CHECK: error: invalid operand for instruction
+paddis 10, 5, 1000000000, 1
+
 # From ISA31
 
 # CHECK: error: invalid operand for instruction

@@ -736,8 +736,7 @@ static bool CheckWeak(InterpState &S, CodePtr OpPC, const Block *B) {
 // For example, since those can't be members of structs, they also can't
 // be mutable.
 bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
-  const auto &Desc =
-      *reinterpret_cast<const GlobalInlineDescriptor *>(B->rawData());
+  const auto &Desc = B->getBlockDesc<GlobalInlineDescriptor>();
   if (!B->isAccessible()) {
     if (!CheckExtern(S, OpPC, Pointer(const_cast<Block *>(B))))
       return false;
@@ -1435,8 +1434,12 @@ static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
 
   if (Ptr.isIntegralPointer()) {
-    S.Stk.push<Pointer>(Ptr.asIntPointer().atOffset(S.getASTContext(), Off));
-    return true;
+    if (std::optional<IntPointer> IntPtr =
+            Ptr.asIntPointer().atOffset(S.getASTContext(), Off)) {
+      S.Stk.push<Pointer>(std::move(*IntPtr));
+      return true;
+    }
+    return false;
   }
 
   if (!Ptr.isBlockPointer()) {
