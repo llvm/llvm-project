@@ -52,6 +52,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVUtils.cpp
   SPIRVEmitNonSemanticDI.cpp
   SPIRVCBufferAccess.cpp
+  SPIRVPushConstantAccess.cpp
 
   LINK_COMPONENTS
   Analysis

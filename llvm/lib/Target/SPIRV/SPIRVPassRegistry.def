@@ -18,6 +18,7 @@
 #endif
 MODULE_PASS("spirv-cbuffer-access", SPIRVCBufferAccess())
 MODULE_PASS("spirv-legalize-zero-size-arrays", SPIRVLegalizeZeroSizeArrays(/*TargetMachine=*/nullptr))
+MODULE_PASS("spirv-pushconstant-access", SPIRVPushConstantAccess(*static_cast<const SPIRVTargetMachine *>(this)))
 #undef MODULE_PASS
 
 #ifndef FUNCTION_PASS
