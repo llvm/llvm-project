@@ -57,7 +57,7 @@ static_library("CodeGen") {
     "EarlyIfConversion.cpp",
     "EdgeBundles.cpp",
     "ExecutionDomainFix.cpp",
-    "ExpandFp.cpp",
+    "ExpandIRInsts.cpp",
     "ExpandMemCmp.cpp",
     "ExpandPostRAPseudos.cpp",
     "ExpandReductions.cpp",
