@@ -3764,9 +3764,7 @@ static void genOMP(
     List<Clause> clauses = makeClauses(initializer, semaCtx);
     ReductionProcessor::GenInitValueCBTy genInitValueCB;
     ClauseProcessor cp(converter, semaCtx, clauses);
-    const parser::OmpClause::Initializer &iclause{
-        std::get<parser::OmpClause::Initializer>(initializer.v.front().u)};
-    cp.processInitializer(symTable, iclause, genInitValueCB);
+    cp.processInitializer(symTable, genInitValueCB);
     const auto &identifier =
         std::get<parser::OmpReductionIdentifier>(specifier.t);
     const auto &designator =

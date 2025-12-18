@@ -3171,9 +3171,9 @@ SDValue DAGCombiner::foldAddToAvg(SDNode *N, const SDLoc &DL) {
                 m_Add(m_And(m_Value(A), m_Value(B)),
                       m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)), m_One()))) ||
        sd_match(N, m_ReassociatableAdd(
-                       m_Srl(m_Value(A), m_One()), m_Srl(m_Value(B), m_One()),
-                       m_ReassociatableAnd(m_Deferred(A), m_Deferred(B),
-                                           m_One()))))) {
+                       m_ReassociatableAnd(m_Value(A), m_Value(B), m_One()),
+                       m_Srl(m_Deferred(A), m_One()),
+                       m_Srl(m_Deferred(B), m_One()))))) {
     return DAG.getNode(ISD::AVGFLOORU, DL, VT, A, B);
   }
   if ((!LegalOperations || hasOperation(ISD::AVGFLOORS, VT)) &&
@@ -3181,9 +3181,9 @@ SDValue DAGCombiner::foldAddToAvg(SDNode *N, const SDLoc &DL) {
                 m_Add(m_And(m_Value(A), m_Value(B)),
                       m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)), m_One()))) ||
        sd_match(N, m_ReassociatableAdd(
-                       m_Sra(m_Value(A), m_One()), m_Sra(m_Value(B), m_One()),
-                       m_ReassociatableAnd(m_Deferred(A), m_Deferred(B),
-                                           m_One()))))) {
+                       m_ReassociatableAnd(m_Value(A), m_Value(B), m_One()),
+                       m_Sra(m_Deferred(A), m_One()),
+                       m_Sra(m_Deferred(B), m_One()))))) {
     return DAG.getNode(ISD::AVGFLOORS, DL, VT, A, B);
   }
 
@@ -5771,7 +5771,7 @@ SDValue DAGCombiner::visitABD(SDNode *N) {
   if (N0 == N1)
     return DAG.getConstant(0, DL, VT);
 
-  SDValue X;
+  SDValue X, Y;
 
   // fold (abds x, 0) -> abs x
   if (sd_match(N, m_c_BinOp(ISD::ABDS, m_Value(X), m_Zero())) &&
@@ -5786,6 +5786,21 @@ SDValue DAGCombiner::visitABD(SDNode *N) {
   if (Opcode == ISD::ABDS && hasOperation(ISD::ABDU, VT) &&
       DAG.SignBitIsZero(N0) && DAG.SignBitIsZero(N1))
     return DAG.getNode(ISD::ABDU, DL, VT, N1, N0);
+
+  // fold (abd? (?ext x), (?ext y)) -> (zext (abd? x, y))
+  if (sd_match(N, m_BinOp(ISD::ABDU, m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) ||
+      sd_match(N, m_BinOp(ISD::ABDS, m_SExt(m_Value(X)), m_SExt(m_Value(Y))))) {
+    EVT SmallVT = X.getScalarValueSizeInBits() > Y.getScalarValueSizeInBits()
+                      ? X.getValueType()
+                      : Y.getValueType();
+    if (!LegalOperations || hasOperation(Opcode, SmallVT)) {
+      SDValue ExtedX = DAG.getExtOrTrunc(X, SDLoc(X), SmallVT, N0->getOpcode());
+      SDValue ExtedY = DAG.getExtOrTrunc(Y, SDLoc(Y), SmallVT, N0->getOpcode());
+      SDValue SmallABD = DAG.getNode(Opcode, DL, SmallVT, {ExtedX, ExtedY});
+      SDValue ZExted = DAG.getZExtOrTrunc(SmallABD, DL, VT);
+      return ZExted;
+    }
+  }
 
   return SDValue();
 }

@@ -638,10 +638,10 @@ make_early_inc_range(RangeT &&Range) {
 
 // Forward declarations required by zip_shortest/zip_equal/zip_first/zip_longest
 template <typename R, typename UnaryPredicate>
-bool all_of(R &&range, UnaryPredicate P);
+constexpr bool all_of(R &&range, UnaryPredicate P);
 
 template <typename R, typename UnaryPredicate>
-bool any_of(R &&range, UnaryPredicate P);
+constexpr bool any_of(R &&range, UnaryPredicate P);
 
 template <typename T> bool all_equal(std::initializer_list<T> Values);
 
@@ -1734,22 +1734,31 @@ UnaryFunction for_each(R &&Range, UnaryFunction F) {
 /// Provide wrappers to std::all_of which take ranges instead of having to pass
 /// begin/end explicitly.
 template <typename R, typename UnaryPredicate>
-bool all_of(R &&Range, UnaryPredicate P) {
-  return std::all_of(adl_begin(Range), adl_end(Range), P);
+constexpr bool all_of(R &&Range, UnaryPredicate P) {
+  // TODO: switch back to std::all_of() after it becomes constexpr in c++20.
+  for (auto I = adl_begin(Range), E = adl_end(Range); I != E; ++I)
+    if (!P(*I))
+      return false;
+  return true;
 }
 
 /// Provide wrappers to std::any_of which take ranges instead of having to pass
 /// begin/end explicitly.
 template <typename R, typename UnaryPredicate>
-bool any_of(R &&Range, UnaryPredicate P) {
-  return std::any_of(adl_begin(Range), adl_end(Range), P);
+constexpr bool any_of(R &&Range, UnaryPredicate P) {
+  // TODO: switch back to std::any_of() after it becomes constexpr in c++20.
+  for (auto I = adl_begin(Range), E = adl_end(Range); I != E; ++I)
+    if (P(*I))
+      return true;
+  return false;
 }
 
 /// Provide wrappers to std::none_of which take ranges instead of having to pass
 /// begin/end explicitly.
 template <typename R, typename UnaryPredicate>
-bool none_of(R &&Range, UnaryPredicate P) {
-  return std::none_of(adl_begin(Range), adl_end(Range), P);
+constexpr bool none_of(R &&Range, UnaryPredicate P) {
+  // TODO: switch back to std::none_of() after it becomes constexpr in c++20.
+  return !any_of(Range, P);
 }
 
 /// Provide wrappers to std::fill which take ranges instead of having to pass
@@ -2152,7 +2161,17 @@ void append_range(Container &C, Range &&R) {
 /// Appends all `Values` to container `C`.
 template <typename Container, typename... Args>
 void append_values(Container &C, Args &&...Values) {
-  C.reserve(range_size(C) + sizeof...(Args));
+  if (size_t InitialSize = range_size(C); InitialSize == 0) {
+    // Only reserve if the container is empty. Reserving on a non-empty
+    // container may interfere with the exponential growth strategy, if the
+    // container does not round up the capacity. Consider `append_values` called
+    // repeatedly in a loop: each call would reserve exactly `size + N`, causing
+    // the capacity to grow linearly (e.g., 100 -> 105 -> 110 -> ...) instead of
+    // exponentially (e.g., 100 -> 200 -> ...). Linear growth turns the
+    // amortized O(1) append into O(n) because every few insertions trigger a
+    // reallocation and copy of all elements.
+    C.reserve(InitialSize + sizeof...(Args));
+  }
   // Append all values one by one.
   ((void)C.insert(C.end(), std::forward<Args>(Values)), ...);
 }
