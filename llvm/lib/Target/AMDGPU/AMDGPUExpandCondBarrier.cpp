@@ -83,10 +83,9 @@ bool AMDGPUExpandCondBarrier::expandCondBarrier(MachineBasicBlock &MBB,
   const SIInstrInfo *TII = ST.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
 
-  // Get the variant that determines barrier execution condition.
-  // This allows complementary thread groups to synchronize on opposite
-  // conditions.
+  // Get operands from SI_COND_BARRIER instruction.
   unsigned Variant = MI.getOperand(0).getImm();
+  unsigned Src1 = MI.getOperand(1).getReg(); // First register operand (unused for now)
 
   // Split current block only if there are instructions after MI.
   MachineBasicBlock *ContinueMBB = nullptr;
@@ -111,9 +110,8 @@ bool AMDGPUExpandCondBarrier::expandCondBarrier(MachineBasicBlock &MBB,
   MF->insert(MBBI, BarrierMBB);
 
   // 1. Conditional branch to skip barrier based on variant:
-  //    Variant 0: Execute barrier when SCC=1, skip when SCC=0 (use
-  //    S_CBRANCH_SCC0). Variant 1: Execute barrier when SCC=0, skip when SCC=1
-  //    (use S_CBRANCH_SCC1).
+  //    Variant 0: Execute barrier when SCC=1, skip when SCC=0 (use S_CBRANCH_SCC0)
+  //    Variant 1: Execute barrier when SCC=0, skip when SCC=1 (use S_CBRANCH_SCC1)
   unsigned BranchOpcode =
       (Variant == 0) ? AMDGPU::S_CBRANCH_SCC0 : AMDGPU::S_CBRANCH_SCC1;
   BuildMI(MBB, &MI, DL, TII->get(BranchOpcode)).addMBB(ContinueMBB);
