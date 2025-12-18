@@ -2407,12 +2407,11 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
         return false;
 
       // A dllimport variable never acts like a constant, unless we're
-      // evaluating a value for use only in name mangling, and unless we're a
+      // evaluating a value for use only in name mangling, and unless it's a
       // static local. For the latter case, we'd still need to evaluate the
       // constant expression in case we're inside a (inlined) function.
       if (!isForManglingOnly(Kind) && Var->hasAttr<DLLImportAttr>() &&
           !Var->isStaticLocal())
-        // FIXME: Diagnostic!
         return false;
 
       // In CUDA/HIP device compilation, only device side variables have
