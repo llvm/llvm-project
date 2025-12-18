@@ -380,11 +380,13 @@ public:
     }
 
     // FIXME: We should be able to just return false here, as we only need a
-    // partial order (we use stable sorts, so this is deterministic) and the
-    // name of a class shouldn't be significant. However, some of the backends
-    // accidentally rely on this behaviour, so it will have to stay like this
-    // until they are fixed.
-    return ValueName < RHS.ValueName;
+    // partial order and the name of a class shouldn't be significant.
+    // However, some of the backends accidentally rely on this behaviour.
+    // We sort by ValueName and use Name as a tie-breaker to ensure
+    // deterministic output for binary reproducibility.
+    if (ValueName != RHS.ValueName)
+      return ValueName < RHS.ValueName;
+    return Name < RHS.Name;
   }
 };
 
