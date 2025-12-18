@@ -4,8 +4,7 @@
 define double @scvtf_bitcast_f32_to_f64(float %f) nounwind {
 ; CHECK-LABEL: scvtf_bitcast_f32_to_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    scvtf d0, w8
+; CHECK-NEXT:    scvtf d0, s0
 ; CHECK-NEXT:    ret
   %i = bitcast float %f to i32
   %r = sitofp i32 %i to double
@@ -15,8 +14,7 @@ define double @scvtf_bitcast_f32_to_f64(float %f) nounwind {
 define double @ucvtf_bitcast_f32_to_f64(float %f) nounwind {
 ; CHECK-LABEL: ucvtf_bitcast_f32_to_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    ucvtf d0, w8
+; CHECK-NEXT:    ucvtf d0, s0
 ; CHECK-NEXT:    ret
   %i = bitcast float %f to i32
   %r = uitofp i32 %i to double
@@ -26,8 +24,7 @@ define double @ucvtf_bitcast_f32_to_f64(float %f) nounwind {
 define half @scvtf_bitcast_f32_to_f16(float %f) nounwind {
 ; CHECK-LABEL: scvtf_bitcast_f32_to_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    scvtf h0, w8
+; CHECK-NEXT:    scvtf h0, s0
 ; CHECK-NEXT:    ret
   %i = bitcast float %f to i32
   %r = sitofp i32 %i to half
@@ -37,8 +34,7 @@ define half @scvtf_bitcast_f32_to_f16(float %f) nounwind {
 define half @ucvtf_bitcast_f32_to_f16(float %f) nounwind {
 ; CHECK-LABEL: ucvtf_bitcast_f32_to_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    ucvtf h0, w8
+; CHECK-NEXT:    ucvtf h0, s0
 ; CHECK-NEXT:    ret
   %i = bitcast float %f to i32
   %r = uitofp i32 %i to half
@@ -48,8 +44,7 @@ define half @ucvtf_bitcast_f32_to_f16(float %f) nounwind {
 define float @scvtf_bitcast_f64_to_f32(double %d) nounwind {
 ; CHECK-LABEL: scvtf_bitcast_f64_to_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    scvtf s0, x8
+; CHECK-NEXT:    scvtf s0, d0
 ; CHECK-NEXT:    ret
   %i = bitcast double %d to i64
   %r = sitofp i64 %i to float
@@ -59,8 +54,7 @@ define float @scvtf_bitcast_f64_to_f32(double %d) nounwind {
 define float @ucvtf_bitcast_f64_to_f32(double %d) nounwind {
 ; CHECK-LABEL: ucvtf_bitcast_f64_to_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    ucvtf s0, x8
+; CHECK-NEXT:    ucvtf s0, d0
 ; CHECK-NEXT:    ret
   %i = bitcast double %d to i64
   %r = uitofp i64 %i to float
@@ -70,8 +64,7 @@ define float @ucvtf_bitcast_f64_to_f32(double %d) nounwind {
 define half @scvtf_bitcast_f64_to_f16(double %d) nounwind {
 ; CHECK-LABEL: scvtf_bitcast_f64_to_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    scvtf h0, x8
+; CHECK-NEXT:    scvtf h0, d0
 ; CHECK-NEXT:    ret
   %i = bitcast double %d to i64
   %r = sitofp i64 %i to half
@@ -81,8 +74,7 @@ define half @scvtf_bitcast_f64_to_f16(double %d) nounwind {
 define half @ucvtf_bitcast_f64_to_f16(double %d) nounwind {
 ; CHECK-LABEL: ucvtf_bitcast_f64_to_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    ucvtf h0, x8
+; CHECK-NEXT:    ucvtf h0, d0
 ; CHECK-NEXT:    ret
   %i = bitcast double %d to i64
   %r = uitofp i64 %i to half
@@ -92,8 +84,7 @@ define half @ucvtf_bitcast_f64_to_f16(double %d) nounwind {
 define float @scvtf_bitcast_f32_to_f32(float %f) nounwind {
 ; CHECK-LABEL: scvtf_bitcast_f32_to_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    scvtf s0, w8
+; CHECK-NEXT:    scvtf s0, s0
 ; CHECK-NEXT:    ret
   %i = bitcast float %f to i32
   %r = sitofp i32 %i to float
@@ -103,8 +94,7 @@ define float @scvtf_bitcast_f32_to_f32(float %f) nounwind {
 define float @ucvtf_bitcast_f32_to_f32(float %f) nounwind {
 ; CHECK-LABEL: ucvtf_bitcast_f32_to_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    ucvtf s0, w8
+; CHECK-NEXT:    ucvtf s0, s0
 ; CHECK-NEXT:    ret
   %i = bitcast float %f to i32
   %r = uitofp i32 %i to float
@@ -114,8 +104,7 @@ define float @ucvtf_bitcast_f32_to_f32(float %f) nounwind {
 define double @scvtf_bitcast_f64_to_f64(double %d) nounwind {
 ; CHECK-LABEL: scvtf_bitcast_f64_to_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    scvtf d0, x8
+; CHECK-NEXT:    scvtf d0, d0
 ; CHECK-NEXT:    ret
   %i = bitcast double %d to i64
   %r = sitofp i64 %i to double
@@ -125,8 +114,7 @@ define double @scvtf_bitcast_f64_to_f64(double %d) nounwind {
 define double @ucvtf_bitcast_f64_to_f64(double %d) nounwind {
 ; CHECK-LABEL: ucvtf_bitcast_f64_to_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    ucvtf d0, x8
+; CHECK-NEXT:    ucvtf d0, d0
 ; CHECK-NEXT:    ret
   %i = bitcast double %d to i64
   %r = uitofp i64 %i to double
