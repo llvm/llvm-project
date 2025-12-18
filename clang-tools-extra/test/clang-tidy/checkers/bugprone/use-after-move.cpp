@@ -1,13 +1,13 @@
 // RUN: %check_clang_tidy -std=c++11 -check-suffixes=,CXX11 %s bugprone-use-after-move %t -- \
 // RUN:   -config='{CheckOptions: { \
 // RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection", \
-// RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset" \
+// RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset" \
 // RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- \
 // RUN:   -config='{CheckOptions: { \
 // RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection", \
-// RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset" \
+// RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset" \
 // RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 
@@ -1719,6 +1719,9 @@ struct Database {
   void Query(T = T()) {}
 };
 
+template <class T = int>
+void RegularReset(Database<T> &d, T = T()) {}
+
 void Run() {
   using DB = Database<>;
 
@@ -1748,5 +1751,10 @@ void Run() {
   std::move(db5);
   db5.Reset(0, 1.5, "extra");
   db5.Query();
+
+  DB db6;
+  std::move(db6);
+  RegularReset(db6);
+  db6.Query();
 }
 } // namespace custom_reinitialization
