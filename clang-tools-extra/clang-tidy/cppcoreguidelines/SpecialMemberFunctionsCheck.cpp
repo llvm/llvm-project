@@ -7,22 +7,42 @@
 //===----------------------------------------------------------------------===//
 
 #include "SpecialMemberFunctionsCheck.h"
-
-#include "clang/AST/ASTContext.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "llvm/ADT/StringExtras.h"
-
-#define DEBUG_TYPE "clang-tidy"
+#include "clang/ASTMatchers/ASTMatchers.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
 namespace {
-AST_MATCHER(CXXRecordDecl, isInMacro) {
-  return Node.getBeginLoc().isMacroID() && Node.getEndLoc().isMacroID();
-}
+
+enum SpecialMemberFunctions : uint8_t {
+  None = 0,
+  Dtor = 1 << 0,
+  DefaultDtor = 1 << 1,
+  NonDefaultDtor = 1 << 2,
+  CopyCtor = 1 << 3,
+  CopyAssignment = 1 << 4,
+  CopyOps = CopyCtor | CopyAssignment,
+  MoveCtor = 1 << 5,
+  MoveAssignment = 1 << 6,
+  MoveOps = MoveCtor | MoveAssignment,
+  LLVM_MARK_AS_BITMASK_ENUM(MoveAssignment),
+};
+
 } // namespace
+
+static StringRef toString(size_t K) {
+  static constexpr StringRef EnumToStringMap[] = {
+      "a destructor",
+      "a default destructor",
+      "a non-default destructor",
+      "a copy constructor",
+      "a copy assignment operator",
+      "a move constructor",
+      "a move assignment operator",
+  };
+  return EnumToStringMap[K];
+}
 
 SpecialMemberFunctionsCheck::SpecialMemberFunctionsCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -46,206 +66,92 @@ void SpecialMemberFunctionsCheck::storeOptions(
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
-std::optional<TraversalKind>
-SpecialMemberFunctionsCheck::getCheckTraversalKind() const {
-  return AllowImplicitlyDeletedCopyOrMove ? TK_AsIs
-                                          : TK_IgnoreUnlessSpelledInSource;
+static std::string joinSMFs(SpecialMemberFunctions SMFs, StringRef AndOr) {
+  assert(SMFs && "List of defined or undefined members should never be empty.");
+  std::string Buffer;
+  const size_t TotalSMFs = llvm::popcount(llvm::to_underlying(SMFs));
+  for (size_t SMFsLeft = TotalSMFs, I = 0; SMFsLeft > 0; ++I) {
+    if (!(SMFs & (1 << I)))
+      continue;
+    if (SMFsLeft != TotalSMFs)
+      Buffer += SMFsLeft == 1 ? AndOr : ", ";
+    Buffer += toString(I);
+    --SMFsLeft;
+  }
+  return Buffer;
 }
 
 void SpecialMemberFunctionsCheck::registerMatchers(MatchFinder *Finder) {
-  const auto IsNotImplicitOrDeleted = anyOf(unless(isImplicit()), isDeleted());
-  const ast_matchers::internal::Matcher<CXXRecordDecl> Anything = anything();
-
-  Finder->addMatcher(
-      cxxRecordDecl(
-          unless(isImplicit()), IgnoreMacros ? unless(isInMacro()) : Anything,
-          eachOf(has(cxxDestructorDecl(unless(isImplicit())).bind("dtor")),
-                 has(cxxConstructorDecl(isCopyConstructor(),
-                                        IsNotImplicitOrDeleted)
-                         .bind("copy-ctor")),
-                 has(cxxMethodDecl(isCopyAssignmentOperator(),
-                                   IsNotImplicitOrDeleted)
-                         .bind("copy-assign")),
-                 has(cxxConstructorDecl(isMoveConstructor(),
-                                        IsNotImplicitOrDeleted)
-                         .bind("move-ctor")),
-                 has(cxxMethodDecl(isMoveAssignmentOperator(),
-                                   IsNotImplicitOrDeleted)
-                         .bind("move-assign"))))
-          .bind("class-def"),
-      this);
-}
-
-static llvm::StringRef
-toString(SpecialMemberFunctionsCheck::SpecialMemberFunctionKind K) {
-  switch (K) {
-  case SpecialMemberFunctionsCheck::SpecialMemberFunctionKind::Destructor:
-    return "a destructor";
-  case SpecialMemberFunctionsCheck::SpecialMemberFunctionKind::
-      DefaultDestructor:
-    return "a default destructor";
-  case SpecialMemberFunctionsCheck::SpecialMemberFunctionKind::
-      NonDefaultDestructor:
-    return "a non-default destructor";
-  case SpecialMemberFunctionsCheck::SpecialMemberFunctionKind::CopyConstructor:
-    return "a copy constructor";
-  case SpecialMemberFunctionsCheck::SpecialMemberFunctionKind::CopyAssignment:
-    return "a copy assignment operator";
-  case SpecialMemberFunctionsCheck::SpecialMemberFunctionKind::MoveConstructor:
-    return "a move constructor";
-  case SpecialMemberFunctionsCheck::SpecialMemberFunctionKind::MoveAssignment:
-    return "a move assignment operator";
-  }
-  llvm_unreachable("Unhandled SpecialMemberFunctionKind");
-}
-
-static std::string
-join(ArrayRef<SpecialMemberFunctionsCheck::SpecialMemberFunctionKind> SMFS,
-     llvm::StringRef AndOr) {
-  assert(!SMFS.empty() &&
-         "List of defined or undefined members should never be empty.");
-  std::string Buffer;
-  llvm::raw_string_ostream Stream(Buffer);
-
-  Stream << toString(SMFS[0]);
-  const size_t LastIndex = SMFS.size() - 1;
-  for (size_t I = 1; I < LastIndex; ++I) {
-    Stream << ", " << toString(SMFS[I]);
-  }
-  if (LastIndex != 0) {
-    Stream << AndOr << toString(SMFS[LastIndex]);
-  }
-  return Stream.str();
+  Finder->addMatcher(cxxRecordDecl().bind("decl"), this);
 }
 
 void SpecialMemberFunctionsCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const auto *MatchedDecl = Result.Nodes.getNodeAs<CXXRecordDecl>("class-def");
-  if (!MatchedDecl)
+  const auto &Class = *Result.Nodes.getNodeAs<CXXRecordDecl>("decl");
+  if (IgnoreMacros && Class.getBeginLoc().isMacroID() &&
+      Class.getEndLoc().isMacroID())
     return;
 
-  ClassDefId ID(MatchedDecl->getLocation(),
-                std::string(MatchedDecl->getName()));
-
-  auto StoreMember = [this, &ID](SpecialMemberFunctionData Data) {
-    llvm::SmallVectorImpl<SpecialMemberFunctionData> &Members =
-        ClassWithSpecialMembers[ID];
-    if (!llvm::is_contained(Members, Data))
-      Members.push_back(std::move(Data));
-  };
-
-  if (const auto *Dtor = Result.Nodes.getNodeAs<CXXMethodDecl>("dtor")) {
-    SpecialMemberFunctionKind DestructorType =
-        SpecialMemberFunctionKind::Destructor;
-    if (Dtor->isDefined()) {
-      DestructorType = Dtor->getDefinition()->isDefaulted()
-                           ? SpecialMemberFunctionKind::DefaultDestructor
-                           : SpecialMemberFunctionKind::NonDefaultDestructor;
+  SpecialMemberFunctions DefinedSMFs{};
+  SpecialMemberFunctions ImplicitSMFs{};
+  SpecialMemberFunctions DeletedSMFs{};
+  for (const CXXMethodDecl *Method : Class.methods()) {
+    SpecialMemberFunctions NewSMF{};
+    if (Method->isCopyAssignmentOperator()) {
+      NewSMF = CopyAssignment;
+    } else if (Method->isMoveAssignmentOperator()) {
+      NewSMF = MoveAssignment;
+    } else if (const auto *Destructor = dyn_cast<CXXDestructorDecl>(Method)) {
+      if (!Destructor->isDefined())
+        NewSMF = Dtor;
+      else if (Destructor->getDefinition()->isDefaulted())
+        NewSMF = DefaultDtor;
+      else
+        NewSMF = NonDefaultDtor;
+    } else if (const auto *Constructor = dyn_cast<CXXConstructorDecl>(Method)) {
+      if (Constructor->isCopyConstructor())
+        NewSMF = CopyCtor;
+      else if (Constructor->isMoveConstructor())
+        NewSMF = MoveCtor;
     }
-    StoreMember({DestructorType, Dtor->isDeleted()});
+
+    if (Method->isImplicit())
+      ImplicitSMFs |= NewSMF;
+    else
+      DefinedSMFs |= NewSMF;
+    if (Method->isDeleted())
+      DeletedSMFs |= NewSMF;
   }
 
-  const std::initializer_list<std::pair<std::string, SpecialMemberFunctionKind>>
-      Matchers = {{"copy-ctor", SpecialMemberFunctionKind::CopyConstructor},
-                  {"copy-assign", SpecialMemberFunctionKind::CopyAssignment},
-                  {"move-ctor", SpecialMemberFunctionKind::MoveConstructor},
-                  {"move-assign", SpecialMemberFunctionKind::MoveAssignment}};
+  if (!DefinedSMFs)
+    return; // Class follows rule of 0.
 
-  for (const auto &KV : Matchers)
-    if (const auto *MethodDecl =
-            Result.Nodes.getNodeAs<CXXMethodDecl>(KV.first)) {
-      StoreMember(
-          {KV.second, MethodDecl->isDeleted(), MethodDecl->isImplicit()});
-    }
-}
+  if (AllowSoleDefaultDtor && !(DefinedSMFs & ~(Dtor | DefaultDtor)))
+    return;
 
-void SpecialMemberFunctionsCheck::onEndOfTranslationUnit() {
-  for (const auto &C : ClassWithSpecialMembers) {
-    checkForMissingMembers(C.first, C.second);
-  }
-}
+  SpecialMemberFunctions RequiredSMFs{};
+  if (!(AllowImplicitlyDeletedCopyOrMove &&
+        (ImplicitSMFs & DeletedSMFs & CopyOps) == CopyOps))
+    RequiredSMFs |= CopyOps;
 
-void SpecialMemberFunctionsCheck::checkForMissingMembers(
-    const ClassDefId &ID,
-    llvm::ArrayRef<SpecialMemberFunctionData> DefinedMembers) {
-  llvm::SmallVector<SpecialMemberFunctionKind, 5> MissingMembers;
+  if (!(DefinedSMFs & (Dtor | NonDefaultDtor | DefaultDtor)))
+    RequiredSMFs |= Dtor;
 
-  auto HasMember = [&](SpecialMemberFunctionKind Kind) {
-    return llvm::any_of(DefinedMembers, [Kind](const auto &Data) {
-      return Data.FunctionKind == Kind && !Data.IsImplicit;
-    });
-  };
-
-  auto HasImplicitDeletedMember = [&](SpecialMemberFunctionKind Kind) {
-    return llvm::any_of(DefinedMembers, [Kind](const auto &Data) {
-      return Data.FunctionKind == Kind && Data.IsImplicit && Data.IsDeleted;
-    });
-  };
-
-  auto IsDeleted = [&](SpecialMemberFunctionKind Kind) {
-    return llvm::any_of(DefinedMembers, [Kind](const auto &Data) {
-      return Data.FunctionKind == Kind && Data.IsDeleted;
-    });
-  };
-
-  auto RequireMembers = [&](SpecialMemberFunctionKind Kind1,
-                            SpecialMemberFunctionKind Kind2) {
-    if (AllowImplicitlyDeletedCopyOrMove && HasImplicitDeletedMember(Kind1) &&
-        HasImplicitDeletedMember(Kind2))
-      return;
-
-    if (!HasMember(Kind1))
-      MissingMembers.push_back(Kind1);
-
-    if (!HasMember(Kind2))
-      MissingMembers.push_back(Kind2);
-  };
-
-  const bool RequireThree =
-      HasMember(SpecialMemberFunctionKind::NonDefaultDestructor) ||
-      (!AllowSoleDefaultDtor &&
-       (HasMember(SpecialMemberFunctionKind::Destructor) ||
-        HasMember(SpecialMemberFunctionKind::DefaultDestructor))) ||
-      HasMember(SpecialMemberFunctionKind::CopyConstructor) ||
-      HasMember(SpecialMemberFunctionKind::CopyAssignment) ||
-      HasMember(SpecialMemberFunctionKind::MoveConstructor) ||
-      HasMember(SpecialMemberFunctionKind::MoveAssignment);
-
-  const bool RequireFive =
-      (!AllowMissingMoveFunctions && RequireThree &&
-       getLangOpts().CPlusPlus11) ||
-      HasMember(SpecialMemberFunctionKind::MoveConstructor) ||
-      HasMember(SpecialMemberFunctionKind::MoveAssignment);
-
-  if (RequireThree) {
-    if (!HasMember(SpecialMemberFunctionKind::Destructor) &&
-        !HasMember(SpecialMemberFunctionKind::DefaultDestructor) &&
-        !HasMember(SpecialMemberFunctionKind::NonDefaultDestructor))
-      MissingMembers.push_back(SpecialMemberFunctionKind::Destructor);
-
-    RequireMembers(SpecialMemberFunctionKind::CopyConstructor,
-                   SpecialMemberFunctionKind::CopyAssignment);
-  }
-
-  if (RequireFive &&
+  if (getLangOpts().CPlusPlus11 &&
+      ((DefinedSMFs & MoveOps) || !AllowMissingMoveFunctions) &&
+      !(AllowImplicitlyDeletedCopyOrMove &&
+        (ImplicitSMFs & DeletedSMFs & MoveOps) == MoveOps) &&
       !(AllowMissingMoveFunctionsWhenCopyIsDeleted &&
-        (IsDeleted(SpecialMemberFunctionKind::CopyConstructor) &&
-         IsDeleted(SpecialMemberFunctionKind::CopyAssignment)))) {
-    assert(RequireThree);
-    RequireMembers(SpecialMemberFunctionKind::MoveConstructor,
-                   SpecialMemberFunctionKind::MoveAssignment);
-  }
+        (DeletedSMFs & CopyOps) == CopyOps))
+    RequiredSMFs |= MoveOps;
 
-  if (!MissingMembers.empty()) {
-    llvm::SmallVector<SpecialMemberFunctionKind, 5> DefinedMemberKinds;
-    for (const auto &Data : DefinedMembers) {
-      if (!Data.IsImplicit)
-        DefinedMemberKinds.push_back(Data.FunctionKind);
-    }
-    diag(ID.first, "class '%0' defines %1 but does not define %2")
-        << ID.second << cppcoreguidelines::join(DefinedMemberKinds, " and ")
-        << cppcoreguidelines::join(MissingMembers, " or ");
-  }
+  const SpecialMemberFunctions MissingSMFs = RequiredSMFs & ~DefinedSMFs;
+  if (!MissingSMFs)
+    return;
+
+  diag(Class.getLocation(), "class %0 defines %1 but does not define %2")
+      << &Class << joinSMFs(DefinedSMFs, " and ")
+      << joinSMFs(MissingSMFs, " or ");
 }
 
 } // namespace clang::tidy::cppcoreguidelines
