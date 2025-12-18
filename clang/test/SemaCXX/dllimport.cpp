@@ -1527,37 +1527,33 @@ template <typename T> struct ExpliciallySpecializedClassTemplate {};
 template <> struct __declspec(dllimport) ExpliciallySpecializedClassTemplate<int> { void f() {} };
 
 // Function-local static constexpr in dllimport function (or class).
-struct DLLImportFuncWithConstexprStatic {
 #if defined(GNU)
 // expected-warning@+2{{'dllimport' attribute ignored on inline function}}
 #endif
-  __declspec(dllimport) static const int *func() {
-    static constexpr int value = 42;
-    static constexpr const int *p = &value;
-    static_assert(*p == 42, "");
-    return p;
-  }
-};
-const int* (*pFunc)() = &DLLImportFuncWithConstexprStatic::func;
+__declspec(dllimport) inline const int *dLLImportFuncWithConstexprStatic() {
+  static constexpr int value = 42;
+  static constexpr const int *p = &value;
+  static_assert(*p == 42, "");
+  return p;
+}
+const int* (*pFunc)() = &dLLImportFuncWithConstexprStatic;
 bool UsedDLLImportFuncWithConstexprStatic() {
-  return pFunc() == DLLImportFuncWithConstexprStatic::func();
+  return pFunc() == dLLImportFuncWithConstexprStatic();
 }
 
 #if !defined(PS)
-struct DLLImportInlineFuncWithConstexprStatic {
 #if defined(GNU)
   // expected-warning@+2{{'dllimport' attribute ignored on inline function}}
 #endif
-  __declspec(dllimport) __forceinline static const int* funcForceInline() {
-    static constexpr int value = 42;
-    static constexpr const int* p = &value;
-    static_assert(*p == 42, "");
-    return p;
-  }
-};
-const int* (*pFuncForceInline)() = &DLLImportInlineFuncWithConstexprStatic::funcForceInline;
+__declspec(dllimport) __forceinline const int* dLLImportInlineFuncWithConstexprStatic() {
+  static constexpr int value = 42;
+  static constexpr const int* p = &value;
+  static_assert(*p == 42, "");
+  return p;
+}
+const int* (*pFuncForceInline)() = &dLLImportInlineFuncWithConstexprStatic;
 bool UsedDLLImportInlineFuncWithConstexprStatic() {
-  return pFuncForceInline() == DLLImportInlineFuncWithConstexprStatic::funcForceInline();
+  return pFuncForceInline() == dLLImportInlineFuncWithConstexprStatic();
 }
 #endif // !PS
 
