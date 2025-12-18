@@ -1158,8 +1158,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // Emit an error message if an actual argument passed to a host intrinsic is
   // on the device.
   if (intrinsic && !FindCUDADeviceContext(scope) &&
-      !FindOpenACCConstructContaining(scope) &&
-      !FindCUFKernelDoConstructContaining(scope)) {
+      !FindOpenACCConstructContaining(scope)) {
     if (!cudaSkippedIntrinsics.contains(intrinsic->name)) {
       std::optional<common::CUDADataAttr> actualDataAttr;
       if (const auto *actualObject{actualLastSymbol

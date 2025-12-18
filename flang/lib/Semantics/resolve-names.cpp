@@ -9260,7 +9260,8 @@ void DeclarationVisitor::LegacyDataInitialization(const parser::Name &name,
 }
 
 bool DeclarationVisitor::Pre(const parser::CUFKernelDoConstruct &x) {
-  PushScope(Scope::Kind::CUFKernelDoConstruct, nullptr);
+  // Treat CUDA kernel do construct as OpenACC construct.
+  PushScope(Scope::Kind::OpenACCConstruct, nullptr);
   return true;
 }
 
