@@ -417,7 +417,7 @@ static void addAnnotationRemarksPass(ModulePassManager &MPM) {
   if (AreStatisticsEnabled()) {
     MPM.addPass(createModuleToFunctionPassAdaptor(InstCountPass()));
     MPM.addPass(
-      createModuleToFunctionPassAdaptor(FunctionPropertiesStatisticsPass()));
+        createModuleToFunctionPassAdaptor(FunctionPropertiesStatisticsPass()));
   }    
 }
 
