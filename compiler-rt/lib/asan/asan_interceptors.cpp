@@ -284,7 +284,7 @@ INTERCEPTOR(int, pthread_create, void *thread, void *attr,
       result = REAL(pthread_create)(thread, attr, asan_thread_start, t);
 // AIX pthread_t is unsigned int.
 #    if SANITIZER_AIX
-      return result ? 0 : *(unsigned*)(thread);
+      return result ? 0 : *(unsigned *)(thread);
 #    else
       return result ? 0 : *(uptr *)(thread);
 #    endif
@@ -785,14 +785,6 @@ static void AtCxaAtexit(void *unused) {
 }
 #endif
 
-#  if ASAN_INTERCEPT_EXIT
-INTERCEPTOR(void, exit, int status) {
-  AsanInitFromRtl();
-  StopInitOrderChecking();
-  REAL(exit)(status);
-}
-#  endif
-
 #  if ASAN_INTERCEPT___CXA_ATEXIT
 INTERCEPTOR(int, __cxa_atexit, void (*func)(void *), void *arg,
             void *dso_handle) {
@@ -950,10 +942,6 @@ void InitializeAsanInterceptors() {
 #if ASAN_INTERCEPT_ATEXIT
   ASAN_INTERCEPT_FUNC(atexit);
 #endif
-
-#  if ASAN_INTERCEPT_EXIT
-  ASAN_INTERCEPT_FUNC(exit);
-#  endif
 
 #  if ASAN_INTERCEPT_PTHREAD_ATFORK
   ASAN_INTERCEPT_FUNC(pthread_atfork);
