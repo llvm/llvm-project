@@ -59103,7 +59103,11 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       }
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Subs);
     };
-    auto IsConcatFree = [](MVT VT, ArrayRef<SDValue> SubOps, unsigned Op) {
+    auto IsOpConstant = [](SDValue Op) -> bool {
+      return ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) ||
+             ISD::isBuildVectorOfConstantFPSDNodes(Op.getNode());
+    };
+    auto IsConcatFree = [&](MVT VT, ArrayRef<SDValue> SubOps, unsigned Op) {
       bool AllConstants = true;
       bool AllSubs = true;
       unsigned VecSize = VT.getSizeInBits();
@@ -59116,8 +59120,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         SDValue BC = peekThroughBitcasts(SubOps[I].getOperand(Op));
         unsigned SubSize = BC.getValueSizeInBits();
         unsigned EltSize = BC.getScalarValueSizeInBits();
-        AllConstants &= ISD::isBuildVectorOfConstantSDNodes(BC.getNode()) ||
-                        ISD::isBuildVectorOfConstantFPSDNodes(BC.getNode());
+        AllConstants &= IsOpConstant(BC);
         AllSubs &= BC.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
                    BC.getOperand(0).getValueSizeInBits() == VecSize &&
                    (BC.getConstantOperandVal(1) * EltSize) == (I * SubSize);
@@ -59128,9 +59131,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       bool AllConstants = true;
       SmallVector<SDValue> Subs;
       for (SDValue SubOp : SubOps) {
-        SDValue BC = peekThroughBitcasts(SubOp.getOperand(I));
-        AllConstants &= ISD::isBuildVectorOfConstantSDNodes(BC.getNode()) ||
-                        ISD::isBuildVectorOfConstantFPSDNodes(BC.getNode());
+        AllConstants &= IsOpConstant(peekThroughBitcasts(SubOp.getOperand(I)));
         Subs.push_back(SubOp.getOperand(I));
       }
       if (AllConstants)
