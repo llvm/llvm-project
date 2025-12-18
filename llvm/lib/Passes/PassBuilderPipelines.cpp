@@ -416,7 +416,8 @@ static void addAnnotationRemarksPass(ModulePassManager &MPM) {
   // Count the types of instructions used
   if (AreStatisticsEnabled()) {
     MPM.addPass(createModuleToFunctionPassAdaptor(InstCountPass()));
-    MPM.addPass(createModuleToFunctionPassAdaptor(FunctionPropertiesStatisticsPass()));
+    MPM.addPass(
+      createModuleToFunctionPassAdaptor(FunctionPropertiesStatisticsPass()));
   }    
 }
 
