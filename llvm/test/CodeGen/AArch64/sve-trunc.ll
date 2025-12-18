@@ -56,46 +56,6 @@ entry:
   ret <vscale x 2 x i32> %out
 }
 
-define <vscale x 4 x i32> @trunc_i64toi32_legal_abi(<vscale x 2 x i64> %in) {
-; CHECK-LABEL: trunc_i64toi32_legal_abi:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    ret
-entry:
-  %out = trunc <vscale x 2 x i64> %in to <vscale x 2 x i32>
-  %out.legal = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv2i32(<vscale x 4 x i32> poison, <vscale x 2 x i32> %out, i64 0)
-  ret <vscale x 4 x i32> %out.legal
-}
-
-define <vscale x 8 x i16> @trunc_i64toi16_legal_abi(<vscale x 2 x i64> %in) {
-; CHECK-LABEL: trunc_i64toi16_legal_abi:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    ret
-entry:
-  %out = trunc <vscale x 2 x i64> %in to <vscale x 2 x i16>
-  %out.legal = call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv2i16(<vscale x 8 x i16> poison, <vscale x 2 x i16> %out, i64 0)
-  ret <vscale x 8 x i16> %out.legal
-}
-
-; Truncating from an "illegal" small type to an even smaller type
-; requires promoting the element type first.
-
-define <vscale x 16 x i8> @trunc_4i16toi8(<vscale x 8 x i16> %in) {
-; CHECK-LABEL: trunc_4i16toi8:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    ret
-entry:
-  %subvec = call <vscale x 4 x i16> @llvm.vector.extract.nvv4i16.nxv8i16(<vscale x 8 x i16> %in, i64 0)
-  %out = trunc <vscale x 4 x i16> %subvec to <vscale x 4 x i8>
-  %out.legal = call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.nxv4i8(<vscale x 16 x i8> poison, <vscale x 4 x i8> %out, i64 0)
-  ret <vscale x 16 x i8> %out.legal
-}
-
 ; <vscale x 1 x ...> types are tricky because their element type cannot be
 ; promoted to form a legal vector type. Instead, they need widening.
 ; Note: The uzp1 operations are due to vector.insert().

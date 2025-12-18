@@ -5671,7 +5671,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {
     if (N->getOpcode() == ISD::TRUNCATE &&
         getTypeAction(MidResVT) == TargetLowering::TypePromoteInteger) {
       SDValue MidRes = DAG.getNode(ISD::TRUNCATE, DL, MidResVT, InOp, Flags);
-      return DAG.getInsertSubvector(DL, DAG.getUNDEF(WidenVT), MidRes, 0);
+      return DAG.getInsertSubvector(DL, DAG.getPOISON(WidenVT), MidRes, 0);
     }
   }
 
