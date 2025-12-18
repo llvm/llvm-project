@@ -3,7 +3,7 @@
 ; RUN: not opt -passes=codegenprepare -disable-output %s 2>&1 | FileCheck %s
 ; RUN: not opt -passes=complex-deinterleaving -disable-output %s 2>&1 | FileCheck %s
 ; RUN: not opt -passes=dwarf-eh-prepare -disable-output %s 2>&1 | FileCheck %s
-; RUN: not opt -passes=expand-large-div-rem -disable-output %s 2>&1 | FileCheck %s
+; RUN: not opt -passes=expand-fp -disable-output %s 2>&1 | FileCheck %s
 ; RUN: not opt -passes=expand-memcmp -disable-output %s 2>&1 | FileCheck %s
 ; RUN: not opt -passes=indirectbr-expand -disable-output %s 2>&1 | FileCheck %s
 ; RUN: not opt -passes=interleaved-access -disable-output %s 2>&1 | FileCheck %s

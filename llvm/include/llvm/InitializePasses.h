@@ -113,7 +113,6 @@ LLVM_ABI void initializeEarlyTailDuplicateLegacyPass(PassRegistry &);
 LLVM_ABI void initializeEdgeBundlesWrapperLegacyPass(PassRegistry &);
 LLVM_ABI void initializeEHContGuardTargetsPass(PassRegistry &);
 LLVM_ABI void initializeExpandFpLegacyPassPass(PassRegistry &);
-LLVM_ABI void initializeExpandLargeDivRemLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeExpandMemCmpLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeExpandPostRALegacyPass(PassRegistry &);
 LLVM_ABI void initializeExpandReductionsPass(PassRegistry &);

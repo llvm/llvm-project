@@ -57,7 +57,6 @@ add_llvm_component_library(LLVMCodeGen
   EdgeBundles.cpp
   EHContGuardTargets.cpp
   ExecutionDomainFix.cpp
-  ExpandLargeDivRem.cpp
   ExpandFp.cpp
   ExpandMemCmp.cpp
   ExpandPostRAPseudos.cpp

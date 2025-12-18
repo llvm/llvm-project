@@ -673,7 +673,6 @@ default optimization pipelines, e.g. (the output has been trimmed):
   ModulePass Manager
   Pre-ISel Intrinsic Lowering
   FunctionPass Manager
-    Expand large div/rem
     Expand fp
     Expand Atomic instructions
   SVE intrinsics optimizations
