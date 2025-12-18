@@ -27,11 +27,10 @@ static cl::opt<bool>
                                 "to lower to librt functions"),
                        cl::init(true));
 
-static cl::opt<bool>
-    UseMOPS("aarch64-use-mops", cl::Hidden,
-            cl::desc("Enable AArch64 MOPS instructions "
-                     "for memcpy/memset/memmove"),
-            cl::init(true));
+static cl::opt<bool> UseMOPS("aarch64-use-mops", cl::Hidden,
+                             cl::desc("Enable AArch64 MOPS instructions "
+                                      "for memcpy/memset/memmove"),
+                             cl::init(true));
 
 AArch64SelectionDAGInfo::AArch64SelectionDAGInfo()
     : SelectionDAGGenTargetInfo(AArch64GenSDNodeInfo) {}
