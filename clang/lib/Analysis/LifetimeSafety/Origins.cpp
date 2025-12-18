@@ -26,14 +26,14 @@ class MissingOriginCollector
     : public RecursiveASTVisitor<MissingOriginCollector> {
 public:
   MissingOriginCollector(
-      const llvm::DenseMap<const clang::Expr *, OriginID> &ExprToOriginId,
+      const llvm::DenseMap<const clang::Expr *, OriginList *> &ExprToOriginList,
       LifetimeSafetyStats &LSStats)
-      : ExprToOriginId(ExprToOriginId), LSStats(LSStats) {}
+      : ExprToOriginList(ExprToOriginList), LSStats(LSStats) {}
   bool VisitExpr(Expr *E) {
     if (!hasOrigin(E))
       return true;
     // Check if we have an origin for this expression.
-    if (!ExprToOriginId.contains(E)) {
+    if (!ExprToOriginList.contains(E)) {
       // No origin found: count this as missing origin.
       LSStats.ExprTypeToMissingOriginCount[E->getType().getTypePtr()]++;
       LSStats.ExprStmtClassToMissingOriginCount[std::string(
@@ -43,7 +43,7 @@ public:
   }
 
 private:
-  const llvm::DenseMap<const clang::Expr *, OriginID> &ExprToOriginId;
+  const llvm::DenseMap<const clang::Expr *, OriginList *> &ExprToOriginList;
   LifetimeSafetyStats &LSStats;
 };
 } // namespace
@@ -189,19 +189,9 @@ const Origin &OriginManager::getOrigin(OriginID ID) const {
   return AllOrigins[ID.Value];
 }
 
-OriginID OriginManager::getOrCreate(const ValueDecl &D) {
-  auto It = DeclToOriginID.find(&D);
-  if (It != DeclToOriginID.end())
-    return It->second;
-  OriginID NewID = getNextOriginID();
-  addOrigin(NewID, D);
-  DeclToOriginID[&D] = NewID;
-  return NewID;
-}
-
 void OriginManager::collectMissingOrigins(Stmt &FunctionBody,
                                           LifetimeSafetyStats &LSStats) {
-  MissingOriginCollector Collector(this->ExprToOriginID, LSStats);
+  MissingOriginCollector Collector(this->ExprToList, LSStats);
   Collector.TraverseStmt(const_cast<Stmt *>(&FunctionBody));
 }
 
