@@ -405,83 +405,7 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
     return op->emitError("expected '")
            << getContainerModuleAttrName() << "' attribute to be attached to '"
            << ModuleOp::getOperationName() << '\'';
-
-  auto walkResult = module.walk([&module](LaunchFuncOp launchOp) -> WalkResult {
-    // Ignore launches that are nested more or less deep than functions in the
-    // module we are currently checking.
-    if (!launchOp->getParentOp() ||
-        launchOp->getParentOp()->getParentOp() != module)
-      return success();
-
-    // Ignore launch ops with missing attributes here. The errors will be
-    // reported by the verifiers of those ops.
-    if (!launchOp->getAttrOfType<SymbolRefAttr>(
-            LaunchFuncOp::getKernelAttrName(launchOp->getName())))
-      return success();
-
-    // Check that `launch_func` refers to a well-formed GPU kernel container.
-    StringAttr kernelContainerName = launchOp.getKernelModuleName();
-    Operation *kernelContainer = module.lookupSymbol(kernelContainerName);
-    if (!kernelContainer)
-      return launchOp.emitOpError()
-             << "kernel container '" << kernelContainerName.getValue()
-             << "' is undefined";
-
-    // If the container is a GPU binary op return success.
-    if (isa<BinaryOp>(kernelContainer))
-      return success();
-
-    auto kernelModule = dyn_cast<GPUModuleOp>(kernelContainer);
-    if (!kernelModule)
-      return launchOp.emitOpError()
-             << "kernel module '" << kernelContainerName.getValue()
-             << "' is undefined";
-
-    // Check that `launch_func` refers to a well-formed kernel function.
-    Operation *kernelFunc = module.lookupSymbol(launchOp.getKernelAttr());
-    if (!kernelFunc)
-      return launchOp.emitOpError("kernel function '")
-             << launchOp.getKernel() << "' is undefined";
-    auto kernelConvertedFunction = dyn_cast<FunctionOpInterface>(kernelFunc);
-    if (!kernelConvertedFunction) {
-      InFlightDiagnostic diag = launchOp.emitOpError()
-                                << "referenced kernel '" << launchOp.getKernel()
-                                << "' is not a function";
-      diag.attachNote(kernelFunc->getLoc()) << "see the kernel definition here";
-      return diag;
-    }
-
-    if (!kernelFunc->getAttrOfType<mlir::UnitAttr>(
-            GPUDialect::getKernelFuncAttrName()))
-      return launchOp.emitOpError("kernel function is missing the '")
-             << GPUDialect::getKernelFuncAttrName() << "' attribute";
-
-    // TODO: If the kernel isn't a GPU function (which happens during separate
-    // compilation), do not check type correspondence as it would require the
-    // verifier to be aware of the type conversion.
-    auto kernelGPUFunction = dyn_cast<gpu::GPUFuncOp>(kernelFunc);
-    if (!kernelGPUFunction)
-      return success();
-
-    unsigned actualNumArguments = launchOp.getNumKernelOperands();
-    unsigned expectedNumArguments = kernelGPUFunction.getNumArguments();
-    if (expectedNumArguments != actualNumArguments)
-      return launchOp.emitOpError("got ")
-             << actualNumArguments << " kernel operands but expected "
-             << expectedNumArguments;
-
-    auto functionType = kernelGPUFunction.getFunctionType();
-    for (unsigned i = 0; i < expectedNumArguments; ++i) {
-      if (launchOp.getKernelOperand(i).getType() != functionType.getInput(i)) {
-        return launchOp.emitOpError("type of function argument ")
-               << i << " does not match";
-      }
-    }
-
-    return success();
-  });
-
-  return walkResult.wasInterrupted() ? failure() : success();
+  return success();
 }
 
 /// Parses an optional list of async operands with an optional leading keyword.
@@ -1376,6 +1300,84 @@ LogicalResult LaunchFuncOp::verify() {
         getClusterSizeZ().getType() != getClusterSizeX().getType())
       return emitOpError()
              << "expects types of the cluster dimensions must be the same";
+  }
+
+  return success();
+}
+
+LogicalResult
+LaunchFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  LaunchFuncOp launchOp = *this;
+  ModuleOp module = (*this)->getParentOfType<ModuleOp>();
+  // Ignore launches that are nested more or less deep than functions in the
+  // module we are currently checking.
+  if (!launchOp->getParentOp() ||
+      launchOp->getParentOp()->getParentOp() != module)
+    return success();
+
+  // Ignore launch ops with missing attributes here. The errors will be
+  // reported by the verifiers of those ops.
+  if (!launchOp->getAttrOfType<SymbolRefAttr>(
+          LaunchFuncOp::getKernelAttrName(launchOp->getName())))
+    return success();
+
+  // Check that `launch_func` refers to a well-formed GPU kernel container.
+  StringAttr kernelContainerName = launchOp.getKernelModuleName();
+  Operation *kernelContainer = module.lookupSymbol(kernelContainerName);
+  if (!kernelContainer)
+    return launchOp.emitOpError()
+           << "kernel container '" << kernelContainerName.getValue()
+           << "' is undefined";
+
+  // If the container is a GPU binary op return success.
+  if (isa<BinaryOp>(kernelContainer))
+    return success();
+
+  auto kernelModule = dyn_cast<GPUModuleOp>(kernelContainer);
+  if (!kernelModule)
+    return launchOp.emitOpError()
+           << "kernel module '" << kernelContainerName.getValue()
+           << "' is undefined";
+
+  // Check that `launch_func` refers to a well-formed kernel function.
+  Operation *kernelFunc = module.lookupSymbol(launchOp.getKernelAttr());
+  if (!kernelFunc)
+    return launchOp.emitOpError("kernel function '")
+           << launchOp.getKernel() << "' is undefined";
+  auto kernelConvertedFunction = dyn_cast<FunctionOpInterface>(kernelFunc);
+  if (!kernelConvertedFunction) {
+    InFlightDiagnostic diag = launchOp.emitOpError()
+                              << "referenced kernel '" << launchOp.getKernel()
+                              << "' is not a function";
+    diag.attachNote(kernelFunc->getLoc()) << "see the kernel definition here";
+    return diag;
+  }
+
+  if (!kernelFunc->getAttrOfType<mlir::UnitAttr>(
+          GPUDialect::getKernelFuncAttrName()))
+    return launchOp.emitOpError("kernel function is missing the '")
+           << GPUDialect::getKernelFuncAttrName() << "' attribute";
+
+  // TODO: If the kernel isn't a GPU function (which happens during separate
+  // compilation), do not check type correspondence as it would require the
+  // verifier to be aware of the type conversion.
+  auto kernelGPUFunction = dyn_cast<gpu::GPUFuncOp>(kernelFunc);
+  if (!kernelGPUFunction)
+    return success();
+
+  unsigned actualNumArguments = launchOp.getNumKernelOperands();
+  unsigned expectedNumArguments = kernelGPUFunction.getNumArguments();
+  if (expectedNumArguments != actualNumArguments)
+    return launchOp.emitOpError("got ")
+           << actualNumArguments << " kernel operands but expected "
+           << expectedNumArguments;
+
+  auto functionType = kernelGPUFunction.getFunctionType();
+  for (unsigned i = 0; i < expectedNumArguments; ++i) {
+    if (launchOp.getKernelOperand(i).getType() != functionType.getInput(i)) {
+      return launchOp.emitOpError("type of function argument ")
+             << i << " does not match";
+    }
   }
 
   return success();
