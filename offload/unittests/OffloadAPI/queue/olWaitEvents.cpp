@@ -52,7 +52,7 @@ TEST_P(olWaitEventsTest, Success) {
       ASSERT_SUCCESS(olWaitEvents(Queues[I], &Events[I - 1], 1));
 
     ASSERT_SUCCESS(olLaunchKernel(Queues[I], Device, Kernel, &Args,
-                                  sizeof(Args), &LaunchArgs));
+                                  sizeof(Args), &LaunchArgs, NULL));
     ASSERT_SUCCESS(olCreateEvent(Queues[I], &Events[I]));
   }
 
@@ -86,7 +86,7 @@ TEST_P(olWaitEventsTest, SuccessSingleQueue) {
       ASSERT_SUCCESS(olWaitEvents(Queue, &Events[I - 1], 1));
 
     ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
-                                  &LaunchArgs));
+                                  &LaunchArgs, NULL));
     ASSERT_SUCCESS(olCreateEvent(Queue, &Events[I]));
   }
 
@@ -120,7 +120,7 @@ TEST_P(olWaitEventsTest, SuccessMultipleEvents) {
       ASSERT_SUCCESS(olWaitEvents(Queues[I], Events, I));
 
     ASSERT_SUCCESS(olLaunchKernel(Queues[I], Device, Kernel, &Args,
-                                  sizeof(Args), &LaunchArgs));
+                                  sizeof(Args), &LaunchArgs, NULL));
     ASSERT_SUCCESS(olCreateEvent(Queues[I], &Events[I]));
   }
 

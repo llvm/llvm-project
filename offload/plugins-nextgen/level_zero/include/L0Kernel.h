@@ -61,6 +61,7 @@ struct KernelPropertiesTy {
   /// Cached input parameters used in the previous launch.
   int32_t NumTeams = -1;
   int32_t ThreadLimit = -1;
+  uint32_t NumKernelArgs = 0;
 
   /// Cached parameters used in the previous launch.
   ze_kernel_indirect_access_flags_t IndirectAccessFlags =

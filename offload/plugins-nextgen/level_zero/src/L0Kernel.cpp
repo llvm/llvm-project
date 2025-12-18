@@ -54,7 +54,7 @@ Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
   CALL_ZE_RET_ERROR(zeKernelGetProperties, zeKernel, &KP);
   KernelPR.SIMDWidth = KP.maxSubgroupSize;
   KernelPR.Width = KP.maxSubgroupSize;
-
+  KernelPR.NumKernelArgs = KP.numKernelArgs;
   if (KP.pNext)
     KernelPR.Width = KPrefGRPSize.preferredMultiple;
 
@@ -421,7 +421,8 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   auto zeKernel = getZeKernel();
   auto DeviceId = l0Device.getDeviceId();
-  int32_t NumArgs = KernelArgs.NumArgs;
+  auto &Context = l0Device.getL0Context();
+
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId, "Launching kernel " DPxMOD "...\n",
        DPxPTR(zeKernel));
 
@@ -447,17 +448,45 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     return Err;
 
   // Set kernel arguments.
-  for (int32_t I = 0; I < NumArgs; I++) {
+
+  uint32_t NumArgs = Properties.NumKernelArgs;
+
+  std::vector<uint32_t> ArgSizes;
+
+  if (NumArgs > 0) {
+    if (KernelArgs.ArgSizes) {
+      for (uint32_t I = 0; I < NumArgs; I++) {
+        ArgSizes.push_back(KernelArgs.ArgSizes[I]);
+      }
+    } else {
+      if (!Context.ZeKernelArgumentSizeExt.Supported) {
+        return Plugin::error(
+            ErrorCode::INVALID_ARGUMENT,
+            "Level zero plugin requires kernel argument sizes.");
+      }
+      for (uint32_t I = 0; I < NumArgs; I++) {
+        uint32_t ArgSize;
+        CALL_ZE_RET_ERROR(
+            Context.ZeKernelArgumentSizeExt.zexKernelGetArgumentSize, zeKernel,
+            I, &ArgSize);
+        ArgSizes.push_back(ArgSize);
+      }
+    }
+  }
+
+  char *Arg = static_cast<char *>(LaunchParams.Data);
+  for (uint32_t I = 0; I < NumArgs; I++) {
     // Scope code to ease integration with downstream custom code.
     {
-      void *Arg = (static_cast<void **>(LaunchParams.Data))[I];
-      CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, zeKernel, I, sizeof(Arg),
-                        Arg == nullptr ? nullptr : &Arg);
+      CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, zeKernel, I, ArgSizes[I],
+                        Arg);
+
       INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-           "Kernel Pointer argument %" PRId32 " (value: " DPxMOD
+           "Kernel Pointer argument %" PRIu32 " (value: " DPxMOD
            ") was set successfully for device %s.\n",
            I, DPxPTR(Arg), IdStr);
     }
+    Arg += ArgSizes[I];
   }
 
   if (auto Err = setIndirectFlags(l0Device, KEnv))
