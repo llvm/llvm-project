@@ -290,7 +290,7 @@ def run(
 ):
     """
     Runs the boilerplate for a ScriptedBuilder buildbot. It is not necessary to
-    use this function (one can also all run_command() etc. directly), but allows
+    use this function (one can also call run_command() etc. directly), but allows
     for some more flexibility and safety checks. Arguments passed to this
     function represent the worker configuration.
 
