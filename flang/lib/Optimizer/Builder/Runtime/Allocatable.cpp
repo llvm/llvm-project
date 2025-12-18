@@ -86,9 +86,8 @@ void fir::runtime::genAllocatableAllocate(fir::FirOpBuilder &builder,
     mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
     errMsg = fir::AbsentOp::create(builder, loc, boxNoneTy).getResult();
   }
-  mlir::Value deviceInit = builder.createBool(loc, false);
-  llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-      builder, loc, fTy, desc, asyncObject, hasStat, errMsg, sourceFile,
-      sourceLine, deviceInit)};
+  llvm::SmallVector<mlir::Value> args{
+      fir::runtime::createArguments(builder, loc, fTy, desc, asyncObject,
+                                    hasStat, errMsg, sourceFile, sourceLine)};
   fir::CallOp::create(builder, loc, func, args);
 }
