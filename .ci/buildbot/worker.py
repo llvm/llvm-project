@@ -427,7 +427,7 @@ def run(
     )
     parser.add_argument(
         "--incremental",
-        type=bool,
+        action=argparse.BooleanOptionalAction,
         default=incremental_default,
         help="Keep previous build artifacts when starting the build",
     )
@@ -442,7 +442,7 @@ def run(
     if cachefile is not None:
         cachefile = os.path.join(llvmsrcroot, args.cachefile)
         if not os.path.isfile(cachefile):
-            raise Exception(f"--cachefile={cachefile} does not exist", file=sys.stderr)
+            raise Exception(f"--cachefile={cachefile} does not exist")
 
     prevcachepath = os.path.join(workdir, "prevcache.cmake")
     prevscriptpath = os.path.join(workdir, "prevscript.py")
