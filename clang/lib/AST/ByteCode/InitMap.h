@@ -12,6 +12,7 @@
 #include <cassert>
 #include <climits>
 #include <memory>
+#include <cstdint>
 
 namespace clang {
 namespace interp {
