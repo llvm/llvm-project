@@ -2491,15 +2491,15 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     break;
   }
 
-  bool DontSeeSemi = false;
+  bool LexedSemi = false;
   if (getLangOpts().CPlusPlusModules)
-    DontSeeSemi =
-        ExpectAndConsumeSemi(diag::err_expected_semi_after_module_or_import,
-                             tok::getKeywordSpelling(tok::kw_import));
+    LexedSemi =
+        !ExpectAndConsumeSemi(diag::err_expected_semi_after_module_or_import,
+                              tok::getKeywordSpelling(tok::kw_import));
   else
-    DontSeeSemi = ExpectAndConsumeSemi(diag::err_module_expected_semi);
+    LexedSemi = !ExpectAndConsumeSemi(diag::err_module_expected_semi);
 
-  if (DontSeeSemi)
+  if (!LexedSemi)
     SkipUntil(tok::semi);
 
   if (SeenError)

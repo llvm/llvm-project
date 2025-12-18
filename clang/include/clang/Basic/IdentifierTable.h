@@ -574,24 +574,24 @@ public:
   }
 
   /// Determine whether this is the contextual keyword \c import.
-  bool isModulesImport() const { return IsModulesImport; }
+  bool isImportKeyword() const { return IsModulesImport; }
 
   /// Set whether this identifier is the contextual keyword \c import.
-  void setModulesImport(bool I) {
-    IsModulesImport = I;
-    if (I)
+  void setKeywordImport(bool Val) {
+    IsModulesImport = Val;
+    if (Val)
       NeedsHandleIdentifier = true;
     else
       RecomputeNeedsHandleIdentifier();
   }
 
   /// Determine whether this is the contextual keyword \c module.
-  bool isModulesDeclaration() const { return IsModulesDecl; }
+  bool isModuleKeyword() const { return IsModulesDecl; }
 
   /// Set whether this identifier is the contextual keyword \c module.
-  void setModulesDeclaration(bool I) {
-    IsModulesDecl = I;
-    if (I)
+  void setModuleKeyword(bool Val) {
+    IsModulesDecl = Val;
+    if (Val)
       NeedsHandleIdentifier = true;
     else
       RecomputeNeedsHandleIdentifier();
@@ -646,7 +646,7 @@ private:
   void RecomputeNeedsHandleIdentifier() {
     NeedsHandleIdentifier = isPoisoned() || hasMacroDefinition() ||
                             isExtensionToken() || isFutureCompatKeyword() ||
-                            isOutOfDate() || isModulesImport();
+                            isOutOfDate() || isImportKeyword();
   }
 };
 
@@ -816,9 +816,9 @@ public:
 
     // If this is the 'import' or 'module' contextual keyword, mark it as such.
     if (Name == "import")
-      II->setModulesImport(true);
+      II->setKeywordImport(true);
     else if (Name == "module")
-      II->setModulesDeclaration(true);
+      II->setModuleKeyword(true);
     return *II;
   }
 

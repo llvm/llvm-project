@@ -299,10 +299,10 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
     AddKeyword("__ieee128", tok::kw___float128, KEYALL, LangOpts, *this);
 
   // Add the 'import' and 'module' contextual keywords.
-  get("import").setModulesImport(true);
-  get("module").setModulesDeclaration(true);
-  get("__preprocessed_import").setModulesImport(true);
-  get("__preprocessed_module").setModulesDeclaration(true);
+  get("import").setKeywordImport(true);
+  get("module").setModuleKeyword(true);
+  get("__preprocessed_import").setKeywordImport(true);
+  get("__preprocessed_module").setModuleKeyword(true);
 }
 
 /// Checks if the specified token kind represents a keyword in the
@@ -417,9 +417,9 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   if (Len < 2) return tok::pp_not_keyword;
   const char *Name = getNameStart();
 
-  if (Name[0] == '_' && isModulesImport())
+  if (Name[0] == '_' && isImportKeyword())
     return tok::pp___preprocessed_import;
-  if (Name[0] == '_' && isModulesDeclaration())
+  if (Name[0] == '_' && isModuleKeyword())
     return tok::pp___preprocessed_module;
 
   // clang-format off

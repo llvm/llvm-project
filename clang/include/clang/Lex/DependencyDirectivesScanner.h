@@ -142,7 +142,7 @@ void printDependencyDirectivesAsSource(
 /// \returns true if any C++20 named modules related directive was found.
 bool scanInputForCXX20ModulesUsage(StringRef Source);
 
-/// Scan an input source buffer, and check whether the input ssource is a
+/// Scan an input source buffer, and check whether the input source is a
 /// preprocessed output.
 ///
 /// \param Source The input source buffer.

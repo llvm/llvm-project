@@ -884,11 +884,8 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
   // used in contexts where import declarations are disallowed.
   //
   // Likewise if this is the standard C++ import keyword.
-  if (((LastTokenWasAt && II.isModulesImport()) ||
+  if (((LastTokenWasAt && II.isImportKeyword()) ||
        Identifier.is(tok::kw_import)) &&
-      // FIXME: Can we just ignore DisableMacroExpansion here?
-      // https://github.com/llvm/llvm-project/pull/137665 disable
-      // macro expansion when current input file is preprocessed.
       !InMacroArgs &&
       (!DisableMacroExpansion || MacroExpansionInDirectivesOverride) &&
       CurLexerCallback != CLK_CachingLexer) {
@@ -1228,7 +1225,21 @@ bool Preprocessor::LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
   }
 }
 
-/// P1857R3: Modules Dependency Discovery
+/// [cpp.pre]/p2:
+/// A preprocessing directive consists of a sequence of preprocessing tokens
+/// that satisfies the following constraints: At the start of translation phase
+/// 4, the first preprocessing token in the sequence, referred to as a
+/// directive-introducing token, begins with the first character in the source
+/// file (optionally after whitespace containing no new-line characters) or
+/// follows whitespace containing at least one new-line character, and is:
+///   - a # preprocessing token, or
+///   - an import preprocessing token immediately followed on the same logical
+///   source line by a header-name, <, identifier, or : preprocessing token, or
+///   - a module preprocessing token immediately followed on the same logical
+///   source line by an identifier, :, or ; preprocessing token, or
+///   - an export preprocessing token immediately followed on the same logical
+///   source line by one of the two preceding forms.
+///
 ///
 /// At the start of phase 4 an import or module token is treated as starting a
 /// directive and are converted to their respective keywords iff:
@@ -1277,7 +1288,7 @@ bool Preprocessor::HandleModuleContextualKeyword(
   // The next token may be an angled string literal after import keyword.
   llvm::SaveAndRestore<bool> SavedParsingFilemame(
       CurPPLexer->ParsingFilename,
-      Result.getIdentifierInfo()->isModulesImport());
+      Result.getIdentifierInfo()->isImportKeyword());
 
   std::optional<Token> NextTok =
       CurLexer ? CurLexer->peekNextPPToken() : CurTokenLexer->peekNextPPToken();
@@ -1287,7 +1298,7 @@ bool Preprocessor::HandleModuleContextualKeyword(
   if (NextTok->is(tok::raw_identifier))
     LookUpIdentifierInfo(*NextTok);
 
-  if (Result.getIdentifierInfo()->isModulesImport()) {
+  if (Result.getIdentifierInfo()->isImportKeyword()) {
     if (NextTok->isOneOf(tok::identifier, tok::less, tok::colon,
                          tok::header_name)) {
       Result.setKind(tok::kw_import);
@@ -1297,7 +1308,7 @@ bool Preprocessor::HandleModuleContextualKeyword(
     }
   }
 
-  if (Result.getIdentifierInfo()->isModulesDeclaration() &&
+  if (Result.getIdentifierInfo()->isModuleKeyword() &&
       NextTok->isOneOf(tok::identifier, tok::colon, tok::semi)) {
     Result.setKind(tok::kw_module);
     ModuleDeclLoc = Result.getLocation();

@@ -100,7 +100,7 @@ class TokenLexer {
   /// See the flag documentation for details.
   bool IsReinject : 1;
 
-  /// This is true if this TokenLexer is created when handling C++ module
+  /// This is true if this TokenLexer is created when handling a C++ module
   /// directive.
   bool LexingCXXModuleDirective : 1;
 
@@ -156,7 +156,7 @@ public:
   bool isParsingPreprocessorDirective() const;
 
   /// setLexingCXXModuleDirective - This is set to true if this TokenLexer is
-  /// created when handling C++ module directive.
+  /// created when handling a C++ module directive.
   void setLexingCXXModuleDirective(bool Val = true);
 
   /// isLexingCXXModuleDirective - Return true if we are lexing a C++ module or

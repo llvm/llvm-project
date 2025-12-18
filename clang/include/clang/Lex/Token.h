@@ -297,7 +297,7 @@ public:
   /// Return the ObjC keyword kind.
   tok::ObjCKeywordKind getObjCKeywordID() const;
 
-  /// Return true if we have an C++20 Modules contextual keyword(export, import
+  /// Return true if we have a C++20 modules contextual keyword(export, import
   /// or module).
   bool isModuleContextualKeyword(const LangOptions &LangOpts,
                                  bool AllowExport = true) const;

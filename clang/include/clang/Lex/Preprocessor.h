@@ -138,10 +138,10 @@ struct CXXStandardLibraryVersionInfo {
 };
 
 /// Record the previous 'export' keyword info.
-//
-// Since P1857R3, the standard introduced several rules to determine whether the
-/// 'module', 'export module', 'import', 'export import' is a valid
-/// directive introducer. This class used to record the previous 'export'
+///
+/// Since P1857R3, the standard introduced several rules to determine whether
+/// the 'module', 'export module', 'import', 'export import' is a valid
+/// directive introducer. This class is used to record the previous 'export'
 /// keyword token, and then handle 'export module' and 'export import'.
 class ExportContextualKeywordInfo {
   Token ExportTok;

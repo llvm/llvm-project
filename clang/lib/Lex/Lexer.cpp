@@ -73,8 +73,6 @@ tok::ObjCKeywordKind Token::getObjCKeywordID() const {
   return specId ? specId->getObjCKeywordID() : tok::objc_not_keyword;
 }
 
-/// Return true if we have an C++20 Modules contextual keyword(export, import
-/// or module).
 bool Token::isModuleContextualKeyword(const LangOptions &LangOpts,
                                       bool AllowExport) const {
   if (!LangOpts.CPlusPlusModules)
@@ -86,7 +84,7 @@ bool Token::isModuleContextualKeyword(const LangOptions &LangOpts,
   if (isNot(tok::identifier))
     return false;
   const auto *II = getIdentifierInfo();
-  return II->isModulesImport() || II->isModulesDeclaration();
+  return II->isImportKeyword() || II->isModuleKeyword();
 }
 
 /// Determine whether the token kind starts a simple-type-specifier.

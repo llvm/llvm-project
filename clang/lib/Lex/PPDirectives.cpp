@@ -647,7 +647,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
           LookUpIdentifierInfo(Tok);
           IdentifierInfo *II = Tok.getIdentifierInfo();
 
-          if (II->getName()[0] == 'e') {
+          if (II->getName()[0] == 'e') { // export
             HandleModuleContextualKeyword(Tok, Tok.isAtStartOfLine());
             CurLexer->Lex(Tok);
             if (Tok.is(tok::raw_identifier)) {
@@ -656,9 +656,9 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
             }
           }
 
-          if (II->getName()[0] == 'm') {
-            // HandleModuleContextualKeyword will look ahead next token, so
-            // exiting RawLexingMode.
+          if (II->getName()[0] == 'm') { // module
+            // HandleModuleContextualKeyword changes the lexer state, so we need
+            // to save RawLexingMode
             llvm::SaveAndRestore RestoreLexingRawMode(CurPPLexer->LexingRawMode,
                                                       false);
             if (HandleModuleContextualKeyword(Tok, Tok.isAtStartOfLine())) {
@@ -4164,6 +4164,15 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
   HandleEmbedDirectiveImpl(HashLoc, *Params, BinaryContents, FilenameToGo);
 }
 
+/// HandleCXXImportDirective - Handle the C++ modules import directives
+///
+/// pp-import:
+///       export[opt] import header-name pp-tokens[opt] ; new-line
+///       export[opt] import header-name-tokens pp-tokens[opt] ; new-line
+///       export[opt] import pp-tokens ; new-line
+///
+/// The header importing are replaced by annot_header_unit token, and the
+/// lexed module name are replaced by annot_module_name token.
 void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
   assert(getLangOpts().CPlusPlusModules && ImportTok.is(tok::kw_import));
   llvm::SaveAndRestore<bool> SaveImportingCXXModules(
@@ -4305,6 +4314,26 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
   EnterModuleSuffixTokenStream(DirToks);
 }
 
+/// HandleCXXModuleDirective - Handle C++ module declaration directives.
+///
+/// pp-module:
+///       export[opt] module pp-tokens[opt] ; new-line
+///
+/// pp-module-name:
+///       pp-module-name-qualifier[opt] identifier
+/// pp-module-partition:
+///       : pp-module-name-qualifier[opt] identifier
+/// pp-module-name-qualifier:
+///       identifier .
+///       pp-module-name-qualifier identifier .
+///
+/// global-module-fragment:
+///       module-keyword ; declaration-seq[opt]
+///
+/// private-module-fragment:
+///       module-keyword : private ; declaration-seq[opt]
+///
+/// The lexed module name are replaced by annot_module_name token.
 void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
   assert(getLangOpts().CPlusPlusModules && ModuleTok.is(tok::kw_module));
   Token Introducer = ModuleTok;
