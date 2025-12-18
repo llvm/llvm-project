@@ -101,24 +101,13 @@ private:
   const SPIRVTargetMachine *TM;
 };
 
-// clang-format off
-
 // Legalize a type. There are only two cases we need to care about:
 // arrays and structs.
 //
-// For arrays, if it is not a nested array ([0 x i32] or if it is nested with a
-// zero element count ([0 x [0 x i32]]), we just replace the entire array type
-// with a ptr.
+// For arrays, we just replace the entire array type with a ptr.
 //
-// If it is nested with a non-zero element count( [5 x [0 x i32]]),
-// we replace the element type with a legalized element type and maintain the
-// existing element count.
-// For the example type we would replace with [5 x ptr]).
-//
-// For structs, we create a new type with any members containing nested
-// arrays legalized.
-
-// clang-format on
+// For structs, we create a new type with any members containing
+// nested arrays legalized.
 
 Type *SPIRVLegalizeZeroSizeArraysImpl::legalizeType(Type *Ty) {
   auto It = TypeMap.find(Ty);
@@ -128,16 +117,10 @@ Type *SPIRVLegalizeZeroSizeArraysImpl::legalizeType(Type *Ty) {
   Type *LegalizedTy = Ty;
 
   if (ArrayType *ArrTy = dyn_cast<ArrayType>(Ty)) {
-    if (ArrTy->getNumElements() == 0) {
-      LegalizedTy = PointerType::get(
-          Ty->getContext(),
-          storageClassToAddressSpace(SPIRV::StorageClass::Generic));
-    } else {
-      Type *ElemTy = ArrTy->getElementType();
-      Type *LegalElemTy = legalizeType(ElemTy);
-      if (LegalElemTy != ElemTy)
-        LegalizedTy = ArrayType::get(LegalElemTy, ArrTy->getNumElements());
-    }
+    LegalizedTy = PointerType::get(
+        Ty->getContext(),
+        storageClassToAddressSpace(SPIRV::StorageClass::Generic));
+
   } else if (StructType *StructTy = dyn_cast<StructType>(Ty)) {
     SmallVector<Type *, 8> ElemTypes;
     bool Changed = false;
