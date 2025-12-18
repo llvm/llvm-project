@@ -5,7 +5,7 @@
 
 # Verify PHI instructions show no distance data
 
-# Verify key LoopTag patterns - %8 shows LoopTag+D for all uses in loop
+# Verify key LoopTag patterns - %1 shows LoopTag+D for all uses in loop
 
 # Verify normal finite distances outside the loop
 
@@ -278,29 +278,29 @@ debugInstrRef:   true
 failsVerification: false
 tracksDebugUserValues: false
 registers:
-  - { id: 0, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 1, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 2, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 3, class: sreg_32, preferred-register: '', flags: [  ] }
   - { id: 4, class: sreg_32, preferred-register: '', flags: [  ] }
   - { id: 5, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 6, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 7, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 16, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 15, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 17, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 19, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 1, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 0, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 3, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 2, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 8, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 9, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 10, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 10, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 11, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 12, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 13, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 14, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 15, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 16, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 17, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 18, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 19, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 18, class: sreg_32, preferred-register: '', flags: [  ] }
 liveins:
-  - { reg: '$vgpr0', virtual-reg: '%8' }
-  - { reg: '$vgpr1', virtual-reg: '%9' }
+  - { reg: '$vgpr0', virtual-reg: '%1' }
+  - { reg: '$vgpr1', virtual-reg: '%0' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -354,34 +354,34 @@ body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
 
-    %9:vgpr_32 = COPY killed $vgpr1
-    %8:vgpr_32 = COPY killed $vgpr0
-    %11:vgpr_32 = V_MOV_B32_e32 100, implicit $exec
-    %10:sreg_32 = S_MOV_B32 0
+    %0:vgpr_32 = COPY killed $vgpr1
+    %1:vgpr_32 = COPY killed $vgpr0
+    %2:vgpr_32 = V_MOV_B32_e32 100, implicit $exec
+    %3:sreg_32 = S_MOV_B32 0
 
   bb.1:
-    %0:sreg_32 = PHI %10, %bb.0, %7, %bb.1
-    %1:vgpr_32 = PHI %8, %bb.0, %6, %bb.1
-    %2:vgpr_32 = PHI %11, %bb.0, %5, %bb.1
-    %3:sreg_32 = PHI %10, %bb.0, %4, %bb.1
-    %12:vgpr_32 = DS_READ_U8_gfx9 %1, 0, 0, implicit $exec :: (load (s8) from %ir.p, addrspace 3)
-    %13:vgpr_32 = DS_READ_U8_gfx9 %1, 1, 0, implicit $exec :: (load (s8) from %ir.p + 1, addrspace 3)
-    %14:vgpr_32 = DS_READ_U8_gfx9 %1, 2, 0, implicit $exec :: (load (s8) from %ir.p + 2, addrspace 3)
-    %15:vgpr_32 = DS_READ_U8_gfx9 %1, 3, 0, implicit $exec :: (load (s8) from %ir.p + 3, addrspace 3)
-    %16:vgpr_32 = V_LSHL_OR_B32_e64 killed %13, 8, killed %12, implicit $exec
-    %17:vgpr_32 = V_LSHL_OR_B32_e64 killed %15, 8, killed %14, implicit $exec
-    %18:vgpr_32 = V_LSHL_OR_B32_e64 killed %17, 16, killed %16, implicit $exec
-    %5:vgpr_32 = V_ADD_U32_e64 %3, killed %18, 0, implicit $exec
-    %4:sreg_32 = S_ADD_I32 killed %3, 1, implicit-def dead $scc
-    %6:vgpr_32 = V_ADD_U32_e64 4, killed %1, 0, implicit $exec
-    %19:sreg_32 = V_CMP_GE_U32_e64 %4, %9, implicit $exec
-    %7:sreg_32 = SI_IF_BREAK killed %19, killed %0, implicit-def dead $scc
-    SI_LOOP %7, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %4:sreg_32 = PHI %3, %bb.0, %19, %bb.1
+    %5:vgpr_32 = PHI %1, %bb.0, %17, %bb.1
+    %6:vgpr_32 = PHI %2, %bb.0, %15, %bb.1
+    %7:sreg_32 = PHI %3, %bb.0, %16, %bb.1
+    %8:vgpr_32 = DS_READ_U8_gfx9 %5, 0, 0, implicit $exec :: (load (s8) from %ir.p, addrspace 3)
+    %9:vgpr_32 = DS_READ_U8_gfx9 %5, 1, 0, implicit $exec :: (load (s8) from %ir.p + 1, addrspace 3)
+    %10:vgpr_32 = DS_READ_U8_gfx9 %5, 2, 0, implicit $exec :: (load (s8) from %ir.p + 2, addrspace 3)
+    %11:vgpr_32 = DS_READ_U8_gfx9 %5, 3, 0, implicit $exec :: (load (s8) from %ir.p + 3, addrspace 3)
+    %12:vgpr_32 = V_LSHL_OR_B32_e64 killed %9, 8, killed %8, implicit $exec
+    %13:vgpr_32 = V_LSHL_OR_B32_e64 killed %11, 8, killed %10, implicit $exec
+    %14:vgpr_32 = V_LSHL_OR_B32_e64 killed %13, 16, killed %12, implicit $exec
+    %15:vgpr_32 = V_ADD_U32_e64 %7, killed %14, 0, implicit $exec
+    %16:sreg_32 = S_ADD_I32 killed %7, 1, implicit-def dead $scc
+    %17:vgpr_32 = V_ADD_U32_e64 4, killed %5, 0, implicit $exec
+    %18:sreg_32 = V_CMP_GE_U32_e64 %16, %0, implicit $exec
+    %19:sreg_32 = SI_IF_BREAK killed %18, killed %4, implicit-def dead $scc
+    SI_LOOP %19, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:
-    SI_END_CF killed %7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-    DS_WRITE_B32_gfx9 killed %8, killed %2, 0, 0, implicit $exec :: (store (s32) into %ir.p, addrspace 3)
+    SI_END_CF killed %19, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    DS_WRITE_B32_gfx9 killed %1, killed %6, 0, 0, implicit $exec :: (store (s32) into %ir.p, addrspace 3)
     S_ENDPGM 0
 
 ...

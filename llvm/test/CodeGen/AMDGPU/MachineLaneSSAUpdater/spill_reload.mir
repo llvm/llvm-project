@@ -1,0 +1,66 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=test-machine-lane-ssa-updater -verify-machineinstrs %s -o - | FileCheck %s
+
+# Test spill/reload SSA reconstruction
+# - Original vreg %0 is spilled at high register pressure point
+# - SpillCutCollector captures cut information
+# - Reload inserted later
+# - addDefAndRepairAfterSpill reconstructs SSA with proper LiveInterval extension
+
+--- |
+  define amdgpu_kernel void @spill_reload() {
+    ret void
+  }
+...
+---
+name: spill_reload
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; CHECK-LABEL: bb.0:
+    ; CHECK: %0:vgpr_32 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    
+    ; Use before spill
+    ; CHECK: S_NOP 0, implicit %0
+    S_NOP 0, implicit %0
+    
+  bb.1:
+    ; CHECK-LABEL: bb.1:
+    ; High register pressure - simulate with many live registers
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    %4:vgpr_32 = IMPLICIT_DEF
+    %5:vgpr_32 = IMPLICIT_DEF
+    %6:vgpr_32 = IMPLICIT_DEF
+    %7:vgpr_32 = IMPLICIT_DEF
+    %8:vgpr_32 = IMPLICIT_DEF
+    %9:vgpr_32 = IMPLICIT_DEF
+    
+    ; Test pass will:
+    ; 1. Call SpillCutCollector.cut(%0, here, FullMask)
+    ; 2. Insert BUFFER_STORE (spill)
+    ; CHECK: BUFFER_STORE_DWORD_OFFSET killed %0
+    
+    S_NOP 0
+    
+  bb.2:
+    ; CHECK-LABEL: bb.2:
+    ; Test pass will:
+    ; 1. Insert BUFFER_LOAD (reload)
+    ; 2. Call addDefAndRepairAfterSpill with CutEndPoints
+    ; CHECK: %[[RELOAD:[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET
+    
+  bb.3:
+    ; CHECK-LABEL: bb.3:
+    ; Uses after reload should reference reload vreg
+    ; CHECK: S_NOP 0, implicit %[[RELOAD]]
+    S_NOP 0, implicit %0
+    
+    ; CHECK: S_NOP 1, implicit %[[RELOAD]]
+    S_NOP 1, implicit %0
+    
+    S_ENDPGM 0
+...
+

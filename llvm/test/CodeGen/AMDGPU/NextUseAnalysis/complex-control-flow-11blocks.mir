@@ -931,131 +931,131 @@ debugInstrRef:   true
 failsVerification: false
 tracksDebugUserValues: false
 registers:
-  - { id: 0, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 1, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 2, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 3, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 4, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 5, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 6, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 77, class: sreg_32, preferred-register: '', flags: [  ] }
   - { id: 7, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 8, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 9, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 10, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 9, class: vreg_64, preferred-register: '', flags: [  ] }
   - { id: 11, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 12, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 13, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 14, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 15, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 16, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 17, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 18, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 19, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 20, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 21, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 8, class: sreg_32, preferred-register: '', flags: [  ] }
   - { id: 22, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 23, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 24, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 25, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 26, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 27, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 28, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 29, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 30, class: vreg_1, preferred-register: '', flags: [  ] }
-  - { id: 31, class: sreg_64, preferred-register: '', flags: [  ] }
-  - { id: 32, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 33, class: sreg_32, preferred-register: '$vcc_lo', flags: [  ] }
-  - { id: 34, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 35, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 36, class: vreg_1, preferred-register: '', flags: [  ] }
-  - { id: 37, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 27, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 29, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 31, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 30, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 32, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 37, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 40, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 42, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 39, class: sreg_32, preferred-register: '', flags: [  ] }
   - { id: 38, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 39, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 40, class: vreg_1, preferred-register: '', flags: [  ] }
-  - { id: 41, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 42, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 43, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 44, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 45, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 46, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 47, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 48, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 49, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 50, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 51, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 52, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 53, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 54, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 43, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 47, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 51, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 53, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 50, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 54, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 72, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 74, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 3, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 2, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 1, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 0, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 78, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 52, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 79, class: vreg_1, preferred-register: '', flags: [  ] }
+  - { id: 80, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 4, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 5, class: sreg_32, preferred-register: '$vcc_lo', flags: [  ] }
+  - { id: 6, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 10, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 81, class: vreg_1, preferred-register: '', flags: [  ] }
+  - { id: 28, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 82, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 12, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 83, class: vreg_1, preferred-register: '', flags: [  ] }
   - { id: 55, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 56, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 57, class: sreg_64, preferred-register: '', flags: [  ] }
-  - { id: 58, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 59, class: vreg_1, preferred-register: '', flags: [  ] }
-  - { id: 60, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 61, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 62, class: vreg_1, preferred-register: '', flags: [  ] }
+  - { id: 57, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 58, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 59, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 60, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 61, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 62, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 84, class: sreg_32, preferred-register: '', flags: [  ] }
   - { id: 63, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 64, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 85, class: sreg_32, preferred-register: '', flags: [  ] }
   - { id: 65, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 66, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 67, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 67, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 68, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 69, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 70, class: sreg_64, preferred-register: '', flags: [  ] }
-  - { id: 71, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 72, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 73, class: vreg_1, preferred-register: '', flags: [  ] }
-  - { id: 74, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 75, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 76, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 77, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 78, class: sreg_32_xm0, preferred-register: '', flags: [  ] }
-  - { id: 79, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 80, class: sreg_32_xm0, preferred-register: '', flags: [  ] }
-  - { id: 81, class: sgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 82, class: sgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 83, class: sgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 84, class: sgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 85, class: sgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 86, class: sgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 87, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 88, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 89, class: vreg_64, preferred-register: '', flags: [  ] }
-  - { id: 90, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 86, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 87, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 88, class: vreg_1, preferred-register: '', flags: [  ] }
+  - { id: 89, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 41, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 90, class: vreg_1, preferred-register: '', flags: [  ] }
+  - { id: 15, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 16, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 17, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 18, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 91, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 92, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 19, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 20, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 92, class: sreg_64, preferred-register: '', flags: [  ] }
   - { id: 93, class: sreg_32, preferred-register: '', flags: [  ] }
   - { id: 94, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 95, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 95, class: vreg_1, preferred-register: '', flags: [  ] }
   - { id: 96, class: sreg_32, preferred-register: '', flags: [  ] }
   - { id: 97, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 98, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 99, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 100, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 101, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 102, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 103, class: sreg_32, preferred-register: '', flags: [  ] }
-  - { id: 104, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 105, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 106, class: sreg_32_xm0_xexec, preferred-register: '$vcc_lo', 
+  - { id: 33, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 98, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 75, class: sreg_32_xm0, preferred-register: '', flags: [  ] }
+  - { id: 99, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 76, class: sreg_32_xm0, preferred-register: '', flags: [  ] }
+  - { id: 100, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 101, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 102, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 103, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 104, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 105, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 106, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 21, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 107, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 73, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 108, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 49, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 48, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 109, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 23, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 110, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 26, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 24, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 25, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 111, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 14, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 13, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 112, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 34, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 36, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 35, class: sreg_32_xm0_xexec, preferred-register: '$vcc_lo', 
       flags: [  ] }
-  - { id: 107, class: sreg_32_xm0_xexec, preferred-register: '', flags: [  ] }
-  - { id: 108, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 109, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 110, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 111, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 112, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 113, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 114, class: sreg_32_xm0_xexec, preferred-register: '$vcc_lo', 
-      flags: [  ] }
-  - { id: 115, class: sreg_32_xm0_xexec, preferred-register: '', flags: [  ] }
+  - { id: 113, class: sreg_32_xm0_xexec, preferred-register: '', flags: [  ] }
+  - { id: 114, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 115, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 116, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 117, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 118, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 44, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 46, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 45, class: sreg_32_xm0_xexec, preferred-register: '$vcc_lo', 
+      flags: [  ] }
+  - { id: 118, class: sreg_32_xm0_xexec, preferred-register: '', flags: [  ] }
   - { id: 119, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 120, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 121, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 122, class: sreg_32_xm0_xexec, preferred-register: '$vcc_lo', 
+  - { id: 122, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 69, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 71, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 70, class: sreg_32_xm0_xexec, preferred-register: '$vcc_lo', 
       flags: [  ] }
   - { id: 123, class: sreg_32_xm0_xexec, preferred-register: '', flags: [  ] }
   - { id: 124, class: vgpr_32, preferred-register: '', flags: [  ] }
@@ -1063,10 +1063,10 @@ registers:
   - { id: 126, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 127, class: vgpr_32, preferred-register: '', flags: [  ] }
 liveins:
-  - { reg: '$vgpr0', virtual-reg: '%24' }
-  - { reg: '$vgpr1', virtual-reg: '%25' }
-  - { reg: '$vgpr2', virtual-reg: '%26' }
-  - { reg: '$vgpr3', virtual-reg: '%27' }
+  - { reg: '$vgpr0', virtual-reg: '%3' }
+  - { reg: '$vgpr1', virtual-reg: '%2' }
+  - { reg: '$vgpr2', virtual-reg: '%1' }
+  - { reg: '$vgpr3', virtual-reg: '%0' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -1137,130 +1137,130 @@ body:             |
     successors: %bb.3(0x40000000), %bb.8(0x40000000)
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
   
-    %27:vgpr_32 = COPY killed $vgpr3
-    %26:vgpr_32 = COPY killed $vgpr2
-    %25:vgpr_32 = COPY killed $vgpr1
-    %24:vgpr_32 = COPY killed $vgpr0
-    %32:vgpr_32 = V_AND_B32_e64 1, killed %24, implicit $exec
-    %33:sreg_32 = V_CMP_NE_U32_e64 1, killed %32, implicit $exec
-    %34:sreg_32 = S_MOV_B32 0
-    %1:sreg_32 = SI_IF %33, %bb.8, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %0:vgpr_32 = COPY killed $vgpr3
+    %1:vgpr_32 = COPY killed $vgpr2
+    %2:vgpr_32 = COPY killed $vgpr1
+    %3:vgpr_32 = COPY killed $vgpr0
+    %4:vgpr_32 = V_AND_B32_e64 1, killed %3, implicit $exec
+    %5:sreg_32 = V_CMP_NE_U32_e64 1, killed %4, implicit $exec
+    %6:sreg_32 = S_MOV_B32 0
+    %7:sreg_32 = SI_IF %5, %bb.8, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.3
   
   bb.1:
     successors: %bb.8(0x80000000)
   
-    %4:sreg_32 = PHI %37, %bb.3, %90, %bb.9
-    %2:vreg_64 = PHI undef %35:vreg_64, %bb.3, %22, %bb.9
-    %3:vreg_64 = PHI %6, %bb.3, undef %39:vreg_64, %bb.9
-    SI_END_CF killed %7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-    %102:sreg_32 = S_AND_B32 killed %4, $exec_lo, implicit-def dead $scc
-    %101:sreg_32 = COPY killed %102
+    %8:sreg_32 = PHI %28, %bb.3, %73, %bb.9
+    %9:vreg_64 = PHI undef %10:vreg_64, %bb.3, %72, %bb.9
+    %11:vreg_64 = PHI %27, %bb.3, undef %12:vreg_64, %bb.9
+    SI_END_CF killed %29, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %13:sreg_32 = S_AND_B32 killed %8, $exec_lo, implicit-def dead $scc
+    %14:sreg_32 = COPY killed %13
     S_BRANCH %bb.8
   
   bb.2:
     successors: %bb.6(0x80000000)
   
-    %63:vgpr_32 = DS_READ_U16_gfx9 %25, 0, 0, implicit $exec :: (load (s16) from %ir.p, addrspace 3)
-    %64:vgpr_32 = DS_READ_U16_gfx9 %25, 2, 0, implicit $exec :: (load (s16) from %ir.p + 2, addrspace 3)
-    %65:vgpr_32 = DS_READ_U16_gfx9 %25, 4, 0, implicit $exec :: (load (s16) from %ir.p + 4, addrspace 3)
-    %66:vgpr_32 = DS_READ_U16_gfx9 %25, 6, 0, implicit $exec :: (load (s16) from %ir.p + 6, addrspace 3)
-    %68:vgpr_32 = V_LSHL_OR_B32_e64 killed %66, 16, killed %65, implicit $exec
-    %69:vgpr_32 = V_LSHL_OR_B32_e64 killed %64, 16, killed %63, implicit $exec
-    %88:vreg_64 = REG_SEQUENCE killed %69, %subreg.sub0, killed %68, %subreg.sub1
-    %5:vreg_64 = COPY killed %88
-    %95:sreg_32 = COPY $exec_lo
-    %98:sreg_32 = S_ANDN2_B32 killed %20, $exec_lo, implicit-def dead $scc
-    %99:sreg_32 = S_AND_B32 killed %33, $exec_lo, implicit-def dead $scc
-    %97:sreg_32 = S_OR_B32 killed %98, killed %99, implicit-def dead $scc
+    %15:vgpr_32 = DS_READ_U16_gfx9 %2, 0, 0, implicit $exec :: (load (s16) from %ir.p, addrspace 3)
+    %16:vgpr_32 = DS_READ_U16_gfx9 %2, 2, 0, implicit $exec :: (load (s16) from %ir.p + 2, addrspace 3)
+    %17:vgpr_32 = DS_READ_U16_gfx9 %2, 4, 0, implicit $exec :: (load (s16) from %ir.p + 4, addrspace 3)
+    %18:vgpr_32 = DS_READ_U16_gfx9 %2, 6, 0, implicit $exec :: (load (s16) from %ir.p + 6, addrspace 3)
+    %19:vgpr_32 = V_LSHL_OR_B32_e64 killed %18, 16, killed %17, implicit $exec
+    %20:vgpr_32 = V_LSHL_OR_B32_e64 killed %16, 16, killed %15, implicit $exec
+    %21:vreg_64 = REG_SEQUENCE killed %20, %subreg.sub0, killed %19, %subreg.sub1
+    %22:vreg_64 = COPY killed %21
+    %23:sreg_32 = COPY $exec_lo
+    %24:sreg_32 = S_ANDN2_B32 killed %50, $exec_lo, implicit-def dead $scc
+    %25:sreg_32 = S_AND_B32 killed %5, $exec_lo, implicit-def dead $scc
+    %26:sreg_32 = S_OR_B32 killed %24, killed %25, implicit-def dead $scc
     S_BRANCH %bb.6
   
   bb.3:
     successors: %bb.9(0x40000000), %bb.1(0x40000000)
   
-    %6:vreg_64 = DS_READ_B64_gfx9 %25, 8, 0, implicit $exec :: (load (s64) from %ir.gep2, addrspace 3)
-    %37:sreg_32 = S_MOV_B32 -1
-    %7:sreg_32 = SI_IF %33, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %27:vreg_64 = DS_READ_B64_gfx9 %2, 8, 0, implicit $exec :: (load (s64) from %ir.gep2, addrspace 3)
+    %28:sreg_32 = S_MOV_B32 -1
+    %29:sreg_32 = SI_IF %5, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.9
   
   bb.4:
     successors: %bb.5(0x40000000), %bb.10(0x40000000)
   
-    %9:sreg_32 = PHI %14, %bb.6, %92, %bb.7
-    %8:vreg_64 = PHI %12, %bb.6, %17, %bb.7
-    SI_END_CF killed %16, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-    %10:sreg_32 = SI_IF killed %9, %bb.10, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %30:sreg_32 = PHI %39, %bb.6, %49, %bb.7
+    %31:vreg_64 = PHI %40, %bb.6, %47, %bb.7
+    SI_END_CF killed %43, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %32:sreg_32 = SI_IF killed %30, %bb.10, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.5
   
   bb.5:
     successors: %bb.10(0x80000000)
   
-    %76:vreg_64 = DS_READ2_B32_gfx9 killed %25, 6, 7, 0, implicit $exec :: (load (s64) from %ir.gep3, align 4, addrspace 3)
-    %104:vgpr_32, %106:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %76.sub0, killed %26, 0, implicit $exec
-    %105:vgpr_32, dead $sgpr_null = V_ADDC_U32_e64 killed %76.sub1, killed %27, killed %106, 0, implicit $exec
-    %11:vreg_64 = REG_SEQUENCE killed %104, %subreg.sub0, killed %105, %subreg.sub1
+    %33:vreg_64 = DS_READ2_B32_gfx9 killed %2, 6, 7, 0, implicit $exec :: (load (s64) from %ir.gep3, align 4, addrspace 3)
+    %34:vgpr_32, %35:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %33.sub0, killed %1, 0, implicit $exec
+    %36:vgpr_32, dead $sgpr_null = V_ADDC_U32_e64 killed %33.sub1, killed %0, killed %35, 0, implicit $exec
+    %37:vreg_64 = REG_SEQUENCE killed %34, %subreg.sub0, killed %36, %subreg.sub1
     S_BRANCH %bb.10
   
   bb.6:
     successors: %bb.7(0x40000000), %bb.4(0x40000000)
   
-    %15:sreg_32 = PHI %20, %bb.8, %97, %bb.2
-    %14:sreg_32 = PHI %34, %bb.8, %95, %bb.2
-    %12:vreg_64 = PHI %18, %bb.8, undef %61:vreg_64, %bb.2
-    %13:vreg_64 = PHI %19, %bb.8, %5, %bb.2
-    SI_END_CF killed %21, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-    %16:sreg_32 = SI_IF killed %15, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %38:sreg_32 = PHI %50, %bb.8, %26, %bb.2
+    %39:sreg_32 = PHI %6, %bb.8, %23, %bb.2
+    %40:vreg_64 = PHI %51, %bb.8, undef %41:vreg_64, %bb.2
+    %42:vreg_64 = PHI %53, %bb.8, %22, %bb.2
+    SI_END_CF killed %54, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %43:sreg_32 = SI_IF killed %38, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.7
   
   bb.7:
     successors: %bb.4(0x80000000)
   
-    %112:vgpr_32, %114:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %13.sub0, %26, 0, implicit $exec
-    %113:vgpr_32, dead $sgpr_null = V_ADDC_U32_e64 killed %13.sub1, %27, killed %114, 0, implicit $exec
-    %17:vreg_64 = REG_SEQUENCE killed %112, %subreg.sub0, killed %113, %subreg.sub1
-    %93:sreg_32 = S_ANDN2_B32 killed %14, $exec_lo, implicit-def dead $scc
-    %92:sreg_32 = COPY killed %93
+    %44:vgpr_32, %45:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %42.sub0, %1, 0, implicit $exec
+    %46:vgpr_32, dead $sgpr_null = V_ADDC_U32_e64 killed %42.sub1, %0, killed %45, 0, implicit $exec
+    %47:vreg_64 = REG_SEQUENCE killed %44, %subreg.sub0, killed %46, %subreg.sub1
+    %48:sreg_32 = S_ANDN2_B32 killed %39, $exec_lo, implicit-def dead $scc
+    %49:sreg_32 = COPY killed %48
     S_BRANCH %bb.4
   
   bb.8:
     successors: %bb.2(0x40000000), %bb.6(0x40000000)
   
-    %20:sreg_32 = PHI %34, %bb.0, %101, %bb.1
-    %18:vreg_64 = PHI undef %29:vreg_64, %bb.0, %2, %bb.1
-    %19:vreg_64 = PHI undef %29:vreg_64, %bb.0, %3, %bb.1
-    %21:sreg_32 = SI_ELSE killed %1, %bb.6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %50:sreg_32 = PHI %6, %bb.0, %14, %bb.1
+    %51:vreg_64 = PHI undef %52:vreg_64, %bb.0, %9, %bb.1
+    %53:vreg_64 = PHI undef %52:vreg_64, %bb.0, %11, %bb.1
+    %54:sreg_32 = SI_ELSE killed %7, %bb.6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.2
   
   bb.9:
     successors: %bb.1(0x80000000)
   
-    %41:vgpr_32 = DS_READ_U8_gfx9 %25, 32, 0, implicit $exec :: (load (s8) from %ir.gep4, addrspace 3)
-    %42:vgpr_32 = DS_READ_U8_gfx9 %25, 33, 0, implicit $exec :: (load (s8) from %ir.gep4 + 1, addrspace 3)
-    %43:vgpr_32 = DS_READ_U8_gfx9 %25, 34, 0, implicit $exec :: (load (s8) from %ir.gep4 + 2, addrspace 3)
-    %44:vgpr_32 = DS_READ_U8_gfx9 %25, 35, 0, implicit $exec :: (load (s8) from %ir.gep4 + 3, addrspace 3)
-    %45:vgpr_32 = DS_READ_U8_gfx9 %25, 36, 0, implicit $exec :: (load (s8) from %ir.gep4 + 4, addrspace 3)
-    %46:vgpr_32 = DS_READ_U8_gfx9 %25, 37, 0, implicit $exec :: (load (s8) from %ir.gep4 + 5, addrspace 3)
-    %47:vgpr_32 = DS_READ_U8_gfx9 %25, 38, 0, implicit $exec :: (load (s8) from %ir.gep4 + 6, addrspace 3)
-    %48:vgpr_32 = DS_READ_U8_gfx9 %25, 39, 0, implicit $exec :: (load (s8) from %ir.gep4 + 7, addrspace 3)
-    %50:vgpr_32 = V_LSHL_OR_B32_e64 killed %46, 8, killed %45, implicit $exec
-    %51:vgpr_32 = V_LSHL_OR_B32_e64 killed %48, 8, killed %47, implicit $exec
-    %53:vgpr_32 = V_LSHL_OR_B32_e64 killed %51, 16, killed %50, implicit $exec
-    %54:vgpr_32 = V_LSHL_OR_B32_e64 killed %42, 8, killed %41, implicit $exec
-    %55:vgpr_32 = V_LSHL_OR_B32_e64 killed %44, 8, killed %43, implicit $exec
-    %56:vgpr_32 = V_LSHL_OR_B32_e64 killed %55, 16, killed %54, implicit $exec
-    %120:vgpr_32, %122:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 killed %56, %26, 0, implicit $exec
-    %121:vgpr_32, dead $sgpr_null = V_ADDC_U32_e64 killed %53, %27, killed %122, 0, implicit $exec
-    %22:vreg_64 = REG_SEQUENCE killed %120, %subreg.sub0, killed %121, %subreg.sub1
-    %90:sreg_32 = S_XOR_B32 $exec_lo, -1, implicit-def dead $scc
+    %55:vgpr_32 = DS_READ_U8_gfx9 %2, 32, 0, implicit $exec :: (load (s8) from %ir.gep4, addrspace 3)
+    %56:vgpr_32 = DS_READ_U8_gfx9 %2, 33, 0, implicit $exec :: (load (s8) from %ir.gep4 + 1, addrspace 3)
+    %57:vgpr_32 = DS_READ_U8_gfx9 %2, 34, 0, implicit $exec :: (load (s8) from %ir.gep4 + 2, addrspace 3)
+    %58:vgpr_32 = DS_READ_U8_gfx9 %2, 35, 0, implicit $exec :: (load (s8) from %ir.gep4 + 3, addrspace 3)
+    %59:vgpr_32 = DS_READ_U8_gfx9 %2, 36, 0, implicit $exec :: (load (s8) from %ir.gep4 + 4, addrspace 3)
+    %60:vgpr_32 = DS_READ_U8_gfx9 %2, 37, 0, implicit $exec :: (load (s8) from %ir.gep4 + 5, addrspace 3)
+    %61:vgpr_32 = DS_READ_U8_gfx9 %2, 38, 0, implicit $exec :: (load (s8) from %ir.gep4 + 6, addrspace 3)
+    %62:vgpr_32 = DS_READ_U8_gfx9 %2, 39, 0, implicit $exec :: (load (s8) from %ir.gep4 + 7, addrspace 3)
+    %63:vgpr_32 = V_LSHL_OR_B32_e64 killed %60, 8, killed %59, implicit $exec
+    %64:vgpr_32 = V_LSHL_OR_B32_e64 killed %62, 8, killed %61, implicit $exec
+    %65:vgpr_32 = V_LSHL_OR_B32_e64 killed %64, 16, killed %63, implicit $exec
+    %66:vgpr_32 = V_LSHL_OR_B32_e64 killed %56, 8, killed %55, implicit $exec
+    %67:vgpr_32 = V_LSHL_OR_B32_e64 killed %58, 8, killed %57, implicit $exec
+    %68:vgpr_32 = V_LSHL_OR_B32_e64 killed %67, 16, killed %66, implicit $exec
+    %69:vgpr_32, %70:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 killed %68, %1, 0, implicit $exec
+    %71:vgpr_32, dead $sgpr_null = V_ADDC_U32_e64 killed %65, %0, killed %70, 0, implicit $exec
+    %72:vreg_64 = REG_SEQUENCE killed %69, %subreg.sub0, killed %71, %subreg.sub1
+    %73:sreg_32 = S_XOR_B32 $exec_lo, -1, implicit-def dead $scc
     S_BRANCH %bb.1
   
   bb.10:
-    %23:vreg_64 = PHI %8, %bb.4, %11, %bb.5
-    SI_END_CF killed %10, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-    %78:sreg_32_xm0 = V_READFIRSTLANE_B32 %23.sub0, implicit $exec
-    %80:sreg_32_xm0 = V_READFIRSTLANE_B32 killed %23.sub1, implicit $exec
-    $sgpr0 = COPY killed %78
-    $sgpr1 = COPY killed %80
+    %74:vreg_64 = PHI %31, %bb.4, %37, %bb.5
+    SI_END_CF killed %32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %75:sreg_32_xm0 = V_READFIRSTLANE_B32 %74.sub0, implicit $exec
+    %76:sreg_32_xm0 = V_READFIRSTLANE_B32 killed %74.sub1, implicit $exec
+    $sgpr0 = COPY killed %75
+    $sgpr1 = COPY killed %76
     SI_RETURN_TO_EPILOG killed $sgpr0, killed $sgpr1
 ...
 ---
