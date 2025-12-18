@@ -13,8 +13,8 @@
 
 // This is the minimal set of safe functions.
 // https://wiki.sei.cmu.edu/confluence/display/c/SIG30-C.+Call+only+asynchronous-safe+functions+within+signal+handlers
-constexpr llvm::StringLiteral MinimalConformingFunctions[] = {
-    "signal", "abort", "_Exit", "quick_exit"};
+constexpr StringRef MinimalConformingFunctions[] = {"signal", "abort", "_Exit",
+                                                    "quick_exit"};
 
 // The POSIX-defined set of safe functions.
 // https://pubs.opengroup.org/onlinepubs/9699919799/functions/V2_chap02.html#tag_15_04_03
@@ -25,7 +25,7 @@ constexpr llvm::StringLiteral MinimalConformingFunctions[] = {
 // The list is repeated in bugprone-signal-handler.rst and should be kept up to
 // date.
 // clang-format off
-constexpr llvm::StringLiteral POSIXConformingFunctions[] = {
+constexpr StringRef POSIXConformingFunctions[] = {
     "_Exit",
     "_exit",
     "abort",

@@ -24,24 +24,24 @@ namespace optutils = clang::tidy::utils::options;
 static constexpr std::size_t DefaultMinimumLength = 2;
 
 /// The default value for ignored parameter names.
-static constexpr llvm::StringLiteral DefaultIgnoredParameterNames = "\"\";"
-                                                                    "iterator;"
-                                                                    "Iterator;"
-                                                                    "begin;"
-                                                                    "Begin;"
-                                                                    "end;"
-                                                                    "End;"
-                                                                    "first;"
-                                                                    "First;"
-                                                                    "last;"
-                                                                    "Last;"
-                                                                    "lhs;"
-                                                                    "LHS;"
-                                                                    "rhs;"
-                                                                    "RHS";
+static constexpr StringRef DefaultIgnoredParameterNames = "\"\";"
+                                                          "iterator;"
+                                                          "Iterator;"
+                                                          "begin;"
+                                                          "Begin;"
+                                                          "end;"
+                                                          "End;"
+                                                          "first;"
+                                                          "First;"
+                                                          "last;"
+                                                          "Last;"
+                                                          "lhs;"
+                                                          "LHS;"
+                                                          "rhs;"
+                                                          "RHS";
 
 /// The default value for ignored parameter type suffixes.
-static constexpr llvm::StringLiteral DefaultIgnoredParameterTypeSuffixes =
+static constexpr StringRef DefaultIgnoredParameterTypeSuffixes =
     "bool;"
     "Bool;"
     "_Bool;"
