@@ -781,9 +781,35 @@ def skipIfLinux(func):
     return skipIfPlatform(["linux"])(func)
 
 
-def skipIfWindows(func):
+def skipIfWindows(func=None, major=None, build=None):
     """Decorate the item to skip tests that should be skipped on Windows."""
-    return skipIfPlatform(["windows"])(func)
+
+    def decorator(func):
+        if major is None and build is None:
+            return skipIfPlatform(["windows"])(func)
+        else:
+            import platform
+            import sys
+
+            def version_check():
+                check_major = 0 if major is None else major
+                check_build = 0 if build is None else build
+                if platform.system() != "Windows":
+                    return False
+                win_version = sys.getwindowsversion()
+                return (
+                    win_version.major >= check_major
+                    and win_version.build >= check_build
+                )
+
+            return unittest.skipIf(
+                version_check(),
+                f"Test is skipped on Windows major={major} build={build}",
+            )(func)
+
+    if func is not None:
+        return decorator(func)
+    return decorator
 
 
 def skipIfWindowsAndNonEnglish(func):
