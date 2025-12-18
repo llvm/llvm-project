@@ -41,6 +41,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Statepoint.h"
@@ -3260,20 +3261,20 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpPredicate Pred, BinaryOperator *LBO,
 
 // If only one of the icmp's operands has NSW flags, try to prove that:
 //
-//   icmp slt (x + C1), (x +nsw C2)
+//   icmp slt/sgt/sle/sge (x + C1), (x +nsw C2)
 //
 // is equivalent to:
 //
-//   icmp slt C1, C2
+//   icmp slt/sgt/sle/sge C1, C2
 //
 // which is true if x + C2 has the NSW flags set and:
-// *) C1 < C2 && C1 >= 0, or
-// *) C2 < C1 && C1 <= 0.
+// *) C1 <= C2 && C1 >= 0, or
+// *) C2 <= C1 && C1 <= 0.
 //
 static bool trySimplifyICmpWithAdds(CmpPredicate Pred, Value *LHS, Value *RHS,
                                     const InstrInfoQuery &IIQ) {
-  // TODO: only support icmp slt for now.
-  if (Pred != CmpInst::ICMP_SLT || !IIQ.UseInstrInfo)
+  // TODO: support other predicates.
+  if (!ICmpInst::isSigned(Pred) || !IIQ.UseInstrInfo)
     return false;
 
   // Canonicalize nsw add as RHS.
@@ -3288,8 +3289,8 @@ static bool trySimplifyICmpWithAdds(CmpPredicate Pred, Value *LHS, Value *RHS,
       !match(RHS, m_Add(m_Specific(X), m_APInt(C2))))
     return false;
 
-  return (C1->slt(*C2) && C1->isNonNegative()) ||
-         (C2->slt(*C1) && C1->isNonPositive());
+  return (C1->sle(*C2) && C1->isNonNegative()) ||
+         (C2->sle(*C1) && C1->isNonPositive());
 }
 
 /// TODO: A large part of this logic is duplicated in InstCombine's
@@ -3846,17 +3847,19 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
     Type *SrcTy = SrcOp->getType();
     Type *DstTy = LI->getType();
 
-    // Turn icmp (ptrtoint x), (ptrtoint/constant) into a compare of the input
-    // if the integer type is the same size as the pointer type.
-    if (MaxRecurse && isa<PtrToIntInst>(LI) &&
-        Q.DL.getTypeSizeInBits(SrcTy) == DstTy->getPrimitiveSizeInBits()) {
+    // Turn icmp (ptrtoint/ptrtoaddr x), (ptrtoint/ptrtoaddr/constant) into a
+    // compare of the input if the integer type is the same size as the
+    // pointer address type (icmp only compares the address of the pointer).
+    if (MaxRecurse && (isa<PtrToIntInst, PtrToAddrInst>(LI)) &&
+        Q.DL.getAddressType(SrcTy) == DstTy) {
       if (Constant *RHSC = dyn_cast<Constant>(RHS)) {
         // Transfer the cast to the constant.
         if (Value *V = simplifyICmpInst(Pred, SrcOp,
                                         ConstantExpr::getIntToPtr(RHSC, SrcTy),
                                         Q, MaxRecurse - 1))
           return V;
-      } else if (PtrToIntInst *RI = dyn_cast<PtrToIntInst>(RHS)) {
+      } else if (isa<PtrToIntInst, PtrToAddrInst>(RHS)) {
+        auto *RI = cast<CastInst>(RHS);
         if (RI->getOperand(0)->getType() == SrcTy)
           // Compare without the cast.
           if (Value *V = simplifyICmpInst(Pred, SrcOp, RI->getOperand(0), Q,
@@ -4076,14 +4079,6 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
   if (LHS->getType()->isPointerTy())
     if (auto *C = computePointerICmp(Pred, LHS, RHS, Q))
       return C;
-  if (auto *CLHS = dyn_cast<PtrToIntOperator>(LHS))
-    if (auto *CRHS = dyn_cast<PtrToIntOperator>(RHS))
-      if (CLHS->getPointerOperandType() == CRHS->getPointerOperandType() &&
-          Q.DL.getTypeSizeInBits(CLHS->getPointerOperandType()) ==
-              Q.DL.getTypeSizeInBits(CLHS->getType()))
-        if (auto *C = computePointerICmp(Pred, CLHS->getPointerOperand(),
-                                         CRHS->getPointerOperand(), Q))
-          return C;
 
   // If the comparison is with the result of a select instruction, check whether
   // comparing with either branch of the select always yields the same value.
@@ -6619,7 +6614,8 @@ static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
   assert(OutNewConstVal != nullptr);
 
   bool PropagateNaN = IID == Intrinsic::minimum || IID == Intrinsic::maximum;
-  bool PropagateSNaN = IID == Intrinsic::minnum || IID == Intrinsic::maxnum;
+  bool ReturnsOtherForAllNaNs =
+      IID == Intrinsic::minimumnum || IID == Intrinsic::maximumnum;
   bool IsMin = IID == Intrinsic::minimum || IID == Intrinsic::minnum ||
                IID == Intrinsic::minimumnum;
 
@@ -6636,29 +6632,27 @@ static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
 
   // minnum(x, qnan) -> x
   // maxnum(x, qnan) -> x
-  // minnum(x, snan) -> qnan
-  // maxnum(x, snan) -> qnan
   // minimum(X, nan) -> qnan
   // maximum(X, nan) -> qnan
   // minimumnum(X, nan) -> x
   // maximumnum(X, nan) -> x
   if (CAPF.isNaN()) {
-    if (PropagateNaN || (PropagateSNaN && CAPF.isSignaling())) {
+    if (PropagateNaN) {
       *OutNewConstVal = ConstantFP::get(CFP->getType(), CAPF.makeQuiet());
       return MinMaxOptResult::UseNewConstVal;
+    } else if (ReturnsOtherForAllNaNs || !CAPF.isSignaling()) {
+      return MinMaxOptResult::UseOtherVal;
     }
-    return MinMaxOptResult::UseOtherVal;
+    return MinMaxOptResult::CannotOptimize;
   }
 
   if (CAPF.isInfinity() || (Call && Call->hasNoInfs() && CAPF.isLargest())) {
-    // minnum(X, -inf) -> -inf (ignoring sNaN -> qNaN propagation)
-    // maxnum(X, +inf) -> +inf (ignoring sNaN -> qNaN propagation)
     // minimum(X, -inf) -> -inf if nnan
     // maximum(X, +inf) -> +inf if nnan
     // minimumnum(X, -inf) -> -inf
     // maximumnum(X, +inf) -> +inf
     if (CAPF.isNegative() == IsMin &&
-        (!PropagateNaN || (Call && Call->hasNoNaNs()))) {
+        (ReturnsOtherForAllNaNs || (Call && Call->hasNoNaNs()))) {
       *OutNewConstVal = const_cast<Constant *>(RHSConst);
       return MinMaxOptResult::UseNewConstVal;
     }
@@ -6674,6 +6668,62 @@ static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
       return MinMaxOptResult::UseOtherVal;
   }
   return MinMaxOptResult::CannotOptimize;
+}
+
+static Value *simplifySVEIntReduction(Intrinsic::ID IID, Type *ReturnType,
+                                      Value *Op0, Value *Op1) {
+  Constant *C0 = dyn_cast<Constant>(Op0);
+  Constant *C1 = dyn_cast<Constant>(Op1);
+  unsigned Width = ReturnType->getPrimitiveSizeInBits();
+
+  // All false predicate or reduction of neutral values ==> neutral result.
+  switch (IID) {
+  case Intrinsic::aarch64_sve_eorv:
+  case Intrinsic::aarch64_sve_orv:
+  case Intrinsic::aarch64_sve_saddv:
+  case Intrinsic::aarch64_sve_uaddv:
+  case Intrinsic::aarch64_sve_umaxv:
+    if ((C0 && C0->isNullValue()) || (C1 && C1->isNullValue()))
+      return ConstantInt::get(ReturnType, 0);
+    break;
+  case Intrinsic::aarch64_sve_andv:
+  case Intrinsic::aarch64_sve_uminv:
+    if ((C0 && C0->isNullValue()) || (C1 && C1->isAllOnesValue()))
+      return ConstantInt::get(ReturnType, APInt::getMaxValue(Width));
+    break;
+  case Intrinsic::aarch64_sve_smaxv:
+    if ((C0 && C0->isNullValue()) || (C1 && C1->isMinSignedValue()))
+      return ConstantInt::get(ReturnType, APInt::getSignedMinValue(Width));
+    break;
+  case Intrinsic::aarch64_sve_sminv:
+    if ((C0 && C0->isNullValue()) || (C1 && C1->isMaxSignedValue()))
+      return ConstantInt::get(ReturnType, APInt::getSignedMaxValue(Width));
+    break;
+  }
+
+  switch (IID) {
+  case Intrinsic::aarch64_sve_andv:
+  case Intrinsic::aarch64_sve_orv:
+  case Intrinsic::aarch64_sve_smaxv:
+  case Intrinsic::aarch64_sve_sminv:
+  case Intrinsic::aarch64_sve_umaxv:
+  case Intrinsic::aarch64_sve_uminv:
+    // sve_reduce_##(all, splat(X)) ==> X
+    if (C0 && C0->isAllOnesValue()) {
+      if (Value *SplatVal = getSplatValue(Op1)) {
+        assert(SplatVal->getType() == ReturnType && "Unexpected result type!");
+        return SplatVal;
+      }
+    }
+    break;
+  case Intrinsic::aarch64_sve_eorv:
+    // sve_reduce_xor(all, splat(X)) ==> 0
+    if (C0 && C0->isAllOnesValue())
+      return ConstantInt::get(ReturnType, 0);
+    break;
+  }
+
+  return nullptr;
 }
 
 Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
@@ -6947,12 +6997,10 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   case Intrinsic::minimum:
   case Intrinsic::maximumnum:
   case Intrinsic::minimumnum: {
-    // In several cases here, we deviate from exact IEEE 754 semantics
-    // to enable optimizations (as allowed by the LLVM IR spec).
-    //
-    // For instance, we may return one of the arguments unmodified instead of
-    // inserting an llvm.canonicalize to transform input sNaNs into qNaNs,
-    // or may assume all NaN inputs are qNaNs.
+    // In some cases here, we deviate from exact IEEE-754 semantics to enable
+    // optimizations (as allowed by the LLVM IR spec) by returning one of the
+    // arguments unmodified instead of inserting an llvm.canonicalize to
+    // transform input sNaNs into qNaNs,
 
     // If the arguments are the same, this is a no-op (ignoring NaN quieting)
     if (Op0 == Op1)
@@ -7037,6 +7085,17 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
     break;
   }
+
+  case Intrinsic::aarch64_sve_andv:
+  case Intrinsic::aarch64_sve_eorv:
+  case Intrinsic::aarch64_sve_orv:
+  case Intrinsic::aarch64_sve_saddv:
+  case Intrinsic::aarch64_sve_smaxv:
+  case Intrinsic::aarch64_sve_sminv:
+  case Intrinsic::aarch64_sve_uaddv:
+  case Intrinsic::aarch64_sve_umaxv:
+  case Intrinsic::aarch64_sve_uminv:
+    return simplifySVEIntReduction(IID, ReturnType, Op0, Op1);
   default:
     break;
   }
@@ -7237,14 +7296,12 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   }
   case Intrinsic::experimental_vp_reverse: {
     Value *Vec = Call->getArgOperand(0);
-    Value *Mask = Call->getArgOperand(1);
     Value *EVL = Call->getArgOperand(2);
 
     Value *X;
-    // vp.reverse(vp.reverse(X)) == X (with all ones mask and matching EVL)
-    if (match(Mask, m_AllOnes()) &&
-        match(Vec, m_Intrinsic<Intrinsic::experimental_vp_reverse>(
-                       m_Value(X), m_AllOnes(), m_Specific(EVL))))
+    // vp.reverse(vp.reverse(X)) == X (mask doesn't matter)
+    if (match(Vec, m_Intrinsic<Intrinsic::experimental_vp_reverse>(
+                       m_Value(X), m_Value(), m_Specific(EVL))))
       return X;
 
     // vp.reverse(splat(X)) -> splat(X) (regardless of mask and EVL)

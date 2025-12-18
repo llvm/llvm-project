@@ -705,6 +705,8 @@ int isAArch64FrameOffsetLegal(const MachineInstr &MI, StackOffset &Offset,
                               unsigned *OutUnscaledOp = nullptr,
                               int64_t *EmittableOffset = nullptr);
 
+bool optimizeTerminators(MachineBasicBlock *MBB, const TargetInstrInfo &TII);
+
 static inline bool isUncondBranchOpcode(int Opc) { return Opc == AArch64::B; }
 
 static inline bool isCondBranchOpcode(int Opc) {
@@ -720,6 +722,8 @@ static inline bool isCondBranchOpcode(int Opc) {
   case AArch64::TBNZX:
   case AArch64::CBWPri:
   case AArch64::CBXPri:
+  case AArch64::CBBAssertExt:
+  case AArch64::CBHAssertExt:
   case AArch64::CBWPrr:
   case AArch64::CBXPrr:
     return true;

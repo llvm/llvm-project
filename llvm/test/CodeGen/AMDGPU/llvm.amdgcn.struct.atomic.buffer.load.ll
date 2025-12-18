@@ -34,6 +34,7 @@ define amdgpu_kernel void @struct_atomic_buffer_load_i32(<4 x i32> %addr, i32 %i
 ;
 ; GFX12-LABEL: struct_atomic_buffer_load_i32:
 ; GFX12:       ; %bb.0: ; %bb
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
@@ -85,6 +86,7 @@ define amdgpu_kernel void @struct_atomic_buffer_load_i32_const_idx(<4 x i32> %ad
 ;
 ; GFX12-LABEL: struct_atomic_buffer_load_i32_const_idx:
 ; GFX12:       ; %bb.0: ; %bb
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 15
@@ -137,6 +139,7 @@ define amdgpu_kernel void @struct_atomic_buffer_load_i32_off(<4 x i32> %addr, i3
 ;
 ; GFX12-LABEL: struct_atomic_buffer_load_i32_off:
 ; GFX12:       ; %bb.0: ; %bb
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
@@ -191,6 +194,7 @@ define amdgpu_kernel void @struct_atomic_buffer_load_i32_soff(<4 x i32> %addr, i
 ;
 ; GFX12-LABEL: struct_atomic_buffer_load_i32_soff:
 ; GFX12:       ; %bb.0: ; %bb
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
@@ -245,6 +249,7 @@ define amdgpu_kernel void @struct_atomic_buffer_load_i32_dlc(<4 x i32> %addr, i3
 ;
 ; GFX12-LABEL: struct_atomic_buffer_load_i32_dlc:
 ; GFX12:       ; %bb.0: ; %bb
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
@@ -299,6 +304,7 @@ define amdgpu_kernel void @struct_nonatomic_buffer_load_i32(<4 x i32> %addr, i32
 ;
 ; GFX12-LABEL: struct_nonatomic_buffer_load_i32:
 ; GFX12:       ; %bb.0: ; %bb
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
@@ -352,28 +358,53 @@ define amdgpu_kernel void @struct_atomic_buffer_load_i64(<4 x i32> %addr, i32 %i
 ; GFX11-NEXT:  ; %bb.2: ; %bb2
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: struct_atomic_buffer_load_i64:
-; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    s_load_b32 s6, s[4:5], 0x34
-; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX12-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-NEXT:    s_wait_xcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s4, 0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v2, s6
-; GFX12-NEXT:  .LBB6_1: ; %bb1
-; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    buffer_load_b64 v[4:5], v2, s[0:3], null idxen offset:4 th:TH_LOAD_NT
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[4:5], v[0:1]
-; GFX12-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
-; GFX12-NEXT:    s_cbranch_execnz .LBB6_1
-; GFX12-NEXT:  ; %bb.2: ; %bb2
-; GFX12-NEXT:    s_endpgm
+; GFX12-SDAG-TRUE16-LABEL: struct_atomic_buffer_load_i64:
+; GFX12-SDAG-TRUE16:       ; %bb.0: ; %bb
+; GFX12-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-SDAG-TRUE16-NEXT:    s_clause 0x1
+; GFX12-SDAG-TRUE16-NEXT:    s_load_b32 s6, s[4:5], 0x34
+; GFX12-SDAG-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-SDAG-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_xcnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s4, 0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v2, s6
+; GFX12-SDAG-TRUE16-NEXT:  .LBB6_1: ; %bb1
+; GFX12-SDAG-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX12-SDAG-TRUE16-NEXT:    buffer_load_b64 v[4:5], v2, s[0:3], null idxen offset:4 th:TH_LOAD_NT
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[4:5], v[0:1]
+; GFX12-SDAG-TRUE16-NEXT:    s_or_b32 s4, vcc_lo, s4
+; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-SDAG-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
+; GFX12-SDAG-TRUE16-NEXT:    s_cbranch_execnz .LBB6_1
+; GFX12-SDAG-TRUE16-NEXT:  ; %bb.2: ; %bb2
+; GFX12-SDAG-TRUE16-NEXT:    s_endpgm
+;
+; GFX12-GISEL-TRUE16-LABEL: struct_atomic_buffer_load_i64:
+; GFX12-GISEL-TRUE16:       ; %bb.0: ; %bb
+; GFX12-GISEL-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-GISEL-TRUE16-NEXT:    s_clause 0x1
+; GFX12-GISEL-TRUE16-NEXT:    s_load_b32 s6, s[4:5], 0x34
+; GFX12-GISEL-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-GISEL-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX12-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_xcnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s4, 0
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v2, s6
+; GFX12-GISEL-TRUE16-NEXT:  .LBB6_1: ; %bb1
+; GFX12-GISEL-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX12-GISEL-TRUE16-NEXT:    buffer_load_b64 v[4:5], v2, s[0:3], null idxen offset:4 th:TH_LOAD_NT
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[4:5], v[0:1]
+; GFX12-GISEL-TRUE16-NEXT:    s_or_b32 s4, vcc_lo, s4
+; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-GISEL-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
+; GFX12-GISEL-TRUE16-NEXT:    s_cbranch_execnz .LBB6_1
+; GFX12-GISEL-TRUE16-NEXT:  ; %bb.2: ; %bb2
+; GFX12-GISEL-TRUE16-NEXT:    s_endpgm
 bb:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %id.zext = zext i32 %id to i64
@@ -410,6 +441,7 @@ define amdgpu_kernel void @struct_atomic_buffer_load_v2i16(<4 x i32> %addr, i32 
 ;
 ; GFX12-LABEL: struct_atomic_buffer_load_v2i16:
 ; GFX12:       ; %bb.0: ; %bb
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
@@ -536,6 +568,7 @@ define amdgpu_kernel void @struct_atomic_buffer_load_v4i16(<4 x i32> %addr, i32 
 ;
 ; GFX12-SDAG-TRUE16-LABEL: struct_atomic_buffer_load_v4i16:
 ; GFX12-SDAG-TRUE16:       ; %bb.0: ; %bb
+; GFX12-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX12-SDAG-TRUE16-NEXT:    s_clause 0x1
 ; GFX12-SDAG-TRUE16-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX12-SDAG-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
@@ -559,6 +592,7 @@ define amdgpu_kernel void @struct_atomic_buffer_load_v4i16(<4 x i32> %addr, i32 
 ;
 ; GFX12-FAKE16-LABEL: struct_atomic_buffer_load_v4i16:
 ; GFX12-FAKE16:       ; %bb.0: ; %bb
+; GFX12-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX12-FAKE16-NEXT:    s_clause 0x1
 ; GFX12-FAKE16-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX12-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
@@ -584,6 +618,7 @@ define amdgpu_kernel void @struct_atomic_buffer_load_v4i16(<4 x i32> %addr, i32 
 ;
 ; GFX12-GISEL-TRUE16-LABEL: struct_atomic_buffer_load_v4i16:
 ; GFX12-GISEL-TRUE16:       ; %bb.0: ; %bb
+; GFX12-GISEL-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX12-GISEL-TRUE16-NEXT:    s_clause 0x1
 ; GFX12-GISEL-TRUE16-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX12-GISEL-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
@@ -641,6 +676,7 @@ define amdgpu_kernel void @struct_atomic_buffer_load_v4i32(<4 x i32> %addr, i32 
 ;
 ; GFX12-LABEL: struct_atomic_buffer_load_v4i32:
 ; GFX12:       ; %bb.0: ; %bb
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
@@ -698,6 +734,7 @@ define amdgpu_kernel void @struct_atomic_buffer_load_ptr(<4 x i32> %addr, i32 %i
 ;
 ; GFX12-LABEL: struct_atomic_buffer_load_ptr:
 ; GFX12:       ; %bb.0: ; %bb
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24

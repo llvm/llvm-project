@@ -245,14 +245,22 @@ specializeToConvOp(RewriterBase &rewriter, GenericOp genericOp,
                    ArrayRef<int64_t> dilations, ArrayRef<int64_t> strides) {
   SmallVector<Value> inputs = genericOp.getDpsInputs();
   ValueRange outputs = genericOp.getDpsInits();
-  SmallVector<AffineMap> indexingMaps = genericOp.getIndexingMapsArray();
   SmallVector<Type> resultTypes = genericOp.hasPureTensorSemantics()
                                       ? TypeRange(ValueRange(outputs))
                                       : TypeRange{};
-  Attribute stridesAttr = rewriter.getI64TensorAttr(strides);
-  Attribute dilationsAttr = rewriter.getI64TensorAttr(dilations);
-  LinalgOp namedOp = rewriter.replaceOpWithNewOp<ConvOpTy>(
-      genericOp, resultTypes, inputs, outputs, stridesAttr, dilationsAttr);
+  LinalgOp namedOp;
+  // Ops with no dilations and no strides.
+  if constexpr (std::is_same_v<ConvOpTy, linalg::Conv1DOp> ||
+                std::is_same_v<ConvOpTy, linalg::Conv2DOp> ||
+                std::is_same_v<ConvOpTy, linalg::Conv3DOp>) {
+    namedOp = rewriter.replaceOpWithNewOp<ConvOpTy>(genericOp, resultTypes,
+                                                    inputs, outputs);
+  } else {
+    Attribute stridesAttr = rewriter.getI64TensorAttr(strides);
+    Attribute dilationsAttr = rewriter.getI64TensorAttr(dilations);
+    namedOp = rewriter.replaceOpWithNewOp<ConvOpTy>(
+        genericOp, resultTypes, inputs, outputs, stridesAttr, dilationsAttr);
+  }
   return namedOp;
 }
 
@@ -265,10 +273,40 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
     return specializeToConvOp<ConvOpTy>(rewriter, genericOp, dilations,        \
                                         strides);                              \
   // -----------------------------
+  // Convolution ops.
+  // -----------------------------
+  CONV_OP_SPECIALIZER(linalg::Conv1DOp);
+  CONV_OP_SPECIALIZER(linalg::Conv1DNwcWcfOp);
+  CONV_OP_SPECIALIZER(linalg::Conv1DNcwFcwOp);
+  CONV_OP_SPECIALIZER(linalg::Conv2DOp);
+  CONV_OP_SPECIALIZER(linalg::Conv2DNhwcHwcfOp);
+  CONV_OP_SPECIALIZER(linalg::Conv2DNhwcHwcfQOp);
+  CONV_OP_SPECIALIZER(linalg::Conv2DNhwcFhwcOp);
+  CONV_OP_SPECIALIZER(linalg::Conv2DNhwcFhwcQOp);
+  CONV_OP_SPECIALIZER(linalg::Conv2DNchwFchwOp);
+  CONV_OP_SPECIALIZER(linalg::Conv2DNchwFchwQOp);
+  CONV_OP_SPECIALIZER(linalg::Conv2DNgchwFgchwOp);
+  CONV_OP_SPECIALIZER(linalg::Conv2DNgchwGfchwOp);
+  CONV_OP_SPECIALIZER(linalg::Conv2DNgchwGfchwQOp);
+  CONV_OP_SPECIALIZER(linalg::Conv2DNhwgcGfhwcOp);
+  CONV_OP_SPECIALIZER(linalg::Conv2DNhwgcGfhwcQOp);
+  CONV_OP_SPECIALIZER(linalg::Conv3DOp);
+  CONV_OP_SPECIALIZER(linalg::Conv3DNdhwcDhwcfOp);
+  CONV_OP_SPECIALIZER(linalg::Conv3DNdhwcDhwcfQOp);
+  CONV_OP_SPECIALIZER(linalg::Conv3DNcdhwFcdhwOp);
+  // -----------------------------
   // Depthwise Convolution ops.
   // -----------------------------
+  CONV_OP_SPECIALIZER(linalg::DepthwiseConv1DNcwCwOp);
   CONV_OP_SPECIALIZER(linalg::DepthwiseConv1DNwcWcOp);
+  CONV_OP_SPECIALIZER(linalg::DepthwiseConv1DNwcWcmOp);
   CONV_OP_SPECIALIZER(linalg::DepthwiseConv2DNchwChwOp);
+  CONV_OP_SPECIALIZER(linalg::DepthwiseConv2DNhwcHwcOp);
+  CONV_OP_SPECIALIZER(linalg::DepthwiseConv2DNhwcHwcQOp);
+  CONV_OP_SPECIALIZER(linalg::DepthwiseConv2DNhwcHwcmOp);
+  CONV_OP_SPECIALIZER(linalg::DepthwiseConv2DNhwcHwcmQOp);
+  CONV_OP_SPECIALIZER(linalg::DepthwiseConv3DNdhwcDhwcOp);
+  CONV_OP_SPECIALIZER(linalg::DepthwiseConv3DNcdhwCdhwOp);
   CONV_OP_SPECIALIZER(linalg::DepthwiseConv3DNdhwcDhwcmOp);
   // -----------------------------
   // Pooling ops.

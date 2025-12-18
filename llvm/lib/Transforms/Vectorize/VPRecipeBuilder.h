@@ -63,8 +63,6 @@ class VPRecipeBuilder {
   /// The profitablity analysis.
   LoopVectorizationCostModel &CM;
 
-  PredicatedScalarEvolution &PSE;
-
   VPBuilder &Builder;
 
   /// The mask of each VPBB, generated earlier and used for predicating recipes
@@ -84,10 +82,6 @@ class VPRecipeBuilder {
   /// A mapping of partial reduction exit instructions to their scaling factor.
   DenseMap<const Instruction *, unsigned> ScaledReductionMap;
 
-  /// Loop versioning instance for getting noalias metadata guaranteed by
-  /// runtime checks.
-  LoopVersioning *LVer;
-
   /// Check if \p I can be widened at the start of \p Range and possibly
   /// decrease the range such that the returned value holds for the entire \p
   /// Range. The function should not be called for memory instructions or calls.
@@ -97,11 +91,6 @@ class VPRecipeBuilder {
   /// Range.Start and potentially masked. Such instructions are handled by a
   /// recipe that takes an additional VPInstruction for the mask.
   VPWidenMemoryRecipe *tryToWidenMemory(VPInstruction *VPI, VFRange &Range);
-
-  /// Check if an induction recipe should be constructed for \p VPI. If so build
-  /// and return it. If not, return null.
-  VPHeaderPHIRecipe *tryToOptimizeInductionPHI(VPInstruction *VPI,
-                                               VFRange &Range);
 
   /// Optimize the special case where the operand of \p VPI is a constant
   /// integer induction variable.
@@ -142,13 +131,10 @@ public:
   VPRecipeBuilder(VPlan &Plan, Loop *OrigLoop, const TargetLibraryInfo *TLI,
                   const TargetTransformInfo *TTI,
                   LoopVectorizationLegality *Legal,
-                  LoopVectorizationCostModel &CM,
-                  PredicatedScalarEvolution &PSE, VPBuilder &Builder,
-                  DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache,
-                  LoopVersioning *LVer)
+                  LoopVectorizationCostModel &CM, VPBuilder &Builder,
+                  DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache)
       : Plan(Plan), OrigLoop(OrigLoop), TLI(TLI), TTI(TTI), Legal(Legal),
-        CM(CM), PSE(PSE), Builder(Builder), BlockMaskCache(BlockMaskCache),
-        LVer(LVer) {}
+        CM(CM), Builder(Builder), BlockMaskCache(BlockMaskCache) {}
 
   std::optional<unsigned> getScalingForReduction(const Instruction *ExitInst) {
     auto It = ScaledReductionMap.find(ExitInst);
@@ -160,9 +146,10 @@ public:
   /// that are valid so recipes can be formed later.
   void collectScaledReductions(VFRange &Range);
 
-  /// Create and return a widened recipe for \p R if one can be created within
-  /// the given VF \p Range.
-  VPRecipeBase *tryToCreateWidenRecipe(VPSingleDefRecipe *R, VFRange &Range);
+  /// Create and return a widened recipe for a non-phi recipe \p R if one can be
+  /// created within the given VF \p Range.
+  VPRecipeBase *tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
+                                             VFRange &Range);
 
   /// Create and return a partial reduction recipe for a reduction instruction
   /// along with binary operation and reduction phi operands.

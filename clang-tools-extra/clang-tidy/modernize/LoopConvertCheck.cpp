@@ -156,7 +156,6 @@ static StatementMatcher makeArrayLoopMatcher() {
 /// Client code will need to make sure that:
 ///   - The two containers on which 'begin' and 'end' are called are the same.
 static StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
-
   auto BeginNameMatcher = IsReverse ? hasAnyName("rbegin", "crbegin")
                                     : hasAnyName("begin", "cbegin");
   auto BeginNameMatcherStd = IsReverse
@@ -511,27 +510,24 @@ static bool canBeModified(ASTContext *Context, const Expr *E) {
 /// Returns true when it can be guaranteed that the elements of the
 /// container are not being modified.
 static bool usagesAreConst(ASTContext *Context, const UsageResult &Usages) {
-  for (const Usage &U : Usages) {
+  return llvm::none_of(Usages, [&Context](const Usage &U) {
     // Lambda captures are just redeclarations (VarDecl) of the same variable,
     // not expressions. If we want to know if a variable that is captured by
     // reference can be modified in an usage inside the lambda's body, we need
     // to find the expression corresponding to that particular usage, later in
     // this loop.
-    if (U.Kind != Usage::UK_CaptureByCopy && U.Kind != Usage::UK_CaptureByRef &&
-        canBeModified(Context, U.Expression))
-      return false;
-  }
-  return true;
+    return U.Kind != Usage::UK_CaptureByCopy &&
+           U.Kind != Usage::UK_CaptureByRef &&
+           canBeModified(Context, U.Expression);
+  });
 }
 
 /// Returns true if the elements of the container are never accessed
 /// by reference.
 static bool usagesReturnRValues(const UsageResult &Usages) {
-  for (const auto &U : Usages) {
-    if (U.Expression && !U.Expression->isPRValue())
-      return false;
-  }
-  return true;
+  return llvm::all_of(Usages, [](const Usage &U) {
+    return !U.Expression || U.Expression->isPRValue();
+  });
 }
 
 /// Returns true if the container is const-qualified.
@@ -563,7 +559,6 @@ LoopConvertCheck::LoopConvertCheck(StringRef Name, ClangTidyContext *Context)
       UseCxx20IfAvailable(Options.get("UseCxx20ReverseRanges", true)),
       ReverseFunction(Options.get("MakeReverseRangeFunction", "")),
       ReverseHeader(Options.get("MakeReverseRangeHeader", "")) {
-
   if (ReverseFunction.empty() && !ReverseHeader.empty()) {
     configurationDiag(
         "modernize-loop-convert: 'MakeReverseRangeHeader' is set but "
@@ -646,9 +641,8 @@ void LoopConvertCheck::doConversion(
       VarNameOrStructuredBinding = "[";
 
       assert(!AliasDecompositionDecl->bindings().empty() && "No bindings");
-      for (const BindingDecl *Binding : AliasDecompositionDecl->bindings()) {
+      for (const BindingDecl *Binding : AliasDecompositionDecl->bindings())
         VarNameOrStructuredBinding += Binding->getName().str() + ", ";
-      }
 
       VarNameOrStructuredBinding.erase(VarNameOrStructuredBinding.size() - 2,
                                        2);
@@ -850,9 +844,8 @@ void LoopConvertCheck::getArrayLoopQualifiers(ASTContext *Context,
       continue;
     QualType Type = U.Expression->getType().getCanonicalType();
     if (U.Kind == Usage::UK_MemberThroughArrow) {
-      if (!Type->isPointerType()) {
+      if (!Type->isPointerType())
         continue;
-      }
       Type = Type->getPointeeType();
     }
     Descriptor.ElemType = Type;
@@ -877,27 +870,25 @@ void LoopConvertCheck::getIteratorLoopQualifiers(ASTContext *Context,
     // canonical const qualification of the init variable type.
     Descriptor.DerefByConstRef = CanonicalInitVarType.isConstQualified();
     Descriptor.ElemType = *DerefByValueType;
+  } else if (const auto *DerefType =
+                 Nodes.getNodeAs<QualType>(DerefByRefResultName)) {
+    // A node will only be bound with DerefByRefResultName if we're dealing
+    // with a user-defined iterator type. Test the const qualification of
+    // the reference type.
+    auto ValueType = DerefType->getNonReferenceType();
+
+    Descriptor.DerefByConstRef = ValueType.isConstQualified();
+    Descriptor.ElemType = ValueType;
   } else {
-    if (const auto *DerefType =
-            Nodes.getNodeAs<QualType>(DerefByRefResultName)) {
-      // A node will only be bound with DerefByRefResultName if we're dealing
-      // with a user-defined iterator type. Test the const qualification of
-      // the reference type.
-      auto ValueType = DerefType->getNonReferenceType();
+    // By nature of the matcher this case is triggered only for built-in
+    // iterator types (i.e. pointers).
+    assert(isa<PointerType>(CanonicalInitVarType) &&
+           "Non-class iterator type is not a pointer type");
 
-      Descriptor.DerefByConstRef = ValueType.isConstQualified();
-      Descriptor.ElemType = ValueType;
-    } else {
-      // By nature of the matcher this case is triggered only for built-in
-      // iterator types (i.e. pointers).
-      assert(isa<PointerType>(CanonicalInitVarType) &&
-             "Non-class iterator type is not a pointer type");
-
-      // We test for const qualification of the pointed-at type.
-      Descriptor.DerefByConstRef =
-          CanonicalInitVarType->getPointeeType().isConstQualified();
-      Descriptor.ElemType = CanonicalInitVarType->getPointeeType();
-    }
+    // We test for const qualification of the pointed-at type.
+    Descriptor.DerefByConstRef =
+        CanonicalInitVarType->getPointeeType().isConstQualified();
+    Descriptor.ElemType = CanonicalInitVarType->getPointeeType();
   }
 }
 
@@ -1084,16 +1075,15 @@ llvm::StringRef LoopConvertCheck::getReverseFunction() const {
   if (!ReverseFunction.empty())
     return ReverseFunction;
   if (UseReverseRanges)
-    return "std::ranges::reverse_view";
+    return "std::views::reverse";
   return "";
 }
 
 llvm::StringRef LoopConvertCheck::getReverseHeader() const {
   if (!ReverseHeader.empty())
     return ReverseHeader;
-  if (UseReverseRanges && ReverseFunction.empty()) {
+  if (UseReverseRanges && ReverseFunction.empty())
     return "<ranges>";
-  }
   return "";
 }
 

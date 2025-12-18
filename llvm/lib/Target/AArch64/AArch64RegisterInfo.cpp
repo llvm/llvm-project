@@ -15,10 +15,10 @@
 #include "AArch64FrameLowering.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
+#include "AArch64SMEAttributes.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
-#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
@@ -437,6 +437,17 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
     markSuperRegs(Reserved, AArch64::W28);
     for (unsigned i = AArch64::B16; i <= AArch64::B31; ++i)
       markSuperRegs(Reserved, i);
+  }
+
+  if (MF.getSubtarget<AArch64Subtarget>().isLFI()) {
+    markSuperRegs(Reserved, AArch64::W28);
+    markSuperRegs(Reserved, AArch64::W27);
+    markSuperRegs(Reserved, AArch64::W26);
+    markSuperRegs(Reserved, AArch64::W25);
+    if (!MF.getProperties().hasNoVRegs()) {
+      markSuperRegs(Reserved, AArch64::LR);
+      markSuperRegs(Reserved, AArch64::W30);
+    }
   }
 
   for (size_t i = 0; i < AArch64::GPR32commonRegClass.getNumRegs(); ++i) {

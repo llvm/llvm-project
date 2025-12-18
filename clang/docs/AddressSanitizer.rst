@@ -164,6 +164,18 @@ To summarize: ``-fsanitize-address-use-after-return=<mode>``
   * ``always``: Enables detection of UAR errors in all cases. (reduces code
     size, but not as much as ``never``).
 
+Container Overflow Detection
+----------------------------
+
+AddressSanitizer can detect overflows in containers with custom allocators
+(such as std::vector) where the library developers have added calls into the
+AddressSanitizer runtime to indicate which memory is poisoned etc.
+
+In environments where not all the process binaries can be recompiled with 
+AddressSanitizer enabled, these checks can cause false positives.
+
+See `Disabling container overflow checks`_ for details on suppressing checks.
+
 Memory leak detection
 ---------------------
 
@@ -241,6 +253,46 @@ AddressSanitizer also supports
 ``__attribute__((disable_sanitizer_instrumentation))``. This attribute
 works similarly to ``__attribute__((no_sanitize("address")))``, but it also
 prevents instrumentation performed by other sanitizers.
+
+Disabling container overflow checks
+-----------------------------------
+
+Runtime suppression
+^^^^^^^^^^^^^^^^^^^
+
+Container overflow checks can be disabled at runtime using the
+``ASAN_OPTIONS=detect_container_overflow=0`` environment variable.
+
+Compile time suppression
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+``-D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__`` can be used at compile time to
+disable container overflow checks if the container library has added support
+for this define.
+
+To support a standard way to disable container overflow checks at compile time,
+library developers should use this definition in conjunction with the 
+AddressSanitizer feature test to conditionally include container overflow 
+related code compiled into user code:
+
+The recommended form is
+
+.. code-block:: c
+
+    // include the sanitizer common interfaces
+    #include <sanitizer/common_interface_defs.h>
+
+    #if __has_feature(address_sanitizer)
+    // Container overflow detection enabled - include annotations
+    __sanitizer_annotate_contiguous_container(beg, end, old_mid, new_mid);
+    #endif
+
+This pattern ensures that:
+
+* Container overflow annotations are only included when AddressSanitizer is
+  enabled
+* Container overflow detection can be disabled by passing 
+  ``-D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__`` to the compiler
 
 Suppressing Errors in Recompiled Code (Ignorelist)
 --------------------------------------------------

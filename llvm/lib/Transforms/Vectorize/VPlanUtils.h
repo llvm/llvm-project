@@ -13,6 +13,7 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
+class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
 } // namespace llvm
@@ -73,6 +74,27 @@ std::optional<VPValue *>
 getRecipesForUncountableExit(VPlan &Plan,
                              SmallVectorImpl<VPRecipeBase *> &Recipes,
                              SmallVectorImpl<VPRecipeBase *> &GEPs);
+
+/// Return a MemoryLocation for \p R with noalias metadata populated from
+/// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
+/// the location is conservatively set to nullptr.
+std::optional<MemoryLocation> getMemoryLocation(const VPRecipeBase &R);
+
+/// Extracts and returns NoWrap and FastMath flags from the induction binop in
+/// \p ID.
+inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
+  if (ID.getKind() == InductionDescriptor::IK_FpInduction)
+    return ID.getInductionBinOp()->getFastMathFlags();
+
+  if (auto *OBO = dyn_cast_if_present<OverflowingBinaryOperator>(
+          ID.getInductionBinOp()))
+    return VPIRFlags::WrapFlagsTy(OBO->hasNoUnsignedWrap(),
+                                  OBO->hasNoSignedWrap());
+
+  assert(ID.getKind() == InductionDescriptor::IK_IntInduction &&
+         "Expected int induction");
+  return VPIRFlags::WrapFlagsTy(false, false);
+}
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//
@@ -94,12 +116,7 @@ public:
            NewBlock->getPredecessors().empty() &&
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
-    SmallVector<VPBlockBase *> Succs(BlockPtr->successors());
-    for (VPBlockBase *Succ : Succs) {
-      Succ->replacePredecessor(BlockPtr, NewBlock);
-      NewBlock->appendSuccessor(Succ);
-    }
-    BlockPtr->clearSuccessors();
+    transferSuccessors(BlockPtr, NewBlock);
     connectBlocks(BlockPtr, NewBlock);
   }
 
@@ -180,6 +197,14 @@ public:
     New->setPredecessors(Old->getPredecessors());
     New->setSuccessors(Old->getSuccessors());
     Old->clearPredecessors();
+    Old->clearSuccessors();
+  }
+
+  /// Transfer successors from \p Old to \p New. \p New must have no successors.
+  static void transferSuccessors(VPBlockBase *Old, VPBlockBase *New) {
+    for (auto *Succ : Old->getSuccessors())
+      Succ->replacePredecessor(Old, New);
+    New->setSuccessors(Old->getSuccessors());
     Old->clearSuccessors();
   }
 

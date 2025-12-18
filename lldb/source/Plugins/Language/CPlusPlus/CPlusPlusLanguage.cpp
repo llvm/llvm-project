@@ -84,7 +84,7 @@ CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
   if (basename.empty()) {
     llvm::StringRef context;
     func_name_type |=
-        (ExtractContextAndIdentifier(name.GetCString(), context, basename)
+        (ExtractContextAndIdentifier(name.GetStringRef(), context, basename)
              ? (eFunctionNameTypeMethod | eFunctionNameTypeBase)
              : eFunctionNameTypeFull);
   } else {
@@ -206,6 +206,20 @@ static bool IsTrivialBasename(const llvm::StringRef &basename) {
 
   // We processed all characters. It is a vaild basename.
   return idx == basename.size();
+}
+
+/// A context is trivial if an only if it matches this pattern.
+/// "^\s*([A-Za-z_:]*)\s*$". for example function `foo::bar::func()`
+/// has a trivial context but. but `foo<int>::bar::func()` doesn't.
+static bool IsTrivialContext(llvm::StringRef context) {
+  // remove trailing or leading whitespace.
+  context = context.trim();
+
+  const auto iter = context.find_if_not([](char current) {
+    return std::isalnum(static_cast<unsigned char>(current)) ||
+           current == '_' || current == ':';
+  });
+  return iter == llvm::StringRef::npos;
 }
 
 /// Writes out the function name in 'full_name' to 'out_stream'
@@ -481,18 +495,17 @@ bool CPlusPlusLanguage::CxxMethodName::TrySimplifiedParse() {
       m_basename = full.substr(basename_begin, basename_end - basename_begin);
     }
 
-    if (IsTrivialBasename(m_basename)) {
+    if (IsTrivialBasename(m_basename) && IsTrivialContext(m_context)) {
       return true;
-    } else {
-      // The C++ basename doesn't match our regular expressions so this can't
-      // be a valid C++ method, clear everything out and indicate an error
-      m_context = llvm::StringRef();
-      m_basename = llvm::StringRef();
-      m_arguments = llvm::StringRef();
-      m_qualifiers = llvm::StringRef();
-      m_return_type = llvm::StringRef();
-      return false;
     }
+    // The C++ basename doesn't match our regular expressions so this can't
+    // be a valid C++ method, clear everything out and indicate an error
+    m_context = llvm::StringRef();
+    m_basename = llvm::StringRef();
+    m_arguments = llvm::StringRef();
+    m_qualifiers = llvm::StringRef();
+    m_return_type = llvm::StringRef();
+    return false;
   }
   return false;
 }
@@ -546,9 +559,8 @@ bool CPlusPlusLanguage::CxxMethodName::ContainsPath(llvm::StringRef path) {
 
   llvm::StringRef identifier;
   llvm::StringRef context;
-  std::string path_str = path.str();
-  bool success = CPlusPlusLanguage::ExtractContextAndIdentifier(
-      path_str.c_str(), context, identifier);
+  const bool success =
+      CPlusPlusLanguage::ExtractContextAndIdentifier(path, context, identifier);
   if (!success)
     return m_full.GetStringRef().contains(path);
 
@@ -592,7 +604,8 @@ bool CPlusPlusLanguage::DemangledNameContainsPath(llvm::StringRef path,
 }
 
 bool CPlusPlusLanguage::ExtractContextAndIdentifier(
-    const char *name, llvm::StringRef &context, llvm::StringRef &identifier) {
+    llvm::StringRef name, llvm::StringRef &context,
+    llvm::StringRef &identifier) {
   if (MSVCUndecoratedNameParser::IsMSVCUndecoratedName(name))
     return MSVCUndecoratedNameParser::ExtractContextAndIdentifier(name, context,
                                                                   identifier);
@@ -867,11 +880,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibcxxStdListSyntheticFrontEndCreator,
-      "libc++ std::list synthetic children",
-      // A POSIX variant of: "^std::__(?!cxx11:)[[:alnum:]]+::list<.+>$"
-      // so that it does not clash with: "^std::(__cxx11::)?list<.+>$"
-      "^std::__([A-Zabd-z0-9]|cx?[A-Za-wyz0-9]|cxx1?[A-Za-z02-9]|"
-      "cxx11[[:alnum:]])[[:alnum:]]*::list<.+>$",
+      "libc++ std::list synthetic children", "^std::__[[:alnum:]]+::list<.+>$",
       stl_deref_flags, true);
   AddCXXSynthetic(
       cpp_category_sp,
@@ -993,14 +1002,10 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
       "libc++ std::list summary provider",
       "^std::__[[:alnum:]]+::forward_list<.+>$", stl_summary_flags, true);
-  AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
-      "libc++ std::list summary provider",
-      // A POSIX variant of: "^std::__(?!cxx11:)[[:alnum:]]+::list<.+>$"
-      // so that it does not clash with: "^std::(__cxx11::)?list<.+>$"
-      "^std::__([A-Zabd-z0-9]|cx?[A-Za-wyz0-9]|cxx1?[A-Za-z02-9]|"
-      "cxx11[[:alnum:]])[[:alnum:]]*::list<.+>$",
-      stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
+                "libc++ std::list summary provider",
+                "^std::__[[:alnum:]]+::list<.+>$", stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::ContainerSizeSummaryProvider,
                 "libc++ std::map summary provider",
@@ -1411,6 +1416,10 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           stl_synth_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdForwardListSynthProvider")));
 
+  AddCXXSynthetic(cpp_category_sp, LibStdcppSpanSyntheticFrontEndCreator,
+                  "libstdc++ std::span synthetic children", "^std::span<.+>$",
+                  stl_deref_flags, true);
+
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
 
@@ -1501,6 +1510,11 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::StdlibCoroutineHandleSummaryProvider,
                 "libstdc++ std::coroutine_handle summary provider",
                 libstdcpp_std_coroutine_handle_regex, stl_summary_flags, true);
+
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
+                "libstdc++ std::span summary provider", "^std::span<.+>$",
+                stl_summary_flags, true);
 }
 
 static lldb_private::SyntheticChildrenFrontEnd *

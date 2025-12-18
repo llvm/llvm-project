@@ -18,30 +18,34 @@
 #include "llvm/Support/Debug.h"
 #include <optional>
 
+using namespace clang::ast_matchers;
+
+namespace clang::tidy::bugprone {
+
 namespace optutils = clang::tidy::utils::options;
 
 /// The default value for the MinimumLength check option.
 static constexpr std::size_t DefaultMinimumLength = 2;
 
 /// The default value for ignored parameter names.
-static constexpr llvm::StringLiteral DefaultIgnoredParameterNames = "\"\";"
-                                                                    "iterator;"
-                                                                    "Iterator;"
-                                                                    "begin;"
-                                                                    "Begin;"
-                                                                    "end;"
-                                                                    "End;"
-                                                                    "first;"
-                                                                    "First;"
-                                                                    "last;"
-                                                                    "Last;"
-                                                                    "lhs;"
-                                                                    "LHS;"
-                                                                    "rhs;"
-                                                                    "RHS";
+static constexpr StringRef DefaultIgnoredParameterNames = "\"\";"
+                                                          "iterator;"
+                                                          "Iterator;"
+                                                          "begin;"
+                                                          "Begin;"
+                                                          "end;"
+                                                          "End;"
+                                                          "first;"
+                                                          "First;"
+                                                          "last;"
+                                                          "Last;"
+                                                          "lhs;"
+                                                          "LHS;"
+                                                          "rhs;"
+                                                          "RHS";
 
 /// The default value for ignored parameter type suffixes.
-static constexpr llvm::StringLiteral DefaultIgnoredParameterTypeSuffixes =
+static constexpr StringRef DefaultIgnoredParameterTypeSuffixes =
     "bool;"
     "Bool;"
     "_Bool;"
@@ -86,10 +90,6 @@ static constexpr bool DefaultSuppressParametersUsedTogether = true;
 /// check option.
 static constexpr std::size_t
     DefaultNamePrefixSuffixSilenceDissimilarityTreshold = 1;
-
-using namespace clang::ast_matchers;
-
-namespace clang::tidy::bugprone {
 
 using TheCheck = EasilySwappableParametersCheck;
 
@@ -1589,11 +1589,9 @@ static bool lazyMapOfSetsIntersectionExists(const MapTy &Map, const ElemTy &E1,
   if (E1Iterator == Map.end() || E2Iterator == Map.end())
     return false;
 
-  for (const auto &E1SetElem : E1Iterator->second)
-    if (E2Iterator->second.contains(E1SetElem))
-      return true;
-
-  return false;
+  return llvm::any_of(E1Iterator->second, [&E2Iterator](const auto &E1SetElem) {
+    return E2Iterator->second.contains(E1SetElem);
+  });
 }
 
 /// Implements the heuristic that marks two parameters related if there is

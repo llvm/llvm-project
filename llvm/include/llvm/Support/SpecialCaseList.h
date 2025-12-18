@@ -110,8 +110,7 @@ protected:
   // classes.
   LLVM_ABI bool createInternal(const std::vector<std::string> &Paths,
                                vfs::FileSystem &VFS, std::string &Error);
-  LLVM_ABI bool createInternal(const MemoryBuffer *MB, std::string &Error,
-                               bool OrderBySize = false);
+  LLVM_ABI bool createInternal(const MemoryBuffer *MB, std::string &Error);
 
   SpecialCaseList() = default;
   SpecialCaseList(SpecialCaseList const &) = delete;
@@ -137,11 +136,6 @@ protected:
     LLVM_ABI unsigned getLastMatch(StringRef Prefix, StringRef Query,
                                    StringRef Category) const;
 
-    // Helper method to search by Prefix, Query, and Category. Returns
-    // matching rule, or empty string if there is no match.
-    LLVM_ABI StringRef getLongestMatch(StringRef Prefix, StringRef Query,
-                                       StringRef Category) const;
-
     /// Returns true if the section has any entries for the given prefix.
     LLVM_ABI bool hasPrefix(StringRef Prefix) const;
 
@@ -166,7 +160,7 @@ private:
 
   /// Parses just-constructed SpecialCaseList entries from a memory buffer.
   LLVM_ABI bool parse(unsigned FileIdx, const MemoryBuffer *MB,
-                      std::string &Error, bool OrderBySize);
+                      std::string &Error);
 };
 
 } // namespace llvm
