@@ -57,45 +57,16 @@ Error L0ProgramTy::deinit() {
   return Plugin::success();
 }
 
-void L0ProgramTy::setLibModule() {
-#if _WIN32
-  return;
-#else
-  // Check if the image belongs to a dynamic library.
-  Dl_info DLI{nullptr, nullptr, nullptr, nullptr};
-  if (dladdr(getStart(), &DLI) && DLI.dli_fname) {
-    std::vector<uint8_t> FileBin;
-    auto Size = readFile(DLI.dli_fname, FileBin);
-    if (Size) {
-      auto MB = MemoryBuffer::getMemBuffer(
-          StringRef(reinterpret_cast<const char *>(FileBin.data()), Size),
-          /*BufferName=*/"", /*RequiresNullTerminator=*/false);
-      auto ELF = ELFObjectFileBase::createELFObjectFile(MB->getMemBufferRef());
-      if (ELF) {
-        if (auto *Obj = dyn_cast<ELF64LEObjectFile>((*ELF).get())) {
-          const auto Header = Obj->getELFFile().getHeader();
-          if (Header.e_type == ELF::ET_DYN) {
-            DP("Processing current image as library\n");
-            IsLibModule = true;
-          }
-        }
-      }
-    }
-  }
-#endif // _WIN32
-}
-
-Error L0ProgramTy::addModule(size_t Size, const uint8_t *Image,
-                             const std::string_view CommonBuildOptions,
-                             ze_module_format_t Format) {
+Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
+                                    const std::string_view CommonBuildOptions,
+                                    ze_module_format_t Format) {
   const ze_module_constants_t SpecConstants =
       LevelZeroPluginTy::getOptions().CommonSpecConstants.getModuleConstants();
   auto &l0Device = getL0Device();
   std::string BuildOptions(CommonBuildOptions);
 
-  // Add required flag to enable dynamic linking.
-  if (IsLibModule)
-    BuildOptions += " -library-compilation ";
+  bool IsLibModule =
+      BuildOptions.find("-library-compilation") != std::string::npos;
 
   ze_module_desc_t ModuleDesc{};
   ModuleDesc.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
@@ -128,7 +99,7 @@ Error L0ProgramTy::addModule(size_t Size, const uint8_t *Image,
   return Plugin::success();
 }
 
-Error L0ProgramTy::linkModules() {
+Error L0ProgramBuilderTy::linkModules() {
   auto &l0Device = getL0Device();
   if (!RequiresModuleLink) {
     DP("Module link is not required\n");
@@ -146,25 +117,9 @@ Error L0ProgramTy::linkModules() {
   return Plugin::success();
 }
 
-size_t L0ProgramTy::readFile(const char *FileName,
-                             std::vector<uint8_t> &OutFile) const {
-  std::ifstream IFS(FileName, std::ios::binary);
-  if (!IFS.good())
-    return 0;
-  IFS.seekg(0, IFS.end);
-  auto FileSize = static_cast<size_t>(IFS.tellg());
-  OutFile.resize(FileSize);
-  IFS.seekg(0);
-  if (!IFS.read(reinterpret_cast<char *>(OutFile.data()), FileSize)) {
-    OutFile.clear();
-    return 0;
-  }
-  return FileSize;
-}
-
-void L0ProgramTy::replaceDriverOptsWithBackendOpts(const L0DeviceTy &Device,
-                                                   std::string &Options) const {
-  // Options that need to be replaced with backend-specific options.
+static void replaceDriverOptsWithBackendOpts(const L0DeviceTy &Device,
+                                             std::string &Options) {
+  // Options that need to be replaced with backend-specific options
   static const struct {
     std::string Option;
     std::string BackendOption;
@@ -254,13 +209,14 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
   return Res;
 }
 
-Error L0ProgramTy::buildModules(const std::string_view BuildOptions) {
+Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
   auto &l0Device = getL0Device();
   auto Image = getMemoryBuffer();
   if (identify_magic(Image.getBuffer()) == file_magic::spirv_object) {
     // Handle legacy plain SPIR-V image.
-    const uint8_t *ImgBegin = reinterpret_cast<const uint8_t *>(getStart());
-    return addModule(getSize(), ImgBegin, BuildOptions,
+    const uint8_t *ImgBegin =
+        reinterpret_cast<const uint8_t *>(Image.getBufferStart());
+    return addModule(Image.getBufferSize(), ImgBegin, BuildOptions,
                      ZE_MODULE_FORMAT_IL_SPIRV);
   }
 
@@ -269,8 +225,6 @@ Error L0ProgramTy::buildModules(const std::string_view BuildOptions) {
     DP("Warning: image is not a valid oneAPI OpenMP image.\n");
     return Plugin::error(ErrorCode::UNKNOWN, "Invalid oneAPI OpenMP image");
   }
-
-  setLibModule();
 
   // Iterate over the images and pick the first one that fits.
   uint64_t ImageCount = 0;
@@ -470,10 +424,30 @@ Error L0ProgramTy::buildModules(const std::string_view BuildOptions) {
     }
     DP("Created module from image #%" PRIu64 ".\n", Idx);
 
+    if (RequiresModuleLink) {
+      DP("Linking modules after adding image #%" PRIu64 ".\n", Idx);
+      if (auto Err = linkModules())
+        return Err;
+    }
+
     return Plugin::success();
   }
 
   return Plugin::error(ErrorCode::UNKNOWN, "Failed to create program modules.");
+}
+
+Expected<std::unique_ptr<MemoryBuffer>> L0ProgramBuilderTy::getELF() {
+  assert(GlobalModule != nullptr && "GlobalModule is null");
+
+  size_t Size = 0;
+
+  CALL_ZE_RET_ERROR(zeModuleGetNativeBinary, GlobalModule, &Size, nullptr);
+  std::vector<uint8_t> ELFData(Size);
+  CALL_ZE_RET_ERROR(zeModuleGetNativeBinary, GlobalModule, &Size,
+                    ELFData.data());
+  return MemoryBuffer::getMemBufferCopy(
+      StringRef(reinterpret_cast<const char *>(ELFData.data()), Size),
+      /*BufferName=*/"L0Program ELF");
 }
 
 Expected<void *> L0ProgramTy::getSymbolDeviceAddr(const char *CName) const {

@@ -15,7 +15,7 @@ end
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = depobj
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Depend -> OmpDependClause -> TaskDep
-!PARSE-TREE: | | Modifier -> OmpTaskDependenceType -> Value = In
+!PARSE-TREE: | | Modifier -> OmpTaskDependenceType -> OmpDependenceKind = In
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'y'
 
 subroutine f01
@@ -31,7 +31,7 @@ end
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPDepobjConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = depobj
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
-!PARSE-TREE: | OmpClauseList -> OmpClause -> Update -> OmpUpdateClause -> OmpTaskDependenceType -> Value = Out
+!PARSE-TREE: | OmpClauseList -> OmpClause -> Update -> OmpUpdateClause -> OmpTaskDependenceType -> OmpDependenceKind = Out
 
 subroutine f02
   integer :: x

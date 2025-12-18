@@ -82,6 +82,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -390,6 +391,8 @@ Expected<std::unique_ptr<UnifiedOnDiskCache>>
 UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
                          StringRef HashName, unsigned HashByteSize,
                          OnDiskGraphDB::FaultInPolicy FaultInPolicy) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   if (std::error_code EC = sys::fs::create_directories(RootPath))
     return createFileError(RootPath, EC);
 
@@ -512,6 +515,8 @@ bool UnifiedOnDiskCache::hasExceededSizeLimit() const {
 }
 
 Error UnifiedOnDiskCache::close(bool CheckSizeLimit) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   if (LockFD == -1)
     return Error::success(); // already closed.
   auto CloseLock = make_scope_exit([&]() {
