@@ -2,6 +2,8 @@
 ; RUN: llc < %s -mtriple=mips -mattr=+soft-float     | FileCheck %s
 
 define signext i32 @testmswh(half %x) {
+; CHECK-LABEL: testmswh:
+; CHECK:       jal     llrintf
 entry:
   %0 = tail call i64 @llvm.llrint.i64.f16(half %x)
   %conv = trunc i64 %0 to i32
@@ -9,6 +11,8 @@ entry:
 }
 
 define i64 @testmsxh(half %x) {
+; CHECK-LABEL: testmsxh:
+; CHECK:       jal     llrintf
 entry:
   %0 = tail call i64 @llvm.llrint.i64.f16(half %x)
   ret i64 %0
