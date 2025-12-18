@@ -27,9 +27,6 @@ class VPRecipeBuilder {
   /// The VPlan new recipes are added to.
   VPlan &Plan;
 
-  /// The loop that we evaluate.
-  Loop *OrigLoop;
-
   /// Target Library Info.
   const TargetLibraryInfo *TLI;
 
@@ -38,8 +35,6 @@ class VPRecipeBuilder {
 
   /// The profitablity analysis.
   LoopVectorizationCostModel &CM;
-
-  PredicatedScalarEvolution &PSE;
 
   VPBuilder &Builder;
 
@@ -90,17 +85,17 @@ class VPRecipeBuilder {
                                          VPInstruction *VPI);
 
 public:
-  VPRecipeBuilder(VPlan &Plan, Loop *OrigLoop, const TargetLibraryInfo *TLI,
+  VPRecipeBuilder(VPlan &Plan, const TargetLibraryInfo *TLI,
                   LoopVectorizationLegality *Legal,
-                  LoopVectorizationCostModel &CM,
-                  PredicatedScalarEvolution &PSE, VPBuilder &Builder,
+                  LoopVectorizationCostModel &CM, VPBuilder &Builder,
                   DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache)
-      : Plan(Plan), OrigLoop(OrigLoop), TLI(TLI), Legal(Legal), CM(CM),
-        PSE(PSE), Builder(Builder), BlockMaskCache(BlockMaskCache) {}
+      : Plan(Plan), TLI(TLI), Legal(Legal), CM(CM), Builder(Builder),
+        BlockMaskCache(BlockMaskCache) {}
 
-  /// Create and return a widened recipe for \p R if one can be created within
-  /// the given VF \p Range.
-  VPRecipeBase *tryToCreateWidenRecipe(VPSingleDefRecipe *R, VFRange &Range);
+  /// Create and return a widened recipe for a non-phi recipe \p R if one can be
+  /// created within the given VF \p Range.
+  VPRecipeBase *tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
+                                             VFRange &Range);
 
   /// Set the recipe created for given ingredient.
   void setRecipe(Instruction *I, VPRecipeBase *R) {

@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoopVectorizationPlanner.h"
-#include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
@@ -673,9 +672,7 @@ void VPlanTransforms::createHeaderPhiRecipes(
       // first-order recurrences. If there are no users of the intermediate
       // recurrences in the chain, the fixed order recurrence should be
       // modeled directly, enabling more efficient codegen.
-      auto *Recipe = new VPFirstOrderRecurrencePHIRecipe(Phi, *Start);
-      Recipe->addOperand(BackedgeValue);
-      return Recipe;
+      return new VPFirstOrderRecurrencePHIRecipe(Phi, *Start, *BackedgeValue);
     }
 
     auto InductionIt = Inductions.find(Phi);
@@ -692,13 +689,11 @@ void VPlanTransforms::createHeaderPhiRecipes(
     // Will be updated later to >1 if reduction is partial.
     unsigned ScaleFactor = 1;
     bool UseOrderedReductions = !AllowReordering && RdxDesc.isOrdered();
-    auto *Recipe = new VPReductionPHIRecipe(
-        Phi, RdxDesc.getRecurrenceKind(), *Start,
+    return new VPReductionPHIRecipe(
+        Phi, RdxDesc.getRecurrenceKind(), *Start, *BackedgeValue,
         getReductionStyle(InLoopReductions.contains(Phi), UseOrderedReductions,
                           ScaleFactor),
         RdxDesc.hasUsesOutsideReductionChain());
-    Recipe->addOperand(BackedgeValue);
-    return Recipe;
   };
 
   for (VPRecipeBase &R : make_early_inc_range(HeaderVPBB->phis())) {
@@ -1555,7 +1550,7 @@ static bool getScaledReductions(
   // For example, reduce.add(ext(mul(ext(A), ext(B)))) is still a valid partial
   // reduction since the inner extends will be widened. We already have oneUse
   // checks on the inner extends so widening them is safe.
-  std::optional<TTI::PartialReductionExtendKind> OuterExtKind = std::nullopt;
+  std::optional<TTI::PartialReductionExtendKind> OuterExtKind;
   if (match(Op, m_ZExtOrSExt(m_Mul(m_VPValue(), m_VPValue())))) {
     auto *CastRecipe = cast<VPWidenCastRecipe>(Op);
     auto CastOp = static_cast<Instruction::CastOps>(CastRecipe->getOpcode());
@@ -1582,8 +1577,7 @@ static bool getScaledReductions(
 
   auto CollectExtInfo = [OuterExtKind, &CastRecipes, &ExtOpTypes, &ExtKinds,
                          &TypeInfo](ArrayRef<VPValue *> Operands) {
-    if (Operands.size() > 2)
-      return false;
+    assert(Operands.size() <= 2 && "expected at most 2 operands");
 
     for (const auto &[I, OpVal] : enumerate(Operands)) {
       // Allow constant as second operand.
@@ -1632,10 +1626,11 @@ static bool getScaledReductions(
     if (match(ExtendUser, m_Sub(m_ZeroInt(), m_VPValue(OtherOp))))
       ExtendUser = dyn_cast<VPWidenRecipe>(OtherOp);
 
-    if (!ExtendUser || !CollectExtInfo(ExtendUser->operands()))
+    if (!ExtendUser || ExtendUser->getNumOperands() != 2 ||
+        !CollectExtInfo(ExtendUser->operands()))
       return false;
 
-    BinOpc = std::make_optional(ExtendUser->getOpcode());
+    BinOpc = ExtendUser->getOpcode();
   } else if (match(UpdateRecipe, m_Add(m_VPValue(), m_VPValue()))) {
     if (!CollectExtInfo({Op}))
       return false;
