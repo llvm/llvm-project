@@ -5572,18 +5572,15 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       Type *EltTy = II->getType()->getScalarType();
 
       // f32 denormal always flushed.
-      if (EltTy->isFloatTy())
+      if (EltTy->isFloatTy()) {
         Known.knownNot(fcSubnormal);
+        KnownSrc.knownNot(fcSubnormal);
+      }
 
       if (KnownSrc.isKnownNever(fcNegative))
         Known.knownNot(fcNegative);
       if (KnownSrc.isKnownNever(fcPositive))
         Known.knownNot(fcPositive);
-
-      if (KnownSrc.isKnownNeverNegInfinity())
-        Known.knownNot(fcNegZero);
-      if (KnownSrc.isKnownNeverPosInfinity())
-        Known.knownNot(fcPosZero);
 
       if (const Function *F = II->getFunction()) {
         DenormalMode Mode = F->getDenormalMode(EltTy->getFltSemantics());
