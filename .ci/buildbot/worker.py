@@ -35,7 +35,10 @@ def shjoin(args):
 
 
 def report(msg):
-    """Emit a message to the build log. Appears in red font. Lines surrounded by @@@ may be interpreted as meta-instructions."""
+    """
+    Emit a message to the build log. Appears in red font. Lines surrounded
+    by @@@ may be interpreted as meta-instructions.
+    """
     print(msg, file=sys.stderr, flush=True)
 
 
@@ -106,7 +109,10 @@ def report_platform():
 
 
 def run_command(cmd, shell=False, **kwargs):
-    """Report which command is being run, then execute it using subprocess.check_call."""
+    """
+    Report which command is being run, then execute it using
+    subprocess.check_call.
+    """
     report(f"Running: {cmd if shell else shjoin(cmd)}")
     sys.stderr.flush()
     subprocess.check_call(cmd, shell=shell, **kwargs)
@@ -130,9 +136,11 @@ def rmtree(path):
 
 def checkout(giturl, sourcepath):
     """
-    Use git to checkout the remote repository giturl at local directory sourcepath.
+    Use git to checkout the remote repository giturl at local directory
+    sourcepath.
 
-    If the repository already exists, clear all local changes and check out the latest main branch.
+    If the repository already exists, clear all local changes and check out the
+    latest main branch.
     """
     if not os.path.exists(sourcepath):
         run_command(["git", "clone", giturl, sourcepath])
@@ -171,7 +179,8 @@ def step(step_name, halt_on_fail=False):
             traceback.print_exc()
             report("@@@STEP_EXCEPTION@@@")
         if halt_on_fail:
-            # Do not continue with the next steps, but allow except/finally blocks to execute
+            # Do not continue with the next steps, but allow except/finally
+            # blocks to execute
             raise e
 
 
@@ -198,12 +207,15 @@ class Worker:
     def run_ninja(
         self, targets: list = [], *, builddir, ccache_stats: bool = False, **kwargs
     ):
-        """Run ninja in builddir. If self.jobs is set, automatically adds an -j option to set the number of parallel jobs.
+        """
+        Run ninja in builddir. If self.jobs is set, automatically adds a
+        -j option to set the number of parallel jobs.
 
         Parameters
         ----------
         targets : list
-            List of build targets; build the default target 'all' if list is empty
+            List of build targets; build the default target 'all' if list is
+            empty
         builddir
             Directory of the build.ninja file
         ccache_stats : bool
@@ -267,7 +279,10 @@ def convert_bool(v):
 
 
 def relative_if_possible(path, relative_to):
-    """Like os.path.relpath, but does not fail if path is not a parent of relative_to; keeps the original path in that case"""
+    """
+    Like os.path.relpath, but does not fail if path is not a parent of
+    relative_to; keeps the original path in that case
+    """
     path = os.path.normpath(path)
     if not os.path.isabs(path):
         # Path is already relative (assumed to relative_to)
@@ -365,8 +380,6 @@ def run(
 
     scriptpath = os.path.abspath(scriptpath)
     llvmsrcroot = os.path.abspath(llvmsrcroot)
-    if cachefile is not None:
-        cachefile = os.path.join(llvmsrcroot, cachefile)
     stem = pathlib.Path(scriptpath).stem
     workdir_default = f"{stem}.workdir"
 
@@ -394,12 +407,13 @@ def run(
         "--workdir=. uses the current directory.\nWarning: This directory "
         "might be deleted",
     )
-    parser.add_argument(
-        "--cachefile",
-        default=relative_if_possible(cachefile, llvmsrcroot),
-        help="File containing the initial values for the CMakeCache.txt for "
-        "the llvm build.",
-    )
+    if cachefile is not None:
+        parser.add_argument(
+            "--cachefile",
+            default=relative_if_possible(cachefile, llvmsrcroot),
+            help="File containing the initial values for the CMakeCache.txt for "
+            "the llvm build.",
+        )
     parser.add_argument(
         "--clean",
         type=bool,
@@ -421,7 +435,8 @@ def run(
     workdir = os.path.abspath(args.workdir)
     incremental = args.incremental
     clean = args.clean
-    cachefile = os.path.join(llvmsrcroot, args.cachefile)
+    if cachefile is not None:
+        cachefile = os.path.join(llvmsrcroot, args.cachefile)
 
     prevcachepath = os.path.join(workdir, "prevcache.cmake")
     prevscriptpath = os.path.join(workdir, "prevscript.py")
