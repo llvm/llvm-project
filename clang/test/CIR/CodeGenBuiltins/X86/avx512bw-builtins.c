@@ -760,10 +760,10 @@ unsigned char test_ktestz_mask64_u8(__mmask64 A, __mmask64 B) {
 
 __m512i test_mm512_movm_epi16(__mmask32 __A) {
   // CIR-LABEL: _mm512_movm_epi16
-  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u32i -> !cir.vector<32 x !cir.int<u, 1>>
-  // CIR: %{{.*}} = cir.cast integral %{{.*}} : !cir.vector<32 x !cir.int<u, 1>> -> !cir.vector<32 x !s16i>
+  // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
+  // CIR: %{{.*}} = cir.cast integral %{{.*}} : !cir.vector<32 x !cir.int<s, 1>> -> !cir.vector<32 x !s16i>
   
-  // LLVM-LABEL: @test_mm512_movm_epi16
+  // LLVM-LABEL: test_mm512_movm_epi16
   // LLVM:  %{{.*}} = bitcast i32 %{{.*}} to <32 x i1>
   // LLVM:  %{{.*}} = sext <32 x i1> %{{.*}} to <32 x i16>
 
@@ -779,7 +779,7 @@ __mmask64 test_mm512_movepi8_mask(__m512i __A) {
   // CIR: [[CMP:%.*]] = cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<64 x !s8i>, !cir.vector<64 x !cir.int<s, 1>>
   // CIR: %{{.*}} = cir.cast bitcast [[CMP]] : !cir.vector<64 x !cir.int<s, 1>> -> !u64i
 
-  // LLVM-LABEL: @test_mm512_movepi8_mask
+  // LLVM-LABEL: test_mm512_movepi8_mask
   // LLVM: [[CMP:%.*]] = icmp slt <64 x i8> %{{.*}}, zeroinitializer
   // LLVM: bitcast <64 x i1> [[CMP]] to i64
   
@@ -795,7 +795,7 @@ __mmask32 test_mm512_movepi16_mask(__m512i __A) {
   // CIR: [[CMP:%.*]] = cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<32 x !s16i>, !cir.vector<32 x !cir.int<s, 1>>
   // CIR: %{{.*}} = cir.cast bitcast [[CMP]] : !cir.vector<32 x !cir.int<s, 1>> -> !u32i
 
-  // LLVM-LABEL: @test_mm512_movepi16_mask
+  // LLVM-LABEL: test_mm512_movepi16_mask
   // LLVM: [[CMP:%.*]] = icmp slt <32 x i16> %{{.*}}, zeroinitializer
   // LLVM: bitcast <32 x i1> [[CMP]] to i32
 
