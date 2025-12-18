@@ -713,8 +713,10 @@ __m256d test_mm512_extractf64x4_pd(__m512d a)
 __m256d test_mm512_mask_extractf64x4_pd(__m256d  __W,__mmask8  __U,__m512d __A){
   // CIR-LABEL: test_mm512_mask_extractf64x4_pd
   // CIR: [[POISON:%.*]] = cir.const #cir.poison : !cir.vector<8 x !cir.double>
-  // CIR: cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<8 x !cir.double>) [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !cir.double>
-  // CIR: cir.select if %{{.*}} then %{{.*}} else %{{.*}} : (!cir.vector<4 x !cir.bool>, !cir.vector<4 x !cir.double>, !cir.vector<4 x !cir.double>) -> !cir.vector<4 x !cir.double>
+  // CIR: [[FULL_VEC:%.*]] = cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<8 x !cir.double>) [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !cir.double>
+  // CIR: [[MASK_VEC:%.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: [[FULL_MASK_VEC:%.*]] = cir.vec.shuffle([[MASK_VEC]], [[MASK_VEC]] : !cir.vector<8 x !cir.int<u, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.int<u, 1>>
+  // CIR: cir.vec.ternary([[FULL_MASK_VEC]], [[FULL_VEC]], {{.*}}) : !cir.vector<4 x !cir.int<u, 1>>, !cir.vector<4 x !cir.double>
 
   // LLVM-LABEL: test_mm512_mask_extractf64x4_pd
   // LLVM: shufflevector <8 x double> %{{.*}}, <8 x double> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -729,8 +731,10 @@ __m256d test_mm512_mask_extractf64x4_pd(__m256d  __W,__mmask8  __U,__m512d __A){
 __m256d test_mm512_maskz_extractf64x4_pd(__mmask8  __U,__m512d __A){
   // CIR-LABEL: test_mm512_maskz_extractf64x4_pd
   // CIR: [[POISON:%.*]] = cir.const #cir.poison : !cir.vector<8 x !cir.double>
-  // CIR: cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<8 x !cir.double>) [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !cir.double>
-  // CIR: cir.select if %{{.*}} then %{{.*}} else %{{.*}} : (!cir.vector<4 x !cir.bool>, !cir.vector<4 x !cir.double>, !cir.vector<4 x !cir.double>) -> !cir.vector<4 x !cir.double>
+  // CIR: [[FULL_VEC:%.*]] = cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<8 x !cir.double>) [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !cir.double>
+  // CIR: [[MASK_VEC:%.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: [[FULL_MASK_VEC:%.*]] = cir.vec.shuffle([[MASK_VEC]], [[MASK_VEC]] : !cir.vector<8 x !cir.int<u, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.int<u, 1>>
+  // CIR: cir.vec.ternary([[FULL_MASK_VEC]], [[FULL_VEC]], {{.*}}) : !cir.vector<4 x !cir.int<u, 1>>, !cir.vector<4 x !cir.double>
 
   // LLVM-LABEL: test_mm512_maskz_extractf64x4_pd
   // LLVM: shufflevector <8 x double> %{{.*}}, <8 x double> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -759,7 +763,10 @@ __m128 test_mm512_extractf32x4_ps(__m512 a)
 __m128 test_mm512_mask_extractf32x4_ps(__m128 __W, __mmask8  __U,__m512 __A){
   // CIR-LABEL: test_mm512_mask_extractf32x4_ps
   // CIR: [[POISON:%.*]] = cir.const #cir.poison : !cir.vector<16 x !cir.float>
-  // CIR: cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<16 x !cir.float>) [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !cir.float>
+  // CIR: [[FULL_VEC:%.*]] = cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<16 x !cir.float>) [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !cir.float>
+  // CIR: [[MASK_VEC:%.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: [[FULL_MASK_VEC:%.*]] = cir.vec.shuffle([[MASK_VEC]], [[MASK_VEC]] : !cir.vector<8 x !cir.int<u, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.int<u, 1>>
+  // CIR: cir.vec.ternary([[FULL_MASK_VEC]], [[FULL_VEC]], {{.*}}) : !cir.vector<4 x !cir.int<u, 1>>, !cir.vector<4 x !cir.float>
 
   // LLVM-LABEL: test_mm512_mask_extractf32x4_ps
   // LLVM: shufflevector <16 x float> %{{.*}}, <16 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -774,7 +781,10 @@ __m128 test_mm512_mask_extractf32x4_ps(__m128 __W, __mmask8  __U,__m512 __A){
 __m128 test_mm512_maskz_extractf32x4_ps( __mmask8  __U,__m512 __A){
   // CIR-LABEL: test_mm512_maskz_extractf32x4_ps
   // CIR: [[POISON:%.*]] = cir.const #cir.poison : !cir.vector<16 x !cir.float>
-  // CIR: cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<16 x !cir.float>) [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !cir.float>
+  // CIR: [[FULL_VEC:%.*]] = cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<16 x !cir.float>) [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !cir.float>
+  // CIR: [[MASK_VEC:%.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: [[FULL_MASK_VEC:%.*]] = cir.vec.shuffle([[MASK_VEC]], [[MASK_VEC]] : !cir.vector<8 x !cir.int<u, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.int<u, 1>>
+  // CIR: cir.vec.ternary([[FULL_MASK_VEC]], [[FULL_VEC]], {{.*}}) : !cir.vector<4 x !cir.int<u, 1>>, !cir.vector<4 x !cir.float>
 
   // LLVM-LABEL: test_mm512_maskz_extractf32x4_ps
   // LLVM: shufflevector <16 x float> %{{.*}}, <16 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -789,7 +799,10 @@ __m128 test_mm512_maskz_extractf32x4_ps( __mmask8  __U,__m512 __A){
 __m128i test_mm512_extracti32x4_epi32(__m512i __A) {
   // CIR-LABEL: test_mm512_extracti32x4_epi32
   // CIR: [[POISON:%.*]] = cir.const #cir.poison : !cir.vector<16 x !s32i>
-  // CIR: cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<16 x !s32i>) [#cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i] : !cir.vector<4 x !s32i>
+  // CIR: [[FULL_VEC:%.*]] = cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<16 x !s32i>) [#cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i] : !cir.vector<4 x !s32i>
+  // CIR: [[MASK_VEC:%.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: [[FULL_MASK_VEC:%.*]] = cir.vec.shuffle([[MASK_VEC]], [[MASK_VEC]] : !cir.vector<8 x !cir.int<u, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.int<u, 1>>
+  // CIR: cir.vec.ternary([[FULL_MASK_VEC]], [[FULL_VEC]], {{.*}}) : !cir.vector<4 x !cir.int<u, 1>>, !cir.vector<4 x !s32i>
 
   // LLVM-LABEL: test_mm512_extracti32x4_epi32
   // LLVM: shufflevector <16 x i32> %{{.*}}, <16 x i32> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
@@ -802,8 +815,10 @@ __m128i test_mm512_extracti32x4_epi32(__m512i __A) {
 __m128i test_mm512_mask_extracti32x4_epi32(__m128i __W, __mmask8 __U, __m512i __A) {
   // CIR-LABEL: test_mm512_mask_extracti32x4_epi32
   // CIR: [[POISON:%.*]] = cir.const #cir.poison : !cir.vector<16 x !s32i>
-  // CIR: cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<16 x !s32i>) [#cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i] : !cir.vector<4 x !s32i>
-  // CIR: cir.select if %{{.*}} then %{{.*}} else %{{.*}} : (!cir.vector<4 x !cir.bool>, !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>) -> !cir.vector<4 x !s32i>
+  // CIR: [[FULL_VEC:%.*]] = cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<16 x !s32i>) [#cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i] : !cir.vector<4 x !s32i>
+  // CIR: [[MASK_VEC:%.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: [[FULL_MASK_VEC:%.*]] = cir.vec.shuffle([[MASK_VEC]], [[MASK_VEC]] : !cir.vector<8 x !cir.int<u, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.int<u, 1>>
+  // CIR: cir.vec.ternary([[FULL_MASK_VEC]], [[FULL_VEC]], {{.*}}) : !cir.vector<4 x !cir.int<u, 1>>, !cir.vector<4 x !s32i>
 
   // LLVM-LABEL: test_mm512_mask_extracti32x4_epi32
   // LLVM: shufflevector <16 x i32> %{{.*}}, <16 x i32> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
@@ -818,8 +833,10 @@ __m128i test_mm512_mask_extracti32x4_epi32(__m128i __W, __mmask8 __U, __m512i __
 __m128i test_mm512_maskz_extracti32x4_epi32(__mmask8 __U, __m512i __A) {
   // CIR-LABEL: test_mm512_maskz_extracti32x4_epi32
   // CIR: [[POISON:%.*]] = cir.const #cir.poison : !cir.vector<16 x !s32i>
-  // CIR: cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<16 x !s32i>) [#cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i] : !cir.vector<4 x !s32i>
-  // CIR: cir.select if %{{.*}} then %{{.*}} else %{{.*}} : (!cir.vector<4 x !cir.bool>, !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>) -> !cir.vector<4 x !s32i>
+  // CIR: [[FULL_VEC:%.*]] = cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<16 x !s32i>) [#cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i] : !cir.vector<4 x !s32i>
+  // CIR: [[MASK_VEC:%.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: [[FULL_MASK_VEC:%.*]] = cir.vec.shuffle([[MASK_VEC]], [[MASK_VEC]] : !cir.vector<8 x !cir.int<u, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.int<u, 1>>
+  // CIR: cir.vec.ternary([[FULL_MASK_VEC]], [[FULL_VEC]], {{.*}}) : !cir.vector<4 x !cir.int<u, 1>>, !cir.vector<4 x !s32i>
 
   // LLVM-LABEL: test_mm512_maskz_extracti32x4_epi32
   // LLVM: shufflevector <16 x i32> %{{.*}}, <16 x i32> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
@@ -834,7 +851,10 @@ __m128i test_mm512_maskz_extracti32x4_epi32(__mmask8 __U, __m512i __A) {
 __m256i test_mm512_extracti64x4_epi64(__m512i __A) {
   // CIR-LABEL: test_mm512_extracti64x4_epi64
   // CIR: [[POISON:%.*]] = cir.const #cir.poison : !cir.vector<8 x !s64i>
-  // CIR: cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<8 x !s64i>) [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !s64i>
+  // CIR: [[FULL_VEC:%.*]] = cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<8 x !s64i>) [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !s64i>
+  // CIR: [[MASK_VEC:%.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: [[FULL_MASK_VEC:%.*]] = cir.vec.shuffle([[MASK_VEC]], [[MASK_VEC]] : !cir.vector<8 x !cir.int<u, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.int<u, 1>>
+  // CIR: cir.vec.ternary([[FULL_MASK_VEC]], [[FULL_VEC]], {{.*}}) : !cir.vector<4 x !cir.int<u, 1>>, !cir.vector<4 x !s64i>
 
   // LLVM-LABEL: test_mm512_extracti64x4_epi64
   // LLVM: shufflevector <8 x i64> %{{.*}}, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -847,7 +867,10 @@ __m256i test_mm512_extracti64x4_epi64(__m512i __A) {
 __m256i test_mm512_mask_extracti64x4_epi64(__m256i __W, __mmask8 __U, __m512i __A) {
   // CIR-LABEL: test_mm512_mask_extracti64x4_epi64
   // CIR: [[POISON:%.*]] = cir.const #cir.poison : !cir.vector<8 x !s64i>
-  // CIR: cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<8 x !s64i>) [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !s64i>
+  // CIR: [[FULL_VEC:%.*]] = cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<8 x !s64i>) [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !s64i>
+  // CIR: [[MASK_VEC:%.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: [[FULL_MASK_VEC:%.*]] = cir.vec.shuffle([[MASK_VEC]], [[MASK_VEC]] : !cir.vector<8 x !cir.int<u, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.int<u, 1>>
+  // CIR: cir.vec.ternary([[FULL_MASK_VEC]], [[FULL_VEC]], {{.*}}) : !cir.vector<4 x !cir.int<u, 1>>, !cir.vector<4 x !s64i>
 
   // LLVM-LABEL: test_mm512_mask_extracti64x4_epi64
   // LLVM: shufflevector <8 x i64> %{{.*}}, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -862,7 +885,10 @@ __m256i test_mm512_mask_extracti64x4_epi64(__m256i __W, __mmask8 __U, __m512i __
 __m256i test_mm512_maskz_extracti64x4_epi64(__mmask8 __U, __m512i __A) {
   // CIR-LABEL: test_mm512_maskz_extracti64x4_epi64
   // CIR: [[POISON:%.*]] = cir.const #cir.poison : !cir.vector<8 x !s64i>
-  // CIR: cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<8 x !s64i>) [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !s64i>
+  // CIR: [[FULL_VEC:%.*]] = cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<8 x !s64i>) [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !s64i>
+  // CIR: [[MASK_VEC:%.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: [[FULL_MASK_VEC:%.*]] = cir.vec.shuffle([[MASK_VEC]], [[MASK_VEC]] : !cir.vector<8 x !cir.int<u, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.int<u, 1>>
+  // CIR: cir.vec.ternary([[FULL_MASK_VEC]], [[FULL_VEC]], {{.*}}) : !cir.vector<4 x !cir.int<u, 1>>, !cir.vector<4 x !s64i>
 
   // LLVM-LABEL: test_mm512_maskz_extracti64x4_epi64
   // LLVM: shufflevector <8 x i64> %{{.*}}, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
