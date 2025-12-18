@@ -441,6 +441,7 @@ TEST_F(MemoryDeathTest, TestReadMemoryRangesWithShortBuffer) {
 ///   200 -> "\0"
 ///   201 -> "goodbye"
 ///   300 -> a string composed of 500 'c' characters, followed by '\0'.
+///   addresses >= 1024 -> error
 class StringReaderProcess : public Process {
 public:
   char memory[1024];
@@ -458,6 +459,10 @@ public:
 
   size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                       Status &error) override {
+    if (vm_addr >= 1024) {
+      error = Status::FromErrorString("out of bounds!");
+      return 0;
+    }
     memcpy(buf, memory + vm_addr, size);
     return size;
   }
@@ -488,7 +493,9 @@ TEST_F(MemoryTest, TestReadCStringsFromMemory) {
   // See the docs for StringReaderProcess above for an explanation of these
   // addresses.
   llvm::SmallVector<std::optional<std::string>> maybe_strings =
-      process_sp->ReadCStringsFromMemory({100, 200, 201, 300});
+      process_sp->ReadCStringsFromMemory({100, 200, 201, 300, 0xffffff});
+  ASSERT_EQ(maybe_strings.size(), 5);
+  auto expected_valid_strings = llvm::ArrayRef(maybe_strings).take_front(4);
 
   std::vector<char> long_str(500, 'c');
   long_str.push_back('\0');
@@ -496,8 +503,11 @@ TEST_F(MemoryTest, TestReadCStringsFromMemory) {
 
   const std::string expected_answers[4] = {"hello", "", "goodbye", big_str};
   for (auto [maybe_str, expected_answer] :
-       llvm::zip(maybe_strings, expected_answers)) {
+       llvm::zip(expected_valid_strings, expected_answers)) {
     EXPECT_TRUE(maybe_str);
     EXPECT_EQ(*maybe_str, expected_answer);
   }
+
+  // The last address should have produced an error.
+  EXPECT_FALSE(maybe_strings.back());
 }
