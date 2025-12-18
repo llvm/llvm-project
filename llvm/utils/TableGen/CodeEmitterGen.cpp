@@ -282,9 +282,11 @@ CodeEmitterGen::getInstructionCases(const Record *R) {
     // reduce the code size if 2 or more hw-modes share the same encoding for
     // the fields of the instruction.
     CaseMapT CaseMap, BitOffsetCaseMap;
+    std::string ModeCase, ModeBitOffsetCase;
 
     for (auto &[ModeId, Encoding] : EBM) {
-      std::string ModeCase, ModeBitOffsetCase;
+      ModeCase.clear();
+      ModeBitOffsetCase.clear();
       addInstructionCasesForEncoding(R, Encoding, ModeCase, ModeBitOffsetCase);
       CaseMap[ModeCase].push_back(utostr(ModeId));
       BitOffsetCaseMap[ModeBitOffsetCase].push_back(utostr(ModeId));
