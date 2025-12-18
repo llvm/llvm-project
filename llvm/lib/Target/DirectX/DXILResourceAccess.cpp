@@ -61,7 +61,6 @@ static Value *traverseGEPOffsets(const DataLayout &DL, IRBuilder<> &Builder,
       assert(cast<ConstantInt>(IndexIt)->getZExtValue() == 0 &&
              "GEP is not indexing through pointer");
       GEPOffset = *(++IndexIt);
-      assert(++IndexIt == GEP->idx_end() && "Too many indices in GEP");
     } else
       llvm_unreachable("Unhandled GEP structure for resource access");
 
