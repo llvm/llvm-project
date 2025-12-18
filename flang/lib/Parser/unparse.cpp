@@ -2518,10 +2518,6 @@ public:
 #include "llvm/Frontend/OpenMP/OMP.inc"
   void Unparse(const OmpObjectList &x) { Walk(x.v, ","); }
 
-  void Unparse(const common::OmpMemoryOrderType &x) {
-    Word(ToUpperCaseLetters(common::EnumToString(x)));
-  }
-
   void Unparse(const OmpBeginDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
@@ -2827,6 +2823,8 @@ public:
   WALK_NESTED_ENUM(common, TypeParamAttr) // R734
   WALK_NESTED_ENUM(common, CUDADataAttr) // CUDA
   WALK_NESTED_ENUM(common, CUDASubprogramAttrs) // CUDA
+  WALK_NESTED_ENUM(common, OmpDependenceKind)
+  WALK_NESTED_ENUM(common, OmpMemoryOrderType)
   WALK_NESTED_ENUM(IntentSpec, Intent) // R826
   WALK_NESTED_ENUM(ImplicitStmt, ImplicitNoneNameSpec) // R866
   WALK_NESTED_ENUM(ConnectSpec::CharExpr, Kind) // R1205
@@ -2848,7 +2846,6 @@ public:
   WALK_NESTED_ENUM(OmpChunkModifier, Value) // OMP chunk-modifier
   WALK_NESTED_ENUM(OmpLinearModifier, Value) // OMP linear-modifier
   WALK_NESTED_ENUM(OmpOrderingModifier, Value) // OMP ordering-modifier
-  WALK_NESTED_ENUM(OmpTaskDependenceType, Value) // OMP task-dependence-type
   WALK_NESTED_ENUM(OmpScheduleClause, Kind) // OMP schedule-kind
   WALK_NESTED_ENUM(OmpSeverityClause, SevLevel) // OMP severity
   WALK_NESTED_ENUM(OmpThreadsetClause, ThreadsetPolicy) // OMP threadset
