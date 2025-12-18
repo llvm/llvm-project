@@ -23,9 +23,8 @@ class LambdaFunctionNameCheck : public ClangTidyCheck {
 public:
   struct SourceRangeLessThan {
     bool operator()(const SourceRange &L, const SourceRange &R) const {
-      if (L.getBegin() == R.getBegin()) {
+      if (L.getBegin() == R.getBegin())
         return L.getEnd() < R.getEnd();
-      }
       return L.getBegin() < R.getBegin();
     }
   };

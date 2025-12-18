@@ -85,9 +85,8 @@ void ComparePointerToMemberVirtualFunctionCheck::check(
     return Ret;
   };
 
-  if (StopVisit != VisitSameSignatureVirtualMethods(RD)) {
+  if (StopVisit != VisitSameSignatureVirtualMethods(RD))
     RD->forallBases(VisitSameSignatureVirtualMethods);
-  }
 
   if (!SameSignatureVirtualMethods.empty()) {
     diag(BO->getOperatorLoc(), ErrorMsg);

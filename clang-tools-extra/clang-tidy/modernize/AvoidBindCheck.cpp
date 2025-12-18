@@ -672,9 +672,8 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
 
   Stream << " { ";
 
-  if (LP.Callable.DoesReturn) {
+  if (LP.Callable.DoesReturn)
     Stream << "return ";
-  }
 
   if (LP.Callable.Type == CT_Function) {
     StringRef SourceTokens = LP.Callable.SourceTokens;

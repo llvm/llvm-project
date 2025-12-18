@@ -41,16 +41,14 @@ public:
     for (const Token &T : MD.getMacroInfo()->tokens()) {
       if (T.is(tok::identifier)) {
         const StringRef IdentName = T.getIdentifierInfo()->getName();
-        if (IdentName == "__FILE__") {
+        if (IdentName == "__FILE__")
           HasFile = true;
-        } else if (IdentName == "__LINE__") {
+        else if (IdentName == "__LINE__")
           HasLine = true;
-        }
       }
     }
-    if (HasFile && HasLine) {
+    if (HasFile && HasLine)
       SuppressMacroExpansions->insert(Range);
-    }
   }
 
 private:

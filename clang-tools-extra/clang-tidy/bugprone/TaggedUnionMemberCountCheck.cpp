@@ -48,9 +48,8 @@ AST_MATCHER_P2(RecordDecl, fieldCountOfKindIsOne,
   const FieldDecl *FirstMatch = nullptr;
   for (const FieldDecl *Field : Node.fields()) {
     if (InnerMatcher.matches(*Field, Finder, &TempBuilder)) {
-      if (FirstMatch) {
+      if (FirstMatch)
         return false;
-      }
       FirstMatch = Field;
     }
   }

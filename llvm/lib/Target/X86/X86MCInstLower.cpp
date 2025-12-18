@@ -1565,10 +1565,16 @@ static void printConstant(const Constant *COp, unsigned BitWidth,
       printConstant(CI->getValue(), CS, PrintZero);
   } else if (auto *CF = dyn_cast<ConstantFP>(COp)) {
     if (auto VTy = dyn_cast<FixedVectorType>(CF->getType())) {
-      for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
-        if (I != 0)
-          CS << ',';
-        printConstant(CF->getValueAPF(), CS, PrintZero);
+      unsigned EltBits = VTy->getScalarSizeInBits();
+      unsigned E = std::min(BitWidth / EltBits, VTy->getNumElements());
+      if ((BitWidth % EltBits) == 0) {
+        for (unsigned I = 0; I != E; ++I) {
+          if (I != 0)
+            CS << ",";
+          printConstant(CF->getValueAPF(), CS, PrintZero);
+        }
+      } else {
+        CS << "?";
       }
     } else
       printConstant(CF->getValueAPF(), CS, PrintZero);

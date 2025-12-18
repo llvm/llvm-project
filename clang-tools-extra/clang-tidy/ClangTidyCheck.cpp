@@ -165,9 +165,8 @@ ClangTidyCheck::OptionsView::getEnumInt(StringRef LocalName,
   StringRef Closest;
   unsigned EditDistance = 3;
   for (const auto &NameAndEnum : Mapping) {
-    if (Value == NameAndEnum.second) {
+    if (Value == NameAndEnum.second)
       return NameAndEnum.first;
-    }
     if (Value.equals_insensitive(NameAndEnum.second)) {
       Closest = NameAndEnum.second;
       EditDistance = 0;
