@@ -95,6 +95,8 @@ void populateVectorContractToPackedTypeDotProductPatterns(
 // range by placing them at their earliest legal use site
 void populateSinkVectorProducerOpsPatterns(RewritePatternSet &patterns);
 
+void populateShuffleVectorFMAOpsPatterns(RewritePatternSet &patterns);
+
 //===----------------------------------------------------------------------===//
 /// Helpers extracted from:
 ///   - clang/lib/Headers/avxintrin.h

@@ -49,6 +49,17 @@ def ApplySinkVectorProducerOpsPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyShuffleVectorFMAOpsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.x86vector.shuffle_vector_fma_ops",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collect patterns to sink vector producer operations forward in a block to
+         place them immediately before their first use.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 
 #endif // X86VECTOR_TRANSFORM_OPS
 
