@@ -597,6 +597,11 @@ struct VPlanTransforms {
   static void makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
                                         VPRecipeBuilder &RecipeBuilder,
                                         VPCostContext &CostCtx);
+
+  /// Convert the scatter to extract-last-active-lane + scalar store if
+  /// profitable.
+  static void narrowScatters(VPlan &Plan, VPCostContext &Ctx, VFRange &Range,
+                             bool FoldTailWithEVL);
 };
 
 } // namespace llvm
