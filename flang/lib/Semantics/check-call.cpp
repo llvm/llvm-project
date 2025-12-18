@@ -18,6 +18,7 @@
 #include "flang/Parser/message.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/StringSet.h"
 #include <map>
 #include <string>
 
@@ -339,6 +340,15 @@ static bool DefersSameTypeParameters(
   }
   return true;
 }
+
+// List of intrinsics that are skipped when checking for device actual
+// arguments.
+static const llvm::StringSet<> cudaSkippedIntrinsics = {"__builtin_c_f_pointer",
+    "__builtin_c_loc"};
+// List of intrinsics that can have a device actual argument if it is an
+// allocatable or pointer.
+static const llvm::StringSet<> cudaAllowedIntrinsics = {"size", "lbound",
+    "ubound", "shape", "allocated", "associated", "kind", "present"};
 
 static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     const std::string &dummyName, evaluate::Expr<evaluate::SomeType> &actual,
@@ -1150,8 +1160,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   if (intrinsic && !FindCUDADeviceContext(scope) &&
       !FindOpenACCConstructContaining(scope) &&
       !FindCUFKernelDoConstructContaining(scope)) {
-    if (intrinsic->name != "__builtin_c_f_pointer" &&
-        intrinsic->name != "__builtin_c_loc") {
+    if (!cudaSkippedIntrinsics.contains(intrinsic->name)) {
       std::optional<common::CUDADataAttr> actualDataAttr;
       if (const auto *actualObject{actualLastSymbol
                   ? actualLastSymbol->detailsIf<ObjectEntityDetails>()
@@ -1164,11 +1173,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         // intrinsics.
         if (!actualLastSymbol || !IsAllocatableOrPointer(*actualLastSymbol) ||
             (IsAllocatableOrPointer(*actualLastSymbol) &&
-                intrinsic->name != "size" && intrinsic->name != "lbound" &&
-                intrinsic->name != "ubound" && intrinsic->name != "shape" &&
-                intrinsic->name != "allocated" &&
-                intrinsic->name != "associated" && intrinsic->name != "kind" &&
-                intrinsic->name != "present")) {
+            !cudaAllowedIntrinsics.contains(intrinsic->name))) {
           messages.Say(
               "Actual argument %s associated with host intrinsic %s is on the device"_err_en_US,
               actualLastSymbol->name(), intrinsic->name);
