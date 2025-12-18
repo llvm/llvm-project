@@ -224,7 +224,7 @@ The following options are implemented only for the ELF file format.
 
  Display the GNU hash table for dynamic symbols.
 
- .. option:: --hash-symbols
+.. option:: --hash-symbols
 
  Display the expanded hash table with dynamic symbol data.
 
