@@ -23,9 +23,24 @@
 // CIR shall be able to support fully.
 
 void *_AddressOfReturnAddress(void);
+void *_ReturnAddress(void);
+
+void *test_ReturnAddress(void) {
+  return _ReturnAddress();
+  // CIR-LABEL: test_ReturnAddress
+  // CIR: [[ARG:%.*]] = cir.const #cir.int<0> : !u32i
+  // CIR: {{%.*}} = cir.return_address([[ARG]])
+
+  // LLVM-LABEL: test_ReturnAddress
+  // LLVM: {{%.*}} = call ptr @llvm.returnaddress(i32 0)
+
+  // OGCG-LABEL: test_ReturnAddress
+  // OGCG: {{%.*}} = call ptr @llvm.returnaddress(i32 0)
+}
 
 #if defined(__i386__) || defined(__x86_64__) || defined (__aarch64__)
 void *test_AddressOfReturnAddress(void) {
+  return _AddressOfReturnAddress();
   // CIR-LABEL: test_AddressOfReturnAddress
   // CIR: %[[ADDR:.*]] = cir.address_of_return_address : !cir.ptr<!u8i>
   // CIR: %{{.*}} = cir.cast bitcast %[[ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
@@ -35,6 +50,5 @@ void *test_AddressOfReturnAddress(void) {
 
   // OGCG-LABEL: test_AddressOfReturnAddress
   // OGCG: call ptr @llvm.addressofreturnaddress.p0()
-  return _AddressOfReturnAddress();
 }
 #endif

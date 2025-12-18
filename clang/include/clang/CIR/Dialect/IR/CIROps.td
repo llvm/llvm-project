@@ -3281,15 +3281,7 @@ def CIR_CopyOp : CIR_Op<"copy",[
 // ReturnAddrOp and FrameAddrOp
 //===----------------------------------------------------------------------===//
 
-class CIR_FuncAddrBuiltinOp<string mnemonic> : CIR_Op<mnemonic, []> {
-  let arguments = (ins CIR_UInt32:$level);
-  let results = (outs CIR_VoidPtrType:$result);
-  let assemblyFormat = [{
-    `(` $level `)` attr-dict
-  }];
-}
-
-def CIR_ReturnAddrOp : CIR_FuncAddrBuiltinOp<"return_address"> {
+def CIR_ReturnAddrOp : CIR_Op<"return_address"> {
   let summary =
       "The return address of the current function, or of one of its callers";
 
@@ -3306,12 +3298,16 @@ def CIR_ReturnAddrOp : CIR_FuncAddrBuiltinOp<"return_address"> {
     Examples:
 
     ```mlir
-    %p = return_address(%level) -> !cir.ptr<!void>
+    %p = return_address(%level) : !cir.ptr<!void>
     ```
   }];
+
+  let arguments = (ins CIR_UInt32:$level);
+  let results = (outs CIR_VoidPtrType:$result);
+  let assemblyFormat = "`(` $level `)` attr-dict";
 }
 
-def CIR_FrameAddrOp : CIR_FuncAddrBuiltinOp<"frame_address"> {
+def CIR_FrameAddrOp : CIR_Op<"frame_address"> {
   let summary =
       "The frame address of the current function, or of one of its callers";
 
@@ -3334,9 +3330,13 @@ def CIR_FrameAddrOp : CIR_FuncAddrBuiltinOp<"frame_address"> {
     Examples:
 
     ```mlir
-    %p = frame_address(%level) -> !cir.ptr<!void>
+    %p = frame_address(%level) : !cir.ptr<!u8i>
     ```
   }];
+
+  let arguments = (ins CIR_UInt32:$level);
+  let results = (outs CIR_PointerType:$result);
+  let assemblyFormat = "`(` $level `)` attr-dict `:` qualified(type($result))";
 }
 
 //===----------------------------------------------------------------------===//
@@ -3354,7 +3354,7 @@ def CIR_AddrOfReturnAddrOp : CIR_Op<"address_of_return_address"> {
     Examples:
 
     ```mlir
-    %addr = address_of_return_address() : !cir.ptr<!cir.int<u, 8>>
+    %addr = address_of_return_address() : !cir.ptr<!u8i>
     ```
   }];
 
