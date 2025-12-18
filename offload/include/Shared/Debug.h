@@ -594,6 +594,7 @@ constexpr const char *ODT_EmptyMapping = "EmptyMapping";
 constexpr const char *ODT_Device = "Device";
 constexpr const char *ODT_Interface = "Interface";
 constexpr const char *ODT_Alloc = "Alloc";
+constexpr const char *ODT_Tool = "Tool";
 
 static inline odbg_ostream reportErrorStream() {
 #ifdef OMPTARGET_DEBUG
