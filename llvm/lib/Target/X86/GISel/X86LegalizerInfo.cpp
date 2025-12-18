@@ -591,7 +591,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .lower();
 
   // fp intrinsics
-  getActionDefinitionsBuilder(G_IS_FPCLASS).lower();
+  getActionDefinitionsBuilder(G_IS_FPCLASS)
+      .lowerIf([=](const LegalityQuery &Q) {
+        return Is64Bit && (typeInSet(1, {s32, s64, s80})(Q));
+      });
 
   getActionDefinitionsBuilder({G_INTRINSIC_ROUNDEVEN, G_INTRINSIC_TRUNC})
       .scalarize(0)
