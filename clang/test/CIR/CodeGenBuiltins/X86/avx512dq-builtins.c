@@ -15,10 +15,10 @@
 
 __mmask8 test_kadd_mask8(__mmask8 A, __mmask8 B) {
  // CIR-LABEL: _kadd_mask8
- // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+ // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.call_llvm_intrinsic "x86.avx512.kadd.b"
- // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<u, 1>> -> !u8i
+ // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
  // LLVM-LABEL: _kadd_mask8
  // LLVM: [[L:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
@@ -36,10 +36,10 @@ __mmask8 test_kadd_mask8(__mmask8 A, __mmask8 B) {
 
 __mmask16 test_kadd_mask16(__mmask16 A, __mmask16 B) {
  // CIR-LABEL: _kadd_mask16
- // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
- // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+ // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
+ // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
  // CIR: cir.call_llvm_intrinsic "x86.avx512.kadd.w"
- // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<u, 1>> -> !u16i
+ // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
 
  // LLVM-LABEL: _kadd_mask16
  // LLVM: [[L:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
@@ -57,10 +57,10 @@ __mmask16 test_kadd_mask16(__mmask16 A, __mmask16 B) {
 
 __mmask8 test_kand_mask8(__mmask8 A, __mmask8 B) {
  // CIR-LABEL: _kand_mask8
- // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.binop(and, {{.*}}, {{.*}}) : !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<u, 1>> -> !u8i
+ // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.binop(and, {{.*}}, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
  // LLVM-LABEL: _kand_mask8
  // LLVM: [[L:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
@@ -79,11 +79,11 @@ __mmask8 test_kand_mask8(__mmask8 A, __mmask8 B) {
 
 __mmask8 test_kandn_mask8(__mmask8 A, __mmask8 B) {
  // CIR-LABEL: _kandn_mask8
- // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.unary(not, {{.*}}) : !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.binop(and, {{.*}}, {{.*}}) : !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<u, 1>> -> !u8i
+ // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.unary(not, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.binop(and, {{.*}}, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
  // LLVM-LABEL: _kandn_mask8
  // LLVM: [[L:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
@@ -104,10 +104,10 @@ __mmask8 test_kandn_mask8(__mmask8 A, __mmask8 B) {
 
 __mmask8 test_kor_mask8(__mmask8 A, __mmask8 B) {
  // CIR-LABEL: _kor_mask8
- // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.binop(or, {{.*}}, {{.*}}) : !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<u, 1>> -> !u8i
+ // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.binop(or, {{.*}}, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
  // LLVM-LABEL: _kor_mask8
  // LLVM: [[L:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
@@ -125,10 +125,10 @@ __mmask8 test_kor_mask8(__mmask8 A, __mmask8 B) {
 
 __mmask8 test_kxor_mask8(__mmask8 A, __mmask8 B) {
  // CIR-LABEL: _kxor_mask8
- // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.binop(xor, {{.*}}, {{.*}}) : !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<u, 1>> -> !u8i
+ // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.binop(xor, {{.*}}, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
  // LLVM-LABEL: _kxor_mask8
  // LLVM: [[L:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
@@ -146,11 +146,11 @@ __mmask8 test_kxor_mask8(__mmask8 A, __mmask8 B) {
 
 __mmask8 test_kxnor_mask8(__mmask8 A, __mmask8 B) {
  // CIR-LABEL: _kxnor_mask8
- // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.unary(not, {{.*}}) : !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.binop(xor, {{.*}}, {{.*}}) : !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<u, 1>> -> !u8i
+ // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.unary(not, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.binop(xor, {{.*}}, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
  // LLVM-LABEL: _kxnor_mask8
  // LLVM: [[L:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
@@ -171,9 +171,9 @@ __mmask8 test_kxnor_mask8(__mmask8 A, __mmask8 B) {
 
 __mmask8 test_knot_mask8(__mmask8 A) {
  // CIR-LABEL: _knot_mask8
- // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.unary(not, {{.*}}) : !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<u, 1>> -> !u8i
+ // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.unary(not, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
  // LLVM-LABEL: _knot_mask8
  // LLVM: [[L:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
@@ -196,8 +196,8 @@ __mmask8 test_knot_mask8(__mmask8 A) {
 
 __mmask8 test_kmov_b(__mmask8 A) {
  // CIR-LABEL: test_kmov_b
- // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
- // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<u, 1>> -> !u8i
+ // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
  // LLVM-LABEL: test_kmov_b
  // LLVM: bitcast i8 %{{.*}} to <8 x i1>
@@ -212,10 +212,10 @@ __mmask8 test_kmov_b(__mmask8 A) {
 unsigned char test_kortestc_mask8_u8(__mmask8 __A, __mmask8 __B) {
   // CIR-LABEL: _kortestc_mask8_u8
   // CIR: %[[ALL_ONES:.*]] = cir.const #cir.int<255> : !u8i
-  // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
-  // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
-  // CIR: %[[OR:.*]] = cir.binop(or, %[[LHS]], %[[RHS]]) : !cir.vector<8 x !cir.int<u, 1>>
-  // CIR: %[[OR_INT:.*]] = cir.cast bitcast %[[OR]] : !cir.vector<8 x !cir.int<u, 1>> -> !u8i
+  // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[OR:.*]] = cir.binop(or, %[[LHS]], %[[RHS]]) : !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[OR_INT:.*]] = cir.cast bitcast %[[OR]] : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
   // CIR: %[[CMP:.*]] = cir.cmp(eq, %[[OR_INT]], %[[ALL_ONES]]) : !u8i, !cir.bool
   // CIR: cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
   // CIR: cir.cast integral {{.*}} : !s32i -> !u8i
@@ -242,8 +242,8 @@ unsigned char test_kortestc_mask8_u8(__mmask8 __A, __mmask8 __B) {
 
 unsigned char test_ktestc_mask8_u8(__mmask8 A, __mmask8 B) {
   // CIR-LABEL: _ktestc_mask8_u8
-  // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
-  // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
   // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.ktestc.b"
   // CIR: cir.cast integral %[[RES]] : {{.*}} -> !u8i
 
@@ -263,8 +263,8 @@ unsigned char test_ktestc_mask8_u8(__mmask8 A, __mmask8 B) {
 
 unsigned char test_ktestz_mask8_u8(__mmask8 A, __mmask8 B) {
   // CIR-LABEL: _ktestz_mask8_u8
-  // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
-  // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
   // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.ktestz.b"
   // CIR: cir.cast integral %[[RES]] : {{.*}} -> !u8i
 
@@ -284,8 +284,8 @@ unsigned char test_ktestz_mask8_u8(__mmask8 A, __mmask8 B) {
 
 unsigned char test_ktestc_mask16_u8(__mmask16 A, __mmask16 B) {
   // CIR-LABEL: _ktestc_mask16_u8
-  // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
-  // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
   // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.ktestc.w"
   // CIR: cir.cast integral %[[RES]] : {{.*}} -> !u8i
 
@@ -305,8 +305,8 @@ unsigned char test_ktestc_mask16_u8(__mmask16 A, __mmask16 B) {
 
 unsigned char test_ktestz_mask16_u8(__mmask16 A, __mmask16 B) {
   // CIR-LABEL: _ktestz_mask16_u8
-  // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
-  // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
   // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.ktestz.w"
   // CIR: cir.cast integral %[[RES]] : {{.*}} -> !u8i
 
