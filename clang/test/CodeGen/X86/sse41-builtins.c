@@ -450,13 +450,13 @@ __m128 test_mm_round_ps(__m128 x) {
 
 __m128d test_mm_round_sd(__m128d x, __m128d y) {
   // CHECK-LABEL: test_mm_round_sd
-  // CHECK: %[[B:.*]] = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %0, <2 x double> %[[A:.*]], i32 4)
+  // CHECK: %{{.*}} = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %0, <2 x double> %{{.*}}, i32 4)
   return _mm_round_sd(x, y, 4);
 }
 
 __m128 test_mm_round_ss(__m128 x, __m128 y) {
   // CHECK-LABEL: test_mm_round_ss
-  // CHECK: %[[B:.*]] = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %0, <4 x float> %[[A:.*]], i32 4)
+  // CHECK: %{{.*}} = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %0, <4 x float> %{{.*}}, i32 4)
   return _mm_round_ss(x, y, 4);
 }
 

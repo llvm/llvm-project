@@ -9,7 +9,7 @@
 // Make sure brackets work after macro intrinsics.
 float pr51324(__m128 a) {
   // CHECK-LABEL: pr51324
-  // call <4 x float> @llvm.nearbyint.v4f32(<4 x float> %{{.*}}) 
+  // CHECK: call <4 x float> @llvm.nearbyint.v4f32(<4 x float> %{{.*}}) 
   // CHECK: extractelement <4 x float> %{{.*}}, i32 0
   return _mm_round_ps(a, 0)[0];
 }
