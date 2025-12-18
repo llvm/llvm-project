@@ -122,7 +122,7 @@ static inline RT_API_ATTRS void memcpy(
   __builtin_memcpy(dest, src, count);
 }
 #elif STD_MEMCPY_UNSUPPORTED
-static inline RT_API_ATTRS void *memcpy(
+static inline RT_API_ATTRS void memcpy(
     void *dest, const void *src, std::size_t count) {
   char *to{reinterpret_cast<char *>(dest)};
   const char *from{reinterpret_cast<const char *>(src)};
@@ -132,7 +132,6 @@ static inline RT_API_ATTRS void *memcpy(
   while (count--) {
     *to++ = *from++;
   }
-  return dest;
 }
 #else
 using std::memcpy;
@@ -174,16 +173,11 @@ using std::memmove;
 #endif // !STD_MEMMOVE_UNSUPPORTED
 
 using MemmoveFct = void *(*)(void *, const void *, std::size_t);
-using MemcpyFct = void *(*)(void *, const void *, std::size_t);
 
 #ifdef RT_DEVICE_COMPILATION
 [[maybe_unused]] static RT_API_ATTRS void *MemmoveWrapper(
     void *dest, const void *src, std::size_t count) {
   return Fortran::runtime::memmove(dest, src, count);
-}
-[[maybe_unused]] static RT_API_ATTRS void *MemcpyWrapper(
-    void *dest, const void *src, std::size_t count) {
-  return Fortran::runtime::memcpy(dest, src, count);
 }
 #endif
 

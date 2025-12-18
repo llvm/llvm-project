@@ -351,3 +351,59 @@ func.func @_QPtest_expr_rhs(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.
 // CHECK:           hlfir.destroy %[[VAL_10]] : !hlfir.expr<?x!fir.logical<4>>
 // CHECK:           return
 // CHECK:         }
+
+// Test that two ALLOCATABLE TARGET globals do not alias,
+// thus hlfir.assign may be inlined.
+// Original code (compiled with -fno-realloc-lhs):
+// module test_global_allocatable_target
+//   real, allocatable, target :: a(:)
+//   real, allocatable, target :: b(:)
+// contains
+//   subroutine test
+//     a = b
+//   end subroutine test
+// end module test_global_allocatable_target
+
+// CHECK-LABEL:   func.func @_QMtest_global_allocatable_targetPtest() {
+// CHECK-NOT: hlfir.assign{{.*}}!fir.array
+func.func @_QMtest_global_allocatable_targetPtest() {
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.address_of(@_QMtest_global_allocatable_targetEa) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %2:2 = hlfir.declare %1 {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QMtest_global_allocatable_targetEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+  %3 = fir.address_of(@_QMtest_global_allocatable_targetEb) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4:2 = hlfir.declare %3 {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QMtest_global_allocatable_targetEb"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+  %5 = fir.load %4#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %6 = fir.load %2#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  hlfir.assign %5 to %6 : !fir.box<!fir.heap<!fir.array<?xf32>>>, !fir.box<!fir.heap<!fir.array<?xf32>>>
+  return
+}
+fir.global @_QMtest_global_allocatable_targetEa target : !fir.box<!fir.heap<!fir.array<?xf32>>>
+fir.global @_QMtest_global_allocatable_targetEb target : !fir.box<!fir.heap<!fir.array<?xf32>>>
+
+// Test that two TARGET global arrays do not alias,
+// thus hlfir.assign may be inlined.
+// Original code:
+// module test_global_shaped_target
+//   real, target :: a1(100)
+//   real, target :: b1(100)
+// contains
+//   subroutine test
+//     a1 = b1
+//   end subroutine test
+// end module test_global_shaped_target
+
+// CHECK-LABEL:   func.func @_QMtest_global_shaped_targetPtest() {
+// CHECK-NOT: hlfir.assign{{.*}}!fir.array
+func.func @_QMtest_global_shaped_targetPtest() {
+  %c100 = arith.constant 100 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.address_of(@_QMtest_global_shaped_targetEa1) : !fir.ref<!fir.array<100xf32>>
+  %2 = fir.shape %c100 : (index) -> !fir.shape<1>
+  %3:2 = hlfir.declare %1(%2) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMtest_global_shaped_targetEa1"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  %4 = fir.address_of(@_QMtest_global_shaped_targetEb1) : !fir.ref<!fir.array<100xf32>>
+  %5:2 = hlfir.declare %4(%2) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMtest_global_shaped_targetEb1"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  hlfir.assign %5#0 to %3#0 : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>
+  return
+}
+fir.global @_QMtest_global_shaped_targetEa1 target : !fir.array<100xf32>
+fir.global @_QMtest_global_shaped_targetEb1 target : !fir.array<100xf32>

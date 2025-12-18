@@ -24,6 +24,7 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/TypedPointerType.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 #include <cassert>
@@ -49,6 +50,11 @@
 // TODO: consider removing spv.track.constant in favor of spv.assign.type.
 
 using namespace llvm;
+
+static cl::opt<bool>
+    SpirvEmitOpNames("spirv-emit-op-names",
+                     cl::desc("Emit OpName for all instructions"),
+                     cl::init(false));
 
 namespace llvm::SPIRV {
 #define GET_BuiltinGroup_DECL
@@ -361,16 +367,22 @@ static void emitAssignName(Instruction *I, IRBuilder<> &B) {
       expectIgnoredInIRTranslation(I))
     return;
 
-  if (isa<CallBase>(I)) {
-    // TODO: this is a temporary workaround meant to prevent inserting internal
-    //       noise into the generated binary; remove once we rework the entire
-    //       aggregate removal machinery.
-    StringRef Name = I->getName();
-    if (Name.starts_with("spv.mutated_callsite"))
-      return;
-    if (Name.starts_with("spv.named_mutated_callsite"))
-      I->setName(Name.substr(Name.rfind('.') + 1));
+  // We want to be conservative when adding the names because they can interfere
+  // with later optimizations.
+  bool KeepName = SpirvEmitOpNames;
+  if (!KeepName) {
+    if (isa<AllocaInst>(I)) {
+      KeepName = true;
+    } else if (auto *CI = dyn_cast<CallBase>(I)) {
+      Function *F = CI->getCalledFunction();
+      if (F && F->getName().starts_with("llvm.spv.alloca"))
+        KeepName = true;
+    }
   }
+
+  if (!KeepName)
+    return;
+
   reportFatalOnTokenType(I);
   setInsertPointAfterDef(B, I);
   LLVMContext &Ctx = I->getContext();

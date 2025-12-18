@@ -2,10 +2,8 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV-NOT: OpCapability FPFastMathModeINTEL
-; CHECK-SPIRV:     OpName %[[#mu:]] "mul"
-; CHECK-SPIRV:     OpName %[[#su:]] "sub"
-; CHECK-SPIRV-NOT: OpDecorate %[[#mu]] FPFastMathMode AllowContractFastINTEL
-; CHECK-SPIRV-NOT: OpDecorate %[[#su]] FPFastMathMode AllowReassocINTEL
+; CHECK-SPIRV-NOT: OpDecorate %[[#]] FPFastMathMode AllowContractFastINTEL
+; CHECK-SPIRV-NOT: OpDecorate %[[#]] FPFastMathMode AllowReassocINTEL
 
 define spir_kernel void @test(float %a, float %b) {
 entry:
