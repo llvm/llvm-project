@@ -4147,6 +4147,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
 
   case ParenExprClass:
   case ArraySubscriptExprClass:
+  case MatrixSingleSubscriptExprClass:
   case MatrixSubscriptExprClass:
   case ArraySectionExprClass:
   case OMPArrayShapingExprClass:
