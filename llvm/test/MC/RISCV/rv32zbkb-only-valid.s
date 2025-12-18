@@ -11,7 +11,7 @@ rev8 t0, t1
 # CHECK-ASM-AND-OBJ: zip t0, t1
 # CHECK-ASM: encoding: [0x93,0x12,0xf3,0x08]
 zip t0, t1
-# CHECK-S-OBJ-NOALIAS: unzip t0, t1
+# CHECK-ASM-AND-OBJ: unzip t0, t1
 # CHECK-ASM: encoding: [0x93,0x52,0xf3,0x08]
 unzip t0, t1
 
