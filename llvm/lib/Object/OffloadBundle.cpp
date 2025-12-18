@@ -222,8 +222,8 @@ Error object::extractCodeObject(const ObjectFile &Source, size_t Offset,
   Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(OutputFileName, Size);
 
-  if (auto EC = BufferOrErr.takeError())
-    return EC;
+  if (Error Err = BufferOrErr.takeError())
+    return Err;
 
   Expected<MemoryBufferRef> InputBuffOrErr = Source.getMemoryBufferRef();
   if (Error Err = InputBuffOrErr.takeError())
@@ -234,8 +234,7 @@ Error object::extractCodeObject(const ObjectFile &Source, size_t Offset,
     return createStringError("size in URI is larger than source");
 
   if (Offset > InputBuffOrErr->getBufferSize())
-    return createStringError(inconvertibleErrorCode(),
-                             "offset in URI is beyond the size of the source");
+    return createStringError("offset in URI is beyond the size of the source");
 
   if (Offset + Size > InputBuffOrErr->getBufferSize())
     return createStringError(
