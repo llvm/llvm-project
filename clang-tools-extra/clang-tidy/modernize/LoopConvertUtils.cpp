@@ -48,10 +48,9 @@ bool StmtAncestorASTVisitor::TraverseStmt(Stmt *Statement) {
 /// Scope, as we can map a VarDecl to its DeclStmt, then walk up the parent tree
 /// using StmtAncestors.
 bool StmtAncestorASTVisitor::VisitDeclStmt(DeclStmt *Statement) {
-  for (const auto *Decl : Statement->decls()) {
+  for (const auto *Decl : Statement->decls())
     if (const auto *V = dyn_cast<VarDecl>(Decl))
       DeclParents.insert(std::make_pair(V, Statement));
-  }
   return true;
 }
 
@@ -830,9 +829,8 @@ bool ForLoopIndexUseVisitor::TraverseStmt(Stmt *S) {
   if (const auto *LE = dyn_cast_or_null<LambdaExpr>(NextStmtParent)) {
     // Any child of a LambdaExpr that isn't the body is an initialization
     // expression.
-    if (S != LE->getBody()) {
+    if (S != LE->getBody())
       return true;
-    }
   }
   return traverseStmtImpl(S);
 }
