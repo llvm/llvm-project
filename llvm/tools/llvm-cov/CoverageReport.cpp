@@ -251,18 +251,20 @@ void CoverageReport::render(const FileCoverageSummary &File,
       OS << column("-", FileReportColumns[3], Column::RightAlignment);
   }
 
-  OS << format("%*u", FileReportColumns[4],
-               (unsigned)File.FunctionCoverage.getNumFunctions());
-  OS << format("%*u", FileReportColumns[5],
-               (unsigned)(File.FunctionCoverage.getNumFunctions() -
-                          File.FunctionCoverage.getExecuted()));
-  if (File.FunctionCoverage.getNumFunctions())
-    Options.colored_ostream(OS, FuncCoverageColor)
-        << format("%*.2f", FileReportColumns[6] - 1,
-                  File.FunctionCoverage.getPercentCovered())
-        << '%';
-  else
-    OS << column("-", FileReportColumns[6], Column::RightAlignment);
+  if (Options.ShowFunctionSummary) {
+    OS << format("%*u", FileReportColumns[4],
+                 (unsigned)File.FunctionCoverage.getNumFunctions());
+    OS << format("%*u", FileReportColumns[5],
+                 (unsigned)(File.FunctionCoverage.getNumFunctions() -
+                            File.FunctionCoverage.getExecuted()));
+    if (File.FunctionCoverage.getNumFunctions())
+      Options.colored_ostream(OS, FuncCoverageColor)
+          << format("%*.2f", FileReportColumns[6] - 1,
+                    File.FunctionCoverage.getPercentCovered())
+          << '%';
+    else
+      OS << column("-", FileReportColumns[6], Column::RightAlignment);
+  }
 
   if (Options.ShowInstantiationSummary) {
     OS << format("%*u", FileReportColumns[7],
@@ -539,9 +541,11 @@ void CoverageReport::renderFileReports(
     OS << column("Regions", FileReportColumns[1], Column::RightAlignment)
        << column("Missed Regions", FileReportColumns[2], Column::RightAlignment)
        << column("Cover", FileReportColumns[3], Column::RightAlignment);
-  OS << column("Functions", FileReportColumns[4], Column::RightAlignment)
-     << column("Missed Functions", FileReportColumns[5], Column::RightAlignment)
-     << column("Executed", FileReportColumns[6], Column::RightAlignment);
+  if (Options.ShowFunctionSummary)
+    OS << column("Functions", FileReportColumns[4], Column::RightAlignment)
+       << column("Missed Functions", FileReportColumns[5],
+                 Column::RightAlignment)
+       << column("Executed", FileReportColumns[6], Column::RightAlignment);
   if (Options.ShowInstantiationSummary)
     OS << column("Instantiations", FileReportColumns[7], Column::RightAlignment)
        << column("Missed Insts.", FileReportColumns[8], Column::RightAlignment)
