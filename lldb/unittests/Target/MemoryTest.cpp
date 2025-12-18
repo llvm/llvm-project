@@ -494,7 +494,7 @@ TEST_F(MemoryTest, TestReadCStringsFromMemory) {
   // addresses.
   llvm::SmallVector<std::optional<std::string>> maybe_strings =
       process_sp->ReadCStringsFromMemory({100, 200, 201, 300, 0xffffff});
-  ASSERT_EQ(maybe_strings.size(), 5);
+  ASSERT_EQ(maybe_strings.size(), 5ull);
   auto expected_valid_strings = llvm::ArrayRef(maybe_strings).take_front(4);
 
   std::vector<char> long_str(500, 'c');
