@@ -17,9 +17,9 @@ testsuitebuilddir = "testsuite.build"
 with worker.run(
     __file__,
     llvmsrcroot,
-    cachefile='polly/ci/polly-x86_64-linux-test-suite.cmake',
+    cachefile="polly/ci/polly-x86_64-linux-test-suite.cmake",
     clobberpaths=[llvmbuilddir, testsuitebuilddir, llvminstalldir],
-    incremental=True
+    incremental=True,
 ) as w:
     with w.step("configure-llvm", halt_on_fail=True):
         cmakecmd = [

@@ -266,8 +266,6 @@ def convert_bool(v):
             return bool(v)
 
 
-
-
 def relative_if_possible(path, relative_to):
     """Like os.path.relpath, but does not fail if path is not a parent of relative_to; keeps the original path in that case"""
     path = os.path.normpath(path)
@@ -368,7 +366,7 @@ def run(
     scriptpath = os.path.abspath(scriptpath)
     llvmsrcroot = os.path.abspath(llvmsrcroot)
     if cachefile is not None:
-        cachefile = os.path.join(llvmsrcroot,cachefile)
+        cachefile = os.path.join(llvmsrcroot, cachefile)
     stem = pathlib.Path(scriptpath).stem
     workdir_default = f"{stem}.workdir"
 
@@ -412,7 +410,7 @@ def run(
     parser.add_argument(
         "--incremental",
         type=bool,
-        default= incremental_default,
+        default=incremental_default,
         help="Keep previous build artifacts when starting the build",
     )
     parser.add_argument(
@@ -430,37 +428,37 @@ def run(
 
     if clean:
         # Clean implies clobber
-        clobber=False
+        clobber = False
     elif incremental is None:
         # Automatically determine whether to clobber
         def has_config_change():
             # Has the master scheduler determined a CMakeLists.txt has changed?
-            if convert_bool(os.environ.get("BUILDBOT_CLOBBER") ):
+            if convert_bool(os.environ.get("BUILDBOT_CLOBBER")):
                 return True
             if convert_bool(os.environ.get("BUILDBOT_CLEAN_OBJ")):
-                    return True
+                return True
 
             # Has the build script changed?
-            if not os.path.isfile(prevscriptpath) :
+            if not os.path.isfile(prevscriptpath):
                 return True
-            if not filecmp.cmp(scriptpath , prevscriptpath, shallow=False):
+            if not filecmp.cmp(scriptpath, prevscriptpath, shallow=False):
                 return True
 
             # Has the cache file (if any) changed?
             if cachefile:
-                if not os.path.isfile(prevcachepath) :
+                if not os.path.isfile(prevcachepath):
                     return True
-                if not os.path.isfile(cachefile) :
+                if not os.path.isfile(cachefile):
                     return True
-                if not filecmp.cmp(  cachefile , prevcachepath, shallow=False):
+                if not filecmp.cmp(cachefile, prevcachepath, shallow=False):
                     return True
 
             return False
+
         clobber = has_config_change()
     else:
         # No clobber if incremental was enabled explicitly
         clobber = False
-
 
     # Safety check
     parentdir = os.path.dirname(scriptpath)
@@ -490,7 +488,7 @@ def run(
     os.chdir("/")
 
     if clean:
-        if os.path.exists(workdir)        :
+        if os.path.exists(workdir):
             print("Deleting previous build state including sources")
 
         with w.step(f"clean"):
@@ -500,7 +498,9 @@ def run(
         if clobber:
             for p in clobberpaths:
                 if os.path.exists(os.path.join(workdir, p)):
-                    print("Deleting previous build artifacts; use --incremental to keep")
+                    print(
+                        "Deleting previous build artifacts; use --incremental to keep"
+                    )
                     break
 
         with w.step(f"clobber"):
@@ -512,9 +512,9 @@ def run(
     os.chdir(workdir)
 
     # Remember used script and cachefile to detect changes
-    shutil.copy(            scriptpath,            prevscriptpath        )
+    shutil.copy(scriptpath, prevscriptpath)
     if cachefile:
-        shutil.copy(            cachefile,            prevcachepath        )
+        shutil.copy(cachefile, prevcachepath)
 
     os.environ["NINJA_STATUS"] = "[%p/%es :: %u->%r->%f (of %t)] "
 
