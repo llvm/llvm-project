@@ -11,6 +11,7 @@
 #include "Context.h"
 #include "Floating.h"
 #include "Function.h"
+#include "InitMap.h"
 #include "Integral.h"
 #include "InterpBlock.h"
 #include "MemberPointer.h"
@@ -477,14 +478,14 @@ bool Pointer::isElementInitialized(unsigned Index) const {
   }
 
   if (Desc->isPrimitiveArray()) {
-    InitMapPtr &IM = getInitMap();
-    if (!IM)
-      return false;
+    InitMapPtr IM = getInitMap();
 
-    if (IM->first)
+    if (IM.allInitialized())
       return true;
 
-    return IM->second->isElementInitialized(Index);
+    if (!IM.hasInitMap())
+      return false;
+    return IM->isElementInitialized(Index);
   }
   return isInitialized();
 }
@@ -523,34 +524,25 @@ void Pointer::initializeElement(unsigned Index) const {
   assert(Index < getFieldDesc()->getNumElems());
 
   InitMapPtr &IM = getInitMap();
-  if (!IM) {
-    const Descriptor *Desc = getFieldDesc();
-    IM = std::make_pair(false, std::make_shared<InitMap>(Desc->getNumElems()));
-  }
 
-  assert(IM);
-
-  // All initialized.
-  if (IM->first)
+  if (IM.allInitialized())
     return;
 
-  if (IM->second->initializeElement(Index)) {
-    IM->first = true;
-    IM->second.reset();
+  if (!IM.hasInitMap()) {
+    const Descriptor *Desc = getFieldDesc();
+    IM.setInitMap(new InitMap(Desc->getNumElems()));
   }
+  assert(IM.hasInitMap());
+
+  if (IM->initializeElement(Index))
+    IM.noteAllInitialized();
 }
 
 void Pointer::initializeAllElements() const {
   assert(getFieldDesc()->isPrimitiveArray());
   assert(isArrayRoot());
 
-  InitMapPtr &IM = getInitMap();
-  if (!IM) {
-    IM = std::make_pair(true, nullptr);
-  } else {
-    IM->first = true;
-    IM->second.reset();
-  }
+  getInitMap().noteAllInitialized();
 }
 
 bool Pointer::allElementsInitialized() const {
@@ -566,8 +558,8 @@ bool Pointer::allElementsInitialized() const {
     return GD.InitState == GlobalInitState::Initialized;
   }
 
-  InitMapPtr &IM = getInitMap();
-  return IM && IM->first;
+  InitMapPtr IM = getInitMap();
+  return IM.allInitialized();
 }
 
 void Pointer::activate() const {
