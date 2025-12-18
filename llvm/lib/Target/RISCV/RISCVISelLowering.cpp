@@ -21891,10 +21891,17 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     unsigned Stride = SEW / 8 * NF;
     unsigned Offset = SEW / 8 * Idx;
 
+    SDValue Passthru = Tuple.getOperand(2);
+    if (Passthru.isUndef())
+      Passthru = DAG.getUNDEF(VT);
+    else
+      Passthru = DAG.getNode(RISCVISD::TUPLE_EXTRACT, DL, VT, Passthru,
+                             N->getOperand(1));
+
     SDValue Ops[] = {
         /*Chain=*/Tuple.getOperand(0),
         /*IntID=*/DAG.getTargetConstant(Intrinsic::riscv_vlse_mask, DL, XLenVT),
-        /*Passthru=*/Tuple.getOperand(2),
+        /*Passthru=*/Passthru,
         /*Ptr=*/
         DAG.getNode(ISD::ADD, DL, XLenVT, Tuple.getOperand(3),
                     DAG.getConstant(Offset, DL, XLenVT)),
