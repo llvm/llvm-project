@@ -3418,6 +3418,30 @@ mlir::LogicalResult CIRToLLVMEhInflightOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMCatchParamFlatOpLowering::matchAndRewrite(
+    cir::CatchParamFlatOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  if (op.getKind() == cir::FlatCatchParamKind::Begin) {
+    StringRef fnName = "__cxa_begin_catch";
+    auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+    auto fnTy = mlir::LLVM::LLVMFunctionType::get(llvmPtrTy, {llvmPtrTy});
+    createLLVMFuncOpIfNotExist(rewriter, op, fnName, fnTy);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+        op, mlir::TypeRange{llvmPtrTy}, fnName,
+        mlir::ValueRange{adaptor.getExceptionPtr()});
+    return mlir::success();
+  }
+
+  assert(op.getKind() == cir::FlatCatchParamKind::End);
+  StringRef fnName = "__cxa_end_catch";
+  auto fnTy = mlir::LLVM::LLVMFunctionType::get(
+      mlir::LLVM::LLVMVoidType::get(rewriter.getContext()), {});
+  createLLVMFuncOpIfNotExist(rewriter, op, fnName, fnTy);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(op, mlir::TypeRange{}, fnName,
+                                                  mlir::ValueRange{});
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMTrapOpLowering::matchAndRewrite(
     cir::TrapOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {

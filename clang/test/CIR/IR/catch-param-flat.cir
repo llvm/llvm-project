@@ -1,0 +1,22 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s  
+
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+module {
+
+cir.func dso_local @catch_param_flat() personality(@__gxx_personality_v0) {
+  %exception_ptr, %type_id = cir.eh.inflight_exception
+  %exception = cir.catch_param.flat begin %exception_ptr -> !cir.ptr<!s32i>
+  cir.catch_param.flat end
+  cir.return
+}
+
+// CHECK: cir.func dso_local @catch_param_flat() personality(@__gxx_personality_v0) {
+// CHECK:   %[[EXCEPTION_PTR:.*]], %[[TYPE_ID:.*]] = cir.eh.inflight_exception
+// CHECK:   %[[EXCEPTION:.*]] = cir.catch_param.flat begin %[[EXCEPTION_PTR]] -> !cir.ptr<!s32i>
+// CHECK:   cir.catch_param.flat end
+// CHECK:   cir.return
+// CHECK: }
+
+}
