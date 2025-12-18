@@ -26,7 +26,7 @@ define i64 @abs_i64(i64 %x) {
   ret i64 %abs
 }
 
-; FIXME: Prefer li over pli
+; Make sure we prefer li over pli
 define i32 @li_imm() {
 ; CHECK-LABEL: li_imm:
 ; CHECK:       # %bb.0:
