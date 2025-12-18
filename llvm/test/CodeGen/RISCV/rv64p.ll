@@ -51,8 +51,7 @@ define i64 @li_imm() {
 define void @pli_b_store_i32(ptr %p) {
 ; CHECK-LABEL: pli_b_store_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 267284
-; CHECK-NEXT:    addi a1, a1, 321
+; CHECK-NEXT:    pli.b a1, 65
 ; CHECK-NEXT:    sw a1, 0(a0)
 ; CHECK-NEXT:    ret
   store i32 u0x41414141, ptr %p
