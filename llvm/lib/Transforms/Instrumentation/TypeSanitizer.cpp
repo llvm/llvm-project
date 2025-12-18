@@ -345,8 +345,13 @@ bool TypeSanitizer::generateBaseTypeDescriptor(
       Member = TypeDescriptors[MemberNode];
     }
 
-    uint64_t Offset =
-        mdconst::extract<ConstantInt>(MD->getOperand(i + 1))->getZExtValue();
+    // According to the LLVM language reference, the third field is actually
+    // optional, its absence indicating an offset of zero.
+    uint64_t Offset = 0;
+    if ((unsigned)i + 1 < MD->getNumOperands()) {
+      Offset =
+          mdconst::extract<ConstantInt>(MD->getOperand(i + 1))->getZExtValue();
+    }
 
     Members.push_back(std::make_pair(Member, Offset));
   }
