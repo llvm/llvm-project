@@ -247,6 +247,11 @@ struct NonMovableIntComparable {
   friend auto operator<=>(NonMovableIntComparable const&, NonMovableIntComparable const&) = default;
 };
 
+// TODO: Clang is broken, see https://github.com/llvm/llvm-project/issues/171438
+#ifdef TEST_COMPILER_CLANG
+static_assert(check_three_way_comparable_with<NonMovableIntComparable, int>());
+#else
 static_assert(!check_three_way_comparable_with<NonMovableIntComparable, int>());
+#endif
 
 } // namespace user_defined
