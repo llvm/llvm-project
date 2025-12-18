@@ -34,8 +34,10 @@ mlir::MLIRContext &CIRGenTypes::getMLIRContext() const {
 /// expanding the type because we're in a recursive context.
 bool CIRGenTypes::isFuncParamTypeConvertible(clang::QualType type) {
   // Some ABIs cannot have their member pointers represented in LLVM IR unless
-  // certain circumstances have been reached.
-  assert(!type->getAs<MemberPointerType>() && "NYI");
+  // certain circumstances have been reached, but in CIR we represent member
+  // pointer types abstractly at this point so they are always convertible.
+  if (type->getAs<MemberPointerType>())
+    return true;
 
   // If this isn't a tag type, we can convert it.
   const TagType *tagType = type->getAs<TagType>();

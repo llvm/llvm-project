@@ -74,7 +74,7 @@ static mlir::Value emitVectorFCmp(CIRGenBuilderTy &builder,
 static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Location loc,
                                    mlir::Value mask, unsigned numElems) {
   auto maskTy = cir::VectorType::get(
-      builder.getUIntNTy(1), cast<cir::IntType>(mask.getType()).getWidth());
+      builder.getSIntNTy(1), cast<cir::IntType>(mask.getType()).getWidth());
   mlir::Value maskVec = builder.createBitcast(mask, maskTy);
 
   // If we have less than 8 elements, then the starting mask was an i8 and
@@ -1758,7 +1758,12 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
                                     cir::SyncScopeKind::SingleThread));
     return mlir::Value{};
   }
-  case X86::BI_AddressOfReturnAddress:
+  case X86::BI_AddressOfReturnAddress: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    mlir::Value addr =
+        cir::AddrOfReturnAddrOp::create(builder, loc, allocaInt8PtrTy);
+    return builder.createCast(loc, cir::CastKind::bitcast, addr, voidPtrTy);
+  }
   case X86::BI__stosb:
   case X86::BI__ud2:
   case X86::BI__int2c:

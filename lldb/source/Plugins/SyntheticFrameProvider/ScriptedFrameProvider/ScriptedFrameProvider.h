@@ -40,6 +40,8 @@ public:
 
   std::string GetDescription() const override;
 
+  std::optional<uint32_t> GetPriority() const override;
+
   /// Get a single stack frame at the specified index.
   llvm::Expected<lldb::StackFrameSP> GetFrameAtIndex(uint32_t idx) override;
 

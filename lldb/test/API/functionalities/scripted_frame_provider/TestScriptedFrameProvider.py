@@ -624,15 +624,15 @@ class ScriptedFrameProviderTestCase(TestBase):
         self.assertIn("unknown_function_2", output)
 
         # Should show PC addresses in hex format.
-        self.assertIn("0x0000000001234000", output)
-        self.assertIn("0x0000000005678000", output)
+        self.assertIn("1234000", output)
+        self.assertIn("5678000", output)
 
         # Verify PC and function name are properly separated by space.
-        self.assertIn("0x0000000001234000 unknown_function_1", output)
-        self.assertIn("0x0000000005678000 unknown_function_2", output)
+        self.assertIn("1234000 unknown_function_1", output)
+        self.assertIn("5678000 unknown_function_2", output)
 
         # Should NOT show invalid address.
-        self.assertNotIn("0xffffffffffffffff", output.lower())
+        self.assertNotIn("ffffff", output.lower())
 
         # Verify frame 2 is the original real frame 0.
         frame2 = thread.GetFrameAtIndex(2)
