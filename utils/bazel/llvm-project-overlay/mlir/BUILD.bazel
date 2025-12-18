@@ -3813,6 +3813,17 @@ gentbl_cc_library(
     deps = [":XeGPUAttrTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "XeGPUOpInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/XeGPU/IR/XeGPUOpInterface.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Dialect/XeGPU/IR/XeGPUOpInterface.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/XeGPU/IR/XeGPUAttrs.td",
+    deps = [":XeGPUAttrTdFiles"],
+)
+
 cc_library(
     name = "XeGPUDialect",
     srcs = glob(["lib/Dialect/XeGPU/IR/*.cpp"]),
@@ -3834,6 +3845,7 @@ cc_library(
         ":XeGPUAttrInterfaceIncGen",
         ":XeGPUEnumsIncGen",
         ":XeGPUIncGen",
+        ":XeGPUOpInterfaceIncGen",
         ":XeGPUuArch",
         ":XeVMDialect",
         "//llvm:Support",
