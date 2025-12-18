@@ -36,7 +36,7 @@ public:
 
 private:
   void impl(SourceLocation DirectiveLoc, SourceRange ConditionRange,
-            const std::array<llvm::StringLiteral, 2> &Replacements) {
+            const std::array<StringRef, 2> &Replacements) {
     // Lexer requires its input range to be null-terminated.
     SmallString<128> Condition =
         Lexer::getSourceText(CharSourceRange::getTokenRange(ConditionRange),

@@ -19,18 +19,18 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-constexpr llvm::StringLiteral FunctionExprName = "FunctionExpr";
-constexpr llvm::StringLiteral CastExprName = "CastExpr";
-constexpr llvm::StringLiteral UnknownDestName = "UnknownDest";
-constexpr llvm::StringLiteral DestArrayTyName = "DestArrayTy";
-constexpr llvm::StringLiteral DestVarDeclName = "DestVarDecl";
-constexpr llvm::StringLiteral DestMallocExprName = "DestMalloc";
-constexpr llvm::StringLiteral DestExprName = "DestExpr";
-constexpr llvm::StringLiteral SrcVarDeclName = "SrcVarDecl";
-constexpr llvm::StringLiteral SrcExprName = "SrcExpr";
-constexpr llvm::StringLiteral LengthExprName = "LengthExpr";
-constexpr llvm::StringLiteral WrongLengthExprName = "WrongLength";
-constexpr llvm::StringLiteral UnknownLengthName = "UnknownLength";
+constexpr StringRef FunctionExprName = "FunctionExpr";
+constexpr StringRef CastExprName = "CastExpr";
+constexpr StringRef UnknownDestName = "UnknownDest";
+constexpr StringRef DestArrayTyName = "DestArrayTy";
+constexpr StringRef DestVarDeclName = "DestVarDecl";
+constexpr StringRef DestMallocExprName = "DestMalloc";
+constexpr StringRef DestExprName = "DestExpr";
+constexpr StringRef SrcVarDeclName = "SrcVarDecl";
+constexpr StringRef SrcExprName = "SrcExpr";
+constexpr StringRef LengthExprName = "LengthExpr";
+constexpr StringRef WrongLengthExprName = "WrongLength";
+constexpr StringRef UnknownLengthName = "UnknownLength";
 
 enum class LengthHandleKind { Increase, Decrease };
 

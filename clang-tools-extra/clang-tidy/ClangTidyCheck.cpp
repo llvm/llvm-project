@@ -187,7 +187,7 @@ ClangTidyCheck::OptionsView::getEnumInt(StringRef LocalName,
   return std::nullopt;
 }
 
-static constexpr llvm::StringLiteral ConfigWarning(
+static constexpr StringRef ConfigWarning(
     "invalid configuration value '%0' for option '%1'%select{|; expected a "
     "bool|; expected an integer|; did you mean '%3'?}2");
 
