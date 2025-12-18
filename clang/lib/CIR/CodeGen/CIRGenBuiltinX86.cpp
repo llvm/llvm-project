@@ -1869,7 +1869,12 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
                                     cir::SyncScopeKind::SingleThread));
     return mlir::Value{};
   }
-  case X86::BI_AddressOfReturnAddress:
+  case X86::BI_AddressOfReturnAddress: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    mlir::Value addr =
+        cir::AddrOfReturnAddrOp::create(builder, loc, allocaInt8PtrTy);
+    return builder.createCast(loc, cir::CastKind::bitcast, addr, voidPtrTy);
+  }
   case X86::BI__stosb:
   case X86::BI__ud2:
   case X86::BI__int2c:
