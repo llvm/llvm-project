@@ -15,6 +15,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 // The platform-specific headers have to provide the following interface.
 //
 // These functions are equivalent to their C counterparts, except that __locale::__locale_t
@@ -120,13 +123,15 @@
 #    include <__locale_dir/support/linux.h>
 #  elif _LIBCPP_LIBC_NEWLIB
 #    include <__locale_dir/support/newlib.h>
+#  elif defined(__MVS__)
+#    include <__locale_dir/support/zos.h>
 #  else
 
 // TODO: This is a temporary definition to bridge between the old way we defined the locale base API
 //       (by providing global non-reserved names) and the new API. As we move individual platforms
 //       towards the new way of defining the locale base API, this should disappear since each platform
 //       will define those directly.
-#    if defined(_AIX) || defined(__MVS__)
+#    if defined(_AIX)
 #      include <__locale_dir/locale_base_api/ibm.h>
 #    elif defined(__OpenBSD__)
 #      include <__locale_dir/locale_base_api/openbsd.h>
@@ -296,5 +301,7 @@ _LIBCPP_END_NAMESPACE_STD
 #  endif // Compatibility definition of locale base APIs
 
 #endif // _LIBCPP_HAS_LOCALIZATION
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_H

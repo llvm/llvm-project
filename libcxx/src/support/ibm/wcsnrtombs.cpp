@@ -6,23 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__locale>
+#include <__locale_dir/support/zos.h> // __locale_guard
 #include <cwchar>   // mbstate_t
 #include <limits.h> // MB_LEN_MAX
 #include <stdlib.h> // MB_CUR_MAX, size_t
 #include <string.h> // memcpy
 
+_LIBCPP_BEGIN_NAMESPACE_STD
+namespace __locale {
+namespace __ibm {
 // Converts `max_source_chars` from the wide character buffer pointer to by *`src`,
 // into the multi byte character sequence buffer stored at `dst`, which must be
 // `dst_size_bytes` bytes in size. Returns the number of bytes in the sequence
 // converted from *src, excluding the null terminator.
 // Returns (size_t) -1 if an error occurs and sets errno.
 // If `dst` is NULL, `dst_size_bytes` is ignored and no bytes are copied to `dst`.
-_LIBCPP_EXPORTED_FROM_ABI size_t wcsnrtombs(
-    char* __restrict dst,
-    const wchar_t** __restrict src,
-    size_t max_source_chars,
-    size_t dst_size_bytes,
-    mbstate_t* __restrict ps) {
+size_t wcsnrtombs(char* __restrict dst,
+                  const wchar_t** __restrict src,
+                  size_t max_source_chars,
+                  size_t dst_size_bytes,
+                  mbstate_t* __restrict ps) {
   const size_t invalid_wchar = static_cast<size_t>(-1);
 
   size_t source_converted;
@@ -92,3 +96,12 @@ _LIBCPP_EXPORTED_FROM_ABI size_t wcsnrtombs(
 
   return dest_converted;
 }
+
+size_t __libcpp_wcsnrtombs_l(char* dest, const wchar_t** src, size_t nwc, size_t len, mbstate_t* ps, locale_t l) {
+  __locale::__locale_guard __current(l);
+  return wcsnrtombs(dest, src, nwc, len, ps);
+}
+
+} // namespace __ibm
+} // namespace __locale
+_LIBCPP_END_NAMESPACE_STD

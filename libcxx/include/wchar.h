@@ -193,14 +193,14 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD wchar_t* wmemchr(wchar_t
 }
 #      endif
 
-#      if defined(__cplusplus) && (defined(_LIBCPP_MSVCRT_LIKE) || defined(__MVS__))
+#      if defined(__cplusplus) && defined(_LIBCPP_MSVCRT_LIKE)
 extern "C" {
 size_t mbsnrtowcs(
     wchar_t* __restrict __dst, const char** __restrict __src, size_t __nmc, size_t __len, mbstate_t* __restrict __ps);
 size_t wcsnrtombs(
     char* __restrict __dst, const wchar_t** __restrict __src, size_t __nwc, size_t __len, mbstate_t* __restrict __ps);
 } // extern "C"
-#      endif // __cplusplus && (_LIBCPP_MSVCRT || __MVS__)
+#      endif // __cplusplus && _LIBCPP_MSVCRT
 #    endif   // _LIBCPP_HAS_WIDE_CHARACTERS
 #  endif     // _LIBCPP_WCHAR_H
 

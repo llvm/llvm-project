@@ -26,3 +26,79 @@
 #ifdef erase
 #  undef erase
 #endif
+
+#ifdef __islower
+#  undef __islower
+#endif
+
+#ifdef __isupper
+#  undef __isupper
+#endif
+
+#ifdef __isdigit
+#  undef __isdigit
+#endif
+
+#ifdef __isxdigit
+#  undef __isxdigit
+#endif
+
+#ifdef __toupper
+#  undef __toupper
+#endif
+
+#ifdef __tolower
+#  undef __tolower
+#endif
+
+#ifdef __iswctype
+#  undef __iswctype
+#endif
+
+#ifdef __iswspace
+#  undef __iswspace
+#endif
+
+#ifdef __iswprint
+#  undef __iswprint
+#endif
+
+#ifdef __iswcntrl
+#  undef __iswcntrl
+#endif
+
+#ifdef __iswupper
+#  undef __iswupper
+#endif
+
+#ifdef __iswlower
+#  undef __iswlower
+#endif
+
+#ifdef __iswalpha
+#  undef __iswalpha
+#endif
+
+#ifdef __iswblank
+#  undef __iswblank
+#endif
+
+#ifdef __iswdigit
+#  undef __iswdigit
+#endif
+
+#ifdef __iswpunct
+#  undef __iswpunct
+#endif
+
+#ifdef __iswxdigit
+#  undef __iswxdigit
+#endif
+
+#ifdef __towupper
+#  undef __towupper
+#endif
+
+#ifdef __towlower
+#  undef __towlower
+#endif

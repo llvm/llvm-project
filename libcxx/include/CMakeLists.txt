@@ -537,6 +537,7 @@ set(files
   __locale_dir/support/no_locale/characters.h
   __locale_dir/support/no_locale/strtonum.h
   __locale_dir/support/windows.h
+  __locale_dir/support/zos.h
   __locale_dir/time.h
   __locale_dir/wbuffer_convert.h
   __locale_dir/wstring_convert.h
@@ -761,6 +762,7 @@ set(files
   __support/ibm/gettod_zos.h
   __support/ibm/locale_mgmt_zos.h
   __support/ibm/nanosleep.h
+  __support/ibm/vasprintf.h
   __support/xlocale/__nop_locale_mgmt.h
   __support/xlocale/__posix_l_fallback.h
   __support/xlocale/__strtonum_fallback.h
