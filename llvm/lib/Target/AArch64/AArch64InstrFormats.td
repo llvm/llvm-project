@@ -1400,6 +1400,8 @@ def gi_arith_extended_reg32to64_i64 :
 
 def arith_uxtx : ComplexPattern<i64, 2, "SelectArithUXTXRegister", []>;
 
+def add_uxtx : ComplexPattern<i64, 2, "SelectAddUXTXRegister", []>;
+
 // Floating-point immediate.
 
 def fpimm16XForm : SDNodeXForm<fpimm, [{

@@ -140,10 +140,9 @@ gpu.func @dpas(%laneid: index) {
     %2 = "some_op"() : () -> vector<8x16xf32>
     %3 = xegpu.dpas %0, %1, %2
       {
-        layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
-        layout_operand_1 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>,
-        layout_operand_2 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
-        layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+        layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+        layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>,
+        layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
       }
       : vector<8x16xf16>, vector<16x16xf16>, vector<8x16xf32> -> vector<8x16xf32>
     gpu.yield %3 : vector<8x16xf32>
