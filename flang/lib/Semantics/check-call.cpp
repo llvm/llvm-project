@@ -1145,6 +1145,37 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           dummyName, toStr(dummyDataAttr), toStr(actualDataAttr));
     }
   }
+  // Emit an error message if an actual argument passed to a host intrinsic is
+  // on the device.
+  if (intrinsic && !FindCUDADeviceContext(scope) &&
+      !FindOpenACCConstructContaining(scope) &&
+      !FindCUFKernelDoConstructContaining(scope)) {
+    if (intrinsic->name != "__builtin_c_f_pointer" &&
+        intrinsic->name != "__builtin_c_loc") {
+      std::optional<common::CUDADataAttr> actualDataAttr;
+      if (const auto *actualObject{actualLastSymbol
+                  ? actualLastSymbol->detailsIf<ObjectEntityDetails>()
+                  : nullptr}) {
+        actualDataAttr = actualObject->cudaDataAttr();
+      }
+      if (actualDataAttr && *actualDataAttr == common::CUDADataAttr::Device) {
+        // Allocatable or pointer with device attribute have their descriptor in
+        // managed memory. It is allowed to pass them to some inquiry
+        // intrinsics.
+        if (!actualLastSymbol || !IsAllocatableOrPointer(*actualLastSymbol) ||
+            (IsAllocatableOrPointer(*actualLastSymbol) &&
+                intrinsic->name != "size" && intrinsic->name != "lbound" &&
+                intrinsic->name != "ubound" && intrinsic->name != "shape" &&
+                intrinsic->name != "allocated" &&
+                intrinsic->name != "associated" && intrinsic->name != "kind" &&
+                intrinsic->name != "present")) {
+          messages.Say(
+              "Actual argument %s associated with host intrinsic %s is on the device"_err_en_US,
+              actualLastSymbol->name(), intrinsic->name);
+        }
+      }
+    }
+  }
 
   // Warning for breaking F'2023 change with character allocatables
   if (intrinsic && dummy.intent != common::Intent::In) {
