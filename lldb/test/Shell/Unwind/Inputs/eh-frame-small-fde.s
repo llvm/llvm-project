@@ -1,3 +1,4 @@
+        .att_syntax
         .text
 
         .type   bar, @function

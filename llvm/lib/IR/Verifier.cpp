@@ -2676,6 +2676,9 @@ void Verifier::verifyFunctionMetadata(
 }
 
 void Verifier::visitConstantExprsRecursively(const Constant *EntryC) {
+  if (EntryC->getNumOperands() == 0)
+    return;
+
   if (!ConstantExprVisited.insert(EntryC).second)
     return;
 
@@ -3424,7 +3427,7 @@ void Verifier::visitSwitchInst(SwitchInst &SI) {
   Type *SwitchTy = SI.getCondition()->getType();
   SmallPtrSet<ConstantInt*, 32> Constants;
   for (auto &Case : SI.cases()) {
-    Check(isa<ConstantInt>(SI.getOperand(Case.getCaseIndex() * 2 + 2)),
+    Check(isa<ConstantInt>(Case.getCaseValue()),
           "Case value is not a constant integer.", &SI);
     Check(Case.getCaseValue()->getType() == SwitchTy,
           "Switch constants must all be same type as switch value!", &SI);
@@ -5610,14 +5613,8 @@ void Verifier::visitInstruction(Instruction &I) {
     } else if (isa<InlineAsm>(I.getOperand(i))) {
       Check(CBI && &CBI->getCalledOperandUse() == &I.getOperandUse(i),
             "Cannot take the address of an inline asm!", &I);
-    } else if (auto *CPA = dyn_cast<ConstantPtrAuth>(I.getOperand(i))) {
-      visitConstantExprsRecursively(CPA);
-    } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(I.getOperand(i))) {
-      if (CE->getType()->isPtrOrPtrVectorTy()) {
-        // If we have a ConstantExpr pointer, we need to see if it came from an
-        // illegal bitcast.
-        visitConstantExprsRecursively(CE);
-      }
+    } else if (auto *C = dyn_cast<Constant>(I.getOperand(i))) {
+      visitConstantExprsRecursively(C);
     }
   }
 

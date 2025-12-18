@@ -2,6 +2,7 @@ add_distinct_clang_unittest(ClangScalableAnalysisFrameworkTests
   ASTEntityMappingTest.cpp
   BuildNamespaceTest.cpp
   EntityNameTest.cpp
+  SummaryNameTest.cpp
 
   CLANG_LIBS
   clangAnalysisScalable
@@ -11,6 +12,12 @@ add_distinct_clang_unittest(ClangScalableAnalysisFrameworkTests
   clangFrontend
   clangSerialization
   clangTooling
+  LINK_LIBS
+  clangTesting
+  LLVMTestingSupport
+  LLVM_COMPONENTS
+  FrontendOpenMP
+  Support
   )
 
 add_custom_target(ClangScalableAnalysisTests

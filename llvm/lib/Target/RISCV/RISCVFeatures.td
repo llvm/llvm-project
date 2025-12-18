@@ -908,6 +908,7 @@ def HasVInstructionsF16Minimal : Predicate<"Subtarget->hasVInstructionsF16Minima
 
 def HasVInstructionsBF16Minimal : Predicate<"Subtarget->hasVInstructionsBF16Minimal()">;
 def HasVInstructionsF16 : Predicate<"Subtarget->hasVInstructionsF16()">;
+def HasVInstructionsBF16 : Predicate<"Subtarget->hasVInstructionsBF16()">;
 def HasVInstructionsF64 : Predicate<"Subtarget->hasVInstructionsF64()">;
 
 def HasVInstructionsFullMultiply : Predicate<"Subtarget->hasVInstructionsFullMultiply()">;
@@ -1639,6 +1640,18 @@ def HasVendorXqcisync
       AssemblerPredicate<(all_of FeatureVendorXqcisync),
                          "'Xqcisync' (Qualcomm uC Sync Delay Extension)">;
 
+def FeatureVendorXqci
+    : RISCVExperimentalExtension<0, 13, "Qualcomm uC Extension",
+                                 [FeatureVendorXqcia, FeatureVendorXqciac,
+                                 FeatureVendorXqcibi, FeatureVendorXqcibm,
+                                 FeatureVendorXqcicli, FeatureVendorXqcicm,
+                                 FeatureVendorXqcics, FeatureVendorXqcicsr,
+                                 FeatureVendorXqciint, FeatureVendorXqciio,
+                                 FeatureVendorXqcilb, FeatureVendorXqcili,
+                                 FeatureVendorXqcilia, FeatureVendorXqcilo,
+                                 FeatureVendorXqcilsm, FeatureVendorXqcisim,
+                                 FeatureVendorXqcisls, FeatureVendorXqcisync]>;
+
 // Rivos Extension(s)
 
 def FeatureVendorXRivosVisni
@@ -1878,6 +1891,7 @@ def TuneNoDefaultUnroll
 // - IALU: RVI Integer instructions, plus ANDN/ORN/XNOR (Zbb/Zbkb)
 // - IMinMax: Zbb MIN(U)/MAX(U)
 // - IMul: MUL
+// - ILoad: LB(U)/LH(U)/LW(U)/LD
 //
 // We make the simplifying assumption that any microarches that implement
 // any "short forward branches" can do the IALU fusions, and can opt into
@@ -1907,6 +1921,11 @@ def TuneShortForwardBranchIMul
                        [TuneShortForwardBranchIALU]>;
 def HasShortForwardBranchIMul : Predicate<"Subtarget->hasShortForwardBranchIMul()">;
 
+def TuneShortForwardBranchILoad
+    : SubtargetFeature<"short-forward-branch-iload", "HasShortForwardBranchILoad",
+                       "true", "Enable short forward branch optimization for load instructions",
+                       [TuneShortForwardBranchIALU]>;
+def HasShortForwardBranchILoad : Predicate<"Subtarget->hasShortForwardBranchILoad()">;
 
 // Some subtargets require a S2V transfer buffer to move scalars into vectors.
 // FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.
