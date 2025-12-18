@@ -39,7 +39,7 @@ define i64 @pack_i64_imm() {
   ret i64 u0x0403020104030201
 }
 
-; FIXME: Prefer li over pli
+; Make sure we prefer li over pli
 define i64 @li_imm() {
 ; CHECK-LABEL: li_imm:
 ; CHECK:       # %bb.0:
