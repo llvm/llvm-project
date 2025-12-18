@@ -36,8 +36,6 @@ define ptr @f2(ptr %x0, ptr %x1) {
   ret ptr %x0
 }
 
-declare void @llvm.hwasan.check.memaccess.shortgranules(ptr, ptr, i32)
-
 ; CHECK: .section        .text.hot,"axG",@progbits,__hwasan_check_x10_2_short,comdat
 ; CHECK-NEXT: .type   __hwasan_check_x10_2_short,@function
 ; CHECK-NEXT: .weak   __hwasan_check_x10_2_short

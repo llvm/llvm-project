@@ -104,9 +104,13 @@ class SPIRVLegalizePointerCast : public FunctionPass {
   Value *loadFirstValueFromAggregate(IRBuilder<> &B, Type *ElementType,
                                      Value *Source, LoadInst *BadLoad) {
     SmallVector<Type *, 2> Types = {BadLoad->getPointerOperandType(),
-                                    BadLoad->getPointerOperandType()};
-    SmallVector<Value *, 3> Args{/* isInBounds= */ B.getInt1(false), Source,
-                                 B.getInt32(0), B.getInt32(0)};
+                                    Source->getType()};
+    SmallVector<Value *, 8> Args{/* isInBounds= */ B.getInt1(false), Source};
+
+    Type *AggregateType = GR->findDeducedElementType(Source);
+    assert(AggregateType && "Could not deduce aggregate type");
+    buildGEPIndexChain(B, ElementType, AggregateType, Args);
+
     auto *GEP = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
     GR->buildAssignPtr(B, ElementType, GEP);
 
@@ -164,6 +168,9 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     assert(VecTy->getElementType() == ArrTy->getElementType() &&
            "Element types of array and vector must be the same.");
 
+    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+    uint64_t ElemSize = DL.getTypeAllocSize(ArrTy->getElementType());
+
     for (unsigned i = 0; i < VecTy->getNumElements(); ++i) {
       // Create a GEP to access the i-th element of the array.
       SmallVector<Type *, 2> Types = {DstArrayPtr->getType(),
@@ -186,7 +193,8 @@ class SPIRVLegalizePointerCast : public FunctionPass {
       buildAssignType(B, VecTy->getElementType(), Element);
 
       Types = {Element->getType(), ElementPtr->getType()};
-      Args = {Element, ElementPtr, B.getInt16(2), B.getInt8(Alignment.value())};
+      Align NewAlign = commonAlignment(Alignment, i * ElemSize);
+      Args = {Element, ElementPtr, B.getInt16(2), B.getInt8(NewAlign.value())};
       B.CreateIntrinsic(Intrinsic::spv_store, {Types}, {Args});
     }
   }
@@ -201,34 +209,20 @@ class SPIRVLegalizePointerCast : public FunctionPass {
 
     auto *SAT = dyn_cast<ArrayType>(FromTy);
     auto *SVT = dyn_cast<FixedVectorType>(FromTy);
-    auto *SST = dyn_cast<StructType>(FromTy);
     auto *DVT = dyn_cast<FixedVectorType>(ToTy);
 
     B.SetInsertPoint(LI);
 
-    // Destination is the element type of Source, and source is an array ->
-    // Loading 1st element.
+    // Destination is the element type of some member of FromTy. For example,
+    // loading the 1st element of an array:
     // - float a = array[0];
-    if (SAT && SAT->getElementType() == ToTy)
-      Output = loadFirstValueFromAggregate(B, SAT->getElementType(),
-                                           OriginalOperand, LI);
-    // Destination is the element type of Source, and source is a vector ->
-    // Vector to scalar.
-    // - float a = vector.x;
-    else if (!DVT && SVT && SVT->getElementType() == ToTy) {
-      Output = loadFirstValueFromAggregate(B, SVT->getElementType(),
-                                           OriginalOperand, LI);
-    }
+    if (isTypeFirstElementAggregate(ToTy, FromTy))
+      Output = loadFirstValueFromAggregate(B, ToTy, OriginalOperand, LI);
     // Destination is a smaller vector than source or different vector type.
     // - float3 v3 = vector4;
     // - float4 v2 = int4;
     else if (SVT && DVT)
       Output = loadVectorFromVector(B, SVT, DVT, OriginalOperand);
-    // Destination is the scalar type stored at the start of an aggregate.
-    // - struct S { float m };
-    // - float v = s.m;
-    else if (SST && SST->getTypeAtIndex(0u) == ToTy)
-      Output = loadFirstValueFromAggregate(B, ToTy, OriginalOperand, LI);
     else if (SAT && DVT && SAT->getElementType() == DVT->getElementType())
       Output = loadVectorFromArray(B, DVT, OriginalOperand);
     else
@@ -334,7 +328,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
   Value *storeToFirstValueAggregate(IRBuilder<> &B, Value *Src, Value *Dst,
                                     Type *DstPointeeType, Align Alignment) {
     SmallVector<Type *, 2> Types = {Dst->getType(), Dst->getType()};
-    SmallVector<Value *, 3> Args{/* isInBounds= */ B.getInt1(true), Dst};
+    SmallVector<Value *, 8> Args{/* isInBounds= */ B.getInt1(true), Dst};
     buildGEPIndexChain(B, Src->getType(), DstPointeeType, Args);
     auto *GEP = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
     GR->buildAssignPtr(B, Src->getType(), GEP);

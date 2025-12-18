@@ -40,24 +40,21 @@ unsigned CodeGenInstAlias::ResultOperand::getMINumOperands() const {
 
 using ResultOperand = CodeGenInstAlias::ResultOperand;
 
-static Expected<ResultOperand> matchSimpleOperand(const Init *Arg,
-                                                  const StringInit *ArgName,
-                                                  const Record *Op,
-                                                  const CodeGenTarget &T) {
-  if (Op->isSubClassOf("RegisterClass") ||
-      Op->isSubClassOf("RegisterOperand")) {
-    const Record *OpRC =
-        Op->isSubClassOf("RegisterClass") ? Op : Op->getValueAsDef("RegClass");
-
+static Expected<ResultOperand>
+matchSimpleOperand(const Init *Arg, const StringInit *ArgName, const Record *Op,
+                   const CodeGenTarget &T, ArrayRef<SMLoc> Loc) {
+  if (const Record *OpRC = T.getAsRegClassLike(Op)) {
     if (const auto *ArgDef = dyn_cast<DefInit>(Arg)) {
       const Record *ArgRec = ArgDef->getDef();
 
       // Match 'RegClass:$name' or 'RegOp:$name'.
       if (const Record *ArgRC = T.getInitValueAsRegClassLike(Arg)) {
         if (ArgRC->isSubClassOf("RegisterClass")) {
-          if (!T.getRegisterClass(OpRC).hasSubClass(&T.getRegisterClass(ArgRC)))
+          if (!OpRC->isSubClassOf("RegisterClass") ||
+              !T.getRegisterClass(OpRC, Loc).hasSubClass(
+                  &T.getRegisterClass(ArgRC, Loc)))
             return createStringError(
-                "argument register class" + ArgRC->getName() +
+                "argument register class " + ArgRC->getName() +
                 " is not a subclass of operand register class " +
                 OpRC->getName());
           if (!ArgName)
@@ -73,7 +70,8 @@ static Expected<ResultOperand> matchSimpleOperand(const Init *Arg,
 
       // Match 'Reg'.
       if (ArgRec->isSubClassOf("Register")) {
-        if (!T.getRegisterClass(OpRC).contains(T.getRegBank().getReg(ArgRec)))
+        if (!T.getRegisterClass(OpRC, Loc).contains(
+                T.getRegBank().getReg(ArgRec)))
           return createStringError(
               "register argument " + ArgRec->getName() +
               " is not a member of operand register class " + OpRC->getName());
@@ -111,11 +109,9 @@ static Expected<ResultOperand> matchSimpleOperand(const Init *Arg,
       return ResultOperand::createRecord(ArgName->getAsUnquotedString(),
                                          ArgDef->getDef());
     }
-
-    return createStringError("argument must be a subclass of Operand");
   }
-
-  llvm_unreachable("Unknown operand kind");
+  return createStringError("argument must be a subclass of 'Operand' but got " +
+                           Op->getName() + " instead");
 }
 
 static Expected<ResultOperand> matchComplexOperand(const Init *Arg,
@@ -204,7 +200,8 @@ CodeGenInstAlias::CodeGenInstAlias(const Record *R, const CodeGenTarget &T)
           const Record *SubOp =
               cast<DefInit>(OpInfo.MIOperandInfo->getArg(SubOpIdx))->getDef();
           Expected<ResultOperand> ResOpOrErr = matchSimpleOperand(
-              ArgDag->getArg(SubOpIdx), ArgDag->getArgName(SubOpIdx), SubOp, T);
+              ArgDag->getArg(SubOpIdx), ArgDag->getArgName(SubOpIdx), SubOp, T,
+              R->getLoc());
           if (!ResOpOrErr)
             PrintFatalError(R, "in argument #" + Twine(ArgIdx) + "." +
                                    Twine(SubOpIdx) + ": " +
@@ -225,8 +222,9 @@ CodeGenInstAlias::CodeGenInstAlias(const Record *R, const CodeGenTarget &T)
     } else {
       // Simple operand (RegisterClass, RegisterOperand or Operand with empty
       // MIOperandInfo).
-      Expected<ResultOperand> ResOpOrErr = matchSimpleOperand(
-          Result->getArg(ArgIdx), Result->getArgName(ArgIdx), Op, T);
+      Expected<ResultOperand> ResOpOrErr =
+          matchSimpleOperand(Result->getArg(ArgIdx), Result->getArgName(ArgIdx),
+                             Op, T, R->getLoc());
       if (!ResOpOrErr)
         PrintFatalError(R, "in argument #" + Twine(ArgIdx) + ": " +
                                toString(ResOpOrErr.takeError()));

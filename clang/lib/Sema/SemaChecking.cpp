@@ -37,6 +37,7 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/AddressSpaces.h"
@@ -2130,6 +2131,11 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   }
 }
 
+static bool isValidMathElementType(QualType T) {
+  return T->isDependentType() ||
+         (T->isRealType() && !T->isBooleanType() && !T->isEnumeralType());
+}
+
 // Check if \p Ty is a valid type for the elementwise math builtins. If it is
 // not a valid type, emit an error message and return true. Otherwise return
 // false.
@@ -2143,8 +2149,7 @@ checkMathBuiltinElementType(Sema &S, SourceLocation Loc, QualType ArgTy,
 
   switch (ArgTyRestr) {
   case Sema::EltwiseBuiltinArgTyRestriction::None:
-    if (!ArgTy->getAs<VectorType>() &&
-        !ConstantMatrixType::isValidElementType(ArgTy)) {
+    if (!ArgTy->getAs<VectorType>() && !isValidMathElementType(ArgTy)) {
       return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
              << ArgOrdinal << /* vector */ 2 << /* integer */ 1 << /* fp */ 1
              << ArgTy;
@@ -4482,6 +4487,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__scoped_atomic_or_fetch:
   case AtomicExpr::AO__scoped_atomic_xor_fetch:
   case AtomicExpr::AO__scoped_atomic_nand_fetch:
+  case AtomicExpr::AO__scoped_atomic_uinc_wrap:
+  case AtomicExpr::AO__scoped_atomic_udec_wrap:
     Form = Arithmetic;
     break;
 
@@ -6359,13 +6366,13 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
     return true;
 
   // For simplicity, we support only limited expressions for the argument.
-  // Specifically a pointer to a flexible array member:'ptr->array'. This
-  // allows us to reject arguments with complex casting, which really shouldn't
-  // be a huge problem.
+  // Specifically a flexible array member or a pointer with counted_by:
+  // 'ptr->array' or 'ptr->pointer'. This allows us to reject arguments with
+  // complex casting, which really shouldn't be a huge problem.
   const Expr *Arg = ArgRes.get()->IgnoreParenImpCasts();
-  if (!isa<PointerType>(Arg->getType()) && !Arg->getType()->isArrayType())
+  if (!Arg->getType()->isPointerType() && !Arg->getType()->isArrayType())
     return Diag(Arg->getBeginLoc(),
-                diag::err_builtin_counted_by_ref_must_be_flex_array_member)
+                diag::err_builtin_counted_by_ref_invalid_arg)
            << Arg->getSourceRange();
 
   if (Arg->HasSideEffects(Context))
@@ -6374,24 +6381,27 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
            << Arg->getSourceRange();
 
   if (const auto *ME = dyn_cast<MemberExpr>(Arg)) {
-    if (!ME->isFlexibleArrayMemberLike(
-            Context, getLangOpts().getStrictFlexArraysLevel()))
-      return Diag(Arg->getBeginLoc(),
-                  diag::err_builtin_counted_by_ref_must_be_flex_array_member)
-             << Arg->getSourceRange();
+    const auto *CATy =
+        ME->getMemberDecl()->getType()->getAs<CountAttributedType>();
 
-    if (auto *CATy =
-            ME->getMemberDecl()->getType()->getAs<CountAttributedType>();
-        CATy && CATy->getKind() == CountAttributedType::CountedBy) {
-      const auto *FAMDecl = cast<FieldDecl>(ME->getMemberDecl());
-      if (const FieldDecl *CountFD = FAMDecl->findCountedByField()) {
+    if (CATy && CATy->getKind() == CountAttributedType::CountedBy) {
+      // Member has counted_by attribute - return pointer to count field
+      const auto *MemberDecl = cast<FieldDecl>(ME->getMemberDecl());
+      if (const FieldDecl *CountFD = MemberDecl->findCountedByField()) {
         TheCall->setType(Context.getPointerType(CountFD->getType()));
         return false;
       }
     }
+
+    // FAMs and pointers without counted_by return void*
+    QualType MemberTy = ME->getMemberDecl()->getType();
+    if (!MemberTy->isArrayType() && !MemberTy->isPointerType())
+      return Diag(Arg->getBeginLoc(),
+                  diag::err_builtin_counted_by_ref_invalid_arg)
+             << Arg->getSourceRange();
   } else {
     return Diag(Arg->getBeginLoc(),
-                diag::err_builtin_counted_by_ref_must_be_flex_array_member)
+                diag::err_builtin_counted_by_ref_invalid_arg)
            << Arg->getSourceRange();
   }
 
@@ -6603,13 +6613,16 @@ static const Expr *maybeConstEvalStringLiteral(ASTContext &Context,
 // If this function returns false on the arguments to a function expecting a
 // format string, we will usually need to emit a warning.
 // True string literals are then checked by CheckFormatString.
-static StringLiteralCheckType checkFormatStringExpr(
-    Sema &S, const StringLiteral *ReferenceFormatString, const Expr *E,
-    ArrayRef<const Expr *> Args, Sema::FormatArgumentPassingKind APK,
-    unsigned format_idx, unsigned firstDataArg, FormatStringType Type,
-    VariadicCallType CallType, bool InFunctionCall,
-    llvm::SmallBitVector &CheckedVarArgs, UncoveredArgHandler &UncoveredArg,
-    llvm::APSInt Offset, bool IgnoreStringsWithoutSpecifiers = false) {
+static StringLiteralCheckType
+checkFormatStringExpr(Sema &S, const StringLiteral *ReferenceFormatString,
+                      const Expr *E, ArrayRef<const Expr *> Args,
+                      Sema::FormatArgumentPassingKind APK, unsigned format_idx,
+                      unsigned firstDataArg, FormatStringType Type,
+                      VariadicCallType CallType, bool InFunctionCall,
+                      llvm::SmallBitVector &CheckedVarArgs,
+                      UncoveredArgHandler &UncoveredArg, llvm::APSInt Offset,
+                      std::optional<unsigned> *CallerFormatParamIdx = nullptr,
+                      bool IgnoreStringsWithoutSpecifiers = false) {
   if (S.isConstantEvaluatedContext())
     return SLCT_NotALiteral;
 tryAgain:
@@ -6631,10 +6644,11 @@ tryAgain:
   case Stmt::InitListExprClass:
     // Handle expressions like {"foobar"}.
     if (const clang::Expr *SLE = maybeConstEvalStringLiteral(S.Context, E)) {
-      return checkFormatStringExpr(
-          S, ReferenceFormatString, SLE, Args, APK, format_idx, firstDataArg,
-          Type, CallType, /*InFunctionCall*/ false, CheckedVarArgs,
-          UncoveredArg, Offset, IgnoreStringsWithoutSpecifiers);
+      return checkFormatStringExpr(S, ReferenceFormatString, SLE, Args, APK,
+                                   format_idx, firstDataArg, Type, CallType,
+                                   /*InFunctionCall*/ false, CheckedVarArgs,
+                                   UncoveredArg, Offset, CallerFormatParamIdx,
+                                   IgnoreStringsWithoutSpecifiers);
     }
     return SLCT_NotALiteral;
   case Stmt::BinaryConditionalOperatorClass:
@@ -6666,10 +6680,11 @@ tryAgain:
     if (!CheckLeft)
       Left = SLCT_UncheckedLiteral;
     else {
-      Left = checkFormatStringExpr(
-          S, ReferenceFormatString, C->getTrueExpr(), Args, APK, format_idx,
-          firstDataArg, Type, CallType, InFunctionCall, CheckedVarArgs,
-          UncoveredArg, Offset, IgnoreStringsWithoutSpecifiers);
+      Left = checkFormatStringExpr(S, ReferenceFormatString, C->getTrueExpr(),
+                                   Args, APK, format_idx, firstDataArg, Type,
+                                   CallType, InFunctionCall, CheckedVarArgs,
+                                   UncoveredArg, Offset, CallerFormatParamIdx,
+                                   IgnoreStringsWithoutSpecifiers);
       if (Left == SLCT_NotALiteral || !CheckRight) {
         return Left;
       }
@@ -6678,7 +6693,8 @@ tryAgain:
     StringLiteralCheckType Right = checkFormatStringExpr(
         S, ReferenceFormatString, C->getFalseExpr(), Args, APK, format_idx,
         firstDataArg, Type, CallType, InFunctionCall, CheckedVarArgs,
-        UncoveredArg, Offset, IgnoreStringsWithoutSpecifiers);
+        UncoveredArg, Offset, CallerFormatParamIdx,
+        IgnoreStringsWithoutSpecifiers);
 
     return (CheckLeft && Left < Right) ? Left : Right;
   }
@@ -6729,8 +6745,8 @@ tryAgain:
           }
           return checkFormatStringExpr(
               S, ReferenceFormatString, Init, Args, APK, format_idx,
-              firstDataArg, Type, CallType,
-              /*InFunctionCall*/ false, CheckedVarArgs, UncoveredArg, Offset);
+              firstDataArg, Type, CallType, /*InFunctionCall=*/false,
+              CheckedVarArgs, UncoveredArg, Offset, CallerFormatParamIdx);
         }
       }
 
@@ -6782,6 +6798,8 @@ tryAgain:
       // format arguments, in all cases.
       //
       if (const auto *PV = dyn_cast<ParmVarDecl>(VD)) {
+        if (CallerFormatParamIdx)
+          *CallerFormatParamIdx = PV->getFunctionScopeIndex();
         if (const auto *D = dyn_cast<Decl>(PV->getDeclContext())) {
           for (const auto *PVFormatMatches :
                D->specific_attrs<FormatMatchesAttr>()) {
@@ -6807,7 +6825,7 @@ tryAgain:
                   S, ReferenceFormatString, PVFormatMatches->getFormatString(),
                   Args, APK, format_idx, firstDataArg, Type, CallType,
                   /*InFunctionCall*/ false, CheckedVarArgs, UncoveredArg,
-                  Offset, IgnoreStringsWithoutSpecifiers);
+                  Offset, CallerFormatParamIdx, IgnoreStringsWithoutSpecifiers);
             }
           }
 
@@ -6862,7 +6880,7 @@ tryAgain:
         StringLiteralCheckType Result = checkFormatStringExpr(
             S, ReferenceFormatString, Arg, Args, APK, format_idx, firstDataArg,
             Type, CallType, InFunctionCall, CheckedVarArgs, UncoveredArg,
-            Offset, IgnoreStringsWithoutSpecifiers);
+            Offset, CallerFormatParamIdx, IgnoreStringsWithoutSpecifiers);
         if (IsFirst) {
           CommonResult = Result;
           IsFirst = false;
@@ -6879,15 +6897,17 @@ tryAgain:
           return checkFormatStringExpr(
               S, ReferenceFormatString, Arg, Args, APK, format_idx,
               firstDataArg, Type, CallType, InFunctionCall, CheckedVarArgs,
-              UncoveredArg, Offset, IgnoreStringsWithoutSpecifiers);
+              UncoveredArg, Offset, CallerFormatParamIdx,
+              IgnoreStringsWithoutSpecifiers);
         }
       }
     }
     if (const Expr *SLE = maybeConstEvalStringLiteral(S.Context, E))
-      return checkFormatStringExpr(
-          S, ReferenceFormatString, SLE, Args, APK, format_idx, firstDataArg,
-          Type, CallType, /*InFunctionCall*/ false, CheckedVarArgs,
-          UncoveredArg, Offset, IgnoreStringsWithoutSpecifiers);
+      return checkFormatStringExpr(S, ReferenceFormatString, SLE, Args, APK,
+                                   format_idx, firstDataArg, Type, CallType,
+                                   /*InFunctionCall*/ false, CheckedVarArgs,
+                                   UncoveredArg, Offset, CallerFormatParamIdx,
+                                   IgnoreStringsWithoutSpecifiers);
     return SLCT_NotALiteral;
   }
   case Stmt::ObjCMessageExprClass: {
@@ -6913,7 +6933,7 @@ tryAgain:
         return checkFormatStringExpr(
             S, ReferenceFormatString, Arg, Args, APK, format_idx, firstDataArg,
             Type, CallType, InFunctionCall, CheckedVarArgs, UncoveredArg,
-            Offset, IgnoreStringsWithoutSpecifiers);
+            Offset, CallerFormatParamIdx, IgnoreStringsWithoutSpecifiers);
       }
     }
 
@@ -7093,9 +7113,142 @@ bool Sema::CheckFormatString(const FormatMatchesAttr *Format,
   return false;
 }
 
+static bool CheckMissingFormatAttribute(
+    Sema *S, ArrayRef<const Expr *> Args, Sema::FormatArgumentPassingKind APK,
+    StringLiteral *ReferenceFormatString, unsigned FormatIdx,
+    unsigned FirstDataArg, FormatStringType FormatType, unsigned CallerParamIdx,
+    SourceLocation Loc) {
+  if (S->getDiagnostics().isIgnored(diag::warn_missing_format_attribute, Loc))
+    return false;
+
+  DeclContext *DC = S->CurContext;
+  if (!isa<ObjCMethodDecl>(DC) && !isa<FunctionDecl>(DC) && !isa<BlockDecl>(DC))
+    return false;
+  Decl *Caller = cast<Decl>(DC)->getCanonicalDecl();
+
+  unsigned NumCallerParams = getFunctionOrMethodNumParams(Caller);
+
+  // Find the offset to convert between attribute and parameter indexes.
+  unsigned CallerArgumentIndexOffset =
+      hasImplicitObjectParameter(Caller) ? 2 : 1;
+
+  unsigned FirstArgumentIndex = -1;
+  switch (APK) {
+  case Sema::FormatArgumentPassingKind::FAPK_Fixed:
+  case Sema::FormatArgumentPassingKind::FAPK_Variadic: {
+    // As an extension, clang allows the format attribute on non-variadic
+    // functions.
+    // Caller must have fixed arguments to pass them to a fixed or variadic
+    // function. Try to match caller and callee arguments. If successful, then
+    // emit a diag with the caller idx, otherwise we can't determine the callee
+    // arguments.
+    unsigned NumCalleeArgs = Args.size() - FirstDataArg;
+    if (NumCalleeArgs == 0 || NumCallerParams < NumCalleeArgs) {
+      // There aren't enough arguments in the caller to pass to callee.
+      return false;
+    }
+    for (unsigned CalleeIdx = Args.size() - 1, CallerIdx = NumCallerParams - 1;
+         CalleeIdx >= FirstDataArg; --CalleeIdx, --CallerIdx) {
+      const auto *Arg =
+          dyn_cast<DeclRefExpr>(Args[CalleeIdx]->IgnoreParenCasts());
+      if (!Arg)
+        return false;
+      const auto *Param = dyn_cast<ParmVarDecl>(Arg->getDecl());
+      if (!Param || Param->getFunctionScopeIndex() != CallerIdx)
+        return false;
+    }
+    FirstArgumentIndex =
+        NumCallerParams + CallerArgumentIndexOffset - NumCalleeArgs;
+    break;
+  }
+  case Sema::FormatArgumentPassingKind::FAPK_VAList:
+    // Caller arguments are either variadic or a va_list.
+    FirstArgumentIndex = isFunctionOrMethodVariadic(Caller)
+                             ? (NumCallerParams + CallerArgumentIndexOffset)
+                             : 0;
+    break;
+  case Sema::FormatArgumentPassingKind::FAPK_Elsewhere:
+    // The callee has a format_matches attribute. We will emit that instead.
+    if (!ReferenceFormatString)
+      return false;
+    break;
+  }
+
+  // Emit the diagnostic and fixit.
+  unsigned FormatStringIndex = CallerParamIdx + CallerArgumentIndexOffset;
+  StringRef FormatTypeName = S->GetFormatStringTypeName(FormatType);
+  NamedDecl *ND = dyn_cast<NamedDecl>(Caller);
+  do {
+    std::string Attr, Fixit;
+    llvm::raw_string_ostream AttrOS(Attr);
+    if (APK != Sema::FormatArgumentPassingKind::FAPK_Elsewhere) {
+      AttrOS << "format(" << FormatTypeName << ", " << FormatStringIndex << ", "
+             << FirstArgumentIndex << ")";
+    } else {
+      AttrOS << "format_matches(" << FormatTypeName << ", " << FormatStringIndex
+             << ", \"";
+      AttrOS.write_escaped(ReferenceFormatString->getString());
+      AttrOS << "\")";
+    }
+    AttrOS.flush();
+    auto DB = S->Diag(Loc, diag::warn_missing_format_attribute) << Attr;
+    if (ND)
+      DB << ND;
+    else
+      DB << "block";
+
+    // Blocks don't provide a correct end loc, so skip emitting a fixit.
+    if (isa<BlockDecl>(Caller))
+      break;
+
+    SourceLocation SL;
+    llvm::raw_string_ostream IS(Fixit);
+    // The attribute goes at the start of the declaration in C/C++ functions
+    // and methods, but after the declaration for Objective-C methods.
+    if (isa<ObjCMethodDecl>(Caller)) {
+      IS << ' ';
+      SL = Caller->getEndLoc();
+    }
+    const LangOptions &LO = S->getLangOpts();
+    if (LO.C23 || LO.CPlusPlus11)
+      IS << "[[gnu::" << Attr << "]]";
+    else if (LO.ObjC || LO.GNUMode)
+      IS << "__attribute__((" << Attr << "))";
+    else
+      break;
+    if (!isa<ObjCMethodDecl>(Caller)) {
+      IS << ' ';
+      SL = Caller->getBeginLoc();
+    }
+    IS.flush();
+
+    DB << FixItHint::CreateInsertion(SL, Fixit);
+  } while (false);
+
+  // Add implicit format or format_matches attribute.
+  if (APK != Sema::FormatArgumentPassingKind::FAPK_Elsewhere) {
+    Caller->addAttr(FormatAttr::CreateImplicit(
+        S->getASTContext(), &S->getASTContext().Idents.get(FormatTypeName),
+        FormatStringIndex, FirstArgumentIndex));
+  } else {
+    Caller->addAttr(FormatMatchesAttr::CreateImplicit(
+        S->getASTContext(), &S->getASTContext().Idents.get(FormatTypeName),
+        FormatStringIndex, ReferenceFormatString));
+  }
+
+  {
+    auto DB = S->Diag(Caller->getLocation(), diag::note_entity_declared_at);
+    if (ND)
+      DB << ND;
+    else
+      DB << "block";
+  }
+  return true;
+}
+
 bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
                                 Sema::FormatArgumentPassingKind APK,
-                                const StringLiteral *ReferenceFormatString,
+                                StringLiteral *ReferenceFormatString,
                                 unsigned format_idx, unsigned firstDataArg,
                                 FormatStringType Type,
                                 VariadicCallType CallType, SourceLocation Loc,
@@ -7122,11 +7275,12 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
   // ObjC string uses the same format specifiers as C string, so we can use
   // the same format string checking logic for both ObjC and C strings.
   UncoveredArgHandler UncoveredArg;
+  std::optional<unsigned> CallerParamIdx;
   StringLiteralCheckType CT = checkFormatStringExpr(
       *this, ReferenceFormatString, OrigFormatExpr, Args, APK, format_idx,
       firstDataArg, Type, CallType,
       /*IsFunctionCall*/ true, CheckedVarArgs, UncoveredArg,
-      /*no string offset*/ llvm::APSInt(64, false) = 0);
+      /*no string offset*/ llvm::APSInt(64, false) = 0, &CallerParamIdx);
 
   // Generate a diagnostic where an uncovered argument is detected.
   if (UncoveredArg.hasUncoveredArg()) {
@@ -7139,11 +7293,6 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
     // Literal format string found, check done!
     return CT == SLCT_CheckedLiteral;
 
-  // Strftime is particular as it always uses a single 'time' argument,
-  // so it is safe to pass a non-literal string.
-  if (Type == FormatStringType::Strftime)
-    return false;
-
   // Do not emit diag when the string param is a macro expansion and the
   // format is either NSString or CFString. This is a hack to prevent
   // diag when using the NSLocalizedString and CFCopyLocalizedString macros
@@ -7151,6 +7300,16 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
   SourceLocation FormatLoc = Args[format_idx]->getBeginLoc();
   if (Type == FormatStringType::NSString &&
       SourceMgr.isInSystemMacro(FormatLoc))
+    return false;
+
+  if (CallerParamIdx && CheckMissingFormatAttribute(
+                            this, Args, APK, ReferenceFormatString, format_idx,
+                            firstDataArg, Type, *CallerParamIdx, Loc))
+    return false;
+
+  // Strftime is particular as it always uses a single 'time' argument,
+  // so it is safe to pass a non-literal string.
+  if (Type == FormatStringType::Strftime)
     return false;
 
   // If there are no arguments specified, warn with -Wformat-security, otherwise
@@ -12568,9 +12727,10 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
       if (SourceMgr.isInSystemMacro(CC))
         return;
       return DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_vector_scalar);
-    } else if (getLangOpts().HLSL &&
-               Target->castAs<VectorType>()->getNumElements() <
-                   Source->castAs<VectorType>()->getNumElements()) {
+    }
+    if (getLangOpts().HLSL &&
+        Target->castAs<VectorType>()->getNumElements() <
+            Source->castAs<VectorType>()->getNumElements()) {
       // Diagnose vector truncation but don't return. We may also want to
       // diagnose an element conversion.
       DiagnoseImpCast(*this, E, T, CC,
@@ -12586,9 +12746,22 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
     Source = cast<VectorType>(Source)->getElementType().getTypePtr();
     Target = cast<VectorType>(Target)->getElementType().getTypePtr();
   }
-  if (auto VecTy = dyn_cast<VectorType>(Target))
+  if (const auto *VecTy = dyn_cast<VectorType>(Target))
     Target = VecTy->getElementType().getTypePtr();
 
+  if (isa<ConstantMatrixType>(Source)) {
+    if (Target->isScalarType())
+      return DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_matrix_scalar);
+
+    if (getLangOpts().HLSL &&
+        Target->castAs<ConstantMatrixType>()->getNumElementsFlattened() <
+            Source->castAs<ConstantMatrixType>()->getNumElementsFlattened()) {
+      // Diagnose Matrix truncation but don't return. We may also want to
+      // diagnose an element conversion.
+      DiagnoseImpCast(*this, E, T, CC,
+                      diag::warn_hlsl_impcast_matrix_truncation);
+    }
+  }
   // Strip complex types.
   if (isa<ComplexType>(Source)) {
     if (!isa<ComplexType>(Target)) {
@@ -16342,6 +16515,13 @@ ExprResult Sema::BuiltinMatrixColumnMajorLoad(CallExpr *TheCall,
     return ExprError();
   }
 
+  if (getLangOpts().getDefaultMatrixMemoryLayout() !=
+      LangOptions::MatrixMemoryLayout::MatrixColMajor) {
+    Diag(TheCall->getBeginLoc(), diag::err_builtin_matrix_major_order_disabled)
+        << /*column*/ 1 << /*load*/ 0;
+    return ExprError();
+  }
+
   if (checkArgCount(TheCall, 4))
     return ExprError();
 
@@ -16376,7 +16556,7 @@ ExprResult Sema::BuiltinMatrixColumnMajorLoad(CallExpr *TheCall,
   } else {
     ElementTy = PtrTy->getPointeeType().getUnqualifiedType();
 
-    if (!ConstantMatrixType::isValidElementType(ElementTy)) {
+    if (!ConstantMatrixType::isValidElementType(ElementTy, getLangOpts())) {
       Diag(PtrExpr->getBeginLoc(), diag::err_builtin_invalid_arg_type)
           << PtrArgIdx + 1 << 0 << /* pointer to element ty */ 5
           << /* no fp */ 0 << PtrExpr->getType();
@@ -16454,6 +16634,18 @@ ExprResult Sema::BuiltinMatrixColumnMajorLoad(CallExpr *TheCall,
 
 ExprResult Sema::BuiltinMatrixColumnMajorStore(CallExpr *TheCall,
                                                ExprResult CallResult) {
+  if (!getLangOpts().MatrixTypes) {
+    Diag(TheCall->getBeginLoc(), diag::err_builtin_matrix_disabled);
+    return ExprError();
+  }
+
+  if (getLangOpts().getDefaultMatrixMemoryLayout() !=
+      LangOptions::MatrixMemoryLayout::MatrixColMajor) {
+    Diag(TheCall->getBeginLoc(), diag::err_builtin_matrix_major_order_disabled)
+        << /*column*/ 1 << /*store*/ 1;
+    return ExprError();
+  }
+
   if (checkArgCount(TheCall, 3))
     return ExprError();
 
