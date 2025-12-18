@@ -1154,15 +1154,21 @@ void LayoutInfoPropagation::visitLoadGatherOp(
       return;
     }
     auto uArch = getUArch(getChipStr(load).value_or(""));
+    const auto *uArchInstruction =
+        dyn_cast<xegpu::uArch::LoadGatherInstruction>(
+            uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
+    const int maxElemsPerInst =
+        uArchInstruction->getMaxBitSize() /
+        payloadTy.getElementType().getIntOrFloatBitWidth();
+
     const int subgroupSize = uArch->getSubgroupSize();
     SmallVector<int> instData{subgroupSize};
-    if (auto chunkSize = load.getChunkSize().value_or(0); chunkSize > 1)
-      instData.push_back(chunkSize);
-    else if (auto srcTdescTy =
-                 dyn_cast<xegpu::TensorDescType>(load.getSourceType())) {
-      if (srcTdescTy.getChunkSizeAsInt() > 1)
-        instData.push_back(chunkSize);
+    auto chunkSize = load.getChunkSize().value_or(0);
+    if (auto srcTdescTy = dyn_cast<xegpu::TensorDescType>(load.getSourceType());
+        !chunkSize && srcTdescTy) {
+      chunkSize = srcTdescTy.getChunkSizeAsInt();
     }
+    instData.push_back(std::min(static_cast<int>(chunkSize), maxElemsPerInst));
 
     if (layoutKind == LayoutKind::InstData)
       loadLayout =
@@ -1226,15 +1232,24 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     const int subgroupSize = uArch->getSubgroupSize();
 
     if (layoutKind == LayoutKind::InstData) {
+      const auto *uArchInstruction =
+          dyn_cast<xegpu::uArch::LoadGatherInstruction>(
+              uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
+      const int maxElemsPerInst =
+          uArchInstruction->getMaxBitSize() /
+          payloadTy.getElementType().getIntOrFloatBitWidth();
+
+      const int subgroupSize = uArch->getSubgroupSize();
       SmallVector<int> instData{subgroupSize};
-      if (auto chunkSize = storeScatter.getChunkSize().value_or(0);
-          chunkSize > 1)
-        instData.push_back(chunkSize);
-      else if (auto dstTdescTy = dyn_cast<xegpu::TensorDescType>(
-                   storeScatter.getDestType())) {
-        if (dstTdescTy.getChunkSizeAsInt() > 1)
-          instData.push_back(chunkSize);
+      auto chunkSize = storeScatter.getChunkSize().value_or(0);
+      if (auto srcTdescTy =
+              dyn_cast<xegpu::TensorDescType>(storeScatter.getDestType());
+          !chunkSize && srcTdescTy) {
+        chunkSize = srcTdescTy.getChunkSizeAsInt();
       }
+      instData.push_back(
+          std::min(static_cast<int>(chunkSize), maxElemsPerInst));
+
       payloadLayout = LayoutInfo(
           xegpu::LayoutAttr::get(storeScatter.getContext(), instData));
     } else {
