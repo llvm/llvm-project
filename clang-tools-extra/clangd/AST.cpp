@@ -1066,26 +1066,26 @@ public:
     unsigned int DepthLeft;
     SeenFunctions *Prev;
     const FunctionDecl *Current;
+
+    bool seenFunction(const FunctionDecl *FD) {
+      if (Current == FD)
+        return true;
+      if (Prev == nullptr)
+        return false;
+      return Prev->seenFunction(FD);
+    }
   };
 
   ForwardingToConstructorVisitor(SeenFunctions SF,
                                  SmallVector<CXXConstructorDecl *, 1> &Output)
       : SF(std::move(SF)), Constructors(Output) {}
 
-  bool seenFunction(const FunctionDecl *FD) {
-    if (SF.Current == FD)
-      return true;
-    if (SF.Prev == nullptr)
-      return false;
-    return seenFunction(SF.Prev->Current);
-  }
-
   bool VisitCallExpr(CallExpr *E) {
     if (SF.DepthLeft == 0)
       return true;
     if (auto *FD = E->getDirectCallee()) {
       // Check if we already visited this function to prevent endless recursion
-      if (seenFunction(FD))
+      if (SF.seenFunction(FD))
         return true;
       if (auto *PT = FD->getPrimaryTemplate();
           PT && isLikelyForwardingFunction(PT)) {

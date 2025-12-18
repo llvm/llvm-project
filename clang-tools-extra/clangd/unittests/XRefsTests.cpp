@@ -2751,6 +2751,9 @@ TEST(FindReferences, ForwardingInASTChained) {
     template <class T, class... Args> T *make_unique2(Args &&...args) {
       return make_unique<T>(forward<Args>(args)...);
     }
+    template <class T, class... Args> T *make_unique3(Args &&...args) {
+      return make_unique2<T>(forward<Args>(args)...);
+    }
     }
 
     struct Test {
@@ -2758,7 +2761,7 @@ TEST(FindReferences, ForwardingInASTChained) {
     };
 
     int main() {
-      auto a = std::$Caller[[make_unique2]]<Test>();
+      auto a = std::$Caller[[make_unique3]]<Test>();
     }
   )cpp");
   TestTU TU;
