@@ -38,8 +38,9 @@ class X86CodeGenPassBuilder
 public:
   explicit X86CodeGenPassBuilder(X86TargetMachine &TM,
                                  const CGPassBuilderOption &Opts,
-                                 PassInstrumentationCallbacks *PIC)
-      : CodeGenPassBuilder(TM, Opts, PIC) {}
+                                 PassInstrumentationCallbacks *PIC,
+                                 PassBuilder &PB)
+      : CodeGenPassBuilder(TM, Opts, PIC, PB) {}
 
   void addIRPasses(PassManagerWrapper &PMW) const;
   void addPreISel(PassManagerWrapper &PMW) const;
@@ -56,7 +57,19 @@ public:
   // TODO(boomanaiden154): We need to add addRegAssignAndRewriteOptimized here
   // once it is available to support AMX.
   void addAsmPrinter(PassManagerWrapper &PMW, CreateMCStreamer) const;
+  Error addRegAssignmentOptimized(PassManagerWrapper &PMW) const;
 };
+
+Error X86CodeGenPassBuilder::addRegAssignmentOptimized(
+  PassManagerWrapper &PMW) const {
+if (EnableTileRAPass) {
+  addRegAllocPassOrOpt(PMW, []() {
+    return RAGreedyPass({onlyAllocateTileRegisters, "tile-reg"});
+  });
+  // TODO: addMachineFunctionPass(X86TileConfigPass(), PMW);
+}
+return Base::addRegAssignmentOptimized(PMW);
+}
 
 void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
   addFunctionPass(AtomicExpandPass(TM), PMW);
@@ -264,12 +277,20 @@ void X86CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW,
 void X86TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "X86PassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
+
+PB.registerRegClassFilterParsingCallback(
+      [](StringRef FilterName) -> RegAllocFilterFunc {
+        if (FilterName == "tile-reg") {
+          return onlyAllocateTileRegisters;
+        }
+        return nullptr;
+      });
 }
 
 Error X86TargetMachine::buildCodeGenPipeline(
     ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opt,
-    PassInstrumentationCallbacks *PIC) {
-  auto CGPB = X86CodeGenPassBuilder(*this, Opt, PIC);
-  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
+    CodeGenFileType FileType, const CGPassBuilderOption &Opt, MCContext &Ctx,
+    PassInstrumentationCallbacks *PIC, PassBuilder &PB) {
+  auto CGPB = X86CodeGenPassBuilder(*this, Opt, PIC, PB);
+  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType, Ctx);
 }

@@ -22,8 +22,14 @@
 
 namespace llvm {
 
+extern cl::opt<bool> EnableTileRAPass;
+
 class StringRef;
 class TargetTransformInfo;
+
+bool onlyAllocateTileRegisters(const TargetRegisterInfo &TRI,
+                               const MachineRegisterInfo &MRI,
+                               const Register Reg);
 
 class X86TargetMachine final : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
@@ -73,8 +79,9 @@ public:
 
   Error buildCodeGenPipeline(ModulePassManager &, raw_pwrite_stream &,
                              raw_pwrite_stream *, CodeGenFileType,
-                             const CGPassBuilderOption &,
-                             PassInstrumentationCallbacks *) override;
+                             const CGPassBuilderOption &, MCContext &,
+                             PassInstrumentationCallbacks *,
+                             PassBuilder &) override;
 
   bool isJIT() const { return IsJIT; }
 

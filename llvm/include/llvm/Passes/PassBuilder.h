@@ -18,6 +18,7 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/RegAllocCommon.h"
+#include "llvm/CodeGen/RegAllocGreedyPass.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/Compiler.h"
@@ -409,7 +410,7 @@ public:
 
   /// Parse RegAllocFilterName to get RegAllocFilterFunc.
   LLVM_ABI std::optional<RegAllocFilterFunc>
-  parseRegAllocFilter(StringRef RegAllocFilterName);
+  parseRegAllocFilter(StringRef RegAllocFilterName) const;
 
   /// Print pass names.
   LLVM_ABI void printPassNames(raw_ostream &OS);
@@ -708,11 +709,13 @@ public:
   /// parameter list in a form of a custom parameters type, all wrapped into
   /// Expected<> template class.
   ///
-  template <typename ParametersParseCallableT>
+  template <typename ParametersParseCallableT, typename... ExtraArgs>
   static auto parsePassParameters(ParametersParseCallableT &&Parser,
-                                  StringRef Name, StringRef PassName)
-      -> decltype(Parser(StringRef{})) {
-    using ParametersT = typename decltype(Parser(StringRef{}))::value_type;
+                                  StringRef Name, StringRef PassName,
+                                  ExtraArgs &&...Args)
+      -> decltype(Parser(StringRef{}, std::forward<ExtraArgs>(Args)...)) {
+    using ParametersT = typename decltype(Parser(
+        StringRef{}, std::forward<ExtraArgs>(Args)...))::value_type;
 
     StringRef Params = Name;
     if (!Params.consume_front(PassName)) {
@@ -724,7 +727,8 @@ public:
       llvm_unreachable("invalid format for parametrized pass name");
     }
 
-    Expected<ParametersT> Result = Parser(Params);
+    Expected<ParametersT> Result =
+        Parser(Params, std::forward<ExtraArgs>(Args)...);
     assert((Result || Result.template errorIsA<StringError>()) &&
            "Pass parameter parser can only return StringErrors.");
     return Result;
@@ -1000,6 +1004,19 @@ public:
 
 /// Common option used by multiple tools to print pipeline passes
 LLVM_ABI extern cl::opt<bool> PrintPipelinePasses;
+
+Expected<RAGreedyPass::Options>
+parseRegAllocGreedyFilterFunc(const PassBuilder &PB, StringRef Params);
+
+Expected<RegAllocFastPass::Options>
+parseRegAllocFastPassOptions(const PassBuilder &PB, StringRef Params);
+
+Expected<bool> parseMachineSinkingPassOptions(StringRef Params,
+                                              const PassBuilder &);
+Expected<bool> parseMachineBlockPlacementPassOptions(StringRef Params,
+                                                     const PassBuilder &);
+Expected<bool> parseVirtRegRewriterPassOptions(StringRef Params,
+                                               const PassBuilder &);
 }
 
 #endif
