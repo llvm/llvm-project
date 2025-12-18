@@ -133,6 +133,11 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case RISCV::PseudoCCMINU:
   case RISCV::PseudoCCMUL:
   case RISCV::PseudoCCLUI:
+  case RISCV::PseudoCCQC_E_LB:
+  case RISCV::PseudoCCQC_E_LH:
+  case RISCV::PseudoCCQC_E_LW:
+  case RISCV::PseudoCCQC_E_LHU:
+  case RISCV::PseudoCCQC_E_LBU:
   case RISCV::PseudoCCLB:
   case RISCV::PseudoCCLH:
   case RISCV::PseudoCCLW:
@@ -250,6 +255,11 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
     case RISCV::PseudoCCMINU:  NewOpc = RISCV::MINU;  break;
     case RISCV::PseudoCCMUL:   NewOpc = RISCV::MUL;   break;
     case RISCV::PseudoCCLUI:   NewOpc = RISCV::LUI;   break;
+    case RISCV::PseudoCCQC_E_LB:  NewOpc = RISCV::QC_E_LB;    break;
+    case RISCV::PseudoCCQC_E_LH:  NewOpc = RISCV::QC_E_LH;    break;
+    case RISCV::PseudoCCQC_E_LW:  NewOpc = RISCV::QC_E_LW;    break;
+    case RISCV::PseudoCCQC_E_LHU: NewOpc = RISCV::QC_E_LHU;   break;
+    case RISCV::PseudoCCQC_E_LBU: NewOpc = RISCV::QC_E_LBU;   break;
     case RISCV::PseudoCCLB:    NewOpc = RISCV::LB;    break;
     case RISCV::PseudoCCLH:    NewOpc = RISCV::LH;    break;
     case RISCV::PseudoCCLW:    NewOpc = RISCV::LW;    break;
