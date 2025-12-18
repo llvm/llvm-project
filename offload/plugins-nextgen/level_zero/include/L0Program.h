@@ -70,7 +70,7 @@ public:
   }
   Error buildModules(const std::string_view BuildOptions);
 
-  /// Retrieve the ELF binary for the program
+  /// Retrieve the ELF binary for the program.
   Expected<std::unique_ptr<MemoryBuffer>> getELF();
 };
 
