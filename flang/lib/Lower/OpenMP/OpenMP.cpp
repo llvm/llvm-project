@@ -3628,57 +3628,28 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     TODO(converter.getCurrentLocation(), "OmpDeclareVariantDirective");
 }
 
-static ReductionProcessor::GenCombinerCBTy
-processReductionCombiner(lower::AbstractConverter &converter,
-                         lower::SymMap &symTable,
-                         semantics::SemanticsContext &semaCtx,
-                         const parser::OmpReductionSpecifier &specifier) {
+static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
+    lower::AbstractConverter &converter, lower::SymMap &symTable,
+    semantics::SemanticsContext &semaCtx, const clause::Combiner &combiner) {
   ReductionProcessor::GenCombinerCBTy genCombinerCB;
-  const auto &combinerExpression =
-      std::get<std::optional<parser::OmpCombinerExpression>>(specifier.t)
-          .value();
-  const parser::OmpStylizedInstance &combinerInstance =
-      combinerExpression.v.front();
-  const parser::OmpStylizedInstance::Instance &instance =
-      std::get<parser::OmpStylizedInstance::Instance>(combinerInstance.t);
-
-  std::optional<semantics::SomeExpr> evalExprOpt;
-  if (const auto *as = std::get_if<parser::AssignmentStmt>(&instance.u)) {
-    auto &expr = std::get<parser::Expr>(as->t);
-    evalExprOpt = makeExpr(expr, semaCtx);
-  } else if (const auto *call = std::get_if<parser::CallStmt>(&instance.u)) {
-    if (call->typedCall) {
-      const auto &procRef = *call->typedCall;
-      evalExprOpt = semantics::SomeExpr{procRef};
-    } else {
-      TODO(converter.getCurrentLocation(),
-           "CallStmt without typedCall is not yet supported");
-    }
-  } else {
-    TODO(converter.getCurrentLocation(), "Unsupported combiner instance type");
-  }
-
-  assert(evalExprOpt.has_value() && "evalExpr must be initialized");
-  semantics::SomeExpr evalExpr = *evalExprOpt;
+  const StylizedInstance &inst = combiner.v.front();
+  semantics::SomeExpr evalExpr = std::get<StylizedInstance::Instance>(inst.t);
 
   genCombinerCB = [&, evalExpr](fir::FirOpBuilder &builder, mlir::Location loc,
                                 mlir::Type type, mlir::Value lhs,
                                 mlir::Value rhs, bool isByRef) {
     lower::SymMapScope scope(symTable);
-    const std::list<parser::OmpStylizedDeclaration> &declList =
-        std::get<std::list<parser::OmpStylizedDeclaration>>(combinerInstance.t);
     mlir::Value ompOutVar;
-    for (const parser::OmpStylizedDeclaration &decl : declList) {
-      auto &name = std::get<parser::ObjectName>(decl.var.t);
+    for (const Object &object : std::get<StylizedInstance::Variables>(inst.t)) {
       mlir::Value addr = lhs;
       mlir::Type type = lhs.getType();
-      bool isRhs = name.ToString() == std::string("omp_in");
+      std::string name = object.sym()->name().ToString();
+      bool isRhs = name == "omp_in";
       if (isRhs) {
         addr = rhs;
         type = rhs.getType();
       }
 
-      assert(name.symbol && "Reduction object name does not have a symbol");
       if (!fir::conformsWithPassByRef(type)) {
         addr = builder.createTemporary(loc, type);
         fir::StoreOp::create(builder, loc, isRhs ? rhs : lhs, addr);
@@ -3686,13 +3657,13 @@ processReductionCombiner(lower::AbstractConverter &converter,
       fir::FortranVariableFlagsEnum extraFlags = {};
       fir::FortranVariableFlagsAttr attributes =
           Fortran::lower::translateSymbolAttributes(builder.getContext(),
-                                                    *name.symbol, extraFlags);
+                                                    *object.sym(), extraFlags);
       auto declareOp =
-          hlfir::DeclareOp::create(builder, loc, addr, name.ToString(), nullptr,
-                                   {}, nullptr, nullptr, 0, attributes);
-      if (name.ToString() == "omp_out")
+          hlfir::DeclareOp::create(builder, loc, addr, name, nullptr, {},
+                                   nullptr, nullptr, 0, attributes);
+      if (name == "omp_out")
         ompOutVar = declareOp.getResult(0);
-      symTable.addVariableDefinition(*name.symbol, declareOp);
+      symTable.addVariableDefinition(*object.sym(), declareOp);
     }
 
     lower::StatementContext stmtCtx;
@@ -3766,46 +3737,69 @@ getReductionType(lower::AbstractConverter &converter,
   return reductionType;
 }
 
-static void genOMP(
-    lower::AbstractConverter &converter, lower::SymMap &symTable,
-    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-    const parser::OpenMPDeclareReductionConstruct &declareReductionConstruct) {
+// Represent the reduction combiner as a clause, return reference to it.
+// If there is a "combiner" clause already present, do nothing. Otherwise
+// manufacture a combiner clause from the combiner expression on the reduction
+// specifier and append it to the list of clauses.
+static const clause::Combiner &
+appendCombiner(const parser::OpenMPDeclareReductionConstruct &construct,
+               List<Clause> &clauses, semantics::SemanticsContext &semaCtx) {
+  for (const Clause &clause : clauses) {
+    if (clause.id == llvm::omp::Clause::OMPC_combiner)
+      return std::get<clause::Combiner>(clause.u);
+  }
+
+  using namespace parser::omp;
+  const parser::OmpDirectiveSpecification &dirSpec = construct.v;
+  auto *specifier = GetFirstArgument<parser::OmpReductionSpecifier>(dirSpec);
+  assert(specifier && "Expecting reduction specifier");
+  if (auto *expr = GetCombinerExpr(*specifier)) {
+    clause::Combiner combiner;
+    for (const parser::OmpStylizedInstance &sinst : expr->v)
+      combiner.v.push_back(makeStylizedInstance(sinst, semaCtx));
+    clauses.push_back(makeClause(llvm::omp::Clause::OMPC_combiner,
+                                 std::move(combiner), expr->source));
+    return std::get<clause::Combiner>(clauses.back().u);
+  }
+
+  llvm_unreachable("Expecting reduction combiner");
+}
+
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OpenMPDeclareReductionConstruct &construct) {
   if (semaCtx.langOptions().OpenMPSimd)
     return;
 
-  const parser::OmpArgumentList &args{declareReductionConstruct.v.Arguments()};
-  const parser::OmpArgument &arg{args.v.front()};
-  const auto &specifier = std::get<parser::OmpReductionSpecifier>(arg.u);
-
+  const auto &specifier =
+      DEREF(parser::omp::GetFirstArgument<parser::OmpReductionSpecifier>(
+          construct.v));
   if (std::get<parser::OmpTypeNameList>(specifier.t).v.size() > 1)
     TODO(converter.getCurrentLocation(),
          "multiple types in declare reduction is not yet supported");
 
   mlir::Type reductionType = getReductionType(converter, specifier);
+  List<Clause> clauses = makeClauses(construct.v.Clauses(), semaCtx);
+  const clause::Combiner &combiner =
+      appendCombiner(construct, clauses, semaCtx);
+
   ReductionProcessor::GenCombinerCBTy genCombinerCB =
-      processReductionCombiner(converter, symTable, semaCtx, specifier);
-  const parser::OmpClauseList &initializer =
-      declareReductionConstruct.v.Clauses();
-  if (initializer.v.size() > 0) {
-    List<Clause> clauses = makeClauses(initializer, semaCtx);
-    ReductionProcessor::GenInitValueCBTy genInitValueCB;
-    ClauseProcessor cp(converter, semaCtx, clauses);
-    cp.processInitializer(symTable, genInitValueCB);
-    const auto &identifier =
-        std::get<parser::OmpReductionIdentifier>(specifier.t);
-    const auto &designator =
-        std::get<parser::ProcedureDesignator>(identifier.u);
-    const auto &reductionName = std::get<parser::Name>(designator.u);
-    bool isByRef = ReductionProcessor::doReductionByRef(reductionType);
-    ReductionProcessor::createDeclareReductionHelper<
-        mlir::omp::DeclareReductionOp>(
-        converter, reductionName.ToString(), reductionType,
-        converter.getCurrentLocation(), isByRef, genCombinerCB, genInitValueCB);
-  } else {
-    TODO(converter.getCurrentLocation(),
-         "declare reduction without an initializer clause is not yet "
-         "supported");
-  }
+      processReductionCombiner(converter, symTable, semaCtx, combiner);
+
+  ReductionProcessor::GenInitValueCBTy genInitValueCB;
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processInitializer(symTable, genInitValueCB);
+
+  const auto &identifier =
+      std::get<parser::OmpReductionIdentifier>(specifier.t);
+  const auto &designator = std::get<parser::ProcedureDesignator>(identifier.u);
+  const auto &reductionName = std::get<parser::Name>(designator.u);
+  bool isByRef = ReductionProcessor::doReductionByRef(reductionType);
+  ReductionProcessor::createDeclareReductionHelper<
+      mlir::omp::DeclareReductionOp>(
+      converter, reductionName.ToString(), reductionType,
+      converter.getCurrentLocation(), isByRef, genCombinerCB, genInitValueCB);
 }
 
 static void

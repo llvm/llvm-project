@@ -2037,6 +2037,8 @@ StringMap<bool> sys::getHostCPUFeatures() {
   // AMX requires additional context to be saved by the OS.
   const unsigned AMXBits = (1 << 17) | (1 << 18);
   bool HasAMXSave = HasXSave && ((EAX & AMXBits) == AMXBits);
+  // APX requires additional context to be saved by the OS.
+  bool HasAPXSave = HasXSave && ((EAX >> 19) & 1);
 
   Features["avx"]   = HasAVXSave;
   Features["fma"]   = ((ECX >> 12) & 1) && HasAVXSave;
@@ -2156,7 +2158,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["prefetchi"] |= HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
   Features["usermsr"]  = HasLeaf7Subleaf1 && ((EDX >> 15) & 1);
   bool HasAVX10 = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
-  bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1);
+  bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1) && HasAPXSave;
   Features["egpr"] = HasAPXF;
   Features["push2pop2"] = HasAPXF;
   Features["ppx"] = HasAPXF;
