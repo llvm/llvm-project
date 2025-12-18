@@ -383,8 +383,8 @@ static bool isEmpty(const ASTContext &Context, const QualType &Type) {
   return isIncompleteOrZeroLengthArrayType(Context, Type);
 }
 
-static llvm::StringLiteral getInitializer(QualType QT, bool UseAssignment) {
-  static constexpr llvm::StringLiteral DefaultInitializer = "{}";
+static StringRef getInitializer(QualType QT, bool UseAssignment) {
+  static constexpr StringRef DefaultInitializer = "{}";
   if (!UseAssignment)
     return DefaultInitializer;
 
