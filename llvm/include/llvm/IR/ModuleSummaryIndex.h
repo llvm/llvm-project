@@ -454,29 +454,21 @@ struct AllocInfo {
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const AllocInfo &AE) {
-  bool First = true;
+  ListSeparator LS;
   OS << "Versions: ";
-  for (auto V : AE.Versions) {
-    if (!First)
-      OS << ", ";
-    First = false;
-    OS << (unsigned)V;
-  }
+  for (auto V : AE.Versions)
+    OS << LS << (unsigned)V;
+
   OS << " MIB:\n";
-  for (auto &M : AE.MIBs) {
+  for (auto &M : AE.MIBs)
     OS << "\t\t" << M << "\n";
-  }
   if (!AE.ContextSizeInfos.empty()) {
     OS << "\tContextSizeInfo per MIB:\n";
     for (auto Infos : AE.ContextSizeInfos) {
       OS << "\t\t";
-      bool FirstInfo = true;
-      for (auto [FullStackId, TotalSize] : Infos) {
-        if (!FirstInfo)
-          OS << ", ";
-        FirstInfo = false;
-        OS << "{ " << FullStackId << ", " << TotalSize << " }";
-      }
+      ListSeparator InfoLS;
+      for (auto [FullStackId, TotalSize] : Infos)
+        OS << InfoLS << "{ " << FullStackId << ", " << TotalSize << " }";
       OS << "\n";
     }
   }

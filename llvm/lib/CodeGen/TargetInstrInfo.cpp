@@ -2048,14 +2048,9 @@ std::string TargetInstrInfo::createMIROperandComment(
   if (OpIdx == InlineAsm::MIOp_ExtraInfo) {
     // Print HasSideEffects, MayLoad, MayStore, IsAlignStack
     unsigned ExtraInfo = Op.getImm();
-    bool First = true;
-    for (StringRef Info : InlineAsm::getExtraInfoNames(ExtraInfo)) {
-      if (!First)
-        OS << " ";
-      First = false;
-      OS << Info;
-    }
-
+    ListSeparator LS(" ");
+    for (StringRef Info : InlineAsm::getExtraInfoNames(ExtraInfo))
+      OS << LS << Info;
     return Flags;
   }
 

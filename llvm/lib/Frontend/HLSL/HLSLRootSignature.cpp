@@ -209,13 +209,9 @@ raw_ostream &operator<<(raw_ostream &OS, const RootElement &Element) {
 
 void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
   OS << " RootElements{";
-  bool First = true;
-  for (const RootElement &Element : Elements) {
-    if (!First)
-      OS << ",";
-    OS << " " << Element;
-    First = false;
-  }
+  ListSeparator LS;
+  for (const RootElement &Element : Elements)
+    OS << LS << Element;
   OS << "}";
 }
 
