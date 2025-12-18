@@ -46,7 +46,6 @@ add_llvm_tool_symlink(llvm-extract-bundle-entry llvm-objcopy)
 if(LLVM_INSTALL_BINUTILS_SYMLINKS)
   add_llvm_tool_symlink(objcopy llvm-objcopy)
   add_llvm_tool_symlink(strip llvm-objcopy)
-  add_llvm_tool_symlink(extract-bundle-entry llvm-objcopy)
 endif()
 
 if(LLVM_INSTALL_CCTOOLS_SYMLINKS)

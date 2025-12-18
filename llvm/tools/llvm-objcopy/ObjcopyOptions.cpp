@@ -1719,9 +1719,7 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
 
 Expected<DriverConfig> objcopy::parseExtractBundleEntryOptions(
     ArrayRef<const char *> ArgsArr, function_ref<Error(Error)> ErrorCallback) {
-
   DriverConfig DC;
-
   ExtractBundleEntryOptTable T;
   unsigned MissingArgumentIndex, MissingArgumentCount;
   opt::InputArgList InputArgs =
@@ -1747,9 +1745,9 @@ Expected<DriverConfig> objcopy::parseExtractBundleEntryOptions(
     Positional.push_back(Arg->getValue());
   assert(!Positional.empty());
 
-  // iterate over all input arguments
-  for (auto input : Positional)
-    if (Error Err = object::extractOffloadBundleByURI(input))
+  // Iterate over all input arguments.
+  for (StringRef Input : Positional)
+    if (Error Err = object::extractOffloadBundleByURI(Input))
       return std::move(Err);
 
   return std::move(DC);
