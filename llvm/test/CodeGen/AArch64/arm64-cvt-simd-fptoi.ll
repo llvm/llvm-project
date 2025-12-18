@@ -15,6 +15,10 @@
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fptoui_i32_f64_simd
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fptoui_i64_f64_simd
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fptoui_i32_f32_simd
+; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fcvtzs_scalar_to_vector_h_strict
+; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fcvtzs_scalar_to_vector_s_strict
+; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fcvtzu_scalar_to_vector_h_strict
+; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fcvtzu_scalar_to_vector_s_strict
 
 ;
 ; FPTOI
@@ -1940,4 +1944,170 @@ define double @fcvtzu_dd_simd(double %a) {
   %i = call i64 @llvm.fptoui.sat.i64.f64(double %r)
   %bc = bitcast i64 %i to double
   ret double %bc
+}
+
+;
+; FPTOI scalar_to_vector
+;
+
+define <1 x i64> @fcvtzs_scalar_to_vector_h(half %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzs_scalar_to_vector_h:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzs_scalar_to_vector_h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, h0
+; CHECK-NEXT:    ret
+  %val = fptosi half %a to i64
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzs_scalar_to_vector_s(float %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzs_scalar_to_vector_s:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzs_scalar_to_vector_s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, s0
+; CHECK-NEXT:    ret
+  %val = fptosi float %a to i64
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzs_scalar_to_vector_d(double %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzs_scalar_to_vector_d:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzs d0, d0
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzs_scalar_to_vector_d:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    ret
+  %val = fptosi double %a to i64
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzu_scalar_to_vector_h(half %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzu_scalar_to_vector_h:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzu x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzu_scalar_to_vector_h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, h0
+; CHECK-NEXT:    ret
+  %val = fptoui half %a to i64
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzu_scalar_to_vector_s(float %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzu_scalar_to_vector_s:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzu x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzu_scalar_to_vector_s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, s0
+; CHECK-NEXT:    ret
+  %val = fptoui float %a to i64
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzu_scalar_to_vector_d(double %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzu_scalar_to_vector_d:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzu d0, d0
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzu_scalar_to_vector_d:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, d0
+; CHECK-NEXT:    ret
+  %val = fptoui double %a to i64
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+;
+; FPTOI scalar_to_vector strictfp
+;
+
+define <1 x i64> @fcvtzs_scalar_to_vector_h_strict(half %x) {
+; CHECK-NOFPRCVT-LABEL: fcvtzs_scalar_to_vector_h_strict:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzs_scalar_to_vector_h_strict:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, h0
+; CHECK-NEXT:    ret
+  %val = call i64 @llvm.experimental.constrained.fptosi.i64.f16(half %x, metadata !"fpexcept.strict")
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzs_scalar_to_vector_s_strict(float %x) {
+; CHECK-NOFPRCVT-LABEL: fcvtzs_scalar_to_vector_s_strict:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzs_scalar_to_vector_s_strict:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, s0
+; CHECK-NEXT:    ret
+  %val = call i64 @llvm.experimental.constrained.fptosi.i64.f32(float %x, metadata !"fpexcept.strict")
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzu_scalar_to_vector_h_strict(half %x) {
+; CHECK-NOFPRCVT-LABEL: fcvtzu_scalar_to_vector_h_strict:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzu x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzu_scalar_to_vector_h_strict:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, h0
+; CHECK-NEXT:    ret
+  %val = call i64 @llvm.experimental.constrained.fptoui.i64.f16(half %x, metadata !"fpexcept.strict")
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzu_scalar_to_vector_s_strict(float %x) {
+; CHECK-NOFPRCVT-LABEL: fcvtzu_scalar_to_vector_s_strict:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzu x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzu_scalar_to_vector_s_strict:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, s0
+; CHECK-NEXT:    ret
+  %val = call i64 @llvm.experimental.constrained.fptoui.i64.f32(float %x, metadata !"fpexcept.strict")
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
 }

@@ -4,7 +4,7 @@
 
 
 ;
-; Intriniscs
+; Intriniscs (bitcast)
 ;
 
 define float @fcvtas_1s1d_simd(double %A) nounwind {
@@ -606,4 +606,336 @@ define  float @fcvtzu_1s1s_simd(float %a) {
   %vcvtah_s32_f32 = tail call i32 @llvm.aarch64.neon.fcvtzu.i32.f32(float %a)
   %d = bitcast i32 %vcvtah_s32_f32 to float
   ret float %d
+}
+
+;
+; Intriniscs (scalar_to_vector)
+;
+
+define <1 x i64> @fcvtas_1d1s_scalar_to_vector_simd(float %A) nounwind {
+; CHECK-LABEL: fcvtas_1d1s_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtas d0, s0
+; CHECK-NEXT:    ret
+  %i = call i64 @llvm.aarch64.neon.fcvtas.i64.f32(float %A)
+  %vec = insertelement <1 x i64> poison, i64 %i, i32 0
+  ret <1 x i64> %vec
+}
+
+
+define  <1 x i64> @fcvtas_1d1h_scalar_to_vector_simd(half %a) {
+; CHECK-LABEL: fcvtas_1d1h_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtas d0, h0
+; CHECK-NEXT:    ret
+  %vcvtah_s64_f16 = tail call i64 @llvm.aarch64.neon.fcvtas.i64.f16(half %a)
+  %vec = insertelement <1 x i64> poison, i64 %vcvtah_s64_f16, i32 0
+  ret <1 x i64> %vec
+}
+
+define  <1 x i64> @fcvtas_1d1d_scalar_to_vector_simd(double %a) {
+; CHECK-LABEL: fcvtas_1d1d_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtas d0, d0
+; CHECK-NEXT:    ret
+  %vcvtah_s64_f64 = tail call i64 @llvm.aarch64.neon.fcvtas.i64.f64(double %a)
+  %vec = insertelement <1 x i64> poison, i64 %vcvtah_s64_f64, i32 0
+  ret <1 x i64> %vec
+}
+
+
+
+define <1 x i64> @fcvtau_1d1s_scalar_to_vector_simd(float %A) nounwind {
+; CHECK-LABEL: fcvtau_1d1s_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtau d0, s0
+; CHECK-NEXT:    ret
+  %i = call i64 @llvm.aarch64.neon.fcvtau.i64.f32(float %A)
+  %vec = insertelement <1 x i64> poison, i64 %i, i32 0
+  ret <1 x i64> %vec
+}
+
+
+define  <1 x i64> @fcvtau_1d1h_scalar_to_vector_simd(half %a) {
+; CHECK-LABEL: fcvtau_1d1h_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtau d0, h0
+; CHECK-NEXT:    ret
+  %vcvtah_s64_f16 = tail call i64 @llvm.aarch64.neon.fcvtau.i64.f16(half %a)
+  %vec = insertelement <1 x i64> poison, i64 %vcvtah_s64_f16, i32 0
+  ret <1 x i64> %vec
+}
+
+define  <1 x i64> @fcvtau_1d1d_scalar_to_vector_simd(double %a) {
+; CHECK-LABEL: fcvtau_1d1d_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtau d0, d0
+; CHECK-NEXT:    ret
+  %vcvtah_s64_f64 = tail call i64 @llvm.aarch64.neon.fcvtau.i64.f64(double %a)
+  %vec = insertelement <1 x i64> poison, i64 %vcvtah_s64_f64, i32 0
+  ret <1 x i64> %vec
+}
+
+
+
+define <1 x i64> @fcvtms_1d1s_scalar_to_vector_simd(float %A) nounwind {
+; CHECK-LABEL: fcvtms_1d1s_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtms d0, s0
+; CHECK-NEXT:    ret
+  %i = call i64 @llvm.aarch64.neon.fcvtms.i64.f32(float %A)
+  %vec = insertelement <1 x i64> poison, i64 %i, i32 0
+  ret <1 x i64> %vec
+}
+
+
+define  <1 x i64> @fcvtms_1d1h_scalar_to_vector_simd(half %a) {
+; CHECK-LABEL: fcvtms_1d1h_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtms d0, h0
+; CHECK-NEXT:    ret
+  %vcvtah_s64_f16 = tail call i64 @llvm.aarch64.neon.fcvtms.i64.f16(half %a)
+  %vec = insertelement <1 x i64> poison, i64 %vcvtah_s64_f16, i32 0
+  ret <1 x i64> %vec
+}
+
+define  <1 x i64> @fcvtms_1d1d_scalar_to_vector_simd(double %a) {
+; CHECK-LABEL: fcvtms_1d1d_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtms d0, d0
+; CHECK-NEXT:    ret
+  %vcvtah_s64_f64 = tail call i64 @llvm.aarch64.neon.fcvtms.i64.f64(double %a)
+  %vec = insertelement <1 x i64> poison, i64 %vcvtah_s64_f64, i32 0
+  ret <1 x i64> %vec
+}
+
+
+
+define <1 x i64> @fcvtmu_1d1s_scalar_to_vector_simd(float %A) nounwind {
+; CHECK-LABEL: fcvtmu_1d1s_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtmu d0, s0
+; CHECK-NEXT:    ret
+  %i = call i64 @llvm.aarch64.neon.fcvtmu.i64.f32(float %A)
+  %vec = insertelement <1 x i64> poison, i64 %i, i32 0
+  ret <1 x i64> %vec
+}
+
+
+define  <1 x i64> @fcvtmu_1d1h_scalar_to_vector_simd(half %a) {
+; CHECK-LABEL: fcvtmu_1d1h_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtmu d0, h0
+; CHECK-NEXT:    ret
+  %vcvtah_s64_f16 = tail call i64 @llvm.aarch64.neon.fcvtmu.i64.f16(half %a)
+  %vec = insertelement <1 x i64> poison, i64 %vcvtah_s64_f16, i32 0
+  ret <1 x i64> %vec
+}
+
+define  <1 x i64> @fcvtmu_1d1d_scalar_to_vector_simd(double %a) {
+; CHECK-LABEL: fcvtmu_1d1d_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtmu d0, d0
+; CHECK-NEXT:    ret
+  %vcvtah_s64_f64 = tail call i64 @llvm.aarch64.neon.fcvtmu.i64.f64(double %a)
+  %vec = insertelement <1 x i64> poison, i64 %vcvtah_s64_f64, i32 0
+  ret <1 x i64> %vec
+}
+
+
+
+define <1 x i64> @fcvtns_1d1s_scalar_to_vector_simd(float %A) nounwind {
+; CHECK-LABEL: fcvtns_1d1s_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtns d0, s0
+; CHECK-NEXT:    ret
+  %i = call i64 @llvm.aarch64.neon.fcvtns.i64.f32(float %A)
+  %vec = insertelement <1 x i64> poison, i64 %i, i32 0
+  ret <1 x i64> %vec
+}
+
+
+define  <1 x i64> @fcvtns_1d1h_scalar_to_vector_simd(half %a) {
+; CHECK-LABEL: fcvtns_1d1h_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtns d0, h0
+; CHECK-NEXT:    ret
+  %vcvtah_s64_f16 = tail call i64 @llvm.aarch64.neon.fcvtns.i64.f16(half %a)
+  %vec = insertelement <1 x i64> poison, i64 %vcvtah_s64_f16, i32 0
+  ret <1 x i64> %vec
+}
+
+define  <1 x i64> @fcvtns_1d1d_scalar_to_vector_simd(double %a) {
+; CHECK-LABEL: fcvtns_1d1d_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtns d0, d0
+; CHECK-NEXT:    ret
+  %vcvtah_s64_f64 = tail call i64 @llvm.aarch64.neon.fcvtns.i64.f64(double %a)
+  %vec = insertelement <1 x i64> poison, i64 %vcvtah_s64_f64, i32 0
+  ret <1 x i64> %vec
+}
+
+
+
+define <1 x i64> @fcvtnu_1d1s_scalar_to_vector_simd(float %A) nounwind {
+; CHECK-LABEL: fcvtnu_1d1s_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtnu d0, s0
+; CHECK-NEXT:    ret
+  %i = call i64 @llvm.aarch64.neon.fcvtnu.i64.f32(float %A)
+  %vec = insertelement <1 x i64> poison, i64 %i, i32 0
+  ret <1 x i64> %vec
+}
+
+
+define  <1 x i64> @fcvtnu_1d1h_scalar_to_vector_simd(half %a) {
+; CHECK-LABEL: fcvtnu_1d1h_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtnu d0, h0
+; CHECK-NEXT:    ret
+  %vcvtah_s64_f16 = tail call i64 @llvm.aarch64.neon.fcvtnu.i64.f16(half %a)
+  %vec = insertelement <1 x i64> poison, i64 %vcvtah_s64_f16, i32 0
+  ret <1 x i64> %vec
+}
+
+define  <1 x i64> @fcvtnu_1d1d_scalar_to_vector_simd(double %a) {
+; CHECK-LABEL: fcvtnu_1d1d_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtnu d0, d0
+; CHECK-NEXT:    ret
+  %vcvtah_s64_f64 = tail call i64 @llvm.aarch64.neon.fcvtnu.i64.f64(double %a)
+  %vec = insertelement <1 x i64> poison, i64 %vcvtah_s64_f64, i32 0
+  ret <1 x i64> %vec
+}
+
+
+
+define <1 x i64> @fcvtps_1d1s_scalar_to_vector_simd(float %A) nounwind {
+; CHECK-LABEL: fcvtps_1d1s_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtps d0, s0
+; CHECK-NEXT:    ret
+  %i = call i64 @llvm.aarch64.neon.fcvtps.i64.f32(float %A)
+  %vec = insertelement <1 x i64> poison, i64 %i, i32 0
+  ret <1 x i64> %vec
+}
+
+
+define  <1 x i64> @fcvtps_1d1h_scalar_to_vector_simd(half %a) {
+; CHECK-LABEL: fcvtps_1d1h_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtps d0, h0
+; CHECK-NEXT:    ret
+  %vcvtah_s64_f16 = tail call i64 @llvm.aarch64.neon.fcvtps.i64.f16(half %a)
+  %vec = insertelement <1 x i64> poison, i64 %vcvtah_s64_f16, i32 0
+  ret <1 x i64> %vec
+}
+
+define  <1 x i64> @fcvtps_1d1d_scalar_to_vector_simd(double %a) {
+; CHECK-LABEL: fcvtps_1d1d_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtps d0, d0
+; CHECK-NEXT:    ret
+  %vcvtah_s64_f64 = tail call i64 @llvm.aarch64.neon.fcvtps.i64.f64(double %a)
+  %vec = insertelement <1 x i64> poison, i64 %vcvtah_s64_f64, i32 0
+  ret <1 x i64> %vec
+}
+
+
+
+define <1 x i64> @fcvtpu_1d1s_scalar_to_vector_simd(float %A) nounwind {
+; CHECK-LABEL: fcvtpu_1d1s_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtpu d0, s0
+; CHECK-NEXT:    ret
+  %i = call i64 @llvm.aarch64.neon.fcvtpu.i64.f32(float %A)
+  %vec = insertelement <1 x i64> poison, i64 %i, i32 0
+  ret <1 x i64> %vec
+}
+
+
+define  <1 x i64> @fcvtpu_1d1h_scalar_to_vector_simd(half %a) {
+; CHECK-LABEL: fcvtpu_1d1h_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtpu d0, h0
+; CHECK-NEXT:    ret
+  %vcvtah_s64_f16 = tail call i64 @llvm.aarch64.neon.fcvtpu.i64.f16(half %a)
+  %vec = insertelement <1 x i64> poison, i64 %vcvtah_s64_f16, i32 0
+  ret <1 x i64> %vec
+}
+
+define  <1 x i64> @fcvtpu_1d1d_scalar_to_vector_simd(double %a) {
+; CHECK-LABEL: fcvtpu_1d1d_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtpu d0, d0
+; CHECK-NEXT:    ret
+  %vcvtah_s64_f64 = tail call i64 @llvm.aarch64.neon.fcvtpu.i64.f64(double %a)
+  %vec = insertelement <1 x i64> poison, i64 %vcvtah_s64_f64, i32 0
+  ret <1 x i64> %vec
+}
+
+
+
+define <1 x i64> @fcvtzs_1d1s_scalar_to_vector_simd(float %A) nounwind {
+; CHECK-LABEL: fcvtzs_1d1s_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, s0
+; CHECK-NEXT:    ret
+  %i = call i64 @llvm.aarch64.neon.fcvtzs.i64.f32(float %A)
+  %vec = insertelement <1 x i64> poison, i64 %i, i32 0
+  ret <1 x i64> %vec
+}
+
+
+define  <1 x i64> @fcvtzs_1d1h_scalar_to_vector_simd(half %a) {
+; CHECK-LABEL: fcvtzs_1d1h_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, h0
+; CHECK-NEXT:    ret
+  %vcvtah_s64_f16 = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f16(half %a)
+  %vec = insertelement <1 x i64> poison, i64 %vcvtah_s64_f16, i32 0
+  ret <1 x i64> %vec
+}
+
+define  <1 x i64> @fcvtzs_1d1d_scalar_to_vector_simd(double %a) {
+; CHECK-LABEL: fcvtzs_1d1d_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    ret
+  %vcvtah_s64_f64 = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f64(double %a)
+  %vec = insertelement <1 x i64> poison, i64 %vcvtah_s64_f64, i32 0
+  ret <1 x i64> %vec
+}
+
+
+
+define <1 x i64> @fcvtzu_1d1s_scalar_to_vector_simd(float %A) nounwind {
+; CHECK-LABEL: fcvtzu_1d1s_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, s0
+; CHECK-NEXT:    ret
+  %i = call i64 @llvm.aarch64.neon.fcvtzu.i64.f32(float %A)
+  %vec = insertelement <1 x i64> poison, i64 %i, i32 0
+  ret <1 x i64> %vec
+}
+
+
+define  <1 x i64> @fcvtzu_1d1h_scalar_to_vector_simd(half %a) {
+; CHECK-LABEL: fcvtzu_1d1h_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, h0
+; CHECK-NEXT:    ret
+  %vcvtah_s64_f16 = tail call i64 @llvm.aarch64.neon.fcvtzu.i64.f16(half %a)
+  %vec = insertelement <1 x i64> poison, i64 %vcvtah_s64_f16, i32 0
+  ret <1 x i64> %vec
+}
+
+define  <1 x i64> @fcvtzu_1d1d_scalar_to_vector_simd(double %a) {
+; CHECK-LABEL: fcvtzu_1d1d_scalar_to_vector_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, d0
+; CHECK-NEXT:    ret
+  %vcvtah_s64_f64 = tail call i64 @llvm.aarch64.neon.fcvtzu.i64.f64(double %a)
+  %vec = insertelement <1 x i64> poison, i64 %vcvtah_s64_f64, i32 0
+  ret <1 x i64> %vec
 }

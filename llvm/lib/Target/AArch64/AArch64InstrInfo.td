@@ -6563,12 +6563,19 @@ multiclass FPToIntegerSIMDScalarPatterns<SDPatternOperator OpN, string INST> {
             (!cast<Instruction>(INST # DHr) FPR16:$Rn)>;
   def : Pat<(f64 (bitconvert (i64 (OpN (f32 FPR32:$Rn))))),
             (!cast<Instruction>(INST # DSr) FPR32:$Rn)>;
+
+  def : Pat<(v1i64 (scalar_to_vector (i64 (OpN (f16 FPR16:$Rn))))),
+            (!cast<Instruction>(INST # DHr) FPR16:$Rn)>;
+  def : Pat<(v1i64 (scalar_to_vector (i64 (OpN (f32 FPR32:$Rn))))),
+            (!cast<Instruction>(INST # DSr) FPR32:$Rn)>;
   }
   def : Pat<(f32 (bitconvert (i32 (OpN (f32 FPR32:$Rn))))),
             (!cast<Instruction>(INST # v1i32) FPR32:$Rn)>;
   def : Pat<(f64 (bitconvert (i64 (OpN (f64 FPR64:$Rn))))),
             (!cast<Instruction>(INST # v1i64) FPR64:$Rn)>;
-            
+
+  def : Pat<(v1i64 (scalar_to_vector (i64 (OpN (f64 FPR64:$Rn))))),
+            (!cast<Instruction>(INST # v1i64) FPR64:$Rn)>;
 }
 defm: FPToIntegerSIMDScalarPatterns<int_aarch64_neon_fcvtas, "FCVTAS">;
 defm: FPToIntegerSIMDScalarPatterns<int_aarch64_neon_fcvtau, "FCVTAU">;
@@ -6611,10 +6618,18 @@ multiclass FPToIntegerIntPats<Intrinsic round, string INST> {
             (!cast<Instruction>(INST # DSr) $Rn)>;
   def : Pat<(f32 (bitconvert (i32 (round f64:$Rn)))), 
             (!cast<Instruction>(INST # SDr) $Rn)>;
+
+  def : Pat<(v1i64 (scalar_to_vector (i64 (round f16:$Rn)))), 
+            (!cast<Instruction>(INST # DHr) $Rn)>;
+  def : Pat<(v1i64 (scalar_to_vector (i64 (round f32:$Rn)))), 
+            (!cast<Instruction>(INST # DSr) $Rn)>;
   }
   def : Pat<(f32 (bitconvert (i32 (round f32:$Rn)))), 
             (!cast<Instruction>(INST # v1i32) $Rn)>;
   def : Pat<(f64 (bitconvert (i64 (round f64:$Rn)))), 
+            (!cast<Instruction>(INST # v1i64) $Rn)>;
+
+  def : Pat<(v1i64 (scalar_to_vector (i64 (round f64:$Rn)))), 
             (!cast<Instruction>(INST # v1i64) $Rn)>;
 
   let Predicates = [HasFullFP16] in {
