@@ -59,6 +59,7 @@ char *internal_strdup(const char *s);
 uptr internal_strlen(const char *s);
 uptr internal_strlcat(char *dst, const char *src, uptr maxlen);
 char *internal_strncat(char *dst, const char *src, uptr n);
+char *internal_strcat(char *dst, const char *src);
 int internal_strncmp(const char *s1, const char *s2, uptr n);
 uptr internal_strlcpy(char *dst, const char *src, uptr maxlen);
 char *internal_strncpy(char *dst, const char *src, uptr n);
