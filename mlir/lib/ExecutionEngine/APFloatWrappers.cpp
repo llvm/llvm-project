@@ -212,6 +212,7 @@ _mlir_apfloat_fused_multiply_add(int32_t semantics, uint64_t operand,
       multiplicand_, addend_, llvm::RoundingMode::NearestTiesToEven);
   assert(stat == llvm::APFloatBase::opOK &&
          "expected fusedMultiplyAdd status to be OK");
+  (void)stat;
   return operand_.bitcastToAPInt().getZExtValue();
 }
 

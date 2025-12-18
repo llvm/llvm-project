@@ -26,7 +26,7 @@ void ReOptimizeLayer::ReOptMaterializationUnitState::reoptimizeFailed() {
   Reoptimizing = false;
 }
 
-Error ReOptimizeLayer::reigsterRuntimeFunctions(JITDylib &PlatformJD) {
+Error ReOptimizeLayer::registerRuntimeFunctions(JITDylib &PlatformJD) {
   ExecutionSession::JITDispatchHandlerAssociationMap WFs;
   using ReoptimizeSPSSig = shared::SPSError(uint64_t, uint32_t);
   WFs[Mangle("__orc_rt_reoptimize_tag")] =

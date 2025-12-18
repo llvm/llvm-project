@@ -22,31 +22,28 @@ namespace {
 
 struct IntegerLiteralCheck {
   using type = clang::IntegerLiteral;
-  static constexpr llvm::StringLiteral Name = llvm::StringLiteral("integer");
+  static constexpr StringRef Name = "integer";
   // What should be skipped before looking for the Suffixes? (Nothing here.)
-  static constexpr llvm::StringLiteral SkipFirst = llvm::StringLiteral("");
+  static constexpr StringRef SkipFirst = "";
   // Suffix can only consist of 'u', 'l', and 'z' chars, can be a bit-precise
   // integer (wb), and can be a complex number ('i', 'j'). In MS compatibility
   // mode, suffixes like i32 are supported.
-  static constexpr llvm::StringLiteral Suffixes =
-      llvm::StringLiteral("uUlLzZwWiIjJ");
+  static constexpr StringRef Suffixes = "uUlLzZwWiIjJ";
 };
 
 struct FloatingLiteralCheck {
   using type = clang::FloatingLiteral;
-  static constexpr llvm::StringLiteral Name =
-      llvm::StringLiteral("floating point");
+  static constexpr StringRef Name = "floating point";
   // C++17 introduced hexadecimal floating-point literals, and 'f' is both a
   // valid hexadecimal digit in a hex float literal and a valid floating-point
   // literal suffix.
   // So we can't just "skip to the chars that can be in the suffix".
   // Since the exponent ('p'/'P') is mandatory for hexadecimal floating-point
   // literals, we first skip everything before the exponent.
-  static constexpr llvm::StringLiteral SkipFirst = llvm::StringLiteral("pP");
+  static constexpr StringRef SkipFirst = "pP";
   // Suffix can only consist of 'f', 'l', "f16", "bf16", "df", "dd", "dl",
   // 'h', 'q' chars, and can be a complex number ('i', 'j').
-  static constexpr llvm::StringLiteral Suffixes =
-      llvm::StringLiteral("fFlLbBdDhHqQiIjJ");
+  static constexpr StringRef Suffixes = "fFlLbBdDhHqQiIjJ";
 };
 
 struct NewSuffix {

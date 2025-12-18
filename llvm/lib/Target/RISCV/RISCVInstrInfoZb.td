@@ -477,9 +477,9 @@ def : InstAlias<"bext $rd, $rs1, $shamt",
                 (BEXTI GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt), 0>;
 } // Predicates = [HasStdExtZbs]
 
-let Predicates = [HasStdExtZbkb, NoStdExtZbb, IsRV32] in {
+let Predicates = [HasStdExtZbkbOrP, NoStdExtZbb, IsRV32] in {
 def : InstAlias<"zext.h $rd, $rs", (PACK GPR:$rd, GPR:$rs, X0)>;
-} // Predicates = [HasStdExtZbkb, NoStdExtZbb, IsRV32]
+} // Predicates = [HasStdExtZbkbOrP, NoStdExtZbb, IsRV32]
 
 let Predicates = [HasStdExtZbkb, NoStdExtZbb, IsRV64] in {
 def : InstAlias<"zext.h $rd, $rs", (PACKW GPR:$rd, GPR:$rs, X0)>;
