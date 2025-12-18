@@ -73,7 +73,6 @@ struct SymbolUsesPass
     SmallVector<func::FuncOp, 4> deadFunctions;
     module.getBodyRegion().walk([&](SymbolOpInterface nestedOp) {
       return operateOnSymbol(nestedOp, module, deadFunctions);
-      return WalkResult::advance();
     });
 
     SymbolTable table(module);
