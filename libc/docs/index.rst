@@ -25,11 +25,14 @@ is common for containerized servers or embedded devices. It can also be through
 using the LLVM-libc internal sources as a library, such as through the
 :ref:`Hand-in-Hand interface<hand_in_hand>`.
 
+For more details please watch the talk "`Climbing the ladder of Complete <https://www.youtube.com/watch?v=HtCMCL13Grg>`__ by Michael Jones.".
 
-TODO: Finish list of where LLVM-libc is used.
 LLVM-libc is currently used in Google servers, Pixel Buds, and other Google
-projects. There is an experiemental config to use LLVM-libc in Emscripten.
-Pieces of LLVM-libc are being used in Bionic (Android's libc) and Fuchsia.
+projects. Through Project Hand-in-Hand LLVM-libc's code is used in other LLVM
+projects, specifically libc++ and the offloading runtime. There is an
+experiemental config to use LLVM-libc in Emscripten and the ARM embedded
+toolchain. Pieces of LLVM-libc are being used in Bionic (Android's libc) and
+Fuchsia.
 
 .. toctree::
    :hidden:
