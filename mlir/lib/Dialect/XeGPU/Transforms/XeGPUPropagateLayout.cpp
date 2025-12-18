@@ -601,8 +601,21 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   LayoutInfo resultLayout = results[0]->getValue();
   if (!resultLayout.isAssigned())
     return;
-  // We only consider 2D -> 1D reductions at this point.
+
   VectorType resultTy = llvm::dyn_cast<VectorType>(reduction.getDestType());
+  VectorType sourceTy =
+      llvm::dyn_cast<VectorType>(reduction.getSourceVectorType());
+  SmallVector<int64_t> reductionDims(reduction.getReductionDims().begin(),
+                                     reduction.getReductionDims().end());
+  // xegpu::DistributeLayoutAttr operandLayout =
+  // xegpu::inferReductionSourceLayout(
+  //       reduction.getContext(),
+  //       dyn_cast<xegpu::DistributeLayoutAttr>(resultLayout.get()),
+  //       resultTy.getShape(),
+  //       sourceTy.getShape(),
+  //       reductionDims);
+  // We only consider 2D -> 1D reductions at this point.
+
   if (!resultTy || resultTy.getRank() != 1) {
     reduction.emitWarning("Expecting output type to be 1D vector.");
     return;
@@ -633,25 +646,13 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
 
   // Hanlding broadcast from low-rank to high-rank (e.g., 1D to 2D) case.
   if (sourceTy.getRank() != resultTy.getRank()) {
-    auto sourceDims = sourceTy.getShape();
-    auto resultDims = resultTy.getShape();
-    SmallVector<int64_t> bcastDims;
-    auto dimDiff = resultTy.getRank() - sourceTy.getRank();
-    // adding the missing leading dims
-    for (int i = 0; i < dimDiff; i++)
-      bcastDims.push_back(i);
+    auto srcShape = sourceTy.getShape();
+    auto resShape = resultTy.getShape();
+    auto resultLayoutAttr =
+        dyn_cast<xegpu::DistributeLayoutAttr>(resultLayout.get());
 
-    // for the rest dims in the resultTy, if sourceTy dim is 1, then it's
-    // broadcasted dim
-    for (size_t i = 0; i < sourceDims.size(); i++)
-      if ((sourceDims[i] == 1) && (resultDims[i + dimDiff] != 1))
-        bcastDims.push_back(i + dimDiff);
-
-    // create a slice layout for the source
-    xegpu::SliceAttr sliceLayout = xegpu::SliceAttr::get(
-        broadcast->getContext(),
-        cast<xegpu::DistributeLayoutAttr>(resultLayout.get()),
-        DenseI64ArrayAttr::get(broadcast->getContext(), bcastDims));
+    xegpu::DistributeLayoutAttr sliceLayout = xegpu::inferBroadCastSourceLayout(
+        broadcast.getContext(), resultLayoutAttr, resShape, srcShape);
 
     propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(sliceLayout)));
     return;
