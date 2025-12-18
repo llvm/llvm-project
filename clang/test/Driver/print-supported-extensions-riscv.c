@@ -230,6 +230,7 @@
 // CHECK-NEXT:     smpmpmt              0.6       'Smpmpmt' (PMP-based Memory Types Extension)
 // CHECK-NEXT:     svukte               0.3       'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses)
 // CHECK-NEXT:     xqccmp               0.3       'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)
+// CHECK-NEXT:     xqci                 0.13      'Xqci' (Qualcomm uC Extension)
 // CHECK-NEXT:     xqcia                0.7       'Xqcia' (Qualcomm uC Arithmetic Extension)
 // CHECK-NEXT:     xqciac               0.3       'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)
 // CHECK-NEXT:     xqcibi               0.2       'Xqcibi' (Qualcomm uC Branch Immediate Extension)
