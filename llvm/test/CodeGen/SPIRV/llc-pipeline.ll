@@ -23,7 +23,6 @@
 ; SPIRV-O0-NEXT:  ModulePass Manager
 ; SPIRV-O0-NEXT:    Pre-ISel Intrinsic Lowering
 ; SPIRV-O0-NEXT:    FunctionPass Manager
-; SPIRV-O0-NEXT:      Expand large div/rem
 ; SPIRV-O0-NEXT:      Expand fp
 ; SPIRV-O0-NEXT:      Lower Garbage Collection Instructions
 ; SPIRV-O0-NEXT:      Shadow Stack GC Lowering
@@ -99,7 +98,6 @@
 ; SPIRV-Opt-NEXT:  ModulePass Manager
 ; SPIRV-Opt-NEXT:    Pre-ISel Intrinsic Lowering
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
-; SPIRV-Opt-NEXT:      Expand large div/rem
 ; SPIRV-Opt-NEXT:      Expand fp
 ; SPIRV-Opt-NEXT:      Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Basic Alias Analysis (stateless AA impl)
