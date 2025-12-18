@@ -1,4 +1,4 @@
-//===- ExpandFp.h -----------------------------------*- C++ -*-===//
+//===- ExpandIRInsts.h -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_EXPANDFP_H
-#define LLVM_CODEGEN_EXPANDFP_H
+#ifndef LLVM_CODEGEN_EXPANDIRINSTS_H
+#define LLVM_CODEGEN_EXPANDIRINSTS_H
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CodeGen.h"
@@ -16,13 +16,13 @@ namespace llvm {
 
 class TargetMachine;
 
-class ExpandFpPass : public PassInfoMixin<ExpandFpPass> {
+class ExpandIRInstsPass : public PassInfoMixin<ExpandIRInstsPass> {
 private:
   const TargetMachine *TM;
   CodeGenOptLevel OptLevel;
 
 public:
-  explicit ExpandFpPass(const TargetMachine &TM, CodeGenOptLevel OptLevel);
+  explicit ExpandIRInstsPass(const TargetMachine &TM, CodeGenOptLevel OptLevel);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
@@ -32,4 +32,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_CODEGEN_EXPANDFP_H
+#endif // LLVM_CODEGEN_EXPANDIRINSTS_H

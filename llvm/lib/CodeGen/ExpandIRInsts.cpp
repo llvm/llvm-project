@@ -1,26 +1,33 @@
-//===--- ExpandFp.cpp - Expand fp instructions ----------------------------===//
+//===--- ExpandIRInsts.cpp - Expand IR instructions -----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// This pass expands certain floating point instructions at the IR level.
+// This pass expands certain instructions at the IR level.
 //
-// It expands ‘fptoui .. to’, ‘fptosi .. to’, ‘uitofp ..  to’, ‘sitofp
+// The following expansions are implemented:
+// - Expansion of ‘fptoui .. to’, ‘fptosi .. to’, ‘uitofp ..  to’, ‘sitofp
 // .. to’ instructions with a bitwidth above a threshold.  This is
 // useful for targets like x86_64 that cannot lower fp convertions
 // with more than 128 bits.
 //
-// This pass also expands div/rem instructions with a bitwidth above a
-// threshold into a call to auto-generated functions.  This is useful
-// for targets like x86_64 that cannot lower divisions with more than
-// 128 bits or targets like x86_32 that cannot lower divisions with
-// more than 64 bits.
+// - Expansion of ‘frem‘ for types MVT::f16, MVT::f32, and MVT::f64 for
+// targets which use "Expand" as the legalization action for the
+// corresponding type.
 //
+// - Expansion of ‘udiv‘, ‘sdiv‘, ‘urem‘, and ‘srem‘ instructions with
+// a bitwidth above a threshold into a call to auto-generated
+// functions.  This is useful for targets like x86_64 that cannot
+// lower divisions with more than 128 bits or targets like x86_32 that
+// cannot lower divisions with more than 64 bits.
+//
+// Instructions with vector types are scalarized first if their scalar
+// types can be expanded. Scalable vector types are not supported.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/ExpandFp.h"
+#include "llvm/CodeGen/ExpandIRInsts.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -45,7 +52,7 @@
 #include <llvm/Support/Casting.h>
 #include <optional>
 
-#define DEBUG_TYPE "expand-fp"
+#define DEBUG_TYPE "expand-ir-insts"
 
 using namespace llvm;
 
@@ -1125,18 +1132,18 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
 }
 
 namespace {
-class ExpandFpLegacyPass : public FunctionPass {
+class ExpandIRInstsLegacyPass : public FunctionPass {
   CodeGenOptLevel OptLevel;
 
 public:
   static char ID;
 
-  ExpandFpLegacyPass(CodeGenOptLevel OptLevel)
+  ExpandIRInstsLegacyPass(CodeGenOptLevel OptLevel)
       : FunctionPass(ID), OptLevel(OptLevel) {
-    initializeExpandFpLegacyPassPass(*PassRegistry::getPassRegistry());
+    initializeExpandIRInstsLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
-  ExpandFpLegacyPass() : ExpandFpLegacyPass(CodeGenOptLevel::None) {};
+  ExpandIRInstsLegacyPass() : ExpandIRInstsLegacyPass(CodeGenOptLevel::None) {};
 
   bool runOnFunction(Function &F) override {
     auto *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
@@ -1165,19 +1172,21 @@ public:
 };
 } // namespace
 
-ExpandFpPass::ExpandFpPass(const TargetMachine &TM, CodeGenOptLevel OptLevel)
+ExpandIRInstsPass::ExpandIRInstsPass(const TargetMachine &TM,
+                                     CodeGenOptLevel OptLevel)
     : TM(&TM), OptLevel(OptLevel) {}
 
-void ExpandFpPass::printPipeline(
+void ExpandIRInstsPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
-  static_cast<PassInfoMixin<ExpandFpPass> *>(this)->printPipeline(
+  static_cast<PassInfoMixin<ExpandIRInstsPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
   OS << '<';
   OS << "O" << (int)OptLevel;
   OS << '>';
 }
 
-PreservedAnalyses ExpandFpPass::run(Function &F, FunctionAnalysisManager &FAM) {
+PreservedAnalyses ExpandIRInstsPass::run(Function &F,
+                                         FunctionAnalysisManager &FAM) {
   const TargetSubtargetInfo *STI = TM->getSubtargetImpl(F);
   auto &TLI = *STI->getTargetLowering();
   AssumptionCache *AC = nullptr;
@@ -1202,12 +1211,13 @@ PreservedAnalyses ExpandFpPass::run(Function &F, FunctionAnalysisManager &FAM) {
                                        : PreservedAnalyses::all();
 }
 
-char ExpandFpLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(ExpandFpLegacyPass, "expand-fp",
+char ExpandIRInstsLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(ExpandIRInstsLegacyPass, "expand-ir-insts",
                       "Expand certain fp instructions", false, false)
 INITIALIZE_PASS_DEPENDENCY(LibcallLoweringInfoWrapper)
-INITIALIZE_PASS_END(ExpandFpLegacyPass, "expand-fp", "Expand fp", false, false)
+INITIALIZE_PASS_END(ExpandIRInstsLegacyPass, "expand-ir-insts",
+                    "Expand IR instructions", false, false)
 
-FunctionPass *llvm::createExpandFpPass(CodeGenOptLevel OptLevel) {
-  return new ExpandFpLegacyPass(OptLevel);
+FunctionPass *llvm::createExpandIRInstsPass(CodeGenOptLevel OptLevel) {
+  return new ExpandIRInstsLegacyPass(OptLevel);
 }
