@@ -594,63 +594,58 @@ lldb::SBFrame DAP::GetLLDBFrame(const llvm::json::Object &arguments) {
   return GetLLDBFrame(frame_id);
 }
 
-ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
+ReplMode DAP::DetectReplMode(lldb::SBFrame &frame, std::string &expression,
                              bool partial_expression) {
   // Check for the escape hatch prefix.
-  if (!expression.empty() &&
-      llvm::StringRef(expression)
-          .starts_with(configuration.commandEscapePrefix)) {
-    expression = expression.substr(configuration.commandEscapePrefix.size());
+  if (llvm::StringRef expr_ref = expression;
+      expr_ref.consume_front(configuration.commandEscapePrefix)) {
+    expression = expr_ref;
     return ReplMode::Command;
   }
 
-  switch (repl_mode) {
-  case ReplMode::Variable:
+  if (repl_mode != ReplMode::Auto)
+    return repl_mode;
+  // To determine if the expression is a command or not, check if the first
+  // term is a variable or command. If it's a variable in scope we will prefer
+  // that behavior and give a warning to the user if they meant to invoke the
+  // operation as a command.
+  //
+  // Example use case:
+  //   int p and expression "p + 1" > variable
+  //   int i and expression "i" > variable
+  //   int var and expression "va" > command
+  const auto [first_tok, remaining] = llvm::getToken(expression);
+
+  // If the first token is not fully finished yet, we can't
+  // determine whether this will be a variable or a lldb command.
+  if (partial_expression && remaining.empty())
+    return ReplMode::Auto;
+
+  std::string first = first_tok.str();
+  const char *first_cstr = first.c_str();
+  lldb::SBCommandInterpreter interpreter = debugger.GetCommandInterpreter();
+  const bool is_command = interpreter.CommandExists(first_cstr) ||
+                          interpreter.UserCommandExists(first_cstr) ||
+                          interpreter.AliasExists(first_cstr);
+  const bool is_variable = frame.FindVariable(first_cstr).IsValid();
+
+  // If we have both a variable and command, warn the user about the conflict.
+  if (!partial_expression && is_command && is_variable) {
+    const std::string warning_msg =
+        llvm::formatv("warning: Expression '{}' is both an LLDB command and "
+                      "variable. It will be evaluated as "
+                      "a variable. To evaluate the expression as an LLDB "
+                      "command, use '{}' as a prefix.\n",
+                      first, configuration.commandEscapePrefix);
+    this->SendOutput(OutputType::Console, warning_msg);
+  }
+
+  // Variables take preference to commands in auto, since commands can always
+  // be called using the command_escape_prefix
+  if (is_variable)
     return ReplMode::Variable;
-  case ReplMode::Command:
-    return ReplMode::Command;
-  case ReplMode::Auto:
-    // To determine if the expression is a command or not, check if the first
-    // term is a variable or command. If it's a variable in scope we will prefer
-    // that behavior and give a warning to the user if they meant to invoke the
-    // operation as a command.
-    //
-    // Example use case:
-    //   int p and expression "p + 1" > variable
-    //   int i and expression "i" > variable
-    //   int var and expression "va" > command
-    std::pair<llvm::StringRef, llvm::StringRef> token =
-        llvm::getToken(expression);
 
-    // If the first token is not fully finished yet, we can't
-    // determine whether this will be a variable or a lldb command.
-    if (partial_expression && token.second.empty())
-      return ReplMode::Auto;
-
-    std::string term = token.first.str();
-    lldb::SBCommandInterpreter interpreter = debugger.GetCommandInterpreter();
-    bool term_is_command = interpreter.CommandExists(term.c_str()) ||
-                           interpreter.UserCommandExists(term.c_str()) ||
-                           interpreter.AliasExists(term.c_str());
-    bool term_is_variable = frame.FindVariable(term.c_str()).IsValid();
-
-    // If we have both a variable and command, warn the user about the conflict.
-    if (term_is_command && term_is_variable) {
-      llvm::errs()
-          << "Warning: Expression '" << term
-          << "' is both an LLDB command and variable. It will be evaluated as "
-             "a variable. To evaluate the expression as an LLDB command, use '"
-          << configuration.commandEscapePrefix << "' as a prefix.\n";
-    }
-
-    // Variables take preference to commands in auto, since commands can always
-    // be called using the command_escape_prefix
-    return term_is_variable  ? ReplMode::Variable
-           : term_is_command ? ReplMode::Command
-                             : ReplMode::Variable;
-  }
-
-  llvm_unreachable("enum cases exhausted.");
+  return is_command ? ReplMode::Command : ReplMode::Variable;
 }
 
 std::optional<protocol::Source> DAP::ResolveSource(const lldb::SBFrame &frame) {
