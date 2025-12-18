@@ -218,7 +218,8 @@ ExecutionEngine::ExecutionEngine(bool enableObjectDump,
 
 ExecutionEngine::~ExecutionEngine() {
   // Execute the global destructors from the module being processed.
-  llvm::consumeError(jit->deinitialize(jit->getMainJITDylib()));
+  if (jit)
+    llvm::consumeError(jit->deinitialize(jit->getMainJITDylib()));
   // Run all dynamic library destroy callbacks to prepare for the shutdown.
   for (LibraryDestroyFn destroy : destroyFns)
     destroy();
