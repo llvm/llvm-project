@@ -54,16 +54,24 @@ public:
         MemMgr(Ctx.getMemoryManager()), ES(ES) {}
 
   ~DebugObject() {
+    // Alloc was finialized
     if (Alloc) {
       std::vector<FinalizedAlloc> Allocs;
       Allocs.push_back(std::move(Alloc));
       if (Error Err = MemMgr.deallocate(std::move(Allocs)))
         ES.reportError(std::move(Err));
-    } else if (!FinalizeFuture.valid()) {
-      // WorkingMem was not finalized
+      return;
+    }
+    // Error before step 3: WorkingMem was not collected
+    if (!FinalizeFuture.valid()) {
       WorkingMem.abandon(
           [ES = &this->ES](Error Err) { ES->reportError(std::move(Err)); });
+      return;
     }
+    // Error before step 4: Finalization error was not reported
+    Expected<ExecutorAddrRange> TargetMem = FinalizeFuture.get();
+    if (!TargetMem)
+      ES.reportError(TargetMem.takeError());
   }
 
   MutableArrayRef<char> getBuffer() {
@@ -71,7 +79,7 @@ public:
     return SegInfo.WorkingMem;
   }
 
-  SimpleSegmentAlloc takeTargetAlloc() {
+  SimpleSegmentAlloc collectTargetAlloc() {
     FinalizeFuture = FinalizePromise.get_future();
     return std::move(WorkingMem);
   }
@@ -296,7 +304,7 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
     }
 
     // Step 3: We start copying the debug object into target memory
-    SimpleSegmentAlloc Alloc = DebugObj->takeTargetAlloc();
+    SimpleSegmentAlloc Alloc = DebugObj->collectTargetAlloc();
 
     // FIXME: FA->getAddress() below is supposed to be the address of the memory
     // range on the target, but InProcessMemoryManager returns the address of a
