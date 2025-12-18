@@ -4995,12 +4995,16 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     break;
 
   case Intrinsic::ctlz:
-  case Intrinsic::cttz:
-    assert(CI->arg_size() == 1 &&
+  case Intrinsic::cttz: {
+    assert((CI->arg_size() <= 2) &&
            "Mismatch between function args and call args");
-    NewCall =
-        Builder.CreateCall(NewFn, {CI->getArgOperand(0), Builder.getFalse()});
+
+    Value *IsZeroPoison =
+        CI->arg_size() == 1 ? Builder.getFalse() : CI->getArgOperand(1);
+    NewCall = Builder.CreateCall(NewFn, {CI->getArgOperand(0), IsZeroPoison});
+
     break;
+  }
 
   case Intrinsic::objectsize: {
     Value *NullIsUnknownSize =

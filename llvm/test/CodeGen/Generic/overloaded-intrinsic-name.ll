@@ -73,6 +73,31 @@ entry:
       %v-new = call ptr addrspace(1) @llvm.experimental.gc.relocate.beefdead(token %tok,  i32 0, i32 0)
       ret ptr addrspace(1) %v-new
 }
+
+define i32 @ctlz(i32 %A) {
+; CHECK: %for.body.i = call i32 @llvm.ctlz.i32(i32 %A, i1 false)
+  %for.body.i = call i32 @llvm.ctlz.i32.p0(i32 %A)
+  ret i32 %for.body.i
+}
+
+define i32 @ctlz_with_isZeroPoison(i32 %A) {
+; CHECK: %for.body.i = call i32 @llvm.ctlz.i32(i32 %A, i1 false)
+  %for.body.i = call i32 @llvm.ctlz.i32.p0(i32 %A, i1 false)
+  ret i32 %for.body.i
+}
+
+define i32 @cttz(i32 %A) {
+; CHECK: %for.body.i = call i32 @llvm.cttz.i32(i32 %A, i1 false)
+  %for.body.i = call i32 @llvm.cttz.i32.p0(i32 %A)
+  ret i32 %for.body.i
+}
+
+define i32 @cttz_with_isZeroPoison(i32 %A) {
+; CHECK: %for.body.i = call i32 @llvm.cttz.i32(i32 %A, i1 false)
+  %for.body.i = call i32 @llvm.cttz.i32.p0(i32 %A, i1 false)
+  ret i32 %for.body.i
+}
+
 declare zeroext i1 @return_i1()
 declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
 declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32)
@@ -80,3 +105,5 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1.tests(token, i32, i32
 declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1.test(token, i32, i32)
 declare ptr addrspace(1) @llvm.experimental.gc.relocate.beefdead(token, i32, i32)
 declare token @llvm.experimental.gc.statepoint.deadbeef(i64, i32, ptr, i32, i32, ...)
+declare i32 @llvm.ctlz.i32.p0(i32, i1 immarg)
+declare i32 @llvm.cttz.i32.p0(i32, i1 immarg)
