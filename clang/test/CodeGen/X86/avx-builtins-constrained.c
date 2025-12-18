@@ -35,24 +35,24 @@ __m256d test_mm256_sqrt_pd(__m256d x) {
 }
 
 __m256d test_mm256_round_pd_dynamic(__m256d x) {
-  // CHECK-LABEL: test_mm256_round_pd_dynamic
-  // CHECK:  %{{.*}} = call <4 x double> @llvm.experimental.constrained.nearbyint.v4f64(<4 x double> %{{.*}}, metadata !"round.dynamic", metadata !"fpexcept.ignore")
-  return _mm256_round_pd(x, 8);
+  // CONSTRAINED-LABEL: test_mm256_round_pd_dynamic
+  // CONSTRAINED: %{{.*}} = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 4)
+  return _mm256_round_pd(x, 0b100);
 }
 
 __m256d test_mm256_round_pd_trunc(__m256d x) {
-  // CHECK-LABEL: test_mm256_round_pd_trunc
-  // CHECK: %{{.*}} = call <4 x double> @llvm.experimental.constrained.trunc.v4f64(<4 x double> %{{.*}}, metadata !"fpexcept.ignore")
+  // CONSTRAINED-LABEL: test_mm256_round_pd_trunc
+  // CONSTRAINED: %{{.*}} = call <4 x double> @llvm.experimental.constrained.trunc.v4f64(<4 x double> %{{.*}}, metadata !"fpexcept.ignore")
   return _mm256_round_pd(x, 3);
 }
 
 __m256 test_mm256_round_ps_dynamic(__m256 x) {
-  // CHECK-LABEL: test_mm256_round_ps_dynamic
-  // CHECK: %{{.*}} = call <8 x float> @llvm.experimental.constrained.nearbyint.v8f32(<8 x float> %{{.*}}, metadata !"round.dynamic", metadata !"fpexcept.ignore")
-  return _mm256_round_ps(x, 8);
+  // CONSTRAINED-LABEL: test_mm256_round_ps_dynamic
+  // CONSTRAINED: %{{.*}} = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 4)
+  return _mm256_round_ps(x, 0b100);
 }
 __m256 test_mm256_round_ps_trunc(__m256 x) {
-  // CHECK-LABEL: test_mm256_round_ps_trunc
-  // CHECK: %{{.*}} = call <8 x float> @llvm.experimental.constrained.trunc.v8f32(<8 x float> %{{.*}}, metadata !"fpexcept.ignore")
+  // CONSTRAINED-LABEL: test_mm256_round_ps_trunc
+  // CONSTRAINED: %{{.*}} = call <8 x float> @llvm.experimental.constrained.trunc.v8f32(<8 x float> %{{.*}}, metadata !"fpexcept.ignore")
   return _mm256_round_ps(x, 3);
 }
