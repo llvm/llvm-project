@@ -679,14 +679,14 @@ LogicalResult SparseMFMAOp::verify() {
         !sparseIdxType.getElementType().isInteger(16))
       return emitOpError("expected vector<2xi16> sparse indices for 8-bit "
                          "source data, but got ")
-             << sparseIdxType;
+             << getSparseIdx().getType();
   } else {
     // 16-bit source data requires vector<4xi8> sparse indices.
     if (sparseIdxType.getNumElements() != 4 ||
         !sparseIdxType.getElementType().isInteger(8))
       return emitOpError("expected vector<4xi8> sparse indices for 16-bit "
                          "source data, but got ")
-             << sparseIdxType;
+             << getSparseIdx().getType();
   }
 
   int64_t expectedSourceElems = (getM() * getK()) / waveSize;
