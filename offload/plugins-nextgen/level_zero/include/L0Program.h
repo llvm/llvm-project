@@ -65,8 +65,7 @@ public:
   size_t getSize() const { return Image->getBufferSize(); }
 
   MemoryBufferRef getMemoryBuffer() const {
-    return MemoryBufferRef(StringRef((const char *)getStart(), getSize()),
-                           "Image");
+    return MemoryBufferRef(*Image);
   }
   Error buildModules(const std::string_view BuildOptions);
 
