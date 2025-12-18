@@ -236,17 +236,10 @@ define amdgpu_kernel void @test_bitcast_gen_12i32_v4i32(ptr addrspace(1) %out, i
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[IDX:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <12 x i32> poison
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <12 x i32> [[ALLOCA]], i32 [[IDX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[IDX]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <12 x i32> [[ALLOCA]], i32 [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[TMP3]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[IDX]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <12 x i32> [[ALLOCA]], i32 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[TMP6]], i64 2
-; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[IDX]], 3
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <12 x i32> [[ALLOCA]], i32 [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[TMP9]], i64 3
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <12 x i32> [[ALLOCA]] to <3 x i128>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[IDX]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x i128> [[TMP0]], i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i128 [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    store <4 x i32> [[TMP10]], ptr addrspace(1) [[OUT]], align 16
 ; CHECK-NEXT:    ret void
 ;

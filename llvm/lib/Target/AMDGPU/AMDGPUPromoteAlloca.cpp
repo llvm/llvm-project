@@ -657,13 +657,13 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       bool IsAlignedLoad = NumBits <= (LoadAlign * 8u);
       unsigned TotalNumElts = VectorTy->getNumElements();
       bool IsProperlyDivisible = TotalNumElts % NumLoadedElts == 0;
-      if (!isa<ConstantInt>(Index) && llvm::isPowerOf2_32(TotalNumElts) &&
+      if (!isa<ConstantInt>(Index) &&
           llvm::isPowerOf2_32(SubVecTy->getNumElements()) &&
           IsProperlyDivisible && IsAlignedLoad) {
         IntegerType *NewElemTy = Builder.getIntNTy(NumBits);
         const unsigned NewNumElts =
             DL.getTypeStoreSize(VectorTy) * 8u / NumBits;
-        const unsigned LShrAmt = llvm::Log2_32(TotalNumElts / NewNumElts);
+        const unsigned LShrAmt = llvm::Log2_32(SubVecTy->getNumElements());
         FixedVectorType *BitCastTy =
             FixedVectorType::get(NewElemTy, NewNumElts);
         Value *BCVal = Builder.CreateBitCast(CurVal, BitCastTy);
