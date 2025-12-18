@@ -10286,10 +10286,21 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
     if (ThreadLimit == nullptr)
       ThreadLimit = Builder.getInt32(0);
 
+    // The __kmpc_fork_teams function expects int32 as the arguments.  So,
+    // truncate or sign extend the passed values to match the int32 parameters.
+    Value *NumTeamsLowerInt32 =
+        Builder.CreateSExtOrTrunc(NumTeamsLower, Builder.getInt32Ty());
+    Value *NumTeamsUpperInt32 =
+        Builder.CreateSExtOrTrunc(NumTeamsUpper, Builder.getInt32Ty());
+    Value *ThreadLimitInt32 =
+        Builder.CreateSExtOrTrunc(ThreadLimit, Builder.getInt32Ty());
+
     Value *ThreadNum = getOrCreateThreadID(Ident);
+
     createRuntimeFunctionCall(
         getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_push_num_teams_51),
-        {Ident, ThreadNum, NumTeamsLower, NumTeamsUpper, ThreadLimit});
+        {Ident, ThreadNum, NumTeamsLowerInt32, NumTeamsUpperInt32,
+         ThreadLimitInt32});
   }
   // Generate the body of teams.
   InsertPointTy AllocaIP(AllocaBB, AllocaBB->begin());

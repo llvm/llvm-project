@@ -5889,15 +5889,20 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
     attrs.TargetThreadLimit.front() =
         moduleTranslation.lookupValue(targetThreadLimit);
 
+  // The __kmpc_fork_teams function expects int32 as the arguments.  So,
+  // truncate or sign extend lower and upper num_teams bounds as well as
+  // thread_limit to match int32 ABI requirements for the OpenMP runtime.
   if (numTeamsLower)
-    attrs.MinTeams = moduleTranslation.lookupValue(numTeamsLower);
+    attrs.MinTeams = builder.CreateSExtOrTrunc(
+        moduleTranslation.lookupValue(numTeamsLower), builder.getInt32Ty());
 
   if (numTeamsUpper)
-    attrs.MaxTeams.front() = moduleTranslation.lookupValue(numTeamsUpper);
+    attrs.MaxTeams.front() = builder.CreateSExtOrTrunc(
+        moduleTranslation.lookupValue(numTeamsUpper), builder.getInt32Ty());
 
   if (teamsThreadLimit)
-    attrs.TeamsThreadLimit.front() =
-        moduleTranslation.lookupValue(teamsThreadLimit);
+    attrs.TeamsThreadLimit.front() = builder.CreateSExtOrTrunc(
+        moduleTranslation.lookupValue(teamsThreadLimit), builder.getInt32Ty());
 
   if (numThreads)
     attrs.MaxThreads = moduleTranslation.lookupValue(numThreads);
