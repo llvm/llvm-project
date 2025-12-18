@@ -6,9 +6,9 @@
 define <8 x i32> @concat_cvtps2dq_v8i32_v4f32(<4 x float> %a0, <4 x float> %a1) {
 ; AVX-LABEL: concat_cvtps2dq_v8i32_v4f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vcvtps2dq %xmm0, %xmm0
-; AVX-NEXT:    vcvtps2dq %xmm1, %xmm1
+; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX-NEXT:    vcvtps2dq %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %v0 = call <4 x i32> @llvm.x86.sse2.cvtps2dq(<4 x float> %a0)
   %v1 = call <4 x i32> @llvm.x86.sse2.cvtps2dq(<4 x float> %a1)
@@ -19,23 +19,22 @@ define <8 x i32> @concat_cvtps2dq_v8i32_v4f32(<4 x float> %a0, <4 x float> %a1) 
 define <16 x i32> @concat_cvtps2dq_v16i32_v4f32(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2, <4 x float> %a3) {
 ; AVX1OR2-LABEL: concat_cvtps2dq_v16i32_v4f32:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vcvtps2dq %xmm0, %xmm0
-; AVX1OR2-NEXT:    vcvtps2dq %xmm1, %xmm1
-; AVX1OR2-NEXT:    vcvtps2dq %xmm2, %xmm2
-; AVX1OR2-NEXT:    vcvtps2dq %xmm3, %xmm3
+; AVX1OR2-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX1OR2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX1OR2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1OR2-NEXT:    vcvtps2dq %ymm0, %ymm0
 ; AVX1OR2-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm1
+; AVX1OR2-NEXT:    vcvtps2dq %ymm1, %ymm1
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: concat_cvtps2dq_v16i32_v4f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvtps2dq %xmm0, %xmm0
-; AVX512-NEXT:    vcvtps2dq %xmm1, %xmm1
-; AVX512-NEXT:    vcvtps2dq %xmm2, %xmm2
-; AVX512-NEXT:    vcvtps2dq %xmm3, %xmm3
+; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512-NEXT:    vcvtps2dq %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %v0 = call <4 x i32> @llvm.x86.sse2.cvtps2dq(<4 x float> %a0)
   %v1 = call <4 x i32> @llvm.x86.sse2.cvtps2dq(<4 x float> %a1)
@@ -56,9 +55,9 @@ define <16 x i32> @concat_cvtps2dq_v16i32_v8f32(<8 x float> %a0, <8 x float> %a1
 ;
 ; AVX512-LABEL: concat_cvtps2dq_v16i32_v8f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvtps2dq %ymm0, %ymm0
-; AVX512-NEXT:    vcvtps2dq %ymm1, %ymm1
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vcvtps2dq %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %v0 = call <8 x i32> @llvm.x86.avx.cvt.ps2dq.256(<8 x float> %a0)
   %v1 = call <8 x i32> @llvm.x86.avx.cvt.ps2dq.256(<8 x float> %a1)

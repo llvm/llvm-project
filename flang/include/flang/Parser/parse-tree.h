@@ -4031,40 +4031,6 @@ struct OmpFallbackModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpFallbackModifier, Value);
 };
 
-// Ref: [6.0:470-471]
-//
-// preference-selector ->                           // since 6.0
-//    FR(foreign-runtime-identifier) |
-//    ATTR(preference-property-extension, ...)
-struct OmpPreferenceSelector {
-  UNION_CLASS_BOILERPLATE(OmpPreferenceSelector);
-  using ForeignRuntimeIdentifier = common::Indirection<Expr>;
-  using PreferencePropertyExtension = common::Indirection<Expr>;
-  using Extensions = std::list<PreferencePropertyExtension>;
-  std::variant<ForeignRuntimeIdentifier, Extensions> u;
-};
-
-// Ref: [6.0:470-471]
-//
-// preference-specification ->
-//    {preference-selector...} |                    // since 6.0
-//    foreign-runtime-identifier                    // since 5.1
-struct OmpPreferenceSpecification {
-  UNION_CLASS_BOILERPLATE(OmpPreferenceSpecification);
-  using ForeignRuntimeIdentifier =
-      OmpPreferenceSelector::ForeignRuntimeIdentifier;
-  std::variant<std::list<OmpPreferenceSelector>, ForeignRuntimeIdentifier> u;
-};
-
-// REF: [5.1:217-220], [5.2:293-294], [6.0:470-471]
-//
-// prefer-type ->                                   // since 5.1
-//    PREFER_TYPE(preference-specification...)
-struct OmpPreferType {
-  WRAPPER_CLASS_BOILERPLATE(
-      OmpPreferType, std::list<OmpPreferenceSpecification>);
-};
-
 // REF: [5.1:217-220], [5.2:293-294], [6.0:470-471]
 //
 // interop-type ->                                  // since 5.1
@@ -4180,6 +4146,40 @@ struct OmpOrderingModifier {
 struct OmpOrderModifier {
   ENUM_CLASS(Value, Reproducible, Unconstrained)
   WRAPPER_CLASS_BOILERPLATE(OmpOrderModifier, Value);
+};
+
+// Ref: [6.0:470-471]
+//
+// preference-selector ->                           // since 6.0
+//    FR(foreign-runtime-identifier) |
+//    ATTR(preference-property-extension, ...)
+struct OmpPreferenceSelector {
+  UNION_CLASS_BOILERPLATE(OmpPreferenceSelector);
+  using ForeignRuntimeIdentifier = common::Indirection<Expr>;
+  using PreferencePropertyExtension = common::Indirection<Expr>;
+  using Extensions = std::list<PreferencePropertyExtension>;
+  std::variant<ForeignRuntimeIdentifier, Extensions> u;
+};
+
+// Ref: [6.0:470-471]
+//
+// preference-specification ->
+//    {preference-selector...} |                    // since 6.0
+//    foreign-runtime-identifier                    // since 5.1
+struct OmpPreferenceSpecification {
+  UNION_CLASS_BOILERPLATE(OmpPreferenceSpecification);
+  using ForeignRuntimeIdentifier =
+      OmpPreferenceSelector::ForeignRuntimeIdentifier;
+  std::variant<std::list<OmpPreferenceSelector>, ForeignRuntimeIdentifier> u;
+};
+
+// REF: [5.1:217-220], [5.2:293-294], [6.0:470-471]
+//
+// prefer-type ->                                   // since 5.1
+//    PREFER_TYPE(preference-specification...)
+struct OmpPreferType {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpPreferType, std::list<OmpPreferenceSpecification>);
 };
 
 // Ref: [5.1:166-171], [5.2:269-270]

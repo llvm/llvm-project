@@ -1106,6 +1106,11 @@ __m256i test_mm256_permute2x128_si256(__m256i a, __m256i b) {
   return _mm256_permute2x128_si256(a, b, 0x38);
 }
 
+TEST_CONSTEXPR(match_m256i(_mm256_permute2x128_si256(((__m256i){1LL, 2LL, 3LL, 4LL}), ((__m256i){5LL, 6LL, 7LL, 8LL}), 0xA7), 7LL, 8LL, 0LL, 0LL));
+TEST_CONSTEXPR(match_m256i(_mm256_permute2x128_si256(((__m256i){1LL, 2LL, 3LL, 4LL}), ((__m256i){5LL, 6LL, 7LL, 8LL}), 0x5F), 0LL, 0LL, 3LL, 4LL));
+TEST_CONSTEXPR(match_m256i(_mm256_permute2x128_si256(((__m256i){1LL, 2LL, 3LL, 4LL}), ((__m256i){5LL, 6LL, 7LL, 8LL}), 0x37), 7LL, 8LL, 7LL, 8LL));
+TEST_CONSTEXPR(match_m256i(_mm256_permute2x128_si256(((__m256i){1LL, 2LL, 3LL, 4LL}), ((__m256i){5LL, 6LL, 7LL, 8LL}), 0x12), 5LL, 6LL, 3LL, 4LL));
+
 __m256i test_mm256_permute4x64_epi64(__m256i a) {
   // CHECK-LABEL: test_mm256_permute4x64_epi64
   // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> poison, <4 x i32> <i32 3, i32 0, i32 2, i32 0>

@@ -1578,6 +1578,7 @@ module std [system] {
     }
 
     module support_impl {
+      textual header "__locale_dir/support/aix.h"
       textual header "__locale_dir/support/apple.h"
       textual header "__locale_dir/support/bsd_like.h"
       textual header "__locale_dir/support/freebsd.h"
