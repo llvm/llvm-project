@@ -430,6 +430,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
     ```mlir
     vector-type ::= !cir.vector<size x element-type>
+    size ::= (decimal-literal | `[` decimal-literal `]`)
     element-type ::= float-type | integer-type | pointer-type
     ```
 
@@ -442,6 +443,13 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     !cir.vector<4 x !cir.int<u, 8>>
     !cir.vector<2 x !cir.float>
     ```
+
+    Scalable vectors are indicated by enclosing size in square brackets.
+
+    Example:
+    ```mlir
+    !cir.vector<[4] x !cir.int<u, 8>>
+    ```
   }];
 
   let parameters = (ins
@@ -449,10 +457,6 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     "uint64_t":$size,
     OptionalParameter<"bool">:$is_scalable
   );
-
-  let assemblyFormat = [{
-    `<` $size `x` $element_type `>`
-  }];
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
@@ -471,6 +475,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
   let genVerifyDecl = 1;
   let skipDefaultBuilders = 1;
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//

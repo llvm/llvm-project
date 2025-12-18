@@ -37,9 +37,9 @@ void __ompt_lw_taskteam_unlink(kmp_info_t *thr);
 
 ompt_team_info_t *__ompt_get_teaminfo(int depth, int *size);
 
-ompt_data_t *__ompt_get_generating_task();
+ompt_data_t *__ompt_get_task_data();
 
-ompt_task_info_t *__ompt_get_task_info_target();
+ompt_data_t *__ompt_get_target_task_data();
 
 ompt_task_info_t *__ompt_get_task_info_object(int depth);
 

@@ -1222,8 +1222,7 @@ bool SimplifyRODataLoads::simplifyRODataLoads(BinaryFunction &BF) {
   uint64_t NumDynamicLocalLoadsFound = 0;
 
   for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
-    for (auto It = BB->begin(); It != BB->end(); ++It) {
-      const MCInst &Inst = *It;
+    for (MCInst &Inst : *BB) {
       unsigned Opcode = Inst.getOpcode();
       const MCInstrDesc &Desc = BC.MII->get(Opcode);
 
@@ -1236,7 +1235,7 @@ bool SimplifyRODataLoads::simplifyRODataLoads(BinaryFunction &BF) {
 
       if (MIB->hasPCRelOperand(Inst)) {
         // Try to find the symbol that corresponds to the PC-relative operand.
-        MCOperand *DispOpI = MIB->getMemOperandDisp(const_cast<MCInst &>(Inst));
+        MCOperand *DispOpI = MIB->getMemOperandDisp(Inst);
         assert(DispOpI != Inst.end() && "expected PC-relative displacement");
         assert(DispOpI->isExpr() &&
                "found PC-relative with non-symbolic displacement");
@@ -1262,49 +1261,28 @@ bool SimplifyRODataLoads::simplifyRODataLoads(BinaryFunction &BF) {
       }
 
       // Get the contents of the section containing the target address of the
-      // memory operand. We are only interested in read-only sections for X86,
-      // for aarch64 the sections can be read-only or executable.
+      // memory operand. We are only interested in read-only sections.
       ErrorOr<BinarySection &> DataSection =
           BC.getSectionForAddress(TargetAddress);
       if (!DataSection || DataSection->isWritable())
         continue;
 
-      if (DataSection->isText()) {
-        // If data is not part of a function, check if it is part of a global CI
-        // Do not proceed if there aren't data markers for CIs
-        BinaryFunction *TargetBF =
-            BC.getBinaryFunctionContainingAddress(TargetAddress,
-                                                  /*CheckPastEnd*/ false,
-                                                  /*UseMaxSize*/ true);
-        const bool IsInsideFunc =
-            TargetBF && TargetBF->isInConstantIsland(TargetAddress);
-
-        auto CIEndIter = BC.AddressToConstantIslandMap.end();
-        auto CIIter = BC.AddressToConstantIslandMap.find(TargetAddress);
-        if (!IsInsideFunc && CIIter == CIEndIter)
-          continue;
-      }
-
       if (BC.getRelocationAt(TargetAddress) ||
           BC.getDynamicRelocationAt(TargetAddress))
         continue;
+
+      uint32_t Offset = TargetAddress - DataSection->getAddress();
+      StringRef ConstantData = DataSection->getContents();
 
       ++NumLocalLoadsFound;
       if (BB->hasProfile())
         NumDynamicLocalLoadsFound += BB->getExecutionCount();
 
-      uint32_t Offset = TargetAddress - DataSection->getAddress();
-      StringRef ConstantData = DataSection->getContents();
-      const InstructionListType Instrs =
-          MIB->materializeConstant(BC, Inst, ConstantData, Offset);
-      if (Instrs.empty())
-        continue;
-
-      It = std::next(BB->replaceInstruction(It, Instrs), Instrs.size() - 1);
-
-      ++NumLocalLoadsSimplified;
-      if (BB->hasProfile())
-        NumDynamicLocalLoadsSimplified += BB->getExecutionCount();
+      if (MIB->replaceMemOperandWithImm(Inst, ConstantData, Offset)) {
+        ++NumLocalLoadsSimplified;
+        if (BB->hasProfile())
+          NumDynamicLocalLoadsSimplified += BB->getExecutionCount();
+      }
     }
   }
 
@@ -1323,13 +1301,12 @@ Error SimplifyRODataLoads::runOnFunctions(BinaryContext &BC) {
       Modified.insert(&Function);
   }
 
-  if (opts::Verbosity > 0 || NumLoadsSimplified)
-    BC.outs() << "BOLT-INFO: simplified " << NumLoadsSimplified << " out of "
-              << NumLoadsFound << " loads from a statically computed address.\n"
-              << "BOLT-INFO: dynamic loads simplified: "
-              << NumDynamicLoadsSimplified << "\n"
-              << "BOLT-INFO: dynamic loads found: " << NumDynamicLoadsFound
-              << "\n";
+  BC.outs() << "BOLT-INFO: simplified " << NumLoadsSimplified << " out of "
+            << NumLoadsFound << " loads from a statically computed address.\n"
+            << "BOLT-INFO: dynamic loads simplified: "
+            << NumDynamicLoadsSimplified << "\n"
+            << "BOLT-INFO: dynamic loads found: " << NumDynamicLoadsFound
+            << "\n";
   return Error::success();
 }
 
