@@ -63,8 +63,7 @@ void (*RegisterCustomChecks)(const ClangTidyOptions &O,
 namespace {
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
 #define ANALYZER_CHECK_NAME_PREFIX "clang-analyzer-"
-static constexpr llvm::StringLiteral AnalyzerCheckNamePrefix =
-    ANALYZER_CHECK_NAME_PREFIX;
+static constexpr StringRef AnalyzerCheckNamePrefix = ANALYZER_CHECK_NAME_PREFIX;
 
 class AnalyzerDiagnosticConsumer : public ento::PathDiagnosticConsumer {
 public:
@@ -734,7 +733,7 @@ ChecksAndOptions getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers,
     Result.Checks.insert(Buffer);
   }
 
-  static constexpr llvm::StringLiteral OptionNames[] = {
+  static constexpr StringRef OptionNames[] = {
 #define GET_CHECKER_OPTIONS
 #define CHECKER_OPTION(TYPE, CHECKER, OPTION_NAME, DESCRIPTION, DEFAULT,       \
                        RELEASE, HIDDEN)                                        \
