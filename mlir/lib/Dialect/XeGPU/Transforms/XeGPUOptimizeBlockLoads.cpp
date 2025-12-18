@@ -416,7 +416,8 @@ public:
   }
 };
 
-class MultiRed2dOp : public OpConversionPattern<vector::MultiDimReductionOp> {
+class MultiRed2dOpPattern
+    : public OpConversionPattern<vector::MultiDimReductionOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
   matchAndRewrite(vector::MultiDimReductionOp reductionOp, OpAdaptor adaptor,
@@ -440,14 +441,8 @@ class MultiRed2dOp : public OpConversionPattern<vector::MultiDimReductionOp> {
 
     // The first reduction's dist attribute does not have the cross lane dim.
     auto resSliceLayoutAttr = cast<xegpu::SliceAttr>(resLayout);
-    SmallVector<int64_t> sliceDims{resSliceLayoutAttr.getDims().asArrayRef()};
-    auto foundIt = std::find(sliceDims.begin(), sliceDims.end(), crossLaneDim);
-    assert(foundIt != sliceDims.end() &&
-           "Expected to find reduction dim in slice dims");
-    sliceDims.erase(foundIt);
-    auto intraLaneRedResLayout = xegpu::SliceAttr::get(
-        reductionOp.getContext(), resSliceLayoutAttr.getParent(),
-        DenseI64ArrayAttr::get(getContext(), sliceDims));
+    SmallVector<int64_t> dropDims{crossLaneDim};
+    auto intraLaneRedResLayout = resSliceLayoutAttr.dropSliceDims(dropDims);
 
     SmallVector<int64_t> accShape(sourceVecType.getShape());
     accShape.erase(accShape.begin() + intraLaneDim);
@@ -485,12 +480,9 @@ private:
     assert(reductionDims.size() == 2 && "Expected 2D reduction");
     int64_t intra, cross = -1;
     xegpu::LayoutAttr layoutAttr = dyn_cast<xegpu::LayoutAttr>(layout);
-    if (auto layoutSliceAttr = dyn_cast<xegpu::SliceAttr>(layout)) {
-      while (dyn_cast<xegpu::SliceAttr>(layoutSliceAttr.getParent()))
-        layoutSliceAttr =
-            dyn_cast<xegpu::SliceAttr>(layoutSliceAttr.getParent());
-      layoutAttr = dyn_cast<xegpu::LayoutAttr>(layoutSliceAttr.getParent());
-    }
+    if (auto layoutSliceAttr = dyn_cast<xegpu::SliceAttr>(layout))
+      layoutAttr =
+          dyn_cast<xegpu::LayoutAttr>(layoutSliceAttr.flatten().getParent());
     assert(layoutAttr);
     SmallVector<int64_t> laneLayout = layoutAttr.getEffectiveLaneLayoutAsInt();
 
@@ -511,7 +503,8 @@ private:
 void xegpu::populateXeGPUOptimizeBlockLoadsPatterns(
     RewritePatternSet &patterns) {
   patterns.add<XeGPUCreateNdDescOpPattern, XeGPULoadNdDescOpPattern,
-               VectorExtractOpPattern, MultiRed2dOp>(patterns.getContext());
+               VectorExtractOpPattern, MultiRed2dOpPattern>(
+      patterns.getContext());
 }
 
 namespace {
