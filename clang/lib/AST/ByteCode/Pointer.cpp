@@ -362,7 +362,7 @@ void Pointer::print(llvm::raw_ostream &OS) const {
   }
 }
 
-/// Compute an offset that can be used to compare this pointer to another one
+/// Compute an offset that can be used to compare the pointer to another one
 /// with the same base. To get accurate results, we basically _have to_ compute
 /// the lvalue offset using the ASTRecordLayout.
 ///
