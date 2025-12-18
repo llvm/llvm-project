@@ -41,6 +41,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -74,6 +75,36 @@ static bool isExitBlock(BasicBlock *BB,
 // lot of instructions within the same loops, computing the exit blocks is
 // expensive, and we're not mutating the loop structure.
 using LoopExitBlocksTy = SmallDenseMap<Loop *, SmallVector<BasicBlock *, 1>>;
+
+// If I is an alloca with lifetime intrinsics that are live out of the loop,
+// remove all the lifetime intrinsics for I.
+// This ensures we don't create a lifetime intrinsic based on an LCSSA phi,
+// and avoids potential lifetime inconsistencies.
+static void fixLifetimeIntrinsics(Instruction *I,
+                                  SmallVectorImpl<Use *> &UsesToRewrite) {
+  if (!isa<AllocaInst>(I))
+    return;
+  bool RemovedAny = false;
+  // First, remove lifetime intrinsics from UsesToRewrite.
+  llvm::erase_if(UsesToRewrite, [&](Use *U) {
+    if (auto *II = dyn_cast<IntrinsicInst>(U->getUser())) {
+      if (II->isLifetimeStartOrEnd()) {
+        RemovedAny = true;
+        return true;
+      }
+    }
+    return false;
+  });
+
+  // Ensure consistency in the simplest way, by removing all lifetime uses
+  // of I.
+  if (RemovedAny) {
+    for (auto *U : make_early_inc_range(I->users()))
+      if (auto *II = dyn_cast<IntrinsicInst>(U))
+        if (II->isLifetimeStartOrEnd())
+          II->eraseFromParent();
+  }
+}
 
 /// For every instruction from the worklist, check to see if it has any uses
 /// that are outside the current loop.  If so, insert LCSSA PHI nodes and
@@ -125,6 +156,8 @@ formLCSSAForInstructionsImpl(SmallVectorImpl<Instruction *> &Worklist,
       if (InstBB != UserBB && !L->contains(UserBB))
         UsesToRewrite.push_back(&U);
     }
+
+    fixLifetimeIntrinsics(I, UsesToRewrite);
 
     // If there are no uses outside the loop, exit with no change.
     if (UsesToRewrite.empty())
