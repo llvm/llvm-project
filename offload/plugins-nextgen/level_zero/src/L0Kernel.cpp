@@ -449,13 +449,14 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   for (int32_t I = 0; I < NumArgs; I++) {
     // Scope code to ease integration with downstream custom code.
     {
-      void *Arg = (static_cast<void **>(LaunchParams.Data))[I];
-      CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, zeKernel, I, sizeof(Arg),
-                        Arg == nullptr ? nullptr : &Arg);
+      auto arg = KernelArgs.ArgPtrs[I];
+      CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, zeKernel, I,
+                        KernelArgs.ArgSizes[I], arg);
+
       INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
            "Kernel Pointer argument %" PRId32 " (value: " DPxMOD
            ") was set successfully for device %s.\n",
-           I, DPxPTR(Arg), IdStr);
+           I, DPxPTR(arg), IdStr);
     }
   }
 

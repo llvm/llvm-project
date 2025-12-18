@@ -286,9 +286,11 @@ DeviceContext::getKernelHandle(ol_program_handle_t ProgramHandle,
   return Handle;
 }
 
-void DeviceContext::launchKernelImpl(
-    ol_symbol_handle_t KernelHandle, uint32_t NumGroups, uint32_t GroupSize,
-    const void *KernelArgs, std::size_t KernelArgsSize) const noexcept {
+void DeviceContext::launchKernelImpl(ol_symbol_handle_t KernelHandle,
+                                     uint32_t NumGroups, uint32_t GroupSize,
+                                     const void **KernelArgs,
+                                     const int64_t *KernelArgsSizes,
+                                     std::size_t KernelArgsNum) const noexcept {
   ol_kernel_launch_size_args_t LaunchSizeArgs;
   LaunchSizeArgs.Dimensions = 1;
   LaunchSizeArgs.NumGroups = {NumGroups, 1, 1};
@@ -296,7 +298,7 @@ void DeviceContext::launchKernelImpl(
   LaunchSizeArgs.DynSharedMemory = 0;
 
   OL_CHECK(olLaunchKernel(nullptr, DeviceHandle, KernelHandle, KernelArgs,
-                          KernelArgsSize, &LaunchSizeArgs));
+                          KernelArgsSizes, KernelArgsNum, &LaunchSizeArgs));
 }
 
 [[nodiscard]] llvm::StringRef DeviceContext::getName() const noexcept {

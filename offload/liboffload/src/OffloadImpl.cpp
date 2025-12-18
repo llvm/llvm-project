@@ -1073,8 +1073,8 @@ Error olCalculateOptimalOccupancy_impl(ol_device_handle_t Device,
 }
 
 Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
-                          ol_symbol_handle_t Kernel, const void *ArgumentsData,
-                          size_t ArgumentsSize,
+                          ol_symbol_handle_t Kernel, const void **ArgumentsData,
+                          const int64_t *ArgumentsSizes, uint32_t ArgumentsNum,
                           const ol_kernel_launch_size_args_t *LaunchSizeArgs) {
   auto *DeviceImpl = Device->Device;
   if (Queue && Device != Queue->Device) {
@@ -1098,12 +1098,10 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   LaunchArgs.ThreadLimit[2] = LaunchSizeArgs->GroupSize.z;
   LaunchArgs.DynCGroupMem = LaunchSizeArgs->DynSharedMemory;
 
-  KernelLaunchParamsTy Params;
-  Params.Data = const_cast<void *>(ArgumentsData);
-  Params.Size = ArgumentsSize;
-  LaunchArgs.ArgPtrs = reinterpret_cast<void **>(&Params);
-  // Don't do anything with pointer indirection; use arg data as-is
-  LaunchArgs.Flags.IsCUDA = true;
+  LaunchArgs.ArgPtrs = const_cast<void **>(ArgumentsData);
+  LaunchArgs.NumArgs = ArgumentsNum;
+  LaunchArgs.ArgSizes = const_cast<int64_t *>(ArgumentsSizes);
+  std::vector<void *> ArgPtrs;
 
   auto *KernelImpl = std::get<GenericKernelTy *>(Kernel->PluginImpl);
   auto Err = KernelImpl->launch(*DeviceImpl, LaunchArgs.ArgPtrs, nullptr,
