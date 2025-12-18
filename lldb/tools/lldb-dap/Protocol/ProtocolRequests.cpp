@@ -701,4 +701,40 @@ bool fromJSON(const llvm::json::Value &Params, PauseArguments &Args,
   return O && O.map("threadId", Args.threadId);
 }
 
+bool fromJSON(const llvm::json::Value &Params, LocationsArguments &Args,
+              llvm::json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("locationReference", Args.locationReference);
+}
+
+llvm::json::Value toJSON(const LocationsResponseBody &Body) {
+  assert(Body.line != LLDB_INVALID_LINE_NUMBER);
+  json::Object result{{"source", Body.source}, {"line", Body.line}};
+
+  if (Body.column != 0 && Body.column != LLDB_INVALID_COLUMN_NUMBER)
+    result.insert({"column", Body.column});
+  if (Body.endLine != 0 && Body.endLine != LLDB_INVALID_LINE_NUMBER)
+    result.insert({"endLine", Body.endLine});
+  if (Body.endColumn != 0 && Body.endColumn != LLDB_INVALID_COLUMN_NUMBER)
+    result.insert({"endColumn", Body.endColumn});
+
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, CompileUnitsArguments &Args,
+              llvm::json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("moduleId", Args.moduleId);
+}
+
+llvm::json::Value toJSON(const CompileUnitsResponseBody &Body) {
+  json::Object result{{"compileUnits", Body.compileUnits}};
+  return result;
+}
+
+llvm::json::Value toJSON(const TestGetTargetBreakpointsResponseBody &Body) {
+  json::Object result{{"breakpoints", Body.breakpoints}};
+  return result;
+}
+
 } // namespace lldb_dap::protocol
