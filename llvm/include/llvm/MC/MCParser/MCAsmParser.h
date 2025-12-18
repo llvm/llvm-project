@@ -150,6 +150,7 @@ protected: // Can only create subclasses.
   bool HadError = false;
 
   bool ShowParsedOperands = false;
+  bool ProcessIncbinFile = true;
 
 public:
   MCAsmParser(const MCAsmParser &) = delete;
@@ -175,6 +176,9 @@ public:
 
   bool getShowParsedOperands() const { return ShowParsedOperands; }
   void setShowParsedOperands(bool Value) { ShowParsedOperands = Value; }
+
+  bool getProcessIncbinFile() const { return ProcessIncbinFile; }
+  void setProcessIncbinFile(bool Value) { ProcessIncbinFile = Value; }
 
   /// Run the parser on the input source buffer.
   virtual bool Run(bool NoInitialTextSection, bool NoFinalize = false) = 0;
