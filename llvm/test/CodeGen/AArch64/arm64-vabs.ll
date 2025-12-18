@@ -1952,3 +1952,131 @@ define <8 x i16> @pr88784_fixed(<8 x i8> %l0, <8 x i8> %l1, <8 x i16> %l2) {
   ret <8 x i16> %l9
 }
 
+define <16 x i16> @sabd16b_i16(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-SD-LABEL: sabd16b_i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sabd.16b v0, v0, v1
+; CHECK-SD-NEXT:    ushll2.8h v1, v0, #0
+; CHECK-SD-NEXT:    ushll.8h v0, v0, #0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sabd16b_i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sshll.8h v2, v0, #0
+; CHECK-GI-NEXT:    sshll.8h v3, v1, #0
+; CHECK-GI-NEXT:    sshll2.8h v4, v0, #0
+; CHECK-GI-NEXT:    sshll2.8h v5, v1, #0
+; CHECK-GI-NEXT:    ssubl.8h v6, v0, v1
+; CHECK-GI-NEXT:    ssubl2.8h v7, v0, v1
+; CHECK-GI-NEXT:    cmgt.8h v2, v3, v2
+; CHECK-GI-NEXT:    cmgt.8h v3, v5, v4
+; CHECK-GI-NEXT:    ssubl.8h v4, v1, v0
+; CHECK-GI-NEXT:    ssubl2.8h v1, v1, v0
+; CHECK-GI-NEXT:    mov.16b v0, v2
+; CHECK-GI-NEXT:    bif.16b v1, v7, v3
+; CHECK-GI-NEXT:    bsl.16b v0, v4, v6
+; CHECK-GI-NEXT:    ret
+  %aext = sext <16 x i8> %a to <16 x i16>
+  %bext = sext <16 x i8> %b to <16 x i16>
+  %abdiff = sub nsw <16 x i16> %aext, %bext
+  %abcmp = icmp slt <16 x i16> %aext, %bext
+  %ababs = sub nsw <16 x i16> %bext, %aext
+  %absel = select <16 x i1> %abcmp, <16 x i16> %ababs, <16 x i16> %abdiff
+  %reduced_v = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %absel)
+  ret <16 x i16> %absel
+}
+
+define <16 x i16> @uabd16b_i16(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-SD-LABEL: uabd16b_i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    uabd.16b v0, v0, v1
+; CHECK-SD-NEXT:    ushll2.8h v1, v0, #0
+; CHECK-SD-NEXT:    ushll.8h v0, v0, #0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uabd16b_i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ushll.8h v2, v0, #0
+; CHECK-GI-NEXT:    ushll.8h v3, v1, #0
+; CHECK-GI-NEXT:    ushll2.8h v4, v0, #0
+; CHECK-GI-NEXT:    ushll2.8h v5, v1, #0
+; CHECK-GI-NEXT:    usubl.8h v6, v0, v1
+; CHECK-GI-NEXT:    usubl2.8h v7, v0, v1
+; CHECK-GI-NEXT:    cmhi.8h v2, v3, v2
+; CHECK-GI-NEXT:    cmhi.8h v3, v5, v4
+; CHECK-GI-NEXT:    usubl.8h v4, v1, v0
+; CHECK-GI-NEXT:    usubl2.8h v1, v1, v0
+; CHECK-GI-NEXT:    mov.16b v0, v2
+; CHECK-GI-NEXT:    bif.16b v1, v7, v3
+; CHECK-GI-NEXT:    bsl.16b v0, v4, v6
+; CHECK-GI-NEXT:    ret
+  %aext = zext <16 x i8> %a to <16 x i16>
+  %bext = zext <16 x i8> %b to <16 x i16>
+  %abdiff = sub nsw <16 x i16> %aext, %bext
+  %abcmp = icmp ult <16 x i16> %aext, %bext
+  %ababs = sub nsw <16 x i16> %bext, %aext
+  %absel = select <16 x i1> %abcmp, <16 x i16> %ababs, <16 x i16> %abdiff
+  ret <16 x i16> %absel
+}
+
+define <16 x i16> @sabd16b_i16_ext(<16 x i16> %aext, <16 x i8> %b) {
+; CHECK-SD-LABEL: sabd16b_i16_ext:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sshll.8h v3, v2, #0
+; CHECK-SD-NEXT:    sshll2.8h v2, v2, #0
+; CHECK-SD-NEXT:    sabd.8h v1, v1, v2
+; CHECK-SD-NEXT:    sabd.8h v0, v0, v3
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sabd16b_i16_ext:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sshll.8h v3, v2, #0
+; CHECK-GI-NEXT:    sshll2.8h v4, v2, #0
+; CHECK-GI-NEXT:    ssubw.8h v5, v0, v2
+; CHECK-GI-NEXT:    ssubw2.8h v2, v1, v2
+; CHECK-GI-NEXT:    cmgt.8h v6, v3, v0
+; CHECK-GI-NEXT:    cmgt.8h v7, v4, v1
+; CHECK-GI-NEXT:    sub.8h v0, v3, v0
+; CHECK-GI-NEXT:    sub.8h v1, v4, v1
+; CHECK-GI-NEXT:    bif.16b v0, v5, v6
+; CHECK-GI-NEXT:    bif.16b v1, v2, v7
+; CHECK-GI-NEXT:    ret
+  %bext = sext <16 x i8> %b to <16 x i16>
+  %abdiff = sub nsw <16 x i16> %aext, %bext
+  %abcmp = icmp slt <16 x i16> %aext, %bext
+  %ababs = sub nsw <16 x i16> %bext, %aext
+  %absel = select <16 x i1> %abcmp, <16 x i16> %ababs, <16 x i16> %abdiff
+  %reduced_v = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %absel)
+  ret <16 x i16> %absel
+}
+
+define <16 x i16> @uabd16b_i16_ext(<16 x i16> %aext, <16 x i8> %b) {
+; CHECK-SD-LABEL: uabd16b_i16_ext:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ushll.8h v3, v2, #0
+; CHECK-SD-NEXT:    ushll2.8h v2, v2, #0
+; CHECK-SD-NEXT:    uabd.8h v1, v1, v2
+; CHECK-SD-NEXT:    uabd.8h v0, v0, v3
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uabd16b_i16_ext:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ushll.8h v3, v2, #0
+; CHECK-GI-NEXT:    ushll2.8h v4, v2, #0
+; CHECK-GI-NEXT:    usubw.8h v5, v0, v2
+; CHECK-GI-NEXT:    usubw2.8h v2, v1, v2
+; CHECK-GI-NEXT:    cmhi.8h v6, v3, v0
+; CHECK-GI-NEXT:    cmhi.8h v7, v4, v1
+; CHECK-GI-NEXT:    sub.8h v0, v3, v0
+; CHECK-GI-NEXT:    sub.8h v1, v4, v1
+; CHECK-GI-NEXT:    bif.16b v0, v5, v6
+; CHECK-GI-NEXT:    bif.16b v1, v2, v7
+; CHECK-GI-NEXT:    ret
+  %bext = zext <16 x i8> %b to <16 x i16>
+  %abdiff = sub nsw <16 x i16> %aext, %bext
+  %abcmp = icmp ult <16 x i16> %aext, %bext
+  %ababs = sub nsw <16 x i16> %bext, %aext
+  %absel = select <16 x i1> %abcmp, <16 x i16> %ababs, <16 x i16> %abdiff
+  %reduced_v = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %absel)
+  ret <16 x i16> %absel
+}
