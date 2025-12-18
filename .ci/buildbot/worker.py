@@ -122,7 +122,7 @@ def rmtree(path):
     """Remove directory path and all its subdirectories. Includes a workaround
     for Windows where shutil.rmtree errors on read-only files.
 
-    Taken from official Pythons docs
+    Taken from official Python docs
     https://docs.python.org/3/library/shutil.html#rmtree-example
     """
     shutil.rmtree(path, onexc=_remove_readonly)
@@ -266,11 +266,6 @@ def convert_bool(v):
             return bool(v)
 
 
-def first_defined(*args):
-    for arg in args:
-        if arg is not None:
-            return arg
-    return None
 
 
 def relative_if_possible(path, relative_to):
@@ -291,6 +286,7 @@ def run(
     scriptpath,
     llvmsrcroot,
     parser=None,
+    cachefile=None,
     clobberpaths=[],
     workerjobs=None,
     incremental=None,
@@ -304,13 +300,18 @@ def run(
     We use the term 'clean' for resetting the worker to an empty state. This
     involves deleting ${prefix}/llvm.src as well as ${prefix}/build.
     The term 'clobber' means deleting build artifacts, but not already
-    downloaded git repositories. Build artifacts including build- and
+    downloaded git repositories. Build artifacts include build- and
     install-directories, but not source directories. Changes in the llvm.src
-    directory will be reset before the next build anyway. By default, we will
+    directory will either be force-reset by the buildbot's 'checkout' step
+    anyway, or -- in case of local invocation -- represents the state the user
+    wants to reproduce. In either case the source directories should not be
+    touched. We consider 'clean' to comprise 'clobber'. The llvm-zorg also uses
+    the term 'clean_obj' instead of 'clobber'.
+
+    be reset before the next build anyway. By default, we will
     always clobber to get the same starting point at every build. If
     incremental=True or the --incremental command line option is used, the
     starting point is the previous build.
-    We consider 'clean' to imply 'clean_obj'.
 
     A buildbot worker will invoke this script using this directory structure,
     where ${prefix} is a dedicated directory for this builder:
@@ -343,6 +344,10 @@ def run(
         Use this argparse.ArgumentParser instead of creating a new one. Allows
         adding additional command line switches in addition to the pre-defined
         ones. Build scripts are encouraged to apply the pre-defined switches.
+    cachefile
+        Path (relative to llvmsrcroot) of the CMake cache file to
+        use. `None` indicates that the script does not use a cache file. Can be
+        overridden using --cachefile.
     clobberpaths
         Directories relative to workdir that need to be deleted if the build
         configuration changes (due to changes of CMakeLists.txt or changes of
@@ -357,10 +362,13 @@ def run(
         BUILDBOT_JOBS environment variable or keep ninja/llvm-lit defaults.
     incremental
         Only clobber the build artifacts when the build configuration changes.
+        Can be overridden using --incremental.
     """
 
     scriptpath = os.path.abspath(scriptpath)
     llvmsrcroot = os.path.abspath(llvmsrcroot)
+    if cachefile is not None:
+        cachefile = os.path.join(llvmsrcroot,cachefile)
     stem = pathlib.Path(scriptpath).stem
     workdir_default = f"{stem}.workdir"
 
@@ -372,11 +380,7 @@ def run(
     if not jobs_default:
         jobs_default = None
 
-    incremental_default = incremental
-    if convert_bool(os.environ.get("BUILDBOT_CLOBBER")):
-        incremental_default=False
-    elif convert_bool(os.environ.get("BUILDBOT_CLEAN_OBJ")):
-      incremental_default=False
+    incremental_default = None if incremental else False
 
     parser = parser or argparse.ArgumentParser(
         allow_abbrev=True,
@@ -394,9 +398,7 @@ def run(
     )
     parser.add_argument(
         "--cachefile",
-        default=relative_if_possible(
-            pathlib.Path(scriptpath).with_suffix(".cmake"), llvmsrcroot
-        ),
+        default=relative_if_possible(cachefile, llvmsrcroot),
         help="File containing the initial values for the CMakeCache.txt for "
         "the llvm build.",
     )
@@ -419,25 +421,53 @@ def run(
     args = parser.parse_args()
 
     workdir = os.path.abspath(args.workdir)
+    incremental = args.incremental
     clean = args.clean
-    clobber = not args.incremental
     cachefile = os.path.join(llvmsrcroot, args.cachefile)
-    oldcwd = os.getcwd()
 
     prevcachepath = os.path.join(workdir, "prevcache.cmake")
-    if cachefile and os.path.exists(prevcachepath):
-        # Force clobber if cache file has changed; a new cachefile does not override entries already present in CMakeCache.txt
-        if not filecmp.cmp(
-            os.path.join(llvmsrcroot, args.cachefile), prevcachepath, shallow=False
-        ):
-            clobber = True
+    prevscriptpath = os.path.join(workdir, "prevscript.py")
+
+    if clean:
+        # Clean implies clobber
+        clobber=False
+    elif incremental is None:
+        # Automatically determine whether to clobber
+        def has_config_change():
+            # Has the master scheduler determined a CMakeLists.txt has changed?
+            if convert_bool(os.environ.get("BUILDBOT_CLOBBER") ):
+                return True
+            if convert_bool(os.environ.get("BUILDBOT_CLEAN_OBJ")):
+                    return True
+
+            # Has the build script changed?
+            if not os.path.isfile(prevscriptpath) :
+                return True
+            if not filecmp.cmp(scriptpath , prevscriptpath, shallow=False):
+                return True
+
+            # Has the cache file (if any) changed?
+            if cachefile:
+                if not os.path.isfile(prevcachepath) :
+                    return True
+                if not os.path.isfile(cachefile) :
+                    return True
+                if not filecmp.cmp(  cachefile , prevcachepath, shallow=False):
+                    return True
+
+            return False
+        clobber = has_config_change()
+    else:
+        # No clobber if incremental was enabled explicitly
+        clobber = False
+
 
     # Safety check
     parentdir = os.path.dirname(scriptpath)
     while True:
         if os.path.exists(workdir) and os.path.samefile(parentdir, workdir):
             raise Exception(
-                f"Cannot use {args.workdir} as workdir; a '--clean' build would rmtree the llvm-project source in {parentdir} as well"
+                f"Cannot use {args.workdir} as workdir; in includes the source in '{parentdir}'"
             )
         newparentdir = os.path.dirname(parentdir)
         if newparentdir == parentdir:
@@ -454,13 +484,25 @@ def run(
         llvmsrcroot=llvmsrcroot,
     )
 
+    # Ensure that the cwd is not the directory we are going to delete. This
+    # would not work e.g. under Windows. We will chdir to workdir in the next
+    # step anyway.
+    os.chdir("/")
+
     if clean:
-        # Ensure that the cwd is not the directory we are going to delete. This would not work under Windows. We will chdir to workdir later anyway.
-        os.chdir("/")
+        if os.path.exists(workdir)        :
+            print("Deleting previous build state including sources")
 
         with w.step(f"clean"):
             rmtree(workdir)
     elif clobber:
+        # Warn user if deleting anything
+        if clobber:
+            for p in clobberpaths:
+                if os.path.exists(os.path.join(workdir, p)):
+                    print("Deleting previous build artifacts; use --incremental to keep")
+                    break
+
         with w.step(f"clobber"):
             for d in clobberpaths:
                 rmtree(os.path.join(workdir, d))
@@ -469,12 +511,10 @@ def run(
     os.makedirs(workdir, exist_ok=True)
     os.chdir(workdir)
 
-    # Remember used cachefile in case it changes
+    # Remember used script and cachefile to detect changes
+    shutil.copy(            scriptpath,            prevscriptpath        )
     if cachefile:
-        shutil.copy(
-            os.path.join(oldcwd, llvmsrcroot, args.cachefile),
-            os.path.join(oldcwd, prevcachepath),
-        )
+        shutil.copy(            cachefile,            prevcachepath        )
 
     os.environ["NINJA_STATUS"] = "[%p/%es :: %u->%r->%f (of %t)] "
 

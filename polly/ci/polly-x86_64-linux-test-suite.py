@@ -17,6 +17,7 @@ testsuitebuilddir = "testsuite.build"
 with worker.run(
     __file__,
     llvmsrcroot,
+    cachefile='polly/ci/polly-x86_64-linux-test-suite.cmake',
     clobberpaths=[llvmbuilddir, testsuitebuilddir, llvminstalldir],
     incremental=True
 ) as w:
