@@ -11,6 +11,10 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
 
+using namespace clang::ast_matchers;
+
+namespace clang::tidy {
+
 // This is the minimal set of safe functions.
 // https://wiki.sei.cmu.edu/confluence/display/c/SIG30-C.+Call+only+asynchronous-safe+functions+within+signal+handlers
 constexpr StringRef MinimalConformingFunctions[] = {"signal", "abort", "_Exit",
@@ -220,10 +224,6 @@ constexpr StringRef POSIXConformingFunctions[] = {
     "write"
 };
 // clang-format on
-
-using namespace clang::ast_matchers;
-
-namespace clang::tidy {
 
 template <>
 struct OptionEnumMapping<
