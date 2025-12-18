@@ -72,6 +72,12 @@
    (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[10]) == 0xff &&           \
    (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[11]) == 0xff)
 
+#define IN6_IS_ADDR_V4COMPAT(a)                                                \
+  ((__LLVM_LIBC_CAST(reinterpret_cast, uint32_t *, a)[0]) == 0 &&              \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint32_t *, a)[1]) == 0 &&              \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint32_t *, a)[2]) == 0 &&              \
+   !IN6_IS_ADDR_UNSPECIFIED(a) && !IN6_IS_ADDR_LOOPBACK(a))
+
 #define IN6_IS_ADDR_MC_NODELOCAL(a)                                            \
   (IN6_IS_ADDR_MULTICAST(a) &&                                                 \
    (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[1] & 0xf) == 0x1)
