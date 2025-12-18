@@ -1,8 +1,7 @@
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512dq -target-feature +avx512vl -fclangir -emit-cir -o %t.cir -Wall -Werror 
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// FIXME: CIR to LLVM lowering fails with "integer width of the output type is smaller or equal to the integer width of the input type" error
-// RUN-DISABLED: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512dq -target-feature +avx512vl -fclangir -emit-llvm -o %t.ll -Wall -Werror
-// RUN-DISABLED: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512dq -target-feature +avx512vl -fclangir -emit-llvm -o %t.ll -Wall -Werror
+// RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512dq -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=OGCG
 
 #include <immintrin.h>
