@@ -477,6 +477,26 @@ add_header_macro(
   elf.h
   DEPENDS
     .llvm-libc-macros.elf_macros
+    .llvm-libc-types.Elf32_Addr
+    .llvm-libc-types.Elf32_Ehdr
+    .llvm-libc-types.Elf32_Half
+    .llvm-libc-types.Elf32_Lword
+    .llvm-libc-types.Elf32_Nhdr
+    .llvm-libc-types.Elf32_Off
+    .llvm-libc-types.Elf32_Phdr
+    .llvm-libc-types.Elf32_Sword
+    .llvm-libc-types.Elf32_Word
+    .llvm-libc-types.Elf64_Addr
+    .llvm-libc-types.Elf64_Ehdr
+    .llvm-libc-types.Elf64_Half
+    .llvm-libc-types.Elf64_Lword
+    .llvm-libc-types.Elf64_Nhdr
+    .llvm-libc-types.Elf64_Off
+    .llvm-libc-types.Elf64_Phdr
+    .llvm-libc-types.Elf64_Sword
+    .llvm-libc-types.Elf64_Sxword
+    .llvm-libc-types.Elf64_Word
+    .llvm-libc-types.Elf64_Xword
 )
 
 # TODO: Not all platforms will have a include/sys directory. Add the sys

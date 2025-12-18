@@ -3,6 +3,8 @@ header_template: elf.h.def
 standards:
   - svid
 macros:
+  - macro_name: EI_NIDENT
+    macro_header: elf-macros.h
   - macro_name: EI_MAG0
     macro_value: 0
   - macro_name: EI_MAG1
