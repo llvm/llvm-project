@@ -162,8 +162,8 @@ Register AMDGPURegBankLegalizeCombiner::tryMatchUnmergeDefs(
   auto *UnMerge = getOpcodeDef<GUnmerge>(DefRegs[0], MRI);
   if (!UnMerge || UnMerge->getNumDefs() != DefRegs.size())
     return {};
-  for (unsigned i = 1; i < DefRegs.size(); ++i) {
-    if (UnMerge->getReg(i) != DefRegs[i])
+  for (unsigned I = 1; I < DefRegs.size(); ++I) {
+    if (UnMerge->getReg(I) != DefRegs[I])
       return {};
   }
   return UnMerge->getSourceReg();
@@ -207,29 +207,22 @@ AMDGPURegBankLegalizeCombiner::getReadAnyLaneSrcs(Register Src) {
     return {RALSrc};
   }
 
-  // LoVgpr, HiVgpr = G_UNMERGE_VALUES UnmergeSrc
-  // LoSgpr = G_AMDGPU_READANYLANE LoVgpr
-  // HiSgpr = G_AMDGPU_READANYLANE HiVgpr
-  // Src = G_MERGE_VALUES LoSgpr, HiSgpr
-  // Dst = COPY Src
-  // ->
-  // Dst = UnmergeSrc
-  //
   // Sgpr0 = G_AMDGPU_READANYLANE Vgpr0
   // Sgpr1 = G_AMDGPU_READANYLANE Vgpr1
   // ...
-  // Src = G_BUILD_VECTOR Sgpr0, Sgpr1, ...
+  // Src = G_MERGE_LIKE Sgpr0, Sgpr1, ...
   // Dst = COPY Src
-  // ->
-  // Dst = G_BUILD_VECTOR Vgpr0, Vgpr1, ...
-  auto *Merge = getOpcodeDef<GMergeLikeInstr>(Src, MRI);
-  if (Merge) {
+  if (auto *Merge = getOpcodeDef<GMergeLikeInstr>(Src, MRI)) {
     SmallVector<Register> ReadAnyLaneSrcs = tryMatchMergeReadAnyLane(Merge);
-    if (!ReadAnyLaneSrcs.empty()) {
-      if (Register UnmergeSrc = tryMatchUnmergeDefs(ReadAnyLaneSrcs))
-        return {UnmergeSrc};
-      return ReadAnyLaneSrcs;
-    }
+    if (ReadAnyLaneSrcs.empty())
+      return {};
+
+    // Vgpr0, Vgpr1, ... = G_UNMERGE_VALUES UnmergeSrc
+    if (Register UnmergeSrc = tryMatchUnmergeDefs(ReadAnyLaneSrcs))
+      return {UnmergeSrc};
+
+    // Multiple ReadAnyLane vgpr sources, need to merge Vgpr0, Vgpr1, ...
+    return ReadAnyLaneSrcs;
   }
 
   // SrcRegIdx = G_AMDGPU_READANYLANE RALElSrc
@@ -240,7 +233,7 @@ AMDGPURegBankLegalizeCombiner::getReadAnyLaneSrcs(Register Src) {
     return {};
 
   int Idx = UnMerge->findRegisterDefOperandIdx(Src, nullptr);
-  Merge = getOpcodeDef<GMergeLikeInstr>(UnMerge->getSourceReg(), MRI);
+  auto *Merge = getOpcodeDef<GMergeLikeInstr>(UnMerge->getSourceReg(), MRI);
   if (!Merge || UnMerge->getNumDefs() != Merge->getNumSources())
     return {};
 
@@ -289,14 +282,12 @@ bool AMDGPURegBankLegalizeCombiner::tryEliminateReadAnyLane(
 
   Register ReadAnyLaneSrc;
   if (ReadAnyLaneSrcRegs.size() == 1) {
-    // Single ReadAnyLane or Unmerge src reg.
     ReadAnyLaneSrc = ReadAnyLaneSrcRegs[0];
   } else {
-    // Multiple readanylanes without a common unmerge, build merge from their
-    // sources.
-    ReadAnyLaneSrc =
-        B.buildMergeLikeInstr({VgprRB, MRI.getType(RALDst)}, ReadAnyLaneSrcRegs)
-            .getReg(0);
+    // Multiple readanylane sources without a common unmerge, merge them.
+    auto Merge = B.buildMergeLikeInstr({VgprRB, MRI.getType(RALDst)},
+                                       ReadAnyLaneSrcRegs);
+    ReadAnyLaneSrc = Merge.getReg(0);
   }
 
   if (SrcMI.getOpcode() != AMDGPU::G_BITCAST) {
