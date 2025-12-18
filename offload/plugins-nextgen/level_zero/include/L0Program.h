@@ -61,12 +61,7 @@ public:
   ze_module_handle_t getGlobalModule() const { return GlobalModule; }
   llvm::SmallVector<ze_module_handle_t> &getModules() { return Modules; }
 
-  const void *getStart() const { return Image->getBufferStart(); }
-  size_t getSize() const { return Image->getBufferSize(); }
-
-  MemoryBufferRef getMemoryBuffer() const {
-    return MemoryBufferRef(*Image);
-  }
+  MemoryBufferRef getMemoryBuffer() const { return MemoryBufferRef(*Image); }
   Error buildModules(const std::string_view BuildOptions);
 
   /// Retrieve the ELF binary for the program.

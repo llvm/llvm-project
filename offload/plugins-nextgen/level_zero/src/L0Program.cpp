@@ -214,8 +214,9 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
   auto Image = getMemoryBuffer();
   if (identify_magic(Image.getBuffer()) == file_magic::spirv_object) {
     // Handle legacy plain SPIR-V image.
-    const uint8_t *ImgBegin = reinterpret_cast<const uint8_t *>(getStart());
-    return addModule(getSize(), ImgBegin, BuildOptions,
+    const uint8_t *ImgBegin =
+        reinterpret_cast<const uint8_t *>(Image.getBufferStart());
+    return addModule(Image.getBufferSize(), ImgBegin, BuildOptions,
                      ZE_MODULE_FORMAT_IL_SPIRV);
   }
 
