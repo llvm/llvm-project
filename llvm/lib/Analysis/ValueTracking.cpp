@@ -5374,8 +5374,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     }
     case Intrinsic::exp:
     case Intrinsic::exp2:
-    case Intrinsic::exp10: {
+    case Intrinsic::exp10:
+    case Intrinsic::amdgcn_exp2: {
       Known.knownNot(fcNegative);
+
+      Type *EltTy = II->getType()->getScalarType();
+      if (IID == Intrinsic::amdgcn_exp2 && EltTy->isFloatTy())
+        Known.knownNot(fcSubnormal);
+
       if ((InterestedClasses & fcNan) == fcNone)
         break;
 
