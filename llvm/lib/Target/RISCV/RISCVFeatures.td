@@ -1651,10 +1651,6 @@ def FeatureVendorXqci
                                  FeatureVendorXqcilia, FeatureVendorXqcilo,
                                  FeatureVendorXqcilsm, FeatureVendorXqcisim,
                                  FeatureVendorXqcisls, FeatureVendorXqcisync]>;
-def HasVendorXqci
-    : Predicate<"Subtarget->hasVendorXqci()">,
-                AssemblerPredicate<(all_of FeatureVendorXqci),
-                "'Xqci' (Qualcomm uC Extension)">;
 
 // Rivos Extension(s)
 
