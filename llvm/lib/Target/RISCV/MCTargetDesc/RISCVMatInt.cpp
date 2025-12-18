@@ -79,7 +79,7 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
     }
   }
 
-  if (STI.hasFeature(RISCV::FeatureStdExtP)) {
+  if (STI.hasFeature(RISCV::FeatureStdExtP) && !isInt<12>(Val)) {
     // Check if the immediate is packed i8 or i10
     int32_t Bit63To32 = Val >> 32;
     int32_t Bit31To0 = Val;
@@ -355,7 +355,8 @@ InstSeq generateInstSeq(int64_t Val, const MCSubtargetInfo &STI) {
   // If the Low and High halves are the same, use pack. The pack instruction
   // packs the XLEN/2-bit lower halves of rs1 and rs2 into rd, with rs1 in the
   // lower half and rs2 in the upper half.
-  if (Res.size() > 2 && STI.hasFeature(RISCV::FeatureStdExtZbkb)) {
+  if (Res.size() > 2 && (STI.hasFeature(RISCV::FeatureStdExtZbkb) ||
+                         STI.hasFeature(RISCV::FeatureStdExtP))) {
     int64_t LoVal = SignExtend64<32>(Val);
     int64_t HiVal = SignExtend64<32>(Val >> 32);
     if (LoVal == HiVal) {
