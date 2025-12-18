@@ -218,7 +218,9 @@ class Worker:
         self.llvmsrcroot = llvmsrcroot
 
     def in_llvmsrc(self, path):
-        """Convert a path in the llvm-project source checkout to an absolute path"""
+        """
+        Convert a path in the llvm-project source checkout to an absolute path
+        """
         return os.path.join(self.llvmsrcroot, path)
 
     def in_workdir(self, path):
@@ -327,8 +329,8 @@ def run(
 ):
     """
     Runs the boilerplate for a ScriptedBuilder buildbot. It is not necessary to
-    use this function (one can also call run_command() etc. directly), but allows
-    for some more flexibility and safety checks. Arguments passed to this
+    use this function (one can also call run_command() etc. directly), but
+    allows for some more flexibility and safety checks. Arguments passed to this
     function represent the worker configuration.
 
     We use the term 'clean' for resetting the worker to an empty state. This
@@ -424,14 +426,16 @@ def run(
     parser.add_argument(
         "--workdir",
         default=workdir_default,
-        help="Use this dir (relative to cwd) as workdir to write the build artifacts into; --workdir=. uses the current directory.\nWarning: The content of this directory may be deleted",
+        help="Use this dir (relative to cwd) as workdir to write the build "
+        "artifacts into; --workdir=. uses the current directory.\nWarning: The "
+        "content of this directory may be deleted",
     )
     if cachefile is not None:
         parser.add_argument(
             "--cachefile",
             default=relative_if_possible(cachefile, llvmsrcroot),
-            help="File containing the initial values for the CMakeCache.txt for "
-            "the llvm build.",
+            help="File containing the initial values for the CMakeCache.txt "
+            "for the llvm build.",
         )
     parser.add_argument(
         "--clean",
@@ -505,7 +509,8 @@ def run(
     while True:
         if os.path.exists(workdir) and os.path.samefile(parentdir, workdir):
             raise Exception(
-                f"Cannot use {args.workdir} as workdir; it contains the source itself in '{parentdir}'"
+                f"Cannot use {args.workdir} as workdir; it contains the source "
+                "itself in '{parentdir}'"
             )
         newparentdir = os.path.dirname(parentdir)
         if newparentdir == parentdir:
