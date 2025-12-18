@@ -211,16 +211,15 @@ RocmInstallationDetector::getInstallationPathCandidates() {
 
   // For candidate specified by --rocm-path we do not do strict check, i.e.,
   // checking existence of HIP version file and device library files.
+  // These are added first as highest priority candidates, but we continue
+  // to add clang-relative paths to support cases where the compiler has its
+  // own device libraries (e.g., python wheels with bundled device libs).
   if (!RocmPathArg.empty()) {
     ROCmSearchDirs.emplace_back(RocmPathArg.str());
-    DoPrintROCmSearchDirs();
-    return ROCmSearchDirs;
   } else if (std::optional<std::string> RocmPathEnv =
                  llvm::sys::Process::GetEnv("ROCM_PATH")) {
     if (!RocmPathEnv->empty()) {
       ROCmSearchDirs.emplace_back(std::move(*RocmPathEnv));
-      DoPrintROCmSearchDirs();
-      return ROCmSearchDirs;
     }
   }
 

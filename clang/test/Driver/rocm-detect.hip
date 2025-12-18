@@ -94,6 +94,16 @@
 // RUN:   --print-rocm-search-dirs %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-REL %s
 
+// Test that device libs from resource dir are found even when ROCM_PATH is set
+// to a location without device libs.
+// This verifies that clang-relative paths are still searched after ROCM_PATH.
+// RUN: rm -rf %t/*
+// RUN: mkdir -p %t/fake_rocm
+// RUN: env ROCM_PATH=%t/fake_rocm \
+// RUN:   %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 -nogpuinc \
+// RUN:   -resource-dir=%S/Inputs/rocm_resource_dir %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=ROCM-PATH-FALLBACK %s
+
 // GFX902-DEFAULTLIBS: error: cannot find ROCm device library for gfx902; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library
 
 // NODEFAULTLIBS-NOT: error: cannot find
@@ -118,3 +128,6 @@
 
 // ROCM-REL: ROCm installation search path: {{.*}}/opt/rocm
 // ROCM-REL: ROCm installation search path: {{.*}}/opt/rocm-3.10.0
+
+// ROCM-PATH-FALLBACK-NOT: error: cannot find ROCm device library
+// ROCM-PATH-FALLBACK: "-mlink-builtin-bitcode" "{{.*}}rocm_resource_dir{{(/|\\\\)}}lib{{(64)?}}{{(/|\\\\)}}amdgcn{{(/|\\\\)}}bitcode{{(/|\\\\)}}ocml.bc"
