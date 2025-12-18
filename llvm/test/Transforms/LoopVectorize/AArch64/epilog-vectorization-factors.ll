@@ -430,13 +430,6 @@ define void @trip_count_based_on_ptrtoint(i64 %x) "target-cpu"="apple-m1" {
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
-; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[ADD]] to i2
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[X]] to i2
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i2 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i2 [[TMP5]] to i64
-; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[TMP6]], 0
-; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; CHECK:       vector.main.loop.iter.check:
 ; CHECK-NEXT:    br i1 true, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -466,7 +459,7 @@ define void @trip_count_based_on_ptrtoint(i64 %x) "target-cpu"="apple-m1" {
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF11]]
 ; CHECK:       vec.epilog.ph:
-; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    [[N_MOD_VF1:%.*]] = urem i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[N_VEC2:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF1]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = mul i64 [[N_VEC2]], 4
@@ -484,7 +477,7 @@ define void @trip_count_based_on_ptrtoint(i64 %x) "target-cpu"="apple-m1" {
 ; CHECK-NEXT:    [[CMP_N6:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC2]]
 ; CHECK-NEXT:    br i1 [[CMP_N6]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP14]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PTR_START]], [[VECTOR_SCEVCHECK]] ], [ [[PTR_START]], [[ITER_CHECK:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP14]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PTR_START]], [[ITER_CHECK:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]

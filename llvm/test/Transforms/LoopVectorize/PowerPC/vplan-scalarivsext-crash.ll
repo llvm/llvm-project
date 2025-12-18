@@ -16,16 +16,7 @@ define void @test_iv_trunc_crash(ptr %a, ptr %b, i32 %n) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[SMAX1]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP3]], 8
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[N]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP4]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP5]], i64 0)
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[SMAX]] to i32
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i32 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[SMAX]], 4294967295
-; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP3]], 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
@@ -49,12 +40,12 @@ define void @test_iv_trunc_crash(ptr %a, ptr %b, i32 %n) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi double [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ [[SUM_0]], %[[ENTRY]] ], [ [[SUM_0]], %[[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi double [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ [[SUM_0]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[SUM_1:%.*]] = phi double [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], %[[LOOP_BODY:.*]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP_BODY]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP_BODY]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[I]], [[N]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LOOP_BODY]]
 ; CHECK:       [[LOOP_BODY]]:

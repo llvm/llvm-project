@@ -17,25 +17,10 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV32-LABEL: @foo4(
 ; RV32-NEXT:  entry:
 ; RV32-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
-; RV32:       vector.scevcheck:
-; RV32-NEXT:    [[MUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 128, i32 624)
-; RV32-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL]], 0
-; RV32-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL]], 1
-; RV32-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i32 [[MUL_RESULT]]
-; RV32-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[TMP0]], [[A]]
-; RV32-NEXT:    [[TMP2:%.*]] = or i1 [[TMP1]], [[MUL_OVERFLOW]]
-; RV32-NEXT:    [[MUL1:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 256, i32 624)
-; RV32-NEXT:    [[MUL_RESULT2:%.*]] = extractvalue { i32, i1 } [[MUL1]], 0
-; RV32-NEXT:    [[MUL_OVERFLOW3:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
-; RV32-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[B:%.*]], i32 [[MUL_RESULT2]]
-; RV32-NEXT:    [[TMP4:%.*]] = icmp ult ptr [[TMP3]], [[B]]
-; RV32-NEXT:    [[TMP5:%.*]] = or i1 [[TMP4]], [[MUL_OVERFLOW3]]
-; RV32-NEXT:    [[TMP6:%.*]] = or i1 [[TMP2]], [[TMP5]]
-; RV32-NEXT:    br i1 [[TMP6]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK1:%.*]]
 ; RV32:       vector.memcheck:
 ; RV32-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER:%.*]], i32 39940
-; RV32-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i32 79880
-; RV32-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B]], i32 159752
+; RV32-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i32 79880
+; RV32-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i32 159752
 ; RV32-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[TRIGGER]], [[SCEVGEP]]
 ; RV32-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
 ; RV32-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
@@ -43,7 +28,7 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV32-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
 ; RV32-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
 ; RV32-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
-; RV32-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; RV32-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; RV32:       vector.ph:
 ; RV32-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; RV32-NEXT:    [[TMP9:%.*]] = mul nuw nsw <vscale x 2 x i64> [[TMP7]], splat (i64 16)
@@ -74,10 +59,9 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV32:       middle.block:
 ; RV32-NEXT:    br label [[FOR_END:%.*]]
 ; RV32:       scalar.ph:
-; RV32-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[VECTOR_MEMCHECK1]] ]
 ; RV32-NEXT:    br label [[FOR_BODY:%.*]]
 ; RV32:       for.body:
-; RV32-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; RV32-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
 ; RV32-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER]], i64 [[INDVARS_IV]]
 ; RV32-NEXT:    [[TMP21:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; RV32-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP21]], 100

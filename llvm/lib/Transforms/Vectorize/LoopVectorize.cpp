@@ -1771,6 +1771,64 @@ public:
 };
 } // end namespace llvm
 
+static std::optional<unsigned> getMaxVScale(const Function &F,
+                                            const TargetTransformInfo &TTI) {
+  if (std::optional<unsigned> MaxVScale = TTI.getMaxVScale())
+    return MaxVScale;
+
+  if (F.hasFnAttribute(Attribute::VScaleRange))
+    return F.getFnAttribute(Attribute::VScaleRange).getVScaleRangeMax();
+
+  return std::nullopt;
+}
+
+/// For the given VF and UF and maximum trip count computed for the loop, return
+/// whether the induction variable might overflow in the vectorized loop. If
+/// not, then we know a runtime overflow check always evaluates to false and can
+/// be removed.
+static bool
+isIndvarOverflowCheckKnownFalse(const LoopVectorizationCostModel *Cost,
+                                ElementCount VF,
+                                std::optional<unsigned> UF = std::nullopt) {
+  // Always be conservative if we don't know the exact unroll factor.
+  unsigned MaxUF = UF ? *UF : Cost->TTI.getMaxInterleaveFactor(VF);
+
+  IntegerType *IdxTy = Cost->Legal->getWidestInductionType();
+  APInt MaxUIntTripCount = IdxTy->getMask();
+
+  // We know the runtime overflow check is known false iff the (max) trip-count
+  // is known and (max) trip-count + (VF * UF) does not overflow in the type of
+  // the vector loop induction variable.
+  if (unsigned TC = Cost->PSE.getSmallConstantMaxTripCount()) {
+    uint64_t MaxVF = VF.getKnownMinValue();
+    if (VF.isScalable()) {
+      std::optional<unsigned> MaxVScale =
+          getMaxVScale(*Cost->TheFunction, Cost->TTI);
+      if (!MaxVScale)
+        return false;
+      MaxVF *= *MaxVScale;
+    }
+
+    return (MaxUIntTripCount - TC).ugt(MaxVF * MaxUF);
+  }
+
+  return false;
+}
+
+/// Checks whether an IndVar overflow check is needed using
+/// isIndvarOverflowCheckKnownFalse, with additional information about the
+/// tail-folding style.
+static bool isIndvarOverflowCheckNeeded(const LoopVectorizationCostModel &CM,
+                                        ElementCount VF, unsigned IC) {
+  // vscale is not necessarily a power-of-2, which means we cannot guarantee
+  // an overflow to zero when updating induction variables and so an
+  // additional overflow check is required before entering the vector loop.
+  return VF.isScalable() && !CM.TTI.isVScaleKnownToBeAPowerOfTwo() &&
+         !isIndvarOverflowCheckKnownFalse(&CM, VF, IC) &&
+         CM.getTailFoldingStyle() !=
+             TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
+}
+
 namespace {
 /// Helper struct to manage generating runtime checks for vectorization.
 ///
@@ -1795,7 +1853,6 @@ class GeneratedRTChecks {
 
   DominatorTree *DT;
   LoopInfo *LI;
-  TargetTransformInfo *TTI;
 
   SCEVExpander SCEVExp;
   SCEVExpander MemCheckExp;
@@ -1806,17 +1863,16 @@ class GeneratedRTChecks {
 
   PredicatedScalarEvolution &PSE;
 
-  /// The kind of cost that we are calculating
-  TTI::TargetCostKind CostKind;
+  /// The CostModel.
+  const LoopVectorizationCostModel &CM;
 
 public:
   GeneratedRTChecks(PredicatedScalarEvolution &PSE, DominatorTree *DT,
-                    LoopInfo *LI, TargetTransformInfo *TTI,
-                    TTI::TargetCostKind CostKind)
-      : DT(DT), LI(LI), TTI(TTI),
+                    LoopInfo *LI, LoopVectorizationCostModel &CM)
+      : DT(DT), LI(LI),
         SCEVExp(*PSE.getSE(), "scev.check", /*PreserveLCSSA=*/false),
         MemCheckExp(*PSE.getSE(), "scev.check", /*PreserveLCSSA=*/false),
-        PSE(PSE), CostKind(CostKind) {}
+        PSE(PSE), CM(CM) {}
 
   /// Generate runtime checks in SCEVCheckBlock and MemCheckBlock, so we can
   /// accurately estimate the cost of the runtime checks. The blocks are
@@ -1850,11 +1906,18 @@ public:
     BasicBlock *LoopHeader = L->getHeader();
     BasicBlock *Preheader = L->getLoopPreheader();
 
+    // SCEVChecks are droppable when the UnionPred is always true, or when
+    // IndVar overflow checks are not needed, under the condition that we don't
+    // drop stride-versioning checks.
+    bool SCEVChecksAreDroppable =
+        UnionPred.isAlwaysTrue() || (!isIndvarOverflowCheckNeeded(CM, VF, IC) &&
+                                     LAI.getSymbolicStrides().empty());
+
     // Use SplitBlock to create blocks for SCEV & memory runtime checks to
     // ensure the blocks are properly added to LoopInfo & DominatorTree. Those
     // may be used by SCEVExpander. The blocks will be un-linked from their
     // predecessors and removed from LI & DT at the end of the function.
-    if (!UnionPred.isAlwaysTrue()) {
+    if (!SCEVChecksAreDroppable) {
       SCEVCheckBlock = SplitBlock(Preheader, Preheader->getTerminator(), DT, LI,
                                   nullptr, "vector.scevcheck");
 
@@ -1952,7 +2015,7 @@ public:
       for (Instruction &I : *SCEVCheckBlock) {
         if (SCEVCheckBlock->getTerminator() == &I)
           continue;
-        InstructionCost C = TTI->getInstructionCost(&I, CostKind);
+        InstructionCost C = CM.TTI.getInstructionCost(&I, CM.CostKind);
         LLVM_DEBUG(dbgs() << "  " << C << "  for " << I << "\n");
         RTCheckCost += C;
       }
@@ -1961,7 +2024,7 @@ public:
       for (Instruction &I : *MemCheckBlock) {
         if (MemCheckBlock->getTerminator() == &I)
           continue;
-        InstructionCost C = TTI->getInstructionCost(&I, CostKind);
+        InstructionCost C = CM.TTI.getInstructionCost(&I, CM.CostKind);
         LLVM_DEBUG(dbgs() << "  " << C << "  for " << I << "\n");
         MemCheckCost += C;
       }
@@ -2239,49 +2302,6 @@ emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
   llvm_unreachable("invalid enum");
 }
 
-static std::optional<unsigned> getMaxVScale(const Function &F,
-                                            const TargetTransformInfo &TTI) {
-  if (std::optional<unsigned> MaxVScale = TTI.getMaxVScale())
-    return MaxVScale;
-
-  if (F.hasFnAttribute(Attribute::VScaleRange))
-    return F.getFnAttribute(Attribute::VScaleRange).getVScaleRangeMax();
-
-  return std::nullopt;
-}
-
-/// For the given VF and UF and maximum trip count computed for the loop, return
-/// whether the induction variable might overflow in the vectorized loop. If not,
-/// then we know a runtime overflow check always evaluates to false and can be
-/// removed.
-static bool isIndvarOverflowCheckKnownFalse(
-    const LoopVectorizationCostModel *Cost,
-    ElementCount VF, std::optional<unsigned> UF = std::nullopt) {
-  // Always be conservative if we don't know the exact unroll factor.
-  unsigned MaxUF = UF ? *UF : Cost->TTI.getMaxInterleaveFactor(VF);
-
-  IntegerType *IdxTy = Cost->Legal->getWidestInductionType();
-  APInt MaxUIntTripCount = IdxTy->getMask();
-
-  // We know the runtime overflow check is known false iff the (max) trip-count
-  // is known and (max) trip-count + (VF * UF) does not overflow in the type of
-  // the vector loop induction variable.
-  if (unsigned TC = Cost->PSE.getSmallConstantMaxTripCount()) {
-    uint64_t MaxVF = VF.getKnownMinValue();
-    if (VF.isScalable()) {
-      std::optional<unsigned> MaxVScale =
-          getMaxVScale(*Cost->TheFunction, Cost->TTI);
-      if (!MaxVScale)
-        return false;
-      MaxVF *= *MaxVScale;
-    }
-
-    return (MaxUIntTripCount - TC).ugt(MaxVF * MaxUF);
-  }
-
-  return false;
-}
-
 // Return whether we allow using masked interleave-groups (for dealing with
 // strided loads/stores that reside in predicated blocks, or for dealing
 // with gaps).
@@ -2371,13 +2391,7 @@ Value *EpilogueVectorizerMainLoop::createIterationCountCheck(
       // check is known to be true, or known to be false.
       CheckMinIters = Builder.CreateICmp(P, Count, Step, "min.iters.check");
     } // else step known to be < trip count, use CheckMinIters preset to false.
-  } else if (VF.isScalable() && !TTI->isVScaleKnownToBeAPowerOfTwo() &&
-             !isIndvarOverflowCheckKnownFalse(Cost, VF, UF) &&
-             Style != TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck) {
-    // vscale is not necessarily a power-of-2, which means we cannot guarantee
-    // an overflow to zero when updating induction variables and so an
-    // additional overflow check is required before entering the vector loop.
-
+  } else if (isIndvarOverflowCheckNeeded(*Cost, VF, UF)) {
     // Get the maximum unsigned value for the type.
     Value *MaxUIntTripCount =
         ConstantInt::get(CountTy, cast<IntegerType>(CountTy)->getMask());
@@ -9026,14 +9040,6 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
 void LoopVectorizationPlanner::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
     ElementCount MinProfitableTripCount) const {
-  // vscale is not necessarily a power-of-2, which means we cannot guarantee
-  // an overflow to zero when updating induction variables and so an
-  // additional overflow check is required before entering the vector loop.
-  bool IsIndvarOverflowCheckNeededForVF =
-      VF.isScalable() && !TTI.isVScaleKnownToBeAPowerOfTwo() &&
-      !isIndvarOverflowCheckKnownFalse(&CM, VF, UF) &&
-      CM.getTailFoldingStyle() !=
-          TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
   const uint32_t *BranchWeigths =
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())
           ? &MinItersBypassWeights[0]
@@ -9041,7 +9047,7 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
   VPlanTransforms::addMinimumIterationCheck(
       Plan, VF, UF, MinProfitableTripCount,
       CM.requiresScalarEpilogue(VF.isVector()), CM.foldTailByMasking(),
-      IsIndvarOverflowCheckNeededForVF, OrigLoop, BranchWeigths,
+      isIndvarOverflowCheckNeeded(CM, VF, UF), OrigLoop, BranchWeigths,
       OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(),
       *PSE.getSE());
 }
@@ -9153,7 +9159,7 @@ static bool processLoopInVPlanNativePath(
   VPlan &BestPlan = LVP.getPlanFor(VF.Width);
 
   {
-    GeneratedRTChecks Checks(PSE, DT, LI, TTI, CM.CostKind);
+    GeneratedRTChecks Checks(PSE, DT, LI, CM);
     InnerLoopVectorizer LB(L, PSE, LI, DT, TTI, AC, VF.Width, /*UF=*/1, &CM,
                            Checks, BestPlan);
     LLVM_DEBUG(dbgs() << "Vectorizing outer loop in \""
@@ -9983,7 +9989,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (ORE->allowExtraAnalysis(LV_NAME))
     LVP.emitInvalidCostRemarks(ORE);
 
-  GeneratedRTChecks Checks(PSE, DT, LI, TTI, CM.CostKind);
+  GeneratedRTChecks Checks(PSE, DT, LI, CM);
   if (LVP.hasPlanWithVF(VF.Width)) {
     // Select the interleave count.
     IC = LVP.selectInterleaveCount(LVP.getPlanFor(VF.Width), VF.Width, VF.Cost);

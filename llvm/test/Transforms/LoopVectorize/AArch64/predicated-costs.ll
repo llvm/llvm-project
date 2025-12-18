@@ -15,31 +15,7 @@ define void @test_predicated_load_cast_hint(ptr %dst.1, ptr %dst.2, ptr %src, i8
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[SMAX16]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[TMP1]], 1
-; CHECK-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
-; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N_SUB]], i32 4)
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 [[SMAX]], -1
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
-; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 4, i8 [[TMP5]])
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = add i8 4, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i8 [[TMP6]], 4
-; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ugt i32 [[TMP4]], 255
-; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[OFF]], 3
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST_1]], i64 [[TMP11]]
-; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP4]] to i64
-; CHECK-NEXT:    [[MUL1:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 512, i64 [[TMP12]])
-; CHECK-NEXT:    [[MUL_RESULT2:%.*]] = extractvalue { i64, i1 } [[MUL1]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW3:%.*]] = extractvalue { i64, i1 } [[MUL1]], 1
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT2]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult ptr [[TMP14]], [[SCEVGEP]]
-; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP15]], [[MUL_OVERFLOW3]]
-; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP10]], [[TMP16]]
-; CHECK-NEXT:    br i1 [[TMP17]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[DST_2]], i64 1
 ; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 1
@@ -64,14 +40,14 @@ define void @test_predicated_load_cast_hint(ptr %dst.1, ptr %dst.2, ptr %src, i8
 ; CHECK-NEXT:    [[BOUND113:%.*]] = icmp ult ptr [[SCEVGEP6]], [[SCEVGEP5]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT14:%.*]] = and i1 [[BOUND012]], [[BOUND113]]
 ; CHECK-NEXT:    [[CONFLICT_RDX15:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT14]]
-; CHECK-NEXT:    br i1 [[CONFLICT_RDX15]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX15]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 0, i32 [[TMP2]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE22:.*]] ]
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[PRED_STORE_CONTINUE22]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 4, i8 8, i8 12>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE22]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE17:.*]] ]
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[PRED_STORE_CONTINUE17]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 4, i8 8, i8 12>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE17]] ]
 ; CHECK-NEXT:    [[TMP28:%.*]] = load i8, ptr [[SRC]], align 1, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[TMP28]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
@@ -88,35 +64,35 @@ define void @test_predicated_load_cast_hint(ptr %dst.1, ptr %dst.2, ptr %src, i8
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i32 1
-; CHECK-NEXT:    br i1 [[TMP32]], label %[[PRED_STORE_IF17:.*]], label %[[PRED_STORE_CONTINUE18:.*]]
-; CHECK:       [[PRED_STORE_IF17]]:
+; CHECK-NEXT:    br i1 [[TMP32]], label %[[PRED_STORE_IF12:.*]], label %[[PRED_STORE_CONTINUE13:.*]]
+; CHECK:       [[PRED_STORE_IF12]]:
 ; CHECK-NEXT:    [[TMP108:%.*]] = extractelement <4 x i64> [[TMP26]], i32 1
 ; CHECK-NEXT:    [[TMP109:%.*]] = getelementptr [16 x i64], ptr [[DST_1]], i64 [[TMP108]], i64 [[OFF]]
 ; CHECK-NEXT:    [[TMP110:%.*]] = extractelement <4 x i64> [[TMP25]], i32 1
 ; CHECK-NEXT:    [[TMP111:%.*]] = or i64 [[TMP110]], 1
 ; CHECK-NEXT:    store i64 [[TMP111]], ptr [[TMP109]], align 8, !alias.scope [[META3]]
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE18]]
-; CHECK:       [[PRED_STORE_CONTINUE18]]:
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE13]]
+; CHECK:       [[PRED_STORE_CONTINUE13]]:
 ; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i32 2
-; CHECK-NEXT:    br i1 [[TMP37]], label %[[PRED_STORE_IF19:.*]], label %[[PRED_STORE_CONTINUE20:.*]]
-; CHECK:       [[PRED_STORE_IF19]]:
+; CHECK-NEXT:    br i1 [[TMP37]], label %[[PRED_STORE_IF14:.*]], label %[[PRED_STORE_CONTINUE15:.*]]
+; CHECK:       [[PRED_STORE_IF14]]:
 ; CHECK-NEXT:    [[TMP114:%.*]] = extractelement <4 x i64> [[TMP26]], i32 2
 ; CHECK-NEXT:    [[TMP115:%.*]] = getelementptr [16 x i64], ptr [[DST_1]], i64 [[TMP114]], i64 [[OFF]]
 ; CHECK-NEXT:    [[TMP116:%.*]] = extractelement <4 x i64> [[TMP25]], i32 2
 ; CHECK-NEXT:    [[TMP117:%.*]] = or i64 [[TMP116]], 1
 ; CHECK-NEXT:    store i64 [[TMP117]], ptr [[TMP115]], align 8, !alias.scope [[META3]]
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE20]]
-; CHECK:       [[PRED_STORE_CONTINUE20]]:
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE15]]
+; CHECK:       [[PRED_STORE_CONTINUE15]]:
 ; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i32 3
-; CHECK-NEXT:    br i1 [[TMP42]], label %[[PRED_STORE_IF21:.*]], label %[[PRED_STORE_CONTINUE22]]
-; CHECK:       [[PRED_STORE_IF21]]:
+; CHECK-NEXT:    br i1 [[TMP42]], label %[[PRED_STORE_IF16:.*]], label %[[PRED_STORE_CONTINUE17]]
+; CHECK:       [[PRED_STORE_IF16]]:
 ; CHECK-NEXT:    [[TMP120:%.*]] = extractelement <4 x i64> [[TMP26]], i32 3
 ; CHECK-NEXT:    [[TMP121:%.*]] = getelementptr [16 x i64], ptr [[DST_1]], i64 [[TMP120]], i64 [[OFF]]
 ; CHECK-NEXT:    [[TMP122:%.*]] = extractelement <4 x i64> [[TMP25]], i32 3
 ; CHECK-NEXT:    [[TMP123:%.*]] = or i64 [[TMP122]], 1
 ; CHECK-NEXT:    store i64 [[TMP123]], ptr [[TMP121]], align 8, !alias.scope [[META3]]
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE22]]
-; CHECK:       [[PRED_STORE_CONTINUE22]]:
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE17]]
+; CHECK:       [[PRED_STORE_CONTINUE17]]:
 ; CHECK-NEXT:    store i8 0, ptr [[DST_2]], align 1, !alias.scope [[META5:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX_NEXT]], i32 [[TMP2]])
@@ -127,10 +103,9 @@ define void @test_predicated_load_cast_hint(ptr %dst.1, ptr %dst.2, ptr %src, i8
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[SRC]], align 1
 ; CHECK-NEXT:    [[L_EXT:%.*]] = zext i8 [[L]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = or i64 [[L_EXT]], 1

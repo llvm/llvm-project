@@ -30,19 +30,7 @@ define void @wrap_around_scev_check(ptr noalias %a, ptr noalias %b, i8 %x, i8 %y
 ; CHECK:       [[LOOP_PREHEADER]]:
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i8 [[Y]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[WIDE_TRIP_COUNT]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[WIDE_TRIP_COUNT]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i8
-; CHECK-NEXT:    [[MUL1:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 2, i8 [[TMP1]])
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL1]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { i8, i1 } [[MUL1]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[X]], [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i8 [[TMP2]], [[X]]
-; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp ugt i64 [[TMP0]], 255
-; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP5]], [[TMP17]]
-; CHECK-NEXT:    br i1 [[TMP18]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
@@ -70,12 +58,12 @@ define void @wrap_around_scev_check(ptr noalias %a, ptr noalias %b, i8 %x, i8 %y
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_PREHEADER]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i8 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ [[X]], %[[LOOP_PREHEADER]] ], [ [[X]], %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i8 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ [[X]], %[[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[INDEX_011:%.*]] = phi i8 [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[INDEX_011:%.*]] = phi i8 [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i8 [[INDEX_011]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
@@ -122,12 +110,8 @@ exit:
 define void @wrap_predicate_for_interleave_group_wraps_for_known_trip_count(ptr noalias %x, ptr noalias %out) {
 ; CHECK-LABEL: define void @wrap_predicate_for_interleave_group_wraps_for_known_trip_count(
 ; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[OUT:%.*]]) {
-; CHECK-NEXT:  [[START:.*]]:
-; CHECK-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
-; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[MUL:%.*]] = call { i4, i1 } @llvm.umul.with.overflow.i4(i4 5, i4 -1)
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i4, i1 } [[MUL]], 1
-; CHECK-NEXT:    br i1 [[MUL_OVERFLOW]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[START:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -143,12 +127,11 @@ define void @wrap_predicate_for_interleave_group_wraps_for_known_trip_count(ptr 
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 12
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 12, %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 12, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[IV_MUL5:%.*]] = mul nuw nsw i64 [[IV]], 5
 ; CHECK-NEXT:    [[IV_MUL5_MASKED:%.*]] = and i64 [[IV_MUL5]], 15
@@ -187,15 +170,7 @@ define void @wrap_predicate_for_interleave_group_unknown_trip_count(ptr noalias 
 ; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[OUT:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[START:.*]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[N]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP0]] to i4
-; CHECK-NEXT:    [[MUL:%.*]] = call { i4, i1 } @llvm.umul.with.overflow.i4(i4 3, i4 [[TMP9]])
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i4, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[TMP0]], 15
-; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[MUL_OVERFLOW]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[TMP10]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
@@ -217,7 +192,7 @@ define void @wrap_predicate_for_interleave_group_unknown_trip_count(ptr noalias 
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[START]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[START]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]

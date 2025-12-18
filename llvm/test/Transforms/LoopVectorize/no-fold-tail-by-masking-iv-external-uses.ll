@@ -16,15 +16,7 @@ define i32 @test(ptr %arr, i64 %n) {
 ; CHECK:       preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
-; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[N]], -2
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP1]] to i8
-; CHECK-NEXT:    [[TMP8:%.*]] = add i8 2, [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult i8 [[TMP8]], 2
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i64 [[TMP1]], 255
-; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
@@ -46,8 +38,8 @@ define i32 @test(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = sub i64 [[IND_END]], 1
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOAD_VAL:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[PREHEADER]] ], [ 1, [[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i8 [ [[IND_END1]], [[MIDDLE_BLOCK]] ], [ 1, [[PREHEADER]] ], [ 1, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i8 [ [[IND_END1]], [[MIDDLE_BLOCK]] ], [ 1, [[PREHEADER]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[CONV:%.*]] = phi i64 [ [[CONV2:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -107,5 +99,5 @@ done:
 ; CHECK: [[META1]] = !{!"llvm.loop.unroll.disable"}
 ; CHECK: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META3]], [[META2]]}
 ;.

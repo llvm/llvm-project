@@ -10,8 +10,8 @@
 
 
 ; CHECK-LABEL: test_sge
-; CHECK-LABEL: vector.scevcheck
-; CHECK-LABEL: vector.body
+; CHECK-NOT: vector.scevcheck
+; CHECK: vector.body
 define void @test_sge(ptr noalias %A,
                       ptr noalias %B,
                       ptr noalias %C, i32 %N) {
@@ -48,8 +48,8 @@ for.end:
 }
 
 ; CHECK-LABEL: test_uge
-; CHECK-LABEL: vector.scevcheck
-; CHECK-LABEL: vector.body
+; CHECK-NOT: vector.scevcheck
+; CHECK: vector.body
 define void @test_uge(ptr noalias %A,
                       ptr noalias %B,
                       ptr noalias %C, i32 %N, i32 %Offset) {
@@ -88,8 +88,8 @@ for.end:
 }
 
 ; CHECK-LABEL: test_ule
-; CHECK-LABEL: vector.scevcheck
-; CHECK-LABEL: vector.body
+; CHECK-NOT: vector.scevcheck
+; CHECK: vector.body
 define void @test_ule(ptr noalias %A,
                       ptr noalias %B,
                       ptr noalias %C, i32 %N,
@@ -127,8 +127,8 @@ for.end:
 }
 
 ; CHECK-LABEL: test_sle
-; CHECK-LABEL: vector.scevcheck
-; CHECK-LABEL: vector.body
+; CHECK-NOT: vector.scevcheck
+; CHECK: vector.body
 define void @test_sle(ptr noalias %A,
                    ptr noalias %B,
                    ptr noalias %C, i32 %N,
