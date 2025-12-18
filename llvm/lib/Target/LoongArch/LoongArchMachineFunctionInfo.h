@@ -81,8 +81,8 @@ public:
   }
 
   void addIncomingByValArgs(SDValue Val) { IncomingByValArgs.push_back(Val); }
-  SDValue &getIncomingByValArgs(int Idx) { return IncomingByValArgs[Idx]; }
-  unsigned getIncomingByValArgsSize() { return IncomingByValArgs.size(); }
+  SDValue getIncomingByValArgs(int Idx) { return IncomingByValArgs[Idx]; }
+  unsigned getIncomingByValArgsSize() const { return IncomingByValArgs.size(); }
 
   void addSExt32Register(Register Reg) { SExt32Registers.push_back(Reg); }
 
