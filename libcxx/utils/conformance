@@ -48,6 +48,14 @@ def extract_between_markers(text: str, begin_marker: str, end_marker: str) -> Op
 
     return text[start:end]
 
+def rst_to_markdown(text: str) -> str:
+    """Best effort conversion from RST to Markdown assuming a single line of text."""
+    return text.replace('``', '`').replace('\\', '')
+
+def markdown_to_rst(text: str) -> str:
+    """Best effort conversion from Markdown to RST assuming a single line of text."""
+    return text.replace('`', '``')
+
 class PaperStatus:
     TODO = 1
     IN_PROGRESS = 2
@@ -214,7 +222,7 @@ class PaperInfo:
     def for_printing(self) -> Tuple[str, str, str, str, str, str, str]:
         return (
             f'`{self.paper_number} <https://wg21.link/{self.paper_number}>`__',
-            self.paper_name,
+            markdown_to_rst(self.paper_name),
             self.meeting if self.meeting is not None else '',
             self.status.to_csv_entry(),
             self.first_released_version if self.first_released_version is not None else '',
@@ -529,9 +537,8 @@ def github_create(csvfiles, load_github_from, labels):
             continue
 
         # Create the actual Github issue
-        paper_name = paper.paper_name.replace('``', '`').replace('\\', '')
         cli = ['gh', 'issue', 'create', '--repo', 'llvm/llvm-project',
-                    '--title', f'{paper.paper_number}: {paper_name}',
+                    '--title', f'{paper.paper_number}: {rst_to_markdown(paper.paper_name)}',
                     '--body', f'**Link:** https://wg21.link/{paper.paper_number}',
                     '--project', 'libc++ Standards Conformance',
                     '--label', 'libc++']
@@ -635,6 +642,7 @@ def csv_create(issues, output, load_github_from):
         else:
             raise RuntimeError(f'Issue {issue} does not have a corresponding tracking issue in Github, aborting')
 
+    rows.sort()
     write_csv(output, rows)
 
 
