@@ -14,6 +14,7 @@
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -25,6 +26,19 @@
 #include <deque>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "statscount"
+
+STATISTIC(TotalBlocks, "Number of basic blocks");
+STATISTIC(TotalInsts, "Number of instructions (of all types)");
+STATISTIC(TotalSuccs, "Number of basic block successors");
+STATISTIC(TotalUncondBranchInsts,
+          "Number of unconditional branch instructions");
+STATISTIC(TotalCondBranchInsts, "Number of conditional branch instructions");
+STATISTIC(TotalBranchInsts, "Number of branch instructions");
+STATISTIC(TotalBranchSuccs, "Number of branch successors");
+STATISTIC(TotalSwitchInsts, "Number of switch instructions");
+STATISTIC(TotalSwitchSuccs, "Number of switch successors");
 
 namespace llvm {
 LLVM_ABI cl::opt<bool> EnableDetailedFunctionProperties(
@@ -124,9 +138,19 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
 
     ControlFlowEdgeCount += Direction * SuccessorCount;
 
-    if (const auto *BI = dyn_cast<BranchInst>(BB.getTerminator())) {
-      if (!BI->isConditional())
+    const Instruction *TI = BB.getTerminator();
+    const int64_t InstructionSuccessorCount = TI->getNumSuccessors();
+    if (isa<BranchInst>(TI)) {
+      BranchInstructionCount += Direction;
+      BranchSuccessorCount += Direction * InstructionSuccessorCount;
+      const auto *BI = dyn_cast<BranchInst>(TI);
+      if (BI->isConditional())
+        ConditionalBranchCount += Direction;
+      else
         UnconditionalBranchCount += Direction;
+    } else if (isa<SwitchInst>(TI)) {
+      SwitchInstructionCount += Direction;
+      SwitchSuccessorCount += Direction * InstructionSuccessorCount;
     }
 
     for (const Instruction &I : BB.instructionsWithoutDebug()) {
@@ -362,6 +386,11 @@ void FunctionPropertiesInfo::print(raw_ostream &OS) const {
     PRINT_PROPERTY(CriticalEdgeCount)
     PRINT_PROPERTY(ControlFlowEdgeCount)
     PRINT_PROPERTY(UnconditionalBranchCount)
+    PRINT_PROPERTY(ConditionalBranchCount)
+    PRINT_PROPERTY(BranchInstructionCount)
+    PRINT_PROPERTY(BranchSuccessorCount)
+    PRINT_PROPERTY(SwitchInstructionCount)
+    PRINT_PROPERTY(SwitchSuccessorCount)
     PRINT_PROPERTY(IntrinsicCount)
     PRINT_PROPERTY(DirectCallCount)
     PRINT_PROPERTY(IndirectCallCount)
@@ -393,6 +422,24 @@ FunctionPropertiesPrinterPass::run(Function &F, FunctionAnalysisManager &AM) {
      << "'" << F.getName() << "':"
      << "\n";
   AM.getResult<FunctionPropertiesAnalysis>(F).print(OS);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+FunctionPropertiesStatisticsPass::run(Function &F,
+                                      FunctionAnalysisManager &AM) {
+  LLVM_DEBUG(dbgs() << "STATSCOUNT: running on function " << F.getName()
+                    << "\n");
+  auto &AnalysisResults = AM.getResult<FunctionPropertiesAnalysis>(F);
+  TotalBlocks += AnalysisResults.BasicBlockCount;
+  TotalInsts += AnalysisResults.TotalInstructionCount;
+  TotalSuccs += AnalysisResults.ControlFlowEdgeCount;
+  TotalUncondBranchInsts += AnalysisResults.UnconditionalBranchCount;
+  TotalCondBranchInsts += AnalysisResults.ConditionalBranchCount;
+  TotalBranchInsts += AnalysisResults.BranchInstructionCount;
+  TotalBranchSuccs += AnalysisResults.BranchSuccessorCount;
+  TotalSwitchInsts += AnalysisResults.SwitchInstructionCount;
+  TotalSwitchSuccs += AnalysisResults.SwitchSuccessorCount;
   return PreservedAnalyses::all();
 }
 
