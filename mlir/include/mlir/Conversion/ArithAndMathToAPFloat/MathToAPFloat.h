@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_CONVERSION_MATHTOAPFLOAT_MATHTOAPFLOAT_H
-#define MLIR_CONVERSION_MATHTOAPFLOAT_MATHTOAPFLOAT_H
+#ifndef MLIR_CONVERSION_ARITHANDMATHTOAPFLOAT_MATHTOAPFLOAT_H
+#define MLIR_CONVERSION_ARITHANDMATHTOAPFLOAT_MATHTOAPFLOAT_H
 
 #include <memory>
 
@@ -18,4 +18,4 @@ class Pass;
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
-#endif // MLIR_CONVERSION_MATHTOAPFLOAT_MATHTOAPFLOAT_H
+#endif // MLIR_CONVERSION_ARITHANDMATHTOAPFLOAT_MATHTOAPFLOAT_H

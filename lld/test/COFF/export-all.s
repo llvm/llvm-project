@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -triple=i686-windows-gnu %s -filetype=obj -o %t.obj
 
-# RUN: lld-link -lldmingw -dll -out:%t.dll -entry:DllMainCRTStartup@12 %t.obj -implib:%t.lib
+# RUN: lld-link -lldmingw -dll -out:%t.dll %t.obj -implib:%t.lib
 # RUN: llvm-readobj --coff-exports %t.dll | grep Name: | FileCheck %s
 # RUN: llvm-readobj --coff-exports %t.dll | FileCheck %s --check-prefix=CHECK-RVA
 # RUN: llvm-readobj %t.lib | FileCheck -check-prefix=IMPLIB %s
@@ -57,7 +57,7 @@ __imp__unexported:
 
 # RUN: yaml2obj %p/Inputs/export.yaml -o %t.obj
 #
-# RUN: lld-link -safeseh:no -out:%t.dll -dll %t.obj -lldmingw -export-all-symbols -output-def:%t.def
+# RUN: lld-link -safeseh:no -out:%t.dll -dll %t.obj -lldmingw -export-all-symbols -entry:_DllMainCRTStartup -output-def:%t.def
 # RUN: llvm-readobj --coff-exports %t.dll | FileCheck -check-prefix=CHECK2 %s
 # RUN: cat %t.def | FileCheck -check-prefix=CHECK2-DEF %s
 
@@ -88,7 +88,7 @@ __imp__unexported:
 # RUN: llvm-ar rcs %t.dir/libs/libmingwex.a %t.dir/libs/mingwfunc.o
 # RUN: echo -e ".global crtfunc\n.text\ncrtfunc:\nret\n" > %t.dir/libs/crtfunc.s
 # RUN: llvm-mc -triple=x86_64-windows-gnu %t.dir/libs/crtfunc.s -filetype=obj -o %t.dir/libs/crt2.o
-# RUN: lld-link -safeseh:no -out:%t.dll -dll -entry:DllMainCRTStartup %t.main.obj -lldmingw %t.dir/libs/crt2.o %t.dir/libs/libmingwex.a -output-def:%t.def
+# RUN: lld-link -safeseh:no -out:%t.dll -dll %t.main.obj -lldmingw %t.dir/libs/crt2.o %t.dir/libs/libmingwex.a -output-def:%t.def
 # RUN: echo "EOF" >> %t.def
 # RUN: cat %t.def | FileCheck -check-prefix=CHECK-EXCLUDE %s
 
@@ -99,7 +99,7 @@ __imp__unexported:
 # Test that libraries included with -wholearchive: are autoexported, even if
 # they are in a library that otherwise normally would be excluded.
 
-# RUN: lld-link -safeseh:no -out:%t.dll -dll -entry:DllMainCRTStartup %t.main.obj -lldmingw %t.dir/libs/crt2.o -wholearchive:%t.dir/libs/libmingwex.a -output-def:%t.def
+# RUN: lld-link -safeseh:no -out:%t.dll -dll %t.main.obj -lldmingw %t.dir/libs/crt2.o -wholearchive:%t.dir/libs/libmingwex.a -output-def:%t.def
 # RUN: echo "EOF" >> %t.def
 # RUN: cat %t.def | FileCheck -check-prefix=CHECK-WHOLEARCHIVE %s
 

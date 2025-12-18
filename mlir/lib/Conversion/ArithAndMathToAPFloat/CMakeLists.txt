@@ -42,6 +42,7 @@ add_mlir_conversion_library(MLIRMathToAPFloat
   Core
 
   LINK_LIBS PUBLIC
+  MLIRTransformUtils
   ArithAndMathToAPFloatUtils
   MLIRMathDialect
   MLIRFuncDialect
