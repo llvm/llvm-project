@@ -663,11 +663,10 @@ static StringRef getRelocTypeName(const RelocationRef &Rel,
       if (Expected<StringRef> SymName = SI->getName())
         CurrentRISCVVendorSymbol = SymName->str();
     }
-  } else if (Type >= ELF::R_RISCV_CUSTOM192 &&
-             Type <= ELF::R_RISCV_CUSTOM255 &&
+  } else if (Type >= ELF::R_RISCV_CUSTOM192 && Type <= ELF::R_RISCV_CUSTOM255 &&
              !CurrentRISCVVendorSymbol.empty()) {
-    StringRef VendorRelocName =
-        object::getRISCVVendorRelocationTypeName(Type, CurrentRISCVVendorSymbol);
+    StringRef VendorRelocName = object::getRISCVVendorRelocationTypeName(
+        Type, CurrentRISCVVendorSymbol);
     CurrentRISCVVendorSymbol.clear();
     if (VendorRelocName != "Unknown")
       return VendorRelocName;
