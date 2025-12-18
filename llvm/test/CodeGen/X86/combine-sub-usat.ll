@@ -137,47 +137,39 @@ define <4 x i32> @combine_dec_v4i32(<4 x i32> %a0) {
 ;
 ; SSE41-LABEL: combine_dec_v4i32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pxor %xmm1, %xmm1
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE41-NEXT:    pxor %xmm1, %xmm2
-; SSE41-NEXT:    paddd %xmm2, %xmm0
+; SSE41-NEXT:    pmaxud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    paddd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE42-LABEL: combine_dec_v4i32:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    pxor %xmm1, %xmm1
-; SSE42-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE42-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE42-NEXT:    pxor %xmm1, %xmm2
-; SSE42-NEXT:    paddd %xmm2, %xmm0
+; SSE42-NEXT:    pmaxud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE42-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE42-NEXT:    paddd %xmm1, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_dec_v4i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpmaxud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_dec_v4i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm1
-; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
+; AVX2-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: combine_dec_v4i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm1 = ~zmm1
+; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
+; AVX512-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %1 = call <4 x i32> @llvm.usub.sat.v4i32(<4 x i32> %a0, <4 x i32> splat (i32 1))
   ret <4 x i32> %1

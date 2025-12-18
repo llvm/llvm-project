@@ -10877,6 +10877,12 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
   assert(VT == RHS.getValueType() && "Expected operands to be the same type");
   assert(VT.isInteger() && "Expected operands to be integers");
 
+  // usub.sat(a, b) -> umax(a, b) - b
+  if (Opcode == ISD::USUBSAT && isOperationLegal(ISD::UMAX, VT)) {
+    SDValue Max = DAG.getNode(ISD::UMAX, dl, VT, LHS, RHS);
+    return DAG.getNode(ISD::SUB, dl, VT, Max, RHS);
+  }
+
   // usub.sat(a, 1) -> sub(a, zext(a != 0))
   if (Opcode == ISD::USUBSAT && isOneOrOneSplat(RHS)) {
     LHS = DAG.getFreeze(LHS);
@@ -10887,12 +10893,6 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
     Subtrahend =
         DAG.getNode(ISD::AND, dl, VT, Subtrahend, DAG.getConstant(1, dl, VT));
     return DAG.getNode(ISD::SUB, dl, VT, LHS, Subtrahend);
-  }
-
-  // usub.sat(a, b) -> umax(a, b) - b
-  if (Opcode == ISD::USUBSAT && isOperationLegal(ISD::UMAX, VT)) {
-    SDValue Max = DAG.getNode(ISD::UMAX, dl, VT, LHS, RHS);
-    return DAG.getNode(ISD::SUB, dl, VT, Max, RHS);
   }
 
   // uadd.sat(a, b) -> umin(a, ~b) + b
