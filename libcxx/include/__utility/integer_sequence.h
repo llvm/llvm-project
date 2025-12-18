@@ -33,7 +33,7 @@ template <class _Tp, _Tp... _Indices>
 struct __integer_sequence {
   using value_type = _Tp;
   static_assert(is_integral<_Tp>::value, "std::integer_sequence can only be instantiated with an integral type");
-  static _LIBCPP_HIDE_FROM_ABI constexpr size_t size() noexcept { return sizeof...(_Indices); }
+  [[__nodiscard__]] static _LIBCPP_HIDE_FROM_ABI constexpr size_t size() noexcept { return sizeof...(_Indices); }
 };
 
 template <size_t... _Indices>
@@ -41,6 +41,9 @@ using __index_sequence _LIBCPP_NODEBUG = __integer_sequence<size_t, _Indices...>
 
 template <size_t _SequenceSize>
 using __make_index_sequence _LIBCPP_NODEBUG = __make_integer_sequence_impl<__integer_sequence, size_t, _SequenceSize>;
+
+template <class... _Args>
+using __index_sequence_for _LIBCPP_NODEBUG = __make_index_sequence<sizeof...(_Args)>;
 
 #  if _LIBCPP_STD_VER >= 14
 

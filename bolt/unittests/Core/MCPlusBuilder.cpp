@@ -198,6 +198,122 @@ TEST_P(MCPlusBuilderTester, AArch64_BTI) {
   ASSERT_TRUE(BC->MIB->isImplicitBTIC(*II));
 }
 
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_empty) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X16);
+  BC->MIB->insertBTI(*BB, CallInst);
+  // Check that BTI c is added to the empty block.
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, false));
+}
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_0) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst Inst = MCInstBuilder(AArch64::RET).addReg(AArch64::LR);
+  BB->addInstruction(Inst);
+  // BR x16 needs BTI c or BTI j. We prefer adding a BTI c.
+  MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X16);
+  BC->MIB->insertBTI(*BB, CallInst);
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, false));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_1) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst BTIc;
+  BC->MIB->createBTI(BTIc, true, false);
+  BB->addInstruction(BTIc);
+  // BR x16 needs BTI c or BTI j. We have a BTI c, no change is needed.
+  MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X16);
+  BC->MIB->insertBTI(*BB, CallInst);
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, false));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_2) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst BTIc;
+  BC->MIB->createBTI(BTIc, true, false);
+  BB->addInstruction(BTIc);
+  // BR x5 needs BTI j
+  // we have BTI c -> extend it to BTI jc.
+  MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X5);
+  BC->MIB->insertBTI(*BB, CallInst);
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, true));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_3) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst Inst = MCInstBuilder(AArch64::RET).addReg(AArch64::LR);
+  BB->addInstruction(Inst);
+  // BR x5 needs BTI j
+  MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X5);
+  BC->MIB->insertBTI(*BB, CallInst);
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, false, true));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_4) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst Inst = MCInstBuilder(AArch64::RET).addReg(AArch64::LR);
+  BB->addInstruction(Inst);
+  // BLR needs BTI c, regardless of the register used.
+  MCInst CallInst = MCInstBuilder(AArch64::BLR).addReg(AArch64::X5);
+  BC->MIB->insertBTI(*BB, CallInst);
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, false));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_5) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst BTIj;
+  BC->MIB->createBTI(BTIj, false, true);
+  BB->addInstruction(BTIj);
+  // BLR needs BTI c, regardless of the register used.
+  // We have a BTI j -> extend it to BTI jc.
+  MCInst CallInst = MCInstBuilder(AArch64::BLR).addReg(AArch64::X5);
+  BC->MIB->insertBTI(*BB, CallInst);
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, true));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_6) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst Paciasp =
+      MCInstBuilder(AArch64::PACIASP).addReg(AArch64::LR).addReg(AArch64::SP);
+  BB->addInstruction(Paciasp);
+  // PACI(AB)SP are implicit BTI c, no change needed.
+  MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X17);
+  BC->MIB->insertBTI(*BB, CallInst);
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, false));
+  ASSERT_TRUE(BC->MIB->isPSignOnLR(*II));
+}
+
 TEST_P(MCPlusBuilderTester, AArch64_CmpJNE) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();

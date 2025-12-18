@@ -1414,6 +1414,49 @@ This is prefixed by `STRING`, a colon and a space.
 - **Class:** subroutine
 - **Syntax:** `CALL PERROR(STRING)`
 
+<<<<<<< HEAD
+### Non-Standard Intrinsics: SRAND
+
+#### Description
+`SRAND` reinitializes the pseudo-random number generator called by `RAND` and `IRAND`.
+The new seed used by the generator is specified by the required argument `SEED`.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine
+- **Syntax:** `CALL SRAND(SEED)`
+
+### Non-Standard Intrinsics: IRAND
+
+#### Description
+`IRAND(FLAG)` returns a pseudo-random number from a uniform distribution between 0 and a system-dependent limit.
+If `FLAG` is 0, the next number in the current sequence is returned;
+If `FLAG` is 1, the generator is restarted by `CALL SRAND(0)`;
+If `FLAG` has any other value, it is used as a new seed with `SRAND`.
+The return value is of `INTEGER` type of kind 4.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** function
+- **Syntax:** `RESULT = IRAND(I)`
+
+### Non-Standard Intrinsics: RAND
+
+#### Description
+`RAND(FLAG)` returns a pseudo-random number from a uniform distribution between 0 and 1.
+If `FLAG` is 0, the next number in the current sequence is returned;
+If `FLAG` is 1, the generator is restarted by `CALL SRAND(0)`;
+If `FLAG` has any other value, it is used as a new seed with `SRAND`.
+The return value is of `REAL` type with the default kind.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** function
+- **Syntax:** `RESULT = RAND(I)`
+
 ### Non-Standard Intrinsics: SHOW_DESCRIPTOR
 
 #### Description
