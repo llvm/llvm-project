@@ -4444,6 +4444,7 @@ public:
     };
     ASTReader *Chain = Writer.getChain();
     for (NamedDecl *D : Decls) {
+      AddDecl(D);
       if (Chain && isa<NamespaceDecl>(D) && D->isFromASTFile() &&
           D == Chain->getKeyDeclaration(D)) {
         // In ASTReader, we stored only the key declaration of a namespace decl
@@ -4456,8 +4457,6 @@ public:
         Chain->forEachImportedKeyDecl(D, [&AddDecl](const Decl *D) {
           AddDecl(cast<NamedDecl>(const_cast<Decl *>(D)));
         });
-      } else {
-        AddDecl(D);
       }
     }
     return std::make_pair(Start, DeclIDs.size());
