@@ -44,7 +44,8 @@ mlir::Value CIRGenBuilderTy::getArrayElement(mlir::Location arrayLocBegin,
   if (shouldDecay && arrayTy && arrayTy == eltTy) {
     auto eltPtrTy =
         getPointerTo(arrayTy.getElementType(), arrayPtrTy.getAddrSpace());
-    return cir::GetElementOp::create(arrayLocEnd, eltPtrTy, arrayPtr, idx);
+    return cir::GetElementOp::create(*this, arrayLocEnd, eltPtrTy, arrayPtr,
+                                     idx);
   }
 
   // If we don't have sufficient type information, emit a PtrStrideOp.
