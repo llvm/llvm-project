@@ -56,18 +56,8 @@ namespace __asan {
 #  define ASAN_READ_STRING(ctx, s, n) \
     ASAN_READ_STRING_OF_LEN((ctx), (s), internal_strlen(s), (n))
 
-static inline void internal_or_real_memcpy(void* new_mem, const char* s,
-                                           uptr length) {
-#  if SANITIZER_INTERCEPT_MEMCPY
-  REAL(memcpy)(new_mem, s, length + 1);
-#  else
-  internal_memcpy(new_mem, s, length + 1);
-#  endif
-}
-
-[[maybe_unused]] static inline uptr MaybeRealStrnlen(const char* s,
-                                                     uptr maxlen) {
-#  if SANITIZER_INTERCEPT_STRNLEN
+static inline uptr MaybeRealStrnlen(const char *s, uptr maxlen) {
+#if SANITIZER_INTERCEPT_STRNLEN
   if (static_cast<bool>(REAL(strnlen)))
     return REAL(strnlen)(s, maxlen);
 #  endif
@@ -532,7 +522,6 @@ DEFINE_REAL(char*, index, const char *string, int c)
 
 // For both strcat() and strncat() we need to check the validity of |to|
 // argument irrespective of the |from| length.
-#  if ASAN_INTERCEPT_STRCAT
   INTERCEPTOR(char *, strcat, char *to, const char *from) {
     void *ctx;
     ASAN_INTERCEPTOR_ENTER(ctx, strcat);
@@ -572,9 +561,7 @@ INTERCEPTOR(char*, strncat, char *to, const char *from, usize size) {
   }
   return REAL(strncat)(to, from, size);
 }
-#  endif
 
-#  if ASAN_INTERCEPT_STRCPY
 INTERCEPTOR(char *, strcpy, char *to, const char *from) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strcpy);
@@ -596,7 +583,6 @@ INTERCEPTOR(char *, strcpy, char *to, const char *from) {
   }
   return REAL(strcpy)(to, from);
 }
-#  endif
 
 INTERCEPTOR(wchar_t*, wcscpy, wchar_t* to, const wchar_t* from) {
   void* ctx;
@@ -638,7 +624,7 @@ INTERCEPTOR(char*, strdup, const char *s) {
   GET_STACK_TRACE_MALLOC;
   void *new_mem = asan_malloc(length + 1, &stack);
   if (new_mem) {
-    internal_or_real_memcpy(new_mem, s, length + 1);
+    REAL(memcpy)(new_mem, s, length + 1);
   }
   return reinterpret_cast<char*>(new_mem);
 }
@@ -656,13 +642,12 @@ INTERCEPTOR(char*, __strdup, const char *s) {
   GET_STACK_TRACE_MALLOC;
   void *new_mem = asan_malloc(length + 1, &stack);
   if (new_mem) {
-    internal_or_real_memcpy(new_mem, s, length + 1);
+    REAL(memcpy)(new_mem, s, length + 1);
   }
   return reinterpret_cast<char*>(new_mem);
 }
 #endif // ASAN_INTERCEPT___STRDUP
 
-#  if ASAN_INTERCEPT_STRCPY
 INTERCEPTOR(char*, strncpy, char *to, const char *from, usize size) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strncpy);
@@ -675,7 +660,6 @@ INTERCEPTOR(char*, strncpy, char *to, const char *from, usize size) {
   }
   return REAL(strncpy)(to, from, size);
 }
-#  endif
 
 INTERCEPTOR(wchar_t*, wcsncpy, wchar_t* to, const wchar_t* from, uptr size) {
   void* ctx;
@@ -870,14 +854,10 @@ void InitializeAsanInterceptors() {
   InitializeSignalInterceptors();
 
   // Intercept str* functions.
-#  if ASAN_INTERCEPT_STRCAT
   ASAN_INTERCEPT_FUNC(strcat);
-  ASAN_INTERCEPT_FUNC(strncat);
-#  endif
-#  if ASAN_INTERCEPT_STRCPY
   ASAN_INTERCEPT_FUNC(strcpy);
+  ASAN_INTERCEPT_FUNC(strncat);
   ASAN_INTERCEPT_FUNC(strncpy);
-#  endif
   ASAN_INTERCEPT_FUNC(strdup);
 
   // Intercept wcs* functions.

@@ -22,16 +22,6 @@
 
 using namespace __asan;
 
-// AIX currently can't retrieve memcpy's address, we have to use internal_memcpy
-// here.
-#if !SANITIZER_AIX
-#  define ASAN_MEMCPY_RETURN(to, from, size) REAL(memcpy)(to, from, size)
-#  define ASAN_MEMMOVE_RETURN(to, from, size) REAL(memmove)(to, from, size)
-#else
-#  define ASAN_MEMCPY_RETURN(to, from, size) internal_memcpy(to, from, size)
-#  define ASAN_MEMMOVE_RETURN(to, from, size) internal_memmove(to, from, size)
-#endif
-
 // memcpy is called during __asan_init() from the internals of printf(...).
 // We do not treat memcpy with to==from as a bug.
 // See http://llvm.org/bugs/show_bug.cgi?id=11763.
@@ -46,7 +36,7 @@ using namespace __asan;
     } else if (UNLIKELY(!AsanInited())) {                     \
       return internal_memcpy(to, from, size);                 \
     }                                                         \
-    return ASAN_MEMCPY_RETURN(to, from, size);                \
+    return REAL(memcpy)(to, from, size);                      \
   } while (0)
 
 // memset is called inside Printf.
@@ -60,15 +50,15 @@ using namespace __asan;
     return REAL(memset)(block, c, size);      \
   } while (0)
 
-#define ASAN_MEMMOVE_IMPL(ctx, to, from, size)  \
-  do {                                          \
-    if (LIKELY(replace_intrin_cached)) {        \
-      ASAN_READ_RANGE(ctx, from, size);         \
-      ASAN_WRITE_RANGE(ctx, to, size);          \
-    } else if (UNLIKELY(!AsanInited())) {       \
-      return internal_memmove(to, from, size);  \
-    }                                           \
-    return ASAN_MEMMOVE_RETURN(to, from, size); \
+#define ASAN_MEMMOVE_IMPL(ctx, to, from, size) \
+  do {                                         \
+    if (LIKELY(replace_intrin_cached)) {       \
+      ASAN_READ_RANGE(ctx, from, size);        \
+      ASAN_WRITE_RANGE(ctx, to, size);         \
+    } else if (UNLIKELY(!AsanInited())) {      \
+      return internal_memmove(to, from, size); \
+    }                                          \
+    return REAL(memmove)(to, from, size);      \
   } while (0)
 
 void *__asan_memcpy(void *to, const void *from, uptr size) {

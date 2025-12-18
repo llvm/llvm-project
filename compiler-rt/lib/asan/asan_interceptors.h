@@ -130,15 +130,6 @@ void InitializePlatformInterceptors();
 #    define ASAN_INTERCEPT_TRYJOIN 0
 #  endif
 
-// AIX currently can't retrieve the address of strcat or strcpy
-#  if SANITIZER_AIX
-#    define ASAN_INTERCEPT_STRCAT 0
-#    define ASAN_INTERCEPT_STRCPY 0
-#  else
-#    define ASAN_INTERCEPT_STRCAT 1
-#    define ASAN_INTERCEPT_STRCPY 1
-#  endif
-
 #  if SANITIZER_LINUX &&                                                \
       (defined(__arm__) || defined(__aarch64__) || defined(__i386__) || \
        defined(__x86_64__) || SANITIZER_RISCV64 || SANITIZER_LOONGARCH64)
