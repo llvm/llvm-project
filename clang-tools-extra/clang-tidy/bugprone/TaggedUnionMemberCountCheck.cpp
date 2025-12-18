@@ -16,24 +16,22 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-static constexpr llvm::StringLiteral StrictModeOptionName = "StrictMode";
-static constexpr llvm::StringLiteral EnableCountingEnumHeuristicOptionName =
+static constexpr StringRef StrictModeOptionName = "StrictMode";
+static constexpr StringRef EnableCountingEnumHeuristicOptionName =
     "EnableCountingEnumHeuristic";
-static constexpr llvm::StringLiteral CountingEnumPrefixesOptionName =
+static constexpr StringRef CountingEnumPrefixesOptionName =
     "CountingEnumPrefixes";
-static constexpr llvm::StringLiteral CountingEnumSuffixesOptionName =
+static constexpr StringRef CountingEnumSuffixesOptionName =
     "CountingEnumSuffixes";
 
 static constexpr bool StrictModeOptionDefaultValue = false;
 static constexpr bool EnableCountingEnumHeuristicOptionDefaultValue = true;
-static constexpr llvm::StringLiteral CountingEnumPrefixesOptionDefaultValue =
-    "";
-static constexpr llvm::StringLiteral CountingEnumSuffixesOptionDefaultValue =
-    "count";
+static constexpr StringRef CountingEnumPrefixesOptionDefaultValue = "";
+static constexpr StringRef CountingEnumSuffixesOptionDefaultValue = "count";
 
-static constexpr llvm::StringLiteral RootMatchBindName = "root";
-static constexpr llvm::StringLiteral UnionMatchBindName = "union";
-static constexpr llvm::StringLiteral TagMatchBindName = "tags";
+static constexpr StringRef RootMatchBindName = "root";
+static constexpr StringRef UnionMatchBindName = "union";
+static constexpr StringRef TagMatchBindName = "tags";
 
 namespace {
 

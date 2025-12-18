@@ -26,11 +26,11 @@ AST_MATCHER(clang::LinkageSpecDecl, isExternCLinkage) {
 
 namespace clang::tidy::modernize {
 
-static constexpr llvm::StringLiteral ExternCDeclName = "extern-c-decl";
-static constexpr llvm::StringLiteral ParentDeclName = "parent-decl";
-static constexpr llvm::StringLiteral TagDeclName = "tag-decl";
-static constexpr llvm::StringLiteral TypedefName = "typedef";
-static constexpr llvm::StringLiteral DeclStmtName = "decl-stmt";
+static constexpr StringRef ExternCDeclName = "extern-c-decl";
+static constexpr StringRef ParentDeclName = "parent-decl";
+static constexpr StringRef TagDeclName = "tag-decl";
+static constexpr StringRef TypedefName = "typedef";
+static constexpr StringRef DeclStmtName = "decl-stmt";
 
 UseUsingCheck::UseUsingCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -119,7 +119,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   if (StartLoc.isMacroID() && IgnoreMacros)
     return;
 
-  static constexpr llvm::StringLiteral UseUsingWarning =
+  static constexpr StringRef UseUsingWarning =
       "use 'using' instead of 'typedef'";
 
   // Warn at StartLoc but do not fix if there is macro or array.
