@@ -205,20 +205,6 @@ public:
   size_t ReadCStringFromMemory(addr_t addr, void *char_buf, size_t size,
                                lldb::SBError &error);
 
-  /// Given a list of addresses, read one NULL-terminated string per address.
-  ///
-  /// \param [in] string_addresses
-  ///   The list of addresses to read from.
-  /// \param [in] error
-  ///   An error that gets populated if the process is not in a valid state.
-  ///
-  /// \return
-  ///   A list of strings read, which is guaranteed to contain as
-  ///   many strings as there are addresses in the input. If reading from an
-  ///   address fails, an empty string is returned for that address.
-  SBStringList ReadCStringsFromMemory(SBValueList string_addresses,
-                                      SBError &error);
-
   uint64_t ReadUnsignedFromMemory(addr_t addr, uint32_t byte_size,
                                   lldb::SBError &error);
 

@@ -876,37 +876,6 @@ lldb::addr_t SBProcess::FindInMemory(const void *buf, uint64_t size,
                                   range.ref(), alignment, error.ref());
 }
 
-SBStringList SBProcess::ReadCStringsFromMemory(SBValueList sb_string_addresses,
-                                               SBError &error) {
-  std::vector<lldb::addr_t> string_addresses;
-  string_addresses.reserve(sb_string_addresses.GetSize());
-
-  for (size_t idx = 0; idx < sb_string_addresses.GetSize(); idx++) {
-    SBValue sb_address = sb_string_addresses.GetValueAtIndex(idx);
-    string_addresses.push_back(sb_address.GetValueAsAddress());
-  }
-
-  ProcessSP process_sp(GetSP());
-  if (!process_sp) {
-    error = Status::FromErrorString("SBProcess is invalid");
-    return {};
-  }
-  Process::StopLocker stop_locker;
-  if (!stop_locker.TryLock(&process_sp->GetRunLock())) {
-    error = Status::FromErrorString("process is running");
-    return {};
-  }
-
-  SBStringList strings;
-  llvm::SmallVector<std::optional<std::string>> maybe_strings =
-      process_sp->ReadCStringsFromMemory(string_addresses);
-
-  for (std::optional<std::string> maybe_str : maybe_strings)
-    strings.AppendString(maybe_str ? maybe_str->c_str() : "");
-
-  return strings;
-}
-
 size_t SBProcess::ReadMemory(addr_t addr, void *dst, size_t dst_len,
                              SBError &sb_error) {
   LLDB_INSTRUMENT_VA(this, addr, dst, dst_len, sb_error);
