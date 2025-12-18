@@ -94,19 +94,8 @@ getCommentsInRange(ASTContext *Ctx, CharSourceRange Range) {
   if (Invalid)
     return Comments;
 
-  const char *StrData = Buffer.data() + BeginLoc.second;
-
-  Lexer TheLexer(SM.getLocForStartOfFile(BeginLoc.first), Ctx->getLangOpts(),
-                 Buffer.begin(), StrData, Buffer.end());
-  TheLexer.SetCommentRetentionState(true);
-
-  while (true) {
-    Token Tok;
-    if (TheLexer.LexFromRawLexer(Tok))
-      break;
-    if (Tok.getLocation() == Range.getEnd() || Tok.is(tok::eof))
-      break;
-
+  for (const Token Tok :
+       utils::lexer::tokensIncludingComments(Range, SM, Ctx->getLangOpts())) {
     if (Tok.is(tok::comment)) {
       const std::pair<FileID, unsigned> CommentLoc =
           SM.getDecomposedLoc(Tok.getLocation());

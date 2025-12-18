@@ -10,8 +10,10 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_LEXERUTILS_H
 
 #include "clang/AST/ASTContext.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
+#include <iterator>
 #include <optional>
 #include <utility>
 
@@ -126,6 +128,81 @@ SourceLocation getUnifiedEndLoc(const Stmt &S, const SourceManager &SM,
 /// the noexcept specifier.
 SourceLocation getLocationForNoexceptSpecifier(const FunctionDecl *FuncDecl,
                                                const SourceManager &SM);
+
+class TokenView {
+public:
+  class iterator { // NOLINT(readability-identifier-naming)
+  public:
+    using value_type = Token;
+    using pointer = const Token *;
+    using reference = const Token &;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    using iterator_category = std::input_iterator_tag;
+
+    iterator &operator++() {
+      if (View->RawLexer.getBufferLocation() < View->EndOfLexedRange)
+        View->RawLexer.LexFromRawLexer(View->Tok);
+      else
+        View = nullptr; // No more tokens.
+      return *this;
+    }
+
+    void operator++(int) { operator++(); }
+
+    friend bool operator==(iterator LHS, iterator RHS) {
+      return LHS.View == RHS.View;
+    }
+
+    friend bool operator!=(iterator LHS, iterator RHS) { return !(LHS == RHS); }
+
+    const Token &operator*() const { return View->Tok; }
+    const Token *operator->() const { return &View->Tok; }
+
+  private:
+    friend class TokenView;
+    iterator(TokenView *V) : View(V) {}
+    TokenView *View;
+  };
+
+  iterator begin() {
+    iterator It(this);
+    ++It;
+    return It;
+  }
+  iterator end() { return {nullptr}; }
+
+  TokenView(CharSourceRange Range, const SourceManager &SM,
+            const LangOptions &LangOpts, bool RetainComments)
+      : RawLexer([&]() -> Lexer {
+          const auto [FID, BeginOffset] = SM.getDecomposedLoc(Range.getBegin());
+          const auto [_, EndOffset] = SM.getDecomposedLoc(Range.getEnd());
+          const StringRef FileContents = SM.getBufferData(FID);
+          const StringRef LexedRange = {FileContents.begin() + BeginOffset,
+                                        EndOffset - BeginOffset};
+          EndOfLexedRange = LexedRange.end();
+          return {Range.getBegin(), LangOpts, LexedRange.begin(),
+                  LexedRange.begin(), FileContents.end()};
+        }()) {
+    RawLexer.SetCommentRetentionState(RetainComments);
+  }
+
+private:
+  Lexer RawLexer;
+  const char *EndOfLexedRange;
+  Token Tok;
+};
+
+inline TokenView tokens(CharSourceRange Range, const SourceManager &SM,
+                        const LangOptions &LangOpts) {
+  return {Range, SM, LangOpts, false};
+}
+
+inline TokenView tokensIncludingComments(CharSourceRange Range,
+                                         const SourceManager &SM,
+                                         const LangOptions &LangOpts) {
+  return {Range, SM, LangOpts, true};
+}
 
 } // namespace tidy::utils::lexer
 } // namespace clang
