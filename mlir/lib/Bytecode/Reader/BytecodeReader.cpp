@@ -952,6 +952,9 @@ public:
   /// Add an index to the deferred worklist for re-parsing.
   void addDeferredParsing(uint64_t index) { deferredWorklist.push_back(index); }
 
+  /// Whether currently resolving.
+  bool isResolving() const { return resolving; }
+
 private:
   /// Resolve the given entry at `index`.
   template <typename T>
@@ -1005,6 +1008,9 @@ private:
   /// Worklist for deferred attribute/type parsing. This is used to handle
   /// deeply nested structures like CallSiteLoc iteratively.
   std::vector<uint64_t> deferredWorklist;
+
+  /// Flag indicating if we are currently resolving an attribute or type.
+  bool resolving = false;
 };
 
 class DialectReader : public DialectBytecodeReader {
@@ -1061,6 +1067,18 @@ public:
     uint64_t index;
     if (failed(reader.parseVarInt(index)))
       return failure();
+
+    // If we aren't currently resolving an attribute/type, we resolve this
+    // attribute eagerly. This is the case when we are parsing properties, which
+    // aren't processed via the worklist.
+    if (!attrTypeReader.isResolving()) {
+      if (Attribute attr = attrTypeReader.resolveAttribute(index)) {
+        result = attr;
+        return success();
+      }
+      return failure();
+    }
+
     if (depth > maxAttrTypeDepth) {
       if (Attribute attr = attrTypeReader.getAttributeOrSentinel(index)) {
         result = attr;
@@ -1078,6 +1096,18 @@ public:
     uint64_t index;
     if (failed(reader.parseVarInt(index)))
       return failure();
+
+    // If we aren't currently resolving an attribute/type, we resolve this
+    // type eagerly. This is the case when we are parsing properties, which
+    // aren't processed via the worklist.
+    if (!attrTypeReader.isResolving()) {
+      if (Type type = attrTypeReader.resolveType(index)) {
+        result = type;
+        return success();
+      }
+      return failure();
+    }
+
     if (depth > maxAttrTypeDepth) {
       if (Type type = attrTypeReader.getTypeOrSentinel(index)) {
         result = type;
@@ -1322,6 +1352,11 @@ LogicalResult AttrTypeReader::initialize(
 template <typename T>
 T AttrTypeReader::resolveEntry(SmallVectorImpl<Entry<T>> &entries, size_t index,
                                StringRef entryType, uint64_t depth) {
+  bool oldResolving = resolving;
+  resolving = true;
+  auto restoreResolving =
+      llvm::make_scope_exit([&]() { resolving = oldResolving; });
+
   if (index >= entries.size()) {
     emitError(fileLoc) << "invalid " << entryType << " index: " << index;
     return {};
