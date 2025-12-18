@@ -7531,8 +7531,15 @@ SDValue DAGTypeLegalizer::WidenVecOp_INSERT_SUBVECTOR(SDNode *N) {
                        N->getOperand(2));
 
   if (OrigVT.isScalableVector()) {
-    // Fallback to inserting through memory.
+    // When the widened types match, overwriting the start of a vector is
+    // effectively a merge operation that can be implement as a vselect.
+    if (SubVT == VT && N->getConstantOperandVal(2) == 0) {
+      SDValue Mask =
+          DAG.getMaskFromElementCount(DL, VT, OrigVT.getVectorElementCount());
+      return DAG.getNode(ISD::VSELECT, DL, VT, Mask, SubVec, InVec);
+    }
 
+    // Fallback to inserting through memory.
     Align Alignment = DAG.getReducedAlign(VT, /*UseABI=*/false);
     SDValue StackPtr = DAG.CreateStackTemporary(VT.getStoreSize(), Alignment);
     MachineFunction &MF = DAG.getMachineFunction();
