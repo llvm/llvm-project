@@ -300,27 +300,29 @@ TEST(IncludeTree, IncludeTreeFileListDuplicates) {
   EXPECT_EQ(I, Files.size());
 }
 
-TEST(IncludeTree, IncludeTreeFileSystemOverlay) {
-  StringRef PathSep = llvm::sys::path::get_separator();
-  std::shared_ptr<ObjectStore> DB = llvm::cas::createInMemoryCAS();
+static Expected<IntrusiveRefCntPtr<llvm::vfs::FileSystem>>
+createTestInclueTreeFS(ObjectStore &DB, unsigned NumFiles = 10) {
   SmallVector<IncludeTree::FileList::FileEntry> Files;
-  for (unsigned I = 0; I < 10; ++I) {
+  for (unsigned I = 0; I < NumFiles; ++I) {
     std::optional<IncludeTree::File> File;
     std::string Path = "/file" + std::to_string(I);
     static constexpr StringRef Bytes = "123456789";
     std::optional<ObjectRef> Content;
-    ASSERT_THAT_ERROR(
-        DB->storeFromString({}, Bytes.substr(0, I)).moveInto(Content),
-        llvm::Succeeded());
-    ASSERT_THAT_ERROR(
-        IncludeTree::File::create(*DB, Path, *Content).moveInto(File),
-        llvm::Succeeded());
+    if (auto E = DB.storeFromString({}, Bytes.substr(0, I)).moveInto(Content))
+      return std::move(E);
+    if (auto E = IncludeTree::File::create(DB, Path, *Content).moveInto(File))
+      return std::move(E);
     Files.push_back({File->getRef(), I});
   }
+  return createIncludeTreeFileSystem(DB, Files);
+}
+
+TEST(IncludeTree, IncludeTreeFileSystemOverlay) {
+  StringRef PathSep = llvm::sys::path::get_separator();
+  std::shared_ptr<ObjectStore> DB = llvm::cas::createInMemoryCAS();
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> IncludeTreeFS;
-  ASSERT_THAT_ERROR(
-      createIncludeTreeFileSystem(*DB, Files).moveInto(IncludeTreeFS),
-      llvm::Succeeded());
+  ASSERT_THAT_ERROR(createTestInclueTreeFS(*DB).moveInto(IncludeTreeFS),
+                    llvm::Succeeded());
 
   auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   FS->setCurrentWorkingDirectory("/dir");
@@ -341,4 +343,33 @@ TEST(IncludeTree, IncludeTreeFileSystemOverlay) {
     ASSERT_EQ(I->path(), Path);
   }
   ASSERT_EQ(NumFile, 2);
+}
+
+TEST(IncludeTree, IncludeTreeFileSystemPrint) {
+  std::shared_ptr<ObjectStore> DB = llvm::cas::createInMemoryCAS();
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> IncludeTreeFS;
+  ASSERT_THAT_ERROR(
+      createTestInclueTreeFS(*DB, /*NumFiles=*/3).moveInto(IncludeTreeFS),
+      llvm::Succeeded());
+
+  {
+    std::string FSStr;
+    llvm::raw_string_ostream OS(FSStr);
+    IncludeTreeFS->print(OS, llvm::vfs::FileSystem::PrintType::Summary);
+    EXPECT_EQ(FSStr, "IncludeTreeFileSystem\n");
+  }
+  {
+    std::string FSStr;
+    llvm::raw_string_ostream OS(FSStr);
+    IncludeTreeFS->print(OS, llvm::vfs::FileSystem::PrintType::Contents);
+    StringRef Printed(FSStr);
+    EXPECT_TRUE(Printed.consume_front("IncludeTreeFileSystem")) << Printed;
+    EXPECT_TRUE(Printed.consume_front("\n  /file0 llvmcas://")) << Printed;
+    Printed = Printed.drop_front(64); // 32 hash bytes in hex
+    EXPECT_TRUE(Printed.consume_front("\n  /file1 llvmcas://")) << Printed;
+    Printed = Printed.drop_front(64); // 32 hash bytes in hex
+    EXPECT_TRUE(Printed.consume_front("\n  /file2 llvmcas://")) << Printed;
+    Printed = Printed.drop_front(64); // 32 hash bytes in hex
+    EXPECT_EQ(Printed, "\n");         // Final newline.
+  }
 }
