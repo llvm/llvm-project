@@ -6,12 +6,14 @@
 // RUN: %clang_cc1 -target-feature +altivec -triple powerpc-unknown-unknown -fsyntax-only -verify %s
 
 #include <altivec.h>
+#define DECL_COMMON_VARS            \
+  vector unsigned char vec = {1,2,3,4}; \
+  unsigned char scalar = 1;         \
+  int i = 1;                        \
+  float f = 1.0f;
 
 vector unsigned char test_bcdshift(void) {
-  vector unsigned char vec = {1, 2, 3, 4};
-  unsigned char scalar = 1;
-  int i = 1;
-  float f = 1.0f;
+  DECL_COMMON_VARS
 
   vector unsigned char res_a = __builtin_ppc_bcdshift(scalar, i, i); // expected-error {{argument 0 must be of type '__vector unsigned char' (vector of 16 'unsigned char' values)}}
 
@@ -25,10 +27,7 @@ vector unsigned char test_bcdshift(void) {
 }
 
 vector unsigned char test_bcdshiftround(void) {
-  vector unsigned char vec = {1, 2, 3, 4};
-  unsigned char scalar = 1;
-  int i = 1;
-  float f = 1.0f;
+  DECL_COMMON_VARS
 
   vector unsigned char res_a = __builtin_ppc_bcdshiftround(scalar, i, i); // expected-error {{argument 0 must be of type '__vector unsigned char' (vector of 16 'unsigned char' values)}}
 
@@ -42,10 +41,7 @@ vector unsigned char test_bcdshiftround(void) {
 }
 
 vector unsigned char test_bcdtruncate(void) {
-  vector unsigned char vec = {1, 2, 3, 4};
-  unsigned char scalar = 1;
-  int i = 1;
-  float f = 1.0f;
+  DECL_COMMON_VARS
 
   vector unsigned char res_a =  __builtin_ppc_bcdtruncate(scalar, i, i); // expected-error {{argument 0 must be of type '__vector unsigned char' (vector of 16 'unsigned char' values)}}
 
