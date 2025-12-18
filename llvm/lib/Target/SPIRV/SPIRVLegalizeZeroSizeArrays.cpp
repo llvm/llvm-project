@@ -61,7 +61,7 @@ class SPIRVLegalizeZeroSizeArraysImpl
   friend class InstVisitor<SPIRVLegalizeZeroSizeArraysImpl>;
 
 public:
-  SPIRVLegalizeZeroSizeArraysImpl(const SPIRVTargetMachine *TM)
+  SPIRVLegalizeZeroSizeArraysImpl(const SPIRVTargetMachine &TM)
       : InstVisitor(), TM(TM) {}
   bool runOnModule(Module &M);
 
@@ -77,7 +77,7 @@ private:
   Type *legalizeType(Type *Ty);
   Constant *legalizeConstant(Constant *C);
 
-  const SPIRVTargetMachine *TM;
+  const SPIRVTargetMachine &TM;
   DenseMap<Type *, Type *> TypeMap;
   DenseMap<GlobalVariable *, GlobalVariable *> GlobalMap;
   SmallVector<Instruction *, 16> ToErase;
@@ -87,7 +87,7 @@ private:
 class SPIRVLegalizeZeroSizeArraysLegacy : public ModulePass {
 public:
   static char ID;
-  SPIRVLegalizeZeroSizeArraysLegacy(const SPIRVTargetMachine *TM)
+  SPIRVLegalizeZeroSizeArraysLegacy(const SPIRVTargetMachine &TM)
       : ModulePass(ID), TM(TM) {}
   StringRef getPassName() const override {
     return "SPIRV Legalize Zero-Size Arrays";
@@ -98,7 +98,7 @@ public:
   }
 
 private:
-  const SPIRVTargetMachine *TM;
+  const SPIRVTargetMachine &TM;
 };
 
 // Legalize a type. There are only two cases we need to care about:
@@ -287,7 +287,7 @@ bool SPIRVLegalizeZeroSizeArraysImpl::runOnModule(Module &M) {
   Modified = false;
 
   // Runtime arrays are allowed for shaders, so we don't need to do anything.
-  if (TM && TM->getSubtargetImpl()->isShader())
+  if (TM.getSubtargetImpl()->isShader())
     return false;
 
   // First pass: create new globals (legalizing the initializer as needed) and
@@ -354,6 +354,6 @@ INITIALIZE_PASS(SPIRVLegalizeZeroSizeArraysLegacy,
                 "Legalize SPIR-V zero-size arrays", false, false)
 
 ModulePass *
-llvm::createSPIRVLegalizeZeroSizeArraysPass(const SPIRVTargetMachine *TM) {
+llvm::createSPIRVLegalizeZeroSizeArraysPass(const SPIRVTargetMachine &TM) {
   return new SPIRVLegalizeZeroSizeArraysLegacy(TM);
 }

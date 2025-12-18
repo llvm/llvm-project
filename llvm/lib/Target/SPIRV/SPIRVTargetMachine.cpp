@@ -214,7 +214,7 @@ void SPIRVPassConfig::addISelPrepare() {
   SPIRVTargetMachine &TM = getTM<SPIRVTargetMachine>();
   addPass(createSPIRVStripConvergenceIntrinsicsPass());
   addPass(createSPIRVLegalizeImplicitBindingPass());
-  addPass(createSPIRVLegalizeZeroSizeArraysPass(&TM));
+  addPass(createSPIRVLegalizeZeroSizeArraysPass(TM));
   addPass(createSPIRVCBufferAccessLegacyPass());
   addPass(createSPIRVPushConstantAccessLegacyPass(&TM));
   addPass(createSPIRVEmitIntrinsicsPass(&TM));
