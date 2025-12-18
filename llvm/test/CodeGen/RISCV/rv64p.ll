@@ -38,3 +38,22 @@ define i64 @pack_i64_imm() {
 ; CHECK-NEXT:    ret
   ret i64 u0x0403020104030201
 }
+
+; Make sure we prefer li over pli
+define i64 @li_imm() {
+; CHECK-LABEL: li_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    ret
+  ret i64 -1
+}
+
+define void @pli_b_store_i32(ptr %p) {
+; CHECK-LABEL: pli_b_store_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.b a1, 65
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  store i32 u0x41414141, ptr %p
+  ret void
+}
