@@ -15,16 +15,14 @@ define void @test(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr <vscale x 8 x i64> [[BROADCAST_SPLAT2]], splat (i64 52)
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <vscale x 8 x i64> [[TMP1]] to <vscale x 8 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <vscale x 8 x i8> [[BROADCAST_SPLAT]] to <vscale x 8 x i32>
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 8 x ptr> poison, ptr [[P]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 8 x ptr> [[BROADCAST_SPLATINSERT3]], <vscale x 8 x ptr> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i32> @llvm.stepvector.nxv8i32()
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 8 x i32> [ [[TMP4]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[FOR_COND]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ 9, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[FOR_COND]] ]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 8, i1 true)
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 8 x i32> poison, i32 [[TMP11]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <vscale x 8 x i32> [[BROADCAST_SPLATINSERT5]], <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 8 x i32> poison, i32 [[TMP11]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 8 x i32> [[BROADCAST_SPLATINSERT3]], <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <vscale x 8 x i32> [[VEC_IND]], splat (i32 2)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 8 x i1> [[TMP6]], <vscale x 8 x i32> [[TMP3]], <vscale x 8 x i32> [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl <vscale x 8 x i32> [[PREDPHI]], splat (i32 8)

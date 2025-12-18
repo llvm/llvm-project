@@ -6182,8 +6182,6 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
     // Now optimize the initial VPlan.
     RUN_VPLAN_PASS(VPlanTransforms::hoistPredicatedLoads, *Plan, PSE, OrigLoop);
     RUN_VPLAN_PASS(VPlanTransforms::sinkPredicatedStores, *Plan, PSE, OrigLoop);
-    RUN_VPLAN_PASS(VPlanTransforms::truncateToMinimalBitwidths, *Plan,
-                   Config.getMinimalBitwidths());
     RUN_VPLAN_PASS(VPlanTransforms::optimize, *Plan);
     // TODO: try to put addExplicitVectorLength close to addActiveLaneMask
     if (PlanCM.foldTailWithEVL()) {
@@ -6427,6 +6425,12 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   // Ensure scalar VF plans only contain VF=1, as required by hasScalarVFOnly.
   if (Range.Start.isScalar())
     Range.End = Range.Start * 2;
+
+  RUN_VPLAN_PASS(VPlanTransforms::truncateToMinimalBitwidths, *Plan,
+                 Config.getMinimalBitwidths());
+  RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, *Plan);
+  RUN_VPLAN_PASS(VPlanTransforms::narrowScatters, *Plan, CostCtx, Range,
+                 CM.foldTailWithEVL());
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);
