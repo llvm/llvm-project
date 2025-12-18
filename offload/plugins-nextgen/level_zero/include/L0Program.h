@@ -104,11 +104,8 @@ public:
   /// specified global variable name.
   Error writeGlobalVariable(const char *Name, size_t Size, const void *HostPtr);
 
-  /// Looks up an OpenMP declare target global variable with the given
-  /// \p Name and \p Size in the device environment for the current device.
-  /// The lookup is first done via the device offload table. If it fails,
-  /// then the lookup falls back to non-OpenMP specific lookup on the device.
-  Expected<void *> getOffloadVarDeviceAddr(const char *Name) const;
+  /// Looks up a device global symbol with the given \p Name in the device.
+  Expected<void *> getSymbolDeviceAddr(const char *Name) const;
 
   /// Returns the handle of a module that contains a given Kernel name.
   ze_module_handle_t findModuleFromKernelName(const char *KernelName) const {
