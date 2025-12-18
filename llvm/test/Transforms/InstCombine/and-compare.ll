@@ -280,3 +280,21 @@ entry:
   %cmp = icmp ne i8 %and, 16
   ret i1 %cmp
 }
+
+define i1 @test_ne_11_and_15_add_10_multiuse(i8 %a) {
+; CHECK-LABEL: @test_ne_11_and_15_add_10_multiuse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[A:%.*]], 10
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ADD]], 15
+; CHECK-NEXT:    call void @use.i8(i8 [[AND]])
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[A]], 15
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP0]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %add = add i8 %a, 10
+  %and = and i8 %add, 15
+  call void @use.i8(i8 %and)
+  %cmp = icmp ne i8 %and, 11
+  ret i1 %cmp
+}
