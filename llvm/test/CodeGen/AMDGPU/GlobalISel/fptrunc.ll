@@ -485,8 +485,6 @@ define amdgpu_ps <2 x half> @fptrunc_v2f32_to_v2f16_div(<2 x float> %a) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-FAKE16-LABEL: fptrunc_v2f32_to_v2f16_div:
@@ -501,8 +499,6 @@ define amdgpu_ps <2 x half> @fptrunc_v2f32_to_v2f16_div(<2 x float> %a) {
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
 ; GFX12-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v1
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
 ; GFX12-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: fptrunc_v2f32_to_v2f16_div:
@@ -519,11 +515,6 @@ define amdgpu_ps void @fptrunc_v2f64_to_v2f32_uniform(<2 x double> inreg %a, ptr
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_cvt_f32_f64_e32 v2, s[0:1]
 ; GFX11-NEXT:    v_cvt_f32_f64_e32 v3, s[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX11-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -531,12 +522,6 @@ define amdgpu_ps void @fptrunc_v2f64_to_v2f32_uniform(<2 x double> inreg %a, ptr
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_cvt_f32_f64_e32 v2, s[0:1]
 ; GFX12-NEXT:    v_cvt_f32_f64_e32 v3, s[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX12-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX12-NEXT:    s_endpgm
 ;
@@ -545,11 +530,6 @@ define amdgpu_ps void @fptrunc_v2f64_to_v2f32_uniform(<2 x double> inreg %a, ptr
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_cvt_f32_f64_e32 v2, s[0:1]
 ; GFX1250-NEXT:    v_cvt_f32_f64_e32 v3, s[2:3]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX1250-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX1250-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1250-NEXT:    s_endpgm
   %result = fptrunc <2 x double> %a to <2 x float>
