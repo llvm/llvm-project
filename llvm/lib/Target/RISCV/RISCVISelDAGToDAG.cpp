@@ -51,7 +51,7 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
     SDValue Result;
     switch (N->getOpcode()) {
     case ISD::SPLAT_VECTOR: {
-      if (Subtarget->enablePExtCodeGen())
+      if (Subtarget->enablePExtSIMDCodeGen())
         break;
       // Convert integer SPLAT_VECTOR to VMV_V_X_VL and floating-point
       // SPLAT_VECTOR to VFMV_V_F_VL to reduce isel burden.
@@ -1024,7 +1024,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
   switch (Opcode) {
   case ISD::Constant: {
-    assert((VT == Subtarget->getXLenVT() || VT == MVT::i32) && "Unexpected VT");
+    assert(VT == Subtarget->getXLenVT() && "Unexpected VT");
     auto *ConstNode = cast<ConstantSDNode>(Node);
     if (ConstNode->isZero()) {
       SDValue New =
@@ -1036,19 +1036,20 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // If only the lower 8 bits are used, try to convert this to a simm6 by
     // sign-extending bit 7. This is neutral without the C extension, and
     // allows C.LI to be used if C is present.
-    if (isUInt<8>(Imm) && isInt<6>(SignExtend64<8>(Imm)) && hasAllBUsers(Node))
+    if (!isInt<8>(Imm) && isUInt<8>(Imm) && isInt<6>(SignExtend64<8>(Imm)) &&
+        hasAllBUsers(Node))
       Imm = SignExtend64<8>(Imm);
     // If the upper XLen-16 bits are not used, try to convert this to a simm12
     // by sign extending bit 15.
-    if (isUInt<16>(Imm) && isInt<12>(SignExtend64<16>(Imm)) &&
-        hasAllHUsers(Node))
+    else if (!isInt<16>(Imm) && isUInt<16>(Imm) &&
+             isInt<12>(SignExtend64<16>(Imm)) && hasAllHUsers(Node))
       Imm = SignExtend64<16>(Imm);
     // If the upper 32-bits are not used try to convert this into a simm32 by
     // sign extending bit 32.
-    if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
+    else if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
       Imm = SignExtend64<32>(Imm);
 
-    if (Subtarget->enablePExtCodeGen() && isApplicableToPLI(Imm) &&
+    if (Subtarget->hasStdExtP() && isApplicableToPLI(Imm) &&
         hasAllWUsers(Node)) {
       // If it's 4 packed 8-bit integers or 2 packed signed 16-bit integers, we
       // can simply copy lower 32 bits to higher 32 bits to make it able to
@@ -1876,7 +1877,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case RISCVISD::PPACK_DH: {
-    assert(Subtarget->enablePExtCodeGen() && Subtarget->isRV32());
+    assert(Subtarget->enablePExtSIMDCodeGen() && Subtarget->isRV32());
 
     SDValue Val0 = Node->getOperand(0);
     SDValue Val1 = Node->getOperand(1);
@@ -2721,7 +2722,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       CurDAG->RemoveDeadNode(Node);
       return;
     }
-    if (Subtarget->enablePExtCodeGen()) {
+    if (Subtarget->enablePExtSIMDCodeGen()) {
       bool Is32BitCast =
           (VT == MVT::i32 && (SrcVT == MVT::v4i8 || SrcVT == MVT::v2i16)) ||
           (SrcVT == MVT::i32 && (VT == MVT::v4i8 || VT == MVT::v2i16));
@@ -2739,7 +2740,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     break;
   }
   case ISD::SCALAR_TO_VECTOR:
-    if (Subtarget->enablePExtCodeGen()) {
+    if (Subtarget->enablePExtSIMDCodeGen()) {
       MVT SrcVT = Node->getOperand(0).getSimpleValueType();
       if ((VT == MVT::v2i32 && SrcVT == MVT::i64) ||
           (VT == MVT::v4i8 && SrcVT == MVT::i32)) {

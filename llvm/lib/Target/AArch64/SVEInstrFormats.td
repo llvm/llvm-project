@@ -2325,9 +2325,13 @@ multiclass sve_fp_2op_p_zds_bfloat<bits<4> opc, string asm, string Ps,
   def : SVE_3_Op_Pat<nxv8bf16, op, nxv8i1, nxv8bf16, nxv8bf16, !cast<Instruction>(NAME)>;
 }
 
-class  sve_fp_2op_p_zds_bfscale<bits<4> opc, string asm,  DestructiveInstTypeEnum flags>
-: sve_fp_2op_p_zds<0b00, opc, asm, ZPR16>{
-  let DestructiveInstType = flags;
+multiclass sve_fp_2op_p_zds_bfscale<bits<4> opc, string asm, SDPatternOperator op,
+                                    DestructiveInstTypeEnum flags> {
+  let DestructiveInstType = flags in {
+  def _H : sve_fp_2op_p_zds<0b00, opc, asm, ZPR16>;
+  }
+
+  def : SVE_3_Op_Pat<nxv8bf16, op, nxv8i1, nxv8bf16, nxv8i16, !cast<Instruction>(NAME # _H)>;
 }
 
 multiclass sve_fp_2op_p_zds_zeroing_hsd<SDPatternOperator op> {
@@ -7983,6 +7987,7 @@ multiclass sve_int_perm_compact_sd<string asm, SDPatternOperator op> {
   def : SVE_2_Op_Pat<nxv4f32, op, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _S)>;
   def : SVE_2_Op_Pat<nxv2i64, op, nxv2i1, nxv2i64, !cast<Instruction>(NAME # _D)>;
   def : SVE_2_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _D)>;
+  def : SVE_2_Op_Pat<nxv2f32, op, nxv2i1, nxv2f32, !cast<Instruction>(NAME # _D)>;
 }
 
 multiclass sve_int_perm_compact_bh<string asm, SDPatternOperator op> {
@@ -9507,7 +9512,7 @@ multiclass sve_fp8_dot<bit bf, ZPRRegOp dstrc, string asm, ValueType vt,
     let mayLoad  = 1;
     let mayStore = 0;
   }
-  
+
   def : SVE_3_Op_Pat<vt, op, vt, nxv16i8, nxv16i8, !cast<Instruction>(NAME)>;
 }
 
@@ -10993,7 +10998,7 @@ class sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic,
 
 multiclass sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic, ValueType vtd, SDPatternOperator op> {
   def _BtoH : sve2_fp8_cvt_single<L, opc, mnemonic, ZPR16, ZPR8>;
-  
+
   def : SVE_1_Op_Pat<vtd, op, nxv16i8, !cast<Instruction>(NAME # _BtoH)>;
 }
 
@@ -11038,7 +11043,7 @@ class sve2_fp8_down_cvt_single_top<bits<2> opc, string mnemonic, RegisterOperand
   let Constraints = "$Zd = $_Zd";
   let DestructiveInstType = DestructiveOther;
   let ElementSize         = ZPR8.ElementSize;
-  
+
   let Uses     = [FPMR, FPCR];
   let mayLoad  = 1;
   let mayStore = 0;

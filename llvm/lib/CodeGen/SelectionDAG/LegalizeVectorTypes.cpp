@@ -5663,6 +5663,21 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {
       if (Opcode == ISD::ZERO_EXTEND)
         return DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, DL, WidenVT, InOp);
     }
+
+    // For TRUNCATE, try to widen using the legal EC of the input type instead
+    // if the legalisation action for that intermediate type is not widening.
+    // E.g. for trunc nxv1i64 -> nxv1i8 where
+    //  - nxv1i64 input gets widened to nxv2i64
+    //  - nxv1i8 output gets widened to nxv16i8
+    // Then one can try widening the result to nxv2i8 (instead of going all the
+    // way to nxv16i8) if this later allows type promotion.
+    EVT MidResVT =
+        EVT::getVectorVT(Ctx, WidenVT.getVectorElementType(), InVTEC);
+    if (N->getOpcode() == ISD::TRUNCATE &&
+        getTypeAction(MidResVT) == TargetLowering::TypePromoteInteger) {
+      SDValue MidRes = DAG.getNode(ISD::TRUNCATE, DL, MidResVT, InOp, Flags);
+      return DAG.getInsertSubvector(DL, DAG.getPOISON(WidenVT), MidRes, 0);
+    }
   }
 
   if (TLI.isTypeLegal(InWidenVT)) {

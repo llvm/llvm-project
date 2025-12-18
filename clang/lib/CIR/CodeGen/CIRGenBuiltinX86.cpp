@@ -164,27 +164,6 @@ static mlir::Value emitX86CompressExpand(CIRGenBuilderTy &builder,
                              mlir::ValueRange{source, mask, maskValue});
 }
 
-static mlir::Value getBoolMaskVecValue(CIRGenBuilderTy &builder,
-                                       mlir::Location loc, mlir::Value mask,
-                                       unsigned numElems) {
-
-  cir::BoolType boolTy = builder.getBoolTy();
-  auto maskTy = cir::VectorType::get(
-      boolTy, cast<cir::IntType>(mask.getType()).getWidth());
-  mlir::Value maskVec = builder.createBitcast(mask, maskTy);
-
-  if (numElems < 8) {
-    SmallVector<mlir::Attribute> indices;
-    indices.reserve(numElems);
-    mlir::Type i32Ty = builder.getSInt32Ty();
-    for (auto i : llvm::seq<unsigned>(0, numElems))
-      indices.push_back(cir::IntAttr::get(i32Ty, i));
-
-    maskVec = builder.createVecShuffle(loc, maskVec, maskVec, indices);
-  }
-  return maskVec;
-}
-
 static mlir::Value emitX86Select(CIRGenBuilderTy &builder, mlir::Location loc,
                                  mlir::Value mask, mlir::Value op0,
                                  mlir::Value op1) {
@@ -193,10 +172,10 @@ static mlir::Value emitX86Select(CIRGenBuilderTy &builder, mlir::Location loc,
   if (constOp && constOp.isAllOnesValue())
     return op0;
 
-  mask = getBoolMaskVecValue(builder, loc, mask,
-                             cast<cir::VectorType>(op0.getType()).getSize());
+  mask = getMaskVecValue(builder, loc, mask,
+                         cast<cir::VectorType>(op0.getType()).getSize());
 
-  return builder.createSelect(loc, mask, op0, op1);
+  return cir::VecTernaryOp::create(builder, loc, mask, op0, op1);
 }
 
 static mlir::Value emitX86MaskAddLogic(CIRGenBuilderTy &builder,
@@ -1152,7 +1131,34 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_insertf64x2_256:
   case X86::BI__builtin_ia32_inserti64x2_256:
   case X86::BI__builtin_ia32_insertf64x2_512:
-  case X86::BI__builtin_ia32_inserti64x2_512:
+  case X86::BI__builtin_ia32_inserti64x2_512: {
+    unsigned dstNumElts = cast<cir::VectorType>(ops[0].getType()).getSize();
+    unsigned srcNumElts = cast<cir::VectorType>(ops[1].getType()).getSize();
+    unsigned subVectors = dstNumElts / srcNumElts;
+    assert(llvm::isPowerOf2_32(subVectors) && "Expected power of 2 subvectors");
+    assert(dstNumElts <= 16);
+
+    uint64_t index = getZExtIntValueFromConstOp(ops[2]);
+    index &= subVectors - 1; // Remove any extra bits.
+    index *= srcNumElts;
+
+    llvm::SmallVector<int64_t, 16> mask(dstNumElts);
+    for (unsigned i = 0; i != dstNumElts; ++i)
+      mask[i] = (i >= srcNumElts) ? srcNumElts + (i % srcNumElts) : i;
+
+    mlir::Value op1 =
+        builder.createVecShuffle(getLoc(expr->getExprLoc()), ops[1], mask);
+
+    for (unsigned i = 0; i != dstNumElts; ++i) {
+      if (i >= index && i < (index + srcNumElts))
+        mask[i] = (i - index) + dstNumElts;
+      else
+        mask[i] = i;
+    }
+
+    return builder.createVecShuffle(getLoc(expr->getExprLoc()), ops[0], op1,
+                                    mask);
+  }
   case X86::BI__builtin_ia32_pmovqd512_mask:
   case X86::BI__builtin_ia32_pmovwb512_mask:
   case X86::BI__builtin_ia32_pblendw128:
@@ -1214,12 +1220,32 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_palignr128:
   case X86::BI__builtin_ia32_palignr256:
   case X86::BI__builtin_ia32_palignr512:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI__builtin_ia32_alignd128:
   case X86::BI__builtin_ia32_alignd256:
   case X86::BI__builtin_ia32_alignd512:
   case X86::BI__builtin_ia32_alignq128:
   case X86::BI__builtin_ia32_alignq256:
-  case X86::BI__builtin_ia32_alignq512:
+  case X86::BI__builtin_ia32_alignq512: {
+    unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getSize();
+    unsigned shiftVal =
+        ops[2].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue() &
+        0xff;
+
+    // Mask the shift amount to width of a vector.
+    shiftVal &= numElts - 1;
+
+    SmallVector<mlir::Attribute, 16> indices;
+    mlir::Type i32Ty = builder.getSInt32Ty();
+    for (unsigned i = 0; i != numElts; ++i)
+      indices.push_back(cir::IntAttr::get(i32Ty, i + shiftVal));
+
+    return builder.createVecShuffle(getLoc(expr->getExprLoc()), ops[0], ops[1],
+                                    indices);
+  }
   case X86::BI__builtin_ia32_shuf_f32x4_256:
   case X86::BI__builtin_ia32_shuf_f64x2_256:
   case X86::BI__builtin_ia32_shuf_i32x4_256:

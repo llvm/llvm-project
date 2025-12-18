@@ -37,11 +37,28 @@ void test_node_container(Converter conv) {
     });
     assert(invoke_count == 0);
   }
+  { // Check that an empty container works, taking the whole range
+    Container c;
+    int invoke_count = 0;
+    std::ranges::for_each(c, [&c, &invoke_count](const value_type& i) {
+      assert(&i == &*std::next(c.begin(), invoke_count++));
+    });
+    assert(invoke_count == 0);
+  }
   { // Check that a single-element container works
     Container c;
     c.insert(conv(0));
     int invoke_count = 0;
     std::ranges::for_each(c.begin(), c.end(), [&c, &invoke_count](const value_type& i) {
+      assert(&i == &*std::next(c.begin(), invoke_count++));
+    });
+    assert(invoke_count == 1);
+  }
+  { // Check that a single-element container works, taking the whole range
+    Container c;
+    c.insert(conv(0));
+    int invoke_count = 0;
+    std::ranges::for_each(c, [&c, &invoke_count](const value_type& i) {
       assert(&i == &*std::next(c.begin(), invoke_count++));
     });
     assert(invoke_count == 1);
@@ -52,6 +69,16 @@ void test_node_container(Converter conv) {
     c.insert(conv(1));
     int invoke_count = 0;
     std::ranges::for_each(c.begin(), c.end(), [&c, &invoke_count](const value_type& i) {
+      assert(&i == &*std::next(c.begin(), invoke_count++));
+    });
+    assert(invoke_count == 2);
+  }
+  { // Check that a two-element container works, taking the whole range
+    Container c;
+    c.insert(conv(0));
+    c.insert(conv(1));
+    int invoke_count = 0;
+    std::ranges::for_each(c, [&c, &invoke_count](const value_type& i) {
       assert(&i == &*std::next(c.begin(), invoke_count++));
     });
     assert(invoke_count == 2);
