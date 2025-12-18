@@ -266,6 +266,13 @@ def convert_bool(v):
             return bool(v)
 
 
+def first_defined(*args):
+    for arg in args:
+        if arg is not None:
+            return arg
+    return None
+
+
 def relative_if_possible(path, relative_to):
     """Like os.path.relpath, but does not fail if path is not a parent of relative_to; keeps the original path in that case"""
     path = os.path.normpath(path)
@@ -286,7 +293,7 @@ def run(
     parser=None,
     clobberpaths=[],
     workerjobs=None,
-    always_clobber=False,
+    incremental=None,
 ):
     """
     Runs the boilerplate for a ScriptedBuilder buildbot. It is not necessary to
@@ -299,8 +306,10 @@ def run(
     The term 'clobber' means deleting build artifacts, but not already
     downloaded git repositories. Build artifacts including build- and
     install-directories, but not source directories. Changes in the llvm.src
-    directory will be reset before the next build anyway. Clobber is necessary
-    if the build instructions change. Otherwise, we try an incremental build.
+    directory will be reset before the next build anyway. By default, we will
+    always clobber to get the same starting point at every build. If
+    incremental=True or the --incremental command line option is used, the
+    starting point is the previous build.
     We consider 'clean' to imply 'clean_obj'.
 
     A buildbot worker will invoke this script using this directory structure,
@@ -346,8 +355,8 @@ def run(
         reproduce this build, they can adjust the number of jobs for the
         reproducer platform. Alternatively, the worker can set the
         BUILDBOT_JOBS environment variable or keep ninja/llvm-lit defaults.
-    always_clobber
-        Always clobber the build artifacts, i.e. disable incremental builds.
+    incremental
+        Only clobber the build artifacts when the build configuration changes.
     """
 
     scriptpath = os.path.abspath(scriptpath)
@@ -362,6 +371,12 @@ def run(
         jobs_default = workerjobs
     if not jobs_default:
         jobs_default = None
+
+    incremental_default = incremental
+    if convert_bool(os.environ.get("BUILDBOT_CLOBBER")):
+        incremental_default=False
+    elif convert_bool(os.environ.get("BUILDBOT_CLEAN_OBJ")):
+      incremental_default=False
 
     parser = parser or argparse.ArgumentParser(
         allow_abbrev=True,
@@ -393,12 +408,10 @@ def run(
         "source directories",
     )
     parser.add_argument(
-        "--clobber",
+        "--incremental",
         type=bool,
-        default=always_clobber
-        or convert_bool(os.environ.get("BUILDBOT_CLOBBER"))
-        or convert_bool(os.environ.get("BUILDBOT_CLEAN_OBJ")),
-        help="Delete build artifacts before starting the build",
+        default= incremental_default,
+        help="Keep previous build artifacts when starting the build",
     )
     parser.add_argument(
         "--jobs", "-j", default=jobs_default, help="Number of build- and test-jobs"
@@ -407,7 +420,7 @@ def run(
 
     workdir = os.path.abspath(args.workdir)
     clean = args.clean
-    clobber = args.clobber
+    clobber = not args.incremental
     cachefile = os.path.join(llvmsrcroot, args.cachefile)
     oldcwd = os.getcwd()
 
@@ -422,7 +435,7 @@ def run(
     # Safety check
     parentdir = os.path.dirname(scriptpath)
     while True:
-        if os.path.samefile(parentdir, workdir):
+        if os.path.exists(workdir) and os.path.samefile(parentdir, workdir):
             raise Exception(
                 f"Cannot use {args.workdir} as workdir; a '--clean' build would rmtree the llvm-project source in {parentdir} as well"
             )

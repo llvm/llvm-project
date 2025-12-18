@@ -18,6 +18,7 @@ with worker.run(
     __file__,
     llvmsrcroot,
     clobberpaths=[llvmbuilddir, testsuitebuilddir, llvminstalldir],
+    incremental=True
 ) as w:
     with w.step("configure-llvm", halt_on_fail=True):
         cmakecmd = [
