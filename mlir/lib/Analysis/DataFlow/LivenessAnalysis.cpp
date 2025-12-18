@@ -254,34 +254,6 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
       propagateIfChanged(argumentLiveness, argumentLiveness->markLive());
     }
   }
-
-  // Now that we have checked for memory-effecting ops in the blocks of concern,
-  // we will simply visit the op with this non-forwarded operand to potentially
-  // mark it "live" due to type (1.a/3) liveness.
-  SmallVector<Liveness *, 4> operandLiveness;
-  operandLiveness.push_back(getLatticeElement(operand.get()));
-  for (BlockArgument argument : argumentNotOperand)
-    operandLiveness.push_back(getLatticeElement(argument));
-  SmallVector<const Liveness *, 4> resultsLiveness;
-  for (const Value result : op->getResults())
-    resultsLiveness.push_back(getLatticeElement(result));
-  LDBG() << "Visiting operation for non-forwarded branch operand: "
-         << OpWithFlags(op, OpPrintingFlags().skipRegions());
-  (void)visitOperation(op, operandLiveness, resultsLiveness);
-
-  // We also visit the parent op with the parent's results and this operand if
-  // `op` is a `RegionBranchTerminatorOpInterface` because its non-forwarded
-  // operand depends on not only its memory effects/results but also on those of
-  // its parent's.
-  if (!isa<RegionBranchTerminatorOpInterface>(op))
-    return;
-  Operation *parentOp = op->getParentOp();
-  SmallVector<const Liveness *, 4> parentResultsLiveness;
-  for (const Value parentResult : parentOp->getResults())
-    parentResultsLiveness.push_back(getLatticeElement(parentResult));
-  LDBG() << "Visiting parent operation for non-forwarded branch operand: "
-         << *parentOp;
-  (void)visitOperation(parentOp, operandLiveness, parentResultsLiveness);
 }
 
 void LivenessAnalysis::visitCallOperand(OpOperand &operand) {
