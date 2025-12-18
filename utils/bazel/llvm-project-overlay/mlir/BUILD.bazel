@@ -8526,8 +8526,7 @@ cc_library(
         "lib/Conversion/ArithAndMathToAPFloat/*.h",
     ]),
     hdrs = glob([
-        "include/mlir/Conversion/ArithToAPFloat/*.h",
-        "include/mlir/Conversion/MathToAPFloat/*.h",
+        "include/mlir/Conversion/ArithAndMathToAPFloat/*.h",
     ]),
     includes = ["include"],
     deps = [
