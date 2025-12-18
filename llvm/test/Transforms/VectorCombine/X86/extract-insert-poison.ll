@@ -140,10 +140,14 @@ define <2 x double> @src_ins0_v2f64_ext2_v4f64(<2 x double> %a, <4 x double> %b)
 }
 
 define <2 x double> @src_ins0_v2f64_ext3_v4f64(<2 x double> %a, <4 x double> %b) {
-; CHECK-LABEL: @src_ins0_v2f64_ext3_v4f64(
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x double> [[B:%.*]], i32 3
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x double> poison, double [[EXT]], i32 0
-; CHECK-NEXT:    ret <2 x double> [[INS]]
+; SSE-LABEL: @src_ins0_v2f64_ext3_v4f64(
+; SSE-NEXT:    [[INS:%.*]] = shufflevector <4 x double> [[B:%.*]], <4 x double> poison, <2 x i32> <i32 3, i32 poison>
+; SSE-NEXT:    ret <2 x double> [[INS]]
+;
+; AVX-LABEL: @src_ins0_v2f64_ext3_v4f64(
+; AVX-NEXT:    [[EXT:%.*]] = extractelement <4 x double> [[B:%.*]], i32 3
+; AVX-NEXT:    [[INS:%.*]] = insertelement <2 x double> poison, double [[EXT]], i32 0
+; AVX-NEXT:    ret <2 x double> [[INS]]
 ;
   %ext = extractelement <4 x double> %b, i32 3
   %ins = insertelement <2 x double> poison, double %ext, i32 0
