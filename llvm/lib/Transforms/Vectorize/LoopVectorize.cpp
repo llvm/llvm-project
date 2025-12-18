@@ -7096,6 +7096,20 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
         if (AddrI && vputils::isSingleScalar(WidenMemR->getAddr()) !=
                          CostCtx.isLegacyUniformAfterVectorization(AddrI, VF))
           return true;
+
+        if (WidenMemR->isReverse()) {
+          // If the stored value of a reverse store is invariant, LICM will
+          // hoist the reverse operation to the preheader. In this case, the
+          // result of the VPlan-based cost model will diverge from that of
+          // the legacy model.
+          if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(WidenMemR))
+            if (StoreR->getStoredValue()->isDefinedOutsideLoopRegions())
+              return true;
+
+          if (auto *StoreR = dyn_cast<VPWidenStoreEVLRecipe>(WidenMemR))
+            if (StoreR->getStoredValue()->isDefinedOutsideLoopRegions())
+              return true;
+        }
       }
 
       // The legacy cost model costs non-header phis with a scalar VF as a phi,
@@ -7633,8 +7647,8 @@ void EpilogueVectorizerEpilogueLoop::printDebugTracesAtEnd() {
   });
 }
 
-VPWidenMemoryRecipe *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
-                                                       VFRange &Range) {
+VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
+                                                VFRange &Range) {
   assert((VPI->getOpcode() == Instruction::Load ||
           VPI->getOpcode() == Instruction::Store) &&
          "Must be called with either a load or store");
@@ -7695,15 +7709,26 @@ VPWidenMemoryRecipe *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
     Builder.insert(VectorPtr);
     Ptr = VectorPtr;
   }
+
   if (VPI->getOpcode() == Instruction::Load) {
     auto *Load = cast<LoadInst>(I);
-    return new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse, *VPI,
-                                 VPI->getDebugLoc());
+    auto *LoadR = new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
+                                        *VPI, Load->getDebugLoc());
+    if (Reverse) {
+      Builder.insert(LoadR);
+      return new VPInstruction(VPInstruction::Reverse, LoadR, {}, {},
+                               LoadR->getDebugLoc());
+    }
+    return LoadR;
   }
 
   StoreInst *Store = cast<StoreInst>(I);
-  return new VPWidenStoreRecipe(*Store, Ptr, VPI->getOperand(0), Mask,
-                                Consecutive, Reverse, *VPI, VPI->getDebugLoc());
+  VPValue *StoredVal = VPI->getOperand(0);
+  if (Reverse)
+    StoredVal = Builder.createNaryOp(VPInstruction::Reverse, StoredVal,
+                                     Store->getDebugLoc());
+  return new VPWidenStoreRecipe(*Store, Ptr, StoredVal, Mask, Consecutive,
+                                Reverse, *VPI, Store->getDebugLoc());
 }
 
 VPWidenIntOrFpInductionRecipe *
