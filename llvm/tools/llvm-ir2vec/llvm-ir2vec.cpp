@@ -147,8 +147,6 @@ static cl::opt<EmbeddingLevel>
 
 namespace ir2vec {
 
-IR2VecTool::IR2VecTool(Module &M) : M(M) {}
-
 bool IR2VecTool::initializeVocabulary() {
   // Register and run the IR2Vec vocabulary analysis
   // The vocabulary file path is specified via --ir2vec-vocab-path global
@@ -342,8 +340,6 @@ Error processModule(Module &M, raw_ostream &OS) {
 } // namespace ir2vec
 
 namespace mir2vec {
-
-MIR2VecTool::MIR2VecTool(MachineModuleInfo &MMI) : MMI(MMI) {}
 
 bool MIR2VecTool::initializeVocabulary(const Module &M) {
   MIR2VecVocabProvider Provider(MMI);
@@ -553,8 +549,6 @@ void MIR2VecTool::writeEmbeddingsToStream(MachineFunction &MF, raw_ostream &OS,
     break;
   }
 }
-
-const MIRVocabulary *MIR2VecTool::getVocabulary() const { return Vocab.get(); }
 
 /// Setup MIR context from input file
 Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {

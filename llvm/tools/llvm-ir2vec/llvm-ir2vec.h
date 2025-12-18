@@ -90,7 +90,7 @@ private:
   const Vocabulary *Vocab = nullptr;
 
 public:
-  explicit IR2VecTool(Module &M);
+  explicit IR2VecTool(Module &M) : M(M) {}
 
   /// Initialize the IR2Vec vocabulary analysis
   bool initializeVocabulary();
@@ -140,7 +140,7 @@ private:
   std::unique_ptr<MIRVocabulary> Vocab;
 
 public:
-  explicit MIR2VecTool(MachineModuleInfo &MMI);
+  explicit MIR2VecTool(MachineModuleInfo &MMI) : MMI(MMI) {}
 
   /// Initialize MIR2Vec vocabulary from file (for embeddings generation)
   bool initializeVocabulary(const Module &M);
@@ -183,7 +183,7 @@ public:
                                EmbeddingLevel Level) const;
 
   /// Get the MIR vocabulary instance
-  const MIRVocabulary *getVocabulary() const;
+  const MIRVocabulary *getVocabulary() const { return Vocab.get(); }
 };
 
 /// Helper structure to hold MIR context
