@@ -547,9 +547,6 @@ LLVM_ABI FunctionPass *createExpandReductionsPass();
 LLVM_ABI FunctionPass *createReplaceWithVeclibLegacyPass();
 
 // Expands large div/rem instructions.
-LLVM_ABI FunctionPass *createExpandLargeDivRemPass();
-
-// Expands large div/rem instructions.
 LLVM_ABI FunctionPass *createExpandFpPass();
 
 // This pass expands memcmp() to load/stores.

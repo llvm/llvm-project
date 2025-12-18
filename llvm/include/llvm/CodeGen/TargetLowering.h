@@ -2222,7 +2222,7 @@ public:
   }
 
   /// Returns the size in bits of the maximum div/rem the backend supports.
-  /// Larger operations will be expanded by ExpandLargeDivRem.
+  /// Larger operations will be expanded by ExpandFp.
   unsigned getMaxDivRemBitWidthSupported() const {
     return MaxDivRemBitWidthSupported;
   }
@@ -2888,7 +2888,7 @@ protected:
   }
 
   /// Set the size in bits of the maximum div/rem the backend supports.
-  /// Larger operations will be expanded by ExpandLargeDivRem.
+  /// Larger operations will be expanded by ExpandFp.
   void setMaxDivRemBitWidthSupported(unsigned SizeInBits) {
     MaxDivRemBitWidthSupported = SizeInBits;
   }
@@ -3745,7 +3745,7 @@ private:
   unsigned MaxAtomicSizeInBitsSupported;
 
   /// Size in bits of the maximum div/rem size the backend supports.
-  /// Larger operations will be expanded by ExpandLargeDivRem.
+  /// Larger operations will be expanded by ExpandFp.
   unsigned MaxDivRemBitWidthSupported;
 
   /// Size in bits of the maximum fp to/from int conversion size the
