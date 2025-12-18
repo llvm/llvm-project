@@ -632,6 +632,35 @@ func.func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
+func.func @invalid_view_out_of_bounds() {
+  %0 = memref.alloc() : memref<64xi8>
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{view total elements in bytes with shift is greater than base total elements in bytes}}
+  %1 = memref.view %0[%c0][] : memref<64xi8> to memref<32xf32>
+  return
+}
+
+// -----
+
+func.func @invalid_view_out_of_bounds_with_dynamic_shift_in_bytes(%shift: index) {
+  %0 = memref.alloc() : memref<64xi8>
+  // expected-error@+1 {{view total elements in bytes with shift is greater than base total elements in bytes}}
+  %1 = memref.view %0[%shift][] : memref<64xi8> to memref<32xf32>
+  return
+}
+
+// -----
+
+func.func @invalid_view_out_of_bounds_with_shift() {
+  %0 = memref.alloc() : memref<128xi8>
+  %c8 = arith.constant 8 : index
+  // expected-error@+1 {{view total elements in bytes with shift is greater than base total elements in bytes}}
+  %1 = memref.view %0[%c8][] : memref<128xi8> to memref<32xf32>
+  return
+}
+
+// -----
+
 func.func @invalid_subview(%input: memref<4x1024xf32>) -> memref<2x256xf32, strided<[1024, 1], offset: 2304>> {
   // expected-error@+1 {{expected offsets to be non-negative, but got -1}}
   %0 = memref.subview %input[-1, 256] [2, 256] [1, 1] : memref<4x1024xf32> to memref<2x256xf32, strided<[1024, 1], offset: 2304>>

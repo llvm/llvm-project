@@ -3740,17 +3740,73 @@ void ViewOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
   setNameFn(getResult(), "view");
 }
 
+static LogicalResult hasIdentityLayoutAndZeroOffset(
+    MemRefType memrefType, StringRef descr,
+    llvm::function_ref<InFlightDiagnostic()> emitError) {
+  if (!memrefType.getLayout().isIdentity())
+    return emitError() << "unsupported map for " << descr << " " << memrefType;
+
+  [[maybe_unused]] SmallVector<int64_t> strides;
+  int64_t offset;
+  if (failed(memrefType.getStridesAndOffset(strides, offset)))
+    return emitError() << "failed to get strides and offset for " << descr
+                       << " " << memrefType;
+  if (offset != 0)
+    return emitError() << "unsupported non-zero offset for " << descr << " "
+                       << memrefType;
+  return success();
+}
+
+// Verifies that a view operation's result, plus the byte shift, fits within
+// the source memref bounds. The check is only performed when both the base
+// and view memrefs have static shapes and the view element type is
+// byte-aligned.
+static LogicalResult
+checkStaticViewBounds(MemRefType baseType, MemRefType viewType,
+                      Value shiftInBytes,
+                      llvm::function_ref<InFlightDiagnostic()> emitError) {
+  // Skip if either the base or view has dynamic shape.
+  if (!baseType.hasStaticShape() || !viewType.hasStaticShape())
+    return success();
+
+  // Skip if the view element type is not int or float.
+  if (!viewType.getElementType().isIntOrFloat())
+    return success();
+
+  // Skip non byte-aligned view element types.
+  int64_t viewElementBitWidth =
+      viewType.getElementType().getIntOrFloatBitWidth();
+  if (viewElementBitWidth % 8 != 0)
+    return success();
+
+  int64_t baseTotalElementsInBytes = baseType.getNumElements();
+  int64_t viewTotalElements = viewType.getNumElements();
+  int64_t viewTotalElementsInBytes =
+      viewTotalElements * (viewElementBitWidth / 8);
+  // Shift in bytes may be a non static value, still we will
+  // check the sizes bounds.
+  int64_t shiftInBytesInt =
+      getConstantIntValue(getAsOpFoldResult(shiftInBytes)).value_or(0);
+
+  if (viewTotalElementsInBytes + shiftInBytesInt > baseTotalElementsInBytes)
+    return emitError()
+           << "view total elements in bytes with shift is greater than base "
+              "total elements in bytes for base memref type "
+           << baseType << " and view memref type " << viewType;
+  return success();
+}
+
 LogicalResult ViewOp::verify() {
   auto baseType = llvm::cast<MemRefType>(getOperand(0).getType());
   auto viewType = getType();
 
-  // The base memref should have identity layout map (or none).
-  if (!baseType.getLayout().isIdentity())
-    return emitError("unsupported map for base memref type ") << baseType;
+  if (failed(hasIdentityLayoutAndZeroOffset(baseType, "base memref type",
+                                            [&]() { return emitError(); })))
+    return failure();
 
-  // The result memref should have identity layout map (or none).
-  if (!viewType.getLayout().isIdentity())
-    return emitError("unsupported map for result memref type ") << viewType;
+  if (failed(hasIdentityLayoutAndZeroOffset(viewType, "result memref type",
+                                            [&]() { return emitError(); })))
+    return failure();
 
   // The base memref and the view memref should be in the same memory space.
   if (baseType.getMemorySpace() != viewType.getMemorySpace())
@@ -3762,6 +3818,9 @@ LogicalResult ViewOp::verify() {
   if (failed(verifyDynamicDimensionCount(getOperation(), viewType, getSizes())))
     return failure();
 
+  if (failed(checkStaticViewBounds(baseType, viewType, getByteShift(),
+                                   [&]() { return emitError(); })))
+    return failure();
   return success();
 }
 

@@ -35,9 +35,9 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
   }
 
   //CHECK-LABEL: load_store_matrix_plain_2d_input
-  gpu.func @load_store_matrix_plain_2d_input(%arg0: memref<1024xi8, 3>) -> f32 {
+  gpu.func @load_store_matrix_plain_2d_input(%arg0: memref<8192xi8, 3>) -> f32 {
     %c0 = arith.constant 0 : index
-    %view = memref.view %arg0[%c0][]: memref<1024xi8, 3> to memref<64x32xf32, 3>
+    %view = memref.view %arg0[%c0][]: memref<8192xi8, 3> to memref<64x32xf32, 3>
 
     %subview = memref.subview %view[32, 0] [32, 32] [1, 1] : memref<64x32xf32, 3> to memref<32x32xf32, strided<[32, 1], offset: 1024>, 3>
 
