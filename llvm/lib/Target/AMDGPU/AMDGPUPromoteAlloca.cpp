@@ -646,7 +646,7 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       assert(DL.getTypeStoreSize(SubVecTy) == DL.getTypeStoreSize(AccessTy));
 
       // If idx is dynamic, then sandwich load with bitcasts.
-      // ie. CurValTy                 SubVecTy  AccessTy
+      // ie. VectorTy                 SubVecTy  AccessTy
       //     <64 x i8> ->             <16 x i8> <8 x i16>
       //     <64 x i8> -> <4 x i128> -> i128 -> <8 x i16>
       // Extracting subvector with dynamic index has very large expansion in
@@ -658,6 +658,7 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       unsigned TotalNumElts = VectorTy->getNumElements();
       bool IsProperlyDivisible = TotalNumElts % NumLoadedElts == 0;
       if (!isa<ConstantInt>(Index) &&
+          llvm::isPowerOf2_32(TotalNumElts) &&
           llvm::isPowerOf2_32(SubVecTy->getNumElements()) &&
           IsProperlyDivisible && IsAlignedLoad) {
         IntegerType *NewElemTy = Builder.getIntNTy(NumBits);
