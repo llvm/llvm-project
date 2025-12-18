@@ -35,10 +35,9 @@ public:
                             const std::vector<StringRef> &IgnoredFilesList)
       : Check(Check), SM(SM) {
     IgnoredFilesRegexes.reserve(IgnoredFilesList.size());
-    for (const StringRef &It : IgnoredFilesList) {
+    for (const StringRef &It : IgnoredFilesList)
       if (!It.empty())
         IgnoredFilesRegexes.emplace_back(It);
-    }
   }
 
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,

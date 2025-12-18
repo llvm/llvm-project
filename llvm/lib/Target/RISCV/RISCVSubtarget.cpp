@@ -69,10 +69,10 @@ static cl::opt<bool> UseMIPSCCMovInsn("use-riscv-mips-ccmov",
                                       cl::desc("Use 'mips.ccmov' instruction"),
                                       cl::init(true), cl::Hidden);
 
-static cl::opt<bool> EnablePExtCodeGen(
-    "enable-p-ext-codegen",
-    cl::desc("Turn on P Extension codegen(This is a temporary switch where "
-             "only partial codegen is currently supported)"),
+static cl::opt<bool> EnablePExtSIMDCodeGen(
+    "riscv-enable-p-ext-simd-codegen",
+    cl::desc("Turn on P Extension SIMD codegen(This is a temporary switch "
+             "where only partial codegen is currently supported)"),
     cl::init(false), cl::Hidden);
 
 void RISCVSubtarget::anchor() {}
@@ -153,8 +153,8 @@ bool RISCVSubtarget::useConstantPoolForLargeInts() const {
   return !RISCVDisableUsingConstantPoolForLargeInts;
 }
 
-bool RISCVSubtarget::enablePExtCodeGen() const {
-  return HasStdExtP && EnablePExtCodeGen;
+bool RISCVSubtarget::enablePExtSIMDCodeGen() const {
+  return HasStdExtP && EnablePExtSIMDCodeGen;
 }
 
 unsigned RISCVSubtarget::getMaxBuildIntsCost() const {

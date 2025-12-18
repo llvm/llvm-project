@@ -5268,3 +5268,27 @@ bool RISCVInstrInfo::isHighLatencyDef(int Opc) const {
     return true;
   }
 }
+
+bool RISCVInstrInfo::isVRegCopy(const MachineInstr *MI, unsigned LMul) const {
+  if (MI->getOpcode() != TargetOpcode::COPY)
+    return false;
+  const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+
+  Register DstReg = MI->getOperand(0).getReg();
+  const TargetRegisterClass *RC = DstReg.isVirtual()
+                                      ? MRI.getRegClass(DstReg)
+                                      : TRI->getMinimalPhysRegClass(DstReg);
+
+  if (!RISCVRegisterInfo::isRVVRegClass(RC))
+    return false;
+
+  if (!LMul)
+    return true;
+
+  // TODO: Perhaps we could distinguish segment register classes (e.g. VRN3M2)
+  // in the future.
+  auto [RCLMul, RCFractional] =
+      RISCVVType::decodeVLMUL(RISCVRI::getLMul(RC->TSFlags));
+  return (!RCFractional && LMul == RCLMul) || (RCFractional && LMul == 1);
+}

@@ -41,11 +41,12 @@ define <8 x float> @concat_sitofp_v8f32_v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 x
 ;
 ; AVX-LABEL: concat_sitofp_v8f32_v4i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; AVX-NEXT:    vcvtdq2ps %xmm1, %xmm1
-; AVX-NEXT:    vaddps %xmm0, %xmm2, %xmm0
-; AVX-NEXT:    vaddps %xmm1, %xmm3, %xmm1
+; AVX-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; AVX-NEXT:    vaddps %ymm0, %ymm2, %ymm0
 ; AVX-NEXT:    retq
   %c0 = sitofp <4 x i32> %a0 to <4 x float>
   %c1 = sitofp <4 x i32> %a1 to <4 x float>
@@ -125,31 +126,34 @@ define <16 x float> @concat_sitofp_v16f32_v4i32(<4 x i32> %a0, <4 x i32> %a1, <4
 ;
 ; AVX1OR2-LABEL: concat_sitofp_v16f32_v4i32:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; AVX1OR2-NEXT:    vcvtdq2ps %xmm1, %xmm1
-; AVX1OR2-NEXT:    vcvtdq2ps %xmm2, %xmm2
-; AVX1OR2-NEXT:    vcvtdq2ps %xmm3, %xmm3
-; AVX1OR2-NEXT:    vaddps %xmm0, %xmm4, %xmm0
-; AVX1OR2-NEXT:    vaddps %xmm1, %xmm5, %xmm1
-; AVX1OR2-NEXT:    vaddps %xmm2, %xmm6, %xmm2
-; AVX1OR2-NEXT:    vaddps %xmm3, %xmm7, %xmm3
+; AVX1OR2-NEXT:    # kill: def $xmm6 killed $xmm6 def $ymm6
+; AVX1OR2-NEXT:    # kill: def $xmm4 killed $xmm4 def $ymm4
+; AVX1OR2-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX1OR2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX1OR2-NEXT:    vinsertf128 $1, %xmm5, %ymm4, %ymm4
 ; AVX1OR2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm1
+; AVX1OR2-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; AVX1OR2-NEXT:    vaddps %ymm0, %ymm4, %ymm0
+; AVX1OR2-NEXT:    vinsertf128 $1, %xmm7, %ymm6, %ymm1
+; AVX1OR2-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; AVX1OR2-NEXT:    vcvtdq2ps %ymm2, %ymm2
+; AVX1OR2-NEXT:    vaddps %ymm2, %ymm1, %ymm1
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: concat_sitofp_v16f32_v4i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; AVX512-NEXT:    vcvtdq2ps %xmm1, %xmm1
-; AVX512-NEXT:    vcvtdq2ps %xmm2, %xmm2
-; AVX512-NEXT:    vcvtdq2ps %xmm3, %xmm3
-; AVX512-NEXT:    vaddps %xmm0, %xmm4, %xmm0
-; AVX512-NEXT:    vaddps %xmm1, %xmm5, %xmm1
-; AVX512-NEXT:    vaddps %xmm2, %xmm6, %xmm2
-; AVX512-NEXT:    vaddps %xmm3, %xmm7, %xmm3
+; AVX512-NEXT:    # kill: def $xmm6 killed $xmm6 def $ymm6
+; AVX512-NEXT:    # kill: def $xmm4 killed $xmm4 def $ymm4
+; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NEXT:    vinsertf128 $1, %xmm7, %ymm6, %ymm6
+; AVX512-NEXT:    vinsertf128 $1, %xmm5, %ymm4, %ymm4
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm6, %zmm4, %zmm4
 ; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512-NEXT:    vcvtdq2ps %zmm0, %zmm0
+; AVX512-NEXT:    vaddps %zmm0, %zmm4, %zmm0
 ; AVX512-NEXT:    retq
   %c0 = sitofp <4 x i32> %a0 to <4 x float>
   %c1 = sitofp <4 x i32> %a1 to <4 x float>
@@ -230,11 +234,12 @@ define <16 x float> @concat_sitofp_v16f32_v8i32(<8 x i32> %a0, <8 x i32> %a1, <8
 ;
 ; AVX512-LABEL: concat_sitofp_v16f32_v8i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX512-NEXT:    vcvtdq2ps %ymm1, %ymm1
-; AVX512-NEXT:    vaddps %ymm0, %ymm2, %ymm0
-; AVX512-NEXT:    vaddps %ymm1, %ymm3, %ymm1
+; AVX512-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm3, %zmm2, %zmm2
 ; AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vcvtdq2ps %zmm0, %zmm0
+; AVX512-NEXT:    vaddps %zmm0, %zmm2, %zmm0
 ; AVX512-NEXT:    retq
   %c0 = sitofp <8 x i32> %a0 to <8 x float>
   %c1 = sitofp <8 x i32> %a1 to <8 x float>

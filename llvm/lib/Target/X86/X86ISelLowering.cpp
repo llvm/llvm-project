@@ -59730,6 +59730,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                            Op0.getOperand(1));
       }
       break;
+    case ISD::SINT_TO_FP:
     case X86ISD::CVTP2SI:
     case X86ISD::CVTTP2SI:
       if (!IsSplat &&

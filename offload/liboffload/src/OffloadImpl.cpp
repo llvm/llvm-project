@@ -263,6 +263,8 @@ constexpr ol_platform_backend_t pluginNameToBackend(StringRef Name) {
     return OL_PLATFORM_BACKEND_AMDGPU;
   } else if (Name == "cuda") {
     return OL_PLATFORM_BACKEND_CUDA;
+  } else if (Name == "level_zero") {
+    return OL_PLATFORM_BACKEND_LEVEL_ZERO;
   } else {
     return OL_PLATFORM_BACKEND_UNKNOWN;
   }

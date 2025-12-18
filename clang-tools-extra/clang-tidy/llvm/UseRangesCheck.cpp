@@ -50,9 +50,8 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
   const auto AddStdToLLVM =
       [&Results](llvm::IntrusiveRefCntPtr<Replacer> Replacer,
                  std::initializer_list<StringRef> Names) {
-        for (const auto &Name : Names) {
+        for (const auto &Name : Names)
           Results.try_emplace(("::std::" + Name).str(), Replacer);
-        }
       };
 
   // Single range algorithms

@@ -132,6 +132,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::Broadcast:
   case VPInstruction::PtrAdd:
   case VPInstruction::WidePtrAdd:
+  case VPInstruction::Reverse:
     // Return the type based on first operand.
     return inferScalarType(R->getOperand(0));
   case VPInstruction::BranchOnCond:

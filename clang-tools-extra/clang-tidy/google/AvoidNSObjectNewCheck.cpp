@@ -37,10 +37,9 @@ static bool isMessageExpressionInsideMacro(const ObjCMessageExpr *Expr) {
 // if one is found and has not been marked unavailable.
 static bool isInitMethodAvailable(const ObjCInterfaceDecl *ClassDecl) {
   while (ClassDecl != nullptr) {
-    for (const auto *MethodDecl : ClassDecl->instance_methods()) {
+    for (const auto *MethodDecl : ClassDecl->instance_methods())
       if (MethodDecl->getSelector().getAsString() == "init")
         return !MethodDecl->isUnavailable();
-    }
     ClassDecl = ClassDecl->getSuperClass();
   }
 

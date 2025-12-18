@@ -2887,25 +2887,41 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     return new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe), Addr,
                                     EVL, Mask);
 
-  if (match(&CurRecipe,
+  VPValue *ReversedVal;
+  if (match(&CurRecipe, m_Reverse(m_VPValue(ReversedVal))) &&
+      match(ReversedVal,
             m_MaskedLoad(m_VPValue(EndPtr), m_RemoveMask(HeaderMask, Mask))) &&
       match(EndPtr, m_VecEndPtr(m_VPValue(Addr), m_Specific(&Plan->getVF()))) &&
-      cast<VPWidenLoadRecipe>(CurRecipe).isReverse())
-    return new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe),
-                                    AdjustEndPtr(EndPtr), EVL, Mask);
+      cast<VPWidenLoadRecipe>(ReversedVal)->isReverse()) {
+    auto *LoadR = new VPWidenLoadEVLRecipe(
+        *cast<VPWidenLoadRecipe>(ReversedVal), AdjustEndPtr(EndPtr), EVL, Mask);
+    LoadR->insertBefore(&CurRecipe);
+    return new VPWidenIntrinsicRecipe(
+        Intrinsic::experimental_vp_reverse, {LoadR, Plan->getTrue(), &EVL},
+        TypeInfo.inferScalarType(LoadR), {}, {}, DL);
+  }
 
-  if (match(&CurRecipe, m_MaskedStore(m_VPValue(Addr), m_VPValue(),
+  VPValue *StoredVal;
+  if (match(&CurRecipe, m_MaskedStore(m_VPValue(Addr), m_VPValue(StoredVal),
                                       m_RemoveMask(HeaderMask, Mask))) &&
       !cast<VPWidenStoreRecipe>(CurRecipe).isReverse())
     return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe), Addr,
-                                     EVL, Mask);
+                                     StoredVal, EVL, Mask);
 
-  if (match(&CurRecipe, m_MaskedStore(m_VPValue(EndPtr), m_VPValue(),
-                                      m_RemoveMask(HeaderMask, Mask))) &&
+  if (match(&CurRecipe,
+            m_MaskedStore(m_VPValue(EndPtr), m_Reverse(m_VPValue(ReversedVal)),
+                          m_RemoveMask(HeaderMask, Mask))) &&
       match(EndPtr, m_VecEndPtr(m_VPValue(Addr), m_Specific(&Plan->getVF()))) &&
-      cast<VPWidenStoreRecipe>(CurRecipe).isReverse())
+      cast<VPWidenStoreRecipe>(CurRecipe).isReverse()) {
+    auto *NewReverse = new VPWidenIntrinsicRecipe(
+        Intrinsic::experimental_vp_reverse,
+        {ReversedVal, Plan->getTrue(), &EVL},
+        TypeInfo.inferScalarType(ReversedVal), {}, {}, DL);
+    NewReverse->insertBefore(&CurRecipe);
     return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe),
-                                     AdjustEndPtr(EndPtr), EVL, Mask);
+                                     AdjustEndPtr(EndPtr), NewReverse, EVL,
+                                     Mask);
+  }
 
   if (auto *Rdx = dyn_cast<VPReductionRecipe>(&CurRecipe))
     if (Rdx->isConditional() &&
