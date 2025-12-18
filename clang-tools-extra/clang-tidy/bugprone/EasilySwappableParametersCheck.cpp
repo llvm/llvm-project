@@ -18,6 +18,10 @@
 #include "llvm/Support/Debug.h"
 #include <optional>
 
+using namespace clang::ast_matchers;
+
+namespace clang::tidy::bugprone {
+
 namespace optutils = clang::tidy::utils::options;
 
 /// The default value for the MinimumLength check option.
@@ -86,10 +90,6 @@ static constexpr bool DefaultSuppressParametersUsedTogether = true;
 /// check option.
 static constexpr std::size_t
     DefaultNamePrefixSuffixSilenceDissimilarityTreshold = 1;
-
-using namespace clang::ast_matchers;
-
-namespace clang::tidy::bugprone {
 
 using TheCheck = EasilySwappableParametersCheck;
 
