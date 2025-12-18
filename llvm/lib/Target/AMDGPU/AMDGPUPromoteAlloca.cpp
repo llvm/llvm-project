@@ -160,9 +160,9 @@ private:
   void promoteAllocaToVector(AllocaAnalysis &AA);
   void analyzePromoteToLDS(AllocaAnalysis &AA) const;
   bool tryPromoteAllocaToLDS(AllocaAnalysis &AA, bool SufficientLDS,
-                             SmallVector<IntrinsicInst *> &DeferredIntrs);
-  void finishDeferredAllocaToLDSPromotion(
-      SmallVector<IntrinsicInst *> &DeferredIntrs);
+                             SetVector<IntrinsicInst *> &DeferredIntrs);
+  void
+  finishDeferredAllocaToLDSPromotion(SetVector<IntrinsicInst *> &DeferredIntrs);
 
   void scoreAlloca(AllocaAnalysis &AA) const;
 
@@ -417,7 +417,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   // clang-format on
 
   bool Changed = false;
-  SmallVector<IntrinsicInst *> DeferredIntrs;
+  SetVector<IntrinsicInst *> DeferredIntrs;
   for (AllocaAnalysis &AA : Allocas) {
     if (AA.Vector.Ty) {
       const unsigned AllocaCost =
@@ -1558,7 +1558,7 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
 // FIXME: Should try to pick the most likely to be profitable allocas first.
 bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
     AllocaAnalysis &AA, bool SufficientLDS,
-    SmallVector<IntrinsicInst *> &DeferredIntrs) {
+    SetVector<IntrinsicInst *> &DeferredIntrs) {
   LLVM_DEBUG(dbgs() << "Trying to promote to LDS: " << *AA.Alloca << '\n');
 
   // Not likely to have sufficient local memory for promotion.
@@ -1687,7 +1687,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
       // These have 2 pointer operands. In case if second pointer also needs
       // to be replaced we defer processing of these intrinsics until all
       // other values are processed.
-      DeferredIntrs.push_back(Intr);
+      DeferredIntrs.insert(Intr);
       continue;
     case Intrinsic::memset: {
       MemSetInst *MemSet = cast<MemSetInst>(Intr);
@@ -1739,7 +1739,8 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
 }
 
 void AMDGPUPromoteAllocaImpl::finishDeferredAllocaToLDSPromotion(
-    SmallVector<IntrinsicInst *> &DeferredIntrs) {
+    SetVector<IntrinsicInst *> &DeferredIntrs) {
+
   for (IntrinsicInst *Intr : DeferredIntrs) {
     IRBuilder<> Builder(Intr);
     Builder.SetInsertPoint(Intr);
