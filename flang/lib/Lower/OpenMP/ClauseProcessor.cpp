@@ -390,10 +390,10 @@ bool ClauseProcessor::processInitializer(
                                  mlir::Type type, mlir::Value ompOrig) {
       lower::SymMapScope scope(symMap);
       mlir::Value ompPrivVar;
-      const clause::StylizedInstance &inst = clause->v.front();
+      const StylizedInstance &inst = clause->v.front();
 
       for (const Object &object :
-           std::get<clause::StylizedInstance::Variables>(inst.t)) {
+           std::get<StylizedInstance::Variables>(inst.t)) {
         mlir::Value addr = builder.createTemporary(loc, ompOrig.getType());
         fir::StoreOp::create(builder, loc, ompOrig, addr);
         fir::FortranVariableFlagsEnum extraFlags = {};
@@ -412,7 +412,7 @@ bool ClauseProcessor::processInitializer(
       // Lower the expression/function call
       lower::StatementContext stmtCtx;
       const semantics::SomeExpr &initExpr =
-          std::get<clause::StylizedInstance::Instance>(inst.t);
+          std::get<StylizedInstance::Instance>(inst.t);
       mlir::Value result = common::visit(
           common::visitors{
               [&](const evaluate::ProcedureRef &procRef) -> mlir::Value {
@@ -439,7 +439,9 @@ bool ClauseProcessor::processInitializer(
     };
     return true;
   }
-  return false;
+  TODO(converter.getCurrentLocation(),
+       "declare reduction without an initializer clause is not yet "
+       "supported");
 }
 
 bool ClauseProcessor::processMergeable(
