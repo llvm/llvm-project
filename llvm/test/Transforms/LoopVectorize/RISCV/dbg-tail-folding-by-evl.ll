@@ -53,11 +53,11 @@ for.cond.cleanup:
   ret void
 
 loop:
-  %indvars.iv = phi i64 [ %n, %entry ], [ %indvars.iv.next, %loop ]
-  %indvars.iv.next = add nsw i64 %indvars.iv, -1, !dbg !7
-  %arrayidx = getelementptr inbounds nuw i64, ptr %a, i64 %indvars.iv.next, !dbg !8
-  store i64 %indvars.iv.next, ptr %arrayidx, align 8, !dbg !9
-  %cmp = icmp samesign ugt i64 %indvars.iv, 1, !dbg !10
+  %iv = phi i64 [ %n, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nsw i64 %iv, -1, !dbg !7
+  %arrayidx = getelementptr inbounds nuw i64, ptr %a, i64 %iv.next, !dbg !8
+  store i64 %iv.next, ptr %arrayidx, align 8, !dbg !9
+  %cmp = icmp samesign ugt i64 %iv, 1, !dbg !10
   br i1 %cmp, label %loop, label %for.cond.cleanup, !dbg !11, !llvm.loop !12
 }
 
