@@ -188,6 +188,7 @@ void const_atomic_thread_fence() {
   __atomic_thread_fence(__ATOMIC_ACQ_REL);
   __atomic_thread_fence(__ATOMIC_SEQ_CST);
   // CIR-LABEL: const_atomic_thread_fence
+  // CIR-NOT: cir.atomic.fence syncscope(system) relaxed
   // CIR: cir.atomic.fence syncscope(system) acquire
   // CIR: cir.atomic.fence syncscope(system) acquire
   // CIR: cir.atomic.fence syncscope(system) release
@@ -195,6 +196,7 @@ void const_atomic_thread_fence() {
   // CIR: cir.atomic.fence syncscope(system) seq_cst
 
   // LLVM-LABEL: const_atomic_thread_fence
+  // LLVM-NOT: fence relaxed
   // LLVM: fence acquire
   // LLVM: fence acquire
   // LLVM: fence release
@@ -202,6 +204,7 @@ void const_atomic_thread_fence() {
   // LLVM: fence seq_cst
 
   // OGCG-LABEL: const_atomic_thread_fence
+  // OGCG-NOT: fence relaxed
   // OGCG: fence acquire
   // OGCG: fence acquire
   // OGCG: fence release
@@ -217,6 +220,7 @@ void const_c11_atomic_thread_fence() {
   __c11_atomic_thread_fence(__ATOMIC_ACQ_REL);
   __c11_atomic_thread_fence(__ATOMIC_SEQ_CST);
   // CIR-LABEL: const_c11_atomic_thread_fence
+  // CIR-NOT: cir.atomic.fence syncscope(system) relaxed
   // CIR: cir.atomic.fence syncscope(system) acquire
   // CIR: cir.atomic.fence syncscope(system) acquire
   // CIR: cir.atomic.fence syncscope(system) release
@@ -224,6 +228,7 @@ void const_c11_atomic_thread_fence() {
   // CIR: cir.atomic.fence syncscope(system) seq_cst
 
   // LLVM-LABEL: const_c11_atomic_thread_fence
+  // LLVM-NOT: fence relaxed
   // LLVM: fence acquire
   // LLVM: fence acquire
   // LLVM: fence release
@@ -231,6 +236,7 @@ void const_c11_atomic_thread_fence() {
   // LLVM: fence seq_cst
 
   // OGCG-LABEL: const_c11_atomic_thread_fence
+  // OGCG-NOT: fence relaxed
   // OGCG: fence acquire
   // OGCG: fence acquire
   // OGCG: fence release
@@ -246,6 +252,7 @@ void const_atomic_signal_fence() {
   __atomic_signal_fence(__ATOMIC_ACQ_REL);
   __atomic_signal_fence(__ATOMIC_SEQ_CST);
   // CIR-LABEL: const_atomic_signal_fence
+  // CIR-NOT: cir.atomic.fence syncscope(single_thread) relaxed
   // CIR: cir.atomic.fence syncscope(single_thread) acquire
   // CIR: cir.atomic.fence syncscope(single_thread) acquire
   // CIR: cir.atomic.fence syncscope(single_thread) release
@@ -253,6 +260,7 @@ void const_atomic_signal_fence() {
   // CIR: cir.atomic.fence syncscope(single_thread) seq_cst
 
   // LLVM-LABEL: const_atomic_signal_fence
+  // LLVM-NOT: fence syncscope("singlethread") relaxed
   // LLVM: fence syncscope("singlethread") acquire
   // LLVM: fence syncscope("singlethread") acquire
   // LLVM: fence syncscope("singlethread") release
@@ -260,6 +268,7 @@ void const_atomic_signal_fence() {
   // LLVM: fence syncscope("singlethread") seq_cst
 
   // OGCG--LABEL: const_atomic_signal_fence
+  // OGCG-NOT: fence syncscope("singlethread") relaxed
   // OGCG: fence syncscope("singlethread") acquire
   // OGCG: fence syncscope("singlethread") acquire
   // OGCG: fence syncscope("singlethread") release
@@ -275,6 +284,7 @@ void const_c11_atomic_signal_fence() {
   __c11_atomic_signal_fence(__ATOMIC_ACQ_REL);
   __c11_atomic_signal_fence(__ATOMIC_SEQ_CST);
   // CIR-LABEL: const_c11_atomic_signal_fence
+  // CIR-NOT: cir.atomic.fence syncscope(single_thread) relaxed
   // CIR: cir.atomic.fence syncscope(single_thread) acquire
   // CIR: cir.atomic.fence syncscope(single_thread) acquire
   // CIR: cir.atomic.fence syncscope(single_thread) release
@@ -282,6 +292,7 @@ void const_c11_atomic_signal_fence() {
   // CIR: cir.atomic.fence syncscope(single_thread) seq_cst
 
   // LLVM-LABEL: const_c11_atomic_signal_fence
+  // LLVM-NOT: fence syncscope("singlethread") relaxed
   // LLVM: fence syncscope("singlethread") acquire
   // LLVM: fence syncscope("singlethread") acquire
   // LLVM: fence syncscope("singlethread") release
@@ -289,6 +300,7 @@ void const_c11_atomic_signal_fence() {
   // LLVM: fence syncscope("singlethread") seq_cst
 
   // OGCG-LABEL: const_c11_atomic_signal_fence
+  // OGCG-NOT: fence syncscope("singlethread") relaxed
   // OGCG: fence syncscope("singlethread") acquire
   // OGCG: fence syncscope("singlethread") acquire
   // OGCG: fence syncscope("singlethread") release
