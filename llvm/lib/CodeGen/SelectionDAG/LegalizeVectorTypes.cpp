@@ -404,19 +404,33 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_MERGE_VALUES(SDNode *N,
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_LOOP_DEPENDENCE_MASK(SDNode *N) {
+  SDLoc DL(N);
   SDValue SourceValue = N->getOperand(0);
   SDValue SinkValue = N->getOperand(1);
-  SDValue EltSize = N->getOperand(2);
-  EVT PtrVT = SourceValue->getValueType(0);
-  SDLoc DL(N);
+  SDValue EltSizeInBytes = N->getOperand(2);
+  SDValue LaneOffset = N->getOperand(3);
 
+  EVT PtrVT = SourceValue->getValueType(0);
+  bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
+
+  // Take the difference between the pointers and divided by the element size,
+  // to see how many lanes separate them.
   SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
+  if (IsReadAfterWrite)
+    Diff = DAG.getNode(ISD::ABS, DL, PtrVT, Diff);
+  Diff = DAG.getNode(ISD::SDIV, DL, PtrVT, Diff, EltSizeInBytes);
+
+  // The pointers do not alias if:
+  //  * Diff <= 0 || LaneOffset < Diff (WAR_MASK)
+  //  * Diff == 0 || LaneOffset < abs(Diff) (RAW_MASK)
+  // Note: If LaneOffset is zero, both cases will fold to "true".
   EVT CmpVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
                                      Diff.getValueType());
   SDValue Zero = DAG.getConstant(0, DL, PtrVT);
-  return DAG.getNode(ISD::OR, DL, CmpVT,
-                     DAG.getSetCC(DL, CmpVT, Diff, EltSize, ISD::SETGE),
-                     DAG.getSetCC(DL, CmpVT, Diff, Zero, ISD::SETEQ));
+  SDValue Cmp = DAG.getSetCC(DL, CmpVT, Diff, Zero,
+                             IsReadAfterWrite ? ISD::SETEQ : ISD::SETLE);
+  return DAG.getNode(ISD::OR, DL, CmpVT, Cmp,
+                     DAG.getSetCC(DL, CmpVT, LaneOffset, Diff, ISD::SETULT));
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_BITCAST(SDNode *N) {
@@ -1695,17 +1709,22 @@ void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo,
                                                         SDValue &Hi) {
   SDLoc DL(N);
   EVT LoVT, HiVT;
-  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
   SDValue PtrA = N->getOperand(0);
   SDValue PtrB = N->getOperand(1);
-  Lo = DAG.getNode(N->getOpcode(), DL, LoVT, PtrA, PtrB, N->getOperand(2));
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
 
-  unsigned EltSize = N->getConstantOperandVal(2);
-  ElementCount Offset = HiVT.getVectorElementCount() * EltSize;
-  SDValue Addend = DAG.getElementCount(DL, MVT::i64, Offset);
-
-  PtrA = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrA, Addend);
-  Hi = DAG.getNode(N->getOpcode(), DL, HiVT, PtrA, PtrB, N->getOperand(2));
+  // The lane offset for the "Lo" half of the mask is unchanged.
+  Lo = DAG.getNode(N->getOpcode(), DL, LoVT, PtrA, PtrB,
+                   /*ElementSizeInBytes=*/N->getOperand(2),
+                   /*LaneOffset=*/N->getOperand(3));
+  // The lane offset for the "Hi" half of the mask is incremented by the number
+  // of elements in the "Lo" half.
+  unsigned LaneOffset =
+      N->getConstantOperandVal(3) + LoVT.getVectorMinNumElements();
+  // Note: The lane offset is implicitly scalable for scalable masks.
+  Hi = DAG.getNode(N->getOpcode(), DL, HiVT, PtrA, PtrB,
+                   /*ElementSizeInBytes=*/N->getOperand(2),
+                   /*LaneOffset=*/DAG.getConstant(LaneOffset, DL, MVT::i64));
 }
 
 void DAGTypeLegalizer::SplitVecRes_BUILD_VECTOR(SDNode *N, SDValue &Lo,
@@ -2662,9 +2681,13 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_COMPRESS(SDNode *N, SDValue &Lo,
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(
       MF, cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex());
 
+  EVT MaskVT = LoMask.getValueType();
+  assert(MaskVT.getScalarType() == MVT::i1 && "Expected vector of i1s");
+
   // We store LoVec and then insert HiVec starting at offset=|1s| in LoMask.
-  SDValue WideMask =
-      DAG.getNode(ISD::ZERO_EXTEND, DL, LoMask.getValueType(), LoMask);
+  EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
+                                    MaskVT.getVectorElementCount());
+  SDValue WideMask = DAG.getNode(ISD::ZERO_EXTEND, DL, WideMaskVT, LoMask);
   SDValue Offset = DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i32, WideMask);
   Offset = TLI.getVectorElementPointer(DAG, StackPtr, VecVT, Offset);
 
@@ -4825,7 +4848,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     EVT VT = N->getValueType(0);
     EVT WideVecVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
     if (!TLI.isOperationLegalOrCustomOrPromote(N->getOpcode(), WideVecVT) &&
-        TLI.isOperationExpand(N->getOpcode(), VT.getScalarType())) {
+        TLI.isOperationExpandOrLibCall(N->getOpcode(), VT.getScalarType())) {
       Res = DAG.UnrollVectorOp(N, WideVecVT.getVectorNumElements());
       if (N->getNumValues() > 1)
         ReplaceOtherWidenResults(N, Res.getNode(), ResNo);
@@ -6050,7 +6073,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_LOOP_DEPENDENCE_MASK(SDNode *N) {
   return DAG.getNode(
       N->getOpcode(), SDLoc(N),
       TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0)),
-      N->getOperand(0), N->getOperand(1), N->getOperand(2));
+      N->getOperand(0), N->getOperand(1), N->getOperand(2), N->getOperand(3));
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_BUILD_VECTOR(SDNode *N) {
