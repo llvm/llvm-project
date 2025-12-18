@@ -1371,8 +1371,8 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
 
   FastMathFlags FMF;
   BuilderTy::FastMathFlagGuard Guard(Builder);
-  if (isa<FPMathOperator>(&I)) {
-    FMF = I.getFastMathFlags();
+  if (const auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
+    FMF = FPOp->getFastMathFlags();
     Builder.setFastMathFlags(FMF);
   }
 
@@ -3373,9 +3373,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
               DL.getAddressSizeInBits(AS) != DL.getPointerSizeInBits(AS);
           bool Changed = false;
           GEP.replaceUsesWithIf(Y, [&](Use &U) {
-            bool ShouldReplace = isa<PtrToAddrInst>(U.getUser()) ||
-                                 (!HasNonAddressBits &&
-                                  isa<ICmpInst, PtrToIntInst>(U.getUser()));
+            bool ShouldReplace =
+                isa<PtrToAddrInst, ICmpInst>(U.getUser()) ||
+                (!HasNonAddressBits && isa<PtrToIntInst>(U.getUser()));
             Changed |= ShouldReplace;
             return ShouldReplace;
           });

@@ -32,6 +32,9 @@ struct clang::CIRGen::CGCoroData {
 
   // Stores the result of __builtin_coro_begin call.
   mlir::Value coroBegin = nullptr;
+
+  // The promise type's 'unhandled_exception' handler, if it defines one.
+  Stmt *exceptionHandler = nullptr;
 };
 
 // Defining these here allows to keep CGCoroData private to this file.
@@ -272,6 +275,17 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   }
   return mlir::success();
 }
+
+static bool memberCallExpressionCanThrow(const Expr *e) {
+  if (const auto *ce = dyn_cast<CXXMemberCallExpr>(e))
+    if (const auto *proto =
+            ce->getMethodDecl()->getType()->getAs<FunctionProtoType>())
+      if (isNoexceptExceptionSpec(proto->getExceptionSpecType()) &&
+          proto->canThrow() == CT_Cannot)
+        return false;
+  return true;
+}
+
 // Given a suspend expression which roughly looks like:
 //
 //   auto && x = CommonExpr();
@@ -333,6 +347,31 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
       },
       /*resumeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
+        // Exception handling requires additional IR. If the 'await_resume'
+        // function is marked as 'noexcept', we avoid generating this additional
+        // IR.
+        CXXTryStmt *tryStmt = nullptr;
+        if (coro.exceptionHandler && kind == cir::AwaitKind::Init &&
+            memberCallExpressionCanThrow(s.getResumeExpr()))
+          cgf.cgm.errorNYI("Coro resume Exception");
+
+        // FIXME(cir): the alloca for the resume expr should be placed in the
+        // enclosing cir.scope instead.
+        if (forLValue) {
+          assert(!cir::MissingFeatures::coroCoYield());
+        } else {
+          awaitRes.rv =
+              cgf.emitAnyExpr(s.getResumeExpr(), aggSlot, ignoreResult);
+          if (!awaitRes.rv.isIgnored())
+            // Create the alloca in the block before the scope wrapping
+            // cir.await.
+            assert(!cir::MissingFeatures::coroCoReturn());
+        }
+
+        if (tryStmt)
+          cgf.cgm.errorNYI("Coro tryStmt");
+
+        // Returns control back to parent.
         cir::YieldOp::create(builder, loc);
       });
 

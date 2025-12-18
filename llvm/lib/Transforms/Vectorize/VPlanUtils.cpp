@@ -82,7 +82,8 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
 const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                                            ScalarEvolution &SE, const Loop *L) {
   if (V->isLiveIn()) {
-    if (Value *LiveIn = V->getLiveInIRValue())
+    Value *LiveIn = V->getLiveInIRValue();
+    if (LiveIn && SE.isSCEVable(LiveIn->getType()))
       return SE.getSCEV(LiveIn);
     return SE.getCouldNotCompute();
   }
@@ -195,10 +196,10 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
     return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
            (preservesUniformity(VPI->getOpcode()) &&
             all_of(VPI->operands(), isSingleScalar));
-  if (isa<VPPartialReductionRecipe>(VPV))
-    return false;
-  if (isa<VPReductionRecipe, VPVectorPointerRecipe, VPVectorEndPointerRecipe>(
-          VPV))
+  if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
+    return !RR->isPartialReduction();
+  if (isa<VPCanonicalIVPHIRecipe, VPVectorPointerRecipe,
+          VPVectorEndPointerRecipe>(VPV))
     return true;
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
     return Expr->isSingleScalar();
@@ -270,7 +271,7 @@ unsigned vputils::getVFScaleFactor(VPRecipeBase *R) {
     return 1;
   if (auto *RR = dyn_cast<VPReductionPHIRecipe>(R))
     return RR->getVFScaleFactor();
-  if (auto *RR = dyn_cast<VPPartialReductionRecipe>(R))
+  if (auto *RR = dyn_cast<VPReductionRecipe>(R))
     return RR->getVFScaleFactor();
   if (auto *ER = dyn_cast<VPExpressionRecipe>(R))
     return ER->getVFScaleFactor();

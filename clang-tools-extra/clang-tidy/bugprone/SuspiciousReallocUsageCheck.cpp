@@ -92,10 +92,9 @@ public:
     return false;
   }
   bool VisitStmt(const Stmt *S) {
-    for (const Stmt *Child : S->children())
-      if (Child && Visit(Child))
-        return true;
-    return false;
+    return llvm::any_of(S->children(), [this](const Stmt *Child) {
+      return Child && Visit(Child);
+    });
   }
 };
 
