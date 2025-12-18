@@ -121,7 +121,10 @@ def run_command(cmd, shell=False, **kwargs):
 
 def _remove_readonly(func, path, _):
     """Clear the readonly bit and reattempt the removal."""
-    os.chmod(path, stat.S_IWRITE)
+    try:
+        os.chmod(path, stat.S_IWRITE)
+    except Exception:
+        pass
     func(path)
 
 
@@ -132,10 +135,24 @@ def rmtree(path):
     Taken from official Python docs
     https://docs.python.org/3/library/shutil.html#rmtree-example
     """
+    shutil.rmtree(path, onexc=_remove_readonly)
+
+
+def try_delete(path):
+    """
+    Delete the file or directory;
+    if not successful, print a warning but continue
+    """
     try:
-        shutil.rmtree(path, onexc=_remove_readonly)
+        os.unlink(path)
     except Exception:
-        pass
+        try:
+            _remove_readonly(os.unlink, path, _)
+        except Exception:
+            try:
+                rmtree(path)
+            except Exception as e:
+                print(f"Warning: Could not delete {path}: {e}")
 
 
 def checkout(giturl, sourcepath):
@@ -407,9 +424,7 @@ def run(
     parser.add_argument(
         "--workdir",
         default=workdir_default,
-        help="Use this dir as workdir to write the build artifact into. "
-        "--workdir=. uses the current directory.\nWarning: This directory "
-        "might be deleted",
+        help="Use this dir (relative to cwd) as workdir to write the build artifacts into; --workdir=. uses the current directory.\nWarning: The content of this directory may be deleted",
     )
     if cachefile is not None:
         parser.add_argument(
@@ -420,7 +435,7 @@ def run(
         )
     parser.add_argument(
         "--clean",
-        type=bool,
+        action=argparse.BooleanOptionalAction,
         default=convert_bool(os.environ.get("BUILDBOT_CLEAN")),
         help="Delete the entire workdir before starting the build, including "
         "source directories",
@@ -432,7 +447,11 @@ def run(
         help="Keep previous build artifacts when starting the build",
     )
     parser.add_argument(
-        "--jobs", "-j", default=jobs_default, help="Number of build- and test-jobs"
+        "--jobs",
+        "-j",
+        type=int,
+        default=jobs_default,
+        help="Number of build- and test-jobs",
     )
     args = parser.parse_args()
 
@@ -478,15 +497,15 @@ def run(
 
         clobber = has_config_change()
     else:
-        # No clobber if incremental was enabled explicitly
-        clobber = False
+        # Adhere to explicitly set incremental option
+        clobber = not incremental
 
     # Safety check
     parentdir = os.path.dirname(scriptpath)
     while True:
         if os.path.exists(workdir) and os.path.samefile(parentdir, workdir):
             raise Exception(
-                f"Cannot use {args.workdir} as workdir; in includes the source in '{parentdir}'"
+                f"Cannot use {args.workdir} as workdir; it contains the source itself in '{parentdir}'"
             )
         newparentdir = os.path.dirname(parentdir)
         if newparentdir == parentdir:
@@ -503,6 +522,9 @@ def run(
         llvmsrcroot=llvmsrcroot,
     )
 
+    with step("platform-info"):
+        report_platform()
+
     # Ensure that the cwd is not the directory we are going to delete. This
     # would not work e.g. under Windows. We will chdir to workdir in the next
     # step anyway.
@@ -513,29 +535,26 @@ def run(
             print("Deleting previous build state including sources", file=sys.stderr)
 
         with w.step(f"clean"):
-            rmtree(workdir)
+            if os.path.exists(workdir):
+                # Do not delete the directory itself, just the contents; it might be
+                # a symlink to somewhere else
+                for d in os.listdir(workdir):
+                    try_delete(os.path.join(workdir, d))
     elif clobber:
         # Warn user if deleting anything
-        if clobber:
-            for p in clobberpaths:
-                if os.path.exists(os.path.join(workdir, p)):
-                    print(
-                        "Deleting previous build artifacts; use --incremental to keep",
-                        file=sys.stderr,
-                    )
-                    break
+        for p in clobberpaths:
+            if os.path.exists(os.path.join(workdir, p)):
+                print(
+                    "Deleting previous build artifacts; use --incremental to keep",
+                    file=sys.stderr,
+                )
+                break
 
         with w.step(f"clobber"):
             for d in clobberpaths:
-                rmtree(os.path.join(workdir, d))
-            try:
-                os.unlink(prevscriptpath)
-            except Exception:
-                pass
-            try:
-                os.unlink(prevcachepath)
-            except Exception:
-                pass
+                try_delete(os.path.join(workdir, d))
+            try_delete(prevscriptpath)
+            try_delete(prevcachepath)
 
     os.makedirs(workdir, exist_ok=True)
     os.chdir(workdir)
@@ -546,8 +565,5 @@ def run(
         shutil.copy(cachefile, prevcachepath)
 
     os.environ["NINJA_STATUS"] = "[%p/%es :: %u->%r->%f (of %t)] "
-
-    with step("platform-info"):
-        report_platform()
 
     yield w
