@@ -27,6 +27,8 @@ using namespace llvm;
 
 namespace {
 
+enum ChangeKind { None, UpdateHint, UpdateInst };
+
 class SIShrinkInstructions {
   MachineFunction *MF;
   MachineRegisterInfo *MRI;
@@ -44,7 +46,7 @@ class SIShrinkInstructions {
   bool shrinkScalarCompare(MachineInstr &MI) const;
   bool shrinkMIMG(MachineInstr &MI) const;
   bool shrinkMadFma(MachineInstr &MI) const;
-  bool shrinkScalarLogicOp(MachineInstr &MI, bool &MoveIterator) const;
+  ChangeKind shrinkScalarLogicOp(MachineInstr &MI) const;
   bool tryReplaceDeadSDST(MachineInstr &MI) const;
   bool instAccessReg(iterator_range<MachineInstr::const_mop_iterator> &&R,
                      Register Reg, unsigned SubReg) const;
@@ -541,11 +543,10 @@ bool SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
 /// For AND or OR, try using S_BITSET{0,1} to clear or set bits.
 /// If the inverse of the immediate is legal, use ANDN2, ORN2 or
 /// XNOR (as a ^ b == ~(a ^ ~b)).
-/// \param MoveIterator true if the caller should continue the machine function
-/// iterator.
-/// \return true if MI was modified.
-bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI,
-                                               bool &MoveIterator) const {
+/// \return ChangeKind::None if no changes were made.
+///         ChangeKind::UpdateHint if regalloc hints were updated.
+///         ChangeKind::UpdateInst if the instruction was modified.
+ChangeKind SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
   const MachineOperand *Dest = &MI.getOperand(0);
   MachineOperand *Src0 = &MI.getOperand(1);
@@ -555,7 +556,7 @@ bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI,
 
   if (!SrcImm->isImm() ||
       AMDGPU::isInlinableLiteral32(SrcImm->getImm(), ST->hasInv2PiInlineImm()))
-    return false;
+    return ChangeKind::None;
 
   uint32_t Imm = static_cast<uint32_t>(SrcImm->getImm());
   uint32_t NewImm = 0;
@@ -591,8 +592,7 @@ bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI,
     if (Dest->getReg().isVirtual() && SrcReg->isReg()) {
       MRI->setRegAllocationHint(Dest->getReg(), 0, SrcReg->getReg());
       MRI->setRegAllocationHint(SrcReg->getReg(), 0, Dest->getReg());
-      MoveIterator = true;
-      return true;
+      return ChangeKind::UpdateHint;
     }
 
     if (SrcReg->isReg() && SrcReg->getReg() == Dest->getReg()) {
@@ -610,11 +610,11 @@ bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI,
       } else {
         SrcImm->setImm(NewImm);
       }
-      return true;
+      return ChangeKind::UpdateInst;
     }
   }
 
-  return false;
+  return ChangeKind::None;
 }
 
 // This is the same as MachineInstr::readsRegister/modifiesRegister except
@@ -978,10 +978,10 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
       if (MI.getOpcode() == AMDGPU::S_AND_B32 ||
           MI.getOpcode() == AMDGPU::S_OR_B32 ||
           MI.getOpcode() == AMDGPU::S_XOR_B32) {
-        bool MoveIterator = false;
-        Changed |= shrinkScalarLogicOp(MI, MoveIterator);
-        if (MoveIterator)
+        ChangeKind CK = shrinkScalarLogicOp(MI);
+        if (CK == ChangeKind::UpdateHint)
           continue;
+        Changed |= (CK == ChangeKind::UpdateInst);
       }
 
       if (IsPostRA && TII->isMIMG(MI.getOpcode()) &&
