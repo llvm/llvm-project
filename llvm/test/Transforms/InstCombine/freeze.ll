@@ -1604,43 +1604,45 @@ define i64 @pr161492_2(i1 %cond) {
 ; added to zext and then dropped by the freeze handling code and so on.
 ;
 ; https://github.com/llvm/llvm-project/pull/171435
-define i32 @_ZN12duckdb_miniz16tinfl_decompressEPNS_22tinfl_decompressor_tagEPKhPmPhS5_S4_j(ptr noundef %0) {
-; CHECK-LABEL: define i32 @_ZN12duckdb_miniz16tinfl_decompressEPNS_22tinfl_decompressor_tagEPKhPmPhS5_S4_j(
-; CHECK-SAME: ptr noundef [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[TMP4]], 0
-; CHECK-NEXT:    br i1 [[COND]], label %[[BB5:.*]], [[DOTLR_PH1788_PREHEADER:label %.*]]
-; CHECK:       [[BB5]]:
-; CHECK-NEXT:    br [[DOTLR_PH1788_PREHEADER]]
-; CHECK:       [[_LR_PH1788_PREHEADER:.*:]]
-; CHECK-NEXT:    [[DOT2826:%.*]] = phi i32 [ [[TMP3]], [[TMP1:%.*]] ], [ 0, %[[BB5]] ]
-; CHECK-NEXT:    [[DOT2826_FR:%.*]] = freeze i32 [[DOT2826]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[DOT2826_FR]], -8
-; CHECK-NEXT:    store i32 [[TMP6]], ptr [[TMP2]], align 4
+define i32 @pr171435_1(ptr noundef %arg) {
+; CHECK-LABEL: define i32 @pr171435_1(
+; CHECK-SAME: ptr noundef [[ARG:%.*]]) {
+; CHECK-NEXT:  [[BB_1:.*]]:
+; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[GETELEMENTPTR]], align 4
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[ARG]], align 8
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i32 [[LOAD1]], 0
+; CHECK-NEXT:    br i1 [[ICMP]], label %[[BB_2:.*]], label %[[BB_3:.*]]
+; CHECK:       [[BB_2]]:
+; CHECK-NEXT:    br label %[[BB_3]]
+; CHECK:       [[BB_3]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[LOAD]], %[[BB_1]] ], [ 0, %[[BB_2]] ]
+; CHECK-NEXT:    [[PHI_FR:%.*]] = freeze i32 [[PHI]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[PHI_FR]], -8
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[GETELEMENTPTR]], align 4
 ; CHECK-NEXT:    ret i32 0
 ;
-  %2 = getelementptr inbounds nuw i8, ptr %0, i64 4
-  %3 = load i32, ptr %2, align 4
-  %4 = load i32, ptr %0, align 8
-  %cond = icmp eq i32 %4, 0
-  br i1 %cond, label %5, label %.lr.ph1788.preheader
+bb.1:
+  %getelementptr = getelementptr inbounds nuw i8, ptr %arg, i64 4
+  %load = load i32, ptr %getelementptr, align 4
+  %load1 = load i32, ptr %arg, align 8
+  %icmp = icmp eq i32 %load1, 0
+  br i1 %icmp, label %bb.2, label %bb.3
 
-5:                                                ; preds = %1
-  br label %.lr.ph1788.preheader
+bb.2:                                              ; preds = %bb.1
+  br label %bb.3
 
-.lr.ph1788.preheader:                             ; preds = %5, %1
-  %.2826 = phi i32 [ %3, %1 ], [ 0, %5 ]
-  %6 = add i32 %.2826, -8
-  %7 = zext i32 %6 to i64
-  %8 = lshr i64 %7, 3
-  %9 = freeze i64 %8
-  %umin1865 = call i64 @llvm.umin.i64(i64 %9, i64 0)
-  %10 = trunc i64 %umin1865 to i32
-  %11 = shl nuw i32 %10, 3
-  %12 = sub i32 %6, %11
-  store i32 %12, ptr %2, align 4
+bb.3:                                              ; preds = %bb.2, %bb.1
+  %phi = phi i32 [ %load, %bb.1 ], [ 0, %bb.2 ]
+  %add = add i32 %phi, -8
+  %zext = zext i32 %add to i64
+  %lshr = lshr i64 %zext, 3
+  %freeze = freeze i64 %lshr
+  %call = call i64 @llvm.umin.i64(i64 %freeze, i64 0)
+  %trunc = trunc i64 %call to i32
+  %shl = shl nuw i32 %trunc, 3
+  %sub = sub i32 %add, %shl
+  store i32 %sub, ptr %getelementptr, align 4
   ret i32 0
 }
 
@@ -1650,75 +1652,75 @@ define i32 @_ZN12duckdb_miniz16tinfl_decompressEPNS_22tinfl_decompressor_tagEPKh
 ; around the loop.
 ;
 ; https://github.com/llvm/llvm-project/pull/171435
-define i32 @ff_avc_decode_sps(ptr noundef %0, i32 noundef %1) "instcombine-no-verify-fixpoint" {
-; CHECK-LABEL: define i32 @ff_avc_decode_sps(
-; CHECK-SAME: ptr noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:  [[_CRITEDGE_THREAD_I:.*:]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @get_ptr()
-; CHECK-NEXT:    br label %[[BB3:.*]]
-; CHECK:       [[BB3]]:
-; CHECK-NEXT:    [[DOT068:%.*]] = phi i32 [ 8, [[DOTCRITEDGE_THREAD_I:%.*]] ], [ [[TMP15:%.*]], %[[DOTTHREAD:.*]] ]
-; CHECK-NEXT:    [[DOTNOT89:%.*]] = phi i1 [ false, [[DOTCRITEDGE_THREAD_I]] ], [ true, %[[DOTTHREAD]] ]
-; CHECK-NEXT:    br i1 [[DOTNOT89]], label %[[DOTTHREAD]], label %[[BB4:.*]]
-; CHECK:       [[BB4]]:
-; CHECK-NEXT:    br i1 true, label %[[DOTCRITEDGE_THREAD_I_I:.*]], label %[[DOTCRITEDGE_I_I:.*]]
-; CHECK:       [[_CRITEDGE_THREAD_I_I:.*:]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP2]], align 1
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP5]])
-; CHECK-NEXT:    br label %[[BB7:.*]]
-; CHECK:       [[_CRITEDGE_I_I:.*:]]
-; CHECK-NEXT:    br label %[[BB7]]
-; CHECK:       [[BB7]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP6]], %[[DOTCRITEDGE_THREAD_I_I]] ], [ poison, %[[DOTCRITEDGE_I_I]] ]
-; CHECK-NEXT:    [[DOTFR:%.*]] = freeze i32 [[TMP8]]
-; CHECK-NEXT:    [[TMP9:%.*]] = and i32 [[DOTFR]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = lshr i32 [[DOTFR]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = add nuw i32 [[TMP10]], [[TMP9]]
-; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[DOT068]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = and i32 [[TMP12]], 255
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[TMP13]], 0
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TMP14]], i32 [[DOT068]], i32 [[TMP13]]
-; CHECK-NEXT:    br label %[[DOTTHREAD]]
-; CHECK:       [[_THREAD:.*:]]
-; CHECK-NEXT:    [[TMP15]] = phi i32 [ [[DOT068]], %[[BB3]] ], [ [[SPEC_SELECT]], %[[BB7]] ]
-; CHECK-NEXT:    br label %[[BB3]]
+define i32 @pr171435_2(ptr noundef %arg, i32 noundef %arg1) "instcombine-no-verify-fixpoint" {
+; CHECK-LABEL: define i32 @pr171435_2(
+; CHECK-SAME: ptr noundef [[ARG:%.*]], i32 noundef [[ARG1:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[BB_1:.*]]:
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @get_ptr()
+; CHECK-NEXT:    br label %[[BB_2:.*]]
+; CHECK:       [[BB_2]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 8, %[[BB_1]] ], [ [[PHI14:%.*]], %[[BB_13:.*]] ]
+; CHECK-NEXT:    [[ICMP:%.*]] = phi i1 [ false, %[[BB_1]] ], [ true, %[[BB_13]] ]
+; CHECK-NEXT:    br i1 [[ICMP]], label %[[BB_13]], label %[[BB_4:.*]]
+; CHECK:       [[BB_4]]:
+; CHECK-NEXT:    br i1 true, label %[[BB_5:.*]], label %[[BB_7:.*]]
+; CHECK:       [[BB_5]]:
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[CALL]], align 1
+; CHECK-NEXT:    [[CALL6:%.*]] = call i32 @llvm.bswap.i32(i32 [[LOAD]])
+; CHECK-NEXT:    br label %[[BB_8:.*]]
+; CHECK:       [[BB_7]]:
+; CHECK-NEXT:    br label %[[BB_8]]
+; CHECK:       [[BB_8]]:
+; CHECK-NEXT:    [[PHI9:%.*]] = phi i32 [ [[CALL6]], %[[BB_5]] ], [ poison, %[[BB_7]] ]
+; CHECK-NEXT:    [[PHI9_FR:%.*]] = freeze i32 [[PHI9]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[PHI9_FR]], 1
+; CHECK-NEXT:    [[ASHR:%.*]] = lshr i32 [[PHI9_FR]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[ASHR]], [[AND]]
+; CHECK-NEXT:    [[ADD10:%.*]] = add i32 [[PHI]], [[ADD]]
+; CHECK-NEXT:    [[AND11:%.*]] = and i32 [[ADD10]], 255
+; CHECK-NEXT:    [[ICMP12:%.*]] = icmp eq i32 [[AND11]], 0
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[ICMP12]], i32 [[PHI]], i32 [[AND11]]
+; CHECK-NEXT:    br label %[[BB_13]]
+; CHECK:       [[BB_13]]:
+; CHECK-NEXT:    [[PHI14]] = phi i32 [ [[PHI]], %[[BB_2]] ], [ [[SELECT]], %[[BB_8]] ]
+; CHECK-NEXT:    br label %[[BB_2]]
 ;
-.critedge.thread.i:
-  %2 = call ptr @get_ptr()
-  br label %3
+bb.1:
+  %call = call ptr @get_ptr()
+  br label %bb.2
 
-3:                                                ; preds = %.thread, %.critedge.thread.i
-  %.068 = phi i32 [ 8, %.critedge.thread.i ], [ %15, %.thread ]
-  %.066 = phi i32 [ 8, %.critedge.thread.i ], [ 0, %.thread ]
-  %.not89 = icmp eq i32 %.066, 0
-  br i1 %.not89, label %.thread, label %4
+bb.2:                                              ; preds = %bb.13, %bb.1
+  %phi = phi i32 [ 8, %bb.1 ], [ %phi14, %bb.13 ]
+  %phi3 = phi i32 [ 8, %bb.1 ], [ 0, %bb.13 ]
+  %icmp = icmp eq i32 %phi3, 0
+  br i1 %icmp, label %bb.13, label %bb.4
 
-4:                                                ; preds = %3
-  br i1 true, label %.critedge.thread.i.i, label %.critedge.i.i
+bb.4:                                              ; preds = %bb.2
+  br i1 true, label %bb.5, label %bb.7
 
-.critedge.thread.i.i:                             ; preds = %4
-  %5 = load i32, ptr %2, align 1
-  %6 = call i32 @llvm.bswap.i32(i32 %5)
-  br label %7
+bb.5:                                              ; preds = %bb.4
+  %load = load i32, ptr %call, align 1
+  %call6 = call i32 @llvm.bswap.i32(i32 %load)
+  br label %bb.8
 
-.critedge.i.i:                                    ; preds = %4
-  br label %7
+bb.7:                                              ; preds = %bb.4
+  br label %bb.8
 
-7:                                                ; preds = %.critedge.i.i, %.critedge.thread.i.i
-  %8 = phi i32 [ %6, %.critedge.thread.i.i ], [ 0, %.critedge.i.i ]
-  %9 = and i32 %8, 1
-  %10 = ashr i32 %8, 1
-  %11 = add nsw i32 %10, %9
-  %12 = add nsw i32 %.068, %11
-  %13 = and i32 %12, 255
-  %14 = icmp eq i32 %13, 0
-  %cond.fr = freeze i1 %14
-  %spec.select = select i1 %cond.fr, i32 %.068, i32 %13
-  br label %.thread
+bb.8:                                              ; preds = %bb.7, %bb.5
+  %phi9 = phi i32 [ %call6, %bb.5 ], [ 0, %bb.7 ]
+  %and = and i32 %phi9, 1
+  %ashr = ashr i32 %phi9, 1
+  %add = add nsw i32 %ashr, %and
+  %add10 = add nsw i32 %phi, %add
+  %and11 = and i32 %add10, 255
+  %icmp12 = icmp eq i32 %and11, 0
+  %freeze = freeze i1 %icmp12
+  %select = select i1 %freeze, i32 %phi, i32 %and11
+  br label %bb.13
 
-.thread:                                          ; preds = %7, %3
-  %15 = phi i32 [ %.068, %3 ], [ %spec.select, %7 ]
-  br label %3
+bb.13:                                             ; preds = %bb.8, %bb.2
+  %phi14 = phi i32 [ %phi, %bb.2 ], [ %select, %bb.8 ]
+  br label %bb.2
 }
 
 !0 = !{}
