@@ -168,11 +168,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         else:
             self.assertEvaluate(
                 "struct1",
-                (
-                    re.escape("{foo:15}")
-                    if enableAutoVariableSummaries
-                    else "my_struct @ 0x"
-                ),
+                (re.escape("{foo:15}") if enableAutoVariableSummaries else "my_struct"),
                 want_varref=True,
             )
             self.assertEvaluate(
@@ -243,11 +239,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         else:
             self.assertEvaluate(
                 "struct1",
-                (
-                    re.escape("{foo:15}")
-                    if enableAutoVariableSummaries
-                    else "my_struct @ 0x"
-                ),
+                (re.escape("{foo:15}") if enableAutoVariableSummaries else "my_struct"),
                 want_type="my_struct",
                 want_varref=True,
             )

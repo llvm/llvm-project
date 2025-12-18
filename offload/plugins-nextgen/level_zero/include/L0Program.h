@@ -33,6 +33,41 @@ struct ProgramDataTy {
   int TeamsThreadLimit = 0;
 };
 
+class L0ProgramBuilderTy {
+  L0DeviceTy &Device;
+  std::unique_ptr<MemoryBuffer> Image;
+  /// Handle multiple modules within a single target image.
+  llvm::SmallVector<ze_module_handle_t> Modules;
+
+  /// Module that contains global data including device RTL.
+  ze_module_handle_t GlobalModule = nullptr;
+
+  /// Requires module link.
+  bool RequiresModuleLink = false;
+
+  /// Build a single module with the given image, build option, and format.
+  Error addModule(const size_t Size, const uint8_t *Image,
+                  const std::string_view BuildOption,
+                  ze_module_format_t Format);
+
+  Error linkModules();
+
+public:
+  L0ProgramBuilderTy(L0DeviceTy &Device, std::unique_ptr<MemoryBuffer> &&Image)
+      : Device(Device), Image(std::move(Image)) {}
+  ~L0ProgramBuilderTy() = default;
+
+  L0DeviceTy &getL0Device() const { return Device; }
+  ze_module_handle_t getGlobalModule() const { return GlobalModule; }
+  llvm::SmallVector<ze_module_handle_t> &getModules() { return Modules; }
+
+  MemoryBufferRef getMemoryBuffer() const { return MemoryBufferRef(*Image); }
+  Error buildModules(const std::string_view BuildOptions);
+
+  /// Retrieve the ELF binary for the program.
+  Expected<std::unique_ptr<MemoryBuffer>> getELF();
+};
+
 /// Level Zero program that can contain multiple modules.
 class L0ProgramTy : public DeviceImageTy {
   /// Handle multiple modules within a single target image.
@@ -49,33 +84,19 @@ class L0ProgramTy : public DeviceImageTy {
   /// Module that contains global data including device RTL.
   ze_module_handle_t GlobalModule = nullptr;
 
-  /// Requires module link.
-  bool RequiresModuleLink = false;
-
-  /// Is this module library.
-  bool IsLibModule = false;
-
-  /// Build a single module with the given image, build option, and format.
-  Error addModule(const size_t Size, const uint8_t *Image,
-                  const std::string_view BuildOption,
-                  ze_module_format_t Format);
-  /// Read file and return the size of the binary if successful.
-  size_t readFile(const char *FileName, std::vector<uint8_t> &OutFile) const;
-  void replaceDriverOptsWithBackendOpts(const L0DeviceTy &Device,
-                                        std::string &Options) const;
-
-  /// Check if the image should be handled as a library module.
-  void setLibModule();
-
   L0DeviceTy &getL0Device() const;
 
 public:
   L0ProgramTy() = delete;
 
   L0ProgramTy(int32_t ImageId, GenericDeviceTy &Device,
-              std::unique_ptr<MemoryBuffer> Image)
-      : DeviceImageTy(ImageId, Device, std::move(Image)) {}
+              std::unique_ptr<MemoryBuffer> Image,
+              ze_module_handle_t GlobalModule,
+              llvm::SmallVector<ze_module_handle_t> &&Modules)
+      : DeviceImageTy(ImageId, Device, std::move(Image)),
+        Modules(std::move(Modules)), GlobalModule(GlobalModule) {}
   ~L0ProgramTy() = default;
+
   L0ProgramTy(const L0ProgramTy &other) = delete;
   L0ProgramTy(L0ProgramTy &&) = delete;
   L0ProgramTy &operator=(const L0ProgramTy &) = delete;
@@ -86,12 +107,6 @@ public:
   static L0ProgramTy &makeL0Program(DeviceImageTy &Device) {
     return static_cast<L0ProgramTy &>(Device);
   }
-
-  /// Build modules from the target image description.
-  Error buildModules(const std::string_view BuildOptions);
-
-  /// Link modules stored in \p Modules.
-  Error linkModules();
 
   /// Loads the kernels names from all modules.
   Error loadModuleKernels();

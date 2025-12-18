@@ -251,13 +251,15 @@ L0DeviceTy::loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
 
   CompilationOptions += " ";
   CompilationOptions += Options.InternalCompilationOptions;
-  auto &Program = addProgram(ImageId, std::move(TgtImage));
 
-  if (auto Err = Program.buildModules(CompilationOptions))
+  L0ProgramBuilderTy Builder(*this, std::move(TgtImage));
+  if (auto Err = Builder.buildModules(CompilationOptions))
     return std::move(Err);
 
-  if (auto Err = Program.linkModules())
-    return std::move(Err);
+  auto ProgramOrErr = addProgram(ImageId, Builder);
+  if (!ProgramOrErr)
+    return ProgramOrErr.takeError();
+  auto &Program = *ProgramOrErr;
 
   if (auto Err = Program.loadModuleKernels())
     return std::move(Err);
