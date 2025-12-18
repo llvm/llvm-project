@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the scheduling model for the NVIDIA Olympus processors.
+// This file defines the scheduling model for the NVIDIA Olympus processor.
 // All information is taken from the Olympus Software Optimisation guide:
 //
 // https://docs.nvidia.com/olympus-cpu-core-software-optimization-guide-dp12531-001v0-7.pdf
@@ -142,7 +142,8 @@ def OlympusWrite_16c_1V0   : SchedWriteRes<[OlympusUnitV0]>    { let Latency = 1
 def OlympusWrite_20c_1M    : SchedWriteRes<[OlympusUnitM]>     { let Latency = 20; let ReleaseAtCycles = [20]; }
 def OlympusWrite_20c_1V45  : SchedWriteRes<[OlympusUnitV45]>   { let Latency = 20; let ReleaseAtCycles = [20]; }
 
-// These types are multi-pumped.
+// These types are multi-pumped, which we model by blocking the pipes for a
+// number of cycles (c.f. §3.1.3).
 def OlympusWrite_4c_1V0123_2 : SchedWriteRes<[OlympusUnitV0123]> { let Latency = 4; let ReleaseAtCycles = [2]; }
 def OlympusWrite_5c_1V0123_2 : SchedWriteRes<[OlympusUnitV0123]> { let Latency = 5; let ReleaseAtCycles = [2]; }
 def OlympusWrite_6c_1V0123_4 : SchedWriteRes<[OlympusUnitV0123]> { let Latency = 6; let ReleaseAtCycles = [4]; }
@@ -154,7 +155,10 @@ def OlympusWrite_11c_1V12_4  : SchedWriteRes<[OlympusUnitV12]>   { let Latency =
 def OlympusWrite_13c_1V12_8  : SchedWriteRes<[OlympusUnitV12]>   { let Latency = 13; let ReleaseAtCycles = [8]; }
 def OlympusWrite_14c_1V12_2  : SchedWriteRes<[OlympusUnitV12]>   { let Latency = 14; let ReleaseAtCycles = [2]; }
 
-// Hack to get the flagset throughputs right.
+// Hack to get the flagset throughputs right. Basic flagset instructions have
+// throughput of six, and use the I pipes. However, there are eight I pipes,
+// which would set their throughput to eight as well. We use six artificial F
+// pipes to get the correct throughput.
 def OlympusWrite_1c_1F : SchedWriteRes<[OlympusUnitI, OlympusUnitF]> { let Latency = 1; }
 
 //===----------------------------------------------------------------------===//
@@ -611,7 +615,7 @@ def OlympusRd_ZBFMMA : SchedReadAdvance<2, [OlympusWr_ZBFMMA]>;
 
 def : InstRW<[WriteI], (instrs COPY)>;
 
-// Branch instructions
+// 3.2 Branch instructions
 // -----------------------------------------------------------------------------
 
 // Branch, simple
@@ -622,7 +626,7 @@ def : SchedAlias<WriteBrReg, OlympusWrite_1c_1B>;
 // Branch and link
 def : InstRW<[OlympusWrite_1c_1I_1B], (instrs BL, BLR)>;
 
-// Arithmetic and logical instructions
+// 3.3 Arithmetic and logical instructions
 // -----------------------------------------------------------------------------
 
 // ALU/Logical basic
@@ -660,7 +664,7 @@ def : InstRW<[OlympusWrite_2c_1M], (instrs ADDG, SUBG)>;
 // Insert Random Tag
 def : InstRW<[OlympusWrite_2c_1M], (instrs IRG, IRGstack)>;
 
-// Divide and multiply instructions
+// 3.4 Divide and multiply instructions
 // -----------------------------------------------------------------------------
 
 // Divide
@@ -684,7 +688,7 @@ def : InstRW<[OlympusWr_IMX, ReadIM, ReadIM, OlympusRd_IMA],
 // Multiply high
 def : InstRW<[OlympusWrite_3c_1M], (instrs SMULHrr, UMULHrr)>;
 
-// Pointer authentication instructions
+// 3.5 Pointer authentication instructions
 // -----------------------------------------------------------------------------
 
 // Authenticate address
@@ -705,7 +709,7 @@ def : InstRW<[OlympusWrite_5c_1I_1B_1M0], (instrs BLRAA, BLRAAZ, BLRAB, BLRABZ)>
 def : InstRW<[OlympusWrite_8c_1M0_1L], (instregex "^LDRA[AB]indexed")>;
 def : InstRW<[WriteAdr, OlympusWrite_8c_1M0_1L], (instregex "^LDRA[AB]writeback")>;
 
-// Miscellaneous data-processing instructions
+// 3.6 Miscellaneous data-processing instructions
 // -----------------------------------------------------------------------------
 
 // Address generation
@@ -731,7 +735,7 @@ def OlympusWr_CRC : SchedWriteRes<[OlympusUnitM]> { let Latency = 2; }
 def OlympusRd_CRC : SchedReadAdvance<1, [OlympusWr_CRC]>;
 def : InstRW<[OlympusWr_CRC, OlympusRd_CRC], (instregex "^CRC32")>;
 
-// Load instructions
+// 3.7 Load instructions
 // -----------------------------------------------------------------------------
 
 def : SchedAlias<WriteLD,    OlympusWrite_4c_1L>;
@@ -836,7 +840,7 @@ def : InstRW<[OlympusWrite_5c_1I_1L], (instrs LDRWl, LDRXl, LDRSWl, PRFMl)>;
 // LDG
 def : InstRW<[OlympusWrite_5c_1I_1L], (instrs LDG, LDGM)>;
 
-// Store instructions
+// 3.8 Store instructions
 // -----------------------------------------------------------------------------
 
 def : SchedAlias<WriteST,    OlympusWrite_1c_1SA_1D>;
@@ -920,7 +924,7 @@ def : InstRW<[WriteAdr, OlympusWrite_1c_1SA_1D],  (instregex "^ST2?G(Pre|Post)In
                                                              "^STZ2?G(Pre|Post)Index$",
                                                              "^STGP(pre|post)$")>;
 
-// Scalar/SIMD floating point instructions
+// 3.9 Scalar/SIMD floating point instructions
 // -----------------------------------------------------------------------------
 
 // FP general
@@ -1250,11 +1254,68 @@ def : InstRW<[OlympusWrite_0or3c_1M], (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr
 // FP mov, from gen to high half of vec
 def : InstRW<[OlympusWrite_5c_1M_1V], (instrs FMOVXDHighr)>;
 
-// SIMD integer instructions
+// 3.10 SIMD FP8 instructions
+// -----------------------------------------------------------------------------
+
+// Convert to/from F16
+def : InstRW<[OlympusWrite_4c_1V0123_2], (instregex "^F[12]CVTL2?$",
+                                                    "^FCVTN_F16v(8|16)f8$")>;
+
+// Convert from F32
+def : InstRW<[OlympusWrite_3c_1V0123], (instrs FCVTN_F32v8f8, FCVTN_F322v16f8)>;
+
+// Dot product, multiply accumulate
+def OlympusWr_F8MA : SchedWriteRes<[OlympusUnitV]> { let Latency = 4; }
+def OlympusRd_F8MA : SchedReadAdvance<2, [OlympusWr_F8MA]>;
+// FDOT (8-bit floating-point to half-precision, vector)
+def : InstRW<[OlympusWr_F8MA, OlympusRd_F8MA], (instregex "^FDOTv(4|8)f16$")>;
+// FDOT (8-bit floating-point to single-precision, vector)
+def : InstRW<[OlympusWr_F8MA, OlympusRd_F8MA], (instregex "^FDOTv(2|4)f32$")>;
+// FDOT (8-bit floating-point to half-precision, by element)
+def : InstRW<[OlympusWr_F8MA, OlympusRd_F8MA], (instregex "^FDOTlanev(4|8)f16$")>;
+// FDOT (8-bit floating-point to single-precision, by element)
+def : InstRW<[OlympusWr_F8MA, OlympusRd_F8MA], (instregex "^FDOTlanev(2|4)f32$")>;
+// FMLALB, FMLALT (vector)
+def : InstRW<[OlympusWr_F8MA, OlympusRd_F8MA], (instregex "^FMLAL[BT]v16i8_v8f16$")>;
+// FMLALLBB, FMLALLBT, FMLALLTB, FMLALLTT (vector)
+def : InstRW<[OlympusWr_F8MA, OlympusRd_F8MA], (instregex "^FMLALL[BT][BT]v4f32$")>;
+// FMLALB, FMLALT (by element)
+def : InstRW<[OlympusWr_F8MA, OlympusRd_F8MA], (instregex "^FMLAL[BT]lanev8f16$")>;
+// FMLALLBB, FMLALLBT, FMLALLTB, FMLALLTT (by element)
+def : InstRW<[OlympusWr_F8MA, OlympusRd_F8MA], (instregex "^FMLALL[BT][BT]lanev4f32$")>;
+
+// 3.11 SIMD BF16 instructions
+// -----------------------------------------------------------------------------
+
+// Convert from F8
+def : InstRW<[OlympusWrite_4c_1V0123_2], (instregex "^BF[12]CVTL2?$")>;
+
+// Convert from F32, vector
+def : InstRW<[OlympusWrite_4c_1V0123_2], (instrs BFCVTN, BFCVTN2)>;
+
+// Convert from F32, scalar
+def : InstRW<[OlympusWrite_3c_1V0123], (instrs BFCVT)>;
+
+// Multiply accumulate
+def OlympusWr_BF16MA : SchedWriteRes<[OlympusUnitV]> { let Latency = 4; }
+def OlympusRd_BF16MA : SchedReadAdvance<2, [OlympusWr_BF16MA]>;
+def : InstRW<[OlympusWr_BF16MA, OlympusRd_BF16MA], (instregex "^BFMLAL[BT](Idx)?$")>;
+
+// Dot product
+def OlympusWr_BF16DOT : SchedWriteRes<[OlympusUnitV]> { let Latency = 5; }
+def OlympusRd_BF16DOT : SchedReadAdvance<2, [OlympusWr_BF16DOT]>;
+def : InstRW<[OlympusWr_BF16DOT, OlympusRd_BF16DOT], (instregex "^BFDOTv[48]bf16$",
+                                                                "^BF16DOTlanev[48]bf16$")>;
+
+// Matrix multiply accumulate
+def OlympusWr_BF16MMA : SchedWriteRes<[OlympusUnitV]> { let Latency = 6; }
+def OlympusRd_BF16MMA : SchedReadAdvance<2, [OlympusWr_BF16MMA]>;
+def : InstRW<[OlympusWr_BF16MMA, OlympusRd_BF16MMA], (instrs BFMMLA)>;
+
+// 3.12 SIMD integer instructions
 // -----------------------------------------------------------------------------
 
 // General
-
 def : SchedAlias<WriteVd, OlympusWrite_2c_1V>;
 def : SchedAlias<WriteVq, OlympusWrite_2c_1V>;
 
@@ -1618,7 +1679,7 @@ def : InstRW<[OlympusWrite_3c_1M], (instregex "^DUP(v8i8|v4i16|v2i32|v16i8|v8i16
 // INS (general)
 def : InstRW<[OlympusWrite_5c_1M_1V], (instregex "^INS(vi8|vi16|vi32|vi64)gpr$")>;
 
-// Cryptography extensions
+// 3.13 Cryptography extensions instructions
 // -----------------------------------------------------------------------------
 
 // AES, SHA3 operations
@@ -1665,65 +1726,7 @@ def : InstRW<[OlympusWrite_2c_1V0123], (instregex "^SM3PARTW[12]$", "^SM3SS1$",
 // SM4 operations
 def : InstRW<[OlympusWrite_4c_1V0], (instrs SM4E, SM4ENCKEY)>;
 
-// SIMD FP8 instructions
-// -----------------------------------------------------------------------------
-
-// Convert to/from F16
-def : InstRW<[OlympusWrite_4c_1V0123_2], (instregex "^F[12]CVTL2?$",
-                                                    "^FCVTN_F16v(8|16)f8$")>;
-
-// Convert from F32
-def : InstRW<[OlympusWrite_3c_1V0123], (instrs FCVTN_F32v8f8, FCVTN_F322v16f8)>;
-
-// Dot product, multiply accumulate
-def OlympusWr_F8MA : SchedWriteRes<[OlympusUnitV]> { let Latency = 4; }
-def OlympusRd_F8MA : SchedReadAdvance<2, [OlympusWr_F8MA]>;
-// FDOT (8-bit floating-point to half-precision, vector)
-def : InstRW<[OlympusWr_F8MA, OlympusRd_F8MA], (instregex "^FDOTv(4|8)f16$")>;
-// FDOT (8-bit floating-point to single-precision, vector)
-def : InstRW<[OlympusWr_F8MA, OlympusRd_F8MA], (instregex "^FDOTv(2|4)f32$")>;
-// FDOT (8-bit floating-point to half-precision, by element)
-def : InstRW<[OlympusWr_F8MA, OlympusRd_F8MA], (instregex "^FDOTlanev(4|8)f16$")>;
-// FDOT (8-bit floating-point to single-precision, by element)
-def : InstRW<[OlympusWr_F8MA, OlympusRd_F8MA], (instregex "^FDOTlanev(2|4)f32$")>;
-// FMLALB, FMLALT (vector)
-def : InstRW<[OlympusWr_F8MA, OlympusRd_F8MA], (instregex "^FMLAL[BT]v16i8_v8f16$")>;
-// FMLALLBB, FMLALLBT, FMLALLTB, FMLALLTT (vector)
-def : InstRW<[OlympusWr_F8MA, OlympusRd_F8MA], (instregex "^FMLALL[BT][BT]v4f32$")>;
-// FMLALB, FMLALT (by element)
-def : InstRW<[OlympusWr_F8MA, OlympusRd_F8MA], (instregex "^FMLAL[BT]lanev8f16$")>;
-// FMLALLBB, FMLALLBT, FMLALLTB, FMLALLTT (by element)
-def : InstRW<[OlympusWr_F8MA, OlympusRd_F8MA], (instregex "^FMLALL[BT][BT]lanev4f32$")>;
-
-// SIMD BF16 instructions
-// -----------------------------------------------------------------------------
-
-// Convert from F8
-def : InstRW<[OlympusWrite_4c_1V0123_2], (instregex "^BF[12]CVTL2?$")>;
-
-// Convert from F32, vector
-def : InstRW<[OlympusWrite_4c_1V0123_2], (instrs BFCVTN, BFCVTN2)>;
-
-// Convert from F32, scalar
-def : InstRW<[OlympusWrite_3c_1V0123], (instrs BFCVT)>;
-
-// Multiply accumulate
-def OlympusWr_BF16MA : SchedWriteRes<[OlympusUnitV]> { let Latency = 4; }
-def OlympusRd_BF16MA : SchedReadAdvance<2, [OlympusWr_BF16MA]>;
-def : InstRW<[OlympusWr_BF16MA, OlympusRd_BF16MA], (instregex "^BFMLAL[BT](Idx)?$")>;
-
-// Dot product
-def OlympusWr_BF16DOT : SchedWriteRes<[OlympusUnitV]> { let Latency = 5; }
-def OlympusRd_BF16DOT : SchedReadAdvance<2, [OlympusWr_BF16DOT]>;
-def : InstRW<[OlympusWr_BF16DOT, OlympusRd_BF16DOT], (instregex "^BFDOTv[48]bf16$",
-                                                                "^BF16DOTlanev[48]bf16$")>;
-
-// Matrix multiply accumulate
-def OlympusWr_BF16MMA : SchedWriteRes<[OlympusUnitV]> { let Latency = 6; }
-def OlympusRd_BF16MMA : SchedReadAdvance<2, [OlympusWr_BF16MMA]>;
-def : InstRW<[OlympusWr_BF16MMA, OlympusRd_BF16MMA], (instrs BFMMLA)>;
-
-// FP load instructions
+// 3.14 FP load instructions
 // -----------------------------------------------------------------------------
 
 // Load vector register, immediate
@@ -1749,7 +1752,7 @@ def : InstRW<[WriteAdr, OlympusWrite_6c_1L, OlympusWrite_6c_1L], (instregex "^LD
 def : InstRW<[OlympusWrite_6c_1L, OlympusWrite_6c], (instregex "^LDN?P[SD]i$")>;
 def : InstRW<[WriteAdr, OlympusWrite_6c_1L, OlympusWrite_6c], (instregex "^LDP[SD](pre|post)$")>;
 
-// FP store instructions
+// 3.15 FP store instructions
 // -----------------------------------------------------------------------------
 
 // Store vector register, immediate
@@ -1772,7 +1775,7 @@ def : InstRW<[WriteAdr, OlympusWrite_3c_1SA_1V0123, OlympusWrite_3c_1SA_1V0123],
 def : InstRW<[OlympusWrite_3c_1SA_1V0123], (instregex "^STP[SD]i$")>;
 def : InstRW<[WriteAdr, OlympusWrite_3c_1SA_1V0123], (instregex "^STN?P[SD](pre|post)$")>;
 
-// SIMD load instructions
+// 3.16 SIMD load instructions
 // -----------------------------------------------------------------------------
 
 // Load 1 element, multiple, 1 register
@@ -1877,7 +1880,7 @@ def : InstRW<[WriteAdr, OlympusWrite_8c_1L_4V], (instregex "^LD4Rv(16b|8h|4s)_PO
 def : InstRW<[OlympusWrite_8c_2L_4V],           (instregex "^LD4Rv[12]d$")>;
 def : InstRW<[WriteAdr, OlympusWrite_8c_2L_4V], (instregex "^LD4Rv[12]d_POST$")>;
 
-// SIMD store instructions
+// 3.17 SIMD store instructions
 // -----------------------------------------------------------------------------
 
 // Store 1 element, multiple, 1 register
@@ -1958,7 +1961,7 @@ def : InstRW<[WriteAdr, OlympusWrite_5c_2SA_2V_2V0123], (instrs ST4i64_POST)>;
 def : InstRW<[OlympusWrite_7c_1SA_2V_1V0123],           (instregex "^ST4i(8|16|32)$")>;
 def : InstRW<[WriteAdr, OlympusWrite_7c_1SA_2V_1V0123], (instregex "^ST4i(8|16|32)_POST$")>;
 
-// SVE Predicate instructions
+// 3.18 SVE predicate instructions
 // -----------------------------------------------------------------------------
 
 // Predicate logical
@@ -2034,7 +2037,7 @@ def : InstRW<[OlympusWrite_3c_1M_1M0], (instrs RDFFR_PPz, RDFFRS_PPz)>;
 // Write/Set first fault register
 def : InstRW<[OlympusWrite_1c_1M0], (instrs WRFFR, SETFFR)>;
 
-// SVE floating-point instructions
+// 3.19 SVE floating-point instructions
 // -----------------------------------------------------------------------------
 
 // FP arithmetic
@@ -2272,7 +2275,7 @@ def : InstRW<[OlympusWrite_6c_3V], (instregex "^(FADD|FMAX(NM)?|FMIN(NM)?)V_VPZ_
 // FP reduction, F64
 def : InstRW<[OlympusWrite_4c_2V], (instregex "^(FADD|FMAX(NM)?|FMIN(NM)?)V_VPZ_D")>;
 
-// SVE FP8 instructions
+// 3.20 SVE FP8 instructions
 // -----------------------------------------------------------------------------
 
 // Convert to/from F16
@@ -2325,7 +2328,7 @@ def : InstRW<[OlympusWr_ZF8MA, OlympusRd_ZF8MA], (instrs FMLALT_ZZZ)>;
 // FMLALT (indexed, FP8 to FP16)
 def : InstRW<[OlympusWr_ZF8MA, OlympusRd_ZF8MA], (instrs FMLALT_ZZZI)>;
 
-// SVE BF16 instructions
+// 3.21 SVE BF16 instructions
 // -----------------------------------------------------------------------------
 
 // Convert to/from F8
@@ -2348,7 +2351,7 @@ def : InstRW<[OlympusWr_ZBFDOT, OlympusRd_ZBFDOT], (instrs BFDOT_ZZI, BFDOT_ZZZ)
 // Matrix multiply accumulate
 def : InstRW<[OlympusWr_ZBFMMA, OlympusRd_ZBFMMA], (instrs BFMMLA_ZZZ_HtoS)>;
 
-// SVE integer instructions
+// 3.22 SVE integer instructions
 // -----------------------------------------------------------------------------
 
 // General
@@ -3185,7 +3188,7 @@ def : InstRW<[OlympusWrite_6c_1V_1V0123], (instregex "^[SU](MAX|MIN)V_VPZ_S")>;
 def : InstRW<[OlympusWrite_5c_2V], (instregex "^[SU](MAX|MIN)V_VPZ_D",
                                               "^UADDV_VPZ_D")>;
 
-// SVE cryptography instructions
+// 3.23 SVE cryptography instructions
 // -----------------------------------------------------------------------------
 
 // AES, SHA3 operations
@@ -3207,7 +3210,7 @@ def : InstRW<[OlympusWrite_2c_1V], (instregex "^XAR_ZZZI_[BHSD]")>;
 // SM4 operations
 def : InstRW<[OlympusWrite_4c_1V0], (instregex "^SM4E(KEY)?_ZZZ_S$")>;
 
-// SVE load instructions
+// 3.24 SVE load instructions
 // -----------------------------------------------------------------------------
 
 // Load vector
@@ -3297,7 +3300,7 @@ def : InstRW<[OlympusWrite_9c_4L_1V03], (instregex "^LDNT1[BHW]_ZZR_S$",
 def : InstRW<[OlympusWrite_9c_2L_1V03], (instregex "^LDNT1S?[BHW]_ZZR_D$",
                                                    "^LDNT1D_ZZR_D$")>;
 
-// SVE store instructions
+// 3.25 SVE store instructions
 // -----------------------------------------------------------------------------
 
 // Store from predicate
