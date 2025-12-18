@@ -12743,10 +12743,10 @@ def err_conflicting_aligned_options : Error <
 def err_coro_invalid_addr_of_label : Error<
   "the GNU address of label extension is not allowed in coroutines"
 >;
-def err_coroutine_return_type : Error<
+def warn_coroutine_return_type : Warning<
   "function returns a type %0 marked with [[clang::coro_return_type]] but is neither a coroutine nor a coroutine wrapper; "
-  "non-coroutines should be marked with [[clang::coro_wrapper]] to allow returning coroutine return type"
->;
+  "non-coroutines should be marked with [[clang::coro_wrapper]] to allow returning coroutine return type">,
+  DefaultError;
 def warn_coroutine_type_aware_allocator_ignored : Warning <
   "type aware %0 will not be used for coroutine allocation">,
   InGroup<CoroTypeAwareAllocationFunction>;

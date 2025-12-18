@@ -16440,7 +16440,7 @@ void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
   if (CanBeGetReturnObject(FD) || CanBeGetReturnTypeOnAllocFailure(FD))
     return;
   if (!FD->hasAttr<CoroWrapperAttr>())
-    Diag(FD->getLocation(), diag::err_coroutine_return_type) << RD;
+    Diag(FD->getLocation(), diag::warn_coroutine_return_type) << RD;
 }
 
 Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
