@@ -834,6 +834,16 @@ struct LinkT {
   List v;
 };
 
+// V6: [6.4.7] Looprange clause
+template <typename T, typename I, typename E> //
+struct LooprangeT {
+  using Begin = E;
+  using End = E;
+
+  using TupleTrait = std::true_type;
+  std::tuple<Begin, End> t;
+};
+
 // V5.2: [5.8.3] `map` clause
 template <typename T, typename I, typename E> //
 struct MapT {
@@ -901,15 +911,15 @@ struct NoOpenmpT {
   using EmptyTrait = std::true_type;
 };
 
-// V5.2: [8.3.1] `assumption` clauses
-template <typename T, typename I, typename E> //
-struct NoOpenmpRoutinesT {
-  using EmptyTrait = std::true_type;
-};
-
 // V6.0: [10.6.1] `assumption` clauses
 template <typename T, typename I, typename E> //
 struct NoOpenmpConstructsT {
+  using EmptyTrait = std::true_type;
+};
+
+// V5.2: [8.3.1] `assumption` clauses
+template <typename T, typename I, typename E> //
+struct NoOpenmpRoutinesT {
   using EmptyTrait = std::true_type;
 };
 
@@ -1321,15 +1331,6 @@ struct WhenT {
 template <typename T, typename I, typename E> //
 struct WriteT {
   using EmptyTrait = std::true_type;
-};
-
-// V6: [6.4.7] Looprange clause
-template <typename T, typename I, typename E> struct LooprangeT {
-  using Begin = E;
-  using End = E;
-
-  using TupleTrait = std::true_type;
-  std::tuple<Begin, End> t;
 };
 
 // ---
