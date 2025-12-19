@@ -200,7 +200,7 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, bool enableCollapse) {
 
   // Create nested scf.for loops and build IR mapping for IVs
   IRMapping mapping;
-  SmallVector<scf::ForOp, 4> forOps;
+  SmallVector<scf::ForOp> forOps;
   b.setInsertionPoint(loopOp);
   OpBuilder nestBuilder(loopOp);
 
@@ -219,7 +219,7 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, bool enableCollapse) {
   }
 
   // Handle IV type conversion (index -> original type)
-  SmallVector<Value, 4> scfIVs;
+  SmallVector<Value> scfIVs;
   for (scf::ForOp forOp : forOps)
     scfIVs.push_back(forOp.getInductionVar());
   mapACCLoopIVsToSCFIVs(loopOp, scfIVs, nestBuilder, mapping);
@@ -246,7 +246,7 @@ scf::ParallelOp convertACCLoopToSCFParallel(LoopOp loopOp, OpBuilder &b) {
 
   Location loc = loopOp->getLoc();
 
-  SmallVector<Value, 4> lowerBounds, upperBounds, steps;
+  SmallVector<Value> lowerBounds, upperBounds, steps;
 
   // Normalize all loops: lb=0, step=1, ub=tripCount
   Value lb = arith::ConstantIndexOp::create(b, loc, 0);
