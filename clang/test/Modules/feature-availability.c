@@ -1,3 +1,4 @@
+// RUN: rm -rf %t
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fmodules %S/Inputs/feature-availability/module.modulemap -fmodule-name=Feature1 -emit-module -o %t/feature1.pcm
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fmodules %S/Inputs/feature-availability/module.modulemap -fmodule-name=Feature2 -fmodule-file=%t/feature1.pcm -emit-module -o %t/feature2.pcm
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fmodules -fmodule-file=%t/feature2.pcm -I %S/Inputs/feature-availability -emit-llvm -o - %s | FileCheck %s
