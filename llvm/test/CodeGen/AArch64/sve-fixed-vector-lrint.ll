@@ -1006,8 +1006,7 @@ define <1 x iXLen> @lrint_v1f64(<1 x double> %x) nounwind {
 ; CHECK-i64-LABEL: lrint_v1f64:
 ; CHECK-i64:       // %bb.0:
 ; CHECK-i64-NEXT:    frintx d0, d0
-; CHECK-i64-NEXT:    fcvtzs x8, d0
-; CHECK-i64-NEXT:    fmov d0, x8
+; CHECK-i64-NEXT:    fcvtzs d0, d0
 ; CHECK-i64-NEXT:    ret
   %a = call <1 x iXLen> @llvm.lrint.v1iXLen.v1f64(<1 x double> %x)
   ret <1 x iXLen> %a

@@ -1326,18 +1326,11 @@ define <1 x iXLen> @lrint_v1f64(<1 x double> %x) nounwind {
 ; CHECK-i32-NEXT:    fmov s0, w8
 ; CHECK-i32-NEXT:    ret
 ;
-; CHECK-i64-SD-LABEL: lrint_v1f64:
-; CHECK-i64-SD:       // %bb.0:
-; CHECK-i64-SD-NEXT:    frintx d0, d0
-; CHECK-i64-SD-NEXT:    fcvtzs x8, d0
-; CHECK-i64-SD-NEXT:    fmov d0, x8
-; CHECK-i64-SD-NEXT:    ret
-;
-; CHECK-i64-GI-LABEL: lrint_v1f64:
-; CHECK-i64-GI:       // %bb.0:
-; CHECK-i64-GI-NEXT:    frintx d0, d0
-; CHECK-i64-GI-NEXT:    fcvtzs d0, d0
-; CHECK-i64-GI-NEXT:    ret
+; CHECK-i64-LABEL: lrint_v1f64:
+; CHECK-i64:       // %bb.0:
+; CHECK-i64-NEXT:    frintx d0, d0
+; CHECK-i64-NEXT:    fcvtzs d0, d0
+; CHECK-i64-NEXT:    ret
   %a = call <1 x iXLen> @llvm.lrint.v1iXLen.v1f64(<1 x double> %x)
   ret <1 x iXLen> %a
 }

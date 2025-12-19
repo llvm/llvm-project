@@ -287,3 +287,197 @@ define double @llrint_i64_f64_simd(double %x)  {
   %bc  = bitcast i64 %val to double
   ret double %bc
 }
+
+;
+; Lround scalar_to_vector
+;
+
+define <1 x i64> @lround_i64_f16_scalar_to_vec(half %x)  {
+; CHECK-FPRCVT-LABEL: lround_i64_f16_scalar_to_vec:
+; CHECK-FPRCVT:       // %bb.0:
+; CHECK-FPRCVT-NEXT:    fcvtas d0, h0
+; CHECK-FPRCVT-NEXT:    ret
+;
+; CHECK-NOFPRCVT-LABEL: lround_i64_f16_scalar_to_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtas x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+  %val = call i64 @llvm.lround.i64.f16(half %x)
+  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @lround_i64_f32_scalar_to_vec(float %x)  {
+; CHECK-FPRCVT-LABEL: lround_i64_f32_scalar_to_vec:
+; CHECK-FPRCVT:       // %bb.0:
+; CHECK-FPRCVT-NEXT:    fcvtas d0, s0
+; CHECK-FPRCVT-NEXT:    ret
+;
+; CHECK-NOFPRCVT-LABEL: lround_i64_f32_scalar_to_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtas x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+  %val = call i64 @llvm.lround.i64.f32(float %x)
+  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @lround_i64_f64_scalar_to_vec(double %x)  {
+; CHECK-LABEL: lround_i64_f64_scalar_to_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtas d0, d0
+; CHECK-NEXT:    ret
+  %val = call i64 @llvm.lround.i64.f64(double %x)
+  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+;
+; Llround scalar_to_vector
+;
+
+define <1 x i64> @llround_i64_f16_scalar_to_vec(half %x)  {
+; CHECK-FPRCVT-LABEL: llround_i64_f16_scalar_to_vec:
+; CHECK-FPRCVT:       // %bb.0:
+; CHECK-FPRCVT-NEXT:    fcvtas d0, h0
+; CHECK-FPRCVT-NEXT:    ret
+;
+; CHECK-NOFPRCVT-LABEL: llround_i64_f16_scalar_to_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtas x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+  %val = call i64 @llvm.llround.i64.f16(half %x)
+  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @llround_i64_f32_scalar_to_vec(float %x)  {
+; CHECK-FPRCVT-LABEL: llround_i64_f32_scalar_to_vec:
+; CHECK-FPRCVT:       // %bb.0:
+; CHECK-FPRCVT-NEXT:    fcvtas d0, s0
+; CHECK-FPRCVT-NEXT:    ret
+;
+; CHECK-NOFPRCVT-LABEL: llround_i64_f32_scalar_to_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtas x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+  %val = call i64 @llvm.llround.i64.f32(float %x)
+  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @llround_i64_f64_scalar_to_vec(double %x)  {
+; CHECK-LABEL: llround_i64_f64_scalar_to_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtas d0, d0
+; CHECK-NEXT:    ret
+  %val = call i64 @llvm.llround.i64.f64(double %x)
+  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+;
+; Lrint scalar_to_vector
+;
+
+define <1 x i64> @lrint_i64_f16_scalar_to_vec(half %x)  {
+; CHECK-FPRCVT-LABEL: lrint_i64_f16_scalar_to_vec:
+; CHECK-FPRCVT:       // %bb.0:
+; CHECK-FPRCVT-NEXT:    frintx h0, h0
+; CHECK-FPRCVT-NEXT:    fcvtzs d0, h0
+; CHECK-FPRCVT-NEXT:    ret
+;
+; CHECK-NOFPRCVT-LABEL: lrint_i64_f16_scalar_to_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    frintx h0, h0
+; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+  %val = call i64 @llvm.lrint.i64.f16(half %x)
+  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @lrint_i64_f32_scalar_to_vec(float %x)  {
+; CHECK-FPRCVT-LABEL: lrint_i64_f32_scalar_to_vec:
+; CHECK-FPRCVT:       // %bb.0:
+; CHECK-FPRCVT-NEXT:    frintx s0, s0
+; CHECK-FPRCVT-NEXT:    fcvtzs d0, s0
+; CHECK-FPRCVT-NEXT:    ret
+;
+; CHECK-NOFPRCVT-LABEL: lrint_i64_f32_scalar_to_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    frintx s0, s0
+; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+  %val = call i64 @llvm.lrint.i64.f32(float %x)
+  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @lrint_i64_f64_scalar_to_vec(double %x)  {
+; CHECK-LABEL: lrint_i64_f64_scalar_to_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    frintx d0, d0
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    ret
+  %val = call i64 @llvm.lrint.i64.f64(double %x)
+  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+;
+; Llrint scalar_to_vector
+;
+
+define <1 x i64> @llrint_i64_f16_scalar_to_vec(half %x)  {
+; CHECK-FPRCVT-LABEL: llrint_i64_f16_scalar_to_vec:
+; CHECK-FPRCVT:       // %bb.0:
+; CHECK-FPRCVT-NEXT:    frintx h0, h0
+; CHECK-FPRCVT-NEXT:    fcvtzs d0, h0
+; CHECK-FPRCVT-NEXT:    ret
+;
+; CHECK-NOFPRCVT-LABEL: llrint_i64_f16_scalar_to_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    frintx h0, h0
+; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+  %val = call i64 @llvm.llrint.i64.f16(half %x)
+  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @llrint_i64_f32_scalar_to_vec(float %x)  {
+; CHECK-FPRCVT-LABEL: llrint_i64_f32_scalar_to_vec:
+; CHECK-FPRCVT:       // %bb.0:
+; CHECK-FPRCVT-NEXT:    frintx s0, s0
+; CHECK-FPRCVT-NEXT:    fcvtzs d0, s0
+; CHECK-FPRCVT-NEXT:    ret
+;
+; CHECK-NOFPRCVT-LABEL: llrint_i64_f32_scalar_to_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    frintx s0, s0
+; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+  %val = call i64 @llvm.llrint.i64.f32(float %x)
+  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @llrint_i64_f64_scalar_to_vec(double %x)  {
+; CHECK-LABEL: llrint_i64_f64_scalar_to_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    frintx d0, d0
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    ret
+  %val = call i64 @llvm.llrint.i64.f64(double %x)
+  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  ret <1 x i64> %vec
+}

@@ -284,3 +284,197 @@ define double @llrint_i64_f64_simd_exp(double %x)  {
   %bc  = bitcast i64 %val to double
   ret double %bc
 }
+
+;
+; Lround scalar_to_vector strictfp
+;
+
+define <1 x i64> @lround_i64_f16_scalar_to_vec_exp(half %x)  {
+; CHECK-FPRCVT-LABEL: lround_i64_f16_scalar_to_vec_exp:
+; CHECK-FPRCVT:       // %bb.0:
+; CHECK-FPRCVT-NEXT:    fcvtas d0, h0
+; CHECK-FPRCVT-NEXT:    ret
+;
+; CHECK-NOFPRCVT-LABEL: lround_i64_f16_scalar_to_vec_exp:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtas x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+  %val = call i64 @llvm.experimental.constrained.lround.i64.f16(half %x, metadata !"fpexcept.strict")
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @lround_i64_f32_scalar_to_vec_exp(float %x)  {
+; CHECK-FPRCVT-LABEL: lround_i64_f32_scalar_to_vec_exp:
+; CHECK-FPRCVT:       // %bb.0:
+; CHECK-FPRCVT-NEXT:    fcvtas d0, s0
+; CHECK-FPRCVT-NEXT:    ret
+;
+; CHECK-NOFPRCVT-LABEL: lround_i64_f32_scalar_to_vec_exp:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtas x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+  %val = call i64 @llvm.experimental.constrained.lround.i64.f32(float %x, metadata !"fpexcept.strict")
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @lround_i64_f64_scalar_to_vec_exp(double %x)  {
+; CHECK-LABEL: lround_i64_f64_scalar_to_vec_exp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtas d0, d0
+; CHECK-NEXT:    ret
+  %val = call i64 @llvm.experimental.constrained.lround.i64.f64(double %x, metadata !"fpexcept.strict")
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+;
+; Llround scalar_to_vector strictfp
+;
+
+define <1 x i64> @llround_i64_f16_scalar_to_vec_exp(half %x)  {
+; CHECK-FPRCVT-LABEL: llround_i64_f16_scalar_to_vec_exp:
+; CHECK-FPRCVT:       // %bb.0:
+; CHECK-FPRCVT-NEXT:    fcvtas d0, h0
+; CHECK-FPRCVT-NEXT:    ret
+;
+; CHECK-NOFPRCVT-LABEL: llround_i64_f16_scalar_to_vec_exp:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtas x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+  %val = call i64 @llvm.experimental.constrained.llround.i64.f16(half %x, metadata !"fpexcept.strict")
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @llround_i64_f32_scalar_to_vec_exp(float %x)  {
+; CHECK-FPRCVT-LABEL: llround_i64_f32_scalar_to_vec_exp:
+; CHECK-FPRCVT:       // %bb.0:
+; CHECK-FPRCVT-NEXT:    fcvtas d0, s0
+; CHECK-FPRCVT-NEXT:    ret
+;
+; CHECK-NOFPRCVT-LABEL: llround_i64_f32_scalar_to_vec_exp:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtas x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+  %val = call i64 @llvm.experimental.constrained.llround.i64.f32(float %x, metadata !"fpexcept.strict")
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @llround_i64_f64_scalar_to_vec_exp(double %x)  {
+; CHECK-LABEL: llround_i64_f64_scalar_to_vec_exp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtas d0, d0
+; CHECK-NEXT:    ret
+  %val = call i64 @llvm.experimental.constrained.llround.i64.f64(double %x, metadata !"fpexcept.strict")
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+;
+; Lrint scalar_to_vector strictfp
+;
+
+define <1 x i64> @lrint_i64_f16_scalar_to_vec_exp(half %x)  {
+; CHECK-FPRCVT-LABEL: lrint_i64_f16_scalar_to_vec_exp:
+; CHECK-FPRCVT:       // %bb.0:
+; CHECK-FPRCVT-NEXT:    frintx h0, h0
+; CHECK-FPRCVT-NEXT:    fcvtzs d0, h0
+; CHECK-FPRCVT-NEXT:    ret
+;
+; CHECK-NOFPRCVT-LABEL: lrint_i64_f16_scalar_to_vec_exp:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    frintx h0, h0
+; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+  %val = call i64 @llvm.experimental.constrained.lrint.i53.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @lrint_i64_f32_scalar_to_vec_exp(float %x)  {
+; CHECK-FPRCVT-LABEL: lrint_i64_f32_scalar_to_vec_exp:
+; CHECK-FPRCVT:       // %bb.0:
+; CHECK-FPRCVT-NEXT:    frintx s0, s0
+; CHECK-FPRCVT-NEXT:    fcvtzs d0, s0
+; CHECK-FPRCVT-NEXT:    ret
+;
+; CHECK-NOFPRCVT-LABEL: lrint_i64_f32_scalar_to_vec_exp:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    frintx s0, s0
+; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+  %val = call i64 @llvm.experimental.constrained.lrint.i64.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @lrint_i64_f64_scalar_to_vec_exp(double %x)  {
+; CHECK-LABEL: lrint_i64_f64_scalar_to_vec_exp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    frintx d0, d0
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    ret
+  %val = call i64 @llvm.experimental.constrained.lrint.i64.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+;
+; Llrint scalar_to_vector strictfp
+;
+
+define <1 x i64> @llrint_i64_f16_scalar_to_vec_exp(half %x)  {
+; CHECK-FPRCVT-LABEL: llrint_i64_f16_scalar_to_vec_exp:
+; CHECK-FPRCVT:       // %bb.0:
+; CHECK-FPRCVT-NEXT:    frintx h0, h0
+; CHECK-FPRCVT-NEXT:    fcvtzs d0, h0
+; CHECK-FPRCVT-NEXT:    ret
+;
+; CHECK-NOFPRCVT-LABEL: llrint_i64_f16_scalar_to_vec_exp:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    frintx h0, h0
+; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+  %val = call i64 @llvm.experimental.constrained.llrint.i64.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @llrint_i64_f32_scalar_to_vec_exp(float %x)  {
+; CHECK-FPRCVT-LABEL: llrint_i64_f32_scalar_to_vec_exp:
+; CHECK-FPRCVT:       // %bb.0:
+; CHECK-FPRCVT-NEXT:    frintx s0, s0
+; CHECK-FPRCVT-NEXT:    fcvtzs d0, s0
+; CHECK-FPRCVT-NEXT:    ret
+;
+; CHECK-NOFPRCVT-LABEL: llrint_i64_f32_scalar_to_vec_exp:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    frintx s0, s0
+; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+  %val = call i64 @llvm.experimental.constrained.llrint.i64.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @llrint_i64_f64_scalar_to_vec_exp(double %x)  {
+; CHECK-LABEL: llrint_i64_f64_scalar_to_vec_exp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    frintx d0, d0
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    ret
+  %val = call i64 @llvm.experimental.constrained.llrint.i64.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
+  ret <1 x i64> %vec
+}

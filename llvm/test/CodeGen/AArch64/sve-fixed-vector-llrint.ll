@@ -542,8 +542,7 @@ define <1 x i64> @llrint_v1i64_v1f64(<1 x double> %x) nounwind {
 ; CHECK-LABEL: llrint_v1i64_v1f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    frintx d0, d0
-; CHECK-NEXT:    fcvtzs x8, d0
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    fcvtzs d0, d0
 ; CHECK-NEXT:    ret
   %a = call <1 x i64> @llvm.llrint.v1i64.v1f64(<1 x double> %x)
   ret <1 x i64> %a
