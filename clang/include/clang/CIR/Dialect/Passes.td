@@ -164,12 +164,14 @@ def LoweringPrepare : Pass<"cir-lowering-prepare"> {
 def LibOpt : Pass<"cir-lib-opt"> {
   let summary = "Optimize C/C++ library calls";
   let description = [{
-    By using higher level information from `cir-idiom-recognize`, this pass
-    apply transformations to CIR based on specific C/C++ library semantics.
+    This pass applies transformations on C/C++ standard library idioms,
+    such as library function calls and structs raised to CIR operations
+     using the `cir-idiom-recognize` pass.
 
     Transformations done by this pass can be inspected by users by using
     remarks. Currently supported are `all` and `transforms`.
   }];
+
   let constructor = "mlir::createLibOptPass()";
   let dependentDialects = ["cir::CIRDialect"];
 

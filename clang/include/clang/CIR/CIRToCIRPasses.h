@@ -29,12 +29,10 @@ class ModuleOp;
 namespace cir {
 
 // Run set of cleanup/prepare/etc passes CIR <-> CIR.
-mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
-                                      mlir::MLIRContext &mlirCtx,
-                                      clang::ASTContext &astCtx,
-                                      bool enableVerifier,
-                                      bool enableCIRSimplify,
-                                      llvm::StringRef libOptOptions);
+mlir::LogicalResult
+runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirCtx,
+                  clang::ASTContext &astCtx, bool enableVerifier,
+                  bool enableCIRSimplify, llvm::StringRef libOptOptions);
 
 } // namespace cir
 

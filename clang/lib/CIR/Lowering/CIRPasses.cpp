@@ -17,12 +17,10 @@
 #include "llvm/Support/TimeProfiler.h"
 
 namespace cir {
-mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
-                                      mlir::MLIRContext &mlirContext,
-                                      clang::ASTContext &astContext,
-                                      bool enableVerifier,
-                                      bool enableCIRSimplify,
-                                      llvm::StringRef libOptOptions) {
+mlir::LogicalResult
+runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
+                  clang::ASTContext &astContext, bool enableVerifier,
+                  bool enableCIRSimplify, llvm::StringRef libOptOptions) {
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
 

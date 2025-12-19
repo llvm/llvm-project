@@ -61,7 +61,7 @@ struct LibOptPass : public impl::LibOptBase<LibOptPass> {
       if (isOptionsParsed)
         return;
 
-      for (const llvm::StringRef &remark : pass.remarksList)
+      for (const llvm::StringRef remark : pass.remarksList)
         parseOption(remark);
 
       isOptionsParsed = true;

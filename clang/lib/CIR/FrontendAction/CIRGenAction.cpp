@@ -113,7 +113,6 @@ public:
     mlir::ModuleOp MlirModule = Gen->getModule();
     mlir::MLIRContext &MlirCtx = Gen->getMLIRContext();
 
-
     if (!FEOptions.ClangIRDisablePasses) {
       std::string libOptOptions = FEOptions.clangIRLibOptOptions;
 
