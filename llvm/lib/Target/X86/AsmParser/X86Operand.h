@@ -506,6 +506,18 @@ struct X86Operand final : public MCParsedAsmOperand {
     return isMemOffs() && Mem.ModeSize == 64 && (!Mem.Size || Mem.Size == 64);
   }
 
+  // Returns true only for a moffset that requires *more than* 32 bits.
+  bool isMemConstOffs64() const {
+    if (!isMemOffs() || Mem.ModeSize != 64)
+      return false;
+
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getMemDisp());
+    if (!CE)
+      return false;
+
+    return !isInt<32>(CE->getValue());
+  }
+
   bool isPrefix() const { return Kind == Prefix; }
   bool isReg() const override { return Kind == Register; }
   bool isDXReg() const { return Kind == DXRegister; }
