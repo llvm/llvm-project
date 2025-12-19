@@ -64,6 +64,8 @@ public:
   deserialize(const unsigned char *&);
   /// Build data access profile summary from \p DataAccessProfile.
   /// The pointer is not owned.
+  /// TODO: Remove this function after the data access profile summary is
+  /// serialized.
   LLVM_ABI void
   buildDataAccessSummary(const DataAccessProfData &DataAccessProfile);
 };
