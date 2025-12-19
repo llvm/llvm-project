@@ -1,0 +1,120 @@
+# REQUIRES: x86-registered-target
+
+# RUN: echo -n 12345678 > %t.data
+
+# RUN echo "" > %t.log
+
+# This test is attempting to trigger symbol table corruption
+# when calling the --update-section flag. We will sequentially
+# generate object files with section_0, section_1, ..., and section_N.
+#
+# Next, we will use llvm-objcopy to update the section data with
+# the --update-section flag, specifying the new data for each section.
+#
+# Finally, we will run llvm-readelf on the resulting object file
+# to check for any errors or warnings. If the symbol table has been corrupted,
+# llvm-readelf should emit a warning message indicating that
+# the extended symbol index is past the end of the SHT_SYMTAB_SHNDX section,
+# which has a size of 0.
+#
+# Our goal is to ensure that llvm-readelf does not emit this error or warning,
+# thus validating that our use of the --update-section flag has not caused any
+# issues with the symbol table.
+# There are a lot of running objcopy commands, because is you dont run this test
+# under sanitizers, then it may not emit any error in smaller test-cases.
+
+# RUN: %python %s 01 %t.yaml %t.objcopy_cmds %t.data; yaml2obj %t.yaml -o %t.o
+# RUN: llvm-objcopy %t.o @%t.objcopy_cmds
+# RUN: llvm-readobj -S -s %t.o 2>&1 >> %t.log
+# RUN: %python %s 02 %t.yaml %t.objcopy_cmds %t.data; yaml2obj %t.yaml -o %t.o
+# RUN: llvm-objcopy %t.o @%t.objcopy_cmds
+# RUN: llvm-readobj -S -s %t.o 2>&1 >> %t.log
+# RUN: %python %s 03 %t.yaml %t.objcopy_cmds %t.data; yaml2obj %t.yaml -o %t.o
+# RUN: llvm-objcopy %t.o @%t.objcopy_cmds
+# RUN: llvm-readobj -S -s %t.o 2>&1 >> %t.log
+# RUN: %python %s 04 %t.yaml %t.objcopy_cmds %t.data; yaml2obj %t.yaml -o %t.o
+# RUN: llvm-objcopy %t.o @%t.objcopy_cmds
+# RUN: llvm-readobj -S -s %t.o 2>&1 >> %t.log
+# RUN: %python %s 05 %t.yaml %t.objcopy_cmds %t.data; yaml2obj %t.yaml -o %t.o
+# RUN: llvm-objcopy %t.o @%t.objcopy_cmds
+# RUN: llvm-readobj -S -s %t.o 2>&1 >> %t.log
+# RUN: %python %s 06 %t.yaml %t.objcopy_cmds %t.data; yaml2obj %t.yaml -o %t.o
+# RUN: llvm-objcopy %t.o @%t.objcopy_cmds
+# RUN: llvm-readobj -S -s %t.o 2>&1 >> %t.log
+# RUN: %python %s 07 %t.yaml %t.objcopy_cmds %t.data; yaml2obj %t.yaml -o %t.o
+# RUN: llvm-objcopy %t.o @%t.objcopy_cmds
+# RUN: llvm-readobj -S -s %t.o 2>&1 >> %t.log
+# RUN: %python %s 08 %t.yaml %t.objcopy_cmds %t.data; yaml2obj %t.yaml -o %t.o
+# RUN: llvm-objcopy %t.o @%t.objcopy_cmds
+# RUN: llvm-readobj -S -s %t.o 2>&1 >> %t.log
+# RUN: %python %s 09 %t.yaml %t.objcopy_cmds %t.data; yaml2obj %t.yaml -o %t.o
+# RUN: llvm-objcopy %t.o @%t.objcopy_cmds
+# RUN: llvm-readobj -S -s %t.o 2>&1 >> %t.log
+# RUN: %python %s 10 %t.yaml %t.objcopy_cmds %t.data; yaml2obj %t.yaml -o %t.o
+# RUN: llvm-objcopy %t.o @%t.objcopy_cmds
+# RUN: llvm-readobj -S -s %t.o 2>&1 >> %t.log
+# RUN: %python %s 11 %t.yaml %t.objcopy_cmds %t.data; yaml2obj %t.yaml -o %t.o
+# RUN: llvm-objcopy %t.o @%t.objcopy_cmds
+# RUN: llvm-readobj -S -s %t.o 2>&1 >> %t.log
+# RUN: %python %s 12 %t.yaml %t.objcopy_cmds %t.data; yaml2obj %t.yaml -o %t.o
+# RUN: llvm-objcopy %t.o @%t.objcopy_cmds
+# RUN: llvm-readobj -S -s %t.o 2>&1 >> %t.log
+# RUN: %python %s 13 %t.yaml %t.objcopy_cmds %t.data; yaml2obj %t.yaml -o %t.o
+# RUN: llvm-objcopy %t.o @%t.objcopy_cmds
+# RUN: llvm-readobj -S -s %t.o 2>&1 >> %t.log
+# RUN: %python %s 14 %t.yaml %t.objcopy_cmds %t.data; yaml2obj %t.yaml -o %t.o
+# RUN: llvm-objcopy %t.o @%t.objcopy_cmds
+# RUN: llvm-readobj -S -s %t.o 2>&1 >> %t.log
+# RUN: %python %s 15 %t.yaml %t.objcopy_cmds %t.data; yaml2obj %t.yaml -o %t.o
+# RUN: llvm-objcopy %t.o @%t.objcopy_cmds
+# RUN: llvm-readobj -S -s %t.o 2>&1 >> %t.log
+# RUN: %python %s 16 %t.yaml %t.objcopy_cmds %t.data; yaml2obj %t.yaml -o %t.o
+# RUN: llvm-objcopy %t.o @%t.objcopy_cmds
+# RUN: llvm-readobj -S -s %t.o 2>&1 >> %t.log
+
+# RUN: not grep -E 'warning.*extended symbol index' %t.log
+
+
+import sys
+
+templ="""
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:{}
+Symbols:{}
+""".strip()
+
+templ_sec="""
+  - Name: .section_{0}
+    Type: SHT_PROGBITS
+    Size: 0x100
+""".rstrip()
+
+sym_templ="""
+  - Name: sym{0}
+    Type: STT_FUNC
+    Value: 0x1
+    Section: .section_{0}
+""".rstrip()
+
+total_sections = int(sys.argv[1])
+output_yaml_file = sys.argv[2]
+output_objcopy_commands_file = sys.argv[3]
+file_with_data = sys.argv[4]
+
+sections=""
+symbols=""
+for i in range(total_sections):
+    suffix = str(i)
+    sections += templ_sec.format(suffix)
+    symbols += sym_templ.format(suffix)
+
+with open(output_yaml_file, 'wt') as f:
+    print(templ.format(sections, symbols), file=f)
+
+with open(output_objcopy_commands_file, 'wt') as f:
+    cmds = ' '.join([f'--update-section=.section_{i}={file_with_data}' for i in range(total_sections)])
+    f.write(cmds)
