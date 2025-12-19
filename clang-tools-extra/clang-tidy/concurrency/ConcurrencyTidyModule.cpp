@@ -14,6 +14,7 @@
 
 namespace clang::tidy {
 namespace concurrency {
+namespace {
 
 class ConcurrencyModule : public ClangTidyModule {
 public:
@@ -25,6 +26,7 @@ public:
   }
 };
 
+} // namespace
 } // namespace concurrency
 
 // Register the ConcurrencyTidyModule using this statically initialized

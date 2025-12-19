@@ -12,14 +12,9 @@
 namespace clang::tidy {
 namespace custom {
 
-class CustomModule : public ClangTidyModule {
-public:
-  void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {}
-};
-
 // We need to register the checks more flexibly than builtin modules. The checks
 // will changed dynamically when switching to different source file.
-extern void registerCustomChecks(const ClangTidyOptions &Options,
+static void registerCustomChecks(const ClangTidyOptions &Options,
                                  ClangTidyCheckFactories &Factories) {
   static llvm::SmallSet<llvm::SmallString<32>, 8> CustomCheckNames{};
   if (!Options.CustomChecks.has_value() || Options.CustomChecks->empty())
@@ -38,11 +33,20 @@ extern void registerCustomChecks(const ClangTidyOptions &Options,
   }
 }
 
+namespace {
+
 struct CustomChecksRegisterInitializer {
   CustomChecksRegisterInitializer() noexcept {
     RegisterCustomChecks = &custom::registerCustomChecks;
   }
 };
+
+class CustomModule : public ClangTidyModule {
+public:
+  void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {}
+};
+
+} // namespace
 
 static CustomChecksRegisterInitializer Init{};
 

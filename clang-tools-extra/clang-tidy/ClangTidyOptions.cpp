@@ -66,6 +66,8 @@ template <> struct MappingTraits<ClangTidyOptions::StringPair> {
   }
 };
 
+namespace {
+
 struct NOptionMap {
   NOptionMap(IO &) {}
   NOptionMap(IO &, const ClangTidyOptions::OptionMap &OptionMap) {
@@ -82,6 +84,8 @@ struct NOptionMap {
   }
   std::vector<ClangTidyOptions::StringPair> Options;
 };
+
+} // namespace
 
 template <>
 void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
@@ -176,10 +180,14 @@ template <> struct MappingTraits<ClangTidyOptions::CustomCheckValue> {
   }
 };
 
+namespace {
+
 struct GlobListVariant {
   std::optional<std::string> AsString;
   std::optional<std::vector<std::string>> AsVector;
 };
+
+} // namespace
 
 template <>
 void yamlize(IO &IO, GlobListVariant &Val, bool, EmptyContext &Ctx) {

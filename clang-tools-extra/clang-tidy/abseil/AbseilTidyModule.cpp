@@ -32,6 +32,7 @@
 
 namespace clang::tidy {
 namespace abseil {
+namespace {
 
 class AbseilModule : public ClangTidyModule {
 public:
@@ -74,6 +75,8 @@ public:
         "abseil-upgrade-duration-conversions");
   }
 };
+
+} // namespace
 
 // Register the AbseilModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<AbseilModule> X("abseil-module",

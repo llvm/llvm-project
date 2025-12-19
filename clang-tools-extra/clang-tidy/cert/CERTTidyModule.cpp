@@ -232,6 +232,7 @@ const llvm::StringRef CertErr33CCheckedFunctions = "^::aligned_alloc$;"
 
 namespace clang::tidy {
 namespace cert {
+namespace {
 
 class CERTModule : public ClangTidyModule {
 public:
@@ -360,6 +361,7 @@ public:
   }
 };
 
+} // namespace
 } // namespace cert
 
 // Register the MiscTidyModule using this statically initialized variable.

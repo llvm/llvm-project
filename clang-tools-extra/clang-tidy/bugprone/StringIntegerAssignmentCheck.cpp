@@ -40,6 +40,8 @@ void StringIntegerAssignmentCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
+namespace {
+
 class CharExpressionDetector {
 public:
   CharExpressionDetector(QualType CharType, const ASTContext &Ctx)
@@ -123,6 +125,8 @@ private:
   const QualType CharType;
   const ASTContext &Ctx;
 };
+
+} // namespace
 
 void StringIntegerAssignmentCheck::check(
     const MatchFinder::MatchResult &Result) {
