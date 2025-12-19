@@ -1272,7 +1272,8 @@ def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
     auto [id, args] = NVVM::BarrierOp::getIntrinsicIDAndArgs(
                         *op, moduleTranslation, builder);
     if ($reductionOp)
-      $res = createIntrinsicCall(builder, id, args);
+      $res = builder.CreateZExt(createIntrinsicCall(builder, id, args),
+                                builder.getInt32Ty());
     else 
       createIntrinsicCall(builder, id, args);
   }];
