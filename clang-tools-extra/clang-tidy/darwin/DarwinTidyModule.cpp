@@ -14,6 +14,7 @@
 
 namespace clang::tidy {
 namespace darwin {
+namespace {
 
 class DarwinModule : public ClangTidyModule {
 public:
@@ -24,6 +25,7 @@ public:
   }
 };
 
+} // namespace
 } // namespace darwin
 
 // Register the DarwinTidyModule using this statically initialized variable.
