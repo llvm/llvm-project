@@ -632,7 +632,7 @@ bool TokenLexer::Lex(Token &Tok) {
     //
     // The 'extern' token should has 'StartOfLine' flag when current TokenLexer
     // exits and propagate line start/leading space info.
-    if (isLexingCXXModuleDirective()) {
+    if (!Macro && isLexingCXXModuleDirective()) {
       AtStartOfLine = true;
       setLexingCXXModuleDirective(false);
     }
