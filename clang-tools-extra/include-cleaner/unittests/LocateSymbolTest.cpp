@@ -43,10 +43,12 @@ private:
   TestAST AST;
 
 public:
-  LocateExample(llvm::StringRef AnnotatedCode)
-      : Target(AnnotatedCode), AST([this] {
+  LocateExample(llvm::StringRef AnnotatedCode,
+                std::vector<const char *> ExtraArgs = {"-std=c++17"})
+      : Target(AnnotatedCode), AST([&] {
           TestInputs Inputs(Target.code());
-          Inputs.ExtraArgs.push_back("-std=c++17");
+          for (auto Arg : ExtraArgs)
+            Inputs.ExtraArgs.push_back(Arg);
           return Inputs;
         }()) {}
 
@@ -126,9 +128,10 @@ TEST(LocateSymbol, Stdlib) {
         ElementsAre(*tooling::stdlib::Symbol::named("std::", "vector")));
   }
   {
-    LocateExample Test("#define assert(x)\nvoid foo() { assert(true); }");
+    LocateExample Test("#define ^assert(x)\nvoid foo() { assert(true); }");
     EXPECT_THAT(locateSymbol(Test.findMacro("assert"), Test.langOpts()),
-                ElementsAre(*tooling::stdlib::Symbol::named("", "assert")));
+                ElementsAre(Test.points().front(),
+                            *tooling::stdlib::Symbol::named("", "assert")));
   }
 }
 
@@ -137,6 +140,14 @@ TEST(LocateSymbol, Macros) {
   LocateExample Test("#define FOO\n#undef FOO\n#define ^FOO");
   EXPECT_THAT(locateSymbol(Test.findMacro("FOO"), Test.langOpts()),
               ElementsAreArray(Test.points()));
+}
+
+TEST(LocateSymbol, MacroI_C) {
+  LocateExample Test("#define ^I 42", {"-x", "c", "-std=c99"});
+  EXPECT_THAT(locateSymbol(Test.findMacro("I"), Test.langOpts()),
+              ElementsAre(Test.points().front(),
+                          *tooling::stdlib::Symbol::named(
+                              "", "I", tooling::stdlib::Lang::C)));
 }
 
 MATCHER_P2(HintedSymbol, Symbol, Hint, "") {
