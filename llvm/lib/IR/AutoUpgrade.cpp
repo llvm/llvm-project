@@ -1538,6 +1538,19 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                                                     {F->getReturnType()});
           return true;
         }
+      } else if (F->arg_size() == 2) {
+        Intrinsic::ID IID =
+            StringSwitch<Intrinsic::ID>(Name)
+                .Cases({"max.s", "max.i", "max.ll"}, Intrinsic::smax)
+                .Cases({"min.s", "min.i", "min.ll"}, Intrinsic::smin)
+                .Cases({"max.us", "max.ui", "max.ull"}, Intrinsic::umax)
+                .Cases({"min.us", "min.ui", "min.ull"}, Intrinsic::umin)
+                .Default(Intrinsic::not_intrinsic);
+        if (IID != Intrinsic::not_intrinsic) {
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                    {F->getReturnType()});
+          return true;
+        }
       }
 
       // Check for nvvm intrinsics that need a return type adjustment.
@@ -1581,10 +1594,6 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         // nvvm.ex2.approx.{f,ftz.f,d,f16x2}
         Expand =
             Name == "f" || Name == "ftz.f" || Name == "d" || Name == "f16x2";
-      else if (Name.consume_front("max.") || Name.consume_front("min."))
-        // nvvm.{min,max}.{i,ii,ui,ull}
-        Expand = Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
-                 Name == "ui" || Name == "ull";
       else if (Name.consume_front("atomic.load."))
         // nvvm.atomic.load.add.{f32,f64}.p
         // nvvm.atomic.load.{inc,dec}.32.p
@@ -2649,24 +2658,6 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
                                                   : AtomicRMWInst::UDecWrap;
     Rep = Builder.CreateAtomicRMW(Op, Ptr, Val, MaybeAlign(),
                                   AtomicOrdering::SequentiallyConsistent);
-  } else if (Name.consume_front("max.") &&
-             (Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
-              Name == "ui" || Name == "ull")) {
-    Value *Arg0 = CI->getArgOperand(0);
-    Value *Arg1 = CI->getArgOperand(1);
-    Value *Cmp = Name.starts_with("u")
-                     ? Builder.CreateICmpUGE(Arg0, Arg1, "max.cond")
-                     : Builder.CreateICmpSGE(Arg0, Arg1, "max.cond");
-    Rep = Builder.CreateSelect(Cmp, Arg0, Arg1, "max");
-  } else if (Name.consume_front("min.") &&
-             (Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
-              Name == "ui" || Name == "ull")) {
-    Value *Arg0 = CI->getArgOperand(0);
-    Value *Arg1 = CI->getArgOperand(1);
-    Value *Cmp = Name.starts_with("u")
-                     ? Builder.CreateICmpULE(Arg0, Arg1, "min.cond")
-                     : Builder.CreateICmpSLE(Arg0, Arg1, "min.cond");
-    Rep = Builder.CreateSelect(Cmp, Arg0, Arg1, "min");
   } else if (Name == "clz.ll") {
     // llvm.nvvm.clz.ll returns an i32, but llvm.ctlz.i64 returns an i64.
     Value *Arg = CI->getArgOperand(0);
