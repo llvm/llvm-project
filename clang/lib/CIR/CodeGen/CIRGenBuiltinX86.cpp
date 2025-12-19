@@ -25,8 +25,8 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/Sequence.h"
-#include <string>
 #include "llvm/Support/ErrorHandling.h"
+#include <string>
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -264,11 +264,12 @@ static mlir::Value emitX86MaskTest(CIRGenBuilderTy &builder, mlir::Location loc,
                              mlir::ValueRange{lhsVec, rhsVec});
 }
 
-// TODO: The cgf parameter should be removed when all the NYI cases are implemented.
-static std::optional<mlir::Value> emitX86MaskedCompareResult(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
-                                              mlir::Value cmp, unsigned numElts,
-                                              mlir::Value maskIn,
-                                              mlir::Location loc) {
+// TODO: The cgf parameter should be removed when all the NYI cases are
+// implemented.
+static std::optional<mlir::Value>
+emitX86MaskedCompareResult(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
+                           mlir::Value cmp, unsigned numElts,
+                           mlir::Value maskIn, mlir::Location loc) {
   if (maskIn) {
     cgf.cgm.errorNYI(loc, "emitX86MaskedCompareResult");
     return {};
@@ -286,15 +287,15 @@ static std::optional<mlir::Value> emitX86MaskedCompareResult(CIRGenFunction &cgf
     mlir::Value nullVec = builder.getNullValue(cmp.getType(), loc);
     cmp = builder.createVecShuffle(loc, cmp, nullVec, indices);
   }
-  return builder.createBitcast(
-      cmp, builder.getUIntNTy(std::max(numElts, 8U)));
+  return builder.createBitcast(cmp, builder.getUIntNTy(std::max(numElts, 8U)));
 }
 
-// TODO: The cgf parameter should be removed when all the NYI cases are implemented.
-static std::optional<mlir::Value> emitX86MaskedCompare(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
-                                        unsigned cc, bool isSigned,
-                                        ArrayRef<mlir::Value> ops,
-                                        mlir::Location loc) {
+// TODO: The cgf parameter should be removed when all the NYI cases are
+// implemented.
+static std::optional<mlir::Value>
+emitX86MaskedCompare(CIRGenFunction &cgf, CIRGenBuilderTy &builder, unsigned cc,
+                     bool isSigned, ArrayRef<mlir::Value> ops,
+                     mlir::Location loc) {
   assert((ops.size() == 2 || ops.size() == 4) &&
          "Unexpected number of arguments");
   unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getSize();
@@ -332,8 +333,7 @@ static std::optional<mlir::Value> emitX86MaskedCompare(CIRGenFunction &cgf, CIRG
     }
 
     auto resultTy = cir::VectorType::get(builder.getSIntNTy(1), numElts);
-    cmp = cir::VecCmpOp::create(builder, loc, resultTy, pred, ops[0],
-                                ops[1]);
+    cmp = cir::VecCmpOp::create(builder, loc, resultTy, pred, ops[0], ops[1]);
   }
 
   mlir::Value maskIn;
@@ -343,17 +343,20 @@ static std::optional<mlir::Value> emitX86MaskedCompare(CIRGenFunction &cgf, CIRG
   return emitX86MaskedCompareResult(cgf, builder, cmp, numElts, maskIn, loc);
 }
 
-// TODO: The cgf parameter should be removed when all the NYI cases are implemented.
-static std::optional<mlir::Value> emitX86ConvertToMask(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
-                                        mlir::Value in, mlir::Location loc) {
+// TODO: The cgf parameter should be removed when all the NYI cases are
+// implemented.
+static std::optional<mlir::Value> emitX86ConvertToMask(CIRGenFunction &cgf,
+                                                       CIRGenBuilderTy &builder,
+                                                       mlir::Value in,
+                                                       mlir::Location loc) {
   cir::ConstantOp zero = builder.getNullValue(in.getType(), loc);
   return emitX86MaskedCompare(cgf, builder, 1, true, {in, zero}, loc);
 }
 
-
 static std::optional<mlir::Value> emitX86SExtMask(CIRGenBuilderTy &builder,
-                                  mlir::Value op,
-                                  mlir::Type dstTy, mlir::Location loc) {
+                                                  mlir::Value op,
+                                                  mlir::Type dstTy,
+                                                  mlir::Location loc) {
   unsigned numberOfElements = cast<cir::VectorType>(dstTy).getSize();
   mlir::Value mask = getMaskVecValue(builder, loc, op, numberOfElements);
 
@@ -756,8 +759,8 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_storess128_mask:
   case X86::BI__builtin_ia32_storesd128_mask:
     cgm.errorNYI(expr->getSourceRange(),
-                std::string("unimplemented x86 builtin call: ") + 
-                getContext().BuiltinInfo.getName(builtinID));
+                 std::string("unimplemented x86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
   case X86::BI__builtin_ia32_cvtmask2b128:
   case X86::BI__builtin_ia32_cvtmask2b256:
@@ -771,9 +774,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_cvtmask2q128:
   case X86::BI__builtin_ia32_cvtmask2q256:
   case X86::BI__builtin_ia32_cvtmask2q512:
-    return emitX86SExtMask(this->getBuilder(), 
-                          ops[0], convertType(expr->getType()),
-                          getLoc(expr->getExprLoc()));
+    return emitX86SExtMask(this->getBuilder(), ops[0],
+                           convertType(expr->getType()),
+                           getLoc(expr->getExprLoc()));
   case X86::BI__builtin_ia32_cvtb2mask128:
   case X86::BI__builtin_ia32_cvtb2mask256:
   case X86::BI__builtin_ia32_cvtb2mask512:
@@ -786,8 +789,8 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_cvtq2mask128:
   case X86::BI__builtin_ia32_cvtq2mask256:
   case X86::BI__builtin_ia32_cvtq2mask512:
-    return emitX86ConvertToMask(*this, this->getBuilder(),
-                               ops[0], getLoc(expr->getExprLoc()));
+    return emitX86ConvertToMask(*this, this->getBuilder(), ops[0],
+                                getLoc(expr->getExprLoc()));
   case X86::BI__builtin_ia32_cvtdq2ps512_mask:
   case X86::BI__builtin_ia32_cvtqq2ps512_mask:
   case X86::BI__builtin_ia32_cvtqq2pd512_mask:
