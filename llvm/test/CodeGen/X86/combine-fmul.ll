@@ -13,9 +13,9 @@ define <4 x double> @concat_fmul_self_v4f64_v2f64(<2 x double> %a0, <2 x double>
 ;
 ; AVX-LABEL: concat_fmul_self_v4f64_v2f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmulpd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vmulpd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX-NEXT:    vmulpd %ymm0, %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %v0 = fmul <2 x double> %a0, %a0
   %v1 = fmul <2 x double> %a1, %a1
@@ -32,9 +32,9 @@ define <8 x float> @concat_fmul_self_v8f32_v4f32(<4 x float> %a0, <4 x float> %a
 ;
 ; AVX-LABEL: concat_fmul_self_v8f32_v4f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmulps %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vmulps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX-NEXT:    vmulps %ymm0, %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %v0 = fmul <4 x float> %a0, %a0
   %v1 = fmul <4 x float> %a1, %a1
@@ -53,23 +53,22 @@ define <8 x double> @concat_fmul_self_v8f64_v2f64(<2 x double> %a0, <2 x double>
 ;
 ; AVX1OR2-LABEL: concat_fmul_self_v8f64_v2f64:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vmulpd %xmm0, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vmulpd %xmm1, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vmulpd %xmm2, %xmm2, %xmm2
-; AVX1OR2-NEXT:    vmulpd %xmm3, %xmm3, %xmm3
+; AVX1OR2-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX1OR2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX1OR2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm0, %ymm0
 ; AVX1OR2-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm1
+; AVX1OR2-NEXT:    vmulpd %ymm1, %ymm1, %ymm1
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: concat_fmul_self_v8f64_v2f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmulpd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmulpd %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vmulpd %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vmulpd %xmm3, %xmm3, %xmm3
+; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512-NEXT:    vmulpd %zmm0, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %v0 = fmul <2 x double> %a0, %a0
   %v1 = fmul <2 x double> %a1, %a1
@@ -92,23 +91,22 @@ define <16 x float> @concat_fmul_self_v16f32_v4f32(<4 x float> %a0, <4 x float> 
 ;
 ; AVX1OR2-LABEL: concat_fmul_self_v16f32_v4f32:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vmulps %xmm0, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vmulps %xmm1, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vmulps %xmm2, %xmm2, %xmm2
-; AVX1OR2-NEXT:    vmulps %xmm3, %xmm3, %xmm3
+; AVX1OR2-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX1OR2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX1OR2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1OR2-NEXT:    vmulps %ymm0, %ymm0, %ymm0
 ; AVX1OR2-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm1
+; AVX1OR2-NEXT:    vmulps %ymm1, %ymm1, %ymm1
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: concat_fmul_self_v16f32_v4f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmulps %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmulps %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vmulps %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vmulps %xmm3, %xmm3, %xmm3
+; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512-NEXT:    vmulps %zmm0, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %v0 = fmul <4 x float> %a0, %a0
   %v1 = fmul <4 x float> %a1, %a1
@@ -137,9 +135,9 @@ define <8 x double> @concat_fmul_self_v8f64_v4f64(<4 x double> %a0, <4 x double>
 ;
 ; AVX512-LABEL: concat_fmul_self_v8f64_v4f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmulpd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmulpd %ymm1, %ymm1, %ymm1
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vmulpd %zmm0, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %v0 = fmul <4 x double> %a0, %a0
   %v1 = fmul <4 x double> %a1, %a1
@@ -164,9 +162,9 @@ define <16 x float> @concat_fmul_self_v16f32_v8f32(<8 x float> %a0, <8 x float> 
 ;
 ; AVX512-LABEL: concat_fmul_self_v16f32_v8f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmulps %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmulps %ymm1, %ymm1, %ymm1
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vmulps %zmm0, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %v0 = fmul <8 x float> %a0, %a0
   %v1 = fmul <8 x float> %a1, %a1
