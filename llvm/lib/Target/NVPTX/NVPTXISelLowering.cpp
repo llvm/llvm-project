@@ -2746,8 +2746,8 @@ lowerTcgen05Ld(SDNode *N, SelectionDAG &DAG, bool HasOffset = false) {
   return {{BuildVector, Chain}};
 }
 
-static SDValue invalidTensormapReplaceUsage(SDValue Op, SelectionDAG &DAG,
-                                            unsigned Val) {
+static SDValue reportInvalidTensormapReplaceUsage(SDValue Op, SelectionDAG &DAG,
+                                                  unsigned Val) {
   SDNode *N = Op.getNode();
   SDLoc DL(N);
 
@@ -2778,7 +2778,8 @@ static SDValue lowerTensormapReplaceElemtype(SDValue Op, SelectionDAG &DAG) {
 
   if (!DAG.getSubtarget<NVPTXSubtarget>().hasTensormapReplaceElemtypeSupport(
           Val))
-    return invalidTensormapReplaceUsage(Op, DAG, Val);
+    return reportInvalidTensormapReplaceUsage(Op, DAG, Val);
+
   return Op;
 }
 
@@ -2791,7 +2792,7 @@ static SDValue lowerTensormapReplaceSwizzleMode(SDValue Op, SelectionDAG &DAG) {
 
   if (!DAG.getSubtarget<NVPTXSubtarget>().hasTensormapReplaceSwizzleModeSupport(
           Val))
-    return invalidTensormapReplaceUsage(Op, DAG, Val);
+    return reportInvalidTensormapReplaceUsage(Op, DAG, Val);
 
   return Op;
 }
