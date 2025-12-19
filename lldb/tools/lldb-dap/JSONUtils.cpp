@@ -810,13 +810,8 @@ VariableDescription::VariableDescription(
       os_display_value << *effective_summary;
 
       // As last resort, we print its type and address if available.
-    } else {
-      if (!raw_display_type_name.empty()) {
-        os_display_value << raw_display_type_name;
-        lldb::addr_t address = val.GetLoadAddress();
-        if (address != LLDB_INVALID_ADDRESS)
-          os_display_value << " @ " << llvm::format_hex(address, 0);
-      }
+    } else if (!raw_display_type_name.empty()) {
+      os_display_value << raw_display_type_name;
     }
   }
 

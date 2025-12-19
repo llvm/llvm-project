@@ -2887,25 +2887,41 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     return new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe), Addr,
                                     EVL, Mask);
 
-  if (match(&CurRecipe,
+  VPValue *ReversedVal;
+  if (match(&CurRecipe, m_Reverse(m_VPValue(ReversedVal))) &&
+      match(ReversedVal,
             m_MaskedLoad(m_VPValue(EndPtr), m_RemoveMask(HeaderMask, Mask))) &&
       match(EndPtr, m_VecEndPtr(m_VPValue(Addr), m_Specific(&Plan->getVF()))) &&
-      cast<VPWidenLoadRecipe>(CurRecipe).isReverse())
-    return new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe),
-                                    AdjustEndPtr(EndPtr), EVL, Mask);
+      cast<VPWidenLoadRecipe>(ReversedVal)->isReverse()) {
+    auto *LoadR = new VPWidenLoadEVLRecipe(
+        *cast<VPWidenLoadRecipe>(ReversedVal), AdjustEndPtr(EndPtr), EVL, Mask);
+    LoadR->insertBefore(&CurRecipe);
+    return new VPWidenIntrinsicRecipe(
+        Intrinsic::experimental_vp_reverse, {LoadR, Plan->getTrue(), &EVL},
+        TypeInfo.inferScalarType(LoadR), {}, {}, DL);
+  }
 
-  if (match(&CurRecipe, m_MaskedStore(m_VPValue(Addr), m_VPValue(),
+  VPValue *StoredVal;
+  if (match(&CurRecipe, m_MaskedStore(m_VPValue(Addr), m_VPValue(StoredVal),
                                       m_RemoveMask(HeaderMask, Mask))) &&
       !cast<VPWidenStoreRecipe>(CurRecipe).isReverse())
     return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe), Addr,
-                                     EVL, Mask);
+                                     StoredVal, EVL, Mask);
 
-  if (match(&CurRecipe, m_MaskedStore(m_VPValue(EndPtr), m_VPValue(),
-                                      m_RemoveMask(HeaderMask, Mask))) &&
+  if (match(&CurRecipe,
+            m_MaskedStore(m_VPValue(EndPtr), m_Reverse(m_VPValue(ReversedVal)),
+                          m_RemoveMask(HeaderMask, Mask))) &&
       match(EndPtr, m_VecEndPtr(m_VPValue(Addr), m_Specific(&Plan->getVF()))) &&
-      cast<VPWidenStoreRecipe>(CurRecipe).isReverse())
+      cast<VPWidenStoreRecipe>(CurRecipe).isReverse()) {
+    auto *NewReverse = new VPWidenIntrinsicRecipe(
+        Intrinsic::experimental_vp_reverse,
+        {ReversedVal, Plan->getTrue(), &EVL},
+        TypeInfo.inferScalarType(ReversedVal), {}, {}, DL);
+    NewReverse->insertBefore(&CurRecipe);
     return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe),
-                                     AdjustEndPtr(EndPtr), EVL, Mask);
+                                     AdjustEndPtr(EndPtr), NewReverse, EVL,
+                                     Mask);
+  }
 
   if (auto *Rdx = dyn_cast<VPReductionRecipe>(&CurRecipe))
     if (Rdx->isConditional() &&
@@ -3230,27 +3246,25 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
   CanonicalIV->eraseFromParent();
 
   // Replace the use of VectorTripCount in the latch-exiting block.
-  // Before: (branch-on-count EVLIVInc, VectorTripCount)
-  // After: (branch-on-cond eq AVLNext, 0)
-
+  // Before: (branch-on-cond (icmp eq EVLIVInc, VectorTripCount))
+  // After: (branch-on-cond icmp eq AVLNext, 0)
   VPBasicBlock *LatchExiting =
       HeaderVPBB->getPredecessors()[1]->getEntryBasicBlock();
   auto *LatchExitingBr = cast<VPInstruction>(LatchExiting->getTerminator());
-  // Skip single-iteration loop region
   if (match(LatchExitingBr, m_BranchOnCond(m_True())))
     return;
-  assert(LatchExitingBr &&
-         match(LatchExitingBr,
-               m_BranchOnCount(m_VPValue(EVLIncrement),
-                               m_Specific(&Plan.getVectorTripCount()))) &&
-         "Unexpected terminator in EVL loop");
+
+  assert(match(LatchExitingBr, m_BranchOnCond(m_SpecificCmp(
+                                   CmpInst::ICMP_EQ, m_VPValue(EVLIncrement),
+                                   m_Specific(&Plan.getVectorTripCount())))) &&
+         "Expected BranchOnCond with ICmp comparing EVL increment with vector "
+         "trip count");
 
   Type *AVLTy = VPTypeAnalysis(Plan).inferScalarType(AVLNext);
   VPBuilder Builder(LatchExitingBr);
-  VPValue *Cmp = Builder.createICmp(CmpInst::ICMP_EQ, AVLNext,
-                                    Plan.getConstantInt(AVLTy, 0));
-  Builder.createNaryOp(VPInstruction::BranchOnCond, Cmp);
-  LatchExitingBr->eraseFromParent();
+  LatchExitingBr->setOperand(0,
+                             Builder.createICmp(CmpInst::ICMP_EQ, AVLNext,
+                                                Plan.getConstantInt(AVLTy, 0)));
 }
 
 void VPlanTransforms::replaceSymbolicStrides(
@@ -3769,6 +3783,17 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         continue;
       }
 
+      // Lower BranchOnCount to ICmp + BranchOnCond.
+      VPValue *IV, *TC;
+      if (match(&R, m_BranchOnCount(m_VPValue(IV), m_VPValue(TC)))) {
+        auto *BranchOnCountInst = cast<VPInstruction>(&R);
+        DebugLoc DL = BranchOnCountInst->getDebugLoc();
+        VPValue *Cond = Builder.createICmp(CmpInst::ICMP_EQ, IV, TC, DL);
+        Builder.createNaryOp(VPInstruction::BranchOnCond, Cond, DL);
+        ToRemove.push_back(BranchOnCountInst);
+        continue;
+      }
+
       VPValue *VectorStep;
       VPValue *ScalarStep;
       if (!match(&R, m_VPInstruction<VPInstruction::WideIVStep>(
@@ -3882,6 +3907,7 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
   // with one exiting if either the original condition of the vector latch is
   // true or the early exit has been taken.
   auto *LatchExitingBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
+  // Skip single-iteration loop region
   assert(LatchExitingBranch->getOpcode() == VPInstruction::BranchOnCount &&
          "Unexpected terminator");
   auto *IsLatchExitTaken =
