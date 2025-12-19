@@ -144,9 +144,16 @@ SmallVector<Register> AMDGPUEarlyRegisterSpilling::getRegistersToSpill(
     if (!isLegalToSpill(CandidateReg))
       continue;
 
-    assert(MRI->hasOneDef(CandidateReg) &&
-           "The Register does not have one definition");
     MachineInstr *CandidateMI = MRI->getOneDef(CandidateReg)->getParent();
+    MachineBasicBlock *CandidateMIMBB = CandidateMI->getParent();
+    // Sanity checks that the spilled register is defined before the high
+    // register pressure point
+    if ((CurMI != CandidateMI) && DT->dominates(CurMI, CandidateMI))
+      continue;
+
+    if ((CurMBB != CandidateMIMBB) && isReachable(CurMBB, CandidateMIMBB))
+      continue;
+
     MachineLoop *CandidateLoop = MLI->getLoopFor(CandidateMI->getParent());
     bool IsLoopCandidate =
         IsCurMIInLoop &&
@@ -176,14 +183,14 @@ SmallVector<Register> AMDGPUEarlyRegisterSpilling::getRegistersToSpill(
       // 'RegCandidates'.
       RegCandidates.push_back(std::make_pair(CandidateReg, *NextUseDist));
       LLVM_DEBUG(dbgs() << "Candidate register to spill = "
-                        << printReg(CandidateReg, TRI)
-                        << " with distance = " << *NextUseDist << "\n");
+                        << printReg(CandidateReg, TRI) << " with distance = "
+                        << format("%.1f", *NextUseDist) << "\n");
     } else if (IsLoopCandidate && (NextUseDist > LoopDistance)) {
       // Collect only the live-through values.
       RegCandidates.push_back(std::make_pair(CandidateReg, *NextUseDist));
       LLVM_DEBUG(dbgs() << "Candidate register to spill = "
-                        << printReg(CandidateReg, TRI)
-                        << " with distance = " << *NextUseDist << "\n");
+                        << printReg(CandidateReg, TRI) << " with distance = "
+                        << format("%.1f", *NextUseDist) << "\n");
     }
   }
 
@@ -659,22 +666,11 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
                                         unsigned NumOfSpills) {
   // CurMI indicates the point of the code where there is high register
   // pressure.
-  MachineBasicBlock *CurMBB = CurMI->getParent();
   unsigned SpillCnt = 0;
   for (Register DefRegToSpill : getRegistersToSpill(CurMI, RPTracker)) {
     if (SpillCnt >= NumOfSpills)
       break;
 
-    assert(MRI->hasOneDef(DefRegToSpill) &&
-           "The Register does not have one definition");
-    MachineInstr *InstrOfDefRegToSpill =
-        MRI->getOneDef(DefRegToSpill)->getParent();
-    MachineBasicBlock *DefRegMBB = InstrOfDefRegToSpill->getParent();
-    // Sanity check that the spilled register is defined before the high
-    // register pressure point
-    assert((!DT->dominates(CurMI, InstrOfDefRegToSpill) ||
-            !isReachable(CurMBB, DefRegMBB)) &&
-           "This register should not be spilled");
     const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, DefRegToSpill);
     unsigned Size = TRI->getSpillSize(*RC);
     Align Alignment = TRI->getSpillAlign(*RC);

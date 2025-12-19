@@ -138,6 +138,8 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
   }
 
   bool isReachable(MachineBasicBlock *From, MachineBasicBlock *To) {
+    if (From == To)
+      return 0;
     return NUA.getShortestDistance(From, To) !=
            std::numeric_limits<double>::max();
   }
