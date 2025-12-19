@@ -7,7 +7,14 @@ export class AndroidConfigurationBuilder {
 
     static async resolveDeviceSerial(device?: string): Promise<string> {
         const adbClient = new AdbClient();
-        const deviceSerials = await adbClient.getDeviceList();
+        let deviceSerials: string[];
+        try {
+            deviceSerials = await adbClient.getDeviceList();
+        } catch (e) {
+            throw new ErrorWithNotification(
+                `Could not connect to ADB server. Please make sure the ADB server is running and at least one device or emulator is connected.`,
+            );
+        }
         if (!device) {
             if (deviceSerials.length === 1) {
                 return deviceSerials[0];
@@ -19,7 +26,7 @@ export class AndroidConfigurationBuilder {
                 );
             }
             throw new ErrorWithNotification(
-                `No connected Android devices found.`,
+                `No Android devices found. Please verify that at least one device or emulator is connected to the ADB server.`,
             );
         }
         for (const deviceSerial of deviceSerials) {
@@ -36,8 +43,7 @@ export class AndroidConfigurationBuilder {
             }
         }
         throw new ErrorWithNotification(
-            `Android devices "${device}" not found, please connect this device.`,
-            new ConfigureButton(),
+            `Android devices "${device}" not found. Please connect this device or emulator to the ADB server.`,
         );
     }
 
