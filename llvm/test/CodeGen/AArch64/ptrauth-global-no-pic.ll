@@ -13,10 +13,12 @@
 ; CHECK: PtrAuthExtern:
 ; CHECK:         .xword  ConstExtern@AUTH(da,0)
 
+; CHECK-NOT:     .section
 ; CHECK:         .globl  PtrAuth
 ; CHECK: PtrAuth:
 ; CHECK:         .xword  Const@AUTH(da,0)
 
+; CHECK-NOT:     .section
 ; CHECK:         .globl  PtrAuthExternNested1
 ; CHECK: PtrAuthExternNested1:
 ; CHECK:         .xword  ConstExtern@AUTH(da,0)
