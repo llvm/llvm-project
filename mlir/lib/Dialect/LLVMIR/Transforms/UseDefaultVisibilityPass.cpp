@@ -30,14 +30,15 @@ class UseDefaultVisibilityPass
 public:
   void runOnOperation() override {
     LLVM::Visibility useDefaultVisibility = useVisibility.getValue();
+    if (useDefaultVisibility == LLVM::Visibility::Default)
+      return;
     Operation *op = getOperation();
     op->walk([&](Operation *op) {
       llvm::TypeSwitch<Operation *, void>(op)
           .Case<LLVM::LLVMFuncOp, LLVM::GlobalOp, LLVM::IFuncOp, LLVM::AliasOp>(
               [&](auto op) {
-                if (op.getVisibility_() == LLVM::Visibility::Default) {
+                if (op.getVisibility_() == LLVM::Visibility::Default)
                   op.setVisibility_(useDefaultVisibility);
-                }
               });
     });
   }
