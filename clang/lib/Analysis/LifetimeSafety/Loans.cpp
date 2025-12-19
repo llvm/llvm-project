@@ -12,15 +12,14 @@ namespace clang::lifetimes::internal {
 
 void PathLoan::dump(llvm::raw_ostream &OS) const {
   OS << getID() << " (Path: ";
-  if (const clang::ValueDecl *VD = Path.getAsValueDecl()) {
+  if (const clang::ValueDecl *VD = Path.getAsValueDecl())
     OS << VD->getNameAsString();
-  } else if (const clang::MaterializeTemporaryExpr *MTE =
-                 Path.getAsMaterializeTemporaryExpr()) {
+  else if (const clang::MaterializeTemporaryExpr *MTE =
+               Path.getAsMaterializeTemporaryExpr())
     // No nice "name" for the temporary, so deferring to LLVM default
     OS << "MaterializeTemporaryExpr at " << MTE;
-  } else {
+  else
     llvm_unreachable("access path is not one of any supported types");
-  }
   OS << ")";
 }
 

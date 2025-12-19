@@ -405,22 +405,22 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
 
 void FactsGenerator::handleTemporaryDtor(
     const CFGTemporaryDtor &TemporaryDtor) {
-  const CXXBindTemporaryExpr *BTE = TemporaryDtor.getBindTemporaryExpr();
-  if (!BTE) {
+  const CXXBindTemporaryExpr *ExpiringBTE =
+      TemporaryDtor.getBindTemporaryExpr();
+  if (!ExpiringBTE)
     return;
-  }
   // Iterate through all loans to see if any expire.
   for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
-    if (const auto *BL = dyn_cast<PathLoan>(Loan)) {
+    if (const auto *PL = dyn_cast<PathLoan>(Loan)) {
       // Check if the loan is for a temporary materialization and if that storage
       // location is the one being destructed.
-      const AccessPath &AP = BL->getAccessPath();
+      const AccessPath &AP = PL->getAccessPath();
       const MaterializeTemporaryExpr *Path = AP.getAsMaterializeTemporaryExpr();
       if (!Path)
         continue;
-      if (BTE == getChildBinding(Path)) {
+      if (ExpiringBTE == getChildBinding(Path)) {
         CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
-            BL->getID(), TemporaryDtor.getBindTemporaryExpr()->getEndLoc()));
+            PL->getID(), TemporaryDtor.getBindTemporaryExpr()->getEndLoc()));
       }
     }
   }
