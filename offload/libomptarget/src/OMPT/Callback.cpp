@@ -436,6 +436,9 @@ void Interface::endTarget(int64_t DeviceId, void *Code) {
 }
 
 void Interface::beginTargetDataOperation() {
+  if (IsRuntimeRoutine) {
+    OmptTaskInfoPtr = &OmptTaskInfo;
+  }
   ODBG(ODT_Tool) << "in ompt_target_region_begin (TargetRegionId = "
                  << TargetData.value << ")";
 }
@@ -443,6 +446,9 @@ void Interface::beginTargetDataOperation() {
 void Interface::endTargetDataOperation() {
   ODBG(ODT_Tool) << "in ompt_target_region_end (TargetRegionId = "
                  << TargetData.value << ")";
+  if (IsRuntimeRoutine) {
+    OmptTaskInfoPtr = nullptr;
+  }
 }
 
 void Interface::beginTargetRegion() {
@@ -455,12 +461,17 @@ void Interface::beginTargetRegion() {
   // In case of deferred target tasks, use pointer from libomp
   if (ompt_task_info_t *TempTaskInfoPtr = ompt_get_task_info_target_fn())
     OmptTaskInfoPtr = TempTaskInfoPtr;
+  else
+    OmptTaskInfoPtr = &OmptTaskInfo;
+
+  IsRuntimeRoutine = false;
 }
 
 void Interface::endTargetRegion() {
   TaskData = 0;
   OmptTaskInfo = {ompt_data_none, ompt_data_none};
-  OmptTaskInfoPtr = &OmptTaskInfo;
+  OmptTaskInfoPtr = nullptr;
+  IsRuntimeRoutine = true;
 }
 
 int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
