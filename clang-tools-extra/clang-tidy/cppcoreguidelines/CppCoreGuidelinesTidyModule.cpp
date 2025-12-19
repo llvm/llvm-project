@@ -54,6 +54,7 @@
 
 namespace clang::tidy {
 namespace cppcoreguidelines {
+namespace {
 
 /// A module containing checks of the C++ Core Guidelines
 class CppCoreGuidelinesModule : public ClangTidyModule {
@@ -153,6 +154,8 @@ public:
     return Options;
   }
 };
+
+} // namespace
 
 // Register the LLVMTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<CppCoreGuidelinesModule>
