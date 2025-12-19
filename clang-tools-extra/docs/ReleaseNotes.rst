@@ -256,8 +256,6 @@ New checks
   LLVM range-based algorithms from ``llvm/ADT/STLExtras.h``.
 
 
-  FIXME: Write a short description.
-
 - New :doc:`misc-override-with-different-visibility
   <clang-tidy/checks/misc/override-with-different-visibility>` check.
 

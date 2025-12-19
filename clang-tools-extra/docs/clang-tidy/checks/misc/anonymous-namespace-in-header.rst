@@ -12,7 +12,6 @@ of the symbols. This increases binary size and can cause confusing link-time err
 References
 ----------
 
-.. bullet list of aliases or simply the text as requested by the specific style guide
 This check corresponds to the CERT C++ Coding Standard rule
 `DCL59-CPP. Do not define an unnamed namespace in a header file
 <https://wiki.sei.cmu.edu/confluence/display/cplusplus/DCL59-CPP.+Do+not+define+an+unnamed+namespace+in+a+header+file>`_.
