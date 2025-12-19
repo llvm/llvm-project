@@ -69,6 +69,11 @@ Changes to the LLVM IR
 * The `"nooutline"` attribute is now writen as `nooutline`. Existing IR and
   bitcode will be automatically updated.
 
+* Added `global-asm-symbols` and `global-asm-symvers` module flags to
+  keep a list of symbols and symvers defined in global inline
+  assembly. This allows LLVM tools to build a symbol table for a
+  module without running AsmParser to find symbols in assembly.
+
 Changes to LLVM infrastructure
 ------------------------------
 
