@@ -705,7 +705,7 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
       // The callee guids for the slice containing all frames (due to the
       // increment above Idx is now 1) comes from the CalleeGuids recorded in
       // the CallSite. For the slices not containing the leaf-most frame, the
-      // callee guid is simply the function GUID if the prior frame.
+      // callee guid is simply the function GUID of the prior frame.
       LocHashToCallSites[StackId].push_back(
           {FrameSlice, (Idx == 1 ? CS.CalleeGuids
                                  : ArrayRef<GlobalValue::GUID>(
