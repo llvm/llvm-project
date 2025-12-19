@@ -477,7 +477,7 @@ protected:
   /// addOptimizedRegAlloc - Add passes related to register allocation.
   /// CodeGenTargetMachineImpl provides standard regalloc passes for most
   /// targets.
-  void addOptimizedRegAlloc(PassManagerWrapper &PMW) const;
+  Error addOptimizedRegAlloc(PassManagerWrapper &PMW) const;
 
   /// Add passes that optimize machine instructions after register allocation.
   void addMachineLateOptimization(PassManagerWrapper &PMW) const;
@@ -508,7 +508,7 @@ protected:
 
   /// addMachinePasses helper to create the target-selected or overriden
   /// regalloc pass.
-  void addRegAllocPass(PassManagerWrapper &PMW, bool Optimized) const;
+  Error addRegAllocPass(PassManagerWrapper &PMW, bool Optimized) const;
   /// Read the --regalloc-npm-pipeline option to add the next pass in line.
   /// If MatchPassTo is specified, ensures the pass matches the expected class.
   /// Returns an error if parsing fails or validation fails.
@@ -517,8 +517,8 @@ protected:
   /// Add the next pass in the cli option or the pass specified if no pass is
   /// left in the option.
   template <typename RegAllocPassBuilderT>
-  void addRegAllocPassOrOpt(PassManagerWrapper &PMW,
-                            RegAllocPassBuilderT PassBuilder) const;
+  Error addRegAllocPassOrOpt(PassManagerWrapper &PMW,
+                             RegAllocPassBuilderT PassBuilder) const;
 
   /// Add core register alloator passes which do the actual register assignment
   /// and rewriting. \returns true if any passes were added.
@@ -997,12 +997,9 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
 
   // Run register allocation and passes that are tightly coupled with it,
   // including phi elimination and scheduling.
-  if (*Opt.OptimizeRegAlloc) {
-    derived().addOptimizedRegAlloc(PMW);
-  } else {
-    if (auto Err = derived().addFastRegAlloc(PMW))
-      return Err;
-  }
+  if (auto Err = *Opt.OptimizeRegAlloc ? derived().addOptimizedRegAlloc(PMW)
+                                       : derived().addFastRegAlloc(PMW))
+    return std::move(Err);
 
   // Run post-ra passes.
   derived().addPostRegAlloc(PMW);
@@ -1164,13 +1161,13 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addTargetRegisterAllocator(
 
 template <typename Derived, typename TargetMachineT>
 template <typename RegAllocPassBuilderT>
-void CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPassOrOpt(
+Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPassOrOpt(
     PassManagerWrapper &PMW, RegAllocPassBuilderT PassBuilder) const {
-  if (auto Err = addRegAllocPassFromOpt(PMW)) {
-    report_fatal_error(std::move(Err));
-  }
+  if (auto Err = addRegAllocPassFromOpt(PMW))
+    return std::move(Err);
   if (Opt.RegAllocPipeline.empty())
     addMachineFunctionPass(std::move(PassBuilder()), PMW);
+  return Error::success();
 }
 
 template <typename Derived, typename TargetMachineT>
@@ -1219,26 +1216,28 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPassFromOpt(
 /// This helper ensures that the -regalloc-npm-pipeline= option is always
 /// available, even for targets that override the default allocator.
 template <typename Derived, typename TargetMachineT>
-void CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPass(
+Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPass(
     PassManagerWrapper &PMW, bool Optimized) const {
   // At O0 (not optimized), only regallocfast is allowed
   StringRef MatchPassTo = Optimized ? StringRef{} : "RegAllocFastPass";
 
   // Use the specified -regalloc-npm-pipeline= option if provided
-  if (auto Err = addRegAllocPassFromOpt(PMW, MatchPassTo)) {
-    report_fatal_error(std::move(Err));
-  }
+  if (auto Err = addRegAllocPassFromOpt(PMW, MatchPassTo))
+    return std::move(Err);
+
   // If no custom pipeline was specified, use the target's default allocator
   if (Opt.RegAllocPipeline.empty()) {
     derived().addTargetRegisterAllocator(PMW, Optimized);
   }
+  return Error::success();
 }
 
 template <typename Derived, typename TargetMachineT>
 Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAssignmentFast(
     PassManagerWrapper &PMW) const {
   // TODO: Ensure allocator is default or fast.
-  addRegAllocPass(PMW, false);
+  if (auto Err = addRegAllocPass(PMW, false))
+    return std::move(Err);
   return Error::success();
 }
 
@@ -1246,7 +1245,8 @@ template <typename Derived, typename TargetMachineT>
 Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAssignmentOptimized(
     PassManagerWrapper &PMW) const {
   // Add the selected register allocation pass.
-  addRegAllocPass(PMW, true);
+  if (auto Err = addRegAllocPass(PMW, true))
+    return std::move(Err);
 
   // Allow targets to change the register assignments before rewriting.
   derived().addPreRewrite(PMW);
@@ -1276,7 +1276,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addFastRegAlloc(
 /// optimized register allocation, including coalescing, machine instruction
 /// scheduling, and register allocation itself.
 template <typename Derived, typename TargetMachineT>
-void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
+Error CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
     PassManagerWrapper &PMW) const {
   addMachineFunctionPass(DetectDeadLanesPass(), PMW);
 
@@ -1319,12 +1319,8 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
   // PreRA instruction scheduling.
   addMachineFunctionPass(MachineSchedulerPass(&TM), PMW);
 
-  if (auto E = derived().addRegAssignmentOptimized(PMW)) {
-    // addRegAssignmentOptimized did not add a reg alloc pass, so do nothing.
-    return;
-  }
-
-  addMachineFunctionPass(StackSlotColoringPass(), PMW);
+  if (auto E = derived().addRegAssignmentOptimized(PMW))
+    return std::move(E);
 
   // Perform stack slot coloring and post-ra machine LICM.
   addMachineFunctionPass(StackSlotColoringPass(), PMW);
@@ -1341,6 +1337,8 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
   //
   // FIXME: can this move into MachineLateOptimization?
   addMachineFunctionPass(MachineLICMPass(), PMW);
+
+  return Error::success();
 }
 
 //===---------------------------------------------------------------------===//

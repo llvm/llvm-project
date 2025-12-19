@@ -7,7 +7,7 @@
 # PASS: regallocfast<filter=sgpr>
 # PASS: regallocfast<filter=wwm>
 # PASS: regallocfast<filter=vgpr>
-# BAD-FILTER: invalid regallocfast register filter 'bad-filter'
+# BAD-FILTER: invalid register filter 'bad-filter'
 
 # RA-NPM: regallocfast<filter=sgpr;no-clear-vregs>
 # RA-NPM: greedy<wwm>

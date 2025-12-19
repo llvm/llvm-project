@@ -158,7 +158,7 @@ public:
   Error addRegAssignmentOptimized(PassManagerWrapper &PMW) const;
   void addPreRegAlloc(PassManagerWrapper &PMW) const;
   Error addFastRegAlloc(PassManagerWrapper &PMW) const;
-  void addOptimizedRegAlloc(PassManagerWrapper &PMW) const;
+  Error addOptimizedRegAlloc(PassManagerWrapper &PMW) const;
   void addPreSched2(PassManagerWrapper &PMW) const;
   void addPostBBSections(PassManagerWrapper &PMW) const;
 
@@ -2349,7 +2349,7 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentFast(
   return Error::success();
 }
 
-void AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
+Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
     PassManagerWrapper &PMW) const {
   if (EnableDCEInRA)
     insertPass<DetectDeadLanesPass>(DeadMachineInstructionElimPass());
@@ -2385,7 +2385,7 @@ void AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
   if (TM.getOptLevel() > CodeGenOptLevel::Less)
     insertPass<MachineSchedulerPass>(SIFormMemoryClausesPass());
 
-  Base::addOptimizedRegAlloc(PMW);
+  return Base::addOptimizedRegAlloc(PMW);
 }
 
 void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) const {
@@ -2395,12 +2395,11 @@ void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) const {
 
 Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
     PassManagerWrapper &PMW) const {
-  // TODO: Check --regalloc-npm option
-
   addMachineFunctionPass(GCNPreRALongBranchRegPass(), PMW);
 
-  addRegAllocPassOrOpt(
-      PMW, []() { return RAGreedyPass({onlyAllocateSGPRs, "sgpr"}); });
+  if (auto Err = addRegAllocPassOrOpt(
+          PMW, []() { return RAGreedyPass({onlyAllocateSGPRs, "sgpr"}); }))
+    return Err;
 
   // Commit allocated register changes. This is mostly necessary because too
   // many things rely on the use lists of the physical registers, such as the
@@ -2420,15 +2419,17 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
   addMachineFunctionPass(SIPreAllocateWWMRegsPass(), PMW);
 
   // For allocating other wwm register operands.
-  addRegAllocPassOrOpt(
-      PMW, []() { return RAGreedyPass({onlyAllocateWWMRegs, "wwm"}); });
+  if (auto Err = addRegAllocPassOrOpt(
+          PMW, []() { return RAGreedyPass({onlyAllocateWWMRegs, "wwm"}); }))
+    return Err;
   addMachineFunctionPass(SILowerWWMCopiesPass(), PMW);
   addMachineFunctionPass(VirtRegRewriterPass(false), PMW);
   addMachineFunctionPass(AMDGPUReserveWWMRegsPass(), PMW);
 
   // For allocating per-thread VGPRs.
-  addRegAllocPassOrOpt(
-      PMW, []() { return RAGreedyPass({onlyAllocateVGPRs, "vgpr"}); });
+  if (auto Err = addRegAllocPassOrOpt(
+          PMW, []() { return RAGreedyPass({onlyAllocateVGPRs, "vgpr"}); }))
+    return Err;
 
   addPreRewrite(PMW);
   addMachineFunctionPass(VirtRegRewriterPass(true), PMW);

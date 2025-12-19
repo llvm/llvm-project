@@ -94,6 +94,7 @@ int llvm::compileModuleWithNewPM(
     std::unique_ptr<ToolOutputFile> DwoOut, LLVMContext &Context,
     const TargetLibraryInfoImpl &TLII, VerifierKind VK, StringRef PassPipeline,
     CodeGenFileType FileType) {
+  ExitOnErr.setBanner(std::string(Arg0) + ": error: ");
 
   if (!PassPipeline.empty() && TargetPassConfig::hasLimitedCodeGenPipeline()) {
     WithColor::error(errs(), Arg0)

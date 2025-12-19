@@ -1668,8 +1668,7 @@ llvm::parseRegAllocFastPassOptions(const PassBuilder &PB, StringRef Params) {
           PB.parseRegAllocFilter(ParamName);
       if (!Filter) {
         return make_error<StringError>(
-            formatv("invalid regallocfast register filter '{0}' ", ParamName)
-                .str(),
+            formatv("invalid register filter '{0}'", ParamName).str(),
             inconvertibleErrorCode());
       }
       Opts.Filter = *Filter;
@@ -1683,7 +1682,7 @@ llvm::parseRegAllocFastPassOptions(const PassBuilder &PB, StringRef Params) {
     }
 
     return make_error<StringError>(
-        formatv("invalid regallocfast pass parameter '{0}' ", ParamName).str(),
+        formatv("invalid pass parameter '{0}'", ParamName).str(),
         inconvertibleErrorCode());
   }
   return Opts;
@@ -1699,7 +1698,7 @@ llvm::parseRegAllocGreedyFilterFunc(const PassBuilder &PB, StringRef Params) {
     return RAGreedyPass::Options{*Filter, Params};
 
   return make_error<StringError>(
-      formatv("invalid regallocgreedy register filter '{0}' ", Params).str(),
+      formatv("invalid register filter '{0}'", Params).str(),
       inconvertibleErrorCode());
 }
 
