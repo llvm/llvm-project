@@ -223,6 +223,11 @@ def N2Write_6c_2V : SchedWriteRes<[N2UnitV, N2UnitV]> {
   let NumMicroOps = 2;
 }
 
+def N2Write_4c_2L : SchedWriteRes<[N2UnitL, N2UnitL]> {
+  let Latency     = 4;
+  let NumMicroOps = 2;
+}
+
 def N2Write_6c_2L : SchedWriteRes<[N2UnitL, N2UnitL]> {
   let Latency     = 6;
   let NumMicroOps = 2;
@@ -795,6 +800,15 @@ def : InstRW<[N2Write_2c_1M], (instregex "^BFM[WX]ri$")>;
 
 def : SchedAlias<WriteLD,    N2Write_4c_1L>;
 def : SchedAlias<WriteLDIdx, N2Write_4c_1I_1L>;
+
+// Load pair, signed immed offset, normal, X-form
+def : InstRW<[N2Write_4c_2L, WriteLDHi],
+             (instrs LDPXi, LDNPXi)>;
+
+// Load pair, immed post-index, normal, X-form
+// Load pair, immed pre-index, normal, X-form
+def : InstRW<[WriteAdr, N2Write_4c_2L, WriteLDHi],
+             (instregex "^LDPX(post|pre)$")>;
 
 // Load pair, signed immed offset, signed words
 def : InstRW<[N2Write_5c_1M0, WriteLDHi], (instrs LDPSWi)>;
