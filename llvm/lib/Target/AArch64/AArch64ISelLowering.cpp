@@ -16384,13 +16384,16 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     for (unsigned i = 0, e = BVN->getNumOperands(); i != e; ++i) {
       const SDValue &LaneOp = BVN->getOperand(i);
       APInt LaneBits;
-      if (auto *C = dyn_cast<ConstantSDNode>(LaneOp)) {
+      if (isa<UndefValue>(LaneOp))
+        LaneBits = APInt(EltSizeInBits, 0);
+      else if (auto *C = dyn_cast<ConstantSDNode>(LaneOp))
         LaneBits = C->getAPIntValue();
-      } else if (auto *CFP = dyn_cast<ConstantFPSDNode>(LaneOp)) {
+      else if (auto *CFP = dyn_cast<ConstantFPSDNode>(LaneOp))
         LaneBits = CFP->getValueAPF().bitcastToAPInt();
-      }
+      else
+          return SDValue();
 
-      PackedVal |= LaneBits.zext(64) << BitPos;
+      PackedVal |= LaneBits.trunc(VT.getScalarSizeInBits()).zext(64) << BitPos;
       BitPos += EltSizeInBits;
     }
 
@@ -16398,9 +16401,8 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     // is under 2
     SmallVector<AArch64_IMM::ImmInsnModel, 4> Insns;
     AArch64_IMM::expandMOVImm(PackedVal.getZExtValue(), 64, Insns);
-    if (Insns.size() > 2) {
+    if (Insns.size() > 2)
       return SDValue();
-    }
 
     SDValue ScalarConst = DAG.getConstant(PackedVal, DL, MVT::i64);
     // Use BITCAST to reinterpret the scalar constant's bits as a vector.
