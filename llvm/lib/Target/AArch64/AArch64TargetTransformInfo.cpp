@@ -50,7 +50,7 @@ static cl::opt<unsigned> SVETailFoldInsnThreshold("sve-tail-folding-insn-thresho
                                                   cl::init(15), cl::Hidden);
 
 static cl::opt<unsigned>
-    NeonNonConstStrideOverhead("neon-nonconst-stride-overhead", cl::init(10),
+    NeonNonConstStrideOverhead("neon-nonconst-stride-overhead", cl::init(2),
                                cl::Hidden);
 
 static cl::opt<unsigned> CallPenaltyChangeSM(
