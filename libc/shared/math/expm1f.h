@@ -1,4 +1,4 @@
-//===-- Single-precision e^x - 1 function ---------------------------------===//
+//===-- Shared expm1f function ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/expm1f.h"
+#ifndef LLVM_LIBC_SHARED_MATH_EXPM1F_H
+#define LLVM_LIBC_SHARED_MATH_EXPM1F_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/expm1f.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float, expm1f, (float x)) { return math::expm1f(x); }
+using math::expm1f;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_EXPM1F_H
