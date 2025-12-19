@@ -251,3 +251,65 @@ entry:
   ret void
 }
 
+define amdgpu_kernel void @test_bitcast_gen_12i32_v3i32(ptr addrspace(1) %out, i32 %idx) #0 {
+; CHECK-LABEL: define amdgpu_kernel void @test_bitcast_gen_12i32_v3i32(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[IDX:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <12 x i32> poison
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <12 x i32> [[ALLOCA]], i32 [[IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x i32> poison, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[IDX]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <12 x i32> [[ALLOCA]], i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <3 x i32> [[TMP1]], i32 [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[IDX]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <12 x i32> [[ALLOCA]], i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <3 x i32> [[TMP4]], i32 [[TMP6]], i64 2
+; CHECK-NEXT:    store <3 x i32> [[TMP7]], ptr addrspace(1) [[OUT]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %alloca = alloca [12 x i32], align 16, addrspace(5)
+  %gep = getelementptr <3 x i32>, ptr addrspace(5) %alloca, i32 0, i32 %idx
+  %load = load <3 x i32>, ptr addrspace(5) %gep, align 16
+  store <3 x i32> %load, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+define amdgpu_kernel void @test_bitcast_gen_11i32_v8i32(ptr addrspace(1) %out, i32 %idx) #0 {
+; CHECK-LABEL: define amdgpu_kernel void @test_bitcast_gen_11i32_v8i32(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[IDX:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <11 x i32> poison
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <11 x i32> [[ALLOCA]], i32 [[IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> poison, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[IDX]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <11 x i32> [[ALLOCA]], i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP1]], i32 [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[IDX]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <11 x i32> [[ALLOCA]], i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[TMP6]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[IDX]], 3
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <11 x i32> [[ALLOCA]], i32 [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[TMP9]], i64 3
+; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[IDX]], 4
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <11 x i32> [[ALLOCA]], i32 [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x i32> [[TMP10]], i32 [[TMP12]], i64 4
+; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[IDX]], 5
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <11 x i32> [[ALLOCA]], i32 [[TMP14]]
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <8 x i32> [[TMP13]], i32 [[TMP15]], i64 5
+; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[IDX]], 6
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <11 x i32> [[ALLOCA]], i32 [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <8 x i32> [[TMP16]], i32 [[TMP18]], i64 6
+; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[IDX]], 7
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <11 x i32> [[ALLOCA]], i32 [[TMP20]]
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <8 x i32> [[TMP19]], i32 [[TMP21]], i64 7
+; CHECK-NEXT:    store <8 x i32> [[TMP22]], ptr addrspace(1) [[OUT]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %alloca = alloca [11 x i32], align 16, addrspace(5)
+  %gep = getelementptr <8 x i32>, ptr addrspace(5) %alloca, i32 0, i32 %idx
+  %load = load <8 x i32>, ptr addrspace(5) %gep, align 16
+  store <8 x i32> %load, ptr addrspace(1) %out, align 16
+  ret void
+}
