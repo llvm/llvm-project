@@ -95,23 +95,13 @@ void nvvm::printTensormapInterleaveLayout(raw_ostream &OS,
 
 void nvvm::printTensormapSwizzleMode(raw_ostream &OS,
                                      const Constant *ImmArgVal) {
+  static constexpr StringRef TensormapSwizzleModes[] = {
+      "No swizzling", "32B swizzling", "64B swizzling", "128B swizzling",
+      "96B swizzling"};
   if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
     uint64_t Val = CI->getZExtValue();
-    switch (static_cast<TensormapSwizzleMode>(Val)) {
-    case TensormapSwizzleMode::NO_SWIZZLE:
-      OS << "No swizzling";
-      return;
-    case TensormapSwizzleMode::SWIZZLE_32B:
-      OS << "32B swizzling";
-      return;
-    case TensormapSwizzleMode::SWIZZLE_64B:
-      OS << "64B swizzling";
-      return;
-    case TensormapSwizzleMode::SWIZZLE_128B:
-      OS << "128B swizzling";
-      return;
-    case TensormapSwizzleMode::SWIZZLE_96B:
-      OS << "96B swizzling";
+    if (Val <= static_cast<uint64_t>(nvvm::TensormapSwizzleMode::SWIZZLE_96B)) {
+      OS << TensormapSwizzleModes[Val];
       return;
     }
   }
@@ -119,20 +109,13 @@ void nvvm::printTensormapSwizzleMode(raw_ostream &OS,
 
 void nvvm::printTensormapSwizzleAtomicity(raw_ostream &OS,
                                           const Constant *ImmArgVal) {
+  static constexpr StringRef TensormapSwizzleAtomicities[] = {
+      "16B", "32B", "32B + 8B flip", "64B"};
   if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
     uint64_t Val = CI->getZExtValue();
-    switch (static_cast<TensormapSwizzleAtomicity>(Val)) {
-    case TensormapSwizzleAtomicity::SWIZZLE_ATOMICITY_16B:
-      OS << "16B";
-      return;
-    case TensormapSwizzleAtomicity::SWIZZLE_ATOMICITY_32B:
-      OS << "32B";
-      return;
-    case TensormapSwizzleAtomicity::SWIZZLE_ATOMICITY_32B_FLIP_8B:
-      OS << "32B + 8B flip";
-      return;
-    case TensormapSwizzleAtomicity::SWIZZLE_ATOMICITY_64B:
-      OS << "64B";
+    if (Val <= static_cast<uint64_t>(
+                   nvvm::TensormapSwizzleAtomicity::SWIZZLE_ATOMICITY_64B)) {
+      OS << TensormapSwizzleAtomicities[Val];
       return;
     }
   }
@@ -141,12 +124,9 @@ void nvvm::printTensormapSwizzleAtomicity(raw_ostream &OS,
 void nvvm::printTensormapFillMode(raw_ostream &OS, const Constant *ImmArgVal) {
   if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
     uint64_t Val = CI->getZExtValue();
-    if (Val == static_cast<uint64_t>(TensormapFillMode::ZERO_FILL)) {
-      OS << "Zero fill";
-      return;
-    } else if (Val == static_cast<uint64_t>(TensormapFillMode::OOB_NAN_FILL)) {
-      OS << "OOB-NaN fill";
-      return;
-    }
+    OS << (Val == static_cast<uint64_t>(TensormapFillMode::ZERO_FILL)
+               ? "Zero fill"
+               : "OOB-NaN fill");
+    return;
   }
 }

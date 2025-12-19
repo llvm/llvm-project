@@ -2746,60 +2746,52 @@ lowerTcgen05Ld(SDNode *N, SelectionDAG &DAG, bool HasOffset = false) {
   return {{BuildVector, Chain}};
 }
 
+static SDValue invalidTensormapReplaceUsage(SDValue Op, SelectionDAG &DAG,
+                                            unsigned Val) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+
+  const Function &Fn = DAG.getMachineFunction().getFunction();
+
+  unsigned AS = 0;
+  if (auto *MemN = dyn_cast<MemIntrinsicSDNode>(N))
+    AS = MemN->getAddressSpace();
+  Type *PtrTy = PointerType::get(*DAG.getContext(), AS);
+  Module *M = DAG.getMachineFunction().getFunction().getParent();
+
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      Fn,
+      "Intrinsic " +
+          Intrinsic::getName(N->getConstantOperandVal(1), {PtrTy}, M) +
+          " with value " + Twine(Val) +
+          " is not supported on the given target.",
+      DL.getDebugLoc()));
+  return Op.getOperand(0);
+}
+
 static SDValue lowerTensormapReplaceElemtype(SDValue Op, SelectionDAG &DAG) {
   SDNode *N = Op.getNode();
   SDLoc DL(N);
+
+  // immediate argument representing elemtype
   unsigned Val = N->getConstantOperandVal(3);
 
   if (!DAG.getSubtarget<NVPTXSubtarget>().hasTensormapReplaceElemtypeSupport(
-          Val)) {
-    const Function &Fn = DAG.getMachineFunction().getFunction();
-
-    unsigned AS = 0;
-    if (auto *MemN = dyn_cast<MemIntrinsicSDNode>(N)) {
-      AS = MemN->getAddressSpace();
-    }
-    Type *PtrTy = PointerType::get(*DAG.getContext(), AS);
-    Module *M = DAG.getMachineFunction().getFunction().getParent();
-
-    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-        Fn,
-        "Intrinsic " +
-            Intrinsic::getName(N->getConstantOperandVal(1), {PtrTy}, M) +
-            " with elemtype " + Twine(Val) +
-            " is not supported on the given target.",
-        DL.getDebugLoc()));
-    return Op.getOperand(0);
-  }
-
+          Val))
+    return invalidTensormapReplaceUsage(Op, DAG, Val);
   return Op;
 }
 
 static SDValue lowerTensormapReplaceSwizzleMode(SDValue Op, SelectionDAG &DAG) {
   SDNode *N = Op.getNode();
   SDLoc DL(N);
+
+  // immediate argument representing swizzle mode
   unsigned Val = N->getConstantOperandVal(3);
 
   if (!DAG.getSubtarget<NVPTXSubtarget>().hasTensormapReplaceSwizzleModeSupport(
-          Val)) {
-    const Function &Fn = DAG.getMachineFunction().getFunction();
-
-    unsigned AS = 0;
-    if (auto *MemN = dyn_cast<MemIntrinsicSDNode>(N)) {
-      AS = MemN->getAddressSpace();
-    }
-    Type *PtrTy = PointerType::get(*DAG.getContext(), AS);
-    Module *M = DAG.getMachineFunction().getFunction().getParent();
-
-    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-        Fn,
-        "Intrinsic " +
-            Intrinsic::getName(N->getConstantOperandVal(1), {PtrTy}, M) +
-            " with swizzle mode " + Twine(Val) +
-            " is not supported on the given target.",
-        DL.getDebugLoc()));
-    return Op.getOperand(0);
-  }
+          Val))
+    return invalidTensormapReplaceUsage(Op, DAG, Val);
 
   return Op;
 }

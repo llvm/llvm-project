@@ -2195,8 +2195,8 @@ For more information, refer
 Tensormap Replace Intrinsics
 ----------------------------
 
-These intrinsics modify the fields of the tensor-map object in ``tile`` mode at 
-the location specified by the address operand ``%addr``.
+These intrinsics modify the fields of the tensor-map object at ``%addr`` in 
+``tile`` mode.
 
 For more information, refer to the 
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-tensormap-replace>`__.
