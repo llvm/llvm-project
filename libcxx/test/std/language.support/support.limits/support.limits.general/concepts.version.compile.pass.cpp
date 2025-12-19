@@ -41,8 +41,8 @@
 #  ifndef __cpp_lib_concepts
 #    error "__cpp_lib_concepts should be defined in c++20"
 #  endif
-#  if __cpp_lib_concepts != 202002L
-#    error "__cpp_lib_concepts should have the value 202002L in c++20"
+#  if __cpp_lib_concepts != 202207L
+#    error "__cpp_lib_concepts should have the value 202207L in c++20"
 #  endif
 
 #elif TEST_STD_VER == 23
@@ -50,8 +50,8 @@
 #  ifndef __cpp_lib_concepts
 #    error "__cpp_lib_concepts should be defined in c++23"
 #  endif
-#  if __cpp_lib_concepts != 202002L
-#    error "__cpp_lib_concepts should have the value 202002L in c++23"
+#  if __cpp_lib_concepts != 202207L
+#    error "__cpp_lib_concepts should have the value 202207L in c++23"
 #  endif
 
 #elif TEST_STD_VER > 23
@@ -59,8 +59,8 @@
 #  ifndef __cpp_lib_concepts
 #    error "__cpp_lib_concepts should be defined in c++26"
 #  endif
-#  if __cpp_lib_concepts != 202002L
-#    error "__cpp_lib_concepts should have the value 202002L in c++26"
+#  if __cpp_lib_concepts != 202207L
+#    error "__cpp_lib_concepts should have the value 202207L in c++26"
 #  endif
 
 #endif // TEST_STD_VER > 23
