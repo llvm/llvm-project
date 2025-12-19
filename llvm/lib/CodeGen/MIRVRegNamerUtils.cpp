@@ -153,7 +153,7 @@ bool VRegRenamer::renameInstsInMBB(MachineBasicBlock *MBB) {
     if (!Candidate.getNumOperands())
       continue;
     // Look for instructions that define VRegs.
-    for (MachineOperand &MO : Candidate.defs()) {
+    for (MachineOperand &MO : Candidate.all_defs()) {
       // Avoid non regs, instructions defining physical regs.
       if (!MO.isReg() || !MO.getReg().isVirtual())
         continue;
