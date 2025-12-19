@@ -1155,8 +1155,7 @@ TYPE_PARSER(construct<OmpEnterClause>(
     maybe(nonemptyList(Parser<OmpEnterClause::Modifier>{}) / ":"),
     Parser<OmpObjectList>{}))
 
-TYPE_PARSER(construct<OmpFailClause>(
-    Parser<common::OmpMemoryOrderType>{}))
+TYPE_PARSER(construct<OmpFailClause>(Parser<common::OmpMemoryOrderType>{}))
 
 TYPE_PARSER(construct<OmpGraphIdClause>(scalarIntExpr))
 

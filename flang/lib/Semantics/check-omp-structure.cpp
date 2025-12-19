@@ -1626,7 +1626,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPDepobjConstruct &x) {
     return static_cast<Symbol *>(nullptr);
   }};
 
-
   for (auto &clause : clauses.v) {
     llvm::omp::Clause clauseId{clause.Id()};
 
