@@ -586,9 +586,18 @@ def testCustomAttribute():
         try:
             TestAttr(42)
         except TypeError as e:
-            assert "__init__(): incompatible function arguments. The following argument types are supported" in str(e)
-            assert "__init__(self, cast_from_attr: mlir._mlir_libs._mlir.ir.Attribute) -> None" in str(e)
-            assert "Invoked with types: mlir._mlir_libs._mlirPythonTestNanobind.TestAttr, int" in str(e)
+            assert (
+                "__init__(): incompatible function arguments. The following argument types are supported"
+                in str(e)
+            )
+            assert (
+                "__init__(self, cast_from_attr: mlir._mlir_libs._mlir.ir.Attribute) -> None"
+                in str(e)
+            )
+            assert (
+                "Invoked with types: mlir._mlir_libs._mlirPythonTestNanobind.TestAttr, int"
+                in str(e)
+            )
         else:
             raise
 
@@ -627,9 +636,18 @@ def testCustomType():
         try:
             TestType(42)
         except TypeError as e:
-            assert "__init__(): incompatible function arguments. The following argument types are supported" in str(e)
-            assert "__init__(self, cast_from_type: mlir._mlir_libs._mlir.ir.Type) -> None" in str(e)
-            assert "Invoked with types: mlir._mlir_libs._mlirPythonTestNanobind.TestType, int" in str(e)
+            assert (
+                "__init__(): incompatible function arguments. The following argument types are supported"
+                in str(e)
+            )
+            assert (
+                "__init__(self, cast_from_type: mlir._mlir_libs._mlir.ir.Type) -> None"
+                in str(e)
+            )
+            assert (
+                "Invoked with types: mlir._mlir_libs._mlirPythonTestNanobind.TestType, int"
+                in str(e)
+            )
         else:
             raise
 
