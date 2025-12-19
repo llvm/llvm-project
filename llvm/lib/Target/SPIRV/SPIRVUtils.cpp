@@ -360,6 +360,8 @@ addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
     return SPIRV::StorageClass::StorageBuffer;
   case 12:
     return SPIRV::StorageClass::Uniform;
+  case 13:
+    return SPIRV::StorageClass::PushConstant;
   default:
     report_fatal_error("Unknown address space");
   }

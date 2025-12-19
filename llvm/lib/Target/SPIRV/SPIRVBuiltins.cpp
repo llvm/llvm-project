@@ -3446,6 +3446,15 @@ static SPIRVType *getVulkanBufferType(const TargetExtType *ExtensionType,
   return GR->getOrCreateVulkanBufferType(MIRBuilder, T, SC, IsWritable);
 }
 
+static SPIRVType *getVulkanPushConstantType(const TargetExtType *ExtensionType,
+                                            MachineIRBuilder &MIRBuilder,
+                                            SPIRVGlobalRegistry *GR) {
+  assert(ExtensionType->getNumTypeParameters() == 1 &&
+         "Vulkan push constants have exactly one type as argument.");
+  auto *T = ExtensionType->getTypeParameter(0);
+  return GR->getOrCreateVulkanPushConstantType(MIRBuilder, T);
+}
+
 static SPIRVType *getLayoutType(const TargetExtType *ExtensionType,
                                 MachineIRBuilder &MIRBuilder,
                                 SPIRVGlobalRegistry *GR) {
@@ -3531,6 +3540,8 @@ SPIRVType *lowerBuiltinType(const Type *OpaqueType,
     TargetType = getVulkanBufferType(BuiltinType, MIRBuilder, GR);
   } else if (Name == "spirv.Padding") {
     TargetType = GR->getOrCreatePaddingType(MIRBuilder);
+  } else if (Name == "spirv.PushConstant") {
+    TargetType = getVulkanPushConstantType(BuiltinType, MIRBuilder, GR);
   } else if (Name == "spirv.Layout") {
     TargetType = getLayoutType(BuiltinType, MIRBuilder, GR);
   } else {
