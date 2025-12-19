@@ -58,8 +58,6 @@ public:
       const X86Subtarget &STI, MachineDominatorTree *MDT,
       const LegalizerInfo *LI);
 
-  static const char *getName() { return "X86PreLegalizerCombiner"; }
-
   bool tryCombineAll(MachineInstr &I) const override;
 
   bool tryCombineAllImpl(MachineInstr &I) const;
