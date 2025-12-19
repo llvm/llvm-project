@@ -101,6 +101,10 @@ lto::Config BitcodeCompiler::createConfig() {
     checkError(c.addSaveTemps(std::string(ctx.config.outputFile) + ".",
                               /*UseInputModulePath*/ true,
                               ctx.config.saveTempsArgs));
+
+  c.PTO.LoopVectorization = c.OptLevel > 1;
+  c.PTO.SLPVectorization = c.OptLevel > 1;
+
   return c;
 }
 
