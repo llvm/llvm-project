@@ -31,7 +31,7 @@ public:
 
   void VisitOMPClause(const OMPClause *clause) {
     cgf.cgm.errorNYI(clause->getBeginLoc(), "OpenMPClause ",
-                     clause->getClauseKind());
+                     llvm::omp::getOpenMPClauseName(clause->getClauseKind()));
   }
 
   void VisitOMPProcBindClause(const OMPProcBindClause *clause) {
