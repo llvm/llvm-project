@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected -Wno-c99-designator -Wno-reorder-init-list -Wno-initializer-overrides
 // RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,wmissing,wmissing-designated -Wmissing-field-initializers -Wno-c99-designator -Wno-reorder-init-list -Wno-initializer-overrides
 // RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,wmissing -Wmissing-field-initializers -Wno-missing-designated-field-initializers -Wno-c99-designator -Wno-reorder-init-list -Wno-initializer-overrides
-
+// RUN: %clang_cc1 -std=c++20 %s -Wreorder-init-list -fdiagnostics-parseable-fixits 2>&1 | FileCheck %s
 
 namespace class_with_ctor {
   struct A { // cxx20-note 6{{candidate}}
@@ -38,6 +38,8 @@ A a1 = {
   .y = 1, // reorder-note {{previous initialization for field 'y' is here}}
   .x = 2 // reorder-error {{ISO C++ requires field designators to be specified in declaration order; field 'y' will be initialized after field 'x'}}
 };
+// CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:3-[[@LINE-3]]:9}:".x = 2"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:3-[[@LINE-3]]:9}:".y = 1"
 int arr[3] = {[1] = 5}; // pedantic-error {{array designators are a C99 extension}}
 B b = {.a.x = 0}; // pedantic-error {{nested designators are a C99 extension}}
 A a2 = {
@@ -71,6 +73,12 @@ C c = {
   .x = 1, // reorder-error {{declaration order}} override-error {{overrides prior initialization}} override-note {{previous}}
   .x = 1, // override-error {{overrides prior initialization}}
 };
+// CHECK: fix-it:"{{.*}}":{[[@LINE-7]]:3-[[@LINE-7]]:9}:".x = 1"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-7]]:3-[[@LINE-7]]:9}:".x = 1"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-7]]:3-[[@LINE-7]]:9}:".x = 1"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-7]]:3-[[@LINE-7]]:9}:".x = 1"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-7]]:3-[[@LINE-7]]:9}:".y = 1"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-7]]:3-[[@LINE-7]]:9}:".y = 1"
 
 struct Foo { int a, b; };
 
@@ -118,6 +126,8 @@ namespace overload_resolution {
   void i() {
     h({.x = 1, .y = 2});
     h({.y = 1, .x = 2}); // reorder-error {{declaration order}} reorder-note {{previous}}
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:8-[[@LINE-1]]:14}:".x = 2"
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:16-[[@LINE-2]]:22}:".y = 1"
     h({.x = 1}); // expected-error {{ambiguous}}
   }
 
@@ -228,6 +238,16 @@ struct : public A, public B {
     .a = 1, // reorder-error {{field 'b' will be initialized after field 'a'}}
 };
 }
+// CHECK: fix-it:"{{.*}}":{[[@LINE-17]]:4-[[@LINE-17]]:8}:".x=2"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-15]]:4-[[@LINE-15]]:8}:".y=1"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-14]]:4-[[@LINE-14]]:8}:".z=0"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-14]]:4-[[@LINE-14]]:8}:".a=4"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-14]]:4-[[@LINE-14]]:8}:".b=3"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-14]]:5-[[@LINE-14]]:11}:".a = 1"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-13]]:5-[[@LINE-13]]:11}:".b = 1"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-12]]:5-[[@LINE-12]]:11}:".c = 1"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-12]]:5-[[@LINE-12]]:11}:".d = 1"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-12]]:5-[[@LINE-12]]:11}:".e = 1"
 
 namespace GH63759 {
 struct C {
@@ -248,3 +268,39 @@ void foo() {
                            //
 }
 }
+
+namespace reorder_derived {
+struct col {
+  int r;
+  int g;
+  int b;
+};
+
+struct point {
+  float x;
+  float y;
+  float z;
+};
+
+struct bar : public col, public point {
+  int z2;
+  int z1;
+};
+
+void foo() {
+  bar a {
+    {.b = 1, .g = 2, .r = 3}, // reorder-error {{field 'b' will be initialized after field 'g'}} // reorder-error {{field 'g' will be initialized after field 'r'}} // reorder-note {{previous initialization for field 'b' is here}} // reorder-note {{previous initialization for field 'g' is here}} // pedantic-note {{first non-designated initializer is here}}
+    { .z = 1, .y=2, .x =  3 }, // reorder-error {{field 'z' will be initialized after field 'y'}} // reorder-error {{field 'y' will be initialized after field 'x'}} // reorder-note {{previous initialization for field 'z' is here}} // reorder-note {{previous initialization for field 'y' is here}}
+    .z1 = 1, // pedantic-error {{mixture of designated and non-designated initializers in the same initializer list is a C99 extension}} // reorder-note {{previous initialization for field 'z1' is here}}
+    .z2 = 2, // reorder-error {{field 'z1' will be initialized after field 'z2'}} 
+  };
+}
+// CHECK: fix-it:"{{.*}}":{[[@LINE-6]]:6-[[@LINE-6]]:12}:".r = 3"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-7]]:14-[[@LINE-7]]:20}:".g = 2"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-8]]:22-[[@LINE-8]]:28}:".b = 1"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-8]]:15-[[@LINE-8]]:19}:".y=2"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-9]]:21-[[@LINE-9]]:28}:".z = 1"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-10]]:7-[[@LINE-10]]:13}:".x =  3"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-10]]:5-[[@LINE-10]]:12}:".z2 = 2"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-10]]:5-[[@LINE-10]]:12}:".z1 = 1"
+} // namespace reorder_derived
