@@ -305,7 +305,8 @@ PdbAstBuilder::GetOrCreateDeclForUid(PdbSymUid uid) {
   return ToCompilerDecl(*result);
 }
 
-clang::DeclContext *PdbAstBuilder::GetOrCreateClangDeclContextForUid(PdbSymUid uid) {
+clang::DeclContext *
+PdbAstBuilder::GetOrCreateClangDeclContextForUid(PdbSymUid uid) {
   if (uid.kind() == PdbSymUidKind::CompilandSym) {
     if (uid.asCompilandSym().offset == 0)
       return FromCompilerDeclContext(GetTranslationUnitDecl());
@@ -1487,9 +1488,9 @@ void PdbAstBuilder::Dump(Stream &stream, llvm::StringRef filter,
 
 CompilerDeclContext
 PdbAstBuilder::FindNamespaceDecl(CompilerDeclContext parent_ctx,
-  llvm::StringRef name) {
-    clang::DeclContext *parent = FromCompilerDeclContext(parent_ctx);
-    NamespaceSet *set;
+                                 llvm::StringRef name) {
+  clang::DeclContext *parent = FromCompilerDeclContext(parent_ctx);
+  NamespaceSet *set;
 
   if (parent) {
     auto it = m_parent_to_namespaces.find(parent);

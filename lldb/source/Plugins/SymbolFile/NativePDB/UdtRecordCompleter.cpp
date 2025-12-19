@@ -276,7 +276,8 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
     }
   }
 
-  clang::QualType member_qt = m_ast_builder.GetOrCreateClangType(PdbTypeSymId(ti));
+  clang::QualType member_qt =
+      m_ast_builder.GetOrCreateClangType(PdbTypeSymId(ti));
   if (member_qt.isNull())
     return Error::success();
   TypeSystemClang::RequireCompleteType(m_ast_builder.ToCompilerType(member_qt));
