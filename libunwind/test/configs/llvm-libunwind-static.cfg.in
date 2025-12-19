@@ -27,7 +27,7 @@ if '@CMAKE_DL_LIBS@':
 compile_flags.append('-funwind-tables')
 
 local_sysroot = '@CMAKE_OSX_SYSROOT@' or '@CMAKE_SYSROOT@'
-config.substitutions.append(('%{flags}',
+config.substitutions.append(('%{common_flags}',
     '-isysroot {}'.format(local_sysroot) if local_sysroot else ''
 ))
 config.substitutions.append(('%{compile_flags}',

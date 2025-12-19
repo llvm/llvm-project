@@ -10,8 +10,8 @@
 // UNSUPPORTED: no-wide-characters
 
 // Validate it works regardless of the signedness of `char`.
-// RUN: %{cxx} %{flags} %{compile_flags} -fsigned-char -fsyntax-only %s
-// RUN: %{cxx} %{flags} %{compile_flags} -funsigned-char -fsyntax-only %s
+// RUN: %{cxx} %{common_flags} %{compile_flags} -fsigned-char -fsyntax-only %s
+// RUN: %{cxx} %{common_flags} %{compile_flags} -funsigned-char -fsyntax-only %s
 
 // <format>
 

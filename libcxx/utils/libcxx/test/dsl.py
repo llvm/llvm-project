@@ -447,7 +447,7 @@ class AddFeature(ConfigAction):
 
 class AddFlag(ConfigAction):
     """
-    This action adds the given flag to the %{flags} substitution.
+    This action adds the given flag to the %{common_flags} substitution.
 
     The flag can be a string or a callable, in which case it is called with the
     configuration to produce the actual flag (as a string).
@@ -460,7 +460,7 @@ class AddFlag(ConfigAction):
         flag = self._getFlag(config)
         _ensureFlagIsSupported(config, flag)
         config.substitutions = _appendToSubstitution(
-            config.substitutions, "%{flags}", flag
+            config.substitutions, "%{common_flags}", flag
         )
 
     def pretty(self, config, litParams):
@@ -468,7 +468,7 @@ class AddFlag(ConfigAction):
 
 class AddFlagIfSupported(ConfigAction):
     """
-    This action adds the given flag to the %{flags} substitution, only if
+    This action adds the given flag to the %{common_flags} substitution, only if
     the compiler supports the flag.
 
     The flag can be a string or a callable, in which case it is called with the
@@ -482,7 +482,7 @@ class AddFlagIfSupported(ConfigAction):
         flag = self._getFlag(config)
         if hasCompileFlag(config, flag):
             config.substitutions = _appendToSubstitution(
-                config.substitutions, "%{flags}", flag
+                config.substitutions, "%{common_flags}", flag
             )
 
     def pretty(self, config, litParams):

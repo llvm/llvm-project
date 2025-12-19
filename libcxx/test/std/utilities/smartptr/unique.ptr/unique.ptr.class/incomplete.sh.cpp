@@ -15,9 +15,9 @@
 // the unique_ptr is created and destroyed, and a TU where the type is incomplete and
 // we check that a restricted set of operations can be performed on the unique_ptr.
 
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -o %t.tu1.o -DCOMPLETE
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -o %t.tu2.o -DINCOMPLETE
-// RUN: %{cxx} %t.tu1.o %t.tu2.o %{flags} %{link_flags} -o %t.exe
+// RUN: %{cxx} %s %{common_flags} %{compile_flags} -c -o %t.tu1.o -DCOMPLETE
+// RUN: %{cxx} %s %{common_flags} %{compile_flags} -c -o %t.tu2.o -DINCOMPLETE
+// RUN: %{cxx} %t.tu1.o %t.tu2.o %{common_flags} %{link_flags} -o %t.exe
 // RUN: %{exec} %t.exe
 
 #include <memory>

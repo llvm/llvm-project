@@ -26,7 +26,7 @@
 // was not being replaced with memory_order_acquire in external
 // TSAN-instrumented tests.
 
-// RUN: %{cxx} -c %s %{flags} %{compile_flags} -O2 -stdlib=libc++ -S -emit-llvm -o %t.ll
+// RUN: %{cxx} -c %s %{common_flags} %{compile_flags} -O2 -stdlib=libc++ -S -emit-llvm -o %t.ll
 
 #include <atomic>
 

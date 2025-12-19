@@ -4,7 +4,7 @@
 
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
-config.substitutions.append(('%{flags}', '-pthread'))
+config.substitutions.append(('%{common_flags}', '-pthread'))
 config.substitutions.append(('%{compile_flags}',
     '-nostdinc++ -I %{target-include-dir} -I %{include-dir} -I %{libcxx-dir}/test/support'
 ))

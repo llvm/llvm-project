@@ -31,7 +31,7 @@ def _getTempPaths(test):
 
 def _checkBaseSubstitutions(substitutions):
     substitutions = [s for (s, _) in substitutions]
-    for s in ["%{cxx}", "%{compile_flags}", "%{link_flags}", "%{benchmark_flags}", "%{flags}", "%{exec}"]:
+    for s in ["%{cxx}", "%{compile_flags}", "%{link_flags}", "%{benchmark_flags}", "%{common_flags}", "%{exec}"]:
         assert s in substitutions, "Required substitution {} was not provided".format(s)
 
 def _executeScriptInternal(test, litConfig, commands):
@@ -94,12 +94,12 @@ def parseScript(test, preamble):
     _checkBaseSubstitutions(substitutions)
     substitutions.append(("%{temp}", tmpDir))
     substitutions.append(
-        ("%{build}", "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe")
+        ("%{build}", "%{cxx} %s %{common_flags} %{compile_flags} %{link_flags} -o %t.exe")
     )
     substitutions.append(
         (
             "%{verify}",
-            "%{cxx} %s %{flags} %{compile_flags} -U_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER -fsyntax-only -Wno-error -Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0",
+            "%{cxx} %s %{common_flags} %{compile_flags} -U_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER -fsyntax-only -Wno-error -Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0",
         )
     )
     substitutions.append(("%{run}", "%{exec} %t.exe"))
@@ -175,7 +175,7 @@ def parseScript(test, preamble):
         if "std.compat" in modules:
             script.insert(
                 0,
-                "%dbg(MODULE std.compat) %{cxx} %{flags} "
+                "%dbg(MODULE std.compat) %{cxx} %{common_flags} "
                 f"{compileFlags} "
                 "-Wno-reserved-module-identifier -Wno-reserved-user-defined-literal "
                 "-fmodule-file=std=%{temp}/std.pcm " # The std.compat module imports std.
@@ -192,7 +192,7 @@ def parseScript(test, preamble):
         # that order.
         script.insert(
             0,
-            "%dbg(MODULE std) %{cxx} %{flags} "
+            "%dbg(MODULE std) %{cxx} %{common_flags} "
             f"{compileFlags} "
             "-Wno-reserved-module-identifier -Wno-reserved-user-defined-literal "
             "--precompile -o %{temp}/std.pcm -c %{module-dir}/std.cppm",
@@ -230,7 +230,7 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
         %{cxx}             - A command that can be used to invoke the compiler
         %{compile_flags}   - Flags to use when compiling a test case
         %{link_flags}      - Flags to use when linking a test case
-        %{flags}           - Flags to use either when compiling or linking a test case
+        %{common_flags}    - Flags to use either when compiling or linking a test case
         %{benchmark_flags} - Flags to use when compiling benchmarks. These flags should provide access to
                              GoogleBenchmark but shouldn't hardcode any optimization level or other settings,
                              since the benchmarks should be run under the same configuration as the rest of
@@ -238,9 +238,9 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
         %{exec}            - A command to prefix the execution of executables
 
     Note that when building an executable (as opposed to only compiling a source
-    file), all three of %{flags}, %{compile_flags} and %{link_flags} will be used
-    in the same command line. In other words, the test format doesn't perform
-    separate compilation and linking steps in this case.
+    file), all three of %{common_flags}, %{compile_flags} and %{link_flags} will
+    be used in the same command line. In other words, the test format doesn't
+    perform separate compilation and linking steps in this case.
 
     Additional provided substitutions and features
     ==============================================
@@ -248,12 +248,12 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
 
         %{build}
             Expands to a command-line that builds the current source
-            file with the %{flags}, %{compile_flags} and %{link_flags}
+            file with the %{common_flags}, %{compile_flags} and %{link_flags}
             substitutions, and that produces an executable named %t.exe.
 
         %{verify}
             Expands to a command-line that builds the current source
-            file with the %{flags} and %{compile_flags} substitutions
+            file with the %{common_flags} and %{compile_flags} substitutions
             and enables clang-verify. This can be used to write .sh.cpp
             tests that use clang-verify. Note that this substitution can
             only be used when the 'verify-support' feature is available.
@@ -310,23 +310,23 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             ".compile.pass.mm"
         ):
             steps = [
-                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} -fsyntax-only"
+                "%dbg(COMPILED WITH) %{cxx} %s %{common_flags} %{compile_flags} -fsyntax-only"
             ]
             return self._executeShTest(test, litConfig, steps)
         elif filename.endswith(".compile.fail.cpp"):
             steps = [
-                "%dbg(COMPILED WITH) ! %{cxx} %s %{flags} %{compile_flags} -fsyntax-only"
+                "%dbg(COMPILED WITH) ! %{cxx} %s %{common_flags} %{compile_flags} -fsyntax-only"
             ]
             return self._executeShTest(test, litConfig, steps)
         elif filename.endswith(".link.pass.cpp") or filename.endswith(".link.pass.mm"):
             steps = [
-                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe"
+                "%dbg(COMPILED WITH) %{cxx} %s %{common_flags} %{compile_flags} %{link_flags} -o %t.exe"
             ]
             return self._executeShTest(test, litConfig, steps)
         elif filename.endswith(".link.fail.cpp"):
             steps = [
-                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} -c -o %t.o",
-                "%dbg(LINKED WITH) ! %{cxx} %t.o %{flags} %{link_flags} -o %t.exe",
+                "%dbg(COMPILED WITH) %{cxx} %s %{common_flags} %{compile_flags} -c -o %t.o",
+                "%dbg(LINKED WITH) ! %{cxx} %t.o %{common_flags} %{link_flags} -o %t.exe",
             ]
             return self._executeShTest(test, litConfig, steps)
         elif filename.endswith(".verify.cpp"):
@@ -343,7 +343,7 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
         # suffixes above too.
         elif filename.endswith(".pass.cpp") or filename.endswith(".pass.mm"):
             steps = [
-                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
+                "%dbg(COMPILED WITH) %{cxx} %s %{common_flags} %{compile_flags} %{link_flags} -o %t.exe",
                 "%dbg(EXECUTED AS) %{exec} %t.exe",
             ]
             return self._executeShTest(test, litConfig, steps)
@@ -356,7 +356,7 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
                     ),
                 )
             steps = [
-                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{benchmark_flags} %{link_flags} -o %t.exe",
+                "%dbg(COMPILED WITH) %{cxx} %s %{common_flags} %{compile_flags} %{benchmark_flags} %{link_flags} -o %t.exe",
             ]
             if "enable-benchmarks=run" in test.config.available_features:
                 steps += ["%dbg(EXECUTED AS) %{exec} %t.exe --benchmark_out=%{temp}/benchmark-result.json --benchmark_out_format=json"]

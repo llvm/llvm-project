@@ -15,12 +15,12 @@
 // Test that we encode the assertion semantic in an ABI tag to avoid ODR violations when linking TUs that have different
 // values for it.
 
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU1  -U_LIBCPP_ASSERTION_SEMANTIC -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_IGNORE        -o %t.tu1.o
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU2  -U_LIBCPP_ASSERTION_SEMANTIC -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_OBSERVE       -o %t.tu2.o
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU3  -U_LIBCPP_ASSERTION_SEMANTIC -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE -o %t.tu3.o
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU4  -U_LIBCPP_ASSERTION_SEMANTIC -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_ENFORCE       -o %t.tu4.o
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DMAIN                                                                                                    -o %t.main.o
-// RUN: %{cxx} %t.tu1.o %t.tu2.o %t.tu3.o %t.tu4.o %t.main.o %{flags} %{link_flags} -o %t.exe
+// RUN: %{cxx} %s %{common_flags} %{compile_flags} -c -DTU1  -U_LIBCPP_ASSERTION_SEMANTIC -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_IGNORE        -o %t.tu1.o
+// RUN: %{cxx} %s %{common_flags} %{compile_flags} -c -DTU2  -U_LIBCPP_ASSERTION_SEMANTIC -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_OBSERVE       -o %t.tu2.o
+// RUN: %{cxx} %s %{common_flags} %{compile_flags} -c -DTU3  -U_LIBCPP_ASSERTION_SEMANTIC -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE -o %t.tu3.o
+// RUN: %{cxx} %s %{common_flags} %{compile_flags} -c -DTU4  -U_LIBCPP_ASSERTION_SEMANTIC -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_ENFORCE       -o %t.tu4.o
+// RUN: %{cxx} %s %{common_flags} %{compile_flags} -c -DMAIN                                                                                                    -o %t.main.o
+// RUN: %{cxx} %t.tu1.o %t.tu2.o %t.tu3.o %t.tu4.o %t.main.o %{common_flags} %{link_flags} -o %t.exe
 // RUN: %{exec} %t.exe
 
 #include "test_macros.h"

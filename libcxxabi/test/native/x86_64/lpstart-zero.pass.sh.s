@@ -1,4 +1,4 @@
-# RUN: %{cxx} %{flags} %s %{link_flags} -no-pie -o %t.exe
+# RUN: %{cxx} %{common_flags} %s %{link_flags} -no-pie -o %t.exe
 # RUN: %{exec} %t.exe
 
 # REQUIRES: linux && target={{x86_64-.+}}

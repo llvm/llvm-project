@@ -17,9 +17,9 @@
 # REQUIRES: target=powerpc-ibm-aix{{.*}}
 # UNSUPPORTED: no-exceptions
 
-// RUN: %{cxx} -c %s -o %t1_32.o -DT1_CPP_CODE %{flags} %{compile_flags}
-// RUN: %{cxx} -c %s -o %t2_32.o -DT2_CPP_CODE %{flags} %{compile_flags}
-// RUN: %{cxx} -o %t_32.exe %t1_32.o %t2_32.o %{flags} %{link_flags}
+// RUN: %{cxx} -c %s -o %t1_32.o -DT1_CPP_CODE %{common_flags} %{compile_flags}
+// RUN: %{cxx} -c %s -o %t2_32.o -DT2_CPP_CODE %{common_flags} %{compile_flags}
+// RUN: %{cxx} -o %t_32.exe %t1_32.o %t2_32.o %{common_flags} %{link_flags}
 // RUN: %{exec} %t_32.exe
 
 #if defined(T1_CPP_CODE)
