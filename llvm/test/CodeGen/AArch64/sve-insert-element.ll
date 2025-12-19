@@ -166,7 +166,7 @@ define <vscale x 16 x i8> @test_lanex_16xi8(<vscale x 16 x i8> %a, i32 %x) {
 }
 
 ; TODO: Implement DAG combiner.
-; INSERT_VECTOR_ELT(undef, ...) -> VECTOR_SPLAT
+; INSERT_VECTOR_ELT(poison, ...) -> VECTOR_SPLAT
 
 define <vscale x 16 x i8> @test_lanex_16xi8_poison(i8 %e, i32 %x) {
 ; CHECK-LABEL: test_lanex_16xi8_poison:
@@ -365,8 +365,8 @@ define <vscale x 8 x half> @test_lanex_nxv8f16_poison_imm(i64 %idx) {
   ret <vscale x 8 x half> %res
 }
 
-define <vscale x 2 x bfloat> @test_lanex_nxv2bf16_undef(bfloat %h, i64 %idx) {
-; CHECK-LABEL: test_lanex_nxv2bf16_undef:
+define <vscale x 2 x bfloat> @test_lanex_nxv2bf16_poison(bfloat %h, i64 %idx) {
+; CHECK-LABEL: test_lanex_nxv2bf16_poison:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z1.d, #0, #1
 ; CHECK-NEXT:    mov z2.d, x0
@@ -378,8 +378,8 @@ define <vscale x 2 x bfloat> @test_lanex_nxv2bf16_undef(bfloat %h, i64 %idx) {
   ret <vscale x 2 x bfloat> %res
 }
 
-define <vscale x 2 x bfloat> @test_lanex_nxv2bf16_undef_imm(i64 %idx) {
-; CHECK-LABEL: test_lanex_nxv2bf16_undef_imm:
+define <vscale x 2 x bfloat> @test_lanex_nxv2bf16_poison_imm(i64 %idx) {
+; CHECK-LABEL: test_lanex_nxv2bf16_poison_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z0.d, #0, #1
 ; CHECK-NEXT:    mov z1.d, x0
@@ -392,8 +392,8 @@ define <vscale x 2 x bfloat> @test_lanex_nxv2bf16_undef_imm(i64 %idx) {
   ret <vscale x 2 x bfloat> %res
 }
 
-define <vscale x 4 x bfloat> @test_lanex_nxv4bf16_undef(bfloat %h, i64 %idx) {
-; CHECK-LABEL: test_lanex_nxv4bf16_undef:
+define <vscale x 4 x bfloat> @test_lanex_nxv4bf16_poison(bfloat %h, i64 %idx) {
+; CHECK-LABEL: test_lanex_nxv4bf16_poison:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    mov z2.s, w0
@@ -405,8 +405,8 @@ define <vscale x 4 x bfloat> @test_lanex_nxv4bf16_undef(bfloat %h, i64 %idx) {
   ret <vscale x 4 x bfloat> %res
 }
 
-define <vscale x 4 x bfloat> @test_lanex_nxv4bf16_undef_imm(i64 %idx) {
-; CHECK-LABEL: test_lanex_nxv4bf16_undef_imm:
+define <vscale x 4 x bfloat> @test_lanex_nxv4bf16_poison_imm(i64 %idx) {
+; CHECK-LABEL: test_lanex_nxv4bf16_poison_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z0.s, #0, #1
 ; CHECK-NEXT:    mov z1.s, w0
