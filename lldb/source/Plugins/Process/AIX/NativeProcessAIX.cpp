@@ -222,10 +222,13 @@ Status NativeProcessAIX::Kill() {
     break;
   }
 
-  llvm::Error result =
-      (PtraceWrapper(PT_KILL, GetID(), nullptr, nullptr, 0)).takeError();
-  if (!result)
-    error.FromErrorString("Kill failed");
+  llvm::Expected<int> result =
+      PtraceWrapper(PT_KILL, GetID(), nullptr, nullptr, 0);
+  if (!result) {
+    std::string error_string = std::string("Kill failed for process. error: ") +
+                               llvm::toString(result.takeError());
+    error.FromErrorString(error_string.c_str());
+  }
   return error;
 }
 
