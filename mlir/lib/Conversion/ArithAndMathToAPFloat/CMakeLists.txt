@@ -20,7 +20,7 @@ add_mlir_conversion_library(MLIRArithToAPFloat
   Core
 
   LINK_LIBS PUBLIC
-  ArithAndMathToAPFloatUtils
+  MLIRArithAndMathToAPFloatUtils
   MLIRArithDialect
   MLIRArithTransforms
   MLIRFuncDialect
@@ -43,7 +43,7 @@ add_mlir_conversion_library(MLIRMathToAPFloat
 
   LINK_LIBS PUBLIC
   MLIRTransformUtils
-  ArithAndMathToAPFloatUtils
+  MLIRArithAndMathToAPFloatUtils
   MLIRMathDialect
   MLIRFuncDialect
   MLIRFuncUtils
