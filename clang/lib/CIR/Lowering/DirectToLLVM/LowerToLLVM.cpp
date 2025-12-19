@@ -2626,18 +2626,6 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type type = cmpOp.getLhs().getType();
 
-  assert(!cir::MissingFeatures::methodType());
-  if (mlir::isa<cir::DataMemberType>(type)) {
-    assert(lowerMod && "lowering module is not available");
-
-    mlir::Value loweredResult;
-    loweredResult = lowerMod->getCXXABI().lowerDataMemberCmp(
-        cmpOp, adaptor.getLhs(), adaptor.getRhs(), rewriter);
-
-    rewriter.replaceOp(cmpOp, loweredResult);
-    return mlir::success();
-  }
-
   if (mlir::isa<cir::IntType, mlir::IntegerType>(type)) {
     bool isSigned = mlir::isa<cir::IntType>(type)
                         ? mlir::cast<cir::IntType>(type).isSigned()
