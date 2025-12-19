@@ -5896,4 +5896,31 @@ def CIR_BlockAddressOp : CIR_Op<"block_address", [Pure]> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// CpuIdOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CpuIdOp : CIR_Op<"cpuid"> {
+  let summary = "Get information about the CPU";
+  let description = [{
+    The `cir.cpuid` operation takes a base pointer to an array of 4 integers, a
+    function ID and a sub-function ID. The array of 4 integers is filled with
+    different information about the processor.
+
+    Example:
+
+    ```mlir
+    cir.cpuid %basePtr, %funcId, %subFuncId
+        : (!cir.ptr<!cir.array<4 x !s32i>>, !s32i, !s32i)
+    ```
+  }];
+
+  let arguments =
+      (ins Arg<CIR_PtrToArray, "array address", [MemWrite]>:$basePtr,
+          CIR_SInt32:$funcId, CIR_SInt32:$subFuncId);
+  // TODO: remove once we can return an optional mlir::Value from
+  //   emitX86BuiltinExpr
+  let results = (outs CIR_VectorType:$result);
+}
+
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD
