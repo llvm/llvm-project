@@ -4298,7 +4298,8 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     } else {
       // Branch to the li instruction.
       BrTarget = Context.createTempSymbol();
-      LabelOp = MCOperand::createExpr(MCSymbolRefExpr::create(BrTarget, Context));
+      LabelOp =
+          MCOperand::createExpr(MCSymbolRefExpr::create(BrTarget, Context));
       TOut.emitRRX(Mips::BNE, RtReg, ZeroReg, LabelOp, IDLoc, STI);
     }
 
