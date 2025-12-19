@@ -13,9 +13,11 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
+using namespace llvm::SCEVPatternMatch;
 
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
   return all_of(Def->users(),
@@ -149,6 +151,23 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
         return SE.getGEPExpr(Base, IndexExprs, SrcElementTy);
       })
       .Default([&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
+}
+
+bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,
+                                   const Loop *L) {
+  // If address is an SCEVAddExpr, we require that all operands must be either
+  // be invariant or a (possibly sign-extend) affine AddRec.
+  if (auto *PtrAdd = dyn_cast<SCEVAddExpr>(Addr)) {
+    return all_of(PtrAdd->operands(), [&SE, L](const SCEV *Op) {
+      return SE.isLoopInvariant(Op, L) ||
+             match(Op, m_scev_SExt(m_scev_AffineAddRec(m_SCEV(), m_SCEV()))) ||
+             match(Op, m_scev_AffineAddRec(m_SCEV(), m_SCEV()));
+    });
+  }
+
+  // Otherwise, check if address is loop invariant or an affine add recurrence.
+  return SE.isLoopInvariant(Addr, L) ||
+         match(Addr, m_scev_AffineAddRec(m_SCEV(), m_SCEV()));
 }
 
 /// Returns true if \p Opcode preserves uniformity, i.e., if all operands are
