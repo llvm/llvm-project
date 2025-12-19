@@ -122,10 +122,9 @@ static cl::list<RuleTy> Profitabilities(
                           "work with other options)")));
 
 // Support for simple reduction of inner loop.
-static cl::opt<bool>
-    EnableUndoSimpleReduction("undo-simple-reduction", cl::init(false),
-                              cl::Hidden,
-                              cl::desc("Support for simple reduction of inner loop."));
+static cl::opt<bool> EnableUndoSimpleReduction(
+    "undo-simple-reduction", cl::init(false), cl::Hidden,
+    cl::desc("Support for simple reduction of inner loop."));
 
 #ifndef NDEBUG
 static bool noDuplicateRulesAndIgnore(ArrayRef<RuleTy> Rules) {
