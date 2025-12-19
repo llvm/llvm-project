@@ -25,6 +25,9 @@ _start:
     bl far_away_func
     ret
 
+# This is skipped, so it stays in the .bolt.org.text.
+# The .text produced by BOLT is aligned to 0x10000000,
+# so _start will need a stub to jump here.
   .global far_away_func
   .type far_away_func, %function
 far_away_func:

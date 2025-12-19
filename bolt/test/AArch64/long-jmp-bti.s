@@ -7,21 +7,21 @@
 # RUN: llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions \
 # RUN: --print-split --print-only foo --print-longjmp 2>&1 | FileCheck %s
 
-#CHECK: BOLT-INFO: Starting stub-insertion pass
-#CHECK: Binary Function "foo" after long-jmp
+# CHECK: BOLT-INFO: Starting stub-insertion pass
+# CHECK: Binary Function "foo" after long-jmp
 
-#CHECK:      cmp     x0, #0x0
-#CHECK-NEXT: Successors: .LStub0
+# CHECK:      cmp     x0, #0x0
+# CHECK-NEXT: Successors: .LStub0
 
-#CHECK:      adrp    x16, .Ltmp0
-#CHECK-NEXT: add     x16, x16, :lo12:.Ltmp0
-#CHECK-NEXT: br      x16 # UNKNOWN CONTROL FLOW
+# CHECK:      adrp    x16, .Ltmp0
+# CHECK-NEXT: add     x16, x16, :lo12:.Ltmp0
+# CHECK-NEXT: br      x16 # UNKNOWN CONTROL FLOW
 
-#CHECK: -------   HOT-COLD SPLIT POINT   -------
+# CHECK: -------   HOT-COLD SPLIT POINT   -------
 
-#CHECK:      bti     c
-#CHECK-NEXT: mov     x0, #0x2
-#CHECK-NEXT: ret
+# CHECK:      bti     c
+# CHECK-NEXT: mov     x0, #0x2
+# CHECK-NEXT: ret
 
   .text
   .globl  foo
