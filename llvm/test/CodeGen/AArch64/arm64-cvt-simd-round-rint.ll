@@ -304,7 +304,7 @@ define <1 x i64> @lround_i64_f16_scalar_to_vec(half %x)  {
 ; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
 ; CHECK-NOFPRCVT-NEXT:    ret
   %val = call i64 @llvm.lround.i64.f16(half %x)
-  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
   ret <1 x i64> %vec
 }
 
@@ -320,7 +320,7 @@ define <1 x i64> @lround_i64_f32_scalar_to_vec(float %x)  {
 ; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
 ; CHECK-NOFPRCVT-NEXT:    ret
   %val = call i64 @llvm.lround.i64.f32(float %x)
-  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
   ret <1 x i64> %vec
 }
 
@@ -330,7 +330,7 @@ define <1 x i64> @lround_i64_f64_scalar_to_vec(double %x)  {
 ; CHECK-NEXT:    fcvtas d0, d0
 ; CHECK-NEXT:    ret
   %val = call i64 @llvm.lround.i64.f64(double %x)
-  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
   ret <1 x i64> %vec
 }
 
@@ -350,7 +350,7 @@ define <1 x i64> @llround_i64_f16_scalar_to_vec(half %x)  {
 ; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
 ; CHECK-NOFPRCVT-NEXT:    ret
   %val = call i64 @llvm.llround.i64.f16(half %x)
-  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
   ret <1 x i64> %vec
 }
 
@@ -366,7 +366,7 @@ define <1 x i64> @llround_i64_f32_scalar_to_vec(float %x)  {
 ; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
 ; CHECK-NOFPRCVT-NEXT:    ret
   %val = call i64 @llvm.llround.i64.f32(float %x)
-  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
   ret <1 x i64> %vec
 }
 
@@ -376,7 +376,7 @@ define <1 x i64> @llround_i64_f64_scalar_to_vec(double %x)  {
 ; CHECK-NEXT:    fcvtas d0, d0
 ; CHECK-NEXT:    ret
   %val = call i64 @llvm.llround.i64.f64(double %x)
-  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
   ret <1 x i64> %vec
 }
 
@@ -398,7 +398,7 @@ define <1 x i64> @lrint_i64_f16_scalar_to_vec(half %x)  {
 ; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
 ; CHECK-NOFPRCVT-NEXT:    ret
   %val = call i64 @llvm.lrint.i64.f16(half %x)
-  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
   ret <1 x i64> %vec
 }
 
@@ -416,7 +416,7 @@ define <1 x i64> @lrint_i64_f32_scalar_to_vec(float %x)  {
 ; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
 ; CHECK-NOFPRCVT-NEXT:    ret
   %val = call i64 @llvm.lrint.i64.f32(float %x)
-  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
   ret <1 x i64> %vec
 }
 
@@ -427,7 +427,7 @@ define <1 x i64> @lrint_i64_f64_scalar_to_vec(double %x)  {
 ; CHECK-NEXT:    fcvtzs d0, d0
 ; CHECK-NEXT:    ret
   %val = call i64 @llvm.lrint.i64.f64(double %x)
-  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
   ret <1 x i64> %vec
 }
 
@@ -449,7 +449,7 @@ define <1 x i64> @llrint_i64_f16_scalar_to_vec(half %x)  {
 ; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
 ; CHECK-NOFPRCVT-NEXT:    ret
   %val = call i64 @llvm.llrint.i64.f16(half %x)
-  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
   ret <1 x i64> %vec
 }
 
@@ -467,7 +467,7 @@ define <1 x i64> @llrint_i64_f32_scalar_to_vec(float %x)  {
 ; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
 ; CHECK-NOFPRCVT-NEXT:    ret
   %val = call i64 @llvm.llrint.i64.f32(float %x)
-  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
   ret <1 x i64> %vec
 }
 
@@ -478,6 +478,6 @@ define <1 x i64> @llrint_i64_f64_scalar_to_vec(double %x)  {
 ; CHECK-NEXT:    fcvtzs d0, d0
 ; CHECK-NEXT:    ret
   %val = call i64 @llvm.llrint.i64.f64(double %x)
-  %vec = insertelement <1 x i64> undef, i64 %val, i32 0
+  %vec = insertelement <1 x i64> poison, i64 %val, i32 0
   ret <1 x i64> %vec
 }
