@@ -63,6 +63,7 @@ def _llvm_repos_extension_impl(module_ctx):
         name = "pfm",
         urls = [
             "https://versaweb.dl.sourceforge.net/project/perfmon2/libpfm4/libpfm-4.13.0.tar.gz",
+            "https://sourceforge.net/projects/perfmon2/files/libpfm4/libpfm-4.13.0.tar.gz",
         ],
         sha256 = "d18b97764c755528c1051d376e33545d0eb60c6ebf85680436813fa5b04cc3d1",
         strip_prefix = "libpfm-4.13.0",

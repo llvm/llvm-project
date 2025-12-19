@@ -452,8 +452,10 @@ std::optional<FPValueAndVReg> llvm::getFConstantVRegValWithLookThrough(
           VReg, MRI, LookThroughInstrs);
   if (!Reg)
     return std::nullopt;
-  return FPValueAndVReg{getConstantFPVRegVal(Reg->VReg, MRI)->getValueAPF(),
-                        Reg->VReg};
+
+  APFloat FloatVal(getFltSemanticForLLT(LLT::scalar(Reg->Value.getBitWidth())),
+                   Reg->Value);
+  return FPValueAndVReg{FloatVal, Reg->VReg};
 }
 
 const ConstantFP *
