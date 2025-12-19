@@ -30,6 +30,8 @@ static const char BitmaskVarErrorMessage[] =
 
 static const char BitmaskNoteMessage[] = "used here as a bitmask";
 
+namespace {
+
 /// Stores a min and a max value which describe an interval.
 struct ValueRange {
   llvm::APSInt MinVal;
@@ -46,6 +48,8 @@ struct ValueRange {
     MaxVal = MinMaxVal.second->getInitVal();
   }
 };
+
+} // namespace
 
 /// Return the number of EnumConstantDecls in an EnumDecl.
 static int enumLength(const EnumDecl *EnumDec) {

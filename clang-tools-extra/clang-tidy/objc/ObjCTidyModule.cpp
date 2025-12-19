@@ -23,6 +23,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy {
 namespace objc {
+namespace {
 
 class ObjCModule : public ClangTidyModule {
 public:
@@ -44,6 +45,8 @@ public:
     CheckFactories.registerCheck<SuperSelfCheck>("objc-super-self");
   }
 };
+
+} // namespace
 
 // Register the ObjCTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<ObjCModule>

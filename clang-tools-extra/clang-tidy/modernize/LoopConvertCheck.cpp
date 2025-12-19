@@ -330,6 +330,8 @@ static StatementMatcher makePseudoArrayLoopMatcher() {
       .bind(LoopNamePseudoArray);
 }
 
+namespace {
+
 enum class IteratorCallKind {
   ICK_Member,
   ICK_ADL,
@@ -342,6 +344,8 @@ struct ContainerCall {
   bool IsArrow;
   IteratorCallKind CallKind;
 };
+
+} // namespace
 
 // Find the Expr likely initializing an iterator.
 //

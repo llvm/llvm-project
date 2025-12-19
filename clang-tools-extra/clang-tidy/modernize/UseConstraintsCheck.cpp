@@ -21,12 +21,12 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+namespace {
 struct EnableIfData {
   TemplateSpecializationTypeLoc Loc;
   TypeLoc Outer;
 };
 
-namespace {
 AST_MATCHER(FunctionDecl, hasOtherDeclarations) {
   auto It = Node.redecls_begin();
   auto EndIt = Node.redecls_end();

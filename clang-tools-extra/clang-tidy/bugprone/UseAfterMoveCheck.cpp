@@ -391,11 +391,15 @@ void UseAfterMoveFinder::getReinits(
   }
 }
 
+namespace {
+
 enum MoveType {
   Forward = 0,      // std::forward
   Move = 1,         // std::move
   Invalidation = 2, // other
 };
+
+} // namespace
 
 static MoveType determineMoveType(const FunctionDecl *FuncDecl) {
   if (FuncDecl->isInStdNamespace()) {

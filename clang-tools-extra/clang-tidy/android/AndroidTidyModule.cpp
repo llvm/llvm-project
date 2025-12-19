@@ -29,6 +29,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy {
 namespace android {
+namespace {
 
 /// This module is for Android specific checks.
 class AndroidModule : public ClangTidyModule {
@@ -58,6 +59,8 @@ public:
         "android-comparison-in-temp-failure-retry");
   }
 };
+
+} // namespace
 
 // Register the AndroidTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<AndroidModule>
