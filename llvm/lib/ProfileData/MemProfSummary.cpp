@@ -25,6 +25,13 @@ void MemProfSummary::printSummaryYaml(raw_ostream &OS) const {
   OS << "#   Maximum cold context total size: " << MaxColdTotalSize << "\n";
   OS << "#   Maximum warm context total size: " << MaxWarmTotalSize << "\n";
   OS << "#   Maximum hot context total size: " << MaxHotTotalSize << "\n";
+  if (HasDataAccessProfile) {
+    OS << "# Num hot symbols and string literals: "
+       << NumHotSymbolsAndStringLiterals << "\n";
+    OS << "# Num known cold symbols: " << NumKnownColdSymbols << "\n";
+    OS << "# Num known cold string literals: " << NumKnownColdStringLiterals
+       << "\n";
+  }
 }
 
 void MemProfSummary::write(ProfOStream &OS) const {
@@ -71,4 +78,15 @@ MemProfSummary::deserialize(const unsigned char *&Ptr) {
   Ptr += NumSummaryFields * sizeof(uint64_t);
 
   return MemProfSum;
+}
+
+// FIXME: Consider to serialize the data access summary fields, ideally
+// batch this together with more substantial profile format change
+// and bump version once.
+void MemProfSummary::buildDataAccessSummary(
+    const DataAccessProfData &DataAccessProfile) {
+  HasDataAccessProfile = true;
+  NumHotSymbolsAndStringLiterals = DataAccessProfile.getRecords().size();
+  NumKnownColdSymbols = DataAccessProfile.getKnownColdSymbols().size();
+  NumKnownColdStringLiterals = DataAccessProfile.getKnownColdHashes().size();
 }

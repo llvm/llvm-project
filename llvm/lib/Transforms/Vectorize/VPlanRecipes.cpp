@@ -23,6 +23,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -3133,15 +3134,11 @@ static const SCEV *getAddressAccessSCEV(const VPValue *Ptr, ScalarEvolution &SE,
                  match(Ptr, m_GetElementPtr(m_VPValue(), m_VPValue()))))
     return nullptr;
 
-  // We are looking for a GEP where all indices are either loop invariant or
-  // inductions.
-  for (VPValue *Opd : drop_begin(PtrR->operands())) {
-    if (!Opd->isDefinedOutsideLoopRegions() &&
-        !isa<VPScalarIVStepsRecipe, VPWidenIntOrFpInductionRecipe>(Opd))
-      return nullptr;
-  }
+  const SCEV *Addr = vputils::getSCEVExprForVPValue(Ptr, SE, L);
+  if (isa<SCEVCouldNotCompute>(Addr))
+    return Addr;
 
-  return vputils::getSCEVExprForVPValue(Ptr, SE, L);
+  return vputils::isAddressSCEVForCost(Addr, SE, L) ? Addr : nullptr;
 }
 
 /// Returns true if \p V is used as part of the address of another load or

@@ -44,6 +44,9 @@
 #   Maximum cold context total size: 0
 #   Maximum warm context total size: 666
 #   Maximum hot context total size: 0
+#   Num hot symbols and string literals: 2
+#   Num known cold symbols: 2
+#   Num known cold string literals: 2
 ---
 HeapProfileRecords:
   - GUID:            0xdeadbeef12345678
@@ -229,6 +232,9 @@ HeapProfileRecords:
 #   Maximum cold context total size: 0
 #   Maximum warm context total size: 0
 #   Maximum hot context total size: 0
+#   Num hot symbols and string literals: 2
+#   Num known cold symbols: 2
+#   Num known cold string literals: 2
 ---
 DataAccessProfiles:
   SampledRecords:

@@ -19,5 +19,5 @@ with parentheses. This ensures that the argument value is calculated
 properly.
 
 This check corresponds to the CERT C Coding Standard rule
-`PRE20-C. Macro replacement lists should be parenthesized.
+`PRE02-C. Macro replacement lists should be parenthesized.
 <https://wiki.sei.cmu.edu/confluence/display/c/PRE02-C.+Macro+replacement+lists+should+be+parenthesized>`_
