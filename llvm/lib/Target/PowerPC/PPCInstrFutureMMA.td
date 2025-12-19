@@ -19,6 +19,9 @@
 def SDT_PPCInst512 : SDTypeProfile<1, 2, [
   SDTCisVT<0, v512i1>, SDTCisVT<1, v256i1>, SDTCisVT<2, v256i1>
 ]>;
+def SDT_PPCInst256 : SDTypeProfile<1, 2, [
+  SDTCisVT<0, v256i1>, SDTCisVT<1, v256i1>, SDTCisVT<2, i32>
+]>;
 
 //===----------------------------------------------------------------------===//
 // ISA Future specific PPCISD nodes.
@@ -26,6 +29,7 @@ def SDT_PPCInst512 : SDTypeProfile<1, 2, [
 
 def PPCInst512   : SDNode<"PPCISD::INST512", SDT_PPCInst512, []>;
 def PPCInst512Hi : SDNode<"PPCISD::INST512HI", SDT_PPCInst512, []>;
+def PPCInst256   : SDNode<"PPCISD::INST256", SDT_PPCInst256, []>;
 
 //===----------------------------------------------------------------------===//
 
@@ -467,7 +471,8 @@ let Predicates = [MMA, IsISAFuture] in {
 
   def DMXXINSTDMR256 : XX2Form_AT3_XBp5_P2<60, 485, (outs dmrrowp:$AT),
                                            (ins vsrprc:$XBp, u2imm:$P),
-                                           "dmxxinstdmr256 $AT, $XBp, $P", []>;
+                                           "dmxxinstdmr256 $AT, $XBp, $P",
+                                           [(set v256i1:$AT, (PPCInst256 v256i1:$XBp, timm:$P))]>;
 
   def DMMR
       : XForm_ATB3<31, 6, 177, (outs dmr:$AT), (ins dmr:$AB), "dmmr $AT, $AB",

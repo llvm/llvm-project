@@ -296,16 +296,16 @@ define void @tins256(ptr %vp1, ptr %vp2, ptr %vp3, ptr %vp4, ptr %rp1, ptr %rp2,
 ; CHECK-NEXT:    stxvp vsp36, 96(r8)
 ; CHECK-NEXT:    stxvp vsp32, 64(r8)
 ; CHECK-NEXT:    dmxxextfdmr512 vsp36, vsp32, wacc_hi0, 1
+; CHECK-NEXT:    dmxxinstdmr256 dmr0, vsp34, 2
 ; CHECK-NEXT:    stxvp vsp36, 32(r8)
 ; CHECK-NEXT:    stxvp vsp32, 0(r8)
-; CHECK-NEXT:    dmxxinstdmr256 dmr0, vsp34, 2
 ; CHECK-NEXT:    dmxxextfdmr512 vsp36, vsp32, wacc0, 0
 ; CHECK-NEXT:    stxvp vsp36, 96(r9)
 ; CHECK-NEXT:    stxvp vsp32, 64(r9)
 ; CHECK-NEXT:    dmxxextfdmr512 vsp36, vsp32, wacc_hi0, 1
+; CHECK-NEXT:    dmxxinstdmr256 dmr0, vsp34, 3
 ; CHECK-NEXT:    stxvp vsp36, 32(r9)
 ; CHECK-NEXT:    stxvp vsp32, 0(r9)
-; CHECK-NEXT:    dmxxinstdmr256 dmr0, vsp34, 3
 ; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxvp vsp34, 96(r10)
 ; CHECK-NEXT:    stxvp vsp36, 64(r10)
@@ -328,21 +328,21 @@ define void @tins256(ptr %vp1, ptr %vp2, ptr %vp3, ptr %vp4, ptr %rp1, ptr %rp2,
 ; CHECK-BE-NEXT:    stxvp vsp34, 0(r7)
 ; CHECK-BE-NEXT:    lxv v2, 0(r4)
 ; CHECK-BE-NEXT:    lxv v3, 16(r4)
-; CHECK-BE-NEXT:    dmxxinstdmr256 dmr0, vsp34, 1
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp36, vsp32, wacc_hi0, 1
 ; CHECK-BE-NEXT:    stxvp vsp32, 96(r8)
 ; CHECK-BE-NEXT:    stxvp vsp36, 64(r8)
+; CHECK-BE-NEXT:    dmxxinstdmr256 dmr0, vsp34, 1
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp36, vsp32, wacc0, 0
+; CHECK-BE-NEXT:    dmxxinstdmr256 dmr0, vsp34, 2
 ; CHECK-BE-NEXT:    stxvp vsp32, 32(r8)
 ; CHECK-BE-NEXT:    stxvp vsp36, 0(r8)
-; CHECK-BE-NEXT:    dmxxinstdmr256 dmr0, vsp34, 2
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp36, vsp32, wacc_hi0, 1
 ; CHECK-BE-NEXT:    stxvp vsp32, 96(r9)
 ; CHECK-BE-NEXT:    stxvp vsp36, 64(r9)
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp36, vsp32, wacc0, 0
+; CHECK-BE-NEXT:    dmxxinstdmr256 dmr0, vsp34, 3
 ; CHECK-BE-NEXT:    stxvp vsp32, 32(r9)
 ; CHECK-BE-NEXT:    stxvp vsp36, 0(r9)
-; CHECK-BE-NEXT:    dmxxinstdmr256 dmr0, vsp34, 3
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
 ; CHECK-BE-NEXT:    stxvp vsp36, 96(r10)
 ; CHECK-BE-NEXT:    stxvp vsp34, 64(r10)

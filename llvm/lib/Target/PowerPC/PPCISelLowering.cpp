@@ -11271,9 +11271,8 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
     SDValue SubReg = DAG.getTargetConstant(Subx, dl, MVT::i32);
     SDValue P = DAG.getTargetConstant(IdxVal, dl, MVT::i32);
-    SDValue Ops[] = {Op.getOperand(2), P};
-    SDValue DMRRowp = SDValue(
-        DAG.getMachineNode(PPC::DMXXINSTDMR256, dl, MVT::v256i1, Ops), 0);
+    SDValue DMRRowp =
+        DAG.getNode(PPCISD::INST256, dl, MVT::v256i1, Op.getOperand(2), P);
     return SDValue(DAG.getMachineNode(PPC::INSERT_SUBREG, dl, MVT::v1024i1,
                                       Op.getOperand(1), DMRRowp, SubReg),
                    0);
