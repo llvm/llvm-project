@@ -684,15 +684,26 @@ define void @testLeftShouldNotCreateSLI1x128(<1 x i128> %src1, <1 x i128> %src2,
 }
 
 define void @testLeftNotAllConstantBuildVec8x8(<8 x i8> %src1, <8 x i8> %src2, ptr %dest) nounwind {
-; CHECK-LABEL: testLeftNotAllConstantBuildVec8x8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI29_0
-; CHECK-NEXT:    shl.8b v1, v1, #3
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI29_0]
-; CHECK-NEXT:    and.8b v0, v0, v2
-; CHECK-NEXT:    orr.8b v0, v0, v1
-; CHECK-NEXT:    str d0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: testLeftNotAllConstantBuildVec8x8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov x8, #506381209866536711 // =0x707070707070707
+; CHECK-SD-NEXT:    shl.8b v1, v1, #3
+; CHECK-SD-NEXT:    orr x8, x8, #0x7f8000007f80000
+; CHECK-SD-NEXT:    fmov d2, x8
+; CHECK-SD-NEXT:    and.8b v0, v0, v2
+; CHECK-SD-NEXT:    orr.8b v0, v0, v1
+; CHECK-SD-NEXT:    str d0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: testLeftNotAllConstantBuildVec8x8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI29_0
+; CHECK-GI-NEXT:    shl.8b v1, v1, #3
+; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI29_0]
+; CHECK-GI-NEXT:    and.8b v0, v0, v2
+; CHECK-GI-NEXT:    orr.8b v0, v0, v1
+; CHECK-GI-NEXT:    str d0, [x0]
+; CHECK-GI-NEXT:    ret
   %and.i = and <8 x i8> %src1, <i8 7, i8 7, i8 255, i8 7, i8 7, i8 7, i8 255, i8 7>
   %vshl_n = shl <8 x i8> %src2, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
   %result = or <8 x i8> %and.i, %vshl_n

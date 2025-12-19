@@ -66,23 +66,24 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; CHECK-LABEL: test_urem_vec:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    mov x8, #65536 // =0x10000
+; CHECK-NEXT:    movk x8, #2, lsl #32
+; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    adrp x8, .LCPI4_0
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI4_0]
-; CHECK-NEXT:    adrp x8, .LCPI4_1
 ; CHECK-NEXT:    mov v0.h[1], w1
 ; CHECK-NEXT:    mov v0.h[2], w2
 ; CHECK-NEXT:    sub v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI4_1]
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI4_0]
+; CHECK-NEXT:    adrp x8, .LCPI4_1
+; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI4_1]
 ; CHECK-NEXT:    adrp x8, .LCPI4_2
-; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI4_2]
-; CHECK-NEXT:    adrp x8, .LCPI4_3
 ; CHECK-NEXT:    mul v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    movi d1, #0x0000000000ffff
 ; CHECK-NEXT:    add v2.4h, v0.4h, v0.4h
 ; CHECK-NEXT:    bic v0.4h, #248, lsl #8
 ; CHECK-NEXT:    ushl v2.4h, v2.4h, v3.4h
 ; CHECK-NEXT:    ushl v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI4_3]
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI4_2]
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v2.8b
 ; CHECK-NEXT:    bic v0.4h, #248, lsl #8
 ; CHECK-NEXT:    cmhi v0.4h, v0.4h, v1.4h

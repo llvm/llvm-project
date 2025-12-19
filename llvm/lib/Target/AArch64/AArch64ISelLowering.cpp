@@ -16371,30 +16371,38 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     return Val;
   }
 
-  // Handle constant v2i32/v2f32 vectors by building a legal scalar and
-  // bitcasting. This is more efficient than a constant pool load.
-  if ((VT == MVT::v2i32 || VT == MVT::v2f32) && BVN->isConstant()) {
+  // Handle 64-bit constant BUILD_VECTORs by packing them into an i64 immediate.
+  // This is cheaper than a load if the immediate can be materialized in a few
+  // mov instructions. This optimization is disabled for big-endian targets for now.
+  if (BVN->isConstant() && VT.isFixedLengthVector() &&
+      VT.getSizeInBits() == 64 && !DAG.getDataLayout().isBigEndian()) {
     const SDLoc DL(Op);
-    APInt LoBits, HiBits;
+    APInt PackedVal(64, 0);
+    unsigned BitPos = 0;
 
-    if (VT == MVT::v2i32) {
-      LoBits = cast<ConstantSDNode>(BVN->getOperand(0))->getAPIntValue();
-      HiBits = cast<ConstantSDNode>(BVN->getOperand(1))->getAPIntValue();
-    } else { // v2f32
-      LoBits = cast<ConstantFPSDNode>(BVN->getOperand(0))
-                   ->getValueAPF()
-                   .bitcastToAPInt();
-      HiBits = cast<ConstantFPSDNode>(BVN->getOperand(1))
-                   ->getValueAPF()
-                   .bitcastToAPInt();
+    unsigned EltSizeInBits = VT.getScalarSizeInBits();
+    for (unsigned i = 0, e = BVN->getNumOperands(); i != e; ++i) {
+      const SDValue &LaneOp = BVN->getOperand(i);
+      APInt LaneBits;
+      if (auto *C = dyn_cast<ConstantSDNode>(LaneOp)) {
+        LaneBits = C->getAPIntValue();
+      } else if (auto *CFP = dyn_cast<ConstantFPSDNode>(LaneOp)) {
+        LaneBits = CFP->getValueAPF().bitcastToAPInt();
+      }
+
+      PackedVal |= LaneBits.zext(64) << BitPos;
+      BitPos += EltSizeInBits;
     }
 
-    // Pack the constants' bits into a single 64-bit scalar.
-    APInt LoZext = LoBits.zext(64);
-    APInt HiZext = HiBits.zext(64);
-    APInt PackedVal = (HiZext << 32) | LoZext;
-    SDValue ScalarConst = DAG.getConstant(PackedVal, DL, MVT::i64);
+    // This optimization kicks in if the number of mov instructions
+    // is under 2
+    SmallVector<AArch64_IMM::ImmInsnModel, 4> Insns;
+    AArch64_IMM::expandMOVImm(PackedVal.getZExtValue(), 64, Insns);
+    if (Insns.size() > 2) {
+      return SDValue();
+    }
 
+    SDValue ScalarConst = DAG.getConstant(PackedVal, DL, MVT::i64);
     // Use BITCAST to reinterpret the scalar constant's bits as a vector.
     return DAG.getNode(ISD::BITCAST, DL, VT, ScalarConst);
   }
