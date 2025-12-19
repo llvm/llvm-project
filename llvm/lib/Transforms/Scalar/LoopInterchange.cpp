@@ -708,7 +708,8 @@ struct LoopInterchange {
       return false;
     }
     LLVM_DEBUG(dbgs() << "Loops '" << OuterLoop->getName() << "' and '"
-		      << InnerLoop->getName() << "' are legal to interchange\n");
+                      << InnerLoop->getName()
+                      << "' are legal to interchange\n");
     LoopInterchangeProfitability LIP(OuterLoop, InnerLoop, SE, ORE);
     if (!LIP.isProfitable(InnerLoop, OuterLoop, InnerLoopId, OuterLoopId,
                           DependencyMatrix, CCM)) {
