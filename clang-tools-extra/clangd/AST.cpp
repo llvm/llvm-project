@@ -1092,8 +1092,6 @@ public:
         SeenFunctions Next{SF.DepthLeft - 1, &SF, FD};
         ForwardingToConstructorVisitor Visitor{std::move(Next), Constructors};
         Visitor.TraverseStmt(FD->getBody());
-        std::move(Visitor.Constructors.begin(), Visitor.Constructors.end(),
-                  std::back_inserter(Constructors));
       }
     }
     return true;
