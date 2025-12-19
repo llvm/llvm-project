@@ -14,6 +14,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
@@ -128,6 +129,9 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
   // We do not see CFG stmts for ExprWithCleanups. Simply peel them.
   if (auto *EC = dyn_cast<ExprWithCleanups>(E))
     return getOrCreateList(EC->getSubExpr());
+
+  if (const ExprWithCleanups *EWC = dyn_cast<ExprWithCleanups>(E))
+    return getOrCreateList(EWC->getSubExpr());
 
   if (!hasOrigins(E))
     return nullptr;

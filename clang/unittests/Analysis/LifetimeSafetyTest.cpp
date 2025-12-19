@@ -1158,7 +1158,6 @@ TEST_F(LifetimeAnalysisTest, LifetimeboundTemplateFunctionReturnVal) {
 
     void target() {
       MyObj a;
-      // FIXME: Captures a reference to temporary MyObj returned by Identity.
       View v1 = Identity(a);
       POINT(p1);
 
@@ -1169,7 +1168,7 @@ TEST_F(LifetimeAnalysisTest, LifetimeboundTemplateFunctionReturnVal) {
       POINT(p2);
     }
   )");
-  EXPECT_THAT(Origin("v1"), HasLoansTo({}, "p1"));
+  EXPECT_THAT(Origin("v1"), HasLoanToATemporary("p1"));
 
   EXPECT_THAT(Origin("v2"), HasLoansTo({"b"}, "p2"));
   EXPECT_THAT(Origin("v3"), HasLoansTo({"v2"}, "p2"));

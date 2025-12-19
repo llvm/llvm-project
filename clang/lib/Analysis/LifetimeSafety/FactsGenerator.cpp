@@ -72,7 +72,7 @@ static const PathLoan *createLoan(FactManager &FactMgr,
 }
 
 /// Creates a loan for the storage location of a temporary object.
-/// \param MTW The MaterializeTemporaryExpr that represents the temporary
+/// \param MTE The MaterializeTemporaryExpr that represents the temporary
 /// binding. \return The new Loan.
 static const PathLoan *createLoan(FactManager &FactMgr,
                                   const MaterializeTemporaryExpr *MTE) {
@@ -360,7 +360,8 @@ void FactsGenerator::VisitInitListExpr(const InitListExpr *ILE) {
 void FactsGenerator::VisitMaterializeTemporaryExpr(
     const MaterializeTemporaryExpr *MTE) {
   OriginList *MTEList = getOriginsList(*MTE);
-  if (!MTEList)
+  // Here we also defer from handling lifetime extended materializations.
+  if (!MTEList || MTE->getStorageDuration() != SD_FullExpression)
     return;
   OriginList *SubExprList = getOriginsList(*MTE->getSubExpr());
   if (MTE->isGLValue()) {
@@ -368,7 +369,13 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
            MTEList->getLength() == SubExprList->getLength() + 1 &&
                "MTE top level origin should contain a loan to the MTE itself");
     MTEList = getRValueOrigins(MTE, MTEList);
-    // TODO: Issue a loan to the MTE.
+    if (getChildBinding(MTE)) {
+      // Issue a loan to MTE for the storage location represented by MTE.
+      const Loan *L = createLoan(FactMgr, MTE);
+      OriginList *List = getOriginsList(*MTE);
+      CurrentBlockFacts.push_back(
+          FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
+    }
     flow(MTEList, SubExprList, /*Kill=*/true);
   } else {
     // A temporary object's origin is the same as the origin of the
