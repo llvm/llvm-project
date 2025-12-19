@@ -5340,19 +5340,12 @@ void Verifier::visitMemProfMetadata(Instruction &I, MDNode *MD) {
     MDNode *StackMD = dyn_cast<MDNode>(MIB->getOperand(0));
     visitCallStackMetadata(StackMD);
 
-    // The next set of 1 or more operands should be MDString.
-    unsigned I = 1;
-    for (; I < MIB->getNumOperands(); ++I) {
-      if (!isa<MDString>(MIB->getOperand(I))) {
-        Check(I > 1,
-              "!memprof MemInfoBlock second operand should be an MDString",
-              MIB);
-        break;
-      }
-    }
+    // The second MIB operand should be MDString.
+    Check(isa<MDString>(MIB->getOperand(1)),
+          "!memprof MemInfoBlock second operand should be an MDString", MIB);
 
     // Any remaining should be MDNode that are pairs of integers
-    for (; I < MIB->getNumOperands(); ++I) {
+    for (unsigned I = 2; I < MIB->getNumOperands(); ++I) {
       MDNode *OpNode = dyn_cast<MDNode>(MIB->getOperand(I));
       Check(OpNode, "Not all !memprof MemInfoBlock operands 2 to N are MDNode",
             MIB);
