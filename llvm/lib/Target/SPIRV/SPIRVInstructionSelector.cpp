@@ -946,8 +946,20 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return MIB.constrainAllUses(TII, TRI, RBI);
   }
   case TargetOpcode::G_STRICT_FMA:
-  case TargetOpcode::G_FMA:
+  case TargetOpcode::G_FMA: {
+    if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_fma)) {
+      MachineBasicBlock &BB = *I.getParent();
+      auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpFmaKHR))
+                     .addDef(ResVReg)
+                     .addUse(GR.getSPIRVTypeID(ResType))
+                     .addUse(I.getOperand(1).getReg())
+                     .addUse(I.getOperand(2).getReg())
+                     .addUse(I.getOperand(3).getReg())
+                     .setMIFlags(I.getFlags());
+      return MIB.constrainAllUses(TII, TRI, RBI);
+    }
     return selectExtInst(ResVReg, ResType, I, CL::fma, GL::Fma);
+  }
 
   case TargetOpcode::G_STRICT_FLDEXP:
     return selectExtInst(ResVReg, ResType, I, CL::ldexp);

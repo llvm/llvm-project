@@ -114,6 +114,7 @@ static const std::map<StringRef, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::SPV_KHR_integer_dot_product},
         {"SPV_KHR_linkonce_odr",
          SPIRV::Extension::Extension::SPV_KHR_linkonce_odr},
+        {"SPV_KHR_fma", SPIRV::Extension::Extension::SPV_KHR_fma},
         {"SPV_INTEL_inline_assembly",
          SPIRV::Extension::Extension::SPV_INTEL_inline_assembly},
         {"SPV_INTEL_bindless_images",
