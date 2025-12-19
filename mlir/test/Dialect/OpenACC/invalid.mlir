@@ -76,24 +76,62 @@ acc.loop {
 
 // -----
 
-// expected-error@+1 {{'acc.loop' op duplicate device_type found in gang attribute}}
+// expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in gang attribute}}
 acc.loop {
   acc.yield
 } attributes {gang = [#acc.device_type<none>, #acc.device_type<none>]}
 
 // -----
 
-// expected-error@+1 {{'acc.loop' op duplicate device_type found in worker attribute}}
+// expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in worker attribute}}
 acc.loop {
   acc.yield
 } attributes {worker = [#acc.device_type<none>, #acc.device_type<none>]}
 
 // -----
 
-// expected-error@+1 {{'acc.loop' op duplicate device_type found in vector attribute}}
+// expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in vector attribute}}
 acc.loop {
   acc.yield
 } attributes {vector = [#acc.device_type<none>, #acc.device_type<none>]}
+
+// -----
+
+// expected-error@+1 {{'acc.loop' op duplicate device_type `nvidia` found in gang attribute}}
+acc.loop {
+  acc.yield
+} attributes {gang = [#acc.device_type<nvidia>, #acc.device_type<nvidia>]}
+
+// -----
+
+// expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in collapseDeviceType attribute}}
+acc.loop {
+  acc.yield
+} attributes {collapse = [1, 1], collapseDeviceType = [#acc.device_type<none>, #acc.device_type<none>], independent = [#acc.device_type<none>]}
+
+// -----
+
+%i64value = arith.constant 1 : i64
+// expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in workerNumOperandsDeviceType attribute}}
+acc.loop worker(%i64value: i64, %i64value: i64) {
+  acc.yield
+} attributes {workerNumOperandsDeviceType = [#acc.device_type<none>, #acc.device_type<none>], independent = [#acc.device_type<none>]}
+
+// -----
+
+%i64value = arith.constant 1 : i64
+// expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in vectorOperandsDeviceType attribute}}
+acc.loop vector(%i64value: i64, %i64value: i64) {
+  acc.yield
+} attributes {vectorOperandsDeviceType = [#acc.device_type<none>, #acc.device_type<none>], independent = [#acc.device_type<none>]}
+
+// -----
+
+func.func @acc_routine_parallelism() -> () {
+  return
+}
+// expected-error@+1 {{only one of `gang`, `worker`, `vector`, `seq` can be present at the same time for device_type `nvidia`}}
+"acc.routine"() <{func_name = @acc_routine_parallelism, sym_name = "acc_routine_parallelism_rout", gang = [#acc.device_type<nvidia>], worker = [#acc.device_type<nvidia>]}> : () -> ()
 
 // -----
 

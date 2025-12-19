@@ -28,7 +28,10 @@ Standard C++ Named modules
 In order to better understand the compiler's behavior, it is helpful to
 understand some terms and definitions for readers who are not familiar with the
 C++ feature. This document is not a tutorial on C++; it only introduces
-necessary concepts to better understand use of modules in a project.
+necessary concepts to better understand use of modules in a project. Other
+resources at `Wikipedia <https://en.wikipedia.org/wiki/Modules_(C++)>`_ and
+`cppreference <https://en.cppreference.com/w/cpp/language/modules.html>`_ can
+provide more background information about modules if needed.
 
 Background and terminology
 --------------------------
@@ -1380,33 +1383,6 @@ When Clang writes BMIs, it will ignore the ``preferred_name`` attribute on
 declarations which use it. Thus, the preferred name will not be displayed in
 the debugger as expected. This is tracked by
 `#56490 <https://github.com/llvm/llvm-project/issues/56490>`_.
-
-Don't emit macros about module declaration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This is covered by `P1857R3 <https://wg21.link/P1857R3>`_. It is mentioned here
-because we want users to be aware that we don't yet implement it.
-
-A direct approach to write code that can be compiled by both modules and
-non-module builds may look like:
-
-.. code-block:: c++
-
-  MODULE
-  IMPORT header_name
-  EXPORT_MODULE MODULE_NAME;
-  IMPORT header_name
-  EXPORT ...
-
-The intent of this is that this file can be compiled like a module unit or a
-non-module unit depending on the definition of some macros. However, this usage
-is forbidden by P1857R3 which is not yet implemented in Clang. This means that
-is possible to write invalid modules which will no longer be accepted once
-P1857R3 is implemented. This is tracked by
-`#54047 <https://github.com/llvm/llvm-project/issues/54047>`_.
-
-Until then, it is recommended not to mix macros with module declarations.
-
 
 Inconsistent filename suffix requirement for importable module units
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

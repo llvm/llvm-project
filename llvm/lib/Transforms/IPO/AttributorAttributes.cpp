@@ -665,10 +665,7 @@ static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
     return;
 
   SmallVector<const BranchInst *, 4> BrInsts;
-  SmallPtrSet<const Instruction *, 16> Visited;
   auto Pred = [&](const Instruction *I) {
-    if (!Visited.insert(I).second)
-      return false;
     if (const BranchInst *Br = dyn_cast<BranchInst>(I))
       if (Br->isConditional())
         BrInsts.push_back(Br);
@@ -687,10 +684,28 @@ static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
   // ParentS_m = ChildS_{m, 1} /\ ChildS_{m, 2} /\ ... /\ ChildS_{m, n_m}
   //
   // Known State |= ParentS_1 \/ ParentS_2 \/... \/ ParentS_m
+  //
+  // FIXME: Currently, recursive branches are not handled. For example, we
+  // can't deduce that ptr must be dereferenced in below function.
+  //
+  // void f(int a, int c, int *ptr) {
+  //    if(a)
+  //      if (b) {
+  //        *ptr = 0;
+  //      } else {
+  //        *ptr = 1;
+  //      }
+  //    else {
+  //      if (b) {
+  //        *ptr = 0;
+  //      } else {
+  //        *ptr = 1;
+  //      }
+  //    }
+  // }
 
   Explorer->checkForAllContext(&CtxI, Pred);
-  while (!BrInsts.empty()) {
-    const BranchInst *Br = BrInsts.pop_back_val();
+  for (const BranchInst *Br : BrInsts) {
     StateType ParentState;
 
     // The known state of the parent state is a conjunction of children's
@@ -699,18 +714,15 @@ static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
 
     for (const BasicBlock *BB : Br->successors()) {
       StateType ChildState;
+
       size_t BeforeSize = Uses.size();
-      const Instruction *I = &BB->front();
-      followUsesInContext(AA, A, *Explorer, I, Uses, ChildState);
+      followUsesInContext(AA, A, *Explorer, &BB->front(), Uses, ChildState);
 
       // Erase uses which only appear in the child.
       for (auto It = Uses.begin() + BeforeSize; It != Uses.end();)
         It = Uses.erase(It);
 
       ParentState &= ChildState;
-
-      // Check for recursive conditional branches.
-      Explorer->checkForAllContext(I, Pred);
     }
 
     // Use only known state.
@@ -2137,9 +2149,12 @@ bool AANoSync::isAlignedBarrier(const CallBase &CB, bool ExecutedAligned) {
   switch (CB.getIntrinsicID()) {
   case Intrinsic::nvvm_barrier_cta_sync_aligned_all:
   case Intrinsic::nvvm_barrier_cta_sync_aligned_count:
-  case Intrinsic::nvvm_barrier0_and:
-  case Intrinsic::nvvm_barrier0_or:
-  case Intrinsic::nvvm_barrier0_popc:
+  case Intrinsic::nvvm_barrier_cta_red_and_aligned_all:
+  case Intrinsic::nvvm_barrier_cta_red_and_aligned_count:
+  case Intrinsic::nvvm_barrier_cta_red_or_aligned_all:
+  case Intrinsic::nvvm_barrier_cta_red_or_aligned_count:
+  case Intrinsic::nvvm_barrier_cta_red_popc_aligned_all:
+  case Intrinsic::nvvm_barrier_cta_red_popc_aligned_count:
     return true;
   case Intrinsic::amdgcn_s_barrier:
     if (ExecutedAligned)
@@ -5208,6 +5223,13 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
         return AlignAA->getKnownAlign().value();
       break;
     }
+    case Intrinsic::amdgcn_make_buffer_rsrc: {
+      const auto *AlignAA = A.getAAFor<AAAlign>(
+          QueryingAA, IRPosition::value(*II), DepClassTy::NONE);
+      if (AlignAA)
+        return AlignAA->getKnownAlign().value();
+      break;
+    }
     default:
       break;
     }
@@ -5531,7 +5553,7 @@ struct AAAlignCallSiteReturned final
         const auto *AlignAA =
             A.getAAFor<AAAlign>(*this, IRPosition::value(*(II->getOperand(0))),
                                 DepClassTy::REQUIRED);
-        if (AlignAA && AlignAA->isValidState()) {
+        if (AlignAA) {
           Alignment = std::max(AlignAA->getAssumedAlign(), Alignment);
           Valid = true;
         }
@@ -5540,6 +5562,18 @@ struct AAAlignCallSiteReturned final
           return clampStateAndIndicateChange<StateType>(
               this->getState(),
               std::min(this->getAssumedAlign(), Alignment).value());
+        break;
+      }
+      // FIXME: Should introduce target specific sub-attributes and letting
+      // getAAfor<AAAlign> lead to create sub-attribute to handle target
+      // specific intrinsics.
+      case Intrinsic::amdgcn_make_buffer_rsrc: {
+        const auto *AlignAA =
+            A.getAAFor<AAAlign>(*this, IRPosition::value(*(II->getOperand(0))),
+                                DepClassTy::REQUIRED);
+        if (AlignAA)
+          return clampStateAndIndicateChange<StateType>(
+              this->getState(), AlignAA->getAssumedAlign().value());
         break;
       }
       default:

@@ -62,6 +62,18 @@ def _parse_ninja_log(ninja_log: list[str]) -> list[tuple[str, str]]:
         # aligned with the failure.
         failing_action = ninja_log[index].split("FAILED: ")[1]
         failure_log = []
+
+        # Parse the lines above the FAILED: string if the line does not come
+        # immediately after a progress indicator to ensure that we capture the
+        # entire failure message.
+        if not ninja_log[index - 1].startswith("["):
+            before_index = index - 1
+            while before_index > 0 and not ninja_log[before_index].startswith("["):
+                failure_log.append(ninja_log[before_index])
+                before_index = before_index - 1
+            failure_log.reverse()
+
+        # Parse the failure information, which comes after the FAILED: tag.
         while (
             index < len(ninja_log)
             and not ninja_log[index].startswith("[")
@@ -146,6 +158,17 @@ def get_failures(junit_objects) -> dict[str, list[tuple[str, str]]]:
     return failures
 
 
+def are_all_failures_explained(
+    failures: list[tuple[str, str]], failure_explanations: dict[str, FailureExplanation]
+) -> bool:
+    for failed_action, _ in failures:
+        if failed_action not in failure_explanations:
+            return False
+        else:
+            assert failure_explanations[failed_action]["explained"]
+    return True
+
+
 # Set size_limit to limit the byte size of the report. The default is 1MB as this
 # is the most that can be put into an annotation. If the generated report exceeds
 # this limit and failures are listed, it will be generated again without failures
@@ -160,7 +183,7 @@ def generate_report(
     size_limit=1024 * 1024,
     list_failures=True,
     failure_explanations_list: list[FailureExplanation] = [],
-):
+) -> tuple[str, bool]:
     failures = get_failures(junit_objects)
     tests_run = 0
     tests_skipped = 0
@@ -171,6 +194,12 @@ def generate_report(
         if not failure_explanation["explained"]:
             continue
         failure_explanations[failure_explanation["name"]] = failure_explanation
+    all_failures_explained = True
+    if failures:
+        for _, failures_list in failures.items():
+            all_failures_explained &= are_all_failures_explained(
+                failures_list, failure_explanations
+            )
 
     for results in junit_objects:
         for testsuite in results:
@@ -184,13 +213,17 @@ def generate_report(
         if return_code == 0:
             report.extend(
                 [
-                    "The build succeeded and no tests ran. This is expected in some "
-                    "build configurations."
+                    ":white_check_mark: The build succeeded and no tests ran. "
+                    "This is expected in some build configurations."
                 ]
             )
         else:
             ninja_failures = find_failure_in_ninja_logs(ninja_logs)
+            all_failures_explained &= are_all_failures_explained(
+                ninja_failures, failure_explanations
+            )
             if not ninja_failures:
+                all_failures_explained = False
                 report.extend(
                     [
                         "The build failed before running any tests. Detailed "
@@ -217,7 +250,7 @@ def generate_report(
                         UNRELATED_FAILURES_STR,
                     ]
                 )
-        return "\n".join(report)
+        return ("\n".join(report), all_failures_explained)
 
     tests_passed = tests_run - tests_skipped - tests_failed
 
@@ -252,10 +285,11 @@ def generate_report(
         # attention.
         ninja_failures = find_failure_in_ninja_logs(ninja_logs)
         if not ninja_failures:
+            all_failures_explained = False
             report.extend(
                 [
                     "",
-                    "All tests passed but another part of the build **failed**. "
+                    "All executed tests passed, but another part of the build **failed**. "
                     "Information about the build failure could not be automatically "
                     "obtained.",
                     "",
@@ -263,15 +297,22 @@ def generate_report(
                 ]
             )
         else:
+            all_failures_explained &= are_all_failures_explained(
+                ninja_failures, failure_explanations
+            )
             report.extend(
                 [
                     "",
-                    "All tests passed but another part of the build **failed**. Click on "
+                    "All executed tests passed, but another part of the build **failed**. Click on "
                     "a failure below to see the details.",
                     "",
                 ]
             )
             report.extend(_format_failures(ninja_failures, failure_explanations))
+    else:
+        report.extend(
+            ["", ":white_check_mark: The build succeeded and all tests passed."]
+        )
 
     if failures or return_code != 0:
         report.extend(["", UNRELATED_FAILURES_STR])
@@ -282,11 +323,12 @@ def generate_report(
             title,
             return_code,
             junit_objects,
+            ninja_logs,
             size_limit,
             list_failures=False,
         )
 
-    return report
+    return (report, all_failures_explained)
 
 
 def load_info_from_files(build_log_files):
