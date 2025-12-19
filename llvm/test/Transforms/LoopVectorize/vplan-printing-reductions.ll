@@ -547,7 +547,8 @@ define i32 @print_mulacc_sub(ptr %a, ptr %b) {
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%ext.b>, ir<%ext.a>
 ; CHECK-NEXT:   REDUCE ir<%add> = ir<%accum> + reduce.sub (ir<%mul>)
 ; CHECK-NEXT:   EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
-; CHECK-NEXT:   EMIT branch-on-count vp<%index.next>, ir<1024>
+; CHECK-NEXT:   EMIT vp<{{%.+}}> = icmp eq vp<%index.next>, ir<1024>
+; CHECK-NEXT:   EMIT branch-on-cond vp<{{%.+}}>
 ; CHECK-NEXT: Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
@@ -667,7 +668,8 @@ define i32 @print_mulacc_negated(ptr %a, ptr %b) {
 ; CHECK-NEXT:   WIDEN ir<%sub> = sub ir<0>, ir<%mul>
 ; CHECK-NEXT:   REDUCE ir<%add> = ir<%accum> + reduce.add (ir<%sub>)
 ; CHECK-NEXT:   EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
-; CHECK-NEXT:   EMIT branch-on-count vp<%index.next>, ir<1024>
+; CHECK-NEXT:   EMIT vp<{{%.+}}> = icmp eq vp<%index.next>, ir<1024>
+; CHECK-NEXT:   EMIT branch-on-cond vp<{{%.+}}>
 ; CHECK-NEXT: Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
@@ -1117,7 +1119,8 @@ define i64 @print_ext_mul_two_uses(i64 %n, ptr %a, i16 %b, i32 %c) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<%7> = compute-reduction-result ir<%res2>, vp<%5>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-element ir<%load.ext.ext>
+; CHECK-NEXT:    EMIT vp<[[EXT_PART:%.+]]> = extract-last-part ir<%load.ext.ext>
+; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[EXT_PART]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<%2>, vp<%1>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph

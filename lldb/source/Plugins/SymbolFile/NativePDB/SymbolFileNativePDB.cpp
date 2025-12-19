@@ -86,6 +86,40 @@ static lldb::LanguageType TranslateLanguage(PDB_Lang lang) {
   }
 }
 
+static std::optional<std::string>
+findMatchingPDBFilePath(llvm::StringRef original_pdb_path,
+                        llvm::StringRef exe_path) {
+  const FileSystem &fs = FileSystem::Instance();
+
+  if (fs.Exists(original_pdb_path))
+    return std::string(original_pdb_path);
+
+  const auto exe_dir = FileSpec(exe_path).CopyByRemovingLastPathComponent();
+  // While the exe_path uses the native style, the exe might be compiled on a
+  // different OS, so try to guess the style used.
+  const FileSpec original_pdb_spec(original_pdb_path,
+                                   FileSpec::GuessPathStyle(original_pdb_path)
+                                       .value_or(FileSpec::Style::native));
+  const llvm::StringRef pdb_filename = original_pdb_spec.GetFilename();
+
+  // If the file doesn't exist, perhaps the path specified at build time
+  // doesn't match the PDB's current location, so check the location of the
+  // executable.
+  const FileSpec local_pdb = exe_dir.CopyByAppendingPathComponent(pdb_filename);
+  if (fs.Exists(local_pdb))
+    return local_pdb.GetPath();
+
+  // Otherwise, search for one in target.debug-file-search-paths
+  FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
+  for (const FileSpec &search_dir : search_paths) {
+    FileSpec pdb_path = search_dir.CopyByAppendingPathComponent(pdb_filename);
+    if (fs.Exists(pdb_path))
+      return pdb_path.GetPath();
+  }
+
+  return std::nullopt;
+}
+
 static std::unique_ptr<PDBFile>
 loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
   // Try to find a matching PDB for an EXE.
@@ -113,17 +147,14 @@ loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
     return nullptr;
   }
 
-  // If the file doesn't exist, perhaps the path specified at build time
-  // doesn't match the PDB's current location, so check the location of the
-  // executable.
-  if (!FileSystem::Instance().Exists(pdb_file)) {
-    const auto exe_dir = FileSpec(exe_path).CopyByRemovingLastPathComponent();
-    const auto pdb_name = FileSpec(pdb_file).GetFilename().GetCString();
-    pdb_file = exe_dir.CopyByAppendingPathComponent(pdb_name).GetPathAsConstString().GetStringRef();
-  }
+  std::optional<std::string> resolved_pdb_path =
+      findMatchingPDBFilePath(pdb_file, exe_path);
+  if (!resolved_pdb_path)
+    return nullptr;
 
   // If the file is not a PDB or if it doesn't have a matching GUID, fail.
-  auto pdb = ObjectFilePDB::loadPDBFile(std::string(pdb_file), allocator);
+  auto pdb =
+      ObjectFilePDB::loadPDBFile(*std::move(resolved_pdb_path), allocator);
   if (!pdb)
     return nullptr;
 
@@ -137,6 +168,9 @@ loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
 
   if (expected_info->getGuid() != guid)
     return nullptr;
+
+  LLDB_LOG(GetLog(LLDBLog::Symbols), "Loading {0} for {1}", pdb->getFilePath(),
+           exe_path);
   return pdb;
 }
 
@@ -1126,7 +1160,8 @@ lldb::LanguageType SymbolFileNativePDB::ParseLanguage(CompileUnit &comp_unit) {
 }
 
 void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
-  auto *section_list = m_objfile_sp->GetSectionList();
+  auto *section_list =
+      m_objfile_sp->GetModule()->GetObjectFile()->GetSectionList();
   if (!section_list)
     return;
 

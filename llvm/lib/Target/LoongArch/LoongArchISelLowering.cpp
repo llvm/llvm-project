@@ -236,7 +236,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCOS, MVT::f32, Expand);
     setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
     setOperationAction(ISD::FPOW, MVT::f32, Expand);
-    setOperationAction(ISD::FREM, MVT::f32, Expand);
+    setOperationAction(ISD::FREM, MVT::f32, LibCall);
     setOperationAction(ISD::FP16_TO_FP, MVT::f32,
                        Subtarget.isSoftFPABI() ? LibCall : Custom);
     setOperationAction(ISD::FP_TO_FP16, MVT::f32,
@@ -286,7 +286,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCOS, MVT::f64, Expand);
     setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
     setOperationAction(ISD::FPOW, MVT::f64, Expand);
-    setOperationAction(ISD::FREM, MVT::f64, Expand);
+    setOperationAction(ISD::FREM, MVT::f64, LibCall);
     setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
     setOperationAction(ISD::FP_TO_FP16, MVT::f64,
                        Subtarget.isSoftFPABI() ? LibCall : Custom);
@@ -8912,7 +8912,7 @@ bool LoongArchTargetLowering::hasAndNot(SDValue Y) const {
 }
 
 bool LoongArchTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                                 const CallInst &I,
+                                                 const CallBase &I,
                                                  MachineFunction &MF,
                                                  unsigned Intrinsic) const {
   switch (Intrinsic) {
