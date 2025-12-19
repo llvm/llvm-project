@@ -10,6 +10,7 @@
 
 // Windows includes
 #include "lldb/Host/windows/windows.h"
+#include <TlHelp32.h>
 #include <psapi.h>
 
 #include "lldb/Breakpoint/Watchpoint.h"
@@ -35,6 +36,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Threading.h"
@@ -225,6 +227,56 @@ ProcessWindows::DoAttachToProcessWithID(lldb::pid_t pid,
   if (error.Success())
     SetID(GetDebuggedProcessId());
   return error;
+}
+
+Status ProcessWindows::DoAttachToProcessWithName(
+    const char *process_name, const ProcessAttachInfo &attach_info) {
+  Status error;
+  Clear();
+
+  if (!process_name || process_name[0] == '\0') {
+    error = Status::FromErrorString("Invalid process name");
+    return error;
+  }
+
+  lldb::pid_t pid = FindProcessByName(process_name, error);
+
+  if (pid == LLDB_INVALID_PROCESS_ID) {
+    error = Status::FromErrorStringWithFormatv("Unable to find process '%s'",
+                                               process_name);
+    return error;
+  }
+
+  return DoAttachToProcessWithID(pid, attach_info);
+}
+
+lldb::pid_t ProcessWindows::FindProcessByName(const char *process_name,
+                                              Status &error) {
+  HANDLE hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+  if (hProcessSnap == INVALID_HANDLE_VALUE) {
+    error = Status(GetLastError(), eErrorTypeWin32);
+    return LLDB_INVALID_PROCESS_ID;
+  }
+  auto cleanup = llvm::make_scope_exit([&] { CloseHandle(hProcessSnap); });
+
+  llvm::StringRef process_filename = llvm::sys::path::filename(process_name);
+
+  PROCESSENTRY32W pe32;
+  pe32.dwSize = sizeof(PROCESSENTRY32W);
+  if (!Process32FirstW(hProcessSnap, &pe32)) {
+    error = Status(GetLastError(), eErrorTypeWin32);
+    return LLDB_INVALID_PROCESS_ID;
+  }
+
+  do {
+    std::string exe_name;
+    llvm::convertWideToUTF8(pe32.szExeFile, exe_name);
+
+    if (exe_name == process_filename)
+      return pe32.th32ProcessID;
+  } while (Process32NextW(hProcessSnap, &pe32));
+
+  return LLDB_INVALID_PROCESS_ID;
 }
 
 Status ProcessWindows::DoResume(RunDirection direction) {
