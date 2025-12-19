@@ -5243,7 +5243,7 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
   if (Base.isMatrixRow()) {
     if (auto *RowIdx =
             llvm::dyn_cast<llvm::ConstantInt>(Base.getMatrixRowIdx())) {
-      llvm::SmallVector<llvm::Constant *, 8> MatIndices;
+      llvm::SmallVector<llvm::Constant *> MatIndices;
       unsigned NumCols = Base.getMatrixNumCols();
       unsigned NumRows = Base.getMatrixNumRows();
       MatIndices.reserve(NumCols);
