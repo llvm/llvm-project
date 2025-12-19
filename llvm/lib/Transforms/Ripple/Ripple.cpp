@@ -68,12 +68,14 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/GenericDomTree.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TypeSize.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -8372,11 +8374,15 @@ void Ripple::registerExternalRippleFunction(
 void Ripple::loadRippleLibDeclarations() {
   LLVMContext &Context = F.getContext();
   auto &ThisModule = *F.getParent();
+  // TODO: Don't load libraries from the ripple pass!
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+  auto &RealFS = *vfs::getRealFileSystem();
   for (auto &Path : llvm::RippleCL::RippleLibs) {
     if (Path.empty())
       continue;
+
     LLVM_DEBUG(dbgs() << "Loading ripple lib: " << Path << "\n");
-    auto BufferOrError = MemoryBuffer::getFile(Path);
+    auto BufferOrError = RealFS.getBufferForFile(Path);
     if (!BufferOrError) {
       // Report a warning and continue to next path
       auto ErrCode = BufferOrError.getError();
