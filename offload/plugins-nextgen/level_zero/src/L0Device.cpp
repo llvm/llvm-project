@@ -547,6 +547,7 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   InfoTreeNode Info;
   Info.add("Device Number", getDeviceId());
   Info.add("Device Name", getNameCStr(), "", DeviceInfo::NAME);
+  Info.add("Product Name", getNameCStr(), "", DeviceInfo::PRODUCT_NAME);
   Info.add("Device Type", "GPU", "", DeviceInfo::TYPE);
   Info.add("Vendor", "Intel", "", DeviceInfo::VENDOR);
   Info.add("Vendor ID", getVendorId(), "", DeviceInfo::VENDOR_ID);
@@ -581,7 +582,8 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   MaxSize.add("y", getMaxGroupSizeY() * getMaxGroupCountY());
   MaxSize.add("z", getMaxGroupSizeZ() * getMaxGroupCountZ());
 
-  Info.add("Local memory size (bytes)", getMaxSharedLocalMemory());
+  Info.add("Local memory size (bytes)", getMaxSharedLocalMemory(), "",
+           DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
   Info.add("Global memory size (bytes)", getGlobalMemorySize(), "",
            DeviceInfo::GLOBAL_MEM_SIZE);
   Info.add("Cache size (bytes)", getCacheSize());
