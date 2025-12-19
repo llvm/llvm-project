@@ -19,8 +19,8 @@
 ; CHECK-DAG: OpExecutionModeId %[[#KERNEL_FLOAT_V]] FPFastMathDefault %[[#FLOAT_TYPE:]] %[[#CONST131079]]
 ; CHECK-DAG: OpExecutionModeId %[[#KERNEL_ALL_V]] FPFastMathDefault %[[#FLOAT_TYPE:]] %[[#CONST131079]]
 ; We expect 0 for the rest of types because it's SignedZeroInfNanPreserve.
-; CHECK-DAG: OpExecutionModeId %[[#KERNEL_ALL_V]] FPFastMathDefault %[[#HALF_TYPE:]] %[[#CONST0]]
 ; CHECK-DAG: OpExecutionModeId %[[#KERNEL_ALL_V]] FPFastMathDefault %[[#DOUBLE_TYPE:]] %[[#CONST0]]
+; CHECK-DAG: OpExecutionModeId %[[#KERNEL_ALL_V]] FPFastMathDefault %[[#HALF_TYPE:]] %[[#CONST0]]
 
 ; CHECK-DAG: OpDecorate %[[#addRes:]] FPFastMathMode NotNaN|NotInf|NSZ|AllowReassoc
 ; CHECK-DAG: OpDecorate %[[#addResH:]] FPFastMathMode None
@@ -42,10 +42,20 @@
 ; CHECK-DAG: %[[#FLOAT_V_TYPE:]] = OpTypeVector %[[#FLOAT_TYPE]]
 ; CHECK-DAG: %[[#DOUBLE_V_TYPE:]] = OpTypeVector %[[#DOUBLE_TYPE]]
 
+@G_addRes = global float 0.0
+@G_addResH = global half 0.0
+@G_addResF = global float 0.0
+@G_addResD = global double 0.0
+@G_addResV = global <2 x float> zeroinitializer
+@G_addResH_V = global <2 x half> zeroinitializer
+@G_addResF_V = global <2 x float> zeroinitializer
+@G_addResD_V = global <2 x double> zeroinitializer
+
 define dso_local dllexport spir_kernel void @k_float_controls_float(float %f) {
 entry:
 ; CHECK-DAG: %[[#addRes]] = OpFAdd %[[#FLOAT_TYPE]]
   %addRes = fadd float %f,  %f
+  store volatile float %addRes, ptr @G_addRes
   ret void
 }
 
@@ -55,8 +65,11 @@ entry:
 ; CHECK-DAG: %[[#addResF]] = OpFAdd %[[#FLOAT_TYPE]]
 ; CHECK-DAG: %[[#addResD]] = OpFAdd %[[#DOUBLE_TYPE]]
   %addResH = fadd half %h,  %h
+  store volatile half %addResH, ptr @G_addResH
   %addResF = fadd float %f,  %f
+  store volatile float %addResF, ptr @G_addResF
   %addResD = fadd double %d,  %d
+  store volatile double %addResD, ptr @G_addResD
   ret void
 }
 
@@ -64,6 +77,7 @@ define dso_local dllexport spir_kernel void @k_float_controls_float_v(<2 x float
 entry:
 ; CHECK-DAG: %[[#addRes_V]] = OpFAdd %[[#FLOAT_V_TYPE]]
   %addRes = fadd <2 x float> %f,  %f
+  store volatile <2 x float> %addRes, ptr @G_addResV
   ret void
 }
 
@@ -73,8 +87,11 @@ entry:
 ; CHECK-DAG: %[[#addResF_V]] = OpFAdd %[[#FLOAT_V_TYPE]]
 ; CHECK-DAG: %[[#addResD_V]] = OpFAdd %[[#DOUBLE_V_TYPE]]
   %addResH = fadd <2 x half> %h,  %h
+  store volatile <2 x half> %addResH, ptr @G_addResH_V
   %addResF = fadd <2 x float> %f,  %f
+  store volatile <2 x float> %addResF, ptr @G_addResF_V
   %addResD = fadd <2 x double> %d,  %d
+  store volatile <2 x double> %addResD, ptr @G_addResD_V
   ret void
 }
 
