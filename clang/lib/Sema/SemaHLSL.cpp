@@ -3323,6 +3323,11 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     auto *ResourceTy =
         TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
     QualType ContainedTy = ResourceTy->getContainedType();
+    // byteaddressbuffer load attempt
+    // if (ResourceTy->getAttrs().RawBuffer && ContainedTy->isChar8Type()) {
+    //   ContainedTy =
+    //   dyn_cast<FunctionDecl>(SemaRef.CurContext)->getReturnType();
+    // }
     auto ReturnType =
         SemaRef.Context.getAddrSpaceQualType(ContainedTy, LangAS::hlsl_device);
     ReturnType = SemaRef.Context.getPointerType(ReturnType);
@@ -3344,6 +3349,11 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     auto *ResourceTy =
         TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
     QualType ReturnType = ResourceTy->getContainedType();
+    // ByteAddressBuffer returns FunctionDecl return type instead of contained
+    // type
+    if (ResourceTy->getAttrs().RawBuffer && ReturnType->isChar8Type()) {
+      ReturnType = dyn_cast<FunctionDecl>(SemaRef.CurContext)->getReturnType();
+    }
     TheCall->setType(ReturnType);
 
     break;
@@ -3360,22 +3370,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
-  case Builtin::BI__builtin_hlsl_byteaddressbuffer_load_with_status: {
-    if (SemaRef.checkArgCount(TheCall, 3) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
-                            SemaRef.getASTContext().UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2),
-                            SemaRef.getASTContext().UnsignedIntTy) ||
-        CheckModifiableLValue(&SemaRef, TheCall, 2))
-      return true;
-
-    auto *FD = dyn_cast<FunctionDecl>(SemaRef.CurContext);
-    TheCall->setType(FD->getReturnType());
-
-    break;
-  }
-  case Builtin::BI__builtin_hlsl_byteaddressbuffer_store: {
+  case Builtin::BI__builtin_hlsl_resource_store: {
     if (SemaRef.checkArgCount(TheCall, 3) ||
         CheckResourceHandle(&SemaRef, TheCall, 0) ||
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),

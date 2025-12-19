@@ -1209,25 +1209,25 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   ASTContext &AST = SemaRef.getASTContext();
 
-  // Helper to add uint Load methods
+  // Add uint Load methods
   auto addLoadMethod = [&](StringRef MethodName, QualType ReturnType) {
     IdentifierInfo &II = AST.Idents.get(MethodName, tok::TokenKind::identifier);
     DeclarationName Load(&II);
 
     // Load without status
     BuiltinTypeMethodBuilder(*this, Load, ReturnType, /*IsConst=*/false)
-        .addParam("byteOffset", AST.UnsignedIntTy)
+        .addParam("Index", AST.UnsignedIntTy)
         .callBuiltin("__builtin_hlsl_byteaddressbuffer_load", ReturnType,
                      PH::Handle, PH::_0)
         .finalize();
 
     // Load with status
     BuiltinTypeMethodBuilder(*this, Load, ReturnType, /*IsConst=*/false)
-        .addParam("byteOffset", AST.UnsignedIntTy)
-        .addParam("status", AST.UnsignedIntTy,
+        .addParam("Index", AST.UnsignedIntTy)
+        .addParam("Status", AST.UnsignedIntTy,
                   HLSLParamModifierAttr::Keyword_out)
-        .callBuiltin("__builtin_hlsl_byteaddressbuffer_load_with_status",
-                     ReturnType, PH::Handle, PH::_0, PH::_1)
+        .callBuiltin("__builtin_hlsl_resource_load_with_status", ReturnType,
+                     PH::Handle, PH::_0, PH::_1)
         .finalize();
   };
 
@@ -1244,20 +1244,34 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
                                /*IsConst=*/false);
   QualType ReturnType = MMB.addTemplateTypeParam("element_type");
   MMB.ReturnTy = ReturnType; // Update return type to template parameter
-  MMB.addParam("byteOffset", AST.UnsignedIntTy)
+  MMB.addParam("Index", AST.UnsignedIntTy)
       .callBuiltin("__builtin_hlsl_byteaddressbuffer_load", ReturnType,
                    PH::Handle, PH::_0)
       .finalize();
+
+  // __builtin_hlsl_resource_getpointer attempt
+  // BuiltinTypeMethodBuilder MMB(*this, Load, AST.UnsignedIntTy,
+  //                              /*IsConst=*/false);
+  // QualType ReturnType = MMB.addTemplateTypeParam("element_type");
+  // MMB.ReturnTy = ReturnType; // Update return type to template parameter
+  // QualType AddrSpaceElemTy =
+  //     AST.getAddrSpaceQualType(ReturnType, LangAS::hlsl_device);
+  // QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
+  // MMB.addParam("Index", AST.UnsignedIntTy)
+  //     .callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy,
+  //                  PH::Handle, PH::_0)
+  //     .dereference(PH::LastStmt)
+  //     .finalize();
 
   // Templated Load with status method
   BuiltinTypeMethodBuilder MMB2(*this, Load, AST.UnsignedIntTy,
                                 /*IsConst=*/false);
   QualType ReturnType2 = MMB2.addTemplateTypeParam("element_type");
   MMB2.ReturnTy = ReturnType2; // Update return type to template parameter
-  MMB2.addParam("byteOffset", AST.UnsignedIntTy)
-      .addParam("status", AST.UnsignedIntTy, HLSLParamModifierAttr::Keyword_out)
-      .callBuiltin("__builtin_hlsl_byteaddressbuffer_load_with_status",
-                   ReturnType2, PH::Handle, PH::_0, PH::_1)
+  MMB2.addParam("Index", AST.UnsignedIntTy)
+      .addParam("Status", AST.UnsignedIntTy, HLSLParamModifierAttr::Keyword_out)
+      .callBuiltin("__builtin_hlsl_resource_load_with_status", ReturnType2,
+                   PH::Handle, PH::_0, PH::_1)
       .finalize();
 
   return *this;
@@ -1276,10 +1290,10 @@ BuiltinTypeDeclBuilder::addByteAddressBufferStoreMethods() {
     DeclarationName Store(&II);
 
     BuiltinTypeMethodBuilder(*this, Store, AST.VoidTy, /*IsConst=*/false)
-        .addParam("byteOffset", AST.UnsignedIntTy)
-        .addParam("value", ValueType)
-        .callBuiltin("__builtin_hlsl_byteaddressbuffer_store", AST.VoidTy,
-                     PH::Handle, PH::_0, PH::_1)
+        .addParam("Index", AST.UnsignedIntTy)
+        .addParam("Value", ValueType)
+        .callBuiltin("__builtin_hlsl_resource_store", AST.VoidTy, PH::Handle,
+                     PH::_0, PH::_1)
         .finalize();
   };
 
@@ -1293,11 +1307,11 @@ BuiltinTypeDeclBuilder::addByteAddressBufferStoreMethods() {
   DeclarationName Store(&II);
 
   BuiltinTypeMethodBuilder Builder(*this, Store, AST.VoidTy, /*IsConst=*/false);
-  QualType ReturnType = Builder.addTemplateTypeParam("element_type");
-  Builder.addParam("byteOffset", AST.UnsignedIntTy)
-      .addParam("value", ReturnType)
-      .callBuiltin("__builtin_hlsl_byteaddressbuffer_store", AST.VoidTy,
-                   PH::Handle, PH::_0, PH::_1)
+  QualType ValueType = Builder.addTemplateTypeParam("element_type");
+  Builder.addParam("Index", AST.UnsignedIntTy)
+      .addParam("Value", ValueType)
+      .callBuiltin("__builtin_hlsl_resource_store", AST.VoidTy, PH::Handle,
+                   PH::_0, PH::_1)
       .finalize();
 
   return *this;

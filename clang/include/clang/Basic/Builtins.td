@@ -5007,14 +5007,8 @@ def HLSLByteAddressBufferLoad : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
-def HLSLByteAddressBufferLoadWithStatus : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_byteaddressbuffer_load_with_status"];
-  let Attributes = [NoThrow];
-  let Prototype = "void(...)";
-}
-
-def HLSLByteAddressBufferStore : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_byteaddressbuffer_store"];
+def HLSLResourceStore : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_store"];
   let Attributes = [NoThrow];
   let Prototype = "void(...)";
 }

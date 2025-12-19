@@ -155,7 +155,7 @@ RESOURCE Buffer;
 // Load methods
 
 // CHECK-LOAD: CXXMethodDecl {{.*}} Load 'unsigned int (unsigned int)'
-// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} byteOffset 'unsigned int'
+// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: CompoundStmt
 // CHECK-LOAD-NEXT: ReturnStmt
 // CHECK-LOAD-NEXT: CallExpr {{.*}} 'unsigned int'
@@ -163,25 +163,25 @@ RESOURCE Buffer;
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_byteaddressbuffer_load' 'void (...) noexcept'
 // CHECK-LOAD-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'byteOffset' 'unsigned int'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 // CHECK-LOAD: CXXMethodDecl {{.*}} Load 'unsigned int (unsigned int, out unsigned int)
-// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} byteOffset 'unsigned int'
-// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} status 'unsigned int &__restrict'
+// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
+// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Status 'unsigned int &__restrict'
 // CHECK-LOAD-NEXT: HLSLParamModifierAttr {{.*}} out
 // CHECK-LOAD-NEXT: CompoundStmt
 // CHECK-LOAD-NEXT: ReturnStmt
 // CHECK-LOAD-NEXT: CallExpr {{.*}} 'unsigned int'
 // CHECK-LOAD-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_byteaddressbuffer_load_with_status' 'void (...) noexcept'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_load_with_status' 'void (...) noexcept'
 // CHECK-LOAD-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'byteOffset' 'unsigned int'
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'status' 'unsigned int &__restrict'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Status' 'unsigned int &__restrict'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // CHECK-LOAD: CXXMethodDecl {{.*}} Load2 'vector<unsigned int (unsigned int), 2>'
-// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} byteOffset 'unsigned int'
+// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: CompoundStmt
 // CHECK-LOAD-NEXT: ReturnStmt
 // CHECK-LOAD-NEXT: CallExpr {{.*}} 'vector<unsigned int, 2>'
@@ -189,25 +189,25 @@ RESOURCE Buffer;
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_byteaddressbuffer_load' 'void (...) noexcept'
 // CHECK-LOAD-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'byteOffset' 'unsigned int'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 // CHECK-LOAD: CXXMethodDecl {{.*}} Load2 'vector<unsigned int (unsigned int, out unsigned int), 2>'
-// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} byteOffset 'unsigned int'
-// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} status 'unsigned int &__restrict'
+// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
+// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Status 'unsigned int &__restrict'
 // CHECK-LOAD-NEXT: HLSLParamModifierAttr {{.*}} out
 // CHECK-LOAD-NEXT: CompoundStmt
 // CHECK-LOAD-NEXT: ReturnStmt
 // CHECK-LOAD-NEXT: CallExpr {{.*}} 'vector<unsigned int, 2>'
 // CHECK-LOAD-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_byteaddressbuffer_load_with_status' 'void (...) noexcept'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_load_with_status' 'void (...) noexcept'
 // CHECK-LOAD-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'byteOffset' 'unsigned int'
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'status' 'unsigned int &__restrict'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Status' 'unsigned int &__restrict'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // CHECK-LOAD: CXXMethodDecl {{.*}} Load3 'vector<unsigned int (unsigned int), 3>'
-// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} byteOffset 'unsigned int'
+// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: CompoundStmt
 // CHECK-LOAD-NEXT: ReturnStmt
 // CHECK-LOAD-NEXT: CallExpr {{.*}} 'vector<unsigned int, 3>'
@@ -215,25 +215,25 @@ RESOURCE Buffer;
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_byteaddressbuffer_load' 'void (...) noexcept'
 // CHECK-LOAD-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'byteOffset' 'unsigned int'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 // CHECK-LOAD: CXXMethodDecl {{.*}} Load3 'vector<unsigned int (unsigned int, out unsigned int), 3>'
-// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} byteOffset 'unsigned int'
-// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} status 'unsigned int &__restrict'
+// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
+// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Status 'unsigned int &__restrict'
 // CHECK-LOAD-NEXT: HLSLParamModifierAttr {{.*}} out
 // CHECK-LOAD-NEXT: CompoundStmt
 // CHECK-LOAD-NEXT: ReturnStmt
 // CHECK-LOAD-NEXT: CallExpr {{.*}} 'vector<unsigned int, 3>'
 // CHECK-LOAD-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_byteaddressbuffer_load_with_status' 'void (...) noexcept'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_load_with_status' 'void (...) noexcept'
 // CHECK-LOAD-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'byteOffset' 'unsigned int'
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'status' 'unsigned int &__restrict'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Status' 'unsigned int &__restrict'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // CHECK-LOAD: CXXMethodDecl {{.*}} Load4 'vector<unsigned int (unsigned int), 4>'
-// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} byteOffset 'unsigned int'
+// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: CompoundStmt
 // CHECK-LOAD-NEXT: ReturnStmt
 // CHECK-LOAD-NEXT: CallExpr {{.*}} 'vector<unsigned int, 4>'
@@ -241,25 +241,25 @@ RESOURCE Buffer;
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_byteaddressbuffer_load' 'void (...) noexcept'
 // CHECK-LOAD-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'byteOffset' 'unsigned int'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 // CHECK-LOAD: CXXMethodDecl {{.*}} Load4 'vector<unsigned int (unsigned int, out unsigned int), 4>'
-// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} byteOffset 'unsigned int'
-// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} status 'unsigned int &__restrict'
+// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
+// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Status 'unsigned int &__restrict'
 // CHECK-LOAD-NEXT: HLSLParamModifierAttr {{.*}} out
 // CHECK-LOAD-NEXT: CompoundStmt
 // CHECK-LOAD-NEXT: ReturnStmt
 // CHECK-LOAD-NEXT: CallExpr {{.*}} 'vector<unsigned int, 4>'
 // CHECK-LOAD-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_byteaddressbuffer_load_with_status' 'void (...) noexcept'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_load_with_status' 'void (...) noexcept'
 // CHECK-LOAD-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'byteOffset' 'unsigned int'
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'status' 'unsigned int &__restrict'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Status' 'unsigned int &__restrict'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // CHECK-LOAD: CXXMethodDecl {{.*}} Load 'element_type (unsigned int)'
-// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} byteOffset 'unsigned int'
+// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: CompoundStmt
 // CHECK-LOAD-NEXT: ReturnStmt
 // CHECK-LOAD-NEXT: CallExpr {{.*}} 'element_type'
@@ -267,87 +267,87 @@ RESOURCE Buffer;
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_byteaddressbuffer_load' 'void (...) noexcept'
 // CHECK-LOAD-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'byteOffset' 'unsigned int'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 // CHECK-LOAD: CXXMethodDecl {{.*}} Load 'element_type (unsigned int, out unsigned int)
-// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} byteOffset 'unsigned int'
-// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} status 'unsigned int &__restrict'
+// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
+// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Status 'unsigned int &__restrict'
 // CHECK-LOAD-NEXT: HLSLParamModifierAttr {{.*}} out
 // CHECK-LOAD-NEXT: CompoundStmt
 // CHECK-LOAD-NEXT: ReturnStmt
 // CHECK-LOAD-NEXT: CallExpr {{.*}} 'element_type'
 // CHECK-LOAD-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_byteaddressbuffer_load_with_status' 'void (...) noexcept'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_load_with_status' 'void (...) noexcept'
 // CHECK-LOAD-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'byteOffset' 'unsigned int'
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'status' 'unsigned int &__restrict'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Status' 'unsigned int &__restrict'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // Store method
 // CHECK-STORE: CXXMethodDecl {{.*}} Store 'void (unsigned int, unsigned int)'
-// CHECK-STORE-NEXT: ParmVarDecl {{.*}} byteOffset 'unsigned int'
-// CHECK-STORE-NEXT: ParmVarDecl {{.*}} value 'unsigned int'
+// CHECK-STORE-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
+// CHECK-STORE-NEXT: ParmVarDecl {{.*}} Value 'unsigned int'
 // CHECK-STORE-NEXT: CompoundStmt
 // CHECK-STORE-NEXT: CallExpr {{.*}} 'void'
 // CHECK-STORE-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-STORE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_byteaddressbuffer_store' 'void (...) noexcept'
+// CHECK-STORE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_store' 'void (...) noexcept'
 // CHECK-STORE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-STORE-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
-// CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'byteOffset' 'unsigned int'
-// CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'value' 'unsigned int'
+// CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
+// CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Value' 'unsigned int'
 // CHECK-STORE-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // CHECK-STORE: CXXMethodDecl {{.*}} Store2 'void (unsigned int, vector<unsigned int, 2>)'
-// CHECK-STORE-NEXT: ParmVarDecl {{.*}} byteOffset 'unsigned int'
-// CHECK-STORE-NEXT: ParmVarDecl {{.*}} value 'vector<unsigned int, 2>'
+// CHECK-STORE-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
+// CHECK-STORE-NEXT: ParmVarDecl {{.*}} Value 'vector<unsigned int, 2>'
 // CHECK-STORE-NEXT: CompoundStmt
 // CHECK-STORE-NEXT: CallExpr {{.*}} 'void'
 // CHECK-STORE-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-STORE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_byteaddressbuffer_store' 'void (...) noexcept'
+// CHECK-STORE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_store' 'void (...) noexcept'
 // CHECK-STORE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-STORE-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
-// CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'byteOffset' 'unsigned int'
-// CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'vector<unsigned int, 2>' ParmVar {{.*}} 'value' 'vector<unsigned int, 2>'
+// CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
+// CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'vector<unsigned int, 2>' ParmVar {{.*}} 'Value' 'vector<unsigned int, 2>'
 // CHECK-STORE-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // CHECK-STORE: CXXMethodDecl {{.*}} Store3 'void (unsigned int, vector<unsigned int, 3>)'
-// CHECK-STORE-NEXT: ParmVarDecl {{.*}} byteOffset 'unsigned int'
-// CHECK-STORE-NEXT: ParmVarDecl {{.*}} value 'vector<unsigned int, 3>'
+// CHECK-STORE-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
+// CHECK-STORE-NEXT: ParmVarDecl {{.*}} Value 'vector<unsigned int, 3>'
 // CHECK-STORE-NEXT: CompoundStmt
 // CHECK-STORE-NEXT: CallExpr {{.*}} 'void'
 // CHECK-STORE-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-STORE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_byteaddressbuffer_store' 'void (...) noexcept'
+// CHECK-STORE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_store' 'void (...) noexcept'
 // CHECK-STORE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-STORE-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
-// CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'byteOffset' 'unsigned int'
-// CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'vector<unsigned int, 3>' ParmVar {{.*}} 'value' 'vector<unsigned int, 3>'
+// CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
+// CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'vector<unsigned int, 3>' ParmVar {{.*}} 'Value' 'vector<unsigned int, 3>'
 // CHECK-STORE-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // CHECK-STORE: CXXMethodDecl {{.*}} Store4 'void (unsigned int, vector<unsigned int, 4>)'
-// CHECK-STORE-NEXT: ParmVarDecl {{.*}} byteOffset 'unsigned int'
-// CHECK-STORE-NEXT: ParmVarDecl {{.*}} value 'vector<unsigned int, 4>'
+// CHECK-STORE-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
+// CHECK-STORE-NEXT: ParmVarDecl {{.*}} Value 'vector<unsigned int, 4>'
 // CHECK-STORE-NEXT: CompoundStmt
 // CHECK-STORE-NEXT: CallExpr {{.*}} 'void'
 // CHECK-STORE-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-STORE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_byteaddressbuffer_store' 'void (...) noexcept'
+// CHECK-STORE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_store' 'void (...) noexcept'
 // CHECK-STORE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-STORE-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
-// CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'byteOffset' 'unsigned int'
-// CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'vector<unsigned int, 4>' ParmVar {{.*}} 'value' 'vector<unsigned int, 4>'
+// CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
+// CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'vector<unsigned int, 4>' ParmVar {{.*}} 'Value' 'vector<unsigned int, 4>'
 // CHECK-STORE-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // CHECK-STORE: CXXMethodDecl {{.*}} Store 'void (unsigned int, element_type)'
-// CHECK-STORE-NEXT: ParmVarDecl {{.*}} byteOffset 'unsigned int'
-// CHECK-STORE-NEXT: ParmVarDecl {{.*}} value 'element_type'
+// CHECK-STORE-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
+// CHECK-STORE-NEXT: ParmVarDecl {{.*}} Value 'element_type'
 // CHECK-STORE-NEXT: CompoundStmt
 // CHECK-STORE-NEXT: CallExpr {{.*}} 'void'
 // CHECK-STORE-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-STORE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_byteaddressbuffer_store' 'void (...) noexcept'
+// CHECK-STORE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_store' 'void (...) noexcept'
 // CHECK-STORE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-STORE-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
-// CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'byteOffset' 'unsigned int'
-// CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'element_type' ParmVar {{.*}} 'value' 'element_type'
+// CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
+// CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'element_type' ParmVar {{.*}} 'Value' 'element_type'
 // CHECK-STORE-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // GetDimensions method

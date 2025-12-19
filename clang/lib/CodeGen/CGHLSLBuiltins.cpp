@@ -489,6 +489,10 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *IndexOp = EmitScalarExpr(E->getArg(1));
 
     llvm::Type *RetTy = ConvertType(E->getType());
+    // byteaddressbufferload attempt
+    // tried replacing last parameter with a SmallVector<Value *> Args like
+    // load_with_status where the last arg is poison but that broke every
+    // intrinsic that uses this builtin
     return Builder.CreateIntrinsic(
         RetTy, CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
         ArrayRef<Value *>{HandleOp, IndexOp});
@@ -521,6 +525,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     if (RT->getAttrs().RawBuffer) {
       Value *Offset = Builder.getInt32(0);
+      // Offset is poison for ByteAddressBuffer
+      if (RT->getContainedType()->isChar8Type())
+        Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
       Args.push_back(Offset);
     }
 
@@ -538,65 +545,49 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   }
   case Builtin::BI__builtin_hlsl_byteaddressbuffer_load: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
-    Value *ByteOffsetOp = EmitScalarExpr(E->getArg(1));
-    Value *ElementOffset = llvm::PoisonValue::get(Builder.getInt32Ty());
+    Value *IndexOp = EmitScalarExpr(E->getArg(1));
+    Value *Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
 
     llvm::Type *DataTy = ConvertType(E->getType());
     llvm::Type *RetTy = llvm::StructType::get(Builder.getContext(),
                                               {DataTy, Builder.getInt1Ty()});
 
-    SmallVector<Value *, 3> Args = {HandleOp, ByteOffsetOp, ElementOffset};
+    SmallVector<Value *, 3> Args = {HandleOp, IndexOp, Offset};
 
     Value *ResRet = Builder.CreateIntrinsic(
         RetTy, Intrinsic::dx_resource_load_rawbuffer, Args);
     return Builder.CreateExtractValue(ResRet, {0}, "ld.value");
   }
-  case Builtin::BI__builtin_hlsl_byteaddressbuffer_load_with_status: {
+  case Builtin::BI__builtin_hlsl_resource_store: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
-    Value *ByteOffsetOp = EmitScalarExpr(E->getArg(1));
-    Value *ElementOffset = llvm::PoisonValue::get(Builder.getInt32Ty());
-
-    // Get the *address* of the status argument to write to it by reference
-    LValue StatusLVal = EmitLValue(E->getArg(2));
-    Address StatusAddr = StatusLVal.getAddress();
-
-    assert(CGM.getTarget().getTriple().getArch() == llvm::Triple::dxil &&
-           "Only DXIL currently implements load with status");
-
-    llvm::Type *DataTy = ConvertType(E->getType());
-    llvm::Type *RetTy = llvm::StructType::get(Builder.getContext(),
-                                              {DataTy, Builder.getInt1Ty()});
-
-    SmallVector<Value *, 3> Args = {HandleOp, ByteOffsetOp, ElementOffset};
-
-    // The load intrinsics give us a (T value, i1 status) pair -
-    // shepherd these into the return value and out reference respectively.
-    Value *ResRet = Builder.CreateIntrinsic(
-        RetTy, Intrinsic::dx_resource_load_rawbuffer, Args, {}, "ld.struct");
-    Value *LoadedValue = Builder.CreateExtractValue(ResRet, {0}, "ld.value");
-    Value *StatusBit = Builder.CreateExtractValue(ResRet, {1}, "ld.status");
-    Value *ExtendedStatus =
-        Builder.CreateZExt(StatusBit, Builder.getInt32Ty(), "ld.status.ext");
-    Builder.CreateStore(ExtendedStatus, StatusAddr);
-
-    return LoadedValue;
-  }
-  case Builtin::BI__builtin_hlsl_byteaddressbuffer_store: {
-    Value *HandleOp = EmitScalarExpr(E->getArg(0));
-    Value *ByteOffsetOp = EmitScalarExpr(E->getArg(1));
+    Value *IndexOp = EmitScalarExpr(E->getArg(1));
     RValue RVal = EmitAnyExpr(E->getArg(2));
     Value *ValueOp =
         RVal.isScalar()
             ? RVal.getScalarVal()
             : Builder.CreateLoad(RVal.getAggregateAddress(), "store_val");
-    Value *ElementOffset = llvm::PoisonValue::get(Builder.getInt32Ty());
 
-    SmallVector<Value *, 4> Args = {HandleOp, ByteOffsetOp, ElementOffset,
-                                    ValueOp};
+    QualType HandleTy = E->getArg(0)->getType();
+    const HLSLAttributedResourceType *RT =
+        HandleTy->getAs<HLSLAttributedResourceType>();
+    Intrinsic::ID IntrID = RT->getAttrs().RawBuffer
+                               ? llvm::Intrinsic::dx_resource_store_rawbuffer
+                               : llvm::Intrinsic::dx_resource_store_typedbuffer;
 
-    return Builder.CreateIntrinsic(Intrinsic::dx_resource_store_rawbuffer,
-                                   {HandleOp->getType(), ValueOp->getType()},
-                                   Args);
+    SmallVector<Value *, 4> Args;
+    Args.push_back(HandleOp);
+    Args.push_back(IndexOp);
+    if (RT->getAttrs().RawBuffer) {
+      Value *Offset = Builder.getInt32(0);
+      // Offset is poison for ByteAddressBuffer
+      if (RT->getContainedType()->isChar8Type())
+        Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
+      Args.push_back(Offset);
+    }
+    Args.push_back(ValueOp);
+
+    return Builder.CreateIntrinsic(
+        IntrID, {HandleOp->getType(), ValueOp->getType()}, Args);
   }
   case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
     llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
