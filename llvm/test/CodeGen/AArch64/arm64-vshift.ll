@@ -2,59 +2,7 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel=0 | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel=1 -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:    warning: Instruction selection used fallback path for sqshlu8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu2d
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu1d_constant
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu_i64_constant
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu_i32_constant
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn1s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun1s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn1s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun1s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn1s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn1s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli8b
+; CHECK-GI:    warning: Instruction selection used fallback path for sli8b
 ; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli4h
 ; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli2s
 ; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli1d
@@ -63,7 +11,6 @@
 ; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli8h
 ; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli4s
 ; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli2d
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu_zero_shift_amount
 
 define <8 x i8> @sqshl8b(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: sqshl8b:
@@ -1496,23 +1443,38 @@ define <2 x i64> @sqshlu2d(ptr %A) nounwind {
 }
 
 define <1 x i64> @sqshlu1d_constant(ptr %A) nounwind {
-; CHECK-LABEL: sqshlu1d_constant:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    sqshlu d0, d0, #1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sqshlu1d_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    sqshlu d0, d0, #1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqshlu1d_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr x8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    sqshlu d0, d0, #1
+; CHECK-GI-NEXT:    ret
   %tmp1 = load <1 x i64>, ptr %A
   %tmp3 = call <1 x i64> @llvm.aarch64.neon.sqshlu.v1i64(<1 x i64> %tmp1, <1 x i64> <i64 1>)
   ret <1 x i64> %tmp3
 }
 
 define i64 @sqshlu_i64_constant(ptr %A) nounwind {
-; CHECK-LABEL: sqshlu_i64_constant:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    sqshlu d0, d0, #1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sqshlu_i64_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    sqshlu d0, d0, #1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqshlu_i64_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr x8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    sqshlu d0, d0, #1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.sqshlu.i64(i64 %tmp1, i64 1)
   ret i64 %tmp3
