@@ -112,14 +112,14 @@ static Block::iterator cloneACCRegionInto(Region *src, Block *dest,
 
   auto lastNewBlock = std::prev(postInsertBlock->getIterator());
 
-  Block::iterator ip;
+  Block::iterator newInsertionPoint;
   Operation *terminator = lastNewBlock->getTerminator();
 
   if (auto yieldOp = dyn_cast<acc::YieldOp>(terminator)) {
-    ip = std::prev(yieldOp->getIterator());
+    newInsertionPoint = std::prev(yieldOp->getIterator());
     yieldOp.erase();
   } else if (auto terminatorOp = dyn_cast<acc::TerminatorOp>(terminator)) {
-    ip = std::prev(terminatorOp->getIterator());
+    newInsertionPoint = std::prev(terminatorOp->getIterator());
     terminatorOp.erase();
   } else {
     llvm_unreachable("unexpected terminator in ACC region");
@@ -135,7 +135,7 @@ static Block::iterator cloneACCRegionInto(Region *src, Block *dest,
   dest->getOperations().splice(dest->end(), firstNewBlock->getOperations());
   firstNewBlock->erase();
 
-  return ip;
+  return newInsertionPoint;
 }
 
 /// Wrap a multi-block region with scf.execute_region.
