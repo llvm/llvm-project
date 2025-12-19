@@ -295,7 +295,7 @@ bool all(double4);
 
 /// \fn bool and(bool x, bool y)
 /// \brief Logically ands two boolean vectors or matrices elementwise and
-// produces a bool vector or matrix output.
+/// produces a bool vector or matrix output.
 
 // TODO: Clean up clang-format marker once we've resolved
 //       https://github.com/llvm/llvm-project/issues/127851
@@ -310,6 +310,13 @@ bool3 and(bool3 x, bool3 y);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
 bool4 and(bool4 x, bool4 y);
 
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool1x2 and(bool1x2 x, bool1x2 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool1x3 and(bool1x3 x, bool1x3 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool1x4 and(bool1x4 x, bool1x4 y);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
 bool2x1 and(bool2x1 x, bool2x1 y);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
@@ -1800,6 +1807,12 @@ bool3 or(bool3, bool3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
 bool4 or(bool4, bool4);
 
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool1x2 or(bool1x2 x, bool1x2 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool1x3 or(bool1x3 x, bool1x3 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool1x4 or(bool1x4 x, bool1x4 y);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
 bool2x1 or(bool2x1 x, bool2x1 y);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)

@@ -32,7 +32,7 @@ bool test_mismatched_scalars(bool a, int b)
   // expected-error@-1{{all arguments to}}{{_builtin_hlsl_or|_builtin_hlsl_and }}{{must have the same type}}
 }
 
-bool2x2 test_mismatched_args(bool2x2 a, bool3x3 b)
+bool2x2 test_mismatched_matrix_dimensions(bool2x2 a, bool3x3 b)
 {
     return TEST_FUNC(a, b);
   // expected-error@-1{{cannot pass object of non-trivial type 'bool2x2' (aka 'matrix<bool, 2, 2>') through variadic function; call will abort at runtime}}

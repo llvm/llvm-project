@@ -13450,7 +13450,7 @@ QualType Sema::CheckMatrixLogicalOperands(ExprResult &LHS, ExprResult &RHS,
                                           BinaryOperatorKind Opc) {
 
   if (!getLangOpts().HLSL) {
-    assert(false && "Logical operands are not support in C\\C++");
+    assert(false && "Logical operands are not supported in C\\C++");
     return QualType();
   }
 
