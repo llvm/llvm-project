@@ -165,7 +165,6 @@ define <vscale x 16 x i8> @test_lanex_16xi8(<vscale x 16 x i8> %a, i32 %x) {
   ret <vscale x 16 x i8> %b
 }
 
-; TODO: Implement DAG combiner.
 ; Test the INSERT_VECTOR_ELT(poison, ...) -> VECTOR_SPLAT combiner
 ; <vscale x 16 x i8> is used as a proxy for testing using IR, but the combiner
 ; is agnostic of the element type.
@@ -173,12 +172,7 @@ define <vscale x 16 x i8> @test_lanex_16xi8(<vscale x 16 x i8> %a, i32 %x) {
 define <vscale x 16 x i8> @test_lanex_16xi8_poison(i8 %e, i32 %x) {
 ; CHECK-LABEL: test_lanex_16xi8_poison:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z0.b, #0, #1
-; CHECK-NEXT:    mov w8, w1
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    mov z1.b, w8
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, z1.b
-; CHECK-NEXT:    mov z0.b, p0/m, w0
+; CHECK-NEXT:    mov z0.b, w0
 ; CHECK-NEXT:    ret
   %b = insertelement <vscale x 16 x i8> poison, i8 %e, i32 %x
   ret <vscale x 16 x i8> %b
@@ -187,13 +181,7 @@ define <vscale x 16 x i8> @test_lanex_16xi8_poison(i8 %e, i32 %x) {
 define <vscale x 16 x i8> @test_lanex_16xi8_poison_imm(i8 %e, i32 %x) {
 ; CHECK-LABEL: test_lanex_16xi8_poison_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z0.b, #0, #1
-; CHECK-NEXT:    mov w8, w1
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    mov z1.b, w8
-; CHECK-NEXT:    mov w8, #5 // =0x5
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, z1.b
-; CHECK-NEXT:    mov z0.b, p0/m, w8
+; CHECK-NEXT:    mov z0.b, #5 // =0x5
 ; CHECK-NEXT:    ret
   %b = insertelement <vscale x 16 x i8> poison, i8 5, i32 %x
   ret <vscale x 16 x i8> %b
