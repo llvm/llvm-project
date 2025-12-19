@@ -547,7 +547,7 @@ template <class DataType> struct OptionValue;
 
 // The default value safely does nothing. Option value printing is only
 // best-effort.
-template <class DataType, bool isClass>
+template <class DataType, bool isCopyable>
 struct OptionValueBase : GenericOptionValue {
   // Temporary storage for argument passing.
   using WrapperType = OptionValue<DataType>;
@@ -590,13 +590,24 @@ public:
     return Value;
   }
 
-  void setValue(const DataType &V) {
+  template <class DT, std::enable_if_t<std::is_assignable_v<DataType &, DT>,
+                                       std::nullptr_t> = nullptr>
+  void setValue(const DT &V) {
     Valid = true;
     Value = V;
   }
 
   // Returns whether this instance matches V.
-  bool compare(const DataType &V) const { return Valid && (Value == V); }
+  bool compare(const DataType &V) const {
+    // FIXME: With C++23, use `std::equality_comparable` to see if `DataType`
+    // may be a class with `operator==` and, if so, use it instead of silently
+    // returning false.
+    if constexpr (std::is_class_v<DataType>) {
+      return false;
+    } else {
+      return Valid && (Value == V);
+    }
+  }
 
   bool compare(const GenericOptionValue &V) const override {
     const OptionValueCopy<DataType> &VC =
@@ -607,9 +618,9 @@ public:
   }
 };
 
-// Non-class option values.
+// Copyable option values.
 template <class DataType>
-struct OptionValueBase<DataType, false> : OptionValueCopy<DataType> {
+struct OptionValueBase<DataType, true> : OptionValueCopy<DataType> {
   using WrapperType = DataType;
 
 protected:
@@ -622,7 +633,10 @@ protected:
 // Top-level option class.
 template <class DataType>
 struct OptionValue final
-    : OptionValueBase<DataType, std::is_class_v<DataType>> {
+    : OptionValueBase<DataType, std::conjunction_v<
+                                    std::is_copy_constructible<DataType>,
+                                    std::is_copy_assignable<DataType>,
+                                    std::is_default_constructible<DataType>>> {
   OptionValue() = default;
 
   OptionValue(const DataType &V) { this->setValue(V); }
@@ -634,42 +648,7 @@ struct OptionValue final
   }
 };
 
-// Other safe-to-copy-by-value common option types.
 enum boolOrDefault { BOU_UNSET, BOU_TRUE, BOU_FALSE };
-template <>
-struct LLVM_ABI OptionValue<cl::boolOrDefault> final
-    : OptionValueCopy<cl::boolOrDefault> {
-  using WrapperType = cl::boolOrDefault;
-
-  OptionValue() = default;
-
-  OptionValue(const cl::boolOrDefault &V) { this->setValue(V); }
-
-  OptionValue<cl::boolOrDefault> &operator=(const cl::boolOrDefault &V) {
-    setValue(V);
-    return *this;
-  }
-
-private:
-  void anchor() override;
-};
-
-template <>
-struct LLVM_ABI OptionValue<std::string> final : OptionValueCopy<std::string> {
-  using WrapperType = StringRef;
-
-  OptionValue() = default;
-
-  OptionValue(const std::string &V) { this->setValue(V); }
-
-  OptionValue<std::string> &operator=(const std::string &V) {
-    setValue(V);
-    return *this;
-  }
-
-private:
-  void anchor() override;
-};
 
 //===----------------------------------------------------------------------===//
 // Enum valued command line option
