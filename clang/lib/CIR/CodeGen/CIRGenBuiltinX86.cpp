@@ -369,7 +369,6 @@ static mlir::Value emitX86CvtF16ToFloatExpr(CIRGenBuilderTy &builder,
 
   mlir::Value src = ops[0];
   mlir::Value passthru = ops[1];
-  mlir::Value mask = ops[2];
 
   auto vecTy = mlir::cast<cir::VectorType>(src.getType());
   uint64_t numElems = vecTy.getSize();
