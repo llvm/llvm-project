@@ -220,9 +220,8 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
       }
     }
     if (KMovMI) {
-      unsigned MovMskOpc = (Opc == X86::VPMOVD2MZ128kr)
-                             ? X86::VMOVMSKPSrr
-                             : X86::VMOVMSKPSYrr;
+      unsigned MovMskOpc =
+          (Opc == X86::VPMOVD2MZ128kr) ? X86::VMOVMSKPSrr : X86::VMOVMSKPSYrr;
 
       const MCInstrDesc &MovMskDesc = ST.getInstrInfo()->get(MovMskOpc);
       MI.setDesc(MovMskDesc);
