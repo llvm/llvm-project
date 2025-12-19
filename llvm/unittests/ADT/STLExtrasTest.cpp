@@ -701,6 +701,41 @@ TEST(STLExtrasTest, AppendValues) {
   EXPECT_THAT(Set, UnorderedElementsAre(1, 2, 3));
 }
 
+TEST(STLExtrasTest, AppendValuesReserve) {
+  // A vector wrapper that tracks reserve() calls.
+  struct TrackedVector : std::vector<int> {
+    using std::vector<int>::vector;
+    size_t LastReservedSize = 0;
+    unsigned ReserveCallCount = 0;
+
+    void reserve(size_t N) {
+      LastReservedSize = N;
+      ++ReserveCallCount;
+      std::vector<int>::reserve(N);
+    }
+  };
+
+  // When empty, reserve should be called.
+  TrackedVector Empty;
+  append_values(Empty, 1, 2, 3);
+  EXPECT_EQ(Empty.ReserveCallCount, 1u);
+  EXPECT_EQ(Empty.LastReservedSize, 3u);
+  EXPECT_THAT(Empty, ElementsAre(1, 2, 3));
+
+  // Appending more values to a now non-empty container should still not
+  // reserve.
+  append_values(Empty, 4, 5);
+  EXPECT_EQ(Empty.ReserveCallCount, 1u);
+  EXPECT_THAT(Empty, ElementsAre(1, 2, 3, 4, 5));
+
+  // When non-empty, reserve should NOT be called to avoid preventing
+  // exponential growth.
+  TrackedVector NonEmpty = {1, 2};
+  append_values(NonEmpty, 3, 4);
+  EXPECT_EQ(NonEmpty.ReserveCallCount, 0u);
+  EXPECT_THAT(NonEmpty, ElementsAre(1, 2, 3, 4));
+}
+
 TEST(STLExtrasTest, ADLTest) {
   some_namespace::some_struct s{{1, 2, 3, 4, 5}, ""};
   some_namespace::some_struct s2{{2, 4, 6, 8, 10}, ""};
@@ -1223,6 +1258,25 @@ TEST(STLExtras, MoveRange) {
   llvm::move(Build(), std::back_inserter(V4));
   EXPECT_EQ(V4.size(), 4U);
   EXPECT_TRUE(llvm::all_of(V4, HasVal));
+}
+
+TEST(STLExtrasTest, AllOfAnyOfNoneOfConstexpr) {
+  // Verify constexpr evaluation works. Functional correctness is tested in
+  // runtime tests (e.g., MoveRange).
+  constexpr std::array<int, 3> Arr = {1, 2, 3};
+  static_assert(all_of(Arr, [](int X) { return X > 0; }));
+  static_assert(any_of(Arr, [](int X) { return X == 2; }));
+  static_assert(none_of(Arr, [](int X) { return X < 0; }));
+
+  // Verify constexpr works with C-style arrays.
+  constexpr int CArr[] = {1, 2};
+  static_assert(all_of(CArr, [](int X) { return X > 0; }));
+
+  // Verify empty range edge case.
+  constexpr std::array<int, 0> Empty = {};
+  static_assert(all_of(Empty, [](int) { return false; }));
+  static_assert(!any_of(Empty, [](int) { return true; }));
+  static_assert(none_of(Empty, [](int) { return true; }));
 }
 
 TEST(STLExtras, Unique) {

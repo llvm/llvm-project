@@ -308,6 +308,7 @@ set(files
   __concepts/class_or_enum.h
   __concepts/common_reference_with.h
   __concepts/common_with.h
+  __concepts/comparison_common_type.h
   __concepts/constructible.h
   __concepts/convertible_to.h
   __concepts/copyable.h
@@ -527,6 +528,7 @@ set(files
   __locale_dir/num.h
   __locale_dir/pad_and_output.h
   __locale_dir/scan_keyword.h
+  __locale_dir/support/aix.h
   __locale_dir/support/apple.h
   __locale_dir/support/bsd_like.h
   __locale_dir/support/freebsd.h
@@ -700,6 +702,7 @@ set(files
   __random/uniform_real_distribution.h
   __random/weibull_distribution.h
   __ranges/access.h
+  __ranges/adjacent_view.h
   __ranges/all.h
   __ranges/as_rvalue_view.h
   __ranges/chunk_by_view.h
@@ -711,6 +714,7 @@ set(files
   __ranges/data.h
   __ranges/drop_view.h
   __ranges/drop_while_view.h
+  __ranges/elements_of.h
   __ranges/elements_view.h
   __ranges/empty.h
   __ranges/empty_view.h
@@ -788,6 +792,7 @@ set(files
   __tuple/tuple_like.h
   __tuple/tuple_like_no_subrange.h
   __tuple/tuple_size.h
+  __tuple/tuple_transform.h
   __type_traits/add_cv_quals.h
   __type_traits/add_pointer.h
   __type_traits/add_reference.h

@@ -123,6 +123,9 @@ def OMPC_Collapse : Clause<[Spelling<"collapse">]> {
 }
 def OMPC_Collector : Clause<[Spelling<"collector">]> {
 }
+def OMPC_Combiner : Clause<[Spelling<"combiner">]> {
+  let flangClass = "OmpCombinerClause";
+}
 def OMPC_Compare : Clause<[Spelling<"compare">]> {
   let clangClass = "OMPCompareClause";
 }
@@ -793,6 +796,7 @@ def OMP_DeclareMapper : Directive<[Spelling<"declare mapper", 1, 52>,
 def OMP_DeclareReduction : Directive<[Spelling<"declare reduction", 1, 52>,
                                       Spelling<"declare_reduction", 60>]> {
   let allowedOnceClauses = [
+    VersionedClause<OMPC_Combiner, 60>,
     VersionedClause<OMPC_Initializer>,
   ];
   let association = AS_None;

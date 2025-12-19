@@ -73,6 +73,8 @@ typedef int MyTypedef;
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "HasEnums": true,
+// CHECK-NEXT:   "HasFunctions": true,
+// CHECK-NEXT:   "HasNamespaces": true,
 // CHECK-NEXT:   "HasRecords": true,
 // CHECK-NEXT:   "InfoType": "namespace",
 // CHECK-NEXT:   "Name": "Global Namespace",
@@ -80,7 +82,6 @@ typedef int MyTypedef;
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "End": true,
 // CHECK-NEXT:       "Name": "NestedNamespace",
-// CHECK-NEXT:       "Path": "",
 // CHECK-NEXT:       "QualName": "NestedNamespace",
 // CHECK-NEXT:       "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:     }

@@ -104,6 +104,7 @@ struct hash<Fortran::lower::omp::IdTy> {
 namespace Fortran::lower::omp {
 using Object = tomp::ObjectT<IdTy, ExprTy>;
 using ObjectList = tomp::ObjectListT<IdTy, ExprTy>;
+using StylizedInstance = tomp::type::StylizedInstanceT<IdTy, ExprTy>;
 
 Object makeObject(const parser::OmpObject &object,
                   semantics::SemanticsContext &semaCtx);
@@ -173,8 +174,10 @@ std::optional<ResultTy> maybeApplyToV(FuncTy &&func, const ArgTy *arg) {
 std::optional<Object> getBaseObject(const Object &object,
                                     semantics::SemanticsContext &semaCtx);
 
+StylizedInstance makeStylizedInstance(const parser::OmpStylizedInstance &inp,
+                                      semantics::SemanticsContext &semaCtx);
+
 namespace clause {
-using StylizedInstance = tomp::type::StylizedInstanceT<IdTy, ExprTy>;
 using Range = tomp::type::RangeT<ExprTy>;
 using Mapper = tomp::type::MapperT<IdTy, ExprTy>;
 using Iterator = tomp::type::IteratorT<TypeTy, IdTy, ExprTy>;
@@ -209,6 +212,7 @@ using Bind = tomp::clause::BindT<TypeTy, IdTy, ExprTy>;
 using Capture = tomp::clause::CaptureT<TypeTy, IdTy, ExprTy>;
 using Collapse = tomp::clause::CollapseT<TypeTy, IdTy, ExprTy>;
 using Collector = tomp::clause::CollectorT<TypeTy, IdTy, ExprTy>;
+using Combiner = tomp::clause::CombinerT<TypeTy, IdTy, ExprTy>;
 using Compare = tomp::clause::CompareT<TypeTy, IdTy, ExprTy>;
 using Contains = tomp::clause::ContainsT<TypeTy, IdTy, ExprTy>;
 using Copyin = tomp::clause::CopyinT<TypeTy, IdTy, ExprTy>;
