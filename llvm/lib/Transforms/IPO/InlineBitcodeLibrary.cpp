@@ -32,7 +32,9 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Ripple/Ripple.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -73,8 +75,11 @@ llvm::cl::opt<bool> RippleDisableLinking(
 namespace {
 std::unique_ptr<Module> getBitcodeModule(LLVMContext &Context,
                                          StringRef PathToBitcode) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrError =
-      MemoryBuffer::getFile(PathToBitcode);
+  // The long time plan has always been to retire this pass and use LTO
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+  auto &RealFS = *vfs::getRealFileSystem();
+
+  auto BufferOrError = RealFS.getBufferForFile(PathToBitcode);
   if (!BufferOrError) {
     Context.diagnose(DiagnosticInfoInlineBitcodeLib(
         DiagnosticSeverity::DS_Error,
