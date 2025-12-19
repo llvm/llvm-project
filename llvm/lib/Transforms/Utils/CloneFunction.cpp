@@ -498,7 +498,7 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
       NewInst = CallInst::Create(IFn, Args, OldInst.getName() + ".strict");
     } else if (auto *ICall = dyn_cast<IntrinsicInst>(&OldInst)) {
       Intrinsic::ID IID = ICall->getIntrinsicID();
-      if (IntrinsicInst::isFloatingPointOperation(IID)) {
+      if (Intrinsic::isFPOperation(IID)) {
         // The function call needs to be cloned, but the bundles attached to it
         // may require update.
         if (const BasicBlock *BB = OldInst.getParent())

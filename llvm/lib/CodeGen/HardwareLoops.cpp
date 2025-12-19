@@ -503,7 +503,7 @@ Value *HardwareLoop::InitLoopCount() {
 Value* HardwareLoop::InsertIterationSetup(Value *LoopCountInit) {
   IRBuilder<> Builder(BeginBB->getTerminator());
   if (BeginBB->getParent()->getAttributes().hasFnAttr(Attribute::StrictFP))
-    Builder.resetModeToStrictFP(true);
+    Builder.setFPMode(true);
   Type *Ty = LoopCountInit->getType();
   bool UsePhi = UsePHICounter || Opts.ForcePhi;
   Intrinsic::ID ID = UseLoopGuard
@@ -537,7 +537,7 @@ void HardwareLoop::InsertLoopDec() {
   IRBuilder<> CondBuilder(ExitBranch);
   if (ExitBranch->getParent()->getParent()->getAttributes().hasFnAttr(
           Attribute::StrictFP))
-    CondBuilder.resetModeToStrictFP(true);
+    CondBuilder.setFPMode(true);
 
   Value *Ops[] = { LoopDecrement };
   Value *NewCond = CondBuilder.CreateIntrinsic(Intrinsic::loop_decrement,
@@ -560,7 +560,7 @@ Instruction* HardwareLoop::InsertLoopRegDec(Value *EltsRem) {
   IRBuilder<> CondBuilder(ExitBranch);
   if (ExitBranch->getParent()->getParent()->getAttributes().hasFnAttr(
           Attribute::StrictFP))
-    CondBuilder.resetModeToStrictFP(true);
+    CondBuilder.setFPMode(true);
 
   Value *Ops[] = { EltsRem, LoopDecrement };
   Value *Call = CondBuilder.CreateIntrinsic(Intrinsic::loop_decrement_reg,

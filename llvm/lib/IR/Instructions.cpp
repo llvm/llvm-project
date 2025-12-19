@@ -689,24 +689,28 @@ fp::ExceptionBehavior CallBase::getExceptionBehavior() const {
   return fp::ebIgnore;
 }
 
-MemoryEffects CallBase::getFloatingPointMemoryEffects() const {
+std::optional<MemoryEffects> CallBase::getFloatingPointMemoryEffects() const {
   if (Intrinsic::ID IntrID = getIntrinsicID())
     if (const BasicBlock *BB = getParent())
       if (const Function *F = BB->getParent())
-        if (F->hasFnAttribute(Attribute::StrictFP) &&
-            IntrinsicInst::isFloatingPointOperation(IntrID)) {
-          // Floating-point operations in strictfp function always have side
-          // effect at least because they can raise exceptions.
-          return MemoryEffects::inaccessibleMemOnly();
+        if (Intrinsic::isFPOperation(IntrID)) {
+          if (F->hasFnAttribute(Attribute::StrictFP))
+            // Floating-point operations in strictfp function always have side
+            // effect at least because they can raise exceptions.
+            return MemoryEffects::inaccessibleMemOnly();
+          return MemoryEffects::none();
         }
-  return MemoryEffects::none();
+  return std::nullopt;
 }
 
 MemoryEffects CallBase::getMemoryEffects() const {
   MemoryEffects ME = getAttributes().getMemoryEffects();
   if (auto *Fn = dyn_cast<Function>(getCalledOperand())) {
     MemoryEffects FnME = Fn->getMemoryEffects();
-    FnME |= getFloatingPointMemoryEffects();
+    if (auto FPME = getFloatingPointMemoryEffects())
+      FnME =
+          FnME.getWithModRef(IRMemLocation::InaccessibleMem,
+                             FPME->getModRef(IRMemLocation::InaccessibleMem));
     if (hasOperandBundles()) {
       // TODO: Add a method to get memory effects for operand bundles instead.
       if (hasReadingOperandBundles())
@@ -722,6 +726,7 @@ MemoryEffects CallBase::getMemoryEffects() const {
   }
   return ME;
 }
+
 void CallBase::setMemoryEffects(MemoryEffects ME) {
   addFnAttr(Attribute::getWithMemoryEffects(getContext(), ME));
 }

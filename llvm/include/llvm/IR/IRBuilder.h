@@ -350,17 +350,16 @@ public:
   /// by this setting.
   void setIsFPConstrained(bool IsCon) { IsFPConstrained = IsCon; }
 
-  /// Enable/Disable use of constrained floating point math and reset FP options
-  /// according to the selected mode.
-  void resetModeToStrictFP(bool IsCon) {
-    if (IsCon) {
+  /// Enable/Disable code generation for strictfp functions.
+  void setFPMode(bool IsStrictFP) {
+    if (IsStrictFP) {
       setDefaultConstrainedRounding(RoundingMode::Dynamic);
       setDefaultConstrainedExcept(fp::ebStrict);
     } else {
       setDefaultConstrainedRounding(RoundingMode::NearestTiesToEven);
       setDefaultConstrainedExcept(fp::ebIgnore);
     }
-    setIsFPConstrained(IsCon);
+    setIsFPConstrained(IsStrictFP);
   }
 
   /// Query for the use of constrained floating point math

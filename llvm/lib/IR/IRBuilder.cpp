@@ -125,7 +125,7 @@ CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
   bool NeedUpdateMemoryEffects = false;
   if (const auto *Func = dyn_cast<Function>(Callee))
     if (Intrinsic::ID ID = Func->getIntrinsicID())
-      if (IntrinsicInst::isFloatingPointOperation(ID)) {
+      if (Intrinsic::isFPOperation(ID)) {
         // If the builder specifies non-default floating-point options, add
         // corresponding operand bundle unless a bundle with such tag is already
         // present.
@@ -146,7 +146,7 @@ CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
         // precedence than the options specified in the builder. Some FP
         // operations do not depend on rounding mode, do not add "fp.round"
         // to them.
-        bool NoRoundingMode = !IntrinsicInst::dependsOnRoundingMode(ID);
+        bool NoRoundingMode = !Intrinsic::dependsOnRoundingMode(ID);
         bool RoundingModeIsSpecified = false;
         for (const auto &Bundle : OpBundles) {
           if (!RoundingModeIsSpecified)

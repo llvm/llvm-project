@@ -4376,7 +4376,7 @@ void AssemblyWriter::printInfoComment(const Value &V, bool isMaterializable) {
     if (auto *CI = dyn_cast<CallInst>(&V))
       if (Intrinsic::ID IID = CI->getIntrinsicID())
         if (const Function *F = CI->getFunction())
-          if (IntrinsicInst::isFloatingPointOperation(IID) &&
+          if (Intrinsic::isFPOperation(IID) &&
               F->hasFnAttribute(Attribute::StrictFP))
             printFPMemoryEffects(Out, CI->getMemoryEffects());
   }

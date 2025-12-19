@@ -135,6 +135,18 @@ namespace Intrinsic {
   /// Floating-Point Intrinsics" that take rounding mode metadata.
   LLVM_ABI bool hasConstrainedFPRoundingModeOperand(ID QID);
 
+  /// Returns true if \p ID represents an intrinsic function that may access FP
+  /// environment and may have FP operand bundles.
+  ///
+  /// Access to FP environment means that in the strict FP environment the
+  /// function has read/write memory effect, which is used to maintain proper
+  /// instructions ordering.
+  LLVM_ABI bool isFPOperation(ID IID);
+
+  /// Returns true if \p ID represents a function that may access FP environment
+  /// and depends on rounding mode.
+  LLVM_ABI bool dependsOnRoundingMode(ID IID);
+
   /// This is a type descriptor which explains the type requirements of an
   /// intrinsic. This is returned by getIntrinsicInfoTableEntries.
   struct IITDescriptor {

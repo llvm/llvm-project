@@ -557,6 +557,10 @@ bool Function::isConstrainedFPIntrinsic() const {
   return Intrinsic::isConstrainedFPIntrinsic(getIntrinsicID());
 }
 
+bool Function::isFPOperation() const {
+  return Intrinsic::isFPOperation(getIntrinsicID());
+}
+
 void Function::clearArguments() {
   for (Argument &A : makeArgArray(Arguments, NumArgs)) {
     A.setName("");

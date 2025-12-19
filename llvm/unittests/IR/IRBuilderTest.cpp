@@ -442,12 +442,12 @@ TEST_F(IRBuilderTest, ConstrainedFPFunctionCall) {
       Function::Create(FTy, Function::ExternalLinkage, "", M.get());
   BasicBlock *CalleeBB = BasicBlock::Create(Ctx, "", Callee);
   IRBuilder<> CalleeBuilder(CalleeBB);
-  CalleeBuilder.resetModeToStrictFP(true);
+  CalleeBuilder.setFPMode(true);
   CalleeBuilder.setConstrainedFPFunctionAttr();
   CalleeBuilder.CreateRetVoid();
 
   // Now call the empty constrained FP function.
-  Builder.resetModeToStrictFP(true);
+  Builder.setFPMode(true);
   Builder.setConstrainedFPFunctionAttr();
   CallInst *FCall = Builder.CreateCall(Callee, {});
 
@@ -575,7 +575,7 @@ TEST_F(IRBuilderTest, FPBundlesDefault) {
     EXPECT_EQ(fp::ebIgnore, I->getExceptionBehavior());
     MemoryEffects ME = I->getMemoryEffects();
     EXPECT_TRUE(ME.doesNotAccessMemory());
-    Builder.resetModeToStrictFP(false);
+    Builder.setFPMode(false);
   }
 
   // If the builder object specifies a rounding mode but the provided operand
@@ -597,7 +597,7 @@ TEST_F(IRBuilderTest, FPBundlesDefault) {
     EXPECT_EQ(fp::ebIgnore, I->getExceptionBehavior());
     MemoryEffects ME = I->getMemoryEffects();
     EXPECT_TRUE(ME.doesNotAccessMemory());
-    Builder.resetModeToStrictFP(false);
+    Builder.setFPMode(false);
   }
 
   // If the builder object specifies a non-default rounding mode and the operand
@@ -613,7 +613,7 @@ TEST_F(IRBuilderTest, FPBundlesDefault) {
     EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_round).has_value());
     EXPECT_EQ(Intrinsic::trunc, I->getIntrinsicID());
     EXPECT_EQ(RoundingMode::NearestTiesToEven, I->getRoundingMode());
-    Builder.resetModeToStrictFP(false);
+    Builder.setFPMode(false);
   }
 
   // Check the state of a call with "fp.except" bundle only.
@@ -670,7 +670,7 @@ TEST_F(IRBuilderTest, FPBundlesStrict) {
   Function *Fn = Intrinsic::getOrInsertDeclaration(
       M.get(), Intrinsic::nearbyint, {Type::getDoubleTy(Ctx)});
 
-  Builder.resetModeToStrictFP(true);
+  Builder.setFPMode(true);
 
   // Check the state of a call without FP bundles.
   {

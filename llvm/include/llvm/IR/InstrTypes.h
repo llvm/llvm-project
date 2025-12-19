@@ -1181,9 +1181,6 @@ protected:
   /// number of extra operands.
   LLVM_ABI unsigned getNumSubclassExtraOperandsDynamic() const;
 
-  /// Get memory effects specific to floating-point operations.
-  MemoryEffects getFloatingPointMemoryEffects() const;
-
 public:
   using Instruction::getContext;
 
@@ -1222,6 +1219,9 @@ public:
     }
     return nullptr;
   }
+
+  /// Get memory effects specific to floating-point operations.
+  std::optional<MemoryEffects> getFloatingPointMemoryEffects() const;
 
   static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::Call ||

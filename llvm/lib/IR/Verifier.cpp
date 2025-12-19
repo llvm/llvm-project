@@ -4040,7 +4040,7 @@ void Verifier::visitCallBase(CallBase &Call) {
     } else if (Tag == LLVMContext::OB_fp_round) {
       Check(!FoundFpeRoundBundle, "Multiple \"fp.round\" operand bundles",
             Call);
-      Check(IntrinsicInst::dependsOnRoundingMode(ID),
+      Check(Intrinsic::dependsOnRoundingMode(ID),
             "\"fp.round\" operand bundles cannot be specified on an intrinsic "
             "that does not depend on rounding mode",
             Call);

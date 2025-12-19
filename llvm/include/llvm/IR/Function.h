@@ -258,6 +258,9 @@ public:
   /// getIntrinsicID() returns Intrinsic::not_intrinsic.
   bool isConstrainedFPIntrinsic() const;
 
+  /// Returns true if the function is a floating-point operations.
+  bool isFPOperation() const;
+
   /// Update internal caches that depend on the function name (such as the
   /// intrinsic ID and libcall cache).
   /// Note, this method does not need to be called directly, as it is called

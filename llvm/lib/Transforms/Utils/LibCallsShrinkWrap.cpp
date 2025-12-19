@@ -103,7 +103,7 @@ private:
     if (!Arg->getType()->isFloatTy())
       V = ConstantFoldCastInstruction(Instruction::FPExt, V, Arg->getType());
     if (BBBuilder.GetInsertBlock()->getParent()->hasFnAttribute(Attribute::StrictFP))
-      BBBuilder.resetModeToStrictFP(true);
+      BBBuilder.setFPMode(true);
     return BBBuilder.CreateFCmp(Cmp, Arg, V);
   }
 
