@@ -405,13 +405,24 @@ define { i64, i1 } @test_select_of_overflow_intrinsic_operand(i64 %n, i1 %cond) 
 }
 
 ; Negative test: Can't fold struct-return into vector select.
-define { <4 x float>, <4 x float> } @test_select_of_sincos_intrinsic_operand(<4 x float> %v, <4 x i1> %cond) {
-; CHECK-LABEL: @test_select_of_sincos_intrinsic_operand(
+define { <4 x float>, <4 x float> } @test_vector_cond_select_of_sincos_intrinsic_operand(<4 x float> %v, <4 x i1> %cond) {
+; CHECK-LABEL: @test_vector_cond_select_of_sincos_intrinsic_operand(
 ; CHECK-NEXT:    [[S:%.*]] = select <4 x i1> [[COND:%.*]], <4 x float> [[V:%.*]], <4 x float> zeroinitializer
 ; CHECK-NEXT:    [[RESULT:%.*]] = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> [[S]])
 ; CHECK-NEXT:    ret { <4 x float>, <4 x float> } [[RESULT]]
 ;
   %s = select <4 x i1> %cond, <4 x float> %v, <4 x float> zeroinitializer
+  %result = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> %s)
+  ret { <4 x float>, <4 x float> } %result
+}
+
+define { <4 x float>, <4 x float> } @test_select_of_sincos_intrinsic_operand(<4 x float> %v, i1 %cond) {
+; CHECK-LABEL: @test_select_of_sincos_intrinsic_operand(
+; CHECK-NEXT:    [[RESULT:%.*]] = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> [[S:%.*]])
+; CHECK-NEXT:    [[RESULT1:%.*]] = select i1 [[COND:%.*]], { <4 x float>, <4 x float> } [[RESULT]], { <4 x float>, <4 x float> } { <4 x float> zeroinitializer, <4 x float> splat (float 1.000000e+00) }
+; CHECK-NEXT:    ret { <4 x float>, <4 x float> } [[RESULT1]]
+;
+  %s = select i1 %cond, <4 x float> %v, <4 x float> zeroinitializer
   %result = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> %s)
   ret { <4 x float>, <4 x float> } %result
 }
