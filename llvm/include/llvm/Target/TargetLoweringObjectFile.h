@@ -305,6 +305,10 @@ public:
     return nullptr;
   }
 
+  virtual bool canEmitConstantPtrAuthAsIRelative(const Constant *CPA) const {
+    return false;
+  }
+
 protected:
   virtual MCSection *SelectSectionForGlobal(const GlobalObject *GO,
                                             SectionKind Kind,

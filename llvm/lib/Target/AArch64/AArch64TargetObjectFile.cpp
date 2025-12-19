@@ -186,3 +186,26 @@ MCSection *AArch64_ELFTargetObjectFile::SelectSectionForGlobal(
 
   return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);
 }
+
+static bool targetSupportsIRelativeRelocation(const Triple &TT) {
+  // IFUNCs are ELF-only.
+  if (!TT.isOSBinFormatELF())
+    return false;
+
+  // IFUNCs are supported on glibc, bionic, and some but not all of the BSDs.
+  return TT.isOSGlibc() || TT.isAndroid() || TT.isOSFreeBSD() ||
+         TT.isOSDragonFly() || TT.isOSNetBSD();
+}
+
+bool AArch64_ELFTargetObjectFile::canEmitConstantPtrAuthAsIRelative(
+    const Constant *CPA) const {
+  // We only emit an IRELATIVE relocation if the target supports IRELATIVE.
+  if (!targetSupportsIRelativeRelocation(TM->getTargetTriple()))
+    return false;
+
+  // For now, only the DA key is supported.
+  if (cast<ConstantPtrAuth>(CPA)->getKey()->getZExtValue() != AArch64PACKey::DA)
+    return false;
+
+  return true;
+}
