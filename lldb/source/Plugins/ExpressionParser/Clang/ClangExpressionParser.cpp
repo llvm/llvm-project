@@ -499,6 +499,12 @@ static void SetupTargetOpts(CompilerInstance &compiler,
     compiler.getTargetOpts().FeaturesAsWritten.push_back("+sse2");
   }
 
+  if (target_machine == llvm::Triple::riscv32 ||
+      target_machine == llvm::Triple::riscv64) {
+    llvm::copy(target_arch.GetSubtargetFeatures().getFeatures(),
+               std::back_inserter(compiler.getTargetOpts().FeaturesAsWritten));
+  }
+
   // Set the target CPU to generate code for. This will be empty for any CPU
   // that doesn't really need to make a special
   // CPU string.
