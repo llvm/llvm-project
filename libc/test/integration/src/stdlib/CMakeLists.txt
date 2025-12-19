@@ -27,7 +27,7 @@ if(LLVM_LIBC_FULL_BUILD)
       setenv_test.cpp
     DEPENDS
       libc.src.stdlib.getenv
-      libc.src.stdlib.setenv
+      libc.src.stdlib.linux.setenv
       libc.src.string.strcmp
   )
 endif()

@@ -81,23 +81,6 @@ if(LLVM_LIBC_FULL_BUILD)
       libc.hdr.func.malloc
       libc.hdr.func.realloc
   )
-
-  add_entrypoint_object(
-    setenv
-    SRCS
-      setenv.cpp
-    HDRS
-      setenv.h
-    DEPENDS
-      .environ_internal
-      libc.src.__support.CPP.string_view
-      libc.src.__support.libc_errno
-      libc.src.__support.threads.mutex
-      libc.hdr.func.malloc
-      libc.hdr.func.free
-      libc.src.string.memory_utils.inline_memcpy
-      libc.src.string.string_utils
-  )
 endif()
 
 add_entrypoint_object(

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/setenv.h"
-#include "environ_internal.h"
+#include "../environ_internal.h"
 #include "hdr/func/free.h"
 #include "hdr/func/malloc.h"
 #include "src/__support/CPP/string_view.h"
