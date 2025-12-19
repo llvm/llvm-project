@@ -10,6 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "orc-rt-utils/CommandLine.h"
+#include "orc-rt/Error.h"
+#include <iostream>
+
 int main(int argc, char *argv[]) {
   return 0;
 }
