@@ -272,3 +272,24 @@ add_libc_test(
     libc.src.errno.errno
     libc.hdr.types.clock_t
 )
+
+add_libc_unittest(
+  update_from_seconds_fast_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    update_from_seconds_fast_test.cpp
+  HDRS
+    TmHelper.h
+    TmMatcher.h
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.time.time_utils
+    libc.src.time.time_constants
+    libc.hdr.types.struct_tm
+    libc.hdr.types.time_t
+    libc.src.__support.CPP.limits
+    libc.test.UnitTest.ErrnoCheckingTest
+)

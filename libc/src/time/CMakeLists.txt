@@ -253,3 +253,39 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.clock_settime
 )
 
+# Fast date algorithm demo executable
+add_executable(fast_date_demo
+  fast_date.cpp
+  fast_date_main.cpp
+)
+
+target_include_directories(fast_date_demo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+# Enable optimizations even in debug for better performance testing
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  target_compile_options(fast_date_demo PRIVATE -O2)
+endif()
+
+# Fast date algorithm unit test executable
+add_executable(fast_date_test
+  fast_date.cpp
+  fast_date_test.cpp
+)
+
+target_include_directories(fast_date_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  target_compile_options(fast_date_test PRIVATE -O2)
+endif()
+
+# Phase 2 Option B: Parallel implementation test
+add_executable(phase2_test
+  phase2_test.cpp
+)
+
+target_include_directories(phase2_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  target_compile_options(phase2_test PRIVATE -O2)
+endif()
+
