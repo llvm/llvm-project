@@ -446,16 +446,8 @@ void HostDataOp::getSuccessorRegions(
 
 void LoopOp::getSuccessorRegions(RegionBranchPoint point,
                                  SmallVectorImpl<RegionSuccessor> &regions) {
-  if (point.isParent()) {
-    // Entering the loop: parent -> body region.
-    regions.push_back(RegionSuccessor(&getRegion()));
-    return;
-  }
-
-  // acc.yield -> parent
-  regions.push_back(RegionSuccessor(
-      getOperation(), Operation::result_range(getOperation()->result_begin(),
-                                              getOperation()->result_end())));
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
 }
 
 //===----------------------------------------------------------------------===//
