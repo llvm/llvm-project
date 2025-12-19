@@ -236,7 +236,10 @@ private:
   ompt_task_info_t OmptTaskInfo{ompt_data_none, ompt_data_none};
 
   /// Ptr to TaskInfo in OpenMP runtime in case of deferred target tasks
-  ompt_task_info_t *OmptTaskInfoPtr{&OmptTaskInfo};
+  ompt_task_info_t *OmptTaskInfoPtr{nullptr};
+
+  /// Flag to indicate whether the target region is for a runtime routine
+  bool IsRuntimeRoutine = true;
 
   /// Used for marking begin of a data operation
   void beginTargetDataOperation();
