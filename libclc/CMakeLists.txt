@@ -121,8 +121,9 @@ if( EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
   foreach( tool IN ITEMS clang llvm-as llvm-link opt )
     find_program( LLVM_CUSTOM_TOOL_${tool} ${tool}
       PATHS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
-    set( ${tool}_exe ${LLVM_CUSTOM_TOOL_${tool}} )
-    set( ${tool}_target )
+    # Use CACHE FORCE to override the cache variables set by get_host_tool_path
+    set( ${tool}_exe ${LLVM_CUSTOM_TOOL_${tool}} CACHE STRING "" FORCE )
+    set( ${tool}_target "" CACHE STRING "" FORCE )
   endforeach()
 endif()
 
