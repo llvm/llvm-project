@@ -137,12 +137,6 @@ void NativeProcessAIX::Manager::SigchldHandler() {
     auto wait_result = WaitPid();
     if (!wait_result)
       return;
-    lldb::pid_t pid = wait_result->first;
-    WaitStatus status = wait_result->second;
-
-    llvm::any_of(m_processes, [&](NativeProcessAIX *process) {
-      return process->TryHandleWaitStatus(pid, status);
-    });
   }
 }
 
