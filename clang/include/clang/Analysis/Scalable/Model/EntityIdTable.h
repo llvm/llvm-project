@@ -38,8 +38,8 @@ public:
   /// Invokes the callback for each entity in the table.
   ///
   /// Iteration order is unspecified.
-  void
-  forEach(llvm::function_ref<void(const EntityName &, EntityId)> Callback) const;
+  void forEach(
+      llvm::function_ref<void(const EntityName &, EntityId)> Callback) const;
 
   /// Returns the number of unique entities in the table.
   size_t count() const { return Entities.size(); }
