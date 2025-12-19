@@ -74,9 +74,6 @@ bool CombinerHelper::constantFoldFCmp(const GFCmp &FCmp,
   APFloat LHS = LHSCst.getScalarValue();
   APFloat RHS = RHSCst.getScalarValue();
 
-  if (&LHS.getSemantics() != &RHS.getSemantics())
-    return false;
-
   bool Result = FCmpInst::compare(LHS, RHS, Pred);
 
   MatchInfo = [=](MachineIRBuilder &B) {

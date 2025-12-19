@@ -453,22 +453,8 @@ std::optional<FPValueAndVReg> llvm::getFConstantVRegValWithLookThrough(
   if (!Reg)
     return std::nullopt;
 
-  auto getFloatSemantics = [](unsigned BitWidth) -> const llvm::fltSemantics & {
-    switch (BitWidth) {
-    default:
-      llvm_unreachable("Unsupported floating-point semantics!");
-    case 16:
-      return APFloat::IEEEhalf();
-    case 32:
-      return APFloat::IEEEsingle();
-    case 64:
-      return APFloat::IEEEdouble();
-    case 128:
-      return APFloat::IEEEquad();
-    }
-  };
-
-  APFloat FloatVal(getFloatSemantics(Reg->Value.getBitWidth()), Reg->Value);
+  APFloat FloatVal(getFltSemanticForLLT(LLT::scalar(Reg->Value.getBitWidth())),
+                   Reg->Value);
   return FPValueAndVReg{FloatVal, Reg->VReg};
 }
 
