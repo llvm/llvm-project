@@ -11,16 +11,41 @@ import Env from "./env";
 export class ApkDebugSession {
 
     private runningSession: SessionInfo | undefined;
+    readonly deviceSerial: string | undefined;
+    readonly componentName: string;
 
     /**
      * Component name is in the form "com.example.app/.MainActivity".
+     */
+    constructor(deviceSerial: string | undefined, componentName: string) {
+        this.deviceSerial = deviceSerial;
+        this.componentName = componentName;
+    }
+
+    getLldbLaunchCommands(): string[] {
+        let deviceSerial = this.deviceSerial;
+        if (deviceSerial === undefined) {
+            deviceSerial = "";
+        }
+        const appId = this.componentName.split("/")[0];
+        return [
+            `platform select remote-android`,
+            `platform connect unix-abstract-connect://${deviceSerial}/${appId}/lldb-platform.sock`,
+            `process attach --name ${appId}`,
+            `process handle SIGSEGV -n false -p true -s false`,
+            `process handle SIGBUS -n false -p true -s false`,
+            `process handle SIGCHLD -n false -p true -s false`,
+        ];
+    }
+
+    /**
      * `wfd` stays for "waiting for debugger".
      */
-    async start(deviceSerial: string | undefined, componentName: string, wfd: boolean) {
-        const addId = componentName.split('/')[0];
+    async start(wfd: boolean) {
+        const addId = this.componentName.split('/')[0];
         const adb = new AdbClient();
-        if (deviceSerial !== undefined) {
-            adb.setDeviceSerial(deviceSerial);
+        if (this.deviceSerial !== undefined) {
+            adb.setDeviceSerial(this.deviceSerial);
         } else {
             await adb.autoDetectDeviceSerial();
         }
@@ -32,7 +57,7 @@ export class ApkDebugSession {
         await this.stop();
         await this.cleanUpEarlierDebugSessions(adb, addId);
         await this.installLldbServer(adb, addId, lldbServerPath);
-        const pid = await this.startApk(adb, componentName, wfd);
+        await this.startApk(adb, this.componentName, wfd);
 
         const abortController = new AbortController();
         const endPromise = this.startLldbServer(adb, addId, abortController.signal);
