@@ -1146,8 +1146,19 @@ void LayoutInfoPropagation::visitLoadGatherOp(
     loadLayout = LayoutInfo(anchorLayout);
     maskLayout = loadLayout;
   } else {
+    LayoutInfo valueLayout = results[0]->getValue();
+    // Need the layout of the value to propagate to the tensor descriptor.
+    if (!valueLayout.isAssigned())
+      return;
 
-    // The layout is strictly determined by the payload type.
+    auto resAttr = dyn_cast<xegpu::DistributeLayoutAttr>(valueLayout.get());
+    auto instDataIncoming = resAttr.getEffectiveInstDataAsInt();
+    if (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(resAttr))
+      instDataIncoming = SmallVector<int64_t>(
+          cast<xegpu::LayoutAttr>(sliceAttr.flatten().getParent())
+              .getInstData()
+              .asArrayRef());
+
     VectorType payloadTy = load.getValueType();
     if (!payloadTy) {
       load.emitWarning("Not propagating, non-vector payload supplied.");
@@ -1157,28 +1168,48 @@ void LayoutInfoPropagation::visitLoadGatherOp(
     const auto *uArchInstruction =
         dyn_cast<xegpu::uArch::LoadGatherInstruction>(
             uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
-    const int maxElemsPerInst =
-        uArchInstruction->getMaxBitSize() /
-        payloadTy.getElementType().getIntOrFloatBitWidth();
 
     const int subgroupSize = uArch->getSubgroupSize();
-    SmallVector<int> instData{subgroupSize};
-    auto chunkSize = load.getChunkSize().value_or(0);
-    if (auto srcTdescTy = dyn_cast<xegpu::TensorDescType>(load.getSourceType());
-        !chunkSize && srcTdescTy) {
-      chunkSize = srcTdescTy.getChunkSizeAsInt();
-    }
-    instData.push_back(std::min(static_cast<int>(chunkSize), maxElemsPerInst));
-
-    if (layoutKind == LayoutKind::InstData)
-      loadLayout =
-          LayoutInfo(xegpu::LayoutAttr::get(load.getContext(), instData));
-    else
-      loadLayout = getSIMTLayoutInfoScatterIO(payloadTy, uArch);
-
     // Mask operand should have 1D default layout.
     maskLayout = getDefaultSIMTLayoutInfo(load->getContext(), 1, subgroupSize);
 
+    // Check if value inst_data complies with uArch
+    if (!instDataIncoming.empty()) {
+      const int maxElemsPerInst =
+          uArchInstruction->getMaxBitSize() /
+          payloadTy.getElementType().getIntOrFloatBitWidth();
+
+      xegpu::LayoutAttr sourceAttr;
+      // Each lane loads either one element
+      SmallVector<int> instDataUarch(instDataIncoming.size(), 1);
+      // Or multiple elements as 2D with lane's elements in the inner dimension
+      if (payloadTy.getRank() == 1) {
+        instDataUarch.back() = subgroupSize;
+      } else {
+        *std::prev(instDataUarch.end(), 2) = subgroupSize;
+        instDataUarch.back() = (std::min(
+            static_cast<int>(payloadTy.getShape().back()), maxElemsPerInst));
+      }
+      // If inst data does not match, enforce the uArch-based one
+      if (!llvm::equal(instDataIncoming, instDataUarch)) {
+        xegpu::LayoutAttr sourceAttr = dyn_cast<xegpu::LayoutAttr>(resAttr);
+        if (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(resAttr)) {
+          sourceAttr = cast<xegpu::LayoutAttr>(sliceAttr.flatten().getParent());
+        }
+        assert(sourceAttr);
+        xegpu::DistributeLayoutAttr updatedLayoutAttr = xegpu::LayoutAttr::get(
+            load.getContext(), sourceAttr.getSgLayout(), sourceAttr.getSgData(),
+            DenseI32ArrayAttr::get(load.getContext(), instDataUarch),
+            sourceAttr.getLaneLayout(), sourceAttr.getLaneData(),
+            sourceAttr.getOrder());
+
+        if (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(resAttr))
+          updatedLayoutAttr = xegpu::SliceAttr::get(
+              load.getContext(), updatedLayoutAttr, sliceAttr.getDims());
+        valueLayout = LayoutInfo(updatedLayoutAttr);
+      }
+    }
+    loadLayout = valueLayout;
     load.setLayoutAttr(dyn_cast<xegpu::DistributeLayoutAttr>(loadLayout.get()));
   }
   // Propagate the new layout to the tensor descriptor operand.
@@ -1427,7 +1458,8 @@ static LogicalResult updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
     }
     // If the result is a vector type, add a temporary layout attribute to the
     // op.
-    xegpu::setDistributeLayoutAttr(result, layout);
+    if (!isa<xegpu::LoadGatherOp>(op))
+      xegpu::setDistributeLayoutAttr(result, layout);
   }
   return success();
 }
