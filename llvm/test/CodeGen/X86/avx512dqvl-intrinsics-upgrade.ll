@@ -2751,8 +2751,7 @@ declare i8 @llvm.x86.avx512.cvtd2mask.128(<4 x i32>)
 define i8@test_int_x86_avx512_cvtd2mask_128(<4 x i32> %x0) {
 ; CHECK-LABEL: test_int_x86_avx512_cvtd2mask_128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovd2m %xmm0, %k0 # encoding: [0x62,0xf2,0x7e,0x08,0x39,0xc0]
-; CHECK-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    vmovmskps %xmm0, %eax # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x50,0xc0]
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
     %res = call i8 @llvm.x86.avx512.cvtd2mask.128(<4 x i32> %x0)

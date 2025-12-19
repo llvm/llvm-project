@@ -100,8 +100,7 @@ define i8 @reverse_cmp_v8i1(<8 x i16> %a0, <8 x i16> %a1) {
 ; AVX512-NEXT:    vpmovm2d %k0, %ymm0
 ; AVX512-NEXT:    vmovdqa {{.*#+}} ymm1 = [7,6,5,4,3,2,1,0]
 ; AVX512-NEXT:    vpermd %ymm0, %ymm1, %ymm0
-; AVX512-NEXT:    vpmovd2m %ymm0, %k0
-; AVX512-NEXT:    kmovd %k0, %eax
+; AVX512-NEXT:    vmovmskps %ymm0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq

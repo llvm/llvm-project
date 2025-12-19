@@ -41,7 +41,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SKX-LABEL: test:
 ; SKX:       # %bb.0: # %bb
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
-; SKX-NEXT:    vpmovd2m %xmm0, %k0
+; SKX-NEXT:    vmovmskps %xmm0, %eax
 ; SKX-NEXT:    kshiftrb $2, %k0, %k1
 ; SKX-NEXT:    kmovd %k1, %eax
 ; SKX-NEXT:    testb $1, %al
@@ -49,7 +49,6 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SKX-NEXT:    fldz
 ; SKX-NEXT:    fld %st(0)
 ; SKX-NEXT:    fcmovne %st(2), %st
-; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    fld %st(1)
 ; SKX-NEXT:    fcmovne %st(3), %st

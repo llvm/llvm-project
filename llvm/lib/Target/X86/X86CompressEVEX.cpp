@@ -41,6 +41,7 @@
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -176,7 +177,8 @@ static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
 }
 
 static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
-                             const X86Subtarget &ST) {
+                             const X86Subtarget &ST,
+                             SmallVectorImpl<MachineInstr *> &ToErase) {
   uint64_t TSFlags = MI.getDesc().TSFlags;
 
   // Check for EVEX instructions only.
@@ -186,6 +188,54 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
   // Instructions with mask or 512-bit vector can't be converted to VEX.
   if (TSFlags & (X86II::EVEX_K | X86II::EVEX_L2))
     return false;
+
+  // Try to compress VPMOV*2M + KMOV chain patterns:
+  //   vpmovd2m %xmm0, %k0     ->   vmovmskps %xmm0, %eax
+  //   kmovb %k0, %eax              (erase this)
+  unsigned Opc = MI.getOpcode();
+  if ((Opc == X86::VPMOVD2MZ128kr || Opc == X86::VPMOVD2MZ256kr) &&
+      !usesExtendedRegister(MI) && MI.getOperand(0).isReg()) {
+
+    Register MaskReg = MI.getOperand(0).getReg();
+    Register SrcVecReg = MI.getOperand(1).getReg();
+
+    // Find the unique KMOV instruction that reads this mask register
+    MachineInstr *KMovMI = nullptr;
+    Register GPRReg;
+    for (MachineInstr &UseMI : MBB) {
+      if (&UseMI == &MI)
+        continue;
+
+      unsigned UseOpc = UseMI.getOpcode();
+      if ((UseOpc == X86::KMOVBrk || UseOpc == X86::KMOVWrk ||
+           UseOpc == X86::KMOVDrk || UseOpc == X86::KMOVQrk) &&
+          UseMI.getOperand(1).isReg() &&
+          UseMI.getOperand(1).getReg() == MaskReg) {
+
+        if (KMovMI)
+          break; // Multiple uses, can't compress
+
+        KMovMI = &UseMI;
+        GPRReg = UseMI.getOperand(0).getReg();
+      }
+    }
+    if (KMovMI) {
+      unsigned MovMskOpc = (Opc == X86::VPMOVD2MZ128kr)
+                             ? X86::VMOVMSKPSrr
+                             : X86::VMOVMSKPSYrr;
+
+      const MCInstrDesc &MovMskDesc = ST.getInstrInfo()->get(MovMskOpc);
+      MI.setDesc(MovMskDesc);
+      MI.getOperand(0).setReg(GPRReg);
+      MI.getOperand(1).setReg(SrcVecReg);
+      MI.setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
+
+      // Record KMOV for deletion
+      ToErase.push_back(KMovMI);
+
+      return true;
+    }
+  }
 
   auto IsRedundantNewDataDest = [&](unsigned &Opc) {
     // $rbx = ADD64rr_ND $rbx, $rax / $rbx = ADD64rr_ND $rax, $rbx
@@ -222,7 +272,6 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
   // For AVX512 cases, EVEX prefix is needed in order to carry this information
   // thus preventing the transformation to VEX encoding.
   bool IsND = X86II::hasNewDataDest(TSFlags);
-  unsigned Opc = MI.getOpcode();
   bool IsSetZUCCm = Opc == X86::SETZUCCm;
   if (TSFlags & X86II::EVEX_B && !IsND && !IsSetZUCCm)
     return false;
@@ -347,9 +396,15 @@ bool CompressEVEXPass::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
-    // Traverse the basic block.
-    for (MachineInstr &MI : llvm::make_early_inc_range(MBB))
-      Changed |= CompressEVEXImpl(MI, MBB, ST);
+    SmallVector<MachineInstr *, 4> ToErase;
+
+    for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+      Changed |= CompressEVEXImpl(MI, MBB, ST, ToErase);
+    }
+
+    for (MachineInstr *MI : ToErase) {
+      MI->eraseFromParent();
+    }
   }
   LLVM_DEBUG(dbgs() << "End X86CompressEVEXPass\n";);
   return Changed;
