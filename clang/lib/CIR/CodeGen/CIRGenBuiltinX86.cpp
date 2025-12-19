@@ -74,7 +74,7 @@ static mlir::Value emitVectorFCmp(CIRGenBuilderTy &builder,
 static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Location loc,
                                    mlir::Value mask, unsigned numElems) {
   auto maskTy = cir::VectorType::get(
-      builder.getUIntNTy(1), cast<cir::IntType>(mask.getType()).getWidth());
+      builder.getSIntNTy(1), cast<cir::IntType>(mask.getType()).getWidth());
   mlir::Value maskVec = builder.createBitcast(mask, maskTy);
 
   // If we have less than 8 elements, then the starting mask was an i8 and
