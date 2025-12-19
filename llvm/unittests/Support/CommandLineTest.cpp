@@ -2352,11 +2352,26 @@ class CopyableClass {
 public:
   int Val;
 };
-TEST(CommandLineTest, ResetClassTypeOptionToInitialValue) {
-  CopyableClass InitialValue{42};
-  StackOption<CopyableClass> O("a", cl::init(InitialValue));
-  O.reset();
-  EXPECT_EQ(O.getValue().Val, InitialValue.Val)
+TEST(CommandLineTest, ResetOptionsToInitialValue) {
+  // Option of scalar type.
+  StackOption<int> O1("opt1", cl::init(12));
+  O1.reset();
+  EXPECT_EQ(O1.getValue(), 12)
       << "Option should be reset to its initial value.";
+
+  // Option of copyable class type.
+  CopyableClass InitialValue{42};
+  StackOption<CopyableClass> O2("opt2", cl::init(InitialValue));
+  O2.reset();
+  EXPECT_EQ(O2.getValue().Val, InitialValue.Val)
+      << "Option should be reset to its initial value.";
+
+  // Option of string type (most important case of copyable class).
+  StackOption<std::string> O3("opt3", cl::init("hello"));
+  O3.reset();
+  EXPECT_EQ(O3.getValue(), "hello")
+      << "Option should be reset to its initial value.";
+
+  cl::ResetCommandLineParser();
 }
 } // anonymous namespace
