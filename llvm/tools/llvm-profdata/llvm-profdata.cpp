@@ -3323,9 +3323,6 @@ static int showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   // be accessed from the reader. Earlier versions build the summary below.
   // The summary is emitted as YAML comments at the start of the output.
   if (auto *MemProfSum = Reader->getMemProfSummary()) {
-    // errs() << "llvm-profdata.cpp find memprof summary\n";
-    // fflush(stdout);
-    // fflush(stderr);
     MemProfSum->printSummaryYaml(OS);
   } else {
     memprof::MemProfSummaryBuilder MemProfSumBuilder;
