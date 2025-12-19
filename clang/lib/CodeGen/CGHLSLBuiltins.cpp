@@ -489,10 +489,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *IndexOp = EmitScalarExpr(E->getArg(1));
 
     llvm::Type *RetTy = ConvertType(E->getType());
-    // byteaddressbufferload attempt
-    // tried replacing last parameter with a SmallVector<Value *> Args like
-    // load_with_status where the last arg is poison but that broke every
-    // intrinsic that uses this builtin
     return Builder.CreateIntrinsic(
         RetTy, CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
         ArrayRef<Value *>{HandleOp, IndexOp});
@@ -542,21 +538,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Builder.CreateStore(ExtendedStatus, StatusAddr);
 
     return LoadedValue;
-  }
-  case Builtin::BI__builtin_hlsl_byteaddressbuffer_load: {
-    Value *HandleOp = EmitScalarExpr(E->getArg(0));
-    Value *IndexOp = EmitScalarExpr(E->getArg(1));
-    Value *Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
-
-    llvm::Type *DataTy = ConvertType(E->getType());
-    llvm::Type *RetTy = llvm::StructType::get(Builder.getContext(),
-                                              {DataTy, Builder.getInt1Ty()});
-
-    SmallVector<Value *, 3> Args = {HandleOp, IndexOp, Offset};
-
-    Value *ResRet = Builder.CreateIntrinsic(
-        RetTy, Intrinsic::dx_resource_load_rawbuffer, Args);
-    return Builder.CreateExtractValue(ResRet, {0}, "ld.value");
   }
   case Builtin::BI__builtin_hlsl_resource_store: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));

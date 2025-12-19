@@ -3323,11 +3323,11 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     auto *ResourceTy =
         TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
     QualType ContainedTy = ResourceTy->getContainedType();
-    // byteaddressbuffer load attempt
-    // if (ResourceTy->getAttrs().RawBuffer && ContainedTy->isChar8Type()) {
-    //   ContainedTy =
-    //   dyn_cast<FunctionDecl>(SemaRef.CurContext)->getReturnType();
-    // }
+    // ByteAddressBuffer uses FunctionDecl return type instead of contained
+    // type
+    if (ResourceTy->getAttrs().RawBuffer && ContainedTy->isChar8Type()) {
+      ContainedTy = dyn_cast<FunctionDecl>(SemaRef.CurContext)->getReturnType();
+    }
     auto ReturnType =
         SemaRef.Context.getAddrSpaceQualType(ContainedTy, LangAS::hlsl_device);
     ReturnType = SemaRef.Context.getPointerType(ReturnType);
@@ -3349,24 +3349,12 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     auto *ResourceTy =
         TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
     QualType ReturnType = ResourceTy->getContainedType();
-    // ByteAddressBuffer returns FunctionDecl return type instead of contained
+    // ByteAddressBuffer uses FunctionDecl return type instead of contained
     // type
     if (ResourceTy->getAttrs().RawBuffer && ReturnType->isChar8Type()) {
       ReturnType = dyn_cast<FunctionDecl>(SemaRef.CurContext)->getReturnType();
     }
     TheCall->setType(ReturnType);
-
-    break;
-  }
-  case Builtin::BI__builtin_hlsl_byteaddressbuffer_load: {
-    if (SemaRef.checkArgCount(TheCall, 2) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
-                            SemaRef.getASTContext().UnsignedIntTy))
-      return true;
-
-    auto *FD = dyn_cast<FunctionDecl>(SemaRef.CurContext);
-    TheCall->setType(FD->getReturnType());
 
     break;
   }

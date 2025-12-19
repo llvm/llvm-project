@@ -647,7 +647,8 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::dereference(T Ptr) {
   Expr *Deref =
       UnaryOperator::Create(DeclBuilder.SemaRef.getASTContext(), PtrExpr,
                             UO_Deref, PtrExpr->getType()->getPointeeType(),
-                            VK_PRValue, OK_Ordinary, SourceLocation(),
+                            /*solution #1? use VK_LValue instead*/ VK_PRValue,
+                            OK_Ordinary, SourceLocation(),
                             /*CanOverflow=*/false, FPOptionsOverride());
   StmtsList.push_back(Deref);
   return *this;
@@ -1215,10 +1216,14 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
     DeclarationName Load(&II);
 
     // Load without status
+    QualType AddrSpaceElemTy =
+        AST.getAddrSpaceQualType(ReturnType, LangAS::hlsl_device);
+    QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
     BuiltinTypeMethodBuilder(*this, Load, ReturnType, /*IsConst=*/false)
         .addParam("Index", AST.UnsignedIntTy)
-        .callBuiltin("__builtin_hlsl_byteaddressbuffer_load", ReturnType,
+        .callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy,
                      PH::Handle, PH::_0)
+        .dereference(PH::LastStmt)
         .finalize();
 
     // Load with status
@@ -1244,24 +1249,14 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
                                /*IsConst=*/false);
   QualType ReturnType = MMB.addTemplateTypeParam("element_type");
   MMB.ReturnTy = ReturnType; // Update return type to template parameter
+  QualType AddrSpaceElemTy =
+      AST.getAddrSpaceQualType(ReturnType, LangAS::hlsl_device);
+  QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
   MMB.addParam("Index", AST.UnsignedIntTy)
-      .callBuiltin("__builtin_hlsl_byteaddressbuffer_load", ReturnType,
-                   PH::Handle, PH::_0)
+      .callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy, PH::Handle,
+                   PH::_0)
+      .dereference(PH::LastStmt)
       .finalize();
-
-  // __builtin_hlsl_resource_getpointer attempt
-  // BuiltinTypeMethodBuilder MMB(*this, Load, AST.UnsignedIntTy,
-  //                              /*IsConst=*/false);
-  // QualType ReturnType = MMB.addTemplateTypeParam("element_type");
-  // MMB.ReturnTy = ReturnType; // Update return type to template parameter
-  // QualType AddrSpaceElemTy =
-  //     AST.getAddrSpaceQualType(ReturnType, LangAS::hlsl_device);
-  // QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
-  // MMB.addParam("Index", AST.UnsignedIntTy)
-  //     .callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy,
-  //                  PH::Handle, PH::_0)
-  //     .dereference(PH::LastStmt)
-  //     .finalize();
 
   // Templated Load with status method
   BuiltinTypeMethodBuilder MMB2(*this, Load, AST.UnsignedIntTy,
