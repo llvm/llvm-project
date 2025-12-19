@@ -500,16 +500,19 @@ Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
       exit(1);
     }
     if (TargetFunction && TargetFunction->isIgnored()) {
+      // Includes PLT functions.
       BC.errs() << "BOLT-ERROR: Cannot add BTI landing pad to ignored function "
                 << TargetFunction->getPrintName() << "\n";
       exit(1);
     }
     if (TargetFunction && !TargetFunction->hasCFG()) {
-      auto FirstII = TargetFunction->instrs().begin();
-      MCInst FirstInst = FirstII->second;
-      if (BC.MIB->isCallCoveredByBTI(*StubBB.getLastNonPseudoInstr(),
-                                     FirstInst))
-        return;
+      if (TargetFunction->hasInstructions()) {
+        auto FirstII = TargetFunction->instrs().begin();
+        MCInst FirstInst = FirstII->second;
+        if (BC.MIB->isCallCoveredByBTI(*StubBB.getLastNonPseudoInstr(),
+                                       FirstInst))
+          return;
+      }
       BC.errs()
           << "BOLT-ERROR: Cannot add BTI landing pad to function without CFG: "
           << TargetFunction->getPrintName() << "\n";
