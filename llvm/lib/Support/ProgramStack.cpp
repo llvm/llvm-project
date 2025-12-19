@@ -20,6 +20,7 @@
 
 #ifndef LLVM_HAS_SPLIT_STACKS
 # include "llvm/Support/thread.h"
+# include <stdlib.h> // for malloc
 #endif
 
 using namespace llvm;
