@@ -127,7 +127,7 @@ is a variable name / expression whose values will be printed to the Debug
 Console or a LLDB command. To side-step this auto-detection and execute a LLDB
 command, prefix it with the `commandEscapePrefix`.
 
-The auto-detection mode can ba adjusted using the `lldb-dap repl-mode` command
+The auto-detection mode can be adjusted using the `lldb-dap repl-mode` command
 in the Debug Console or by adjusting the `--repl-mode [mode]` argument to
 `lldb-dap`. The supported modes are `variable`, `command` and `auto`.
 
