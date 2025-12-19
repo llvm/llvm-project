@@ -642,14 +642,14 @@ struct LoopInterchange {
 
     unsigned LoopNestDepth = LoopList.size();
 
-    LLVM_DEBUG(
+    LLVM_DEBUG({
       dbgs() << "Processing LoopList of size = " << LoopNestDepth
              << " containing the following loops:\n";
       for (auto *L : LoopList) {
         dbgs() << "  - ";
         L->print(dbgs());
       }
-    );
+    });
 
     CharMatrix DependencyMatrix;
     Loop *OuterMostLoop = *(LoopList.begin());
