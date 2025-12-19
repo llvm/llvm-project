@@ -54,24 +54,13 @@ public:
         MemMgr(Ctx.getMemoryManager()), ES(ES) {}
 
   ~DebugObject() {
-    // Alloc was finialized
+    assert(!FinalizeFuture.valid());
     if (Alloc) {
       std::vector<FinalizedAlloc> Allocs;
       Allocs.push_back(std::move(Alloc));
       if (Error Err = MemMgr.deallocate(std::move(Allocs)))
         ES.reportError(std::move(Err));
-      return;
     }
-    // Error before step 3: WorkingMem was not collected
-    if (!FinalizeFuture.valid()) {
-      WorkingMem.abandon(
-          [ES = &this->ES](Error Err) { ES->reportError(std::move(Err)); });
-      return;
-    }
-    // Error before step 4: Finalization error was not reported
-    Expected<ExecutorAddrRange> TargetMem = FinalizeFuture.get();
-    if (!TargetMem)
-      ES.reportError(TargetMem.takeError());
   }
 
   MutableArrayRef<char> getBuffer() {
@@ -94,6 +83,19 @@ public:
 
   void failMaterialization(Error Err) {
     FinalizePromise.set_value(std::move(Err));
+  }
+
+  void releasePendingResources() {
+    if (FinalizeFuture.valid()) {
+      // Error before step 4: Finalization error was not reported
+      Expected<ExecutorAddrRange> TargetMem = FinalizeFuture.get();
+      if (!TargetMem)
+        ES.reportError(TargetMem.takeError());
+    } else {
+      // Error before step 3: WorkingMem was not collected
+      WorkingMem.abandon(
+          [ES = &this->ES](Error Err) { ES->reportError(std::move(Err)); });
+    }
   }
 
   using GetLoadAddressFn = llvm::unique_function<ExecutorAddr(StringRef)>;
@@ -372,7 +374,9 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
 
 Error ELFDebugObjectPlugin::notifyFailed(MaterializationResponsibility &MR) {
   std::lock_guard<std::mutex> Lock(PendingObjsLock);
-  PendingObjs.erase(&MR);
+  auto It = PendingObjs.find(&MR);
+  It->second->releasePendingResources();
+  PendingObjs.erase(It);
   return Error::success();
 }
 
