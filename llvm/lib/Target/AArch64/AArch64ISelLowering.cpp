@@ -16371,6 +16371,34 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     return Val;
   }
 
+  // Handle constant v2i32/v2f32 vectors by building a legal scalar and
+  // bitcasting. This is more efficient than a constant pool load.
+  if ((VT == MVT::v2i32 || VT == MVT::v2f32) && BVN->isConstant()) {
+    const SDLoc DL(Op);
+    APInt LoBits, HiBits;
+
+    if (VT == MVT::v2i32) {
+      LoBits = cast<ConstantSDNode>(BVN->getOperand(0))->getAPIntValue();
+      HiBits = cast<ConstantSDNode>(BVN->getOperand(1))->getAPIntValue();
+    } else { // v2f32
+      LoBits = cast<ConstantFPSDNode>(BVN->getOperand(0))
+                   ->getValueAPF()
+                   .bitcastToAPInt();
+      HiBits = cast<ConstantFPSDNode>(BVN->getOperand(1))
+                   ->getValueAPF()
+                   .bitcastToAPInt();
+    }
+
+    // Pack the constants' bits into a single 64-bit scalar.
+    APInt LoZext = LoBits.zext(64);
+    APInt HiZext = HiBits.zext(64);
+    APInt PackedVal = (HiZext << 32) | LoZext;
+    SDValue ScalarConst = DAG.getConstant(PackedVal, DL, MVT::i64);
+
+    // Use BITCAST to reinterpret the scalar constant's bits as a vector.
+    return DAG.getNode(ISD::BITCAST, DL, VT, ScalarConst);
+  }
+
   // This will generate a load from the constant pool.
   if (isConstant) {
     LLVM_DEBUG(

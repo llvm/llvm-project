@@ -143,8 +143,9 @@ define <2 x i32> @test8(<2 x float> %f) {
 define <2 x i32> @test9(<2 x float> %f) {
 ; CHECK-LABEL: test9:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI8_0
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI8_0]
+; CHECK-NEXT:    mov x8, #1098907648 // =0x41800000
+; CHECK-NEXT:    movk x8, #16640, lsl #48
+; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    fmul v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    fcvtzu v0.2s, v0.2s
 ; CHECK-NEXT:    ret
@@ -686,8 +687,9 @@ define <2 x i32> @test8_sat(<2 x float> %f) {
 define <2 x i32> @test9_sat(<2 x float> %f) {
 ; CHECK-LABEL: test9_sat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI27_0
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI27_0]
+; CHECK-NEXT:    mov x8, #1098907648 // =0x41800000
+; CHECK-NEXT:    movk x8, #16640, lsl #48
+; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    fmul v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    fcvtzu v0.2s, v0.2s
 ; CHECK-NEXT:    ret

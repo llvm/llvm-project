@@ -139,13 +139,10 @@ entry:
 }
 
 define <2 x i32> @stepvector_v2i32() {
-; CHECK-LABEL: .LCPI6_0:
-; CHECK-NEXT:    .word 0
-; CHECK-NEXT:    .word 1
 ; CHECK-LABEL: stepvector_v2i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adrp x8, .LCPI6_0
-; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI6_0]
+; CHECK-NEXT:    mov x8, #4294967296 // =0x100000000
+; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <2 x i32> @llvm.stepvector.v2i32()
