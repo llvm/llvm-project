@@ -59701,6 +59701,35 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                            ConcatSubOperand(VT, Ops, 1));
       }
       break;
+    case ISD::FMA:
+    case X86ISD::FMSUB:
+    case X86ISD::FNMSUB:
+    case X86ISD::FNMADD:
+      if (!IsSplat && (VT.is256BitVector() ||
+                       (VT.is512BitVector() && Subtarget.useAVX512Regs()))) {
+        // Only concat FMA triops if only a single op will require actual
+        // concatenation - the others must be free (const etc.)
+        bool IsFree0 = IsConcatFree(VT, Ops, 0);
+        bool IsFree1 = IsConcatFree(VT, Ops, 1);
+        bool IsFree2 = IsConcatFree(VT, Ops, 2);
+        unsigned NumFree = IsFree0 + IsFree1 + IsFree2;
+        if (NumFree) {
+          SDValue Concat0 = IsFree0 ? SDValue() : CombineSubOperand(VT, Ops, 0);
+          SDValue Concat1 = IsFree1 ? SDValue() : CombineSubOperand(VT, Ops, 1);
+          SDValue Concat2 = IsFree2 ? SDValue() : CombineSubOperand(VT, Ops, 2);
+          bool SelfMul = llvm::all_of(Ops, [](SDValue Op) {
+            return Op.getOperand(0) == Op.getOperand(1);
+          });
+          if (Concat0 || Concat1 || Concat2 || NumFree >= 2 || SelfMul)
+            return DAG.getNode(Opcode, DL, VT,
+                               Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
+                               Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1),
+                               Concat2 ? Concat2
+                                       : ConcatSubOperand(VT, Ops, 2));
+        }
+      }
+      break;
+    case ISD::FNEG:
     case ISD::FSQRT:
     case ISD::FCEIL:
     case ISD::FTRUNC:
