@@ -53,6 +53,9 @@
    (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[14]) == 0 &&              \
    (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[15]) == 1)
 
+#define IN6_IS_ADDR_MULTICAST(a)                                               \
+  (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[0]) == 0xff
+
 #define IN6_IS_ADDR_LINKLOCAL(a)                                               \
   ((__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[0]) == 0xfe &&            \
    (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[1] & 0xc0) == 0x80)
