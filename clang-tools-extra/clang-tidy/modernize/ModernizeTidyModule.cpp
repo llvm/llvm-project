@@ -60,6 +60,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy {
 namespace modernize {
+namespace {
 
 class ModernizeModule : public ClangTidyModule {
 public:
@@ -139,6 +140,8 @@ public:
     CheckFactories.registerCheck<UseUsingCheck>("modernize-use-using");
   }
 };
+
+} // namespace
 
 // Register the ModernizeTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<ModernizeModule> X("modernize-module",

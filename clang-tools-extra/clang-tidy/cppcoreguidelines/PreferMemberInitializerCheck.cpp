@@ -95,10 +95,14 @@ static void updateAssignmentLevel(
   }
 }
 
+namespace {
+
 struct AssignmentPair {
   const FieldDecl *Field;
   const Expr *Init;
 };
+
+} // namespace
 
 static std::optional<AssignmentPair>
 isAssignmentToMemberOf(const CXXRecordDecl *Rec, const Stmt *S,

@@ -15,6 +15,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy {
 namespace boost {
+namespace {
 
 class BoostModule : public ClangTidyModule {
 public:
@@ -23,6 +24,8 @@ public:
     CheckFactories.registerCheck<UseToStringCheck>("boost-use-to-string");
   }
 };
+
+} // namespace
 
 // Register the BoostModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<BoostModule> X("boost-module",

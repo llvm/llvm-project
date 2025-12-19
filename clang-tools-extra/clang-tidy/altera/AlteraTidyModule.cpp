@@ -19,6 +19,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy {
 namespace altera {
+namespace {
 
 class AlteraModule : public ClangTidyModule {
 public:
@@ -35,6 +36,7 @@ public:
   }
 };
 
+} // namespace
 } // namespace altera
 
 // Register the AlteraTidyModule using this statically initialized variable.

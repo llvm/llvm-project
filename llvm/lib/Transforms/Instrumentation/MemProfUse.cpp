@@ -702,8 +702,14 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
     for (auto &StackFrame : CS.Frames) {
       uint64_t StackId = computeStackId(StackFrame);
       ArrayRef<Frame> FrameSlice = ArrayRef<Frame>(CS.Frames).drop_front(Idx++);
-      ArrayRef<GlobalValue::GUID> CalleeGuids(CS.CalleeGuids);
-      LocHashToCallSites[StackId].push_back({FrameSlice, CalleeGuids});
+      // The callee guids for the slice containing all frames (due to the
+      // increment above Idx is now 1) comes from the CalleeGuids recorded in
+      // the CallSite. For the slices not containing the leaf-most frame, the
+      // callee guid is simply the function GUID of the prior frame.
+      LocHashToCallSites[StackId].push_back(
+          {FrameSlice, (Idx == 1 ? CS.CalleeGuids
+                                 : ArrayRef<GlobalValue::GUID>(
+                                       CS.Frames[Idx - 2].Function))});
 
       ProfileHasColumns |= StackFrame.Column;
       // Once we find this function, we can stop recording.

@@ -278,9 +278,9 @@ void RewriterBase::replaceUsesWithIf(ValueRange from, ValueRange to,
   assert(from.size() == to.size() && "incorrect number of replacements");
   bool allReplaced = true;
   for (auto it : llvm::zip_equal(from, to)) {
-    bool r;
+    bool r = true;
     replaceUsesWithIf(std::get<0>(it), std::get<1>(it), functor,
-                      /*allUsesReplaced=*/&r);
+                      /*allUsesReplaced=*/allUsesReplaced ? &r : nullptr);
     allReplaced &= r;
   }
   if (allUsesReplaced)

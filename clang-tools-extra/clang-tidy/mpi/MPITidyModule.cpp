@@ -14,6 +14,7 @@
 
 namespace clang::tidy {
 namespace mpi {
+namespace {
 
 class MPIModule : public ClangTidyModule {
 public:
@@ -23,6 +24,7 @@ public:
   }
 };
 
+} // namespace
 } // namespace mpi
 
 // Register the MPITidyModule using this statically initialized variable.

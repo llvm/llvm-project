@@ -415,6 +415,12 @@ struct AppendArgsT {
   using IncompleteTrait = std::true_type;
 };
 
+// [6.0:372-373]
+template <typename T, typename I, typename E> //
+struct ApplyT {
+  using IncompleteTrait = std::true_type;
+};
+
 // V5.2: [8.1] `at` clause
 template <typename T, typename I, typename E> //
 struct AtT {
@@ -495,6 +501,12 @@ struct CopyprivateT {
   using List = ObjectListT<I, E>;
   using WrapperTrait = std::true_type;
   List v;
+};
+
+// [6.0:378-379]
+template <typename T, typename I, typename E> //
+struct CountsT {
+  using IncompleteTrait = std::true_type;
 };
 
 // V5.2: [5.4.1] `default` clause
@@ -757,6 +769,12 @@ struct IndirectT {
   OPT(InvokedByFptr) v;
 };
 
+// [6.0:257-261]
+template <typename T, typename I, typename E> //
+struct InductionT {
+  using IncompleteTrait = std::true_type;
+};
+
 // [6.0:265-266]
 template <typename T, typename I, typename E> //
 struct InductorT {
@@ -776,6 +794,12 @@ struct InitT {
   std::tuple<OPT(InteropPreference), InteropTypes, InteropVar> t;
 };
 
+// [6.0:270]
+template <typename T, typename I, typename E> //
+struct InitCompleteT {
+  using IncompleteTrait = std::true_type;
+};
+
 // V5.2: [5.5.4] `initializer` clause
 template <typename T, typename I, typename E> //
 struct InitializerT {
@@ -793,6 +817,12 @@ struct InReductionT {
   using ReductionIdentifiers = ListT<type::ReductionIdentifierT<I, E>>;
   using TupleTrait = std::true_type;
   std::tuple<ReductionIdentifiers, List> t;
+};
+
+// [6.0:339-340]
+template <typename T, typename I, typename E> //
+struct InteropT {
+  using IncompleteTrait = std::true_type;
 };
 
 // V5.2: [5.4.7] `is_device_ptr` clause
@@ -834,6 +864,12 @@ struct LinkT {
   List v;
 };
 
+// [6.0:303]
+template <typename T, typename I, typename E> //
+struct LocalT {
+  using IncompleteTrait = std::true_type;
+};
+
 // V6: [6.4.7] Looprange clause
 template <typename T, typename I, typename E> //
 struct LooprangeT {
@@ -866,6 +902,12 @@ struct MapT {
 // V5.2: [7.5.1] `match` clause
 template <typename T, typename I, typename E> //
 struct MatchT {
+  using IncompleteTrait = std::true_type;
+};
+
+// [6.0:493-494]
+template <typename T, typename I, typename E> //
+struct MemscopeT {
   using IncompleteTrait = std::true_type;
 };
 
@@ -1116,6 +1158,12 @@ struct SafelenT {
   Length v;
 };
 
+// [6.0:393]
+template <typename T, typename I, typename E> //
+struct SafesyncT {
+  using IncompleteTrait = std::true_type;
+};
+
 // V5.2: [11.5.3] `schedule` clause
 template <typename T, typename I, typename E> //
 struct ScheduleT {
@@ -1352,10 +1400,13 @@ using EmptyClausesT = std::variant<
 
 template <typename T, typename I, typename E>
 using IncompleteClausesT =
-    std::variant<AdjustArgsT<T, I, E>, AppendArgsT<T, I, E>,
-                 CollectorT<T, I, E>, GraphIdT<T, I, E>, GraphResetT<T, I, E>,
-                 InductorT<T, I, E>, MatchT<T, I, E>, OtherwiseT<T, I, E>,
-                 ReplayableT<T, I, E>, TransparentT<T, I, E>, WhenT<T, I, E>>;
+    std::variant<AdjustArgsT<T, I, E>, AppendArgsT<T, I, E>, ApplyT<T, I, E>,
+                 CollectorT<T, I, E>, CountsT<T, I, E>, GraphIdT<T, I, E>,
+                 GraphResetT<T, I, E>, InductionT<T, I, E>, InductorT<T, I, E>,
+                 InitCompleteT<T, I, E>, InteropT<T, I, E>, LocalT<T, I, E>,
+                 MatchT<T, I, E>, MemscopeT<T, I, E>, OtherwiseT<T, I, E>,
+                 ReplayableT<T, I, E>, SafesyncT<T, I, E>,
+                 TransparentT<T, I, E>, WhenT<T, I, E>>;
 
 template <typename T, typename I, typename E>
 using TupleClausesT =

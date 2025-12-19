@@ -65,6 +65,8 @@ def OMPC_Allocator : Clause<[Spelling<"allocator">]> {
   let clangClass = "OMPAllocatorClause";
   let flangClass = "ScalarIntExpr";
 }
+def OMPC_Apply : Clause<[Spelling<"apply">]> {
+}
 def OMPC_AppendArgs : Clause<[Spelling<"append_args">]> {
   let flangClass = "OmpAppendArgsClause";
 }
@@ -138,6 +140,8 @@ def OMPC_Copyin : Clause<[Spelling<"copyin">]> {
 def OMPC_CopyPrivate : Clause<[Spelling<"copyprivate">]> {
   let clangClass = "OMPCopyprivateClause";
   let flangClass = "OmpObjectList";
+}
+def OMPC_Counts : Clause<[Spelling<"counts">]> {
 }
 def OMPC_Default : Clause<[Spelling<"default">]> {
   let clangClass = "OMPDefaultClause";
@@ -273,11 +277,16 @@ def OMPC_Inclusive : Clause<[Spelling<"inclusive">]> {
 def OMPC_Indirect : Clause<[Spelling<"indirect">]> {
   let flangClass = "OmpIndirectClause";
 }
+def OMPC_Induction : Clause<[Spelling<"induction">]> {
+}
 def OMPC_Inductor : Clause<[Spelling<"inductor">]> {
 }
 def OMPC_Init : Clause<[Spelling<"init">]> {
   let clangClass = "OMPInitClause";
   let flangClass = "OmpInitClause";
+}
+def OMPC_InitComplete : Clause<[Spelling<"init_complete">]> {
+  let isValueOptional = true;
 }
 def OMPC_Initializer : Clause<[Spelling<"initializer">]> {
   let flangClass = "OmpInitializerClause";
@@ -285,6 +294,8 @@ def OMPC_Initializer : Clause<[Spelling<"initializer">]> {
 def OMPC_InReduction : Clause<[Spelling<"in_reduction">]> {
   let clangClass = "OMPInReductionClause";
   let flangClass = "OmpInReductionClause";
+}
+def OMPC_Interop : Clause<[Spelling<"interop">]> {
 }
 def OMPC_IsDevicePtr : Clause<[Spelling<"is_device_ptr">]> {
   let clangClass = "OMPIsDevicePtrClause";
@@ -301,6 +312,8 @@ def OMPC_Linear : Clause<[Spelling<"linear">]> {
 def OMPC_Link : Clause<[Spelling<"link">]> {
   let flangClass = "OmpObjectList";
 }
+def OMPC_Local : Clause<[Spelling<"local">]> {
+}
 def OMPC_LoopRange : Clause<[Spelling<"looprange">]> {
   let clangClass = "OMPLoopRangeClause";
   let flangClass = "OmpLooprangeClause";
@@ -311,6 +324,8 @@ def OMPC_Map : Clause<[Spelling<"map">]> {
 }
 def OMPC_Match : Clause<[Spelling<"match">]> {
   let flangClass = "OmpMatchClause";
+}
+def OMPC_Memscope : Clause<[Spelling<"memscope">]> {
 }
 def OMP_MEMORY_ORDER_SeqCst : EnumVal<"seq_cst", 1, 1> {}
 def OMP_MEMORY_ORDER_AcqRel : EnumVal<"acq_rel", 2, 1> {}
@@ -490,6 +505,9 @@ def OMPC_ReverseOffload : Clause<[Spelling<"reverse_offload">]> {
 def OMPC_SafeLen : Clause<[Spelling<"safelen">]> {
   let clangClass = "OMPSafelenClause";
   let flangClass = "ScalarIntConstantExpr";
+}
+def OMPC_Safesync : Clause<[Spelling<"safesync">]> {
+  let isValueOptional = true;
 }
 def OMP_SCHEDULE_Static : EnumVal<"static", 2, 1> {}
 def OMP_SCHEDULE_Dynamic : EnumVal<"dynamic", 3, 1> {}
