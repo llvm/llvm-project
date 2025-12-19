@@ -3136,9 +3136,13 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
             SourceManager &SM = SemaRef.getSourceManager();
             const LangOptions &LangOpts = SemaRef.getLangOpts();
 
-            // loop over each existing expression and apply replacement
+            // In a derived Record, first n base-classes are initialized first.
+            // They do not use designated init, so skip them
+            const auto IListInits =
+                IList->inits().drop_front(CxxRecord->getNumBases());
+            // loop over each existing expressions and apply replacement
             for (const auto &[OrigExpr, Repl] :
-                 llvm::zip(IList->inits(), ReorderedInitExprs)) {
+                 llvm::zip(IListInits, ReorderedInitExprs)) {
               CharSourceRange CharRange = CharSourceRange::getTokenRange(
                   Repl.InitExpr->getSourceRange());
               const auto InitText =
