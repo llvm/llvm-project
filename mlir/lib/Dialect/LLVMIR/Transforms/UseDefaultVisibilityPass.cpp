@@ -22,11 +22,12 @@ using namespace mlir;
 
 static void updateVisibility(Operation *op,
                              LLVM::VisibilityAttr newVisibilityAttr) {
+  static constexpr char visibilityAttrName[] = "visibility_";
   if (auto visibilityAttr =
-          op->getAttrOfType<LLVM::VisibilityAttr>(LLVM::VisibilityAttr::name)) {
+          op->getAttrOfType<LLVM::VisibilityAttr>(visibilityAttrName)) {
     LLVM::Visibility visibility = visibilityAttr.getValue();
     if (visibility == LLVM::Visibility::Default) {
-      op->setAttr(LLVM::VisibilityAttr::name, newVisibilityAttr);
+      op->setAttr(visibilityAttrName, newVisibilityAttr);
     }
   }
 }
