@@ -2348,4 +2348,15 @@ TEST(CommandLineTest, HelpWithEmptyCategory) {
   cl::ResetCommandLineParser();
 }
 
+class CopyableClass {
+public:
+  int Val;
+};
+TEST(CommandLineTest, ResetClassTypeOptionToInitialValue) {
+  CopyableClass InitialValue{42};
+  StackOption<CopyableClass> O("a", cl::init(InitialValue));
+  O.reset();
+  EXPECT_EQ(O.getValue().Val, InitialValue.Val)
+      << "Option should be reset to its initial value.";
+}
 } // anonymous namespace
