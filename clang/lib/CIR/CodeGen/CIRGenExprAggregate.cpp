@@ -375,7 +375,22 @@ public:
   }
 
   void VisitVAArgExpr(VAArgExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitVAArgExpr");
+    // emitVAArg returns an aggregate value (not a pointer) at the CIR level.
+    // ABI-specific pointer handling will be done later in LoweringPrepare.
+    mlir::Value vaArgValue = cgf.emitVAArg(e);
+
+    // Create a temporary alloca to hold the aggregate value.
+    mlir::Location loc = cgf.getLoc(e->getSourceRange());
+    Address tmpAddr = cgf.createMemTemp(e->getType(), loc, "vaarg.tmp");
+
+    // Store the va_arg result into the temporary.
+    cgf.emitAggregateStore(vaArgValue, tmpAddr);
+
+    // Create an LValue from the temporary address.
+    LValue tmpLValue = cgf.makeAddrLValue(tmpAddr, e->getType());
+
+    // Copy the aggregate value from temporary to destination.
+    emitFinalDestCopy(e->getType(), tmpLValue);
   }
 
   void VisitCXXThrowExpr(const CXXThrowExpr *e) {
