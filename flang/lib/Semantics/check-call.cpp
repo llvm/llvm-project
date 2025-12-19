@@ -1175,7 +1175,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
                 !cudaAllowedIntrinsics.contains(intrinsic->name))) {
           messages.Say(
               "Actual argument %s associated with host intrinsic %s is on the device"_err_en_US,
-              actualLastSymbol->name(), intrinsic->name);
+              actualLastSymbol ? actualLastSymbol->name() : "",
+              intrinsic->name);
         }
       }
     }
