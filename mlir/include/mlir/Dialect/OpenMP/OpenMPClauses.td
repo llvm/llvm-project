@@ -1070,14 +1070,12 @@ class OpenMP_NumThreadsClauseSkip<
                     extraClassDeclaration> {
   let arguments = (ins
     ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$num_threads_num_dims,
-    Variadic<AnyInteger>:$num_threads_dims_values,
-    Optional<IntLikeType>:$num_threads
+    Variadic<IntLikeType>:$num_threads_dims_values
   );
 
   let optAssemblyFormat = [{
     `num_threads` `(` custom<NumThreadsClause>(
-      $num_threads_num_dims, $num_threads_dims_values, type($num_threads_dims_values),
-      $num_threads, type($num_threads)
+      $num_threads_num_dims, $num_threads_dims_values, type($num_threads_dims_values)
     ) `)`
   }];
 
@@ -1092,10 +1090,9 @@ class OpenMP_NumThreadsClauseSkip<
     - Example: `num_threads(dims(3): %ub0, %ub1, %ub2 : i32)`
 
     Without dims modifier:
-    - Uses `num_threads`
-    - If lower bound not specified, it defaults to upper bound value
-    - Format: `num_threads(bounds : type)`
-    - Example: `num_threads(%ub : i32)`
+    - The number of threads is specified by single value in `num_threads_dims_values`
+    - Format: `num_threads(value : type)`
+    - Example: `num_threads(%n : i32)`
   }];
 
   let extraClassDeclaration = [{
@@ -1116,6 +1113,8 @@ class OpenMP_NumThreadsClauseSkip<
     ::mlir::Value getNumThreadsDimsValue(unsigned index) {
       assert(index < getNumThreadsDimsCount() &&
              "Num threads dims index out of bounds");
+      if(getNumThreadsDimsValues().empty())
+        return nullptr;
       return getNumThreadsDimsValues()[index];
     }
   }];

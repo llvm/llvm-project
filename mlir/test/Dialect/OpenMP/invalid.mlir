@@ -34,7 +34,7 @@ func.func @num_threads_dims_no_values() {
   // expected-error@+1 {{dims modifier requires values to be specified}}
   "omp.parallel"() ({
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 0,0,0,0,0,0,0>, num_threads_num_dims = 2 : i64} : () -> ()
+  }) {operandSegmentSizes = array<i32: 0,0,0,0,0,0>, num_threads_num_dims = 2 : i64} : () -> ()
   return
 }
 
@@ -51,11 +51,11 @@ func.func @num_threads_dims_mismatch(%n : i64) {
 
 // -----
 
-func.func @num_threads_dims_and_scalar(%n : i64, %m: i64) {
-  // expected-error@+1 {{num_threads with dims modifier cannot be used together with number of threads}}
-  "omp.parallel"(%n, %n, %m) ({
+func.func @num_threads_multiple_values_without_dims(%n : i64, %m: i64) {
+  // expected-error@+1 {{dims values can only be specified with dims modifier}}
+  "omp.parallel"(%n, %m) ({
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 0,0,0,2,1,0,0>, num_threads_num_dims = 2 : i64} : (i64, i64, i64) -> ()
+  }) {operandSegmentSizes = array<i32: 0,0,0,2,0,0>} : (i64, i64) -> ()
   return
 }
 
@@ -2722,7 +2722,7 @@ func.func @undefined_privatizer(%arg0: index) {
 // -----
 func.func @undefined_privatizer(%arg0: !llvm.ptr) {
   // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
-  "omp.parallel"(%arg0) <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 1, 0>, private_syms = [@x.privatizer, @y.privatizer]}> ({
+  "omp.parallel"(%arg0) <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 1, 0>, private_syms = [@x.privatizer, @y.privatizer]}> ({
     ^bb0(%arg2: !llvm.ptr):
       omp.terminator
     }) : (!llvm.ptr) -> ()
