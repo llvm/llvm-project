@@ -44,6 +44,8 @@ Implemented Papers
 - P3044R2: sub-``string_view`` from ``string`` (`Github <https://llvm.org/PR148140>`__)
 - P3223R2: Making ``std::istream::ignore`` less surprising (`Github <https://llvm.org/PR148178>`__)
 - P3060R3: Add ``std::views::indices(n)`` (`Github <https://llvm.org/PR148175>`__)
+- P2404R3: Move-only types for ``equality_comparable_with``, ``totally_ordered_with``, and ``three_way_comparable_with``
+  (`Github <https://llvm.org/PR105210>`__)
 - P2641R4: Checking if a ``union`` alternative is active (``std::is_within_lifetime``)
   (`Github <https://llvm.org/PR105381>`__)
 - P2835R7: Expose ``std::atomic_ref``'s object address (`Github <https://llvm.org/PR118377>`__)
