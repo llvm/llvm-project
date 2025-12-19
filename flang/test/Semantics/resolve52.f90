@@ -74,7 +74,7 @@ contains
   end
   subroutine s2(w, x)
     real :: x
-    !ERROR: The type of 'x' has already been declared
+    !ERROR: The type of 'x' has already been declared as REAL(4)
     class(t), allocatable :: x
   end
   subroutine s3(f)
