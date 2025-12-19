@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -336,13 +337,9 @@ public:
 
   LLVM_DUMP_METHOD void dump(const MachineRegisterInfo *MRI) const {
     dbgs() << "Registers: ";
-    bool First = true;
-    for (Register Reg : Edges) {
-      if (!First)
-        dbgs() << ", ";
-      First = false;
-      dbgs() << printReg(Reg, MRI->getTargetRegisterInfo(), 0, MRI);
-    }
+    ListSeparator LS;
+    for (Register Reg : Edges)
+      dbgs() << LS << printReg(Reg, MRI->getTargetRegisterInfo(), 0, MRI);
     dbgs() << "\n" << "Instructions:";
     for (MachineInstr *MI : Instrs) {
       dbgs() << "\n  ";
