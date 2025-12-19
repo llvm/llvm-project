@@ -32,11 +32,11 @@ constexpr llvm::StringLiteral LengthExprName = "LengthExpr";
 constexpr llvm::StringLiteral WrongLengthExprName = "WrongLength";
 constexpr llvm::StringLiteral UnknownLengthName = "UnknownLength";
 
-enum class LengthHandleKind { Increase, Decrease };
-
 namespace {
-static Preprocessor *PP;
+enum class LengthHandleKind { Increase, Decrease };
 } // namespace
+
+static Preprocessor *PP;
 
 // Returns the expression of destination's capacity which is part of a
 // 'VariableArrayType', 'ConstantArrayTypeLoc' or an argument of a 'malloc()'
