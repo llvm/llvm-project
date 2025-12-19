@@ -39,6 +39,7 @@
 #include <optional>
 
 using namespace clang;
+using namespace clang::diag;
 
 namespace {
 
@@ -1250,7 +1251,8 @@ void CXXNameMangler::mangleFloatLiteral(QualType T, const llvm::APFloat &V) {
 
 void CXXNameMangler::mangleFixedPointLiteral() {
   DiagnosticsEngine &Diags = Context.getDiags();
-  Diags.Report(diag::err_itanium_mangle_fixed_point_literal);
+  Diags.Report(err_unsupported_itanium_mangling)
+      << UnsupportedItaniumManglingKind::FixedPointLiteral;
 }
 
 void CXXNameMangler::mangleNullPointer(QualType T) {
@@ -3968,8 +3970,8 @@ void CXXNameMangler::mangleNeonVectorType(const VectorType *T) {
 
 void CXXNameMangler::mangleNeonVectorType(const DependentVectorType *T) {
   DiagnosticsEngine &Diags = Context.getDiags();
-  Diags.Report(T->getAttributeLoc(),
-               diag::err_itanium_mangle_dependent_neon_vector);
+  Diags.Report(T->getAttributeLoc(), err_unsupported_itanium_mangling)
+      << UnsupportedItaniumManglingKind::DependentNeonVector;
 }
 
 static StringRef mangleAArch64VectorBase(const BuiltinType *EltType) {
@@ -4045,8 +4047,8 @@ void CXXNameMangler::mangleAArch64NeonVectorType(const VectorType *T) {
 }
 void CXXNameMangler::mangleAArch64NeonVectorType(const DependentVectorType *T) {
   DiagnosticsEngine &Diags = Context.getDiags();
-  Diags.Report(T->getAttributeLoc(),
-               diag::err_itanium_mangle_dependent_neon_vector);
+  Diags.Report(T->getAttributeLoc(), err_unsupported_itanium_mangling)
+      << UnsupportedItaniumManglingKind::DependentNeonVector;
 }
 
 // The AArch64 ACLE specifies that fixed-length SVE vector and predicate types
@@ -4141,8 +4143,8 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(const VectorType *T) {
 void CXXNameMangler::mangleAArch64FixedSveVectorType(
     const DependentVectorType *T) {
   DiagnosticsEngine &Diags = Context.getDiags();
-  Diags.Report(T->getAttributeLoc(),
-               diag::err_itanium_mangle_dependent_fixed_length_sve_vector);
+  Diags.Report(T->getAttributeLoc(), err_unsupported_itanium_mangling)
+      << UnsupportedItaniumManglingKind::DependentFixedLengthSVEVector;
 }
 
 void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
@@ -4245,8 +4247,8 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
 void CXXNameMangler::mangleRISCVFixedRVVVectorType(
     const DependentVectorType *T) {
   DiagnosticsEngine &Diags = Context.getDiags();
-  Diags.Report(T->getAttributeLoc(),
-               diag::err_itanium_mangle_dependent_fixed_length_rvv_vector);
+  Diags.Report(T->getAttributeLoc(), err_unsupported_itanium_mangling)
+      << UnsupportedItaniumManglingKind::DependentFixedLengthRVVVectorType;
 }
 
 // GNU extension: vector types
@@ -4775,9 +4777,9 @@ void CXXNameMangler::mangleRequirement(SourceLocation RequiresExprLoc,
   auto HandleSubstitutionFailure =
       [&](SourceLocation Loc) {
         DiagnosticsEngine &Diags = Context.getDiags();
-        Diags.Report(
-            Loc,
-            diag::err_itanium_mangle_requires_expr_with_substitution_failure);
+        Diags.Report(Loc, err_unsupported_itanium_mangling)
+            << UnsupportedItaniumManglingKind::
+                   RequiresExprWithSubstitutionFailure;
         Out << 'F';
       };
 
@@ -4978,8 +4980,7 @@ recurse:
     if (!NullOut) {
       // As bad as this diagnostic is, it's better than crashing.
       DiagnosticsEngine &Diags = Context.getDiags();
-      Diags.Report(E->getExprLoc(),
-                   diag::err_itanium_mangle_unsupported_expr_type)
+      Diags.Report(E->getExprLoc(), err_unsupported_itanium_expr_mangling)
           << E->getStmtClassName() << E->getSourceRange();
       return;
     }
@@ -5016,8 +5017,8 @@ recurse:
   case Expr::BinaryConditionalOperatorClass: {
     NotPrimaryExpr();
     DiagnosticsEngine &Diags = Context.getDiags();
-    Diags.Report(E->getExprLoc(),
-                 diag::err_itanium_mangle_ternary_omitted_operand)
+    Diags.Report(E->getExprLoc(), err_unsupported_itanium_mangling)
+        << UnsupportedItaniumManglingKind::TernaryWithOmittedMiddleOperand
         << E->getStmtClassName() << E->getSourceRange();
     return;
   }
@@ -5389,7 +5390,7 @@ recurse:
     case UETT_PtrAuthTypeDiscriminator:
     case UETT_DataSizeOf: {
       DiagnosticsEngine &Diags = Context.getDiags();
-      Diags.Report(E->getExprLoc(), diag::err_itanium_mangle_unsupported_expr)
+      Diags.Report(E->getExprLoc(), err_unsupported_itanium_expr_mangling)
           << getTraitSpelling(SAE->getKind());
       return;
     }
@@ -5892,7 +5893,8 @@ recurse:
   case Expr::OpenACCAsteriskSizeExprClass: {
     // We shouldn't ever be able to get here, but diagnose anyway.
     DiagnosticsEngine &Diags = Context.getDiags();
-    Diags.Report(diag::err_itanium_mangle_openacc_asterisk_size_expr);
+    Diags.Report(err_unsupported_itanium_mangling)
+        << UnsupportedItaniumManglingKind::OpenACCAsteriskSizeExpr;
     return;
   }
   }
@@ -6510,7 +6512,8 @@ static IdentifierInfo *getUnionInitName(SourceLocation UnionLoc,
   // of the data members in the union are unnamed), then there is no way for a
   // program to refer to the anonymous union, and there is therefore no need to
   // mangle its name. However, we should diagnose this anyway.
-  Diags.Report(UnionLoc, diag::err_itanium_mangle_unnamed_union_nttp);
+  Diags.Report(UnionLoc, err_unsupported_itanium_mangling)
+      << UnsupportedItaniumManglingKind::UnnamedUnionNTTP;
 
   return nullptr;
 }
