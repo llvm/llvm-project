@@ -5773,8 +5773,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
           if (A.isZero() && B.isZero())
             return B;
-          else
-            return llvm::minimum(A, B);
+          return llvm::minimum(A, B);
         });
 
   case clang::X86::BI__builtin_ia32_maxps:
@@ -5791,8 +5790,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
           if (A.isZero() && B.isZero())
             return B;
-          else
-            return llvm::maximum(A, B);
+          return llvm::maximum(A, B);
         });
 
   default:

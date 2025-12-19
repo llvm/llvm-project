@@ -12280,6 +12280,42 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         return Success(APValue(ResultElements.data(), SourceLen), E);
       };
 
+  auto EvaluateFpBinOpExpr =
+      [&](llvm::function_ref<APFloat(const APFloat &, const APFloat &,
+                                     std::optional<APSInt>)>
+              Fn) {
+        assert(E->getNumArgs() == 2 || E->getNumArgs() == 3);
+        APValue A, B;
+        if (!EvaluateAsRValue(Info, E->getArg(0), A) ||
+            !EvaluateAsRValue(Info, E->getArg(1), B))
+          return false;
+
+        assert(A.isVector() && B.isVector());
+        assert(A.getVectorLength() == B.getVectorLength());
+
+        std::optional<APSInt> RoundingMode;
+        if (E->getNumArgs() == 3) {
+          APSInt Imm;
+          if (!EvaluateInteger(E->getArg(2), Imm, Info))
+            return false;
+          RoundingMode = Imm;
+        }
+
+        unsigned NumElems = A.getVectorLength();
+        SmallVector<APValue, 4> ResultElements;
+        ResultElements.reserve(NumElems);
+
+        for (unsigned EltNum = 0; EltNum < NumElems; ++EltNum) {
+          const APFloat &EltA = A.getVectorElt(EltNum).getFloat();
+          const APFloat &EltB = B.getVectorElt(EltNum).getFloat();
+          if (EltA.isNaN() || EltA.isInfinity() || EltA.isDenormal() ||
+              EltB.isNaN() || EltB.isInfinity() || EltB.isDenormal())
+            return false;
+          ResultElements.push_back(APValue(Fn(EltA, EltB, RoundingMode)));
+        }
+        return Success(APValue(ResultElements.data(), NumElems), E);
+      };
+
   auto EvalSelectScalar = [&](unsigned Len) -> bool {
     APSInt Mask;
     APValue AVal, WVal;
@@ -14350,70 +14386,35 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
   case clang::X86::BI__builtin_ia32_minps:
   case clang::X86::BI__builtin_ia32_minpd:
-  case clang::X86::BI__builtin_ia32_maxpd:
-  case clang::X86::BI__builtin_ia32_maxps:
   case clang::X86::BI__builtin_ia32_minps256:
-  case clang::X86::BI__builtin_ia32_maxps256:
   case clang::X86::BI__builtin_ia32_minpd256:
-  case clang::X86::BI__builtin_ia32_maxpd256:
   case clang::X86::BI__builtin_ia32_minps512:
-  case clang::X86::BI__builtin_ia32_maxps512:
   case clang::X86::BI__builtin_ia32_minpd512:
-  case clang::X86::BI__builtin_ia32_maxpd512:
   case clang::X86::BI__builtin_ia32_minph128:
-  case clang::X86::BI__builtin_ia32_maxph128:
   case clang::X86::BI__builtin_ia32_minph256:
-  case clang::X86::BI__builtin_ia32_maxph256:
   case clang::X86::BI__builtin_ia32_minph512:
-  case clang::X86::BI__builtin_ia32_maxph512: {
+    return EvaluateFpBinOpExpr(
+        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::minimum(A, B);
+        });
 
-    APValue AVec, BVec;
-    if (!EvaluateAsRValue(Info, E->getArg(0), AVec) ||
-        !EvaluateAsRValue(Info, E->getArg(1), BVec))
-      return false;
-
-    assert(AVec.isVector() && BVec.isVector());
-    assert(AVec.getVectorLength() == BVec.getVectorLength());
-
-    bool IsMin;
-    switch (E->getBuiltinCallee()) {
-    case clang::X86::BI__builtin_ia32_minps:
-    case clang::X86::BI__builtin_ia32_minpd:
-    case clang::X86::BI__builtin_ia32_minps256:
-    case clang::X86::BI__builtin_ia32_minpd256:
-    case clang::X86::BI__builtin_ia32_minps512:
-    case clang::X86::BI__builtin_ia32_minpd512:
-    case clang::X86::BI__builtin_ia32_minph128:
-    case clang::X86::BI__builtin_ia32_minph256:
-    case clang::X86::BI__builtin_ia32_minph512:
-      IsMin = true;
-      break;
-    default:
-      IsMin = false;
-    }
-    const auto *DstVTy = E->getType()->castAs<VectorType>();
-    unsigned NumDstElems = DstVTy->getNumElements();
-    SmallVector<APValue, 16> ResultElems;
-    ResultElems.reserve(NumDstElems);
-
-    for (unsigned EltIdx = 0; EltIdx != NumDstElems; ++EltIdx) {
-      const APFloat &EltA = AVec.getVectorElt(EltIdx).getFloat();
-      const APFloat &EltB = BVec.getVectorElt(EltIdx).getFloat();
-      if (EltA.isZero() && EltB.isZero()) {
-        ResultElems.push_back(BVec.getVectorElt(EltIdx));
-      } else {
-        if (EltA.isNaN() || EltA.isInfinity() || EltA.isDenormal() ||
-            EltB.isNaN() || EltB.isInfinity() || EltB.isDenormal())
-          return false;
-        if (IsMin)
-          ResultElems.push_back(APValue(llvm::minimum(EltA, EltB)));
-        else
-          ResultElems.push_back(APValue(llvm::maximum(EltA, EltB)));
-      }
-    }
-
-    return Success(APValue(ResultElems.data(), ResultElems.size()), E);
-  }
+  case clang::X86::BI__builtin_ia32_maxps:
+  case clang::X86::BI__builtin_ia32_maxpd:
+  case clang::X86::BI__builtin_ia32_maxps256:
+  case clang::X86::BI__builtin_ia32_maxpd256:
+  case clang::X86::BI__builtin_ia32_maxps512:
+  case clang::X86::BI__builtin_ia32_maxpd512:
+  case clang::X86::BI__builtin_ia32_maxph128:
+  case clang::X86::BI__builtin_ia32_maxph256:
+  case clang::X86::BI__builtin_ia32_maxph512:
+    return EvaluateFpBinOpExpr(
+        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::maximum(A, B);
+        });
 
   case clang::X86::BI__builtin_ia32_vcvtps2ph:
   case clang::X86::BI__builtin_ia32_vcvtps2ph256: {
