@@ -22,7 +22,7 @@ using namespace mlir::ptr;
 
 constexpr const static unsigned kDefaultPointerSizeBits = 64;
 constexpr const static unsigned kBitsInByte = 8;
-constexpr const static unsigned kDefaultPointerAlignmentBits = 8;
+constexpr const static unsigned kDefaultPointerAlignmentBits = 64;
 
 /// Searches the data layout for the pointer spec, returns nullptr if it is not
 /// found.

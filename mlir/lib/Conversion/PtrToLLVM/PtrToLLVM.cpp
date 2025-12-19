@@ -15,6 +15,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/Dialect/Ptr/IR/PtrOps.h"
 #include "mlir/IR/TypeUtilities.h"
 #include <type_traits>
@@ -404,19 +405,22 @@ void mlir::ptr::populatePtrToLLVMConversionPatterns(
           -> TypeConverter::AttributeConversionResult {
         if (type.getMemorySpace() != memorySpace)
           return TypeConverter::AttributeConversionResult::na();
-        return IntegerAttr::get(IntegerType::get(type.getContext(), 32), 0);
+        return LLVM::AddressSpaceAttr::get(type.getContext(), 0);
       });
 
   // Add type conversions.
   converter.addConversion([&](ptr::PtrType type) -> Type {
+    if (isa<LLVM::LLVMAddrSpaceAttrInterface>(type.getMemorySpace()))
+      return type;
+
     std::optional<Attribute> maybeAttr =
         converter.convertTypeAttribute(type, type.getMemorySpace());
     auto memSpace =
-        maybeAttr ? dyn_cast_or_null<IntegerAttr>(*maybeAttr) : IntegerAttr();
-    if (!memSpace)
+        maybeAttr ? dyn_cast_or_null<ptr::MemorySpaceAttrInterface>(*maybeAttr)
+                  : ptr::MemorySpaceAttrInterface();
+    if (!memSpace || !isa<LLVM::LLVMAddrSpaceAttrInterface>(memSpace))
       return {};
-    return LLVM::LLVMPointerType::get(type.getContext(),
-                                      memSpace.getValue().getSExtValue());
+    return ptr::PtrType::get(memSpace);
   });
 
   // Convert ptr metadata of memref type.

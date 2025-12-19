@@ -101,7 +101,7 @@ DataLayoutImporter::tryToParseAlignment(StringRef token) const {
       {minimal, preferred});
 }
 
-FailureOr<DenseIntElementsAttr>
+FailureOr<ptr::SpecAttr>
 DataLayoutImporter::tryToParsePointerAlignment(StringRef token) const {
   FailureOr<SmallVector<uint64_t>> alignment = tryToParseIntList(token);
   if (failed(alignment))
@@ -119,9 +119,7 @@ DataLayoutImporter::tryToParsePointerAlignment(StringRef token) const {
   uint64_t minimal = (*alignment)[1];
   uint64_t preferred = alignment->size() < 3 ? minimal : (*alignment)[2];
   uint64_t idx = alignment->size() < 4 ? size : (*alignment)[3];
-  return DenseIntElementsAttr::get<uint64_t>(
-      VectorType::get({4}, IntegerType::get(context, 64)),
-      {size, minimal, preferred, idx});
+  return ptr::SpecAttr::get(context, size, minimal, preferred, idx);
 }
 
 LogicalResult DataLayoutImporter::tryToEmplaceAlignmentEntry(Type type,
@@ -145,7 +143,7 @@ DataLayoutImporter::tryToEmplacePointerAlignmentEntry(LLVMPointerType type,
   if (typeEntries.count(key))
     return success();
 
-  FailureOr<DenseIntElementsAttr> params = tryToParsePointerAlignment(token);
+  FailureOr<ptr::SpecAttr> params = tryToParsePointerAlignment(token);
   if (failed(params))
     return failure();
 

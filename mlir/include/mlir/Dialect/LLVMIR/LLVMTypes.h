@@ -14,9 +14,11 @@
 #ifndef MLIR_DIALECT_LLVMIR_LLVMTYPES_H_
 #define MLIR_DIALECT_LLVMIR_LLVMTYPES_H_
 
+#include "mlir/Dialect/Ptr/IR/PtrTypes.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
+#include <cstddef>
 #include <optional>
 
 namespace llvm {
@@ -35,7 +37,6 @@ class LLVMDialect;
 
 namespace detail {
 struct LLVMFunctionTypeStorage;
-struct LLVMPointerTypeStorage;
 struct LLVMStructTypeStorage;
 struct LLVMTypeAndSizeStorage;
 } // namespace detail
@@ -72,6 +73,36 @@ DEFINE_TRIVIAL_LLVM_TYPE(LLVMLabelType, "llvm.label");
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMMetadataType, "llvm.metadata");
 
 #undef DEFINE_TRIVIAL_LLVM_TYPE
+
+//===----------------------------------------------------------------------===//
+// LLVM pointer type
+//===----------------------------------------------------------------------===//
+
+/// LLVM pointer type, this is a thin wrapper over the ptr::PtrType with
+/// LLVM::AddressSpaceAttr as the memory space.
+class LLVMPointerType : public ptr::PtrType {
+public:
+  static constexpr StringLiteral name = "llvm.ptr";
+  static constexpr StringLiteral dialectName = "llvm";
+  LLVMPointerType() = default;
+  LLVMPointerType(std::nullptr_t) : ptr::PtrType() {}
+  LLVMPointerType(const ptr::PtrType &other) : ptr::PtrType(other) {
+    assert(isaLLVMPtr(other) && "not an LLVM pointer type");
+  }
+  static bool classof(Type type) {
+    return isaLLVMPtr(dyn_cast_or_null<ptr::PtrType>(type));
+  }
+  /// Checks whether the given ptr::PtrType is an LLVM pointer type. That is, it
+  /// uses an LLVMAddrSpaceAttrInterface as memory space.
+  static bool isaLLVMPtr(ptr::PtrType type);
+  /// Creates an LLVM pointer type with the given address space.
+  static LLVMPointerType get(MLIRContext *context, unsigned addressSpace = 0);
+  static constexpr StringLiteral getMnemonic() { return {"ptr"}; }
+  static Type parse(AsmParser &odsParser);
+  void print(AsmPrinter &odsPrinter) const;
+  /// Returns the address space of the pointer type.
+  unsigned getAddressSpace() const;
+};
 
 //===----------------------------------------------------------------------===//
 // Printing and parsing.
@@ -141,19 +172,15 @@ Type getVectorType(Type elementType, const llvm::ElementCount &numElements);
 /// the size of vector<4xi16> is 64. Returns 0 for non-primitive
 /// (aggregates such as struct) or types that don't have a size (such as void).
 llvm::TypeSize getPrimitiveTypeSizeInBits(Type type);
-
-/// The positions of different values in the data layout entry for pointers.
-enum class PtrDLEntryPos { Size = 0, Abi = 1, Preferred = 2, Index = 3 };
-
-/// Returns the value that corresponds to named position `pos` from the
-/// data layout entry `attr` assuming it's a dense integer elements attribute.
-/// Returns `std::nullopt` if `pos` is not present in the entry.
-/// Currently only `PtrDLEntryPos::Index` is optional, and all other positions
-/// may be assumed to be present.
-std::optional<uint64_t> extractPointerSpecValue(Attribute attr,
-                                                PtrDLEntryPos pos);
-
 } // namespace LLVM
+
+namespace detail {
+template <>
+class TypeIDResolver<LLVM::LLVMPointerType> {
+public:
+  static TypeID resolveTypeID() { return TypeID::get<ptr::PtrType>(); }
+};
+} // namespace detail
 } // namespace mlir
 
 #endif // MLIR_DIALECT_LLVMIR_LLVMTYPES_H_

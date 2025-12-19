@@ -85,6 +85,13 @@ void LLVMStructType::print(AsmPrinter &printer) const {
   printer << '>';
 }
 
+/// Prints a pointer type.
+void LLVMPointerType::print(AsmPrinter &printer) const {
+  // Omit `<0>` for address space 0.
+  if (unsigned addrSpace = getAddressSpace())
+    printer << '<' << addrSpace << '>';
+}
+
 /// Prints the given LLVM dialect type recursively. This leverages closedness of
 /// the LLVM dialect type system to avoid printing the dialect prefix
 /// repeatedly. For recursive structures, only prints the name of the structure
@@ -235,6 +242,18 @@ Type LLVMStructType::parse(AsmParser &parser) {
   auto type = LLVMStructType::getIdentifiedChecked(
       [loc] { return emitError(loc); }, loc.getContext(), name);
   return trySetStructBody(type, subtypes, isPacked, parser, subtypesLoc);
+}
+
+/// Parses a pointer type.
+Type LLVMPointerType::parse(AsmParser &parser) {
+  // Default to address space 0.
+  unsigned addressSpace = 0;
+  // `<` address-space `>`
+  if (succeeded(parser.parseOptionalLess())) {
+    if (parser.parseInteger(addressSpace) || parser.parseGreater())
+      return Type();
+  }
+  return get(parser.getContext(), addressSpace);
 }
 
 /// Parses a type appearing inside another LLVM dialect-compatible type. This

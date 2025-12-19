@@ -248,7 +248,7 @@ struct MemRefPointerLikeModel
 
 struct LLVMPointerPointerLikeModel
     : public PointerLikeType::ExternalModel<LLVMPointerPointerLikeModel,
-                                            LLVM::LLVMPointerType> {
+                                            ptr::PtrType> {
   Type getElementType(Type pointer) const { return Type(); }
 
   mlir::Value genLoad(Type pointer, OpBuilder &builder, Location loc,
@@ -380,8 +380,7 @@ void OpenACCDialect::initialize() {
       *getContext());
   UnrankedMemRefType::attachInterface<
       MemRefPointerLikeModel<UnrankedMemRefType>>(*getContext());
-  LLVM::LLVMPointerType::attachInterface<LLVMPointerPointerLikeModel>(
-      *getContext());
+  ptr::PtrType::attachInterface<LLVMPointerPointerLikeModel>(*getContext());
 
   // Attach operation interfaces
   memref::GetGlobalOp::attachInterface<MemrefAddressOfGlobalModel>(
