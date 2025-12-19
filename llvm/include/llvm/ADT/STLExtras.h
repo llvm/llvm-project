@@ -1792,6 +1792,8 @@ OutputIt copy_if(R &&Range, OutputIt Out, UnaryPredicate P) {
 
 /// Provide wrappers to std::search which searches for the first occurrence of
 /// Range2 within Range1.
+/// \returns An iterator to the start of Range2 within Range1 if found, or
+///          the end iterator of Range1 if not found.
 template <typename R1, typename R2> auto search(R1 &&Range1, R2 &&Range2) {
   return std::search(adl_begin(Range1), adl_end(Range1), adl_begin(Range2),
                      adl_end(Range2));
@@ -1799,6 +1801,8 @@ template <typename R1, typename R2> auto search(R1 &&Range1, R2 &&Range2) {
 
 /// Provide wrappers to std::search which searches for the first occurrence of
 /// Range2 within Range1 using predicate `P`.
+/// \returns An iterator to the start of Range2 within Range1 if found, or
+///          the end iterator of Range1 if not found.
 template <typename R1, typename R2, typename BinaryPredicate>
 auto search(R1 &&Range1, R2 &&Range2, BinaryPredicate P) {
   return std::search(adl_begin(Range1), adl_end(Range1), adl_begin(Range2),
@@ -1807,12 +1811,16 @@ auto search(R1 &&Range1, R2 &&Range2, BinaryPredicate P) {
 
 /// Provide wrappers to std::adjacent_find which finds the first pair of
 /// adjacent elements that are equal.
+/// \returns An iterator to the first adjacent element within Range1 if found,
+///          or the end iterator of Range1 if not found.
 template <typename R> auto adjacent_find(R &&Range) {
   return std::adjacent_find(adl_begin(Range), adl_end(Range));
 }
 
 /// Provide wrappers to std::adjacent_find which finds the first pair of
 /// adjacent elements that are satisfy `P`.
+/// \returns An iterator to the first adjacent element within Range1 if found,
+///          or the end iterator of Range1 if not found.
 template <typename R, typename BinaryPredicate>
 auto adjacent_find(R &&Range, BinaryPredicate P) {
   return std::adjacent_find(adl_begin(Range), adl_end(Range), P);
