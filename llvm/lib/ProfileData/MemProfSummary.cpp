@@ -18,7 +18,7 @@ using namespace llvm::memprof;
 void MemProfSummary::printSummaryYaml(raw_ostream &OS) const {
   // For now emit as YAML comments, since they aren't read on input.
   OS << "---\n";
-  OS << "# MemProfHeapSummary:\n";
+  OS << "# MemProfSummary:\n";
   OS << "#   Total contexts: " << NumContexts << "\n";
   OS << "#   Total cold contexts: " << NumColdContexts << "\n";
   OS << "#   Total hot contexts: " << NumHotContexts << "\n";
