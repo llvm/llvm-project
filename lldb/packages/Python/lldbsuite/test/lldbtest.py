@@ -461,6 +461,9 @@ class _LocalProcess(_BaseProcess):
     def wait(self, timeout=None):
         return self._proc.wait(timeout)
 
+    def kill(self):
+        return self._proc.kill()
+
 
 class _RemoteProcess(_BaseProcess):
     def __init__(self, install_remote):
