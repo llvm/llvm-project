@@ -2149,7 +2149,8 @@ PrintingPolicy TypeSystemClang::GetTypePrintingPolicy() {
   printing_policy.SuppressTagKeyword = true;
   // Inline namespaces are important for some type formatters (e.g., libc++
   // and libstdc++ are differentiated by their inline namespaces).
-  printing_policy.SuppressInlineNamespace = false;
+  printing_policy.SuppressInlineNamespace =
+      llvm::to_underlying(PrintingPolicy::SuppressInlineNamespaceMode::None);
   printing_policy.SuppressUnwrittenScope = false;
   // Default arguments are also always important for type formatters. Otherwise
   // we would need to always specify two type names for the setups where we do
@@ -3870,7 +3871,8 @@ TypeSystemClang::GetDisplayTypeName(lldb::opaque_compiler_type_t type) {
   printing_policy.SuppressTagKeyword = true;
   printing_policy.SuppressScope = false;
   printing_policy.SuppressUnwrittenScope = true;
-  printing_policy.SuppressInlineNamespace = true;
+  printing_policy.SuppressInlineNamespace =
+      llvm::to_underlying(PrintingPolicy::SuppressInlineNamespaceMode::All);
   return ConstString(qual_type.getAsString(printing_policy));
 }
 

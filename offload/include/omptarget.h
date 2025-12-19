@@ -103,6 +103,7 @@ enum TargetAllocTy : int32_t {
   TARGET_ALLOC_HOST,
   TARGET_ALLOC_SHARED,
   TARGET_ALLOC_DEFAULT,
+  TARGET_ALLOC_LAST = TARGET_ALLOC_DEFAULT
 };
 
 struct DeviceTy;
@@ -272,6 +273,8 @@ extern "C" {
 void ompx_dump_mapping_tables(void);
 int omp_get_num_devices(void);
 int omp_get_device_num(void);
+int omp_get_device_from_uid(const char *DeviceUid);
+const char *omp_get_uid_from_device(int DeviceNum);
 int omp_get_initial_device(void);
 void *omp_target_alloc(size_t Size, int DeviceNum);
 void omp_target_free(void *DevicePtr, int DeviceNum);

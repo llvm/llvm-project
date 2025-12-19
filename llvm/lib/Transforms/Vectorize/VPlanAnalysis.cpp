@@ -11,6 +11,7 @@
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanHelpers.h"
+#include "VPlanPatternMatch.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -19,6 +20,7 @@
 #include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
+using namespace VPlanPatternMatch;
 
 #define DEBUG_TYPE "vplan"
 
@@ -117,14 +119,11 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
     return Type::getIntNTy(Ctx, 64);
-  case VPInstruction::ExtractLastElement:
-  case VPInstruction::ExtractLastLanePerPart:
-  case VPInstruction::ExtractPenultimateElement: {
-    Type *BaseTy = inferScalarType(R->getOperand(0));
-    if (auto *VecTy = dyn_cast<VectorType>(BaseTy))
-      return VecTy->getElementType();
-    return BaseTy;
-  }
+  case VPInstruction::ExtractLastLane:
+  case VPInstruction::ExtractPenultimateElement:
+    return inferScalarType(R->getOperand(0));
+  case VPInstruction::ExtractLastPart:
+    return inferScalarType(R->getOperand(0));
   case VPInstruction::LogicalAnd:
     assert(inferScalarType(R->getOperand(0))->isIntegerTy(1) &&
            inferScalarType(R->getOperand(1))->isIntegerTy(1) &&
@@ -133,6 +132,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::Broadcast:
   case VPInstruction::PtrAdd:
   case VPInstruction::WidePtrAdd:
+  case VPInstruction::Reverse:
     // Return the type based on first operand.
     return inferScalarType(R->getOperand(0));
   case VPInstruction::BranchOnCond:
@@ -327,8 +327,7 @@ void llvm::collectEphemeralRecipesForVPlan(
            vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : *VPBB) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR || !match(RepR->getUnderlyingInstr(),
-                          PatternMatch::m_Intrinsic<Intrinsic::assume>()))
+      if (!RepR || !match(RepR, m_Intrinsic<Intrinsic::assume>()))
         continue;
       Worklist.push_back(RepR);
       EphRecipes.insert(RepR);
@@ -539,11 +538,14 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
       SmallMapVector<unsigned, unsigned, 4> RegUsage;
 
       for (auto *VPV : OpenIntervals) {
-        // Skip values that weren't present in the original loop.
-        // TODO: Remove after removing the legacy
+        // Skip artificial values or values that weren't present in the original
+        // loop.
+        // TODO: Remove skipping values that weren't present in the original
+        // loop after removing the legacy
         // LoopVectorizationCostModel::calculateRegisterUsage
         if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe,
-                VPBranchOnMaskRecipe>(VPV))
+                VPBranchOnMaskRecipe>(VPV) ||
+            match(VPV, m_ExtractLastPart(m_VPValue())))
           continue;
 
         if (VFs[J].isScalar() ||

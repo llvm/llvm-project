@@ -21,6 +21,7 @@ enum class NodeKind {
   eArraySubscriptNode,
   eBitExtractionNode,
   eBooleanLiteralNode,
+  eCastNode,
   eErrorNode,
   eFloatLiteralNode,
   eIdentifierNode,
@@ -35,6 +36,14 @@ enum class UnaryOpKind {
   Deref,  // "*"
   Minus,  // "-"
   Plus,   // "+"
+};
+
+/// The type casts allowed by DIL.
+enum class CastKind {
+  eEnumeration, ///< Casting from a scalar to an enumeration type
+  eNullptr,     ///< Casting to a nullptr type
+  eReference,   ///< Casting to a reference type
+  eNone,        ///< Type promotion casting
 };
 
 /// Forward declaration, for use in DIL AST nodes. Definition is at the very
@@ -141,14 +150,14 @@ private:
 
 class ArraySubscriptNode : public ASTNode {
 public:
-  ArraySubscriptNode(uint32_t location, ASTNodeUP base, int64_t index)
+  ArraySubscriptNode(uint32_t location, ASTNodeUP base, ASTNodeUP index)
       : ASTNode(location, NodeKind::eArraySubscriptNode),
-        m_base(std::move(base)), m_index(index) {}
+        m_base(std::move(base)), m_index(std::move(index)) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
   ASTNode *GetBase() const { return m_base.get(); }
-  int64_t GetIndex() const { return m_index; }
+  ASTNode *GetIndex() const { return m_index.get(); }
 
   static bool classof(const ASTNode *node) {
     return node->GetKind() == NodeKind::eArraySubscriptNode;
@@ -156,22 +165,22 @@ public:
 
 private:
   ASTNodeUP m_base;
-  int64_t m_index;
+  ASTNodeUP m_index;
 };
 
 class BitFieldExtractionNode : public ASTNode {
 public:
-  BitFieldExtractionNode(uint32_t location, ASTNodeUP base, int64_t first_index,
-                         int64_t last_index)
+  BitFieldExtractionNode(uint32_t location, ASTNodeUP base,
+                         ASTNodeUP first_index, ASTNodeUP last_index)
       : ASTNode(location, NodeKind::eBitExtractionNode),
-        m_base(std::move(base)), m_first_index(first_index),
-        m_last_index(last_index) {}
+        m_base(std::move(base)), m_first_index(std::move(first_index)),
+        m_last_index(std::move(last_index)) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
   ASTNode *GetBase() const { return m_base.get(); }
-  int64_t GetFirstIndex() const { return m_first_index; }
-  int64_t GetLastIndex() const { return m_last_index; }
+  ASTNode *GetFirstIndex() const { return m_first_index.get(); }
+  ASTNode *GetLastIndex() const { return m_last_index.get(); }
 
   static bool classof(const ASTNode *node) {
     return node->GetKind() == NodeKind::eBitExtractionNode;
@@ -179,8 +188,8 @@ public:
 
 private:
   ASTNodeUP m_base;
-  int64_t m_first_index;
-  int64_t m_last_index;
+  ASTNodeUP m_first_index;
+  ASTNodeUP m_last_index;
 };
 
 enum class IntegerTypeSuffix { None, Long, LongLong };
@@ -246,6 +255,29 @@ private:
   bool m_value;
 };
 
+class CastNode : public ASTNode {
+public:
+  CastNode(uint32_t location, CompilerType type, ASTNodeUP operand,
+           CastKind kind)
+      : ASTNode(location, NodeKind::eCastNode), m_type(type),
+        m_operand(std::move(operand)), m_cast_kind(kind) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  CompilerType GetType() const { return m_type; }
+  ASTNode *GetOperand() const { return m_operand.get(); }
+  CastKind GetCastKind() const { return m_cast_kind; }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eCastNode;
+  }
+
+private:
+  CompilerType m_type;
+  ASTNodeUP m_operand;
+  CastKind m_cast_kind;
+};
+
 /// This class contains one Visit method for each specialized type of
 /// DIL AST node. The Visit methods are used to dispatch a DIL AST node to
 /// the correct function in the DIL expression evaluator for evaluating that
@@ -269,6 +301,7 @@ public:
   Visit(const FloatLiteralNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const BooleanLiteralNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP> Visit(const CastNode *node) = 0;
 };
 
 } // namespace lldb_private::dil

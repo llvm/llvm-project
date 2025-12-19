@@ -363,7 +363,8 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
         ScEnd = SE->getAddExpr(
             SE->getNegativeSCEV(EltSizeSCEV),
             SE->getSCEV(ConstantExpr::getIntToPtr(
-                ConstantInt::get(EltSizeSCEV->getType(), -1), AR->getType())));
+                ConstantInt::getAllOnesValue(EltSizeSCEV->getType()),
+                AR->getType())));
       }
     }
     const SCEV *Step = AR->getStepRecurrence(*SE);
@@ -2998,9 +2999,8 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   if (!StrideExpr)
     return;
 
-  if (auto *Unknown = dyn_cast<SCEVUnknown>(StrideExpr))
-    if (isa<UndefValue>(Unknown->getValue()))
-      return;
+  if (match(StrideExpr, m_scev_UndefOrPoison()))
+    return;
 
   LLVM_DEBUG(dbgs() << "LAA: Found a strided access that is a candidate for "
                        "versioning:");

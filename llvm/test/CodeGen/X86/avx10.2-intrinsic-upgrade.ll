@@ -97,3 +97,99 @@ define <16 x i32>@test_int_x86_avx10_vpdpbuuds_512(<16 x i32> %x0, <16 x i32> %x
   %res = call <16 x i32> @llvm.x86.avx10.vpdpbuuds.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2)
   ret <16 x i32> %res
 }
+
+declare <16 x i32> @llvm.x86.avx10.vpdpwsud.512(<16 x i32>, <16 x i32>, <16 x i32>)
+
+define <16 x i32>@test_int_x86_avx10_vpdpwsud_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2) {
+; X86-LABEL: test_int_x86_avx10_vpdpwsud_512:
+; X86:       # %bb.0:
+; X86-NEXT:    vpdpwsud %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x76,0x48,0xd2,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_int_x86_avx10_vpdpwsud_512:
+; X64:       # %bb.0:
+; X64-NEXT:    vpdpwsud %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x76,0x48,0xd2,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <16 x i32> @llvm.x86.avx10.vpdpwsud.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2)
+  ret <16 x i32> %res
+}
+
+declare <16 x i32> @llvm.x86.avx10.vpdpwsuds.512(<16 x i32>, <16 x i32>, <16 x i32>)
+
+define <16 x i32>@test_int_x86_avx10_vpdpwsuds_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2) {
+; X86-LABEL: test_int_x86_avx10_vpdpwsuds_512:
+; X86:       # %bb.0:
+; X86-NEXT:    vpdpwsuds %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x76,0x48,0xd3,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_int_x86_avx10_vpdpwsuds_512:
+; X64:       # %bb.0:
+; X64-NEXT:    vpdpwsuds %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x76,0x48,0xd3,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <16 x i32> @llvm.x86.avx10.vpdpwsuds.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2)
+  ret <16 x i32> %res
+}
+
+declare <16 x i32> @llvm.x86.avx10.vpdpwusd.512(<16 x i32>, <16 x i32>, <16 x i32>)
+
+define <16 x i32>@test_int_x86_avx10_vpdpwusd_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2) {
+; X86-LABEL: test_int_x86_avx10_vpdpwusd_512:
+; X86:       # %bb.0:
+; X86-NEXT:    vpdpwusd %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x75,0x48,0xd2,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_int_x86_avx10_vpdpwusd_512:
+; X64:       # %bb.0:
+; X64-NEXT:    vpdpwusd %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x75,0x48,0xd2,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <16 x i32> @llvm.x86.avx10.vpdpwusd.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2)
+  ret <16 x i32> %res
+}
+
+declare <16 x i32> @llvm.x86.avx10.vpdpwusds.512(<16 x i32>, <16 x i32>, <16 x i32>)
+
+define <16 x i32>@test_int_x86_avx10_vpdpwusds_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2) {
+; X86-LABEL: test_int_x86_avx10_vpdpwusds_512:
+; X86:       # %bb.0:
+; X86-NEXT:    vpdpwusds %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x75,0x48,0xd3,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_int_x86_avx10_vpdpwusds_512:
+; X64:       # %bb.0:
+; X64-NEXT:    vpdpwusds %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x75,0x48,0xd3,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <16 x i32> @llvm.x86.avx10.vpdpwusds.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2)
+  ret <16 x i32> %res
+}
+
+declare <16 x i32> @llvm.x86.avx10.vpdpwuud.512(<16 x i32>, <16 x i32>, <16 x i32>)
+
+define <16 x i32>@test_int_x86_avx10_vpdpwuud_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2) {
+; X86-LABEL: test_int_x86_avx10_vpdpwuud_512:
+; X86:       # %bb.0:
+; X86-NEXT:    vpdpwuud %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x74,0x48,0xd2,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_int_x86_avx10_vpdpwuud_512:
+; X64:       # %bb.0:
+; X64-NEXT:    vpdpwuud %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x74,0x48,0xd2,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <16 x i32> @llvm.x86.avx10.vpdpwuud.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2)
+  ret <16 x i32> %res
+}
+
+declare <16 x i32> @llvm.x86.avx10.vpdpwuuds.512(<16 x i32>, <16 x i32>, <16 x i32>)
+
+define <16 x i32>@test_int_x86_avx10_vpdpwuuds_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2) {
+; X86-LABEL: test_int_x86_avx10_vpdpwuuds_512:
+; X86:       # %bb.0:
+; X86-NEXT:    vpdpwuuds %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x74,0x48,0xd3,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_int_x86_avx10_vpdpwuuds_512:
+; X64:       # %bb.0:
+; X64-NEXT:    vpdpwuuds %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x74,0x48,0xd3,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <16 x i32> @llvm.x86.avx10.vpdpwuuds.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2)
+  ret <16 x i32> %res
+}

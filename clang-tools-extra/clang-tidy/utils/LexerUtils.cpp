@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "LexerUtils.h"
-#include "clang/AST/AST.h"
 #include "clang/Basic/SourceManager.h"
 #include <optional>
 #include <utility>
@@ -20,9 +19,8 @@ getPreviousTokenAndStart(SourceLocation Location, const SourceManager &SM,
   const std::optional<Token> Tok =
       Lexer::findPreviousToken(Location, SM, LangOpts, !SkipComments);
 
-  if (Tok.has_value()) {
+  if (Tok.has_value())
     return {*Tok, Lexer::GetBeginningOfToken(Tok->getLocation(), SM, LangOpts)};
-  }
 
   Token Token;
   Token.setKind(tok::unknown);

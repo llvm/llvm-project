@@ -89,31 +89,6 @@ class RegSeq<int n, string prefix> {
 // Synchronization and shuffle functions
 //-----------------------------------
 let isConvergent = true in {
-def INT_BARRIER0_POPC : NVPTXInst<(outs B32:$dst), (ins B32:$pred),
-  !strconcat("{{ \n\t",
-             ".reg .pred \t%p1; \n\t",
-             "setp.ne.u32 \t%p1, $pred, 0; \n\t",
-             "bar.red.popc.u32 \t$dst, 0, %p1; \n\t",
-             "}}"),
-      [(set i32:$dst, (int_nvvm_barrier0_popc i32:$pred))]>;
-def INT_BARRIER0_AND : NVPTXInst<(outs B32:$dst), (ins B32:$pred),
-  !strconcat("{{ \n\t",
-             ".reg .pred \t%p1; \n\t",
-             ".reg .pred \t%p2; \n\t",
-             "setp.ne.u32 \t%p1, $pred, 0; \n\t",
-             "bar.red.and.pred \t%p2, 0, %p1; \n\t",
-             "selp.u32 \t$dst, 1, 0, %p2; \n\t",
-             "}}"),
-      [(set i32:$dst, (int_nvvm_barrier0_and i32:$pred))]>;
-def INT_BARRIER0_OR : NVPTXInst<(outs B32:$dst), (ins B32:$pred),
-  !strconcat("{{ \n\t",
-             ".reg .pred \t%p1; \n\t",
-             ".reg .pred \t%p2; \n\t",
-             "setp.ne.u32 \t%p1, $pred, 0; \n\t",
-             "bar.red.or.pred \t%p2, 0, %p1; \n\t",
-             "selp.u32 \t$dst, 1, 0, %p2; \n\t",
-             "}}"),
-      [(set i32:$dst, (int_nvvm_barrier0_or i32:$pred))]>;
 
 def INT_BAR_WARP_SYNC_I : BasicNVPTXInst<(outs), (ins i32imm:$i), "bar.warp.sync",
                              [(int_nvvm_bar_warp_sync imm:$i)]>,
@@ -122,44 +97,73 @@ def INT_BAR_WARP_SYNC_R : BasicNVPTXInst<(outs), (ins B32:$i), "bar.warp.sync",
                              [(int_nvvm_bar_warp_sync i32:$i)]>,
         Requires<[hasPTX<60>, hasSM<30>]>;
 
-multiclass BARRIER1<string asmstr, Intrinsic intrinsic, list<Predicate> requires = []> {
-  def _i : BasicNVPTXInst<(outs), (ins i32imm:$i), asmstr,
-                          [(intrinsic imm:$i)]>,
-           Requires<requires>;
-
-  def _r : BasicNVPTXInst<(outs), (ins B32:$i), asmstr,
-                          [(intrinsic i32:$i)]>,
-           Requires<requires>;
+multiclass BARRIER_ALL<string asmstr, Intrinsic intrinsic, list<Predicate> requires = []> {
+  let Predicates = requires in {
+    def _i : BasicNVPTXInst<(outs), (ins i32imm:$i), asmstr, [(intrinsic imm:$i)]>;
+    def _r : BasicNVPTXInst<(outs), (ins B32:$i), asmstr, [(intrinsic i32:$i)]>;
+  }
 }
 
-multiclass BARRIER2<string asmstr, Intrinsic intrinsic, list<Predicate> requires = []> {
-  def _rr : BasicNVPTXInst<(outs), (ins B32:$i, B32:$j), asmstr,
-                          [(intrinsic i32:$i, i32:$j)]>,
-            Requires<requires>;
-
-  def _ri : BasicNVPTXInst<(outs), (ins B32:$i, i32imm:$j), asmstr,
-                          [(intrinsic i32:$i, imm:$j)]>,
-            Requires<requires>;
-
-  def _ir : BasicNVPTXInst<(outs), (ins i32imm:$i, B32:$j), asmstr,
-                          [(intrinsic imm:$i, i32:$j)]>,
-            Requires<requires>;
-
-  def _ii : BasicNVPTXInst<(outs), (ins i32imm:$i, i32imm:$j), asmstr,
-                          [(intrinsic imm:$i, imm:$j)]>,
-            Requires<requires>;
+multiclass BARRIER_COUNT<string asmstr, Intrinsic intrinsic, list<Predicate> requires = []> {
+  let Predicates = requires in {
+    def _rr : BasicNVPTXInst<(outs), (ins B32:$i, B32:$j), asmstr, 
+                             [(intrinsic i32:$i, i32:$j)]>;
+    def _ri : BasicNVPTXInst<(outs), (ins B32:$i, i32imm:$j), asmstr, 
+                             [(intrinsic i32:$i, imm:$j)]>;
+    def _ir : BasicNVPTXInst<(outs), (ins i32imm:$i, B32:$j), asmstr,
+                             [(intrinsic imm:$i, i32:$j)]>;
+    def _ii : BasicNVPTXInst<(outs), (ins i32imm:$i, i32imm:$j), asmstr,
+                             [(intrinsic imm:$i, imm:$j)]>;
+  }
 }
+
+multiclass BARRIER_RED_ALL<string asmstr, Intrinsic intrinsic, RegTyInfo dst_rt, list<Predicate> requires = []> {
+  let Predicates = requires in {
+    def _ip : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins i32imm:$i, B1:$pred), asmstr,
+                             [(set dst_rt.Ty:$dest, (intrinsic imm:$i, i1:$pred))]>;
+    def _rp : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins B32:$i, B1:$pred), asmstr, 
+                             [(set dst_rt.Ty:$dest, (intrinsic i32:$i, i1:$pred))]>;
+  }
+}
+
+multiclass BARRIER_RED_COUNT<string asmstr, Intrinsic intrinsic, RegTyInfo dst_rt, list<Predicate> requires = []> {
+  let Predicates = requires in {
+    def _rrp : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins B32:$i, B32:$j, B1:$pred), asmstr, 
+                              [(set dst_rt.Ty:$dest, (intrinsic i32:$i, i32:$j, i1:$pred))]>;
+    def _rip : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins B32:$i, i32imm:$j, B1:$pred), asmstr, 
+                              [(set dst_rt.Ty:$dest, (intrinsic i32:$i, imm:$j, i1:$pred))]>;
+    def _irp : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins i32imm:$i, B32:$j, B1:$pred), asmstr,
+                              [(set dst_rt.Ty:$dest, (intrinsic imm:$i, i32:$j, i1:$pred))]>;
+    def _iip : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins i32imm:$i, i32imm:$j, B1:$pred), asmstr,
+                              [(set dst_rt.Ty:$dest, (intrinsic imm:$i, imm:$j, i1:$pred))]>;
+  }
+}
+
 
 // Note the "bar.sync" variants could be renamed to the equivalent corresponding
 // "barrier.*.aligned" variants. We use the older syntax for compatibility with
 // older versions of the PTX ISA.
-defm BARRIER_CTA_SYNC_ALIGNED_ALL : BARRIER1<"bar.sync", int_nvvm_barrier_cta_sync_aligned_all>;
-defm BARRIER_CTA_SYNC_ALIGNED : BARRIER2<"bar.sync", int_nvvm_barrier_cta_sync_aligned_count>;
-defm BARRIER_CTA_ARRIVE_ALIGNED : BARRIER2<"bar.arrive", int_nvvm_barrier_cta_arrive_aligned_count>;
+defm BARRIER_CTA_SYNC_ALIGNED_ALL : BARRIER_ALL<"bar.sync", int_nvvm_barrier_cta_sync_aligned_all>;
+defm BARRIER_CTA_SYNC_ALIGNED : BARRIER_COUNT<"bar.sync", int_nvvm_barrier_cta_sync_aligned_count>;
+defm BARRIER_CTA_ARRIVE_ALIGNED : BARRIER_COUNT<"bar.arrive", int_nvvm_barrier_cta_arrive_aligned_count>;
 
-defm BARRIER_CTA_SYNC_ALL : BARRIER1<"barrier.sync", int_nvvm_barrier_cta_sync_all, [hasPTX<60>]>;
-defm BARRIER_CTA_SYNC : BARRIER2<"barrier.sync", int_nvvm_barrier_cta_sync_count, [hasPTX<60>]>;
-defm BARRIER_CTA_ARRIVE : BARRIER2<"barrier.arrive", int_nvvm_barrier_cta_arrive_count, [hasPTX<60>]>;
+defm BARRIER_CTA_SYNC_ALL : BARRIER_ALL<"barrier.sync", int_nvvm_barrier_cta_sync_all, [hasPTX<60>]>;
+defm BARRIER_CTA_SYNC : BARRIER_COUNT<"barrier.sync", int_nvvm_barrier_cta_sync_count, [hasPTX<60>]>;
+defm BARRIER_CTA_ARRIVE : BARRIER_COUNT<"barrier.arrive", int_nvvm_barrier_cta_arrive_count, [hasPTX<60>]>;
+
+defm BARRIER_CTA_RED_POPC_ALIGNED_ALL : BARRIER_RED_ALL<"bar.red.popc", int_nvvm_barrier_cta_red_popc_aligned_all, I32RT>;
+defm BARRIER_CTA_RED_AND_ALIGNED_ALL : BARRIER_RED_ALL<"bar.red.and", int_nvvm_barrier_cta_red_and_aligned_all, I1RT>;
+defm BARRIER_CTA_RED_OR_ALIGNED_ALL : BARRIER_RED_ALL<"bar.red.or", int_nvvm_barrier_cta_red_or_aligned_all, I1RT>;
+defm BARRIER_CTA_RED_POPC_ALIGNED : BARRIER_RED_COUNT<"bar.red.popc", int_nvvm_barrier_cta_red_popc_aligned_count, I32RT>;
+defm BARRIER_CTA_RED_AND_ALIGNED : BARRIER_RED_COUNT<"bar.red.and", int_nvvm_barrier_cta_red_and_aligned_count, I1RT>;
+defm BARRIER_CTA_RED_OR_ALIGNED : BARRIER_RED_COUNT<"bar.red.or", int_nvvm_barrier_cta_red_or_aligned_count, I1RT>;
+
+defm BARRIER_CTA_RED_POPC_ALL : BARRIER_RED_ALL<"barrier.red.popc", int_nvvm_barrier_cta_red_popc_all, I32RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_AND_ALL : BARRIER_RED_ALL<"barrier.red.and", int_nvvm_barrier_cta_red_and_all, I1RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_OR_ALL : BARRIER_RED_ALL<"barrier.red.or", int_nvvm_barrier_cta_red_or_all, I1RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_POPC_COUNT : BARRIER_RED_COUNT<"barrier.red.popc", int_nvvm_barrier_cta_red_popc_count, I32RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_AND_COUNT : BARRIER_RED_COUNT<"barrier.red.and", int_nvvm_barrier_cta_red_and_count, I1RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_OR_COUNT : BARRIER_RED_COUNT<"barrier.red.or", int_nvvm_barrier_cta_red_or_count, I1RT, [hasPTX<60>]>;
 
 class INT_BARRIER_CLUSTER<string variant, Intrinsic Intr,
                           list<Predicate> Preds = [hasPTX<78>, hasSM<90>]>:
@@ -1672,13 +1676,21 @@ multiclass FMA_INST {
     FMA_TUPLE<"_rp_f64", int_nvvm_fma_rp_d, B64>,
 
     FMA_TUPLE<"_rn_ftz_f32", int_nvvm_fma_rn_ftz_f, B32>,
+    FMA_TUPLE<"_rn_ftz_sat_f32", int_nvvm_fma_rn_ftz_sat_f, B32>,
     FMA_TUPLE<"_rn_f32", int_nvvm_fma_rn_f, B32>,
+    FMA_TUPLE<"_rn_sat_f32", int_nvvm_fma_rn_sat_f, B32>,
     FMA_TUPLE<"_rz_ftz_f32", int_nvvm_fma_rz_ftz_f, B32>,
+    FMA_TUPLE<"_rz_ftz_sat_f32", int_nvvm_fma_rz_ftz_sat_f, B32>,
     FMA_TUPLE<"_rz_f32", int_nvvm_fma_rz_f, B32>,
+    FMA_TUPLE<"_rz_sat_f32", int_nvvm_fma_rz_sat_f, B32>,
     FMA_TUPLE<"_rm_f32", int_nvvm_fma_rm_f, B32>,
+    FMA_TUPLE<"_rm_sat_f32", int_nvvm_fma_rm_sat_f, B32>,
     FMA_TUPLE<"_rm_ftz_f32", int_nvvm_fma_rm_ftz_f, B32>,
+    FMA_TUPLE<"_rm_ftz_sat_f32", int_nvvm_fma_rm_ftz_sat_f, B32>,
     FMA_TUPLE<"_rp_f32", int_nvvm_fma_rp_f, B32>,
+    FMA_TUPLE<"_rp_sat_f32", int_nvvm_fma_rp_sat_f, B32>,
     FMA_TUPLE<"_rp_ftz_f32", int_nvvm_fma_rp_ftz_f, B32>,
+    FMA_TUPLE<"_rp_ftz_sat_f32", int_nvvm_fma_rp_ftz_sat_f, B32>,
 
     FMA_TUPLE<"_rn_f16", int_nvvm_fma_rn_f16, B16, [hasPTX<42>, hasSM<53>]>,
     FMA_TUPLE<"_rn_ftz_f16", int_nvvm_fma_rn_ftz_f16, B16,
@@ -1728,6 +1740,32 @@ multiclass FMA_INST {
 }
 
 defm INT_NVVM_FMA : FMA_INST;
+
+foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
+  foreach sat = ["", "_sat"] in {
+    foreach type = [f16, bf16] in {
+      def INT_NVVM_MIXED_FMA # rnd # sat # _f32_ # type : 
+        BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B16:$b, B32:$c),
+          !subst("_", ".", "fma" # rnd # sat # "_f32_" # type),
+          [(set f32:$dst, 
+           (!cast<Intrinsic>("int_nvvm_fma" # rnd # sat # "_f") 
+             (f32 (fpextend type:$a)),
+             (f32 (fpextend type:$b)),
+             f32:$c))]>,
+        Requires<[hasSM<100>, hasPTX<86>]>;
+    }
+  }
+}
+
+// Pattern for llvm.fma.f32 intrinsic when there is no FTZ flag
+let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
+  def : Pat<(f32 (fma (f32 (fpextend f16:$a)),
+                      (f32 (fpextend f16:$b)), f32:$c)),
+            (INT_NVVM_MIXED_FMA_rn_f32_f16 B16:$a, B16:$b, B32:$c)>;
+  def : Pat<(f32 (fma (f32 (fpextend bf16:$a)), 
+                      (f32 (fpextend bf16:$b)), f32:$c)),
+            (INT_NVVM_MIXED_FMA_rn_f32_bf16 B16:$a, B16:$b, B32:$c)>;
+}
 
 //
 // Rcp
@@ -1828,18 +1866,94 @@ let Predicates = [doRsqrtOpt] in {
 //
 
 def INT_NVVM_ADD_RN_FTZ_F : F_MATH_2<"add.rn.ftz.f32", B32, B32, B32, int_nvvm_add_rn_ftz_f>;
+def INT_NVVM_ADD_RN_SAT_FTZ_F : F_MATH_2<"add.rn.sat.ftz.f32", B32, B32, B32, int_nvvm_add_rn_ftz_sat_f>;
 def INT_NVVM_ADD_RN_F : F_MATH_2<"add.rn.f32", B32, B32, B32, int_nvvm_add_rn_f>;
+def INT_NVVM_ADD_RN_SAT_F : F_MATH_2<"add.rn.sat.f32", B32, B32, B32, int_nvvm_add_rn_sat_f>;
 def INT_NVVM_ADD_RZ_FTZ_F : F_MATH_2<"add.rz.ftz.f32", B32, B32, B32, int_nvvm_add_rz_ftz_f>;
+def INT_NVVM_ADD_RZ_SAT_FTZ_F : F_MATH_2<"add.rz.sat.ftz.f32", B32, B32, B32, int_nvvm_add_rz_ftz_sat_f>;
 def INT_NVVM_ADD_RZ_F : F_MATH_2<"add.rz.f32", B32, B32, B32, int_nvvm_add_rz_f>;
+def INT_NVVM_ADD_RZ_SAT_F : F_MATH_2<"add.rz.sat.f32", B32, B32, B32, int_nvvm_add_rz_sat_f>;
 def INT_NVVM_ADD_RM_FTZ_F : F_MATH_2<"add.rm.ftz.f32", B32, B32, B32, int_nvvm_add_rm_ftz_f>;
+def INT_NVVM_ADD_RM_SAT_FTZ_F : F_MATH_2<"add.rm.sat.ftz.f32", B32, B32, B32, int_nvvm_add_rm_ftz_sat_f>;
 def INT_NVVM_ADD_RM_F : F_MATH_2<"add.rm.f32", B32, B32, B32, int_nvvm_add_rm_f>;
+def INT_NVVM_ADD_RM_SAT_F : F_MATH_2<"add.rm.sat.f32", B32, B32, B32, int_nvvm_add_rm_sat_f>;
 def INT_NVVM_ADD_RP_FTZ_F : F_MATH_2<"add.rp.ftz.f32", B32, B32, B32, int_nvvm_add_rp_ftz_f>;
+def INT_NVVM_ADD_RP_SAT_FTZ_F : F_MATH_2<"add.rp.sat.ftz.f32", B32, B32, B32, int_nvvm_add_rp_ftz_sat_f>;
 def INT_NVVM_ADD_RP_F : F_MATH_2<"add.rp.f32", B32, B32, B32, int_nvvm_add_rp_f>;
+def INT_NVVM_ADD_RP_SAT_F : F_MATH_2<"add.rp.sat.f32", B32, B32, B32, int_nvvm_add_rp_sat_f>;
 
 def INT_NVVM_ADD_RN_D : F_MATH_2<"add.rn.f64", B64, B64, B64, int_nvvm_add_rn_d>;
 def INT_NVVM_ADD_RZ_D : F_MATH_2<"add.rz.f64", B64, B64, B64, int_nvvm_add_rz_d>;
 def INT_NVVM_ADD_RM_D : F_MATH_2<"add.rm.f64", B64, B64, B64, int_nvvm_add_rm_d>;
 def INT_NVVM_ADD_RP_D : F_MATH_2<"add.rp.f64", B64, B64, B64, int_nvvm_add_rp_d>;
+
+foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
+  foreach sat = ["", "_sat"] in {
+    foreach type = [f16, bf16] in {
+      def INT_NVVM_MIXED_ADD # rnd # sat # _f32_ # type : 
+        BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B32:$b),
+          !subst("_", ".", "add" # rnd # sat # "_f32_" # type),
+          [(set f32:$dst, 
+           (!cast<Intrinsic>("int_nvvm_add" # rnd # sat # "_f") 
+             (f32 (fpextend type:$a)),
+             f32:$b))]>,
+        Requires<[hasSM<100>, hasPTX<86>]>;
+    }
+  }
+}
+
+// Pattern for fadd when there is no FTZ flag
+let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
+  def : Pat<(f32 (fadd (f32 (fpextend f16:$a)), f32:$b)),
+            (INT_NVVM_MIXED_ADD_rn_f32_f16 B16:$a, B32:$b)>;
+  def : Pat<(f32 (fadd (f32 (fpextend bf16:$a)), f32:$b)),
+            (INT_NVVM_MIXED_ADD_rn_f32_bf16 B16:$a, B32:$b)>;
+}
+
+//
+// Sub
+//
+
+foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
+  foreach ftz = ["", "_ftz"] in {
+    foreach sat = ["", "_sat"] in {
+      defvar add_intrin = !cast<Intrinsic>("int_nvvm_add" # rnd # ftz # sat # "_f");
+      def INT_NVVM_SUB # rnd # ftz # sat # _F : 
+        BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
+          !subst("_", ".", "sub" # rnd # sat # ftz # "_f32"),
+          [(set f32:$dst, (add_intrin f32:$a, (f32 (fneg f32:$b))))]>;
+    }
+  }
+  
+  defvar add_intrin = !cast<Intrinsic>("int_nvvm_add" # rnd # "_d");
+  def INT_NVVM_SUB # rnd # _D : 
+    BasicNVPTXInst<(outs B64:$dst), (ins B64:$a, B64:$b),
+      !subst("_", ".", "sub" # rnd # "_f64"),
+      [(set f64:$dst, (add_intrin f64:$a, (f64 (fneg f64:$b))))]>;
+}
+
+foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
+  foreach sat = ["", "_sat"] in {
+    foreach type = [f16, bf16] in {
+      def INT_NVVM_MIXED_SUB # rnd # sat # _f32_ # type : 
+        BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B32:$b),
+          !subst("_", ".", "sub" # rnd # sat # "_f32_" # type),
+          [(set f32:$dst, 
+           (!cast<Intrinsic>("int_nvvm_add" # rnd # sat # "_f") 
+             (f32 (fpextend type:$a)),
+             (f32 (fneg f32:$b))))]>,
+        Requires<[hasSM<100>, hasPTX<86>]>;
+    }
+  }
+}
+
+// Pattern for fsub when there is no FTZ flag
+let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
+  def : Pat<(f32 (fsub (f32 (fpextend f16:$a)), f32:$b)),
+            (INT_NVVM_MIXED_SUB_rn_f32_f16 B16:$a, B32:$b)>;
+  def : Pat<(f32 (fsub (f32 (fpextend bf16:$a)), f32:$b)),
+            (INT_NVVM_MIXED_SUB_rn_f32_bf16 B16:$a, B32:$b)>;
+}
 
 //
 // BFIND
@@ -6122,3 +6236,4 @@ foreach sp = [0, 1] in {
     }
   }
 }
+
