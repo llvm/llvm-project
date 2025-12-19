@@ -402,6 +402,14 @@ TEST(StringRefTest, ConsumeFrontChar) {
   }
 
   {
+    StringRef Str("\0");
+    EXPECT_FALSE(Str.consume_front('\0'));
+    EXPECT_EQ("", Str);
+    EXPECT_FALSE(Str.consume_front('\0'));
+    EXPECT_EQ("", Str);
+  }
+
+  {
     char Prefix = 'h';
     StringRef Str("h");
     EXPECT_TRUE(Str.consume_front(Prefix));
