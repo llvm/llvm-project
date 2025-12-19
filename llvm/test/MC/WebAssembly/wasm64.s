@@ -1,10 +1,15 @@
-# RUN: llvm-mc -triple=wasm64-unknown-unknown -mattr=+atomics,+simd128,+nontrapping-fptoint,+exception-handling < %s | FileCheck %s
-# RUN: llvm-mc -triple=wasm64-unknown-unknown -filetype=obj -mattr=+atomics,+simd128,+nontrapping-fptoint,+exception-handling -o - < %s | obj2yaml | FileCheck %s -check-prefix=BIN
+# RUN: llvm-mc -triple=wasm64-unknown-unknown -mattr=+atomics,+reference-types,+simd128,+nontrapping-fptoint,+exception-handling < %s | FileCheck %s
+# RUN: llvm-mc -triple=wasm64-unknown-unknown -filetype=obj -mattr=+atomics,+reference-types,+simd128,+nontrapping-fptoint,+exception-handling -o - < %s | obj2yaml | FileCheck %s -check-prefix=BIN
 
 # Most of our other tests are for wasm32, this one adds some wasm64 specific tests.
 
 .globaltype myglob64, i64
 .globaltype __stack_pointer, i64
+
+table1:
+    .tabletype table1, funcref, i32
+table2:
+    .tabletype table2, funcref, i64
 
 test:
     .functype   test (i64) -> ()
@@ -59,6 +64,18 @@ test:
     global.get  __stack_pointer
     drop
 
+    ### table address type
+
+    ref.null_func
+    i32.const 0
+    table.grow table1
+    drop
+
+    ref.null_func
+    i64.const 0
+    table.grow table2
+    drop
+
     end_function
 
     .section    .rodata..L.str,"",@
@@ -71,6 +88,9 @@ test:
 
 
 # CHECK:              .globaltype     myglob64, i64
+
+# CHECK:              .tabletype table1, funcref, i32  
+# CHECK:              .tabletype table2, funcref, i64  
 
 # CHECK:              .functype       test (i64) -> ()
 # CHECK-NEXT:         .local          i64
@@ -159,41 +179,58 @@ test:
 # BIN-NEXT:         GlobalMutable:   true
 # BIN-NEXT:   - Type:            FUNCTION
 # BIN-NEXT:     FunctionTypes:   [ 0 ]
+# BIN-NEXT:   - Type:            TABLE
+# BIN-NEXT:     Tables:
+# BIN-NEXT:       - Index:           0
+# BIN-NEXT:         ElemType:        FUNCREF
+# BIN-NEXT:         Limits:
+# BIN-NEXT:           Minimum:         0x0
+# BIN-NEXT:       - Index:           1
+# BIN-NEXT:         ElemType:        FUNCREF
+# BIN-NEXT:         Limits:
+# BIN-NEXT:           Flags:           [ IS_64 ]
+# BIN-NEXT:           Minimum:         0x0
 # BIN-NEXT:   - Type:            DATACOUNT
 # BIN-NEXT:     Count:           1
 # BIN-NEXT:   - Type:            CODE
 # BIN-NEXT:     Relocations:
 # BIN-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB64
-# BIN-NEXT:         Index:           1
+# BIN-NEXT:         Index:           3
 # BIN-NEXT:         Offset:          0x13
 # BIN-NEXT:       - Type:            R_WASM_GLOBAL_INDEX_LEB
-# BIN-NEXT:         Index:           2
+# BIN-NEXT:         Index:           4
 # BIN-NEXT:         Offset:          0x22
 # BIN-NEXT:       - Type:            R_WASM_MEMORY_ADDR_LEB64
-# BIN-NEXT:         Index:           1
+# BIN-NEXT:         Index:           3
 # BIN-NEXT:         Offset:          0x2F
 # BIN-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB64
-# BIN-NEXT:         Index:           1
+# BIN-NEXT:         Index:           3
 # BIN-NEXT:         Offset:          0x4F
 # BIN-NEXT:       - Type:            R_WASM_GLOBAL_INDEX_LEB
-# BIN-NEXT:         Index:           2
+# BIN-NEXT:         Index:           4
 # BIN-NEXT:         Offset:          0x62
 # BIN-NEXT:       - Type:            R_WASM_MEMORY_ADDR_LEB64
-# BIN-NEXT:         Index:           1
+# BIN-NEXT:         Index:           3
 # BIN-NEXT:         Offset:          0x78
 # BIN-NEXT:       - Type: R_WASM_GLOBAL_INDEX_LEB
-# BIN-NEXT:         Index: 3
+# BIN-NEXT:         Index: 5
 # BIN-NEXT:         Offset: 0x83
+# BIN-NEXT:       - Type: R_WASM_TABLE_NUMBER_LEB
+# BIN-NEXT:         Index: 0
+# BIN-NEXT:         Offset: 0x8F
+# BIN-NEXT:       - Type: R_WASM_TABLE_NUMBER_LEB
+# BIN-NEXT:         Index: 1
+# BIN-NEXT:         Offset: 0x9B
 # BIN-NEXT:     Functions:
 # BIN-NEXT:       - Index:           0
 # BIN-NEXT:         Locals:
 # BIN-NEXT:           - Type:            I64
 # BIN-NEXT:             Count:           1
-# BIN-NEXT:         Body:            42002A02001A20002A02001A42808080808080808080002A02001A2380808080002A02001A42002A02808080808080808080001A4200430000000038020020004300000000380200428080808080808080800043000000003802002380808080004300000000380200420043000000003802808080808080808080002381808080001A0B
+# BIN-NEXT:         Body:            42002A02001A20002A02001A42808080808080808080002A02001A2380808080002A02001A42002A02808080808080808080001A4200430000000038020020004300000000380200428080808080808080800043000000003802002380808080004300000000380200420043000000003802808080808080808080002381808080001AD0704100FC0F80808080001AD0704200FC0F81808080001A0B
 # BIN-NEXT:   - Type:            DATA
 # BIN-NEXT:     Relocations:
 # BIN-NEXT:       - Type:            R_WASM_MEMORY_ADDR_I64
-# BIN-NEXT:         Index:           1
+# BIN-NEXT:         Index:           3
 # BIN-NEXT:         Offset:          0x16
 # BIN-NEXT:     Segments:
 # BIN-NEXT:       - SectionOffset:   6
@@ -207,22 +244,32 @@ test:
 # BIN-NEXT:     Version:         2
 # BIN-NEXT:     SymbolTable:
 # BIN-NEXT:       - Index:           0
+# BIN-NEXT:         Kind:            TABLE
+# BIN-NEXT:         Name:            table1
+# BIN-NEXT:         Flags:           [ BINDING_LOCAL ]
+# BIN-NEXT:         Table:           0
+# BIN-NEXT:       - Index:           1
+# BIN-NEXT:         Kind:            TABLE
+# BIN-NEXT:         Name:            table2
+# BIN-NEXT:         Flags:           [ BINDING_LOCAL ]
+# BIN-NEXT:         Table:           1
+# BIN-NEXT:       - Index:           2
 # BIN-NEXT:         Kind:            FUNCTION
 # BIN-NEXT:         Name:            test
 # BIN-NEXT:         Flags:           [ BINDING_LOCAL ]
 # BIN-NEXT:         Function:        0
-# BIN-NEXT:       - Index:           1
+# BIN-NEXT:       - Index:           3
 # BIN-NEXT:         Kind:            DATA
 # BIN-NEXT:         Name:            .L.str
 # BIN-NEXT:         Flags:           [ BINDING_LOCAL, VISIBILITY_HIDDEN ]
 # BIN-NEXT:         Segment:         0
 # BIN-NEXT:         Size:            24
-# BIN-NEXT:       - Index:           2
+# BIN-NEXT:       - Index:           4
 # BIN-NEXT:         Kind:            GLOBAL
 # BIN-NEXT:         Name:            myglob64
 # BIN-NEXT:         Flags:           [ UNDEFINED ]
 # BIN-NEXT:         Global:          0
-# BIN-NEXT:       - Index:           3
+# BIN-NEXT:       - Index:           5
 # BIN-NEXT:         Kind:            GLOBAL
 # BIN-NEXT:         Name:            __stack_pointer
 # BIN-NEXT:         Flags:           [ UNDEFINED ]
