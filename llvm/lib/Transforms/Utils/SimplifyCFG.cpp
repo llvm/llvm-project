@@ -319,6 +319,7 @@ class SimplifyCFGOpt {
   bool simplifySwitchOnSelect(SwitchInst *SI, SelectInst *Select);
   bool simplifyIndirectBrOnSelect(IndirectBrInst *IBI, SelectInst *SI);
   bool turnSwitchRangeIntoICmp(SwitchInst *SI, IRBuilder<> &Builder);
+  bool simplifyDuplicatePredecessors(BasicBlock *Succ, DomTreeUpdater *DTU);
 
 public:
   SimplifyCFGOpt(const TargetTransformInfo &TTI, DomTreeUpdater *DTU,
@@ -8666,6 +8667,219 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
 
   return false;
 }
+/// Checking whether two BBs are equal depends on the contents of the
+/// BasicBlock and the incoming values of their successor PHINodes.
+/// PHINode::getIncomingValueForBlock is O(|Preds|), so we'd like to avoid
+/// calling this function on each BasicBlock every time isEqual is called,
+/// especially since the same BasicBlock may be passed as an argument multiple
+/// times. To do this, we can precompute a map of PHINode -> Pred BasicBlock ->
+/// IncomingValue and add it in the Wrapper so isEqual can do O(1) checking
+/// of the incoming values.
+struct EqualBBWrapper {
+  BasicBlock *BB;
+
+  // One Phi usually has < 8 incoming values.
+  using BB2ValueMap = SmallDenseMap<BasicBlock *, Value *, 8>;
+  using Phi2IVsMap = DenseMap<PHINode *, BB2ValueMap>;
+  Phi2IVsMap *PhiPredIVs;
+};
+
+template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
+  static const EqualBBWrapper *getEmptyKey() {
+    return static_cast<EqualBBWrapper *>(DenseMapInfo<void *>::getEmptyKey());
+  }
+  static const EqualBBWrapper *getTombstoneKey() {
+    return static_cast<EqualBBWrapper *>(
+        DenseMapInfo<void *>::getTombstoneKey());
+  }
+  static unsigned getHashValue(const EqualBBWrapper *SSW) {
+    BasicBlock *BB = SSW->BB;
+    BranchInst *BI = cast<BranchInst>(BB->getTerminator());
+    assert(BI->isUnconditional() &&
+           "Only supporting unconditional branches for now");
+    assert(BI->getNumSuccessors() == 1 &&
+           "Expected unconditional branches to have one successor");
+    assert(BB->size() == 1 && "Expected just a single branch in the BB");
+
+    // Since we assume the BB is just a single BranchInst with a single
+    // successor, we hash as the BB and the incoming Values of its successor
+    // PHIs. Initially, we tried to just use the successor BB as the hash, but
+    // including the incoming PHI values leads to better performance.
+    // We also tried to build a map from BB -> Succs.IncomingValues ahead of
+    // time and passing it in SwitchSuccWrapper, but this slowed down the
+    // average compile time without having any impact on the worst case compile
+    // time.
+    BasicBlock *Succ = BI->getSuccessor(0);
+    auto PhiValsForBB = map_range(
+        BB->phis(), [BB, &PhiPredIVs = *SSW->PhiPredIVs](PHINode &Phi) {
+          return PhiPredIVs[&Phi][BB];
+        });
+    return hash_combine(Succ, hash_combine_range(PhiValsForBB));
+  }
+  static bool isEqual(const EqualBBWrapper *LHS, const EqualBBWrapper *RHS) {
+    auto *EKey = DenseMapInfo<EqualBBWrapper *>::getEmptyKey();
+    auto *TKey = DenseMapInfo<EqualBBWrapper *>::getTombstoneKey();
+    if (LHS == EKey || RHS == EKey || LHS == TKey || RHS == TKey)
+      return LHS == RHS;
+
+    BasicBlock *A = LHS->BB;
+    BasicBlock *B = RHS->BB;
+
+    // FIXME: we checked that the size of A and B are both 1 in
+    // simplifyDuplicateSwitchArms to make the Case list smaller to
+    // improve performance. If we decide to support BasicBlocks with more
+    // than just a single instruction, we need to check that A.size() ==
+    // B.size() here, and we need to check more than just the BranchInsts
+    // for equality.
+
+    BranchInst *ABI = cast<BranchInst>(A->getTerminator());
+    BranchInst *BBI = cast<BranchInst>(B->getTerminator());
+    assert(ABI->isUnconditional() && BBI->isUnconditional() &&
+           "Only supporting unconditional branches for now");
+    if (ABI->getSuccessor(0) != BBI->getSuccessor(0))
+      return false;
+
+    // Need to check that PHIs in successor have matching values
+    BasicBlock *Succ = ABI->getSuccessor(0);
+    auto IfPhiIVMatch = [A, B, &PhiPredIVs = *LHS->PhiPredIVs](PHINode &Phi) {
+      // Replace O(|Pred|) Phi.getIncomingValueForBlock with this O(1) hashmap
+      // query
+      auto &PredIVs = PhiPredIVs[&Phi];
+      return PredIVs[A] == PredIVs[B];
+    };
+    return all_of(Succ->phis(), IfPhiIVMatch);
+  }
+};
+
+bool SimplifyCFGOpt::simplifyDuplicatePredecessors(BasicBlock *BB,
+                                                   DomTreeUpdater *DTU) {
+  // Need at least 2 predecessors to do anything.
+  if (!BB || pred_empty(BB))
+    return false;
+  // Precompute PHI incoming values in BB for all candidate preds.
+  // PhiPredIVs[Phi][Pred] = incoming value
+  EqualBBWrapper::Phi2IVsMap PhiPredIVs;
+
+  // Collect candidate non-entry predecessors P with:
+  // - terminator unconditional br to Succ,
+  // - does not have address taken / weird control.
+  auto Filter = [BB](BasicBlock *Pred) {
+    // Entry block cannot be eliminated or have predecessors.
+    if (Pred->isEntryBlock())
+      return false;
+
+    // Single successor and must be Succ.
+    auto *BI = dyn_cast<BranchInst>(Pred->getTerminator());
+    if (!BI || !BI->isUnconditional())
+      return false;
+
+    // Avoid blocks that are "address-taken" (blockaddress) or have unusual
+    // uses.
+    if (Pred->hasAddressTaken())
+      return false;
+    if (Pred->isLandingPad())
+      return false;
+
+    // TODO: should we support Pred with >1 instructions?
+    if (Pred->size() != 1)
+      return false;
+
+    // Avoid self-loop predecessor merging for now.
+    if (Pred == BB)
+      return false;
+
+    return true;
+  };
+
+  auto FilteredPreds = make_filter_range(predecessors(BB), Filter);
+
+  SmallVector<EqualBBWrapper> Preds(
+      map_range(FilteredPreds, [&PhiPredIVs](BasicBlock *Pred) {
+        return EqualBBWrapper{Pred, &PhiPredIVs};
+      }));
+
+  if (Preds.size() < 2)
+    return false;
+
+  SmallVector<PHINode *, 8> Phis(make_pointer_range(BB->phis()));
+
+  PhiPredIVs.reserve(Phis.size());
+  for (PHINode *Phi : Phis) {
+    auto &IVs =
+        PhiPredIVs.try_emplace(Phi, Phi->getNumIncomingValues()).first->second;
+    // Pre-fill all incoming for O(1) lookup as Phi.getIncomingValueForBlock is
+    // O(|Pred|).
+    for (auto &IV : Phi->incoming_values())
+      IVs.insert({Phi->getIncomingBlock(IV), IV.get()});
+  }
+
+  // Group duplicates using DenseSet with custom equality/hashing.
+  DenseSet<const EqualBBWrapper *> Keep;
+  Keep.reserve(Preds.size());
+
+  SmallVector<DominatorTree::UpdateType> Updates;
+  Updates.reserve(Preds.size() * 2);
+
+  bool MadeChange = false;
+
+  // Helper: redirect all edges X -> DeadPred to X -> LivePred.
+  auto RedirectIncomingEdges = [&](BasicBlock *DeadPred, BasicBlock *LivePred) {
+    // Replace successors in all predecessors of DeadPred.
+    SmallSetVector<BasicBlock *, 8> DeadPredPreds(llvm::from_range,
+                                                  predecessors(DeadPred));
+    if (DTU) {
+      // All predecessors of DeadPred (except the common predecessor) will be
+      // moved to LivePred.
+      Updates.reserve(Updates.size() + DeadPredPreds.size() * 2);
+      SmallPtrSet<BasicBlock *, 16> LivePredPreds(llvm::from_range,
+                                                  predecessors(LivePred));
+      for (BasicBlock *PP : DeadPredPreds) {
+        // Do not modify those common predecessors of DeadPred and LivePred
+        if (!LivePredPreds.contains(PP))
+          Updates.push_back({DominatorTree::Insert, PP, LivePred});
+        Updates.push_back({DominatorTree::Delete, PP, DeadPred});
+      }
+    }
+    LLVM_DEBUG(dbgs() << "Replacing duplicate pred BB ";
+               DeadPred->printAsOperand(dbgs()); dbgs() << " with pred ";
+               LivePred->printAsOperand(dbgs()); dbgs() << " for ";
+               BB->printAsOperand(dbgs()); dbgs() << "\n");
+    for (BasicBlock *PP : DeadPredPreds) {
+      Instruction *T = PP->getTerminator();
+      T->replaceSuccessorWith(DeadPred, LivePred);
+    }
+  };
+
+  // Try to canonicalize duplicates.
+  for (const auto &Pred : Preds) {
+    // Pred is a candidate for simplification. If we find a duplicate BB,
+    // replace it.
+    const auto [It, Inserted] = Keep.insert(&Pred);
+    if (Inserted)
+      continue;
+
+    // Found duplicate: merge P into canonical predecessor It->Pred.
+    BasicBlock *KeepPred = (*It)->BB;
+    BasicBlock *DeadPred = Pred.BB;
+
+    // Avoid merging if either is the other's predecessor in weird ways.
+    if (KeepPred == DeadPred)
+      continue;
+
+    // Redirect all edges into DeadPred to KeepPred.
+    RedirectIncomingEdges(DeadPred, KeepPred);
+
+    // Now DeadPred should become unreachable; leave DCE to later,
+    // but we can try to simplify it if it only branches to Succ.
+    // (We won't erase here to keep the routine simple and DT-safe.)
+    MadeChange = true;
+  }
+
+  if (DTU && !Updates.empty())
+    DTU->applyUpdates(Updates);
+
+  return MadeChange;
+}
 
 /// Check if passing a value to an instruction will cause undefined behavior.
 static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValueMayBeModified) {
@@ -8912,8 +9126,6 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
       return true;
     }
 
-  IRBuilder<> Builder(BB);
-
   if (Options.SpeculateBlocks &&
       !BB->getParent()->hasFnAttribute(Attribute::OptForFuzzing)) {
     // If there is a trivial two-entry PHI node in this basic block, and we can
@@ -8925,6 +9137,11 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
           return true;
   }
 
+  // Merge identical predecessors of this block
+  if (simplifyDuplicatePredecessors(BB, DTU))
+    return true;
+
+  IRBuilder<> Builder(BB);
   Instruction *Terminator = BB->getTerminator();
   Builder.SetInsertPoint(Terminator);
   switch (Terminator->getOpcode()) {
