@@ -975,7 +975,7 @@ class OpenMP_NumTeamsClauseSkip<
                     extraClassDeclaration> {
   let arguments = (ins
     ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$num_teams_num_dims,
-    Variadic<AnyInteger>:$num_teams_dims_values,
+    Variadic<IntLikeType>:$num_teams_dims_values,
     Optional<AnyInteger>:$num_teams_lower,
     Optional<AnyInteger>:$num_teams_upper
   );
