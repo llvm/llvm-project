@@ -1,4 +1,4 @@
-add_distinct_clang_unittest(ClangScalableAnalysisFrameworkTests
+add_distinct_clang_unittest(ClangScalableAnalysisTests
   ASTEntityMappingTest.cpp
   BuildNamespaceTest.cpp
   EntityNameTest.cpp
@@ -18,9 +18,4 @@ add_distinct_clang_unittest(ClangScalableAnalysisFrameworkTests
   LLVM_COMPONENTS
   FrontendOpenMP
   Support
-  )
-
-add_custom_target(ClangScalableAnalysisTests
-  DEPENDS
-  ClangScalableAnalysisFrameworkTests
   )
