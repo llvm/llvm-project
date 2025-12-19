@@ -64,6 +64,14 @@
   ((__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[0]) == 0xfe &&            \
    (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[1] & 0xc0) == 0xc0)
 
+#define IN6_IS_ADDR_V4MAPPED(a)                                                \
+  ((__LLVM_LIBC_CAST(reinterpret_cast, uint32_t *, a)[0]) == 0 &&              \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint32_t *, a)[1]) == 0 &&              \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[8]) == 0 &&               \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[9]) == 0 &&               \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[10]) == 0xff &&           \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[11]) == 0xff)
+
 #define IN6_IS_ADDR_MC_NODELOCAL(a)                                            \
   (IN6_IS_ADDR_MULTICAST(a) &&                                                 \
    (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[1] & 0xf) == 0x1)
