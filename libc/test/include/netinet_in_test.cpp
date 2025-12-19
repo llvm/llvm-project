@@ -19,6 +19,11 @@ TEST(LlvmLibcNetinetInTest, IN6Macro) {
     buff[i] = 0;
   }
 
+  EXPECT_FALSE(IN6_IS_ADDR_LOOPBACK(buff));
+  buff[15] = 1;
+  EXPECT_TRUE(IN6_IS_ADDR_LOOPBACK(buff));
+  buff[15] = 0;
+
   buff[0] = 0xfe;
   buff[1] = 0x80;
   EXPECT_TRUE(IN6_IS_ADDR_LINKLOCAL(buff));
