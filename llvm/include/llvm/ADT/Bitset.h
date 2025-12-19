@@ -42,6 +42,9 @@ class Bitset {
   static constexpr unsigned NumWords =
       (NumBits + BitwordBits - 1) / BitwordBits;
 
+  // Returns the index of the last word (0-based). The last word may be
+  // partially filled and requires masking to maintain the invariant that
+  // unused high bits are always zero.
   static constexpr unsigned getLastWordIndex() { return NumWords - 1; }
 
   using StorageType = std::array<BitWord, NumWords>;
@@ -188,67 +191,6 @@ public:
         return LHS < RHS;
     }
     return false;
-  }
-
-  constexpr Bitset &operator<<=(unsigned N) {
-    if (N == 0)
-      return *this;
-    if (N >= NumBits) {
-      return *this = Bitset();
-    }
-    const unsigned WordShift = N / BitwordBits;
-    const unsigned BitShift = N % BitwordBits;
-    if (BitShift == 0) {
-      for (int I = getLastWordIndex(); I >= static_cast<int>(WordShift); --I)
-        Bits[I] = Bits[I - WordShift];
-    } else {
-      const unsigned CarryShift = BitwordBits - BitShift;
-      for (int I = getLastWordIndex(); I > static_cast<int>(WordShift); --I) {
-        Bits[I] = (Bits[I - WordShift] << BitShift) |
-                  (Bits[I - WordShift - 1] >> CarryShift);
-      }
-      Bits[WordShift] = Bits[0] << BitShift;
-    }
-    for (unsigned I = 0; I < WordShift; ++I)
-      Bits[I] = 0;
-    maskLastWord();
-    return *this;
-  }
-
-  constexpr Bitset operator<<(unsigned N) const {
-    Bitset Result(*this);
-    Result <<= N;
-    return Result;
-  }
-
-  constexpr Bitset &operator>>=(unsigned N) {
-    if (N == 0)
-      return *this;
-    if (N >= NumBits) {
-      return *this = Bitset();
-    }
-    const unsigned WordShift = N / BitwordBits;
-    const unsigned BitShift = N % BitwordBits;
-    if (BitShift == 0) {
-      for (unsigned I = 0; I < NumWords - WordShift; ++I)
-        Bits[I] = Bits[I + WordShift];
-    } else {
-      const unsigned CarryShift = BitwordBits - BitShift;
-      for (unsigned I = 0; I < NumWords - WordShift - 1; ++I) {
-        Bits[I] = (Bits[I + WordShift] >> BitShift) |
-                  (Bits[I + WordShift + 1] << CarryShift);
-      }
-      Bits[NumWords - WordShift - 1] = Bits[getLastWordIndex()] >> BitShift;
-    }
-    for (unsigned I = NumWords - WordShift; I < NumWords; ++I)
-      Bits[I] = 0;
-    return *this;
-  }
-
-  constexpr Bitset operator>>(unsigned N) const {
-    Bitset Result(*this);
-    Result >>= N;
-    return Result;
   }
 };
 
