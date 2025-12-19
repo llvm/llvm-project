@@ -120,6 +120,13 @@ def SymbolOp : TEST_Op<"symbol", [NoMemoryEffect, Symbol]> {
                        OptionalAttr<StrAttr>:$sym_visibility);
 }
 
+def SymbolWithResultOp : TEST_Op<"symbol_with_result", [Symbol]> {
+  let summary = "invalid symbol operation that produces an SSA result";
+  let arguments = (ins StrAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility);
+  let results = (outs AnyType:$result);
+}
+
 def OverriddenSymbolVisibilityOp : TEST_Op<"overridden_symbol_visibility", [
   DeclareOpInterfaceMethods<Symbol, ["getVisibility", "setVisibility"]>,
 ]> {
@@ -2343,6 +2350,24 @@ def IsolatedGraphRegionOp : TEST_Op<"isolated_graph_region",  [
 
   let regions = (region AnyRegion:$region);
   let assemblyFormat = "attr-dict-with-keyword $region";
+}
+
+def ManyRegionsOp : TEST_Op<"many_regions", []> {
+  let summary = "operation created with move-only objects";
+  let description = [{
+    Test op with multiple regions with a `create` function that
+    takes parameters containing move-only objects.
+  }];
+
+  let regions = (region VariadicRegion<AnyRegion>:$regions);
+  let builders =
+      [OpBuilder<(ins "::std::unique_ptr<::mlir::Region>":$singleRegion), [{
+      $_state.addRegion(std::move(singleRegion));
+      build($_builder, $_state, {}, /*regionsCount=*/1);
+    }]>,
+       // Define in TestOps.cpp.
+       OpBuilder<(ins "::llvm::SmallVectorImpl<::std::unique_ptr<::mlir::"
+                      "Region>>&&":$regions)>];
 }
 
 def AffineScopeOp : TEST_Op<"affine_scope", [AffineScope]> {

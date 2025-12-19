@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenValue.h"
 
@@ -139,6 +140,11 @@ public:
     return {};
   }
 
+  mlir::Value VisitConstantExpr(ConstantExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: constant expr");
+    return {};
+  }
+
   mlir::Value VisitPackIndexingExpr(PackIndexingExpr *e) {
     return Visit(e->getSelectedExpr());
   }
@@ -156,6 +162,18 @@ public:
     return cgf.emitLoadOfLValue(lv, e->getExprLoc()).getValue();
   }
 
+  mlir::Value VisitCoawaitExpr(CoawaitExpr *s) {
+    return cgf.emitCoawaitExpr(*s).getValue();
+  }
+  mlir::Value VisitCoyieldExpr(CoyieldExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: coyield");
+    return {};
+  }
+  mlir::Value VisitUnaryCoawait(const UnaryOperator *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: unary coawait");
+    return {};
+  }
+
   mlir::Value emitLoadOfLValue(LValue lv, SourceLocation loc) {
     return cgf.emitLoadOfLValue(lv, loc).getValue();
   }
@@ -168,10 +186,36 @@ public:
     return emitLoadOfLValue(e);
   }
 
+  mlir::Value VisitAddrLabelExpr(const AddrLabelExpr *e) {
+    auto func = cast<cir::FuncOp>(cgf.curFn);
+    cir::BlockAddrInfoAttr blockInfoAttr = cir::BlockAddrInfoAttr::get(
+        &cgf.getMLIRContext(), func.getSymName(), e->getLabel()->getName());
+    cir::BlockAddressOp blockAddressOp = cir::BlockAddressOp::create(
+        builder, cgf.getLoc(e->getSourceRange()), cgf.convertType(e->getType()),
+        blockInfoAttr);
+    cir::LabelOp resolvedLabel = cgf.cgm.lookupBlockAddressInfo(blockInfoAttr);
+    if (!resolvedLabel) {
+      cgf.cgm.mapUnresolvedBlockAddress(blockAddressOp);
+      // Still add the op to maintain insertion order it will be resolved in
+      // resolveBlockAddresses
+      cgf.cgm.mapResolvedBlockAddress(blockAddressOp, nullptr);
+    } else {
+      cgf.cgm.mapResolvedBlockAddress(blockAddressOp, resolvedLabel);
+    }
+    cgf.instantiateIndirectGotoBlock();
+    return blockAddressOp;
+  }
+
   mlir::Value VisitIntegerLiteral(const IntegerLiteral *e) {
     mlir::Type type = cgf.convertType(e->getType());
     return cir::ConstantOp::create(builder, cgf.getLoc(e->getExprLoc()),
                                    cir::IntAttr::get(type, e->getValue()));
+  }
+
+  mlir::Value VisitFixedPointLiteral(const FixedPointLiteral *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "ScalarExprEmitter: fixed point literal");
+    return {};
   }
 
   mlir::Value VisitFloatingLiteral(const FloatingLiteral *e) {
@@ -203,6 +247,28 @@ public:
     return emitNullValue(e->getType(), cgf.getLoc(e->getSourceRange()));
   }
 
+  mlir::Value VisitOffsetOfExpr(OffsetOfExpr *e);
+
+  mlir::Value VisitSizeOfPackExpr(SizeOfPackExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: size of pack");
+    return {};
+  }
+  mlir::Value VisitPseudoObjectExpr(PseudoObjectExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: pseudo object");
+    return {};
+  }
+  mlir::Value VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "ScalarExprEmitter: sycl unique stable name");
+    return {};
+  }
+  mlir::Value VisitEmbedExpr(EmbedExpr *e) {
+    assert(e->getDataElementCount() == 1);
+    auto it = e->begin();
+    llvm::APInt value = (*it)->getValue();
+    return builder.getConstInt(cgf.getLoc(e->getExprLoc()), value,
+                               e->getType()->isUnsignedIntegerType());
+  }
   mlir::Value VisitOpaqueValueExpr(OpaqueValueExpr *e) {
     if (e->isGLValue())
       return emitLoadOfLValue(cgf.getOrCreateOpaqueLValueMapping(e),
@@ -210,6 +276,38 @@ public:
 
     // Otherwise, assume the mapping is the scalar directly.
     return cgf.getOrCreateOpaqueRValueMapping(e).getValue();
+  }
+
+  mlir::Value VisitObjCSelectorExpr(ObjCSelectorExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: objc selector");
+    return {};
+  }
+  mlir::Value VisitObjCProtocolExpr(ObjCProtocolExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: objc protocol");
+    return {};
+  }
+  mlir::Value VisitObjCIVarRefExpr(ObjCIvarRefExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: objc ivar ref");
+    return {};
+  }
+  mlir::Value VisitObjCMessageExpr(ObjCMessageExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: objc message");
+    return {};
+  }
+  mlir::Value VisitObjCIsaExpr(ObjCIsaExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: objc isa");
+    return {};
+  }
+  mlir::Value VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "ScalarExprEmitter: objc availability check");
+    return {};
+  }
+
+  mlir::Value VisitMatrixSubscriptExpr(MatrixSubscriptExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "ScalarExprEmitter: matrix subscript");
+    return {};
   }
 
   mlir::Value VisitCastExpr(CastExpr *e);
@@ -292,6 +390,18 @@ public:
   }
 
   mlir::Value VisitInitListExpr(InitListExpr *e);
+
+  mlir::Value VisitArrayInitIndexExpr(ArrayInitIndexExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "ScalarExprEmitter: array init index");
+    return {};
+  }
+
+  mlir::Value VisitImplicitValueInitExpr(const ImplicitValueInitExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "ScalarExprEmitter: implicit value init");
+    return {};
+  }
 
   mlir::Value VisitExplicitCastExpr(ExplicitCastExpr *e) {
     return VisitCastExpr(e);
@@ -625,11 +735,8 @@ public:
   }
 
   mlir::Value VisitUnaryAddrOf(const UnaryOperator *e) {
-    if (llvm::isa<MemberPointerType>(e->getType())) {
-      cgf.cgm.errorNYI(e->getSourceRange(), "Address of member pointer");
-      return builder.getNullPtr(cgf.convertType(e->getType()),
-                                cgf.getLoc(e->getExprLoc()));
-    }
+    if (llvm::isa<MemberPointerType>(e->getType()))
+      return cgf.cgm.emitMemberPointerConstant(e);
 
     return cgf.emitLValue(e->getSubExpr()).getPointer();
   }
@@ -700,6 +807,26 @@ public:
     return Visit(e->getSubExpr());
   }
 
+  // C++
+  mlir::Value VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "ScalarExprEmitter: materialize temporary");
+    return {};
+  }
+  mlir::Value VisitSourceLocExpr(SourceLocExpr *e) {
+    ASTContext &ctx = cgf.getContext();
+    APValue evaluated =
+        e->EvaluateInContext(ctx, cgf.curSourceLocExprScope.getDefaultExpr());
+    mlir::Attribute attribute = ConstantEmitter(cgf).emitAbstract(
+        e->getLocation(), evaluated, e->getType());
+    mlir::TypedAttr typedAttr = mlir::cast<mlir::TypedAttr>(attribute);
+    return cir::ConstantOp::create(builder, cgf.getLoc(e->getExprLoc()),
+                                   typedAttr);
+  }
+  mlir::Value VisitCXXDefaultArgExpr(CXXDefaultArgExpr *dae) {
+    CIRGenFunction::CXXDefaultArgExprScope scope(cgf, dae);
+    return Visit(dae->getExpr());
+  }
   mlir::Value VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
     CIRGenFunction::CXXDefaultInitExprScope scope(cgf, die);
     return Visit(die->getExpr());
@@ -715,10 +842,41 @@ public:
     cgf.emitCXXDeleteExpr(e);
     return {};
   }
-
+  mlir::Value VisitTypeTraitExpr(const TypeTraitExpr *e) {
+    mlir::Location loc = cgf.getLoc(e->getExprLoc());
+    if (e->isStoredAsBoolean())
+      return builder.getBool(e->getBoolValue(), loc);
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "ScalarExprEmitter: TypeTraitExpr stored as int");
+    return {};
+  }
+  mlir::Value
+  VisitConceptSpecializationExpr(const ConceptSpecializationExpr *e) {
+    return builder.getBool(e->isSatisfied(), cgf.getLoc(e->getExprLoc()));
+  }
+  mlir::Value VisitRequiresExpr(const RequiresExpr *e) {
+    return builder.getBool(e->isSatisfied(), cgf.getLoc(e->getExprLoc()));
+  }
+  mlir::Value VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *e) {
+    mlir::Type type = cgf.convertType(e->getType());
+    mlir::Location loc = cgf.getLoc(e->getExprLoc());
+    return builder.getConstInt(loc, type, e->getValue());
+  }
+  mlir::Value VisitExpressionTraitExpr(const ExpressionTraitExpr *e) {
+    return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
+  }
+  mlir::Value VisitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "ScalarExprEmitter: cxx pseudo destructor");
+    return {};
+  }
   mlir::Value VisitCXXThrowExpr(const CXXThrowExpr *e) {
     cgf.emitCXXThrowExpr(e);
     return {};
+  }
+
+  mlir::Value VisitCXXNoexceptExpr(CXXNoexceptExpr *e) {
+    return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
   }
 
   /// Emit a conversion from the specified type to the specified destination
@@ -1183,6 +1341,49 @@ public:
     return maybePromoteBoolResult(resOp.getResult(), resTy);
   }
 
+  mlir::Value VisitBinPtrMemD(const BinaryOperator *e) {
+    return emitLoadOfLValue(e);
+  }
+
+  mlir::Value VisitBinPtrMemI(const BinaryOperator *e) {
+    return emitLoadOfLValue(e);
+  }
+
+  // Other Operators.
+  mlir::Value VisitBlockExpr(const BlockExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: block");
+    return {};
+  }
+
+  mlir::Value VisitChooseExpr(ChooseExpr *e) {
+    return Visit(e->getChosenSubExpr());
+  }
+
+  mlir::Value VisitObjCStringLiteral(const ObjCStringLiteral *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "ScalarExprEmitter: objc string literal");
+    return {};
+  }
+  mlir::Value VisitObjCBoxedExpr(ObjCBoxedExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: objc boxed");
+    return {};
+  }
+  mlir::Value VisitObjCArrayLiteral(ObjCArrayLiteral *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "ScalarExprEmitter: objc array literal");
+    return {};
+  }
+  mlir::Value VisitObjCDictionaryLiteral(ObjCDictionaryLiteral *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "ScalarExprEmitter: objc dictionary literal");
+    return {};
+  }
+
+  mlir::Value VisitAsTypeExpr(AsTypeExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: as type");
+    return {};
+  }
+
   mlir::Value VisitAtomicExpr(AtomicExpr *e) {
     return cgf.emitAtomicExpr(e).getValue();
   }
@@ -1440,28 +1641,6 @@ mlir::Value CIRGenFunction::emitPromotedScalarExpr(const Expr *e,
   if (!promotionType.isNull())
     return ScalarExprEmitter(*this, builder).emitPromoted(e, promotionType);
   return ScalarExprEmitter(*this, builder).Visit(const_cast<Expr *>(e));
-}
-
-mlir::Value CIRGenFunction::emitScalarOrConstFoldImmArg(unsigned iceArguments,
-                                                        unsigned index,
-                                                        const Expr *arg) {
-  mlir::Value result{};
-
-  // The bit at the specified index indicates whether the argument is required
-  // to be a constant integer expression.
-  bool isArgRequiredToBeConstant = (iceArguments & (1 << index));
-
-  if (!isArgRequiredToBeConstant) {
-    result = emitScalarExpr(arg);
-  } else {
-    // If this is required to be a constant, constant fold it so that we
-    // know that the generated intrinsic gets a ConstantInt.
-    std::optional<llvm::APSInt> iceOpt =
-        arg->getIntegerConstantExpr(getContext());
-    assert(iceOpt && "Expected argument to be a constant");
-    result = builder.getConstInt(getLoc(arg->getSourceRange()), *iceOpt);
-  }
-  return result;
 }
 
 [[maybe_unused]] static bool mustVisitNullValue(const Expr *e) {
@@ -1992,6 +2171,20 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return builder.createIntToPtr(middleVal, destCIRTy);
   }
 
+  case CK_BaseToDerived: {
+    const CXXRecordDecl *derivedClassDecl = destTy->getPointeeCXXRecordDecl();
+    assert(derivedClassDecl && "BaseToDerived arg isn't a C++ object pointer!");
+    Address base = cgf.emitPointerWithAlignment(subExpr);
+    Address derived = cgf.getAddressOfDerivedClass(
+        cgf.getLoc(ce->getSourceRange()), base, derivedClassDecl, ce->path(),
+        cgf.shouldNullCheckClassCastValue(ce));
+
+    // C++11 [expr.static.cast]p11: Behavior is undefined if a downcast is
+    // performed and the object is not of the derived type.
+    assert(!cir::MissingFeatures::sanitizers());
+
+    return cgf.getAsNaturalPointerTo(derived, ce->getType()->getPointeeType());
+  }
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {
     // The EmitPointerWithAlignment path does this fine; just discard
@@ -1999,7 +2192,6 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return cgf.getAsNaturalPointerTo(cgf.emitPointerWithAlignment(ce),
                                      ce->getType()->getPointeeType());
   }
-
   case CK_Dynamic: {
     Address v = cgf.emitPointerWithAlignment(subExpr);
     const auto *dce = cast<CXXDynamicCastExpr>(ce);
@@ -2016,6 +2208,23 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     // nullptr type.
     mlir::Type ty = cgf.convertType(destTy);
     return builder.getNullPtr(ty, cgf.getLoc(subExpr->getExprLoc()));
+  }
+
+  case CK_NullToMemberPointer: {
+    if (mustVisitNullValue(subExpr))
+      cgf.emitIgnoredExpr(subExpr);
+
+    assert(!cir::MissingFeatures::cxxABI());
+
+    const MemberPointerType *mpt = ce->getType()->getAs<MemberPointerType>();
+    if (mpt->isMemberFunctionPointerType()) {
+      cgf.cgm.errorNYI(subExpr->getSourceRange(),
+                       "CK_NullToMemberPointer: member function pointer");
+      return {};
+    }
+
+    auto ty = mlir::cast<cir::DataMemberType>(cgf.convertType(destTy));
+    return builder.getNullDataMemberPtr(ty, cgf.getLoc(subExpr->getExprLoc()));
   }
 
   case CK_LValueToRValue:
@@ -2231,6 +2440,21 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
   return maybePromoteBoolResult(boolVal, cgf.convertType(e->getType()));
 }
 
+mlir::Value ScalarExprEmitter::VisitOffsetOfExpr(OffsetOfExpr *e) {
+  // Try folding the offsetof to a constant.
+  Expr::EvalResult evalResult;
+  if (e->EvaluateAsInt(evalResult, cgf.getContext())) {
+    mlir::Type type = cgf.convertType(e->getType());
+    llvm::APSInt value = evalResult.Val.getInt();
+    return builder.getConstAPInt(cgf.getLoc(e->getExprLoc()), type, value);
+  }
+
+  cgf.getCIRGenModule().errorNYI(
+      e->getSourceRange(),
+      "ScalarExprEmitter::VisitOffsetOfExpr Can't eval expr as int");
+  return {};
+}
+
 mlir::Value ScalarExprEmitter::VisitUnaryReal(const UnaryOperator *e) {
   QualType promotionTy = getPromotionType(e->getSubExpr()->getType());
   mlir::Value result = VisitRealImag(e, promotionTy);
@@ -2300,14 +2524,50 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
   const QualType typeToSize = e->getTypeOfArgument();
   const mlir::Location loc = cgf.getLoc(e->getSourceRange());
   if (auto kind = e->getKind();
-      kind == UETT_SizeOf || kind == UETT_DataSizeOf) {
-    if (cgf.getContext().getAsVariableArrayType(typeToSize)) {
-      cgf.getCIRGenModule().errorNYI(e->getSourceRange(),
-                                     "sizeof operator for VariableArrayType",
-                                     e->getStmtClassName());
-      return builder.getConstant(
-          loc, cir::IntAttr::get(cgf.cgm.uInt64Ty,
-                                 llvm::APSInt(llvm::APInt(64, 1), true)));
+      kind == UETT_SizeOf || kind == UETT_DataSizeOf || kind == UETT_CountOf) {
+    if (const VariableArrayType *vat =
+            cgf.getContext().getAsVariableArrayType(typeToSize)) {
+      // For _Countof, we only want to evaluate if the extent is actually
+      // variable as opposed to a multi-dimensional array whose extent is
+      // constant but whose element type is variable.
+      bool evaluateExtent = true;
+      if (kind == UETT_CountOf && vat->getElementType()->isArrayType()) {
+        evaluateExtent =
+            !vat->getSizeExpr()->isIntegerConstantExpr(cgf.getContext());
+      }
+
+      if (evaluateExtent) {
+        if (e->isArgumentType()) {
+          // sizeof(type) - make sure to emit the VLA size.
+          cgf.emitVariablyModifiedType(typeToSize);
+        } else {
+          // C99 6.5.3.4p2: If the argument is an expression of type
+          // VLA, it is evaluated.
+          cgf.emitIgnoredExpr(e->getArgumentExpr());
+        }
+
+        // For _Countof, we just want to return the size of a single dimension.
+        if (kind == UETT_CountOf)
+          return cgf.getVLAElements1D(vat).numElts;
+
+        // For sizeof and __datasizeof, we need to scale the number of elements
+        // by the size of the array element type.
+        CIRGenFunction::VlaSizePair vlaSize = cgf.getVLASize(vat);
+        mlir::Value numElts = vlaSize.numElts;
+
+        // Scale the number of non-VLA elements by the non-VLA element size.
+        CharUnits eltSize = cgf.getContext().getTypeSizeInChars(vlaSize.type);
+        if (!eltSize.isOne()) {
+          mlir::Location loc = cgf.getLoc(e->getSourceRange());
+          mlir::Value eltSizeValue =
+              builder.getConstAPInt(numElts.getLoc(), numElts.getType(),
+                                    cgf.cgm.getSize(eltSize).getValue());
+          return builder.createMul(loc, eltSizeValue, numElts,
+                                   cir::OverflowBehavior::NoUnsignedWrap);
+        }
+
+        return numElts;
+      }
     }
   } else if (e->getKind() == UETT_OpenMPRequiredSimdAlign) {
     cgf.getCIRGenModule().errorNYI(
@@ -2371,9 +2631,9 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
       // type, so evaluating it returns a null Value.  However, a conditional
       // with non-void type must return a non-null Value.
       if (!result && !e->getType()->isVoidType()) {
-        cgf.cgm.errorNYI(e->getSourceRange(),
-                         "throw expression in conditional operator");
-        result = {};
+        result = builder.getConstant(
+            loc, cir::PoisonAttr::get(builder.getContext(),
+                                      cgf.convertType(e->getType())));
       }
 
       return result;

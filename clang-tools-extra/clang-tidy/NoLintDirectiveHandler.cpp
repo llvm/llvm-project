@@ -19,7 +19,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Core/Diagnostic.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -109,7 +108,7 @@ private:
 
 // Consume the entire buffer and return all `NoLintToken`s that were found.
 static SmallVector<NoLintToken> getNoLints(StringRef Buffer) {
-  static constexpr llvm::StringLiteral NOLINT = "NOLINT";
+  static constexpr StringRef NOLINT = "NOLINT";
   SmallVector<NoLintToken> NoLints;
 
   size_t Pos = 0;

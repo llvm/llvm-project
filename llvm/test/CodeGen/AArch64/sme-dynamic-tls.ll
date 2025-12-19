@@ -10,7 +10,7 @@ define i32 @load_tls_streaming_compat() nounwind "aarch64_pstate_sm_compatible" 
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
 ; CHECK-NEXT:    mrs x8, SVCR
 ; CHECK-NEXT:    tbz w8, #0, .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %entry
@@ -30,7 +30,7 @@ define i32 @load_tls_streaming_compat() nounwind "aarch64_pstate_sm_compatible" 
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr w0, [x8, x0]
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
@@ -46,7 +46,7 @@ define i32 @load_tls_streaming() nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    adrp x0, :tlsdesc:x
 ; CHECK-NEXT:    ldr x1, [x0, :tlsdesc_lo12:x]
@@ -59,7 +59,7 @@ define i32 @load_tls_streaming() nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr w0, [x8, x0]
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
@@ -87,8 +87,7 @@ define i32 @load_tls_shared_za() nounwind "aarch64_inout_za" {
 ; CHECK-NEXT:    .tlsdesccall x
 ; CHECK-NEXT:    blr x1
 ; CHECK-NEXT:    mrs x8, TPIDR_EL0
-; CHECK-NEXT:    ldr w0, [x8, x0]
-; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    ldr w8, [x8, x0]
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x9, TPIDR2_EL0
 ; CHECK-NEXT:    sub x0, x29, #16
@@ -116,7 +115,7 @@ define i32 @load_tls_streaming_shared_za() nounwind "aarch64_inout_za" "aarch64_
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    add x29, sp, #64
-; CHECK-NEXT:    str x19, [sp, #80] // 8-byte Folded Spill
+; CHECK-NEXT:    str x19, [sp, #80] // 8-byte Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    mov x9, sp
@@ -133,8 +132,7 @@ define i32 @load_tls_streaming_shared_za() nounwind "aarch64_inout_za" "aarch64_
 ; CHECK-NEXT:    blr x1
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    mrs x8, TPIDR_EL0
-; CHECK-NEXT:    ldr w0, [x8, x0]
-; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    ldr w8, [x8, x0]
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x9, TPIDR2_EL0
 ; CHECK-NEXT:    sub x0, x29, #80
@@ -146,7 +144,7 @@ define i32 @load_tls_streaming_shared_za() nounwind "aarch64_inout_za" "aarch64_
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEXT:    sub sp, x29, #64
 ; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #80] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #80] // 8-byte Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload

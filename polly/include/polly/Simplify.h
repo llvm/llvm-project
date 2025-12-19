@@ -13,11 +13,11 @@
 #ifndef POLLY_TRANSFORM_SIMPLIFY_H
 #define POLLY_TRANSFORM_SIMPLIFY_H
 
-#include "polly/ScopPass.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace polly {
 class MemoryAccess;
+class Scop;
 class ScopStmt;
 
 /// Return a vector that contains MemoryAccesses in the order in
@@ -35,28 +35,6 @@ class ScopStmt;
 ///   The order in which implicit writes are executed relative to each other is
 ///   undefined.
 llvm::SmallVector<MemoryAccess *, 32> getAccessesInOrder(ScopStmt &Stmt);
-
-struct SimplifyPass final : PassInfoMixin<SimplifyPass> {
-  SimplifyPass(int CallNo = 0) : CallNo(CallNo) {}
-
-  llvm::PreservedAnalyses run(Scop &S, ScopAnalysisManager &SAM,
-                              ScopStandardAnalysisResults &AR, SPMUpdater &U);
-
-private:
-  int CallNo;
-};
-
-struct SimplifyPrinterPass final : PassInfoMixin<SimplifyPrinterPass> {
-  SimplifyPrinterPass(raw_ostream &OS, int CallNo = 0)
-      : OS(OS), CallNo(CallNo) {}
-
-  PreservedAnalyses run(Scop &S, ScopAnalysisManager &,
-                        ScopStandardAnalysisResults &, SPMUpdater &);
-
-private:
-  raw_ostream &OS;
-  int CallNo;
-};
 
 bool runSimplify(Scop &S, int CallNo);
 } // namespace polly

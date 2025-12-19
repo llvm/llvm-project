@@ -166,13 +166,6 @@ FunctionPass *createX86IndirectThunksPass();
 /// This pass replaces ret instructions with jmp's to __x86_return thunk.
 FunctionPass *createX86ReturnThunksPass();
 
-/// This pass ensures instructions featuring a memory operand
-/// have distinctive <LineNumber, Discriminator> (with respect to each other)
-FunctionPass *createX86DiscriminateMemOpsPass();
-
-/// This pass applies profiling information to insert cache prefetches.
-FunctionPass *createX86InsertPrefetchPass();
-
 /// This pass insert wait instruction after X87 instructions which could raise
 /// fp exceptions when strict-fp enabled.
 FunctionPass *createX86InsertX87waitPass();

@@ -843,15 +843,14 @@ void VPRegionBlock::dissolveToCFGLoop() {
 
   VPBlockBase *Preheader = getSinglePredecessor();
   auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
-  VPBlockBase *Middle = getSingleSuccessor();
+
   VPBlockUtils::disconnectBlocks(Preheader, this);
-  VPBlockUtils::disconnectBlocks(this, Middle);
 
   for (VPBlockBase *VPB : vp_depth_first_shallow(Entry))
     VPB->setParent(getParent());
 
   VPBlockUtils::connectBlocks(Preheader, Header);
-  VPBlockUtils::connectBlocks(ExitingLatch, Middle);
+  VPBlockUtils::transferSuccessors(this, ExitingLatch);
   VPBlockUtils::connectBlocks(ExitingLatch, Header);
 }
 
@@ -884,8 +883,7 @@ VPlan::~VPlan() {
   }
   for (VPValue *VPV : getLiveIns())
     delete VPV;
-  if (BackedgeTakenCount)
-    delete BackedgeTakenCount;
+  delete BackedgeTakenCount;
 }
 
 VPIRBasicBlock *VPlan::getExitBlock(BasicBlock *IRBB) const {

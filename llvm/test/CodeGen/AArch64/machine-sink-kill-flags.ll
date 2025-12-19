@@ -16,8 +16,9 @@ define i32 @test(ptr %ptr) {
 ; CHECK-NEXT:    mov w9, wzr
 ; CHECK-NEXT:  LBB0_1: ; %.thread
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    lsr w11, w9, #1
 ; CHECK-NEXT:    sub w10, w9, #1
-; CHECK-NEXT:    lsr w9, w9, #1
+; CHECK-NEXT:    mov w9, w11
 ; CHECK-NEXT:    tbnz w10, #0, LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb343
 ; CHECK-NEXT:    and w9, w10, #0x1

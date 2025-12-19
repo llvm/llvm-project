@@ -36,6 +36,7 @@ define void @jacobi(i32 %nn, ptr nocapture %a, ptr nocapture %p) nounwind uwtabl
 ; CHECK-NEXT:  Base offset: %a.base
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][(sext i32 %a.cols to i64)][(sext i32 %a.deps to i64)] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{1,+,1}<nuw><nsw><%for.i>][{1,+,1}<nuw><nsw><%for.j>][{1,+,1}<nuw><nsw><%for.k>]
+; CHECK-NEXT:  Delinearization validation: Failed
 ;
 entry:
   %p.rows.ptr = getelementptr inbounds %struct.Mat, ptr %p, i64 0, i32 2

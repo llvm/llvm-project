@@ -225,17 +225,25 @@ def fircg_XDeclareOp : fircg_Op<"ext_declare", [AttrSizedOperandSegments]> {
   let description = [{
     Prior to lowering to LLVM IR dialect, a DeclareOp will
     be converted to an extended DeclareOp.
+
+    Most operands are inherited from fir.declare except for the shape and shift
+    operands, which are "expanded" forms of the corresponding shape/shift
+    operands of fir.declare.
   }];
 
   let arguments = (ins AnyRefOrBox:$memref, Variadic<AnyIntegerType>:$shape,
       Variadic<AnyIntegerType>:$shift, Variadic<AnyIntegerType>:$typeparams,
-      Optional<fir_DummyScopeType>:$dummy_scope, Builtin_StringAttr:$uniq_name,
+      Optional<fir_DummyScopeType>:$dummy_scope,
+      Optional<AnyReferenceLike>:$storage,
+      DefaultValuedAttr<UI64Attr, "0">:$storage_offset,
+      Builtin_StringAttr:$uniq_name,
       OptionalAttr<UI32Attr>:$dummy_arg_no);
   let results = (outs AnyRefOrBox);
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`origin` $shift^)? (`typeparams` $typeparams^)?
     (`dummy_scope` $dummy_scope^ (`arg` $dummy_arg_no^)?)?
+    (`storage` `(` $storage^ `[` $storage_offset `]` `)`)?
     attr-dict `:` functional-type(operands, results)
   }];
 

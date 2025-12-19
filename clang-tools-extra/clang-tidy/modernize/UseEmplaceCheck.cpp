@@ -30,31 +30,24 @@ AST_MATCHER_P(NamedDecl, hasAnyNameIgnoringTemplates, std::vector<StringRef>,
   // example, it'll transform a::b<c<d>>::e<f> to simply a::b::e.
   std::string FullNameTrimmed;
   int Depth = 0;
-  for (const auto &Character : FullName) {
-    if (Character == '<') {
+  for (const auto &Character : FullName)
+    if (Character == '<')
       ++Depth;
-    } else if (Character == '>') {
+    else if (Character == '>')
       --Depth;
-    } else if (Depth == 0) {
+    else if (Depth == 0)
       FullNameTrimmed.append(1, Character);
-    }
-  }
 
   // This loop is taken from HasNameMatcher::matchesNodeFullSlow in
   // clang/lib/ASTMatchers/ASTMatchersInternal.cpp and checks whether
   // FullNameTrimmed matches any of the given Names.
   const StringRef FullNameTrimmedRef = FullNameTrimmed;
-  for (const StringRef Pattern : Names) {
-    if (Pattern.starts_with("::")) {
-      if (FullNameTrimmed == Pattern)
-        return true;
-    } else if (FullNameTrimmedRef.ends_with(Pattern) &&
-               FullNameTrimmedRef.drop_back(Pattern.size()).ends_with("::")) {
-      return true;
-    }
-  }
-
-  return false;
+  return llvm::any_of(Names, [&](const StringRef Pattern) {
+    if (Pattern.starts_with("::"))
+      return FullNameTrimmed == Pattern;
+    return FullNameTrimmedRef.ends_with(Pattern) &&
+           FullNameTrimmedRef.drop_back(Pattern.size()).ends_with("::");
+  });
 }
 
 // Checks if the given matcher is the last argument of the given CallExpr.
@@ -318,15 +311,12 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<MaterializeTemporaryExpr>("temporary_expr");
 
   const CXXMemberCallExpr *Call = [&]() {
-    if (PushBackCall) {
+    if (PushBackCall)
       return PushBackCall;
-    }
-    if (PushCall) {
+    if (PushCall)
       return PushCall;
-    }
-    if (PushFrontCall) {
+    if (PushFrontCall)
       return PushFrontCall;
-    }
     return EmplacyCall;
   }();
 
