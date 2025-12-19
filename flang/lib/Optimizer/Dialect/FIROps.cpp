@@ -207,8 +207,11 @@ std::optional<mlir::PromotableAllocationOpInterface>
 fir::AllocaOp::handlePromotionComplete(const mlir::MemorySlot &slot,
                                        mlir::Value defaultValue,
                                        mlir::OpBuilder &builder) {
-  if (defaultValue && defaultValue.use_empty())
+  if (defaultValue && defaultValue.use_empty()) {
+    assert(mlir::isa<fir::UndefOp>(defaultValue.getDefiningOp()) &&
+           "Expected undef op to be the default value");
     defaultValue.getDefiningOp()->erase();
+  }
   this->erase();
   return std::nullopt;
 }
@@ -2898,7 +2901,7 @@ mlir::Value fir::LoadOp::getStored(const mlir::MemorySlot &slot,
                                    mlir::OpBuilder &builder,
                                    mlir::Value reachingDef,
                                    const mlir::DataLayout &dataLayout) {
-  llvm_unreachable("getStored should not be called on LoadOp");
+  return mlir::Value();
 }
 
 bool fir::LoadOp::canUsesBeRemoved(
