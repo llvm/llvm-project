@@ -846,7 +846,7 @@ void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
     }
 
     // TO_UPSTREAM(CAS)
-    if (DiagOpts.FallbackRealFileSystemAbsolutePaths &&
+    if (DiagOpts.FallbackRealFileSystemAbsolutePaths && !Filename.empty() &&
         !llvm::sys::path::is_absolute(Filename)) {
       // When caching, the above may fail to canonicalize due to using the
       // IncludeTreeFileSystem. In that case, we can safely fallback to the real
