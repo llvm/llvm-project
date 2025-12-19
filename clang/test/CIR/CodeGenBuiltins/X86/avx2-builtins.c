@@ -28,6 +28,36 @@
 
 #include <immintrin.h>
 
+__m256i test0_mm256_inserti128_si256(__m256i a, __m128i b) {
+  // CIR-LABEL: test0_mm256_inserti128_si256
+  // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<2 x !s64i>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !s64i>
+  // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !s64i>) [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !s64i>
+
+  // LLVM-LABEL: test0_mm256_inserti128_si256
+  // LLVM: shufflevector <2 x i64> %{{.*}}, <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // LLVM: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+
+  // OGCG-LABEL: test0_mm256_inserti128_si256
+  // OGCG: shufflevector <2 x i64> %{{.*}}, <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // OGCG: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+  return _mm256_inserti128_si256(a, b, 0);
+}
+
+__m256i test1_mm256_inserti128_si256(__m256i a, __m128i b) {
+  // CIR-LABEL: test1_mm256_inserti128_si256
+  // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<2 x !s64i>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !s64i>
+  // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !s64i>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i] : !cir.vector<4 x !s64i>
+
+  // LLVM-LABEL: test1_mm256_inserti128_si256
+  // LLVM: shufflevector <2 x i64> %{{.*}}, <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // LLVM: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+
+  // OGCG-LABEL: test1_mm256_inserti128_si256
+  // OGCG: shufflevector <2 x i64> %{{.*}}, <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // OGCG: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  return _mm256_inserti128_si256(a, b, 1);
+}
+
 __m256i test_mm256_shufflelo_epi16(__m256i a) {
   // CIR-LABEL: _mm256_shufflelo_epi16
   // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<16 x !s16i>) [#cir.int<3> : !s32i, #cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<1> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i, #cir.int<11> : !s32i, #cir.int<8> : !s32i, #cir.int<9> : !s32i, #cir.int<9> : !s32i, #cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i] : !cir.vector<16 x !s16i>
@@ -72,7 +102,7 @@ __m256i test_mm256_mul_epu32(__m256i a, __m256i b) {
   // OGCG: and <4 x i64> %{{.*}}, splat (i64 4294967295)
   // OGCG: mul <4 x i64> %{{.*}}, %{{.*}}
 
-return _mm256_mul_epu32(a, b);
+  return _mm256_mul_epu32(a, b);
 }
 
 __m256i test_mm256_mul_epi32(__m256i a, __m256i b) {
