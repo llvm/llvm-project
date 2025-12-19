@@ -321,10 +321,7 @@ clang::DeclContext *PdbAstBuilder::GetOrCreateClangDeclContextForUid(PdbSymUid u
 }
 
 CompilerDeclContext PdbAstBuilder::GetOrCreateDeclContextForUid(PdbSymUid uid) {
-  clang::DeclContext *context = GetOrCreateClangDeclContextForUid(uid);
-  if (!context)
-    return {};
-  return ToCompilerDeclContext(*context);
+  return m_clang.CreateDeclContext(GetOrCreateClangDeclContextForUid(uid));
 }
 
 std::pair<clang::DeclContext *, std::string>
@@ -428,10 +425,7 @@ clang::DeclContext *PdbAstBuilder::GetParentClangDeclContext(PdbSymUid uid) {
 }
 
 CompilerDeclContext PdbAstBuilder::GetParentDeclContext(PdbSymUid uid) {
-  clang::DeclContext *context = GetParentClangDeclContext(uid);
-  if (!context)
-    return {};
-  return ToCompilerDeclContext(*context);
+  return m_clang.CreateDeclContext(GetParentClangDeclContext(uid));
 }
 
 bool PdbAstBuilder::CompleteType(CompilerType ct) {
