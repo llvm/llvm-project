@@ -297,11 +297,16 @@ void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded) {
 Type RecordType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
   assert(isUnion() && "Only call getLargestMember on unions");
   llvm::ArrayRef<Type> members = getMembers();
+  if (members.empty())
+    return {};
+
   // If the union is padded, we need to ignore the last member,
   // which is the padding.
+  auto endIt = getPadded() ? std::prev(members.end()) : members.end();
+  if (endIt == members.begin())
+    return {};
   return *std::max_element(
-      members.begin(), getPadded() ? members.end() - 1 : members.end(),
-      [&](Type lhs, Type rhs) {
+      members.begin(), endIt, [&](Type lhs, Type rhs) {
         return dataLayout.getTypeABIAlignment(lhs) <
                    dataLayout.getTypeABIAlignment(rhs) ||
                (dataLayout.getTypeABIAlignment(lhs) ==

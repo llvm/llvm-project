@@ -1,0 +1,11 @@
+// RUN: cir-opt %s --cir-to-llvm | FileCheck %s
+
+!u_padded = !cir.record<union padded {}>
+
+module {
+  cir.func @test_empty_padded_union(%arg0: !u_padded) {
+    // CHECK-LABEL: llvm.func @test_empty_padded_union
+    // CHECK-SAME: ({{.*}}: !llvm.struct<(i8)>)
+    cir.return
+  }
+}
