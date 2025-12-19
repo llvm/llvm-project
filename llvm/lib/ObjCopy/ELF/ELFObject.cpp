@@ -2171,13 +2171,16 @@ Error Object::updateSectionData(SecPtr &Sec, ArrayRef<uint8_t> Data) {
                              Data.size(), Sec->Name.c_str(), Sec->Size);
 
   if (!Sec->ParentSegment) {
-    // Be careful: the "Sec" refers to an item in a std::vector,
-    // so any changes to the std::vector could invalidate this reference.
-    // To avoid possible memory-related issues, save raw pointers.
-    auto Replaced = Sec.get();
-    auto Modified = &addSection<OwnedDataSection>(*Sec, Data);
-    DenseMap<SectionBase *, SectionBase *> replacements{{Replaced, Modified}};
-    if (auto err = replaceSections(replacements))
+    // Be careful: the "Sec" refers to an element in a std::vector.
+    // Calling the function addSection adds a new element to this std::vector,
+    // which may cause a reallocation and lead to dangling references.
+    // To avoid possible memory-related issues, you should save a raw pointer.
+    SectionBase *Replaced = Sec.get();
+    SectionBase *Modified = &addSection<OwnedDataSection>(*Sec, Data);
+    // We also don't need to additionally remove the "Replaced" section,
+    // as this removal will be handled during the replaceSections call.
+    DenseMap<SectionBase *, SectionBase *> Replacements{{Replaced, Modified}};
+    if (auto err = replaceSections(Replacements))
       return err;
   } else {
     // The segment writer will be in charge of updating these contents.
