@@ -65,6 +65,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::exp2m1f(0.0f));
   EXPECT_FP_EQ(0x1p+0f, LIBC_NAMESPACE::shared::expf(0.0f));
   EXPECT_FP_EQ(0x1p+0f, LIBC_NAMESPACE::shared::exp2f(0.0f));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::expm1f(0.0f));
 
   EXPECT_FP_EQ_ALL_ROUNDING(0.75f,
                             LIBC_NAMESPACE::shared::frexpf(24.0f, &exponent));
