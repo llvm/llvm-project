@@ -6533,6 +6533,7 @@ cc_binary(
     testonly = True,
     srcs = glob([
         "tools/llvm-ir2vec/*.cpp",
+        "tools/llvm-ir2vec/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
