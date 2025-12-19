@@ -8189,8 +8189,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   if (const auto *ATy = dyn_cast<ArrayType>(NewVD->getType())) {
     if (ATy && ATy->getElementType().isWebAssemblyReferenceType() &&
         !NewVD->hasLocalStorage()) {
-      QualType Type = Context.getAddrSpaceQualType(
-          NewVD->getType(), Context.getLangASForBuiltinAddressSpace(1));
+      QualType Type = Context.getAddrSpaceQualType(NewVD->getType(),
+                                                   getLangASFromTargetAS(1));
       NewVD->setType(Type);
     }
   }
