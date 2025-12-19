@@ -32,8 +32,7 @@
 #include "llvm/CodeGen/DetectDeadLanes.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
-#include "llvm/CodeGen/ExpandFp.h"
-#include "llvm/CodeGen/ExpandLargeDivRem.h"
+#include "llvm/CodeGen/ExpandIRInsts.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/ExpandReductions.h"
@@ -678,8 +677,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPasses(
     addModulePass(LowerEmuTLSPass(), PMW);
 
   addModulePass(PreISelIntrinsicLoweringPass(&TM), PMW);
-  addFunctionPass(ExpandLargeDivRemPass(TM), PMW);
-  addFunctionPass(ExpandFpPass(TM, getOptLevel()), PMW);
+  addFunctionPass(ExpandIRInstsPass(TM, getOptLevel()), PMW);
 
   derived().addIRPasses(PMW);
   derived().addCodeGenPrepare(PMW);

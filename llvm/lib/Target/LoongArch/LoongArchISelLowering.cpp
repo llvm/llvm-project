@@ -338,7 +338,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::MUL, ISD::SDIV, ISD::SREM, ISD::UDIV, ISD::UREM},
                          VT, Legal);
       setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, VT, Legal);
-      setOperationAction({ISD::SHL, ISD::SRA}, VT, Legal);
+      setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL}, VT, Legal);
       setOperationAction({ISD::CTPOP, ISD::CTLZ}, VT, Legal);
       setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Legal);
       setCondCodeAction(
@@ -354,7 +354,6 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::USUBSAT, VT, Legal);
       setOperationAction(ISD::ROTL, VT, Custom);
       setOperationAction(ISD::ROTR, VT, Custom);
-      setOperationAction(ISD::SRL, VT, Custom);
     }
     for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
       setOperationAction(ISD::BITREVERSE, VT, Custom);
@@ -428,7 +427,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::MUL, ISD::SDIV, ISD::SREM, ISD::UDIV, ISD::UREM},
                          VT, Legal);
       setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, VT, Legal);
-      setOperationAction({ISD::SHL, ISD::SRA}, VT, Legal);
+      setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL}, VT, Legal);
       setOperationAction({ISD::CTPOP, ISD::CTLZ}, VT, Legal);
       setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Legal);
       setCondCodeAction(
@@ -445,7 +444,6 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
       setOperationAction(ISD::ROTL, VT, Custom);
       setOperationAction(ISD::ROTR, VT, Custom);
-      setOperationAction(ISD::SRL, VT, Custom);
     }
     for (MVT VT : {MVT::v32i8, MVT::v16i16, MVT::v8i32})
       setOperationAction(ISD::BITREVERSE, VT, Custom);
@@ -620,49 +618,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerVECREDUCE(Op, DAG);
   case ISD::ConstantFP:
     return lowerConstantFP(Op, DAG);
-  case ISD::SRL:
-    return lowerVectorSRL(Op, DAG);
   }
   return SDValue();
-}
-
-/// getVShiftAmt - Check if this is a valid build_vector for the immediate
-/// operand of a vector shift operation, where all the elements of the
-/// build_vector must have the same constant integer value.
-static bool getVShiftAmt(SDValue Op, unsigned ElementBits, int64_t &Amt) {
-  // Ignore bit_converts.
-  while (Op.getOpcode() == ISD::BITCAST)
-    Op = Op.getOperand(0);
-  BuildVectorSDNode *BVN = dyn_cast<BuildVectorSDNode>(Op.getNode());
-  APInt SplatBits, SplatUndef;
-  unsigned SplatBitSize;
-  bool HasAnyUndefs;
-  if (!BVN ||
-      !BVN->isConstantSplat(SplatBits, SplatUndef, SplatBitSize, HasAnyUndefs,
-                            ElementBits) ||
-      SplatBitSize > ElementBits)
-    return false;
-  Amt = SplatBits.getSExtValue();
-  return true;
-}
-
-SDValue LoongArchTargetLowering::lowerVectorSRL(SDValue Op,
-                                                SelectionDAG &DAG) const {
-  EVT VT = Op.getValueType();
-  SDLoc DL(Op);
-  int64_t Amt;
-
-  if (!Op.getOperand(1).getValueType().isVector())
-    return Op;
-  unsigned EltSize = VT.getScalarSizeInBits();
-  MVT GRLenVT = Subtarget.getGRLenVT();
-
-  assert(Op.getOpcode() == ISD::SRL && "unexpected shift opcode");
-  if (getVShiftAmt(Op.getOperand(1), EltSize, Amt) && Amt >= 0 && Amt < EltSize)
-    return DAG.getNode(LoongArchISD::VSRLI, DL, VT, Op.getOperand(0),
-                       DAG.getConstant(Amt, DL, GRLenVT));
-  return DAG.getNode(LoongArchISD::VSRL, DL, VT, Op.getOperand(0),
-                     Op.getOperand(1));
 }
 
 // Helper to attempt to return a cheaper, bit-inverted version of \p V.
@@ -5940,10 +5897,10 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
     if (CC != ISD::SETEQ && CC != ISD::SETNE)
       return SDValue();
     ConstantSDNode *CN = dyn_cast<ConstantSDNode>(AndInputValue1.getOperand(1));
-    if (!CN || CN->getSExtValue() != -1)
+    if (!CN || !CN->isAllOnes())
       return SDValue();
     CN = dyn_cast<ConstantSDNode>(CmpInputValue);
-    if (!CN || CN->getSExtValue() != 0)
+    if (!CN || !CN->isZero())
       return SDValue();
     AndInputValue1 = AndInputValue1.getOperand(0);
     if (AndInputValue1.getOpcode() != ISD::ZERO_EXTEND)
