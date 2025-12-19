@@ -41,19 +41,21 @@ body:             |
     ; RV32XQCI-LABEL: name: load_large_offset_i32
     ; RV32XQCI: liveins: $x10
     ; RV32XQCI-NEXT: {{  $}}
-    ; RV32XQCI-NEXT: dead renamable $x11 = QC_E_LW renamable $x10, 4000 :: (load (s32))
-    ; RV32XQCI-NEXT: dead renamable $x11 = QC_E_LW renamable $x10, 4004 :: (load (s32))
-    ; RV32XQCI-NEXT: dead renamable $x11 = QC_E_LW renamable $x10, 4008 :: (load (s32))
-    ; RV32XQCI-NEXT: dead renamable $x10 = QC_E_LW killed renamable $x10, 4012 :: (load (s32))
+    ; RV32XQCI-NEXT: $x12 = QC_E_ADDI $x10, 3968
+    ; RV32XQCI-NEXT: dead renamable $x11 = QC_E_LW $x12, 32 :: (load (s32))
+    ; RV32XQCI-NEXT: dead renamable $x11 = QC_E_LW $x12, 36 :: (load (s32))
+    ; RV32XQCI-NEXT: dead renamable $x11 = QC_E_LW $x12, 40 :: (load (s32))
+    ; RV32XQCI-NEXT: dead renamable $x10 = QC_E_LW killed $x12, 44 :: (load (s32))
     ; RV32XQCI-NEXT: PseudoRET
     ;
     ; RV32XQCI_ZCB-LABEL: name: load_large_offset_i32
     ; RV32XQCI_ZCB: liveins: $x10
     ; RV32XQCI_ZCB-NEXT: {{  $}}
-    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LW renamable $x10, 4000 :: (load (s32))
-    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LW renamable $x10, 4004 :: (load (s32))
-    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LW renamable $x10, 4008 :: (load (s32))
-    ; RV32XQCI_ZCB-NEXT: dead renamable $x10 = QC_E_LW killed renamable $x10, 4012 :: (load (s32))
+    ; RV32XQCI_ZCB-NEXT: $x12 = QC_E_ADDI $x10, 3968
+    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LW $x12, 32 :: (load (s32))
+    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LW $x12, 36 :: (load (s32))
+    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LW $x12, 40 :: (load (s32))
+    ; RV32XQCI_ZCB-NEXT: dead renamable $x10 = QC_E_LW killed $x12, 44 :: (load (s32))
     ; RV32XQCI_ZCB-NEXT: PseudoRET
     ;
     ; RV32XQCI_NOXQCILIA-LABEL: name: load_large_offset_i32
@@ -99,10 +101,11 @@ body:             |
     ; RV32XQCI_ZCB-LABEL: name: load_large_offset_s16
     ; RV32XQCI_ZCB: liveins: $x10
     ; RV32XQCI_ZCB-NEXT: {{  $}}
-    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LH renamable $x10, 4000 :: (load (s16))
-    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LH renamable $x10, 4000 :: (load (s16))
-    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LH renamable $x10, 4002 :: (load (s16))
-    ; RV32XQCI_ZCB-NEXT: dead renamable $x10 = QC_E_LH killed renamable $x10, 4002 :: (load (s16))
+    ; RV32XQCI_ZCB-NEXT: $x12 = QC_E_ADDI $x10, 4000
+    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LH $x12, 0 :: (load (s16))
+    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LH $x12, 0 :: (load (s16))
+    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LH $x12, 2 :: (load (s16))
+    ; RV32XQCI_ZCB-NEXT: dead renamable $x10 = QC_E_LH killed $x12, 2 :: (load (s16))
     ; RV32XQCI_ZCB-NEXT: PseudoRET
     ;
     ; RV32XQCI_NOXQCILIA-LABEL: name: load_large_offset_s16
@@ -148,10 +151,11 @@ body:             |
     ; RV32XQCI_ZCB-LABEL: name: load_large_offset_u16
     ; RV32XQCI_ZCB: liveins: $x10
     ; RV32XQCI_ZCB-NEXT: {{  $}}
-    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LHU renamable $x10, 4000 :: (load (s16))
-    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LHU renamable $x10, 4000 :: (load (s16))
-    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LHU renamable $x10, 4002 :: (load (s16))
-    ; RV32XQCI_ZCB-NEXT: dead renamable $x10 = QC_E_LHU killed renamable $x10, 4002 :: (load (s16))
+    ; RV32XQCI_ZCB-NEXT: $x12 = QC_E_ADDI $x10, 4000
+    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LHU $x12, 0 :: (load (s16))
+    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LHU $x12, 0 :: (load (s16))
+    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LHU $x12, 2 :: (load (s16))
+    ; RV32XQCI_ZCB-NEXT: dead renamable $x10 = QC_E_LHU killed $x12, 2 :: (load (s16))
     ; RV32XQCI_ZCB-NEXT: PseudoRET
     ;
     ; RV32XQCI_NOXQCILIA-LABEL: name: load_large_offset_u16
@@ -197,10 +201,11 @@ body:             |
     ; RV32XQCI_ZCB-LABEL: name: load_large_offset_u8
     ; RV32XQCI_ZCB: liveins: $x10
     ; RV32XQCI_ZCB-NEXT: {{  $}}
-    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LBU renamable $x10, 4000 :: (load (s8))
-    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LBU renamable $x10, 4001 :: (load (s8))
-    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LBU renamable $x10, 4002 :: (load (s8))
-    ; RV32XQCI_ZCB-NEXT: dead renamable $x10 = QC_E_LBU killed renamable $x10, 4003 :: (load (s8))
+    ; RV32XQCI_ZCB-NEXT: $x12 = QC_E_ADDI $x10, 4000
+    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LBU $x12, 0 :: (load (s8))
+    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LBU $x12, 1 :: (load (s8))
+    ; RV32XQCI_ZCB-NEXT: dead renamable $x11 = QC_E_LBU $x12, 2 :: (load (s8))
+    ; RV32XQCI_ZCB-NEXT: dead renamable $x10 = QC_E_LBU killed $x12, 3 :: (load (s8))
     ; RV32XQCI_ZCB-NEXT: PseudoRET
     ;
     ; RV32XQCI_NOXQCILIA-LABEL: name: load_large_offset_u8
@@ -287,26 +292,28 @@ body:             |
     ; RV32XQCI: liveins: $x10
     ; RV32XQCI-NEXT: {{  $}}
     ; RV32XQCI-NEXT: renamable $x11 = ADDI $x0, 1
-    ; RV32XQCI-NEXT: QC_E_SW killed renamable $x11, renamable $x10, 4000 :: (volatile store (s32))
+    ; RV32XQCI-NEXT: $x12 = QC_E_ADDI $x10, 3968
+    ; RV32XQCI-NEXT: QC_E_SW killed renamable $x11, $x12, 32 :: (volatile store (s32))
     ; RV32XQCI-NEXT: renamable $x11 = ADDI $x0, 3
-    ; RV32XQCI-NEXT: QC_E_SW killed renamable $x11, renamable $x10, 4004 :: (volatile store (s32))
+    ; RV32XQCI-NEXT: QC_E_SW killed renamable $x11, $x12, 36 :: (volatile store (s32))
     ; RV32XQCI-NEXT: renamable $x11 = ADDI $x0, 5
-    ; RV32XQCI-NEXT: QC_E_SW killed renamable $x11, renamable $x10, 4008 :: (volatile store (s32))
+    ; RV32XQCI-NEXT: QC_E_SW killed renamable $x11, $x12, 40 :: (volatile store (s32))
     ; RV32XQCI-NEXT: renamable $x11 = ADDI $x0, 7
-    ; RV32XQCI-NEXT: QC_E_SW killed renamable $x11, killed renamable $x10, 4012 :: (volatile store (s32))
+    ; RV32XQCI-NEXT: QC_E_SW killed renamable $x11, killed $x12, 44 :: (volatile store (s32))
     ; RV32XQCI-NEXT: PseudoRET
     ;
     ; RV32XQCI_ZCB-LABEL: name: store_large_offset_i32
     ; RV32XQCI_ZCB: liveins: $x10
     ; RV32XQCI_ZCB-NEXT: {{  $}}
     ; RV32XQCI_ZCB-NEXT: renamable $x11 = ADDI $x0, 1
-    ; RV32XQCI_ZCB-NEXT: QC_E_SW killed renamable $x11, renamable $x10, 4000 :: (volatile store (s32))
+    ; RV32XQCI_ZCB-NEXT: $x12 = QC_E_ADDI $x10, 3968
+    ; RV32XQCI_ZCB-NEXT: QC_E_SW killed renamable $x11, $x12, 32 :: (volatile store (s32))
     ; RV32XQCI_ZCB-NEXT: renamable $x11 = ADDI $x0, 3
-    ; RV32XQCI_ZCB-NEXT: QC_E_SW killed renamable $x11, renamable $x10, 4004 :: (volatile store (s32))
+    ; RV32XQCI_ZCB-NEXT: QC_E_SW killed renamable $x11, $x12, 36 :: (volatile store (s32))
     ; RV32XQCI_ZCB-NEXT: renamable $x11 = ADDI $x0, 5
-    ; RV32XQCI_ZCB-NEXT: QC_E_SW killed renamable $x11, renamable $x10, 4008 :: (volatile store (s32))
+    ; RV32XQCI_ZCB-NEXT: QC_E_SW killed renamable $x11, $x12, 40 :: (volatile store (s32))
     ; RV32XQCI_ZCB-NEXT: renamable $x11 = ADDI $x0, 7
-    ; RV32XQCI_ZCB-NEXT: QC_E_SW killed renamable $x11, killed renamable $x10, 4012 :: (volatile store (s32))
+    ; RV32XQCI_ZCB-NEXT: QC_E_SW killed renamable $x11, killed $x12, 44 :: (volatile store (s32))
     ; RV32XQCI_ZCB-NEXT: PseudoRET
     ;
     ; RV32XQCI_NOXQCILIA-LABEL: name: store_large_offset_i32
@@ -369,13 +376,14 @@ body:             |
     ; RV32XQCI_ZCB: liveins: $x10
     ; RV32XQCI_ZCB-NEXT: {{  $}}
     ; RV32XQCI_ZCB-NEXT: renamable $x11 = ADDI $x0, 1
-    ; RV32XQCI_ZCB-NEXT: QC_E_SH killed renamable $x11, renamable $x10, 4000 :: (volatile store (s16))
+    ; RV32XQCI_ZCB-NEXT: $x12 = QC_E_ADDI $x10, 4000
+    ; RV32XQCI_ZCB-NEXT: QC_E_SH killed renamable $x11, $x12, 0 :: (volatile store (s16))
     ; RV32XQCI_ZCB-NEXT: renamable $x11 = ADDI $x0, 3
-    ; RV32XQCI_ZCB-NEXT: QC_E_SH killed renamable $x11, renamable $x10, 4000 :: (volatile store (s16))
+    ; RV32XQCI_ZCB-NEXT: QC_E_SH killed renamable $x11, $x12, 0 :: (volatile store (s16))
     ; RV32XQCI_ZCB-NEXT: renamable $x11 = ADDI $x0, 5
-    ; RV32XQCI_ZCB-NEXT: QC_E_SH killed renamable $x11, renamable $x10, 4002 :: (volatile store (s16))
+    ; RV32XQCI_ZCB-NEXT: QC_E_SH killed renamable $x11, $x12, 2 :: (volatile store (s16))
     ; RV32XQCI_ZCB-NEXT: renamable $x11 = ADDI $x0, 7
-    ; RV32XQCI_ZCB-NEXT: QC_E_SH killed renamable $x11, killed renamable $x10, 4002 :: (volatile store (s16))
+    ; RV32XQCI_ZCB-NEXT: QC_E_SH killed renamable $x11, killed $x12, 2 :: (volatile store (s16))
     ; RV32XQCI_ZCB-NEXT: PseudoRET
     ;
     ; RV32XQCI_NOXQCILIA-LABEL: name: store_large_offset_i16
@@ -438,13 +446,14 @@ body:             |
     ; RV32XQCI_ZCB: liveins: $x10
     ; RV32XQCI_ZCB-NEXT: {{  $}}
     ; RV32XQCI_ZCB-NEXT: renamable $x11 = ADDI $x0, 1
-    ; RV32XQCI_ZCB-NEXT: QC_E_SB killed renamable $x11, renamable $x10, 4000 :: (volatile store (s8))
+    ; RV32XQCI_ZCB-NEXT: $x12 = QC_E_ADDI $x10, 4000
+    ; RV32XQCI_ZCB-NEXT: QC_E_SB killed renamable $x11, $x12, 0 :: (volatile store (s8))
     ; RV32XQCI_ZCB-NEXT: renamable $x11 = ADDI $x0, 3
-    ; RV32XQCI_ZCB-NEXT: QC_E_SB killed renamable $x11, renamable $x10, 4001 :: (volatile store (s8))
+    ; RV32XQCI_ZCB-NEXT: QC_E_SB killed renamable $x11, $x12, 1 :: (volatile store (s8))
     ; RV32XQCI_ZCB-NEXT: renamable $x11 = ADDI $x0, 5
-    ; RV32XQCI_ZCB-NEXT: QC_E_SB killed renamable $x11, renamable $x10, 4002 :: (volatile store (s8))
+    ; RV32XQCI_ZCB-NEXT: QC_E_SB killed renamable $x11, $x12, 2 :: (volatile store (s8))
     ; RV32XQCI_ZCB-NEXT: renamable $x11 = ADDI $x0, 7
-    ; RV32XQCI_ZCB-NEXT: QC_E_SB killed renamable $x11, killed renamable $x10, 4003 :: (volatile store (s8))
+    ; RV32XQCI_ZCB-NEXT: QC_E_SB killed renamable $x11, killed $x12, 3 :: (volatile store (s8))
     ; RV32XQCI_ZCB-NEXT: PseudoRET
     ;
     ; RV32XQCI_NOXQCILIA-LABEL: name: store_large_offset_i8

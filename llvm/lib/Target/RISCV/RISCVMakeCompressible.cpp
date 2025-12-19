@@ -101,12 +101,17 @@ static unsigned log2LdstWidth(unsigned Opcode) {
     llvm_unreachable("Unexpected opcode");
   case RISCV::LBU:
   case RISCV::SB:
+  case RISCV::QC_E_LBU:
+  case RISCV::QC_E_SB:
     return 0;
   case RISCV::LH:
   case RISCV::LH_INX:
   case RISCV::LHU:
   case RISCV::SH:
   case RISCV::SH_INX:
+  case RISCV::QC_E_LH:
+  case RISCV::QC_E_LHU:
+  case RISCV::QC_E_SH:
     return 1;
   case RISCV::LW:
   case RISCV::LW_INX:
@@ -114,6 +119,8 @@ static unsigned log2LdstWidth(unsigned Opcode) {
   case RISCV::SW_INX:
   case RISCV::FLW:
   case RISCV::FSW:
+  case RISCV::QC_E_LW:
+  case RISCV::QC_E_SW:
     return 2;
   case RISCV::LD:
   case RISCV::LD_RV32:
@@ -132,12 +139,18 @@ static unsigned offsetMask(unsigned Opcode) {
     llvm_unreachable("Unexpected opcode");
   case RISCV::LBU:
   case RISCV::SB:
+  case RISCV::QC_E_LB:
+  case RISCV::QC_E_LBU:
+  case RISCV::QC_E_SB:
     return maskTrailingOnes<unsigned>(2U);
   case RISCV::LH:
   case RISCV::LH_INX:
   case RISCV::LHU:
   case RISCV::SH:
   case RISCV::SH_INX:
+  case RISCV::QC_E_LH:
+  case RISCV::QC_E_LHU:
+  case RISCV::QC_E_SH:
     return maskTrailingOnes<unsigned>(1U);
   case RISCV::LW:
   case RISCV::LW_INX:
@@ -151,6 +164,8 @@ static unsigned offsetMask(unsigned Opcode) {
   case RISCV::SD_RV32:
   case RISCV::FLD:
   case RISCV::FSD:
+  case RISCV::QC_E_LW:
+  case RISCV::QC_E_SW:
     return maskTrailingOnes<unsigned>(5U);
   }
 }
@@ -214,6 +229,15 @@ static bool isCompressibleLoad(const MachineInstr &MI) {
     return !STI.is64Bit() && STI.hasStdExtCOrZcfOrZce();
   case RISCV::FLD:
     return STI.hasStdExtCOrZcd();
+  // For the Xqcilo loads we mark it as compressible only if Xqcilia is also
+  // enabled so that QC_E_ADDI can be used to create the new base.
+  case RISCV::QC_E_LBU:
+  case RISCV::QC_E_LH:
+  case RISCV::QC_E_LHU:
+    return !STI.is64Bit() && STI.hasVendorXqcilo() && STI.hasVendorXqcilia() &&
+           STI.hasStdExtZcb();
+  case RISCV::QC_E_LW:
+    return !STI.is64Bit() && STI.hasVendorXqcilo() && STI.hasVendorXqcilia();
   }
 }
 
@@ -238,6 +262,14 @@ static bool isCompressibleStore(const MachineInstr &MI) {
     return !STI.is64Bit() && STI.hasStdExtCOrZcfOrZce();
   case RISCV::FSD:
     return STI.hasStdExtCOrZcd();
+  // For the Xqcilo stores we mark it as compressible only if Xqcilia is also
+  // enabled so that QC_E_ADDI can be used to create the new base.
+  case RISCV::QC_E_SB:
+  case RISCV::QC_E_SH:
+    return !STI.is64Bit() && STI.hasVendorXqcilo() && STI.hasVendorXqcilia() &&
+           STI.hasStdExtZcb();
+  case RISCV::QC_E_SW:
+    return !STI.is64Bit() && STI.hasVendorXqcilo() && STI.hasVendorXqcilia();
   }
 }
 
@@ -437,10 +469,16 @@ bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
 
       // Create the appropriate copy and/or offset.
       if (RISCV::GPRRegClass.contains(RegImm.Reg)) {
-        assert(isInt<12>(RegImm.Imm));
-        BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::ADDI), NewReg)
-            .addReg(RegImm.Reg)
-            .addImm(RegImm.Imm);
+        if (isInt<12>(RegImm.Imm)) {
+          BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::ADDI), NewReg)
+              .addReg(RegImm.Reg)
+              .addImm(RegImm.Imm);
+        } else {
+          assert(STI.hasVendorXqcilia() && isInt<26>(RegImm.Imm));
+          BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::QC_E_ADDI), NewReg)
+              .addReg(RegImm.Reg)
+              .addImm(RegImm.Imm);
+        }
       } else {
         assert(RegImm.Imm == 0);
         TII.copyPhysReg(MBB, MI, MI.getDebugLoc(), NewReg, RegImm.Reg,
