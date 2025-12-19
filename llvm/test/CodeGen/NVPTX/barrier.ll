@@ -147,10 +147,10 @@ define void @barrier_cta_red_popc_all(i32 %id, i1 %pred) {
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; CHECK-NEXT:    ld.param.b32 %r1, [barrier_cta_red_popc_all_param_0];
-; CHECK-NEXT:    bar.red.popc %r2, %r1, %p1;
-; CHECK-NEXT:    bar.red.popc %r3, 3, %p1;
-; CHECK-NEXT:    barrier.red.popc %r4, %r1, %p1;
-; CHECK-NEXT:    barrier.red.popc %r5, 3, %p1;
+; CHECK-NEXT:    bar.red.popc.u32 %r2, %r1, %p1;
+; CHECK-NEXT:    bar.red.popc.u32 %r3, 3, %p1;
+; CHECK-NEXT:    barrier.red.popc.u32 %r4, %r1, %p1;
+; CHECK-NEXT:    barrier.red.popc.u32 %r5, 3, %p1;
 ; CHECK-NEXT:    ret;
   %v1 = call i32 @llvm.nvvm.barrier.cta.red.popc.aligned.all(i32 %id, i1 %pred)
   %v2 = call i32 @llvm.nvvm.barrier.cta.red.popc.aligned.all(i32 3, i1 %pred)
@@ -172,24 +172,24 @@ define void @barrier_cta_red_popc_count(i32 %id, i32 %cnt, i1 %pred) {
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; CHECK-NEXT:    ld.param.b32 %r1, [barrier_cta_red_popc_count_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [barrier_cta_red_popc_count_param_1];
-; CHECK-NEXT:    bar.red.popc %r3, %r1, %r2, %p1;
-; CHECK-NEXT:    bar.red.popc %r4, 3, %r2, %p1;
-; CHECK-NEXT:    barrier.red.popc %r5, %r1, %r2, %p1;
-; CHECK-NEXT:    barrier.red.popc %r6, 3, %r2, %p1;
-; CHECK-NEXT:    bar.red.popc %r7, %r1, 10, %p1;
-; CHECK-NEXT:    bar.red.popc %r8, 3, 11, %p1;
-; CHECK-NEXT:    barrier.red.popc %r9, %r1, 12, %p1;
-; CHECK-NEXT:    barrier.red.popc %r10, 3, 13, %p1;
+; CHECK-NEXT:    bar.red.popc.u32 %r3, %r1, %r2, %p1;
+; CHECK-NEXT:    bar.red.popc.u32 %r4, 3, %r2, %p1;
+; CHECK-NEXT:    barrier.red.popc.u32 %r5, %r1, %r2, %p1;
+; CHECK-NEXT:    barrier.red.popc.u32 %r6, 3, %r2, %p1;
+; CHECK-NEXT:    bar.red.popc.u32 %r7, %r1, 64, %p1;
+; CHECK-NEXT:    bar.red.popc.u32 %r8, 3, 64, %p1;
+; CHECK-NEXT:    barrier.red.popc.u32 %r9, %r1, 64, %p1;
+; CHECK-NEXT:    barrier.red.popc.u32 %r10, 3, 64, %p1;
 ; CHECK-NEXT:    ret;
   %v1 = call i32 @llvm.nvvm.barrier.cta.red.popc.aligned.count(i32 %id, i32 %cnt, i1 %pred)
   %v2 = call i32 @llvm.nvvm.barrier.cta.red.popc.aligned.count(i32 3, i32 %cnt, i1 %pred)
   %v3 = call i32 @llvm.nvvm.barrier.cta.red.popc.count(i32 %id, i32 %cnt, i1 %pred)
   %v4 = call i32 @llvm.nvvm.barrier.cta.red.popc.count(i32 3, i32 %cnt, i1 %pred)
 
-  %v5 = call i32 @llvm.nvvm.barrier.cta.red.popc.aligned.count(i32 %id, i32 10, i1 %pred)
-  %v6 = call i32 @llvm.nvvm.barrier.cta.red.popc.aligned.count(i32 3, i32 11, i1 %pred)
-  %v7 = call i32 @llvm.nvvm.barrier.cta.red.popc.count(i32 %id, i32 12, i1 %pred)
-  %v8 = call i32 @llvm.nvvm.barrier.cta.red.popc.count(i32 3, i32 13, i1 %pred)
+  %v5 = call i32 @llvm.nvvm.barrier.cta.red.popc.aligned.count(i32 %id, i32 64, i1 %pred)
+  %v6 = call i32 @llvm.nvvm.barrier.cta.red.popc.aligned.count(i32 3, i32 64, i1 %pred)
+  %v7 = call i32 @llvm.nvvm.barrier.cta.red.popc.count(i32 %id, i32 64, i1 %pred)
+  %v8 = call i32 @llvm.nvvm.barrier.cta.red.popc.count(i32 3, i32 64, i1 %pred)
   ret void
 }
 
@@ -205,10 +205,10 @@ define void @barrier_cta_red_and_all(i32 %id, i1 %pred) {
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; CHECK-NEXT:    ld.param.b32 %r1, [barrier_cta_red_and_all_param_0];
-; CHECK-NEXT:    bar.red.and %p2, %r1, %p1;
-; CHECK-NEXT:    bar.red.and %p3, 3, %p1;
-; CHECK-NEXT:    barrier.red.and %p4, %r1, %p1;
-; CHECK-NEXT:    barrier.red.and %p5, 3, %p1;
+; CHECK-NEXT:    bar.red.and.pred %p2, %r1, %p1;
+; CHECK-NEXT:    bar.red.and.pred %p3, 3, %p1;
+; CHECK-NEXT:    barrier.red.and.pred %p4, %r1, %p1;
+; CHECK-NEXT:    barrier.red.and.pred %p5, 3, %p1;
 ; CHECK-NEXT:    ret;
   %v1 = call i1 @llvm.nvvm.barrier.cta.red.and.aligned.all(i32 %id, i1 %pred)
   %v2 = call i1 @llvm.nvvm.barrier.cta.red.and.aligned.all(i32 3, i1 %pred)
@@ -230,24 +230,24 @@ define void @barrier_cta_red_and_count(i32 %id, i32 %cnt, i1 %pred) {
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; CHECK-NEXT:    ld.param.b32 %r1, [barrier_cta_red_and_count_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [barrier_cta_red_and_count_param_1];
-; CHECK-NEXT:    bar.red.and %p2, %r1, %r2, %p1;
-; CHECK-NEXT:    bar.red.and %p3, 3, %r2, %p1;
-; CHECK-NEXT:    barrier.red.and %p4, %r1, %r2, %p1;
-; CHECK-NEXT:    barrier.red.and %p5, 3, %r2, %p1;
-; CHECK-NEXT:    bar.red.and %p6, %r1, 10, %p1;
-; CHECK-NEXT:    bar.red.and %p7, 3, 11, %p1;
-; CHECK-NEXT:    barrier.red.and %p8, %r1, 12, %p1;
-; CHECK-NEXT:    barrier.red.and %p9, 3, 13, %p1;
+; CHECK-NEXT:    bar.red.and.pred %p2, %r1, %r2, %p1;
+; CHECK-NEXT:    bar.red.and.pred %p3, 3, %r2, %p1;
+; CHECK-NEXT:    barrier.red.and.pred %p4, %r1, %r2, %p1;
+; CHECK-NEXT:    barrier.red.and.pred %p5, 3, %r2, %p1;
+; CHECK-NEXT:    bar.red.and.pred %p6, %r1, 64, %p1;
+; CHECK-NEXT:    bar.red.and.pred %p7, 3, 32, %p1;
+; CHECK-NEXT:    barrier.red.and.pred %p8, %r1, 64, %p1;
+; CHECK-NEXT:    barrier.red.and.pred %p9, 3, 64, %p1;
 ; CHECK-NEXT:    ret;
   %v1 = call i1 @llvm.nvvm.barrier.cta.red.and.aligned.count(i32 %id, i32 %cnt, i1 %pred)
   %v2 = call i1 @llvm.nvvm.barrier.cta.red.and.aligned.count(i32 3, i32 %cnt, i1 %pred)
   %v3 = call i1 @llvm.nvvm.barrier.cta.red.and.count(i32 %id, i32 %cnt, i1 %pred)
   %v4 = call i1 @llvm.nvvm.barrier.cta.red.and.count(i32 3, i32 %cnt, i1 %pred)
 
-  %v5 = call i1 @llvm.nvvm.barrier.cta.red.and.aligned.count(i32 %id, i32 10, i1 %pred)
-  %v6 = call i1 @llvm.nvvm.barrier.cta.red.and.aligned.count(i32 3, i32 11, i1 %pred)
-  %v7 = call i1 @llvm.nvvm.barrier.cta.red.and.count(i32 %id, i32 12, i1 %pred)
-  %v8 = call i1 @llvm.nvvm.barrier.cta.red.and.count(i32 3, i32 13, i1 %pred)
+  %v5 = call i1 @llvm.nvvm.barrier.cta.red.and.aligned.count(i32 %id, i32 64, i1 %pred)
+  %v6 = call i1 @llvm.nvvm.barrier.cta.red.and.aligned.count(i32 3, i32 32, i1 %pred)
+  %v7 = call i1 @llvm.nvvm.barrier.cta.red.and.count(i32 %id, i32 64, i1 %pred)
+  %v8 = call i1 @llvm.nvvm.barrier.cta.red.and.count(i32 3, i32 64, i1 %pred)
   ret void
 }
 
@@ -263,10 +263,10 @@ define void @barrier_cta_red_or_all(i32 %id, i1 %pred) {
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; CHECK-NEXT:    ld.param.b32 %r1, [barrier_cta_red_or_all_param_0];
-; CHECK-NEXT:    bar.red.or %p2, %r1, %p1;
-; CHECK-NEXT:    bar.red.or %p3, 3, %p1;
-; CHECK-NEXT:    barrier.red.or %p4, %r1, %p1;
-; CHECK-NEXT:    barrier.red.or %p5, 3, %p1;
+; CHECK-NEXT:    bar.red.or.pred %p2, %r1, %p1;
+; CHECK-NEXT:    bar.red.or.pred %p3, 3, %p1;
+; CHECK-NEXT:    barrier.red.or.pred %p4, %r1, %p1;
+; CHECK-NEXT:    barrier.red.or.pred %p5, 3, %p1;
 ; CHECK-NEXT:    ret;
   %v1 = call i1 @llvm.nvvm.barrier.cta.red.or.aligned.all(i32 %id, i1 %pred)
   %v2 = call i1 @llvm.nvvm.barrier.cta.red.or.aligned.all(i32 3, i1 %pred)
@@ -288,23 +288,23 @@ define void @barrier_cta_red_or_count(i32 %id, i32 %cnt, i1 %pred) {
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; CHECK-NEXT:    ld.param.b32 %r1, [barrier_cta_red_or_count_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [barrier_cta_red_or_count_param_1];
-; CHECK-NEXT:    bar.red.or %p2, %r1, %r2, %p1;
-; CHECK-NEXT:    bar.red.or %p3, 3, %r2, %p1;
-; CHECK-NEXT:    barrier.red.or %p4, %r1, %r2, %p1;
-; CHECK-NEXT:    barrier.red.or %p5, 3, %r2, %p1;
-; CHECK-NEXT:    bar.red.or %p6, %r1, 10, %p1;
-; CHECK-NEXT:    bar.red.or %p7, 3, 11, %p1;
-; CHECK-NEXT:    barrier.red.or %p8, %r1, 12, %p1;
-; CHECK-NEXT:    barrier.red.or %p9, 3, 13, %p1;
+; CHECK-NEXT:    bar.red.or.pred %p2, %r1, %r2, %p1;
+; CHECK-NEXT:    bar.red.or.pred %p3, 3, %r2, %p1;
+; CHECK-NEXT:    barrier.red.or.pred %p4, %r1, %r2, %p1;
+; CHECK-NEXT:    barrier.red.or.pred %p5, 3, %r2, %p1;
+; CHECK-NEXT:    bar.red.or.pred %p6, %r1, 64, %p1;
+; CHECK-NEXT:    bar.red.or.pred %p7, 3, 32, %p1;
+; CHECK-NEXT:    barrier.red.or.pred %p8, %r1, 64, %p1;
+; CHECK-NEXT:    barrier.red.or.pred %p9, 3, 64, %p1;
 ; CHECK-NEXT:    ret;
   %v1 = call i1 @llvm.nvvm.barrier.cta.red.or.aligned.count(i32 %id, i32 %cnt, i1 %pred)
   %v2 = call i1 @llvm.nvvm.barrier.cta.red.or.aligned.count(i32 3, i32 %cnt, i1 %pred)
   %v3 = call i1 @llvm.nvvm.barrier.cta.red.or.count(i32 %id, i32 %cnt, i1 %pred)
   %v4 = call i1 @llvm.nvvm.barrier.cta.red.or.count(i32 3, i32 %cnt, i1 %pred)
 
-  %v5 = call i1 @llvm.nvvm.barrier.cta.red.or.aligned.count(i32 %id, i32 10, i1 %pred)
-  %v6 = call i1 @llvm.nvvm.barrier.cta.red.or.aligned.count(i32 3, i32 11, i1 %pred)
-  %v7 = call i1 @llvm.nvvm.barrier.cta.red.or.count(i32 %id, i32 12, i1 %pred)
-  %v8 = call i1 @llvm.nvvm.barrier.cta.red.or.count(i32 3, i32 13, i1 %pred)
+  %v5 = call i1 @llvm.nvvm.barrier.cta.red.or.aligned.count(i32 %id, i32 64, i1 %pred)
+  %v6 = call i1 @llvm.nvvm.barrier.cta.red.or.aligned.count(i32 3, i32 32, i1 %pred)
+  %v7 = call i1 @llvm.nvvm.barrier.cta.red.or.count(i32 %id, i32 64, i1 %pred)
+  %v8 = call i1 @llvm.nvvm.barrier.cta.red.or.count(i32 3, i32 64, i1 %pred)
   ret void
 }

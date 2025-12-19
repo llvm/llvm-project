@@ -151,19 +151,19 @@ defm BARRIER_CTA_SYNC_ALL : BARRIER_ALL<"barrier.sync", int_nvvm_barrier_cta_syn
 defm BARRIER_CTA_SYNC : BARRIER_COUNT<"barrier.sync", int_nvvm_barrier_cta_sync_count, [hasPTX<60>]>;
 defm BARRIER_CTA_ARRIVE : BARRIER_COUNT<"barrier.arrive", int_nvvm_barrier_cta_arrive_count, [hasPTX<60>]>;
 
-defm BARRIER_CTA_RED_POPC_ALIGNED_ALL : BARRIER_RED_ALL<"bar.red.popc", int_nvvm_barrier_cta_red_popc_aligned_all, I32RT>;
-defm BARRIER_CTA_RED_AND_ALIGNED_ALL : BARRIER_RED_ALL<"bar.red.and", int_nvvm_barrier_cta_red_and_aligned_all, I1RT>;
-defm BARRIER_CTA_RED_OR_ALIGNED_ALL : BARRIER_RED_ALL<"bar.red.or", int_nvvm_barrier_cta_red_or_aligned_all, I1RT>;
-defm BARRIER_CTA_RED_POPC_ALIGNED : BARRIER_RED_COUNT<"bar.red.popc", int_nvvm_barrier_cta_red_popc_aligned_count, I32RT>;
-defm BARRIER_CTA_RED_AND_ALIGNED : BARRIER_RED_COUNT<"bar.red.and", int_nvvm_barrier_cta_red_and_aligned_count, I1RT>;
-defm BARRIER_CTA_RED_OR_ALIGNED : BARRIER_RED_COUNT<"bar.red.or", int_nvvm_barrier_cta_red_or_aligned_count, I1RT>;
+defm BARRIER_CTA_RED_POPC_ALIGNED_ALL : BARRIER_RED_ALL<"bar.red.popc.u32", int_nvvm_barrier_cta_red_popc_aligned_all, I32RT>;
+defm BARRIER_CTA_RED_AND_ALIGNED_ALL : BARRIER_RED_ALL<"bar.red.and.pred", int_nvvm_barrier_cta_red_and_aligned_all, I1RT>;
+defm BARRIER_CTA_RED_OR_ALIGNED_ALL : BARRIER_RED_ALL<"bar.red.or.pred", int_nvvm_barrier_cta_red_or_aligned_all, I1RT>;
+defm BARRIER_CTA_RED_POPC_ALIGNED : BARRIER_RED_COUNT<"bar.red.popc.u32", int_nvvm_barrier_cta_red_popc_aligned_count, I32RT>;
+defm BARRIER_CTA_RED_AND_ALIGNED : BARRIER_RED_COUNT<"bar.red.and.pred", int_nvvm_barrier_cta_red_and_aligned_count, I1RT>;
+defm BARRIER_CTA_RED_OR_ALIGNED : BARRIER_RED_COUNT<"bar.red.or.pred", int_nvvm_barrier_cta_red_or_aligned_count, I1RT>;
 
-defm BARRIER_CTA_RED_POPC_ALL : BARRIER_RED_ALL<"barrier.red.popc", int_nvvm_barrier_cta_red_popc_all, I32RT, [hasPTX<60>]>;
-defm BARRIER_CTA_RED_AND_ALL : BARRIER_RED_ALL<"barrier.red.and", int_nvvm_barrier_cta_red_and_all, I1RT, [hasPTX<60>]>;
-defm BARRIER_CTA_RED_OR_ALL : BARRIER_RED_ALL<"barrier.red.or", int_nvvm_barrier_cta_red_or_all, I1RT, [hasPTX<60>]>;
-defm BARRIER_CTA_RED_POPC_COUNT : BARRIER_RED_COUNT<"barrier.red.popc", int_nvvm_barrier_cta_red_popc_count, I32RT, [hasPTX<60>]>;
-defm BARRIER_CTA_RED_AND_COUNT : BARRIER_RED_COUNT<"barrier.red.and", int_nvvm_barrier_cta_red_and_count, I1RT, [hasPTX<60>]>;
-defm BARRIER_CTA_RED_OR_COUNT : BARRIER_RED_COUNT<"barrier.red.or", int_nvvm_barrier_cta_red_or_count, I1RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_POPC_ALL : BARRIER_RED_ALL<"barrier.red.popc.u32", int_nvvm_barrier_cta_red_popc_all, I32RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_AND_ALL : BARRIER_RED_ALL<"barrier.red.and.pred", int_nvvm_barrier_cta_red_and_all, I1RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_OR_ALL : BARRIER_RED_ALL<"barrier.red.or.pred", int_nvvm_barrier_cta_red_or_all, I1RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_POPC_COUNT : BARRIER_RED_COUNT<"barrier.red.popc.u32", int_nvvm_barrier_cta_red_popc_count, I32RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_AND_COUNT : BARRIER_RED_COUNT<"barrier.red.and.pred", int_nvvm_barrier_cta_red_and_count, I1RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_OR_COUNT : BARRIER_RED_COUNT<"barrier.red.or.pred", int_nvvm_barrier_cta_red_or_count, I1RT, [hasPTX<60>]>;
 
 class INT_BARRIER_CLUSTER<string variant, Intrinsic Intr,
                           list<Predicate> Preds = [hasPTX<78>, hasSM<90>]>:

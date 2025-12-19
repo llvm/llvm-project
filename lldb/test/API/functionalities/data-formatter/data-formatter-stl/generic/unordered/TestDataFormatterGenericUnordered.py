@@ -4,6 +4,8 @@ from lldbsuite.test import lldbutil
 
 
 class GenericUnorderedDataFormatterTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def setUp(self):
         TestBase.setUp(self)
         self.namespace = "std"
@@ -46,10 +48,15 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
         self.runCmd("settings set auto-one-line-summaries false")
         children_are_key_value = r"\[0\] = \{\s*first = "
 
+        unordered_map_type = (
+            "std::unordered_map<int, std::basic_string<char, std::char_traits<char>, std::allocator<char>>, std::hash<int>, std::equal_to<int>, std::allocator<std::pair<int const, std::basic_string<char, std::char_traits<char>, std::allocator<char>>>>>"
+            if self.getDebugInfo() == "pdb"
+            else "UnorderedMap"
+        )
         self.look_for_content_and_continue(
             "map",
             [
-                "UnorderedMap",
+                unordered_map_type,
                 children_are_key_value,
                 "size=5 {",
                 "hello",
@@ -60,10 +67,15 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
             ],
         )
 
+        unordered_mmap_type = (
+            "std::unordered_multimap<int, std::basic_string<char, std::char_traits<char>, std::allocator<char>>, std::hash<int>, std::equal_to<int>, std::allocator<std::pair<int const, std::basic_string<char, std::char_traits<char>, std::allocator<char>>>>>"
+            if self.getDebugInfo() == "pdb"
+            else "UnorderedMultiMap"
+        )
         self.look_for_content_and_continue(
             "mmap",
             [
-                "UnorderedMultiMap",
+                unordered_mmap_type,
                 children_are_key_value,
                 "size=6 {",
                 "first = 3",
@@ -73,10 +85,15 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
             ],
         )
 
+        ints_unordered_set = (
+            "std::unordered_set<int, std::hash<int>, std::equal_to<int>, std::allocator<int>>"
+            if self.getDebugInfo() == "pdb"
+            else "IntsUnorderedSet"
+        )
         self.look_for_content_and_continue(
             "iset",
             [
-                "IntsUnorderedSet",
+                ints_unordered_set,
                 "size=5 {",
                 r"\[\d\] = 5",
                 r"\[\d\] = 3",
@@ -84,10 +101,15 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
             ],
         )
 
+        strings_unordered_set = (
+            "std::unordered_set<std::basic_string<char, std::char_traits<char>, std::allocator<char>>, std::hash<std::basic_string<char, std::char_traits<char>, std::allocator<char>>>, std::equal_to<std::basic_string<char, std::char_traits<char>, std::allocator<char>>>, std::allocator<std::basic_string<char, std::char_traits<char>, std::allocator<char>>>>"
+            if self.getDebugInfo() == "pdb"
+            else "StringsUnorderedSet"
+        )
         self.look_for_content_and_continue(
             "sset",
             [
-                "StringsUnorderedSet",
+                strings_unordered_set,
                 "size=5 {",
                 r'\[\d\] = "is"',
                 r'\[\d\] = "world"',
@@ -95,10 +117,15 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
             ],
         )
 
+        ints_unordered_mset = (
+            "std::unordered_multiset<int, std::hash<int>, std::equal_to<int>, std::allocator<int>>"
+            if self.getDebugInfo() == "pdb"
+            else "IntsUnorderedMultiSet"
+        )
         self.look_for_content_and_continue(
             "imset",
             [
-                "IntsUnorderedMultiSet",
+                ints_unordered_mset,
                 "size=6 {",
                 "(\\[\\d\\] = 3(\\n|.)+){3}",
                 r"\[\d\] = 2",
@@ -106,10 +133,15 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
             ],
         )
 
+        strings_unordered_mset = (
+            "std::unordered_multiset<std::basic_string<char, std::char_traits<char>, std::allocator<char>>, std::hash<std::basic_string<char, std::char_traits<char>, std::allocator<char>>>, std::equal_to<std::basic_string<char, std::char_traits<char>, std::allocator<char>>>, std::allocator<std::basic_string<char, std::char_traits<char>, std::allocator<char>>>>"
+            if self.getDebugInfo() == "pdb"
+            else "StringsUnorderedMultiSet"
+        )
         self.look_for_content_and_continue(
             "smset",
             [
-                "StringsUnorderedMultiSet",
+                strings_unordered_mset,
                 "size=5 {",
                 '(\\[\\d\\] = "is"(\\n|.)+){2}',
                 '(\\[\\d\\] = "world"(\\n|.)+){2}',
