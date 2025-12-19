@@ -80,10 +80,9 @@ DuplicateIncludeCallbacks::DuplicateIncludeCallbacks(
   Files.emplace_back();
 
   AllowedRegexes.reserve(IgnoredList.size());
-  for (const StringRef &It : IgnoredList) {
+  for (const StringRef &It : IgnoredList)
     if (!It.empty())
       AllowedRegexes.emplace_back(It);
-  }
 }
 
 void DuplicateIncludeCallbacks::FileChanged(SourceLocation Loc,

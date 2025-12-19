@@ -70,6 +70,24 @@ std::string ScriptedFrameProviderPythonInterface::GetDescription(
   return obj->GetStringValue().str();
 }
 
+std::optional<uint32_t>
+ScriptedFrameProviderPythonInterface::GetPriority(llvm::StringRef class_name) {
+  Status error;
+  StructuredData::ObjectSP obj =
+      CallStaticMethod(class_name, "get_priority", error);
+
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
+    return std::nullopt;
+
+  // Try to extract as unsigned integer. Return nullopt if Python returned None
+  // or if extraction fails.
+  if (StructuredData::UnsignedInteger *int_obj = obj->GetAsUnsignedInteger())
+    return static_cast<uint32_t>(int_obj->GetValue());
+
+  return std::nullopt;
+}
+
 StructuredData::ObjectSP
 ScriptedFrameProviderPythonInterface::GetFrameAtIndex(uint32_t index) {
   Status error;

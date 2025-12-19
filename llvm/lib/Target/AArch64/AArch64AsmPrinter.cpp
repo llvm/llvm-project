@@ -2419,30 +2419,14 @@ void AArch64AsmPrinter::emitAddress(MCRegister Reg, const MCExpr *Expr,
   }
 }
 
-static bool targetSupportsPAuthRelocation(const Triple &TT,
-                                          const MCExpr *Target,
-                                          const MCExpr *DSExpr) {
-  // No released version of glibc supports PAuth relocations.
-  if (TT.isOSGlibc() || TT.isMusl())
-    return false;
-
-  // We emit PAuth constants as IRELATIVE relocations in cases where the
-  // constant cannot be represented as a PAuth relocation:
-  // 1) There is a deactivation symbol.
-  // 2) The signed value is not a symbol.
-  return !DSExpr && !isa<MCConstantExpr>(Target);
-}
-
 static bool targetSupportsIRelativeRelocation(const Triple &TT) {
   // IFUNCs are ELF-only.
   if (!TT.isOSBinFormatELF())
     return false;
 
-  // musl doesn't support IFUNCs.
-  if (TT.isMusl())
-    return false;
-
-  return true;
+  // IFUNCs are supported on glibc, bionic, and some but not all of the BSDs.
+  return TT.isOSGlibc() || TT.isAndroid() || TT.isOSFreeBSD() ||
+         TT.isOSDragonFly() || TT.isOSNetBSD();
 }
 
 // Emit an ifunc resolver that returns a signed pointer to the specified target,
@@ -2501,10 +2485,8 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
     bool HasAddressDiversity, bool IsDSOLocal, const MCExpr *DSExpr) {
   const Triple &TT = TM.getTargetTriple();
 
-  // We only emit an IRELATIVE relocation if the target supports IRELATIVE and
-  // does not support the kind of PAuth relocation that we are trying to emit.
-  if (targetSupportsPAuthRelocation(TT, Target, DSExpr) ||
-      !targetSupportsIRelativeRelocation(TT))
+  // We only emit an IRELATIVE relocation if the target supports IRELATIVE.
+  if (!targetSupportsIRelativeRelocation(TT))
     return nullptr;
 
   // For now, only the DA key is supported.
@@ -2634,7 +2616,7 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
 
   uint64_t Disc = CPA.getDiscriminator()->getZExtValue();
 
-  // Check if we need to represent this with an IRELATIVE and emit it if so.
+  // Check if we can represent this with an IRELATIVE and emit it if so.
   if (auto *IFuncSym = emitPAuthRelocationAsIRelative(
           Sym, Disc, AArch64PACKey::ID(KeyID), CPA.hasAddressDiscriminator(),
           BaseGVB && BaseGVB->isDSOLocal(), DSExpr))

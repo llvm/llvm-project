@@ -869,19 +869,25 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     break; // Handled as library calls below.
   case Builtin::BI__builtin_dwarf_cfa:
     return errorBuiltinNYI(*this, e, builtinID);
-  case Builtin::BI__builtin_return_address:
-  case Builtin::BI_ReturnAddress:
-  case Builtin::BI__builtin_frame_address: {
-    mlir::Location loc = getLoc(e->getExprLoc());
+  case Builtin::BI__builtin_return_address: {
     llvm::APSInt level = e->getArg(0)->EvaluateKnownConstInt(getContext());
-    if (builtinID == Builtin::BI__builtin_return_address) {
-      return RValue::get(cir::ReturnAddrOp::create(
-          builder, loc,
-          builder.getConstAPInt(loc, builder.getUInt32Ty(), level)));
-    }
-    return RValue::get(cir::FrameAddrOp::create(
-        builder, loc,
+    return RValue::get(cir::ReturnAddrOp::create(
+        builder, getLoc(e->getExprLoc()),
         builder.getConstAPInt(loc, builder.getUInt32Ty(), level)));
+  }
+  case Builtin::BI_ReturnAddress: {
+    return RValue::get(cir::ReturnAddrOp::create(
+        builder, getLoc(e->getExprLoc()),
+        builder.getConstInt(loc, builder.getUInt32Ty(), 0)));
+  }
+  case Builtin::BI__builtin_frame_address: {
+    llvm::APSInt level = e->getArg(0)->EvaluateKnownConstInt(getContext());
+    mlir::Location loc = getLoc(e->getExprLoc());
+    mlir::Value addr = cir::FrameAddrOp::create(
+        builder, loc, allocaInt8PtrTy,
+        builder.getConstAPInt(loc, builder.getUInt32Ty(), level));
+    return RValue::get(
+        builder.createCast(loc, cir::CastKind::bitcast, addr, voidPtrTy));
   }
   case Builtin::BI__builtin_extract_return_addr:
   case Builtin::BI__builtin_frob_return_addr:

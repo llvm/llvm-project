@@ -70,10 +70,9 @@ static std::pair<OverloadedOperatorKind, StringRef> OperatorNames[] = {
     {OO_GreaterEqual, ">="}, {OO_Greater, ">"},       {OO_LessEqual, "<="}};
 
 static StringRef getOperatorName(OverloadedOperatorKind OpKind) {
-  for (auto Name : OperatorNames) {
+  for (auto Name : OperatorNames)
     if (Name.first == OpKind)
       return Name.second;
-  }
 
   return {};
 }
@@ -247,10 +246,9 @@ static bool containsDiscardedTokens(const ASTContext &Context,
   Lex.SetCommentRetentionState(true);
 
   Token Tok;
-  while (!Lex.LexFromRawLexer(Tok)) {
+  while (!Lex.LexFromRawLexer(Tok))
     if (Tok.is(tok::TokenKind::comment) || Tok.is(tok::TokenKind::hash))
       return true;
-  }
 
   return false;
 }
@@ -276,9 +274,8 @@ public:
   }
 
   bool dataTraverseStmtPre(Stmt *S) {
-    if (!S) {
+    if (!S)
       return true;
-    }
     if (Check->canBeBypassed(S))
       return false;
     if (!shouldIgnore(S))
@@ -920,13 +917,11 @@ static bool flipDemorganSide(SmallVectorImpl<FixItHint> &Fixes,
         FixItHint::CreateRemoval(cast<UnaryOperator>(E)->getOperatorLoc()));
     return false;
   }
-  if (const auto *BinOp = dyn_cast<BinaryOperator>(E)) {
+  if (const auto *BinOp = dyn_cast<BinaryOperator>(E))
     return flipDemorganBinaryOperator(Fixes, Ctx, BinOp, OuterBO);
-  }
   if (const auto *Paren = dyn_cast<ParenExpr>(E)) {
-    if (const auto *BinOp = dyn_cast<BinaryOperator>(Paren->getSubExpr())) {
+    if (const auto *BinOp = dyn_cast<BinaryOperator>(Paren->getSubExpr()))
       return flipDemorganBinaryOperator(Fixes, Ctx, BinOp, OuterBO, Paren);
-    }
   }
   // Fallback case just insert a logical not operator.
   if (E->getBeginLoc().isMacroID())

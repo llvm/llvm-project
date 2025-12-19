@@ -106,6 +106,13 @@ std::string ScriptedFrameProvider::GetDescription() const {
   return m_interface_sp->GetDescription(m_descriptor.GetName());
 }
 
+std::optional<uint32_t> ScriptedFrameProvider::GetPriority() const {
+  if (!m_interface_sp)
+    return std::nullopt;
+
+  return m_interface_sp->GetPriority(m_descriptor.GetName());
+}
+
 llvm::Expected<StackFrameSP>
 ScriptedFrameProvider::GetFrameAtIndex(uint32_t idx) {
   if (!m_interface_sp)
