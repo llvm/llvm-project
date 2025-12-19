@@ -34,7 +34,7 @@ users.
 Current Hand-in-Hand users:
 Libc++ uses it for from_chars<float/double>
 OpenMP uses it for printf on GPUs
-[WIP] clang uses it for constexpr math.
+[WIP] clang uses it for APFloat functions.
 
 For more information check out the 2024 talk about the original Project:
   * `slides <https://llvm.org/devmtg/2024-10/slides/techtalk/Jones-DiBella-hand-in-hand.pdf>`__
