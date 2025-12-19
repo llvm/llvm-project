@@ -1453,7 +1453,7 @@ class OpenMP_ThreadLimitClauseSkip<
                     extraClassDeclaration> {
   let arguments = (ins
     ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$thread_limit_num_dims,
-    Variadic<AnyInteger>:$thread_limit_dims_values
+    Variadic<IntLikeType>:$thread_limit_dims_values
   );
 
   let optAssemblyFormat = [{
