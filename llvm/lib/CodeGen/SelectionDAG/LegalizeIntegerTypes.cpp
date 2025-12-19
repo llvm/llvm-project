@@ -6209,7 +6209,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTEND_VECTOR_INREG(SDNode *N) {
     unsigned NewSize = NVT.getSizeInBits();
     if (Promoted.getValueType().getSizeInBits() > NewSize) {
       EVT ExtractVT = EVT::getVectorVT(
-          *DAG.getContext(), Promoted.getValueType().getScalarType(),
+          *DAG.getContext(), Promoted.getValueType().getVectorElementType(),
           NewSize / Promoted.getScalarValueSizeInBits());
 
       Promoted = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, ExtractVT, Promoted,
