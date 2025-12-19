@@ -1034,12 +1034,6 @@ bool RISCVInstructionSelector::selectInsertSubVector(
   if (Idx != 0)
     return false;
 
-  RISCVVType::VLMUL SubVecLMUL = RISCVTargetLowering::getLMUL(SubVecMVT);
-  [[maybe_unused]] bool IsSubVecPartReg =
-      SubVecLMUL == RISCVVType::VLMUL::LMUL_F2 ||
-      SubVecLMUL == RISCVVType::VLMUL::LMUL_F4 ||
-      SubVecLMUL == RISCVVType::VLMUL::LMUL_F8;
-
   // Constrain dst
   unsigned DstRegClassID = RISCVTargetLowering::getRegClassIDForVecVT(VecMVT);
   const TargetRegisterClass *DstRC = TRI.getRegClass(DstRegClassID);
