@@ -1,4 +1,4 @@
-// REQUIRES: hexagon-registered-target
+// REQUIRES: hexagon-registered-target, has-ripple-hexagon-rtlib
 // RUN: %clang++ -g -S -fenable-ripple --target=hexagon -mhvx -mv79 -emit-llvm -mllvm -ripple-disable-link %s -o - 2>&1 | FileCheck %s
 
 #include <ripple.h>
