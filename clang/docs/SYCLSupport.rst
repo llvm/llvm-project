@@ -190,14 +190,12 @@ for more details.
 
 The `SMCP`_ and `SSCP`_ compilation models require that code generation be
 performed for each SYCL kernel for each target device.
-In order for Clang to perform that code generation, it needs to be informed
-that a SYCL kernel invocation is present.
 The `sycl_kernel_entry_point <attr-sycl_kernel_entry_point_>`_ attribute
 provides the means for the SYCL run-time library, which provides the
 definition of all SYCL kernel invocation functions, to inform Clang of a SYCL
 kernel invocation.
-This is accomplished by, in the definition of a SYCL kernel invocation function,
-including a call to a function declared with the attribute.
+This is accomplished by including a call to a function declared with the
+attribute in the definition of a SYCL kernel invocation function.
 For example:
 
 .. code-block:: C++
@@ -250,7 +248,7 @@ The SYCL run-time library is responsible for:
   selected device.
 
 The SYCL run-time library tasks are expected to be performed in conjunction
-with an offload backend such as liboffload, OpenCL, CUDA, Hip, or Level Zero;
+with an offload backend such as liboffload, OpenCL, CUDA, HIP, or Level Zero;
 their details are out of scope for this document.
 
 The above division of responsibilities requires coordination.
@@ -322,8 +320,8 @@ function generated for the SYCL kernel denoted by ``KernelName``.
 This argument names the function that the SYCL run-time library, in conjunction
 with an offload backend, needs to resolve and execute on the selected device
 in order to execute the SYCL kernel.
-The remaining arguments, for which there is just one in this case,
-``kernelFunc``, are the kernel arguments.
+The remaining arguments are the kernel arguments for which there is just one in
+this case; ``kernelFunc``.
 Kernel arguments that contain a special subobject are passed as lvalues; those
 that don't are passed as xvalues (and may therefore be moved from though such
 types are unlikely to have optimized move operations since they are required to
@@ -348,7 +346,7 @@ template in a form similar to this:
          return [&] (auto &... subobjects) {
            // Process the kernel arguments and special subobjects, schedule
            // execution of 'entryPointName' on the selected device, and
-           // return a type-list object sepcifying additional parameters to
+           // return a type-list object specifying additional parameters to
            // add to the offload kernel entry point function (see below).
            return detail::type_list<...>{};
          };
@@ -488,7 +486,7 @@ attribute.
 
 When translating calls to functions declared with the
 `sycl_kernel_entry_point <attr-sycl_kernel_entry_point_>`_ attribute, Clang
-inspects each kernel argument type to look for data members, catures, and base
+inspects each kernel argument type to look for data members, captures, and base
 classes, that have a type declared with the
 `sycl_special_kernel_parameter <attr-sycl_special_kernel_parameter_>`_
 attribute.
