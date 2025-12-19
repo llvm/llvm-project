@@ -59495,10 +59495,10 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           ((VT.is256BitVector() && Subtarget.hasInt256()) ||
            (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
             (EltSizeInBits >= 32 || Subtarget.useBWIRegs()))) &&
-          Op0.getOperand(0).getValueType().is128BitVector() &&
-          Op0.getOperand(0).getValueType() ==
-              Ops[0].getOperand(0).getValueType()) {
-        EVT SrcVT = Op0.getOperand(0).getValueType();
+          Ops[0].getOperand(0).getValueType().is128BitVector() &&
+          Ops[0].getOperand(0).getValueType() ==
+              Ops[1].getOperand(0).getValueType()) {
+        EVT SrcVT = Ops[0].getOperand(0).getValueType();
         unsigned NumElts = VT.getVectorNumElements();
         MVT UnpackSVT =
             MVT::getIntegerVT(SrcVT.getScalarSizeInBits() * (NumElts / 2));
