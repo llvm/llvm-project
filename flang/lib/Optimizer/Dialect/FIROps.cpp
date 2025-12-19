@@ -187,8 +187,8 @@ static mlir::Type wrapAllocaResultType(mlir::Type intype) {
 }
 
 llvm::SmallVector<mlir::MemorySlot> fir::AllocaOp::getPromotableSlots() {
-  // TODO: support promotion of allocas with LEN params or shape operands
-  if (hasLenParams() || hasShapeOperands())
+  // TODO: support promotion of dynamic allocas
+  if (isDynamic())
     return {};
 
   return {mlir::MemorySlot{getResult(), getAllocatedType()}};
@@ -2912,8 +2912,7 @@ bool fir::LoadOp::canUsesBeRemoved(
   if (blockingUses.size() != 1)
     return false;
   mlir::Value blockingUse = (*blockingUses.begin())->get();
-  return blockingUse == slot.ptr && getMemref() == slot.ptr &&
-         getType() == slot.elemType;
+  return blockingUse == slot.ptr && getMemref() == slot.ptr;
 }
 
 mlir::DeletionKind fir::LoadOp::removeBlockingUses(
@@ -4342,7 +4341,7 @@ bool fir::StoreOp::canUsesBeRemoved(
     return false;
   mlir::Value blockingUse = (*blockingUses.begin())->get();
   return blockingUse == slot.ptr && getMemref() == slot.ptr &&
-         getValue() != slot.ptr && slot.elemType == getValue().getType();
+         getValue() != slot.ptr;
 }
 
 mlir::DeletionKind fir::StoreOp::removeBlockingUses(
