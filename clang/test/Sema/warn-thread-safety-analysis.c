@@ -94,6 +94,7 @@ int get_value(int *p) SHARED_LOCKS_REQUIRED(foo_.mu_){
 }
 
 void unlock_scope(struct Mutex *const *mu) __attribute__((release_capability(**mu)));
+void unlock_scope_type_erased(int **priv) __attribute__((release_capability(*(struct Mutex **)priv)));
 
 // Verify late parsing:
 #ifdef LATE_PARSING
@@ -190,6 +191,13 @@ int main(void) {
   {
     struct Mutex* const __attribute__((unused, cleanup(unlock_scope))) scope = &mu1;
     mutex_exclusive_lock(&mu1);  // With basic alias analysis lock through mu1 also works.
+  }
+  // Cleanup through cast alias pointer in a for-loop; a variant of this pattern
+  // appears in the Linux kernel for generic scoped guard macros.
+  for (int i = (mutex_exclusive_lock(foo_.mu_), 0),
+       *priv __attribute__((cleanup(unlock_scope_type_erased))) = (int *)(__UINTPTR_TYPE__)(foo_.mu_);
+       !i; i++) {
+    a_ = 42;
   }
 
   foo_.a_value = 0; // expected-warning {{writing variable 'a_value' requires holding mutex 'mu_' exclusively}}

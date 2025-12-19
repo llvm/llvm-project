@@ -3093,27 +3093,26 @@ mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
                                ? mt.lookupValue(thisOp.getBarrierId())
                                : builder.getInt32(0);
   llvm::Intrinsic::ID id;
-  llvm::SmallVector<llvm::Value *> args;
+  llvm::SmallVector<llvm::Value *> args = {barrierId};
   if (thisOp.getNumberOfThreads()) {
     id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count;
-    args.push_back(barrierId);
     args.push_back(mt.lookupValue(thisOp.getNumberOfThreads()));
   } else if (thisOp.getReductionOp()) {
     switch (*thisOp.getReductionOp()) {
     case NVVM::BarrierReduction::AND:
-      id = llvm::Intrinsic::nvvm_barrier0_and;
+      id = llvm::Intrinsic::nvvm_barrier_cta_red_and_aligned_all;
       break;
     case NVVM::BarrierReduction::OR:
-      id = llvm::Intrinsic::nvvm_barrier0_or;
+      id = llvm::Intrinsic::nvvm_barrier_cta_red_or_aligned_all;
       break;
     case NVVM::BarrierReduction::POPC:
-      id = llvm::Intrinsic::nvvm_barrier0_popc;
+      id = llvm::Intrinsic::nvvm_barrier_cta_red_popc_aligned_all;
       break;
     }
-    args.push_back(mt.lookupValue(thisOp.getReductionPredicate()));
+    args.push_back(builder.CreateICmpNE(
+        mt.lookupValue(thisOp.getReductionPredicate()), builder.getInt32(0)));
   } else {
     id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all;
-    args.push_back(barrierId);
   }
 
   return {id, std::move(args)};
@@ -3241,13 +3240,19 @@ mlir::NVVM::IDArgPair MBarrierArriveOp::getIntrinsicIDAndArgs(
   if (needCast)
     mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
 
+  // We have the most basic mbarrier.arrive supported on sm_80.
+  // It supports: Space=cta, scope=cta, No relaxed, No explicit count.
+  // So, only for this combination use the legacy intrinsic.
+  bool hasCount = static_cast<bool>(thisOp.getCount());
+  if (!hasCount &&
+      (id == llvm::Intrinsic::nvvm_mbarrier_arrive_scope_cta_space_cta))
+    return {llvm::Intrinsic::nvvm_mbarrier_arrive_shared, {mbar}};
+
   // When count is not explicitly specified, the default is 1.
   llvm::LLVMContext &ctx = mt.getLLVMContext();
-  bool hasCount = static_cast<bool>(thisOp.getCount());
   llvm::Value *count =
       hasCount ? mt.lookupValue(thisOp.getCount())
                : llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), 1);
-
   return {id, {mbar, count}};
 }
 

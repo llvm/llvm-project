@@ -510,7 +510,10 @@ public:
     return llvm::ConstantFP::get(VMContext, E->getValue());
   }
   Value *VisitCharacterLiteral(const CharacterLiteral *E) {
-    return llvm::ConstantInt::get(ConvertType(E->getType()), E->getValue());
+    // Character literals are always stored in an unsigned (even for signed
+    // char), so allow implicit truncation here.
+    return llvm::ConstantInt::get(ConvertType(E->getType()), E->getValue(),
+                                  /*IsSigned=*/false, /*ImplicitTrunc=*/true);
   }
   Value *VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E) {
     return llvm::ConstantInt::get(ConvertType(E->getType()), E->getValue());
@@ -599,6 +602,7 @@ public:
   }
 
   Value *VisitArraySubscriptExpr(ArraySubscriptExpr *E);
+  Value *VisitMatrixSingleSubscriptExpr(MatrixSingleSubscriptExpr *E);
   Value *VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E);
   Value *VisitShuffleVectorExpr(ShuffleVectorExpr *E);
   Value *VisitConvertVectorExpr(ConvertVectorExpr *E);
@@ -2107,6 +2111,39 @@ Value *ScalarExprEmitter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
     CGF.EmitBoundsCheck(E, E->getBase(), Idx, IdxTy, /*Accessed*/true);
 
   return Builder.CreateExtractElement(Base, Idx, "vecext");
+}
+
+Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
+    MatrixSingleSubscriptExpr *E) {
+  TestAndClearIgnoreResultAssign();
+
+  auto *MatrixTy = E->getBase()->getType()->castAs<ConstantMatrixType>();
+  unsigned NumRows = MatrixTy->getNumRows();
+  unsigned NumColumns = MatrixTy->getNumColumns();
+
+  // Row index
+  Value *RowIdx = CGF.EmitMatrixIndexExpr(E->getRowIdx());
+  llvm::MatrixBuilder MB(Builder);
+
+  // The row index must be in [0, NumRows)
+  if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0)
+    MB.CreateIndexAssumption(RowIdx, NumRows);
+
+  Value *FlatMatrix = Visit(E->getBase());
+  llvm::Type *ElemTy = CGF.ConvertType(MatrixTy->getElementType());
+  auto *ResultTy = llvm::FixedVectorType::get(ElemTy, NumColumns);
+  Value *RowVec = llvm::PoisonValue::get(ResultTy);
+
+  for (unsigned Col = 0; Col != NumColumns; ++Col) {
+    Value *ColVal = llvm::ConstantInt::get(RowIdx->getType(), Col);
+    Value *EltIdx = MB.CreateIndex(RowIdx, ColVal, NumRows, "matrix_row_idx");
+    Value *Elt =
+        Builder.CreateExtractElement(FlatMatrix, EltIdx, "matrix_elem");
+    Value *Lane = llvm::ConstantInt::get(Builder.getInt32Ty(), Col);
+    RowVec = Builder.CreateInsertElement(RowVec, Elt, Lane, "matrix_row_ins");
+  }
+
+  return RowVec;
 }
 
 Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {

@@ -207,6 +207,7 @@ C++20 Feature Support
 - Clang now normalizes constraints before checking whether they are satisfied, as mandated by the standard.
   As a result, Clang no longer incorrectly diagnoses substitution failures in template arguments only
   used in concept-ids, and produces better diagnostics for satisfaction failure. (#GH61811) (#GH135190)
+- Clang now supports `P1857R3 <https://wg21.link/p1857r3>`_ Modules Dependency Discovery. (#GH54047)
 
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -368,6 +369,9 @@ Attribute Changes in Clang
 - The definition of a function declaration with ``[[clang::cfi_unchecked_callee]]`` inherits this
   attribute, allowing the attribute to only be attached to the declaration. Prior, this would be
   treated as an error where the definition and declaration would have differing types.
+
+- Instrumentation added by ``-fsanitize=function`` will also be omitted for indirect calls to function
+  pointers and function declarations marked with ``[[clang::cfi_unchecked_callee]]``.
 
 - New format attributes ``gnu_printf``, ``gnu_scanf``, ``gnu_strftime`` and ``gnu_strfmon`` are added
   as aliases for ``printf``, ``scanf``, ``strftime`` and ``strfmon``. (#GH16219)
@@ -537,6 +541,7 @@ Bug Fixes in This Version
 - Fixed false-positive shadow diagnostics for lambdas in explicit object member functions. (#GH163731)
 - Fix an assertion failure when a ``target_clones`` attribute is only on the
   forward declaration of a multiversioned function. (#GH165517) (#GH129483)
+- Fix a crash caused by invalid format string in printf-like functions with ``-Wunsafe-buffer-usage-in-libc-call`` option enabled. (#GH170496)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
