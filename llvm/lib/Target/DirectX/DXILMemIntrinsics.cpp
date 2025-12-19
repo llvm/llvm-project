@@ -109,7 +109,6 @@ static Type *getPointeeType(Value *Ptr, const DataLayout &DL) {
   llvm_unreachable("Could not calculate pointee type");
 }
 
-
 void expandMemCpy(MemCpyInst *MemCpy) {
   IRBuilder<> Builder(MemCpy);
   Value *Dst = MemCpy->getDest();
