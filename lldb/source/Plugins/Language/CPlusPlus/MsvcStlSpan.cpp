@@ -94,10 +94,11 @@ lldb_private::formatters::MsvcStlSpanSyntheticFrontEnd::Update() {
   // Get number of elements.
   if (auto size_sp = m_backend.GetChildMemberWithName("_Mysize"))
     m_num_elements = size_sp->GetValueAsUnsigned(0);
-  else if (auto field = m_backend.GetCompilerType()
-                         .GetDirectBaseClassAtIndex(0, nullptr) // _Span_extent_type
-                         .GetStaticFieldWithName("_Mysize"))
-      m_num_elements = field.GetConstantValue().ULongLong(0);
+  else if (auto field =
+               m_backend.GetCompilerType()
+                   .GetDirectBaseClassAtIndex(0, nullptr) // _Span_extent_type
+                   .GetStaticFieldWithName("_Mysize"))
+    m_num_elements = field.GetConstantValue().ULongLong(0);
 
   return lldb::ChildCacheState::eRefetch;
 }

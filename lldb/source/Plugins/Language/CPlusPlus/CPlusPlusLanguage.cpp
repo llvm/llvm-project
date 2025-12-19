@@ -1762,8 +1762,8 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                   "std::deque container synthetic children",
                   "^std::deque<.+>(( )?&)?$", stl_deref_flags, true);
   AddCXXSynthetic(cpp_category_sp, GenericSpanSyntheticFrontEndCreator,
-                  "std::span container synthetic children",
-                  "^std::span<.+>$", stl_deref_flags, true);
+                  "std::span container synthetic children", "^std::span<.+>$",
+                  stl_deref_flags, true);
 
   AddCXXSynthetic(cpp_category_sp, GenericMapLikeSyntheticFrontEndCreator,
                   "std::(multi)?map/set synthetic children",
