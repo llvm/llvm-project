@@ -316,7 +316,36 @@ struct TestXeGPUPropagateLayouts
       signalPassFailure();
       return;
     }
-    if (xegpu::propagateLayouts(builder, getOperation(), kind).failed()) {
+    if (failed(xegpu::propagateLayouts(builder, getOperation(), kind))) {
+      signalPassFailure();
+    }
+  }
+};
+
+struct TestXeGPUResolveLayoutConflicts
+    : public PassWrapper<TestXeGPUResolveLayoutConflicts,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUResolveLayoutConflicts)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-resolve-layout-conflicts";
+  }
+
+  StringRef getDescription() const final {
+    return "Test the implementation of XeGPU layout conflict resolution.";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<gpu::GPUDialect>();
+  }
+
+  TestXeGPUResolveLayoutConflicts() = default;
+  TestXeGPUResolveLayoutConflicts(const TestXeGPUResolveLayoutConflicts &pass) =
+      default;
+
+  void runOnOperation() override {
+    if (failed(xegpu::resolveLayoutConflicts(getOperation()))) {
       signalPassFailure();
     }
   }
@@ -387,6 +416,8 @@ void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPULayoutInterface>();
   PassRegistration<TestXeGPUSGDistribute>();
   PassRegistration<TestXeGPUMoveFuncBodyToWarpOp>();
+  PassRegistration<TestXeGPUPropagateLayouts>();
+  PassRegistration<TestXeGPUResolveLayoutConflicts>();
 }
 } // namespace test
 } // namespace mlir

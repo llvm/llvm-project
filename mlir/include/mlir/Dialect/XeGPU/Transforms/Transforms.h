@@ -97,7 +97,7 @@ enum class LayoutKind { Lane, InstData, Subgroup };
 LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
                                LayoutKind layoutKind, bool printOnly = false);
 
-LogicalResult resolveLayoutConflicts(OpBuilder &builder, Operation *target);
+LogicalResult resolveLayoutConflicts(Operation *target);
 
 } // namespace xegpu
 } // namespace mlir

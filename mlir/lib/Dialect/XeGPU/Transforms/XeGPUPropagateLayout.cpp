@@ -38,6 +38,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
+#include "mlir/Support/WalkResult.h"
 
 namespace mlir {
 namespace xegpu {
@@ -1180,6 +1181,77 @@ void RunLayoutInfoPropagation::printAnalysisResult(llvm::raw_ostream &os) {
     printFunctionResult(funcOp);
 }
 
+namespace {
+
+//===----------------------------------------------------------------------===//
+// ResolveLayoutConflicts
+//===----------------------------------------------------------------------===//
+struct ResolveLayoutConflicts {
+  ResolveLayoutConflicts(Operation *parentOp)
+      : parentOp(parentOp), builder(parentOp->getContext()) {}
+  LogicalResult run();
+
+private:
+  Operation *parentOp;
+  OpBuilder builder;
+  LogicalResult resolveLoadNdOp(xegpu::LoadNdOp loadNdOp);
+};
+
+}; // namespace
+
+LogicalResult ResolveLayoutConflicts::run() {
+  auto r = parentOp->walk([&](Operation *op) -> WalkResult {
+    TypeSwitch<Operation *>(op).Case([&](xegpu::LoadNdOp loadNdOp) {
+      return failed(resolveLoadNdOp(loadNdOp)) ? WalkResult::interrupt()
+                                               : WalkResult::advance();
+    });
+    // TODO: Add other layout conflict resolution methods as needed.
+    return WalkResult::advance();
+  });
+
+  return r.wasInterrupted() ? failure() : success();
+}
+
+/// LoadNd has a conflict if the tensor descriptor layout is different from the
+/// load's anchor layout.
+LogicalResult
+ResolveLayoutConflicts::resolveLoadNdOp(xegpu::LoadNdOp loadNdOp) {
+  Attribute anchorLayout = loadNdOp.getLayoutAttr();
+  Attribute tdescLayout = loadNdOp.getTensorDescType().getLayout();
+
+  if (anchorLayout && tdescLayout && anchorLayout != tdescLayout) {
+    // Try to get the defining CreateNdDescOp of the tensor descriptor.
+    auto conflictingCreateNdOp =
+        loadNdOp.getTensorDesc().getDefiningOp<xegpu::CreateNdDescOp>();
+    if (!conflictingCreateNdOp) {
+      DBGS() << "Unable to find defining CreateNdDescOp for tensor descriptor: "
+             << loadNdOp.getTensorDesc() << "\n";
+      return failure();
+    }
+    // Duplicate the CreateNdDescOp with the expected layout.
+    builder.setInsertionPointAfter(conflictingCreateNdOp);
+    xegpu::TensorDescType tdescType = loadNdOp.getTensorDescType();
+    auto expectedLayout = anchorLayout;
+    auto newTensorDescType = xegpu::TensorDescType::get(
+        conflictingCreateNdOp.getContext(), tdescType.getShape(),
+        tdescType.getElementType(), tdescType.getEncoding(), expectedLayout);
+    xegpu::CreateNdDescOp newOp = xegpu::CreateNdDescOp::create(
+        builder, loadNdOp.getLoc(), newTensorDescType,
+        conflictingCreateNdOp->getOperands(),
+        conflictingCreateNdOp->getAttrs());
+    // Replace only the conflicting uses of the createNdOp that can be
+    // resolved using the new layout.
+    conflictingCreateNdOp->replaceUsesWithIf(
+        ArrayRef<Value>(newOp.getResult()), [&](OpOperand &opnd) {
+          auto userLoadNdOp = dyn_cast<xegpu::LoadNdOp>(opnd.getOwner());
+          if (!userLoadNdOp)
+            return false;
+          return userLoadNdOp.getLayoutAttr() == expectedLayout;
+        });
+  }
+  return success();
+}
+
 using GetLayoutFnTy = function_ref<xegpu::DistributeLayoutAttr(Value)>;
 /// Update an operation with the layout of its results. If the result type is
 /// a vector type, a temporary layout attribute is added to the operation. If
@@ -1400,60 +1472,67 @@ LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
   return success();
 }
 
-LogicalResult xegpu::resolveLayoutConflicts(OpBuilder &builder,
-                                            Operation *target) {
-  auto r = target->walk([&](xegpu::LoadNdOp loadNdOp) -> WalkResult {
-    // Load op has a conflict if tensor desc layout is different from the its
-    // result layout.
-    auto getResultLayout = [](OpResult result) {
-      auto resultLayoutName = xegpu::getTemporaryLayoutName(result);
-      return result.getOwner()->getAttrOfType<xegpu::DistributeLayoutAttr>(
-          resultLayoutName);
-    };
-    auto hasConflict = [&getResultLayout](xegpu::LoadNdOp loadNdOp) -> bool {
-      auto tdescType = loadNdOp.getTensorDescType();
-      auto tdescLayout = tdescType.getLayout();
-      auto resultLayoutName =
-          xegpu::getTemporaryLayoutName(loadNdOp->getOpResult(0));
-      auto resultLayout = getResultLayout(loadNdOp->getOpResult(0));
-      return tdescLayout && resultLayout && tdescLayout != resultLayout;
-    };
-    if (hasConflict(loadNdOp)) {
-      OpBuilder builder(loadNdOp);
-      // Try to get the defining createNdDesc op.
-      auto createNdOp =
-          loadNdOp.getTensorDesc().getDefiningOp<xegpu::CreateNdDescOp>();
-      if (!createNdOp) {
-        DBGS() << "Failed to resolve LoadNdOp layout conflict: " << *loadNdOp
-               << "\n";
-        return WalkResult::interrupt();
-      }
+// LogicalResult xegpu::resolveLayoutConflicts(OpBuilder &builder,
+//                                             Operation *target) {
+//   auto r = target->walk([&](xegpu::LoadNdOp loadNdOp) -> WalkResult {
+//     // Load op has a conflict if tensor desc layout is different from the its
+//     // result layout.
+//     auto getResultLayout = [](OpResult result) {
+//       auto resultLayoutName = xegpu::getTemporaryLayoutName(result);
+//       return result.getOwner()->getAttrOfType<xegpu::DistributeLayoutAttr>(
+//           resultLayoutName);
+//     };
+//     auto hasConflict = [&getResultLayout](xegpu::LoadNdOp loadNdOp) -> bool {
+//       auto tdescType = loadNdOp.getTensorDescType();
+//       auto tdescLayout = tdescType.getLayout();
+//       auto resultLayoutName =
+//           xegpu::getTemporaryLayoutName(loadNdOp->getOpResult(0));
+//       auto resultLayout = getResultLayout(loadNdOp->getOpResult(0));
+//       return tdescLayout && resultLayout && tdescLayout != resultLayout;
+//     };
+//     if (hasConflict(loadNdOp)) {
+//       OpBuilder builder(loadNdOp);
+//       // Try to get the defining createNdDesc op.
+//       auto createNdOp =
+//           loadNdOp.getTensorDesc().getDefiningOp<xegpu::CreateNdDescOp>();
+//       if (!createNdOp) {
+//         DBGS() << "Failed to resolve LoadNdOp layout conflict: " << *loadNdOp
+//                << "\n";
+//         return WalkResult::interrupt();
+//       }
 
-      builder.setInsertionPointAfter(createNdOp);
-      auto tdescType = loadNdOp.getTensorDescType();
-      auto expectedLayout = getResultLayout(loadNdOp->getOpResult(0));
-      auto newTensorDescType = xegpu::TensorDescType::get(
-          createNdOp.getContext(), tdescType.getShape(),
-          tdescType.getElementType(), tdescType.getEncoding(), expectedLayout);
-      auto newOp = xegpu::CreateNdDescOp::create(
-          builder, loadNdOp.getLoc(), newTensorDescType,
-          createNdOp->getOperands(), createNdOp->getAttrs());
-      // Replace only the conflicting uses of the createNdOp that can be
-      // resolved using the new layout.
-      createNdOp->replaceUsesWithIf(
-          ArrayRef<Value>(newOp.getResult()), [&](OpOperand &opnd) {
-            auto userLoadNdOp = dyn_cast<xegpu::LoadNdOp>(opnd.getOwner());
-            if (!userLoadNdOp)
-              return false;
-            auto resultLayout = getResultLayout(userLoadNdOp->getOpResult(0));
-            return hasConflict(userLoadNdOp) && resultLayout == expectedLayout;
-          });
-    }
-    return WalkResult::advance();
-  });
-  if (r.wasInterrupted())
-    return failure();
-  return success();
+//       builder.setInsertionPointAfter(createNdOp);
+//       auto tdescType = loadNdOp.getTensorDescType();
+//       auto expectedLayout = getResultLayout(loadNdOp->getOpResult(0));
+//       auto newTensorDescType = xegpu::TensorDescType::get(
+//           createNdOp.getContext(), tdescType.getShape(),
+//           tdescType.getElementType(), tdescType.getEncoding(),
+//           expectedLayout);
+//       auto newOp = xegpu::CreateNdDescOp::create(
+//           builder, loadNdOp.getLoc(), newTensorDescType,
+//           createNdOp->getOperands(), createNdOp->getAttrs());
+//       // Replace only the conflicting uses of the createNdOp that can be
+//       // resolved using the new layout.
+//       createNdOp->replaceUsesWithIf(
+//           ArrayRef<Value>(newOp.getResult()), [&](OpOperand &opnd) {
+//             auto userLoadNdOp = dyn_cast<xegpu::LoadNdOp>(opnd.getOwner());
+//             if (!userLoadNdOp)
+//               return false;
+//             auto resultLayout =
+//             getResultLayout(userLoadNdOp->getOpResult(0)); return
+//             hasConflict(userLoadNdOp) && resultLayout == expectedLayout;
+//           });
+//     }
+//     return WalkResult::advance();
+//   });
+//   if (r.wasInterrupted())
+//     return failure();
+//   return success();
+// }
+
+LogicalResult xegpu::resolveLayoutConflicts(Operation *target) {
+  ResolveLayoutConflicts resolver(target);
+  return resolver.run();
 }
 
 void XeGPUPropagateLayoutPass::runOnOperation() {
@@ -1473,6 +1552,11 @@ void XeGPUPropagateLayoutPass::runOnOperation() {
   OpBuilder builder(&getContext());
   if (failed(xegpu::propagateLayouts(builder, getOperation(), layoutKind,
                                      this->printOnly))) {
+    signalPassFailure();
+    return;
+  }
+  // Resolve layout conflicts if any.
+  if (failed(xegpu::resolveLayoutConflicts(getOperation()))) {
     signalPassFailure();
     return;
   }
