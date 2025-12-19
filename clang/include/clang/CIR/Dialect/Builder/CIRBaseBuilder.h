@@ -66,6 +66,11 @@ public:
     return cir::ConstantOp::create(*this, loc, cir::IntAttr::get(typ, val));
   }
 
+  mlir::Value getConstAPFloat(mlir::Location loc, mlir::Type typ,
+                              const llvm::APFloat &val) {
+    return cir::ConstantOp::create(*this, loc, cir::FPAttr::get(typ, val));
+  }
+
   cir::ConstantOp getConstant(mlir::Location loc, mlir::TypedAttr attr) {
     return cir::ConstantOp::create(*this, loc, attr);
   }

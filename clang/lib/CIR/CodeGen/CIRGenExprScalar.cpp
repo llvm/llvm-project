@@ -493,6 +493,56 @@ public:
               sanOpts.has(SanitizerKind::ImplicitIntegerSignChange)) {}
   };
 
+  mlir::Value foldScalarCast(mlir::Value src, mlir::Type srcTy,
+                             mlir::Type dstTy, ScalarConversionOpts opts) {
+    // If the is not a constant, we can't fold the cast.
+    cir::ConstantOp srcConst = src.getDefiningOp<cir::ConstantOp>();
+    if (!srcConst)
+      return {};
+
+    // Don't try to fold vector casts for now.
+    if (mlir::isa<cir::VectorType>(srcTy) && mlir::isa<cir::VectorType>(dstTy))
+      return {};
+
+    CIRGenBuilderTy &builder = cgf.getBuilder();
+    mlir::Location loc = src.getLoc();
+    if (auto srcIntTy = mlir::dyn_cast<cir::IntType>(srcTy)) {
+      if (auto dstIntTy = mlir::dyn_cast<cir::IntType>(dstTy)) {
+        if (srcIntTy.isSigned())
+          return builder.getConstAPInt(
+              loc, dstTy,
+              srcConst.getIntValue().sextOrTrunc(dstIntTy.getWidth()));
+        else
+          return builder.getConstAPInt(
+              loc, dstTy,
+              srcConst.getIntValue().zextOrTrunc(dstIntTy.getWidth()));
+      }
+      if (auto fltInterface = mlir::dyn_cast<cir::FPTypeInterface>(dstTy)) {
+        llvm::APFloat apfValue(fltInterface.getFloatSemantics());
+        apfValue.convertFromAPInt(srcConst.getIntValue(), srcIntTy.isSigned(),
+                                  llvm::APFloat::rmNearestTiesToEven);
+        return builder.getConstAPFloat(loc, dstTy, apfValue);
+      }
+      return {};
+    }
+    if (mlir::isa<cir::FPTypeInterface>(srcTy)) {
+      if (auto dstIntTy = mlir::dyn_cast<cir::IntType>(dstTy))
+        return builder.getConstAPInt(
+            loc, dstTy,
+            srcConst.getFloatValue().bitcastToAPInt().sextOrTrunc(
+                dstIntTy.getWidth()));
+      if (auto fltInterface = mlir::dyn_cast<cir::FPTypeInterface>(dstTy)) {
+        bool ignored;
+        llvm::APFloat apfValue = srcConst.getFloatValue();
+        apfValue.convert(fltInterface.getFloatSemantics(),
+                         llvm::APFloat::rmNearestTiesToEven, &ignored);
+        return builder.getConstAPFloat(loc, dstTy, apfValue);
+      }
+      return {};
+    }
+    return {};
+  }
+
   // Conversion from bool, integral, or floating-point to integral or
   // floating-point. Conversions involving other types are handled elsewhere.
   // Conversion to bool is handled elsewhere because that's a comparison against
@@ -505,6 +555,16 @@ public:
     assert(!(mlir::isa<mlir::IntegerType>(srcTy) ||
              mlir::isa<mlir::IntegerType>(dstTy)) &&
            "Obsolete code. Don't use mlir::IntegerType with CIR.");
+
+    if (mlir::Value foldedVal = foldScalarCast(src, srcTy, dstTy, opts)) {
+      // If the value passed to the cast was a constant, it shouldn't have
+      // other users.
+      auto constSrc = src.getDefiningOp<cir::ConstantOp>();
+      assert(constSrc && "Expected constant");
+      assert(constSrc.use_empty() && "Constant should have no other users");
+      constSrc.erase();
+      return foldedVal;
+    }
 
     mlir::Type fullDstTy = dstTy;
     if (mlir::isa<cir::VectorType>(srcTy) &&
@@ -781,9 +841,26 @@ public:
     return result;
   }
 
+  mlir::Value foldUnaryOp(const UnaryOperator *e) {
+    Expr::EvalResult result;
+    if (!e->EvaluateAsRValue(result, cgf.getContext()))
+      return {};
+
+    mlir::Location loc = cgf.getLoc(e->getExprLoc());
+    mlir::Type type = cgf.convertType(e->getType());
+    if (e->getType()->isIntegerType())
+      return builder.getConstAPInt(loc, type, result.Val.getInt());
+    if (e->getType()->isFloatingType())
+      return builder.getConstAPFloat(loc, type, result.Val.getFloat());
+    return {};
+  }
+
   mlir::Value emitUnaryPlusOrMinus(const UnaryOperator *e,
                                    cir::UnaryOpKind kind,
                                    QualType promotionType) {
+    if (mlir::Value foldedVal = foldUnaryOp(e))
+      return foldedVal;
+
     ignoreResultAssign = false;
     mlir::Value operand;
     if (!promotionType.isNull())
@@ -807,6 +884,9 @@ public:
   }
 
   mlir::Value VisitUnaryNot(const UnaryOperator *e) {
+    if (mlir::Value foldedVal = foldUnaryOp(e))
+      return foldedVal;
+
     ignoreResultAssign = false;
     mlir::Value op = Visit(e->getSubExpr());
     return emitUnaryOp(e, cir::UnaryOpKind::Not, op);
@@ -2445,6 +2525,9 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
     return cir::VecCmpOp::create(builder, loc, exprVecTy, cir::CmpOpKind::eq,
                                  oper, zeroVec);
   }
+
+  if (mlir::Value foldedVal = foldUnaryOp(e))
+    return foldedVal;
 
   // Compare operand to zero.
   mlir::Value boolVal = cgf.evaluateExprAsBool(e->getSubExpr());
