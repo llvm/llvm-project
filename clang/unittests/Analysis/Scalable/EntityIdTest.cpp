@@ -53,8 +53,7 @@ TEST(EntityIdTest, Transitivity) {
   EntityName Entity2("c:@F@yyy", "", {});
   EntityName Entity3("c:@F@zzz", "", {});
 
-  EntityId Ids[3] = {Table.getId(Entity1),
-                     Table.getId(Entity2),
+  EntityId Ids[3] = {Table.getId(Entity1), Table.getId(Entity2),
                      Table.getId(Entity3)};
 
   std::sort(Ids, Ids + 3);
