@@ -1790,25 +1790,29 @@ OutputIt copy_if(R &&Range, OutputIt Out, UnaryPredicate P) {
   return std::copy_if(adl_begin(Range), adl_end(Range), Out, P);
 }
 
-/// Wrapper for std::search.
+/// Provide wrappers to std::search which searches for the first occurrence of
+/// Range2 within Range1.
 template <typename R1, typename R2> auto search(R1 &&Range1, R2 &&Range2) {
   return std::search(adl_begin(Range1), adl_end(Range1), adl_begin(Range2),
                      adl_end(Range2));
 }
 
-/// Wrapper for std::search.
+/// Provide wrappers to std::search which searches for the first occurrence of
+/// Range2 within Range1 using predicate `P`.
 template <typename R1, typename R2, typename BinaryPredicate>
 auto search(R1 &&Range1, R2 &&Range2, BinaryPredicate P) {
   return std::search(adl_begin(Range1), adl_end(Range1), adl_begin(Range2),
                      adl_end(Range2), P);
 }
 
-/// Wrapper for std::adjacent_find.
+/// Provide wrappers to std::adjacent_find which finds the first pair of
+/// adjacent elements that are equal.
 template <typename R> auto adjacent_find(R &&Range) {
   return std::adjacent_find(adl_begin(Range), adl_end(Range));
 }
 
-/// Wrapper for std::adjacent_find.
+/// Provide wrappers to std::adjacent_find which finds the first pair of
+/// adjacent elements that are satisfy `P`.
 template <typename R, typename BinaryPredicate>
 auto adjacent_find(R &&Range, BinaryPredicate P) {
   return std::adjacent_find(adl_begin(Range), adl_end(Range), P);
