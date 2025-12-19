@@ -80,7 +80,7 @@ X86PreLegalizerCombinerImpl::X86PreLegalizerCombinerImpl(
     const X86PreLegalizerCombinerImplRuleConfig &RuleConfig,
     const X86Subtarget &STI, MachineDominatorTree *MDT, const LegalizerInfo *LI)
     : Combiner(MF, CInfo, TPC, &VT, CSEInfo),
-      Helper(Observer, B, /*IsPreLegalize=*/ true, &VT, MDT, LI),
+      Helper(Observer, B, /*IsPreLegalize=*/true, &VT, MDT, LI),
       RuleConfig(RuleConfig), STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "X86GenPreLegalizeGICombiner.inc"
