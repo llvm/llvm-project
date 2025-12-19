@@ -89,31 +89,6 @@ class RegSeq<int n, string prefix> {
 // Synchronization and shuffle functions
 //-----------------------------------
 let isConvergent = true in {
-def INT_BARRIER0_POPC : NVPTXInst<(outs B32:$dst), (ins B32:$pred),
-  !strconcat("{{ \n\t",
-             ".reg .pred \t%p1; \n\t",
-             "setp.ne.u32 \t%p1, $pred, 0; \n\t",
-             "bar.red.popc.u32 \t$dst, 0, %p1; \n\t",
-             "}}"),
-      [(set i32:$dst, (int_nvvm_barrier0_popc i32:$pred))]>;
-def INT_BARRIER0_AND : NVPTXInst<(outs B32:$dst), (ins B32:$pred),
-  !strconcat("{{ \n\t",
-             ".reg .pred \t%p1; \n\t",
-             ".reg .pred \t%p2; \n\t",
-             "setp.ne.u32 \t%p1, $pred, 0; \n\t",
-             "bar.red.and.pred \t%p2, 0, %p1; \n\t",
-             "selp.u32 \t$dst, 1, 0, %p2; \n\t",
-             "}}"),
-      [(set i32:$dst, (int_nvvm_barrier0_and i32:$pred))]>;
-def INT_BARRIER0_OR : NVPTXInst<(outs B32:$dst), (ins B32:$pred),
-  !strconcat("{{ \n\t",
-             ".reg .pred \t%p1; \n\t",
-             ".reg .pred \t%p2; \n\t",
-             "setp.ne.u32 \t%p1, $pred, 0; \n\t",
-             "bar.red.or.pred \t%p2, 0, %p1; \n\t",
-             "selp.u32 \t$dst, 1, 0, %p2; \n\t",
-             "}}"),
-      [(set i32:$dst, (int_nvvm_barrier0_or i32:$pred))]>;
 
 def INT_BAR_WARP_SYNC_I : BasicNVPTXInst<(outs), (ins i32imm:$i), "bar.warp.sync",
                              [(int_nvvm_bar_warp_sync imm:$i)]>,
@@ -122,44 +97,73 @@ def INT_BAR_WARP_SYNC_R : BasicNVPTXInst<(outs), (ins B32:$i), "bar.warp.sync",
                              [(int_nvvm_bar_warp_sync i32:$i)]>,
         Requires<[hasPTX<60>, hasSM<30>]>;
 
-multiclass BARRIER1<string asmstr, Intrinsic intrinsic, list<Predicate> requires = []> {
-  def _i : BasicNVPTXInst<(outs), (ins i32imm:$i), asmstr,
-                          [(intrinsic imm:$i)]>,
-           Requires<requires>;
-
-  def _r : BasicNVPTXInst<(outs), (ins B32:$i), asmstr,
-                          [(intrinsic i32:$i)]>,
-           Requires<requires>;
+multiclass BARRIER_ALL<string asmstr, Intrinsic intrinsic, list<Predicate> requires = []> {
+  let Predicates = requires in {
+    def _i : BasicNVPTXInst<(outs), (ins i32imm:$i), asmstr, [(intrinsic imm:$i)]>;
+    def _r : BasicNVPTXInst<(outs), (ins B32:$i), asmstr, [(intrinsic i32:$i)]>;
+  }
 }
 
-multiclass BARRIER2<string asmstr, Intrinsic intrinsic, list<Predicate> requires = []> {
-  def _rr : BasicNVPTXInst<(outs), (ins B32:$i, B32:$j), asmstr,
-                          [(intrinsic i32:$i, i32:$j)]>,
-            Requires<requires>;
-
-  def _ri : BasicNVPTXInst<(outs), (ins B32:$i, i32imm:$j), asmstr,
-                          [(intrinsic i32:$i, imm:$j)]>,
-            Requires<requires>;
-
-  def _ir : BasicNVPTXInst<(outs), (ins i32imm:$i, B32:$j), asmstr,
-                          [(intrinsic imm:$i, i32:$j)]>,
-            Requires<requires>;
-
-  def _ii : BasicNVPTXInst<(outs), (ins i32imm:$i, i32imm:$j), asmstr,
-                          [(intrinsic imm:$i, imm:$j)]>,
-            Requires<requires>;
+multiclass BARRIER_COUNT<string asmstr, Intrinsic intrinsic, list<Predicate> requires = []> {
+  let Predicates = requires in {
+    def _rr : BasicNVPTXInst<(outs), (ins B32:$i, B32:$j), asmstr, 
+                             [(intrinsic i32:$i, i32:$j)]>;
+    def _ri : BasicNVPTXInst<(outs), (ins B32:$i, i32imm:$j), asmstr, 
+                             [(intrinsic i32:$i, imm:$j)]>;
+    def _ir : BasicNVPTXInst<(outs), (ins i32imm:$i, B32:$j), asmstr,
+                             [(intrinsic imm:$i, i32:$j)]>;
+    def _ii : BasicNVPTXInst<(outs), (ins i32imm:$i, i32imm:$j), asmstr,
+                             [(intrinsic imm:$i, imm:$j)]>;
+  }
 }
+
+multiclass BARRIER_RED_ALL<string asmstr, Intrinsic intrinsic, RegTyInfo dst_rt, list<Predicate> requires = []> {
+  let Predicates = requires in {
+    def _ip : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins i32imm:$i, B1:$pred), asmstr,
+                             [(set dst_rt.Ty:$dest, (intrinsic imm:$i, i1:$pred))]>;
+    def _rp : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins B32:$i, B1:$pred), asmstr, 
+                             [(set dst_rt.Ty:$dest, (intrinsic i32:$i, i1:$pred))]>;
+  }
+}
+
+multiclass BARRIER_RED_COUNT<string asmstr, Intrinsic intrinsic, RegTyInfo dst_rt, list<Predicate> requires = []> {
+  let Predicates = requires in {
+    def _rrp : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins B32:$i, B32:$j, B1:$pred), asmstr, 
+                              [(set dst_rt.Ty:$dest, (intrinsic i32:$i, i32:$j, i1:$pred))]>;
+    def _rip : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins B32:$i, i32imm:$j, B1:$pred), asmstr, 
+                              [(set dst_rt.Ty:$dest, (intrinsic i32:$i, imm:$j, i1:$pred))]>;
+    def _irp : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins i32imm:$i, B32:$j, B1:$pred), asmstr,
+                              [(set dst_rt.Ty:$dest, (intrinsic imm:$i, i32:$j, i1:$pred))]>;
+    def _iip : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins i32imm:$i, i32imm:$j, B1:$pred), asmstr,
+                              [(set dst_rt.Ty:$dest, (intrinsic imm:$i, imm:$j, i1:$pred))]>;
+  }
+}
+
 
 // Note the "bar.sync" variants could be renamed to the equivalent corresponding
 // "barrier.*.aligned" variants. We use the older syntax for compatibility with
 // older versions of the PTX ISA.
-defm BARRIER_CTA_SYNC_ALIGNED_ALL : BARRIER1<"bar.sync", int_nvvm_barrier_cta_sync_aligned_all>;
-defm BARRIER_CTA_SYNC_ALIGNED : BARRIER2<"bar.sync", int_nvvm_barrier_cta_sync_aligned_count>;
-defm BARRIER_CTA_ARRIVE_ALIGNED : BARRIER2<"bar.arrive", int_nvvm_barrier_cta_arrive_aligned_count>;
+defm BARRIER_CTA_SYNC_ALIGNED_ALL : BARRIER_ALL<"bar.sync", int_nvvm_barrier_cta_sync_aligned_all>;
+defm BARRIER_CTA_SYNC_ALIGNED : BARRIER_COUNT<"bar.sync", int_nvvm_barrier_cta_sync_aligned_count>;
+defm BARRIER_CTA_ARRIVE_ALIGNED : BARRIER_COUNT<"bar.arrive", int_nvvm_barrier_cta_arrive_aligned_count>;
 
-defm BARRIER_CTA_SYNC_ALL : BARRIER1<"barrier.sync", int_nvvm_barrier_cta_sync_all, [hasPTX<60>]>;
-defm BARRIER_CTA_SYNC : BARRIER2<"barrier.sync", int_nvvm_barrier_cta_sync_count, [hasPTX<60>]>;
-defm BARRIER_CTA_ARRIVE : BARRIER2<"barrier.arrive", int_nvvm_barrier_cta_arrive_count, [hasPTX<60>]>;
+defm BARRIER_CTA_SYNC_ALL : BARRIER_ALL<"barrier.sync", int_nvvm_barrier_cta_sync_all, [hasPTX<60>]>;
+defm BARRIER_CTA_SYNC : BARRIER_COUNT<"barrier.sync", int_nvvm_barrier_cta_sync_count, [hasPTX<60>]>;
+defm BARRIER_CTA_ARRIVE : BARRIER_COUNT<"barrier.arrive", int_nvvm_barrier_cta_arrive_count, [hasPTX<60>]>;
+
+defm BARRIER_CTA_RED_POPC_ALIGNED_ALL : BARRIER_RED_ALL<"bar.red.popc", int_nvvm_barrier_cta_red_popc_aligned_all, I32RT>;
+defm BARRIER_CTA_RED_AND_ALIGNED_ALL : BARRIER_RED_ALL<"bar.red.and", int_nvvm_barrier_cta_red_and_aligned_all, I1RT>;
+defm BARRIER_CTA_RED_OR_ALIGNED_ALL : BARRIER_RED_ALL<"bar.red.or", int_nvvm_barrier_cta_red_or_aligned_all, I1RT>;
+defm BARRIER_CTA_RED_POPC_ALIGNED : BARRIER_RED_COUNT<"bar.red.popc", int_nvvm_barrier_cta_red_popc_aligned_count, I32RT>;
+defm BARRIER_CTA_RED_AND_ALIGNED : BARRIER_RED_COUNT<"bar.red.and", int_nvvm_barrier_cta_red_and_aligned_count, I1RT>;
+defm BARRIER_CTA_RED_OR_ALIGNED : BARRIER_RED_COUNT<"bar.red.or", int_nvvm_barrier_cta_red_or_aligned_count, I1RT>;
+
+defm BARRIER_CTA_RED_POPC_ALL : BARRIER_RED_ALL<"barrier.red.popc", int_nvvm_barrier_cta_red_popc_all, I32RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_AND_ALL : BARRIER_RED_ALL<"barrier.red.and", int_nvvm_barrier_cta_red_and_all, I1RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_OR_ALL : BARRIER_RED_ALL<"barrier.red.or", int_nvvm_barrier_cta_red_or_all, I1RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_POPC_COUNT : BARRIER_RED_COUNT<"barrier.red.popc", int_nvvm_barrier_cta_red_popc_count, I32RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_AND_COUNT : BARRIER_RED_COUNT<"barrier.red.and", int_nvvm_barrier_cta_red_and_count, I1RT, [hasPTX<60>]>;
+defm BARRIER_CTA_RED_OR_COUNT : BARRIER_RED_COUNT<"barrier.red.or", int_nvvm_barrier_cta_red_or_count, I1RT, [hasPTX<60>]>;
 
 class INT_BARRIER_CLUSTER<string variant, Intrinsic Intr,
                           list<Predicate> Preds = [hasPTX<78>, hasSM<90>]>:
