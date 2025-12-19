@@ -98,28 +98,23 @@ static void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
 
   std::string StartLocInsertion;
 
-  if (NeedOuterParens) {
+  if (NeedOuterParens)
     StartLocInsertion += "(";
-  }
-  if (NeedInnerParens) {
+  if (NeedInnerParens)
     StartLocInsertion += "(";
-  }
 
-  if (!StartLocInsertion.empty()) {
+  if (!StartLocInsertion.empty())
     Diag << FixItHint::CreateInsertion(Cast->getBeginLoc(), StartLocInsertion);
-  }
 
   std::string EndLocInsertion;
 
-  if (NeedInnerParens) {
+  if (NeedInnerParens)
     EndLocInsertion += ")";
-  }
 
-  if (InvertComparison) {
+  if (InvertComparison)
     EndLocInsertion += " == ";
-  } else {
+  else
     EndLocInsertion += " != ";
-  }
 
   const StringRef ZeroLiteral = getZeroLiteralToCompareWithForType(
       Cast->getCastKind(), SubExpr->getType(), Context);
@@ -129,9 +124,8 @@ static void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
   else
     EndLocInsertion += ZeroLiteral;
 
-  if (NeedOuterParens) {
+  if (NeedOuterParens)
     EndLocInsertion += ")";
-  }
 
   const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
       Cast->getEndLoc(), 0, Context.getSourceManager(), Context.getLangOpts());
@@ -140,14 +134,11 @@ static void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
 
 static StringRef getEquivalentBoolLiteralForExpr(const Expr *Expression,
                                                  ASTContext &Context) {
-  if (isNULLMacroExpansion(Expression, Context)) {
+  if (isNULLMacroExpansion(Expression, Context))
     return "false";
-  }
 
-  if (const auto *IntLit =
-          dyn_cast<IntegerLiteral>(Expression->IgnoreParens())) {
+  if (const auto *IntLit = dyn_cast<IntegerLiteral>(Expression->IgnoreParens()))
     return (IntLit->getValue() == 0) ? "false" : "true";
-  }
 
   if (const auto *FloatLit = dyn_cast<FloatingLiteral>(Expression)) {
     llvm::APFloat FloatLitAbsValue = FloatLit->getValue();
@@ -155,13 +146,11 @@ static StringRef getEquivalentBoolLiteralForExpr(const Expr *Expression,
     return (FloatLitAbsValue.bitcastToAPInt() == 0) ? "false" : "true";
   }
 
-  if (const auto *CharLit = dyn_cast<CharacterLiteral>(Expression)) {
+  if (const auto *CharLit = dyn_cast<CharacterLiteral>(Expression))
     return (CharLit->getValue() == 0) ? "false" : "true";
-  }
 
-  if (isa<StringLiteral>(Expression->IgnoreCasts())) {
+  if (isa<StringLiteral>(Expression->IgnoreCasts()))
     return "true";
-  }
 
   return {};
 }
@@ -217,15 +206,13 @@ getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
   }
 
   if (DestType->isFloatingType()) {
-    if (ASTContext::hasSameType(DestType, Context.FloatTy)) {
+    if (ASTContext::hasSameType(DestType, Context.FloatTy))
       return BoolLiteral->getValue() ? "1.0f" : "0.0f";
-    }
     return BoolLiteral->getValue() ? "1.0" : "0.0";
   }
 
-  if (DestType->isUnsignedIntegerType()) {
+  if (DestType->isUnsignedIntegerType())
     return BoolLiteral->getValue() ? "1u" : "0u";
-  }
   return BoolLiteral->getValue() ? "1" : "0";
 }
 

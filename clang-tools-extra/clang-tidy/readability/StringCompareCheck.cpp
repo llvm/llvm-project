@@ -38,9 +38,8 @@ void StringCompareCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void StringCompareCheck::registerMatchers(MatchFinder *Finder) {
-  if (StringLikeClasses.empty()) {
+  if (StringLikeClasses.empty())
     return;
-  }
   const auto StrCompare = cxxMemberCallExpr(
       callee(cxxMethodDecl(hasName("compare"), ofClass(cxxRecordDecl(hasAnyName(
                                                    StringLikeClasses))))),

@@ -184,11 +184,9 @@ getParameterSourceDeclaration(const FunctionDecl *OriginalDeclaration) {
   if (OriginalDeclaration->isThisDeclarationADefinition())
     return OriginalDeclaration;
 
-  for (const FunctionDecl *OtherDeclaration : OriginalDeclaration->redecls()) {
-    if (OtherDeclaration->isThisDeclarationADefinition()) {
+  for (const FunctionDecl *OtherDeclaration : OriginalDeclaration->redecls())
+    if (OtherDeclaration->isThisDeclarationADefinition())
       return OtherDeclaration;
-    }
-  }
 
   // No definition found, so return original declaration.
   return OriginalDeclaration;
