@@ -9,7 +9,7 @@ define void @fun(ptr %Src, ptr %Dst, i64 %wide.trip.count) {
 ; CHECK-LABEL: vector.body:
 ; CHECK: %wide.load = load <16 x i8>
 ; CHECK-LABEL: vec.epilog.vector.body:
-; CHECK: %wide.load8 = load <4 x i8>
+; CHECK: %wide.load7 = load <4 x i8>
 entry:
   br label %for.body
 

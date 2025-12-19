@@ -1932,8 +1932,9 @@ public:
   LLVM_ABI bool preferPredicatedReductionSelect() const;
 
   /// Return true if the loop vectorizer should consider vectorizing an
-  /// otherwise scalar epilogue loop.
-  LLVM_ABI bool preferEpilogueVectorization() const;
+  /// otherwise scalar epilogue loop. VF is what was used for the vectorized
+  /// loop body.
+  LLVM_ABI bool preferEpilogueVectorization(ElementCount VF) const;
 
   /// \returns True if the loop vectorizer should discard any VFs where the
   /// maximum register pressure exceeds getNumberOfRegisters.

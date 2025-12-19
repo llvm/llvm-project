@@ -479,12 +479,9 @@ unsigned SystemZTTIImpl::getMinPrefetchStride(unsigned NumMemAccesses,
 }
 
 unsigned SystemZTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
-  // Enable vectorization of (LoopVectorizer) epilogue loop after VF 16 main
-  // loop. This can be highly beneficial when the original loop handles bytes
-  // (i8) and most of the time is not spent in the main vectorized loop
-  // (x264/mc_chroma).
-  if (VF == ElementCount::getFixed(16))
-    return 2;
+  // TODO: Find optimal settings for interleave factors.
+  // if (VF == ElementCount::getFixed(16))
+  //   return 2;
   return 1;
 }
 
