@@ -4423,6 +4423,109 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
           matchFMulByZeroIfResultEqZero(*this, Cmp0, Cmp1, MatchCmp1, MatchCmp0,
                                         SI, SIFPOp->hasNoSignedZeros()))
         return replaceInstUsesWith(SI, Cmp0);
+
+      Type *EltTy = SelType->getScalarType();
+
+      // TODO: Generalize to any ordered / unordered compare.
+      if ((Pred == CmpInst::FCMP_ORD || Pred == CmpInst::FCMP_UNO) &&
+          match(Cmp1, m_PosZeroFP()) && EltTy->isIEEELikeFPTy()) {
+        // Fold out only-canonicalize-non-nans pattern. This implements a
+        // wrapper around llvm.canonicalize which is not required to quiet
+        // signaling nans or preserve nan payload bits.
+        //
+        //   %hard.canonical = call @llvm.canonicalize(%x)
+        //   %soft.canonical = fdiv 1.0, %x
+        //   %ord = fcmp ord %x, 0.0
+        //   %x.canon = select i1 %ord, %hard.canonical, %soft.canonical
+        //
+        // With known IEEE handling:
+        //   => %x
+        //
+        // With other denormal behaviors:
+        //   => llvm.canonicalize(%x)
+        //
+        // Note the fdiv could be any value preserving, potentially
+        // canonicalizing floating-point operation such as fmul by 1.0. However,
+        // since in the llvm model canonicalization is not mandatory, the fmul
+        // would have been dropped by the time we reached here. The trick here
+        // is to use a reciprocal fdiv. It's not a droppable no-op, as it could
+        // return an infinity if %x were sufficiently small, but in this pattern
+        // we're only using the output for nan values.
+
+        if (Pred == CmpInst::FCMP_ORD) {
+          MatchCmp0 = TrueVal;
+          MatchCmp1 = FalseVal;
+        } else {
+          MatchCmp0 = FalseVal;
+          MatchCmp1 = TrueVal;
+        }
+
+        bool RcpIfNan = match(MatchCmp1, m_FDiv(m_FPOne(), m_Specific(Cmp0)));
+        bool CanonicalizeIfNotNan =
+            match(MatchCmp0, m_FCanonicalize(m_Specific(Cmp0)));
+
+        if (RcpIfNan || CanonicalizeIfNotNan) {
+          const fltSemantics &FPSem = EltTy->getFltSemantics();
+          DenormalMode Mode = F.getDenormalMode(FPSem);
+
+          if (RcpIfNan) {
+            if (Mode == DenormalMode::getIEEE()) {
+              // Special case for the other select operand. Otherwise, we may
+              // need to insert freeze on Cmp0 in the compare and select.
+              if (CanonicalizeIfNotNan)
+                return replaceInstUsesWith(SI, Cmp0);
+
+              if (isGuaranteedNotToBeUndef(Cmp0, &AC, &SI, &DT)) {
+                // select (fcmp ord %cmp0, 0), y, (fdiv 1, x)
+                //   => select (fcmp ord %cmp0, 0), y, x
+                //
+                // select (fcmp uno %cmp0, 0), (fdiv 1, x), y
+                //   => select (fcmp uno %cmp0, 0), x, y
+                replaceOperand(SI, Pred == CmpInst::FCMP_ORD ? 2 : 1, Cmp0);
+                return &SI;
+              }
+
+              auto *FrCmp0 = InsertNewInstBefore(
+                  new FreezeInst(Cmp0, Cmp0->getName() + ".fr"),
+                  FCmp->getIterator());
+
+              replaceOperand(*FCmp, 0, FrCmp0);
+              return replaceOperand(SI, Pred == CmpInst::FCMP_ORD ? 2 : 1,
+                                    FrCmp0);
+            }
+          }
+
+          if (CanonicalizeIfNotNan) {
+            // IEEE handling does not have non-canonical values, so the
+            // canonicalize can be dropped for direct replacement without
+            // looking for the intermediate maybe-canonicalizing operation.
+            if (Mode == DenormalMode::getIEEE()) {
+              // select (fcmp ord %cmp0, 0), canonicalize(x), y
+              //  => select (fcmp ord %cmp0, 0), x, y
+
+              replaceOperand(SI, Pred == CmpInst::FCMP_ORD ? 1 : 2, Cmp0);
+              return &SI;
+            }
+
+            // If denormals may be flushed, we need to retain the canonicalize
+            // call. This introduces a canonicalization on the nan path, which
+            // we are not free to do as that could change the sign bit or
+            // payload bits. We can only do this if there were a no-op like
+            // floating-point instruction which may have changed the nan bits
+            // anyway.
+            if (RcpIfNan) {
+              if (Mode == DenormalMode::getIEEE())
+                return replaceInstUsesWith(SI, Cmp0);
+
+              if (Mode.inputsAreZero() || Mode.outputsAreZero())
+                return replaceInstUsesWith(SI, MatchCmp0);
+            }
+
+            // Leave the dynamic mode case alone. This would introduce new
+            // constraints if the mode may be refined later.
+          }
+        }
+      }
     }
   }
 
