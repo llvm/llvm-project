@@ -2608,9 +2608,6 @@ void CheckHelper::CheckPassArg(
   if (!passArg.has<ObjectEntityDetails>()) {
     msg = "Passed-object dummy argument '%s' of procedure '%s'"
           " must be a data object"_err_en_US;
-  } else if (passArg.attrs().test(Attr::POINTER)) {
-    msg = "Passed-object dummy argument '%s' of procedure '%s'"
-          " may not have the POINTER attribute"_err_en_US;
   } else if (passArg.attrs().test(Attr::ALLOCATABLE)) {
     msg = "Passed-object dummy argument '%s' of procedure '%s'"
           " may not have the ALLOCATABLE attribute"_err_en_US;
@@ -2620,6 +2617,23 @@ void CheckHelper::CheckPassArg(
   } else if (passArg.Rank() > 0) {
     msg = "Passed-object dummy argument '%s' of procedure '%s'"
           " must be scalar"_err_en_US;
+  } else if (passArg.attrs().test(Attr::POINTER)) {
+    if (context_.IsEnabled(common::LanguageFeature::PointerPassObject) &&
+        IsIntentIn(passArg)) {
+      if (proc.has<ProcBindingDetails>()) {
+        // Extension: allow a passed object to be an INTENT(IN) POINTER.
+        // Only works for TBPs, needs lowering work for proc ptr components.
+        Warn(common::LanguageFeature::PointerPassObject, name,
+            "Passed-object dummy argument '%s' of procedure '%s' that is an INTENT(IN) POINTER is not standard"_port_en_US,
+            *passName, name);
+      } else {
+        msg =
+            "Passed-object dummy argument '%s' of procedure '%s' used as procedure pointer component interface may not have the POINTER attribute"_err_en_US;
+      }
+    } else {
+      msg =
+          "Passed-object dummy argument '%s' of procedure '%s' may not have the POINTER attribute unless INTENT(IN)"_err_en_US;
+    }
   }
   if (msg) {
     messages_.Say(name, std::move(*msg), passName.value(), name);
