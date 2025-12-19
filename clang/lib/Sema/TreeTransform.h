@@ -4618,8 +4618,10 @@ bool TreeTransform<Derived>::TransformExprs(Expr *const *Inputs,
     }
 
     ExprResult Result =
-      IsCall ? getDerived().TransformInitializer(Inputs[I], /*DirectInit*/false)
-             : getDerived().TransformExpr(Inputs[I]);
+        IsCall
+            ? getDerived().TransformInitializer(Inputs[I], /*DirectInit*/ false)
+            : getDerived().TransformExpr(Inputs[I]->CloneIfIAmAStringLiteral(
+                  getSema().getASTContext()));
     if (Result.isInvalid())
       return true;
 

@@ -133,6 +133,82 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
   return E;
 }
 
+static StringLiteral *CloneStringLiteral(const StringLiteral *SL,
+                                         ASTContext &C) {
+  SourceLocation *SLocs = new (C) SourceLocation[SL->getNumConcatenated()];
+  std::copy(SL->tokloc_begin(), SL->tokloc_end(), SLocs);
+  return StringLiteral::Create(
+      C, SL->getBytes(), SL->getKind(), SL->isPascal(), SL->getType(),
+      ArrayRef<SourceLocation>(SLocs, SL->getNumConcatenated()));
+}
+
+// Exactly follow `IgnoreParensSingleStep` (`AST/IgnoreExpr.h`)
+// We only recursively visit those subexpressions which `IgnoreParensSingleStep`
+// drills down to.
+Expr *Expr::CloneIfIAmAStringLiteral(ASTContext &C) {
+  if (auto *SL = dyn_cast<StringLiteral>(this)) {
+    return CloneStringLiteral(SL, C);
+  }
+
+  if (auto *PE = dyn_cast<ParenExpr>(this)) {
+    return new (C) ParenExpr(PE->getBeginLoc(), PE->getEndLoc(),
+                             PE->getSubExpr()->CloneIfIAmAStringLiteral(C));
+  }
+
+  if (auto *UO = dyn_cast<UnaryOperator>(this)) {
+    if (UO->getOpcode() == UO_Extension) {
+      return UnaryOperator::Create(
+          C, UO->getSubExpr()->CloneIfIAmAStringLiteral(C), UO_Extension,
+          UO->getType(), UO->getValueKind(), UO->getObjectKind(),
+          UO->getBeginLoc(), UO->canOverflow(), UO->getFPOptionsOverride());
+    }
+  }
+
+  else if (auto *GSE = dyn_cast<GenericSelectionExpr>(this)) {
+    if (!GSE->isResultDependent()) {
+      ArrayRef<Expr *> GSEAEs = GSE->getAssocExprs();
+      Expr **NewGSEAEs = new (C) Expr *[GSEAEs.size()];
+      std::copy(GSEAEs.begin(), GSEAEs.end(), NewGSEAEs);
+      NewGSEAEs[GSE->getResultIndex()] =
+          GSE->getResultExpr()->CloneIfIAmAStringLiteral(C);
+
+      auto GSECreate = [&](auto *ExprOrTSI) -> Expr * {
+        return GenericSelectionExpr::Create(
+            C, GSE->getGenericLoc(), ExprOrTSI, GSE->getAssocTypeSourceInfos(),
+            ArrayRef<Expr *>(NewGSEAEs, GSEAEs.size()), GSE->getDefaultLoc(),
+            GSE->getRParenLoc(), GSE->containsUnexpandedParameterPack(),
+            GSE->getResultIndex());
+      };
+
+      return GSE->isExprPredicate() ? GSECreate(GSE->getControllingExpr())
+                                    : GSECreate(GSE->getControllingType());
+    }
+  }
+
+  else if (auto *CE = dyn_cast<ChooseExpr>(this)) {
+    if (!CE->isConditionDependent()) {
+      // Drills to `CE->getChosenSubExpr()`
+      const bool isCondTrue = CE->isConditionTrue();
+      return new (C) ChooseExpr(
+          CE->getBeginLoc(), CE->getCond(),
+          isCondTrue ? CE->getLHS()->CloneIfIAmAStringLiteral(C) : CE->getLHS(),
+          isCondTrue ? CE->getRHS() : CE->getRHS()->CloneIfIAmAStringLiteral(C),
+          CE->getType(), CE->getValueKind(), CE->getObjectKind(),
+          CE->getRParenLoc(), CE->isConditionTrue());
+    }
+  }
+
+  else if (auto *PE = dyn_cast<PredefinedExpr>(this)) {
+    if (PE->isTransparent() && PE->getFunctionName()) {
+      return PredefinedExpr::Create(
+          C, PE->getLocation(), PE->getType(), PE->getIdentKind(),
+          PE->isTransparent(), CloneStringLiteral(PE->getFunctionName(), C));
+    }
+  }
+
+  return this;
+}
+
 bool Expr::isKnownToHaveBooleanValue(bool Semantic) const {
   const Expr *E = IgnoreParens();
 
