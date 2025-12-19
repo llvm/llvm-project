@@ -158,6 +158,18 @@ public:
 
   void emitSled(const MachineInstr &MI, SledKind Kind);
 
+  // Returns whether Reg may be used to store sensitive temporary values when
+  // expanding PtrAuth pseudos. Some OSes may take extra care to protect a
+  // small subset of GPRs on context switches - use these registers then.
+  //
+  // If there are no preferred registers, returns true for any Reg.
+  bool isPtrauthRegSafe(Register Reg) const {
+    if (STI->isX16X17Safer())
+      return Reg == AArch64::X16 || Reg == AArch64::X17;
+
+    return true;
+  }
+
   // Emit the sequence for BRA/BLRA (authenticate + branch/call).
   void emitPtrauthBranch(const MachineInstr *MI);
 
@@ -188,13 +200,16 @@ public:
 
   // Emit the sequence to compute the discriminator.
   //
-  // The returned register is either unmodified AddrDisc or ScratchReg.
+  // The Scratch register passed to this function must be safe, as returned by
+  // isPtrauthRegSafe(ScratchReg).
+  //
+  // The returned register is either ScratchReg, AddrDisc, or XZR. Furthermore,
+  // it is guaranteed to be safe (or XZR), with the only exception of
+  // passing-through an *unmodified* unsafe AddrDisc register.
   //
   // If the expanded pseudo is allowed to clobber AddrDisc register, setting
-  // MayUseAddrAsScratch may save one MOV instruction, provided the address
-  // is already in x16/x17 (i.e. return x16/x17 which is the *modified* AddrDisc
-  // register at the same time) or the OS doesn't make it safer to use x16/x17
-  // (see AArch64Subtarget::isX16X17Safer()):
+  // MayClobberAddrDisc may save one MOV instruction, provided
+  // isPtrauthRegSafe(AddrDisc) is true:
   //
   //   mov   x17, x16
   //   movk  x17, #1234, lsl #48
@@ -203,9 +218,9 @@ public:
   // can be replaced by
   //
   //   movk  x16, #1234, lsl #48
-  Register emitPtrauthDiscriminator(uint16_t Disc, Register AddrDisc,
+  Register emitPtrauthDiscriminator(uint64_t Disc, Register AddrDisc,
                                     Register ScratchReg,
-                                    bool MayUseAddrAsScratch = false);
+                                    bool MayClobberAddrDisc = false);
 
   // Emit the sequence for LOADauthptrstatic
   void LowerLOADauthptrstatic(const MachineInstr &MI);
@@ -1916,12 +1931,14 @@ void AArch64AsmPrinter::emitFMov0AsFMov(const MachineInstr &MI,
   EmitToStreamer(*OutStreamer, FMov);
 }
 
-Register AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
+Register AArch64AsmPrinter::emitPtrauthDiscriminator(uint64_t Disc,
                                                      Register AddrDisc,
                                                      Register ScratchReg,
-                                                     bool MayUseAddrAsScratch) {
-  assert(ScratchReg == AArch64::X16 || ScratchReg == AArch64::X17 ||
-         !STI->isX16X17Safer());
+                                                     bool MayClobberAddrDisc) {
+  assert(isPtrauthRegSafe(ScratchReg) &&
+         "Safe scratch register must be provided by the caller");
+  assert(isUInt<16>(Disc) && "Constant discriminator is too wide");
+
   // So far we've used NoRegister in pseudos.  Now we need real encodings.
   if (AddrDisc == AArch64::NoRegister)
     AddrDisc = AArch64::XZR;
@@ -1940,13 +1957,13 @@ Register AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
   // If there are both, emit a blend into the scratch register.
 
   // Check if we can save one MOV instruction.
-  assert(MayUseAddrAsScratch || ScratchReg != AddrDisc);
-  bool AddrDiscIsSafe = AddrDisc == AArch64::X16 || AddrDisc == AArch64::X17 ||
-                        !STI->isX16X17Safer();
-  if (MayUseAddrAsScratch && AddrDiscIsSafe)
+  if (MayClobberAddrDisc && isPtrauthRegSafe(AddrDisc)) {
     ScratchReg = AddrDisc;
-  else
+  } else {
     emitMovXReg(ScratchReg, AddrDisc);
+    assert(ScratchReg != AddrDisc &&
+           "Forbidden to clobber AddrDisc, but have to");
+  }
 
   emitMOVK(ScratchReg, Disc, 48);
   return ScratchReg;
@@ -2185,7 +2202,6 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
   }
 
   // Compute aut discriminator
-  assert(isUInt<16>(AUTDisc));
   Register AUTDiscReg = emitPtrauthDiscriminator(
       AUTDisc, AUTAddrDisc->getReg(), Scratch, AUTAddrDisc->isKill());
   bool AUTZero = AUTDiscReg == AArch64::XZR;
@@ -2224,7 +2240,6 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     return;
 
   // Compute pac discriminator
-  assert(isUInt<16>(PACDisc));
   Register PACDiscReg =
       emitPtrauthDiscriminator(PACDisc, PACAddrDisc, Scratch);
   bool PACZero = PACDiscReg == AArch64::XZR;
@@ -2259,9 +2274,8 @@ void AArch64AsmPrinter::emitPtrauthSign(const MachineInstr *MI) {
          "Neither X16 nor X17 is available as a scratch register");
 
   // Compute pac discriminator
-  assert(isUInt<16>(Disc));
   Register DiscReg = emitPtrauthDiscriminator(
-      Disc, AddrDisc, ScratchReg, /*MayUseAddrAsScratch=*/AddrDiscKilled);
+      Disc, AddrDisc, ScratchReg, /*MayClobberAddrDisc=*/AddrDiscKilled);
   bool IsZeroDisc = DiscReg == AArch64::XZR;
   unsigned Opc = getPACOpcodeForKey(Key, IsZeroDisc);
 
@@ -2288,7 +2302,6 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
          "Invalid auth call key");
 
   uint64_t Disc = MI->getOperand(2).getImm();
-  assert(isUInt<16>(Disc));
 
   unsigned AddrDisc = MI->getOperand(3).getReg();
 
@@ -2708,8 +2721,6 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
   const auto Key = (AArch64PACKey::ID)KeyC;
   const unsigned AddrDisc = MI.getOperand(2).getReg();
   const uint64_t Disc = MI.getOperand(3).getImm();
-  assert(isUInt<16>(Disc) &&
-         "constant discriminator is out of range [0, 0xffff]");
 
   const int64_t Offset = GAOp.getOffset();
   GAOp.setOffset(0);
@@ -3253,7 +3264,6 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
            "Invalid auth key for tail-call return");
 
     const uint64_t Disc = MI->getOperand(3).getImm();
-    assert(isUInt<16>(Disc) && "Integer discriminator is too wide");
 
     Register AddrDisc = MI->getOperand(4).getReg();
 

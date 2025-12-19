@@ -59729,6 +59729,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         }
       }
       break;
+    case ISD::FNEG:
     case ISD::FSQRT:
     case ISD::FCEIL:
     case ISD::FTRUNC:
