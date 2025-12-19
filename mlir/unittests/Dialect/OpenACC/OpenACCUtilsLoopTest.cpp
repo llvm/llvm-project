@@ -40,14 +40,12 @@ protected:
 
   /// Helper to create an index constant
   Value createIndexConstant(int64_t value) {
-    return arith::ConstantOp::create(b, loc, b.getIndexType(),
-                                     b.getIndexAttr(value));
+    return arith::ConstantIndexOp::create(b, loc, value);
   }
 
   /// Helper to create an i32 constant
   Value createI32Constant(int32_t value) {
-    return arith::ConstantOp::create(b, loc, b.getI32Type(),
-                                     b.getI32IntegerAttr(value));
+    return arith::ConstantIntOp::create(b, loc, b.getI32Type(), value);
   }
 
   /// Helper to create a simple acc.loop with the given bounds.
