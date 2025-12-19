@@ -9,6 +9,7 @@
 #ifndef LLVM_CODEGEN_MACHINEMODULESLOTTRACKER_H
 #define LLVM_CODEGEN_MACHINEMODULESLOTTRACKER_H
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/Support/Compiler.h"
 
@@ -20,11 +21,11 @@ class MachineModuleInfo;
 class MachineFunction;
 class Module;
 
-using MFGetterFnT = std::function<MachineFunction *(const Function &)>;
+using MFGetterFnT = function_ref<MachineFunction *(const Function &)>;
 
 class LLVM_ABI MachineModuleSlotTracker : public ModuleSlotTracker {
   const Function &TheFunction;
-  MFGetterFnT MachineFunctionGetterFn;
+  const MachineFunction *TheMF;
   unsigned MDNStartSlot = 0, MDNEndSlot = 0;
 
   void processMachineFunctionMetadata(AbstractSlotTrackerStorage *AST,
