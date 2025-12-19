@@ -957,7 +957,14 @@ INTERCEPTOR(hsa_status_t, hsa_amd_pointer_info, const void* ptr,
                                    accessible);
 }
 
+INTERCEPTOR(hsa_status_t, hsa_init) {
+  AsanInitFromRtl();
+  ENSURE_HSA_INITED();
+  return asan_hsa_init();
+}
+
 void InitializeAmdgpuInterceptors() {
+  ASAN_INTERCEPT_FUNC(hsa_init);
   ASAN_INTERCEPT_FUNC(hsa_memory_copy);
   ASAN_INTERCEPT_FUNC(hsa_amd_memory_pool_allocate);
   ASAN_INTERCEPT_FUNC(hsa_amd_memory_pool_free);
@@ -975,7 +982,7 @@ void InitializeAmdgpuInterceptors() {
 }
 
 void ENSURE_HSA_INITED() {
-  if (!REAL(hsa_memory_copy))
+  if (!REAL(hsa_init))
     InitializeAmdgpuInterceptors();
 }
 #endif

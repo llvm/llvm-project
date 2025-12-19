@@ -347,6 +347,7 @@ hsa_status_t asan_hsa_amd_pointer_info(const void* ptr,
                                        void* (*alloc)(size_t),
                                        uint32_t* num_agents_accessible,
                                        hsa_agent_t** accessible);
+hsa_status_t asan_hsa_init();
 } // namespace __asan
 #endif
 

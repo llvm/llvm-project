@@ -1385,6 +1385,7 @@ int __asan_update_allocation_context(void* addr) {
 }
 
 #if SANITIZER_AMDGPU
+DECLARE_REAL(hsa_status_t, hsa_init);
 DECLARE_REAL(hsa_status_t, hsa_amd_agents_allow_access, uint32_t num_agents,
   const hsa_agent_t *agents, const uint32_t *flags, const void *ptr)
 DECLARE_REAL(hsa_status_t, hsa_amd_memory_pool_allocate,
@@ -1403,9 +1404,10 @@ DECLARE_REAL(hsa_status_t, hsa_amd_vmem_address_free, void* ptr, size_t size)
 DECLARE_REAL(hsa_status_t, hsa_amd_pointer_info, const void* ptr,
              hsa_amd_pointer_info_t* info, void* (*alloc)(size_t),
              uint32_t* num_agents_accessible, hsa_agent_t** accessible)
+DECLARE_REAL(hsa_status_t, hsa_amd_register_system_event_handler,
+             hsa_amd_system_event_callback_t, void*)
 
 namespace __asan {
-
 // Always align to page boundary to match current ROCr behavior
 static const size_t kPageSize_ = 4096;
 
@@ -1576,6 +1578,13 @@ hsa_status_t asan_hsa_amd_pointer_info(const void* ptr,
   }
   return REAL(hsa_amd_pointer_info)(ptr, info, alloc, num_agents_accessible,
                                     accessible);
+}
+
+hsa_status_t asan_hsa_init() {
+  hsa_status_t status = REAL(hsa_init)();
+  if (status == HSA_STATUS_SUCCESS)
+    __sanitizer::AmdgpuMemFuncs::RegisterSystemEventHandlers();
+  return status;
 }
 
 }  // namespace __asan

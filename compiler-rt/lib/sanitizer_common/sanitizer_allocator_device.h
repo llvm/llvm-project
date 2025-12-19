@@ -122,7 +122,6 @@ class DeviceAllocatorT {
       CHECK_EQ(chunks_[idx], p_);
       CHECK_LT(idx, n_chunks_);
       h = GetHeader(chunks_[idx], &header);
-      CHECK(!dev_runtime_unloaded_);
       chunks_[idx] = chunks_[--n_chunks_];
       chunks_sorted_ = false;
       stats.n_frees++;
@@ -140,7 +139,6 @@ class DeviceAllocatorT {
     uptr res = 0;
     for (uptr i = 0; i < n_chunks_; i++) {
       Header *h = GetHeader(chunks_[i], &header);
-      CHECK(!dev_runtime_unloaded_);
       res += RoundUpMapSize(h->map_size);
     }
     return res;
@@ -188,7 +186,6 @@ class DeviceAllocatorT {
       CHECK_LT(nearest_chunk, h->map_beg + h->map_size);
       CHECK_LE(nearest_chunk, p);
       if (h->map_beg + h->map_size <= p) {
-        CHECK(!dev_runtime_unloaded_);
         return nullptr;
       }
     }
@@ -306,14 +303,21 @@ class DeviceAllocatorT {
   }
 
   Header* GetHeader(uptr chunk, Header* h) const {
-    if (dev_runtime_unloaded_ || !DeviceMemFuncs::GetPointerInfo(chunk, h)) {
-      // Device allocator has dependency on device runtime. If device runtime
-      // is unloaded, GetPointerInfo() will fail. For such case, we can still
-      // return a valid value for map_beg, map_size will be limited to one page
-      h->map_beg = chunk;
-      h->map_size = page_size_;
-      dev_runtime_unloaded_ = true;
+    // Device allocator has dependency on device runtime. If device runtime
+    // is unloaded, GetPointerInfo() will fail. For such case, we can still
+    // return a valid value for map_beg, map_size will be limited to one page
+    if (LIKELY(!dev_runtime_unloaded_)) {
+      if (DeviceMemFuncs::GetPointerInfo(chunk, h))
+        return h;
+      // If GetPointerInfo() fails, we don't assume the runtime is unloaded yet.
+      // We just return a conservative single-page header. Here mark/check the
+      // runtime shutdown state
+      dev_runtime_unloaded_ = DeviceMemFuncs::IsAmdgpuRuntimeShutdown();
     }
+    // If we reach here, device runtime is unloaded.
+    // Fallback: conservative single-page header
+    h->map_beg = chunk;
+    h->map_size = page_size_;
     return h;
   }
 
