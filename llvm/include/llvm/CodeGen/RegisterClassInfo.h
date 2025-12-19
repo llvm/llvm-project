@@ -98,7 +98,7 @@ public:
   LLVM_ABI void runOnMachineFunction(const MachineFunction &MF,
                                      bool Rev = false);
 
-  bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+  LLVM_ABI bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
                   MachineFunctionAnalysisManager::Invalidator &) {
     // Check whether the analysis has been explicitly invalidated. Otherwise,
     // it's stateless and remains preserved.
