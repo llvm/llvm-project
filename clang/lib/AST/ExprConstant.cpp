@@ -9752,7 +9752,7 @@ bool LValueExprEvaluator::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
       // If Index cannot be represented as a 64 bit integer, return
       // unsuccessful.
       if (!Index.tryExtValue().has_value())
-        return Error(E);
+        return false;
 
       HandleLValueVectorElement(Info, E, Result, VT->getElementType(),
                                 VT->getNumElements(), Index.getExtValue());
