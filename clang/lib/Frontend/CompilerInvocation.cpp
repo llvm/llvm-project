@@ -5075,9 +5075,8 @@ bool CompilerInvocation::CreateFromArgsImpl(
     Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
 
   // Set the default triple for SYCL device compilation.
-  if (LangOpts.SYCLIsDevice && !Args.hasArg(options::OPT_triple)) {
+  if (LangOpts.SYCLIsDevice && !Args.hasArg(options::OPT_triple))
     Res.getTargetOpts().Triple = "spirv64-unknown-unknown";
-  }
 
   ParseCodeGenArgs(Res.getCodeGenOpts(), Args, DashX, Diags, T,
                    Res.getFrontendOpts().OutputFile, LangOpts);

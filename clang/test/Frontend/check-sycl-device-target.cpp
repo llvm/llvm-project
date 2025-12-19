@@ -4,7 +4,7 @@
 
 // These tests validate the target for SYCL device compilation
 
-// INVALID: 86_64-unknown-unknown is not a supported SYCL device target
+// INVALID: x86_64-unknown-unknown is not a supported SYCL device target
 
 // valid-no-diagnostics
 
