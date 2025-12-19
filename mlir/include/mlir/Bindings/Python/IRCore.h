@@ -957,12 +957,6 @@ public:
     auto cls = ClassTy(m, DerivedTy::pyClassName);
     cls.def(nanobind::init<PyType &>(), nanobind::keep_alive<0, 1>(),
             nanobind::arg("cast_from_type"));
-    cls.def_static(
-        "isinstance",
-        [](PyType &otherType) -> bool {
-          return DerivedTy::isaFunction(otherType);
-        },
-        nanobind::arg("other"));
     cls.def_prop_ro_static(
         "static_typeid",
         [](nanobind::object & /*class*/) {
@@ -1094,12 +1088,6 @@ public:
     }
     cls.def(nanobind::init<PyAttribute &>(), nanobind::keep_alive<0, 1>(),
             nanobind::arg("cast_from_attr"));
-    cls.def_static(
-        "isinstance",
-        [](PyAttribute &otherAttr) -> bool {
-          return DerivedTy::isaFunction(otherAttr);
-        },
-        nanobind::arg("other"));
     cls.def_prop_ro(
         "type",
         [](PyAttribute &attr) -> nanobind::typed<nanobind::object, PyType> {
