@@ -1,7 +1,7 @@
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
-; RUN: llc -mtriple aarch64-linux-gnu -mattr=+pauth -filetype=asm -o - %t/unsigned-got.ll | FileCheck %t/unsigned-got.ll
-; RUN: llc -mtriple aarch64-linux-gnu -mattr=+pauth -filetype=asm -o - %t/signed-got.ll | FileCheck %t/signed-got.ll
+; RUN: llc -mtriple aarch64-linux-gnu -mattr=+pauth,+fpac -filetype=asm -o - %t/unsigned-got.ll | FileCheck %t/unsigned-got.ll
+; RUN: llc -mtriple aarch64-linux-gnu -mattr=+pauth,+fpac -filetype=asm -o - %t/signed-got.ll | FileCheck %t/signed-got.ll
 
 ;--- unsigned-got.ll
 
