@@ -22,6 +22,71 @@ namespace fs = std::filesystem;
 
 constexpr fs::copy_options ME(int val) { return static_cast<fs::copy_options>(val); }
 
+// Verify binary operations on std::filesystem::copy_options bitmask constants.
+// Also verify that compound assignment operators are not incorrectly marked [[nodiscard]],
+// to avoid regression in https://llvm.org/PR171085.
+constexpr bool test_bitmask_binary_operations() {
+  using E = fs::copy_options;
+  constexpr E bitmask_elems[]{
+      // non-empty standard bitmask elements
+      E::skip_existing,
+      E::overwrite_existing,
+      E::update_existing,
+      E::recursive,
+      E::copy_symlinks,
+      E::skip_symlinks,
+      E::directories_only,
+      E::create_symlinks,
+      E::create_hard_links,
+  };
+
+  for (auto elem : bitmask_elems) {
+    assert((E::none | elem) == elem);
+    assert((E::none & elem) == E::none);
+    assert((E::none ^ elem) == elem);
+
+    assert((elem | elem) == elem);
+    assert((elem & elem) == elem);
+    assert((elem ^ elem) == E::none);
+
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      {
+        auto e = E::none;
+        e |= elem;
+        assert(e == elem);
+      }
+      {
+        auto e = E::none;
+        e &= elem;
+        assert(e == E::none);
+      }
+      {
+        auto e = E::none;
+        e ^= elem;
+        assert(e == elem);
+      }
+
+      {
+        auto e = elem;
+        elem |= elem;
+        assert(e == elem);
+      }
+      {
+        auto e = elem;
+        e &= elem;
+        assert(e == elem);
+      }
+      {
+        auto e = elem;
+        e ^= elem;
+        assert(e == E::none);
+      }
+    }
+  }
+
+  return true;
+}
+
 int main(int, char**) {
   typedef fs::copy_options E;
   static_assert(std::is_enum<E>::value, "");
@@ -61,14 +126,8 @@ int main(int, char**) {
           E::create_hard_links   == ME(256),
         "Expected enumeration values do not match");
 
-  // Verify that compound assignment operators are not incorrectly marked [[nodiscard]],
-  // to avoid regression in https://llvm.org/PR171085.
-  {
-    E e = E::none;
-    e &= E::skip_existing;
-    e |= E::recursive;
-    e ^= E::create_hard_links;
-  }
+  test_bitmask_binary_operations();
+  static_assert(test_bitmask_binary_operations());
 
   return 0;
 }
