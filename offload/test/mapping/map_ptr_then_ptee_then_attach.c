@@ -8,6 +8,8 @@
 // RUN: env LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS=1 \
 // RUN: %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic -check-prefix=CHECK
+//
+// REQUIRES: debug
 
 // Ensure that under LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS, the pointer
 // attachment for map(p[0:0]) happens as if the user had specified the
