@@ -120,9 +120,8 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
   if (!new_storage)
     return false;
 
-  EnvStringOwnership *new_ownership =
-      reinterpret_cast<EnvStringOwnership *>(realloc(
-          ownership, sizeof(EnvStringOwnership) * (new_capacity + 1)));
+  EnvStringOwnership *new_ownership = reinterpret_cast<EnvStringOwnership *>(
+      realloc(ownership, sizeof(EnvStringOwnership) * (new_capacity + 1)));
   if (!new_ownership) {
     // If ownership realloc fails, we still have the old storage in new_storage
     // which was successfully reallocated. We need to restore or handle this.
