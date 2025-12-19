@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBVariableAnnotator.h"
+#include "SBVariableAnnotator.h"
 #include "lldb/Utility/Instrumentation.h"
 
 using namespace lldb;
@@ -37,3 +38,20 @@ SBVariableAnnotator::operator bool() const {
 }
 
 bool lldb::SBVariableAnnotator::IsValid() const { return false; }
+
+lldb::SBVariableAnnotator::SBVariableAnnotator(
+    const lldb::VariableAnnotatorSP &annotator_sp)
+    : m_opaque_sp(annotator_sp) {
+  LLDB_INSTRUMENT_VA(this, annotator_sp);
+}
+
+lldb::VariableAnnotatorSP lldb::SBVariableAnnotator::GetSP() const {
+  LLDB_INSTRUMENT_VA(this);
+  return m_opaque_sp;
+}
+
+void lldb::SBVariableAnnotator::SetSP(
+    const lldb::VariableAnnotatorSP &annotator_sp) {
+  LLDB_INSTRUMENT_VA(this, annotator_sp);
+  m_opaque_sp = annotator_sp;
+}

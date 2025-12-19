@@ -27,6 +27,16 @@ public:
   explicit operator bool() const;
 
   bool IsValid() const;
+
+protected:
+  SBVariableAnnotator(const lldb::VariableAnnotatorSP &annotator_sp);
+
+  lldb::VariableAnnotatorSP GetSP() const;
+
+  void SetSP(const lldb::VariableAnnotatorSP &annotator_sp);
+
+private:
+  lldb::VariableAnnotatorSP m_opaque_sp;
 };
 } // namespace lldb
 #endif // LLDB_API_SBVARIABLEANNOTATOR_H
