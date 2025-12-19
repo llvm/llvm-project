@@ -61,10 +61,7 @@ define void @pli_b_store_i32(ptr %p) {
 define i64 @pack_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: pack_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 32
-; CHECK-NEXT:    srli a0, a0, 32
-; CHECK-NEXT:    slli a1, a1, 32
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    pack a0, a0, a1
 ; CHECK-NEXT:    ret
   %shl = and i64 %a, 4294967295
   %shl1 = shl i64 %b, 32
@@ -75,10 +72,7 @@ define i64 @pack_i64(i64 %a, i64 %b) nounwind {
 define i64 @pack_i64_2(i32 signext %a, i32 signext %b) nounwind {
 ; CHECK-LABEL: pack_i64_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 32
-; CHECK-NEXT:    srli a0, a0, 32
-; CHECK-NEXT:    slli a1, a1, 32
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    pack a0, a0, a1
 ; CHECK-NEXT:    ret
   %zexta = zext i32 %a to i64
   %zextb = zext i32 %b to i64
@@ -91,9 +85,8 @@ define i64 @pack_i64_3(ptr %0, ptr %1) {
 ; CHECK-LABEL: pack_i64_3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lw a0, 0(a0)
-; CHECK-NEXT:    lwu a1, 0(a1)
-; CHECK-NEXT:    slli a0, a0, 32
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    pack a0, a1, a0
 ; CHECK-NEXT:    ret
   %3 = load i32, ptr %0, align 4
   %4 = zext i32 %3 to i64

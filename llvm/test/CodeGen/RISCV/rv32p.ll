@@ -49,10 +49,7 @@ define void @pli_b_store_i32(ptr %p) {
 define i32 @pack_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: pack_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 16
-; CHECK-NEXT:    srli a0, a0, 16
-; CHECK-NEXT:    slli a1, a1, 16
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    pack a0, a0, a1
 ; CHECK-NEXT:    ret
   %shl = and i32 %a, 65535
   %shl1 = shl i32 %b, 16
@@ -63,8 +60,7 @@ define i32 @pack_i32(i32 %a, i32 %b) nounwind {
 define i32 @pack_i32_2(i16 zeroext %a, i16 zeroext %b) nounwind {
 ; CHECK-LABEL: pack_i32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a1, a1, 16
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    pack a0, a0, a1
 ; CHECK-NEXT:    ret
   %zexta = zext i16 %a to i32
   %zextb = zext i16 %b to i32
@@ -76,8 +72,7 @@ define i32 @pack_i32_2(i16 zeroext %a, i16 zeroext %b) nounwind {
 define i32 @pack_i32_3(i16 zeroext %0, i16 zeroext %1, i32 %2) {
 ; CHECK-LABEL: pack_i32_3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 16
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    pack a0, a1, a0
 ; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    ret
   %4 = zext i16 %0 to i32
