@@ -1,10 +1,33 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 -run-pass=si-shrink-instructions -o - %s | FileCheck --check-prefix=GCN %s
 
+--- |
+    define amdgpu_kernel void @rcp_f16_v127_lo16() #0 { ret void }
+    define amdgpu_kernel void @rcp_f16_v128_lo16() #0 { ret void }
+    define amdgpu_kernel void @rcp_f16_v256_lo16() #0 { ret void }
+    define amdgpu_kernel void @rcp_f16_v384_lo16() #0 { ret void }
+    define amdgpu_kernel void @rcp_f16_v512_lo16() #0 { ret void }
+    define amdgpu_kernel void @rcp_f16_v767_lo16() #0 { ret void }
+    define amdgpu_kernel void @rcp_f16_v768_lo16() #0 { ret void }
+    define amdgpu_kernel void @rcp_f16_v1023_lo16() #0 { ret void }
+    define amdgpu_kernel void @rcp_f16_v127_hi16() #0 { ret void }
+    define amdgpu_kernel void @rcp_f16_v128_hi16() #0 { ret void }
+    define amdgpu_kernel void @rcp_f16_v256_hi16() #0 { ret void }
+    define amdgpu_kernel void @rcp_f16_v384_hi16() #0 { ret void }
+    define amdgpu_kernel void @rcp_f16_v512_hi16() #0 { ret void }
+    define amdgpu_kernel void @rcp_f16_v767_hi16() #0 { ret void }
+    define amdgpu_kernel void @rcp_f16_v768_hi16() #0 { ret void }
+    define amdgpu_kernel void @rcp_f16_v1023_hi16() #0 { ret void }
+
+    attributes #0 = { "amdgpu-flat-work-group-size"="128,128" "amdgpu-waves-per-eu"="1,1" }
+...
+
 # GCN-LABEL: name:  rcp_f16_v127_lo16
 # GCN: $vgpr127_lo16 = V_RCP_F16_t16_e32 killed $vgpr127_lo16
 ---
 name: rcp_f16_v127_lo16
 tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       1
 body:             |
   bb.0:
     $vgpr127_lo16 = IMPLICIT_DEF
@@ -16,6 +39,8 @@ body:             |
 ---
 name: rcp_f16_v128_lo16
 tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       1
 body:             |
   bb.0:
     $vgpr128_lo16 = IMPLICIT_DEF
@@ -27,6 +52,8 @@ body:             |
 ---
 name: rcp_f16_v256_lo16
 tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       1
 body:             |
   bb.0:
     $vgpr256_lo16 = IMPLICIT_DEF
@@ -38,6 +65,8 @@ body:             |
 ---
 name: rcp_f16_v384_lo16
 tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       1
 body:             |
   bb.0:
     $vgpr384_lo16 = IMPLICIT_DEF
@@ -49,6 +78,8 @@ body:             |
 ---
 name: rcp_f16_v512_lo16
 tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       1
 body:             |
   bb.0:
     $vgpr512_lo16 = IMPLICIT_DEF
@@ -60,6 +91,8 @@ body:             |
 ---
 name: rcp_f16_v767_lo16
 tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       1
 body:             |
   bb.0:
     $vgpr767_lo16 = IMPLICIT_DEF
@@ -71,6 +104,8 @@ body:             |
 ---
 name: rcp_f16_v768_lo16
 tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       1
 body:             |
   bb.0:
     $vgpr768_lo16 = IMPLICIT_DEF
@@ -82,6 +117,8 @@ body:             |
 ---
 name: rcp_f16_v1023_lo16
 tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       1
 body:             |
   bb.0:
     $vgpr1023_lo16 = IMPLICIT_DEF
@@ -93,6 +130,8 @@ body:             |
 ---
 name: rcp_f16_v127_hi16
 tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       1
 body:             |
   bb.0:
     $vgpr127_hi16 = IMPLICIT_DEF
@@ -104,6 +143,8 @@ body:             |
 ---
 name: rcp_f16_v128_hi16
 tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       1
 body:             |
   bb.0:
     $vgpr128_hi16 = IMPLICIT_DEF
@@ -115,6 +156,8 @@ body:             |
 ---
 name: rcp_f16_v256_hi16
 tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       1
 body:             |
   bb.0:
     $vgpr256_hi16 = IMPLICIT_DEF
@@ -126,6 +169,8 @@ body:             |
 ---
 name: rcp_f16_v384_hi16
 tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       1
 body:             |
   bb.0:
     $vgpr384_hi16 = IMPLICIT_DEF
@@ -137,6 +182,8 @@ body:             |
 ---
 name: rcp_f16_v512_hi16
 tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       1
 body:             |
   bb.0:
     $vgpr512_hi16 = IMPLICIT_DEF
@@ -148,6 +195,8 @@ body:             |
 ---
 name: rcp_f16_v767_hi16
 tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       1
 body:             |
   bb.0:
     $vgpr767_hi16 = IMPLICIT_DEF
@@ -159,6 +208,8 @@ body:             |
 ---
 name: rcp_f16_v768_hi16
 tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       1
 body:             |
   bb.0:
     $vgpr768_hi16 = IMPLICIT_DEF
@@ -170,6 +221,8 @@ body:             |
 ---
 name: rcp_f16_v1023_hi16
 tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       1
 body:             |
   bb.0:
     $vgpr1023_hi16 = IMPLICIT_DEF

@@ -597,6 +597,8 @@ def Reg1024Types : RegisterTypes<[v32i32, v32f32, v16i64, v16f64]>;
 
 let HasVGPR = 1 in {
 // VOP3 and VINTERP can access 1024 lo and 1024 hi registers.
+// The order of registers in the class determines order of allocation, so it is
+// important to interleave lo and hi registers.
 def VGPR_16 : SIRegisterClass<"AMDGPU",  Reg16Types.types, 16,
                             (add (interleave (sequence "VGPR%u_LO16", 0, 1023),
                                              (sequence "VGPR%u_HI16", 0, 1023)))> {
@@ -609,20 +611,21 @@ def VGPR_16 : SIRegisterClass<"AMDGPU",  Reg16Types.types, 16,
 }
 
 // VOP1/2/C can access the First 128 lo and 128 hi registers.
-// The order of registers in the class determines order of allocation, so it is
-// important to interleave lo and hi registers.
 def VGPR_16_Lo128 : SIRegisterClass<"AMDGPU",  Reg16Types.types, 16,
-                                    (add (interleave (sequence "VGPR%u_LO16", 0, 895),
-                                                     (sequence "VGPR%u_HI16", 0, 895)))> {
- let AltOrders = [(add (interleave (sequence "VGPR%u_LO16", 0, 127),
-                                   (sequence "VGPR%u_HI16", 0, 127)),
-                       (interleave (sequence "VGPR%u_LO16", 256, 383),
-                                   (sequence "VGPR%u_HI16", 256, 383)),
-                       (interleave (sequence "VGPR%u_LO16", 512, 639),
-                                   (sequence "VGPR%u_HI16", 512, 639)),
-                       (interleave (sequence "VGPR%u_LO16", 768, 895),
-                                   (sequence "VGPR%u_HI16", 768, 895)))];
-  let AltOrderSelect = [{ return 1;}];
+                                    (trunc VGPR_16, 1792)> {
+  defvar AltOrdersList = (add (trunc MemberList, 256),
+                              (trunc (shl MemberList, 512), 256),
+                              (trunc (shl MemberList, 1024), 256),
+                              (trunc (shl MemberList, 1536), 256));
+  let AltOrders = [AltOrdersList,
+                   (trunc AltOrdersList, 768),
+                   (trunc AltOrdersList, 512),
+                   (trunc AltOrdersList, 256)];
+  let AltOrderSelect = [{
+    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+    unsigned N = ST.getSoftMaxNumVGPRs(MF);
+    return N > 768 ? 1 : N > 512 ? 2 : N > 256 ? 3 : 4;
+  }];
   let AllocationPriority = !add(2, !mul(BaseClassPriority, BaseClassScaleFactor));
   let Size = 16;
   let GeneratePressureSet = 0;
@@ -645,11 +648,19 @@ def VGPR_32 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types
 // register bank are allocatable.
 def VGPR_32_Lo128 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types.types), 32,
                                     (trunc VGPR_32, 896)> {
-  let AltOrders = [(add (sequence "VGPR%u", 0, 127),
-                        (sequence "VGPR%u", 256, 383),
-                        (sequence "VGPR%u", 512, 639),
-                        (sequence "VGPR%u", 768, 895))];
-  let AltOrderSelect = [{ return 1; }];
+  defvar AltOrdersList = (add (trunc MemberList, 128),
+                              (trunc (shl MemberList, 256), 128),
+                              (trunc (shl MemberList, 512), 128),
+                              (trunc (shl MemberList, 768), 128));
+  let AltOrders = [AltOrdersList,
+                   (trunc AltOrdersList, 384),
+                   (trunc AltOrdersList, 256),
+                   (trunc AltOrdersList, 128)];
+  let AltOrderSelect = [{
+    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+    unsigned N = ST.getSoftMaxNumVGPRs(MF);
+    return N > 768 ? 1 : N > 512 ? 2 : N > 256 ? 3 : 4;
+  }];
   let AllocationPriority = !add(0, !mul(BaseClassPriority, BaseClassScaleFactor));
   let GeneratePressureSet = 0;
   let Size = 32;

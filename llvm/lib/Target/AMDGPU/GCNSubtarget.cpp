@@ -570,6 +570,13 @@ unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
   return getMaxNumVGPRs(MF.getFunction());
 }
 
+unsigned GCNSubtarget::getSoftMaxNumVGPRs(const MachineFunction &MF) const {
+  unsigned N = getMaxNumVGPRs(MF);
+  unsigned SchedWaves =
+      MF.getInfo<SIMachineFunctionInfo>()->getMinAllowedOccupancy();
+  return std::min(N, getMaxNumVGPRs(SchedWaves, 0));
+}
+
 std::pair<unsigned, unsigned>
 GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
   const unsigned MaxVectorRegs = getMaxNumVGPRs(F);

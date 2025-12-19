@@ -1768,6 +1768,14 @@ public:
   /// unit requirement.
   unsigned getMaxNumVGPRs(const MachineFunction &MF) const;
 
+  /// \returns Maximum number of VGPRs that meets number of waves per execution
+  /// unit requirement for function \p MF, or number of VGPRs explicitly
+  /// requested using "amdgpu-num-vgpr" attribute attached to function \p MF.
+  ///
+  /// The result is further limited by the occupancy achieved during the pre-RA
+  /// scheduling and thus call shall be issued after the shceduling.
+  unsigned getSoftMaxNumVGPRs(const MachineFunction &MF) const;
+
   bool supportsWave32() const { return getGeneration() >= GFX10; }
 
   bool supportsWave64() const { return !hasGFX1250Insts(); }
