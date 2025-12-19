@@ -139,6 +139,10 @@ class TreeTransform {
     ~ForgetPartiallySubstitutedPackRAII() {
       Self.RememberPartiallySubstitutedPack(Old);
     }
+    ForgetPartiallySubstitutedPackRAII(
+        const ForgetPartiallySubstitutedPackRAII &) = delete;
+    ForgetPartiallySubstitutedPackRAII &
+    operator=(const ForgetPartiallySubstitutedPackRAII &) = delete;
   };
 
 protected:
@@ -239,6 +243,8 @@ public:
     ~TemporaryBase() {
       Self.getDerived().setBase(OldLocation, OldEntity);
     }
+    TemporaryBase(const TemporaryBase &) = delete;
+    TemporaryBase &operator=(const TemporaryBase &) = delete;
   };
 
   /// Determine whether the given type \p T has already been
