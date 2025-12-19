@@ -17,7 +17,7 @@ MATH_MANGLE(cbrt)(double x)
 
     if (!FINITE_ONLY_OPT()) {
         // Is normal or subnormal.
-        c = ((x != 0.0) & BUILTIN_ISFINITE_F64(x)) ? c : x;
+        c = x == 0.0 || BUILTIN_ISINF_F64(x) ? x : c;
     }
 
     return BUILTIN_COPYSIGN_F64(c, x);
