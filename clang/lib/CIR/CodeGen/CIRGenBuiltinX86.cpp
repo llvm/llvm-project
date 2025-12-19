@@ -1723,27 +1723,28 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_cvtneps2bf16_128_mask: {
     mlir::Location loc = getLoc(expr->getExprLoc());
     unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getSize();
-    ops[2] = getMaskVecValue(builder, loc, ops[2], numElts);
-    return emitIntrinsicCallOp(builder, loc,
-                               "x86.avx512bf16.mask.cvtneps2bf16.128",
-                               convertType(expr->getType()), ops);
+    mlir::Value intrinsicMask = ops[2];
+    mlir::Value selectMask = getMaskVecValue(builder, loc, ops[2], numElts);
+    mlir::Value intrinsicResult = emitIntrinsicCallOp(
+        builder, loc, "x86.avx512bf16.mask.cvtneps2bf16.128",
+        convertType(expr->getType()), {ops[0], ops[1], intrinsicMask});
+    return emitX86Select(builder, loc, selectMask, intrinsicResult, ops[1]);
   }
   case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:
   case X86::BI__builtin_ia32_cvtneps2bf16_512_mask: {
     mlir::Location loc = getLoc(expr->getExprLoc());
     unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getSize();
-    ops[2] = getMaskVecValue(builder, loc, ops[2], numElts);
-
+    mlir::Value intrinsicMask = ops[2];
+    mlir::Value selectMask = getMaskVecValue(builder, loc, ops[2], numElts);
     StringRef intrinsicName;
     if (builtinID == X86::BI__builtin_ia32_cvtneps2bf16_256_mask)
       intrinsicName = "x86.avx512bf16.cvtneps2bf16.256";
     else
       intrinsicName = "x86.avx512bf16.cvtneps2bf16.512";
-
     mlir::Value intrinsicResult = emitIntrinsicCallOp(
-        builder, loc, intrinsicName, convertType(expr->getType()), ops);
-
-    return emitX86Select(builder, loc, ops[2], intrinsicResult, ops[1]);
+        builder, loc, intrinsicName, convertType(expr->getType()),
+        {ops[0], ops[1], intrinsicMask});
+    return emitX86Select(builder, loc, selectMask, intrinsicResult, ops[1]);
   }
   case X86::BI__cpuid:
   case X86::BI__cpuidex:
