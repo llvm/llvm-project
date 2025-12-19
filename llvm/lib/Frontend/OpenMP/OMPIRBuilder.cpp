@@ -10286,7 +10286,7 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
     if (ThreadLimit == nullptr)
       ThreadLimit = Builder.getInt32(0);
 
-    // The __kmpc_fork_teams function expects int32 as the arguments.  So,
+    // The __kmpc_push_num_teams_51 function expects int32 as the arguments. So,
     // truncate or sign extend the passed values to match the int32 parameters.
     Value *NumTeamsLowerInt32 =
         Builder.CreateSExtOrTrunc(NumTeamsLower, Builder.getInt32Ty());
