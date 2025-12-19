@@ -2091,7 +2091,7 @@ class SpecialReturn<bits<4> opc, string asm>
 let mayLoad = 1 in
 class RCPCLoad<bits<2> sz, string asm, RegisterClass RC>
   : I<(outs RC:$Rt), (ins GPR64sp0:$Rn), asm, "\t$Rt, [$Rn]", "", []>,
-  Sched<[]> {
+  Sched<[WriteLD]> {
   bits<5> Rn;
   bits<5> Rt;
   let Inst{31-30} = sz;
