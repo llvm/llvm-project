@@ -649,7 +649,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   IRBuilder<> B(&I);
 
   if (AtomicRMWInst::isFPOperation(Op)) {
-    B.resetModeToStrictFP(I.getFunction()->hasFnAttribute(Attribute::StrictFP));
+    B.setFPMode(I.getFunction()->hasFnAttribute(Attribute::StrictFP));
   }
 
   // If we are in a pixel shader, because of how we have to mask out helper

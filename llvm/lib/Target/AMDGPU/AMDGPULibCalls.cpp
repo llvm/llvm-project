@@ -621,7 +621,7 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
 
   IRBuilder<> B(CI);
   if (CI->isStrictFP())
-    B.resetModeToStrictFP(true);
+    B.setFPMode(true);
 
   if (FPMathOperator *FPOp = dyn_cast<FPMathOperator>(CI)) {
     // Under unsafe-math, evaluate calls if possible.
