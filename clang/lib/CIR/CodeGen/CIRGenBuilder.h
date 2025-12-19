@@ -194,6 +194,10 @@ public:
     return cir::DataMemberAttr::get(ty, memberIndex);
   }
 
+  cir::DataMemberAttr getNullDataMemberAttr(cir::DataMemberType ty) {
+    return cir::DataMemberAttr::get(ty);
+  }
+
   // Return true if the value is a null constant such as null pointer, (+0.0)
   // for floating-point or zero initializer
   bool isNullValue(mlir::Attribute attr) const {
@@ -358,6 +362,12 @@ public:
   cir::IsFPClassOp createIsFPClass(mlir::Location loc, mlir::Value src,
                                    cir::FPClassTest flags) {
     return cir::IsFPClassOp::create(*this, loc, src, flags);
+  }
+
+  /// Create constant nullptr for pointer-to-data-member type ty.
+  cir::ConstantOp getNullDataMemberPtr(cir::DataMemberType ty,
+                                       mlir::Location loc) {
+    return cir::ConstantOp::create(*this, loc, getNullDataMemberAttr(ty));
   }
 
   // TODO: split this to createFPExt/createFPTrunc when we have dedicated cast

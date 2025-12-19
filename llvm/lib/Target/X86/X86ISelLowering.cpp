@@ -62941,9 +62941,10 @@ X86TargetLowering::getStackProbeSymbolName(const MachineFunction &MF) const {
 
   // We need a stack probe to conform to the Windows ABI. Choose the right
   // symbol.
-  if (Subtarget.is64Bit())
-    return Subtarget.isTargetCygMing() ? "___chkstk_ms" : "__chkstk";
-  return Subtarget.isTargetCygMing() ? "_alloca" : "_chkstk";
+  RTLIB::LibcallImpl StackProbeImpl = getLibcallImpl(RTLIB::STACK_PROBE);
+  if (StackProbeImpl == RTLIB::Unsupported)
+    return "";
+  return getLibcallImplName(StackProbeImpl);
 }
 
 unsigned

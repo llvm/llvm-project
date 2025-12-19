@@ -3093,27 +3093,26 @@ mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
                                ? mt.lookupValue(thisOp.getBarrierId())
                                : builder.getInt32(0);
   llvm::Intrinsic::ID id;
-  llvm::SmallVector<llvm::Value *> args;
+  llvm::SmallVector<llvm::Value *> args = {barrierId};
   if (thisOp.getNumberOfThreads()) {
     id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count;
-    args.push_back(barrierId);
     args.push_back(mt.lookupValue(thisOp.getNumberOfThreads()));
   } else if (thisOp.getReductionOp()) {
     switch (*thisOp.getReductionOp()) {
     case NVVM::BarrierReduction::AND:
-      id = llvm::Intrinsic::nvvm_barrier0_and;
+      id = llvm::Intrinsic::nvvm_barrier_cta_red_and_aligned_all;
       break;
     case NVVM::BarrierReduction::OR:
-      id = llvm::Intrinsic::nvvm_barrier0_or;
+      id = llvm::Intrinsic::nvvm_barrier_cta_red_or_aligned_all;
       break;
     case NVVM::BarrierReduction::POPC:
-      id = llvm::Intrinsic::nvvm_barrier0_popc;
+      id = llvm::Intrinsic::nvvm_barrier_cta_red_popc_aligned_all;
       break;
     }
-    args.push_back(mt.lookupValue(thisOp.getReductionPredicate()));
+    args.push_back(builder.CreateICmpNE(
+        mt.lookupValue(thisOp.getReductionPredicate()), builder.getInt32(0)));
   } else {
     id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all;
-    args.push_back(barrierId);
   }
 
   return {id, std::move(args)};

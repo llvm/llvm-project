@@ -31,7 +31,7 @@ for header in public_headers:
 // RUN:                    -header-filter=.*                                                \\
 // RUN:                    --config-file=%{{libcxx-dir}}/.clang-tidy                        \\
 // RUN:                    --load=%{{test-tools-dir}}/clang_tidy_checks/libcxx-tidy.plugin  \\
-// RUN:                    -- -Wweak-vtables %{{compile_flags}} -fno-modules
+// RUN:                    -- -Wweak-vtables %{{flags}} %{{compile_flags}} -fno-modules
 
 #include <{header}>
 """)
