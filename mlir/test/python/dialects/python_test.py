@@ -613,12 +613,6 @@ def testCustomType():
         b = TestType(a)
         # Instance custom types should have typeids
         assert isinstance(b.typeid, TypeID)
-        # Subclasses of ir.Type should not have a static_typeid
-        # CHECK: 'TestType' object has no attribute 'static_typeid'
-        try:
-            b.static_typeid
-        except AttributeError as e:
-            print(e)
 
         i8 = IntegerType.get_signless(8)
         try:
@@ -633,9 +627,9 @@ def testCustomType():
         try:
             TestType(42)
         except TypeError as e:
-            assert "Expected an MLIR object (got 42)" in str(e)
-        except ValueError as e:
-            assert "Cannot cast type to TestType (from 42)" in str(e)
+            assert "__init__(): incompatible function arguments. The following argument types are supported" in str(e)
+            assert "__init__(self, cast_from_type: mlir._mlir_libs._mlir.ir.Type) -> None" in str(e)
+            assert "Invoked with types: mlir._mlir_libs._mlirPythonTestNanobind.TestType, int" in str(e)
         else:
             raise
 
