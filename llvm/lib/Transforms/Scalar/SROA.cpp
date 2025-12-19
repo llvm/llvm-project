@@ -5261,7 +5261,7 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
 
   // Check if there is a common type that all slices of the partition use that
   // spans the partition.
-  auto [CommonUseTy, LargestIntTy] =
+  auto [CommonUseTy, LargestIntTy, OnlyIntrinsicUsers] =
       findCommonType(P.begin(), P.end(), P.endOffset());
   if (CommonUseTy) {
     TypeSize CommonUseSize = DL.getTypeAllocSize(CommonUseTy);
@@ -5298,6 +5298,15 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
         DL.getTypeAllocSize(LargestIntTy).getFixedValue() >= P.size() &&
         isIntegerWideningViable(P, LargestIntTy, DL))
       return {LargestIntTy, true, nullptr};
+
+    // If there are only intrinsic users of an aggregate type, try to
+    // represent as a legal integer type because we are probably just copying
+    // data around and the integer can be promoted.
+    if (OnlyIntrinsicUsers && DL.isLegalInteger(P.size() * 8) &&
+        TypePartitionTy->isAggregateType())
+      auto *IntNTy = Type::getIntNTy(*C, P.size() * 8);
+      return {IntNTy, isIntegerWideningViable(P, IntNTy, DL), nullptr};
+    }
 
     // Fallback to TypePartitionTy and we probably won't promote.
     return {TypePartitionTy, false, nullptr};
