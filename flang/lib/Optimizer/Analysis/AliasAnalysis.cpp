@@ -349,6 +349,12 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   // of non-data is included below.
   if (src1->isTargetOrPointer() && src2->isTargetOrPointer() &&
       src1->isData() && src2->isData()) {
+    // Two distinct TARGET globals may not alias.
+    if (!src1->isPointer() && !src2->isPointer() &&
+        src1->kind == SourceKind::Global && src2->kind == SourceKind::Global &&
+        src1->origin.u != src2->origin.u) {
+      return AliasResult::NoAlias;
+    }
     LLVM_DEBUG(llvm::dbgs() << "  aliasing because of target or pointer\n");
     return AliasResult::MayAlias;
   }
