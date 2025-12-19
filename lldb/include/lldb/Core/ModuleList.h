@@ -24,6 +24,10 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/RWMutex.h"
 
+// BEGIN CAS
+#include "llvm/CAS/CASConfiguration.h"
+// END CAS
+
 #include <functional>
 #include <list>
 #include <mutex>
@@ -547,7 +551,7 @@ public:
   // START CAS
 
   struct CAS {
-    std::shared_ptr<llvm::cas::CASConfiguration> configuration;
+    llvm::cas::CASConfiguration configuration;
     std::shared_ptr<llvm::cas::ObjectStore> object_store;
     std::shared_ptr<llvm::cas::ActionCache> action_cache;
   };

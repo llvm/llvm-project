@@ -926,14 +926,14 @@ static void ConfigureCASStorage(const std::string &m_description,
   }
   m_ast_context->SetCASStorage(std::move(cas->object_store),
                                std::move(cas->action_cache));
-  m_ast_context->GetCASOptions().CASOpts.CASPath = cas->configuration->CASPath;
+  m_ast_context->GetCASOptions().CASOpts.CASPath = cas->configuration.CASPath;
   m_ast_context->GetCASOptions().CASOpts.PluginPath =
-      cas->configuration->PluginPath;
+      cas->configuration.PluginPath;
   m_ast_context->GetCASOptions().CASOpts.PluginOptions =
-      cas->configuration->PluginOptions;
+      cas->configuration.PluginOptions;
   LOG_PRINTF(GetLog(LLDBLog::Types),
              "Setup CAS from module list properties with cas path: %s",
-             cas->configuration->CASPath.c_str());
+             cas->configuration.CASPath.c_str());
 }
 
 SwiftASTContext::ScopedDiagnostics::ScopedDiagnostics(
