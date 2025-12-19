@@ -58,6 +58,8 @@ public:
       const X86Subtarget &STI, MachineDominatorTree *MDT,
       const LegalizerInfo *LI);
 
+  static const char *getName() { return "X86PreLegalizerCombiner"; }
+
   bool tryCombineAll(MachineInstr &I) const override;
 
   bool tryCombineAllImpl(MachineInstr &I) const;
@@ -145,7 +147,7 @@ bool X86PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
       &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
   MachineDominatorTree *MDT =
       &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  CombinerInfo CInfo(/*AllowIllegalOps=*/ true, /*ShouldLegalizeIllegal=*/ false,
+  CombinerInfo CInfo(/*AllowIllegalOps=*/true, /*ShouldLegalizeIllegal=*/false,
                      /*LegalizerInfo=*/LI, EnableOpt, F.hasOptSize(),
                      F.hasMinSize());
 
