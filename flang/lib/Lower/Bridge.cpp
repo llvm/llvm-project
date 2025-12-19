@@ -222,14 +222,15 @@ static mlir::FlatSymbolRefAttr gatherComponentInit(
   return mlir::FlatSymbolRefAttr::get(mlirContext, name);
 }
 
-/// Emit fir.use_stmt operations for USE statements in the given scope
+/// Emit fir.use_stmt operations for USE statements in the given function unit
 static void
-emitUseStatementsFromScope(Fortran::lower::AbstractConverter &converter,
+emitUseStatementsFromFunit(Fortran::lower::AbstractConverter &converter,
                            mlir::OpBuilder &builder, mlir::Location loc,
-                           const Fortran::semantics::Scope &scope) {
+                           const Fortran::lower::pft::FunctionLikeUnit &funit) {
   mlir::MLIRContext *context = builder.getContext();
+  const Fortran::semantics::Scope &scope = funit.getScope();
 
-  for (const auto &preservedStmt : scope.preservedUseStmts()) {
+  for (const auto &preservedStmt : funit.preservedUseStmts) {
 
     auto getMangledName = [&](const std::string &localName) -> std::string {
       Fortran::parser::CharBlock charBlock{localName.data(), localName.size()};
@@ -258,7 +259,7 @@ emitUseStatementsFromScope(Fortran::lower::AbstractConverter &converter,
     llvm::SmallVector<mlir::Attribute> onlySymbolAttrs;
     llvm::SmallVector<mlir::Attribute> renameAttrs;
 
-    // USE mod, ONLY: list
+    // Handle only
     for (const auto &name : preservedStmt.onlyNames) {
       std::string mangledName = getMangledName(name);
       if (!mangledName.empty())
@@ -6355,7 +6356,7 @@ private:
     mapDummiesAndResults(funit, callee);
 
     // Emit USE statement operations for debug info generation
-    emitUseStatementsFromScope(*this, *builder, toLocation(), funit.getScope());
+    emitUseStatementsFromFunit(*this, *builder, toLocation(), funit);
 
     // Map host associated symbols from parent procedure if any.
     if (funit.parentHasHostAssoc())
@@ -7186,7 +7187,7 @@ void Fortran::lower::LoweringBridge::lower(
     const Fortran::parser::Program &prg,
     const Fortran::semantics::SemanticsContext &semanticsContext) {
   std::unique_ptr<Fortran::lower::pft::Program> pft =
-      Fortran::lower::createPFT(prg, semanticsContext);
+      Fortran::lower::createPFT(prg, semanticsContext, getLoweringOptions());
   FirConverter converter{*this};
   converter.run(*pft);
 }

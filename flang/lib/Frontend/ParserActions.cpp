@@ -48,7 +48,10 @@ void dumpProvenance(CompilerInstance &ci) {
 void dumpPreFIRTree(CompilerInstance &ci) {
   auto &parseTree{*ci.getParsing().parseTree()};
 
-  if (auto ast{lower::createPFT(parseTree, ci.getSemanticsContext())}) {
+  // Use default lowering options for PFT dump
+  lower::LoweringOptions loweringOptions{};
+  if (auto ast{lower::createPFT(parseTree, ci.getSemanticsContext(),
+                                loweringOptions)}) {
     lower::dumpPFT(llvm::outs(), *ast);
   } else {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
