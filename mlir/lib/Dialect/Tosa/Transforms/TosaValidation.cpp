@@ -395,27 +395,24 @@ private:
     if (!convOp)
       return success();
 
-    DenseIntElementsAttr padding;
-    if (matchPattern(convOp.getPad(), m_Constant(&padding))) {
-      const SmallVector<int64_t> padValues = convertFromIntAttr(padding, 4);
+    SmallVector<int64_t> padValues;
+    if (tosa::getConstShapeValues(convOp.getPad().getDefiningOp(), padValues)) {
       for (const auto p : padValues)
         if (failed(levelCheckKernel(op, p, "pad <= MAX_KERNEL")))
           return failure();
     }
 
-    DenseIntElementsAttr stride;
-    if (matchPattern(convOp.getStride(), m_Constant(&stride))) {
-      const SmallVector<int64_t> strideValues = convertFromIntAttr(stride, 4);
+    SmallVector<int64_t> strideValues;
+    if (tosa::getConstShapeValues(convOp.getStride().getDefiningOp(),
+                                  strideValues)) {
       for (const auto s : strideValues)
         if (failed(levelCheckKernel(op, s, "stride <= MAX_KERNEL")))
           return failure();
     }
 
-    DenseIntElementsAttr dilation;
-    if (matchPattern(convOp.getDilation(), m_Constant(&dilation))) {
-      const SmallVector<int64_t> dilationValues =
-          convertFromIntAttr(dilation, 4);
-
+    SmallVector<int64_t> dilationValues;
+    if (tosa::getConstShapeValues(convOp.getDilation().getDefiningOp(),
+                                  dilationValues)) {
       int64_t KH = ShapedType::kDynamic;
       int64_t KW = ShapedType::kDynamic;
       const ShapeAdaptor weightDataShape(convOp.getWeightData().getType());
