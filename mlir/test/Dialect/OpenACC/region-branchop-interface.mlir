@@ -176,8 +176,7 @@ func.func @last_mod_openacc_loop(%arg0: memref<f32>) -> memref<f32> {
     memref.store %one, %arg0[] {tag_name = "loop_region"} : memref<f32>
     memref.load %arg0[] {tag = "acc_loop_inside"} : memref<f32>
     acc.yield
-  } attributes {auto_ = [#acc.device_type<none>],
-                inclusiveUpperbound = array<i1: true>}
+  } attributes {auto_ = [#acc.device_type<none>]}
   memref.load %arg0[] {tag = "acc_loop_after"} : memref<f32>
   memref.store %zero, %arg0[] {tag_name = "post_loop"} : memref<f32>
   memref.load %arg0[] {tag = "acc_loop_post"} : memref<f32>
@@ -221,12 +220,10 @@ func.func @last_mod_openacc_loop_unstructured(%arg0: memref<f32>) -> memref<f32>
     cf.cond_br %is_done, ^normal_exit, ^header(%iv_next : i32)
 
   ^early_exit:
-    // One exit path with its own store.
     memref.store %one, %arg0[] {tag_name = "loop_unstructured_early"} : memref<f32>
     acc.yield
 
   ^normal_exit:
-    // Another exit path with a different store.
     memref.store %one, %arg0[] {tag_name = "loop_unstructured_normal"} : memref<f32>
     acc.yield
   } attributes {auto_ = [#acc.device_type<none>], unstructured}
