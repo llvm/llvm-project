@@ -47,7 +47,7 @@ struct __default_three_way_comparator<
     _RHS,
     __enable_if_t<!(is_arithmetic<_LHS>::value && is_arithmetic<_RHS>::value) &&
                   __builtin_lt_synthesizes_from_spaceship(const _LHS&, const _RHS&)>> {
-  _LIBCPP_HIDE_FROM_ABI static int operator()(const _LHS& __lhs, const _RHS& __rhs) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static int operator()(const _LHS& __lhs, const _RHS& __rhs) {
     auto __res = __lhs <=> __rhs;
     if (__res < 0)
       return -1;
