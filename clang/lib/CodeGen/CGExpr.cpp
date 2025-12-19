@@ -2482,7 +2482,10 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
 
     for (unsigned Col = 0; Col < NumCols; ++Col) {
       llvm::Value *ColIdx = llvm::ConstantInt::get(Row->getType(), Col);
-      llvm::Value *EltIndex = MB.CreateIndex(Row, ColIdx, NumRows);
+      bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
+                              LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+      llvm::Value *EltIndex =
+          MB.createIndex(Row, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
       llvm::Value *Elt = Builder.CreateExtractElement(MatrixVec, EltIndex);
       llvm::Value *Lane = llvm::ConstantInt::get(Builder.getInt32Ty(), Col);
       Result = Builder.CreateInsertElement(Result, Elt, Lane);
@@ -2733,7 +2736,10 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
 
       for (unsigned Col = 0; Col < NumCols; ++Col) {
         llvm::Value *ColIdx = llvm::ConstantInt::get(Row->getType(), Col);
-        llvm::Value *EltIndex = MB.CreateIndex(Row, ColIdx, NumRows);
+        bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
+                                LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+        llvm::Value *EltIndex =
+            MB.createIndex(Row, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
         llvm::Value *Lane = llvm::ConstantInt::get(Builder.getInt32Ty(), Col);
         llvm::Value *NewElt = Builder.CreateExtractElement(RowVal, Lane);
         MatrixVec = Builder.CreateInsertElement(MatrixVec, NewElt, EltIndex);
@@ -4976,20 +4982,15 @@ LValue CodeGenFunction::EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E) {
   // Extend or truncate the index type to 32 or 64-bits if needed.
   llvm::Value *RowIdx = EmitMatrixIndexExpr(E->getRowIdx());
   llvm::Value *ColIdx = EmitMatrixIndexExpr(E->getColumnIdx());
+  llvm::MatrixBuilder MB(Builder);
+  const auto *MatrixTy = E->getBase()->getType()->castAs<ConstantMatrixType>();
+  unsigned NumCols = MatrixTy->getNumColumns();
+  unsigned NumRows = MatrixTy->getNumRows();
+  bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
+                          LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+  llvm::Value *FinalIdx =
+      MB.createIndex(RowIdx, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
 
-  llvm::Value *FinalIdx;
-  if (getLangOpts().getDefaultMatrixMemoryLayout() ==
-      LangOptions::MatrixMemoryLayout::MatrixRowMajor) {
-    llvm::Value *NumCols = Builder.getIntN(
-        RowIdx->getType()->getScalarSizeInBits(),
-        E->getBase()->getType()->castAs<ConstantMatrixType>()->getNumColumns());
-    FinalIdx = Builder.CreateAdd(Builder.CreateMul(RowIdx, NumCols), ColIdx);
-  } else {
-    llvm::Value *NumRows = Builder.getIntN(
-        RowIdx->getType()->getScalarSizeInBits(),
-        E->getBase()->getType()->castAs<ConstantMatrixType>()->getNumRows());
-    FinalIdx = Builder.CreateAdd(Builder.CreateMul(ColIdx, NumRows), RowIdx);
-  }
   return LValue::MakeMatrixElt(
       MaybeConvertMatrixAddress(Base.getAddress(), *this), FinalIdx,
       E->getBase()->getType(), Base.getBaseInfo(), TBAAAccessInfo());

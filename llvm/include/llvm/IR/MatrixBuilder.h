@@ -238,30 +238,34 @@ public:
     else
       B.CreateAssumption(Cmp);
   }
-
-  /// Compute the index to access the element at (\p RowIdx, \p ColumnIdx) from
-  /// a matrix with \p NumRows embedded in a vector.
-  Value *createColumnMajorIndex(Value *RowIdx, Value *ColumnIdx,
-                                unsigned NumRows, Twine const &Name = "") {
+  Value *createIndex(Value *RowIdx, Value *ColumnIdx, unsigned NumRows,
+                     unsigned NumCols, bool IsMatrixRowMajor = false,
+                     Twine const &Name = "") {
     unsigned MaxWidth = std::max(RowIdx->getType()->getScalarSizeInBits(),
                                  ColumnIdx->getType()->getScalarSizeInBits());
     Type *IntTy = IntegerType::get(RowIdx->getType()->getContext(), MaxWidth);
     RowIdx = B.CreateZExt(RowIdx, IntTy);
     ColumnIdx = B.CreateZExt(ColumnIdx, IntTy);
+    if (IsMatrixRowMajor) {
+      Value *NumColsV = B.getIntN(MaxWidth, NumCols);
+      return createRowMajorIndex(RowIdx, ColumnIdx, NumColsV, Name);
+    }
     Value *NumRowsV = B.getIntN(MaxWidth, NumRows);
+    return createColumnMajorIndex(RowIdx, ColumnIdx, NumRowsV, Name);
+  }
+
+private:
+  /// Compute the index to access the element at (\p RowIdx, \p ColumnIdx) from
+  /// a matrix with \p NumRows embedded in a vector.
+  Value *createColumnMajorIndex(Value *RowIdx, Value *ColumnIdx,
+                                Value *NumRowsV, Twine const &Name) {
     return B.CreateAdd(B.CreateMul(ColumnIdx, NumRowsV), RowIdx);
   }
 
   /// Compute the index to access the element at (\p RowIdx, \p ColumnIdx) from
   /// a matrix with \p NumCols embedded in a vector.
-  Value *createRowMajorIndex(Value *RowIdx, Value *ColumnIdx, unsigned NumCols,
-                             Twine const &Name = "") {
-    unsigned MaxWidth = std::max(RowIdx->getType()->getScalarSizeInBits(),
-                                 ColumnIdx->getType()->getScalarSizeInBits());
-    Type *IntTy = IntegerType::get(RowIdx->getType()->getContext(), MaxWidth);
-    RowIdx = B.CreateZExt(RowIdx, IntTy);
-    ColumnIdx = B.CreateZExt(ColumnIdx, IntTy);
-    Value *NumColsV = B.getIntN(MaxWidth, NumCols);
+  Value *createRowMajorIndex(Value *RowIdx, Value *ColumnIdx, Value *NumColsV,
+                             Twine const &Name) {
     return B.CreateAdd(B.CreateMul(RowIdx, NumColsV), ColumnIdx);
   }
 };
