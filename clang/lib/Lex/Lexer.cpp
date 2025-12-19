@@ -73,20 +73,6 @@ tok::ObjCKeywordKind Token::getObjCKeywordID() const {
   return specId ? specId->getObjCKeywordID() : tok::objc_not_keyword;
 }
 
-bool Token::isModuleContextualKeyword(const LangOptions &LangOpts,
-                                      bool AllowExport) const {
-  if (!LangOpts.CPlusPlusModules)
-    return false;
-  if (AllowExport && is(tok::kw_export))
-    return true;
-  if (isOneOf(tok::kw_import, tok::kw_module))
-    return true;
-  if (isNot(tok::identifier))
-    return false;
-  const auto *II = getIdentifierInfo();
-  return II->isImportKeyword() || II->isModuleKeyword();
-}
-
 /// Determine whether the token kind starts a simple-type-specifier.
 bool Token::isSimpleTypeSpecifier(const LangOptions &LangOpts) const {
   switch (getKind()) {
@@ -4034,21 +4020,11 @@ LexStart:
   case 'h': case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
   case 'o': case 'p': case 'q': case 'r': case 's': case 't':    /*'u'*/
   case 'v': case 'w': case 'x': case 'y': case 'z':
-  case '_': {
+  case '_':
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
-    bool returnedToken = LexIdentifierContinue(Result, CurPtr);
+    return LexIdentifierContinue(Result, CurPtr);
 
-    // Check eof token first, because EOF may be encountered in
-    // LexIdentifierContinue, and the current lexer may then be made invalid by
-    // HandleEndOfFile.
-    if (returnedToken && Result.isNot(tok::eof) &&
-        Result.isModuleContextualKeyword(LangOpts) && !LexingRawMode &&
-        !Is_PragmaLexer && !ParsingPreprocessorDirective && PP &&
-        PP->HandleModuleContextualKeyword(Result, TokAtPhysicalStartOfLine))
-      goto HandleDirective;
-    return returnedToken;
-  }
   case '$':   // $ in identifiers.
     if (LangOpts.DollarIdents) {
       if (!isLexingRawMode())
@@ -4251,12 +4227,8 @@ LexStart:
         // it's actually the start of a preprocessing directive.  Callback to
         // the preprocessor to handle it.
         // TODO: -fpreprocessed mode??
-        if (TokAtPhysicalStartOfLine && !LexingRawMode && !Is_PragmaLexer) {
-          // We parsed a # character and it's the start of a preprocessing
-          // directive.
-          FormTokenWithChars(Result, CurPtr, tok::hash);
+        if (TokAtPhysicalStartOfLine && !LexingRawMode && !Is_PragmaLexer)
           goto HandleDirective;
-        }
 
         Kind = tok::hash;
       }
@@ -4443,12 +4415,8 @@ LexStart:
       // it's actually the start of a preprocessing directive.  Callback to
       // the preprocessor to handle it.
       // TODO: -fpreprocessed mode??
-      if (TokAtPhysicalStartOfLine && !LexingRawMode && !Is_PragmaLexer) {
-        // We parsed a # character and it's the start of a preprocessing
-        // directive.
-        FormTokenWithChars(Result, CurPtr, tok::hash);
+      if (TokAtPhysicalStartOfLine && !LexingRawMode && !Is_PragmaLexer)
         goto HandleDirective;
-      }
 
       Kind = tok::hash;
     }
@@ -4538,6 +4506,9 @@ LexStart:
   return true;
 
 HandleDirective:
+  // We parsed a # character and it's the start of a preprocessing directive.
+
+  FormTokenWithChars(Result, CurPtr, tok::hash);
   PP->HandleDirective(Result);
 
   if (PP->hadModuleLoaderFatalFailure())
@@ -4560,10 +4531,6 @@ const char *Lexer::convertDependencyDirectiveToken(
   Result.setKind(DDTok.Kind);
   Result.setFlag((Token::TokenFlags)DDTok.Flags);
   Result.setLength(DDTok.Length);
-  if (Result.is(tok::raw_identifier))
-    Result.setRawIdentifierData(TokPtr);
-  else if (Result.isLiteral())
-    Result.setLiteralData(TokPtr);
   BufferPtr = TokPtr + DDTok.Length;
   return TokPtr;
 }
@@ -4621,18 +4588,15 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
     Result.setRawIdentifierData(TokPtr);
     if (!isLexingRawMode()) {
       const IdentifierInfo *II = PP->LookUpIdentifierInfo(Result);
-      if (Result.isModuleContextualKeyword(LangOpts) &&
-          PP->HandleModuleContextualKeyword(Result, Result.isAtStartOfLine())) {
-        PP->HandleDirective(Result);
-        return false;
-      }
       if (II->isHandleIdentifierCase())
         return PP->HandleIdentifier(Result);
     }
     return true;
   }
-  if (Result.isLiteral())
+  if (Result.isLiteral()) {
+    Result.setLiteralData(TokPtr);
     return true;
+  }
   if (Result.is(tok::colon)) {
     // Convert consecutive colons to 'tok::coloncolon'.
     if (*BufferPtr == ':') {
