@@ -32,7 +32,7 @@ target_include_directories(omp_testing PUBLIC
 )
 
 # Make the targets default_gtest and default_gtest_main available.
-build_gtest()
+add_subdirectory("${LLVM_THIRD_PARTY_DIR}/unittest" "${CMAKE_BINARY_DIR}/third-party/runtimes_gtest")
 
 function(add_openmp_unittest test_name)
   add_unittest(OpenMPUnitTests ${test_name} ${ARGN})
