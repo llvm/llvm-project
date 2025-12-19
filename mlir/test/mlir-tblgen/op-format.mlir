@@ -221,6 +221,13 @@ test.format_optional_default_attrs "foo" @foo case10
 // CHECK-NOT: case5
 test.format_optional_default_attrs "default" @default case5
 
+// CHECK: test.format_optional_default_enum_attr case10
+test.format_optional_default_enum_attr case10
+
+// CHECK: test.format_optional_default_enum_attr
+// CHECK-NOT: case5
+test.format_optional_default_enum_attr case5
+
 //===----------------------------------------------------------------------===//
 // Format optional operands and results
 //===----------------------------------------------------------------------===//
