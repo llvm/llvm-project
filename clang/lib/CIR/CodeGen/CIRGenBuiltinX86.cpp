@@ -1727,7 +1727,8 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     mlir::Value selectMask = getMaskVecValue(builder, loc, ops[2], numElts);
     mlir::Value intrinsicResult = emitIntrinsicCallOp(
         builder, loc, "x86.avx512bf16.mask.cvtneps2bf16.128",
-        convertType(expr->getType()), {ops[0], ops[1], intrinsicMask});
+        convertType(expr->getType()),
+        mlir::ValueRange{ops[0], ops[1], intrinsicMask});
     return emitX86Select(builder, loc, selectMask, intrinsicResult, ops[1]);
   }
   case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:
@@ -1743,7 +1744,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
       intrinsicName = "x86.avx512bf16.cvtneps2bf16.512";
     mlir::Value intrinsicResult = emitIntrinsicCallOp(
         builder, loc, intrinsicName, convertType(expr->getType()),
-        {ops[0], ops[1], intrinsicMask});
+        mlir::ValueRange{ops[0], ops[1], intrinsicMask});
     return emitX86Select(builder, loc, selectMask, intrinsicResult, ops[1]);
   }
   case X86::BI__cpuid:
