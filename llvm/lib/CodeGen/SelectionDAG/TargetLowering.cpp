@@ -8768,7 +8768,8 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   // available, use plain select with setcc instead.
   SDValue MinMax;
   unsigned MinMaxOpcIeee = IsMax ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
-  unsigned MinMaxOpcNum = IsMax ? ISD::FMAXNUM : ISD::FMINNUM;
+  // TODO: Add ISD::FMAXNUM or ISD::FMINNUM when we are sure that they have
+  // the same behavior on all platforms.
   unsigned MinMaxOpcNum2019 = IsMax ? ISD::FMAXIMUMNUM : ISD::FMINIMUMNUM;
   unsigned MinMaxOpc = ISD::DELETED_NODE;
 
@@ -8776,17 +8777,12 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
 
   if (isOperationLegal(MinMaxOpcIeee, VT))
     MinMaxOpc = MinMaxOpcIeee;
-  else if (isOperationLegal(MinMaxOpcNum, VT))
-    MinMaxOpc = MinMaxOpcNum;
   else if (isOperationLegal(MinMaxOpcNum2019, VT))
     MinMaxOpc = MinMaxOpcNum2019;
   else if (isOperationCustom(MinMaxOpcIeee, VT))
     MinMaxOpc = MinMaxOpcIeee;
   else if (isOperationCustom(MinMaxOpcNum2019, VT))
     MinMaxOpc = MinMaxOpcNum2019;
-  // TODO: we don't use isOperationCustom(ISD::FMAXNUM or ISD::FMINNUM)
-  // due to some backends cannot process +0 vs -0 correctly: x86 is an
-  // example.
   if (MinMaxOpc != ISD::DELETED_NODE) {
     // TODO: we can also move NaN from RHS to LHS
     // and LHS to RHS, so that we can keep payloads of NaNs.
