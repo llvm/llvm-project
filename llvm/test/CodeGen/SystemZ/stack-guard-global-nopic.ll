@@ -118,22 +118,22 @@ define i32 @test_global_stack_guard_large() #0 {
 ; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    aghi %r15, -8376
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8536
+; CHECK-NEXT:    lay %r1, 8192(%r15)
 ; CHECK-NEXT:    .section __stack_protector_loc,"a",@progbits
 ; CHECK-NEXT:    .quad .Ltmp6
 ; CHECK-NEXT:    .text
 ; CHECK-NEXT:  .Ltmp6:
-; CHECK-NEXT:    larl %r1, __stack_chk_guard
-; CHECK-NEXT:    lay %r2, 8192(%r15)
-; CHECK-NEXT:    mvc 176(8,%r2), 0(%r1)
+; CHECK-NEXT:    larl %r2, __stack_chk_guard
+; CHECK-NEXT:    mvc 176(8,%r1), 0(%r2)
 ; CHECK-NEXT:    la %r2, 176(%r15)
 ; CHECK-NEXT:    brasl %r14, foo3@PLT
+; CHECK-NEXT:    lay %r1, 8192(%r15)
 ; CHECK-NEXT:    .section __stack_protector_loc,"a",@progbits
 ; CHECK-NEXT:    .quad .Ltmp7
 ; CHECK-NEXT:    .text
 ; CHECK-NEXT:  .Ltmp7:
-; CHECK-NEXT:    larl %r1, __stack_chk_guard
-; CHECK-NEXT:    lay %r2, 8192(%r15)
-; CHECK-NEXT:    clc 176(8,%r2), 0(%r1)
+; CHECK-NEXT:    larl %r2, __stack_chk_guard
+; CHECK-NEXT:    clc 176(8,%r1), 0(%r2)
 ; CHECK-NEXT:    jlh .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    lhi %r2, 0

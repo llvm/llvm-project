@@ -217,16 +217,6 @@ SystemZAsmPrinter::AssociatedDataAreaTable::insert(const MachineOperand MO) {
   return insert(Sym, ADAslotType);
 }
 
-namespace {
-unsigned long getStackGuardOffset(const MachineBasicBlock *MBB) {
-  // In the TLS (default) case, AddrReg will contain the thread pointer, so we
-  // need to add 40 bytes to get the actual address of the stack guard.
-  StringRef GuardType =
-      MBB->getParent()->getFunction().getParent()->getStackProtectorGuard();
-  return (GuardType == "global") ? 0 : 40;
-}
-} // namespace
-
 void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   SystemZ_MC::verifyInstructionPredicates(MI->getOpcode(),
                                           getSubtargetInfo().getFeatureBits());

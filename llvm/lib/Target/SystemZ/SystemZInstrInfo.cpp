@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -1793,21 +1794,55 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 }
 
 namespace {
-unsigned long getStackGuardOffset(const MachineBasicBlock &MBB) {
+    Register scavengeAddrReg(MachineInstr& MI, MachineBasicBlock* MBB) {
+    // create fresh RegScavanger instance.
+    RegScavenger RS;
+    // initialize RegScavenger to correct location
+    RS.enterBasicBlockEnd(*MBB);
+    RS.backward(MI);
+
+    // Attempt to find a free register.
+    Register Scratch = RS.FindUnusedReg(&SystemZ::ADDR64BitRegClass);
+    // If not found, scavenge one, i.e. evict something to a stack spill slot.
+    if (!Scratch) {
+      Scratch = RS.scavengeRegisterBackwards(
+          SystemZ::ADDR64BitRegClass,
+          MI,              // Scavenge back to this position.
+          true,  // Will need Scratch Reg after MI.
+          0,            
+          true     // Spills are allowed.
+      );
+    }
+    return Scratch;
+  }
+unsigned long getStackGuardOffset(const MachineBasicBlock *MBB) {
   // In the TLS (default) case, AddrReg will contain the thread pointer, so we
   // need to add 40 bytes to get the actual address of the stack guard.
   StringRef GuardType =
-      MBB.getParent()->getFunction().getParent()->getStackProtectorGuard();
+      MBB->getParent()->getFunction().getParent()->getStackProtectorGuard();
   return (GuardType == "global") ? 0 : 40;
+}
+// Check MI (which should be either MOVE_STACK_GUARD or COMPARE_STACK_GUARD)
+// to see if the early-clobber flag on the def reg was honored. If so,
+// return that register. If not, scavenge a new register and return that.
+// This is a workaround for https://github.com/llvm/llvm-project/issues/172511
+// and should be removed once that issue is resolved.
+Register chooseAddrReg(MachineInstr& MI, MachineBasicBlock *MBB) {
+  Register DefReg = MI.getOperand(0).getReg();
+  Register OpReg = MI.getOperand(1).getReg();
+  // if we can use DefReg, return it
+  if (DefReg != OpReg)
+    return DefReg;
+  // otherwise, scavenge
+  return scavengeAddrReg(MI, MBB);
 }
 } // namespace
 
 // Emit the stack guard address load, depending on guard type.
 // Return the register the stack guard address was loaded into.
-void SystemZInstrInfo::emitLoadStackGuardAddress(MachineInstr &MI) const {
+void SystemZInstrInfo::emitLoadStackGuardAddress(MachineInstr &MI, Register AddrReg) const {
   MachineBasicBlock &MBB = *(MI.getParent());
   const MachineFunction &MF = *(MBB.getParent());
-  const Register AddrReg = MI.getOperand(0).getReg();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const Register Reg32 =
       MRI.getTargetRegisterInfo()->getSubReg(AddrReg, SystemZ::subreg_l32);
@@ -1857,23 +1892,27 @@ void SystemZInstrInfo::emitLoadStackGuardAddress(MachineInstr &MI) const {
 }
 
 void SystemZInstrInfo::expandMSGPseudo(MachineInstr &MI) const {
-  emitLoadStackGuardAddress(MI);
+  MachineBasicBlock* MBB = MI.getParent();
+  Register AddrReg = chooseAddrReg(MI, MBB);
+  emitLoadStackGuardAddress(MI, AddrReg);
   BuildMI(*(MI.getParent()), MI, MI.getDebugLoc(), get(SystemZ::MVC))
       .addReg(MI.getOperand(1).getReg())
       .addImm(MI.getOperand(2).getImm())
       .addImm(8)
-      .addReg(MI.getOperand(0).getReg())
-      .addImm(getStackGuardOffset(*(MI.getParent())));
+      .addReg(AddrReg)
+      .addImm(getStackGuardOffset(MBB));
   MI.removeFromParent();
 }
 void SystemZInstrInfo::expandCSGPseudo(MachineInstr &MI) const {
-  emitLoadStackGuardAddress(MI);
+  MachineBasicBlock* MBB = MI.getParent();
+  Register AddrReg = chooseAddrReg(MI, MBB);
+  emitLoadStackGuardAddress(MI, AddrReg);
   BuildMI(*(MI.getParent()), MI, MI.getDebugLoc(), get(SystemZ::CLC))
       .addReg(MI.getOperand(1).getReg())
       .addImm(MI.getOperand(2).getImm())
       .addImm(8)
-      .addReg(MI.getOperand(0).getReg())
-      .addImm(getStackGuardOffset(*(MI.getParent())));
+      .addReg(AddrReg)
+      .addImm(getStackGuardOffset(MBB));
   MI.removeFromParent();
 }
 
