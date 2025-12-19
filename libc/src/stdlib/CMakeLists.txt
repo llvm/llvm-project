@@ -65,7 +65,7 @@ add_entrypoint_object(
   libc.config.app_h
 )
 
-if(LLVM_LIBC_FULL_BUILD)
+if(TARGET libc.src.__support.threads.mutex)
   add_object_library(
     environ_internal
     SRCS
@@ -729,6 +729,15 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.abort
 )
+
+if(TARGET libc.src.stdlib.environ_internal)
+  add_entrypoint_object(
+    setenv
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.setenv
+  )
+endif()
 
 add_entrypoint_object(
   system
