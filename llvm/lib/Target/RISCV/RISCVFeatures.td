@@ -387,7 +387,7 @@ def FeatureStdExtZca
                      "part of the C extension, excluding compressed "
                      "floating point loads/stores">,
       RISCVExtensionBitmask<1, 2>;
-// FIXME: Update this message - Zca always implies C.
+// Note: Zca conditionally implies C (see RISCVISAInfo::updateImplication).
 def HasStdExtZca
     : Predicate<"Subtarget->hasStdExtZca()">,
       AssemblerPredicate<(any_of FeatureStdExtZca),
