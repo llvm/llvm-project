@@ -1868,8 +1868,8 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
       return false;
     // Create right shift instruction. Store the output register in Shr.
     auto Shr = MIB.buildInstr(AArch64::G_VASHR,
-			{MRI.getType(MI.getOperand(2).getReg())},
-			{MI.getOperand(2), MI.getOperand(3).getImm()});
+                              {MRI.getType(MI.getOperand(2).getReg())},
+                              {MI.getOperand(2), MI.getOperand(3).getImm()});
     // Build the narrow intrinsic, taking in Shr.
     MIB.buildInstr(TargetOpcode::G_TRUNC_SSAT_S, {MI.getOperand(0)}, {Shr});
     MI.eraseFromParent();
@@ -1941,7 +1941,8 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
         *MRI.getVRegDef(MI.getOperand(3).getReg()), MRI);
     if (ShiftAmount) {
       // If so, create a new intrinsic with the correct shift amount
-      MIB.buildInstr(AArch64::G_SQSHLU_I, {MI.getOperand(0)}, {MI.getOperand(2)})
+      MIB.buildInstr(AArch64::G_SQSHLU_I, {MI.getOperand(0)},
+                     {MI.getOperand(2)})
           .addImm(ShiftAmount->getSExtValue());
       MI.eraseFromParent();
       return true;
