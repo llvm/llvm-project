@@ -506,6 +506,10 @@ public:
   void VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
                      ExplodedNodeSet &Dst);
 
+  /// VisitPackIndexingExpr - Transfer function logic for C++26 pack indexing
+  void VisitPackIndexingExpr(const PackIndexingExpr *E, ExplodedNode *Pred,
+                             ExplodedNodeSet &Dst);
+
   /// VisitGuardedExpr - Transfer function logic for ?, __builtin_choose
   void VisitGuardedExpr(const Expr *Ex, const Expr *L, const Expr *R,
                         ExplodedNode *Pred, ExplodedNodeSet &Dst);

@@ -1740,7 +1740,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::RecoveryExprClass:
     case Stmt::CXXNoexceptExprClass:
     case Stmt::PackExpansionExprClass:
-    case Stmt::PackIndexingExprClass:
     case Stmt::SubstNonTypeTemplateParmPackExprClass:
     case Stmt::FunctionParmPackExprClass:
     case Stmt::CoroutineBodyStmtClass:
@@ -2291,6 +2290,13 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       VisitDeclStmt(cast<DeclStmt>(S), Pred, Dst);
       Bldr.addNodes(Dst);
       break;
+
+    case Stmt::PackIndexingExprClass: {
+      Bldr.takeNodes(Pred);
+      VisitPackIndexingExpr(cast<PackIndexingExpr>(S), Pred, Dst);
+      Bldr.addNodes(Dst);
+      break;
+    }
 
     case Stmt::ImplicitCastExprClass:
     case Stmt::CStyleCastExprClass:
@@ -3296,6 +3302,13 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
 
     SVal V = UnknownVal();
 
+    // For pack indexing expressions. Binding is not available here but through
+    // the expanded expressions in the PackIndexingExpr node.
+    if (BD->isParameterPack()) {
+      // FIXME: We should meaningfully implement this.
+      return;
+    }
+
     // Handle binding to data members
     if (const auto *ME = dyn_cast<MemberExpr>(BD->getBinding())) {
       const auto *Field = cast<FieldDecl>(ME->getMemberDecl());
@@ -3343,6 +3356,12 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
   if (const auto *TPO = dyn_cast<TemplateParamObjectDecl>(D)) {
     // FIXME: We should meaningfully implement this.
     (void)TPO;
+    return;
+  }
+
+  if (const auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(D)) {
+    // FIXME: We should meaningfully implement this.
+    (void)NTTPD;
     return;
   }
 
@@ -3445,6 +3464,26 @@ void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
   }
 
   getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, Ex, *this);
+}
+
+void ExprEngine::VisitPackIndexingExpr(const PackIndexingExpr *E,
+                                       ExplodedNode *Pred,
+                                       ExplodedNodeSet &Dst) {
+  assert(E->isFullySubstituted() && "unsubstituted pack indexing expression");
+
+  if (const auto *DE = dyn_cast<DeclRefExpr>(E->getSelectedExpr())) {
+    VisitCommonDeclRefExpr(E, DE->getDecl(), Pred, Dst);
+  } else if (const auto *SNTTPE =
+                 dyn_cast<SubstNonTypeTemplateParmExpr>(E->getSelectedExpr())) {
+    (void)SNTTPE;
+    // FIXME: handle this case
+    StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);
+    const ExplodedNode *node = Bldr.generateSink(E, Pred, Pred->getState());
+    Engine.addAbortedBlock(node, currBldrCtx->getBlock());
+  } else {
+    llvm_unreachable(
+        "Unexpected selected expression in pack indexing expression");
+  }
 }
 
 /// VisitArraySubscriptExpr - Transfer function for array accesses
