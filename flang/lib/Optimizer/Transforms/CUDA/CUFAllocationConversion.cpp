@@ -128,14 +128,9 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
       mlir::Value stream =
           op.getStream() ? op.getStream()
                          : builder.createNullConstant(loc, fTy.getInput(1));
-      mlir::Value deviceInit =
-          (op.getDataAttrAttr() &&
-           op.getDataAttrAttr().getValue() == cuf::DataAttribute::Device)
-              ? builder.createBool(loc, true)
-              : builder.createBool(loc, false);
       args = fir::runtime::createArguments(builder, loc, fTy, op.getBox(),
                                            stream, pinned, hasStat, errmsg,
-                                           sourceFile, sourceLine, deviceInit);
+                                           sourceFile, sourceLine);
     }
   } else {
     args =

@@ -249,15 +249,12 @@ protected:
 class InitializeTicket : public ImmediateTicketRunner<InitializeTicket>,
                          private ElementsOverComponents {
 public:
-  RT_API_ATTRS InitializeTicket(const Descriptor &instance,
-      const typeInfo::DerivedType &derived, MemcpyFct memcpyFct)
+  RT_API_ATTRS InitializeTicket(
+      const Descriptor &instance, const typeInfo::DerivedType &derived)
       : ImmediateTicketRunner<InitializeTicket>{*this},
-        ElementsOverComponents{instance, derived}, memcpyFct_{memcpyFct} {}
+        ElementsOverComponents{instance, derived} {}
   RT_API_ATTRS int Begin(WorkQueue &);
   RT_API_ATTRS int Continue(WorkQueue &);
-
-private:
-  MemcpyFct memcpyFct_;
 };
 
 // Initializes one derived type instance from the value of another
@@ -451,12 +448,12 @@ public:
 
   // APIs for particular tasks.  These can return StatOk if the work is
   // completed immediately.
-  RT_API_ATTRS int BeginInitialize(const Descriptor &descriptor,
-      const typeInfo::DerivedType &derived, MemcpyFct memcpyFct = nullptr) {
+  RT_API_ATTRS int BeginInitialize(
+      const Descriptor &descriptor, const typeInfo::DerivedType &derived) {
     if (runTicketsImmediately_) {
-      return InitializeTicket{descriptor, derived, memcpyFct}.Run(*this);
+      return InitializeTicket{descriptor, derived}.Run(*this);
     } else {
-      StartTicket().u.emplace<InitializeTicket>(descriptor, derived, memcpyFct);
+      StartTicket().u.emplace<InitializeTicket>(descriptor, derived);
       return StatContinue;
     }
   }
