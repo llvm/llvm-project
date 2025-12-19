@@ -34,6 +34,9 @@ public:
 
 protected:
   void SetUp() override {
+
+    OrcNativeTarget::initialize();
+
     auto JTMB = JITTargetMachineBuilder::detectHost();
     // Bail out if we can not detect the host.
     if (!JTMB) {
