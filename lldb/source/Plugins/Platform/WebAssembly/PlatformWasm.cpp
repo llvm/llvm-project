@@ -203,11 +203,11 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
 
     return nullptr;
   }
-
+#ifndef _WIN32
   if (launch_info.GetPTY().GetPrimaryFileDescriptor() !=
       PseudoTerminal::invalid_fd)
     process_sp->SetSTDIOFileDescriptor(
         launch_info.GetPTY().ReleasePrimaryFileDescriptor());
-
+#endif
   return process_sp;
 }
