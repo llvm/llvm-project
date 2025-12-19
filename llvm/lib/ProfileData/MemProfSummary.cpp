@@ -18,7 +18,7 @@ using namespace llvm::memprof;
 void MemProfSummary::printSummaryYaml(raw_ostream &OS) const {
   // For now emit as YAML comments, since they aren't read on input.
   OS << "---\n";
-  OS << "# MemProfHeapSummary:\n";
+  OS << "# MemProfSummary:\n";
   OS << "#   Total contexts: " << NumContexts << "\n";
   OS << "#   Total cold contexts: " << NumColdContexts << "\n";
   OS << "#   Total hot contexts: " << NumHotContexts << "\n";
@@ -26,12 +26,10 @@ void MemProfSummary::printSummaryYaml(raw_ostream &OS) const {
   OS << "#   Maximum warm context total size: " << MaxWarmTotalSize << "\n";
   OS << "#   Maximum hot context total size: " << MaxHotTotalSize << "\n";
   if (HasDataAccessProfile) {
-    OS << "#\n";
-    OS << "# DataAccessProfileSummary:\n";
-    OS << "#   Num hot symbols and string literals: "
+    OS << "# Num hot symbols and string literals: "
        << NumHotSymbolsAndStringLiterals << "\n";
-    OS << "#   Num known cold symbols: " << NumKnownColdSymbols << "\n";
-    OS << "#   Num known cold string literals: " << NumKnownColdStringLiterals
+    OS << "# Num known cold symbols: " << NumKnownColdSymbols << "\n";
+    OS << "# Num known cold string literals: " << NumKnownColdStringLiterals
        << "\n";
   }
 }

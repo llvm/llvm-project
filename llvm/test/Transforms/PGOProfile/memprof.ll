@@ -23,7 +23,7 @@
 ;; Check that the summary can be shown (and is identical) for both the raw and indexed profiles.
 ; RUN: llvm-profdata show --memory %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe | FileCheck %s --check-prefixes=SUMMARY
 ; RUN: llvm-profdata show --memory %t.memprofdata | FileCheck %s --check-prefixes=SUMMARY
-; SUMMARY: # MemProfHeapSummary:
+; SUMMARY: # MemProfSummary:
 ; SUMMARY: #   Total contexts: 8
 ; SUMMARY: #   Total cold contexts: 5
 ; SUMMARY: #   Total hot contexts: 0

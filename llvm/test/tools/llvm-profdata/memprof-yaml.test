@@ -37,15 +37,13 @@
 
 ;--- memprof-in.yaml
 ---
-# MemProfHeapSummary:
+# MemProfSummary:
 #   Total contexts: 2
 #   Total cold contexts: 0
 #   Total hot contexts: 0
 #   Maximum cold context total size: 0
 #   Maximum warm context total size: 666
 #   Maximum hot context total size: 0
-#
-# DataAccessProfileSummary:
 #   Num hot symbols and string literals: 2
 #   Num known cold symbols: 2
 #   Num known cold string literals: 2
@@ -99,7 +97,7 @@ DataAccessProfiles:
 ...
 ;--- memprof-in-v3.yaml
 ---
-# MemProfHeapSummary:
+# MemProfSummary:
 #   Total contexts: 2
 #   Total cold contexts: 0
 #   Total hot contexts: 0
@@ -136,7 +134,7 @@ HeapProfileRecords:
 ...
 ;--- memprof-in-alloc-sites-only.yaml
 ---
-# MemProfHeapSummary:
+# MemProfSummary:
 #   Total contexts: 2
 #   Total cold contexts: 0
 #   Total hot contexts: 0
@@ -166,7 +164,7 @@ HeapProfileRecords:
 ...
 ;--- memprof-in-call-sites-only.yaml
 ---
-# MemProfHeapSummary:
+# MemProfSummary:
 #   Total contexts: 0
 #   Total cold contexts: 0
 #   Total hot contexts: 0
@@ -188,7 +186,7 @@ HeapProfileRecords:
 ...
 ;--- memprof-in-no-dap.yaml
 ---
-# MemProfHeapSummary:
+# MemProfSummary:
 #   Total contexts: 2
 #   Total cold contexts: 0
 #   Total hot contexts: 0
@@ -227,15 +225,13 @@ HeapProfileRecords:
 ...
 ;--- memprof-in-no-heap.yaml
 ---
-# MemProfHeapSummary:
+# MemProfSummary:
 #   Total contexts: 0
 #   Total cold contexts: 0
 #   Total hot contexts: 0
 #   Maximum cold context total size: 0
 #   Maximum warm context total size: 0
 #   Maximum hot context total size: 0
-#
-# DataAccessProfileSummary:
 #   Num hot symbols and string literals: 2
 #   Num known cold symbols: 2
 #   Num known cold string literals: 2

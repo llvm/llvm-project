@@ -33,7 +33,8 @@ private:
   const uint64_t NumContexts, NumColdContexts, NumHotContexts;
   const uint64_t MaxColdTotalSize, MaxWarmTotalSize, MaxHotTotalSize;
 
-  // MemProf v3 and prior versions don't have data access profile.
+  // MemProf v3 and prior versions don't have data access profile,
+  // so record the data access profile state.
   bool HasDataAccessProfile = false;
   size_t NumHotSymbolsAndStringLiterals = 0;
   size_t NumKnownColdSymbols = 0;

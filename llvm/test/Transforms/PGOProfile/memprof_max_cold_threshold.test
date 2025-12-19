@@ -9,7 +9,7 @@
 ; RUN: llvm-profdata merge --memprof-version=4 %t/memprof_max_cold_threshold.yaml -o %t/memprof_max_cold_threshold.memprofdata
 
 ; RUN: llvm-profdata show --memory %t/memprof_max_cold_threshold.memprofdata | FileCheck %s --check-prefixes=SUMMARY
-; SUMMARY: # MemProfHeapSummary:
+; SUMMARY: # MemProfSummary:
 ; SUMMARY: #   Total contexts: 5
 ; SUMMARY: #   Total cold contexts: 4
 ; SUMMARY: #   Total hot contexts: 0
