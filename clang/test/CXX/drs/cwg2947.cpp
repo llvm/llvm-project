@@ -61,7 +61,8 @@ export module M
 // expected-warning@-1 {{unknown attribute 'attr2' ignored}}
 
 //--- cwg2947_example6.cpp
-export module M; int // expected-warning {{extra tokens after semicolon in 'module' directive}}
+export module M; int
+// expected-warning@-1 {{extra tokens after semicolon in 'module' directive}}
   n;                         // OK
 
 //--- cwg2947_ext1.cpp
