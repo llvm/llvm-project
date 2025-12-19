@@ -403,3 +403,15 @@ define { i64, i1 } @test_select_of_overflow_intrinsic_operand(i64 %n, i1 %cond) 
   %add_overflow = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %s, i64 42)
   ret { i64, i1 } %add_overflow
 }
+
+; Negative test: Can't fold struct-return into vector select.
+define { <4 x float>, <4 x float> } @test_select_of_sincos_intrinsic_operand(<4 x float> %v, <4 x i1> %cond) {
+; CHECK-LABEL: @test_select_of_sincos_intrinsic_operand(
+; CHECK-NEXT:    [[S:%.*]] = select <4 x i1> [[COND:%.*]], <4 x float> [[V:%.*]], <4 x float> zeroinitializer
+; CHECK-NEXT:    [[RESULT:%.*]] = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> [[S]])
+; CHECK-NEXT:    ret { <4 x float>, <4 x float> } [[RESULT]]
+;
+  %s = select <4 x i1> %cond, <4 x float> %v, <4 x float> zeroinitializer
+  %result = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> %s)
+  ret { <4 x float>, <4 x float> } %result
+}
