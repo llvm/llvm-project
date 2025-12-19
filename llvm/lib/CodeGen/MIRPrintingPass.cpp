@@ -30,7 +30,7 @@ PreservedAnalyses PrintMIRPass::run(MachineFunction &MF,
   auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
                   .getManager();
 
-  printMIR(OS, nullptr, &FAM, MF);
+  printMIR(OS, FAM, MF);
   return PreservedAnalyses::all();
 }
 
@@ -60,7 +60,7 @@ struct MIRPrintingPass : public MachineFunctionPass {
     MachineModuleInfo *MMI =
         &getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
 
-    printMIR(StrOS, MMI, nullptr, MF);
+    printMIR(StrOS, *MMI, MF);
     MachineFunctions.append(Str);
     return false;
   }

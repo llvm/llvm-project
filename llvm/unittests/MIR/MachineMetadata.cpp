@@ -275,8 +275,7 @@ body:             |
   EXPECT_EQ(Collected, Generated);
 
   // FileCheck the output from MIR printer.
-  std::string Output =
-      print([&](raw_ostream &OS) { printMIR(OS, &MMI, nullptr, *MF); });
+  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, MMI, *MF); });
   std::string CheckString = R"(
 CHECK: machineMetadataNodes:
 CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"domain"}
@@ -427,8 +426,7 @@ body:             |
   EXPECT_EQ(Collected, Generated);
 
   // FileCheck the output from MIR printer.
-  std::string Output =
-      print([&](raw_ostream &OS) { printMIR(OS, &MMI, nullptr, *MF); });
+  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, MMI, *MF); });
   std::string CheckString = R"(
 CHECK: machineMetadataNodes:
 CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"domain"}
@@ -528,8 +526,7 @@ body:             |
   EXPECT_EQ(Collected, Generated);
 
   // FileCheck the output from MIR printer.
-  std::string Output =
-      print([&](raw_ostream &OS) { printMIR(OS, &MMI, nullptr, *MF); });
+  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, MMI, *MF); });
   std::string CheckString = R"(
 CHECK: machineMetadataNodes:
 CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"domain"}

@@ -450,7 +450,7 @@ void ReducerWorkItem::print(raw_ostream &ROS, void *p) const {
     printMIR(ROS, *M);
     for (Function &F : *M) {
       if (auto *MF = MMI->getMachineFunction(F))
-        printMIR(ROS, MMI.get(), nullptr, *MF);
+        printMIR(ROS, *MMI, *MF);
     }
   } else {
     M->print(ROS, /*AssemblyAnnotationWriter=*/nullptr,

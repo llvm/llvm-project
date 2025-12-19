@@ -1021,19 +1021,19 @@ void llvm::printMIR(raw_ostream &OS, const Module &M) {
   Out << const_cast<Module &>(M);
 }
 
-void llvm::printMIR(raw_ostream &OS, MachineModuleInfo *MMI,
-                    FunctionAnalysisManager *FAM, const MachineFunction &MF) {
-  if (MMI) {
-    printMF(
-        OS, [&](const Function &F) { return MMI->getMachineFunction(F); }, MF);
-  } else {
-    printMF(
-        OS,
-        [&](const Function &F) {
-          return &FAM->getResult<MachineFunctionAnalysis>(
-                         const_cast<Function &>(F))
-                      .getMF();
-        },
-        MF);
-  }
+void llvm::printMIR(raw_ostream &OS, const MachineModuleInfo &MMI,
+                    const MachineFunction &MF) {
+  printMF(OS, [&](const Function &F) { return MMI.getMachineFunction(F); }, MF);
+}
+
+void llvm::printMIR(raw_ostream &OS, FunctionAnalysisManager &FAM,
+                    const MachineFunction &MF) {
+  printMF(
+      OS,
+      [&](const Function &F) {
+        return &FAM.getResult<MachineFunctionAnalysis>(
+                       const_cast<Function &>(F))
+                    .getMF();
+      },
+      MF);
 }
