@@ -268,17 +268,25 @@ MAKE_EMPTY_CLASS(Write, Write);
 // Artificial clauses
 MAKE_EMPTY_CLASS(Depobj, Depobj);
 MAKE_EMPTY_CLASS(Flush, Flush);
+MAKE_EMPTY_CLASS(Groupprivate, Groupprivate);
 MAKE_EMPTY_CLASS(MemoryOrder, MemoryOrder);
 MAKE_EMPTY_CLASS(Threadprivate, Threadprivate);
-MAKE_EMPTY_CLASS(Groupprivate, Groupprivate);
 
 MAKE_INCOMPLETE_CLASS(AdjustArgs, AdjustArgs);
 MAKE_INCOMPLETE_CLASS(AppendArgs, AppendArgs);
+MAKE_INCOMPLETE_CLASS(Apply, Apply);
 MAKE_INCOMPLETE_CLASS(Collector, Collector);
+MAKE_INCOMPLETE_CLASS(Counts, Counts);
 MAKE_INCOMPLETE_CLASS(GraphId, GraphId);
 MAKE_INCOMPLETE_CLASS(GraphReset, GraphReset);
+MAKE_INCOMPLETE_CLASS(Induction, Induction);
 MAKE_INCOMPLETE_CLASS(Inductor, Inductor);
+MAKE_INCOMPLETE_CLASS(InitComplete, InitComplete);
+MAKE_INCOMPLETE_CLASS(Interop, Interop);
+MAKE_INCOMPLETE_CLASS(Local, Local);
+MAKE_INCOMPLETE_CLASS(Memscope, Memscope);
 MAKE_INCOMPLETE_CLASS(Replayable, Replayable);
+MAKE_INCOMPLETE_CLASS(Safesync, Safesync);
 MAKE_INCOMPLETE_CLASS(Transparent, Transparent);
 
 List<IteratorSpecifier>
