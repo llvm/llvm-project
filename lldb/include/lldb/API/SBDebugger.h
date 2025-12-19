@@ -360,7 +360,7 @@ public:
                                            const char *arch);
 
   /// Find a target with the specified unique ID.
-  lldb::SBTarget FindTargetByGloballyUniqueID(lldb::user_id_t id);
+  lldb::SBTarget FindTargetByGloballyUniqueID(lldb::user_id_t id) const;
 
   /// Get the number of targets in the debugger.
   uint32_t GetNumTargets();

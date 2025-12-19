@@ -175,7 +175,7 @@ void SBModuleSpec::SetObjectSize(uint64_t object_size) {
   m_opaque_up->SetObjectSize(object_size);
 }
 
-SBTarget SBModuleSpec::GetTarget() {
+SBTarget SBModuleSpec::GetTarget() const {
   LLDB_INSTRUMENT_VA(this);
 
   return SBTarget(m_opaque_up->GetTargetSP());

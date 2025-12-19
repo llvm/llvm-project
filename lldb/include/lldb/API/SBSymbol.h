@@ -91,7 +91,7 @@ public:
   ///
   /// \returns
   ///   Returns the ID of this symbol.
-  uint32_t GetID();
+  uint32_t GetID() const;
 
   bool operator==(const lldb::SBSymbol &rhs) const;
 
@@ -108,7 +108,7 @@ public:
   bool IsSynthetic();
 
   /// Returns true if the symbol is a debug symbol.
-  bool IsDebug();
+  bool IsDebug() const;
 
   /// Get the string representation of a symbol type.
   static const char *GetTypeAsString(lldb::SymbolType symbol_type);

@@ -276,6 +276,7 @@ the following `lldb-dap` specific key/value pairs:
 | **program**                       | string      |     | Path to the executable to attach to. This value is optional but can help to resolve breakpoints prior the attaching to the program.
 | **pid**                           | number      |     | The process id of the process you wish to attach to. If **pid** is omitted, the debugger will attempt to attach to the program by finding a process whose file name matches the file name from **program**. Setting this value to `${command:pickMyProcess}` will allow interactive process selection in the IDE.
 | **waitFor**                       | boolean     |     | Wait for the process to launch.
+| **stopOnEntry**                   | boolean     |     | Whether to stop program immediately after attaching.
 | **attachCommands**                | [string]    |     | LLDB commands that will be executed after **preRunCommands** which take place of the code that normally does the attach. The commands can create a new target and attach or launch it however desired. This allows custom launch and attach configurations. Core files can use `target create --core /path/to/core` to attach to core files.
 
 ### Configuring `lldb-dap` defaults

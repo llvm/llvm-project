@@ -202,7 +202,7 @@ SymbolType SBSymbol::GetType() {
   return eSymbolTypeInvalid;
 }
 
-uint32_t SBSymbol::GetID() {
+uint32_t SBSymbol::GetID() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_ptr)
@@ -226,7 +226,7 @@ bool SBSymbol::IsSynthetic() {
   return false;
 }
 
-bool SBSymbol::IsDebug() {
+bool SBSymbol::IsDebug() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_ptr)

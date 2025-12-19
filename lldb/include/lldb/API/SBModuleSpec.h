@@ -87,7 +87,7 @@ public:
 
   bool GetDescription(lldb::SBStream &description);
 
-  lldb::SBTarget GetTarget();
+  lldb::SBTarget GetTarget() const;
 
   /// Set the target to be used when resolving a module.
   ///

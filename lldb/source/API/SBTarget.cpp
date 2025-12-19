@@ -1581,7 +1581,7 @@ SBModule SBTarget::FindModule(const SBFileSpec &sb_file_spec) {
   return sb_module;
 }
 
-SBModule SBTarget::FindModule(const SBModuleSpec &sb_module_spec) {
+SBModule SBTarget::FindModule(const SBModuleSpec &sb_module_spec) const {
   LLDB_INSTRUMENT_VA(this, sb_module_spec);
 
   SBModule sb_module;
@@ -1624,7 +1624,7 @@ const char *SBTarget::GetTriple() {
   return nullptr;
 }
 
-const char *SBTarget::GetArchName() {
+const char *SBTarget::GetArchName() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP()) {
