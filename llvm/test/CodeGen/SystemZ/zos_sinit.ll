@@ -6,12 +6,10 @@
 
 ; Check for presence of C_@@SQINIT:
 ; CHECK: 	.xtor.22
-; CHECK: 	DC AD(cfuncctor)
 ; CHECK: 	DC XL4'7FFF0017'
 ; Check direct relocation and low bit on ctor.
 ; CHECK:        DC AD(QD(stdin#S)+XL8'0')
 ; CHECK: 	DC XL8'0000000000000000'
-; CHECK:        DC AD(cfuncdtor)
 ; CHECK:        DC XL4'7FFF0017'
 ; CHECK:        DC XL8'0000000000000000'
 ; Check direct relocation and low bit on dtor.

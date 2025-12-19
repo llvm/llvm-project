@@ -1020,8 +1020,8 @@ void SystemZAsmPrinter::emitMachineConstantPoolValue(
 // Emit the ctor or dtor list taking into account the init priority.
 void SystemZAsmPrinter::emitXXStructorList(const DataLayout &DL,
                                            const Constant *List, bool IsCtor) {
-  if (TM.getTargetTriple().isOSBinFormatGOFF())
-    AsmPrinter::emitXXStructorList(DL, List, IsCtor);
+  if (!TM.getTargetTriple().isOSBinFormatGOFF())
+    return AsmPrinter::emitXXStructorList(DL, List, IsCtor);
 
   SmallVector<Structor, 8> Structors;
   preprocessXXStructorList(DL, List, Structors);
@@ -1639,14 +1639,16 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
 }
 
 void SystemZAsmPrinter::emitStartOfAsmFile(Module &M) {
-  if (TM.getTargetTriple().isOSzOS())
+  if (TM.getTargetTriple().isOSzOS()) {
+    ADASym = getObjFileLowering().getADASection()->getBeginSymbol();
+
     emitPPA2(M);
+  }
+
   AsmPrinter::emitStartOfAsmFile(M);
 }
 
 void SystemZAsmPrinter::emitPPA2(Module &M) {
-  ADASym = getObjFileLowering().getADASection()->getBeginSymbol();
-
   OutStreamer->pushSection();
   OutStreamer->switchSection(getObjFileLowering().getTextSection(),
                              GOFF::SK_PPA2);

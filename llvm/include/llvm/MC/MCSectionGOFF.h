@@ -27,13 +27,6 @@ namespace llvm {
 class MCExpr;
 
 class LLVM_ABI MCSectionGOFF final : public MCSection {
-public:
-  enum XtorType { NotXtor, CtorType, DtorType };
-
-private:
-  // ctor/dtor section related - i.e. C_@@S[Q]INIT
-  enum XtorType XtorSectionType = NotXtor;
-
   // Parent of this section. Implies that the parent is emitted first.
   MCSectionGOFF *Parent;
 
@@ -122,10 +115,6 @@ public:
   bool requiresNonZeroLength() const { return RequiresNonZeroLength; }
 
   void setName(StringRef SectionName) { Name = SectionName; }
-
-  bool isXtorSection() const { return XtorSectionType != NotXtor; }
-  void setXtorSectionType(XtorType Value) { XtorSectionType = Value; }
-  XtorType getXtorSectionType() const { return XtorSectionType; }
 };
 } // end namespace llvm
 
