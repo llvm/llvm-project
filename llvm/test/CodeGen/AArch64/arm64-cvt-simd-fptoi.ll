@@ -812,7 +812,6 @@ define double @fcvtpu_dd_round_simd(double %a) {
   ret double %bc
 }
 
-
 define double @fcvtzs_ds_round_simd(float %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtzs_ds_round_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
@@ -945,6 +944,274 @@ define double @fcvtzu_dd_round_simd(double %a) {
   ret double %bc
 }
 
+
+;
+; FPTOI rounding scalar_to_vector
+;
+
+define <1 x i64> @fcvtas_ds_round_vec_simd(float %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtas_ds_round_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtas x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtas_ds_round_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtas d0, s0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.round.f32(float %a)
+  %i = fptosi float %r to i64
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtas_dd_round_vec_simd(double %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtas_dd_round_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtas d0, d0
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtas_dd_round_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtas d0, d0
+; CHECK-NEXT:    ret
+  %r = call double @llvm.round.f64(double %a)
+  %i = fptosi double %r to i64
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtau_ds_round_vec_simd(float %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtau_ds_round_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtau x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtau_ds_round_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtau d0, s0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.round.f32(float %a)
+  %i = fptoui float %r to i64
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtau_dd_round_vec_simd(double %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtau_dd_round_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtau d0, d0
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtau_dd_round_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtau d0, d0
+; CHECK-NEXT:    ret
+  %r = call double @llvm.round.f64(double %a)
+  %i = fptoui double %r to i64
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtms_ds_round_vec_simd(float %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtms_ds_round_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtms x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtms_ds_round_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtms d0, s0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.floor.f32(float %a)
+  %i = fptosi float %r to i64
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtms_dd_round_vec_simd(double %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtms_dd_round_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtms d0, d0
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtms_dd_round_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtms d0, d0
+; CHECK-NEXT:    ret
+  %r = call double @llvm.floor.f64(double %a)
+  %i = fptosi double %r to i64
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtmu_ds_round_vec_simd(float %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtmu_ds_round_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtmu x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtmu_ds_round_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtmu d0, s0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.floor.f32(float %a)
+  %i = fptoui float %r to i64
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtmu_dd_round_vec_simd(double %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtmu_dd_round_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtmu d0, d0
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtmu_dd_round_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtmu d0, d0
+; CHECK-NEXT:    ret
+  %r = call double @llvm.floor.f64(double %a)
+  %i = fptoui double %r to i64
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtps_ds_round_vec_simd(float %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtps_ds_round_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtps x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtps_ds_round_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtps d0, s0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.ceil.f32(float %a)
+  %i = fptosi float %r to i64
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtps_dd_round_vec_simd(double %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtps_dd_round_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtps d0, d0
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtps_dd_round_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtps d0, d0
+; CHECK-NEXT:    ret
+  %r = call double @llvm.ceil.f64(double %a)
+  %i = fptosi double %r to i64
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtpu_ds_round_vec_simd(float %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtpu_ds_round_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtpu x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtpu_ds_round_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtpu d0, s0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.ceil.f32(float %a)
+  %i = fptoui float %r to i64
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtpu_dd_round_vec_simd(double %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtpu_dd_round_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtpu d0, d0
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtpu_dd_round_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtpu d0, d0
+; CHECK-NEXT:    ret
+  %r = call double @llvm.ceil.f64(double %a)
+  %i = fptoui double %r to i64
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzs_ds_round_vec_simd(float %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzs_ds_round_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzs_ds_round_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, s0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.trunc.f32(float %a)
+  %i = fptosi float %r to i64
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzs_dd_round_vec_simd(double %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzs_dd_round_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzs d0, d0
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzs_dd_round_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    ret
+  %r = call double @llvm.trunc.f64(double %a)
+  %i = fptosi double %r to i64
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzu_ds_round_vec_simd(float %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzu_ds_round_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzu x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzu_ds_round_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, s0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.trunc.f32(float %a)
+  %i = fptoui float %r to i64
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzu_dd_round_vec_simd(double %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzu_dd_round_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzu d0, d0
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzu_dd_round_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, d0
+; CHECK-NEXT:    ret
+  %r = call double @llvm.trunc.f64(double %a)
+  %i = fptoui double %r to i64
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
 
 ;
 ; FPTOI saturating
@@ -1136,6 +1403,104 @@ define double @fcvtzu_dd_sat_simd(double %a) {
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %a)
   %bc = bitcast i64 %i to double
   ret double %bc
+}
+
+;
+; FPTOI saturating scalar_to_vector
+;
+
+define <1 x i64> @fcvtzs_dh_sat_vec_simd(half %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzs_dh_sat_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzs_dh_sat_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, h0
+; CHECK-NEXT:    ret
+  %i = call i64 @llvm.fptosi.sat.i64.f16(half %a)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzs_ds_sat_vec_simd(float %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzs_ds_sat_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzs_ds_sat_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, s0
+; CHECK-NEXT:    ret
+  %i = call i64 @llvm.fptosi.sat.i64.f32(float %a)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzs_dd_sat_vec_simd(double %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzs_dd_sat_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzs d0, d0
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzs_dd_sat_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    ret
+  %i = call i64 @llvm.fptosi.sat.i64.f64(double %a)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzu_dh_sat_vec_simd(half %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzu_dh_sat_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzu x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzu_dh_sat_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, h0
+; CHECK-NEXT:    ret
+  %i = call i64 @llvm.fptoui.sat.i64.f16(half %a)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzu_ds_sat_vec_simd(float %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzu_ds_sat_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzu x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzu_ds_sat_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, s0
+; CHECK-NEXT:    ret
+  %i = call i64 @llvm.fptoui.sat.i64.f32(float %a)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzu_dd_sat_vec_simd(double %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzu_dd_sat_vec_simd:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzu d0, d0
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzu_dd_sat_vec_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, d0
+; CHECK-NEXT:    ret
+  %i = call i64 @llvm.fptoui.sat.i64.f64(double %a)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
 }
 
 ;
@@ -1940,4 +2305,408 @@ define double @fcvtzu_dd_simd(double %a) {
   %i = call i64 @llvm.fptoui.sat.i64.f64(double %r)
   %bc = bitcast i64 %i to double
   ret double %bc
+}
+
+;
+; FPTOI saturating with rounding scalar_to_vector
+;
+
+define <1 x i64> @fcvtas_dh_simd_vec(half %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtas_dh_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtas x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtas_dh_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtas d0, h0
+; CHECK-NEXT:    ret
+  %r = call half @llvm.round.f16(half %a) nounwind readnone
+  %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtas_ds_simd_vec(float %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtas_ds_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtas x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtas_ds_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtas d0, s0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.round.f32(float %a)
+  %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtas_dd_simd_vec(double %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtas_dd_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtas d0, d0
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtas_dd_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtas d0, d0
+; CHECK-NEXT:    ret
+  %r = call double @llvm.round.f64(double %a)
+  %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtau_ds_simd_vec(float %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtau_ds_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtau x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtau_ds_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtau d0, s0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.round.f32(float %a)
+  %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtau_dd_simd_vec(double %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtau_dd_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtau d0, d0
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtau_dd_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtau d0, d0
+; CHECK-NEXT:    ret
+  %r = call double @llvm.round.f64(double %a)
+  %i = call i64 @llvm.fptoui.sat.i64.f64(double %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtau_dh_simd_vec(half %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtau_dh_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtau x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtau_dh_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtau d0, h0
+; CHECK-NEXT:    ret
+  %r = call half @llvm.round.f16(half %a) nounwind readnone
+  %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtms_dh_simd_vec(half %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtms_dh_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtms x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtms_dh_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtms d0, h0
+; CHECK-NEXT:    ret
+  %r = call half @llvm.floor.f16(half %a) nounwind readnone
+  %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtms_ds_simd_vec(float %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtms_ds_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtms x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtms_ds_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtms d0, s0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.floor.f32(float %a)
+  %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtms_dd_simd_vec(double %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtms_dd_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtms d0, d0
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtms_dd_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtms d0, d0
+; CHECK-NEXT:    ret
+  %r = call double @llvm.floor.f64(double %a)
+  %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtmu_dh_simd_vec(half %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtmu_dh_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtmu x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtmu_dh_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtmu d0, h0
+; CHECK-NEXT:    ret
+  %r = call half @llvm.floor.f16(half %a) nounwind readnone
+  %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtmu_ds_simd_vec(float %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtmu_ds_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtmu x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtmu_ds_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtmu d0, s0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.floor.f32(float %a)
+  %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtmu_dd_simd_vec(double %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtmu_dd_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtmu d0, d0
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtmu_dd_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtmu d0, d0
+; CHECK-NEXT:    ret
+  %r = call double @llvm.floor.f64(double %a)
+  %i = call i64 @llvm.fptoui.sat.i64.f64(double %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtps_dh_simd_vec(half %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtps_dh_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtps x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtps_dh_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtps d0, h0
+; CHECK-NEXT:    ret
+  %r = call half @llvm.ceil.f16(half %a) nounwind readnone
+  %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtps_ds_simd_vec(float %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtps_ds_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtps x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtps_ds_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtps d0, s0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.ceil.f32(float %a)
+  %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtps_dd_simd_vec(double %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtps_dd_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtps d0, d0
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtps_dd_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtps d0, d0
+; CHECK-NEXT:    ret
+  %r = call double @llvm.ceil.f64(double %a)
+  %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtpu_dh_simd_vec(half %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtpu_dh_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtpu x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtpu_dh_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtpu d0, h0
+; CHECK-NEXT:    ret
+  %r = call half @llvm.ceil.f16(half %a) nounwind readnone
+  %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtpu_ds_simd_vec(float %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtpu_ds_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtpu x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtpu_ds_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtpu d0, s0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.ceil.f32(float %a)
+  %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtpu_dd_simd_vec(double %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtpu_dd_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtpu d0, d0
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtpu_dd_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtpu d0, d0
+; CHECK-NEXT:    ret
+  %r = call double @llvm.ceil.f64(double %a)
+  %i = call i64 @llvm.fptoui.sat.i64.f64(double %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzs_dh_simd_vec(half %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzs_dh_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzs_dh_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, h0
+; CHECK-NEXT:    ret
+  %r = call half @llvm.trunc.f16(half %a) nounwind readnone
+  %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzs_ds_simd_vec(float %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzs_ds_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzs_ds_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, s0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.trunc.f32(float %a)
+  %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzs_dd_simd_vec(double %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzs_dd_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzs d0, d0
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzs_dd_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    ret
+  %r = call double @llvm.trunc.f64(double %a)
+  %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzu_dh_simd_vec(half %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzu_dh_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzu x8, h0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzu_dh_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, h0
+; CHECK-NEXT:    ret
+  %r = call half @llvm.trunc.f16(half %a) nounwind readnone
+  %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzu_ds_simd_vec(float %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzu_ds_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzu x8, s0
+; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzu_ds_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, s0
+; CHECK-NEXT:    ret
+  %r = call float @llvm.trunc.f32(float %a)
+  %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
+}
+
+define <1 x i64> @fcvtzu_dd_simd_vec(double %a) {
+; CHECK-NOFPRCVT-LABEL: fcvtzu_dd_simd_vec:
+; CHECK-NOFPRCVT:       // %bb.0:
+; CHECK-NOFPRCVT-NEXT:    fcvtzu d0, d0
+; CHECK-NOFPRCVT-NEXT:    ret
+;
+; CHECK-LABEL: fcvtzu_dd_simd_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, d0
+; CHECK-NEXT:    ret
+  %r = call double @llvm.trunc.f64(double %a)
+  %i = call i64 @llvm.fptoui.sat.i64.f64(double %r)
+  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  ret <1 x i64> %vec
 }
