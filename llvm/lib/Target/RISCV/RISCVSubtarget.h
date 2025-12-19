@@ -97,6 +97,8 @@ private:
   RISCVProcFamilyEnum RISCVProcFamily = Others;
   RISCVVRGatherCostModelEnum RISCVVRGatherCostModel = Quadratic;
 
+  bool IsLittleEndian = true;
+
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \
   bool ATTRIBUTE = DEFAULT;
 #include "RISCVGenSubtargetInfo.inc"
@@ -220,6 +222,7 @@ public:
   }
 
   bool is64Bit() const { return IsRV64; }
+  bool isLittleEndian() const { return IsLittleEndian; }
   MVT getXLenVT() const {
     return is64Bit() ? MVT::i64 : MVT::i32;
   }
