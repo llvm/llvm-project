@@ -649,9 +649,8 @@ int clangTidyMain(int argc, const char **argv) {
 
   StringRef FileName("dummy");
   auto PathList = OptionsParser->getSourcePathList();
-  if (!PathList.empty()) {
+  if (!PathList.empty())
     FileName = PathList.front();
-  }
 
   const SmallString<256> FilePath = makeAbsolute(FileName);
   ClangTidyOptions EffectiveOptions = OptionsProvider->getOptions(FilePath);
