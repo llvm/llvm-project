@@ -634,6 +634,16 @@ namespace llvm {
 
     /// Returns true if this StringRef has the given prefix and removes that
     /// prefix.
+    bool consume_front(char Prefix) {
+      if (!starts_with(Prefix))
+        return false;
+
+      *this = drop_front();
+      return true;
+    }
+
+    /// Returns true if this StringRef has the given prefix and removes that
+    /// prefix.
     bool consume_front(StringRef Prefix) {
       if (!starts_with(Prefix))
         return false;
