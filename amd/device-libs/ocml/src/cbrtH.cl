@@ -16,6 +16,6 @@ MATH_MANGLE(cbrt)(half x)
     ret = BUILTIN_COPYSIGN_F16(ret, x);
 
     // Is normal or subnormal.
-    return ((x != 0.0h) & BUILTIN_ISFINITE_F16(x)) ? ret : x;
+    return x == 0.0h || BUILTIN_ISINF_F16(x) ? x : ret;
 }
 
