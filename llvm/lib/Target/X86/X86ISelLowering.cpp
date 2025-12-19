@@ -49994,12 +49994,14 @@ static SDValue combineMulToPMADD52(SDNode *N, const SDLoc &DL,
   if (VT.getScalarType() != MVT::i64 || !Subtarget.isPMULLQSlow())
     return SDValue();
   // Check hardware support:
-  // 512-bit vectors require AVX512-IFMA.
-  // 128/256-bit vectors require either AVX512-IFMA + VLX, or AVX-IFMA.
-  bool Supported512 = VT.getSizeInBits() == 512 && Subtarget.hasIFMA();
+  // 512-bit vectors (v8i64) require AVX512-IFMA.
+  // 128/256-bit vectors (v2i64/v4i64) require either AVX512-IFMA + VLX, or
+  // AVX-IFMA.
+  bool Supported512 = (VT == MVT::v8i64) && Subtarget.hasIFMA();
   bool SupportedSmall =
-      VT.getSizeInBits() < 512 &&
+      (VT == MVT::v2i64 || VT == MVT::v4i64) &&
       ((Subtarget.hasIFMA() && Subtarget.hasVLX()) || Subtarget.hasAVXIFMA());
+
   if (!Supported512 && !SupportedSmall)
     return SDValue();
   SDValue Op0 = N->getOperand(0);
