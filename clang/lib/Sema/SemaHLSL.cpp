@@ -3355,10 +3355,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                             SemaRef.getASTContext().UnsignedIntTy))
       return true;
 
-    auto *ResourceTy =
-        TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
-    QualType ReturnType = ResourceTy->getContainedType();
-    TheCall->setType(ReturnType);
+    auto *FD = dyn_cast<FunctionDecl>(SemaRef.CurContext);
+    TheCall->setType(FD->getReturnType());
 
     break;
   }
@@ -3372,10 +3370,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
         CheckModifiableLValue(&SemaRef, TheCall, 2))
       return true;
 
-    auto *ResourceTy =
-        TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
-    QualType ReturnType = ResourceTy->getContainedType();
-    TheCall->setType(ReturnType);
+    auto *FD = dyn_cast<FunctionDecl>(SemaRef.CurContext);
+    TheCall->setType(FD->getReturnType());
 
     break;
   }
@@ -3386,8 +3382,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                             SemaRef.getASTContext().UnsignedIntTy))
       return true;
 
-    //  || CheckArgTypeMatches(&SemaRef, TheCall->getArg(2),
-    //  SemaRef.getASTContext().UnsignedIntTy)
+    // need to check anything for the 2nd parameter? not an array?
 
     TheCall->setType(SemaRef.Context.VoidTy);
     break;

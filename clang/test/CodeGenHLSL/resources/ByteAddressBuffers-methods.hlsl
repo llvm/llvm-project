@@ -3,6 +3,11 @@
 
 // NOTE: SPIRV codegen for resource methods is not yet implemented
 
+struct SmallStruct {
+  int a;
+  uint b;
+};
+
 ByteAddressBuffer Buf : register(t0);
 RWByteAddressBuffer RWBuf : register(u0);
 
@@ -16,7 +21,8 @@ export uint TestLoad() {
     uint u = Buf.Load(0);
     uint2 v = Buf.Load2(0);
     float f = Buf.Load<float>(4);
-    //float4 v = RWBuf.Load<float4>(8);
+    float4 g = Buf.Load<float4>(8);
+    SmallStruct U9 = Buf.Load<SmallStruct>(0);
     return u;
 }
 
@@ -25,8 +31,10 @@ export uint TestLoad() {
 // CHECK: ret i32
 
 export uint TestLoadWithStatus() {
-    uint s1;
+    uint s1, s2, s3;
     uint u = Buf.Load(0, s1);
+    float f = Buf.Load<float>(4, s2);
+    SmallStruct U9 = Buf.Load<SmallStruct>(0, s3);
     return u;
 }
 
@@ -36,9 +44,11 @@ export uint TestLoadWithStatus() {
 
 export void TestStore() {
     uint u0;
-    //float f0;
+    float f0;
     RWBuf.Store(0, u0);
-    //RWBuf.Store<float>(0, f0);
+    RWBuf.Store<float>(0, f0);
+    SmallStruct TempStruct1;
+    RWBuf.Store<SmallStruct>(144, TempStruct1);
     return;
 }
 

@@ -1236,20 +1236,29 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
   addLoadMethod("Load3", AST.getExtVectorType(AST.UnsignedIntTy, 3));
   addLoadMethod("Load4", AST.getExtVectorType(AST.UnsignedIntTy, 4));
 
-  // templated
-  {
-    IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
-    DeclarationName Load(&II);
-    BuiltinTypeMethodBuilder Builder(*this, Load, AST.UnsignedIntTy,
-                                     /*IsConst=*/false);
-    QualType TType = Builder.addTemplateTypeParam("element_type");
-    Builder.ReturnTy = TType; // Update return type to template parameter
+  // Templated Load method
+  IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
+  DeclarationName Load(&II);
 
-    Builder.addParam("byteOffset", AST.UnsignedIntTy)
-        .callBuiltin("__builtin_hlsl_byteaddressbuffer_load", TType, PH::Handle,
-                     PH::_0)
-        .finalize();
-  }
+  BuiltinTypeMethodBuilder MMB(*this, Load, AST.UnsignedIntTy,
+                               /*IsConst=*/false);
+  QualType ReturnType = MMB.addTemplateTypeParam("element_type");
+  MMB.ReturnTy = ReturnType; // Update return type to template parameter
+  MMB.addParam("byteOffset", AST.UnsignedIntTy)
+      .callBuiltin("__builtin_hlsl_byteaddressbuffer_load", ReturnType,
+                   PH::Handle, PH::_0)
+      .finalize();
+
+  // Templated Load with status method
+  BuiltinTypeMethodBuilder MMB2(*this, Load, AST.UnsignedIntTy,
+                                /*IsConst=*/false);
+  QualType ReturnType2 = MMB2.addTemplateTypeParam("element_type");
+  MMB2.ReturnTy = ReturnType2; // Update return type to template parameter
+  MMB2.addParam("byteOffset", AST.UnsignedIntTy)
+      .addParam("status", AST.UnsignedIntTy, HLSLParamModifierAttr::Keyword_out)
+      .callBuiltin("__builtin_hlsl_byteaddressbuffer_load_with_status",
+                   ReturnType2, PH::Handle, PH::_0, PH::_1)
+      .finalize();
 
   return *this;
 }
@@ -1279,19 +1288,17 @@ BuiltinTypeDeclBuilder::addByteAddressBufferStoreMethods() {
   addStoreMethod("Store3", AST.getExtVectorType(AST.UnsignedIntTy, 3));
   addStoreMethod("Store4", AST.getExtVectorType(AST.UnsignedIntTy, 4));
 
-  // {
-  //   IdentifierInfo &II = AST.Idents.get("Store", tok::TokenKind::identifier);
-  //   DeclarationName Store(&II);
+  // Templated Store method
+  IdentifierInfo &II = AST.Idents.get("Store", tok::TokenKind::identifier);
+  DeclarationName Store(&II);
 
-  //   BuiltinTypeMethodBuilder Builder(*this, Store, AST.VoidTy,
-  //   /*IsConst=*/false); QualType TType =
-  //   Builder.addTemplateTypeParam("element_type");
-  //   Builder.addParam("byteOffset", AST.UnsignedIntTy)
-  //         .addParam("value", TType)
-  //         .callBuiltin("__builtin_hlsl_byteaddressbuffer_store", AST.VoidTy,
-  //                     PH::Handle, PH::_0, PH::_1)
-  //         .finalize();
-  // }
+  BuiltinTypeMethodBuilder Builder(*this, Store, AST.VoidTy, /*IsConst=*/false);
+  QualType ReturnType = Builder.addTemplateTypeParam("element_type");
+  Builder.addParam("byteOffset", AST.UnsignedIntTy)
+      .addParam("value", ReturnType)
+      .callBuiltin("__builtin_hlsl_byteaddressbuffer_store", AST.VoidTy,
+                   PH::Handle, PH::_0, PH::_1)
+      .finalize();
 
   return *this;
 }

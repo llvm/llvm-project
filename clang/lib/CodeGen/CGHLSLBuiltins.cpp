@@ -584,7 +584,11 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_byteaddressbuffer_store: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *ByteOffsetOp = EmitScalarExpr(E->getArg(1));
-    Value *ValueOp = EmitScalarExpr(E->getArg(2));
+    RValue RVal = EmitAnyExpr(E->getArg(2));
+    Value *ValueOp =
+        RVal.isScalar()
+            ? RVal.getScalarVal()
+            : Builder.CreateLoad(RVal.getAggregateAddress(), "store_val");
     Value *ElementOffset = llvm::PoisonValue::get(Builder.getInt32Ty());
 
     SmallVector<Value *, 4> Args = {HandleOp, ByteOffsetOp, ElementOffset,

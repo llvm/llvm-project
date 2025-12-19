@@ -6901,8 +6901,20 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
   //    whose type is not instantiation dependent, do nothing to the decl
   //  - otherwise find its instantiated decl.
   if (isa<ParmVarDecl>(D) && !ParentDependsOnArgs &&
-      !cast<ParmVarDecl>(D)->getType()->isInstantiationDependentType())
-    return D;
+      !cast<ParmVarDecl>(D)->getType()->isInstantiationDependentType()) {
+    // Check if D belongs to a function template
+    auto *PVD = cast<ParmVarDecl>(D);
+    bool IsFromFunctionTemplate =
+        llvm::any_of(ParentDC->decls(), [PVD](Decl *D) {
+          if (auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
+            return llvm::is_contained(FTD->getTemplatedDecl()->parameters(),
+                                      PVD);
+          return false;
+        });
+
+    if (!IsFromFunctionTemplate)
+      return D;
+  }
   if (isa<ParmVarDecl>(D) || isa<NonTypeTemplateParmDecl>(D) ||
       isa<TemplateTypeParmDecl>(D) || isa<TemplateTemplateParmDecl>(D) ||
       (ParentDependsOnArgs && (ParentDC->isFunctionOrMethod() ||
