@@ -2650,9 +2650,8 @@ void OmpStructureChecker::CheckTaskDependenceType(
   if (version < since) {
     context_.Say(GetContext().clauseSource,
         "%s task dependence type is not supported in %s, %s"_warn_en_US,
-        parser::ToUpperCaseLetters(
-            parser::OmpTaskDependenceType::EnumToString(x)),
-        ThisVersion(version), TryVersion(since));
+        parser::ToUpperCaseLetters(EnumToString(x)), ThisVersion(version),
+        TryVersion(since));
   }
 }
 
@@ -5603,6 +5602,7 @@ CHECK_SIMPLE_CLAUSE(AppendArgs, OMPC_append_args)
 CHECK_SIMPLE_CLAUSE(Bind, OMPC_bind)
 CHECK_SIMPLE_CLAUSE(Capture, OMPC_capture)
 CHECK_SIMPLE_CLAUSE(Collector, OMPC_collector)
+CHECK_SIMPLE_CLAUSE(Combiner, OMPC_combiner)
 CHECK_SIMPLE_CLAUSE(Compare, OMPC_compare)
 CHECK_SIMPLE_CLAUSE(Contains, OMPC_contains)
 CHECK_SIMPLE_CLAUSE(Default, OMPC_default)

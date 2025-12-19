@@ -459,6 +459,15 @@ struct CollectorT {
   using IncompleteTrait = std::true_type;
 };
 
+// [6.0:262]
+template <typename T, typename I, typename E> //
+struct CombinerT {
+  using List = ListT<type::StylizedInstanceT<I, E>>;
+  using WrapperTrait = std::true_type;
+  List v;
+};
+
+// V5.2: [15.8.3] `extended-atomic` clauses
 template <typename T, typename I, typename E> //
 struct CompareT {
   using EmptyTrait = std::true_type;
@@ -825,6 +834,16 @@ struct LinkT {
   List v;
 };
 
+// V6: [6.4.7] Looprange clause
+template <typename T, typename I, typename E> //
+struct LooprangeT {
+  using Begin = E;
+  using End = E;
+
+  using TupleTrait = std::true_type;
+  std::tuple<Begin, End> t;
+};
+
 // V5.2: [5.8.3] `map` clause
 template <typename T, typename I, typename E> //
 struct MapT {
@@ -892,15 +911,15 @@ struct NoOpenmpT {
   using EmptyTrait = std::true_type;
 };
 
-// V5.2: [8.3.1] `assumption` clauses
-template <typename T, typename I, typename E> //
-struct NoOpenmpRoutinesT {
-  using EmptyTrait = std::true_type;
-};
-
 // V6.0: [10.6.1] `assumption` clauses
 template <typename T, typename I, typename E> //
 struct NoOpenmpConstructsT {
+  using EmptyTrait = std::true_type;
+};
+
+// V5.2: [8.3.1] `assumption` clauses
+template <typename T, typename I, typename E> //
+struct NoOpenmpRoutinesT {
   using EmptyTrait = std::true_type;
 };
 
@@ -1314,15 +1333,6 @@ struct WriteT {
   using EmptyTrait = std::true_type;
 };
 
-// V6: [6.4.7] Looprange clause
-template <typename T, typename I, typename E> struct LooprangeT {
-  using Begin = E;
-  using End = E;
-
-  using TupleTrait = std::true_type;
-  std::tuple<Begin, End> t;
-};
-
 // ---
 
 template <typename T, typename I, typename E>
@@ -1365,17 +1375,17 @@ template <typename T, typename I, typename E>
 using WrapperClausesT = std::variant<
     AbsentT<T, I, E>, AlignT<T, I, E>, AllocatorT<T, I, E>,
     AtomicDefaultMemOrderT<T, I, E>, AtT<T, I, E>, BindT<T, I, E>,
-    CollapseT<T, I, E>, ContainsT<T, I, E>, CopyinT<T, I, E>,
-    CopyprivateT<T, I, E>, DefaultT<T, I, E>, DestroyT<T, I, E>,
-    DetachT<T, I, E>, DeviceSafesyncT<T, I, E>, DeviceTypeT<T, I, E>,
-    DynamicAllocatorsT<T, I, E>, EnterT<T, I, E>, ExclusiveT<T, I, E>,
-    FailT<T, I, E>, FilterT<T, I, E>, FinalT<T, I, E>, FirstprivateT<T, I, E>,
-    HasDeviceAddrT<T, I, E>, HintT<T, I, E>, HoldsT<T, I, E>,
-    InclusiveT<T, I, E>, IndirectT<T, I, E>, InitializerT<T, I, E>,
-    IsDevicePtrT<T, I, E>, LinkT<T, I, E>, MessageT<T, I, E>,
-    NocontextT<T, I, E>, NontemporalT<T, I, E>, NovariantsT<T, I, E>,
-    NumTeamsT<T, I, E>, NumThreadsT<T, I, E>, OrderedT<T, I, E>,
-    PartialT<T, I, E>, PriorityT<T, I, E>, PrivateT<T, I, E>,
+    CollapseT<T, I, E>, CombinerT<T, I, E>, ContainsT<T, I, E>,
+    CopyinT<T, I, E>, CopyprivateT<T, I, E>, DefaultT<T, I, E>,
+    DestroyT<T, I, E>, DetachT<T, I, E>, DeviceSafesyncT<T, I, E>,
+    DeviceTypeT<T, I, E>, DynamicAllocatorsT<T, I, E>, EnterT<T, I, E>,
+    ExclusiveT<T, I, E>, FailT<T, I, E>, FilterT<T, I, E>, FinalT<T, I, E>,
+    FirstprivateT<T, I, E>, HasDeviceAddrT<T, I, E>, HintT<T, I, E>,
+    HoldsT<T, I, E>, InclusiveT<T, I, E>, IndirectT<T, I, E>,
+    InitializerT<T, I, E>, IsDevicePtrT<T, I, E>, LinkT<T, I, E>,
+    MessageT<T, I, E>, NocontextT<T, I, E>, NontemporalT<T, I, E>,
+    NovariantsT<T, I, E>, NumTeamsT<T, I, E>, NumThreadsT<T, I, E>,
+    OrderedT<T, I, E>, PartialT<T, I, E>, PriorityT<T, I, E>, PrivateT<T, I, E>,
     ProcBindT<T, I, E>, ReverseOffloadT<T, I, E>, SafelenT<T, I, E>,
     SelfMapsT<T, I, E>, SeverityT<T, I, E>, SharedT<T, I, E>, SimdlenT<T, I, E>,
     SizesT<T, I, E>, PermutationT<T, I, E>, ThreadLimitT<T, I, E>,
