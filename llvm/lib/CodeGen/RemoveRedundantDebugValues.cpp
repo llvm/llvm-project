@@ -67,10 +67,7 @@ INITIALIZE_PASS(RemoveRedundantDebugValuesLegacy, DEBUG_TYPE,
 
 /// Default construct and initialize the pass.
 RemoveRedundantDebugValuesLegacy::RemoveRedundantDebugValuesLegacy()
-    : MachineFunctionPass(ID) {
-  initializeRemoveRedundantDebugValuesLegacyPass(
-      *PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 // This analysis aims to remove redundant DBG_VALUEs by going forward
 // in the basic block by considering the first DBG_VALUE as a valid
