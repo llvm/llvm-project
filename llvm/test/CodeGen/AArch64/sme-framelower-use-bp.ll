@@ -3,8 +3,8 @@
 
 target triple = "aarch64-linux-gnu"
 
-; This test checks that with only +sme set with set up the base-pointer (x19) in
-; functions with dynamic allocas and SVE stack objects.
+; This test checks that with only +sme (no SVE), LLVM sets up the base-pointer
+; (x19) in functions with dynamic allocas and SVE stack objects.
 
 define void @quux(i64 %n) "aarch64_new_za" "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: quux:
