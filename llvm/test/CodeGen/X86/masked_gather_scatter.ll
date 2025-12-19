@@ -648,28 +648,29 @@ declare <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr>, i32, <2 x i1>, <2
 define <4 x float> @test15(ptr %base, <4 x i32> %ind, <4 x i1> %mask) {
 ; X64-KNL-LABEL: test15:
 ; X64-KNL:       # %bb.0:
+; X64-KNL-NEXT:    vpslld $31, %xmm1, %xmm1
+; X64-KNL-NEXT:    vptestmd %zmm1, %zmm1, %k0
 ; X64-KNL-NEXT:    vpmovsxdq %xmm0, %ymm0
 ; X64-KNL-NEXT:    vpsllq $2, %ymm0, %ymm0
-; X64-KNL-NEXT:    vmovq %rdi, %xmm2
-; X64-KNL-NEXT:    vpbroadcastq %xmm2, %ymm2
-; X64-KNL-NEXT:    vpaddq %ymm0, %ymm2, %ymm2
-; X64-KNL-NEXT:    vpslld $31, %xmm1, %xmm0
-; X64-KNL-NEXT:    vmovmskps %xmm0, %eax
+; X64-KNL-NEXT:    vmovq %rdi, %xmm1
+; X64-KNL-NEXT:    vpbroadcastq %xmm1, %ymm1
+; X64-KNL-NEXT:    vpaddq %ymm0, %ymm1, %ymm1
+; X64-KNL-NEXT:    kmovw %k0, %eax
 ; X64-KNL-NEXT:    testb $1, %al
 ; X64-KNL-NEXT:    # implicit-def: $xmm0
 ; X64-KNL-NEXT:    je .LBB14_2
 ; X64-KNL-NEXT:  # %bb.1: # %cond.load
-; X64-KNL-NEXT:    vmovq %xmm2, %rcx
+; X64-KNL-NEXT:    vmovq %xmm1, %rcx
 ; X64-KNL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-KNL-NEXT:  .LBB14_2: # %else
 ; X64-KNL-NEXT:    testb $2, %al
 ; X64-KNL-NEXT:    je .LBB14_4
 ; X64-KNL-NEXT:  # %bb.3: # %cond.load1
-; X64-KNL-NEXT:    vpextrq $1, %xmm2, %rcx
+; X64-KNL-NEXT:    vpextrq $1, %xmm1, %rcx
 ; X64-KNL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; X64-KNL-NEXT:  .LBB14_4: # %else2
 ; X64-KNL-NEXT:    testb $4, %al
-; X64-KNL-NEXT:    vextracti128 $1, %ymm2, %xmm1
+; X64-KNL-NEXT:    vextracti128 $1, %ymm1, %xmm1
 ; X64-KNL-NEXT:    jne .LBB14_5
 ; X64-KNL-NEXT:  # %bb.6: # %else5
 ; X64-KNL-NEXT:    testb $8, %al
@@ -690,11 +691,12 @@ define <4 x float> @test15(ptr %base, <4 x i32> %ind, <4 x i1> %mask) {
 ;
 ; X86-KNL-LABEL: test15:
 ; X86-KNL:       # %bb.0:
+; X86-KNL-NEXT:    vpslld $31, %xmm1, %xmm1
+; X86-KNL-NEXT:    vptestmd %zmm1, %zmm1, %k0
 ; X86-KNL-NEXT:    vpslld $2, %xmm0, %xmm0
-; X86-KNL-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %xmm2
-; X86-KNL-NEXT:    vpaddd %xmm0, %xmm2, %xmm2
-; X86-KNL-NEXT:    vpslld $31, %xmm1, %xmm0
-; X86-KNL-NEXT:    vmovmskps %xmm0, %eax
+; X86-KNL-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %xmm1
+; X86-KNL-NEXT:    vpaddd %xmm0, %xmm1, %xmm1
+; X86-KNL-NEXT:    kmovw %k0, %eax
 ; X86-KNL-NEXT:    testb $1, %al
 ; X86-KNL-NEXT:    # implicit-def: $xmm0
 ; X86-KNL-NEXT:    jne .LBB14_1
@@ -708,25 +710,27 @@ define <4 x float> @test15(ptr %base, <4 x i32> %ind, <4 x i1> %mask) {
 ; X86-KNL-NEXT:    testb $8, %al
 ; X86-KNL-NEXT:    jne .LBB14_7
 ; X86-KNL-NEXT:  .LBB14_8: # %else8
+; X86-KNL-NEXT:    vzeroupper
 ; X86-KNL-NEXT:    retl
 ; X86-KNL-NEXT:  .LBB14_1: # %cond.load
-; X86-KNL-NEXT:    vmovd %xmm2, %ecx
+; X86-KNL-NEXT:    vmovd %xmm1, %ecx
 ; X86-KNL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-KNL-NEXT:    testb $2, %al
 ; X86-KNL-NEXT:    je .LBB14_4
 ; X86-KNL-NEXT:  .LBB14_3: # %cond.load1
-; X86-KNL-NEXT:    vpextrd $1, %xmm2, %ecx
+; X86-KNL-NEXT:    vpextrd $1, %xmm1, %ecx
 ; X86-KNL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; X86-KNL-NEXT:    testb $4, %al
 ; X86-KNL-NEXT:    je .LBB14_6
 ; X86-KNL-NEXT:  .LBB14_5: # %cond.load4
-; X86-KNL-NEXT:    vpextrd $2, %xmm2, %ecx
+; X86-KNL-NEXT:    vpextrd $2, %xmm1, %ecx
 ; X86-KNL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; X86-KNL-NEXT:    testb $8, %al
 ; X86-KNL-NEXT:    je .LBB14_8
 ; X86-KNL-NEXT:  .LBB14_7: # %cond.load7
-; X86-KNL-NEXT:    vpextrd $3, %xmm2, %eax
+; X86-KNL-NEXT:    vpextrd $3, %xmm1, %eax
 ; X86-KNL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; X86-KNL-NEXT:    vzeroupper
 ; X86-KNL-NEXT:    retl
 ;
 ; X64-SKX-LABEL: test15:
@@ -757,26 +761,27 @@ define <4 x float> @test15(ptr %base, <4 x i32> %ind, <4 x i1> %mask) {
 define <4 x double> @test16(ptr %base, <4 x i32> %ind, <4 x i1> %mask, <4 x double> %src0) {
 ; X64-KNL-LABEL: test16:
 ; X64-KNL:       # %bb.0:
+; X64-KNL-NEXT:    vpslld $31, %xmm1, %xmm1
+; X64-KNL-NEXT:    vptestmd %zmm1, %zmm1, %k0
 ; X64-KNL-NEXT:    vpmovsxdq %xmm0, %ymm0
 ; X64-KNL-NEXT:    vpsllq $3, %ymm0, %ymm0
-; X64-KNL-NEXT:    vmovq %rdi, %xmm3
-; X64-KNL-NEXT:    vpbroadcastq %xmm3, %ymm3
-; X64-KNL-NEXT:    vpaddq %ymm0, %ymm3, %ymm0
-; X64-KNL-NEXT:    vpslld $31, %xmm1, %xmm1
-; X64-KNL-NEXT:    vmovmskps %xmm1, %eax
+; X64-KNL-NEXT:    vmovq %rdi, %xmm1
+; X64-KNL-NEXT:    vpbroadcastq %xmm1, %ymm1
+; X64-KNL-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
+; X64-KNL-NEXT:    kmovw %k0, %eax
 ; X64-KNL-NEXT:    testb $1, %al
 ; X64-KNL-NEXT:    je .LBB15_2
 ; X64-KNL-NEXT:  # %bb.1: # %cond.load
 ; X64-KNL-NEXT:    vmovq %xmm0, %rcx
-; X64-KNL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; X64-KNL-NEXT:    vblendps {{.*#+}} ymm2 = ymm1[0,1],ymm2[2,3,4,5,6,7]
+; X64-KNL-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; X64-KNL-NEXT:    vpblendd {{.*#+}} ymm2 = ymm1[0,1],ymm2[2,3,4,5,6,7]
 ; X64-KNL-NEXT:  .LBB15_2: # %else
 ; X64-KNL-NEXT:    testb $2, %al
 ; X64-KNL-NEXT:    je .LBB15_4
 ; X64-KNL-NEXT:  # %bb.3: # %cond.load1
 ; X64-KNL-NEXT:    vpextrq $1, %xmm0, %rcx
 ; X64-KNL-NEXT:    vmovhps {{.*#+}} xmm1 = xmm2[0,1],mem[0,1]
-; X64-KNL-NEXT:    vblendps {{.*#+}} ymm2 = ymm1[0,1,2,3],ymm2[4,5,6,7]
+; X64-KNL-NEXT:    vpblendd {{.*#+}} ymm2 = ymm1[0,1,2,3],ymm2[4,5,6,7]
 ; X64-KNL-NEXT:  .LBB15_4: # %else2
 ; X64-KNL-NEXT:    testb $4, %al
 ; X64-KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
@@ -785,28 +790,29 @@ define <4 x double> @test16(ptr %base, <4 x i32> %ind, <4 x i1> %mask, <4 x doub
 ; X64-KNL-NEXT:    testb $8, %al
 ; X64-KNL-NEXT:    jne .LBB15_7
 ; X64-KNL-NEXT:  .LBB15_8: # %else8
-; X64-KNL-NEXT:    vmovaps %ymm2, %ymm0
+; X64-KNL-NEXT:    vmovdqa %ymm2, %ymm0
 ; X64-KNL-NEXT:    retq
 ; X64-KNL-NEXT:  .LBB15_5: # %cond.load4
 ; X64-KNL-NEXT:    vmovq %xmm0, %rcx
-; X64-KNL-NEXT:    vbroadcastsd (%rcx), %ymm1
-; X64-KNL-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm1[4,5],ymm2[6,7]
+; X64-KNL-NEXT:    vpbroadcastq (%rcx), %ymm1
+; X64-KNL-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm1[4,5],ymm2[6,7]
 ; X64-KNL-NEXT:    testb $8, %al
 ; X64-KNL-NEXT:    je .LBB15_8
 ; X64-KNL-NEXT:  .LBB15_7: # %cond.load7
 ; X64-KNL-NEXT:    vpextrq $1, %xmm0, %rax
-; X64-KNL-NEXT:    vbroadcastsd (%rax), %ymm0
-; X64-KNL-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1,2,3,4,5],ymm0[6,7]
-; X64-KNL-NEXT:    vmovaps %ymm2, %ymm0
+; X64-KNL-NEXT:    vpbroadcastq (%rax), %ymm0
+; X64-KNL-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3,4,5],ymm0[6,7]
+; X64-KNL-NEXT:    vmovdqa %ymm2, %ymm0
 ; X64-KNL-NEXT:    retq
 ;
 ; X86-KNL-LABEL: test16:
 ; X86-KNL:       # %bb.0:
-; X86-KNL-NEXT:    vpslld $3, %xmm0, %xmm0
-; X86-KNL-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %xmm3
-; X86-KNL-NEXT:    vpaddd %xmm0, %xmm3, %xmm0
 ; X86-KNL-NEXT:    vpslld $31, %xmm1, %xmm1
-; X86-KNL-NEXT:    vmovmskps %xmm1, %eax
+; X86-KNL-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; X86-KNL-NEXT:    vpslld $3, %xmm0, %xmm0
+; X86-KNL-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %xmm1
+; X86-KNL-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; X86-KNL-NEXT:    kmovw %k0, %eax
 ; X86-KNL-NEXT:    testb $1, %al
 ; X86-KNL-NEXT:    jne .LBB15_1
 ; X86-KNL-NEXT:  # %bb.2: # %else
@@ -819,31 +825,31 @@ define <4 x double> @test16(ptr %base, <4 x i32> %ind, <4 x i1> %mask, <4 x doub
 ; X86-KNL-NEXT:    testb $8, %al
 ; X86-KNL-NEXT:    jne .LBB15_7
 ; X86-KNL-NEXT:  .LBB15_8: # %else8
-; X86-KNL-NEXT:    vmovaps %ymm2, %ymm0
+; X86-KNL-NEXT:    vmovdqa %ymm2, %ymm0
 ; X86-KNL-NEXT:    retl
 ; X86-KNL-NEXT:  .LBB15_1: # %cond.load
 ; X86-KNL-NEXT:    vmovd %xmm0, %ecx
-; X86-KNL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; X86-KNL-NEXT:    vblendps {{.*#+}} ymm2 = ymm1[0,1],ymm2[2,3,4,5,6,7]
+; X86-KNL-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; X86-KNL-NEXT:    vpblendd {{.*#+}} ymm2 = ymm1[0,1],ymm2[2,3,4,5,6,7]
 ; X86-KNL-NEXT:    testb $2, %al
 ; X86-KNL-NEXT:    je .LBB15_4
 ; X86-KNL-NEXT:  .LBB15_3: # %cond.load1
 ; X86-KNL-NEXT:    vpextrd $1, %xmm0, %ecx
 ; X86-KNL-NEXT:    vmovhps {{.*#+}} xmm1 = xmm2[0,1],mem[0,1]
-; X86-KNL-NEXT:    vblendps {{.*#+}} ymm2 = ymm1[0,1,2,3],ymm2[4,5,6,7]
+; X86-KNL-NEXT:    vpblendd {{.*#+}} ymm2 = ymm1[0,1,2,3],ymm2[4,5,6,7]
 ; X86-KNL-NEXT:    testb $4, %al
 ; X86-KNL-NEXT:    je .LBB15_6
 ; X86-KNL-NEXT:  .LBB15_5: # %cond.load4
 ; X86-KNL-NEXT:    vpextrd $2, %xmm0, %ecx
-; X86-KNL-NEXT:    vbroadcastsd (%ecx), %ymm1
-; X86-KNL-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm1[4,5],ymm2[6,7]
+; X86-KNL-NEXT:    vpbroadcastq (%ecx), %ymm1
+; X86-KNL-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm1[4,5],ymm2[6,7]
 ; X86-KNL-NEXT:    testb $8, %al
 ; X86-KNL-NEXT:    je .LBB15_8
 ; X86-KNL-NEXT:  .LBB15_7: # %cond.load7
 ; X86-KNL-NEXT:    vpextrd $3, %xmm0, %eax
-; X86-KNL-NEXT:    vbroadcastsd (%eax), %ymm0
-; X86-KNL-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1,2,3,4,5],ymm0[6,7]
-; X86-KNL-NEXT:    vmovaps %ymm2, %ymm0
+; X86-KNL-NEXT:    vpbroadcastq (%eax), %ymm0
+; X86-KNL-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3,4,5],ymm0[6,7]
+; X86-KNL-NEXT:    vmovdqa %ymm2, %ymm0
 ; X86-KNL-NEXT:    retl
 ;
 ; X64-SKX-LABEL: test16:
@@ -998,7 +1004,8 @@ define void @test18(<4 x i32>%a1, <4 x ptr> %ptr, <4 x i1>%mask) {
 ; X64-KNL-LABEL: test18:
 ; X64-KNL:       # %bb.0:
 ; X64-KNL-NEXT:    vpslld $31, %xmm2, %xmm2
-; X64-KNL-NEXT:    vmovmskps %xmm2, %eax
+; X64-KNL-NEXT:    vptestmd %zmm2, %zmm2, %k0
+; X64-KNL-NEXT:    kmovw %k0, %eax
 ; X64-KNL-NEXT:    testb $1, %al
 ; X64-KNL-NEXT:    je .LBB17_2
 ; X64-KNL-NEXT:  # %bb.1: # %cond.store
@@ -1034,7 +1041,8 @@ define void @test18(<4 x i32>%a1, <4 x ptr> %ptr, <4 x i1>%mask) {
 ; X86-KNL-LABEL: test18:
 ; X86-KNL:       # %bb.0:
 ; X86-KNL-NEXT:    vpslld $31, %xmm2, %xmm2
-; X86-KNL-NEXT:    vmovmskps %xmm2, %eax
+; X86-KNL-NEXT:    vptestmd %zmm2, %zmm2, %k0
+; X86-KNL-NEXT:    kmovw %k0, %eax
 ; X86-KNL-NEXT:    testb $1, %al
 ; X86-KNL-NEXT:    jne .LBB17_1
 ; X86-KNL-NEXT:  # %bb.2: # %else
@@ -1047,6 +1055,7 @@ define void @test18(<4 x i32>%a1, <4 x ptr> %ptr, <4 x i1>%mask) {
 ; X86-KNL-NEXT:    testb $8, %al
 ; X86-KNL-NEXT:    jne .LBB17_7
 ; X86-KNL-NEXT:  .LBB17_8: # %else6
+; X86-KNL-NEXT:    vzeroupper
 ; X86-KNL-NEXT:    retl
 ; X86-KNL-NEXT:  .LBB17_1: # %cond.store
 ; X86-KNL-NEXT:    vmovd %xmm1, %ecx
@@ -1066,6 +1075,7 @@ define void @test18(<4 x i32>%a1, <4 x ptr> %ptr, <4 x i1>%mask) {
 ; X86-KNL-NEXT:  .LBB17_7: # %cond.store5
 ; X86-KNL-NEXT:    vpextrd $3, %xmm1, %eax
 ; X86-KNL-NEXT:    vextractps $3, %xmm0, (%eax)
+; X86-KNL-NEXT:    vzeroupper
 ; X86-KNL-NEXT:    retl
 ;
 ; X64-SKX-LABEL: test18:
@@ -1089,27 +1099,28 @@ define void @test18(<4 x i32>%a1, <4 x ptr> %ptr, <4 x i1>%mask) {
 define void @test19(<4 x double>%a1, ptr %ptr, <4 x i1>%mask, <4 x i64> %ind) {
 ; X64-KNL-LABEL: test19:
 ; X64-KNL:       # %bb.0:
-; X64-KNL-NEXT:    vpsllq $3, %ymm2, %ymm2
-; X64-KNL-NEXT:    vmovq %rdi, %xmm3
-; X64-KNL-NEXT:    vpbroadcastq %xmm3, %ymm3
-; X64-KNL-NEXT:    vpaddq %ymm2, %ymm3, %ymm2
 ; X64-KNL-NEXT:    vpslld $31, %xmm1, %xmm1
-; X64-KNL-NEXT:    vmovmskps %xmm1, %eax
+; X64-KNL-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; X64-KNL-NEXT:    vpsllq $3, %ymm2, %ymm1
+; X64-KNL-NEXT:    vmovq %rdi, %xmm2
+; X64-KNL-NEXT:    vpbroadcastq %xmm2, %ymm2
+; X64-KNL-NEXT:    vpaddq %ymm1, %ymm2, %ymm1
+; X64-KNL-NEXT:    kmovw %k0, %eax
 ; X64-KNL-NEXT:    testb $1, %al
 ; X64-KNL-NEXT:    je .LBB18_2
 ; X64-KNL-NEXT:  # %bb.1: # %cond.store
-; X64-KNL-NEXT:    vmovq %xmm2, %rcx
+; X64-KNL-NEXT:    vmovq %xmm1, %rcx
 ; X64-KNL-NEXT:    vmovlps %xmm0, (%rcx)
 ; X64-KNL-NEXT:  .LBB18_2: # %else
 ; X64-KNL-NEXT:    testb $2, %al
 ; X64-KNL-NEXT:    je .LBB18_4
 ; X64-KNL-NEXT:  # %bb.3: # %cond.store1
-; X64-KNL-NEXT:    vpextrq $1, %xmm2, %rcx
+; X64-KNL-NEXT:    vpextrq $1, %xmm1, %rcx
 ; X64-KNL-NEXT:    vmovhps %xmm0, (%rcx)
 ; X64-KNL-NEXT:  .LBB18_4: # %else2
 ; X64-KNL-NEXT:    testb $4, %al
 ; X64-KNL-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; X64-KNL-NEXT:    vextracti128 $1, %ymm2, %xmm1
+; X64-KNL-NEXT:    vextracti128 $1, %ymm1, %xmm1
 ; X64-KNL-NEXT:    jne .LBB18_5
 ; X64-KNL-NEXT:  # %bb.6: # %else4
 ; X64-KNL-NEXT:    testb $8, %al
@@ -1131,22 +1142,23 @@ define void @test19(<4 x double>%a1, ptr %ptr, <4 x i1>%mask, <4 x i64> %ind) {
 ; X86-KNL-LABEL: test19:
 ; X86-KNL:       # %bb.0:
 ; X86-KNL-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
-; X86-KNL-NEXT:    vpmovqd %zmm2, %ymm2
-; X86-KNL-NEXT:    vpslld $3, %xmm2, %xmm2
-; X86-KNL-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %xmm3
-; X86-KNL-NEXT:    vpaddd %xmm2, %xmm3, %xmm2
 ; X86-KNL-NEXT:    vpslld $31, %xmm1, %xmm1
-; X86-KNL-NEXT:    vmovmskps %xmm1, %eax
+; X86-KNL-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; X86-KNL-NEXT:    vpmovqd %zmm2, %ymm1
+; X86-KNL-NEXT:    vpslld $3, %xmm1, %xmm1
+; X86-KNL-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %xmm2
+; X86-KNL-NEXT:    vpaddd %xmm1, %xmm2, %xmm1
+; X86-KNL-NEXT:    kmovw %k0, %eax
 ; X86-KNL-NEXT:    testb $1, %al
 ; X86-KNL-NEXT:    je .LBB18_2
 ; X86-KNL-NEXT:  # %bb.1: # %cond.store
-; X86-KNL-NEXT:    vmovd %xmm2, %ecx
+; X86-KNL-NEXT:    vmovd %xmm1, %ecx
 ; X86-KNL-NEXT:    vmovlps %xmm0, (%ecx)
 ; X86-KNL-NEXT:  .LBB18_2: # %else
 ; X86-KNL-NEXT:    testb $2, %al
 ; X86-KNL-NEXT:    je .LBB18_4
 ; X86-KNL-NEXT:  # %bb.3: # %cond.store1
-; X86-KNL-NEXT:    vpextrd $1, %xmm2, %ecx
+; X86-KNL-NEXT:    vpextrd $1, %xmm1, %ecx
 ; X86-KNL-NEXT:    vmovhps %xmm0, (%ecx)
 ; X86-KNL-NEXT:  .LBB18_4: # %else2
 ; X86-KNL-NEXT:    testb $4, %al
@@ -1159,12 +1171,12 @@ define void @test19(<4 x double>%a1, ptr %ptr, <4 x i1>%mask, <4 x i64> %ind) {
 ; X86-KNL-NEXT:    vzeroupper
 ; X86-KNL-NEXT:    retl
 ; X86-KNL-NEXT:  .LBB18_5: # %cond.store3
-; X86-KNL-NEXT:    vpextrd $2, %xmm2, %ecx
+; X86-KNL-NEXT:    vpextrd $2, %xmm1, %ecx
 ; X86-KNL-NEXT:    vmovlps %xmm0, (%ecx)
 ; X86-KNL-NEXT:    testb $8, %al
 ; X86-KNL-NEXT:    je .LBB18_8
 ; X86-KNL-NEXT:  .LBB18_7: # %cond.store5
-; X86-KNL-NEXT:    vpextrd $3, %xmm2, %eax
+; X86-KNL-NEXT:    vpextrd $3, %xmm1, %eax
 ; X86-KNL-NEXT:    vmovhps %xmm0, (%eax)
 ; X86-KNL-NEXT:    vzeroupper
 ; X86-KNL-NEXT:    retl
@@ -4414,24 +4426,25 @@ define void @scatter_16i64_constant_indices(ptr %ptr, <16 x i1> %mask, <16 x i32
 define <4 x i32> @splat_ptr_gather(ptr %ptr, <4 x i1> %mask, <4 x i32> %passthru) {
 ; X64-KNL-LABEL: splat_ptr_gather:
 ; X64-KNL:       # %bb.0:
-; X64-KNL-NEXT:    vmovq %rdi, %xmm2
-; X64-KNL-NEXT:    vpbroadcastq %xmm2, %ymm2
 ; X64-KNL-NEXT:    vpslld $31, %xmm0, %xmm0
-; X64-KNL-NEXT:    vmovmskps %xmm0, %eax
+; X64-KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; X64-KNL-NEXT:    vmovq %rdi, %xmm0
+; X64-KNL-NEXT:    vpbroadcastq %xmm0, %ymm0
+; X64-KNL-NEXT:    kmovw %k0, %eax
 ; X64-KNL-NEXT:    testb $1, %al
 ; X64-KNL-NEXT:    je .LBB62_2
 ; X64-KNL-NEXT:  # %bb.1: # %cond.load
-; X64-KNL-NEXT:    vmovq %xmm2, %rcx
+; X64-KNL-NEXT:    vmovq %xmm0, %rcx
 ; X64-KNL-NEXT:    vpinsrd $0, (%rcx), %xmm1, %xmm1
 ; X64-KNL-NEXT:  .LBB62_2: # %else
 ; X64-KNL-NEXT:    testb $2, %al
 ; X64-KNL-NEXT:    je .LBB62_4
 ; X64-KNL-NEXT:  # %bb.3: # %cond.load1
-; X64-KNL-NEXT:    vpextrq $1, %xmm2, %rcx
+; X64-KNL-NEXT:    vpextrq $1, %xmm0, %rcx
 ; X64-KNL-NEXT:    vpinsrd $1, (%rcx), %xmm1, %xmm1
 ; X64-KNL-NEXT:  .LBB62_4: # %else2
 ; X64-KNL-NEXT:    testb $4, %al
-; X64-KNL-NEXT:    vextracti128 $1, %ymm2, %xmm0
+; X64-KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; X64-KNL-NEXT:    jne .LBB62_5
 ; X64-KNL-NEXT:  # %bb.6: # %else5
 ; X64-KNL-NEXT:    testb $8, %al
@@ -4454,9 +4467,10 @@ define <4 x i32> @splat_ptr_gather(ptr %ptr, <4 x i1> %mask, <4 x i32> %passthru
 ;
 ; X86-KNL-LABEL: splat_ptr_gather:
 ; X86-KNL:       # %bb.0:
-; X86-KNL-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %xmm2
 ; X86-KNL-NEXT:    vpslld $31, %xmm0, %xmm0
-; X86-KNL-NEXT:    vmovmskps %xmm0, %eax
+; X86-KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; X86-KNL-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %xmm0
+; X86-KNL-NEXT:    kmovw %k0, %eax
 ; X86-KNL-NEXT:    testb $1, %al
 ; X86-KNL-NEXT:    jne .LBB62_1
 ; X86-KNL-NEXT:  # %bb.2: # %else
@@ -4470,26 +4484,28 @@ define <4 x i32> @splat_ptr_gather(ptr %ptr, <4 x i1> %mask, <4 x i32> %passthru
 ; X86-KNL-NEXT:    jne .LBB62_7
 ; X86-KNL-NEXT:  .LBB62_8: # %else8
 ; X86-KNL-NEXT:    vmovdqa %xmm1, %xmm0
+; X86-KNL-NEXT:    vzeroupper
 ; X86-KNL-NEXT:    retl
 ; X86-KNL-NEXT:  .LBB62_1: # %cond.load
-; X86-KNL-NEXT:    vmovd %xmm2, %ecx
+; X86-KNL-NEXT:    vmovd %xmm0, %ecx
 ; X86-KNL-NEXT:    vpinsrd $0, (%ecx), %xmm1, %xmm1
 ; X86-KNL-NEXT:    testb $2, %al
 ; X86-KNL-NEXT:    je .LBB62_4
 ; X86-KNL-NEXT:  .LBB62_3: # %cond.load1
-; X86-KNL-NEXT:    vpextrd $1, %xmm2, %ecx
+; X86-KNL-NEXT:    vpextrd $1, %xmm0, %ecx
 ; X86-KNL-NEXT:    vpinsrd $1, (%ecx), %xmm1, %xmm1
 ; X86-KNL-NEXT:    testb $4, %al
 ; X86-KNL-NEXT:    je .LBB62_6
 ; X86-KNL-NEXT:  .LBB62_5: # %cond.load4
-; X86-KNL-NEXT:    vpextrd $2, %xmm2, %ecx
+; X86-KNL-NEXT:    vpextrd $2, %xmm0, %ecx
 ; X86-KNL-NEXT:    vpinsrd $2, (%ecx), %xmm1, %xmm1
 ; X86-KNL-NEXT:    testb $8, %al
 ; X86-KNL-NEXT:    je .LBB62_8
 ; X86-KNL-NEXT:  .LBB62_7: # %cond.load7
-; X86-KNL-NEXT:    vpextrd $3, %xmm2, %eax
+; X86-KNL-NEXT:    vpextrd $3, %xmm0, %eax
 ; X86-KNL-NEXT:    vpinsrd $3, (%eax), %xmm1, %xmm1
 ; X86-KNL-NEXT:    vmovdqa %xmm1, %xmm0
+; X86-KNL-NEXT:    vzeroupper
 ; X86-KNL-NEXT:    retl
 ;
 ; X64-SKX-LABEL: splat_ptr_gather:
@@ -4520,24 +4536,25 @@ declare  <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x
 define void @splat_ptr_scatter(ptr %ptr, <4 x i1> %mask, <4 x i32> %val) {
 ; X64-KNL-LABEL: splat_ptr_scatter:
 ; X64-KNL:       # %bb.0:
-; X64-KNL-NEXT:    vmovq %rdi, %xmm2
-; X64-KNL-NEXT:    vpbroadcastq %xmm2, %ymm2
 ; X64-KNL-NEXT:    vpslld $31, %xmm0, %xmm0
-; X64-KNL-NEXT:    vmovmskps %xmm0, %eax
+; X64-KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; X64-KNL-NEXT:    vmovq %rdi, %xmm0
+; X64-KNL-NEXT:    vpbroadcastq %xmm0, %ymm0
+; X64-KNL-NEXT:    kmovw %k0, %eax
 ; X64-KNL-NEXT:    testb $1, %al
 ; X64-KNL-NEXT:    je .LBB63_2
 ; X64-KNL-NEXT:  # %bb.1: # %cond.store
-; X64-KNL-NEXT:    vmovq %xmm2, %rcx
+; X64-KNL-NEXT:    vmovq %xmm0, %rcx
 ; X64-KNL-NEXT:    vmovss %xmm1, (%rcx)
 ; X64-KNL-NEXT:  .LBB63_2: # %else
 ; X64-KNL-NEXT:    testb $2, %al
 ; X64-KNL-NEXT:    je .LBB63_4
 ; X64-KNL-NEXT:  # %bb.3: # %cond.store1
-; X64-KNL-NEXT:    vpextrq $1, %xmm2, %rcx
+; X64-KNL-NEXT:    vpextrq $1, %xmm0, %rcx
 ; X64-KNL-NEXT:    vextractps $1, %xmm1, (%rcx)
 ; X64-KNL-NEXT:  .LBB63_4: # %else2
 ; X64-KNL-NEXT:    testb $4, %al
-; X64-KNL-NEXT:    vextracti128 $1, %ymm2, %xmm0
+; X64-KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; X64-KNL-NEXT:    jne .LBB63_5
 ; X64-KNL-NEXT:  # %bb.6: # %else4
 ; X64-KNL-NEXT:    testb $8, %al
@@ -4558,9 +4575,10 @@ define void @splat_ptr_scatter(ptr %ptr, <4 x i1> %mask, <4 x i32> %val) {
 ;
 ; X86-KNL-LABEL: splat_ptr_scatter:
 ; X86-KNL:       # %bb.0:
-; X86-KNL-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %xmm2
 ; X86-KNL-NEXT:    vpslld $31, %xmm0, %xmm0
-; X86-KNL-NEXT:    vmovmskps %xmm0, %eax
+; X86-KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; X86-KNL-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %xmm0
+; X86-KNL-NEXT:    kmovw %k0, %eax
 ; X86-KNL-NEXT:    testb $1, %al
 ; X86-KNL-NEXT:    jne .LBB63_1
 ; X86-KNL-NEXT:  # %bb.2: # %else
@@ -4573,25 +4591,27 @@ define void @splat_ptr_scatter(ptr %ptr, <4 x i1> %mask, <4 x i32> %val) {
 ; X86-KNL-NEXT:    testb $8, %al
 ; X86-KNL-NEXT:    jne .LBB63_7
 ; X86-KNL-NEXT:  .LBB63_8: # %else6
+; X86-KNL-NEXT:    vzeroupper
 ; X86-KNL-NEXT:    retl
 ; X86-KNL-NEXT:  .LBB63_1: # %cond.store
-; X86-KNL-NEXT:    vmovd %xmm2, %ecx
+; X86-KNL-NEXT:    vmovd %xmm0, %ecx
 ; X86-KNL-NEXT:    vmovss %xmm1, (%ecx)
 ; X86-KNL-NEXT:    testb $2, %al
 ; X86-KNL-NEXT:    je .LBB63_4
 ; X86-KNL-NEXT:  .LBB63_3: # %cond.store1
-; X86-KNL-NEXT:    vpextrd $1, %xmm2, %ecx
+; X86-KNL-NEXT:    vpextrd $1, %xmm0, %ecx
 ; X86-KNL-NEXT:    vextractps $1, %xmm1, (%ecx)
 ; X86-KNL-NEXT:    testb $4, %al
 ; X86-KNL-NEXT:    je .LBB63_6
 ; X86-KNL-NEXT:  .LBB63_5: # %cond.store3
-; X86-KNL-NEXT:    vpextrd $2, %xmm2, %ecx
+; X86-KNL-NEXT:    vpextrd $2, %xmm0, %ecx
 ; X86-KNL-NEXT:    vextractps $2, %xmm1, (%ecx)
 ; X86-KNL-NEXT:    testb $8, %al
 ; X86-KNL-NEXT:    je .LBB63_8
 ; X86-KNL-NEXT:  .LBB63_7: # %cond.store5
-; X86-KNL-NEXT:    vpextrd $3, %xmm2, %eax
+; X86-KNL-NEXT:    vpextrd $3, %xmm0, %eax
 ; X86-KNL-NEXT:    vextractps $3, %xmm1, (%eax)
+; X86-KNL-NEXT:    vzeroupper
 ; X86-KNL-NEXT:    retl
 ;
 ; X64-SKX-LABEL: splat_ptr_scatter:

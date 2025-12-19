@@ -45612,15 +45612,14 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
     }
   }
 
-  // If the input is a truncate from a small vector type (v16i8, v32i8, v64i8,
-  // v4i32, v8i32), prefer using movmsk instructions (vmovmskb, vmovmskps)
-  // even with avx512 instead of converting to vXi1 and using kmov.
+  // If the input is a truncate from v16i8 or v32i8 go ahead and use a
+  // movmskb even with avx512. This will be better than truncating to vXi1 and
+  // using a kmov. This can especially help KNL if the input is a v16i8/v32i8
+  // vpcmpeqb/vpcmpgtb.
   bool PreferMovMsk = Src.getOpcode() == ISD::TRUNCATE && Src.hasOneUse() &&
                       (Src.getOperand(0).getValueType() == MVT::v16i8 ||
                        Src.getOperand(0).getValueType() == MVT::v32i8 ||
-                       Src.getOperand(0).getValueType() == MVT::v64i8 ||
-                       Src.getOperand(0).getValueType() == MVT::v4i32 ||
-                       Src.getOperand(0).getValueType() == MVT::v8i32);
+                       Src.getOperand(0).getValueType() == MVT::v64i8);
 
   // Prefer movmsk for AVX512 for (bitcast (setlt X, 0)) which can be handled
   // directly with vpmovmskb/vmovmskps/vmovmskpd.

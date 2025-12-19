@@ -79,13 +79,34 @@ define i1 @trunc_v4i32_v4i1(<4 x i32>) nounwind {
 ; AVX-NEXT:    setnp %al
 ; AVX-NEXT:    retq
 ;
-; AVX512-LABEL: trunc_v4i32_v4i1:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX512-NEXT:    vmovmskps %xmm0, %eax
-; AVX512-NEXT:    testb %al, %al
-; AVX512-NEXT:    setnp %al
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: trunc_v4i32_v4i1:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    testb $15, %al
+; AVX512F-NEXT:    setnp %al
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: trunc_v4i32_v4i1:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX512BW-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    testb $15, %al
+; AVX512BW-NEXT:    setnp %al
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512VL-LABEL: trunc_v4i32_v4i1:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX512VL-NEXT:    vptestmd %xmm0, %xmm0, %k0
+; AVX512VL-NEXT:    kmovd %k0, %eax
+; AVX512VL-NEXT:    testb %al, %al
+; AVX512VL-NEXT:    setnp %al
+; AVX512VL-NEXT:    retq
   %a = trunc <4 x i32> %0 to <4 x i1>
   %b = call i1 @llvm.vector.reduce.xor.v4i1(<4 x i1> %a)
   ret i1 %b
@@ -286,14 +307,35 @@ define i1 @trunc_v8i32_v8i1(<8 x i32>) nounwind {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: trunc_v8i32_v8i1:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpslld $31, %ymm0, %ymm0
-; AVX512-NEXT:    vmovmskps %ymm0, %eax
-; AVX512-NEXT:    testb %al, %al
-; AVX512-NEXT:    setnp %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: trunc_v8i32_v8i1:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpslld $31, %ymm0, %ymm0
+; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    testb %al, %al
+; AVX512F-NEXT:    setnp %al
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: trunc_v8i32_v8i1:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpslld $31, %ymm0, %ymm0
+; AVX512BW-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    testb %al, %al
+; AVX512BW-NEXT:    setnp %al
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512VL-LABEL: trunc_v8i32_v8i1:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpslld $31, %ymm0, %ymm0
+; AVX512VL-NEXT:    vptestmd %ymm0, %ymm0, %k0
+; AVX512VL-NEXT:    kmovd %k0, %eax
+; AVX512VL-NEXT:    testb %al, %al
+; AVX512VL-NEXT:    setnp %al
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
   %a = trunc <8 x i32> %0 to <8 x i1>
   %b = call i1 @llvm.vector.reduce.xor.v8i1(<8 x i1> %a)
   ret i1 %b
