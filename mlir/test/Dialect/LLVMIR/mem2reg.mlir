@@ -906,8 +906,8 @@ llvm.func @impossible_load() -> f64 {
 // with different bitsize.
 
 module attributes { dlti.dl_spec = #dlti.dl_spec<
-  #dlti.dl_entry<!llvm.ptr<1>, dense<[32, 64, 64]> : vector<3xi64>>,
-  #dlti.dl_entry<!llvm.ptr<2>, dense<[64, 64, 64]> : vector<3xi64>>
+  #dlti.dl_entry<!llvm.ptr<1>, #ptr.spec<size = 32, abi = 64, preferred = 64>>,
+  #dlti.dl_entry<!llvm.ptr<2>, #ptr.spec<size = 64, abi = 64, preferred = 64>>
 >} {
 
   // CHECK-LABEL: @load_ptr_addrspace_cast_different_size
