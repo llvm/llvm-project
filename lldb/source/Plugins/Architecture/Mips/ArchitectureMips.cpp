@@ -113,7 +113,7 @@ lldb::addr_t ArchitectureMips::GetBreakableLoadAddress(lldb::addr_t addr,
   if (current_offset == 0)
     return addr;
 
-  auto insn = GetInstructionAtAddress(target, current_offset, addr);
+  auto insn = GetInstructionAtAddress(target, addr, current_offset);
 
   if (nullptr == insn || !insn->HasDelaySlot())
     return addr;
