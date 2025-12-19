@@ -1,4 +1,4 @@
-add_mlir_library(ArithAndMathToAPFloatUtils
+add_mlir_library(MLIRArithAndMathToAPFloatUtils
   Utils.cpp
   PARTIAL_SOURCES_INTENDED
 
