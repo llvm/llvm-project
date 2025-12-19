@@ -93,6 +93,9 @@ set(ripple_files
   ripple_hvx.h
   ripple_math.h
   __ripple_vec.h
+  )
+
+set (ripple_extra_headers
   ripple/zip.h
   )
 
@@ -662,6 +665,12 @@ install(
   FILES ${zos_wrapper_files}
   DESTINATION ${header_install_dir}/zos_wrappers
   COMPONENT clang-resource-headers)
+
+install(
+  FILES ${ripple_extra_headers}
+  DESTINATION ${header_install_dir}/ripple
+  COMPONENT clang-resource-headers)
+
 
 #############################################################
 # Install rules for separate header lists

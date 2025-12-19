@@ -15,6 +15,8 @@
 
 #include "HVX_Rotate.h"
 
+#include "lib_func_attrib.h"
+
 #define _decl_rotate_impl(N, T, C_T, shft)                                     \
   RIPPLE_INTRIN_INLINE v##N##T ripple_pure_hvx_rotate_to_lower_##T(            \
       v##N##T in, int32_t n) {                                                 \
