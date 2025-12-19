@@ -466,10 +466,6 @@ void AMDGPUNextUseAnalysis::dumpShortestPaths() const {
   }
 }
 
-bool isVCCReg(Register Reg) {
-  return Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI;
-}
-
 void AMDGPUNextUseAnalysis::printAllDistances(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : *&MBB) {
@@ -478,13 +474,13 @@ void AMDGPUNextUseAnalysis::printAllDistances(MachineFunction &MF) {
           continue;
 
         Register Reg = MO.getReg();
-        if (Reg == 0)
+        if (!MO.isReg())
           continue;
 
         if (MO.isUse())
           continue;
 
-        if (Reg.isPhysical() || TRI->isAGPR(*MRI, Reg) || isVCCReg(Reg))
+        if (Reg.isPhysical() || TRI->isAGPR(*MRI, Reg))
           continue;
 
         std::optional<uint64_t> NextUseDistance = getNextUseDistance(Reg);
@@ -504,7 +500,6 @@ void AMDGPUNextUseAnalysis::printAllDistances(MachineFunction &MF) {
 std::optional<uint64_t>
 AMDGPUNextUseAnalysis::getNextUseDistance(Register DefReg) {
   assert(!DefReg.isPhysical() && !TRI->isAGPR(*MRI, DefReg) &&
-         !isVCCReg(DefReg) &&
          "Next-use distance is calculated for SGPRs and VGPRs");
   uint64_t NextUseDistance = std::numeric_limits<uint64_t>::max();
   uint64_t CurrentNextUseDistance = std::numeric_limits<uint64_t>::max();
@@ -541,7 +536,6 @@ std::optional<uint64_t>
 AMDGPUNextUseAnalysis::getNextUseDistance(Register DefReg, MachineInstr *CurMI,
                                           SmallVector<MachineInstr *> &Uses) {
   assert(!DefReg.isPhysical() && !TRI->isAGPR(*MRI, DefReg) &&
-         !isVCCReg(DefReg) &&
          "Next-use distance is calculated for SGPRs and VGPRs");
   uint64_t NextUseDistance = std::numeric_limits<uint64_t>::max();
   uint64_t CurrentNextUseDistance = std::numeric_limits<uint64_t>::max();
