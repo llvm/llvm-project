@@ -1023,7 +1023,7 @@ static void addToWorklist(Instruction &I,
 }
 
 static bool runImpl(Function &F, const TargetLowering &TLI,
-                    const LibcallLoweringInfo &Libcalls, AssumptionCache *AC) {
+                    AssumptionCache *AC) {
   SmallVector<Instruction *, 4> Worklist;
 
   unsigned MaxLegalFpConvertBitWidth =
@@ -1151,23 +1151,17 @@ public:
     auto *TLI = Subtarget->getTargetLowering();
     AssumptionCache *AC = nullptr;
 
-    const LibcallLoweringInfo &Libcalls =
-        getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
-            *Subtarget);
-
     if (OptLevel != CodeGenOptLevel::None && !F.hasOptNone())
       AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    return runImpl(F, *TLI, Libcalls, AC);
+    return runImpl(F, *TLI, AC);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LibcallLoweringInfoWrapper>();
     AU.addRequired<TargetPassConfig>();
     if (OptLevel != CodeGenOptLevel::None)
       AU.addRequired<AssumptionCacheTracker>();
     AU.addPreserved<AAResultsWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addRequired<LibcallLoweringInfoWrapper>();
   }
 };
 } // namespace
@@ -1193,28 +1187,13 @@ PreservedAnalyses ExpandIRInstsPass::run(Function &F,
   if (OptLevel != CodeGenOptLevel::None)
     AC = &FAM.getResult<AssumptionAnalysis>(F);
 
-  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-
-  const LibcallLoweringModuleAnalysisResult *LibcallLowering =
-      MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(*F.getParent());
-
-  if (!LibcallLowering) {
-    F.getContext().emitError("'" + LibcallLoweringModuleAnalysis::name() +
-                             "' analysis required");
-    return PreservedAnalyses::all();
-  }
-
-  const LibcallLoweringInfo &Libcalls =
-      LibcallLowering->getLibcallLowering(*STI);
-
-  return runImpl(F, TLI, Libcalls, AC) ? PreservedAnalyses::none()
-                                       : PreservedAnalyses::all();
+  return runImpl(F, TLI, AC) ? PreservedAnalyses::none()
+                             : PreservedAnalyses::all();
 }
 
 char ExpandIRInstsLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ExpandIRInstsLegacyPass, "expand-ir-insts",
                       "Expand certain fp instructions", false, false)
-INITIALIZE_PASS_DEPENDENCY(LibcallLoweringInfoWrapper)
 INITIALIZE_PASS_END(ExpandIRInstsLegacyPass, "expand-ir-insts",
                     "Expand IR instructions", false, false)
 
