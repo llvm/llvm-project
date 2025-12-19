@@ -2905,53 +2905,6 @@ public:
     return Insts;
   }
 
-  InstructionListType materializeConstant(BinaryContext &BC, const MCInst &Inst,
-                                          StringRef ConstantData,
-                                          uint64_t Offset) const override {
-    struct InstInfo {
-      // Size in bytes that Inst loads from memory.
-      uint8_t DataSize;
-      // Number of instructions needed to materialize the constant.
-      uint8_t NumInstrs;
-      // Opcode to use for materializing the constant.
-      unsigned Opcode;
-    };
-
-    InstInfo II;
-    InstructionListType Insts(0);
-    switch (Inst.getOpcode()) {
-    case AArch64::LDRWl:
-      II = {4, 2, AArch64::MOVKWi};
-      break;
-    case AArch64::LDRXl:
-      II = {8, 4, AArch64::MOVKXi};
-      break;
-    default:
-      return Insts;
-    }
-
-    if (ConstantData.size() - Offset < II.DataSize)
-      return Insts;
-
-    DataExtractor DE(ConstantData, BC.AsmInfo->isLittleEndian(),
-                     BC.AsmInfo->getCodePointerSize());
-    const uint64_t ImmVal = DE.getUnsigned(&Offset, II.DataSize);
-
-    Insts.resize(II.NumInstrs);
-    unsigned Shift = (Insts.size() - 1) * 16;
-    MCPhysReg Reg = Inst.getOperand(0).getReg();
-    for (unsigned I = 0; I < Insts.size(); ++I, Shift -= 16) {
-      Insts[I].setOpcode(II.Opcode);
-      Insts[I].clear();
-      Insts[I].addOperand(MCOperand::createReg(Reg));
-      Insts[I].addOperand(MCOperand::createReg(Reg));
-      Insts[I].addOperand(MCOperand::createImm((ImmVal >> Shift) & 0xFFFF));
-      Insts[I].addOperand(MCOperand::createImm(Shift));
-    }
-
-    return Insts;
-  }
-
   std::optional<Relocation>
   createRelocation(const MCFixup &Fixup,
                    const MCAsmBackend &MAB) const override {
