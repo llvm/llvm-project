@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir --check-prefix=CIR %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir -emit-cir -mmlir -mlir-print-ir-before=cir-cxxabi-lowering %s -o %t.cir 2> %t-before.cir
+// RUN: FileCheck --check-prefix=CIR-BEFORE --input-file=%t-before.cir %s
+// RUN: FileCheck --check-prefix=CIR-AFTER --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll --check-prefix=LLVM %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -emit-llvm %s -o %t.ll
@@ -21,9 +22,17 @@ auto base_to_derived(int Base2::*ptr) -> int Derived::* {
   return ptr;
 }
 
-// CIR: cir.func {{.*}} @_Z15base_to_derivedM5Base2i
-// CIR:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}}
-// CIR:   %[[RET:.*]] = cir.derived_data_member %[[PTR]] : !cir.data_member<!s32i in !rec_Base2> [4] -> !cir.data_member<!s32i in !rec_Derived>
+// CIR-BEFORE: cir.func {{.*}} @_Z15base_to_derivedM5Base2i
+// CIR-BEFORE:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}}
+// CIR-BEFORE:   %[[RET:.*]] = cir.derived_data_member %[[PTR]] : !cir.data_member<!s32i in !rec_Base2> [4] -> !cir.data_member<!s32i in !rec_Derived>
+
+// CIR-AFTER: cir.func {{.*}} @_Z15base_to_derivedM5Base2i
+// CIR-AFTER:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s64i>, !s64i
+// CIR-AFTER:   %[[NULL_VALUE:.*]] = cir.const #cir.int<-1> : !s64i
+// CIR-AFTER:   %[[IS_NULL:.*]] = cir.cmp(eq, %[[PTR]], %[[NULL_VALUE]])
+// CIR-AFTER:   %[[OFFSET_VALUE:.*]] = cir.const #cir.int<4> : !s64i
+// CIR-AFTER:   %[[BINOP_KIND:.*]] = cir.binop(add, %[[PTR]], %[[OFFSET_VALUE]]) nsw : !s64i
+// CIR-AFTER:   %[[SELECT:.*]] = cir.select if %[[IS_NULL]] then %[[PTR]] else %[[BINOP_KIND]]
 
 // LLVM: define {{.*}} i64 @_Z15base_to_derivedM5Base2i
 // LLVM:   %[[PTR:.*]] = load i64, ptr %{{.*}}
@@ -41,9 +50,17 @@ auto derived_to_base(int Derived::*ptr) -> int Base2::* {
   return static_cast<int Base2::*>(ptr);
 }
 
-// CIR: cir.func {{.*}} @_Z15derived_to_baseM7Derivedi
-// CIR:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}}
-// CIR:   %[[RET:.*]] = cir.base_data_member %[[PTR]] : !cir.data_member<!s32i in !rec_Derived> [4] -> !cir.data_member<!s32i in !rec_Base2>
+// CIR-BEFORE: cir.func {{.*}} @_Z15derived_to_baseM7Derivedi
+// CIR-BEFORE:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}}
+// CIR-BEFORE:   %[[RET:.*]] = cir.base_data_member %[[PTR]] : !cir.data_member<!s32i in !rec_Derived> [4] -> !cir.data_member<!s32i in !rec_Base2>
+
+// CIR-AFTER: cir.func {{.*}} @_Z15derived_to_baseM7Derivedi
+// CIR-AFTER:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s64i>, !s64i
+// CIR-AFTER:   %[[NULL_VALUE:.*]] = cir.const #cir.int<-1> : !s64i
+// CIR-AFTER:   %[[IS_NULL:.*]] = cir.cmp(eq, %[[PTR]], %[[NULL_VALUE]])
+// CIR-AFTER:   %[[OFFSET_VALUE:.*]] = cir.const #cir.int<4> : !s64i
+// CIR-AFTER:   %[[BINOP_KIND:.*]] = cir.binop(sub, %[[PTR]], %[[OFFSET_VALUE]]) nsw : !s64i
+// CIR-AFTER:   %[[SELECT:.*]] = cir.select if %[[IS_NULL]] then %[[PTR]] else %[[BINOP_KIND]]
 
 // LLVM: define {{.*}} i64 @_Z15derived_to_baseM7Derivedi
 // LLVM:   %[[PTR:.*]] = load i64, ptr %{{.*}}
@@ -61,9 +78,13 @@ auto base_to_derived_zero_offset(int Base1::*ptr) -> int Derived::* {
   return ptr;
 }
 
-// CIR: cir.func {{.*}} @_Z27base_to_derived_zero_offsetM5Base1i
-// CIR:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}}
-// CIR:   %[[RET:.*]] = cir.derived_data_member %[[PTR]] : !cir.data_member<!s32i in !rec_Base1> [0] -> !cir.data_member<!s32i in !rec_Derived>
+// CIR-BEFORE: cir.func {{.*}} @_Z27base_to_derived_zero_offsetM5Base1i
+// CIR-BEFORE:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}}
+// CIR-BEFORE:   %[[RET:.*]] = cir.derived_data_member %[[PTR]] : !cir.data_member<!s32i in !rec_Base1> [0] -> !cir.data_member<!s32i in !rec_Derived>
+
+// CIR-AFTER: cir.func {{.*}} @_Z27base_to_derived_zero_offsetM5Base1i
+// CIR-AFTER:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s64i>, !s64i
+// CIR-AFTER:   cir.store %[[PTR]], %{{.*}} : !s64i, !cir.ptr<!s64i>
 
 // No LLVM instructions emitted for performing a zero-offset cast.
 
@@ -87,9 +108,13 @@ auto derived_to_base_zero_offset(int Derived::*ptr) -> int Base1::* {
   return static_cast<int Base1::*>(ptr);
 }
 
-// CIR: cir.func {{.*}} @_Z27derived_to_base_zero_offsetM7Derivedi
-// CIR:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}}
-// CIR:   %[[RET:.*]] = cir.base_data_member %[[PTR]] : !cir.data_member<!s32i in !rec_Derived> [0] -> !cir.data_member<!s32i in !rec_Base1>
+// CIR-BEFORE: cir.func {{.*}} @_Z27derived_to_base_zero_offsetM7Derivedi
+// CIR-BEFORE:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}}
+// CIR-BEFORE:   %[[RET:.*]] = cir.base_data_member %[[PTR]] : !cir.data_member<!s32i in !rec_Derived> [0] -> !cir.data_member<!s32i in !rec_Base1>
+
+// CIR-AFTER: cir.func {{.*}} @_Z27derived_to_base_zero_offsetM7Derivedi
+// CIR-AFTER:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s64i>, !s64i
+// CIR-AFTER:   cir.store %[[PTR]], %{{.*}} : !s64i, !cir.ptr<!s64i>
 
 // No LLVM instructions emitted for performing a zero-offset cast.
 

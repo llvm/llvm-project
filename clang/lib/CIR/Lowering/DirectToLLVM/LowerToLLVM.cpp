@@ -1528,24 +1528,6 @@ mlir::LogicalResult CIRToLLVMDerivedClassAddrOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMBaseDataMemberOpLowering::matchAndRewrite(
-    cir::BaseDataMemberOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Value loweredResult =
-      lowerMod->getCXXABI().lowerBaseDataMember(op, adaptor.getSrc(), rewriter);
-  rewriter.replaceOp(op, loweredResult);
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMDerivedDataMemberOpLowering::matchAndRewrite(
-    cir::DerivedDataMemberOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Value loweredResult = lowerMod->getCXXABI().lowerDerivedDataMember(
-      op, adaptor.getSrc(), rewriter);
-  rewriter.replaceOp(op, loweredResult);
-  return mlir::success();
-}
-
 mlir::LogicalResult CIRToLLVMATanOpLowering::matchAndRewrite(
     cir::ATanOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {

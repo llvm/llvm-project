@@ -151,26 +151,22 @@ static mlir::Value lowerDataMemberCast(mlir::Operation *op,
   mlir::Location loc = op->getLoc();
   mlir::Type ty = loweredSrc.getType();
 
-  auto nullValue = mlir::LLVM::ConstantOp::create(
-      builder, loc, ty, mlir::IntegerAttr::get(ty, -1));
+  auto getConstantInt = [&](int64_t value) -> cir::ConstantOp {
+    return cir::ConstantOp::create(builder, loc, cir::IntAttr::get(ty, value));
+  };
 
-  auto isNull = mlir::LLVM::ICmpOp::create(
-      builder, loc, mlir::LLVM::ICmpPredicate::eq, loweredSrc, nullValue);
+  cir::ConstantOp nullValue = getConstantInt(-1);
+  auto isNull = cir::CmpOp::create(builder, loc, cir::CmpOpKind::eq, loweredSrc,
+                                   nullValue);
 
-  auto offsetValue = mlir::LLVM::ConstantOp::create(
-      builder, loc, ty, mlir::IntegerAttr::get(ty, offset));
-  mlir::Value adjustedPtr;
-  if (isDerivedToBase)
-    adjustedPtr =
-        mlir::LLVM::SubOp::create(builder, loc, loweredSrc, offsetValue,
-                                  mlir::LLVM::IntegerOverflowFlags::nsw);
-  else
-    adjustedPtr =
-        mlir::LLVM::AddOp::create(builder, loc, loweredSrc, offsetValue,
-                                  mlir::LLVM::IntegerOverflowFlags::nsw);
+  cir::ConstantOp offsetValue = getConstantInt(offset);
+  auto binOpKind = isDerivedToBase ? cir::BinOpKind::Sub : cir::BinOpKind::Add;
+  cir::BinOp adjustedPtr =
+      cir::BinOp::create(builder, loc, ty, binOpKind, loweredSrc, offsetValue);
+  adjustedPtr.setNoSignedWrap(true);
 
-  return mlir::LLVM::SelectOp::create(builder, loc, isNull, loweredSrc,
-                                      adjustedPtr);
+  return cir::SelectOp::create(builder, loc, ty, isNull, loweredSrc,
+                               adjustedPtr);
 }
 
 mlir::Value
