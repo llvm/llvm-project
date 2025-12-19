@@ -639,7 +639,6 @@ namespace llvm {
         return false;
 
       *this = drop_front();
-
       return true;
     }
 
