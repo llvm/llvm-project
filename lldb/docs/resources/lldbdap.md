@@ -1,31 +1,52 @@
 # Getting started with `lldb-dap`
 
-Welcome to the `llb-dap` documentation!
+Welcome to the `lldb-dap` documentation!
 
 `lldb-dap` brings the power of `lldb` into any editor or IDE that supports the
 [Debug Adapter Protocol (DAP)](https://microsoft.github.io/debug-adapter-protocol/).
 
-## Prerequisites
+## Responsibilities of LLDB, `lldb-dap` and IDE Integrations
 
-In order to begin debugging with `lldb-dap`, you may first need to acquire the
-`lldb-dap` binary from an LLVM distribution. For general LLVM releases visit
-https://releases.llvm.org/ or check your systems preferred package manager for
-the `lldb` package.
+Under the hood, the UI-based debugging experience is fueled by three separate
+components:
+
+- LLDB provides general, IDE-independent debugging features, such as:
+  loading binaries / core dumps, interpreting debug info, setting breakpoints,
+  pretty-printing variables, etc. The `lldb` binary exposes this functionality
+  via a command line interface.
+- `lldb-dap` exposes LLDB's functionality via the
+  "[Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/)",
+  i.e. a protocol through which various IDEs (Visual Studio Code, Emacs, vim,
+  neovim, ...) can interact with a wide range of debuggers (`lldb-dap` and many
+  others).
+- An IDE specific extension is used to hook lldb-dap and the IDEs DAP
+  implementations together for launching a binary.
+
+Since `lldb-dap` builds on top of LLDB, all of LLDB's extensibility mechanisms
+such as [Variable Pretty-Printing](https://lldb.llvm.org/use/variable.html),
+[Frame recognizers](https://lldb.llvm.org/use/python-reference.html#writing-lldb-frame-recognizers-in-python)
+and [Python Scripting](https://lldb.llvm.org/use/python.html) are available
+also in `lldb-dap`.
+
+#### Links to IDE Extensions
+
+- Visual Studio Code -
+[LLDB DAP Extension](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.lldb-dap)
+<!-- Add other IDE integrations. -->
+
+## Procuring the `lldb-dap` binary
+
+There are multiple ways to obtain this binary:
+
+- Use the binary provided by your toolchain (for example `xcrun -f lldb-dap` on macOS) or contact your toolchain vendor to include it.
+- Download one of the release packages from the [LLVM release page](https://github.com/llvm/llvm-project/releases/). The `LLVM-{version}-{operating_system}.tar.xz` packages contain a prebuilt `lldb-dap` binary or check your systems prefered package manager.
+- Build it from source (see [LLDB's build instructions](https://lldb.llvm.org/resources/build.html)).
 
 In some cases, a language specific build of `lldb` / `lldb-dap` may also be
 available as part of the languages toolchain. For example the
 [swift language](https://www.swift.org/) toolchain includes additional language
 integrations in `lldb` and the toolchain builds provider both the `lldb` driver
 binary and `lldb-dap` binary.
-
-## IDE Integration
-
-In addition to the `lldb-dap` binary, some IDEs have additional extensions to
-support debugging.
-
-- Visual Studio Code -
-[LLDB DAP Extension](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.lldb-dap)
-<!-- Add other IDE integrations. -->
 
 ## Launching a program
 
@@ -48,20 +69,55 @@ for more information.
 
 # Supported Features
 
-`lldb-dap` supports many features of the DAP spec.
+`lldb-dap` supports the following capabilities:
 
-- Breakpoints
-  - Source breakpoints
-  - Function breakpoint
-  - Exception breakpoints
-- Call Stacks
-- Variables
-- Watch points
-- Expression Evaluation
-- And more...
+| Capability                            | Supported               | Description                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| supportsConfigurationDoneRequest      | Y                       | The debug adapter supports the `configurationDone` request.                                                                                                                                                                                                                                                           |
+| supportsFunctionBreakpoints           | Y                       | The debug adapter supports function breakpoints.                                                                                                                                                                                                                                                                      |
+| supportsConditionalBreakpoints        | Y                       | The debug adapter supports conditional breakpoints.                                                                                                                                                                                                                                                                   |
+| supportsHitConditionalBreakpoints     | Y                       | The debug adapter supports breakpoints that break execution after a specified number of hits.                                                                                                                                                                                                                         |
+| supportsEvaluateForHovers             | Y                       | The debug adapter supports a (side effect free) `evaluate` request for data hovers.                                                                                                                                                                                                                                   |
+| exceptionBreakpointFilters            | Y                       | Available exception filter options for the `setExceptionBreakpoints` request.                                                                                                                                                                                                                                         |
+| supportsStepBack                      | N                       | The debug adapter supports stepping back via the `stepBack` and `reverseContinue` requests.                                                                                                                                                                                                                           |
+| supportsSetVariable                   | Y                       | The debug adapter supports setting a variable to a value.                                                                                                                                                                                                                                                             |
+| supportsRestartFrame                  | Y                       | The debug adapter supports restarting a frame.                                                                                                                                                                                                                                                                        |
+| supportsGotoTargetsRequest            | Y                       | The debug adapter supports the `gotoTargets` request.                                                                                                                                                                                                                                                                 |
+| supportsStepInTargetsRequest          | Y                       | The debug adapter supports the `stepInTargets` request.                                                                                                                                                                                                                                                               |
+| supportsCompletionsRequest            | Y                       | The debug adapter supports the `completions` request.                                                                                                                                                                                                                                                                 |
+| completionTriggerCharacters           | `['.', '\s', '\t']`     | The set of characters that should trigger completion in a REPL. If not specified, the UI should assume the `.` character.                                                                                                                                                                                             |
+| supportsModulesRequest                | Y                       | The debug adapter supports the `modules` request.                                                                                                                                                                                                                                                                     |
+| additionalModuleColumns               | N                       | The set of additional module information exposed by the debug adapter.                                                                                                                                                                                                                                                |
+| supportedChecksumAlgorithms           | N                       | Checksum algorithms supported by the debug adapter.                                                                                                                                                                                                                                                                   |
+| supportsRestartRequest                | Y (for launch requests) | The debug adapter supports the `restart` request. In this case a client should not implement `restart` by terminating and relaunching the adapter but by calling the `restart` request.                                                                                                                               |
+| supportsExceptionOptions              | N                       | The debug adapter supports `exceptionOptions` on the `setExceptionBreakpoints` request.                                                                                                                                                                                                                               |
+| supportsValueFormattingOptions        | Y                       | The debug adapter supports a `format` attribute on the `stackTrace`, `variables`, and `evaluate` requests.                                                                                                                                                                                                            |
+| supportsExceptionInfoRequest          | Y                       | The debug adapter supports the `exceptionInfo` request.                                                                                                                                                                                                                                                               |
+| supportTerminateDebuggee              | Y                       | The debug adapter supports the `terminateDebuggee` attribute on the `disconnect` request.                                                                                                                                                                                                                             |
+| supportSuspendDebuggee                | N                       | The debug adapter supports the `suspendDebuggee` attribute on the `disconnect` request.                                                                                                                                                                                                                               |
+| supportsDelayedStackTraceLoading      | Y                       | The debug adapter supports the delayed loading of parts of the stack, which requires that both the `startFrame` and `levels` arguments and the `totalFrames` result of the `stackTrace` request are supported.                                                                                                        |
+| supportsLoadedSourcesRequest          | N                       | The debug adapter supports the `loadedSources` request.                                                                                                                                                                                                                                                               |
+| supportsLogPoints                     | Y                       | The debug adapter supports log points by interpreting the `logMessage` attribute of the `SourceBreakpoint`.                                                                                                                                                                                                           |
+| supportsTerminateThreadsRequest       | N                       | The debug adapter supports the `terminateThreads` request.                                                                                                                                                                                                                                                            |
+| supportsSetExpression                 | Y                       | The debug adapter supports the `setExpression` request.                                                                                                                                                                                                                                                               |
+| supportsTerminateRequest              | Y                       | The debug adapter supports the `terminate` request.                                                                                                                                                                                                                                                                   |
+| supportsDataBreakpoints               | Y                       | The debug adapter supports data breakpoints.                                                                                                                                                                                                                                                                          |
+| supportsReadMemoryRequest             | Y                       | The debug adapter supports the `readMemory` request.                                                                                                                                                                                                                                                                  |
+| supportsWriteMemoryRequest            | Y                       | The debug adapter supports the `writeMemory` request.                                                                                                                                                                                                                                                                 |
+| supportsDisassembleRequest            | Y                       | The debug adapter supports the `disassemble` request.                                                                                                                                                                                                                                                                 |
+| supportsCancelRequest                 | Y                       | The debug adapter supports the `cancel` request.                                                                                                                                                                                                                                                                      |
+| supportsBreakpointLocationsRequest    | Y                       | The debug adapter supports the `breakpointLocations` request.                                                                                                                                                                                                                                                         |
+| supportsClipboardContext              | N                       | The debug adapter supports the `clipboard` context value in the `evaluate` request.                                                                                                                                                                                                                                   |
+| supportsSteppingGranularity           | Y                       | The debug adapter supports stepping granularities (argument `granularity`) for the stepping requests.                                                                                                                                                                                                                 |
+| supportsInstructionBreakpoints        | Y                       | The debug adapter supports adding breakpoints based on instruction references.                                                                                                                                                                                                                                        |
+| supportsExceptionFilterOptions        | N                       | The debug adapter supports `filterOptions` as an argument on the `setExceptionBreakpoints` request.                                                                                                                                                                                                                   |
+| supportsSingleThreadExecutionRequests | N                       | The debug adapter supports the `singleThread` property on the execution requests (`continue`, `next`, `stepIn`, `stepOut`, `reverseContinue`, `stepBack`).                                                                                                                                                            |
+| supportsDataBreakpointBytes           | Y                       | The debug adapter supports the `asAddress` and `bytes` fields in the `dataBreakpointInfo` request.                                                                                                                                                                                                                    |
+| breakpointModes                       | `[]`                    | Modes of breakpoints supported by the debug adapter, such as 'hardware' or 'software'. If present, the client may allow the user to select a mode and include it in its `setBreakpoints` request. Clients may present the first applicable mode in this array as the 'default' mode in gestures that set breakpoints. |
+| supportsANSIStyling                   | Y                       | The debug adapter supports ANSI escape sequences in styling of `OutputEvent.output` and `Variable.value` fields.                                                                                                                                                                                                      |
 
-For more information, visit
-[Visual Studio Code's Debugging User Documentation](https://code.visualstudio.com/docs/debugtest/debugging)
+For more information, see
+[Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/).
 
 ## Debug Console
 
@@ -76,6 +132,12 @@ in the Debug Console or by adjusting the `--repl-mode [mode]` argument to
 `lldb-dap`. The supported modes are `variable`, `command` and `auto`.
 
 # Configuration Settings Reference
+
+In order for `lldb-dap` to know how to start a debug session a launch or attach
+configuration may be specified. Different IDEs may have different mechanisms in
+place for configuring the launch configuration.
+
+For Visual Studio Code, see [Visual Studio Code's Debugging User Documentation](https://code.visualstudio.com/docs/debugtest/debugging).
 
 ## Common configurations
 

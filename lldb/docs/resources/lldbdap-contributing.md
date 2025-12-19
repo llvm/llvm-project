@@ -14,7 +14,7 @@ project.
 lldb-dap's source code is [part of the LLVM
 repository](https://github.com/llvm/llvm-project/tree/main/lldb/tools/lldb-dap)
 on Github. We use Github's [issue
-tracker](https://github.com/llvm/llvm-project/tree/main/lldb/tools/lldb-dap)
+tracker](https://github.com/llvm/llvm-project/issues)
 and patches can be submitted via [pull
 requests](https://github.com/llvm/llvm-project/pulls).
 
