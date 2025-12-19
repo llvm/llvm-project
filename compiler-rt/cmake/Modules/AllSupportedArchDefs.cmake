@@ -30,7 +30,7 @@ if (COMPILER_RT_PROFILE_BAREMETAL)
     armv7r
     armebv7
     armv8m.main
-    arm8.1m.main
+    armv8.1m.main
     armv8-r
   )
 endif()
