@@ -1416,10 +1416,6 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           stl_synth_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdForwardListSynthProvider")));
 
-  AddCXXSynthetic(cpp_category_sp, LibStdcppSpanSyntheticFrontEndCreator,
-                  "libstdc++ std::span synthetic children", "^std::span<.+>$",
-                  stl_deref_flags, true);
-
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
 
@@ -1510,11 +1506,6 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::StdlibCoroutineHandleSummaryProvider,
                 "libstdc++ std::coroutine_handle summary provider",
                 libstdcpp_std_coroutine_handle_regex, stl_summary_flags, true);
-
-  AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::ContainerSizeSummaryProvider,
-                "libstdc++ std::span summary provider", "^std::span<.+>$",
-                stl_summary_flags, true);
 }
 
 static lldb_private::SyntheticChildrenFrontEnd *
@@ -1671,6 +1662,17 @@ GenericDequeSyntheticFrontEndCreator(CXXSyntheticChildren *children,
       "lldb.formatters.cpp.gnu_libstdcpp.StdDequeSynthProvider", *valobj_sp);
 }
 
+static SyntheticChildrenFrontEnd *
+GenericSpanSyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                    ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+
+  if (IsMsvcStlSpan(*valobj_sp))
+    return MsvcStlSpanSyntheticFrontEndCreator(children, valobj_sp);
+  return LibStdcppSpanSyntheticFrontEndCreator(children, valobj_sp);
+}
+
 /// Load formatters that are formatting types from more than one STL
 static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   if (!cpp_category_sp)
@@ -1759,6 +1761,9 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(cpp_category_sp, GenericDequeSyntheticFrontEndCreator,
                   "std::deque container synthetic children",
                   "^std::deque<.+>(( )?&)?$", stl_deref_flags, true);
+  AddCXXSynthetic(cpp_category_sp, GenericSpanSyntheticFrontEndCreator,
+                  "std::span container synthetic children",
+                  "^std::span<.+>$", stl_deref_flags, true);
 
   AddCXXSynthetic(cpp_category_sp, GenericMapLikeSyntheticFrontEndCreator,
                   "std::(multi)?map/set synthetic children",
@@ -1811,6 +1816,9 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
                 "MSVC STL/libstd++ std::deque summary provider",
                 "^std::deque<.+>(( )?&)?$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "MSVC STL/libstd++ std::span summary provider",
+                "^std::span<.+>$", stl_summary_flags, true);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {

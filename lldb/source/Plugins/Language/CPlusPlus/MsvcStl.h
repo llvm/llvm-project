@@ -119,6 +119,12 @@ SyntheticChildrenFrontEnd *
 MsvcStlDequeSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                      lldb::ValueObjectSP valobj_sp);
 
+// MSVC STL std::span<>
+bool IsMsvcStlSpan(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlSpanSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                    lldb::ValueObjectSP valobj_sp);
+
 } // namespace formatters
 } // namespace lldb_private
 
