@@ -811,9 +811,15 @@ void CIRRecordLowering::lowerUnion() {
     fieldTypes.push_back(fieldType);
   }
 
-  if (!storageType)
-    cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
-                                       "No-storage Union NYI");
+  if (!storageType) {
+    if (layoutSize.isZero())
+      return;
+    // C++ empty unions can have non-zero size/alignment, so use an integer type
+    // sized to the required alignment.
+    CharUnits requiredAlign = astRecordLayout.getAlignment();
+    storageType = getUIntNType(astContext.toBits(requiredAlign));
+    fieldTypes.push_back(storageType);
+  }
 
   if (layoutSize < getSize(storageType))
     storageType = getByteArrayType(layoutSize);
