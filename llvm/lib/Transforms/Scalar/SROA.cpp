@@ -5303,8 +5303,8 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
     // represent as a legal integer type because we are probably just copying
     // data around and the integer can be promoted.
     if (OnlyIntrinsicUsers && DL.isLegalInteger(P.size() * 8) &&
-        TypePartitionTy->isAggregateType())
-      auto *IntNTy = Type::getIntNTy(*C, P.size() * 8);
+        TypePartitionTy->isAggregateType()) {
+      auto *IntNTy = Type::getIntNTy(C, P.size() * 8);
       return {IntNTy, isIntegerWideningViable(P, IntNTy, DL), nullptr};
     }
 
