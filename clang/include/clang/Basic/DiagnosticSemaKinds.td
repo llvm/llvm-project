@@ -13170,11 +13170,17 @@ def warn_sycl_external_missing_on_first_decl : Warning<
 
 // SYCL kernel entry point diagnostics
 def err_sycl_entry_point_invalid : Error<
-  "the %0 attribute cannot be applied to a"
-  " %select{non-static member function|variadic function|deleted function|"
-           "defaulted function|constexpr function|consteval function|"
-           "function declared with the 'noreturn' attribute|coroutine|"
-           "function defined with a function try block}1">;
+  "the %0 attribute cannot be applied to a %enum_select<InvalidSKEPReason>{"
+      "%NonStaticMemberFn{non-static member function}|"
+      "%VariadicFn{variadic function}|"
+      "%DeletedFn{deleted function}|"
+      "%DefaultedFn{defaulted function}|"
+      "%ConstexprFn{constexpr function}|"
+      "%ConstevalFn{consteval function}|"
+      "%NoreturnFn{function declared with the 'noreturn' attribute}|"
+      "%Coroutine{coroutine}|"
+      "%FunctionTryBlock{function defined with a function try block}"
+      "}1">;
 def err_sycl_entry_point_invalid_redeclaration : Error<
   "the %0 kernel name argument does not match prior"
   " declaration%diff{: $ vs $|}1,2">;
