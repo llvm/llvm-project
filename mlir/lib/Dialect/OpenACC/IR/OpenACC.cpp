@@ -446,8 +446,21 @@ void HostDataOp::getSuccessorRegions(
 
 void LoopOp::getSuccessorRegions(RegionBranchPoint point,
                                  SmallVectorImpl<RegionSuccessor> &regions) {
-  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
-                                    regions);
+  // Unstructured loops: the body may contain arbitrary CFG and early exits.
+  // At the RegionBranch level, only model entry into the body and exit to the
+  // parent; any backedges are represented inside the region CFG.
+  if (getUnstructured()) {
+    if (point.isParent()) {
+      regions.push_back(RegionSuccessor(&getRegion()));
+      return;
+    }
+    regions.push_back(RegionSuccessor(getOperation(), getResults()));
+    return;
+  }
+
+  // Structured loops: model a loop-shaped region graph similar to scf.for.
+  regions.push_back(RegionSuccessor(&getRegion()));
+  regions.push_back(RegionSuccessor(getOperation(), getResults()));
 }
 
 //===----------------------------------------------------------------------===//
