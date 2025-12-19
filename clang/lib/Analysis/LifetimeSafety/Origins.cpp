@@ -30,7 +30,7 @@ public:
       LifetimeSafetyStats &LSStats)
       : ExprToOriginList(ExprToOriginList), LSStats(LSStats) {}
   bool VisitExpr(Expr *E) {
-    if (!hasOrigin(E))
+    if (!hasOrigins(E))
       return true;
     // Check if we have an origin for this expression.
     if (!ExprToOriginList.contains(E)) {

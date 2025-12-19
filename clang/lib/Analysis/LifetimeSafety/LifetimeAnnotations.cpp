@@ -101,14 +101,4 @@ template <typename T> static bool isRecordWithAttr(QualType Type) {
 bool isGslPointerType(QualType QT) { return isRecordWithAttr<PointerAttr>(QT); }
 bool isGslOwnerType(QualType QT) { return isRecordWithAttr<OwnerAttr>(QT); }
 
-bool isPointerType(QualType QT) {
-  return QT->isPointerOrReferenceType() || isGslPointerType(QT);
-}
-
-bool hasOrigin(const Expr *E) {
-  return E->isGLValue() || isPointerType(E->getType());
-}
-
-bool hasOrigin(const VarDecl *VD) { return isPointerType(VD->getType()); }
-
 } // namespace clang::lifetimes

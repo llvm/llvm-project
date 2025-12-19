@@ -43,15 +43,6 @@ bool isGslPointerType(QualType QT);
 // Tells whether the type is annotated with [[gsl::Owner]].
 bool isGslOwnerType(QualType QT);
 
-// Check if a type is pointer-like.
-bool isPointerType(QualType QT);
-
-// Check if a type has an origin.
-bool hasOrigin(const Expr *E);
-
-// Check whether the variable declaration has an origin.
-bool hasOrigin(const VarDecl *VD);
-
 } // namespace clang::lifetimes
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H
