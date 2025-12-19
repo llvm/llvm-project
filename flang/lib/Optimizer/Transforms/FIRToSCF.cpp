@@ -126,6 +126,7 @@ struct IterWhileConversion : public mlir::OpRewritePattern<fir::IterWhileOp> {
 
     mlir::Value okInit = iterWhileOp.getIterateIn();
     mlir::ValueRange iterArgs = iterWhileOp.getInitArgs();
+    bool hasFinalValue = iterWhileOp.getFinalValue().has_value();
 
     mlir::SmallVector<mlir::Value> initVals;
     initVals.push_back(lowerBound);
@@ -152,10 +153,23 @@ struct IterWhileConversion : public mlir::OpRewritePattern<fir::IterWhileOp> {
 
     rewriter.setInsertionPointToStart(&beforeBlock);
 
-    mlir::Value inductionCmp = mlir::arith::CmpIOp::create(
+    // The comparison depends on the sign of the step value. We fully expect
+    // this expression to be folded by the optimizer or LLVM. This expression
+    // is written this way so that `step == 0` always returns `false`.
+    auto zero = mlir::arith::ConstantIndexOp::create(rewriter, loc, 0);
+    auto compl0 = mlir::arith::CmpIOp::create(
+        rewriter, loc, mlir::arith::CmpIPredicate::slt, zero, step);
+    auto compl1 = mlir::arith::CmpIOp::create(
         rewriter, loc, mlir::arith::CmpIPredicate::sle, ivInBefore, upperBound);
-    mlir::Value cond = mlir::arith::AndIOp::create(rewriter, loc, inductionCmp,
-                                                   earlyExitInBefore);
+    auto compl2 = mlir::arith::CmpIOp::create(
+        rewriter, loc, mlir::arith::CmpIPredicate::slt, step, zero);
+    auto compl3 = mlir::arith::CmpIOp::create(
+        rewriter, loc, mlir::arith::CmpIPredicate::sge, ivInBefore, upperBound);
+    auto cmp0 = mlir::arith::AndIOp::create(rewriter, loc, compl0, compl1);
+    auto cmp1 = mlir::arith::AndIOp::create(rewriter, loc, compl2, compl3);
+    auto cmp2 = mlir::arith::OrIOp::create(rewriter, loc, cmp0, cmp1);
+    mlir::Value cond =
+        mlir::arith::AndIOp::create(rewriter, loc, earlyExitInBefore, cmp2);
 
     mlir::scf::ConditionOp::create(rewriter, loc, cond, argsInBefore);
 
@@ -164,17 +178,22 @@ struct IterWhileConversion : public mlir::OpRewritePattern<fir::IterWhileOp> {
 
     auto *afterBody = scfWhileOp.getAfterBody();
     auto resultOp = mlir::cast<fir::ResultOp>(afterBody->getTerminator());
-    mlir::SmallVector<mlir::Value> results(resultOp->getOperands());
-    mlir::Value ivInAfter = scfWhileOp.getAfterArguments()[0];
+    mlir::SmallVector<mlir::Value> results;
+    mlir::Value iv = scfWhileOp.getAfterArguments()[0];
 
     rewriter.setInsertionPointToStart(afterBody);
-    results[0] = mlir::arith::AddIOp::create(rewriter, loc, ivInAfter, step);
+    results.push_back(mlir::arith::AddIOp::create(rewriter, loc, iv, step));
+    llvm::append_range(results, hasFinalValue
+                                    ? resultOp->getOperands().drop_front()
+                                    : resultOp->getOperands());
 
     rewriter.setInsertionPointToEnd(afterBody);
     rewriter.replaceOpWithNewOp<mlir::scf::YieldOp>(resultOp, results);
 
     scfWhileOp->setAttrs(iterWhileOp->getAttrs());
-    rewriter.replaceOp(iterWhileOp, scfWhileOp);
+    rewriter.replaceOp(iterWhileOp,
+                       hasFinalValue ? scfWhileOp->getResults()
+                                     : scfWhileOp->getResults().drop_front());
     return mlir::success();
   }
 };

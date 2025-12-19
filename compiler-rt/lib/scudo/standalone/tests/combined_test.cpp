@@ -18,7 +18,9 @@
 #include "size_class_map.h"
 
 #include <algorithm>
+#include <atomic>
 #include <condition_variable>
+#include <cstdio>
 #include <memory>
 #include <mutex>
 #include <set>
@@ -1079,6 +1081,82 @@ struct TestQuarantineSizeClassConfig {
   static const scudo::uptr SizeDelta = 0;
 };
 
+#if SCUDO_FUCHSIA
+struct TestZeroOnDeallocConfig {
+  static const bool MaySupportMemoryTagging = false;
+  static const bool EnableZeroOnDealloc = true;
+  static const bool QuarantineDisabled = true;
+
+  template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 1U, 1U>;
+  struct Primary {
+    // Tiny allocator, its Primary only serves chunks of four sizes.
+    using SizeClassMap =
+        scudo::FixedSizeClassMap<TestQuarantineSizeClassConfig>;
+    static const scudo::uptr RegionSizeLog = DeathRegionSizeLog;
+    static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+    typedef scudo::uptr CompactPtrT;
+    static const scudo::uptr CompactPtrScale = 0;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+    static const scudo::uptr GroupSizeLog = 18;
+  };
+
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator64<Config>;
+
+  struct Secondary {
+    template <typename Config>
+    using CacheT = scudo::MapAllocatorNoCache<Config>;
+  };
+
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+};
+
+struct TestNoZeroOnDeallocConfig : public TestZeroOnDeallocConfig {
+  static const bool EnableZeroOnDealloc = false;
+};
+
+TEST(ScudoCombinedTest, ZeroOnDeallocEnabledAndFlag) {
+  ([]() { // Cleanup on exit scope.
+    for (scudo::uptr FlagValue = 128; FlagValue <= 2048; FlagValue *= 2) {
+      // Set the size limit flag via the environment variable.
+      char Options[256];
+      snprintf(Options, sizeof(Options),
+               "SCUDO_OPTIONS=zero_on_dealloc_max_size=%ld",
+               static_cast<long>(FlagValue));
+      putenv(Options);
+
+      // Creates an allocator, configured from the environment.
+      using AllocatorT = TestAllocator<TestZeroOnDeallocConfig>;
+      auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+      for (scudo::uptr AllocatedSize : {FlagValue / 2, FlagValue}) {
+        // Allocates and sets the memory.
+        void *P = Allocator->allocate(AllocatedSize, Origin);
+        ASSERT_NE(P, nullptr);
+        memset(P, 'B', AllocatedSize);
+
+        char *Begin =
+            reinterpret_cast<char *>(Allocator->getBlockBeginTestOnly(P));
+        char *End = reinterpret_cast<char *>(P) + AllocatedSize;
+        // Deallocates and eventually clears the memory.
+        Allocator->deallocate(P, Origin);
+
+        if (End - Begin <= static_cast<long>(FlagValue)) {
+          // Verifies the memory was cleared, including the header.
+          for (char *T = Begin; T < End; ++T) {
+            ASSERT_EQ(*T, 0);
+          }
+        }
+      }
+    }
+  })();
+  // Clear the scudo flag option.
+  unsetenv("SCUDO_OPTIONS");
+}
+#endif
+
 struct TestQuarantineConfig {
   static const bool MaySupportMemoryTagging = false;
 
@@ -1396,6 +1474,7 @@ TEST(ScudoCombinedTest, FullUsableSizeMTE) {
   VerifyExactUsableSize<AllocatorT>(*Allocator);
   VerifyIterateOverUsableSize<AllocatorT>(*Allocator);
 }
+
 // Verify that no special quarantine blocks appear in iterateOverChunks.
 TEST(ScudoCombinedTest, QuarantineIterateOverChunks) {
   using AllocatorT = TestAllocator<TestQuarantineConfig>;
@@ -1425,4 +1504,90 @@ TEST(ScudoCombinedTest, QuarantineIterateOverChunks) {
     EXPECT_TRUE(false) << "Unexpected pointer found in iterateOverChunks "
                        << std::hex << Base << " Size " << std::dec << Size;
   }
+}
+
+struct InitSizeClassConfig {
+  static const scudo::uptr NumBits = 1;
+  static const scudo::uptr MinSizeLog = 10;
+  static const scudo::uptr MidSizeLog = 10;
+  static const scudo::uptr MaxSizeLog = 13;
+  static const scudo::u16 MaxNumCachedHint = 8;
+  static const scudo::uptr MaxBytesCachedLog = 12;
+  static const scudo::uptr SizeDelta = 0;
+};
+
+struct TestInitSizeConfig {
+  static const bool MaySupportMemoryTagging = false;
+  static const bool QuarantineDisabled = true;
+
+  struct Primary {
+    using SizeClassMap = scudo::FixedSizeClassMap<InitSizeClassConfig>;
+    static const scudo::uptr RegionSizeLog = 21U;
+    static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+    typedef scudo::uptr CompactPtrT;
+    static const scudo::uptr CompactPtrScale = 0;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+    static const scudo::uptr GroupSizeLog = 18;
+  };
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator64<Config>;
+
+  struct Secondary {
+    template <typename Config>
+    using CacheT = scudo::MapAllocatorNoCache<Config>;
+  };
+
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+};
+
+struct TestInitSizeTSDSharedConfig : public TestInitSizeConfig {
+  template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 4U, 4U>;
+};
+
+struct TestInitSizeTSDExclusiveConfig : public TestInitSizeConfig {
+  template <class A> using TSDRegistryT = scudo::TSDRegistryExT<A>;
+};
+
+template <class AllocatorT> void RunStress() {
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  // This test is designed to try and have many threads trying to initialize
+  // the TSD at the same time. Make sure this doesn't crash.
+  std::atomic_bool StartRunning = false;
+  std::vector<std::thread *> threads;
+  for (size_t I = 0; I < 16; I++) {
+    threads.emplace_back(new std::thread([&Allocator, &StartRunning]() {
+      while (!StartRunning.load())
+        ;
+
+      void *Ptr = Allocator->allocate(10, Origin);
+      EXPECT_TRUE(Ptr != nullptr);
+      // Make sure this value is not optimized away.
+      asm volatile("" : : "r,m"(Ptr) : "memory");
+      Allocator->deallocate(Ptr, Origin);
+    }));
+  }
+
+  StartRunning = true;
+
+  for (auto *thread : threads) {
+    thread->join();
+    delete thread;
+  }
+}
+
+TEST(ScudoCombinedTest, StressThreadInitTSDShared) {
+  using AllocatorT = scudo::Allocator<TestInitSizeTSDSharedConfig>;
+  // Run the stress test a few times.
+  for (size_t I = 0; I < 10; I++)
+    RunStress<AllocatorT>();
+}
+
+TEST(ScudoCombinedTest, StressThreadInitTSDExclusive) {
+  using AllocatorT = scudo::Allocator<TestInitSizeTSDExclusiveConfig>;
+  // Run the stress test a few times.
+  for (size_t I = 0; I < 10; I++)
+    RunStress<AllocatorT>();
 }

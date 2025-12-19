@@ -48,10 +48,9 @@ bool StmtAncestorASTVisitor::TraverseStmt(Stmt *Statement) {
 /// Scope, as we can map a VarDecl to its DeclStmt, then walk up the parent tree
 /// using StmtAncestors.
 bool StmtAncestorASTVisitor::VisitDeclStmt(DeclStmt *Statement) {
-  for (const auto *Decl : Statement->decls()) {
+  for (const auto *Decl : Statement->decls())
     if (const auto *V = dyn_cast<VarDecl>(Decl))
       DeclParents.insert(std::make_pair(V, Statement));
-  }
   return true;
 }
 
@@ -89,13 +88,11 @@ bool DependencyFinderASTVisitor::VisitVarDecl(VarDecl *V) {
 
   // Next, check if the variable was removed from existence by an earlier
   // iteration.
-  for (const auto &I : *ReplacedVars) {
-    if (I.second == V) {
-      DependsOnInsideVariable = true;
-      return false;
-    }
-  }
-  return true;
+  if (llvm::none_of(*ReplacedVars,
+                    [&](const auto &I) { return I.second == V; }))
+    return true;
+  DependsOnInsideVariable = true;
+  return false;
 }
 
 /// If we already created a variable for TheLoop, check to make sure
@@ -234,11 +231,8 @@ static bool containsExpr(ASTContext *Context, const ContainerT *Container,
                          const Expr *E) {
   llvm::FoldingSetNodeID ID;
   E->Profile(ID, *Context, true);
-  for (const auto &I : *Container) {
-    if (ID == I.second)
-      return true;
-  }
-  return false;
+  return llvm::any_of(*Container,
+                      [&](const auto &I) { return ID == I.second; });
 }
 
 /// Returns true when the index expression is a declaration reference to
@@ -835,9 +829,8 @@ bool ForLoopIndexUseVisitor::TraverseStmt(Stmt *S) {
   if (const auto *LE = dyn_cast_or_null<LambdaExpr>(NextStmtParent)) {
     // Any child of a LambdaExpr that isn't the body is an initialization
     // expression.
-    if (S != LE->getBody()) {
+    if (S != LE->getBody())
       return true;
-    }
   }
   return traverseStmtImpl(S);
 }

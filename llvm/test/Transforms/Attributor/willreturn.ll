@@ -238,7 +238,7 @@ define void @only_exit() local_unnamed_addr #0 {
 define void @conditional_exit(i32 %0, ptr nocapture readonly %1) local_unnamed_addr #0 {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: define {{[^@]+}}@conditional_exit
-; CHECK-SAME: (i32 [[TMP0:%.*]], ptr nofree nonnull readonly align 4 captures(none) dereferenceable(4) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
+; CHECK-SAME: (i32 [[TMP0:%.*]], ptr nofree readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP5:%.*]], label [[TMP4:%.*]]
 ; CHECK:       4:

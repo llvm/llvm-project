@@ -164,7 +164,7 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
 
     // If this sub-register has a DWARF number and we haven't covered
     // its range, and its range covers the value, emit a DWARF piece for it.
-    if (Offset < MaxSize && CurSubReg.test(Coverage)) {
+    if (Offset < MaxSize && !CurSubReg.subsetOf(Coverage)) {
       // Emit a piece for any gap in the coverage.
       if (Offset > CurPos)
         DwarfRegs.push_back(Register::createSubRegister(

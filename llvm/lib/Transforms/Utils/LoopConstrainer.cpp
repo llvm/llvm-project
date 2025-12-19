@@ -397,8 +397,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
   BasicBlock *LatchExit = LatchBr->getSuccessor(LatchBrExitIdx);
 
   assert(!L.contains(LatchExit) && "expected an exit block!");
-  const DataLayout &DL = Preheader->getDataLayout();
-  SCEVExpander Expander(SE, DL, "loop-constrainer");
+  SCEVExpander Expander(SE, "loop-constrainer");
   Instruction *Ins = Preheader->getTerminator();
 
   if (FixedRightSCEV)
@@ -733,7 +732,7 @@ bool LoopConstrainer::run() {
   bool Increasing = MainLoopStructure.IndVarIncreasing;
   IntegerType *IVTy = cast<IntegerType>(RangeTy);
 
-  SCEVExpander Expander(SE, F.getDataLayout(), "loop-constrainer");
+  SCEVExpander Expander(SE, "loop-constrainer");
   Instruction *InsertPt = OriginalPreheader->getTerminator();
 
   // It would have been better to make `PreLoop' and `PostLoop'

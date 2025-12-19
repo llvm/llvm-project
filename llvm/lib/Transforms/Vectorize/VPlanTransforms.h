@@ -102,6 +102,17 @@ struct VPlanTransforms {
   buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy, DebugLoc IVDL,
               PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr);
 
+  /// Replace VPPhi recipes in \p Plan's header with corresponding
+  /// VPHeaderPHIRecipe subclasses for inductions, reductions, and
+  /// fixed-order recurrences. This processes all header phis and creates
+  /// the appropriate widened recipe for each one.
+  static void createHeaderPhiRecipes(
+      VPlan &Plan, ScalarEvolution &SE, Loop &OrigLoop,
+      const MapVector<PHINode *, InductionDescriptor> &Inductions,
+      const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
+      const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
+      const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering);
+
   /// Update \p Plan to account for all early exits.
   LLVM_ABI_FOR_TEST static void handleEarlyExits(VPlan &Plan,
                                                  bool HasUncountableExit);
@@ -323,6 +334,13 @@ struct VPlanTransforms {
   /// they are guaranteed to execute on both paths (i.e., in replicate regions
   /// with complementary masks P and NOT P).
   static void hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
+                                   const Loop *L);
+
+  /// Sink predicated stores to the same address with complementary predicates
+  /// (P and NOT P) to an unconditional store with select recipes for the
+  /// stored values. This eliminates branching overhead when all paths
+  /// unconditionally store to the same location.
+  static void sinkPredicatedStores(VPlan &Plan, ScalarEvolution &SE,
                                    const Loop *L);
 
   // Materialize vector trip counts for constants early if it can simply be
