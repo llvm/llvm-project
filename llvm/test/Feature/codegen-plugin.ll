@@ -1,9 +1,11 @@
 ; REQUIRES: x86-registered-target
 ; RUN: llc < %s %loadnewpmbye | FileCheck %s --check-prefix=CHECK-ASM
 ; RUN: llc < %s %loadnewpmbye -last-words | FileCheck %s --check-prefix=CHECK-ACTIVE
-; RUN: not llc %s %loadnewpmbye -last-words -filetype=obj 2>&1 | FileCheck %s --check-prefix=CHECK-ERR
+; RUN: not llc < %s %loadnewpmbye -last-words -filetype=obj 2>&1 | FileCheck %s --check-prefix=CHECK-ERR
 ; REQUIRES: plugins, examples
 ; UNSUPPORTED: target={{.*windows.*}}
+; Plugins are currently broken on AIX, at least in the CI.
+; XFAIL: target={{.*}}-aix{{.*}}
 ; CHECK-ASM: somefunk:
 ; CHECK-ACTIVE: CodeGen Bye
 ; CHECK-ERR: error: last words unsupported for binary output
