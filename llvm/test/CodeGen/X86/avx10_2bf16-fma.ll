@@ -20,22 +20,17 @@ define bfloat @fuse_bf16(bfloat %a, bfloat %b, bfloat %c) nounwind {
 ;
 ; AVX512BF16-LABEL: fuse_bf16:
 ; AVX512BF16:       # %bb.0: # %entry
-; AVX512BF16-NEXT:    vpextrw $0, %xmm2, %eax
+; AVX512BF16-NEXT:    vpextrw $0, %xmm1, %eax
 ; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX512BF16-NEXT:    vpextrw $0, %xmm1, %edx
+; AVX512BF16-NEXT:    vpextrw $0, %xmm2, %edx
 ; AVX512BF16-NEXT:    shll $16, %edx
 ; AVX512BF16-NEXT:    vmovd %edx, %xmm0
 ; AVX512BF16-NEXT:    shll $16, %ecx
 ; AVX512BF16-NEXT:    vmovd %ecx, %xmm1
-; AVX512BF16-NEXT:    vmulss %xmm0, %xmm1, %xmm0
-; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
-; AVX512BF16-NEXT:    vmovd %xmm0, %ecx
-; AVX512BF16-NEXT:    shll $16, %ecx
-; AVX512BF16-NEXT:    vmovd %ecx, %xmm0
 ; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm1
-; AVX512BF16-NEXT:    vaddss %xmm1, %xmm0, %xmm0
-; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; AVX512BF16-NEXT:    vmovd %eax, %xmm2
+; AVX512BF16-NEXT:    vfmadd213ss {{.*#+}} xmm2 = (xmm1 * xmm2) + xmm0
+; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm2, %xmm0
 ; AVX512BF16-NEXT:    retq
 entry:
   %m = fmul contract bfloat %a, %b
