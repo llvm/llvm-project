@@ -142,4 +142,51 @@ func.func @last_mod_openacc_host_data(%arg0: memref<f32>, %mapped: memref<f32>) 
   return %arg0 : memref<f32>
 }
 
+// -----
+
+// CHECK-LABEL: test_tag: acc_loop_before:
+// CHECK:  operand #0
+// CHECK-NEXT:   - pre
+// CHECK-LABEL: test_tag: acc_loop_inside:
+// CHECK:  operand #0
+// CHECK-NEXT:   - loop_region
+// CHECK-LABEL: test_tag: acc_loop_after:
+// CHECK:  operand #0
+// CHECK-NEXT:   - loop_region
+// CHECK-LABEL: test_tag: acc_loop_post:
+// CHECK:  operand #0
+// CHECK-NEXT:   - post_loop
+// CHECK-LABEL: test_tag: acc_loop_return:
+// CHECK:  operand #0
+// CHECK-NEXT:   - post_loop
+func.func @last_mod_openacc_loop(%arg0: memref<f32>) -> memref<f32> {
+  %zero = arith.constant 0.0 : f32
+  // Store before the loop.
+  memref.store %zero, %arg0[] {tag_name = "pre"} : memref<f32>
+  memref.load %arg0[] {tag = "acc_loop_before"} : memref<f32>
+
+  %one = arith.constant 1.0 : f32
+  %c1_i32 = arith.constant 1 : i32
+  %c10_i32 = arith.constant 10 : i32
+
+  // Single-region loop: store and load inside.
+  acc.loop control(%iv : i32) = (%c1_i32 : i32) to (%c10_i32 : i32)
+      step (%c1_i32 : i32) {
+    // Store inside the loop.
+    memref.store %one, %arg0[] {tag_name = "loop_region"} : memref<f32>
+    memref.load %arg0[] {tag = "acc_loop_inside"} : memref<f32>
+    acc.yield
+  } attributes {auto_ = [#acc.device_type<none>],
+                inclusiveUpperbound = array<i1: true>}
+
+  // After the loop, the last writer is still the store in the loop.
+  memref.load %arg0[] {tag = "acc_loop_after"} : memref<f32>
+
+  // Store after the loop.
+  memref.store %zero, %arg0[] {tag_name = "post_loop"} : memref<f32>
+  memref.load %arg0[] {tag = "acc_loop_post"} : memref<f32>
+
+  // At return, the last writer should be the post-loop store.
+  return {tag = "acc_loop_return"} %arg0 : memref<f32>
+}
 

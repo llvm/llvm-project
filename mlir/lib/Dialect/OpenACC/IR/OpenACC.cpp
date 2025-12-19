@@ -391,7 +391,7 @@ void OpenACCDialect::initialize() {
 
 //===----------------------------------------------------------------------===//
 // RegionBranchOpInterface for acc.kernels / acc.parallel / acc.serial /
-// acc.kernel_environment / acc.data / acc.host_data
+// acc.kernel_environment / acc.data / acc.host_data / acc.loop
 //===----------------------------------------------------------------------===//
 
 /// Generic helper for single-region OpenACC ops that execute their body once
@@ -442,6 +442,20 @@ void HostDataOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
                                     regions);
+}
+
+void LoopOp::getSuccessorRegions(RegionBranchPoint point,
+                                 SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent()) {
+    // Entering the loop: parent -> body region.
+    regions.push_back(RegionSuccessor(&getRegion()));
+    return;
+  }
+
+  // acc.yield -> parent
+  regions.push_back(RegionSuccessor(
+      getOperation(), Operation::result_range(getOperation()->result_begin(),
+                                              getOperation()->result_end())));
 }
 
 //===----------------------------------------------------------------------===//
