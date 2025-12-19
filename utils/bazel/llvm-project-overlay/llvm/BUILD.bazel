@@ -3402,6 +3402,58 @@ llvm_target_lib_list = [lib for lib in [
             ),
         ],
     },
+    {
+        "name": "Xtensa",
+        "short_name": "Xtensa",
+        "tbl_outs": [
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/Xtensa/XtensaGenAsmWriter.inc",
+            ),
+            (
+                ["-gen-asm-matcher"],
+                "lib/Target/Xtensa/XtensaGenAsmMatcher.inc",
+            ),
+            (
+                ["-gen-callingconv"],
+                "lib/Target/Xtensa/XtensaGenCallingConv.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/Xtensa/XtensaGenDAGISel.inc",
+            ),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/Xtensa/XtensaGenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/Xtensa/XtensaGenInstrInfo.inc",
+            ),
+            (
+                ["-gen-emitter"],
+                "lib/Target/Xtensa/XtensaGenMCCodeEmitter.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                [
+                    "lib/Target/Xtensa/XtensaGenRegisterInfo.inc",
+                    "lib/Target/Xtensa/XtensaGenRegisterInfoEnums.inc",
+                    "lib/Target/Xtensa/XtensaGenRegisterInfoMCDesc.inc",
+                    "lib/Target/Xtensa/XtensaGenRegisterInfoHeader.inc",
+                    "lib/Target/Xtensa/XtensaGenRegisterInfoTargetDesc.inc",
+                ],
+            ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/Xtensa/XtensaGenSDNodeInfo.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/Xtensa/XtensaGenSubtargetInfo.inc",
+            ),
+        ],
+    },
 ] if lib["name"] in llvm_targets]
 
 cc_library(
