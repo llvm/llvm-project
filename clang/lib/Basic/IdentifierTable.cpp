@@ -298,8 +298,11 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
   if (LangOpts.IEEE128)
     AddKeyword("__ieee128", tok::kw___float128, KEYALL, LangOpts, *this);
 
-  // Add the 'import' contextual keyword.
-  get("import").setModulesImport(true);
+  // Add the 'import' and 'module' contextual keywords.
+  get("import").setKeywordImport(true);
+  get("module").setModuleKeyword(true);
+  get("__preprocessed_import").setKeywordImport(true);
+  get("__preprocessed_module").setModuleKeyword(true);
 }
 
 /// Checks if the specified token kind represents a keyword in the
@@ -413,6 +416,13 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   unsigned Len = getLength();
   if (Len < 2) return tok::pp_not_keyword;
   const char *Name = getNameStart();
+
+  if (Name[0] == '_' && isImportKeyword())
+    return tok::pp___preprocessed_import;
+  if (Name[0] == '_' && isModuleKeyword())
+    return tok::pp___preprocessed_module;
+
+  // clang-format off
   switch (HASH(Len, Name[0], Name[2])) {
   default: return tok::pp_not_keyword;
   CASE( 2, 'i', '\0', if);
@@ -431,6 +441,7 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   CASE( 6, 'd', 'f', define);
   CASE( 6, 'i', 'n', ifndef);
   CASE( 6, 'i', 'p', import);
+  CASE( 6, 'm', 'd', module);
   CASE( 6, 'p', 'a', pragma);
 
   CASE( 7, 'd', 'f', defined);
@@ -450,6 +461,7 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
 #undef CASE
 #undef HASH
   }
+  // clang-format on
 }
 
 //===----------------------------------------------------------------------===//
