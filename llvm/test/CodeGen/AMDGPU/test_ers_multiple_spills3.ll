@@ -55,8 +55,8 @@
 ;                       |
 ;                  bb.21.bb14
 ;
-define amdgpu_ps void @test15(ptr addrspace(1) %p1, ptr addrspace(3) %p2, i1 %cond1, i1 %cond2, ptr addrspace(1) %p3, ptr addrspace(1) %p4, ptr addrspace(1) %p5, ptr addrspace(1) %p6, ptr addrspace(1) %p7, ptr addrspace(1) %p8, ptr addrspace(1) %p9, i32 %TC1) {
-; CHECK-LABEL: # Machine code for function test15: IsSSA, TracksLiveness
+define amdgpu_ps void @test(ptr addrspace(1) %p1, ptr addrspace(3) %p2, i1 %cond1, i1 %cond2, ptr addrspace(1) %p3, ptr addrspace(1) %p4, ptr addrspace(1) %p5, ptr addrspace(1) %p6, ptr addrspace(1) %p7, ptr addrspace(1) %p8, ptr addrspace(1) %p9, i32 %TC1) {
+; CHECK-LABEL: # Machine code for function test: IsSSA, TracksLiveness
 ; CHECK-NEXT: Frame Objects:
 ; CHECK-NEXT:   fi#0: variable sized, align=1, at location [SP]
 ; CHECK-NEXT:   fi#1: variable sized, align=1, at location [SP]
@@ -589,7 +589,7 @@ define amdgpu_ps void @test15(ptr addrspace(1) %p1, ptr addrspace(3) %p2, i1 %co
 ; CHECK-NEXT:   GLOBAL_STORE_DWORD killed [[Reg219]]:vreg_64, killed [[Reg394]]:vgpr_32, 4, 0, implicit $exec :: (store (s32) into %ir.gep4, addrspace 1)
 ; CHECK-NEXT:   S_ENDPGM 0
 ; EMPTY:
-; CHECK: # End machine code for function test15.
+; CHECK: # End machine code for function test.
 ; EMPTY:
 ; CHECK: Next-use distance of Register [[Reg20]] = 64.0
 ; CHECK-NEXT: Next-use distance of Register [[Reg19]] = 86.0

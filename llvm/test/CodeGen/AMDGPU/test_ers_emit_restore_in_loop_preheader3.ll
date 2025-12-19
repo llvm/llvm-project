@@ -40,8 +40,8 @@
 ;     +--------+
 ;              |
 ;          bb.18.exit
-define amdgpu_ps i32 @test12 (ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr addrspace(1) %p3, ptr addrspace(1) %p4, ptr addrspace(1) %p5, ptr addrspace(1) %p6, ptr addrspace(1) %p7, ptr addrspace(1) %p8, ptr addrspace(1) %p9, ptr addrspace(1) %p10, ptr addrspace(1) %p11, i32 %TC1, i32 %TC2, i32 %TC3, i32 %TC4, i32 %TC5, i32 %Val1, i32 %Val2, i1 %cond1) {
-; CHECK-LABEL: # Machine code for function test12: IsSSA, TracksLiveness
+define amdgpu_ps i32 @test (ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr addrspace(1) %p3, ptr addrspace(1) %p4, ptr addrspace(1) %p5, ptr addrspace(1) %p6, ptr addrspace(1) %p7, ptr addrspace(1) %p8, ptr addrspace(1) %p9, ptr addrspace(1) %p10, ptr addrspace(1) %p11, i32 %TC1, i32 %TC2, i32 %TC3, i32 %TC4, i32 %TC5, i32 %Val1, i32 %Val2, i1 %cond1) {
+; CHECK-LABEL: # Machine code for function test: IsSSA, TracksLiveness
 ; CHECK-NEXT: Function Live Ins: $vgpr0 in [[Reg1:%[0-9]+]], $vgpr1 in [[Reg2:%[0-9]+]], $vgpr2 in [[Reg3:%[0-9]+]], $vgpr3 in [[Reg4:%[0-9]+]], $vgpr4 in [[Reg5:%[0-9]+]], $vgpr5 in [[Reg6:%[0-9]+]], $vgpr6 in [[Reg7:%[0-9]+]], $vgpr7 in [[Reg8:%[0-9]+]], $vgpr8 in [[Reg9:%[0-9]+]], $vgpr9 in [[Reg10:%[0-9]+]], $vgpr10 in [[Reg11:%[0-9]+]], $vgpr11 in [[Reg12:%[0-9]+]], $vgpr12 in [[Reg13:%[0-9]+]], $vgpr13 in [[Reg14:%[0-9]+]], $vgpr14 in [[Reg15:%[0-9]+]], $vgpr15 in [[Reg16:%[0-9]+]], $vgpr16 in [[Reg17:%[0-9]+]], $vgpr17 in [[Reg18:%[0-9]+]], $vgpr18 in [[Reg19:%[0-9]+]], $vgpr19 in [[Reg20:%[0-9]+]], $vgpr20 in [[Reg21:%[0-9]+]], $vgpr21 in [[Reg22:%[0-9]+]], $vgpr22 in [[Reg23:%[0-9]+]], $vgpr23 in [[Reg24:%[0-9]+]], $vgpr24 in [[Reg25:%[0-9]+]], $vgpr25 in [[Reg26:%[0-9]+]], $vgpr26 in [[Reg27:%[0-9]+]], $vgpr27 in [[Reg28:%[0-9]+]]
 ; EMPTY:
 ; CHECK: bb.0.entry:
@@ -335,7 +335,7 @@ define amdgpu_ps i32 @test12 (ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr ad
 ; CHECK-NEXT:   $sgpr0 = COPY killed [[Reg161]]:sreg_32_xm0
 ; CHECK-NEXT:   SI_RETURN_TO_EPILOG killed $sgpr0
 ; EMPTY:
-; CHECK: # End machine code for function test12.
+; CHECK: # End machine code for function test.
 ; EMPTY:
 ; CHECK: Next-use distance of Register [[Reg28]] = 29.0
 ; CHECK-NEXT: Next-use distance of Register [[Reg27]] = 27040088.0

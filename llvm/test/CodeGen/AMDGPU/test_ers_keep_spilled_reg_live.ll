@@ -23,8 +23,8 @@
 ;         \  |
 ;        bb.10.exit
 ;
-define amdgpu_ps i64 @test2(i1 %cond, ptr addrspace(3) %p, i64 %val) {
-; CHECK-LABEL: # Machine code for function test2: IsSSA, TracksLiveness
+define amdgpu_ps i64 @test(i1 %cond, ptr addrspace(3) %p, i64 %val) {
+; CHECK-LABEL: # Machine code for function test: IsSSA, TracksLiveness
 ; CHECK-NEXT: Function Live Ins: $vgpr0 in [[Reg1:%[0-9]+]], $vgpr1 in [[Reg2:%[0-9]+]], $vgpr2 in [[Reg3:%[0-9]+]], $vgpr3 in [[Reg4:%[0-9]+]]
 ; EMPTY:
 ; CHECK: bb.0.entry:
@@ -165,7 +165,7 @@ define amdgpu_ps i64 @test2(i1 %cond, ptr addrspace(3) %p, i64 %val) {
 ; CHECK-NEXT:   $sgpr1 = COPY killed [[Reg73]]:sreg_32_xm0
 ; CHECK-NEXT:   SI_RETURN_TO_EPILOG killed $sgpr0, killed $sgpr1
 ; EMPTY:
-; CHECK: # End machine code for function test2.
+; CHECK: # End machine code for function test.
 ; EMPTY:
 ; CHECK: Next-use distance of Register [[Reg4]] = 21.0
 ; CHECK-NEXT: Next-use distance of Register [[Reg3]] = 19.0
