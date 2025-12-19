@@ -31,19 +31,20 @@
 
 namespace __interception {
 
+// These symbols cannot be used for indirect calls.
 char* ___strcpy(char*, const char*) __asm__(STRCPY_STR);
 char* ___memcpy(char*, const char*, size_t) __asm__(MEMCPY_STR);
 char* ___memmove(char*, const char*, size_t) __asm__(MEMMOVE_STR);
 
-char* real_strcpy_wrapper(char* s1, const char* s2) {
+static char* real_strcpy_wrapper(char* s1, const char* s2) {
   return (char*)___strcpy(s1, s2);
 }
 
-char* real_memcpy_wrapper(char* s1, const char* s2, size_t n) {
+static char* real_memcpy_wrapper(char* s1, const char* s2, size_t n) {
   return (char*)___memcpy(s1, s2, n);
 }
 
-char* real_memmove_wrapper(char* s1, const char* s2, size_t n) {
+static char* real_memmove_wrapper(char* s1, const char* s2, size_t n) {
   return (char*)___memmove(s1, s2, n);
 }
 
@@ -53,9 +54,9 @@ static void* GetFuncAddr(const char* name, uptr wrapper_addr) {
   void *addr = dlsym(RTLD_NEXT, name);
 
   // AIX dlsym can only detect functions that are exported, so
-  // some basic functions like memcpy return null. In this case, we fallback
+  // some basic functions like memcpy return null. In this case, we fall back
   // to a corresponding internal libc symbol (for example, ___memcpy) if it's
-  // available, or the internal sanitizer function.
+  // available and, otherwise, to the internal sanitizer function.
   if (!addr) {
     if (internal_strcmp(name, "strcpy") == 0)
       addr = (void*)real_strcpy_wrapper;
