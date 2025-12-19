@@ -357,22 +357,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.getFinal())
       result = todo("final");
   };
-  auto checkGrainsize = [&todo](auto op, LogicalResult &result) {
-    if (op.getGrainsize())
-      result = todo("grainsize");
-  };
-  auto checkIf = [&todo](auto op, LogicalResult &result) {
-    if (op.getIfExpr())
-      result = todo("if");
-  };
-  auto checkMergeable = [&todo](auto op, LogicalResult &result) {
-    if (op.getMergeable())
-      result = todo("mergeable");
-  };
-  auto checkNogroup = [&todo](auto op, LogicalResult &result) {
-    if (op.getNogroup())
-      result = todo("nogroup");
-  };
   auto checkHint = [](auto op, LogicalResult &) {
     if (op.getHint())
       op.emitWarning("hint clause discarded");
@@ -385,10 +369,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
   auto checkNowait = [&todo](auto op, LogicalResult &result) {
     if (op.getNowait())
       result = todo("nowait");
-  };
-  auto checkNumTasks = [&todo](auto op, LogicalResult &result) {
-    if (op.getNumTasks())
-      result = todo("num_tasks");
   };
   auto checkOrder = [&todo](auto op, LogicalResult &result) {
     if (op.getOrder() || op.getOrderMod())
@@ -419,10 +399,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (!op.getTaskReductionVars().empty() || op.getTaskReductionByref() ||
         op.getTaskReductionSyms())
       result = todo("task_reduction");
-  };
-  auto checkUntied = [&todo](auto op, LogicalResult &result) {
-    if (op.getUntied())
-      result = todo("untied");
   };
 
   LogicalResult result = success();
@@ -467,16 +443,8 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::TaskloopOp op) {
         checkAllocate(op, result);
-        checkFinal(op, result);
-        checkGrainsize(op, result);
-        checkIf(op, result);
         checkInReduction(op, result);
-        checkMergeable(op, result);
-        checkNogroup(op, result);
-        checkNumTasks(op, result);
         checkReduction(op, result);
-        checkUntied(op, result);
-        checkPriority(op, result);
       })
       .Case([&](omp::WsloopOp op) {
         checkAllocate(op, result);
@@ -2783,6 +2751,21 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
     return loopInfo;
   };
 
+  llvm::Value *ifCond = nullptr;
+  llvm::Value *grainsize = nullptr;
+  int sched = 0; // default
+  Value grainsizeVal = taskloopOp.getGrainsize();
+  Value numTasksVal = taskloopOp.getNumTasks();
+  if (Value ifVar = taskloopOp.getIfExpr())
+    ifCond = moduleTranslation.lookupValue(ifVar);
+  if (grainsizeVal) {
+    grainsize = moduleTranslation.lookupValue(grainsizeVal);
+    sched = 1; // grainsize
+  } else if (numTasksVal) {
+    grainsize = moduleTranslation.lookupValue(numTasksVal);
+    sched = 2; // num_tasks
+  }
+
   llvm::OpenMPIRBuilder::TaskDupCallbackTy taskDupOrNull = nullptr;
   if (!taskStructMgr.getLLVMPrivateVarGEPs().empty())
     taskDupOrNull = taskDupCB;
@@ -2794,7 +2777,11 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupValue(loopOp.getLoopLowerBounds()[0]),
           moduleTranslation.lookupValue(loopOp.getLoopUpperBounds()[0]),
           moduleTranslation.lookupValue(loopOp.getLoopSteps()[0]),
-          /*Tied=*/true, taskDupOrNull, taskStructMgr.getStructPtr());
+          taskloopOp.getUntied(), ifCond, grainsize, taskloopOp.getNogroup(),
+          sched, moduleTranslation.lookupValue(taskloopOp.getFinal()),
+          taskloopOp.getMergeable(),
+          moduleTranslation.lookupValue(taskloopOp.getPriority()),
+          taskDupOrNull, taskStructMgr.getStructPtr());
 
   if (failed(handleError(afterIP, opInst)))
     return failure();

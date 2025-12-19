@@ -2096,8 +2096,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     BodyGenCallbackTy BodyGenCB,
     llvm::function_ref<llvm::Expected<llvm::CanonicalLoopInfo *>()> LoopInfo,
-    Value *LBVal, Value *UBVal, Value *StepVal, bool Tied,
-    TaskDupCallbackTy DupCB, Value *TaskContextStructPtrVal) {
+    Value *LBVal, Value *UBVal, Value *StepVal, bool Untied, Value *IfCond,
+    Value *GrainSize, bool NoGroup, int Sched, Value *Final, bool Mergeable,
+    Value *Priority, TaskDupCallbackTy DupCB, Value *TaskContextStructPtrVal) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -2172,9 +2173,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
   }
   Value *TaskDupFn = *TaskDupFnOrErr;
 
-  OI.PostOutlineCB = [this, Ident, LBVal, UBVal, StepVal, Tied,
+  OI.PostOutlineCB = [this, Ident, LBVal, UBVal, StepVal, Untied,
                       TaskloopAllocaBB, CLI, Loc, TaskDupFn, ToBeDeleted,
-                      FakeLB, FakeUB, FakeStep](Function &OutlinedFn) mutable {
+                      IfCond, GrainSize, NoGroup, Sched, FakeLB, FakeUB,
+                      FakeStep, Final, Mergeable,
+                      Priority](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
@@ -2207,8 +2210,22 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
         getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_taskgroup);
     Builder.CreateCall(TaskgroupFn, {Ident, ThreadID});
 
-    // The flags are set to 1 if the task is tied, 0 otherwise.
-    Value *Flags = Builder.getInt32(Tied);
+    // `flags` Argument Configuration
+    // Task is tied if (Flags & 1) == 1.
+    // Task is untied if (Flags & 1) == 0.
+    // Task is final if (Flags & 2) == 2.
+    // Task is not final if (Flags & 2) == 0.
+    // Task is mergeable if (Flags & 4) == 4.
+    // Task is not mergeable if (Flags & 4) == 0.
+    // Task is priority if (Flags & 32) == 32.
+    // Task is not priority if (Flags & 32) == 0.
+    Value *Flags = Builder.getInt32(Untied ? 0 : 1);
+    if (Final)
+      Flags = Builder.CreateOr(Builder.getInt32(2), Flags);
+    if (Mergeable)
+      Flags = Builder.CreateOr(Builder.getInt32(4), Flags);
+    if (Priority)
+      Flags = Builder.CreateOr(Builder.getInt32(32), Flags);
 
     Value *TaskSize = Builder.getInt64(
         divideCeil(M.getDataLayout().getTypeSizeInBits(Task), 8));
@@ -2251,25 +2268,32 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     llvm::Value *Loadstep = Builder.CreateLoad(Builder.getInt64Ty(), Step);
 
     // set up the arguments for emitting kmpc_taskloop runtime call
-    // setting default values for ifval, nogroup, sched, grainsize, task_dup
-    Value *IfVal = Builder.getInt32(1);
-    Value *NoGroup = Builder.getInt32(1);
-    Value *Sched = Builder.getInt32(0);
-    Value *GrainSize = Builder.getInt64(0);
+    // setting values for ifval, nogroup, sched, grainsize, task_dup
+    Value *IfCondVal =
+        IfCond ? Builder.CreateIntCast(IfCond, Builder.getInt32Ty(), true)
+               : Builder.getInt32(1);
+    Value *NoGroupVal = Builder.getInt32(NoGroup ? 1 : 0);
+    Value *SchedVal = Builder.getInt32(Sched);
+    Value *GrainSizeVal =
+        GrainSize ? Builder.CreateIntCast(GrainSize, Builder.getInt64Ty(), true)
+                  : Builder.getInt64(0);
     Value *TaskDup = TaskDupFn;
 
-    Value *Args[] = {Ident,    ThreadID, TaskData, IfVal,     Lb,     Ub,
-                     Loadstep, NoGroup,  Sched,    GrainSize, TaskDup};
+    Value *Args[] = {Ident,    ThreadID,   TaskData, IfCondVal,    Lb,     Ub,
+                     Loadstep, NoGroupVal, SchedVal, GrainSizeVal, TaskDup};
 
     // taskloop runtime call
     Function *TaskloopFn =
         getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_taskloop);
     Builder.CreateCall(TaskloopFn, Args);
 
-    // Emit the @__kmpc_end_taskgroup runtime call to end the taskgroup
-    Function *EndTaskgroupFn =
-        getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_taskgroup);
-    Builder.CreateCall(EndTaskgroupFn, {Ident, ThreadID});
+    // Emit the @__kmpc_end_taskgroup runtime call to end the taskgroup if
+    // nogroup is not defined
+    if (!NoGroup) {
+      Function *EndTaskgroupFn =
+          getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_taskgroup);
+      Builder.CreateCall(EndTaskgroupFn, {Ident, ThreadID});
+    }
 
     StaleCI->eraseFromParent();
 
