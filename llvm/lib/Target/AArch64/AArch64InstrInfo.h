@@ -808,6 +808,27 @@ static inline unsigned getPACOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
   llvm_unreachable("Unhandled AArch64PACKey::ID enum");
 }
 
+/// Return B(L)RA opcode to be used for an authenticated branch or call using
+/// the given key, or its B(L)RA*Z variant that doesn't take a discriminator
+/// operand, using zero instead.
+static inline unsigned getBranchOpcodeForKey(bool IsCall, AArch64PACKey::ID K,
+                                             bool Zero) {
+  using namespace AArch64PACKey;
+  static const unsigned BranchOpcode[2][2] = {
+      {AArch64::BRAA, AArch64::BRAAZ},
+      {AArch64::BRAB, AArch64::BRABZ},
+  };
+  static const unsigned CallOpcode[2][2] = {
+      {AArch64::BLRAA, AArch64::BLRAAZ},
+      {AArch64::BLRAB, AArch64::BLRABZ},
+  };
+
+  assert((K == IA || K == IB) && "B(L)RA* instructions require IA or IB key");
+  if (IsCall)
+    return CallOpcode[K == IB][Zero];
+  return BranchOpcode[K == IB][Zero];
+}
+
 // struct TSFlags {
 #define TSFLAG_ELEMENT_SIZE_TYPE(X)      (X)        // 3-bits
 #define TSFLAG_DESTRUCTIVE_INST_TYPE(X) ((X) << 3)  // 4-bits
