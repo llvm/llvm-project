@@ -745,7 +745,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
           Filename, TmpFileMgr, *AST->ModCache, PCHContainerRdr,
           /*FindModuleFileExtensions=*/true, Collector,
           /*ValidateDiagnosticOptions=*/true, ASTReader::ARR_None)) {
-    AST->getDiagnostics().Report(diag::err_fe_unable_to_load_pch);
+    AST->getDiagnostics().Report(diag::err_fe_unable_to_load_ast_file);
     return nullptr;
   }
 
@@ -847,7 +847,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   case ASTReader::VersionMismatch:
   case ASTReader::ConfigurationMismatch:
   case ASTReader::HadErrors:
-    AST->getDiagnostics().Report(diag::err_fe_unable_to_load_pch);
+    AST->getDiagnostics().Report(diag::err_fe_unable_to_load_ast_file);
     return nullptr;
   }
 

@@ -2210,6 +2210,23 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return builder.getNullPtr(ty, cgf.getLoc(subExpr->getExprLoc()));
   }
 
+  case CK_NullToMemberPointer: {
+    if (mustVisitNullValue(subExpr))
+      cgf.emitIgnoredExpr(subExpr);
+
+    assert(!cir::MissingFeatures::cxxABI());
+
+    const MemberPointerType *mpt = ce->getType()->getAs<MemberPointerType>();
+    if (mpt->isMemberFunctionPointerType()) {
+      cgf.cgm.errorNYI(subExpr->getSourceRange(),
+                       "CK_NullToMemberPointer: member function pointer");
+      return {};
+    }
+
+    auto ty = mlir::cast<cir::DataMemberType>(cgf.convertType(destTy));
+    return builder.getNullDataMemberPtr(ty, cgf.getLoc(subExpr->getExprLoc()));
+  }
+
   case CK_LValueToRValue:
     assert(cgf.getContext().hasSameUnqualifiedType(subExpr->getType(), destTy));
     assert(subExpr->isGLValue() && "lvalue-to-rvalue applied to r-value!");

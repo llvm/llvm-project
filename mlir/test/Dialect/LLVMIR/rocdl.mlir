@@ -961,7 +961,7 @@ llvm.func @rocdl.global.prefetch(%ptr : !llvm.ptr<1>) {
 
 llvm.func @rocdl.flat.prefetch(%ptr : !llvm.ptr) {
   // CHECK-LABEL: rocdl.flat.prefetch
-  // CHECK: rocdl.flat.prefetch %{{.*}}, scope 0 : !llvm.ptr 
+  // CHECK: rocdl.flat.prefetch %{{.*}}, scope 0 : !llvm.ptr
   rocdl.flat.prefetch %ptr, scope 0 : !llvm.ptr
   llvm.return
 }
@@ -1187,6 +1187,13 @@ llvm.func @rocdl.s.sleep() {
   // CHECK-LABEL: rocdl.s.sleep
   // CHECK: rocdl.s.sleep 0
   rocdl.s.sleep 0
+  llvm.return
+}
+
+llvm.func @rocdl.s.nop() {
+  // CHECK-LABEL: rocdl.s.nop
+  // CHECK: rocdl.s.nop 0
+  rocdl.s.nop 0
   llvm.return
 }
 
