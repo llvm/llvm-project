@@ -285,8 +285,10 @@ VectorType VectorType::scaleElementBitwidth(unsigned scale) {
 
 VectorType VectorType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
                                  Type elementType) const {
-  return VectorType::get(shape.value_or(getShape()), elementType,
-                         getScalableDims());
+  ArrayRef<int64_t> shapeVal = shape.value_or(getShape());
+  SmallVector<bool> scalableDims(getScalableDims());
+  scalableDims.resize(shapeVal.size(), false);
+  return VectorType::get(shapeVal, elementType, scalableDims);
 }
 
 //===----------------------------------------------------------------------===//
