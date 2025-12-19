@@ -962,7 +962,7 @@ define <1 x i64> @fcvtas_ds_round_vec_simd(float %a) {
 ; CHECK-NEXT:    ret
   %r = call float @llvm.round.f32(float %a)
   %i = fptosi float %r to i64
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -978,7 +978,7 @@ define <1 x i64> @fcvtas_dd_round_vec_simd(double %a) {
 ; CHECK-NEXT:    ret
   %r = call double @llvm.round.f64(double %a)
   %i = fptosi double %r to i64
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -995,7 +995,7 @@ define <1 x i64> @fcvtau_ds_round_vec_simd(float %a) {
 ; CHECK-NEXT:    ret
   %r = call float @llvm.round.f32(float %a)
   %i = fptoui float %r to i64
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -1011,7 +1011,7 @@ define <1 x i64> @fcvtau_dd_round_vec_simd(double %a) {
 ; CHECK-NEXT:    ret
   %r = call double @llvm.round.f64(double %a)
   %i = fptoui double %r to i64
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -1028,7 +1028,7 @@ define <1 x i64> @fcvtms_ds_round_vec_simd(float %a) {
 ; CHECK-NEXT:    ret
   %r = call float @llvm.floor.f32(float %a)
   %i = fptosi float %r to i64
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -1044,7 +1044,7 @@ define <1 x i64> @fcvtms_dd_round_vec_simd(double %a) {
 ; CHECK-NEXT:    ret
   %r = call double @llvm.floor.f64(double %a)
   %i = fptosi double %r to i64
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -1061,7 +1061,7 @@ define <1 x i64> @fcvtmu_ds_round_vec_simd(float %a) {
 ; CHECK-NEXT:    ret
   %r = call float @llvm.floor.f32(float %a)
   %i = fptoui float %r to i64
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -1077,7 +1077,7 @@ define <1 x i64> @fcvtmu_dd_round_vec_simd(double %a) {
 ; CHECK-NEXT:    ret
   %r = call double @llvm.floor.f64(double %a)
   %i = fptoui double %r to i64
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -1094,7 +1094,7 @@ define <1 x i64> @fcvtps_ds_round_vec_simd(float %a) {
 ; CHECK-NEXT:    ret
   %r = call float @llvm.ceil.f32(float %a)
   %i = fptosi float %r to i64
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -1110,7 +1110,7 @@ define <1 x i64> @fcvtps_dd_round_vec_simd(double %a) {
 ; CHECK-NEXT:    ret
   %r = call double @llvm.ceil.f64(double %a)
   %i = fptosi double %r to i64
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -1127,7 +1127,7 @@ define <1 x i64> @fcvtpu_ds_round_vec_simd(float %a) {
 ; CHECK-NEXT:    ret
   %r = call float @llvm.ceil.f32(float %a)
   %i = fptoui float %r to i64
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -1143,7 +1143,7 @@ define <1 x i64> @fcvtpu_dd_round_vec_simd(double %a) {
 ; CHECK-NEXT:    ret
   %r = call double @llvm.ceil.f64(double %a)
   %i = fptoui double %r to i64
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -1160,7 +1160,7 @@ define <1 x i64> @fcvtzs_ds_round_vec_simd(float %a) {
 ; CHECK-NEXT:    ret
   %r = call float @llvm.trunc.f32(float %a)
   %i = fptosi float %r to i64
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -1176,7 +1176,7 @@ define <1 x i64> @fcvtzs_dd_round_vec_simd(double %a) {
 ; CHECK-NEXT:    ret
   %r = call double @llvm.trunc.f64(double %a)
   %i = fptosi double %r to i64
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -1193,7 +1193,7 @@ define <1 x i64> @fcvtzu_ds_round_vec_simd(float %a) {
 ; CHECK-NEXT:    ret
   %r = call float @llvm.trunc.f32(float %a)
   %i = fptoui float %r to i64
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -1209,7 +1209,7 @@ define <1 x i64> @fcvtzu_dd_round_vec_simd(double %a) {
 ; CHECK-NEXT:    ret
   %r = call double @llvm.trunc.f64(double %a)
   %i = fptoui double %r to i64
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -1421,7 +1421,7 @@ define <1 x i64> @fcvtzs_dh_sat_vec_simd(half %a) {
 ; CHECK-NEXT:    fcvtzs d0, h0
 ; CHECK-NEXT:    ret
   %i = call i64 @llvm.fptosi.sat.i64.f16(half %a)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -1437,7 +1437,7 @@ define <1 x i64> @fcvtzs_ds_sat_vec_simd(float %a) {
 ; CHECK-NEXT:    fcvtzs d0, s0
 ; CHECK-NEXT:    ret
   %i = call i64 @llvm.fptosi.sat.i64.f32(float %a)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -1452,7 +1452,7 @@ define <1 x i64> @fcvtzs_dd_sat_vec_simd(double %a) {
 ; CHECK-NEXT:    fcvtzs d0, d0
 ; CHECK-NEXT:    ret
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %a)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -1468,7 +1468,7 @@ define <1 x i64> @fcvtzu_dh_sat_vec_simd(half %a) {
 ; CHECK-NEXT:    fcvtzu d0, h0
 ; CHECK-NEXT:    ret
   %i = call i64 @llvm.fptoui.sat.i64.f16(half %a)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -1484,7 +1484,7 @@ define <1 x i64> @fcvtzu_ds_sat_vec_simd(float %a) {
 ; CHECK-NEXT:    fcvtzu d0, s0
 ; CHECK-NEXT:    ret
   %i = call i64 @llvm.fptoui.sat.i64.f32(float %a)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -1499,7 +1499,7 @@ define <1 x i64> @fcvtzu_dd_sat_vec_simd(double %a) {
 ; CHECK-NEXT:    fcvtzu d0, d0
 ; CHECK-NEXT:    ret
   %i = call i64 @llvm.fptoui.sat.i64.f64(double %a)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2324,7 +2324,7 @@ define <1 x i64> @fcvtas_dh_simd_vec(half %a) {
 ; CHECK-NEXT:    ret
   %r = call half @llvm.round.f16(half %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2341,7 +2341,7 @@ define <1 x i64> @fcvtas_ds_simd_vec(float %a) {
 ; CHECK-NEXT:    ret
   %r = call float @llvm.round.f32(float %a)
   %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2357,7 +2357,7 @@ define <1 x i64> @fcvtas_dd_simd_vec(double %a) {
 ; CHECK-NEXT:    ret
   %r = call double @llvm.round.f64(double %a)
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2374,7 +2374,7 @@ define <1 x i64> @fcvtau_ds_simd_vec(float %a) {
 ; CHECK-NEXT:    ret
   %r = call float @llvm.round.f32(float %a)
   %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2390,7 +2390,7 @@ define <1 x i64> @fcvtau_dd_simd_vec(double %a) {
 ; CHECK-NEXT:    ret
   %r = call double @llvm.round.f64(double %a)
   %i = call i64 @llvm.fptoui.sat.i64.f64(double %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2407,7 +2407,7 @@ define <1 x i64> @fcvtau_dh_simd_vec(half %a) {
 ; CHECK-NEXT:    ret
   %r = call half @llvm.round.f16(half %a) nounwind readnone
   %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2424,7 +2424,7 @@ define <1 x i64> @fcvtms_dh_simd_vec(half %a) {
 ; CHECK-NEXT:    ret
   %r = call half @llvm.floor.f16(half %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2441,7 +2441,7 @@ define <1 x i64> @fcvtms_ds_simd_vec(float %a) {
 ; CHECK-NEXT:    ret
   %r = call float @llvm.floor.f32(float %a)
   %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2457,7 +2457,7 @@ define <1 x i64> @fcvtms_dd_simd_vec(double %a) {
 ; CHECK-NEXT:    ret
   %r = call double @llvm.floor.f64(double %a)
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2474,7 +2474,7 @@ define <1 x i64> @fcvtmu_dh_simd_vec(half %a) {
 ; CHECK-NEXT:    ret
   %r = call half @llvm.floor.f16(half %a) nounwind readnone
   %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2491,7 +2491,7 @@ define <1 x i64> @fcvtmu_ds_simd_vec(float %a) {
 ; CHECK-NEXT:    ret
   %r = call float @llvm.floor.f32(float %a)
   %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2507,7 +2507,7 @@ define <1 x i64> @fcvtmu_dd_simd_vec(double %a) {
 ; CHECK-NEXT:    ret
   %r = call double @llvm.floor.f64(double %a)
   %i = call i64 @llvm.fptoui.sat.i64.f64(double %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2524,7 +2524,7 @@ define <1 x i64> @fcvtps_dh_simd_vec(half %a) {
 ; CHECK-NEXT:    ret
   %r = call half @llvm.ceil.f16(half %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2541,7 +2541,7 @@ define <1 x i64> @fcvtps_ds_simd_vec(float %a) {
 ; CHECK-NEXT:    ret
   %r = call float @llvm.ceil.f32(float %a)
   %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2557,7 +2557,7 @@ define <1 x i64> @fcvtps_dd_simd_vec(double %a) {
 ; CHECK-NEXT:    ret
   %r = call double @llvm.ceil.f64(double %a)
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2574,7 +2574,7 @@ define <1 x i64> @fcvtpu_dh_simd_vec(half %a) {
 ; CHECK-NEXT:    ret
   %r = call half @llvm.ceil.f16(half %a) nounwind readnone
   %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2591,7 +2591,7 @@ define <1 x i64> @fcvtpu_ds_simd_vec(float %a) {
 ; CHECK-NEXT:    ret
   %r = call float @llvm.ceil.f32(float %a)
   %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2607,7 +2607,7 @@ define <1 x i64> @fcvtpu_dd_simd_vec(double %a) {
 ; CHECK-NEXT:    ret
   %r = call double @llvm.ceil.f64(double %a)
   %i = call i64 @llvm.fptoui.sat.i64.f64(double %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2624,7 +2624,7 @@ define <1 x i64> @fcvtzs_dh_simd_vec(half %a) {
 ; CHECK-NEXT:    ret
   %r = call half @llvm.trunc.f16(half %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2641,7 +2641,7 @@ define <1 x i64> @fcvtzs_ds_simd_vec(float %a) {
 ; CHECK-NEXT:    ret
   %r = call float @llvm.trunc.f32(float %a)
   %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2657,7 +2657,7 @@ define <1 x i64> @fcvtzs_dd_simd_vec(double %a) {
 ; CHECK-NEXT:    ret
   %r = call double @llvm.trunc.f64(double %a)
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2674,7 +2674,7 @@ define <1 x i64> @fcvtzu_dh_simd_vec(half %a) {
 ; CHECK-NEXT:    ret
   %r = call half @llvm.trunc.f16(half %a) nounwind readnone
   %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2691,7 +2691,7 @@ define <1 x i64> @fcvtzu_ds_simd_vec(float %a) {
 ; CHECK-NEXT:    ret
   %r = call float @llvm.trunc.f32(float %a)
   %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
 
@@ -2707,6 +2707,6 @@ define <1 x i64> @fcvtzu_dd_simd_vec(double %a) {
 ; CHECK-NEXT:    ret
   %r = call double @llvm.trunc.f64(double %a)
   %i = call i64 @llvm.fptoui.sat.i64.f64(double %r)
-  %vec = insertelement <1 x i64> undef, i64 %i, i64 0
+  %vec = insertelement <1 x i64> poison, i64 %i, i64 0
   ret <1 x i64> %vec
 }
