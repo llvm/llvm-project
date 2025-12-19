@@ -20,7 +20,6 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace clang;
@@ -375,7 +374,7 @@ static mlir::Value emitX86CvtF16ToFloatExpr(CIRGenBuilderTy &builder,
   auto vecTy = mlir::cast<cir::VectorType>(src.getType());
   uint64_t numElems = vecTy.getSize();
 
-  mask = getMaskVecValue(builder, loc, mask, numElems);
+  mlir::Value mask = getMaskVecValue(builder, loc, ops[2], numElems);
 
   auto halfTy = cir::VectorType::get(builder.getF16Type(), numElems);
   mlir::Value srcF16 = builder.createBitcast(loc, src, halfTy);
@@ -1737,11 +1736,10 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     ops[2] = getMaskVecValue(builder, loc, ops[2], numElts);
 
     StringRef intrinsicName;
-    if (builtinID == X86::BI__builtin_ia32_cvtneps2bf16_256_mask) {
+    if (builtinID == X86::BI__builtin_ia32_cvtneps2bf16_256_mask)
       intrinsicName = "x86.avx512bf16.cvtneps2bf16.256";
-    } else {
+    else
       intrinsicName = "x86.avx512bf16.cvtneps2bf16.512";
-    }
 
     mlir::Value intrinsicResult = emitIntrinsicCallOp(
         builder, loc, intrinsicName, convertType(expr->getType()), ops);

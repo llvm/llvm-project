@@ -2,9 +2,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512fp16 -target-feature +avx512bf16 -emit-llvm %s -o - | FileCheck %s --check-prefix=OGCG
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512fp16 -target-feature +avx512bf16 -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM
 
-// REQUIRES: avx512fp16
-// REQUIRES: avx512bf16
-
 #include <immintrin.h>
 
 // CIR-LABEL: test_mm512_mask_cvtneps_pbh
