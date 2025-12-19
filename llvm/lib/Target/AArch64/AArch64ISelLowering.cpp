@@ -11177,6 +11177,40 @@ std::pair<SDValue, uint64_t> lookThroughSignExtension(SDValue Val) {
   return {Val, Val.getValueSizeInBits() - 1};
 }
 
+// Op is an SDValue that is being compared to 0. If the comparison is a bit
+// test, optimize it to a TBZ or TBNZ.
+static SDValue optimizeBitTest(SDValue Op, SDValue Chain, SDValue Dest,
+                               unsigned Opcode, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+
+  if (Op.getOpcode() != ISD::AND)
+    return SDValue();
+
+  // See if we can use a TBZ to fold in an AND as well.
+  // TBZ has a smaller branch displacement than CBZ.  If the offset is
+  // out of bounds, a late MI-layer pass rewrites branches.
+  // 403.gcc is an example that hits this case.
+  if (isa<ConstantSDNode>(Op.getOperand(1)) &&
+      isPowerOf2_64(Op.getConstantOperandVal(1))) {
+    SDValue Test = Op.getOperand(0);
+    uint64_t Mask = Op.getConstantOperandVal(1);
+    return DAG.getNode(Opcode, DL, MVT::Other, Chain, Test,
+                       DAG.getConstant(Log2_64(Mask), DL, MVT::i64), Dest);
+  }
+
+  if (Op.getOperand(0).getOpcode() == ISD::SHL) {
+    auto Op00 = Op.getOperand(0).getOperand(0);
+    if (isa<ConstantSDNode>(Op00) && Op00->getAsZExtVal() == 1) {
+      auto Shr = DAG.getNode(ISD::SRL, DL, Op00.getValueType(),
+                             Op.getOperand(1), Op.getOperand(0).getOperand(1));
+      return DAG.getNode(Opcode, DL, MVT::Other, Chain, Shr,
+                         DAG.getConstant(0, DL, MVT::i64), Dest);
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
@@ -11236,35 +11270,15 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
     const ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
     if (RHSC && RHSC->getZExtValue() == 0 && ProduceNonFlagSettingCondBr) {
       if (CC == ISD::SETEQ) {
-        // See if we can use a TBZ to fold in an AND as well.
-        // TBZ has a smaller branch displacement than CBZ.  If the offset is
-        // out of bounds, a late MI-layer pass rewrites branches.
-        // 403.gcc is an example that hits this case.
-        if (LHS.getOpcode() == ISD::AND &&
-            isa<ConstantSDNode>(LHS.getOperand(1)) &&
-            isPowerOf2_64(LHS.getConstantOperandVal(1))) {
-          SDValue Test = LHS.getOperand(0);
-          uint64_t Mask = LHS.getConstantOperandVal(1);
-          return DAG.getNode(AArch64ISD::TBZ, DL, MVT::Other, Chain, Test,
-                             DAG.getConstant(Log2_64(Mask), DL, MVT::i64),
-                             Dest);
-        }
+        if (SDValue Result =
+                optimizeBitTest(LHS, Chain, Dest, AArch64ISD::TBZ, DAG))
+          return Result;
 
         return DAG.getNode(AArch64ISD::CBZ, DL, MVT::Other, Chain, LHS, Dest);
       } else if (CC == ISD::SETNE) {
-        // See if we can use a TBZ to fold in an AND as well.
-        // TBZ has a smaller branch displacement than CBZ.  If the offset is
-        // out of bounds, a late MI-layer pass rewrites branches.
-        // 403.gcc is an example that hits this case.
-        if (LHS.getOpcode() == ISD::AND &&
-            isa<ConstantSDNode>(LHS.getOperand(1)) &&
-            isPowerOf2_64(LHS.getConstantOperandVal(1))) {
-          SDValue Test = LHS.getOperand(0);
-          uint64_t Mask = LHS.getConstantOperandVal(1);
-          return DAG.getNode(AArch64ISD::TBNZ, DL, MVT::Other, Chain, Test,
-                             DAG.getConstant(Log2_64(Mask), DL, MVT::i64),
-                             Dest);
-        }
+        if (SDValue Result =
+                optimizeBitTest(LHS, Chain, Dest, AArch64ISD::TBNZ, DAG))
+          return Result;
 
         return DAG.getNode(AArch64ISD::CBNZ, DL, MVT::Other, Chain, LHS, Dest);
       } else if (CC == ISD::SETLT && LHS.getOpcode() != ISD::AND) {
