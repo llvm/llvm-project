@@ -19,6 +19,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -53,7 +54,7 @@ void ObjectFileAIXCore::Terminate() {
 }
 
 ObjectFile *ObjectFileAIXCore::CreateInstance(const lldb::ModuleSP &module_sp,
-                                          DataBufferSP data_sp,
+                                          DataExtractorSP extractor_sp,
                                           lldb::offset_t data_offset,
                                           const lldb_private::FileSpec *file,
                                           lldb::offset_t file_offset,
@@ -63,19 +64,20 @@ ObjectFile *ObjectFileAIXCore::CreateInstance(const lldb::ModuleSP &module_sp,
   {
 
       bool mapped_writable = false;
-      if (!data_sp) {
-          data_sp = MapFileDataWritable(*file, length, file_offset);
+      if (!extractor_sp || !extractor_sp->HasData()) {
+          DataBufferSP data_sp = MapFileDataWritable(*file, length, file_offset);
           if (!data_sp)
               return nullptr;
           data_offset = 0;
           mapped_writable = true;
+          extractor_sp = std::make_shared<lldb_private::DataExtractor>(data_sp);
       }
 
-      assert(data_sp);
+      //assert(data_sp);
 
       // Update the data to contain the entire file if it doesn't already
-      if (data_sp->GetByteSize() < length) {
-          data_sp = MapFileDataWritable(*file, length, file_offset);
+      if (extractor_sp->GetByteSize() < length) {
+          DataBufferSP data_sp = MapFileDataWritable(*file, length, file_offset);
           if (!data_sp)
               return nullptr;
           data_offset = 0;
@@ -84,13 +86,13 @@ ObjectFile *ObjectFileAIXCore::CreateInstance(const lldb::ModuleSP &module_sp,
 
       // If we didn't map the data as writable take ownership of the buffer.
       if (!mapped_writable) {
-          data_sp = std::make_shared<DataBufferHeap>(data_sp->GetBytes(),
+          DataBufferSP data_sp = std::make_shared<DataBufferHeap>(data_sp->GetBytes(),
                   data_sp->GetByteSize());
           data_offset = 0;
       }
 
       std::unique_ptr<ObjectFileAIXCore> objfile_up(new ObjectFileAIXCore(
-                  module_sp, data_sp, data_offset, file, file_offset, length));
+                  module_sp, extractor_sp, data_offset, file, file_offset, length));
       ArchSpec spec = objfile_up->GetArchitecture();
       objfile_up->SetModulesArchitecture(spec);
       return objfile_up.release();
@@ -233,10 +235,10 @@ ObjectFileAIXCore::MapFileDataWritable(const FileSpec &file, uint64_t Size,
 }
 
 ObjectFileAIXCore::ObjectFileAIXCore(const lldb::ModuleSP &module_sp,
-                             DataBufferSP data_sp, lldb::offset_t data_offset,
+                             DataExtractorSP extractor_sp, lldb::offset_t data_offset,
                              const FileSpec *file, lldb::offset_t file_offset,
                              lldb::offset_t length)
-    : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset)
+    : ObjectFile(module_sp, file, file_offset, length, extractor_sp, data_offset)
       {
   if (file)
     m_file = *file;
@@ -246,6 +248,7 @@ ObjectFileAIXCore::ObjectFileAIXCore(const lldb::ModuleSP &module_sp,
                              DataBufferSP header_data_sp,
                              const lldb::ProcessSP &process_sp,
                              addr_t header_addr)
-    : ObjectFile(module_sp, process_sp, header_addr, header_data_sp)
+    : ObjectFile(module_sp, process_sp, header_addr, 
+                 std::make_shared<lldb_private::DataExtractor>(header_data_sp))
       {
 }

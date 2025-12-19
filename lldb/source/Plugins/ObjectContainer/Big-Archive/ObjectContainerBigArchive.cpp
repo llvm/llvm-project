@@ -138,21 +138,20 @@ ObjectContainerBigArchive::Object::Extract(const DataExtractor &data,
 ObjectContainerBigArchive::Archive::Archive(const lldb_private::ArchSpec &arch,
                                             const llvm::sys::TimePoint<> &time,
                                             lldb::offset_t file_offset,
-                                            lldb_private::DataExtractor &data)
+                                            lldb::DataExtractorSP extractor_sp)
     : m_arch(arch), m_modification_time(time), m_file_offset(file_offset),
-      m_objects(), m_data(data) {}
+      m_objects(), m_extractor_sp(extractor_sp) {}
 
 ObjectContainerBigArchive::Archive::~Archive() = default;
 
 size_t ObjectContainerBigArchive::Archive::ParseObjects() {
-  DataExtractor &data = m_data;
   std::string str;
   lldb::offset_t offset = 0;
-  str.assign((const char *)data.GetData(&offset, (sizeof(llvm::object::BigArchiveMagic) - 1)),
+  str.assign((const char *)m_extractor_sp->GetData(&offset, (sizeof(llvm::object::BigArchiveMagic) - 1)),
              (sizeof(llvm::object::BigArchiveMagic) - 1));
   if (str == llvm::object::BigArchiveMagic) {
     llvm::Error err = llvm::Error::success();
-    llvm::object::BigArchive bigAr(llvm::MemoryBufferRef(toStringRef(m_data.GetData()), llvm::StringRef("")), err);
+    llvm::object::BigArchive bigAr(llvm::MemoryBufferRef(toStringRef(m_extractor_sp->GetData()), llvm::StringRef("")), err);
     if (err)
       return 0;
 
@@ -280,8 +279,8 @@ ObjectContainerBigArchive::Archive::shared_ptr
 ObjectContainerBigArchive::Archive::ParseAndCacheArchiveForFile(
     const FileSpec &file, const ArchSpec &arch,
     const llvm::sys::TimePoint<> &time, lldb::offset_t file_offset,
-    DataExtractor &data) {
-  shared_ptr archive_sp(new Archive(arch, time, file_offset, data));
+    DataExtractorSP extractor_sp) {
+  shared_ptr archive_sp(new Archive(arch, time, file_offset, extractor_sp));
   if (archive_sp) {
     const size_t num_objects = archive_sp->ParseObjects();
     if (num_objects > 0) {
@@ -408,16 +407,16 @@ ObjectContainerBigArchive::~ObjectContainerBigArchive() = default;
 
 bool ObjectContainerBigArchive::ParseHeader() {
   if (m_archive_sp.get() == nullptr) {
-    if (m_data.GetByteSize() > 0) {
+    if (m_extractor_sp->GetByteSize() > 0) {
       ModuleSP module_sp(GetModule());
       if (module_sp) {
         m_archive_sp = Archive::ParseAndCacheArchiveForFile(
             m_file, module_sp->GetArchitecture(),
-            module_sp->GetModificationTime(), m_offset, m_data);
+            module_sp->GetModificationTime(), m_offset, m_extractor_sp);
       }
-      // Clear the m_data that contains the entire archive data and let our
+      // Clear the m_extractor_sp that contains the entire archive data and let our
       // m_archive_sp hold onto the data.
-      m_data.Clear();
+      m_extractor_sp->Clear();
     }
   }
   return m_archive_sp.get() != nullptr;
@@ -441,9 +440,11 @@ ObjectFileSP ObjectContainerBigArchive::GetObjectFile(const FileSpec *file) {
           module_sp->GetObjectName(), module_sp->GetObjectModificationTime());
       if (object) {
         lldb::offset_t data_offset = object->file_offset;
+        DataExtractorSP extractor_sp =
+            std::make_shared<DataExtractor>(m_archive_sp->GetData());
         return ObjectFile::FindPlugin(
             module_sp, file, m_offset + object->file_offset, object->file_size,
-            m_archive_sp->GetData().GetSharedDataBuffer(), data_offset);
+            extractor_sp, data_offset);
       }
     }
   }
@@ -458,8 +459,11 @@ size_t ObjectContainerBigArchive::GetModuleSpecifications(
   // We have data, which means this is the first 512 bytes of the file Check to
   // see if the magic bytes match and if they do, read the entire table of
   // contents for the archive and cache it
+
   DataExtractor data;
   data.SetData(data_sp, data_offset, data_sp->GetByteSize());
+  DataExtractorSP extractor_sp = std::make_shared<DataExtractor>();
+  extractor_sp->SetData(data_sp, data_offset, data_sp->GetByteSize());
   if (!file || !data_sp || !ObjectContainerBigArchive::MagicBytesMatch(data))
     return 0;
 
@@ -473,9 +477,9 @@ size_t ObjectContainerBigArchive::GetModuleSpecifications(
     data_sp =
         FileSystem::Instance().CreateDataBuffer(file, file_size, file_offset);
     if (data_sp) {
-      data.SetData(data_sp, 0, data_sp->GetByteSize());
+      extractor_sp->SetData(data_sp, 0, data_sp->GetByteSize());
       archive_sp = Archive::ParseAndCacheArchiveForFile(
-          file, ArchSpec(), file_mod_time, file_offset, data);
+          file, ArchSpec(), file_mod_time, file_offset, extractor_sp);
     }
   }
 
