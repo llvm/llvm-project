@@ -893,7 +893,7 @@ private:
   /// load it.
   ModuleLoadResult findOrCompileModuleAndReadAST(StringRef ModuleName,
                                                  SourceLocation ImportLoc,
-                                                 SourceRange ModuleNameRange,
+                                                 SourceLocation ModuleNameLoc,
                                                  bool IsInclusionDirective);
 
   /// Creates a \c CompilerInstance for compiling a module.

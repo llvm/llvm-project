@@ -103,7 +103,7 @@ bool Fortran::lower::CallerInterface::requireDispatchCall() const {
       return true;
   }
   // calls with PASS attribute have the passed-object already set in its
-  // arguments. Just check if their is one.
+  // arguments. Just check if there is one.
   std::optional<unsigned> passArg = getPassArgIndex();
   if (passArg)
     return true;
