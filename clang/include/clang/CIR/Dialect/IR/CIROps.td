@@ -963,6 +963,36 @@ def CIR_ResumeOp : CIR_Op<"resume", [
   let hasLLVMLowering = false;
 }
 
+def CIR_ResumeFlatOp : CIR_Op<"resume.flat", [
+  ReturnLike, Terminator
+]> {
+  let summary = "A flattened version of `cir.resume`";
+  let description = [{
+    The `cir.resume.flat` operation is a region-less and simplified
+    version of the `cir.resume`.
+
+    Its representation is closer to LLVM IR dialect
+    than the C/C++ language feature.
+
+    This operation is used only after the CFG flatterning pass.
+
+    Examples:
+    ```mlir
+    cir.resume.flat %exception_ptr, %type_id
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_VoidPtrType:$exception_ptr,
+    CIR_UInt32:$type_id
+  );
+
+  let assemblyFormat = [{
+    $exception_ptr `,` $type_id
+    attr-dict
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // ScopeOp
 //===----------------------------------------------------------------------===//
@@ -1216,7 +1246,7 @@ def CIR_SwitchOp : CIR_Op<"switch", [
 
   let arguments = (ins 
     CIR_IntType:$condition,
-    UnitAttr:$allEnumCasesCovered
+    UnitAttr:$all_enum_cases_covered
   );
 
   let regions = (region AnyRegion:$body);
@@ -1229,7 +1259,7 @@ def CIR_SwitchOp : CIR_Op<"switch", [
 
   let assemblyFormat = [{
     `(` $condition `:` qualified(type($condition)) `)` 
-     (`allEnumCasesCovered` $allEnumCasesCovered^)?
+     (`all_enum_cases_covered` $all_enum_cases_covered^)?
     $body
     attr-dict
   }];
@@ -2746,6 +2776,10 @@ def CIR_FuncOp : CIR_Op<"func", [
     The `always_inline` attribute marks a function that should always be inlined.
     The `inline_hint` attribute suggests that the function should be inlined.
 
+    The `personality` attribute specifies the personality function to use for
+    exception handling. This is a symbol reference to the personality function
+    (e.g., `@__gxx_personality_v0` for C++ exceptions).
+
     Example:
 
     ```mlir
@@ -2792,6 +2826,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs,
     OptionalAttr<FlatSymbolRefAttr>:$aliasee,
+    OptionalAttr<FlatSymbolRefAttr>:$personality,
     CIR_OptionalPriorityAttr:$global_ctor_priority,
     CIR_OptionalPriorityAttr:$global_dtor_priority,
     OptionalAttr<CIR_CXXSpecialMemberAttr>:$cxx_special_member
@@ -3026,6 +3061,8 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
 
   let results = (outs Optional<CIR_AnyType>:$result);
   let arguments = commonArgs;
+
+  let skipDefaultBuilders = 1;
 
   let builders = [
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee, "mlir::Type":$resType,
@@ -3276,15 +3313,7 @@ def CIR_CopyOp : CIR_Op<"copy",[
 // ReturnAddrOp and FrameAddrOp
 //===----------------------------------------------------------------------===//
 
-class CIR_FuncAddrBuiltinOp<string mnemonic> : CIR_Op<mnemonic, []> {
-  let arguments = (ins CIR_UInt32:$level);
-  let results = (outs CIR_VoidPtrType:$result);
-  let assemblyFormat = [{
-    `(` $level `)` attr-dict
-  }];
-}
-
-def CIR_ReturnAddrOp : CIR_FuncAddrBuiltinOp<"return_address"> {
+def CIR_ReturnAddrOp : CIR_Op<"return_address"> {
   let summary =
       "The return address of the current function, or of one of its callers";
 
@@ -3301,12 +3330,16 @@ def CIR_ReturnAddrOp : CIR_FuncAddrBuiltinOp<"return_address"> {
     Examples:
 
     ```mlir
-    %p = return_address(%level) -> !cir.ptr<!void>
+    %p = return_address(%level) : !cir.ptr<!void>
     ```
   }];
+
+  let arguments = (ins CIR_UInt32:$level);
+  let results = (outs CIR_VoidPtrType:$result);
+  let assemblyFormat = "`(` $level `)` attr-dict";
 }
 
-def CIR_FrameAddrOp : CIR_FuncAddrBuiltinOp<"frame_address"> {
+def CIR_FrameAddrOp : CIR_Op<"frame_address"> {
   let summary =
       "The frame address of the current function, or of one of its callers";
 
@@ -3329,9 +3362,36 @@ def CIR_FrameAddrOp : CIR_FuncAddrBuiltinOp<"frame_address"> {
     Examples:
 
     ```mlir
-    %p = frame_address(%level) -> !cir.ptr<!void>
+    %p = frame_address(%level) : !cir.ptr<!u8i>
     ```
   }];
+
+  let arguments = (ins CIR_UInt32:$level);
+  let results = (outs CIR_PointerType:$result);
+  let assemblyFormat = "`(` $level `)` attr-dict `:` qualified(type($result))";
+}
+
+//===----------------------------------------------------------------------===//
+// AddrOfReturnAddrOp
+//===----------------------------------------------------------------------===//
+
+def CIR_AddrOfReturnAddrOp : CIR_Op<"address_of_return_address"> {
+  let summary = "The place stores the return address of the current function";
+
+  let description = [{
+    Represents a call to builtin function `_AddressOfReturnAddress` in CIR.
+    This builtin function returns a pointer to the place in the stack frame
+    where the return address of the current function is stored.
+
+    Examples:
+
+    ```mlir
+    %addr = address_of_return_address() : !cir.ptr<!u8i>
+    ```
+  }];
+
+  let results = (outs CIR_PointerType:$result);
+  let assemblyFormat = "attr-dict `:` qualified(type($result))";
 }
 
 //===----------------------------------------------------------------------===//
@@ -3557,6 +3617,65 @@ def CIR_ArrayDtor : CIR_ArrayInitDestroy<"array.dtor"> {
     }
     ```
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// GetRuntimeMemberOp
+//===----------------------------------------------------------------------===//
+
+def CIR_GetRuntimeMemberOp : CIR_Op<"get_runtime_member"> {
+  let summary = "Get the address of a member of a record";
+  let description = [{
+    The `cir.get_runtime_member` operation gets the address of a member from
+    the input record. The target member is given by a value of type
+    `!cir.data_member` (i.e. a pointer-to-data-member value).
+
+    This operation differs from `cir.get_member` in when the target member can
+    be determined. For the `cir.get_member` operation, the target member is
+    specified as a constant index so the member it returns access to is known
+    when the operation is constructed. For the `cir.get_runtime_member`
+    operation, the target member is given through a pointer-to-data-member
+    value which is unknown until the program being compiled is executed. In
+    other words, `cir.get_member` represents a normal member access through the
+    `.` operator in C/C++:
+
+    ```cpp
+    struct Foo { int x; };
+    Foo f;
+    (void)f.x;  // cir.get_member
+    ```
+
+    And `cir.get_runtime_member` represents a member access through the `.*` or
+    the `->*` operator in C++:
+
+    ```cpp
+    struct Foo { int x; }
+    Foo f;
+    Foo *p;
+    int Foo::*member;
+
+    (void)f.*member;   // cir.get_runtime_member
+    (void)p->*member;  // cir.get_runtime_member
+    ```
+
+    This operation expects a pointer to the base record as well as the pointer
+    to the target member.
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PtrToRecordType, "address of the record object", [MemRead]>:$addr,
+    Arg<CIR_DataMemberType, "pointer to the target member">:$member);
+
+  let results = (outs Res<CIR_PointerType, "">:$result);
+
+  let assemblyFormat = [{
+    $addr `[` $member `:` qualified(type($member)) `]` attr-dict
+    `:` qualified(type($addr)) `->` qualified(type($result))
+  }];
+
+  let hasVerifier = 1;
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
