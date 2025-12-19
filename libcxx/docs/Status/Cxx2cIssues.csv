@@ -113,7 +113,7 @@
 "","","","","","",""
 "`LWG3578 <https://wg21.link/LWG3578>`__","Iterator SCARYness in the context of associative container merging","2025-02 (Hagenberg)","","","`#127859 <https://github.com/llvm/llvm-project/issues/127859>`__",""
 "`LWG3956 <https://wg21.link/LWG3956>`__","``chrono::parse`` uses ``from_stream`` as a customization point","2025-02 (Hagenberg)","","","`#127860 <https://github.com/llvm/llvm-project/issues/127860>`__",""
-"`LWG4172 <https://wg21.link/LWG4172>`__","``unique_lock`` self-move-assignment is broken","2025-02 (Hagenberg)","","","`#127861 <https://github.com/llvm/llvm-project/issues/127861>`__",""
+"`LWG4172 <https://wg21.link/LWG4172>`__","``unique_lock`` self-move-assignment is broken","2025-02 (Hagenberg)","|Complete|","22","`#127861 <https://github.com/llvm/llvm-project/issues/127861>`__",""
 "`LWG4175 <https://wg21.link/LWG4175>`__","``get_env()`` specified in terms of ``as_const()`` but this doesn't work with rvalue senders","2025-02 (Hagenberg)","","","`#127862 <https://github.com/llvm/llvm-project/issues/127862>`__",""
 "`LWG4179 <https://wg21.link/LWG4179>`__","Wrong range in ``[alg.search]``","2025-02 (Hagenberg)","","","`#127863 <https://github.com/llvm/llvm-project/issues/127863>`__",""
 "`LWG4186 <https://wg21.link/LWG4186>`__","``regex_traits::transform_primary`` mistakenly detects ``typeid`` of a function","2025-02 (Hagenberg)","","","`#127864 <https://github.com/llvm/llvm-project/issues/127864>`__",""
