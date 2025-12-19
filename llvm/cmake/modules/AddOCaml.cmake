@@ -57,12 +57,9 @@ function(add_ocaml_library name)
                   "-ccopt" "-Wl,-rpath,\\$CAMLORIGIN/../.."
                   ${ocaml_pkgs})
 
-  set(ocaml_dep_outputs)
   foreach( ocaml_dep ${ARG_OCAMLDEP} )
     get_target_property(dep_ocaml_flags "ocaml_${ocaml_dep}" OCAML_FLAGS)
     list(APPEND ocaml_flags ${dep_ocaml_flags})
-    # Add dependency on the dependent module's .cmi file
-    list(APPEND ocaml_dep_outputs "${LLVM_LIBRARY_DIR}/ocaml/llvm/${ocaml_dep}.cmi")
   endforeach()
 
   if( NOT BUILD_SHARED_LIBS )
@@ -160,7 +157,7 @@ function(add_ocaml_library name)
     OUTPUT ${ocaml_outputs}
     COMMAND "${OCAMLFIND}" "ocamlmklib" "-ocamlcflags" "-bin-annot"
       "-o" "${name}" ${ocaml_flags} ${ocaml_params}
-    DEPENDS ${ocaml_inputs} ${c_outputs} ${ocaml_dep_outputs}
+    DEPENDS ${ocaml_inputs} ${c_outputs}
     COMMENT "Building OCaml library ${name}"
     VERBATIM)
 
