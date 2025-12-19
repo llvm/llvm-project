@@ -1,0 +1,19 @@
+# Simplified Makefile - compiles as standalone benchmark
+CXX = g++
+CXXFLAGS = -std=c++17 -O3 -march=native -Wall -Wextra
+
+TARGET = benchmark_time_conversion
+SOURCES = benchmark_time_conversion_standalone.cpp
+
+all: $(TARGET)
+
+$(TARGET): $(SOURCES)
+	$(CXX) $(CXXFLAGS) $(SOURCES) -o $(TARGET)
+
+run: $(TARGET)
+	./$(TARGET)
+
+clean:
+	rm -f $(TARGET)
+
+.PHONY: all run clean
