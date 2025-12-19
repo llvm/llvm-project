@@ -3,12 +3,18 @@
 misc-anonymous-namespace-in-header
 ==================================
 
-`google-build-namespaces` redirects here as an alias for this check.
-`cert-dcl59-cpp` redirects here as an alias for this check.
-`fuchsia-header-anon-namespaces` redirects here as an alias for this check.
-
 Finds anonymous namespaces in headers.
 
-https://google.github.io/styleguide/cppguide.html#Namespaces
+Anonymous namespaces in headers can lead to One Definition Rule (ODR) violations
+because each translation unit including the header will get its own unique version
+of the symbols. This increases binary size and can cause confusing link-time errors.
+
+References
+----------
+
+.. bullet list of aliases or simply the text as requested by the specific style guide
+This check corresponds to the CERT C++ Coding Standard rule
+`DCL59-CPP. Do not define an unnamed namespace in a header file
+<https://wiki.sei.cmu.edu/confluence/display/cplusplus/DCL59-CPP.+Do+not+define+an+unnamed+namespace+in+a+header+file>`_.
 
 Corresponding cpplint.py check name: `build/namespaces`.
