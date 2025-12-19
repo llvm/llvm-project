@@ -1786,8 +1786,10 @@ void clang::targets::getAppleMachOAArch64Defines(MacroBuilder &Builder,
   Builder.defineMacro("__arm64", "1");
   Builder.defineMacro("__arm64__", "1");
 
-  if (Triple.isArm64e())
+  if (Triple.isArm64e()) {
     Builder.defineMacro("__arm64e__", "1");
+    Builder.defineMacro("__PTRAUTH_INTRINSICS__", "1");
+  }
 }
 
 void AppleMachOAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
