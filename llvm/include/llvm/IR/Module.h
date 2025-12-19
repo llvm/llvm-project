@@ -1012,6 +1012,10 @@ public:
   /// Get/set the width in memory of the stack protector guard value.
   std::optional<unsigned> getStackProtectorGuardValueWidth() const;
   void setStackProtectorGuardValueWidth(unsigned Width);
+  
+  // Get/set flag indicating whether to emit a __stack_protector_loc section.
+  bool hasStackProtectorGuardRecord() const;
+  void setStackProtectorGuardRecord(bool Flag);
 
   /// Get/set the stack alignment overridden from the default.
   unsigned getOverrideStackAlignment() const;

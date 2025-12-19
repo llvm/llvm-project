@@ -11,12 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZISelLowering.h"
-#include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "SystemZCallingConv.h"
 #include "SystemZConstantPoolValue.h"
 #include "SystemZMachineFunctionInfo.h"
-#include "SystemZRegisterInfo.h"
-#include "SystemZTargetMachine.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
@@ -26,10 +23,12 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsS390.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Target/TargetMachine.h"
 #include <cctype>
 #include <optional>
 
@@ -3032,6 +3031,12 @@ static bool isNaturalMemoryOperand(SDValue Op, unsigned ICmpType) {
 
 // Return true if it is better to swap the operands of C.
 static bool shouldSwapCmpOperands(const Comparison &C) {
+  // If one side of the compare is a load of the stackguard reference value,
+  // then that load should be Op1.
+  if (C.Op0.isMachineOpcode() &&
+      (C.Op0.getMachineOpcode() == SystemZ::LOAD_STACK_GUARD))
+    return true;
+
   // Leave i128 and f128 comparisons alone, since they have no memory forms.
   if (C.Op0.getValueType() == MVT::i128)
     return false;
@@ -3178,6 +3183,35 @@ static void adjustICmpTruncate(SelectionDAG &DAG, const SDLoc &DL,
       }
     }
   }
+}
+
+// Adjust if a given Compare is a check of the stack guard against a stack
+// guard instance on the stack. Specifically, this checks if:
+// - The operands are a load of the stack guard, and a load from a stack slot
+// - The original opcode is ICMP
+// - ICMPType is compatible with unsigned comparison.
+static void adjustForStackGuardCompare(SelectionDAG &DAG, const SDLoc &DL,
+                                       Comparison &C) {
+
+  // Opcode must be ICMP.
+  if (C.Opcode != SystemZISD::ICMP)
+    return;
+  // ICmpType must be Unsigned or Any.
+  if (C.ICmpType == SystemZICMP::SignedOnly)
+    return;
+  // Op0 must be FrameIndex Load.
+  if (!(ISD::isNormalLoad(C.Op0.getNode()) &&
+        dyn_cast<FrameIndexSDNode>(C.Op0.getOperand(1))))
+    return;
+  // Op1 must be LOAD_STACK_GUARD.
+  if (!C.Op1.isMachineOpcode() ||
+      C.Op1.getMachineOpcode() != SystemZ::LOAD_STACK_GUARD)
+    return;
+
+  // At this point we are sure that this is a proper CMP_STACKGUARD
+  // case, update the opcode to reflect this.
+  C.Opcode = SystemZISD::CMP_STACKGUARD;
+  C.Op1 = SDValue();
 }
 
 // Return true if shift operation N has an in-range constant shift value.
@@ -3601,12 +3635,15 @@ static Comparison getCmp(SelectionDAG &DAG, SDValue CmpOp0, SDValue CmpOp1,
 
   adjustForTestUnderMask(DAG, DL, C);
   adjustICmp128(DAG, DL, C);
+  adjustForStackGuardCompare(DAG, DL, C);
   return C;
 }
 
 // Emit the comparison instruction described by C.
 static SDValue emitCmp(SelectionDAG &DAG, const SDLoc &DL, Comparison &C) {
   if (!C.Op1.getNode()) {
+    if (C.Opcode == SystemZISD::CMP_STACKGUARD)
+      return DAG.getNode(SystemZISD::CMP_STACKGUARD, DL, MVT::i32, C.Op0);
     SDNode *Node;
     switch (C.Op0.getOpcode()) {
     case ISD::INTRINSIC_W_CHAIN:
@@ -8121,20 +8158,14 @@ SDValue SystemZTargetLowering::combineSTORE(
     }
   }
 
-  // combine STORE (LOAD_STACK_GUARD) into MOVE_STACK_GUARD
+  // combine STORE (LOAD_STACK_GUARD) into MOV_STACKGUARD_DAG
   if (Op1->isMachineOpcode() &&
       (Op1->getMachineOpcode() == SystemZ::LOAD_STACK_GUARD)) {
-    // If so, create a MOVE_STACK_GUARD_DAG node to replace the store,
-    // as well as the LOAD_STACK_GUARD.
+    // Obtain the frame index the store was targeting.
     int FI = cast<FrameIndexSDNode>(SN->getOperand(2))->getIndex();
-    // FrameIndex, Dummy Displacement
-    SDValue Ops[] = {DAG.getTargetFrameIndex(FI, MVT::i64),
-                     DAG.getTargetConstant(0, SDLoc(SN), MVT::i64),
-                     SN->getChain()};
-    MachineSDNode *Move = DAG.getMachineNode(SystemZ::MOVE_STACK_GUARD_DAG,
-                                             SDLoc(SN), MVT::Other, Ops);
-
-    return SDValue(Move, 0);
+    // Prepare operands of the MOV_STACKGUARD ISD Node - Chain and FrameIndex.
+    SDValue Ops[] = {SN->getChain(), DAG.getTargetFrameIndex(FI, MVT::i64)};
+    return DAG.getNode(SystemZISD::MOV_STACKGUARD, SDLoc(SN), MVT::Other, Ops);
   }
 
   // Combine STORE (BSWAP) into STRVH/STRV/STRVG/VSTBR
@@ -8961,66 +8992,20 @@ SystemZTargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
   return {-1, -1, -1};
 }
 
-namespace {
-bool isStackGuardCheck(SDNode const *N, int &FI, SDValue &InChain,
-                       SDValue &OutChain, SDValue &StackGuardLoad,
-                       SystemZTargetLowering::DAGCombinerInfo &DCI) {
-  auto Comp = N->getOperand(4);
-  if (Comp->getOpcode() != SystemZISD::ICMP)
-    return false;
-
-  if (!Comp->hasOneUse())
-    return false;
-
-  SDValue LHS = Comp->getOperand(0);
-  SDValue RHS = Comp->getOperand(1);
-  LoadSDNode *FILoad;
-
-  if (LHS.isMachineOpcode() &&
-      LHS.getMachineOpcode() == SystemZ::LOAD_STACK_GUARD &&
-      ISD::isNormalLoad(RHS.getNode()) &&
-      dyn_cast<FrameIndexSDNode>(RHS.getOperand(1))) {
-    StackGuardLoad = LHS;
-    FILoad = cast<LoadSDNode>(RHS);
-  } else if ((RHS.isMachineOpcode() &&
-              RHS.getMachineOpcode() == SystemZ::LOAD_STACK_GUARD &&
-              ISD::isNormalLoad(LHS.getNode()) &&
-              dyn_cast<FrameIndexSDNode>(LHS.getOperand(1)))) {
-    StackGuardLoad = RHS;
-    FILoad = cast<LoadSDNode>(LHS);
-  } else
-    return false;
-
-  // Assert that the values of the loads are not used elsewhere.
-  // Bail for now. TODO: What is the proper response here?
-  assert(
-      SDValue(FILoad, 0).hasOneUse() &&
-      "Value of stackguard loaded from stack must be used for compare only!");
-  assert(StackGuardLoad.hasOneUse() &&
-         "Value of reference stackguard must be used for compare only!");
-
-  FI = cast<FrameIndexSDNode>(FILoad->getOperand(1))->getIndex();
-  InChain = FILoad->getChain();
-  OutChain = SDValue(FILoad, 1);
-  DCI.AddToWorklist(FILoad);
-  DCI.AddToWorklist(Comp.getNode());
-  return true;
-}
-} // namespace
-
 SDValue SystemZTargetLowering::combineBR_CCMASK(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
 
+  // Combine BR_CCMASK (ICMP (SELECT_CCMASK)) into a single BR_CCMASK.
   auto *CCValid = dyn_cast<ConstantSDNode>(N->getOperand(1));
   auto *CCMask = dyn_cast<ConstantSDNode>(N->getOperand(2));
   if (!CCValid || !CCMask)
     return SDValue();
+
   int CCValidVal = CCValid->getZExtValue();
   int CCMaskVal = CCMask->getZExtValue();
   SDValue Chain = N->getOperand(0);
   SDValue CCReg = N->getOperand(4);
-
   // If combineCMask was able to merge or simplify ccvalid or ccmask, re-emit
   // the modified BR_CCMASK with the new values.
   // In order to avoid conditional branches with full or empty cc masks, do not
@@ -9032,43 +9017,6 @@ SDValue SystemZTargetLowering::combineBR_CCMASK(SDNode *N,
                        DAG.getTargetConstant(CCValidVal, SDLoc(N), MVT::i32),
                        DAG.getTargetConstant(CCMaskVal, SDLoc(N), MVT::i32),
                        N->getOperand(3), CCReg);
-
-  SDLoc DL(N);
-
-  // Combine BR_CCMASK (ICMP (Load FI, Load StackGuard)) into BRC
-  // (COMPARE_STACK_GUARD)
-  int FI = 0;
-  SDValue InChain, OutChain, StackGuardLoad;
-  if (isStackGuardCheck(N, FI, InChain, OutChain, StackGuardLoad, DCI)) {
-    // Sanity Checks
-    assert(CCMaskVal == SystemZ::CCMASK_CMP_NE &&
-           "Unexpected branch condition in stack guard check");
-    // Handle the load's chain if necessary
-    DAG.ReplaceAllUsesOfValueWith(OutChain, InChain);
-
-    // Construct the COMPARE_STACK_GUARD_DAG to replace the icmp and
-    // LOAD_STACK_GUARD nodes.
-    SDVTList CmpVTs = DAG.getVTList(MVT::Other, MVT::Glue);
-    auto CompOps = {DAG.getTargetFrameIndex(FI, MVT::i64),
-                    DAG.getTargetConstant(0, DL, MVT::i64), InChain};
-    auto *Compare = DAG.getMachineNode(SystemZ::COMPARE_STACK_GUARD_DAG, DL,
-                                       CmpVTs, CompOps);
-    // Construct the BRC node using COMPARE_STACK_GUARD's CC result
-    auto BranchOps = {DAG.getTargetConstant(CCValidVal, DL, MVT::i32),
-                      DAG.getTargetConstant(CCMaskVal, DL, MVT::i32),
-                      N->getOperand(3), SDValue(Compare, 0),
-                      SDValue(Compare, 1)};
-    return SDValue(DAG.getMachineNode(SystemZ::BRC, DL, MVT::Other, BranchOps),
-                   0);
-  }
-
-  // Combine BR_CCMASK (ICMP (SELECT_CCMASK)) into a single BR_CCMASK.
-  if (combineCCMask(CCReg, CCValidVal, CCMaskVal, DAG))
-    return DAG.getNode(SystemZISD::BR_CCMASK, DL, N->getValueType(0), Chain,
-                       DAG.getTargetConstant(CCValidVal, DL, MVT::i32),
-                       DAG.getTargetConstant(CCMaskVal, DL, MVT::i32),
-                       N->getOperand(3), CCReg);
-
   return SDValue();
 }
 
@@ -9481,8 +9429,6 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case SystemZISD::BR_CCMASK:   return combineBR_CCMASK(N, DCI);
   case SystemZISD::SELECT_CCMASK: return combineSELECT_CCMASK(N, DCI);
   case SystemZISD::GET_CCMASK:  return combineGET_CCMASK(N, DCI);
-  // case SystemZISD::ICMP:
-  //   return combineICMP(N, DCI);
   case ISD::SRL:
   case ISD::SRA:                return combineShiftToMulAddHigh(N, DCI);
   case ISD::MUL:                return combineMUL(N, DCI);
@@ -11150,28 +11096,16 @@ getBackchainAddress(SDValue SP, SelectionDAG &DAG) const {
                      DAG.getIntPtrConstant(TFL->getBackchainOffset(MF), DL));
 }
 
-MachineBasicBlock *
-SystemZTargetLowering::emitMSGPseudo(MachineInstr &MI,
-                                     MachineBasicBlock *MBB) const {
+// Replace a _STACKGUARD_DAG pseudo with a _STACKGUARD pseudo, adding
+// a dead early-clobber def reg that will be used as a scratch register
+// when the pseudo is expanded.
+MachineBasicBlock *SystemZTargetLowering::emitStackGuardPseudo(
+    MachineInstr &MI, MachineBasicBlock *MBB, unsigned PseudoOp) const {
   MachineRegisterInfo *MRI = &MBB->getParent()->getRegInfo();
   const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
   Register AddrReg = MRI->createVirtualRegister(&SystemZ::ADDR64BitRegClass);
-  BuildMI(*MBB, MI, DL, TII->get(SystemZ::MOVE_STACK_GUARD), AddrReg)
-      .addFrameIndex(MI.getOperand(0).getIndex())
-      .addImm(MI.getOperand(1).getImm());
-  MI.eraseFromParent();
-  return MBB;
-}
-
-MachineBasicBlock *
-SystemZTargetLowering::emitCSGPseudo(MachineInstr &MI,
-                                     MachineBasicBlock *MBB) const {
-  MachineRegisterInfo *MRI = &MBB->getParent()->getRegInfo();
-  const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
-  DebugLoc DL = MI.getDebugLoc();
-  Register AddrReg = MRI->createVirtualRegister(&SystemZ::ADDR64BitRegClass);
-  BuildMI(*MBB, MI, DL, TII->get(SystemZ::COMPARE_STACK_GUARD), AddrReg)
+  BuildMI(*MBB, MI, DL, TII->get(PseudoOp), AddrReg)
       .addFrameIndex(MI.getOperand(0).getIndex())
       .addImm(MI.getOperand(1).getImm());
   MI.eraseFromParent();
@@ -11335,11 +11269,11 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
   case TargetOpcode::PATCHPOINT:
     return emitPatchPoint(MI, MBB);
 
-  case SystemZ::MOVE_STACK_GUARD_DAG:
-    return emitMSGPseudo(MI, MBB);
+  case SystemZ::MOV_STACKGUARD_DAG:
+    return emitStackGuardPseudo(MI, MBB, SystemZ::MOV_STACKGUARD);
 
-  case SystemZ::COMPARE_STACK_GUARD_DAG:
-    return emitCSGPseudo(MI, MBB);
+  case SystemZ::CMP_STACKGUARD_DAG:
+    return emitStackGuardPseudo(MI, MBB, SystemZ::CMP_STACKGUARD);
 
   default:
     llvm_unreachable("Unexpected instr type to insert");
@@ -11526,4 +11460,16 @@ bool SystemZTargetLowering::verifyNarrowIntegerArgs(
   }
 
   return true;
+}
+
+void SystemZTargetLowering::insertSSPDeclarations(
+    Module &M, const LibcallLoweringInfo &Libcalls) const {
+  StringRef GuardMode = M.getStackProtectorGuard();
+
+  // In the TLS case, no symbol needs to be inserted.
+  if (GuardMode == "tls" || GuardMode.empty())
+    return;
+
+  // Otherwise (in the global case), insert the appropriate global variable.
+  TargetLowering::insertSSPDeclarations(M, Libcalls);
 }

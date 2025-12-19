@@ -371,7 +371,7 @@ public:
         report_fatal_error("mrecord-mcount only supported with fentry-call");
     }
     if (F.getParent()->getStackProtectorGuard() != "global") {
-      if (F.hasFnAttribute("mstack-protector-guard-record"))
+      if (F.getParent()->hasStackProtectorGuardRecord())
         report_fatal_error("mstack-protector-guard-record only supported with "
                            "mstack-protector-guard=global");
     }
