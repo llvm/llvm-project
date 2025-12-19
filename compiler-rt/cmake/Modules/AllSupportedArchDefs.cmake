@@ -17,6 +17,24 @@ set(WASM32 wasm32)
 set(WASM64 wasm64)
 set(VE ve)
 
+if (COMPILER_RT_PROFILE_BAREMETAL)
+  set(ARM64 aarch64 aarch64_be)
+  set(ARM32
+    arm
+    armhf
+    armv4t
+    armv5te
+    armv6m
+    armv7a
+    armv7m
+    armv7r
+    armebv7
+    armv8m.main
+    arm8.1m.main
+    armv8-r
+  )
+endif()
+
 if(APPLE)
   set(ARM64 arm64)
   set(ARM32 armv7 armv7s armv7k)
