@@ -158,6 +158,18 @@ public:
 
   void emitSled(const MachineInstr &MI, SledKind Kind);
 
+  // Returns whether Reg may be used to store sensitive temporary values when
+  // expanding PtrAuth pseudos. Some OSes may take extra care to protect a
+  // small subset of GPRs on context switches - use these registers then.
+  //
+  // If there are no preferred registers, returns true for any Reg.
+  bool isPtrauthRegSafe(Register Reg) const {
+    if (STI->isX16X17Safer())
+      return Reg == AArch64::X16 || Reg == AArch64::X17;
+
+    return true;
+  }
+
   // Emit the sequence for BRA/BLRA (authenticate + branch/call).
   void emitPtrauthBranch(const MachineInstr *MI);
 
@@ -188,13 +200,16 @@ public:
 
   // Emit the sequence to compute the discriminator.
   //
-  // The returned register is either unmodified AddrDisc or ScratchReg.
+  // The Scratch register passed to this function must be safe, as returned by
+  // isPtrauthRegSafe(ScratchReg).
+  //
+  // The returned register is either ScratchReg, AddrDisc, or XZR. Furthermore,
+  // it is guaranteed to be safe (or XZR), with the only exception of
+  // passing-through an *unmodified* unsafe AddrDisc register.
   //
   // If the expanded pseudo is allowed to clobber AddrDisc register, setting
-  // MayUseAddrAsScratch may save one MOV instruction, provided the address
-  // is already in x16/x17 (i.e. return x16/x17 which is the *modified* AddrDisc
-  // register at the same time) or the OS doesn't make it safer to use x16/x17
-  // (see AArch64Subtarget::isX16X17Safer()):
+  // MayClobberAddrDisc may save one MOV instruction, provided
+  // isPtrauthRegSafe(AddrDisc) is true:
   //
   //   mov   x17, x16
   //   movk  x17, #1234, lsl #48
@@ -203,9 +218,9 @@ public:
   // can be replaced by
   //
   //   movk  x16, #1234, lsl #48
-  Register emitPtrauthDiscriminator(uint16_t Disc, Register AddrDisc,
+  Register emitPtrauthDiscriminator(uint64_t Disc, Register AddrDisc,
                                     Register ScratchReg,
-                                    bool MayUseAddrAsScratch = false);
+                                    bool MayClobberAddrDisc = false);
 
   // Emit the sequence for LOADauthptrstatic
   void LowerLOADauthptrstatic(const MachineInstr &MI);
@@ -319,6 +334,11 @@ private:
   void emitMovXReg(Register Dest, Register Src);
   void emitMOVZ(Register Dest, uint64_t Imm, unsigned Shift);
   void emitMOVK(Register Dest, uint64_t Imm, unsigned Shift);
+
+  void emitAUT(AArch64PACKey::ID Key, Register Pointer, Register Disc);
+  void emitPAC(AArch64PACKey::ID Key, Register Pointer, Register Disc);
+  void emitBLRA(bool IsCall, AArch64PACKey::ID Key, Register Target,
+                Register Disc);
 
   /// Emit instruction to set float register to zero.
   void emitFMov0(const MachineInstr &MI);
@@ -1841,6 +1861,55 @@ void AArch64AsmPrinter::emitMOVK(Register Dest, uint64_t Imm, unsigned Shift) {
                      .addImm(Shift));
 }
 
+void AArch64AsmPrinter::emitAUT(AArch64PACKey::ID Key, Register Pointer,
+                                Register Disc) {
+  bool IsZeroDisc = Disc == AArch64::XZR;
+  unsigned Opcode = getAUTOpcodeForKey(Key, IsZeroDisc);
+
+  //  autiza x16       ; if  IsZeroDisc
+  //  autia  x16, x17  ; if !IsZeroDisc
+  MCInst AUTInst;
+  AUTInst.setOpcode(Opcode);
+  AUTInst.addOperand(MCOperand::createReg(Pointer));
+  AUTInst.addOperand(MCOperand::createReg(Pointer));
+  if (!IsZeroDisc)
+    AUTInst.addOperand(MCOperand::createReg(Disc));
+
+  EmitToStreamer(AUTInst);
+}
+
+void AArch64AsmPrinter::emitPAC(AArch64PACKey::ID Key, Register Pointer,
+                                Register Disc) {
+  bool IsZeroDisc = Disc == AArch64::XZR;
+  unsigned Opcode = getPACOpcodeForKey(Key, IsZeroDisc);
+
+  //  paciza x16       ; if  IsZeroDisc
+  //  pacia  x16, x17  ; if !IsZeroDisc
+  MCInst PACInst;
+  PACInst.setOpcode(Opcode);
+  PACInst.addOperand(MCOperand::createReg(Pointer));
+  PACInst.addOperand(MCOperand::createReg(Pointer));
+  if (!IsZeroDisc)
+    PACInst.addOperand(MCOperand::createReg(Disc));
+
+  EmitToStreamer(PACInst);
+}
+
+void AArch64AsmPrinter::emitBLRA(bool IsCall, AArch64PACKey::ID Key,
+                                 Register Target, Register Disc) {
+  bool IsZeroDisc = Disc == AArch64::XZR;
+  unsigned Opcode = getBranchOpcodeForKey(IsCall, Key, IsZeroDisc);
+
+  //  blraaz x16       ; if  IsZeroDisc
+  //  blraa  x16, x17  ; if !IsZeroDisc
+  MCInst Inst;
+  Inst.setOpcode(Opcode);
+  Inst.addOperand(MCOperand::createReg(Target));
+  if (!IsZeroDisc)
+    Inst.addOperand(MCOperand::createReg(Disc));
+  EmitToStreamer(Inst);
+}
+
 void AArch64AsmPrinter::emitFMov0(const MachineInstr &MI) {
   Register DestReg = MI.getOperand(0).getReg();
   if (!STI->hasZeroCycleZeroingFPWorkaround() && STI->isNeonAvailable()) {
@@ -1916,12 +1985,14 @@ void AArch64AsmPrinter::emitFMov0AsFMov(const MachineInstr &MI,
   EmitToStreamer(*OutStreamer, FMov);
 }
 
-Register AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
+Register AArch64AsmPrinter::emitPtrauthDiscriminator(uint64_t Disc,
                                                      Register AddrDisc,
                                                      Register ScratchReg,
-                                                     bool MayUseAddrAsScratch) {
-  assert(ScratchReg == AArch64::X16 || ScratchReg == AArch64::X17 ||
-         !STI->isX16X17Safer());
+                                                     bool MayClobberAddrDisc) {
+  assert(isPtrauthRegSafe(ScratchReg) &&
+         "Safe scratch register must be provided by the caller");
+  assert(isUInt<16>(Disc) && "Constant discriminator is too wide");
+
   // So far we've used NoRegister in pseudos.  Now we need real encodings.
   if (AddrDisc == AArch64::NoRegister)
     AddrDisc = AArch64::XZR;
@@ -1940,13 +2011,13 @@ Register AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
   // If there are both, emit a blend into the scratch register.
 
   // Check if we can save one MOV instruction.
-  assert(MayUseAddrAsScratch || ScratchReg != AddrDisc);
-  bool AddrDiscIsSafe = AddrDisc == AArch64::X16 || AddrDisc == AArch64::X17 ||
-                        !STI->isX16X17Safer();
-  if (MayUseAddrAsScratch && AddrDiscIsSafe)
+  if (MayClobberAddrDisc && isPtrauthRegSafe(AddrDisc)) {
     ScratchReg = AddrDisc;
-  else
+  } else {
     emitMovXReg(ScratchReg, AddrDisc);
+    assert(ScratchReg != AddrDisc &&
+           "Forbidden to clobber AddrDisc, but have to");
+  }
 
   emitMOVK(ScratchReg, Disc, 48);
   return ScratchReg;
@@ -2185,23 +2256,11 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
   }
 
   // Compute aut discriminator
-  assert(isUInt<16>(AUTDisc));
   Register AUTDiscReg = emitPtrauthDiscriminator(
       AUTDisc, AUTAddrDisc->getReg(), Scratch, AUTAddrDisc->isKill());
-  bool AUTZero = AUTDiscReg == AArch64::XZR;
-  unsigned AUTOpc = getAUTOpcodeForKey(AUTKey, AUTZero);
 
-  if (!emitDeactivationSymbolRelocation(DS)) {
-    //  autiza x16      ; if  AUTZero
-    //  autia x16, x17  ; if !AUTZero
-    MCInst AUTInst;
-    AUTInst.setOpcode(AUTOpc);
-    AUTInst.addOperand(MCOperand::createReg(AUTVal));
-    AUTInst.addOperand(MCOperand::createReg(AUTVal));
-    if (!AUTZero)
-      AUTInst.addOperand(MCOperand::createReg(AUTDiscReg));
-    EmitToStreamer(*OutStreamer, AUTInst);
-  }
+  if (!emitDeactivationSymbolRelocation(DS))
+    emitAUT(AUTKey, AUTVal, AUTDiscReg);
 
   // Unchecked or checked-but-non-trapping AUT is just an "AUT": we're done.
   if (!IsAUTPAC && (!ShouldCheck || !ShouldTrap))
@@ -2224,21 +2283,8 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     return;
 
   // Compute pac discriminator
-  assert(isUInt<16>(PACDisc));
-  Register PACDiscReg =
-      emitPtrauthDiscriminator(PACDisc, PACAddrDisc, Scratch);
-  bool PACZero = PACDiscReg == AArch64::XZR;
-  unsigned PACOpc = getPACOpcodeForKey(*PACKey, PACZero);
-
-  //  pacizb x16      ; if  PACZero
-  //  pacib x16, x17  ; if !PACZero
-  MCInst PACInst;
-  PACInst.setOpcode(PACOpc);
-  PACInst.addOperand(MCOperand::createReg(AUTVal));
-  PACInst.addOperand(MCOperand::createReg(AUTVal));
-  if (!PACZero)
-    PACInst.addOperand(MCOperand::createReg(PACDiscReg));
-  EmitToStreamer(*OutStreamer, PACInst);
+  Register PACDiscReg = emitPtrauthDiscriminator(PACDisc, PACAddrDisc, Scratch);
+  emitPAC(*PACKey, AUTVal, PACDiscReg);
 
   //  Lend:
   if (EndSym)
@@ -2259,24 +2305,13 @@ void AArch64AsmPrinter::emitPtrauthSign(const MachineInstr *MI) {
          "Neither X16 nor X17 is available as a scratch register");
 
   // Compute pac discriminator
-  assert(isUInt<16>(Disc));
   Register DiscReg = emitPtrauthDiscriminator(
-      Disc, AddrDisc, ScratchReg, /*MayUseAddrAsScratch=*/AddrDiscKilled);
-  bool IsZeroDisc = DiscReg == AArch64::XZR;
-  unsigned Opc = getPACOpcodeForKey(Key, IsZeroDisc);
+      Disc, AddrDisc, ScratchReg, /*MayClobberAddrDisc=*/AddrDiscKilled);
 
   if (emitDeactivationSymbolRelocation(MI->getDeactivationSymbol()))
     return;
 
-  //  paciza x16      ; if  IsZeroDisc
-  //  pacia x16, x17  ; if !IsZeroDisc
-  MCInst PACInst;
-  PACInst.setOpcode(Opc);
-  PACInst.addOperand(MCOperand::createReg(Val));
-  PACInst.addOperand(MCOperand::createReg(Val));
-  if (!IsZeroDisc)
-    PACInst.addOperand(MCOperand::createReg(DiscReg));
-  EmitToStreamer(*OutStreamer, PACInst);
+  emitPAC(Key, Val, DiscReg);
 }
 
 void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
@@ -2284,11 +2319,7 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
   unsigned BrTarget = MI->getOperand(0).getReg();
 
   auto Key = (AArch64PACKey::ID)MI->getOperand(1).getImm();
-  assert((Key == AArch64PACKey::IA || Key == AArch64PACKey::IB) &&
-         "Invalid auth call key");
-
   uint64_t Disc = MI->getOperand(2).getImm();
-  assert(isUInt<16>(Disc));
 
   unsigned AddrDisc = MI->getOperand(3).getReg();
 
@@ -2317,27 +2348,7 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
       IsCall && (AddrDisc == AArch64::X16 || AddrDisc == AArch64::X17);
   Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, AArch64::X17,
                                               AddrDiscIsImplicitDef);
-  bool IsZeroDisc = DiscReg == AArch64::XZR;
-
-  unsigned Opc;
-  if (IsCall) {
-    if (Key == AArch64PACKey::IA)
-      Opc = IsZeroDisc ? AArch64::BLRAAZ : AArch64::BLRAA;
-    else
-      Opc = IsZeroDisc ? AArch64::BLRABZ : AArch64::BLRAB;
-  } else {
-    if (Key == AArch64PACKey::IA)
-      Opc = IsZeroDisc ? AArch64::BRAAZ : AArch64::BRAA;
-    else
-      Opc = IsZeroDisc ? AArch64::BRABZ : AArch64::BRAB;
-  }
-
-  MCInst BRInst;
-  BRInst.setOpcode(Opc);
-  BRInst.addOperand(MCOperand::createReg(BrTarget));
-  if (!IsZeroDisc)
-    BRInst.addOperand(MCOperand::createReg(DiscReg));
-  EmitToStreamer(*OutStreamer, BRInst);
+  emitBLRA(IsCall, Key, BrTarget, DiscReg);
 }
 
 void AArch64AsmPrinter::emitAddImm(MCRegister Reg, int64_t Addend,
@@ -2708,8 +2719,6 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
   const auto Key = (AArch64PACKey::ID)KeyC;
   const unsigned AddrDisc = MI.getOperand(2).getReg();
   const uint64_t Disc = MI.getOperand(3).getImm();
-  assert(isUInt<16>(Disc) &&
-         "constant discriminator is out of range [0, 0xffff]");
 
   const int64_t Offset = GAOp.getOffset();
   GAOp.setOffset(0);
@@ -2789,22 +2798,14 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
 
       assert(GAOp.isGlobal());
       assert(GAOp.getGlobal()->getValueType() != nullptr);
-      unsigned AuthOpcode = GAOp.getGlobal()->getValueType()->isFunctionTy()
-                                ? AArch64::AUTIA
-                                : AArch64::AUTDA;
 
-      EmitToStreamer(MCInstBuilder(AuthOpcode)
-                         .addReg(AArch64::X16)
-                         .addReg(AArch64::X16)
-                         .addReg(AArch64::X17));
+      bool IsFunctionTy = GAOp.getGlobal()->getValueType()->isFunctionTy();
+      auto AuthKey = IsFunctionTy ? AArch64PACKey::IA : AArch64PACKey::DA;
+      emitAUT(AuthKey, AArch64::X16, AArch64::X17);
 
-      if (!STI->hasFPAC()) {
-        auto AuthKey = (AuthOpcode == AArch64::AUTIA ? AArch64PACKey::IA
-                                                     : AArch64PACKey::DA);
-
+      if (!STI->hasFPAC())
         emitPtrauthCheckAuthenticatedValue(AArch64::X16, AArch64::X17, AuthKey,
                                            AArch64PAuth::AuthCheckMethod::XPAC);
-      }
     } else {
       EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
                          .addReg(AArch64::X16)
@@ -2822,12 +2823,7 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
   emitAddImm(AArch64::X16, Offset, AArch64::X17);
   Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, AArch64::X17);
 
-  auto MIB = MCInstBuilder(getPACOpcodeForKey(Key, DiscReg == AArch64::XZR))
-                 .addReg(AArch64::X16)
-                 .addReg(AArch64::X16);
-  if (DiscReg != AArch64::XZR)
-    MIB.addReg(DiscReg);
-  EmitToStreamer(MIB);
+  emitPAC(Key, AArch64::X16, DiscReg);
 }
 
 void AArch64AsmPrinter::LowerLOADgotAUTH(const MachineInstr &MI) {
@@ -2881,21 +2877,15 @@ void AArch64AsmPrinter::LowerLOADgotAUTH(const MachineInstr &MI) {
   }
 
   assert(GAMO.getGlobal()->getValueType() != nullptr);
-  unsigned AuthOpcode = GAMO.getGlobal()->getValueType()->isFunctionTy()
-                            ? AArch64::AUTIA
-                            : AArch64::AUTDA;
-  EmitToStreamer(MCInstBuilder(AuthOpcode)
-                     .addReg(AuthResultReg)
-                     .addReg(AuthResultReg)
-                     .addReg(AArch64::X17));
+
+  bool IsFunctionTy = GAMO.getGlobal()->getValueType()->isFunctionTy();
+  auto AuthKey = IsFunctionTy ? AArch64PACKey::IA : AArch64PACKey::DA;
+  emitAUT(AuthKey, AuthResultReg, AArch64::X17);
 
   if (GAMO.getGlobal()->hasExternalWeakLinkage())
     OutStreamer->emitLabel(UndefWeakSym);
 
   if (!STI->hasFPAC()) {
-    auto AuthKey =
-        (AuthOpcode == AArch64::AUTIA ? AArch64PACKey::IA : AArch64PACKey::DA);
-
     emitPtrauthCheckAuthenticatedValue(AuthResultReg, AArch64::X17, AuthKey,
                                        AArch64PAuth::AuthCheckMethod::XPAC);
 
@@ -3248,12 +3238,8 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::AUTH_TCRETURN:
   case AArch64::AUTH_TCRETURN_BTI: {
     Register Callee = MI->getOperand(0).getReg();
-    const uint64_t Key = MI->getOperand(2).getImm();
-    assert((Key == AArch64PACKey::IA || Key == AArch64PACKey::IB) &&
-           "Invalid auth key for tail-call return");
-
+    const auto Key = (AArch64PACKey::ID)MI->getOperand(2).getImm();
     const uint64_t Disc = MI->getOperand(3).getImm();
-    assert(isUInt<16>(Disc) && "Integer discriminator is too wide");
 
     Register AddrDisc = MI->getOperand(4).getReg();
 
@@ -3273,17 +3259,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
         AddrDisc == AArch64::X16 || AddrDisc == AArch64::X17;
     Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, ScratchReg,
                                                 AddrDiscIsImplicitDef);
-
-    const bool IsZero = DiscReg == AArch64::XZR;
-    const unsigned Opcodes[2][2] = {{AArch64::BRAA, AArch64::BRAAZ},
-                                    {AArch64::BRAB, AArch64::BRABZ}};
-
-    MCInst TmpInst;
-    TmpInst.setOpcode(Opcodes[Key][IsZero]);
-    TmpInst.addOperand(MCOperand::createReg(Callee));
-    if (!IsZero)
-      TmpInst.addOperand(MCOperand::createReg(DiscReg));
-    EmitToStreamer(*OutStreamer, TmpInst);
+    emitBLRA(/*IsCall*/ false, Key, Callee, DiscReg);
     return;
   }
 
