@@ -38,10 +38,7 @@ public:
   ~PyGlobals();
 
   /// Most code should get the globals via this static accessor.
-  static PyGlobals &get() {
-    assert(instance && "PyGlobals is null");
-    return *instance;
-  }
+  static PyGlobals &get();
 
   /// Get and set the list of parent modules to search for dialect
   /// implementation classes.

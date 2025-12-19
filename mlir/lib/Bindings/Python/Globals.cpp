@@ -39,6 +39,11 @@ PyGlobals::PyGlobals() {
 
 PyGlobals::~PyGlobals() { instance = nullptr; }
 
+PyGlobals &PyGlobals::get() {
+  assert(instance && "PyGlobals is null");
+  return *instance;
+}
+
 bool PyGlobals::loadDialectModule(llvm::StringRef dialectNamespace) {
   {
     nb::ft_lock_guard lock(mutex);

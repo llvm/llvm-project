@@ -994,17 +994,16 @@ endif()
 get_property(NB_LIBRARY_TARGET_NAME TARGET MLIRPythonModules.extension._mlir.dso PROPERTY LINK_LIBRARIES)
 list(GET NB_LIBRARY_TARGET_NAME 0 NB_LIBRARY_TARGET_NAME)
 add_mlir_library_install(${NB_LIBRARY_TARGET_NAME})
-add_mlir_library(MLIRPythonSupport
+add_library(MLIRPythonSupport SHARED
   ${PYTHON_SOURCE_DIR}/IRCore.cpp
   ${PYTHON_SOURCE_DIR}/Globals.cpp
-  EXCLUDE_FROM_LIBMLIR
-  SHARED
-  LINK_COMPONENTS
-    Support
-  LINK_LIBS
-    Python::Module
-    ${NB_LIBRARY_TARGET_NAME}
-    MLIRPythonCAPI
+)
+target_link_libraries(MLIRPythonSupport PRIVATE
+  LLVMSupport
+  Python::Module
+  ${NB_LIBRARY_TARGET_NAME}
+  MLIRPythonCAPI
+
 )
 if((CMAKE_SYSTEM_NAME STREQUAL "Linux") AND (NOT LLVM_USE_SANITIZER))
   target_link_options(MLIRPythonSupport PRIVATE "-Wl,-z,undefs")
@@ -1028,6 +1027,7 @@ set_target_properties(${NB_LIBRARY_TARGET_NAME} PROPERTIES
 set(eh_rtti_enable)
 if(MSVC)
   set(eh_rtti_enable /EHsc /GR)
+  set_property(TARGET MLIRPythonSupport PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
 elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL)
   set(eh_rtti_enable -frtti -fexceptions)
 endif()
