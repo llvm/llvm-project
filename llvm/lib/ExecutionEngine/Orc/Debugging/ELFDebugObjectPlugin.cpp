@@ -312,7 +312,16 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
     auto ROSeg = Alloc.getSegInfo(MemProt::Read);
     ExecutorAddrRange R(ROSeg.Addr, ROSeg.WorkingMem.size());
     Alloc.finalize([this, R, &MR](Expected<DebugObject::FinalizedAlloc> FA) {
-      DebugObject *DebugObj = getPendingDebugObj(MR);
+      // Bail out if materialization failed in the meantime
+      std::lock_guard<std::mutex> Lock(PendingObjsLock);
+      auto It = PendingObjs.find(&MR);
+      if (It == PendingObjs.end()) {
+        if (!FA)
+          ES.reportError(FA.takeError());
+        return;
+      }
+
+      DebugObject *DebugObj = It->second.get();
       if (!FA)
         DebugObj->failMaterialization(FA.takeError());
 
