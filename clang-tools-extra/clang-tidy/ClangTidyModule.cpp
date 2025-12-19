@@ -23,10 +23,9 @@ void ClangTidyCheckFactories::registerCheckFactory(StringRef Name,
 std::vector<std::unique_ptr<ClangTidyCheck>>
 ClangTidyCheckFactories::createChecks(ClangTidyContext *Context) const {
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks;
-  for (const auto &[CheckName, Factory] : Factories) {
+  for (const auto &[CheckName, Factory] : Factories)
     if (Context->isCheckEnabled(CheckName))
       Checks.emplace_back(Factory(CheckName, Context));
-  }
   return Checks;
 }
 
