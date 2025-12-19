@@ -108,7 +108,7 @@ RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
                                StringRef ABIName, unsigned RVVVectorBitsMin,
                                unsigned RVVVectorBitsMax,
                                const TargetMachine &TM)
-    : RISCVGenSubtargetInfo(TT, CPU, TuneCPU, FS), TargetTriple(TT),
+    : RISCVGenSubtargetInfo(TT, CPU, TuneCPU, FS),
       IsLittleEndian(TT.isLittleEndian()), RVVVectorBitsMin(RVVVectorBitsMin),
       RVVVectorBitsMax(RVVVectorBitsMax),
       FrameLowering(

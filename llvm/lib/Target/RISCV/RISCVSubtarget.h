@@ -97,7 +97,6 @@ private:
   RISCVProcFamilyEnum RISCVProcFamily = Others;
   RISCVVRGatherCostModelEnum RISCVVRGatherCostModel = Quadratic;
 
-  Triple TargetTriple;
   bool IsLittleEndian = true;
 
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \

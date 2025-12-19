@@ -23439,7 +23439,6 @@ static SDValue unpackF64OnRV32DSoftABI(SelectionDAG &DAG, SDValue Chain,
 
   // For big-endian, swap the order of Lo and Hi when building the pair.
   const RISCVSubtarget &Subtarget = DAG.getSubtarget<RISCVSubtarget>();
-  // TESTED with: CodeGen/RISCV/bigendian-double-bitmanip.ll
   if (!Subtarget.isLittleEndian())
     std::swap(Lo, Hi);
 
