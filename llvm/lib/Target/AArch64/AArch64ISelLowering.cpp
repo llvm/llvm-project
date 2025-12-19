@@ -27792,6 +27792,17 @@ performInsertVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   if (SDValue Res = removeRedundantInsertVectorElt(N))
     return Res;
 
+  // Turn INSERT_VECTOR_ELT(undef, Elt, Idx) into SPLAT_VECTOR(Elt)
+  // Do not bother with inserts into lane 0 because there are patterns to select
+  // them using INSERT_SUBREG hsub/ssub/dsub.
+  SDLoc DL(N);
+  SDValue Vec = N->getOperand(0);
+  SDValue Elt = N->getOperand(1);
+  SDValue Idx = N->getOperand(2);
+  EVT VecVT = Vec.getValueType();
+  if (VecVT.isScalableVector() && Vec->isUndef() && !isNullConstant(Idx))
+    return DCI.DAG.getNode(ISD::SPLAT_VECTOR, DL, VecVT, Elt);
+
   return performPostLD1Combine(N, DCI, true);
 }
 
