@@ -80,6 +80,7 @@ DECLARE_DESCRIPTOR(parser::OmpCloseModifier);
 DECLARE_DESCRIPTOR(parser::OmpContextSelector);
 DECLARE_DESCRIPTOR(parser::OmpDeleteModifier);
 DECLARE_DESCRIPTOR(parser::OmpDependenceType);
+DECLARE_DESCRIPTOR(parser::OmpDepinfoModifier);
 DECLARE_DESCRIPTOR(parser::OmpDeviceModifier);
 DECLARE_DESCRIPTOR(parser::OmpDimsModifier);
 DECLARE_DESCRIPTOR(parser::OmpDirectiveNameModifier);

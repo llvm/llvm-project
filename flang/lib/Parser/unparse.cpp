@@ -2231,6 +2231,12 @@ public:
     Walk(x.v);
     Put(")");
   }
+  void Unparse(const OmpDepinfoModifier &x) {
+    Walk(std::get<OmpDepinfoModifier::Value>(x.t));
+    Put("(");
+    Walk(std::get<OmpObject>(x.t));
+    Put(")");
+  }
   void Unparse(const OmpStylizedDeclaration &x) {
     // empty
   }

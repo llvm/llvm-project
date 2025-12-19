@@ -252,6 +252,23 @@ void OmpDirectiveNameParser::initTokens(std::vector<NameWithId> table[]) const {
   }
 }
 
+// --- Common types ---------------------------------------------------
+
+TYPE_PARSER(construct<common::OmpDependenceKind>(
+    "DEPOBJ" >> pure(common::OmpDependenceKind::Depobj) ||
+    "IN"_id >> pure(common::OmpDependenceKind::In) ||
+    "INOUT"_id >> pure(common::OmpDependenceKind::Inout) ||
+    "INOUTSET" >> pure(common::OmpDependenceKind::Inoutset) ||
+    "MUTEXINOUTSET" >> pure(common::OmpDependenceKind::Mutexinoutset) ||
+    "OUT" >> pure(common::OmpDependenceKind::Out)))
+
+TYPE_PARSER(construct<common::OmpMemoryOrderType>(
+    "ACQ_REL" >> pure(common::OmpMemoryOrderType::Acq_Rel) ||
+    "ACQUIRE" >> pure(common::OmpMemoryOrderType::Acquire) ||
+    "RELAXED" >> pure(common::OmpMemoryOrderType::Relaxed) ||
+    "RELEASE" >> pure(common::OmpMemoryOrderType::Release) ||
+    "SEQ_CST" >> pure(common::OmpMemoryOrderType::Seq_Cst)))
+
 // --- Modifier helpers -----------------------------------------------
 
 template <typename Clause, typename Separator> struct ModifierList {
@@ -816,6 +833,9 @@ TYPE_PARSER(construct<OmpDependenceType>(
     "SINK" >> pure(OmpDependenceType::Value::Sink) ||
     "SOURCE" >> pure(OmpDependenceType::Value::Source)))
 
+TYPE_PARSER(construct<OmpDepinfoModifier>(
+    Parser<common::OmpDependenceKind>{}, parenthesized(Parser<OmpObject>{})))
+
 TYPE_PARSER(construct<OmpDeviceModifier>(
     "ANCESTOR" >> pure(OmpDeviceModifier::Value::Ancestor) ||
     "DEVICE_NUM" >> pure(OmpDeviceModifier::Value::Device_Num)))
@@ -998,7 +1018,8 @@ TYPE_PARSER(sourced(
 TYPE_PARSER(sourced(
     // Try interop-type first, since prefer-type can take arbitrary strings.
     construct<OmpInitClause::Modifier>(Parser<OmpInteropType>{}) ||
-    construct<OmpInitClause::Modifier>(Parser<OmpPreferType>{})))
+    construct<OmpInitClause::Modifier>(Parser<OmpPreferType>{}) ||
+    construct<OmpInitClause::Modifier>(Parser<OmpDepinfoModifier>{})))
 
 TYPE_PARSER(sourced(construct<OmpInReductionClause::Modifier>(
     Parser<OmpReductionIdentifier>{})))
@@ -1105,11 +1126,7 @@ TYPE_PARSER(construct<OmpAffinityClause>(
 //                               release
 //                               seq_cst
 TYPE_PARSER(construct<OmpAtomicDefaultMemOrderClause>(
-    "ACQ_REL" >> pure(common::OmpMemoryOrderType::Acq_Rel) ||
-    "ACQUIRE" >> pure(common::OmpMemoryOrderType::Acquire) ||
-    "RELAXED" >> pure(common::OmpMemoryOrderType::Relaxed) ||
-    "RELEASE" >> pure(common::OmpMemoryOrderType::Release) ||
-    "SEQ_CST" >> pure(common::OmpMemoryOrderType::Seq_Cst)))
+    Parser<common::OmpMemoryOrderType>{}))
 
 TYPE_PARSER(construct<OmpCancellationConstructTypeClause>(
     OmpDirectiveNameParser{}, maybe(parenthesized(scalarLogicalExpr))))
@@ -1139,11 +1156,7 @@ TYPE_PARSER(construct<OmpEnterClause>(
     Parser<OmpObjectList>{}))
 
 TYPE_PARSER(construct<OmpFailClause>(
-    "ACQ_REL" >> pure(common::OmpMemoryOrderType::Acq_Rel) ||
-    "ACQUIRE" >> pure(common::OmpMemoryOrderType::Acquire) ||
-    "RELAXED" >> pure(common::OmpMemoryOrderType::Relaxed) ||
-    "RELEASE" >> pure(common::OmpMemoryOrderType::Release) ||
-    "SEQ_CST" >> pure(common::OmpMemoryOrderType::Seq_Cst)))
+    Parser<common::OmpMemoryOrderType>{}))
 
 TYPE_PARSER(construct<OmpGraphIdClause>(scalarIntExpr))
 

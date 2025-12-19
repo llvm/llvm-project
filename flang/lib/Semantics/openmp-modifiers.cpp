@@ -289,6 +289,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDependenceType>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDepinfoModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"depinfo-modifier",
+      /*props=*/
+      {
+          {60, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {60, {Clause::OMPC_init}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDimsModifier>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"dims-modifier",
@@ -378,6 +394,7 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpInteropType>() {
       /*props=*/
       {
           {52, {OmpProperty::Required}},
+          {60, {}},
       },
       /*clauses=*/
       {
