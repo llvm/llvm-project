@@ -32,6 +32,8 @@
 #  elif SANITIZER_GLIBC || SANITIZER_ANDROID
 #    define SANITIZER_HAS_STAT64 1
 #    define SANITIZER_HAS_STATFS64 1
+#  elif SANITIZER_HAIKU
+#    include <stdint.h>
 #  endif
 
 #  if defined(__sparc__)
@@ -629,7 +631,7 @@ typedef unsigned long __sanitizer_sigset_t;
 #  elif SANITIZER_APPLE
 typedef unsigned __sanitizer_sigset_t;
 #  elif SANITIZER_HAIKU
-typedef unsigned long long __sanitizer_sigset_t;
+typedef uint64_t __sanitizer_sigset_t;
 #  elif SANITIZER_LINUX
 struct __sanitizer_sigset_t {
   // The size is determined by looking at sizeof of real sigset_t on linux.
