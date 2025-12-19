@@ -27,7 +27,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "statscount"
+#define DEBUG_TYPE "func-properties-count"
 
 STATISTIC(TotalBlocks, "Number of basic blocks");
 STATISTIC(TotalInsts, "Number of instructions (of all types)");
