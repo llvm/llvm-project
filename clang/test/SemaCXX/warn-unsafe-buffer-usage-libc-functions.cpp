@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage \
+// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage -Wno-gcc-compat\
 // RUN:            -verify %s
-// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage \
+// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage -Wno-gcc-compat\
 // RUN:            -verify %s -x objective-c++
-// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call \
+// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call -Wno-gcc-compat\
 // RUN:            -verify %s
-// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call \
+// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call -Wno-gcc-compat\
 // RUN:            -verify %s -DTEST_STD_NS
 
 typedef struct {} FILE;
@@ -254,4 +254,28 @@ void test(StrBuff& str)
 void dontCrashForInvalidFormatString() {
   snprintf((char*)0, 0, "%");
   snprintf((char*)0, 0, "\0");
+}
+
+
+// Also warn about unsafe printf/scanf-like functions:
+void myprintf(const char *F, ...) __attribute__((__format__ (__printf__, 1, 2)));
+void myprintf_2(const char *F, int irrelevant, const char *Str) __attribute__((__format__ (__printf__, 1, 3)));
+void myscanf(const char *F, ...) __attribute__((__format__ (__scanf__, 1, 2)));
+
+void test_myprintf(char * Str, std::string StdStr) {
+  myprintf("hello", Str);
+  myprintf("hello %s", StdStr.c_str());
+  myprintf("hello %s", Str);  // expected-warning{{function 'myprintf' is unsafe}} \
+			         expected-note{{string argument is not guaranteed to be null-terminated}}
+
+  myprintf_2("hello", 0, Str);
+  myprintf_2("hello %s", 0, StdStr.c_str());
+  myprintf_2("hello %s", 0, Str);  // expected-warning{{function 'myprintf_2' is unsafe}} \
+			              expected-note{{string argument is not guaranteed to be null-terminated}}
+  myscanf("hello %s");
+  myscanf("hello %s", Str); // expected-warning{{function 'myscanf' is unsafe}}
+
+  int X;
+
+  myscanf("hello %d", &X); // expected-warning{{function 'myscanf' is unsafe}}
 }
