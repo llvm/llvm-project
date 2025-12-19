@@ -800,37 +800,36 @@ void LayoutInfoPropagation::visitDpasOp(
           aTy, 0, uArch, uArchInstruction->getPackedFormatBitSizeA());
       dpasBLayout = getSIMTLayoutInfoForDPASOperand(
           bTy, 1, uArch, uArchInstruction->getPackedFormatBitSizeB());
-    } else {
+    } else { // Subgroup
       auto numSgOrErr = getNumSg(dpas, subgroupSize);
       if (failed(numSgOrErr)) {
         dpas.emitWarning(
             "Unable to determine the number of subgroups for the operation.");
         return;
       }
-      auto layoutDataAOrErr = chooseLayout(aTy.getShape(), numSgOrErr.value());
-      if (failed(layoutDataAOrErr)) {
+      auto layoutDataCDOrErr =
+          chooseLayout(dpas.getResultType().getShape(), numSgOrErr.value());
+      if (failed(layoutDataCDOrErr)) {
         dpas.emitWarning(
-            "Unable to determine suitable subgroup layout and data for A.");
+            "Unable to determine suitable subgroup layout and data for C/D.");
         return;
       }
-      auto [sgLayoutA, sgDataA] = layoutDataAOrErr.value();
+      auto [sgLayoutCD, sgDataCD] = layoutDataCDOrErr.value();
+      auto sgDataA = sgDataCD;
+      sgDataA[1] = aTy.getShape()[1];
+      auto sgDataB = sgDataCD;
+      sgDataB[0] = bTy.getShape()[0];
 
       dpasALayout = LayoutInfo(xegpu::LayoutAttr::get(
-          aTy.getContext(), DenseI32ArrayAttr::get(aTy.getContext(), sgLayoutA),
+          aTy.getContext(),
+          DenseI32ArrayAttr::get(aTy.getContext(), sgLayoutCD),
           DenseI32ArrayAttr::get(aTy.getContext(), sgDataA),
           /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
           /*lane_data =*/nullptr, /*order =*/nullptr));
 
-      auto layoutDataBOrErr = chooseLayout(bTy.getShape(), numSgOrErr.value());
-      if (failed(layoutDataBOrErr)) {
-        dpas.emitWarning(
-            "Unable to determine suitable subgroup layout and data for B.");
-        return;
-      }
-      auto [sgLayoutB, sgDataB] = layoutDataBOrErr.value();
-
       dpasBLayout = LayoutInfo(xegpu::LayoutAttr::get(
-          bTy.getContext(), DenseI32ArrayAttr::get(bTy.getContext(), sgLayoutB),
+          bTy.getContext(),
+          DenseI32ArrayAttr::get(bTy.getContext(), sgLayoutCD),
           DenseI32ArrayAttr::get(bTy.getContext(), sgDataB),
           /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
           /*lane_data =*/nullptr, /*order =*/nullptr));
@@ -862,15 +861,14 @@ void LayoutInfoPropagation::visitDpasOp(
               "Unable to determine the number of subgroups for the operation.");
           return;
         }
-        auto layoutDataAOrErr =
-            chooseLayout(cTy.getShape(), numSgOrErr.value());
-        if (failed(layoutDataAOrErr)) {
+        auto layoutDataCDOrErr =
+            chooseLayout(dpas.getResultType().getShape(), numSgOrErr.value());
+        if (failed(layoutDataCDOrErr)) {
           dpas.emitWarning(
-              "Unable to determine suitable subgroup layout and data for A.");
+              "Unable to determine suitable subgroup layout and data for C/D.");
           return;
         }
-        auto [sgLayoutCD, sgDataCD] = layoutDataAOrErr.value();
-
+        auto [sgLayoutCD, sgDataCD] = layoutDataCDOrErr.value();
         dpasCDLayout = LayoutInfo(xegpu::LayoutAttr::get(
             cTy.getContext(),
             DenseI32ArrayAttr::get(cTy.getContext(), sgLayoutCD),

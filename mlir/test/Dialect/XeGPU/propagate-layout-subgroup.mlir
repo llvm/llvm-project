@@ -89,23 +89,21 @@ gpu.module @test {
   gpu.func @dpas(%a: memref<128x128xf16>, %b: memref<128x128xf16>, %d: memref<128x128xf32>) kernel attributes
       {known_block_size = array<i32: 1, 64, 16>} {
   // CHECK: %[[TDESC_A:.*]] = xegpu.create_nd_tdesc %[[A_MEMREF]] : memref<128x128xf16> ->
-  // CHECK-SAME: !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [16, 4], sg_data = [8, 32]>>
+  // CHECK-SAME: !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [16, 4], sg_data = [8, 128]>>
 
   // CHECK: %[[A_LOADED:.*]] = xegpu.load_nd %[[TDESC_A]]
-  // CHECK-SAME: <{layout = #xegpu.layout<sg_layout = [16, 4], sg_data = [8, 32]>}>
-  // CHECK-SAME: {layout_result_0 = #xegpu.layout<sg_layout = [16, 4], sg_data = [8, 32]>} :
-  // CHECK-SAME: !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [16, 4], sg_data = [8, 32]>> -> vector<128x128xf16>
+  // CHECK-SAME: <{layout = #xegpu.layout<sg_layout = [16, 4], sg_data = [8, 128]>}>
+  // CHECK-SAME: : !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [16, 4], sg_data = [8, 128]>> -> vector<128x128xf16>
 
   // CHECK: %[[TDESC_B:.*]] = xegpu.create_nd_tdesc %[[B_MEMREF]] : memref<128x128xf16> ->
-  // CHECK-SAME: !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [16, 4], sg_data = [8, 32]>>
+  // CHECK-SAME: !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [16, 4], sg_data = [128, 32]>>
 
-  // CHECK: %[[B_LOADED:.*]] = xegpu.load_nd %[[TDESC_B]] <{layout = #xegpu.layout<sg_layout = [16, 4], sg_data = [8, 32]>}>
-  // CHECK-SAME: {layout_result_0 = #xegpu.layout<sg_layout = [16, 4], sg_data = [8, 32]>} :
-  // CHECK-SAME: !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [16, 4], sg_data = [8, 32]>> -> vector<128x128xf16>
+  // CHECK: %[[B_LOADED:.*]] = xegpu.load_nd %[[TDESC_B]] <{layout = #xegpu.layout<sg_layout = [16, 4], sg_data = [128, 32]>}>
+  // CHECK-SAME: : !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [16, 4], sg_data = [128, 32]>> -> vector<128x128xf16>
 
   // CHECK: %[[DPAS_RES:.*]] = xegpu.dpas %[[A_LOADED]], %[[B_LOADED]]
-  // CHECK-SAME: {layout_a = #xegpu.layout<sg_layout = [16, 4], sg_data = [8, 32]>,
-  // CHECK-SAME: layout_b = #xegpu.layout<sg_layout = [16, 4], sg_data = [8, 32]>,
+  // CHECK-SAME: {layout_a = #xegpu.layout<sg_layout = [16, 4], sg_data = [8, 128]>,
+  // CHECK-SAME: layout_b = #xegpu.layout<sg_layout = [16, 4], sg_data = [128, 32]>,
   // CHECK-SAME: layout_result_0 = #xegpu.layout<sg_layout = [16, 4], sg_data = [8, 32]>} :
   // CHECK-SAME: vector<128x128xf16>, vector<128x128xf16> -> vector<128x128xf32>
 
