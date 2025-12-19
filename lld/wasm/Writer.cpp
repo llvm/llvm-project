@@ -26,6 +26,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/BinaryFormat/Wasm.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Parallel.h"
@@ -152,6 +153,12 @@ void Writer::calculateCustomSections() {
         continue;
       // Strip debug section in that option was specified.
       if (stripDebug && name.starts_with(".debug_"))
+        continue;
+      // Drop `__llvm_covfun` and `__llvm_covmap` sections if
+      // `__llvm_prf_*` segments are discarded.
+      if (ctx.arg.gcSections && !file->prfSegmentsRetained &&
+          (name == getInstrProfSectionName(IPSK_covfun, Triple::Wasm) ||
+           name == getInstrProfSectionName(IPSK_covmap, Triple::Wasm)))
         continue;
       // Otherwise include custom sections by default and concatenate their
       // contents.
@@ -1035,6 +1042,8 @@ void Writer::createOutputSegments() {
       if (!segment->live)
         continue;
       StringRef name = getOutputDataSegmentName(*segment);
+      if (name == getInstrProfSectionName(IPSK_name, Triple::Wasm))
+        file->prfSegmentsRetained = true;
       OutputSegment *s = nullptr;
       // When running in relocatable mode we can't merge segments that are part
       // of comdat groups since the ultimate linker needs to be able exclude or
