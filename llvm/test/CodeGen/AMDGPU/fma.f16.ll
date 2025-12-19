@@ -12,6 +12,8 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GFX12-GISEL-TRUE16
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GFX12-GISEL-FAKE16
 
+; TODO: Switch test to use -new-reg-bank-select after adding G_FCMP support.
+
 declare half @llvm.fma.f16(half, half, half)
 declare half @llvm.maxnum.f16(half, half)
 

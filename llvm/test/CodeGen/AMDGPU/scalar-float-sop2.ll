@@ -4,6 +4,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=CHECK,GFX12 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -global-isel < %s | FileCheck -check-prefixes=CHECK,GFX12 %s
 
+; TODO: Switch test to use -new-reg-bank-select after adding G_FMINNUM support.
+
 define amdgpu_vs float @fadd_f32(float inreg %a, float inreg %b) {
 ; CHECK-LABEL: fadd_f32:
 ; CHECK:       ; %bb.0:

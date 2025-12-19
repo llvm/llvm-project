@@ -2,6 +2,8 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-mesa3d -mcpu=gfx1200 -mattr=-real-true16 < %s | FileCheck -check-prefix=GFX12 %s
 
+; TODO: Switch test to use -new-reg-bank-select after adding G_FCANONICALIZE support.
+
 define float @test_fmed3_f32_known_nnan_ieee_true(float %a) #0 {
 ; GFX10-LABEL: test_fmed3_f32_known_nnan_ieee_true:
 ; GFX10:       ; %bb.0:
