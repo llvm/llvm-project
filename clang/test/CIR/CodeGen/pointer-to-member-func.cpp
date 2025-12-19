@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir -emit-cir -mmlir -mlir-print-ir-before=cir-cxxabi-lowering %s -o %t.cir 2> %t-before.cir
+// RUN: FileCheck --check-prefix=CIR-BEFORE --input-file=%t-before.cir %s
+// RUN: FileCheck --check-prefix=CIR-AFTER --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll --check-prefix=LLVM %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -emit-llvm %s -o %t.ll
@@ -14,8 +15,12 @@ struct Foo {
 void unused_pointer_to_member_func(void (Foo::*func)(int)) {
 }
 
-// CIR: cir.func {{.*}} @_Z29unused_pointer_to_member_funcM3FooFviE(%[[ARG:.*]]: !cir.method<!cir.func<(!s32i)> in !rec_Foo> {{.*}})
-// CIR:   %[[FUNC:.*]] = cir.alloca !cir.method<!cir.func<(!s32i)> in !rec_Foo>, !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>, ["func", init]
+// CIR-BEFORE: cir.func {{.*}} @_Z29unused_pointer_to_member_funcM3FooFviE(%[[ARG:.*]]: !cir.method<!cir.func<(!s32i)> in !rec_Foo>)
+// CIR-BEFORE:   %[[FUNC:.*]] = cir.alloca !cir.method<!cir.func<(!s32i)> in !rec_Foo>, !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>, ["func", init]
+
+// CIR-AFTER: !rec_anon_struct = !cir.record<struct  {!s64i, !s64i}>
+// CIR-AFTER: cir.func {{.*}} @_Z29unused_pointer_to_member_funcM3FooFviE(%[[ARG:.*]]: !rec_anon_struct {{.*}})
+// CIR-AFTER    %[[FUNC:.*]] = cir.alloca !rec_anon_struct, !cir.ptr<!rec_anon_struct>, ["func", init]
 
 // NOTE: The difference between LLVM and OGCG are due to the lack of calling convention handling in CIR.
 
