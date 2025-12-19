@@ -637,7 +637,7 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame &frame, std::string &expression,
                       "a variable. To evaluate the expression as an LLDB "
                       "command, use '{}' as a prefix.\n",
                       first, configuration.commandEscapePrefix);
-    this->SendOutput(OutputType::Console, warning_msg);
+    SendOutput(OutputType::Console, warning_msg);
   }
 
   // Variables take preference to commands in auto, since commands can always
