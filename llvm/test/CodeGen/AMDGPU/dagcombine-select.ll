@@ -579,8 +579,8 @@ define amdgpu_kernel void @fdiv_constant_sel_constants(ptr addrspace(1) %p, i1 %
   ret void
 }
 
-; ExpandFp now expands frem before it reaches dagcombine.
-; TODO Implement this optimization in/before ExpandFP
+; ExpandIRInsts now expands frem before it reaches dagcombine.
+; TODO Implement this optimization in/before ExpandIRInsts?
 define amdgpu_kernel void @frem_constant_sel_constants(ptr addrspace(1) %p, i1 %cond) {
 ; GFX9-LABEL: frem_constant_sel_constants:
 ; GFX9:       ; %bb.0:
