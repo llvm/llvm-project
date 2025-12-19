@@ -555,7 +555,25 @@ namespace {
 
 using MacroDefinitionsMap =
     llvm::StringMap<std::pair<StringRef, bool /*IsUndef*/>>;
-using DeclsMap = llvm::DenseMap<DeclarationName, SmallVector<NamedDecl *, 8>>;
+
+class DeclsSet {
+  SmallVector<NamedDecl *, 64> Decls;
+  llvm::SmallPtrSet<NamedDecl *, 8> Found;
+
+public:
+  operator ArrayRef<NamedDecl *>() const { return Decls; }
+
+  bool empty() const { return Decls.empty(); }
+
+  bool insert(NamedDecl *ND) {
+    auto [_, Inserted] = Found.insert(ND);
+    if (Inserted)
+      Decls.push_back(ND);
+    return Inserted;
+  }
+};
+
+using DeclsMap = llvm::DenseMap<DeclarationName, DeclsSet>;
 
 } // namespace
 
@@ -4447,6 +4465,22 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
         DeclsToCheckForDeferredDiags.insert(ReadDeclID(F, Record, I));
       break;
+
+    case RISCV_VECTOR_INTRINSICS_PRAGMA: {
+      unsigned NumRecords = Record.front();
+      // Last record which is used to keep number of valid records.
+      if (Record.size() - 1 != NumRecords)
+        return llvm::createStringError(std::errc::illegal_byte_sequence,
+                                       "invalid rvv intrinsic pragma record");
+
+      if (RISCVVecIntrinsicPragma.empty())
+        RISCVVecIntrinsicPragma.append(NumRecords, 0);
+      // There might be multiple precompiled modules imported, we need to union
+      // them all.
+      for (unsigned i = 0; i < NumRecords; ++i)
+        RISCVVecIntrinsicPragma[i] |= Record[i + 1];
+      break;
+    }
     }
   }
 }
@@ -5580,9 +5614,13 @@ void ASTReader::InitializeContext() {
 
   // If there were any CUDA special declarations, deserialize them.
   if (!CUDASpecialDeclRefs.empty()) {
-    assert(CUDASpecialDeclRefs.size() == 1 && "More decl refs than expected!");
+    assert(CUDASpecialDeclRefs.size() == 3 && "More decl refs than expected!");
     Context.setcudaConfigureCallDecl(
-                           cast<FunctionDecl>(GetDecl(CUDASpecialDeclRefs[0])));
+        cast_or_null<FunctionDecl>(GetDecl(CUDASpecialDeclRefs[0])));
+    Context.setcudaGetParameterBufferDecl(
+        cast_or_null<FunctionDecl>(GetDecl(CUDASpecialDeclRefs[1])));
+    Context.setcudaLaunchDeviceDecl(
+        cast_or_null<FunctionDecl>(GetDecl(CUDASpecialDeclRefs[2])));
   }
 
   // Re-export any modules that were imported by a non-module AST file.
@@ -8525,10 +8563,14 @@ bool ASTReader::LoadExternalSpecializationsImpl(
     ArrayRef<TemplateArgument> TemplateArgs) {
   assert(D);
 
-  auto It = SpecLookups.find(D);
-  if (It == SpecLookups.end())
+  reader::LazySpecializationInfoLookupTable *LookupTable = nullptr;
+  if (auto It = SpecLookups.find(D); It != SpecLookups.end())
+    LookupTable = &It->getSecond();
+  if (!LookupTable)
     return false;
 
+  // NOTE: The getNameForDiagnostic usage in the lambda may mutate the
+  // `SpecLookups` object.
   llvm::TimeTraceScope TimeScope("Load External Specializations for ", [&] {
     std::string Name;
     llvm::raw_string_ostream OS(Name);
@@ -8543,7 +8585,7 @@ bool ASTReader::LoadExternalSpecializationsImpl(
 
   // Get Decl may violate the iterator from SpecLookups
   llvm::SmallVector<serialization::reader::LazySpecializationInfo, 8> Infos =
-      It->second.Table.find(HashValue);
+      LookupTable->Table.find(HashValue);
 
   bool NewSpecsFound = false;
   for (auto &Info : Infos) {
@@ -8698,14 +8740,23 @@ bool ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
     return false;
 
   // Load the list of declarations.
-  SmallVector<NamedDecl *, 64> Decls;
-  llvm::SmallPtrSet<NamedDecl *, 8> Found;
+  DeclsSet DS;
 
   auto Find = [&, this](auto &&Table, auto &&Key) {
     for (GlobalDeclID ID : Table.find(Key)) {
       NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
-      if (ND->getDeclName() == Name && Found.insert(ND).second)
-        Decls.push_back(ND);
+      if (ND->getDeclName() != Name)
+        continue;
+      // Special case for namespaces: There can be a lot of redeclarations of
+      // some namespaces, and we import a "key declaration" per imported module.
+      // Since all declarations of a namespace are essentially interchangeable,
+      // we can optimize namespace look-up by only storing the key declaration
+      // of the current TU, rather than storing N key declarations where N is
+      // the # of imported modules that declare that namespace.
+      // TODO: Try to generalize this optimization to other redeclarable decls.
+      if (isa<NamespaceDecl>(ND))
+        ND = cast<NamedDecl>(getKeyDeclaration(ND));
+      DS.insert(ND);
     }
   };
 
@@ -8740,8 +8791,8 @@ bool ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
     Find(It->second.Table, Name);
   }
 
-  SetExternalVisibleDeclsForName(DC, Name, Decls);
-  return !Decls.empty();
+  SetExternalVisibleDeclsForName(DC, Name, DS);
+  return !DS.empty();
 }
 
 void ASTReader::completeVisibleDeclsMap(const DeclContext *DC) {
@@ -8759,7 +8810,16 @@ void ASTReader::completeVisibleDeclsMap(const DeclContext *DC) {
 
     for (GlobalDeclID ID : It->second.Table.findAll()) {
       NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
-      Decls[ND->getDeclName()].push_back(ND);
+      // Special case for namespaces: There can be a lot of redeclarations of
+      // some namespaces, and we import a "key declaration" per imported module.
+      // Since all declarations of a namespace are essentially interchangeable,
+      // we can optimize namespace look-up by only storing the key declaration
+      // of the current TU, rather than storing N key declarations where N is
+      // the # of imported modules that declare that namespace.
+      // TODO: Try to generalize this optimization to other redeclarable decls.
+      if (isa<NamespaceDecl>(ND))
+        ND = cast<NamedDecl>(getKeyDeclaration(ND));
+      Decls[ND->getDeclName()].insert(ND);
     }
 
     // FIXME: Why a PCH test is failing if we remove the iterator after findAll?
@@ -8769,9 +8829,9 @@ void ASTReader::completeVisibleDeclsMap(const DeclContext *DC) {
   findAll(ModuleLocalLookups, NumModuleLocalVisibleDeclContexts);
   findAll(TULocalLookups, NumTULocalVisibleDeclContexts);
 
-  for (DeclsMap::iterator I = Decls.begin(), E = Decls.end(); I != E; ++I) {
-    SetExternalVisibleDeclsForName(DC, I->first, I->second);
-  }
+  for (auto &[Name, DS] : Decls)
+    SetExternalVisibleDeclsForName(DC, Name, DS);
+
   const_cast<DeclContext *>(DC)->setHasExternalVisibleStorage(false);
 }
 
@@ -9059,6 +9119,13 @@ void ASTReader::UpdateSema() {
         PointersToMembersPragmaLocation);
   }
   SemaObj->CUDA().ForceHostDeviceDepth = ForceHostDeviceDepth;
+  if (!RISCVVecIntrinsicPragma.empty()) {
+    assert(RISCVVecIntrinsicPragma.size() == 3 &&
+           "Wrong number of RISCVVecIntrinsicPragma");
+    SemaObj->RISCV().DeclareRVVBuiltins = RISCVVecIntrinsicPragma[0];
+    SemaObj->RISCV().DeclareSiFiveVectorBuiltins = RISCVVecIntrinsicPragma[1];
+    SemaObj->RISCV().DeclareAndesVectorBuiltins = RISCVVecIntrinsicPragma[2];
+  }
 
   if (PragmaAlignPackCurrentValue) {
     // The bottom of the stack might have a default value. It must be adjusted
@@ -12387,6 +12454,8 @@ void OMPClauseReader::VisitOMPToClause(OMPToClause *C) {
     C->setMotionModifier(
         I, static_cast<OpenMPMotionModifierKind>(Record.readInt()));
     C->setMotionModifierLoc(I, Record.readSourceLocation());
+    if (C->getMotionModifier(I) == OMPC_MOTION_MODIFIER_iterator)
+      C->setIteratorModifier(Record.readExpr());
   }
   C->setMapperQualifierLoc(Record.readNestedNameSpecifierLoc());
   C->setMapperIdInfo(Record.readDeclarationNameInfo());
@@ -12443,6 +12512,8 @@ void OMPClauseReader::VisitOMPFromClause(OMPFromClause *C) {
     C->setMotionModifier(
         I, static_cast<OpenMPMotionModifierKind>(Record.readInt()));
     C->setMotionModifierLoc(I, Record.readSourceLocation());
+    if (C->getMotionModifier(I) == OMPC_MOTION_MODIFIER_iterator)
+      C->setIteratorModifier(Record.readExpr());
   }
   C->setMapperQualifierLoc(Record.readNestedNameSpecifierLoc());
   C->setMapperIdInfo(Record.readDeclarationNameInfo());

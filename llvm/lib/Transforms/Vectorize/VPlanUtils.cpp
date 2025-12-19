@@ -82,7 +82,8 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
 const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                                            ScalarEvolution &SE, const Loop *L) {
   if (V->isLiveIn()) {
-    if (Value *LiveIn = V->getLiveInIRValue())
+    Value *LiveIn = V->getLiveInIRValue();
+    if (LiveIn && SE.isSCEVable(LiveIn->getType()))
       return SE.getSCEV(LiveIn);
     return SE.getCouldNotCompute();
   }
@@ -197,7 +198,8 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
             all_of(VPI->operands(), isSingleScalar));
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
     return !RR->isPartialReduction();
-  if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe>(VPV))
+  if (isa<VPCanonicalIVPHIRecipe, VPVectorPointerRecipe,
+          VPVectorEndPointerRecipe>(VPV))
     return true;
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
     return Expr->isSingleScalar();

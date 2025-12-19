@@ -51,6 +51,8 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                             options::OPT_fxor_operator,
                             options::OPT_fno_xor_operator,
                             options::OPT_falternative_parameter_statement,
+                            options::OPT_fdefault_integer_4,
+                            options::OPT_fdefault_real_4,
                             options::OPT_fdefault_real_8,
                             options::OPT_fdefault_integer_8,
                             options::OPT_fdefault_double_8,
@@ -200,6 +202,13 @@ void Flang::addCodegenOptions(const ArgList &Args,
   if (stackArrays &&
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
+
+  if (Args.hasFlag(options::OPT_funsafe_cray_pointers,
+                   options::OPT_fno_unsafe_cray_pointers, false)) {
+    // TODO: currently passed as MLIR option
+    CmdArgs.push_back("-mmlir");
+    CmdArgs.push_back("-funsafe-cray-pointers");
+  }
 
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_loop_fusion,
                     options::OPT_fno_experimental_loop_fusion);
@@ -958,6 +967,14 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   for (options::ID Opt : {options::OPT_fbuiltin, options::OPT_fno_builtin})
     if (const Arg *A = Args.getLastArg(Opt))
       D.Diag(diag::warn_drv_invalid_argument_for_flang) << A->getSpelling();
+
+  // Warn about options that are ignored by flang. These are options that are
+  // accepted by gfortran, but have no equivalent in flang.
+  for (const Arg *A :
+       Args.filtered(options::OPT_clang_ignored_gcc_optimization_f_Group)) {
+    D.Diag(diag::warn_ignored_gcc_optimization) << A->getAsString(Args);
+    A->claim();
+  }
 
   const InputInfo &Input = Inputs[0];
   types::ID InputType = Input.getType();

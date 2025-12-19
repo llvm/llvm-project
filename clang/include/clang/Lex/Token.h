@@ -100,11 +100,17 @@ public:
   /// is/isNot - Predicates to check if this token is a specific kind, as in
   /// "if (Tok.is(tok::l_brace)) {...}".
   bool is(tok::TokenKind K) const { return Kind == K; }
-  bool isNot(tok::TokenKind K) const { return Kind != K; }
   template <typename... Ts> bool isOneOf(Ts... Ks) const {
     static_assert(sizeof...(Ts) > 0,
                   "requires at least one tok::TokenKind specified");
     return (is(Ks) || ...);
+  }
+
+  bool isNot(tok::TokenKind K) const { return Kind != K; }
+  template <typename... Ts> bool isNoneOf(Ts... Ks) const {
+    static_assert(sizeof...(Ts) > 0,
+                  "requires at least one tok::TokenKind specified");
+    return (isNot(Ks) && ...);
   }
 
   /// Return true if this is a raw identifier (when lexing
@@ -290,6 +296,11 @@ public:
 
   /// Return the ObjC keyword kind.
   tok::ObjCKeywordKind getObjCKeywordID() const;
+
+  /// Return true if we have a C++20 modules contextual keyword(export, import
+  /// or module).
+  bool isModuleContextualKeyword(const LangOptions &LangOpts,
+                                 bool AllowExport = true) const;
 
   bool isSimpleTypeSpecifier(const LangOptions &LangOpts) const;
 

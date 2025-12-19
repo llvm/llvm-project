@@ -682,6 +682,47 @@ OpenMPIRBuilder::getOrCreateRuntimeFunction(Module &M, RuntimeFunction FnID) {
   return {FnTy, Fn};
 }
 
+Expected<BasicBlock *>
+OpenMPIRBuilder::FinalizationInfo::getFiniBB(IRBuilderBase &Builder) {
+  if (!FiniBB) {
+    Function *ParentFunc = Builder.GetInsertBlock()->getParent();
+    IRBuilderBase::InsertPointGuard Guard(Builder);
+    FiniBB = BasicBlock::Create(Builder.getContext(), ".fini", ParentFunc);
+    Builder.SetInsertPoint(FiniBB);
+    // FiniCB adds the branch to the exit stub.
+    if (Error Err = FiniCB(Builder.saveIP()))
+      return Err;
+  }
+  return FiniBB;
+}
+
+Error OpenMPIRBuilder::FinalizationInfo::mergeFiniBB(IRBuilderBase &Builder,
+                                                     BasicBlock *OtherFiniBB) {
+  // Simple case: FiniBB does not exist yet: re-use OtherFiniBB.
+  if (!FiniBB) {
+    FiniBB = OtherFiniBB;
+
+    Builder.SetInsertPoint(FiniBB->getFirstNonPHIIt());
+    if (Error Err = FiniCB(Builder.saveIP()))
+      return Err;
+
+    return Error::success();
+  }
+
+  // Move instructions from FiniBB to the start of OtherFiniBB.
+  auto EndIt = FiniBB->end();
+  if (FiniBB->size() >= 1)
+    if (auto Prev = std::prev(EndIt); Prev->isTerminator())
+      EndIt = Prev;
+  OtherFiniBB->splice(OtherFiniBB->getFirstNonPHIIt(), FiniBB, FiniBB->begin(),
+                      EndIt);
+
+  FiniBB->replaceAllUsesWith(OtherFiniBB);
+  FiniBB->eraseFromParent();
+  FiniBB = OtherFiniBB;
+  return Error::success();
+}
+
 Function *OpenMPIRBuilder::getOrCreateRuntimeFunctionPtr(RuntimeFunction FnID) {
   FunctionCallee RTLFn = getOrCreateRuntimeFunction(M, FnID);
   auto *Fn = dyn_cast<llvm::Function>(RTLFn.getCallee());
@@ -1108,8 +1149,20 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
   auto *UI = Builder.CreateUnreachable();
 
   Instruction *ThenTI = UI, *ElseTI = nullptr;
-  if (IfCondition)
+  if (IfCondition) {
     SplitBlockAndInsertIfThenElse(IfCondition, UI, &ThenTI, &ElseTI);
+
+    // Even if the if condition evaluates to false, this should count as a
+    // cancellation point
+    Builder.SetInsertPoint(ElseTI);
+    auto ElseIP = Builder.saveIP();
+
+    InsertPointOrErrorTy IPOrErr = createCancellationPoint(
+        LocationDescription{ElseIP, Loc.DL}, CanceledDirective);
+    if (!IPOrErr)
+      return IPOrErr;
+  }
+
   Builder.SetInsertPoint(ThenTI);
 
   Value *CancelKind = nullptr;
@@ -1129,21 +1182,9 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
   Value *Args[] = {Ident, getOrCreateThreadID(Ident), CancelKind};
   Value *Result = createRuntimeFunctionCall(
       getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_cancel), Args);
-  auto ExitCB = [this, CanceledDirective, Loc](InsertPointTy IP) -> Error {
-    if (CanceledDirective == OMPD_parallel) {
-      IRBuilder<>::InsertPointGuard IPG(Builder);
-      Builder.restoreIP(IP);
-      return createBarrier(LocationDescription(Builder.saveIP(), Loc.DL),
-                           omp::Directive::OMPD_unknown,
-                           /* ForceSimpleCall */ false,
-                           /* CheckCancelFlag */ false)
-          .takeError();
-    }
-    return Error::success();
-  };
 
   // The actual cancel logic is shared with others, e.g., cancel_barriers.
-  if (Error Err = emitCancelationCheckImpl(Result, CanceledDirective, ExitCB))
+  if (Error Err = emitCancelationCheckImpl(Result, CanceledDirective))
     return Err;
 
   // Update the insertion point and remove the terminator we introduced.
@@ -1180,21 +1221,9 @@ OpenMPIRBuilder::createCancellationPoint(const LocationDescription &Loc,
   Value *Args[] = {Ident, getOrCreateThreadID(Ident), CancelKind};
   Value *Result = createRuntimeFunctionCall(
       getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_cancellationpoint), Args);
-  auto ExitCB = [this, CanceledDirective, Loc](InsertPointTy IP) -> Error {
-    if (CanceledDirective == OMPD_parallel) {
-      IRBuilder<>::InsertPointGuard IPG(Builder);
-      Builder.restoreIP(IP);
-      return createBarrier(LocationDescription(Builder.saveIP(), Loc.DL),
-                           omp::Directive::OMPD_unknown,
-                           /* ForceSimpleCall */ false,
-                           /* CheckCancelFlag */ false)
-          .takeError();
-    }
-    return Error::success();
-  };
 
   // The actual cancel logic is shared with others, e.g., cancel_barriers.
-  if (Error Err = emitCancelationCheckImpl(Result, CanceledDirective, ExitCB))
+  if (Error Err = emitCancelationCheckImpl(Result, CanceledDirective))
     return Err;
 
   // Update the insertion point and remove the terminator we introduced.
@@ -1298,8 +1327,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitKernelLaunch(
 }
 
 Error OpenMPIRBuilder::emitCancelationCheckImpl(
-    Value *CancelFlag, omp::Directive CanceledDirective,
-    FinalizeCallbackTy ExitCB) {
+    Value *CancelFlag, omp::Directive CanceledDirective) {
   assert(isLastFinalizationInfoCancellable(CanceledDirective) &&
          "Unexpected cancellation!");
 
@@ -1326,13 +1354,12 @@ Error OpenMPIRBuilder::emitCancelationCheckImpl(
 
   // From the cancellation block we finalize all variables and go to the
   // post finalization block that is known to the FiniCB callback.
-  Builder.SetInsertPoint(CancellationBlock);
-  if (ExitCB)
-    if (Error Err = ExitCB(Builder.saveIP()))
-      return Err;
   auto &FI = FinalizationStack.back();
-  if (Error Err = FI.FiniCB(Builder.saveIP()))
-    return Err;
+  Expected<BasicBlock *> FiniBBOrErr = FI.getFiniBB(Builder);
+  if (!FiniBBOrErr)
+    return FiniBBOrErr.takeError();
+  Builder.SetInsertPoint(CancellationBlock);
+  Builder.CreateBr(*FiniBBOrErr);
 
   // The continuation block is where code generation continues.
   Builder.SetInsertPoint(NonCancellationBlock, NonCancellationBlock->begin());
@@ -1342,7 +1369,7 @@ Error OpenMPIRBuilder::emitCancelationCheckImpl(
 // Callback used to create OpenMP runtime calls to support
 // omp parallel clause for the device.
 // We need to use this callback to replace call to the OutlinedFn in OuterFn
-// by the call to the OpenMP DeviceRTL runtime function (kmpc_parallel_51)
+// by the call to the OpenMP DeviceRTL runtime function (kmpc_parallel_60)
 static void targetParallelCallback(
     OpenMPIRBuilder *OMPIRBuilder, Function &OutlinedFn, Function *OuterFn,
     BasicBlock *OuterAllocaBB, Value *Ident, Value *IfCondition,
@@ -1380,7 +1407,7 @@ static void targetParallelCallback(
     Args = Builder.CreatePointerCast(ArgsAlloca, PtrTy);
   Builder.restoreIP(CurrentIP);
 
-  // Store captured vars which are used by kmpc_parallel_51
+  // Store captured vars which are used by kmpc_parallel_60
   for (unsigned Idx = 0; Idx < NumCapturedVars; Idx++) {
     Value *V = *(CI->arg_begin() + 2 + Idx);
     Value *StoreAddress = Builder.CreateConstInBoundsGEP2_64(
@@ -1392,8 +1419,8 @@ static void targetParallelCallback(
       IfCondition ? Builder.CreateSExtOrTrunc(IfCondition, OMPIRBuilder->Int32)
                   : Builder.getInt32(1);
 
-  // Build kmpc_parallel_51 call
-  Value *Parallel51CallArgs[] = {
+  // Build kmpc_parallel_60 call
+  Value *Parallel60CallArgs[] = {
       /* identifier*/ Ident,
       /* global thread num*/ ThreadID,
       /* if expression */ Cond,
@@ -1402,14 +1429,15 @@ static void targetParallelCallback(
       /* outlined function */ &OutlinedFn,
       /* wrapper function */ NullPtrValue,
       /* arguments of the outlined funciton*/ Args,
-      /* number of arguments */ Builder.getInt64(NumCapturedVars)};
+      /* number of arguments */ Builder.getInt64(NumCapturedVars),
+      /* strict for number of threads */ Builder.getInt32(0)};
 
   FunctionCallee RTLFn =
-      OMPIRBuilder->getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_parallel_51);
+      OMPIRBuilder->getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_parallel_60);
 
-  OMPIRBuilder->createRuntimeFunctionCall(RTLFn, Parallel51CallArgs);
+  OMPIRBuilder->createRuntimeFunctionCall(RTLFn, Parallel60CallArgs);
 
-  LLVM_DEBUG(dbgs() << "With kmpc_parallel_51 placed: "
+  LLVM_DEBUG(dbgs() << "With kmpc_parallel_60 placed: "
                     << *Builder.GetInsertBlock()->getParent() << "\n");
 
   // Initialize the local TID stack location with the argument value.
@@ -1821,8 +1849,18 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
   Instruction *PRegPreFiniTI = PRegPreFiniBB->getTerminator();
 
   InsertPointTy PreFiniIP(PRegPreFiniBB, PRegPreFiniTI->getIterator());
-  if (Error Err = FiniCB(PreFiniIP))
-    return Err;
+  Expected<BasicBlock *> FiniBBOrErr = FiniInfo.getFiniBB(Builder);
+  if (!FiniBBOrErr)
+    return FiniBBOrErr.takeError();
+  {
+    IRBuilderBase::InsertPointGuard Guard(Builder);
+    Builder.restoreIP(PreFiniIP);
+    Builder.CreateBr(*FiniBBOrErr);
+    // There's currently a branch to omp.par.exit. Delete it. We will get there
+    // via the fini block
+    if (Instruction *Term = Builder.GetInsertBlock()->getTerminator())
+      Term->eraseFromParent();
+  }
 
   // Register the outlined info.
   addOutlineInfo(std::move(OI));
@@ -2258,23 +2296,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createSections(
   if (!updateToLocation(Loc))
     return Loc.IP;
 
-  // FiniCBWrapper needs to create a branch to the loop finalization block, but
-  // this has not been created yet at some times when this callback runs.
-  SmallVector<BranchInst *> CancellationBranches;
-  auto FiniCBWrapper = [&](InsertPointTy IP) {
-    if (IP.getBlock()->end() != IP.getPoint())
-      return FiniCB(IP);
-    // This must be done otherwise any nested constructs using FinalizeOMPRegion
-    // will fail because that function requires the Finalization Basic Block to
-    // have a terminator, which is already removed by EmitOMPRegionBody.
-    // IP is currently at cancelation block.
-    BranchInst *DummyBranch = Builder.CreateBr(IP.getBlock());
-    IP = InsertPointTy(DummyBranch->getParent(), DummyBranch->getIterator());
-    CancellationBranches.push_back(DummyBranch);
-    return FiniCB(IP);
-  };
-
-  FinalizationStack.push_back({FiniCBWrapper, OMPD_sections, IsCancellable});
+  FinalizationStack.push_back({FiniCB, OMPD_sections, IsCancellable});
 
   // Each section is emitted as a switch case
   // Each finalization callback is handled from clang.EmitOMPSectionDirective()
@@ -2340,20 +2362,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createSections(
   auto FiniInfo = FinalizationStack.pop_back_val();
   assert(FiniInfo.DK == OMPD_sections &&
          "Unexpected finalization stack state!");
-  if (FinalizeCallbackTy &CB = FiniInfo.FiniCB) {
-    Builder.restoreIP(AfterIP);
-    BasicBlock *FiniBB =
-        splitBBWithSuffix(Builder, /*CreateBranch=*/true, "sections.fini");
-    if (Error Err = CB(Builder.saveIP()))
-      return Err;
-    AfterIP = {FiniBB, FiniBB->begin()};
-  }
-
-  // Now we can fix the dummy branch to point to the right place
-  for (BranchInst *DummyBranch : CancellationBranches) {
-    assert(DummyBranch->getNumSuccessors() == 1);
-    DummyBranch->setSuccessor(0, LoopFini);
-  }
+  if (Error Err = FiniInfo.mergeFiniBB(Builder, LoopFini))
+    return Err;
 
   return AfterIP;
 }
@@ -3158,9 +3168,9 @@ Expected<Function *> OpenMPIRBuilder::emitShuffleAndReduceFunction(
   return SarFunc;
 }
 
-Function *OpenMPIRBuilder::emitListToGlobalCopyFunction(
+Expected<Function *> OpenMPIRBuilder::emitListToGlobalCopyFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Type *ReductionsBufferTy,
-    AttributeList FuncAttrs) {
+    AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
   OpenMPIRBuilder::InsertPointTy OldIP = Builder.saveIP();
   LLVMContext &Ctx = M.getContext();
   FunctionType *FuncTy = FunctionType::get(
@@ -3230,7 +3240,21 @@ Function *OpenMPIRBuilder::emitListToGlobalCopyFunction(
 
     switch (RI.EvaluationKind) {
     case EvalKind::Scalar: {
-      Value *TargetElement = Builder.CreateLoad(RI.ElementType, ElemPtr);
+      Value *TargetElement;
+
+      if (IsByRef.empty() || !IsByRef[En.index()]) {
+        TargetElement = Builder.CreateLoad(RI.ElementType, ElemPtr);
+      } else {
+        InsertPointOrErrorTy GenResult =
+            RI.DataPtrPtrGen(Builder.saveIP(), ElemPtr, ElemPtr);
+
+        if (!GenResult)
+          return GenResult.takeError();
+
+        ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtr);
+        TargetElement = Builder.CreateLoad(RI.ByRefElementType, ElemPtr);
+      }
+
       Builder.CreateStore(TargetElement, GlobVal);
       break;
     }
@@ -3268,9 +3292,9 @@ Function *OpenMPIRBuilder::emitListToGlobalCopyFunction(
   return LtGCFunc;
 }
 
-Function *OpenMPIRBuilder::emitListToGlobalReduceFunction(
+Expected<Function *> OpenMPIRBuilder::emitListToGlobalReduceFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Function *ReduceFn,
-    Type *ReductionsBufferTy, AttributeList FuncAttrs) {
+    Type *ReductionsBufferTy, AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
   OpenMPIRBuilder::InsertPointTy OldIP = Builder.saveIP();
   LLVMContext &Ctx = M.getContext();
   FunctionType *FuncTy = FunctionType::get(
@@ -3309,6 +3333,8 @@ Function *OpenMPIRBuilder::emitListToGlobalReduceFunction(
   Value *LocalReduceList =
       Builder.CreateAlloca(RedListArrayTy, nullptr, ".omp.reduction.red_list");
 
+  InsertPointTy AllocaIP{EntryBlock, EntryBlock->begin()};
+
   Value *BufferArgAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
       BufferArgAlloca, Builder.getPtrTy(),
       BufferArgAlloca->getName() + ".ascast");
@@ -3330,6 +3356,20 @@ Function *OpenMPIRBuilder::emitListToGlobalReduceFunction(
   Type *IndexTy = Builder.getIndexTy(
       M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
   for (auto En : enumerate(ReductionInfos)) {
+    const ReductionInfo &RI = En.value();
+    Value *ByRefAlloc;
+
+    if (!IsByRef.empty() && IsByRef[En.index()]) {
+      InsertPointTy OldIP = Builder.saveIP();
+      Builder.restoreIP(AllocaIP);
+
+      ByRefAlloc = Builder.CreateAlloca(RI.ByRefAllocatedType);
+      ByRefAlloc = Builder.CreatePointerBitCastOrAddrSpaceCast(
+          ByRefAlloc, Builder.getPtrTy(), ByRefAlloc->getName() + ".ascast");
+
+      Builder.restoreIP(OldIP);
+    }
+
     Value *TargetElementPtrPtr = Builder.CreateInBoundsGEP(
         RedListArrayTy, LocalReduceListAddrCast,
         {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, En.index())});
@@ -3338,7 +3378,21 @@ Function *OpenMPIRBuilder::emitListToGlobalReduceFunction(
     // Global = Buffer.VD[Idx];
     Value *GlobValPtr = Builder.CreateConstInBoundsGEP2_32(
         ReductionsBufferTy, BufferVD, 0, En.index());
-    Builder.CreateStore(GlobValPtr, TargetElementPtrPtr);
+
+    if (!IsByRef.empty() && IsByRef[En.index()]) {
+      Value *ByRefDataPtr;
+
+      InsertPointOrErrorTy GenResult =
+          RI.DataPtrPtrGen(Builder.saveIP(), ByRefAlloc, ByRefDataPtr);
+
+      if (!GenResult)
+        return GenResult.takeError();
+
+      Builder.CreateStore(GlobValPtr, ByRefDataPtr);
+      Builder.CreateStore(ByRefAlloc, TargetElementPtrPtr);
+    } else {
+      Builder.CreateStore(GlobValPtr, TargetElementPtrPtr);
+    }
   }
 
   // Call reduce_function(GlobalReduceList, ReduceList)
@@ -3351,32 +3405,32 @@ Function *OpenMPIRBuilder::emitListToGlobalReduceFunction(
   return LtGRFunc;
 }
 
-Function *OpenMPIRBuilder::emitGlobalToListCopyFunction(
+Expected<Function *> OpenMPIRBuilder::emitGlobalToListCopyFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Type *ReductionsBufferTy,
-    AttributeList FuncAttrs) {
+    AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
   OpenMPIRBuilder::InsertPointTy OldIP = Builder.saveIP();
   LLVMContext &Ctx = M.getContext();
   FunctionType *FuncTy = FunctionType::get(
       Builder.getVoidTy(),
       {Builder.getPtrTy(), Builder.getInt32Ty(), Builder.getPtrTy()},
       /* IsVarArg */ false);
-  Function *LtGCFunc =
+  Function *GtLCFunc =
       Function::Create(FuncTy, GlobalVariable::InternalLinkage,
                        "_omp_reduction_global_to_list_copy_func", &M);
-  LtGCFunc->setAttributes(FuncAttrs);
-  LtGCFunc->addParamAttr(0, Attribute::NoUndef);
-  LtGCFunc->addParamAttr(1, Attribute::NoUndef);
-  LtGCFunc->addParamAttr(2, Attribute::NoUndef);
+  GtLCFunc->setAttributes(FuncAttrs);
+  GtLCFunc->addParamAttr(0, Attribute::NoUndef);
+  GtLCFunc->addParamAttr(1, Attribute::NoUndef);
+  GtLCFunc->addParamAttr(2, Attribute::NoUndef);
 
-  BasicBlock *EntryBlock = BasicBlock::Create(Ctx, "entry", LtGCFunc);
+  BasicBlock *EntryBlock = BasicBlock::Create(Ctx, "entry", GtLCFunc);
   Builder.SetInsertPoint(EntryBlock);
 
   // Buffer: global reduction buffer.
-  Argument *BufferArg = LtGCFunc->getArg(0);
+  Argument *BufferArg = GtLCFunc->getArg(0);
   // Idx: index of the buffer.
-  Argument *IdxArg = LtGCFunc->getArg(1);
+  Argument *IdxArg = GtLCFunc->getArg(1);
   // ReduceList: thread local Reduce list.
-  Argument *ReduceListArg = LtGCFunc->getArg(2);
+  Argument *ReduceListArg = GtLCFunc->getArg(2);
 
   Value *BufferArgAlloca = Builder.CreateAlloca(Builder.getPtrTy(), nullptr,
                                                 BufferArg->getName() + ".addr");
@@ -3420,7 +3474,20 @@ Function *OpenMPIRBuilder::emitGlobalToListCopyFunction(
 
     switch (RI.EvaluationKind) {
     case EvalKind::Scalar: {
-      Value *TargetElement = Builder.CreateLoad(RI.ElementType, GlobValPtr);
+      Type *ElemType = RI.ElementType;
+
+      if (!IsByRef.empty() && IsByRef[En.index()]) {
+        ElemType = RI.ByRefElementType;
+        InsertPointOrErrorTy GenResult =
+            RI.DataPtrPtrGen(Builder.saveIP(), ElemPtr, ElemPtr);
+
+        if (!GenResult)
+          return GenResult.takeError();
+
+        ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtr);
+      }
+
+      Value *TargetElement = Builder.CreateLoad(ElemType, GlobValPtr);
       Builder.CreateStore(TargetElement, ElemPtr);
       break;
     }
@@ -3456,35 +3523,35 @@ Function *OpenMPIRBuilder::emitGlobalToListCopyFunction(
 
   Builder.CreateRetVoid();
   Builder.restoreIP(OldIP);
-  return LtGCFunc;
+  return GtLCFunc;
 }
 
-Function *OpenMPIRBuilder::emitGlobalToListReduceFunction(
+Expected<Function *> OpenMPIRBuilder::emitGlobalToListReduceFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Function *ReduceFn,
-    Type *ReductionsBufferTy, AttributeList FuncAttrs) {
+    Type *ReductionsBufferTy, AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
   OpenMPIRBuilder::InsertPointTy OldIP = Builder.saveIP();
   LLVMContext &Ctx = M.getContext();
   auto *FuncTy = FunctionType::get(
       Builder.getVoidTy(),
       {Builder.getPtrTy(), Builder.getInt32Ty(), Builder.getPtrTy()},
       /* IsVarArg */ false);
-  Function *LtGRFunc =
+  Function *GtLRFunc =
       Function::Create(FuncTy, GlobalVariable::InternalLinkage,
                        "_omp_reduction_global_to_list_reduce_func", &M);
-  LtGRFunc->setAttributes(FuncAttrs);
-  LtGRFunc->addParamAttr(0, Attribute::NoUndef);
-  LtGRFunc->addParamAttr(1, Attribute::NoUndef);
-  LtGRFunc->addParamAttr(2, Attribute::NoUndef);
+  GtLRFunc->setAttributes(FuncAttrs);
+  GtLRFunc->addParamAttr(0, Attribute::NoUndef);
+  GtLRFunc->addParamAttr(1, Attribute::NoUndef);
+  GtLRFunc->addParamAttr(2, Attribute::NoUndef);
 
-  BasicBlock *EntryBlock = BasicBlock::Create(Ctx, "entry", LtGRFunc);
+  BasicBlock *EntryBlock = BasicBlock::Create(Ctx, "entry", GtLRFunc);
   Builder.SetInsertPoint(EntryBlock);
 
   // Buffer: global reduction buffer.
-  Argument *BufferArg = LtGRFunc->getArg(0);
+  Argument *BufferArg = GtLRFunc->getArg(0);
   // Idx: index of the buffer.
-  Argument *IdxArg = LtGRFunc->getArg(1);
+  Argument *IdxArg = GtLRFunc->getArg(1);
   // ReduceList: thread local Reduce list.
-  Argument *ReduceListArg = LtGRFunc->getArg(2);
+  Argument *ReduceListArg = GtLRFunc->getArg(2);
 
   Value *BufferArgAlloca = Builder.CreateAlloca(Builder.getPtrTy(), nullptr,
                                                 BufferArg->getName() + ".addr");
@@ -3499,6 +3566,8 @@ Function *OpenMPIRBuilder::emitGlobalToListReduceFunction(
   // void *RedList[<n>] = {<ReductionVars>[0], ..., <ReductionVars>[<n>-1]};
   Value *LocalReduceList =
       Builder.CreateAlloca(RedListArrayTy, nullptr, ".omp.reduction.red_list");
+
+  InsertPointTy AllocaIP{EntryBlock, EntryBlock->begin()};
 
   Value *BufferArgAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
       BufferArgAlloca, Builder.getPtrTy(),
@@ -3521,6 +3590,20 @@ Function *OpenMPIRBuilder::emitGlobalToListReduceFunction(
   Type *IndexTy = Builder.getIndexTy(
       M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
   for (auto En : enumerate(ReductionInfos)) {
+    const ReductionInfo &RI = En.value();
+    Value *ByRefAlloc;
+
+    if (!IsByRef.empty() && IsByRef[En.index()]) {
+      InsertPointTy OldIP = Builder.saveIP();
+      Builder.restoreIP(AllocaIP);
+
+      ByRefAlloc = Builder.CreateAlloca(RI.ByRefAllocatedType);
+      ByRefAlloc = Builder.CreatePointerBitCastOrAddrSpaceCast(
+          ByRefAlloc, Builder.getPtrTy(), ByRefAlloc->getName() + ".ascast");
+
+      Builder.restoreIP(OldIP);
+    }
+
     Value *TargetElementPtrPtr = Builder.CreateInBoundsGEP(
         RedListArrayTy, ReductionList,
         {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, En.index())});
@@ -3529,7 +3612,19 @@ Function *OpenMPIRBuilder::emitGlobalToListReduceFunction(
         Builder.CreateInBoundsGEP(ReductionsBufferTy, BufferVal, Idxs);
     Value *GlobValPtr = Builder.CreateConstInBoundsGEP2_32(
         ReductionsBufferTy, BufferVD, 0, En.index());
-    Builder.CreateStore(GlobValPtr, TargetElementPtrPtr);
+
+    if (!IsByRef.empty() && IsByRef[En.index()]) {
+      Value *ByRefDataPtr;
+      InsertPointOrErrorTy GenResult =
+          RI.DataPtrPtrGen(Builder.saveIP(), ByRefAlloc, ByRefDataPtr);
+      if (!GenResult)
+        return GenResult.takeError();
+
+      Builder.CreateStore(GlobValPtr, ByRefDataPtr);
+      Builder.CreateStore(ByRefAlloc, TargetElementPtrPtr);
+    } else {
+      Builder.CreateStore(GlobValPtr, TargetElementPtrPtr);
+    }
   }
 
   // Call reduce_function(ReduceList, GlobalReduceList)
@@ -3539,7 +3634,7 @@ Function *OpenMPIRBuilder::emitGlobalToListReduceFunction(
       ->addFnAttr(Attribute::NoUnwind);
   Builder.CreateRetVoid();
   Builder.restoreIP(OldIP);
-  return LtGRFunc;
+  return GtLRFunc;
 }
 
 std::string OpenMPIRBuilder::getReductionFuncName(StringRef Name) const {
@@ -3795,7 +3890,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     auto Size = M.getDataLayout().getTypeStoreSize(En.value().ElementType);
     if (Size > MaxDataSize)
       MaxDataSize = Size;
-    ReductionTypeArgs.emplace_back(En.value().ElementType);
+    Type *RedTypeArg = (!IsByRef.empty() && IsByRef[En.index()])
+                           ? En.value().ByRefElementType
+                           : En.value().ElementType;
+    ReductionTypeArgs.emplace_back(RedTypeArg);
   }
   Value *ReductionDataSize =
       Builder.getInt64(MaxDataSize * ReductionInfos.size());
@@ -3813,20 +3911,33 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     CodeGenIP = Builder.saveIP();
     StructType *ReductionsBufferTy = StructType::create(
         Ctx, ReductionTypeArgs, "struct._globalized_locals_ty");
-    Function *RedFixedBuferFn = getOrCreateRuntimeFunctionPtr(
+    Function *RedFixedBufferFn = getOrCreateRuntimeFunctionPtr(
         RuntimeFunction::OMPRTL___kmpc_reduction_get_fixed_buffer);
-    Function *LtGCFunc = emitListToGlobalCopyFunction(
-        ReductionInfos, ReductionsBufferTy, FuncAttrs);
-    Function *LtGRFunc = emitListToGlobalReduceFunction(
-        ReductionInfos, ReductionFunc, ReductionsBufferTy, FuncAttrs);
-    Function *GtLCFunc = emitGlobalToListCopyFunction(
-        ReductionInfos, ReductionsBufferTy, FuncAttrs);
-    Function *GtLRFunc = emitGlobalToListReduceFunction(
-        ReductionInfos, ReductionFunc, ReductionsBufferTy, FuncAttrs);
+
+    Expected<Function *> LtGCFunc = emitListToGlobalCopyFunction(
+        ReductionInfos, ReductionsBufferTy, FuncAttrs, IsByRef);
+    if (!LtGCFunc)
+      return LtGCFunc.takeError();
+
+    Expected<Function *> LtGRFunc = emitListToGlobalReduceFunction(
+        ReductionInfos, ReductionFunc, ReductionsBufferTy, FuncAttrs, IsByRef);
+    if (!LtGRFunc)
+      return LtGRFunc.takeError();
+
+    Expected<Function *> GtLCFunc = emitGlobalToListCopyFunction(
+        ReductionInfos, ReductionsBufferTy, FuncAttrs, IsByRef);
+    if (!GtLCFunc)
+      return GtLCFunc.takeError();
+
+    Expected<Function *> GtLRFunc = emitGlobalToListReduceFunction(
+        ReductionInfos, ReductionFunc, ReductionsBufferTy, FuncAttrs, IsByRef);
+    if (!GtLRFunc)
+      return GtLRFunc.takeError();
+
     Builder.restoreIP(CodeGenIP);
 
     Value *KernelTeamsReductionPtr = createRuntimeFunctionCall(
-        RedFixedBuferFn, {}, "_openmp_teams_reductions_buffer_$_$ptr");
+        RedFixedBufferFn, {}, "_openmp_teams_reductions_buffer_$_$ptr");
 
     Value *Args3[] = {SrcLocInfo,
                       KernelTeamsReductionPtr,
@@ -3835,10 +3946,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
                       RL,
                       *SarFunc,
                       WcFunc,
-                      LtGCFunc,
-                      LtGRFunc,
-                      GtLCFunc,
-                      GtLRFunc};
+                      *LtGCFunc,
+                      *LtGRFunc,
+                      *GtLCFunc,
+                      *GtLRFunc};
 
     Function *TeamsReduceFn = getOrCreateRuntimeFunctionPtr(
         RuntimeFunction::OMPRTL___kmpc_nvptx_teams_reduce_nowait_v2);
@@ -4968,7 +5079,7 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
     bool NeedsBarrier, Value *ChunkSize, OMPScheduleType SchedType,
     Value *DistScheduleChunkSize, OMPScheduleType DistScheduleSchedType) {
   assert(CLI->isValid() && "Requires a valid canonical loop");
-  assert(ChunkSize || DistScheduleChunkSize && "Chunk size is required");
+  assert((ChunkSize || DistScheduleChunkSize) && "Chunk size is required");
 
   LLVMContext &Ctx = CLI->getFunction()->getContext();
   Value *IV = CLI->getIndVar();
@@ -5030,7 +5141,10 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
       ConstantInt::get(I32Type, static_cast<int>(DistScheduleSchedType));
   Builder.CreateStore(Zero, PLowerBound);
   Value *OrigUpperBound = Builder.CreateSub(CastedTripCount, One);
-  Builder.CreateStore(OrigUpperBound, PUpperBound);
+  Value *IsTripCountZero = Builder.CreateICmpEQ(CastedTripCount, Zero);
+  Value *UpperBound =
+      Builder.CreateSelect(IsTripCountZero, Zero, OrigUpperBound);
+  Builder.CreateStore(UpperBound, PUpperBound);
   Builder.CreateStore(One, PStride);
 
   // Call the "init" function and update the trip count of the loop with the
@@ -5404,8 +5518,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoop(
   switch (EffectiveScheduleType & ~OMPScheduleType::ModifierMask) {
   case OMPScheduleType::BaseStatic:
   case OMPScheduleType::BaseDistribute:
-    assert(!ChunkSize || !DistScheduleChunkSize &&
-                             "No chunk size with static-chunked schedule");
+    assert((!ChunkSize || !DistScheduleChunkSize) &&
+           "No chunk size with static-chunked schedule");
     if (IsOrdered && !HasDistSchedule)
       return applyDynamicWorkshareLoop(DL, CLI, AllocaIP, EffectiveScheduleType,
                                        NeedsBarrier, ChunkSize);
@@ -6718,9 +6832,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::EmitOMPInlinedRegion(
       emitCommonDirectiveExit(OMPD, FinIP, ExitCall, HasFinalize);
   if (!AfterIP)
     return AfterIP.takeError();
-  assert(FiniBB->getUniquePredecessor()->getUniqueSuccessor() == FiniBB &&
-         "Unexpected Control Flow State!");
-  MergeBlockIntoPredecessor(FiniBB);
 
   // If we are skipping the region of a non conditional, remove the exit
   // block, and clear the builder's insertion point.
@@ -6780,14 +6891,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitCommonDirectiveExit(
     FinalizationInfo Fi = FinalizationStack.pop_back_val();
     assert(Fi.DK == OMPD && "Unexpected Directive for Finalization call!");
 
-    if (Error Err = Fi.FiniCB(FinIP))
-      return Err;
+    if (Error Err = Fi.mergeFiniBB(Builder, FinIP.getBlock()))
+      return std::move(Err);
 
-    BasicBlock *FiniBB = FinIP.getBlock();
-    Instruction *FiniBBTI = FiniBB->getTerminator();
-
-    // set Builder IP for call creation
-    Builder.SetInsertPoint(FiniBBTI);
+    // Exit condition: insertion point is before the terminator of the new Fini
+    // block
+    Builder.SetInsertPoint(FinIP.getBlock()->getTerminator());
   }
 
   if (!ExitCall)
@@ -10598,6 +10707,12 @@ void OpenMPIRBuilder::setCorrectMemberOfFlag(
       static_cast<std::underlying_type_t<omp::OpenMPOffloadMappingFlags>>(
           (Flags & omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) !=
           omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF))
+    return;
+
+  // Entries with ATTACH are not members-of anything. They are handled
+  // separately by the runtime after other maps have been handled.
+  if (static_cast<std::underlying_type_t<omp::OpenMPOffloadMappingFlags>>(
+          Flags & omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH))
     return;
 
   // Reset the placeholder value to prepare the flag for the assignment of the
