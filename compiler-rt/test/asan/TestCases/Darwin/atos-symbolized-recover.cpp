@@ -14,6 +14,6 @@ void bar() {
 int main() {
   bar();
   return 0;
-  // CHECK: WARNING: atos failed to symbolize address{{.*}}
+  // CHECK: WARNING: atos failed to symbolize buf address{{.*}}
   // CHECK: {{.*}}atos-symbolized-recover.cpp:[[@LINE-3]]{{.*}}
 }
