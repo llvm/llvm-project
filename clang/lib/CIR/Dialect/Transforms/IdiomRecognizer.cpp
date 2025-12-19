@@ -1,4 +1,4 @@
-//===- IdiomRecognizer.cpp - pareparation work for LLVM lowering ----------===//
+//===- IdiomRecognizer.cpp - recognizing and raising idioms to CIR --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,9 +39,13 @@ namespace mlir {
 
 namespace {
 
-struct IdiomRecognizerPass : public impl::IdiomRecognizerBase<IdiomRecognizerPass> {
+struct IdiomRecognizerPass
+    : public impl::IdiomRecognizerBase<IdiomRecognizerPass> {
   IdiomRecognizerPass() = default;
+
   void runOnOperation() override;
+
+  void recognizeStandardLibraryCall(CallOp call);
 
   clang::ASTContext *astCtx;
   void setASTContext(clang::ASTContext *c) { astCtx = c; }
@@ -51,10 +55,22 @@ struct IdiomRecognizerPass : public impl::IdiomRecognizerBase<IdiomRecognizerPas
 };
 } // namespace
 
+void IdiomRecognizerPass::recognizeStandardLibraryCall(CallOp call) {
+  // To be implemented
+}
+
 void IdiomRecognizerPass::runOnOperation() {
-  auto *op = getOperation();
-  if (isa<::mlir::ModuleOp>(op))
-    theModule = cast<::mlir::ModuleOp>(op);
+  theModule = getOperation();
+
+  // Process call operations
+  theModule->walk([&](CallOp callOp) {
+    // Skip indirect calls.
+    std::optional<llvm::StringRef> callee = callOp.getCallee();
+    if (!callee)
+      return;
+
+    recognizeStandardLibraryCall(callOp);
+  });
 }
 
 std::unique_ptr<Pass> mlir::createIdiomRecognizerPass() {
