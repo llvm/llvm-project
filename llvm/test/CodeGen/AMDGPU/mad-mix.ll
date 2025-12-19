@@ -16,8 +16,6 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=VI,GISEL-VI %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=hawaii < %s | FileCheck -check-prefixes=CI,GISEL-CI %s
 
-; TODO: Switch test to use -new-reg-bank-select after adding G_FMAXNUM_IEEE support.
-
 define float @v_mad_mix_f32_f16lo_f16lo_f16lo(half %src0, half %src1, half %src2) #0 {
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:

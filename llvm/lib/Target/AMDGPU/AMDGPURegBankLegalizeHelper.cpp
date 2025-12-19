@@ -982,6 +982,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
     return LLT::fixed_vector(2, 16);
   case SgprV2S32:
   case VgprV2S32:
+  case UniInVgprV2S32:
     return LLT::fixed_vector(2, 32);
   case SgprV4S32:
   case SgprV4S32_WF:
@@ -1085,6 +1086,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case UniInVgprS32:
   case UniInVgprS64:
   case UniInVgprV2S16:
+  case UniInVgprV2S32:
   case UniInVgprV4S32:
   case UniInVgprB32:
   case UniInVgprB64:
@@ -1220,6 +1222,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case UniInVgprS32:
     case UniInVgprS64:
     case UniInVgprV2S16:
+    case UniInVgprV2S32:
     case UniInVgprV4S32: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));
       assert(RB == SgprRB);

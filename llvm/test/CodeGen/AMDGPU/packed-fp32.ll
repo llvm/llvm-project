@@ -7,8 +7,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250,GFX1250-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250,GFX1250-GISEL %s
 
-; TODO: Switch test to use -new-reg-bank-select after adding G_FCANONICALIZE support.
-
 define amdgpu_kernel void @fadd_v2_vv(ptr addrspace(1) %a) {
 ; GFX900-LABEL: fadd_v2_vv:
 ; GFX900:       ; %bb.0:

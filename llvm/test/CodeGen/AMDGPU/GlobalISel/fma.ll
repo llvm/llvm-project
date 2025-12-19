@@ -2,6 +2,7 @@
 ; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=GFX6 %s
 ; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefix=GFX8 %s
 ; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9 %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck -check-prefix=GFX90A %s
 ; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX11,GFX11-TRUE16 %s
 ; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16 %s
@@ -25,6 +26,12 @@ define float @v_fma_f32(float %x, float %y, float %z) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_fma_f32 v0, v0, v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90A-LABEL: v_fma_f32:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_fma_f32 v0, v0, v1, v2
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_fma_f32:
 ; GFX10:       ; %bb.0:
@@ -72,6 +79,12 @@ define <2 x float> @v_fma_v2f32(<2 x float> %x, <2 x float> %y, <2 x float> %z) 
 ; GFX9-NEXT:    v_fma_f32 v0, v0, v2, v4
 ; GFX9-NEXT:    v_fma_f32 v1, v1, v3, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90A-LABEL: v_fma_v2f32:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5]
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_fma_v2f32:
 ; GFX10:       ; %bb.0:
@@ -123,6 +136,12 @@ define half @v_fma_f16(half %x, half %y, half %z) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_fma_f16 v0, v0, v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90A-LABEL: v_fma_f16:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_fma_f16 v0, v0, v1, v2
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_fma_f16:
 ; GFX10:       ; %bb.0:
@@ -179,6 +198,12 @@ define half @v_fma_f16_fneg_lhs(half %x, half %y, half %z) {
 ; GFX9-NEXT:    v_fma_f16 v0, -v0, v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX90A-LABEL: v_fma_f16_fneg_lhs:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_fma_f16 v0, -v0, v1, v2
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX10-LABEL: v_fma_f16_fneg_lhs:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -234,6 +259,12 @@ define half @v_fma_f16_fneg_rhs(half %x, half %y, half %z) {
 ; GFX9-NEXT:    v_fma_f16 v0, v0, -v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX90A-LABEL: v_fma_f16_fneg_rhs:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_fma_f16 v0, v0, -v1, v2
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX10-LABEL: v_fma_f16_fneg_rhs:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -288,6 +319,12 @@ define half @v_fma_f16_fneg_add(half %x, half %y, half %z) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_fma_f16 v0, v0, v1, -v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90A-LABEL: v_fma_f16_fneg_add:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_fma_f16 v0, v0, v1, -v2
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_fma_f16_fneg_add:
 ; GFX10:       ; %bb.0:
@@ -355,6 +392,12 @@ define <2 x half> @v_fma_v2f16(<2 x half> %x, <2 x half> %y, <2 x half> %z) {
 ; GFX9-NEXT:    v_pk_fma_f16 v0, v0, v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX90A-LABEL: v_fma_v2f16:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_pk_fma_f16 v0, v0, v1, v2
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX10-LABEL: v_fma_v2f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -419,6 +462,12 @@ define <2 x half> @v_fma_v2f16_fneg_lhs(<2 x half> %x, <2 x half> %y, <2 x half>
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_pk_fma_f16 v0, v0, v1, v2 neg_lo:[1,0,0] neg_hi:[1,0,0]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90A-LABEL: v_fma_v2f16_fneg_lhs:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_pk_fma_f16 v0, v0, v1, v2 neg_lo:[1,0,0] neg_hi:[1,0,0]
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_fma_v2f16_fneg_lhs:
 ; GFX10:       ; %bb.0:
@@ -486,6 +535,12 @@ define <2 x half> @v_fma_v2f16_fneg_rhs(<2 x half> %x, <2 x half> %y, <2 x half>
 ; GFX9-NEXT:    v_pk_fma_f16 v0, v0, v1, v2 neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX90A-LABEL: v_fma_v2f16_fneg_rhs:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_pk_fma_f16 v0, v0, v1, v2 neg_lo:[0,1,0] neg_hi:[0,1,0]
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX10-LABEL: v_fma_v2f16_fneg_rhs:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -545,6 +600,12 @@ define <2 x half> @v_fma_v2f16_fneg_lhs_rhs(<2 x half> %x, <2 x half> %y, <2 x h
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_pk_fma_f16 v0, v0, v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90A-LABEL: v_fma_v2f16_fneg_lhs_rhs:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_pk_fma_f16 v0, v0, v1, v2
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_fma_v2f16_fneg_lhs_rhs:
 ; GFX10:       ; %bb.0:
@@ -613,6 +674,13 @@ define <3 x half> @v_fma_v3f16(<3 x half> %x, <3 x half> %y, <3 x half> %z) {
 ; GFX9-NEXT:    v_pk_fma_f16 v0, v0, v2, v4
 ; GFX9-NEXT:    v_pk_fma_f16 v1, v1, v3, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90A-LABEL: v_fma_v3f16:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_pk_fma_f16 v0, v0, v2, v4
+; GFX90A-NEXT:    v_pk_fma_f16 v1, v1, v3, v5
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_fma_v3f16:
 ; GFX10:       ; %bb.0:
@@ -694,6 +762,13 @@ define <4 x half> @v_fma_v4f16(<4 x half> %x, <4 x half> %y, <4 x half> %z) {
 ; GFX9-NEXT:    v_pk_fma_f16 v1, v1, v3, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX90A-LABEL: v_fma_v4f16:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_pk_fma_f16 v0, v0, v2, v4
+; GFX90A-NEXT:    v_pk_fma_f16 v1, v1, v3, v5
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX10-LABEL: v_fma_v4f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -741,6 +816,14 @@ define double @v_fma_f64(double %x, double %y, double %z) {
 ; GFX9-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX90A-LABEL: v_fma_f64:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_fmac_f64_e32 v[4:5], v[0:1], v[2:3]
+; GFX90A-NEXT:    v_mov_b32_e32 v0, v4
+; GFX90A-NEXT:    v_mov_b32_e32 v1, v5
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX10-LABEL: v_fma_f64:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -784,6 +867,12 @@ define double @v_fma_f64_fneg_all(double %x, double %y, double %z) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], -v[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90A-LABEL: v_fma_f64_fneg_all:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], -v[4:5]
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_fma_f64_fneg_all:
 ; GFX10:       ; %bb.0:
@@ -835,6 +924,17 @@ define <2 x double> @v_fma_v2f64(<2 x double> %x, <2 x double> %y, <2 x double> 
 ; GFX9-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[10:11]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX90A-LABEL: v_fma_v2f64:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_fmac_f64_e32 v[8:9], v[0:1], v[4:5]
+; GFX90A-NEXT:    v_fmac_f64_e32 v[10:11], v[2:3], v[6:7]
+; GFX90A-NEXT:    v_mov_b32_e32 v0, v8
+; GFX90A-NEXT:    v_mov_b32_e32 v1, v9
+; GFX90A-NEXT:    v_mov_b32_e32 v2, v10
+; GFX90A-NEXT:    v_mov_b32_e32 v3, v11
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX10-LABEL: v_fma_v2f64:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -882,6 +982,12 @@ define float @v_fma_f32_fabs_lhs(float %x, float %y, float %z) {
 ; GFX9-NEXT:    v_fma_f32 v0, |v0|, v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX90A-LABEL: v_fma_f32_fabs_lhs:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_fma_f32 v0, |v0|, v1, v2
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX10-LABEL: v_fma_f32_fabs_lhs:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -926,6 +1032,12 @@ define float @v_fma_f32_fabs_rhs(float %x, float %y, float %z) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_fma_f32 v0, v0, |v1|, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90A-LABEL: v_fma_f32_fabs_rhs:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_fma_f32 v0, v0, |v1|, v2
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_fma_f32_fabs_rhs:
 ; GFX10:       ; %bb.0:
@@ -972,6 +1084,12 @@ define float @v_fma_f32_fabs_lhs_rhs(float %x, float %y, float %z) {
 ; GFX9-NEXT:    v_fma_f32 v0, |v0|, |v1|, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX90A-LABEL: v_fma_f32_fabs_lhs_rhs:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_fma_f32 v0, |v0|, |v1|, v2
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX10-LABEL: v_fma_f32_fabs_lhs_rhs:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1015,6 +1133,11 @@ define amdgpu_ps float @v_fma_f32_sgpr_vgpr_vgpr(float inreg %x, float %y, float
 ; GFX9-NEXT:    v_fma_f32 v0, s0, v0, v1
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
+; GFX90A-LABEL: v_fma_f32_sgpr_vgpr_vgpr:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    v_fma_f32 v0, s0, v0, v1
+; GFX90A-NEXT:    ; return to shader part epilog
+;
 ; GFX10-LABEL: v_fma_f32_sgpr_vgpr_vgpr:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_fma_f32 v0, s0, v0, v1
@@ -1048,6 +1171,11 @@ define amdgpu_ps float @v_fma_f32_vgpr_sgpr_vgpr(float %x, float inreg %y, float
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_fma_f32 v0, v0, s0, v1
 ; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX90A-LABEL: v_fma_f32_vgpr_sgpr_vgpr:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    v_fma_f32 v0, s0, v0, v1
+; GFX90A-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: v_fma_f32_vgpr_sgpr_vgpr:
 ; GFX10:       ; %bb.0:
@@ -1089,6 +1217,13 @@ define amdgpu_ps float @v_fma_f32_sgpr_sgpr_sgpr(float inreg %x, float inreg %y,
 ; GFX9-NEXT:    v_fma_f32 v0, s0, v0, v1
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
+; GFX90A-LABEL: v_fma_f32_sgpr_sgpr_sgpr:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    v_mov_b32_e32 v0, s1
+; GFX90A-NEXT:    v_mov_b32_e32 v1, s2
+; GFX90A-NEXT:    v_fma_f32 v0, s0, v0, v1
+; GFX90A-NEXT:    ; return to shader part epilog
+;
 ; GFX10-LABEL: v_fma_f32_sgpr_sgpr_sgpr:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s2
@@ -1128,6 +1263,12 @@ define float @v_fma_f32_fneg_lhs(float %x, float %y, float %z) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_fma_f32 v0, -v0, v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90A-LABEL: v_fma_f32_fneg_lhs:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_fma_f32 v0, -v0, v1, v2
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_fma_f32_fneg_lhs:
 ; GFX10:       ; %bb.0:
@@ -1174,6 +1315,12 @@ define float @v_fma_f32_fneg_rhs(float %x, float %y, float %z) {
 ; GFX9-NEXT:    v_fma_f32 v0, v0, -v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX90A-LABEL: v_fma_f32_fneg_rhs:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_fma_f32 v0, v0, -v1, v2
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX10-LABEL: v_fma_f32_fneg_rhs:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1219,6 +1366,12 @@ define float @v_fma_f32_fneg_z(float %x, float %y, float %z) {
 ; GFX9-NEXT:    v_fma_f32 v0, v0, v1, -v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX90A-LABEL: v_fma_f32_fneg_z:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_fma_f32 v0, v0, v1, -v2
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX10-LABEL: v_fma_f32_fneg_z:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1260,6 +1413,11 @@ define amdgpu_ps float @dont_crash_after_fma_mix_select_attempt(float inreg %x, 
 ; GFX9:       ; %bb.0: ; %.entry
 ; GFX9-NEXT:    v_fma_f32 v0, |s0|, v0, v1
 ; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX90A-LABEL: dont_crash_after_fma_mix_select_attempt:
+; GFX90A:       ; %bb.0: ; %.entry
+; GFX90A-NEXT:    v_fma_f32 v0, |s0|, v0, v1
+; GFX90A-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: dont_crash_after_fma_mix_select_attempt:
 ; GFX10:       ; %bb.0: ; %.entry
@@ -1304,6 +1462,13 @@ define amdgpu_ps half @fma_s16_uniform(half inreg %a, half inreg %b, half inreg 
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9-NEXT:    v_fma_f16 v0, s0, v0, v1
 ; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX90A-LABEL: fma_s16_uniform:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    v_mov_b32_e32 v0, s1
+; GFX90A-NEXT:    v_mov_b32_e32 v1, s2
+; GFX90A-NEXT:    v_fma_f16 v0, s0, v0, v1
+; GFX90A-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: fma_s16_uniform:
 ; GFX10:       ; %bb.0:
@@ -1353,6 +1518,13 @@ define amdgpu_ps float @fma_s32_uniform(float inreg %a, float inreg %b, float in
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9-NEXT:    v_fma_f32 v0, s0, v0, v1
 ; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX90A-LABEL: fma_s32_uniform:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    v_mov_b32_e32 v0, s1
+; GFX90A-NEXT:    v_mov_b32_e32 v1, s2
+; GFX90A-NEXT:    v_fma_f32 v0, s0, v0, v1
+; GFX90A-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: fma_s32_uniform:
 ; GFX10:       ; %bb.0:
@@ -1408,6 +1580,14 @@ define amdgpu_ps void @fma_s64_uniform(double inreg %a, double inreg %b, double 
 ; GFX9-NEXT:    v_fma_f64 v[2:3], s[0:1], v[2:3], v[4:5]
 ; GFX9-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX90A-LABEL: fma_s64_uniform:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], s[4:5], s[4:5] op_sel:[0,1]
+; GFX90A-NEXT:    v_fmac_f64_e32 v[4:5], s[0:1], v[2:3]
+; GFX90A-NEXT:    global_store_dwordx2 v[0:1], v[4:5], off
+; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: fma_s64_uniform:
 ; GFX10:       ; %bb.0:
@@ -1477,6 +1657,13 @@ define amdgpu_ps <2 x half> @fma_v2s16_uniform(<2 x half> inreg %a, <2 x half> i
 ; GFX9-NEXT:    v_pk_fma_f16 v0, s0, v0, v1
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
+; GFX90A-LABEL: fma_v2s16_uniform:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    v_mov_b32_e32 v0, s1
+; GFX90A-NEXT:    v_mov_b32_e32 v1, s2
+; GFX90A-NEXT:    v_pk_fma_f16 v0, s0, v0, v1
+; GFX90A-NEXT:    ; return to shader part epilog
+;
 ; GFX10-LABEL: fma_v2s16_uniform:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s2
@@ -1501,6 +1688,69 @@ define amdgpu_ps <2 x half> @fma_v2s16_uniform(<2 x half> inreg %a, <2 x half> i
 ; GFX12-NEXT:    ; return to shader part epilog
   %fma = call <2 x half> @llvm.fma.v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c)
   ret <2 x half> %fma
+}
+
+define amdgpu_ps <2 x float> @fma_v2s32_uniform(<2 x float> inreg %a, <2 x float> inreg %b, <2 x float> inreg %c) {
+; GFX6-LABEL: fma_v2s32_uniform:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    v_mov_b32_e32 v0, s2
+; GFX6-NEXT:    v_mov_b32_e32 v1, s4
+; GFX6-NEXT:    v_fma_f32 v0, s0, v0, v1
+; GFX6-NEXT:    v_mov_b32_e32 v1, s3
+; GFX6-NEXT:    v_mov_b32_e32 v2, s5
+; GFX6-NEXT:    v_fma_f32 v1, s1, v1, v2
+; GFX6-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: fma_v2s32_uniform:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_mov_b32_e32 v0, s2
+; GFX8-NEXT:    v_mov_b32_e32 v1, s4
+; GFX8-NEXT:    v_fma_f32 v0, s0, v0, v1
+; GFX8-NEXT:    v_mov_b32_e32 v1, s3
+; GFX8-NEXT:    v_mov_b32_e32 v2, s5
+; GFX8-NEXT:    v_fma_f32 v1, s1, v1, v2
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: fma_v2s32_uniform:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_mov_b32_e32 v0, s2
+; GFX9-NEXT:    v_mov_b32_e32 v1, s4
+; GFX9-NEXT:    v_fma_f32 v0, s0, v0, v1
+; GFX9-NEXT:    v_mov_b32_e32 v1, s3
+; GFX9-NEXT:    v_mov_b32_e32 v2, s5
+; GFX9-NEXT:    v_fma_f32 v1, s1, v1, v2
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX90A-LABEL: fma_v2s32_uniform:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], s[4:5], s[4:5] op_sel:[0,1]
+; GFX90A-NEXT:    v_pk_fma_f32 v[0:1], s[0:1], v[0:1], v[2:3]
+; GFX90A-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: fma_v2s32_uniform:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-NEXT:    v_fma_f32 v0, s2, s0, v0
+; GFX10-NEXT:    v_fma_f32 v1, s3, s1, v1
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: fma_v2s32_uniform:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
+; GFX11-NEXT:    v_fma_f32 v0, s2, s0, v0
+; GFX11-NEXT:    v_fma_f32 v1, s3, s1, v1
+; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: fma_v2s32_uniform:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_fmac_f32 s4, s0, s2
+; GFX12-NEXT:    s_fmac_f32 s5, s1, s3
+; GFX12-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
+; GFX12-NEXT:    ; return to shader part epilog
+  %fma = call <2 x float> @llvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c)
+  ret <2 x float> %fma
 }
 
 declare half @llvm.fma.f16(half, half, half) #0

@@ -1,8 +1,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --stress-regalloc=10 < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --stress-regalloc=10 < %s | FileCheck -check-prefix=GCN %s
 
-; TODO: Switch test to use -new-reg-bank-select after adding G_PHI support.
-
 ; Rematerialization test for fp64 constants (w/ intentionally high register pressure).
 ; Check to make sure we have at least six constant MOVs, not necessarily consecutive, inside the loop.
 
