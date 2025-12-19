@@ -91,10 +91,9 @@ static cl::opt<bool>
 static const unsigned ZvfbfaVPOps[] = {
     ISD::VP_FNEG, ISD::VP_FABS, ISD::VP_FCOPYSIGN};
 static const unsigned ZvfbfaOps[] = {
-    ISD::FNEG,    ISD::FABS,        ISD::FCOPYSIGN,   ISD::SPLAT_VECTOR,
-    ISD::FADD,    ISD::FSUB,        ISD::FMUL,        ISD::FMINNUM,
-    ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM, ISD::FMINIMUM,
-    ISD::FMAXIMUM};
+    ISD::FNEG,        ISD::FABS,        ISD::FCOPYSIGN, ISD::FADD,
+    ISD::FSUB,        ISD::FMUL,        ISD::FMINNUM,   ISD::FMAXNUM,
+    ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM, ISD::FMINIMUM,  ISD::FMAXIMUM};
 
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                          const RISCVSubtarget &STI)
@@ -289,7 +288,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   // fixed vector is stored in GPRs for P extension packed operations
-  if (Subtarget.enablePExtCodeGen()) {
+  if (Subtarget.enablePExtSIMDCodeGen()) {
     if (Subtarget.is64Bit()) {
       addRegisterClass(MVT::v2i32, &RISCV::GPRRegClass);
       addRegisterClass(MVT::v4i16, &RISCV::GPRRegClass);
@@ -504,7 +503,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::FTRUNC,       ISD::FRINT,         ISD::FROUND,
       ISD::FROUNDEVEN,   ISD::FCANONICALIZE};
 
-  if (Subtarget.enablePExtCodeGen()) {
+  if (Subtarget.enablePExtSIMDCodeGen()) {
     setTargetDAGCombine(ISD::TRUNCATE);
     setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
     setTruncStoreAction(MVT::v4i16, MVT::v4i8, Expand);
@@ -1851,7 +1850,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
 TargetLoweringBase::LegalizeTypeAction
 RISCVTargetLowering::getPreferredVectorAction(MVT VT) const {
-  if (Subtarget.is64Bit() && Subtarget.enablePExtCodeGen())
+  if (Subtarget.is64Bit() && Subtarget.enablePExtSIMDCodeGen())
     if (VT == MVT::v2i16 || VT == MVT::v4i8)
       return TypeWidenVector;
 
@@ -4517,7 +4516,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
   SDLoc DL(Op);
 
-  if (Subtarget.isRV32() && Subtarget.enablePExtCodeGen()) {
+  if (Subtarget.isRV32() && Subtarget.enablePExtSIMDCodeGen()) {
     if (VT != MVT::v4i8)
       return SDValue();
 
@@ -4547,7 +4546,8 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   // Proper support for f16 requires Zvfh. bf16 always requires special
   // handling. We need to cast the scalar to integer and create an integer
   // build_vector.
-  if ((EltVT == MVT::f16 && !Subtarget.hasStdExtZvfh()) || EltVT == MVT::bf16) {
+  if ((EltVT == MVT::f16 && !Subtarget.hasStdExtZvfh()) ||
+      (EltVT == MVT::bf16 && !Subtarget.hasVInstructionsBF16())) {
     MVT IVT = VT.changeVectorElementType(MVT::i16);
     SmallVector<SDValue, 16> NewOps(Op.getNumOperands());
     for (const auto &[I, U] : enumerate(Op->ops())) {
@@ -7791,7 +7791,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return DAG.getNode(RISCVISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
     }
 
-    if (Subtarget.enablePExtCodeGen()) {
+    if (Subtarget.enablePExtSIMDCodeGen()) {
       bool Is32BitCast =
           (VT == MVT::i32 && (Op0VT == MVT::v4i8 || Op0VT == MVT::v2i16)) ||
           (Op0VT == MVT::i32 && (VT == MVT::v4i8 || VT == MVT::v2i16));
@@ -8476,7 +8476,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     auto *Store = cast<StoreSDNode>(Op);
     SDValue StoredVal = Store->getValue();
     EVT VT = StoredVal.getValueType();
-    if (Subtarget.enablePExtCodeGen()) {
+    if (Subtarget.enablePExtSIMDCodeGen()) {
       if (VT == MVT::v2i16 || VT == MVT::v4i8) {
         SDValue DL(Op);
         SDValue Cast = DAG.getBitcast(MVT::i32, StoredVal);
@@ -8676,7 +8676,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SRL:
   case ISD::SRA:
     if (Op.getSimpleValueType().isFixedLengthVector()) {
-      if (Subtarget.enablePExtCodeGen()) {
+      if (Subtarget.enablePExtSIMDCodeGen()) {
         // We have patterns for scalar/immediate shift amount, so no lowering
         // needed.
         if (Op.getOperand(1)->getOpcode() == ISD::SPLAT_VECTOR)
@@ -10823,7 +10823,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
     return DAG.getNode(RISCVISD::FMV_H_X, DL, EltVT, IntExtract);
   }
 
-  if (Subtarget.enablePExtCodeGen() && VecVT.isFixedLengthVector()) {
+  if (Subtarget.enablePExtSIMDCodeGen() && VecVT.isFixedLengthVector()) {
     if (VecVT != MVT::v4i16 && VecVT != MVT::v2i16 && VecVT != MVT::v8i8 &&
         VecVT != MVT::v4i8 && VecVT != MVT::v2i32)
       return SDValue();
@@ -16489,7 +16489,7 @@ static SDValue performTRUNCATECombine(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
 
-  if (VT.isFixedLengthVector() && Subtarget.enablePExtCodeGen())
+  if (VT.isFixedLengthVector() && Subtarget.enablePExtSIMDCodeGen())
     return combinePExtTruncate(N, DAG, Subtarget);
 
   // Pre-promote (i1 (truncate (srl X, Y))) on RV64 with Zbs without zero
