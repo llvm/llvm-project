@@ -200,7 +200,7 @@ define double @lrint_i64_f16_simd_exp(half %x)  {
 ; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, h0
 ; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
 ; CHECK-NOFPRCVT-NEXT:    ret
-  %val = call i64 @llvm.experimental.constrained.lrint.i53.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  %val = call i64 @llvm.experimental.constrained.lrint.i64.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict")
   %bc  = bitcast i64 %val to double
   ret double %bc
 }
@@ -394,7 +394,7 @@ define <1 x i64> @lrint_i64_f16_scalar_to_vec_exp(half %x)  {
 ; CHECK-NOFPRCVT-NEXT:    fcvtzs x8, h0
 ; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
 ; CHECK-NOFPRCVT-NEXT:    ret
-  %val = call i64 @llvm.experimental.constrained.lrint.i53.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  %val = call i64 @llvm.experimental.constrained.lrint.i64.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict")
   %vec = insertelement <1 x i64> poison, i64 %val, i32 0
   ret <1 x i64> %vec
 }
