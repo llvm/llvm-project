@@ -27,6 +27,7 @@ def ol_platform_backend_t : Enum {
     Etor<"UNKNOWN", "The backend is not recognized">,
     Etor<"CUDA", "The backend is CUDA">,
     Etor<"AMDGPU", "The backend is AMDGPU">,
+    Etor<"LEVEL_ZERO", "The backend is Level Zero">,
     Etor<"HOST", "The backend is the host">,
   ];
 }
