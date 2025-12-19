@@ -59,7 +59,7 @@ end
 
 module m4
   type :: t
-    !ERROR: Passed-object dummy argument 'x' of procedure 'a' may not have the POINTER attribute
+    !ERROR: Passed-object dummy argument 'x' of procedure 'a' may not have the POINTER attribute unless INTENT(IN)
     procedure(s1), pointer :: a
     !ERROR: Passed-object dummy argument 'x' of procedure 'b' may not have the ALLOCATABLE attribute
     procedure(s2), pointer, pass(x) :: b
