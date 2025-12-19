@@ -599,13 +599,6 @@ def err_drv_reduced_module_output_overrided : Warning<
   "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
   InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
 
-def remark_found_cxx20_module_usage : Remark<
-  "found C++20 module usage in file '%0'">,
-  InGroup<ModulesDriver>;
-def remark_performing_driver_managed_module_build : Remark<
-  "performing driver managed module build">,
-  InGroup<ModulesDriver>;
-
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
   InGroup<DiagGroup<"delayed-template-parsing-in-cxx20">>;
@@ -826,6 +819,8 @@ def err_drv_target_variant_invalid : Error<
 
 def err_drv_invalid_directx_shader_module : Error<
   "invalid profile : %0">;
+def err_drv_dxc_invalid_matrix_layout : Error<
+  "cannot specify /Zpr and /Zpc together">;
 def err_drv_dxc_missing_target_profile : Error<
   "target profile option (-T) is missing">;
 def err_drv_hlsl_unsupported_target : Error<

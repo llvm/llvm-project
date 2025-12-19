@@ -51,7 +51,6 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Metadata.h"
@@ -79,7 +78,6 @@
 #include <variant>
 
 #include "MatchContext.h"
-#include "SDNodeDbgValue.h"
 
 using namespace llvm;
 using namespace llvm::SDPatternMatch;
@@ -3173,9 +3171,9 @@ SDValue DAGCombiner::foldAddToAvg(SDNode *N, const SDLoc &DL) {
                 m_Add(m_And(m_Value(A), m_Value(B)),
                       m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)), m_One()))) ||
        sd_match(N, m_ReassociatableAdd(
-                       m_Srl(m_Value(A), m_One()), m_Srl(m_Value(B), m_One()),
-                       m_ReassociatableAnd(m_Deferred(A), m_Deferred(B),
-                                           m_One()))))) {
+                       m_ReassociatableAnd(m_Value(A), m_Value(B), m_One()),
+                       m_Srl(m_Deferred(A), m_One()),
+                       m_Srl(m_Deferred(B), m_One()))))) {
     return DAG.getNode(ISD::AVGFLOORU, DL, VT, A, B);
   }
   if ((!LegalOperations || hasOperation(ISD::AVGFLOORS, VT)) &&
@@ -3183,9 +3181,9 @@ SDValue DAGCombiner::foldAddToAvg(SDNode *N, const SDLoc &DL) {
                 m_Add(m_And(m_Value(A), m_Value(B)),
                       m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)), m_One()))) ||
        sd_match(N, m_ReassociatableAdd(
-                       m_Sra(m_Value(A), m_One()), m_Sra(m_Value(B), m_One()),
-                       m_ReassociatableAnd(m_Deferred(A), m_Deferred(B),
-                                           m_One()))))) {
+                       m_ReassociatableAnd(m_Value(A), m_Value(B), m_One()),
+                       m_Sra(m_Deferred(A), m_One()),
+                       m_Sra(m_Deferred(B), m_One()))))) {
     return DAG.getNode(ISD::AVGFLOORS, DL, VT, A, B);
   }
 
@@ -5773,7 +5771,7 @@ SDValue DAGCombiner::visitABD(SDNode *N) {
   if (N0 == N1)
     return DAG.getConstant(0, DL, VT);
 
-  SDValue X;
+  SDValue X, Y;
 
   // fold (abds x, 0) -> abs x
   if (sd_match(N, m_c_BinOp(ISD::ABDS, m_Value(X), m_Zero())) &&
@@ -5788,6 +5786,21 @@ SDValue DAGCombiner::visitABD(SDNode *N) {
   if (Opcode == ISD::ABDS && hasOperation(ISD::ABDU, VT) &&
       DAG.SignBitIsZero(N0) && DAG.SignBitIsZero(N1))
     return DAG.getNode(ISD::ABDU, DL, VT, N1, N0);
+
+  // fold (abd? (?ext x), (?ext y)) -> (zext (abd? x, y))
+  if (sd_match(N, m_BinOp(ISD::ABDU, m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) ||
+      sd_match(N, m_BinOp(ISD::ABDS, m_SExt(m_Value(X)), m_SExt(m_Value(Y))))) {
+    EVT SmallVT = X.getScalarValueSizeInBits() > Y.getScalarValueSizeInBits()
+                      ? X.getValueType()
+                      : Y.getValueType();
+    if (!LegalOperations || hasOperation(Opcode, SmallVT)) {
+      SDValue ExtedX = DAG.getExtOrTrunc(X, SDLoc(X), SmallVT, N0->getOpcode());
+      SDValue ExtedY = DAG.getExtOrTrunc(Y, SDLoc(Y), SmallVT, N0->getOpcode());
+      SDValue SmallABD = DAG.getNode(Opcode, DL, SmallVT, {ExtedX, ExtedY});
+      SDValue ZExted = DAG.getZExtOrTrunc(SmallABD, DL, VT);
+      return ZExted;
+    }
+  }
 
   return SDValue();
 }
@@ -14467,44 +14480,10 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
                                    LN0->getBasePtr(), N0.getValueType(),
                                    LN0->getMemOperand());
   Combiner.ExtendSetCCUses(SetCCs, N0, ExtLoad, ExtOpc);
-  unsigned Opcode = N->getOpcode();
-  bool IsSigned = Opcode == ISD::SIGN_EXTEND;
   // If the load value is used only by N, replace it via CombineTo N.
-  SDValue OldLoadVal(LN0, 0);
-  SDValue OldExtValue(N, 0);
-  bool NoReplaceTrunc = OldLoadVal.hasOneUse();
-
-  // Because we are replacing a load and a s|z ext with a load-s|z ext
-  // instruction, the dbg_value attached to the load will be of a smaller bit
-  // width, and we have to add a DW_OP_LLVM_convert expression to get the
-  // correct size.
-  auto SalvageToOldLoadSize = [&](SDValue From, SDValue To, bool IsSigned) {
-    for (SDDbgValue *Dbg : DAG.GetDbgValues(From.getNode())) {
-      unsigned VarBitsFrom = From->getValueSizeInBits(0);
-      unsigned VarBitsTo = To->getValueSizeInBits(0);
-
-      // Build a convert expression for the s|z extend.
-      const DIExpression *OldE = Dbg->getExpression();
-      auto *NewE =
-          DIExpression::appendExt(OldE, VarBitsFrom, VarBitsTo, IsSigned);
-
-      // Create a new SDDbgValue that points at the widened node with the
-      // fragment.
-      Dbg->setIsInvalidated();
-      Dbg->setIsEmitted();
-      SDDbgValue *NewDV = DAG.getDbgValue(
-          Dbg->getVariable(), NewE, To.getNode(), To.getResNo(),
-          Dbg->isIndirect(), Dbg->getDebugLoc(), Dbg->getOrder());
-      DAG.AddDbgValue(NewDV, /*isParametet*/ false);
-    }
-  };
-
+  bool NoReplaceTrunc = SDValue(LN0, 0).hasOneUse();
+  Combiner.CombineTo(N, ExtLoad);
   if (NoReplaceTrunc) {
-    if (LN0->getHasDebugValue())
-      SalvageToOldLoadSize(OldLoadVal, ExtLoad, IsSigned);
-
-    if (N->getHasDebugValue())
-      DAG.transferDbgValues(OldExtValue, ExtLoad);
     DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
     Combiner.recursivelyDeleteUnusedNodes(LN0);
   } else {
@@ -14512,7 +14491,6 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
         DAG.getNode(ISD::TRUNCATE, SDLoc(N0), N0.getValueType(), ExtLoad);
     Combiner.CombineTo(LN0, Trunc, ExtLoad.getValue(1));
   }
-  Combiner.CombineTo(N, ExtLoad);
   return SDValue(N, 0); // Return N so it doesn't get rechecked!
 }
 

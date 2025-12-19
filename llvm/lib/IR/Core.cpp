@@ -3261,6 +3261,19 @@ LLVMBasicBlockRef LLVMGetSwitchDefaultDest(LLVMValueRef Switch) {
   return wrap(unwrap<SwitchInst>(Switch)->getDefaultDest());
 }
 
+LLVMValueRef LLVMGetSwitchCaseValue(LLVMValueRef Switch, unsigned i) {
+  assert(i > 0 && i <= unwrap<SwitchInst>(Switch)->getNumCases());
+  auto It = unwrap<SwitchInst>(Switch)->case_begin() + (i - 1);
+  return wrap(It->getCaseValue());
+}
+
+void LLVMSetSwitchCaseValue(LLVMValueRef Switch, unsigned i,
+                            LLVMValueRef CaseValue) {
+  assert(i > 0 && i <= unwrap<SwitchInst>(Switch)->getNumCases());
+  auto It = unwrap<SwitchInst>(Switch)->case_begin() + (i - 1);
+  It->setValue(unwrap<ConstantInt>(CaseValue));
+}
+
 /*--.. Operations on alloca instructions (only) ............................--*/
 
 LLVMTypeRef LLVMGetAllocatedType(LLVMValueRef Alloca) {

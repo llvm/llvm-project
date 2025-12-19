@@ -666,30 +666,9 @@ bool llvm::delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
   return !Subscripts.empty();
 }
 
-static bool isKnownNonNegative(ScalarEvolution *SE, const SCEV *S,
-                               const Value *Ptr) {
-  bool Inbounds = false;
-  if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(Ptr))
-    Inbounds = SrcGEP->isInBounds();
-  if (Inbounds) {
-    if (const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(S)) {
-      if (AddRec->isAffine()) {
-        // We know S is for Ptr, the operand on a load/store, so doesn't wrap.
-        // If both parts are NonNegative, the end result will be NonNegative
-        if (SE->isKnownNonNegative(AddRec->getStart()) &&
-            SE->isKnownNonNegative(AddRec->getOperand(1)))
-          return true;
-      }
-    }
-  }
-
-  return SE->isKnownNonNegative(S);
-}
-
 bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
                                          ArrayRef<const SCEV *> Sizes,
-                                         ArrayRef<const SCEV *> Subscripts,
-                                         const Value *Ptr) {
+                                         ArrayRef<const SCEV *> Subscripts) {
   // Sizes and Subscripts are as follows:
   //
   //   Sizes:      [UNK][S_2]...[S_n]
@@ -713,7 +692,7 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
   for (size_t I = 1; I < Sizes.size(); ++I) {
     const SCEV *Size = Sizes[I - 1];
     const SCEV *Subscript = Subscripts[I];
-    if (!isKnownNonNegative(&SE, Subscript, Ptr))
+    if (!SE.isKnownNonNegative(Subscript))
       return false;
 
     // TODO: It may be better that delinearization itself unifies the types of
@@ -882,8 +861,7 @@ void printDelinearization(raw_ostream &O, Function *F, LoopInfo *LI,
         O << "[" << *Subscripts[i] << "]";
       O << "\n";
 
-      bool IsValid = validateDelinearizationResult(
-          *SE, Sizes, Subscripts, getLoadStorePointerOperand(&Inst));
+      bool IsValid = validateDelinearizationResult(*SE, Sizes, Subscripts);
       O << "Delinearization validation: " << (IsValid ? "Succeeded" : "Failed")
         << "\n";
   }
