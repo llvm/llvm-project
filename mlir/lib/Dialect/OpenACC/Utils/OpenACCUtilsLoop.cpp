@@ -23,10 +23,8 @@ using namespace mlir;
 
 namespace {
 
-/// Calculate trip count for a loop: max(0, (ub - lb + step) / step)
-/// If inclusiveUpperbound is true, uses ub as-is; otherwise subtracts 1.
-/// The result is clamped to 0 to handle cases where lb > ub for positive step
-/// (or lb < ub for negative step), which would result in a negative trip count.
+/// Calculate trip count for a loop: (ub - lb + step) / step
+/// If inclusiveUpperbound is false, subtracts 1 from ub first.
 static Value calculateTripCount(OpBuilder &b, Location loc, Value lb, Value ub,
                                 Value step, bool inclusiveUpperbound) {
   Type type = b.getIndexType();
@@ -43,15 +41,7 @@ static Value calculateTripCount(OpBuilder &b, Location loc, Value lb, Value ub,
 
   Value sub = b.createOrFold<arith::SubIOp>(loc, ub, lb);
   Value add = b.createOrFold<arith::AddIOp>(loc, sub, step);
-  Value unclampedTrips = b.createOrFold<arith::DivSIOp>(loc, add, step);
-
-  // Clamp negative trip counts to 0
-  Value zero = arith::ConstantIndexOp::create(b, loc, 0);
-  Value isNegative = b.createOrFold<arith::CmpIOp>(
-      loc, arith::CmpIPredicate::slt, unclampedTrips, zero);
-  Value trips =
-      b.createOrFold<arith::SelectOp>(loc, isNegative, zero, unclampedTrips);
-  return trips;
+  return b.createOrFold<arith::DivSIOp>(loc, add, step);
 }
 
 /// Get exclusive upper bound from acc.loop (add 1 if inclusive).
