@@ -45,6 +45,26 @@ struct PyTestType : mlir::python::PyConcreteType<PyTestType> {
   }
 };
 
+class PyTestAttr : public mlir::python::PyConcreteAttribute<PyTestAttr> {
+public:
+  static constexpr IsAFunctionTy isaFunction =
+      mlirAttributeIsAPythonTestTestAttribute;
+  static constexpr const char *pyClassName = "TestAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPythonTestTestAttributeGetTypeID;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](mlir::python::DefaultingPyMlirContext context) {
+          return PyTestAttr(context->getRef(), mlirPythonTestTestAttributeGet(
+                                                   context.get()->get()));
+        },
+        nb::arg("context").none() = nb::none());
+  }
+};
+
 NB_MODULE(_mlirPythonTestNanobind, m) {
   m.def(
       "register_python_test_dialect",
@@ -84,19 +104,7 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
       nb::sig("def test_diagnostics_with_errors_and_notes(arg: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") ", /) -> None"));
   // clang-format on
 
-  mlir_attribute_subclass(m, "TestAttr",
-                          mlirAttributeIsAPythonTestTestAttribute,
-                          mlirPythonTestTestAttributeGetTypeID)
-      .def_classmethod(
-          "get",
-          [](const nb::object &cls, MlirContext ctx) {
-            return cls(mlirPythonTestTestAttributeGet(ctx));
-          },
-          // clang-format off
-          nb::sig("def get(cls: object, context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " | None = None) -> object"),
-          // clang-format on
-          nb::arg("cls"), nb::arg("context").none() = nb::none());
-
+  PyTestAttr::bind(m);
   PyTestType::bind(m);
 
   auto typeCls =
