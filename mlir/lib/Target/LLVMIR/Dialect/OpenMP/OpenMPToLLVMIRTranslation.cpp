@@ -6047,7 +6047,8 @@ extractHostEvalClauses(omp::TargetOp targetOp, Value &numThreads,
           .Case([&](omp::TeamsOp teamsOp) {
             // num_teams dims and values are not yet supported
             assert(!teamsOp.hasNumTeamsDimsModifier() &&
-                   "Lowering of num_teams with dims modifier is NYI.");
+                   "Lowering of num_teams with dims modifier is not yet "
+                   "implemented.");
             assert(!teamsOp.hasThreadLimitDimsModifier() &&
                    "Lowering of thread_limit with dims modifier is not yet "
                    "implemented.");
