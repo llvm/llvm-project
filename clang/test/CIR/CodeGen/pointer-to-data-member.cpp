@@ -303,3 +303,43 @@ int test5(Incomplete *ic, int Incomplete::*member) {
 // OGCG:   %[[RT_MEMBER:.*]] = getelementptr inbounds i8, ptr %[[IC]], i64 %[[MEMBER]]
 // OGCG:   %[[RET:.*]] = load i32, ptr %[[RT_MEMBER]]
 // OGCG:   ret i32 %[[RET]]
+
+auto test_null() -> int Point::* {
+  return nullptr;
+}
+
+// CIR: cir.func {{.*}} @_Z9test_nullv() -> !cir.data_member<!s32i in !rec_Point> {
+// CIR:   %[[RETVAL_ADDR:.*]] = cir.alloca !cir.data_member<!s32i in !rec_Point>, !cir.ptr<!cir.data_member<!s32i in !rec_Point>>, ["__retval"]
+// CIR:   %[[CONST_NULL:.*]] = cir.const #cir.data_member<null> : !cir.data_member<!s32i in !rec_Point>
+// CIR:   cir.store %[[CONST_NULL]], %[[RETVAL_ADDR]]
+// CIR:   %[[RET:.*]] = cir.load %[[RETVAL_ADDR]]
+// CIR:   cir.return %[[RET]] : !cir.data_member<!s32i in !rec_Point>
+
+// LLVM: define {{.*}} i64 @_Z9test_nullv()
+// LLVM:   %[[RETVAL_ADDR:.*]] = alloca i64
+// LLVM:   store i64 -1, ptr %[[RETVAL_ADDR]]
+// LLVM:   %[[RET:.*]] = load i64, ptr %[[RETVAL_ADDR]]
+// LLVM:   ret i64 %[[RET]]
+
+// OGCG: define {{.*}} i64 @_Z9test_nullv()
+// OGCG:   ret i64 -1
+
+auto test_null_incomplete() -> int Incomplete::* {
+  return nullptr;
+}
+
+// CIR: cir.func {{.*}} @_Z20test_null_incompletev() -> !cir.data_member<!s32i in !rec_Incomplete> {
+// CIR:   %[[RETVAL_ADDR:.*]] = cir.alloca !cir.data_member<!s32i in !rec_Incomplete>, !cir.ptr<!cir.data_member<!s32i in !rec_Incomplete>>, ["__retval"]
+// CIR:   %[[CONST_NULL:.*]] = cir.const #cir.data_member<null> : !cir.data_member<!s32i in !rec_Incomplete>
+// CIR:   cir.store %[[CONST_NULL]], %[[RETVAL_ADDR]]
+// CIR:   %[[RET:.*]] = cir.load %[[RETVAL_ADDR]]
+// CIR:   cir.return %[[RET]] : !cir.data_member<!s32i in !rec_Incomplete>
+
+// LLVM: define {{.*}} i64 @_Z20test_null_incompletev()
+// LLVM:   %[[RETVAL_ADDR:.*]] = alloca i64
+// LLVM:   store i64 -1, ptr %[[RETVAL_ADDR]]
+// LLVM:   %[[RET:.*]] = load i64, ptr %[[RETVAL_ADDR]]
+// LLVM:   ret i64 %[[RET]]
+
+// OGCG: define {{.*}} i64 @_Z20test_null_incompletev()
+// OGCG:   ret i64 -1
