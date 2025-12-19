@@ -17,7 +17,7 @@ end
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = task
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Replayable ->
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 !PARSE-TREE: | Block
 
 
@@ -41,7 +41,7 @@ end
 !PARSE-TREE: | OmpClause -> Replayable -> OmpReplayableClause -> Scalar -> Logical -> Constant -> Expr = '.true._4'
 !PARSE-TREE: | | LiteralConstant -> LogicalLiteralConstant
 !PARSE-TREE: | | | bool = 'true'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
 
 subroutine f02
@@ -57,4 +57,4 @@ end
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Replayable -> OmpReplayableClause -> Scalar -> Logical -> Constant -> Expr = '.false._4'
 !PARSE-TREE: | | LiteralConstant -> LogicalLiteralConstant
 !PARSE-TREE: | | | bool = 'false'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}

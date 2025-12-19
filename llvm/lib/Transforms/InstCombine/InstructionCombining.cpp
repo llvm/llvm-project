@@ -3373,9 +3373,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
               DL.getAddressSizeInBits(AS) != DL.getPointerSizeInBits(AS);
           bool Changed = false;
           GEP.replaceUsesWithIf(Y, [&](Use &U) {
-            bool ShouldReplace = isa<PtrToAddrInst>(U.getUser()) ||
-                                 (!HasNonAddressBits &&
-                                  isa<ICmpInst, PtrToIntInst>(U.getUser()));
+            bool ShouldReplace =
+                isa<PtrToAddrInst, ICmpInst>(U.getUser()) ||
+                (!HasNonAddressBits && isa<PtrToIntInst>(U.getUser()));
             Changed |= ShouldReplace;
             return ShouldReplace;
           });
@@ -5627,8 +5627,15 @@ bool InstCombinerImpl::run() {
 
       for (Use &U : I->uses()) {
         User *User = U.getUser();
-        if (User->isDroppable())
-          continue;
+        if (User->isDroppable()) {
+          // Do not sink if there are dereferenceable assumes that would be
+          // removed.
+          auto II = dyn_cast<IntrinsicInst>(User);
+          if (II->getIntrinsicID() != Intrinsic::assume ||
+              !II->getOperandBundle("dereferenceable"))
+            continue;
+        }
+
         if (NumUsers > MaxSinkNumUsers)
           return std::nullopt;
 

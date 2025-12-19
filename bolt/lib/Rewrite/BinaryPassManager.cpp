@@ -19,15 +19,15 @@
 #include "bolt/Passes/IdenticalCodeFolding.h"
 #include "bolt/Passes/IndirectCallPromotion.h"
 #include "bolt/Passes/Inliner.h"
-#include "bolt/Passes/InsertNegateRAStatePass.h"
 #include "bolt/Passes/Instrumentation.h"
 #include "bolt/Passes/JTFootprintReduction.h"
 #include "bolt/Passes/LongJmp.h"
 #include "bolt/Passes/LoopInversionPass.h"
 #include "bolt/Passes/MCF.h"
-#include "bolt/Passes/MarkRAStates.h"
 #include "bolt/Passes/PLTCall.h"
 #include "bolt/Passes/PatchEntries.h"
+#include "bolt/Passes/PointerAuthCFIAnalyzer.h"
+#include "bolt/Passes/PointerAuthCFIFixup.h"
 #include "bolt/Passes/ProfileQualityStats.h"
 #include "bolt/Passes/RegReAssign.h"
 #include "bolt/Passes/ReorderData.h"
@@ -132,6 +132,15 @@ static cl::opt<bool> PrintJTFootprintReduction(
 static cl::opt<bool> PrintAArch64Relaxation(
     "print-adr-ldr-relaxation",
     cl::desc("print functions after ADR/LDR Relaxation pass"), cl::Hidden,
+    cl::cat(BoltOptCategory));
+
+cl::opt<bool> PrintPAuthCFIAnalyzer(
+    "print-pointer-auth-cfi-analyzer",
+    cl::desc("print functions after PointerAuthCFIAnalyzer pass"), cl::Hidden,
+    cl::cat(BoltOptCategory));
+static cl::opt<bool> PrintPAuthCFIFixup(
+    "print-pointer-auth-cfi-fixup",
+    cl::desc("print functions after PointerAuthCFIFixup pass"), cl::Hidden,
     cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
@@ -362,7 +371,8 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   BinaryFunctionPassManager Manager(BC);
 
   if (BC.isAArch64())
-    Manager.registerPass(std::make_unique<MarkRAStates>());
+    Manager.registerPass(
+        std::make_unique<PointerAuthCFIAnalyzer>(PrintPAuthCFIAnalyzer));
 
   Manager.registerPass(
       std::make_unique<EstimateEdgeCounts>(PrintEstimateEdgeCounts));
@@ -524,7 +534,8 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
     // relocations out of range and crash during linking.
     Manager.registerPass(std::make_unique<LongJmpPass>(PrintLongJmp));
 
-    Manager.registerPass(std::make_unique<InsertNegateRAState>());
+    Manager.registerPass(
+        std::make_unique<PointerAuthCFIFixup>(PrintPAuthCFIFixup));
   }
 
   // This pass should always run last.*

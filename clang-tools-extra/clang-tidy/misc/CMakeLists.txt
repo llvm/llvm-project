@@ -28,11 +28,13 @@ add_clang_library(clangTidyMiscModule STATIC
   MisleadingBidirectionalCheck.cpp
   MisleadingIdentifierCheck.cpp
   MisplacedConstCheck.cpp
+  MultipleInheritanceCheck.cpp
   NewDeleteOverloadsCheck.cpp
   NoRecursionCheck.cpp
   NonCopyableObjectsCheck.cpp
   NonPrivateMemberVariablesInClassesCheck.cpp
   OverrideWithDifferentVisibilityCheck.cpp
+  PredictableRandCheck.cpp
   RedundantExpressionCheck.cpp
   ShadowedNamespaceFunctionCheck.cpp
   StaticAssertCheck.cpp

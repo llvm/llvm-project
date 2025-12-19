@@ -736,6 +736,42 @@ static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
   return false;
 }
 
+// Constant fold a conditional expression 'cond ? A : B' to
+// - 'A', if 'cond' has constant true value;
+// - 'B', if 'cond' has constant false value.
+static const Expr *tryConstantFoldConditionalExpr(const Expr *E,
+                                                  const ASTContext &Ctx) {
+  // FIXME: more places can use this function
+  if (const auto *CE = dyn_cast<ConditionalOperator>(E)) {
+    bool CondEval;
+    const auto *Cond = CE->getCond();
+
+    if (!Cond->isValueDependent() &&
+        Cond->EvaluateAsBooleanCondition(CondEval, Ctx))
+      return CondEval ? CE->getLHS() : CE->getRHS();
+  }
+  return E;
+}
+
+// A pointer type expression is known to be null-terminated, if it has the
+// form: E.c_str(), for any expression E of `std::string` type.
+static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
+  Ptr = tryConstantFoldConditionalExpr(Ptr, Ctx);
+  if (isa<clang::StringLiteral>(Ptr->IgnoreParenImpCasts()))
+    return true;
+  if (isa<PredefinedExpr>(Ptr->IgnoreParenImpCasts()))
+    return true;
+  if (auto *MCE = dyn_cast<CXXMemberCallExpr>(Ptr->IgnoreParenImpCasts())) {
+    const CXXMethodDecl *MD = MCE->getMethodDecl();
+    const CXXRecordDecl *RD = MCE->getRecordDecl()->getCanonicalDecl();
+
+    if (MD && RD && RD->isInStdNamespace() && MD->getIdentifier())
+      if (MD->getName() == "c_str" && RD->getName() == "basic_string")
+        return true;
+  }
+  return false;
+}
+
 namespace libc_func_matchers {
 // Under `libc_func_matchers`, define a set of matchers that match unsafe
 // functions in libc and unsafe calls to them.
@@ -780,24 +816,6 @@ struct LibcFunNamePrefixSuffixParser {
     return Name;
   }
 };
-
-// A pointer type expression is known to be null-terminated, if it has the
-// form: E.c_str(), for any expression E of `std::string` type.
-static bool isNullTermPointer(const Expr *Ptr) {
-  if (isa<clang::StringLiteral>(Ptr->IgnoreParenImpCasts()))
-    return true;
-  if (isa<PredefinedExpr>(Ptr->IgnoreParenImpCasts()))
-    return true;
-  if (auto *MCE = dyn_cast<CXXMemberCallExpr>(Ptr->IgnoreParenImpCasts())) {
-    const CXXMethodDecl *MD = MCE->getMethodDecl();
-    const CXXRecordDecl *RD = MCE->getRecordDecl()->getCanonicalDecl();
-
-    if (MD && RD && RD->isInStdNamespace() && MD->getIdentifier())
-      if (MD->getName() == "c_str" && RD->getName() == "basic_string")
-        return true;
-  }
-  return false;
-}
 
 // Return true iff at least one of following cases holds:
 //  1. Format string is a literal and there is an unsafe pointer argument
@@ -874,7 +892,7 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
 
       const Expr *Arg = Call->getArg(ArgIdx);
 
-      if (isNullTermPointer(Arg))
+      if (isNullTermPointer(Arg, Ctx))
         // If Arg is a null-terminated pointer, it is safe anyway.
         return true; // continue parsing
 
@@ -922,8 +940,8 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
   // (including the format argument) is unsafe pointer.
   return llvm::any_of(
       llvm::make_range(Call->arg_begin() + FmtArgIdx, Call->arg_end()),
-      [&UnsafeArg](const Expr *Arg) -> bool {
-        if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg)) {
+      [&UnsafeArg, &Ctx](const Expr *Arg) -> bool {
+        if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg, Ctx)) {
           UnsafeArg = Arg;
           return true;
         }
@@ -1175,7 +1193,7 @@ static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
   // We don't really recognize this "normal" printf, the only thing we
   // can do is to require all pointers to be null-terminated:
   for (const auto *Arg : Node.arguments())
-    if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg)) {
+    if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg, Ctx)) {
       Result.addNode(Tag, DynTypedNode::create(*Arg));
       return true;
     }
@@ -2089,6 +2107,10 @@ public:
     // A libc function must either be in the std:: namespace or a global
     // function that is not in any namespace:
     if (!FD->isInStdNamespace() && !IsGlobalAndNotInAnyNamespace)
+      return false;
+    // If the call has a sole null-terminated argument, e.g., strlen,
+    //  printf, atoi, we consider it safe:
+    if (CE->getNumArgs() == 1 && isNullTermPointer(CE->getArg(0), Ctx))
       return false;
     auto isSingleStringLiteralArg = false;
     if (CE->getNumArgs() == 1) {

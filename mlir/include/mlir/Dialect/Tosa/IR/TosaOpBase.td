@@ -240,6 +240,7 @@ class Tosa_I32EnumAttr<string name, string description, string mnemonic,
 // DOUBLEROUND  : Adds double rounding support to the RESCALE operator.
 // INEXACTROUND : Adds inexact rounding support to the RESCALE operator.
 // DYNAMIC      : Removes all Compile Time Constant state for CTC inputs.
+// MXFP         : Microscaling formats.
 //===----------------------------------------------------------------------===//
 
 def Tosa_NONE : I32EnumAttrCase<"none", 0>;

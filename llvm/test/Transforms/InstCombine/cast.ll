@@ -2238,3 +2238,147 @@ define i32 @test95(i32 %x) {
   %5 = zext i8 %4 to i32
   ret i32 %5
 }
+
+define i16 @test96(i16 %x, i16 %y) {
+; ALL-LABEL: @test96(
+; ALL-NEXT:    [[A:%.*]] = add i16 [[X:%.*]], [[Y:%.*]]
+; ALL-NEXT:    [[B:%.*]] = add i16 [[A]], 5
+; ALL-NEXT:    [[C:%.*]] = mul i16 [[A]], 3
+; ALL-NEXT:    [[T:%.*]] = or i16 [[B]], [[C]]
+; ALL-NEXT:    ret i16 [[T]]
+;
+  %zx = zext i16 %x to i32
+  %zy = zext i16 %y to i32
+  %a = add i32 %zx, %zy
+  %b = add i32 %a, 5
+  %c = mul i32 %a, 3
+  %d = or i32 %b, %c
+  %t = trunc i32 %d to i16
+  ret i16 %t
+}
+
+define i16 @test97(i16 %x, i16 %y) {
+; ALL-LABEL: @test97(
+; ALL-NEXT:    [[ZX:%.*]] = zext i16 [[X:%.*]] to i32
+; ALL-NEXT:    [[ZY:%.*]] = zext i16 [[Y:%.*]] to i32
+; ALL-NEXT:    [[A:%.*]] = add nuw nsw i32 [[ZX]], [[ZY]]
+; ALL-NEXT:    [[B:%.*]] = add nuw nsw i32 [[A]], 5
+; ALL-NEXT:    [[C:%.*]] = mul nuw nsw i32 [[A]], 3
+; ALL-NEXT:    [[D:%.*]] = or i32 [[B]], [[C]]
+; ALL-NEXT:    call void @use_i32(i32 [[A]])
+; ALL-NEXT:    [[T:%.*]] = trunc i32 [[D]] to i16
+; ALL-NEXT:    ret i16 [[T]]
+;
+  %zx = zext i16 %x to i32
+  %zy = zext i16 %y to i32
+  %a = add i32 %zx, %zy
+  %b = add i32 %a, 5
+  %c = mul i32 %a, 3
+  %d = or i32 %b, %c
+  call void @use_i32(i32 %a)
+  %t = trunc i32 %d to i16
+  ret i16 %t
+}
+
+; expected not to narrow operations to i16 due to a loop in use chains
+define i16 @test98(i16 %x, i16 %n) {
+; ALL-LABEL: @test98(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    [[Z:%.*]] = zext i16 [[X:%.*]] to i32
+; ALL-NEXT:    br label [[LOOP:%.*]]
+; ALL:       loop:
+; ALL-NEXT:    [[P:%.*]] = phi i32 [ [[Z]], [[ENTRY:%.*]] ], [ [[A:%.*]], [[LOOP]] ]
+; ALL-NEXT:    [[A]] = add i32 [[P]], 1
+; ALL-NEXT:    [[T:%.*]] = trunc i32 [[A]] to i16
+; ALL-NEXT:    [[COND:%.*]] = icmp ugt i16 [[N:%.*]], [[T]]
+; ALL-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; ALL:       exit:
+; ALL-NEXT:    ret i16 [[T]]
+;
+entry:
+  %z = zext i16 %x to i32
+  br label %loop
+
+loop:
+  %p = phi i32 [ %z, %entry ], [ %a, %loop ]
+  %a = add i32 %p, 1
+  %t = trunc i32 %a to i16
+  %cond = icmp ult i16 %t, %n
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret i16 %t
+}
+
+define i32 @test99(i32 %x, i32 %y) {
+; ALL-LABEL: @test99(
+; ALL-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; ALL-NEXT:    [[B:%.*]] = add i32 [[A]], 5
+; ALL-NEXT:    [[C:%.*]] = mul i32 [[A]], 3
+; ALL-NEXT:    [[D:%.*]] = or i32 [[B]], [[C]]
+; ALL-NEXT:    [[SEXT:%.*]] = shl i32 [[D]], 16
+; ALL-NEXT:    [[S:%.*]] = ashr exact i32 [[SEXT]], 16
+; ALL-NEXT:    ret i32 [[S]]
+;
+  %tx = trunc i32 %x to i16
+  %ty = trunc i32 %y to i16
+  %a = add i16 %tx, %ty
+  %b = add i16 %a, 5
+  %c = mul i16 %a, 3
+  %d = or i16 %b, %c
+  %t = sext i16 %d to i32
+  ret i32 %t
+}
+
+define i32 @test100(i32 %x, i32 %y) {
+; ALL-LABEL: @test100(
+; ALL-NEXT:    [[TX:%.*]] = trunc i32 [[X:%.*]] to i8
+; ALL-NEXT:    [[TY:%.*]] = trunc i32 [[Y:%.*]] to i8
+; ALL-NEXT:    [[A:%.*]] = add i8 [[TX]], [[TY]]
+; ALL-NEXT:    [[B:%.*]] = add i8 [[A]], 5
+; ALL-NEXT:    [[C:%.*]] = mul i8 [[A]], 3
+; ALL-NEXT:    [[D:%.*]] = or i8 [[B]], [[C]]
+; ALL-NEXT:    call void @use_i8(i8 [[A]])
+; ALL-NEXT:    [[T:%.*]] = sext i8 [[D]] to i32
+; ALL-NEXT:    ret i32 [[T]]
+;
+  %tx = trunc i32 %x to i8
+  %ty = trunc i32 %y to i8
+  %a = add i8 %tx, %ty
+  %b = add i8 %a, 5
+  %c = mul i8 %a, 3
+  %d = or i8 %b, %c
+  call void @use_i8(i8 %a)
+  %t = sext i8 %d to i32
+  ret i32 %t
+}
+
+; expected not to extend operations to i32 due to a loop in use chains
+define i32 @test101(i32 %x, i8 %n) {
+; ALL-LABEL: @test101(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
+; ALL-NEXT:    br label [[LOOP:%.*]]
+; ALL:       loop:
+; ALL-NEXT:    [[P:%.*]] = phi i8 [ [[T]], [[ENTRY:%.*]] ], [ [[A:%.*]], [[LOOP]] ]
+; ALL-NEXT:    [[A]] = add i8 [[P]], 1
+; ALL-NEXT:    [[COND:%.*]] = icmp ult i8 [[A]], [[N:%.*]]
+; ALL-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; ALL:       exit:
+; ALL-NEXT:    [[S:%.*]] = sext i8 [[A]] to i32
+; ALL-NEXT:    ret i32 [[S]]
+;
+entry:
+  %t = trunc i32 %x to i8
+  br label %loop
+
+loop:
+  %p = phi i8 [ %t, %entry ], [ %a, %loop ]
+  %a = add i8 %p, 1
+  %cond = icmp ult i8 %a, %n
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  %s = sext i8 %a to i32
+  ret i32 %s
+}

@@ -22,6 +22,8 @@ set(ORC_RT_HEADERS
     orc-rt/SPSMemoryFlags.h
     orc-rt/SPSWrapperFunction.h
     orc-rt/SPSWrapperFunctionBuffer.h
+    orc-rt/TaskDispatcher.h
+    orc-rt/ThreadPoolTaskDispatcher.h
     orc-rt/WrapperFunction.h
     orc-rt/bind.h
     orc-rt/bit.h
@@ -29,16 +31,28 @@ set(ORC_RT_HEADERS
     orc-rt/span.h
 )
 
+# Add generated config header
+set(ORC_RT_GENERATED_HEADERS
+    ${CMAKE_CURRENT_BINARY_DIR}/orc-rt-c/config.h
+)
+
 # TODO: Switch to filesets when we move to cmake-3.23.
 add_library(orc-rt-headers INTERFACE)
 target_include_directories(orc-rt-headers INTERFACE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
 set_property(TARGET orc-rt-headers
-    PROPERTY PUBLIC_HEADER ${ORC_RT_HEADERS}
+    PROPERTY PUBLIC_HEADER ${ORC_RT_HEADERS} ${ORC_RT_GENERATED_HEADERS}
 )
 install(TARGETS orc-rt-headers
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/
+    COMPONENT OrcRT_Development
+)
+
+# Install generated config header
+install(FILES ${ORC_RT_GENERATED_HEADERS}
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/orc-rt-c/
     COMPONENT OrcRT_Development
 )

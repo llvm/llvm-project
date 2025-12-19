@@ -29,9 +29,9 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-4-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-4-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 [[INDEX]]
-; INTERLEAVE-4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 4
-; INTERLEAVE-4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 8
-; INTERLEAVE-4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 12
+; INTERLEAVE-4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 4
+; INTERLEAVE-4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 8
+; INTERLEAVE-4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 12
 ; INTERLEAVE-4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 1
 ; INTERLEAVE-4-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP1]], align 1
 ; INTERLEAVE-4-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i32>, ptr [[TMP2]], align 1
@@ -103,7 +103,7 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-2-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-2-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 [[INDEX]]
-; INTERLEAVE-2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 4
+; INTERLEAVE-2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 4
 ; INTERLEAVE-2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 1
 ; INTERLEAVE-2-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP1]], align 1
 ; INTERLEAVE-2-NEXT:    [[TMP2]] = add <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]

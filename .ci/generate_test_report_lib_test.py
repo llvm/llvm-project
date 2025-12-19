@@ -181,6 +181,7 @@ class TestReports(unittest.TestCase):
                 "tools/check-langley",
                 dedent(
                     """\
+                    ModuleNotFoundError: No module named 'mount_langley'
                     FAILED: tools/check-langley
                     Wow! This system is really broken!"""
                 ),
@@ -194,7 +195,7 @@ class TestReports(unittest.TestCase):
                 """\
                 # Foo
 
-                The build succeeded and no tests ran. This is expected in some build configurations."""
+                :white_check_mark: The build succeeded and no tests ran. This is expected in some build configurations."""
             ),
         )
 
@@ -308,7 +309,9 @@ class TestReports(unittest.TestCase):
                     """\
               # Foo
 
-              * 1 test passed"""
+              * 1 test passed
+              
+              :white_check_mark: The build succeeded and all tests passed."""
                 )
             ),
         )
@@ -340,7 +343,7 @@ class TestReports(unittest.TestCase):
 
               * 1 test passed
 
-              All tests passed but another part of the build **failed**. Information about the build failure could not be automatically obtained.
+              All executed tests passed, but another part of the build **failed**. Information about the build failure could not be automatically obtained.
 
               Download the build's log file to see the details.
               
@@ -387,7 +390,7 @@ class TestReports(unittest.TestCase):
 
                     * 1 test passed
 
-                    All tests passed but another part of the build **failed**. Click on a failure below to see the details.
+                    All executed tests passed, but another part of the build **failed**. Click on a failure below to see the details.
 
                     <details>
                     <summary>test/4.stamp</summary>
@@ -473,7 +476,7 @@ class TestReports(unittest.TestCase):
 
                     * 1 test passed
 
-                    All tests passed but another part of the build **failed**. Click on a failure below to see the details.
+                    All executed tests passed, but another part of the build **failed**. Click on a failure below to see the details.
 
                     <details>
                     <summary>touch test/2.stamp</summary>
@@ -975,7 +978,7 @@ class TestReports(unittest.TestCase):
 
                     * 1 test passed
 
-                    All tests passed but another part of the build **failed**. Click on a failure below to see the details.
+                    All executed tests passed, but another part of the build **failed**. Click on a failure below to see the details.
 
                     <details>
                     <summary>test/4.stamp</summary>

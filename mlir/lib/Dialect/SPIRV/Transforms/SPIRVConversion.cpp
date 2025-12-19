@@ -502,6 +502,11 @@ static Type convertTensorType(const spirv::TargetEnv &targetEnv,
                << type << " illegal: cannot handle zero-element tensors\n");
     return nullptr;
   }
+  if (arrayElemCount > std::numeric_limits<unsigned>::max()) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: cannot fit tensor into target type\n");
+    return nullptr;
+  }
 
   Type arrayElemType = convertScalarType(targetEnv, options, scalarType);
   if (!arrayElemType)

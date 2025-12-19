@@ -12,13 +12,15 @@
 
 // inline constexpr unspecified indices = unspecified;
 
+// FIXME: This test shouldn't define TEST_HAS_NO_INT128
+// ADDITIONAL_COMPILE_FLAGS(clang-modules-build): -fno-modules
+
 #include <cassert>
 #include <cstddef>
 #include <ranges>
 #include <vector>
 
 #include "test_macros.h"
-#define TEST_HAS_NO_INT128 // Size cannot be larger than 64 bits
 #include "type_algorithms.h"
 
 #include "types.h"

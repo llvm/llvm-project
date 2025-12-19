@@ -1,4 +1,6 @@
 InheritParentConfig: true
+HeaderFilterRegex: 'clang-tools-extra/clang-tidy'
+ExcludeHeaderFilterRegex: 'include-cleaner|clang-query'
 Checks: >
   bugprone-*,
   -bugprone-assignment-in-if-condition,
@@ -7,6 +9,12 @@ Checks: >
   -bugprone-narrowing-conversions,
   -bugprone-unchecked-optional-access,
   -bugprone-unused-return-value,
+  cppcoreguidelines-init-variables,
+  cppcoreguidelines-missing-std-forward,
+  cppcoreguidelines-rvalue-reference-param-not-moved,
+  cppcoreguidelines-virtual-class-destructor,
+  google-readability-casting,
+  misc-const-correctness,
   modernize-*,
   -modernize-avoid-c-arrays,
   -modernize-pass-by-value,
@@ -15,7 +23,6 @@ Checks: >
   performance-*,
   -performance-enum-size,
   -performance-no-int-to-ptr,
-  -performance-unnecessary-value-param,
   readability-*,
   -readability-avoid-nested-conditional-operator,
   -readability-braces-around-statements,
@@ -30,8 +37,7 @@ Checks: >
   -readability-qualified-auto,
   -readability-simplify-boolean-expr,
   -readability-static-definition-in-anonymous-namespace,
-  -readability-suspicious-call-argument,
-  -readability-use-anyofallof
+  -readability-suspicious-call-argument
 
 CheckOptions:
   - key:             performance-move-const-arg.CheckTriviallyCopyableMove

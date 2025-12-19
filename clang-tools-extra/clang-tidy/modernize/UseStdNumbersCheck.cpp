@@ -81,16 +81,17 @@ AST_MATCHER_P(clang::Expr, anyOfExhaustive, std::vector<Matcher<clang::Stmt>>,
 // literals.
 struct MatchBuilder {
   auto
-  ignoreParenAndArithmeticCasting(const Matcher<clang::Expr> Matcher) const {
+  ignoreParenAndArithmeticCasting(const Matcher<clang::Expr> &Matcher) const {
     return expr(hasType(qualType(isArithmetic())), ignoringParenCasts(Matcher));
   }
 
-  auto ignoreParenAndFloatingCasting(const Matcher<clang::Expr> Matcher) const {
+  auto
+  ignoreParenAndFloatingCasting(const Matcher<clang::Expr> &Matcher) const {
     return expr(hasType(qualType(isFloating())), ignoringParenCasts(Matcher));
   }
 
   auto matchMathCall(const StringRef FunctionName,
-                     const Matcher<clang::Expr> ArgumentMatcher) const {
+                     const Matcher<clang::Expr> &ArgumentMatcher) const {
     auto HasAnyPrecisionName = hasAnyName(
         FunctionName, (FunctionName + "l").str(),
         (FunctionName + "f").str()); // Support long double(l) and float(f).
@@ -100,7 +101,7 @@ struct MatchBuilder {
                  hasArgument(0, ArgumentMatcher))));
   }
 
-  auto matchSqrt(const Matcher<clang::Expr> ArgumentMatcher) const {
+  auto matchSqrt(const Matcher<clang::Expr> &ArgumentMatcher) const {
     return matchMathCall("sqrt", ArgumentMatcher);
   }
 
@@ -148,7 +149,7 @@ struct MatchBuilder {
     return expr(anyOf(Int, Float, Dref));
   }
 
-  auto match1Div(const Matcher<clang::Expr> Match) const {
+  auto match1Div(const Matcher<clang::Expr> &Match) const {
     return binaryOperator(hasOperatorName("/"), hasLHS(matchValue(1)),
                           hasRHS(Match));
   }

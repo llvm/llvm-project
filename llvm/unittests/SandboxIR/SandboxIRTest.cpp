@@ -160,12 +160,20 @@ define void @foo(i32 %v0) {
 
   auto *Int32Ty = sandboxir::Type::getInt32Ty(Ctx);
   auto *LLVMInt32Ty = llvm::Type::getInt32Ty(C);
+  auto *Int32VecTy =
+      sandboxir::VectorType::get(Int32Ty, ElementCount::getFixed(2u));
+  auto *LLVMInt32VecTy = llvm::FixedVectorType::get(LLVMInt32Ty, 2);
   {
     // Check get(Type, V).
     auto *FortyThree = sandboxir::ConstantInt::get(Int32Ty, 43);
     auto *LLVMFortyThree = llvm::ConstantInt::get(LLVMInt32Ty, 43);
     EXPECT_NE(FortyThree, FortyTwo);
     EXPECT_EQ(FortyThree, Ctx.getValue(LLVMFortyThree));
+
+    // Check vector splat.
+    auto *FortyThreeVec = sandboxir::ConstantInt::get(Int32VecTy, 43);
+    auto *LLVMFortyThreeVec = llvm::ConstantInt::get(LLVMInt32VecTy, 43);
+    EXPECT_EQ(FortyThreeVec, Ctx.getValue(LLVMFortyThreeVec));
   }
   {
     // Check get(Type, V, IsSigned).
@@ -1385,7 +1393,7 @@ define ptr @foo() {
   // Check get(), getKey(), getDiscriminator(), getAddrDiscriminator().
   auto *NewPtrAuth = sandboxir::ConstantPtrAuth::get(
       &F, PtrAuth->getKey(), PtrAuth->getDiscriminator(),
-      PtrAuth->getAddrDiscriminator());
+      PtrAuth->getAddrDiscriminator(), PtrAuth->getDeactivationSymbol());
   EXPECT_EQ(NewPtrAuth, PtrAuth);
   // Check hasAddressDiscriminator().
   EXPECT_EQ(PtrAuth->hasAddressDiscriminator(),

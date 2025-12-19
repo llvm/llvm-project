@@ -68,17 +68,13 @@ public:
 
   BasicBlockSectionsProfileReader() = default;
 
-  // Returns true if basic block sections profile exist for function \p
-  // FuncName.
+  // Returns true if function \p FuncName is hot based on the basic block
+  // section profile.
   bool isFunctionHot(StringRef FuncName) const;
 
-  // Returns a pair with first element representing whether basic block sections
-  // profile exist for the function \p FuncName, and the second element
-  // representing the basic block sections profile (cluster info) for this
-  // function. If the first element is true and the second element is empty, it
-  // means unique basic block sections are desired for all basic blocks of the
-  // function.
-  std::pair<bool, SmallVector<BBClusterInfo>>
+  // Returns the cluster info for the function \p FuncName. Returns an empty
+  // vector if function has no cluster info.
+  SmallVector<BBClusterInfo>
   getClusterInfoForFunction(StringRef FuncName) const;
 
   // Returns the path clonings for the given function.
@@ -89,6 +85,10 @@ public:
   // function `FuncName` or zero if it does not exist.
   uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
                         const UniqueBBID &SinkBBID) const;
+
+  // Return the complete function path and cluster info for the given function.
+  std::pair<bool, FunctionPathAndClusterInfo>
+  getFunctionPathAndClusterInfo(StringRef FuncName) const;
 
 private:
   StringRef getAliasName(StringRef FuncName) const {
@@ -190,7 +190,7 @@ public:
 
   bool isFunctionHot(StringRef FuncName) const;
 
-  std::pair<bool, SmallVector<BBClusterInfo>>
+  SmallVector<BBClusterInfo>
   getClusterInfoForFunction(StringRef FuncName) const;
 
   SmallVector<SmallVector<unsigned>>
@@ -198,6 +198,9 @@ public:
 
   uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
                         const UniqueBBID &DestBBID) const;
+
+  std::pair<bool, FunctionPathAndClusterInfo>
+  getFunctionPathAndClusterInfo(StringRef FuncName) const;
 
   // Initializes the FunctionNameToDIFilename map for the current module and
   // then reads the profile for the matching functions.

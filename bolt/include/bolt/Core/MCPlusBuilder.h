@@ -632,6 +632,12 @@ public:
     return false;
   }
 
+  /// Generate the matching pointer authentication instruction from a fused
+  /// pauth-and-return instruction.
+  virtual void createMatchingAuth(const MCInst &AuthAndRet, MCInst &Auth) {
+    llvm_unreachable("not implemented");
+  }
+
   /// Returns the register used as a return address. Returns std::nullopt if
   /// not applicable, such as reading the return address from a system register
   /// or from the stack.
@@ -783,6 +789,11 @@ public:
   }
 
   virtual bool isPop(const MCInst &Inst) const { return false; }
+
+  /// Determine if a basic block looks like an epilogue. For now it is only
+  /// called at the final stage of building CFG to check basic block ending
+  /// with an indirect call that has unknown control flow attribute.
+  virtual bool isEpilogue(const BinaryBasicBlock &BB) const { return false; }
 
   /// Return true if the instruction is used to terminate an indirect branch.
   virtual bool isTerminateBranch(const MCInst &Inst) const {
@@ -1371,20 +1382,13 @@ public:
   /// Return true if \p Inst has RestoreState annotation.
   bool hasRestoreState(const MCInst &Inst) const;
 
-  /// Stores RA Signed annotation on \p Inst.
-  void setRASigned(MCInst &Inst) const;
+  /// Sets kRASigned or kRAUnsigned annotation on \p Inst.
+  /// Fails if \p Inst has either annotation already set.
+  void setRAState(MCInst &Inst, bool State) const;
 
-  /// Return true if \p Inst has Signed RA annotation.
-  bool isRASigned(const MCInst &Inst) const;
-
-  /// Stores RA Unsigned annotation on \p Inst.
-  void setRAUnsigned(MCInst &Inst) const;
-
-  /// Return true if \p Inst has Unsigned RA annotation.
-  bool isRAUnsigned(const MCInst &Inst) const;
-
-  /// Return true if \p Inst doesn't have any annotation related to RA state.
-  bool isRAStateUnknown(const MCInst &Inst) const;
+  /// Return true if \p Inst has kRASigned annotation, false if it has
+  /// kRAUnsigned annotation, and std::nullopt if neither annotation is set.
+  std::optional<bool> getRAState(const MCInst &Inst) const;
 
   /// Return true if the instruction is a call with an exception handling info.
   virtual bool isInvoke(const MCInst &Inst) const {
@@ -1862,6 +1866,44 @@ public:
 
   /// Create a return instruction.
   virtual void createReturn(MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Check if an Instruction is a BTI landing pad with the required properties.
+  /// Takes both explicit and implicit BTIs into account.
+  virtual bool isBTILandingPad(MCInst &Inst, bool CallTarget,
+                               bool JumpTarget) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Check if an Instruction is an implicit BTI c landing pad.
+  virtual bool isImplicitBTIC(MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Create a BTI landing pad instruction.
+  virtual void createBTI(MCInst &Inst, bool CallTarget, bool JumpTarget) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Update operand of BTI instruction.
+  virtual void updateBTIVariant(MCInst &Inst, bool CallTarget,
+                                bool JumpTarget) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Checks if the indirect call / jump is accepted by the landing pad at the
+  /// start of the target BasicBlock.
+  virtual bool isCallCoveredByBTI(MCInst &Call, MCInst &Pad) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Inserts a BTI landing pad to the start of the BB, that matches the
+  /// indirect call inst used to call the BB.
+  virtual void insertBTI(BinaryBasicBlock &BB, MCInst &Call) const {
     llvm_unreachable("not implemented");
   }
 

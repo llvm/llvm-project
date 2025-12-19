@@ -98,7 +98,7 @@ define i32 @sink_after_dead_inst(ptr %A.ptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i16> [[TMP0]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[A_PTR]], i16 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP3]], i32 4
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP3]], i64 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -160,7 +160,7 @@ define void @sink_dead_inst(ptr %a) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub <4 x i16> [[TMP5]], splat (i16 10)
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub <4 x i16> [[TMP6]], splat (i16 10)
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[A]], i16 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i16, ptr [[TMP9]], i32 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i16, ptr [[TMP9]], i64 4
 ; CHECK-NEXT:    store <4 x i16> [[TMP7]], ptr [[TMP9]], align 2
 ; CHECK-NEXT:    store <4 x i16> [[TMP8]], ptr [[TMP11]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8

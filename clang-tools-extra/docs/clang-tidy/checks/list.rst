@@ -98,6 +98,7 @@ Clang-Tidy Checks
    :doc:`bugprone-dynamic-static-initializers <bugprone/dynamic-static-initializers>`,
    :doc:`bugprone-easily-swappable-parameters <bugprone/easily-swappable-parameters>`,
    :doc:`bugprone-empty-catch <bugprone/empty-catch>`,
+   :doc:`bugprone-exception-copy-constructor-throws <bugprone/exception-copy-constructor-throws>`,
    :doc:`bugprone-exception-escape <bugprone/exception-escape>`,
    :doc:`bugprone-float-loop-counter <bugprone/float-loop-counter>`,
    :doc:`bugprone-fold-init-type <bugprone/fold-init-type>`,
@@ -132,6 +133,7 @@ Clang-Tidy Checks
    :doc:`bugprone-parent-virtual-call <bugprone/parent-virtual-call>`, "Yes"
    :doc:`bugprone-pointer-arithmetic-on-polymorphic-object <bugprone/pointer-arithmetic-on-polymorphic-object>`,
    :doc:`bugprone-posix-return <bugprone/posix-return>`, "Yes"
+   :doc:`bugprone-random-generator-seed <bugprone/random-generator-seed>`,
    :doc:`bugprone-raw-memory-call-on-non-trivial-type <bugprone/raw-memory-call-on-non-trivial-type>`,
    :doc:`bugprone-redundant-branch-condition <bugprone/redundant-branch-condition>`, "Yes"
    :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
@@ -180,8 +182,8 @@ Clang-Tidy Checks
    :doc:`bugprone-virtual-near-miss <bugprone/virtual-near-miss>`, "Yes"
    :doc:`cert-err33-c <cert/err33-c>`,
    :doc:`cert-err60-cpp <cert/err60-cpp>`,
+   :doc:`cert-flp30-c <cert/flp30-c>`,
    :doc:`cert-msc50-cpp <cert/msc50-cpp>`,
-   :doc:`cert-msc51-cpp <cert/msc51-cpp>`,
    :doc:`cert-oop58-cpp <cert/oop58-cpp>`,
    :doc:`concurrency-mt-unsafe <concurrency/mt-unsafe>`,
    :doc:`concurrency-thread-canceltype-asynchronous <concurrency/thread-canceltype-asynchronous>`,
@@ -220,7 +222,6 @@ Clang-Tidy Checks
    :doc:`darwin-dispatch-once-nonstatic <darwin/dispatch-once-nonstatic>`, "Yes"
    :doc:`fuchsia-default-arguments-calls <fuchsia/default-arguments-calls>`,
    :doc:`fuchsia-default-arguments-declarations <fuchsia/default-arguments-declarations>`, "Yes"
-   :doc:`fuchsia-multiple-inheritance <fuchsia/multiple-inheritance>`,
    :doc:`fuchsia-overloaded-operator <fuchsia/overloaded-operator>`,
    :doc:`fuchsia-statically-constructed-objects <fuchsia/statically-constructed-objects>`,
    :doc:`fuchsia-temporary-objects <fuchsia/temporary-objects>`,
@@ -237,7 +238,6 @@ Clang-Tidy Checks
    :doc:`google-objc-function-naming <google/objc-function-naming>`,
    :doc:`google-objc-global-variable-declaration <google/objc-global-variable-declaration>`,
    :doc:`google-readability-avoid-underscore-in-googletest-name <google/readability-avoid-underscore-in-googletest-name>`,
-   :doc:`google-readability-casting <google/readability-casting>`,
    :doc:`google-readability-todo <google/readability-todo>`,
    :doc:`google-runtime-float <google/runtime-float>`,
    :doc:`google-runtime-int <google/runtime-int>`,
@@ -271,11 +271,13 @@ Clang-Tidy Checks
    :doc:`misc-misleading-bidirectional <misc/misleading-bidirectional>`,
    :doc:`misc-misleading-identifier <misc/misleading-identifier>`,
    :doc:`misc-misplaced-const <misc/misplaced-const>`,
+   :doc:`misc-multiple-inheritance <misc/multiple-inheritance>`,
    :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,
    :doc:`misc-no-recursion <misc/no-recursion>`,
    :doc:`misc-non-copyable-objects <misc/non-copyable-objects>`,
    :doc:`misc-non-private-member-variables-in-classes <misc/non-private-member-variables-in-classes>`,
    :doc:`misc-override-with-different-visibility <misc/override-with-different-visibility>`,
+   :doc:`misc-predictable-rand <misc/predictable-rand>`,
    :doc:`misc-redundant-expression <misc/redundant-expression>`, "Yes"
    :doc:`misc-shadowed-namespace-function <misc/shadowed-namespace-function>`, "Yes"
    :doc:`misc-static-assert <misc/static-assert>`, "Yes"
@@ -289,6 +291,7 @@ Clang-Tidy Checks
    :doc:`misc-use-internal-linkage <misc/use-internal-linkage>`, "Yes"
    :doc:`modernize-avoid-bind <modernize/avoid-bind>`, "Yes"
    :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
+   :doc:`modernize-avoid-c-style-cast <modernize/avoid-c-style-cast>`,
    :doc:`modernize-avoid-setjmp-longjmp <modernize/avoid-setjmp-longjmp>`,
    :doc:`modernize-avoid-variadic-functions <modernize/avoid-variadic-functions>`,
    :doc:`modernize-concat-nested-namespaces <modernize/concat-nested-namespaces>`, "Yes"
@@ -450,6 +453,7 @@ Check aliases
    :doc:`cert-err34-c <cert/err34-c>`, :doc:`bugprone-unchecked-string-to-number-conversion <bugprone/unchecked-string-to-number-conversion>`,
    :doc:`cert-err52-cpp <cert/err52-cpp>`, :doc:`modernize-avoid-setjmp-longjmp <modernize/avoid-setjmp-longjmp>`,
    :doc:`cert-err58-cpp <cert/err58-cpp>`, :doc:`bugprone-throwing-static-initialization <bugprone/throwing-static-initialization>`,
+   :doc:`cert-err60-cpp <cert/err60-cpp>`, :doc:`bugprone-exception-copy-constructor-throws <bugprone/exception-copy-constructor-throws>`,
    :doc:`cert-err61-cpp <cert/err61-cpp>`, :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
    :doc:`cert-exp42-c <cert/exp42-c>`, :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,
    :doc:`cert-fio38-c <cert/fio38-c>`, :doc:`misc-non-copyable-objects <misc/non-copyable-objects>`,
@@ -458,9 +462,11 @@ Check aliases
    :doc:`cert-int09-c <cert/int09-c>`, :doc:`readability-enum-initial-value <readability/enum-initial-value>`, "Yes"
    :doc:`cert-mem57-cpp <cert/mem57-cpp>`, :doc:`bugprone-default-operator-new-on-overaligned-type <bugprone/default-operator-new-on-overaligned-type>`,
    :doc:`cert-msc24-c <cert/msc24-c>`, :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
-   :doc:`cert-msc30-c <cert/msc30-c>`, :doc:`cert-msc50-cpp <cert/msc50-cpp>`,
-   :doc:`cert-msc32-c <cert/msc32-c>`, :doc:`cert-msc51-cpp <cert/msc51-cpp>`,
+   :doc:`cert-msc30-c <cert/msc30-c>`, :doc:`misc-predictable-rand <misc/predictable-rand>`,
+   :doc:`cert-msc32-c <cert/msc32-c>`, :doc:`bugprone-random-generator-seed <bugprone/random-generator-seed>`,
    :doc:`cert-msc33-c <cert/msc33-c>`, :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
+   :doc:`cert-msc50-cpp <cert/msc50-cpp>`, :doc:`misc-predictable-rand <misc/predictable-rand>`,
+   :doc:`cert-msc51-cpp <cert/msc51-cpp>`, :doc:`bugprone-random-generator-seed <bugprone/random-generator-seed>`,
    :doc:`cert-msc54-cpp <cert/msc54-cpp>`, :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
    :doc:`cert-oop11-cpp <cert/oop11-cpp>`, :doc:`performance-move-constructor-init <performance/move-constructor-init>`,
    :doc:`cert-oop54-cpp <cert/oop54-cpp>`, :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,
@@ -545,7 +551,7 @@ Check aliases
    :doc:`clang-analyzer-security.insecureAPI.bcmp <clang-analyzer/security.insecureAPI.bcmp>`, `Clang Static Analyzer security.insecureAPI.bcmp <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-bcmp>`_,
    :doc:`clang-analyzer-security.insecureAPI.bcopy <clang-analyzer/security.insecureAPI.bcopy>`, `Clang Static Analyzer security.insecureAPI.bcopy <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-bcopy>`_,
    :doc:`clang-analyzer-security.insecureAPI.bzero <clang-analyzer/security.insecureAPI.bzero>`, `Clang Static Analyzer security.insecureAPI.bzero <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-bzero>`_,
-   :doc:`clang-analyzer-security.insecureAPI.decodeValueOfObjCType <clang-analyzer/security.insecureAPI.decodeValueOfObjCType>`, Clang Static Analyzer security.insecureAPI.decodeValueOfObjCType,
+   :doc:`clang-analyzer-security.insecureAPI.decodeValueOfObjCType <clang-analyzer/security.insecureAPI.decodeValueOfObjCType>`, `Clang Static Analyzer security.insecureAPI.decodeValueOfObjCType <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-decodevalueofobjctype>`_,
    :doc:`clang-analyzer-security.insecureAPI.getpw <clang-analyzer/security.insecureAPI.getpw>`, `Clang Static Analyzer security.insecureAPI.getpw <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-getpw>`_,
    :doc:`clang-analyzer-security.insecureAPI.gets <clang-analyzer/security.insecureAPI.gets>`, `Clang Static Analyzer security.insecureAPI.gets <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-gets>`_,
    :doc:`clang-analyzer-security.insecureAPI.mkstemp <clang-analyzer/security.insecureAPI.mkstemp>`, `Clang Static Analyzer security.insecureAPI.mkstemp <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-mkstemp>`_,
@@ -579,7 +585,9 @@ Check aliases
    :doc:`cppcoreguidelines-non-private-member-variables-in-classes <cppcoreguidelines/non-private-member-variables-in-classes>`, :doc:`misc-non-private-member-variables-in-classes <misc/non-private-member-variables-in-classes>`,
    :doc:`cppcoreguidelines-use-default-member-init <cppcoreguidelines/use-default-member-init>`, :doc:`modernize-use-default-member-init <modernize/use-default-member-init>`, "Yes"
    :doc:`fuchsia-header-anon-namespaces <fuchsia/header-anon-namespaces>`, :doc:`google-build-namespaces <google/build-namespaces>`,
+   :doc:`fuchsia-multiple-inheritance <fuchsia/multiple-inheritance>`, :doc:`misc-multiple-inheritance <misc/multiple-inheritance>`,
    :doc:`google-readability-braces-around-statements <google/readability-braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
+   :doc:`google-readability-casting <google/readability-casting>`, :doc:`modernize-avoid-c-style-cast <modernize/avoid-c-style-cast>`,
    :doc:`google-readability-function-size <google/readability-function-size>`, :doc:`readability-function-size <readability/function-size>`,
    :doc:`google-readability-namespace-comments <google/readability-namespace-comments>`, :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
    :doc:`hicpp-avoid-c-arrays <hicpp/avoid-c-arrays>`, :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,

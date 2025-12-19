@@ -318,7 +318,7 @@ defm SPV_INTEL_io_pipes : ExtensionOperand<63, [EnvOpenCL]>;
 defm SPV_KHR_ray_tracing : ExtensionOperand<64, [EnvVulkan]>;
 defm SPV_KHR_ray_query : ExtensionOperand<65, [EnvVulkan]>;
 defm SPV_INTEL_fpga_memory_accesses : ExtensionOperand<66, [EnvOpenCL]>;
-defm SPV_INTEL_arbitrary_precision_integers : ExtensionOperand<67, [EnvOpenCL]>;
+defm SPV_ALTERA_arbitrary_precision_integers : ExtensionOperand<67, [EnvOpenCL]>;
 defm SPV_EXT_shader_atomic_float_add
     : ExtensionOperand<68, [EnvVulkan, EnvOpenCL]>;
 defm SPV_KHR_terminate_invocation : ExtensionOperand<69, [EnvVulkan]>;
@@ -389,6 +389,10 @@ defm SPV_INTEL_predicated_io : ExtensionOperand<127, [EnvOpenCL]>;
 defm SPV_KHR_maximal_reconvergence : ExtensionOperand<128, [EnvVulkan]>;
 defm SPV_INTEL_bfloat16_arithmetic
     : ExtensionOperand<129, [EnvVulkan, EnvOpenCL]>;
+defm SPV_INTEL_16bit_atomics : ExtensionOperand<130, [EnvVulkan, EnvOpenCL]>;
+defm SPV_ALTERA_arbitrary_precision_fixed_point : ExtensionOperand<131, [EnvOpenCL, EnvVulkan]>;
+defm SPV_NV_shader_atomic_fp16_vector
+    : ExtensionOperand<132, [EnvVulkan, EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -548,7 +552,7 @@ defm ComputeDerivativeGroupLinearNV : CapabilityOperand<5350, 0, 0, [], []>;
 defm FragmentDensityEXT : CapabilityOperand<5291, 0, 0, [], [Shader]>;
 defm PhysicalStorageBufferAddressesEXT : CapabilityOperand<5347, 0, 0, [], [Shader]>;
 defm CooperativeMatrixNV : CapabilityOperand<5357, 0, 0, [], [Shader]>;
-defm ArbitraryPrecisionIntegersINTEL : CapabilityOperand<5844, 0, 0, [SPV_INTEL_arbitrary_precision_integers], [Int8, Int16]>;
+defm ArbitraryPrecisionIntegersALTERA : CapabilityOperand<5844, 0, 0, [SPV_ALTERA_arbitrary_precision_integers], [Int8, Int16]>;
 defm OptNoneINTEL : CapabilityOperand<6094, 0, 0, [SPV_INTEL_optnone], []>;
 defm OptNoneEXT : CapabilityOperand<6094, 0, 0, [SPV_EXT_optnone], []>;
 defm BitInstructions : CapabilityOperand<6025, 0, 0, [SPV_KHR_bit_instructions], []>;
@@ -566,9 +570,12 @@ defm FloatControls2
 defm AtomicFloat32AddEXT : CapabilityOperand<6033, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
 defm AtomicFloat64AddEXT : CapabilityOperand<6034, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
 defm AtomicFloat16AddEXT : CapabilityOperand<6095, 0, 0, [SPV_EXT_shader_atomic_float16_add], []>;
+defm AtomicBFloat16AddINTEL : CapabilityOperand<6255, 0, 0, [SPV_INTEL_16bit_atomics], []>;
 defm AtomicFloat16MinMaxEXT : CapabilityOperand<5616, 0, 0, [SPV_EXT_shader_atomic_float_min_max], []>;
 defm AtomicFloat32MinMaxEXT : CapabilityOperand<5612, 0, 0, [SPV_EXT_shader_atomic_float_min_max], []>;
 defm AtomicFloat64MinMaxEXT : CapabilityOperand<5613, 0, 0, [SPV_EXT_shader_atomic_float_min_max], []>;
+defm AtomicBFloat16MinMaxINTEL : CapabilityOperand<6256, 0, 0, [SPV_INTEL_16bit_atomics], []>;
+defm AtomicFloat16VectorNV : CapabilityOperand<5404, 0, 0, [SPV_NV_shader_atomic_fp16_vector], []>;
 defm VariableLengthArrayINTEL : CapabilityOperand<5817, 0, 0, [SPV_INTEL_variable_length_array], []>;
 defm GroupUniformArithmeticKHR : CapabilityOperand<6400, 0, 0, [SPV_KHR_uniform_group_instructions], []>;
 defm USMStorageClassesINTEL : CapabilityOperand<5935, 0, 0, [SPV_INTEL_usm_storage_classes], [Kernel]>;
@@ -612,6 +619,7 @@ defm BFloat16TypeKHR : CapabilityOperand<5116, 0, 0, [SPV_KHR_bfloat16], []>;
 defm BFloat16DotProductKHR : CapabilityOperand<5117, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR]>;
 defm BFloat16CooperativeMatrixKHR : CapabilityOperand<5118, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR, CooperativeMatrixKHR]>;
 defm BlockingPipesALTERA : CapabilityOperand<5945, 0, 0, [SPV_ALTERA_blocking_pipes], []>;
+defm ArbitraryPrecisionFixedPointALTERA : CapabilityOperand<5922, 0, 0, [SPV_ALTERA_arbitrary_precision_fixed_point], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time

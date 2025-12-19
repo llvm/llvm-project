@@ -13,9 +13,14 @@
 
 #include "SPIRVCommandLine.h"
 #include "MCTargetDesc/SPIRVBaseInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/TargetParser/Triple.h"
-#include <algorithm>
+
+#include <functional>
 #include <map>
+#include <string>
+#include <utility>
+#include <vector>
 
 #define DEBUG_TYPE "spirv-commandline"
 
@@ -29,6 +34,10 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
          SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float16_add},
         {"SPV_EXT_shader_atomic_float_min_max",
          SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float_min_max},
+        {"SPV_INTEL_16bit_atomics",
+         SPIRV::Extension::Extension::SPV_INTEL_16bit_atomics},
+        {"SPV_NV_shader_atomic_fp16_vector",
+         SPIRV::Extension::Extension::SPV_NV_shader_atomic_fp16_vector},
         {"SPV_EXT_arithmetic_fence",
          SPIRV::Extension::Extension::SPV_EXT_arithmetic_fence},
         {"SPV_EXT_demote_to_helper_invocation",
@@ -51,8 +60,8 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
          SPIRV::Extension::Extension::SPV_GOOGLE_hlsl_functionality1},
         {"SPV_GOOGLE_user_type",
          SPIRV::Extension::Extension::SPV_GOOGLE_user_type},
-        {"SPV_INTEL_arbitrary_precision_integers",
-         SPIRV::Extension::Extension::SPV_INTEL_arbitrary_precision_integers},
+        {"SPV_ALTERA_arbitrary_precision_integers",
+         SPIRV::Extension::Extension::SPV_ALTERA_arbitrary_precision_integers},
         {"SPV_INTEL_cache_controls",
          SPIRV::Extension::Extension::SPV_INTEL_cache_controls},
         {"SPV_INTEL_float_controls2",
@@ -161,14 +170,28 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
         {"SPV_INTEL_kernel_attributes",
          SPIRV::Extension::Extension::SPV_INTEL_kernel_attributes},
         {"SPV_ALTERA_blocking_pipes",
-         SPIRV::Extension::Extension::SPV_ALTERA_blocking_pipes}};
+         SPIRV::Extension::Extension::SPV_ALTERA_blocking_pipes},
+        {"SPV_INTEL_int4", SPIRV::Extension::Extension::SPV_INTEL_int4},
+        {"SPV_ALTERA_arbitrary_precision_fixed_point",
+         SPIRV::Extension::Extension::
+             SPV_ALTERA_arbitrary_precision_fixed_point}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue,
                                   std::set<SPIRV::Extension::Extension> &Vals) {
   SmallVector<StringRef, 10> Tokens;
   ArgValue.split(Tokens, ",", -1, false);
-  std::sort(Tokens.begin(), Tokens.end());
+  llvm::sort(Tokens, [](auto &&LHS, auto &&RHS) {
+    // We want to ensure that we handle "all" first, to ensure that any
+    // subsequent disablement actually behaves as expected i.e. given
+    // --spv-ext=all,-foo, we first enable all and then disable foo; this should
+    // be revisited and simplified.
+    if (LHS == "all")
+      return true;
+    if (RHS == "all")
+      return false;
+    return !(RHS < LHS);
+  });
 
   std::set<SPIRV::Extension::Extension> EnabledExtensions;
 
@@ -244,6 +267,12 @@ SPIRVExtensionsParser::getValidExtensions(const Triple &TT) {
 
     if (llvm::is_contained(AllowedEnv, CurrentEnvironment))
       R.insert(ExtensionEnum);
+  }
+
+  if (TT.getVendor() == Triple::AMD) {
+    // AMD uses the translator to recover LLVM-IR from SPIRV. Currently, the
+    // translator doesn't implement the SPV_KHR_float_controls2 extension.
+    R.erase(SPIRV::Extension::SPV_KHR_float_controls2);
   }
 
   return R;

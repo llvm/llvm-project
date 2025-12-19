@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 -debug -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 -force-widen-divrem-via-safe-divisor=0 -debug -disable-output %s 2>&1 | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -276,7 +276,7 @@ define void @uniform_gep(i64 %k, ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:   ir<%iv> = WIDEN-INDUCTION ir<21>, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:   ir<%iv> = WIDEN-INDUCTION nsw ir<21>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<21> + vp<[[CAN_IV]]> * ir<1>
 ; CHECK-NEXT:   EMIT vp<[[WIDE_CAN_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule vp<[[WIDE_CAN_IV]]>, vp<[[BTC]]>
@@ -1060,7 +1060,7 @@ define void @merge_with_dead_gep_between_regions(i32 %n, i32 %k, ptr noalias %sr
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION ir<%n>, ir<-1>, vp<[[VF]]>
+; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION nsw ir<%n>, ir<-1>, vp<[[VF]]>
 ; CHECK-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
 ; CHECK-NEXT:     WIDEN ir<%cond> = icmp ult ir<%iv>, ir<%k>
 ; CHECK-NEXT:   Successor(s): pred.store

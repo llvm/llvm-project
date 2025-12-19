@@ -136,6 +136,8 @@ private:
 
   void lowerScalarAbs(SIInstrWorklist &Worklist, MachineInstr &Inst) const;
 
+  void lowerScalarAbsDiff(SIInstrWorklist &Worklist, MachineInstr &Inst) const;
+
   void lowerScalarXnor(SIInstrWorklist &Worklist, MachineInstr &Inst) const;
 
   void splitScalarNotBinop(SIInstrWorklist &Worklist, MachineInstr &Inst,
@@ -307,22 +309,19 @@ public:
 
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
-      int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
   void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                      Register DestReg, unsigned SubIdx,
-                     const MachineInstr &Orig,
-                     const TargetRegisterInfo &TRI) const override;
+                     const MachineInstr &Orig) const override;
 
   // Splits a V_MOV_B64_DPP_PSEUDO opcode into a pair of v_mov_b32_dpp
   // instructions. Returns a pair of generated instructions.
@@ -426,6 +425,9 @@ public:
 
   void removeModOperands(MachineInstr &MI) const;
 
+  void mutateAndCleanupImplicit(MachineInstr &MI,
+                                const MCInstrDesc &NewDesc) const;
+
   /// Return the extracted immediate value in a subregister use from a constant
   /// materialized in a super register.
   ///
@@ -453,6 +455,12 @@ public:
 
   bool isSALU(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::SALU;
+  }
+
+  static bool isProgramStateSALU(const MachineInstr &MI) {
+    return MI.getOpcode() == AMDGPU::S_DELAY_ALU ||
+           MI.getOpcode() == AMDGPU::S_SET_VGPR_MSB ||
+           MI.getOpcode() == AMDGPU::ATOMIC_FENCE;
   }
 
   static bool isVALU(const MachineInstr &MI) {
@@ -583,6 +591,10 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::MTBUF;
   }
 
+  static bool isBUF(const MachineInstr &MI) {
+    return isMUBUF(MI) || isMTBUF(MI);
+  }
+
   static bool isSMRD(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::SMRD;
   }
@@ -688,11 +700,11 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::FLAT;
   }
 
-  /// \returns true for SCRATCH_ instructions, or FLAT_ instructions with
-  /// SCRATCH_ memory operands.
+  /// \returns true for SCRATCH_ instructions, or FLAT/BUF instructions unless
+  /// the MMOs do not include scratch.
   /// Conservatively correct; will return true if \p MI cannot be proven
   /// to not hit scratch.
-  bool mayAccessScratchThroughFlat(const MachineInstr &MI) const;
+  bool mayAccessScratch(const MachineInstr &MI) const;
 
   /// \returns true for FLAT instructions that can access VMEM.
   bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
@@ -1174,13 +1186,13 @@ public:
   bool isVGPRCopy(const MachineInstr &MI) const {
     assert(isCopyInstr(MI));
     Register Dest = MI.getOperand(0).getReg();
-    const MachineFunction &MF = *MI.getParent()->getParent();
+    const MachineFunction &MF = *MI.getMF();
     const MachineRegisterInfo &MRI = MF.getRegInfo();
     return !RI.isSGPRReg(MRI, Dest);
   }
 
   bool hasVGPRUses(const MachineInstr &MI) const {
-    const MachineFunction &MF = *MI.getParent()->getParent();
+    const MachineFunction &MF = *MI.getMF();
     const MachineRegisterInfo &MRI = MF.getRegInfo();
     return llvm::any_of(MI.explicit_uses(),
                         [&MRI, this](const MachineOperand &MO) {
@@ -1622,10 +1634,6 @@ public:
   /// Return true if this opcode should not be used by codegen.
   bool isAsmOnlyOpcode(int MCOp) const;
 
-  const TargetRegisterClass *
-  getRegClass(const MCInstrDesc &TID, unsigned OpNum,
-              const TargetRegisterInfo *TRI) const override;
-
   void fixImplicitOperands(MachineInstr &MI) const;
 
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
@@ -1655,6 +1663,7 @@ public:
 
   const TargetSchedModel &getSchedModel() const { return SchedModel; }
 
+  // FIXME: This should be removed
   // Enforce operand's \p OpName even alignment if required by target.
   // This is used if an operand is a 32 bit register but needs to be aligned
   // regardless.

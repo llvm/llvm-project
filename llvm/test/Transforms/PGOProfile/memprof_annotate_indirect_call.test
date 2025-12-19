@@ -3,7 +3,7 @@
 ;; Basic functionality with flag toggle
 ; RUN: llvm-profdata merge --memprof-version=4 %t/basic.yaml -o %t/basic.memprofdata
 ; RUN: opt < %t/basic.ll -passes='memprof-use<profile-filename=%t/basic.memprofdata>' -memprof-attach-calleeguids=false -S 2>&1 | FileCheck %s --check-prefix=CHECK-DISABLE
-; RUN: opt < %t/basic.ll -passes='memprof-use<profile-filename=%t/basic.memprofdata>' -memprof-attach-calleeguids=true -S 2>&1 | FileCheck %s --check-prefix=CHECK-ENABLE
+; RUN: opt < %t/basic.ll -passes='memprof-use<profile-filename=%t/basic.memprofdata>' -memprof-attach-calleeguids=true -S 2>&1 | FileCheck %s --check-prefix=CHECK-ENABLE --dump-input-filter=all
 
 ;; FDO conflict handling
 ; RUN: llvm-profdata merge --memprof-version=4 %t/fdo_conflict.yaml -o %t/fdo_conflict.memprofdata
@@ -18,6 +18,18 @@ HeapProfileRecords:
       - Frames:
           - { Function: _Z3barv, LineOffset: 3, Column: 5, IsInlineFrame: false }
         CalleeGuids:   [0x123456789abcdef0, 0x23456789abcdef01]
+      # The next 2 sets of frames simulates the case where this function was
+      # eventually inlined into multiple callers. We would have propagated the
+      # resulting frames and callee guids here for matching with they not yet
+      # inlined bar. We should aggregate all callee guids into the metadata.
+      - Frames:
+          - { Function: _Z3barv, LineOffset: 3, Column: 5, IsInlineFrame: true }
+          - { Function: _Z3foov, LineOffset: 1, Column: 6, IsInlineFrame: false }
+        CalleeGuids:   [0x1234, 0x2345]
+      - Frames:
+          - { Function: _Z3barv, LineOffset: 3, Column: 5, IsInlineFrame: true }
+          - { Function: _Z3foov, LineOffset: 10, Column: 7, IsInlineFrame: false }
+        CalleeGuids:   [0x3456, 0x4567]
 ...
 
 ;--- basic.ll
@@ -31,7 +43,7 @@ entry:
   ret void
 }
 
-; CHECK-ENABLE: !6 = !{!"VP", i32 0, i64 2, i64 1311768467463790320, i64 1, i64 2541551405711093505, i64 1}
+; CHECK-ENABLE: !6 = !{!"VP", i32 0, i64 6, i64 1311768467463790320, i64 1, i64 2541551405711093505, i64 1, i64 4660, i64 1, i64 9029, i64 1, i64 13398, i64 1, i64 17767, i64 1}
 
 !llvm.module.flags = !{!2, !3}
 

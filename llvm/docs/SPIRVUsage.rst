@@ -30,8 +30,8 @@ Static Compiler Commands
    Description: This command compiles an LLVM IL file (`input.ll`) to a SPIR-V binary (`output.spvt`) for a 32-bit architecture.
 
 2. **Compilation with Extensions and Optimization**
-   Command: `llc -O1 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_arbitrary_precision_integers input.ll -o output.spvt`
-   Description: Compiles an LLVM IL file to SPIR-V with (`-O1`) optimizations, targeting a 64-bit architecture. It enables the SPV_INTEL_arbitrary_precision_integers extension.
+   Command: `llc -O1 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_ALTERA_arbitrary_precision_integers input.ll -o output.spvt`
+   Description: Compiles an LLVM IL file to SPIR-V with (`-O1`) optimizations, targeting a 64-bit architecture. It enables the SPV_ALTERA_arbitrary_precision_integers extension.
 
 3. **Compilation with experimental NonSemantic.Shader.DebugInfo.100 support**
    Command: `llc --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info input.ll -o output.spvt`
@@ -136,7 +136,7 @@ extensions to enable or disable, each prefixed with ``+`` or ``-``, respectively
 
 To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 
-``-spirv-ext=+SPV_EXT_shader_atomic_float_add,+SPV_INTEL_arbitrary_precision_integers``
+``-spirv-ext=+SPV_EXT_shader_atomic_float_add,+SPV_ALTERA_arbitrary_precision_integers``
 
 To enable all extensions, use the following option:
 ``-spirv-ext=all``
@@ -145,7 +145,7 @@ To enable all KHR extensions, use the following option:
 ``-spirv-ext=khr``
 
 To enable all extensions except specified, specify ``all`` followed by a list of disallowed extensions. For example:
-``-spirv-ext=all,-SPV_INTEL_arbitrary_precision_integers``
+``-spirv-ext=all,-SPV_ALTERA_arbitrary_precision_integers``
 
 Below is a list of supported SPIR-V extensions, sorted alphabetically by their extension names:
 
@@ -167,9 +167,13 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds atomic add instruction on floating-point numbers.
    * - ``SPV_EXT_shader_atomic_float_min_max``
      - Adds atomic min and max instruction on floating-point numbers.
+   * - ``SPV_INTEL_16bit_atomics``
+     - Extends the SPV_EXT_shader_atomic_float_add and SPV_EXT_shader_atomic_float_min_max to support addition, minimum and maximum on 16-bit `bfloat16` floating-point numbers in memory.
+   * - ``SPV_NV_shader_atomic_fp16_vector``
+     - Adds atomic add, min and max instructions on 2 or 4-component vectors with 16-bit float components.
    * - ``SPV_INTEL_2d_block_io``
      - Adds additional subgroup block prefetch, load, load transposed, load transformed and store instructions to read two-dimensional blocks of data from a two-dimensional region of memory, or to write two-dimensional blocks of data to a two dimensional region of memory.
-   * - ``SPV_INTEL_arbitrary_precision_integers``
+   * - ``SPV_ALTERA_arbitrary_precision_integers``
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bindless_images``
      - Adds instructions to convert convert unsigned integer handles to images, samplers and sampled images.
@@ -214,7 +218,7 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
    * - ``SPV_KHR_float_controls``
      - Provides new execution modes to control floating-point computations by overriding an implementation’s default behavior for rounding modes, denormals, signed zero, and infinities.
    * - ``SPV_KHR_integer_dot_product``
-     - Adds instructions for dot product operations on integer vectors with optional accumulation. Integer vectors includes 4-component vector of 8 bit integers and 4-component vectors of 8 bit integers packed into 32-bit integers.
+     - Adds instructions for dot product operations on integer vectors with optional accumulation. Integer vectors includes 4-component vector of 8-bit integers and 4-component vectors of 8-bit integers packed into 32-bit integers.
    * - ``SPV_KHR_linkonce_odr``
      - Allows to use the LinkOnceODR linkage type that lets a function or global variable to be merged with other functions or global variables of the same name when linkage occurs.
    * - ``SPV_KHR_no_integer_wrap_decoration``
@@ -243,6 +247,9 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds execution mode and capability to enable maximal reconvergence.
    * - ``SPV_ALTERA_blocking_pipes``
      - Adds new pipe read and write functions that have blocking semantics instead of the non-blocking semantics of the existing pipe read/write functions.
+   * - ``SPV_ALTERA_arbitrary_precision_fixed_point``
+     - Add instructions for fixed point arithmetic. The extension works without SPV_ALTERA_arbitrary_precision_integers, but together they allow greater flexibility in representing arbitrary precision data types.
+
 
 SPIR-V representation in LLVM IR
 ================================

@@ -35,7 +35,7 @@ public:
 
   const RISCVSubtarget &getSubtarget() const { return Subtarget; }
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
+  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
                           MachineFunction &MF,
                           unsigned Intrinsic) const override;
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
@@ -71,6 +71,9 @@ public:
 
   bool preferScalarizeSplat(SDNode *N) const override;
 
+  /// Customize the preferred legalization strategy for certain types.
+  LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
+
   bool softPromoteHalfType() const override { return true; }
 
   /// Return the register type for a given MVT, ensuring vectors are treated
@@ -88,12 +91,6 @@ public:
   unsigned getNumRegistersForCallingConv(LLVMContext &Context,
                                          CallingConv::ID CC,
                                          EVT VT) const override;
-
-  unsigned getVectorTypeBreakdownForCallingConv(LLVMContext &Context,
-                                                CallingConv::ID CC, EVT VT,
-                                                EVT &IntermediateVT,
-                                                unsigned &NumIntermediates,
-                                                MVT &RegisterVT) const override;
 
   bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
                                             unsigned SelectOpcode, SDValue X,
@@ -426,6 +423,10 @@ public:
   /// alignment is legal.
   bool isLegalStridedLoadStore(EVT DataType, Align Alignment) const;
 
+  /// Return true if a fault-only-first load of the given result type and
+  /// alignment is legal.
+  bool isLegalFirstFaultLoad(EVT DataType, Align Alignment) const;
+
   unsigned getMaxSupportedInterleaveFactor() const override { return 8; }
 
   bool fallBackToDAGISel(const Instruction &Inst) const override;
@@ -466,6 +467,11 @@ public:
   ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
 
   bool shouldFoldMaskToVariableShiftPair(SDValue Y) const override;
+
+  /// Control the following reassociation of operands: (op (op x, c1), y) -> (op
+  /// (op x, y), c1) where N0 is (op x, c1) and N1 is y.
+  bool isReassocProfitable(SelectionDAG &DAG, SDValue N0,
+                           SDValue N1) const override;
 
   /// Match a mask which "spreads" the leading elements of a vector evenly
   /// across the result.  Factor is the spread amount, and Index is the
@@ -545,7 +551,6 @@ private:
   SDValue lowerVPExtMaskOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPSetCCMaskOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPMergeMask(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVPSplatExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPSpliceExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPReverseExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG) const;
@@ -572,6 +577,9 @@ private:
 
   SDValue expandUnalignedRVVLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue expandUnalignedRVVStore(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue expandUnalignedVPLoad(SDValue Op, SelectionDAG &DAG) const;
+  SDValue expandUnalignedVPStore(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;

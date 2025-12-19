@@ -316,3 +316,85 @@ define ptr @gep_gep_inv_ptrtoaddr(ptr %p) {
   %gep2 = getelementptr i8, ptr %gep1, i64 %p.addr.inv
   ret ptr %gep2
 }
+
+define i1 @icmp_ptrtoaddr_0() {
+; CHECK-LABEL: define i1 @icmp_ptrtoaddr_0() {
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp ne i64 ptrtoaddr (ptr @g to i64), 0
+  ret i1 %cmp
+}
+
+; This fails to fold because we currently don't assume that globals are located
+; at a non-null address for non-default address spaces.
+define i1 @icmp_ptrtoaddr_0_addrsize() {
+; CHECK-LABEL: define i1 @icmp_ptrtoaddr_0_addrsize() {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 ptrtoaddr (ptr addrspace(1) @g.as1 to i32), 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp ne i32 ptrtoaddr (ptr addrspace(1) @g.as1 to i32), 0
+  ret i1 %cmp
+}
+
+define i1 @icmp_ptrtoint_0_addrsize() {
+; CHECK-LABEL: define i1 @icmp_ptrtoint_0_addrsize() {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 ptrtoint (ptr addrspace(1) @g.as1 to i64), 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp ne i64 ptrtoint (ptr addrspace(1) @g.as1 to i64), 0
+  ret i1 %cmp
+}
+
+define i1 @icmp_ptrtoaddr_ptrtoaddr() {
+; CHECK-LABEL: define i1 @icmp_ptrtoaddr_ptrtoaddr() {
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp ne i64 ptrtoaddr (ptr @g to i64), ptrtoaddr (ptr @g2 to i64)
+  ret i1 %cmp
+}
+
+define i1 @icmp_ptrtoaddr_ptrtoaddr_addrsize() {
+; CHECK-LABEL: define i1 @icmp_ptrtoaddr_ptrtoaddr_addrsize() {
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp ne i32 ptrtoaddr (ptr addrspace(1) @g.as1 to i32), ptrtoaddr (ptr addrspace(1) @g2.as1 to i32)
+  ret i1 %cmp
+}
+
+; This could still be folded because the address being non-equal also implies
+; that all pointer bits together are non-equal.
+define i1 @icmp_ptrtoint_ptrtoint_addrsize() {
+; CHECK-LABEL: define i1 @icmp_ptrtoint_ptrtoint_addrsize() {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 ptrtoint (ptr addrspace(1) @g.as1 to i64), ptrtoint (ptr addrspace(1) @g2.as1 to i64)
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp ne i64 ptrtoint (ptr addrspace(1) @g.as1 to i64), ptrtoint (ptr addrspace(1) @g2.as1 to i64)
+  ret i1 %cmp
+}
+
+define i1 @icmp_relational_ptrtoaddr_ptrtoaddr() {
+; CHECK-LABEL: define i1 @icmp_relational_ptrtoaddr_ptrtoaddr() {
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp ult i64 ptrtoaddr (ptr @g to i64), ptrtoaddr (ptr getelementptr inbounds (i8, ptr @g, i64 1) to i64)
+  ret i1 %cmp
+}
+
+define i1 @icmp_relational_ptrtoaddr_ptrtoaddr_addrsize() {
+; CHECK-LABEL: define i1 @icmp_relational_ptrtoaddr_ptrtoaddr_addrsize() {
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp ult i32 ptrtoaddr (ptr addrspace(1) @g.as1 to i32), ptrtoaddr (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @g.as1, i32 1) to i32)
+  ret i1 %cmp
+}
+
+; This could still be folded because we know that the non-address bits must be
+; the same, as GEP does not modify them.
+define i1 @icmp_relational_ptrtoint_ptrtoint_addrsize() {
+; CHECK-LABEL: define i1 @icmp_relational_ptrtoint_ptrtoint_addrsize() {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 ptrtoint (ptr addrspace(1) @g.as1 to i64), ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @g.as1, i64 1) to i64)
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp ult i64 ptrtoint (ptr addrspace(1) @g.as1 to i64), ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @g.as1, i64 1) to i64)
+  ret i1 %cmp
+}

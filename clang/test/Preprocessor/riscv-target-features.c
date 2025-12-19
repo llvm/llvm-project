@@ -40,6 +40,7 @@
 // CHECK-NOT: __riscv_smepmp {{.*$}}
 // CHECK-NOT: __riscv_smmpm{{.*$}}
 // CHECK-NOT: __riscv_smnpm{{.*$}}
+// CHECK-NOT: __riscv_smpmpmt {{.*$}}
 // CHECK-NOT: __riscv_smrnmi {{.*$}}
 // CHECK-NOT: __riscv_smstateen {{.*$}}
 // CHECK-NOT: __riscv_ssaia {{.*$}}
@@ -1332,6 +1333,14 @@
 // RUN:   -march=rv64ismepmp1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SMEPMP-EXT %s
 // CHECK-SMEPMP-EXT: __riscv_smepmp  1000000{{$}}
+
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN: -march=rv32ismpmpmt0p6 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-SMPMPMT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN: -march=rv64ismpmpmt0p6 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-SMPMPMT %s
+// CHECK-SMPMPMT: __riscv_smpmpmt  6000{{$}}
 
 // RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32ismrnmi1p0 -E -dM %s \
