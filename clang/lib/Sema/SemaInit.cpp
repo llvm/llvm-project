@@ -3094,59 +3094,60 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
         PrevField = *FI;
       }
 
-      const auto GenerateDesignatedInitReorderingFixit = [&]() -> FixItHint {
-        struct ReorderInfo {
-          int Pos{};
-          const Expr *InitExpr{};
-        };
+      const auto GenerateDesignatedInitReorderingFixit =
+          [&](SemaBase::SemaDiagnosticBuilder &Diags) {
+            struct ReorderInfo {
+              int Pos{};
+              const Expr *InitExpr{};
+            };
 
-        llvm::SmallDenseMap<IdentifierInfo *, int> MemberNameInx{};
-        llvm::SmallVector<ReorderInfo, 16> ReorderedInitExprs{};
+            llvm::SmallDenseMap<IdentifierInfo *, int> MemberNameInx{};
+            llvm::SmallVector<ReorderInfo, 16> ReorderedInitExprs{};
 
-        const auto *CxxRecord =
-            IList->getSemanticForm()->getType()->getAsCXXRecordDecl();
+            const auto *CxxRecord =
+                IList->getSemanticForm()->getType()->getAsCXXRecordDecl();
 
-        for (const auto &Field : CxxRecord->fields()) {
-          MemberNameInx[Field->getIdentifier()] = Field->getFieldIndex();
-        }
+            for (const auto &Field : CxxRecord->fields()) {
+              MemberNameInx[Field->getIdentifier()] = Field->getFieldIndex();
+            }
 
-        for (const auto *Init : IList->inits()) {
-          if (const auto *DI = dyn_cast_if_present<DesignatedInitExpr>(Init)) {
-            // We expect only one Designator
-            if (DI->size() != 1)
-              return {};
+            for (const auto *Init : IList->inits()) {
+              if (const auto *DI =
+                      dyn_cast_if_present<DesignatedInitExpr>(Init)) {
+                // We expect only one Designator
+                if (DI->size() != 1)
+                  return;
 
-            const auto *const FieldName = DI->getDesignator(0)->getFieldName();
-            // In case we have an unknown initializer in the source, not in the
-            // record
-            if (MemberNameInx.contains(FieldName))
-              ReorderedInitExprs.emplace_back(
-                  ReorderInfo{MemberNameInx.at(FieldName), Init});
-          }
-        }
+                const auto *const FieldName =
+                    DI->getDesignator(0)->getFieldName();
+                // In case we have an unknown initializer in the source, not in
+                // the record
+                if (MemberNameInx.contains(FieldName))
+                  ReorderedInitExprs.emplace_back(
+                      ReorderInfo{MemberNameInx.at(FieldName), Init});
+              }
+            }
 
-        llvm::sort(ReorderedInitExprs,
-                   [](const auto &A, const auto &B) { return A.Pos < B.Pos; });
+            llvm::sort(ReorderedInitExprs, [](const auto &A, const auto &B) {
+              return A.Pos < B.Pos;
+            });
 
-        // generate replacement
-        llvm::SmallString<128> FixedInitList{};
-        SourceManager &SM = SemaRef.getSourceManager();
-        const LangOptions &LangOpts = SemaRef.getLangOpts();
+            llvm::SmallString<128> FixedInitList{};
+            SourceManager &SM = SemaRef.getSourceManager();
+            const LangOptions &LangOpts = SemaRef.getLangOpts();
 
-        FixedInitList += "{";
-        for (const auto &Item : ReorderedInitExprs) {
-          CharSourceRange CharRange =
-              CharSourceRange::getTokenRange(Item.InitExpr->getSourceRange());
-          const auto InitText =
-              Lexer::getSourceText(CharRange, SM, LangOpts) + ", ";
-          FixedInitList += InitText.str();
-        }
-        FixedInitList.pop_back_n(2); // remove trailing comma
-        FixedInitList += "}";
+            // loop over each existing expression and apply replacement
+            for (const auto &[OrigExpr, Repl] :
+                 llvm::zip(IList->inits(), ReorderedInitExprs)) {
+              CharSourceRange CharRange = CharSourceRange::getTokenRange(
+                  Repl.InitExpr->getSourceRange());
+              const auto InitText =
+                  Lexer::getSourceText(CharRange, SM, LangOpts);
 
-        return FixItHint::CreateReplacement(IList->getSourceRange(),
-                                            FixedInitList);
-      };
+              Diags << FixItHint::CreateReplacement(OrigExpr->getSourceRange(),
+                                                    InitText.str());
+            }
+          };
 
       if (PrevField &&
           PrevField->getFieldIndex() > KnownField->getFieldIndex()) {
@@ -3157,10 +3158,10 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
         unsigned OldIndex = StructuredIndex - 1;
         if (StructuredList && OldIndex <= StructuredList->getNumInits()) {
           if (Expr *PrevInit = StructuredList->getInit(OldIndex)) {
-            auto ReorderFixit = GenerateDesignatedInitReorderingFixit();
-            SemaRef.Diag(PrevInit->getBeginLoc(),
-                         diag::note_previous_field_init)
-                << PrevField << PrevInit->getSourceRange() << ReorderFixit;
+            auto Diags = SemaRef.Diag(PrevInit->getBeginLoc(),
+                                      diag::note_previous_field_init)
+                         << PrevField << PrevInit->getSourceRange();
+            GenerateDesignatedInitReorderingFixit(Diags);
           }
         }
       }
