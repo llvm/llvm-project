@@ -206,6 +206,8 @@ public:
 
   bool GetSwiftAllowExplicitModules() const;
 
+  bool GetSwiftAllowImplicitModules() const;
+
   AutoBool GetSwiftPCMValidation() const;
 
   bool GetSwiftUseTasksPlugin() const;
