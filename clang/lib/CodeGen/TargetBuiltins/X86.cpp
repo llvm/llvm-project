@@ -12,6 +12,7 @@
 
 #include "CGBuiltin.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/UnsignedOrNone.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/TargetParser/X86TargetParser.h"
@@ -902,9 +903,11 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_roundpd256: {
     unsigned M = cast<ConstantInt>(Ops[1])->getZExtValue();
     unsigned MXCSRMask = 0b100;
+    unsigned FRoundNoExcMask = 0b1000;
     unsigned UseMXCSR = MXCSRMask & M;
+    unsigned FRoundNoExc = FRoundNoExcMask & M;
 
-    if (UseMXCSR) {
+    if (UseMXCSR || FRoundNoExc) {
 
       Intrinsic::ID ID = Intrinsic::not_intrinsic;
 
@@ -935,9 +938,11 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_roundsd: {
     unsigned M = cast<ConstantInt>(Ops[2])->getZExtValue();
     unsigned MXCSRMask = 0b100;
+    unsigned FRoundNoExcMask = 0b1000;
     unsigned UseMXCSR = MXCSRMask & M;
+    unsigned FRoundNoExc = FRoundNoExcMask & M;
 
-    if (UseMXCSR) {
+    if (UseMXCSR || FRoundNoExc) {
 
       Intrinsic::ID ID = Intrinsic::not_intrinsic;
 
