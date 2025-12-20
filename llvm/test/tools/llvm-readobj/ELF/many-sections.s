@@ -13,8 +13,8 @@
 # GNU1: There are 3 section headers, starting at offset 0x58
 
 # RUN: llvm-readobj --file-headers %t1 | FileCheck %s --check-prefix=LLVM1
-# LLVM1: SectionHeaderCount: 3
-# LLVM1: StringTableSectionIndex: 2
+# LLVM1: SectionHeaderCount: 0 (3)
+# LLVM1: StringTableSectionIndex: 65535 (2)
 
 --- !ELF
 FileHeader:
@@ -38,16 +38,16 @@ Sections:
 # RUN: llvm-readelf --file-headers --section-details %t2 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t2 --check-prefix=GNU2
 # GNU2:  warning: '[[FILE]]': invalid section index: 0
-# GNU2: Number of section headers:         <?>
-# GNU2: Section header string table index: <?>
+# GNU2: Number of section headers:         0
+# GNU2: Section header string table index: 65535 (corrupt: out of range)
 
 # GNU2-EMPTY:
 # GNU2:       There are no sections in this file.
 
 # RUN: llvm-readobj --file-headers --sections %t2 | \
 # RUN:   FileCheck %s --check-prefix=LLVM2 --implicit-check-not="warning:"
-# LLVM2:       SectionHeaderCount: <?>
-# LLVM2:       StringTableSectionIndex: <?>
+# LLVM2:       SectionHeaderCount: 0
+# LLVM2:       StringTableSectionIndex: 65535 (corrupt: out of range)
 # LLVM2-NEXT: }
 # LLVM2-NEXT: Sections [
 # LLVM2-NEXT: ]
