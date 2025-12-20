@@ -139,7 +139,6 @@ static unsigned offsetMask(unsigned Opcode) {
     llvm_unreachable("Unexpected opcode");
   case RISCV::LBU:
   case RISCV::SB:
-  case RISCV::QC_E_LB:
   case RISCV::QC_E_LBU:
   case RISCV::QC_E_SB:
     return maskTrailingOnes<unsigned>(2U);
