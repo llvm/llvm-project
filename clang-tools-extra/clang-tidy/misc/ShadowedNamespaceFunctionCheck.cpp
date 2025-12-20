@@ -7,14 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "ShadowedNamespaceFunctionCheck.h"
-#include "../utils/FixItHintUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclFriend.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include <tuple>
+#include "llvm/ADT/SmallVector.h"
 
 using namespace clang::ast_matchers;
 
@@ -40,44 +41,103 @@ static bool hasSameSignature(const FunctionDecl *Func1,
                      makeCannonicalTypesRange(Func2->parameters()));
 }
 
-static std::pair<const FunctionDecl *, const NamespaceDecl *>
-findShadowedInNamespace(const NamespaceDecl *NS, const FunctionDecl *GlobalFunc,
-                        StringRef GlobalFuncName,
-                        llvm::SmallPtrSet<const FunctionDecl *, 16> &All) {
-  if (NS->isAnonymousNamespace())
-    return {nullptr, nullptr};
+namespace {
+class ShadowedFunctionFinder : public DynamicRecursiveASTVisitor {
+public:
+  ShadowedFunctionFinder(const FunctionDecl *GlobalFunc,
+                         StringRef GlobalFuncName)
+      : GlobalFunc(GlobalFunc), GlobalFuncName(GlobalFuncName) {}
 
+  bool VisitFunctionDecl(FunctionDecl *Func) override {
+    // Only process functions that are inside a namespace (not in global scope)
+    if (CurrentNamespaceStack.empty())
+      return true;
+
+    const NamespaceDecl *CurrentNS = CurrentNamespaceStack.back();
+
+    // TODO: syncronize this check with the matcher?
+    if (Func == GlobalFunc || Func->isTemplated() ||
+        Func->isThisDeclarationADefinition())
+      return true;
+
+    if (Func->getName() == GlobalFuncName && !Func->isVariadic() &&
+        hasSameSignature(Func, GlobalFunc)) {
+      AllShadowedFuncs.insert(Func);
+      if (!ShadowedFunc) {
+        ShadowedFunc = Func;
+        ShadowedNamespace = CurrentNS;
+      }
+    }
+    return true;
+  }
+
+  bool VisitFriendDecl(FriendDecl *Friend) override {
+    // Only process functions that are inside a namespace (not in global scope)
+    if (CurrentNamespaceStack.empty())
+      return true;
+
+    const FunctionDecl *Func =
+        dyn_cast_or_null<FunctionDecl>(Friend->getFriendDecl());
+    if (!Func) {
+      return true;
+    }
+
+    const NamespaceDecl *CurrentNS = CurrentNamespaceStack.back();
+
+    // TODO: syncronize this check with the matcher?
+    if (Func == GlobalFunc || Func->isTemplated() ||
+        Func->isThisDeclarationADefinition())
+      return true;
+
+    if (Func->getName() == GlobalFuncName && !Func->isVariadic() &&
+        hasSameSignature(Func, GlobalFunc)) {
+      if (!ShadowedFunc) {
+        ShadowedFunc = Func;
+        ShadowedNamespace = CurrentNS;
+        IsShadowedFuncFriend = true;
+      }
+    }
+    return true;
+  }
+
+  bool TraverseNamespaceDecl(NamespaceDecl *NS) override {
+    // Skip anonymous namespaces
+    if (NS->isAnonymousNamespace())
+      return true;
+
+    // Push this namespace onto the stack
+    CurrentNamespaceStack.push_back(NS);
+
+    // Traverse children (which will call VisitFunctionDecl for functions
+    // inside)
+    bool Result = DynamicRecursiveASTVisitor::TraverseNamespaceDecl(NS);
+
+    // Pop the namespace from the stack
+    CurrentNamespaceStack.pop_back();
+
+    return Result;
+  }
+
+  const FunctionDecl *getShadowedFunc() const { return ShadowedFunc; }
+  const NamespaceDecl *getShadowedNamespace() const {
+    return ShadowedNamespace;
+  }
+  const llvm::SmallPtrSet<const FunctionDecl *, 16> &
+  getAllShadowedFuncs() const {
+    return AllShadowedFuncs;
+  }
+  bool isShadowedFuncFriend() const { return IsShadowedFuncFriend; }
+
+private:
+  const FunctionDecl *GlobalFunc;
+  StringRef GlobalFuncName;
   const FunctionDecl *ShadowedFunc = nullptr;
   const NamespaceDecl *ShadowedNamespace = nullptr;
-
-  for (const auto *Decl : NS->decls()) {
-    // Check nested namespaces
-    if (const auto *NestedNS = dyn_cast<NamespaceDecl>(Decl)) {
-      auto [NestedShadowedFunc, NestedShadowedNamespace] =
-          findShadowedInNamespace(NestedNS, GlobalFunc, GlobalFuncName, All);
-      if (!ShadowedFunc) {
-        ShadowedFunc = NestedShadowedFunc;
-        ShadowedNamespace = NestedShadowedNamespace;
-      }
-    }
-
-    // Check functions
-    if (const auto *Func = dyn_cast<FunctionDecl>(Decl)) {
-      // TODO: syncronize this check with the matcher?
-      if (Func == GlobalFunc || Func->isTemplated() ||
-          Func->isThisDeclarationADefinition())
-        continue;
-
-      if (Func->getName() == GlobalFuncName && !Func->isVariadic() &&
-          hasSameSignature(Func, GlobalFunc)) {
-        All.insert(Func);
-        if (!ShadowedFunc)
-          std::tie(ShadowedFunc, ShadowedNamespace) = std::tie(Func, NS);
-      }
-    }
-  }
-  return {ShadowedFunc, ShadowedNamespace};
-}
+  bool IsShadowedFuncFriend = false;
+  llvm::SmallPtrSet<const FunctionDecl *, 16> AllShadowedFuncs;
+  llvm::SmallVector<const NamespaceDecl *, 4> CurrentNamespaceStack;
+};
+} // anonymous namespace
 
 void ShadowedNamespaceFunctionCheck::registerMatchers(MatchFinder *Finder) {
   using ast_matchers::isTemplateInstantiation;
@@ -93,32 +153,24 @@ void ShadowedNamespaceFunctionCheck::registerMatchers(MatchFinder *Finder) {
 void ShadowedNamespaceFunctionCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func");
+  assert(Func);
 
   const StringRef FuncName = Func->getName();
   if (FuncName.empty())
     return;
 
-  const ASTContext *Context = Result.Context;
+  ShadowedFunctionFinder Finder(Func, FuncName);
+  Finder.TraverseAST(*Result.Context);
 
-  llvm::SmallPtrSet<const FunctionDecl *, 16> AllShadowedFuncs;
-  const FunctionDecl *ShadowedFunc = nullptr;
-  const NamespaceDecl *ShadowedNamespace = nullptr;
-
-  for (const auto *Decl : Context->getTranslationUnitDecl()->decls()) {
-    if (const auto *NS = dyn_cast<NamespaceDecl>(Decl)) {
-      auto [NestedShadowedFunc, NestedShadowedNamespace] =
-          findShadowedInNamespace(NS, Func, FuncName, AllShadowedFuncs);
-      if (!ShadowedFunc) {
-        ShadowedFunc = NestedShadowedFunc;
-        ShadowedNamespace = NestedShadowedNamespace;
-      }
-    }
-  }
+  const FunctionDecl *ShadowedFunc = Finder.getShadowedFunc();
+  const NamespaceDecl *ShadowedNamespace = Finder.getShadowedNamespace();
+  const auto &AllShadowedFuncs = Finder.getAllShadowedFuncs();
+  const bool IsShadowedFuncFriend = Finder.isShadowedFuncFriend();
 
   if (!ShadowedFunc || !ShadowedNamespace)
     return;
 
-  // TODO: should it be inside findShadowedInNamespace?
+  // TODO: should it be inside ShadowedFunctionFinder?
   if (ShadowedFunc->getDefinition())
     return;
 
@@ -130,7 +182,8 @@ void ShadowedNamespaceFunctionCheck::check(
               << ShadowedFunc->getDeclName().getAsString();
 
   const SourceLocation NameLoc = Func->getLocation();
-  if (NameLoc.isValid() && !Func->getPreviousDecl() && !Ambiguous) {
+  if (NameLoc.isValid() && !Func->getPreviousDecl() && !Ambiguous &&
+      !IsShadowedFuncFriend) {
     const std::string Fix = std::move(NamespaceName) + "::";
     Diag << FixItHint::CreateInsertion(NameLoc, Fix);
   }

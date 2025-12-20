@@ -42,23 +42,5 @@ The check will not warn about:
 Limitations
 -----------
 
-- Does not warn about friend functions:
-
-.. code-block:: c++
-
-  namespace llvm::gsym {
-    struct MergedFunctionsInfo {
-        friend bool operator==(const MergedFunctionsInfo &LHS,
-                               const MergedFunctionsInfo &RHS);
-    };
-  }
-
-  using namespace llvm::gsym;
-
-  bool operator==(const MergedFunctionsInfo &LHS,  // no warning in this version
-                  const MergedFunctionsInfo &RHS) {
-    return LHS.MergedFunctions == RHS.MergedFunctions;
-  }
-
 - Does not warn about template functions;
 - Does not warn about variadic functions.

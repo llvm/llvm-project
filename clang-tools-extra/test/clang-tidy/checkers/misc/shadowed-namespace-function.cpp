@@ -199,9 +199,12 @@ namespace foo_friend {
   };
 }
 
-// FIXME: provide warning without fixit in these two cases
 void f0_friend(foo_friend::A) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'f0_friend' shadows 'foo_friend::f0_friend' [misc-shadowed-namespace-function]
+// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 void f1_friend(foo_friend::A) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'f1_friend' shadows 'foo_friend::f1_friend' [misc-shadowed-namespace-function]
+// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
