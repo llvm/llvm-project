@@ -17157,11 +17157,15 @@ AArch64TargetLowering::LowerWindowsDYNAMIC_STACKALLOC(SDValue Op,
     return DAG.getMergeValues(Ops, DL);
   }
 
+  RTLIB::LibcallImpl ChkStkImpl = getLibcallImpl(RTLIB::STACK_PROBE);
+  if (ChkStkImpl == RTLIB::Unsupported)
+    return SDValue();
+
   Chain = DAG.getCALLSEQ_START(Chain, 0, 0, DL);
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
-  SDValue Callee = DAG.getTargetExternalSymbol(Subtarget->getChkStkName(),
-                                               PtrVT, 0);
+  SDValue Callee = DAG.getTargetExternalSymbol(
+      getLibcallImplName(ChkStkImpl).data(), PtrVT, 0);
 
   const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
   const uint32_t *Mask = TRI->getWindowsStackProbePreservedMask();
@@ -27787,6 +27791,17 @@ static SDValue
 performInsertVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   if (SDValue Res = removeRedundantInsertVectorElt(N))
     return Res;
+
+  // Turn INSERT_VECTOR_ELT(undef, Elt, Idx) into SPLAT_VECTOR(Elt)
+  // Do not bother with inserts into lane 0 because there are patterns to select
+  // them using INSERT_SUBREG hsub/ssub/dsub.
+  SDLoc DL(N);
+  SDValue Vec = N->getOperand(0);
+  SDValue Elt = N->getOperand(1);
+  SDValue Idx = N->getOperand(2);
+  EVT VecVT = Vec.getValueType();
+  if (VecVT.isScalableVector() && Vec->isUndef() && !isNullConstant(Idx))
+    return DCI.DAG.getNode(ISD::SPLAT_VECTOR, DL, VecVT, Elt);
 
   return performPostLD1Combine(N, DCI, true);
 }

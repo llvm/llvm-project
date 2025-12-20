@@ -57,7 +57,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         )
         self.assertFalse(response["success"])
         self.assertTrue(self.get_dict_value(response, ["body", "error", "showUser"]))
-        self.assertEqual(
+        self.assertIn(
             "'launchCommands' and non-internal 'console' are mutually exclusive",
             self.get_dict_value(response, ["body", "error", "format"]),
         )

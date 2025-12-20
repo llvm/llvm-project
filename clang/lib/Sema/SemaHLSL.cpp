@@ -1943,8 +1943,8 @@ void SemaHLSL::handlePackOffsetAttr(Decl *D, const ParsedAttr &AL) {
   // Check Component is valid for T.
   if (Component) {
     unsigned Size = getASTContext().getTypeSize(T);
-    if (IsAggregateTy || Size > 128) {
-      Diag(AL.getLoc(), diag::err_hlsl_packoffset_cross_reg_boundary);
+    if (IsAggregateTy) {
+      Diag(AL.getLoc(), diag::err_hlsl_invalid_register_or_packoffset);
       return;
     } else {
       // Make sure Component + sizeof(T) <= 4.
@@ -4620,9 +4620,12 @@ bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
   // the user intended fewer or more elements. This implementation assumes that
   // the user intended more, and errors that there are too few initializers to
   // complete the final element.
-  if (Entity.getType()->isIncompleteArrayType())
+  if (Entity.getType()->isIncompleteArrayType()) {
+    assert(ExpectedSize > 0 &&
+           "The expected size of an incomplete array type must be at least 1.");
     ExpectedSize =
         ((ActualSize + ExpectedSize - 1) / ExpectedSize) * ExpectedSize;
+  }
 
   // An initializer list might be attempting to initialize a reference or
   // rvalue-reference. When checking the initializer we should look through

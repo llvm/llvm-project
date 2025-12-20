@@ -2725,6 +2725,63 @@ def CIR_GetMemberOp : CIR_Op<"get_member"> {
 }
 
 //===----------------------------------------------------------------------===//
+// GetElementOp
+//===----------------------------------------------------------------------===//
+
+def CIR_GetElementOp : CIR_Op<"get_element", [
+  TypesMatchWith<
+      "type of 'result' matches element type of 'base'", "base", "result",
+      "cir::PointerType::get(mlir::cast<cir::ArrayType>(mlir::cast<cir::"
+      "PointerType>($_self).getPointee()).getElementType())">
+]> {
+  let summary = "Get the address of an array element";
+
+  let description = [{
+    The `cir.get_element` operation gets the address of a particular element
+    from the `base` array.
+
+    It expects a pointer to the `base` array and the `index` of the element.
+
+    Example:
+    ```mlir
+    // Suppose we have a array.
+    !s32i = !cir.int<s, 32>
+    !arr_ty = !cir.array<!s32i x 4>
+
+    // Get the address of the element at index 1.
+    %elem_1 = cir.get_element %0[1 : !s32i] : !cir.ptr<!array_ty> -> !cir.ptr<!s32i>
+
+    // Get the address of the element at index %i.
+    %i = ...
+    %elem_i = cir.get_element %0[%i : !s32i] : !cir.ptr<!array_ty> -> !cir.ptr<!s32i>
+
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PtrToArray, "the base address of the array ">:$base,
+    Arg<CIR_AnyFundamentalIntType, "the index of the element">:$index
+  );
+  let results = (outs CIR_PointerType : $result);
+
+  let assemblyFormat = [{
+    $base`[` $index `:` type($index) `]` attr-dict
+      `:` qualified(type($base)) `->` qualified(type($result))
+  }];
+
+  let extraClassDeclaration = [{
+    // Get the type of the element of the array.
+    mlir::Type getElementType() {
+      return getType().getPointee();
+}
+
+    cir::PointerType getBaseType() {
+      return mlir::cast<cir::PointerType>(getBase().getType());
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 
@@ -3313,15 +3370,7 @@ def CIR_CopyOp : CIR_Op<"copy",[
 // ReturnAddrOp and FrameAddrOp
 //===----------------------------------------------------------------------===//
 
-class CIR_FuncAddrBuiltinOp<string mnemonic> : CIR_Op<mnemonic, []> {
-  let arguments = (ins CIR_UInt32:$level);
-  let results = (outs CIR_VoidPtrType:$result);
-  let assemblyFormat = [{
-    `(` $level `)` attr-dict
-  }];
-}
-
-def CIR_ReturnAddrOp : CIR_FuncAddrBuiltinOp<"return_address"> {
+def CIR_ReturnAddrOp : CIR_Op<"return_address"> {
   let summary =
       "The return address of the current function, or of one of its callers";
 
@@ -3338,12 +3387,16 @@ def CIR_ReturnAddrOp : CIR_FuncAddrBuiltinOp<"return_address"> {
     Examples:
 
     ```mlir
-    %p = return_address(%level) -> !cir.ptr<!void>
+    %p = return_address(%level) : !cir.ptr<!void>
     ```
   }];
+
+  let arguments = (ins CIR_UInt32:$level);
+  let results = (outs CIR_VoidPtrType:$result);
+  let assemblyFormat = "`(` $level `)` attr-dict";
 }
 
-def CIR_FrameAddrOp : CIR_FuncAddrBuiltinOp<"frame_address"> {
+def CIR_FrameAddrOp : CIR_Op<"frame_address"> {
   let summary =
       "The frame address of the current function, or of one of its callers";
 
@@ -3366,9 +3419,36 @@ def CIR_FrameAddrOp : CIR_FuncAddrBuiltinOp<"frame_address"> {
     Examples:
 
     ```mlir
-    %p = frame_address(%level) -> !cir.ptr<!void>
+    %p = frame_address(%level) : !cir.ptr<!u8i>
     ```
   }];
+
+  let arguments = (ins CIR_UInt32:$level);
+  let results = (outs CIR_PointerType:$result);
+  let assemblyFormat = "`(` $level `)` attr-dict `:` qualified(type($result))";
+}
+
+//===----------------------------------------------------------------------===//
+// AddrOfReturnAddrOp
+//===----------------------------------------------------------------------===//
+
+def CIR_AddrOfReturnAddrOp : CIR_Op<"address_of_return_address"> {
+  let summary = "The place stores the return address of the current function";
+
+  let description = [{
+    Represents a call to builtin function `_AddressOfReturnAddress` in CIR.
+    This builtin function returns a pointer to the place in the stack frame
+    where the return address of the current function is stored.
+
+    Examples:
+
+    ```mlir
+    %addr = address_of_return_address() : !cir.ptr<!u8i>
+    ```
+  }];
+
+  let results = (outs CIR_PointerType:$result);
+  let assemblyFormat = "attr-dict `:` qualified(type($result))";
 }
 
 //===----------------------------------------------------------------------===//
@@ -3651,6 +3731,8 @@ def CIR_GetRuntimeMemberOp : CIR_Op<"get_runtime_member"> {
   }];
 
   let hasVerifier = 1;
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
