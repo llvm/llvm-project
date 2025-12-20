@@ -26,12 +26,6 @@ Error LaunchRequestHandler::Run(const LaunchRequestArguments &arguments) const {
   if (Error err = dap.InitializeDebugger())
     return err;
 
-  // Validate that we have a well formed launch request.
-  if (!arguments.launchCommands.empty() &&
-      arguments.console != protocol::eConsoleInternal)
-    return make_error<DAPError>(
-        "'launchCommands' and non-internal 'console' are mutually exclusive");
-
   dap.SetConfiguration(arguments.configuration, /*is_attach=*/false);
   dap.last_launch_request = arguments;
 

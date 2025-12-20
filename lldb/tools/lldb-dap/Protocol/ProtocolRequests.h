@@ -31,6 +31,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace lldb_dap::protocol {
@@ -1254,6 +1255,18 @@ struct TestGetTargetBreakpointsResponseBody {
   std::vector<Breakpoint> breakpoints;
 };
 llvm::json::Value toJSON(const TestGetTargetBreakpointsResponseBody &);
+
+/// Arguments for `restart` request.
+struct RestartArguments {
+  /// The latest version of the `launch` or `attach` configuration.
+  std::variant<std::monostate, LaunchRequestArguments, AttachRequestArguments>
+      arguments = std::monostate{};
+};
+bool fromJSON(const llvm::json::Value &, RestartArguments &, llvm::json::Path);
+
+/// Response to `restart` request. This is just an acknowledgement, so no body
+/// field is required.
+using RestartResponse = VoidResponse;
 
 } // namespace lldb_dap::protocol
 
