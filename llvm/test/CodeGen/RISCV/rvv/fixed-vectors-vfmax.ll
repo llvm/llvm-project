@@ -8,9 +8,9 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+zvfhmin,+zfbfmin,+zvfbfmin,+v -target-abi=lp64d \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFBFMIN,ZVFHMIN
 ; RUN: llc -mtriple=riscv32 -mattr=+d,+zfh,+zvfhmin,+experimental-zvfbfa,+v \
-; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFBFA,ZVFHMIN
+; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN,ZVFBFA
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+zvfhmin,+experimental-zvfbfa,+v \
-; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFBFA,ZVFHMIN
+; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN,ZVFBFA
 
 define <2 x bfloat> @vfmax_v2bf16_vv(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; ZVFBFMIN-LABEL: vfmax_v2bf16_vv:
@@ -313,7 +313,6 @@ define <2 x half> @vfmax_v2f16_vv(<2 x half> %a, <2 x half> %b) {
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9
 ; ZVFHMIN-NEXT:    ret
-;
   %v = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> %b)
   ret <2 x half> %v
 }
