@@ -931,9 +931,13 @@ template <class ELFT> ELFFile<ELFT>::ELFFile(StringRef Object) : Buf(Object) {}
 template <class ELFT> Error ELFFile<ELFT>::readShdrZero() {
   const Elf_Ehdr &Header = getHeader();
 
-  if ((Header.e_phnum == ELF::PN_XNUM || Header.e_shnum == 0 ||
-       Header.e_shstrndx == ELF::SHN_XINDEX) &&
-      Header.e_shoff != 0) {
+  // If e_shnum == 0 && e_shoff == 0, that means we actually have no section and
+  // thus is a valid ELF. But if the condition is still true when e_phnum ==
+  // PN_XNUM || e_shtstrndx == SHN_XINDEX and e_shoff == 0 The error will
+  // trigger when getSection() and e_shoff == 0
+  if ((Header.e_phnum == ELF::PN_XNUM ||
+       (Header.e_shnum == 0 && Header.e_shoff != 0) ||
+       Header.e_shstrndx == ELF::SHN_XINDEX)) {
     // Pretend we have section 0 or sections() would call getShNum and thus
     // become an infinite recursion.
     RealShNum = 1;

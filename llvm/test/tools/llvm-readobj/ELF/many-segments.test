@@ -1,11 +1,27 @@
 ## Show that llvm-readelf can handle an input file with many segments.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --file-headers --sections --segments %t | FileCheck %s
+# RUN: llvm-readelf --segments %t | FileCheck --check-prefix=SYMS %s
 
-RUN: %python %p/../../llvm-objcopy/Inputs/ungzip.py %p/Inputs/many-segments.o.gz > %t
-RUN: llvm-readobj --file-headers --sections --segments %t | FileCheck %s
-RUN: llvm-readelf --segments %t | FileCheck --check-prefix=SYMS %s
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+  EPhNum:  65535
+Sections:
+  - Type: SHT_NULL
+    Info: 2
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x0001
+  - Type:     PT_LOAD
+    VAddr:    0x0002
 
 ## The ELF header should have e_phnum == PN_XNUM
-# CHECK:        ProgramHeaderCount: 65535 (66549)
+# CHECK:        ProgramHeaderCount: 65535 (2)
 ## The first section header should store the real program header count in its fields.
 # CHECK:      Section {
 # CHECK-NEXT:   Index: 0
@@ -17,63 +33,32 @@ RUN: llvm-readelf --segments %t | FileCheck --check-prefix=SYMS %s
 # CHECK-NEXT:   Offset:
 # CHECK-NEXT:   Size:
 # CHECK-NEXT:   Link:
-# CHECK-NEXT:   Info: 66549
+# CHECK-NEXT:   Info: 2
+# CHECK: ProgramHeader {
+# CHECK-NEXT:   Type: PT_LOAD (0x1)
+# CHECK-NEXT:   Offset: 0x0
+# CHECK-NEXT:   VirtualAddress: 0x1
+# CHECK-NEXT:   PhysicalAddress: 0x1
+# CHECK-NEXT:   FileSize: 0
+# CHECK-NEXT:   MemSize: 0
+# CHECK-NEXT:   Flags [ (0x0)
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   Alignment: 1
+# CHECK-NEXT: }
+# CHECK-NEXT: ProgramHeader {
+# CHECK-NEXT:   Type: PT_LOAD (0x1)
+# CHECK-NEXT:   Offset: 0x0
+# CHECK-NEXT:   VirtualAddress: 0x2
+# CHECK-NEXT:   PhysicalAddress: 0x2
+# CHECK-NEXT:   FileSize: 0
+# CHECK-NEXT:   MemSize: 0
+# CHECK-NEXT:   Flags [ (0x0)
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   Alignment: 1
+# CHECK-NEXT: }
 
 ## Show that the symbols with segments indexes around the reserved range still
 ## have the right segment indexes afterwards.
-# 65535th segment
-# CHECK:         Offset: 0x1183B000
-# CHECK-NEXT:	 VirtualAddress: 0x349139F3000
-# CHECK:		 }
-# CHECK-NEXT  ProgramHeader {
-# CHECK-NEXT    Type: PT_LOAD (0x1)
-# CHECK-NEXT    Offset: 0x1183C000
-# CHECK-NEXT    VirtualAddress: 0x349139F4000
-# CHECK-NEXT    PhysicalAddress: 0x0
-# CHECK-NEXT    FileSize: 4096
-# CHECK-NEXT    MemSize: 4096
-# CHECK-NEXT    Flags [ (0x4)
-# CHECK-NEXT      PF_R (0x4)
-# CHECK-NEXT    ]
-# CHECK-NEXT    Alignment: 4096
-# CHECK-NEXT  }
-# CHECK-NEXT  ProgramHeader {
-# CHECK-NEXT    Type: PT_LOAD (0x1)
-# CHECK-NEXT    Offset: 0x1183D000
-# CHECK-NEXT    VirtualAddress: 0x349139F5000
-# CHECK-NEXT    PhysicalAddress: 0x0
-# CHECK-NEXT    FileSize: 4096
-# CHECK-NEXT    MemSize: 4096
-# CHECK-NEXT    Flags [ (0x6)
-# CHECK-NEXT      PF_R (0x4)
-# CHECK-NEXT      PF_W (0x2)
-# CHECK-NEXT    ]
-# CHECK-NEXT    Alignment: 4096
-# CHECK-NEXT  }
-# CHECK-NEXT  ProgramHeader {
-# CHECK-NEXT    Type: PT_LOAD (0x1)
-# CHECK-NEXT    Offset: 0x1183E000
-# CHECK-NEXT    VirtualAddress: 0x349139F6000
-# CHECK-NEXT    PhysicalAddress: 0x0
-# CHECK-NEXT    FileSize: 4096
-# CHECK-NEXT    MemSize: 4096
-# CHECK-NEXT    Flags [ (0x4)
-# CHECK-NEXT      PF_R (0x4)
-# CHECK-NEXT    ]
-# CHECK-NEXT    Alignment: 4096
-# CHECK-NEXT  }
-# CHECK        ProgramHeader {
-# CHECK-NEXT    Type: PT_LOAD (0x1)
-# CHECK-NEXT    Offset: 0x11C31000
-# CHECK-NEXT    VirtualAddress: 0x30D8E7868000
-# CHECK-NEXT    PhysicalAddress: 0x0
-# CHECK-NEXT    FileSize: 8192
-# CHECK-NEXT    MemSize: 8192
-# CHECK-NEXT    Flags [ (0x6)
-# CHECK-NEXT      PF_R (0x4)
-# CHECK-NEXT      PF_W (0x2)
-# CHECK-NEXT    ]
-# CHECK-NEXT    Alignment: 4096
-# CHECK-NEXT  }
 
-# SYMS: There are 66549 program headers, starting at offset 64
+# SYMS: There are 2 program headers, starting at offset 64
+

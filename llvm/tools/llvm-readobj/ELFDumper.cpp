@@ -433,6 +433,8 @@ protected:
       const typename SFrameParser<ELFT::Endianness>::FDERange::iterator FDE,
       ArrayRef<Relocation<ELFT>> Relocations, const Elf_Shdr *RelocSymTab);
 
+  std::string getProgramHeadersNumString();
+
 private:
   mutable SmallVector<std::optional<VersionEntry>, 0> VersionMap;
 };
@@ -3573,61 +3575,62 @@ static inline void printFields(formatted_raw_ostream &OS, StringRef Str1,
 }
 
 template <class ELFT>
-static std::string getProgramHeadersNumString(const ELFFile<ELFT> &Obj,
-                                              StringRef FileName) {
-
-  if (Obj.getHeader().e_phnum != ELF::PN_XNUM)
-    return to_string(Obj.getHeader().e_phnum);
-
+std::string ELFDumper<ELFT>::getProgramHeadersNumString() {
+  const ELFFile<ELFT> &Obj = this->Obj;
   Expected<uint32_t> PhNumOrErr = Obj.getPhNum();
   if (!PhNumOrErr) {
-    // In this case we can ignore an error, because we have already reported a
-    // warning about the broken section header table earlier.
-    consumeError(PhNumOrErr.takeError());
+    this->reportUniqueWarning(PhNumOrErr.takeError());
     return "<?>";
   }
 
-  if (*PhNumOrErr == ELF::PN_XNUM)
+  uint32_t PhNum;
+  PhNum = *PhNumOrErr;
+  if (PhNum == ELF::PN_XNUM)
     return "65535 (corrupt)";
-  return "65535 (" + to_string(*PhNumOrErr) + ")";
+  if (Obj.getHeader().e_phnum != ELF::PN_XNUM)
+    return to_string(PhNum);
+  return "65535 (" + to_string(PhNum) + ")";
 }
 
 template <class ELFT>
 static std::string getSectionHeadersNumString(const ELFFile<ELFT> &Obj,
                                               StringRef FileName) {
-  if (Obj.getHeader().e_shnum != 0)
-    return to_string(Obj.getHeader().e_shnum);
+  const typename ELFT::Ehdr &ElfHeader = Obj.getHeader();
+  if (ElfHeader.e_shnum != 0)
+    return to_string(ElfHeader.e_shnum);
 
-  Expected<uint64_t> ShNumOrErr = Obj.getShNum();
-  if (!ShNumOrErr) {
+  Expected<ArrayRef<typename ELFT::Shdr>> ArrOrErr = Obj.sections();
+  if (!ArrOrErr) {
     // In this case we can ignore an error, because we have already reported a
     // warning about the broken section header table earlier.
-    consumeError(ShNumOrErr.takeError());
+    consumeError(ArrOrErr.takeError());
     return "<?>";
   }
 
-  if (*ShNumOrErr == 0)
+  if (ArrOrErr->empty())
     return "0";
-  return "0 (" + to_string(*ShNumOrErr) + ")";
+  return "0 (" + to_string((*ArrOrErr)[0].sh_size) + ")";
 }
 
 template <class ELFT>
 static std::string getSectionHeaderTableIndexString(const ELFFile<ELFT> &Obj,
                                                     StringRef FileName) {
-  if (Obj.getHeader().e_shstrndx != ELF::SHN_XINDEX)
-    return to_string(Obj.getHeader().e_shstrndx);
+  const typename ELFT::Ehdr &ElfHeader = Obj.getHeader();
+  if (ElfHeader.e_shstrndx != SHN_XINDEX)
+    return to_string(ElfHeader.e_shstrndx);
 
-  Expected<uint32_t> ShStrNdxOrErr = Obj.getShStrNdx();
-  if (!ShStrNdxOrErr) {
+  Expected<ArrayRef<typename ELFT::Shdr>> ArrOrErr = Obj.sections();
+  if (!ArrOrErr) {
     // In this case we can ignore an error, because we have already reported a
     // warning about the broken section header table earlier.
-    consumeError(ShStrNdxOrErr.takeError());
+    consumeError(ArrOrErr.takeError());
     return "<?>";
   }
 
-  if (*ShStrNdxOrErr == ELF::SHN_XINDEX)
+  if (ArrOrErr->empty())
     return "65535 (corrupt: out of range)";
-  return "65535 (" + to_string(*ShStrNdxOrErr) + ")";
+  return to_string(ElfHeader.e_shstrndx) + " (" +
+         to_string((*ArrOrErr)[0].sh_link) + ")";
 }
 
 static const EnumEntry<unsigned> *getObjectFileEnumEntry(unsigned Type) {
@@ -3782,7 +3785,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
   printFields(OS, "Size of this header:", Str);
   Str = to_string(e.e_phentsize) + " (bytes)";
   printFields(OS, "Size of program headers:", Str);
-  Str = getProgramHeadersNumString(this->Obj, this->FileName);
+  Str = this->getProgramHeadersNumString();
   printFields(OS, "Number of program headers:", Str);
   Str = to_string(e.e_shentsize) + " (bytes)";
   printFields(OS, "Size of section headers:", Str);
@@ -4797,7 +4800,7 @@ void GNUELFDumper<ELFT>::printProgramHeaders(
   if (PrintProgramHeaders) {
     Expected<uint32_t> PhNumOrErr = this->Obj.getPhNum();
     if (!PhNumOrErr) {
-      OS << '\n' << errorToErrorCode(PhNumOrErr.takeError()).message() << '\n';
+      this->reportUniqueWarning(PhNumOrErr.takeError());
     } else if (*PhNumOrErr == 0) {
       OS << "\nThere are no program headers in this file.\n";
     } else {
@@ -4814,12 +4817,11 @@ template <class ELFT> void GNUELFDumper<ELFT>::printProgramHeaders() {
   const Elf_Ehdr &Header = this->Obj.getHeader();
   Field Fields[8] = {2,         17,        26,        37 + Bias,
                      48 + Bias, 56 + Bias, 64 + Bias, 68 + Bias};
-  uint32_t PhNum;
-  if (Expected<uint32_t> PhNumOrErr = this->Obj.getPhNum())
+  uint32_t PhNum = 0;
+  if (Expected<uint32_t> PhNumOrErr = this->Obj.getPhNum(); PhNumOrErr)
     PhNum = *PhNumOrErr;
   else {
-    OS << '\n' << errorToErrorCode(PhNumOrErr.takeError()).message() << '\n';
-    return;
+    this->reportUniqueWarning(PhNumOrErr.takeError());
   }
 
   OS << "\nElf file type is "
@@ -7497,8 +7499,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
       W.printFlags("Flags", E.e_flags);
     W.printNumber("HeaderSize", E.e_ehsize);
     W.printNumber("ProgramHeaderEntrySize", E.e_phentsize);
-    W.printString("ProgramHeaderCount",
-                  getProgramHeadersNumString(this->Obj, this->FileName));
+    W.printString("ProgramHeaderCount", this->getProgramHeadersNumString());
     W.printNumber("SectionHeaderEntrySize", E.e_shentsize);
     W.printString("SectionHeaderCount",
                   getSectionHeadersNumString(this->Obj, this->FileName));

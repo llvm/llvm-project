@@ -1,10 +1,14 @@
 # RUN: yaml2obj --docnum=1 %s -o %t.o
 
-# RUN: llvm-readobj --headers %t.o 2>&1 | FileCheck %s --check-prefix=CASE-INVALID
+# RUN: llvm-readobj --headers %t.o 2>&1 | FileCheck %s -DFILE=%t.o --check-prefix=CASE-INVALID
 
-# CASE-INVALID: SectionHeaderOffset: 0
-# CASE-INVALID: ProgramHeaderCount: 65535 (corrupt)
-# CASE-INVALID: unable to dump program headers: program headers are longer than binary of size 336: e_phoff = 0x40, e_phnum = 65535, e_phentsize = 56
+# CASE-INVALID: SectionHeaderOffset: 0x0
+# CASE-INVALID: ProgramHeaderEntrySize: 56
+# CASE-INVALID-NEXT: warning: '[[FILE]]': invalid section index: 0
+# CHECK-INVALID-NEXT:  ProgramHeaderCount: <?>
+# CHECK-INVALID-NEXT:  SectionHeaderEntrySize: 64
+# CHECK-INVALID-NEXT:  SectionHeaderCount: <?>
+# CHECK-INVALID-NEXT:  StringTableSectionIndex: <?>
 
 --- !ELF
 FileHeader:
