@@ -4164,7 +4164,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     for (Value *Op : II->args()) {
       if (auto *Sel = dyn_cast<SelectInst>(Op)) {
         bool IsVectorCond = Sel->getCondition()->getType()->isVectorTy();
-        if (IsVectorCond && !isNotCrossLaneOperation(II))
+        if (IsVectorCond &&
+            (!isNotCrossLaneOperation(II) || !II->getType()->isVectorTy()))
           continue;
         // Don't replace a scalar select with a more expensive vector select if
         // we can't simplify both arms of the select.
