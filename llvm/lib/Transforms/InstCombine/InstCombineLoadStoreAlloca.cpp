@@ -1535,6 +1535,16 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
     if (Value *V = simplifyNonNullOperand(Ptr, /*HasDereferenceable=*/true))
       return replaceOperand(SI, 1, V);
 
+  // If the stored value is constant at this point (e.g., constrained by a
+  // guaranteed-to-execute llvm.assume), fold the store.
+  if (Val->getType()->isIntegerTy() && !isa<Constant>(Val) &&
+      !isa<PoisonValue>(Val)) {
+    KnownBits Known = computeKnownBits(Val, &SI);
+    if (Known.isConstant())
+      return replaceOperand(
+          SI, 0, ConstantInt::get(SI.getContext(), Known.getConstant()));
+  }
+
   return nullptr;
 }
 

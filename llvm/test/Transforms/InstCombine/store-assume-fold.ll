@@ -11,7 +11,7 @@ declare void @llvm.assume(i1)
 define void @assume_store_i1(i1 %x) {
 ; CHECK-LABEL: define void @assume_store_i1(
 ; CHECK-SAME: i1 [[X:%.*]]) {
-; CHECK-NEXT:    store i1 [[X]], ptr @a, align 1
+; CHECK-NEXT:    store i1 true, ptr @a, align 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X]])
 ; CHECK-NEXT:    ret void
 ;
@@ -23,7 +23,7 @@ define void @assume_store_i1(i1 %x) {
 define void @assume_store_i1_not(i1 %x) {
 ; CHECK-LABEL: define void @assume_store_i1_not(
 ; CHECK-SAME: i1 [[X:%.*]]) {
-; CHECK-NEXT:    store i1 [[X]], ptr @a, align 1
+; CHECK-NEXT:    store i1 false, ptr @a, align 1
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[X]], true
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT]])
 ; CHECK-NEXT:    ret void
@@ -39,7 +39,7 @@ define i1 @assume_store_i1_xor(ptr %G) {
 ; CHECK-SAME: ptr [[G:%.*]]) {
 ; CHECK-NEXT:    [[L:%.*]] = load i1, ptr [[G]], align 1
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[L]], true
-; CHECK-NEXT:    store i1 [[XOR]], ptr @a, align 1
+; CHECK-NEXT:    store i1 true, ptr @a, align 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[XOR]])
 ; CHECK-NEXT:    ret i1 [[XOR]]
 ;
@@ -53,7 +53,7 @@ define i1 @assume_store_i1_xor(ptr %G) {
 define void @assume_store_i32_eq(i32 %x) {
 ; CHECK-LABEL: define void @assume_store_i32_eq(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    store i32 [[X]], ptr @b, align 4
+; CHECK-NEXT:    store i32 10, ptr @b, align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 10
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    ret void
@@ -68,9 +68,8 @@ define void @unreachable_implies_false(i8 %x) {
 ; CHECK-LABEL: define void @unreachable_implies_false(
 ; CHECK-SAME: i8 [[X:%.*]]) {
 ; CHECK-NEXT:  [[RET:.*:]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X]], 5
-; CHECK-NEXT:    store i1 [[CMP]], ptr @a, align 1
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i8 [[X]], 6
+; CHECK-NEXT:    store i1 false, ptr @a, align 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    ret void
 ;
