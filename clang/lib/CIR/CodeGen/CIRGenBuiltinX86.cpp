@@ -19,8 +19,9 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
-#include "clang/CIR/MissingFeatures.h"
+
 #include "llvm/Support/ErrorHandling.h"
+#include <cstdint>
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -360,50 +361,6 @@ static mlir::Value emitX86Muldq(CIRGenBuilderTy &builder, mlir::Location loc,
     rhs = builder.createAnd(loc, rhs, mask);
   }
   return builder.createMul(loc, lhs, rhs);
-}
-
-static mlir::Value emitX86CvtF16ToFloatExpr(CIRGenBuilderTy &builder,
-                                            mlir::Location loc,
-                                            SmallVectorImpl<mlir::Value> &ops,
-                                            mlir::Type DstTy) {
-  assert((ops.size() == 1 || ops.size() == 3 || ops.size() == 4) &&
-         "Unknown cvtph2ps intrinsic");
-
-  // If the SAE intrinsic doesn't use default rounding then we can't upgrade.
-  if (ops.size() == 4) {
-    cir::ConstantOp constOp = ops[3].getDefiningOp<cir::ConstantOp>();
-    if (constOp &&
-        mlir::cast<mlir::IntegerAttr>(constOp.getValue()).getInt() != 4) {
-      return emitIntrinsicCallOp(builder, loc, "x86.avx512.mask.vcvtph2ps.512",
-                                 DstTy, ops);
-    }
-  }
-
-  uint64_t NumDstElts = mlir::cast<cir::VectorType>(DstTy).getSize();
-  mlir::Value Src = ops[0];
-
-  // Extract the subvector
-  if (NumDstElts != mlir::cast<cir::VectorType>(Src.getType()).getSize()) {
-    assert(NumDstElts == 4 && "Unexpected vector size");
-
-    SmallVector<int32_t, 4> indices = {0, 1, 2, 3};
-    Src = builder.createShuffle(loc, Src, Src, indices);
-  }
-
-  // Bitcast from vXi16 to vXf16.
-  cir::VectorType HalfTy =
-      cir::VectorType::get(builder.getF16Type(), NumDstElts);
-  Src = builder.createBitcast(loc, Src, HalfTy);
-
-  // Perform the fp-extension.
-  mlir::Value Res = builder.createFloatingCast(Src, DstTy);
-
-  if (ops.size() >= 3) {
-    mlir::Value MaskVec = getMaskVecValue(builder, loc, ops[2], NumDstElts);
-    Res = emitX86Select(builder, loc, MaskVec, Res, ops[1]);
-  }
-
-  return Res;
 }
 
 static mlir::Value emitX86vpcom(CIRGenBuilderTy &builder, mlir::Location loc,
@@ -1706,38 +1663,29 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_cmpnltsd:
   case X86::BI__builtin_ia32_cmpnlesd:
   case X86::BI__builtin_ia32_cmpordsd:
+  case X86::BI__builtin_ia32_vcvtph2ps_mask:
+  case X86::BI__builtin_ia32_vcvtph2ps256_mask:
+  case X86::BI__builtin_ia32_vcvtph2ps512_mask:
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented X86 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
-  case X86::BI__builtin_ia32_vcvtph2ps_mask:
-  case X86::BI__builtin_ia32_vcvtph2ps256_mask:
-  case X86::BI__builtin_ia32_vcvtph2ps512_mask: {
-    mlir::Location loc = getLoc(expr->getExprLoc());
-    return emitX86CvtF16ToFloatExpr(builder, loc, convertType(expr->getType()),
-                                    ops);
-  }
-  case X86::BI__builtin_ia32_cvtneps2bf16_128_mask: {
-    mlir::Location loc = getLoc(expr->getExprLoc());
-    mlir::Value intrinsicMask = getMaskVecValue(builder, loc, ops[2], 4);
-    return emitIntrinsicCallOp(builder, loc,
-                               "x86.avx512bf16.mask.cvtneps2bf16.128",
-                               convertType(expr->getType()),
-                               mlir::ValueRange{ops[0], ops[1], intrinsicMask});
-  }
+  case X86::BI__builtin_ia32_cvtneps2bf16_128_mask:
   case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:
   case X86::BI__builtin_ia32_cvtneps2bf16_512_mask: {
     mlir::Location loc = getLoc(expr->getExprLoc());
-    unsigned numElts = cast<cir::VectorType>(ops[1].getType()).getSize();
+    mlir::Type resTy = convertType(expr->getType());
+    unsigned numElts = cast<cir::VectorType>(resTy).getSize();
     mlir::Value selectMask = getMaskVecValue(builder, loc, ops[2], numElts);
     StringRef intrinsicName;
-    if (builtinID == X86::BI__builtin_ia32_cvtneps2bf16_256_mask)
+    if (builtinID == X86::BI__builtin_ia32_cvtneps2bf16_128_mask)
+      intrinsicName = "x86.avx512bf16.cvtneps2bf16.128";
+    else if (builtinID == X86::BI__builtin_ia32_cvtneps2bf16_256_mask)
       intrinsicName = "x86.avx512bf16.cvtneps2bf16.256";
     else
       intrinsicName = "x86.avx512bf16.cvtneps2bf16.512";
-    mlir::Value intrinsicResult =
-        emitIntrinsicCallOp(builder, loc, intrinsicName, ops[1].getType(),
-                            mlir::ValueRange{ops[0]});
+    mlir::Value intrinsicResult = emitIntrinsicCallOp(
+        builder, loc, intrinsicName, resTy, mlir::ValueRange{ops[0]});
     return emitX86Select(builder, loc, selectMask, intrinsicResult, ops[1]);
   }
   case X86::BI__cpuid:
