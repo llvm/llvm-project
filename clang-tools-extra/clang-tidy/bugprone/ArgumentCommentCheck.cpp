@@ -142,45 +142,34 @@ getCommentsBeforeLoc(ASTContext *Ctx, SourceLocation Loc) {
   return Comments;
 }
 
-static llvm::SmallString<64> getLowercasedString(StringRef Name) {
-  llvm::SmallString<64> Result;
-  Result.reserve(Name.size());
-  for (const char C : Name)
-    Result.push_back(llvm::toLower(C));
-  return Result;
-}
-
 template <typename NamedDeclRange>
 static bool isLikelyTypo(const NamedDeclRange &Candidates, StringRef ArgName,
                          StringRef TargetName) {
-  const llvm::SmallString<64> ArgNameLower = getLowercasedString(ArgName);
-  const StringRef ArgNameLowerRef = StringRef(ArgNameLower);
+  const std::string ArgNameLowerStr = ArgName.lower();
+  const StringRef ArgNameLower = ArgNameLowerStr;
   // The threshold is arbitrary.
   const unsigned UpperBound = ((ArgName.size() + 2) / 3) + 1;
-  const llvm::SmallString<64> TargetNameLower = getLowercasedString(TargetName);
   const unsigned ThisED =
-      ArgNameLowerRef.edit_distance(StringRef(TargetNameLower),
-                                    /*AllowReplacements=*/true, UpperBound);
+      ArgNameLower.edit_distance(TargetName.lower(),
+                                 /*AllowReplacements=*/true, UpperBound);
   if (ThisED >= UpperBound)
     return false;
 
   return llvm::all_of(Candidates, [&](const auto &Candidate) {
     const IdentifierInfo *II = Candidate->getIdentifier();
-    if (II->getName() == TargetName)
-      return true;
-
     if (!II)
       return true;
 
+    // Skip the target itself.
+    if (II->getName() == TargetName)
+      return true;
+
     const unsigned Threshold = 2;
-    // Other candidates must be an edit distance at least
-    // Threshold more away from this candidate. This gives us
-    // greater confidence that this is a typo of this
-    // candidate and not one with a similar name.
-    const llvm::SmallString<64> CandidateLower =
-        getLowercasedString(II->getName());
-    const unsigned OtherED = ArgNameLowerRef.edit_distance(
-        StringRef(CandidateLower),
+    // Other candidates must be an edit distance at least Threshold more away
+    // from this candidate. This gives us greater confidence that this is a
+    // typo of this candidate and not one with a similar name.
+    const unsigned OtherED = ArgNameLower.edit_distance(
+        II->getName().lower(),
         /*AllowReplacements=*/true, ThisED + Threshold);
     return OtherED >= ThisED + Threshold;
   });
