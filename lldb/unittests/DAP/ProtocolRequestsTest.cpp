@@ -304,3 +304,43 @@ TEST(ProtocolRequestsTest, TestGetTargetBreakpointsResponseBody) {
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
   EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(body));
 }
+
+TEST(ProtocolRequestsTest, RestartArguments) {
+  llvm::Expected<RestartArguments> expected = parse<RestartArguments>(R"({})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_TRUE(std::holds_alternative<std::monostate>(expected->arguments));
+
+  // Check missed keys.
+  expected = parse<RestartArguments>(R"({
+    "arguments": {}
+  })");
+  EXPECT_THAT_EXPECTED(expected,
+                       FailedWithMessage("failed to parse arguments, expected "
+                                         "`launch` or `attach` arguments"));
+
+  // Check launch arguments.
+  expected = parse<RestartArguments>(R"({
+    "arguments": {
+      "program": "main.exe",
+      "cwd": "/home/root"
+    }
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  const LaunchRequestArguments *launch_args =
+      std::get_if<LaunchRequestArguments>(&expected->arguments);
+  EXPECT_NE(launch_args, nullptr);
+  EXPECT_EQ(launch_args->configuration.program, "main.exe");
+  EXPECT_EQ(launch_args->cwd, "/home/root");
+
+  // Check attach arguments.
+  expected = parse<RestartArguments>(R"({
+    "arguments": {
+      "pid": 123
+    }
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  const AttachRequestArguments *attach_args =
+      std::get_if<AttachRequestArguments>(&expected->arguments);
+  EXPECT_NE(attach_args, nullptr);
+  EXPECT_EQ(attach_args->pid, 123U);
+}
