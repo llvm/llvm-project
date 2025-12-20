@@ -218,6 +218,11 @@ void AvoidCStyleCastCheck::check(const MatchFinder::MatchResult &Result) {
       ReplaceWithNamedCast("static_cast");
     return;
   case CK_NoOp:
+  if (isa<CXXNullPtrLiteralExpr>(CastExpr->getSubExprAsWritten()->IgnoreImpCasts())) {
+  ReplaceWithNamedCast("static_cast");
+  return;
+}
+
     if (FnToFnCast) {
       ReplaceWithNamedCast("static_cast");
       return;
