@@ -8,7 +8,7 @@ target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 define void @path_compression(i32 %a, ptr %base, i16 %r, i1 %cond) {
 ; CHECK-LABEL: @path_compression(
 ; CHECK: [[I:%.*]] = sext i32 %a to i64
-; CHECK: [[GEP1:%.*]] = getelementptr inbounds %struct.A, ptr %base, i64 [[I]]
+; CHECK: [[GEP1:%.*]] = getelementptr %struct.A, ptr %base, i64 [[I]]
 ; CHECK: br
 ; CHECK-LABEL: next
 ; compress the path to use GEP1 as the Basis instead of GEP2

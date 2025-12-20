@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/internal/math/clc_sw_fma.h>
-#include <clc/opencl/math/fma.h>
 
 #define __CLC_FLOAT_ONLY
 #define __CLC_FUNCTION fma

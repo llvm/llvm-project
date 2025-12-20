@@ -26,8 +26,8 @@
 #include "TargetInfo.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Intrinsics.h"
@@ -566,6 +566,7 @@ static Value *EmitISOVolatileLoad(CodeGenFunction &CGF, const CallExpr *E) {
   llvm::Type *ITy =
       llvm::IntegerType::get(CGF.getLLVMContext(), LoadSize.getQuantity() * 8);
   llvm::LoadInst *Load = CGF.Builder.CreateAlignedLoad(ITy, Ptr, LoadSize);
+  Load->setAtomic(llvm::AtomicOrdering::Monotonic);
   Load->setVolatile(true);
   return Load;
 }
@@ -578,6 +579,7 @@ static Value *EmitISOVolatileStore(CodeGenFunction &CGF, const CallExpr *E) {
   CharUnits StoreSize = CGF.getContext().getTypeSizeInChars(ElTy);
   llvm::StoreInst *Store =
       CGF.Builder.CreateAlignedStore(Value, Ptr, StoreSize);
+  Store->setAtomic(llvm::AtomicOrdering::Monotonic);
   Store->setVolatile(true);
   return Store;
 }
@@ -2640,84 +2642,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // fast-math which implies math-errno.
   bool OptNone = CurFuncDecl && CurFuncDecl->hasAttr<OptimizeNoneAttr>();
 
-  // True if we are compiling at -O2 and errno has been disabled
-  // using the '#pragma float_control(precise, off)', and
-  // attribute opt-none hasn't been seen.
-  bool ErrnoOverridenToFalseWithOpt =
-       ErrnoOverriden.has_value() && !ErrnoOverriden.value() && !OptNone &&
-       CGM.getCodeGenOpts().OptimizationLevel != 0;
+  bool IsOptimizationEnabled = CGM.getCodeGenOpts().OptimizationLevel != 0;
 
-  // There are LLVM math intrinsics/instructions corresponding to math library
-  // functions except the LLVM op will never set errno while the math library
-  // might. Also, math builtins have the same semantics as their math library
-  // twins. Thus, we can transform math library and builtin calls to their
-  // LLVM counterparts if the call is marked 'const' (known to never set errno).
-  // In case FP exceptions are enabled, the experimental versions of the
-  // intrinsics model those.
-  bool ConstAlways =
-      getContext().BuiltinInfo.isConst(BuiltinID);
+  bool GenerateFPMathIntrinsics =
+      getContext().BuiltinInfo.shouldGenerateFPMathIntrinsic(
+          BuiltinID, CGM.getTriple(), ErrnoOverriden, getLangOpts().MathErrno,
+          OptNone, IsOptimizationEnabled);
 
-  // There's a special case with the fma builtins where they are always const
-  // if the target environment is GNU or the target is OS is Windows and we're
-  // targeting the MSVCRT.dll environment.
-  // FIXME: This list can be become outdated. Need to find a way to get it some
-  // other way.
-  switch (BuiltinID) {
-  case Builtin::BI__builtin_fma:
-  case Builtin::BI__builtin_fmaf:
-  case Builtin::BI__builtin_fmal:
-  case Builtin::BI__builtin_fmaf16:
-  case Builtin::BIfma:
-  case Builtin::BIfmaf:
-  case Builtin::BIfmal: {
-    auto &Trip = CGM.getTriple();
-    if (Trip.isGNUEnvironment() || Trip.isOSMSVCRT())
-      ConstAlways = true;
-    break;
-  }
-  default:
-    break;
-  }
-
-  bool ConstWithoutErrnoAndExceptions =
-      getContext().BuiltinInfo.isConstWithoutErrnoAndExceptions(BuiltinID);
-  bool ConstWithoutExceptions =
-      getContext().BuiltinInfo.isConstWithoutExceptions(BuiltinID);
-
-  // ConstAttr is enabled in fast-math mode. In fast-math mode, math-errno is
-  // disabled.
-  // Math intrinsics are generated only when math-errno is disabled. Any pragmas
-  // or attributes that affect math-errno should prevent or allow math
-  // intrinsics to be generated. Intrinsics are generated:
-  //   1- In fast math mode, unless math-errno is overriden
-  //      via '#pragma float_control(precise, on)', or via an
-  //      'attribute__((optnone))'.
-  //   2- If math-errno was enabled on command line but overriden
-  //      to false via '#pragma float_control(precise, off))' and
-  //      'attribute__((optnone))' hasn't been used.
-  //   3- If we are compiling with optimization and errno has been disabled
-  //      via '#pragma float_control(precise, off)', and
-  //      'attribute__((optnone))' hasn't been used.
-
-  bool ConstWithoutErrnoOrExceptions =
-      ConstWithoutErrnoAndExceptions || ConstWithoutExceptions;
-  bool GenerateIntrinsics =
-      (ConstAlways && !OptNone) ||
-      (!getLangOpts().MathErrno &&
-       !(ErrnoOverriden.has_value() && ErrnoOverriden.value()) && !OptNone);
-  if (!GenerateIntrinsics) {
-    GenerateIntrinsics =
-        ConstWithoutErrnoOrExceptions && !ConstWithoutErrnoAndExceptions;
-    if (!GenerateIntrinsics)
-      GenerateIntrinsics =
-          ConstWithoutErrnoOrExceptions &&
-          (!getLangOpts().MathErrno &&
-           !(ErrnoOverriden.has_value() && ErrnoOverriden.value()) && !OptNone);
-    if (!GenerateIntrinsics)
-      GenerateIntrinsics =
-          ConstWithoutErrnoOrExceptions && ErrnoOverridenToFalseWithOpt;
-  }
-  if (GenerateIntrinsics) {
+  if (GenerateFPMathIntrinsics) {
     switch (BuiltinIDIfNoAsmLabel) {
     case Builtin::BIacos:
     case Builtin::BIacosf:
@@ -3653,12 +3585,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::IntegerType *IntTy = cast<llvm::IntegerType>(ArgValue->getType());
     assert(IntTy && "LLVM's __builtin_bswapg only supports integer variants");
-    assert(((IntTy->getBitWidth() % 16 == 0 && IntTy->getBitWidth() != 0) ||
-            IntTy->getBitWidth() == 8) &&
+    if (IntTy->getBitWidth() == 1 || IntTy->getBitWidth() == 8)
+      return RValue::get(ArgValue);
+    assert(((IntTy->getBitWidth() % 16 == 0 && IntTy->getBitWidth() != 0)) &&
            "LLVM's __builtin_bswapg only supports integer variants that has a "
            "multiple of 16 bits as well as a single byte");
-    if (IntTy->getBitWidth() == 8)
-      return RValue::get(ArgValue);
     return RValue::get(
         emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::bswap));
   }
@@ -3763,9 +3694,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       if (auto *CATy =
               ME->getMemberDecl()->getType()->getAs<CountAttributedType>();
           CATy && CATy->getKind() == CountAttributedType::CountedBy) {
-        const auto *FAMDecl = cast<FieldDecl>(ME->getMemberDecl());
-        if (const FieldDecl *CountFD = FAMDecl->findCountedByField())
-          Result = GetCountedByFieldExprGEP(Arg, FAMDecl, CountFD);
+        const auto *MemberDecl = cast<FieldDecl>(ME->getMemberDecl());
+        if (const FieldDecl *CountFD = MemberDecl->findCountedByField())
+          Result = GetCountedByFieldExprGEP(Arg, MemberDecl, CountFD);
         else
           llvm::report_fatal_error("Cannot find the counted_by 'count' field");
       }
@@ -4332,7 +4263,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Type *IntTy = ConvertType(E->getType());
     Value *Zero = Constant::getNullValue(IntTy);
     Value *One = ConstantInt::get(IntTy, 1);
-    Value *NegativeOne = ConstantInt::get(IntTy, -1);
+    Value *NegativeOne = ConstantInt::getAllOnesValue(IntTy);
     Value *SignResult = Builder.CreateSelect(IsNeg, NegativeOne, One);
     Value *Result = Builder.CreateSelect(IsInf, SignResult, Zero);
     return RValue::get(Result);
@@ -4748,7 +4679,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     PHINode *Ret = Builder.CreatePHI(IntTy, 4);
     Ret->addIncoming(ConstantInt::get(IntTy, 0), Entry);
     Ret->addIncoming(ConstantInt::get(IntTy, 1), CmpGT);
-    Ret->addIncoming(ConstantInt::get(IntTy, -1), CmpLT);
+    Ret->addIncoming(ConstantInt::getAllOnesValue(IntTy), CmpLT);
     Ret->addIncoming(ConstantInt::get(IntTy, 0), Next);
     return RValue::get(Ret);
   }

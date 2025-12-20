@@ -1009,7 +1009,7 @@ TEST_F(VPRecipeTest, CastVPWidenRecipeToVPUser) {
   SmallVector<VPValue *, 2> Args;
   Args.push_back(Op1);
   Args.push_back(Op2);
-  VPWidenRecipe WidenR(*AI, Args, VPIRMetadata(), DebugLoc());
+  VPWidenRecipe WidenR(*AI, Args);
 
   checkVPRecipeCastImpl<VPWidenRecipe, VPUser, VPIRMetadata>(&WidenR);
   delete AI;
@@ -1053,7 +1053,7 @@ TEST_F(VPRecipeTest, CastVPWidenSelectRecipeToVPUserAndVPDef) {
   Args.push_back(Op1);
   Args.push_back(Op2);
   Args.push_back(Op3);
-  VPWidenSelectRecipe WidenSelectR(*SelectI,
+  VPWidenSelectRecipe WidenSelectR(SelectI,
                                    make_range(Args.begin(), Args.end()));
 
   checkVPRecipeCastImpl<VPWidenSelectRecipe, VPUser, VPIRMetadata>(
@@ -1093,7 +1093,7 @@ TEST_F(VPRecipeTest, CastVPWidenCastRecipeToVPUser) {
   IntegerType *Int64 = IntegerType::get(C, 64);
   auto *Cast = CastInst::CreateZExtOrBitCast(PoisonValue::get(Int32), Int64);
   VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPWidenCastRecipe Recipe(Instruction::ZExt, Op1, Int64, *Cast, {});
+  VPWidenCastRecipe Recipe(Instruction::ZExt, Op1, Int64, Cast);
 
   checkVPRecipeCastImpl<VPWidenCastRecipe, VPUser, VPIRMetadata>(&Recipe);
   delete Cast;
@@ -1243,7 +1243,7 @@ TEST_F(VPRecipeTest, CastVPWidenStoreEVLRecipeToVPUser) {
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPWidenStoreRecipe BaseStore(*Store, Addr, StoredVal, Mask, true, false, {},
                                {});
-  VPWidenStoreEVLRecipe Recipe(BaseStore, Addr, *EVL, Mask);
+  VPWidenStoreEVLRecipe Recipe(BaseStore, Addr, StoredVal, *EVL, Mask);
 
   checkVPRecipeCastImpl<VPWidenStoreEVLRecipe, VPUser, VPIRMetadata>(&Recipe);
 
@@ -1264,7 +1264,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     SmallVector<VPValue *, 2> Args;
     Args.push_back(Op1);
     Args.push_back(Op2);
-    VPWidenRecipe Recipe(*AI, Args, VPIRMetadata(), DebugLoc());
+    VPWidenRecipe Recipe(*AI, Args);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1283,7 +1283,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     Args.push_back(Op1);
     Args.push_back(Op2);
     Args.push_back(Op3);
-    VPWidenSelectRecipe Recipe(*SelectI, make_range(Args.begin(), Args.end()));
+    VPWidenSelectRecipe Recipe(SelectI, make_range(Args.begin(), Args.end()));
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1318,35 +1318,29 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   }
 
   {
-    auto *Add = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
-                                          PoisonValue::get(Int32));
     VPValue *ChainOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPValue *VecOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
     VPValue *CondOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
-    VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), Add, ChainOp,
-                             CondOp, VecOp, false);
+    VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
+                             CondOp, RdxUnordered{});
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
     EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
-    delete Add;
   }
 
   {
-    auto *Add = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
-                                          PoisonValue::get(Int32));
     VPValue *ChainOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPValue *VecOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
     VPValue *CondOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
-    VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), Add, ChainOp,
-                             CondOp, VecOp, false);
+    VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
+                             CondOp, RdxUnordered{});
     VPValue *EVL = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 4));
     VPReductionEVLRecipe EVLRecipe(Recipe, *EVL, CondOp);
     EXPECT_FALSE(EVLRecipe.mayHaveSideEffects());
     EXPECT_FALSE(EVLRecipe.mayReadFromMemory());
     EXPECT_FALSE(EVLRecipe.mayWriteToMemory());
     EXPECT_FALSE(EVLRecipe.mayReadOrWriteMemory());
-    delete Add;
   }
 
   {
@@ -1412,7 +1406,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     Args.push_back(Op1);
     Args.push_back(Op2);
     Args.push_back(CalledFn);
-    VPWidenCallRecipe Recipe(Call, TheFn, Args);
+    VPWidenCallRecipe Recipe(Call, TheFn, Args, VPIRFlags(), VPIRMetadata());
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1468,8 +1462,7 @@ TEST_F(VPRecipeTest, dumpRecipeInPlan) {
   VPValue *ExtVPV2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   Args.push_back(ExtVPV1);
   Args.push_back(ExtVPV2);
-  VPWidenRecipe *WidenR =
-      new VPWidenRecipe(*AI, Args, VPIRMetadata(), DebugLoc());
+  VPWidenRecipe *WidenR = new VPWidenRecipe(*AI, Args);
   VPBB1->appendRecipe(WidenR);
 
   {
@@ -1690,30 +1683,27 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
 
 TEST_F(VPRecipeTest, CastVPReductionRecipeToVPUser) {
   IntegerType *Int32 = IntegerType::get(C, 32);
-  auto *Add = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
-                                        PoisonValue::get(Int32));
   VPValue *ChainOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *VecOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPValue *CondOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 3));
-  VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), Add, ChainOp,
-                           CondOp, VecOp, false);
+  VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
+                           CondOp, RdxUnordered{});
   checkVPRecipeCastImpl<VPReductionRecipe, VPUser>(&Recipe);
-  delete Add;
+  EXPECT_TRUE(isa<VPUser>(&Recipe));
+  VPRecipeBase *BaseR = &Recipe;
+  EXPECT_TRUE(isa<VPUser>(BaseR));
 }
 
 TEST_F(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
   IntegerType *Int32 = IntegerType::get(C, 32);
-  auto *Add = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
-                                        PoisonValue::get(Int32));
   VPValue *ChainOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *VecOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPValue *CondOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 3));
-  VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), Add, ChainOp,
-                           CondOp, VecOp, false);
+  VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
+                           CondOp, RdxUnordered{});
   VPValue *EVL = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 0));
   VPReductionEVLRecipe EVLRecipe(Recipe, *EVL, CondOp);
   checkVPRecipeCastImpl<VPReductionEVLRecipe, VPUser>(&EVLRecipe);
-  delete Add;
 }
 } // namespace
 

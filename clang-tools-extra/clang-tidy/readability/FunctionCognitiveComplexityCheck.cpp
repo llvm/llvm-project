@@ -20,7 +20,7 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
-#include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <array>
 #include <cassert>
@@ -79,6 +79,8 @@ struct CognitiveComplexity final {
     PenalizeNesting = 1U << 2,
 
     All = Increment | PenalizeNesting | IncrementNesting,
+
+    LLVM_MARK_AS_BITMASK_ENUM(PenalizeNesting),
   };
 
   // The helper struct used to record one increment occurrence, with all the
@@ -163,32 +165,6 @@ static const std::array<const StringRef, 4> Msgs = {{
     // B2
     "nesting level increased to %2",
 }};
-
-// Criteria is a bitset, thus a few helpers are needed.
-static CognitiveComplexity::Criteria
-operator|(CognitiveComplexity::Criteria LHS,
-          CognitiveComplexity::Criteria RHS) {
-  return static_cast<CognitiveComplexity::Criteria>(llvm::to_underlying(LHS) |
-                                                    llvm::to_underlying(RHS));
-}
-static CognitiveComplexity::Criteria
-operator&(CognitiveComplexity::Criteria LHS,
-          CognitiveComplexity::Criteria RHS) {
-  return static_cast<CognitiveComplexity::Criteria>(llvm::to_underlying(LHS) &
-                                                    llvm::to_underlying(RHS));
-}
-static CognitiveComplexity::Criteria &
-operator|=(CognitiveComplexity::Criteria &LHS,
-           CognitiveComplexity::Criteria RHS) {
-  LHS = operator|(LHS, RHS);
-  return LHS;
-}
-static CognitiveComplexity::Criteria &
-operator&=(CognitiveComplexity::Criteria &LHS,
-           CognitiveComplexity::Criteria RHS) {
-  LHS = operator&(LHS, RHS);
-  return LHS;
-}
 
 void CognitiveComplexity::account(SourceLocation Loc, unsigned short Nesting,
                                   Criteria C) {
@@ -519,7 +495,6 @@ void FunctionCognitiveComplexityCheck::registerMatchers(MatchFinder *Finder) {
 
 void FunctionCognitiveComplexityCheck::check(
     const MatchFinder::MatchResult &Result) {
-
   FunctionASTVisitor Visitor(IgnoreMacros);
   SourceLocation Loc;
 
@@ -558,7 +533,7 @@ void FunctionCognitiveComplexityCheck::check(
     // Increase, on the other hand, can be 0.
 
     diag(Detail.Loc, Msgs[MsgId], DiagnosticIDs::Note)
-        << (unsigned)Increase << (unsigned)Detail.Nesting << 1 + Detail.Nesting;
+        << Increase << Detail.Nesting << 1 + Detail.Nesting;
   }
 }
 

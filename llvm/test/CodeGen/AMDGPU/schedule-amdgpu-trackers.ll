@@ -20,7 +20,7 @@
 
 
 ; CHECK-LABEL: {{^}}call_72xi32:
-; GFX11-PAL:    NumSgprs: 37
+; GFX11-PAL:    NumSgprs: 40
 ; GFX11-PAL-GCNTRACKERS:    NumSgprs: 37
 ; GFX11-PAL:    NumVgprs: 64
 ; GFX11-PAL-GCNTRACKERS:    NumVgprs: 64
