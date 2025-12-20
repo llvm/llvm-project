@@ -12,9 +12,9 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+d,+zvfhmin,+zfbfmin,+zvfbfmin,+v,+m -target-abi=ilp32d \
 ; RUN:   -verify-machineinstrs -early-live-intervals < %s | FileCheck %s --check-prefixes=CHECK,ZVFBFMIN,ZVFHMIN
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfhmin,+experimental-zvfbfa,+v,+m \
-; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFBFA,ZVFHMIN
+; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN,ZVFBFA
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfhmin,+experimental-zvfbfa,+v,+m \
-; RUN:   -verify-machineinstrs -early-live-intervals < %s | FileCheck %s --check-prefixes=CHECK,ZVFBFA,ZVFHMIN
+; RUN:   -verify-machineinstrs -early-live-intervals < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN,ZVFBFA
 
 define <vscale x 1 x bfloat> @vfmin_nxv1bf16_vv(<vscale x 1 x bfloat> %a, <vscale x 1 x bfloat> %b) {
 ; ZVFBFMIN-LABEL: vfmin_nxv1bf16_vv:
