@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// constexpr auto operator[](difference_type n) const requires
+// constexpr decltype(auto) operator[](difference_type n) const requires
 //        all_random_access<Const, Views...>
 
 #include <ranges>
