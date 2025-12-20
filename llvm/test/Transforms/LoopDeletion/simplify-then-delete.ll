@@ -11,6 +11,11 @@ define i32 @pmat(i32 %m, i32 %n, ptr %y, i1 %arg) nounwind {
 ; CHECK-LABEL: @pmat(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp sgt i32 [[M:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP4]], label [[BB_N10:%.*]], label [[W_E12:%.*]]
+; CHECK:       bb.n10:
+; CHECK-NEXT:    [[CMP51:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br label [[W_E12]]
+; CHECK:       w.e12:
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

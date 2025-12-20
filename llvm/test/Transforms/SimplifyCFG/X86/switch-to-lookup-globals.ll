@@ -10,16 +10,9 @@ target triple = "x86_64-unknown-linux-gnu"
 define i1 @zot(i32 %arg) {
 ; CHECK-LABEL: @zot(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    %0 = icmp ult i32 %arg, 3
-; CHECK-NEXT:    br i1 %0, label %switch.lookup, label %bb6
-; CHECK:       switch.lookup:
-; CHECK-NEXT:    %1 = zext nneg i32 %arg to i64
-; CHECK-NEXT:    %switch.gep = getelementptr inbounds [3 x ptr], ptr @switch.table.zot, i64 0, i64 %1
-; CHECK-NEXT:    %switch.load = load ptr, ptr %switch.gep, align 8
-; CHECK-NEXT:    br label %bb6
-; CHECK:       bb6:
-; CHECK-NEXT:    %tmp7 = phi ptr [ null, %bb ], [ %switch.load, %switch.lookup ]
-; CHECK-NEXT:    %tmp8 = icmp eq ptr %tmp7, getelementptr inbounds ([75 x { i32, i32, i32, i8, i8 }], ptr @global, i64 1, i64 0, i32 0)
+; CHECK-NEXT:    %cond = icmp eq i32 %arg, 1
+; CHECK-NEXT:    %spec.select = select i1 %cond, ptr getelementptr inbounds ([75 x { i32, i32, i32, i8, i8 }], ptr @global, i64 0, i64 6, i32 0), ptr null
+; CHECK-NEXT:    %tmp8 = icmp eq ptr %spec.select, getelementptr inbounds ([75 x { i32, i32, i32, i8, i8 }], ptr @global, i64 1, i64 0, i32 0)
 ; CHECK-NEXT:    ret i1 %tmp8
 ;
 bb:
