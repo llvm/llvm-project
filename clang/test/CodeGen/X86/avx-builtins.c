@@ -1526,14 +1526,38 @@ __m256 test_mm256_rcp_ps(__m256 A) {
 
 __m256d test_mm256_round_pd(__m256d x) {
   // CHECK-LABEL: test_mm256_round_pd
+  // CHECK: %{{.*}} = call <4 x double> @llvm.roundeven.v4f64(<4 x double> %{{.*}})
+  return _mm256_round_pd(x, 0);
+}
+
+__m256d test_mm256_round_pd_mxcsr(__m256d x) {
+  // CHECK-LABEL: test_mm256_round_pd_mxcsr
   // CHECK: %{{.*}} = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 4)
   return _mm256_round_pd(x, 4);
 }
 
+__m256d test_mm256_round_pd_fround_no_exc(__m256d x) {
+  // CHECK-LABEL: test_mm256_round_pd_fround_no_exc
+  // CHECK: %{{.*}} = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 8)
+  return _mm256_round_pd(x, 0b1000);
+}
+
 __m256 test_mm256_round_ps(__m256 x) {
   // CHECK-LABEL: test_mm256_round_ps
+  // CHECK: %{{.*}} = call <8 x float> @llvm.roundeven.v8f32(<8 x float> %{{.*}})
+  return _mm256_round_ps(x, 0);
+}
+
+__m256 test_mm256_round_ps_mxcsr(__m256 x) {
+  // CHECK-LABEL: test_mm256_round_ps_mxcsr
   // CHECK: %{{.*}} = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 4)
   return _mm256_round_ps(x, 4);
+}
+
+__m256 test_mm256_round_ps_fround_no_exc(__m256 x) {
+  // CHECK-LABEL: test_mm256_round_ps_fround_no_exc
+  // CHECK: %{{.*}} = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 8)
+  return _mm256_round_ps(x, 0b1000);
 }
 
 __m256 test_mm256_rsqrt_ps(__m256 A) {

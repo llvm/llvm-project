@@ -25,10 +25,16 @@ __m128d test_mm_round_pd_roundeven(__m128d x) {
   return _mm_round_pd(x, 0);
 }
 
-__m128d test_mm_round_pd_dynamic(__m128d x) {
-  // CHECK-LABEL: test_mm_round_pd_dynamic
+__m128d test_mm_round_pd_mxcsr(__m128d x) {
+  // CHECK-LABEL: test_mm_round_pd_mxcsr
   // CHECK: %{{.*}} = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %{{.*}}, i32 4)
   return _mm_round_pd(x, 0b100);
+}
+
+__m128d test_mm_round_pd_fround_no_exc(__m128d x) {
+  // CHECK-LABEL: test_mm_round_pd_fround_no_exc
+  // CHECK: %{{.*}} = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %{{.*}}, i32 8)
+  return _mm_round_pd(x, 0b1000);
 }
 
 __m128 test_mm_round_ps_floor(__m128 x) {
@@ -37,10 +43,16 @@ __m128 test_mm_round_ps_floor(__m128 x) {
   return _mm_round_ps(x, 1);
 }
 
-__m128 test_mm_round_ps_dynamic(__m128 x) {
-  // CHECK-LABEL: test_mm_round_ps_dynamic
+__m128 test_mm_round_ps_mxcsr(__m128 x) {
+  // CHECK-LABEL: test_mm_round_ps_mxcsr
   // CHECK: %{{.*}} = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %{{.*}}, i32 4)
   return _mm_round_ps(x, 0b100);
+}
+
+__m128 test_mm_round_ps_fround_no_exc(__m128 x) {
+  // CHECK-LABEL: test_mm_round_ps_fround_no_exc
+  // CHECK: %{{.*}} = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %{{.*}}, i32 8)
+  return _mm_round_ps(x, 0b1000);
 }
 
 __m128d test_mm_round_sd_ceil(__m128d x, __m128d y) {
@@ -51,10 +63,16 @@ __m128d test_mm_round_sd_ceil(__m128d x, __m128d y) {
   return _mm_round_sd(x, y, 2);
 }
 
-__m128d test_mm_round_sd_dynamic(__m128d x, __m128d y) {
-  // CHECK-LABEL: test_mm_round_sd_dynamic
+__m128d test_mm_round_sd_mxcsr(__m128d x, __m128d y) {
+  // CHECK-LABEL: test_mm_round_sd_mxcsr
   // CHECK: %{{.*}} = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i32 4)
   return _mm_round_sd(x, y, 0b100);
+}
+
+__m128d test_mm_round_sd_fround_no_exc(__m128d x, __m128d y) {
+  // CHECK-LABEL: test_mm_round_sd_fround_no_exc
+  // CHECK: %{{.*}} = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i32 8)
+  return _mm_round_sd(x, y, 0b1000);
 }
 
 __m128 test_mm_round_ss_trunc(__m128 x, __m128 y) {
@@ -65,8 +83,14 @@ __m128 test_mm_round_ss_trunc(__m128 x, __m128 y) {
   return _mm_round_ss(x, y, 3);
 }
 
-__m128 test_mm_round_ss_dynamic(__m128 x, __m128 y) {
-  // CHECK-LABEL: test_mm_round_ss_dynamic
+__m128 test_mm_round_ss_mxcsr(__m128 x, __m128 y) {
+  // CHECK-LABEL: test_mm_round_ss_mxcsr
   // CHECK: %{{.*}} = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %{{.*}}, <4 x float> %1, i32 4)
   return _mm_round_ss(x, y, 0b100);
+}
+
+__m128 test_mm_round_ss_fround_no_exc(__m128 x, __m128 y) {
+  // CHECK-LABEL: test_mm_round_ss_fround_no_exc
+  // CHECK: %{{.*}} = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %{{.*}}, <4 x float> %1, i32 8)
+  return _mm_round_ss(x, y, 0b1000);
 }
