@@ -1423,3 +1423,17 @@ define i8 @orSelectOrUses(i8 %arg0, i8 %arg1) {
   %res = add i8 %v1, %v3
   ret i8 %res
 }
+
+define i8 @udivSelectudivSomeCommon1InfLoopRep(i8 %arg0, i8 %arg1, i1 %v0) {
+; CHECK-LABEL: @udivSelectudivSomeCommon1InfLoopRep(
+; CHECK-NEXT:    [[V1:%.*]] = udiv i8 11, [[ARG0:%.*]]
+; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0:%.*]], i8 [[V1]], i8 [[ARG0]]
+; CHECK-NEXT:    [[V3:%.*]] = udiv i8 [[V2]], 5
+; CHECK-NEXT:    ret i8 [[V3]]
+;
+  %v01 = icmp sgt i8 %arg0, 0
+  %v1 = udiv i8 11, %arg0
+  %v2 = select i1 %v0, i8 %v1, i8 %arg0
+  %v3 = udiv i8 %v2, 5
+  ret i8 %v3
+}
