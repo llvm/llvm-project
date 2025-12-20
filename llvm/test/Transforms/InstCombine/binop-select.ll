@@ -616,6 +616,79 @@ define i8 @comBinOpSelectComBinOpRev3(i8 %arg0, i8 %arg1) {
   ret i8 %v3
 }
 
+define i8 @BinOpSelectBinOpMultiUseRegsWithSelect1(i8 %arg0, i8 %arg1, i1 %whatToReturn) {
+; CHECK-LABEL: @BinOpSelectBinOpMultiUseRegsWithSelect1(
+; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
+; CHECK-NEXT:    [[V1:%.*]] = or i8 [[ARG0:%.*]], 4
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 5, i8 1
+; CHECK-NEXT:    [[V3:%.*]] = or i8 [[ARG0]], [[V3_V]]
+; CHECK-NEXT:    [[USE:%.*]] = add i8 [[V1]], 42
+; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[WHATTORETURN:%.*]], i8 [[USE]], i8 [[V3]]
+; CHECK-NEXT:    ret i8 [[RETVAL]]
+;
+  %v0 = icmp eq i8 %arg1, -1
+  %v1 = or i8 4, %arg0
+  %v2 = select i1 %v0, i8 %v1, i8 %arg0
+  %v3 = or i8 1, %v2
+  %use = add i8 %v1, 42
+  %retVal = select i1 %whatToReturn, i8 %use, i8 %v3
+  ret i8 %retVal
+}
+
+
+define i8 @BinOpSelectBinOpMultiUseRegsWithSelect2(i8 %arg0, i8 %arg1, i1 %whatToReturn) {
+; CHECK-LABEL: @BinOpSelectBinOpMultiUseRegsWithSelect2(
+; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
+; CHECK-NEXT:    [[V1:%.*]] = or i8 [[ARG0:%.*]], 4
+; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
+; CHECK-NEXT:    [[V3:%.*]] = or i8 [[V2]], 1
+; CHECK-NEXT:    [[USE:%.*]] = add i8 [[V2]], 42
+; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[WHATTORETURN:%.*]], i8 [[USE]], i8 [[V3]]
+; CHECK-NEXT:    ret i8 [[RETVAL]]
+;
+  %v0 = icmp eq i8 %arg1, -1
+  %v1 = or i8 4, %arg0
+  %v2 = select i1 %v0, i8 %v1, i8 %arg0
+  %v3 = or i8 1, %v2
+  %use = add i8 %v2, 42
+  %retVal = select i1 %whatToReturn, i8 %use, i8 %v3
+  ret i8 %retVal
+}
+
+define i8 @BinOpSelectBinOpMultiUseRegsWithSelect3(i8 %arg0, i8 %arg1, i1 %whatToReturn) {
+; CHECK-LABEL: @BinOpSelectBinOpMultiUseRegsWithSelect3(
+; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 5, i8 1
+; CHECK-NEXT:    [[RETVAL_V:%.*]] = select i1 [[WHATTORETURN:%.*]], i8 4, i8 [[V3_V]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = or i8 [[ARG0:%.*]], [[RETVAL_V]]
+; CHECK-NEXT:    ret i8 [[RETVAL]]
+;
+  %v0 = icmp eq i8 %arg1, -1
+  %v1 = or i8 4, %arg0
+  %v2 = select i1 %v0, i8 %v1, i8 %arg0
+  %v3 = or i8 1, %v2
+  %retVal = select i1 %whatToReturn, i8 %v1, i8 %v3
+  ret i8 %retVal
+}
+
+define i8 @BinOpSelectBinOpMultiUseRegsWithSelect4(i8 %arg0, i8 %arg1, i1 %whatToReturn) {
+; CHECK-LABEL: @BinOpSelectBinOpMultiUseRegsWithSelect4(
+; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
+; CHECK-NEXT:    [[V1:%.*]] = or i8 [[ARG0:%.*]], 4
+; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
+; CHECK-NEXT:    [[NOT_WHATTORETURN:%.*]] = xor i1 [[WHATTORETURN:%.*]], true
+; CHECK-NEXT:    [[V3:%.*]] = zext i1 [[NOT_WHATTORETURN]] to i8
+; CHECK-NEXT:    [[RETVAL:%.*]] = or i8 [[V2]], [[V3]]
+; CHECK-NEXT:    ret i8 [[RETVAL]]
+;
+  %v0 = icmp eq i8 %arg1, -1
+  %v1 = or i8 4, %arg0
+  %v2 = select i1 %v0, i8 %v1, i8 %arg0
+  %v3 = or i8 1, %v2
+  %retVal = select i1 %whatToReturn, i8 %v2, i8 %v3
+  ret i8 %retVal
+}
+
 define i8 @orSelectOrNoCommonBits1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @orSelectOrNoCommonBits1(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
