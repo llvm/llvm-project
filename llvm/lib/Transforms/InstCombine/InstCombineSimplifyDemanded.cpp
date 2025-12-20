@@ -2106,6 +2106,96 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
       Known.copysign(KnownSign);
       break;
     }
+    case Intrinsic::exp:
+    case Intrinsic::exp2:
+    case Intrinsic::exp10: {
+      if ((DemandedMask &
+           (fcPosZero | fcPosSubnormal | fcPosNormal | fcPosInf)) == fcNone) {
+        // Only returns positive values or nans.
+        if ((DemandedMask & fcNan) == fcNone)
+          return PoisonValue::get(VTy);
+
+        // Only need nan propagation.
+        // Note: Dropping snan quieting.
+        return CI->getArgOperand(0);
+      }
+
+      FPClassTest SrcDemandedMask = DemandedMask & fcNan;
+
+      if (DemandedMask & fcZero) {
+        // exp(-infinity) = 0
+        SrcDemandedMask |= fcNegInf;
+
+        // exp(-largest_normal) = 0
+        //
+        // Negative numbers of sufficiently large magnitude underflow to 0. No
+        // subnormal input has a 0 result.
+        SrcDemandedMask |= fcNegNormal;
+      }
+
+      if (DemandedMask & fcPosSubnormal) {
+        // Negative numbers of sufficiently large magnitude underflow to 0. No
+        // subnormal input has a 0 result.
+        SrcDemandedMask |= fcNegNormal;
+      }
+
+      if (DemandedMask & fcPosNormal) {
+        // exp(0) = 1
+        // exp(+/- smallest_normal) = 1
+        // exp(+/- largest_denormal) = 1
+        // exp(+/- smallest_denormal) = 1
+        SrcDemandedMask |= fcPosNormal | fcSubnormal | fcZero;
+      }
+
+      // exp(inf), exp(largest_normal) = inf
+      if (DemandedMask & fcPosInf)
+        SrcDemandedMask |= fcPosInf | fcPosNormal;
+
+      // TODO: This could really make use of KnownFPClass of specific value
+      // range, (i.e., close enough to 1)
+      if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, Known, Depth + 1))
+        return I;
+
+      /// Propagate nnan-ness to simplify edge case checks.
+      if ((DemandedMask & fcNan) == fcNone)
+        Known.knownNot(fcNan);
+
+      // exp(+/-0) = 1
+      if (Known.isKnownAlways(fcZero))
+        return ConstantFP::get(VTy, 1.0);
+
+      // exp(0 | nan) => x == 0.0 ? 1.0 : x
+      if (Known.isKnownAlways(fcZero | fcNan)) {
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(CI);
+
+        // fadd +/-0, 1.0 => 1.0
+        // fadd nan, 1.0 => nan
+        return Builder.CreateFAdd(CI->getArgOperand(0),
+                                  ConstantFP::get(VTy, 1.0));
+      }
+
+      if (Known.isKnownAlways(fcInf | fcNan)) {
+        // exp(-inf) = 0
+        // exp(+inf) = +inf
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(CI);
+
+        // Note: Dropping canonicalize / quiet of signaling nan.
+        Value *X = CI->getArgOperand(0);
+        Value *IsPosInfOrNan =
+            Builder.CreateFCmpUEQ(X, ConstantFP::getInfinity(VTy));
+        return Builder.CreateSelect(IsPosInfOrNan, X, ConstantFP::getZero(VTy));
+      }
+
+      // Only perform nan propagation.
+      // Note: Dropping canonicalize / quiet of signaling nan.
+      if (Known.isKnownAlways(fcNan))
+        return CI->getArgOperand(0);
+
+      Known.exp();
+      break;
+    }
     case Intrinsic::canonicalize: {
       Type *EltTy = VTy->getScalarType();
 
