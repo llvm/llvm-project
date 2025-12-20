@@ -128,6 +128,7 @@ SmallVector<Register> AMDGPUEarlyRegisterSpilling::getRegistersToSpill(
   MachineBasicBlock *CurMBB = CurMI->getParent();
   bool IsCurMIInLoop = MLI->getLoopFor(CurMI->getParent());
   SmallVector<std::pair<Register, double>> RegCandidates;
+  DenseMap<Register, unsigned> RegNumOfUses;
   MachineLoop *OutermostLoop = nullptr;
   double LoopDistance = 0;
   LLVM_DEBUG(dbgs() << "===========================================\n");
@@ -175,6 +176,7 @@ SmallVector<Register> AMDGPUEarlyRegisterSpilling::getRegistersToSpill(
     if (Uses.empty())
       continue;
 
+    RegNumOfUses[CandidateReg] = Uses.size();
     auto NextUseDist = NUA.getNextUseDistance(CandidateReg, CurMI, Uses);
 
     if (!IsCurMIInLoop) {
@@ -199,11 +201,22 @@ SmallVector<Register> AMDGPUEarlyRegisterSpilling::getRegistersToSpill(
     return {};
 
   // Return the registers with the longest next-use distance.
-  llvm::sort(RegCandidates, [](auto &Pair1, auto &Pair2) {
-    return Pair1.second > Pair2.second;
+  llvm::sort(RegCandidates, [&](auto &Pair1, auto &Pair2) {
+    double NUA1 = Pair1.second;
+    double NUA2 = Pair2.second;
+    if (NUA1 != NUA2)
+      return NUA1 > NUA2;
+    Register Reg1 = Pair1.first;
+    Register Reg2 = Pair2.first;
+    unsigned NumOfUses1 = RegNumOfUses[Reg1];
+    unsigned NumOfUses2 = RegNumOfUses[Reg2];
+    if (NumOfUses1 == NumOfUses2)
+      return Reg1 < Reg2;
+    return NumOfUses1 < NumOfUses2;
   });
 
-  SmallVector<Register> RegistersToSpill(llvm::make_first_range(RegCandidates));
+  SmallVector<Register> RegistersToSpill;
+  RegistersToSpill.reserve(RegCandidates.size());
   for (auto P : RegCandidates)
     RegistersToSpill.push_back(P.first);
 
