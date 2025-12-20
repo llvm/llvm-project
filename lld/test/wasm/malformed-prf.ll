@@ -1,7 +1,7 @@
-; RUN: llc -filetype=obj %s -o %t.instr-prof.o
+; RUN: llc -filetype=obj %s -o %t.o
 ; RUN: llc -filetype=obj %p/Inputs/malformed-prf1.ll -o %t.malformed-prf1.o
 ; RUN: llc -filetype=obj %p/Inputs/malformed-prf2.ll -o %t.malformed-prf2.o
-; RUN: wasm-ld -o %t.wasm %t.instr-prof.o %t.malformed-prf1.o --start-lib %t.malformed-prf2.o --end-lib --gc-sections --no-entry
+; RUN: wasm-ld -o %t.wasm %t.o %t.malformed-prf1.o --start-lib %t.malformed-prf2.o --end-lib --gc-sections --no-entry
 ; RUN: llvm-cov export --object %t.wasm --empty-profile
 
 ; Every covfun record holds a hash of its symbol name, and llvm-cov will exit fatally if
@@ -25,4 +25,3 @@ target triple = "wasm32-unknown-unknown"
 !0 = !{i32 2, !"EnableValueProfiling", i32 0}
 !1 = !{i32 1, !"wchar_size", i32 4}
 !2 = !{!"clang version 21.1.6"}
-
