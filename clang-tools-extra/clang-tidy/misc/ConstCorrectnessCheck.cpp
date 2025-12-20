@@ -33,6 +33,10 @@ AST_MATCHER(ReferenceType, isSpelledAsLValue) {
   return Node.isSpelledAsLValue();
 }
 AST_MATCHER(Type, isDependentType) { return Node.isDependentType(); }
+
+AST_MATCHER(TypeLoc, hasContainedAutoType) {
+  return !TypeLoc.getContainedAutoTypeLoc().isNull();
+}
 } // namespace
 
 ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
@@ -41,6 +45,8 @@ ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
       AnalyzePointers(Options.get("AnalyzePointers", true)),
       AnalyzeReferences(Options.get("AnalyzeReferences", true)),
       AnalyzeValues(Options.get("AnalyzeValues", true)),
+      AnalyzeAutoVariables(Options.get("AnalyzeAutoVariables", true)),
+      AnalyzeLambdas(Options.get("AnalyzeLambdas", true)),
 
       WarnPointersAsPointers(Options.get("WarnPointersAsPointers", true)),
       WarnPointersAsValues(Options.get("WarnPointersAsValues", false)),
@@ -66,6 +72,8 @@ void ConstCorrectnessCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AnalyzePointers", AnalyzePointers);
   Options.store(Opts, "AnalyzeReferences", AnalyzeReferences);
   Options.store(Opts, "AnalyzeValues", AnalyzeValues);
+  Options.store(Opts, "AnalyzeAutoVariables", AnalyzeAutoVariables);
+  Options.store(Opts, "AnalyzeLambdas", AnalyzeLambdas);
 
   Options.store(Opts, "WarnPointersAsPointers", WarnPointersAsPointers);
   Options.store(Opts, "WarnPointersAsValues", WarnPointersAsValues);
@@ -114,7 +122,11 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       isLocal(), hasInitializer(anything()),
       unless(anyOf(ConstType, ConstReference, TemplateType,
                    hasInitializer(isInstantiationDependent()), RValueReference,
-                   FunctionPointerRef, isImplicit(), AllowedType)));
+                   FunctionPointerRef, isImplicit(), AllowedType)),
+      AnalyzeLambdas ? TypeMatcher(anything())
+                     : unless(hasType(cxxRecordDecl(isLambda()))),
+      AnalyzeAutoVariables ? TypeLocMatcher(anything())
+                           : unless(hasTypeLoc(hasContainedAutoType())));
 
   // Match the function scope for which the analysis of all local variables
   // shall be run.
