@@ -958,7 +958,7 @@ public:
     }
 
     if (DirectiveID.getString() == ".tabletype") {
-      // .tabletype SYM, ELEMTYPE[, ADDR_TYPE[, MINSIZE[, MAXSIZE]]]
+      // .tabletype SYM, ELEMTYPE[, ADDR_TYPE][, MINSIZE[, MAXSIZE]]
       auto SymName = expectIdent();
       if (SymName.empty())
         return ParseStatus::Failure;
@@ -980,9 +980,15 @@ public:
         Limits.Flags |= wasm::WASM_LIMITS_FLAG_IS_64;
       }
 
+      // Address type is an optinal parameter with more optional parameters
+      // following.
       auto NextTok = Lexer.peekTok();
 
+      // Check if the next parameter is an address type by checking the token
+      // type.
       if (Lexer.is(AsmToken::Comma) && !NextTok.is(AsmToken::Integer)) {
+        // After confirming the next parameter is the address type,
+        // we can consume the tokens.
         auto AddrType = Lexer.Lex().getString();
         Parser.Lex();
 
