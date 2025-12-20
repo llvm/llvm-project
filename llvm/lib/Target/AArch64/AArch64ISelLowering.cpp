@@ -18479,14 +18479,12 @@ EVT AArch64TargetLowering::getOptimalMemOpType(
 bool AArch64TargetLowering::findOptimalMemOpLowering(
     LLVMContext &Context, std::vector<EVT> &MemOps, unsigned Limit,
     const MemOp &Op, unsigned DstAS, unsigned SrcAS,
-    const AttributeList &FuncAttributes) const {
-  // For non-zero memset with v16i8, don't downgrade if we can extract
-  // the needed size efficiently using
-  // shallExtractConstSplatVectorElementToStore
+    const AttributeList &FuncAttributes, EVT *LargestVT) const {
+  // For non-zero memset with v16i8, don't downgrade. We can extract smaller
+  // stores (i64, i32, i16, i8) from the v16i8 splat efficiently.
   EVT VT = getOptimalMemOpType(Context, Op, FuncAttributes);
   if (VT == MVT::v16i8 && Op.isMemset() && !Op.isZeroMemset() &&
       Op.size() < 16) {
-    Type *VectorTy = VT.getTypeForEVT(Context);
     unsigned Size = Op.size();
     unsigned RemainingSize = Size;
 
@@ -18495,46 +18493,35 @@ bool AArch64TargetLowering::findOptimalMemOpLowering(
     // Use the largest possible stores first to minimize the number of
     // operations.
     while (RemainingSize > 0) {
-      unsigned Index;
       EVT TargetVT;
 
       // Try largest stores first
-      if (RemainingSize >= 8 &&
-          shallExtractConstSplatVectorElementToStore(VectorTy, 64, Index)) {
+      if (RemainingSize >= 8) {
         TargetVT = MVT::i64;
         RemainingSize -= 8;
-      } else if (RemainingSize >= 4 &&
-                 shallExtractConstSplatVectorElementToStore(VectorTy, 32,
-                                                            Index)) {
+      } else if (RemainingSize >= 4) {
         TargetVT = MVT::i32;
         RemainingSize -= 4;
-      } else if (RemainingSize >= 2 &&
-                 shallExtractConstSplatVectorElementToStore(VectorTy, 16,
-                                                            Index)) {
+      } else if (RemainingSize >= 2) {
         TargetVT = MVT::i16;
         RemainingSize -= 2;
-      } else if (RemainingSize >= 1 &&
-                 shallExtractConstSplatVectorElementToStore(VectorTy, 8,
-                                                            Index)) {
+      } else if (RemainingSize >= 1) {
         TargetVT = MVT::i8;
         RemainingSize -= 1;
       } else {
-        // Can't extract this size, fall back to default implementation
+        // Should not reach here, but fall back to default implementation
         break;
       }
 
       MemOps.push_back(TargetVT);
     }
 
-    // If we successfully decomposed the entire size, add v16i8 as LargestVT
+    // If we successfully decomposed the entire size, set LargestVT to v16i8
     // to ensure getMemsetValue generates the efficient vector splat (DUP).
-    // We add v16i8 as an oversized store (larger than RemainingSize which is 0)
-    // to ensure it becomes LargestVT. Since Size will be 0 when we reach it,
-    // getMemsetStores will skip emitting it (it's only used for LargestVT
-    // selection). This satisfies getMemsetStores' requirement that oversized
-    // stores be last with at least 2 operations.
+    // We don't add v16i8 to MemOps since we only need it for value generation.
     if (RemainingSize == 0 && !MemOps.empty()) {
-      MemOps.push_back(VT); // Last: v16i8 (LargestVT, oversized, not emitted)
+      if (LargestVT)
+        *LargestVT = VT; // v16i8 for vector splat generation
       return true;
     }
 
@@ -18542,8 +18529,8 @@ bool AArch64TargetLowering::findOptimalMemOpLowering(
     MemOps.clear();
   }
   // Otherwise, use the default implementation
-  return TargetLowering::findOptimalMemOpLowering(Context, MemOps, Limit, Op,
-                                                  DstAS, SrcAS, FuncAttributes);
+  return TargetLowering::findOptimalMemOpLowering(
+      Context, MemOps, Limit, Op, DstAS, SrcAS, FuncAttributes, LargestVT);
 }
 
 LLT AArch64TargetLowering::getOptimalMemOpLLT(

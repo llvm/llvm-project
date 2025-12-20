@@ -4157,16 +4157,20 @@ public:
     }
   };
 
-  /// Determines the optimal series of memory ops to replace the memset / memcpy.
-  /// Return true if the number of memory ops is below the threshold (Limit).
-  /// Note that this is always the case when Limit is ~0.
-  /// It returns the types of the sequence of memory ops to perform
-  /// memset / memcpy by reference.
-  virtual bool
-  findOptimalMemOpLowering(LLVMContext &Context, std::vector<EVT> &MemOps,
-                           unsigned Limit, const MemOp &Op, unsigned DstAS,
-                           unsigned SrcAS,
-                           const AttributeList &FuncAttributes) const;
+  /// Determines the optimal series of memory ops to replace the memset /
+  /// memcpy. Return true if the number of memory ops is below the threshold
+  /// (Limit). Note that this is always the case when Limit is ~0. It returns
+  /// the types of the sequence of memory ops to perform memset / memcpy by
+  /// reference. If LargestVT is non-null, the target may set it to the largest
+  /// EVT that should be used for generating the memset value (e.g., for vector
+  /// splats). If LargestVT is null or left unchanged, the caller will compute
+  /// it from MemOps.
+  virtual bool findOptimalMemOpLowering(LLVMContext &Context,
+                                        std::vector<EVT> &MemOps,
+                                        unsigned Limit, const MemOp &Op,
+                                        unsigned DstAS, unsigned SrcAS,
+                                        const AttributeList &FuncAttributes,
+                                        EVT *LargestVT = nullptr) const;
 
   /// Check to see if the specified operand of the specified instruction is a
   /// constant integer.  If so, check to see if there are any bits set in the

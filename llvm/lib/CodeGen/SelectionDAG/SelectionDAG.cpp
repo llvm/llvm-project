@@ -8603,7 +8603,7 @@ static SDValue getMemcpyLoadsAndStores(
                                      *SrcAlign, isVol, CopyFromConstant);
   if (!TLI.findOptimalMemOpLowering(
           C, MemOps, Limit, Op, DstPtrInfo.getAddrSpace(),
-          SrcPtrInfo.getAddrSpace(), MF.getFunction().getAttributes()))
+          SrcPtrInfo.getAddrSpace(), MF.getFunction().getAttributes(), nullptr))
     return SDValue();
 
   if (DstAlignCanChange) {
@@ -8798,7 +8798,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
           MemOp::Copy(Size, DstAlignCanChange, Alignment, *SrcAlign,
                       /*IsVolatile*/ true),
           DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
-          MF.getFunction().getAttributes()))
+          MF.getFunction().getAttributes(), nullptr))
     return SDValue();
 
   if (DstAlignCanChange) {
@@ -8913,10 +8913,12 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
   bool IsZeroVal = isNullConstant(Src);
   unsigned Limit = AlwaysInline ? ~0 : TLI.getMaxStoresPerMemset(OptSize);
 
+  EVT LargestVT;
   if (!TLI.findOptimalMemOpLowering(
           C, MemOps, Limit,
           MemOp::Set(Size, DstAlignCanChange, Alignment, IsZeroVal, isVol),
-          DstPtrInfo.getAddrSpace(), ~0u, MF.getFunction().getAttributes()))
+          DstPtrInfo.getAddrSpace(), ~0u, MF.getFunction().getAttributes(),
+          &LargestVT))
     return SDValue();
 
   if (DstAlignCanChange) {
@@ -8945,10 +8947,13 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
   unsigned NumMemOps = MemOps.size();
 
   // Find the largest store and generate the bit pattern for it.
-  EVT LargestVT = MemOps[0];
-  for (unsigned i = 1; i < NumMemOps; i++)
-    if (MemOps[i].bitsGT(LargestVT))
-      LargestVT = MemOps[i];
+  // If target didn't set LargestVT, compute it from MemOps.
+  if (!LargestVT.isSimple()) {
+    LargestVT = MemOps[0];
+    for (unsigned i = 1; i < NumMemOps; i++)
+      if (MemOps[i].bitsGT(LargestVT))
+        LargestVT = MemOps[i];
+  }
   SDValue MemSetValue = getMemsetValue(Src, LargestVT, DAG, dl);
 
   // Prepare AAInfo for loads/stores after lowering this memset.
@@ -8960,20 +8965,10 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
     unsigned VTSize = VT.getSizeInBits() / 8;
     // The target should specify store types that exactly cover the memset size
     // (with the last store potentially being oversized for overlapping stores).
-    // If Size is 0, all bytes have been written by previous stores. The only
-    // valid case for Size == 0 is when the last store in MemOps is oversized
-    // and was added only to ensure LargestVT selection for value generation.
-    // Skip emitting such stores.
-    if (Size == 0) {
-      assert(i == NumMemOps - 1 &&
-             "Target's findOptimalMemOpLowering added more stores than needed");
-      continue;
-    }
-    // For stores that will be emitted, we must have remaining bytes to write.
     assert(Size > 0 && "Target specified more stores than needed in "
                        "findOptimalMemOpLowering");
     if (VTSize > Size) {
-      // Issuing an unaligned load / store pair  that overlaps with the previous
+      // Issuing an unaligned load / store pair that overlaps with the previous
       // pair. Adjust the offset accordingly.
       assert(i == NumMemOps-1 && i != 0);
       DstOff -= VTSize - Size;
@@ -9023,8 +9018,6 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
 
   // After processing all stores, Size should be exactly 0. Any remaining bytes
   // indicate a bug in the target's findOptimalMemOpLowering implementation.
-  // Note: Oversized stores added only for LargestVT selection are skipped when
-  // Size == 0, so Size remains 0, which is correct.
   assert(Size == 0 && "Target's findOptimalMemOpLowering did not specify "
                       "stores that exactly cover the memset size");
 
