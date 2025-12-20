@@ -10,6 +10,7 @@
 #define _LIBCPP___ATOMIC_ATOMIC_H
 
 #include <__atomic/atomic_sync.h>
+#include <__atomic/atomic_waitable_traits.h>
 #include <__atomic/check_memory_order.h>
 #include <__atomic/floating_point_helper.h>
 #include <__atomic/is_always_lock_free.h>

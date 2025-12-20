@@ -10,6 +10,7 @@
 #define _LIBCPP___ATOMIC_ATOMIC_FLAG_H
 
 #include <__atomic/atomic_sync.h>
+#include <__atomic/atomic_waitable_traits.h>
 #include <__atomic/contention_t.h>
 #include <__atomic/memory_order.h>
 #include <__atomic/support.h>
