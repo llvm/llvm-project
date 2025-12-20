@@ -325,7 +325,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRASL)
                                      .addReg(SystemZ::R7D)
                                      .addExpr(Lower.getExpr(MI->getOperand(0),
-                                                            SystemZ::S_PLT)));
+                                                            SystemZ::S_None)));
     emitCallInformation(CallType::BRASL7);
     return;
 

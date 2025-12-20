@@ -1,4 +1,4 @@
-; RUN: llc -mtriple s390x-zos < %s | FileCheck %s
+; RUN: llc -mtriple s390x-zos -emit-gnuas-syntax-on-zos=0 < %s | FileCheck %s
 
 define float @sqrt_ieee(float %x) {
 entry:
@@ -31,17 +31,18 @@ declare fp128 @llvm.exp2.f128(fp128)
 
 ; Check the calls in the ADA.
 ; CHECK: stdin#C CSECT
-; CHECK: C_WSA64 CATTR ALIGN(4),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(stdin#S)
+; CHECK: C_WSA64 CATTR ALIGN(4),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(stdi
+; CHECK-NEXT:                in#S)
 ; CHECK: stdin#S XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)
 
 ; Check that there is no call to sqrt.
-; CHECK-NOT:  .quad   R(@@WSQT@B)
-; CHECK-NOT:  .quad   V(@@WSQT@B)
+; CHECK-NOT:  DC   RD(@@WSQT@B)
+; CHECK-NOT:  DC   VD(@@WSQT@B)
 
 ; Check that there is the correct library call.
-; CHECK:      .quad   R(@@FCOS@B)
-; CHECK-NEXT: .quad   V(@@FCOS@B)
-; CHECK:      .quad   R(@@SSIN@B)
-; CHECK-NEXT: .quad   V(@@SSIN@B)
-; CHECK:      .quad   R(@@LXP2@B)
-; CHECK-NEXT: .quad   V(@@LXP2@B)
+; CHECK:      DC   RD(@@FCOS@B)
+; CHECK-NEXT: DC   VD(@@FCOS@B)
+; CHECK:      DC   RD(@@SSIN@B)
+; CHECK-NEXT: DC   VD(@@SSIN@B)
+; CHECK:      DC   RD(@@LXP2@B)
+; CHECK-NEXT: DC   VD(@@LXP2@B)
