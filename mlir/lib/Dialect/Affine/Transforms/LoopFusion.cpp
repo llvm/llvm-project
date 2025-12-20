@@ -26,6 +26,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iomanip>
 #include <optional>
@@ -95,8 +96,8 @@ static bool canRemoveSrcNodeAfterFusion(
     // Otherwise, the src loop can't be removed.
     if (fusedLoopInsPoint != depNodeOp &&
         !fusedLoopInsPoint->isBeforeInBlock(depNodeOp)) {
-      LLVM_DEBUG(llvm::dbgs() << "Src loop can't be removed: dst loop doesn't "
-                                 "dominate dependence\n");
+      LDBG() << "Src loop can't be removed: dst loop doesn't "
+             << "dominate dependence";
       return false;
     }
 
@@ -109,14 +110,13 @@ static bool canRemoveSrcNodeAfterFusion(
   if (hasOutDepsAfterFusion || !escapingMemRefs.empty()) {
     std::optional<bool> isMaximal = fusionSlice.isMaximal();
     if (!isMaximal) {
-      LLVM_DEBUG(llvm::dbgs() << "Src loop can't be removed: can't determine "
-                                 "if fusion is maximal\n");
+      LDBG() << "Src loop can't be removed: can't determine "
+             << "if fusion is maximal";
       return false;
     }
 
     if (!*isMaximal) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "Src loop can't be removed: fusion is not maximal\n");
+      LDBG() << "Src loop can't be removed: fusion is not maximal";
       return false;
     }
   }
@@ -280,19 +280,19 @@ static std::optional<double> getAdditionalComputeFraction(
     AffineForOp srcForOp, AffineForOp dstForOp, unsigned depth,
     ArrayRef<ComputationSliceState> depthSliceUnions, int64_t &sliceCost,
     int64_t &fusedLoopNestComputeCost) {
-  LLVM_DEBUG(llvm::dbgs() << "Determining additional compute fraction...\n";);
+  LDBG() << "Determining additional compute fraction...";
   // Compute cost of sliced and unsliced src loop nest.
   // Walk src loop nest and collect stats.
   LoopNestStats srcLoopNestStats;
   if (!getLoopNestStats(srcForOp, &srcLoopNestStats)) {
-    LLVM_DEBUG(llvm::dbgs() << "Failed to get source loop nest stats.\n");
+    LDBG() << "Failed to get source loop nest stats.";
     return std::nullopt;
   }
 
   // Compute cost of dst loop nest.
   LoopNestStats dstLoopNestStats;
   if (!getLoopNestStats(dstForOp, &dstLoopNestStats)) {
-    LLVM_DEBUG(llvm::dbgs() << "Failed to get destination loop nest stats.\n");
+    LDBG() << "Failed to get destination loop nest stats.";
     return std::nullopt;
   }
 
@@ -305,14 +305,14 @@ static std::optional<double> getAdditionalComputeFraction(
   const ComputationSliceState &slice = depthSliceUnions[depth - 1];
   // Skip slice union if it wasn't computed for this depth.
   if (slice.isEmpty()) {
-    LLVM_DEBUG(llvm::dbgs() << "Slice wasn't computed.\n");
+    LDBG() << "Slice wasn't computed.";
     return std::nullopt;
   }
 
   if (!getFusionComputeCost(srcForOp, srcLoopNestStats, dstForOp,
                             dstLoopNestStats, slice,
                             &fusedLoopNestComputeCost)) {
-    LLVM_DEBUG(llvm::dbgs() << "Unable to compute fusion compute cost\n");
+    LDBG() << "Unable to compute fusion compute cost";
     return std::nullopt;
   }
 
@@ -349,9 +349,8 @@ static Value createPrivateMemRef(AffineForOp forOp,
                     MemRefAccess bM(cast<AffineWriteOpInterface>(b));
                     return aM == bM;
                   })) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "Private memref creation unsupported for multiple producer "
-                  "stores with different access functions.\n");
+    LDBG() << "Private memref creation unsupported for multiple producer "
+           << "stores with different access functions.";
     return nullptr;
   }
 
@@ -456,8 +455,7 @@ static Value createPrivateMemRef(AffineForOp forOp,
   assert(succeeded(res) &&
          "replaceAllMemrefUsesWith should always succeed here");
   (void)res;
-  LLVM_DEBUG(llvm::dbgs() << "Created private memref of type: " << newMemRefType
-                          << '\n');
+  LDBG() << "Created private memref of type: " << newMemRefType;
   return newMemRef;
 }
 
@@ -506,15 +504,12 @@ static bool isFusionProfitable(AffineForOp srcForOp,
                                unsigned maxLegalFusionDepth,
                                unsigned *dstLoopDepth,
                                double computeToleranceThreshold) {
-  LLVM_DEBUG({
-    llvm::dbgs()
-        << "Checking whether fusion is profitable between source nest:\n";
-    llvm::dbgs() << ' ' << srcForOp << " and destination nest:\n";
-    llvm::dbgs() << dstForOp << "\n";
-  });
+  LDBG() << "Checking whether fusion is profitable between source nest:";
+  LDBG() << ' ' << srcForOp << " and destination nest:";
+  LDBG() << dstForOp;
 
   if (maxLegalFusionDepth == 0) {
-    LLVM_DEBUG(llvm::dbgs() << "Can't fuse: maxLegalFusionDepth is 0\n");
+    LDBG() << "Can't fuse: maxLegalFusionDepth is 0";
     return false;
   }
 
@@ -538,8 +533,8 @@ static bool isFusionProfitable(AffineForOp srcForOp,
   // TODO: Suppport multiple producer stores in profitability
   // analysis.
   if (producerStores.size() > 1) {
-    LLVM_DEBUG(llvm::dbgs() << "Limited profitability analysis. Not "
-                               "supported for multiple producer store case.\n");
+    LDBG() << "Limited profitability analysis. Not "
+           << "supported for multiple producer store case.";
     int64_t sliceCost;
     int64_t fusedLoopNestComputeCost;
     // We will still fuse if fusion obeys the specified compute
@@ -548,12 +543,11 @@ static bool isFusionProfitable(AffineForOp srcForOp,
         srcForOp, dstForOp, maxLegalFusionDepth, depthSliceUnions, sliceCost,
         fusedLoopNestComputeCost);
     if (!fraction || fraction > computeToleranceThreshold) {
-      LLVM_DEBUG(llvm::dbgs() << "Additional computation exceeds "
-                                 "compute tolerance. Not fusing.\n");
+      LDBG() << "Additional computation exceeds "
+             << "compute tolerance. Not fusing.";
       return false;
     }
-    LLVM_DEBUG(llvm::dbgs()
-               << "Considering fusion profitable at max legal depth.\n");
+    LDBG() << "Considering fusion profitable at max legal depth.";
     return true;
   }
 
@@ -575,8 +569,7 @@ static bool isFusionProfitable(AffineForOp srcForOp,
   // Compute src loop nest write region size.
   MemRefRegion srcWriteRegion(srcStoreOp->getLoc());
   if (failed(srcWriteRegion.compute(srcStoreOp, /*loopDepth=*/0))) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "Unable to compute MemRefRegion for source operation\n");
+    LDBG() << "Unable to compute MemRefRegion for source operation";
     return false;
   }
 
@@ -610,8 +603,7 @@ static bool isFusionProfitable(AffineForOp srcForOp,
         getAdditionalComputeFraction(srcForOp, dstForOp, i, depthSliceUnions,
                                      sliceCost, fusedLoopNestComputeCost);
     if (!mayAdditionalComputeFraction) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "Can't determine additional compute fraction.\n");
+      LDBG() << "Can't determine additional compute fraction.";
       continue;
     }
     double additionalComputeFraction = *mayAdditionalComputeFraction;
@@ -621,9 +613,7 @@ static bool isFusionProfitable(AffineForOp srcForOp,
     // depth 'i'.
     MemRefRegion sliceWriteRegion(srcStoreOp->getLoc());
     if (failed(sliceWriteRegion.compute(srcStoreOp, /*loopDepth=*/0, &slice))) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "Failed to compute slice write region at loopDepth: " << i
-                 << "\n");
+      LDBG() << "Failed to compute slice write region at loopDepth: " << i;
       continue;
     }
 
@@ -631,9 +621,7 @@ static bool isFusionProfitable(AffineForOp srcForOp,
         sliceWriteRegion.getRegionSize();
     if (!maybeSliceWriteRegionSizeBytes.has_value() ||
         *maybeSliceWriteRegionSizeBytes == 0) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "Failed to get slice write region size at loopDepth: " << i
-                 << "\n");
+      LDBG() << "Failed to get slice write region size at loopDepth: " << i;
       continue;
     }
     int64_t sliceWriteRegionSizeBytes = *maybeSliceWriteRegionSizeBytes;
@@ -650,9 +638,8 @@ static bool isFusionProfitable(AffineForOp srcForOp,
           << "   storage reduction factor: " << storageReduction << "x\n"
           << "   fused nest cost: " << fusedLoopNestComputeCost << "\n"
           << "   src write region size: " << srcWriteRegionSizeBytes << "\n"
-          << "   slice write region size: " << sliceWriteRegionSizeBytes
-          << "\n";
-      llvm::dbgs() << msg.str();
+          << "   slice write region size: " << sliceWriteRegionSizeBytes;
+      LDBG() << msg.str();
     });
 
     // TODO: This is a placeholder cost model.
@@ -671,28 +658,24 @@ static bool isFusionProfitable(AffineForOp srcForOp,
   // A simple cost model: fuse if it reduces the memory footprint.
 
   if (!bestDstLoopDepth) {
-    LLVM_DEBUG(
-        llvm::dbgs()
-        << "All fusion choices involve more than the threshold amount of "
-           "redundant computation; NOT fusing.\n");
+    LDBG() << "All fusion choices involve more than the threshold amount of "
+           << "redundant computation; NOT fusing.";
     return false;
   }
 
   if (!bestDstLoopDepth) {
-    LLVM_DEBUG(llvm::dbgs() << "no fusion depth could be evaluated.\n");
+    LDBG() << "no fusion depth could be evaluated.";
     return false;
   }
 
   // Set dstLoopDepth based on best values from search.
   *dstLoopDepth = *bestDstLoopDepth;
 
-  LLVM_DEBUG(
-      llvm::dbgs() << " LoopFusion fusion stats:"
-                   << "\n  best loop depth: " << bestDstLoopDepth
-                   << "\n  src loop nest compute cost: " << srcLoopNestCost
-                   << "\n  dst loop nest compute cost: " << dstLoopNestCost
-                   << "\n  fused loop nest compute cost: "
-                   << minFusedLoopNestComputeCost << "\n");
+  LDBG() << " LoopFusion fusion stats:";
+  LDBG() << "  best loop depth: " << bestDstLoopDepth;
+  LDBG() << "  src loop nest compute cost: " << srcLoopNestCost;
+  LDBG() << "  dst loop nest compute cost: " << dstLoopNestCost;
+  LDBG() << "  fused loop nest compute cost: " << minFusedLoopNestComputeCost;
 
   auto dstMemSize = getMemoryFootprintBytes(dstForOp);
   auto srcMemSize = getMemoryFootprintBytes(srcForOp);
@@ -700,8 +683,7 @@ static bool isFusionProfitable(AffineForOp srcForOp,
   std::optional<double> storageReduction;
 
   if (!dstMemSize || !srcMemSize) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "  fusion memory benefit cannot be evaluated; NOT fusing.\n");
+    LDBG() << "  fusion memory benefit cannot be evaluated; NOT fusing.";
     return false;
   }
 
@@ -711,13 +693,13 @@ static bool isFusionProfitable(AffineForOp srcForOp,
   assert(sliceMemEstimate && "expected value");
   auto fusedMem = dstMemSizeVal + *sliceMemEstimate;
 
-  LLVM_DEBUG(llvm::dbgs() << "   src mem: " << srcMemSizeVal << "\n"
-                          << "   dst mem: " << dstMemSizeVal << "\n"
-                          << "   fused mem: " << fusedMem << "\n"
-                          << "   slice mem: " << sliceMemEstimate << "\n");
+  LDBG() << "   src mem: " << srcMemSizeVal;
+  LDBG() << "   dst mem: " << dstMemSizeVal;
+  LDBG() << "   fused mem: " << fusedMem;
+  LDBG() << "   slice mem: " << sliceMemEstimate;
 
   if (static_cast<long>(fusedMem) > srcMemSizeVal + dstMemSizeVal) {
-    LLVM_DEBUG(llvm::dbgs() << "Fusion is not profitable; NOT fusing.\n");
+    LDBG() << "Fusion is not profitable; NOT fusing.";
     return false;
   }
   storageReduction =
@@ -735,8 +717,8 @@ static bool isFusionProfitable(AffineForOp srcForOp,
         << std::setprecision(2) << additionalComputeFraction
         << "% redundant computation and a ";
     msg << (storageReduction ? std::to_string(*storageReduction) : "<unknown>");
-    msg << "% storage reduction.\n";
-    llvm::dbgs() << msg.str();
+    msg << "% storage reduction.";
+    LDBG() << msg.str();
   });
 
   return true;
@@ -896,7 +878,7 @@ public:
   /// No fusion is performed when producers with a user count greater than
   /// `maxSrcUserCount` for any of the memrefs involved.
   void performFusionsIntoDest(unsigned dstId, unsigned maxSrcUserCount) {
-    LLVM_DEBUG(llvm::dbgs() << "Evaluating dst loop " << dstId << "\n");
+    LDBG() << "Evaluating dst loop " << dstId;
     // Skip if this node was removed (fused into another node).
     if (mdg->nodes.count(dstId) == 0)
       return;
@@ -910,7 +892,7 @@ public:
     if (dstNode->op->getNumResults() > 0)
       return;
 
-    LLVM_DEBUG(llvm::dbgs() << "Evaluating dst loop " << dstId << "\n");
+    LDBG() << "Evaluating dst loop " << dstId;
 
     // Sink sequential loops in 'dstNode' (and thus raise parallel loops)
     // while preserving relative order. This can increase the maximum loop
@@ -937,18 +919,14 @@ public:
         auto *srcNode = mdg->getNode(srcId);
         auto srcAffineForOp = cast<AffineForOp>(srcNode->op);
 
-        LLVM_DEBUG(llvm::dbgs()
-                   << "Trying to fuse producer loop nest " << srcId
-                   << " with consumer loop nest " << dstId << "\n");
-        LLVM_DEBUG(llvm::dbgs() << "Compute tolerance threshold: "
-                                << computeToleranceThreshold << '\n');
-        LLVM_DEBUG(llvm::dbgs()
-                   << "Producer loop nest:\n"
-                   << *srcNode->op << "\n and consumer loop nest:\n"
-                   << *dstNode->op << '\n');
+        LDBG() << "Trying to fuse producer loop nest " << srcId
+               << " with consumer loop nest " << dstId;
+        LDBG() << "Compute tolerance threshold: " << computeToleranceThreshold;
+        LDBG() << "Producer loop nest:";
+        LDBG() << *srcNode->op << " and consumer loop nest:";
+        LDBG() << *dstNode->op;
 
-        LLVM_DEBUG(llvm::dbgs() << "Evaluating src loop " << srcId
-                                << " for dst loop " << dstId << "\n");
+        LDBG() << "Evaluating src loop " << srcId << " for dst loop " << dstId;
 
         // Skip if 'srcNode' is a loop nest returning values.
         // TODO: support loop nests that return values.
@@ -1019,19 +997,16 @@ public:
                                    &depthSliceUnions[i - 1], strategy);
           if (result.value == FusionResult::Success) {
             maxLegalFusionDepth = i;
-            LLVM_DEBUG(llvm::dbgs()
-                       << "Found valid slice for depth: " << i << '\n');
+            LDBG() << "Found valid slice for depth: " << i;
           }
         }
 
         if (maxLegalFusionDepth == 0) {
-          LLVM_DEBUG(llvm::dbgs()
-                     << "Can't fuse: fusion is not legal at any depth\n");
+          LDBG() << "Can't fuse: fusion is not legal at any depth";
           continue;
         }
 
-        LLVM_DEBUG(llvm::dbgs() << "Max legal depth for fusion: "
-                                << maxLegalFusionDepth << '\n');
+        LDBG() << "Max legal depth for fusion: " << maxLegalFusionDepth;
 
         double computeToleranceThresholdToUse = computeToleranceThreshold;
 
@@ -1041,7 +1016,7 @@ public:
         // producer-consumer memref access for example). Check this and allow
         // fusion accordingly.
         if (hasCyclicDependence(srcAffineForOp)) {
-          LLVM_DEBUG(llvm::dbgs() << "Source nest has a cyclic dependence.\n");
+          LDBG() << "Source nest has a cyclic dependence.";
           // Maximal fusion does not check for compute tolerance threshold; so
           // perform the maximal fusion only when the redundanation computation
           // is zero.
@@ -1054,18 +1029,15 @@ public:
                 srcForOp, dstForOp, maxLegalFusionDepth, depthSliceUnions,
                 sliceCost, fusedLoopNestComputeCost);
             if (!fraction || fraction > 0) {
-              LLVM_DEBUG(
-                  llvm::dbgs()
-                  << "Can't perform maximal fusion with a cyclic dependence "
-                     "and non-zero additional compute.\n");
+              LDBG() << "Can't perform maximal fusion with a cyclic dependence "
+                     << "and non-zero additional compute.";
               return;
             }
           } else {
             // Set redundant computation tolerance to zero regardless of what
             // the user specified. Without this, fusion would be invalid.
-            LLVM_DEBUG(llvm::dbgs()
-                       << "Setting compute tolerance to zero since "
-                          "source has a cylic dependence.\n");
+            LDBG() << "Setting compute tolerance to zero since "
+                   << "source has a cylic dependence.";
             computeToleranceThresholdToUse = 0;
           }
         }
@@ -1108,8 +1080,7 @@ public:
           if (canCreatePrivateMemRef(memref, srcEscapingMemRefs, srcId, dstId,
                                      removeSrcNode)) {
             // Create a private version of this memref.
-            LLVM_DEBUG(llvm::dbgs()
-                       << "Creating private memref for " << memref << '\n');
+            LDBG() << "Creating private memref for " << memref;
             // Create a private version of this memref.
             privateMemrefs.insert(memref);
           }
@@ -1119,10 +1090,9 @@ public:
         fuseLoops(srcAffineForOp, dstAffineForOp, bestSlice);
         dstNodeChanged = true;
 
-        LLVM_DEBUG(llvm::dbgs()
-                   << "Fused src loop " << srcId << " into dst loop " << dstId
-                   << " at depth " << bestDstLoopDepth << ":\n"
-                   << dstAffineForOp << "\n");
+        LDBG() << "Fused src loop " << srcId << " into dst loop " << dstId
+               << " at depth " << bestDstLoopDepth << ":";
+        LDBG() << dstAffineForOp;
 
         // Move 'dstAffineForOp' before 'insertPointInst' if needed.
         if (fusedLoopInsPoint != dstAffineForOp)
@@ -1180,8 +1150,7 @@ public:
             dstLoopCollector.memrefFrees);
 
         if (removeSrcNode) {
-          LLVM_DEBUG(llvm::dbgs()
-                     << "Removing src loop " << srcId << " after fusion\n");
+          LDBG() << "Removing src loop " << srcId << " after fusion";
           // srcNode is no longer valid after it is removed from mdg.
           srcAffineForOp.erase();
           mdg->removeNode(srcId);
@@ -1196,7 +1165,7 @@ public:
   /// user count greater than `maxSrcUserCount` for any of the memrefs involved
   /// are encountered.
   void fuseProducerConsumerNodes(unsigned maxSrcUserCount) {
-    LLVM_DEBUG(llvm::dbgs() << "--- Producer/Consumer Fusion ---\n");
+    LDBG() << "--- Producer/Consumer Fusion ---";
     init();
     while (!worklist.empty()) {
       unsigned dstId = worklist.back();
@@ -1208,7 +1177,7 @@ public:
   // Visits each node in the graph, and for each node, attempts to fuse it with
   // its sibling nodes (nodes which share a parent, but no dependence edges).
   void fuseSiblingNodes() {
-    LLVM_DEBUG(llvm::dbgs() << "--- Sibling Fusion ---\n");
+    LDBG() << "--- Sibling Fusion ---";
     init();
     while (!worklist.empty()) {
       unsigned dstId = worklist.back();
@@ -1290,8 +1259,7 @@ public:
           maxLegalFusionDepth = i;
       }
 
-      LLVM_DEBUG(llvm::dbgs() << "Max legal depth for fusion: "
-                              << maxLegalFusionDepth << '\n');
+      LDBG() << "Max legal depth for fusion: " << maxLegalFusionDepth;
 
       // Skip if fusion is not feasible at any loop depths.
       if (maxLegalFusionDepth == 0)
@@ -1305,7 +1273,7 @@ public:
       // producer-consumer memref access for example). Check this and allow
       // fusion accordingly.
       if (hasCyclicDependence(sibAffineForOp)) {
-        LLVM_DEBUG(llvm::dbgs() << "Source nest has a cyclic dependence.\n");
+        LDBG() << "Source nest has a cyclic dependence.";
         // Maximal fusion does not check for compute tolerance threshold; so
         // perform the maximal fusion only when the redundanation computation is
         // zero.
@@ -1317,17 +1285,15 @@ public:
               sibAffineForOp, dstForOp, maxLegalFusionDepth, depthSliceUnions,
               sliceCost, fusedLoopNestComputeCost);
           if (!fraction || fraction > 0) {
-            LLVM_DEBUG(
-                llvm::dbgs()
-                << "Can't perform maximal fusion with a cyclic dependence "
-                   "and non-zero additional compute.\n");
+            LDBG() << "Can't perform maximal fusion with a cyclic dependence "
+                   << "and non-zero additional compute.";
             return;
           }
         } else {
           // Set redundant computation tolerance to zero regardless of what the
           // user specified. Without this, fusion would be invalid.
-          LLVM_DEBUG(llvm::dbgs() << "Setting compute tolerance to zero since "
-                                     "source has a cyclic dependence.\n");
+          LDBG() << "Setting compute tolerance to zero since "
+                 << "source has a cyclic dependence.";
           computeToleranceThresholdToUse = 0.0;
         }
       }
@@ -1357,8 +1323,7 @@ public:
       // slice is used in the destination.
       auto isMaximal = bestSlice.isMaximal();
       if (!isMaximal.value_or(false)) {
-        LLVM_DEBUG(llvm::dbgs()
-                   << "Slice isn't maximal; not performing sibling fusion.\n");
+        LDBG() << "Slice isn't maximal; not performing sibling fusion.";
         continue;
       }
 
@@ -1375,10 +1340,9 @@ public:
       if (insertPointInst != dstForInst)
         dstForInst->moveBefore(insertPointInst);
 
-      LLVM_DEBUG(llvm::dbgs()
-                 << "Fused sibling nest " << sibId << " into destination nest "
-                 << dstNode->id << " at depth " << bestDstLoopDepth << ":\n"
-                 << dstAffineForOp << "\n");
+      LDBG() << "Fused sibling nest " << sibId << " into destination nest "
+             << dstNode->id << " at depth " << bestDstLoopDepth << ":";
+      LDBG() << dstAffineForOp;
 
       // Update data dependence graph state post fusion.
       updateStateAfterSiblingFusion(sibNode, dstNode);
@@ -1556,7 +1520,7 @@ public:
 void LoopFusion::runOnBlock(Block *block) {
   MemRefDependenceGraph g(*block);
   if (!g.init()) {
-    LLVM_DEBUG(llvm::dbgs() << "MDG init failed\n");
+    LDBG() << "MDG init failed";
     return;
   }
 

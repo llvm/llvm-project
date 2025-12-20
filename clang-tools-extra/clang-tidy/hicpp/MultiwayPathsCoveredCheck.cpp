@@ -1,4 +1,4 @@
-//===--- MultiwayPathsCoveredCheck.cpp - clang-tidy------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -152,7 +152,7 @@ void MultiwayPathsCoveredCheck::handleSwitchWithoutDefault(
   assert(CaseCount > 0 && "Switch statement without any case found. This case "
                           "should be excluded by the matcher and is handled "
                           "separately.");
-  std::size_t MaxPathsPossible = [&]() {
+  const std::size_t MaxPathsPossible = [&]() {
     if (const auto *GeneralCondition =
             Result.Nodes.getNodeAs<DeclRefExpr>("non-enum-condition")) {
       return getNumberOfPossibleValues(GeneralCondition->getType(),

@@ -104,7 +104,7 @@ void OpAsmPrinter::printFunctionalType(Operation *op) {
   // it is a function (avoiding a grammar ambiguity).
   bool wrapped = op->getNumResults() != 1;
   if (!wrapped && op->getResult(0).getType() &&
-      llvm::isa<FunctionType>(op->getResult(0).getType()))
+      isa<FunctionType>(op->getResult(0).getType()))
     wrapped = true;
 
   if (wrapped)
@@ -1090,9 +1090,12 @@ unsigned AliasInitializer::uniqueAliasNameIndex(
   }
   // Otherwise, we had a conflict - probe until we find a unique name.
   SmallString<64> probeAlias(alias);
+  size_t probeSize = probeAlias.size();
   // alias with trailing digit will be printed as _N
-  if (isdigit(alias.back()))
+  if (isdigit(alias.back())) {
     probeAlias.push_back('_');
+    probeSize++;
+  }
   // nameCounts start from 1 because 0 is not printed in SymbolAlias.
   if (nameCounts[probeAlias] == 0)
     nameCounts[probeAlias] = 1;
@@ -1106,7 +1109,7 @@ unsigned AliasInitializer::uniqueAliasNameIndex(
       return nameIndex;
     }
     // Reset probeAlias to the original alias for the next iteration.
-    probeAlias.resize(alias.size() + isdigit(alias.back()) ? 1 : 0);
+    probeAlias.resize(probeSize);
   }
 }
 
@@ -2032,7 +2035,7 @@ private:
 };
 
 template <typename Range>
-void printDimensionList(raw_ostream &stream, Range &&shape) {
+static void printDimensionList(raw_ostream &stream, Range &&shape) {
   llvm::interleave(
       shape, stream,
       [&stream](const auto &dimSize) {
@@ -2200,10 +2203,9 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
           os << '>';
         }
         os << '[';
-        interleave(
-            loc.getLocations(),
-            [&](Location loc) { printLocationInternal(loc, pretty); },
-            [&]() { os << ", "; });
+        interleaveComma(loc.getLocations(), [&](Location loc) {
+          printLocationInternal(loc, pretty);
+        });
         os << ']';
       })
       .Default([&](LocationAttr loc) {
@@ -2836,6 +2838,19 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         os << '>';
       })
       .Case<NoneType>([&](Type) { os << "none"; })
+      .Case<GraphType>([&](GraphType graphTy) {
+        os << '(';
+        interleaveComma(graphTy.getInputs(), [&](Type ty) { printType(ty); });
+        os << ") -> ";
+        ArrayRef<Type> results = graphTy.getResults();
+        if (results.size() == 1 && !isa<FunctionType, GraphType>(results[0])) {
+          printType(results[0]);
+        } else {
+          os << '(';
+          interleaveComma(results, [&](Type ty) { printType(ty); });
+          os << ')';
+        }
+      })
       .Default([&](Type type) { return printDialectType(type); });
 }
 

@@ -25,7 +25,6 @@
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/ADT/SmallSet.h"
 
 namespace mlir {
 namespace bufferization {
@@ -525,7 +524,19 @@ struct ControlDropUnitDims {
   RankReductionStrategy rankReductionStrategy =
       RankReductionStrategy::ReassociativeReshape;
 
+  /// Instances of this type are used to control which dimensions of an operand
+  /// are considered for dropping unit extent dimensions. The parameter to the
+  /// function is the operation itself, the expected return is a list of
+  /// dimensions to consider for dropping unit extent dimensions. If the
+  /// operation should not be have any dimensions dropped, implementations
+  /// should return an empty list.
   using ControlFnTy = std::function<SmallVector<unsigned>(Operation *)>;
+
+  /// Function to control which dimensions, if any, are to be considered for
+  /// dropping unit extent dimensions. The default behavior is to consider all
+  /// dimensions of a \c linalg.generic or \c tensor.pad operation for dropping.
+  /// Users of the \ref dropUnitDims interface can override the default behavior
+  /// by setting this member to their own implementation.
   ControlFnTy controlFn = [](Operation *op) {
     if (auto genericOp = dyn_cast_or_null<GenericOp>(op)) {
       return llvm::to_vector(llvm::seq<unsigned>(0, genericOp.getNumLoops()));
@@ -536,6 +547,79 @@ struct ControlDropUnitDims {
     }
     return SmallVector<unsigned>{};
   };
+
+  /// Instances of this type are used to control how operand values are
+  /// collapsed after dropping unit extent dimensions. Next to the control
+  /// struct, rewriter and location, the function receives the operand value to
+  /// collapse, the new target shape and how old dimensions should be grouped.
+  /// The function needs to insert the necessary operations to collapse the
+  /// operand to the target shape and returns the new operand value.
+  /// If the operand should not be collapsed, the function should return
+  /// failure, leading to the transformation to be aborted.
+  using CollapseFnTy = std::function<FailureOr<Value>(
+      RewriterBase &, Location, Value, ArrayRef<int64_t>,
+      ArrayRef<ReassociationIndices>, const ControlDropUnitDims &)>;
+
+  /// Function to control how operands are collapsed into their new target shape
+  /// after dropping unit extent dimensions. For the default behavior
+  /// \see linalg::collapseValue.
+  /// Users of the \ref dropUnitDims interface can override the default behavior
+  /// by setting this member to their own implementation.
+  CollapseFnTy collapseFn =
+      [](RewriterBase &rewriter, Location loc, Value operand,
+         ArrayRef<int64_t> targetShape,
+         ArrayRef<ReassociationIndices> reassociation,
+         const ControlDropUnitDims &control) -> FailureOr<Value> {
+    return collapseValue(rewriter, loc, operand, targetShape, reassociation,
+                         control);
+  };
+
+  /// Instances of this type are used to control how result values are expanded
+  /// into their original shape after dropping unit extent dimensions. Next to
+  /// the control construct, rewriter and location, the function recieves the
+  /// result value, the original value to replace and and information on how the
+  /// new dimensions were grouped.
+  /// The function needs to insert the necessary operations to expand the
+  /// result to the original shape and returns the new result value.
+  /// If the result should not be expanded, the function should return
+  /// failure, leading to the transformation to be aborted.
+  using ExpandFnTy = std::function<FailureOr<Value>(
+      RewriterBase &, Location, Value, Value, ArrayRef<ReassociationIndices>,
+      const ControlDropUnitDims &)>;
+
+  /// Function to control how results are expanded into their original shape
+  /// after dropping unit extent dimensions. The default behavior
+  /// \see linalg::expandValue.
+  /// Users of the \ref dropUnitDims interface can override the default behavior
+  /// by setting this member to their own implementation.
+  ExpandFnTy expandFn =
+      [](RewriterBase &rewriter, Location loc, Value result, Value origDest,
+         ArrayRef<ReassociationIndices> reassociation,
+         const ControlDropUnitDims &control) -> FailureOr<Value> {
+    return expandValue(rewriter, loc, result, origDest, reassociation, control);
+  };
+
+private:
+  /// Collapse the given \p value to \p targetShape. The \p reassociation is
+  /// used when `rankReductionStrategy` of \p control is set to
+  /// `RankReductionStrategy::ReassociativeReshape`. Will return failure if the
+  /// operand has memref type with a non-identity layout or tensor type with an
+  /// encoding.
+  static FailureOr<Value>
+  collapseValue(RewriterBase &rewriter, Location loc, Value operand,
+                ArrayRef<int64_t> targetShape,
+                ArrayRef<ReassociationIndices> reassociation,
+                const ControlDropUnitDims &control);
+
+  /// Expand the given \p value so that the type matches the type of \p
+  /// origDest. The \p reassociation is used when `rankReductionStrategy` of \p
+  /// control is set to `RankReductionStrategy::ReassociativeReshape`. Will
+  /// return failure if the original destination has tensor type with an
+  /// encoding.
+  static FailureOr<Value>
+  expandValue(RewriterBase &rewriter, Location loc, Value result,
+              Value origDest, ArrayRef<ReassociationIndices> reassociation,
+              const ControlDropUnitDims &control);
 };
 
 struct DropUnitDimsResult {
@@ -547,10 +631,21 @@ using DroppedUnitDimsBuilder = std::function<IndexingMapOpInterface(
     ArrayRef<Value> newOperands, ArrayRef<AffineMap> newIndexingMaps,
     const llvm::SmallDenseSet<unsigned> &droppedDims)>;
 
+/// Drop unit extent dimensions from the \p op and its operands.
+/// The transformation is aborted if unit dimensions cannot be dropped from any
+/// of the operands. Note that this function may insert trivially dead
+/// operations if the transformation is aborted and should therefore not be
+/// called from greedy drivers.
 FailureOr<DropUnitDimsResult>
 dropUnitDims(RewriterBase &rewriter, IndexingMapOpInterface op,
              const DroppedUnitDimsBuilder &droppedUnitDimsBuilder,
              const ControlDropUnitDims &options);
+
+/// Drop unit extent dimensions from the \p genericOp and its operands.
+/// The transformation is aborted if unit dimensions cannot be dropped from any
+/// of the operands. Note that this function may insert trivially dead
+/// operations if the transformation is aborted and should therefore not be
+/// called from greedy drivers.
 FailureOr<DropUnitDimsResult> dropUnitDims(RewriterBase &rewriter,
                                            GenericOp genericOp,
                                            const ControlDropUnitDims &options);
@@ -621,35 +716,46 @@ LogicalResult rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
 /// In the future, more general interfaces can be devised to encode similar
 /// shape evolutions and map between an op and its operands.
 SmallVector<OpFoldResult>
-computePaddedShape(RewriterBase &rewriter, TypedValue<RankedTensorType> v,
+computePaddedShape(OpBuilder &, TypedValue<RankedTensorType> v,
                    AffineMap indexingMap, ArrayRef<OpFoldResult> indexingSizes,
                    const PadTilingInterfaceOptions &options);
 
 using PadSizeComputationFunction =
     std::function<FailureOr<SmallVector<OpFoldResult>>(
-        RewriterBase &, OpOperand &, ArrayRef<Range>,
+        OpBuilder &, OpOperand &, ArrayRef<Range>,
         const PadTilingInterfaceOptions &)>;
 
 /// Specific helper for Linalg ops.
-FailureOr<SmallVector<OpFoldResult>> computeIndexingMapOpInterfacePaddedShape(
-    RewriterBase &rewriter, OpOperand &operandToPad,
-    ArrayRef<Range> iterationDomain, const PadTilingInterfaceOptions &options);
+FailureOr<SmallVector<OpFoldResult>>
+computeIndexingMapOpInterfacePaddedShape(OpBuilder &, OpOperand &operandToPad,
+                                         ArrayRef<Range> iterationDomain,
+                                         const PadTilingInterfaceOptions &);
 
-/// Pad the iterator dimensions `options.paddingDimensions` of `opToPad`.
-///
+/// Operations and values created in the process of padding a TilingInterface
+/// operation.
+struct PadTilingInterfaceResult {
+  /// The operands of the padded op.
+  SmallVector<tensor::PadOp> padOps;
+  /// The padded op, a clone of `toPad` with padded operands.
+  TilingInterface paddedOp;
+  /// Slices of the padded op's results, same types as `toPad`.
+  SmallVector<Value> replacements;
+};
+
+/// Pad the iterator dimensions of `toPad`.
 /// * "options.paddingSizes" indicates that each padding dimension should be
 ///   padded to the specified padding size.
 /// * "options.padToMultipleOf" indicates that the paddingSizes should be
 //    interpreted as the bounding box (dynamic) value to pad to.
 /// * Use "options.paddingValues" to set the padding value of the created
 //    tensor::PadOp.
-/// * The tensor::PadOp is returned on success.
-
-FailureOr<TilingInterface>
-rewriteAsPaddedOp(RewriterBase &rewriter, TilingInterface opToPad,
-                  const PadTilingInterfaceOptions &constOptions,
-                  SmallVector<tensor::PadOp> &padOps,
-                  PadSizeComputationFunction computePaddingSizeFun =
+//
+// The transformation assumes that the insertion point is set after the
+// operation to pad.
+FailureOr<PadTilingInterfaceResult>
+rewriteAsPaddedOp(OpBuilder &, TilingInterface toPad,
+                  PadTilingInterfaceOptions options,
+                  const PadSizeComputationFunction & =
                       &computeIndexingMapOpInterfacePaddedShape);
 
 namespace detail {
@@ -1650,8 +1756,12 @@ protected:
 /// Rewrites a linalg::PackOp into a sequence of:
 ///   * tensor::PadOp + linalg::TransposeOp + tensor::EmptyOp +
 ///     tensor::InsertSliceOp ops.
+/// (InsertSliceOp is rank-expanding).
 ///
-/// Requires that all the outer dims of the input linalg::PackOp are 1.
+/// Requires that all the tiled-outer-dims of the input linalg::PackOp are 1.
+/// Note that this constraint means that effectively exactly one tile is packed.
+///
+/// In addition, assumes that the un-tiled-outer-dims are not permuted.
 ///
 /// Before:
 /// ```
@@ -1687,10 +1797,13 @@ struct DecomposeOuterUnitDimsPackOpPattern
                                 PatternRewriter &rewriter) const override;
 };
 
-/// Rewrites a linalg::UnPackOp into a sequence of rank-reduced
+/// Rewrites a linalg::UnPackOp into a sequence of:
 ///   * tensor::ExtractSliceOp + linalg::TransposeOp + tensor::InsertSliceOp
+/// (ExtractSliceOp is rank-reducing).
 ///
-/// Requires that all the tiled outer dims of the input linalg::PackOp are 1.
+/// Requires that all the tiled-outer-dims of the input linalg::UnPackOp are 1.
+/// Note that this constraint means that effectively exactly one tile is
+/// unpacked.
 ///
 /// Before:
 /// ```
@@ -1858,6 +1971,7 @@ void populateDecomposePadPatterns(RewritePatternSet &patterns);
 
 /// Populates patterns to transform linalg.conv_2d_xxx operations into
 /// linalg.generic (for img2col packing) and linalg.matmul.
+/// Note: currently limited to Tensor semantics only.
 /// \see rewriteInIm2Col for more details.
 void populateConvertConv2DToImg2ColPatterns(RewritePatternSet &patterns);
 
@@ -1914,7 +2028,15 @@ void populateElementwiseOpsFusionPatterns(
 using ControlPropagationFn = std::function<bool(OpOperand *opOperand)>;
 
 /// Patterns to bubble up or down data layout ops across other operations.
+/// The function also has an option to allow the patterns to propagate with
+/// poison padding if requested by the caller.
 void populateDataLayoutPropagationPatterns(
+    RewritePatternSet &patterns,
+    const ControlPropagationFn &controlPackUnPackPropagation,
+    bool PoisonPaddingOk = false);
+
+/// Patterns to sink extract slice across other operations.
+void populateExtractSliceSinkingPatterns(
     RewritePatternSet &patterns,
     const ControlPropagationFn &controlPackUnPackPropagation);
 
@@ -1966,9 +2088,15 @@ void populateFuseTensorPadWithProducerLinalgOpPatterns(
 void populateSimplifyDepthwiseConvPatterns(RewritePatternSet &patterns);
 
 /// Patterns to fold unit-extent dimensions in operands/results of linalg ops on
-/// tensors via reassociative reshape ops.
+/// tensors and memref.
+/// Note that these patterns should not be used with a greedy driver.
 void populateFoldUnitExtentDimsPatterns(RewritePatternSet &patterns,
                                         ControlDropUnitDims &options);
+
+/// Populates canonicalization patterns that simplify IR after folding
+/// unit-extent dimensions.
+void populateFoldUnitExtentDimsCanonicalizationPatterns(
+    RewritePatternSet &patterns, ControlDropUnitDims &options);
 
 /// A pattern that converts init operands to input operands.
 void populateMoveInitOperandsToInputPattern(RewritePatternSet &patterns);

@@ -1,4 +1,4 @@
-//===--- PortabilityTidyModule.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,6 +17,7 @@
 
 namespace clang::tidy {
 namespace portability {
+namespace {
 
 class PortabilityModule : public ClangTidyModule {
 public:
@@ -33,6 +34,8 @@ public:
         "portability-template-virtual-member-function");
   }
 };
+
+} // namespace
 
 // Register the PortabilityModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<PortabilityModule>

@@ -26,6 +26,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/Support/DebugLog.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "nvvm-to-llvm"
@@ -62,7 +63,8 @@ struct PtxLowering
     PtxBuilder generator(op, rewriter, needsManualMapping);
     for (auto &[asmValue, modifier] : asmValues) {
       LDBG() << asmValue << "\t Modifier : " << modifier;
-      generator.insertValue(asmValue, modifier);
+      if (failed(generator.insertValue(asmValue, modifier)))
+        return failure();
     }
 
     generator.buildAndReplaceOp();

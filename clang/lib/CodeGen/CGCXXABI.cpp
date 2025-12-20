@@ -165,10 +165,7 @@ bool CGCXXABI::mayNeedDestruction(const VarDecl *VD) const {
   // If the variable has an incomplete class type (or array thereof), it
   // might need destruction.
   const Type *T = VD->getType()->getBaseElementTypeUnsafe();
-  if (T->getAs<RecordType>() && T->isIncompleteType())
-    return true;
-
-  return false;
+  return T->isRecordType() && T->isIncompleteType();
 }
 
 bool CGCXXABI::isEmittedWithConstantInitializer(
@@ -264,6 +261,20 @@ void CGCXXABI::ReadArrayCookie(CodeGenFunction &CGF, Address ptr,
     cookieSize = CharUnits::Zero();
     return;
   }
+
+  cookieSize = getArrayCookieSizeImpl(eltTy);
+  Address allocAddr = CGF.Builder.CreateConstInBoundsByteGEP(ptr, -cookieSize);
+  allocPtr = allocAddr.emitRawPointer(CGF);
+  numElements = readArrayCookieImpl(CGF, allocAddr, cookieSize);
+}
+
+void CGCXXABI::ReadArrayCookie(CodeGenFunction &CGF, Address ptr,
+                               QualType eltTy, llvm::Value *&numElements,
+                               llvm::Value *&allocPtr, CharUnits &cookieSize) {
+  assert(eltTy.isDestructedType());
+
+  // Derive a char* in the same address space as the pointer.
+  ptr = ptr.withElementType(CGF.Int8Ty);
 
   cookieSize = getArrayCookieSizeImpl(eltTy);
   Address allocAddr = CGF.Builder.CreateConstInBoundsByteGEP(ptr, -cookieSize);

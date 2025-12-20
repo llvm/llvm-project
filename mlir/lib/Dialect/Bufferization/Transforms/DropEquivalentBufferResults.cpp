@@ -41,28 +41,37 @@ namespace bufferization {
 
 using namespace mlir;
 
-/// Return the unique ReturnOp that terminates `funcOp`.
-/// Return nullptr if there is no such unique ReturnOp.
-static func::ReturnOp getAssumedUniqueReturnOp(func::FuncOp funcOp) {
-  func::ReturnOp returnOp;
+/// Get all the ReturnOp in the funcOp.
+static SmallVector<func::ReturnOp> getReturnOps(func::FuncOp funcOp) {
+  SmallVector<func::ReturnOp> returnOps;
   for (Block &b : funcOp.getBody()) {
     if (auto candidateOp = dyn_cast<func::ReturnOp>(b.getTerminator())) {
-      if (returnOp)
-        return nullptr;
-      returnOp = candidateOp;
+      returnOps.push_back(candidateOp);
     }
   }
-  return returnOp;
+  return returnOps;
 }
 
-/// Return the func::FuncOp called by `callOp`.
-static func::FuncOp getCalledFunction(CallOpInterface callOp) {
-  SymbolRefAttr sym =
-      llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
-  if (!sym)
-    return nullptr;
-  return dyn_cast_or_null<func::FuncOp>(
-      SymbolTable::lookupNearestSymbolFrom(callOp, sym));
+/// Get the operands at the specified position for all returnOps.
+static SmallVector<Value>
+getReturnOpsOperandInPos(ArrayRef<func::ReturnOp> returnOps, size_t pos) {
+  return llvm::map_to_vector(returnOps, [&](func::ReturnOp returnOp) {
+    return returnOp.getOperand(pos);
+  });
+}
+
+/// Check if all given values are the same buffer as the block argument (modulo
+/// cast ops).
+static bool operandsEqualFuncArgument(ArrayRef<Value> operands,
+                                      BlockArgument argument) {
+  for (Value val : operands) {
+    while (auto castOp = val.getDefiningOp<memref::CastOp>())
+      val = castOp.getSource();
+
+    if (val != argument)
+      return false;
+  }
+  return true;
 }
 
 LogicalResult
@@ -72,48 +81,55 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
   DenseMap<func::FuncOp, DenseSet<func::CallOp>> callerMap;
   // Collect the mapping of functions to their call sites.
   module.walk([&](func::CallOp callOp) {
-    if (func::FuncOp calledFunc = getCalledFunction(callOp)) {
-      callerMap[calledFunc].insert(callOp);
+    if (func::FuncOp calledFunc =
+            dyn_cast_or_null<func::FuncOp>(callOp.resolveCallable())) {
+      if (!calledFunc.isPublic() && !calledFunc.isExternal())
+        callerMap[calledFunc].insert(callOp);
     }
   });
 
   for (auto funcOp : module.getOps<func::FuncOp>()) {
-    if (funcOp.isExternal())
+    if (funcOp.isExternal() || funcOp.isPublic())
       continue;
-    func::ReturnOp returnOp = getAssumedUniqueReturnOp(funcOp);
-    // TODO: Support functions with multiple blocks.
-    if (!returnOp)
+    SmallVector<func::ReturnOp> returnOps = getReturnOps(funcOp);
+    if (returnOps.empty())
       continue;
 
     // Compute erased results.
-    SmallVector<Value> newReturnValues;
-    BitVector erasedResultIndices(funcOp.getFunctionType().getNumResults());
+    size_t numReturnOps = returnOps.size();
+    size_t numReturnValues = funcOp.getFunctionType().getNumResults();
+    SmallVector<SmallVector<Value>> newReturnValues(numReturnOps);
+    BitVector erasedResultIndices(numReturnValues);
     DenseMap<int64_t, int64_t> resultToArgs;
-    for (const auto &it : llvm::enumerate(returnOp.getOperands())) {
+    for (size_t i = 0; i < numReturnValues; ++i) {
       bool erased = false;
+      SmallVector<Value> returnOperands =
+          getReturnOpsOperandInPos(returnOps, i);
       for (BlockArgument bbArg : funcOp.getArguments()) {
-        Value val = it.value();
-        while (auto castOp = val.getDefiningOp<memref::CastOp>())
-          val = castOp.getSource();
-
-        if (val == bbArg) {
-          resultToArgs[it.index()] = bbArg.getArgNumber();
+        if (operandsEqualFuncArgument(returnOperands, bbArg)) {
+          resultToArgs[i] = bbArg.getArgNumber();
           erased = true;
           break;
         }
       }
 
       if (erased) {
-        erasedResultIndices.set(it.index());
+        erasedResultIndices.set(i);
       } else {
-        newReturnValues.push_back(it.value());
+        for (auto [newReturnValue, operand] :
+             llvm::zip(newReturnValues, returnOperands)) {
+          newReturnValue.push_back(operand);
+        }
       }
     }
 
     // Update function.
     if (failed(funcOp.eraseResults(erasedResultIndices)))
       return failure();
-    returnOp.getOperandsMutable().assign(newReturnValues);
+
+    for (auto [returnOp, newReturnValue] :
+         llvm::zip(returnOps, newReturnValues))
+      returnOp.getOperandsMutable().assign(newReturnValue);
 
     // Update function calls.
     for (func::CallOp callOp : callerMap[funcOp]) {

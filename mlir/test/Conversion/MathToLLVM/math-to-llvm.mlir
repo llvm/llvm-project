@@ -230,6 +230,16 @@ func.func @trigonometrics(%arg0: f32) {
 
 // -----
 
+// CHECK-LABEL: func @sincos
+// CHECK-SAME: [[ARG0:%.+]]: f32
+func.func @sincos(%arg0: f32) {
+  // CHECK: llvm.intr.sincos([[ARG0]]) : (f32) -> !llvm.struct<(f32, f32)>
+  %0:2 = math.sincos %arg0 : f32
+  func.return
+}
+
+// -----
+
 // CHECK-LABEL: func @inverse_trigonometrics
 // CHECK-SAME: [[ARG0:%.+]]: f32
 func.func @inverse_trigonometrics(%arg0: f32) {
@@ -617,4 +627,17 @@ func.func @fastmath(%arg0 : f32, %arg1 : vector<4xf32>) {
   // CHECK: llvm.intr.fma(%arg0, %arg0, %arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32, f32) -> f32
   %3 = math.fma %arg0, %arg0, %arg0 fastmath<reassoc,nnan,ninf,nsz,arcp,contract,afn> : f32
   func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @unsupported_fp_type
+//       CHECK:   math.absf {{.*}} : f4E2M1FN
+//       CHECK:   math.cos {{.*}} : f4E2M1FN
+//       CHECK:   math.fma {{.*}} : f4E2M1FN
+func.func @unsupported_fp_type(%arg0: f4E2M1FN, %arg1: f4E2M1FN, %arg2: f4E2M1FN) {
+  %0 = math.absf %arg0 : f4E2M1FN
+  %1 = math.cos %arg0 : f4E2M1FN
+  %2 = math.fma %arg1, %arg1, %arg2 : f4E2M1FN
+  return
 }

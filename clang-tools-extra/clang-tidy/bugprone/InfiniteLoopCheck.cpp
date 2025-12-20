@@ -1,4 +1,4 @@
-//===--- InfiniteLoopCheck.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,7 +34,7 @@ AST_MATCHER(FunctionType, typeHasNoReturnAttr) {
 } // namespace
 
 static Matcher<Stmt> loopEndingStmt(Matcher<Stmt> Internal) {
-  Matcher<QualType> IsNoReturnFunType =
+  const Matcher<QualType> IsNoReturnFunType =
       ignoringParens(functionType(typeHasNoReturnAttr()));
   Matcher<Decl> IsNoReturnDecl =
       anyOf(declHasNoReturnAttr(), functionDecl(hasType(IsNoReturnFunType)),
@@ -119,14 +119,9 @@ static bool isAtLeastOneCondVarChanged(const Decl *Func, const Stmt *LoopStmt,
   if (isVarThatIsPossiblyChanged(Func, LoopStmt, Cond, Context))
     return true;
 
-  for (const Stmt *Child : Cond->children()) {
-    if (!Child)
-      continue;
-
-    if (isAtLeastOneCondVarChanged(Func, LoopStmt, Child, Context))
-      return true;
-  }
-  return false;
+  return llvm::any_of(Cond->children(), [&](const Stmt *Child) {
+    return Child && isAtLeastOneCondVarChanged(Func, LoopStmt, Child, Context);
+  });
 }
 
 /// Return the variable names in `Cond`.
@@ -135,9 +130,8 @@ static std::string getCondVarNames(const Stmt *Cond) {
     if (const auto *Var = dyn_cast<VarDecl>(DRE->getDecl()))
       return std::string(Var->getName());
 
-    if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl())) {
+    if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl()))
       return std::string(BD->getName());
-    }
   }
 
   std::string Result;
@@ -145,7 +139,7 @@ static std::string getCondVarNames(const Stmt *Cond) {
     if (!Child)
       continue;
 
-    std::string NewNames = getCondVarNames(Child);
+    const std::string NewNames = getCondVarNames(Child);
     if (!Result.empty() && !NewNames.empty())
       Result += ", ";
     Result += NewNames;
@@ -240,10 +234,9 @@ static bool hasStaticLocalVariable(const Stmt *Cond) {
           return true;
   }
 
-  for (const Stmt *Child : Cond->children())
-    if (Child && hasStaticLocalVariable(Child))
-      return true;
-  return false;
+  return llvm::any_of(Cond->children(), [](const Stmt *Child) {
+    return Child && hasStaticLocalVariable(Child);
+  });
 }
 
 /// Tests if the loop condition `Cond` involves static local variables and
@@ -332,7 +325,7 @@ void InfiniteLoopCheck::check(const MatchFinder::MatchResult &Result) {
                                               Result.Context))
     return;
 
-  std::string CondVarNames = getCondVarNames(Cond);
+  const std::string CondVarNames = getCondVarNames(Cond);
   if (ShouldHaveConditionVariables && CondVarNames.empty())
     return;
 

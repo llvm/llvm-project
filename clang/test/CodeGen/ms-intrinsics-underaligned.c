@@ -111,6 +111,6 @@ long test_InterlockedAdd(X *x) {
 // CHECK-AARCH64-LABEL: @test_InterlockedAdd64(
 // CHECK-AARCH64:   atomicrmw {{.*}} align 8
 long test_InterlockedAdd64(X *x) {
-  return _InterlockedAdd64(&x->c, 4);
+  return _InterlockedAdd64((volatile long long*)&x->c, 4);
 }
 #endif

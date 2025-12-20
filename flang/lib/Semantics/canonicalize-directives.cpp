@@ -56,11 +56,17 @@ bool CanonicalizeDirectives(
 static bool IsExecutionDirective(const parser::CompilerDirective &dir) {
   return std::holds_alternative<parser::CompilerDirective::VectorAlways>(
              dir.u) ||
+      std::holds_alternative<parser::CompilerDirective::VectorLength>(dir.u) ||
       std::holds_alternative<parser::CompilerDirective::Unroll>(dir.u) ||
       std::holds_alternative<parser::CompilerDirective::UnrollAndJam>(dir.u) ||
       std::holds_alternative<parser::CompilerDirective::NoVector>(dir.u) ||
       std::holds_alternative<parser::CompilerDirective::NoUnroll>(dir.u) ||
-      std::holds_alternative<parser::CompilerDirective::NoUnrollAndJam>(dir.u);
+      std::holds_alternative<parser::CompilerDirective::NoUnrollAndJam>(
+          dir.u) ||
+      std::holds_alternative<parser::CompilerDirective::ForceInline>(dir.u) ||
+      std::holds_alternative<parser::CompilerDirective::Inline>(dir.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoInline>(dir.u) ||
+      std::holds_alternative<parser::CompilerDirective::IVDep>(dir.u);
 }
 
 void CanonicalizationOfDirectives::Post(parser::SpecificationPart &spec) {
@@ -116,6 +122,9 @@ void CanonicalizationOfDirectives::Post(parser::Block &block) {
           common::visitors{[&](parser::CompilerDirective::VectorAlways &) {
                              CheckLoopDirective(*dir, block, it);
                            },
+              [&](parser::CompilerDirective::VectorLength &) {
+                CheckLoopDirective(*dir, block, it);
+              },
               [&](parser::CompilerDirective::Unroll &) {
                 CheckLoopDirective(*dir, block, it);
               },
@@ -129,6 +138,9 @@ void CanonicalizationOfDirectives::Post(parser::Block &block) {
                 CheckLoopDirective(*dir, block, it);
               },
               [&](parser::CompilerDirective::NoUnrollAndJam &) {
+                CheckLoopDirective(*dir, block, it);
+              },
+              [&](parser::CompilerDirective::IVDep &) {
                 CheckLoopDirective(*dir, block, it);
               },
               [&](auto &) {}},

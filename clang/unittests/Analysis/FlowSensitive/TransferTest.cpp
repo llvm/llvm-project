@@ -17,6 +17,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
+#include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
@@ -1534,6 +1535,67 @@ TEST(TransferTest, BaseClassInitializer) {
             EXPECT_THAT(Results.keys(), UnorderedElementsAre("p"));
           }),
       llvm::Succeeded());
+}
+
+TEST(TransferTest, BaseClassInitializerFromSiblingDerivedInstance) {
+  using ast_matchers::cxxConstructorDecl;
+  using ast_matchers::hasName;
+  using ast_matchers::ofClass;
+
+  std::string Code = R"(
+    struct Base {
+      bool BaseField;
+      char UnmodeledField;
+    };
+
+    struct DerivedOne : public Base {
+      int DerivedOneField;
+    };
+
+    struct DerivedTwo : public Base {
+      int DerivedTwoField;
+
+      DerivedTwo(const DerivedOne& D1)
+          : Base(D1), DerivedTwoField(D1.DerivedOneField) {
+          (void)BaseField;
+          }
+    };
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        // Regression test only; we used to crash when transferring the base
+        // class initializer from the DerivedToBase-cast `D1`.
+      },
+      LangStandard::lang_cxx17, /*ApplyBuiltinTransfer=*/true, "DerivedTwo");
+}
+
+TEST(TransferTest, CopyAssignmentToDerivedToBase) {
+  std::string Code = R"cc(
+  struct Base {};
+
+struct DerivedOne : public Base {
+    int DerivedOneField;
+};
+
+struct DerivedTwo : public Base {
+    int DerivedTwoField;
+
+    explicit DerivedTwo(const DerivedOne& D1) {
+        *static_cast<Base*>(this) = D1;
+    }
+};
+)cc";
+
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        // Regression test only; we used to crash when transferring the copy
+        // assignment operator in the constructor for `DerivedTwo`.
+      },
+      LangStandard::lang_cxx17, /*ApplyBuiltinTransfer=*/true, "DerivedTwo");
 }
 
 TEST(TransferTest, FieldsDontHaveValuesInConstructor) {
@@ -3648,6 +3710,83 @@ TEST(TransferTest, StaticCastBaseToDerived) {
       });
 }
 
+TEST(TransferTest, MultipleConstructionsFromStaticCastsBaseToDerived) {
+  std::string Code = R"cc(
+ struct Base {};
+
+struct DerivedOne : public Base {
+  // Need a field in one of the derived siblings that the other doesn't have.
+  int I;
+};
+
+struct DerivedTwo : public Base {};
+
+int getInt();
+
+void target(Base* B) {
+  // Need something to cause modeling of I.
+  DerivedOne D1;
+  (void)D1.I;
+
+  // Switch cases are a reasonable pattern where the same variable might be
+  // safely cast to two different derived types within the same function
+  // without resetting the value of the variable. getInt is a stand-in for what
+  // is usually a function indicating the dynamic derived type.
+  switch (getInt()) {
+    case 1:
+      // Need a CXXConstructExpr or copy/move CXXOperatorCallExpr from each of
+      // the casts to derived types, cast from the same base variable, to
+      // trigger the copyRecord behavior.
+      (void)new DerivedOne(*static_cast<DerivedOne*>(B));
+      break;
+    case 2:
+      (void)new DerivedTwo(*static_cast<DerivedTwo*>(B));
+      break;
+  };
+}
+)cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        // This is a crash repro. We used to crash when transferring the
+        // construction of DerivedTwo because B's StorageLocation had a child
+        // for the field I, but DerivedTwo doesn't. Now, we should only copy the
+        // fields from B that are present in DerivedTwo.
+      });
+}
+
+TEST(TransferTest, CopyConstructionOfBaseAfterStaticCastsBaseToDerived) {
+  std::string Code = R"cc(
+ struct Base {};
+
+struct Derived : public Base {
+// Need a field in Derived that is not in Base.
+  char C;
+};
+
+void target(Base* B, Base* OtherB) {
+  Derived* D = static_cast<Derived*>(B);
+  *B = *OtherB;
+  // Need something to cause modeling of C.
+  (void)D->C;
+}
+
+)cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        // This is a crash repro. We used to crash when transferring the
+        // copy construction of B from OtherB because B's StorageLocation had a
+        // child for the field C, but Base doesn't (so OtherB doesn't, since
+        // it's never been cast to any other type), and we tried to copy from
+        // the source (OtherB) all the fields present in the destination (B).
+        // Now, we should only try to copy the fields from OtherB that are
+        // present in Base.
+      });
+}
+
 TEST(TransferTest, ExplicitDerivedToBaseCast) {
   std::string Code = R"cc(
     struct Base {};
@@ -4218,6 +4357,40 @@ TEST(TransferTest, VarDeclInitAssignConditionalOperator) {
 
     void target(A Foo, A Bar, bool Cond) {
       A Baz = Cond ?  A(Foo) : A(Bar);
+      // Make sure A::i is modeled.
+      Baz.i;
+      /*[[p]]*/
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *FooIVal = cast<IntegerValue>(getFieldValue(
+            &getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "Foo"), "i",
+            ASTCtx, Env));
+        auto *BarIVal = cast<IntegerValue>(getFieldValue(
+            &getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "Bar"), "i",
+            ASTCtx, Env));
+        auto *BazIVal = cast<IntegerValue>(getFieldValue(
+            &getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "Baz"), "i",
+            ASTCtx, Env));
+
+        EXPECT_NE(BazIVal, FooIVal);
+        EXPECT_NE(BazIVal, BarIVal);
+      });
+}
+
+TEST(TransferTest, VarDeclInitReferenceAssignConditionalOperator) {
+  std::string Code = R"(
+    struct A {
+      int i;
+    };
+
+    void target(A Foo, A Bar, bool Cond) {
+      A &Baz = Cond ? Foo : Bar;
       // Make sure A::i is modeled.
       Baz.i;
       /*[[p]]*/
@@ -5259,7 +5432,7 @@ TEST(TransferTest, UnsupportedValueEquality) {
       A,
       B
     };
-  
+
     void target() {
       EC ec = EC::A;
 
@@ -6012,6 +6185,45 @@ TEST(TransferTest, ConditionalOperatorValue) {
       });
 }
 
+TEST(TransferTest, ConditionalOperatorValuesTested) {
+  // We should be able to show that the result of the conditional operator,
+  // JoinResultMustBeB1, must be equal to B1, because the condition is checking
+  // `B1 == B2` and selecting B1 on the false branch, or B2 on the true branch.
+  // Similarly, for JoinResultMustBeB2 == B2.
+  // Note that the conditional operator involves a join of two *different*
+  // glvalues, before casting the lvalue to an rvalue, which may affect the
+  // implementation of the transfer function, and thus affect whether or not we
+  // can prove that IsB1 == B1.
+  std::string Code = R"(
+    void target(bool B1, bool B2) {
+      bool JoinResultMustBeB1 = (B1 == B2) ? B2 : B1;
+      bool JoinResultMustBeB2 = (B1 == B2) ? B1 : B2;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        Environment Env = getEnvironmentAtAnnotation(Results, "p").fork();
+
+        auto &B1 = getValueForDecl<BoolValue>(ASTCtx, Env, "B1");
+        auto &B2 = getValueForDecl<BoolValue>(ASTCtx, Env, "B2");
+        auto &JoinResultMustBeB1 =
+            getValueForDecl<BoolValue>(ASTCtx, Env, "JoinResultMustBeB1");
+        auto &JoinResultMustBeB2 =
+            getValueForDecl<BoolValue>(ASTCtx, Env, "JoinResultMustBeB2");
+
+        const Formula &MustBeB1_Eq_B1 =
+            Env.arena().makeEquals(JoinResultMustBeB1.formula(), B1.formula());
+        EXPECT_TRUE(Env.proves(MustBeB1_Eq_B1));
+
+        const Formula &MustBeB2_Eq_B2 =
+            Env.arena().makeEquals(JoinResultMustBeB2.formula(), B2.formula());
+        EXPECT_TRUE(Env.proves(MustBeB2_Eq_B2));
+      });
+}
+
 TEST(TransferTest, ConditionalOperatorLocation) {
   std::string Code = R"(
     void target(bool Cond, int I1, int I2) {
@@ -6036,6 +6248,66 @@ TEST(TransferTest, ConditionalOperatorLocation) {
 
         EXPECT_NE(&JoinDifferent, &I1);
         EXPECT_NE(&JoinDifferent, &I2);
+      });
+}
+
+TEST(TransferTest, ConditionalOperatorLocationUpdatedAfter) {
+  // We don't currently model a Conditional Operator with an LValue result
+  // as having aliases to the LHS and RHS (if it isn't just the same LValue
+  // on both sides). We also don't model that the update "may" happen
+  // (a weak update). So, we don't consider the LHS and RHS as being weakly
+  // updated at [[after_diff]].
+  std::string Code = R"(
+    void target(bool Cond, bool B1, bool B2) {
+      (void)0;
+      // [[before_same]]
+      (Cond ? B1 : B1) = !B1;
+      // [[after_same]]
+      (Cond ? B1 : B2) = !B1;
+      // [[after_diff]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        Environment BeforeSameEnv =
+            getEnvironmentAtAnnotation(Results, "before_same").fork();
+        Environment AfterSameEnv =
+            getEnvironmentAtAnnotation(Results, "after_same").fork();
+        Environment AfterDiffEnv =
+            getEnvironmentAtAnnotation(Results, "after_diff").fork();
+
+        auto &BeforeSameB1 =
+            getValueForDecl<BoolValue>(ASTCtx, BeforeSameEnv, "B1");
+        auto &AfterSameB1 =
+            getValueForDecl<BoolValue>(ASTCtx, AfterSameEnv, "B1");
+        auto &AfterDiffB1 =
+            getValueForDecl<BoolValue>(ASTCtx, AfterDiffEnv, "B1");
+
+        EXPECT_NE(&BeforeSameB1, &AfterSameB1);
+        EXPECT_NE(&BeforeSameB1, &AfterDiffB1);
+        // FIXME: The formula for AfterSameB1 should be different from
+        // AfterDiffB1 to reflect that B1 may be updated.
+        EXPECT_EQ(&AfterSameB1, &AfterDiffB1);
+
+        // The value of B1 is definitely different from before_same vs
+        // after_same.
+        const Formula &B1ChangedForSame =
+            AfterSameEnv.arena().makeNot(AfterSameEnv.arena().makeEquals(
+                AfterSameB1.formula(), BeforeSameB1.formula()));
+        EXPECT_TRUE(AfterSameEnv.allows(B1ChangedForSame));
+        EXPECT_TRUE(AfterSameEnv.proves(B1ChangedForSame));
+
+        const Formula &B1ChangedForDiff =
+            AfterDiffEnv.arena().makeNot(AfterDiffEnv.arena().makeEquals(
+                AfterDiffB1.formula(), AfterSameB1.formula()));
+        // FIXME: It should be possible that B1 *may* be updated, so it may be
+        // that AfterSameB1 != AfterDiffB1 or AfterSameB1 == AfterDiffB1.
+        EXPECT_FALSE(AfterSameEnv.allows(B1ChangedForDiff));
+        // proves() should be false, since B1 may or may not have changed
+        // depending on `Cond`.
+        EXPECT_FALSE(AfterSameEnv.proves(B1ChangedForDiff));
       });
 }
 

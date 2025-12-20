@@ -52,7 +52,7 @@ SmallPtrSetImplBase::insert_imp_big(const void *Ptr) {
   // Okay, we know we have space.  Find a hash bucket.
   const void **Bucket = const_cast<const void**>(FindBucketFor(Ptr));
   if (*Bucket == Ptr)
-    return std::make_pair(Bucket, false); // Already inserted, good.
+    return {Bucket, false}; // Already inserted, good.
 
   // Otherwise, insert it!
   if (*Bucket == getTombstoneMarker())
@@ -60,7 +60,7 @@ SmallPtrSetImplBase::insert_imp_big(const void *Ptr) {
   ++NumEntries;
   *Bucket = Ptr;
   incrementEpoch();
-  return std::make_pair(Bucket, true);
+  return {Bucket, true};
 }
 
 const void *const *SmallPtrSetImplBase::doFind(const void *Ptr) const {

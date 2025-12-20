@@ -298,21 +298,22 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   // definition, as well as the initializers of data members, receive special
   // treatment. Identify them.
   Kind = [&]() {
-    if (!ManglingContextDecl)
-      return Normal;
-
-    if (auto *ND = dyn_cast<NamedDecl>(ManglingContextDecl)) {
+    if (auto *ND = dyn_cast<NamedDecl>(ManglingContextDecl ? ManglingContextDecl
+                                                           : cast<Decl>(DC))) {
       // See discussion in https://github.com/itanium-cxx-abi/cxx-abi/issues/186
       //
       // zygoloid:
       //    Yeah, I think the only cases left where lambdas don't need a
       //    mangling are when they have (effectively) internal linkage or appear
       //    in a non-inline function in a non-module translation unit.
-      Module *M = ManglingContextDecl->getOwningModule();
+      Module *M = ND->getOwningModule();
       if (M && M->getTopLevelModule()->isNamedModuleUnit() &&
           ND->isExternallyVisible())
         return NonInlineInModulePurview;
     }
+
+    if (!ManglingContextDecl)
+      return Normal;
 
     if (ParmVarDecl *Param = dyn_cast<ParmVarDecl>(ManglingContextDecl)) {
       if (const DeclContext *LexicalDC
@@ -641,9 +642,8 @@ static EnumDecl *findEnumForBlockReturn(Expr *E) {
   }
 
   //   - it is an expression of that formal enum type.
-  if (const EnumType *ET = E->getType()->getAs<EnumType>()) {
-    return ET->getOriginalDecl()->getDefinitionOrSelf();
-  }
+  if (auto *ED = E->getType()->getAsEnumDecl())
+    return ED;
 
   // Otherwise, nope.
   return nullptr;
@@ -1440,16 +1440,16 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   TypeSourceInfo *MethodTyInfo = getLambdaType(
       *this, Intro, ParamInfo, getCurScope(), TypeLoc, ExplicitResultType);
 
-  LSI->ExplicitParams = ParamInfo.getNumTypeObjects() != 0;
-
-  if (ParamInfo.isFunctionDeclarator() != 0 &&
-      !FTIHasSingleVoidParameter(ParamInfo.getFunctionTypeInfo())) {
+  if (ParamInfo.isFunctionDeclarator() != 0) {
     const auto &FTI = ParamInfo.getFunctionTypeInfo();
-    Params.reserve(Params.size());
-    for (unsigned I = 0; I < FTI.NumParams; ++I) {
-      auto *Param = cast<ParmVarDecl>(FTI.Params[I].Param);
-      Param->setScopeInfo(0, Params.size());
-      Params.push_back(Param);
+    LSI->ExplicitParams = FTI.getLParenLoc().isValid();
+    if (!FTIHasSingleVoidParameter(FTI)) {
+      Params.reserve(Params.size());
+      for (unsigned I = 0; I < FTI.NumParams; ++I) {
+        auto *Param = cast<ParmVarDecl>(FTI.Params[I].Param);
+        Param->setScopeInfo(0, Params.size());
+        Params.push_back(Param);
+      }
     }
   }
 

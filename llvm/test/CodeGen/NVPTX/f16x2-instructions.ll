@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN: | FileCheck -allow-deprecated-dag-overlap -check-prefixes CHECK,CHECK-F16 %s
-; RUN: %if ptxas %{                                                           \
+; RUN: %if ptxas-sm_53 %{                                                           \
 ; RUN:   llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN:   | %ptxas-verify -arch=sm_53                                          \
@@ -13,7 +13,7 @@
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all --nvptx-no-f16-math \
 ; RUN:           -verify-machineinstrs \
 ; RUN: | FileCheck -allow-deprecated-dag-overlap -check-prefixes CHECK,CHECK-NOF16 %s
-; RUN: %if ptxas %{                                                           \
+; RUN: %if ptxas-sm_53 %{                                                           \
 ; RUN:   llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all --nvptx-no-f16-math   \
 ; RUN:           -verify-machineinstrs                                        \
@@ -23,7 +23,7 @@
 ; RUN: llc < %s -O0 -mtriple=nvptx64-nvidia-cuda -mcpu=sm_52 \
 ; RUN:          -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN: | FileCheck -allow-deprecated-dag-overlap -check-prefixes CHECK,CHECK-NOF16 %s
-; RUN: %if ptxas %{                                                               \
+; RUN: %if ptxas-sm_52 %{                                                               \
 ; RUN:   llc < %s -O0 -mtriple=nvptx64-nvidia-cuda -mcpu=sm_52 \
 ; RUN:          -disable-post-ra -frame-pointer=all -verify-machineinstrs         \
 ; RUN:   | %ptxas-verify -arch=sm_52                                              \
@@ -1766,27 +1766,28 @@ define <2 x half> @test_fma(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
 ; CHECK-NOF16-LABEL: test_fma(
 ; CHECK-NOF16:       {
 ; CHECK-NOF16-NEXT:    .reg .b16 %rs<9>;
-; CHECK-NOF16-NEXT:    .reg .b32 %r<13>;
+; CHECK-NOF16-NEXT:    .reg .b32 %r<5>;
+; CHECK-NOF16-NEXT:    .reg .b64 %rd<9>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r3, [test_fma_param_2];
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r2, [test_fma_param_1];
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r1, [test_fma_param_0];
 ; CHECK-NOF16-NEXT:    mov.b32 {%rs1, %rs2}, %r3;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %r4, %rs2;
+; CHECK-NOF16-NEXT:    cvt.f64.f16 %rd1, %rs2;
 ; CHECK-NOF16-NEXT:    mov.b32 {%rs3, %rs4}, %r2;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %r5, %rs4;
+; CHECK-NOF16-NEXT:    cvt.f64.f16 %rd2, %rs4;
 ; CHECK-NOF16-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %r6, %rs6;
-; CHECK-NOF16-NEXT:    fma.rn.f32 %r7, %r6, %r5, %r4;
-; CHECK-NOF16-NEXT:    cvt.rn.f16.f32 %rs7, %r7;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %r8, %rs1;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %r9, %rs3;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %r10, %rs5;
-; CHECK-NOF16-NEXT:    fma.rn.f32 %r11, %r10, %r9, %r8;
-; CHECK-NOF16-NEXT:    cvt.rn.f16.f32 %rs8, %r11;
-; CHECK-NOF16-NEXT:    mov.b32 %r12, {%rs8, %rs7};
-; CHECK-NOF16-NEXT:    st.param.b32 [func_retval0], %r12;
+; CHECK-NOF16-NEXT:    cvt.f64.f16 %rd3, %rs6;
+; CHECK-NOF16-NEXT:    fma.rn.f64 %rd4, %rd3, %rd2, %rd1;
+; CHECK-NOF16-NEXT:    cvt.rn.f16.f64 %rs7, %rd4;
+; CHECK-NOF16-NEXT:    cvt.f64.f16 %rd5, %rs1;
+; CHECK-NOF16-NEXT:    cvt.f64.f16 %rd6, %rs3;
+; CHECK-NOF16-NEXT:    cvt.f64.f16 %rd7, %rs5;
+; CHECK-NOF16-NEXT:    fma.rn.f64 %rd8, %rd7, %rd6, %rd5;
+; CHECK-NOF16-NEXT:    cvt.rn.f16.f64 %rs8, %rd8;
+; CHECK-NOF16-NEXT:    mov.b32 %r4, {%rs8, %rs7};
+; CHECK-NOF16-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NOF16-NEXT:    ret;
   %r = call <2 x half> @llvm.fma.f16(<2 x half> %a, <2 x half> %b, <2 x half> %c)
   ret <2 x half> %r
@@ -2203,27 +2204,28 @@ define <2 x half> @test_fmuladd(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 
 ; CHECK-NOF16-LABEL: test_fmuladd(
 ; CHECK-NOF16:       {
 ; CHECK-NOF16-NEXT:    .reg .b16 %rs<9>;
-; CHECK-NOF16-NEXT:    .reg .b32 %r<13>;
+; CHECK-NOF16-NEXT:    .reg .b32 %r<5>;
+; CHECK-NOF16-NEXT:    .reg .b64 %rd<9>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r3, [test_fmuladd_param_2];
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r2, [test_fmuladd_param_1];
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r1, [test_fmuladd_param_0];
 ; CHECK-NOF16-NEXT:    mov.b32 {%rs1, %rs2}, %r3;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %r4, %rs2;
+; CHECK-NOF16-NEXT:    cvt.f64.f16 %rd1, %rs2;
 ; CHECK-NOF16-NEXT:    mov.b32 {%rs3, %rs4}, %r2;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %r5, %rs4;
+; CHECK-NOF16-NEXT:    cvt.f64.f16 %rd2, %rs4;
 ; CHECK-NOF16-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %r6, %rs6;
-; CHECK-NOF16-NEXT:    fma.rn.f32 %r7, %r6, %r5, %r4;
-; CHECK-NOF16-NEXT:    cvt.rn.f16.f32 %rs7, %r7;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %r8, %rs1;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %r9, %rs3;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %r10, %rs5;
-; CHECK-NOF16-NEXT:    fma.rn.f32 %r11, %r10, %r9, %r8;
-; CHECK-NOF16-NEXT:    cvt.rn.f16.f32 %rs8, %r11;
-; CHECK-NOF16-NEXT:    mov.b32 %r12, {%rs8, %rs7};
-; CHECK-NOF16-NEXT:    st.param.b32 [func_retval0], %r12;
+; CHECK-NOF16-NEXT:    cvt.f64.f16 %rd3, %rs6;
+; CHECK-NOF16-NEXT:    fma.rn.f64 %rd4, %rd3, %rd2, %rd1;
+; CHECK-NOF16-NEXT:    cvt.rn.f16.f64 %rs7, %rd4;
+; CHECK-NOF16-NEXT:    cvt.f64.f16 %rd5, %rs1;
+; CHECK-NOF16-NEXT:    cvt.f64.f16 %rd6, %rs3;
+; CHECK-NOF16-NEXT:    cvt.f64.f16 %rd7, %rs5;
+; CHECK-NOF16-NEXT:    fma.rn.f64 %rd8, %rd7, %rd6, %rd5;
+; CHECK-NOF16-NEXT:    cvt.rn.f16.f64 %rs8, %rd8;
+; CHECK-NOF16-NEXT:    mov.b32 %r4, {%rs8, %rs7};
+; CHECK-NOF16-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NOF16-NEXT:    ret;
   %r = call <2 x half> @llvm.fmuladd.f16(<2 x half> %a, <2 x half> %b, <2 x half> %c)
   ret <2 x half> %r

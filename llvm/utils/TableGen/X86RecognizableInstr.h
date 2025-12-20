@@ -22,8 +22,6 @@
 #include <string>
 #include <vector>
 
-struct InstructionSpecifier;
-
 namespace llvm {
 class Record;
 #define X86_INSTR_MRM_MAPPING                                                  \
@@ -179,6 +177,8 @@ enum { ExplicitREX2 = 1, ExplicitEVEX = 3 };
 
 namespace X86Disassembler {
 class DisassemblerTables;
+struct InstructionSpecifier;
+
 /// Extract common fields of a single X86 instruction from a CodeGenInstruction
 struct RecognizableInstrBase {
   /// The OpPrefix field from the record
@@ -383,6 +383,18 @@ bool isMemoryOperand(const Record *Rec);
 bool isImmediateOperand(const Record *Rec);
 unsigned getRegOperandSize(const Record *RegRec);
 unsigned getMemOperandSize(const Record *MemRec);
+
+/// byteFromBitsInit - Extracts a value at most 8 bits in width from a BitsInit.
+///   Useful for switch statements and the like.
+///
+/// @param B - A pointer to the BitsInit to be decoded.
+/// @return  - The field, with the first bit in the BitsInit as the lowest
+///            order bit.
+inline uint8_t byteFromBitsInit(const BitsInit *B) {
+  assert(B->getNumBits() <= 8 && "Field is too large for uint8_t!");
+  return static_cast<uint8_t>(*B->convertInitializerToInt());
+}
+
 } // namespace X86Disassembler
 } // namespace llvm
 #endif

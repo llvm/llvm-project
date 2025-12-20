@@ -393,7 +393,11 @@ add_generic_entrypoint_object(
 list(APPEND fprintf_deps
       libc.hdr.types.FILE
       libc.src.__support.arg_list
+      libc.src.__support.CPP.limits
+      libc.src.__support.libc_errno
       libc.src.stdio.printf_core.vfprintf_internal
+      libc.src.stdio.printf_core.core_structs
+      libc.src.stdio.printf_core.error_mapper
 )
 
 if(LLVM_LIBC_FULL_BUILD)

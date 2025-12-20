@@ -560,3 +560,44 @@ loop:
 exit:
   ret void
 }
+
+; TODO: Relax HasSameSize check in isSafeDependenceDistance.
+define void @different_type_sizes_safe_dep_dist(i16  %n, ptr %p) {
+; CHECK-LABEL: 'different_type_sizes_safe_dep_dist'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            store i32 0, ptr %gep.iv, align 1 ->
+; CHECK-NEXT:            store i16 1, ptr %gep.off.iv, align 1
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %n.pos = icmp sgt i16 %n, 0
+  br i1 %n.pos, label %ph, label %exit
+
+ph:
+  %gep.off = getelementptr i32, ptr %p, i16 %n
+  br label %loop
+
+loop:
+  %iv = phi i16 [ 0, %ph ], [ %iv.next, %loop ]
+  %gep.iv = getelementptr inbounds i32, ptr %p, i16 %iv
+  store i32 0, ptr %gep.iv, align 1
+  %gep.off.iv = getelementptr i32, ptr %gep.off, i16 %iv
+  store i16 1, ptr %gep.off.iv, align 1
+  %iv.next = add i16 %iv, 1
+  %exit.cond = icmp eq i16 %iv.next, %n
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:
+  ret void
+}

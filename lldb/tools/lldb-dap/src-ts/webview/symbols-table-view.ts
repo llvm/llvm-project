@@ -95,6 +95,7 @@ const SYMBOLS_TABLE = new Tabulator("#symbols-table", {
   height: "100vh",
   columns: SYMBOL_TABLE_COLUMNS,
   layout: "fitColumns",
+  selectableRows: false,
   data: previousState?.symbols || [],
 });
 

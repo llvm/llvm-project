@@ -246,97 +246,172 @@ class SemaOpenACCClauseVisitor {
     llvm_unreachable("didn't return from switch above?");
   }
 
-  // Helper for the 'routine' checks during 'new' clause addition. Precondition
-  // is that we already know the new clause is one of the prohbiited ones.
+  // Certain clauses are not allowed within the same 'device_type' region, or in
+  // a 'device_type' region if there is one 'outside' of a 'device_type' region,
+  // or within a conflicting 'device_type' region.  This helper checks these
+  // cases.
+  // DTOverrides is whether the 'before a device type' value is allowed to be
+  // 'overridden' by each individual device type.
   template <typename Pred>
-  bool
-  CheckValidRoutineNewClauseHelper(Pred HasPredicate,
-                                   SemaOpenACC::OpenACCParsedClause &Clause) {
-    if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Routine)
-      return false;
+  bool DisallowSinceLastDeviceType(Pred HasPredicate,
+                                   SemaOpenACC::OpenACCParsedClause &Clause,
+                                   bool DTOverrides = true) {
+    using ItrTy = decltype(ExistingClauses.begin());
+    llvm::SmallVector<ItrTy> DeviceTypeClauses;
 
-    auto *FirstDeviceType =
+    ItrTy DevTypeItr =
         llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCDeviceTypeClause>);
+    while (DevTypeItr != ExistingClauses.end()) {
+      DeviceTypeClauses.push_back(DevTypeItr);
+      DevTypeItr = std::find_if(std::next(DevTypeItr), ExistingClauses.end(),
+                                llvm::IsaPred<OpenACCDeviceTypeClause>);
+    }
 
-    if (FirstDeviceType == ExistingClauses.end()) {
-      // If there isn't a device type yet, ANY duplicate is wrong.
+    auto SinceLastDevType =
+        std::find_if(DeviceTypeClauses.empty() ? ExistingClauses.begin()
+                                               : DeviceTypeClauses.back(),
+                     ExistingClauses.end(), HasPredicate);
 
-      auto *ExistingProhibitedClause =
-          llvm::find_if(ExistingClauses, HasPredicate);
+    // At this point, any duplicates since the 'last' device type are an error,
+    // so diagnose that.
+    if (SinceLastDevType != ExistingClauses.end()) {
+      SemaRef.Diag(Clause.getBeginLoc(),
+                   diag::err_acc_clause_cannot_combine_same_device_type)
+          << Clause.getDirectiveKind() << Clause.getClauseKind()
+          << (*SinceLastDevType)->getClauseKind() << !DeviceTypeClauses.empty();
 
-      if (ExistingProhibitedClause == ExistingClauses.end())
-        return false;
-
-      SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_cannot_combine)
-          << Clause.getClauseKind()
-          << (*ExistingProhibitedClause)->getClauseKind()
-          << Clause.getDirectiveKind();
-      SemaRef.Diag((*ExistingProhibitedClause)->getBeginLoc(),
+      SemaRef.Diag((*SinceLastDevType)->getBeginLoc(),
                    diag::note_acc_previous_clause_here)
-          << (*ExistingProhibitedClause)->getClauseKind();
+          << (*SinceLastDevType)->getClauseKind();
+
+      if (!DeviceTypeClauses.empty()) {
+        SemaRef.Diag((*DeviceTypeClauses.back())->getBeginLoc(),
+                     diag::note_acc_active_applies_clause_here)
+            << diag::ACCDeviceTypeApp::Active
+            << (*DeviceTypeClauses.back())->getClauseKind();
+      }
+
       return true;
     }
 
-    // At this point we know that this is 'after' a device type. So this is an
-    // error if: 1- there is one BEFORE the 'device_type' 2- there is one
-    // between this and the previous 'device_type'.
-
-    auto *BeforeDeviceType =
-        std::find_if(ExistingClauses.begin(), FirstDeviceType, HasPredicate);
-    // If there is one before the device_type (and we know we are after a
-    // device_type), than this is ill-formed.
-    if (BeforeDeviceType != FirstDeviceType) {
-      SemaRef.Diag(
-          Clause.getBeginLoc(),
-          diag::err_acc_clause_routine_cannot_combine_before_device_type)
-          << Clause.getClauseKind() << (*BeforeDeviceType)->getClauseKind();
-      SemaRef.Diag((*BeforeDeviceType)->getBeginLoc(),
-                   diag::note_acc_previous_clause_here)
-          << (*BeforeDeviceType)->getClauseKind();
-      SemaRef.Diag((*FirstDeviceType)->getBeginLoc(),
-                   diag::note_acc_active_applies_clause_here)
-          << diag::ACCDeviceTypeApp::Active
-          << (*FirstDeviceType)->getClauseKind();
-      return true;
-    }
-
-    auto LastDeviceTypeItr =
-        std::find_if(ExistingClauses.rbegin(), ExistingClauses.rend(),
-                     llvm::IsaPred<OpenACCDeviceTypeClause>);
-
-    // We already know there is one in the list, so it is nonsensical to not
-    // have one.
-    assert(LastDeviceTypeItr != ExistingClauses.rend());
-
-    // Get the device-type from-the-front (not reverse) iterator from the
-    // reverse iterator.
-    auto *LastDeviceType = LastDeviceTypeItr.base() - 1;
-
-    auto *ExistingProhibitedSinceLastDevice =
-        std::find_if(LastDeviceType, ExistingClauses.end(), HasPredicate);
-
-    // No prohibited ones since the last device-type.
-    if (ExistingProhibitedSinceLastDevice == ExistingClauses.end())
+    // The only other diagnostics are relationships between the current clause
+    // and ones in OTHER device_type regions, so if we have no other ones, we
+    // can exit early.
+    if (DeviceTypeClauses.empty())
       return false;
 
-    SemaRef.Diag(Clause.getBeginLoc(),
-                 diag::err_acc_clause_routine_cannot_combine_same_device_type)
-        << Clause.getClauseKind()
-        << (*ExistingProhibitedSinceLastDevice)->getClauseKind();
-    SemaRef.Diag((*ExistingProhibitedSinceLastDevice)->getBeginLoc(),
-                 diag::note_acc_previous_clause_here)
-        << (*ExistingProhibitedSinceLastDevice)->getClauseKind();
-    SemaRef.Diag((*LastDeviceType)->getBeginLoc(),
-                 diag::note_acc_active_applies_clause_here)
-        << diag::ACCDeviceTypeApp::Active << (*LastDeviceType)->getClauseKind();
-    return true;
+    if (!DTOverrides) {
+      // At this point we know we are after 1 of the device_type clauses, AND
+      // that one exists, so see if we conflict with anything BEFORE the first
+      // device_type clause.
+      auto BeforeFirstDevType = std::find_if(
+          ExistingClauses.begin(), DeviceTypeClauses.front(), HasPredicate);
+
+      if (BeforeFirstDevType != DeviceTypeClauses.front()) {
+        SemaRef.Diag(Clause.getBeginLoc(),
+                     diag::err_acc_clause_cannot_combine_before_device_type)
+            << Clause.getDirectiveKind() << Clause.getClauseKind()
+            << (*BeforeFirstDevType)->getClauseKind();
+
+        SemaRef.Diag((*BeforeFirstDevType)->getBeginLoc(),
+                     diag::note_acc_previous_clause_here)
+            << (*BeforeFirstDevType)->getClauseKind();
+
+        SemaRef.Diag((*DeviceTypeClauses.back())->getBeginLoc(),
+                     diag::note_acc_active_applies_clause_here)
+            << diag::ACCDeviceTypeApp::Active
+            << (*DeviceTypeClauses.back())->getClauseKind();
+        return true;
+      }
+    }
+
+    // This catches duplicates, * regions, duplicate-same-text (thanks to
+    // identifier equiv), and case-insensitive dupes, in addition to the
+    // acc_device_nvidia/nvidia equivilence.
+    auto areSameArch = [](const DeviceTypeArgument &LHS,
+                          const DeviceTypeArgument &RHS) {
+      // If they are the same identifier, they are the same. This includes both
+      // nulls.
+      if (LHS.getIdentifierInfo() == RHS.getIdentifierInfo())
+        return true;
+      // If only 1 is null, they obviously aren't the same.
+      if (!LHS.getIdentifierInfo() || !RHS.getIdentifierInfo())
+        return false;
+      StringRef LHSName = LHS.getIdentifierInfo()->getName();
+      StringRef RHSName = RHS.getIdentifierInfo()->getName();
+      if (LHSName.equals_insensitive(RHSName))
+        return true;
+
+      // acc_device_nvidia is used in NVC++ as an alias for nvidia, so include
+      // a check here.
+      return (LHSName.equals_insensitive("acc_device_nvidia") &&
+              RHSName.equals_insensitive("nvidia")) ||
+             (RHSName.equals_insensitive("acc_device_nvidia") &&
+              LHSName.equals_insensitive("nvidia"));
+    };
+    const OpenACCDeviceTypeClause *ActiveDTClause =
+        cast<OpenACCDeviceTypeClause>(*DeviceTypeClauses.back());
+
+    // Loop through each of the device types to figure out if they have a
+    // conflicting clause.
+    for (unsigned Idx = 0; Idx < DeviceTypeClauses.size() - 1; ++Idx) {
+      ItrTy ProhibitedClause = std::find_if(
+          DeviceTypeClauses[Idx], DeviceTypeClauses[Idx + 1], HasPredicate);
+
+      // If there no prohibited clause between this and the next, we don't have
+      // to check this region.
+      if (ProhibitedClause == DeviceTypeClauses[Idx + 1])
+        continue;
+
+      const OpenACCDeviceTypeClause *CurDTClause =
+          cast<OpenACCDeviceTypeClause>(*DeviceTypeClauses[Idx]);
+
+      for (const DeviceTypeArgument &ActiveArch :
+           ActiveDTClause->getArchitectures()) {
+        for (const DeviceTypeArgument &CurArch :
+             CurDTClause->getArchitectures()) {
+          if (areSameArch(CurArch, ActiveArch)) {
+            SemaRef.Diag(Clause.getBeginLoc(),
+                         diag::err_acc_clause_conflicts_prev_dev_type)
+                << Clause.getClauseKind()
+                << (ActiveArch.getIdentifierInfo()
+                        ? ActiveArch.getIdentifierInfo()->getName()
+                        : "*")
+                << (*ProhibitedClause)->getClauseKind();
+
+            SemaRef.Diag(ActiveDTClause->getBeginLoc(),
+                         diag::note_acc_active_applies_clause_here)
+                << diag::ACCDeviceTypeApp::Active
+                << ActiveDTClause->getClauseKind();
+
+            SemaRef.Diag((*ProhibitedClause)->getBeginLoc(),
+                         diag::note_acc_previous_clause_here)
+                << (*ProhibitedClause)->getClauseKind();
+
+            SemaRef.Diag(CurDTClause->getBeginLoc(),
+                         diag::note_acc_active_applies_clause_here)
+                << diag::ACCDeviceTypeApp::Applies
+                << CurDTClause->getClauseKind();
+
+            return true;
+          }
+        }
+      }
+
+      // At this point we know we have a potentially prohibited clause, but only
+      // if the device_type clauses try to do the 'same' thing.
+    }
+
+    // If we haven't found anything by now, this is valid.
+    return false;
   }
 
   // Routine has a pretty complicated set of rules for how device_type and the
   // gang, worker, vector, and seq clauses work.  So diagnose some of it here.
   bool CheckValidRoutineGangWorkerVectorSeqNewClause(
       SemaOpenACC::OpenACCParsedClause &Clause) {
-
+    if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Routine)
+      return false;
     if (Clause.getClauseKind() != OpenACCClauseKind::Gang &&
         Clause.getClauseKind() != OpenACCClauseKind::Vector &&
         Clause.getClauseKind() != OpenACCClauseKind::Worker &&
@@ -345,7 +420,8 @@ class SemaOpenACCClauseVisitor {
     auto ProhibitedPred = llvm::IsaPred<OpenACCGangClause, OpenACCWorkerClause,
                                         OpenACCVectorClause, OpenACCSeqClause>;
 
-    return CheckValidRoutineNewClauseHelper(ProhibitedPred, Clause);
+    return DisallowSinceLastDeviceType(ProhibitedPred, Clause,
+                                       /*DTOverrides=*/false);
   }
 
   // Bind should have similar rules on a routine as gang/worker/vector/seq,
@@ -353,124 +429,14 @@ class SemaOpenACCClauseVisitor {
   // here.
   bool
   CheckValidRoutineBindNewClause(SemaOpenACC::OpenACCParsedClause &Clause) {
-
+    if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Routine)
+      return false;
     if (Clause.getClauseKind() != OpenACCClauseKind::Bind)
       return false;
 
     auto HasBindPred = llvm::IsaPred<OpenACCBindClause>;
-    return CheckValidRoutineNewClauseHelper(HasBindPred, Clause);
-  }
-
-  // For 'tile' and 'collapse', only allow 1 per 'device_type'.
-  // Also applies to num_worker, num_gangs, vector_length, and async.
-  // This does introspection into the actual device-types to prevent duplicates
-  // across device types as well.
-  template <typename TheClauseTy>
-  bool DisallowSinceLastDeviceType(SemaOpenACC::OpenACCParsedClause &Clause) {
-    auto LastDeviceTypeItr =
-        std::find_if(ExistingClauses.rbegin(), ExistingClauses.rend(),
-                     llvm::IsaPred<OpenACCDeviceTypeClause>);
-
-    auto LastSinceDevTy =
-        std::find_if(ExistingClauses.rbegin(), LastDeviceTypeItr,
-                     llvm::IsaPred<TheClauseTy>);
-
-    // In this case there is a duplicate since the last device_type/lack of a
-    // device_type.  Diagnose these as duplicates.
-    if (LastSinceDevTy != LastDeviceTypeItr) {
-      SemaRef.Diag(Clause.getBeginLoc(),
-                   diag::err_acc_clause_since_last_device_type)
-          << Clause.getClauseKind() << Clause.getDirectiveKind()
-          << (LastDeviceTypeItr != ExistingClauses.rend());
-
-      SemaRef.Diag((*LastSinceDevTy)->getBeginLoc(),
-                   diag::note_acc_previous_clause_here)
-          << (*LastSinceDevTy)->getClauseKind();
-
-      // Mention the last device_type as well.
-      if (LastDeviceTypeItr != ExistingClauses.rend())
-        SemaRef.Diag((*LastDeviceTypeItr)->getBeginLoc(),
-                     diag::note_acc_active_applies_clause_here)
-            << diag::ACCDeviceTypeApp::Active
-            << (*LastDeviceTypeItr)->getClauseKind();
-      return true;
-    }
-
-    // If this isn't in a device_type, and we didn't diagnose that there are
-    // dupes above, just give up, no sense in searching for previous device_type
-    // regions as they don't exist.
-    if (LastDeviceTypeItr == ExistingClauses.rend())
-      return false;
-
-    // The device-type that is active for us, so we can compare to the previous
-    // ones.
-    const auto &ActiveDeviceTypeClause =
-        cast<OpenACCDeviceTypeClause>(**LastDeviceTypeItr);
-
-    auto PrevDeviceTypeItr = LastDeviceTypeItr;
-    auto CurDevTypeItr = LastDeviceTypeItr;
-
-    while ((CurDevTypeItr = std::find_if(
-                std::next(PrevDeviceTypeItr), ExistingClauses.rend(),
-                llvm::IsaPred<OpenACCDeviceTypeClause>)) !=
-           ExistingClauses.rend()) {
-      // At this point, we know that we have a region between two device_types,
-      // as specified by CurDevTypeItr and PrevDeviceTypeItr.
-
-      auto CurClauseKindItr = std::find_if(PrevDeviceTypeItr, CurDevTypeItr,
-                                           llvm::IsaPred<TheClauseTy>);
-
-      // There are no clauses of the current kind between these device_types, so
-      // continue.
-      if (CurClauseKindItr == CurDevTypeItr) {
-        PrevDeviceTypeItr = CurDevTypeItr;
-        continue;
-      }
-
-      // At this point, we know that this device_type region has a collapse.  So
-      // diagnose if the two device_types have any overlap in their
-      // architectures.
-      const auto &CurDeviceTypeClause =
-          cast<OpenACCDeviceTypeClause>(**CurDevTypeItr);
-
-      for (const DeviceTypeArgument &arg :
-           ActiveDeviceTypeClause.getArchitectures()) {
-        for (const DeviceTypeArgument &prevArg :
-             CurDeviceTypeClause.getArchitectures()) {
-
-          // This should catch duplicates * regions, duplicate same-text (thanks
-          // to identifier equiv.) and case insensitive dupes.
-          if (arg.getIdentifierInfo() == prevArg.getIdentifierInfo() ||
-              (arg.getIdentifierInfo() && prevArg.getIdentifierInfo() &&
-               StringRef{arg.getIdentifierInfo()->getName()}.equals_insensitive(
-                   prevArg.getIdentifierInfo()->getName()))) {
-            SemaRef.Diag(Clause.getBeginLoc(),
-                         diag::err_acc_clause_conflicts_prev_dev_type)
-                << Clause.getClauseKind()
-                << (arg.getIdentifierInfo() ? arg.getIdentifierInfo()->getName()
-                                            : "*");
-            // mention the active device type.
-            SemaRef.Diag(ActiveDeviceTypeClause.getBeginLoc(),
-                         diag::note_acc_active_applies_clause_here)
-                << diag::ACCDeviceTypeApp::Active
-                << ActiveDeviceTypeClause.getClauseKind();
-            // mention the previous clause.
-            SemaRef.Diag((*CurClauseKindItr)->getBeginLoc(),
-                         diag::note_acc_previous_clause_here)
-                << (*CurClauseKindItr)->getClauseKind();
-            // mention the previous device type.
-            SemaRef.Diag(CurDeviceTypeClause.getBeginLoc(),
-                         diag::note_acc_active_applies_clause_here)
-                << diag::ACCDeviceTypeApp::Applies
-                << CurDeviceTypeClause.getClauseKind();
-            return true;
-          }
-        }
-      }
-
-      PrevDeviceTypeItr = CurDevTypeItr;
-    }
-    return false;
+    return DisallowSinceLastDeviceType(HasBindPred, Clause,
+                                       /*DTOverrides=*/false);
   }
 
 public:
@@ -530,7 +496,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDefaultClause(
 OpenACCClause *SemaOpenACCClauseVisitor::VisitTileClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
 
-  if (DisallowSinceLastDeviceType<OpenACCTileClause>(Clause))
+  if (DisallowSinceLastDeviceType(llvm::IsaPred<OpenACCTileClause>, Clause))
     return nullptr;
 
   llvm::SmallVector<Expr *> NewSizeExprs;
@@ -598,7 +564,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitSelfClause(
 OpenACCClause *SemaOpenACCClauseVisitor::VisitNumGangsClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
 
-  if (DisallowSinceLastDeviceType<OpenACCNumGangsClause>(Clause))
+  if (DisallowSinceLastDeviceType(llvm::IsaPred<OpenACCNumGangsClause>, Clause))
     return nullptr;
 
   // num_gangs requires at least 1 int expr in all forms.  Diagnose here, but
@@ -695,7 +661,8 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitNumGangsClause(
 OpenACCClause *SemaOpenACCClauseVisitor::VisitNumWorkersClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
 
-  if (DisallowSinceLastDeviceType<OpenACCNumWorkersClause>(Clause))
+  if (DisallowSinceLastDeviceType(llvm::IsaPred<OpenACCNumWorkersClause>,
+                                  Clause))
     return nullptr;
 
   // OpenACC 3.3 Section 2.9.2:
@@ -728,7 +695,8 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitNumWorkersClause(
 OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorLengthClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
 
-  if (DisallowSinceLastDeviceType<OpenACCVectorLengthClause>(Clause))
+  if (DisallowSinceLastDeviceType(llvm::IsaPred<OpenACCVectorLengthClause>,
+                                  Clause))
     return nullptr;
 
   // OpenACC 3.3 Section 2.9.4:
@@ -760,7 +728,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorLengthClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitAsyncClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  if (DisallowSinceLastDeviceType<OpenACCAsyncClause>(Clause))
+  if (DisallowSinceLastDeviceType(llvm::IsaPred<OpenACCAsyncClause>, Clause))
     return nullptr;
 
   assert(Clause.getNumIntExprs() < 2 &&
@@ -795,12 +763,11 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitPrivateClause(
   // really isn't anything to do here. GCC does some duplicate-finding, though
   // it isn't apparent in the standard where this is justified.
 
-  llvm::SmallVector<VarDecl *> InitRecipes;
+  llvm::SmallVector<OpenACCPrivateRecipe> InitRecipes;
 
   // Assemble the recipes list.
   for (const Expr *VarExpr : Clause.getVarList())
-    InitRecipes.push_back(
-        SemaRef.CreateInitRecipe(OpenACCClauseKind::Private, VarExpr).first);
+    InitRecipes.push_back(SemaRef.CreatePrivateInitRecipe(VarExpr));
 
   return OpenACCPrivateClause::Create(
       Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getVarList(),
@@ -817,8 +784,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitFirstPrivateClause(
 
   // Assemble the recipes list.
   for (const Expr *VarExpr : Clause.getVarList())
-    InitRecipes.push_back(
-        SemaRef.CreateInitRecipe(OpenACCClauseKind::FirstPrivate, VarExpr));
+    InitRecipes.push_back(SemaRef.CreateFirstPrivateInitRecipe(VarExpr));
 
   return OpenACCFirstPrivateClause::Create(
       Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getVarList(),
@@ -1774,7 +1740,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitReductionClause(
   }
 
   SmallVector<Expr *> ValidVars;
-  SmallVector<OpenACCReductionRecipe> Recipes;
+  SmallVector<OpenACCReductionRecipeWithStorage> Recipes;
 
   for (Expr *Var : Clause.getVarList()) {
     ExprResult Res = SemaRef.CheckReductionVar(Clause.getDirectiveKind(),
@@ -1783,11 +1749,8 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitReductionClause(
     if (Res.isUsable()) {
       ValidVars.push_back(Res.get());
 
-      VarDecl *InitRecipe =
-          SemaRef.CreateInitRecipe(OpenACCClauseKind::Reduction, Res.get())
-              .first;
-      // TODO: OpenACC: Create the reduction operation recipe here too.
-      Recipes.push_back({InitRecipe});
+      Recipes.push_back(SemaRef.CreateReductionInitRecipe(
+          Clause.getReductionOp(), Res.get()));
     }
   }
 
@@ -1801,7 +1764,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitReductionClause(
 OpenACCClause *SemaOpenACCClauseVisitor::VisitCollapseClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
 
-  if (DisallowSinceLastDeviceType<OpenACCCollapseClause>(Clause))
+  if (DisallowSinceLastDeviceType(llvm::IsaPred<OpenACCCollapseClause>, Clause))
     return nullptr;
 
   ExprResult LoopCount = SemaRef.CheckCollapseLoopCount(Clause.getLoopCount());
@@ -1896,13 +1859,6 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
   if (DiagnoseAllowedClauses(Clause.getDirectiveKind(), Clause.getClauseKind(),
                              Clause.getBeginLoc()))
     return nullptr;
-  //// Diagnose that we don't support this clause on this directive.
-  // if (!doesClauseApplyToDirective(Clause.getDirectiveKind(),
-  //                                 Clause.getClauseKind())) {
-  //   Diag(Clause.getBeginLoc(), diag::err_acc_clause_appertainment)
-  //       << Clause.getDirectiveKind() << Clause.getClauseKind();
-  //   return nullptr;
-  // }
 
   if (const auto *DevTypeClause = llvm::find_if(
           ExistingClauses, llvm::IsaPred<OpenACCDeviceTypeClause>);
@@ -1920,6 +1876,90 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
   return Result;
 }
 
+bool SemaOpenACC::CheckReductionVarType(Expr *VarExpr) {
+  SourceLocation VarLoc = VarExpr->getBeginLoc();
+
+  SmallVector<PartialDiagnosticAt> Notes;
+  // The standard isn't clear how many levels of 'array element' or 'subarray'
+  // are permitted, but we can handle as many as we need, so we'll strip them
+  // off here. This will result in CurType being the actual 'type' of the
+  // expression, which is what we are looking to check.
+  QualType CurType = isa<ArraySectionExpr>(VarExpr)
+                         ? cast<ArraySectionExpr>(VarExpr)->getElementType()
+                         : VarExpr->getType();
+
+  // This can happen when we have a dependent type in an array element that the
+  // above function has tried to 'unwrap'. Since this can only happen with
+  // dependence, just let it go.
+  if (CurType.isNull())
+    return false;
+
+  // If we are still an array type, we allow 1 level of 'unpeeling' of the
+  // array.  The standard isn't clear here whether this is allowed, but
+  // array-of-valid-things makes sense.
+  if (auto *AT = getASTContext().getAsArrayType(CurType)) {
+    // If we're already the array type, peel off the array and leave the element
+    // type.
+    PartialDiagnostic PD = PDiag(diag::note_acc_reduction_array)
+                           << diag::OACCReductionArray::ArrayTy << CurType;
+    Notes.push_back({VarLoc, PD});
+    CurType = AT->getElementType();
+  }
+
+  auto IsValidMemberOfComposite = [](QualType Ty) {
+    return !Ty->isAnyComplexType() &&
+           (Ty->isDependentType() ||
+            (Ty->isScalarType() && !Ty->isPointerType()));
+  };
+
+  auto EmitDiags = [&](SourceLocation Loc, PartialDiagnostic PD) {
+    Diag(Loc, PD);
+
+    for (auto [Loc, PD] : Notes)
+      Diag(Loc, PD);
+
+    return Diag(VarLoc, diag::note_acc_reduction_type_summary);
+  };
+
+  // If the type is already scalar, or is dependent, just give up.
+  if (IsValidMemberOfComposite(CurType)) {
+    // Nothing to do here, is valid.
+  } else if (auto *RD = CurType->getAsRecordDecl()) {
+    if (!RD->isStruct() && !RD->isClass())
+      return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                   << RD
+                                   << diag::OACCReductionTy::NotClassStruct);
+
+    if (!RD->isCompleteDefinition())
+      return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                   << RD << diag::OACCReductionTy::NotComplete);
+
+    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
+        CXXRD && !CXXRD->isAggregate())
+      return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                   << CXXRD << diag::OACCReductionTy::NotAgg);
+
+    for (FieldDecl *FD : RD->fields()) {
+      if (!IsValidMemberOfComposite(FD->getType())) {
+        PartialDiagnostic PD =
+            PDiag(diag::note_acc_reduction_member_of_composite)
+            << FD->getName() << RD->getName();
+        Notes.push_back({FD->getBeginLoc(), PD});
+        // TODO: member here.note_acc_reduction_member_of_composite
+        return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                     << FD->getType()
+                                     << diag::OACCReductionTy::MemberNotScalar);
+      }
+    }
+  } else {
+    return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                 << CurType
+                                 << diag::OACCReductionTy::NotScalar);
+  }
+
+  return false;
+}
+
 /// OpenACC 3.3 section 2.5.15:
 /// At a mininmum, the supported data types include ... the numerical data types
 /// in C, C++, and Fortran.
@@ -1933,93 +1973,9 @@ ExprResult SemaOpenACC::CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
   // For now, we only support 'scalar' types, or composites/arrays of scalar
   // types.
   VarExpr = VarExpr->IgnoreParenCasts();
-  SourceLocation VarLoc = VarExpr->getBeginLoc();
 
-  SmallVector<PartialDiagnosticAt> Notes;
-  QualType CurType = VarExpr->getType();
-
-  // For array like things, the expression can either be an array element
-  // (subscript expr), array section, or array type. Peel those off, and add
-  // notes in case we find an illegal kind.  We'll allow scalar or composite of
-  // scalars inside of this.
-  if (auto *ASE = dyn_cast<ArraySectionExpr>(VarExpr)) {
-    QualType BaseType = ArraySectionExpr::getBaseOriginalType(ASE);
-
-    PartialDiagnostic PD = PDiag(diag::note_acc_reduction_array)
-                           << diag::OACCReductionArray::Section << BaseType;
-    Notes.push_back({ASE->getBeginLoc(), PD});
-
-    CurType = getASTContext().getBaseElementType(BaseType);
-  } else if (auto *SubExpr = dyn_cast<ArraySubscriptExpr>(VarExpr)) {
-    // Array subscript already results in the type of the thing as its type, so
-    // there is no type to change here.
-    PartialDiagnostic PD =
-        PDiag(diag::note_acc_reduction_array)
-        << diag::OACCReductionArray::Subscript
-        << SubExpr->getBase()->IgnoreParenImpCasts()->getType();
-    Notes.push_back({SubExpr->getBeginLoc(), PD});
-  } else if (auto *AT = getASTContext().getAsArrayType(CurType)) {
-    // If we're already the array type, peel off the array and leave the element
-    // type.
-    CurType = getASTContext().getBaseElementType(AT);
-    PartialDiagnostic PD = PDiag(diag::note_acc_reduction_array)
-                           << diag::OACCReductionArray::ArrayTy << CurType;
-    Notes.push_back({VarLoc, PD});
-  }
-
-  auto IsValidMemberOfComposite = [](QualType Ty) {
-    return Ty->isDependentType() || Ty->isScalarType();
-  };
-
-  auto EmitDiags = [&](SourceLocation Loc, PartialDiagnostic PD) {
-    Diag(Loc, PD);
-
-    for (auto [Loc, PD] : Notes)
-      Diag(Loc, PD);
-
-    Diag(VarLoc, diag::note_acc_reduction_type_summary);
-  };
-
-  // If the type is already scalar, or is dependent, just give up.
-  if (IsValidMemberOfComposite(CurType)) {
-    // Nothing to do here, is valid.
-  } else if (auto *RD = CurType->getAsRecordDecl()) {
-    if (!RD->isStruct() && !RD->isClass()) {
-      EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
-                            << RD << diag::OACCReductionTy::NotClassStruct);
-      return ExprError();
-    }
-
-    if (!RD->isCompleteDefinition()) {
-      EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
-                            << RD << diag::OACCReductionTy::NotComplete);
-      return ExprError();
-    }
-
-    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
-        CXXRD && !CXXRD->isAggregate()) {
-      EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
-                            << CXXRD << diag::OACCReductionTy::NotAgg);
-      return ExprError();
-    }
-
-    for (FieldDecl *FD : RD->fields()) {
-      if (!IsValidMemberOfComposite(FD->getType())) {
-        PartialDiagnostic PD =
-            PDiag(diag::note_acc_reduction_member_of_composite)
-            << FD->getName() << RD->getName();
-        Notes.push_back({FD->getBeginLoc(), PD});
-        // TODO: member here.note_acc_reduction_member_of_composite
-        EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
-                              << FD->getType()
-                              << diag::OACCReductionTy::MemberNotScalar);
-        return ExprError();
-      }
-    }
-  } else {
-    EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
-                          << CurType << diag::OACCReductionTy::NotScalar);
-  }
+  if (CheckReductionVarType(VarExpr))
+    return ExprError();
 
   // OpenACC3.3: 2.9.11: Reduction clauses on nested constructs for the same
   // reduction 'var' must have the same reduction operator.
@@ -2201,7 +2157,7 @@ OpenACCClause *SemaOpenACC::CheckReductionClause(
     ArrayRef<const OpenACCClause *> ExistingClauses,
     OpenACCDirectiveKind DirectiveKind, SourceLocation BeginLoc,
     SourceLocation LParenLoc, OpenACCReductionOperator ReductionOp,
-    ArrayRef<Expr *> Vars, ArrayRef<OpenACCReductionRecipe> Recipes,
+    ArrayRef<Expr *> Vars, ArrayRef<OpenACCReductionRecipeWithStorage> Recipes,
     SourceLocation EndLoc) {
   if (DirectiveKind == OpenACCDirectiveKind::Loop ||
       isOpenACCCombinedDirectiveKind(DirectiveKind)) {
@@ -2261,13 +2217,23 @@ SemaOpenACC::CheckLinkClauseVarList(ArrayRef<Expr *> VarExprs) {
       continue;
     }
 
+    Expr *OrigExpr = VarExpr;
+
+    while (isa<ArraySectionExpr, ArraySubscriptExpr>(VarExpr)) {
+      if (auto *ASE = dyn_cast<ArraySectionExpr>(VarExpr))
+        VarExpr = ASE->getBase()->IgnoreParenImpCasts();
+      else
+        VarExpr =
+            cast<ArraySubscriptExpr>(VarExpr)->getBase()->IgnoreParenImpCasts();
+    }
+
     const auto *DRE = cast<DeclRefExpr>(VarExpr);
     const VarDecl *Var = dyn_cast<VarDecl>(DRE->getDecl());
 
     if (!Var || !Var->hasExternalStorage())
       Diag(VarExpr->getBeginLoc(), diag::err_acc_link_not_extern);
     else
-      NewVarList.push_back(VarExpr);
+      NewVarList.push_back(OrigExpr);
   }
 
   return NewVarList;

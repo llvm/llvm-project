@@ -16,6 +16,8 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
+#include <stddef.h>
+
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
@@ -46,6 +48,10 @@ public:
   LIBC_INLINE constexpr bool operator()() const { return is_unsigned::value; }
 };
 #endif // LIBC_COMPILER_HAS_FIXED_POINT
+#if LIBC_HAS_VECTOR_TYPE
+template <typename T, size_t N>
+struct is_unsigned<T [[clang::ext_vector_type(N)]]> : bool_constant<false> {};
+#endif
 
 template <typename T>
 LIBC_INLINE_VAR constexpr bool is_unsigned_v = is_unsigned<T>::value;

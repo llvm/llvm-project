@@ -6,7 +6,9 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
 import os
+import pathlib
 import re
+import tempfile
 
 # Many tests are skipped on Windows because get_stdout() returns None there.
 # Despite the test program printing correctly. See
@@ -14,7 +16,7 @@ import re
 
 
 class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
-    @skipIfWindows
+    @skipIfWindows(windows_version=["<", "10.0.17763"])
     def test_default(self):
         """
         Tests the default launch of a simple program. No arguments,
@@ -55,7 +57,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         )
         self.assertFalse(response["success"])
         self.assertTrue(self.get_dict_value(response, ["body", "error", "showUser"]))
-        self.assertEqual(
+        self.assertIn(
             "'launchCommands' and non-internal 'console' are mutually exclusive",
             self.get_dict_value(response, ["body", "error", "format"]),
         )
@@ -74,7 +76,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             r"unexpected value, expected 'internalConsole\', 'integratedTerminal\' or 'externalTerminal\' at arguments.console",
         )
 
-    @skipIfWindows
+    @skipIfWindows(windows_version=["<", "10.0.17763"])
     def test_termination(self):
         """
         Tests the correct termination of lldb-dap upon a 'disconnect'
@@ -207,8 +209,8 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         output = self.get_stdout()
         self.assertEqual(output, "", "expect no program output")
 
-    @skipIfWindows
     @skipIfLinux  # shell argument expansion doesn't seem to work on Linux
+    @skipIfWindows(windows_version=["<", "10.0.17763"])
     @expectedFailureAll(oslist=["freebsd", "netbsd"], bugnumber="llvm.org/pr48349")
     def test_shellExpandArguments_enabled(self):
         """
@@ -231,7 +233,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                     quote_path, line, 'verify "%s" expanded to "%s"' % (glob, program)
                 )
 
-    @skipIfWindows
+    @skipIfWindows(windows_version=["<", "10.0.17763"])
     def test_shellExpandArguments_disabled(self):
         """
         Tests the default launch of a simple program with shell expansion
@@ -253,7 +255,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                     quote_path, line, 'verify "%s" stayed to "%s"' % (glob, glob)
                 )
 
-    @skipIfWindows
+    @skipIfWindows(windows_version=["<", "10.0.17763"])
     def test_args(self):
         """
         Tests launch of a simple program with arguments
@@ -278,7 +280,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                 'arg[%i] "%s" not in "%s"' % (i + 1, quoted_arg, lines[i]),
             )
 
-    @skipIfWindows
+    @skipIfWindows(windows_version=["<", "10.0.17763"])
     def test_environment_with_object(self):
         """
         Tests launch of a simple program with environment variables
@@ -555,7 +557,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         output = self.collect_console(pattern=terminateCommands[0])
         self.verify_commands("terminateCommands", output, terminateCommands)
 
-    @skipIfWindows
+    @skipIfWindows(windows_version=["<", "10.0.17763"])
     def test_version(self):
         """
         Tests that "initialize" response contains the "version" string the same
@@ -582,3 +584,78 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             version_string.splitlines(),
             "version string does not match",
         )
+
+    def test_no_lldbinit_flag(self):
+        """
+        Test that the --no-lldbinit flag prevents sourcing .lldbinit files.
+        """
+        # Create a temporary .lldbinit file in the home directory
+        with tempfile.TemporaryDirectory() as temp_home:
+            lldbinit_path = os.path.join(temp_home, ".lldbinit")
+
+            # Write a command to the .lldbinit file that would set a unique setting
+            with open(lldbinit_path, "w") as f:
+                f.write("settings set stop-disassembly-display never\n")
+                f.write("settings set target.x86-disassembly-flavor intel\n")
+
+            # Test with --no-lldbinit flag (should NOT source .lldbinit)
+            self.build_and_create_debug_adapter(
+                lldbDAPEnv={"HOME": temp_home}, additional_args=["--no-lldbinit"]
+            )
+            program = self.getBuildArtifact("a.out")
+
+            # Use initCommands to check if .lldbinit was sourced
+            initCommands = ["settings show stop-disassembly-display"]
+
+            # Launch with initCommands to check the setting
+            self.launch(program, initCommands=initCommands, stopOnEntry=True)
+
+            # Get console output to verify the setting was NOT set from .lldbinit
+            output = self.get_console()
+            self.assertTrue(output and len(output) > 0, "expect console output")
+
+            # Verify the setting has default value, not "never" from .lldbinit
+            self.assertNotIn(
+                "never",
+                output,
+                "Setting should have default value when --no-lldbinit is used",
+            )
+
+            # Verify the initCommands were executed
+            self.verify_commands("initCommands", output, initCommands)
+
+    def test_stdio_redirection(self):
+        """
+        Test stdio redirection.
+        """
+        self.build_and_create_debug_adapter()
+        program = self.getBuildArtifact("a.out")
+
+        with tempfile.NamedTemporaryFile("rt") as f:
+            self.launch(program, stdio=[None, f.name])
+            self.continue_to_exit()
+            lines = f.readlines()
+            self.assertIn(
+                program, lines[0], "make sure program path is in first argument"
+            )
+
+    @skipIfAsan
+    @skipIfWindows(windows_version=["<", "10.0.17763"])
+    @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
+    @skipIfBuildType(["debug"])
+    def test_stdio_redirection_and_console(self):
+        """
+        Test stdio redirection and console.
+        """
+        self.build_and_create_debug_adapter()
+        program = self.getBuildArtifact("a.out")
+
+        with tempfile.NamedTemporaryFile("rt") as f:
+            self.launch(
+                program, console="integratedTerminal", stdio=[None, f.name, None]
+            )
+            self.continue_to_exit()
+            lines = f.readlines()
+            self.assertIn(
+                program, lines[0], "make sure program path is in first argument"
+            )

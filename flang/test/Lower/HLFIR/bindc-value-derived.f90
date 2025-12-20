@@ -17,7 +17,7 @@ contains
 ! CHECK-SAME:                    %[[VAL_0:.*]]: !fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>
 ! CHECK:           fir.store %[[VAL_0]] to %[[VAL_1]] : !fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]}} {fortran_attrs = #fir.var_attrs<value>, uniq_name = "_QMbindc_byvalFtestEx"} : (!fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>, !fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]}} {{.*}} {fortran_attrs = #fir.var_attrs<value>, uniq_name = "_QMbindc_byvalFtestEx"} : (!fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>, !fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>)
 ! CHECK:           %[[VAL_3:.*]] = hlfir.designate %[[VAL_2]]#0{"i"}   : (!fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>) -> !fir.ref<i32>
 ! CHECK:           fir.call @_QPuse_it(%[[VAL_3]]) fastmath<contract> : (!fir.ref<i32>) -> ()
 ! CHECK:           return
@@ -29,7 +29,7 @@ contains
   end subroutine
 ! CHECK-LABEL:   func.func @_QMbindc_byvalPcall_it(
 ! CHECK-SAME:                                      %[[VAL_0:.*]]: !fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]}} {uniq_name = "_QMbindc_byvalFcall_itEx"} : (!fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>, !fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]}} {{.*}} {uniq_name = "_QMbindc_byvalFcall_itEx"} : (!fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>, !fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>
 ! CHECK:           fir.call @test(%[[VAL_2]]) proc_attrs<bind_c> fastmath<contract> : (!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>) -> ()
 ! CHECK:           return

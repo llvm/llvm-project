@@ -149,6 +149,9 @@ void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum, raw_ostream &O,
     case NVPTX::PTXCvtMode::RNA:
       O << ".rna";
       return;
+    case NVPTX::PTXCvtMode::RS:
+      O << ".rs";
+      return;
     }
   }
   llvm_unreachable("Invalid conversion modifier");
@@ -290,7 +293,8 @@ void NVPTXInstPrinter::printAtomicCode(const MCInst *MI, int OpNum,
       O << ".acq_rel";
       return;
     case NVPTX::Ordering::SequentiallyConsistent:
-      O << ".seq_cst";
+      report_fatal_error(
+          "NVPTX AtomicCode Printer does not support \"seq_cst\" ordering.");
       return;
     case NVPTX::Ordering::Volatile:
       O << ".volatile";
@@ -389,6 +393,25 @@ void NVPTXInstPrinter::printMemOperand(const MCInst *MI, int OpNum,
     O << "+";
     printOperand(MI, OpNum + 1, O);
   }
+}
+
+void NVPTXInstPrinter::printUsedBytesMaskPragma(const MCInst *MI, int OpNum,
+                                                raw_ostream &O) {
+  auto &Op = MI->getOperand(OpNum);
+  assert(Op.isImm() && "Invalid operand");
+  uint32_t Imm = (uint32_t)Op.getImm();
+  if (Imm != UINT32_MAX) {
+    O << ".pragma \"used_bytes_mask " << format_hex(Imm, 1) << "\";\n\t";
+  }
+}
+
+void NVPTXInstPrinter::printRegisterOrSinkSymbol(const MCInst *MI, int OpNum,
+                                                 raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNum);
+  if (Op.isReg() && Op.getReg() == MCRegister::NoRegister)
+    O << "_";
+  else
+    printOperand(MI, OpNum, O);
 }
 
 void NVPTXInstPrinter::printHexu32imm(const MCInst *MI, int OpNum,

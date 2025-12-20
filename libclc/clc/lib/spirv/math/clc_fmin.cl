@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcmacro.h>
 #include <clc/internal/clc.h>
 
 _CLC_DEF _CLC_OVERLOAD float __clc_fmin(float x, float y) {

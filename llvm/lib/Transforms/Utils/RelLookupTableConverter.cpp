@@ -21,29 +21,20 @@
 
 using namespace llvm;
 
-static bool shouldConvertToRelLookupTable(Module &M, GlobalVariable &GV) {
+struct LookupTableInfo {
+  Value *Index;
+  SmallVector<Constant *> Ptrs;
+};
+
+static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
+                                          GlobalVariable &GV) {
   // If lookup table has more than one user,
   // do not generate a relative lookup table.
   // This is to simplify the analysis that needs to be done for this pass.
   // TODO: Add support for lookup tables with multiple uses.
   // For ex, this can happen when a function that uses a lookup table gets
   // inlined into multiple call sites.
-  if (!GV.hasInitializer() ||
-      !GV.isConstant() ||
-      !GV.hasOneUse())
-    return false;
-
-  GetElementPtrInst *GEP =
-      dyn_cast<GetElementPtrInst>(GV.use_begin()->getUser());
-  if (!GEP || !GEP->hasOneUse() ||
-      GV.getValueType() != GEP->getSourceElementType())
-    return false;
-
-  LoadInst *Load = dyn_cast<LoadInst>(GEP->use_begin()->getUser());
-  if (!Load || !Load->hasOneUse() ||
-      Load->getType() != GEP->getResultElementType())
-    return false;
-
+  //
   // If the original lookup table does not have local linkage and is
   // not dso_local, do not generate a relative lookup table.
   // This optimization creates a relative lookup table that consists of
@@ -51,19 +42,38 @@ static bool shouldConvertToRelLookupTable(Module &M, GlobalVariable &GV) {
   // To be able to generate these offsets, relative lookup table and
   // its elements should have internal linkage and be dso_local, which means
   // that they should resolve to symbols within the same linkage unit.
-  if (!GV.hasLocalLinkage() ||
-      !GV.isDSOLocal() ||
-      !GV.isImplicitDSOLocal())
+  if (!GV.hasInitializer() || !GV.isConstant() || !GV.hasOneUse() ||
+      !GV.hasLocalLinkage() || !GV.isDSOLocal() || !GV.isImplicitDSOLocal())
     return false;
 
-  ConstantArray *Array = dyn_cast<ConstantArray>(GV.getInitializer());
-  if (!Array)
+  auto *GEP = dyn_cast<GetElementPtrInst>(GV.use_begin()->getUser());
+  if (!GEP || !GEP->hasOneUse())
+    return false;
+
+  auto *Load = dyn_cast<LoadInst>(GEP->use_begin()->getUser());
+  if (!Load || !Load->hasOneUse())
     return false;
 
   // If values are not 64-bit pointers, do not generate a relative lookup table.
   const DataLayout &DL = M.getDataLayout();
-  Type *ElemType = Array->getType()->getElementType();
+  Type *ElemType = Load->getType();
   if (!ElemType->isPointerTy() || DL.getPointerTypeSizeInBits(ElemType) != 64)
+    return false;
+
+  // Make sure this is a gep of the form GV + scale*var.
+  unsigned IndexWidth =
+      DL.getIndexTypeSizeInBits(Load->getPointerOperand()->getType());
+  SmallMapVector<Value *, APInt, 4> VarOffsets;
+  APInt ConstOffset(IndexWidth, 0);
+  if (!GEP->collectOffset(DL, IndexWidth, VarOffsets, ConstOffset) ||
+      !ConstOffset.isZero() || VarOffsets.size() != 1)
+    return false;
+
+  // This can't be a pointer lookup table if the stride is smaller than a
+  // pointer.
+  Info.Index = VarOffsets.front().first;
+  const APInt &Stride = VarOffsets.front().second;
+  if (Stride.ult(DL.getTypeStoreSize(ElemType)))
     return false;
 
   SmallVector<GlobalVariable *, 4> GVOps;
@@ -80,14 +90,20 @@ static bool shouldConvertToRelLookupTable(Module &M, GlobalVariable &GV) {
       // https://github.com/rust-lang/rust/issues/141306.
       || (TT.isX86() && TT.isOSDarwin());
 
-  for (const Use &Op : Array->operands()) {
-    Constant *ConstOp = cast<Constant>(&Op);
+  APInt Offset(IndexWidth, 0);
+  uint64_t GVSize = DL.getTypeAllocSize(GV.getValueType());
+  for (; Offset.ult(GVSize); Offset += Stride) {
+    Constant *C =
+        ConstantFoldLoadFromConst(GV.getInitializer(), ElemType, Offset, DL);
+    if (!C)
+      return false;
+
     GlobalValue *GVOp;
-    APInt Offset;
+    APInt GVOffset;
 
     // If an operand is not a constant offset from a lookup table,
     // do not generate a relative lookup table.
-    if (!IsConstantOffsetFromGlobal(ConstOp, GVOp, Offset, DL))
+    if (!IsConstantOffsetFromGlobal(C, GVOp, GVOffset, DL))
       return false;
 
     // If operand is mutable, do not generate a relative lookup table.
@@ -102,6 +118,8 @@ static bool shouldConvertToRelLookupTable(Module &M, GlobalVariable &GV) {
 
     if (ShouldDropUnnamedAddr)
       GVOps.push_back(GlovalVarOp);
+
+    Info.Ptrs.push_back(C);
   }
 
   if (ShouldDropUnnamedAddr)
@@ -111,14 +129,12 @@ static bool shouldConvertToRelLookupTable(Module &M, GlobalVariable &GV) {
   return true;
 }
 
-static GlobalVariable *createRelLookupTable(Function &Func,
+static GlobalVariable *createRelLookupTable(LookupTableInfo &Info,
+                                            Function &Func,
                                             GlobalVariable &LookupTable) {
   Module &M = *Func.getParent();
-  ConstantArray *LookupTableArr =
-      cast<ConstantArray>(LookupTable.getInitializer());
-  unsigned NumElts = LookupTableArr->getType()->getNumElements();
   ArrayType *IntArrayTy =
-      ArrayType::get(Type::getInt32Ty(M.getContext()), NumElts);
+      ArrayType::get(Type::getInt32Ty(M.getContext()), Info.Ptrs.size());
 
   GlobalVariable *RelLookupTable = new GlobalVariable(
       M, IntArrayTy, LookupTable.isConstant(), LookupTable.getLinkage(),
@@ -127,10 +143,9 @@ static GlobalVariable *createRelLookupTable(Function &Func,
       LookupTable.isExternallyInitialized());
 
   uint64_t Idx = 0;
-  SmallVector<Constant *, 64> RelLookupTableContents(NumElts);
+  SmallVector<Constant *, 64> RelLookupTableContents(Info.Ptrs.size());
 
-  for (Use &Operand : LookupTableArr->operands()) {
-    Constant *Element = cast<Constant>(Operand);
+  for (Constant *Element : Info.Ptrs) {
     Type *IntPtrTy = M.getDataLayout().getIntPtrType(M.getContext());
     Constant *Base = llvm::ConstantExpr::getPtrToInt(RelLookupTable, IntPtrTy);
     Constant *Target = llvm::ConstantExpr::getPtrToInt(Element, IntPtrTy);
@@ -148,7 +163,8 @@ static GlobalVariable *createRelLookupTable(Function &Func,
   return RelLookupTable;
 }
 
-static void convertToRelLookupTable(GlobalVariable &LookupTable) {
+static void convertToRelLookupTable(LookupTableInfo &Info,
+                                    GlobalVariable &LookupTable) {
   GetElementPtrInst *GEP =
       cast<GetElementPtrInst>(LookupTable.use_begin()->getUser());
   LoadInst *Load = cast<LoadInst>(GEP->use_begin()->getUser());
@@ -159,21 +175,21 @@ static void convertToRelLookupTable(GlobalVariable &LookupTable) {
   Function &Func = *BB->getParent();
 
   // Generate an array that consists of relative offsets.
-  GlobalVariable *RelLookupTable = createRelLookupTable(Func, LookupTable);
+  GlobalVariable *RelLookupTable =
+      createRelLookupTable(Info, Func, LookupTable);
 
   // Place new instruction sequence before GEP.
   Builder.SetInsertPoint(GEP);
-  Value *Index = GEP->getOperand(2);
-  IntegerType *IntTy = cast<IntegerType>(Index->getType());
-  Value *Offset =
-      Builder.CreateShl(Index, ConstantInt::get(IntTy, 2), "reltable.shift");
+  IntegerType *IntTy = cast<IntegerType>(Info.Index->getType());
+  Value *Offset = Builder.CreateShl(Info.Index, ConstantInt::get(IntTy, 2),
+                                    "reltable.shift");
 
   // Insert the call to load.relative intrinsic before LOAD.
   // GEP might not be immediately followed by a LOAD, like it can be hoisted
   // outside the loop or another instruction might be inserted them in between.
   Builder.SetInsertPoint(Load);
   Function *LoadRelIntrinsic = llvm::Intrinsic::getOrInsertDeclaration(
-      &M, Intrinsic::load_relative, {Index->getType()});
+      &M, Intrinsic::load_relative, {Info.Index->getType()});
 
   // Create a call to load.relative intrinsic that computes the target address
   // by adding base address (lookup table address) and relative offset.
@@ -205,10 +221,11 @@ static bool convertToRelativeLookupTables(
   bool Changed = false;
 
   for (GlobalVariable &GV : llvm::make_early_inc_range(M.globals())) {
-    if (!shouldConvertToRelLookupTable(M, GV))
+    LookupTableInfo Info;
+    if (!shouldConvertToRelLookupTable(Info, M, GV))
       continue;
 
-    convertToRelLookupTable(GV);
+    convertToRelLookupTable(Info, GV);
 
     // Remove the original lookup table.
     GV.eraseFromParent();

@@ -19,7 +19,6 @@
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/BuiltinModules.h"
 #include "flang/Lower/CallInterface.h"
-#include "flang/Lower/Coarray.h"
 #include "flang/Lower/ComponentPath.h"
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertConstant.h"
@@ -28,6 +27,7 @@
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
 #include "flang/Lower/Mangler.h"
+#include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/Character.h"
@@ -2750,7 +2750,7 @@ public:
                   fir::unwrapSequenceType(fir::unwrapPassByRefType(argTy))))
             TODO(loc, "passing to an OPTIONAL CONTIGUOUS derived type argument "
                       "with length parameters");
-          if (Fortran::evaluate::IsAssumedRank(*expr))
+          if (Fortran::semantics::IsAssumedRank(*expr))
             TODO(loc, "passing an assumed rank entity to an OPTIONAL "
                       "CONTIGUOUS argument");
           // Assumed shape VALUE are currently TODO in the call interface
@@ -5603,7 +5603,7 @@ private:
                     return newIters;
                   };
                   if (useTripsForSlice) {
-                    LLVM_ATTRIBUTE_UNUSED auto vectorSubscriptShape =
+                    [[maybe_unused]] auto vectorSubscriptShape =
                         getShape(arrayOperands.back());
                     auto undef = fir::UndefOp::create(builder, loc, idxTy);
                     trips.push_back(undef);
