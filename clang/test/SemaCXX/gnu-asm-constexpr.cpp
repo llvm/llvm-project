@@ -77,7 +77,7 @@ struct string_view {
 
 
 void f() {
-    asm(("")); // expected-error {{the expression in this asm operand must be a string literal or an object with 'data()' and 'size()' member functions}}
+    asm(("")); // expected-error {{the expression in this asm operand must be a null terminated constant string or an object with 'data()' and 'size()' member functions}}
     asm((NotAString{})); // expected-error {{the string object in this asm operand is missing 'data()' and 'size()' member functions}}
     asm((MessageInvalidData{})); // expected-error {{the expression in this asm operand must have a 'data()' member function returning an object convertible to 'const char *'}} \
                                  // expected-error {{too few arguments to function call, expected 1, have 0}}
@@ -106,7 +106,7 @@ void test_dependent1(int i) {
 
 template void test_dependent1<int>(int);
 // expected-note@-1 {{in instantiation of function template specialization}}
-// expected-error@#err-int {{the expression in this asm operand must be a string literal or an object with 'data()' and 'size()' member functions}}
+// expected-error@#err-int {{the expression in this asm operand must be a null terminated constant string or an object with 'data()' and 'size()' member functions}}
 // expected-error@#err-int2 {{cannot initialize a value of type 'int' with an lvalue of type 'const char[3]'}}
 // expected-error@#err-int3 {{cannot initialize a value of type 'int' with an lvalue of type 'const char[2]'}}
 // expected-error@#err-int4 {{cannot initialize a value of type 'int' with an lvalue of type 'const char[7]'}}

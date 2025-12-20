@@ -1746,15 +1746,22 @@ def subst_user_defined_msg : TextSubstitution<
   "%select{the message|the expression}0 in "
   "%select{a static assertion|this asm operand}0">;
 
-def err_user_defined_msg_invalid : Error<
-  "%sub{subst_user_defined_msg}0 must be a string literal or an "
-  "object with 'data()' and 'size()' member functions">;
+def err_user_defined_msg_invalid
+    : Error<"%sub{subst_user_defined_msg}0 must be a null terminated constant "
+            "string or an "
+            "object with 'data()' and 'size()' member functions">;
 def err_user_defined_msg_missing_member_function : Error<
   "the %select{message|string}0 object in "
   "%select{this static assertion|this asm operand}0 is missing %select{"
   "a 'size()' member function|"
   "a 'data()' member function|"
   "'data()' and 'size()' member functions}1">;
+def err_user_defined_msg_not_null_terminated_string
+    : Error<"%sub{subst_user_defined_msg}0 is not null terminated">;
+def ext_consteval_string_constants
+    : Extension<"consteval string constants are an extension">,
+      DefaultWarn,
+      InGroup<DiagGroup<"consteval-string-constants-extension">>;
 def err_user_defined_msg_invalid_mem_fn_ret_ty : Error<
   "%sub{subst_user_defined_msg}0 must have a '%select{size|data}1()' member "
   "function returning an object convertible to '%select{std::size_t|const char *}1'">;

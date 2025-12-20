@@ -17694,6 +17694,44 @@ void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
 }
 
 template <typename ResultType>
+static bool EvaluateAsNullTerminatedCharBuffer(
+    Sema &SemaRef, Expr *Message, ResultType &Result, ASTContext &Ctx,
+    Sema::StringEvaluationContext EvalContext, bool ErrorOnInvalidMessage) {
+  SourceLocation Loc = Message->getBeginLoc();
+  QualType SizeT = Ctx.getSizeType();
+  QualType ConstCharPtr = Ctx.getPointerType(Ctx.getConstType(Ctx.CharTy));
+  Expr::EvalResult Status;
+  SmallVector<PartialDiagnosticAt, 8> Notes;
+  Status.Diag = &Notes;
+
+  auto DiagnoseInvalidConstantString = [&]() {
+    SemaRef.Diag(Loc, diag::err_user_defined_msg_not_null_terminated_string)
+        << EvalContext;
+    for (const auto &Note : Notes)
+      SemaRef.Diag(Note.first, Note.second);
+    return !ErrorOnInvalidMessage;
+  };
+  ExprResult EvaluatedData = SemaRef.BuildConvertedConstantExpression(
+      Message, ConstCharPtr, CCEKind::StaticAssertNullTerminatedString);
+  if (EvaluatedData.isInvalid())
+    return DiagnoseInvalidConstantString();
+
+  uint64_t Length = 0;
+  if (!EvaluatedData.get()->tryEvaluateStrLen(Length, Ctx))
+    return DiagnoseInvalidConstantString();
+
+  llvm::APInt SizeVal(Ctx.getIntWidth(SizeT), Length);
+  Expr *SizeExpr = IntegerLiteral::Create(Ctx, SizeVal, SizeT, Loc);
+
+  bool EvalResult = Message->EvaluateCharRangeAsString(
+      Result, SizeExpr, EvaluatedData.get(), Ctx, Status);
+  if (!EvalResult || !Notes.empty())
+    return DiagnoseInvalidConstantString();
+  SemaRef.Diag(Loc, diag::ext_consteval_string_constants);
+  return true;
+}
+
+template <typename ResultType>
 static bool EvaluateAsStringImpl(Sema &SemaRef, Expr *Message,
                                  ResultType &Result, ASTContext &Ctx,
                                  Sema::StringEvaluationContext EvalContext,
@@ -17726,6 +17764,10 @@ static bool EvaluateAsStringImpl(Sema &SemaRef, Expr *Message,
 
   SourceLocation Loc = Message->getBeginLoc();
   QualType T = Message->getType().getNonReferenceType();
+  if (T->isPointerType() && T->getPointeeType()->isCharType())
+    return EvaluateAsNullTerminatedCharBuffer(
+        SemaRef, Message, Result, Ctx, EvalContext, ErrorOnInvalidMessage);
+
   auto *RD = T->getAsCXXRecordDecl();
   if (!RD) {
     SemaRef.Diag(Loc, diag::err_user_defined_msg_invalid) << EvalContext;

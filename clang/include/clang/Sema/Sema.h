@@ -831,10 +831,11 @@ enum class CCEKind {
   ArrayBound,    ///< Array bound in array declarator or new-expression.
   ExplicitBool,  ///< Condition in an explicit(bool) specifier.
   Noexcept,      ///< Condition in a noexcept(bool) specifier.
-  StaticAssertMessageSize, ///< Call to size() in a static assert
-                           ///< message.
-  StaticAssertMessageData, ///< Call to data() in a static assert
-                           ///< message.
+  StaticAssertMessageSize,          ///< Call to size() in a static assert
+                                    ///< message.
+  StaticAssertMessageData,          ///< Call to data() in a static assert
+                                    ///< message.
+  StaticAssertNullTerminatedString, ///< tryEvaluateStrLen
 };
 
 /// Enums for the diagnostics of target, target_version and target_clones.
