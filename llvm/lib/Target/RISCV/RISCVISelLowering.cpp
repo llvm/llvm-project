@@ -21974,7 +21974,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (sd_match(Src, m_InsertSubvector(m_Undef(), m_Value(SubVec), m_Zero())))
       Src = SubVec;
 
-    SDValue SplatVal = DAG.getSplatValue(Src);
+    SDValue SplatVal = DAG.getSplatValue(Src, true);
     if (!SplatVal)
       break;
     MVT VT = N->getSimpleValueType(0);
