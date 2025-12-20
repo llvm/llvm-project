@@ -4112,6 +4112,8 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     return replaceUnaryCall(CI, Builder, Intrinsic::ceil);
   case LibFunc_floor:
     return replaceUnaryCall(CI, Builder, Intrinsic::floor);
+  case LibFunc_llrint:
+    return replaceUnaryCall(CI, Builder, Intrinsic::llrint);
   case LibFunc_round:
     return replaceUnaryCall(CI, Builder, Intrinsic::round);
   case LibFunc_roundeven:

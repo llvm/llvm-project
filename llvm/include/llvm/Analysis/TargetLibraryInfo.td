@@ -1141,6 +1141,15 @@ def ilogbf : TargetLibCall<"ilogbf", Int, [Flt]>;
 /// int ilogbl(long double x);
 def ilogbl : TargetLibCall<"ilogbl", Int, [LDbl]>;
 
+/// long long llrint(double x);
+def llrint : TargetLibCall<"llrint", LLong, [Dbl]>;
+
+/// long long llrintf(float x);
+def llrintf : TargetLibCall<"llrintf", LLong, [Flt]>;
+
+/// long long llrintl(long double x);
+def llrintl : TargetLibCall<"llrintl", LLong, [LDbl]>;
+
 /// double logb(double x);
 def logb : TargetLibCall<"logb", Dbl, [Dbl]>;
 
@@ -1236,22 +1245,22 @@ def nearbyintf : TargetLibCall<"nearbyintf", Flt, [Flt]>;
 def nearbyintl : TargetLibCall<"nearbyintl", LDbl, [LDbl]>;
 
 /// double nextafter(double x, double y);
-def nextafter : TargetLibCall< "nextafter", Dbl, [Dbl, Dbl]>;
+def nextafter : TargetLibCall<"nextafter", Dbl, [Dbl, Dbl]>;
 
 /// float nextafterf(float x, float y);
-def nextafterf : TargetLibCall< "nextafterf", Flt, [Flt, Flt]>;
+def nextafterf : TargetLibCall<"nextafterf", Flt, [Flt, Flt]>;
 
 /// long double nextafterl(long double x, long double y);
-def nextafterl : TargetLibCall< "nextafterl", LDbl, [LDbl, LDbl]>;
+def nextafterl : TargetLibCall<"nextafterl", LDbl, [LDbl, LDbl]>;
 
 /// double nexttoward(double x, long double y);
-def nexttoward : TargetLibCall< "nexttoward", Dbl, [Dbl, LDbl]>;
+def nexttoward : TargetLibCall<"nexttoward", Dbl, [Dbl, LDbl]>;
 
 /// float nexttowardf(float x, long double y);
-def nexttowardf : TargetLibCall< "nexttowardf", Flt, [Flt, LDbl]>;
+def nexttowardf : TargetLibCall<"nexttowardf", Flt, [Flt, LDbl]>;
 
 /// long double nexttowardl(long double x, long double y);
-def nexttowardl : TargetLibCall< "nexttowardl", LDbl, [LDbl, LDbl]>;
+def nexttowardl : TargetLibCall<"nexttowardl", LDbl, [LDbl, LDbl]>;
 
 /// uint32_t ntohl(uint32_t netlong);
 def ntohl : TargetLibCall<"ntohl", Int32, [Int32]>;

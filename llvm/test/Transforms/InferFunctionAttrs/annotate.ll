@@ -679,7 +679,16 @@ declare i32 @ilogbf(float)
 ; CHECK: declare i32 @ilogbl(x86_fp80) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare i32 @ilogbl(x86_fp80)
 
-; CHECK: declare double @logb(double) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare i64 @llrint(double) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare i64 @llrint(double)
+
+; CHECK: declare i64 @llrintf(float) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare i64 @llrintf(float)
+
+; CHECK: declare i64 @llrintl(x86_fp80) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare i64 @llrintl(x86_fp80)
+
+; CHECK: declare double @logb(double) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare double @logb(double)
 
 ; CHECK: declare float @logbf(float) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
