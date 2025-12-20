@@ -27,7 +27,7 @@ class StopInfoMachException : public StopInfo {
   /// is auth-related failure, and returns false otherwise.
   bool DeterminePtrauthFailure(ExecutionContext &exe_ctx);
 
-  bool DetermineTagMismatch(ExecutionContext &exe_ctx);
+  bool DetermineTagMismatch();
 
 public:
   // Constructors and Destructors
@@ -47,6 +47,9 @@ public:
   }
 
   const char *GetDescription() override;
+
+  // Returns the fault address, iff this is a EXC_ARM_MTE_TAG_FAULT.
+  std::optional<lldb::addr_t> GetTagFaultAddress() const;
 
 #if defined(__APPLE__)
   struct MachException {
