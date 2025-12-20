@@ -1,4 +1,4 @@
-; RUN: llc -mtriple s390x-ibm-zos < %s | FileCheck %s
+; RUN: llc -mtriple s390x-ibm-zos -emit-gnuas-syntax-on-zos=false < %s | FileCheck %s
 
 define signext i32 @_Z9computeitv() personality ptr @__zos_cxx_personality_v2 {
   ret i32 0
