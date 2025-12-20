@@ -124,7 +124,7 @@ DecodeMemoryReference(llvm::StringRef memoryReference) {
 
 bool DecodeMemoryReference(const llvm::json::Value &v, llvm::StringLiteral key,
                            lldb::addr_t &out, llvm::json::Path path,
-                           bool required) {
+                           bool required, bool allow_empty) {
   const llvm::json::Object *v_obj = v.getAsObject();
   if (!v_obj) {
     path.report("expected object");
@@ -145,6 +145,11 @@ bool DecodeMemoryReference(const llvm::json::Value &v, llvm::StringLiteral key,
   if (!mem_ref_str) {
     path.field(key).report("expected string");
     return false;
+  }
+
+  if (allow_empty && mem_ref_str->empty()) {
+    out = LLDB_INVALID_ADDRESS;
+    return true;
   }
 
   const std::optional<lldb::addr_t> addr_opt =
@@ -554,9 +559,8 @@ llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
 
   lldb::SBModule module = frame.GetModule();
   if (module.IsValid()) {
-    std::string uuid = module.GetUUIDString();
-    if (!uuid.empty())
-      object.try_emplace("moduleId", uuid);
+    if (const llvm::StringRef uuid = module.GetUUIDString(); !uuid.empty())
+      object.try_emplace("moduleId", uuid.str());
   }
 
   return llvm::json::Value(std::move(object));
@@ -810,13 +814,8 @@ VariableDescription::VariableDescription(lldb::SBValue v,
       os_display_value << *effective_summary;
 
       // As last resort, we print its type and address if available.
-    } else {
-      if (!raw_display_type_name.empty()) {
-        os_display_value << raw_display_type_name;
-        lldb::addr_t address = v.GetLoadAddress();
-        if (address != LLDB_INVALID_ADDRESS)
-          os_display_value << " @ " << llvm::format_hex(address, 0);
-      }
+    } else if (!raw_display_type_name.empty()) {
+      os_display_value << raw_display_type_name;
     }
   }
 
@@ -859,15 +858,6 @@ int64_t PackLocation(int64_t var_ref, bool is_value_location) {
 
 std::pair<int64_t, bool> UnpackLocation(int64_t location_id) {
   return std::pair{location_id >> 1, location_id & 1};
-}
-
-llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit) {
-  llvm::json::Object object;
-  char unit_path_arr[PATH_MAX];
-  unit.GetFileSpec().GetPath(unit_path_arr, sizeof(unit_path_arr));
-  std::string unit_path(unit_path_arr);
-  object.try_emplace("compileUnitPath", unit_path);
-  return llvm::json::Value(std::move(object));
 }
 
 /// See

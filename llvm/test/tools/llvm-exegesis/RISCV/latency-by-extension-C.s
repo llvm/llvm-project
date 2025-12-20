@@ -46,3 +46,12 @@ C_SRLI-NEXT: key:
 C_SRLI-NEXT:   instructions:
 C_SRLI-NEXT:     - 'C_SRLI [[REG101:X[0-9]+]] [[REG102:X[0-9]+]] [[IMM10:i_0x[0-9]+]]'
 C_SRLI-DAG: ...
+
+# RUN: llvm-exegesis -mode=latency -mtriple=riscv64-unknown-linux-gnu --mcpu=generic --benchmark-phase=assemble-measured-code -opcode-name=C_LDSP -mattr=+c | FileCheck --check-prefix=C_LDSP %s
+
+C_LDSP:      ---
+C_LDSP-NEXT: mode: latency
+C_LDSP-NEXT: key:
+C_LDSP-NEXT:   instructions:
+C_LDSP-NEXT:     - 'C_LDSP X2 X2 [[IMM11:i_0x[0-9]+]]'
+C_LDSP-DAG: ...

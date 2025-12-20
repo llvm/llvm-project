@@ -240,8 +240,8 @@ bool isReductionIterator(utils::IteratorType iteratorType) {
 //===----------------------------------------------------------------------===//
 
 /// Returns the BlockArgument that leads to `val`, if any. Traverses optional
-/// ext* ops.
-static BlockArgument getBlockArgumentWithOptionalExtOps(Value val) {
+/// ext*/sitofp ops.
+static BlockArgument getBlockArgumentWithOptionalCastOps(Value val) {
   BlockArgument blockArg = dyn_cast<BlockArgument>(val);
   if ((blockArg))
     return blockArg;
@@ -249,10 +249,70 @@ static BlockArgument getBlockArgumentWithOptionalExtOps(Value val) {
   Operation *defOp = val.getDefiningOp();
   if (!dyn_cast_if_present<arith::ExtFOp>(defOp) &&
       !dyn_cast_if_present<arith::ExtSIOp>(defOp) &&
-      !dyn_cast_if_present<arith::ExtUIOp>(defOp)) {
+      !dyn_cast_if_present<arith::ExtUIOp>(defOp) &&
+      !dyn_cast_if_present<arith::SIToFPOp>(defOp)) {
     return nullptr;
   }
   return dyn_cast<BlockArgument>(defOp->getOperand(0));
+}
+
+/// Utility function to match the zero point offset body of quantized
+/// convolution ops.
+///
+/// Quantized convolutions have a body of the form:
+///   %out + ((%input - %inputZp) * (%filter - %filterZp))
+/// where:
+///   - %input is the input tensor element (block arg 0)
+///   - %filter is the filter tensor element (block arg 1)
+///   - %inputZp is the input zero-point scalar (block arg 2)
+///   - %filterZp is the filter zero-point scalar (block arg 3)
+///   - %out is the output accumulator (block arg 4)
+///
+/// This function verifies that the multiplication operands are subtraction
+/// operations matching this pattern.
+static bool bodyMatcherForZeroPointOffsets(Operation *addOp, Operation *mulOp,
+                                           Block *body) {
+  // The multiplication should have two subtraction operands:
+  // one for (input - inputZp) and one for (filter - filterZp).
+  Operation *inputSubOp = mulOp->getOperand(0).getDefiningOp();
+  if (!isa_and_present<arith::SubIOp, arith::SubFOp>(inputSubOp))
+    return false;
+
+  Operation *filterSubOp = mulOp->getOperand(1).getDefiningOp();
+  if (!isa_and_present<arith::SubIOp, arith::SubFOp>(filterSubOp))
+    return false;
+
+  // Extract block arguments from subtraction operands.
+  BlockArgument inputBlockArg =
+      getBlockArgumentWithOptionalCastOps(inputSubOp->getOperand(0));
+  BlockArgument inputZpBlockArg =
+      getBlockArgumentWithOptionalCastOps(inputSubOp->getOperand(1));
+  BlockArgument filterBlockArg =
+      getBlockArgumentWithOptionalCastOps(filterSubOp->getOperand(0));
+  BlockArgument filterZpBlockArg =
+      getBlockArgumentWithOptionalCastOps(filterSubOp->getOperand(1));
+  BlockArgument outBlockArg =
+      getBlockArgumentWithOptionalCastOps(addOp->getOperand(0));
+
+  // Verify all block arguments are valid.
+  if (!inputBlockArg || !inputZpBlockArg || !filterBlockArg ||
+      !filterZpBlockArg || !outBlockArg)
+    return false;
+
+  // Verify all block arguments belong to the convolution body.
+  if (inputBlockArg.getOwner() != body || inputZpBlockArg.getOwner() != body ||
+      filterBlockArg.getOwner() != body ||
+      filterZpBlockArg.getOwner() != body || outBlockArg.getOwner() != body)
+    return false;
+
+  // Verify block arguments have expected indices:
+  // arg0: input, arg1: filter, arg2: inputZp, arg3: filterZp, arg4: output
+  if (inputBlockArg.getArgNumber() != 0 || filterBlockArg.getArgNumber() != 1 ||
+      inputZpBlockArg.getArgNumber() != 2 ||
+      filterZpBlockArg.getArgNumber() != 3 || outBlockArg.getArgNumber() != 4)
+    return false;
+
+  return true;
 }
 
 /// Utility to match block body for convolution ops.
@@ -260,7 +320,11 @@ static BlockArgument getBlockArgumentWithOptionalExtOps(Value val) {
 ///     %out + (%lhs * %rhs)
 ///   where: %lhs, %rhs and %out are block arguments and
 ///          %lhs and %rhs can have optional upcast operation.
-static bool bodyMatcherForConvolutionOps(Value yieldVal, Block *body) {
+/// NOTE: In case of zero point offset convolution ops %lhs and %rhs would be :-
+///       %input - %input_scalar
+///          where, %input_scalar can have optional upcast operation.
+static bool bodyMatcherForConvolutionOps(Value yieldVal, Block *body,
+                                         bool containsZeroPointOffset = false) {
   Operation *addOp = yieldVal.getDefiningOp();
   if (!isa_and_present<arith::AddIOp, arith::AddFOp>(addOp))
     return false;
@@ -269,12 +333,15 @@ static bool bodyMatcherForConvolutionOps(Value yieldVal, Block *body) {
   if (!isa_and_present<arith::MulIOp, arith::MulFOp>(mulOp))
     return false;
 
+  if (containsZeroPointOffset) {
+    return bodyMatcherForZeroPointOffsets(addOp, mulOp, body);
+  }
   BlockArgument lhsBlockArg =
-      getBlockArgumentWithOptionalExtOps(mulOp->getOperand(0));
+      getBlockArgumentWithOptionalCastOps(mulOp->getOperand(0));
   BlockArgument rhsBlockArg =
-      getBlockArgumentWithOptionalExtOps(mulOp->getOperand(1));
+      getBlockArgumentWithOptionalCastOps(mulOp->getOperand(1));
   BlockArgument outBlockArg =
-      getBlockArgumentWithOptionalExtOps(addOp->getOperand(0));
+      getBlockArgumentWithOptionalCastOps(addOp->getOperand(0));
   if (!lhsBlockArg || !rhsBlockArg || !outBlockArg ||
       lhsBlockArg.getOwner() != body || rhsBlockArg.getOwner() != body ||
       outBlockArg.getOwner() != body || lhsBlockArg.getArgNumber() != 0 ||
@@ -291,9 +358,9 @@ static bool bodyMatcherForPoolOps(Value yieldVal, Block *body) {
     return false;
 
   BlockArgument lhsArg =
-      getBlockArgumentWithOptionalExtOps(defOp->getOperand(0));
+      getBlockArgumentWithOptionalCastOps(defOp->getOperand(0));
   BlockArgument rhsArg =
-      getBlockArgumentWithOptionalExtOps(defOp->getOperand(1));
+      getBlockArgumentWithOptionalCastOps(defOp->getOperand(1));
   if (!lhsArg || !rhsArg || lhsArg.getOwner() != body ||
       rhsArg.getOwner() != body || lhsArg.getArgNumber() != 2 ||
       rhsArg.getArgNumber() != 0)
@@ -430,19 +497,33 @@ static bool convLayoutMatches(ArrayRef<ArrayRef<AffineExpr>> mapListExpected,
                           })));
 }
 
-/// Enum of all kinds of Pooling Op's type.
-enum PoolingType {
-  NONE,
-  MAX_SIGNED,
-  MAX_UNSIGNED,
-  MIN_SIGNED,
-  MIN_UNSIGNED,
-  SUM
+/// Enum representing pooling operation types used by ConvMatcherBuilder.
+enum class PoolingType {
+  None,
+  MaxSigned,
+  MaxUnsigned,
+  MinSigned,
+  MinUnsigned,
+  Sum
 };
 
 /// Helper class for building convolution op matchers with minimal boilerplate.
 /// Reduces repetitive code across Conv1D/2D/3D and Depthwise variants as well
 /// as Pooling ops.
+///
+/// Usage: Create an instance with the op, spatial rank, and output pointers for
+/// extracted dilations/strides. Then chain matchStride() calls for each spatial
+/// dimension, followed by matchMaps() to verify indexing maps, and finally
+/// matchBody() to verify the operation body pattern.
+///
+/// The `matched` flag starts as `true` and is set to `false` if any match step
+/// fails. This allows chaining multiple match calls; once any match fails, all
+/// subsequent calls become no-ops and the final result is `false`.
+///
+/// The `dilations` and `strides` pointers are output parameters that get
+/// populated with the extracted dilation and stride values from the operation's
+/// indexing maps during matchStride() calls. These values are initially set to
+/// 1 for each spatial dimension and updated as patterns are matched.
 class ConvMatcherBuilder {
   LinalgOp op;
   MLIRContext *ctx;
@@ -454,7 +535,7 @@ class ConvMatcherBuilder {
 public:
   ConvMatcherBuilder(LinalgOp op, unsigned spatialRank, SmallVector<int64_t> *d,
                      SmallVector<int64_t> *s,
-                     PoolingType poolingType = PoolingType::NONE)
+                     PoolingType poolingType = PoolingType::None)
       : op(op), ctx(op->getContext()), dilations(d), strides(s),
         indexingMaps(op.getIndexingMaps()), poolingType(poolingType) {
     *dilations = SmallVector<int64_t>(spatialRank, 1);
@@ -474,37 +555,38 @@ public:
   ConvMatcherBuilder &matchStride(unsigned iDim, unsigned fDim, unsigned oDim,
                                   unsigned idx) {
     if (matched) {
-      matched = matchConvDimAddExprPattern(indexingMaps, iDim, fDim, oDim,
-                                           (*dilations)[idx], (*strides)[idx]);
+      matched &= matchConvDimAddExprPattern(indexingMaps, iDim, fDim, oDim,
+                                            (*dilations)[idx], (*strides)[idx]);
     }
     return *this;
   }
 
   /// Match expected indexing maps layout. Returns *this for method chaining.
-  ConvMatcherBuilder &expectMaps(ArrayRef<ArrayRef<AffineExpr>> maps) {
+  ConvMatcherBuilder &matchMaps(ArrayRef<ArrayRef<AffineExpr>> maps) {
     if (matched)
-      matched = convLayoutMatches(maps, indexingMaps, ctx);
+      matched &= convLayoutMatches(maps, indexingMaps, ctx);
     return *this;
   }
 
   /// Match body pattern. This should be called last.
-  bool matchBody() {
+  bool matchBody(bool containsZeroPointOffset = false) {
     if (!matched)
       return false;
     Block *body = op.getBlock();
     auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
     switch (poolingType) {
-    case PoolingType::NONE:
-      return bodyMatcherForConvolutionOps(yieldOp.getOperand(0), body);
-    case PoolingType::MAX_SIGNED:
+    case PoolingType::None:
+      return bodyMatcherForConvolutionOps(yieldOp.getOperand(0), body,
+                                          containsZeroPointOffset);
+    case PoolingType::MaxSigned:
       return bodyMatcherForMaxSignedPoolOps(yieldOp.getOperand(0), body);
-    case PoolingType::MAX_UNSIGNED:
+    case PoolingType::MaxUnsigned:
       return bodyMatcherForMaxUnsignedPoolOps(yieldOp.getOperand(0), body);
-    case PoolingType::MIN_SIGNED:
+    case PoolingType::MinSigned:
       return bodyMatcherForMinSignedPoolOps(yieldOp.getOperand(0), body);
-    case PoolingType::MIN_UNSIGNED:
+    case PoolingType::MinUnsigned:
       return bodyMatcherForMinUnsignedPoolOps(yieldOp.getOperand(0), body);
-    case PoolingType::SUM:
+    case PoolingType::Sum:
       return bodyMatcherForSumPoolOps(yieldOp.getOperand(0), body);
     }
     return false;
@@ -515,9 +597,6 @@ public:
 // Matchers for specific convolution operation.
 //===----------------------------------------------------------------------===//
 
-// #inputMap = affine_map<(W, w) -> (W + w)>
-// #filterMap = affine_map<(W, w) -> (w)>
-// #outputMap = affine_map<(W, w) -> (W)>
 template <>
 bool isaConvolutionOpOfType<linalg::Conv1DOp>(LinalgOp op,
                                               SmallVector<int64_t> *dilations,
@@ -533,15 +612,12 @@ bool isaConvolutionOpOfType<linalg::Conv1DOp>(LinalgOp op,
   AffineExpr w = m.dim(1);
 
   return m.matchStride(/*iDim=*/0, /*fDim=*/0, /*oDim=*/0, /*idx=*/0)
-      .expectMaps({/*inputMap=*/{m.strided(W, w, 0)},
-                   /*filterMap=*/{w},
-                   /*outputMap=*/{W}})
+      .matchMaps({/*inputMap=*/{m.strided(W, w, 0)},
+                  /*filterMap=*/{w},
+                  /*outputMap=*/{W}})
       .matchBody();
 }
 
-// #inputMap  = affine_map<(N, W, F, w, c) -> (N, W + w, c)>
-// #filterMap = affine_map<(N, W, F, w, c) -> (w, c, F)>
-// #outputMap = affine_map<(N, W, F, w, c) -> (N, W, F)>
 template <>
 bool isaConvolutionOpOfType<linalg::Conv1DNwcWcfOp>(
     LinalgOp op, SmallVector<int64_t> *dilations,
@@ -560,15 +636,12 @@ bool isaConvolutionOpOfType<linalg::Conv1DNwcWcfOp>(
   AffineExpr c = m.dim(4);
 
   return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
-      .expectMaps({/*inputMap=*/{N, m.strided(W, w, 0), c},
-                   /*filterMap=*/{w, c, F},
-                   /*outputMap=*/{N, W, F}})
+      .matchMaps({/*inputMap=*/{N, m.strided(W, w, 0), c},
+                  /*filterMap=*/{w, c, F},
+                  /*outputMap=*/{N, W, F}})
       .matchBody();
 }
 
-// #inputMap  = affine_map<(N, F, W, c, w) -> (N, c, W + w)>
-// #filterMap = affine_map<(N, F, W, c, w) -> (F, c, w)>
-// #outputMap = affine_map<(N, F, W, c, w) -> (N, F, W)>
 template <>
 bool isaConvolutionOpOfType<linalg::Conv1DNcwFcwOp>(
     LinalgOp op, SmallVector<int64_t> *dilations,
@@ -587,15 +660,12 @@ bool isaConvolutionOpOfType<linalg::Conv1DNcwFcwOp>(
   AffineExpr w = m.dim(4);
 
   return m.matchStride(/*iDim=*/2, /*fDim=*/2, /*oDim=*/2, /*idx=*/0)
-      .expectMaps({/*inputMap=*/{N, c, m.strided(W, w, 0)},
-                   /*filterMap=*/{F, c, w},
-                   /*outputMap=*/{N, F, W}})
+      .matchMaps({/*inputMap=*/{N, c, m.strided(W, w, 0)},
+                  /*filterMap=*/{F, c, w},
+                  /*outputMap=*/{N, F, W}})
       .matchBody();
 }
 
-// #inputMap  = affine_map<(H, W, h, w) -> (H + h, W + w)>
-// #filterMap = affine_map<(H, W, h, w) -> (h, w)>
-// #outputMap = affine_map<(H, W, h, w) -> (H, W)>
 template <>
 bool isaConvolutionOpOfType<linalg::Conv2DOp>(LinalgOp op,
                                               SmallVector<int64_t> *dilations,
@@ -614,15 +684,329 @@ bool isaConvolutionOpOfType<linalg::Conv2DOp>(LinalgOp op,
 
   return m.matchStride(/*iDim=*/0, /*fDim=*/0, /*oDim=*/0, /*idx=*/0)
       .matchStride(/*iDim=*/1, /*fDim=*/1, /*oDim=*/1, /*idx=*/1)
-      .expectMaps({/*inputMap=*/{m.strided(H, h, 0), m.strided(W, w, 1)},
-                   /*filterMap=*/{h, w},
-                   /*outputMap=*/{H, W}})
+      .matchMaps({/*inputMap=*/{m.strided(H, h, 0), m.strided(W, w, 1)},
+                  /*filterMap=*/{h, w},
+                  /*outputMap=*/{H, W}})
       .matchBody();
 }
 
-// #inputMap  = affine_map<(D, H, W, d, h, w) -> (D + d, H + h, W + w)>
-// #filterMap = affine_map<(D, H, W, d, h, w) -> (d, h, w)>
-// #outputMap = affine_map<(D, H, W, d, h, w) -> (D, H, W)>
+template <>
+bool isaConvolutionOpOfType<linalg::Conv2DNhwcHwcfOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNhwcHwcfOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides);
+  AffineExpr N = m.dim(0);
+  AffineExpr H = m.dim(1);
+  AffineExpr W = m.dim(2);
+  AffineExpr F = m.dim(3);
+  AffineExpr h = m.dim(4);
+  AffineExpr w = m.dim(5);
+  AffineExpr c = m.dim(6);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
+      .matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/1)
+      .matchMaps({/*inputMap=*/{N, m.strided(H, h, 0), m.strided(W, w, 1), c},
+                  /*filterMap=*/{h, w, c, F},
+                  /*outputMap=*/{N, H, W, F}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::Conv2DNhwcHwcfQOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNhwcHwcfQOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides);
+  AffineExpr N = m.dim(0);
+  AffineExpr H = m.dim(1);
+  AffineExpr W = m.dim(2);
+  AffineExpr F = m.dim(3);
+  AffineExpr h = m.dim(4);
+  AffineExpr w = m.dim(5);
+  AffineExpr c = m.dim(6);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
+      .matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/1)
+      .matchMaps({/*inputMap=*/{N, m.strided(H, h, 0), m.strided(W, w, 1), c},
+                  /*filterMap=*/{h, w, c, F},
+                  /*scalarMap=*/{},
+                  /*scalarMap=*/{},
+                  /*outputMap=*/{N, H, W, F}})
+      .matchBody(/*containsZeroPointOffset=*/true);
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::Conv2DNhwcFhwcOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNhwcFhwcOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides);
+  AffineExpr N = m.dim(0);
+  AffineExpr H = m.dim(1);
+  AffineExpr W = m.dim(2);
+  AffineExpr F = m.dim(3);
+  AffineExpr h = m.dim(4);
+  AffineExpr w = m.dim(5);
+  AffineExpr c = m.dim(6);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/1, /*oDim=*/1, /*idx=*/0)
+      .matchStride(/*iDim=*/2, /*fDim=*/2, /*oDim=*/2, /*idx=*/1)
+      .matchMaps({/*inputMap=*/{N, m.strided(H, h, 0), m.strided(W, w, 1), c},
+                  /*filterMap=*/{F, h, w, c},
+                  /*outputMap=*/{N, H, W, F}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::Conv2DNhwcFhwcQOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNhwcFhwcQOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides);
+  AffineExpr N = m.dim(0);
+  AffineExpr H = m.dim(1);
+  AffineExpr W = m.dim(2);
+  AffineExpr F = m.dim(3);
+  AffineExpr h = m.dim(4);
+  AffineExpr w = m.dim(5);
+  AffineExpr c = m.dim(6);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/1, /*oDim=*/1, /*idx=*/0)
+      .matchStride(/*iDim=*/2, /*fDim=*/2, /*oDim=*/2, /*idx=*/1)
+      .matchMaps({/*inputMap=*/{N, m.strided(H, h, 0), m.strided(W, w, 1), c},
+                  /*filterMap=*/{F, h, w, c},
+                  /*scalarMap=*/{},
+                  /*scalarMap=*/{},
+                  /*outputMap=*/{N, H, W, F}})
+      .matchBody(/*containsZeroPointOffset=*/true);
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::Conv2DNchwFchwOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNchwFchwOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides);
+  AffineExpr N = m.dim(0);
+  AffineExpr F = m.dim(1);
+  AffineExpr H = m.dim(2);
+  AffineExpr W = m.dim(3);
+  AffineExpr c = m.dim(4);
+  AffineExpr h = m.dim(5);
+  AffineExpr w = m.dim(6);
+
+  return m.matchStride(/*iDim=*/2, /*fDim=*/2, /*oDim=*/2, /*idx=*/0)
+      .matchStride(/*iDim=*/3, /*fDim=*/3, /*oDim=*/3, /*idx=*/1)
+      .matchMaps({/*inputMap=*/{N, c, m.strided(H, h, 0), m.strided(W, w, 1)},
+                  /*filterMap=*/{F, c, h, w},
+                  /*outputMap=*/{N, F, H, W}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::Conv2DNchwFchwQOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNchwFchwQOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides);
+  AffineExpr N = m.dim(0);
+  AffineExpr F = m.dim(1);
+  AffineExpr H = m.dim(2);
+  AffineExpr W = m.dim(3);
+  AffineExpr c = m.dim(4);
+  AffineExpr h = m.dim(5);
+  AffineExpr w = m.dim(6);
+
+  return m.matchStride(/*iDim=*/2, /*fDim=*/2, /*oDim=*/2, /*idx=*/0)
+      .matchStride(/*iDim=*/3, /*fDim=*/3, /*oDim=*/3, /*idx=*/1)
+      .matchMaps({/*inputMap=*/{N, c, m.strided(H, h, 0), m.strided(W, w, 1)},
+                  /*filterMap=*/{F, c, h, w},
+                  /*scalarMap=*/{},
+                  /*scalarMap=*/{},
+                  /*outputMap=*/{N, F, H, W}})
+      .matchBody(/*containsZeroPointOffset=*/true);
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::Conv2DNgchwFgchwOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNgchwFgchwOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides);
+  AffineExpr N = m.dim(0);
+  AffineExpr G = m.dim(1);
+  AffineExpr F = m.dim(2);
+  AffineExpr H = m.dim(3);
+  AffineExpr W = m.dim(4);
+  AffineExpr c = m.dim(5);
+  AffineExpr h = m.dim(6);
+  AffineExpr w = m.dim(7);
+
+  return m.matchStride(/*iDim=*/3, /*fDim=*/3, /*oDim=*/3, /*idx=*/0)
+      .matchStride(/*iDim=*/4, /*fDim=*/4, /*oDim=*/4, /*idx=*/1)
+      .matchMaps(
+          {/*inputMap=*/{N, G, c, m.strided(H, h, 0), m.strided(W, w, 1)},
+           /*filterMap=*/{F, G, c, h, w},
+           /*outputMap=*/{N, G, F, H, W}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::Conv2DNgchwGfchwOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNgchwGfchwOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides);
+  AffineExpr N = m.dim(0);
+  AffineExpr G = m.dim(1);
+  AffineExpr F = m.dim(2);
+  AffineExpr H = m.dim(3);
+  AffineExpr W = m.dim(4);
+  AffineExpr c = m.dim(5);
+  AffineExpr h = m.dim(6);
+  AffineExpr w = m.dim(7);
+
+  return m.matchStride(/*iDim=*/3, /*fDim=*/3, /*oDim=*/3, /*idx=*/0)
+      .matchStride(/*iDim=*/4, /*fDim=*/4, /*oDim=*/4, /*idx=*/1)
+      .matchMaps(
+          {/*inputMap=*/{N, G, c, m.strided(H, h, 0), m.strided(W, w, 1)},
+           /*filterMap=*/{G, F, c, h, w},
+           /*outputMap=*/{N, G, F, H, W}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::Conv2DNgchwGfchwQOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNgchwGfchwQOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides);
+  AffineExpr N = m.dim(0);
+  AffineExpr G = m.dim(1);
+  AffineExpr F = m.dim(2);
+  AffineExpr H = m.dim(3);
+  AffineExpr W = m.dim(4);
+  AffineExpr c = m.dim(5);
+  AffineExpr h = m.dim(6);
+  AffineExpr w = m.dim(7);
+
+  return m.matchStride(/*iDim=*/3, /*fDim=*/3, /*oDim=*/3, /*idx=*/0)
+      .matchStride(/*iDim=*/4, /*fDim=*/4, /*oDim=*/4, /*idx=*/1)
+      .matchMaps(
+          {/*inputMap=*/{N, G, c, m.strided(H, h, 0), m.strided(W, w, 1)},
+           /*filterMap=*/{G, F, c, h, w},
+           /*scalarMap=*/{},
+           /*scalarMap=*/{},
+           /*outputMap=*/{N, G, F, H, W}})
+      .matchBody(/*containsZeroPointOffset=*/true);
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::Conv2DNhwgcGfhwcOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNhwgcGfhwcOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides);
+  AffineExpr N = m.dim(0);
+  AffineExpr H = m.dim(1);
+  AffineExpr W = m.dim(2);
+  AffineExpr G = m.dim(3);
+  AffineExpr F = m.dim(4);
+  AffineExpr h = m.dim(5);
+  AffineExpr w = m.dim(6);
+  AffineExpr c = m.dim(7);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/2, /*oDim=*/1, /*idx=*/0)
+      .matchStride(/*iDim=*/2, /*fDim=*/3, /*oDim=*/2, /*idx=*/1)
+      .matchMaps(
+          {/*inputMap=*/{N, m.strided(H, h, 0), m.strided(W, w, 1), G, c},
+           /*filterMap=*/{G, F, h, w, c},
+           /*outputMap=*/{N, H, W, G, F}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::Conv2DNhwgcGfhwcQOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv2DNhwgcGfhwcQOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides);
+  AffineExpr N = m.dim(0);
+  AffineExpr H = m.dim(1);
+  AffineExpr W = m.dim(2);
+  AffineExpr G = m.dim(3);
+  AffineExpr F = m.dim(4);
+  AffineExpr h = m.dim(5);
+  AffineExpr w = m.dim(6);
+  AffineExpr c = m.dim(7);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/2, /*oDim=*/1, /*idx=*/0)
+      .matchStride(/*iDim=*/2, /*fDim=*/3, /*oDim=*/2, /*idx=*/1)
+      .matchMaps(
+          {/*inputMap=*/{N, m.strided(H, h, 0), m.strided(W, w, 1), G, c},
+           /*filterMap=*/{G, F, h, w, c},
+           /*scalarMap=*/{},
+           /*scalarMap=*/{},
+           /*outputMap=*/{N, H, W, G, F}})
+      .matchBody(/*containsZeroPointOffset=*/true);
+}
+
 template <>
 bool isaConvolutionOpOfType<linalg::Conv3DOp>(LinalgOp op,
                                               SmallVector<int64_t> *dilations,
@@ -644,16 +1028,108 @@ bool isaConvolutionOpOfType<linalg::Conv3DOp>(LinalgOp op,
   return m.matchStride(/*iDim=*/0, /*fDim=*/0, /*oDim=*/0, /*idx=*/0)
       .matchStride(/*iDim=*/1, /*fDim=*/1, /*oDim=*/1, /*idx=*/1)
       .matchStride(/*iDim=*/2, /*fDim=*/2, /*oDim=*/2, /*idx=*/2)
-      .expectMaps({/*inputMap=*/{m.strided(D, d, 0), m.strided(H, h, 1),
-                                 m.strided(W, w, 2)},
-                   /*filterMap=*/{d, h, w},
-                   /*outputMap=*/{D, H, W}})
+      .matchMaps({/*inputMap=*/{m.strided(D, d, 0), m.strided(H, h, 1),
+                                m.strided(W, w, 2)},
+                  /*filterMap=*/{d, h, w},
+                  /*outputMap=*/{D, H, W}})
       .matchBody();
 }
 
-// #inputMap  = affine_map<(N, W, C, w) -> (N, C, W + w)>
-// #filterMap = affine_map<(N, W, C, w) -> (C, w)>
-// #outputMap = affine_map<(N, W, C, w) -> (N, C, W)>
+template <>
+bool isaConvolutionOpOfType<linalg::Conv3DNdhwcDhwcfOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv3DNdhwcDhwcfOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/3, dilations, strides);
+  AffineExpr N = m.dim(0);
+  AffineExpr D = m.dim(1);
+  AffineExpr H = m.dim(2);
+  AffineExpr W = m.dim(3);
+  AffineExpr F = m.dim(4);
+  AffineExpr d = m.dim(5);
+  AffineExpr h = m.dim(6);
+  AffineExpr w = m.dim(7);
+  AffineExpr c = m.dim(8);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
+      .matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/1)
+      .matchStride(/*iDim=*/3, /*fDim=*/2, /*oDim=*/3, /*idx=*/2)
+      .matchMaps({/*inputMap=*/{N, m.strided(D, d, 0), m.strided(H, h, 1),
+                                m.strided(W, w, 2), c},
+                  /*filterMap=*/{d, h, w, c, F},
+                  /*outputMap=*/{N, D, H, W, F}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::Conv3DNdhwcDhwcfQOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv3DNdhwcDhwcfQOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/3, dilations, strides);
+  AffineExpr N = m.dim(0);
+  AffineExpr D = m.dim(1);
+  AffineExpr H = m.dim(2);
+  AffineExpr W = m.dim(3);
+  AffineExpr F = m.dim(4);
+  AffineExpr d = m.dim(5);
+  AffineExpr h = m.dim(6);
+  AffineExpr w = m.dim(7);
+  AffineExpr c = m.dim(8);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
+      .matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/1)
+      .matchStride(/*iDim=*/3, /*fDim=*/2, /*oDim=*/3, /*idx=*/2)
+      .matchMaps({/*inputMap=*/{N, m.strided(D, d, 0), m.strided(H, h, 1),
+                                m.strided(W, w, 2), c},
+                  /*filterMap=*/{d, h, w, c, F},
+                  /*scalarMap=*/{},
+                  /*scalarMap=*/{},
+                  /*outputMap=*/{N, D, H, W, F}})
+      .matchBody(/*containsZeroPointOffset=*/true);
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::Conv3DNcdhwFcdhwOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::Conv3DNcdhwFcdhwOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/3, dilations, strides);
+  AffineExpr N = m.dim(0);
+  AffineExpr F = m.dim(1);
+  AffineExpr D = m.dim(2);
+  AffineExpr H = m.dim(3);
+  AffineExpr W = m.dim(4);
+  AffineExpr c = m.dim(5);
+  AffineExpr d = m.dim(6);
+  AffineExpr h = m.dim(7);
+  AffineExpr w = m.dim(8);
+
+  return m.matchStride(/*iDim=*/2, /*fDim=*/2, /*oDim=*/2, /*idx=*/0)
+      .matchStride(/*iDim=*/3, /*fDim=*/3, /*oDim=*/3, /*idx=*/1)
+      .matchStride(/*iDim=*/4, /*fDim=*/4, /*oDim=*/4, /*idx=*/2)
+      .matchMaps({/*inputMap=*/{N, c, m.strided(D, d, 0), m.strided(H, h, 1),
+                                m.strided(W, w, 2)},
+                  /*filterMap=*/{F, c, d, h, w},
+                  /*outputMap=*/{N, F, D, H, W}})
+      .matchBody();
+}
+
 template <>
 bool isaConvolutionOpOfType<linalg::DepthwiseConv1DNcwCwOp>(
     LinalgOp op, SmallVector<int64_t> *dilations,
@@ -671,15 +1147,12 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv1DNcwCwOp>(
   AffineExpr w = m.dim(3);
 
   return m.matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/0)
-      .expectMaps({/*inputMap=*/{N, C, m.strided(W, w, 0)},
-                   /*filterMap=*/{C, w},
-                   /*outputMap=*/{N, C, W}})
+      .matchMaps({/*inputMap=*/{N, C, m.strided(W, w, 0)},
+                  /*filterMap=*/{C, w},
+                  /*outputMap=*/{N, C, W}})
       .matchBody();
 }
 
-// #inputMap = affine_map<(N, W, C, w) -> (N, W + w, C)>
-// #filterMap = affine_map<(N, W, C, w) -> (w, C)>
-// #outputMap = affine_map<(N, W, C, w) -> (N, W, C)>
 template <>
 bool isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(
     LinalgOp op, SmallVector<int64_t> *dilations,
@@ -697,15 +1170,12 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(
   AffineExpr w = m.dim(3);
 
   return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
-      .expectMaps({/*inputMap=*/{N, m.strided(W, w, 0), C},
-                   /*filterMap=*/{w, C},
-                   /*outputMap=*/{N, W, C}})
+      .matchMaps({/*inputMap=*/{N, m.strided(W, w, 0), C},
+                  /*filterMap=*/{w, C},
+                  /*outputMap=*/{N, W, C}})
       .matchBody();
 }
 
-// #inputMap  = affine_map<(N, W, C, CM, w) -> (N, W + w, C)>
-// #filterMap = affine_map<(N, W, C, CM, w) -> (w, C, CM)>
-// #outputMap = affine_map<(N, W, C, CM, w) -> (N, W, C, CM)>
 template <>
 bool isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcmOp>(
     LinalgOp op, SmallVector<int64_t> *dilations,
@@ -724,15 +1194,12 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcmOp>(
   AffineExpr w = m.dim(4);
 
   return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
-      .expectMaps({/*inputMap=*/{N, m.strided(W, w, 0), C},
-                   /*filterMap=*/{w, C, CM},
-                   /*outputMap=*/{N, W, C, CM}})
+      .matchMaps({/*inputMap=*/{N, m.strided(W, w, 0), C},
+                  /*filterMap=*/{w, C, CM},
+                  /*outputMap=*/{N, W, C, CM}})
       .matchBody();
 }
 
-// #inputMap = affine_map<(N, H, W, C, h, w) -> (N, C, H + h, W + w)>
-// #filterMap = affine_map<(N, H, W, C, h, w) -> (C, h, w)>
-// #outputMap = affine_map<(N, H, W, C, h, w) -> (N, C, H, W)>
 template <>
 bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNchwChwOp>(
     LinalgOp op, SmallVector<int64_t> *dilations,
@@ -753,18 +1220,182 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNchwChwOp>(
 
   return m.matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/0)
       .matchStride(/*iDim=*/3, /*fDim=*/2, /*oDim=*/3, /*idx=*/1)
-      .expectMaps({/*inputMap=*/{N, C, m.strided(H, h, 0), m.strided(W, w, 1)},
-                   /*filterMap=*/{C, h, w},
-                   /*outputMap=*/{N, C, H, W}})
+      .matchMaps({/*inputMap=*/{N, C, m.strided(H, h, 0), m.strided(W, w, 1)},
+                  /*filterMap=*/{C, h, w},
+                  /*outputMap=*/{N, C, H, W}})
       .matchBody();
 }
 
-// #inputMap = affine_map<(N, D, H, W, CM, d, h, w, C)
-//                    -> (N, D + d, H + h, W + w, C)>
-// #filterMap = affine_map<(N, D, H, W, CM, d, h, w, C)
-//                    -> (d, h, w, C, CM)>
-// #outputMap = affine_map<(N, D, H, W, CM, d, h, w, C)
-//                    -> (N, D, H, W, C, CM)>
+template <>
+bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNhwcHwcOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::DepthwiseConv2DNhwcHwcOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides);
+  AffineExpr N = m.dim(0);
+  AffineExpr H = m.dim(1);
+  AffineExpr W = m.dim(2);
+  AffineExpr C = m.dim(3);
+  AffineExpr h = m.dim(4);
+  AffineExpr w = m.dim(5);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
+      .matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/1)
+      .matchMaps({/*inputMap=*/{N, m.strided(H, h, 0), m.strided(W, w, 1), C},
+                  /*filterMap=*/{h, w, C},
+                  /*outputMap=*/{N, H, W, C}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNhwcHwcQOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::DepthwiseConv2DNhwcHwcQOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides);
+  AffineExpr N = m.dim(0);
+  AffineExpr H = m.dim(1);
+  AffineExpr W = m.dim(2);
+  AffineExpr C = m.dim(3);
+  AffineExpr h = m.dim(4);
+  AffineExpr w = m.dim(5);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
+      .matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/1)
+      .matchMaps({/*inputMap=*/{N, m.strided(H, h, 0), m.strided(W, w, 1), C},
+                  /*filterMap=*/{h, w, C},
+                  /*scalarMap=*/{},
+                  /*scalarMap=*/{},
+                  /*outputMap=*/{N, H, W, C}})
+      .matchBody(/*containsZeroPointOffset=*/true);
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNhwcHwcmOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::DepthwiseConv2DNhwcHwcmOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides);
+  AffineExpr N = m.dim(0);
+  AffineExpr H = m.dim(1);
+  AffineExpr W = m.dim(2);
+  AffineExpr C = m.dim(3);
+  AffineExpr CM = m.dim(4);
+  AffineExpr h = m.dim(5);
+  AffineExpr w = m.dim(6);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
+      .matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/1)
+      .matchMaps({/*inputMap=*/{N, m.strided(H, h, 0), m.strided(W, w, 1), C},
+                  /*filterMap=*/{h, w, C, CM},
+                  /*outputMap=*/{N, H, W, C, CM}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNhwcHwcmQOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::DepthwiseConv2DNhwcHwcmQOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides);
+  AffineExpr N = m.dim(0);
+  AffineExpr H = m.dim(1);
+  AffineExpr W = m.dim(2);
+  AffineExpr C = m.dim(3);
+  AffineExpr CM = m.dim(4);
+  AffineExpr h = m.dim(5);
+  AffineExpr w = m.dim(6);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
+      .matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/1)
+      .matchMaps({/*inputMap=*/{N, m.strided(H, h, 0), m.strided(W, w, 1), C},
+                  /*filterMap=*/{h, w, C, CM},
+                  /*scalarMap=*/{},
+                  /*scalarMap=*/{},
+                  /*outputMap=*/{N, H, W, C, CM}})
+      .matchBody(/*containsZeroPointOffset=*/true);
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::DepthwiseConv3DNdhwcDhwcOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::DepthwiseConv3DNdhwcDhwcOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/3, dilations, strides);
+  AffineExpr N = m.dim(0);
+  AffineExpr D = m.dim(1);
+  AffineExpr H = m.dim(2);
+  AffineExpr W = m.dim(3);
+  AffineExpr d = m.dim(4);
+  AffineExpr h = m.dim(5);
+  AffineExpr w = m.dim(6);
+  AffineExpr C = m.dim(7);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
+      .matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/1)
+      .matchStride(/*iDim=*/3, /*fDim=*/2, /*oDim=*/3, /*idx=*/2)
+      .matchMaps({/*inputMap=*/{N, m.strided(D, d, 0), m.strided(H, h, 1),
+                                m.strided(W, w, 2), C},
+                  /*filterMap=*/{d, h, w, C},
+                  /*outputMap=*/{N, D, H, W, C}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::DepthwiseConv3DNcdhwCdhwOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::DepthwiseConv3DNcdhwCdhwOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/3, dilations, strides);
+  AffineExpr N = m.dim(0);
+  AffineExpr D = m.dim(1);
+  AffineExpr H = m.dim(2);
+  AffineExpr W = m.dim(3);
+  AffineExpr d = m.dim(4);
+  AffineExpr h = m.dim(5);
+  AffineExpr w = m.dim(6);
+  AffineExpr C = m.dim(7);
+
+  return m.matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/0)
+      .matchStride(/*iDim=*/3, /*fDim=*/2, /*oDim=*/3, /*idx=*/1)
+      .matchStride(/*iDim=*/4, /*fDim=*/3, /*oDim=*/4, /*idx=*/2)
+      .matchMaps({/*inputMap=*/{N, C, m.strided(D, d, 0), m.strided(H, h, 1),
+                                m.strided(W, w, 2)},
+                  /*filterMap=*/{C, d, h, w},
+                  /*outputMap=*/{N, C, D, H, W}})
+      .matchBody();
+}
+
 template <>
 bool isaConvolutionOpOfType<linalg::DepthwiseConv3DNdhwcDhwcmOp>(
     LinalgOp op, SmallVector<int64_t> *dilations,
@@ -789,16 +1420,13 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv3DNdhwcDhwcmOp>(
   return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
       .matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/1)
       .matchStride(/*iDim=*/3, /*fDim=*/2, /*oDim=*/3, /*idx=*/2)
-      .expectMaps({/*inputMap=*/{N, m.strided(D, d, 0), m.strided(H, h, 1),
-                                 m.strided(W, w, 2), C},
-                   /*filterMap=*/{d, h, w, C, CM},
-                   /*outputMap=*/{N, D, H, W, C, CM}})
+      .matchMaps({/*inputMap=*/{N, m.strided(D, d, 0), m.strided(H, h, 1),
+                                m.strided(W, w, 2), C},
+                  /*filterMap=*/{d, h, w, C, CM},
+                  /*outputMap=*/{N, D, H, W, C, CM}})
       .matchBody();
 }
 
-// #inputMap = affine_map<(N, H, W, C, h, w) -> (N, H + h, W + w, C)>
-// #filterMap = affine_map<(N, H, W, C, h, w) -> (h, w)>
-// #outputMap = affine_map<(N, H, W, C, h, w) -> (N, H, W, C)>
 template <>
 bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxOp>(
     LinalgOp op, SmallVector<int64_t> *dilations,
@@ -810,7 +1438,7 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxOp>(
          "expected op to implement ConvolutionOpInterface");
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides,
-                       PoolingType::MAX_SIGNED);
+                       PoolingType::MaxSigned);
   AffineExpr N = m.dim(0);
   AffineExpr H = m.dim(1);
   AffineExpr W = m.dim(2);
@@ -820,15 +1448,12 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxOp>(
 
   return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
       .matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/1)
-      .expectMaps({/*inputMap=*/{N, m.strided(H, h, 0), m.strided(W, w, 1), C},
-                   /*filterMap=*/{h, w},
-                   /*outputMap=*/{N, H, W, C}})
+      .matchMaps({/*inputMap=*/{N, m.strided(H, h, 0), m.strided(W, w, 1), C},
+                  /*filterMap=*/{h, w},
+                  /*outputMap=*/{N, H, W, C}})
       .matchBody();
 }
 
-// #inputMap = affine_map<(N, H, W, C, h, w) -> (N, H + h, W + w, C)>
-// #filterMap = affine_map<(N, H, W, C, h, w) -> (h, w)>
-// #outputMap = affine_map<(N, H, W, C, h, w) -> (N, H, W, C)>
 template <>
 bool isaConvolutionOpOfType<linalg::PoolingNhwcMinOp>(
     LinalgOp op, SmallVector<int64_t> *dilations,
@@ -840,7 +1465,7 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMinOp>(
          "expected op to implement ConvolutionOpInterface");
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides,
-                       PoolingType::MIN_SIGNED);
+                       PoolingType::MinSigned);
   AffineExpr N = m.dim(0);
   AffineExpr H = m.dim(1);
   AffineExpr W = m.dim(2);
@@ -850,15 +1475,12 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMinOp>(
 
   return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
       .matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/1)
-      .expectMaps({/*inputMap=*/{N, m.strided(H, h, 0), m.strided(W, w, 1), C},
-                   /*filterMap=*/{h, w},
-                   /*outputMap=*/{N, H, W, C}})
+      .matchMaps({/*inputMap=*/{N, m.strided(H, h, 0), m.strided(W, w, 1), C},
+                  /*filterMap=*/{h, w},
+                  /*outputMap=*/{N, H, W, C}})
       .matchBody();
 }
 
-// #inputMap = affine_map<(N, H, W, C, h, w) -> (N, H + h, W + w, C)>
-// #filterMap = affine_map<(N, H, W, C, h, w) -> (h, w)>
-// #outputMap = affine_map<(N, H, W, C, h, w) -> (N, H, W, C)>
 template <>
 bool isaConvolutionOpOfType<linalg::PoolingNhwcSumOp>(
     LinalgOp op, SmallVector<int64_t> *dilations,
@@ -870,7 +1492,7 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcSumOp>(
          "expected op to implement ConvolutionOpInterface");
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides,
-                       PoolingType::SUM);
+                       PoolingType::Sum);
   AffineExpr N = m.dim(0);
   AffineExpr H = m.dim(1);
   AffineExpr W = m.dim(2);
@@ -880,15 +1502,12 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcSumOp>(
 
   return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
       .matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/1)
-      .expectMaps({/*inputMap=*/{N, m.strided(H, h, 0), m.strided(W, w, 1), C},
-                   /*filterMap=*/{h, w},
-                   /*outputMap=*/{N, H, W, C}})
+      .matchMaps({/*inputMap=*/{N, m.strided(H, h, 0), m.strided(W, w, 1), C},
+                  /*filterMap=*/{h, w},
+                  /*outputMap=*/{N, H, W, C}})
       .matchBody();
 }
 
-// #inputMap = affine_map<(N, H, W, C, h, w) -> (N, H + h, W + w, C)>
-// #filterMap = affine_map<(N, H, W, C, h, w) -> (h, w)>
-// #outputMap = affine_map<(N, H, W, C, h, w) -> (N, H, W, C)>
 template <>
 bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxUnsignedOp>(
     LinalgOp op, SmallVector<int64_t> *dilations,
@@ -900,7 +1519,7 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxUnsignedOp>(
          "expected op to implement ConvolutionOpInterface");
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides,
-                       PoolingType::MAX_UNSIGNED);
+                       PoolingType::MaxUnsigned);
   AffineExpr N = m.dim(0);
   AffineExpr H = m.dim(1);
   AffineExpr W = m.dim(2);
@@ -910,15 +1529,12 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxUnsignedOp>(
 
   return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
       .matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/1)
-      .expectMaps({/*inputMap=*/{N, m.strided(H, h, 0), m.strided(W, w, 1), C},
-                   /*filterMap=*/{h, w},
-                   /*outputMap=*/{N, H, W, C}})
+      .matchMaps({/*inputMap=*/{N, m.strided(H, h, 0), m.strided(W, w, 1), C},
+                  /*filterMap=*/{h, w},
+                  /*outputMap=*/{N, H, W, C}})
       .matchBody();
 }
 
-// #inputMap = affine_map<(N, H, W, C, h, w) -> (N, H + h, W + w, C)>
-// #filterMap = affine_map<(N, H, W, C, h, w) -> (h, w)>
-// #outputMap = affine_map<(N, H, W, C, h, w) -> (N, H, W, C)>
 template <>
 bool isaConvolutionOpOfType<linalg::PoolingNhwcMinUnsignedOp>(
     LinalgOp op, SmallVector<int64_t> *dilations,
@@ -930,7 +1546,7 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMinUnsignedOp>(
          "expected op to implement ConvolutionOpInterface");
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides,
-                       PoolingType::MIN_UNSIGNED);
+                       PoolingType::MinUnsigned);
   AffineExpr N = m.dim(0);
   AffineExpr H = m.dim(1);
   AffineExpr W = m.dim(2);
@@ -940,9 +1556,324 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMinUnsignedOp>(
 
   return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
       .matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/1)
-      .expectMaps({/*inputMap=*/{N, m.strided(H, h, 0), m.strided(W, w, 1), C},
-                   /*filterMap=*/{h, w},
-                   /*outputMap=*/{N, H, W, C}})
+      .matchMaps({/*inputMap=*/{N, m.strided(H, h, 0), m.strided(W, w, 1), C},
+                  /*filterMap=*/{h, w},
+                  /*outputMap=*/{N, H, W, C}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::PoolingNchwSumOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNchwSumOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides,
+                       PoolingType::Sum);
+  AffineExpr N = m.dim(0);
+  AffineExpr C = m.dim(1);
+  AffineExpr H = m.dim(2);
+  AffineExpr W = m.dim(3);
+  AffineExpr h = m.dim(4);
+  AffineExpr w = m.dim(5);
+
+  return m.matchStride(/*iDim=*/2, /*fDim=*/0, /*oDim=*/2, /*idx=*/0)
+      .matchStride(/*iDim=*/3, /*fDim=*/1, /*oDim=*/3, /*idx=*/1)
+      .matchMaps({/*inputMap=*/{N, C, m.strided(H, h, 0), m.strided(W, w, 1)},
+                  /*filterMap=*/{h, w},
+                  /*outputMap=*/{N, C, H, W}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::PoolingNchwMaxOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNchwMaxOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/2, dilations, strides,
+                       PoolingType::MaxSigned);
+  AffineExpr N = m.dim(0);
+  AffineExpr C = m.dim(1);
+  AffineExpr H = m.dim(2);
+  AffineExpr W = m.dim(3);
+  AffineExpr h = m.dim(4);
+  AffineExpr w = m.dim(5);
+
+  return m.matchStride(/*iDim=*/2, /*fDim=*/0, /*oDim=*/2, /*idx=*/0)
+      .matchStride(/*iDim=*/3, /*fDim=*/1, /*oDim=*/3, /*idx=*/1)
+      .matchMaps({/*inputMap=*/{N, C, m.strided(H, h, 0), m.strided(W, w, 1)},
+                  /*filterMap=*/{h, w},
+                  /*outputMap=*/{N, C, H, W}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::PoolingNwcSumOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNwcSumOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/1, dilations, strides,
+                       PoolingType::Sum);
+  AffineExpr N = m.dim(0);
+  AffineExpr W = m.dim(1);
+  AffineExpr C = m.dim(2);
+  AffineExpr w = m.dim(3);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
+      .matchMaps({/*inputMap=*/{N, m.strided(W, w, 0), C},
+                  /*filterMap=*/{w},
+                  /*outputMap=*/{N, W, C}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::PoolingNcwSumOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNcwSumOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/1, dilations, strides,
+                       PoolingType::Sum);
+  AffineExpr N = m.dim(0);
+  AffineExpr C = m.dim(1);
+  AffineExpr W = m.dim(2);
+  AffineExpr w = m.dim(3);
+
+  return m.matchStride(/*iDim=*/2, /*fDim=*/0, /*oDim=*/2, /*idx=*/0)
+      .matchMaps({/*inputMap=*/{N, C, m.strided(W, w, 0)},
+                  /*filterMap=*/{w},
+                  /*outputMap=*/{N, C, W}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::PoolingNwcMaxOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNwcMaxOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/1, dilations, strides,
+                       PoolingType::MaxSigned);
+  AffineExpr N = m.dim(0);
+  AffineExpr W = m.dim(1);
+  AffineExpr C = m.dim(2);
+  AffineExpr w = m.dim(3);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
+      .matchMaps({/*inputMap=*/{N, m.strided(W, w, 0), C},
+                  /*filterMap=*/{w},
+                  /*outputMap=*/{N, W, C}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::PoolingNwcMaxUnsignedOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNwcMaxUnsignedOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/1, dilations, strides,
+                       PoolingType::MaxUnsigned);
+  AffineExpr N = m.dim(0);
+  AffineExpr W = m.dim(1);
+  AffineExpr C = m.dim(2);
+  AffineExpr w = m.dim(3);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
+      .matchMaps({/*inputMap=*/{N, m.strided(W, w, 0), C},
+                  /*filterMap=*/{w},
+                  /*outputMap=*/{N, W, C}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::PoolingNcwMaxOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNcwMaxOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/1, dilations, strides,
+                       PoolingType::MaxSigned);
+  AffineExpr N = m.dim(0);
+  AffineExpr C = m.dim(1);
+  AffineExpr W = m.dim(2);
+  AffineExpr w = m.dim(3);
+
+  return m.matchStride(/*iDim=*/2, /*fDim=*/0, /*oDim=*/2, /*idx=*/0)
+      .matchMaps({/*inputMap=*/{N, C, m.strided(W, w, 0)},
+                  /*filterMap=*/{w},
+                  /*outputMap=*/{N, C, W}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::PoolingNwcMinOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNwcMinOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/1, dilations, strides,
+                       PoolingType::MinSigned);
+  AffineExpr N = m.dim(0);
+  AffineExpr W = m.dim(1);
+  AffineExpr C = m.dim(2);
+  AffineExpr w = m.dim(3);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
+      .matchMaps({/*inputMap=*/{N, m.strided(W, w, 0), C},
+                  /*filterMap=*/{w},
+                  /*outputMap=*/{N, W, C}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::PoolingNwcMinUnsignedOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNwcMinUnsignedOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/1, dilations, strides,
+                       PoolingType::MinUnsigned);
+  AffineExpr N = m.dim(0);
+  AffineExpr W = m.dim(1);
+  AffineExpr C = m.dim(2);
+  AffineExpr w = m.dim(3);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
+      .matchMaps({/*inputMap=*/{N, m.strided(W, w, 0), C},
+                  /*filterMap=*/{w},
+                  /*outputMap=*/{N, W, C}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::PoolingNdhwcSumOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNdhwcSumOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/3, dilations, strides,
+                       PoolingType::Sum);
+  AffineExpr N = m.dim(0);
+  AffineExpr D = m.dim(1);
+  AffineExpr H = m.dim(2);
+  AffineExpr W = m.dim(3);
+  AffineExpr C = m.dim(4);
+  AffineExpr d = m.dim(5);
+  AffineExpr h = m.dim(6);
+  AffineExpr w = m.dim(7);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
+      .matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/1)
+      .matchStride(/*iDim=*/3, /*fDim=*/2, /*oDim=*/3, /*idx=*/2)
+      .matchMaps({/*inputMap=*/{N, m.strided(D, d, 0), m.strided(H, h, 1),
+                                m.strided(W, w, 2), C},
+                  /*filterMap=*/{d, h, w},
+                  /*outputMap=*/{N, D, H, W, C}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::PoolingNdhwcMaxOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNdhwcMaxOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/3, dilations, strides,
+                       PoolingType::MaxSigned);
+  AffineExpr N = m.dim(0);
+  AffineExpr D = m.dim(1);
+  AffineExpr H = m.dim(2);
+  AffineExpr W = m.dim(3);
+  AffineExpr C = m.dim(4);
+  AffineExpr d = m.dim(5);
+  AffineExpr h = m.dim(6);
+  AffineExpr w = m.dim(7);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
+      .matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/1)
+      .matchStride(/*iDim=*/3, /*fDim=*/2, /*oDim=*/3, /*idx=*/2)
+      .matchMaps({/*inputMap=*/{N, m.strided(D, d, 0), m.strided(H, h, 1),
+                                m.strided(W, w, 2), C},
+                  /*filterMap=*/{d, h, w},
+                  /*outputMap=*/{N, D, H, W, C}})
+      .matchBody();
+}
+
+template <>
+bool isaConvolutionOpOfType<linalg::PoolingNdhwcMinOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
+  if (isa<linalg::PoolingNdhwcMinOp>(op))
+    return true;
+
+  assert(isaConvolutionOpInterface(op) &&
+         "expected op to implement ConvolutionOpInterface");
+
+  ConvMatcherBuilder m(op, /*spatialRank=*/3, dilations, strides,
+                       PoolingType::MinSigned);
+  AffineExpr N = m.dim(0);
+  AffineExpr D = m.dim(1);
+  AffineExpr H = m.dim(2);
+  AffineExpr W = m.dim(3);
+  AffineExpr C = m.dim(4);
+  AffineExpr d = m.dim(5);
+  AffineExpr h = m.dim(6);
+  AffineExpr w = m.dim(7);
+
+  return m.matchStride(/*iDim=*/1, /*fDim=*/0, /*oDim=*/1, /*idx=*/0)
+      .matchStride(/*iDim=*/2, /*fDim=*/1, /*oDim=*/2, /*idx=*/1)
+      .matchStride(/*iDim=*/3, /*fDim=*/2, /*oDim=*/3, /*idx=*/2)
+      .matchMaps({/*inputMap=*/{N, m.strided(D, d, 0), m.strided(H, h, 1),
+                                m.strided(W, w, 2), C},
+                  /*filterMap=*/{d, h, w},
+                  /*outputMap=*/{N, D, H, W, C}})
       .matchBody();
 }
 
