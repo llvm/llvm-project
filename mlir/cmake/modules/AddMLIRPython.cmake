@@ -228,13 +228,18 @@ endfunction()
 #     aggregate dylib that is linked against.
 function(declare_mlir_python_extension name)
   cmake_parse_arguments(ARG
-    ""
-    "ROOT_DIR;MODULE_NAME;ADD_TO_PARENT"
+    "SUPPORT_LIB"
+    "ROOT_DIR;MODULE_NAME;ADD_TO_PARENT;SOURCES_TYPE"
     "SOURCES;PRIVATE_LINK_LIBS;EMBED_CAPI_LINK_LIBS"
     ${ARGN})
 
   if(NOT ARG_ROOT_DIR)
     set(ARG_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+  endif()
+  if(ARG_SUPPORT_LIB)
+    set(SOURCES_TYPE "support")
+  else()
+    set(SOURCES_TYPE "extension")
   endif()
   set(_install_destination "src/python/${name}")
 
@@ -243,7 +248,7 @@ function(declare_mlir_python_extension name)
     # Yes: Leading-lowercase property names are load bearing and the recommended
     # way to do this: https://gitlab.kitware.com/cmake/cmake/-/issues/19261
     EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_EXTENSION_MODULE_NAME;mlir_python_EMBED_CAPI_LINK_LIBS;mlir_python_DEPENDS"
-    mlir_python_SOURCES_TYPE extension
+    mlir_python_SOURCES_TYPE "${SOURCES_TYPE}"
     mlir_python_EXTENSION_MODULE_NAME "${ARG_MODULE_NAME}"
     mlir_python_EMBED_CAPI_LINK_LIBS "${ARG_EMBED_CAPI_LINK_LIBS}"
     mlir_python_DEPENDS ""
@@ -297,6 +302,39 @@ function(_mlir_python_install_sources name source_root_dir destination)
   )
 endfunction()
 
+function(build_nanobind_lib)
+  cmake_parse_arguments(ARG
+    ""
+    "INSTALL_COMPONENT;INSTALL_DESTINATION;OUTPUT_DIRECTORY"
+    ""
+    ${ARGN})
+
+  if (NB_ABI MATCHES "[0-9]t")
+    set(_ft "-ft")
+  endif()
+  # nanobind does a string match on the suffix to figure out whether to build
+  # the lib with free threading...
+  set(NB_LIBRARY_TARGET_NAME "nanobind${_ft}-${MLIR_BINDINGS_PYTHON_NB_DOMAIN}")
+  set(NB_LIBRARY_TARGET_NAME "${NB_LIBRARY_TARGET_NAME}" PARENT_SCOPE)
+  nanobind_build_library(${NB_LIBRARY_TARGET_NAME} AS_SYSINCLUDE)
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_options(${NB_LIBRARY_TARGET_NAME} PRIVATE "-Wl,-z,undefs")
+  endif()
+  set_target_properties(${NB_LIBRARY_TARGET_NAME} PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
+    BINARY_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
+    # Needed for windows (and don't hurt others).
+    RUNTIME_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
+    ARCHIVE_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
+  )
+  mlir_python_setup_extension_rpath(${NB_LIBRARY_TARGET_NAME})
+  install(TARGETS ${NB_LIBRARY_TARGET_NAME}
+    COMPONENT ${ARG_INSTALL_COMPONENT}
+    LIBRARY DESTINATION "${ARG_INSTALL_DESTINATION}"
+    RUNTIME DESTINATION "${ARG_INSTALL_DESTINATION}"
+  )
+endfunction()
+
 # Function: add_mlir_python_modules
 # Adds python modules to a project, building them from a list of declared
 # source groupings (see declare_mlir_python_sources and
@@ -318,8 +356,16 @@ function(add_mlir_python_modules name)
     "ROOT_PREFIX;INSTALL_PREFIX"
     "COMMON_CAPI_LINK_LIBS;DECLARED_SOURCES"
     ${ARGN})
+
+  # This call sets NB_LIBRARY_TARGET_NAME.
+  build_nanobind_lib(
+    INSTALL_COMPONENT ${name}
+    INSTALL_DESTINATION "${ARG_INSTALL_PREFIX}/_mlir_libs"
+    OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
+  )
+
   # Helper to process an individual target.
-  function(_process_target modules_target sources_target)
+  function(_process_target modules_target sources_target support_libs)
     get_target_property(_source_type ${sources_target} mlir_python_SOURCES_TYPE)
 
     if(_source_type STREQUAL "pure")
@@ -337,16 +383,19 @@ function(add_mlir_python_modules name)
       get_target_property(_module_name ${sources_target} mlir_python_EXTENSION_MODULE_NAME)
       # Transform relative source to based on root dir.
       set(_extension_target "${modules_target}.extension.${_module_name}.dso")
-      add_mlir_python_extension(${_extension_target} "${_module_name}"
+      add_mlir_python_extension(${_extension_target} "${_module_name}" ${NB_LIBRARY_TARGET_NAME}
         INSTALL_COMPONENT ${modules_target}
         INSTALL_DIR "${ARG_INSTALL_PREFIX}/_mlir_libs"
         OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
         LINK_LIBS PRIVATE
           ${sources_target}
           ${ARG_COMMON_CAPI_LINK_LIBS}
+          ${support_libs}
       )
       add_dependencies(${modules_target} ${_extension_target})
       mlir_python_setup_extension_rpath(${_extension_target})
+    elseif(_source_type STREQUAL "support")
+      # do nothing because already built
     else()
       message(SEND_ERROR "Unrecognized source type '${_source_type}' for python source target ${sources_target}")
       return()
@@ -356,8 +405,34 @@ function(add_mlir_python_modules name)
   # Build the modules target.
   add_custom_target(${name} ALL)
   _flatten_mlir_python_targets(_flat_targets ${ARG_DECLARED_SOURCES})
+
+  # Build all support libs first.
+  set(_mlir_python_support_libs)
   foreach(sources_target ${_flat_targets})
-    _process_target(${name} ${sources_target})
+    get_target_property(_source_type ${sources_target} mlir_python_SOURCES_TYPE)
+    if(_source_type STREQUAL "support")
+      get_target_property(_module_name ${sources_target} mlir_python_EXTENSION_MODULE_NAME)
+      set(_extension_target "${name}.extension.${_module_name}.dso")
+      add_mlir_python_extension(${_extension_target} "${_module_name}" ${NB_LIBRARY_TARGET_NAME}
+        INSTALL_COMPONENT ${name}
+        INSTALL_DIR "${ARG_INSTALL_PREFIX}/_mlir_libs"
+        OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
+        SUPPORT_LIB
+        LINK_LIBS PRIVATE
+          LLVMSupport
+          Python::Module
+          ${sources_target}
+          ${ARG_COMMON_CAPI_LINK_LIBS}
+      )
+      add_dependencies(${name} ${_extension_target})
+      mlir_python_setup_extension_rpath(${_extension_target})
+      list(APPEND _mlir_python_support_libs "${_extension_target}")
+    endif()
+  endforeach()
+
+  # Build extensions.
+  foreach(sources_target ${_flat_targets})
+    _process_target(${name} ${sources_target} ${_mlir_python_support_libs})
   endforeach()
 
   # Create an install target.
@@ -741,9 +816,9 @@ endfunction()
 ################################################################################
 # Build python extension
 ################################################################################
-function(add_mlir_python_extension libname extname)
+function(add_mlir_python_extension libname extname nb_library_target_name)
   cmake_parse_arguments(ARG
-  ""
+  "SUPPORT_LIB"
   "INSTALL_COMPONENT;INSTALL_DIR;OUTPUT_DIRECTORY"
   "SOURCES;LINK_LIBS"
   ${ARGN})
@@ -760,41 +835,57 @@ function(add_mlir_python_extension libname extname)
     set(eh_rtti_enable -frtti -fexceptions)
   endif ()
 
-  nanobind_add_module(${libname}
-    NB_DOMAIN ${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
-    FREE_THREADED
-    NB_SHARED
-    ${ARG_SOURCES}
-  )
+  if(NOT MLIR_BINDINGS_PYTHON_NB_DOMAIN)
+    set(MLIR_BINDINGS_PYTHON_NB_DOMAIN "mlir" CACHE STRING "" FORCE)
+  endif()
+
+  if(ARG_SUPPORT_LIB)
+    add_library(${libname} SHARED ${ARG_SOURCES})
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+      target_link_options(${libname} PRIVATE "-Wl,-z,undefs")
+    endif()
+    nanobind_link_options(${libname})
+    target_compile_definitions(${libname} PRIVATE NB_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN})
+    if (MSVC)
+      set_property(TARGET ${libname} PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
+    endif ()
+  else()
+    nanobind_add_module(${libname}
+      NB_DOMAIN ${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+      FREE_THREADED
+      NB_SHARED
+      ${ARG_SOURCES}
+    )
+  endif()
+  target_link_libraries(${libname} PRIVATE ${nb_library_target_name})
 
   if (NOT MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES
       AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
     # Avoid some warnings from upstream nanobind.
     # If a superproject set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES, let
     # the super project handle compile options as it wishes.
-    get_property(NB_LIBRARY_TARGET_NAME TARGET ${libname} PROPERTY LINK_LIBRARIES)
-    target_compile_options(${NB_LIBRARY_TARGET_NAME}
+    target_compile_options(${nb_library_target_name}
       PRIVATE
         -Wno-c++98-compat-extra-semi
-          -Wno-cast-qual
-          -Wno-covered-switch-default
-          -Wno-deprecated-literal-operator
-          -Wno-nested-anon-types
-          -Wno-unused-parameter
-          -Wno-zero-length-array
-          -Wno-missing-field-initializers
+        -Wno-cast-qual
+        -Wno-covered-switch-default
+        -Wno-deprecated-literal-operator
+        -Wno-nested-anon-types
+        -Wno-unused-parameter
+        -Wno-zero-length-array
+        -Wno-missing-field-initializers
         ${eh_rtti_enable})
 
     target_compile_options(${libname}
       PRIVATE
         -Wno-c++98-compat-extra-semi
-          -Wno-cast-qual
-          -Wno-covered-switch-default
-          -Wno-deprecated-literal-operator
-          -Wno-nested-anon-types
-          -Wno-unused-parameter
-          -Wno-zero-length-array
-          -Wno-missing-field-initializers
+        -Wno-cast-qual
+        -Wno-covered-switch-default
+        -Wno-deprecated-literal-operator
+        -Wno-nested-anon-types
+        -Wno-unused-parameter
+        -Wno-zero-length-array
+        -Wno-missing-field-initializers
         ${eh_rtti_enable})
   endif()
 
@@ -813,11 +904,16 @@ function(add_mlir_python_extension libname extname)
   target_compile_options(${libname} PRIVATE ${eh_rtti_enable})
 
   # Configure the output to match python expectations.
+  if (ARG_SUPPORT_LIB)
+    set(_no_soname OFF)
+  else ()
+    set(_no_soname ON)
+  endif ()
   set_target_properties(
     ${libname} PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${ARG_OUTPUT_DIRECTORY}
     OUTPUT_NAME "${extname}"
-    NO_SONAME ON
+    NO_SONAME ${_no_soname}
   )
 
   if(WIN32)
