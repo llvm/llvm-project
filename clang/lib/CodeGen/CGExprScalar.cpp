@@ -2138,7 +2138,7 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
     Value *ColVal = llvm::ConstantInt::get(RowIdx->getType(), Col);
     bool IsMatrixRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
                             LangOptions::MatrixMemoryLayout::MatrixRowMajor;
-    Value *EltIdx = MB.createIndex(RowIdx, ColVal, NumRows, NumColumns,
+    Value *EltIdx = MB.CreateIndex(RowIdx, ColVal, NumRows, NumColumns,
                                    IsMatrixRowMajor, "matrix_row_idx");
     Value *Elt =
         Builder.CreateExtractElement(FlatMatrix, EltIdx, "matrix_elem");
@@ -2165,7 +2165,7 @@ Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   unsigned NumRows = MatrixTy->getNumRows();
   bool IsMatrixRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
                           LangOptions::MatrixMemoryLayout::MatrixRowMajor;
-  Idx = MB.createIndex(RowIdx, ColumnIdx, NumRows, NumCols, IsMatrixRowMajor);
+  Idx = MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols, IsMatrixRowMajor);
 
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0)
     MB.CreateIndexAssumption(Idx, MatrixTy->getNumElementsFlattened());

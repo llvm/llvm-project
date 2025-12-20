@@ -2485,7 +2485,7 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
       bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
                               LangOptions::MatrixMemoryLayout::MatrixRowMajor;
       llvm::Value *EltIndex =
-          MB.createIndex(Row, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
+          MB.CreateIndex(Row, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
       llvm::Value *Elt = Builder.CreateExtractElement(MatrixVec, EltIndex);
       llvm::Value *Lane = llvm::ConstantInt::get(Builder.getInt32Ty(), Col);
       Result = Builder.CreateInsertElement(Result, Elt, Lane);
@@ -2739,7 +2739,7 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
         bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
                                 LangOptions::MatrixMemoryLayout::MatrixRowMajor;
         llvm::Value *EltIndex =
-            MB.createIndex(Row, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
+            MB.CreateIndex(Row, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
         llvm::Value *Lane = llvm::ConstantInt::get(Builder.getInt32Ty(), Col);
         llvm::Value *NewElt = Builder.CreateExtractElement(RowVal, Lane);
         MatrixVec = Builder.CreateInsertElement(MatrixVec, NewElt, EltIndex);
@@ -4989,7 +4989,7 @@ LValue CodeGenFunction::EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E) {
   bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
                           LangOptions::MatrixMemoryLayout::MatrixRowMajor;
   llvm::Value *FinalIdx =
-      MB.createIndex(RowIdx, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
+      MB.CreateIndex(RowIdx, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
 
   return LValue::MakeMatrixElt(
       MaybeConvertMatrixAddress(Base.getAddress(), *this), FinalIdx,

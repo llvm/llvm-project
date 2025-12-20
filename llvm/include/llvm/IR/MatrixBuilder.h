@@ -238,7 +238,10 @@ public:
     else
       B.CreateAssumption(Cmp);
   }
-  Value *createIndex(Value *RowIdx, Value *ColumnIdx, unsigned NumRows,
+  /// Compute the index to access the element at (\p RowIdx, \p ColumnIdx) from
+  /// a matrix with \p NumRows or \p NumCols embedded in a vector depending
+  /// on matrix major ordering.
+  Value *CreateIndex(Value *RowIdx, Value *ColumnIdx, unsigned NumRows,
                      unsigned NumCols, bool IsMatrixRowMajor = false,
                      Twine const &Name = "") {
     unsigned MaxWidth = std::max(RowIdx->getType()->getScalarSizeInBits(),
@@ -248,23 +251,23 @@ public:
     ColumnIdx = B.CreateZExt(ColumnIdx, IntTy);
     if (IsMatrixRowMajor) {
       Value *NumColsV = B.getIntN(MaxWidth, NumCols);
-      return createRowMajorIndex(RowIdx, ColumnIdx, NumColsV, Name);
+      return CreateRowMajorIndex(RowIdx, ColumnIdx, NumColsV, Name);
     }
     Value *NumRowsV = B.getIntN(MaxWidth, NumRows);
-    return createColumnMajorIndex(RowIdx, ColumnIdx, NumRowsV, Name);
+    return CreateColumnMajorIndex(RowIdx, ColumnIdx, NumRowsV, Name);
   }
 
 private:
   /// Compute the index to access the element at (\p RowIdx, \p ColumnIdx) from
   /// a matrix with \p NumRows embedded in a vector.
-  Value *createColumnMajorIndex(Value *RowIdx, Value *ColumnIdx,
+  Value *CreateColumnMajorIndex(Value *RowIdx, Value *ColumnIdx,
                                 Value *NumRowsV, Twine const &Name) {
     return B.CreateAdd(B.CreateMul(ColumnIdx, NumRowsV), RowIdx);
   }
 
   /// Compute the index to access the element at (\p RowIdx, \p ColumnIdx) from
   /// a matrix with \p NumCols embedded in a vector.
-  Value *createRowMajorIndex(Value *RowIdx, Value *ColumnIdx, Value *NumColsV,
+  Value *CreateRowMajorIndex(Value *RowIdx, Value *ColumnIdx, Value *NumColsV,
                              Twine const &Name) {
     return B.CreateAdd(B.CreateMul(RowIdx, NumColsV), ColumnIdx);
   }
