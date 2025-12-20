@@ -266,11 +266,24 @@ public:
     BehavAttrs.setBindingScope(Attr.BindingScope);
     BehavAttrs.setAlignment(EDAttr.Alignment);
   }
+
+  GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,
+             const GOFF::ERAttr &Attr)
+      : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(ParentEsdID),
+        SymbolType(GOFF::ESD_ST_ExternalReference),
+        NameSpace(GOFF::ESD_NS_NormalName) {
+    BehavAttrs.setExecutable(Attr.Executable);
+    BehavAttrs.setBindingStrength(Attr.BindingStrength);
+    BehavAttrs.setLinkageType(Attr.Linkage);
+    BehavAttrs.setAmode(Attr.Amode);
+    BehavAttrs.setBindingScope(Attr.BindingScope);
+  }
 };
 
 class GOFFWriter {
   GOFFOstream OS;
   MCAssembler &Asm;
+  MCSectionGOFF *RootSD;
 
   void writeHeader();
   void writeSymbol(const GOFFSymbol &Symbol);
@@ -279,16 +292,18 @@ class GOFFWriter {
 
   void defineSectionSymbols(const MCSectionGOFF &Section);
   void defineLabel(const MCSymbolGOFF &Symbol);
+  void defineExtern(const MCSymbolGOFF &Symbol);
   void defineSymbols();
 
 public:
-  GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm);
+  GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm, MCSectionGOFF *RootSD);
   uint64_t writeObject();
 };
 } // namespace
 
-GOFFWriter::GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm)
-    : OS(OS), Asm(Asm) {}
+GOFFWriter::GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm,
+                       MCSectionGOFF *RootSD)
+    : OS(OS), Asm(Asm), RootSD(RootSD) {}
 
 void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
   if (Section.isSD()) {
@@ -325,10 +340,22 @@ void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
 void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
   MCSectionGOFF &Section = static_cast<MCSectionGOFF &>(Symbol.getSection());
   GOFFSymbol LD(Symbol.getName(), Symbol.getIndex(), Section.getOrdinal(),
-                Section.getEDAttributes().NameSpace, Symbol.getLDAttributes());
+                Section.getEDAttributes().NameSpace,
+                GOFF::LDAttr{false, Symbol.getCodeData(),
+                             Symbol.getBindingStrength(), Symbol.getLinkage(),
+                             GOFF::ESD_AMODE_64, Symbol.getBindingScope()});
   if (Symbol.getADA())
     LD.ADAEsdId = Symbol.getADA()->getOrdinal();
+  LD.Offset = Asm.getSymbolOffset(Symbol);
   writeSymbol(LD);
+}
+
+void GOFFWriter::defineExtern(const MCSymbolGOFF &Symbol) {
+  GOFFSymbol ER(Symbol.getName(), Symbol.getIndex(), RootSD->getOrdinal(),
+                GOFF::ERAttr{Symbol.getCodeData(), Symbol.getBindingStrength(),
+                             Symbol.getLinkage(), GOFF::ESD_AMODE_64,
+                             Symbol.getBindingScope()});
+  writeSymbol(ER);
 }
 
 void GOFFWriter::defineSymbols() {
@@ -345,7 +372,10 @@ void GOFFWriter::defineSymbols() {
     if (Sym.isTemporary())
       continue;
     auto &Symbol = static_cast<const MCSymbolGOFF &>(Sym);
-    if (Symbol.hasLDAttributes()) {
+    if (!Symbol.isDefined()) {
+      Symbol.setIndex(++Ordinal);
+      defineExtern(Symbol);
+    } else if (Symbol.isInEDSection()) {
       Symbol.setIndex(++Ordinal);
       defineLabel(Symbol);
     }
@@ -523,7 +553,7 @@ GOFFObjectWriter::GOFFObjectWriter(
 GOFFObjectWriter::~GOFFObjectWriter() = default;
 
 uint64_t GOFFObjectWriter::writeObject() {
-  uint64_t Size = GOFFWriter(OS, *Asm).writeObject();
+  uint64_t Size = GOFFWriter(OS, *Asm, RootSD).writeObject();
   return Size;
 }
 

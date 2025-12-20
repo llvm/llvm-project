@@ -14,6 +14,7 @@
 
 namespace llvm {
 class MCObjectWriter;
+class MCSectionGOFF;
 class raw_pwrite_stream;
 
 class MCGOFFObjectTargetWriter : public MCObjectTargetWriter {
@@ -37,10 +38,15 @@ class GOFFObjectWriter : public MCObjectWriter {
   // The stream used to write the GOFF records.
   raw_pwrite_stream &OS;
 
+  // The RootSD section.
+  MCSectionGOFF *RootSD = nullptr;
+
 public:
   GOFFObjectWriter(std::unique_ptr<MCGOFFObjectTargetWriter> MOTW,
                    raw_pwrite_stream &OS);
   ~GOFFObjectWriter() override;
+
+  void setRootSD(MCSectionGOFF *RootSD) { this->RootSD = RootSD; }
 
   // Implementation of the MCObjectWriter interface.
   void recordRelocation(const MCFragment &F, const MCFixup &Fixup,
