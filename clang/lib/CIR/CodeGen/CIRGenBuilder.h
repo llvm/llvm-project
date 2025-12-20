@@ -189,6 +189,11 @@ public:
     return getType<cir::RecordType>(nameAttr, kind);
   }
 
+  cir::DataMemberAttr getDataMemberAttr(cir::DataMemberType ty,
+                                        unsigned memberIndex) {
+    return cir::DataMemberAttr::get(ty, memberIndex);
+  }
+
   // Return true if the value is a null constant such as null pointer, (+0.0)
   // for floating-point or zero initializer
   bool isNullValue(mlir::Attribute attr) const {
@@ -280,9 +285,15 @@ public:
   cir::IntType getUInt32Ty() { return typeCache.uInt32Ty; }
   cir::IntType getUInt64Ty() { return typeCache.uInt64Ty; }
 
+  cir::FP16Type getFp16Ty() { return typeCache.fP16Ty; }
+  cir::BF16Type getBfloat6Ty() { return typeCache.bFloat16Ty; }
+  cir::SingleType getSingleTy() { return typeCache.floatTy; }
+  cir::DoubleType getDoubleTy() { return typeCache.doubleTy; }
+
   cir::ConstantOp getConstInt(mlir::Location loc, llvm::APSInt intVal);
 
-  cir::ConstantOp getConstInt(mlir::Location loc, llvm::APInt intVal);
+  cir::ConstantOp getConstInt(mlir::Location loc, llvm::APInt intVal,
+                              bool isUnsigned = true);
 
   cir::ConstantOp getConstInt(mlir::Location loc, mlir::Type t, uint64_t c);
 
@@ -462,6 +473,7 @@ public:
     mlir::IntegerAttr align = getAlignmentAttr(addr.getAlignment());
     return cir::LoadOp::create(*this, loc, addr.getPointer(), /*isDeref=*/false,
                                isVolatile, /*alignment=*/align,
+                               /*sync_scope=*/cir::SyncScopeKindAttr{},
                                /*mem_order=*/cir::MemOrderAttr{});
   }
 
@@ -473,6 +485,7 @@ public:
     mlir::IntegerAttr alignAttr = getAlignmentAttr(alignment);
     return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false,
                                /*isVolatile=*/false, alignAttr,
+                               /*sync_scope=*/cir::SyncScopeKindAttr{},
                                /*mem_order=*/cir::MemOrderAttr{});
   }
 
@@ -485,11 +498,12 @@ public:
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, Address dst,
                            bool isVolatile = false,
                            mlir::IntegerAttr align = {},
+                           cir::SyncScopeKindAttr scope = {},
                            cir::MemOrderAttr order = {}) {
     if (!align)
       align = getAlignmentAttr(dst.getAlignment());
     return CIRBaseBuilderTy::createStore(loc, val, dst.getPointer(), isVolatile,
-                                         align, order);
+                                         align, scope, order);
   }
 
   /// Create a cir.complex.real_ptr operation that derives a pointer to the real
@@ -519,6 +533,19 @@ public:
   Address createComplexImagPtr(mlir::Location loc, Address addr) {
     return Address{createComplexImagPtr(loc, addr.getPointer()),
                    addr.getAlignment()};
+  }
+
+  cir::GetRuntimeMemberOp createGetIndirectMember(mlir::Location loc,
+                                                  mlir::Value objectPtr,
+                                                  mlir::Value memberPtr) {
+    auto memberPtrTy = mlir::cast<cir::DataMemberType>(memberPtr.getType());
+
+    // TODO(cir): consider address space.
+    assert(!cir::MissingFeatures::addressSpace());
+    cir::PointerType resultTy = getPointerTo(memberPtrTy.getMemberTy());
+
+    return cir::GetRuntimeMemberOp::create(*this, loc, resultTy, objectPtr,
+                                           memberPtr);
   }
 
   /// Create a cir.ptr_stride operation to get access to an array element.
@@ -607,8 +634,8 @@ public:
   createVecShuffle(mlir::Location loc, mlir::Value vec1, mlir::Value vec2,
                    llvm::ArrayRef<mlir::Attribute> maskAttrs) {
     auto vecType = mlir::cast<cir::VectorType>(vec1.getType());
-    auto resultTy = cir::VectorType::get(getContext(), vecType.getElementType(),
-                                         maskAttrs.size());
+    auto resultTy =
+        cir::VectorType::get(vecType.getElementType(), maskAttrs.size());
     return cir::VecShuffleOp::create(*this, loc, resultTy, vec1, vec2,
                                      getArrayAttr(maskAttrs));
   }
