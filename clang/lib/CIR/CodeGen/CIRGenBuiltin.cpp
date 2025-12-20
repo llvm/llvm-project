@@ -679,7 +679,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_va_end:
     emitVAEnd(emitVAListRef(e->getArg(0)).getPointer());
     return {};
-
+  case Builtin::BI__builtin_va_copy: {
+    mlir::Value dstPtr = emitVAListRef(e->getArg(0)).getPointer();
+    mlir::Value srcPtr = emitVAListRef(e->getArg(1)).getPointer();
+    cir::VACopyOp::create(builder, dstPtr.getLoc(), dstPtr, srcPtr);
+    return {};
+  }
   case Builtin::BI__assume:
   case Builtin::BI__builtin_assume: {
     if (e->getArg(0)->HasSideEffects(getContext()))
