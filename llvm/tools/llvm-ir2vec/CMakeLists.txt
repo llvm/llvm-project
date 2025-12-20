@@ -19,6 +19,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_tool(llvm-ir2vec
   llvm-ir2vec.cpp
+  emb-tool.cpp
   
   DEPENDS
   intrinsics_gen
