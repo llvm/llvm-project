@@ -1069,24 +1069,27 @@ define i8 @subSelectsubSame(i8 %arg0, i8 %arg1) {
 define i8 @mulSelectmulNoCommonBits1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @mulSelectmulNoCommonBits1(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V1:%.*]] = shl i8 [[ARG0:%.*]], 2
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 3, i8 1
+; CHECK-NEXT:    [[V2:%.*]] = shl i8 [[ARG0:%.*]], [[V3_V]]
 ; CHECK-NEXT:    ret i8 [[V2]]
 ;
   %v0 = icmp eq i8 %arg1, -1
   %v1 = mul i8 %arg0, 4
   %v2 = select i1 %v0, i8 %v1, i8 %arg0
-  %v3 = mul i8 %v2, 1
+  %v3 = mul i8 %v2, 2
   ret i8 %v3
 }
 
 define i8 @mulSelectmulNoCommonBits2(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @mulSelectmulNoCommonBits2(
-; CHECK-NEXT:    [[V3:%.*]] = shl i8 [[ARG0:%.*]], 2
+; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
+; CHECK-NEXT:    [[V1:%.*]] = mul i8 [[ARG2:%.*]], 3
+; CHECK-NEXT:    [[ARG0:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG2]]
+; CHECK-NEXT:    [[V3:%.*]] = shl i8 [[ARG0]], 2
 ; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
-  %v1 = mul i8 %arg0, 1
+  %v1 = mul i8 %arg0, 3
   %v2 = select i1 %v0, i8 %v1, i8 %arg0
   %v3 = mul i8 %v2, 4
   ret i8 %v3
@@ -1168,22 +1171,26 @@ define i8 @udivSelectudivNoCommonBits1(i8 %arg0, i8 %arg1) {
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
 ; CHECK-NEXT:    [[V1:%.*]] = lshr i8 [[ARG0:%.*]], 2
 ; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
-; CHECK-NEXT:    ret i8 [[V2]]
+; CHECK-NEXT:    [[V3:%.*]] = udiv i8 [[V2]], 3
+; CHECK-NEXT:    ret i8 [[V3]]
 ;
   %v0 = icmp eq i8 %arg1, -1
   %v1 = udiv i8 %arg0, 4
   %v2 = select i1 %v0, i8 %v1, i8 %arg0
-  %v3 = udiv i8 %v2, 1
+  %v3 = udiv i8 %v2, 3
   ret i8 %v3
 }
 
 define i8 @udivSelectudivNoCommonBits2(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @udivSelectudivNoCommonBits2(
-; CHECK-NEXT:    [[V3:%.*]] = lshr i8 [[ARG0:%.*]], 2
-; CHECK-NEXT:    ret i8 [[V3]]
+; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i8 [[ARG0:%.*]], 28
+; CHECK-NEXT:    [[V3:%.*]] = lshr i8 [[ARG0]], 2
+; CHECK-NEXT:    [[V4:%.*]] = select i1 [[V0]], i8 [[TMP1]], i8 [[V3]]
+; CHECK-NEXT:    ret i8 [[V4]]
 ;
   %v0 = icmp eq i8 %arg1, -1
-  %v1 = udiv i8 %arg0, 1
+  %v1 = udiv i8 %arg0, 7
   %v2 = select i1 %v0, i8 %v1, i8 %arg0
   %v3 = udiv i8 %v2, 4
   ret i8 %v3
