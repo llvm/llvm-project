@@ -1943,8 +1943,8 @@ void SemaHLSL::handlePackOffsetAttr(Decl *D, const ParsedAttr &AL) {
   // Check Component is valid for T.
   if (Component) {
     unsigned Size = getASTContext().getTypeSize(T);
-    if (IsAggregateTy || Size > 128) {
-      Diag(AL.getLoc(), diag::err_hlsl_packoffset_cross_reg_boundary);
+    if (IsAggregateTy) {
+      Diag(AL.getLoc(), diag::err_hlsl_invalid_register_or_packoffset);
       return;
     } else {
       // Make sure Component + sizeof(T) <= 4.
