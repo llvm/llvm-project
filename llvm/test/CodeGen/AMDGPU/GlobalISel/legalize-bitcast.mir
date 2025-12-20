@@ -218,7 +218,7 @@ body: |
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(p1) = G_BITCAST [[COPY]](p0)
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](p1)
     %0:_(p0) = COPY $vgpr0_vgpr1
-    %1:_(p1) = G_BITCAST %0
+    %1:_(p1) = G_ADDRSPACE_CAST %0
     $vgpr0_vgpr1 = COPY %1
 ...
 
@@ -235,7 +235,7 @@ body: |
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[COPY]](p1)
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](p0)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(p0) = G_BITCAST %0
+    %1:_(p0) = G_ADDRSPACE_CAST %0
     $vgpr0_vgpr1 = COPY %1
 ...
 
@@ -252,7 +252,7 @@ body: |
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[COPY]](p999)
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](p0)
     %0:_(p999) = COPY $vgpr0_vgpr1
-    %1:_(p0) = G_BITCAST %0
+    %1:_(p0) = G_ADDRSPACE_CAST %0
     $vgpr0_vgpr1 = COPY %1
 ...
 
@@ -269,7 +269,7 @@ body: |
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(p999) = G_BITCAST [[COPY]](p123)
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](p999)
     %0:_(p123) = COPY $vgpr0_vgpr1
-    %1:_(p999) = G_BITCAST %0
+    %1:_(p999) = G_ADDRSPACE_CAST %0
     $vgpr0_vgpr1 = COPY %1
 ...
 

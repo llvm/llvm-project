@@ -22,10 +22,10 @@ define amdgpu_kernel void @s_cvt_pknorm_u16_f32(ptr addrspace(1) %out, float %x,
 ; VI-LABEL: s_cvt_pknorm_u16_f32:
 ; VI:  ; %bb.0:
 ; VI:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VI:    v_mov_b32_e32 v0, s3
-; VI:    v_cvt_pknorm_u16_f32 v2, s2, v0
+; VI:    v_mov_b32_e32 v2, s3
 ; VI:    v_mov_b32_e32 v0, s0
 ; VI:    v_mov_b32_e32 v1, s1
+; VI:    v_cvt_pknorm_u16_f32 v2, s2, v2
 ; VI:    s_endpgm
 ;
 ; GFX9-SDAG-LABEL: s_cvt_pknorm_u16_f32:
@@ -52,26 +52,24 @@ define amdgpu_kernel void @s_cvt_pknorm_u16_f32(ptr addrspace(1) %out, float %x,
 define amdgpu_kernel void @s_cvt_pknorm_u16_samereg_f32(ptr addrspace(1) %out, float %x) #0 {
 ; SI-LABEL: s_cvt_pknorm_u16_samereg_f32:
 ; SI:  ; %bb.0:
-; SI:    s_load_dword s6, s[4:5], 0xb
-; SI:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; SI:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI:    s_mov_b32 s3, 0xf000
+; SI:    s_mov_b32 s4, s2
 ; SI:    s_mov_b32 s2, -1
-; SI:    v_cvt_pknorm_u16_f32_e64 v0, s6, s6
+; SI:    v_cvt_pknorm_u16_f32_e64 v0, s4, s4
 ; SI:    s_endpgm
 ;
 ; VI-LABEL: s_cvt_pknorm_u16_samereg_f32:
 ; VI:  ; %bb.0:
-; VI:    s_load_dword s2, s[4:5], 0x2c
-; VI:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; VI:    v_cvt_pknorm_u16_f32 v2, s2, s2
+; VI:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI:    v_mov_b32_e32 v0, s0
 ; VI:    v_mov_b32_e32 v1, s1
+; VI:    v_cvt_pknorm_u16_f32 v2, s2, s2
 ; VI:    s_endpgm
 ;
 ; GFX9-SDAG-LABEL: s_cvt_pknorm_u16_samereg_f32:
 ; GFX9-SDAG:  ; %bb.0:
-; GFX9-SDAG:    s_load_dword s2, s[4:5], 0x2c
-; GFX9-SDAG:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-SDAG:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-SDAG:    v_mov_b32_e32 v0, 0
 ; GFX9-SDAG:    v_cvt_pknorm_u16_f32 v1, s2, s2
 ; GFX9-SDAG:    s_endpgm
