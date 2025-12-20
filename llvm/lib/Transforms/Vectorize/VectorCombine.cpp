@@ -2552,8 +2552,8 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
                            m_Mask(Mask))))
     return false;
 
-  auto *Sel0 = cast<Instruction>(I.getOperand(0));
-  auto *Sel1 = cast<Instruction>(I.getOperand(1));
+  auto *Sel1 = cast<Instruction>(I.getOperand(0));
+  auto *Sel2 = cast<Instruction>(I.getOperand(1));
 
   auto *C1VecTy = dyn_cast<FixedVectorType>(C1->getType());
   auto *C2VecTy = dyn_cast<FixedVectorType>(C2->getType());
@@ -2573,13 +2573,13 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
   auto SK = TargetTransformInfo::SK_PermuteTwoSrc;
   auto SelOp = Instruction::Select;
 
-  InstructionCost CostSel0 = TTI.getCmpSelInstrCost(
-      SelOp, SrcVecTy, C1VecTy, CmpInst::BAD_ICMP_PREDICATE, CostKind);
   InstructionCost CostSel1 = TTI.getCmpSelInstrCost(
+      SelOp, SrcVecTy, C1VecTy, CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  InstructionCost CostSel2 = TTI.getCmpSelInstrCost(
       SelOp, SrcVecTy, C2VecTy, CmpInst::BAD_ICMP_PREDICATE, CostKind);
 
-  InstructionCost OldCost = CostSel0 + CostSel1;
-  OldCost +=
+  InstructionCost OldCost =
+      CostSel1 + CostSel2 +
       TTI.getShuffleCost(SK, DstVecTy, SrcVecTy, Mask, CostKind, 0, nullptr,
                          {I.getOperand(0), I.getOperand(1)}, &I);
 
@@ -2595,10 +2595,10 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
   NewCost += TTI.getCmpSelInstrCost(SelOp, DstVecTy, C1C2ShuffledVecTy,
                                     CmpInst::BAD_ICMP_PREDICATE, CostKind);
 
-  if (!Sel0->hasOneUse())
-    NewCost += CostSel0;
   if (!Sel1->hasOneUse())
     NewCost += CostSel1;
+  if (!Sel2->hasOneUse())
+    NewCost += CostSel2;
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two selects: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
