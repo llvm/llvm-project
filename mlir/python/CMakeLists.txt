@@ -784,7 +784,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.AMDGPU.Nanobind
   MODULE_NAME _mlirDialectsAMDGPU
   ADD_TO_PARENT MLIRPythonSources.Dialects.amdgpu
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
-  PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     DialectAMDGPU.cpp
   PRIVATE_LINK_LIBS
@@ -840,6 +839,16 @@ if(MLIR_INCLUDE_TESTS)
       MLIRCAPIPythonTestDialect
   )
 endif()
+
+declare_mlir_python_extension(MLIRPythonExtension.MLIRPythonSupport
+  SUPPORT_LIB
+  MODULE_NAME MLIRPythonSupport
+  ADD_TO_PARENT MLIRPythonSources.Core
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    IRCore.cpp
+    Globals.cpp
+)
 
 ################################################################################
 # Common CAPI dependency DSO.
@@ -990,63 +999,3 @@ if(MLIR_PYTHON_STUBGEN_ENABLED)
     add_dependencies(MLIRPythonModules "${_mlirPythonTestNanobind_typestub_gen_target}")
   endif()
 endif()
-
-get_property(NB_LIBRARY_TARGET_NAME TARGET MLIRPythonModules.extension._mlir.dso PROPERTY LINK_LIBRARIES)
-list(GET NB_LIBRARY_TARGET_NAME 0 NB_LIBRARY_TARGET_NAME)
-add_mlir_library_install(${NB_LIBRARY_TARGET_NAME})
-add_library(MLIRPythonSupport SHARED
-  ${PYTHON_SOURCE_DIR}/IRCore.cpp
-  ${PYTHON_SOURCE_DIR}/Globals.cpp
-)
-target_link_libraries(MLIRPythonSupport PRIVATE
-  LLVMSupport
-  Python::Module
-  ${NB_LIBRARY_TARGET_NAME}
-  MLIRPythonCAPI
-
-)
-if((CMAKE_SYSTEM_NAME STREQUAL "Linux") AND (NOT LLVM_USE_SANITIZER))
-  target_link_options(MLIRPythonSupport PRIVATE "-Wl,-z,undefs")
-  target_link_options(${NB_LIBRARY_TARGET_NAME} PRIVATE "-Wl,-z,undefs")
-endif()
-nanobind_link_options(MLIRPythonSupport)
-set_target_properties(MLIRPythonSupport PROPERTIES
-  LIBRARY_OUTPUT_DIRECTORY "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"
-  BINARY_OUTPUT_DIRECTORY "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"
-  # Needed for windows (and doesn't hurt others).
-  RUNTIME_OUTPUT_DIRECTORY "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"
-  ARCHIVE_OUTPUT_DIRECTORY "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"
-)
-set_target_properties(${NB_LIBRARY_TARGET_NAME} PROPERTIES
-  LIBRARY_OUTPUT_DIRECTORY "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"
-  BINARY_OUTPUT_DIRECTORY "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"
-  # Needed for windows (and doesn't hurt others).
-  RUNTIME_OUTPUT_DIRECTORY "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"
-  ARCHIVE_OUTPUT_DIRECTORY "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"
-)
-set(eh_rtti_enable)
-if(MSVC)
-  set(eh_rtti_enable /EHsc /GR)
-  set_property(TARGET MLIRPythonSupport PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
-elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL)
-  set(eh_rtti_enable -frtti -fexceptions)
-endif()
-target_compile_options(MLIRPythonSupport PRIVATE ${eh_rtti_enable})
-if(APPLE)
-  # NanobindAdaptors.h uses PyClassMethod_New to build `pure_subclass`es but nanobind
-  # doesn't declare this API as undefined in its linker flags. So we need to declare it as such
-  # for downstream users that do not do something like `-undefined dynamic_lookup`.
-  # Same for the rest.
-  target_link_options(MLIRPythonSupport PUBLIC
-    "LINKER:-U,_PyClassMethod_New"
-    "LINKER:-U,_PyCode_Addr2Location"
-    "LINKER:-U,_PyFrame_GetLasti"
-  )
-endif()
-target_link_libraries(
-  MLIRPythonModules.extension._mlir.dso
-  PUBLIC MLIRPythonSupport)
-target_link_libraries(
-  MLIRPythonModules.extension._mlirPythonTestNanobind.dso
-  PUBLIC MLIRPythonSupport)
-target_compile_definitions(MLIRPythonSupport PRIVATE NB_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN})
