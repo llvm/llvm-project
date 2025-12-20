@@ -143,10 +143,10 @@ FileHeader:
 # RUN: yaml2obj %s --docnum=4 -o %t.invalid1
 # RUN: not llvm-readobj --file-headers %t.invalid1 2>&1 \
 # RUN:  | FileCheck %s --implicit-check-not=warning: -DFILE=%t.invalid1 \
-# RUN:    -DSECHDRCOUNT=8192 -DSECHDRSTRTABINDEX=12288 --check-prefix=INVALID-LLVM
+# RUN:    -DPHDRCOUNT=0 -DSECHDRCOUNT=8192 -DSECHDRSTRTABINDEX=12288 --check-prefix=INVALID-LLVM
 # RUN: not llvm-readelf --file-headers %t.invalid1 2>&1 \
 # RUN:  | FileCheck %s --implicit-check-not=warning: -DFILE=%t.invalid1 \
-# RUN:    -DSECHDRCOUNT=8192 -DSECHDRSTRTABINDEX=12288 --check-prefix=INVALID-GNU
+# RUN:    -DPHDRCOUNT=0 -DSECHDRCOUNT=8192 -DSECHDRSTRTABINDEX=12288 --check-prefix=INVALID-GNU
 
 # INVALID-LLVM:      File: [[FILE]]
 # INVALID-LLVM-NEXT: Format: elf64-unknown
@@ -173,7 +173,7 @@ FileHeader:
 # INVALID-LLVM-NEXT:   ]
 # INVALID-LLVM-NEXT:   HeaderSize: 64
 # INVALID-LLVM-NEXT:   ProgramHeaderEntrySize: 0
-# INVALID-LLVM-NEXT:   ProgramHeaderCount: 0
+# INVALID-LLVM:   ProgramHeaderCount: [[PHDRCOUNT]]
 # INVALID-LLVM-NEXT:   SectionHeaderEntrySize: 64
 # INVALID-LLVM-NEXT:   SectionHeaderCount: [[SECHDRCOUNT]]
 # INVALID-LLVM-NEXT:   StringTableSectionIndex: [[SECHDRSTRTABINDEX]]
@@ -196,7 +196,7 @@ FileHeader:
 # INVALID-GNU-NEXT:   Flags:                             0x0
 # INVALID-GNU-NEXT:   Size of this header:               64 (bytes)
 # INVALID-GNU-NEXT:   Size of program headers:           0 (bytes)
-# INVALID-GNU-NEXT:   Number of program headers:         0
+# INVALID-GNU:   Number of program headers:         [[PHDRCOUNT]]
 # INVALID-GNU-NEXT:   Size of section headers:           64 (bytes)
 # INVALID-GNU-NEXT:   Number of section headers:         [[SECHDRCOUNT]]
 # INVALID-GNU-NEXT:   Section header string table index: [[SECHDRSTRTABINDEX]]
@@ -222,14 +222,14 @@ Sections:
 ## Check we don't dump anything except the file header when the section header table can't be read.
 
 # RUN: not llvm-readobj -a %t.invalid1 2>&1 \
-# RUN:  | FileCheck %s -DFILE=%t.invalid1 -DSECHDRCOUNT=8192 -DSECHDRSTRTABINDEX=12288 --check-prefix=INVALID-LLVM
+# RUN:  | FileCheck %s -DFILE=%t.invalid1 -DPHDRCOUNT="0" -DSECHDRCOUNT=8192 -DSECHDRSTRTABINDEX=12288 --check-prefix=INVALID-LLVM
 # RUN: not llvm-readelf -a %t.invalid1 2>&1 \
-# RUN:  | FileCheck %s -DFILE=%t.invalid1 -DSECHDRCOUNT=8192 -DSECHDRSTRTABINDEX=12288 --check-prefix=INVALID-GNU
+# RUN:  | FileCheck %s -DFILE=%t.invalid1 -DPHDRCOUNT="0" -DSECHDRCOUNT=8192 -DSECHDRSTRTABINDEX=12288 --check-prefix=INVALID-GNU
 
 ## Check what we print when e_shnum == 0, e_shstrndx == SHN_XINDEX and the section header table can't be read.
 
 # RUN: yaml2obj %s -DSHNUM=0 -DSHSTRNDX=0xffff --docnum=4 -o %t.invalid2
 # RUN: not llvm-readobj --file-headers %t.invalid2 2>&1 \
-# RUN:  | FileCheck %s -DFILE=%t.invalid2 -DSECHDRCOUNT="<?>" -DSECHDRSTRTABINDEX="<?>" --check-prefix=INVALID-LLVM
+# RUN:  | FileCheck %s -DFILE=%t.invalid2 -DPHDRCOUNT="<?>" -DSECHDRCOUNT="<?>" -DSECHDRSTRTABINDEX="<?>" --check-prefix=INVALID-LLVM
 # RUN: not llvm-readelf --file-headers %t.invalid2 2>&1 \
-# RUN:  | FileCheck %s -DFILE=%t.invalid2 -DSECHDRCOUNT="<?>" -DSECHDRSTRTABINDEX="<?>" --check-prefix=INVALID-GNU
+# RUN:  | FileCheck %s -DFILE=%t.invalid2 -DPHDRCOUNT="<?>" -DSECHDRCOUNT="<?>" -DSECHDRSTRTABINDEX="<?>" --check-prefix=INVALID-GNU
