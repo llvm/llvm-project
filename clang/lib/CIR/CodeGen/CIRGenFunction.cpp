@@ -32,11 +32,6 @@ CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
 
 CIRGenFunction::~CIRGenFunction() {}
 
-mlir::Type CIRGenFunction::convertTypeForLoadStore(QualType astType,
-                                                   mlir::Type mlirType) {
-  return cgm.getTypes().convertTypeForLoadStore(astType, mlirType);
-}
-
 // This is copied from clang/lib/CodeGen/CodeGenFunction.cpp
 cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
   type = type.getCanonicalType();

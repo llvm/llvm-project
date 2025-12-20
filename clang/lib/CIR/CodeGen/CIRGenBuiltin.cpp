@@ -108,7 +108,7 @@ static Address checkAtomicAlignment(CIRGenFunction &cgf, const CallExpr *e) {
 /// and the expression node.
 static mlir::Value makeBinaryAtomicValue(
     CIRGenFunction &cgf, cir::AtomicFetchKind kind, const CallExpr *expr,
-    mlir::Value *neededValP = nullptr,
+    mlir::Type *originalArgType, mlir::Value *emittedArgValue = nullptr,
     cir::MemOrder ordering = cir::MemOrder::SequentiallyConsistent) {
 
   QualType type = expr->getType();
@@ -134,8 +134,10 @@ static mlir::Value makeBinaryAtomicValue(
   // that calculate the result of the operation as return value of
   // <binop>_and_fetch builtins. The `AtomicFetch` operation only updates the
   // memory location and returns the old value.
-  if (neededValP)
-    *neededValP = val;
+  if (emittedArgValue) {
+    *emittedArgValue = val;
+    *originalArgType = valueType;
+  }
 
   auto rmwi = cir::AtomicFetchOp::create(
       builder, cgf.getLoc(expr->getSourceRange()), destAddr.emitRawPointer(),
@@ -148,17 +150,20 @@ static RValue emitBinaryAtomicPost(CIRGenFunction &cgf,
                                    cir::AtomicFetchKind atomicOpkind,
                                    const CallExpr *e, cir::BinOpKind binopKind,
                                    bool invert = false) {
-  mlir::Value val;
+  mlir::Value emittedArgValue;
+  mlir::Type originalArgType;
   clang::QualType typ = e->getType();
-  mlir::Value result = makeBinaryAtomicValue(cgf, atomicOpkind, e, &val);
+  mlir::Value result = makeBinaryAtomicValue(
+      cgf, atomicOpkind, e, &originalArgType, &emittedArgValue);
   clang::CIRGen::CIRGenBuilderTy &builder = cgf.getBuilder();
-  result = cir::BinOp::create(builder, result.getLoc(), binopKind, result, val);
+  result = cir::BinOp::create(builder, result.getLoc(), binopKind, result,
+                              emittedArgValue);
 
   if (invert)
     result = cir::UnaryOp::create(builder, result.getLoc(),
                                   cir::UnaryOpKind::Not, result);
 
-  result = emitFromInt(cgf, result, typ, val.getType());
+  result = emitFromInt(cgf, result, typ, originalArgType);
   return RValue::get(result);
 }
 
@@ -1012,6 +1017,31 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__sync_nand_and_fetch_16:
     return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Nand, e,
                                 cir::BinOpKind::And, true);
+  case Builtin::BI__sync_val_compare_and_swap_1:
+  case Builtin::BI__sync_val_compare_and_swap_2:
+  case Builtin::BI__sync_val_compare_and_swap_4:
+  case Builtin::BI__sync_val_compare_and_swap_8:
+  case Builtin::BI__sync_val_compare_and_swap_16:
+  case Builtin::BI__sync_bool_compare_and_swap_1:
+  case Builtin::BI__sync_bool_compare_and_swap_2:
+  case Builtin::BI__sync_bool_compare_and_swap_4:
+  case Builtin::BI__sync_bool_compare_and_swap_8:
+  case Builtin::BI__sync_bool_compare_and_swap_16:
+  case Builtin::BI__sync_swap_1:
+  case Builtin::BI__sync_swap_2:
+  case Builtin::BI__sync_swap_4:
+  case Builtin::BI__sync_swap_8:
+  case Builtin::BI__sync_swap_16:
+  case Builtin::BI__sync_lock_test_and_set_1:
+  case Builtin::BI__sync_lock_test_and_set_2:
+  case Builtin::BI__sync_lock_test_and_set_4:
+  case Builtin::BI__sync_lock_test_and_set_8:
+  case Builtin::BI__sync_lock_test_and_set_16:
+  case Builtin::BI__sync_lock_release_1:
+  case Builtin::BI__sync_lock_release_2:
+  case Builtin::BI__sync_lock_release_4:
+  case Builtin::BI__sync_lock_release_8:
+  case Builtin::BI__sync_lock_release_16:
   case Builtin::BI__sync_synchronize:
   case Builtin::BI__builtin_nontemporal_load:
   case Builtin::BI__builtin_nontemporal_store:

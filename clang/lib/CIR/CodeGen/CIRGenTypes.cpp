@@ -117,29 +117,6 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
   return builder.getUniqueRecordName(std::string(typeName));
 }
 
-mlir::Type CIRGenTypes::convertTypeForLoadStore(QualType qualType,
-                                                mlir::Type mlirType) {
-  if (!mlirType) {
-    mlirType = convertType(qualType);
-  }
-
-  if (qualType->isBitIntType())
-    return mlir::IntegerType::get(
-        &getMLIRContext(),
-        astContext.getTypeSizeInChars(qualType).getQuantity() *
-            astContext.getCharWidth());
-
-  if (mlir::isa<mlir::IntegerType>(mlirType) &&
-      mlir::cast<mlir::IntegerType>(mlirType).getWidth() == 1)
-    return mlir::IntegerType::get(&getMLIRContext(),
-                                  astContext.getTypeSize(qualType));
-
-  if (qualType->isExtVectorBoolType())
-    return convertTypeForMem(qualType);
-
-  return mlirType;
-}
-
 /// Return true if the specified type is already completely laid out.
 bool CIRGenTypes::isRecordLayoutComplete(const Type *ty) const {
   const auto it = recordDeclTypes.find(ty);

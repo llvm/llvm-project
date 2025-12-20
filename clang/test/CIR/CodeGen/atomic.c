@@ -1137,6 +1137,7 @@ int c11_atomic_fetch_nand(_Atomic(int) *ptr, int value) {
 // CHECK-LABEL: @test_op_and_fetch
 // LLVM-LABEL: @test_op_and_fetch
 void test_op_and_fetch() {
+  int *ptr;
   signed char sc;
   unsigned char uc;
   signed short ss;
@@ -1145,6 +1146,19 @@ void test_op_and_fetch() {
   unsigned int ui;
   signed long long sll;
   unsigned long long ull;
+
+  // CHECK: [[VAL0:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s8i
+  // CHECK: [[RES0:%.*]] = cir.atomic.fetch(add, {{%.*}} : !cir.ptr<!s8i>, [[VAL0]] : !s8i, seq_cst) fetch_first : !s8i
+  // CHECK: [[RET0:%.*]] = cir.binop(add, [[RES0]], [[VAL0]]) : !s8i
+  // LLVM:  [[VAL0:%.*]] = load i8, ptr %{{.*}}, align 1
+  // LLVM:  [[RES0:%.*]] = atomicrmw add ptr %{{.*}}, i8 [[VAL0]] seq_cst, align 1
+  // LLVM:  [[RET0:%.*]] = add i8 [[RES0]], [[VAL0]]
+  // LLVM:  store i8 [[RET0]], ptr %{{.*}}, align 1
+  // OGCG:  [[VAL0:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[RES0:%.*]] = atomicrmw add ptr %{{.*}}, i8 [[VAL0]] seq_cst, align 1
+  // OGCG:  [[RET0:%.*]] = add i8 [[RES0]], [[VAL0]]
+  // OGCG:  store i8 [[RET0]], ptr %{{.*}}, align 1
+  ptr = __sync_add_and_fetch(&ptr, ptr);
 
   // CHECK: [[VAL0:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s8i
   // CHECK: [[RES0:%.*]] = cir.atomic.fetch(add, {{%.*}} : !cir.ptr<!s8i>, [[VAL0]] : !s8i, seq_cst) fetch_first : !s8i

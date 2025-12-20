@@ -547,8 +547,7 @@ LValue CIRGenFunction::emitLValueForFieldInitialization(
 }
 
 /// Converts a scalar value from its primary IR type (as returned
-/// by ConvertType) to its load/store type (as returned by
-/// convertTypeForLoadStore).
+/// by ConvertType) to its load/store type.
 mlir::Value CIRGenFunction::emitToMemory(mlir::Value value, QualType ty) {
   if (auto *atomicTy = ty->getAs<AtomicType>())
     ty = atomicTy->getValueType();
@@ -557,10 +556,8 @@ mlir::Value CIRGenFunction::emitToMemory(mlir::Value value, QualType ty) {
     cgm.errorNYI("emitToMemory: extVectorBoolType");
   }
 
-  if (ty->hasBooleanRepresentation() || ty->isBitIntType()) {
-    mlir::Type storeType = convertTypeForLoadStore(ty, value.getType());
-    return builder.createIntCast(value, storeType);
-  }
+  // Unlike in classic codegen CIR, bools are kept as `cir.bool` and BitInts are
+  // kept as `cir.int<N>` until further lowering
 
   return value;
 }
@@ -571,12 +568,6 @@ mlir::Value CIRGenFunction::emitFromMemory(mlir::Value value, QualType ty) {
 
   if (ty->isPackedVectorBoolType(getContext())) {
     cgm.errorNYI("emitFromMemory: PackedVectorBoolType");
-  }
-
-  if (ty->hasBooleanRepresentation() || ty->isBitIntType() ||
-      ty->isExtVectorBoolType()) {
-    mlir::Type resTy = convertType(ty);
-    return builder.createIntCast(value, resTy);
   }
 
   return value;
