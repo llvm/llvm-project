@@ -8,13 +8,104 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
-#include "JSONUtils.h"
+#include "LLDBUtils.h"
+#include "Protocol/ProtocolRequests.h"
+#include "ProtocolUtils.h"
 #include "RequestHandler.h"
+#include "lldb/API/SBStream.h"
 
-namespace lldb_dap {
+using namespace lldb_dap;
+using namespace lldb_dap::protocol;
 
-/// Page size used for reporting addtional frames in the 'stackTrace' request.
+/// Page size used for reporting additional frames in the 'stackTrace' request.
 static constexpr int StackPageSize = 20;
+
+// Create a "StackFrame" object for a LLDB frame object.
+static StackFrame CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
+                                   lldb::SBFormat &format) {
+  StackFrame stack_frame;
+  stack_frame.id = MakeDAPFrameID(frame);
+
+  lldb::SBStream stream;
+  if (format && frame.GetDescriptionWithFormat(format, stream).Success()) {
+    stack_frame.name = stream.GetData();
+
+    // `function_name` can be a nullptr, which throws an error when assigned to
+    // an `std::string`.
+  } else if (const char *name = frame.GetDisplayFunctionName()) {
+    stack_frame.name = name;
+  }
+
+  if (stack_frame.name.empty()) {
+    // If the function name is unavailable, display the pc address as a 16-digit
+    // hex string, e.g. "0x0000000000012345"
+    stack_frame.name = GetLoadAddressString(frame.GetPC());
+  }
+
+  // We only include `[opt]` if a custom frame format is not specified.
+  if (!format && frame.GetFunction().GetIsOptimized())
+    stack_frame.name += " [opt]";
+
+  std::optional<protocol::Source> source = dap.ResolveSource(frame);
+  if (source && !IsAssemblySource(*source)) {
+    // This is a normal source with a valid line entry.
+    auto line_entry = frame.GetLineEntry();
+    stack_frame.line = line_entry.GetLine();
+    stack_frame.column = line_entry.GetColumn();
+  } else if (frame.GetSymbol().IsValid()) {
+    // This is a source where the disassembly is used, but there is a valid
+    // symbol. Calculate the line of the current PC from the start of the
+    // current symbol.
+    lldb::SBInstructionList inst_list = dap.target.ReadInstructions(
+        frame.GetSymbol().GetStartAddress(), frame.GetPCAddress(), nullptr);
+    size_t inst_line = inst_list.GetSize();
+
+    // Line numbers are 1-based.
+    stack_frame.line = inst_line + 1;
+    stack_frame.column = 1;
+  } else {
+    // No valid line entry or symbol.
+    stack_frame.line = 1;
+    stack_frame.column = 1;
+  }
+
+  stack_frame.source = std::move(source);
+  stack_frame.instructionPointerReference = frame.GetPC();
+
+  if (frame.IsArtificial() || frame.IsHidden())
+    stack_frame.presentationHint = StackFrame::ePresentationHintSubtle;
+  lldb::SBModule module = frame.GetModule();
+  if (module.IsValid()) {
+    if (const llvm::StringRef uuid = module.GetUUIDString(); !uuid.empty())
+      stack_frame.moduleId = uuid.str();
+  }
+
+  return stack_frame;
+}
+
+// Create a "StackFrame" label object for a LLDB thread.
+static StackFrame CreateExtendedStackFrameLabel(lldb::SBThread &thread,
+                                                lldb::SBFormat &format) {
+  StackFrame stack_frame;
+  lldb::SBStream stream;
+  if (format && thread.GetDescriptionWithFormat(format, stream).Success()) {
+    stack_frame.name = stream.GetData();
+  } else {
+    const uint32_t thread_idx = thread.GetExtendedBacktraceOriginatingIndexID();
+    const char *queue_name = thread.GetQueueName();
+    if (queue_name != nullptr) {
+      stack_frame.name = llvm::formatv("Enqueued from {0} (Thread {1})",
+                                       queue_name, thread_idx);
+    } else {
+      stack_frame.name = llvm::formatv("Thread {0}", thread_idx);
+    }
+  }
+
+  stack_frame.id = thread.GetThreadID() + 1;
+  stack_frame.presentationHint = StackFrame::ePresentationHintLabel;
+
+  return stack_frame;
+}
 
 // Fill in the stack frames of the thread.
 //
@@ -50,13 +141,12 @@ static constexpr int StackPageSize = 20;
 // s=3,l=3 = [th0->s3, label1, th1->s0]
 static bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
                             lldb::SBFormat &frame_format,
-                            llvm::json::Array &stack_frames, int64_t &offset,
-                            const int64_t start_frame, const int64_t levels,
-                            const bool include_all) {
+                            std::vector<StackFrame> &stack_frames,
+                            uint32_t &offset, const uint32_t start_frame,
+                            const uint32_t levels, const bool include_all) {
   bool reached_end_of_stack = false;
-  for (int64_t i = start_frame;
-       static_cast<int64_t>(stack_frames.size()) < levels; i++) {
-    if (i == -1) {
+  for (uint32_t i = start_frame; stack_frames.size() < levels; i++) {
+    if (i == UINT32_MAX) {
       stack_frames.emplace_back(
           CreateExtendedStackFrameLabel(thread, frame_format));
       continue;
@@ -83,9 +173,9 @@ static bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
 
       reached_end_of_stack = FillStackFrames(
           dap, backtrace, frame_format, stack_frames, offset,
-          (start_frame - offset) > 0 ? start_frame - offset : -1, levels,
+          start_frame > offset ? start_frame - offset : UINT32_MAX, levels,
           include_all);
-      if (static_cast<int64_t>(stack_frames.size()) >= levels)
+      if (stack_frames.size() >= levels)
         break;
     }
   }
@@ -93,150 +183,53 @@ static bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
   return reached_end_of_stack;
 }
 
-// "StackTraceRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "StackTrace request; value of command field is
-//     'stackTrace'. The request returns a stacktrace from the current execution
-//     state.", "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "stackTrace" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/StackTraceArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments"  ]
-//   }]
-// },
-// "StackTraceArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'stackTrace' request.",
-//   "properties": {
-//     "threadId": {
-//       "type": "integer",
-//       "description": "Retrieve the stacktrace for this thread."
-//     },
-//     "startFrame": {
-//       "type": "integer",
-//       "description": "The index of the first frame to return; if omitted
-//       frames start at 0."
-//     },
-//     "levels": {
-//       "type": "integer",
-//       "description": "The maximum number of frames to return. If levels is
-//       not specified or 0, all frames are returned."
-//     },
-//     "format": {
-//       "$ref": "#/definitions/StackFrameFormat",
-//       "description": "Specifies details on how to format the stack frames.
-//       The attribute is only honored by a debug adapter if the corresponding
-//       capability `supportsValueFormattingOptions` is true."
-//     }
-//  },
-//   "required": [ "threadId" ]
-// },
-// "StackTraceResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to `stackTrace` request.",
-//     "properties": {
-//       "body": {
-//         "type": "object",
-//         "properties": {
-//           "stackFrames": {
-//             "type": "array",
-//             "items": {
-//               "$ref": "#/definitions/StackFrame"
-//             },
-//             "description": "The frames of the stackframe. If the array has
-//             length zero, there are no stackframes available. This means that
-//             there is no location information available."
-//           },
-//           "totalFrames": {
-//             "type": "integer",
-//             "description": "The total number of frames available in the
-//             stack. If omitted or if `totalFrames` is larger than the
-//             available frames, a client is expected to request frames until
-//             a request returns less frames than requested (which indicates
-//             the end of the stack). Returning monotonically increasing
-//             `totalFrames` values for subsequent requests can be used to
-//             enforce paging in the client."
-//           }
-//         },
-//         "required": [ "stackFrames" ]
-//       }
-//     },
-//     "required": [ "body" ]
-//   }]
-// }
-void StackTraceRequestHandler::operator()(
-    const llvm::json::Object &request) const {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  lldb::SBError error;
-  const auto *arguments = request.getObject("arguments");
-  lldb::SBThread thread = dap.GetLLDBThread(*arguments);
-  llvm::json::Array stack_frames;
-  llvm::json::Object body;
+llvm::Expected<protocol::StackTraceResponseBody>
+StackTraceRequestHandler::Run(const protocol::StackTraceArguments &args) const {
+  lldb::SBThread thread = dap.GetLLDBThread(args.threadId);
 
   lldb::SBFormat frame_format = dap.frame_format;
   bool include_all = dap.configuration.displayExtendedBacktrace;
 
-  if (const auto *format = arguments->getObject("format")) {
-    // Indicates that all stack frames should be included, even those the debug
-    // adapter might otherwise hide.
-    include_all = GetBoolean(format, "includeAll").value_or(false);
+  if (args.format) {
+    const StackFrameFormat &format = *args.format;
 
-    // Parse the properties that have a corresponding format string.
+    include_all = format.includeAll;
+
     // FIXME: Support "parameterTypes" and "hex".
-    const bool module = GetBoolean(format, "module").value_or(false);
-    const bool line = GetBoolean(format, "line").value_or(false);
-    const bool parameters = GetBoolean(format, "parameters").value_or(false);
-    const bool parameter_names =
-        GetBoolean(format, "parameterNames").value_or(false);
-    const bool parameter_values =
-        GetBoolean(format, "parameterValues").value_or(false);
-
     // Only change the format string if we have to.
-    if (module || line || parameters || parameter_names || parameter_values) {
+    if (format.module || format.line || format.parameters ||
+        format.parameterNames || format.parameterValues) {
       std::string format_str;
       llvm::raw_string_ostream os(format_str);
 
-      if (module)
+      if (format.module)
         os << "{${module.file.basename} }";
 
-      if (line)
+      if (format.line)
         os << "{${line.file.basename}:${line.number}:${line.column} }";
 
-      if (parameters || parameter_names || parameter_values)
+      if (format.parameters || format.parameterNames || format.parameterValues)
         os << "{${function.name-with-args}}";
       else
         os << "{${function.name-without-args}}";
 
       lldb::SBError error;
       frame_format = lldb::SBFormat(format_str.c_str(), error);
-      assert(error.Success());
+      if (error.Fail())
+        return ToError(error);
     }
   }
 
+  StackTraceResponseBody body;
   if (thread.IsValid()) {
-    const auto start_frame =
-        GetInteger<uint64_t>(arguments, "startFrame").value_or(0);
-    const auto levels = GetInteger<uint64_t>(arguments, "levels").value_or(0);
-    int64_t offset = 0;
-    bool reached_end_of_stack = FillStackFrames(
-        dap, thread, frame_format, stack_frames, offset, start_frame,
-        levels == 0 ? INT64_MAX : levels, include_all);
-    body.try_emplace("totalFrames",
-                     start_frame + stack_frames.size() +
-                         (reached_end_of_stack ? 0 : StackPageSize));
+    const auto levels = args.levels == 0 ? UINT32_MAX : args.levels;
+    uint32_t offset = 0;
+    bool reached_end_of_stack =
+        FillStackFrames(dap, thread, frame_format, body.stackFrames, offset,
+                        args.startFrame, levels, include_all);
+    body.totalFrames = args.startFrame + body.stackFrames.size() +
+                       (reached_end_of_stack ? 0 : StackPageSize);
   }
 
-  body.try_emplace("stackFrames", std::move(stack_frames));
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
+  return body;
 }
-
-} // namespace lldb_dap

@@ -1044,6 +1044,92 @@ struct CompileUnit {
 };
 llvm::json::Value toJSON(const CompileUnit &);
 
+/// Provides formatting information for a stack frame.
+struct StackFrameFormat {
+  /// Displays parameters for the stack frame.
+  bool parameters = false;
+
+  /// Displays the types of parameters for the stack frame.
+  bool parameterTypes = false;
+
+  /// Displays the names of parameters for the stack frame.
+  bool parameterNames = false;
+
+  /// Displays the values of parameters for the stack frame.
+  bool parameterValues = false;
+
+  /// Displays the line number of the stack frame.
+  bool line = false;
+
+  /// Displays the module of the stack frame.
+  bool module = false;
+
+  /// Includes all stack frames, including those the debug adapter might
+  /// otherwise hide.
+  bool includeAll = false;
+};
+bool fromJSON(const llvm::json::Value &, StackFrameFormat &, llvm::json::Path);
+
+/// A Stackframe contains the source location.
+struct StackFrame {
+  enum PresentationHint : unsigned {
+    ePresentationHintNormal,
+    ePresentationHintLabel,
+    ePresentationHintSubtle,
+  };
+
+  /// An identifier for the stack frame. It must be unique across all threads.
+  /// This id can be used to retrieve the scopes of the frame with the `scopes`
+  /// request or to restart the execution of a stack frame.
+  int64_t id;
+
+  /// The name of the stack frame, typically a method name.
+  std::string name;
+
+  /// The source of the frame.
+  std::optional<Source> source;
+
+  /// The line within the source of the frame. If the source attribute is
+  /// missing or doesn't exist, `line` is 0 and should be ignored by the client.
+  uint32_t line = LLDB_INVALID_LINE_NUMBER;
+
+  /// Start position of the range covered by the stack frame. It is measured in
+  /// UTF-16 code units and the client capability `columnsStartAt1` determines
+  /// whether it is 0- or 1-based. If attribute `source` is missing or doesn't
+  /// exist, `column` is 0 and should be ignored by the client.
+  uint32_t column = LLDB_INVALID_COLUMN_NUMBER;
+
+  /// The end line of the range covered by the stack frame.
+  uint32_t endLine = LLDB_INVALID_LINE_NUMBER;
+
+  /// End position of the range covered by the stack frame. It is measured in
+  /// UTF-16 code units and the client capability `columnsStartAt1` determines
+  /// whether it is 0- or 1-based.
+  uint32_t endColumn = LLDB_INVALID_COLUMN_NUMBER;
+
+  /// Indicates whether this frame can be restarted with the `restartFrame`
+  /// request. Clients should only use this if the debug adapter supports the
+  /// `restart` request and the corresponding capability `supportsRestartFrame`
+  /// is true. If a debug adapter has this capability, then `canRestart`
+  /// defaults to `true` if the property is absent.
+  bool canRestart = false;
+
+  /// A memory reference for the current instruction pointer in this frame.
+  lldb::addr_t instructionPointerReference = LLDB_INVALID_ADDRESS;
+
+  /// The module associated with this frame, if any.
+  std::optional<std::string> moduleId;
+
+  /// A hint for how to present this frame in the UI. A value of `label` can be
+  /// used to indicate that the frame is an artificial frame that is used as a
+  /// visual label or separator. A value of `subtle` can be used to change the
+  /// appearance of a frame in a 'subtle' way. Values: 'normal', 'label',
+  /// 'subtle'
+  std::optional<PresentationHint> presentationHint;
+};
+llvm::json::Value toJSON(const StackFrame::PresentationHint &);
+llvm::json::Value toJSON(const StackFrame &);
+
 } // namespace lldb_dap::protocol
 
 #endif

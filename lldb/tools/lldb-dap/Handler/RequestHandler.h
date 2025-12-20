@@ -79,16 +79,6 @@ protected:
   DAP &dap;
 };
 
-/// FIXME: Migrate callers to typed RequestHandler for improved type handling.
-class LegacyRequestHandler : public BaseRequestHandler {
-  using BaseRequestHandler::BaseRequestHandler;
-  virtual void operator()(const llvm::json::Object &request) const = 0;
-  void operator()(const protocol::Request &request) const override {
-    auto req = toJSON(request);
-    (*this)(*req.getAsObject());
-  }
-};
-
 template <typename Args>
 llvm::Expected<Args> parseArgs(const protocol::Request &request) {
   if (!is_optional_v<Args> && !request.arguments)
@@ -542,11 +532,14 @@ public:
   Run(const protocol::SourceArguments &args) const override;
 };
 
-class StackTraceRequestHandler : public LegacyRequestHandler {
+class StackTraceRequestHandler
+    : public RequestHandler<protocol::StackTraceArguments,
+                            llvm::Expected<protocol::StackTraceResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "stackTrace"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::StackTraceResponseBody>
+  Run(const protocol::StackTraceArguments &args) const override;
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureDelayedStackTraceLoading};
   }
