@@ -1400,6 +1400,8 @@ def gi_arith_extended_reg32to64_i64 :
 
 def arith_uxtx : ComplexPattern<i64, 2, "SelectArithUXTXRegister", []>;
 
+def add_uxtx : ComplexPattern<i64, 2, "SelectAddUXTXRegister", []>;
+
 // Floating-point immediate.
 
 def fpimm16XForm : SDNodeXForm<fpimm, [{
@@ -2089,7 +2091,7 @@ class SpecialReturn<bits<4> opc, string asm>
 let mayLoad = 1 in
 class RCPCLoad<bits<2> sz, string asm, RegisterClass RC>
   : I<(outs RC:$Rt), (ins GPR64sp0:$Rn), asm, "\t$Rt, [$Rn]", "", []>,
-  Sched<[]> {
+  Sched<[WriteLD]> {
   bits<5> Rn;
   bits<5> Rt;
   let Inst{31-30} = sz;
@@ -4398,6 +4400,7 @@ class BaseLoadStoreUnscale<bits<2> sz, bit V, bits<2> opc, dag oops, dag iops,
 // Armv8.4 LDAPR & STLR with Immediate Offset instruction
 multiclass BaseLoadUnscaleV84<string asm, bits<2> sz, bits<2> opc,
                               DAGOperand regtype > {
+  let mayLoad = 1 in
   def i : BaseLoadStoreUnscale<sz, 0, opc, (outs regtype:$Rt),
                                (ins GPR64sp:$Rn, simm9:$offset), asm, []>,
           Sched<[WriteLD]> {
