@@ -10,18 +10,16 @@ define i8 @foo(i8 %v1, i8 %v2) {
 ; SIMPLIFY-CFG-NEXT:    ]
 ; SIMPLIFY-CFG:       then:
 ; SIMPLIFY-CFG-NEXT:    switch i8 [[V2:%.*]], label [[EXIT]] [
-; SIMPLIFY-CFG-NEXT:      i8 0, label [[SWITCH_CASE_0:%.*]]
+; SIMPLIFY-CFG-NEXT:      i8 0, label [[ELSE]]
 ; SIMPLIFY-CFG-NEXT:      i8 1, label [[SWITCH_CASE_1:%.*]]
 ; SIMPLIFY-CFG-NEXT:      i8 2, label [[SWITCH_CASE_1]]
 ; SIMPLIFY-CFG-NEXT:    ]
-; SIMPLIFY-CFG:       switch.case.0:
-; SIMPLIFY-CFG-NEXT:    br label [[EXIT]]
 ; SIMPLIFY-CFG:       switch.case.1:
 ; SIMPLIFY-CFG-NEXT:    br label [[EXIT]]
 ; SIMPLIFY-CFG:       else:
 ; SIMPLIFY-CFG-NEXT:    br label [[EXIT]]
 ; SIMPLIFY-CFG:       exit:
-; SIMPLIFY-CFG-NEXT:    [[RET:%.*]] = phi i8 [ 0, [[ELSE]] ], [ 0, [[SWITCH_CASE_0]] ], [ 1, [[SWITCH_CASE_1]] ], [ 2, [[THEN]] ], [ 3, [[ENTRY:%.*]] ]
+; SIMPLIFY-CFG-NEXT:    [[RET:%.*]] = phi i8 [ 0, [[ELSE]] ], [ 2, [[THEN]] ], [ 1, [[SWITCH_CASE_1]] ], [ 3, [[ENTRY:%.*]] ]
 ; SIMPLIFY-CFG-NEXT:    ret i8 [[RET]]
 ;
 entry:
