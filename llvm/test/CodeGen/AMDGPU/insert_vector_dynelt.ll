@@ -142,19 +142,19 @@ entry:
 define amdgpu_kernel void @float2_inselt(ptr addrspace(1) %out, <2 x float> %vec, i32 %sel) {
 ; GCN-LABEL: float2_inselt:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
+; GCN-NEXT:    s_load_dword s6, s[4:5], 0x34
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_cmp_lg_u32 s2, 1
-; GCN-NEXT:    v_mov_b32_e32 v0, s1
+; GCN-NEXT:    s_cmp_lg_u32 s6, 1
+; GCN-NEXT:    v_mov_b32_e32 v0, s3
 ; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
-; GCN-NEXT:    s_cmp_lg_u32 s2, 0
+; GCN-NEXT:    s_cmp_lg_u32 s6, 0
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, 1.0, v0, vcc
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
-; GCN-NEXT:    v_mov_b32_e32 v2, s4
+; GCN-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, 1.0, v0, vcc
-; GCN-NEXT:    v_mov_b32_e32 v3, s5
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GCN-NEXT:    s_endpgm
 ;

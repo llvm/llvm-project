@@ -9,43 +9,45 @@ define amdgpu_kernel void @blender_no_live_segment_at_def_error(<4 x float> %ext
 ; CHECK-NEXT:    s_addc_u32 s13, s13, 0
 ; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s12
 ; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s13
-; CHECK-NEXT:    s_load_dwordx8 s[48:55], s[8:9], 0x0
+; CHECK-NEXT:    s_load_dword s12, s[8:9], 0x10
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
-; CHECK-NEXT:    s_mov_b32 s12, 0
+; CHECK-NEXT:    s_mov_b32 s36, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_cmp_lg_u32 s52, 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_9
-; CHECK-NEXT:  ; %bb.1: ; %if.end13.i.i
-; CHECK-NEXT:    s_cmp_eq_u32 s54, 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_4
-; CHECK-NEXT:  ; %bb.2: ; %if.else251.i.i
-; CHECK-NEXT:    s_cmp_lg_u32 s55, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s12, 0
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_2
+; CHECK-NEXT:  ; %bb.1:
+; CHECK-NEXT:    s_load_dwordx4 s[36:39], s[8:9], 0x0
+; CHECK-NEXT:    s_branch .LBB0_10
+; CHECK-NEXT:  .LBB0_2: ; %if.end13.i.i
+; CHECK-NEXT:    s_load_dword s12, s[8:9], 0x18
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_cmp_eq_u32 s12, 0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_8
+; CHECK-NEXT:  ; %bb.3: ; %if.else251.i.i
+; CHECK-NEXT:    s_load_dword s12, s[8:9], 0x1c
 ; CHECK-NEXT:    s_mov_b32 s17, 0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_cmp_lg_u32 s12, 0
 ; CHECK-NEXT:    s_cselect_b32 s12, -1, 0
 ; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s12
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_5
-; CHECK-NEXT:  ; %bb.3:
+; CHECK-NEXT:  ; %bb.4:
 ; CHECK-NEXT:    s_mov_b32 s18, 0
 ; CHECK-NEXT:    s_branch .LBB0_6
-; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    s_mov_b32 s14, s12
-; CHECK-NEXT:    s_mov_b32 s15, s12
-; CHECK-NEXT:    s_mov_b32 s13, s12
-; CHECK-NEXT:    s_mov_b64 s[50:51], s[14:15]
-; CHECK-NEXT:    s_mov_b64 s[48:49], s[12:13]
-; CHECK-NEXT:    s_branch .LBB0_8
 ; CHECK-NEXT:  .LBB0_5: ; %if.then263.i.i
-; CHECK-NEXT:    v_cmp_lt_f32_e64 s12, s53, 0
+; CHECK-NEXT:    s_load_dword s12, s[8:9], 0x14
 ; CHECK-NEXT:    s_mov_b32 s18, 1.0
 ; CHECK-NEXT:    s_mov_b32 s17, 0x7fc00000
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s12, s12, 0
 ; CHECK-NEXT:  .LBB0_6: ; %Flow
-; CHECK-NEXT:    s_mov_b32 s48, 1.0
+; CHECK-NEXT:    s_mov_b32 s36, 1.0
 ; CHECK-NEXT:    s_andn2_b32 vcc_lo, exec_lo, s12
-; CHECK-NEXT:    s_mov_b32 s49, s48
-; CHECK-NEXT:    s_mov_b32 s50, s48
-; CHECK-NEXT:    s_mov_b32 s51, s48
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_8
+; CHECK-NEXT:    s_mov_b32 s37, s36
+; CHECK-NEXT:    s_mov_b32 s38, s36
+; CHECK-NEXT:    s_mov_b32 s39, s36
+; CHECK-NEXT:    s_cbranch_vccnz .LBB0_9
 ; CHECK-NEXT:  ; %bb.7: ; %if.end273.i.i
 ; CHECK-NEXT:    s_add_u32 s12, s8, 40
 ; CHECK-NEXT:    s_addc_u32 s13, s9, 0
@@ -65,27 +67,28 @@ define amdgpu_kernel void @blender_no_live_segment_at_def_error(<4 x float> %ext
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_mov_b32 s13, s15
 ; CHECK-NEXT:    s_mov_b32 s14, s16
-; CHECK-NEXT:    s_mov_b32 s48, 0
+; CHECK-NEXT:    s_mov_b32 s36, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[20:21]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[34:35]
-; CHECK-NEXT:    s_mov_b32 s49, s48
-; CHECK-NEXT:    s_mov_b32 s50, s48
-; CHECK-NEXT:    s_mov_b32 s51, s48
 ; CHECK-NEXT:  .LBB0_8: ; %if.end294.i.i
+; CHECK-NEXT:    s_mov_b32 s37, s36
+; CHECK-NEXT:    s_mov_b32 s38, s36
+; CHECK-NEXT:    s_mov_b32 s39, s36
+; CHECK-NEXT:  .LBB0_9: ; %if.end294.i.i
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:12
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:8
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; CHECK-NEXT:  .LBB0_9: ; %kernel_direct_lighting.exit
+; CHECK-NEXT:  .LBB0_10: ; %kernel_direct_lighting.exit
 ; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x20
-; CHECK-NEXT:    v_mov_b32_e32 v0, s48
-; CHECK-NEXT:    v_mov_b32_e32 v4, 0
-; CHECK-NEXT:    v_mov_b32_e32 v1, s49
-; CHECK-NEXT:    v_mov_b32_e32 v2, s50
-; CHECK-NEXT:    v_mov_b32_e32 v3, s51
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v0, s36
+; CHECK-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, s37
+; CHECK-NEXT:    v_mov_b32_e32 v2, s38
+; CHECK-NEXT:    v_mov_b32_e32 v3, s39
 ; CHECK-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5]
 ; CHECK-NEXT:    s_endpgm
 entry:

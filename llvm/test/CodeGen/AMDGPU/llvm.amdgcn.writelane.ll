@@ -1579,15 +1579,15 @@ define amdgpu_kernel void @test_writelane_sreg_oldval_i64(i64 %oldval, ptr addrs
 ; GFX802-SDAG-NEXT:    s_add_i32 s12, s12, s17
 ; GFX802-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX802-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX802-SDAG-NEXT:    v_mov_b32_e32 v3, s1
+; GFX802-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; GFX802-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX802-SDAG-NEXT:    s_mov_b32 m0, s6
-; GFX802-SDAG-NEXT:    v_mov_b32_e32 v2, s0
+; GFX802-SDAG-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX802-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; GFX802-SDAG-NEXT:    v_mov_b32_e32 v0, s2
-; GFX802-SDAG-NEXT:    v_mov_b32_e32 v1, s3
-; GFX802-SDAG-NEXT:    v_writelane_b32 v3, s5, m0
-; GFX802-SDAG-NEXT:    v_writelane_b32 v2, s4, m0
-; GFX802-SDAG-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
+; GFX802-SDAG-NEXT:    v_writelane_b32 v1, s5, m0
+; GFX802-SDAG-NEXT:    v_writelane_b32 v0, s4, m0
+; GFX802-SDAG-NEXT:    v_mov_b32_e32 v3, s3
+; GFX802-SDAG-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX802-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1010-SDAG-LABEL: test_writelane_sreg_oldval_i64:
@@ -1682,15 +1682,15 @@ define amdgpu_kernel void @test_writelane_sreg_oldval_f64(double %oldval, ptr ad
 ; GFX802-SDAG-NEXT:    s_add_i32 s12, s12, s17
 ; GFX802-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX802-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX802-SDAG-NEXT:    v_mov_b32_e32 v3, s1
+; GFX802-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; GFX802-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX802-SDAG-NEXT:    s_mov_b32 m0, s6
-; GFX802-SDAG-NEXT:    v_mov_b32_e32 v2, s0
+; GFX802-SDAG-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX802-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; GFX802-SDAG-NEXT:    v_mov_b32_e32 v0, s2
-; GFX802-SDAG-NEXT:    v_mov_b32_e32 v1, s3
-; GFX802-SDAG-NEXT:    v_writelane_b32 v3, s5, m0
-; GFX802-SDAG-NEXT:    v_writelane_b32 v2, s4, m0
-; GFX802-SDAG-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
+; GFX802-SDAG-NEXT:    v_writelane_b32 v1, s5, m0
+; GFX802-SDAG-NEXT:    v_writelane_b32 v0, s4, m0
+; GFX802-SDAG-NEXT:    v_mov_b32_e32 v3, s3
+; GFX802-SDAG-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX802-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1010-SDAG-LABEL: test_writelane_sreg_oldval_f64:
@@ -1854,19 +1854,19 @@ define amdgpu_kernel void @test_writelane_imm_oldval_i32(ptr addrspace(1) %out, 
 define amdgpu_kernel void @test_writelane_imm_oldval_i64(ptr addrspace(1) %out, i64 %src0, i32 %src1) #1 {
 ; GFX802-SDAG-LABEL: test_writelane_imm_oldval_i64:
 ; GFX802-SDAG:       ; %bb.0:
-; GFX802-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX802-SDAG-NEXT:    s_load_dword s4, s[8:9], 0x10
+; GFX802-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX802-SDAG-NEXT:    s_add_i32 s12, s12, s17
 ; GFX802-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX802-SDAG-NEXT:    v_mov_b32_e32 v0, 42
-; GFX802-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX802-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX802-SDAG-NEXT:    s_mov_b32 m0, s4
-; GFX802-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; GFX802-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX802-SDAG-NEXT:    v_mov_b32_e32 v3, s1
+; GFX802-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX802-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v1, s3, m0
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v0, s2, m0
+; GFX802-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX802-SDAG-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX802-SDAG-NEXT:    s_endpgm
 ;
@@ -1951,19 +1951,19 @@ define amdgpu_kernel void @test_writelane_imm_oldval_i64(ptr addrspace(1) %out, 
 define amdgpu_kernel void @test_writelane_imm_oldval_f64(ptr addrspace(1) %out, double %src0, i32 %src1) #1 {
 ; GFX802-SDAG-LABEL: test_writelane_imm_oldval_f64:
 ; GFX802-SDAG:       ; %bb.0:
-; GFX802-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX802-SDAG-NEXT:    s_load_dword s4, s[8:9], 0x10
+; GFX802-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX802-SDAG-NEXT:    s_add_i32 s12, s12, s17
 ; GFX802-SDAG-NEXT:    v_mov_b32_e32 v1, 0x40450000
 ; GFX802-SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; GFX802-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX802-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX802-SDAG-NEXT:    s_mov_b32 m0, s4
-; GFX802-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; GFX802-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX802-SDAG-NEXT:    v_mov_b32_e32 v3, s1
+; GFX802-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX802-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v1, s3, m0
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v0, s2, m0
+; GFX802-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX802-SDAG-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX802-SDAG-NEXT:    s_endpgm
 ;

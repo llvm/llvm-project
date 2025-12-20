@@ -104,8 +104,8 @@ define amdgpu_kernel void @rotl_v2i32(ptr addrspace(1) %in, <2 x i32> %x, <2 x i
 ;
 ; SI-LABEL: rotl_v2i32:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xb
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; SI-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xd
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_sub_i32 s6, 32, s2
@@ -125,8 +125,8 @@ define amdgpu_kernel void @rotl_v2i32(ptr addrspace(1) %in, <2 x i32> %x, <2 x i
 ;
 ; GFX8-LABEL: rotl_v2i32:
 ; GFX8:       ; %bb.0: ; %entry
-; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
-; GFX8-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
+; GFX8-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_sub_i32 s7, 32, s3
 ; GFX8-NEXT:    s_sub_i32 s6, 32, s2
@@ -147,8 +147,8 @@ define amdgpu_kernel void @rotl_v2i32(ptr addrspace(1) %in, <2 x i32> %x, <2 x i
 ; GFX10-LABEL: rotl_v2i32:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
-; GFX10-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; GFX10-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_sub_i32 s4, 32, s2

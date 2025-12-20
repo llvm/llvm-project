@@ -18,22 +18,27 @@
 define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reached_align4(ptr addrspace(1) %out, i32 %arg.cond0, i32 %arg.cond1, i32 %in) #1 {
 ; MUBUF-LABEL: kernel_non_entry_block_static_alloca_uniformly_reached_align4:
 ; MUBUF:       ; %bb.0: ; %entry
+; MUBUF-NEXT:    s_load_dword s6, s[4:5], 0x8
 ; MUBUF-NEXT:    s_add_u32 s0, s0, s9
-; MUBUF-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x8
 ; MUBUF-NEXT:    s_addc_u32 s1, s1, 0
 ; MUBUF-NEXT:    s_mov_b32 s33, 0
 ; MUBUF-NEXT:    s_movk_i32 s32, 0x400
 ; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
-; MUBUF-NEXT:    s_cmp_lg_u32 s8, 0
+; MUBUF-NEXT:    s_cmp_lg_u32 s6, 0
 ; MUBUF-NEXT:    s_cbranch_scc1 .LBB0_3
 ; MUBUF-NEXT:  ; %bb.1: ; %bb.0
-; MUBUF-NEXT:    s_cmp_lg_u32 s9, 0
+; MUBUF-NEXT:    s_load_dword s6, s[4:5], 0xc
+; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
+; MUBUF-NEXT:    s_cmp_lg_u32 s6, 0
 ; MUBUF-NEXT:    s_cbranch_scc1 .LBB0_3
 ; MUBUF-NEXT:  ; %bb.2: ; %bb.1
+; MUBUF-NEXT:    s_load_dword s7, s[4:5], 0x10
 ; MUBUF-NEXT:    s_mov_b32 s6, s32
 ; MUBUF-NEXT:    v_mov_b32_e32 v1, 0
 ; MUBUF-NEXT:    v_mov_b32_e32 v2, 1
 ; MUBUF-NEXT:    s_add_i32 s32, s6, 0x1000
+; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
+; MUBUF-NEXT:    s_lshl_b32 s7, s7, 2
 ; MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], s6
 ; MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], s6 offset:4
 ; MUBUF-NEXT:    s_lshl2_add_u32 s6, s10, s6
@@ -53,21 +58,26 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; FLATSCR-LABEL: kernel_non_entry_block_static_alloca_uniformly_reached_align4:
 ; FLATSCR:       ; %bb.0: ; %entry
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s2, s5
-; FLATSCR-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x8
+; FLATSCR-NEXT:    s_load_dword s2, s[0:1], 0x8
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s3, 0
 ; FLATSCR-NEXT:    s_mov_b32 s33, 0
 ; FLATSCR-NEXT:    s_mov_b32 s32, 16
 ; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
-; FLATSCR-NEXT:    s_cmp_lg_u32 s4, 0
+; FLATSCR-NEXT:    s_cmp_lg_u32 s2, 0
 ; FLATSCR-NEXT:    s_cbranch_scc1 .LBB0_3
 ; FLATSCR-NEXT:  ; %bb.1: ; %bb.0
-; FLATSCR-NEXT:    s_cmp_lg_u32 s5, 0
+; FLATSCR-NEXT:    s_load_dword s2, s[0:1], 0xc
+; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
+; FLATSCR-NEXT:    s_cmp_lg_u32 s2, 0
 ; FLATSCR-NEXT:    s_cbranch_scc1 .LBB0_3
 ; FLATSCR-NEXT:  ; %bb.2: ; %bb.1
+; FLATSCR-NEXT:    s_load_dword s3, s[0:1], 0x10
 ; FLATSCR-NEXT:    s_mov_b32 s2, s32
 ; FLATSCR-NEXT:    v_mov_b32_e32 v1, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, 1
 ; FLATSCR-NEXT:    s_add_i32 s32, s2, 0x1000
+; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
+; FLATSCR-NEXT:    s_lshl_b32 s3, s3, 2
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[1:2], s2
 ; FLATSCR-NEXT:    s_lshl2_add_u32 s2, s6, s2
 ; FLATSCR-NEXT:    scratch_load_dword v2, off, s2
@@ -119,7 +129,7 @@ bb.2:
 define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reached_align64(ptr addrspace(1) %out, i32 %arg.cond, i32 %in) {
 ; MUBUF-LABEL: kernel_non_entry_block_static_alloca_uniformly_reached_align64:
 ; MUBUF:       ; %bb.0: ; %entry
-; MUBUF-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x8
+; MUBUF-NEXT:    s_load_dword s4, s[8:9], 0x8
 ; MUBUF-NEXT:    s_add_u32 s0, s0, s17
 ; MUBUF-NEXT:    s_addc_u32 s1, s1, 0
 ; MUBUF-NEXT:    s_mov_b32 s33, 0
@@ -132,13 +142,16 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; MUBUF-NEXT:    s_and_b32 s4, s4, 0xfffff000
 ; MUBUF-NEXT:    s_add_i32 s32, s4, 0x1000
 ; MUBUF-NEXT:    v_mov_b32_e32 v1, 0
-; MUBUF-NEXT:    v_mov_b32_e32 v2, s4
+; MUBUF-NEXT:    v_mov_b32_e32 v2, s5
+; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
+; MUBUF-NEXT:    s_lshl_b32 s4, s4, 2
 ; MUBUF-NEXT:    v_mov_b32_e32 v3, 1
 ; MUBUF-NEXT:    s_lshl2_add_u32 s4, s5, s4
 ; MUBUF-NEXT:    buffer_store_dword v1, v2, s[0:3], 0 offen
 ; MUBUF-NEXT:    buffer_store_dword v3, v2, s[0:3], 0 offen offset:4
 ; MUBUF-NEXT:    v_mov_b32_e32 v2, s4
 ; MUBUF-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
+; MUBUF-NEXT:    s_add_i32 s32, s5, 0x1000
 ; MUBUF-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    v_add_u32_e32 v0, v2, v0
@@ -152,7 +165,7 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ;
 ; FLATSCR-LABEL: kernel_non_entry_block_static_alloca_uniformly_reached_align64:
 ; FLATSCR:       ; %bb.0: ; %entry
-; FLATSCR-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
+; FLATSCR-NEXT:    s_load_dword s0, s[4:5], 0x8
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s8, s13
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s9, 0
 ; FLATSCR-NEXT:    s_mov_b32 s33, 0
@@ -161,9 +174,10 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; FLATSCR-NEXT:    s_cmp_lg_u32 s0, 0
 ; FLATSCR-NEXT:    s_cbranch_scc1 .LBB1_2
 ; FLATSCR-NEXT:  ; %bb.1: ; %bb.0
-; FLATSCR-NEXT:    s_add_i32 s0, s32, 0xfff
+; FLATSCR-NEXT:    s_load_dword s0, s[4:5], 0xc
+; FLATSCR-NEXT:    s_add_i32 s1, s32, 0xfff
 ; FLATSCR-NEXT:    v_mov_b32_e32 v1, 0
-; FLATSCR-NEXT:    s_and_b32 s0, s0, 0xfffff000
+; FLATSCR-NEXT:    s_and_b32 s1, s1, 0xfffff000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, 1
 ; FLATSCR-NEXT:    s_add_i32 s32, s0, 0x1000
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[1:2], s0

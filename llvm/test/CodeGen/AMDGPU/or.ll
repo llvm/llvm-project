@@ -924,14 +924,16 @@ define amdgpu_kernel void @or_i1(ptr addrspace(1) %out, ptr addrspace(1) %in0, p
 define amdgpu_kernel void @s_or_i1(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c, i32 %d) {
 ; GFX6-LABEL: s_or_i1:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xb
-; GFX6-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GFX6-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xd
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s6, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_cmp_eq_u32 s0, s1
-; GFX6-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX6-NEXT:    s_cmp_eq_u32 s2, s3
+; GFX6-NEXT:    s_mov_b32 s4, s0
+; GFX6-NEXT:    s_mov_b32 s5, s1
+; GFX6-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GFX6-NEXT:    s_cmp_eq_u32 s8, s9
 ; GFX6-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; GFX6-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
 ; GFX6-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
@@ -940,14 +942,16 @@ define amdgpu_kernel void @s_or_i1(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c
 ;
 ; GFX8-LABEL: s_or_i1:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
-; GFX8-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
+; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX8-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x34
 ; GFX8-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s6, -1
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    s_cmp_eq_u32 s0, s1
-; GFX8-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX8-NEXT:    s_cmp_eq_u32 s2, s3
+; GFX8-NEXT:    s_mov_b32 s4, s0
+; GFX8-NEXT:    s_mov_b32 s5, s1
+; GFX8-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GFX8-NEXT:    s_cmp_eq_u32 s8, s9
 ; GFX8-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; GFX8-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]

@@ -8,30 +8,34 @@
 define amdgpu_kernel void @i32_mad24(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c) {
 ; GCN-LABEL: i32_mad24:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xb
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GCN-NEXT:    s_load_dword s4, s[4:5], 0xd
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_bfe_i32 s0, s0, 0x180000
-; GCN-NEXT:    s_bfe_i32 s1, s1, 0x180000
-; GCN-NEXT:    s_mul_i32 s0, s0, s1
-; GCN-NEXT:    s_add_i32 s0, s0, s2
+; GCN-NEXT:    s_bfe_i32 s2, s2, 0x180000
+; GCN-NEXT:    s_bfe_i32 s3, s3, 0x180000
+; GCN-NEXT:    s_mul_i32 s2, s2, s3
+; GCN-NEXT:    s_add_i32 s2, s2, s4
 ; GCN-NEXT:    s_mov_b32 s6, -1
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    s_mov_b32 s4, s0
+; GCN-NEXT:    s_mov_b32 s5, s1
+; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
 ;
 ; VI-LABEL: i32_mad24:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; VI-NEXT:    s_load_dword s8, s[4:5], 0x34
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_bfe_i32 s0, s0, 0x180000
-; VI-NEXT:    s_bfe_i32 s1, s1, 0x180000
+; VI-NEXT:    s_mov_b32 s4, s0
+; VI-NEXT:    s_mov_b32 s5, s1
+; VI-NEXT:    s_bfe_i32 s0, s2, 0x180000
+; VI-NEXT:    s_bfe_i32 s1, s3, 0x180000
 ; VI-NEXT:    s_mul_i32 s0, s0, s1
-; VI-NEXT:    s_add_i32 s0, s0, s2
+; VI-NEXT:    s_add_i32 s0, s0, s8
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm

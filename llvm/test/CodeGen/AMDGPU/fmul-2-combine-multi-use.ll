@@ -203,24 +203,24 @@ define amdgpu_kernel void @multiple_use_fadd_fmad_f32(ptr addrspace(1) %out, flo
 define amdgpu_kernel void @multiple_use_fadd_multi_fmad_f32(ptr addrspace(1) %out, float %x, float %y, float %z) #0 {
 ; VI-LABEL: multiple_use_fadd_multi_fmad_f32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x8
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; VI-NEXT:    s_load_dword s5, s[8:9], 0x10
 ; VI-NEXT:    s_add_i32 s12, s12, s17
 ; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_add_u32 s6, s4, 4
-; VI-NEXT:    v_mov_b32_e32 v0, s1
-; VI-NEXT:    v_mov_b32_e32 v1, s2
-; VI-NEXT:    v_mad_f32 v2, |s0|, 2.0, v0
-; VI-NEXT:    v_mad_f32 v3, |s0|, 2.0, v1
-; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
-; VI-NEXT:    s_addc_u32 s7, s5, 0
+; VI-NEXT:    v_mad_f32 v2, |s2|, 2.0, v0
+; VI-NEXT:    v_mad_f32 v3, |s2|, 2.0, v1
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    s_add_u32 s4, s0, 4
+; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    s_addc_u32 s5, s1, 0
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s6
-; VI-NEXT:    v_mov_b32_e32 v1, s7
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_store_dword v[0:1], v3
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
@@ -228,30 +228,30 @@ define amdgpu_kernel void @multiple_use_fadd_multi_fmad_f32(ptr addrspace(1) %ou
 ; GFX10-LABEL: multiple_use_fadd_multi_fmad_f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x8
-; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GFX10-NEXT:    s_load_dword s4, s[8:9], 0x10
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_fma_f32 v1, |s0|, 2.0, s1
-; GFX10-NEXT:    v_fma_f32 v2, |s0|, 2.0, s2
-; GFX10-NEXT:    global_store_dword v0, v1, s[4:5]
+; GFX10-NEXT:    v_fma_f32 v1, |s2|, 2.0, s3
+; GFX10-NEXT:    v_fma_f32 v2, |s2|, 2.0, s4
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    global_store_dword v0, v2, s[4:5] offset:4
+; GFX10-NEXT:    global_store_dword v0, v2, s[0:1] offset:4
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: multiple_use_fadd_multi_fmad_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x8
-; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX11-NEXT:    s_load_b32 s4, s[4:5], 0x10
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_fma_f32 v1, |s0|, 2.0, s1
-; GFX11-NEXT:    v_fma_f32 v2, |s0|, 2.0, s2
-; GFX11-NEXT:    global_store_b32 v0, v1, s[4:5] dlc
+; GFX11-NEXT:    v_fma_f32 v1, |s2|, 2.0, s3
+; GFX11-NEXT:    v_fma_f32 v2, |s2|, 2.0, s4
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1] dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    global_store_b32 v0, v2, s[4:5] offset:4 dlc
+; GFX11-NEXT:    global_store_b32 v0, v2, s[0:1] offset:4 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_endpgm
   %out.gep.1 = getelementptr float, ptr addrspace(1) %out, i32 1

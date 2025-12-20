@@ -555,12 +555,12 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v8i8(ptr addrspace(1) %out
 ; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
+; VI-NEXT:    s_lshl_b32 s4, s4, 3
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    s_lshl_b32 s0, s4, 3
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_lshr_b64 s[0:1], s[2:3], s0
-; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    s_lshr_b64 s[2:3], s[2:3], s4
+; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    flat_store_byte v[0:1], v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm

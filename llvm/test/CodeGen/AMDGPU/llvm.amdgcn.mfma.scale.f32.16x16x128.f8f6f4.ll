@@ -1160,15 +1160,13 @@ define amdgpu_kernel void @test_mfma_scale_f32_16x16x128_f8f6f4__vgprcd(<8 x i32
 ; SDAG-NEXT:    v_mov_b32_e32 v9, s17
 ; SDAG-NEXT:    v_mov_b32_e32 v10, s18
 ; SDAG-NEXT:    v_mov_b32_e32 v11, s19
+; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; SDAG-NEXT:    v_mov_b64_e32 v[18:19], s[10:11]
 ; SDAG-NEXT:    v_mov_b32_e32 v12, s20
 ; SDAG-NEXT:    v_mov_b32_e32 v13, s21
 ; SDAG-NEXT:    v_mov_b32_e32 v14, s22
 ; SDAG-NEXT:    v_mov_b32_e32 v15, s23
-; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-NEXT:    v_mov_b32_e32 v16, s8
-; SDAG-NEXT:    v_mov_b32_e32 v17, s9
-; SDAG-NEXT:    v_mov_b32_e32 v18, s10
-; SDAG-NEXT:    v_mov_b32_e32 v19, s11
+; SDAG-NEXT:    v_mov_b64_e32 v[16:17], s[8:9]
 ; SDAG-NEXT:    v_mov_b32_e32 v21, s12
 ; SDAG-NEXT:    v_mov_b32_e32 v22, s13
 ; SDAG-NEXT:    s_nop 1

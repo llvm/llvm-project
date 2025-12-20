@@ -10,20 +10,20 @@ define amdgpu_kernel void @_Z3fooPiiii(ptr addrspace(1) nocapture noundef writeo
 ; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    .file 1 "." "a.h"
 ; CHECK-NEXT:    .loc 1 5 12 prologue_end ; ./a.h:5:12 @[ a.hip:12:8 ]
-; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x8
-; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; CHECK-NEXT:    s_load_dword s4, s[8:9], 0x10
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_add_i32 s1, s1, s0
+; CHECK-NEXT:    s_add_i32 s3, s3, s2
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    .loc 1 5 12 is_stmt 0 ; ./a.h:5:12 @[ a.hip:13:9 ]
-; CHECK-NEXT:    s_add_i32 s0, s2, s0
+; CHECK-NEXT:    s_add_i32 s2, s4, s2
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    .file 2 "a.hip"
 ; CHECK-NEXT:    .loc 2 13 6 is_stmt 1 ; a.hip:13:6
-; CHECK-NEXT:    s_mul_i32 s0, s0, s1
-; CHECK-NEXT:    v_mov_b32_e32 v1, s0
-; CHECK-NEXT:    global_store_dword v0, v1, s[4:5]
+; CHECK-NEXT:    s_mul_i32 s2, s2, s3
+; CHECK-NEXT:    v_mov_b32_e32 v1, s2
+; CHECK-NEXT:    global_store_dword v0, v1, s[0:1]
 ; CHECK-NEXT:    .loc 2 14 1 ; a.hip:14:1
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  .Ltmp2:

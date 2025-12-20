@@ -125,18 +125,18 @@ define amdgpu_kernel void @s_uaddo_i32(ptr addrspace(1) %out, ptr addrspace(1) %
 ;
 ; VI-LABEL: s_uaddo_i32:
 ; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v2, s7
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_mov_b32_e32 v4, s5
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    v_add_u32_e32 v4, vcc, s4, v4
-; VI-NEXT:    v_mov_b32_e32 v2, s2
-; VI-NEXT:    v_mov_b32_e32 v3, s3
-; VI-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
-; VI-NEXT:    flat_store_dword v[0:1], v4
-; VI-NEXT:    flat_store_byte v[2:3], v5
+; VI-NEXT:    v_add_u32_e32 v2, vcc, s6, v2
+; VI-NEXT:    flat_store_dword v[0:1], v2
+; VI-NEXT:    v_mov_b32_e32 v0, s2
+; VI-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
+; VI-NEXT:    v_mov_b32_e32 v1, s3
+; VI-NEXT:    flat_store_byte v[0:1], v3
 ; VI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: s_uaddo_i32:

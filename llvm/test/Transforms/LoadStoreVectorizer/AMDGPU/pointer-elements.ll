@@ -229,8 +229,7 @@ entry:
 }
 
 ; CHECK-LABEL: @no_merge_load_i64_ptr32(
-; CHECK: load i64,
-; CHECK: load ptr addrspace(3),
+; CHECK: load <3 x i32>
 define amdgpu_kernel void @no_merge_load_i64_ptr32(ptr addrspace(1) nocapture %a) #0 {
 entry:
   %a.1 = getelementptr inbounds i64, ptr addrspace(1) %a, i64 1
