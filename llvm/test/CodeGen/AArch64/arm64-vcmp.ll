@@ -234,3 +234,67 @@ define <1 x i64> @cmnez_d(<1 x i64> %A) nounwind {
   %mask = sext <1 x i1> %tst to <1 x i64>
   ret <1 x i64> %mask
 }
+
+; Check for the elimination of spurious type extensions
+define <16 x i1> @abdu_cmp(<16 x i8> %a, <16 x i8> %b, <16 x i8> %g) {
+; CHECK-LABEL: abdu_cmp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uabd.16b v0, v0, v1
+; CHECK-NEXT:    ushll.8h v1, v2, #0
+; CHECK-NEXT:    ushll2.8h v2, v2, #0
+; CHECK-NEXT:    ushll2.8h v3, v0, #0
+; CHECK-NEXT:    ushll.8h v0, v0, #0
+; CHECK-NEXT:    ushll.4s v4, v1, #0
+; CHECK-NEXT:    ushll2.4s v1, v1, #0
+; CHECK-NEXT:    ushll.4s v5, v2, #0
+; CHECK-NEXT:    ushll2.4s v2, v2, #0
+; CHECK-NEXT:    ushll2.4s v6, v3, #0
+; CHECK-NEXT:    ushll.4s v7, v0, #0
+; CHECK-NEXT:    ushll2.4s v0, v0, #0
+; CHECK-NEXT:    ushll.4s v3, v3, #0
+; CHECK-NEXT:    cmhi.4s v2, v2, v6
+; CHECK-NEXT:    cmhi.4s v0, v1, v0
+; CHECK-NEXT:    cmhi.4s v1, v4, v7
+; CHECK-NEXT:    cmhi.4s v3, v5, v3
+; CHECK-NEXT:    uzp1.8h v0, v1, v0
+; CHECK-NEXT:    uzp1.8h v2, v3, v2
+; CHECK-NEXT:    uzp1.16b v0, v0, v2
+; CHECK-NEXT:    ret
+  %za = zext <16 x i8> %a to <16 x i32>
+  %zb = zext <16 x i8> %b to <16 x i32>
+  %zg = zext <16 x i8> %g to <16 x i32>
+  %mx = call <16 x i32> @llvm.umax.v16i32(<16 x i32> %za, <16 x i32> %zb)
+  %mn = call <16 x i32> @llvm.umin.v16i32(<16 x i32> %za, <16 x i32> %zb)
+  %abdu = sub <16 x i32> %mx, %mn
+  %cond = icmp ult <16 x i32> %abdu, %zg
+  ret <16 x i1> %cond
+}
+
+define <16 x i1> @sext_cmp(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: sext_cmp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll.8h v2, v0, #0
+; CHECK-NEXT:    sshll2.8h v0, v0, #0
+; CHECK-NEXT:    sshll2.8h v3, v1, #0
+; CHECK-NEXT:    sshll.8h v1, v1, #0
+; CHECK-NEXT:    sshll.4s v4, v2, #0
+; CHECK-NEXT:    sshll2.4s v2, v2, #0
+; CHECK-NEXT:    sshll.4s v5, v0, #0
+; CHECK-NEXT:    sshll2.4s v0, v0, #0
+; CHECK-NEXT:    sshll2.4s v6, v3, #0
+; CHECK-NEXT:    sshll.4s v7, v1, #0
+; CHECK-NEXT:    sshll2.4s v1, v1, #0
+; CHECK-NEXT:    sshll.4s v3, v3, #0
+; CHECK-NEXT:    cmgt.4s v0, v6, v0
+; CHECK-NEXT:    cmgt.4s v3, v3, v5
+; CHECK-NEXT:    cmgt.4s v1, v1, v2
+; CHECK-NEXT:    cmgt.4s v2, v7, v4
+; CHECK-NEXT:    uzp1.8h v0, v3, v0
+; CHECK-NEXT:    uzp1.8h v1, v2, v1
+; CHECK-NEXT:    uzp1.16b v0, v1, v0
+; CHECK-NEXT:    ret
+  %za = sext <16 x i8> %a to <16 x i32>
+  %zb = sext <16 x i8> %b to <16 x i32>
+  %cond = icmp slt <16 x i32> %za, %zb
+  ret <16 x i1> %cond
+}
