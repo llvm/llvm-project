@@ -31,10 +31,9 @@ ProcessRunner::run(llvm::StringRef program,
                    int timeoutSeconds) {
 
   auto programPath = sys::findProgramByName(program);
-  if (!programPath) {
+  if (!programPath)
     return createStringError(programPath.getError(),
                              "Tool not found: " + program);
-  }
 
   llvm::SmallVector<StringRef, 8> execArgs;
   execArgs.push_back(program);
@@ -60,14 +59,12 @@ ProcessRunner::run(llvm::StringRef program,
   result.executionTime = 0; // not tracking time
 
   auto stdoutBuffer = MemoryBuffer::getFile(stdoutPath);
-  if (stdoutBuffer) {
+  if (stdoutBuffer)
     result.stdout = (*stdoutBuffer)->getBuffer().str();
-  }
 
   auto stderrBuffer = MemoryBuffer::getFile(stderrPath);
-  if (stderrBuffer) {
+  if (stderrBuffer)
     result.stderr = (*stderrBuffer)->getBuffer().str();
-  }
 
   sys::fs::remove(stdoutPath);
   sys::fs::remove(stderrPath);
@@ -123,23 +120,20 @@ Expected<ProcessRunner::ProcessResult> ProcessRunner::runWithEnv(
                                    nullptr           // Process statistics
   );
 
-  if (executionFailed) {
+  if (executionFailed)
     return createStringError(std::errc::no_such_file_or_directory,
                              "Failed to execute process");
-  }
 
   // Read stdout and stderr from temporary files
   std::string stdoutStr, stderrStr;
 
   auto stdoutBuffer = MemoryBuffer::getFile(stdoutFile);
-  if (stdoutBuffer) {
+  if (stdoutBuffer)
     stdoutStr = stdoutBuffer.get()->getBuffer().str();
-  }
 
   auto stderrBuffer = MemoryBuffer::getFile(stderrFile);
-  if (stderrBuffer) {
+  if (stderrBuffer)
     stderrStr = stderrBuffer.get()->getBuffer().str();
-  }
 
   // Clean up temporary files
   sys::fs::remove(stdoutFile);

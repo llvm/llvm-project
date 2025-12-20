@@ -24,7 +24,7 @@
 namespace llvm {
 namespace advisor {
 
-BuildExecutor::BuildExecutor(const AdvisorConfig &config) : config_(config) {}
+BuildExecutor::BuildExecutor(const AdvisorConfig &config) : config(config) {}
 
 llvm::Expected<int>
 BuildExecutor::execute(llvm::StringRef compiler,
@@ -33,11 +33,10 @@ BuildExecutor::execute(llvm::StringRef compiler,
   auto instrumentedArgs = instrumentCompilerArgs(args, buildContext, tempDir);
 
   auto compilerPath = llvm::sys::findProgramByName(compiler);
-  if (!compilerPath) {
+  if (!compilerPath)
     return llvm::createStringError(
         std::make_error_code(std::errc::no_such_file_or_directory),
         "Compiler not found: " + compiler.str());
-  }
 
   llvm::SmallVector<llvm::StringRef, 16> execArgs;
   execArgs.push_back(compiler);
@@ -45,7 +44,7 @@ BuildExecutor::execute(llvm::StringRef compiler,
     execArgs.push_back(arg);
   }
 
-  if (config_.getVerbose()) {
+  if (config.getVerbose()) {
     llvm::outs() << "Executing: " << compiler;
     for (const auto &arg : instrumentedArgs) {
       llvm::outs() << " " << arg;
@@ -56,6 +55,10 @@ BuildExecutor::execute(llvm::StringRef compiler,
   return llvm::sys::ExecuteAndWait(*compilerPath, execArgs);
 }
 
+// NOTE: We currently parse relevant compiler flags manually. We should prefer
+// using the llvm::opt::ArgList / OptTable infrastructure (generated via
+// TableGen) to parse and manipulate compiler arguments reliably. See
+// clang/tools/clang-linker-wrapper/LinkerWrapperOpts.td for an example.
 llvm::SmallVector<std::string, 16> BuildExecutor::instrumentCompilerArgs(
     const llvm::SmallVectorImpl<std::string> &args, BuildContext &buildContext,
     llvm::StringRef tempDir) {
@@ -74,9 +77,8 @@ llvm::SmallVector<std::string, 16> BuildExecutor::instrumentCompilerArgs(
   }
 
   // Add debug info if not present
-  if (!existingFlags.contains("debug")) {
+  if (!existingFlags.contains("debug"))
     result.push_back("-g");
-  }
 
   // Add optimization remarks with proper redirection
   if (!existingFlags.contains("remarks")) {
@@ -84,7 +86,7 @@ llvm::SmallVector<std::string, 16> BuildExecutor::instrumentCompilerArgs(
     result.push_back("-foptimization-record-file=" + tempDir.str() +
                      "/remarks.opt.yaml");
     buildContext.expectedGeneratedFiles.push_back(tempDir.str() +
-                                                  "/remarks.opt.yaml");
+                                                 "/remarks.opt.yaml");
   } else {
     // If user already specified remarks, find and redirect the file
     bool foundFileFlag = false;
@@ -96,7 +98,7 @@ llvm::SmallVector<std::string, 16> BuildExecutor::instrumentCompilerArgs(
         arg = "-foptimization-record-file=" + tempDir.str() + "/" +
               filename.str();
         buildContext.expectedGeneratedFiles.push_back(tempDir.str() + "/" +
-                                                      filename.str());
+                                                     filename.str());
         foundFileFlag = true;
         break;
       }
@@ -106,17 +108,17 @@ llvm::SmallVector<std::string, 16> BuildExecutor::instrumentCompilerArgs(
       result.push_back("-foptimization-record-file=" + tempDir.str() +
                        "/remarks.opt.yaml");
       buildContext.expectedGeneratedFiles.push_back(tempDir.str() +
-                                                    "/remarks.opt.yaml");
+                                                   "/remarks.opt.yaml");
     }
   }
 
   // Add profiling if enabled and not present, redirect to temp directory
-  if (config_.getRunProfiler() && !existingFlags.contains("profile")) {
+  if (config.getRunProfiler() && !existingFlags.contains("profile")) {
     result.push_back("-fprofile-instr-generate=" + tempDir.str() +
                      "/profile.profraw");
     result.push_back("-fcoverage-mapping");
     buildContext.expectedGeneratedFiles.push_back(tempDir.str() +
-                                                  "/profile.profraw");
+                                                 "/profile.profraw");
   }
 
   // Add remark extraction flags if none present

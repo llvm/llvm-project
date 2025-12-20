@@ -11,8 +11,8 @@
 // relocatable file, given LLVM bitcode.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_ADVISOR_CORE_COMPILATIONMANAGER_H
-#define LLVM_ADVISOR_CORE_COMPILATIONMANAGER_H
+#ifndef LLVM_TOOLS_LLVM_ADVISOR_SRC_CORE_COMPILATIONMANAGER_H
+#define LLVM_TOOLS_LLVM_ADVISOR_SRC_CORE_COMPILATIONMANAGER_H
 
 #include "../Config/AdvisorConfig.h"
 #include "../Utils/FileClassifier.h"
@@ -27,38 +27,36 @@
 #include <string>
 #include <unordered_set>
 
-namespace llvm {
-namespace advisor {
+namespace llvm::advisor {
 
 class CompilationManager {
 public:
   explicit CompilationManager(const AdvisorConfig &config);
   ~CompilationManager();
 
-  llvm::Expected<int>
+  auto
   executeWithDataCollection(const std::string &compiler,
-                            const llvm::SmallVectorImpl<std::string> &args);
+                            const llvm::SmallVectorImpl<std::string> &args) -> llvm::Expected<int>;
 
 private:
-  std::unordered_set<std::string> scanDirectory(llvm::StringRef dir) const;
+  [[nodiscard]] auto scanDirectory(llvm::StringRef dir) const -> std::unordered_set<std::string>;
 
   void collectGeneratedFiles(
       const std::unordered_set<std::string> &existingFiles,
       llvm::SmallVectorImpl<std::unique_ptr<CompilationUnit>> &units);
 
-  llvm::Error organizeOutput(
-      const llvm::SmallVectorImpl<std::unique_ptr<CompilationUnit>> &units);
+  auto organizeOutput(
+      const llvm::SmallVectorImpl<std::unique_ptr<CompilationUnit>> &units) -> llvm::Error;
 
   void cleanupLeakedFiles();
 
-  const AdvisorConfig &config_;
-  BuildExecutor buildExecutor_;
-  std::string tempDir_;
-  std::string initialWorkingDir_;
-  std::unique_ptr<utils::UnitMetadata> unitMetadata_;
+  const AdvisorConfig &config;
+  BuildExecutor buildExecutor;
+  std::string tempDir;
+  std::string initialWorkingDir;
+  std::unique_ptr<utils::UnitMetadata> unitMetadata;
 };
 
-} // namespace advisor
-} // namespace llvm
+} // namespace llvm::advisor
 
-#endif // LLVM_ADVISOR_CORE_COMPILATIONMANAGER_H
+#endif // LLVM_TOOLS_LLVM_ADVISOR_SRC_CORE_COMPILATIONMANAGER_H

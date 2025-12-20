@@ -14,7 +14,6 @@
 #include "UnitMetadata.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <chrono>
@@ -27,337 +26,295 @@ namespace llvm {
 namespace advisor {
 namespace utils {
 
-UnitMetadata::UnitMetadata(StringRef OutputDirectory)
-    : OutputDirectory(OutputDirectory.str()) {
-  MetadataFilePath = getMetadataPath();
-}
+UnitMetadata::UnitMetadata(StringRef outputDirectory)
+    : outputDirectory(outputDirectory.str()),
+      metadataFilePath(getMetadataPath()) {}
 
 Error UnitMetadata::loadMetadata() {
-  if (!fileExists(MetadataFilePath)) {
-    return Error::success(); // No existing metadata, start fresh
-  }
+  if (!fileExists(metadataFilePath))
+    return Error::success();
 
-  auto BufferOrError = MemoryBuffer::getFile(MetadataFilePath);
-  if (!BufferOrError) {
-    return createStringError(BufferOrError.getError(),
+  auto bufferOrError = MemoryBuffer::getFile(metadataFilePath);
+  if (!bufferOrError)
+    return createStringError(bufferOrError.getError(),
                              "Failed to open metadata file: " +
-                                 MetadataFilePath);
-  }
+                                 metadataFilePath);
 
-  return fromJson(BufferOrError->get()->getBuffer());
+  return fromJson(bufferOrError->get()->getBuffer());
 }
 
 Error UnitMetadata::saveMetadata() {
-  // Ensure output directory exists
-  if (auto Err = createDirectoryIfNeeded(OutputDirectory)) {
-    return Err;
-  }
+  if (auto err = createDirectoryIfNeeded(outputDirectory))
+    return err;
 
-  auto JsonStr = toJson();
-  if (!JsonStr) {
-    return JsonStr.takeError();
-  }
+  auto jsonStr = toJson();
+  if (!jsonStr)
+    return jsonStr.takeError();
 
-  std::error_code EC;
-  raw_fd_ostream File(MetadataFilePath, EC);
-  if (EC) {
-    return createStringError(EC, "Failed to create metadata file: " +
-                                     MetadataFilePath);
-  }
+  std::error_code ec;
+  raw_fd_ostream file(metadataFilePath, ec);
+  if (ec)
+    return createStringError(ec, "Failed to create metadata file: " +
+                                     metadataFilePath);
 
-  File << *JsonStr;
+  file << *jsonStr;
   return Error::success();
 }
 
-void UnitMetadata::clear() { Units.clear(); }
+void UnitMetadata::clear() { units.clear(); }
 
-void UnitMetadata::registerUnit(StringRef UnitName) {
-  CompilationUnitInfo Info;
-  Info.Name = UnitName.str();
-  Info.Timestamp = std::chrono::system_clock::now();
-  Info.TotalFiles = 0;
-  Info.Status = "in_progress";
-  Info.OutputPath = OutputDirectory + "/" + UnitName.str();
+void UnitMetadata::registerUnit(StringRef unitName) {
+  CompilationUnitInfo info;
+  info.name = unitName.str();
+  info.timestamp = std::chrono::system_clock::now();
+  info.totalFiles = 0;
+  info.status = "in_progress";
+  info.outputPath = outputDirectory + "/" + unitName.str();
 
-  Units[UnitName.str()] = Info;
+  units[unitName.str()] = std::move(info);
 }
 
-void UnitMetadata::updateUnitStatus(StringRef UnitName, StringRef Status) {
-  auto it = Units.find(UnitName.str());
-  if (it != Units.end()) {
-    it->second.Status = Status.str();
-    // Update timestamp when status changes
-    it->second.Timestamp = std::chrono::system_clock::now();
-  }
+void UnitMetadata::updateUnitStatus(StringRef unitName, StringRef status) {
+  auto it = units.find(unitName.str());
+  if (it == units.end())
+    return;
+
+  it->second.status = status.str();
+  it->second.timestamp = std::chrono::system_clock::now();
 }
 
-void UnitMetadata::updateUnitFileCount(StringRef UnitName, size_t FileCount) {
-  auto it = Units.find(UnitName.str());
-  if (it != Units.end()) {
-    it->second.TotalFiles = FileCount;
-  }
+void UnitMetadata::updateUnitFileCount(StringRef unitName, size_t fileCount) {
+  auto it = units.find(unitName.str());
+  if (it == units.end())
+    return;
+  it->second.totalFiles = fileCount;
 }
 
-void UnitMetadata::addArtifactType(StringRef UnitName, StringRef Type) {
-  auto it = Units.find(UnitName.str());
-  if (it != Units.end()) {
-    auto &Types = it->second.ArtifactTypes;
-    if (std::find(Types.begin(), Types.end(), Type.str()) == Types.end()) {
-      Types.push_back(Type.str());
-    }
-  }
+void UnitMetadata::addArtifactType(StringRef unitName, StringRef type) {
+  auto it = units.find(unitName.str());
+  if (it == units.end())
+    return;
+
+  auto &types = it->second.artifactTypes;
+  if (std::find(types.begin(), types.end(), type.str()) == types.end())
+    types.push_back(type.str());
 }
 
-void UnitMetadata::setUnitProperty(StringRef UnitName, StringRef Key,
-                                   StringRef Value) {
-  auto it = Units.find(UnitName.str());
-  if (it != Units.end()) {
-    it->second.Properties[Key.str()] = Value.str();
-  }
+void UnitMetadata::setUnitProperty(StringRef unitName, StringRef key,
+                                   StringRef value) {
+  auto it = units.find(unitName.str());
+  if (it == units.end())
+    return;
+  it->second.properties[key.str()] = value.str();
 }
 
-bool UnitMetadata::hasUnit(StringRef UnitName) const {
-  return Units.find(UnitName.str()) != Units.end();
+bool UnitMetadata::hasUnit(StringRef unitName) const {
+  return units.find(unitName.str()) != units.end();
 }
 
-Expected<CompilationUnitInfo>
-UnitMetadata::getUnitInfo(StringRef UnitName) const {
-  auto it = Units.find(UnitName.str());
-  if (it != Units.end()) {
+Expected<CompilationUnitInfo> UnitMetadata::getUnitInfo(StringRef unitName) const {
+  auto it = units.find(unitName.str());
+  if (it != units.end())
     return it->second;
-  }
+
   return createStringError(
       std::make_error_code(std::errc::no_such_file_or_directory),
-      "Unit not found: " + UnitName);
+      "Unit not found: " + unitName);
 }
 
 std::vector<CompilationUnitInfo> UnitMetadata::getAllUnits() const {
-  std::vector<CompilationUnitInfo> Result;
-  for (const auto &Pair : Units) {
-    Result.push_back(Pair.second);
-  }
+  std::vector<CompilationUnitInfo> result;
+  result.reserve(units.size());
+  for (const auto &pair : units)
+    result.push_back(pair.second);
 
-  // Sort by timestamp (most recent first)
-  std::sort(Result.begin(), Result.end(),
-            [](const CompilationUnitInfo &A, const CompilationUnitInfo &B) {
-              return A.Timestamp > B.Timestamp;
+  std::sort(result.begin(), result.end(),
+            [](const CompilationUnitInfo &a, const CompilationUnitInfo &b) {
+              return a.timestamp > b.timestamp;
             });
-
-  return Result;
+  return result;
 }
 
-std::vector<std::string> UnitMetadata::getRecentUnits(size_t Count) const {
-  auto AllUnits = getAllUnits();
-  std::vector<std::string> Result;
+std::vector<std::string> UnitMetadata::getRecentUnits(size_t count) const {
+  auto allUnits = getAllUnits();
+  std::vector<std::string> result;
 
-  size_t MaxCount = std::min(Count, AllUnits.size());
-  for (size_t i = 0; i < MaxCount; ++i) {
-    Result.push_back(AllUnits[i].Name);
-  }
+  size_t maxCount = std::min(count, allUnits.size());
+  result.reserve(maxCount);
+  for (size_t i = 0; i < maxCount; ++i)
+    result.push_back(allUnits[i].name);
 
-  return Result;
+  return result;
 }
 
 Expected<std::string> UnitMetadata::getMostRecentUnit() const {
-  auto RecentUnits = getRecentUnits(1);
-  if (RecentUnits.empty()) {
+  auto recentUnits = getRecentUnits(1);
+  if (recentUnits.empty())
     return createStringError(
         std::make_error_code(std::errc::no_such_file_or_directory),
         "No units found");
-  }
-  return RecentUnits[0];
+  return recentUnits.front();
 }
 
-void UnitMetadata::removeUnit(StringRef UnitName) {
-  Units.erase(UnitName.str());
+void UnitMetadata::removeUnit(StringRef unitName) { units.erase(unitName.str()); }
+
+void UnitMetadata::cleanupOldUnits(int maxAgeInDays) {
+  auto now = std::chrono::system_clock::now();
+  auto maxAge = std::chrono::hours(24 * maxAgeInDays);
+
+  std::vector<std::string> unitsToRemove;
+  for (const auto &pair : units)
+    if (now - pair.second.timestamp > maxAge)
+      unitsToRemove.push_back(pair.first);
+
+  for (const auto &unitName : unitsToRemove)
+    removeUnit(unitName);
 }
 
-void UnitMetadata::cleanupOldUnits(int MaxAgeInDays) {
-  auto Now = std::chrono::system_clock::now();
-  auto MaxAge = std::chrono::hours(24 * MaxAgeInDays);
-
-  std::vector<std::string> UnitsToRemove;
-  for (const auto &Pair : Units) {
-    if (Now - Pair.second.Timestamp > MaxAge) {
-      UnitsToRemove.push_back(Pair.first);
-    }
-  }
-
-  for (const auto &UnitName : UnitsToRemove) {
-    removeUnit(UnitName);
-  }
-}
-
-size_t UnitMetadata::getUnitCount() const { return Units.size(); }
+size_t UnitMetadata::getUnitCount() const { return units.size(); }
 
 Expected<std::string> UnitMetadata::toJson() const {
-  json::Object Root;
-  json::Array UnitsArray;
+  json::Object root;
+  json::Array unitsArray;
 
-  for (const auto &Pair : Units) {
-    const auto &Info = Pair.second;
-    json::Object UnitObj;
+  for (const auto &pair : units) {
+    const auto &info = pair.second;
+    json::Object unitObj;
 
-    UnitObj["name"] = Info.Name;
-    UnitObj["timestamp"] = formatTimestamp(Info.Timestamp);
-    UnitObj["total_files"] = static_cast<int64_t>(Info.TotalFiles);
-    UnitObj["status"] = Info.Status;
-    UnitObj["output_path"] = Info.OutputPath;
+    unitObj["name"] = info.name;
+    unitObj["timestamp"] = formatTimestamp(info.timestamp);
+    unitObj["total_files"] = static_cast<int64_t>(info.totalFiles);
+    unitObj["status"] = info.status;
+    unitObj["output_path"] = info.outputPath;
 
-    // Artifact types
-    json::Array ArtifactTypesArray;
-    for (const auto &Type : Info.ArtifactTypes) {
-      ArtifactTypesArray.push_back(Type);
-    }
-    UnitObj["artifact_types"] = std::move(ArtifactTypesArray);
+    json::Array artifactTypesArray;
+    for (const auto &type : info.artifactTypes)
+      artifactTypesArray.push_back(type);
+    unitObj["artifact_types"] = std::move(artifactTypesArray);
 
-    // Properties
-    json::Object PropertiesObj;
-    for (const auto &Prop : Info.Properties) {
-      PropertiesObj[Prop.first] = Prop.second;
-    }
-    UnitObj["properties"] = std::move(PropertiesObj);
+    json::Object propertiesObj;
+    for (const auto &prop : info.properties)
+      propertiesObj[prop.first] = prop.second;
+    unitObj["properties"] = std::move(propertiesObj);
 
-    UnitsArray.push_back(std::move(UnitObj));
+    unitsArray.push_back(std::move(unitObj));
   }
 
-  Root["units"] = std::move(UnitsArray);
+  root["units"] = std::move(unitsArray);
 
-  std::string Result;
-  raw_string_ostream OS(Result);
-  OS << json::Value(std::move(Root));
-  return Result;
+  std::string result;
+  raw_string_ostream os(result);
+  os << json::Value(std::move(root));
+  return result;
 }
 
-Error UnitMetadata::fromJson(StringRef JsonStr) {
-  Units.clear();
+Error UnitMetadata::fromJson(StringRef jsonStr) {
+  units.clear();
 
-  Expected<json::Value> JsonOrError = json::parse(JsonStr);
-  if (!JsonOrError) {
-    return JsonOrError.takeError();
-  }
+  auto jsonOrError = json::parse(jsonStr);
+  if (!jsonOrError)
+    return jsonOrError.takeError();
 
-  auto *Root = JsonOrError->getAsObject();
-  if (!Root) {
+  auto *root = jsonOrError->getAsObject();
+  if (!root)
     return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "Invalid JSON: root must be an object");
-  }
+                             "Config file must contain JSON object");
 
-  auto *UnitsArray = Root->getArray("units");
-  if (!UnitsArray) {
-    return Error::success(); // No units section found, return success with
-                             // empty units
-  }
+  auto *unitsArray = root->getArray("units");
+  if (!unitsArray)
+    return Error::success();
 
-  for (const auto &UnitValue : *UnitsArray) {
-    auto *UnitObj = UnitValue.getAsObject();
-    if (!UnitObj) {
-      continue; // Skip invalid unit objects
-    }
+  for (const auto &unitValue : *unitsArray) {
+    auto *unitObj = unitValue.getAsObject();
+    if (!unitObj)
+      continue;
 
-    CompilationUnitInfo Info;
+    CompilationUnitInfo info;
 
-    // Parse name
-    if (auto NameOpt = UnitObj->getString("name")) {
-      Info.Name = NameOpt->str();
+    if (auto nameOpt = unitObj->getString("name")) {
+      info.name = nameOpt->str();
     } else {
-      continue; // Skip units without name
+      continue;
     }
 
-    // Parse timestamp
-    if (auto TimestampOpt = UnitObj->getString("timestamp")) {
-      auto TimestampOrError = parseTimestamp(*TimestampOpt);
-      if (TimestampOrError) {
-        Info.Timestamp = *TimestampOrError;
-      } else {
-        // Use current time if parsing fails
-        Info.Timestamp = std::chrono::system_clock::now();
-      }
+    if (auto timestampOpt = unitObj->getString("timestamp")) {
+      auto timestampOrError = parseTimestamp(*timestampOpt);
+      info.timestamp =
+          timestampOrError ? *timestampOrError : std::chrono::system_clock::now();
     } else {
-      Info.Timestamp = std::chrono::system_clock::now();
+      info.timestamp = std::chrono::system_clock::now();
     }
 
-    // Parse total_files
-    if (auto FilesOpt = UnitObj->getInteger("total_files")) {
-      Info.TotalFiles = static_cast<size_t>(*FilesOpt);
+    if (auto filesOpt = unitObj->getInteger("total_files")) {
+      info.totalFiles = static_cast<size_t>(*filesOpt);
     } else {
-      Info.TotalFiles = 0;
+      info.totalFiles = 0;
     }
 
-    // Parse status
-    if (auto StatusOpt = UnitObj->getString("status")) {
-      Info.Status = StatusOpt->str();
+    if (auto statusOpt = unitObj->getString("status")) {
+      info.status = statusOpt->str();
     } else {
-      Info.Status = "unknown";
+      info.status = "unknown";
     }
 
-    // Parse output_path
-    if (auto PathOpt = UnitObj->getString("output_path")) {
-      Info.OutputPath = PathOpt->str();
+    if (auto pathOpt = unitObj->getString("output_path")) {
+      info.outputPath = pathOpt->str();
     } else {
-      Info.OutputPath = OutputDirectory + "/" + Info.Name;
+      info.outputPath = outputDirectory + "/" + info.name;
     }
 
-    // Parse artifact_types
-    if (auto TypesArray = UnitObj->getArray("artifact_types")) {
-      for (const auto &TypeValue : *TypesArray) {
-        if (auto TypeStr = TypeValue.getAsString()) {
-          Info.ArtifactTypes.push_back(TypeStr->str());
-        }
-      }
+    if (auto typesArray = unitObj->getArray("artifact_types")) {
+      for (const auto &typeValue : *typesArray)
+        if (auto typeStr = typeValue.getAsString())
+          info.artifactTypes.push_back(typeStr->str());
     }
 
-    // Parse properties
-    if (auto PropertiesObj = UnitObj->getObject("properties")) {
-      for (const auto &Prop : *PropertiesObj) {
-        if (auto ValueStr = Prop.second.getAsString()) {
-          Info.Properties[Prop.first.str()] = ValueStr->str();
-        }
-      }
+    if (auto propertiesObj = unitObj->getObject("properties")) {
+      for (const auto &prop : *propertiesObj)
+        if (auto valueStr = prop.second.getAsString())
+          info.properties[prop.first.str()] = valueStr->str();
     }
 
-    Units[Info.Name] = Info;
+    units[info.name] = std::move(info);
   }
 
   return Error::success();
 }
 
 std::string UnitMetadata::getMetadataPath() const {
-  return OutputDirectory + "/.llvm-advisor-metadata.json";
+  return outputDirectory + "/.llvm-advisor-metadata.json";
 }
 
 std::string UnitMetadata::formatTimestamp(
-    const std::chrono::system_clock::time_point &TimePoint) const {
-  auto TimeT = std::chrono::system_clock::to_time_t(TimePoint);
+    const std::chrono::system_clock::time_point &timePoint) const {
+  auto timeT = std::chrono::system_clock::to_time_t(timePoint);
   std::stringstream ss;
-  ss << std::put_time(std::gmtime(&TimeT), "%Y-%m-%dT%H:%M:%SZ");
+  ss << std::put_time(std::gmtime(&timeT), "%Y-%m-%dT%H:%M:%SZ");
   return ss.str();
 }
 
 Expected<std::chrono::system_clock::time_point>
-UnitMetadata::parseTimestamp(StringRef TimestampStr) const {
+UnitMetadata::parseTimestamp(StringRef timestampStr) const {
   std::tm tm = {};
-  std::istringstream ss(TimestampStr.str());
+  std::istringstream ss(timestampStr.str());
   ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
 
-  if (ss.fail()) {
+  if (ss.fail())
     return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "Invalid timestamp format: " + TimestampStr);
-  }
+                             "Invalid timestamp format: " + timestampStr);
 
   return std::chrono::system_clock::from_time_t(std::mktime(&tm));
 }
 
-bool UnitMetadata::fileExists(StringRef Path) const {
-  return sys::fs::exists(Path);
+bool UnitMetadata::fileExists(StringRef path) const {
+  return sys::fs::exists(path);
 }
 
-Error UnitMetadata::createDirectoryIfNeeded(StringRef Path) const {
-  if (!sys::fs::exists(Path)) {
-    std::error_code EC = sys::fs::create_directories(Path);
-    if (EC) {
-      return createStringError(EC, "Error creating directory: " + Path);
-    }
+Error UnitMetadata::createDirectoryIfNeeded(StringRef path) const {
+  if (!sys::fs::exists(path)) {
+    std::error_code ec = sys::fs::create_directories(path);
+    if (ec)
+      return createStringError(ec, "Error creating directory: " + path);
   }
   return Error::success();
 }

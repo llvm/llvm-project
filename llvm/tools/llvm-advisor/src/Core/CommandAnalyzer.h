@@ -36,8 +36,8 @@ private:
   llvm::SmallVector<std::string, 8> extractInputFiles() const;
   llvm::SmallVector<std::string, 8> extractOutputFiles() const;
 
-  std::string command_;
-  llvm::SmallVector<std::string, 8> args_;
+  std::string command;
+  llvm::SmallVector<std::string, 8> args;
 };
 
 } // namespace advisor

@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ADVISOR_CORE_BUILDCONTEXT_H
-#define LLVM_ADVISOR_CORE_BUILDCONTEXT_H
+#ifndef LLVM_TOOLS_LLVM_ADVISOR_SRC_CORE_BUILDCONTEXT_H
+#define LLVM_TOOLS_LLVM_ADVISOR_SRC_CORE_BUILDCONTEXT_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
@@ -21,8 +21,8 @@
 #include <string>
 #include <unordered_map>
 
-namespace llvm {
-namespace advisor {
+
+namespace llvm::advisor {
 
 enum class BuildPhase {
   Unknown,
@@ -40,7 +40,7 @@ enum class BuildTool {
   Unknown,
   Clang,
   GCC,
-  LLVM_Tools,
+  LlvmTools,
   CMake,
   Make,
   Ninja,
@@ -62,7 +62,7 @@ struct BuildContext {
   bool hasOptimization = false;
 };
 
-} // namespace advisor
-} // namespace llvm
+} // namespace llvm::advisor
 
-#endif // LLVM_ADVISOR_CORE_BUILDCONTEXT_H
+
+#endif // LLVM_TOOLS_LLVM_ADVISOR_SRC_CORE_BUILDCONTEXT_H

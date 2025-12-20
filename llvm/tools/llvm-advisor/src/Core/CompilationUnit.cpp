@@ -25,7 +25,7 @@ namespace advisor {
 
 CompilationUnit::CompilationUnit(const CompilationUnitInfo &info,
                                  const std::string &workDir)
-    : info_(info), workDir_(workDir) {
+    : info(info), workDir(workDir) {
   // Create unit-specific data directory
   llvm::SmallString<128> dataDir;
   llvm::sys::path::append(dataDir, workDir, "units", info.name);
@@ -33,52 +33,52 @@ CompilationUnit::CompilationUnit(const CompilationUnitInfo &info,
 }
 
 std::string CompilationUnit::getPrimarySource() const {
-  if (info_.sources.empty()) {
+  if (info.sources.empty()) {
     return "";
   }
-  return info_.sources[0].path;
+  return info.sources[0].path;
 }
 
 std::string CompilationUnit::getDataDir() const {
   llvm::SmallString<128> dataDir;
-  llvm::sys::path::append(dataDir, workDir_, "units", info_.name);
-  return dataDir.str().str();
+  llvm::sys::path::append(dataDir, workDir, "units", info.name);
+  return std::string(dataDir.str());
 }
 
 std::string CompilationUnit::getExecutablePath() const {
-  return info_.outputExecutable;
+  return info.outputExecutable;
 }
 
 void CompilationUnit::addGeneratedFile(llvm::StringRef type,
                                        llvm::StringRef path) {
-  generatedFiles_[type.str()].push_back(path.str());
+  generatedFiles[type.str()].push_back(path.str());
 }
 
 bool CompilationUnit::hasGeneratedFiles(llvm::StringRef type) const {
   if (type.empty()) {
-    return !generatedFiles_.empty();
+    return !generatedFiles.empty();
   }
-  auto it = generatedFiles_.find(type.str());
-  return it != generatedFiles_.end() && !it->second.empty();
+  auto it = generatedFiles.find(type.str());
+  return it != generatedFiles.end() && !it->second.empty();
 }
 
 llvm::SmallVector<std::string, 8>
 CompilationUnit::getGeneratedFiles(llvm::StringRef type) const {
   if (type.empty()) {
     llvm::SmallVector<std::string, 8> allFiles;
-    for (const auto &pair : generatedFiles_) {
+    for (const auto &pair : generatedFiles) {
       allFiles.append(pair.second.begin(), pair.second.end());
     }
     return allFiles;
   }
-  auto it = generatedFiles_.find(type.str());
-  return it != generatedFiles_.end() ? it->second
-                                     : llvm::SmallVector<std::string, 8>();
+  auto it = generatedFiles.find(type.str());
+  return it != generatedFiles.end() ? it->second
+                                    : llvm::SmallVector<std::string, 8>();
 }
 
 const std::unordered_map<std::string, llvm::SmallVector<std::string, 8>> &
 CompilationUnit::getAllGeneratedFiles() const {
-  return generatedFiles_;
+  return generatedFiles;
 }
 
 } // namespace advisor

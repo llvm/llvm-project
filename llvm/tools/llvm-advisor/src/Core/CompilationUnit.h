@@ -11,8 +11,8 @@
 // given LLVM bitcode.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_ADVISOR_CORE_COMPILATIONUNIT_H
-#define LLVM_ADVISOR_CORE_COMPILATIONUNIT_H
+#ifndef LLVM_TOOLS_LLVM_ADVISOR_SRC_CORE_COMPILATIONUNIT_H
+#define LLVM_TOOLS_LLVM_ADVISOR_SRC_CORE_COMPILATIONUNIT_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
@@ -21,8 +21,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace llvm {
-namespace advisor {
+namespace llvm::advisor {
 
 struct SourceFile {
   std::string path;
@@ -45,30 +44,29 @@ class CompilationUnit {
 public:
   CompilationUnit(const CompilationUnitInfo &info, const std::string &workDir);
 
-  const std::string &getName() const { return info_.name; }
-  const CompilationUnitInfo &getInfo() const { return info_; }
-  const std::string &getWorkDir() const { return workDir_; }
-  std::string getPrimarySource() const;
+  auto getName() const -> const std::string & { return info.name; }
+  auto getInfo() const -> const CompilationUnitInfo & { return info; }
+  auto getWorkDir() const -> const std::string & { return workDir; }
+  auto getPrimarySource() const -> std::string;
 
-  std::string getDataDir() const;
-  std::string getExecutablePath() const;
+  auto getDataDir() const -> std::string;
+  auto getExecutablePath() const -> std::string;
 
   void addGeneratedFile(llvm::StringRef type, llvm::StringRef path);
 
-  bool hasGeneratedFiles(llvm::StringRef type) const;
-  llvm::SmallVector<std::string, 8>
-  getGeneratedFiles(llvm::StringRef type = "") const;
-  const std::unordered_map<std::string, llvm::SmallVector<std::string, 8>> &
-  getAllGeneratedFiles() const;
+  auto hasGeneratedFiles(llvm::StringRef type) const -> bool;
+  auto
+  getGeneratedFiles(llvm::StringRef type = "") const -> llvm::SmallVector<std::string, 8>;
+  auto
+  getAllGeneratedFiles() const -> const std::unordered_map<std::string, llvm::SmallVector<std::string, 8>> &;
 
 private:
-  CompilationUnitInfo info_;
-  std::string workDir_;
+  CompilationUnitInfo info;
+  std::string workDir;
   std::unordered_map<std::string, llvm::SmallVector<std::string, 8>>
-      generatedFiles_;
+      generatedFiles;
 };
 
-} // namespace advisor
-} // namespace llvm
+} // namespace llvm::advisor
 
-#endif // LLVM_ADVISOR_CORE_COMPILATIONUNIT_H
+#endif // LLVM_TOOLS_LLVM_ADVISOR_SRC_CORE_COMPILATIONUNIT_H

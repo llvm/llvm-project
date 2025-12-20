@@ -11,14 +11,14 @@
 // given LLVM bitcode.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_ADVISOR_FILE_CLASSIFIER_H
-#define LLVM_ADVISOR_FILE_CLASSIFIER_H
+#ifndef LLVM_TOOLS_LLVM_ADVISOR_SRC_UTILS_FILECLASSIFIER_H
+#define LLVM_TOOLS_LLVM_ADVISOR_SRC_UTILS_FILECLASSIFIER_H
 
 #include "llvm/ADT/StringRef.h"
 #include <string>
 
-namespace llvm {
-namespace advisor {
+
+namespace llvm::advisor {
 
 struct FileClassification {
   std::string category;
@@ -29,12 +29,12 @@ struct FileClassification {
 
 class FileClassifier {
 public:
-  FileClassification classifyFile(llvm::StringRef filePath) const;
-  bool shouldCollect(llvm::StringRef filePath) const;
-  std::string getLanguage(llvm::StringRef filePath) const;
+  [[nodiscard]] auto classifyFile(llvm::StringRef filePath) const -> FileClassification;
+  [[nodiscard]] auto shouldCollect(llvm::StringRef filePath) const -> bool;
+  [[nodiscard]] auto getLanguage(llvm::StringRef filePath) const -> std::string;
 };
 
-} // namespace advisor
-} // namespace llvm
+} // namespace llvm::advisor
+
 
 #endif

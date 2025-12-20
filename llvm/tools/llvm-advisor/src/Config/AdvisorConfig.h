@@ -12,45 +12,49 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ADVISOR_CONFIG_H
-#define LLVM_ADVISOR_CONFIG_H
+#ifndef LLVM_TOOLS_LLVM_ADVISOR_SRC_CONFIG_ADVISORCONFIG_H
+#define LLVM_TOOLS_LLVM_ADVISOR_SRC_CONFIG_ADVISORCONFIG_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include <string>
+#include <unordered_map>
 
-namespace llvm {
-namespace advisor {
+namespace llvm::advisor {
 
 class AdvisorConfig {
 public:
   AdvisorConfig();
 
-  Expected<bool> loadFromFile(llvm::StringRef path);
+  auto loadFromFile(llvm::StringRef path) -> Expected<bool>;
 
-  void setOutputDir(const std::string &dir) { OutputDir_ = dir; }
-  void setVerbose(bool verbose) { Verbose_ = verbose; }
-  void setKeepTemps(bool keep) { KeepTemps_ = keep; }
-  void setRunProfiler(bool run) { RunProfiler_ = run; }
-  void setTimeout(int seconds) { TimeoutSeconds_ = seconds; }
+  void setOutputDir(const std::string &dir) { outputDir = dir; }
+  void setVerbose(bool verbose) { isVerbose = verbose; }
+  void setKeepTemps(bool keep) { keepTemps = keep; }
+  void setRunProfiler(bool run) { runProfiler = run; }
+  void setTimeout(int seconds) { timeoutSeconds = seconds; }
 
-  const std::string &getOutputDir() const { return OutputDir_; }
-  bool getVerbose() const { return Verbose_; }
-  bool getKeepTemps() const { return KeepTemps_; }
-  bool getRunProfiler() const { return RunProfiler_; }
-  int getTimeout() const { return TimeoutSeconds_; }
+  auto getOutputDir() const -> const std::string & { return outputDir; }
+  auto getVerbose() const -> bool { return isVerbose; }
+  auto getKeepTemps() const -> bool { return keepTemps; }
+  auto getRunProfiler() const -> bool { return runProfiler; }
+  auto getTimeout() const -> int { return timeoutSeconds; }
 
-  std::string getToolPath(llvm::StringRef tool) const;
+  auto getToolPath(llvm::StringRef tool) const -> std::string;
+  void setToolPath(llvm::StringRef tool, llvm::StringRef path) {
+    toolPaths[tool.str()] = path.str();
+  }
 
 private:
-  std::string OutputDir_;
-  bool Verbose_ = false;
-  bool KeepTemps_ = false;
-  bool RunProfiler_ = true;
-  int TimeoutSeconds_ = 60;
+  std::string outputDir;
+  bool isVerbose = false;
+  bool keepTemps = false;
+  bool runProfiler = true;
+  int timeoutSeconds = 60;
+  // Optional per-tool path overrides loaded from the configuration file.
+  std::unordered_map<std::string, std::string> toolPaths;
 };
 
-} // namespace advisor
-} // namespace llvm
+} // namespace llvm::advisor
 
 #endif

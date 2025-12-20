@@ -11,26 +11,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ADVISOR_CORE_VIEWERLAUNCHER_H
-#define LLVM_ADVISOR_CORE_VIEWERLAUNCHER_H
+#ifndef LLVM_TOOLS_LLVM_ADVISOR_SRC_CORE_VIEWERLAUNCHER_H
+#define LLVM_TOOLS_LLVM_ADVISOR_SRC_CORE_VIEWERLAUNCHER_H
 
 #include "llvm/Support/Error.h"
 #include <string>
 
-namespace llvm {
-namespace advisor {
+
+namespace llvm::advisor {
 
 class ViewerLauncher {
 public:
-  static llvm::Expected<int> launch(const std::string &outputDir,
-                                    int port = 8000);
+  static auto launch(const std::string &outputDir,
+                                    int port = 8000) -> llvm::Expected<int>;
 
 private:
-  static llvm::Expected<std::string> findPythonExecutable();
-  static llvm::Expected<std::string> getViewerScript();
+  static auto findPythonExecutable() -> llvm::Expected<std::string>;
+  static auto getViewerScript() -> llvm::Expected<std::string>;
 };
 
-} // namespace advisor
-} // namespace llvm
+} // namespace llvm::advisor
 
-#endif // LLVM_ADVISOR_CORE_VIEWERLAUNCHER_H
+
+#endif // LLVM_TOOLS_LLVM_ADVISOR_SRC_CORE_VIEWERLAUNCHER_H

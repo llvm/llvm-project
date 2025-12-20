@@ -20,7 +20,7 @@
 namespace llvm {
 namespace advisor {
 
-UnitDetector::UnitDetector(const AdvisorConfig &config) : config_(config) {}
+UnitDetector::UnitDetector(const AdvisorConfig &config) : config(config) {}
 
 llvm::Expected<llvm::SmallVector<CompilationUnitInfo, 4>>
 UnitDetector::detectUnits(llvm::StringRef compiler,
@@ -38,16 +38,16 @@ UnitDetector::detectUnits(llvm::StringRef compiler,
   unit.sources = sources;
 
   // Store original args but filter out source files for the compile flags
-  for (const auto &arg : args) {
-    // Skip source files when adding to compile flags
-    llvm::StringRef extension = llvm::sys::path::extension(arg);
-    if (!arg.empty() && arg[0] != '-' &&
-        (extension == ".c" || extension == ".cpp" || extension == ".cc" ||
-         extension == ".cxx" || extension == ".C")) {
-      continue;
-    }
-    unit.compileFlags.push_back(arg);
+for (const auto &arg : args) {
+  // Skip source files when adding to compile flags
+  llvm::StringRef extension = llvm::sys::path::extension(arg);
+  if (!arg.empty() && arg[0] != '-' &&
+      (extension == ".c" || extension == ".cpp" || extension == ".cc" ||
+       extension == ".cxx" || extension == ".C")) {
+    continue;
   }
+      unit.compileFlags.push_back(arg);
+}
 
   // Extract output files and features
   extractBuildInfo(args, unit);
@@ -69,7 +69,7 @@ llvm::SmallVector<SourceFile, 4> UnitDetector::findSourceFiles(
 
       SourceFile source;
       source.path = arg;
-      source.language = classifier_.getLanguage(arg);
+      source.language = classifier.getLanguage(arg);
       source.isHeader = false;
       sources.push_back(source);
     }
@@ -86,11 +86,10 @@ void UnitDetector::extractBuildInfo(
     if (arg == "-o" && i + 1 < args.size()) {
       llvm::StringRef output = args[i + 1];
       llvm::StringRef ext = llvm::sys::path::extension(output);
-      if (ext == ".o") {
+      if (ext == ".o")
         unit.outputObject = args[i + 1];
-      } else {
+      else
         unit.outputExecutable = args[i + 1];
-      }
     }
 
     llvm::StringRef argRef(arg);

@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ADVISOR_UTILS_UNITMETADATA_H
-#define LLVM_ADVISOR_UTILS_UNITMETADATA_H
+#ifndef LLVM_TOOLS_LLVM_ADVISOR_SRC_UTILS_UNITMETADATA_H
+#define LLVM_TOOLS_LLVM_ADVISOR_SRC_UTILS_UNITMETADATA_H
 
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
@@ -22,70 +22,74 @@
 #include <string>
 #include <vector>
 
-namespace llvm {
-namespace advisor {
-namespace utils {
+
+
+namespace llvm::advisor::utils {
 
 struct CompilationUnitInfo {
-  std::string Name;
-  std::chrono::system_clock::time_point Timestamp;
-  size_t TotalFiles;
-  std::vector<std::string> ArtifactTypes;
-  std::string Status; // "in_progress", "completed", "failed"
-  std::string OutputPath;
-  std::map<std::string, std::string> Properties;
+  std::string name;
+  std::chrono::system_clock::time_point timestamp;
+  size_t totalFiles;
+  std::vector<std::string> artifactTypes;
+  std::string status; // "in_progress", "completed", "failed"
+  std::string outputPath;
+  std::map<std::string, std::string> properties;
 };
 
 class UnitMetadata {
 public:
-  UnitMetadata(StringRef OutputDirectory);
+  UnitMetadata(StringRef outputDirectory);
   ~UnitMetadata() = default;
 
   // Main operations
-  Error loadMetadata();
-  Error saveMetadata();
+  auto loadMetadata() -> Error;
+  auto saveMetadata() -> Error;
   void clear();
 
   // Unit management
-  void registerUnit(StringRef UnitName);
-  void updateUnitStatus(StringRef UnitName, StringRef Status);
-  void updateUnitFileCount(StringRef UnitName, size_t FileCount);
-  void addArtifactType(StringRef UnitName, StringRef Type);
-  void setUnitProperty(StringRef UnitName, StringRef Key, StringRef Value);
+  void registerUnit(StringRef unitName);
+  void updateUnitStatus(StringRef unitName, StringRef status);
+  void updateUnitFileCount(StringRef unitName, size_t fileCount);
+  void addArtifactType(StringRef unitName, StringRef type);
+  void setUnitProperty(StringRef unitName, StringRef key, StringRef value);
 
   // Query operations
-  bool hasUnit(StringRef UnitName) const;
-  Expected<CompilationUnitInfo> getUnitInfo(StringRef UnitName) const;
-  std::vector<CompilationUnitInfo> getAllUnits() const;
-  std::vector<std::string> getRecentUnits(size_t Count = 5) const;
-  Expected<std::string> getMostRecentUnit() const;
+  [[nodiscard]] auto hasUnit(StringRef unitName) const -> bool;
+  [[nodiscard]] auto getUnitInfo(StringRef unitName) const
+      -> Expected<CompilationUnitInfo>;
+  [[nodiscard]] auto getAllUnits() const -> std::vector<CompilationUnitInfo>;
+  [[nodiscard]] auto getRecentUnits(size_t count = 5) const
+      -> std::vector<std::string>;
+  [[nodiscard]] auto getMostRecentUnit() const -> Expected<std::string>;
 
   // Utility operations
-  void removeUnit(StringRef UnitName);
-  void cleanupOldUnits(int MaxAgeInDays = 30);
-  size_t getUnitCount() const;
+  void removeUnit(StringRef unitName);
+  void cleanupOldUnits(int maxAgeInDays = 30);
+  [[nodiscard]] auto getUnitCount() const -> size_t;
 
   // JSON operations
-  Expected<std::string> toJson() const;
-  Error fromJson(StringRef JsonStr);
+  [[nodiscard]] auto toJson() const -> Expected<std::string>;
+  auto fromJson(StringRef jsonStr) -> Error;
 
 private:
-  std::string OutputDirectory;
-  std::string MetadataFilePath;
-  std::map<std::string, CompilationUnitInfo> Units;
+  std::string outputDirectory;
+  std::string metadataFilePath;
+  std::map<std::string, CompilationUnitInfo> units;
 
   // Helper methods
-  std::string getMetadataPath() const;
-  std::string
-  formatTimestamp(const std::chrono::system_clock::time_point &TimePoint) const;
-  Expected<std::chrono::system_clock::time_point>
-  parseTimestamp(StringRef TimestampStr) const;
-  bool fileExists(StringRef Path) const;
-  Error createDirectoryIfNeeded(StringRef Path) const;
+  [[nodiscard]] auto getMetadataPath() const -> std::string;
+  [[nodiscard]] auto
+  formatTimestamp(const std::chrono::system_clock::time_point &timePoint) const
+      -> std::string;
+  [[nodiscard]] auto
+  parseTimestamp(StringRef timestampStr) const
+      -> Expected<std::chrono::system_clock::time_point>;
+  [[nodiscard]] auto fileExists(StringRef path) const -> bool;
+  auto createDirectoryIfNeeded(StringRef path) const -> Error;
 };
 
-} // namespace utils
-} // namespace advisor
-} // namespace llvm
+} // namespace llvm::advisor::utils
 
-#endif // LLVM_ADVISOR_UTILS_UNITMETADATA_H
+
+
+#endif // LLVM_TOOLS_LLVM_ADVISOR_SRC_UTILS_UNITMETADATA_H

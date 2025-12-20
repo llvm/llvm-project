@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ADVISOR_CORE_BUILDEXECUTOR_H
-#define LLVM_ADVISOR_CORE_BUILDEXECUTOR_H
+#ifndef LLVM_TOOLS_LLVM_ADVISOR_SRC_CORE_BUILDEXECUTOR_H
+#define LLVM_TOOLS_LLVM_ADVISOR_SRC_CORE_BUILDEXECUTOR_H
 
 #include "../Config/AdvisorConfig.h"
 #include "BuildContext.h"
@@ -22,27 +22,26 @@
 #include "llvm/Support/Error.h"
 #include <string>
 
-namespace llvm {
-namespace advisor {
+namespace llvm::advisor {
 
 class BuildExecutor {
 public:
   BuildExecutor(const AdvisorConfig &config);
 
-  llvm::Expected<int> execute(llvm::StringRef compiler,
-                              const llvm::SmallVectorImpl<std::string> &args,
-                              BuildContext &buildContext,
-                              llvm::StringRef tempDir);
+  auto execute(llvm::StringRef compiler,
+               const llvm::SmallVectorImpl<std::string> &args,
+               BuildContext &buildContext, llvm::StringRef tempDir)
+      -> llvm::Expected<int>;
 
 private:
-  llvm::SmallVector<std::string, 16>
-  instrumentCompilerArgs(const llvm::SmallVectorImpl<std::string> &args,
-                         BuildContext &buildContext, llvm::StringRef tempDir);
+  auto instrumentCompilerArgs(const llvm::SmallVectorImpl<std::string> &args,
+                              BuildContext &buildContext,
+                              llvm::StringRef tempDir)
+      -> llvm::SmallVector<std::string, 16>;
 
-  const AdvisorConfig &config_;
+  const AdvisorConfig &config;
 };
 
-} // namespace advisor
-} // namespace llvm
+} // namespace llvm::advisor
 
-#endif // LLVM_ADVISOR_CORE_BUILDEXECUTOR_H
+#endif // LLVM_TOOLS_LLVM_ADVISOR_SRC_CORE_BUILDEXECUTOR_H

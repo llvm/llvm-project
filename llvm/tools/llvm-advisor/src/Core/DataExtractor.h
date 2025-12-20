@@ -26,54 +26,54 @@ namespace advisor {
 
 class DataExtractor {
 public:
-  DataExtractor(const AdvisorConfig &config);
+  DataExtractor(const AdvisorConfig &Config);
 
-  Error extractAllData(CompilationUnit &unit, llvm::StringRef tempDir);
+  Error extractAllData(CompilationUnit &Unit, llvm::StringRef TempDir);
 
 private:
   llvm::SmallVector<std::string, 8>
-  getBaseCompilerArgs(const CompilationUnitInfo &unitInfo) const;
+  getBaseCompilerArgs(const CompilationUnitInfo &UnitInfo) const;
 
-  Error extractIR(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractAssembly(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractAST(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractPreprocessed(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractIncludeTree(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractDependencies(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractDebugInfo(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractStaticAnalysis(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractMacroExpansion(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractCompilationPhases(CompilationUnit &unit,
-                                 llvm::StringRef tempDir);
-  Error extractFTimeReport(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractVersionInfo(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractSources(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractASTJSON(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractDiagnostics(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractCoverage(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractTimeTrace(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractRuntimeTrace(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractSARIF(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractBinarySize(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractPGO(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractSymbols(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractObjdump(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractXRay(CompilationUnit &unit, llvm::StringRef tempDir);
-  Error extractOptDot(CompilationUnit &unit, llvm::StringRef tempDir);
+  Error extractIR(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractAssembly(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractAST(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractPreprocessed(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractIncludeTree(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractDependencies(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractDebugInfo(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractStaticAnalysis(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractMacroExpansion(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractCompilationPhases(CompilationUnit &Unit,
+                                 llvm::StringRef TempDir);
+  Error extractFTimeReport(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractVersionInfo(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractSources(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractASTJSON(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractDiagnostics(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractCoverage(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractTimeTrace(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractRuntimeTrace(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractSARIF(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractBinarySize(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractPGO(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractSymbols(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractObjdump(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractXRay(CompilationUnit &Unit, llvm::StringRef TempDir);
+  Error extractOptDot(CompilationUnit &Unit, llvm::StringRef TempDir);
 
-  Error runCompilerWithFlags(const llvm::SmallVector<std::string, 8> &args);
+  Error runCompilerWithFlags(const llvm::SmallVector<std::string, 8> &Args);
 
-  using ExtractorMethod = Error (DataExtractor::*)(CompilationUnit &,
-                                                   llvm::StringRef);
+  using ExtractorMethod = Error (DataExtractor::*)(CompilationUnit &Unit,
+                                                   llvm::StringRef TempDir);
   struct ExtractorInfo {
     ExtractorMethod method;
     const char *name;
   };
 
-  static const ExtractorInfo extractors_[];
-  static const size_t numExtractors_;
+  static const ExtractorInfo extractors[];
+  static const size_t numExtractors;
 
-  const AdvisorConfig &config_;
+  const AdvisorConfig &Config;
 };
 
 } // namespace advisor

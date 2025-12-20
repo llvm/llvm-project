@@ -40,8 +40,8 @@ private:
   std::string
   generateUnitName(const llvm::SmallVectorImpl<SourceFile> &sources) const;
 
-  const AdvisorConfig &config_;
-  FileClassifier classifier_;
+  const AdvisorConfig &config;
+  FileClassifier classifier;
 };
 
 } // namespace advisor

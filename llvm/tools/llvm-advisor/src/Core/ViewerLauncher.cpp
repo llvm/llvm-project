@@ -48,7 +48,7 @@ Expected<std::string> ViewerLauncher::getViewerScript() {
   sys::path::append(scriptPath, "server.py");
 
   if (sys::fs::exists(scriptPath)) {
-    return scriptPath.str().str();
+    return std::string(scriptPath.str());
   }
 
   // Try: relative to binary (same directory as executable)
@@ -59,7 +59,7 @@ Expected<std::string> ViewerLauncher::getViewerScript() {
   sys::path::append(scriptPath, "server.py");
 
   if (sys::fs::exists(scriptPath)) {
-    return scriptPath.str().str();
+    return std::string(scriptPath.str());
   }
 
   // Try: installed location
@@ -73,7 +73,7 @@ Expected<std::string> ViewerLauncher::getViewerScript() {
   sys::path::append(scriptPath, "server.py");
 
   if (sys::fs::exists(scriptPath)) {
-    return scriptPath.str().str();
+    return std::string(scriptPath.str());
   }
 
   return createStringError(
@@ -84,21 +84,16 @@ Expected<std::string> ViewerLauncher::getViewerScript() {
 
 Expected<int> ViewerLauncher::launch(const std::string &outputDir, int port) {
   auto pythonOrErr = findPythonExecutable();
-  if (!pythonOrErr) {
-    return pythonOrErr.takeError();
-  }
+  if (!pythonOrErr) return pythonOrErr.takeError();
 
   auto scriptOrErr = getViewerScript();
-  if (!scriptOrErr) {
-    return scriptOrErr.takeError();
-  }
+  if (!scriptOrErr) return scriptOrErr.takeError();
 
   // Verify output directory exists and has data
-  if (!sys::fs::exists(outputDir)) {
+  if (!sys::fs::exists(outputDir))
     return createStringError(
         std::make_error_code(std::errc::no_such_file_or_directory),
         "Output directory does not exist: " + outputDir);
-  }
 
   std::vector<StringRef> args = {*pythonOrErr, *scriptOrErr,
                                  "--data-dir", outputDir,
@@ -107,11 +102,10 @@ Expected<int> ViewerLauncher::launch(const std::string &outputDir, int port) {
   // Execute the Python web server
   int result = sys::ExecuteAndWait(*pythonOrErr, args);
 
-  if (result != 0) {
+  if (result != 0)
     return createStringError(std::make_error_code(std::errc::io_error),
                              "Web server failed with exit code: " +
                                  std::to_string(result));
-  }
 
   return result;
 }

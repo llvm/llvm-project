@@ -25,70 +25,92 @@ namespace advisor {
 Expected<std::string> FileManager::createTempDir(llvm::StringRef prefix) {
   SmallString<128> tempDirPath;
   if (std::error_code ec =
-          sys::fs::createUniqueDirectory(prefix, tempDirPath)) {
+          sys::fs::createUniqueDirectory(prefix, tempDirPath))
     return createStringError(ec, "Failed to create unique temporary directory");
-  }
-  return tempDirPath.str().str();
+  return std::string(tempDirPath.str());
 }
 
-Error FileManager::copyDirectory(llvm::StringRef source, llvm::StringRef dest) {
-  std::error_code EC;
-
-  SmallString<128> sourcePathNorm(source);
-  // Remove trailing slash manually if present
-  if (sourcePathNorm.ends_with("/") && sourcePathNorm.size() > 1) {
-    sourcePathNorm.pop_back();
+Error FileManager::copyDirectory(StringRef source, StringRef dest) {
+  // Normalize source path (preserve root directories)
+  SmallString<128> sourceNorm = source;
+  if (sourceNorm.size() > 1 && sys::path::is_separator(sourceNorm.back())) {
+    sourceNorm.pop_back();
   }
 
-  for (sys::fs::recursive_directory_iterator I(source, EC), E; I != E && !EC;
-       I.increment(EC)) {
-    StringRef currentPath = I->path();
-    SmallString<128> destPath(dest);
+  std::error_code ec;
+  sys::fs::recursive_directory_iterator iter(source, ec), end;
+  if (ec) return createFileError(source, ec, "Failed to iterate directory");
 
-    StringRef relativePath = currentPath;
-    if (!relativePath.consume_front(sourcePathNorm)) {
+  // Functional handlers with minimal state capture
+  const auto handleEntry = [dest](const sys::fs::directory_entry& entry,
+                                 StringRef sourceNorm) -> Error {
+    const auto currentPath = entry.path();
+    StringRef currentPathRef(currentPath);
+    SmallString<128> destPath = dest;
+
+    // Validate and compute relative path in single pass
+    const auto [valid, relative] = [&]() -> std::pair<bool, StringRef> {
+      if (!currentPathRef.starts_with(sourceNorm))
+        return std::make_pair(false, StringRef{});
+
+      auto rel = currentPathRef.drop_front(sourceNorm.size());
+      if (!rel.empty() && sys::path::is_separator(rel.front()))
+        rel = rel.drop_front(1);
+      return std::make_pair(true, rel);
+    }();
+
+    if (!valid)
       return createStringError(
-          std::make_error_code(std::errc::invalid_argument),
-          "Path '" + currentPath.str() + "' not in source dir '" + source +
-              "'");
-    }
-    // Remove leading slash manually if present
-    if (relativePath.starts_with("/")) {
-      relativePath = relativePath.drop_front(1);
+          std::errc::invalid_argument,
+          "Path '{}' not contained in source directory '{}'",
+          currentPath.c_str(), sourceNorm.str().c_str());
+
+
+    sys::path::append(destPath, relative);
+    auto statusOrErr = entry.status();
+    if (!statusOrErr)
+      return createFileError(currentPath, statusOrErr.getError(),
+                             "Failed to stat path");
+    const auto status = *statusOrErr;
+
+    // Unified directory creation for both files and directories
+    const auto ensureParent = [&]() -> Error {
+      const auto parent = sys::path::parent_path(destPath);
+      if (!parent.empty()) {
+        std::error_code createEc = sys::fs::create_directories(parent);
+        if (createEc)
+          return createFileError(parent, createEc, "Failed to create parent directory");
+      }
+      return Error::success();
+    };
+
+    // Type-specific handling with early returns
+    if (status.type() == sys::fs::file_type::directory_file) {
+      if (std::error_code ec = sys::fs::create_directories(destPath))
+        return createFileError(destPath, ec, "Failed to create directory");
+      return Error::success();
     }
 
-    sys::path::append(destPath, relativePath);
+    if (Error err = ensureParent()) return err;
+    if (std::error_code ec = sys::fs::copy_file(currentPath, destPath))
+      return createFileError(
+          currentPath, ec, "Failed to copy file to '%s'", destPath.c_str());
 
-    if (sys::fs::is_directory(currentPath)) {
-      if (sys::fs::create_directories(destPath)) {
-        return createStringError(std::make_error_code(std::errc::io_error),
-                                 "Failed to create directory: " +
-                                     destPath.str().str());
-      }
-    } else {
-      if (sys::fs::create_directories(sys::path::parent_path(destPath))) {
-        return createStringError(std::make_error_code(std::errc::io_error),
-                                 "Failed to create parent directory for: " +
-                                     destPath.str().str());
-      }
-      if (sys::fs::copy_file(currentPath, destPath)) {
-        return createStringError(std::make_error_code(std::errc::io_error),
-                                 "Failed to copy file: " + currentPath.str());
-      }
-    }
+    return Error::success();
+  };
+
+  // Declarative iteration with error propagation
+  while (iter != end && !ec) {
+    if (Error err = handleEntry(*iter, sourceNorm)) return err;
+    iter.increment(ec);
   }
 
-  if (EC) {
-    return createStringError(EC, "Failed to iterate directory: " + source);
-  }
-
-  return Error::success();
+  return ec ? createFileError(source, ec, "Directory iteration failed")
+            : Error::success();
 }
 
 Error FileManager::removeDirectory(llvm::StringRef path) {
-  if (!sys::fs::exists(path)) {
-    return Error::success();
-  }
+  if (!sys::fs::exists(path)) return Error::success();
 
   std::error_code EC;
   SmallVector<std::string, 8> Dirs;
@@ -103,20 +125,16 @@ Error FileManager::removeDirectory(llvm::StringRef path) {
     }
   }
 
-  if (EC) {
-    return createStringError(EC, "Error iterating directory " + path);
-  }
+  if (EC) return createStringError(EC, "Error iterating directory " + path);
 
   for (const auto &Dir : llvm::reverse(Dirs)) {
-    if (auto E = sys::fs::remove(Dir)) {
+    if (auto E = sys::fs::remove(Dir))
       return createStringError(E, "Failed to remove directory: " + Dir);
-    }
   }
 
-  if (auto E = sys::fs::remove(path)) {
+  if (auto E = sys::fs::remove(path))
     return createStringError(E,
                              "Failed to remove top-level directory: " + path);
-  }
 
   return Error::success();
 }
@@ -129,9 +147,8 @@ SmallVector<std::string, 8> FileManager::findFiles(llvm::StringRef directory,
        I.increment(EC)) {
     if (I->type() != sys::fs::file_type::directory_file) {
       StringRef filename = sys::path::filename(I->path());
-      if (filename.find(pattern) != StringRef::npos) {
+      if (filename.find(pattern) != StringRef::npos)
         files.push_back(I->path());
-      }
     }
   }
   return files;
@@ -157,15 +174,12 @@ SmallVector<std::string, 8> FileManager::findFilesByExtension(
 }
 
 Error FileManager::moveFile(llvm::StringRef source, llvm::StringRef dest) {
-  if (source == dest) {
-    return Error::success();
-  }
+  if (source == dest) return Error::success();
 
-  if (sys::fs::create_directories(sys::path::parent_path(dest))) {
+  if (sys::fs::create_directories(sys::path::parent_path(dest)))
     return createStringError(
         std::make_error_code(std::errc::io_error),
         "Failed to create parent directory for destination: " + dest);
-  }
 
   if (sys::fs::rename(source, dest)) {
     // If rename fails, try copy and remove
@@ -184,9 +198,7 @@ Error FileManager::moveFile(llvm::StringRef source, llvm::StringRef dest) {
 }
 
 Error FileManager::copyFile(llvm::StringRef source, llvm::StringRef dest) {
-  if (source == dest) {
-    return Error::success();
-  }
+  if (source == dest) return Error::success();
 
   if (sys::fs::create_directories(sys::path::parent_path(dest))) {
     return createStringError(
@@ -194,10 +206,9 @@ Error FileManager::copyFile(llvm::StringRef source, llvm::StringRef dest) {
         "Failed to create parent directory for destination: " + dest);
   }
 
-  if (sys::fs::copy_file(source, dest)) {
+  if (sys::fs::copy_file(source, dest))
     return createStringError(std::make_error_code(std::errc::io_error),
                              "Failed to copy file: " + source);
-  }
 
   return Error::success();
 }

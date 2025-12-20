@@ -24,21 +24,21 @@
 #include "llvm/Support/raw_ostream.h"
 
 static llvm::cl::opt<std::string>
-    ConfigFile("config", llvm::cl::desc("Configuration file"),
+    g_ConfigFile("config", llvm::cl::desc("Configuration file"),
                llvm::cl::value_desc("filename"));
-static llvm::cl::opt<std::string> OutputDir("output-dir",
+static llvm::cl::opt<std::string> g_OutputDir("output-dir",
                                             llvm::cl::desc("Output directory"),
                                             llvm::cl::value_desc("directory"));
-static llvm::cl::opt<bool> Verbose("verbose", llvm::cl::desc("Verbose output"));
-static llvm::cl::opt<bool> KeepTemps("keep-temps",
+static llvm::cl::opt<bool> g_Verbose("verbose", llvm::cl::desc("Verbose output"));
+static llvm::cl::opt<bool> g_KeepTemps("keep-temps",
                                      llvm::cl::desc("Keep temporary files"));
-static llvm::cl::opt<bool> NoProfiler("no-profiler",
+static llvm::cl::opt<bool> g_NoProfiler("no-profiler",
                                       llvm::cl::desc("Disable profiler"));
 static llvm::cl::opt<int>
-    Port("port", llvm::cl::desc("Web server port (for view command)"),
+    g_Port("port", llvm::cl::desc("Web server port (for view command)"),
          llvm::cl::value_desc("port"), llvm::cl::init(8000));
 
-int main(int argc, char **argv) {
+auto main(int argc, char **argv) -> int {
   llvm::InitLLVM X(argc, argv);
 
   // Handle help and subcommands before argument parsing
@@ -127,24 +127,24 @@ int main(int argc, char **argv) {
 
   // Configure advisor
   llvm::advisor::AdvisorConfig config;
-  if (!ConfigFile.empty()) {
-    if (auto Err = config.loadFromFile(ConfigFile).takeError()) {
+  if (!g_ConfigFile.empty()) {
+    if (auto Err = config.loadFromFile(g_ConfigFile).takeError()) {
       llvm::errs() << "Error loading config: " << llvm::toString(std::move(Err))
                    << "\n";
       return 1;
     }
   }
 
-  if (!OutputDir.empty()) {
-    config.setOutputDir(OutputDir);
+  if (!g_OutputDir.empty()) {
+    config.setOutputDir(g_OutputDir);
   } else {
     config.setOutputDir(".llvm-advisor"); // Default hidden directory
   }
 
-  config.setVerbose(Verbose);
-  config.setKeepTemps(KeepTemps ||
+  config.setVerbose(g_Verbose);
+  config.setKeepTemps(g_KeepTemps ||
                       isViewCommand); // Keep temps for view command
-  config.setRunProfiler(!NoProfiler);
+  config.setRunProfiler(!g_NoProfiler);
 
   // Create output directory
   if (auto EC = llvm::sys::fs::create_directories(config.getOutputDir())) {
@@ -190,7 +190,7 @@ int main(int argc, char **argv) {
     }
 
     auto viewerResult = llvm::advisor::ViewerLauncher::launch(
-        absoluteOutputDir.str().str(), Port);
+        std::string(absoluteOutputDir.str()), g_Port);
     if (!viewerResult) {
       llvm::errs() << "Error launching web viewer: "
                    << llvm::toString(viewerResult.takeError()) << "\n";
