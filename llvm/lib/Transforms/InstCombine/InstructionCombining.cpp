@@ -1835,7 +1835,7 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   //   %3 = or i8 %2, C2
   Value *Input;
   if (!NewTV && !NewFV &&
-      (Op.isIntDivRem() || Op.isFPDivRem() ||
+      (Op.isIntDivRem() ||
        !match(&Op, m_BinOp(m_c_Select(m_Value(Input),
                                       m_BinOp(Op.getOpcode(), m_Deferred(Input),
                                               m_ConstantInt())),
