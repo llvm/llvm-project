@@ -32,3 +32,5 @@ add_llvm_tool(llvm-ir2vec
 
 target_include_directories(llvm-ir2vec PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils)
 target_link_libraries(llvm-ir2vec PRIVATE emb_utils)
+
+add_subdirectory(bindings)
