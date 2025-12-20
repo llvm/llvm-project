@@ -33,9 +33,9 @@ concept NoExceptMemberSwap = requires(T t1, T t2) {
   { t1.swap(t2) } noexcept;
 };
 
-static_assert(NoExceptMemberSwap<std::flat_multimap<int, int>>);
+static_assert(NoExceptMemberSwap< std::flat_multimap<int, int, std::less<int>, std::vector<int>, std::vector<int>>>);
 #ifndef TEST_HAS_NO_EXCEPTIONS
-static_assert(NoExceptMemberSwap<
+static_assert(!NoExceptMemberSwap<
               std::flat_multimap<int, int, std::less<int>, ThrowOnMoveContainer<int>, ThrowOnMoveContainer<int>>>);
 #endif
 

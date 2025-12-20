@@ -466,6 +466,15 @@ public:
     __append_sort_merge_unique</*WasSorted = */ false>(std::forward<_Range>(__range));
   }
 
+  template <_ContainerCompatibleRange<value_type> _Range>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert_range(std::sorted_unique_t, _Range&& __range) {
+    if constexpr (ranges::sized_range<_Range>) {
+      __reserve(ranges::size(__range));
+    }
+
+    __append_sort_merge_unique</*WasSorted = */ true>(std::forward<_Range>(__range));
+  }
+
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert(initializer_list<value_type> __il) {
     insert(__il.begin(), __il.end());
   }
@@ -524,13 +533,15 @@ public:
     return iterator(std::move(__key_it));
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void swap(flat_set& __y) noexcept {
-    // warning: The spec has unconditional noexcept, which means that
-    // if any of the following functions throw an exception,
-    // std::terminate will be called.
-    // This is discussed in P2767, which hasn't been voted on yet.
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+  swap(flat_set& __y) noexcept(is_nothrow_swappable_v<container_type> && is_nothrow_swappable_v<key_compare>) {
+    auto __on_failure = std::__make_exception_guard([&]() noexcept {
+      clear() /* noexcept */;
+      __y.clear() /* noexcept */;
+    });
     ranges::swap(__compare_, __y.__compare_);
     ranges::swap(__keys_, __y.__keys_);
+    __on_failure.__complete();
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void clear() noexcept { __keys_.clear(); }
@@ -661,7 +672,8 @@ public:
         __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
   }
 
-  friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void swap(flat_set& __x, flat_set& __y) noexcept {
+  friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+  swap(flat_set& __x, flat_set& __y) noexcept(noexcept(__x.swap(__y))) {
     __x.swap(__y);
   }
 
