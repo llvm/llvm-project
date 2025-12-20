@@ -364,23 +364,46 @@ static mlir::Value emitX86Muldq(CIRGenBuilderTy &builder, mlir::Location loc,
 
 static mlir::Value emitX86CvtF16ToFloatExpr(CIRGenBuilderTy &builder,
                                             mlir::Location loc,
-                                            mlir::Type dstTy,
-                                            SmallVectorImpl<mlir::Value> &ops) {
+                                            SmallVectorImpl<mlir::Value> &ops,
+                                            mlir::Type DstTy) {
+  assert((ops.size() == 1 || ops.size() == 3 || ops.size() == 4) &&
+         "Unknown cvtph2ps intrinsic");
 
-  mlir::Value src = ops[0];
-  mlir::Value passthru = ops[1];
+  // If the SAE intrinsic doesn't use default rounding then we can't upgrade.
+  if (ops.size() == 4) {
+    cir::ConstantOp constOp = ops[3].getDefiningOp<cir::ConstantOp>();
+    if (constOp &&
+        mlir::cast<mlir::IntegerAttr>(constOp.getValue()).getInt() != 4) {
+      return emitIntrinsicCallOp(builder, loc, "x86.avx512.mask.vcvtph2ps.512",
+                                 DstTy, ops);
+    }
+  }
 
-  auto vecTy = mlir::cast<cir::VectorType>(src.getType());
-  uint64_t numElems = vecTy.getSize();
+  uint64_t NumDstElts = mlir::cast<cir::VectorType>(DstTy).getSize();
+  mlir::Value Src = ops[0];
 
-  mlir::Value mask = getMaskVecValue(builder, loc, ops[2], numElems);
+  // Extract the subvector
+  if (NumDstElts != mlir::cast<cir::VectorType>(Src.getType()).getSize()) {
+    assert(NumDstElts == 4 && "Unexpected vector size");
 
-  auto halfTy = cir::VectorType::get(builder.getF16Type(), numElems);
-  mlir::Value srcF16 = builder.createBitcast(loc, src, halfTy);
+    SmallVector<int32_t, 4> indices = {0, 1, 2, 3};
+    Src = builder.createShuffle(loc, Src, Src, indices);
+  }
 
-  mlir::Value res = builder.createFloatingCast(srcF16, dstTy);
+  // Bitcast from vXi16 to vXf16.
+  cir::VectorType HalfTy =
+      cir::VectorType::get(builder.getF16Type(), NumDstElts);
+  Src = builder.createBitcast(loc, Src, HalfTy);
 
-  return emitX86Select(builder, loc, mask, res, passthru);
+  // Perform the fp-extension.
+  mlir::Value Res = builder.createFloatingCast(Src, DstTy);
+
+  if (ops.size() >= 3) {
+    mlir::Value MaskVec = getMaskVecValue(builder, loc, ops[2], NumDstElts);
+    Res = emitX86Select(builder, loc, MaskVec, Res, ops[1]);
+  }
+
+  return Res;
 }
 
 static mlir::Value emitX86vpcom(CIRGenBuilderTy &builder, mlir::Location loc,
