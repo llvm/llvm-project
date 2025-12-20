@@ -19,7 +19,6 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
-#include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace clang;
@@ -1674,6 +1673,10 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_cvtneps2bf16_512_mask: {
     mlir::Location loc = getLoc(expr->getExprLoc());
     mlir::Type resTy = convertType(expr->getType());
+    if (!isa<cir::VectorType>(resTy)) {
+      llvm::report_fatal_error(
+          "Expected cir::VectorType for AVX512 BF16 builtin lowering.");
+    }
     unsigned numElts = cast<cir::VectorType>(resTy).getSize();
     bool isMaskZ = false;
     if (auto *callExpr = llvm::dyn_cast<clang::CallExpr>(expr)) {
@@ -1710,12 +1713,10 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
               loc, mlir::SymbolRefAttr::get(builder.getContext(), cirFuncName),
               resTy, {ops[2], ops[0]})
           .getResult();
-    else {
-      mlir::Value selectMask = getMaskVecValue(builder, loc, ops[2], numElts);
-      mlir::Value intrinsicResult = emitIntrinsicCallOp(
-          builder, loc, intrinsicName, resTy, mlir::ValueRange{ops[0]});
-      return emitX86Select(builder, loc, selectMask, intrinsicResult, ops[1]);
-    }
+    mlir::Value selectMask = getMaskVecValue(builder, loc, ops[2], numElts);
+    mlir::Value intrinsicResult = emitIntrinsicCallOp(
+        builder, loc, intrinsicName, resTy, mlir::ValueRange{ops[0]});
+    return emitX86Select(builder, loc, selectMask, intrinsicResult, ops[1]);
   }
 
   case X86::BI__cpuid:
