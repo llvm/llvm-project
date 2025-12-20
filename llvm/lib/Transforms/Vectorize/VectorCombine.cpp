@@ -2279,8 +2279,7 @@ bool VectorCombine::foldConcatOfBoolMasks(Instruction &I) {
 bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
   BinaryOperator *BinOp;
   ArrayRef<int> OuterMask;
-  if (!match(&I,
-             m_Shuffle(m_BinOp(BinOp), m_Undef(), m_Mask(OuterMask))))
+  if (!match(&I, m_Shuffle(m_BinOp(BinOp), m_Undef(), m_Mask(OuterMask))))
     return false;
 
   // Don't introduce poison into div/rem.
@@ -2289,12 +2288,10 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
 
   Value *Op00, *Op01, *Op10, *Op11;
   ArrayRef<int> Mask0, Mask1;
-  bool Match0 =
-      match(BinOp->getOperand(0),
-            m_Shuffle(m_Value(Op00), m_Value(Op01), m_Mask(Mask0)));
-  bool Match1 =
-      match(BinOp->getOperand(1),
-            m_Shuffle(m_Value(Op10), m_Value(Op11), m_Mask(Mask1)));
+  bool Match0 = match(BinOp->getOperand(0),
+                      m_Shuffle(m_Value(Op00), m_Value(Op01), m_Mask(Mask0)));
+  bool Match1 = match(BinOp->getOperand(1),
+                      m_Shuffle(m_Value(Op10), m_Value(Op11), m_Mask(Mask1)));
   if (!Match0 && !Match1)
     return false;
 
@@ -2349,15 +2346,15 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
     bool WillRemoveShuf0 = BinOp->getOperand(0)->hasOneUse();
     bool WillRemoveShuf1 = BinOp->getOperand(1)->hasOneUse();
     if (Match0 && WillRemoveShuf0)
-        OldCost +=
-            TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy,
-                                Op0Ty, Mask0, CostKind, 0, nullptr, {Op00, Op01},
-                                cast<Instruction>(BinOp->getOperand(0)));
+      OldCost +=
+          TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy,
+                             Op0Ty, Mask0, CostKind, 0, nullptr, {Op00, Op01},
+                             cast<Instruction>(BinOp->getOperand(0)));
     if (Match1 && WillRemoveShuf1)
-        OldCost +=
-            TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy,
-                                Op1Ty, Mask1, CostKind, 0, nullptr, {Op10, Op11},
-                                cast<Instruction>(BinOp->getOperand(1)));
+      OldCost +=
+          TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy,
+                             Op1Ty, Mask1, CostKind, 0, nullptr, {Op10, Op11},
+                             cast<Instruction>(BinOp->getOperand(1)));
   }
 
   InstructionCost NewCost =
