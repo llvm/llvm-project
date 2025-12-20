@@ -201,6 +201,7 @@ struct __atomic_base<_Tp, true> : public __atomic_base<_Tp, false> {
   _LIBCPP_HIDE_FROM_ABI _Tp operator^=(_Tp __op) _NOEXCEPT { return fetch_xor(__op) ^ __op; }
 };
 
+#if _LIBCPP_STD_VER >= 20
 // Here we need _IsIntegral because the default template argument is not enough
 // e.g  __atomic_base<int> is __atomic_base<int, true>, which inherits from
 // __atomic_base<int, false> and the caller of the wait function is
@@ -228,6 +229,8 @@ struct __atomic_waitable_traits<__atomic_base<_Tp, _IsIntegral> > {
     return std::addressof(__this.__a_);
   }
 };
+
+#endif // _LIBCPP_STD_VER >= 20
 
 template <typename _Tp>
 struct __check_atomic_mandates {
@@ -322,10 +325,10 @@ struct atomic<_Tp*> : public __atomic_base<_Tp*> {
   atomic& operator=(const atomic&) volatile = delete;
 };
 
+#if _LIBCPP_STD_VER >= 20
 template <class _Tp>
 struct __atomic_waitable_traits<atomic<_Tp> > : __atomic_waitable_traits<__atomic_base<_Tp> > {};
 
-#if _LIBCPP_STD_VER >= 20
 template <class _Tp>
   requires is_floating_point_v<_Tp>
 struct atomic<_Tp> : __atomic_base<_Tp> {

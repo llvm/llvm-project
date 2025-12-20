@@ -26,13 +26,13 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if _LIBCPP_STD_VER >= 20
+
 // The customisation points to enable the following functions:
 // - __atomic_wait
 // - __atomic_wait_unless
 // - __atomic_notify_one
 // - __atomic_notify_all
-// Note that std::atomic<T>::wait was back-ported to C++03
-// The below implementations look ugly to support C++03
 template <class _Tp, class = void>
 struct __atomic_waitable_traits {
   using __value_type _LIBCPP_NODEBUG = void;
@@ -44,43 +44,40 @@ struct __atomic_waitable_traits {
   static void __atomic_contention_address(_AtomicWaitable&&) = delete;
 };
 
-template <class _Tp, class = void>
-struct __atomic_waitable : false_type {};
-
 template <class _Tp>
-struct __atomic_waitable< _Tp,
-                          __void_t<decltype(__atomic_waitable_traits<__decay_t<_Tp> >::__atomic_load(
-                                       std::declval<const _Tp&>(), std::declval<memory_order>())),
-                                   decltype(__atomic_waitable_traits<__decay_t<_Tp> >::__atomic_contention_address(
-                                       std::declval<const _Tp&>()))> > : true_type {};
+concept __atomic_waitable = requires(const _Tp __t, memory_order __order) {
+  typename __atomic_waitable_traits<__decay_t<_Tp> >::__value_type;
+  { __atomic_waitable_traits<__decay_t<_Tp> >::__atomic_load(__t, __order) };
+  { __atomic_waitable_traits<__decay_t<_Tp> >::__atomic_contention_address(__t) };
+};
 
-#ifdef __linux__
-#  define _LIBCPP_NATIVE_PLATFORM_WAIT_SIZES(_APPLY) _APPLY(4)
-#elif defined(__APPLE__)
-#  define _LIBCPP_NATIVE_PLATFORM_WAIT_SIZES(_APPLY)                                                                   \
-    _APPLY(4)                                                                                                          \
-    _APPLY(8)
-#elif defined(__FreeBSD__) && __SIZEOF_LONG__ == 8
-#  define _LIBCPP_NATIVE_PLATFORM_WAIT_SIZES(_APPLY) _APPLY(8)
-#elif defined(_WIN32)
-#  define _LIBCPP_NATIVE_PLATFORM_WAIT_SIZES(_APPLY) _APPLY(8)
-#else
-#  define _LIBCPP_NATIVE_PLATFORM_WAIT_SIZES(_APPLY) _APPLY(sizeof(__cxx_contention_t))
-#endif // __linux__
+#  ifdef __linux__
+#    define _LIBCPP_NATIVE_PLATFORM_WAIT_SIZES(_APPLY) _APPLY(4)
+#  elif defined(__APPLE__)
+#    define _LIBCPP_NATIVE_PLATFORM_WAIT_SIZES(_APPLY)                                                                 \
+      _APPLY(4)                                                                                                        \
+      _APPLY(8)
+#  elif defined(__FreeBSD__) && __SIZEOF_LONG__ == 8
+#    define _LIBCPP_NATIVE_PLATFORM_WAIT_SIZES(_APPLY) _APPLY(8)
+#  elif defined(_WIN32)
+#    define _LIBCPP_NATIVE_PLATFORM_WAIT_SIZES(_APPLY) _APPLY(8)
+#  else
+#    define _LIBCPP_NATIVE_PLATFORM_WAIT_SIZES(_APPLY) _APPLY(sizeof(__cxx_contention_t))
+#  endif // __linux__
 
 // concepts defines the types are supported natively by the platform's wait
 
-#if defined(_LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE)
+#  if defined(_LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE)
 
 _LIBCPP_HIDE_FROM_ABI constexpr bool __has_native_atomic_wait_impl(size_t __size) {
   switch (__size) {
-#  define _LIBCPP_MAKE_CASE(n)                                                                                         \
-  case n:                                                                                                              \
-    return true;
+#    define _LIBCPP_MAKE_CASE(n)                                                                                       \
+    case n:                                                                                                            \
+      return true;
     _LIBCPP_NATIVE_PLATFORM_WAIT_SIZES(_LIBCPP_MAKE_CASE)
   default:
     return false;
-#  undef _LIBCPP_MAKE_CASE
+#    undef _LIBCPP_MAKE_CASE
   };
 }
 
@@ -89,12 +86,14 @@ concept __has_native_atomic_wait =
     has_unique_object_representations_v<_Tp> && is_trivially_copyable_v<_Tp> &&
     __has_native_atomic_wait_impl(sizeof(_Tp));
 
-#else // _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
+#  else // _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
 
 template <class _Tp>
 concept __has_native_atomic_wait = is_same_v<_Tp, __cxx_contention_t>;
 
-#endif // _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
+#  endif // _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
+
+#endif // C++20
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -75,6 +75,7 @@ struct atomic_flag {
   atomic_flag& operator=(const atomic_flag&) volatile = delete;
 };
 
+#if _LIBCPP_STD_VER >= 20
 template <>
 struct __atomic_waitable_traits<atomic_flag> {
   using __value_type _LIBCPP_NODEBUG = _LIBCPP_ATOMIC_FLAG_TYPE;
@@ -98,6 +99,7 @@ struct __atomic_waitable_traits<atomic_flag> {
     return std::addressof(__a.__a_);
   }
 };
+#endif // _LIBCPP_STD_VER >= 20
 
 inline _LIBCPP_HIDE_FROM_ABI bool atomic_flag_test(const volatile atomic_flag* __o) _NOEXCEPT { return __o->test(); }
 

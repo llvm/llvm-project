@@ -169,7 +169,7 @@ struct __atomic_wait_backoff_impl {
 // value. The predicate function must not return `false` spuriously.
 template <class _AtomicWaitable, class _Poll>
 _LIBCPP_HIDE_FROM_ABI void __atomic_wait_unless(const _AtomicWaitable& __a, memory_order __order, _Poll&& __poll) {
-  static_assert(__atomic_waitable<_AtomicWaitable>::value, "");
+  static_assert(__atomic_waitable<_AtomicWaitable>);
   __atomic_wait_backoff_impl<_AtomicWaitable, __decay_t<_Poll> > __backoff_fn = {__a, __poll, __order};
   std::__libcpp_thread_poll_with_backoff(
       /* poll */
@@ -184,7 +184,7 @@ _LIBCPP_HIDE_FROM_ABI void __atomic_wait_unless(const _AtomicWaitable& __a, memo
 
 template <class _AtomicWaitable>
 _LIBCPP_HIDE_FROM_ABI void __atomic_notify_one(const _AtomicWaitable& __a) {
-  static_assert(__atomic_waitable<_AtomicWaitable>::value, "");
+  static_assert(__atomic_waitable<_AtomicWaitable>);
   using __value_type _LIBCPP_NODEBUG = typename __atomic_waitable_traits<__decay_t<_AtomicWaitable> >::__value_type;
   using __waitable_traits _LIBCPP_NODEBUG = __atomic_waitable_traits<__decay_t<_AtomicWaitable> >;
   auto __contention_address =
@@ -198,7 +198,7 @@ _LIBCPP_HIDE_FROM_ABI void __atomic_notify_one(const _AtomicWaitable& __a) {
 
 template <class _AtomicWaitable>
 _LIBCPP_HIDE_FROM_ABI void __atomic_notify_all(const _AtomicWaitable& __a) {
-  static_assert(__atomic_waitable<_AtomicWaitable>::value, "");
+  static_assert(__atomic_waitable<_AtomicWaitable>);
   using __value_type _LIBCPP_NODEBUG = typename __atomic_waitable_traits<__decay_t<_AtomicWaitable> >::__value_type;
   using __waitable_traits _LIBCPP_NODEBUG = __atomic_waitable_traits<__decay_t<_AtomicWaitable> >;
   auto __contention_address =
@@ -214,13 +214,13 @@ _LIBCPP_HIDE_FROM_ABI void __atomic_notify_all(const _AtomicWaitable& __a) {
 
 template <class _AtomicWaitable>
 _LIBCPP_HIDE_FROM_ABI void __atomic_notify_one(const _AtomicWaitable& __a) {
-  static_assert(__atomic_waitable<_AtomicWaitable>::value, "");
+  static_assert(__atomic_waitable<_AtomicWaitable>);
   std::__cxx_atomic_notify_one(__atomic_waitable_traits<__decay_t<_AtomicWaitable> >::__atomic_contention_address(__a));
 }
 
 template <class _AtomicWaitable>
 _LIBCPP_HIDE_FROM_ABI void __atomic_notify_all(const _AtomicWaitable& __a) {
-  static_assert(__atomic_waitable<_AtomicWaitable>::value, "");
+  static_assert(__atomic_waitable<_AtomicWaitable>);
   std::__cxx_atomic_notify_all(__atomic_waitable_traits<__decay_t<_AtomicWaitable> >::__atomic_contention_address(__a));
 }
 
@@ -254,7 +254,7 @@ _LIBCPP_HIDE_FROM_ABI bool __cxx_nonatomic_compare_equal(_Tp const& __lhs, _Tp c
 
 template <class _AtomicWaitable, class _Tp>
 _LIBCPP_HIDE_FROM_ABI void __atomic_wait(_AtomicWaitable& __a, _Tp __val, memory_order __order) {
-  static_assert(__atomic_waitable<_AtomicWaitable>::value, "");
+  static_assert(__atomic_waitable<_AtomicWaitable>);
   std::__atomic_wait_unless(__a, __order, [&](_Tp const& __current) {
     return !std::__cxx_nonatomic_compare_equal(__current, __val);
   });
