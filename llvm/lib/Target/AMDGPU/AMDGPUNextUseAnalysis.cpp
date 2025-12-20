@@ -158,14 +158,14 @@ double AMDGPUNextUseAnalysis::calculateShortestDistance(MachineInstr *CurMI,
       getInstrId(&*(std::prev(CurMBB->instr_end()))) - getInstrId(CurMI);
   double UseDistanceFromBBBegin = getInstrId(&*(UseMI->getIterator())) -
                                   getInstrId(&*(UseMBB->instr_begin())) + 1;
-  double Dst = getShortestDistanceFromTable(CurMBB, UseMBB);
+  double Dst = getShortestDistance(CurMBB, UseMBB);
   assert(Dst != std::numeric_limits<double>::max());
   return CurMIDistanceToBBEnd + Dst + UseDistanceFromBBBegin;
 }
 
 std::pair<double, MachineBasicBlock *>
 AMDGPUNextUseAnalysis::getShortestDistanceToExitingLatch(
-    MachineBasicBlock *CurMBB, MachineLoop *CurLoop) const {
+    MachineBasicBlock *CurMBB, MachineLoop *CurLoop) {
   SmallVector<MachineBasicBlock *, 2> Latches;
   CurLoop->getLoopLatches(Latches);
   double ShortestDistanceToLatch = std::numeric_limits<double>::max();
@@ -175,7 +175,7 @@ AMDGPUNextUseAnalysis::getShortestDistanceToExitingLatch(
     if (LMBB == CurMBB)
       return std::make_pair(0.0, CurMBB);
 
-    double Dst = getShortestDistanceFromTable(CurMBB, LMBB);
+    double Dst = getShortestDistance(CurMBB, LMBB);
     if (ShortestDistanceToLatch > Dst) {
       ShortestDistanceToLatch = Dst;
       ExitingLatch = LMBB;
@@ -186,7 +186,7 @@ AMDGPUNextUseAnalysis::getShortestDistanceToExitingLatch(
 
 std::pair<double, MachineBasicBlock *>
 AMDGPUNextUseAnalysis::getLoopDistanceAndExitingLatch(
-    MachineBasicBlock *CurMBB) const {
+    MachineBasicBlock *CurMBB) {
   MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
   MachineBasicBlock *LoopHeader = CurLoop->getHeader();
   SmallVector<MachineBasicBlock *, 2> Latches;
@@ -210,13 +210,12 @@ AMDGPUNextUseAnalysis::getLoopDistanceAndExitingLatch(
 
   if (IsCurLoopLatch) {
     TotalDistance = static_cast<double>(LoopHeader->size()) +
-                    getShortestDistanceFromTable(LoopHeader, CurMBB) +
+                    getShortestDistance(LoopHeader, CurMBB) +
                     static_cast<double>(CurMBB->size());
     return std::make_pair(TotalDistance, CurMBB);
   }
 
-  double LoopHeaderToCurMBBDistance =
-      getShortestDistanceFromTable(LoopHeader, CurMBB);
+  double LoopHeaderToCurMBBDistance = getShortestDistance(LoopHeader, CurMBB);
 
   std::tie(DistanceToLatch, ExitingLatch) =
       getShortestDistanceToExitingLatch(CurMBB, CurLoop);
@@ -339,7 +338,7 @@ double AMDGPUNextUseAnalysis::calculateCurLoopDistance(Register DefReg,
 
   double UseDistanceFromBBBegin = getInstrId(&*(UseMI->getIterator())) -
                                   getInstrId(&*(UseMBB->instr_begin())) + 1;
-  return LoopDistance + getShortestDistanceFromTable(ExitingLatch, UseMBB) +
+  return LoopDistance + getShortestDistance(ExitingLatch, UseMBB) +
          UseDistanceFromBBBegin;
 }
 
@@ -356,7 +355,7 @@ double AMDGPUNextUseAnalysis::calculateBackedgeDistance(MachineInstr *CurMI,
                                   getInstrId(&*(UseMBB->instr_begin())) + 1;
 
   if (!CurLoop)
-    return CurMIDistanceToBBEnd + getShortestDistanceFromTable(CurMBB, UseMBB) +
+    return CurMIDistanceToBBEnd + getShortestDistance(CurMBB, UseMBB) +
            UseDistanceFromBBBegin;
 
   if (CurLoop == UseLoop) {
@@ -370,7 +369,7 @@ double AMDGPUNextUseAnalysis::calculateBackedgeDistance(MachineInstr *CurMI,
 
   if (!CurLoop->contains(UseLoop) && !UseLoop->contains(CurLoop)) {
     auto [LoopDistance, ExitingLatch] = getLoopDistanceAndExitingLatch(CurMBB);
-    return LoopDistance + getShortestDistanceFromTable(ExitingLatch, UseMBB) +
+    return LoopDistance + getShortestDistance(ExitingLatch, UseMBB) +
            UseDistanceFromBBBegin;
   }
 
@@ -468,7 +467,6 @@ void AMDGPUNextUseAnalysis::printAllDistances(MachineFunction &MF) {
   }
 }
 
-
 // TODO: Remove it. It is only used for testing.
 std::optional<double>
 AMDGPUNextUseAnalysis::getNextUseDistance(Register DefReg) {
@@ -556,9 +554,8 @@ bool AMDGPUNextUseAnalysis::run(MachineFunction &MF,
     }
   }
 
-  calculateShortestPaths(MF);
-
   if (DumpNextUseDistance) {
+    calculateShortestPaths(MF);
     MF.print(errs());
     printAllDistances(MF);
   }

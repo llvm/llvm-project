@@ -56,14 +56,6 @@ class AMDGPUNextUseAnalysis {
       ShortestPathTable;
   /// We assume an approximate trip count of 1000 for all loops.
   static constexpr const double LoopWeight = 1000.0;
-  /// Returns the shortest ditance from ShortestPathTable. Will crash if
-  /// {FromMBB,ToMBB} not found.
-  double getShortestDistanceFromTable(MachineBasicBlock *FromMBB,
-                                      MachineBasicBlock *ToMBB) const {
-    auto It = ShortestPathTable.find({FromMBB, ToMBB});
-    assert(It != ShortestPathTable.end() && "Not found in table!");
-    return It->second;
-  }
   bool isBackedge(MachineBasicBlock *From, MachineBasicBlock *To) const;
   double getShortestPath(MachineBasicBlock *From, MachineBasicBlock *To);
   /// Goes over all MBB pairs in \p MF, calculates the shortest path between
@@ -76,7 +68,7 @@ class AMDGPUNextUseAnalysis {
   /// its closest exiting latch of \p CurLoop.
   std::pair<double, MachineBasicBlock *>
   getShortestDistanceToExitingLatch(MachineBasicBlock *CurMBB,
-                                    MachineLoop *CurLoop) const;
+                                    MachineLoop *CurLoop);
   /// Helper function for calculating the minimum instruction distance from the
   /// outer loop header to the outer loop latch.
   std::pair<double, MachineBasicBlock *> getNestedLoopDistanceAndExitingLatch(
@@ -126,14 +118,17 @@ public:
   /// the earliest loop latch. \Returns the path cost and the earliest latch
   /// MBB.
   std::pair<double, MachineBasicBlock *>
-  getLoopDistanceAndExitingLatch(MachineBasicBlock *CurMBB) const;
-  /// Returns the shortest ditance from ShortestPathTable.
+  getLoopDistanceAndExitingLatch(MachineBasicBlock *CurMBB);
+  /// Calculates the shortest distance and caches it.
   double getShortestDistance(MachineBasicBlock *FromMBB,
-                             MachineBasicBlock *ToMBB) const {
+                             MachineBasicBlock *ToMBB) {
     auto It = ShortestPathTable.find({FromMBB, ToMBB});
-    if (It == ShortestPathTable.end())
-      return std::numeric_limits<double>::max();
-    return It->second;
+    if (It != ShortestPathTable.end())
+      return It->second;
+    double ShortestDistance = 0.0;
+    ShortestDistance = getShortestPath(FromMBB, ToMBB);
+    ShortestPathTable[std::make_pair(FromMBB, ToMBB)] = ShortestDistance;
+    return ShortestDistance;
   }
 };
 
