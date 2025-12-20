@@ -178,7 +178,7 @@ public:
               ++AppliedFixes;
             }
             FixLoc = getLocation(FixAbsoluteFilePath, Repl.getOffset());
-            FixLocations.push_back(std::make_pair(FixLoc, CanBeApplied));
+            FixLocations.emplace_back(FixLoc, CanBeApplied);
             Entry.BuildDir = Error.BuildDirectory;
           }
         }
