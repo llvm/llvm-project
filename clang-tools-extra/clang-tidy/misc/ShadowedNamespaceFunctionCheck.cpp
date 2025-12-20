@@ -97,7 +97,7 @@ public:
 
     if (Func->getName() == GlobalFuncName && !Func->isVariadic() &&
         hasSameSignature(Func, GlobalFunc)) {
-      // TODO: AllShadowedFuncs
+      AllShadowedFuncs.insert(Func);
       if (!ShadowedFunc) {
         ShadowedFunc = Func;
         ShadowedNamespace = CurrentNS;
