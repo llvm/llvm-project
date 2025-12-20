@@ -8502,7 +8502,7 @@ LegalizerHelper::lowerFPTOINT_SAT(MachineInstr &MI) {
   return Legalized;
 }
 
-// fp conversions using truncating and extending loads and stores.
+// Floating-point conversions using truncating and extending loads and stores.
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFPExtAndTruncMem(MachineInstr &MI) {
   assert((MI.getOpcode() == TargetOpcode::G_FPEXT ||
