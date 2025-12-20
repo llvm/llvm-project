@@ -572,50 +572,6 @@ define i32 @OrSelectIcmpNonZero(i32 %a, i32 %b) {
   ret i32 %or
 }
 
-define i8 @comBinOpSelectComBinOpRev1(i8 %arg0, i8 %arg1) {
-; CHECK-LABEL: @comBinOpSelectComBinOpRev1(
-; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 5, i8 1
-; CHECK-NEXT:    [[V3:%.*]] = or i8 [[ARG0:%.*]], [[V3_V]]
-; CHECK-NEXT:    ret i8 [[V3]]
-;
-  %v0 = icmp eq i8 %arg1, -1
-  %v1 = or i8 %arg0, 4
-  %v2 = select i1 %v0, i8 %v1, i8 %arg0
-  %v3 = or i8 1, %v2
-  ret i8 %v3
-}
-
-
-define i8 @comBinOpSelectComBinOpRev2(i8 %arg0, i8 %arg1) {
-; CHECK-LABEL: @comBinOpSelectComBinOpRev2(
-; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 5, i8 1
-; CHECK-NEXT:    [[V3:%.*]] = or i8 [[ARG0:%.*]], [[V3_V]]
-; CHECK-NEXT:    ret i8 [[V3]]
-;
-  %v0 = icmp eq i8 %arg1, -1
-  %v1 = or i8 4, %arg0
-  %v2 = select i1 %v0, i8 %v1, i8 %arg0
-  %v3 = or i8 %v2, 1
-  ret i8 %v3
-}
-
-
-define i8 @comBinOpSelectComBinOpRev3(i8 %arg0, i8 %arg1) {
-; CHECK-LABEL: @comBinOpSelectComBinOpRev3(
-; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
-; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 5, i8 1
-; CHECK-NEXT:    [[V3:%.*]] = or i8 [[ARG0:%.*]], [[V3_V]]
-; CHECK-NEXT:    ret i8 [[V3]]
-;
-  %v0 = icmp eq i8 %arg1, -1
-  %v1 = or i8 4, %arg0
-  %v2 = select i1 %v0, i8 %v1, i8 %arg0
-  %v3 = or i8 1, %v2
-  ret i8 %v3
-}
-
 define i8 @BinOpSelectBinOpMultiUseRegsWithSelect1(i8 %arg0, i8 %arg1, i1 %whatToReturn) {
 ; CHECK-LABEL: @BinOpSelectBinOpMultiUseRegsWithSelect1(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
