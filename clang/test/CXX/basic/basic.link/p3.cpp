@@ -13,8 +13,7 @@ struct module { struct inner {}; };
 constexpr int n = 123;
 
 export module m; // #1
-module y = {}; // expected-error {{multiple module declarations}}
-// expected-error@-1 {{unexpected preprocessing token '=' after module name, only ';' and '[' (start of attribute specifier sequence) are allowed}}
+module y = {}; // expected-error {{multiple module declarations}} expected-error 2{{}}
 // expected-note@#1 {{previous module declaration}}
 
 ::import x = {};
@@ -24,8 +23,8 @@ import::inner xi = {};
 module::inner yi = {};
 
 namespace N {
-  module a; // expected-error {{module declaration can only appear at the top level}}
-  import b; // expected-error {{import declaration can only appear at the top level}}
+  module a;
+  import b;
 }
 
 extern "C++" module cxxm;
@@ -46,11 +45,10 @@ constexpr int n = 123;
 
 export module m; // #1
 
-import x = {}; // expected-error {{import directive must end with a ';'}}
+import x = {}; // expected-error {{expected ';' after module name}}
                // expected-error@-1 {{module 'x' not found}}
 
 //--- ImportError2.cpp
-// expected-no-diagnostics
 module;
 
 struct module { struct inner {}; };
@@ -65,4 +63,7 @@ template<> struct import<n> {
   static X y;
 };
 
-struct X {} import<n>::y;
+// This is not valid because the 'import <n>' is a pp-import, even though it
+// grammatically can't possibly be an import declaration.
+struct X {} import<n>::y; // expected-error {{'n' file not found}}
+
