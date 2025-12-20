@@ -10,7 +10,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclFriend.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "llvm/ADT/STLExtras.h"
@@ -41,6 +40,11 @@ static bool hasSameSignature(const FunctionDecl *Func1,
                      makeCannonicalTypesRange(Func2->parameters()));
 }
 
+// FIXME: get rid of this
+static bool isUnsupportedYet(const FunctionDecl *Func) {
+  return Func->isVariadic() || Func->isTemplated();
+}
+
 namespace {
 class ShadowedFunctionFinder : public DynamicRecursiveASTVisitor {
 public:
@@ -53,55 +57,20 @@ public:
     if (CurrentNamespaceStack.empty())
       return true;
 
-    const NamespaceDecl *CurrentNS = CurrentNamespaceStack.back();
-
-    // TODO: syncronize this check with the matcher?
-    if (Func == GlobalFunc || Func->isTemplated() ||
-        Func->isThisDeclarationADefinition())
+    if (Func->getDefinition() || isUnsupportedYet(Func))
       return true;
-
-    if (Func->getDefinition())
-      return true;
-
-    if (Func->getName() == GlobalFuncName && !Func->isVariadic() &&
-        hasSameSignature(Func, GlobalFunc)) {
-      AllShadowedFuncs.insert(Func);
-      if (!ShadowedFunc) {
-        ShadowedFunc = Func;
-        ShadowedNamespace = CurrentNS;
-      }
-    }
-    return true;
-  }
-
-  bool VisitFriendDecl(FriendDecl *Friend) override {
-    // Only process functions that are inside a namespace (not in global scope)
-    if (CurrentNamespaceStack.empty())
-      return true;
-
-    const FunctionDecl *Func =
-        dyn_cast_or_null<FunctionDecl>(Friend->getFriendDecl());
-    if (!Func) {
-      return true;
-    }
 
     const NamespaceDecl *CurrentNS = CurrentNamespaceStack.back();
 
-    // TODO: syncronize this check with the matcher?
-    if (Func == GlobalFunc || Func->isTemplated() ||
-        Func->isThisDeclarationADefinition())
-      return true;
-
-    if (Func->getDefinition())
-      return true;
-
-    if (Func->getName() == GlobalFuncName && !Func->isVariadic() &&
+    if (Func != GlobalFunc && Func->getName() == GlobalFuncName &&
         hasSameSignature(Func, GlobalFunc)) {
       AllShadowedFuncs.insert(Func);
       if (!ShadowedFunc) {
+        if (Func->isInIdentifierNamespace(Decl::IDNS_OrdinaryFriend) ||
+            Func->isInIdentifierNamespace(Decl::IDNS_TagFriend))
+          IsShadowedFuncFriend = true;
         ShadowedFunc = Func;
         ShadowedNamespace = CurrentNS;
-        IsShadowedFuncFriend = true;
       }
     }
     return true;
@@ -117,7 +86,7 @@ public:
 
     // Traverse children (which will call VisitFunctionDecl for functions
     // inside)
-    bool Result = DynamicRecursiveASTVisitor::TraverseNamespaceDecl(NS);
+    const bool Result = DynamicRecursiveASTVisitor::TraverseNamespaceDecl(NS);
 
     // Pop the namespace from the stack
     CurrentNamespaceStack.pop_back();
@@ -148,13 +117,12 @@ private:
 
 void ShadowedNamespaceFunctionCheck::registerMatchers(MatchFinder *Finder) {
   using ast_matchers::isTemplateInstantiation;
-  Finder->addMatcher(functionDecl(isDefinition(),
-                                  hasDeclContext(translationUnitDecl()),
-                                  unless(anyOf(isImplicit(), isVariadic(),
-                                               isMain(), isStaticStorageClass(),
-                                               isTemplateInstantiation())))
-                         .bind("func"),
-                     this);
+  Finder->addMatcher(
+      functionDecl(
+          isDefinition(), hasDeclContext(translationUnitDecl()),
+          unless(anyOf(isImplicit(), isMain(), isStaticStorageClass())))
+          .bind("func"),
+      this);
 }
 
 void ShadowedNamespaceFunctionCheck::check(
@@ -163,7 +131,7 @@ void ShadowedNamespaceFunctionCheck::check(
   assert(Func);
 
   const StringRef FuncName = Func->getName();
-  if (FuncName.empty())
+  if (FuncName.empty() || isUnsupportedYet(Func))
     return;
 
   ShadowedFunctionFinder Finder(Func, FuncName);
