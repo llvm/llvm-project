@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir -fmath-errno %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s -check-prefix=ALL,CIR-ERRNO
+// RUN: FileCheck --input-file=%t.cir %s -check-prefixes=ALL,CIR-ERRNO
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t-no-errno.cir
-// RUN: FileCheck --input-file=%t-no-errno.cir %s -check-prefix=ALL,CIR-NO-ERRNO
+// RUN: FileCheck --input-file=%t-no-errno.cir %s -check-prefixes=ALL,CIR-NO-ERRNO
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir -fmath-errno -O1 %s -o %t-errno-o1.cir
 // RUN: FileCheck --input-file=%t-errno-o1.cir %s -check-prefixes=ALL,CIR-ERRNO-O1
