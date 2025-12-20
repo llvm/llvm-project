@@ -60,6 +60,9 @@ public:
         Func->isThisDeclarationADefinition())
       return true;
 
+    if (Func->getDefinition())
+      return true;
+
     if (Func->getName() == GlobalFuncName && !Func->isVariadic() &&
         hasSameSignature(Func, GlobalFunc)) {
       AllShadowedFuncs.insert(Func);
@@ -89,8 +92,12 @@ public:
         Func->isThisDeclarationADefinition())
       return true;
 
+    if (Func->getDefinition())
+      return true;
+
     if (Func->getName() == GlobalFuncName && !Func->isVariadic() &&
         hasSameSignature(Func, GlobalFunc)) {
+      // TODO: AllShadowedFuncs
       if (!ShadowedFunc) {
         ShadowedFunc = Func;
         ShadowedNamespace = CurrentNS;
@@ -168,10 +175,6 @@ void ShadowedNamespaceFunctionCheck::check(
   const bool IsShadowedFuncFriend = Finder.isShadowedFuncFriend();
 
   if (!ShadowedFunc || !ShadowedNamespace)
-    return;
-
-  // TODO: should it be inside ShadowedFunctionFinder?
-  if (ShadowedFunc->getDefinition())
     return;
 
   const bool Ambiguous = AllShadowedFuncs.size() > 1;

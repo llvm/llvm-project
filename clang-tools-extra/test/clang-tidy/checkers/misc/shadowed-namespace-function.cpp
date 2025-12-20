@@ -233,3 +233,26 @@ void f1_inline_ns() {}
 // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
 //////////////////////////////////////////////////////////////////////////////////////////
+
+// Test case: The implementation only checks the first shadowed function for
+// having a definition. If the first one has a definition, it returns early
+// even if other shadowed functions without definitions should still warn.
+void f1_definition_check();
+namespace foo_def1 {
+  void f0_definition_check();  // Has definition - found first
+  void f1_definition_check();  // Has definition - found first
+}
+namespace foo_def2 {
+  void f0_definition_check();     // No definition - should still warn
+  void f1_definition_check();     // No definition - should still warn
+}
+void foo_def1::f0_definition_check() {}
+void foo_def1::f1_definition_check() {}
+void f0_definition_check() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'f0_definition_check' shadows 'foo_def2::f0_definition_check' [misc-shadowed-namespace-function]
+// CHECK-FIXES: void foo_def2::f0_definition_check() {}
+void f1_definition_check() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'f1_definition_check' shadows 'foo_def2::f1_definition_check' [misc-shadowed-namespace-function]
+// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+//////////////////////////////////////////////////////////////////////////////////////////
