@@ -1121,7 +1121,7 @@ private:
     void setTypeInfo(AsmTypeInfo Type) { CurType = Type; }
   };
 
-  bool Error(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt,
+  bool Error(SMLoc L, const Twine &Msg, SMRange Range = {},
              bool MatchingInlineAsm = false) {
     MCAsmParser &Parser = getParser();
     if (MatchingInlineAsm) {
@@ -1170,6 +1170,9 @@ private:
                                      bool IsParsingOffsetOperator = false);
   void tryParseOperandIdx(AsmToken::TokenKind PrevTK,
                           IntelExprStateMachine &SM);
+
+  bool CheckDispOverflow(MCRegister BaseReg, MCRegister IndexReg,
+                         const MCExpr *Disp, SMLoc Loc);
 
   bool ParseMemOperand(MCRegister SegReg, const MCExpr *Disp, SMLoc StartLoc,
                        SMLoc EndLoc, OperandVector &Operands);
@@ -2470,10 +2473,10 @@ bool X86AsmParser::ParseIntelOffsetOperator(const MCExpr *&Val, StringRef &ID,
 // Report back its kind, or IOK_INVALID if does not evaluated as a known one
 unsigned X86AsmParser::IdentifyIntelInlineAsmOperator(StringRef Name) {
   return StringSwitch<unsigned>(Name)
-    .Cases("TYPE","type",IOK_TYPE)
-    .Cases("SIZE","size",IOK_SIZE)
-    .Cases("LENGTH","length",IOK_LENGTH)
-    .Default(IOK_INVALID);
+      .Cases({"TYPE", "type"}, IOK_TYPE)
+      .Cases({"SIZE", "size"}, IOK_SIZE)
+      .Cases({"LENGTH", "length"}, IOK_LENGTH)
+      .Default(IOK_INVALID);
 }
 
 /// Parse the 'LENGTH', 'TYPE' and 'SIZE' operators.  The LENGTH operator
@@ -2516,8 +2519,8 @@ unsigned X86AsmParser::ParseIntelInlineAsmOperator(unsigned OpKind) {
 unsigned X86AsmParser::IdentifyMasmOperator(StringRef Name) {
   return StringSwitch<unsigned>(Name.lower())
       .Case("type", MOK_TYPE)
-      .Cases("size", "sizeof", MOK_SIZEOF)
-      .Cases("length", "lengthof", MOK_LENGTHOF)
+      .Cases({"size", "sizeof"}, MOK_SIZEOF)
+      .Cases({"length", "lengthof"}, MOK_LENGTHOF)
       .Default(MOK_INVALID);
 }
 
@@ -2581,21 +2584,21 @@ bool X86AsmParser::ParseMasmOperator(unsigned OpKind, int64_t &Val) {
 bool X86AsmParser::ParseIntelMemoryOperandSize(unsigned &Size,
                                                StringRef *SizeStr) {
   Size = StringSwitch<unsigned>(getTok().getString())
-    .Cases("BYTE", "byte", 8)
-    .Cases("WORD", "word", 16)
-    .Cases("DWORD", "dword", 32)
-    .Cases("FLOAT", "float", 32)
-    .Cases("LONG", "long", 32)
-    .Cases("FWORD", "fword", 48)
-    .Cases("DOUBLE", "double", 64)
-    .Cases("QWORD", "qword", 64)
-    .Cases("MMWORD","mmword", 64)
-    .Cases("XWORD", "xword", 80)
-    .Cases("TBYTE", "tbyte", 80)
-    .Cases("XMMWORD", "xmmword", 128)
-    .Cases("YMMWORD", "ymmword", 256)
-    .Cases("ZMMWORD", "zmmword", 512)
-    .Default(0);
+             .Cases({"BYTE", "byte"}, 8)
+             .Cases({"WORD", "word"}, 16)
+             .Cases({"DWORD", "dword"}, 32)
+             .Cases({"FLOAT", "float"}, 32)
+             .Cases({"LONG", "long"}, 32)
+             .Cases({"FWORD", "fword"}, 48)
+             .Cases({"DOUBLE", "double"}, 64)
+             .Cases({"QWORD", "qword"}, 64)
+             .Cases({"MMWORD", "mmword"}, 64)
+             .Cases({"XWORD", "xword"}, 80)
+             .Cases({"TBYTE", "tbyte"}, 80)
+             .Cases({"XMMWORD", "xmmword"}, 128)
+             .Cases({"YMMWORD", "ymmword"}, 256)
+             .Cases({"ZMMWORD", "zmmword"}, 512)
+             .Default(0);
   if (Size) {
     if (SizeStr)
       *SizeStr = getTok().getString();
@@ -2801,6 +2804,9 @@ bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
       MaybeDirectBranchDest = false;
   }
 
+  if (CheckDispOverflow(BaseReg, IndexReg, Disp, Start))
+    return true;
+
   if ((BaseReg || IndexReg || RegNo || DefaultBaseReg))
     Operands.push_back(X86Operand::CreateMem(
         getPointerWidth(), RegNo, Disp, BaseReg, IndexReg, Scale, Start, End,
@@ -2886,22 +2892,22 @@ bool X86AsmParser::parseATTOperand(OperandVector &Operands) {
 // otherwise the EFLAGS Condition Code enumerator.
 X86::CondCode X86AsmParser::ParseConditionCode(StringRef CC) {
   return StringSwitch<X86::CondCode>(CC)
-      .Case("o", X86::COND_O)          // Overflow
-      .Case("no", X86::COND_NO)        // No Overflow
-      .Cases("b", "nae", X86::COND_B)  // Below/Neither Above nor Equal
-      .Cases("ae", "nb", X86::COND_AE) // Above or Equal/Not Below
-      .Cases("e", "z", X86::COND_E)    // Equal/Zero
-      .Cases("ne", "nz", X86::COND_NE) // Not Equal/Not Zero
-      .Cases("be", "na", X86::COND_BE) // Below or Equal/Not Above
-      .Cases("a", "nbe", X86::COND_A)  // Above/Neither Below nor Equal
-      .Case("s", X86::COND_S)          // Sign
-      .Case("ns", X86::COND_NS)        // No Sign
-      .Cases("p", "pe", X86::COND_P)   // Parity/Parity Even
-      .Cases("np", "po", X86::COND_NP) // No Parity/Parity Odd
-      .Cases("l", "nge", X86::COND_L)  // Less/Neither Greater nor Equal
-      .Cases("ge", "nl", X86::COND_GE) // Greater or Equal/Not Less
-      .Cases("le", "ng", X86::COND_LE) // Less or Equal/Not Greater
-      .Cases("g", "nle", X86::COND_G)  // Greater/Neither Less nor Equal
+      .Case("o", X86::COND_O)            // Overflow
+      .Case("no", X86::COND_NO)          // No Overflow
+      .Cases({"b", "nae"}, X86::COND_B)  // Below/Neither Above nor Equal
+      .Cases({"ae", "nb"}, X86::COND_AE) // Above or Equal/Not Below
+      .Cases({"e", "z"}, X86::COND_E)    // Equal/Zero
+      .Cases({"ne", "nz"}, X86::COND_NE) // Not Equal/Not Zero
+      .Cases({"be", "na"}, X86::COND_BE) // Below or Equal/Not Above
+      .Cases({"a", "nbe"}, X86::COND_A)  // Above/Neither Below nor Equal
+      .Case("s", X86::COND_S)            // Sign
+      .Case("ns", X86::COND_NS)          // No Sign
+      .Cases({"p", "pe"}, X86::COND_P)   // Parity/Parity Even
+      .Cases({"np", "po"}, X86::COND_NP) // No Parity/Parity Odd
+      .Cases({"l", "nge"}, X86::COND_L)  // Less/Neither Greater nor Equal
+      .Cases({"ge", "nl"}, X86::COND_GE) // Greater or Equal/Not Less
+      .Cases({"le", "ng"}, X86::COND_LE) // Less or Equal/Not Greater
+      .Cases({"g", "nle"}, X86::COND_G)  // Greater/Neither Less nor Equal
       .Default(X86::COND_INVALID);
 }
 
@@ -3008,6 +3014,40 @@ bool X86AsmParser::HandleAVX512Operand(OperandVector &Operands) {
         // allow it.
         if (Z)
           Operands.push_back(std::move(Z));
+      }
+    }
+  }
+  return false;
+}
+
+/// Returns false if okay and true if there was an overflow.
+bool X86AsmParser::CheckDispOverflow(MCRegister BaseReg, MCRegister IndexReg,
+                                     const MCExpr *Disp, SMLoc Loc) {
+  // If the displacement is a constant, check overflows. For 64-bit addressing,
+  // gas requires isInt<32> and otherwise reports an error. For others, gas
+  // reports a warning and allows a wider range. E.g. gas allows
+  // [-0xffffffff,0xffffffff] for 32-bit addressing (e.g. Linux kernel uses
+  // `leal -__PAGE_OFFSET(%ecx),%esp` where __PAGE_OFFSET is 0xc0000000).
+  if (BaseReg || IndexReg) {
+    if (auto CE = dyn_cast<MCConstantExpr>(Disp)) {
+      auto Imm = CE->getValue();
+      bool Is64 = X86MCRegisterClasses[X86::GR64RegClassID].contains(BaseReg) ||
+                  X86MCRegisterClasses[X86::GR64RegClassID].contains(IndexReg);
+      bool Is16 = X86MCRegisterClasses[X86::GR16RegClassID].contains(BaseReg);
+      if (Is64) {
+        if (!isInt<32>(Imm))
+          return Error(Loc, "displacement " + Twine(Imm) +
+                                " is not within [-2147483648, 2147483647]");
+      } else if (!Is16) {
+        if (!isUInt<32>(Imm < 0 ? -uint64_t(Imm) : uint64_t(Imm))) {
+          Warning(Loc, "displacement " + Twine(Imm) +
+                           " shortened to 32-bit signed " +
+                           Twine(static_cast<int32_t>(Imm)));
+        }
+      } else if (!isUInt<16>(Imm < 0 ? -uint64_t(Imm) : uint64_t(Imm))) {
+        Warning(Loc, "displacement " + Twine(Imm) +
+                         " shortened to 16-bit signed " +
+                         Twine(static_cast<int16_t>(Imm)));
       }
     }
   }
@@ -3192,34 +3232,8 @@ bool X86AsmParser::ParseMemOperand(MCRegister SegReg, const MCExpr *Disp,
                                       ErrMsg))
     return Error(BaseLoc, ErrMsg);
 
-  // If the displacement is a constant, check overflows. For 64-bit addressing,
-  // gas requires isInt<32> and otherwise reports an error. For others, gas
-  // reports a warning and allows a wider range. E.g. gas allows
-  // [-0xffffffff,0xffffffff] for 32-bit addressing (e.g. Linux kernel uses
-  // `leal -__PAGE_OFFSET(%ecx),%esp` where __PAGE_OFFSET is 0xc0000000).
-  if (BaseReg || IndexReg) {
-    if (auto CE = dyn_cast<MCConstantExpr>(Disp)) {
-      auto Imm = CE->getValue();
-      bool Is64 = X86MCRegisterClasses[X86::GR64RegClassID].contains(BaseReg) ||
-                  X86MCRegisterClasses[X86::GR64RegClassID].contains(IndexReg);
-      bool Is16 = X86MCRegisterClasses[X86::GR16RegClassID].contains(BaseReg);
-      if (Is64) {
-        if (!isInt<32>(Imm))
-          return Error(BaseLoc, "displacement " + Twine(Imm) +
-                                    " is not within [-2147483648, 2147483647]");
-      } else if (!Is16) {
-        if (!isUInt<32>(Imm < 0 ? -uint64_t(Imm) : uint64_t(Imm))) {
-          Warning(BaseLoc, "displacement " + Twine(Imm) +
-                               " shortened to 32-bit signed " +
-                               Twine(static_cast<int32_t>(Imm)));
-        }
-      } else if (!isUInt<16>(Imm < 0 ? -uint64_t(Imm) : uint64_t(Imm))) {
-        Warning(BaseLoc, "displacement " + Twine(Imm) +
-                             " shortened to 16-bit signed " +
-                             Twine(static_cast<int16_t>(Imm)));
-      }
-    }
-  }
+  if (CheckDispOverflow(BaseReg, IndexReg, Disp, BaseLoc))
+    return true;
 
   if (SegReg || BaseReg || IndexReg)
     Operands.push_back(X86Operand::CreateMem(getPointerWidth(), SegReg, Disp,
@@ -4322,7 +4336,7 @@ bool X86AsmParser::matchAndEmitATTInstruction(
     SMLoc IDLoc, unsigned &Opcode, MCInst &Inst, OperandVector &Operands,
     MCStreamer &Out, uint64_t &ErrorInfo, bool MatchingInlineAsm) {
   X86Operand &Op = static_cast<X86Operand &>(*Operands[0]);
-  SMRange EmptyRange = std::nullopt;
+  SMRange EmptyRange;
   // In 16-bit mode, if data32 is specified, temporarily switch to 32-bit mode
   // when matching the instruction.
   if (ForcedDataPrefix == X86::Is32Bit)
@@ -4548,7 +4562,7 @@ bool X86AsmParser::matchAndEmitIntelInstruction(
     SMLoc IDLoc, unsigned &Opcode, MCInst &Inst, OperandVector &Operands,
     MCStreamer &Out, uint64_t &ErrorInfo, bool MatchingInlineAsm) {
   X86Operand &Op = static_cast<X86Operand &>(*Operands[0]);
-  SMRange EmptyRange = std::nullopt;
+  SMRange EmptyRange;
   // Find one unsized memory operand, if present.
   X86Operand *UnsizedMemOp = nullptr;
   for (const auto &Op : Operands) {

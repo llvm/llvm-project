@@ -90,6 +90,14 @@ def err_unterminated___pragma : Error<"missing terminating ')' character">;
 
 def err_conflict_marker : Error<"version control conflict marker in file">;
 
+def err_counter_overflow : Error<
+  "'__COUNTER__' value cannot exceed 2'147'483'647">;
+def ext_counter : Extension<
+  "'__COUNTER__' is a C2y extension">, InGroup<C2y>;
+def warn_counter : Warning<
+  "'__COUNTER__' is incompatible with standards before C2y">,
+  InGroup<CPre2yCompat>, DefaultIgnore;
+
 def err_raw_delim_too_long : Error<
   "raw string delimiter longer than 16 characters"
   "; use PREFIX( )PREFIX to delimit raw string">;
@@ -951,6 +959,10 @@ def warn_quoted_include_in_framework_header : Warning<
 def warn_framework_include_private_from_public : Warning<
   "public framework header includes private framework header '%0'"
   >, InGroup<FrameworkIncludePrivateFromPublic>;
+def warn_header_shadowing : Warning<
+  "multiple candidates for header '%0' found; "
+  "directory '%1' chosen, ignoring others including '%2'">,
+  InGroup<ShadowHeader>, DefaultIgnore;
 def warn_deprecated_module_dot_map : Warning<
   "'%0' as a module map name is deprecated, rename it to %select{module.modulemap|module.private.modulemap}1%select{| in the 'Modules' directory of the framework}2">,
   InGroup<DeprecatedModuleDotMap>;

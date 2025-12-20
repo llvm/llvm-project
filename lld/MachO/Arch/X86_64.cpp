@@ -54,7 +54,8 @@ static constexpr std::array<RelocAttrs, 10> relocAttrsArray{{
     {"UNSIGNED", B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) | B(BYTE1) |
                      B(BYTE4) | B(BYTE8)},
     {"SIGNED", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
-    {"BRANCH", B(PCREL) | B(EXTERN) | B(BRANCH) | B(BYTE1) | B(BYTE4)},
+    {"BRANCH",
+     B(PCREL) | B(EXTERN) | B(LOCAL) | B(BRANCH) | B(BYTE1) | B(BYTE4)},
     {"GOT_LOAD", B(PCREL) | B(EXTERN) | B(GOT) | B(LOAD) | B(BYTE4)},
     {"GOT", B(PCREL) | B(EXTERN) | B(GOT) | B(POINTER) | B(BYTE4)},
     {"SUBTRACTOR", B(SUBTRAHEND) | B(EXTERN) | B(BYTE4) | B(BYTE8)},
@@ -104,7 +105,7 @@ int64_t X86_64::getEmbeddedAddend(MemoryBufferRef mb, uint64_t offset,
 void X86_64::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
                          uint64_t relocVA) const {
   if (r.pcrel) {
-    uint64_t pc = relocVA + (1 << r.length) + pcrelOffset(r.type);
+    uint64_t pc = relocVA + (1ull << r.length) + pcrelOffset(r.type);
     value -= pc;
   }
 

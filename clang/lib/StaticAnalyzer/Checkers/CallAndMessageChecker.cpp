@@ -20,7 +20,9 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -76,6 +78,10 @@ public:
   };
 
   bool ChecksEnabled[CK_NumCheckKinds] = {false};
+
+  /// When checking a struct value for uninitialized data, should all the fields
+  /// be un-initialized or only find one uninitialized field.
+  bool StructInitializednessComplete = true;
 
   void checkPreObjCMessage(const ObjCMethodCall &msg, CheckerContext &C) const;
 
@@ -179,69 +185,23 @@ static void describeUninitializedArgumentInCall(const CallEvent &Call,
   }
 }
 
-bool CallAndMessageChecker::uninitRefOrPointer(
-    CheckerContext &C, SVal V, SourceRange ArgRange, const Expr *ArgEx,
-    const BugType &BT, const ParmVarDecl *ParamDecl, int ArgumentNumber) const {
-
-  // The pointee being uninitialized is a sign of code smell, not a bug, no need
-  // to sink here.
-  if (!ChecksEnabled[CK_ArgPointeeInitializedness])
-    return false;
-
-  // No parameter declaration available, i.e. variadic function argument.
-  if(!ParamDecl)
-    return false;
-
-  // If parameter is declared as pointer to const in function declaration,
-  // then check if corresponding argument in function call is
-  // pointing to undefined symbol value (uninitialized memory).
-  SmallString<200> Buf;
-  llvm::raw_svector_ostream Os(Buf);
-
-  if (ParamDecl->getType()->isPointerType()) {
-    Os << (ArgumentNumber + 1) << llvm::getOrdinalSuffix(ArgumentNumber + 1)
-       << " function call argument is a pointer to uninitialized value";
-  } else if (ParamDecl->getType()->isReferenceType()) {
-    Os << (ArgumentNumber + 1) << llvm::getOrdinalSuffix(ArgumentNumber + 1)
-       << " function call argument is an uninitialized value";
-  } else
-    return false;
-
-  if(!ParamDecl->getType()->getPointeeType().isConstQualified())
-    return false;
-
-  if (const MemRegion *SValMemRegion = V.getAsRegion()) {
-    const ProgramStateRef State = C.getState();
-    const SVal PSV = State->getSVal(SValMemRegion, C.getASTContext().CharTy);
-    if (PSV.isUndef()) {
-      if (ExplodedNode *N = C.generateErrorNode()) {
-        auto R = std::make_unique<PathSensitiveBugReport>(BT, Os.str(), N);
-        R->addRange(ArgRange);
-        if (ArgEx)
-          bugreporter::trackExpressionValue(N, ArgEx, *R);
-
-        C.emitReport(std::move(R));
-      }
-      return true;
-    }
-  }
-  return false;
-}
-
 namespace {
 class FindUninitializedField {
 public:
-  SmallVector<const FieldDecl *, 10> FieldChain;
+  using FieldChainTy = SmallVector<const FieldDecl *, 10>;
+  FieldChainTy FieldChain;
 
 private:
   StoreManager &StoreMgr;
   MemRegionManager &MrMgr;
   Store store;
+  bool FindNotUninitialized;
 
 public:
   FindUninitializedField(StoreManager &storeMgr, MemRegionManager &mrMgr,
-                         Store s)
-      : StoreMgr(storeMgr), MrMgr(mrMgr), store(s) {}
+                         Store s, bool FindNotUninitialized = false)
+      : StoreMgr(storeMgr), MrMgr(mrMgr), store(s),
+        FindNotUninitialized(FindNotUninitialized) {}
 
   bool Find(const TypedValueRegion *R) {
     QualType T = R->getValueType();
@@ -255,21 +215,113 @@ public:
         FieldChain.push_back(I);
         T = I->getType();
         if (T->isStructureType()) {
-          if (Find(FR))
-            return true;
+          if (FindNotUninitialized ? !Find(FR) : Find(FR))
+            return !FindNotUninitialized;
         } else {
           SVal V = StoreMgr.getBinding(store, loc::MemRegionVal(FR));
-          if (V.isUndef())
-            return true;
+          if (FindNotUninitialized ? !V.isUndef() : V.isUndef())
+            return !FindNotUninitialized;
         }
         FieldChain.pop_back();
       }
     }
 
-    return false;
+    return FindNotUninitialized;
   }
 };
 } // namespace
+
+namespace llvm {
+template <> struct format_provider<FindUninitializedField::FieldChainTy> {
+  static void format(const FindUninitializedField::FieldChainTy &V,
+                     raw_ostream &Stream, StringRef Style) {
+    if (V.size() == 0)
+      return;
+    else if (V.size() == 1)
+      Stream << " (e.g., field: '" << *V[0] << "')";
+    else {
+      Stream << " (e.g., via the field chain: '";
+      interleave(
+          V, Stream, [&Stream](const FieldDecl *FD) { Stream << *FD; }, ".");
+      Stream << "')";
+    }
+  }
+};
+} // namespace llvm
+
+bool CallAndMessageChecker::uninitRefOrPointer(
+    CheckerContext &C, SVal V, SourceRange ArgRange, const Expr *ArgEx,
+    const BugType &BT, const ParmVarDecl *ParamDecl, int ArgumentNumber) const {
+
+  if (!ChecksEnabled[CK_ArgPointeeInitializedness])
+    return false;
+
+  // No parameter declaration available, i.e. variadic function argument.
+  if (!ParamDecl)
+    return false;
+
+  QualType ParamT = ParamDecl->getType();
+  if (!ParamT->isPointerOrReferenceType())
+    return false;
+
+  QualType PointeeT = ParamT->getPointeeType();
+  if (!PointeeT.isConstQualified())
+    return false;
+
+  const MemRegion *SValMemRegion = V.getAsRegion();
+  if (!SValMemRegion)
+    return false;
+
+  // If parameter is declared as pointer to const in function declaration,
+  // then check if corresponding argument in function call is
+  // pointing to undefined symbol value (uninitialized memory).
+
+  const ProgramStateRef State = C.getState();
+  if (PointeeT->isVoidType())
+    PointeeT = C.getASTContext().CharTy;
+  const SVal PointeeV = State->getSVal(SValMemRegion, PointeeT);
+
+  if (PointeeV.isUndef()) {
+    if (ExplodedNode *N = C.generateErrorNode()) {
+      std::string Msg = llvm::formatv(
+          "{0}{1} function call argument is {2} uninitialized value",
+          ArgumentNumber + 1, llvm::getOrdinalSuffix(ArgumentNumber + 1),
+          ParamT->isPointerType() ? "a pointer to" : "an");
+      auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
+      R->addRange(ArgRange);
+      if (ArgEx)
+        bugreporter::trackExpressionValue(N, ArgEx, *R);
+
+      C.emitReport(std::move(R));
+    }
+    return true;
+  }
+
+  if (auto LV = PointeeV.getAs<nonloc::LazyCompoundVal>()) {
+    const LazyCompoundValData *D = LV->getCVData();
+    FindUninitializedField F(C.getState()->getStateManager().getStoreManager(),
+                             C.getSValBuilder().getRegionManager(),
+                             D->getStore(), StructInitializednessComplete);
+
+    if (F.Find(D->getRegion())) {
+      if (ExplodedNode *N = C.generateErrorNode()) {
+        std::string Msg = llvm::formatv(
+            "{0}{1} function call argument {2} an uninitialized value{3}",
+            (ArgumentNumber + 1), llvm::getOrdinalSuffix(ArgumentNumber + 1),
+            ParamT->isPointerType() ? "points to" : "references", F.FieldChain);
+        auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
+        R->addRange(ArgRange);
+        if (ArgEx)
+          bugreporter::trackExpressionValue(N, ArgEx, *R);
+
+        C.emitReport(std::move(R));
+      }
+      return true;
+    }
+  }
+
+  return false;
+}
 
 bool CallAndMessageChecker::PreVisitProcessArg(
     CheckerContext &C, SVal V, SourceRange ArgRange, const Expr *ArgEx,
@@ -313,28 +365,12 @@ bool CallAndMessageChecker::PreVisitProcessArg(
         return true;
       }
       if (ExplodedNode *N = C.generateErrorNode()) {
-        SmallString<512> Str;
-        llvm::raw_svector_ostream os(Str);
-        os << "Passed-by-value struct argument contains uninitialized data";
-
-        if (F.FieldChain.size() == 1)
-          os << " (e.g., field: '" << *F.FieldChain[0] << "')";
-        else {
-          os << " (e.g., via the field chain: '";
-          bool first = true;
-          for (SmallVectorImpl<const FieldDecl *>::iterator
-               DI = F.FieldChain.begin(), DE = F.FieldChain.end(); DI!=DE;++DI){
-            if (first)
-              first = false;
-            else
-              os << '.';
-            os << **DI;
-          }
-          os << "')";
-        }
+        std::string Msg = llvm::formatv(
+            "Passed-by-value struct argument contains uninitialized data{0}",
+            F.FieldChain);
 
         // Generate a report for this bug.
-        auto R = std::make_unique<PathSensitiveBugReport>(BT, os.str(), N);
+        auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
         R->addRange(ArgRange);
 
         if (ArgEx)
@@ -690,6 +726,10 @@ void ento::registerCallAndMessageChecker(CheckerManager &Mgr) {
   QUERY_CHECKER_OPTION(ArgPointeeInitializedness)
   QUERY_CHECKER_OPTION(NilReceiver)
   QUERY_CHECKER_OPTION(UndefReceiver)
+
+  Chk->StructInitializednessComplete =
+      Mgr.getAnalyzerOptions().getCheckerBooleanOption(
+          Mgr.getCurrentCheckerName(), "ArgPointeeInitializednessComplete");
 }
 
 bool ento::shouldRegisterCallAndMessageChecker(const CheckerManager &) {

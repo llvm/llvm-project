@@ -10,8 +10,10 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
+class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
 } // namespace llvm
@@ -37,7 +39,14 @@ VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr);
 
 /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
 /// SCEV expression could be constructed.
-const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
+const SCEV *getSCEVExprForVPValue(const VPValue *V, ScalarEvolution &SE,
+                                  const Loop *L = nullptr);
+
+/// Returns true if \p Addr is an address SCEV that can be passed to
+/// TTI::getAddressComputationCost, i.e. the address SCEV is loop invariant, an
+/// affine AddRec (i.e. induction ), or an add expression of such operands or a
+/// sign-extended AddRec.
+bool isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE, const Loop *L);
 
 /// Returns true if \p VPV is a single scalar, either because it produces the
 /// same value for all lanes or only has its first lane used.
@@ -66,10 +75,32 @@ unsigned getVFScaleFactor(VPRecipeBase *R);
 /// generating the values for the comparison. The recipes are stored in
 /// \p Recipes, and recipes forming an address for a load are also added to
 /// \p GEPs.
+LLVM_ABI_FOR_TEST
 std::optional<VPValue *>
 getRecipesForUncountableExit(VPlan &Plan,
                              SmallVectorImpl<VPRecipeBase *> &Recipes,
                              SmallVectorImpl<VPRecipeBase *> &GEPs);
+
+/// Return a MemoryLocation for \p R with noalias metadata populated from
+/// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
+/// the location is conservatively set to nullptr.
+std::optional<MemoryLocation> getMemoryLocation(const VPRecipeBase &R);
+
+/// Extracts and returns NoWrap and FastMath flags from the induction binop in
+/// \p ID.
+inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
+  if (ID.getKind() == InductionDescriptor::IK_FpInduction)
+    return ID.getInductionBinOp()->getFastMathFlags();
+
+  if (auto *OBO = dyn_cast_if_present<OverflowingBinaryOperator>(
+          ID.getInductionBinOp()))
+    return VPIRFlags::WrapFlagsTy(OBO->hasNoUnsignedWrap(),
+                                  OBO->hasNoSignedWrap());
+
+  assert(ID.getKind() == InductionDescriptor::IK_IntInduction &&
+         "Expected int induction");
+  return VPIRFlags::WrapFlagsTy(false, false);
+}
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//
@@ -91,12 +122,7 @@ public:
            NewBlock->getPredecessors().empty() &&
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
-    SmallVector<VPBlockBase *> Succs(BlockPtr->successors());
-    for (VPBlockBase *Succ : Succs) {
-      Succ->replacePredecessor(BlockPtr, NewBlock);
-      NewBlock->appendSuccessor(Succ);
-    }
-    BlockPtr->clearSuccessors();
+    transferSuccessors(BlockPtr, NewBlock);
     connectBlocks(BlockPtr, NewBlock);
   }
 
@@ -177,6 +203,14 @@ public:
     New->setPredecessors(Old->getPredecessors());
     New->setSuccessors(Old->getSuccessors());
     Old->clearPredecessors();
+    Old->clearSuccessors();
+  }
+
+  /// Transfer successors from \p Old to \p New. \p New must have no successors.
+  static void transferSuccessors(VPBlockBase *Old, VPBlockBase *New) {
+    for (auto *Succ : Old->getSuccessors())
+      Succ->replacePredecessor(Old, New);
+    New->setSuccessors(Old->getSuccessors());
     Old->clearSuccessors();
   }
 

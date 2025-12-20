@@ -48,7 +48,7 @@ enum {
   NEEDS_COPY = 1 << 3,
   NEEDS_TLSDESC = 1 << 4,
   NEEDS_TLSGD = 1 << 5,
-  NEEDS_TLSGD_TO_IE = 1 << 6,
+  // 1 << 6 unused
   NEEDS_GOT_DTPREL = 1 << 7,
   NEEDS_TLSIE = 1 << 8,
   NEEDS_GOT_AUTH = 1 << 9,
@@ -313,6 +313,8 @@ public:
   // represents the Verdef index within the input DSO, which will be converted
   // to a Verneed index in the output. Otherwise, this represents the Verdef
   // index (VER_NDX_LOCAL, VER_NDX_GLOBAL, or a named version).
+  // VER_NDX_LOCAL indicates a defined symbol that has been localized by a
+  // version script's local: directive or --exclude-libs.
   uint16_t versionId;
   LLVM_PREFERRED_TYPE(bool)
   uint8_t versionScriptAssigned : 1;
@@ -350,7 +352,7 @@ public:
   bool needsDynReloc() const {
     return flags.load(std::memory_order_relaxed) &
            (NEEDS_COPY | NEEDS_GOT | NEEDS_PLT | NEEDS_TLSDESC | NEEDS_TLSGD |
-            NEEDS_TLSGD_TO_IE | NEEDS_GOT_DTPREL | NEEDS_TLSIE);
+            NEEDS_GOT_DTPREL | NEEDS_TLSIE);
   }
   void allocateAux(Ctx &ctx) {
     assert(auxIdx == 0);

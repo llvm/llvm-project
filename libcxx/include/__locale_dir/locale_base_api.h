@@ -57,15 +57,11 @@
 //  float               __strtof(const char*, char**, __locale_t);
 //  double              __strtod(const char*, char**, __locale_t);
 //  long double         __strtold(const char*, char**, __locale_t);
-//  long long           __strtoll(const char*, char**, __locale_t);
-//  unsigned long long  __strtoull(const char*, char**, __locale_t);
 // }
 //
 // Character manipulation functions
 // --------------------------------
 // namespace __locale {
-//  int     __isdigit(int, __locale_t);  // required by the headers
-//  int     __isxdigit(int, __locale_t); // required by the headers
 //  int     __toupper(int, __locale_t);
 //  int     __tolower(int, __locale_t);
 //  int     __strcoll(const char*, const char*, __locale_t);
@@ -106,7 +102,6 @@
 //
 //  int     __snprintf(char*, size_t, __locale_t, const char*, ...); // required by the headers
 //  int     __asprintf(char**, __locale_t, const char*, ...);        // required by the headers
-//  int     __sscanf(const char*, __locale_t, const char*, ...);     // required by the headers
 // }
 
 #if _LIBCPP_HAS_LOCALIZATION
@@ -123,18 +118,20 @@
 #    include <__locale_dir/support/fuchsia.h>
 #  elif defined(__linux__)
 #    include <__locale_dir/support/linux.h>
+#  elif _LIBCPP_LIBC_NEWLIB
+#    include <__locale_dir/support/newlib.h>
+#  elif defined(_AIX)
+#    include <__locale_dir/support/aix.h>
 #  else
 
 // TODO: This is a temporary definition to bridge between the old way we defined the locale base API
 //       (by providing global non-reserved names) and the new API. As we move individual platforms
 //       towards the new way of defining the locale base API, this should disappear since each platform
 //       will define those directly.
-#    if defined(_AIX) || defined(__MVS__)
+#    if defined(__MVS__)
 #      include <__locale_dir/locale_base_api/ibm.h>
 #    elif defined(__OpenBSD__)
 #      include <__locale_dir/locale_base_api/openbsd.h>
-#    elif defined(__wasi__) || _LIBCPP_HAS_MUSL_LIBC
-#      include <__locale_dir/locale_base_api/musl.h>
 #    endif
 
 #    include <__locale_dir/locale_base_api/bsd_locale_fallbacks.h>
@@ -194,21 +191,9 @@ inline _LIBCPP_HIDE_FROM_ABI long double __strtold(const char* __nptr, char** __
   return strtold_l(__nptr, __endptr, __loc);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long long __strtoll(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
-  return strtoll_l(__nptr, __endptr, __base, __loc);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI unsigned long long
-__strtoull(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
-  return strtoull_l(__nptr, __endptr, __base, __loc);
-}
-
 //
 // Character manipulation functions
 //
-inline _LIBCPP_HIDE_FROM_ABI int __isdigit(int __ch, __locale_t __loc) { return isdigit_l(__ch, __loc); }
-inline _LIBCPP_HIDE_FROM_ABI int __isxdigit(int __ch, __locale_t __loc) { return isxdigit_l(__ch, __loc); }
-
 #    if defined(_LIBCPP_BUILDING_LIBRARY)
 inline _LIBCPP_HIDE_FROM_ABI int __strcoll(const char* __s1, const char* __s2, __locale_t __loc) {
   return strcoll_l(__s1, __s2, __loc);
@@ -303,11 +288,6 @@ template <class... _Args>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __asprintf(
     char** __s, __locale_t __loc, const char* __format, _Args&&... __args) {
   return std::__libcpp_asprintf_l(__s, __loc, __format, std::forward<_Args>(__args)...);
-}
-template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__scanf__, 3, 4) int __sscanf(
-    const char* __s, __locale_t __loc, const char* __format, _Args&&... __args) {
-  return std::__libcpp_sscanf_l(__s, __loc, __format, std::forward<_Args>(__args)...);
 }
 _LIBCPP_DIAGNOSTIC_POP
 #    undef _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT

@@ -36,8 +36,6 @@ Expected<ExecutorAddr> SimpleExecutorMemoryManager::reserve(uint64_t Size) {
 
 Expected<ExecutorAddr>
 SimpleExecutorMemoryManager::initialize(tpctypes::FinalizeRequest &FR) {
-  std::vector<shared::WrapperFunctionCall> DeallocationActions;
-
   if (FR.Segments.empty()) {
     if (FR.Actions.empty())
       return make_error<StringError>("Finalization request is empty",
@@ -308,7 +306,7 @@ SimpleExecutorMemoryManager::getRegionInfo(ExecutorAddr A, StringRef Context) {
   return getRegionInfo(*Slab, A, Context);
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorMemoryManager::reserveWrapper(const char *ArgData,
                                             size_t ArgSize) {
   return shared::WrapperFunction<rt::SPSSimpleRemoteMemoryMapReserveSignature>::
@@ -318,7 +316,7 @@ SimpleExecutorMemoryManager::reserveWrapper(const char *ArgData,
           .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorMemoryManager::initializeWrapper(const char *ArgData,
                                                size_t ArgSize) {
   return shared::
@@ -329,7 +327,7 @@ SimpleExecutorMemoryManager::initializeWrapper(const char *ArgData,
           .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorMemoryManager::deinitializeWrapper(const char *ArgData,
                                                  size_t ArgSize) {
   return shared::WrapperFunction<
@@ -340,7 +338,7 @@ SimpleExecutorMemoryManager::deinitializeWrapper(const char *ArgData,
           .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorMemoryManager::releaseWrapper(const char *ArgData,
                                             size_t ArgSize) {
   return shared::WrapperFunction<rt::SPSSimpleRemoteMemoryMapReleaseSignature>::

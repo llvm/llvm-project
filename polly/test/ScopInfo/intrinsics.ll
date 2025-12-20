@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -polly-print-instructions -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -polly-print-instructions -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; Verify that we remove the ignored intrinsics from the instruction list.
 ;

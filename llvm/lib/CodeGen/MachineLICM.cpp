@@ -492,7 +492,7 @@ static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo &TRI,
 
       if (PhysReg && !((Word >> Bit) & 1)) {
         for (MCRegUnit Unit : TRI.regunits(PhysReg))
-          RUsFromRegsNotInMask.set(Unit);
+          RUsFromRegsNotInMask.set(static_cast<unsigned>(Unit));
       }
     }
   }
@@ -541,7 +541,8 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
         for (MCRegUnit Unit : TRI->regunits(Reg)) {
           // If it's using a non-loop-invariant register, then it's obviously
           // not safe to hoist.
-          if (RUDefs.test(Unit) || RUClobbers.test(Unit)) {
+          if (RUDefs.test(static_cast<unsigned>(Unit)) ||
+              RUClobbers.test(static_cast<unsigned>(Unit))) {
             HasNonInvariantUse = true;
             break;
           }
@@ -562,16 +563,16 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
     // register, then this is not safe.  Two defs is indicated by setting a
     // PhysRegClobbers bit.
     for (MCRegUnit Unit : TRI->regunits(Reg)) {
-      if (RUDefs.test(Unit)) {
-        RUClobbers.set(Unit);
+      if (RUDefs.test(static_cast<unsigned>(Unit))) {
+        RUClobbers.set(static_cast<unsigned>(Unit));
         RuledOut = true;
-      } else if (RUClobbers.test(Unit)) {
+      } else if (RUClobbers.test(static_cast<unsigned>(Unit))) {
         // MI defined register is seen defined by another instruction in
         // the loop, it cannot be a LICM candidate.
         RuledOut = true;
       }
 
-      RUDefs.set(Unit);
+      RUDefs.set(static_cast<unsigned>(Unit));
     }
   }
 
@@ -612,7 +613,7 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
     // be LICM'ed.
     for (const auto &LI : BB->liveins()) {
       for (MCRegUnit Unit : TRI->regunits(LI.PhysReg))
-        RUDefs.set(Unit);
+        RUDefs.set(static_cast<unsigned>(Unit));
     }
 
     // Funclet entry blocks will clobber all registers
@@ -626,10 +627,10 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
       const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
       if (MCRegister Reg = TLI.getExceptionPointerRegister(PersonalityFn))
         for (MCRegUnit Unit : TRI->regunits(Reg))
-          RUClobbers.set(Unit);
+          RUClobbers.set(static_cast<unsigned>(Unit));
       if (MCRegister Reg = TLI.getExceptionSelectorRegister(PersonalityFn))
         for (MCRegUnit Unit : TRI->regunits(Reg))
-          RUClobbers.set(Unit);
+          RUClobbers.set(static_cast<unsigned>(Unit));
     }
 
     SpeculationState = SpeculateUnknown;
@@ -648,7 +649,7 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
       if (!Reg)
         continue;
       for (MCRegUnit Unit : TRI->regunits(Reg))
-        TermRUs.set(Unit);
+        TermRUs.set(static_cast<unsigned>(Unit));
     }
   }
 
@@ -668,7 +669,8 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
     Register Def = Candidate.Def;
     bool Safe = true;
     for (MCRegUnit Unit : TRI->regunits(Def)) {
-      if (RUClobbers.test(Unit) || TermRUs.test(Unit)) {
+      if (RUClobbers.test(static_cast<unsigned>(Unit)) ||
+          TermRUs.test(static_cast<unsigned>(Unit))) {
         Safe = false;
         break;
       }
@@ -682,7 +684,8 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
       if (!MO.getReg())
         continue;
       for (MCRegUnit Unit : TRI->regunits(MO.getReg())) {
-        if (RUDefs.test(Unit) || RUClobbers.test(Unit)) {
+        if (RUDefs.test(static_cast<unsigned>(Unit)) ||
+            RUClobbers.test(static_cast<unsigned>(Unit))) {
           // If it's using a non-loop-invariant register, then it's obviously
           // not safe to hoist.
           Safe = false;
@@ -1399,7 +1402,7 @@ MachineInstr *MachineLICMImpl::ExtractHoistableLoad(MachineInstr *MI,
   if (NewOpc == 0) return nullptr;
   const MCInstrDesc &MID = TII->get(NewOpc);
   MachineFunction &MF = *MI->getMF();
-  const TargetRegisterClass *RC = TII->getRegClass(MID, LoadRegIndex, TRI);
+  const TargetRegisterClass *RC = TII->getRegClass(MID, LoadRegIndex);
   // Ok, we're unfolding. Create a temporary register and do the unfold.
   Register Reg = MRI->createVirtualRegister(RC);
 

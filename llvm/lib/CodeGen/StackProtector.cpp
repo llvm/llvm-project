@@ -49,7 +49,6 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <optional>
-#include <utility>
 
 using namespace llvm;
 
@@ -577,7 +576,7 @@ bool InsertStackProtectors(const TargetMachine *TM, Function *F,
   // impossible to emit the check in IR, so the target *must* support stack
   // protection in SDAG.
   bool SupportsSelectionDAGSP =
-      TLI->useStackGuardXorFP() ||
+      TLI->useStackGuardMixCookie() ||
       (EnableSelectionDAGSP && !TM->Options.EnableFastISel);
   AllocaInst *AI = nullptr; // Place on stack that stores the stack guard.
   BasicBlock *FailBB = nullptr;

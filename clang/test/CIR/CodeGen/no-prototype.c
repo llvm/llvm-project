@@ -7,9 +7,9 @@
 
 // No-proto definition followed by a correct call.
 int noProto0(x) int x; { return x; }
-// CHECK: cir.func no_proto dso_local @noProto0(%arg0: !s32i {{.+}}) -> !s32i
+// CHECK: cir.func {{.*}} no_proto {{.*}} @noProto0(%arg0: !s32i {{.+}}) -> !s32i
 int test0(int x) {
-  // CHECK: cir.func dso_local @test0
+  // CHECK: cir.func {{.*}} @test0
   return noProto0(x); // We know the definition. Should be a direct call.
   // CHECK: %{{.+}} = cir.call @noProto0(%{{.+}})
 }
@@ -21,9 +21,9 @@ int test0(int x) {
 // definition is not marked as no-proto.
 int noProto1();
 int noProto1(int x) { return x; }
-// CHECK: cir.func dso_local @noProto1(%arg0: !s32i {{.+}}) -> !s32i
+// CHECK: cir.func {{.*}} @noProto1(%arg0: !s32i {{.+}}) -> !s32i
 int test1(int x) {
-  // CHECK: cir.func dso_local @test1
+  // CHECK: cir.func {{.*}} @test1
   return noProto1(x);
   // CHECK: %{{.+}} = cir.call @noProto1(%{{[0-9]+}}) : (!s32i) -> !s32i
 }
@@ -39,7 +39,7 @@ int test2(int x) {
   // CHECK:  {{.*}} = cir.call [[GGO]](%{{[0-9]+}}) : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
 }
 int noProto2(int x) { return x; }
-// CHECK: cir.func no_proto dso_local @noProto2(%arg0: !s32i {{.+}}) -> !s32i
+// CHECK: cir.func {{.*}} no_proto {{.*}} @noProto2(%arg0: !s32i {{.+}}) -> !s32i
 
 // No-proto declaration without definition (any call here is "correct").
 //
@@ -48,7 +48,7 @@ int noProto2(int x) { return x; }
 int noProto3();
 // cir.func private no_proto @noProto3(...) -> !s32i
 int test3(int x) {
-// CHECK: cir.func dso_local @test3
+// CHECK: cir.func {{.*}} @test3
   return noProto3(x);
   // CHECK:  [[GGO:%.*]] = cir.get_global @noProto3 : !cir.ptr<!cir.func<(...) -> !s32i>>
   // CHECK:  [[CAST:%.*]] = cir.cast bitcast [[GGO]] : !cir.ptr<!cir.func<(...) -> !s32i>> -> !cir.ptr<!cir.func<(!s32i) -> !s32i>>
@@ -64,7 +64,7 @@ int test3(int x) {
 
 // No-proto definition followed by an incorrect call due to extra args.
 int noProto4() { return 0; }
-// cir.func private no_proto @noProto4() -> !s32i
+// cir.func {{.*}} no_proto {{.*}} @noProto4() -> !s32i
 int test4(int x) {
   return noProto4(x); // Even if we know the definition, this should compile.
   // CHECK:  [[GGO:%.*]] = cir.get_global @noProto4 : !cir.ptr<!cir.func<() -> !s32i>>
@@ -81,4 +81,4 @@ int test5(int x) {
   // CHECK:  {{%.*}} = cir.call [[CAST]]() : (!cir.ptr<!cir.func<() -> !s32i>>) -> !s32i
 }
 int noProto5(int x) { return x; }
-// CHECK: cir.func no_proto dso_local @noProto5(%arg0: !s32i {{.+}}) -> !s32i
+// CHECK: cir.func {{.*}} no_proto {{.*}} @noProto5(%arg0: !s32i {{.+}}) -> !s32i

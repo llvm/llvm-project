@@ -11,12 +11,6 @@
 ; RUN:   -mattr=+zve64x,+zvl64b -verify-machineinstrs \
 ; RUN:   < %s | FileCheck %s --check-prefixes=CHECK,CHECK-64
 
-declare <vscale x 1 x i64> @llvm.riscv.vslide1down.nxv1i64.i64(
-  <vscale x 1 x i64>,
-  <vscale x 1 x i64>,
-  i64,
-  i32)
-
 define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl1(<vscale x 1 x i64> %0, i64 %1) nounwind {
 ; CHECK-LABEL: intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl1:
 ; CHECK:       # %bb.0: # %entry

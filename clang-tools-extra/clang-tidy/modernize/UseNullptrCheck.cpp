@@ -92,12 +92,13 @@ static bool isReplaceableRange(SourceLocation StartLoc, SourceLocation EndLoc,
 /// Returns true if and only if a replacement was made.
 static void replaceWithNullptr(ClangTidyCheck &Check, SourceManager &SM,
                                SourceLocation StartLoc, SourceLocation EndLoc) {
-  CharSourceRange Range(SourceRange(StartLoc, EndLoc), true);
+  const CharSourceRange Range(SourceRange(StartLoc, EndLoc), true);
   // Add a space if nullptr follows an alphanumeric character. This happens
   // whenever there is an c-style explicit cast to nullptr not surrounded by
   // parentheses and right beside a return statement.
-  SourceLocation PreviousLocation = StartLoc.getLocWithOffset(-1);
-  bool NeedsSpace = isAlphanumeric(*SM.getCharacterData(PreviousLocation));
+  const SourceLocation PreviousLocation = StartLoc.getLocWithOffset(-1);
+  const bool NeedsSpace =
+      isAlphanumeric(*SM.getCharacterData(PreviousLocation));
   Check.diag(Range.getBegin(), "use nullptr") << FixItHint::CreateReplacement(
       Range, NeedsSpace ? " nullptr" : "nullptr");
 }
@@ -136,7 +137,7 @@ public:
   }
 
   bool TraverseStmt(Stmt *S) {
-    bool VisitedPreviously = Visited;
+    const bool VisitedPreviously = Visited;
 
     if (!RecursiveASTVisitor<MacroArgUsageVisitor>::TraverseStmt(S))
       return false;
@@ -237,9 +238,8 @@ public:
 
     auto *CastSubExpr = C->getSubExpr()->IgnoreParens();
     // Ignore cast expressions which cast nullptr literal.
-    if (isa<CXXNullPtrLiteralExpr>(CastSubExpr)) {
+    if (isa<CXXNullPtrLiteralExpr>(CastSubExpr))
       return true;
-    }
 
     if (!FirstSubExpr)
       FirstSubExpr = CastSubExpr;
@@ -258,8 +258,8 @@ public:
     // If the location comes from a macro body expansion, check to see if its
     // coming from one of the allowed 'NULL' macros.
     if (SM.isMacroArgExpansion(StartLoc) && SM.isMacroArgExpansion(EndLoc)) {
-      SourceLocation FileLocStart = SM.getFileLoc(StartLoc),
-                     FileLocEnd = SM.getFileLoc(EndLoc);
+      const SourceLocation FileLocStart = SM.getFileLoc(StartLoc),
+                           FileLocEnd = SM.getFileLoc(EndLoc);
       SourceLocation ImmediateMacroArgLoc, MacroLoc;
       // Skip NULL macros used in macro.
       if (!getMacroAndArgLocations(StartLoc, ImmediateMacroArgLoc, MacroLoc) ||
@@ -274,7 +274,7 @@ public:
     }
 
     if (SM.isMacroBodyExpansion(StartLoc) && SM.isMacroBodyExpansion(EndLoc)) {
-      StringRef OutermostMacroName =
+      const StringRef OutermostMacroName =
           getOutermostMacroName(StartLoc, SM, Context.getLangOpts());
 
       // Check to see if the user wants to replace the macro being expanded.
@@ -285,9 +285,8 @@ public:
       EndLoc = SM.getFileLoc(EndLoc);
     }
 
-    if (!isReplaceableRange(StartLoc, EndLoc, SM)) {
+    if (!isReplaceableRange(StartLoc, EndLoc, SM))
       return skipSubTree();
-    }
     replaceWithNullptr(Check, SM, StartLoc, EndLoc);
 
     return true;
@@ -302,7 +301,7 @@ private:
   /// Tests that all expansions of a macro arg, one of which expands to
   /// result in \p CE, yield NullTo(Member)Pointer casts.
   bool allArgUsesValid(const CastExpr *CE) {
-    SourceLocation CastLoc = CE->getBeginLoc();
+    const SourceLocation CastLoc = CE->getBeginLoc();
 
     // Step 1: Get location of macro arg and location of the macro the arg was
     // provided to.
@@ -348,17 +347,17 @@ private:
 
     // Find the location of the immediate macro expansion.
     while (true) {
-      std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(ArgLoc);
+      const std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(ArgLoc);
       const SrcMgr::SLocEntry *E = &SM.getSLocEntry(LocInfo.first);
       const SrcMgr::ExpansionInfo &Expansion = E->getExpansion();
 
-      SourceLocation OldArgLoc = ArgLoc;
+      const SourceLocation OldArgLoc = ArgLoc;
       ArgLoc = Expansion.getExpansionLocStart();
       if (!Expansion.isMacroArgExpansion()) {
         if (!MacroLoc.isFileID())
           return false;
 
-        StringRef Name =
+        const StringRef Name =
             Lexer::getImmediateMacroName(OldArgLoc, SM, Context.getLangOpts());
         return llvm::is_contained(NullMacros, Name);
       }
@@ -371,7 +370,7 @@ private:
 
       // If spelling location resides in the same FileID as macro expansion
       // location, it means there is no inner macro.
-      FileID MacroFID = SM.getFileID(MacroLoc);
+      const FileID MacroFID = SM.getFileID(MacroLoc);
       if (SM.isInFileID(ArgLoc, MacroFID)) {
         // Don't transform this case. If the characters that caused the
         // null-conversion come from within a macro, they can't be changed.
@@ -394,23 +393,21 @@ private:
   /// - TestLoc is not from a macro expansion.
   /// - TestLoc is from a different macro expansion.
   bool expandsFrom(SourceLocation TestLoc, SourceLocation TestMacroLoc) {
-    if (TestLoc.isFileID()) {
+    if (TestLoc.isFileID())
       return false;
-    }
 
     SourceLocation Loc = TestLoc, MacroLoc;
 
     while (true) {
-      std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
+      const std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
       const SrcMgr::SLocEntry *E = &SM.getSLocEntry(LocInfo.first);
       const SrcMgr::ExpansionInfo &Expansion = E->getExpansion();
 
       Loc = Expansion.getExpansionLocStart();
 
       if (!Expansion.isMacroArgExpansion()) {
-        if (Loc.isFileID()) {
+        if (Loc.isFileID())
           return Loc == TestMacroLoc;
-        }
         // Since Loc is still a macro ID and it's not an argument expansion, we
         // don't need to do the work of handling an argument expansion. Simply
         // keep recursively expanding until we hit a FileID or a macro arg
@@ -457,10 +454,9 @@ private:
         // they are InitListsExpr (semantic and syntactic form). In this case we
         // can choose any one here, and the ASTVisitor will take care of
         // traversing the right one.
-        for (const auto &Parent : Parents) {
+        for (const auto &Parent : Parents)
           if (!Parent.get<InitListExpr>())
             return false;
-        }
       }
 
       const DynTypedNode &Parent = Parents[0];

@@ -2561,6 +2561,7 @@ DEF_TRAVERSE_STMT(DefaultStmt, {})
 DEF_TRAVERSE_STMT(DoStmt, {})
 DEF_TRAVERSE_STMT(ForStmt, {})
 DEF_TRAVERSE_STMT(GotoStmt, {})
+DEF_TRAVERSE_STMT(DeferStmt, {})
 DEF_TRAVERSE_STMT(IfStmt, {})
 DEF_TRAVERSE_STMT(IndirectGotoStmt, {})
 DEF_TRAVERSE_STMT(LabelStmt, {})
@@ -2893,6 +2894,7 @@ DEF_TRAVERSE_STMT(CXXMemberCallExpr, {})
 // over the children.
 DEF_TRAVERSE_STMT(AddrLabelExpr, {})
 DEF_TRAVERSE_STMT(ArraySubscriptExpr, {})
+DEF_TRAVERSE_STMT(MatrixSingleSubscriptExpr, {})
 DEF_TRAVERSE_STMT(MatrixSubscriptExpr, {})
 DEF_TRAVERSE_STMT(ArraySectionExpr, {})
 DEF_TRAVERSE_STMT(OMPArrayShapingExpr, {})
@@ -4160,6 +4162,14 @@ bool RecursiveASTVisitor<Derived>::VisitOMPBindClause(OMPBindClause *C) {
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPXDynCGroupMemClause(
     OMPXDynCGroupMemClause *C) {
+  TRY_TO(VisitOMPClauseWithPreInit(C));
+  TRY_TO(TraverseStmt(C->getSize()));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPDynGroupprivateClause(
+    OMPDynGroupprivateClause *C) {
   TRY_TO(VisitOMPClauseWithPreInit(C));
   TRY_TO(TraverseStmt(C->getSize()));
   return true;

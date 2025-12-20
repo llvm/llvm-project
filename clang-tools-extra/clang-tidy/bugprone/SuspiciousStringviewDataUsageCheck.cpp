@@ -43,7 +43,6 @@ SuspiciousStringviewDataUsageCheck::getCheckTraversalKind() const {
 }
 
 void SuspiciousStringviewDataUsageCheck::registerMatchers(MatchFinder *Finder) {
-
   auto AncestorCall = anyOf(
       cxxConstructExpr(), callExpr(unless(cxxOperatorCallExpr())), lambdaExpr(),
       initListExpr(

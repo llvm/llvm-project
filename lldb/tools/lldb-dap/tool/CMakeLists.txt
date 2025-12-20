@@ -1,9 +1,18 @@
+set(LLVM_TARGET_DEFINITIONS Options.td)
+tablegen(LLVM Options.inc -gen-opt-parser-defs)
+add_public_tablegen_target(LLDBDAPOptionsTableGen)
+
 add_lldb_tool(lldb-dap
   lldb-dap.cpp
 
   LINK_LIBS
     lldbDAP
   )
+
+add_dependencies(lldb-dap
+  LLDBDAPOptionsTableGen
+  ${tablegen_deps}
+)
 
 if(APPLE)
   configure_file(
