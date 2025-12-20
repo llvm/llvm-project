@@ -2335,7 +2335,7 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
   bool IsIdentity1 = ShuffleDstTy == Op1Ty &&
       all_of(NewMask1, [NumOpElts](int M) { return M < (int)NumOpElts; }) &&
       ShuffleVectorInst::isIdentityMask(NewMask1, NumOpElts);
-  
+
   bool WillRemoveBinOp = BinOp->hasOneUse();
   // Try to merge shuffles across the binop if the new shuffles are not costly.
   InstructionCost OldCost =
