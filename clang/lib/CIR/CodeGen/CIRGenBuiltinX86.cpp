@@ -19,9 +19,8 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
-
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <cstdint>
 
 using namespace clang;
 using namespace clang::CIRGen;
