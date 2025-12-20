@@ -973,7 +973,8 @@ feature_test_macros = [
             "name": "__cpp_lib_move_only_function",
             "values": {"c++23": 202110},
             "headers": ["functional"],
-            "unimplemented": True,
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (!defined(TEST_COMPILER_GCC) && defined(_LIBCPP_HAS_EXPERIMENTAL_MOVE_ONLY_FUNCTION))"
+            "libcxx_guard": "!defined(_LIBCPP_COMPILER_GCC) && defined(_LIBCPP_HAS_EXPERIMENTAL_MOVE_ONLY_FUNCTION)"
         },
         {
             "name": "__cpp_lib_node_extract",

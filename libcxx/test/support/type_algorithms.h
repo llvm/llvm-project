@@ -144,6 +144,42 @@ struct type_list_as_pointers<type_list<Types...> > {
 
 template <class T>
 using as_pointers = typename type_list_as_pointers<T>::type;
+template <class...>
+struct function_noexcept_const_lvalue_ref_qualified_impl;
+
+template <class ReturnT, class... Args>
+struct function_noexcept_const_lvalue_ref_qualified_impl<ReturnT(Args...)> {
+  using type =
+      type_list<ReturnT(Args...),
+                ReturnT(Args...)&,
+                ReturnT(Args...) noexcept,
+                ReturnT(Args...) & noexcept,
+                ReturnT(Args...) const,
+                ReturnT(Args...) const&,
+                ReturnT(Args...) const noexcept,
+                ReturnT(Args...) const & noexcept>;
+};
+
+template <class Func>
+using function_noexcept_const_lvalue_ref_qualified =
+    typename function_noexcept_const_lvalue_ref_qualified_impl<Func>::type;
+
+template <class...>
+struct function_noexcept_const_ref_qualified_impl;
+
+template <class ReturnT, class... Args>
+struct function_noexcept_const_ref_qualified_impl<ReturnT(Args...)> {
+  using type =
+      concatenate_t<function_noexcept_const_lvalue_ref_qualified<ReturnT(Args...)>,
+                    type_list<ReturnT(Args...)&&,
+                              ReturnT(Args...) && noexcept,
+                              ReturnT(Args...) const&&,
+                              ReturnT(Args...) const && noexcept> >;
+};
+
+template <class Func>
+using function_noexcept_const_ref_qualified = typename function_noexcept_const_ref_qualified_impl<Func>::type;
+
 } // namespace types
 
 #endif // TEST_SUPPORT_TYPE_ALGORITHMS_H

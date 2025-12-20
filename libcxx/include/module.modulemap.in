@@ -1421,6 +1421,9 @@ module std [system] {
     module is_transparent               { header "__functional/is_transparent.h" }
     module mem_fn                       { header "__functional/mem_fn.h" }
     module mem_fun_ref                  { header "__functional/mem_fun_ref.h" }
+    module move_only_function           { header "__functional/move_only_function.h" }
+    module move_only_function_common    { header "__functional/move_only_function_common.h" }
+    module move_only_function_impl      { textual header "__functional/move_only_function_impl.h" }
     module not_fn {
       header "__functional/not_fn.h"
       export std.functional.perfect_forward // inherited from and using its operators

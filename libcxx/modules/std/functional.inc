@@ -100,7 +100,7 @@ export namespace std {
   using std::operator==;
 
   // [func.wrap.move], move only wrapper
-  // using std::move_only_function;
+  using std::move_only_function;
 
   // [func.search], searchers
   using std::default_searcher;

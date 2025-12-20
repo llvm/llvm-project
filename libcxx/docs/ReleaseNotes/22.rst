@@ -51,6 +51,8 @@ Implemented Papers
 - P2835R7: Expose ``std::atomic_ref``'s object address (`Github <https://llvm.org/PR118377>`__)
 - P2944R3: Comparisons for ``reference_wrapper`` (`Github <https://llvm.org/PR105424>`__)
 - P3168R2: Give ``std::optional`` Range Support (`Github <https://llvm.org/PR105430>`__)
+- P0288R9 - ``move_only_function`` (`Github <https://llvm.org/PR105157>`__) This feature is currently experimental and
+  therefore requires ``-fexperimental-library``.
 
 Improvements and New Features
 -----------------------------
