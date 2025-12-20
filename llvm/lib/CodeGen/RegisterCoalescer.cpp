@@ -456,6 +456,100 @@ static bool isSplitEdge(const MachineBasicBlock *MBB) {
   return true;
 }
 
+static const TargetRegisterClass *
+getCommonSubClassWithSubReg(const TargetRegisterInfo &TRI,
+                            const TargetRegisterClass *DstRC,
+                            const TargetRegisterClass *SrcRC, unsigned DstSub,
+                            const MachineFunction &MF) {
+  const TargetRegisterClass *ReferenceRC = TRI.getMatchingSuperRegClass(DstRC, SrcRC, DstSub);
+
+  if (ReferenceRC)
+    return ReferenceRC;
+
+
+  const TargetRegisterClass *NewSuperDstRC = nullptr;
+  for (auto SuperDstRCID : DstRC->superclasses()) {
+    const TargetRegisterClass *SuperDstRC = TRI.getRegClass(SuperDstRCID);
+    const TargetRegisterClass *WithSubRC = TRI.getSubClassWithSubReg(SuperDstRC, DstSub);
+    if (WithSubRC)
+      return TRI.getMatchingSuperRegClass(WithSubRC, SrcRC, DstSub);
+  }
+
+  // TODO: For a subregister insert, it may well be worth either reconstraining
+  // the source register based on the use constraints, or even introducing a
+  // copy.
+
+
+  LLVM_DEBUG(dbgs() << "NewSuperDstRC = " << (NewSuperDstRC ? TRI.getRegClassName(NewSuperDstRC) : "<null>") << '\n');
+  if (!NewSuperDstRC)
+    return nullptr;
+
+  const TargetRegisterClass *LargerSrcRC =
+      TRI.getLargestLegalSuperClass(SrcRC, MF);
+
+  return TRI.getMatchingSuperRegClass(NewSuperDstRC, SrcRC, DstSub);
+
+  //const TargetRegisterClass *ReferenceRC = TRI.getMatchingSuperRegClass(DstRC, SrcRC, DstSub);
+
+
+  const TargetRegisterClass *LargerDstRC =
+      TRI.getLargestLegalSuperClass(DstRC, MF);
+
+  const TargetRegisterClass *NewSuperRC =
+      TRI.getMatchingSuperRegClass(DstRC, LargerSrcRC, DstSub);
+
+  LLVM_DEBUG(
+    dbgs() << "ReferenceRC: " << (ReferenceRC ? TRI.getRegClassName(ReferenceRC) : "<null>") << '\n';
+      dbgs() << "LargerDstRC: " << TRI.getRegClassName(LargerDstRC) << '\n';
+      dbgs() << "LargerSrcRC: " << TRI.getRegClassName(LargerSrcRC) << '\n';);
+
+  if (NewSuperRC) {
+
+    {
+
+      unsigned PreA, PreB;
+      const TargetRegisterClass *CommSup = TRI.getCommonSuperRegClass(SrcRC, DstSub,
+                                                                      DstRC, DstSub,
+                                                                      PreA, PreB);
+
+    }
+
+    if (TRI.getSubClassWithSubReg(NewSuperRC, DstSub) == NewSuperRC) {
+      // Subregister supported in test class
+    }
+
+    if (false && TRI.getSubRegisterClass(NewSuperRC, DstSub) != SrcRC)
+      return nullptr;
+
+    const TargetRegisterClass *NewDstSubRC = TRI.getSubClassWithSubReg(NewSuperRC, DstSub);
+
+    const TargetRegisterClass *NewSubRC = TRI.getSubRegisterClass(NewSuperRC, DstSub);
+
+
+//    if (TRI.getCommonSubClass(NewSubRC, SrcRC) == SrcRC)
+//      return nullptr;
+    return TRI.getMatchingSuperRegClass(NewSuperRC, NewSubRC, DstSub);
+
+    //if (NewSubRC->hasSubClassEq(SrcRC))
+    //return nullptr;
+
+
+
+    //if (!NewDstSubRC || !NewDstSubRC->hasSubClassEq(SrcRC))
+    ///return nullptr;
+
+    //return TRI.getCommonSubClass(DstRC, NewDstSubRC);
+
+    return NewDstSubRC;
+
+    //const TargetRegisterClass *Rematch =
+    //TRI.getMatchingSuperRegClass(NewSuperRC, SrcRC, DstSub);
+    //return Rematch;
+  }
+
+  return nullptr;
+}
+
 bool CoalescerPair::setRegisters(const MachineInstr *MI) {
   SrcReg = DstReg = Register();
   SrcIdx = DstIdx = 0;
@@ -477,7 +571,8 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
     Flipped = true;
   }
 
-  const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+  const MachineFunction *MF = MI->getMF();
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
   const TargetRegisterClass *SrcRC = MRI.getRegClass(Src);
 
   if (Dst.isPhysical()) {
@@ -514,7 +609,37 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
     } else if (DstSub) {
       // SrcReg will be merged with a sub-register of DstReg.
       SrcIdx = DstSub;
-      NewRC = TRI.getMatchingSuperRegClass(DstRC, SrcRC, DstSub);
+
+      const TargetRegisterClass *OldRC = TRI.getMatchingSuperRegClass(DstRC, SrcRC, DstSub);
+
+      // TODO: Probably should be more aggressive than one use. This is mostly
+      // to avoid regressing some lane broadcast patterns.
+      if (false && !OldRC && !MRI.hasOneNonDBGUse(Src))
+        return false;
+
+      LLVM_DEBUG(
+          dbgs() << "SrcRC = " << TRI.getRegClassName(SrcRC) << '\n';
+          dbgs() << "DstRC = " << TRI.getRegClassName(DstRC) << '\n';
+          dbgs() << "DstSub = " << TRI.getSubRegIndexName(DstSub) << '\n';
+          dbgs() << "OldRC " << (OldRC ? TRI.getRegClassName(OldRC) : "<null>")
+                 << '\n';);
+
+      NewRC = getCommonSubClassWithSubReg(TRI, DstRC, SrcRC, DstSub, *MF);
+
+      LLVM_DEBUG(dbgs() << "NewRC "
+                        << (NewRC ? TRI.getRegClassName(NewRC) : "<null>")
+                        << '\n';);
+
+
+      /*
+      const TargetRegisterClass *SRC =
+        TRI.getSubClassWithSubReg(NewRC, DstSub);
+
+      assert(SRC && "no class with subreg");
+      assert(SRC->hasSubClassEq(SrcRC));
+      */
+
+
     } else if (SrcSub) {
       // DstReg will be merged with a sub-register of SrcReg.
       DstIdx = SrcSub;
@@ -2238,11 +2363,20 @@ bool RegisterCoalescer::joinCopy(
     return false;
   }
 
+
   // Coalescing to a virtual register that is of a sub-register class of the
   // other. Make sure the resulting register is set to the right register class.
   if (CP.isCrossClass()) {
-    ++numCrossRCs;
+
+    if (false && !MRI->constrainRegClass(CP.getDstReg(), CP.getNewRC())) {
+      //dbgs() <
+    }
+
     MRI->setRegClass(CP.getDstReg(), CP.getNewRC());
+
+    //InflateRegs.push_back(CP.getSrcReg());
+    //InflateRegs.push_back(CP.getDstReg());
+    ++numCrossRCs;
   }
 
   // Removing sub-register copies can ease the register class constraints.
