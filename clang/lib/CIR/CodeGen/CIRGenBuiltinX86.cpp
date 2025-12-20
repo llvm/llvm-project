@@ -839,13 +839,40 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_cmpnltsd:
   case X86::BI__builtin_ia32_cmpnlesd:
   case X86::BI__builtin_ia32_cmpordsd:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI__builtin_ia32_vcvtph2ps_mask:
   case X86::BI__builtin_ia32_vcvtph2ps256_mask:
-  case X86::BI__builtin_ia32_vcvtph2ps512_mask:
-  case X86::BI__builtin_ia32_cvtneps2bf16_128_mask:
-  case X86::BI__builtin_ia32_cvtsbf162ss_32:
+  case X86::BI__builtin_ia32_vcvtph2ps512_mask: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    return emitX86CvtF16ToFloatExpr(builder, loc, convertType(expr->getType()),
+                                    ops);
+  }
+  case X86::BI__builtin_ia32_cvtneps2bf16_128_mask: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    mlir::Value intrinsicMask = getMaskVecValue(builder, loc, ops[2], 4);
+    return emitIntrinsicCallOp(builder, loc,
+                               "x86.avx512bf16.mask.cvtneps2bf16.128",
+                               convertType(expr->getType()),
+                               mlir::ValueRange{ops[0], ops[1], intrinsicMask});
+  }
   case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:
-  case X86::BI__builtin_ia32_cvtneps2bf16_512_mask:
+  case X86::BI__builtin_ia32_cvtneps2bf16_512_mask: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    unsigned numElts = cast<cir::VectorType>(ops[1].getType()).getSize();
+    mlir::Value selectMask = getMaskVecValue(builder, loc, ops[2], numElts);
+    StringRef intrinsicName;
+    if (builtinID == X86::BI__builtin_ia32_cvtneps2bf16_256_mask)
+      intrinsicName = "x86.avx512bf16.cvtneps2bf16.256";
+    else
+      intrinsicName = "x86.avx512bf16.cvtneps2bf16.512";
+    mlir::Value intrinsicResult =
+        emitIntrinsicCallOp(builder, loc, intrinsicName, ops[1].getType(),
+                            mlir::ValueRange{ops[0]});
+    return emitX86Select(builder, loc, selectMask, intrinsicResult, ops[1]);
+  }
   case X86::BI__cpuid:
   case X86::BI__cpuidex:
   case X86::BI__emul:
