@@ -8186,6 +8186,8 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::roundeven:
   case Intrinsic::lrint:
   case Intrinsic::llrint:
+  case Intrinsic::fshl:
+  case Intrinsic::fshr:
     return true;
   default:
     return false;
