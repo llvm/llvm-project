@@ -88,7 +88,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         resp = self.attach(targetId=99999, expectFailure=True)
         self.assertFalse(resp["success"])
         self.assertIn(
-            "Both debuggerId and targetId must be specified together",
+            "Both 'debuggerId' and 'targetId' must be specified together",
             resp["body"]["error"]["format"],
         )
 
