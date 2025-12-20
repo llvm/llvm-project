@@ -7,13 +7,17 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 define void @correct_order(ptr noalias %ptr) {
 ; CHECK-LABEL: @correct_order(
 ; CHECK-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[PTR]], align 4
-; CHECK-NEXT:    [[L21:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[L12:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[PTR]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[NEXT_GEP1]], align 4
-; CHECK-NEXT:    [[L33:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
-; CHECK-NEXT:    [[L44:%.*]] = extractelement <2 x i32> [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x b32>, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[L21:%.*]] = extractelement <2 x b32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[L21]] to i32
+; CHECK-NEXT:    [[L12:%.*]] = extractelement <2 x b32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[L12]] to i32
+; CHECK-NEXT:    store <2 x b32> zeroinitializer, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x b32>, ptr [[NEXT_GEP1]], align 4
+; CHECK-NEXT:    [[L33:%.*]] = extractelement <2 x b32> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b32 [[L33]] to i32
+; CHECK-NEXT:    [[L44:%.*]] = extractelement <2 x b32> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast b32 [[L44]] to i32
 ; CHECK-NEXT:    ret void
 ;
   %next.gep1 = getelementptr i32, ptr %ptr, i64 1

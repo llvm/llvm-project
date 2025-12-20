@@ -8,9 +8,11 @@ define i32 @foo(ptr %ptr) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i32 1
 ; CHECK-NEXT:    [[P1:%.*]] = addrspacecast ptr [[PTR1]] to ptr addrspace(1)
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[PTR]], align 8, !invariant.load !0
-; CHECK-NEXT:    [[V01:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
-; CHECK-NEXT:    [[V12:%.*]] = extractelement <2 x i32> [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x b32>, ptr [[PTR]], align 8, !invariant.load [[META0:![0-9]+]]
+; CHECK-NEXT:    [[V1:%.*]] = extractelement <2 x b32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[V01:%.*]] = bitcast b32 [[V1]] to i32
+; CHECK-NEXT:    [[V13:%.*]] = extractelement <2 x b32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[V12:%.*]] = bitcast b32 [[V13]] to i32
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[V01]], [[V12]]
 ; CHECK-NEXT:    ret i32 [[SUM]]
 ;

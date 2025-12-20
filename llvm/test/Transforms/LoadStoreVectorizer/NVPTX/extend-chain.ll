@@ -10,11 +10,14 @@ define void @load3to4(ptr %p) {
 ; CHECK-LABEL: define void @load3to4(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[P_0:%.*]] = getelementptr i32, ptr [[P]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 16 [[P_0]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x i32> poison)
-; CHECK-NEXT:    [[V01:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[V12:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[V23:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[EXTEND4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x b32> @llvm.masked.load.v4b32.p0(ptr align 16 [[P_0]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x b32> poison)
+; CHECK-NEXT:    [[V01:%.*]] = extractelement <4 x b32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[V01]] to i32
+; CHECK-NEXT:    [[V12:%.*]] = extractelement <4 x b32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[V12]] to i32
+; CHECK-NEXT:    [[V23:%.*]] = extractelement <4 x b32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[V23]] to i32
+; CHECK-NEXT:    [[EXTEND4:%.*]] = extractelement <4 x b32> [[TMP1]], i32 3
 ; CHECK-NEXT:    ret void
 ;
   %p.0 = getelementptr i32, ptr %p, i32 0
@@ -32,15 +35,20 @@ define void @load5to8(ptr %p) {
 ; CHECK-LABEL: define void @load5to8(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[P_0:%.*]] = getelementptr i16, ptr [[P]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 16 [[P_0]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false>, <8 x i16> poison)
-; CHECK-NEXT:    [[V05:%.*]] = extractelement <8 x i16> [[TMP1]], i32 0
-; CHECK-NEXT:    [[V16:%.*]] = extractelement <8 x i16> [[TMP1]], i32 1
-; CHECK-NEXT:    [[V27:%.*]] = extractelement <8 x i16> [[TMP1]], i32 2
-; CHECK-NEXT:    [[V38:%.*]] = extractelement <8 x i16> [[TMP1]], i32 3
-; CHECK-NEXT:    [[V49:%.*]] = extractelement <8 x i16> [[TMP1]], i32 4
-; CHECK-NEXT:    [[EXTEND10:%.*]] = extractelement <8 x i16> [[TMP1]], i32 5
-; CHECK-NEXT:    [[EXTEND211:%.*]] = extractelement <8 x i16> [[TMP1]], i32 6
-; CHECK-NEXT:    [[EXTEND412:%.*]] = extractelement <8 x i16> [[TMP1]], i32 7
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x b16> @llvm.masked.load.v8b16.p0(ptr align 16 [[P_0]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false>, <8 x b16> poison)
+; CHECK-NEXT:    [[V05:%.*]] = extractelement <8 x b16> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b16 [[V05]] to i16
+; CHECK-NEXT:    [[V16:%.*]] = extractelement <8 x b16> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b16 [[V16]] to i16
+; CHECK-NEXT:    [[V27:%.*]] = extractelement <8 x b16> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b16 [[V27]] to i16
+; CHECK-NEXT:    [[V38:%.*]] = extractelement <8 x b16> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b16 [[V38]] to i16
+; CHECK-NEXT:    [[V49:%.*]] = extractelement <8 x b16> [[TMP1]], i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast b16 [[V49]] to i16
+; CHECK-NEXT:    [[EXTEND10:%.*]] = extractelement <8 x b16> [[TMP1]], i32 5
+; CHECK-NEXT:    [[EXTEND211:%.*]] = extractelement <8 x b16> [[TMP1]], i32 6
+; CHECK-NEXT:    [[EXTEND412:%.*]] = extractelement <8 x b16> [[TMP1]], i32 7
 ; CHECK-NEXT:    ret void
 ;
   %p.0 = getelementptr i16, ptr %p, i32 0
@@ -62,15 +70,21 @@ define void @load6to8(ptr %p) {
 ; CHECK-LABEL: define void @load6to8(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[P_0:%.*]] = getelementptr i16, ptr [[P]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 16 [[P_0]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false>, <8 x i16> poison)
-; CHECK-NEXT:    [[V05:%.*]] = extractelement <8 x i16> [[TMP1]], i32 0
-; CHECK-NEXT:    [[V16:%.*]] = extractelement <8 x i16> [[TMP1]], i32 1
-; CHECK-NEXT:    [[V27:%.*]] = extractelement <8 x i16> [[TMP1]], i32 2
-; CHECK-NEXT:    [[V38:%.*]] = extractelement <8 x i16> [[TMP1]], i32 3
-; CHECK-NEXT:    [[V49:%.*]] = extractelement <8 x i16> [[TMP1]], i32 4
-; CHECK-NEXT:    [[EXTEND10:%.*]] = extractelement <8 x i16> [[TMP1]], i32 5
-; CHECK-NEXT:    [[EXTEND211:%.*]] = extractelement <8 x i16> [[TMP1]], i32 6
-; CHECK-NEXT:    [[EXTEND412:%.*]] = extractelement <8 x i16> [[TMP1]], i32 7
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x b16> @llvm.masked.load.v8b16.p0(ptr align 16 [[P_0]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false>, <8 x b16> poison)
+; CHECK-NEXT:    [[V03:%.*]] = extractelement <8 x b16> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b16 [[V03]] to i16
+; CHECK-NEXT:    [[V14:%.*]] = extractelement <8 x b16> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b16 [[V14]] to i16
+; CHECK-NEXT:    [[V25:%.*]] = extractelement <8 x b16> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b16 [[V25]] to i16
+; CHECK-NEXT:    [[V36:%.*]] = extractelement <8 x b16> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b16 [[V36]] to i16
+; CHECK-NEXT:    [[V47:%.*]] = extractelement <8 x b16> [[TMP1]], i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast b16 [[V47]] to i16
+; CHECK-NEXT:    [[V58:%.*]] = extractelement <8 x b16> [[TMP1]], i32 5
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast b16 [[V58]] to i16
+; CHECK-NEXT:    [[EXTEND9:%.*]] = extractelement <8 x b16> [[TMP1]], i32 6
+; CHECK-NEXT:    [[EXTEND210:%.*]] = extractelement <8 x b16> [[TMP1]], i32 7
 ; CHECK-NEXT:    ret void
 ;
   %p.0 = getelementptr i16, ptr %p, i32 0
@@ -95,9 +109,11 @@ define void @load3to4_unaligned(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[P_0:%.*]] = getelementptr i32, ptr [[P]], i32 0
 ; CHECK-NEXT:    [[P_2:%.*]] = getelementptr i32, ptr [[P]], i32 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P_0]], align 8
-; CHECK-NEXT:    [[V01:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[V12:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x b32>, ptr [[P_0]], align 8
+; CHECK-NEXT:    [[V01:%.*]] = extractelement <2 x b32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[V01]] to i32
+; CHECK-NEXT:    [[V12:%.*]] = extractelement <2 x b32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[V12]] to i32
 ; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[P_2]], align 8
 ; CHECK-NEXT:    ret void
 ;

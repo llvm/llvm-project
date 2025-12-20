@@ -4,11 +4,15 @@
 define void @ldg_f16(ptr nocapture align 16 %rd0) {
 ; CHECK-LABEL: define void @ldg_f16(
 ; CHECK-SAME: ptr align 16 captures(none) [[RD0:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x half>, ptr [[RD0]], align 16
-; CHECK-NEXT:    [[LOAD11:%.*]] = shufflevector <8 x half> [[TMP1]], <8 x half> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[LOAD22:%.*]] = shufflevector <8 x half> [[TMP1]], <8 x half> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[LOAD33:%.*]] = shufflevector <8 x half> [[TMP1]], <8 x half> poison, <2 x i32> <i32 4, i32 5>
-; CHECK-NEXT:    [[LOAD44:%.*]] = shufflevector <8 x half> [[TMP1]], <8 x half> poison, <2 x i32> <i32 6, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x b16>, ptr [[RD0]], align 16
+; CHECK-NEXT:    [[LOAD12:%.*]] = shufflevector <8 x b16> [[TMP1]], <8 x b16> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[LOAD11:%.*]] = bitcast <2 x b16> [[LOAD12]] to <2 x half>
+; CHECK-NEXT:    [[LOAD23:%.*]] = shufflevector <8 x b16> [[TMP1]], <8 x b16> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[LOAD22:%.*]] = bitcast <2 x b16> [[LOAD23]] to <2 x half>
+; CHECK-NEXT:    [[LOAD34:%.*]] = shufflevector <8 x b16> [[TMP1]], <8 x b16> poison, <2 x i32> <i32 4, i32 5>
+; CHECK-NEXT:    [[LOAD33:%.*]] = bitcast <2 x b16> [[LOAD34]] to <2 x half>
+; CHECK-NEXT:    [[LOAD45:%.*]] = shufflevector <8 x b16> [[TMP1]], <8 x b16> poison, <2 x i32> <i32 6, i32 7>
+; CHECK-NEXT:    [[LOAD44:%.*]] = bitcast <2 x b16> [[LOAD45]] to <2 x half>
 ; CHECK-NEXT:    [[P1:%.*]] = fcmp ogt <2 x half> [[LOAD11]], zeroinitializer
 ; CHECK-NEXT:    [[S1:%.*]] = select <2 x i1> [[P1]], <2 x half> [[LOAD11]], <2 x half> zeroinitializer
 ; CHECK-NEXT:    [[P2:%.*]] = fcmp ogt <2 x half> [[LOAD22]], zeroinitializer
@@ -17,23 +21,27 @@ define void @ldg_f16(ptr nocapture align 16 %rd0) {
 ; CHECK-NEXT:    [[S3:%.*]] = select <2 x i1> [[P3]], <2 x half> [[LOAD33]], <2 x half> zeroinitializer
 ; CHECK-NEXT:    [[P4:%.*]] = fcmp ogt <2 x half> [[LOAD44]], zeroinitializer
 ; CHECK-NEXT:    [[S4:%.*]] = select <2 x i1> [[P4]], <2 x half> [[LOAD44]], <2 x half> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x half> [[S1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x half> poison, half [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x half> [[S1]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x half> [[TMP3]], half [[TMP4]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x half> [[S2]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x half> [[TMP5]], half [[TMP6]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x half> [[S2]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x half> [[TMP7]], half [[TMP8]], i32 3
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x half> [[S3]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x half> [[TMP9]], half [[TMP10]], i32 4
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x half> [[S3]], i32 1
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x half> [[TMP11]], half [[TMP12]], i32 5
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x half> [[S4]], i32 0
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x half> [[TMP13]], half [[TMP14]], i32 6
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x half> [[S4]], i32 1
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <8 x half> [[TMP15]], half [[TMP16]], i32 7
-; CHECK-NEXT:    store <8 x half> [[TMP17]], ptr [[RD0]], align 16
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x half> [[S1]] to <2 x b16>
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x b16> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x b16> poison, b16 [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x b16> [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x b16> [[TMP8]], b16 [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <2 x half> [[S2]] to <2 x b16>
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x b16> [[TMP11]], i32 0
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x b16> [[TMP10]], b16 [[TMP12]], i32 2
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x b16> [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x b16> [[TMP13]], b16 [[TMP14]], i32 3
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <2 x half> [[S3]] to <2 x b16>
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x b16> [[TMP16]], i32 0
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <8 x b16> [[TMP15]], b16 [[TMP17]], i32 4
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x b16> [[TMP16]], i32 1
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <8 x b16> [[TMP18]], b16 [[TMP19]], i32 5
+; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <2 x half> [[S4]] to <2 x b16>
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x b16> [[TMP21]], i32 0
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <8 x b16> [[TMP20]], b16 [[TMP22]], i32 6
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x b16> [[TMP21]], i32 1
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <8 x b16> [[TMP23]], b16 [[TMP24]], i32 7
+; CHECK-NEXT:    store <8 x b16> [[TMP25]], ptr [[RD0]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %load1 = load <2 x half>, ptr %rd0, align 16
@@ -62,11 +70,13 @@ define void @ldg_f16(ptr nocapture align 16 %rd0) {
 define void @no_nonpow2_vector(ptr nocapture align 16 %rd0) {
 ; CHECK-LABEL: define void @no_nonpow2_vector(
 ; CHECK-SAME: ptr align 16 captures(none) [[RD0:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x half> @llvm.masked.load.v8f16.p0(ptr align 16 [[RD0]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false>, <8 x half> poison)
-; CHECK-NEXT:    [[LOAD13:%.*]] = shufflevector <8 x half> [[TMP1]], <8 x half> poison, <3 x i32> <i32 0, i32 1, i32 2>
-; CHECK-NEXT:    [[LOAD24:%.*]] = shufflevector <8 x half> [[TMP1]], <8 x half> poison, <3 x i32> <i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[EXTEND5:%.*]] = extractelement <8 x half> [[TMP1]], i32 6
-; CHECK-NEXT:    [[EXTEND26:%.*]] = extractelement <8 x half> [[TMP1]], i32 7
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x b16> @llvm.masked.load.v8b16.p0(ptr align 16 [[RD0]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false>, <8 x b16> poison)
+; CHECK-NEXT:    [[LOAD14:%.*]] = shufflevector <8 x b16> [[TMP1]], <8 x b16> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[LOAD13:%.*]] = bitcast <3 x b16> [[LOAD14]] to <3 x half>
+; CHECK-NEXT:    [[LOAD25:%.*]] = shufflevector <8 x b16> [[TMP1]], <8 x b16> poison, <3 x i32> <i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[LOAD24:%.*]] = bitcast <3 x b16> [[LOAD25]] to <3 x half>
+; CHECK-NEXT:    [[EXTEND5:%.*]] = extractelement <8 x b16> [[TMP1]], i32 6
+; CHECK-NEXT:    [[EXTEND26:%.*]] = extractelement <8 x b16> [[TMP1]], i32 7
 ; CHECK-NEXT:    [[P1:%.*]] = fcmp ogt <3 x half> [[LOAD13]], zeroinitializer
 ; CHECK-NEXT:    [[S1:%.*]] = select <3 x i1> [[P1]], <3 x half> [[LOAD13]], <3 x half> zeroinitializer
 ; CHECK-NEXT:    store <3 x half> [[S1]], ptr [[RD0]], align 16

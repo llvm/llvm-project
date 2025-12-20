@@ -15,7 +15,7 @@ entry:
 
 define fastcc void @test2(ptr addrspace(1) %pso) unnamed_addr {
 ; CHECK-LABEL: @test2
-; CHECK: load <2 x i16>
+; CHECK: load <2 x b16>
 entry:
   %tmp1 = load i16, ptr addrspace(1) %pso, align 2
   %sunkaddr51 = getelementptr i8, ptr addrspace(1) %pso, i64 2

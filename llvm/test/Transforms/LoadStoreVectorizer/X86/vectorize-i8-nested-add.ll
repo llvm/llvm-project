@@ -15,16 +15,20 @@ define void @ld_v4i8_add_nsw(i32 %v0, i32 %v1, ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[V1:%.*]], [[TMP]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[TMP3]], align 1
-; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <4 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <4 x i8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP133:%.*]] = extractelement <4 x i8> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP184:%.*]] = extractelement <4 x i8> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> undef, i8 [[TMP41]], i32 0
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP82]], i32 1
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i8> [[TMP20]], i8 [[TMP133]], i32 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x b8>, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <4 x b8> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b8 [[TMP41]] to i8
+; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <4 x b8> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b8 [[TMP82]] to i8
+; CHECK-NEXT:    [[TMP133:%.*]] = extractelement <4 x b8> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b8 [[TMP133]] to i8
+; CHECK-NEXT:    [[TMP185:%.*]] = extractelement <4 x b8> [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP184:%.*]] = bitcast b8 [[TMP185]] to i8
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> undef, i8 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i8> [[TMP20]], i8 [[TMP3]], i32 2
 ; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i8> [[TMP21]], i8 [[TMP184]], i32 3
-; CHECK-NEXT:    store <4 x i8> [[TMP22]], ptr [[DST:%.*]]
+; CHECK-NEXT:    store <4 x i8> [[TMP22]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -63,16 +67,20 @@ define void @ld_v4i8_add_nsw_operand_orders(i32 %v0, i32 %v1, ptr %src, ptr %dst
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[V1:%.*]], [[TMP]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[TMP3]], align 1
-; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <4 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <4 x i8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP133:%.*]] = extractelement <4 x i8> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP184:%.*]] = extractelement <4 x i8> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> undef, i8 [[TMP41]], i32 0
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP82]], i32 1
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i8> [[TMP20]], i8 [[TMP133]], i32 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x b8>, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <4 x b8> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b8 [[TMP41]] to i8
+; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <4 x b8> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b8 [[TMP82]] to i8
+; CHECK-NEXT:    [[TMP133:%.*]] = extractelement <4 x b8> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b8 [[TMP133]] to i8
+; CHECK-NEXT:    [[TMP185:%.*]] = extractelement <4 x b8> [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP184:%.*]] = bitcast b8 [[TMP185]] to i8
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> undef, i8 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i8> [[TMP20]], i8 [[TMP3]], i32 2
 ; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i8> [[TMP21]], i8 [[TMP184]], i32 3
-; CHECK-NEXT:    store <4 x i8> [[TMP22]], ptr [[DST:%.*]]
+; CHECK-NEXT:    store <4 x i8> [[TMP22]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -116,15 +124,18 @@ define void @ld_v4i8_add_known_bits(i32 %ind0, i32 %ind1, ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[V1]], [[V0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i8>, ptr [[TMP7]], align 1
-; CHECK-NEXT:    [[TMP81:%.*]] = extractelement <3 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP132:%.*]] = extractelement <3 x i8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP183:%.*]] = extractelement <3 x i8> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x b8>, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[TMP81:%.*]] = extractelement <3 x b8> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b8 [[TMP81]] to i8
+; CHECK-NEXT:    [[TMP132:%.*]] = extractelement <3 x b8> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b8 [[TMP132]] to i8
+; CHECK-NEXT:    [[TMP183:%.*]] = extractelement <3 x b8> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b8 [[TMP183]] to i8
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> undef, i8 [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP81]], i32 1
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i8> [[TMP20]], i8 [[TMP132]], i32 2
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i8> [[TMP21]], i8 [[TMP183]], i32 3
-; CHECK-NEXT:    store <4 x i8> [[TMP22]], ptr [[DST:%.*]]
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i8> [[TMP20]], i8 [[TMP2]], i32 2
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i8> [[TMP21]], i8 [[TMP3]], i32 3
+; CHECK-NEXT:    store <4 x i8> [[TMP22]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -165,16 +176,20 @@ define void @ld_v4i8_add_known_bits1(i32 %ind0, i32 %ind1, ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[V1]], [[V0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[TMP7]], align 1
-; CHECK-NEXT:    [[TMP81:%.*]] = extractelement <4 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP132:%.*]] = extractelement <4 x i8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP183:%.*]] = extractelement <4 x i8> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP44:%.*]] = extractelement <4 x i8> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x b8>, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <4 x b8> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP81:%.*]] = bitcast b8 [[TMP82]] to i8
+; CHECK-NEXT:    [[TMP133:%.*]] = extractelement <4 x b8> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP132:%.*]] = bitcast b8 [[TMP133]] to i8
+; CHECK-NEXT:    [[TMP184:%.*]] = extractelement <4 x b8> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP183:%.*]] = bitcast b8 [[TMP184]] to i8
+; CHECK-NEXT:    [[TMP45:%.*]] = extractelement <4 x b8> [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP44:%.*]] = bitcast b8 [[TMP45]] to i8
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> undef, i8 [[TMP44]], i32 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP81]], i32 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i8> [[TMP20]], i8 [[TMP132]], i32 2
 ; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i8> [[TMP21]], i8 [[TMP183]], i32 3
-; CHECK-NEXT:    store <4 x i8> [[TMP22]], ptr [[DST:%.*]]
+; CHECK-NEXT:    store <4 x i8> [[TMP22]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -221,16 +236,20 @@ define void @ld_v4i8_add_known_bits_by_assume(i32 %ind0, i32 %ind1, ptr %src, pt
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[V1]], [[V0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[TMP7]], align 1
-; CHECK-NEXT:    [[TMP81:%.*]] = extractelement <4 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP132:%.*]] = extractelement <4 x i8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP183:%.*]] = extractelement <4 x i8> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP44:%.*]] = extractelement <4 x i8> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x b8>, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <4 x b8> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP81:%.*]] = bitcast b8 [[TMP82]] to i8
+; CHECK-NEXT:    [[TMP133:%.*]] = extractelement <4 x b8> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP132:%.*]] = bitcast b8 [[TMP133]] to i8
+; CHECK-NEXT:    [[TMP184:%.*]] = extractelement <4 x b8> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP183:%.*]] = bitcast b8 [[TMP184]] to i8
+; CHECK-NEXT:    [[TMP45:%.*]] = extractelement <4 x b8> [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP44:%.*]] = bitcast b8 [[TMP45]] to i8
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> undef, i8 [[TMP44]], i32 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP81]], i32 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i8> [[TMP20]], i8 [[TMP132]], i32 2
 ; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i8> [[TMP21]], i8 [[TMP183]], i32 3
-; CHECK-NEXT:    store <4 x i8> [[TMP22]], ptr [[DST:%.*]]
+; CHECK-NEXT:    store <4 x i8> [[TMP22]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -288,15 +307,18 @@ define void @ld_v4i8_add_assume_on_arg(i32 %v0, i32 %v1, ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[V1]], [[V0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i8>, ptr [[TMP7]], align 1
-; CHECK-NEXT:    [[TMP81:%.*]] = extractelement <3 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP132:%.*]] = extractelement <3 x i8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP183:%.*]] = extractelement <3 x i8> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x b8>, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[TMP81:%.*]] = extractelement <3 x b8> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b8 [[TMP81]] to i8
+; CHECK-NEXT:    [[TMP132:%.*]] = extractelement <3 x b8> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b8 [[TMP132]] to i8
+; CHECK-NEXT:    [[TMP183:%.*]] = extractelement <3 x b8> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b8 [[TMP183]] to i8
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> undef, i8 [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP81]], i32 1
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i8> [[TMP20]], i8 [[TMP132]], i32 2
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i8> [[TMP21]], i8 [[TMP183]], i32 3
-; CHECK-NEXT:    store <4 x i8> [[TMP22]], ptr [[DST:%.*]]
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i8> [[TMP20]], i8 [[TMP2]], i32 2
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i8> [[TMP21]], i8 [[TMP3]], i32 3
+; CHECK-NEXT:    store <4 x i8> [[TMP22]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -345,16 +367,20 @@ define void @ld_v4i8_add_assume_on_arg1(i32 %v0, i32 %v1, ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[V1]], [[V0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[TMP7]], align 1
-; CHECK-NEXT:    [[TMP81:%.*]] = extractelement <4 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP132:%.*]] = extractelement <4 x i8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP183:%.*]] = extractelement <4 x i8> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP44:%.*]] = extractelement <4 x i8> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x b8>, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <4 x b8> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP81:%.*]] = bitcast b8 [[TMP82]] to i8
+; CHECK-NEXT:    [[TMP133:%.*]] = extractelement <4 x b8> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP132:%.*]] = bitcast b8 [[TMP133]] to i8
+; CHECK-NEXT:    [[TMP184:%.*]] = extractelement <4 x b8> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP183:%.*]] = bitcast b8 [[TMP184]] to i8
+; CHECK-NEXT:    [[TMP45:%.*]] = extractelement <4 x b8> [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP44:%.*]] = bitcast b8 [[TMP45]] to i8
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> undef, i8 [[TMP44]], i32 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP81]], i32 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i8> [[TMP20]], i8 [[TMP132]], i32 2
 ; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i8> [[TMP21]], i8 [[TMP183]], i32 3
-; CHECK-NEXT:    store <4 x i8> [[TMP22]], ptr [[DST:%.*]]
+; CHECK-NEXT:    store <4 x i8> [[TMP22]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -406,12 +432,14 @@ define void @ld_v2i8_add_different_contexts(i32 %ind0, i32 %ind1, ptr %src, ptr 
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[BIT_COND]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr [[TMP7]], align 1
-; CHECK-NEXT:    [[TMP81:%.*]] = extractelement <2 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <2 x i8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b8>, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <2 x b8> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP81:%.*]] = bitcast b8 [[TMP82]] to i8
+; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <2 x b8> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP42:%.*]] = bitcast b8 [[TMP43]] to i8
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i8> undef, i8 [[TMP42]], i32 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x i8> [[TMP19]], i8 [[TMP81]], i32 1
-; CHECK-NEXT:    store <2 x i8> [[TMP20]], ptr [[DST:%.*]]
+; CHECK-NEXT:    store <2 x i8> [[TMP20]], ptr [[DST:%.*]], align 2
 ; CHECK-NEXT:    br label [[BB_SKIP]]
 ; CHECK:       bb.skip:
 ; CHECK-NEXT:    ret void
@@ -455,13 +483,15 @@ define void @ld_v2i8_add_different_contexts1(i32 %ind0, i32 %ind1, ptr %src, ptr
 ; CHECK:       bb.loads:
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr [[TMP7]], align 1
-; CHECK-NEXT:    [[TMP81:%.*]] = extractelement <2 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <2 x i8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b8>, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <2 x b8> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP81:%.*]] = bitcast b8 [[TMP82]] to i8
+; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <2 x b8> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP42:%.*]] = bitcast b8 [[TMP43]] to i8
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[BIT_COND]])
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i8> undef, i8 [[TMP42]], i32 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x i8> [[TMP19]], i8 [[TMP81]], i32 1
-; CHECK-NEXT:    store <2 x i8> [[TMP20]], ptr [[DST:%.*]]
+; CHECK-NEXT:    store <2 x i8> [[TMP20]], ptr [[DST:%.*]], align 2
 ; CHECK-NEXT:    br label [[BB_SKIP]]
 ; CHECK:       bb.skip:
 ; CHECK-NEXT:    ret void
@@ -502,14 +532,16 @@ define void @ld_v2i8_add_context(i32 %ind0, i32 %ind1, ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[V1]], [[V0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr [[TMP7]], align 1
-; CHECK-NEXT:    [[TMP81:%.*]] = extractelement <2 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <2 x i8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b8>, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <2 x b8> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP81:%.*]] = bitcast b8 [[TMP82]] to i8
+; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <2 x b8> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP42:%.*]] = bitcast b8 [[TMP43]] to i8
 ; CHECK-NEXT:    [[BIT_COND:%.*]] = icmp eq i32 [[TMP5]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[BIT_COND]])
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i8> undef, i8 [[TMP42]], i32 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x i8> [[TMP19]], i8 [[TMP81]], i32 1
-; CHECK-NEXT:    store <2 x i8> [[TMP20]], ptr [[DST:%.*]]
+; CHECK-NEXT:    store <2 x i8> [[TMP20]], ptr [[DST:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -542,12 +574,14 @@ define void @ld_v2i8_add_context1(i32 %ind0, i32 %ind1, ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[V1]], [[V0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr [[TMP7]], align 1
-; CHECK-NEXT:    [[TMP81:%.*]] = extractelement <2 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <2 x i8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b8>, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <2 x b8> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP81:%.*]] = bitcast b8 [[TMP82]] to i8
+; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <2 x b8> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP42:%.*]] = bitcast b8 [[TMP43]] to i8
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i8> undef, i8 [[TMP42]], i32 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x i8> [[TMP19]], i8 [[TMP81]], i32 1
-; CHECK-NEXT:    store <2 x i8> [[TMP20]], ptr [[DST:%.*]]
+; CHECK-NEXT:    store <2 x i8> [[TMP20]], ptr [[DST:%.*]], align 2
 ; CHECK-NEXT:    [[BIT_COND:%.*]] = icmp eq i32 [[TMP5]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[BIT_COND]])
 ; CHECK-NEXT:    ret void
@@ -602,7 +636,7 @@ define void @ld_v4i8_add_not_safe(i32 %v0, i32 %v1, ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP8]], i32 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i8> [[TMP20]], i8 [[TMP13]], i32 2
 ; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i8> [[TMP21]], i8 [[TMP18]], i32 3
-; CHECK-NEXT:    store <4 x i8> [[TMP22]], ptr [[DST:%.*]]
+; CHECK-NEXT:    store <4 x i8> [[TMP22]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:

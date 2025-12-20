@@ -7,7 +7,7 @@
 define void @singleGap(ptr addrspace(1) %out) {
 ; CHECK-LABEL: define void @singleGap(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p1(<4 x i64> <i64 1, i64 2, i64 poison, i64 4>, ptr addrspace(1) align 32 [[OUT]], <4 x i1> <i1 true, i1 true, i1 false, i1 true>)
+; CHECK-NEXT:    call void @llvm.masked.store.v4b64.p1(<4 x b64> <b64 1, b64 2, b64 poison, b64 4>, ptr addrspace(1) align 32 [[OUT]], <4 x i1> <i1 true, i1 true, i1 false, i1 true>)
 ; CHECK-NEXT:    ret void
 ;
   store i64 1, ptr addrspace(1) %out, align 32
@@ -22,7 +22,7 @@ define void @singleGap(ptr addrspace(1) %out) {
 define void @singleGapDouble(ptr addrspace(1) %out) {
 ; CHECK-LABEL: define void @singleGapDouble(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @llvm.masked.store.v4f64.p1(<4 x double> <double 1.000000e+00, double 2.000000e+00, double poison, double 4.000000e+00>, ptr addrspace(1) align 32 [[OUT]], <4 x i1> <i1 true, i1 true, i1 false, i1 true>)
+; CHECK-NEXT:    call void @llvm.masked.store.v4b64.p1(<4 x b64> <b64 4607182418800017408, b64 4611686018427387904, b64 poison, b64 4616189618054758400>, ptr addrspace(1) align 32 [[OUT]], <4 x i1> <i1 true, i1 true, i1 false, i1 true>)
 ; CHECK-NEXT:    ret void
 ;
   store double 1.0, ptr addrspace(1) %out, align 32
@@ -37,7 +37,7 @@ define void @singleGapDouble(ptr addrspace(1) %out) {
 define void @multipleGaps(ptr addrspace(1) %out) {
 ; CHECK-LABEL: define void @multipleGaps(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p1(<4 x i64> <i64 1, i64 poison, i64 poison, i64 4>, ptr addrspace(1) align 32 [[OUT]], <4 x i1> <i1 true, i1 false, i1 false, i1 true>)
+; CHECK-NEXT:    call void @llvm.masked.store.v4b64.p1(<4 x b64> <b64 1, b64 poison, b64 poison, b64 4>, ptr addrspace(1) align 32 [[OUT]], <4 x i1> <i1 true, i1 false, i1 false, i1 true>)
 ; CHECK-NEXT:    ret void
 ;
   store i64 1, ptr addrspace(1) %out, align 32
@@ -50,7 +50,7 @@ define void @multipleGaps(ptr addrspace(1) %out) {
 define void @multipleGaps8xi32(ptr addrspace(1) %out) {
 ; CHECK-LABEL: define void @multipleGaps8xi32(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p1(<8 x i32> <i32 1, i32 poison, i32 poison, i32 2, i32 4, i32 poison, i32 poison, i32 8>, ptr addrspace(1) align 32 [[OUT]], <8 x i1> <i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true>)
+; CHECK-NEXT:    call void @llvm.masked.store.v8b32.p1(<8 x b32> <b32 1, b32 poison, b32 poison, b32 2, b32 4, b32 poison, b32 poison, b32 8>, ptr addrspace(1) align 32 [[OUT]], <8 x i1> <i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true>)
 ; CHECK-NEXT:    ret void
 ;
   store i32 1, ptr addrspace(1) %out, align 32
@@ -69,9 +69,9 @@ define void @singleGapLongerChain(ptr addrspace(1) %out) {
 ; CHECK-LABEL: define void @singleGapLongerChain(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[GETELEM3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT]], i32 24
-; CHECK-NEXT:    store <4 x i64> <i64 1, i64 2, i64 3, i64 4>, ptr addrspace(1) [[OUT]], align 32
+; CHECK-NEXT:    store <4 x b64> <b64 1, b64 2, b64 3, b64 4>, ptr addrspace(1) [[OUT]], align 32
 ; CHECK-NEXT:    [[GAPFILLGEP:%.*]] = getelementptr i8, ptr addrspace(1) [[GETELEM3]], i64 8
-; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p1(<4 x i64> <i64 poison, i64 6, i64 7, i64 8>, ptr addrspace(1) align 32 [[GAPFILLGEP]], <4 x i1> <i1 false, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    call void @llvm.masked.store.v4b64.p1(<4 x b64> <b64 poison, b64 6, b64 7, b64 8>, ptr addrspace(1) align 32 [[GAPFILLGEP]], <4 x i1> <i1 false, i1 true, i1 true, i1 true>)
 ; CHECK-NEXT:    ret void
 ;
   store i64 1, ptr addrspace(1) %out, align 32
@@ -94,7 +94,7 @@ define void @singleGapLongerChain(ptr addrspace(1) %out) {
 define void @vectorElements(ptr addrspace(1) %out) {
 ; CHECK-LABEL: define void @vectorElements(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p1(<8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 poison, i32 poison, i32 7, i32 8>, ptr addrspace(1) align 32 [[OUT]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true>)
+; CHECK-NEXT:    call void @llvm.masked.store.v8b32.p1(<8 x b32> <b32 1, b32 2, b32 3, b32 4, b32 poison, b32 poison, b32 7, b32 8>, ptr addrspace(1) align 32 [[OUT]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true>)
 ; CHECK-NEXT:    ret void
 ;
   store <2 x i32> <i32 1, i32 2>, ptr addrspace(1) %out, align 32
@@ -109,7 +109,7 @@ define void @vectorElements(ptr addrspace(1) %out) {
 define void @vectorElements64(ptr addrspace(1) %in) {
 ; CHECK-LABEL: define void @vectorElements64(
 ; CHECK-SAME: ptr addrspace(1) [[IN:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <4 x i64> <i64 1, i64 2, i64 3, i64 4>, ptr addrspace(1) [[IN]], align 32
+; CHECK-NEXT:    store <4 x b64> <b64 1, b64 2, b64 3, b64 4>, ptr addrspace(1) [[IN]], align 32
 ; CHECK-NEXT:    [[GETELEM1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[IN]], i32 48
 ; CHECK-NEXT:    store <2 x i64> <i64 7, i64 8>, ptr addrspace(1) [[GETELEM1]], align 16
 ; CHECK-NEXT:    ret void
@@ -126,7 +126,7 @@ define void @vectorElements64(ptr addrspace(1) %in) {
 define void @extendStores(ptr addrspace(1) %out) {
 ; CHECK-LABEL: define void @extendStores(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p1(<4 x i64> <i64 1, i64 2, i64 3, i64 poison>, ptr addrspace(1) align 32 [[OUT]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
+; CHECK-NEXT:    call void @llvm.masked.store.v4b64.p1(<4 x b64> <b64 1, b64 2, b64 3, b64 poison>, ptr addrspace(1) align 32 [[OUT]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
 ; CHECK-NEXT:    ret void
 ;
   store i64 1, ptr addrspace(1) %out, align 32
@@ -141,7 +141,7 @@ define void @extendStores(ptr addrspace(1) %out) {
 define void @extendStores8xi32(ptr addrspace(1) %out) {
 ; CHECK-LABEL: define void @extendStores8xi32(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p1(<8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 poison, i32 poison, i32 poison>, ptr addrspace(1) align 32 [[OUT]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false>)
+; CHECK-NEXT:    call void @llvm.masked.store.v8b32.p1(<8 x b32> <b32 1, b32 2, b32 3, b32 4, b32 5, b32 poison, b32 poison, b32 poison>, ptr addrspace(1) align 32 [[OUT]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false>)
 ; CHECK-NEXT:    ret void
 ;
   store i32 1, ptr addrspace(1) %out, align 32
@@ -160,24 +160,34 @@ define void @extendStores8xi32(ptr addrspace(1) %out) {
 define void @extendStoresFromLoads8xi32(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; CHECK-LABEL: define void @extendStoresFromLoads8xi32(
 ; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p1(ptr addrspace(1) align 32 [[IN]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false>, <8 x i32> poison)
-; CHECK-NEXT:    [[LOAD05:%.*]] = extractelement <8 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[LOAD16:%.*]] = extractelement <8 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[LOAD27:%.*]] = extractelement <8 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[LOAD38:%.*]] = extractelement <8 x i32> [[TMP1]], i32 3
-; CHECK-NEXT:    [[LOAD49:%.*]] = extractelement <8 x i32> [[TMP1]], i32 4
-; CHECK-NEXT:    [[EXTENDLOAD10:%.*]] = extractelement <8 x i32> [[TMP1]], i32 5
-; CHECK-NEXT:    [[EXTENDLOAD211:%.*]] = extractelement <8 x i32> [[TMP1]], i32 6
-; CHECK-NEXT:    [[EXTENDLOAD412:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[LOAD05]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[LOAD16]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[LOAD27]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[LOAD38]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[LOAD49]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 poison, i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 poison, i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[TMP8]], i32 poison, i32 7
-; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p1(<8 x i32> [[TMP9]], ptr addrspace(1) align 32 [[OUT]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x b32> @llvm.masked.load.v8b32.p1(ptr addrspace(1) align 32 [[IN]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false>, <8 x b32> poison)
+; CHECK-NEXT:    [[LOAD05:%.*]] = extractelement <8 x b32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LOAD05]] to i32
+; CHECK-NEXT:    [[LOAD16:%.*]] = extractelement <8 x b32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[LOAD16]] to i32
+; CHECK-NEXT:    [[LOAD27:%.*]] = extractelement <8 x b32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[LOAD27]] to i32
+; CHECK-NEXT:    [[LOAD38:%.*]] = extractelement <8 x b32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b32 [[LOAD38]] to i32
+; CHECK-NEXT:    [[LOAD49:%.*]] = extractelement <8 x b32> [[TMP1]], i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast b32 [[LOAD49]] to i32
+; CHECK-NEXT:    [[EXTEND10:%.*]] = extractelement <8 x b32> [[TMP1]], i32 5
+; CHECK-NEXT:    [[EXTEND211:%.*]] = extractelement <8 x b32> [[TMP1]], i32 6
+; CHECK-NEXT:    [[EXTEND412:%.*]] = extractelement <8 x b32> [[TMP1]], i32 7
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32 [[TMP2]] to b32
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x b32> poison, b32 [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32 [[TMP3]] to b32
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x b32> [[TMP8]], b32 [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32 [[TMP4]] to b32
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x b32> [[TMP10]], b32 [[TMP11]], i32 2
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast i32 [[TMP5]] to b32
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x b32> [[TMP12]], b32 [[TMP13]], i32 3
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast i32 [[TMP6]] to b32
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <8 x b32> [[TMP14]], b32 [[TMP15]], i32 4
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <8 x b32> [[TMP16]], b32 poison, i32 5
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <8 x b32> [[TMP17]], b32 poison, i32 6
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <8 x b32> [[TMP18]], b32 poison, i32 7
+; CHECK-NEXT:    call void @llvm.masked.store.v8b32.p1(<8 x b32> [[TMP19]], ptr addrspace(1) align 32 [[OUT]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false>)
 ; CHECK-NEXT:    ret void
 ;
   %load0 = load i32, ptr addrspace(1) %in, align 32
@@ -206,24 +216,33 @@ define void @extendStoresFromLoads8xi32(ptr addrspace(1) %in, ptr addrspace(1) %
 define void @extendAndGapFillStoresFromLoads8xi32(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; CHECK-LABEL: define void @extendAndGapFillStoresFromLoads8xi32(
 ; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p1(ptr addrspace(1) align 32 [[IN]], <8 x i1> <i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false>, <8 x i32> poison)
-; CHECK-NEXT:    [[LOAD05:%.*]] = extractelement <8 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[LOAD16:%.*]] = extractelement <8 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[LOAD27:%.*]] = extractelement <8 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[LOAD38:%.*]] = extractelement <8 x i32> [[TMP1]], i32 3
-; CHECK-NEXT:    [[LOAD49:%.*]] = extractelement <8 x i32> [[TMP1]], i32 4
-; CHECK-NEXT:    [[EXTENDLOAD10:%.*]] = extractelement <8 x i32> [[TMP1]], i32 5
-; CHECK-NEXT:    [[EXTENDLOAD211:%.*]] = extractelement <8 x i32> [[TMP1]], i32 6
-; CHECK-NEXT:    [[EXTENDLOAD412:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[LOAD05]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[LOAD16]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 poison, i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[LOAD38]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[LOAD49]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 poison, i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 poison, i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[TMP8]], i32 poison, i32 7
-; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p1(<8 x i32> [[TMP9]], ptr addrspace(1) align 32 [[OUT]], <8 x i1> <i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x b32> @llvm.masked.load.v8b32.p1(ptr addrspace(1) align 32 [[IN]], <8 x i1> <i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false>, <8 x b32> poison)
+; CHECK-NEXT:    [[LOAD05:%.*]] = extractelement <8 x b32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LOAD05]] to i32
+; CHECK-NEXT:    [[LOAD16:%.*]] = extractelement <8 x b32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[LOAD16]] to i32
+; CHECK-NEXT:    [[GAPFILL7:%.*]] = extractelement <8 x b32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[GAPFILL7]] to i32
+; CHECK-NEXT:    [[LOAD38:%.*]] = extractelement <8 x b32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b32 [[LOAD38]] to i32
+; CHECK-NEXT:    [[LOAD49:%.*]] = extractelement <8 x b32> [[TMP1]], i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast b32 [[LOAD49]] to i32
+; CHECK-NEXT:    [[EXTEND10:%.*]] = extractelement <8 x b32> [[TMP1]], i32 5
+; CHECK-NEXT:    [[EXTEND211:%.*]] = extractelement <8 x b32> [[TMP1]], i32 6
+; CHECK-NEXT:    [[EXTEND412:%.*]] = extractelement <8 x b32> [[TMP1]], i32 7
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32 [[TMP2]] to b32
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x b32> poison, b32 [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32 [[TMP3]] to b32
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x b32> [[TMP8]], b32 [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x b32> [[TMP10]], b32 poison, i32 2
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i32 [[TMP5]] to b32
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x b32> [[TMP11]], b32 [[TMP12]], i32 3
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i32 [[TMP6]] to b32
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x b32> [[TMP13]], b32 [[TMP14]], i32 4
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <8 x b32> [[TMP15]], b32 poison, i32 5
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <8 x b32> [[TMP16]], b32 poison, i32 6
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <8 x b32> [[TMP17]], b32 poison, i32 7
+; CHECK-NEXT:    call void @llvm.masked.store.v8b32.p1(<8 x b32> [[TMP18]], ptr addrspace(1) align 32 [[OUT]], <8 x i1> <i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false>)
 ; CHECK-NEXT:    ret void
 ;
   %load0 = load i32, ptr addrspace(1) %in, align 32
@@ -251,7 +270,7 @@ define void @extendAndGapFillStoresFromLoads8xi32(ptr addrspace(1) %in, ptr addr
 define void @singleGapWrongAddrSpace(ptr addrspace(3) %out) {
 ; CHECK-LABEL: define void @singleGapWrongAddrSpace(
 ; CHECK-SAME: ptr addrspace(3) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <2 x i64> <i64 1, i64 2>, ptr addrspace(3) [[OUT]], align 32
+; CHECK-NEXT:    store <2 x b64> <b64 1, b64 2>, ptr addrspace(3) [[OUT]], align 32
 ; CHECK-NEXT:    [[GETELEM3:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[OUT]], i32 24
 ; CHECK-NEXT:    store i64 4, ptr addrspace(3) [[GETELEM3]], align 8
 ; CHECK-NEXT:    ret void
@@ -268,7 +287,7 @@ define void @singleGapWrongAddrSpace(ptr addrspace(3) %out) {
 define void @singleGapMisaligned(ptr addrspace(1) %out) {
 ; CHECK-LABEL: define void @singleGapMisaligned(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <2 x i64> <i64 1, i64 2>, ptr addrspace(1) [[OUT]], align 16
+; CHECK-NEXT:    store <2 x b64> <b64 1, b64 2>, ptr addrspace(1) [[OUT]], align 16
 ; CHECK-NEXT:    [[GETELEM3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT]], i32 24
 ; CHECK-NEXT:    store i64 4, ptr addrspace(1) [[GETELEM3]], align 8
 ; CHECK-NEXT:    ret void
@@ -287,7 +306,7 @@ define void @singleGap4xi32(ptr addrspace(1) %out) {
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    store i32 1, ptr addrspace(1) [[OUT]], align 32
 ; CHECK-NEXT:    [[GETELEM2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT]], i32 8
-; CHECK-NEXT:    store <2 x i32> <i32 3, i32 4>, ptr addrspace(1) [[GETELEM2]], align 8
+; CHECK-NEXT:    store <2 x b32> <b32 3, b32 4>, ptr addrspace(1) [[GETELEM2]], align 8
 ; CHECK-NEXT:    ret void
 ;
   store i32 1, ptr addrspace(1) %out, align 32
@@ -303,13 +322,13 @@ define void @singleGap4xi32(ptr addrspace(1) %out) {
 define void @gapInWrongLocation(ptr addrspace(1) %out) {
 ; CHECK-LABEL: define void @gapInWrongLocation(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, ptr addrspace(1) [[OUT]], align 32
+; CHECK-NEXT:    store <2 x b32> <b32 1, b32 2>, ptr addrspace(1) [[OUT]], align 32
 ; CHECK-NEXT:    [[GETELEM2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT]], i32 8
 ; CHECK-NEXT:    store i32 3, ptr addrspace(1) [[GETELEM2]], align 8
 ; CHECK-NEXT:    [[GETELEM5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT]], i32 20
 ; CHECK-NEXT:    store i32 5, ptr addrspace(1) [[GETELEM5]], align 4
 ; CHECK-NEXT:    [[GETELEM6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT]], i32 24
-; CHECK-NEXT:    store <2 x i32> <i32 6, i32 7>, ptr addrspace(1) [[GETELEM6]], align 8
+; CHECK-NEXT:    store <2 x b32> <b32 6, b32 7>, ptr addrspace(1) [[GETELEM6]], align 8
 ; CHECK-NEXT:    ret void
 ;
   store i32 1, ptr addrspace(1) %out, align 32
@@ -332,39 +351,71 @@ define void @gapInWrongLocation(ptr addrspace(1) %out) {
 define void @cantMaski8(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; CHECK-LABEL: define void @cantMaski8(
 ; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i8> @llvm.masked.load.v32i8.p1(ptr addrspace(1) align 32 [[IN]], <32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true>, <32 x i8> poison)
-; CHECK-NEXT:    [[LOAD031:%.*]] = extractelement <32 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[GAPFILL32:%.*]] = extractelement <32 x i8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[GAPFILL233:%.*]] = extractelement <32 x i8> [[TMP1]], i32 2
-; CHECK-NEXT:    [[LOAD334:%.*]] = extractelement <32 x i8> [[TMP1]], i32 3
-; CHECK-NEXT:    [[LOAD435:%.*]] = extractelement <32 x i8> [[TMP1]], i32 4
-; CHECK-NEXT:    [[GAPFILL436:%.*]] = extractelement <32 x i8> [[TMP1]], i32 5
-; CHECK-NEXT:    [[GAPFILL637:%.*]] = extractelement <32 x i8> [[TMP1]], i32 6
-; CHECK-NEXT:    [[LOAD738:%.*]] = extractelement <32 x i8> [[TMP1]], i32 7
-; CHECK-NEXT:    [[LOAD839:%.*]] = extractelement <32 x i8> [[TMP1]], i32 8
-; CHECK-NEXT:    [[GAPFILL840:%.*]] = extractelement <32 x i8> [[TMP1]], i32 9
-; CHECK-NEXT:    [[GAPFILL1041:%.*]] = extractelement <32 x i8> [[TMP1]], i32 10
-; CHECK-NEXT:    [[LOAD1142:%.*]] = extractelement <32 x i8> [[TMP1]], i32 11
-; CHECK-NEXT:    [[LOAD1243:%.*]] = extractelement <32 x i8> [[TMP1]], i32 12
-; CHECK-NEXT:    [[GAPFILL1244:%.*]] = extractelement <32 x i8> [[TMP1]], i32 13
-; CHECK-NEXT:    [[GAPFILL1445:%.*]] = extractelement <32 x i8> [[TMP1]], i32 14
-; CHECK-NEXT:    [[LOAD1546:%.*]] = extractelement <32 x i8> [[TMP1]], i32 15
-; CHECK-NEXT:    [[LOAD1647:%.*]] = extractelement <32 x i8> [[TMP1]], i32 16
-; CHECK-NEXT:    [[GAPFILL1648:%.*]] = extractelement <32 x i8> [[TMP1]], i32 17
-; CHECK-NEXT:    [[GAPFILL1849:%.*]] = extractelement <32 x i8> [[TMP1]], i32 18
-; CHECK-NEXT:    [[LOAD1950:%.*]] = extractelement <32 x i8> [[TMP1]], i32 19
-; CHECK-NEXT:    [[LOAD2051:%.*]] = extractelement <32 x i8> [[TMP1]], i32 20
-; CHECK-NEXT:    [[GAPFILL2052:%.*]] = extractelement <32 x i8> [[TMP1]], i32 21
-; CHECK-NEXT:    [[GAPFILL2253:%.*]] = extractelement <32 x i8> [[TMP1]], i32 22
-; CHECK-NEXT:    [[LOAD2354:%.*]] = extractelement <32 x i8> [[TMP1]], i32 23
-; CHECK-NEXT:    [[LOAD2455:%.*]] = extractelement <32 x i8> [[TMP1]], i32 24
-; CHECK-NEXT:    [[GAPFILL2456:%.*]] = extractelement <32 x i8> [[TMP1]], i32 25
-; CHECK-NEXT:    [[GAPFILL2657:%.*]] = extractelement <32 x i8> [[TMP1]], i32 26
-; CHECK-NEXT:    [[LOAD2758:%.*]] = extractelement <32 x i8> [[TMP1]], i32 27
-; CHECK-NEXT:    [[LOAD2859:%.*]] = extractelement <32 x i8> [[TMP1]], i32 28
-; CHECK-NEXT:    [[GAPFILL2860:%.*]] = extractelement <32 x i8> [[TMP1]], i32 29
-; CHECK-NEXT:    [[GAPFILL3061:%.*]] = extractelement <32 x i8> [[TMP1]], i32 30
-; CHECK-NEXT:    [[LOAD3162:%.*]] = extractelement <32 x i8> [[TMP1]], i32 31
+; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x b8> @llvm.masked.load.v32b8.p1(ptr addrspace(1) align 32 [[IN]], <32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true>, <32 x b8> poison)
+; CHECK-NEXT:    [[LOAD31:%.*]] = extractelement <32 x b8> [[TMP1]], i32 0
+; CHECK-NEXT:    [[LOAD031:%.*]] = bitcast b8 [[LOAD31]] to i8
+; CHECK-NEXT:    [[GAPFILL32:%.*]] = extractelement <32 x b8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b8 [[GAPFILL32]] to i8
+; CHECK-NEXT:    [[GAPFILL233:%.*]] = extractelement <32 x b8> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b8 [[GAPFILL233]] to i8
+; CHECK-NEXT:    [[LOAD335:%.*]] = extractelement <32 x b8> [[TMP1]], i32 3
+; CHECK-NEXT:    [[LOAD334:%.*]] = bitcast b8 [[LOAD335]] to i8
+; CHECK-NEXT:    [[LOAD436:%.*]] = extractelement <32 x b8> [[TMP1]], i32 4
+; CHECK-NEXT:    [[LOAD435:%.*]] = bitcast b8 [[LOAD436]] to i8
+; CHECK-NEXT:    [[GAPFILL436:%.*]] = extractelement <32 x b8> [[TMP1]], i32 5
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast b8 [[GAPFILL436]] to i8
+; CHECK-NEXT:    [[GAPFILL637:%.*]] = extractelement <32 x b8> [[TMP1]], i32 6
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast b8 [[GAPFILL637]] to i8
+; CHECK-NEXT:    [[LOAD739:%.*]] = extractelement <32 x b8> [[TMP1]], i32 7
+; CHECK-NEXT:    [[LOAD738:%.*]] = bitcast b8 [[LOAD739]] to i8
+; CHECK-NEXT:    [[LOAD840:%.*]] = extractelement <32 x b8> [[TMP1]], i32 8
+; CHECK-NEXT:    [[LOAD839:%.*]] = bitcast b8 [[LOAD840]] to i8
+; CHECK-NEXT:    [[GAPFILL840:%.*]] = extractelement <32 x b8> [[TMP1]], i32 9
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast b8 [[GAPFILL840]] to i8
+; CHECK-NEXT:    [[GAPFILL1041:%.*]] = extractelement <32 x b8> [[TMP1]], i32 10
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast b8 [[GAPFILL1041]] to i8
+; CHECK-NEXT:    [[LOAD1143:%.*]] = extractelement <32 x b8> [[TMP1]], i32 11
+; CHECK-NEXT:    [[LOAD1142:%.*]] = bitcast b8 [[LOAD1143]] to i8
+; CHECK-NEXT:    [[LOAD1244:%.*]] = extractelement <32 x b8> [[TMP1]], i32 12
+; CHECK-NEXT:    [[LOAD1243:%.*]] = bitcast b8 [[LOAD1244]] to i8
+; CHECK-NEXT:    [[GAPFILL1244:%.*]] = extractelement <32 x b8> [[TMP1]], i32 13
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast b8 [[GAPFILL1244]] to i8
+; CHECK-NEXT:    [[GAPFILL1445:%.*]] = extractelement <32 x b8> [[TMP1]], i32 14
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast b8 [[GAPFILL1445]] to i8
+; CHECK-NEXT:    [[LOAD1547:%.*]] = extractelement <32 x b8> [[TMP1]], i32 15
+; CHECK-NEXT:    [[LOAD1546:%.*]] = bitcast b8 [[LOAD1547]] to i8
+; CHECK-NEXT:    [[LOAD1648:%.*]] = extractelement <32 x b8> [[TMP1]], i32 16
+; CHECK-NEXT:    [[LOAD1647:%.*]] = bitcast b8 [[LOAD1648]] to i8
+; CHECK-NEXT:    [[GAPFILL1648:%.*]] = extractelement <32 x b8> [[TMP1]], i32 17
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast b8 [[GAPFILL1648]] to i8
+; CHECK-NEXT:    [[GAPFILL1849:%.*]] = extractelement <32 x b8> [[TMP1]], i32 18
+; CHECK-NEXT:    [[TMP20:%.*]] = bitcast b8 [[GAPFILL1849]] to i8
+; CHECK-NEXT:    [[LOAD1951:%.*]] = extractelement <32 x b8> [[TMP1]], i32 19
+; CHECK-NEXT:    [[LOAD1950:%.*]] = bitcast b8 [[LOAD1951]] to i8
+; CHECK-NEXT:    [[LOAD2052:%.*]] = extractelement <32 x b8> [[TMP1]], i32 20
+; CHECK-NEXT:    [[LOAD2051:%.*]] = bitcast b8 [[LOAD2052]] to i8
+; CHECK-NEXT:    [[GAPFILL2052:%.*]] = extractelement <32 x b8> [[TMP1]], i32 21
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast b8 [[GAPFILL2052]] to i8
+; CHECK-NEXT:    [[GAPFILL2253:%.*]] = extractelement <32 x b8> [[TMP1]], i32 22
+; CHECK-NEXT:    [[TMP24:%.*]] = bitcast b8 [[GAPFILL2253]] to i8
+; CHECK-NEXT:    [[LOAD2355:%.*]] = extractelement <32 x b8> [[TMP1]], i32 23
+; CHECK-NEXT:    [[LOAD2354:%.*]] = bitcast b8 [[LOAD2355]] to i8
+; CHECK-NEXT:    [[LOAD2456:%.*]] = extractelement <32 x b8> [[TMP1]], i32 24
+; CHECK-NEXT:    [[LOAD2455:%.*]] = bitcast b8 [[LOAD2456]] to i8
+; CHECK-NEXT:    [[GAPFILL2456:%.*]] = extractelement <32 x b8> [[TMP1]], i32 25
+; CHECK-NEXT:    [[TMP27:%.*]] = bitcast b8 [[GAPFILL2456]] to i8
+; CHECK-NEXT:    [[GAPFILL2657:%.*]] = extractelement <32 x b8> [[TMP1]], i32 26
+; CHECK-NEXT:    [[TMP28:%.*]] = bitcast b8 [[GAPFILL2657]] to i8
+; CHECK-NEXT:    [[LOAD2759:%.*]] = extractelement <32 x b8> [[TMP1]], i32 27
+; CHECK-NEXT:    [[LOAD2758:%.*]] = bitcast b8 [[LOAD2759]] to i8
+; CHECK-NEXT:    [[LOAD2860:%.*]] = extractelement <32 x b8> [[TMP1]], i32 28
+; CHECK-NEXT:    [[LOAD2859:%.*]] = bitcast b8 [[LOAD2860]] to i8
+; CHECK-NEXT:    [[GAPFILL2860:%.*]] = extractelement <32 x b8> [[TMP1]], i32 29
+; CHECK-NEXT:    [[TMP31:%.*]] = bitcast b8 [[GAPFILL2860]] to i8
+; CHECK-NEXT:    [[GAPFILL3061:%.*]] = extractelement <32 x b8> [[TMP1]], i32 30
+; CHECK-NEXT:    [[TMP32:%.*]] = bitcast b8 [[GAPFILL3061]] to i8
+; CHECK-NEXT:    [[LOAD3163:%.*]] = extractelement <32 x b8> [[TMP1]], i32 31
+; CHECK-NEXT:    [[LOAD3162:%.*]] = bitcast b8 [[LOAD3163]] to i8
 ; CHECK-NEXT:    store i8 [[LOAD031]], ptr addrspace(1) [[OUT]], align 32
 ; CHECK-NEXT:    [[OUTELEM3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT]], i32 3
 ; CHECK-NEXT:    store i8 [[LOAD334]], ptr addrspace(1) [[OUTELEM3]], align 1
@@ -471,23 +522,39 @@ define void @cantMaski8(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 define void @cantMaski16(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; CHECK-LABEL: define void @cantMaski16(
 ; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.masked.load.v16i16.p1(ptr addrspace(1) align 32 [[IN]], <16 x i1> <i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true>, <16 x i16> poison)
-; CHECK-NEXT:    [[LOAD015:%.*]] = extractelement <16 x i16> [[TMP1]], i32 0
-; CHECK-NEXT:    [[GAPFILL16:%.*]] = extractelement <16 x i16> [[TMP1]], i32 1
-; CHECK-NEXT:    [[GAPFILL217:%.*]] = extractelement <16 x i16> [[TMP1]], i32 2
-; CHECK-NEXT:    [[LOAD318:%.*]] = extractelement <16 x i16> [[TMP1]], i32 3
-; CHECK-NEXT:    [[LOAD419:%.*]] = extractelement <16 x i16> [[TMP1]], i32 4
-; CHECK-NEXT:    [[GAPFILL420:%.*]] = extractelement <16 x i16> [[TMP1]], i32 5
-; CHECK-NEXT:    [[GAPFILL621:%.*]] = extractelement <16 x i16> [[TMP1]], i32 6
-; CHECK-NEXT:    [[LOAD722:%.*]] = extractelement <16 x i16> [[TMP1]], i32 7
-; CHECK-NEXT:    [[LOAD823:%.*]] = extractelement <16 x i16> [[TMP1]], i32 8
-; CHECK-NEXT:    [[GAPFILL824:%.*]] = extractelement <16 x i16> [[TMP1]], i32 9
-; CHECK-NEXT:    [[GAPFILL1025:%.*]] = extractelement <16 x i16> [[TMP1]], i32 10
-; CHECK-NEXT:    [[LOAD1126:%.*]] = extractelement <16 x i16> [[TMP1]], i32 11
-; CHECK-NEXT:    [[LOAD1227:%.*]] = extractelement <16 x i16> [[TMP1]], i32 12
-; CHECK-NEXT:    [[GAPFILL1228:%.*]] = extractelement <16 x i16> [[TMP1]], i32 13
-; CHECK-NEXT:    [[GAPFILL1429:%.*]] = extractelement <16 x i16> [[TMP1]], i32 14
-; CHECK-NEXT:    [[LOAD1530:%.*]] = extractelement <16 x i16> [[TMP1]], i32 15
+; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x b16> @llvm.masked.load.v16b16.p1(ptr addrspace(1) align 32 [[IN]], <16 x i1> <i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true>, <16 x b16> poison)
+; CHECK-NEXT:    [[LOAD15:%.*]] = extractelement <16 x b16> [[TMP1]], i32 0
+; CHECK-NEXT:    [[LOAD015:%.*]] = bitcast b16 [[LOAD15]] to i16
+; CHECK-NEXT:    [[GAPFILL16:%.*]] = extractelement <16 x b16> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b16 [[GAPFILL16]] to i16
+; CHECK-NEXT:    [[GAPFILL217:%.*]] = extractelement <16 x b16> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b16 [[GAPFILL217]] to i16
+; CHECK-NEXT:    [[LOAD319:%.*]] = extractelement <16 x b16> [[TMP1]], i32 3
+; CHECK-NEXT:    [[LOAD318:%.*]] = bitcast b16 [[LOAD319]] to i16
+; CHECK-NEXT:    [[LOAD420:%.*]] = extractelement <16 x b16> [[TMP1]], i32 4
+; CHECK-NEXT:    [[LOAD419:%.*]] = bitcast b16 [[LOAD420]] to i16
+; CHECK-NEXT:    [[GAPFILL420:%.*]] = extractelement <16 x b16> [[TMP1]], i32 5
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast b16 [[GAPFILL420]] to i16
+; CHECK-NEXT:    [[GAPFILL621:%.*]] = extractelement <16 x b16> [[TMP1]], i32 6
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast b16 [[GAPFILL621]] to i16
+; CHECK-NEXT:    [[LOAD723:%.*]] = extractelement <16 x b16> [[TMP1]], i32 7
+; CHECK-NEXT:    [[LOAD722:%.*]] = bitcast b16 [[LOAD723]] to i16
+; CHECK-NEXT:    [[LOAD824:%.*]] = extractelement <16 x b16> [[TMP1]], i32 8
+; CHECK-NEXT:    [[LOAD823:%.*]] = bitcast b16 [[LOAD824]] to i16
+; CHECK-NEXT:    [[GAPFILL824:%.*]] = extractelement <16 x b16> [[TMP1]], i32 9
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast b16 [[GAPFILL824]] to i16
+; CHECK-NEXT:    [[GAPFILL1025:%.*]] = extractelement <16 x b16> [[TMP1]], i32 10
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast b16 [[GAPFILL1025]] to i16
+; CHECK-NEXT:    [[LOAD1127:%.*]] = extractelement <16 x b16> [[TMP1]], i32 11
+; CHECK-NEXT:    [[LOAD1126:%.*]] = bitcast b16 [[LOAD1127]] to i16
+; CHECK-NEXT:    [[LOAD1228:%.*]] = extractelement <16 x b16> [[TMP1]], i32 12
+; CHECK-NEXT:    [[LOAD1227:%.*]] = bitcast b16 [[LOAD1228]] to i16
+; CHECK-NEXT:    [[GAPFILL1228:%.*]] = extractelement <16 x b16> [[TMP1]], i32 13
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast b16 [[GAPFILL1228]] to i16
+; CHECK-NEXT:    [[GAPFILL1429:%.*]] = extractelement <16 x b16> [[TMP1]], i32 14
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast b16 [[GAPFILL1429]] to i16
+; CHECK-NEXT:    [[LOAD1531:%.*]] = extractelement <16 x b16> [[TMP1]], i32 15
+; CHECK-NEXT:    [[LOAD1530:%.*]] = bitcast b16 [[LOAD1531]] to i16
 ; CHECK-NEXT:    store i16 [[LOAD015]], ptr addrspace(1) [[OUT]], align 32
 ; CHECK-NEXT:    [[OUTELEM6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT]], i32 6
 ; CHECK-NEXT:    store i16 [[LOAD318]], ptr addrspace(1) [[OUTELEM6]], align 2

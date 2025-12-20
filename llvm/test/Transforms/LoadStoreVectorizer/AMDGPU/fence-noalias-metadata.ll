@@ -15,9 +15,11 @@
 define void @vectorize_loads_across_fence_with_noalias(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define void @vectorize_loads_across_fence_with_noalias(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[PTR]], align 8, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
-; CHECK-NEXT:    [[LOAD01:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[LOAD12:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x b32>, ptr addrspace(1) [[PTR]], align 8, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = extractelement <2 x b32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[LOAD01:%.*]] = bitcast b32 [[LOAD1]] to i32
+; CHECK-NEXT:    [[LOAD13:%.*]] = extractelement <2 x b32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[LOAD12:%.*]] = bitcast b32 [[LOAD13]] to i32
 ; CHECK-NEXT:    fence syncscope("workgroup") release, !noalias [[META5:![0-9]+]]
 ; CHECK-NEXT:    fence syncscope("workgroup") acquire, !noalias [[META5]]
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[LOAD01]], [[LOAD12]]
@@ -39,9 +41,11 @@ define void @vectorize_loads_across_fence_with_noalias(ptr addrspace(1) %ptr) {
 define void @vectorize_loads_across_fence_with_alias_scope(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define void @vectorize_loads_across_fence_with_alias_scope(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[PTR]], align 8, !alias.scope [[META0]], !noalias [[META6:![0-9]+]]
-; CHECK-NEXT:    [[LOAD01:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[LOAD12:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x b32>, ptr addrspace(1) [[PTR]], align 8, !alias.scope [[META0]], !noalias [[META6:![0-9]+]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = extractelement <2 x b32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[LOAD01:%.*]] = bitcast b32 [[LOAD1]] to i32
+; CHECK-NEXT:    [[LOAD13:%.*]] = extractelement <2 x b32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[LOAD12:%.*]] = bitcast b32 [[LOAD13]] to i32
 ; CHECK-NEXT:    fence syncscope("workgroup") release, !alias.scope [[META6]]
 ; CHECK-NEXT:    fence syncscope("workgroup") acquire, !alias.scope [[META6]]
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[LOAD01]], [[LOAD12]]

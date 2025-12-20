@@ -1036,14 +1036,14 @@ define i64 @mad_i64_i32_unpack_i64ops(i64 %arg0) #0 {
 define amdgpu_kernel void @mad_i64_i32_uniform(ptr addrspace(1) %out, i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; CI-LABEL: mad_i64_i32_uniform:
 ; CI:       ; %bb.0:
+; CI-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xd
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; CI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0xd
 ; CI-NEXT:    s_mov_b32 s7, 0xf000
 ; CI-NEXT:    s_mov_b32 s6, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
+; CI-NEXT:    v_mov_b32_e32 v0, s8
+; CI-NEXT:    v_mov_b32_e32 v1, s9
 ; CI-NEXT:    v_mov_b32_e32 v2, s3
-; CI-NEXT:    v_mov_b32_e32 v0, s4
-; CI-NEXT:    v_mov_b32_e32 v1, s5
 ; CI-NEXT:    v_mad_u64_u32 v[0:1], s[2:3], s2, v2, v[0:1]
 ; CI-NEXT:    s_mov_b32 s4, s0
 ; CI-NEXT:    s_mov_b32 s5, s1

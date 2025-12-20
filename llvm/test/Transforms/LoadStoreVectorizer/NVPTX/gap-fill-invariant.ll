@@ -8,11 +8,15 @@
 define i32 @noGaps(ptr %in) {
 ; CHECK-LABEL: define i32 @noGaps(
 ; CHECK-SAME: ptr [[IN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[IN]], align 16, !invariant.load [[META0:![0-9]+]]
-; CHECK-NEXT:    [[TMP01:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x b32>, ptr [[IN]], align 16, !invariant.load [[META0:![0-9]+]]
+; CHECK-NEXT:    [[LOAD01:%.*]] = extractelement <4 x b32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP01:%.*]] = bitcast b32 [[LOAD01]] to i32
+; CHECK-NEXT:    [[LOAD12:%.*]] = extractelement <4 x b32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast b32 [[LOAD12]] to i32
+; CHECK-NEXT:    [[LOAD23:%.*]] = extractelement <4 x b32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast b32 [[LOAD23]] to i32
+; CHECK-NEXT:    [[LOAD34:%.*]] = extractelement <4 x b32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP34:%.*]] = bitcast b32 [[LOAD34]] to i32
 ; CHECK-NEXT:    [[SUM01:%.*]] = add i32 [[TMP01]], [[TMP12]]
 ; CHECK-NEXT:    [[SUM012:%.*]] = add i32 [[SUM01]], [[TMP23]]
 ; CHECK-NEXT:    [[SUM0123:%.*]] = add i32 [[SUM012]], [[TMP34]]
@@ -35,11 +39,15 @@ define i32 @noGaps(ptr %in) {
 define i32 @noGapsMissingInvariant(ptr %in) {
 ; CHECK-LABEL: define i32 @noGapsMissingInvariant(
 ; CHECK-SAME: ptr [[IN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[IN]], align 16
-; CHECK-NEXT:    [[TMP01:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x b32>, ptr [[IN]], align 16
+; CHECK-NEXT:    [[LOAD01:%.*]] = extractelement <4 x b32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP01:%.*]] = bitcast b32 [[LOAD01]] to i32
+; CHECK-NEXT:    [[LOAD12:%.*]] = extractelement <4 x b32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast b32 [[LOAD12]] to i32
+; CHECK-NEXT:    [[LOAD23:%.*]] = extractelement <4 x b32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast b32 [[LOAD23]] to i32
+; CHECK-NEXT:    [[LOAD34:%.*]] = extractelement <4 x b32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP34:%.*]] = bitcast b32 [[LOAD34]] to i32
 ; CHECK-NEXT:    [[SUM01:%.*]] = add i32 [[TMP01]], [[TMP12]]
 ; CHECK-NEXT:    [[SUM012:%.*]] = add i32 [[SUM01]], [[TMP23]]
 ; CHECK-NEXT:    [[SUM0123:%.*]] = add i32 [[SUM012]], [[TMP34]]
@@ -62,11 +70,15 @@ define i32 @noGapsMissingInvariant(ptr %in) {
 define i32 @twoGaps(ptr %in) {
 ; CHECK-LABEL: define i32 @twoGaps(
 ; CHECK-SAME: ptr [[IN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 16 [[IN]], <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> poison), !invariant.load [[META0]]
-; CHECK-NEXT:    [[LOAD03:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[GAPFILL4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[GAPFILL25:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[LOAD36:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x b32> @llvm.masked.load.v4b32.p0(ptr align 16 [[IN]], <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x b32> poison), !invariant.load [[META0]]
+; CHECK-NEXT:    [[LOAD3:%.*]] = extractelement <4 x b32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[LOAD03:%.*]] = bitcast b32 [[LOAD3]] to i32
+; CHECK-NEXT:    [[GAPFILL4:%.*]] = extractelement <4 x b32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[GAPFILL4]] to i32
+; CHECK-NEXT:    [[GAPFILL25:%.*]] = extractelement <4 x b32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[GAPFILL25]] to i32
+; CHECK-NEXT:    [[LOAD37:%.*]] = extractelement <4 x b32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[LOAD36:%.*]] = bitcast b32 [[LOAD37]] to i32
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[LOAD03]], [[LOAD36]]
 ; CHECK-NEXT:    ret i32 [[SUM]]
 ;

@@ -8,13 +8,17 @@ define void @int8x3a2(ptr nocapture align 2 %ptr) {
 ; CHECK-SAME: ptr align 2 captures(none) [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR]], i64 0
 ; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr [[PTR]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr [[PTR0]], align 2
-; CHECK-NEXT:    [[L01:%.*]] = extractelement <2 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[L12:%.*]] = extractelement <2 x i8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x b8>, ptr [[PTR0]], align 2
+; CHECK-NEXT:    [[L1:%.*]] = extractelement <2 x b8> [[TMP1]], i32 0
+; CHECK-NEXT:    [[L01:%.*]] = bitcast b8 [[L1]] to i8
+; CHECK-NEXT:    [[L12:%.*]] = extractelement <2 x b8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b8 [[L12]] to i8
 ; CHECK-NEXT:    [[L2:%.*]] = load i8, ptr [[PTR2]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i8> poison, i8 [[L2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i8> [[TMP2]], i8 [[L12]], i32 1
-; CHECK-NEXT:    store <2 x i8> [[TMP3]], ptr [[PTR0]], align 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8 [[L2]] to b8
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x b8> poison, b8 [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8 [[TMP3]] to b8
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x b8> [[TMP5]], b8 [[TMP6]], i32 1
+; CHECK-NEXT:    store <2 x b8> [[TMP7]], ptr [[PTR0]], align 2
 ; CHECK-NEXT:    store i8 [[L01]], ptr [[PTR2]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -39,14 +43,19 @@ define void @int8x3a4(ptr nocapture align 4 %ptr) {
 ; CHECK-SAME: ptr align 4 captures(none) [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR]], i64 0
 ; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr [[PTR]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr align 4 [[PTR0]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x i8> poison)
-; CHECK-NEXT:    [[L01:%.*]] = extractelement <4 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[L12:%.*]] = extractelement <4 x i8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[L23:%.*]] = extractelement <4 x i8> [[TMP1]], i32 2
-; CHECK-NEXT:    [[EXTEND4:%.*]] = extractelement <4 x i8> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i8> poison, i8 [[L23]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i8> [[TMP2]], i8 [[L12]], i32 1
-; CHECK-NEXT:    store <2 x i8> [[TMP3]], ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x b8> @llvm.masked.load.v4b8.p0(ptr align 4 [[PTR0]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x b8> poison)
+; CHECK-NEXT:    [[L1:%.*]] = extractelement <4 x b8> [[TMP1]], i32 0
+; CHECK-NEXT:    [[L01:%.*]] = bitcast b8 [[L1]] to i8
+; CHECK-NEXT:    [[L12:%.*]] = extractelement <4 x b8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b8 [[L12]] to i8
+; CHECK-NEXT:    [[L23:%.*]] = extractelement <4 x b8> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b8 [[L23]] to i8
+; CHECK-NEXT:    [[EXTEND4:%.*]] = extractelement <4 x b8> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8 [[TMP4]] to b8
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x b8> poison, b8 [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i8 [[TMP3]] to b8
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x b8> [[TMP6]], b8 [[TMP7]], i32 1
+; CHECK-NEXT:    store <2 x b8> [[TMP8]], ptr [[PTR0]], align 4
 ; CHECK-NEXT:    store i8 [[L01]], ptr [[PTR2]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -72,36 +81,60 @@ define void @int8x12a4(ptr nocapture align 4 %ptr) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR]], i64 0
 ; CHECK-NEXT:    [[PTR4:%.*]] = getelementptr i8, ptr [[PTR]], i64 4
 ; CHECK-NEXT:    [[PTR8:%.*]] = getelementptr i8, ptr [[PTR]], i64 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[PTR0]], align 4
-; CHECK-NEXT:    [[L01:%.*]] = extractelement <4 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[L12:%.*]] = extractelement <4 x i8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[L23:%.*]] = extractelement <4 x i8> [[TMP1]], i32 2
-; CHECK-NEXT:    [[L34:%.*]] = extractelement <4 x i8> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr [[PTR4]], align 4
-; CHECK-NEXT:    [[L45:%.*]] = extractelement <4 x i8> [[TMP2]], i32 0
-; CHECK-NEXT:    [[L56:%.*]] = extractelement <4 x i8> [[TMP2]], i32 1
-; CHECK-NEXT:    [[L67:%.*]] = extractelement <4 x i8> [[TMP2]], i32 2
-; CHECK-NEXT:    [[L78:%.*]] = extractelement <4 x i8> [[TMP2]], i32 3
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i8>, ptr [[PTR8]], align 4
-; CHECK-NEXT:    [[L89:%.*]] = extractelement <4 x i8> [[TMP3]], i32 0
-; CHECK-NEXT:    [[L910:%.*]] = extractelement <4 x i8> [[TMP3]], i32 1
-; CHECK-NEXT:    [[LA11:%.*]] = extractelement <4 x i8> [[TMP3]], i32 2
-; CHECK-NEXT:    [[LB12:%.*]] = extractelement <4 x i8> [[TMP3]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i8> poison, i8 [[LB12]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i8> [[TMP4]], i8 [[LA11]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i8> [[TMP5]], i8 [[L910]], i32 2
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i8> [[TMP6]], i8 [[L89]], i32 3
-; CHECK-NEXT:    store <4 x i8> [[TMP7]], ptr [[PTR0]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i8> poison, i8 [[L78]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i8> [[TMP8]], i8 [[L67]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i8> [[TMP9]], i8 [[L56]], i32 2
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i8> [[TMP10]], i8 [[L45]], i32 3
-; CHECK-NEXT:    store <4 x i8> [[TMP11]], ptr [[PTR4]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i8> poison, i8 [[L34]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i8> [[TMP12]], i8 [[L23]], i32 1
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i8> [[TMP13]], i8 [[L12]], i32 2
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i8> [[TMP14]], i8 [[L01]], i32 3
-; CHECK-NEXT:    store <4 x i8> [[TMP15]], ptr [[PTR8]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x b8>, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[L01:%.*]] = extractelement <4 x b8> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b8 [[L01]] to i8
+; CHECK-NEXT:    [[L12:%.*]] = extractelement <4 x b8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b8 [[L12]] to i8
+; CHECK-NEXT:    [[L23:%.*]] = extractelement <4 x b8> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b8 [[L23]] to i8
+; CHECK-NEXT:    [[L34:%.*]] = extractelement <4 x b8> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b8 [[L34]] to i8
+; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x b8>, ptr [[PTR4]], align 4
+; CHECK-NEXT:    [[L45:%.*]] = extractelement <4 x b8> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast b8 [[L45]] to i8
+; CHECK-NEXT:    [[L56:%.*]] = extractelement <4 x b8> [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast b8 [[L56]] to i8
+; CHECK-NEXT:    [[L67:%.*]] = extractelement <4 x b8> [[TMP6]], i32 2
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast b8 [[L67]] to i8
+; CHECK-NEXT:    [[L78:%.*]] = extractelement <4 x b8> [[TMP6]], i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast b8 [[L78]] to i8
+; CHECK-NEXT:    [[TMP11:%.*]] = load <4 x b8>, ptr [[PTR8]], align 4
+; CHECK-NEXT:    [[L89:%.*]] = extractelement <4 x b8> [[TMP11]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast b8 [[L89]] to i8
+; CHECK-NEXT:    [[L910:%.*]] = extractelement <4 x b8> [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast b8 [[L910]] to i8
+; CHECK-NEXT:    [[LA11:%.*]] = extractelement <4 x b8> [[TMP11]], i32 2
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast b8 [[LA11]] to i8
+; CHECK-NEXT:    [[LB12:%.*]] = extractelement <4 x b8> [[TMP11]], i32 3
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast b8 [[LB12]] to i8
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast i8 [[TMP15]] to b8
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x b8> poison, b8 [[TMP16]], i32 0
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i8 [[TMP14]] to b8
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x b8> [[TMP17]], b8 [[TMP18]], i32 1
+; CHECK-NEXT:    [[TMP20:%.*]] = bitcast i8 [[TMP13]] to b8
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x b8> [[TMP19]], b8 [[TMP20]], i32 2
+; CHECK-NEXT:    [[TMP22:%.*]] = bitcast i8 [[TMP12]] to b8
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x b8> [[TMP21]], b8 [[TMP22]], i32 3
+; CHECK-NEXT:    store <4 x b8> [[TMP23]], ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[TMP24:%.*]] = bitcast i8 [[TMP10]] to b8
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <4 x b8> poison, b8 [[TMP24]], i32 0
+; CHECK-NEXT:    [[TMP26:%.*]] = bitcast i8 [[TMP9]] to b8
+; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x b8> [[TMP25]], b8 [[TMP26]], i32 1
+; CHECK-NEXT:    [[TMP28:%.*]] = bitcast i8 [[TMP8]] to b8
+; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <4 x b8> [[TMP27]], b8 [[TMP28]], i32 2
+; CHECK-NEXT:    [[TMP30:%.*]] = bitcast i8 [[TMP7]] to b8
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x b8> [[TMP29]], b8 [[TMP30]], i32 3
+; CHECK-NEXT:    store <4 x b8> [[TMP31]], ptr [[PTR4]], align 4
+; CHECK-NEXT:    [[TMP32:%.*]] = bitcast i8 [[TMP5]] to b8
+; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x b8> poison, b8 [[TMP32]], i32 0
+; CHECK-NEXT:    [[TMP34:%.*]] = bitcast i8 [[TMP4]] to b8
+; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <4 x b8> [[TMP33]], b8 [[TMP34]], i32 1
+; CHECK-NEXT:    [[TMP36:%.*]] = bitcast i8 [[TMP3]] to b8
+; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <4 x b8> [[TMP35]], b8 [[TMP36]], i32 2
+; CHECK-NEXT:    [[TMP38:%.*]] = bitcast i8 [[TMP2]] to b8
+; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <4 x b8> [[TMP37]], b8 [[TMP38]], i32 3
+; CHECK-NEXT:    store <4 x b8> [[TMP39]], ptr [[PTR8]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr i8, ptr %ptr, i64 0
@@ -155,46 +188,78 @@ define void @int8x16a4(ptr nocapture align 4 %ptr) {
 ; CHECK-NEXT:    [[PTR4:%.*]] = getelementptr i8, ptr [[PTR]], i64 4
 ; CHECK-NEXT:    [[PTR8:%.*]] = getelementptr i8, ptr [[PTR]], i64 8
 ; CHECK-NEXT:    [[PTRC:%.*]] = getelementptr i8, ptr [[PTR]], i64 12
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[PTR0]], align 4
-; CHECK-NEXT:    [[L01:%.*]] = extractelement <4 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[L12:%.*]] = extractelement <4 x i8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[L23:%.*]] = extractelement <4 x i8> [[TMP1]], i32 2
-; CHECK-NEXT:    [[L34:%.*]] = extractelement <4 x i8> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr [[PTR4]], align 4
-; CHECK-NEXT:    [[L45:%.*]] = extractelement <4 x i8> [[TMP2]], i32 0
-; CHECK-NEXT:    [[L56:%.*]] = extractelement <4 x i8> [[TMP2]], i32 1
-; CHECK-NEXT:    [[L67:%.*]] = extractelement <4 x i8> [[TMP2]], i32 2
-; CHECK-NEXT:    [[L78:%.*]] = extractelement <4 x i8> [[TMP2]], i32 3
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i8>, ptr [[PTR8]], align 4
-; CHECK-NEXT:    [[L89:%.*]] = extractelement <4 x i8> [[TMP3]], i32 0
-; CHECK-NEXT:    [[L910:%.*]] = extractelement <4 x i8> [[TMP3]], i32 1
-; CHECK-NEXT:    [[LA11:%.*]] = extractelement <4 x i8> [[TMP3]], i32 2
-; CHECK-NEXT:    [[LB12:%.*]] = extractelement <4 x i8> [[TMP3]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i8>, ptr [[PTRC]], align 4
-; CHECK-NEXT:    [[LC13:%.*]] = extractelement <4 x i8> [[TMP4]], i32 0
-; CHECK-NEXT:    [[LD14:%.*]] = extractelement <4 x i8> [[TMP4]], i32 1
-; CHECK-NEXT:    [[LE15:%.*]] = extractelement <4 x i8> [[TMP4]], i32 2
-; CHECK-NEXT:    [[LF16:%.*]] = extractelement <4 x i8> [[TMP4]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i8> poison, i8 [[LF16]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i8> [[TMP5]], i8 [[LE15]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i8> [[TMP6]], i8 [[LD14]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i8> [[TMP7]], i8 [[LC13]], i32 3
-; CHECK-NEXT:    store <4 x i8> [[TMP8]], ptr [[PTRC]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i8> poison, i8 [[LB12]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i8> [[TMP9]], i8 [[LA11]], i32 1
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i8> [[TMP10]], i8 [[L910]], i32 2
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i8> [[TMP11]], i8 [[L89]], i32 3
-; CHECK-NEXT:    store <4 x i8> [[TMP12]], ptr [[PTR0]], align 4
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i8> poison, i8 [[L78]], i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i8> [[TMP13]], i8 [[L67]], i32 1
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i8> [[TMP14]], i8 [[L56]], i32 2
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i8> [[TMP15]], i8 [[L45]], i32 3
-; CHECK-NEXT:    store <4 x i8> [[TMP16]], ptr [[PTR4]], align 4
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i8> poison, i8 [[L34]], i32 0
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i8> [[TMP17]], i8 [[L23]], i32 1
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> [[TMP18]], i8 [[L12]], i32 2
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[L01]], i32 3
-; CHECK-NEXT:    store <4 x i8> [[TMP20]], ptr [[PTR8]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x b8>, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[L01:%.*]] = extractelement <4 x b8> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b8 [[L01]] to i8
+; CHECK-NEXT:    [[L12:%.*]] = extractelement <4 x b8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b8 [[L12]] to i8
+; CHECK-NEXT:    [[L23:%.*]] = extractelement <4 x b8> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b8 [[L23]] to i8
+; CHECK-NEXT:    [[L34:%.*]] = extractelement <4 x b8> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b8 [[L34]] to i8
+; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x b8>, ptr [[PTR4]], align 4
+; CHECK-NEXT:    [[L45:%.*]] = extractelement <4 x b8> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast b8 [[L45]] to i8
+; CHECK-NEXT:    [[L56:%.*]] = extractelement <4 x b8> [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast b8 [[L56]] to i8
+; CHECK-NEXT:    [[L67:%.*]] = extractelement <4 x b8> [[TMP6]], i32 2
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast b8 [[L67]] to i8
+; CHECK-NEXT:    [[L78:%.*]] = extractelement <4 x b8> [[TMP6]], i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast b8 [[L78]] to i8
+; CHECK-NEXT:    [[TMP11:%.*]] = load <4 x b8>, ptr [[PTR8]], align 4
+; CHECK-NEXT:    [[L89:%.*]] = extractelement <4 x b8> [[TMP11]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast b8 [[L89]] to i8
+; CHECK-NEXT:    [[L910:%.*]] = extractelement <4 x b8> [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast b8 [[L910]] to i8
+; CHECK-NEXT:    [[LA11:%.*]] = extractelement <4 x b8> [[TMP11]], i32 2
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast b8 [[LA11]] to i8
+; CHECK-NEXT:    [[LB12:%.*]] = extractelement <4 x b8> [[TMP11]], i32 3
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast b8 [[LB12]] to i8
+; CHECK-NEXT:    [[TMP16:%.*]] = load <4 x b8>, ptr [[PTRC]], align 4
+; CHECK-NEXT:    [[LC13:%.*]] = extractelement <4 x b8> [[TMP16]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast b8 [[LC13]] to i8
+; CHECK-NEXT:    [[LD14:%.*]] = extractelement <4 x b8> [[TMP16]], i32 1
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast b8 [[LD14]] to i8
+; CHECK-NEXT:    [[LE15:%.*]] = extractelement <4 x b8> [[TMP16]], i32 2
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast b8 [[LE15]] to i8
+; CHECK-NEXT:    [[LF16:%.*]] = extractelement <4 x b8> [[TMP16]], i32 3
+; CHECK-NEXT:    [[TMP20:%.*]] = bitcast b8 [[LF16]] to i8
+; CHECK-NEXT:    [[TMP21:%.*]] = bitcast i8 [[TMP20]] to b8
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x b8> poison, b8 [[TMP21]], i32 0
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast i8 [[TMP19]] to b8
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x b8> [[TMP22]], b8 [[TMP23]], i32 1
+; CHECK-NEXT:    [[TMP25:%.*]] = bitcast i8 [[TMP18]] to b8
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x b8> [[TMP24]], b8 [[TMP25]], i32 2
+; CHECK-NEXT:    [[TMP27:%.*]] = bitcast i8 [[TMP17]] to b8
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <4 x b8> [[TMP26]], b8 [[TMP27]], i32 3
+; CHECK-NEXT:    store <4 x b8> [[TMP28]], ptr [[PTRC]], align 4
+; CHECK-NEXT:    [[TMP29:%.*]] = bitcast i8 [[TMP15]] to b8
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x b8> poison, b8 [[TMP29]], i32 0
+; CHECK-NEXT:    [[TMP31:%.*]] = bitcast i8 [[TMP14]] to b8
+; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x b8> [[TMP30]], b8 [[TMP31]], i32 1
+; CHECK-NEXT:    [[TMP33:%.*]] = bitcast i8 [[TMP13]] to b8
+; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <4 x b8> [[TMP32]], b8 [[TMP33]], i32 2
+; CHECK-NEXT:    [[TMP35:%.*]] = bitcast i8 [[TMP12]] to b8
+; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <4 x b8> [[TMP34]], b8 [[TMP35]], i32 3
+; CHECK-NEXT:    store <4 x b8> [[TMP36]], ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[TMP37:%.*]] = bitcast i8 [[TMP10]] to b8
+; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <4 x b8> poison, b8 [[TMP37]], i32 0
+; CHECK-NEXT:    [[TMP39:%.*]] = bitcast i8 [[TMP9]] to b8
+; CHECK-NEXT:    [[TMP40:%.*]] = insertelement <4 x b8> [[TMP38]], b8 [[TMP39]], i32 1
+; CHECK-NEXT:    [[TMP41:%.*]] = bitcast i8 [[TMP8]] to b8
+; CHECK-NEXT:    [[TMP42:%.*]] = insertelement <4 x b8> [[TMP40]], b8 [[TMP41]], i32 2
+; CHECK-NEXT:    [[TMP43:%.*]] = bitcast i8 [[TMP7]] to b8
+; CHECK-NEXT:    [[TMP44:%.*]] = insertelement <4 x b8> [[TMP42]], b8 [[TMP43]], i32 3
+; CHECK-NEXT:    store <4 x b8> [[TMP44]], ptr [[PTR4]], align 4
+; CHECK-NEXT:    [[TMP45:%.*]] = bitcast i8 [[TMP5]] to b8
+; CHECK-NEXT:    [[TMP46:%.*]] = insertelement <4 x b8> poison, b8 [[TMP45]], i32 0
+; CHECK-NEXT:    [[TMP47:%.*]] = bitcast i8 [[TMP4]] to b8
+; CHECK-NEXT:    [[TMP48:%.*]] = insertelement <4 x b8> [[TMP46]], b8 [[TMP47]], i32 1
+; CHECK-NEXT:    [[TMP49:%.*]] = bitcast i8 [[TMP3]] to b8
+; CHECK-NEXT:    [[TMP50:%.*]] = insertelement <4 x b8> [[TMP48]], b8 [[TMP49]], i32 2
+; CHECK-NEXT:    [[TMP51:%.*]] = bitcast i8 [[TMP2]] to b8
+; CHECK-NEXT:    [[TMP52:%.*]] = insertelement <4 x b8> [[TMP50]], b8 [[TMP51]], i32 3
+; CHECK-NEXT:    store <4 x b8> [[TMP52]], ptr [[PTR8]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr i8, ptr %ptr, i64 0
@@ -256,24 +321,40 @@ define void @int8x8a8(ptr nocapture align 8 %ptr) {
 ; CHECK-LABEL: define void @int8x8a8(
 ; CHECK-SAME: ptr align 8 captures(none) [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[PTR0]], align 8
-; CHECK-NEXT:    [[L01:%.*]] = extractelement <8 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[L12:%.*]] = extractelement <8 x i8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[L23:%.*]] = extractelement <8 x i8> [[TMP1]], i32 2
-; CHECK-NEXT:    [[L34:%.*]] = extractelement <8 x i8> [[TMP1]], i32 3
-; CHECK-NEXT:    [[L45:%.*]] = extractelement <8 x i8> [[TMP1]], i32 4
-; CHECK-NEXT:    [[L56:%.*]] = extractelement <8 x i8> [[TMP1]], i32 5
-; CHECK-NEXT:    [[L67:%.*]] = extractelement <8 x i8> [[TMP1]], i32 6
-; CHECK-NEXT:    [[L78:%.*]] = extractelement <8 x i8> [[TMP1]], i32 7
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i8> poison, i8 [[L78]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> [[TMP2]], i8 [[L67]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i8> [[TMP3]], i8 [[L56]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i8> [[TMP4]], i8 [[L45]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i8> [[TMP5]], i8 [[L34]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i8> [[TMP6]], i8 [[L23]], i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i8> [[TMP7]], i8 [[L12]], i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i8> [[TMP8]], i8 [[L01]], i32 7
-; CHECK-NEXT:    store <8 x i8> [[TMP9]], ptr [[PTR0]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x b8>, ptr [[PTR0]], align 8
+; CHECK-NEXT:    [[L01:%.*]] = extractelement <8 x b8> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b8 [[L01]] to i8
+; CHECK-NEXT:    [[L12:%.*]] = extractelement <8 x b8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b8 [[L12]] to i8
+; CHECK-NEXT:    [[L23:%.*]] = extractelement <8 x b8> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b8 [[L23]] to i8
+; CHECK-NEXT:    [[L34:%.*]] = extractelement <8 x b8> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b8 [[L34]] to i8
+; CHECK-NEXT:    [[L45:%.*]] = extractelement <8 x b8> [[TMP1]], i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast b8 [[L45]] to i8
+; CHECK-NEXT:    [[L56:%.*]] = extractelement <8 x b8> [[TMP1]], i32 5
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast b8 [[L56]] to i8
+; CHECK-NEXT:    [[L67:%.*]] = extractelement <8 x b8> [[TMP1]], i32 6
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast b8 [[L67]] to i8
+; CHECK-NEXT:    [[L78:%.*]] = extractelement <8 x b8> [[TMP1]], i32 7
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast b8 [[L78]] to i8
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i8 [[TMP9]] to b8
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x b8> poison, b8 [[TMP10]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i8 [[TMP8]] to b8
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x b8> [[TMP11]], b8 [[TMP12]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i8 [[TMP7]] to b8
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x b8> [[TMP13]], b8 [[TMP14]], i32 2
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast i8 [[TMP6]] to b8
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <8 x b8> [[TMP15]], b8 [[TMP16]], i32 3
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i8 [[TMP5]] to b8
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <8 x b8> [[TMP17]], b8 [[TMP18]], i32 4
+; CHECK-NEXT:    [[TMP20:%.*]] = bitcast i8 [[TMP4]] to b8
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <8 x b8> [[TMP19]], b8 [[TMP20]], i32 5
+; CHECK-NEXT:    [[TMP22:%.*]] = bitcast i8 [[TMP3]] to b8
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <8 x b8> [[TMP21]], b8 [[TMP22]], i32 6
+; CHECK-NEXT:    [[TMP24:%.*]] = bitcast i8 [[TMP2]] to b8
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <8 x b8> [[TMP23]], b8 [[TMP24]], i32 7
+; CHECK-NEXT:    store <8 x b8> [[TMP25]], ptr [[PTR0]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr i8, ptr %ptr, i64 0
@@ -312,34 +393,58 @@ define void @int8x12a8(ptr nocapture align 8 %ptr) {
 ; CHECK-SAME: ptr align 8 captures(none) [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR]], i64 0
 ; CHECK-NEXT:    [[PTR8:%.*]] = getelementptr i8, ptr [[PTR]], i64 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[PTR0]], align 8
-; CHECK-NEXT:    [[L01:%.*]] = extractelement <8 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[L12:%.*]] = extractelement <8 x i8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[L23:%.*]] = extractelement <8 x i8> [[TMP1]], i32 2
-; CHECK-NEXT:    [[L34:%.*]] = extractelement <8 x i8> [[TMP1]], i32 3
-; CHECK-NEXT:    [[L45:%.*]] = extractelement <8 x i8> [[TMP1]], i32 4
-; CHECK-NEXT:    [[L56:%.*]] = extractelement <8 x i8> [[TMP1]], i32 5
-; CHECK-NEXT:    [[L67:%.*]] = extractelement <8 x i8> [[TMP1]], i32 6
-; CHECK-NEXT:    [[L78:%.*]] = extractelement <8 x i8> [[TMP1]], i32 7
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr [[PTR8]], align 8
-; CHECK-NEXT:    [[L89:%.*]] = extractelement <4 x i8> [[TMP2]], i32 0
-; CHECK-NEXT:    [[L910:%.*]] = extractelement <4 x i8> [[TMP2]], i32 1
-; CHECK-NEXT:    [[LA11:%.*]] = extractelement <4 x i8> [[TMP2]], i32 2
-; CHECK-NEXT:    [[LB12:%.*]] = extractelement <4 x i8> [[TMP2]], i32 3
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> poison, i8 [[LB12]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i8> [[TMP3]], i8 [[LA11]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i8> [[TMP4]], i8 [[L910]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i8> [[TMP5]], i8 [[L89]], i32 3
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i8> [[TMP6]], i8 [[L78]], i32 4
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i8> [[TMP7]], i8 [[L67]], i32 5
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i8> [[TMP8]], i8 [[L56]], i32 6
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x i8> [[TMP9]], i8 [[L45]], i32 7
-; CHECK-NEXT:    store <8 x i8> [[TMP10]], ptr [[PTR0]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i8> poison, i8 [[L34]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i8> [[TMP11]], i8 [[L23]], i32 1
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i8> [[TMP12]], i8 [[L12]], i32 2
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i8> [[TMP13]], i8 [[L01]], i32 3
-; CHECK-NEXT:    store <4 x i8> [[TMP14]], ptr [[PTR8]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x b8>, ptr [[PTR0]], align 8
+; CHECK-NEXT:    [[L01:%.*]] = extractelement <8 x b8> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b8 [[L01]] to i8
+; CHECK-NEXT:    [[L12:%.*]] = extractelement <8 x b8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b8 [[L12]] to i8
+; CHECK-NEXT:    [[L23:%.*]] = extractelement <8 x b8> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b8 [[L23]] to i8
+; CHECK-NEXT:    [[L34:%.*]] = extractelement <8 x b8> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b8 [[L34]] to i8
+; CHECK-NEXT:    [[L45:%.*]] = extractelement <8 x b8> [[TMP1]], i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast b8 [[L45]] to i8
+; CHECK-NEXT:    [[L56:%.*]] = extractelement <8 x b8> [[TMP1]], i32 5
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast b8 [[L56]] to i8
+; CHECK-NEXT:    [[L67:%.*]] = extractelement <8 x b8> [[TMP1]], i32 6
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast b8 [[L67]] to i8
+; CHECK-NEXT:    [[L78:%.*]] = extractelement <8 x b8> [[TMP1]], i32 7
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast b8 [[L78]] to i8
+; CHECK-NEXT:    [[TMP10:%.*]] = load <4 x b8>, ptr [[PTR8]], align 8
+; CHECK-NEXT:    [[L89:%.*]] = extractelement <4 x b8> [[TMP10]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast b8 [[L89]] to i8
+; CHECK-NEXT:    [[L910:%.*]] = extractelement <4 x b8> [[TMP10]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast b8 [[L910]] to i8
+; CHECK-NEXT:    [[LA11:%.*]] = extractelement <4 x b8> [[TMP10]], i32 2
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast b8 [[LA11]] to i8
+; CHECK-NEXT:    [[LB12:%.*]] = extractelement <4 x b8> [[TMP10]], i32 3
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast b8 [[LB12]] to i8
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast i8 [[TMP14]] to b8
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <8 x b8> poison, b8 [[TMP15]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast i8 [[TMP13]] to b8
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <8 x b8> [[TMP16]], b8 [[TMP17]], i32 1
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast i8 [[TMP12]] to b8
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <8 x b8> [[TMP18]], b8 [[TMP19]], i32 2
+; CHECK-NEXT:    [[TMP21:%.*]] = bitcast i8 [[TMP11]] to b8
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <8 x b8> [[TMP20]], b8 [[TMP21]], i32 3
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast i8 [[TMP9]] to b8
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <8 x b8> [[TMP22]], b8 [[TMP23]], i32 4
+; CHECK-NEXT:    [[TMP25:%.*]] = bitcast i8 [[TMP8]] to b8
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <8 x b8> [[TMP24]], b8 [[TMP25]], i32 5
+; CHECK-NEXT:    [[TMP27:%.*]] = bitcast i8 [[TMP7]] to b8
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <8 x b8> [[TMP26]], b8 [[TMP27]], i32 6
+; CHECK-NEXT:    [[TMP29:%.*]] = bitcast i8 [[TMP6]] to b8
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <8 x b8> [[TMP28]], b8 [[TMP29]], i32 7
+; CHECK-NEXT:    store <8 x b8> [[TMP30]], ptr [[PTR0]], align 8
+; CHECK-NEXT:    [[TMP31:%.*]] = bitcast i8 [[TMP5]] to b8
+; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x b8> poison, b8 [[TMP31]], i32 0
+; CHECK-NEXT:    [[TMP33:%.*]] = bitcast i8 [[TMP4]] to b8
+; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <4 x b8> [[TMP32]], b8 [[TMP33]], i32 1
+; CHECK-NEXT:    [[TMP35:%.*]] = bitcast i8 [[TMP3]] to b8
+; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <4 x b8> [[TMP34]], b8 [[TMP35]], i32 2
+; CHECK-NEXT:    [[TMP37:%.*]] = bitcast i8 [[TMP2]] to b8
+; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <4 x b8> [[TMP36]], b8 [[TMP37]], i32 3
+; CHECK-NEXT:    store <4 x b8> [[TMP38]], ptr [[PTR8]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr i8, ptr %ptr, i64 0
@@ -391,42 +496,74 @@ define void @int8x16a8(ptr nocapture align 8 %ptr) {
 ; CHECK-SAME: ptr align 8 captures(none) [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR]], i64 0
 ; CHECK-NEXT:    [[PTR8:%.*]] = getelementptr i8, ptr [[PTR]], i64 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[PTR0]], align 8
-; CHECK-NEXT:    [[L01:%.*]] = extractelement <8 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[L12:%.*]] = extractelement <8 x i8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[L23:%.*]] = extractelement <8 x i8> [[TMP1]], i32 2
-; CHECK-NEXT:    [[L34:%.*]] = extractelement <8 x i8> [[TMP1]], i32 3
-; CHECK-NEXT:    [[L45:%.*]] = extractelement <8 x i8> [[TMP1]], i32 4
-; CHECK-NEXT:    [[L56:%.*]] = extractelement <8 x i8> [[TMP1]], i32 5
-; CHECK-NEXT:    [[L67:%.*]] = extractelement <8 x i8> [[TMP1]], i32 6
-; CHECK-NEXT:    [[L78:%.*]] = extractelement <8 x i8> [[TMP1]], i32 7
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr [[PTR8]], align 8
-; CHECK-NEXT:    [[L89:%.*]] = extractelement <8 x i8> [[TMP2]], i32 0
-; CHECK-NEXT:    [[L910:%.*]] = extractelement <8 x i8> [[TMP2]], i32 1
-; CHECK-NEXT:    [[LA11:%.*]] = extractelement <8 x i8> [[TMP2]], i32 2
-; CHECK-NEXT:    [[LB12:%.*]] = extractelement <8 x i8> [[TMP2]], i32 3
-; CHECK-NEXT:    [[LC13:%.*]] = extractelement <8 x i8> [[TMP2]], i32 4
-; CHECK-NEXT:    [[LD14:%.*]] = extractelement <8 x i8> [[TMP2]], i32 5
-; CHECK-NEXT:    [[LE15:%.*]] = extractelement <8 x i8> [[TMP2]], i32 6
-; CHECK-NEXT:    [[LF16:%.*]] = extractelement <8 x i8> [[TMP2]], i32 7
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> poison, i8 [[LF16]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i8> [[TMP3]], i8 [[LE15]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i8> [[TMP4]], i8 [[LD14]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i8> [[TMP5]], i8 [[LC13]], i32 3
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i8> [[TMP6]], i8 [[LB12]], i32 4
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i8> [[TMP7]], i8 [[LA11]], i32 5
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i8> [[TMP8]], i8 [[L910]], i32 6
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x i8> [[TMP9]], i8 [[L89]], i32 7
-; CHECK-NEXT:    store <8 x i8> [[TMP10]], ptr [[PTR0]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x i8> poison, i8 [[L78]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x i8> [[TMP11]], i8 [[L67]], i32 1
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x i8> [[TMP12]], i8 [[L56]], i32 2
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x i8> [[TMP13]], i8 [[L45]], i32 3
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x i8> [[TMP14]], i8 [[L34]], i32 4
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <8 x i8> [[TMP15]], i8 [[L23]], i32 5
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <8 x i8> [[TMP16]], i8 [[L12]], i32 6
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <8 x i8> [[TMP17]], i8 [[L01]], i32 7
-; CHECK-NEXT:    store <8 x i8> [[TMP18]], ptr [[PTR8]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x b8>, ptr [[PTR0]], align 8
+; CHECK-NEXT:    [[L01:%.*]] = extractelement <8 x b8> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b8 [[L01]] to i8
+; CHECK-NEXT:    [[L12:%.*]] = extractelement <8 x b8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b8 [[L12]] to i8
+; CHECK-NEXT:    [[L23:%.*]] = extractelement <8 x b8> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b8 [[L23]] to i8
+; CHECK-NEXT:    [[L34:%.*]] = extractelement <8 x b8> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b8 [[L34]] to i8
+; CHECK-NEXT:    [[L45:%.*]] = extractelement <8 x b8> [[TMP1]], i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast b8 [[L45]] to i8
+; CHECK-NEXT:    [[L56:%.*]] = extractelement <8 x b8> [[TMP1]], i32 5
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast b8 [[L56]] to i8
+; CHECK-NEXT:    [[L67:%.*]] = extractelement <8 x b8> [[TMP1]], i32 6
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast b8 [[L67]] to i8
+; CHECK-NEXT:    [[L78:%.*]] = extractelement <8 x b8> [[TMP1]], i32 7
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast b8 [[L78]] to i8
+; CHECK-NEXT:    [[TMP10:%.*]] = load <8 x b8>, ptr [[PTR8]], align 8
+; CHECK-NEXT:    [[L89:%.*]] = extractelement <8 x b8> [[TMP10]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast b8 [[L89]] to i8
+; CHECK-NEXT:    [[L910:%.*]] = extractelement <8 x b8> [[TMP10]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast b8 [[L910]] to i8
+; CHECK-NEXT:    [[LA11:%.*]] = extractelement <8 x b8> [[TMP10]], i32 2
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast b8 [[LA11]] to i8
+; CHECK-NEXT:    [[LB12:%.*]] = extractelement <8 x b8> [[TMP10]], i32 3
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast b8 [[LB12]] to i8
+; CHECK-NEXT:    [[LC13:%.*]] = extractelement <8 x b8> [[TMP10]], i32 4
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast b8 [[LC13]] to i8
+; CHECK-NEXT:    [[LD14:%.*]] = extractelement <8 x b8> [[TMP10]], i32 5
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast b8 [[LD14]] to i8
+; CHECK-NEXT:    [[LE15:%.*]] = extractelement <8 x b8> [[TMP10]], i32 6
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast b8 [[LE15]] to i8
+; CHECK-NEXT:    [[LF16:%.*]] = extractelement <8 x b8> [[TMP10]], i32 7
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast b8 [[LF16]] to i8
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast i8 [[TMP18]] to b8
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <8 x b8> poison, b8 [[TMP19]], i32 0
+; CHECK-NEXT:    [[TMP21:%.*]] = bitcast i8 [[TMP17]] to b8
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <8 x b8> [[TMP20]], b8 [[TMP21]], i32 1
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast i8 [[TMP16]] to b8
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <8 x b8> [[TMP22]], b8 [[TMP23]], i32 2
+; CHECK-NEXT:    [[TMP25:%.*]] = bitcast i8 [[TMP15]] to b8
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <8 x b8> [[TMP24]], b8 [[TMP25]], i32 3
+; CHECK-NEXT:    [[TMP27:%.*]] = bitcast i8 [[TMP14]] to b8
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <8 x b8> [[TMP26]], b8 [[TMP27]], i32 4
+; CHECK-NEXT:    [[TMP29:%.*]] = bitcast i8 [[TMP13]] to b8
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <8 x b8> [[TMP28]], b8 [[TMP29]], i32 5
+; CHECK-NEXT:    [[TMP31:%.*]] = bitcast i8 [[TMP12]] to b8
+; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <8 x b8> [[TMP30]], b8 [[TMP31]], i32 6
+; CHECK-NEXT:    [[TMP33:%.*]] = bitcast i8 [[TMP11]] to b8
+; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <8 x b8> [[TMP32]], b8 [[TMP33]], i32 7
+; CHECK-NEXT:    store <8 x b8> [[TMP34]], ptr [[PTR0]], align 8
+; CHECK-NEXT:    [[TMP35:%.*]] = bitcast i8 [[TMP9]] to b8
+; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <8 x b8> poison, b8 [[TMP35]], i32 0
+; CHECK-NEXT:    [[TMP37:%.*]] = bitcast i8 [[TMP8]] to b8
+; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <8 x b8> [[TMP36]], b8 [[TMP37]], i32 1
+; CHECK-NEXT:    [[TMP39:%.*]] = bitcast i8 [[TMP7]] to b8
+; CHECK-NEXT:    [[TMP40:%.*]] = insertelement <8 x b8> [[TMP38]], b8 [[TMP39]], i32 2
+; CHECK-NEXT:    [[TMP41:%.*]] = bitcast i8 [[TMP6]] to b8
+; CHECK-NEXT:    [[TMP42:%.*]] = insertelement <8 x b8> [[TMP40]], b8 [[TMP41]], i32 3
+; CHECK-NEXT:    [[TMP43:%.*]] = bitcast i8 [[TMP5]] to b8
+; CHECK-NEXT:    [[TMP44:%.*]] = insertelement <8 x b8> [[TMP42]], b8 [[TMP43]], i32 4
+; CHECK-NEXT:    [[TMP45:%.*]] = bitcast i8 [[TMP4]] to b8
+; CHECK-NEXT:    [[TMP46:%.*]] = insertelement <8 x b8> [[TMP44]], b8 [[TMP45]], i32 5
+; CHECK-NEXT:    [[TMP47:%.*]] = bitcast i8 [[TMP3]] to b8
+; CHECK-NEXT:    [[TMP48:%.*]] = insertelement <8 x b8> [[TMP46]], b8 [[TMP47]], i32 6
+; CHECK-NEXT:    [[TMP49:%.*]] = bitcast i8 [[TMP2]] to b8
+; CHECK-NEXT:    [[TMP50:%.*]] = insertelement <8 x b8> [[TMP48]], b8 [[TMP49]], i32 7
+; CHECK-NEXT:    store <8 x b8> [[TMP50]], ptr [[PTR8]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr i8, ptr %ptr, i64 0

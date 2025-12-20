@@ -388,14 +388,14 @@ define amdgpu_kernel void @flat_scratch_load(float %a, float %b, <8 x i32> %desc
 ; GCN-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x44
 ; GCN-NEXT:    s_addc_u32 s17, s17, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0x40b00000
+; GCN-NEXT:    s_brev_b32 s0, 1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[16:19], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    s_brev_b32 s0, 1
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN-NEXT:    s_mov_b32 s3, 0
 ; GCN-NEXT:    s_mov_b32 s1, s0
 ; GCN-NEXT:    s_mov_b32 s2, s0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN-NEXT:    v_mov_b32_e32 v1, s7
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND

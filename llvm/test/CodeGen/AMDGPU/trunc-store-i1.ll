@@ -3,8 +3,8 @@
 
 
 ; GCN-LABEL: {{^}}global_truncstore_i32_to_i1:
-; GCN: s_load_dword [[LOAD:s[0-9]+]],
-; GCN: s_and_b32 [[SREG:s[0-9]+]], [[LOAD]], 1
+; GCN: s_load_dwordx4
+; GCN: s_and_b32 [[SREG:s[0-9]+]], [[LOAD:s[0-9]+]], 1
 ; GCN: v_mov_b32_e32 [[VREG:v[0-9]+]], [[SREG]]
 ; GCN: buffer_store_byte [[VREG]],
 define amdgpu_kernel void @global_truncstore_i32_to_i1(ptr addrspace(1) %out, i32 %val) nounwind {
@@ -23,8 +23,8 @@ define amdgpu_kernel void @global_truncstore_i64_to_i1(ptr addrspace(1) %out, i6
 
 ; FIXME: VGPR on VI
 ; GCN-LABEL: {{^}}s_arg_global_truncstore_i16_to_i1:
-; GCN: s_load_dword [[LOAD:s[0-9]+]],
-; GCN: s_and_b32 [[SREG:s[0-9]+]], [[LOAD]], 1
+; GCN: s_load_dwordx4
+; GCN: s_and_b32 [[SREG:s[0-9]+]], [[LOAD:s[0-9]+]], 1
 ; GCN: v_mov_b32_e32 [[VREG:v[0-9]+]], [[SREG]]
 ; GCN: buffer_store_byte [[VREG]],
 define amdgpu_kernel void @s_arg_global_truncstore_i16_to_i1(ptr addrspace(1) %out, i16 %val) nounwind {

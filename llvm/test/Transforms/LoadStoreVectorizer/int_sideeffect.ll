@@ -8,18 +8,26 @@ declare void @llvm.sideeffect()
 
 define void @test_sideeffect(ptr %p) {
 ; CHECK-LABEL: @test_sideeffect(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[L01:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
-; CHECK-NEXT:    [[L12:%.*]] = extractelement <4 x float> [[TMP2]], i32 1
-; CHECK-NEXT:    [[L23:%.*]] = extractelement <4 x float> [[TMP2]], i32 2
-; CHECK-NEXT:    [[L34:%.*]] = extractelement <4 x float> [[TMP2]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x b32>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[L01:%.*]] = extractelement <4 x b32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[L01]] to float
+; CHECK-NEXT:    [[L12:%.*]] = extractelement <4 x b32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[L12]] to float
+; CHECK-NEXT:    [[L23:%.*]] = extractelement <4 x b32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[L23]] to float
+; CHECK-NEXT:    [[L34:%.*]] = extractelement <4 x b32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b32 [[L34]] to float
 ; CHECK-NEXT:    call void @llvm.sideeffect()
 ; CHECK-NEXT:    call void @llvm.sideeffect()
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[L01]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[L12]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[L23]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[L34]], i32 3
-; CHECK-NEXT:    store <4 x float> [[TMP6]], ptr [[P]], align 16
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast float [[TMP2]] to b32
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x b32> poison, b32 [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast float [[TMP3]] to b32
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x b32> [[TMP7]], b32 [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast float [[TMP4]] to b32
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x b32> [[TMP9]], b32 [[TMP10]], i32 2
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast float [[TMP5]] to b32
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x b32> [[TMP11]], b32 [[TMP12]], i32 3
+; CHECK-NEXT:    store <4 x b32> [[TMP13]], ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %p1 = getelementptr float, ptr %p, i64 1
@@ -42,18 +50,26 @@ declare void @foo()
 
 define void @test_inaccessiblememonly_nounwind_willreturn(ptr %p) {
 ; CHECK-LABEL: @test_inaccessiblememonly_nounwind_willreturn(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[L01:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
-; CHECK-NEXT:    [[L12:%.*]] = extractelement <4 x float> [[TMP2]], i32 1
-; CHECK-NEXT:    [[L23:%.*]] = extractelement <4 x float> [[TMP2]], i32 2
-; CHECK-NEXT:    [[L34:%.*]] = extractelement <4 x float> [[TMP2]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x b32>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[L01:%.*]] = extractelement <4 x b32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[L01]] to float
+; CHECK-NEXT:    [[L12:%.*]] = extractelement <4 x b32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[L12]] to float
+; CHECK-NEXT:    [[L23:%.*]] = extractelement <4 x b32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[L23]] to float
+; CHECK-NEXT:    [[L34:%.*]] = extractelement <4 x b32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b32 [[L34]] to float
 ; CHECK-NEXT:    call void @foo() #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    call void @foo() #[[ATTR1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[L01]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[L12]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[L23]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[L34]], i32 3
-; CHECK-NEXT:    store <4 x float> [[TMP6]], ptr [[P]], align 16
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast float [[TMP2]] to b32
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x b32> poison, b32 [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast float [[TMP3]] to b32
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x b32> [[TMP7]], b32 [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast float [[TMP4]] to b32
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x b32> [[TMP9]], b32 [[TMP10]], i32 2
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast float [[TMP5]] to b32
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x b32> [[TMP11]], b32 [[TMP12]], i32 3
+; CHECK-NEXT:    store <4 x b32> [[TMP13]], ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %p1 = getelementptr float, ptr %p, i64 1

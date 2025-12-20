@@ -4,12 +4,17 @@
 define void @test_redundant_no_gap(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define void @test_redundant_no_gap(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr addrspace(1) [[PTR]], align 32
-; CHECK-NEXT:    [[LD03:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[LD14:%.*]] = extractelement <8 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[LD25:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[LD37:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 4, i32 5>
-; CHECK-NEXT:    [[LD45:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 6, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x b32>, ptr addrspace(1) [[PTR]], align 32
+; CHECK-NEXT:    [[LD01:%.*]] = shufflevector <8 x b32> [[TMP1]], <8 x b32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x b32> [[LD01]] to <2 x i32>
+; CHECK-NEXT:    [[LD12:%.*]] = extractelement <8 x b32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[LD12]] to i32
+; CHECK-NEXT:    [[LD23:%.*]] = shufflevector <8 x b32> [[TMP1]], <8 x b32> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x b32> [[LD23]] to <2 x i32>
+; CHECK-NEXT:    [[LD34:%.*]] = shufflevector <8 x b32> [[TMP1]], <8 x b32> poison, <2 x i32> <i32 4, i32 5>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x b32> [[LD34]] to <2 x i32>
+; CHECK-NEXT:    [[LD45:%.*]] = shufflevector <8 x b32> [[TMP1]], <8 x b32> poison, <2 x i32> <i32 6, i32 7>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x b32> [[LD45]] to <2 x i32>
 ; CHECK-NEXT:    ret void
 ;
   %ld0 = load <2 x i32>, ptr addrspace(1) %ptr, align 32
@@ -30,12 +35,17 @@ define void @test_redundant_no_gap(ptr addrspace(1) %ptr) {
 define void @test_redundant_gap(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define void @test_redundant_gap(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p1(ptr addrspace(1) align 32 [[PTR]], <8 x i1> <i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <8 x i32> poison)
-; CHECK-NEXT:    [[LD01:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[LD12:%.*]] = extractelement <8 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[GAPFILL3:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[LD34:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 4, i32 5>
-; CHECK-NEXT:    [[LD45:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 6, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x b32> @llvm.masked.load.v8b32.p1(ptr addrspace(1) align 32 [[PTR]], <8 x i1> <i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <8 x b32> poison)
+; CHECK-NEXT:    [[LD01:%.*]] = shufflevector <8 x b32> [[TMP1]], <8 x b32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x b32> [[LD01]] to <2 x i32>
+; CHECK-NEXT:    [[LD12:%.*]] = extractelement <8 x b32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[LD12]] to i32
+; CHECK-NEXT:    [[GAPFILL3:%.*]] = shufflevector <8 x b32> [[TMP1]], <8 x b32> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x b32> [[GAPFILL3]] to <2 x i32>
+; CHECK-NEXT:    [[LD34:%.*]] = shufflevector <8 x b32> [[TMP1]], <8 x b32> poison, <2 x i32> <i32 4, i32 5>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x b32> [[LD34]] to <2 x i32>
+; CHECK-NEXT:    [[LD45:%.*]] = shufflevector <8 x b32> [[TMP1]], <8 x b32> poison, <2 x i32> <i32 6, i32 7>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x b32> [[LD45]] to <2 x i32>
 ; CHECK-NEXT:    ret void
 ;
   %ld0 = load <2 x i32>, ptr addrspace(1) %ptr, align 32
@@ -52,14 +62,19 @@ define void @test_redundant_gap(ptr addrspace(1) %ptr) {
 define void @test_redundant_gap_and_extend(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define void @test_redundant_gap_and_extend(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p1(ptr addrspace(1) align 32 [[PTR]], <8 x i1> <i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false>, <8 x i32> poison)
-; CHECK-NEXT:    [[LD03:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[LD14:%.*]] = extractelement <8 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[GAPFILL5:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[LD36:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 4, i32 5>
-; CHECK-NEXT:    [[LD47:%.*]] = extractelement <8 x i32> [[TMP1]], i32 4
-; CHECK-NEXT:    [[EXTEND8:%.*]] = extractelement <8 x i32> [[TMP1]], i32 6
-; CHECK-NEXT:    [[EXTEND29:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x b32> @llvm.masked.load.v8b32.p1(ptr addrspace(1) align 32 [[PTR]], <8 x i1> <i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false>, <8 x b32> poison)
+; CHECK-NEXT:    [[LD03:%.*]] = shufflevector <8 x b32> [[TMP1]], <8 x b32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x b32> [[LD03]] to <2 x i32>
+; CHECK-NEXT:    [[LD14:%.*]] = extractelement <8 x b32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[LD14]] to i32
+; CHECK-NEXT:    [[GAPFILL5:%.*]] = shufflevector <8 x b32> [[TMP1]], <8 x b32> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x b32> [[GAPFILL5]] to <2 x i32>
+; CHECK-NEXT:    [[LD36:%.*]] = shufflevector <8 x b32> [[TMP1]], <8 x b32> poison, <2 x i32> <i32 4, i32 5>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x b32> [[LD36]] to <2 x i32>
+; CHECK-NEXT:    [[LD47:%.*]] = extractelement <8 x b32> [[TMP1]], i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast b32 [[LD47]] to i32
+; CHECK-NEXT:    [[EXTEND8:%.*]] = extractelement <8 x b32> [[TMP1]], i32 6
+; CHECK-NEXT:    [[EXTEND29:%.*]] = extractelement <8 x b32> [[TMP1]], i32 7
 ; CHECK-NEXT:    ret void
 ;
   %ld0 = load <2 x i32>, ptr addrspace(1) %ptr, align 32

@@ -12,7 +12,7 @@ define amdgpu_kernel void @no_crash(i32 %arg) {
 ; GCN-NEXT:    [[TEMP3:%.*]] = getelementptr [16384 x i32], ptr addrspace(3) @[[GLOB0:[0-9]+]], i32 0, i32 [[TEMP2]]
 ; GCN-NEXT:    [[TEMP4:%.*]] = add i32 [[ARG]], 15
 ; GCN-NEXT:    [[TEMP5:%.*]] = getelementptr [16384 x i32], ptr addrspace(3) @[[GLOB0]], i32 0, i32 [[TEMP4]]
-; GCN-NEXT:    store <2 x i32> zeroinitializer, ptr addrspace(3) [[TEMP3]], align 4
+; GCN-NEXT:    store <2 x b32> zeroinitializer, ptr addrspace(3) [[TEMP3]], align 4
 ; GCN-NEXT:    store i32 0, ptr addrspace(3) [[TEMP5]], align 4
 ; GCN-NEXT:    store i32 0, ptr addrspace(3) [[TEMP5]], align 4
 ; GCN-NEXT:    ret void
@@ -40,18 +40,26 @@ define amdgpu_kernel void @interleave_get_longest(i32 %arg) {
 ; GCN-NEXT:    [[TEMP1:%.*]] = getelementptr [16384 x i32], ptr addrspace(3) @[[GLOB0]], i32 0, i32 [[ARG]]
 ; GCN-NEXT:    [[TEMP2:%.*]] = getelementptr [16384 x i32], ptr addrspace(3) @[[GLOB0]], i32 0, i32 [[A1]]
 ; GCN-NEXT:    [[TEMP4:%.*]] = getelementptr [16384 x i32], ptr addrspace(3) @[[GLOB0]], i32 0, i32 [[A3]]
-; GCN-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(3) [[TEMP1]], align 4
-; GCN-NEXT:    [[L21:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; GCN-NEXT:    [[L12:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; GCN-NEXT:    store <2 x i32> zeroinitializer, ptr addrspace(3) [[TEMP1]], align 4
-; GCN-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr addrspace(3) [[TEMP2]], align 4
-; GCN-NEXT:    [[L33:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
-; GCN-NEXT:    [[L44:%.*]] = extractelement <2 x i32> [[TMP2]], i32 1
-; GCN-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr addrspace(3) [[TEMP4]], align 4
-; GCN-NEXT:    [[L55:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
-; GCN-NEXT:    [[L66:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
-; GCN-NEXT:    [[L77:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
-; GCN-NEXT:    [[L88:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
+; GCN-NEXT:    [[TMP1:%.*]] = load <2 x b32>, ptr addrspace(3) [[TEMP1]], align 4
+; GCN-NEXT:    [[L21:%.*]] = extractelement <2 x b32> [[TMP1]], i32 0
+; GCN-NEXT:    [[TMP2:%.*]] = bitcast b32 [[L21]] to i32
+; GCN-NEXT:    [[L12:%.*]] = extractelement <2 x b32> [[TMP1]], i32 1
+; GCN-NEXT:    [[TMP3:%.*]] = bitcast b32 [[L12]] to i32
+; GCN-NEXT:    store <2 x b32> zeroinitializer, ptr addrspace(3) [[TEMP1]], align 4
+; GCN-NEXT:    [[TMP4:%.*]] = load <2 x b32>, ptr addrspace(3) [[TEMP2]], align 4
+; GCN-NEXT:    [[L33:%.*]] = extractelement <2 x b32> [[TMP4]], i32 0
+; GCN-NEXT:    [[TMP5:%.*]] = bitcast b32 [[L33]] to i32
+; GCN-NEXT:    [[L44:%.*]] = extractelement <2 x b32> [[TMP4]], i32 1
+; GCN-NEXT:    [[TMP6:%.*]] = bitcast b32 [[L44]] to i32
+; GCN-NEXT:    [[TMP7:%.*]] = load <2 x b32>, ptr addrspace(3) [[TEMP4]], align 4
+; GCN-NEXT:    [[L55:%.*]] = extractelement <2 x b32> [[TMP7]], i32 0
+; GCN-NEXT:    [[TMP8:%.*]] = bitcast b32 [[L55]] to i32
+; GCN-NEXT:    [[L66:%.*]] = extractelement <2 x b32> [[TMP7]], i32 1
+; GCN-NEXT:    [[TMP9:%.*]] = bitcast b32 [[L66]] to i32
+; GCN-NEXT:    [[L77:%.*]] = extractelement <2 x b32> [[TMP7]], i32 1
+; GCN-NEXT:    [[TMP10:%.*]] = bitcast b32 [[L77]] to i32
+; GCN-NEXT:    [[L88:%.*]] = extractelement <2 x b32> [[TMP7]], i32 1
+; GCN-NEXT:    [[TMP11:%.*]] = bitcast b32 [[L88]] to i32
 ; GCN-NEXT:    ret void
 ;
   %a1 = add i32 %arg, 1

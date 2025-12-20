@@ -4,13 +4,17 @@
 define void @test(ptr %ptr) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[PTR]], align 8
-; CHECK-NEXT:    [[LD01:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[LD12:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x b32>, ptr [[PTR]], align 8
+; CHECK-NEXT:    [[LD01:%.*]] = extractelement <2 x b32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LD01]] to i32
+; CHECK-NEXT:    [[LD12:%.*]] = extractelement <2 x b32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[LD12]] to i32
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[GEP2]], align 8
-; CHECK-NEXT:    [[LD23:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[LD34:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x b32>, ptr [[GEP2]], align 8
+; CHECK-NEXT:    [[LD23:%.*]] = shufflevector <2 x b32> [[TMP4]], <2 x b32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x b32> [[LD23]] to <2 x i32>
+; CHECK-NEXT:    [[LD34:%.*]] = extractelement <2 x b32> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast b32 [[LD34]] to i32
 ; CHECK-NEXT:    ret void
 ;
   %ld0 = load i32, ptr %ptr, align 8

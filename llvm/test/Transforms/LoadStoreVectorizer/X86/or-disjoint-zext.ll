@@ -12,10 +12,13 @@ define void @test_zext_add(ptr %base, i32 %idx) {
 ; CHECK-SAME: ptr [[BASE:%.*]], i32 [[IDX:%.*]]) {
 ; CHECK-NEXT:    [[I0:%.*]] = zext i32 [[IDX]] to i64
 ; CHECK-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i64 [[I0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr [[G0]], align 4
-; CHECK-NEXT:    [[V01:%.*]] = extractelement <3 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[V12:%.*]] = extractelement <3 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[V23:%.*]] = extractelement <3 x i32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x b32>, ptr [[G0]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = extractelement <3 x b32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[V01:%.*]] = bitcast b32 [[V1]] to i32
+; CHECK-NEXT:    [[V13:%.*]] = extractelement <3 x b32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[V12:%.*]] = bitcast b32 [[V13]] to i32
+; CHECK-NEXT:    [[V24:%.*]] = extractelement <3 x b32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[V23:%.*]] = bitcast b32 [[V24]] to i32
 ; CHECK-NEXT:    [[IDX3:%.*]] = add nuw i32 [[IDX]], 3
 ; CHECK-NEXT:    [[I3:%.*]] = zext i32 [[IDX3]] to i64
 ; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i64 [[I3]]
@@ -62,10 +65,13 @@ define void @test_zext_or_disjoint(ptr %base, i32 %idx) {
 ; CHECK-SAME: ptr [[BASE:%.*]], i32 [[IDX:%.*]]) {
 ; CHECK-NEXT:    [[I0:%.*]] = zext i32 [[IDX]] to i64
 ; CHECK-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i64 [[I0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr [[G0]], align 4
-; CHECK-NEXT:    [[V01:%.*]] = extractelement <3 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[V12:%.*]] = extractelement <3 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[V23:%.*]] = extractelement <3 x i32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x b32>, ptr [[G0]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = extractelement <3 x b32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[V01:%.*]] = bitcast b32 [[V1]] to i32
+; CHECK-NEXT:    [[V13:%.*]] = extractelement <3 x b32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[V12:%.*]] = bitcast b32 [[V13]] to i32
+; CHECK-NEXT:    [[V24:%.*]] = extractelement <3 x b32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[V23:%.*]] = bitcast b32 [[V24]] to i32
 ; CHECK-NEXT:    [[B3:%.*]] = or disjoint i32 [[IDX]], 3
 ; CHECK-NEXT:    [[I3:%.*]] = zext i32 [[B3]] to i64
 ; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i64 [[I3]]

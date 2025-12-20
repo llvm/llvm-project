@@ -25,9 +25,11 @@ define void @scev_range_urem_bounded(ptr noalias %in, ptr noalias %out, i32 %idx
 ; CHECK-NEXT:    [[BOUNDED:%.*]] = urem i32 [[IDX]], -4
 ; CHECK-NEXT:    [[EXT0:%.*]] = zext i32 [[BOUNDED]] to i64
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr [[IN]], i64 [[EXT0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[GEP0]], align 4
-; CHECK-NEXT:    [[V01:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[V42:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x b32>, ptr [[GEP0]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = extractelement <2 x b32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[V01:%.*]] = bitcast b32 [[V1]] to i32
+; CHECK-NEXT:    [[V43:%.*]] = extractelement <2 x b32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[V42:%.*]] = bitcast b32 [[V43]] to i32
 ; CHECK-NEXT:    [[S:%.*]] = add i32 [[V01]], [[V42]]
 ; CHECK-NEXT:    store i32 [[S]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    ret void

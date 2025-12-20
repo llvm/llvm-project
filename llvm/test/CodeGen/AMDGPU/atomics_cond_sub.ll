@@ -182,11 +182,11 @@ entry:
 define amdgpu_kernel void @global_atomic_usub_cond_rtn_u32(ptr addrspace(1) %addr, i32 %in, ptr addrspace(1) %use) {
 ; GFX12-SDAG-LABEL: global_atomic_usub_cond_rtn_u32:
 ; GFX12-SDAG:       ; %bb.0: ; %entry
+; GFX12-SDAG-NEXT:    s_clause 0x1
 ; GFX12-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, s2
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-SDAG-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-NEXT:    global_atomic_cond_sub_u32 v1, v0, v1, s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_SYS

@@ -27,11 +27,15 @@ define amdgpu_kernel void @merge_align_4(ptr addrspace(7) captures(none) %p) #0 
 ; OOB-RELAXED-SAME: ptr addrspace(7) captures(none) [[P:%.*]]) {
 ; OOB-RELAXED-NEXT:  [[ENTRY:.*:]]
 ; OOB-RELAXED-NEXT:    [[GEP_M8:%.*]] = getelementptr i8, ptr addrspace(7) [[P]], i32 -8
-; OOB-RELAXED-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr addrspace(7) [[GEP_M8]], align 4
-; OOB-RELAXED-NEXT:    [[LD_M81:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
-; OOB-RELAXED-NEXT:    [[LD_M42:%.*]] = extractelement <4 x i32> [[TMP0]], i32 1
-; OOB-RELAXED-NEXT:    [[LD_03:%.*]] = extractelement <4 x i32> [[TMP0]], i32 2
-; OOB-RELAXED-NEXT:    [[LD_44:%.*]] = extractelement <4 x i32> [[TMP0]], i32 3
+; OOB-RELAXED-NEXT:    [[TMP0:%.*]] = load <4 x b32>, ptr addrspace(7) [[GEP_M8]], align 4
+; OOB-RELAXED-NEXT:    [[LD_M81:%.*]] = extractelement <4 x b32> [[TMP0]], i32 0
+; OOB-RELAXED-NEXT:    [[TMP1:%.*]] = bitcast b32 [[LD_M81]] to i32
+; OOB-RELAXED-NEXT:    [[LD_M42:%.*]] = extractelement <4 x b32> [[TMP0]], i32 1
+; OOB-RELAXED-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LD_M42]] to i32
+; OOB-RELAXED-NEXT:    [[LD_03:%.*]] = extractelement <4 x b32> [[TMP0]], i32 2
+; OOB-RELAXED-NEXT:    [[TMP3:%.*]] = bitcast b32 [[LD_03]] to i32
+; OOB-RELAXED-NEXT:    [[LD_44:%.*]] = extractelement <4 x b32> [[TMP0]], i32 3
+; OOB-RELAXED-NEXT:    [[TMP4:%.*]] = bitcast b32 [[LD_44]] to i32
 ; OOB-RELAXED-NEXT:    ret void
 ;
 entry:
@@ -54,22 +58,30 @@ define amdgpu_kernel void @merge_align_16(ptr addrspace(7) captures(none) %p) #0
 ; OOB-STRICT-SAME: ptr addrspace(7) captures(none) [[P:%.*]]) {
 ; OOB-STRICT-NEXT:  [[ENTRY:.*:]]
 ; OOB-STRICT-NEXT:    [[GEP_M8:%.*]] = getelementptr i8, ptr addrspace(7) [[P]], i32 -8
-; OOB-STRICT-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr addrspace(7) [[GEP_M8]], align 16
-; OOB-STRICT-NEXT:    [[LD_M81:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
-; OOB-STRICT-NEXT:    [[LD_M42:%.*]] = extractelement <4 x i32> [[TMP0]], i32 1
-; OOB-STRICT-NEXT:    [[LD_03:%.*]] = extractelement <4 x i32> [[TMP0]], i32 2
-; OOB-STRICT-NEXT:    [[LD_44:%.*]] = extractelement <4 x i32> [[TMP0]], i32 3
+; OOB-STRICT-NEXT:    [[TMP0:%.*]] = load <4 x b32>, ptr addrspace(7) [[GEP_M8]], align 16
+; OOB-STRICT-NEXT:    [[LD_M81:%.*]] = extractelement <4 x b32> [[TMP0]], i32 0
+; OOB-STRICT-NEXT:    [[TMP1:%.*]] = bitcast b32 [[LD_M81]] to i32
+; OOB-STRICT-NEXT:    [[LD_M42:%.*]] = extractelement <4 x b32> [[TMP0]], i32 1
+; OOB-STRICT-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LD_M42]] to i32
+; OOB-STRICT-NEXT:    [[LD_03:%.*]] = extractelement <4 x b32> [[TMP0]], i32 2
+; OOB-STRICT-NEXT:    [[TMP3:%.*]] = bitcast b32 [[LD_03]] to i32
+; OOB-STRICT-NEXT:    [[LD_44:%.*]] = extractelement <4 x b32> [[TMP0]], i32 3
+; OOB-STRICT-NEXT:    [[TMP4:%.*]] = bitcast b32 [[LD_44]] to i32
 ; OOB-STRICT-NEXT:    ret void
 ;
 ; OOB-RELAXED-LABEL: define amdgpu_kernel void @merge_align_16(
 ; OOB-RELAXED-SAME: ptr addrspace(7) captures(none) [[P:%.*]]) {
 ; OOB-RELAXED-NEXT:  [[ENTRY:.*:]]
 ; OOB-RELAXED-NEXT:    [[GEP_M8:%.*]] = getelementptr i8, ptr addrspace(7) [[P]], i32 -8
-; OOB-RELAXED-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr addrspace(7) [[GEP_M8]], align 16
-; OOB-RELAXED-NEXT:    [[LD_M81:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
-; OOB-RELAXED-NEXT:    [[LD_M42:%.*]] = extractelement <4 x i32> [[TMP0]], i32 1
-; OOB-RELAXED-NEXT:    [[LD_03:%.*]] = extractelement <4 x i32> [[TMP0]], i32 2
-; OOB-RELAXED-NEXT:    [[LD_44:%.*]] = extractelement <4 x i32> [[TMP0]], i32 3
+; OOB-RELAXED-NEXT:    [[TMP0:%.*]] = load <4 x b32>, ptr addrspace(7) [[GEP_M8]], align 16
+; OOB-RELAXED-NEXT:    [[LD_M81:%.*]] = extractelement <4 x b32> [[TMP0]], i32 0
+; OOB-RELAXED-NEXT:    [[TMP1:%.*]] = bitcast b32 [[LD_M81]] to i32
+; OOB-RELAXED-NEXT:    [[LD_M42:%.*]] = extractelement <4 x b32> [[TMP0]], i32 1
+; OOB-RELAXED-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LD_M42]] to i32
+; OOB-RELAXED-NEXT:    [[LD_03:%.*]] = extractelement <4 x b32> [[TMP0]], i32 2
+; OOB-RELAXED-NEXT:    [[TMP3:%.*]] = bitcast b32 [[LD_03]] to i32
+; OOB-RELAXED-NEXT:    [[LD_44:%.*]] = extractelement <4 x b32> [[TMP0]], i32 3
+; OOB-RELAXED-NEXT:    [[TMP4:%.*]] = bitcast b32 [[LD_44]] to i32
 ; OOB-RELAXED-NEXT:    ret void
 ;
 entry:

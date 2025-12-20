@@ -186,31 +186,16 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v3i16(ptr addrspace(1) %ou
 ;
 ; GCN-LABEL: dynamic_extract_vector_elt_v3i16:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s2, s[4:5], 0x15
-; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x13
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GCN-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x13
+; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_lshl_b32 s2, s2, 4
-; GCN-NEXT:    s_lshr_b64 s[4:5], s[6:7], s2
-; GCN-NEXT:    s_mov_b32 s2, -1
-; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; GCN-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
+; GCN-NEXT:    s_mov_b32 s6, -1
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
-;
-; GFX89-LABEL: dynamic_extract_vector_elt_v3i16:
-; GFX89:       ; %bb.0:
-; GFX89-NEXT:    s_load_dword s8, s[4:5], 0x54
-; GFX89-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x4c
-; GFX89-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX89-NEXT:    s_mov_b32 s3, 0xf000
-; GFX89-NEXT:    s_mov_b32 s2, -1
-; GFX89-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX89-NEXT:    s_lshl_b32 s4, s8, 4
-; GFX89-NEXT:    s_lshr_b64 s[4:5], s[6:7], s4
-; GFX89-NEXT:    v_mov_b32_e32 v0, s4
-; GFX89-NEXT:    buffer_store_short v0, off, s[0:3], 0
-; GFX89-NEXT:    s_endpgm
   %p0 = extractelement <3 x i16> %foo, i32 %idx
   %out1 = getelementptr i16, ptr addrspace(1) %out, i32 1
   store i16 %p0, ptr addrspace(1) %out

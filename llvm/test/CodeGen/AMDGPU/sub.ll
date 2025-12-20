@@ -11,23 +11,24 @@ define amdgpu_kernel void @s_sub_i32(ptr addrspace(1) %out, i32 %a, i32 %b) {
 ; GFX6-LABEL: s_sub_i32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GFX6-NEXT:    s_mov_b32 s7, 0xf000
+; GFX6-NEXT:    s_mov_b32 s6, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX6-NEXT:    s_sub_i32 s4, s4, s5
-; GFX6-NEXT:    s_mov_b32 s3, 0xf000
-; GFX6-NEXT:    s_mov_b32 s2, -1
-; GFX6-NEXT:    v_mov_b32_e32 v0, s4
-; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GFX6-NEXT:    s_mov_b32 s4, s0
+; GFX6-NEXT:    s_sub_i32 s0, s2, s3
+; GFX6-NEXT:    s_mov_b32 s5, s1
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
+; GFX6-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GFX6-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: s_sub_i32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    s_sub_i32 s2, s2, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
+; GFX8-NEXT:    s_sub_i32 s0, s2, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
-; GFX8-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8-NEXT:    s_endpgm
 ;
@@ -58,32 +59,31 @@ define amdgpu_kernel void @s_sub_i32(ptr addrspace(1) %out, i32 %a, i32 %b) {
 define amdgpu_kernel void @s_sub_imm_i32(ptr addrspace(1) %out, i32 %a) {
 ; GFX6-LABEL: s_sub_imm_i32:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_load_dword s6, s[4:5], 0xb
-; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GFX6-NEXT:    s_mov_b32 s3, 0xf000
-; GFX6-NEXT:    s_mov_b32 s2, -1
+; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GFX6-NEXT:    s_mov_b32 s7, 0xf000
+; GFX6-NEXT:    s_mov_b32 s6, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_sub_i32 s4, 0x4d2, s6
-; GFX6-NEXT:    v_mov_b32_e32 v0, s4
-; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GFX6-NEXT:    s_mov_b32 s4, s0
+; GFX6-NEXT:    s_sub_i32 s0, 0x4d2, s2
+; GFX6-NEXT:    s_mov_b32 s5, s1
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
+; GFX6-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GFX6-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: s_sub_imm_i32:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    s_sub_i32 s2, 0x4d2, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
+; GFX8-NEXT:    s_sub_i32 s0, 0x4d2, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
-; GFX8-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: s_sub_imm_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_sub_i32 s2, 0x4d2, s2

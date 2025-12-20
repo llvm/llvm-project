@@ -8,11 +8,15 @@
 define void @fillTwoGapsCanVectorize(ptr %in) {
 ; CHECK-LABEL: define void @fillTwoGapsCanVectorize(
 ; CHECK-SAME: ptr [[IN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 16 [[IN]], <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> poison)
-; CHECK-NEXT:    [[LOAD03:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[GAPFILL4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[GAPFILL25:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[LOAD36:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x b32> @llvm.masked.load.v4b32.p0(ptr align 16 [[IN]], <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x b32> poison)
+; CHECK-NEXT:    [[LOAD03:%.*]] = extractelement <4 x b32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LOAD03]] to i32
+; CHECK-NEXT:    [[GAPFILL4:%.*]] = extractelement <4 x b32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[GAPFILL4]] to i32
+; CHECK-NEXT:    [[GAPFILL25:%.*]] = extractelement <4 x b32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[GAPFILL25]] to i32
+; CHECK-NEXT:    [[LOAD36:%.*]] = extractelement <4 x b32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b32 [[LOAD36]] to i32
 ; CHECK-NEXT:    ret void
 ;
   %load0 = load i32, ptr %in, align 16

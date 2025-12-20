@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=VI -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
 ; RUN: llc -mtriple=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}sext_bool_icmp_eq_0:
@@ -154,8 +154,8 @@ define amdgpu_kernel void @zext_bool_icmp_ne_neg1(ptr addrspace(1) %out, i32 %a,
 }
 
 ; FUNC-LABEL: {{^}}cmp_zext_k_i8max:
-; GCN: s_load_dword [[VALUE:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}
-; GCN-DAG: s_and_b32 [[B:s[0-9]+]], [[VALUE]], 0xff
+; GCN-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x9|0x24}}
+; GCN-DAG: s_and_b32 [[B:s[0-9]+]], s{{[0-9]+}}, 0xff
 ; GCN: s_cmpk_lg_i32 [[B]], 0xff
 ; GCN: s_cselect_b64 [[CC:[^,]+]], -1, 0
 
@@ -199,9 +199,8 @@ define void @v_cmp_sext_k_neg1_i8_sext_arg(i8 signext %b) nounwind {
 ; Should do a buffer_load_sbyte and compare with -1
 
 ; FUNC-LABEL: {{^}}cmp_sext_k_neg1_i8_arg:
-; SI: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0xb
-; VI: s_load_dword [[VAL:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
-; GCN-DAG: s_and_b32 [[B:s[0-9]+]], [[VAL]], 0xff
+; GCN-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x9|0x24}}
+; GCN-DAG: s_and_b32 [[B:s[0-9]+]], s{{[0-9]+}}, 0xff
 ; GCN: s_cmpk_lg_i32 [[B]], 0xff{{$}}
 ; GCN: s_cselect_b64 [[CC:[^,]+]], -1, 0
 ; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, [[CC]]

@@ -44,16 +44,14 @@ define void @test1() {
 define amdgpu_kernel void @test2(ptr %p, i32 %x) {
 ; GFX9-SDAG-LABEL: test2:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_load_dword s0, s[4:5], 0x2c
+; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-SDAG-NEXT:    s_cmp_lt_i32 s0, 1
+; GFX9-SDAG-NEXT:    s_cmp_lt_i32 s2, 1
 ; GFX9-SDAG-NEXT:    s_cbranch_scc0 .LBB2_2
 ; GFX9-SDAG-NEXT:  ; %bb.1: ; %else
-; GFX9-SDAG-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s3
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX9-SDAG-NEXT:    flat_store_dword v[0:1], v2
 ; GFX9-SDAG-NEXT:    s_endpgm
 ; GFX9-SDAG-NEXT:  .LBB2_2: ; %then
@@ -78,16 +76,14 @@ define amdgpu_kernel void @test2(ptr %p, i32 %x) {
 ;
 ; GFX10-SDAG-LABEL: test2:
 ; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_load_dword s0, s[4:5], 0x2c
+; GFX10-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-SDAG-NEXT:    s_cmp_lt_i32 s0, 1
+; GFX10-SDAG-NEXT:    s_cmp_lt_i32 s2, 1
 ; GFX10-SDAG-NEXT:    s_cbranch_scc0 .LBB2_2
 ; GFX10-SDAG-NEXT:  ; %bb.1: ; %else
-; GFX10-SDAG-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
-; GFX10-SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_mov_b32_e32 v0, s2
-; GFX10-SDAG-NEXT:    v_mov_b32_e32 v1, s3
+; GFX10-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; GFX10-SDAG-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX10-SDAG-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-SDAG-NEXT:    s_endpgm
 ; GFX10-SDAG-NEXT:  .LBB2_2: ; %then
@@ -112,15 +108,13 @@ define amdgpu_kernel void @test2(ptr %p, i32 %x) {
 ;
 ; GFX11-SDAG-LABEL: test2:
 ; GFX11-SDAG:       ; %bb.0:
-; GFX11-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x2c
+; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-NEXT:    s_cmp_lt_i32 s0, 1
+; GFX11-SDAG-NEXT:    s_cmp_lt_i32 s2, 1
 ; GFX11-SDAG-NEXT:    s_cbranch_scc0 .LBB2_2
 ; GFX11-SDAG-NEXT:  ; %bb.1: ; %else
-; GFX11-SDAG-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24
-; GFX11-SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-SDAG-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-SDAG-NEXT:    s_endpgm
 ; GFX11-SDAG-NEXT:  .LBB2_2: ; %then

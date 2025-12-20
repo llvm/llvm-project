@@ -17,8 +17,7 @@
 define amdgpu_kernel void @uniform_value_float(ptr addrspace(1) %out, float %in) #0 {
 ; GFX8DAGISEL-LABEL: uniform_value_float:
 ; GFX8DAGISEL:       ; %bb.0: ; %entry
-; GFX8DAGISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX8DAGISEL-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX8DAGISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX8DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v1, s1
@@ -39,8 +38,7 @@ define amdgpu_kernel void @uniform_value_float(ptr addrspace(1) %out, float %in)
 ;
 ; GFX9DAGISEL-LABEL: uniform_value_float:
 ; GFX9DAGISEL:       ; %bb.0: ; %entry
-; GFX9DAGISEL-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX9DAGISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9DAGISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v1, s2
@@ -59,9 +57,7 @@ define amdgpu_kernel void @uniform_value_float(ptr addrspace(1) %out, float %in)
 ;
 ; GFX10DAGISEL-LABEL: uniform_value_float:
 ; GFX10DAGISEL:       ; %bb.0: ; %entry
-; GFX10DAGISEL-NEXT:    s_clause 0x1
-; GFX10DAGISEL-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX10DAGISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10DAGISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX10DAGISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10DAGISEL-NEXT:    v_mov_b32_e32 v1, s2
@@ -81,9 +77,7 @@ define amdgpu_kernel void @uniform_value_float(ptr addrspace(1) %out, float %in)
 ;
 ; GFX1164DAGISEL-LABEL: uniform_value_float:
 ; GFX1164DAGISEL:       ; %bb.0: ; %entry
-; GFX1164DAGISEL-NEXT:    s_clause 0x1
-; GFX1164DAGISEL-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GFX1164DAGISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1164DAGISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1164DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v1, s2
@@ -103,9 +97,7 @@ define amdgpu_kernel void @uniform_value_float(ptr addrspace(1) %out, float %in)
 ;
 ; GFX1132DAGISEL-LABEL: uniform_value_float:
 ; GFX1132DAGISEL:       ; %bb.0: ; %entry
-; GFX1132DAGISEL-NEXT:    s_clause 0x1
-; GFX1132DAGISEL-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GFX1132DAGISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1132DAGISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX1132DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132DAGISEL-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX1132DAGISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
