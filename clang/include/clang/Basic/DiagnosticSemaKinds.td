@@ -1770,7 +1770,6 @@ def err_user_defined_msg_constexpr : Error<
 def note_unsatisfied_trait
     : Note<"%0 is not %enum_select<TraitName>{"
            "%TriviallyRelocatable{trivially relocatable}|"
-           "%Replaceable{replaceable}|"
            "%TriviallyCopyable{trivially copyable}|"
            "%Empty{empty}|"
            "%StandardLayout{standard-layout}|"
@@ -1792,8 +1791,6 @@ def note_unsatisfied_trait_reason
            "class type}|"
            "%NTRBase{has a non-trivially-relocatable base %1}|"
            "%NTRField{has a non-trivially-relocatable member %1 of type %2}|"
-           "%NonReplaceableBase{has a non-replaceable base %1}|"
-           "%NonReplaceableField{has a non-replaceable member %1 of type %2}|"
            "%NTCBase{has a non-trivially-copyable base %1}|"
            "%NTCField{has a non-trivially-copyable member %1 of type %2}|"
            "%NonEmptyMember{has a non-static data member %1 of type %2}|"
@@ -3904,9 +3901,19 @@ def warn_attribute_dllimport_static_field_definition : Warning<
 def warn_attribute_dllexport_explicit_instantiation_decl : Warning<
   "explicit instantiation declaration should not be 'dllexport'">,
   InGroup<DllexportExplicitInstantiationDecl>;
-def warn_attribute_dllexport_explicit_instantiation_def : Warning<
+def warn_attr_dllexport_explicit_inst_def : Warning<
+  "'dllexport' attribute ignored on explicit instantiation definition">,
+  InGroup<DllexportExplicitInstantiation>;
+def warn_attr_dllexport_explicit_inst_def_mismatch : Warning<
   "'dllexport' attribute ignored on explicit instantiation definition">,
   InGroup<IgnoredAttributes>;
+def note_prev_decl_missing_dllexport : Note<
+  "'dllexport' attribute is missing on previous declaration">;
+def warn_dllexport_on_decl_ignored : Warning<
+  "explicit instantiation definition is not exported without 'dllexport'">,
+  InGroup<IgnoredAttributes>;
+def note_dllexport_on_decl : Note<
+  "'dllexport' attribute on the declaration is ignored">;
 def warn_attribute_exclude_from_explicit_instantiation_local_class : Warning<
   "%0 attribute ignored on local class%select{| member}1">,
   InGroup<IgnoredAttributes>;
@@ -10808,9 +10815,16 @@ def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
 def note_lifetime_safety_returned_here : Note<"returned here">;
 
-def warn_lifetime_safety_suggest_lifetimebound
-    : Warning<"param should be marked [[clang::lifetimebound]]">,
-      InGroup<LifetimeSafetySuggestions>,
+def warn_lifetime_safety_intra_tu_suggestion
+    : Warning<"parameter in intra-TU function should be marked "
+              "[[clang::lifetimebound]]">,
+      InGroup<LifetimeSafetyIntraTUSuggestions>,
+      DefaultIgnore;
+
+def warn_lifetime_safety_cross_tu_suggestion
+    : Warning<"parameter in cross-TU function should be marked "
+              "[[clang::lifetimebound]]">,
+      InGroup<LifetimeSafetyCrossTUSuggestions>,
       DefaultIgnore;
 
 def note_lifetime_safety_suggestion_returned_here : Note<"param returned here">;
@@ -11795,6 +11809,9 @@ def err_omp_expected_addressable_lvalue_or_array_item : Error<
   "expected addressable lvalue expression, array element%select{ or array section|, array section or array shaping expression}0%select{| of non 'omp_depend_t' type}1">;
 def err_omp_expected_named_var_member_or_array_expression: Error<
   "expected expression containing only member accesses and/or array sections based on named variables">;
+def err_omp_expected_base_pointer_var_name_member_expr
+    : Error<"base-pointer is not a variable name%select{| or data member of "
+            "current class}0">;
 def err_omp_bit_fields_forbidden_in_clause : Error<
   "bit fields cannot be used to specify storage in a '%0' clause">;
 def err_array_section_does_not_specify_contiguous_storage : Error<
@@ -13272,6 +13289,9 @@ def err_hlsl_attr_invalid_type : Error<
    "attribute %0 only applies to a field or parameter of type '%1'">;
 def err_hlsl_attr_invalid_ast_node : Error<
    "attribute %0 only applies to %1">;
+def err_hlsl_attr_incompatible
+    : Error<"%0 attribute is not compatible with %1 attribute">;
+
 def err_hlsl_entry_shader_attr_mismatch : Error<
    "%0 attribute on entry function does not match the target profile">;
 def err_hlsl_numthreads_argument_oor : Error<"argument '%select{X|Y|Z}0' to numthreads attribute cannot exceed %1">;
@@ -13313,7 +13333,10 @@ def warn_hlsl_packoffset_mix : Warning<"cannot mix packoffset elements with nonp
     InGroup<HLSLMixPackOffset>;
 def err_hlsl_packoffset_overlap : Error<"packoffset overlap between %0, %1">;
 def err_hlsl_packoffset_cross_reg_boundary : Error<"packoffset cannot cross register boundary">;
-def err_hlsl_packoffset_alignment_mismatch : Error<"packoffset at 'y' not match alignment %0 required by %1">;
+def err_hlsl_invalid_register_or_packoffset
+    : Error<"register or packoffset bind is not valid">;
+def err_hlsl_packoffset_alignment_mismatch
+    : Error<"packoffset at 'y' does not match alignment %0 required by %1">;
 def err_hlsl_pointers_unsupported : Error<
   "%select{pointers|references}0 are unsupported in HLSL">;
 def err_hlsl_missing_resource_class : Error<"HLSL resource needs to have [[hlsl::resource_class()]] attribute">;
@@ -13391,6 +13414,9 @@ def err_hlsl_incomplete_resource_array_in_function_param: Error<
   "incomplete resource array in a function parameter">;
 def err_hlsl_assign_to_global_resource: Error<
   "assignment to global resource variable %0 is not allowed">;
+
+def err_hlsl_push_constant_unique
+    : Error<"cannot have more than one push constant block">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

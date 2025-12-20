@@ -1768,6 +1768,11 @@ void SemaHLSL::handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL) {
                  HLSLVkExtBuiltinInputAttr(getASTContext(), AL, ID));
 }
 
+void SemaHLSL::handleVkPushConstantAttr(Decl *D, const ParsedAttr &AL) {
+  D->addAttr(::new (getASTContext())
+                 HLSLVkPushConstantAttr(getASTContext(), AL));
+}
+
 void SemaHLSL::handleVkConstantIdAttr(Decl *D, const ParsedAttr &AL) {
   uint32_t Id;
   if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), Id))
@@ -1938,8 +1943,8 @@ void SemaHLSL::handlePackOffsetAttr(Decl *D, const ParsedAttr &AL) {
   // Check Component is valid for T.
   if (Component) {
     unsigned Size = getASTContext().getTypeSize(T);
-    if (IsAggregateTy || Size > 128) {
-      Diag(AL.getLoc(), diag::err_hlsl_packoffset_cross_reg_boundary);
+    if (IsAggregateTy) {
+      Diag(AL.getLoc(), diag::err_hlsl_invalid_register_or_packoffset);
       return;
     } else {
       // Make sure Component + sizeof(T) <= 4.
@@ -3338,7 +3343,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_elementwise_rsqrt:
   case Builtin::BI__builtin_hlsl_elementwise_frac:
   case Builtin::BI__builtin_hlsl_elementwise_ddx_coarse:
-  case Builtin::BI__builtin_hlsl_elementwise_ddy_coarse: {
+  case Builtin::BI__builtin_hlsl_elementwise_ddy_coarse:
+  case Builtin::BI__builtin_hlsl_elementwise_ddx_fine:
+  case Builtin::BI__builtin_hlsl_elementwise_ddy_fine: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
     if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
@@ -3937,12 +3944,15 @@ QualType SemaHLSL::getInoutParameterType(QualType Ty) {
   return Ty;
 }
 
-static bool IsDefaultBufferConstantDecl(VarDecl *VD) {
+static bool IsDefaultBufferConstantDecl(const ASTContext &Ctx, VarDecl *VD) {
+  bool IsVulkan =
+      Ctx.getTargetInfo().getTriple().getOS() == llvm::Triple::Vulkan;
+  bool IsVKPushConstant = IsVulkan && VD->hasAttr<HLSLVkPushConstantAttr>();
   QualType QT = VD->getType();
   return VD->getDeclContext()->isTranslationUnit() &&
          QT.getAddressSpace() == LangAS::Default &&
          VD->getStorageClass() != SC_Static &&
-         !VD->hasAttr<HLSLVkConstantIdAttr>() &&
+         !VD->hasAttr<HLSLVkConstantIdAttr>() && !IsVKPushConstant &&
          !isInvalidConstantBufferLeafElementType(QT.getTypePtr());
 }
 
@@ -3960,6 +3970,19 @@ void SemaHLSL::deduceAddressSpace(VarDecl *Decl) {
     LangAS ImplAS = LangAS::hlsl_input;
     Type = SemaRef.getASTContext().getAddrSpaceQualType(Type, ImplAS);
     Decl->setType(Type);
+    return;
+  }
+
+  bool IsVulkan = getASTContext().getTargetInfo().getTriple().getOS() ==
+                  llvm::Triple::Vulkan;
+  if (IsVulkan && Decl->hasAttr<HLSLVkPushConstantAttr>()) {
+    if (HasDeclaredAPushConstant)
+      SemaRef.Diag(Decl->getLocation(), diag::err_hlsl_push_constant_unique);
+
+    LangAS ImplAS = LangAS::hlsl_push_constant;
+    Type = SemaRef.getASTContext().getAddrSpaceQualType(Type, ImplAS);
+    Decl->setType(Type);
+    HasDeclaredAPushConstant = true;
     return;
   }
 
@@ -3995,7 +4018,7 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
     // Global variables outside a cbuffer block that are not a resource, static,
     // groupshared, or an empty array or struct belong to the default constant
     // buffer $Globals (to be created at the end of the translation unit).
-    if (IsDefaultBufferConstantDecl(VD)) {
+    if (IsDefaultBufferConstantDecl(getASTContext(), VD)) {
       // update address space to hlsl_constant
       QualType NewTy = getASTContext().getAddrSpaceQualType(
           VD->getType(), LangAS::hlsl_constant);
@@ -4298,8 +4321,11 @@ void SemaHLSL::processExplicitBindingsOnDecl(VarDecl *VD) {
 
   bool HasBinding = false;
   for (Attr *A : VD->attrs()) {
-    if (isa<HLSLVkBindingAttr>(A))
+    if (isa<HLSLVkBindingAttr>(A)) {
       HasBinding = true;
+      if (auto PA = VD->getAttr<HLSLVkPushConstantAttr>())
+        Diag(PA->getLoc(), diag::err_hlsl_attr_incompatible) << A << PA;
+    }
 
     HLSLResourceBindingAttr *RBA = dyn_cast<HLSLResourceBindingAttr>(A);
     if (!RBA || !RBA->hasRegisterSlot())
@@ -4594,9 +4620,12 @@ bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
   // the user intended fewer or more elements. This implementation assumes that
   // the user intended more, and errors that there are too few initializers to
   // complete the final element.
-  if (Entity.getType()->isIncompleteArrayType())
+  if (Entity.getType()->isIncompleteArrayType()) {
+    assert(ExpectedSize > 0 &&
+           "The expected size of an incomplete array type must be at least 1.");
     ExpectedSize =
         ((ActualSize + ExpectedSize - 1) / ExpectedSize) * ExpectedSize;
+  }
 
   // An initializer list might be attempting to initialize a reference or
   // rvalue-reference. When checking the initializer we should look through

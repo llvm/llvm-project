@@ -42,6 +42,12 @@ VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr);
 const SCEV *getSCEVExprForVPValue(const VPValue *V, ScalarEvolution &SE,
                                   const Loop *L = nullptr);
 
+/// Returns true if \p Addr is an address SCEV that can be passed to
+/// TTI::getAddressComputationCost, i.e. the address SCEV is loop invariant, an
+/// affine AddRec (i.e. induction ), or an add expression of such operands or a
+/// sign-extended AddRec.
+bool isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE, const Loop *L);
+
 /// Returns true if \p VPV is a single scalar, either because it produces the
 /// same value for all lanes or only has its first lane used.
 bool isSingleScalar(const VPValue *VPV);
@@ -116,12 +122,7 @@ public:
            NewBlock->getPredecessors().empty() &&
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
-    SmallVector<VPBlockBase *> Succs(BlockPtr->successors());
-    for (VPBlockBase *Succ : Succs) {
-      Succ->replacePredecessor(BlockPtr, NewBlock);
-      NewBlock->appendSuccessor(Succ);
-    }
-    BlockPtr->clearSuccessors();
+    transferSuccessors(BlockPtr, NewBlock);
     connectBlocks(BlockPtr, NewBlock);
   }
 
@@ -202,6 +203,14 @@ public:
     New->setPredecessors(Old->getPredecessors());
     New->setSuccessors(Old->getSuccessors());
     Old->clearPredecessors();
+    Old->clearSuccessors();
+  }
+
+  /// Transfer successors from \p Old to \p New. \p New must have no successors.
+  static void transferSuccessors(VPBlockBase *Old, VPBlockBase *New) {
+    for (auto *Succ : Old->getSuccessors())
+      Succ->replacePredecessor(Old, New);
+    New->setSuccessors(Old->getSuccessors());
     Old->clearSuccessors();
   }
 
