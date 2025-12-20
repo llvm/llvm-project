@@ -159,6 +159,11 @@ struct KnownFPClass {
     signBitMustBeZero();
   }
 
+  /// Apply the canonicalize intrinsic to this value. This is essentially a
+  /// stronger form of propagateCanonicalizingSrc.
+  LLVM_ABI void
+  canonicalize(DenormalMode DenormMode = DenormalMode::getDynamic());
+
   /// Return true if the sign bit must be 0, ignoring the sign of nans.
   bool signBitIsZeroOrNaN() const { return isKnownNever(fcNegative); }
 

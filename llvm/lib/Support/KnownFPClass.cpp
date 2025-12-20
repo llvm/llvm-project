@@ -91,6 +91,54 @@ void KnownFPClass::propagateDenormal(const KnownFPClass &Src,
   }
 }
 
+void KnownFPClass::canonicalize(DenormalMode DenormMode) {
+  KnownFPClass KnownSrc = *this;
+  *this = KnownFPClass();
+
+  // This is essentially a stronger form of
+  // propagateCanonicalizingSrc. Other "canonicalizing" operations don't
+  // actually have an IR canonicalization guarantee.
+
+  // Canonicalize may flush denormals to zero, so we have to consider the
+  // denormal mode to preserve known-not-0 knowledge.
+  KnownFPClasses = KnownSrc.KnownFPClasses | fcZero | fcQNan;
+
+  // Stronger version of propagateNaN
+  // Canonicalize is guaranteed to quiet signaling nans.
+  if (KnownSrc.isKnownNeverNaN())
+    knownNot(fcNan);
+  else
+    knownNot(fcSNan);
+
+  // FIXME: Missing check of IEEE like types.
+
+  // If the parent function flushes denormals, the canonical output cannot be a
+  // denormal.
+  if (DenormMode == DenormalMode::getIEEE()) {
+    if (KnownSrc.isKnownNever(fcPosZero))
+      knownNot(fcPosZero);
+    if (KnownSrc.isKnownNever(fcNegZero))
+      knownNot(fcNegZero);
+    return;
+  }
+
+  if (DenormMode.inputsAreZero() || DenormMode.outputsAreZero())
+    knownNot(fcSubnormal);
+
+  if (DenormMode == DenormalMode::getPreserveSign()) {
+    if (KnownSrc.isKnownNever(fcPosZero | fcPosSubnormal))
+      knownNot(fcPosZero);
+    if (KnownSrc.isKnownNever(fcNegZero | fcNegSubnormal))
+      knownNot(fcNegZero);
+    return;
+  }
+
+  if (DenormMode.Input == DenormalMode::PositiveZero ||
+      (DenormMode.Output == DenormalMode::PositiveZero &&
+       DenormMode.Input == DenormalMode::IEEE))
+    knownNot(fcNegZero);
+}
+
 void KnownFPClass::propagateCanonicalizingSrc(const KnownFPClass &Src,
                                               DenormalMode Mode) {
   propagateDenormal(Src, Mode);
