@@ -5361,6 +5361,22 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known.signBitMustBeZero();
       }
 
+      if (KnownSrc.cannotBeOrderedLessThanZero()) {
+        // If the source is positive, and cannot be ~0, this cannot underflow.
+        Known.knownNot(fcPosZero);
+
+        // Cannot introduce new denormal values.
+        if (KnownSrc.isKnownNever(fcPosSubnormal))
+          Known.knownNot(fcPosSubnormal);
+      }
+
+      if (KnownSrc.cannotBeOrderedGreaterThanZero()) {
+        // If the source is negative, and cannot be infinity, this cannot
+        // overflow to infinity.
+        if (KnownSrc.isKnownNeverPosInfinity())
+          Known.knownNot(fcPosInf);
+      }
+
       break;
     }
     case Intrinsic::fptrunc_round: {
