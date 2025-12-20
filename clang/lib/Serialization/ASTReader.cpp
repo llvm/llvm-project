@@ -5996,8 +5996,7 @@ bool ASTReader::readASTFileControlBlock(
           }
           shouldContinue = Listener.visitInputFileAsRequested(
               *FilenameAsRequestedBuf, Filename, isSystemFile, Overridden,
-              StoredTime,
-              /*IsExplicitModule=*/false);
+              StoredTime, /*IsExplicitModule=*/false);
           break;
         }
         if (!shouldContinue)
