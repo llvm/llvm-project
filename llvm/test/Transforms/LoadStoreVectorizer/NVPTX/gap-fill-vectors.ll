@@ -10,11 +10,15 @@ define void @i8x2_gap_gap_i8x2(ptr %ptr) {
 ; CHECK-LABEL: define void @i8x2_gap_gap_i8x2(
 ; CHECK-SAME: ptr [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr align 8 [[PTR0]], <8 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true>, <8 x i8> poison)
-; CHECK-NEXT:    [[L03:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[GAPFILL4:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[GAPFILL25:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <2 x i32> <i32 4, i32 5>
-; CHECK-NEXT:    [[L36:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <2 x i32> <i32 6, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x b8> @llvm.masked.load.v8b8.p0(ptr align 8 [[PTR0]], <8 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true>, <8 x b8> poison)
+; CHECK-NEXT:    [[L03:%.*]] = shufflevector <8 x b8> [[TMP1]], <8 x b8> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x b8> [[L03]] to <2 x i8>
+; CHECK-NEXT:    [[GAPFILL4:%.*]] = shufflevector <8 x b8> [[TMP1]], <8 x b8> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x b8> [[GAPFILL4]] to <2 x i8>
+; CHECK-NEXT:    [[GAPFILL25:%.*]] = shufflevector <8 x b8> [[TMP1]], <8 x b8> poison, <2 x i32> <i32 4, i32 5>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x b8> [[GAPFILL25]] to <2 x i8>
+; CHECK-NEXT:    [[L36:%.*]] = shufflevector <8 x b8> [[TMP1]], <8 x b8> poison, <2 x i32> <i32 6, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x b8> [[L36]] to <2 x i8>
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr i8, ptr %ptr, i64 0
@@ -50,11 +54,15 @@ define void @i16x2_gap_i16x2_i16x2(ptr %ptr) {
 ; CHECK-LABEL: define void @i16x2_gap_i16x2_i16x2(
 ; CHECK-SAME: ptr [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 16 [[PTR0]], <8 x i1> <i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <8 x i16> poison)
-; CHECK-NEXT:    [[L01:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[GAPFILL2:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[L23:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <2 x i32> <i32 4, i32 5>
-; CHECK-NEXT:    [[L34:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <2 x i32> <i32 6, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x b16> @llvm.masked.load.v8b16.p0(ptr align 16 [[PTR0]], <8 x i1> <i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <8 x b16> poison)
+; CHECK-NEXT:    [[L01:%.*]] = shufflevector <8 x b16> [[TMP1]], <8 x b16> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x b16> [[L01]] to <2 x i16>
+; CHECK-NEXT:    [[GAPFILL2:%.*]] = shufflevector <8 x b16> [[TMP1]], <8 x b16> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x b16> [[GAPFILL2]] to <2 x i16>
+; CHECK-NEXT:    [[L23:%.*]] = shufflevector <8 x b16> [[TMP1]], <8 x b16> poison, <2 x i32> <i32 4, i32 5>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x b16> [[L23]] to <2 x i16>
+; CHECK-NEXT:    [[L34:%.*]] = shufflevector <8 x b16> [[TMP1]], <8 x b16> poison, <2 x i32> <i32 6, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x b16> [[L34]] to <2 x i16>
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr i8, ptr %ptr, i64 0
@@ -72,11 +80,15 @@ define void @i16x2_gap_gap_i16x2(ptr %ptr) {
 ; CHECK-LABEL: define void @i16x2_gap_gap_i16x2(
 ; CHECK-SAME: ptr [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 16 [[PTR0]], <8 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true>, <8 x i16> poison)
-; CHECK-NEXT:    [[L03:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[GAPFILL4:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[GAPFILL25:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <2 x i32> <i32 4, i32 5>
-; CHECK-NEXT:    [[L36:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <2 x i32> <i32 6, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x b16> @llvm.masked.load.v8b16.p0(ptr align 16 [[PTR0]], <8 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true>, <8 x b16> poison)
+; CHECK-NEXT:    [[L03:%.*]] = shufflevector <8 x b16> [[TMP1]], <8 x b16> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x b16> [[L03]] to <2 x i16>
+; CHECK-NEXT:    [[GAPFILL4:%.*]] = shufflevector <8 x b16> [[TMP1]], <8 x b16> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x b16> [[GAPFILL4]] to <2 x i16>
+; CHECK-NEXT:    [[GAPFILL25:%.*]] = shufflevector <8 x b16> [[TMP1]], <8 x b16> poison, <2 x i32> <i32 4, i32 5>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x b16> [[GAPFILL25]] to <2 x i16>
+; CHECK-NEXT:    [[L36:%.*]] = shufflevector <8 x b16> [[TMP1]], <8 x b16> poison, <2 x i32> <i32 6, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x b16> [[L36]] to <2 x i16>
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr i8, ptr %ptr, i64 0
@@ -91,11 +103,15 @@ define void @i16x2_gap_gap_i16x2(ptr %ptr) {
 define void @i32x2_i32x2_gap_i32x2(ptr addrspace(1) %in) {
 ; CHECK-LABEL: define void @i32x2_i32x2_gap_i32x2(
 ; CHECK-SAME: ptr addrspace(1) [[IN:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p1(ptr addrspace(1) align 32 [[IN]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true>, <8 x i32> poison)
-; CHECK-NEXT:    [[VEC01:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[VEC12:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[GAPFILL3:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 4, i32 5>
-; CHECK-NEXT:    [[VEC34:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 6, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x b32> @llvm.masked.load.v8b32.p1(ptr addrspace(1) align 32 [[IN]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true>, <8 x b32> poison)
+; CHECK-NEXT:    [[VEC01:%.*]] = shufflevector <8 x b32> [[TMP1]], <8 x b32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x b32> [[VEC01]] to <2 x i32>
+; CHECK-NEXT:    [[VEC12:%.*]] = shufflevector <8 x b32> [[TMP1]], <8 x b32> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x b32> [[VEC12]] to <2 x i32>
+; CHECK-NEXT:    [[GAPFILL3:%.*]] = shufflevector <8 x b32> [[TMP1]], <8 x b32> poison, <2 x i32> <i32 4, i32 5>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x b32> [[GAPFILL3]] to <2 x i32>
+; CHECK-NEXT:    [[VEC34:%.*]] = shufflevector <8 x b32> [[TMP1]], <8 x b32> poison, <2 x i32> <i32 6, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x b32> [[VEC34]] to <2 x i32>
 ; CHECK-NEXT:    ret void
 ;
   %vec0 = load <2 x i32>, ptr addrspace(1) %in, align 32
@@ -113,9 +129,11 @@ define void @i64x2_gap_i64x2_i64x2(ptr addrspace(1) %in) {
 ; CHECK-SAME: ptr addrspace(1) [[IN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[VEC0:%.*]] = load <2 x i64>, ptr addrspace(1) [[IN]], align 32
 ; CHECK-NEXT:    [[GETELEM3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[IN]], i32 32
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr addrspace(1) [[GETELEM3]], align 32
-; CHECK-NEXT:    [[VEC31:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[VEC12:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x b64>, ptr addrspace(1) [[GETELEM3]], align 32
+; CHECK-NEXT:    [[VEC31:%.*]] = shufflevector <4 x b64> [[TMP1]], <4 x b64> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x b64> [[VEC31]] to <2 x i64>
+; CHECK-NEXT:    [[VEC12:%.*]] = shufflevector <4 x b64> [[TMP1]], <4 x b64> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x b64> [[VEC12]] to <2 x i64>
 ; CHECK-NEXT:    ret void
 ;
   %vec0 = load <2 x i64>, ptr addrspace(1) %in, align 32
@@ -131,9 +149,11 @@ define void @i64x2_gap_i64x2_i64x2(ptr addrspace(1) %in) {
 define void @i64x2_i64x2_gap_i64x2(ptr addrspace(1) %in) {
 ; CHECK-LABEL: define void @i64x2_i64x2_gap_i64x2(
 ; CHECK-SAME: ptr addrspace(1) [[IN:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr addrspace(1) [[IN]], align 32
-; CHECK-NEXT:    [[VEC01:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[VEC32:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x b64>, ptr addrspace(1) [[IN]], align 32
+; CHECK-NEXT:    [[VEC01:%.*]] = shufflevector <4 x b64> [[TMP1]], <4 x b64> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x b64> [[VEC01]] to <2 x i64>
+; CHECK-NEXT:    [[VEC32:%.*]] = shufflevector <4 x b64> [[TMP1]], <4 x b64> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x b64> [[VEC32]] to <2 x i64>
 ; CHECK-NEXT:    [[GETELEM1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[IN]], i32 48
 ; CHECK-NEXT:    [[VEC1:%.*]] = load <2 x i64>, ptr addrspace(1) [[GETELEM1]], align 8
 ; CHECK-NEXT:    ret void

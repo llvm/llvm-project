@@ -218,13 +218,13 @@ define amdgpu_gs void @_amdgpu_gs_main(i32 inreg %primShaderTableAddrLow, <31 x 
   ; CHECK-NEXT:   [[S_ADD_I32_22:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_BUFFER_LOAD_DWORD_IMM7]], -473, implicit-def dead $scc
   ; CHECK-NEXT:   undef [[S_ADD_U32_22:%[0-9]+]].sub0:sreg_64 = S_ADD_U32 [[COPY1]], [[S_LSHL_B32_]], implicit-def $scc
   ; CHECK-NEXT:   [[S_ADD_U32_22:%[0-9]+]].sub1:sreg_64 = S_ADDC_U32 undef %33:sreg_32, [[S_ASHR_I32_]], implicit-def dead $scc, implicit $scc
-  ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM24:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_22]], 96, 0 :: (invariant load (s128) from %ir.326, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM24:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_22]], 96, 0 :: (invariant load (s128) from %ir.335, addrspace 4)
   ; CHECK-NEXT:   undef [[S_ADD_U32_23:%[0-9]+]].sub0:sreg_64 = S_ADD_U32 [[COPY1]], [[S_LSHL_B32_1]], implicit-def $scc
   ; CHECK-NEXT:   [[S_ADD_U32_23:%[0-9]+]].sub1:sreg_64 = S_ADDC_U32 undef %33:sreg_32, [[S_ASHR_I32_1]], implicit-def dead $scc, implicit $scc
-  ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM25:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_23]], 96, 0 :: (invariant load (s128) from %ir.332, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM25:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_23]], 96, 0 :: (invariant load (s128) from %ir.341, addrspace 4)
   ; CHECK-NEXT:   undef [[S_ADD_U32_24:%[0-9]+]].sub0:sreg_64 = S_ADD_U32 [[COPY1]], [[S_LSHL_B32_2]], implicit-def $scc
   ; CHECK-NEXT:   [[S_ADD_U32_24:%[0-9]+]].sub1:sreg_64 = S_ADDC_U32 undef %33:sreg_32, [[S_ASHR_I32_2]], implicit-def dead $scc, implicit $scc
-  ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM26:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_24]], 96, 0 :: (invariant load (s128) from %ir.338, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM26:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_24]], 96, 0 :: (invariant load (s128) from %ir.347, addrspace 4)
   ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_IDXEN23:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX4_IMM24]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
   ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_IDXEN24:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX4_IMM25]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
   ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_IDXEN25:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX4_IMM26]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)

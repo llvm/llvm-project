@@ -2933,10 +2933,8 @@ define amdgpu_kernel void @cvt_f32_ubyte0_vector() local_unnamed_addr {
 ; SI-NEXT:    buffer_load_ubyte v1, off, s[0:3], 0 offset:2
 ; SI-NEXT:    buffer_load_ubyte v2, off, s[0:3], 0 offset:1
 ; SI-NEXT:    buffer_load_ubyte v3, off, s[0:3], 0
-; SI-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; SI-NEXT:    s_waitcnt vmcnt(3)
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    v_fma_f32 v0, s0, v0, 0.5
 ; SI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; SI-NEXT:    s_waitcnt vmcnt(2)
@@ -3055,7 +3053,6 @@ define amdgpu_kernel void @cvt_f32_ubyte0_vector() local_unnamed_addr {
 ; GFX11-NEXT:    global_load_u8 v2, v0, s[0:1] offset:1
 ; GFX11-NEXT:    global_load_u8 v3, v0, s[0:1] offset:2
 ; GFX11-NEXT:    global_load_u8 v0, v0, s[0:1]
-; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-NEXT:    s_waitcnt vmcnt(3)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 8, v1
 ; GFX11-NEXT:    s_waitcnt vmcnt(2)

@@ -37,9 +37,8 @@ define amdgpu_kernel void @fold_mi_v_or_0(ptr addrspace(1) %out) {
 }
 
 ; GCN-LABEL: {{^}}fold_mi_s_or_0:
-; GCN: s_load_dword [[SVAL:s[0-9]+]]
-; GCN-NOT: [[SVAL]]
-; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[SVAL]]
+; GCN: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x0|0x9|0x24}}
+; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[SVAL:s[0-9]+]]
 ; GCN-NOT: [[VVAL]]
 ; GCN: buffer_store_dword [[VVAL]]
 define amdgpu_kernel void @fold_mi_s_or_0(ptr addrspace(1) %out, i32 %x) #0 {
@@ -62,9 +61,8 @@ define amdgpu_kernel void @fold_mi_v_xor_0(ptr addrspace(1) %out) {
 }
 
 ; GCN-LABEL: {{^}}fold_mi_s_xor_0:
-; GCN: s_load_dword [[SVAL:s[0-9]+]]
-; GCN-NOT: [[SVAL]]
-; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[SVAL]]
+; GCN: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x0|0x9|0x24}}
+; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[SVAL:s[0-9]+]]
 ; GCN-NOT: [[VVAL]]
 ; GCN: buffer_store_dword [[VVAL]]
 define amdgpu_kernel void @fold_mi_s_xor_0(ptr addrspace(1) %out, i32 %x) #0 {

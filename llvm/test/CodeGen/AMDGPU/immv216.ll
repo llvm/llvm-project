@@ -118,18 +118,18 @@ define amdgpu_kernel void @store_literal_imm_v2f16(ptr addrspace(1) %out) #0 {
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_0.0_v2f16:
-; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0 ; encoding
+; GFX9: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, 0 ; encoding
 ; GFX9: buffer_store_dword [[REG]]
 
 ; FIXME: Shouldn't need right shift and SDWA, also extra copy
-; VI-DAG: s_load_dword [[VAL:s[0-9]+]]
+; VI-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
 ; VI-DAG: v_mov_b32_e32 [[CONST0:v[0-9]+]], 0
-; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], [[VAL]], 16
+; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], s{{[0-9]+}}, 16
 ; VI-DAG: v_mov_b32_e32 [[V_SHR:v[0-9]+]], [[SHR]]
 
 ; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[V_SHR]], [[CONST0]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, [[VAL]], 0
+; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, s{{[0-9]+}}, 0
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_0.0_v2f16(ptr addrspace(1) %out, <2 x half> %x) #0 {
@@ -139,22 +139,22 @@ define amdgpu_kernel void @add_inline_imm_0.0_v2f16(ptr addrspace(1) %out, <2 x 
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_0.5_v2f16:
-; GFX10: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
-; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x0f,0xcc,0x02,0xe0,0x01,0x0a]
+; GFX10: s_load_{{b128|dwordx4}} s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, 0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x0f,0xcc,0x02,0xe0,0x01,0x0a]
 ; GFX10: buffer_store_{{dword|b32}} [[REG]]
 
-; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x8f,0xd3,0x06,0xe0,0x01,0x08]
+; GFX9: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, 0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x8f,0xd3,0x02,0xe0,0x01,0x08]
 ; GFX9: buffer_store_dword [[REG]]
 
 ; FIXME: Shouldn't need right shift and SDWA, also extra copy
-; VI-DAG: s_load_dword [[VAL:s[0-9]+]]
+; VI-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
 ; VI-DAG: v_mov_b32_e32 [[CONST05:v[0-9]+]], 0x3800
-; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], [[VAL]], 16
+; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], s{{[0-9]+}}, 16
 ; VI-DAG: v_mov_b32_e32 [[V_SHR:v[0-9]+]], [[SHR]]
 
 ; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[V_SHR]], [[CONST05]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, [[VAL]], 0.5
+; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, s{{[0-9]+}}, 0.5
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_0.5_v2f16(ptr addrspace(1) %out, <2 x half> %x) #0 {
@@ -164,22 +164,22 @@ define amdgpu_kernel void @add_inline_imm_0.5_v2f16(ptr addrspace(1) %out, <2 x 
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_0.5_v2f16:
-; GFX10: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
-; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x0f,0xcc,0x02,0xe2,0x01,0x0a]
+; GFX10: s_load_{{b128|dwordx4}} s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, -0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x0f,0xcc,0x02,0xe2,0x01,0x0a]
 ; GFX10: buffer_store_{{dword|b32}} [[REG]]
 
-; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x8f,0xd3,0x06,0xe2,0x01,0x08]
+; GFX9: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, -0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x8f,0xd3,0x02,0xe2,0x01,0x08]
 ; GFX9: buffer_store_dword [[REG]]
 
 ; FIXME: Shouldn't need right shift and SDWA, also extra copy
-; VI-DAG: s_load_dword [[VAL:s[0-9]+]]
+; VI-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
 ; VI-DAG: v_mov_b32_e32 [[CONSTM05:v[0-9]+]], 0xb800
-; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], [[VAL]], 16
+; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], s{{[0-9]+}}, 16
 ; VI-DAG: v_mov_b32_e32 [[V_SHR:v[0-9]+]], [[SHR]]
 
 ; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[V_SHR]], [[CONSTM05]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, [[VAL]], -0.5
+; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, s{{[0-9]+}}, -0.5
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_neg_0.5_v2f16(ptr addrspace(1) %out, <2 x half> %x) #0 {
@@ -189,22 +189,22 @@ define amdgpu_kernel void @add_inline_imm_neg_0.5_v2f16(ptr addrspace(1) %out, <
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_1.0_v2f16:
-; GFX10: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
-; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 1.0 op_sel_hi:[1,0] ; encoding:
+; GFX10: s_load_{{b128|dwordx4}} s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, 1.0 op_sel_hi:[1,0] ; encoding:
 ; GFX10: buffer_store_{{dword|b32}} [[REG]]
 
-; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 1.0 op_sel_hi:[1,0] ; encoding
+; GFX9: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, 1.0 op_sel_hi:[1,0] ; encoding
 ; GFX9: buffer_store_dword [[REG]]
 
 ; FIXME: Shouldn't need right shift and SDWA, also extra copy
-; VI-DAG: s_load_dword [[VAL:s[0-9]+]]
+; VI-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
 ; VI-DAG: v_mov_b32_e32 [[CONST1:v[0-9]+]], 0x3c00
-; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], [[VAL]], 16
+; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], s{{[0-9]+}}, 16
 ; VI-DAG: v_mov_b32_e32 [[V_SHR:v[0-9]+]], [[SHR]]
 
 ; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[V_SHR]], [[CONST1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, [[VAL]], 1.0
+; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, s{{[0-9]+}}, 1.0
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_1.0_v2f16(ptr addrspace(1) %out, <2 x half> %x) #0 {
@@ -214,23 +214,23 @@ define amdgpu_kernel void @add_inline_imm_1.0_v2f16(ptr addrspace(1) %out, <2 x 
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_1.0_v2f16:
-; GFX10: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
-; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -1.0 op_sel_hi:[1,0] ; encoding
+; GFX10: s_load_{{b128|dwordx4}} s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, -1.0 op_sel_hi:[1,0] ; encoding
 ; GFX10: buffer_store_{{dword|b32}} [[REG]]
 
-; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -1.0 op_sel_hi:[1,0] ; encoding
+; GFX9: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, -1.0 op_sel_hi:[1,0] ; encoding
 ; GFX9: buffer_store_dword [[REG]]
 
 
 ; FIXME: Shouldn't need right shift and SDWA, also extra copy
-; VI-DAG: s_load_dword [[VAL:s[0-9]+]]
+; VI-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
 ; VI-DAG: v_mov_b32_e32 [[CONST1:v[0-9]+]], 0xbc00
-; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], [[VAL]], 16
+; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], s{{[0-9]+}}, 16
 ; VI-DAG: v_mov_b32_e32 [[V_SHR:v[0-9]+]], [[SHR]]
 
 ; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[V_SHR]], [[CONST1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, [[VAL]], -1.0
+; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, s{{[0-9]+}}, -1.0
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_neg_1.0_v2f16(ptr addrspace(1) %out, <2 x half> %x) #0 {
@@ -240,22 +240,22 @@ define amdgpu_kernel void @add_inline_imm_neg_1.0_v2f16(ptr addrspace(1) %out, <
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_2.0_v2f16:
-; GFX10: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
-; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 2.0 op_sel_hi:[1,0] ; encoding
+; GFX10: s_load_{{b128|dwordx4}} s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, 2.0 op_sel_hi:[1,0] ; encoding
 ; GFX10: buffer_store_{{dword|b32}} [[REG]]
 
-; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 2.0 op_sel_hi:[1,0] ; encoding
+; GFX9: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, 2.0 op_sel_hi:[1,0] ; encoding
 ; GFX9: buffer_store_dword [[REG]]
 
 ; FIXME: Shouldn't need right shift and SDWA, also extra copy
-; VI-DAG: s_load_dword [[VAL:s[0-9]+]]
+; VI-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
 ; VI-DAG: v_mov_b32_e32 [[CONST2:v[0-9]+]], 0x4000
-; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], [[VAL]], 16
+; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], s{{[0-9]+}}, 16
 ; VI-DAG: v_mov_b32_e32 [[V_SHR:v[0-9]+]], [[SHR]]
 
 ; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[V_SHR]], [[CONST2]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, [[VAL]], 2.0
+; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, s{{[0-9]+}}, 2.0
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_2.0_v2f16(ptr addrspace(1) %out, <2 x half> %x) #0 {
@@ -265,22 +265,22 @@ define amdgpu_kernel void @add_inline_imm_2.0_v2f16(ptr addrspace(1) %out, <2 x 
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_2.0_v2f16:
-; GFX10: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
-; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -2.0 op_sel_hi:[1,0] ; encoding
+; GFX10: s_load_{{b128|dwordx4}} s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, -2.0 op_sel_hi:[1,0] ; encoding
 ; GFX10: buffer_store_{{dword|b32}} [[REG]]
 
-; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -2.0 op_sel_hi:[1,0] ; encoding
+; GFX9: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, -2.0 op_sel_hi:[1,0] ; encoding
 ; GFX9: buffer_store_dword [[REG]]
 
 ; FIXME: Shouldn't need right shift and SDWA, also extra copy
-; VI-DAG: s_load_dword [[VAL:s[0-9]+]]
+; VI-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
 ; VI-DAG: v_mov_b32_e32 [[CONSTM2:v[0-9]+]], 0xc000
-; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], [[VAL]], 16
+; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], s{{[0-9]+}}, 16
 ; VI-DAG: v_mov_b32_e32 [[V_SHR:v[0-9]+]], [[SHR]]
 
 ; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[V_SHR]], [[CONSTM2]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, [[VAL]], -2.0
+; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, s{{[0-9]+}}, -2.0
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_neg_2.0_v2f16(ptr addrspace(1) %out, <2 x half> %x) #0 {
@@ -290,22 +290,22 @@ define amdgpu_kernel void @add_inline_imm_neg_2.0_v2f16(ptr addrspace(1) %out, <
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_4.0_v2f16:
-; GFX10: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
-; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 4.0 op_sel_hi:[1,0] ; encoding
+; GFX10: s_load_{{b128|dwordx4}} s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, 4.0 op_sel_hi:[1,0] ; encoding
 ; GFX10: buffer_store_{{dword|b32}} [[REG]]
 
-; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 4.0 op_sel_hi:[1,0] ; encoding
+; GFX9: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, 4.0 op_sel_hi:[1,0] ; encoding
 ; GFX9: buffer_store_dword [[REG]]
 
 ; FIXME: Shouldn't need right shift and SDWA, also extra copy
-; VI-DAG: s_load_dword [[VAL:s[0-9]+]]
+; VI-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
 ; VI-DAG: v_mov_b32_e32 [[CONST4:v[0-9]+]], 0x4400
-; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], [[VAL]], 16
+; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], s{{[0-9]+}}, 16
 ; VI-DAG: v_mov_b32_e32 [[V_SHR:v[0-9]+]], [[SHR]]
 
 ; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[V_SHR]], [[CONST4]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, [[VAL]], 4.0
+; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, s{{[0-9]+}}, 4.0
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_4.0_v2f16(ptr addrspace(1) %out, <2 x half> %x) #0 {
@@ -315,22 +315,22 @@ define amdgpu_kernel void @add_inline_imm_4.0_v2f16(ptr addrspace(1) %out, <2 x 
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_4.0_v2f16:
-; GFX10: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
-; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -4.0 op_sel_hi:[1,0] ; encoding
+; GFX10: s_load_{{b128|dwordx4}} s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, -4.0 op_sel_hi:[1,0] ; encoding
 ; GFX10: buffer_store_{{dword|b32}} [[REG]]
 
-; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -4.0 op_sel_hi:[1,0] ; encoding
+; GFX9: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, -4.0 op_sel_hi:[1,0] ; encoding
 ; GFX9: buffer_store_dword [[REG]]
 
 ; FIXME: Shouldn't need right shift and SDWA, also extra copy
-; VI-DAG: s_load_dword [[VAL:s[0-9]+]]
+; VI-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
 ; VI-DAG: v_mov_b32_e32 [[CONSTM4:v[0-9]+]], 0xc400
-; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], [[VAL]], 16
+; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], s{{[0-9]+}}, 16
 ; VI-DAG: v_mov_b32_e32 [[V_SHR:v[0-9]+]], [[SHR]]
 
 ; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[V_SHR]], [[CONSTM4]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, [[VAL]], -4.0
+; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, s{{[0-9]+}}, -4.0
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_neg_4.0_v2f16(ptr addrspace(1) %out, <2 x half> %x) #0 {
@@ -365,8 +365,8 @@ define amdgpu_kernel void @commute_add_inline_imm_0.5_v2f16(ptr addrspace(1) %ou
 ; GCN-LABEL: {{^}}commute_add_literal_v2f16:
 ; GFX10: v_pk_add_f16 v0, 0x6400, v0 op_sel_hi:[0,1] ; encoding: [0x00,0x40,0x0f,0xcc,0xff,0x00,0x02,0x12,0x00,0x64,0x00,0x00]
 
-; GFX9-DAG: buffer_load_dword [[VAL:v[0-9]+]]
-; GFX9-DAG: s_movk_i32 [[K:s[0-9]+]], 0x6400 ; encoding
+; GFX9: buffer_load_dword [[VAL:v[0-9]+]]
+; GFX9: s_movk_i32 [[K:s[0-9]+]], 0x6400 ; encoding
 ; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], [[K]] op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x8f,0xd3,0x00,0x01,0x00,0x08]
 ; GFX9: buffer_store_dword [[REG]]
 
@@ -386,22 +386,22 @@ define amdgpu_kernel void @commute_add_literal_v2f16(ptr addrspace(1) %out, ptr 
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_1_v2f16:
-; GFX10: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
-; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 1 op_sel_hi:[1,0] ; encoding
+; GFX10: s_load_{{b128|dwordx4}} s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, 1 op_sel_hi:[1,0] ; encoding
 ; GFX10: buffer_store_{{dword|b32}} [[REG]]
 
-; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 1 op_sel_hi:[1,0] ; encoding
+; GFX9: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, 1 op_sel_hi:[1,0] ; encoding
 ; GFX9: buffer_store_dword [[REG]]
 
 ; FIXME: Shouldn't need right shift and SDWA, also extra copy
-; VI-DAG: s_load_dword [[VAL:s[0-9]+]]
+; VI-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
 ; VI-DAG: v_mov_b32_e32 [[CONST1:v[0-9]+]], 1 ; encoding
-; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], [[VAL]], 16
+; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], s{{[0-9]+}}, 16
 ; VI-DAG: v_mov_b32_e32 [[V_SHR:v[0-9]+]], [[SHR]]
 
 ; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[V_SHR]], [[CONST1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, [[VAL]], 1 ; encoding
+; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, s{{[0-9]+}}, 1 ; encoding
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_1_v2f16(ptr addrspace(1) %out, <2 x half> %x) #0 {
@@ -411,23 +411,23 @@ define amdgpu_kernel void @add_inline_imm_1_v2f16(ptr addrspace(1) %out, <2 x ha
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_2_v2f16:
-; GFX10: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
-; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 2 op_sel_hi:[1,0] ; encoding
+; GFX10: s_load_{{b128|dwordx4}} s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, 2 op_sel_hi:[1,0] ; encoding
 ; GFX10: buffer_store_{{dword|b32}} [[REG]]
 
-; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 2 op_sel_hi:[1,0] ; encoding
+; GFX9: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, 2 op_sel_hi:[1,0] ; encoding
 ; GFX9: buffer_store_dword [[REG]]
 
 
 ; FIXME: Shouldn't need right shift and SDWA, also extra copy
-; VI-DAG: s_load_dword [[VAL:s[0-9]+]]
+; VI-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
 ; VI-DAG: v_mov_b32_e32 [[CONST2:v[0-9]+]], 2 ; encoding
-; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], [[VAL]], 16
+; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], s{{[0-9]+}}, 16
 ; VI-DAG: v_mov_b32_e32 [[V_SHR:v[0-9]+]], [[SHR]]
 
 ; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[V_SHR]], [[CONST2]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, [[VAL]], 2 ; encoding
+; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, s{{[0-9]+}}, 2 ; encoding
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_2_v2f16(ptr addrspace(1) %out, <2 x half> %x) #0 {
@@ -437,23 +437,23 @@ define amdgpu_kernel void @add_inline_imm_2_v2f16(ptr addrspace(1) %out, <2 x ha
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_16_v2f16:
-; GFX10: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
-; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 16 op_sel_hi:[1,0] ; encoding
+; GFX10: s_load_{{b128|dwordx4}} s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, 16 op_sel_hi:[1,0] ; encoding
 ; GFX10: buffer_store_{{dword|b32}} [[REG]]
 
-; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 16 op_sel_hi:[1,0] ; encoding
+; GFX9: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, 16 op_sel_hi:[1,0] ; encoding
 ; GFX9: buffer_store_dword [[REG]]
 
 
 ; FIXME: Shouldn't need right shift and SDWA, also extra copy
-; VI-DAG: s_load_dword [[VAL:s[0-9]+]]
+; VI-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
 ; VI-DAG: v_mov_b32_e32 [[CONST16:v[0-9]+]], 16 ; encoding
-; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], [[VAL]], 16
+; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], s{{[0-9]+}}, 16
 ; VI-DAG: v_mov_b32_e32 [[V_SHR:v[0-9]+]], [[SHR]]
 
 ; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[V_SHR]], [[CONST16]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, [[VAL]], 16 ; encoding
+; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, s{{[0-9]+}}, 16 ; encoding
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_16_v2f16(ptr addrspace(1) %out, <2 x half> %x) #0 {
@@ -467,12 +467,12 @@ define amdgpu_kernel void @add_inline_imm_16_v2f16(ptr addrspace(1) %out, <2 x h
 ; GFX10: v_mov_b32_e32 [[REG:v[0-9]+]], [[VAL]]
 ; GFX10: buffer_store_{{dword|b32}} [[REG]]
 
-; GFX9: s_add_i32 [[VAL:s[0-9]+]], s6, -1
+; GFX9: s_add_i32 [[VAL:s[0-9]+]], s{{[0-9]+}}, -1
 ; GFX9: v_mov_b32_e32 [[REG:v[0-9]+]], [[VAL]]
 ; GFX9: buffer_store_dword [[REG]]
 
-; VI: s_load_dword [[VAL:s[0-9]+]]
-; VI: s_add_i32 [[ADD:s[0-9]+]], [[VAL]], -1 ; encoding
+; VI-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; VI: s_add_i32 [[ADD:s[0-9]+]], s{{[0-9]+}}, -1 ; encoding
 ; VI: v_mov_b32_e32 [[REG:v[0-9]+]], [[ADD]]
 ; VI: buffer_store_dword [[REG]]
 define amdgpu_kernel void @add_inline_imm_neg_1_v2f16(ptr addrspace(1) %out, <2 x half> %x) #0 {
@@ -488,12 +488,12 @@ define amdgpu_kernel void @add_inline_imm_neg_1_v2f16(ptr addrspace(1) %out, <2 
 ; GFX10: v_mov_b32_e32 [[REG:v[0-9]+]], [[VAL]]
 ; GFX10: buffer_store_{{dword|b32}} [[REG]]
 
-; GFX9: s_add_i32 [[VAL:s[0-9]+]], s6, 0xfffefffe
+; GFX9: s_add_i32 [[VAL:s[0-9]+]], s{{[0-9]+}}, 0xfffefffe
 ; GFX9: v_mov_b32_e32 [[REG:v[0-9]+]], [[VAL]]
 ; GFX9: buffer_store_dword [[REG]]
 
-; VI: s_load_dword [[VAL:s[0-9]+]]
-; VI: s_add_i32 [[ADD:s[0-9]+]], [[VAL]], 0xfffefffe ; encoding
+; VI-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; VI: s_add_i32 [[ADD:s[0-9]+]], s{{[0-9]+}}, 0xfffefffe ; encoding
 ; VI: v_mov_b32_e32 [[REG:v[0-9]+]], [[ADD]]
 ; VI: buffer_store_dword [[REG]]
 define amdgpu_kernel void @add_inline_imm_neg_2_v2f16(ptr addrspace(1) %out, <2 x half> %x) #0 {
@@ -509,13 +509,13 @@ define amdgpu_kernel void @add_inline_imm_neg_2_v2f16(ptr addrspace(1) %out, <2 
 ; GFX10: v_mov_b32_e32 [[REG:v[0-9]+]], [[VAL]]
 ; GFX10: buffer_store_{{dword|b32}} [[REG]]
 
-; GFX9: s_add_i32 [[VAL:s[0-9]+]], s6, 0xfff0fff0
+; GFX9: s_add_i32 [[VAL:s[0-9]+]], s{{[0-9]+}}, 0xfff0fff0
 ; GFX9: v_mov_b32_e32 [[REG:v[0-9]+]], [[VAL]]
 ; GFX9: buffer_store_dword [[REG]]
 
 
-; VI: s_load_dword [[VAL:s[0-9]+]]
-; VI: s_add_i32 [[ADD:s[0-9]+]], [[VAL]], 0xfff0fff0 ; encoding
+; VI-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; VI: s_add_i32 [[ADD:s[0-9]+]], s{{[0-9]+}}, 0xfff0fff0 ; encoding
 ; VI: v_mov_b32_e32 [[REG:v[0-9]+]], [[ADD]]
 ; VI: buffer_store_dword [[REG]]
 define amdgpu_kernel void @add_inline_imm_neg_16_v2f16(ptr addrspace(1) %out, <2 x half> %x) #0 {
@@ -527,22 +527,22 @@ define amdgpu_kernel void @add_inline_imm_neg_16_v2f16(ptr addrspace(1) %out, <2
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_63_v2f16:
-; GFX10: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
-; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 63
+; GFX10: s_load_{{b128|dwordx4}} s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, 63
 ; GFX10: buffer_store_{{dword|b32}} [[REG]]
 
-; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 63
+; GFX9: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, 63
 ; GFX9: buffer_store_dword [[REG]]
 
 ; FIXME: Shouldn't need right shift and SDWA, also extra copy
-; VI-DAG: s_load_dword [[VAL:s[0-9]+]]
+; VI-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
 ; VI-DAG: v_mov_b32_e32 [[CONST63:v[0-9]+]], 63
-; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], [[VAL]], 16
+; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], s{{[0-9]+}}, 16
 ; VI-DAG: v_mov_b32_e32 [[V_SHR:v[0-9]+]], [[SHR]]
 
 ; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[V_SHR]], [[CONST63]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, [[VAL]], 63
+; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, s{{[0-9]+}}, 63
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_63_v2f16(ptr addrspace(1) %out, <2 x half> %x) #0 {
@@ -552,22 +552,22 @@ define amdgpu_kernel void @add_inline_imm_63_v2f16(ptr addrspace(1) %out, <2 x h
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_64_v2f16:
-; GFX10: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
-; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 64
+; GFX10: s_load_{{b128|dwordx4}} s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, 64
 ; GFX10: buffer_store_{{dword|b32}} [[REG]]
 
-; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 64
+; GFX9: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], s{{[0-9]+}}, 64
 ; GFX9: buffer_store_dword [[REG]]
 
 ; FIXME: Shouldn't need right shift and SDWA, also extra copy
-; VI-DAG: s_load_dword [[VAL:s[0-9]+]]
+; VI-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
 ; VI-DAG: v_mov_b32_e32 [[CONST64:v[0-9]+]], 64
-; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], [[VAL]], 16
+; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], s{{[0-9]+}}, 16
 ; VI-DAG: v_mov_b32_e32 [[V_SHR:v[0-9]+]], [[SHR]]
 
 ; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[V_SHR]], [[CONST64]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, [[VAL]], 64
+; VI-DAG: v_add_f16_e64 v{{[0-9]+}}, s{{[0-9]+}}, 64
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_64_v2f16(ptr addrspace(1) %out, <2 x half> %x) #0 {

@@ -50,9 +50,7 @@ main_body:
 define amdgpu_kernel void @buffer_store_format_d16_xyz(ptr addrspace(8) %rsrc, <4 x half> %data, i32 %index) {
 ; UNPACKED-LABEL: buffer_store_format_d16_xyz:
 ; UNPACKED:       ; %bb.0: ; %main_body
-; UNPACKED-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x10
-; UNPACKED-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; UNPACKED-NEXT:    s_load_dword s6, s[8:9], 0x18
+; UNPACKED-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x0
 ; UNPACKED-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNPACKED-NEXT:    s_and_b32 s5, s5, 0xffff
 ; UNPACKED-NEXT:    s_lshr_b32 s7, s4, 16
@@ -66,9 +64,7 @@ define amdgpu_kernel void @buffer_store_format_d16_xyz(ptr addrspace(8) %rsrc, <
 ;
 ; PACKED-LABEL: buffer_store_format_d16_xyz:
 ; PACKED:       ; %bb.0: ; %main_body
-; PACKED-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x10
-; PACKED-NEXT:    s_load_dword s6, s[8:9], 0x18
-; PACKED-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; PACKED-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x0
 ; PACKED-NEXT:    s_waitcnt lgkmcnt(0)
 ; PACKED-NEXT:    s_and_b32 s5, s5, 0xffff
 ; PACKED-NEXT:    v_mov_b32_e32 v0, s4
@@ -85,9 +81,7 @@ main_body:
 define amdgpu_kernel void @buffer_store_format_d16_xyzw(ptr addrspace(8) %rsrc, <4 x half> %data, i32 %index) {
 ; UNPACKED-LABEL: buffer_store_format_d16_xyzw:
 ; UNPACKED:       ; %bb.0: ; %main_body
-; UNPACKED-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x10
-; UNPACKED-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; UNPACKED-NEXT:    s_load_dword s6, s[8:9], 0x18
+; UNPACKED-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x0
 ; UNPACKED-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNPACKED-NEXT:    s_lshr_b32 s7, s5, 16
 ; UNPACKED-NEXT:    s_and_b32 s5, s5, 0xffff
@@ -103,9 +97,7 @@ define amdgpu_kernel void @buffer_store_format_d16_xyzw(ptr addrspace(8) %rsrc, 
 ;
 ; PACKED-LABEL: buffer_store_format_d16_xyzw:
 ; PACKED:       ; %bb.0: ; %main_body
-; PACKED-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x10
-; PACKED-NEXT:    s_load_dword s6, s[8:9], 0x18
-; PACKED-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; PACKED-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x0
 ; PACKED-NEXT:    s_waitcnt lgkmcnt(0)
 ; PACKED-NEXT:    v_mov_b32_e32 v0, s4
 ; PACKED-NEXT:    v_mov_b32_e32 v1, s5

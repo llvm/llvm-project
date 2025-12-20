@@ -7,12 +7,12 @@ target triple = "amdgpu7.01--"
 ; Verify that the alignment of the global remains at 1, even if we vectorize
 ; the stores.
 ;
-; CHECK: @G = internal addrspace(5) global [8 x i16] undef, align 1
 
 define void @private_store_2xi16_align2_not_alloca(ptr addrspace(5) %p, ptr addrspace(5) %r) {
-; CHECK: define void @private_store_2xi16_align2_not_alloca(ptr addrspace(5) [[P:%.*]], ptr addrspace(5) [[R:%.*]]) #0 {
+; CHECK-LABEL: define void @private_store_2xi16_align2_not_alloca(
+; CHECK-SAME: ptr addrspace(5) [[P:%.*]], ptr addrspace(5) [[R:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i16, ptr addrspace(5) @G, i32 0
-; CHECK-NEXT:    store <2 x i16> <i16 1, i16 2>, ptr addrspace(5) [[GEP0]], align 1
+; CHECK-NEXT:    store <2 x b16> <b16 1, b16 2>, ptr addrspace(5) [[GEP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %gep0 = getelementptr i16, ptr addrspace(5) @G, i32 0

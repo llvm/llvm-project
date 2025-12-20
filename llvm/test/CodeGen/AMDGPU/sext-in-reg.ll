@@ -7,8 +7,8 @@
 ; FIXME: r600 fails verifier
 
 ; FUNC-LABEL: {{^}}sext_in_reg_i1_i32:
-; GCN: s_load_dword [[ARG:s[0-9]+]],
-; GCN: s_bfe_i32 [[SEXTRACT:s[0-9]+]], [[ARG]], 0x10000
+; GCN: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x0|0x9|0x24}}
+; GCN: s_bfe_i32 [[SEXTRACT:s[0-9]+]], s{{[0-9]+}}, 0x10000
 ; GCN: v_mov_b32_e32 [[EXTRACT:v[0-9]+]], [[SEXTRACT]]
 ; GCN: buffer_store_dword [[EXTRACT]],
 
@@ -519,6 +519,7 @@ define amdgpu_kernel void @v_sext_in_reg_i32_to_i64_move_use(ptr addrspace(1) %o
 }
 
 ; FUNC-LABEL: {{^}}s_sext_in_reg_i1_i16:
+; GCN: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x0|0x9|0x24}}
 ; GCN: s_load_dword [[VAL:s[0-9]+]]
 
 ; GCN: s_bfe_i32 [[BFE:s[0-9]+]], [[VAL]], 0x10000
@@ -535,6 +536,7 @@ define amdgpu_kernel void @s_sext_in_reg_i1_i16(ptr addrspace(1) %out, ptr addrs
 }
 
 ; FUNC-LABEL: {{^}}s_sext_in_reg_i2_i16:
+; GCN: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x0|0x9|0x24}}
 ; GCN: s_load_dword [[VAL:s[0-9]+]]
 
 ; SI: s_bfe_i32 [[BFE:s[0-9]+]], [[VAL]], 0x20000
@@ -596,9 +598,9 @@ define amdgpu_kernel void @v_sext_in_reg_i1_i16_nonload(ptr addrspace(3) %out, p
 }
 
 ; FUNC-LABEL: {{^}}s_sext_in_reg_i2_i16_arg:
-; GCN: s_load_dword [[VAL:s[0-9]+]]
+; GCN: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x0|0x9|0x24}}
 
-; SI: s_bfe_i32 [[BFE:s[0-9]+]], [[VAL]], 0x20000
+; SI: s_bfe_i32 [[BFE:s[0-9]+]], s{{[0-9]+}}, 0x20000
 ; SI: v_mov_b32_e32 [[VBFE:v[0-9]+]], [[BFE]]
 ; SI: buffer_store_short [[VBFE]]
 
@@ -613,9 +615,9 @@ define amdgpu_kernel void @s_sext_in_reg_i2_i16_arg(ptr addrspace(1) %out, i16 %
 }
 
 ; FUNC-LABEL: {{^}}s_sext_in_reg_i8_i16_arg:
-; GCN: s_load_dword [[VAL:s[0-9]+]]
+; GCN: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x0|0x9|0x24}}
 
-; SI: s_sext_i32_i8 [[SSEXT:s[0-9]+]], [[VAL]]
+; SI: s_sext_i32_i8 [[SSEXT:s[0-9]+]], s{{[0-9]+}}
 ; SI: v_mov_b32_e32 [[VSEXT:v[0-9]+]], [[SSEXT]]
 ; SI: buffer_store_short [[VSEXT]]
 
@@ -628,9 +630,9 @@ define amdgpu_kernel void @s_sext_in_reg_i8_i16_arg(ptr addrspace(1) %out, i16 %
 }
 
 ; FUNC-LABEL: {{^}}s_sext_in_reg_i15_i16_arg:
-; GCN: s_load_dword [[VAL:s[0-9]+]]
+; GCN: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x0|0x9|0x24}}
 
-; SI: s_bfe_i32 [[BFE:s[0-9]+]], [[VAL]], 0xf0000
+; SI: s_bfe_i32 [[BFE:s[0-9]+]], s{{[0-9]+}}, 0xf0000
 ; SI: v_mov_b32_e32 [[VBFE:v[0-9]+]], [[BFE]]
 ; SI: buffer_store_short [[VBFE]]
 

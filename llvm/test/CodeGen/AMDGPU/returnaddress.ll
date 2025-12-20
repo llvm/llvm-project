@@ -36,8 +36,7 @@ entry:
 
 ; Test with use outside the entry-block
 ; GCN-LABEL: {{^}}func4
-; GCN: v_mov_b32_e32 v0, 0
-; GCN: v_mov_b32_e32 v1, {{v0|0}}
+; GCN: flat_store_dwordx2
 define amdgpu_kernel void @func4(ptr %out, i32 %val) nounwind {
 entry:
   %cmp = icmp ne i32 %val, 0
