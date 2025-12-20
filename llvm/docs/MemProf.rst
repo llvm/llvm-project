@@ -22,7 +22,7 @@ Traditional PGO focuses on control flow (hot vs. cold code). MemProf extends thi
 
 This information enables optimizations such as:
 
-*   **Heap Layout Optimization:** Grouping objects with similar lifetimes or access density.
+*   **Heap Layout Optimization:** Grouping objects with similar lifetimes or access density. This currently requires an allocator that supports the necessary interfaces (e.g., tcmalloc).
 *   **Static Data Partitioning:** Segregating frequently accessed (hot) global variables and constants from rarely accessed (cold) ones to improve data locality and TLB utilization.
 
 User Manual
@@ -30,14 +30,14 @@ User Manual
 
 This section describes how to use MemProf to profile and optimize your application.
 
-Building with MemProf
----------------------
+Building with MemProf Instrumentation
+-------------------------------------
 
 To enable MemProf instrumentation, compile your application with the ``-fmemory-profile`` flag. Make sure to include debug information (``-gmlt`` and ``-fdebug-info-for-profiling``) and frame pointers to ensure accurate stack traces and line number reporting.
 
 .. code-block:: bash
 
-    clang++ -fmemory-profile -fdebug-info-for-profiling -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -gmlt -O2 source.cpp -o app
+    clang++ -fmemory-profile -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -fno-optimize-sibling-calls -fdebug-info-for-profiling -gmlt -O2 source.cpp -o app
 
 .. note::
     Link with ``-fmemory-profile`` as well to link the necessary runtime libraries. If you use a separate link step, ensure the flag is passed to the linker.
@@ -80,7 +80,7 @@ To dump the profile in YAML format (useful for debugging or creating test cases)
 
     llvm-profdata show --memory memprof.memprofdata > memprof.yaml
 
-Merge MemProf profiles with standard PGO instrumentation profiles if you have both.
+Merge MemProf profiles with standard PGO instrumentation profiles if you have both (optional).
 
 Using Profiles for Optimization
 -------------------------------
@@ -89,7 +89,7 @@ Feed the indexed profile back into the compiler using the ``-fmemory-profile-use
 
 .. code-block:: bash
 
-    clang++ -fmemory-profile-use=memprof.memprofdata -O2 source.cpp -o optimized_app -ltcmalloc
+    clang++ -fmemory-profile-use=memprof.memprofdata -O2 -Wl,-mllvm,-enable-memprof-context-disambiguation -Wl,-mllvm,-optimize-hot-cold-new -Wl,-mllvm,-supports-hot-cold-new source.cpp -o optimized_app -ltcmalloc
 
 If invoking the optimizer directly via ``opt``:
 
@@ -100,10 +100,13 @@ If invoking the optimizer directly via ``opt``:
 The compiler uses the profile data to annotate allocation instructions with metadata (e.g., ``!memprof``), distinguishing between "hot", "cold", and "notcold" allocations. This metadata guides downstream optimizations.
 
 .. note::
-    For the optimized binary to utilize the hot/cold hinting, it must be linked with an allocator that supports this mechanism, such as `tcmalloc <https://github.com/google/tcmalloc>`_. TCMalloc extends operator new that accepts a hint (0 for cold, 255 for hot) to guide data placement and improve locality.
+    Ensure that the same debug info flags (e.g. ``-gmlt`` and ``-fdebug-info-for-profiling``) used during instrumentation are also passed during this compilation step to enable correct matching of the profile data.
 
-Context Disambiguation (LTO/ThinLTO)
-------------------------------------
+.. note::
+    For the optimized binary to fully utilize the hot/cold hinting, it must be linked with an allocator that supports this mechanism, such as `tcmalloc <https://github.com/google/tcmalloc>`_. TCMalloc provides an API (``tcmalloc::hot_cold_t``) that accepts a hint (0 for cold, 255 for hot) to guide data placement and improve locality. To indicate that the library supports these interfaces, the ``-mllvm -supports-hot-cold-new`` flag is used during the LTO link.
+
+Context Disambiguation (LTO)
+----------------------------
 
 To fully benefit from MemProf, especially for common allocation wrappers, enabling **ThinLTO** (preferred) or LTO is required. This allows the compiler to perform **context disambiguation**.
 
@@ -125,7 +128,7 @@ Consider the following example:
 
 Without context disambiguation, the compiler sees a single ``allocate`` function called from both hot and cold contexts. It must conservatively assume the allocation is "not cold" or "ambiguous".
 
-With ThinLTO and MemProf:
+With LTO and MemProf:
 1.  The compiler constructs a whole-program call graph.
 2.  It identifies that ``allocate`` has distinct calling contexts with different behaviors.
 3.  It **clones** ``allocate`` into two versions: one for the hot path and one for the cold path.
@@ -153,6 +156,9 @@ To enable this feature, pass the following flags to the compiler:
 
 The optimized layout clusters hot static data, improving dTLB and cache efficiency.
 
+.. note::
+   For an LTO build -split-static-data needs to be passed to the LTO backend via the linker using ``-Wl,-mllvm,-split-static-data``.
+
 Developer Manual
 ================
 
@@ -163,40 +169,59 @@ Architecture Overview
 
 MemProf consists of three main components:
 
-1.  **Instrumentation Pass (Compile-time):** Injects code to record memory allocations and accesses.
+1.  **Instrumentation Pass (Compile-time):** Memory accesses are instrumented to increment the access count held in a shadow memory location, or alternatively to call into the runtime.
 2.  **Runtime Library (Link-time/Run-time):** Manages shadow memory and tracks allocation contexts and access statistics.
 3.  **Profile Analysis (Post-processing/Compile-time):** Tools and passes that read the profile, annotate the IR, and perform advanced optimizations like context disambiguation for ThinLTO.
 
-Detailed Workflow (ThinLTO)
----------------------------
+Detailed Workflow (LTO)
+-----------------------
 
-The optimization process, particularly context disambiguation, involves several steps during the ThinLTO pipeline:
+The optimization process, using LTO, involves several steps during the LTO pipeline:
 
-1.  **Metadata Serialization:** During the ThinLTO summary analysis step, MemProf metadata (including MIBs and CallStacks) is serialized into the module summary. This is implemented in ``llvm/lib/Analysis/ModuleSummaryAnalysis.cpp``.
-2.  **Whole Program Graph Construction:** During the ThinLTO indexing step, the compiler constructs a whole-program ``CallingContextGraph`` to analyze and disambiguate contexts. This graph identifies where allocation contexts diverge (e.g., same function called from hot vs. cold paths). This logic resides in ``llvm/lib/Transforms/IPO/MemProfContextDisambiguation.cpp``.
-3.  **Auxiliary Graph & Cloning Decisions:** An auxiliary graph is constructed to guide the cloning process. The analysis identifies which functions and callsites need to be cloned to isolate cold allocation paths from hot ones.
-4.  **ThinLTO Backend:** The actual cloning of functions and replacement of allocation calls (e.g., ``operator new``) happens in the ThinLTO backend passes. These transformations are guided by the decisions made during the indexing step.
+1.  **Metadata Serialization:** During the LTO summary analysis step, MemProf metadata (``!memprof`` and ``!callsite``) is serialized into the module summary. This is implemented in ``llvm/lib/Analysis/ModuleSummaryAnalysis.cpp``.
+2.  **Whole Program Graph Construction:** During the LTO indexing step, the compiler constructs a whole-program ``CallsiteContextGraph`` to analyze and disambiguate contexts. This graph identifies where allocation contexts diverge (e.g., same function called from hot vs. cold paths). This logic resides in ``llvm/lib/Transforms/IPO/MemProfContextDisambiguation.cpp``.
+3.  **Cloning Decisions:** The analysis identifies which functions and callsites need to be cloned to isolate cold allocation paths from hot ones using the ``CallsiteContextGraph``.
+4.  **LTO Backend:** The actual cloning of functions happens in the ``MemProfContextDisambiguation`` pass. The replacement of allocation calls (e.g., ``operator new``) happens in ``SimplifyLibCalls`` during the ``InstCombine`` pass. These transformations are guided by the decisions made during the indexing step.
 
 Source Structure
 ----------------
 
 *   **Runtime:** ``compiler-rt/lib/memprof``
+
     *   Contains the runtime implementation, including shadow memory mapping, interceptors (malloc, free, etc.), and the thread-local storage for recording stats.
+
 *   **Instrumentation:** ``llvm/lib/Transforms/Instrumentation/MemProfInstrumentation.cpp``
+
     *   Implements the LLVM IR pass that adds instrumentation calls.
+
 *   **Profile Data:** ``llvm/include/llvm/ProfileData/MemProf.h`` and ``MemProfData.inc``
+
     *   Defines the profile format, data structures (like ``MemInfoBlock``), and serialization logic.
+
 *   **Use Pass:** ``llvm/lib/Transforms/Instrumentation/MemProfUse.cpp``
+
     *   Reads the profile and annotates the IR with metadata.
+
 *   **Context Disambiguation:** ``llvm/lib/transforms/ipo/MemProfContextDisambiguation.cpp``
-    *   Implements the analysis and transformations (e.g., cloning) for resolving ambiguous allocation contexts, particularly during ThinLTO.
+
+    *   Implements the analysis and transformations (e.g., cloning) for resolving ambiguous allocation contexts using LTO.
+
+*   **Transformation:** ``llvm/lib/Transforms/Utils/SimplifyLibCalls.cpp``
+
+    *   Implements the rewriting of allocation calls based on the hot/cold hints.
+
+*   **Static Data Partitioning:** ``llvm/lib/CodeGen/AsmPrinter/AsmPrinter.cpp`` and ``llvm/lib/CodeGen/StaticDataSplitter.cpp``
+
+    *   Implements the splitting of static data into hot and cold sections.
 
 Runtime Implementation
 ----------------------
 
 The runtime uses a **shadow memory** scheme similar to AddressSanitizer (ASan) but optimized for profiling.
 *   **Shadow Mapping:** Application memory is mapped to shadow memory.
+
 *   **Granularity:** The default granularity is 64 bytes. One byte of shadow memory tracks the access state of 64 bytes of application memory.
+
 *   **MemInfoBlock (MIB):** A key data structure that stores statistics for an allocation context, including: ``AllocCount``, ``TotalAccessCount``, ``TotalLifetime``, and ``Min/MaxAccessDensity``.
 
 Profile Format
@@ -233,8 +258,8 @@ When making changes to MemProf, verify your changes using the following test sui
     *   Purpose: Verify the correctness of the ``MemProfUse`` pass, metadata annotation, and IR transformations.
 
 4.  **ThinLTO & Context Disambiguation Tests:**
-    *   Location: ``llvm/test/ThinLTO/X86``
-    *   Purpose: Verify context disambiguation, cloning, and summary analysis during ThinLTO.
+    *   Location: ``llvm/test/ThinLTO/X86/memprof*`` and ``llvm/test/Transforms/MemProfContextDisambiguation``
+    *   Purpose: Verify context disambiguation, cloning, and summary analysis during ThinLTO and LTO.
 
 Testing with YAML Profiles
 --------------------------
