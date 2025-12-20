@@ -14162,6 +14162,34 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
       }
     }
   }
+
+  // (setcc (zext a), (zext b), setu??) -> (setcc a, b, setu??)
+  // (setcc (sext a), (sext b), sets??) -> (setcc a, b, sets??)
+  if ((ISD::isUnsignedIntSetCC(Cond) && N0.getOpcode() == ISD::ZERO_EXTEND &&
+       N1.getOpcode() == ISD::ZERO_EXTEND) ||
+      (ISD::isSignedIntSetCC(Cond) && N0.getOpcode() == ISD::SIGN_EXTEND &&
+       N1.getOpcode() == ISD::SIGN_EXTEND)) {
+    SDValue LHS = N0.getOperand(0), RHS = N1.getOperand(0);
+    EVT SmallVT =
+        LHS.getScalarValueSizeInBits() > RHS.getScalarValueSizeInBits()
+            ? LHS.getValueType()
+            : RHS.getValueType();
+    if (!LegalOperations ||
+        (SmallVT.isSimple() &&
+         TLI.isCondCodeLegal(Cond, SmallVT.getSimpleVT()))) {
+      LHS = DAG.getExtOrTrunc(ISD::isSignedIntSetCC(Cond), LHS, SDLoc(LHS),
+                              SmallVT);
+      RHS = DAG.getExtOrTrunc(ISD::isSignedIntSetCC(Cond), RHS, SDLoc(RHS),
+                              SmallVT);
+      SDValue NewSetCC =
+          DAG.getSetCC(DL, getSetCCResultType(SmallVT), LHS, RHS, Cond);
+      // Promote to a legal type for setcc, then adjust back to VT (if before
+      // LegalOperations)
+      return DAG.getZExtOrTrunc(
+          TLI.promoteTargetBoolean(DAG, NewSetCC, N0.getValueType()), DL, VT);
+    }
+  }
+
   return SDValue();
 }
 
