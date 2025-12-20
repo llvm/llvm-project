@@ -4037,14 +4037,18 @@ LexStart:
   case '_': {
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
+
+    // The reason for saving and using LangOpts in the preprocessor here is that
+    // EOF may be encountered in LexIdentifierContinue and current Lexer might
+    // be destructed in HandleEndOfFile, If the code after
+    // LexIdentifierContinue try to access LangOps in this Lexer, it will hit
+    // undefined behavior.
+    const LangOptions *PPLangOpts = PP ? &PP->getLangOpts() : nullptr;
     bool returnedToken = LexIdentifierContinue(Result, CurPtr);
 
-    // Check eof token first, because EOF may be encountered in
-    // LexIdentifierContinue, and the current lexer may then be made invalid by
-    // HandleEndOfFile.
-    if (returnedToken && Result.isNot(tok::eof) &&
-        Result.isModuleContextualKeyword(LangOpts) && !LexingRawMode &&
-        !Is_PragmaLexer && !ParsingPreprocessorDirective && PP &&
+    if (returnedToken && !LexingRawMode && !Is_PragmaLexer &&
+        !ParsingPreprocessorDirective && PP &&
+        Result.isModuleContextualKeyword(*PPLangOpts) &&
         PP->HandleModuleContextualKeyword(Result, TokAtPhysicalStartOfLine))
       goto HandleDirective;
     return returnedToken;
