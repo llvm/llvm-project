@@ -1835,11 +1835,10 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   //   %3 = or i8 %2, C2
   Value *Input;
   if (!NewTV && !NewFV &&
-      (!match(&Op,
-              m_c_BinOp(m_c_Select(m_Value(Input),
-                                   m_c_BinOp(Op.getOpcode(), m_Deferred(Input),
-                                             m_ConstantInt())),
-                        m_ConstantInt()))))
+      (!match(&Op, m_BinOp(m_c_Select(m_Value(Input),
+                                      m_BinOp(Op.getOpcode(), m_Deferred(Input),
+                                              m_ConstantInt())),
+                           m_ConstantInt()))))
     return nullptr;
 
   // Create an instruction for the arm that did not fold.

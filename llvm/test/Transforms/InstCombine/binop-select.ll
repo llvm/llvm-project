@@ -572,6 +572,50 @@ define i32 @OrSelectIcmpNonZero(i32 %a, i32 %b) {
   ret i32 %or
 }
 
+define i8 @comBinOpSelectComBinOpRev1(i8 %arg0, i8 %arg1) {
+; CHECK-LABEL: @comBinOpSelectComBinOpRev1(
+; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 5, i8 1
+; CHECK-NEXT:    [[V3:%.*]] = or i8 [[ARG0:%.*]], [[V3_V]]
+; CHECK-NEXT:    ret i8 [[V3]]
+;
+  %v0 = icmp eq i8 %arg1, -1
+  %v1 = or i8 %arg0, 4
+  %v2 = select i1 %v0, i8 %v1, i8 %arg0
+  %v3 = or i8 1, %v2
+  ret i8 %v3
+}
+
+
+define i8 @comBinOpSelectComBinOpRev2(i8 %arg0, i8 %arg1) {
+; CHECK-LABEL: @comBinOpSelectComBinOpRev2(
+; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 5, i8 1
+; CHECK-NEXT:    [[V3:%.*]] = or i8 [[ARG0:%.*]], [[V3_V]]
+; CHECK-NEXT:    ret i8 [[V3]]
+;
+  %v0 = icmp eq i8 %arg1, -1
+  %v1 = or i8 4, %arg0
+  %v2 = select i1 %v0, i8 %v1, i8 %arg0
+  %v3 = or i8 %v2, 1
+  ret i8 %v3
+}
+
+
+define i8 @comBinOpSelectComBinOpRev3(i8 %arg0, i8 %arg1) {
+; CHECK-LABEL: @comBinOpSelectComBinOpRev3(
+; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
+; CHECK-NEXT:    [[V3_V:%.*]] = select i1 [[V0]], i8 5, i8 1
+; CHECK-NEXT:    [[V3:%.*]] = or i8 [[ARG0:%.*]], [[V3_V]]
+; CHECK-NEXT:    ret i8 [[V3]]
+;
+  %v0 = icmp eq i8 %arg1, -1
+  %v1 = or i8 4, %arg0
+  %v2 = select i1 %v0, i8 %v1, i8 %arg0
+  %v3 = or i8 1, %v2
+  ret i8 %v3
+}
+
 define i8 @orSelectOrNoCommonBits1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @orSelectOrNoCommonBits1(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
@@ -965,6 +1009,52 @@ define i8 @addSelectaddSame(i8 %arg0, i8 %arg1) {
   ret i8 %v3
 }
 
+define i8 @subSelectsubNoCommonBitsConstOnLeft1(i8 %arg0, i8 %arg1) {
+; CHECK-LABEL: @subSelectsubNoCommonBitsConstOnLeft1(
+; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
+; CHECK-NEXT:    [[V1:%.*]] = sub i8 4, [[ARG0:%.*]]
+; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
+; CHECK-NEXT:    [[V3:%.*]] = add i8 [[V2]], -1
+; CHECK-NEXT:    ret i8 [[V3]]
+;
+  %v0 = icmp eq i8 %arg1, -1
+  %v1 = sub i8 4, %arg0
+  %v2 = select i1 %v0, i8 %v1, i8 %arg0
+  %v3 = sub i8 %v2, 1
+  ret i8 %v3
+}
+
+
+define i8 @subSelectsubNoCommonBitsConstOnLeft2(i8 %arg0, i8 %arg1) {
+; CHECK-LABEL: @subSelectsubNoCommonBitsConstOnLeft2(
+; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
+; CHECK-NEXT:    [[V1:%.*]] = add i8 [[ARG0:%.*]], -4
+; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
+; CHECK-NEXT:    [[V3:%.*]] = sub i8 1, [[V2]]
+; CHECK-NEXT:    ret i8 [[V3]]
+;
+  %v0 = icmp eq i8 %arg1, -1
+  %v1 = sub i8 %arg0, 4
+  %v2 = select i1 %v0, i8 %v1, i8 %arg0
+  %v3 = sub i8 1, %v2
+  ret i8 %v3
+}
+
+
+define i8 @subSelectsubNoCommonBitsConstOnLeft3(i8 %arg0, i8 %arg1) {
+; CHECK-LABEL: @subSelectsubNoCommonBitsConstOnLeft3(
+; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 4, [[TMP2:%.*]]
+; CHECK-NEXT:    [[V3:%.*]] = select i1 [[V0]], i8 [[TMP1]], i8 [[TMP2]]
+; CHECK-NEXT:    [[V4:%.*]] = sub i8 1, [[V3]]
+; CHECK-NEXT:    ret i8 [[V4]]
+;
+  %v0 = icmp eq i8 %arg1, -1
+  %v1 = sub i8 4, %arg0
+  %v2 = select i1 %v0, i8 %v1, i8 %arg0
+  %v3 = sub i8 1, %v2
+  ret i8 %v3
+}
 
 define i8 @subSelectsubNoCommonBits1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @subSelectsubNoCommonBits1(
@@ -1165,6 +1255,50 @@ define i8 @mulSelectmulSame(i8 %arg0, i8 %arg1) {
   ret i8 %v3
 }
 
+define i8 @udivSelectudivNoCommonBitsConstOnLeft1(i8 %arg0, i8 %arg1) {
+; CHECK-LABEL: @udivSelectudivNoCommonBitsConstOnLeft1(
+; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
+; CHECK-NEXT:    [[V1:%.*]] = udiv i8 4, [[ARG0:%.*]]
+; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
+; CHECK-NEXT:    [[V3:%.*]] = udiv i8 [[V2]], 3
+; CHECK-NEXT:    ret i8 [[V3]]
+;
+  %v0 = icmp eq i8 %arg1, -1
+  %v1 = udiv i8 4, %arg0
+  %v2 = select i1 %v0, i8 %v1, i8 %arg0
+  %v3 = udiv i8 %v2, 3
+  ret i8 %v3
+}
+
+define i8 @udivSelectudivNoCommonBitsConstOnLeft2(i8 %arg0, i8 %arg1) {
+; CHECK-LABEL: @udivSelectudivNoCommonBitsConstOnLeft2(
+; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
+; CHECK-NEXT:    [[V11:%.*]] = lshr i8 [[ARG0:%.*]], 2
+; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V11]], i8 [[ARG0]]
+; CHECK-NEXT:    [[V3:%.*]] = udiv i8 3, [[V2]]
+; CHECK-NEXT:    ret i8 [[V3]]
+;
+  %v0 = icmp eq i8 %arg1, -1
+  %v1 = udiv i8 %arg0, 4
+  %v2 = select i1 %v0, i8 %v1, i8 %arg0
+  %v3 = udiv i8 3, %v2
+  ret i8 %v3
+}
+
+define i8 @udivSelectudivNoCommonBitsConstOnLeft3(i8 %arg0, i8 %arg1) {
+; CHECK-LABEL: @udivSelectudivNoCommonBitsConstOnLeft3(
+; CHECK-NEXT:    [[V0:%.*]] = icmp eq i8 [[ARG1:%.*]], -1
+; CHECK-NEXT:    [[V1:%.*]] = udiv i8 4, [[ARG0:%.*]]
+; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V0]], i8 [[V1]], i8 [[ARG0]]
+; CHECK-NEXT:    [[V3:%.*]] = udiv i8 3, [[V2]]
+; CHECK-NEXT:    ret i8 [[V3]]
+;
+  %v0 = icmp eq i8 %arg1, -1
+  %v1 = udiv i8 4, %arg0
+  %v2 = select i1 %v0, i8 %v1, i8 %arg0
+  %v3 = udiv i8 3, %v2
+  ret i8 %v3
+}
 
 define i8 @udivSelectudivNoCommonBits1(i8 %arg0, i8 %arg1) {
 ; CHECK-LABEL: @udivSelectudivNoCommonBits1(
