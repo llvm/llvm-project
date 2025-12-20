@@ -297,7 +297,7 @@ nodes are matched by the AST.
 
 Every syntactic (and sometimes semantic) element of the C++ source code is
 represented by different classes in the AST. You select the portions of the
-AST you're interested in by composing AST matcher functions.  You will want
+AST you're interested in by composing AST matcher functions. You will want
 to study carefully the `AST Matcher Reference
 <https://clang.llvm.org/docs/LibASTMatchersReference.html>`_
 to understand the relationship between the different matcher functions.
@@ -389,7 +389,7 @@ matchers or other support classes by writing a unit test than by writing a
 tests for the public AST matcher classes and is a good source of testing
 idioms for matchers.
 
-You can build the Clang-tidy unit tests by building the ``ClangTidyTests``
+You can build the Clang-Tidy unit tests by building the ``ClangTidyTests``
 target. Test targets in LLVM and Clang are excluded from the "build all" style
 action of IDE-based CMake generators, so you need to explicitly build the
 target for the unit tests to be built.
@@ -682,12 +682,12 @@ hints. The most frequent pitfalls are macros and templates:
 
 If you need multiple files to exercise all the aspects of your check, it is
 recommended you place them in a subdirectory named for the check under the
-``Inputs`` directory for the module containing your check.  This keeps the
+``Inputs`` directory for the module containing your check. This keeps the
 test directory from getting cluttered.
 
 If you need to validate how your check interacts with system header files, a
 set of simulated system header files is located in the
-``checkers/Inputs/Headers`` directory.  The path to this directory is
+``checkers/Inputs/Headers`` directory. The path to this directory is
 available in a lit test with the variable ``%clang_tidy_headers``.
 
 .. _lit: https://llvm.org/docs/CommandGuide/lit.html
