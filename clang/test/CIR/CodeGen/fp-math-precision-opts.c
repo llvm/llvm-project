@@ -4,29 +4,29 @@
 // RUN: FileCheck --input-file=%t-no-errno.cir %s -check-prefix=ALL,CIR-NO-ERRNO
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir -fmath-errno -O1 %s -o %t-errno-o1.cir
-// RUN: FileCheck --input-file=%t-errno-o1.cir %s -check-prefix=ALL,CIR-ERRNO-O1
+// RUN: FileCheck --input-file=%t-errno-o1.cir %s -check-prefixes=ALL,CIR-ERRNO-O1
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir -ffast-math -O1 %s -o %t-no-errno-o1.cir
-// RUN: FileCheck --input-file=%t-no-errno-o1.cir %s -check-prefix=ALL,CIR-NO-ERRNO-O1
+// RUN: FileCheck --input-file=%t-no-errno-o1.cir %s -check-prefixes=ALL,CIR-NO-ERRNO-O1
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm -fmath-errno %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=ALL,LLVM-ERRNO
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=ALL,LLVM-ERRNO
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm -ffast-math %s -o %t-no-errno.ll
-// RUN: FileCheck --input-file=%t-no-errno.ll %s -check-prefix=ALL,LLVM-NO-ERRNO
+// RUN: FileCheck --input-file=%t-no-errno.ll %s -check-prefixes=ALL,LLVM-NO-ERRNO
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm -fmath-errno -O1 %s -o %t-errno-o1.ll
-// RUN: FileCheck --input-file=%t-errno-o1.ll %s -check-prefix=ALL,LLVM-ERRNO-O1
+// RUN: FileCheck --input-file=%t-errno-o1.ll %s -check-prefixes=ALL,LLVM-ERRNO-O1
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm -ffast-math -O1 %s -o %t-no-errno-o1.ll
-// RUN: FileCheck --input-file=%t-no-errno-o1.ll %s -check-prefix=ALL,LLVM-NO-ERRNO-O1
+// RUN: FileCheck --input-file=%t-no-errno-o1.ll %s -check-prefixes=ALL,LLVM-NO-ERRNO-O1
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm -fmath-errno %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=ALL,OGCG-ERRNO
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=ALL,OGCG-ERRNO
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm -ffast-math %s -o %t-no-errno.ll
-// RUN: FileCheck --input-file=%t-no-errno.ll %s -check-prefix=ALL,OGCG-NO-ERRNO
+// RUN: FileCheck --input-file=%t-no-errno.ll %s -check-prefixes=ALL,OGCG-NO-ERRNO
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm -fmath-errno -O1 %s -o %t-errno-o1.ll
-// RUN: FileCheck --input-file=%t-errno-o1.ll %s -check-prefix=ALL,OGCG-ERRNO-O1
+// RUN: FileCheck --input-file=%t-errno-o1.ll %s -check-prefixes=ALL,OGCG-ERRNO-O1
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm -ffast-math -O1 %s -o %t-no-errno-o1.ll
-// RUN: FileCheck --input-file=%t-no-errno-o1.ll %s -check-prefix=ALL,OGCG-NO-ERRNO-O1
+// RUN: FileCheck --input-file=%t-no-errno-o1.ll %s -check-prefixes=ALL,OGCG-NO-ERRNO-O1
 
 float test_normal(float f) {
   return __builtin_cosf(f);
