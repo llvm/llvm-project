@@ -682,12 +682,15 @@ divergent.ret:
 }
 
 ; IR-LABEL: @multi_divergent_unreachable_exit(
-; IR: UnifiedUnreachableBlock:
-; IR-NEXT: call void @llvm.amdgcn.unreachable()
+; IR: Flow5:
+; IR-NEXT: call void @llvm.amdgcn.end.cf.i64(i64
 ; IR-NEXT: br label %UnifiedReturnBlock
 
+; IR: UnifiedUnreachableBlock:
+; IR-NEXT: call void @llvm.amdgcn.unreachable()
+; IR-NEXT: br label %Flow5
+
 ; IR: UnifiedReturnBlock:
-; IR-NEXT: call void @llvm.amdgcn.end.cf.i64(i64
 ; IR-NEXT: ret void
 define amdgpu_kernel void @multi_divergent_unreachable_exit(i32 %switch) #0 {
 bb:
