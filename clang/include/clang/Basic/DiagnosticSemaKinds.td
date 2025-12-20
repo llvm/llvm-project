@@ -13337,7 +13337,10 @@ def warn_hlsl_packoffset_mix : Warning<"cannot mix packoffset elements with nonp
     InGroup<HLSLMixPackOffset>;
 def err_hlsl_packoffset_overlap : Error<"packoffset overlap between %0, %1">;
 def err_hlsl_packoffset_cross_reg_boundary : Error<"packoffset cannot cross register boundary">;
-def err_hlsl_packoffset_alignment_mismatch : Error<"packoffset at 'y' not match alignment %0 required by %1">;
+def err_hlsl_invalid_register_or_packoffset
+    : Error<"register or packoffset bind is not valid">;
+def err_hlsl_packoffset_alignment_mismatch
+    : Error<"packoffset at 'y' does not match alignment %0 required by %1">;
 def err_hlsl_pointers_unsupported : Error<
   "%select{pointers|references}0 are unsupported in HLSL">;
 def err_hlsl_missing_resource_class : Error<"HLSL resource needs to have [[hlsl::resource_class()]] attribute">;
