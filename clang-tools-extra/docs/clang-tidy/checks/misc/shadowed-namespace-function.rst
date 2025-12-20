@@ -39,8 +39,15 @@ The check will not warn about:
 - Functions in anonymous namespaces;
 - The ``main`` function.
 
+Options
+-------
+
+.. option:: IgnoreTemplated
+
+   A boolean that controls whether the check should ignore templated functions
+   (function templates and their instantiations). Defaults to `false`.
+
 Limitations
 -----------
 
-- Does not warn about template functions;
 - Does not warn about variadic functions.

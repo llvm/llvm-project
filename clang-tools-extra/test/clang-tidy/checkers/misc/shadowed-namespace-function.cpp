@@ -90,12 +90,14 @@ namespace foo {
   void f1_template();
 }
 
-// FIXME: provide warning in these two cases
-// FIXME: provide fixit for f0
 template<typename T>
 void f0_template() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'f0_template' shadows 'foo::f0_template' [misc-shadowed-namespace-function]
+// CHECK-FIXES: void foo::f0_template() {}
 template<typename T>
 void f1_template() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: free function 'f1_template' shadows 'foo::f1_template' [misc-shadowed-namespace-function]
+// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
 //////////////////////////////////////////////////////////////////////////////////////////
 

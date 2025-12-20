@@ -40,24 +40,30 @@ static bool hasSameSignature(const FunctionDecl *Func1,
                      makeCannonicalTypesRange(Func2->parameters()));
 }
 
-// FIXME: get rid of this
-static bool isUnsupportedYet(const FunctionDecl *Func) {
-  return Func->isVariadic() || Func->isTemplated();
+static bool sholdBeIgnored(const FunctionDecl *Func,
+                      bool IgnoreTemplated) {
+  if (Func->isVariadic())
+    return true;
+  if (IgnoreTemplated && Func->isTemplated())
+    return true;
+  return false;
 }
 
 namespace {
 class ShadowedFunctionFinder : public DynamicRecursiveASTVisitor {
 public:
   ShadowedFunctionFinder(const FunctionDecl *GlobalFunc,
-                         StringRef GlobalFuncName)
-      : GlobalFunc(GlobalFunc), GlobalFuncName(GlobalFuncName) {}
+                         StringRef GlobalFuncName,
+                         bool IgnoreTemplated)
+      : GlobalFunc(GlobalFunc), GlobalFuncName(GlobalFuncName),
+        IgnoreTemplated(IgnoreTemplated) {}
 
   bool VisitFunctionDecl(FunctionDecl *Func) override {
     // Only process functions that are inside a namespace (not in global scope)
     if (CurrentNamespaceStack.empty())
       return true;
 
-    if (Func->getDefinition() || isUnsupportedYet(Func))
+    if (Func->getDefinition() || sholdBeIgnored(Func, IgnoreTemplated))
       return true;
 
     const NamespaceDecl *CurrentNS = CurrentNamespaceStack.back();
@@ -105,8 +111,9 @@ public:
   bool isShadowedFuncFriend() const { return IsShadowedFuncFriend; }
 
 private:
-  const FunctionDecl *GlobalFunc;
-  StringRef GlobalFuncName;
+  const FunctionDecl * const GlobalFunc;
+  const StringRef GlobalFuncName;
+  const bool IgnoreTemplated;
   const FunctionDecl *ShadowedFunc = nullptr;
   const NamespaceDecl *ShadowedNamespace = nullptr;
   bool IsShadowedFuncFriend = false;
@@ -116,7 +123,6 @@ private:
 } // anonymous namespace
 
 void ShadowedNamespaceFunctionCheck::registerMatchers(MatchFinder *Finder) {
-  using ast_matchers::isTemplateInstantiation;
   Finder->addMatcher(
       functionDecl(
           isDefinition(), hasDeclContext(translationUnitDecl()),
@@ -131,10 +137,10 @@ void ShadowedNamespaceFunctionCheck::check(
   assert(Func);
 
   const StringRef FuncName = Func->getName();
-  if (FuncName.empty() || isUnsupportedYet(Func))
+  if (FuncName.empty() || sholdBeIgnored(Func, IgnoreTemplated))
     return;
 
-  ShadowedFunctionFinder Finder(Func, FuncName);
+  ShadowedFunctionFinder Finder(Func, FuncName, IgnoreTemplated);
   Finder.TraverseAST(*Result.Context);
 
   const FunctionDecl *ShadowedFunc = Finder.getShadowedFunc();
