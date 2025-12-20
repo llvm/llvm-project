@@ -16,6 +16,7 @@
 #include <cassert>
 
 using namespace clang::ast_matchers;
+using namespace clang::ast_matchers::internal;
 
 namespace clang::tidy::misc {
 
@@ -35,7 +36,7 @@ AST_MATCHER(ReferenceType, isSpelledAsLValue) {
 AST_MATCHER(Type, isDependentType) { return Node.isDependentType(); }
 
 AST_MATCHER(TypeLoc, hasContainedAutoType) {
-  return !TypeLoc.getContainedAutoTypeLoc().isNull();
+  return !Node.getContainedAutoTypeLoc().isNull();
 }
 } // namespace
 
@@ -123,10 +124,12 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       unless(anyOf(ConstType, ConstReference, TemplateType,
                    hasInitializer(isInstantiationDependent()), RValueReference,
                    FunctionPointerRef, isImplicit(), AllowedType)),
-      AnalyzeLambdas ? TypeMatcher(anything())
-                     : unless(hasType(cxxRecordDecl(isLambda()))),
-      AnalyzeAutoVariables ? TypeLocMatcher(anything())
-                           : unless(hasTypeLoc(hasContainedAutoType())));
+      AnalyzeLambdas
+          ? Matcher<VarDecl>(anything())
+          : Matcher<VarDecl>(unless(hasType(cxxRecordDecl(isLambda())))),
+      AnalyzeAutoVariables
+          ? Matcher<VarDecl>(anything())
+          : Matcher<VarDecl>(unless(hasTypeLoc(hasContainedAutoType()))));
 
   // Match the function scope for which the analysis of all local variables
   // shall be run.
