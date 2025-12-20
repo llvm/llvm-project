@@ -92,14 +92,16 @@ add_llvm_component_library(LLVMTransformUtils
   ValueMapper.cpp
   VNCoercion.cpp
 
-  MyTy.cpp
-  PointerTypePrinter.cpp
-  PointerTypeTransformer.cpp
-  PointerTypeHelpers.cpp
+  PointerTypeTool/MyTy.cpp
+  PointerTypeTool/PointerTypePrinter.cpp
+  PointerTypeTool/PointerTypeTransformer.cpp
+  PointerTypeTool/PointerTypeHelpers.cpp
+  PointerTypeTool/FlowAnalyzer.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms/Utils
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms/Utils/PointerTypeTool
 
   DEPENDS
   intrinsics_gen
