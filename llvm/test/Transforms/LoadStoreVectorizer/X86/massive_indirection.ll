@@ -84,30 +84,30 @@ define void @v1_4_4_4_2_1_to_v8_8_levels_6_7(i32 %arg0, ptr addrspace(3) align 1
 ; CHECK-LABEL: define void @v1_4_4_4_2_1_to_v8_8_levels_6_7(
 ; CHECK-SAME: i32 [[ARG0:%.*]], ptr addrspace(3) align 16 [[ARG1_PTR:%.*]], i32 [[ARG2:%.*]], i32 [[ARG3:%.*]], i32 [[ARG4:%.*]], i32 [[ARG5:%.*]], half [[ARG6_HALF:%.*]], half [[ARG7_HALF:%.*]], <2 x half> [[ARG8_2XHALF:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[ARG1_PTR]], i32 458752
-; CHECK-NEXT:    br [[DOTPREHEADER11_PREHEADER:label %.*]]
-; CHECK:       [[_PREHEADER11_PREHEADER:.*:]]
+; CHECK-NEXT:    br label %[[DOTPREHEADER11_PREHEADER:.*]]
+; CHECK:       [[DOTPREHEADER11_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[ARG0]], 6
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP1]], i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP3]], i32 [[ARG2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP4]], i32 [[ARG3]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ARG0]], 2
-; CHECK-NEXT:    br i1 [[CMP]], [[DOTLR_PH:label %.*]], [[DOTEXIT_POINT:label %.*]]
-; CHECK:       [[_LR_PH:.*:]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[DOTLR_PH:.*]], label %[[DOTEXIT_POINT:.*]]
+; CHECK:       [[DOTLR_PH]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP5]], i32 [[ARG4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[GEP]], i32 [[ARG5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x half> poison, half [[ARG6_HALF]], i64 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x half> [[TMP10]], half 0.000000e+00, i64 1
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x half> [[TMP11]], half 0.000000e+00, i64 2
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x half> [[TMP12]], half 0.000000e+00, i64 3
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x half> [[TMP13]], half 0.000000e+00, i64 4
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x half> [[ARG8_2XHALF]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x half> [[TMP14]], half [[TMP15]], i64 5
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x half> [[ARG8_2XHALF]], i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x half> [[TMP7]], half [[TMP8]], i64 6
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <8 x half> [[TMP9]], half [[ARG7_HALF]], i64 7
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x half> poison, half [[ARG6_HALF]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x half> [[TMP10]], half 0.000000e+00, i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x half> [[TMP11]], half 0.000000e+00, i32 2
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x half> [[TMP12]], half 0.000000e+00, i32 3
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x half> [[TMP13]], half 0.000000e+00, i32 4
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x half> [[ARG8_2XHALF]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x half> [[TMP14]], half [[TMP15]], i32 5
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x half> [[ARG8_2XHALF]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x half> [[TMP7]], half [[TMP8]], i32 6
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <8 x half> [[TMP9]], half [[ARG7_HALF]], i32 7
 ; CHECK-NEXT:    store <8 x half> [[TMP16]], ptr addrspace(3) [[TMP6]], align 2
-; CHECK-NEXT:    br [[DOTEXIT_POINT]]
-; CHECK:       [[_EXIT_POINT:.*:]]
+; CHECK-NEXT:    br label %[[DOTEXIT_POINT]]
+; CHECK:       [[DOTEXIT_POINT]]:
 ; CHECK-NEXT:    ret void
 ;
   %base1 = getelementptr inbounds i8, ptr addrspace(3) %arg1_ptr, i32 458752
@@ -156,8 +156,8 @@ define void @variadics1(ptr %vlist) {
 ; CHECK-NEXT:    [[X2:%.*]] = getelementptr i8, ptr [[ARGP_NEXT12]], i32 7
 ; CHECK-NEXT:    [[ARGP_CUR16_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[X2]], i64 0)
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[ARGP_CUR16_ALIGNED]], align 4294967296
-; CHECK-NEXT:    [[X31:%.*]] = extractelement <2 x double> [[TMP1]], i64 0
-; CHECK-NEXT:    [[X42:%.*]] = extractelement <2 x double> [[TMP1]], i64 1
+; CHECK-NEXT:    [[X31:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
+; CHECK-NEXT:    [[X42:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[X5:%.*]] = fadd double [[X42]], [[X31]]
 ; CHECK-NEXT:    store double [[X5]], ptr null, align 8
 ; CHECK-NEXT:    ret void

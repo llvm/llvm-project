@@ -125,41 +125,39 @@ define amdgpu_kernel void @v9f64_divergent_idx(ptr addrspace(1) %out, double %a,
 define amdgpu_kernel void @v9f64_uniform_idx(ptr addrspace(1) %out, double %a, double %b, i32 %idx) {
 ; CHECK-LABEL: v9f64_uniform_idx:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
+; CHECK-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x0
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
-; CHECK-NEXT:    s_load_dword s4, s[4:5], 0x18
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:64
-; CHECK-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:32
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
+; CHECK-NEXT:    global_load_dwordx4 v[16:19], v32, s[8:9] offset:64
+; CHECK-NEXT:    global_load_dwordx4 v[12:15], v32, s[8:9] offset:48
+; CHECK-NEXT:    global_load_dwordx4 v[8:11], v32, s[8:9] offset:32
+; CHECK-NEXT:    global_load_dwordx4 v[4:7], v32, s[8:9] offset:16
+; CHECK-NEXT:    global_load_dwordx4 v[0:3], v32, s[8:9]
+; CHECK-NEXT:    s_lshl_b32 s0, s14, 1
 ; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    v_mov_b32_e32 v18, s2
-; CHECK-NEXT:    v_mov_b32_e32 v33, s3
-; CHECK-NEXT:    v_mov_b32_e32 v34, s6
-; CHECK-NEXT:    s_lshl_b32 s4, s4, 1
-; CHECK-NEXT:    s_add_i32 s2, s4, 2
-; CHECK-NEXT:    s_add_i32 s3, s4, 3
-; CHECK-NEXT:    v_mov_b32_e32 v35, s7
+; CHECK-NEXT:    v_mov_b32_e32 v18, s10
+; CHECK-NEXT:    v_mov_b32_e32 v33, s11
+; CHECK-NEXT:    s_add_i32 s1, s0, 2
+; CHECK-NEXT:    v_mov_b32_e32 v34, s12
+; CHECK-NEXT:    s_add_i32 s2, s0, 3
+; CHECK-NEXT:    v_mov_b32_e32 v35, s13
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    s_set_gpr_idx_on s4, gpr_idx(DST)
+; CHECK-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v18
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v33
 ; CHECK-NEXT:    s_set_gpr_idx_off
-; CHECK-NEXT:    s_set_gpr_idx_on s2, gpr_idx(DST)
+; CHECK-NEXT:    s_set_gpr_idx_on s1, gpr_idx(DST)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v34
 ; CHECK-NEXT:    s_set_gpr_idx_off
-; CHECK-NEXT:    s_set_gpr_idx_on s3, gpr_idx(DST)
+; CHECK-NEXT:    s_set_gpr_idx_on s2, gpr_idx(DST)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v35
 ; CHECK-NEXT:    s_set_gpr_idx_off
-; CHECK-NEXT:    global_store_dwordx2 v32, v[16:17], s[0:1] offset:64
-; CHECK-NEXT:    global_store_dwordx4 v32, v[8:11], s[0:1] offset:32
-; CHECK-NEXT:    global_store_dwordx4 v32, v[12:15], s[0:1] offset:48
-; CHECK-NEXT:    global_store_dwordx4 v32, v[0:3], s[0:1]
-; CHECK-NEXT:    global_store_dwordx4 v32, v[4:7], s[0:1] offset:16
+; CHECK-NEXT:    global_store_dwordx2 v32, v[16:17], s[8:9] offset:64
+; CHECK-NEXT:    global_store_dwordx4 v32, v[8:11], s[8:9] offset:32
+; CHECK-NEXT:    global_store_dwordx4 v32, v[12:15], s[8:9] offset:48
+; CHECK-NEXT:    global_store_dwordx4 v32, v[0:3], s[8:9]
+; CHECK-NEXT:    global_store_dwordx4 v32, v[4:7], s[8:9] offset:16
 ; CHECK-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <9 x double>, ptr addrspace(1) %out, i32 %tid

@@ -19,7 +19,7 @@ main_body:
 }
 
 ; GFX90A-HW-LABEL: atomic_add_unsafe_hw_agent:
-; GFX90A-HW:    global_atomic_add_f32 v0, v1, s[2:3]
+; GFX90A-HW:    global_atomic_add_f32 v0, v1, s{{\[[0-9]+:[0-9]+\]}}
 ; GFX90A-HW:    s_endpgm
 define amdgpu_kernel void @atomic_add_unsafe_hw_agent(ptr addrspace(1) %ptr, float %val) #0 {
 main_body:
@@ -28,7 +28,7 @@ main_body:
 }
 
 ; GFX90A-HW-LABEL: atomic_add_unsafe_hw_wg:
-; GFX90A-HW:    global_atomic_add_f32 v0, v1, s[2:3]
+; GFX90A-HW:    global_atomic_add_f32 v0, v1, s{{\[[0-9]+:[0-9]+\]}}
 ; GFX90A-HW:    s_endpgm
 define amdgpu_kernel void @atomic_add_unsafe_hw_wg(ptr addrspace(1) %ptr, float %val) #0 {
 main_body:
@@ -37,7 +37,7 @@ main_body:
 }
 
 ; GFX90A-HW-LABEL: atomic_add_unsafe_hw_wavefront:
-; GFX90A-HW:    global_atomic_add_f32 v0, v1, s[2:3]
+; GFX90A-HW:    global_atomic_add_f32 v0, v1, s{{\[[0-9]+:[0-9]+\]}}
 ; GFX90A-HW:    s_endpgm
 define amdgpu_kernel void @atomic_add_unsafe_hw_wavefront(ptr addrspace(1) %ptr, float %val) #0 {
 main_body:
@@ -46,7 +46,7 @@ main_body:
 }
 
 ; GFX90A-HW-LABEL: atomic_add_unsafe_hw_single_thread:
-; GFX90A-HW:    global_atomic_add_f32 v0, v1, s[2:3]
+; GFX90A-HW:    global_atomic_add_f32 v0, v1, s{{\[[0-9]+:[0-9]+\]}}
 ; GFX90A-HW:    s_endpgm
 define amdgpu_kernel void @atomic_add_unsafe_hw_single_thread(ptr addrspace(1) %ptr, float %val) #0 {
 main_body:
@@ -55,7 +55,7 @@ main_body:
 }
 
 ; GFX90A-HW-LABEL: atomic_add_unsafe_hw_aoa:
-; GFX90A-HW:    global_atomic_add_f32 v0, v1, s[2:3]
+; GFX90A-HW:    global_atomic_add_f32 v0, v1, s{{\[[0-9]+:[0-9]+\]}}
 ; GFX90A-HW:    s_endpgm
 define amdgpu_kernel void @atomic_add_unsafe_hw_aoa(ptr addrspace(1) %ptr, float %val) #0 {
 main_body:
@@ -64,7 +64,7 @@ main_body:
 }
 
 ; GFX90A-HW-LABEL: atomic_add_unsafe_hw_wgoa:
-; GFX90A-HW:    global_atomic_add_f32 v0, v1, s[2:3]
+; GFX90A-HW:    global_atomic_add_f32 v0, v1, s{{\[[0-9]+:[0-9]+\]}}
 ; GFX90A-HW:    s_endpgm
 define amdgpu_kernel void @atomic_add_unsafe_hw_wgoa(ptr addrspace(1) %ptr, float %val) #0 {
 main_body:
@@ -73,7 +73,7 @@ main_body:
 }
 
 ; GFX90A-HW-LABEL: atomic_add_unsafe_hw_wfoa:
-; GFX90A-HW:    global_atomic_add_f32 v0, v1, s[2:3]
+; GFX90A-HW:    global_atomic_add_f32 v0, v1, s{{\[[0-9]+:[0-9]+\]}}
 ; GFX90A-HW:    s_endpgm
 define amdgpu_kernel void @atomic_add_unsafe_hw_wfoa(ptr addrspace(1) %ptr, float %val) #0 {
 main_body:
@@ -82,7 +82,7 @@ main_body:
 }
 
 ; GFX90A-HW-LABEL: atomic_add_unsafe_hw_stoa:
-; GFX90A-HW:    global_atomic_add_f32 v0, v1, s[2:3]
+; GFX90A-HW:    global_atomic_add_f32 v0, v1, s{{\[[0-9]+:[0-9]+\]}}
 ; GFX90A-HW:    s_endpgm
 define amdgpu_kernel void @atomic_add_unsafe_hw_stoa(ptr addrspace(1) %ptr, float %val) #0 {
 main_body:

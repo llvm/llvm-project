@@ -5,8 +5,8 @@
 ;       allocation differences.
 
 ; SI-LABEL: {{^}}s_addk_i32_k0:
-; SI: s_load_dword [[VAL:s[0-9]+]]
-; SI: s_addk_i32 [[VAL]], 0x41
+; SI-DAG: s_load_dwordx4
+; SI: s_add_i32 [[VAL:s[0-9]+]], s{{[0-9]+}}, 0x41
 ; SI: v_mov_b32_e32 [[VRESULT:v[0-9]+]], [[VAL]]
 ; SI: buffer_store_dword [[VRESULT]]
 ; SI: s_endpgm
@@ -29,7 +29,7 @@ define amdgpu_kernel void @s_addk_i32_k0_x2(ptr addrspace(1) %out0, ptr addrspac
 }
 
 ; SI-LABEL: {{^}}s_addk_i32_k1:
-; SI: s_addk_i32 {{s[0-9]+}}, 0x7fff{{$}}
+; SI: s_add_i32 {{s[0-9]+}}, s{{[0-9]+}}, 0x7fff{{$}}
 ; SI: s_endpgm
 define amdgpu_kernel void @s_addk_i32_k1(ptr addrspace(1) %out, i32 %b) #0 {
   %add = add i32 %b, 32767 ; (1 << 15) - 1
@@ -47,7 +47,7 @@ define amdgpu_kernel void @s_addk_i32_k2(ptr addrspace(1) %out, i32 %b) #0 {
 }
 
 ; SI-LABEL: {{^}}s_addk_i32_k3:
-; SI: s_addk_i32 {{s[0-9]+}}, 0xffbf{{$}}
+; SI: s_add_i32 {{s[0-9]+}}, s{{[0-9]+}}, 0xffffffbf{{$}}
 ; SI: s_endpgm
 define amdgpu_kernel void @s_addk_i32_k3(ptr addrspace(1) %out, i32 %b) #0 {
   %add = add i32 %b, -65

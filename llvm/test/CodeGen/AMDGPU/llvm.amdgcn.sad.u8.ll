@@ -9,15 +9,16 @@ declare i32 @llvm.amdgcn.sad.u8(i32, i32, i32) #0
 define amdgpu_kernel void @v_sad_u8(ptr addrspace(1) %out, i32 %src) {
 ; SI-SDAG-LABEL: v_sad_u8:
 ; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_load_dword s6, s[4:5], 0xb
-; SI-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-SDAG-NEXT:    s_movk_i32 s4, 0x64
-; SI-SDAG-NEXT:    s_mov_b32 s3, 0xf000
-; SI-SDAG-NEXT:    s_mov_b32 s2, -1
+; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s6
-; SI-SDAG-NEXT:    v_sad_u8 v0, v0, s4, s4
-; SI-SDAG-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-SDAG-NEXT:    s_movk_i32 s3, 0x64
+; SI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
+; SI-SDAG-NEXT:    s_mov_b32 s6, -1
+; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
+; SI-SDAG-NEXT:    s_mov_b32 s4, s0
+; SI-SDAG-NEXT:    s_mov_b32 s5, s1
+; SI-SDAG-NEXT:    v_sad_u8 v0, v0, s3, s3
+; SI-SDAG-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-SDAG-NEXT:    s_endpgm
 ;
 ; SI-GISEL-LABEL: v_sad_u8:
@@ -34,14 +35,13 @@ define amdgpu_kernel void @v_sad_u8(ptr addrspace(1) %out, i32 %src) {
 ;
 ; VI-SDAG-LABEL: v_sad_u8:
 ; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; VI-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; VI-SDAG-NEXT:    s_movk_i32 s3, 0x64
+; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
-; VI-SDAG-NEXT:    v_sad_u8 v2, v0, s3, s3
+; VI-SDAG-NEXT:    s_movk_i32 s3, 0x64
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; VI-SDAG-NEXT:    v_sad_u8 v2, v2, s3, s3
 ; VI-SDAG-NEXT:    flat_store_dword v[0:1], v2
 ; VI-SDAG-NEXT:    s_endpgm
 ;
@@ -64,14 +64,16 @@ define amdgpu_kernel void @v_sad_u8(ptr addrspace(1) %out, i32 %src) {
 define amdgpu_kernel void @v_sad_u8_non_immediate(ptr addrspace(1) %out, i32 %src, i32 %a, i32 %b) {
 ; SI-SDAG-LABEL: v_sad_u8_non_immediate:
 ; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xb
-; SI-SDAG-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; SI-SDAG-NEXT:    s_load_dword s8, s[4:5], 0xd
 ; SI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s1
-; SI-SDAG-NEXT:    v_mov_b32_e32 v1, s2
-; SI-SDAG-NEXT:    v_sad_u8 v0, s0, v0, v1
+; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s3
+; SI-SDAG-NEXT:    v_mov_b32_e32 v1, s8
+; SI-SDAG-NEXT:    s_mov_b32 s4, s0
+; SI-SDAG-NEXT:    s_mov_b32 s5, s1
+; SI-SDAG-NEXT:    v_sad_u8 v0, s2, v0, v1
 ; SI-SDAG-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-SDAG-NEXT:    s_endpgm
 ;
@@ -90,14 +92,14 @@ define amdgpu_kernel void @v_sad_u8_non_immediate(ptr addrspace(1) %out, i32 %sr
 ;
 ; VI-SDAG-LABEL: v_sad_u8_non_immediate:
 ; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
-; VI-SDAG-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
+; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; VI-SDAG-NEXT:    s_load_dword s4, s[4:5], 0x34
 ; VI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s1
-; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s2
-; VI-SDAG-NEXT:    v_sad_u8 v2, s0, v0, v1
-; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s4
-; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s5
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, s3
+; VI-SDAG-NEXT:    v_mov_b32_e32 v3, s4
+; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; VI-SDAG-NEXT:    v_sad_u8 v2, s2, v2, v3
 ; VI-SDAG-NEXT:    flat_store_dword v[0:1], v2
 ; VI-SDAG-NEXT:    s_endpgm
 ;
