@@ -42,6 +42,7 @@ COFF Improvements
   (`#165529 <https://github.com/llvm/llvm-project/pull/165529>`_)
 * ``/linkreprofullpathrsp`` prints the full path to each object passed to the link line to a file.
   (`#174971 <https://github.com/llvm/llvm-project/pull/165449>`_)
+* New flag ``-prefetch-inputs`` can improve link times if (some) input files were not in the Windows cache.
 
 MinGW Improvements
 ------------------
