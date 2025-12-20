@@ -2719,11 +2719,11 @@ def CIR_GetElementOp : CIR_Op<"get_element", [
     !arr_ty = !cir.array<!s32i x 4>
 
     // Get the address of the element at index 1.
-    %elem_1 = cir.get_element %0[1] : (!cir.ptr<!array_ty>, !s32i) -> !cir.ptr<!s32i>
+    %elem_1 = cir.get_element %0[1 : !s32i] : !cir.ptr<!array_ty> -> !cir.ptr<!s32i>
 
     // Get the address of the element at index %i.
     %i = ...
-    %elem_i = cir.get_element %0[%i] : (!cir.ptr<!array_ty>, !s32i) -> !cir.ptr<!s32i>
+    %elem_i = cir.get_element %0[%i : !s32i] : !cir.ptr<!array_ty> -> !cir.ptr<!s32i>
 
     ```
   }];

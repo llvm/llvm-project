@@ -1378,11 +1378,11 @@ static mlir::Value convertToIndexTy(mlir::ConversionPatternRewriter &rewriter,
   auto sub = dyn_cast<mlir::LLVM::SubOp>(indexOp);
   bool rewriteSub = false;
   if (sub) {
-    if (auto lhsConst = dyn_cast<mlir::LLVM::ConstantOp>(
-            sub.getOperand(0).getDefiningOp())) {
+    if (auto lhsConst =
+            dyn_cast<mlir::LLVM::ConstantOp>(sub.getLhs().getDefiningOp())) {
       auto lhsConstInt = mlir::dyn_cast<mlir::IntegerAttr>(lhsConst.getValue());
       if (lhsConstInt && lhsConstInt.getValue() == 0) {
-        index = sub.getOperand(1);
+        index = sub.getRhs();
         rewriteSub = true;
       }
     }
