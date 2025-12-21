@@ -186,7 +186,7 @@ define i64 @test_vectorize_select_umax_idx_select_ops_flipped(ptr %src, i64 %n) 
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i64> [[TMP2]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[TMP3]], <4 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[TMP7]])
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP5]], 0
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 0, [[TMP5]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i64 [[TMP8]], i64 0
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]

@@ -44,7 +44,7 @@ define i64 @test_vectorize_select_umin_first_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP11]], <4 x i64> [[TMP7]], <4 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[TMP12]], <4 x i64> [[TMP13]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[RDX_MINMAX5]])
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult i64 [[TMP9]], 50
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 50, [[TMP9]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], i64 [[TMP14]], i64 0
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -222,7 +222,7 @@ define i64 @test_vectorize_select_smin_first_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP11]], <4 x i64> [[TMP7]], <4 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[TMP12]], <4 x i64> [[TMP13]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[RDX_MINMAX5]])
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp slt i64 [[TMP9]], 0
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 0, [[TMP9]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], i64 [[TMP14]], i64 0
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -400,7 +400,7 @@ define i64 @test_vectorize_select_umax_first_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP11]], <4 x i64> [[TMP7]], <4 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[TMP12]], <4 x i64> [[TMP13]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[RDX_MINMAX5]])
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp ugt i64 [[TMP9]], 0
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 0, [[TMP9]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], i64 [[TMP14]], i64 0
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -578,7 +578,7 @@ define i64 @test_vectorize_select_smax_first_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP11]], <4 x i64> [[TMP7]], <4 x i64> splat (i64 -1)
 ; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[TMP12]], <4 x i64> [[TMP13]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[RDX_MINMAX5]])
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp sgt i64 [[TMP9]], 0
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 0, [[TMP9]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], i64 [[TMP14]], i64 0
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
