@@ -462,6 +462,12 @@ m_LastActiveLane(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::LastActiveLane>(Op0);
 }
 
+template <typename Op0_t>
+inline VPInstruction_match<VPInstruction::Reverse, Op0_t>
+m_Reverse(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::Reverse>(Op0);
+}
+
 inline VPInstruction_match<VPInstruction::StepVector> m_StepVector() {
   return m_VPInstruction<VPInstruction::StepVector>();
 }

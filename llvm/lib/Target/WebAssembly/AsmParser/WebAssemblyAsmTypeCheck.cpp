@@ -19,6 +19,7 @@
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -103,15 +104,12 @@ std::string WebAssemblyAsmTypeCheck::getTypesString(ArrayRef<StackType> Types,
           WebAssembly::typeToString(std::get<wasm::ValType>(Types[I - 1])));
   }
 
-  std::stringstream SS;
+  std::string S;
+  raw_string_ostream SS(S);
   SS << "[";
-  bool First = true;
-  for (auto It = TypeStrs.rbegin(); It != TypeStrs.rend(); ++It) {
-    if (!First)
-      SS << ", ";
-    SS << *It;
-    First = false;
-  }
+  ListSeparator LS;
+  for (StringRef Type : reverse(TypeStrs))
+    SS << LS << Type;
   SS << "]";
   return SS.str();
 }

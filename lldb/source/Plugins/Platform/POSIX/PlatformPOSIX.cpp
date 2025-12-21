@@ -488,12 +488,14 @@ lldb::ProcessSP PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info,
   if (error.Success()) {
     // Hook up process PTY if we have one (which we should for local debugging
     // with llgs).
+#ifndef _WIN32 // TODO: Implement on Windows
     int pty_fd = launch_info.GetPTY().ReleasePrimaryFileDescriptor();
     if (pty_fd != PseudoTerminal::invalid_fd) {
       process_sp->SetSTDIOFileDescriptor(pty_fd);
       LLDB_LOG(log, "hooked up STDIO pty to process");
     } else
       LLDB_LOG(log, "not using process STDIO pty");
+#endif
   } else {
     LLDB_LOG(log, "{0}", error);
     // FIXME figure out appropriate cleanup here. Do we delete the process?
@@ -774,14 +776,13 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   // This will be the address of the storage for paths, if we are using them,
   // or nullptr to signal we aren't.
   lldb::addr_t path_array_addr = 0x0;
-  std::optional<llvm::detail::scope_exit<std::function<void()>>>
-      path_array_cleanup;
+  std::optional<llvm::scope_exit<std::function<void()>>> path_array_cleanup;
 
   // This is the address to a buffer large enough to hold the largest path
   // conjoined with the library name we're passing in.  This is a convenience 
   // to avoid having to call malloc in the dlopen function.
   lldb::addr_t buffer_addr = 0x0;
-  std::optional<llvm::detail::scope_exit<std::function<void()>>> buffer_cleanup;
+  std::optional<llvm::scope_exit<std::function<void()>>> buffer_cleanup;
 
   // Set the values into our args and write them to the target:
   if (paths != nullptr) {

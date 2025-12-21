@@ -541,8 +541,18 @@ def LifetimeSafety : DiagGroup<"experimental-lifetime-safety",
     Experimental warnings to detect use-after-free and related temporal safety bugs based on lifetime safety analysis.
   }];
 }
+def LifetimeSafetyCrossTUSuggestions
+    : DiagGroup<"experimental-lifetime-safety-cross-tu-suggestions">;
+def LifetimeSafetyIntraTUSuggestions
+    : DiagGroup<"experimental-lifetime-safety-intra-tu-suggestions">;
 def LifetimeSafetySuggestions
-    : DiagGroup<"experimental-lifetime-safety-suggestions">;
+    : DiagGroup<"experimental-lifetime-safety-suggestions",
+                [LifetimeSafetyCrossTUSuggestions,
+                 LifetimeSafetyIntraTUSuggestions]> {
+  code Documentation = [{
+    Lifetime annotation suggestions for function parameters that should be marked [[clang::lifetimebound]] based on lifetime analysis.
+  }];
+}
 
 def DistributedObjectModifiers : DiagGroup<"distributed-object-modifiers">;
 def DllexportExplicitInstantiationDecl : DiagGroup<"dllexport-explicit-instantiation-decl">;
@@ -640,7 +650,6 @@ def ModuleConflict : DiagGroup<"module-conflict">;
 def ModuleFileExtension : DiagGroup<"module-file-extension">;
 def ModuleIncludeDirectiveTranslation : DiagGroup<"module-include-translation">;
 def ModuleMap : DiagGroup<"module-map">;
-def ModulesDriver : DiagGroup<"modules-driver">;
 def RoundTripCC1Args : DiagGroup<"round-trip-cc1-args">;
 def NewlineEOF : DiagGroup<"newline-eof">;
 def Nullability : DiagGroup<"nullability">;
@@ -1779,6 +1788,15 @@ def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
 // Warnings about using the non-standard extension having an explicit specialization
 // with a storage class specifier.
 def ExplicitSpecializationStorageClass : DiagGroup<"explicit-specialization-storage-class">;
+
+// Warnings related to the simdlen intrinsic
+def SIMDLen : DiagGroup<"simdlen">;
+
+// Warnings related to PGO coverage limitations
+def PGOCoverage : DiagGroup<"pgo-coverage">;
+
+// Warnings related to -ftrivial-auto-var-init
+def TrivialAutoVarInit : DiagGroup<"trivial-auto-var-init">;
 
 // A warning for options that enable a feature that is not yet complete
 def ExperimentalOption : DiagGroup<"experimental-option">;
