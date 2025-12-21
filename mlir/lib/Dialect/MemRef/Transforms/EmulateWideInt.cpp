@@ -90,7 +90,7 @@ struct ConvertMemRefStore final : OpConversionPattern<memref::StoreOp> {
                                       op.getMemRefType()));
 
     rewriter.replaceOpWithNewOp<memref::StoreOp>(
-        op, adaptor.getValue(), adaptor.getBase(), adaptor.getIndices(),
+        op, adaptor.getValueToStore(), adaptor.getBase(), adaptor.getIndices(),
         op.getNontemporal());
     return success();
   }

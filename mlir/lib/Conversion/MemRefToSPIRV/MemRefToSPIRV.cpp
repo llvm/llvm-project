@@ -874,7 +874,7 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
           storeOp, "failed to determine memory requirements");
 
     auto [memoryAccess, alignment] = *memoryRequirements;
-    Value storeVal = adaptor.getValue();
+    Value storeVal = adaptor.getValueToStore();
     if (isBool)
       storeVal = castBoolToIntN(loc, storeVal, dstType, rewriter);
     rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, accessChain, storeVal,
@@ -915,7 +915,8 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   clearBitsMask =
       rewriter.createOrFold<spirv::NotOp>(loc, dstType, clearBitsMask);
 
-  Value storeVal = shiftValue(loc, adaptor.getValue(), offset, mask, rewriter);
+  Value storeVal =
+      shiftValue(loc, adaptor.getValueToStore(), offset, mask, rewriter);
   Value adjustedPtr = adjustAccessChainForBitwidth(typeConverter, accessChainOp,
                                                    srcBits, dstBits, rewriter);
   std::optional<spirv::Scope> scope = getAtomicOpScope(memrefType);
@@ -1033,7 +1034,7 @@ StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
 
   auto [memoryAccess, alignment] = *memoryRequirements;
   rewriter.replaceOpWithNewOp<spirv::StoreOp>(
-      storeOp, storePtr, adaptor.getValue(), memoryAccess, alignment);
+      storeOp, storePtr, adaptor.getValueToStore(), memoryAccess, alignment);
   return success();
 }
 

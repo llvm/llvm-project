@@ -426,7 +426,7 @@ struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
     Location loc = op.getLoc();
 
     // Pad the input value with 0s on the left.
-    Value input = adaptor.getValue();
+    Value input = adaptor.getValueToStore();
     if (!input.getType().isInteger()) {
       input = arith::BitcastOp::create(
           rewriter, loc,

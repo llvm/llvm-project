@@ -370,7 +370,7 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
     auto subscript = emitc::SubscriptOp::create(
         rewriter, op.getLoc(), arrayValue, operands.getIndices());
     rewriter.replaceOpWithNewOp<emitc::AssignOp>(op, subscript,
-                                                 operands.getValue());
+                                                 operands.getValueToStore());
     return success();
   }
 };
