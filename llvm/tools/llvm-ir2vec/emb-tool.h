@@ -44,7 +44,7 @@
 #define DEBUG_TYPE "ir2vec"
 
 namespace llvm {
-  
+
 /// Tool name for error reporting
 static const char *ToolName = "llvm-ir2vec";
 
