@@ -368,3 +368,12 @@ void functional_casts() {
 
   throw S2(5.0f);
 }
+void f(int *);
+void f(double *);
+
+void test_nullptr_cast() {
+  f((int*)nullptr);
+}
+// CHECK-MESSAGES: warning: C-style casts are discouraged
+// CHECK-FIXES: f(static_cast<int*>(nullptr));
+
