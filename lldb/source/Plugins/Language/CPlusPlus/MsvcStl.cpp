@@ -145,6 +145,12 @@ bool lldb_private::formatters::IsMsvcStlStringType(ValueObject &valobj) {
                                                                 indexes) > 0;
 }
 
+bool lldb_private::formatters::IsMsvcStlStringViewType(ValueObject &valobj) {
+  std::vector<uint32_t> indexes;
+  return valobj.GetCompilerType().GetIndexOfChildMemberWithName("_Mydata", true,
+                                                                indexes) > 0;
+}
+
 bool lldb_private::formatters::MsvcStlWStringSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &summary_options) {
