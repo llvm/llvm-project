@@ -800,45 +800,43 @@ class SVEInstr2Rev<string name1, string name2, bit name1IsReverseInstr> {
 //
 // Pseudos for destructive operands
 //
-let hasNoSchedulingInfo = 1 in {
-  class PredTwoOpPseudo<string name, ZPRRegOp zprty,
+
+class PredTwoOpPseudo<string name, ZPRRegOp zprty,
+                      FalseLanesEnum flags = FalseLanesNone>
+: SVEPseudo2Instr<name, 0>,
+  Pseudo<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zs1, zprty:$Zs2), []> {
+  let FalseLanes = flags;
+}
+
+class PredTwoOpImmPseudo<string name, ZPRRegOp zprty, Operand immty,
+                         FalseLanesEnum flags = FalseLanesNone>
+: SVEPseudo2Instr<name, 0>,
+  Pseudo<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zs1, immty:$imm), []> {
+  let FalseLanes = flags;
+}
+
+class PredThreeOpPseudo<string name, ZPRRegOp zprty,
                         FalseLanesEnum flags = FalseLanesNone>
-  : SVEPseudo2Instr<name, 0>,
-    Pseudo<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zs1, zprty:$Zs2), []> {
-    let FalseLanes = flags;
-  }
+: SVEPseudo2Instr<name, 0>,
+  Pseudo<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zs1, zprty:$Zs2, zprty:$Zs3), []> {
+  let FalseLanes = flags;
+}
 
-  class PredTwoOpImmPseudo<string name, ZPRRegOp zprty, Operand immty,
-                           FalseLanesEnum flags = FalseLanesNone>
-  : SVEPseudo2Instr<name, 0>,
-    Pseudo<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zs1, immty:$imm), []> {
-    let FalseLanes = flags;
-  }
-
-  class PredThreeOpPseudo<string name, ZPRRegOp zprty,
-                          FalseLanesEnum flags = FalseLanesNone>
-  : SVEPseudo2Instr<name, 0>,
-    Pseudo<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zs1, zprty:$Zs2, zprty:$Zs3), []> {
-    let FalseLanes = flags;
-  }
-
-  class UnpredRegImmPseudo<ZPRRegOp zprty, Operand immty>
-  : SVEPseudo2Instr<NAME, 0>,
-    Pseudo<(outs zprty:$Zd), (ins zprty:$Zs, immty:$imm), []> {
-  }
+class UnpredRegImmPseudo<ZPRRegOp zprty, Operand immty>
+: SVEPseudo2Instr<NAME, 0>,
+  Pseudo<(outs zprty:$Zd), (ins zprty:$Zs, immty:$imm), []> {
 }
 
 //
 // Pseudos for passthru operands
 //
-let hasNoSchedulingInfo = 1 in {
-  class PredOneOpPassthruPseudo<string name, ZPRRegOp zprty,
-                                FalseLanesEnum flags = FalseLanesNone>
-  : SVEPseudo2Instr<name, 0>,
-    Pseudo<(outs zprty:$Zd), (ins zprty:$Passthru, PPR3bAny:$Pg, zprty:$Zs), []> {
-    let FalseLanes = flags;
-    let Constraints = !if(!eq(flags, FalseLanesZero), "$Zd = $Passthru,@earlyclobber $Zd", "");
-  }
+
+class PredOneOpPassthruPseudo<string name, ZPRRegOp zprty,
+                              FalseLanesEnum flags = FalseLanesNone>
+: SVEPseudo2Instr<name, 0>,
+  Pseudo<(outs zprty:$Zd), (ins zprty:$Passthru, PPR3bAny:$Pg, zprty:$Zs), []> {
+  let FalseLanes = flags;
+  let Constraints = !if(!eq(flags, FalseLanesZero), "$Zd = $Passthru,@earlyclobber $Zd", "");
 }
 
 //===----------------------------------------------------------------------===//
@@ -901,7 +899,7 @@ multiclass sve_int_ptest<bits<6> opc, string asm, SDPatternOperator op,
                          SDPatternOperator op_any, SDPatternOperator op_first> {
   def NAME : sve_int_ptest<opc, asm, op>;
 
-  let hasNoSchedulingInfo = 1, isCompare = 1, Defs = [NZCV] in {
+  let isCompare = 1, Defs = [NZCV] in {
   def _ANY : Pseudo<(outs), (ins PPRAny:$Pg, PPR8:$Pn),
                     [(set NZCV, (op_any (nxv16i1 PPRAny:$Pg), (nxv16i1 PPR8:$Pn)))]>,
              PseudoInstExpansion<(!cast<Instruction>(NAME) PPRAny:$Pg, PPR8:$Pn)>;
@@ -1177,13 +1175,6 @@ multiclass sve_int_pcount_pred<bits<3> opc, string asm,
   def : SVE_2_Op_Pat<i64, int_op, nxv8i1,  nxv8i1,  !cast<Instruction>(NAME # _H)>;
   def : SVE_2_Op_Pat<i64, int_op, nxv4i1,  nxv4i1,  !cast<Instruction>(NAME # _S)>;
   def : SVE_2_Op_Pat<i64, int_op, nxv2i1,  nxv2i1,  !cast<Instruction>(NAME # _D)>;
-}
-
-multiclass sve_int_pcount_pred_tmp<bits<3> opc, string asm> {
-  def _B : sve_int_pcount_pred<0b00, opc, asm, PPR8>;
-  def _H : sve_int_pcount_pred<0b01, opc, asm, PPR16>;
-  def _S : sve_int_pcount_pred<0b10, opc, asm, PPR32>;
-  def _D : sve_int_pcount_pred<0b11, opc, asm, PPR64>;
 }
 //===----------------------------------------------------------------------===//
 // SVE Element Count Group
@@ -2334,9 +2325,13 @@ multiclass sve_fp_2op_p_zds_bfloat<bits<4> opc, string asm, string Ps,
   def : SVE_3_Op_Pat<nxv8bf16, op, nxv8i1, nxv8bf16, nxv8bf16, !cast<Instruction>(NAME)>;
 }
 
-class  sve_fp_2op_p_zds_bfscale<bits<4> opc, string asm,  DestructiveInstTypeEnum flags>
-: sve_fp_2op_p_zds<0b00, opc, asm, ZPR16>{
-  let DestructiveInstType = flags;
+multiclass sve_fp_2op_p_zds_bfscale<bits<4> opc, string asm, SDPatternOperator op,
+                                    DestructiveInstTypeEnum flags> {
+  let DestructiveInstType = flags in {
+  def _H : sve_fp_2op_p_zds<0b00, opc, asm, ZPR16>;
+  }
+
+  def : SVE_3_Op_Pat<nxv8bf16, op, nxv8i1, nxv8bf16, nxv8i16, !cast<Instruction>(NAME # _H)>;
 }
 
 multiclass sve_fp_2op_p_zds_zeroing_hsd<SDPatternOperator op> {
@@ -6022,13 +6017,13 @@ multiclass sve2_int_while_rr<bits<1> rw, string asm, SDPatternOperator op> {
   def _S : sve2_int_while_rr<0b10, rw, asm, PPR32>;
   def _D : sve2_int_while_rr<0b11, rw, asm, PPR64>;
 
-  def : Pat<(nxv16i1 (op i64:$Op1, i64:$Op2, (i64 1))),
+  def : Pat<(nxv16i1 (op i64:$Op1, i64:$Op2, (i64 1), (i64 0))),
             (!cast<Instruction>(NAME # _B) $Op1, $Op2)>;
-  def : Pat<(nxv8i1 (op i64:$Op1, i64:$Op2, (i64 2))),
+  def : Pat<(nxv8i1 (op i64:$Op1, i64:$Op2, (i64 2), (i64 0))),
             (!cast<Instruction>(NAME # _H) $Op1, $Op2)>;
-  def : Pat<(nxv4i1 (op i64:$Op1, i64:$Op2, (i64 4))),
+  def : Pat<(nxv4i1 (op i64:$Op1, i64:$Op2, (i64 4), (i64 0))),
             (!cast<Instruction>(NAME # _S) $Op1, $Op2)>;
-  def : Pat<(nxv2i1 (op i64:$Op1, i64:$Op2, (i64 8))),
+  def : Pat<(nxv2i1 (op i64:$Op1, i64:$Op2, (i64 8), (i64 0))),
             (!cast<Instruction>(NAME # _D) $Op1, $Op2)>;
 }
 
@@ -7718,11 +7713,20 @@ class sve2_int_perm_expand<bits<2> sz, string asm,
   let hasSideEffects = 0;
 }
 
-multiclass sve2_int_perm_expand<string asm> {
+multiclass sve2_int_perm_expand<string asm, SDPatternOperator op> {
   def _B : sve2_int_perm_expand<0b00, asm, ZPR8>;
   def _H : sve2_int_perm_expand<0b01, asm, ZPR16>;
   def _S : sve2_int_perm_expand<0b10, asm, ZPR32>;
   def _D : sve2_int_perm_expand<0b11, asm, ZPR64>;
+
+  def : SVE_2_Op_Pat<nxv16i8,  op, nxv16i1, nxv16i8,  !cast<Instruction>(NAME # _B)>;
+  def : SVE_2_Op_Pat<nxv8i16,  op, nxv8i1,  nxv8i16,  !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv8f16,  op, nxv8i1,  nxv8f16,  !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv8bf16, op, nxv8i1,  nxv8bf16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv4i32,  op, nxv4i1,  nxv4i32,  !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Pat<nxv4f32,  op, nxv4i1,  nxv4f32,  !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Pat<nxv2i64,  op, nxv2i1,  nxv2i64,  !cast<Instruction>(NAME # _D)>;
+  def : SVE_2_Op_Pat<nxv2f64,  op, nxv2i1,  nxv2f64,  !cast<Instruction>(NAME # _D)>;
 }
 
 class sve_int_perm_rev<bits<2> sz8_64, bits<2> opc, string asm,
@@ -7983,6 +7987,7 @@ multiclass sve_int_perm_compact_sd<string asm, SDPatternOperator op> {
   def : SVE_2_Op_Pat<nxv4f32, op, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _S)>;
   def : SVE_2_Op_Pat<nxv2i64, op, nxv2i1, nxv2i64, !cast<Instruction>(NAME # _D)>;
   def : SVE_2_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _D)>;
+  def : SVE_2_Op_Pat<nxv2f32, op, nxv2i1, nxv2f32, !cast<Instruction>(NAME # _D)>;
 }
 
 multiclass sve_int_perm_compact_bh<string asm, SDPatternOperator op> {
@@ -9507,7 +9512,7 @@ multiclass sve_fp8_dot<bit bf, ZPRRegOp dstrc, string asm, ValueType vt,
     let mayLoad  = 1;
     let mayStore = 0;
   }
-  
+
   def : SVE_3_Op_Pat<vt, op, vt, nxv16i8, nxv16i8, !cast<Instruction>(NAME)>;
 }
 
@@ -10993,7 +10998,7 @@ class sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic,
 
 multiclass sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic, ValueType vtd, SDPatternOperator op> {
   def _BtoH : sve2_fp8_cvt_single<L, opc, mnemonic, ZPR16, ZPR8>;
-  
+
   def : SVE_1_Op_Pat<vtd, op, nxv16i8, !cast<Instruction>(NAME # _BtoH)>;
 }
 
@@ -11038,7 +11043,7 @@ class sve2_fp8_down_cvt_single_top<bits<2> opc, string mnemonic, RegisterOperand
   let Constraints = "$Zd = $_Zd";
   let DestructiveInstType = DestructiveOther;
   let ElementSize         = ZPR8.ElementSize;
-  
+
   let Uses     = [FPMR, FPCR];
   let mayLoad  = 1;
   let mayStore = 0;

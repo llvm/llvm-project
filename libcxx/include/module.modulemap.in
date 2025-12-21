@@ -21,6 +21,7 @@ module std_core [system] {
     module class_or_enum            { header "__concepts/class_or_enum.h" }
     module common_reference_with    { header "__concepts/common_reference_with.h" }
     module common_with              { header "__concepts/common_with.h" }
+    module comparison_common_type   { header "__concepts/comparison_common_type.h" }
     module constructible            { header "__concepts/constructible.h" }
     module convertible_to           { header "__concepts/convertible_to.h" }
     module copyable                 { header "__concepts/copyable.h" }
@@ -1140,6 +1141,7 @@ module std [system] {
     export *
   }
 
+
   module condition_variable {
     module condition_variable   { header "__condition_variable/condition_variable.h" }
 
@@ -1614,6 +1616,7 @@ module std [system] {
     }
 
     module support_impl {
+      textual header "__locale_dir/support/aix.h"
       textual header "__locale_dir/support/apple.h"
       textual header "__locale_dir/support/bsd_like.h"
       textual header "__locale_dir/support/freebsd.h"
@@ -1884,6 +1887,7 @@ module std [system] {
 
   module ranges {
     module access                         { header "__ranges/access.h" }
+    module adjacent_view                  { header "__ranges/adjacent_view.h" }
     module all                            {
       header "__ranges/all.h"
       export std.ranges.ref_view
@@ -1915,6 +1919,7 @@ module std [system] {
       header "__ranges/drop_while_view.h"
       export std.functional.bind_back
     }
+    module elements_of                    { header "__ranges/elements_of.h" }
     module elements_view                  { header "__ranges/elements_view.h" }
     module empty                          { header "__ranges/empty.h" }
     module empty_view                     { header "__ranges/empty_view.h" }
@@ -2145,6 +2150,7 @@ module std [system] {
     module find_index               { header "__tuple/find_index.h" }
     module ignore                   { header "__tuple/ignore.h" }
     module sfinae_helpers           { header "__tuple/sfinae_helpers.h" }
+    module tuple_trasnform          { header "__tuple/tuple_transform.h" }
 
     header "tuple"
     export *
