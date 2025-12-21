@@ -1841,8 +1841,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     mlir::Location loc = getLoc(expr->getExprLoc());
     mlir::Type resTy = convertType(expr->getType());
     if (!isa<cir::VectorType>(resTy)) {
-      llvm::report_fatal_error(
-          "Expected cir::VectorType for AVX512 BF16 builtin lowering.");
+      return mlir::Value();
     }
     unsigned numElts = cast<cir::VectorType>(resTy).getSize();
     bool isMaskZ = false;
