@@ -1235,8 +1235,8 @@ def MemRef_GlobalOp : MemRef_Op<"global", [Symbol,
 //===----------------------------------------------------------------------===//
 
 def LoadOp : MemRef_Op<"load",
-     [TypesMatchWith<"result type matches element type of 'memref'",
-                     "memref", "result",
+     [TypesMatchWith<"result type matches element type of 'base'",
+                     "base", "result",
                      "::llvm::cast<MemRefType>($_self).getElementType()">,
       MemRefsNormalizable,
       DeclareOpInterfaceMethods<AlignmentAttrOpInterface>,
@@ -1275,7 +1275,7 @@ def LoadOp : MemRef_Op<"load",
   }];
 
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
-                           [MemRead]>:$memref,
+                           [MemRead]>:$base,
                        Variadic<Index>:$indices,
                        DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
                        OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
@@ -1312,6 +1312,8 @@ def LoadOp : MemRef_Op<"load",
   let results = (outs AnyType:$result);
 
   let extraClassDeclaration = [{
+    ::mlir::TypedValue<::mlir::MemRefType> getMemref() { return getBase(); }
+    ::mlir::OpOperand &getMemrefMutable() { return getBaseMutable(); }
     Value getMemRef() { return getOperand(0); }
     void setMemRef(Value value) { setOperand(0, value); }
     MemRefType getMemRefType() {
@@ -1322,7 +1324,7 @@ def LoadOp : MemRef_Op<"load",
   let hasFolder = 1;
   let hasVerifier = 1;
 
-  let assemblyFormat = "$memref `[` $indices `]` attr-dict `:` type($memref)";
+  let assemblyFormat = "$base `[` $indices `]` attr-dict `:` type($base)";
 }
 
 //===----------------------------------------------------------------------===//

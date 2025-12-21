@@ -342,7 +342,7 @@ struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
     }
 
     auto arrayValue =
-        dyn_cast<TypedValue<emitc::ArrayType>>(operands.getMemref());
+        dyn_cast<TypedValue<emitc::ArrayType>>(operands.getBase());
     if (!arrayValue) {
       return rewriter.notifyMatchFailure(op.getLoc(), "expected array type");
     }

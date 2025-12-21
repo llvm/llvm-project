@@ -121,7 +121,7 @@ def testParallelMemcpy():
 
             with InsertionPoint(loop_block):
                 idx = arith.index_cast(out=IndexType.get(), in_=loop_block.arguments[0])
-                val = memref.load(memref=copied, indices=[idx])
+                val = memref.load(base=copied, indices=[idx])
                 memref.store(value=val, memref=created, indices=[idx])
                 openacc.YieldOp([])
 

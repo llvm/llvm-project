@@ -284,7 +284,7 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
   LogicalResult
   matchAndRewrite(memref::LoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto convertedType = cast<MemRefType>(adaptor.getMemref().getType());
+    auto convertedType = cast<MemRefType>(adaptor.getBase().getType());
     auto convertedElementType = convertedType.getElementType();
     auto oldElementType = op.getMemRefType().getElementType();
     int srcBits = oldElementType.getIntOrFloatBitWidth();
@@ -298,7 +298,7 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
     // Special case 0-rank memref loads.
     Value bitsLoad;
     if (convertedType.getRank() == 0) {
-      bitsLoad = memref::LoadOp::create(rewriter, loc, adaptor.getMemref(),
+      bitsLoad = memref::LoadOp::create(rewriter, loc, adaptor.getBase(),
                                         ValueRange{});
     } else {
       // Linearize the indices of the original load instruction. Do not account
@@ -307,7 +307,7 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
           rewriter, loc, srcBits, adaptor.getIndices(), op.getMemRef());
 
       Value newLoad = memref::LoadOp::create(
-          rewriter, loc, adaptor.getMemref(),
+          rewriter, loc, adaptor.getBase(),
           getIndicesForLoadOrStore(rewriter, loc, linearizedIndices, srcBits,
                                    dstBits));
 

@@ -555,7 +555,7 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
 
   const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
   Value accessChain =
-      spirv::getElementPtr(typeConverter, memrefType, adaptor.getMemref(),
+      spirv::getElementPtr(typeConverter, memrefType, adaptor.getBase(),
                            adaptor.getIndices(), loc, rewriter);
 
   if (!accessChain)
@@ -682,7 +682,7 @@ LoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
         "failed to lower memref in image storage class to storage buffer");
 
   Value loadPtr = spirv::getElementPtr(
-      *getTypeConverter<SPIRVTypeConverter>(), memrefType, adaptor.getMemref(),
+      *getTypeConverter<SPIRVTypeConverter>(), memrefType, adaptor.getBase(),
       adaptor.getIndices(), loadOp.getLoc(), rewriter);
 
   if (!loadPtr)
@@ -743,7 +743,7 @@ ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
     return rewriter.notifyMatchFailure(
         loadOp, "failed to lower memref in non-image storage class to image");
 
-  Value loadPtr = adaptor.getMemref();
+  Value loadPtr = adaptor.getBase();
   auto memoryRequirements = calculateMemoryRequirements(loadPtr, loadOp);
   if (failed(memoryRequirements))
     return rewriter.notifyMatchFailure(
