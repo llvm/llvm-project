@@ -22,8 +22,7 @@ class ShadowedNamespaceFunctionCheck : public ClangTidyCheck {
 public:
   ShadowedNamespaceFunctionCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        IgnoreTemplated(
-            Options.get("IgnoreTemplated", false)) {}
+        IgnoreTemplated(Options.get("IgnoreTemplated", false)) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {

@@ -9,7 +9,6 @@
 #include "ShadowedNamespaceFunctionCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "llvm/ADT/STLExtras.h"
@@ -40,8 +39,7 @@ static bool hasSameSignature(const FunctionDecl *Func1,
                      makeCannonicalTypesRange(Func2->parameters()));
 }
 
-static bool sholdBeIgnored(const FunctionDecl *Func,
-                      bool IgnoreTemplated) {
+static bool sholdBeIgnored(const FunctionDecl *Func, bool IgnoreTemplated) {
   if (Func->isVariadic())
     return true;
   if (IgnoreTemplated && Func->isTemplated())
@@ -53,8 +51,7 @@ namespace {
 class ShadowedFunctionFinder : public DynamicRecursiveASTVisitor {
 public:
   ShadowedFunctionFinder(const FunctionDecl *GlobalFunc,
-                         StringRef GlobalFuncName,
-                         bool IgnoreTemplated)
+                         StringRef GlobalFuncName, bool IgnoreTemplated)
       : GlobalFunc(GlobalFunc), GlobalFuncName(GlobalFuncName),
         IgnoreTemplated(IgnoreTemplated) {}
 
@@ -111,7 +108,7 @@ public:
   bool isShadowedFuncFriend() const { return IsShadowedFuncFriend; }
 
 private:
-  const FunctionDecl * const GlobalFunc;
+  const FunctionDecl *const GlobalFunc;
   const StringRef GlobalFuncName;
   const bool IgnoreTemplated;
   const FunctionDecl *ShadowedFunc = nullptr;
