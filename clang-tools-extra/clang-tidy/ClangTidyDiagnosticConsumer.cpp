@@ -659,13 +659,13 @@ void ClangTidyDiagnosticConsumer::removeIncompatibleErrors() {
       //   disallowing the first one.
       switch (Type) {
       case ET_Begin:
-        Priority = std::make_tuple(Begin, Type, -End, -ErrorSize, ErrorId);
+        Priority = {Begin, Type, -End, -ErrorSize, ErrorId};
         break;
       case ET_Insert:
-        Priority = std::make_tuple(Begin, Type, -End, ErrorSize, ErrorId);
+        Priority = {Begin, Type, -End, ErrorSize, ErrorId};
         break;
       case ET_End:
-        Priority = std::make_tuple(End, Type, -Begin, ErrorSize, ErrorId);
+        Priority = {End, Type, -Begin, ErrorSize, ErrorId};
         break;
       }
     }
