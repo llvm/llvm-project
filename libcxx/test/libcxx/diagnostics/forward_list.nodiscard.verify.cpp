@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // check that <forward_list> functions are marked [[nodiscard]]
 
 #include <forward_list>
