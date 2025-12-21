@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s misc-shadowed-namespace-function %t
+// RUN: %check_clang_tidy -std=c++20-or-later %s misc-shadowed-namespace-function %t
 
 void f1_nested_inline_ns();
 namespace foo_nested_inline_ns::inline foo2::foo3 {
