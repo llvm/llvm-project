@@ -36,6 +36,11 @@ int main(int, char**)
     test<optional<const int>, const int>();
     test<optional<double>, double>();
     test<optional<const double>, const double>();
-
-  return 0;
+#if TEST_STD_VER >= 26
+    test<optional<int&>, int>();
+    test<optional<const int&>, const int>();
+    test<optional<double&>, double>();
+    test<optional<const double&>, const double>();
+#endif
+    return 0;
 }

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT
-#define LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT
+#ifndef CLANG_CIR_DIALECT_IR_CIRDIALECT_TD
+#define CLANG_CIR_DIALECT_IR_CIRDIALECT_TD
 
 include "mlir/IR/OpBase.td"
 
@@ -24,8 +24,7 @@ def CIR_Dialect : Dialect {
 
   let cppNamespace = "::cir";
 
-  let useDefaultAttributePrinterParser = 0;
-  let useDefaultTypePrinterParser = 0;
+  let useDefaultAttributePrinterParser = 1;
 
   // Enable constant materialization for the CIR dialect. This generates a
   // declaration for the cir::CIRDialect::materializeConstant function. This
@@ -35,11 +34,16 @@ def CIR_Dialect : Dialect {
   let hasConstantMaterializer = 1;
 
   let extraClassDeclaration = [{
+    static llvm::StringRef getSourceLanguageAttrName() { return "cir.lang"; }
     static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
     static llvm::StringRef getOptInfoAttrName() { return "cir.opt_info"; }
     static llvm::StringRef getCalleeAttrName() { return "callee"; }
     static llvm::StringRef getNoThrowAttrName() { return "nothrow"; }
     static llvm::StringRef getSideEffectAttrName() { return "side_effect"; }
+    static llvm::StringRef getModuleLevelAsmAttrName() { return "cir.module_asm"; }
+    static llvm::StringRef getGlobalCtorsAttrName() { return "cir.global_ctors"; }
+    static llvm::StringRef getGlobalDtorsAttrName() { return "cir.global_dtors"; }
+    static llvm::StringRef getOperandSegmentSizesAttrName() { return "operandSegmentSizes"; }
 
     void registerAttributes();
     void registerTypes();
@@ -47,13 +51,7 @@ def CIR_Dialect : Dialect {
     mlir::Type parseType(mlir::DialectAsmParser &parser) const override;
     void printType(mlir::Type type,
                    mlir::DialectAsmPrinter &printer) const override;
-
-    mlir::Attribute parseAttribute(mlir::DialectAsmParser &parser,
-                                   mlir::Type type) const override;
-
-    void printAttribute(mlir::Attribute attr,
-                        mlir::DialectAsmPrinter &os) const override;
   }];
 }
 
-#endif // LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT
+#endif // CLANG_CIR_DIALECT_IR_CIRDIALECT_TD

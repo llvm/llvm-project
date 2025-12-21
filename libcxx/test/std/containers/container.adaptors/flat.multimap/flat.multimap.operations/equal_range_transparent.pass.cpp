@@ -15,6 +15,7 @@
 // template<class K> pair<iterator,iterator>             equal_range(const K& x);
 // template<class K> pair<const_iterator,const_iterator> equal_range(const K& x) const;
 
+#include <algorithm>
 #include <cassert>
 #include <deque>
 #include <flat_map>
@@ -38,7 +39,7 @@ static_assert(!CanEqualRange<NonTransparentMap>);
 static_assert(!CanEqualRange<const NonTransparentMap>);
 
 template <class KeyContainer, class ValueContainer>
-void test() {
+constexpr void test() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
   using M     = std::flat_multimap<Key, Value, TransparentComparator, KeyContainer, ValueContainer>;
@@ -62,7 +63,7 @@ void test() {
     auto [first, last] = map.equal_range(Transparent<std::string>{expected_key});
     auto expected_range =
         expected_values | std::views::transform([&](auto&& val) { return std::pair(expected_key, val); });
-    assert(std::ranges::equal(std::ranges::subrange(first, last), expected_range));
+    assert(std::ranges::is_permutation(std::ranges::subrange(first, last), expected_range));
   };
 
   auto test_not_found = [&](auto&& map, const std::string& expected_key, long expected_offset) {
@@ -90,9 +91,12 @@ void test() {
   test_not_found(cm, "zzz", 9);
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test<std::vector<std::string>, std::vector<int>>();
-  test<std::deque<std::string>, std::vector<int>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque<std::string>, std::vector<int>>();
   test<MinSequenceContainer<std::string>, MinSequenceContainer<int>>();
   test<std::vector<std::string, min_allocator<std::string>>, std::vector<int, min_allocator<int>>>();
 
@@ -114,6 +118,14 @@ int main(int, char**) {
     assert(first == m.begin() + 1);
     assert(last == m.begin() + 3);
   }
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

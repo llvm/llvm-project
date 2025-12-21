@@ -64,7 +64,7 @@ static void emitEnumClass(EnumInfo enumInfo, raw_ostream &os) {
   if (enumInfo.isBitEnum()) {
     os << formatv("    def __iter__(self):\n"
                   "        return iter([case for case in type(self) if "
-                  "(self & case) is case])\n");
+                  "(self & case) is case and self is not case])\n");
     os << formatv("    def __len__(self):\n"
                   "        return bin(self).count(\"1\")\n");
     os << "\n";

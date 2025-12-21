@@ -29,13 +29,13 @@ end module
 ! CHECK: Mappable: !fir.class<!fir.type<_QMmmTpolyty{field:f32}>>
 ! CHECK: Type category: composite
 ! CHECK: Visiting: {{.*}} acc.copyin {{.*}} {name = "this%field", structured = false}
-! CHECK: Pointer-like: !fir.ref<f32>
+! CHECK: Pointer-like and Mappable: !fir.ref<f32>
 ! CHECK: Type category: composite
 
 ! For unlimited polymorphic entities and assumed types - they effectively have
 ! no declared type. Thus the type categorizer cannot categorize it.
 ! CHECK: Visiting: {{.*}} = acc.copyin {{.*}} {name = "var", structured = false}
-! CHECK: Pointer-like: !fir.ref<none>
+! CHECK: Pointer-like and Mappable: !fir.ref<none>
 ! CHECK: Type category: uncategorized
 ! CHECK: Visiting: {{.*}} = acc.copyin {{.*}} {name = "this", structured = false}
 ! CHECK: Mappable: !fir.class<none>
@@ -43,4 +43,4 @@ end module
 
 ! TODO: After using select type - the appropriate type category should be
 ! possible. Add the rest of the test once OpenACC lowering correctly handles
-! unlimited polymorhic.
+! unlimited polymorphic.

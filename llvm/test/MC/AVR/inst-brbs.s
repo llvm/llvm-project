@@ -14,8 +14,10 @@ foo:
 ; CHECK: brcs .Ltmp1-12+2  ; encoding: [0bAAAAA000,0b111100AA]
 
 ; INST-LABEL: <foo>:
-; INST-NEXT: 23 f0   brvs .+8
-; INST-NEXT: d0 f3   brlo .-12
+; INST-NEXT: fb f3   brvs .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0xa
+; INST-NEXT: f8 f3   brlo .-2
+; INST-NEXT: R_AVR_7_PCREL .text-0x8
 ; INST-NEXT: 59 f3   breq .-42
 ; INST-NEXT: 52 f3   brmi .-44
 ; INST-NEXT: 4c f3   brlt .-46

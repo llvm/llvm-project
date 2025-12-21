@@ -39,7 +39,7 @@ unsigned CSKYELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                            bool IsPCRel) const {
   const MCExpr *Expr = Fixup.getValue();
   // Determine the type of the relocation
-  unsigned Kind = Fixup.getTargetKind();
+  auto Kind = Fixup.getKind();
   uint8_t Modifier = Target.getSpecifier();
 
   switch (Target.getSpecifier()) {
@@ -48,8 +48,8 @@ unsigned CSKYELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case CSKY::S_TLSGD:
   case CSKY::S_TLSLDM:
   case CSKY::S_TLSLDO:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;

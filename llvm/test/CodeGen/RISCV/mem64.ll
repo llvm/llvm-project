@@ -214,11 +214,11 @@ define dso_local i64 @ld_sd_global(i64 %a) nounwind {
 ; RV64I-LABEL: ld_sd_global:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, %hi(G)
-; RV64I-NEXT:    ld a1, %lo(G)(a2)
-; RV64I-NEXT:    addi a3, a2, %lo(G)
-; RV64I-NEXT:    sd a0, %lo(G)(a2)
-; RV64I-NEXT:    ld zero, 72(a3)
-; RV64I-NEXT:    sd a0, 72(a3)
+; RV64I-NEXT:    addi a2, a2, %lo(G)
+; RV64I-NEXT:    ld a1, 0(a2)
+; RV64I-NEXT:    sd a0, 0(a2)
+; RV64I-NEXT:    ld zero, 72(a2)
+; RV64I-NEXT:    sd a0, 72(a2)
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    ret
   %1 = load volatile i64, ptr @G

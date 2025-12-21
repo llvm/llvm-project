@@ -99,7 +99,7 @@ unsigned VirtRegMap::createSpillSlot(const TargetRegisterClass *RC) {
   // Set preferred alignment if we are still able to realign the stack
   auto &ST = MF->getSubtarget();
   Align CurrentAlign = ST.getFrameLowering()->getStackAlign();
-  if (Alignment > CurrentAlign && !ST.getRegisterInfo()->canRealignStack(*MF)) {
+  if (Alignment > CurrentAlign && !TRI->canRealignStack(*MF)) {
     Alignment = CurrentAlign;
   }
   int SS = MF->getFrameInfo().CreateSpillStackObject(Size, Alignment);
@@ -301,6 +301,8 @@ bool VirtRegRewriterLegacy::runOnMachineFunction(MachineFunction &MF) {
 PreservedAnalyses
 VirtRegRewriterPass::run(MachineFunction &MF,
                          MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
   VirtRegMap &VRM = MFAM.getResult<VirtRegMapAnalysis>(MF);
   LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
   LiveRegMatrix &LRM = MFAM.getResult<LiveRegMatrixAnalysis>(MF);

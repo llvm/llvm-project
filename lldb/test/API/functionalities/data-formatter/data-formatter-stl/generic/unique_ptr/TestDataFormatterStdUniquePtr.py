@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def do_test(self):
         """Test `frame variable` output for `std::unique_ptr` types."""
 
@@ -84,7 +86,15 @@ class TestCase(TestBase):
         self.assertNotEqual(valobj.child[0].unsigned, 0)
 
         self.expect_var_path("up_user->id", type="int", value="30")
-        self.expect_var_path("up_user->name", type="std::string", summary='"steph"')
+        self.expect_var_path(
+            "up_user->name",
+            type=(
+                "std::basic_string<char, std::char_traits<char>, std::allocator<char>>"
+                if self.getDebugInfo() == "pdb"
+                else "std::string"
+            ),
+            summary='"steph"',
+        )
 
         self.runCmd("settings set target.experimental.use-DIL true")
         self.expect_var_path("ptr_node->value", value="1")
@@ -100,6 +110,12 @@ class TestCase(TestBase):
     @add_test_categories(["libc++"])
     def test_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
+
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        # No flags, because the "msvcstl" category checks that the MSVC STL is used by default.
+        self.build()
         self.do_test()
 
     def do_test_recursive_unique_ptr(self):
@@ -154,4 +170,9 @@ class TestCase(TestBase):
     @add_test_categories(["libc++"])
     def test_recursive_unique_ptr_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_recursive_unique_ptr()
+
+    @add_test_categories(["msvcstl"])
+    def test_recursive_unique_ptr_msvcstl(self):
+        self.build()
         self.do_test_recursive_unique_ptr()

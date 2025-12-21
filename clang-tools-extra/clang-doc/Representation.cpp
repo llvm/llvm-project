@@ -82,12 +82,10 @@ llvm::StringRef commentKindToString(CommentKind Kind) {
   llvm_unreachable("Unhandled CommentKind");
 }
 
-namespace {
-
 const SymbolID EmptySID = SymbolID();
 
 template <typename T>
-llvm::Expected<std::unique_ptr<Info>>
+static llvm::Expected<std::unique_ptr<Info>>
 reduce(std::vector<std::unique_ptr<Info>> &Values) {
   if (Values.empty() || !Values[0])
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -102,7 +100,7 @@ reduce(std::vector<std::unique_ptr<Info>> &Values) {
 // Return the index of the matching child in the vector, or -1 if merge is not
 // necessary.
 template <typename T>
-int getChildIndexIfExists(std::vector<T> &Children, T &ChildToMerge) {
+static int getChildIndexIfExists(std::vector<T> &Children, T &ChildToMerge) {
   for (unsigned long I = 0; I < Children.size(); I++) {
     if (ChildToMerge.USR == Children[I].USR)
       return I;
@@ -111,8 +109,8 @@ int getChildIndexIfExists(std::vector<T> &Children, T &ChildToMerge) {
 }
 
 template <typename T>
-void reduceChildren(std::vector<T> &Children,
-                    std::vector<T> &&ChildrenToMerge) {
+static void reduceChildren(std::vector<T> &Children,
+                           std::vector<T> &&ChildrenToMerge) {
   for (auto &ChildToMerge : ChildrenToMerge) {
     int MergeIdx = getChildIndexIfExists(Children, ChildToMerge);
     if (MergeIdx == -1) {
@@ -122,8 +120,6 @@ void reduceChildren(std::vector<T> &Children,
     Children[MergeIdx].merge(std::move(ChildToMerge));
   }
 }
-
-} // namespace
 
 // Dispatch function.
 llvm::Expected<std::unique_ptr<Info>>
@@ -247,6 +243,8 @@ void Reference::merge(Reference &&Other) {
     Name = Other.Name;
   if (Path.empty())
     Path = Other.Path;
+  if (DocumentationFileName.empty())
+    DocumentationFileName = Other.DocumentationFileName;
 }
 
 bool FriendInfo::mergeable(const FriendInfo &Other) {
@@ -290,6 +288,8 @@ void SymbolInfo::merge(SymbolInfo &&Other) {
   auto *Last = llvm::unique(Loc);
   Loc.erase(Last, Loc.end());
   mergeBase(std::move(Other));
+  if (MangledName.empty())
+    MangledName = std::move(Other.MangledName);
 }
 
 NamespaceInfo::NamespaceInfo(SymbolID USR, StringRef Name, StringRef Path)
@@ -398,7 +398,7 @@ BaseRecordInfo::BaseRecordInfo() : RecordInfo() {}
 BaseRecordInfo::BaseRecordInfo(SymbolID USR, StringRef Name, StringRef Path,
                                bool IsVirtual, AccessSpecifier Access,
                                bool IsParent)
-    : RecordInfo(USR, Name, Path), IsVirtual(IsVirtual), Access(Access),
+    : RecordInfo(USR, Name, Path), Access(Access), IsVirtual(IsVirtual),
       IsParent(IsParent) {}
 
 llvm::SmallString<16> Info::extractName() const {
@@ -477,10 +477,11 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
                                  StringRef RepositoryUrl,
                                  StringRef RepositoryLinePrefix, StringRef Base,
                                  std::vector<std::string> UserStylesheets,
+                                 clang::DiagnosticsEngine &Diags,
                                  bool FTimeTrace)
-    : ECtx(ECtx), ProjectName(ProjectName), PublicOnly(PublicOnly),
-      FTimeTrace(FTimeTrace), OutDirectory(OutDirectory),
-      UserStylesheets(UserStylesheets), Base(Base) {
+    : ECtx(ECtx), ProjectName(ProjectName), OutDirectory(OutDirectory),
+      SourceRoot(std::string(SourceRoot)), UserStylesheets(UserStylesheets),
+      Base(Base), Diags(Diags), PublicOnly(PublicOnly), FTimeTrace(FTimeTrace) {
   llvm::SmallString<128> SourceRootDir(SourceRoot);
   if (SourceRoot.empty())
     // If no SourceRoot was provided the current path is used as the default
@@ -498,13 +499,13 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
 }
 
 void ScopeChildren::sort() {
-  llvm::sort(Namespaces.begin(), Namespaces.end());
-  llvm::sort(Records.begin(), Records.end());
-  llvm::sort(Functions.begin(), Functions.end());
-  llvm::sort(Enums.begin(), Enums.end());
-  llvm::sort(Typedefs.begin(), Typedefs.end());
-  llvm::sort(Concepts.begin(), Concepts.end());
-  llvm::sort(Variables.begin(), Variables.end());
+  llvm::sort(Namespaces);
+  llvm::sort(Records);
+  llvm::sort(Functions);
+  llvm::sort(Enums);
+  llvm::sort(Typedefs);
+  llvm::sort(Concepts);
+  llvm::sort(Variables);
 }
 } // namespace doc
 } // namespace clang

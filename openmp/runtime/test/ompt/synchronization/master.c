@@ -1,7 +1,9 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | FileCheck %s
 // REQUIRES: ompt
 // GCC generates code that does not call the runtime for the master construct
 // XFAIL: gcc
+// clang-format on
 
 #define USE_PRIVATE_TOOL 1
 #include "callback.h"
@@ -76,6 +78,7 @@ ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
   return &ompt_start_tool_result;
 }
 
+// clang-format off
 // Check if libomp supports the callbacks for this test.
 // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_master'
 
@@ -87,3 +90,4 @@ ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_master_end:
 // CHECK-SAME: codeptr_ra=[[RETURN_ADDRESS_END:(0x)?[0-f]+]]
 // CHECK: {{^}}[[MASTER_ID]]: current_address={{.*}}[[RETURN_ADDRESS_END]]
+// clang-format on

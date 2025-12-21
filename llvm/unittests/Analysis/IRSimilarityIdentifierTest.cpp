@@ -49,6 +49,9 @@ void getSimilarities(
   SimilarityCandidates = Identifier.findSimilarity(M);
 }
 
+// TODO: All these tests could probably become IR LIT tests like
+// IROutliner/outlining-special-state.ll
+
 // Checks that different opcodes are mapped to different values
 TEST(IRInstructionMapper, OpcodeDifferentiation) {
   StringRef ModuleString = R"(

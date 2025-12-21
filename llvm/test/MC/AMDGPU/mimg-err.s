@@ -12,22 +12,22 @@ image_load    v[4:6], v[237:240], s[28:35] dmask:0x7 tfe
 // NOGFX9:   error: image data size does not match dmask, d16 and tfe
 // NOGFX90A: :[[@LINE-3]]:{{[0-9]+}}: error: invalid operand for instruction
 
-image_load    v[4:5], v[237:240], s[28:35] dmask:0x7
+image_load    v[4:5], v[236:239], s[28:35] dmask:0x7
 // NOGCN:    error: image data size does not match dmask and tfe
 // NOGFX9:   error: image data size does not match dmask, d16 and tfe
 // NOGFX90A: :[[@LINE-3]]:{{[0-9]+}}: error: image data size does not match dmask and d16
 
-image_store   v[4:7], v[237:240], s[28:35] dmask:0x7
+image_store   v[4:7], v[236:239], s[28:35] dmask:0x7
 // NOGCN:    error: image data size does not match dmask and tfe
 // NOGFX9:   error: image data size does not match dmask, d16 and tfe
 // NOGFX90A: :[[@LINE-3]]:{{[0-9]+}}: error: image data size does not match dmask and d16
 
-image_store   v[4:7], v[237:240], s[28:35] dmask:0xe
+image_store   v[4:7], v[236:239], s[28:35] dmask:0xe
 // NOGCN:    error: image data size does not match dmask and tfe
 // NOGFX9:   error: image data size does not match dmask, d16 and tfe
 // NOGFX90A: :[[@LINE-3]]:{{[0-9]+}}: error: image data size does not match dmask and d16
 
-image_load    v4, v[237:240], s[28:35] tfe
+image_load    v4, v[236:239], s[28:35] tfe
 // NOGCN:    error: image data size does not match dmask and tfe
 // NOGFX9:   error: image data size does not match dmask, d16 and tfe
 // NOGFX90A: :[[@LINE-3]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -36,17 +36,17 @@ image_load    v4, v[237:240], s[28:35] tfe
 // Image Sample
 //===----------------------------------------------------------------------===//
 
-image_sample  v[193:195], v[237:240], s[28:35], s[4:7] dmask:0x7 tfe
+image_sample  v[192:194], v[236:239], s[28:35], s[4:7] dmask:0x7 tfe
 // NOGCN:    error: image data size does not match dmask and tfe
 // NOGFX9:   error: image data size does not match dmask, d16 and tfe
 // NOGFX90A: :[[@LINE-3]]:{{[0-9]+}}: error: invalid operand for instruction
 
-image_sample  v[193:195], v[237:240], s[28:35], s[4:7] dmask:0x3
+image_sample  v[192:194], v[236:239], s[28:35], s[4:7] dmask:0x3
 // NOGCN:    error: image data size does not match dmask and tfe
 // NOGFX9:   error: image data size does not match dmask, d16 and tfe
 // NOGFX90A: :[[@LINE-3]]:{{[0-9]+}}: error: image data size does not match dmask and d16
 
-image_sample  v[193:195], v[237:240], s[28:35], s[4:7] dmask:0xf
+image_sample  v[192:194], v[236:239], s[28:35], s[4:7] dmask:0xf
 // NOGCN:    error: image data size does not match dmask and tfe
 // NOGFX9:   error: image data size does not match dmask, d16 and tfe
 // NOGFX90A: :[[@LINE-3]]:{{[0-9]+}}: error: image data size does not match dmask and d16

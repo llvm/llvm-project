@@ -282,8 +282,7 @@ define i32 @atomicrmw_nand_private_i32(ptr addrspace(5) %ptr) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_not_b32_e32 v2, v1
-; GCN-NEXT:    v_or_b32_e32 v2, -5, v2
+; GCN-NEXT:    v_bfi_b32 v2, v1, -5, -1
 ; GCN-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
@@ -620,8 +619,7 @@ define i32 @atomicrmw_dec_private_i32(ptr addrspace(5) %ptr) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_add_i32_e32 v2, vcc, -1, v1
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
+; GCN-NEXT:    v_subrev_i32_e32 v2, vcc, 1, v1
 ; GCN-NEXT:    v_cmp_lt_u32_e64 s[4:5], 4, v1
 ; GCN-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; GCN-NEXT:    v_cndmask_b32_e64 v2, v2, 4, s[4:5]
@@ -630,5 +628,51 @@ define i32 @atomicrmw_dec_private_i32(ptr addrspace(5) %ptr) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %result = atomicrmw udec_wrap ptr addrspace(5) %ptr, i32 4 seq_cst
+  ret i32 %result
+}
+
+define i32 @atomicrmw_usub_cond_private_i32(ptr addrspace(5) %ptr) {
+; IR-LABEL: @atomicrmw_usub_cond_private_i32(
+; IR-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[PTR:%.*]], align 4
+; IR-NEXT:    [[TMP2:%.*]] = icmp uge i32 [[TMP1]], 4
+; IR-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP1]], 4
+; IR-NEXT:    [[NEW:%.*]] = select i1 [[TMP2]], i32 [[TMP3]], i32 [[TMP1]]
+; IR-NEXT:    store i32 [[NEW]], ptr addrspace(5) [[PTR]], align 4
+; IR-NEXT:    ret i32 [[TMP1]]
+;
+; GCN-LABEL: atomicrmw_usub_cond_private_i32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    buffer_load_dword v1, v0, s[0:3], 0 offen
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_add_i32_e32 v2, vcc, -4, v1
+; GCN-NEXT:    v_min_u32_e32 v2, v2, v1
+; GCN-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen
+; GCN-NEXT:    v_mov_b32_e32 v0, v1
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %result = atomicrmw usub_cond ptr addrspace(5) %ptr, i32 4 seq_cst
+  ret i32 %result
+}
+
+define i32 @atomicrmw_usub_sat_private_i32(ptr addrspace(5) %ptr) {
+; IR-LABEL: @atomicrmw_usub_sat_private_i32(
+; IR-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[PTR:%.*]], align 4
+; IR-NEXT:    [[NEW:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[TMP1]], i32 4)
+; IR-NEXT:    store i32 [[NEW]], ptr addrspace(5) [[PTR]], align 4
+; IR-NEXT:    ret i32 [[TMP1]]
+;
+; GCN-LABEL: atomicrmw_usub_sat_private_i32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    buffer_load_dword v1, v0, s[0:3], 0 offen
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_max_u32_e32 v2, 4, v1
+; GCN-NEXT:    v_add_i32_e32 v2, vcc, -4, v2
+; GCN-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen
+; GCN-NEXT:    v_mov_b32_e32 v0, v1
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %result = atomicrmw usub_sat ptr addrspace(5) %ptr, i32 4 seq_cst
   ret i32 %result
 }

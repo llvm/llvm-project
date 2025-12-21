@@ -40,6 +40,8 @@ include "AArch64SchedPredExynos.td"
 include "AArch64SchedPredNeoverse.td"
 include "AArch64Combine.td"
 
+defm : RemapAllTargetPseudoPointerOperands<GPR64sp>;
+
 def AArch64InstrInfo : InstrInfo;
 
 //===----------------------------------------------------------------------===//
@@ -63,7 +65,7 @@ def SVE2p1Unsupported : AArch64Unsupported;
 
 def SVE2Unsupported : AArch64Unsupported {
   let F = !listconcat([HasSVE2, HasSVE2_or_SME, HasNonStreamingSVE2_or_SME2, HasSSVE_FP8FMA, HasSMEF8F16,
-                       HasSMEF8F32, HasSVEAES, HasSVESHA3, HasSVE2SM4, HasSVEBitPerm,
+                       HasSMEF8F32, HasSVEAES, HasSVESHA3, HasSVESM4, HasSVEBitPerm,
                        HasSVEB16B16],
                        SVE2p1Unsupported.F);
 }
@@ -73,9 +75,16 @@ def SVEUnsupported : AArch64Unsupported {
                       SVE2Unsupported.F);
 }
 
-let F = [HasSME2p2, HasSVE2p2_or_SME2p2, HasNonStreamingSVE_or_SME2p2,
-         HasNonStreamingSVE2p2_or_SME2p2] in
-def SME2p2Unsupported : AArch64Unsupported;
+def SME2p3Unsupported : AArch64Unsupported {
+  let F = [HasSVE2p3_or_SME2p3, HasSVE_B16MM];
+}
+
+def SME2p2Unsupported : AArch64Unsupported {
+  let F = !listconcat([HasSME2p2, HasSVE2p2_or_SME2p2,
+           HasNonStreamingSVE_or_SME2p2,
+           HasNonStreamingSVE2p2_or_SME2p2],
+           SME2p3Unsupported.F);
+}
 
 def SME2p1Unsupported : AArch64Unsupported {
   let F = !listconcat([HasSME2p1, HasSVE2p1_or_SME2p1,
@@ -126,6 +135,8 @@ include "AArch64SchedNeoverseN2.td"
 include "AArch64SchedNeoverseN3.td"
 include "AArch64SchedNeoverseV1.td"
 include "AArch64SchedNeoverseV2.td"
+include "AArch64SchedNeoverseV3.td"
+include "AArch64SchedNeoverseV3AE.td"
 include "AArch64SchedOryon.td"
 
 include "AArch64Processors.td"

@@ -8,9 +8,6 @@
 
 #include "mlir/Tools/mlir-translate/MlirTranslateMain.h"
 #include "mlir/IR/AsmState.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/Dialect.h"
-#include "mlir/IR/Verifier.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/Timing.h"
@@ -138,6 +135,13 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
   // Processes the memory buffer with a new MLIRContext.
   auto processBuffer = [&](std::unique_ptr<llvm::MemoryBuffer> ownedBuffer,
                            raw_ostream &os) {
+    // Many of the translations expect a null-terminated buffer while splitting
+    // the buffer does not guarantee null-termination. Make a copy of the buffer
+    // to ensure null-termination.
+    if (!ownedBuffer->getBuffer().ends_with('\0')) {
+      ownedBuffer = llvm::MemoryBuffer::getMemBufferCopy(
+          ownedBuffer->getBuffer(), ownedBuffer->getBufferIdentifier());
+    }
     // Temporary buffers for chained translation processing.
     std::string dataIn;
     std::string dataOut;

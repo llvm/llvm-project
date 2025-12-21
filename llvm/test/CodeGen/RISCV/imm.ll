@@ -837,8 +837,8 @@ define i64 @imm64_5() nounwind {
 define i64 @imm64_6() nounwind {
 ; RV32I-LABEL: imm64_6:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a0, 74565
-; RV32I-NEXT:    addi a1, a0, 1656
+; RV32I-NEXT:    lui a1, 74565
+; RV32I-NEXT:    addi a1, a1, 1656
 ; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:    ret
 ;
@@ -3895,8 +3895,8 @@ define i64 @imm_neg_10307948543() {
 define i64 @li_rori_1() {
 ; RV32I-LABEL: li_rori_1:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a0, 1048567
-; RV32I-NEXT:    addi a1, a0, 2047
+; RV32I-NEXT:    lui a1, 1048567
+; RV32I-NEXT:    addi a1, a1, 2047
 ; RV32I-NEXT:    li a0, -1
 ; RV32I-NEXT:    ret
 ;

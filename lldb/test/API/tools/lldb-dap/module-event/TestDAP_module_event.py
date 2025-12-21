@@ -23,16 +23,16 @@ class TestDAP_module_event(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
 
         # We're now stopped at breakpoint 1 before the dlopen. Flush all the module events.
-        event = self.dap_server.wait_for_event("module", 0.25)
+        event = self.dap_server.wait_for_event(["module"])
         while event is not None:
-            event = self.dap_server.wait_for_event("module", 0.25)
+            event = self.dap_server.wait_for_event(["module"])
 
         # Continue to the second breakpoint, before the dlclose.
         self.continue_to_breakpoints(breakpoint_ids)
 
         # Make sure we got a module event for libother.
-        event = self.dap_server.wait_for_event("module", 5)
-        self.assertTrue(event, "didn't get a module event")
+        event = self.dap_server.wait_for_event(["module"])
+        self.assertIsNotNone(event, "didn't get a module event")
         module_name = event["body"]["module"]["name"]
         module_id = event["body"]["module"]["id"]
         self.assertEqual(event["body"]["reason"], "new")
@@ -42,14 +42,17 @@ class TestDAP_module_event(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
 
         # Make sure we got a module event for libother.
-        event = self.dap_server.wait_for_event("module", 5)
-        self.assertTrue(event, "didn't get a module event")
+        event = self.dap_server.wait_for_event(["module"])
+        self.assertIsNotNone(event, "didn't get a module event")
         reason = event["body"]["reason"]
-        self.assertEqual(event["body"]["reason"], "removed")
+        self.assertEqual(reason, "removed")
         self.assertEqual(event["body"]["module"]["id"], module_id)
 
-        # The removed module event should omit everything but the module id.
-        # Check that there's no module name in the event.
-        self.assertNotIn("name", event["body"]["module"])
+        # The removed module event should omit everything but the module id and name
+        # as they are required fields.
+        module_data = event["body"]["module"]
+        required_keys = ["id", "name"]
+        self.assertListEqual(list(module_data.keys()), required_keys)
+        self.assertEqual(module_data["name"], "", "expects empty name.")
 
         self.continue_to_exit()

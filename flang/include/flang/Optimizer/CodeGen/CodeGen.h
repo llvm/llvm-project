@@ -9,6 +9,7 @@
 #ifndef FORTRAN_OPTIMIZER_CODEGEN_CODEGEN_H
 #define FORTRAN_OPTIMIZER_CODEGEN_CODEGEN_H
 
+#include "flang/Frontend/CodeGenOptions.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
@@ -58,6 +59,11 @@ struct FIRToLLVMPassOptions {
   // the name of the global variable corresponding to a derived
   // type's descriptor.
   bool typeDescriptorsRenamedForAssembly = false;
+
+  // Specify the calculation method for complex number division used by the
+  // Conversion pass of the MLIR complex dialect.
+  Fortran::frontend::CodeGenOptions::ComplexRangeKind ComplexRange =
+      Fortran::frontend::CodeGenOptions::ComplexRangeKind::CX_Full;
 };
 
 /// Convert FIR to the LLVM IR dialect with default options.

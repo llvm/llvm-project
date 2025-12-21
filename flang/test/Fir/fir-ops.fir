@@ -467,6 +467,13 @@ fir.type_info @cpinfo : !fir.type<cpinfo{comp_i:!fir.array<10x20xi32>}> componen
   fir.dt_component "component_info" lbs [2, 3]
 }
 
+// CHECK-LABEL: fir.type_info @abstract_dispatch_tbl abstract : !fir.type<abstract_dispatch_tbl{i:i32}> dispatch_table {
+// CHECK: fir.dt_entry "deferred_method", @deferred_impl deferred
+// CHECK: }
+fir.type_info @abstract_dispatch_tbl abstract : !fir.type<abstract_dispatch_tbl{i:i32}> dispatch_table {
+  fir.dt_entry "deferred_method", @deferred_impl deferred
+}
+
 // CHECK-LABEL: func @compare_complex(
 // CHECK-SAME: [[VAL_151:%.*]]: complex<f128>, [[VAL_152:%.*]]: complex<f128>) {
 func.func @compare_complex(%a : complex<f128>, %b : complex<f128>) {
@@ -841,6 +848,16 @@ func.func @embox_tdesc(%arg0: !fir.class<!fir.array<10x!fir.type<derived_poly{a:
   }
   fir.store %4#1 to %0 : !fir.ref<i32>
   return
+}
+
+// CHECK-LABEL:   func.func @embox_with_source_box(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.heap<!fir.array<?xnone>>,
+// CHECK-SAME:      %[[ARG1:.*]]: !fir.shape<1>,
+// CHECK-SAME:      %[[ARG2:.*]]: !fir.box<!fir.array<?xnone>>) -> !fir.class<!fir.heap<!fir.array<?xnone>>> {
+func.func @embox_with_source_box(%arg0: !fir.heap<!fir.array<?xnone>>, %arg1: !fir.shape<1>, %arg2: !fir.box<!fir.array<?xnone>>) -> !fir.class<!fir.heap<!fir.array<?xnone>>> {
+// CHECK:           %[[VAL_0:.*]] = fir.embox %[[ARG0]](%[[ARG1]]) source_box %[[ARG2]] : (!fir.heap<!fir.array<?xnone>>, !fir.shape<1>, !fir.box<!fir.array<?xnone>>) -> !fir.class<!fir.heap<!fir.array<?xnone>>>
+  %0 = fir.embox %arg0(%arg1) source_box %arg2 : (!fir.heap<!fir.array<?xnone>>, !fir.shape<1>, !fir.box<!fir.array<?xnone>>) -> !fir.class<!fir.heap<!fir.array<?xnone>>>
+  return %0 : !fir.class<!fir.heap<!fir.array<?xnone>>>
 }
 
 func.func @test_fortran_var_attrs() {

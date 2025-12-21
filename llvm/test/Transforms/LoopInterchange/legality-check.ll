@@ -17,10 +17,10 @@
 ; CHECK-NEXT: * = <
 ; CHECK-NEXT: * = =
 ; CHECK-NEXT: Processing InnerLoopId = 2 and OuterLoopId = 1
-; CHECK-NEXT: Checking if loops are tightly nested
+; CHECK-NEXT: Checking if loops 'for.i.header' and 'for.j' are tightly nested
 ; CHECK-NEXT: Checking instructions in Loop header and Loop latch
 ; CHECK-NEXT: Loops are perfectly nested
-; CHECK-NEXT: Loops are legal to interchange
+; CHECK-NEXT: Loops 'for.i.header' and 'for.j' are legal to interchange
 
 define void @all_eq_lt() {
 entry:
@@ -72,7 +72,7 @@ exit:
 ; CHECK-NEXT: * <
 ; CHECK-NEXT: Processing InnerLoopId = 1 and OuterLoopId = 0
 ; CHECK-NEXT: Failed interchange InnerLoopId = 1 and OuterLoopId = 0 due to dependence
-; CHECK-NEXT: Not interchanging loops. Cannot prove legality.
+; CHECK-NEXT: Cannot prove legality, not interchanging loops 'for.i.header' and 'for.j'
 
 define void @all_lt() {
 entry:
@@ -114,7 +114,7 @@ exit:
 ; CHECK-NEXT: < >
 ; CHECK-NEXT: Processing InnerLoopId = 1 and OuterLoopId = 0
 ; CHECK-NEXT: Failed interchange InnerLoopId = 1 and OuterLoopId = 0 due to dependence
-; CHECK-NEXT: Not interchanging loops. Cannot prove legality.
+; CHECK-NEXT: Cannot prove legality, not interchanging loops 'for.i.header' and 'for.j'
 
 define void @lt_gt() {
 entry:
@@ -149,16 +149,16 @@ exit:
 ;;      for (int k = 0; k < 19; k++)
 ;;        b[i][j][k] = b[i][5][k + 1];
 ;;
-;; The direction vector of `b` is [= * <]. We cannot interchange all the loops.
+;; The direction vector of `b` is [= * *]. We cannot interchange all the loops.
 
 ; CHECK:      Dependency matrix before interchange:
-; CHECK-NEXT: = * <
+; CHECK-NEXT: = * *
 ; CHECK-NEXT: Processing InnerLoopId = 2 and OuterLoopId = 1
 ; CHECK-NEXT: Failed interchange InnerLoopId = 2 and OuterLoopId = 1 due to dependence
-; CHECK-NEXT: Not interchanging loops. Cannot prove legality.
+; CHECK-NEXT: Cannot prove legality, not interchanging loops 'for.j.header' and 'for.k'
 ; CHECK-NEXT: Processing InnerLoopId = 1 and OuterLoopId = 0
 ; CHECK-NEXT: Failed interchange InnerLoopId = 1 and OuterLoopId = 0 due to dependence
-; CHECK-NEXT: Not interchanging loops. Cannot prove legality.
+; CHECK-NEXT: Cannot prove legality, not interchanging loops 'for.i.header' and 'for.j.header'
 
 define void @eq_all_lt() {
 entry:
@@ -175,8 +175,8 @@ for.j.header:
 for.k:
   %k = phi i32 [ 0, %for.j.header ], [ %k.inc, %for.k ]
   %k.inc = add nuw nsw i32 %k, 1
-  %idx.store = getelementptr inbounds [20 x [20 x [20 x i32]]], ptr @b, i32 %i, i32 %j, i32 %k
-  %idx.load = getelementptr inbounds [20 x [20 x [20 x i32]]], ptr @b, i32 %i, i32 5, i32 %k.inc
+  %idx.store = getelementptr inbounds [20 x [20 x [20 x i32]]], ptr @b, i32 0, i32 %i, i32 %j, i32 %k
+  %idx.load = getelementptr inbounds [20 x [20 x [20 x i32]]], ptr @b, i32 0, i32 %i, i32 5, i32 %k.inc
   %0 = load i32, ptr %idx.load, align 4
   store i32 %0, ptr %idx.store, align 4
   %cmp.k = icmp slt i32 %k.inc, 19

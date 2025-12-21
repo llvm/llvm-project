@@ -72,8 +72,7 @@ public:
         const TargetRegisterClass *RC) const;
 
   const TargetRegisterClass *
-  getPointerRegClass(const MachineFunction &MF,
-                     unsigned Kind = 0) const override;
+  getPointerRegClass(unsigned Kind = 0) const override;
 
   bool isEHReturnCalleeSaveReg(Register Reg) const;
 };

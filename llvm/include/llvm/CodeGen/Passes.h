@@ -31,6 +31,7 @@ class ModulePass;
 class Pass;
 class TargetMachine;
 class raw_ostream;
+enum class RunOutliner;
 
 template <typename T> class IntrusiveRefCntPtr;
 namespace vfs {
@@ -68,6 +69,13 @@ LLVM_ABI MachineFunctionPass *createBasicBlockSectionsPass();
 
 LLVM_ABI MachineFunctionPass *createBasicBlockPathCloningPass();
 
+/// createBasicBlockMatchingAndInferencePass - This pass enables matching
+/// and inference when using propeller.
+LLVM_ABI MachineFunctionPass *createBasicBlockMatchingAndInferencePass();
+
+/// createMachineBlockHashInfoPass - This pass computes basic block hashes.
+LLVM_ABI MachineFunctionPass *createMachineBlockHashInfoPass();
+
 /// createMachineFunctionSplitterPass - This pass splits machine functions
 /// using profile information.
 LLVM_ABI MachineFunctionPass *createMachineFunctionSplitterPass();
@@ -86,6 +94,15 @@ LLVM_ABI ModulePass *createStaticDataAnnotatorPass();
 LLVM_ABI MachineFunctionPass *
 createMachineFunctionPrinterPass(raw_ostream &OS,
                                  const std::string &Banner = "");
+
+/// MIR2VecVocabPrinter pass - This pass prints out the MIR2Vec vocabulary
+/// contents to the given stream as a debugging tool.
+LLVM_ABI MachineFunctionPass *
+createMIR2VecVocabPrinterLegacyPass(raw_ostream &OS);
+
+/// MIR2VecPrinter pass - This pass prints out the MIR2Vec embeddings for
+/// machine functions, basic blocks and instructions.
+LLVM_ABI MachineFunctionPass *createMIR2VecPrinterLegacyPass(raw_ostream &OS);
 
 /// StackFramePrinter pass - This pass prints out the machine function's
 /// stack frame to the given stream as a debugging tool.
@@ -438,10 +455,6 @@ LLVM_ABI extern char &UnpackMachineBundlesID;
 LLVM_ABI FunctionPass *
 createUnpackMachineBundles(std::function<bool(const MachineFunction &)> Ftor);
 
-/// FinalizeMachineBundles - This pass finalize machine instruction
-/// bundles (created earlier, e.g. during pre-RA scheduling).
-LLVM_ABI extern char &FinalizeMachineBundlesID;
-
 /// StackMapLiveness - This pass analyses the register live-out set of
 /// stackmap/patchpoint intrinsics and attaches the calculated information to
 /// the intrinsic for later emission to the StackMap.
@@ -524,7 +537,7 @@ LLVM_ABI ModulePass *createGlobalMergeFuncPass();
 
 /// This pass performs outlining on machine instructions directly before
 /// printing assembly.
-LLVM_ABI ModulePass *createMachineOutlinerPass(bool RunOnAllFunctions = true);
+LLVM_ABI ModulePass *createMachineOutlinerPass(RunOutliner RunOutlinerMode);
 
 /// This pass expands the reduction intrinsics into sequences of shuffles.
 LLVM_ABI FunctionPass *createExpandReductionsPass();
@@ -534,10 +547,7 @@ LLVM_ABI FunctionPass *createExpandReductionsPass();
 LLVM_ABI FunctionPass *createReplaceWithVeclibLegacyPass();
 
 // Expands large div/rem instructions.
-LLVM_ABI FunctionPass *createExpandLargeDivRemPass();
-
-// Expands large div/rem instructions.
-LLVM_ABI FunctionPass *createExpandFpPass();
+LLVM_ABI FunctionPass *createExpandIRInstsPass();
 
 // This pass expands memcmp() to load/stores.
 LLVM_ABI FunctionPass *createExpandMemCmpLegacyPass();
@@ -553,6 +563,9 @@ LLVM_ABI FunctionPass *createCFIFixup();
 
 /// Creates CFI Instruction Inserter pass. \see CFIInstrInserter.cpp
 LLVM_ABI FunctionPass *createCFIInstrInserter();
+
+// Expands floating point instructions.
+FunctionPass *createExpandIRInstsPass(CodeGenOptLevel);
 
 /// Creates CFGuard longjmp target identification pass.
 /// \see CFGuardLongjmp.cpp
@@ -598,14 +611,6 @@ LLVM_ABI ModulePass *createCheckDebugMachineModulePass();
 /// caller saved registers with stack slots.
 LLVM_ABI extern char &FixupStatepointCallerSavedID;
 
-/// The pass transforms load/store <256 x i32> to AMX load/store intrinsics
-/// or split the data to two <128 x i32>.
-LLVM_ABI FunctionPass *createX86LowerAMXTypePass();
-
-/// The pass transforms amx intrinsics to scalar operation if the function has
-/// optnone attribute or it is O0.
-LLVM_ABI FunctionPass *createX86LowerAMXIntrinsicsPass();
-
 /// When learning an eviction policy, extract score(reward) information,
 /// otherwise this does nothing
 LLVM_ABI FunctionPass *createRegAllocScoringPass();
@@ -619,7 +624,7 @@ LLVM_ABI FunctionPass *createSelectOptimizePass();
 LLVM_ABI FunctionPass *createCallBrPass();
 
 /// Creates Windows Secure Hot Patch pass. \see WindowsSecureHotPatching.cpp
-ModulePass *createWindowsSecureHotPatchingPass();
+LLVM_ABI ModulePass *createWindowsSecureHotPatchingPass();
 
 /// Lowers KCFI operand bundles for indirect calls.
 LLVM_ABI FunctionPass *createKCFIPass();

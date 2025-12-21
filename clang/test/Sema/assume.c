@@ -19,7 +19,7 @@ void test(int n) {
   __attribute__((assume(n++))); // expected-warning {{assumption is ignored because it contains (potential) side-effects}}
   [[clang::assume(n++)]];       // expected-warning {{assumption is ignored because it contains (potential) side-effects}}
 
-  [[clang::assume(true)]] int x;       // expected-error {{'assume' attribute cannot be applied to a declaration}}
+  [[clang::assume(true)]] int x;       // expected-error {{'clang::assume' attribute cannot be applied to a declaration}}
   __attribute__((assume(true))) int y; // expected-error {{'assume' attribute cannot be applied to a declaration}}
 }
 

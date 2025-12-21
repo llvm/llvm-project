@@ -267,8 +267,7 @@ void OutlinableRegion::splitCandidate() {
   // region is the same as the recorded instruction following the last
   // instruction. If they do not match, there could be problems in rewriting
   // the program after outlining, so we ignore it.
-  if (!BackInst->isTerminator() &&
-      EndInst != BackInst->getNextNonDebugInstruction())
+  if (!BackInst->isTerminator() && EndInst != BackInst->getNextNode())
     return;
 
   Instruction *StartInst = (*Candidate->begin()).Inst;
@@ -686,9 +685,6 @@ Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
         DINode::DIFlags::FlagArtificial /* Compiler-generated code. */,
         /* Outlined code is optimized code by definition. */
         DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
-
-    // Don't add any new variables to the subprogram.
-    DB.finalizeSubprogram(OutlinedSP);
 
     // Attach subprogram to the function.
     F->setSubprogram(OutlinedSP);
@@ -2112,8 +2108,7 @@ static void createAndInsertBasicBlocks(DenseMap<Value *, BasicBlock *> &OldMap,
 
   for (Value *RetVal : SortedKeys) {
     BasicBlock *NewBB = BasicBlock::Create(
-        ParentFunc->getContext(),
-        Twine(BaseName) + Twine("_") + Twine(static_cast<unsigned>(Idx++)),
+        ParentFunc->getContext(), Twine(BaseName) + Twine("_") + Twine(Idx++),
         ParentFunc);
     NewMap.insert(std::make_pair(RetVal, NewBB));
   }
@@ -2290,9 +2285,9 @@ void IROutliner::deduplicateExtractedSections(
     // Create a set of BasicBlocks, one for each return block, to hold the
     // needed store instructions.
     DenseMap<Value *, BasicBlock *> NewBBs;
-    createAndInsertBasicBlocks(
-        CurrentGroup.EndBBs, NewBBs, CurrentGroup.OutlinedFunction,
-        "output_block_" + Twine(static_cast<unsigned>(Idx)));
+    createAndInsertBasicBlocks(CurrentGroup.EndBBs, NewBBs,
+                               CurrentGroup.OutlinedFunction,
+                               "output_block_" + Twine(Idx));
     replaceArgumentUses(*CurrentOS, NewBBs, OutputMappings);
     alignOutputBlockWithAggFunc(CurrentGroup, *CurrentOS, NewBBs,
                                 CurrentGroup.EndBBs, OutputMappings,
@@ -2326,7 +2321,7 @@ static bool nextIRInstructionDataMatchesNextInst(IRInstructionData &ID) {
   Instruction *NextIDLInst = NextIDIt->Inst;
   Instruction *NextModuleInst = nullptr;
   if (!ID.Inst->isTerminator())
-    NextModuleInst = ID.Inst->getNextNonDebugInstruction();
+    NextModuleInst = ID.Inst->getNextNode();
   else if (NextIDLInst != nullptr)
     NextModuleInst =
         &*NextIDIt->Inst->getParent()->instructionsWithoutDebug().begin();
@@ -2353,7 +2348,7 @@ bool IROutliner::isCompatibleWithAlreadyOutlinedCode(
   // if it does not, we fix it in the InstructionDataList.
   if (!Region.Candidate->backInstruction()->isTerminator()) {
     Instruction *NewEndInst =
-        Region.Candidate->backInstruction()->getNextNonDebugInstruction();
+        Region.Candidate->backInstruction()->getNextNode();
     assert(NewEndInst && "Next instruction is a nullptr?");
     if (Region.Candidate->end()->Inst != NewEndInst) {
       IRInstructionDataList *IDL = Region.Candidate->front()->IDL;

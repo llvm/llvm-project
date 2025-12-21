@@ -24,13 +24,11 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
                                   Function *Func) {
   assert(FuncDecl);
   assert(Func);
+  assert(FuncDecl->isThisDeclarationADefinition());
 
   // Manually created functions that haven't been assigned proper
   // parameters yet.
   if (!FuncDecl->param_empty() && !FuncDecl->param_begin())
-    return;
-
-  if (!FuncDecl->isDefined())
     return;
 
   // Set up lambda captures.
@@ -62,7 +60,7 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
                   (Func->hasThisPointer() && !Func->isThisPointerExplicit());
   for (auto ParamOffset : llvm::drop_begin(Func->ParamOffsets, Drop)) {
     const ParmVarDecl *PD = FuncDecl->parameters()[ParamIndex];
-    std::optional<PrimType> T = Ctx.classify(PD->getType());
+    OptPrimType T = Ctx.classify(PD->getType());
     this->Params.insert({PD, {ParamOffset, T != std::nullopt}});
     ++ParamIndex;
   }
@@ -87,7 +85,7 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
   }
 
   // Set the function's code.
-  Func->setCode(NextLocalOffset, std::move(Code), std::move(SrcMap),
+  Func->setCode(FuncDecl, NextLocalOffset, std::move(Code), std::move(SrcMap),
                 std::move(Scopes), FuncDecl->hasBody());
   Func->setIsFullyCompiled(true);
 }
@@ -135,25 +133,25 @@ int32_t ByteCodeEmitter::getOffset(LabelTy Label) {
 /// Helper to write bytecode and bail out if 32-bit offsets become invalid.
 /// Pointers will be automatically marshalled as 32-bit IDs.
 template <typename T>
-static void emit(Program &P, std::vector<std::byte> &Code, const T &Val,
-                 bool &Success) {
+static void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
+                 const T &Val, bool &Success) {
+  size_t ValPos = Code.size();
   size_t Size;
 
   if constexpr (std::is_pointer_v<T>)
-    Size = sizeof(uint32_t);
+    Size = align(sizeof(uint32_t));
   else
-    Size = sizeof(T);
+    Size = align(sizeof(T));
 
-  if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
+  if (ValPos + Size > std::numeric_limits<unsigned>::max()) {
     Success = false;
     return;
   }
 
   // Access must be aligned!
-  size_t ValPos = align(Code.size());
-  Size = align(Size);
+  assert(aligned(ValPos));
   assert(aligned(ValPos + Size));
-  Code.resize(ValPos + Size);
+  Code.resize_for_overwrite(ValPos + Size);
 
   if constexpr (!std::is_pointer_v<T>) {
     new (Code.data() + ValPos) T(Val);
@@ -166,58 +164,58 @@ static void emit(Program &P, std::vector<std::byte> &Code, const T &Val,
 /// Emits a serializable value. These usually (potentially) contain
 /// heap-allocated memory and aren't trivially copyable.
 template <typename T>
-static void emitSerialized(std::vector<std::byte> &Code, const T &Val,
+static void emitSerialized(llvm::SmallVectorImpl<std::byte> &Code, const T &Val,
                            bool &Success) {
-  size_t Size = Val.bytesToSerialize();
+  size_t ValPos = Code.size();
+  size_t Size = align(Val.bytesToSerialize());
 
-  if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
+  if (ValPos + Size > std::numeric_limits<unsigned>::max()) {
     Success = false;
     return;
   }
 
   // Access must be aligned!
-  assert(aligned(Code.size()));
-  size_t ValPos = Code.size();
-  Size = align(Size);
+  assert(aligned(ValPos));
   assert(aligned(ValPos + Size));
-  Code.resize(ValPos + Size);
+  Code.resize_for_overwrite(ValPos + Size);
 
   Val.serialize(Code.data() + ValPos);
 }
 
 template <>
-void emit(Program &P, std::vector<std::byte> &Code, const Floating &Val,
-          bool &Success) {
+void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
+          const Floating &Val, bool &Success) {
   emitSerialized(Code, Val, Success);
 }
 
 template <>
-void emit(Program &P, std::vector<std::byte> &Code,
+void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
           const IntegralAP<false> &Val, bool &Success) {
   emitSerialized(Code, Val, Success);
 }
 
 template <>
-void emit(Program &P, std::vector<std::byte> &Code, const IntegralAP<true> &Val,
-          bool &Success) {
+void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
+          const IntegralAP<true> &Val, bool &Success) {
   emitSerialized(Code, Val, Success);
 }
 
 template <>
-void emit(Program &P, std::vector<std::byte> &Code, const FixedPoint &Val,
-          bool &Success) {
+void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
+          const FixedPoint &Val, bool &Success) {
   emitSerialized(Code, Val, Success);
 }
 
 template <typename... Tys>
-bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &...Args,
-                             const SourceInfo &SI) {
+bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &...Args, SourceInfo SI) {
   bool Success = true;
 
   // The opcode is followed by arguments. The source info is
   // attached to the address after the opcode.
   emit(P, Code, Op, Success);
-  if (SI)
+  if (LocOverride)
+    SrcMap.emplace_back(Code.size(), *LocOverride);
+  else if (SI)
     SrcMap.emplace_back(Code.size(), SI);
 
   (..., emit(P, Code, Args, Success));

@@ -84,8 +84,8 @@ define dso_local void @caller_St4x1(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St4x1_param_1
   ; CHECK:       )
   ; CHECK:       .param .b32 param0;
-  ; CHECK:       st.param.b32 [param0], {{%r[0-9]+}};
   ; CHECK:       .param .align 16 .b8 retval0[4];
+  ; CHECK:       st.param.b32 [param0], {{%r[0-9]+}};
   ; CHECK:       call.uni (retval0), callee_St4x1, (param0);
   ; CHECK:       ld.param.b32 {{%r[0-9]+}}, [retval0];
   %1 = load i32, ptr %in, align 4
@@ -112,8 +112,8 @@ define dso_local void @caller_St4x2(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St4x2_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[8];
-  ; CHECK:       st.param.v2.b32 [param0], {{{%r[0-9]+}}, {{%r[0-9]+}}};
   ; CHECK:       .param .align 16 .b8 retval0[8];
+  ; CHECK:       st.param.v2.b32 [param0], {{{%r[0-9]+}}, {{%r[0-9]+}}};
   ; CHECK:       call.uni (retval0), callee_St4x2, (param0);
   ; CHECK:       ld.param.v2.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0];
   %agg.tmp = alloca %struct.St4x2, align 8
@@ -149,9 +149,9 @@ define dso_local void @caller_St4x3(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St4x3_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[12];
-  ; CHECK:       st.param.v2.b32 [param0], {{{%r[0-9]+}}, {{%r[0-9]+}}};
-  ; CHECK:       st.param.b32    [param0+8], {{%r[0-9]+}};
   ; CHECK:       .param .align 16 .b8 retval0[12];
+  ; CHECK-DAG:   st.param.v2.b32 [param0], {{{%r[0-9]+}}, {{%r[0-9]+}}};
+  ; CHECK-DAG:   st.param.b32    [param0+8], {{%r[0-9]+}};
   ; CHECK:       call.uni (retval0), callee_St4x3, (param0);
   ; CHECK:       ld.param.v2.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0];
   ; CHECK:       ld.param.b32    {{%r[0-9]+}},  [retval0+8];
@@ -171,8 +171,7 @@ define internal fastcc [3 x i32] @callee_St4x3(ptr nocapture noundef readonly by
   ; CHECK:       .func  (.param .align 16 .b8 func_retval0[12])
   ; CHECK-LABEL: callee_St4x3(
   ; CHECK-NEXT:  .param .align 16 .b8 callee_St4x3_param_0[12]
-  ; CHECK:       ld.param.v2.b32 {[[R1:%r[0-9]+]], [[R2:%r[0-9]+]]}, [callee_St4x3_param_0];
-  ; CHECK:       ld.param.b32    [[R3:%r[0-9]+]],  [callee_St4x3_param_0+8];
+  ; CHECK:       ld.param.v4.b32 {[[R1:%r[0-9]+]], [[R2:%r[0-9]+]], [[R3:%r[0-9]+]], %{{.*}}}, [callee_St4x3_param_0];
   ; CHECK-DAG:   st.param.v2.b32 [func_retval0], {[[R1]], [[R2]]};
   ; CHECK-DAG:   st.param.b32    [func_retval0+8], [[R3]];
   ; CHECK-NEXT:  ret;
@@ -193,8 +192,8 @@ define dso_local void @caller_St4x4(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St4x4_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[16];
-  ; CHECK:       st.param.v4.b32 [param0], {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
   ; CHECK:       .param .align 16 .b8 retval0[16];
+  ; CHECK:       st.param.v4.b32 [param0], {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
   ; CHECK:       call.uni (retval0), callee_St4x4, (param0);
   ; CHECK:       ld.param.v4.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0];
   %call = tail call fastcc [4 x i32] @callee_St4x4(ptr noundef nonnull byval(%struct.St4x4) align 4 %in) #2
@@ -239,9 +238,9 @@ define dso_local void @caller_St4x5(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St4x5_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[20];
-  ; CHECK:       st.param.v4.b32 [param0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
-  ; CHECK:       st.param.b32    [param0+16], {{%r[0-9]+}};
   ; CHECK:       .param .align 16 .b8 retval0[20];
+  ; CHECK-DAG:   st.param.v4.b32 [param0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
+  ; CHECK-DAG:   st.param.b32    [param0+16], {{%r[0-9]+}};
   ; CHECK:       call.uni (retval0), callee_St4x5, (param0);
   ; CHECK:       ld.param.v4.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0];
   ; CHECK:       ld.param.b32    {{%r[0-9]+}},  [retval0+16];
@@ -295,9 +294,9 @@ define dso_local void @caller_St4x6(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St4x6_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[24];
-  ; CHECK:       st.param.v4.b32 [param0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
-  ; CHECK:       st.param.v2.b32 [param0+16], {{{%r[0-9]+}}, {{%r[0-9]+}}};
   ; CHECK:       .param .align 16 .b8 retval0[24];
+  ; CHECK-DAG:   st.param.v4.b32 [param0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
+  ; CHECK-DAG:   st.param.v2.b32 [param0+16], {{{%r[0-9]+}}, {{%r[0-9]+}}};
   ; CHECK:       call.uni (retval0), callee_St4x6, (param0);
   ; CHECK:       ld.param.v4.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0];
   ; CHECK:       ld.param.v2.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0+16];
@@ -357,10 +356,10 @@ define dso_local void @caller_St4x7(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St4x7_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[28];
-  ; CHECK:       st.param.v4.b32 [param0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
-  ; CHECK:       st.param.v2.b32 [param0+16], {{{%r[0-9]+}}, {{%r[0-9]+}}};
-  ; CHECK:       st.param.b32    [param0+24], {{%r[0-9]+}};
   ; CHECK:       .param .align 16 .b8 retval0[28];
+  ; CHECK-DAG:   st.param.v4.b32 [param0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
+  ; CHECK-DAG:   st.param.v2.b32 [param0+16], {{{%r[0-9]+}}, {{%r[0-9]+}}};
+  ; CHECK-DAG:   st.param.b32    [param0+24], {{%r[0-9]+}};
   ; CHECK:       call.uni (retval0), callee_St4x7, (param0);
   ; CHECK:       ld.param.v4.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0];
   ; CHECK:       ld.param.v2.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0+16];
@@ -394,8 +393,7 @@ define internal fastcc [7 x i32] @callee_St4x7(ptr nocapture noundef readonly by
   ; CHECK-LABEL: callee_St4x7(
   ; CHECK-NEXT:  .param .align 16 .b8 callee_St4x7_param_0[28]
   ; CHECK:       ld.param.v4.b32 {[[R1:%r[0-9]+]], [[R2:%r[0-9]+]], [[R3:%r[0-9]+]], [[R4:%r[0-9]+]]}, [callee_St4x7_param_0];
-  ; CHECK:       ld.param.v2.b32 {[[R5:%r[0-9]+]],  [[R6:%r[0-9]+]]}, [callee_St4x7_param_0+16];
-  ; CHECK:       ld.param.b32    [[R7:%r[0-9]+]],   [callee_St4x7_param_0+24];
+  ; CHECK:       ld.param.v4.b32 {[[R5:%r[0-9]+]], [[R6:%r[0-9]+]], [[R7:%r[0-9]+]], %{{.*}}}, [callee_St4x7_param_0+16];
   ; CHECK-DAG:   st.param.v4.b32 [func_retval0],  {[[R1]], [[R2]], [[R3]], [[R4]]};
   ; CHECK-DAG:   st.param.v2.b32 [func_retval0+16], {[[R5]], [[R6]]};
   ; CHECK-DAG:   st.param.b32    [func_retval0+24], [[R7]];
@@ -429,9 +427,9 @@ define dso_local void @caller_St4x8(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St4x8_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[32];
-  ; CHECK:       st.param.v4.b32 [param0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
-  ; CHECK:       st.param.v4.b32 [param0+16], {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
   ; CHECK:       .param .align 16 .b8 retval0[32];
+  ; CHECK-DAG:   st.param.v4.b32 [param0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
+  ; CHECK-DAG:   st.param.v4.b32 [param0+16], {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
   ; CHECK:       call.uni (retval0), callee_St4x8, (param0);
   ; CHECK:       ld.param.v4.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0];
   ; CHECK:       ld.param.v4.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0+16];
@@ -503,8 +501,8 @@ define dso_local void @caller_St8x1(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St8x1_param_1
   ; CHECK:       )
   ; CHECK:       .param .b64 param0;
-  ; CHECK:       st.param.b64 [param0], {{%rd[0-9]+}};
   ; CHECK:       .param .align 16 .b8 retval0[8];
+  ; CHECK:       st.param.b64 [param0], {{%rd[0-9]+}};
   ; CHECK:       call.uni (retval0), callee_St8x1, (param0);
   ; CHECK:       ld.param.b64 {{%rd[0-9]+}}, [retval0];
   %1 = load i64, ptr %in, align 8
@@ -531,8 +529,8 @@ define dso_local void @caller_St8x2(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St8x2_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[16];
-  ; CHECK:       st.param.v2.b64 [param0],  {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
   ; CHECK:       .param .align 16 .b8 retval0[16];
+  ; CHECK:       st.param.v2.b64 [param0],  {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
   ; CHECK:       call.uni (retval0), callee_St8x2, (param0);
   ; CHECK:       ld.param.v2.b64 {{{%rd[0-9]+}}, {{%rd[0-9]+}}}, [retval0];
   %call = tail call fastcc [2 x i64] @callee_St8x2(ptr noundef nonnull byval(%struct.St8x2) align 8 %in) #2
@@ -565,9 +563,9 @@ define dso_local void @caller_St8x3(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St8x3_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[24];
-  ; CHECK:       st.param.v2.b64 [param0],  {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
-  ; CHECK:       st.param.b64    [param0+16], {{%rd[0-9]+}};
   ; CHECK:       .param .align 16 .b8 retval0[24];
+  ; CHECK-DAG:   st.param.v2.b64 [param0],  {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
+  ; CHECK-DAG:   st.param.b64    [param0+16], {{%rd[0-9]+}};
   ; CHECK:       call.uni (retval0), callee_St8x3, (param0);
   ; CHECK:       ld.param.v2.b64 {{{%rd[0-9]+}}, {{%rd[0-9]+}}}, [retval0];
   ; CHECK:       ld.param.b64    {{%rd[0-9]+}}, [retval0+16];
@@ -609,9 +607,9 @@ define dso_local void @caller_St8x4(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St8x4_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[32];
-  ; CHECK:       st.param.v2.b64 [param0],  {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
-  ; CHECK:       st.param.v2.b64 [param0+16], {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
   ; CHECK:       .param .align 16 .b8 retval0[32];
+  ; CHECK-DAG:   st.param.v2.b64 [param0],  {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
+  ; CHECK-DAG:   st.param.v2.b64 [param0+16], {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
   ; CHECK:       call.uni (retval0), callee_St8x4, (param0);
   ; CHECK:       ld.param.v2.b64 {{{%rd[0-9]+}}, {{%rd[0-9]+}}}, [retval0];
   ; CHECK:       ld.param.v2.b64 {{{%rd[0-9]+}}, {{%rd[0-9]+}}}, [retval0+16];

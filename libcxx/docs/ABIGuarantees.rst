@@ -44,6 +44,10 @@ This removes the ``iterator`` base class from ``back_insert_iterator``, ``front_
 This doesn't directly affect the layout of these types in most cases, but may result in more padding being used when
 they are used in combination, for example ``reverse_iterator<reverse_iterator<T>>``.
 
+``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER``
+-------------------------------------------------
+This removes a second member in ``reverse_iterator`` that is unused after LWG2360.
+
 ``_LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION``
 -------------------------------------------------
 This changes the index type used inside ``variant`` to the smallest required type to reduce the datasize of variants in
@@ -109,6 +113,11 @@ may not work with an older library. Vendors who require such support can leverag
 hand, backwards compatibility is generally guaranteed.
 
 There are multiple ABI flags that change the symbols exported from the built library:
+
+``_LIBCPP_ABI_DO_NOT_EXPORT_ALIGN``
+-------------------------------------------------
+This removes ``std::align()`` from the built library. In the past, ``std::align()`` was defined in the built library,
+but nowadays it is an inline function defined in the headers for performance reasons.
 
 ``_LIBCPP_ABI_DO_NOT_EXPORT_BASIC_STRING_COMMON``
 -------------------------------------------------
@@ -200,6 +209,16 @@ This changes the value of ``regex_constants::syntax_option-type::ECMAScript`` to
 This flag fixes the implementation of CityHash used for ``hash<fundamental-type>``. The incorrect implementation of
 CityHash has the problem that it drops some bits on the floor. Fixing the implementation changes the hash of values,
 resulting in an ABI break.
+
+``_LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE``
+------------------------------------------
+This flag changes the implementation of ``atomic::wait()`` and ``atomic::notify_one()/notify_all()`` to use the
+native atomic wait/notify operations on platforms that support them based on the size of the atomic type, instead
+of the type itself. This means for example that a type with ``sizeof(T) == 4`` on Linux that doesn't have padding
+bytes would be able to use the underlying platform's atomic wait primitive, which is otherwise only used for ``int32_t``.
+Since the whole program must use the same implementation for correctness, changing this is an ABI break since libc++
+supports linking against TUs that were compiled against older versions of the library.
+
 
 inline namespaces
 =================

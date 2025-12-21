@@ -26,6 +26,7 @@ builtin_check_c_compiler_flag("-Xclang -mcode-object-version=none" COMPILER_RT_H
 builtin_check_c_compiler_flag(-Wbuiltin-declaration-mismatch COMPILER_RT_HAS_WBUILTIN_DECLARATION_MISMATCH_FLAG)
 builtin_check_c_compiler_flag(/Zl COMPILER_RT_HAS_ZL_FLAG)
 builtin_check_c_compiler_flag(-fcf-protection=full COMPILER_RT_HAS_FCF_PROTECTION_FLAG)
+builtin_check_c_compiler_flag(-nostdinc++          COMPILER_RT_HAS_NOSTDINCXX_FLAG)
 
 builtin_check_c_compiler_source(COMPILER_RT_HAS_ATOMIC_KEYWORD
 "
@@ -77,7 +78,7 @@ else()
 endif()
 
 set(AMDGPU amdgcn)
-set(ARM64 aarch64 arm64ec)
+set(ARM64 aarch64 arm64ec aarch64_lfi)
 set(ARM32 arm armhf armv4t armv5te armv6 armv6m armv7m armv7em armv7 armv7s armv7k armv8m.base armv8m.main armv8.1m.main)
 set(AVR avr)
 set(HEXAGON hexagon)
@@ -97,6 +98,7 @@ set(SPARCV9 sparcv9)
 set(WASM32 wasm32)
 set(WASM64 wasm64)
 set(VE ve)
+set(M68K m68k)
 
 if(APPLE)
   set(ARM64 arm64 arm64e)
@@ -108,7 +110,7 @@ set(ALL_BUILTIN_SUPPORTED_ARCH
   ${X86} ${X86_64} ${AMDGPU} ${ARM32} ${ARM64} ${AVR}
   ${HEXAGON} ${MIPS32} ${MIPS64} ${NVPTX} ${PPC32} ${PPC64}
   ${RISCV32} ${RISCV64} ${S390X} ${SPARC} ${SPARCV9}
-  ${WASM32} ${WASM64} ${VE} ${LOONGARCH64})
+  ${WASM32} ${WASM64} ${VE} ${LOONGARCH64} ${M68K})
 
 include(CompilerRTUtils)
 include(CompilerRTDarwinUtils)
@@ -116,14 +118,22 @@ include(CompilerRTDarwinUtils)
 if(APPLE)
 
   find_darwin_sdk_dir(DARWIN_osx_SYSROOT macosx)
-  find_darwin_sdk_dir(DARWIN_iossim_SYSROOT iphonesimulator)
-  find_darwin_sdk_dir(DARWIN_ios_SYSROOT iphoneos)
-  find_darwin_sdk_dir(DARWIN_watchossim_SYSROOT watchsimulator)
-  find_darwin_sdk_dir(DARWIN_watchos_SYSROOT watchos)
-  find_darwin_sdk_dir(DARWIN_tvossim_SYSROOT appletvsimulator)
-  find_darwin_sdk_dir(DARWIN_tvos_SYSROOT appletvos)
-  find_darwin_sdk_dir(DARWIN_xrossim_SYSROOT xrsimulator)
-  find_darwin_sdk_dir(DARWIN_xros_SYSROOT xros)
+  if(COMPILER_RT_ENABLE_IOS)
+    find_darwin_sdk_dir(DARWIN_iossim_SYSROOT iphonesimulator)
+    find_darwin_sdk_dir(DARWIN_ios_SYSROOT iphoneos)
+  endif()
+  if(COMPILER_RT_ENABLE_WATCHOS)
+    find_darwin_sdk_dir(DARWIN_watchossim_SYSROOT watchsimulator)
+    find_darwin_sdk_dir(DARWIN_watchos_SYSROOT watchos)
+  endif()
+  if(COMPILER_RT_ENABLE_TVOS)
+    find_darwin_sdk_dir(DARWIN_tvossim_SYSROOT appletvsimulator)
+    find_darwin_sdk_dir(DARWIN_tvos_SYSROOT appletvos)
+  endif()
+  if(COMPILER_RT_ENABLE_XROS)
+    find_darwin_sdk_dir(DARWIN_xrossim_SYSROOT xrsimulator)
+    find_darwin_sdk_dir(DARWIN_xros_SYSROOT xros)
+  endif()
 
   # Get supported architecture from SDKSettings.
   function(sdk_has_arch_support sdk_path os arch has_support)

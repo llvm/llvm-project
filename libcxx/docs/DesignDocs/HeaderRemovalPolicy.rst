@@ -22,9 +22,10 @@ to port headers to platforms with reduced functionality.
 
 A disadvantage is that users unknowingly depend on these transitive includes.
 Thus removing an include might break their build after upgrading a newer
-version of libc++. For example, ``<algorithm>`` is often forgotten but using
-algorithms will still work through those transitive includes. This problem is
-solved by modules, however in practice most people do not use modules (yet).
+version of libc++ by reducing the set of declarations provided by a header.
+For example, ``<algorithm>`` is often forgotten but using algorithms will
+still work through those transitive includes. This problem is solved by modules,
+however in practice most people do not use modules (yet).
 
 To ease the removal of transitive includes in libc++, libc++ will remove
 unnecessary transitive includes in newly supported C++ versions. This means
@@ -33,21 +34,34 @@ newer version of the Standard. Libc++ also reserves the right to remove
 transitive includes at any other time, however new language versions will be
 used as a convenient way to perform bulk removals of transitive includes.
 
-For libc++ developers, this means that any transitive include removal must be
-guarded by something of the form:
+However, libc++ intends not to gratuitously break users on stable versions of
+the Standard. Hence, we intend to maintain backwards compatibility of the
+declarations we provide in a header, within reason. We reserve the right to
+break such backwards compatibility in the future, however we will strive to
+do it in a user-friendly way, again within reason. For libc++ developers, this
+means that any transitive include removal of a public header must be guarded by
+something of the form:
 
 .. code-block:: cpp
 
-   #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+   #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 23
    #  include <algorithm>
    #  include <iterator>
    #  include <utility>
    #endif
 
-When users define ``_LIBCPP_REMOVE_TRANSITIVE_INCLUDES``, libc++ will not
-include transitive headers, regardless of the language version. This can be
-useful for users to aid the transition to a newer language version, or by users
-who simply want to make sure they include what they use in their code.
+Occasionally, private headers may also be included transitively for backwards
+compatibility in the same manner. We currently strive to provide backwards
+compatibility on the set of declarations provided by a header in all Standard
+modes starting with **C++23**. Note that this is very difficult to actually
+enforce, so this is done only on a best effort basis.
+
+When users define ``_LIBCPP_REMOVE_TRANSITIVE_INCLUDES``, libc++ will not include
+transitive headers, regardless of the language version. This can be useful for users
+to aid the transition to a newer language version, or by users who simply want to
+make sure they include what they use in their code. However, note that defining this
+macro means that the set of declarations and transitive includes provided by the library
+may change from release to release, which can break your code.
 
 
 Rationale

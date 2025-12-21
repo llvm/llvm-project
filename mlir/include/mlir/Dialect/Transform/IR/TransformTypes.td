@@ -103,4 +103,9 @@ def TransformAnyHandle : Type<
         TransformValueHandleTypeInterface.predicate]>,
     "transform operation or value handle">;
 
+def TransformAnyParamTypeOrAnyHandle : Type<
+    Or<[TransformHandleTypeInterface.predicate,
+        TransformParamTypeInterface.predicate]>,
+    "transform any param type or any handle type">;
+
 #endif  // MLIR_DIALECT_TRANSFORM_IR_TRANSFORMTYPES

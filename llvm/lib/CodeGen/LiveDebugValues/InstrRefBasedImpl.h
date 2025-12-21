@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 #include "LiveDebugValues.h"
@@ -204,8 +205,8 @@ public:
         .str();
   }
 
-  static ValueIDNum EmptyValue;
-  static ValueIDNum TombstoneValue;
+  LLVM_ABI_FOR_TEST static ValueIDNum EmptyValue;
+  LLVM_ABI_FOR_TEST static ValueIDNum TombstoneValue;
 };
 
 } // End namespace LiveDebugValues
@@ -425,7 +426,7 @@ struct DbgOpID {
   DbgOpID(uint32_t RawID) : RawID(RawID) {}
   DbgOpID(bool IsConst, uint32_t Index) : ID({IsConst, Index}) {}
 
-  static DbgOpID UndefID;
+  LLVM_ABI_FOR_TEST static DbgOpID UndefID;
 
   bool operator==(const DbgOpID &Other) const { return RawID == Other.RawID; }
   bool operator!=(const DbgOpID &Other) const { return !(*this == Other); }
@@ -788,8 +789,9 @@ public:
     value_type operator*() { return value_type(Idx, ValueMap[LocIdx(Idx)]); }
   };
 
-  MLocTracker(MachineFunction &MF, const TargetInstrInfo &TII,
-              const TargetRegisterInfo &TRI, const TargetLowering &TLI);
+  LLVM_ABI_FOR_TEST MLocTracker(MachineFunction &MF, const TargetInstrInfo &TII,
+                                const TargetRegisterInfo &TRI,
+                                const TargetLowering &TLI);
 
   /// Produce location ID number for a Register. Provides some small amount of
   /// type safety.
@@ -903,7 +905,7 @@ public:
 
   /// Create a LocIdx for an untracked register ID. Initialize it to either an
   /// mphi value representing a live-in, or a recent register mask clobber.
-  LocIdx trackRegister(unsigned ID);
+  LLVM_ABI_FOR_TEST LocIdx trackRegister(unsigned ID);
 
   LocIdx lookupOrTrackRegister(unsigned ID) {
     LocIdx &Index = LocIDToLocIdx[ID];
@@ -968,7 +970,8 @@ public:
   /// Find LocIdx for SpillLoc \p L, creating a new one if it's not tracked.
   /// Returns std::nullopt when in scenarios where a spill slot could be
   /// tracked, but we would likely run into resource limitations.
-  std::optional<SpillLocationNo> getOrTrackSpillLoc(SpillLoc L);
+  LLVM_ABI_FOR_TEST std::optional<SpillLocationNo>
+  getOrTrackSpillLoc(SpillLoc L);
 
   // Get LocIdx of a spill ID.
   LocIdx getSpillMLoc(unsigned SpillID) {
@@ -1342,7 +1345,7 @@ private:
   /// in an MLocTracker. Convert the observations into a per-block transfer
   /// function in \p MLocTransfer, suitable for using with the machine value
   /// location dataflow problem.
-  void
+  LLVM_ABI_FOR_TEST void
   produceMLocTransferFunction(MachineFunction &MF,
                               SmallVectorImpl<MLocTransferMap> &MLocTransfer,
                               unsigned MaxNumBlocks);
@@ -1352,9 +1355,10 @@ private:
   /// live-out arrays to the (initialized to zero) multidimensional arrays in
   /// \p MInLocs and \p MOutLocs. The outer dimension is indexed by block
   /// number, the inner by LocIdx.
-  void buildMLocValueMap(MachineFunction &MF, FuncValueTable &MInLocs,
-                         FuncValueTable &MOutLocs,
-                         SmallVectorImpl<MLocTransferMap> &MLocTransfer);
+  LLVM_ABI_FOR_TEST void
+  buildMLocValueMap(MachineFunction &MF, FuncValueTable &MInLocs,
+                    FuncValueTable &MOutLocs,
+                    SmallVectorImpl<MLocTransferMap> &MLocTransfer);
 
   /// Examine the stack indexes (i.e. offsets within the stack) to find the
   /// basic units of interference -- like reg units, but for the stack.
@@ -1362,10 +1366,9 @@ private:
 
   /// Install PHI values into the live-in array for each block, according to
   /// the IDF of each register.
-  void placeMLocPHIs(MachineFunction &MF,
-                     SmallPtrSetImpl<MachineBasicBlock *> &AllBlocks,
-                     FuncValueTable &MInLocs,
-                     SmallVectorImpl<MLocTransferMap> &MLocTransfer);
+  LLVM_ABI_FOR_TEST void placeMLocPHIs(
+      MachineFunction &MF, SmallPtrSetImpl<MachineBasicBlock *> &AllBlocks,
+      FuncValueTable &MInLocs, SmallVectorImpl<MLocTransferMap> &MLocTransfer);
 
   /// Propagate variable values to blocks in the common case where there's
   /// only one value assigned to the variable. This function has better
@@ -1422,12 +1425,13 @@ private:
   /// \p AssignBlocks contains the set of blocks that aren't in \p DILoc's
   /// scope, but which do contain DBG_VALUEs, which VarLocBasedImpl tracks
   /// locations through.
-  void buildVLocValueMap(const DILocation *DILoc,
-                         const SmallSet<DebugVariableID, 4> &VarsWeCareAbout,
-                         SmallPtrSetImpl<MachineBasicBlock *> &AssignBlocks,
-                         LiveInsT &Output, FuncValueTable &MOutLocs,
-                         FuncValueTable &MInLocs,
-                         SmallVectorImpl<VLocTracker> &AllTheVLocs);
+  LLVM_ABI_FOR_TEST void
+  buildVLocValueMap(const DILocation *DILoc,
+                    const SmallSet<DebugVariableID, 4> &VarsWeCareAbout,
+                    SmallPtrSetImpl<MachineBasicBlock *> &AssignBlocks,
+                    LiveInsT &Output, FuncValueTable &MOutLocs,
+                    FuncValueTable &MInLocs,
+                    SmallVectorImpl<VLocTracker> &AllTheVLocs);
 
   /// Attempt to eliminate un-necessary PHIs on entry to a block. Examines the
   /// live-in values coming from predecessors live-outs, and replaces any PHIs
@@ -1436,16 +1440,17 @@ private:
   /// \p LiveIn Old live-in value, overwritten with new one if live-in changes.
   /// \returns true if any live-ins change value, either from value propagation
   ///          or PHI elimination.
-  bool vlocJoin(MachineBasicBlock &MBB, LiveIdxT &VLOCOutLocs,
-                SmallPtrSet<const MachineBasicBlock *, 8> &BlocksToExplore,
-                DbgValue &LiveIn);
+  LLVM_ABI_FOR_TEST bool
+  vlocJoin(MachineBasicBlock &MBB, LiveIdxT &VLOCOutLocs,
+           SmallPtrSet<const MachineBasicBlock *, 8> &BlocksToExplore,
+           DbgValue &LiveIn);
 
   /// For the given block and live-outs feeding into it, try to find
   /// machine locations for each debug operand where all the values feeding
   /// into that operand join together.
   /// \returns true if a joined location was found for every value that needed
   ///          to be joined.
-  bool
+  LLVM_ABI_FOR_TEST bool
   pickVPHILoc(SmallVectorImpl<DbgOpID> &OutValues, const MachineBasicBlock &MBB,
               const LiveIdxT &LiveOuts, FuncValueTable &MOutLocs,
               const SmallVectorImpl<const MachineBasicBlock *> &BlockOrders);
@@ -1461,7 +1466,7 @@ private:
 
   /// Boilerplate computation of some initial sets, artifical blocks and
   /// RPOT block ordering.
-  void initialSetup(MachineFunction &MF);
+  LLVM_ABI_FOR_TEST void initialSetup(MachineFunction &MF);
 
   /// Produce a map of the last lexical scope that uses a block, using the
   /// scopes DFSOut number. Mapping is block-number to DFSOut.
@@ -1490,7 +1495,7 @@ private:
 
 public:
   /// Default construct and initialize the pass.
-  InstrRefBasedLDV();
+  LLVM_ABI_FOR_TEST InstrRefBasedLDV();
 
   LLVM_DUMP_METHOD
   void dump_mloc_transfer(const MLocTransferMap &mloc_transfer) const;

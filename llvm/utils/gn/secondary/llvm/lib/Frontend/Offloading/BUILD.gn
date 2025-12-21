@@ -8,6 +8,7 @@ static_library("Offloading") {
   ]
   sources = [
     "OffloadWrapper.cpp",
+    "PropertySet.cpp",
     "Utility.cpp",
   ]
 }

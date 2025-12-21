@@ -1,6 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --extra-arg -std=c++20 --output=%t --format=json --executor=standalone %s
-// RUN: FileCheck %s < %t/GlobalNamespace/index.json
+// RUN: FileCheck %s < %t/json/GlobalNamespace/index.json
 
 template<typename T>
 concept Incrementable = requires(T x) {
@@ -14,10 +14,12 @@ template<Incrementable T> Incrementable auto incrementTwo(T t);
 
 // CHECK:       "Functions": [
 // CHECK-NEXT:    {
+// CHECK-NEXT:      "InfoType": "function",
 // CHECK-NEXT:      "IsStatic": false,
 // CHECK-NEXT:      "Name": "increment",
 // CHECK-NEXT:      "Params": [
 // CHECK-NEXT:        {
+// CHECK-NEXT:          "End": true,
 // CHECK-NEXT:          "Name": "t",
 // CHECK-NEXT:          "Type": "T"
 // CHECK-NEXT:        }
@@ -32,24 +34,30 @@ template<Incrementable T> Incrementable auto incrementTwo(T t);
 // CHECK-NEXT:      "Template": {
 // CHECK-NEXT:        "Constraints": [
 // CHECK-NEXT:          {
+// CHECK-NEXT:            "End": true,
 // CHECK-NEXT:            "Expression": "Incrementable<T>",
 // CHECK-NEXT:            "Name": "Incrementable",
-// CHECK-NEXT:            "Path": "",
 // CHECK-NEXT:            "QualName": "Incrementable",
 // CHECK-NEXT:            "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ],
 // CHECK-NEXT:        "Parameters": [
-// CHECK-NEXT:          "typename T"
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "End": true,
+// CHECK-NEXT:            "Param": "typename T"
+// CHECK-NEXT:          }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "USR": "{{[0-9A-F]*}}" 
 // CHECK-NEXT:    },
 // CHECK-NEXT:    {
+// CHECK-NEXT:      "End": true,
+// CHECK-NEXT:      "InfoType": "function",
 // CHECK-NEXT:      "IsStatic": false,
 // CHECK-NEXT:      "Name": "incrementTwo",
 // CHECK-NEXT:      "Params": [
 // CHECK-NEXT:        {
+// CHECK-NEXT:          "End": true,
 // CHECK-NEXT:          "Name": "t",
 // CHECK-NEXT:          "Type": "T"
 // CHECK-NEXT:        }
@@ -64,15 +72,18 @@ template<Incrementable T> Incrementable auto incrementTwo(T t);
 // CHECK-NEXT:      "Template": {
 // CHECK-NEXT:        "Constraints": [
 // CHECK-NEXT:          {
+// CHECK-NEXT:            "End": true,
 // CHECK-NEXT:            "Expression": "Incrementable<T>",
 // CHECK-NEXT:            "Name": "Incrementable",
-// CHECK-NEXT:            "Path": "",
 // CHECK-NEXT:            "QualName": "Incrementable",
 // CHECK-NEXT:            "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ],
 // CHECK-NEXT:        "Parameters": [
-// CHECK-NEXT:          "Incrementable T"
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "End": true,
+// CHECK-NEXT:            "Param": "Incrementable T"
+// CHECK-NEXT:          }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "USR": "{{[0-9A-F]*}}"

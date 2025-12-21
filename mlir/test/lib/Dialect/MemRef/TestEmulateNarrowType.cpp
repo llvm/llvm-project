@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 
@@ -126,10 +127,73 @@ struct TestEmulateNarrowTypePass
                      "normal sequence"),
       llvm::cl::init(false)};
 };
+
+struct TestMemRefFlattenAndVectorNarrowTypeEmulationPass
+    : public PassWrapper<TestMemRefFlattenAndVectorNarrowTypeEmulationPass,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestMemRefFlattenAndVectorNarrowTypeEmulationPass)
+
+  TestMemRefFlattenAndVectorNarrowTypeEmulationPass() = default;
+  TestMemRefFlattenAndVectorNarrowTypeEmulationPass(
+      const TestMemRefFlattenAndVectorNarrowTypeEmulationPass &pass)
+      : PassWrapper(pass) {}
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry
+        .insert<arith::ArithDialect, func::FuncDialect, memref::MemRefDialect,
+                vector::VectorDialect, affine::AffineDialect>();
+  }
+
+  StringRef getArgument() const final {
+    return "test-memref-flatten-and-vector-narrow-type-emulation";
+  }
+
+  StringRef getDescription() const final {
+    return "Test MemRef flattening and vector narrow type emulation patterns";
+  }
+
+  void runOnOperation() override {
+    Operation *op = getOperation();
+    MLIRContext *ctx = &getContext();
+
+    // Create a type converter for narrow type emulation (8-bit)
+    arith::NarrowTypeEmulationConverter typeConverter(8);
+
+    // Add conversions for memref types with i4 elements
+    memref::populateMemRefNarrowTypeEmulationConversions(typeConverter);
+
+    ConversionTarget target(*ctx);
+    target.addDynamicallyLegalOp<func::FuncOp>([&typeConverter](Operation *op) {
+      return typeConverter.isLegal(cast<func::FuncOp>(op).getFunctionType());
+    });
+    auto opLegalCallback = [&typeConverter](Operation *op) {
+      return typeConverter.isLegal(op);
+    };
+    target.addDynamicallyLegalOp<func::CallOp, func::ReturnOp>(opLegalCallback);
+    target.addDynamicallyLegalDialect<
+        arith::ArithDialect, vector::VectorDialect, memref::MemRefDialect,
+        affine::AffineDialect>(opLegalCallback);
+
+    RewritePatternSet patterns(ctx);
+
+    // This is necessary for the purpose of emulating `memref.alloc` and
+    // function boundaries.
+    memref::populateMemRefNarrowTypeEmulationPatterns(typeConverter, patterns);
+
+    vector::populateMemRefFlattenAndVectorNarrowTypeEmulationPatterns(
+        typeConverter, patterns);
+
+    // Apply partial conversion
+    if (failed(applyPartialConversion(op, target, std::move(patterns))))
+      signalPassFailure();
+  }
+};
 } // namespace
 
 namespace mlir::test {
 void registerTestEmulateNarrowTypePass() {
   PassRegistration<TestEmulateNarrowTypePass>();
+  PassRegistration<TestMemRefFlattenAndVectorNarrowTypeEmulationPass>();
 }
 } // namespace mlir::test

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/opencl-base.h>
 
 _CLC_DECL void __clc_write_imagei_2d(image2d_t image, int2 coord, int4 color);
 

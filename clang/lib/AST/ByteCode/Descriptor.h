@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_DESCRIPTOR_H
 #define LLVM_CLANG_AST_INTERP_DESCRIPTOR_H
 
+#include "InitMap.h"
 #include "PrimType.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
@@ -22,12 +23,10 @@ namespace interp {
 class Block;
 class Record;
 class SourceInfo;
-struct InitMap;
 struct Descriptor;
-enum PrimType : unsigned;
+enum PrimType : uint8_t;
 
 using DeclTy = llvm::PointerUnion<const Decl *, const Expr *>;
-using InitMapPtr = std::optional<std::pair<bool, std::shared_ptr<InitMap>>>;
 
 /// Invoked whenever a block is created. The constructor method fills in the
 /// inline descriptors of all fields and array elements. It also initializes
@@ -39,14 +38,6 @@ using BlockCtorFn = void (*)(Block *Storage, std::byte *FieldPtr, bool IsConst,
 /// Invoked when a block is destroyed. Invokes the destructors of all
 /// non-trivial nested fields of arrays and records.
 using BlockDtorFn = void (*)(Block *Storage, std::byte *FieldPtr,
-                             const Descriptor *FieldDesc);
-
-/// Invoked when a block with pointers referencing it goes out of scope. Such
-/// blocks are persisted: the move function copies all inline descriptors and
-/// non-trivial fields, as existing pointers might need to reference those
-/// descriptors. Data is not copied since it cannot be legally read.
-using BlockMoveFn = void (*)(Block *Storage, std::byte *SrcFieldPtr,
-                             std::byte *DstFieldPtr,
                              const Descriptor *FieldDesc);
 
 enum class GlobalInitState {
@@ -101,6 +92,10 @@ struct InlineDescriptor {
   /// Flag indicating if the field is mutable (if in a record).
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsFieldMutable : 1;
+  /// Flag indicating if this field is a const field nested in
+  /// a mutable parent field.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsConstInMutable : 1;
   /// Flag indicating if the field is an element of a composite array.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsArrayElement : 1;
@@ -160,7 +155,7 @@ public:
   /// The primitive type this descriptor was created for,
   /// or the primitive element type in case this is
   /// a primitive array.
-  const std::optional<PrimType> PrimT = std::nullopt;
+  const OptPrimType PrimT = std::nullopt;
   /// Flag indicating if the block is mutable.
   const bool IsConst = false;
   /// Flag indicating if a field is mutable.
@@ -170,14 +165,11 @@ public:
   const bool IsVolatile = false;
   /// Flag indicating if the block is an array.
   const bool IsArray = false;
-  /// Flag indicating if this is a dummy descriptor.
-  bool IsDummy = false;
   bool IsConstexprUnknown = false;
 
   /// Storage management methods.
   const BlockCtorFn CtorFn = nullptr;
   const BlockDtorFn DtorFn = nullptr;
-  const BlockMoveFn MoveFn = nullptr;
 
   /// Allocates a descriptor for a primitive.
   Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
@@ -207,9 +199,6 @@ public:
 
   /// Allocates a dummy descriptor.
   Descriptor(const DeclTy &D, MetadataSize MD = std::nullopt);
-
-  /// Make this descriptor a dummy descriptor.
-  void makeDummy() { IsDummy = true; }
 
   QualType getType() const;
   QualType getElemQualType() const;
@@ -278,8 +267,6 @@ public:
   bool isRecord() const { return !IsArray && ElemRecord; }
   /// Checks if the descriptor is of a union.
   bool isUnion() const;
-  /// Checks if this is a dummy descriptor.
-  bool isDummy() const { return IsDummy; }
 
   /// Whether variables of this descriptor need their destructor called or not.
   bool hasTrivialDtor() const;
@@ -287,39 +274,6 @@ public:
   void dump() const;
   void dump(llvm::raw_ostream &OS) const;
   void dumpFull(unsigned Offset = 0, unsigned Indent = 0) const;
-};
-
-/// Bitfield tracking the initialisation status of elements of primitive arrays.
-struct InitMap final {
-private:
-  /// Type packing bits.
-  using T = uint64_t;
-  /// Bits stored in a single field.
-  static constexpr uint64_t PER_FIELD = sizeof(T) * CHAR_BIT;
-
-public:
-  /// Initializes the map with no fields set.
-  explicit InitMap(unsigned N);
-
-private:
-  friend class Pointer;
-
-  /// Returns a pointer to storage.
-  T *data() { return Data.get(); }
-  const T *data() const { return Data.get(); }
-
-  /// Initializes an element. Returns true when object if fully initialized.
-  bool initializeElement(unsigned I);
-
-  /// Checks if an element was initialized.
-  bool isElementInitialized(unsigned I) const;
-
-  static constexpr size_t numFields(unsigned N) {
-    return (N + PER_FIELD - 1) / PER_FIELD;
-  }
-  /// Number of fields not initialized.
-  unsigned UninitFields;
-  std::unique_ptr<T[]> Data;
 };
 
 } // namespace interp

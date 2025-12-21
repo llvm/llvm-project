@@ -26,7 +26,7 @@ define zeroext i16 @overflow_add(i16 zeroext %a, i16 zeroext %b) {
 define zeroext i16 @overflow_sub(i16 zeroext %a, i16 zeroext %b) {
 ; CHECK-LABEL: overflow_sub:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subw a0, a0, a1
+; CHECK-NEXT:    sub a0, a0, a1
 ; CHECK-NEXT:    ori a0, a0, 1
 ; CHECK-NEXT:    slli a0, a0, 48
 ; CHECK-NEXT:    srli a0, a0, 48

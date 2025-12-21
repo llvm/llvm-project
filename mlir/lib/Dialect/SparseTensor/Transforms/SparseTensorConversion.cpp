@@ -137,7 +137,7 @@ static SmallVector<Value> getDimSizes(OpBuilder &builder, Location loc,
 /// this buffer must be explicitly deallocated by client.
 static Value genAlloc(RewriterBase &rewriter, Location loc, Value sz, Type tp) {
   auto memTp = MemRefType::get({ShapedType::kDynamic}, tp);
-  return rewriter.create<memref::AllocOp>(loc, memTp, ValueRange{sz});
+  return memref::AllocOp::create(rewriter, loc, memTp, ValueRange{sz});
 }
 
 /// Generates a temporary buffer for the level-types of the given encoding.
@@ -154,7 +154,7 @@ static Value genLvlTypesBuffer(OpBuilder &builder, Location loc,
 static Value extractBarePtrFromTensor(OpBuilder &builder, Location loc,
                                       Value tensor) {
   auto buf = genToMemref(builder, loc, tensor);
-  return builder.create<memref::ExtractAlignedPointerAsIndexOp>(loc, buf);
+  return memref::ExtractAlignedPointerAsIndexOp::create(builder, loc, buf);
 }
 
 /// Generates a temporary buffer for the level-types of the given encoding.
@@ -168,12 +168,12 @@ static Value genLvlPtrsBuffers(OpBuilder &builder, Location loc,
 
   // Passing in value buffer pointers.
   lvlBarePtrs.push_back(extractBarePtrFromTensor(builder, loc, valTensor));
-  Value idxPtr = builder.create<memref::ExtractAlignedPointerAsIndexOp>(
-      loc, allocaBuffer(builder, loc, lvlBarePtrs));
+  Value idxPtr = memref::ExtractAlignedPointerAsIndexOp::create(
+      builder, loc, allocaBuffer(builder, loc, lvlBarePtrs));
   Value idxCast =
-      builder.create<arith::IndexCastOp>(loc, builder.getI64Type(), idxPtr);
-  return builder.create<LLVM::IntToPtrOp>(loc, getOpaquePointerType(builder),
-                                          idxCast);
+      arith::IndexCastOp::create(builder, loc, builder.getI64Type(), idxPtr);
+  return LLVM::IntToPtrOp::create(builder, loc, getOpaquePointerType(builder),
+                                  idxCast);
 }
 
 /// This class abstracts over the API of `_mlir_ciface_newSparseTensor`:
@@ -227,7 +227,7 @@ public:
     assert(isInitialized() && "Must initialize before genNewCall");
     StringRef name = "newSparseTensor";
     params[kParamAction] = constantAction(builder, loc, action);
-    params[kParamPtr] = ptr ? ptr : builder.create<LLVM::ZeroOp>(loc, pTp);
+    params[kParamPtr] = ptr ? ptr : LLVM::ZeroOp::create(builder, loc, pTp);
     return createFuncCall(builder, loc, name, pTp, params, EmitCInterface::On)
         .getResult(0);
   }
@@ -539,7 +539,7 @@ public:
     // Cast the MemRef type to the type expected by the users, though these
     // two types should be compatible at runtime.
     if (op.getType() != crds.getType())
-      crds = rewriter.create<memref::CastOp>(loc, op.getType(), crds);
+      crds = memref::CastOp::create(rewriter, loc, op.getType(), crds);
     rewriter.replaceOp(op, crds);
     return success();
   }
@@ -560,7 +560,7 @@ public:
     // Cast the MemRef type to the type expected by the users, though these
     // two types should be compatible at runtime.
     if (op.getType() != crds.getType())
-      crds = rewriter.create<memref::CastOp>(loc, op.getType(), crds);
+      crds = memref::CastOp::create(rewriter, loc, op.getType(), crds);
     rewriter.replaceOp(op, crds);
     return success();
   }
@@ -652,7 +652,7 @@ public:
       vref = genAllocaScalar(rewriter, loc, elemTp);
     }
     storeAll(rewriter, loc, lvlCoords, adaptor.getIndices());
-    rewriter.create<memref::StoreOp>(loc, adaptor.getScalar(), vref);
+    memref::StoreOp::create(rewriter, loc, adaptor.getScalar(), vref);
     SmallString<12> name{"lexInsert", primaryTypeFunctionSuffix(elemTp)};
     createFuncCall(rewriter, loc, name, {},
                    {adaptor.getDest(), lvlCoords, vref}, EmitCInterface::On);
@@ -690,12 +690,12 @@ public:
     // operation is amortized over the innermost loops for the access
     // pattern expansion. As noted in the operation doc, we would like
     // to amortize this setup cost even between kernels.
-    rewriter.create<linalg::FillOp>(
-        loc, ValueRange{constantZero(rewriter, loc, eltType)},
-        ValueRange{values});
-    rewriter.create<linalg::FillOp>(
-        loc, ValueRange{constantZero(rewriter, loc, boolType)},
-        ValueRange{filled});
+    linalg::FillOp::create(rewriter, loc,
+                           ValueRange{constantZero(rewriter, loc, eltType)},
+                           ValueRange{values});
+    linalg::FillOp::create(rewriter, loc,
+                           ValueRange{constantZero(rewriter, loc, boolType)},
+                           ValueRange{filled});
     // Replace expansion op with these buffers and initial coordinate.
     assert(op.getNumResults() == 4);
     rewriter.replaceOp(op, {values, filled, lastLvlCoordinates, zero});
@@ -730,12 +730,12 @@ public:
                    {tensor, lvlCoords, values, filled, added, count},
                    EmitCInterface::On);
     Operation *parent = getTop(op);
+    rewriter.setInsertionPointAfter(parent);
     rewriter.replaceOp(op, adaptor.getTensor());
     // Deallocate the buffers on exit of the loop nest.
-    rewriter.setInsertionPointAfter(parent);
-    rewriter.create<memref::DeallocOp>(loc, values);
-    rewriter.create<memref::DeallocOp>(loc, filled);
-    rewriter.create<memref::DeallocOp>(loc, added);
+    memref::DeallocOp::create(rewriter, loc, values);
+    memref::DeallocOp::create(rewriter, loc, filled);
+    memref::DeallocOp::create(rewriter, loc, added);
     return success();
   }
 };
@@ -837,21 +837,21 @@ public:
                                       cooStartLvl + 1);
       auto crdLen = linalg::createOrFoldDimOp(rewriter, loc, crds0, 0);
       auto two = constantIndex(rewriter, loc, 2);
-      auto bufLen = rewriter.create<arith::MulIOp>(loc, crdLen, two);
+      auto bufLen = arith::MulIOp::create(rewriter, loc, crdLen, two);
       Type indexType = rewriter.getIndexType();
       auto zero = constantZero(rewriter, loc, indexType);
       auto one = constantOne(rewriter, loc, indexType);
-      scf::ForOp forOp = rewriter.create<scf::ForOp>(loc, zero, crdLen, one);
+      scf::ForOp forOp = scf::ForOp::create(rewriter, loc, zero, crdLen, one);
       auto idx = forOp.getInductionVar();
       rewriter.setInsertionPointToStart(forOp.getBody());
-      auto c0 = rewriter.create<memref::LoadOp>(loc, crds0, idx);
-      auto c1 = rewriter.create<memref::LoadOp>(loc, crds1, idx);
+      auto c0 = memref::LoadOp::create(rewriter, loc, crds0, idx);
+      auto c1 = memref::LoadOp::create(rewriter, loc, crds1, idx);
       SmallVector<Value> args;
       args.push_back(idx);
       args.push_back(zero);
-      rewriter.create<memref::StoreOp>(loc, c0, buf, args);
+      memref::StoreOp::create(rewriter, loc, c0, buf, args);
       args[1] = one;
-      rewriter.create<memref::StoreOp>(loc, c1, buf, args);
+      memref::StoreOp::create(rewriter, loc, c1, buf, args);
       rewriter.setInsertionPointAfter(forOp);
       auto bufLenTp = op.getLvlLens().getTypes()[retLen.size()];
       retVal.push_back(buf);
@@ -867,11 +867,11 @@ public:
     // Converts MemRefs back to Tensors.
     assert(retVal.size() + retLen.size() == op.getNumResults());
     for (unsigned i = 0, sz = retVal.size(); i < sz; i++) {
-      auto tensor = rewriter.create<bufferization::ToTensorOp>(
-          loc, memref::getTensorTypeFromMemRefType(retVal[i].getType()),
-          retVal[i]);
+      auto tensor = bufferization::ToTensorOp::create(
+          rewriter, loc,
+          memref::getTensorTypeFromMemRefType(retVal[i].getType()), retVal[i]);
       retVal[i] =
-          rewriter.create<tensor::CastOp>(loc, op.getResultTypes()[i], tensor);
+          tensor::CastOp::create(rewriter, loc, op.getResultTypes()[i], tensor);
     }
 
     // Appends the actual memory length used in each buffer returned.

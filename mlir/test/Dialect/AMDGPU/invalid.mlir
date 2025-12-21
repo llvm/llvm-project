@@ -19,9 +19,7 @@ func.func @mixing_packed_stoch_round_types(%arg0: f32, %arg1: i32, %arg2: vector
 func.func @bad_source_types(%a: vector<2xf32>, %b: vector<4xf16>,
                                 %c: vector<32xf32>) -> vector<32xf32> {
   // expected-error@+1 {{'amdgpu.mfma' op expected both non-small-float source operand types to match exactly}}
-  %d = amdgpu.mfma %a * %b + %c {
-    m = 32 : i32, n = 32 : i32, k = 1 : i32, blocks = 2 : i32,
-    abid = 0 : i32, cbsz = 0 : i32} blgp = none : vector<2xf32>, vector<4xf16>, vector<32xf32>
+  %d = amdgpu.mfma 32x32x1 %a * %b + %c { blocks = 2 : i32, abid = 0 : i32, cbsz = 0 : i32} blgp = none : vector<2xf32>, vector<4xf16>, vector<32xf32>
   func.return %d : vector<32xf32>
 }
 
@@ -30,9 +28,7 @@ func.func @bad_source_types(%a: vector<2xf32>, %b: vector<4xf16>,
 func.func @bad_source_types_f8(%a: vector<8xf8E5M2FNUZ>, %b: vector<8xi8>,
                                 %c: vector<32xf32>) -> vector<32xf32> {
   // expected-error@+1 {{'amdgpu.mfma' op expected both source operands to have small-float elements if one does}}
-  %d = amdgpu.mfma %a * %b + %c {
-    m = 32 : i32, n = 32 : i32, k = 1 : i32, blocks = 2 : i32,
-    abid = 0 : i32, cbsz = 0 : i32} blgp = none : vector<8xf8E5M2FNUZ>, vector<8xi8>, vector<32xf32>
+  %d = amdgpu.mfma 32x32x1 %a * %b + %c { blocks = 2 : i32, abid = 0 : i32, cbsz = 0 : i32} blgp = none : vector<8xf8E5M2FNUZ>, vector<8xi8>, vector<32xf32>
   func.return %d : vector<32xf32>
 }
 
@@ -41,9 +37,7 @@ func.func @bad_source_types_f8(%a: vector<8xf8E5M2FNUZ>, %b: vector<8xi8>,
 func.func @bad_source_arguments(%a: vector<2xf32>, %b: vector<2xf32>,
                                 %c: vector<32xf32>) -> vector<32xf32> {
   // expected-error@+1 {{'amdgpu.mfma' op expected 1 source values for this operation but got 2}}
-  %d = amdgpu.mfma %a * %b + %c {
-    m = 32 : i32, n = 32 : i32, k = 1 : i32, blocks = 2 : i32,
-    abid = 0 : i32, cbsz = 0 : i32} blgp = none : vector<2xf32>, vector<2xf32>, vector<32xf32>
+  %d = amdgpu.mfma 32x32x1 %a * %b + %c { blocks = 2 : i32, abid = 0 : i32, cbsz = 0 : i32} blgp = none : vector<2xf32>, vector<2xf32>, vector<32xf32>
   func.return %d : vector<32xf32>
 }
 
@@ -52,9 +46,7 @@ func.func @bad_source_arguments(%a: vector<2xf32>, %b: vector<2xf32>,
 func.func @bad_source_arguments_i8(%a: vector<8xi8>, %b: vector<8xi8>,
                                    %c: vector<4xi32>) -> vector<4xi32> {
   // expected-error@+1 {{'amdgpu.mfma' op expected 4 source values for this operation but got 8}}
-  %d = amdgpu.mfma %a * %b + %c {
-    m = 32 : i32, n = 32 : i32, k = 4 : i32, blocks = 2 : i32,
-    abid = 0 : i32, cbsz = 0 : i32} blgp = none : vector<8xi8>, vector<8xi8>, vector<4xi32>
+  %d = amdgpu.mfma 32x32x4 %a * %b + %c { blocks = 2 : i32, abid = 0 : i32, cbsz = 0 : i32} blgp = none : vector<8xi8>, vector<8xi8>, vector<4xi32>
   func.return %d : vector<4xi32>
 }
 
@@ -62,9 +54,7 @@ func.func @bad_source_arguments_i8(%a: vector<8xi8>, %b: vector<8xi8>,
 
 func.func @bad_dest_type(%a: f32, %b: f32, %c: vector<16xf32>) -> vector<16xf32> {
   // expected-error@+1 {{'amdgpu.mfma' op expected 32 result values for this operation but got 16}}
-  %d = amdgpu.mfma %a * %b + %c {
-    m = 32 : i32, n = 32 : i32, k = 1 : i32, blocks = 2 : i32,
-    abid = 0 : i32, cbsz = 0 : i32} blgp = none : f32, f32, vector<16xf32>
+  %d = amdgpu.mfma 32x32x1 %a * %b + %c { blocks = 2 : i32, abid = 0 : i32, cbsz = 0 : i32} blgp = none : f32, f32, vector<16xf32>
   return %d : vector<16xf32>
 }
 
@@ -72,9 +62,7 @@ func.func @bad_dest_type(%a: f32, %b: f32, %c: vector<16xf32>) -> vector<16xf32>
 
 func.func @f64_permuting_b(%a: f64, %b: f64, %c: vector<4xf64>) -> vector<4xf64> {
   // expected-error@+1 {{'amdgpu.mfma' op double-precision ops do not support permuting lanes of B}}
-  %d = amdgpu.mfma %a * %b + %c {
-    m = 16 : i32, n = 16 : i32, k = 4 : i32, blocks = 1 : i32,
-    abid = 0 : i32, cbsz = 0 : i32} blgp = bcast_first_32 : f64, f64, vector<4xf64>
+  %d = amdgpu.mfma 16x16x4 %a * %b + %c { abid = 0 : i32, cbsz = 0 : i32} blgp = bcast_first_32 : f64, f64, vector<4xf64>
   return %d : vector<4xf64>
 }
 
@@ -82,9 +70,7 @@ func.func @f64_permuting_b(%a: f64, %b: f64, %c: vector<4xf64>) -> vector<4xf64>
 
 func.func @f64_permuting_a(%a: f64, %b: f64, %c: vector<4xf64>) -> vector<4xf64> {
   // expected-error@+1 {{'amdgpu.mfma' op double-precision ops do not support permuting lanes of A}}
-  %d = amdgpu.mfma %a * %b + %c {
-    m = 16 : i32, n = 16 : i32, k = 4 : i32, blocks = 1 : i32,
-    abid = 0 : i32, cbsz = 1 : i32} blgp = none : f64, f64, vector<4xf64>
+  %d = amdgpu.mfma 16x16x4 %a * %b + %c { abid = 0 : i32, cbsz = 1 : i32} blgp = none : f64, f64, vector<4xf64>
   return %d : vector<4xf64>
 }
 
@@ -92,9 +78,7 @@ func.func @f64_permuting_a(%a: f64, %b: f64, %c: vector<4xf64>) -> vector<4xf64>
 
 func.func @abid_without_bradcast(%a: f32, %b: f32, %c: vector<32xf32>) -> vector<32xf32> {
   // expected-error@+1 {{'amdgpu.mfma' op block ID for permuting A (abid) must be below 2 ** cbsz}}
-  %d = amdgpu.mfma %a * %b + %c {
-    m = 32 : i32, n = 32 : i32, k = 1 : i32, blocks = 2 : i32,
-    abid = 1 : i32, cbsz = 0 : i32} blgp = none : f32, f32, vector<32xf32>
+  %d = amdgpu.mfma 32x32x1 %a * %b + %c { blocks = 2 : i32, abid = 1 : i32, cbsz = 0 : i32} blgp = none : f32, f32, vector<32xf32>
   func.return %d : vector<32xf32>
 }
 
@@ -102,9 +86,7 @@ func.func @abid_without_bradcast(%a: f32, %b: f32, %c: vector<32xf32>) -> vector
 
 func.func @abid_too_large(%a: f32, %b: f32, %c: vector<32xf32>) -> vector<32xf32> {
   // expected-error@+1 {{'amdgpu.mfma' op block ID for permuting A (abid) must be below 2 ** cbsz}}
-  %d = amdgpu.mfma %a * %b + %c {
-    m = 32 : i32, n = 32 : i32, k = 1 : i32, blocks = 2 : i32,
-    abid = 2 : i32, cbsz = 1 : i32} blgp = none : f32, f32, vector<32xf32>
+  %d = amdgpu.mfma 32x32x1 %a * %b + %c { blocks = 2 : i32, abid = 2 : i32, cbsz = 1 : i32} blgp = none : f32, f32, vector<32xf32>
   func.return %d : vector<32xf32>
 }
 
@@ -112,23 +94,133 @@ func.func @abid_too_large(%a: f32, %b: f32, %c: vector<32xf32>) -> vector<32xf32
 
 func.func @no_negation(%a: f32, %b: f32, %c: vector<32xf32>) -> vector<32xf32> {
   // expected-error@+1 {{'amdgpu.mfma' op negation flags only available for double-precision operations}}
-  %d = amdgpu.mfma %a * %b + %c {
-    m = 32 : i32, n = 32 : i32, k = 1 : i32, blocks = 2 : i32,
-    abid = 0 : i32, cbsz = 0 : i32, negateA} blgp = none : f32, f32, vector<32xf32>
+  %d = amdgpu.mfma 32x32x1 %a * %b + %c { blocks = 2 : i32, abid = 0 : i32, cbsz = 0 : i32, negateA} blgp = none : f32, f32, vector<32xf32>
   func.return %d : vector<32xf32>
 }
 
 // -----
 
-func.func @wmma(%arg0 : vector<16xf16>, %arg1 : vector<8xi32>) -> vector<8xi32> {
-  // expected-error@+1 {{'amdgpu.wmma' op Expected int sources with int destination}}
-  %0 = amdgpu.wmma %arg0 * %arg0 + %arg1 : vector<16xf16>, vector<16xf16>, vector<8xi32>
+func.func @mfma_invalid_m(%a: f32, %b: f32, %c: vector<32xf32>) -> vector<32xf32> {
+  // expected-error@+1 {{'amdgpu.mfma' op attribute 'm' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {4, 16, 32}}}
+  %d = amdgpu.mfma 7x32x1 %a * %b + %c { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : f32, f32, vector<32xf32>
+  func.return %d : vector<32xf32>
+}
+
+// -----
+
+func.func @mfma_invalid_n(%a: f32, %b: f32, %c: vector<32xf32>) -> vector<32xf32> {
+  // expected-error@+1 {{'amdgpu.mfma' op attribute 'n' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {4, 16, 32}}}
+  %d = amdgpu.mfma 32x7x1 %a * %b + %c { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : f32, f32, vector<32xf32>
+  func.return %d : vector<32xf32>
+}
+
+// -----
+
+func.func @mfma_invalid_k(%a: f32, %b: f32, %c: vector<32xf32>) -> vector<32xf32> {
+  // expected-error@+1 {{'amdgpu.mfma' op attribute 'k' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {1, 2, 4, 8, 16, 32, 64, 128}}}
+  %d = amdgpu.mfma 32x32x3 %a * %b + %c { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : f32, f32, vector<32xf32>
+  func.return %d : vector<32xf32>
+}
+
+// -----
+
+func.func @mfma_invalid_blocks(%a: f32, %b: f32, %c: vector<32xf32>) -> vector<32xf32> {
+  // expected-error@+1 {{'amdgpu.mfma' op attribute 'blocks' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {1, 2, 4, 16}}}
+  %d = amdgpu.mfma 32x32x1 %a * %b + %c { blocks = 7 : i32, abid = 0 : i32, cbsz = 0 : i32 } blgp = none : f32, f32, vector<32xf32>
+  func.return %d : vector<32xf32>
+}
+
+// -----
+
+func.func @wmma_f16_i32(%arg0 : vector<16xf16>, %arg1 : vector<8xi32>) -> vector<8xi32> {
+  // expected-error@+1 {{'amdgpu.wmma' op expected int sources with int destination}}
+  %0 = amdgpu.wmma 16x16x16 %arg0 * %arg0 + %arg1 : vector<16xf16>, vector<16xf16>, vector<8xi32>
   func.return %0 : vector<8xi32>
 }
 
 // -----
 
-// Missinng `resetOffset`
+func.func @wmma_i16_f32(%arg0 : vector<16xi8>, %arg1 : vector<8xf32>) -> vector<8xf32> {
+  // expected-error@+1 {{'amdgpu.wmma' op expected float sources with float destination}}
+  %0 = amdgpu.wmma 16x16x16 %arg0 * %arg0 + %arg1 : vector<16xi8>, vector<16xi8>, vector<8xf32>
+  func.return %0 : vector<8xf32>
+}
+
+// -----
+
+func.func @wmma_no_k_dim(%arg0 : vector<16xi8>, %arg1 : vector<8xi32>) -> vector<8xi32> {
+  // expected-error@+1 {{'amdgpu.wmma' expected 3 dimensions in MNK dimension list}}
+  %0 = amdgpu.wmma 16x16 %arg0 * %arg0 + %arg1 : vector<16xi8>, vector<16xi8>, vector<8xi32>
+  func.return %0 : vector<8xi32>
+}
+
+// -----
+
+func.func @wmma_wrong_n_dim(%arg0 : vector<16xi8>, %arg1 : vector<8xi32>) -> vector<8xi32> {
+  // expected-error@+1 {{'amdgpu.wmma' op attribute 'n' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {16}}}
+  %0 = amdgpu.wmma 16x32x16 %arg0 * %arg0 + %arg1 : vector<16xi8>, vector<16xi8>, vector<8xi32>
+  func.return %0 : vector<8xi32>
+}
+
+// -----
+
+func.func @wmma_wrong_k_dim(%arg0 : vector<16xi8>, %arg1 : vector<8xi32>) -> vector<8xi32> {
+  // expected-error@+1 {{'amdgpu.wmma' op attribute 'k' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {4, 16, 32, 64, 128}}}
+  %0 = amdgpu.wmma 16x16x24 %arg0 * %arg0 + %arg1 : vector<16xi8>, vector<16xi8>, vector<8xi32>
+  func.return %0 : vector<8xi32>
+}
+
+// -----
+
+func.func @wmma_source_length_mismatch(%arg0 : vector<8xf16>, %arg1 : vector<16xf16>, %arg2 : vector<8xf32>) -> vector<8xf32> {
+  // expected-error@+1 {{'amdgpu.wmma' op source vectors have different lengths}}
+  %0 = amdgpu.wmma 16x16x16 %arg0 * %arg1 + %arg2 : vector<8xf16>, vector<16xf16>, vector<8xf32>
+  func.return %0 : vector<8xf32>
+}
+
+// -----
+
+func.func @wmma_mismatched_float_types(%arg0 : vector<8xf16>, %arg1 : vector<8xbf16>, %arg2 : vector<8xf32>) -> vector<8xf32> {
+  // expected-error@+1 {{'amdgpu.wmma' op source element types must match (except for fp8/bf8)}}
+  %0 = amdgpu.wmma 16x16x16 %arg0 * %arg1 + %arg2 : vector<8xf16>, vector<8xbf16>, vector<8xf32>
+  func.return %0 : vector<8xf32>
+}
+
+// -----
+
+func.func @wmma_mismatched_int_types(%arg0 : vector<8xi8>, %arg1 : vector<8xi4>, %arg2 : vector<8xi32>) -> vector<8xi32> {
+  // expected-error@+1 {{'amdgpu.wmma' op source element types must match (except for fp8/bf8)}}
+  %0 = amdgpu.wmma 16x16x16 %arg0 * %arg1 + %arg2 : vector<8xi8>, vector<8xi4>, vector<8xi32>
+  func.return %0 : vector<8xi32>
+}
+
+// -----
+
+func.func @wmma_clamp_float(%arg0 : vector<8xf16>, %arg1 : vector<8xf32>) -> vector<8xf32> {
+  // expected-error@+1 {{'amdgpu.wmma' op clamp flag is not supported for float types}}
+  %0 = amdgpu.wmma 16x16x16 %arg0 * %arg0 + %arg1 {clamp} : vector<8xf16>, vector<8xf16>, vector<8xf32>
+  func.return %0 : vector<8xf32>
+}
+
+// -----
+
+func.func @wmma_unsignedA_float(%arg0 : vector<8xf16>, %arg1 : vector<8xf32>) -> vector<8xf32> {
+  // expected-error@+1 {{'amdgpu.wmma' op unsigned flags are not supported for float types}}
+  %0 = amdgpu.wmma 16x16x16 %arg0 * %arg0 + %arg1 {unsignedA} : vector<8xf16>, vector<8xf16>, vector<8xf32>
+  func.return %0 : vector<8xf32>
+}
+
+// -----
+
+func.func @wmma_unsignedB_float(%arg0 : vector<8xf16>, %arg1 : vector<8xf32>) -> vector<8xf32> {
+  // expected-error@+1 {{'amdgpu.wmma' op unsigned flags are not supported for float types}}
+  %0 = amdgpu.wmma 16x16x16 %arg0 * %arg0 + %arg1 {unsignedB} : vector<8xf16>, vector<8xf16>, vector<8xf32>
+  func.return %0 : vector<8xf32>
+}
+
+// -----
+
+// Missing `resetOffset`
 func.func @fat_raw_buffer_cast_stripped_offset(%m: memref<8xi32, strided<[1], offset: ?>, #gpu.address_space<global>>) -> memref<8xi32, #amdgpu.address_space<fat_raw_buffer>> {
   // expected-error@+1 {{'amdgpu.fat_raw_buffer_cast' op expected result type to be 'memref<8xi32, strided<[1], offset: ?>, #amdgpu.address_space<fat_raw_buffer>>' but got 'memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>'}}
   %ret = amdgpu.fat_raw_buffer_cast %m : memref<8xi32, strided<[1], offset: ?>, #gpu.address_space<global>> to memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
@@ -221,4 +313,206 @@ func.func @transpose_load_vector_size_i8(%idx1 : index, %idx2 : index, %mem : me
   // expected-error@+1 {{'amdgpu.transpose_load' op Transferring type size mismatch: expected num of elements: 16}}
   %0 = amdgpu.transpose_load %mem[%idx1, %idx2] : memref<128x32xi6, 3> -> vector<8xi6>
   func.return %0 : vector<8xi6>
+}
+
+// -----
+
+func.func @gather_to_lds_non_lds(%idx1 : index, %mem1 : memref<32xf16>, %mem2 : memref<32xf16>) {
+  // expected-error@+1 {{'amdgpu.gather_to_lds' op destination memory address space must be Workgroup}}
+  amdgpu.gather_to_lds %mem1[%idx1], %mem2[%idx1] : vector<2xf16>, memref<32xf16>, memref<32xf16>
+  func.return
+}
+
+// -----
+
+func.func @gather_to_lds_non_lds(%idx1 : index, %mem1 : memref<32xf16>, %mem2 : memref<32xf16, strided<[?]>, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.gather_to_lds' op destination type inner most dim must be contiguous}}
+  amdgpu.gather_to_lds %mem1[%idx1], %mem2[%idx1] : vector<2xf16>, memref<32xf16>, memref<32xf16, strided<[?]>, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+func.func @scaled_mfma_invalid_m(%arg0 : vector<4xf8E8M0FNU>, %arg1 : vector<32xf4E2M1FN>, %arg2 : vector<16xf32>) -> vector<16xf32> {
+  // expected-error@+1 {{'amdgpu.scaled_mfma' op attribute 'm' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {16, 32}}}
+  %0 = amdgpu.scaled_mfma 8x32x64 (%arg0[0] * %arg1) * (%arg0[1] * %arg1) + %arg2 : vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<16xf32>
+  func.return %0 : vector<16xf32>
+}
+
+// -----
+
+func.func @scaled_mfma_invalid_n(%arg0 : vector<4xf8E8M0FNU>, %arg1 : vector<32xf4E2M1FN>, %arg2 : vector<16xf32>) -> vector<16xf32> {
+  // expected-error@+1 {{'amdgpu.scaled_mfma' op attribute 'n' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {16, 32}}}
+  %0 = amdgpu.scaled_mfma 32x8x64 (%arg0[0] * %arg1) * (%arg0[1] * %arg1) + %arg2 : vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<16xf32>
+  func.return %0 : vector<16xf32>
+}
+
+// -----
+
+func.func @scaled_mfma_invalid_k(%arg0 : vector<4xf8E8M0FNU>, %arg1 : vector<32xf4E2M1FN>, %arg2 : vector<16xf32>) -> vector<16xf32> {
+  // expected-error@+1 {{'amdgpu.scaled_mfma' op attribute 'k' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {64, 128}}}
+  %0 = amdgpu.scaled_mfma 32x32x32 (%arg0[0] * %arg1) * (%arg0[1] * %arg1) + %arg2 : vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<16xf32>
+  func.return %0 : vector<16xf32>
+}
+
+// -----
+
+func.func @make_dma_base_invalid_addressspace(%idx: index, %mem: memref<8xi32>) {
+  // expected-error@+1 {{'amdgpu.make_dma_base' op lds memref must have workgroup address space attribute.}}
+  amdgpu.make_dma_base %mem[%idx], %mem[%idx] : memref<8xi32>, memref<8xi32> -> !amdgpu.tdm_base<i32>
+}
+
+// -----
+
+func.func @make_dma_base_invalid_addressspace(%idx: index, %smem : memref<8xi32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.make_dma_base' op global memref must have global address space attribute.}}
+  amdgpu.make_dma_base %smem[%idx], %smem[%idx] : memref<8xi32, #gpu.address_space<workgroup>>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+  return
+}
+
+// -----
+
+func.func @make_gather_dma_base_invalid_addressspace(%idx: index, %mem: memref<8xi32>) {
+  // expected-error@+1 {{'amdgpu.make_gather_dma_base' op lds memref must have workgroup address space attribute.}}
+  amdgpu.make_gather_dma_base %mem[%idx], %mem[%idx] : memref<8xi32>, memref<8xi32> -> !amdgpu.tdm_gather_base<i32, i16>
+  return
+}
+
+// -----
+
+func.func @make_gather_dma_base_invalid_index_type(%idx: index, %smem: memref<8xi32, #gpu.address_space<workgroup>>, %mem: memref<8xi32>) {
+  // expected-error@+1 {{index type must be i16 or i32 but index type is 'i64'.}}
+  amdgpu.make_gather_dma_base %smem[%idx], %mem[%idx] : memref<8xi32, #gpu.address_space<workgroup>>, memref<8xi32> -> !amdgpu.tdm_gather_base<i32, i64>
+  return
+}
+
+// -----
+
+func.func @make_gather_dma_base_invalid_addressspace(%idx: index, %smem : memref<8xi32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.make_gather_dma_base' op global memref must have global address space attribute.}}
+  amdgpu.make_gather_dma_base %smem[%idx], %smem[%idx] : memref<8xi32, #gpu.address_space<workgroup>>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_gather_base<i32, i16>
+  return
+}
+
+// -----
+
+func.func @make_dma_base_invalid_barrier(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8xi32>, %idx: index) {
+  // expected-error@+1 {{'amdgpu.make_dma_descriptor' op atomic barrier address must be in LDS.}}
+  amdgpu.make_dma_descriptor %base globalSize [64, 64] globalStride [64, 1] sharedSize [64, 64] atomicBarrier(%barrier[%idx] : memref<8xi32>) : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @make_dma_descriptor_invalid_empty_strides
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>)
+func.func @make_dma_descriptor_invalid_empty_strides(%base: !amdgpu.tdm_base<i32>) {
+  // expected-error@+1 {{'amdgpu.make_dma_descriptor' op strides must not be empty.}}
+  amdgpu.make_dma_descriptor %base globalSize [0, 1] globalStride [] sharedSize [1, 0] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @make_dma_descriptor_invalid_innermost_stride
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>)
+func.func @make_dma_descriptor_invalid_innermost_stride(%base: !amdgpu.tdm_base<i32>) {
+  // expected-error@+1 {{'amdgpu.make_dma_descriptor' op strides for the innermost dimension must be 1.}}
+  amdgpu.make_dma_descriptor %base globalSize [2, 2] globalStride [1, 2] sharedSize [1, 0] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @make_dma_descriptor_invalid_size_and_stride_sizes
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>)
+func.func @make_dma_descriptor_invalid_size_and_stride_sizes(%base: !amdgpu.tdm_base<i32>) {
+  // expected-error@+1 {{'amdgpu.make_dma_descriptor' op strides and sizes must have same rank.}}
+  amdgpu.make_dma_descriptor %base globalSize [1, 1, 1] globalStride [1, 1] sharedSize [1, 0] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @make_dma_descriptor_invalid_shared_and_global_rank
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>)
+func.func @make_dma_descriptor_invalid_shared_and_global_rank(%base: !amdgpu.tdm_base<i32>) {
+  // expected-error@+1 {{'amdgpu.make_dma_descriptor' op tensor must have same rank as tile.}}
+  amdgpu.make_dma_descriptor %base globalSize [4, 4] globalStride [1, 1] sharedSize [1, 2, 3] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  func.return
+}
+
+
+// -----
+
+// CHECK-LABEL: func @make_gather_dma_descriptor_invalid_index_types
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_gather_base<i32, i32>, %[[VEC:.+]]: vector<8xi32>)
+func.func @make_gather_dma_descriptor_invalid_index_types(%base: !amdgpu.tdm_gather_base<i32, i16>, %indices: vector<8xi32>) {
+  // expected-error@+1 {{'amdgpu.make_gather_dma_descriptor' op indices' element type must match base's element type.}}
+  amdgpu.make_gather_dma_descriptor %base[%indices] globalSize [4, 4] globalStride [1, 1] sharedSize [1, 2] : !amdgpu.tdm_gather_base<i32, i16>, vector<8xi32> -> !amdgpu.tdm_descriptor
+  func.return
+}
+
+// -----
+
+func.func @sparse_mfma_dense_not_double_sparse(%a: vector<4xf16>, %b: vector<4xf16>, %c: vector<4xf32>, %idx: vector<4xi8>) -> vector<4xf32> {
+  // expected-error@+1 {{'amdgpu.sparse_mfma' op operand #1 must be vector of 16-bit float values of length 8/16 or vector of bfloat16 type values of length 8/16 or vector of 8-bit signless integer values of length 16/32 or vector of f8E4M3FN type or f8E5M2 type values of length 16/32 or vector of f8E4M3FNUZ type or f8E5M2FNUZ type values of length 16/32, but got 'vector<4xf16>'}}
+  %d = amdgpu.sparse_mfma 16x16x32 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<4xf16>, vector<4xf16>, vector<4xf32>
+  func.return %d : vector<4xf32>
+}
+
+// -----
+
+func.func @sparse_mfma_mismatched_source_types(%a: vector<4xf16>, %b: vector<8xbf16>, %c: vector<4xf32>, %idx: vector<4xi8>) -> vector<4xf32> {
+  // expected-error@+1 {{'amdgpu.sparse_mfma' op expected source operands to have the same element type}}
+  %d = amdgpu.sparse_mfma 16x16x32 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<4xf16>, vector<8xbf16>, vector<4xf32>
+  func.return %d : vector<4xf32>
+}
+
+// -----
+
+func.func @sparse_mfma_abid_invalid_for_8bit(%a: vector<8xi8>, %b: vector<16xi8>, %c: vector<4xi32>, %idx: vector<2xi16>) -> vector<4xi32> {
+  // expected-error@+1 {{'amdgpu.sparse_mfma' op ABID must be 0 or 1 for 8-bit source data}}
+  %d = amdgpu.sparse_mfma 16x16x64 %a * %b + %c sparse(%idx : vector<2xi16>) { abid = 2 : i32, cbsz = 0 : i32 } : vector<8xi8>, vector<16xi8>, vector<4xi32>
+  func.return %d : vector<4xi32>
+}
+
+// -----
+
+func.func @sparse_mfma_abid_invalid_for_16bit(%a: vector<4xf16>, %b: vector<8xf16>, %c: vector<4xf32>, %idx: vector<4xi8>) -> vector<4xf32> {
+  // expected-error@+1 {{'amdgpu.sparse_mfma' op ABID must be between 0 and 3 for 16-bit source data}}
+  %d = amdgpu.sparse_mfma 16x16x32 %a * %b + %c sparse(%idx : vector<4xi8>) { abid = 4 : i32, cbsz = 0 : i32 } : vector<4xf16>, vector<8xf16>, vector<4xf32>
+  func.return %d : vector<4xf32>
+}
+
+// -----
+
+func.func @sparse_mfma_wrong_idx_type_for_8bit(%a: vector<8xi8>, %b: vector<16xi8>, %c: vector<4xi32>, %idx: vector<4xi8>) -> vector<4xi32> {
+  // expected-error@+1 {{'amdgpu.sparse_mfma' op expected vector<2xi16> sparse indices for 8-bit source data, but got 'vector<4xi8>'}}
+  %d = amdgpu.sparse_mfma 16x16x64 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<8xi8>, vector<16xi8>, vector<4xi32>
+  func.return %d : vector<4xi32>
+}
+
+// -----
+
+func.func @sparse_mfma_wrong_idx_type_for_16bit(%a: vector<4xf16>, %b: vector<8xf16>, %c: vector<4xf32>, %idx: vector<2xi16>) -> vector<4xf32> {
+  // expected-error@+1 {{'amdgpu.sparse_mfma' op expected vector<4xi8> sparse indices for 16-bit source data, but got 'vector<2xi16>'}}
+  %d = amdgpu.sparse_mfma 16x16x32 %a * %b + %c sparse(%idx : vector<2xi16>) : vector<4xf16>, vector<8xf16>, vector<4xf32>
+  func.return %d : vector<4xf32>
+}
+
+// -----
+
+func.func @sparse_mfma_wrong_source_count(%a: vector<4xf16>, %b: vector<8xf16>, %c: vector<16xf32>, %idx: vector<4xi8>) -> vector<16xf32> {
+  // expected-error@+1 {{'amdgpu.sparse_mfma' op expected 16 source values for this operation but got 8}}
+  %d = amdgpu.sparse_mfma 32x32x32 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<4xf16>, vector<8xf16>, vector<16xf32>
+  func.return %d : vector<16xf32>
+}
+
+// -----
+
+func.func @sparse_mfma_wrong_dest_count(%a: vector<4xf16>, %b: vector<8xf16>, %c: vector<16xf32>, %idx: vector<4xi8>) -> vector<16xf32> {
+  // expected-error@+1 {{'amdgpu.sparse_mfma' op expected 4 result values for this operation but got 16}}
+  %d = amdgpu.sparse_mfma 16x16x32 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<4xf16>, vector<8xf16>, vector<16xf32>
+  func.return %d : vector<16xf32>
 }

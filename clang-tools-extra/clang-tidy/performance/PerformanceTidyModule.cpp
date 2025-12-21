@@ -1,4 +1,4 @@
-//===-- PerformanceTidyModule.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,11 +26,12 @@
 #include "NoexceptSwapCheck.h"
 #include "TriviallyDestructibleCheck.h"
 #include "TypePromotionInMathFnCheck.h"
-#include "UnnecessaryCopyInitialization.h"
+#include "UnnecessaryCopyInitializationCheck.h"
 #include "UnnecessaryValueParamCheck.h"
 
 namespace clang::tidy {
 namespace performance {
+namespace {
 
 class PerformanceModule : public ClangTidyModule {
 public:
@@ -66,12 +67,14 @@ public:
         "performance-trivially-destructible");
     CheckFactories.registerCheck<TypePromotionInMathFnCheck>(
         "performance-type-promotion-in-math-fn");
-    CheckFactories.registerCheck<UnnecessaryCopyInitialization>(
+    CheckFactories.registerCheck<UnnecessaryCopyInitializationCheck>(
         "performance-unnecessary-copy-initialization");
     CheckFactories.registerCheck<UnnecessaryValueParamCheck>(
         "performance-unnecessary-value-param");
   }
 };
+
+} // namespace
 
 // Register the PerformanceModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<PerformanceModule>

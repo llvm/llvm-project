@@ -42,15 +42,6 @@
 #include <vector>
 
 namespace llvm {
-extern cl::opt<bool> EnableCSPreInliner;
-extern cl::opt<bool> UseContextCostForPreInliner;
-} // namespace llvm
-
-using namespace llvm;
-using namespace sampleprof;
-using namespace llvm::object;
-
-namespace llvm {
 namespace sampleprof {
 
 class ProfiledBinary;
@@ -81,10 +72,22 @@ enum SpecialFrameAddr {
 
 using RangesTy = std::vector<std::pair<uint64_t, uint64_t>>;
 
+enum DwarfNameStatus {
+  // Dwarf name matches with the symbol table (or symbol table just doesn't have
+  // this entry)
+  Matched = 0,
+  // Dwarf name is missing, but we fixed it with the name from symbol table
+  Missing = 1,
+  // Symbol table has different names on this. Log these GUIDs in
+  // AlternativeFunctionGUIDs
+  Mismatch = 2,
+};
+
 struct BinaryFunction {
   StringRef FuncName;
   // End of range is an exclusive bound.
   RangesTy Ranges;
+  DwarfNameStatus NameStatus = DwarfNameStatus::Matched;
 
   uint64_t getFuncSize() {
     uint64_t Sum = 0;
@@ -185,6 +188,16 @@ private:
 
 using AddressRange = std::pair<uint64_t, uint64_t>;
 
+// The parsed MMap event
+struct MMapEvent {
+  int64_t PID = 0;
+  uint64_t Address = 0;
+  uint64_t Size = 0;
+  uint64_t Offset = 0;
+  StringRef MemProtectionFlag;
+  StringRef BinaryPath;
+};
+
 class ProfiledBinary {
   // Absolute path of the executable binary.
   std::string Path;
@@ -227,19 +240,27 @@ class ProfiledBinary {
   // A list of binary functions that have samples.
   std::unordered_set<const BinaryFunction *> ProfiledFunctions;
 
-  // GUID to Elf symbol start address map
+  // GUID to symbol start address map
   DenseMap<uint64_t, uint64_t> SymbolStartAddrs;
+
+  // Binary function to GUID mapping that stores the alternative names in symbol
+  // table, despite the original name from DWARF info
+  std::unordered_multimap<const BinaryFunction *, uint64_t>
+      AlternativeFunctionGUIDs;
+
+  // Mapping of profiled binary function to its pseudo probe name
+  std::unordered_map<const BinaryFunction *, StringRef> PseudoProbeNames;
 
   // These maps are for temporary use of warning diagnosis.
   DenseSet<int64_t> AddrsWithMultipleSymbols;
   DenseSet<std::pair<uint64_t, uint64_t>> AddrsWithInvalidInstruction;
 
-  // Start address to Elf symbol GUID map
+  // Start address to symbol GUID map
   std::unordered_multimap<uint64_t, uint64_t> StartAddrToSymMap;
 
   // An ordered map of mapping function's start address to function range
-  // relevant info. Currently to determine if the offset of ELF is the start of
-  // a real function, we leverage the function range info from DWARF.
+  // relevant info. Currently to determine if the offset of ELF/COFF is the
+  // start of a real function, we leverage the function range info from DWARF.
   std::map<uint64_t, FuncRange> StartAddrToFuncRangeMap;
 
   // Address to context location map. Used to expand the context.
@@ -276,6 +297,19 @@ class ProfiledBinary {
   // String table owning function name strings created from the symbolizer.
   std::unordered_set<std::string> NameStrings;
 
+  // MMap events for PT_LOAD segments without 'x' memory protection flag.
+  std::map<uint64_t, MMapEvent, std::greater<uint64_t>> NonTextMMapEvents;
+
+  // Records the file offset, file size and virtual address of program headers.
+  struct PhdrInfo {
+    uint64_t FileOffset;
+    uint64_t FileSz;
+    uint64_t VirtualAddr;
+  };
+
+  // Program header information for non-text PT_LOAD segments.
+  SmallVector<PhdrInfo> NonTextPhdrInfo;
+
   // A collection of functions to print disassembly for.
   StringSet<> DisassembleFunctionSet;
 
@@ -303,34 +337,47 @@ class ProfiledBinary {
 
   bool IsCOFF = false;
 
-  void setPreferredTextSegmentAddresses(const ObjectFile *O);
+  void setPreferredTextSegmentAddresses(const object::ObjectFile *O);
+
+  // LLVMSymbolizer's symbolize{Code, Data} interfaces requires a section index
+  // for each address to be symbolized. This is a helper function to
+  // construct a SectionedAddress object with the given address and section
+  // index. The section index is set to UndefSection by default.
+  static object::SectionedAddress getSectionedAddress(
+      uint64_t Address,
+      uint64_t SectionIndex = object::SectionedAddress::UndefSection) {
+    return object::SectionedAddress{Address, SectionIndex};
+  }
 
   template <class ELFT>
-  void setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
+  void setPreferredTextSegmentAddresses(const object::ELFFile<ELFT> &Obj,
                                         StringRef FileName);
-  void setPreferredTextSegmentAddresses(const COFFObjectFile *Obj,
+  void setPreferredTextSegmentAddresses(const object::COFFObjectFile *Obj,
                                         StringRef FileName);
 
-  void checkPseudoProbe(const ELFObjectFileBase *Obj);
+  void checkPseudoProbe(const object::ObjectFile *Obj);
 
-  void decodePseudoProbe(const ELFObjectFileBase *Obj);
+  void decodePseudoProbe(const object::ObjectFile *Obj);
 
-  void
-  checkUseFSDiscriminator(const ObjectFile *Obj,
-                          std::map<SectionRef, SectionSymbolsTy> &AllSymbols);
+  void checkUseFSDiscriminator(
+      const object::ObjectFile *Obj,
+      std::map<object::SectionRef, SectionSymbolsTy> &AllSymbols);
 
   // Set up disassembler and related components.
-  void setUpDisassembler(const ObjectFile *Obj);
+  void setUpDisassembler(const object::ObjectFile *Obj);
   symbolize::LLVMSymbolizer::Options getSymbolizerOpts() const;
 
   // Load debug info of subprograms from DWARF section.
-  void loadSymbolsFromDWARF(ObjectFile &Obj);
+  void loadSymbolsFromDWARF(object::ObjectFile &Obj);
 
   // Load debug info from DWARF unit.
   void loadSymbolsFromDWARFUnit(DWARFUnit &CompilationUnit);
 
-  // Create elf symbol to its start address mapping.
-  void populateElfSymbolAddressList(const ELFObjectFileBase *O);
+  // Create symbol to its start address mapping.
+  void populateSymbolAddressList(const object::ObjectFile *O);
+
+  // Load functions from its symbol table (when DWARF info is missing).
+  void loadSymbolsFromSymtab(const object::ObjectFile *O);
 
   // A function may be spilt into multiple non-continuous address ranges. We use
   // this to set whether start a function range is the real entry of the
@@ -341,11 +388,12 @@ class ProfiledBinary {
   void warnNoFuncEntry();
 
   /// Dissassemble the text section and build various address maps.
-  void disassemble(const ObjectFile *O);
+  void disassemble(const object::ObjectFile *O);
 
   /// Helper function to dissassemble the symbol and extract info for unwinding
   bool dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
-                          SectionSymbolsTy &Symbols, const SectionRef &Section);
+                          SectionSymbolsTy &Symbols,
+                          const object::SectionRef &Section);
   /// Symbolize a given instruction pointer and return a full call context.
   SampleContextFrameVector symbolize(const InstructionPointer &IP,
                                      bool UseCanonicalFnName = false,
@@ -362,6 +410,10 @@ class ProfiledBinary {
 public:
   ProfiledBinary(const StringRef ExeBinPath, const StringRef DebugBinPath);
   ~ProfiledBinary();
+
+  /// Symbolize an address and return the symbol name. The returned StringRef is
+  /// owned by this ProfiledBinary object.
+  StringRef symbolizeDataAddress(uint64_t Address);
 
   void decodePseudoProbe();
 
@@ -501,7 +553,7 @@ public:
   void setProfiledFunctions(std::unordered_set<const BinaryFunction *> &Funcs) {
     ProfiledFunctions = Funcs;
   }
-  
+
   BinaryFunction *getBinaryFunction(FunctionId FName) {
     if (FName.isStringRef()) {
       auto I = BinaryFunctions.find(FName.str());
@@ -570,6 +622,10 @@ public:
 
   void computeInlinedContextSizeForFunc(const BinaryFunction *Func);
 
+  void loadSymbolsFromPseudoProbe();
+
+  StringRef findPseudoProbeName(const BinaryFunction *Func);
+
   const MCDecodedPseudoProbe *getCallProbeForAddr(uint64_t Address) const {
     return ProbeDecoder.getCallProbeForAddr(Address);
   }
@@ -602,6 +658,46 @@ public:
   getInlinerDescForProbe(const MCDecodedPseudoProbe *Probe) {
     return ProbeDecoder.getInlinerDescForProbe(Probe);
   }
+
+  bool isNonOverlappingAddressInterval(std::pair<uint64_t, uint64_t> LHS,
+                                       std::pair<uint64_t, uint64_t> RHS) {
+    if (LHS.second <= RHS.first || RHS.second <= LHS.first)
+      return true;
+    return false;
+  }
+
+  Error addMMapNonTextEvent(MMapEvent Event) {
+    // Given the mmap events of the profiled binary, the virtual address
+    // intervals of mmaps most often doesn't overlap with each other. The
+    // implementation validates so, and runtime data address is mapped to
+    // a mmap event using look-up. With this implementation, data addresses
+    // from dynamic shared libraries (not the profiled binary) are not mapped or
+    // symbolized. To map runtime address to binary address in case of
+    // overlapping mmap events, the implementation could store all the mmap
+    // events in a vector and in the order they are added and reverse iterate
+    // the vector to find the mmap events. We opt'ed for the non-overlapping
+    // implementation for simplicity.
+    for (const auto &ExistingMMap : NonTextMMapEvents) {
+      if (isNonOverlappingAddressInterval(
+              {ExistingMMap.second.Address,
+               ExistingMMap.second.Address + ExistingMMap.second.Size},
+              {Event.Address, Event.Address + Event.Size})) {
+        continue;
+      }
+      return createStringError(
+          inconvertibleErrorCode(),
+          "Non-text mmap event overlaps with existing event at address: %lx",
+          Event.Address);
+    }
+    NonTextMMapEvents[Event.Address] = Event;
+    return Error::success();
+  }
+
+  // Given a non-text runtime address, canonicalize it to the virtual address in
+  // the binary.
+  // TODO: Consider unifying the canonicalization of text and non-text addresses
+  // in the ProfiledBinary class.
+  uint64_t CanonicalizeNonTextAddress(uint64_t Address);
 
   bool getTrackFuncContextSize() { return TrackFuncContextSize; }
 

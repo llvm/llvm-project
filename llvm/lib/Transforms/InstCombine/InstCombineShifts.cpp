@@ -288,8 +288,9 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
     // creating the subsequent shift op.
     unsigned WidestTyBitWidth = WidestTy->getScalarSizeInBits();
     ShAmtsDiff = Constant::replaceUndefsWith(
-        ShAmtsDiff, ConstantInt::get(ShAmtsDiff->getType()->getScalarType(),
-                                     -WidestTyBitWidth));
+        ShAmtsDiff,
+        ConstantInt::getSigned(ShAmtsDiff->getType()->getScalarType(),
+                               -(int)WidestTyBitWidth));
     auto *ExtendedNumHighBitsToClear = ConstantFoldCastOperand(
         Instruction::ZExt,
         ConstantExpr::getSub(ConstantInt::get(ShAmtsDiff->getType(),
@@ -1253,7 +1254,8 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
     // shl (zext i1 X), C1 --> select (X, 1 << C1, 0)
     if (match(Op0, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
       auto *NewC = Builder.CreateShl(ConstantInt::get(Ty, 1), C1);
-      return SelectInst::Create(X, NewC, ConstantInt::getNullValue(Ty));
+      return createSelectInstWithUnknownProfile(X, NewC,
+                                                ConstantInt::getNullValue(Ty));
     }
   }
 

@@ -13,88 +13,195 @@
 // template <class InputIterator>
 //   void insert(InputIterator first, InputIterator last);
 
-#include <map>
+#include <array>
 #include <cassert>
+#include <map>
 
-#include "test_macros.h"
-#include "test_iterators.h"
 #include "min_allocator.h"
+#include "test_iterators.h"
+#include "test_macros.h"
+
+template <class Iter, class Alloc>
+void test_alloc() {
+  {   // Check that an empty range works correctly
+    { // Without elements in the container
+      using Map = std::multimap<int, int, std::less<int>, Alloc>;
+
+      std::array<std::pair<const int, int>, 0> arr;
+
+      Map map;
+      map.insert(Iter(arr.data()), Iter(arr.data() + arr.size()));
+      assert(map.size() == 0);
+      assert(map.begin() == map.end());
+    }
+    { // With 1 element in the container
+      using Map  = std::multimap<int, int, std::less<int>, Alloc>;
+      using Pair = std::pair<const int, int>;
+
+      std::array<Pair, 0> arr;
+
+      Map map;
+      map.insert(Pair(0, 0));
+      map.insert(Iter(arr.data()), Iter(arr.data() + arr.size()));
+      assert(map.size() == 1);
+      assert(*std::next(map.begin(), 0) == Pair(0, 0));
+      assert(std::next(map.begin(), 1) == map.end());
+    }
+    { // With multiple elements in the container
+      using Map  = std::multimap<int, int, std::less<int>, Alloc>;
+      using Pair = std::pair<const int, int>;
+
+      std::array<Pair, 0> arr;
+
+      Map map;
+      map.insert(Pair(0, 0));
+      map.insert(Pair(1, 1));
+      map.insert(Pair(2, 2));
+      map.insert(Iter(arr.data()), Iter(arr.data() + arr.size()));
+      assert(map.size() == 3);
+      assert(*std::next(map.begin(), 0) == Pair(0, 0));
+      assert(*std::next(map.begin(), 1) == Pair(1, 1));
+      assert(*std::next(map.begin(), 2) == Pair(2, 2));
+      assert(std::next(map.begin(), 3) == map.end());
+    }
+  }
+  {   // Check that 1 element is inserted correctly
+    { // Without elements in the container
+      using Map  = std::multimap<int, int, std::less<int>, Alloc>;
+      using Pair = std::pair<const int, int>;
+
+      Pair arr[] = {Pair(1, 1)};
+
+      Map map;
+      map.insert(Iter(std::begin(arr)), Iter(std::end(arr)));
+      assert(map.size() == 1);
+      assert(*std::next(map.begin(), 0) == Pair(1, 1));
+      assert(std::next(map.begin(), 1) == map.end());
+    }
+    { // With 1 element in the container - a different key
+      using Map  = std::multimap<int, int, std::less<int>, Alloc>;
+      using Pair = std::pair<const int, int>;
+
+      Pair arr[] = {Pair(1, 1)};
+
+      Map map;
+      map.insert(Pair(0, 0));
+      map.insert(Iter(std::begin(arr)), Iter(std::end(arr)));
+      assert(map.size() == 2);
+      assert(*std::next(map.begin(), 0) == Pair(0, 0));
+      assert(*std::next(map.begin(), 1) == Pair(1, 1));
+      assert(std::next(map.begin(), 2) == map.end());
+    }
+    { // With 1 element in the container - the same key
+      using Map  = std::multimap<int, int, std::less<int>, Alloc>;
+      using Pair = std::pair<const int, int>;
+
+      Pair arr[] = {Pair(1, 1)};
+
+      Map map;
+      map.insert(Pair(1, 1));
+      map.insert(Iter(std::begin(arr)), Iter(std::end(arr)));
+      assert(map.size() == 2);
+      assert(*std::next(map.begin(), 0) == Pair(1, 1));
+      assert(*std::next(map.begin(), 1) == Pair(1, 1));
+      assert(std::next(map.begin(), 2) == map.end());
+    }
+    { // With multiple elements in the container
+      using Map  = std::multimap<int, int, std::less<int>, Alloc>;
+      using Pair = std::pair<const int, int>;
+
+      Pair arr[] = {Pair(1, 1)};
+
+      Map map;
+      map.insert(Pair(0, 0));
+      map.insert(Pair(1, 1));
+      map.insert(Pair(2, 2));
+      map.insert(Iter(std::begin(arr)), Iter(std::end(arr)));
+      assert(map.size() == 4);
+      assert(*std::next(map.begin(), 0) == Pair(0, 0));
+      assert(*std::next(map.begin(), 1) == Pair(1, 1));
+      assert(*std::next(map.begin(), 2) == Pair(1, 1));
+      assert(*std::next(map.begin(), 3) == Pair(2, 2));
+      assert(std::next(map.begin(), 4) == map.end());
+    }
+  }
+  {   // Check that multiple elements are inserted correctly
+    { // Without elements in the container
+      using Map  = std::multimap<int, int, std::less<int>, Alloc>;
+      using Pair = std::pair<const int, int>;
+
+      Pair arr[] = {Pair(1, 1), Pair(1, 1), Pair(3, 3)};
+
+      Map map;
+      map.insert(Iter(std::begin(arr)), Iter(std::end(arr)));
+      assert(map.size() == 3);
+      assert(*std::next(map.begin(), 0) == Pair(1, 1));
+      assert(*std::next(map.begin(), 1) == Pair(1, 1));
+      assert(*std::next(map.begin(), 2) == Pair(3, 3));
+      assert(std::next(map.begin(), 3) == map.end());
+    }
+    { // With 1 element in the container - a different key
+      using Map  = std::multimap<int, int, std::less<int>, Alloc>;
+      using Pair = std::pair<const int, int>;
+
+      Pair arr[] = {Pair(1, 1), Pair(1, 1), Pair(3, 3)};
+
+      Map map;
+      map.insert(Pair(0, 0));
+      map.insert(Iter(std::begin(arr)), Iter(std::end(arr)));
+      assert(map.size() == 4);
+      assert(*std::next(map.begin(), 0) == Pair(0, 0));
+      assert(*std::next(map.begin(), 1) == Pair(1, 1));
+      assert(*std::next(map.begin(), 2) == Pair(1, 1));
+      assert(*std::next(map.begin(), 3) == Pair(3, 3));
+      assert(std::next(map.begin(), 4) == map.end());
+    }
+    { // With 1 element in the container - the same key
+      using Map  = std::multimap<int, int, std::less<int>, Alloc>;
+      using Pair = std::pair<const int, int>;
+
+      Pair arr[] = {Pair(1, 1), Pair(2, 2), Pair(3, 3)};
+
+      Map map;
+      map.insert(Pair(1, 1));
+      map.insert(Iter(std::begin(arr)), Iter(std::end(arr)));
+      assert(map.size() == 4);
+      assert(*std::next(map.begin(), 0) == Pair(1, 1));
+      assert(*std::next(map.begin(), 1) == Pair(1, 1));
+      assert(*std::next(map.begin(), 2) == Pair(2, 2));
+      assert(*std::next(map.begin(), 3) == Pair(3, 3));
+      assert(std::next(map.begin(), 4) == map.end());
+    }
+    { // With multiple elements in the container
+      using Map  = std::multimap<int, int, std::less<int>, Alloc>;
+      using Pair = std::pair<const int, int>;
+
+      Pair arr[] = {Pair(1, 1), Pair(3, 3), Pair(4, 4)};
+
+      Map map;
+      map.insert(Pair(0, 0));
+      map.insert(Pair(1, 1));
+      map.insert(Pair(2, 2));
+      map.insert(Iter(std::begin(arr)), Iter(std::end(arr)));
+      assert(map.size() == 6);
+      assert(*std::next(map.begin(), 0) == Pair(0, 0));
+      assert(*std::next(map.begin(), 1) == Pair(1, 1));
+      assert(*std::next(map.begin(), 2) == Pair(1, 1));
+      assert(*std::next(map.begin(), 3) == Pair(2, 2));
+      assert(*std::next(map.begin(), 4) == Pair(3, 3));
+      assert(*std::next(map.begin(), 5) == Pair(4, 4));
+      assert(std::next(map.begin(), 6) == map.end());
+    }
+  }
+}
+
+void test() {
+  test_alloc<cpp17_input_iterator<std::pair<const int, int>*>, std::allocator<std::pair<const int, int> > >();
+  test_alloc<cpp17_input_iterator<std::pair<const int, int>*>, min_allocator<std::pair<const int, int> > >();
+}
 
 int main(int, char**) {
-  {
-    typedef std::multimap<int, double> M;
-    typedef std::pair<int, double> P;
-    P ar[] = {
-        P(1, 1),
-        P(1, 1.5),
-        P(1, 2),
-        P(2, 1),
-        P(2, 1.5),
-        P(2, 2),
-        P(3, 1),
-        P(3, 1.5),
-        P(3, 2),
-    };
-    M m;
-    m.insert(cpp17_input_iterator<P*>(ar), cpp17_input_iterator<P*>(ar + sizeof(ar) / sizeof(ar[0])));
-    assert(m.size() == 9);
-    assert(m.begin()->first == 1);
-    assert(m.begin()->second == 1);
-    assert(std::next(m.begin())->first == 1);
-    assert(std::next(m.begin())->second == 1.5);
-    assert(std::next(m.begin(), 2)->first == 1);
-    assert(std::next(m.begin(), 2)->second == 2);
-    assert(std::next(m.begin(), 3)->first == 2);
-    assert(std::next(m.begin(), 3)->second == 1);
-    assert(std::next(m.begin(), 4)->first == 2);
-    assert(std::next(m.begin(), 4)->second == 1.5);
-    assert(std::next(m.begin(), 5)->first == 2);
-    assert(std::next(m.begin(), 5)->second == 2);
-    assert(std::next(m.begin(), 6)->first == 3);
-    assert(std::next(m.begin(), 6)->second == 1);
-    assert(std::next(m.begin(), 7)->first == 3);
-    assert(std::next(m.begin(), 7)->second == 1.5);
-    assert(std::next(m.begin(), 8)->first == 3);
-    assert(std::next(m.begin(), 8)->second == 2);
-  }
-#if TEST_STD_VER >= 11
-  {
-    typedef std::multimap<int, double, std::less<int>, min_allocator<std::pair<const int, double>>> M;
-    typedef std::pair<int, double> P;
-    P ar[] = {
-        P(1, 1),
-        P(1, 1.5),
-        P(1, 2),
-        P(2, 1),
-        P(2, 1.5),
-        P(2, 2),
-        P(3, 1),
-        P(3, 1.5),
-        P(3, 2),
-    };
-    M m;
-    m.insert(cpp17_input_iterator<P*>(ar), cpp17_input_iterator<P*>(ar + sizeof(ar) / sizeof(ar[0])));
-    assert(m.size() == 9);
-    assert(m.begin()->first == 1);
-    assert(m.begin()->second == 1);
-    assert(std::next(m.begin())->first == 1);
-    assert(std::next(m.begin())->second == 1.5);
-    assert(std::next(m.begin(), 2)->first == 1);
-    assert(std::next(m.begin(), 2)->second == 2);
-    assert(std::next(m.begin(), 3)->first == 2);
-    assert(std::next(m.begin(), 3)->second == 1);
-    assert(std::next(m.begin(), 4)->first == 2);
-    assert(std::next(m.begin(), 4)->second == 1.5);
-    assert(std::next(m.begin(), 5)->first == 2);
-    assert(std::next(m.begin(), 5)->second == 2);
-    assert(std::next(m.begin(), 6)->first == 3);
-    assert(std::next(m.begin(), 6)->second == 1);
-    assert(std::next(m.begin(), 7)->first == 3);
-    assert(std::next(m.begin(), 7)->second == 1.5);
-    assert(std::next(m.begin(), 8)->first == 3);
-    assert(std::next(m.begin(), 8)->second == 2);
-  }
-#endif
+  test();
 
   return 0;
 }

@@ -30,7 +30,7 @@ because the naming and other conventions are dictated by the C++ standard.
 
 There are some conventions that are not uniformly followed in the code base
 (e.g. the naming convention).  This is because they are relatively new, and a
-lot of code was written before they were put in place.  Our long term goal is
+lot of code was written before they were put in place.  Our long-term goal is
 for the entire codebase to follow the convention, but we explicitly *do not*
 want patches that do large-scale reformatting of existing code.  On the other
 hand, it is reasonable to rename the methods of a class if you're about to
@@ -46,11 +46,11 @@ Languages, Libraries, and Standards
 Most source code in LLVM and other LLVM projects using these coding standards
 is C++ code. There are some places where C code is used either due to
 environment restrictions, historical restrictions, or due to third-party source
-code imported into the tree. Generally, our preference is for standards
-conforming, modern, and portable C++ code as the implementation language of
+code imported into the tree. Generally, our preference is for
+standards-conforming, modern, and portable C++ code as the implementation language of
 choice.
 
-For automation, build-systems and utility scripts Python is preferred and
+For automation, build systems, and utility scripts, Python is preferred and
 is widely used in the LLVM repository already.
 
 C++ Standard Versions
@@ -78,6 +78,12 @@ Each toolchain provides a good reference for what it accepts:
 Additionally, there are compiler comparison tables of supported C++ features on
 `cppreference.com <https://en.cppreference.com/w/cpp/compiler_support/17>`_.
 
+To keep track with the evolution of the standard, newer C++ versions can be used
+to build LLVM. However, our support focuses on the minimum supported C++
+version and a very recent standard may not yet be supported, or only using the
+latest version of the supported toolchains and possibly not across all the
+subprojects.
+
 
 C++ Standard Library
 --------------------
@@ -92,7 +98,7 @@ LLVM support libraries (for example, `ADT
 <https://github.com/llvm/llvm-project/tree/main/llvm/include/llvm/ADT>`_)
 implement specialized data structures or functionality missing in the standard
 library. Such libraries are usually implemented in the ``llvm`` namespace and
-follow the expected standard interface, when there is one.
+follow the expected standard interface when there is one.
 
 When both C++ and the LLVM support libraries provide similar functionality, and
 there isn't a specific reason to favor the C++ implementation, it is generally
@@ -236,7 +242,7 @@ Comment Formatting
 
 In general, prefer C++-style comments (``//`` for normal comments, ``///`` for
 ``doxygen`` documentation comments).  There are a few cases when it is
-useful to use C-style (``/* */``) comments however:
+useful to use C-style (``/* */``) comments, however:
 
 #. When writing C code to be compatible with C89.
 
@@ -263,7 +269,7 @@ useful to use C-style (``/* */``) comments however:
 Commenting out large blocks of code is discouraged, but if you really have to do
 this (for documentation purposes or as a suggestion for debug printing), use
 ``#if 0`` and ``#endif``. These nest properly and are better behaved in general
-than C style comments.
+than C-style comments.
 
 Doxygen Use in Documentation Comments
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -325,8 +331,8 @@ implementation file.  In any case, implementation files can include additional
 comments (not necessarily in Doxygen markup) to explain implementation details
 as needed.
 
-Don't duplicate function or class name at the beginning of the comment.
-For humans it is obvious which function or class is being documented;
+Don't duplicate the function or class name at the beginning of the comment.
+For humans, it is obvious which function or class is being documented;
 automatic documentation processing tools are smart enough to bind the comment
 to the correct declaration.
 
@@ -365,11 +371,11 @@ Clear diagnostic messages are important to help users identify and fix issues in
 their inputs. Use succinct but correct English prose that gives the user the
 context needed to understand what went wrong. Also, to match error message
 styles commonly produced by other tools, start the first sentence with a
-lower-case letter, and finish the last sentence without a period, if it would
+lowercase letter, and finish the last sentence without a period, if it would
 end in one otherwise. Sentences which end with different punctuation, such as
 "did you forget ';'?", should still do so.
 
-For example this is a good error message:
+For example, this is a good error message:
 
 .. code-block:: none
 
@@ -443,7 +449,7 @@ Write your code to fit within 80 columns.
 There must be some limit to the width of the code in
 order to allow developers to have multiple files side-by-side in
 windows on a modest display.  If you are going to pick a width limit, it is
-somewhat arbitrary but you might as well pick something standard.  Going with 90
+somewhat arbitrary, but you might as well pick something standard.  Going with 90
 columns (for example) instead of 80 columns wouldn't add any significant value
 and would be detrimental to printing out code.  Also many other projects have
 standardized on 80 columns, so some people have already configured their editors
@@ -520,7 +526,7 @@ within each other and within function calls in order to build up aggregates
 The historically common formatting of braced initialization of aggregate
 variables does not mix cleanly with deep nesting, general expression contexts,
 function arguments, and lambdas. We suggest new code use a simple rule for
-formatting braced initialization lists: act as-if the braces were parentheses
+formatting braced initialization lists: act as if the braces were parentheses
 in a function call. The formatting rules exactly match those already well
 understood for formatting nested function calls. Examples:
 
@@ -607,11 +613,11 @@ Static constructors and destructors (e.g., global variables whose types have a
 constructor or destructor) should not be added to the code base, and should be
 removed wherever possible.
 
-Globals in different source files are initialized in `arbitrary order
+Globals in different source files are initialized in an `arbitrary order
 <https://yosefk.com/c++fqa/ctors.html#fqa-10.12>`_, making the code more
 difficult to reason about.
 
-Static constructors have negative impact on launch time of programs that use
+Static constructors have a negative impact on the launch time of programs that use
 LLVM as a library. We would really like for there to be zero cost for linking
 in an additional LLVM target or other library into an application, but static
 constructors undermine this goal.
@@ -698,12 +704,12 @@ If you use a braced initializer list when initializing a variable, use an equals
 Use ``auto`` Type Deduction to Make Code More Readable
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Some are advocating a policy of "almost always ``auto``" in C++11, however LLVM
+Some are advocating a policy of "almost always ``auto``" in C++11; however, LLVM
 uses a more moderate stance. Use ``auto`` if and only if it makes the code more
 readable or easier to maintain. Don't "almost always" use ``auto``, but do use
 ``auto`` with initializers like ``cast<Foo>(...)`` or other places where the
 type is already obvious from the context. Another time when ``auto`` works well
-for these purposes is when the type would have been abstracted away anyways,
+for these purposes is when the type would have been abstracted away anyway,
 often behind a container's typedef such as ``std::vector<T>::iterator``.
 
 Similarly, C++14 adds generic lambda expressions where parameter types can be
@@ -754,7 +760,7 @@ Beware of non-deterministic sorting order of equal elements
 elements is not guaranteed to be preserved. Thus using ``std::sort`` for a
 container having equal elements may result in non-deterministic behavior.
 To uncover such instances of non-determinism, LLVM has introduced a new
-llvm::sort wrapper function. For an EXPENSIVE_CHECKS build this will randomly
+``llvm::sort`` wrapper function. For an ``EXPENSIVE_CHECKS`` build this will randomly
 shuffle the container before sorting. Default to using ``llvm::sort`` instead
 of ``std::sort``.
 
@@ -783,14 +789,14 @@ guards, and might not include their prerequisites. Name such files with the
 
 In general, a header should be implemented by one or more ``.cpp`` files.  Each
 of these ``.cpp`` files should include the header that defines their interface
-first.  This ensures that all of the dependences of the header have been
+first.  This ensures that all of the dependencies of the header have been
 properly added to the header itself, and are not implicit.  System headers
 should be included after user headers for a translation unit.
 
 Library Layering
 ^^^^^^^^^^^^^^^^
 
-A directory of header files (for example ``include/llvm/Foo``) defines a
+A directory of header files (for example, ``include/llvm/Foo``) defines a
 library (``Foo``). One library (both
 its headers and implementation) should only use things from the libraries
 listed in its dependencies.
@@ -822,14 +828,14 @@ especially in header files.
 
 But wait! Sometimes you need to have the definition of a class to use it, or to
 inherit from it.  In these cases go ahead and ``#include`` that header file.  Be
-aware however that there are many cases where you don't need to have the full
+aware, however, that there are many cases where you don't need to have the full
 definition of a class.  If you are using a pointer or reference to a class, you
 don't need the header file.  If you are simply returning a class instance from a
 prototyped function or method, you don't need it.  In fact, for most cases, you
 simply don't need the definition of a class. And not ``#include``\ing speeds up
 compilation.
 
-It is easy to try to go too overboard on this recommendation, however.  You
+It is easy to try to go overboard on this recommendation, however.  You
 **must** include all of the header files that you are using --- you can include
 them either directly or indirectly through another header file.  To make sure
 that you don't accidentally forget to include a header file in your module
@@ -854,24 +860,37 @@ your private interface remains private and undisturbed by outsiders.
     It's okay to put extra implementation methods in a public class itself. Just
     make them private (or protected) and all is well.
 
-Use Namespace Qualifiers to Implement Previously Declared Functions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Use Namespace Qualifiers to Define Previously Declared Symbols
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-When providing an out of line implementation of a function in a source file, do
-not open namespace blocks in the source file. Instead, use namespace qualifiers
-to help ensure that your definition matches an existing declaration. Do this:
+When providing an out-of-line definition for various symbols (variables,
+functions, opaque classes) in a source file, do not open namespace blocks in the
+source file. Instead, use namespace qualifiers to help ensure that your
+definition matches an existing declaration. Do this:
 
 .. code-block:: c++
 
   // Foo.h
   namespace llvm {
+  extern int FooVal;
   int foo(const char *s);
-  }
+
+  namespace detail {
+  class FooImpl;
+  } // namespace detail
+  } // namespace llvm
 
   // Foo.cpp
   #include "Foo.h"
   using namespace llvm;
+
+  int llvm::FooVal;
+
   int llvm::foo(const char *s) {
+    // ...
+  }
+
+  class detail::FooImpl {
     // ...
   }
 
@@ -970,7 +989,7 @@ loops.  A silly example is something like this:
 When you have very, very small loops, this sort of structure is fine. But if it
 exceeds more than 10-15 lines, it becomes difficult for people to read and
 understand at a glance. The problem with this sort of code is that it gets very
-nested very quickly. Meaning that the reader of the code has to keep a lot of
+nested very quickly. This means that the reader of the code has to keep a lot of
 context in their brain to remember what is going immediately on in the loop,
 because they don't know if/when the ``if`` conditions will have ``else``\s etc.
 It is strongly preferred to structure the loop like this:
@@ -988,7 +1007,7 @@ It is strongly preferred to structure the loop like this:
     ...
   }
 
-This has all the benefits of using early exits for functions: it reduces nesting
+This has all the benefits of using early exits for functions: it reduces the nesting
 of the loop, it makes it easier to describe why the conditions are true, and it
 makes it obvious to the reader that there is no ``else`` coming up that they
 have to push context into their brain for.  If a loop is large, this can be a
@@ -1149,12 +1168,12 @@ In general, names should be in camel case (e.g. ``TextFileReader`` and
   nouns and start with an upper-case letter (e.g. ``TextFileReader``).
 
 * **Variable names** should be nouns (as they represent state).  The name should
-  be camel case, and start with an upper case letter (e.g. ``Leader`` or
+  be camel case, and start with an upper-case letter (e.g. ``Leader`` or
   ``Boats``).
 
 * **Function names** should be verb phrases (as they represent actions), and
   command-like function should be imperative.  The name should be camel case,
-  and start with a lower case letter (e.g. ``openFile()`` or ``isFoo()``).
+  and start with a lowercase letter (e.g. ``openFile()`` or ``isFoo()``).
 
 * **Enum declarations** (e.g. ``enum Foo {...}``) are types, so they should
   follow the naming conventions for types.  A common use for enums is as a
@@ -1179,7 +1198,7 @@ In general, names should be in camel case (e.g. ``TextFileReader`` and
       };
 
 As an exception, classes that mimic STL classes can have member names in STL's
-style of lower-case words separated by underscores (e.g. ``begin()``,
+style of lowercase words separated by underscores (e.g. ``begin()``,
 ``push_back()``, and ``empty()``). Classes that provide multiple
 iterators should add a singular prefix to ``begin()`` and ``end()``
 (e.g. ``global_begin()`` and ``use_begin()``).
@@ -1207,7 +1226,7 @@ Assert Liberally
 ^^^^^^^^^^^^^^^^
 
 Use the "``assert``" macro to its fullest.  Check all of your preconditions and
-assumptions, you never know when a bug (not necessarily even yours) might be
+assumptions.  You never know when a bug (not necessarily even yours) might be
 caught early by an assertion, which reduces debugging time dramatically.  The
 "``<cassert>``" header file is probably already included by the header files you
 are using, so it doesn't cost anything to use it.
@@ -1302,7 +1321,7 @@ preferred to write the code like this:
   assert(NewToSet && "The value shouldn't be in the set yet");
 
 In C code where ``[[maybe_unused]]`` is not supported, use ``void`` cast to
-suppress unused variable warning as follows:
+suppress an unused variable warning as follows:
 
 .. code-block:: c
 
@@ -1417,7 +1436,7 @@ please write the loop in the first form and add a comment indicating that you
 did it intentionally.
 
 Why do we prefer the second form (when correct)?  Writing the loop in the first
-form has two problems. First it may be less efficient than evaluating it at the
+form has two problems. First, it may be less efficient than evaluating it at the
 start of the loop.  In this case, the cost is probably minor --- a few extra
 loads every time through the loop.  However, if the base expression is more
 complex, then the cost can rise quickly.  I've seen loops where the end
@@ -1546,7 +1565,7 @@ whenever possible.
 The semantics of postincrement include making a copy of the value being
 incremented, returning it, and then preincrementing the "work value".  For
 primitive types, this isn't a big deal. But for iterators, it can be a huge
-issue (for example, some iterators contains stack and set objects in them...
+issue (for example, some iterators contain stack and set objects in them...
 copying an iterator could invoke the copy ctor's of these as well).  In general,
 get in the habit of always using preincrement, and you won't have a problem.
 
@@ -1594,20 +1613,25 @@ Restrict Visibility
 ^^^^^^^^^^^^^^^^^^^
 
 Functions and variables should have the most restricted visibility possible.
+
 For class members, that means using appropriate ``private``, ``protected``, or
-``public`` keyword to restrict their access. For non-member functions, variables,
-and classes, that means restricting visibility to a single ``.cpp`` file if it's
-not referenced outside that file.
+``public`` keyword to restrict their access.
+
+For non-member functions, variables, and classes, that means restricting
+visibility to a single ``.cpp`` file if it is not referenced outside that file.
 
 Visibility of file-scope non-member variables and functions can be restricted to
 the current translation unit by using either the ``static`` keyword or an anonymous
-namespace. Anonymous namespaces are a great language feature that tells the C++
+namespace.
+
+Anonymous namespaces are a great language feature that tells the C++
 compiler that the contents of the namespace are only visible within the current
 translation unit, allowing more aggressive optimization and eliminating the
-possibility of symbol name collisions.  Anonymous namespaces are to C++ as
-``static`` is to C functions and global variables.  While ``static`` is available
-in C++, anonymous namespaces are more general: they can make entire classes
-private to a file.
+possibility of symbol name collisions.
+
+Anonymous namespaces are to C++ as ``static`` is to C functions and global
+variables.  While ``static`` is available in C++, anonymous namespaces are more
+general: they can make entire classes private to a file.
 
 The problem with anonymous namespaces is that they naturally want to encourage
 indentation of their body, and they reduce locality of reference: if you see a
@@ -1653,37 +1677,44 @@ Avoid putting declarations other than classes into anonymous namespaces:
 
   } // namespace
 
-When you are looking at "``runHelper``" in the middle of a large C++ file,
-you have no immediate way to tell if this function is local to the file.  In
-contrast, when the function is marked static, you don't need to cross-reference
-faraway places in the file to tell that the function is local.
+When you are looking at ``runHelper`` in the middle of a large C++ file,
+you have no immediate way to tell if this function is local to the file.
+
+In contrast, when the function is marked static, you don't need to cross-reference
+faraway places in the file to tell that the function is local:
+
+.. code-block:: c++
+
+  static void runHelper() {
+    ...
+  }
 
 Don't Use Braces on Simple Single-Statement Bodies of if/else/loop Statements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-When writing the body of an ``if``, ``else``, or for/while loop statement, we
-prefer to omit the braces to avoid unnecessary line noise. However, braces
-should be used in cases where the omission of braces harm the readability and
-maintainability of the code.
+When writing the body of an ``if``, ``else``, or ``for``/``while`` loop
+statement, we aim to reduce unnecessary line noise.
 
-We consider that readability is harmed when omitting the brace in the presence
-of a single statement that is accompanied by a comment (assuming the comment
-can't be hoisted above the ``if`` or loop statement, see below).
+**Omit braces when:**
 
-Similarly, braces should be used when a single-statement body is complex enough
-that it becomes difficult to see where the block containing the following
-statement began. An ``if``/``else`` chain or a loop is considered a single
-statement for this rule, and this rule applies recursively.
+*   The body consists of a single **simple** statement.
+*   The single statement is not preceded by a comment.
+    (Hoist comments above the control statement if you can.)
+*   An ``else`` clause, if present, also meets the above criteria (single
+    simple statement, no associated comments).
 
-This list is not exhaustive. For example, readability is also harmed if an
-``if``/``else`` chain does not use braced bodies for either all or none of its
-members, or has complex conditionals, deep nesting, etc. The examples below
-intend to provide some guidelines.
+**Use braces in all other cases, including:**
 
-Maintainability is harmed if the body of an ``if`` ends with a (directly or
-indirectly) nested ``if`` statement with no ``else``. Braces on the outer ``if``
-would help to avoid running into a "dangling else" situation.
+*   Multi-statement bodies
+*   Single-statement bodies with non-hoistable comments
+*   Complex single-statement bodies (e.g., deep nesting, complex nested
+    loops)
+*   Inconsistent bracing within ``if``/``else if``/``else`` chains (if one
+    block requires braces, all must)
+*   ``if`` statements ending with a nested ``if`` lacking an ``else`` (to
+    prevent "dangling else")
 
+The examples below provide guidelines for these cases:
 
 .. code-block:: c++
 
@@ -1763,7 +1794,7 @@ would help to avoid running into a "dangling else" situation.
         handleAttrOnDecl(D, A, i);
   }
 
-  // Use braces on the outer block because of a nested `if`; otherwise the
+  // Use braces on the outer block because of a nested `if`; otherwise, the
   // compiler would warn: `add explicit braces to avoid dangling else`
   if (auto *D = dyn_cast<FunctionDecl>(D)) {
     if (shouldProcess(D))
@@ -1772,6 +1803,12 @@ would help to avoid running into a "dangling else" situation.
       markAsIgnored(D);
   }
 
+Use Unix line endings for files
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Use Unix line endings for all files. CRLF line endings are allowed as an
+exception for test files that intend to test CRLF handling or when the file
+format requires it (like ``.bat`` or ``.rc`` files).
 
 See Also
 ========

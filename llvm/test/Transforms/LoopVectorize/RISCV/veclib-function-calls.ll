@@ -2288,7 +2288,7 @@ define void @tgamma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 }
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "target-features"="+v" }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR2]] = { "vector-function-abi-variant"="_ZGVrNxv_acos(Sleef_acosdx_u10rvvm2)" }
 ; CHECK: attributes #[[ATTR3]] = { "vector-function-abi-variant"="_ZGVrNxv_acosf(Sleef_acosfx_u10rvvm2)" }
 ; CHECK: attributes #[[ATTR4]] = { "vector-function-abi-variant"="_ZGVrNxv_acosh(Sleef_acoshdx_u10rvvm2)" }

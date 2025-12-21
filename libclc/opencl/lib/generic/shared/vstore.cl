@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/shared/clc_vstore.h>
 
 #define __CLC_BODY "vstore.inc"

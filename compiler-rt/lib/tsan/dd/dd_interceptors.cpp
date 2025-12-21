@@ -11,6 +11,7 @@
 #include "dd_rtl.h"
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
+#include "sanitizer_common/sanitizer_glibc_version.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
 
 using namespace __dsan;
@@ -312,12 +313,24 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(pthread_rwlock_timedwrlock);
   INTERCEPT_FUNCTION(pthread_rwlock_unlock);
 
+  // See the comment in tsan_interceptors_posix.cpp.
+#if SANITIZER_GLIBC && !__GLIBC_PREREQ(2, 36) &&                      \
+    (defined(__x86_64__) || defined(__mips__) || SANITIZER_PPC64V1 || \
+     defined(__s390x__))
   INTERCEPT_FUNCTION_VER(pthread_cond_init, "GLIBC_2.3.2");
   INTERCEPT_FUNCTION_VER(pthread_cond_signal, "GLIBC_2.3.2");
   INTERCEPT_FUNCTION_VER(pthread_cond_broadcast, "GLIBC_2.3.2");
   INTERCEPT_FUNCTION_VER(pthread_cond_wait, "GLIBC_2.3.2");
   INTERCEPT_FUNCTION_VER(pthread_cond_timedwait, "GLIBC_2.3.2");
   INTERCEPT_FUNCTION_VER(pthread_cond_destroy, "GLIBC_2.3.2");
+#else
+  INTERCEPT_FUNCTION(pthread_cond_init);
+  INTERCEPT_FUNCTION(pthread_cond_signal);
+  INTERCEPT_FUNCTION(pthread_cond_broadcast);
+  INTERCEPT_FUNCTION(pthread_cond_wait);
+  INTERCEPT_FUNCTION(pthread_cond_timedwait);
+  INTERCEPT_FUNCTION(pthread_cond_destroy);
+#endif
 
   // for symbolizer
   INTERCEPT_FUNCTION(realpath);

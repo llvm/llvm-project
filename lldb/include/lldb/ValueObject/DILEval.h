@@ -43,9 +43,16 @@ public:
               lldb::DynamicValueType use_dynamic, bool use_synthetic,
               bool fragile_ivar, bool check_ptr_vs_member);
 
+  /// Evaluate an ASTNode.
+  /// \returns A non-null lldb::ValueObjectSP or an Error.
   llvm::Expected<lldb::ValueObjectSP> Evaluate(const ASTNode *node);
 
 private:
+  /// Evaluate an ASTNode. If the result is a reference, it is also
+  /// dereferenced using ValueObject::Dereference.
+  /// \returns A non-null lldb::ValueObjectSP or an Error.
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateAndDereference(const ASTNode *node);
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const IdentifierNode *node) override;
   llvm::Expected<lldb::ValueObjectSP> Visit(const MemberOfNode *node) override;
@@ -54,6 +61,22 @@ private:
   Visit(const ArraySubscriptNode *node) override;
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const BitFieldExtractionNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const IntegerLiteralNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const FloatLiteralNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const BooleanLiteralNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP> Visit(const CastNode *node) override;
+
+  /// Perform usual unary conversions on a value. At the moment this
+  /// includes array-to-pointer and integral promotion for eligible types.
+  llvm::Expected<lldb::ValueObjectSP>
+  UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location);
+  llvm::Expected<CompilerType>
+  PickIntegerType(lldb::TypeSystemSP type_system,
+                  std::shared_ptr<ExecutionContextScope> ctx,
+                  const IntegerLiteralNode *literal);
 
   // Used by the interpreter to create objects, perform casts, etc.
   lldb::TargetSP m_target;

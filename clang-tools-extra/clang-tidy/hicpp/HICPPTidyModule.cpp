@@ -1,4 +1,4 @@
-//===------- HICPPTidyModule.cpp - clang-tidy -----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -43,6 +43,7 @@
 
 namespace clang::tidy {
 namespace hicpp {
+namespace {
 
 class HICPPModule : public ClangTidyModule {
 public:
@@ -110,6 +111,8 @@ public:
         "hicpp-vararg");
   }
 };
+
+} // namespace
 
 // Register the HICPPModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<HICPPModule>

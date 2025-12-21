@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -34,7 +35,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -47,7 +48,6 @@
 #include <algorithm>
 #include <cmath>
 #include <optional>
-#include <queue>
 
 using namespace llvm;
 using ProfCorrelatorKind = InstrProfCorrelator::ProfCorrelatorKind;
@@ -761,7 +761,8 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     auto DataAccessProfData = Reader->takeDataAccessProfData();
 
     // Check for the empty input in case the YAML file is invalid.
-    if (MemProfData.Records.empty()) {
+    if (MemProfData.Records.empty() &&
+        (!DataAccessProfData || DataAccessProfData->empty())) {
       WC->Errors.emplace_back(
           make_error<StringError>("The profile is empty.", std::error_code()),
           Filename);
@@ -778,6 +779,12 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   // we have more non-fatal errors from InstrProfReader in the future. How
   // should this interact with different -failure-mode?
   std::optional<std::pair<Error, std::string>> ReaderWarning;
+  auto ReaderWarningScope = llvm::make_scope_exit([&] {
+    // If we hit a different error we may still have an error in ReaderWarning.
+    // Consume it now to avoid an assert
+    if (ReaderWarning)
+      consumeError(std::move(ReaderWarning->first));
+  });
   auto Warn = [&](Error E) {
     if (ReaderWarning) {
       consumeError(std::move(E));
@@ -2630,7 +2637,7 @@ void SampleOverlapAggregator::dumpFuncSimilarity(raw_fd_ostream &OS) const {
 }
 
 void SampleOverlapAggregator::dumpProgramSummary(raw_fd_ostream &OS) const {
-  OS << "Profile overlap infomation for base_profile: "
+  OS << "Profile overlap information for base_profile: "
      << ProfOverlap.BaseName.toString()
      << " and test_profile: " << ProfOverlap.TestName.toString()
      << "\nProgram level:\n";
@@ -2849,9 +2856,8 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   auto FS = vfs::getRealFileSystem();
   auto ReaderOrErr = InstrProfReader::create(Filename, *FS);
   std::vector<uint32_t> Cutoffs = std::move(DetailedSummaryCutoffs);
-  if (ShowDetailedSummary && Cutoffs.empty()) {
+  if (Cutoffs.empty() && (ShowDetailedSummary || ShowHotFuncList))
     Cutoffs = ProfileSummaryBuilder::DefaultCutoffs;
-  }
   InstrProfSummaryBuilder Builder(std::move(Cutoffs));
   if (Error E = ReaderOrErr.takeError())
     exitWithError(std::move(E), Filename);
@@ -2863,15 +2869,7 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   int NumVPKind = IPVK_Last - IPVK_First + 1;
   std::vector<ValueSitesStats> VPStats(NumVPKind);
 
-  auto MinCmp = [](const std::pair<std::string, uint64_t> &v1,
-                   const std::pair<std::string, uint64_t> &v2) {
-    return v1.second > v2.second;
-  };
-
-  std::priority_queue<std::pair<std::string, uint64_t>,
-                      std::vector<std::pair<std::string, uint64_t>>,
-                      decltype(MinCmp)>
-      HottestFuncs(MinCmp);
+  std::vector<std::pair<StringRef, uint64_t>> NameAndMaxCount;
 
   if (!TextFormat && OnlyListBelow) {
     OS << "The list of functions with the maximum counter less than "
@@ -2931,9 +2929,9 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
       continue;
     }
 
-    for (size_t I = 0, E = Func.Counts.size(); I < E; ++I) {
-      FuncMax = std::max(FuncMax, Func.Counts[I]);
-      FuncSum += Func.Counts[I];
+    for (uint64_t Count : Func.Counts) {
+      FuncMax = std::max(FuncMax, Count);
+      FuncSum += Count;
     }
 
     if (FuncMax < ShowValueCutoff) {
@@ -2946,15 +2944,8 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     } else if (OnlyListBelow)
       continue;
 
-    if (TopNFunctions) {
-      if (HottestFuncs.size() == TopNFunctions) {
-        if (HottestFuncs.top().second < FuncMax) {
-          HottestFuncs.pop();
-          HottestFuncs.emplace(std::make_pair(std::string(Func.Name), FuncMax));
-        }
-      } else
-        HottestFuncs.emplace(std::make_pair(std::string(Func.Name), FuncMax));
-    }
+    if (TopNFunctions || ShowHotFuncList)
+      NameAndMaxCount.emplace_back(Func.Name, FuncMax);
 
     if (Show) {
       if (!ShownFunctions)
@@ -3034,16 +3025,27 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
        << "): " << PS->getNumFunctions() - BelowCutoffFunctions << "\n";
   }
 
+  // Sort by MaxCount in decreasing order
+  llvm::stable_sort(NameAndMaxCount, [](const auto &L, const auto &R) {
+    return L.second > R.second;
+  });
   if (TopNFunctions) {
-    std::vector<std::pair<std::string, uint64_t>> SortedHottestFuncs;
-    while (!HottestFuncs.empty()) {
-      SortedHottestFuncs.emplace_back(HottestFuncs.top());
-      HottestFuncs.pop();
-    }
     OS << "Top " << TopNFunctions
        << " functions with the largest internal block counts: \n";
-    for (auto &hotfunc : llvm::reverse(SortedHottestFuncs))
-      OS << "  " << hotfunc.first << ", max count = " << hotfunc.second << "\n";
+    auto TopFuncs = ArrayRef(NameAndMaxCount).take_front(TopNFunctions);
+    for (auto [Name, MaxCount] : TopFuncs)
+      OS << "  " << Name << ", max count = " << MaxCount << "\n";
+  }
+
+  if (ShowHotFuncList) {
+    auto HotCountThreshold =
+        ProfileSummaryBuilder::getHotCountThreshold(PS->getDetailedSummary());
+    OS << "# Hot count threshold: " << HotCountThreshold << "\n";
+    for (auto [Name, MaxCount] : NameAndMaxCount) {
+      if (MaxCount < HotCountThreshold)
+        break;
+      OS << Name << "\n";
+    }
   }
 
   if (ShownFunctions && ShowIndirectCallTargets) {
@@ -3469,10 +3471,8 @@ static int order_main() {
   return 0;
 }
 
-int llvm_profdata_main(int argc, char **argvNonConst,
-                       const llvm::ToolContext &) {
-  const char **argv = const_cast<const char **>(argvNonConst);
-
+int main(int argc, const char *argv[]) {
+  InitLLVM X(argc, argv);
   StringRef ProgName(sys::path::filename(argv[0]));
 
   if (argc < 2) {
