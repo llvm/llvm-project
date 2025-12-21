@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // check that <array> functions are marked [[nodiscard]]
 
 // clang-format off
