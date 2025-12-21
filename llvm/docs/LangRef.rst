@@ -21587,7 +21587,7 @@ Arguments:
 
 ``rounding mode``
   A metadata string specifying the rounding mode. The permitted strings match those
-  accepted by :ref:`llvm.fptrunc.round <int_fptrunc_round>` (for example,
+  accepted by ``llvm.fptrunc.round`` (for example,
   ``"round.tonearest"`` or ``"round.towardzero"``).
 
   The rounding mode is only consulted when ``value`` is not exactly representable in the target format.
@@ -21618,25 +21618,23 @@ integer (e.g., ``i8`` for FP8, ``i6`` for FP6) containing the encoded arbitrary 
 
 **Handling of special values:**
 
-- **NaN**: If the input is NaN and the target format supports NaN, it is converted to a NaN
-  representation in the target format. The exact NaN payload and quiet/signaling status are
-  implementation-defined; implementations may preserve them when the target supports it.
-  If the target format does not support NaN, the intrinsic returns a poison value.
-- **Infinity**: If the input is +/-Inf:
+- **NaN**: NaN values follow LLVM's standard :ref:`NaN rules <floatnan>`. When the target
+  format supports NaN, the NaN representation is preserved (quiet NaNs remain quiet, signaling
+  NaNs remain signaling). The exact NaN payload may be truncated or extended to fit the target
+  format's payload size. If the target format does not support NaN, the intrinsic returns a
+  poison value.
+- **Infinity and Overflow**: If the input is +/-Inf or a finite value that exceeds the representable range:
 
-  - When ``saturation`` is ``false`` and the target format supports infinity, +/-Inf is preserved.
+  - When ``saturation`` is ``false`` and the target format supports infinity, the result is +/-Inf (preserving the sign).
   - When ``saturation`` is ``false`` and the target format does not support infinity (e.g., formats
     with "FN" suffix), the intrinsic returns a poison value.
-  - When ``saturation`` is ``true``, +/-Inf is clamped to the maximum/minimum representable finite value.
-
-- **Overflow**: When a finite value exceeds the representable range:
-
   - When ``saturation`` is ``true``, the value is clamped to the maximum/minimum representable finite value.
-  - When ``saturation`` is ``false`` and the target format supports infinity, the value becomes +/-Inf.
-  - When ``saturation`` is ``false`` and the target format does not support infinity, the intrinsic
-    returns a poison value.
 
-For FP6/FP4 interpretations, producers are expected to use ``saturation`` = ``true``; using ``saturation`` = ``false`` and generating NaN/Inf/overflowing values is undefined (poison).
+For FP6/FP4 interpretations, producers are expected to use ``saturation`` = ``true``; using ``saturation`` = ``false`` and generating NaN/Inf/overflowing values results in a poison value.
+
+.. note::
+
+   The supported conversions are target dependent.
 
 Example:
 """"""""
@@ -21694,12 +21692,16 @@ The intrinsic interprets the integer value as arbitrary FP bits according to
 
 Conversions from arbitrary FP formats to native LLVM floating-point types are typically
 widening conversions (e.g., FP8 to FP16 or FP32), which are exact and require no rounding.
-Normal finite values are converted exactly. NaN values in the source format are converted to
-NaN in the target format. The exact NaN payload and quiet/signaling status are
-implementation-defined; implementations may preserve them when the target supports it.
-Infinity values are preserved as infinity. If a value exceeds the representable range of the
-target type (for example, converting ``Float8E8M0FNU`` with large exponents to ``half``),
-the result is converted to infinity with the appropriate sign.
+Normal finite values are converted exactly. NaN values follow LLVM's standard :ref:`NaN rules
+<floatnan>`; the NaN representation is preserved (quiet NaNs remain quiet, signaling NaNs
+remain signaling), and the NaN payload may be truncated or extended to fit the target format's
+payload size. Infinity values are preserved as infinity. If a value exceeds the representable
+range of the target type (for example, converting ``Float8E8M0FNU`` with large exponents to
+``half``), the result is converted to infinity with the appropriate sign.
+
+.. note::
+
+   The supported conversions are target dependent.
 
 Example:
 """"""""
