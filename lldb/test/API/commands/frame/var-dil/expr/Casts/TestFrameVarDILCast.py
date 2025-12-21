@@ -118,6 +118,7 @@ class TestFrameVarDILCast(TestBase):
         self.expect_var_path("(long long)arr", type="long long")
         self.expect_var_path("(bool)ap", type="bool", value="true")
         self.expect_var_path("(bool)(int*)0x00000000", type="bool", value="false")
+        self.expect_var_path("(bool)std_nullptr_t", value="false")
         self.expect_var_path("(bool)arr", type="bool", value="true")
         self.expect(
             "frame variable '(char)ap'",
@@ -129,7 +130,7 @@ class TestFrameVarDILCast(TestBase):
             Is32Bit = True
 
         if Is32Bit:
-            self.expect("frame variable '(int)arr'", type="int")
+            self.expect_var_path("(int)arr", type="int")
         else:
             self.expect(
                 "frame variable '(int)arr'",
@@ -194,6 +195,23 @@ class TestFrameVarDILCast(TestBase):
             self.expect_var_path("(void *)0", type="void *", value="0x00000000")
         else:
             self.expect_var_path("(void *)0", type="void *", value="0x0000000000000000")
+
+            self.expect(
+                "frame variable '(int)std_nullptr_t'",
+                error=True,
+                substrs=["cast from pointer to smaller type 'int' loses information"]
+            )
+
+        if Is32Bit:
+            self.expect_var_path("(void*)std_nullptr_t", type="void *",
+                                 value="0x00000000")
+            self.expect_var_path("(char*)std_nullptr_t", type="char *",
+                                 value="0x00000000")
+        else:
+            self.expect_var_path("(void*)std_nullptr_t", type="void *",
+                                 value="0x0000000000000000")
+            self.expect_var_path("(char*)std_nullptr_t", type="char *",
+                                 value="0x0000000000000000")
 
         # TestCastArray
         self.expect_var_path("(int*)arr_1d", type="int *")

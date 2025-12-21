@@ -42,7 +42,6 @@ enum class UnaryOpKind {
 enum class CastKind {
   eArithmetic,  ///< Casting to a scalar.
   eEnumeration, ///< Casting from a scalar to an enumeration type
-  eNullptr,     ///< Casting to a nullptr type
   ePointer,     ///< Casting to a pointer type.
   eReference,   ///< Casting to a reference type
   eNone,        ///< Invalid promotion type (results in error).

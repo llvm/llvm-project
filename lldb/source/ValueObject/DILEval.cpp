@@ -863,24 +863,6 @@ Interpreter::VerifyCastType(lldb::ValueObjectSP operand,
     return CastKind::ePointer;
   }
 
-  if (target_type.IsNullPtrType()) {
-    // Cast to nullptr type.
-    bool is_signed;
-    if (!source_type.IsNullPtrType() &&
-        (!operand->IsIntegerType(is_signed) ||
-         (is_signed && operand->GetValueAsSigned(0) != 0) ||
-         (!is_signed && operand->GetValueAsUnsigned(0) != 0))) {
-      std::string errMsg = llvm::formatv("Cast from {0} to {1} is not allowed",
-                                         source_type.TypeDescription(),
-                                         target_type.TypeDescription());
-
-      return llvm::make_error<DILDiagnosticError>(
-          m_expr, std::move(errMsg), location,
-          source_type.TypeDescription().length());
-    }
-    return CastKind::eNullptr;
-  }
-
   if (target_type.IsReferenceType())
     return CastKind::eReference;
 
@@ -928,10 +910,6 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode *node) {
     if (op_type.IsFloat() || op_type.IsInteger() || op_type.IsEnumerationType())
       return operand->CastToEnumType(target_type);
     break;
-  }
-  case CastKind::eNullptr: {
-    return ValueObject::CreateValueObjectFromNullptr(m_target, target_type,
-                                                     "result");
   }
   case CastKind::eReference: {
     lldb::ValueObjectSP operand_sp(
