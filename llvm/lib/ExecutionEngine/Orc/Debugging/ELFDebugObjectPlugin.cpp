@@ -197,52 +197,6 @@ static bool isDwarfSection(StringRef SectionName) {
   return DwarfSectionNames.count(SectionName) == 1;
 }
 
-void ELFDebugObjectPlugin::notifyMaterializing(
-    MaterializationResponsibility &MR, LinkGraph &G, JITLinkContext &Ctx,
-    MemoryBufferRef InputObj) {
-  if (InputObj.getBufferSize() == 0)
-    return;
-  if (G.getTargetTriple().getObjectFormat() != Triple::ELF)
-    return;
-
-  unsigned char Class, Endian;
-  std::tie(Class, Endian) = getElfArchType(InputObj.getBuffer());
-  if (Class != ELF::ELFCLASS64 && Class != ELF::ELFCLASS32)
-    return ES.reportError(
-        createStringError(object_error::invalid_file_type,
-                          "Skipping debug object registration: Invalid arch "
-                          "0x%02x in ELF LinkGraph %s",
-                          Class, G.getName().c_str()));
-  if (Endian != ELF::ELFDATA2LSB && Endian != ELF::ELFDATA2MSB)
-    return ES.reportError(
-        createStringError(object_error::invalid_file_type,
-                          "Skipping debug object registration: Invalid endian "
-                          "0x%02x in ELF LinkGraph %s",
-                          Endian, G.getName().c_str()));
-
-  // Step 1: We copy the raw input object into the working memory of a
-  // single-segment read-only allocation
-  size_t Size = InputObj.getBufferSize();
-  auto Alignment = sys::Process::getPageSizeEstimate();
-  SimpleSegmentAlloc::Segment Segment{Size, Align(Alignment)};
-
-  auto Alloc = SimpleSegmentAlloc::Create(
-      Ctx.getMemoryManager(), ES.getSymbolStringPool(), ES.getTargetTriple(),
-      Ctx.getJITLinkDylib(), {{MemProt::Read, Segment}});
-  if (!Alloc) {
-    ES.reportError(Alloc.takeError());
-    return;
-  }
-
-  std::lock_guard<std::mutex> Lock(PendingObjsLock);
-  assert(PendingObjs.count(&MR) == 0 && "One debug object per materialization");
-  PendingObjs[&MR] = std::make_unique<DebugObject>(
-      InputObj.getBufferIdentifier(), std::move(*Alloc), Ctx, ES);
-
-  MutableArrayRef<char> Buffer = PendingObjs[&MR]->getBuffer();
-  memcpy(Buffer.data(), InputObj.getBufferStart(), Size);
-}
-
 DebugObject *
 ELFDebugObjectPlugin::getPendingDebugObj(MaterializationResponsibility &MR) {
   std::lock_guard<std::mutex> Lock(PendingObjsLock);
