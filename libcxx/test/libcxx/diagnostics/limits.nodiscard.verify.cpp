@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // check that <limits> functions are marked [[nodiscard]]
 
 #include <limits>

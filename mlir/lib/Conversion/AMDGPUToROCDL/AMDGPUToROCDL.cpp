@@ -661,6 +661,27 @@ static Value packSmallFloatVectorOperand(ConversionPatternRewriter &rewriter,
   return input;
 }
 
+/// Converts sparse MFMA (smfmac) operands to the expected ROCDL types.
+static Value convertSparseMFMAVectorOperand(ConversionPatternRewriter &rewriter,
+                                            Location loc, Value input,
+                                            bool allowBf16 = true) {
+  Type inputType = input.getType();
+  auto vectorType = cast<VectorType>(inputType);
+  // bf16 -> i16 when not allowed (pre-gfx950).
+  if (vectorType.getElementType().isBF16() && !allowBf16)
+    return LLVM::BitcastOp::create(
+        rewriter, loc, vectorType.clone(rewriter.getI16Type()), input);
+  // i8/fp8 vectors -> vector<Nxi32>.
+  if (isa<IntegerType>(vectorType.getElementType()) &&
+      vectorType.getElementTypeBitWidth() <= 8) {
+    int64_t numWords = llvm::divideCeil(
+        vectorType.getNumElements() * vectorType.getElementTypeBitWidth(), 32);
+    return LLVM::BitcastOp::create(
+        rewriter, loc, VectorType::get(numWords, rewriter.getI32Type()), input);
+  }
+  return input;
+}
+
 /// Converts the scaled MFMA/WMMA operands, `scalesA` and `scalesB`, from MLIR
 /// AMDGPU dialect convention to ROCDL and LLVM AMDGPU intrinsics convention.
 ///
@@ -1171,6 +1192,105 @@ static std::optional<StringRef> wmmaOpToIntrinsicGfx1250(Type elemSourceType,
   return std::nullopt;
 }
 
+/// Returns the `rocdl` intrinsic corresponding to a SparseMFMA (smfmac)
+/// operation if one exists. This includes checking to ensure the intrinsic is
+/// supported on the architecture you are compiling for.
+static std::optional<StringRef> smfmacOpToIntrinsic(SparseMFMAOp op,
+                                                    Chipset chipset) {
+  bool isGfx950 = chipset >= kGfx950;
+  auto isFp8 = [&](Type t) { return typeIsExpectedFp8ForChipset(chipset, t); };
+  auto isBf8 = [&](Type t) { return typeIsExpectedBf8ForChipset(chipset, t); };
+
+  uint32_t m = op.getM(), n = op.getN(), k = op.getK();
+  Type sourceAElem = getElementTypeOrSelf(op.getSourceA().getType());
+  Type sourceBElem = getElementTypeOrSelf(op.getSourceB().getType());
+  Type destElem = getElementTypeOrSelf(op.getDestC().getType());
+
+  if (m == 16 && n == 16 && k == 32) {
+    if (sourceAElem.isF16() && sourceBElem.isF16() && destElem.isF32())
+      return ROCDL::smfmac_f32_16x16x32_f16::getOperationName();
+    if (sourceAElem.isBF16() && sourceBElem.isBF16() && destElem.isF32())
+      return ROCDL::smfmac_f32_16x16x32_bf16::getOperationName();
+  }
+
+  if (m == 16 && n == 16 && k == 64) {
+    if (isGfx950) {
+      if (sourceAElem.isF16() && sourceBElem.isF16() && destElem.isF32())
+        return ROCDL::smfmac_f32_16x16x64_f16::getOperationName();
+      if (sourceAElem.isBF16() && sourceBElem.isBF16() && destElem.isF32())
+        return ROCDL::smfmac_f32_16x16x64_bf16::getOperationName();
+    }
+    if (sourceAElem.isInteger(8) && sourceBElem.isInteger(8) &&
+        destElem.isInteger(32))
+      return ROCDL::smfmac_i32_16x16x64_i8::getOperationName();
+    if (isFp8(sourceAElem) && isFp8(sourceBElem) && destElem.isF32())
+      return ROCDL::smfmac_f32_16x16x64_fp8_fp8::getOperationName();
+    if (isFp8(sourceAElem) && isBf8(sourceBElem) && destElem.isF32())
+      return ROCDL::smfmac_f32_16x16x64_fp8_bf8::getOperationName();
+    if (isBf8(sourceAElem) && isFp8(sourceBElem) && destElem.isF32())
+      return ROCDL::smfmac_f32_16x16x64_bf8_fp8::getOperationName();
+    if (isBf8(sourceAElem) && isBf8(sourceBElem) && destElem.isF32())
+      return ROCDL::smfmac_f32_16x16x64_bf8_bf8::getOperationName();
+  }
+
+  if (m == 16 && n == 16 && k == 128 && isGfx950) {
+    if (sourceAElem.isInteger(8) && sourceBElem.isInteger(8) &&
+        destElem.isInteger(32))
+      return ROCDL::smfmac_i32_16x16x128_i8::getOperationName();
+    if (isFp8(sourceAElem) && isFp8(sourceBElem) && destElem.isF32())
+      return ROCDL::smfmac_f32_16x16x128_fp8_fp8::getOperationName();
+    if (isFp8(sourceAElem) && isBf8(sourceBElem) && destElem.isF32())
+      return ROCDL::smfmac_f32_16x16x128_fp8_bf8::getOperationName();
+    if (isBf8(sourceAElem) && isFp8(sourceBElem) && destElem.isF32())
+      return ROCDL::smfmac_f32_16x16x128_bf8_fp8::getOperationName();
+    if (isBf8(sourceAElem) && isBf8(sourceBElem) && destElem.isF32())
+      return ROCDL::smfmac_f32_16x16x128_bf8_bf8::getOperationName();
+  }
+
+  if (m == 32 && n == 32 && k == 16) {
+    if (sourceAElem.isF16() && sourceBElem.isF16() && destElem.isF32())
+      return ROCDL::smfmac_f32_32x32x16_f16::getOperationName();
+    if (sourceAElem.isBF16() && sourceBElem.isBF16() && destElem.isF32())
+      return ROCDL::smfmac_f32_32x32x16_bf16::getOperationName();
+  }
+
+  if (m == 32 && n == 32 && k == 32) {
+    if (isGfx950) {
+      if (sourceAElem.isF16() && sourceBElem.isF16() && destElem.isF32())
+        return ROCDL::smfmac_f32_32x32x32_f16::getOperationName();
+      if (sourceAElem.isBF16() && sourceBElem.isBF16() && destElem.isF32())
+        return ROCDL::smfmac_f32_32x32x32_bf16::getOperationName();
+    }
+    if (sourceAElem.isInteger(8) && sourceBElem.isInteger(8) &&
+        destElem.isInteger(32))
+      return ROCDL::smfmac_i32_32x32x32_i8::getOperationName();
+    if (isFp8(sourceAElem) && isFp8(sourceBElem) && destElem.isF32())
+      return ROCDL::smfmac_f32_32x32x32_fp8_fp8::getOperationName();
+    if (isFp8(sourceAElem) && isBf8(sourceBElem) && destElem.isF32())
+      return ROCDL::smfmac_f32_32x32x32_fp8_bf8::getOperationName();
+    if (isBf8(sourceAElem) && isFp8(sourceBElem) && destElem.isF32())
+      return ROCDL::smfmac_f32_32x32x32_bf8_fp8::getOperationName();
+    if (isBf8(sourceAElem) && isBf8(sourceBElem) && destElem.isF32())
+      return ROCDL::smfmac_f32_32x32x32_bf8_bf8::getOperationName();
+  }
+
+  if (m == 32 && n == 32 && k == 64 && isGfx950) {
+    if (sourceAElem.isInteger(8) && sourceBElem.isInteger(8) &&
+        destElem.isInteger(32))
+      return ROCDL::smfmac_i32_32x32x64_i8::getOperationName();
+    if (isFp8(sourceAElem) && isFp8(sourceBElem) && destElem.isF32())
+      return ROCDL::smfmac_f32_32x32x64_fp8_fp8::getOperationName();
+    if (isFp8(sourceAElem) && isBf8(sourceBElem) && destElem.isF32())
+      return ROCDL::smfmac_f32_32x32x64_fp8_bf8::getOperationName();
+    if (isBf8(sourceAElem) && isFp8(sourceBElem) && destElem.isF32())
+      return ROCDL::smfmac_f32_32x32x64_bf8_fp8::getOperationName();
+    if (isBf8(sourceAElem) && isBf8(sourceBElem) && destElem.isF32())
+      return ROCDL::smfmac_f32_32x32x64_bf8_bf8::getOperationName();
+  }
+
+  return std::nullopt;
+}
+
 /// Returns the `rocdl` intrinsic corresponding to a WMMA operation `wmma`
 /// if one exists. This includes checking to ensure the intrinsic is supported
 /// on the architecture you are compiling for.
@@ -1320,6 +1440,52 @@ struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
          /*scales idx B=*/scalesIdxB,
          /*scales B*/
          castScaleOperand(rewriter, loc, adaptor.getScalesB())});
+    Value lowered = rewriter.create(loweredOp)->getResult(0);
+    rewriter.replaceOp(op, lowered);
+    return success();
+  }
+};
+
+struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
+  SparseMFMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<SparseMFMAOp>(converter), chipset(chipset) {}
+
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(SparseMFMAOp op, SparseMFMAOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    auto outType =
+        typeConverter->convertType<VectorType>(op.getDestC().getType());
+    if (!outType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    // smfmac is supported on gfx942 and gfx950.
+    if (chipset.majorVersion != 9 || chipset < kGfx942)
+      return op->emitOpError("sparse MFMA (smfmac) only supported on gfx942+");
+    bool isGfx950 = chipset >= kGfx950;
+
+    Value a = convertSparseMFMAVectorOperand(rewriter, loc,
+                                             adaptor.getSourceA(), isGfx950);
+    Value b = convertSparseMFMAVectorOperand(rewriter, loc,
+                                             adaptor.getSourceB(), isGfx950);
+    Value c = adaptor.getDestC();
+
+    std::optional<StringRef> maybeIntrinsic = smfmacOpToIntrinsic(op, chipset);
+    if (!maybeIntrinsic.has_value())
+      return op.emitOpError(
+          "no intrinsic matching sparse MFMA on the given chipset");
+
+    // Bitcast sparse indices from vector<4xi8> or vector<2xi16> to i32.
+    Value sparseIdx = LLVM::BitcastOp::create(
+        rewriter, loc, rewriter.getI32Type(), adaptor.getSparseIdx());
+
+    OperationState loweredOp(loc, maybeIntrinsic.value());
+    loweredOp.addTypes(outType);
+    loweredOp.addOperands({a, b, c, sparseIdx,
+                           createI32Constant(rewriter, loc, op.getCbsz()),
+                           createI32Constant(rewriter, loc, op.getAbid())});
     Value lowered = rewriter.create(loweredOp)->getResult(0);
     rewriter.replaceOp(op, lowered);
     return success();
@@ -3218,11 +3384,6 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
 
     Location loc = op.getLoc();
 
-    IntegerType i32 = rewriter.getI32Type();
-    [[maybe_unused]] Type v4i32 =
-        this->typeConverter->convertType(VectorType::get(4, i32));
-    assert(v4i32 && "expected type conversion to succeed");
-
     SmallVector<Value> consts;
     for (int64_t i = 0; i < 8; ++i)
       consts.push_back(createI32Constant(rewriter, loc, i));
@@ -3233,6 +3394,32 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     Value dgroup3 = this->getDGroup3(op, adaptor, rewriter, loc, consts);
     SmallVector<Value> results = {dgroup0, dgroup1, dgroup2, dgroup3};
     rewriter.replaceOpWithMultiple(op, {results});
+    return success();
+  }
+};
+
+template <typename SourceOp, typename TargetOp>
+struct AMDGPUTensorLoadStoreOpLowering
+    : public ConvertOpToLLVMPattern<SourceOp> {
+  using ConvertOpToLLVMPattern<SourceOp>::ConvertOpToLLVMPattern;
+  using Adaptor = typename ConvertOpToLLVMPattern<SourceOp>::OneToNOpAdaptor;
+  AMDGPUTensorLoadStoreOpLowering(const LLVMTypeConverter &converter,
+                                  Chipset chipset)
+      : ConvertOpToLLVMPattern<SourceOp>(converter), chipset(chipset) {}
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(SourceOp op, Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1250)
+      return op->emitOpError("is only supported on gfx1250");
+
+    ValueRange desc = adaptor.getDesc();
+    rewriter.replaceOpWithNewOp<TargetOp>(op, desc[0], desc[1], desc[2],
+                                          desc[3], /*cachePolicy=*/0,
+                                          /*alias_scopes=*/nullptr,
+                                          /*noalias_scopes=*/nullptr,
+                                          /*tbaa=*/nullptr);
     return success();
   }
 };
@@ -3306,6 +3493,33 @@ void mlir::populateAMDGPUTypeAndAttributeConversions(
     Type i32 = IntegerType::get(type.getContext(), 32);
     return typeConverter.convertType(VectorType::get(4, i32));
   });
+  typeConverter.addConversion(
+      [&](TDMDescriptorType type,
+          SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+        Type i32 = IntegerType::get(type.getContext(), 32);
+        Type v4i32 = typeConverter.convertType(VectorType::get(4, i32));
+        Type v8i32 = typeConverter.convertType(VectorType::get(8, i32));
+        llvm::append_values(result, v4i32, v8i32, v4i32, v4i32);
+        return success();
+      });
+
+  auto addUnrealizedCast = [](OpBuilder &builder, TypeRange types,
+                              ValueRange inputs,
+                              Location loc) -> SmallVector<Value> {
+    // Only create unrealized_conversion_cast for TDMDescriptorType.
+    // All other types which are not expected, should be
+    // materialized by other target materialization functions.
+    if (inputs.size() != 1)
+      return {};
+
+    if (!isa<TDMDescriptorType>(inputs[0].getType()))
+      return {};
+
+    auto cast = UnrealizedConversionCastOp::create(builder, loc, types, inputs);
+    return cast.getResults();
+  };
+
+  typeConverter.addTargetMaterialization(addUnrealizedCast);
 }
 
 void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
@@ -3328,15 +3542,19 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                ROCDL::RawPtrBufferAtomicCmpSwap>,
            AMDGPUDPPLowering, MemoryCounterWaitOpLowering, LDSBarrierOpLowering,
            SchedBarrierOpLowering, MFMAOpLowering, ScaledMFMAOpLowering,
-           WMMAOpLowering, ScaledWMMAOpLowering, ExtPackedFp8OpLowering,
-           ScaledExtPackedMatrixOpLowering, ScaledExtPackedOpLowering,
-           PackedScaledTruncOpLowering, PackedTrunc2xFp8OpLowering,
-           PackedStochRoundFp8OpLowering, GatherToLDSOpLowering,
-           TransposeLoadOpLowering, AMDGPUPermlaneLowering,
-           AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
+           SparseMFMAOpLowering, WMMAOpLowering, ScaledWMMAOpLowering,
+           ExtPackedFp8OpLowering, ScaledExtPackedMatrixOpLowering,
+           ScaledExtPackedOpLowering, PackedScaledTruncOpLowering,
+           PackedTrunc2xFp8OpLowering, PackedStochRoundFp8OpLowering,
+           GatherToLDSOpLowering, TransposeLoadOpLowering,
+           AMDGPUPermlaneLowering, AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
            AMDGPUMakeDmaBaseLowering<MakeGatherDmaBaseOp>,
            AMDGPULowerDescriptor<MakeDmaDescriptorOp>,
-           AMDGPULowerDescriptor<MakeGatherDmaDescriptorOp>>(converter,
-                                                             chipset);
+           AMDGPULowerDescriptor<MakeGatherDmaDescriptorOp>,
+           AMDGPUTensorLoadStoreOpLowering<TensorLoadToLDSOp,
+                                           ROCDL::TensorLoadToLDSOp>,
+           AMDGPUTensorLoadStoreOpLowering<TensorStoreFromLDSOp,
+                                           ROCDL::TensorStoreFromLDSOp>>(
+          converter, chipset);
   patterns.add<AMDGPUSwizzleBitModeLowering>(converter);
 }
