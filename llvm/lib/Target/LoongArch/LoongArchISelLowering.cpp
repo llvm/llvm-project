@@ -5542,7 +5542,7 @@ static SDValue performBITCASTCombine(SDNode *N, SelectionDAG &DAG,
       Lo = DAG.getNode(LoongArchISD::VMSKLTZ, DL, GRLenVT, Lo);
       Hi = DAG.getNode(LoongArchISD::VMSKLTZ, DL, GRLenVT, Hi);
       Hi = DAG.getNode(ISD::SHL, DL, GRLenVT, Hi,
-                       DAG.getConstant(16, DL, MVT::i8));
+                       DAG.getShiftAmountConstant(16, GRLenVT, DL));
       V = DAG.getNode(ISD::OR, DL, GRLenVT, Lo, Hi);
     } else if (UseLASX) {
       return SDValue();
