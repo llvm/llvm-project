@@ -189,6 +189,7 @@ private:
 
 } // namespace
 
+
 // Matches nodes that are
 // - Part of a decltype argument or class template argument (we check this by
 //   seeing if they are children of a TypeLoc), or
@@ -278,14 +279,12 @@ UseAfterMoveFinder::findInternal(const CFGBlock *Block, const Expr *MovingCall,
   // If `Reinit` is identical to `MovingCall`, we're looking at a move-to-self
   // (e.g. `a = std::move(a)`). Count these as reinitializations.
   llvm::SmallVector<const Stmt *, 1> ReinitsToDelete;
-  for (const Stmt *Reinit : Reinits) {
+  for (const Stmt *Reinit : Reinits)
     if (MovingCall && Reinit != MovingCall &&
         Sequence->potentiallyAfter(MovingCall, Reinit))
       ReinitsToDelete.push_back(Reinit);
-  }
-  for (const Stmt *Reinit : ReinitsToDelete) {
+  for (const Stmt *Reinit : ReinitsToDelete)
     Reinits.erase(Reinit);
-  }
 
   // Find all uses that potentially come after the move.
   for (const DeclRefExpr *Use : Uses) {
@@ -294,10 +293,9 @@ UseAfterMoveFinder::findInternal(const CFGBlock *Block, const Expr *MovingCall,
       // comes before the use, i.e. if there's no potential that the reinit is
       // after the use.
       bool HaveSavingReinit = false;
-      for (const Stmt *Reinit : Reinits) {
+      for (const Stmt *Reinit : Reinits)
         if (!Sequence->potentiallyAfter(Reinit, Use))
           HaveSavingReinit = true;
-      }
 
       if (!HaveSavingReinit) {
         UseAfterMove TheUseAfterMove;
@@ -321,9 +319,8 @@ UseAfterMoveFinder::findInternal(const CFGBlock *Block, const Expr *MovingCall,
   if (Reinits.empty()) {
     for (const auto &Succ : Block->succs()) {
       if (Succ) {
-        if (auto Found = findInternal(Succ, nullptr, MovedVariable)) {
+        if (auto Found = findInternal(Succ, nullptr, MovedVariable))
           return Found;
-        }
       }
     }
   }
@@ -343,10 +340,9 @@ void UseAfterMoveFinder::getUsesAndReinits(
 
   // All references to the variable that aren't reinitializations are uses.
   Uses->clear();
-  for (const DeclRefExpr *DeclRef : DeclRefs) {
+  for (const DeclRefExpr *DeclRef : DeclRefs)
     if (!ReinitDeclRefs.contains(DeclRef))
       Uses->push_back(DeclRef);
-  }
 
   // Sort the uses by their occurrence in the source code.
   llvm::sort(*Uses, [](const DeclRefExpr *D1, const DeclRefExpr *D2) {
@@ -391,9 +387,8 @@ void UseAfterMoveFinder::getDeclRefs(
         if (DeclRef && BlockMap->blockContainingStmt(DeclRef) == Block) {
           // Ignore uses of a standard smart pointer that don't dereference the
           // pointer.
-          if (Operator || !isStandardSmartPointer(DeclRef->getDecl())) {
+          if (Operator || !isStandardSmartPointer(DeclRef->getDecl()))
             DeclRefs->insert(DeclRef);
-          }
         }
       }
     };
@@ -476,11 +471,15 @@ void UseAfterMoveFinder::getReinits(
   }
 }
 
+namespace {
+
 enum MoveType {
   Forward = 0,      // std::forward
   Move = 1,         // std::move
   Invalidation = 2, // other
 };
+
+} // namespace
 
 static MoveType determineMoveType(const FunctionDecl *FuncDecl) {
   if (FuncDecl->isInStdNamespace()) {

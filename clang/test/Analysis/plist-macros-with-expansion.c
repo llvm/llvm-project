@@ -22,7 +22,7 @@ void test_strange_macro_expansion(void) {
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>STRANGE_FN(path)</string>
-// CHECK-NEXT:   <key>expansion</key><string>STRANGE_FN (path ,0)</string>
+// CHECK-NEXT:   <key>expansion</key><string>STRANGE_FN
 // CHECK-NEXT:  </dict>
 // CHECK-NEXT: </array>
 

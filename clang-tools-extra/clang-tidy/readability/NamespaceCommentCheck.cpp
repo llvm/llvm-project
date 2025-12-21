@@ -110,10 +110,9 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
   // Currently for nested namespace (n1::n2::...) the AST matcher will match foo
   // then bar instead of a single match. So if we got a nested namespace we have
   // to skip the next ones.
-  for (const SourceLocation &EndOfNameLocation : Ends) {
+  for (const SourceLocation &EndOfNameLocation : Ends)
     if (Sources.isBeforeInTranslationUnit(ND->getLocation(), EndOfNameLocation))
       return;
-  }
 
   std::optional<std::string> NamespaceNameAsWritten =
       getNamespaceNameAsWritten(LBraceLoc, Sources, getLangOpts());
