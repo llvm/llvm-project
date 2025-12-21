@@ -199,19 +199,23 @@ class TestFrameVarDILCast(TestBase):
             self.expect(
                 "frame variable '(int)std_nullptr_t'",
                 error=True,
-                substrs=["cast from pointer to smaller type 'int' loses information"]
+                substrs=["cast from pointer to smaller type 'int' loses information"],
             )
 
         if Is32Bit:
-            self.expect_var_path("(void*)std_nullptr_t", type="void *",
-                                 value="0x00000000")
-            self.expect_var_path("(char*)std_nullptr_t", type="char *",
-                                 value="0x00000000")
+            self.expect_var_path(
+                "(void*)std_nullptr_t", type="void *", value="0x00000000"
+            )
+            self.expect_var_path(
+                "(char*)std_nullptr_t", type="char *", value="0x00000000"
+            )
         else:
-            self.expect_var_path("(void*)std_nullptr_t", type="void *",
-                                 value="0x0000000000000000")
-            self.expect_var_path("(char*)std_nullptr_t", type="char *",
-                                 value="0x0000000000000000")
+            self.expect_var_path(
+                "(void*)std_nullptr_t", type="void *", value="0x0000000000000000"
+            )
+            self.expect_var_path(
+                "(char*)std_nullptr_t", type="char *", value="0x0000000000000000"
+            )
 
         # TestCastArray
         self.expect_var_path("(int*)arr_1d", type="int *")
