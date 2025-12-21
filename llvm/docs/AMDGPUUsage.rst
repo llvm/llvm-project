@@ -1428,6 +1428,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    with two i32 operands (holding a vector of 8 4bit values), summed
                                                    with the third i32 operand. The i1 fourth operand is used to clamp
                                                    the output.
+
   llvm.amdgcn.sdot2                                Provides direct access to v_dot2_i32_i16 across targets which
                                                    support such instructions. This performs a signed dot product
                                                    with two v2i16 operands, summed with the third i32 operand. The
