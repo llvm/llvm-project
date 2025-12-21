@@ -5185,7 +5185,7 @@ private:
                                  .OMPX_XTeamReductionOccupancyBasedOpt = false,
                                  .OMPX_AdjustNumTeamsForXteamRedSmallBlockSize=1}},
                       // Default config for unknown devices.
-                      {"DEFAULT", {.OMPX_UseMultipleSdmaEngines = true,
+                      {"DEFAULT", {.OMPX_UseMultipleSdmaEngines = false,
                                  .OMPX_XteamBlockSize = 512,
                                  .OMPX_XTeamReductionOccupancyBasedOpt = false,
                                  .OMPX_AdjustNumTeamsForXteamRedSmallBlockSize=1}}};
