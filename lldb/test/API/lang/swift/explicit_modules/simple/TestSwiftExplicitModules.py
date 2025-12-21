@@ -41,6 +41,13 @@ class TestSwiftExplicitModules(lldbtest.TestBase):
     @skipUnlessDarwin
     def test_import(self):
         """Test an implicit import inside an explicit build"""
+        mod_cache = self.getBuildArtifact("my-clang-modules-cache")
+        if os.path.isdir(mod_cache):
+          shutil.rmtree(mod_cache)
+
+        self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
+                    % mod_cache)
+
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))

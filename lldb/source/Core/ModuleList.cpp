@@ -18,6 +18,7 @@
 #include "lldb/Interpreter/Property.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/Platform.h"
@@ -30,7 +31,9 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-defines.h"
+#include "lldb/lldb-private-enumerations.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/ThreadPool.h"
 
@@ -306,6 +309,11 @@ bool ModuleListProperties::GetSwiftEnableASTContext() const {
 FileSpec ModuleListProperties::GetCASOnDiskPath() const {
   const uint32_t idx = ePropertyCASOnDiskPath;
   return GetPropertyAtIndexAs<FileSpec>(idx, {});
+}
+
+bool ModuleListProperties::SetCASOnDiskPath(const FileSpec &path) {
+  const uint32_t idx = ePropertyCASOnDiskPath;
+  return SetPropertyAtIndex(idx, path);
 }
 
 FileSpec ModuleListProperties::GetCASPluginPath() const {
@@ -1286,6 +1294,17 @@ private:
           continue;
         ModuleList to_remove = RemoveOrphansFromVector(vec);
         remove_count += to_remove.GetSize();
+        // BEGIN CAS
+        to_remove.ForEach([&](auto &m) {
+          auto it = m_module_configs.find(m.get());
+          if (it != m_module_configs.end())
+            if (auto config = it->second) {
+              m_cas_cache.erase(config);
+              m_module_configs.erase(it);
+            }
+          return IterationAction::Continue;
+        });
+        // END CAS
         m_list.Remove(to_remove);
       }
       // Break when fixed-point is reached.
@@ -1300,6 +1319,21 @@ private:
   /// filename, for fast module lookups by name.
   llvm::DenseMap<ConstString, llvm::SmallVector<ModuleSP, 1>> m_name_to_modules;
 
+  // BEGIN CAS
+public:
+  /// Each module may have a CAS config associated with it.
+  /// Often many modules share the same CAS.
+  llvm::DenseMap<const Module *, llvm::cas::CASConfiguration> m_module_configs;
+
+  /// Each CAS config has a CAS associated with it.
+  llvm::DenseMap<llvm::cas::CASConfiguration,
+                 std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
+                           std::shared_ptr<llvm::cas::ActionCache>>>
+      m_cas_cache;
+
+private:
+  // END CAS
+
   /// The use count of a module held only by m_list and m_name_to_modules.
   static constexpr long kUseCountSharedModuleListOrphaned = 2;
 };
@@ -1307,7 +1341,6 @@ private:
 struct SharedModuleListInfo {
   SharedModuleList module_list;
   ModuleListProperties module_list_properties;
-  std::shared_ptr<llvm::cas::ObjectStore> cas_object_store;
   std::mutex shared_lock;
 };
 }
@@ -1330,45 +1363,21 @@ static SharedModuleList &GetSharedModuleList() {
   return GetSharedModuleListInfo().module_list;
 }
 
-std::optional<llvm::cas::CASConfiguration>
-ModuleList::GetCASConfiguration(FileSpec CandidateConfigSearchPath) {
+static llvm::cas::CASConfiguration
+GetCASConfiguration(FileSpec CandidateConfigSearchPath) {
   // Config CAS from properties.
-  llvm::cas::CASConfiguration cas_config;
-  cas_config.CASPath =
-      ModuleList::GetGlobalModuleListProperties().GetCASOnDiskPath().GetPath();
-  cas_config.PluginPath =
-      ModuleList::GetGlobalModuleListProperties().GetCASPluginPath().GetPath();
-  cas_config.PluginOptions =
-      ModuleList::GetGlobalModuleListProperties().GetCASPluginOptions();
-
-  if (!cas_config.CASPath.empty())
-    return cas_config;
-
+  auto &props = ModuleList::GetGlobalModuleListProperties();
+  auto path = props.GetCASOnDiskPath().GetPath();
+  if (!path.empty()) {
+    return {props.GetCASOnDiskPath().GetPath(),
+            props.GetCASPluginPath().GetPath(), props.GetCASPluginOptions()};
+  }
   auto search_config = llvm::cas::CASConfiguration::createFromSearchConfigFile(
       CandidateConfigSearchPath.GetPath());
   if (search_config)
     return search_config->second;
 
-  return std::nullopt;
-}
-
-static llvm::Expected<std::shared_ptr<llvm::cas::ObjectStore>>
-GetOrCreateCASStorage(FileSpec CandidateConfigSearchPath) {
-  auto &shared_module_list = GetSharedModuleListInfo();
-  if (shared_module_list.cas_object_store)
-    return shared_module_list.cas_object_store;
-
-  auto config = ModuleList::GetCASConfiguration(CandidateConfigSearchPath);
-  if (!config)
-    return nullptr;
-
-  auto cas = config->createDatabases();
-  if (!cas)
-    return cas.takeError();
-
-  std::scoped_lock<std::mutex> lock(shared_module_list.shared_lock);
-  shared_module_list.cas_object_store = std::move(cas->first);
-  return shared_module_list.cas_object_store;
+  return {};
 }
 
 ModuleListProperties &ModuleList::GetGlobalModuleListProperties() {
@@ -1664,19 +1673,18 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
   return error;
 }
 
-static llvm::Expected<bool> loadModuleFromCAS(ConstString module_name,
-                                              llvm::StringRef cas_id,
-                                              FileSpec cu_path,
-                                              ModuleSpec &module_spec) {
-  auto maybe_cas = GetOrCreateCASStorage(cu_path);
+static llvm::Expected<bool> loadModuleFromCASImpl(llvm::StringRef cas_id,
+                                                  const lldb::ModuleSP &nearby,
+                                                  ModuleSpec &module_spec) {
+  auto maybe_cas = ModuleList::GetOrCreateCAS(nearby);
   if (!maybe_cas)
     return maybe_cas.takeError();
 
-  auto cas = std::move(*maybe_cas);
+  auto cas = std::move(maybe_cas->object_store);
   if (!cas) {
     LLDB_LOG(GetLog(LLDBLog::Modules),
              "skip loading module '{0}' from CAS: CAS is not available",
-             module_name);
+             cas_id);
     return false;
   }
 
@@ -1695,30 +1703,162 @@ static llvm::Expected<bool> loadModuleFromCAS(ConstString module_name,
       std::make_shared<DataBufferLLVM>(module_proxy->getMemoryBuffer());
 
   // Swap out the module_spec with the one loaded via CAS.
-  ModuleSpec loaded(module_spec.GetFileSpec(), module_spec.GetUUID(),
-                    std::move(file_buffer));
+  FileSpec cas_spec;
+  cas_spec.SetDirectory(ConstString(maybe_cas->configuration.CASPath));
+  cas_spec.SetFilename(ConstString(cas_id));
+  ModuleSpec loaded(cas_spec, module_spec.GetUUID(), std::move(file_buffer));
   loaded.GetArchitecture() = module_spec.GetArchitecture();
   module_spec = loaded;
 
-  LLDB_LOG(GetLog(LLDBLog::Modules), "loading module '{0}' using CASID '{1}'",
-           module_name, cas_id);
+  LLDB_LOG(GetLog(LLDBLog::Modules), "loading module using CASID '{0}'",
+           cas_id);
   return true;
 }
 
+/// Load the module referenced by \c cas_id from a CAS located
+/// near \c nearby.
+static llvm::Expected<bool> loadModuleFromCAS(llvm::StringRef cas_id,
+                                              const lldb::ModuleSP &nearby,
+                                              ModuleSpec &module_spec) {
+  static llvm::StringMap<bool> g_cache;
+  static std::recursive_mutex g_cache_lock;
+  std::scoped_lock<std::recursive_mutex> lock(g_cache_lock);
+  auto cached = g_cache.find(cas_id);
+  if (cached != g_cache.end())
+    return cached->second;
+  auto result = loadModuleFromCASImpl(cas_id, nearby, module_spec);
+  // Errors are only returned the first time.
+  g_cache.insert({cas_id, result ? *result : false});
+  return result;
+}
+
+static llvm::cas::CASConfiguration
+FindCASConfiguration(const ModuleSP &module_sp) {
+  auto get_dir = [](FileSpec path) {
+    path.ClearFilename();
+    return path;
+  };
+
+  // Look near the binary / dSYM.
+  std::set<FileSpec> unique_paths;
+  llvm::cas::CASConfiguration cas_config =
+      GetCASConfiguration(module_sp->GetFileSpec());
+
+  if (!cas_config) {
+    // Look near the object files.
+    if (SymbolFile *sf = module_sp->GetSymbolFile()) {
+      sf->GetDebugInfoModules().ForEach([&](const ModuleSP &m) {
+        if (m)
+          unique_paths.insert(get_dir(m->GetFileSpec()));
+        return IterationAction::Continue;
+      });
+      for (auto &path : unique_paths)
+        if ((cas_config = GetCASConfiguration(path)))
+          break;
+    }
+  }
+  // TODO: Remove this block once the build system consistently
+  // generates .cas-config files.
+  if (!cas_config) {
+    unique_paths.insert(get_dir(module_sp->GetFileSpec()));
+    for (auto &path : unique_paths) {
+      llvm::StringRef parent = path.GetDirectory().GetStringRef();
+      while (!parent.empty() &&
+             llvm::sys::path::filename(parent) != "DerivedData")
+        parent = llvm::sys::path::parent_path(parent);
+      if (parent.empty())
+        continue;
+      llvm::SmallString<256> cas_path(parent);
+      llvm::sys::path::append(cas_path, "CompilationCache.noindex", "builtin");
+      FileSpec fs = FileSpec(cas_path);
+      ModuleList::GetGlobalModuleListProperties().SetCASOnDiskPath(fs);
+      cas_config = GetCASConfiguration(fs);
+      if (cas_config)
+        break;
+    }
+  }    
+  return cas_config;
+}
+
+llvm::Expected<ModuleList::CAS>
+ModuleList::GetOrCreateCAS(const ModuleSP &module_sp) {
+  if (!module_sp)
+    return llvm::createStringError("no lldb::Module available");
+
+  // Look in cache first.
+  auto &shared_module_list = GetSharedModuleListInfo();
+  std::scoped_lock<std::mutex> lock(shared_module_list.shared_lock);
+  auto &module_configs = shared_module_list.module_list.m_module_configs;
+  auto &cas_cache = shared_module_list.module_list.m_cas_cache;
+
+  llvm::cas::CASConfiguration cas_config;
+  {
+    auto cached_config = module_configs.find(module_sp.get());
+    if (cached_config != module_configs.end()) {
+      cas_config = cached_config->second;
+      if (!cas_config)
+        return llvm::createStringError("no CAS available (cached)");
+    }
+  }
+
+  if (!cas_config) {
+    cas_config = FindCASConfiguration(module_sp);
+    // Cache the config or lack thereof.
+    module_configs.insert({module_sp.get(), cas_config});
+  }
+
+  if (!cas_config)
+    return llvm::createStringError("no CAS available");
+
+  // Look in the cache.
+  {
+    auto cached = cas_cache.find(cas_config);
+    if (cached != cas_cache.end()) {
+      if (!cached->second.first)
+        return llvm::createStringError(
+            "CAS config created, but CAS not available (cached)");
+      return ModuleList::CAS{cas_config, cached->second.first,
+                             cached->second.second};
+    }
+  }
+
+  // Create the CAS.
+  auto cas = cas_config.createDatabases();
+  if (!cas) {
+    cas_cache.insert({cas_config, {}});
+    return cas.takeError();
+  }
+
+  LLDB_LOG(GetLog(LLDBLog::Modules | LLDBLog::Symbols),
+           "Initialized CAS at {0}", cas_config.CASPath);
+  cas_cache.insert({cas_config, {cas->first, cas->second}});
+  return ModuleList::CAS{cas_config, cas->first, cas->second};
+}
+
 llvm::Expected<bool> ModuleList::GetSharedModuleFromCAS(
-    ConstString module_name, llvm::StringRef cas_id, FileSpec cu_path,
+    llvm::StringRef cas_id, const lldb::ModuleSP &nearby,
     ModuleSpec &module_spec, lldb::ModuleSP &module_sp) {
-  auto loaded = loadModuleFromCAS(module_name, cas_id, cu_path, module_spec);
+  auto loaded = loadModuleFromCAS(cas_id, nearby, module_spec);
   if (!loaded)
     return loaded.takeError();
 
   if (!*loaded)
     return false;
 
-  auto status = GetSharedModule(module_spec, module_sp, nullptr, nullptr,
-                                /*always_create=*/true);
-  if (status.Success())
+  auto status =
+      GetSharedModule(module_spec, module_sp, nullptr, nullptr, nullptr,
+                      /*always_create=*/true);
+  if (status.Success()) {
+    if (module_sp) {
+      // Enter the new module into the config cache.
+      auto &shared_module_list = GetSharedModuleListInfo();
+      std::scoped_lock<std::mutex> lock(shared_module_list.shared_lock);
+      auto &module_configs = shared_module_list.module_list.m_module_configs;
+      auto config = module_configs.lookup(nearby.get());
+      module_configs.insert({module_sp.get(), config});
+    }
     return true;
+  }
   return status.takeError();
 }
 

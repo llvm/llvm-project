@@ -913,26 +913,27 @@ static std::string GetClangModulesCacheProperty() {
   return std::string(path);
 }
 
-static void ConfigureCASStorage(SwiftASTContext *m_ast_context,
-                                FileSpec CandidateConfigSearchPath) {
-  std::string m_description;
-  auto cas_config = ModuleList::GetCASConfiguration(CandidateConfigSearchPath);
-  if (!cas_config) {
-    HEALTH_LOG_PRINTF("no CAS available");
+/// This function implements various heuristics to find a CAS
+/// configuration file.
+static void ConfigureCASStorage(const std::string &m_description,
+                                SwiftASTContext *m_ast_context,
+                                const SymbolContext &sc) {
+  auto cas = ModuleList::GetOrCreateCAS(sc.module_sp);
+  if (!cas) {
+    HEALTH_LOG_PRINTF("Did not create CAS: %s",
+                      toString(cas.takeError()).c_str());
     return;
   }
-  auto maybe_cas = cas_config->createDatabases();
-  if (!maybe_cas) {
-    Debugger::ReportWarning("failed to create CAS: " +
-                            toString(maybe_cas.takeError()));
-    return;
-  }
-  m_ast_context->SetCASStorage(std::move(maybe_cas->first),
-                               std::move(maybe_cas->second));
-  m_ast_context->GetCASOptions().Config = *cas_config;
+  m_ast_context->SetCASStorage(std::move(cas->object_store),
+                               std::move(cas->action_cache));
+  m_ast_context->GetCASOptions().CASOpts.CASPath = cas->configuration.CASPath;
+  m_ast_context->GetCASOptions().CASOpts.PluginPath =
+      cas->configuration.PluginPath;
+  m_ast_context->GetCASOptions().CASOpts.PluginOptions =
+      cas->configuration.PluginOptions;
   LOG_PRINTF(GetLog(LLDBLog::Types),
              "Setup CAS from module list properties with cas path: %s",
-             cas_config->CASPath.c_str());
+             cas->configuration.CASPath.c_str());
 }
 
 SwiftASTContext::ScopedDiagnostics::ScopedDiagnostics(
@@ -1264,11 +1265,9 @@ static std::string GetPluginServerForSDK(llvm::StringRef sdk_path) {
 }
 
 namespace {
-  constexpr std::array<std::string_view, 4> g_known_eplicit_module_prefixes =
-       {"-fmodule-map-file=",
-        "-fmodule-file=",
-        "-fno-implicit-modules",
-        "-fno-implicit-module-maps"};
+constexpr std::array<std::string_view, 5> g_known_eplicit_module_prefixes = {
+    "-fmodule-map-file=", "-fmodule-file=", "-fmodule-file-cache-key=",
+    "-fno-implicit-modules", "-fno-implicit-module-maps"};
 }
 
 /// Retrieve the serialized AST data blobs and initialize the compiler
@@ -1859,8 +1858,10 @@ void SwiftASTContext::AddExtraClangArgs(
     m_has_explicit_modules |=
         llvm::any_of(importer_options.ExtraArgs, [](const std::string &s) {
           StringRef arg(s);
-          return arg.starts_with("-fno-implicit-module") ||
-                 arg.starts_with("-fmodule-file=");
+          for (const auto &option : g_known_eplicit_module_prefixes)
+            if (arg.starts_with(option))
+              return true;
+          return false;
         });
     ConfigureModuleValidation(importer_options.ExtraArgs);
   });
@@ -1903,8 +1904,7 @@ void SwiftASTContext::AddExtraClangArgs(
 bool SwiftASTContext::IsModuleAvailableInCAS(const std::string &key) {
   auto id = m_cas->parseID(key);
   if (!id) {
-    HEALTH_LOG_PRINTF("failed to parse CASID when loading module: %s",
-                      toString(id.takeError()).c_str());
+    llvm::consumeError(id.takeError());
     return false;
   }
   auto lookup = m_action_cache->get(*id);
@@ -1982,16 +1982,16 @@ void SwiftASTContext::AddExtraClangCC1Args(
   bool use_cas_module = m_cas && m_action_cache;
   if (use_cas_module) {
     // Load from CAS.
-    invocation.getCASOpts().CASPath = GetCASOptions().Config.CASPath;
-    invocation.getCASOpts().PluginPath = GetCASOptions().Config.PluginPath;
+    invocation.getCASOpts().CASPath = GetCASOptions().CASOpts.CASPath;
+    invocation.getCASOpts().PluginPath = GetCASOptions().CASOpts.PluginPath;
     invocation.getCASOpts().PluginOptions =
-        GetCASOptions().Config.PluginOptions;
+        GetCASOptions().CASOpts.PluginOptions;
 
     use_cas_module = llvm::all_of(
         invocation.getFrontendOpts().ModuleCacheKeys, [&](const auto &entry) {
           bool exist = IsModuleAvailableInCAS(entry.second);
           if (!exist)
-            HEALTH_LOG_PRINTF("module '%s' cannot be load "
+            HEALTH_LOG_PRINTF("module '%s' cannot be loaded "
                               "from CAS using key: %s, fallback to "
                               "load from file system",
                               entry.first.c_str(), entry.second.c_str());
@@ -2611,7 +2611,9 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
     }
   }
 
-  ConfigureCASStorage(swift_ast_sp.get(), module.GetFileSpec());
+  SymbolContext sc;
+  module.CalculateSymbolContext(&sc);
+  ConfigureCASStorage(m_description, swift_ast_sp.get(), sc);
 
   // The serialized triple is the triple of the last binary
   // __swiftast section that was processed. Instead of relying on
@@ -3094,7 +3096,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     }
   }
 
-  ConfigureCASStorage(swift_ast_sp.get(), sc.module_sp->GetFileSpec());
+  ConfigureCASStorage(m_description, swift_ast_sp.get(), sc);
 
   std::string resource_dir = HostInfo::GetSwiftResourceDir(
       triple, swift_ast_sp->GetPlatformSDKPath());
@@ -3835,7 +3837,27 @@ ThreadSafeASTContext SwiftASTContext::GetASTContext() {
 
   // The order here matters due to fallback behaviors:
   //
-  // 1. Create and install the memory buffer serialized module loader.
+  // 1. Create the explicit swift module loader.
+  if (props.GetUseSwiftExplicitModuleLoader()) {
+    auto &search_path_opts = GetCompilerInvocation().getSearchPathOptions();
+    std::unique_ptr<swift::ModuleLoader> esml_up =
+        LLDBExplicitSwiftModuleLoader::create(
+            *m_ast_context_up, m_cas.get(), m_action_cache.get(),
+            m_dependency_tracker.get(), loading_mode,
+            search_path_opts.ExplicitSwiftModuleMapPath,
+            search_path_opts.ExplicitSwiftModuleInputs,
+            /*IgnoreSwiftSourceInfo*/ false);
+    if (esml_up) {
+      m_explicit_swift_module_loader =
+          static_cast<LLDBExplicitSwiftModuleLoader *>(esml_up.get());
+      m_ast_context_up->addModuleLoader(std::move(esml_up), /*isClang=*/false,
+                                        /*isDwarf=*/false,
+                                        /*isInterface=*/false,
+                                        /*isExplicit=*/true);
+    }
+  }
+
+  // 2. Create and install the memory buffer serialized module loader.
   std::unique_ptr<swift::ModuleLoader> memory_buffer_loader_up(
       swift::MemoryBufferSerializedModuleLoader::create(
           *m_ast_context_up, m_dependency_tracker.get(), loading_mode,
@@ -3845,25 +3867,6 @@ ThreadSafeASTContext SwiftASTContext::GetASTContext() {
         static_cast<swift::MemoryBufferSerializedModuleLoader *>(
             memory_buffer_loader_up.get());
     m_ast_context_up->addModuleLoader(std::move(memory_buffer_loader_up));
-  }
-
-  // 2. Create the explicit swift module loader.
-  if (props.GetUseSwiftExplicitModuleLoader()) {
-    auto &search_path_opts = GetCompilerInvocation().getSearchPathOptions();
-    std::unique_ptr<swift::ModuleLoader> esml_up =
-        swift::ExplicitSwiftModuleLoader::create(
-            *m_ast_context_up, m_dependency_tracker.get(), loading_mode,
-            search_path_opts.ExplicitSwiftModuleMapPath,
-            search_path_opts.ExplicitSwiftModuleInputs,
-            /*IgnoreSwiftSourceInfo*/ false);
-    if (esml_up) {
-      m_explicit_swift_module_loader =
-          static_cast<swift::ExplicitSwiftModuleLoader *>(esml_up.get());
-      m_ast_context_up->addModuleLoader(std::move(esml_up), /*isClang=*/false,
-                                        /*isDwarf=*/false,
-                                        /*isInterface=*/false,
-                                        /*isExplicit=*/true);
-    }
   }
 
   // Add a module interface checker.
@@ -9409,7 +9412,6 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
         *modules,
     Status &error) {
   // If EBM is enabled, disable implicit modules during contextual imports.
-  // fixme nullptr!
   bool turn_off_implicit = m_has_explicit_modules;
   auto reset = llvm::make_scope_exit([&] {
     if (turn_off_implicit) {
@@ -9431,7 +9433,11 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
     // Swift.
     if (m_module_interface_loader) {
       auto &opts = m_module_interface_loader->getOptions();
-      opts.disableImplicitSwiftModule = true;
+      // Turning this on would change the Clang module hash, which
+      // results in a "precompiled file '$HASH1/A.pcm' was compiled
+      // with module cache path '$HASH2', but the path is currently
+      // '$HASH1" when manually importing more modules.
+      opts.disableImplicitSwiftModule = false;
       opts.disableBuildingInterface = true;
     }
     // Clang.
