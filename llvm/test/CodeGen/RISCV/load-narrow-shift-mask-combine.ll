@@ -7,22 +7,19 @@
 ; For each of these examples, it is fewer instructions to narrow the load and
 ; then shift (which is an opportunity that can be exposed by doing the mask
 ; before the shift).
-; TODO: Impement this optimisation.
 
 define ptr @narrow_to_lbu(ptr %a, ptr %b) {
 ; RV32I-LABEL: narrow_to_lbu:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lhu a0, 0(a0)
-; RV32I-NEXT:    slli a0, a0, 24
-; RV32I-NEXT:    srli a0, a0, 20
+; RV32I-NEXT:    lbu a0, 0(a0)
+; RV32I-NEXT:    slli a0, a0, 4
 ; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: narrow_to_lbu:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lh a0, 0(a0)
-; RV64I-NEXT:    slli a0, a0, 56
-; RV64I-NEXT:    srli a0, a0, 52
+; RV64I-NEXT:    lbu a0, 0(a0)
+; RV64I-NEXT:    slli a0, a0, 4
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    ret
   %1 = load i16, ptr %a, align 2
@@ -36,17 +33,15 @@ define ptr @narrow_to_lbu(ptr %a, ptr %b) {
 define ptr @narrow_to_lhu(ptr %a, ptr %b) {
 ; RV32I-LABEL: narrow_to_lhu:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lw a0, 0(a0)
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srli a0, a0, 12
+; RV32I-NEXT:    lhu a0, 0(a0)
+; RV32I-NEXT:    slli a0, a0, 4
 ; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: narrow_to_lhu:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lw a0, 0(a0)
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srli a0, a0, 44
+; RV64I-NEXT:    lhu a0, 0(a0)
+; RV64I-NEXT:    slli a0, a0, 4
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    ret
   %1 = load i32, ptr %a, align 4
@@ -67,9 +62,8 @@ define ptr @narrow_to_lwu(ptr %a, ptr %b) {
 ;
 ; RV64I-LABEL: narrow_to_lwu:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    ld a0, 0(a0)
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 28
+; RV64I-NEXT:    lwu a0, 0(a0)
+; RV64I-NEXT:    slli a0, a0, 4
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    ret
   %1 = load i64, ptr %a, align 8
