@@ -1494,6 +1494,12 @@ bool TargetTransformInfo::isVectorShiftByScalarCheap(Type *Ty) const {
   return TTIImpl->isVectorShiftByScalarCheap(Ty);
 }
 
+bool TargetTransformInfo::isSafeToCastIntPtrWithAS(
+    unsigned AddrUnchangedLeadingBit, unsigned SrcAS, unsigned DstAS) const {
+  return TTIImpl->isSafeToCastIntPtrWithAS(AddrUnchangedLeadingBit, SrcAS,
+                                           DstAS);
+}
+
 unsigned
 TargetTransformInfo::getNumBytesToPadGlobalArray(unsigned Size,
                                                  Type *ArrayType) const {

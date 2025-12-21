@@ -180,6 +180,22 @@ public:
     }
   }
 
+  bool isSafeToCastIntPtrWithAS(unsigned AddrUnchangedLeadingBit,
+                                unsigned SrcAS, unsigned DstAS) const override {
+    if (SrcAS != llvm::ADDRESS_SPACE_GENERIC)
+      return false;
+    if (DstAS != llvm::ADDRESS_SPACE_GLOBAL &&
+        DstAS != llvm::ADDRESS_SPACE_SHARED)
+      return false;
+
+    // Address change within 4K size does not change the original address space
+    // and is safe to perform address cast form SrcAS to DstAS.
+    if (AddrUnchangedLeadingBit >= 52)
+      return true;
+
+    return false;
+  }
+
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                   Intrinsic::ID IID) const override;
 

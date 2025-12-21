@@ -1159,6 +1159,11 @@ public:
 
   virtual bool isVectorShiftByScalarCheap(Type *Ty) const { return false; }
 
+  virtual bool isSafeToCastIntPtrWithAS(unsigned AddrUnchangedLeadingBit,
+                                        unsigned SrcAS, unsigned DstAS) const {
+    return false;
+  }
+
   virtual TargetTransformInfo::VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const {
     return TargetTransformInfo::VPLegalization(
