@@ -77,9 +77,8 @@ void ThrowByValueCatchByReferenceCheck::diagnoseThrowLocations(
       return;
     // If it's a variable from a catch statement, we return as well.
     auto *DeclRef = dyn_cast<DeclRefExpr>(Inner);
-    if (DeclRef && isCatchVariable(DeclRef)) {
+    if (DeclRef && isCatchVariable(DeclRef))
       return;
-    }
     diag(SubExpr->getBeginLoc(), "throw expression throws a pointer; it should "
                                  "throw a non-pointer value instead");
   }

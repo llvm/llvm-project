@@ -26,6 +26,7 @@ static const OffloadArchToStringMap ArchNames[] = {
     SM(75),                          // Turing
     SM(80), SM(86),                  // Ampere
     SM(87),                          // Jetson/Drive AGX Orin
+    SM(88),                          // Ampere
     SM(89),                          // Ada Lovelace
     SM(90),                          // Hopper
     SM(90a),                         // Hopper
@@ -35,6 +36,8 @@ static const OffloadArchToStringMap ArchNames[] = {
     SM(101a),                        // Blackwell
     SM(103),                         // Blackwell
     SM(103a),                        // Blackwell
+    SM(110),                         // Blackwell
+    SM(110a),                        // Blackwell
     SM(120),                         // Blackwell
     SM(120a),                        // Blackwell
     SM(121),                         // Blackwell

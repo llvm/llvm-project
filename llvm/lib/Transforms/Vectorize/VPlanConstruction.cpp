@@ -20,6 +20,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -566,6 +567,22 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
   }
 }
 
+/// Check \p Plan's live-in and replace them with constants, if they can be
+/// simplified via SCEV.
+static void simplifyLiveInsWithSCEV(VPlan &Plan, ScalarEvolution &SE) {
+  auto GetSimplifiedLiveInViaSCEV = [&](VPValue *VPV) -> VPValue * {
+    const SCEV *Expr = vputils::getSCEVExprForVPValue(VPV, SE);
+    if (auto *C = dyn_cast<SCEVConstant>(Expr))
+      return Plan.getOrAddLiveIn(C->getValue());
+    return nullptr;
+  };
+
+  for (VPValue *LiveIn : Plan.getLiveIns()) {
+    if (VPValue *SimplifiedLiveIn = GetSimplifiedLiveInViaSCEV(LiveIn))
+      LiveIn->replaceAllUsesWith(SimplifiedLiveIn);
+  }
+}
+
 std::unique_ptr<VPlan>
 VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
                              DebugLoc IVDL, PredicatedScalarEvolution &PSE,
@@ -573,7 +590,113 @@ VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
   PlainCFGBuilder Builder(TheLoop, &LI, LVer);
   std::unique_ptr<VPlan> VPlan0 = Builder.buildPlainCFG();
   addInitialSkeleton(*VPlan0, InductionTy, IVDL, PSE, TheLoop);
+  simplifyLiveInsWithSCEV(*VPlan0, *PSE.getSE());
   return VPlan0;
+}
+
+/// Creates a VPWidenIntOrFpInductionRecipe or VPWidenPointerInductionRecipe
+/// for \p Phi based on \p IndDesc.
+static VPHeaderPHIRecipe *
+createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPValue *Start,
+                           const InductionDescriptor &IndDesc, VPlan &Plan,
+                           ScalarEvolution &SE, Loop &OrigLoop, DebugLoc DL) {
+  assert(SE.isLoopInvariant(IndDesc.getStep(), &OrigLoop) &&
+         "step must be loop invariant");
+  assert((Plan.getLiveIn(IndDesc.getStartValue()) == Start ||
+          (SE.isSCEVable(IndDesc.getStartValue()->getType()) &&
+           SE.getSCEV(IndDesc.getStartValue()) ==
+               vputils::getSCEVExprForVPValue(Start, SE))) &&
+         "Start VPValue must match IndDesc's start value");
+
+  VPValue *Step =
+      vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
+
+  if (IndDesc.getKind() == InductionDescriptor::IK_PtrInduction)
+    return new VPWidenPointerInductionRecipe(Phi, Start, Step, &Plan.getVFxUF(),
+                                             IndDesc, DL);
+
+  assert((IndDesc.getKind() == InductionDescriptor::IK_IntInduction ||
+          IndDesc.getKind() == InductionDescriptor::IK_FpInduction) &&
+         "must have an integer or float induction at this point");
+
+  // Update wide induction increments to use the same step as the corresponding
+  // wide induction. This enables detecting induction increments directly in
+  // VPlan and removes redundant splats.
+  using namespace llvm::VPlanPatternMatch;
+  if (match(PhiR->getOperand(1), m_Add(m_Specific(PhiR), m_VPValue())))
+    PhiR->getOperand(1)->getDefiningRecipe()->setOperand(1, Step);
+
+  // It is always safe to copy over the NoWrap and FastMath flags. In
+  // particular, when folding tail by masking, the masked-off lanes are never
+  // used, so it is safe.
+  VPIRFlags Flags = vputils::getFlagsFromIndDesc(IndDesc);
+
+  return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
+                                           IndDesc, Flags, DL);
+}
+
+void VPlanTransforms::createHeaderPhiRecipes(
+    VPlan &Plan, ScalarEvolution &SE, Loop &OrigLoop,
+    const MapVector<PHINode *, InductionDescriptor> &Inductions,
+    const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
+    const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
+    const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering) {
+  // Retrieve the header manually from the intial plain-CFG VPlan.
+  VPBasicBlock *HeaderVPBB = cast<VPBasicBlock>(
+      Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
+  assert(VPDominatorTree(Plan).dominates(HeaderVPBB,
+                                         HeaderVPBB->getPredecessors()[1]) &&
+         "header must dominate its latch");
+
+  auto CreateHeaderPhiRecipe = [&](VPPhi *PhiR) -> VPHeaderPHIRecipe * {
+    // TODO: Gradually replace uses of underlying instruction by analyses on
+    // VPlan.
+    auto *Phi = cast<PHINode>(PhiR->getUnderlyingInstr());
+    assert(PhiR->getNumOperands() == 2 &&
+           "Must have 2 operands for header phis");
+
+    // Extract common values once.
+    VPValue *Start = PhiR->getOperand(0);
+    VPValue *BackedgeValue = PhiR->getOperand(1);
+
+    if (FixedOrderRecurrences.contains(Phi)) {
+      // TODO: Currently fixed-order recurrences are modeled as chains of
+      // first-order recurrences. If there are no users of the intermediate
+      // recurrences in the chain, the fixed order recurrence should be
+      // modeled directly, enabling more efficient codegen.
+      return new VPFirstOrderRecurrencePHIRecipe(Phi, *Start, *BackedgeValue);
+    }
+
+    auto InductionIt = Inductions.find(Phi);
+    if (InductionIt != Inductions.end())
+      return createWidenInductionRecipe(Phi, PhiR, Start, InductionIt->second,
+                                        Plan, SE, OrigLoop,
+                                        PhiR->getDebugLoc());
+
+    assert(Reductions.contains(Phi) && "only reductions are expected now");
+    const RecurrenceDescriptor &RdxDesc = Reductions.lookup(Phi);
+    assert(RdxDesc.getRecurrenceStartValue() ==
+               Phi->getIncomingValueForBlock(OrigLoop.getLoopPreheader()) &&
+           "incoming value must match start value");
+    // Will be updated later to >1 if reduction is partial.
+    unsigned ScaleFactor = 1;
+    bool UseOrderedReductions = !AllowReordering && RdxDesc.isOrdered();
+    return new VPReductionPHIRecipe(
+        Phi, RdxDesc.getRecurrenceKind(), *Start, *BackedgeValue,
+        getReductionStyle(InLoopReductions.contains(Phi), UseOrderedReductions,
+                          ScaleFactor),
+        RdxDesc.hasUsesOutsideReductionChain());
+  };
+
+  for (VPRecipeBase &R : make_early_inc_range(HeaderVPBB->phis())) {
+    if (isa<VPCanonicalIVPHIRecipe>(&R))
+      continue;
+    auto *PhiR = cast<VPPhi>(&R);
+    VPHeaderPHIRecipe *HeaderPhiR = CreateHeaderPhiRecipe(PhiR);
+    HeaderPhiR->insertBefore(PhiR);
+    PhiR->replaceAllUsesWith(HeaderPhiR);
+    PhiR->eraseFromParent();
+  }
 }
 
 void VPlanTransforms::handleEarlyExits(VPlan &Plan,
