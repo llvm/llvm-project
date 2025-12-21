@@ -5690,12 +5690,24 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::FMul: {
+    const Function *F = cast<Instruction>(Op)->getFunction();
+    DenormalMode Mode =
+        F ? F->getDenormalMode(
+                Op->getType()->getScalarType()->getFltSemantics())
+          : DenormalMode::getDynamic();
+
     // X * X is always non-negative or a NaN.
-    if (Op->getOperand(0) == Op->getOperand(1))
-      Known.knownNot(fcNegative);
+    if (Op->getOperand(0) == Op->getOperand(1)) {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownSrc,
+                          Q, Depth + 1);
+      Known = KnownFPClass::square(KnownSrc, Mode);
+      break;
+    }
 
     KnownFPClass KnownLHS, KnownRHS;
 
+    bool CannotBeSubnormal = false;
     const APFloat *CRHS;
     if (match(Op->getOperand(1), m_APFloat(CRHS))) {
       // Match denormal scaling pattern, similar to the case in ldexp. If the
@@ -5710,7 +5722,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       int MinKnownExponent = ilogb(*CRHS);
       if (MinKnownExponent >= MantissaBits)
-        Known.knownNot(fcSubnormal);
+        CannotBeSubnormal = true;
 
       KnownRHS = KnownFPClass(*CRHS);
     } else {
@@ -5721,66 +5733,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
                         Q, Depth + 1);
 
-    // xor sign bit.
-    if ((KnownLHS.isKnownNever(fcNegative) &&
-         KnownRHS.isKnownNever(fcNegative)) ||
-        (KnownLHS.isKnownNever(fcPositive) &&
-         KnownRHS.isKnownNever(fcPositive)))
-      Known.knownNot(fcNegative);
-
-    if ((KnownLHS.isKnownNever(fcPositive) &&
-         KnownRHS.isKnownNever(fcNegative)) ||
-        (KnownLHS.isKnownNever(fcNegative) &&
-         KnownRHS.isKnownNever(fcPositive)))
-      Known.knownNot(fcPositive);
-
-    // inf * anything => inf or nan
-    if (KnownLHS.isKnownAlways(fcInf | fcNan) ||
-        KnownRHS.isKnownAlways(fcInf | fcNan))
-      Known.knownNot(fcNormal | fcSubnormal | fcZero);
-
-    // 0 * anything => 0 or nan
-    if (KnownRHS.isKnownAlways(fcZero | fcNan) ||
-        KnownLHS.isKnownAlways(fcZero | fcNan))
-      Known.knownNot(fcNormal | fcSubnormal | fcInf);
-
-    // +/-0 * +/-inf = nan
-    if ((KnownLHS.isKnownAlways(fcZero | fcNan) &&
-         KnownRHS.isKnownAlways(fcInf | fcNan)) ||
-        (KnownLHS.isKnownAlways(fcInf | fcNan) &&
-         KnownRHS.isKnownAlways(fcZero | fcNan)))
-      Known.knownNot(~fcNan);
-
-    if (!KnownLHS.isKnownNeverNaN() || !KnownRHS.isKnownNeverNaN())
-      break;
-
-    if (KnownLHS.SignBit && KnownRHS.SignBit) {
-      if (*KnownLHS.SignBit == *KnownRHS.SignBit)
-        Known.signBitMustBeZero();
-      else
-        Known.signBitMustBeOne();
-    }
-
-    // If 0 * +/-inf produces NaN.
-    if (KnownLHS.isKnownNeverInfinity() && KnownRHS.isKnownNeverInfinity()) {
-      Known.knownNot(fcNan);
-      break;
-    }
-
-    const Function *F = cast<Instruction>(Op)->getFunction();
-    if (!F)
-      break;
-
-    Type *OpTy = Op->getType()->getScalarType();
-    const fltSemantics &FltSem = OpTy->getFltSemantics();
-    DenormalMode Mode = F->getDenormalMode(FltSem);
-
-    if ((KnownRHS.isKnownNeverInfinity() ||
-         KnownLHS.isKnownNeverLogicalZero(Mode)) &&
-        (KnownLHS.isKnownNeverInfinity() ||
-         KnownRHS.isKnownNeverLogicalZero(Mode)))
-      Known.knownNot(fcNan);
-
+    Known = KnownFPClass::fmul(KnownLHS, KnownRHS, Mode);
+    if (CannotBeSubnormal)
+      Known.knownNot(fcSubnormal);
     break;
   }
   case Instruction::FDiv:

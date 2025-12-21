@@ -141,6 +141,64 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
   return Known;
 }
 
+KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
+                                const KnownFPClass &KnownRHS,
+                                DenormalMode Mode) {
+  KnownFPClass Known;
+
+  // xor sign bit.
+  if ((KnownLHS.isKnownNever(fcNegative) &&
+       KnownRHS.isKnownNever(fcNegative)) ||
+      (KnownLHS.isKnownNever(fcPositive) && KnownRHS.isKnownNever(fcPositive)))
+    Known.knownNot(fcNegative);
+
+  if ((KnownLHS.isKnownNever(fcPositive) &&
+       KnownRHS.isKnownNever(fcNegative)) ||
+      (KnownLHS.isKnownNever(fcNegative) && KnownRHS.isKnownNever(fcPositive)))
+    Known.knownNot(fcPositive);
+
+  // inf * anything => inf or nan
+  if (KnownLHS.isKnownAlways(fcInf | fcNan) ||
+      KnownRHS.isKnownAlways(fcInf | fcNan))
+    Known.knownNot(fcNormal | fcSubnormal | fcZero);
+
+  // 0 * anything => 0 or nan
+  if (KnownRHS.isKnownAlways(fcZero | fcNan) ||
+      KnownLHS.isKnownAlways(fcZero | fcNan))
+    Known.knownNot(fcNormal | fcSubnormal | fcInf);
+
+  // +/-0 * +/-inf = nan
+  if ((KnownLHS.isKnownAlways(fcZero | fcNan) &&
+       KnownRHS.isKnownAlways(fcInf | fcNan)) ||
+      (KnownLHS.isKnownAlways(fcInf | fcNan) &&
+       KnownRHS.isKnownAlways(fcZero | fcNan)))
+    Known.knownNot(~fcNan);
+
+  if (!KnownLHS.isKnownNeverNaN() || !KnownRHS.isKnownNeverNaN())
+    return Known;
+
+  if (KnownLHS.SignBit && KnownRHS.SignBit) {
+    if (*KnownLHS.SignBit == *KnownRHS.SignBit)
+      Known.signBitMustBeZero();
+    else
+      Known.signBitMustBeOne();
+  }
+
+  // If 0 * +/-inf produces NaN.
+  if (KnownLHS.isKnownNeverInfinity() && KnownRHS.isKnownNeverInfinity()) {
+    Known.knownNot(fcNan);
+    return Known;
+  }
+
+  if ((KnownRHS.isKnownNeverInfinity() ||
+       KnownLHS.isKnownNeverLogicalZero(Mode)) &&
+      (KnownLHS.isKnownNeverInfinity() ||
+       KnownRHS.isKnownNeverLogicalZero(Mode)))
+    Known.knownNot(fcNan);
+
+  return Known;
+}
+
 KnownFPClass KnownFPClass::exp(const KnownFPClass &KnownSrc) {
   KnownFPClass Known;
   Known.knownNot(fcNegative);
