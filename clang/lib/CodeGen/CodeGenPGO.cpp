@@ -16,6 +16,7 @@
 #include "CoverageMappingGen.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/CommandLine.h"
@@ -293,23 +294,14 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
         if (LogOpStack.empty()) {
           /// Was the "split-nested" logical operator case encountered?
           if (SplitNestedLogicalOp) {
-            unsigned DiagID = Diag.getCustomDiagID(
-                DiagnosticsEngine::Warning,
-                "unsupported MC/DC boolean expression; "
-                "contains an operation with a nested boolean expression. "
-                "Expression will not be covered");
-            Diag.Report(S->getBeginLoc(), DiagID);
+            Diag.Report(S->getBeginLoc(), diag::warn_pgo_nested_boolean_expr);
             return true;
           }
 
           /// Was the maximum number of conditions encountered?
           if (NumCond > MCDCMaxCond) {
-            unsigned DiagID = Diag.getCustomDiagID(
-                DiagnosticsEngine::Warning,
-                "unsupported MC/DC boolean expression; "
-                "number of conditions (%0) exceeds max (%1). "
-                "Expression will not be covered");
-            Diag.Report(S->getBeginLoc(), DiagID) << NumCond << MCDCMaxCond;
+            Diag.Report(S->getBeginLoc(), diag::warn_pgo_condition_limit)
+                << NumCond << MCDCMaxCond;
             return true;
           }
 
