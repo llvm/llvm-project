@@ -9763,6 +9763,9 @@ def err_typecheck_cond_incompatible_operands : Error<
 def err_typecheck_expect_scalar_or_vector : Error<
   "invalid operand of type %0 where %1 or "
   "a vector of such type is required">;
+def err_typecheck_expect_scalar_or_vector_or_matrix : Error<
+  "invalid operand of type %0 where %1 or "
+  "a vector or matrix of such type is required">;
 def err_typecheck_expect_any_scalar_or_vector : Error<
   "invalid operand of type %0%select{| where a scalar or vector is required}1">;
 def err_typecheck_expect_flt_or_vector : Error<
@@ -13174,11 +13177,17 @@ def warn_sycl_external_missing_on_first_decl : Warning<
 
 // SYCL kernel entry point diagnostics
 def err_sycl_entry_point_invalid : Error<
-  "the %0 attribute cannot be applied to a"
-  " %select{non-static member function|variadic function|deleted function|"
-           "defaulted function|constexpr function|consteval function|"
-           "function declared with the 'noreturn' attribute|coroutine|"
-           "function defined with a function try block}1">;
+  "the %0 attribute cannot be applied to a %enum_select<InvalidSKEPReason>{"
+      "%NonStaticMemberFn{non-static member function}|"
+      "%VariadicFn{variadic function}|"
+      "%DeletedFn{deleted function}|"
+      "%DefaultedFn{defaulted function}|"
+      "%ConstexprFn{constexpr function}|"
+      "%ConstevalFn{consteval function}|"
+      "%NoreturnFn{function declared with the 'noreturn' attribute}|"
+      "%Coroutine{coroutine}|"
+      "%FunctionTryBlock{function defined with a function try block}"
+      "}1">;
 def err_sycl_entry_point_invalid_redeclaration : Error<
   "the %0 kernel name argument does not match prior"
   " declaration%diff{: $ vs $|}1,2">;
@@ -13288,6 +13297,7 @@ def err_std_initializer_list_malformed : Error<
   "%0 layout not recognized. Must be a non-polymorphic class type with no bases and two fields: a 'const E *' and either another 'const E *' or a 'std::size_t'">;
 
 // HLSL Diagnostics
+def err_hlsl_langstd_unimplemented : Error<"support for HLSL language version %0 is incomplete">;
 def err_hlsl_attr_unsupported_in_stage : Error<"attribute %0 is unsupported in '%1' shaders, requires %select{|one of the following: }2%3">;
 def err_hlsl_attr_invalid_type : Error<
    "attribute %0 only applies to a field or parameter of type '%1'">;

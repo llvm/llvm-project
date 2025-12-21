@@ -16495,19 +16495,19 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
         FD->getAttr<SYCLKernelEntryPointAttr>();
     if (FD->isDefaulted()) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-          << SKEPAttr << /*defaulted function*/ 3;
+          << SKEPAttr << diag::InvalidSKEPReason::DefaultedFn;
       SKEPAttr->setInvalidAttr();
     } else if (FD->isDeleted()) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-          << SKEPAttr << /*deleted function*/ 2;
+          << SKEPAttr << diag::InvalidSKEPReason::DeletedFn;
       SKEPAttr->setInvalidAttr();
     } else if (FSI->isCoroutine()) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-          << SKEPAttr << /*coroutine*/ 7;
+          << SKEPAttr << diag::InvalidSKEPReason::Coroutine;
       SKEPAttr->setInvalidAttr();
     } else if (Body && isa<CXXTryStmt>(Body)) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-          << SKEPAttr << /*function defined with a function try block*/ 8;
+          << SKEPAttr << diag::InvalidSKEPReason::FunctionTryBlock;
       SKEPAttr->setInvalidAttr();
     }
 
