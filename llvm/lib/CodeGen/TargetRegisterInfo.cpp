@@ -137,13 +137,13 @@ Printable llvm::printRegUnit(MCRegUnit Unit, const TargetRegisterInfo *TRI) {
   return Printable([Unit, TRI](raw_ostream &OS) {
     // Generic printout when TRI is missing.
     if (!TRI) {
-      OS << "Unit~" << Unit;
+      OS << "Unit~" << static_cast<unsigned>(Unit);
       return;
     }
 
     // Check for invalid register units.
-    if (Unit >= TRI->getNumRegUnits()) {
-      OS << "BadUnit~" << Unit;
+    if (static_cast<unsigned>(Unit) >= TRI->getNumRegUnits()) {
+      OS << "BadUnit~" << static_cast<unsigned>(Unit);
       return;
     }
 

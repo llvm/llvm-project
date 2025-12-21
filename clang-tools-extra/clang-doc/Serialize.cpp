@@ -11,7 +11,9 @@
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/Comment.h"
+#include "clang/AST/CommentVisitor.h"
 #include "clang/AST/DeclFriend.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
@@ -335,28 +337,29 @@ static std::string getSourceCode(const Decl *D, const SourceRange &R) {
       .str();
 }
 
-template <typename T> static std::string serialize(T &I) {
+template <typename T>
+static std::string serialize(T &I, DiagnosticsEngine &Diags) {
   SmallString<2048> Buffer;
   llvm::BitstreamWriter Stream(Buffer);
-  ClangDocBitcodeWriter Writer(Stream);
+  ClangDocBitcodeWriter Writer(Stream, Diags);
   Writer.emitBlock(I);
   return Buffer.str().str();
 }
 
-std::string serialize(std::unique_ptr<Info> &I) {
+std::string serialize(std::unique_ptr<Info> &I, DiagnosticsEngine &Diags) {
   switch (I->IT) {
   case InfoType::IT_namespace:
-    return serialize(*static_cast<NamespaceInfo *>(I.get()));
+    return serialize(*static_cast<NamespaceInfo *>(I.get()), Diags);
   case InfoType::IT_record:
-    return serialize(*static_cast<RecordInfo *>(I.get()));
+    return serialize(*static_cast<RecordInfo *>(I.get()), Diags);
   case InfoType::IT_enum:
-    return serialize(*static_cast<EnumInfo *>(I.get()));
+    return serialize(*static_cast<EnumInfo *>(I.get()), Diags);
   case InfoType::IT_function:
-    return serialize(*static_cast<FunctionInfo *>(I.get()));
+    return serialize(*static_cast<FunctionInfo *>(I.get()), Diags);
   case InfoType::IT_concept:
-    return serialize(*static_cast<ConceptInfo *>(I.get()));
+    return serialize(*static_cast<ConceptInfo *>(I.get()), Diags);
   case InfoType::IT_variable:
-    return serialize(*static_cast<VarInfo *>(I.get()));
+    return serialize(*static_cast<VarInfo *>(I.get()), Diags);
   case InfoType::IT_friend:
   case InfoType::IT_typedef:
   case InfoType::IT_default:

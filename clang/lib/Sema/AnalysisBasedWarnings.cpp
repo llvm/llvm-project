@@ -36,7 +36,6 @@
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -2872,6 +2871,44 @@ public:
         << UseExpr->getEndLoc();
   }
 
+  void reportUseAfterReturn(const Expr *IssueExpr, const Expr *EscapeExpr,
+                            SourceLocation ExpiryLoc, Confidence C) override {
+    S.Diag(IssueExpr->getExprLoc(),
+           C == Confidence::Definite
+               ? diag::warn_lifetime_safety_return_stack_addr_permissive
+               : diag::warn_lifetime_safety_return_stack_addr_strict)
+        << IssueExpr->getEndLoc();
+
+    S.Diag(EscapeExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
+        << EscapeExpr->getEndLoc();
+  }
+
+  void suggestAnnotation(SuggestionScope Scope,
+                         const ParmVarDecl *ParmToAnnotate,
+                         const Expr *EscapeExpr) override {
+    unsigned DiagID;
+    switch (Scope) {
+    case SuggestionScope::CrossTU:
+      DiagID = diag::warn_lifetime_safety_cross_tu_suggestion;
+      break;
+    case SuggestionScope::IntraTU:
+      DiagID = diag::warn_lifetime_safety_intra_tu_suggestion;
+      break;
+    }
+
+    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
+        ParmToAnnotate->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+
+    S.Diag(ParmToAnnotate->getBeginLoc(), DiagID)
+        << ParmToAnnotate->getSourceRange()
+        << FixItHint::CreateInsertion(InsertionPoint,
+                                      " [[clang::lifetimebound]]");
+
+    S.Diag(EscapeExpr->getBeginLoc(),
+           diag::note_lifetime_safety_suggestion_returned_here)
+        << EscapeExpr->getSourceRange();
+  }
+
 private:
   Sema &S;
 };
@@ -2980,6 +3017,9 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
 
   bool EnableLifetimeSafetyAnalysis = S.getLangOpts().EnableLifetimeSafety;
 
+  if (EnableLifetimeSafetyAnalysis)
+    AC.getCFGBuildOptions().AddLifetime = true;
+
   // Force that certain expressions appear as CFGElements in the CFG.  This
   // is used to speed up various analyses.
   // FIXME: This isn't the right factoring.  This is here for initial
@@ -2999,6 +3039,9 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       .setAlwaysAdd(Stmt::DeclRefExprClass)
       .setAlwaysAdd(Stmt::ImplicitCastExprClass)
       .setAlwaysAdd(Stmt::UnaryOperatorClass);
+  }
+  if (EnableLifetimeSafetyAnalysis) {
+    AC.getCFGBuildOptions().AddLifetime = true;
   }
 
   // Install the logical handler.

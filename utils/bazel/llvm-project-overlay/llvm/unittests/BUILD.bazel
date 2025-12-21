@@ -408,7 +408,7 @@ cc_test(
         "@platforms//os:macos": [],
         "@platforms//os:windows": [],
         "//conditions:default": [
-            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBWrapper",
+            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBAllocAction",
         ],
     }),
     deps = [

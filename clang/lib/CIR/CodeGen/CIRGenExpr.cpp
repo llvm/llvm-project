@@ -188,6 +188,7 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
     case CK_HLSLArrayRValue:
     case CK_HLSLElementwiseCast:
     case CK_HLSLVectorTruncation:
+    case CK_HLSLMatrixTruncation:
     case CK_IntToOCLSampler:
     case CK_IntegralCast:
     case CK_IntegralComplexCast:
@@ -281,7 +282,6 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
   QualType t = e->getType();
 
   // If it's thread_local, emit a call to its wrapper function instead.
-  assert(!cir::MissingFeatures::opGlobalThreadLocal());
   if (vd->getTLSKind() == VarDecl::TLS_Dynamic)
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "emitGlobalVarDeclLValue: thread_local variable");
@@ -317,7 +317,6 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
                                        bool isVolatile, QualType ty,
                                        LValueBaseInfo baseInfo, bool isInit,
                                        bool isNontemporal) {
-  assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
 
   if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
     // Boolean vectors use `iN` as storage type.
@@ -568,7 +567,8 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
 mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
                                              QualType ty, SourceLocation loc,
                                              LValueBaseInfo baseInfo) {
-  assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
+  // Traditional LLVM codegen handles thread local separately, CIR handles
+  // as part of getAddrOfGlobalVar (GetGlobalOp).
   mlir::Type eltTy = addr.getElementType();
 
   if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
@@ -681,6 +681,53 @@ RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
   }
 
   return RValue::get(resultVec);
+}
+
+LValue
+CIRGenFunction::emitPointerToDataMemberBinaryExpr(const BinaryOperator *e) {
+  assert((e->getOpcode() == BO_PtrMemD || e->getOpcode() == BO_PtrMemI) &&
+         "unexpected binary operator opcode");
+
+  Address baseAddr = Address::invalid();
+  if (e->getOpcode() == BO_PtrMemD)
+    baseAddr = emitLValue(e->getLHS()).getAddress();
+  else
+    baseAddr = emitPointerWithAlignment(e->getLHS());
+
+  const auto *memberPtrTy = e->getRHS()->getType()->castAs<MemberPointerType>();
+
+  mlir::Value memberPtr = emitScalarExpr(e->getRHS());
+
+  LValueBaseInfo baseInfo;
+  assert(!cir::MissingFeatures::opTBAA());
+  Address memberAddr = emitCXXMemberDataPointerAddress(e, baseAddr, memberPtr,
+                                                       memberPtrTy, &baseInfo);
+
+  return makeAddrLValue(memberAddr, memberPtrTy->getPointeeType(), baseInfo);
+}
+
+/// Generates lvalue for partial ext_vector access.
+Address CIRGenFunction::emitExtVectorElementLValue(LValue lv,
+                                                   mlir::Location loc) {
+  Address vectorAddress = lv.getExtVectorAddress();
+  QualType elementTy = lv.getType()->castAs<VectorType>()->getElementType();
+  mlir::Type vectorElementTy = cgm.getTypes().convertType(elementTy);
+  Address castToPointerElement =
+      vectorAddress.withElementType(builder, vectorElementTy);
+
+  mlir::ArrayAttr extVecElts = lv.getExtVectorElts();
+  unsigned idx = getAccessedFieldNo(0, extVecElts);
+  mlir::Value idxValue =
+      builder.getConstInt(loc, mlir::cast<cir::IntType>(ptrDiffTy), idx);
+
+  mlir::Value elementValue = builder.getArrayElement(
+      loc, loc, castToPointerElement.getPointer(), vectorElementTy, idxValue,
+      /*shouldDecay=*/false);
+
+  const CharUnits eltSize = getContext().getTypeSizeInChars(elementTy);
+  const CharUnits alignment =
+      castToPointerElement.getAlignment().alignmentAtOffset(idx * eltSize);
+  return Address(elementValue, vectorElementTy, alignment);
 }
 
 static cir::FuncOp emitFunctionDeclPointer(CIRGenModule &cgm, GlobalDecl gd) {
@@ -1081,12 +1128,6 @@ static Address emitArraySubscriptPtr(CIRGenFunction &cgf,
 
 LValue
 CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
-  if (isa<ExtVectorElementExpr>(e->getBase())) {
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitArraySubscriptExpr: ExtVectorElementExpr");
-    return LValue::makeAddr(Address::invalid(), e->getType(), LValueBaseInfo());
-  }
-
   if (getContext().getAsVariableArrayType(e->getType())) {
     cgm.errorNYI(e->getSourceRange(),
                  "emitArraySubscriptExpr: VariableArrayType");
@@ -1116,15 +1157,30 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
 
   // If the base is a vector type, then we are forming a vector element
   // with this subscript.
-  if (e->getBase()->getType()->isVectorType() &&
+  if (e->getBase()->getType()->isSubscriptableVectorType() &&
       !isa<ExtVectorElementExpr>(e->getBase())) {
     const mlir::Value idx = emitIdxAfterBase(/*promote=*/false);
-    const LValue lhs = emitLValue(e->getBase());
-    return LValue::makeVectorElt(lhs.getAddress(), idx, e->getBase()->getType(),
-                                 lhs.getBaseInfo());
+    const LValue lv = emitLValue(e->getBase());
+    return LValue::makeVectorElt(lv.getAddress(), idx, e->getBase()->getType(),
+                                 lv.getBaseInfo());
   }
 
   const mlir::Value idx = emitIdxAfterBase(/*promote=*/true);
+
+  // Handle the extvector case we ignored above.
+  if (isa<ExtVectorElementExpr>(e->getBase())) {
+    const LValue lv = emitLValue(e->getBase());
+    Address addr = emitExtVectorElementLValue(lv, cgm.getLoc(e->getExprLoc()));
+
+    QualType elementType = lv.getType()->castAs<VectorType>()->getElementType();
+    addr = emitArraySubscriptPtr(*this, cgm.getLoc(e->getBeginLoc()),
+                                 cgm.getLoc(e->getEndLoc()), addr, e->getType(),
+                                 idx, cgm.getLoc(e->getExprLoc()),
+                                 /*shouldDecay=*/false);
+
+    return makeAddrLValue(addr, elementType, lv.getBaseInfo());
+  }
+
   if (const Expr *array = getSimpleArrayDecayOperand(e->getBase())) {
     LValue arrayLV;
     if (const auto *ase = dyn_cast<ArraySubscriptExpr>(array))
@@ -1174,9 +1230,14 @@ LValue CIRGenFunction::emitExtVectorElementExpr(const ExtVectorElementExpr *e) {
 
   // ExtVectorElementExpr's base can either be a vector or pointer to vector.
   if (e->isArrow()) {
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitExtVectorElementExpr: pointer to vector");
-    return {};
+    // If it is a pointer to a vector, emit the address and form an lvalue with
+    // it.
+    LValueBaseInfo baseInfo;
+    Address ptr = emitPointerWithAlignment(e->getBase(), &baseInfo);
+    const auto *clangPtrTy =
+        e->getBase()->getType()->castAs<clang::PointerType>();
+    base = makeAddrLValue(ptr, clangPtrTy->getPointeeType(), baseInfo);
+    base.getQuals().removeObjCGCAttr();
   } else if (e->getBase()->isGLValue()) {
     // Otherwise, if the base is an lvalue ( as in the case of foo.x.x),
     // emit the base as an lvalue.
@@ -1184,9 +1245,20 @@ LValue CIRGenFunction::emitExtVectorElementExpr(const ExtVectorElementExpr *e) {
     base = emitLValue(e->getBase());
   } else {
     // Otherwise, the base is a normal rvalue (as in (V+V).x), emit it as such.
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitExtVectorElementExpr: base is a normal rvalue");
-    return {};
+    assert(e->getBase()->getType()->isVectorType() &&
+           "Result must be a vector");
+    mlir::Value vec = emitScalarExpr(e->getBase());
+
+    // Store the vector to memory (because LValue wants an address).
+    QualType baseTy = e->getBase()->getType();
+    Address vecMem = createMemTemp(baseTy, vec.getLoc(), "tmp");
+    if (!getLangOpts().HLSL && baseTy->isExtVectorBoolType()) {
+      cgm.errorNYI(e->getSourceRange(),
+                   "emitExtVectorElementExpr: ExtVectorBoolType & !HLSL");
+      return {};
+    }
+    builder.createStore(vec.getLoc(), vec, vecMem);
+    base = makeAddrLValue(vecMem, baseTy, AlignmentSource::Decl);
   }
 
   QualType type =
@@ -1274,6 +1346,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLMatrixTruncation:
   case CK_HLSLArrayRValue:
   case CK_HLSLElementwiseCast:
   case CK_HLSLAggregateSplatCast:
@@ -1296,7 +1369,6 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_NonAtomicToAtomic:
   case CK_AtomicToNonAtomic:
   case CK_ToUnion:
-  case CK_BaseToDerived:
   case CK_ObjCObjectLValueCast:
   case CK_VectorSplat:
   case CK_ConstructorConversion:
@@ -1331,6 +1403,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
                                   lv.getAddress().getAlignment()),
                           e->getType(), lv.getBaseInfo());
   }
+
   case CK_LValueBitCast: {
     // This must be a reinterpret_cast (or c-style equivalent).
     const auto *ce = cast<ExplicitCastExpr>(e);
@@ -1380,6 +1453,22 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
     // type.
     assert(!cir::MissingFeatures::opTBAA());
     return makeAddrLValue(baseAddr, e->getType(), lv.getBaseInfo());
+  }
+
+  case CK_BaseToDerived: {
+    const auto *derivedClassDecl = e->getType()->castAsCXXRecordDecl();
+    LValue lv = emitLValue(e->getSubExpr());
+
+    // Perform the base-to-derived conversion
+    Address derived = getAddressOfDerivedClass(
+        getLoc(e->getSourceRange()), lv.getAddress(), derivedClassDecl,
+        e->path(), /*NullCheckValue=*/false);
+    // C++11 [expr.static.cast]p2: Behavior is undefined if a downcast is
+    // performed and the object is not of the derived type.
+    assert(!cir::MissingFeatures::sanitizers());
+
+    assert(!cir::MissingFeatures::opTBAA());
+    return makeAddrLValue(derived, e->getType(), lv.getBaseInfo());
   }
 
   case CK_ZeroToOCLOpaqueType:
@@ -1696,10 +1785,8 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
     return emitLValue(e->getRHS());
   }
 
-  if (e->getOpcode() == BO_PtrMemD || e->getOpcode() == BO_PtrMemI) {
-    cgm.errorNYI(e->getSourceRange(), "member pointers");
-    return {};
-  }
+  if (e->getOpcode() == BO_PtrMemD || e->getOpcode() == BO_PtrMemI)
+    return emitPointerToDataMemberBinaryExpr(e);
 
   assert(e->getOpcode() == BO_Assign && "unexpected binary l-value");
 
@@ -1777,11 +1864,7 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
   const auto *fd = cast<FunctionDecl>(gd.getDecl());
 
   if (unsigned builtinID = fd->getBuiltinID()) {
-    if (fd->getAttr<AsmLabelAttr>()) {
-      cgm.errorNYI("AsmLabelAttr");
-    }
-
-    StringRef ident = fd->getName();
+    StringRef ident = cgm.getMangledName(gd);
     std::string fdInlineName = (ident + ".inline").str();
 
     bool isPredefinedLibFunction =
@@ -1809,8 +1892,7 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
         clone.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
             &cgm.getMLIRContext(), cir::GlobalLinkageKind::InternalLinkage));
         clone.setSymVisibility("private");
-        clone.setInlineKindAttr(cir::InlineAttr::get(
-            &cgm.getMLIRContext(), cir::InlineKind::AlwaysInline));
+        clone.setInlineKind(cir::InlineKind::AlwaysInline);
       }
       return CIRGenCallee::forDirect(clone, gd);
     }

@@ -271,31 +271,18 @@ Updating the CI testing container images
 The libcxx linux premerge testing can run on one of three sets of runner
 groups. The three runner group names are ``llvm-premerge-libcxx-runners``,
 ``llvm-premerge-libcxx-release-runners`` and ``llvm-premerge-libcxx-next-runners``.
-The runner set to use is controlled by the contents of
+The runner set currently in use is controlled by the contents of
 https://github.com/llvm/llvm-project/blob/main/.github/workflows/libcxx-build-and-test.yaml.
 By default, it uses ``llvm-premerge-libcxx-runners``. To switch to one of the
 other runner sets, just replace all uses of ``llvm-premerge-libcxx-runners`` in
 the yaml file with the desired runner set.
 
-Which container image is used by these three runner sets is controlled
-and set by the variable values in
-https://github.com/llvm/llvm-zorg/blob/main/premerge/premerge_resources/variables.tf.
-The table below shows the variable names and
-the runner sets to which they correspond. To see their values, follow the
-link above (to ``variables.tf`` in llvm-zorg).
+The container image used by these three runner sets is controlled by the contents
+of the corresponding text files in ``libcxx/utils/ci/images``. The content of these
+files is read by the `Terraform configuration in llvm-zorg
+<https://github.com/llvm/llvm-zorg/blob/main/premerge/premerge_resources/main.tf>`__.
 
-+------------------------------------+---------------------------+
-|Runner Set                          |Variable                   |
-+====================================+===========================+
-|llvm-premerge-libcxx-runners        |libcxx_runner_image        |
-+------------------------------------+---------------------------+
-|llvm-premerge-libcxx-release-runners|libcxx_release_runner_image|
-+------------------------------------+---------------------------+
-|llvm-premerge-libcxx-next-runners   |libcxx_next_runner_image   |
-+------------------------------------+---------------------------+
-
-
-When updating the container image you can either update just the runner binary (the part
+When updating the container image, you can either update just the runner binary (the part
 that connects to Github), or you can update everything (tools, etc.). To update the runner
 binary, bump the value of ``GITHUB_RUNNER_VERSION`` in ``libcxx/utils/ci/docker/docker-compose.yml``.
 To update all of the tools, bump ``BASE_IMAGE_VERSION`` to a newer version of the ``libcxx-linux-builder-base``
@@ -304,13 +291,9 @@ image. You can see all versions of that image at https://github.com/llvm/llvm-pr
 On push to ``main``, a new version of both the ``libcxx-linux-builder`` and the ``libcxx-android-builder``
 images will be built and pushed to https://github.com/llvm/llvm-project/packages.
 
-You can then update the image used by the actual runners by changing the sha associated
-to ``libcxx_runner_image``, ``libcxx_release_runner_image`` or ``libcxx_next_runner_image``
-in `the Terraform configuration file <https://github.com/llvm/llvm-zorg/blob/main/premerge/premerge_resources/variables.tf>`_.
-To do so, you will need to create a PR in the llvm-zorg repository and wait for it to be
-merged. Once that change has been merged, an LLVM premerge maintainer (a Google employee)
-must use terraform to apply the change to the running GKE cluster.
-
+You can then update the image used by the actual runners by changing the image encoded in
+``libcxx/utils/ci/images`` and asking an LLVM premerge maintainer (a Google employee) to
+actually deploy the changes to the GKE cluster via Terraform.
 
 Monitoring premerge testing performance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -333,7 +316,7 @@ your system.
 run-buildbot
 ~~~~~~~~~~~~
 
-Contains the build script executed on Buildkite. This script can be executed
+This is the script executed by the CI runners. This script can be executed
 locally or inside ``run-buildbot-container``. The script must be called with
 the target to test. For example, ``run-buildbot generic-cxx20`` will build
 libc++ and test it using C++20.

@@ -195,3 +195,46 @@ const int& test_cond_const_false_throw_true() {
 // OGCG-NOT: __cxa_throw
 // OGCG: ret ptr %[[A]]
 
+const int &test_cond_const_true_throw_true() {
+  const int a = 30;
+  return true ? throw 0 : a;
+}
+
+// CIR-LABEL: cir.func{{.*}} @_Z31test_cond_const_true_throw_truev(
+// CIR:  %[[RET_ADDR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["__retval"]
+// CIR:  %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init, const]
+// CIR:  %[[CONST_30:.*]] = cir.const #cir.int<30> : !s32i
+// CIR:  cir.store{{.*}} %[[CONST_30]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR:  %[[EXCEPTION:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
+// CIR:  %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
+// CIR:  cir.store{{.*}} %[[CONST_0]], %[[EXCEPTION]] : !s32i, !cir.ptr<!s32i>
+// CIR:  cir.throw %[[EXCEPTION]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:  cir.unreachable
+// CIR: ^[[NO_PRED_LABEL:.*]]:
+// CIR:   %[[CONST_NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
+// CIR:   cir.store %[[CONST_NULL]], %[[RET_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CIR:   %[[TMP_RET:.*]] = cir.load %[[RET_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR:   cir.return %[[TMP_RET]] : !cir.ptr<!s32i>
+
+// LLVM-LABEL: define{{.*}} ptr @_Z31test_cond_const_true_throw_truev(
+// LLVM:  %[[RET_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:  %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:  store i32 30, ptr %[[A_ADDR]], align 4
+// LLVM:  %[[EXCEPTION:.*]] = call ptr @__cxa_allocate_exception(i64 4)
+// LLVM:  store i32 0, ptr %[[EXCEPTION]], align 16
+// LLVM:  call void @__cxa_throw(ptr %[[EXCEPTION]], ptr @_ZTIi, ptr null)
+// LLVM:  unreachable
+// LLVM: [[NO_PRED_LABEL:.*]]:
+// LLVM:  store ptr null, ptr %[[RET_ADDR]], align 8
+// LLVM:  %[[TMP_RET:.*]] = load ptr, ptr %[[RET_ADDR]], align 8
+// LLVM:  ret ptr %[[TMP_RET]]
+
+// OGCG-LABEL: define{{.*}} ptr @_Z31test_cond_const_true_throw_truev(
+// OGCG:  %[[A_ADDR:.*]] = alloca i32, align 4
+// OGCG:  store i32 30, ptr %[[A_ADDR]], align 4
+// OGCG:  %[[EXCEPTION:.*]] = call ptr @__cxa_allocate_exception(i64 4)
+// OGCG:  store i32 0, ptr %[[EXCEPTION]], align 16
+// OGCG:  call void @__cxa_throw(ptr %[[EXCEPTION]], ptr @_ZTIi, ptr null)
+// OGCG:  unreachable
+// OGCG: [[NO_PRED_LABEL:.*]]:
+// OGCG:  ret ptr [[UNDEF:.*]]

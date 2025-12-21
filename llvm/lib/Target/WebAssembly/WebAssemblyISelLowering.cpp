@@ -43,7 +43,7 @@ using namespace llvm;
 
 WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     const TargetMachine &TM, const WebAssemblySubtarget &STI)
-    : TargetLowering(TM), Subtarget(&STI) {
+    : TargetLowering(TM, STI), Subtarget(&STI) {
   auto MVTPtr = Subtarget->hasAddr64() ? MVT::i64 : MVT::i32;
 
   // Set the load count for memcmp expand optimization
@@ -137,9 +137,9 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
                     ISD::SETULT, ISD::SETULE, ISD::SETUGT, ISD::SETUGE})
       setCondCodeAction(CC, T, Expand);
     // Expand floating-point library function operators.
-    for (auto Op :
-         {ISD::FSIN, ISD::FCOS, ISD::FSINCOS, ISD::FPOW, ISD::FREM, ISD::FMA})
+    for (auto Op : {ISD::FSIN, ISD::FCOS, ISD::FSINCOS, ISD::FPOW, ISD::FMA})
       setOperationAction(Op, T, Expand);
+    setOperationAction(ISD::FREM, T, LibCall);
     // Note supported floating-point library function operators that otherwise
     // default to expand.
     for (auto Op : {ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FNEARBYINT,
@@ -319,6 +319,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     // Support vector extending
     for (auto T : MVT::integer_fixedlen_vector_valuetypes()) {
+      setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG, T, Custom);
       setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, T, Custom);
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Custom);
     }
@@ -1059,7 +1060,7 @@ EVT WebAssemblyTargetLowering::getSetCCResultType(const DataLayout &DL,
 }
 
 bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                                   const CallInst &I,
+                                                   const CallBase &I,
                                                    MachineFunction &MF,
                                                    unsigned Intrinsic) const {
   switch (Intrinsic) {
@@ -1136,7 +1137,27 @@ void WebAssemblyTargetLowering::computeKnownBitsForTargetNode(
     }
     break;
   }
-
+  case WebAssemblyISD::EXTEND_LOW_U:
+  case WebAssemblyISD::EXTEND_HIGH_U: {
+    // We know the high half, of each destination vector element, will be zero.
+    SDValue SrcOp = Op.getOperand(0);
+    EVT VT = SrcOp.getSimpleValueType();
+    unsigned BitWidth = Known.getBitWidth();
+    if (VT == MVT::v8i8 || VT == MVT::v16i8) {
+      assert(BitWidth >= 8 && "Unexpected width!");
+      APInt Mask = APInt::getHighBitsSet(BitWidth, BitWidth - 8);
+      Known.Zero |= Mask;
+    } else if (VT == MVT::v4i16 || VT == MVT::v8i16) {
+      assert(BitWidth >= 16 && "Unexpected width!");
+      APInt Mask = APInt::getHighBitsSet(BitWidth, BitWidth - 16);
+      Known.Zero |= Mask;
+    } else if (VT == MVT::v2i32 || VT == MVT::v4i32) {
+      assert(BitWidth >= 32 && "Unexpected width!");
+      APInt Mask = APInt::getHighBitsSet(BitWidth, BitWidth - 32);
+      Known.Zero |= Mask;
+    }
+    break;
+  }
   // For 128-bit addition if the upper bits are all zero then it's known that
   // the upper bits of the result will have all bits guaranteed zero except the
   // first.
@@ -1705,6 +1726,7 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     return LowerSIGN_EXTEND_INREG(Op, DAG);
   case ISD::ZERO_EXTEND_VECTOR_INREG:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
+  case ISD::ANY_EXTEND_VECTOR_INREG:
     return LowerEXTEND_VECTOR_INREG(Op, DAG);
   case ISD::BUILD_VECTOR:
     return LowerBUILD_VECTOR(Op, DAG);
@@ -2299,6 +2321,9 @@ WebAssemblyTargetLowering::LowerEXTEND_VECTOR_INREG(SDValue Op,
 
   unsigned Ext;
   switch (Op.getOpcode()) {
+  default:
+    llvm_unreachable("unexpected opcode");
+  case ISD::ANY_EXTEND_VECTOR_INREG:
   case ISD::ZERO_EXTEND_VECTOR_INREG:
     Ext = WebAssemblyISD::EXTEND_LOW_U;
     break;
@@ -2603,18 +2628,12 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
         // Values may need to be fixed so that they will sign extend to be
         // within the expected range during ISel. Check whether the value is in
         // bounds based on the lane bit width and if it is out of bounds, lop
-        // off the extra bits and subtract 2^n to reflect giving the high bit
-        // value -2^(n-1) rather than +2^(n-1). Skip the i64 case because it
-        // cannot possibly be out of range.
-        auto *Const = dyn_cast<ConstantSDNode>(Lane.getNode());
-        int64_t Val = Const ? Const->getSExtValue() : 0;
+        // off the extra bits.
         uint64_t LaneBits = 128 / Lanes;
-        assert((LaneBits == 64 || Val >= -(1ll << (LaneBits - 1))) &&
-               "Unexpected out of bounds negative value");
-        if (Const && LaneBits != 64 && Val > (1ll << (LaneBits - 1)) - 1) {
-          uint64_t Mask = (1ll << LaneBits) - 1;
-          auto NewVal = (((uint64_t)Val & Mask) - (1ll << LaneBits)) & Mask;
-          ConstLanes.push_back(DAG.getConstant(NewVal, SDLoc(Lane), LaneT));
+        if (auto *Const = dyn_cast<ConstantSDNode>(Lane.getNode())) {
+          ConstLanes.push_back(DAG.getConstant(
+              Const->getAPIntValue().trunc(LaneBits).getZExtValue(),
+              SDLoc(Lane), LaneT));
         } else {
           ConstLanes.push_back(Lane);
         }

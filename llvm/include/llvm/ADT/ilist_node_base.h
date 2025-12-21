@@ -67,6 +67,9 @@ class ilist_node_base : public ilist_detail::node_base_prevnext<
                             EnableSentinelTracking>,
                         public ilist_detail::node_base_parent<ParentTy> {};
 
+// Specialization implemented in the core LLVM library.
+template class LLVM_ABI ilist_node_base<true, void>;
+
 } // end namespace llvm
 
 #endif // LLVM_ADT_ILIST_NODE_BASE_H
