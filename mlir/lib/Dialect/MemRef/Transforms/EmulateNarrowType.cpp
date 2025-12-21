@@ -414,7 +414,7 @@ struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
   LogicalResult
   matchAndRewrite(memref::StoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto convertedType = cast<MemRefType>(adaptor.getMemref().getType());
+    auto convertedType = cast<MemRefType>(adaptor.getBase().getType());
     int srcBits = op.getMemRefType().getElementTypeBitWidth();
     int dstBits = convertedType.getElementTypeBitWidth();
     auto dstIntegerType = rewriter.getIntegerType(dstBits);
@@ -440,7 +440,7 @@ struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
     // Special case 0-rank memref stores. No need for masking.
     if (convertedType.getRank() == 0) {
       memref::AtomicRMWOp::create(rewriter, loc, arith::AtomicRMWKind::assign,
-                                  extendedInput, adaptor.getMemref(),
+                                  extendedInput, adaptor.getBase(),
                                   ValueRange{});
       rewriter.eraseOp(op);
       return success();
@@ -460,10 +460,10 @@ struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
 
     // Clear destination bits
     memref::AtomicRMWOp::create(rewriter, loc, arith::AtomicRMWKind::andi,
-                                writeMask, adaptor.getMemref(), storeIndices);
+                                writeMask, adaptor.getBase(), storeIndices);
     // Write srcs bits to destination
     memref::AtomicRMWOp::create(rewriter, loc, arith::AtomicRMWKind::ori,
-                                alignedVal, adaptor.getMemref(), storeIndices);
+                                alignedVal, adaptor.getBase(), storeIndices);
     rewriter.eraseOp(op);
     return success();
   }

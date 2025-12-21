@@ -824,7 +824,7 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   auto loc = storeOp.getLoc();
   auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
   Value accessChain =
-      spirv::getElementPtr(typeConverter, memrefType, adaptor.getMemref(),
+      spirv::getElementPtr(typeConverter, memrefType, adaptor.getBase(),
                            adaptor.getIndices(), loc, rewriter);
 
   if (!accessChain)
@@ -1020,7 +1020,7 @@ StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   if (memrefType.getElementType().isSignlessInteger())
     return rewriter.notifyMatchFailure(storeOp, "signless int");
   auto storePtr = spirv::getElementPtr(
-      *getTypeConverter<SPIRVTypeConverter>(), memrefType, adaptor.getMemref(),
+      *getTypeConverter<SPIRVTypeConverter>(), memrefType, adaptor.getBase(),
       adaptor.getIndices(), storeOp.getLoc(), rewriter);
 
   if (!storePtr)

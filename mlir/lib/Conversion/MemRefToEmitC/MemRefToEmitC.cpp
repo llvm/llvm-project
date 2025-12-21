@@ -362,7 +362,7 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
   matchAndRewrite(memref::StoreOp op, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto arrayValue =
-        dyn_cast<TypedValue<emitc::ArrayType>>(operands.getMemref());
+        dyn_cast<TypedValue<emitc::ArrayType>>(operands.getBase());
     if (!arrayValue) {
       return rewriter.notifyMatchFailure(op.getLoc(), "expected array type");
     }

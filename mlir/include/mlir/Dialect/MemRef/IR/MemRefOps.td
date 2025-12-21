@@ -2014,8 +2014,8 @@ def MemRef_CollapseShapeOp : MemRef_ReassociativeReshapeOp<"collapse_shape", [
 //===----------------------------------------------------------------------===//
 
 def MemRef_StoreOp : MemRef_Op<"store",
-     [TypesMatchWith<"type of 'value' matches element type of 'memref'",
-                     "memref", "value",
+     [TypesMatchWith<"type of 'value' matches element type of 'base'",
+                     "base", "value",
                      "::llvm::cast<MemRefType>($_self).getElementType()">,
       MemRefsNormalizable,
       DeclareOpInterfaceMethods<AlignmentAttrOpInterface>,
@@ -2052,7 +2052,7 @@ def MemRef_StoreOp : MemRef_Op<"store",
 
   let arguments = (ins AnyType:$value,
                        Arg<AnyMemRef, "the reference to store to",
-                           [MemWrite]>:$memref,
+                           [MemWrite]>:$base,
                        Variadic<Index>:$indices,
                        DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
                        OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
@@ -2074,6 +2074,9 @@ def MemRef_StoreOp : MemRef_Op<"store",
   ];
 
   let extraClassDeclaration = [{
+      ::mlir::TypedValue<::mlir::MemRefType> getMemref() { return getBase(); }
+      ::mlir::OpOperand &getMemrefMutable() { return getBaseMutable(); }
+
       Value getValueToStore() { return getOperand(0); }
 
       Value getMemRef() { return getOperand(1); }
@@ -2087,7 +2090,7 @@ def MemRef_StoreOp : MemRef_Op<"store",
   let hasVerifier = 1;
 
   let assemblyFormat = [{
-    $value `,` $memref `[` $indices `]` attr-dict `:` type($memref)
+    $value `,` $base `[` $indices `]` attr-dict `:` type($base)
   }];
 }
 

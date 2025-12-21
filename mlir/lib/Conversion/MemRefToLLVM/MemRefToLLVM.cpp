@@ -965,7 +965,7 @@ struct StoreOpLowering : public LoadStoreOpLowering<memref::StoreOp> {
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,
     // hence inbounds and nuw are used when lowering to llvm.getelementptr.
     Value dataPtr =
-        getStridedElementPtr(rewriter, op.getLoc(), type, adaptor.getMemref(),
+        getStridedElementPtr(rewriter, op.getLoc(), type, adaptor.getBase(),
                              adaptor.getIndices(), kNoWrapFlags);
     rewriter.replaceOpWithNewOp<LLVM::StoreOp>(op, adaptor.getValue(), dataPtr,
                                                op.getAlignment().value_or(0),
