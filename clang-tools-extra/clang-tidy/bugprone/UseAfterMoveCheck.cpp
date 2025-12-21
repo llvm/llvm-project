@@ -33,6 +33,54 @@ using matchers::hasUnevaluatedContext;
 
 namespace {
 
+/// Contains information about a use-after-move.
+struct UseAfterMove {
+  // The DeclRefExpr that constituted the use of the object.
+  const DeclRefExpr *DeclRef;
+
+  // Is the order in which the move and the use are evaluated undefined?
+  bool EvaluationOrderUndefined = false;
+
+  // Does the use happen in a later loop iteration than the move?
+  //
+  // We default to false and change it to true if required in find().
+  bool UseHappensInLaterLoopIteration = false;
+};
+
+/// Finds uses of a variable after a move (and maintains state required by the
+/// various internal helper functions).
+class UseAfterMoveFinder {
+public:
+  UseAfterMoveFinder(ASTContext *TheContext,
+                     llvm::ArrayRef<StringRef> InvalidationFunctions);
+
+  // Within the given code block, finds the first use of 'MovedVariable' that
+  // occurs after 'MovingCall' (the expression that performs the move). If a
+  // use-after-move is found, writes information about it to 'TheUseAfterMove'.
+  // Returns whether a use-after-move was found.
+  std::optional<UseAfterMove> find(Stmt *CodeBlock, const Expr *MovingCall,
+                                   const DeclRefExpr *MovedVariable);
+
+private:
+  std::optional<UseAfterMove> findInternal(const CFGBlock *Block,
+                                           const Expr *MovingCall,
+                                           const ValueDecl *MovedVariable);
+  void getUsesAndReinits(const CFGBlock *Block, const ValueDecl *MovedVariable,
+                         llvm::SmallVectorImpl<const DeclRefExpr *> *Uses,
+                         llvm::SmallPtrSetImpl<const Stmt *> *Reinits);
+  void getDeclRefs(const CFGBlock *Block, const Decl *MovedVariable,
+                   llvm::SmallPtrSetImpl<const DeclRefExpr *> *DeclRefs);
+  void getReinits(const CFGBlock *Block, const ValueDecl *MovedVariable,
+                  llvm::SmallPtrSetImpl<const Stmt *> *Stmts,
+                  llvm::SmallPtrSetImpl<const DeclRefExpr *> *DeclRefs);
+
+  ASTContext *Context;
+  llvm::ArrayRef<StringRef> InvalidationFunctions;
+  std::unique_ptr<ExprSequence> Sequence;
+  std::unique_ptr<StmtToBlockMap> BlockMap;
+  llvm::SmallPtrSet<const CFGBlock *, 8> Visited;
+};
+
 AST_MATCHER_P(CXXRecordDecl, hasCaptureByReference, const ValueDecl *,
               TargetDecl) {
   if (!Node.isLambda())
@@ -52,22 +100,21 @@ static auto getNameMatcher(llvm::ArrayRef<StringRef> InvalidationFunctions) {
                matchers::matchesAnyListedName(InvalidationFunctions));
 }
 
-StatementMatcher
+static StatementMatcher
 makeReinitMatcher(const ValueDecl *MovedVariable,
                   llvm::ArrayRef<StringRef> InvalidationFunctions) {
   const auto DeclRefMatcher =
       declRefExpr(hasDeclaration(equalsNode(MovedVariable))).bind("declref");
 
-  static const auto StandardContainerTypeMatcher =
-      hasType(hasUnqualifiedDesugaredType(
-          recordType(hasDeclaration(cxxRecordDecl(hasAnyName(
-              "::std::basic_string", "::std::vector", "::std::deque",
-              "::std::forward_list", "::std::list", "::std::set", "::std::map",
-              "::std::multiset", "::std::multimap", "::std::unordered_set",
-              "::std::unordered_map", "::std::unordered_multiset",
-              "::std::unordered_multimap"))))));
+  const auto StandardContainerTypeMatcher = hasType(hasUnqualifiedDesugaredType(
+      recordType(hasDeclaration(cxxRecordDecl(hasAnyName(
+          "::std::basic_string", "::std::vector", "::std::deque",
+          "::std::forward_list", "::std::list", "::std::set", "::std::map",
+          "::std::multiset", "::std::multimap", "::std::unordered_set",
+          "::std::unordered_map", "::std::unordered_multiset",
+          "::std::unordered_multimap"))))));
 
-  static const auto StandardResettableOwnerTypeMatcher = hasType(
+  const auto StandardResettableOwnerTypeMatcher = hasType(
       hasUnqualifiedDesugaredType(recordType(hasDeclaration(cxxRecordDecl(
           hasAnyName("::std::unique_ptr", "::std::shared_ptr",
                      "::std::weak_ptr", "::std::optional", "::std::any"))))));
@@ -117,7 +164,6 @@ makeReinitMatcher(const ValueDecl *MovedVariable,
       .bind("reinit");
 }
 
-
 bool isVariableResetInLambda(const Stmt *Body, const ValueDecl *MovedVariable,
                              ASTContext *Context,
                              llvm::ArrayRef<StringRef> InvalidationFunctions) {
@@ -139,56 +185,7 @@ bool isVariableResetInLambda(const Stmt *Body, const ValueDecl *MovedVariable,
   return !match(findAll(ReinitMatcher), *Body, *Context).empty();
 }
 
-/// Contains information about a use-after-move.
-struct UseAfterMove {
-  // The DeclRefExpr that constituted the use of the object.
-  const DeclRefExpr *DeclRef;
-
-  // Is the order in which the move and the use are evaluated undefined?
-  bool EvaluationOrderUndefined = false;
-
-  // Does the use happen in a later loop iteration than the move?
-  //
-  // We default to false and change it to true if required in find().
-  bool UseHappensInLaterLoopIteration = false;
-};
-
-/// Finds uses of a variable after a move (and maintains state required by the
-/// various internal helper functions).
-class UseAfterMoveFinder {
-public:
-  UseAfterMoveFinder(ASTContext *TheContext,
-                     llvm::ArrayRef<StringRef> InvalidationFunctions);
-
-  // Within the given code block, finds the first use of 'MovedVariable' that
-  // occurs after 'MovingCall' (the expression that performs the move). If a
-  // use-after-move is found, writes information about it to 'TheUseAfterMove'.
-  // Returns whether a use-after-move was found.
-  std::optional<UseAfterMove> find(Stmt *CodeBlock, const Expr *MovingCall,
-                                   const DeclRefExpr *MovedVariable);
-
-private:
-  std::optional<UseAfterMove> findInternal(const CFGBlock *Block,
-                                           const Expr *MovingCall,
-                                           const ValueDecl *MovedVariable);
-  void getUsesAndReinits(const CFGBlock *Block, const ValueDecl *MovedVariable,
-                         llvm::SmallVectorImpl<const DeclRefExpr *> *Uses,
-                         llvm::SmallPtrSetImpl<const Stmt *> *Reinits);
-  void getDeclRefs(const CFGBlock *Block, const Decl *MovedVariable,
-                   llvm::SmallPtrSetImpl<const DeclRefExpr *> *DeclRefs);
-  void getReinits(const CFGBlock *Block, const ValueDecl *MovedVariable,
-                  llvm::SmallPtrSetImpl<const Stmt *> *Stmts,
-                  llvm::SmallPtrSetImpl<const DeclRefExpr *> *DeclRefs);
-
-  ASTContext *Context;
-  llvm::ArrayRef<StringRef> InvalidationFunctions;
-  std::unique_ptr<ExprSequence> Sequence;
-  std::unique_ptr<StmtToBlockMap> BlockMap;
-  llvm::SmallPtrSet<const CFGBlock *, 8> Visited;
-};
-
 } // namespace
-
 
 // Matches nodes that are
 // - Part of a decltype argument or class template argument (we check this by
