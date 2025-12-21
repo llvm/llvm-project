@@ -2695,7 +2695,8 @@ auto HvxIdioms::processFxpMulChopped(IRBuilderBase &Builder, Instruction &In,
     // Do full-precision multiply and shift.
     Value *Prod32 = createMul16(Builder, Op.X, Op.Y);
     if (Rounding) {
-      Value *RoundVal = ConstantInt::get(Prod32->getType(), 1 << *Op.RoundAt);
+      Value *RoundVal =
+          ConstantInt::get(Prod32->getType(), 1ull << *Op.RoundAt);
       Prod32 = Builder.CreateAdd(Prod32, RoundVal, "add");
     }
 
@@ -2721,7 +2722,7 @@ auto HvxIdioms::processFxpMulChopped(IRBuilderBase &Builder, Instruction &In,
     Value *Zero = Constant::getNullValue(WordX[0]->getType());
     SmallVector<Value *> RoundV(WordP.size(), Zero);
     RoundV[*Op.RoundAt / 32] =
-        ConstantInt::get(HvxWordTy, 1 << (*Op.RoundAt % 32));
+        ConstantInt::get(HvxWordTy, 1ull << (*Op.RoundAt % 32));
     WordP = createAddLong(Builder, WordP, RoundV);
   }
 
