@@ -136,8 +136,7 @@ SmallVector<Register> AMDGPUEarlyRegisterSpilling::getRegistersToSpill(
     OutermostLoop = MLI->getLoopFor(CurMI->getParent())->getOutermostLoop();
     auto [DistanceFromHeaderToExitingLatch, ExitingLatch] =
         NUA.getLoopDistanceAndExitingLatch(OutermostLoop->getHeader());
-    LoopDistance =
-        (DistanceFromHeaderToExitingLatch + ExitingLatch->size()) * LoopWeight;
+    LoopDistance = DistanceFromHeaderToExitingLatch * LoopWeight;
   }
 
   for (auto [CandidateReg, Mask] : RPTracker.getLiveRegs()) {
