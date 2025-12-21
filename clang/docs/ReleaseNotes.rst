@@ -176,6 +176,9 @@ Clang Python Bindings Potentially Breaking Changes
   ElaboratedTypes. The value becomes unused, and all the existing users should
   expect the former underlying type to be reported instead.
 - Remove ``AccessSpecifier.NONE`` kind. No libclang interfaces ever returned this kind.
+- Allow setting the path to the libclang library via environment variables: ``LIBCLANG_LIBRARY_PATH``
+  to specifiy the path to the containing folder, or ``LIBCLANG_LIBRARY_FILE`` to specify the path to
+  the library file
 
 What's New in Clang |release|?
 ==============================
@@ -366,6 +369,9 @@ Attribute Changes in Clang
   attribute, allowing the attribute to only be attached to the declaration. Prior, this would be
   treated as an error where the definition and declaration would have differing types.
 
+- Instrumentation added by ``-fsanitize=function`` will also be omitted for indirect calls to function
+  pointers and function declarations marked with ``[[clang::cfi_unchecked_callee]]``.
+
 - New format attributes ``gnu_printf``, ``gnu_scanf``, ``gnu_strftime`` and ``gnu_strfmon`` are added
   as aliases for ``printf``, ``scanf``, ``strftime`` and ``strfmon``. (#GH16219)
 
@@ -487,6 +493,9 @@ Improvements to Clang's diagnostics
   carries messages like 'In file included from ...' or 'In module ...'.
   Now the include/import locations are written into `sarif.run.result.relatedLocations`.
 
+- Clang now generates a fix-it for C++20 designated initializers when the 
+  initializers do not match the declaration order in the structure. 
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -534,6 +543,7 @@ Bug Fixes in This Version
 - Fixed false-positive shadow diagnostics for lambdas in explicit object member functions. (#GH163731)
 - Fix an assertion failure when a ``target_clones`` attribute is only on the
   forward declaration of a multiversioned function. (#GH165517) (#GH129483)
+- Fix a crash caused by invalid format string in printf-like functions with ``-Wunsafe-buffer-usage-in-libc-call`` option enabled. (#GH170496)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -608,6 +618,8 @@ Bug Fixes to C++ Support
 - Fixed an issue where templates prevented nested anonymous records from checking the deletion of special members. (#GH167217)
 - Fixed spurious diagnoses of certain nested lambda expressions. (#GH149121) (#GH156579)
 - Fix the result of ``__is_pointer_interconvertible_base_of`` when arguments are qualified and passed via template parameters. (#GH135273)
+- Fixed a crash when evaluating nested requirements in requires-expressions that reference invented parameters. (#GH166325)
+- Fixed a crash when standard comparison categories (e.g. ``std::partial_ordering``) are defined with incorrect static member types. (#GH170015) (#GH56571)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -655,6 +667,11 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+- Support has been added for the following processors (command-line identifiers in parentheses):
+  - Arm C1-Nano (``c1-nano``)
+  - Arm C1-Pro (``c1-pro``)
+  - Arm C1-Premium (``c1-premium``)
+  - Arm C1-Ultra (``c1-ultra``)
 - More intrinsics for the following AArch64 instructions:
   FCVTZ[US], FCVTN[US], FCVTM[US], FCVTP[US], FCVTA[US]
 
@@ -843,6 +860,18 @@ OpenMP Support
 
 Improvements
 ^^^^^^^^^^^^
+- Mapping of expressions that have base-pointers now conforms to the OpenMP's
+  conditional pointer-attachment based on both pointee and poitner being
+  present, and one being new. This also lays the foundation of supporting
+  OpenMP 6.1's attach map-type modifier.
+- Several improvements were made to the handling of maps on list items involving
+  multiple levels of pointer dereferences, including not mapping intermediate
+  expressions, and grouping the items that share the same base-pointer, as
+  belonging to the same containing structure.
+- Support of array-sections on ``use_device_addr`` was made more robust,
+  including diagnosing when the array-section's base is not a named-variable.
+- Handling of ``use_device_addr`` and ``use_device_ptr`` in the presence of
+  other maps with the same base-pointer/variable, was improved.
 
 Additional Information
 ======================

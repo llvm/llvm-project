@@ -2491,14 +2491,16 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   ReducedInstCount |= MergeInner(Y, 0, NewMask1, CostKind);
   ReducedInstCount |= MergeInner(Z, NumSrcElts, NewMask0, CostKind);
   ReducedInstCount |= MergeInner(W, NumSrcElts, NewMask1, CostKind);
+  bool SingleSrcBinOp = (X == Y) && (Z == W) && (NewMask0 == NewMask1);
+  ReducedInstCount |= SingleSrcBinOp;
 
   auto *ShuffleCmpTy =
       FixedVectorType::get(BinOpTy->getElementType(), ShuffleDstTy);
-  InstructionCost NewCost =
-      TTI.getShuffleCost(SK0, ShuffleCmpTy, BinOpTy, NewMask0, CostKind, 0,
-                         nullptr, {X, Z}) +
-      TTI.getShuffleCost(SK1, ShuffleCmpTy, BinOpTy, NewMask1, CostKind, 0,
-                         nullptr, {Y, W});
+  InstructionCost NewCost = TTI.getShuffleCost(
+      SK0, ShuffleCmpTy, BinOpTy, NewMask0, CostKind, 0, nullptr, {X, Z});
+  if (!SingleSrcBinOp)
+    NewCost += TTI.getShuffleCost(SK1, ShuffleCmpTy, BinOpTy, NewMask1,
+                                  CostKind, 0, nullptr, {Y, W});
 
   if (PredLHS == CmpInst::BAD_ICMP_PREDICATE) {
     NewCost +=
@@ -2520,7 +2522,8 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
     return false;
 
   Value *Shuf0 = Builder.CreateShuffleVector(X, Z, NewMask0);
-  Value *Shuf1 = Builder.CreateShuffleVector(Y, W, NewMask1);
+  Value *Shuf1 =
+      SingleSrcBinOp ? Shuf0 : Builder.CreateShuffleVector(Y, W, NewMask1);
   Value *NewBO = PredLHS == CmpInst::BAD_ICMP_PREDICATE
                      ? Builder.CreateBinOp(
                            cast<BinaryOperator>(LHS)->getOpcode(), Shuf0, Shuf1)
@@ -4575,22 +4578,15 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
   SmallVector<int> Mask(NumDstElts, PoisonMaskElem);
 
   bool NeedExpOrNarrow = NumSrcElts != NumDstElts;
-  bool IsExtIdxInBounds = ExtIdx < NumDstElts;
   bool NeedDstSrcSwap = isa<PoisonValue>(DstVec) && !isa<UndefValue>(SrcVec);
   if (NeedDstSrcSwap) {
     SK = TargetTransformInfo::SK_PermuteSingleSrc;
-    if (!IsExtIdxInBounds && NeedExpOrNarrow)
-      Mask[InsIdx] = 0;
-    else
-      Mask[InsIdx] = ExtIdx;
+    Mask[InsIdx] = ExtIdx % NumDstElts;
     std::swap(DstVec, SrcVec);
   } else {
     SK = TargetTransformInfo::SK_PermuteTwoSrc;
     std::iota(Mask.begin(), Mask.end(), 0);
-    if (!IsExtIdxInBounds && NeedExpOrNarrow)
-      Mask[InsIdx] = NumDstElts;
-    else
-      Mask[InsIdx] = ExtIdx + NumDstElts;
+    Mask[InsIdx] = (ExtIdx % NumDstElts) + NumDstElts;
   }
 
   // Cost
@@ -4611,14 +4607,11 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
       NewCost += TTI.getShuffleCost(SK, DstVecTy, DstVecTy, Mask, CostKind, 0,
                                     nullptr, {DstVec, SrcVec});
   } else {
-    // When creating length-changing-vector, always create with a Mask whose
-    // first element has an ExtIdx, so that the first element of the vector
-    // being created is always the target to be extracted.
+    // When creating a length-changing-vector, always try to keep the relevant
+    // element in an equivalent position, so that bulk shuffles are more likely
+    // to be useful.
     ExtToVecMask.assign(NumDstElts, PoisonMaskElem);
-    if (IsExtIdxInBounds)
-      ExtToVecMask[ExtIdx] = ExtIdx;
-    else
-      ExtToVecMask[0] = ExtIdx;
+    ExtToVecMask[ExtIdx % NumDstElts] = ExtIdx;
     // Add cost for expanding or narrowing
     NewCost = TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
                                  DstVecTy, SrcVecTy, ExtToVecMask, CostKind);

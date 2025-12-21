@@ -612,15 +612,13 @@ void foo24() {
 // CIR: %[[ARR:.*]] = cir.alloca !cir.array<!cir.complex<!s32i> x 2>, !cir.ptr<!cir.array<!cir.complex<!s32i> x 2>>, ["arr"]
 // CIR: %[[RESULT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["r", init]
 // CIR: %[[IDX:.*]] = cir.const #cir.int<1> : !s32i
-// CIR: %[[ARR_PTR:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!cir.complex<!s32i> x 2>> -> !cir.ptr<!cir.complex<!s32i>>
-// CIR: %[[RESULT_VAL:.*]] = cir.ptr_stride %[[ARR_PTR]], %[[IDX]] : (!cir.ptr<!cir.complex<!s32i>>, !s32i) -> !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[RESULT_VAL:.*]] = cir.get_element %[[ARR]][%[[IDX]] : !s32i] : !cir.ptr<!cir.array<!cir.complex<!s32i> x 2>> -> !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[RESULT_VAL]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[TMP]], %[[RESULT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
 // LLVM: %[[ARR:.*]] = alloca [2 x { i32, i32 }], i64 1, align 16
 // LLVM: %[[RESULT:.*]] = alloca { i32, i32 }, i64 1, align 4
-// LLVM: %[[ARR_PTR:.*]] = getelementptr { i32, i32 }, ptr %[[ARR]], i32 0
-// LLVM: %[[RESULT_VAL:.*]] = getelementptr { i32, i32 }, ptr %[[ARR_PTR]], i64 1
+// LLVM: %[[RESULT_VAL:.*]] = getelementptr [2 x { i32, i32 }], ptr %[[ARR]], i32 0, i64 1
 // LLVM: %[[TMP:.*]] = load { i32, i32 }, ptr %[[RESULT_VAL]], align 8
 // LLVM: store { i32, i32 } %[[TMP]], ptr %[[RESULT]], align 4
 

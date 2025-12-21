@@ -845,7 +845,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FMUL,       MVT::f64, Expand);
     setOperationAction(ISD::FMA,        MVT::f64, Expand);
     setOperationAction(ISD::FDIV,       MVT::f64, Expand);
-    setOperationAction(ISD::FREM,       MVT::f64, Expand);
+    setOperationAction(ISD::FREM, MVT::f64, LibCall);
     setOperationAction(ISD::FCOPYSIGN,  MVT::f64, Expand);
     setOperationAction(ISD::FGETSIGN,   MVT::f64, Expand);
     setOperationAction(ISD::FNEG,       MVT::f64, Expand);
@@ -1216,8 +1216,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   setOperationAction(ISD::FCOS,      MVT::f64, Expand);
   setOperationAction(ISD::FSINCOS,   MVT::f64, Expand);
   setOperationAction(ISD::FSINCOS,   MVT::f32, Expand);
-  setOperationAction(ISD::FREM,      MVT::f64, Expand);
-  setOperationAction(ISD::FREM,      MVT::f32, Expand);
+  setOperationAction(ISD::FREM, MVT::f64, LibCall);
+  setOperationAction(ISD::FREM, MVT::f32, LibCall);
   if (!Subtarget->useSoftFloat() && Subtarget->hasVFP2Base() &&
       !Subtarget->isThumb1Only()) {
     setOperationAction(ISD::FCOPYSIGN, MVT::f64, Custom);
@@ -11487,6 +11487,11 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
   // -mcmodel=large, alleviating the need for the trampoline which may clobber
   // IP.
 
+  RTLIB::LibcallImpl ChkStkLibcall = getLibcallImpl(RTLIB::STACK_PROBE);
+  if (ChkStkLibcall == RTLIB::Unsupported)
+    reportFatalUsageError("no available implementation of __chkstk");
+
+  const char *ChkStk = getLibcallImplName(ChkStkLibcall).data();
   switch (TM.getCodeModel()) {
   case CodeModel::Tiny:
     llvm_unreachable("Tiny code model not available on ARM.");
@@ -11495,7 +11500,7 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
   case CodeModel::Kernel:
     BuildMI(*MBB, MI, DL, TII.get(ARM::tBL))
         .add(predOps(ARMCC::AL))
-        .addExternalSymbol("__chkstk")
+        .addExternalSymbol(ChkStk)
         .addReg(ARM::R4, RegState::Implicit | RegState::Kill)
         .addReg(ARM::R4, RegState::Implicit | RegState::Define)
         .addReg(ARM::R12,
@@ -11508,7 +11513,7 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
     Register Reg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
 
     BuildMI(*MBB, MI, DL, TII.get(ARM::t2MOVi32imm), Reg)
-      .addExternalSymbol("__chkstk");
+        .addExternalSymbol(ChkStk);
     BuildMI(*MBB, MI, DL, TII.get(gettBLXrOpcode(*MBB->getParent())))
         .add(predOps(ARMCC::AL))
         .addReg(Reg, RegState::Kill)
