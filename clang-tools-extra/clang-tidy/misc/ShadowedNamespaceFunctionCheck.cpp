@@ -80,18 +80,15 @@ public:
   }
 
   bool TraverseNamespaceDecl(NamespaceDecl *NS) override {
-    // Skip anonymous namespaces
     if (NS->isAnonymousNamespace())
       return true;
 
-    // Push this namespace onto the stack
     CurrentNamespaceStack.push_back(NS);
 
     // Traverse children (which will call VisitFunctionDecl for functions
     // inside)
     const bool Result = DynamicRecursiveASTVisitor::TraverseNamespaceDecl(NS);
 
-    // Pop the namespace from the stack
     CurrentNamespaceStack.pop_back();
 
     return Result;
