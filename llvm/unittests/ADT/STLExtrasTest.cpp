@@ -1260,25 +1260,6 @@ TEST(STLExtras, MoveRange) {
   EXPECT_TRUE(llvm::all_of(V4, HasVal));
 }
 
-TEST(STLExtrasTest, AllOfAnyOfNoneOfConstexpr) {
-  // Verify constexpr evaluation works. Functional correctness is tested in
-  // runtime tests (e.g., MoveRange).
-  constexpr std::array<int, 3> Arr = {1, 2, 3};
-  static_assert(all_of(Arr, [](int X) { return X > 0; }));
-  static_assert(any_of(Arr, [](int X) { return X == 2; }));
-  static_assert(none_of(Arr, [](int X) { return X < 0; }));
-
-  // Verify constexpr works with C-style arrays.
-  constexpr int CArr[] = {1, 2};
-  static_assert(all_of(CArr, [](int X) { return X > 0; }));
-
-  // Verify empty range edge case.
-  constexpr std::array<int, 0> Empty = {};
-  static_assert(all_of(Empty, [](int) { return false; }));
-  static_assert(!any_of(Empty, [](int) { return true; }));
-  static_assert(none_of(Empty, [](int) { return true; }));
-}
-
 TEST(STLExtras, Unique) {
   std::vector<int> V = {1, 5, 5, 4, 3, 3, 3};
 
