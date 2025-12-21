@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // check that <queue> functions are marked [[nodiscard]]
 
 #include <queue>
@@ -15,7 +13,7 @@
 void test() {
   {
     std::queue<int> q;
-    const std::queue<int> cq{};
+    const std::queue<int> cq;
 
     q.empty();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     q.size();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
