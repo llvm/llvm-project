@@ -5,24 +5,24 @@
 #include "var.h"
 
 int global;
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: variable 'global'
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: variable 'global' can be made static or moved into an anonymous namespace to enforce internal linkage
 // CHECK-FIXES: static int global;
 
 template<class T>
 T global_template;
-// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: variable 'global_template'
+// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: variable 'global_template' can be made static or moved into an anonymous namespace to enforce internal linkage
 // CHECK-FIXES: static T global_template;
 
 int const* ptr_const_star;
-// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: variable 'ptr_const_star'
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: variable 'ptr_const_star' can be made static or moved into an anonymous namespace to enforce internal linkage
 // CHECK-FIXES: static int const* ptr_const_star;
 
 const int* const_ptr_star;
-// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: variable 'const_ptr_star'
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: variable 'const_ptr_star' can be made static or moved into an anonymous namespace to enforce internal linkage
 // CHECK-FIXES: static const int* const_ptr_star;
 
 const volatile int* const_volatile_ptr_star;
-// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: variable 'const_volatile_ptr_star'
+// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: variable 'const_volatile_ptr_star' can be made static or moved into an anonymous namespace to enforce internal linkage
 // CHECK-FIXES: static const volatile int* const_volatile_ptr_star;
 
 int gloabl_header;

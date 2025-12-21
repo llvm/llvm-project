@@ -517,6 +517,9 @@ Changes in existing checks
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
 
+- Improved :doc:`misc-use-internal-linkage
+  <clang-tidy/checks/misc/use-internal-linkage>` by enabling it for C.
+
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` to not diagnose array types
   which are part of an implicit instantiation of a template.
