@@ -73,12 +73,12 @@ constexpr bool test_bitmask_binary_operations() {
       }
       {
         auto e = elem;
-        e &= elem;
+        assert(&(e &= elem) == &e);
         assert(e == elem);
       }
       {
         auto e = elem;
-        e ^= elem;
+        assert(&(e ^= elem) == &e);
         assert(e == E::none);
       }
     }
