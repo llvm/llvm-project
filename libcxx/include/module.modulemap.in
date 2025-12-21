@@ -1852,6 +1852,7 @@ module std [system] {
 
   module ranges {
     module access                         { header "__ranges/access.h" }
+    module adjacent_transform_view        { header "__ranges/adjacent_transform_view.h" }
     module adjacent_view                  { header "__ranges/adjacent_view.h" }
     module all                            {
       header "__ranges/all.h"
