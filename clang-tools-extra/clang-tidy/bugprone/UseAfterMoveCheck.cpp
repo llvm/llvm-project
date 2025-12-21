@@ -169,8 +169,7 @@ static bool
 isVariableResetInLambda(const Stmt *Body, const ValueDecl *MovedVariable,
                         ASTContext *Context,
                         llvm::ArrayRef<StringRef> InvalidationFunctions) {
-  if (!Body)
-    return false;
+  assert(Body && "There should be a lambda body");
 
   // If the variable is not mentioned at all in the lambda body,
   // it cannot be reinitialized.
