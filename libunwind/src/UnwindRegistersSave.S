@@ -783,6 +783,24 @@ LnoR2Fix:
 #define UNW_RA_SIGNED_WITH_B_KEY ((UNW_ARM_FEATURE_PAC_DEFAULT & 2) != 0)
 #define UNW_RA_SIGNED_WITH_PC    ((UNW_ARM_FEATURE_PAC_DEFAULT & 8) != 0)
 
+#if UNW_RA_SIGNED
+# if UNW_RA_SIGNED_WITH_PC
+#  if UNW_RA_SIGNED_WITH_B_KEY
+#   define UNW_RA_SIGNING_SCHEME 7
+#  else
+#   define UNW_RA_SIGNING_SCHEME 3
+#  endif
+# else
+#  if UNW_RA_SIGNED_WITH_B_KEY
+#   define UNW_RA_SIGNING_SCHEME 5
+#  else
+#   define UNW_RA_SIGNING_SCHEME 1
+#  endif
+# endif
+#else
+# define UNW_RA_SIGNING_SCHEME 0
+#endif
+
 //
 // extern int __unw_getcontext(unw_context_t* thread_state)
 //
@@ -824,31 +842,38 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   str    x1,      [x0, #0x0F8]
   str    x30,     [x0, #0x100]    // store return address as pc
 
-  // Fill subfields of __ra_sign field
-#if UNW_RA_SIGNED
-# if UNW_RA_SIGNED_WITH_PC
-  adrp   x16, .L__unw_getcontext_start
-  add    x16, x16, :lo12:.L__unw_getcontext_start
-  str    x16,     [x0, #0x110]    // __second_modifier = x16
+  // Fill subfields of __ra_signing_scheme field
+
+  mov    x16, #UNW_RA_SIGNING_SCHEME
+  str    x16,     [x0, #0x108]    // __flags
+
+  // Check if PAuth feature is available. See also
+  // RUN_IF_PAUTH_FEATURE_PRESENT in Registers.hpp
+  mrs    x17, ID_AA64ISAR1_EL1
+  lsr    x17, x17, #24
+  ands   x17, x17, #255
+  cbnz   x17, .Lcompute_pac
+  mrs    x17, ID_AA64ISAR2_EL1
+  lsr    x17, x17, #8
+  ands   x17, x17, #15
+  cbnz   x17, .Lcompute_pac
+  str    xzr,     [x0, #0x110]    // __flags_pac
+  b      .Lno_pauth
+  .Lcompute_pac:
+  add    x17, x0, #0x108
+  pacga  x17, x16, x17
+  str    x17,     [x0, #0x110]    // __flags_pac
+  .Lno_pauth:
+
+#if UNW_RA_SIGNED_WITH_PC
+  adrp   x17, .L__unw_getcontext_start
+  add    x17, x17, :lo12:.L__unw_getcontext_start
 # else
-  str    xzr,     [x0, #0x110]    // __second_modifier = 0
+  mov    x17, xzr
 # endif
+  str    x17,     [x0, #0x118]    // __second_modifier = x17
 
-  mov    x16, #1
-  str    x16,     [x0, #0x108]    // __state = 1
-
-# if UNW_RA_SIGNED_WITH_B_KEY
-  str    x16,     [x0, #0x118]    // __use_b_key = 1
-# else
-  str    xzr,     [x0, #0x118]    // __use_b_key = 0
-# endif
-
-  ldr    x16,     [x0, #0x080]    // restore x16 after clobber
-#else
-  str    xzr,     [x0, #0x108]    // __state = 0
-  str    xzr,     [x0, #0x110]    // __second_modifier = 0
-  str    xzr,     [x0, #0x118]    // __use_b_key = 0
-#endif
+  ldp    x16,x17, [x0, #0x080]    // restore x16 and x17 after clobber
 
   // skip cpsr
 #if defined(__ARM_FP) && __ARM_FP != 0

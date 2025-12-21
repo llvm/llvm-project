@@ -97,7 +97,7 @@ public:
     uint32_t          spExtraArgSize;
     RegisterLocation  savedRegisters[kMaxRegisterNumber + 1];
 #if defined(_LIBUNWIND_TARGET_AARCH64)
-    pint_t ptrAuthDiversifier;
+    pint_t ptrAuthDiversifier = 0;
 #endif
     enum class InitializeTime { kLazy, kNormal };
 

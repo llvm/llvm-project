@@ -165,7 +165,7 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
           _LIBUNWIND_ABORT("Bad unwind with PAuth-enabled ABI");
         }
       }
-#elif defined(_LIBUNWIND_TARGET_AARCH64) &&                                    \
+#elif defined(_LIBUNWIND_TARGET_AARCH64) && defined(_LIBUNWIND_IS_NATIVE_ONLY) &&    \
     !(defined(_LIBUNWIND_SUPPORT_SEH_UNWIND) && defined(_WIN32))
       // We expect IP register value to be signed only for a full-fledged
       // PAuth ABI such as Apple's arm64e or Linux's pauthtest. Otherwise,
@@ -173,9 +173,8 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
       // so we need to update RA sign info and mark the pointer as unsigned.
       // This prevents attempts of unsigned pointer authentication in case
       // if previously a signed RA was stored in the IP register field.
-      co->setReg(UNW_AARCH64_RA_SIGN_STATE, 0);
-      co->setReg(UNW_AARCH64_RA_SIGN_SECOND_MODIFIER, 0);
-      co->setReg(UNW_AARCH64_RA_SIGN_USE_B_KEY, 0);
+      co->setReg(UNW_AARCH64_RA_SIGNING_SCHEME_SECOND_MODIFIER, 0);
+      co->setReg(UNW_AARCH64_RA_SIGNING_SCHEME_FLAGS, 0);
 #endif
 
       // If the original call expects stack adjustment, perform this now.

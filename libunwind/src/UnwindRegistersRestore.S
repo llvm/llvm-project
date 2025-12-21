@@ -704,64 +704,97 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldr    d31,     [x0, #0x218]
 #endif
 
-  // The lr value stored in __pc might be signed with IA/IB key (as described
-  // by __ra_sign.__use_b_key field) and &__pc address as a modifier.
-  // If the lr value is signed, re-sign that with the corresponding key
-  // and initial signing scheme using __sp as a modifier and potentially
-  // involving a second modifier (as described by (__ra_sign.__state & 2)).
+  // The lr value stored in __pc might be signed with IA/IB key, &__pc address
+  // as a modifier and an optional second modifier. If the lr value is signed,
+  // re-sign that with the corresponding key and initial signing scheme using
+  // __sp as a modifier and potentially involving a second modifier
+  // (as described by '__ra_signing_scheme.__flags & 2').
 
   ldr    x14,     [x0, #0x0F8]  // x14 = __sp
-  ldr    x15,     [x0, #0x110]  // x15 = __ra_sign.__second_modifier
+  ldr    x15,     [x0, #0x118]  // x15 = __ra_signing_scheme.__second_modifier
+  ldr    x1,      [x0, #0x108]  // x1 = __ra_signing_scheme.__flags
+  ldr    x16,      [x0, #0x110]  // x16 = __ra_signing_scheme.__flags_pac
+
+  // Check if PAuth feature is available. See also
+  // RUN_IF_PAUTH_FEATURE_PRESENT in Registers.hpp
+  mrs  x17, ID_AA64ISAR1_EL1
+  lsr  x17, x17, #24
+  ands x17, x17, #255
+  cbnz x17, .Lcheck_pac
+  mrs  x17, ID_AA64ISAR2_EL1
+  lsr  x17, x17, #8
+  ands x17, x17, #15
+  cbnz x17, .Lcheck_pac
+  b .Lno_pauth
+  .Lcheck_pac:
+
+  // See also CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY in Registers.hpp.
+  add   x17, x0, #0x108
+  pacga x17, x1, x17
+  cmp   x17, x16
+  b.eq  .Lpacga_success
+  brk   #0xc474
+  .Lpacga_success:
+  .Lno_pauth:
+
+  // See also CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY_FOR_PAUTHABI
+  // in Registers.hpp.
+#if __has_feature(ptrauth_returns)
+  cmp   x1, #5
+  b.eq  .Lpauthabi_success
+  brk   #0xc474
+  .Lpauthabi_success:
+#endif
+
   add    x16, x0, #0x100        // x16 = &__pc
   ldr    x17,     [x0, #0x100]  // x17 = __pc
 
-  ldr    x1,      [x0, #0x108]  // x1 = __ra_sign.__state
-  and    x1, x1, #1
-  cbz    x1, .Lresign_end
+  // See also SIGNING_SCHEME_FLAGS_SWITCH in Registers.hpp.
+  cmp   x1, #0
+  b.ne  .Lswitch_1716_1
+  b     .Lswitch_1716_end
 
-  // lr needs resign
-  ldr    x1,      [x0, #0x108]  // x1 = __ra_sign.__state
-  and    x1, x1, #2
-  cbnz   x1, .Lresign_with_pc
+  .Lswitch_1716_1:
+  cmp   x1, #1
+  b.ne  .Lswitch_1716_3
+  hint 0xc     // autia1716
+  mov x16, x14
+  hint 0x8     // pacia1716
+  b     .Lswitch_1716_end
 
-  // lr needs resign without pc as a second modifier
-  ldr    x1,      [x0, #0x118]  // x1 = __ra_sign.__use_b_key
-  cbnz   x1, .Lresign_with_b_key
+  .Lswitch_1716_3:
+  cmp   x1, #3
+  b.ne  .Lswitch_1716_5
+  hint 0x27    // pacm
+  hint 0xc     // autia1716
+  mov x16, x14
+  hint 0x27    // pacm
+  hint 0x8     // pacia1716
+  b     .Lswitch_1716_end
 
-  // lr needs resign with A key and without pc as a second modifier
-  hint   0xc                    // autia1716
-  mov    x16, x14               // x16 = __sp
-  hint   0x8                    // pacia1716
-  b .Lresign_end
+  .Lswitch_1716_5:
+  cmp   x1, #5
+  b.ne  .Lswitch_1716_7
+  hint 0xe     // autib1716
+  mov x16, x14
+  hint 0xa     // pacib1716
+  b     .Lswitch_1716_end
 
-.Lresign_with_b_key:
-  // lr needs resign with B key and without pc as a second modifier
-  hint   0xe                    // autib1716
-  mov    x16, x14               // x16 = __sp
-  hint   0xa                    // pacib1716
-  b .Lresign_end
+  .Lswitch_1716_7:
+  cmp   x1, #7
+  b.ne  .Lswitch_1716_unexpected
+  hint 0x27    // pacm
+  hint 0xe     // autib1716
+  mov x16, x14
+  hint 0x27    // pacm
+  hint 0xa     // pacib1716
+  b     .Lswitch_1716_end
 
-.Lresign_with_pc:
-  // lr needs resign with pc as a second modifier
-  ldr    x1,      [x0, #0x118]  // x1 = __ra_sign.__use_b_key
-  cbnz   x1, .Lresign_with_pc_b_key
+  .Lswitch_1716_unexpected:
+  brk   #0xc474
 
-  // lr needs resign with A key and pc as a second modifier
-  hint   0xc                    // autia1716
-  mov    x16, x14               // x16 = __sp
-  hint   0x27                   // pacm
-  hint   0x8                    // pacia1716
-  b .Lresign_end
+  .Lswitch_1716_end:
 
-.Lresign_with_pc_b_key:
-  // lr needs resign with B key and pc as a second modifier
-  hint   0xe                    // autib1716
-  mov    x16, x14               // x16 = __sp
-  hint   0x27                   // pacm
-  hint   0xa                    // pacib1716
-  b .Lresign_end
-
-.Lresign_end:
   mov    lr, x17                // assign final lr value
   ldp    x14,x15, [x0, #0x070]  // restore x14,x15
   ldr    x16,     [x0, #0x110]  // second modifier for auti{a|b}sp with PACM
@@ -770,55 +803,56 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   // context struct, because it is allocated on the stack, and an exception
   // could clobber the de-allocated portion of the stack after sp has been
   // restored.
+
   ldr    x17,     [x0, #0x0F8]  // load sp into scratch
 
-  ldr    x1,      [x0, #0x108]  // x1 = __ra_sign.__state
-  and    x1, x1, #1
-  cbz    x1, .Lauth_end
+  // Integrity of the signing scheme stored in x1 was checked above and no
+  // manipulations on x1 were performed since then, so skip this check.
 
-  // lr is signed
-  ldr    x1,      [x0, #0x108]  // x1 = __ra_sign.__state
-  and    x1, x1, #2
-  cbnz   x1, .Lauth_with_pc
+  // See also SIGNING_SCHEME_FLAGS_SWITCH in Registers.hpp.
+  cmp   x1, #0
+  b.ne  .Lswitch_lrsp_1
+  b     .Lswitch_lrsp_end
 
-  // lr is signed without pc as a second modifier
-  ldr    x1,      [x0, #0x118]  // x1 = __ra_sign.__use_b_key
-  cbnz   x1, .Lauth_with_b_key
-
-  // lr is signed with A key and without pc as a second modifier
+  .Lswitch_lrsp_1:
+  cmp   x1, #1
+  b.ne  .Lswitch_lrsp_3
   ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
   mov    sp,x17                 // restore sp
   hint   0x1d                   // autiasp
   ret    x30
 
-.Lauth_with_b_key:
-  // lr is signed with B key and without pc as a second modifier
-  ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
-  mov    sp,x17                 // restore sp
-  hint   0x1f                   // autibsp
-  ret    x30
-
-.Lauth_with_pc:
-  // lr is signed with pc as a second modifier
-  ldr    x1,      [x0, #0x118]  // x1 = __ra_sign.__use_b_key
-  cbnz   x1, .Lauth_with_pc_b_key
-
-  // lr is signed with A key and pc as a second modifier
+  .Lswitch_lrsp_3:
+  cmp   x1, #3
+  b.ne  .Lswitch_lrsp_5
   ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
   mov    sp,x17                 // restore sp
   hint   0x27                   // pacm
   hint   0x1d                   // autiasp
   ret    x30
 
-.Lauth_with_pc_b_key:
-  // lr is signed with B key and pc as a second modifier
+  .Lswitch_lrsp_5:
+  cmp   x1, #5
+  b.ne  .Lswitch_lrsp_7
+  ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
+  mov    sp,x17                 // restore sp
+  hint   0x1f                   // autibsp
+  ret    x30
+
+  .Lswitch_lrsp_7:
+  cmp   x1, #7
+  b.ne  .Lswitch_lrsp_unexpected
+
   ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
   mov    sp,x17                 // restore sp
   hint   0x27                   // pacm
   hint   0x1f                   // autibsp
   ret    x30
 
-.Lauth_end:
+  .Lswitch_lrsp_unexpected:
+  brk   #0xc474
+
+.Lswitch_lrsp_end:
   ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
   mov    sp,x17                 // restore sp
 #if defined(__ARM_FEATURE_GCS_DEFAULT)

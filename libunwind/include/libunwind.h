@@ -642,11 +642,13 @@ enum {
   // reserved block
   UNW_AARCH64_RA_SIGN_STATE = 34,
 
-  // The following two registers are not real Dwarf registers and use numbers
-  // which are not occupied by real Dwarf registers according to
+  // Warning: the two registers below are intended for internal libunwind use
+  // only and should not be used by external code. These are not real Dwarf
+  // registers and they use numbers which are not occupied by real Dwarf
+  // registers according to
   // https://github.com/ARM-software/abi-aa/blob/2025Q1/aadwarf64/aadwarf64.rst
-  UNW_AARCH64_RA_SIGN_SECOND_MODIFIER = 128,
-  UNW_AARCH64_RA_SIGN_USE_B_KEY = 129,
+  UNW_AARCH64_RA_SIGNING_SCHEME_SECOND_MODIFIER = 128,
+  UNW_AARCH64_RA_SIGNING_SCHEME_FLAGS = 129,
 
   // FP/vector registers
   UNW_AARCH64_V0 = 64,
