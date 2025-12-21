@@ -5146,6 +5146,65 @@ TEST(Hover, FunctionParameters) {
   }
 }
 
+TEST(Hover, GH2381) {
+  Annotations Code(R"cpp(
+  struct Foo {
+    enum Bar {
+      A = -42UL,
+      B = ~0UL,
+      C = 0xFFFFFFFFFFFFFFFFUL,
+    };
+  };
+  constexpr auto va$a^ = Foo::A;
+  constexpr auto vb$b^ = Foo::B;
+  constexpr auto vc$c^ = Foo::C;
+  )cpp");
+
+  TestTU TU = TestTU::withCode(Code.code());
+  auto AST = TU.build();
+
+  {
+    auto H = getHover(AST, Code.point("a"), format::getLLVMStyle(), nullptr);
+
+    ASSERT_TRUE(H);
+    EXPECT_EQ(H->Name, "va");
+    EXPECT_EQ(H->Kind, index::SymbolKind::Variable);
+    EXPECT_EQ(H->NamespaceScope, "");
+    EXPECT_EQ(H->LocalScope, "");
+    EXPECT_EQ(H->Type, "const Foo::Bar");
+    EXPECT_EQ(H->Definition, "constexpr auto va = Foo::A");
+    // FIXME: Should be "A (FFFFFFFFFFFFFFD6)
+    EXPECT_EQ(H->Value, "18446744073709551574");
+  }
+
+  {
+    auto H = getHover(AST, Code.point("b"), format::getLLVMStyle(), nullptr);
+
+    ASSERT_TRUE(H);
+    EXPECT_EQ(H->Name, "vb");
+    EXPECT_EQ(H->Kind, index::SymbolKind::Variable);
+    EXPECT_EQ(H->NamespaceScope, "");
+    EXPECT_EQ(H->LocalScope, "");
+    EXPECT_EQ(H->Type, "const Foo::Bar");
+    EXPECT_EQ(H->Definition, "constexpr auto vb = Foo::B");
+    // FIXME: Should be "B (0xFFFFFFFFFFFFFFFF)");
+    EXPECT_EQ(H->Value, "18446744073709551615");
+  }
+
+  {
+    auto H = getHover(AST, Code.point("c"), format::getLLVMStyle(), nullptr);
+
+    ASSERT_TRUE(H);
+    EXPECT_EQ(H->Name, "vc");
+    EXPECT_EQ(H->Kind, index::SymbolKind::Variable);
+    EXPECT_EQ(H->NamespaceScope, "");
+    EXPECT_EQ(H->LocalScope, "");
+    EXPECT_EQ(H->Type, "const Foo::Bar");
+    EXPECT_EQ(H->Definition, "constexpr auto vc = Foo::C");
+    // FIXME: Should be "C (0xFFFFFFFFFFFFFFFF)");
+    EXPECT_EQ(H->Value, "18446744073709551615");
+  }
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
