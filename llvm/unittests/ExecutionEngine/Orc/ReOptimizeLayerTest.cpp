@@ -26,7 +26,7 @@ using namespace llvm::jitlink;
 
 class ReOptimizeLayerTest : public testing::Test {
 public:
-  ~ReOptimizeLayerTest() {
+  ~ReOptimizeLayerTest() override {
     if (ES)
       if (auto Err = ES->endSession())
         ES->reportError(std::move(Err));
@@ -34,6 +34,9 @@ public:
 
 protected:
   void SetUp() override {
+
+    OrcNativeTarget::initialize();
+
     auto JTMB = JITTargetMachineBuilder::detectHost();
     // Bail out if we can not detect the host.
     if (!JTMB) {
@@ -174,7 +177,7 @@ TEST_F(ReOptimizeLayerTest, BasicReOptimization) {
         });
         return Error::success();
       });
-  EXPECT_THAT_ERROR(ROLayer->reigsterRuntimeFunctions(*JD), Succeeded());
+  EXPECT_THAT_ERROR(ROLayer->registerRuntimeFunctions(*JD), Succeeded());
 
   auto Ctx = std::make_unique<LLVMContext>();
   auto M = std::make_unique<Module>("<main>", *Ctx);

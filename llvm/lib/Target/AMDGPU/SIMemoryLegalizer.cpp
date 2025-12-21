@@ -25,6 +25,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/TargetParser/TargetParser.h"
 
@@ -277,6 +278,12 @@ public:
   /// rmw operation, "std::nullopt" otherwise.
   std::optional<SIMemOpInfo>
   getAtomicCmpxchgOrRmwInfo(const MachineBasicBlock::iterator &MI) const;
+
+  /// \returns DMA to LDS info if \p MI is as a direct-to/from-LDS load/store,
+  /// along with an indication of whether this is a load or store. If it is not
+  /// a direct-to-LDS operation, returns std::nullopt.
+  std::optional<SIMemOpInfo>
+  getLDSDMAInfo(const MachineBasicBlock::iterator &MI) const;
 };
 
 class SICacheControl {
@@ -295,16 +302,17 @@ protected:
 
   SICacheControl(const GCNSubtarget &ST);
 
-  /// Sets named bit \p BitName to "true" if present in instruction \p MI.
+  /// Sets CPol \p Bits to "true" if present in instruction \p MI.
   /// \returns Returns true if \p MI is modified, false otherwise.
-  bool enableNamedBit(const MachineBasicBlock::iterator MI,
-                      AMDGPU::CPol::CPol Bit) const;
+  bool enableCPolBits(const MachineBasicBlock::iterator MI,
+                      unsigned Bits) const;
 
   /// Check if any atomic operation on AS can affect memory accessible via the
   /// global address space.
   bool canAffectGlobalAddrSpace(SIAtomicAddrSpace AS) const;
 
 public:
+  using CPol = AMDGPU::CPol::CPol;
 
   /// Create a cache control for the subtarget \p ST.
   static std::unique_ptr<SICacheControl> create(const GCNSubtarget &ST);
@@ -390,31 +398,13 @@ public:
                              bool IsCrossAddrSpaceOrdering,
                              Position Pos) const = 0;
 
-  /// Inserts any necessary instructions before the barrier start instruction
-  /// \p MI in order to support pairing of barriers and fences.
-  virtual bool insertBarrierStart(MachineBasicBlock::iterator &MI) const {
-    return false;
-  };
-
   /// Virtual destructor to allow derivations to be deleted.
   virtual ~SICacheControl() = default;
 };
 
-class SIGfx6CacheControl : public SICacheControl {
-protected:
-
-  /// Sets GLC bit to "true" if present in \p MI. Returns true if \p MI
-  /// is modified, false otherwise.
-  bool enableGLCBit(const MachineBasicBlock::iterator &MI) const {
-    return enableNamedBit(MI, AMDGPU::CPol::GLC);
-  }
-
-  /// Sets SLC bit to "true" if present in \p MI. Returns true if \p MI
-  /// is modified, false otherwise.
-  bool enableSLCBit(const MachineBasicBlock::iterator &MI) const {
-    return enableNamedBit(MI, AMDGPU::CPol::SLC);
-  }
-
+/// Generates code sequences for the memory model of all GFX targets below
+/// GFX10.
+class SIGfx6CacheControl final : public SICacheControl {
 public:
 
   SIGfx6CacheControl(const GCNSubtarget &ST) : SICacheControl(ST) {}
@@ -453,76 +443,10 @@ public:
                      Position Pos) const override;
 };
 
-class SIGfx7CacheControl : public SIGfx6CacheControl {
+/// Generates code sequences for the memory model of GFX10/11.
+class SIGfx10CacheControl final : public SICacheControl {
 public:
-
-  SIGfx7CacheControl(const GCNSubtarget &ST) : SIGfx6CacheControl(ST) {}
-
-  bool insertAcquire(MachineBasicBlock::iterator &MI,
-                     SIAtomicScope Scope,
-                     SIAtomicAddrSpace AddrSpace,
-                     Position Pos) const override;
-
-};
-
-class SIGfx90ACacheControl : public SIGfx7CacheControl {
-public:
-
-  SIGfx90ACacheControl(const GCNSubtarget &ST) : SIGfx7CacheControl(ST) {}
-
-  bool enableLoadCacheBypass(const MachineBasicBlock::iterator &MI,
-                             SIAtomicScope Scope,
-                             SIAtomicAddrSpace AddrSpace) const override;
-
-  bool enableRMWCacheBypass(const MachineBasicBlock::iterator &MI,
-                            SIAtomicScope Scope,
-                            SIAtomicAddrSpace AddrSpace) const override;
-
-  bool enableVolatileAndOrNonTemporal(MachineBasicBlock::iterator &MI,
-                                      SIAtomicAddrSpace AddrSpace, SIMemOp Op,
-                                      bool IsVolatile, bool IsNonTemporal,
-                                      bool IsLastUse) const override;
-
-  bool insertWait(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
-                  SIAtomicAddrSpace AddrSpace, SIMemOp Op,
-                  bool IsCrossAddrSpaceOrdering, Position Pos,
-                  AtomicOrdering Order, bool AtomicsOnly) const override;
-
-  bool insertAcquire(MachineBasicBlock::iterator &MI,
-                     SIAtomicScope Scope,
-                     SIAtomicAddrSpace AddrSpace,
-                     Position Pos) const override;
-
-  bool insertRelease(MachineBasicBlock::iterator &MI,
-                     SIAtomicScope Scope,
-                     SIAtomicAddrSpace AddrSpace,
-                     bool IsCrossAddrSpaceOrdering,
-                     Position Pos) const override;
-};
-
-class SIGfx940CacheControl : public SIGfx90ACacheControl {
-protected:
-
-  /// Sets SC0 bit to "true" if present in \p MI. Returns true if \p MI
-  /// is modified, false otherwise.
-  bool enableSC0Bit(const MachineBasicBlock::iterator &MI) const {
-    return enableNamedBit(MI, AMDGPU::CPol::SC0);
-  }
-
-  /// Sets SC1 bit to "true" if present in \p MI. Returns true if \p MI
-  /// is modified, false otherwise.
-  bool enableSC1Bit(const MachineBasicBlock::iterator &MI) const {
-    return enableNamedBit(MI, AMDGPU::CPol::SC1);
-  }
-
-  /// Sets NT bit to "true" if present in \p MI. Returns true if \p MI
-  /// is modified, false otherwise.
-  bool enableNTBit(const MachineBasicBlock::iterator &MI) const {
-    return enableNamedBit(MI, AMDGPU::CPol::NT);
-  }
-
-public:
-  SIGfx940CacheControl(const GCNSubtarget &ST) : SIGfx90ACacheControl(ST) {};
+  SIGfx10CacheControl(const GCNSubtarget &ST) : SICacheControl(ST) {}
 
   bool enableLoadCacheBypass(const MachineBasicBlock::iterator &MI,
                              SIAtomicScope Scope,
@@ -530,41 +454,15 @@ public:
 
   bool enableStoreCacheBypass(const MachineBasicBlock::iterator &MI,
                               SIAtomicScope Scope,
-                              SIAtomicAddrSpace AddrSpace) const override;
+                              SIAtomicAddrSpace AddrSpace) const override {
+    return false;
+  }
 
   bool enableRMWCacheBypass(const MachineBasicBlock::iterator &MI,
                             SIAtomicScope Scope,
-                            SIAtomicAddrSpace AddrSpace) const override;
-
-  bool enableVolatileAndOrNonTemporal(MachineBasicBlock::iterator &MI,
-                                      SIAtomicAddrSpace AddrSpace, SIMemOp Op,
-                                      bool IsVolatile, bool IsNonTemporal,
-                                      bool IsLastUse) const override;
-
-  bool insertAcquire(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
-                     SIAtomicAddrSpace AddrSpace, Position Pos) const override;
-
-  bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
-                     SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
-                     Position Pos) const override;
-};
-
-class SIGfx10CacheControl : public SIGfx7CacheControl {
-protected:
-
-  /// Sets DLC bit to "true" if present in \p MI. Returns true if \p MI
-  /// is modified, false otherwise.
-  bool enableDLCBit(const MachineBasicBlock::iterator &MI) const {
-    return enableNamedBit(MI, AMDGPU::CPol::DLC);
+                            SIAtomicAddrSpace AddrSpace) const override {
+    return false;
   }
-
-public:
-
-  SIGfx10CacheControl(const GCNSubtarget &ST) : SIGfx7CacheControl(ST) {}
-
-  bool enableLoadCacheBypass(const MachineBasicBlock::iterator &MI,
-                             SIAtomicScope Scope,
-                             SIAtomicAddrSpace AddrSpace) const override;
 
   bool enableVolatileAndOrNonTemporal(MachineBasicBlock::iterator &MI,
                                       SIAtomicAddrSpace AddrSpace, SIMemOp Op,
@@ -576,34 +474,25 @@ public:
                   bool IsCrossAddrSpaceOrdering, Position Pos,
                   AtomicOrdering Order, bool AtomicsOnly) const override;
 
-  bool insertAcquire(MachineBasicBlock::iterator &MI,
-                     SIAtomicScope Scope,
-                     SIAtomicAddrSpace AddrSpace,
-                     Position Pos) const override;
+  bool insertAcquire(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
+                     SIAtomicAddrSpace AddrSpace, Position Pos) const override;
 
-  bool insertBarrierStart(MachineBasicBlock::iterator &MI) const override;
+  bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
+                     SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
+                     Position Pos) const override {
+    return insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
+                      IsCrossAddrSpaceOrdering, Pos, AtomicOrdering::Release,
+                      /*AtomicsOnly=*/false);
+  }
 };
 
-class SIGfx11CacheControl : public SIGfx10CacheControl {
-public:
-  SIGfx11CacheControl(const GCNSubtarget &ST) : SIGfx10CacheControl(ST) {}
-
-  bool enableLoadCacheBypass(const MachineBasicBlock::iterator &MI,
-                             SIAtomicScope Scope,
-                             SIAtomicAddrSpace AddrSpace) const override;
-
-  bool enableVolatileAndOrNonTemporal(MachineBasicBlock::iterator &MI,
-                                      SIAtomicAddrSpace AddrSpace, SIMemOp Op,
-                                      bool IsVolatile, bool IsNonTemporal,
-                                      bool IsLastUse) const override;
-};
-
-class SIGfx12CacheControl : public SIGfx11CacheControl {
+class SIGfx12CacheControl final : public SICacheControl {
 protected:
   // Sets TH policy to \p Value if CPol operand is present in instruction \p MI.
   // \returns Returns true if \p MI is modified, false otherwise.
   bool setTH(const MachineBasicBlock::iterator MI,
              AMDGPU::CPol::CPol Value) const;
+
   // Sets Scope policy to \p Value if CPol operand is present in instruction \p
   // MI. \returns Returns true if \p MI is modified, false otherwise.
   bool setScope(const MachineBasicBlock::iterator MI,
@@ -622,7 +511,7 @@ protected:
                       SIAtomicScope Scope, SIAtomicAddrSpace AddrSpace) const;
 
 public:
-  SIGfx12CacheControl(const GCNSubtarget &ST) : SIGfx11CacheControl(ST) {
+  SIGfx12CacheControl(const GCNSubtarget &ST) : SICacheControl(ST) {
     // GFX12.0 and GFX12.5 memory models greatly overlap, and in some cases
     // the behavior is the same if assuming GFX12.0 in CU mode.
     assert(!ST.hasGFX1250Insts() || ST.isCuModeEnabled());
@@ -643,7 +532,7 @@ public:
 
   bool finalizeStore(MachineInstr &MI, bool Atomic) const override;
 
-  virtual bool handleCooperativeAtomic(MachineInstr &MI) const override;
+  bool handleCooperativeAtomic(MachineInstr &MI) const override;
 
   bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
@@ -703,6 +592,9 @@ private:
   /// instructions are added/deleted or \p MI is modified, false otherwise.
   bool expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
                                 MachineBasicBlock::iterator &MI);
+  /// Expands LDS DMA operation \p MI. Returns true if instructions are
+  /// added/deleted or \p MI is modified, false otherwise.
+  bool expandLDSDMA(const SIMemOpInfo &MOI, MachineBasicBlock::iterator &MI);
 
 public:
   SIMemoryLegalizer(const MachineModuleInfo &MMI) : MMI(MMI) {};
@@ -777,7 +669,7 @@ getSynchronizeAddrSpaceMD(const MachineInstr &MI) {
 
 void SIMemOpAccess::reportUnsupported(const MachineBasicBlock::iterator &MI,
                                       const char *Msg) const {
-  const Function &Func = MI->getParent()->getParent()->getFunction();
+  const Function &Func = MI->getMF()->getFunction();
   Func.getContext().diagnose(
       DiagnosticInfoUnsupported(Func, Msg, MI->getDebugLoc()));
 }
@@ -832,6 +724,9 @@ SIAtomicAddrSpace SIMemOpAccess::toSIAtomicAddrSpace(unsigned AS) const {
     return SIAtomicAddrSpace::SCRATCH;
   if (AS == AMDGPUAS::REGION_ADDRESS)
     return SIAtomicAddrSpace::GDS;
+  if (AS == AMDGPUAS::BUFFER_FAT_POINTER || AS == AMDGPUAS::BUFFER_RESOURCE ||
+      AS == AMDGPUAS::BUFFER_STRIDED_POINTER)
+    return SIAtomicAddrSpace::GLOBAL;
 
   return SIAtomicAddrSpace::OTHER;
 }
@@ -880,6 +775,13 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
           getMergedAtomicOrdering(FailureOrdering, MMO->getFailureOrdering());
     }
   }
+
+  // FIXME: The MMO of buffer atomic instructions does not always have an atomic
+  // ordering. We only need to handle VBUFFER atomics on GFX12+ so we can fix it
+  // here, but the lowering should really be cleaned up at some point.
+  if ((ST.getGeneration() >= GCNSubtarget::GFX12) && SIInstrInfo::isBUF(*MI) &&
+      SIInstrInfo::isAtomic(*MI) && Ordering == AtomicOrdering::NotAtomic)
+    Ordering = AtomicOrdering::Monotonic;
 
   SIAtomicScope Scope = SIAtomicScope::NONE;
   SIAtomicAddrSpace OrderingAddrSpace = SIAtomicAddrSpace::NONE;
@@ -987,19 +889,29 @@ std::optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
   return constructFromMIWithMMO(MI);
 }
 
+std::optional<SIMemOpInfo>
+SIMemOpAccess::getLDSDMAInfo(const MachineBasicBlock::iterator &MI) const {
+  assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
+
+  if (!SIInstrInfo::isLDSDMA(*MI))
+    return std::nullopt;
+
+  return constructFromMIWithMMO(MI);
+}
+
 SICacheControl::SICacheControl(const GCNSubtarget &ST) : ST(ST) {
   TII = ST.getInstrInfo();
   IV = getIsaVersion(ST.getCPU());
   InsertCacheInv = !AmdgcnSkipCacheInvalidations;
 }
 
-bool SICacheControl::enableNamedBit(const MachineBasicBlock::iterator MI,
-                                    AMDGPU::CPol::CPol Bit) const {
+bool SICacheControl::enableCPolBits(const MachineBasicBlock::iterator MI,
+                                    unsigned Bits) const {
   MachineOperand *CPol = TII->getNamedOperand(*MI, AMDGPU::OpName::cpol);
   if (!CPol)
     return false;
 
-  CPol->setImm(CPol->getImm() | Bit);
+  CPol->setImm(CPol->getImm() | Bits);
   return true;
 }
 
@@ -1015,18 +927,10 @@ bool SICacheControl::canAffectGlobalAddrSpace(SIAtomicAddrSpace AS) const {
 /* static */
 std::unique_ptr<SICacheControl> SICacheControl::create(const GCNSubtarget &ST) {
   GCNSubtarget::Generation Generation = ST.getGeneration();
-  if (ST.hasGFX940Insts())
-    return std::make_unique<SIGfx940CacheControl>(ST);
-  if (ST.hasGFX90AInsts())
-    return std::make_unique<SIGfx90ACacheControl>(ST);
-  if (Generation <= AMDGPUSubtarget::SOUTHERN_ISLANDS)
-    return std::make_unique<SIGfx6CacheControl>(ST);
   if (Generation < AMDGPUSubtarget::GFX10)
-    return std::make_unique<SIGfx7CacheControl>(ST);
-  if (Generation < AMDGPUSubtarget::GFX11)
-    return std::make_unique<SIGfx10CacheControl>(ST);
+    return std::make_unique<SIGfx6CacheControl>(ST);
   if (Generation < AMDGPUSubtarget::GFX12)
-    return std::make_unique<SIGfx11CacheControl>(ST);
+    return std::make_unique<SIGfx10CacheControl>(ST);
   return std::make_unique<SIGfx12CacheControl>(ST);
 }
 
@@ -1035,32 +939,60 @@ bool SIGfx6CacheControl::enableLoadCacheBypass(
     SIAtomicScope Scope,
     SIAtomicAddrSpace AddrSpace) const {
   assert(MI->mayLoad() && !MI->mayStore());
-  bool Changed = false;
 
-  if (canAffectGlobalAddrSpace(AddrSpace)) {
-    switch (Scope) {
-    case SIAtomicScope::SYSTEM:
-    case SIAtomicScope::AGENT:
-      // Set L1 cache policy to MISS_EVICT.
-      // Note: there is no L2 cache bypass policy at the ISA level.
-      Changed |= enableGLCBit(MI);
-      break;
-    case SIAtomicScope::WORKGROUP:
-    case SIAtomicScope::WAVEFRONT:
-    case SIAtomicScope::SINGLETHREAD:
-      // No cache to bypass.
-      break;
-    default:
-      llvm_unreachable("Unsupported synchronization scope");
-    }
+  if (!canAffectGlobalAddrSpace(AddrSpace)) {
+    /// The scratch address space does not need the global memory caches
+    /// to be bypassed as all memory operations by the same thread are
+    /// sequentially consistent, and no other thread can access scratch
+    /// memory.
+
+    /// Other address spaces do not have a cache.
+    return false;
   }
 
-  /// The scratch address space does not need the global memory caches
-  /// to be bypassed as all memory operations by the same thread are
-  /// sequentially consistent, and no other thread can access scratch
-  /// memory.
-
-  /// Other address spaces do not have a cache.
+  bool Changed = false;
+  switch (Scope) {
+  case SIAtomicScope::SYSTEM:
+    if (ST.hasGFX940Insts()) {
+      // Set SC bits to indicate system scope.
+      Changed |= enableCPolBits(MI, CPol::SC0 | CPol::SC1);
+      break;
+    }
+    [[fallthrough]];
+  case SIAtomicScope::AGENT:
+    if (ST.hasGFX940Insts()) {
+      // Set SC bits to indicate agent scope.
+      Changed |= enableCPolBits(MI, CPol::SC1);
+    } else {
+      // Set L1 cache policy to MISS_EVICT.
+      // Note: there is no L2 cache bypass policy at the ISA level.
+      Changed |= enableCPolBits(MI, CPol::GLC);
+    }
+    break;
+  case SIAtomicScope::WORKGROUP:
+    if (ST.hasGFX940Insts()) {
+      // In threadgroup split mode the waves of a work-group can be executing
+      // on different CUs. Therefore need to bypass the L1 which is per CU.
+      // Otherwise in non-threadgroup split mode all waves of a work-group are
+      // on the same CU, and so the L1 does not need to be bypassed. Setting
+      // SC bits to indicate work-group scope will do this automatically.
+      Changed |= enableCPolBits(MI, CPol::SC0);
+    } else if (ST.hasGFX90AInsts()) {
+      // In threadgroup split mode the waves of a work-group can be executing
+      // on different CUs. Therefore need to bypass the L1 which is per CU.
+      // Otherwise in non-threadgroup split mode all waves of a work-group are
+      // on the same CU, and so the L1 does not need to be bypassed.
+      if (ST.isTgSplitEnabled())
+        Changed |= enableCPolBits(MI, CPol::GLC);
+    }
+    break;
+  case SIAtomicScope::WAVEFRONT:
+  case SIAtomicScope::SINGLETHREAD:
+    // No cache to bypass.
+    break;
+  default:
+    llvm_unreachable("Unsupported synchronization scope");
+  }
 
   return Changed;
 }
@@ -1072,8 +1004,39 @@ bool SIGfx6CacheControl::enableStoreCacheBypass(
   assert(!MI->mayLoad() && MI->mayStore());
   bool Changed = false;
 
-  /// The L1 cache is write through so does not need to be bypassed. There is no
-  /// bypass control for the L2 cache at the isa level.
+  /// For targets other than GFX940, the L1 cache is write through so does not
+  /// need to be bypassed. There is no bypass control for the L2 cache at the
+  /// isa level.
+
+  if (ST.hasGFX940Insts() && canAffectGlobalAddrSpace(AddrSpace)) {
+    switch (Scope) {
+    case SIAtomicScope::SYSTEM:
+      // Set SC bits to indicate system scope.
+      Changed |= enableCPolBits(MI, CPol::SC0 | CPol::SC1);
+      break;
+    case SIAtomicScope::AGENT:
+      // Set SC bits to indicate agent scope.
+      Changed |= enableCPolBits(MI, CPol::SC1);
+      break;
+    case SIAtomicScope::WORKGROUP:
+      // Set SC bits to indicate workgroup scope.
+      Changed |= enableCPolBits(MI, CPol::SC0);
+      break;
+    case SIAtomicScope::WAVEFRONT:
+    case SIAtomicScope::SINGLETHREAD:
+      // Leave SC bits unset to indicate wavefront scope.
+      break;
+    default:
+      llvm_unreachable("Unsupported synchronization scope");
+    }
+
+    /// The scratch address space does not need the global memory caches
+    /// to be bypassed as all memory operations by the same thread are
+    /// sequentially consistent, and no other thread can access scratch
+    /// memory.
+
+    /// Other address spaces do not have a cache.
+  }
 
   return Changed;
 }
@@ -1085,10 +1048,31 @@ bool SIGfx6CacheControl::enableRMWCacheBypass(
   assert(MI->mayLoad() && MI->mayStore());
   bool Changed = false;
 
-  /// Do not set GLC for RMW atomic operations as L0/L1 cache is automatically
-  /// bypassed, and the GLC bit is instead used to indicate if they are
-  /// return or no-return.
-  /// Note: there is no L2 cache coherent bypass control at the ISA level.
+  /// For targets other than GFX940, do not set GLC for RMW atomic operations as
+  /// L0/L1 cache is automatically bypassed, and the GLC bit is instead used to
+  /// indicate if they are return or no-return. Note: there is no L2 cache
+  /// coherent bypass control at the ISA level.
+  ///       For GFX90A+, RMW atomics implicitly bypass the L1 cache.
+
+  if (ST.hasGFX940Insts() && canAffectGlobalAddrSpace(AddrSpace)) {
+    switch (Scope) {
+    case SIAtomicScope::SYSTEM:
+      // Set SC1 bit to indicate system scope.
+      Changed |= enableCPolBits(MI, CPol::SC1);
+      break;
+    case SIAtomicScope::AGENT:
+    case SIAtomicScope::WORKGROUP:
+    case SIAtomicScope::WAVEFRONT:
+    case SIAtomicScope::SINGLETHREAD:
+      // RMW atomic operations implicitly bypass the L1 cache and only use SC1
+      // to indicate system or agent scope. The SC0 bit is used to indicate if
+      // they are return or no-return. Leave SC1 bit unset to indicate agent
+      // scope.
+      break;
+    default:
+      llvm_unreachable("Unsupported synchronization scope");
+    }
+  }
 
   return Changed;
 }
@@ -1099,7 +1083,7 @@ bool SIGfx6CacheControl::enableVolatileAndOrNonTemporal(
   // Only handle load and store, not atomic read-modify-write insructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
   // be used for cache control.
-  assert(MI->mayLoad() ^ MI->mayStore());
+  assert((MI->mayLoad() ^ MI->mayStore()) || SIInstrInfo::isLDSDMA(*MI));
 
   // Only update load and store, not LLVM IR atomic read-modify-write
   // instructions. The latter are always marked as volatile so cannot sensibly
@@ -1110,11 +1094,15 @@ bool SIGfx6CacheControl::enableVolatileAndOrNonTemporal(
   bool Changed = false;
 
   if (IsVolatile) {
-    // Set L1 cache policy to be MISS_EVICT for load instructions
-    // and MISS_LRU for store instructions.
-    // Note: there is no L2 cache bypass policy at the ISA level.
-    if (Op == SIMemOp::LOAD)
-      Changed |= enableGLCBit(MI);
+    if (ST.hasGFX940Insts()) {
+      // Set SC bits to indicate system scope.
+      Changed |= enableCPolBits(MI, CPol::SC0 | CPol::SC1);
+    } else if (Op == SIMemOp::LOAD) {
+      // Set L1 cache policy to be MISS_EVICT for load instructions
+      // and MISS_LRU for store instructions.
+      // Note: there is no L2 cache bypass policy at the ISA level.
+      Changed |= enableCPolBits(MI, CPol::GLC);
+    }
 
     // Ensure operation has completed at system scope to cause all volatile
     // operations to be visible outside the program in a global order. Do not
@@ -1129,10 +1117,13 @@ bool SIGfx6CacheControl::enableVolatileAndOrNonTemporal(
   }
 
   if (IsNonTemporal) {
-    // Setting both GLC and SLC configures L1 cache policy to MISS_EVICT
-    // for both loads and stores, and the L2 cache policy to STREAM.
-    Changed |= enableGLCBit(MI);
-    Changed |= enableSLCBit(MI);
+    if (ST.hasGFX940Insts()) {
+      Changed |= enableCPolBits(MI, CPol::NT);
+    } else {
+      // Setting both GLC and SLC configures L1 cache policy to MISS_EVICT
+      // for both loads and stores, and the L2 cache policy to STREAM.
+      Changed |= enableCPolBits(MI, CPol::SLC | CPol::GLC);
+    }
     return Changed;
   }
 
@@ -1152,6 +1143,26 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
 
   if (Pos == Position::AFTER)
     ++MI;
+
+  // GFX90A+
+  if (ST.hasGFX90AInsts() && ST.isTgSplitEnabled()) {
+    // In threadgroup split mode the waves of a work-group can be executing on
+    // different CUs. Therefore need to wait for global or GDS memory operations
+    // to complete to ensure they are visible to waves in the other CUs.
+    // Otherwise in non-threadgroup split mode all waves of a work-group are on
+    // the same CU, so no need to wait for global memory as all waves in the
+    // work-group access the same the L1, nor wait for GDS as access are ordered
+    // on a CU.
+    if (((AddrSpace & (SIAtomicAddrSpace::GLOBAL | SIAtomicAddrSpace::SCRATCH |
+                       SIAtomicAddrSpace::GDS)) != SIAtomicAddrSpace::NONE) &&
+        (Scope == SIAtomicScope::WORKGROUP)) {
+      // Same as <GFX90A at AGENT scope;
+      Scope = SIAtomicScope::AGENT;
+    }
+    // In threadgroup split mode LDS cannot be allocated so no need to wait for
+    // LDS memory operations.
+    AddrSpace &= ~SIAtomicAddrSpace::LDS;
+  }
 
   bool VMCnt = false;
   bool LGKMCnt = false;
@@ -1247,6 +1258,12 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
   return Changed;
 }
 
+static bool canUseBUFFER_WBINVL1_VOL(const GCNSubtarget &ST) {
+  if (ST.getGeneration() <= AMDGPUSubtarget::SOUTHERN_ISLANDS)
+    return false;
+  return !ST.isAmdPalOS() && !ST.isMesa3DOS();
+}
+
 bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
                                        SIAtomicScope Scope,
                                        SIAtomicAddrSpace AddrSpace,
@@ -1262,17 +1279,92 @@ bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
+  const unsigned InvalidateL1 = canUseBUFFER_WBINVL1_VOL(ST)
+                                    ? AMDGPU::BUFFER_WBINVL1_VOL
+                                    : AMDGPU::BUFFER_WBINVL1;
+
   if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
+      if (ST.hasGFX940Insts()) {
+        // Ensures that following loads will not see stale remote VMEM data or
+        // stale local VMEM data with MTYPE NC. Local VMEM data with MTYPE RW
+        // and CC will never be stale due to the local memory probes.
+        BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_INV))
+            // Set SC bits to indicate system scope.
+            .addImm(AMDGPU::CPol::SC0 | AMDGPU::CPol::SC1);
+        // Inserting a "S_WAITCNT vmcnt(0)" after is not required because the
+        // hardware does not reorder memory operations by the same wave with
+        // respect to a preceding "BUFFER_INV". The invalidate is guaranteed to
+        // remove any cache lines of earlier writes by the same wave and ensures
+        // later reads by the same wave will refetch the cache lines.
+        Changed = true;
+        break;
+      }
+
+      if (ST.hasGFX90AInsts()) {
+        // Ensures that following loads will not see stale remote VMEM data or
+        // stale local VMEM data with MTYPE NC. Local VMEM data with MTYPE RW
+        // and CC will never be stale due to the local memory probes.
+        BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_INVL2));
+        BuildMI(MBB, MI, DL, TII->get(InvalidateL1));
+        // Inserting a "S_WAITCNT vmcnt(0)" after is not required because the
+        // hardware does not reorder memory operations by the same wave with
+        // respect to a preceding "BUFFER_INVL2". The invalidate is guaranteed
+        // to remove any cache lines of earlier writes by the same wave and
+        // ensures later reads by the same wave will refetch the cache lines.
+        Changed = true;
+        break;
+      }
+      [[fallthrough]];
     case SIAtomicScope::AGENT:
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBINVL1));
+      if (ST.hasGFX940Insts()) {
+        // Ensures that following loads will not see stale remote date or local
+        // MTYPE NC global data. Local MTYPE RW and CC memory will never be
+        // stale due to the memory probes.
+        BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_INV))
+            // Set SC bits to indicate agent scope.
+            .addImm(AMDGPU::CPol::SC1);
+        // Inserting "S_WAITCNT vmcnt(0)" is not required because the hardware
+        // does not reorder memory operations with respect to preceeding buffer
+        // invalidate. The invalidate is guaranteed to remove any cache lines of
+        // earlier writes and ensures later writes will refetch the cache lines.
+      } else
+        BuildMI(MBB, MI, DL, TII->get(InvalidateL1));
       Changed = true;
       break;
     case SIAtomicScope::WORKGROUP:
+      if (ST.isTgSplitEnabled()) {
+        if (ST.hasGFX940Insts()) {
+          // In threadgroup split mode the waves of a work-group can be
+          // executing on different CUs. Therefore need to invalidate the L1
+          // which is per CU. Otherwise in non-threadgroup split mode all waves
+          // of a work-group are on the same CU, and so the L1 does not need to
+          // be invalidated.
+
+          // Ensures L1 is invalidated if in threadgroup split mode. In
+          // non-threadgroup split mode it is a NOP, but no point generating it
+          // in that case if know not in that mode.
+          BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_INV))
+              // Set SC bits to indicate work-group scope.
+              .addImm(AMDGPU::CPol::SC0);
+          // Inserting "S_WAITCNT vmcnt(0)" is not required because the hardware
+          // does not reorder memory operations with respect to preceeding
+          // buffer invalidate. The invalidate is guaranteed to remove any cache
+          // lines of earlier writes and ensures later writes will refetch the
+          // cache lines.
+          Changed = true;
+        } else if (ST.hasGFX90AInsts()) {
+          BuildMI(MBB, MI, DL, TII->get(InvalidateL1));
+          Changed = true;
+        }
+      }
+      break;
     case SIAtomicScope::WAVEFRONT:
     case SIAtomicScope::SINGLETHREAD:
-      // No cache to invalidate.
+      // For GFX940, we could generate "BUFFER_INV" but it would do nothing as
+      // there are no caches to invalidate. All other targets have no cache to
+      // invalidate.
       break;
     default:
       llvm_unreachable("Unsupported synchronization scope");
@@ -1297,617 +1389,56 @@ bool SIGfx6CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
                                        SIAtomicAddrSpace AddrSpace,
                                        bool IsCrossAddrSpaceOrdering,
                                        Position Pos) const {
-  return insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
-                    IsCrossAddrSpaceOrdering, Pos, AtomicOrdering::Release,
-                    /*AtomicsOnly=*/false);
-}
-
-bool SIGfx7CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
-                                       SIAtomicScope Scope,
-                                       SIAtomicAddrSpace AddrSpace,
-                                       Position Pos) const {
-  if (!InsertCacheInv)
-    return false;
-
   bool Changed = false;
 
-  MachineBasicBlock &MBB = *MI->getParent();
-  DebugLoc DL = MI->getDebugLoc();
-
-  const GCNSubtarget &STM = MBB.getParent()->getSubtarget<GCNSubtarget>();
-
-  const unsigned InvalidateL1 = STM.isAmdPalOS() || STM.isMesa3DOS()
-                                    ? AMDGPU::BUFFER_WBINVL1
-                                    : AMDGPU::BUFFER_WBINVL1_VOL;
-
-  if (Pos == Position::AFTER)
-    ++MI;
-
-  if (canAffectGlobalAddrSpace(AddrSpace)) {
-    switch (Scope) {
-    case SIAtomicScope::SYSTEM:
-    case SIAtomicScope::AGENT:
-      BuildMI(MBB, MI, DL, TII->get(InvalidateL1));
-      Changed = true;
-      break;
-    case SIAtomicScope::WORKGROUP:
-    case SIAtomicScope::WAVEFRONT:
-    case SIAtomicScope::SINGLETHREAD:
-      // No cache to invalidate.
-      break;
-    default:
-      llvm_unreachable("Unsupported synchronization scope");
-    }
-  }
-
-  /// The scratch address space does not need the global memory cache
-  /// to be flushed as all memory operations by the same thread are
-  /// sequentially consistent, and no other thread can access scratch
-  /// memory.
-
-  /// Other address spaces do not have a cache.
-
-  if (Pos == Position::AFTER)
-    --MI;
-
-  return Changed;
-}
-
-bool SIGfx90ACacheControl::enableLoadCacheBypass(
-    const MachineBasicBlock::iterator &MI,
-    SIAtomicScope Scope,
-    SIAtomicAddrSpace AddrSpace) const {
-  assert(MI->mayLoad() && !MI->mayStore());
-  bool Changed = false;
-
-  if (canAffectGlobalAddrSpace(AddrSpace)) {
-    switch (Scope) {
-    case SIAtomicScope::SYSTEM:
-    case SIAtomicScope::AGENT:
-      // Set the L1 cache policy to MISS_LRU.
-      // Note: there is no L2 cache bypass policy at the ISA level.
-      Changed |= enableGLCBit(MI);
-      break;
-    case SIAtomicScope::WORKGROUP:
-      // In threadgroup split mode the waves of a work-group can be executing on
-      // different CUs. Therefore need to bypass the L1 which is per CU.
-      // Otherwise in non-threadgroup split mode all waves of a work-group are
-      // on the same CU, and so the L1 does not need to be bypassed.
-      if (ST.isTgSplitEnabled())
-        Changed |= enableGLCBit(MI);
-      break;
-    case SIAtomicScope::WAVEFRONT:
-    case SIAtomicScope::SINGLETHREAD:
-      // No cache to bypass.
-      break;
-    default:
-      llvm_unreachable("Unsupported synchronization scope");
-    }
-  }
-
-  /// The scratch address space does not need the global memory caches
-  /// to be bypassed as all memory operations by the same thread are
-  /// sequentially consistent, and no other thread can access scratch
-  /// memory.
-
-  /// Other address spaces do not have a cache.
-
-  return Changed;
-}
-
-bool SIGfx90ACacheControl::enableRMWCacheBypass(
-    const MachineBasicBlock::iterator &MI,
-    SIAtomicScope Scope,
-    SIAtomicAddrSpace AddrSpace) const {
-  assert(MI->mayLoad() && MI->mayStore());
-  bool Changed = false;
-
-  if (canAffectGlobalAddrSpace(AddrSpace)) {
-    switch (Scope) {
-    case SIAtomicScope::SYSTEM:
-    case SIAtomicScope::AGENT:
-      /// Do not set glc for RMW atomic operations as they implicitly bypass
-      /// the L1 cache, and the glc bit is instead used to indicate if they are
-      /// return or no-return.
-      break;
-    case SIAtomicScope::WORKGROUP:
-    case SIAtomicScope::WAVEFRONT:
-    case SIAtomicScope::SINGLETHREAD:
-      // No cache to bypass. RMW atomics implicitly bypass the L1 cache.
-      break;
-    default:
-      llvm_unreachable("Unsupported synchronization scope");
-    }
-  }
-
-  return Changed;
-}
-
-bool SIGfx90ACacheControl::enableVolatileAndOrNonTemporal(
-    MachineBasicBlock::iterator &MI, SIAtomicAddrSpace AddrSpace, SIMemOp Op,
-    bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
-  // Only handle load and store, not atomic read-modify-write insructions. The
-  // latter use glc to indicate if the atomic returns a result and so must not
-  // be used for cache control.
-  assert(MI->mayLoad() ^ MI->mayStore());
-
-  // Only update load and store, not LLVM IR atomic read-modify-write
-  // instructions. The latter are always marked as volatile so cannot sensibly
-  // handle it as do not want to pessimize all atomics. Also they do not support
-  // the nontemporal attribute.
-  assert(Op == SIMemOp::LOAD || Op == SIMemOp::STORE);
-
-  bool Changed = false;
-
-  if (IsVolatile) {
-    // Set L1 cache policy to be MISS_EVICT for load instructions
-    // and MISS_LRU for store instructions.
-    // Note: there is no L2 cache bypass policy at the ISA level.
-    if (Op == SIMemOp::LOAD)
-      Changed |= enableGLCBit(MI);
-
-    // Ensure operation has completed at system scope to cause all volatile
-    // operations to be visible outside the program in a global order. Do not
-    // request cross address space as only the global address space can be
-    // observable outside the program, so no need to cause a waitcnt for LDS
-    // address space operations.
-    Changed |= insertWait(MI, SIAtomicScope::SYSTEM, AddrSpace, Op, false,
-                          Position::AFTER, AtomicOrdering::Unordered,
-                          /*AtomicsOnly=*/false);
-
-    return Changed;
-  }
-
-  if (IsNonTemporal) {
-    // Setting both GLC and SLC configures L1 cache policy to MISS_EVICT
-    // for both loads and stores, and the L2 cache policy to STREAM.
-    Changed |= enableGLCBit(MI);
-    Changed |= enableSLCBit(MI);
-    return Changed;
-  }
-
-  return Changed;
-}
-
-bool SIGfx90ACacheControl::insertWait(MachineBasicBlock::iterator &MI,
-                                      SIAtomicScope Scope,
-                                      SIAtomicAddrSpace AddrSpace, SIMemOp Op,
-                                      bool IsCrossAddrSpaceOrdering,
-                                      Position Pos, AtomicOrdering Order,
-                                      bool AtomicsOnly) const {
-  if (ST.isTgSplitEnabled()) {
-    // In threadgroup split mode the waves of a work-group can be executing on
-    // different CUs. Therefore need to wait for global or GDS memory operations
-    // to complete to ensure they are visible to waves in the other CUs.
-    // Otherwise in non-threadgroup split mode all waves of a work-group are on
-    // the same CU, so no need to wait for global memory as all waves in the
-    // work-group access the same the L1, nor wait for GDS as access are ordered
-    // on a CU.
-    if (((AddrSpace & (SIAtomicAddrSpace::GLOBAL | SIAtomicAddrSpace::SCRATCH |
-                       SIAtomicAddrSpace::GDS)) != SIAtomicAddrSpace::NONE) &&
-        (Scope == SIAtomicScope::WORKGROUP)) {
-      // Same as GFX7 using agent scope.
-      Scope = SIAtomicScope::AGENT;
-    }
-    // In threadgroup split mode LDS cannot be allocated so no need to wait for
-    // LDS memory operations.
-    AddrSpace &= ~SIAtomicAddrSpace::LDS;
-  }
-  return SIGfx7CacheControl::insertWait(MI, Scope, AddrSpace, Op,
-                                        IsCrossAddrSpaceOrdering, Pos, Order,
-                                        AtomicsOnly);
-}
-
-bool SIGfx90ACacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
-                                         SIAtomicScope Scope,
-                                         SIAtomicAddrSpace AddrSpace,
-                                         Position Pos) const {
-  if (!InsertCacheInv)
-    return false;
-
-  bool Changed = false;
-
-  MachineBasicBlock &MBB = *MI->getParent();
-  DebugLoc DL = MI->getDebugLoc();
-
-  if (Pos == Position::AFTER)
-    ++MI;
-
-  if (canAffectGlobalAddrSpace(AddrSpace)) {
-    switch (Scope) {
-    case SIAtomicScope::SYSTEM:
-      // Ensures that following loads will not see stale remote VMEM data or
-      // stale local VMEM data with MTYPE NC. Local VMEM data with MTYPE RW and
-      // CC will never be stale due to the local memory probes.
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_INVL2));
-      // Inserting a "S_WAITCNT vmcnt(0)" after is not required because the
-      // hardware does not reorder memory operations by the same wave with
-      // respect to a preceding "BUFFER_INVL2". The invalidate is guaranteed to
-      // remove any cache lines of earlier writes by the same wave and ensures
-      // later reads by the same wave will refetch the cache lines.
-      Changed = true;
-      break;
-    case SIAtomicScope::AGENT:
-      // Same as GFX7.
-      break;
-    case SIAtomicScope::WORKGROUP:
-      // In threadgroup split mode the waves of a work-group can be executing on
-      // different CUs. Therefore need to invalidate the L1 which is per CU.
-      // Otherwise in non-threadgroup split mode all waves of a work-group are
-      // on the same CU, and so the L1 does not need to be invalidated.
-      if (ST.isTgSplitEnabled()) {
-        // Same as GFX7 using agent scope.
-        Scope = SIAtomicScope::AGENT;
-      }
-      break;
-    case SIAtomicScope::WAVEFRONT:
-    case SIAtomicScope::SINGLETHREAD:
-      // Same as GFX7.
-      break;
-    default:
-      llvm_unreachable("Unsupported synchronization scope");
-    }
-  }
-
-  /// The scratch address space does not need the global memory cache
-  /// to be flushed as all memory operations by the same thread are
-  /// sequentially consistent, and no other thread can access scratch
-  /// memory.
-
-  /// Other address spaces do not have a cache.
-
-  if (Pos == Position::AFTER)
-    --MI;
-
-  Changed |= SIGfx7CacheControl::insertAcquire(MI, Scope, AddrSpace, Pos);
-
-  return Changed;
-}
-
-bool SIGfx90ACacheControl::insertRelease(MachineBasicBlock::iterator &MI,
-                                         SIAtomicScope Scope,
-                                         SIAtomicAddrSpace AddrSpace,
-                                         bool IsCrossAddrSpaceOrdering,
-                                         Position Pos) const {
-  bool Changed = false;
-
-  MachineBasicBlock &MBB = *MI->getParent();
-  const DebugLoc &DL = MI->getDebugLoc();
-
-  if (Pos == Position::AFTER)
-    ++MI;
-
-  if (canAffectGlobalAddrSpace(AddrSpace)) {
-    switch (Scope) {
-    case SIAtomicScope::SYSTEM:
-      // Inserting a "S_WAITCNT vmcnt(0)" before is not required because the
-      // hardware does not reorder memory operations by the same wave with
-      // respect to a following "BUFFER_WBL2". The "BUFFER_WBL2" is guaranteed
-      // to initiate writeback of any dirty cache lines of earlier writes by the
-      // same wave. A "S_WAITCNT vmcnt(0)" is needed after to ensure the
-      // writeback has completed.
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBL2))
-        // Set SC bits to indicate system scope.
-        .addImm(AMDGPU::CPol::SC0 | AMDGPU::CPol::SC1);
-      // Followed by same as GFX7, which will ensure the necessary "S_WAITCNT
-      // vmcnt(0)" needed by the "BUFFER_WBL2".
-      Changed = true;
-      break;
-    case SIAtomicScope::AGENT:
-    case SIAtomicScope::WORKGROUP:
-    case SIAtomicScope::WAVEFRONT:
-    case SIAtomicScope::SINGLETHREAD:
-      // Same as GFX7.
-      break;
-    default:
-      llvm_unreachable("Unsupported synchronization scope");
-    }
-  }
-
-  if (Pos == Position::AFTER)
-    --MI;
-
-  Changed |=
-      SIGfx7CacheControl::insertRelease(MI, Scope, AddrSpace,
-                                        IsCrossAddrSpaceOrdering, Pos);
-
-  return Changed;
-}
-
-bool SIGfx940CacheControl::enableLoadCacheBypass(
-    const MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
-    SIAtomicAddrSpace AddrSpace) const {
-  assert(MI->mayLoad() && !MI->mayStore());
-  bool Changed = false;
-
-  if (canAffectGlobalAddrSpace(AddrSpace)) {
-    switch (Scope) {
-    case SIAtomicScope::SYSTEM:
-      // Set SC bits to indicate system scope.
-      Changed |= enableSC0Bit(MI);
-      Changed |= enableSC1Bit(MI);
-      break;
-    case SIAtomicScope::AGENT:
-      // Set SC bits to indicate agent scope.
-      Changed |= enableSC1Bit(MI);
-      break;
-    case SIAtomicScope::WORKGROUP:
-      // In threadgroup split mode the waves of a work-group can be executing on
-      // different CUs. Therefore need to bypass the L1 which is per CU.
-      // Otherwise in non-threadgroup split mode all waves of a work-group are
-      // on the same CU, and so the L1 does not need to be bypassed. Setting SC
-      // bits to indicate work-group scope will do this automatically.
-      Changed |= enableSC0Bit(MI);
-      break;
-    case SIAtomicScope::WAVEFRONT:
-    case SIAtomicScope::SINGLETHREAD:
-      // Leave SC bits unset to indicate wavefront scope.
-      break;
-    default:
-      llvm_unreachable("Unsupported synchronization scope");
-    }
-  }
-
-  /// The scratch address space does not need the global memory caches
-  /// to be bypassed as all memory operations by the same thread are
-  /// sequentially consistent, and no other thread can access scratch
-  /// memory.
-
-  /// Other address spaces do not have a cache.
-
-  return Changed;
-}
-
-bool SIGfx940CacheControl::enableStoreCacheBypass(
-    const MachineBasicBlock::iterator &MI,
-    SIAtomicScope Scope, SIAtomicAddrSpace AddrSpace) const {
-  assert(!MI->mayLoad() && MI->mayStore());
-  bool Changed = false;
-
-  if (canAffectGlobalAddrSpace(AddrSpace)) {
-    switch (Scope) {
-    case SIAtomicScope::SYSTEM:
-      // Set SC bits to indicate system scope.
-      Changed |= enableSC0Bit(MI);
-      Changed |= enableSC1Bit(MI);
-      break;
-    case SIAtomicScope::AGENT:
-      // Set SC bits to indicate agent scope.
-      Changed |= enableSC1Bit(MI);
-      break;
-    case SIAtomicScope::WORKGROUP:
-      // Set SC bits to indicate workgroup scope.
-      Changed |= enableSC0Bit(MI);
-      break;
-    case SIAtomicScope::WAVEFRONT:
-    case SIAtomicScope::SINGLETHREAD:
-      // Leave SC bits unset to indicate wavefront scope.
-      break;
-    default:
-      llvm_unreachable("Unsupported synchronization scope");
-    }
-  }
-
-  /// The scratch address space does not need the global memory caches
-  /// to be bypassed as all memory operations by the same thread are
-  /// sequentially consistent, and no other thread can access scratch
-  /// memory.
-
-  /// Other address spaces do not have a cache.
-
-  return Changed;
-}
-
-bool SIGfx940CacheControl::enableRMWCacheBypass(
-    const MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
-    SIAtomicAddrSpace AddrSpace) const {
-  assert(MI->mayLoad() && MI->mayStore());
-  bool Changed = false;
-
-  if (canAffectGlobalAddrSpace(AddrSpace)) {
-    switch (Scope) {
-    case SIAtomicScope::SYSTEM:
-      // Set SC1 bit to indicate system scope.
-      Changed |= enableSC1Bit(MI);
-      break;
-    case SIAtomicScope::AGENT:
-    case SIAtomicScope::WORKGROUP:
-    case SIAtomicScope::WAVEFRONT:
-    case SIAtomicScope::SINGLETHREAD:
-      // RMW atomic operations implicitly bypass the L1 cache and only use SC1
-      // to indicate system or agent scope. The SC0 bit is used to indicate if
-      // they are return or no-return. Leave SC1 bit unset to indicate agent
-      // scope.
-      break;
-    default:
-      llvm_unreachable("Unsupported synchronization scope");
-    }
-  }
-
-  return Changed;
-}
-
-bool SIGfx940CacheControl::enableVolatileAndOrNonTemporal(
-    MachineBasicBlock::iterator &MI, SIAtomicAddrSpace AddrSpace, SIMemOp Op,
-    bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
-  // Only handle load and store, not atomic read-modify-write insructions. The
-  // latter use glc to indicate if the atomic returns a result and so must not
-  // be used for cache control.
-  assert(MI->mayLoad() ^ MI->mayStore());
-
-  // Only update load and store, not LLVM IR atomic read-modify-write
-  // instructions. The latter are always marked as volatile so cannot sensibly
-  // handle it as do not want to pessimize all atomics. Also they do not support
-  // the nontemporal attribute.
-  assert(Op == SIMemOp::LOAD || Op == SIMemOp::STORE);
-
-  bool Changed = false;
-
-  if (IsVolatile) {
-    // Set SC bits to indicate system scope.
-    Changed |= enableSC0Bit(MI);
-    Changed |= enableSC1Bit(MI);
-
-    // Ensure operation has completed at system scope to cause all volatile
-    // operations to be visible outside the program in a global order. Do not
-    // request cross address space as only the global address space can be
-    // observable outside the program, so no need to cause a waitcnt for LDS
-    // address space operations.
-    Changed |= insertWait(MI, SIAtomicScope::SYSTEM, AddrSpace, Op, false,
-                          Position::AFTER, AtomicOrdering::Unordered,
-                          /*AtomicsOnly=*/false);
-
-    return Changed;
-  }
-
-  if (IsNonTemporal) {
-    Changed |= enableNTBit(MI);
-    return Changed;
-  }
-
-  return Changed;
-}
-
-bool SIGfx940CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
-                                         SIAtomicScope Scope,
-                                         SIAtomicAddrSpace AddrSpace,
-                                         Position Pos) const {
-  if (!InsertCacheInv)
-    return false;
-
-  bool Changed = false;
-
-  MachineBasicBlock &MBB = *MI->getParent();
-  DebugLoc DL = MI->getDebugLoc();
-
-  if (Pos == Position::AFTER)
-    ++MI;
-
-  if (canAffectGlobalAddrSpace(AddrSpace)) {
-    switch (Scope) {
-    case SIAtomicScope::SYSTEM:
-      // Ensures that following loads will not see stale remote VMEM data or
-      // stale local VMEM data with MTYPE NC. Local VMEM data with MTYPE RW and
-      // CC will never be stale due to the local memory probes.
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_INV))
-          // Set SC bits to indicate system scope.
-          .addImm(AMDGPU::CPol::SC0 | AMDGPU::CPol::SC1);
-      // Inserting a "S_WAITCNT vmcnt(0)" after is not required because the
-      // hardware does not reorder memory operations by the same wave with
-      // respect to a preceding "BUFFER_INV". The invalidate is guaranteed to
-      // remove any cache lines of earlier writes by the same wave and ensures
-      // later reads by the same wave will refetch the cache lines.
-      Changed = true;
-      break;
-    case SIAtomicScope::AGENT:
-      // Ensures that following loads will not see stale remote date or local
-      // MTYPE NC global data. Local MTYPE RW and CC memory will never be stale
-      // due to the memory probes.
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_INV))
-          // Set SC bits to indicate agent scope.
-          .addImm(AMDGPU::CPol::SC1);
-      // Inserting "S_WAITCNT vmcnt(0)" is not required because the hardware
-      // does not reorder memory operations with respect to preceeding buffer
-      // invalidate. The invalidate is guaranteed to remove any cache lines of
-      // earlier writes and ensures later writes will refetch the cache lines.
-      Changed = true;
-      break;
-    case SIAtomicScope::WORKGROUP:
-      // In threadgroup split mode the waves of a work-group can be executing on
-      // different CUs. Therefore need to invalidate the L1 which is per CU.
-      // Otherwise in non-threadgroup split mode all waves of a work-group are
-      // on the same CU, and so the L1 does not need to be invalidated.
-      if (ST.isTgSplitEnabled()) {
-        // Ensures L1 is invalidated if in threadgroup split mode. In
-        // non-threadgroup split mode it is a NOP, but no point generating it in
-        // that case if know not in that mode.
-        BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_INV))
-            // Set SC bits to indicate work-group scope.
-            .addImm(AMDGPU::CPol::SC0);
-        // Inserting "S_WAITCNT vmcnt(0)" is not required because the hardware
-        // does not reorder memory operations with respect to preceeding buffer
-        // invalidate. The invalidate is guaranteed to remove any cache lines of
-        // earlier writes and ensures later writes will refetch the cache lines.
+  if (ST.hasGFX90AInsts()) {
+    MachineBasicBlock &MBB = *MI->getParent();
+    const DebugLoc &DL = MI->getDebugLoc();
+
+    if (Pos == Position::AFTER)
+      ++MI;
+
+    if (canAffectGlobalAddrSpace(AddrSpace)) {
+      switch (Scope) {
+      case SIAtomicScope::SYSTEM:
+        // Inserting a "S_WAITCNT vmcnt(0)" before is not required because the
+        // hardware does not reorder memory operations by the same wave with
+        // respect to a following "BUFFER_WBL2". The "BUFFER_WBL2" is guaranteed
+        // to initiate writeback of any dirty cache lines of earlier writes by
+        // the same wave. A "S_WAITCNT vmcnt(0)" is needed after to ensure the
+        // writeback has completed.
+        BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBL2))
+            // Set SC bits to indicate system scope.
+            .addImm(AMDGPU::CPol::SC0 | AMDGPU::CPol::SC1);
         Changed = true;
+        break;
+      case SIAtomicScope::AGENT:
+        if (ST.hasGFX940Insts()) {
+          BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBL2))
+              // Set SC bits to indicate agent scope.
+              .addImm(AMDGPU::CPol::SC1);
+
+          // Since AddrSpace contains SIAtomicAddrSpace::GLOBAL and Scope is
+          // SIAtomicScope::AGENT, the following insertWait will generate the
+          // required "S_WAITCNT vmcnt(0)".
+          Changed = true;
+        }
+        break;
+      case SIAtomicScope::WORKGROUP:
+      case SIAtomicScope::WAVEFRONT:
+      case SIAtomicScope::SINGLETHREAD:
+        // For GFX940, do not generate "BUFFER_WBL2" as there are no caches it
+        // would writeback, and would require an otherwise unnecessary
+        // "S_WAITCNT vmcnt(0)".
+        break;
+      default:
+        llvm_unreachable("Unsupported synchronization scope");
       }
-      break;
-    case SIAtomicScope::WAVEFRONT:
-    case SIAtomicScope::SINGLETHREAD:
-      // Could generate "BUFFER_INV" but it would do nothing as there are no
-      // caches to invalidate.
-      break;
-    default:
-      llvm_unreachable("Unsupported synchronization scope");
     }
+
+    if (Pos == Position::AFTER)
+      --MI;
   }
-
-  /// The scratch address space does not need the global memory cache
-  /// to be flushed as all memory operations by the same thread are
-  /// sequentially consistent, and no other thread can access scratch
-  /// memory.
-
-  /// Other address spaces do not have a cache.
-
-  if (Pos == Position::AFTER)
-    --MI;
-
-  return Changed;
-}
-
-bool SIGfx940CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
-                                         SIAtomicScope Scope,
-                                         SIAtomicAddrSpace AddrSpace,
-                                         bool IsCrossAddrSpaceOrdering,
-                                         Position Pos) const {
-  bool Changed = false;
-
-  MachineBasicBlock &MBB = *MI->getParent();
-  DebugLoc DL = MI->getDebugLoc();
-
-  if (Pos == Position::AFTER)
-    ++MI;
-
-  if (canAffectGlobalAddrSpace(AddrSpace)) {
-    switch (Scope) {
-    case SIAtomicScope::SYSTEM:
-      // Inserting a "S_WAITCNT vmcnt(0)" before is not required because the
-      // hardware does not reorder memory operations by the same wave with
-      // respect to a following "BUFFER_WBL2". The "BUFFER_WBL2" is guaranteed
-      // to initiate writeback of any dirty cache lines of earlier writes by the
-      // same wave. A "S_WAITCNT vmcnt(0)" is needed after to ensure the
-      // writeback has completed.
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBL2))
-          // Set SC bits to indicate system scope.
-          .addImm(AMDGPU::CPol::SC0 | AMDGPU::CPol::SC1);
-      // Since AddrSpace contains SIAtomicAddrSpace::GLOBAL and Scope is
-      // SIAtomicScope::SYSTEM, the following insertWait will generate the
-      // required "S_WAITCNT vmcnt(0)" needed by the "BUFFER_WBL2".
-      Changed = true;
-      break;
-    case SIAtomicScope::AGENT:
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBL2))
-          // Set SC bits to indicate agent scope.
-          .addImm(AMDGPU::CPol::SC1);
-
-      // Since AddrSpace contains SIAtomicAddrSpace::GLOBAL and Scope is
-      // SIAtomicScope::AGENT, the following insertWait will generate the
-      // required "S_WAITCNT vmcnt(0)".
-      Changed = true;
-      break;
-    case SIAtomicScope::WORKGROUP:
-    case SIAtomicScope::WAVEFRONT:
-    case SIAtomicScope::SINGLETHREAD:
-      // Do not generate "BUFFER_WBL2" as there are no caches it would
-      // writeback, and would require an otherwise unnecessary
-      // "S_WAITCNT vmcnt(0)".
-      break;
-    default:
-      llvm_unreachable("Unsupported synchronization scope");
-    }
-  }
-
-  if (Pos == Position::AFTER)
-    --MI;
 
   // Ensure the necessary S_WAITCNT needed by any "BUFFER_WBL2" as well as other
   // S_WAITCNT needed.
@@ -1919,8 +1450,7 @@ bool SIGfx940CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
 }
 
 bool SIGfx10CacheControl::enableLoadCacheBypass(
-    const MachineBasicBlock::iterator &MI,
-    SIAtomicScope Scope,
+    const MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
     SIAtomicAddrSpace AddrSpace) const {
   assert(MI->mayLoad() && !MI->mayStore());
   bool Changed = false;
@@ -1931,8 +1461,9 @@ bool SIGfx10CacheControl::enableLoadCacheBypass(
     case SIAtomicScope::AGENT:
       // Set the L0 and L1 cache policies to MISS_EVICT.
       // Note: there is no L2 cache coherent bypass control at the ISA level.
-      Changed |= enableGLCBit(MI);
-      Changed |= enableDLCBit(MI);
+      // For GFX10, set GLC+DLC, for GFX11, only set GLC.
+      Changed |=
+          enableCPolBits(MI, CPol::GLC | (AMDGPU::isGFX10(ST) ? CPol::DLC : 0));
       break;
     case SIAtomicScope::WORKGROUP:
       // In WGP mode the waves of a work-group can be executing on either CU of
@@ -1940,7 +1471,7 @@ bool SIGfx10CacheControl::enableLoadCacheBypass(
       // CU mode all waves of a work-group are on the same CU, and so the L0
       // does not need to be bypassed.
       if (!ST.isCuModeEnabled())
-        Changed |= enableGLCBit(MI);
+        Changed |= enableCPolBits(MI, CPol::GLC);
       break;
     case SIAtomicScope::WAVEFRONT:
     case SIAtomicScope::SINGLETHREAD:
@@ -1968,7 +1499,7 @@ bool SIGfx10CacheControl::enableVolatileAndOrNonTemporal(
   // Only handle load and store, not atomic read-modify-write insructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
   // be used for cache control.
-  assert(MI->mayLoad() ^ MI->mayStore());
+  assert((MI->mayLoad() ^ MI->mayStore()) || SIInstrInfo::isLDSDMA(*MI));
 
   // Only update load and store, not LLVM IR atomic read-modify-write
   // instructions. The latter are always marked as volatile so cannot sensibly
@@ -1983,9 +1514,12 @@ bool SIGfx10CacheControl::enableVolatileAndOrNonTemporal(
     // and MISS_LRU for store instructions.
     // Note: there is no L2 cache coherent bypass control at the ISA level.
     if (Op == SIMemOp::LOAD) {
-      Changed |= enableGLCBit(MI);
-      Changed |= enableDLCBit(MI);
+      Changed |= enableCPolBits(MI, CPol::GLC | CPol::DLC);
     }
+
+    // GFX11: Set MALL NOALLOC for both load and store instructions.
+    if (AMDGPU::isGFX11(ST))
+      Changed |= enableCPolBits(MI, CPol::DLC);
 
     // Ensure operation has completed at system scope to cause all volatile
     // operations to be visible outside the program in a global order. Do not
@@ -2004,8 +1538,12 @@ bool SIGfx10CacheControl::enableVolatileAndOrNonTemporal(
     // For stores setting both GLC and SLC configures L0 and L1 cache policy
     // to MISS_EVICT and the L2 cache policy to STREAM.
     if (Op == SIMemOp::STORE)
-      Changed |= enableGLCBit(MI);
-    Changed |= enableSLCBit(MI);
+      Changed |= enableCPolBits(MI, CPol::GLC);
+    Changed |= enableCPolBits(MI, CPol::SLC);
+
+    // GFX11: Set MALL NOALLOC for both load and store instructions.
+    if (AMDGPU::isGFX11(ST))
+      Changed |= enableCPolBits(MI, CPol::DLC);
 
     return Changed;
   }
@@ -2046,8 +1584,11 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
       // the WGP. Therefore need to wait for operations to complete to ensure
       // they are visible to waves in the other CU as the L0 is per CU.
       // Otherwise in CU mode and all waves of a work-group are on the same CU
-      // which shares the same L0.
-      if (!ST.isCuModeEnabled()) {
+      // which shares the same L0. Note that we still need to wait when
+      // performing a release in this mode to respect the transitivity of
+      // happens-before, e.g. other waves of the workgroup must be able to
+      // release the memory from another wave at a wider scope.
+      if (!ST.isCuModeEnabled() || isReleaseOrStronger(Order)) {
         if ((Op & SIMemOp::LOAD) != SIMemOp::NONE)
           VMCnt |= true;
         if ((Op & SIMemOp::STORE) != SIMemOp::NONE)
@@ -2202,118 +1743,6 @@ bool SIGfx10CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   return Changed;
 }
 
-bool SIGfx10CacheControl::insertBarrierStart(
-    MachineBasicBlock::iterator &MI) const {
-  // We need to wait on vm_vsrc so barriers can pair with fences in GFX10+ CU
-  // mode. This is because a CU mode release fence does not emit any wait, which
-  // is fine when only dealing with vmem, but isn't sufficient in the presence
-  // of barriers which do not go through vmem.
-  // GFX12.5 does not require this additional wait.
-  if (!ST.isCuModeEnabled() || ST.hasGFX1250Insts())
-    return false;
-
-  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-          TII->get(AMDGPU::S_WAITCNT_DEPCTR))
-      .addImm(AMDGPU::DepCtr::encodeFieldVmVsrc(0));
-  return true;
-}
-
-bool SIGfx11CacheControl::enableLoadCacheBypass(
-    const MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
-    SIAtomicAddrSpace AddrSpace) const {
-  assert(MI->mayLoad() && !MI->mayStore());
-  bool Changed = false;
-
-  if (canAffectGlobalAddrSpace(AddrSpace)) {
-    switch (Scope) {
-    case SIAtomicScope::SYSTEM:
-    case SIAtomicScope::AGENT:
-      // Set the L0 and L1 cache policies to MISS_EVICT.
-      // Note: there is no L2 cache coherent bypass control at the ISA level.
-      Changed |= enableGLCBit(MI);
-      break;
-    case SIAtomicScope::WORKGROUP:
-      // In WGP mode the waves of a work-group can be executing on either CU of
-      // the WGP. Therefore need to bypass the L0 which is per CU. Otherwise in
-      // CU mode all waves of a work-group are on the same CU, and so the L0
-      // does not need to be bypassed.
-      if (!ST.isCuModeEnabled())
-        Changed |= enableGLCBit(MI);
-      break;
-    case SIAtomicScope::WAVEFRONT:
-    case SIAtomicScope::SINGLETHREAD:
-      // No cache to bypass.
-      break;
-    default:
-      llvm_unreachable("Unsupported synchronization scope");
-    }
-  }
-
-  /// The scratch address space does not need the global memory caches
-  /// to be bypassed as all memory operations by the same thread are
-  /// sequentially consistent, and no other thread can access scratch
-  /// memory.
-
-  /// Other address spaces do not have a cache.
-
-  return Changed;
-}
-
-bool SIGfx11CacheControl::enableVolatileAndOrNonTemporal(
-    MachineBasicBlock::iterator &MI, SIAtomicAddrSpace AddrSpace, SIMemOp Op,
-    bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
-
-  // Only handle load and store, not atomic read-modify-write insructions. The
-  // latter use glc to indicate if the atomic returns a result and so must not
-  // be used for cache control.
-  assert(MI->mayLoad() ^ MI->mayStore());
-
-  // Only update load and store, not LLVM IR atomic read-modify-write
-  // instructions. The latter are always marked as volatile so cannot sensibly
-  // handle it as do not want to pessimize all atomics. Also they do not support
-  // the nontemporal attribute.
-  assert(Op == SIMemOp::LOAD || Op == SIMemOp::STORE);
-
-  bool Changed = false;
-
-  if (IsVolatile) {
-    // Set L0 and L1 cache policy to be MISS_EVICT for load instructions
-    // and MISS_LRU for store instructions.
-    // Note: there is no L2 cache coherent bypass control at the ISA level.
-    if (Op == SIMemOp::LOAD)
-      Changed |= enableGLCBit(MI);
-
-    // Set MALL NOALLOC for load and store instructions.
-    Changed |= enableDLCBit(MI);
-
-    // Ensure operation has completed at system scope to cause all volatile
-    // operations to be visible outside the program in a global order. Do not
-    // request cross address space as only the global address space can be
-    // observable outside the program, so no need to cause a waitcnt for LDS
-    // address space operations.
-    Changed |= insertWait(MI, SIAtomicScope::SYSTEM, AddrSpace, Op, false,
-                          Position::AFTER, AtomicOrdering::Unordered,
-                          /*AtomicsOnly=*/false);
-    return Changed;
-  }
-
-  if (IsNonTemporal) {
-    // For loads setting SLC configures L0 and L1 cache policy to HIT_EVICT
-    // and L2 cache policy to STREAM.
-    // For stores setting both GLC and SLC configures L0 and L1 cache policy
-    // to MISS_EVICT and the L2 cache policy to STREAM.
-    if (Op == SIMemOp::STORE)
-      Changed |= enableGLCBit(MI);
-    Changed |= enableSLCBit(MI);
-
-    // Set MALL NOALLOC for load and store instructions.
-    Changed |= enableDLCBit(MI);
-    return Changed;
-  }
-
-  return Changed;
-}
-
 bool SIGfx12CacheControl::setTH(const MachineBasicBlock::iterator MI,
                                 AMDGPU::CPol::CPol Value) const {
   MachineOperand *CPol = TII->getNamedOperand(*MI, OpName::cpol);
@@ -2396,15 +1825,20 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
       //   In WGP mode the waves of a work-group can be executing on either CU
       //   of the WGP. Therefore need to wait for operations to complete to
       //   ensure they are visible to waves in the other CU as the L0 is per CU.
+      //
       //   Otherwise in CU mode and all waves of a work-group are on the same CU
-      //   which shares the same L0.
+      //   which shares the same L0. Note that we still need to wait when
+      //   performing a release in this mode to respect the transitivity of
+      //   happens-before, e.g. other waves of the workgroup must be able to
+      //   release the memory from another wave at a wider scope.
       //
       // GFX12.5:
       //   CU$ has two ports. To ensure operations are visible at the workgroup
       //   level, we need to ensure all operations in this port have completed
       //   so the other SIMDs in the WG can see them. There is no ordering
       //   guarantee between the ports.
-      if (!ST.isCuModeEnabled() || ST.hasGFX1250Insts()) {
+      if (!ST.isCuModeEnabled() || ST.hasGFX1250Insts() ||
+          isReleaseOrStronger(Order)) {
         if ((Op & SIMemOp::LOAD) != SIMemOp::NONE)
           LOADCnt |= true;
         if ((Op & SIMemOp::STORE) != SIMemOp::NONE)
@@ -2611,7 +2045,7 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
     bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
 
   // Only handle load and store, not atomic read-modify-write instructions.
-  assert(MI->mayLoad() ^ MI->mayStore());
+  assert((MI->mayLoad() ^ MI->mayStore()) || SIInstrInfo::isLDSDMA(*MI));
 
   // Only update load and store, not LLVM IR atomic read-modify-write
   // instructions. The latter are always marked as volatile so cannot sensibly
@@ -2632,6 +2066,13 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
   if (IsVolatile) {
     Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SYS);
 
+    if (ST.requiresWaitXCntForSingleAccessInstructions() &&
+        SIInstrInfo::isVMEM(*MI)) {
+      MachineBasicBlock &MBB = *MI->getParent();
+      BuildMI(MBB, MI, MI->getDebugLoc(), TII->get(S_WAIT_XCNT_soft)).addImm(0);
+      Changed = true;
+    }
+
     // Ensure operation has completed at system scope to cause all volatile
     // operations to be visible outside the program in a global order. Do not
     // request cross address space as only the global address space can be
@@ -2650,9 +2091,8 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   const bool IsRMW = (MI.mayLoad() && MI.mayStore());
   bool Changed = false;
 
-  // GFX12.5 only: xcnt wait is needed before flat and global atomics
-  // stores/rmw.
-  if (Atomic && ST.requiresWaitXCntBeforeAtomicStores() && TII->isFLAT(MI)) {
+  if (Atomic && ST.requiresWaitXCntForSingleAccessInstructions() &&
+      SIInstrInfo::isVMEM(MI)) {
     MachineBasicBlock &MBB = *MI.getParent();
     BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(S_WAIT_XCNT_soft)).addImm(0);
     Changed = true;
@@ -2668,7 +2108,8 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   const unsigned Scope = CPol->getImm() & CPol::SCOPE;
 
   // GFX12.0 only: Extra waits needed before system scope stores.
-  if (!ST.hasGFX1250Insts() && !Atomic && Scope == CPol::SCOPE_SYS)
+  if (ST.requiresWaitsBeforeSystemScopeStores() && !Atomic &&
+      Scope == CPol::SCOPE_SYS)
     Changed |= insertWaitsBeforeSystemScopeStore(MI.getIterator());
 
   return Changed;
@@ -2934,6 +2375,23 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
   return Changed;
 }
 
+bool SIMemoryLegalizer::expandLDSDMA(const SIMemOpInfo &MOI,
+                                     MachineBasicBlock::iterator &MI) {
+  assert(MI->mayLoad() && MI->mayStore());
+
+  // The volatility or nontemporal-ness of the operation is a
+  // function of the global memory, not the LDS.
+  SIMemOp OpKind =
+      SIInstrInfo::mayWriteLDSThroughDMA(*MI) ? SIMemOp::LOAD : SIMemOp::STORE;
+
+  // Handle volatile and/or nontemporal markers on direct-to-LDS loads and
+  // stores. The operation is treated as a volatile/nontemporal store
+  // to its second argument.
+  return CC->enableVolatileAndOrNonTemporal(
+      MI, MOI.getInstrAddrSpace(), OpKind, MOI.isVolatile(),
+      MOI.isNonTemporal(), MOI.isLastUse());
+}
+
 bool SIMemoryLegalizerLegacy::runOnMachineFunction(MachineFunction &MF) {
   const MachineModuleInfo &MMI =
       getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
@@ -2977,22 +2435,20 @@ bool SIMemoryLegalizer::run(MachineFunction &MF) {
         MI = II->getIterator();
       }
 
-      if (ST.getInstrInfo()->isBarrierStart(MI->getOpcode())) {
-        Changed |= CC->insertBarrierStart(MI);
-        continue;
-      }
-
       if (!(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic))
         continue;
 
-      if (const auto &MOI = MOA.getLoadInfo(MI))
+      if (const auto &MOI = MOA.getLoadInfo(MI)) {
         Changed |= expandLoad(*MOI, MI);
-      else if (const auto &MOI = MOA.getStoreInfo(MI)) {
+      } else if (const auto &MOI = MOA.getStoreInfo(MI)) {
         Changed |= expandStore(*MOI, MI);
-      } else if (const auto &MOI = MOA.getAtomicFenceInfo(MI))
+      } else if (const auto &MOI = MOA.getLDSDMAInfo(MI)) {
+        Changed |= expandLDSDMA(*MOI, MI);
+      } else if (const auto &MOI = MOA.getAtomicFenceInfo(MI)) {
         Changed |= expandAtomicFence(*MOI, MI);
-      else if (const auto &MOI = MOA.getAtomicCmpxchgOrRmwInfo(MI))
+      } else if (const auto &MOI = MOA.getAtomicCmpxchgOrRmwInfo(MI)) {
         Changed |= expandAtomicCmpxchgOrRmw(*MOI, MI);
+      }
     }
   }
 

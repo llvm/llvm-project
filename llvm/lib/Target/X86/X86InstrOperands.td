@@ -280,6 +280,10 @@ let RenderMethod = "addMemOffsOperands" in {
     let Name = "MemOffs64_64";
     let SuperClasses = [X86Mem64AsmOperand];
   }
+  def X86MemConstOffs64_AsmOperand : AsmOperandClass {
+    let Name = "MemConstOffs64";
+    let SuperClasses = [X86Mem8AsmOperand];
+  }
 } // RenderMethod = "addMemOffsOperands"
 
 class X86SrcIdxOperand<string printMethod, AsmOperandClass parserMatchClass>
@@ -329,6 +333,9 @@ def offset64_32 : X86MemOffsOperand<i64imm, "printMemOffs32",
                                     X86MemOffs64_32AsmOperand>;
 def offset64_64 : X86MemOffsOperand<i64imm, "printMemOffs64",
                                     X86MemOffs64_64AsmOperand>;
+
+def offset64const  : X86MemOffsOperand<i64imm, "printMemOffset",
+                                       X86MemConstOffs64_AsmOperand>;
 
 def ccode : Operand<i8> {
   let PrintMethod = "printCondCode";
@@ -535,11 +542,4 @@ def VK8Pair : RegisterOperand<VK8PAIR, "printVKPair"> {
 
 def VK16Pair : RegisterOperand<VK16PAIR, "printVKPair"> {
   let ParserMatchClass = VK16PairAsmOperand;
-}
-
-let RenderMethod = "addTILEPairOperands" in
-  def TILEPairAsmOperand : AsmOperandClass { let Name = "TILEPair"; }
-
-def TILEPair : RegisterOperand<TILEPAIR, "printTILEPair"> {
-  let ParserMatchClass = TILEPairAsmOperand;
 }

@@ -109,8 +109,7 @@ def err_fe_expected_clang_command : Error<
     "expected a clang compiler command">;
 def err_fe_remap_missing_to_file : Error<
     "could not remap file '%0' to the contents of file '%1'">, DefaultFatal;
-def err_fe_unable_to_load_pch : Error<
-    "unable to load PCH file">;
+def err_fe_unable_to_load_ast_file : Error<"unable to load precompiled file">;
 def err_fe_unable_to_load_plugin : Error<
     "unable to load plugin '%0': '%1'">;
 def err_fe_unable_to_create_target : Error<
@@ -403,10 +402,6 @@ def warn_hlsl_langstd_minimal :
   Warning<"support for HLSL language version %0 is incomplete, "
           "recommend using %1 instead">,
   InGroup<HLSLDXCCompat>;
-
-def err_hlsl_semantic_missing : Error<"semantic annotations must be present "
-                                      "for all input and outputs of an entry "
-                                      "function or patch constant function">;
 
 // ClangIR frontend errors
 def err_cir_to_cir_transform_failed : Error<

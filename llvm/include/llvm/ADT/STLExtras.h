@@ -638,10 +638,10 @@ make_early_inc_range(RangeT &&Range) {
 
 // Forward declarations required by zip_shortest/zip_equal/zip_first/zip_longest
 template <typename R, typename UnaryPredicate>
-bool all_of(R &&range, UnaryPredicate P);
+constexpr bool all_of(R &&range, UnaryPredicate P);
 
 template <typename R, typename UnaryPredicate>
-bool any_of(R &&range, UnaryPredicate P);
+constexpr bool any_of(R &&range, UnaryPredicate P);
 
 template <typename T> bool all_equal(std::initializer_list<T> Values);
 
@@ -1415,6 +1415,18 @@ template <typename ContainerTy> auto make_second_range(ContainerTy &&c) {
       });
 }
 
+/// Return a range that conditionally reverses \p C. The collection is iterated
+/// in reverse if \p ShouldReverse is true (otherwise, it is iterated forwards).
+template <typename ContainerTy>
+[[nodiscard]] auto reverse_conditionally(ContainerTy &&C, bool ShouldReverse) {
+  using IterTy = detail::IterOfRange<ContainerTy>;
+  using ReferenceTy = typename std::iterator_traits<IterTy>::reference;
+  return map_range(zip_equal(reverse(C), C),
+                   [ShouldReverse](auto I) -> ReferenceTy {
+                     return ShouldReverse ? std::get<0>(I) : std::get<1>(I);
+                   });
+}
+
 //===----------------------------------------------------------------------===//
 //     Extra additions to <utility>
 //===----------------------------------------------------------------------===//
@@ -1516,8 +1528,8 @@ template <class Iterator, class RNG>
 void shuffle(Iterator first, Iterator last, RNG &&g) {
   // It would be better to use a std::uniform_int_distribution,
   // but that would be stdlib dependent.
-  typedef
-      typename std::iterator_traits<Iterator>::difference_type difference_type;
+  using difference_type =
+      typename std::iterator_traits<Iterator>::difference_type;
   for (auto size = last - first; size > 1; ++first, (void)--size) {
     difference_type offset = g() % size;
     // Avoid self-assignment due to incorrect assertions in libstdc++
@@ -1722,22 +1734,31 @@ UnaryFunction for_each(R &&Range, UnaryFunction F) {
 /// Provide wrappers to std::all_of which take ranges instead of having to pass
 /// begin/end explicitly.
 template <typename R, typename UnaryPredicate>
-bool all_of(R &&Range, UnaryPredicate P) {
-  return std::all_of(adl_begin(Range), adl_end(Range), P);
+constexpr bool all_of(R &&Range, UnaryPredicate P) {
+  // TODO: switch back to std::all_of() after it becomes constexpr in c++20.
+  for (auto I = adl_begin(Range), E = adl_end(Range); I != E; ++I)
+    if (!P(*I))
+      return false;
+  return true;
 }
 
 /// Provide wrappers to std::any_of which take ranges instead of having to pass
 /// begin/end explicitly.
 template <typename R, typename UnaryPredicate>
-bool any_of(R &&Range, UnaryPredicate P) {
-  return std::any_of(adl_begin(Range), adl_end(Range), P);
+constexpr bool any_of(R &&Range, UnaryPredicate P) {
+  // TODO: switch back to std::any_of() after it becomes constexpr in c++20.
+  for (auto I = adl_begin(Range), E = adl_end(Range); I != E; ++I)
+    if (P(*I))
+      return true;
+  return false;
 }
 
 /// Provide wrappers to std::none_of which take ranges instead of having to pass
 /// begin/end explicitly.
 template <typename R, typename UnaryPredicate>
-bool none_of(R &&Range, UnaryPredicate P) {
-  return std::none_of(adl_begin(Range), adl_end(Range), P);
+constexpr bool none_of(R &&Range, UnaryPredicate P) {
+  // TODO: switch back to std::none_of() after it becomes constexpr in c++20.
+  return !any_of(Range, P);
 }
 
 /// Provide wrappers to std::fill which take ranges instead of having to pass
@@ -2140,7 +2161,17 @@ void append_range(Container &C, Range &&R) {
 /// Appends all `Values` to container `C`.
 template <typename Container, typename... Args>
 void append_values(Container &C, Args &&...Values) {
-  C.reserve(range_size(C) + sizeof...(Args));
+  if (size_t InitialSize = range_size(C); InitialSize == 0) {
+    // Only reserve if the container is empty. Reserving on a non-empty
+    // container may interfere with the exponential growth strategy, if the
+    // container does not round up the capacity. Consider `append_values` called
+    // repeatedly in a loop: each call would reserve exactly `size + N`, causing
+    // the capacity to grow linearly (e.g., 100 -> 105 -> 110 -> ...) instead of
+    // exponentially (e.g., 100 -> 200 -> ...). Linear growth turns the
+    // amortized O(1) append into O(n) because every few insertions trigger a
+    // reallocation and copy of all elements.
+    C.reserve(InitialSize + sizeof...(Args));
+  }
   // Append all values one by one.
   ((void)C.insert(C.end(), std::forward<Args>(Values)), ...);
 }
@@ -2599,16 +2630,6 @@ template <typename ContainerTy>
 bool hasNItemsOrLess(ContainerTy &&C, unsigned N) {
   return hasNItemsOrLess(adl_begin(C), adl_end(C), N);
 }
-
-/// Returns a raw pointer that represents the same address as the argument.
-///
-/// This implementation can be removed once we move to C++20 where it's defined
-/// as std::to_address().
-///
-/// The std::pointer_traits<>::to_address(p) variations of these overloads has
-/// not been implemented.
-template <class Ptr> auto to_address(const Ptr &P) { return P.operator->(); }
-template <class T> constexpr T *to_address(T *P) { return P; }
 
 // Detect incomplete types, relying on the fact that their size is unknown.
 namespace detail {

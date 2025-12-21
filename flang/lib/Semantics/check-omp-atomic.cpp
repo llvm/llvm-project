@@ -19,6 +19,7 @@
 #include "flang/Evaluate/rewrite.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/char-block.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/symbol.h"
@@ -41,6 +42,7 @@
 
 namespace Fortran::semantics {
 
+using namespace Fortran::parser::omp;
 using namespace Fortran::semantics::omp;
 
 namespace operation = Fortran::evaluate::operation;
@@ -286,7 +288,7 @@ static std::optional<AnalyzedCondStmt> AnalyzeConditionalStmt(
   // Extract the evaluate::Expr from ScalarLogicalExpr.
   auto getFromLogical{[](const parser::ScalarLogicalExpr &logical) {
     // ScalarLogicalExpr is Scalar<Logical<common::Indirection<Expr>>>
-    const parser::Expr &expr{logical.thing.thing.value()};
+    auto &expr{parser::UnwrapRef<parser::Expr>(logical)};
     return GetEvaluateExpr(expr);
   }};
 
@@ -585,14 +587,26 @@ void OmpStructureChecker::CheckAtomicVariable(
   }
 
   std::vector<SomeExpr> dsgs{GetAllDesignators(atom)};
-  assert(dsgs.size() == 1 && "Should have a single top-level designator");
+
+  // Procedure references are valid if they return a pointer to a scalar.
+  // Just return if we don't have exactly one designator - other checks will
+  // diagnose any actual errors.
+  if (dsgs.size() != 1) {
+    return;
+  }
+
   evaluate::SymbolVector syms{evaluate::GetSymbolVector(dsgs.front())};
+  if (syms.empty()) {
+    return;
+  }
 
   CheckAtomicType(syms.back(), source, atom.AsFortran(), checkTypeOnPointer);
 
-  if (IsAllocatable(syms.back()) && !IsArrayElement(atom)) {
-    context_.Say(source, "Atomic variable %s cannot be ALLOCATABLE"_err_en_US,
-        atom.AsFortran());
+  if (!IsArrayElement(atom) && !ExtractComplexPart(atom)) {
+    if (IsAllocatable(syms.back())) {
+      context_.Say(source, "Atomic variable %s cannot be ALLOCATABLE"_err_en_US,
+          atom.AsFortran());
+    }
   }
 }
 

@@ -10,7 +10,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "AmbiguousSmartptrResetCallCheck.h"
-#include "AvoidConstParamsInDecls.h"
+#include "AvoidConstParamsInDeclsCheck.h"
 #include "AvoidNestedConditionalOperatorCheck.h"
 #include "AvoidReturnWithVoidValueCheck.h"
 #include "AvoidUnconditionalPreprocessorIfCheck.h"
@@ -19,7 +19,7 @@
 #include "ContainerContainsCheck.h"
 #include "ContainerDataPointerCheck.h"
 #include "ContainerSizeEmptyCheck.h"
-#include "ConvertMemberFunctionsToStatic.h"
+#include "ConvertMemberFunctionsToStaticCheck.h"
 #include "DeleteNullPointerCheck.h"
 #include "DuplicateIncludeCheck.h"
 #include "ElseAfterReturnCheck.h"
@@ -52,6 +52,7 @@
 #include "RedundantSmartptrGetCheck.h"
 #include "RedundantStringCStrCheck.h"
 #include "RedundantStringInitCheck.h"
+#include "RedundantTypenameCheck.h"
 #include "ReferenceToConstructedTemporaryCheck.h"
 #include "SimplifyBooleanExprCheck.h"
 #include "SimplifySubscriptExprCheck.h"
@@ -67,13 +68,14 @@
 
 namespace clang::tidy {
 namespace readability {
+namespace {
 
 class ReadabilityModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AmbiguousSmartptrResetCallCheck>(
         "readability-ambiguous-smartptr-reset-call");
-    CheckFactories.registerCheck<AvoidConstParamsInDecls>(
+    CheckFactories.registerCheck<AvoidConstParamsInDeclsCheck>(
         "readability-avoid-const-params-in-decls");
     CheckFactories.registerCheck<AvoidNestedConditionalOperatorCheck>(
         "readability-avoid-nested-conditional-operator");
@@ -91,7 +93,7 @@ public:
         "readability-container-data-pointer");
     CheckFactories.registerCheck<ContainerSizeEmptyCheck>(
         "readability-container-size-empty");
-    CheckFactories.registerCheck<ConvertMemberFunctionsToStatic>(
+    CheckFactories.registerCheck<ConvertMemberFunctionsToStaticCheck>(
         "readability-convert-member-functions-to-static");
     CheckFactories.registerCheck<DeleteNullPointerCheck>(
         "readability-delete-null-pointer");
@@ -143,6 +145,8 @@ public:
         "readability-redundant-parentheses");
     CheckFactories.registerCheck<RedundantPreprocessorCheck>(
         "readability-redundant-preprocessor");
+    CheckFactories.registerCheck<RedundantTypenameCheck>(
+        "readability-redundant-typename");
     CheckFactories.registerCheck<ReferenceToConstructedTemporaryCheck>(
         "readability-reference-to-constructed-temporary");
     CheckFactories.registerCheck<SimplifySubscriptExprCheck>(
@@ -183,6 +187,8 @@ public:
         "readability-use-std-min-max");
   }
 };
+
+} // namespace
 
 // Register the ReadabilityModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<ReadabilityModule>

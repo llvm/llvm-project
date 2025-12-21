@@ -1495,15 +1495,14 @@ static void randomizeSectionPadding(Ctx &ctx) {
       if (auto *isd = dyn_cast<InputSectionDescription>(bc)) {
         SmallVector<InputSection *, 0> tmp;
         if (os->ptLoad != curPtLoad) {
-          tmp.push_back(make<RandomizePaddingSection>(
-              ctx, g() % ctx.arg.maxPageSize, os));
+          tmp.push_back(
+              make<PaddingSection>(ctx, g() % ctx.arg.maxPageSize, os));
           curPtLoad = os->ptLoad;
         }
         for (InputSection *isec : isd->sections) {
           // Probability of inserting padding is 1 in 16.
           if (g() % 16 == 0)
-            tmp.push_back(
-                make<RandomizePaddingSection>(ctx, isec->addralign, os));
+            tmp.push_back(make<PaddingSection>(ctx, isec->addralign, os));
           tmp.push_back(isec);
         }
         isd->sections = std::move(tmp);

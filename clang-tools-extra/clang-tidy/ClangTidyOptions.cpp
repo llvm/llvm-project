@@ -52,10 +52,9 @@ template <> struct MappingTraits<FileFilter> {
   static std::string validate(IO &Io, FileFilter &File) {
     if (File.Name.empty())
       return "No file name specified";
-    for (const FileFilter::LineRange &Range : File.LineRanges) {
+    for (const FileFilter::LineRange &Range : File.LineRanges)
       if (Range.first <= 0 || Range.second <= 0)
         return "Invalid line range";
-    }
     return "";
   }
 };
@@ -66,6 +65,8 @@ template <> struct MappingTraits<ClangTidyOptions::StringPair> {
     IO.mapRequired("value", KeyValue.second);
   }
 };
+
+namespace {
 
 struct NOptionMap {
   NOptionMap(IO &) {}
@@ -84,6 +85,8 @@ struct NOptionMap {
   std::vector<ClangTidyOptions::StringPair> Options;
 };
 
+} // namespace
+
 template <>
 void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
              EmptyContext &Ctx) {
@@ -91,9 +94,8 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
     // Ensure check options are sorted
     std::vector<std::pair<StringRef, StringRef>> SortedOptions;
     SortedOptions.reserve(Val.size());
-    for (auto &Key : Val) {
+    for (auto &Key : Val)
       SortedOptions.emplace_back(Key.getKey(), Key.getValue().Value);
-    }
     std::sort(SortedOptions.begin(), SortedOptions.end());
 
     IO.beginMapping();
@@ -119,7 +121,7 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
       yamlize(IO, NOpts->Options, true, Ctx);
     } else if (isa<MappingNode>(I.getCurrentNode())) {
       IO.beginMapping();
-      for (StringRef Key : IO.keys()) {
+      for (const StringRef Key : IO.keys()) {
         // Requires 'llvm::yaml::IO' to accept 'StringRef'
         // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
         IO.mapRequired(Key.data(), Val[Key].Value);
@@ -178,12 +180,17 @@ template <> struct MappingTraits<ClangTidyOptions::CustomCheckValue> {
   }
 };
 
-struct ChecksVariant {
+namespace {
+
+struct GlobListVariant {
   std::optional<std::string> AsString;
   std::optional<std::vector<std::string>> AsVector;
 };
 
-template <> void yamlize(IO &IO, ChecksVariant &Val, bool, EmptyContext &Ctx) {
+} // namespace
+
+template <>
+void yamlize(IO &IO, GlobListVariant &Val, bool, EmptyContext &Ctx) {
   if (!IO.outputting()) {
     // Special case for reading from YAML
     // Must support reading from both a string or a list
@@ -200,25 +207,26 @@ template <> void yamlize(IO &IO, ChecksVariant &Val, bool, EmptyContext &Ctx) {
   }
 }
 
-static void mapChecks(IO &IO, std::optional<std::string> &Checks) {
+static void mapGlobList(IO &IO, std::optional<std::string> &GlobList,
+                        StringRef Key) {
   if (IO.outputting()) {
     // Output always a string
-    IO.mapOptional("Checks", Checks);
+    IO.mapOptional(Key, GlobList);
   } else {
     // Input as either a string or a list
-    ChecksVariant ChecksAsVariant;
-    IO.mapOptional("Checks", ChecksAsVariant);
-    if (ChecksAsVariant.AsString)
-      Checks = ChecksAsVariant.AsString;
-    else if (ChecksAsVariant.AsVector)
-      Checks = llvm::join(*ChecksAsVariant.AsVector, ",");
+    GlobListVariant GlobListAsVariant;
+    IO.mapOptional(Key, GlobListAsVariant);
+    if (GlobListAsVariant.AsString)
+      GlobList = GlobListAsVariant.AsString;
+    else if (GlobListAsVariant.AsVector)
+      GlobList = llvm::join(*GlobListAsVariant.AsVector, ",");
   }
 }
 
 template <> struct MappingTraits<ClangTidyOptions> {
   static void mapping(IO &IO, ClangTidyOptions &Options) {
-    mapChecks(IO, Options.Checks);
-    IO.mapOptional("WarningsAsErrors", Options.WarningsAsErrors);
+    mapGlobList(IO, Options.Checks, "Checks");
+    mapGlobList(IO, Options.WarningsAsErrors, "WarningsAsErrors");
     IO.mapOptional("HeaderFileExtensions", Options.HeaderFileExtensions);
     IO.mapOptional("ImplementationFileExtensions",
                    Options.ImplementationFileExtensions);
@@ -230,6 +238,7 @@ template <> struct MappingTraits<ClangTidyOptions> {
     IO.mapOptional("CheckOptions", Options.CheckOptions);
     IO.mapOptional("ExtraArgs", Options.ExtraArgs);
     IO.mapOptional("ExtraArgsBefore", Options.ExtraArgsBefore);
+    IO.mapOptional("RemovedArgs", Options.RemovedArgs);
     IO.mapOptional("InheritParentConfig", Options.InheritParentConfig);
     IO.mapOptional("UseColor", Options.UseColor);
     IO.mapOptional("SystemHeaders", Options.SystemHeaders);
@@ -247,11 +256,12 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
   Options.WarningsAsErrors = "";
   Options.HeaderFileExtensions = {"", "h", "hh", "hpp", "hxx"};
   Options.ImplementationFileExtensions = {"c", "cc", "cpp", "cxx"};
-  Options.HeaderFilterRegex = "";
+  Options.HeaderFilterRegex = ".*";
   Options.ExcludeHeaderFilterRegex = "";
   Options.SystemHeaders = false;
   Options.FormatStyle = "none";
   Options.User = std::nullopt;
+  Options.RemovedArgs = std::nullopt;
   for (const ClangTidyModuleRegistry::entry &Module :
        ClangTidyModuleRegistry::entries())
     Options.mergeWith(Module.instantiate()->getModuleOptions(), 0);
@@ -295,6 +305,7 @@ ClangTidyOptions &ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
   overrideValue(UseColor, Other.UseColor);
   mergeVectors(ExtraArgs, Other.ExtraArgs);
   mergeVectors(ExtraArgsBefore, Other.ExtraArgsBefore);
+  mergeVectors(RemovedArgs, Other.RemovedArgs);
   // FIXME: how to handle duplicate names check?
   mergeVectors(CustomChecks, Other.CustomChecks);
   for (const auto &KeyValue : Other.CheckOptions) {
@@ -356,9 +367,8 @@ ConfigOptionsProvider::getRawOptions(llvm::StringRef FileName) {
 
     llvm::ErrorOr<llvm::SmallString<128>> AbsoluteFilePath =
         getNormalizedAbsolutePath(FileName);
-    if (AbsoluteFilePath) {
+    if (AbsoluteFilePath)
       addRawFileOptions(AbsoluteFilePath->str(), RawOptions);
-    }
   }
   RawOptions.emplace_back(ConfigOptions,
                           OptionsSourceTypeConfigCommandLineOption);
@@ -392,7 +402,7 @@ llvm::ErrorOr<llvm::SmallString<128>>
 FileOptionsBaseProvider::getNormalizedAbsolutePath(llvm::StringRef Path) {
   assert(FS && "FS must be set.");
   llvm::SmallString<128> NormalizedAbsolutePath = {Path};
-  std::error_code Err = FS->makeAbsolute(NormalizedAbsolutePath);
+  const std::error_code Err = FS->makeAbsolute(NormalizedAbsolutePath);
   if (Err)
     return Err;
   llvm::sys::path::remove_dots(NormalizedAbsolutePath, /*remove_dot_dot=*/true);
@@ -463,7 +473,7 @@ FileOptionsProvider::getRawOptions(StringRef FileName) {
   LLVM_DEBUG(llvm::dbgs() << "Getting options for file " << FileName
                           << "...\n");
 
-  llvm::ErrorOr<llvm::SmallString<128>> AbsoluteFilePath =
+  const llvm::ErrorOr<llvm::SmallString<128>> AbsoluteFilePath =
       getNormalizedAbsolutePath(FileName);
   if (!AbsoluteFilePath)
     return {};
@@ -471,8 +481,8 @@ FileOptionsProvider::getRawOptions(StringRef FileName) {
   std::vector<OptionsSource> RawOptions =
       DefaultOptionsProvider::getRawOptions(AbsoluteFilePath->str());
   addRawFileOptions(AbsoluteFilePath->str(), RawOptions);
-  OptionsSource CommandLineOptions(OverrideOptions,
-                                   OptionsSourceTypeCheckCommandLineOption);
+  const OptionsSource CommandLineOptions(
+      OverrideOptions, OptionsSourceTypeCheckCommandLineOption);
 
   RawOptions.push_back(CommandLineOptions);
   return RawOptions;
@@ -502,7 +512,7 @@ FileOptionsBaseProvider::tryReadConfigFile(StringRef Directory) {
 
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
         FS->getBufferForFile(ConfigFile);
-    if (std::error_code EC = Text.getError()) {
+    if (const std::error_code EC = Text.getError()) {
       llvm::errs() << "Can't read " << ConfigFile << ": " << EC.message()
                    << "\n";
       continue;

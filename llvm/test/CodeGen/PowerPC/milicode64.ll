@@ -100,3 +100,82 @@ entry:
 }
 
 declare i64 @strlen(ptr noundef) nounwind
+
+define ptr @test_memmove(ptr noundef %destination, ptr noundef %source, i64 noundef %num) #0 {
+; CHECK-LE-P9-LABEL: test_memmove:
+; CHECK-LE-P9:       # %bb.0: # %entry
+; CHECK-LE-P9-NEXT:    mflr r0
+; CHECK-LE-P9-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-LE-P9-NEXT:    .cfi_offset lr, 16
+; CHECK-LE-P9-NEXT:    .cfi_offset r30, -16
+; CHECK-LE-P9-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-LE-P9-NEXT:    stdu r1, -80(r1)
+; CHECK-LE-P9-NEXT:    std r0, 96(r1)
+; CHECK-LE-P9-NEXT:    mr r30, r3
+; CHECK-LE-P9-NEXT:    std r3, 56(r1)
+; CHECK-LE-P9-NEXT:    std r4, 48(r1)
+; CHECK-LE-P9-NEXT:    std r5, 40(r1)
+; CHECK-LE-P9-NEXT:    bl memmove
+; CHECK-LE-P9-NEXT:    nop
+; CHECK-LE-P9-NEXT:    mr r3, r30
+; CHECK-LE-P9-NEXT:    addi r1, r1, 80
+; CHECK-LE-P9-NEXT:    ld r0, 16(r1)
+; CHECK-LE-P9-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-LE-P9-NEXT:    mtlr r0
+; CHECK-LE-P9-NEXT:    blr
+;
+; CHECK-BE-P9-LABEL: test_memmove:
+; CHECK-BE-P9:       # %bb.0: # %entry
+; CHECK-BE-P9-NEXT:    mflr r0
+; CHECK-BE-P9-NEXT:    stdu r1, -160(r1)
+; CHECK-BE-P9-NEXT:    std r0, 176(r1)
+; CHECK-BE-P9-NEXT:    .cfi_def_cfa_offset 160
+; CHECK-BE-P9-NEXT:    .cfi_offset lr, 16
+; CHECK-BE-P9-NEXT:    .cfi_offset r30, -16
+; CHECK-BE-P9-NEXT:    std r30, 144(r1) # 8-byte Folded Spill
+; CHECK-BE-P9-NEXT:    mr r30, r3
+; CHECK-BE-P9-NEXT:    std r3, 136(r1)
+; CHECK-BE-P9-NEXT:    std r4, 128(r1)
+; CHECK-BE-P9-NEXT:    std r5, 120(r1)
+; CHECK-BE-P9-NEXT:    bl memmove
+; CHECK-BE-P9-NEXT:    nop
+; CHECK-BE-P9-NEXT:    mr r3, r30
+; CHECK-BE-P9-NEXT:    ld r30, 144(r1) # 8-byte Folded Reload
+; CHECK-BE-P9-NEXT:    addi r1, r1, 160
+; CHECK-BE-P9-NEXT:    ld r0, 16(r1)
+; CHECK-BE-P9-NEXT:    mtlr r0
+; CHECK-BE-P9-NEXT:    blr
+;
+; CHECK-AIX-64-P9-LABEL: test_memmove:
+; CHECK-AIX-64-P9:       # %bb.0: # %entry
+; CHECK-AIX-64-P9-NEXT:    mflr r0
+; CHECK-AIX-64-P9-NEXT:    stdu r1, -144(r1)
+; CHECK-AIX-64-P9-NEXT:    std r0, 160(r1)
+; CHECK-AIX-64-P9-NEXT:    std r31, 136(r1) # 8-byte Folded Spill
+; CHECK-AIX-64-P9-NEXT:    mr r31, r3
+; CHECK-AIX-64-P9-NEXT:    std r3, 128(r1)
+; CHECK-AIX-64-P9-NEXT:    std r4, 120(r1)
+; CHECK-AIX-64-P9-NEXT:    std r5, 112(r1)
+; CHECK-AIX-64-P9-NEXT:    bl .___memmove64[PR]
+; CHECK-AIX-64-P9-NEXT:    nop
+; CHECK-AIX-64-P9-NEXT:    mr r3, r31
+; CHECK-AIX-64-P9-NEXT:    ld r31, 136(r1) # 8-byte Folded Reload
+; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 144
+; CHECK-AIX-64-P9-NEXT:    ld r0, 16(r1)
+; CHECK-AIX-64-P9-NEXT:    mtlr r0
+; CHECK-AIX-64-P9-NEXT:    blr
+entry:
+  %destination.addr = alloca ptr, align 8
+  %source.addr = alloca ptr, align 8
+  %num.addr = alloca i64, align 8
+  store ptr %destination, ptr %destination.addr, align 8
+  store ptr %source, ptr %source.addr, align 8
+  store i64 %num, ptr %num.addr, align 8
+  %0 = load ptr, ptr %destination.addr, align 8
+  %1 = load ptr, ptr %source.addr, align 8
+  %2 = load i64, ptr %num.addr, align 8
+  call void @llvm.memmove.p0.p0.i64(ptr align 1 %0, ptr align 1 %1, i64 %2, i1 false)
+  ret ptr %0
+}
+
+declare void @llvm.memmove.p0.p0.i32(ptr writeonly captures(none), ptr readonly captures(none), i32, i1 immarg)

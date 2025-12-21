@@ -39,36 +39,12 @@ void ARMTargetInfo::setABIAAPCS() {
 
   ZeroLengthBitfieldBoundary = 0;
 
-  // Thumb1 add sp, #imm requires the immediate value be multiple of 4,
-  // so set preferred for small types to 32.
-  if (T.isOSBinFormatMachO()) {
-    resetDataLayout(BigEndian
-                        ? "E-m:o-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-                        : "e-m:o-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64",
-                    "_");
-  } else if (T.isOSWindows()) {
-    assert(!BigEndian && "Windows on ARM does not support big endian");
-    resetDataLayout("e"
-                    "-m:w"
-                    "-p:32:32"
-                    "-Fi8"
-                    "-i64:64"
-                    "-v128:64:128"
-                    "-a:0:32"
-                    "-n32"
-                    "-S64");
-  } else {
-    resetDataLayout(BigEndian
-                        ? "E-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-                        : "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64");
-  }
+  resetDataLayout();
 
   // FIXME: Enumerated types are variable width in straight AAPCS.
 }
 
 void ARMTargetInfo::setABIAPCS(bool IsAAPCS16) {
-  const llvm::Triple &T = getTriple();
-
   IsAAPCS = false;
 
   if (IsAAPCS16)
@@ -89,20 +65,7 @@ void ARMTargetInfo::setABIAPCS(bool IsAAPCS16) {
   /// gcc.
   ZeroLengthBitfieldBoundary = 32;
 
-  if (T.isOSBinFormatMachO() && IsAAPCS16) {
-    assert(!BigEndian && "AAPCS16 does not support big-endian");
-    resetDataLayout("e-m:o-p:32:32-Fi8-i64:64-a:0:32-n32-S128", "_");
-  } else if (T.isOSBinFormatMachO())
-    resetDataLayout(
-        BigEndian
-            ? "E-m:o-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
-            : "e-m:o-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32",
-        "_");
-  else
-    resetDataLayout(
-        BigEndian
-            ? "E-m:e-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
-            : "e-m:e-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32");
+  resetDataLayout();
 
   // FIXME: Override "preferred align" for double and long long.
 }
@@ -231,6 +194,8 @@ StringRef ARMTargetInfo::getCPUAttr() const {
     return "9_5A";
   case llvm::ARM::ArchKind::ARMV9_6A:
     return "9_6A";
+  case llvm::ARM::ArchKind::ARMV9_7A:
+    return "9_7A";
   case llvm::ARM::ArchKind::ARMV8MBaseline:
     return "8M_BASE";
   case llvm::ARM::ArchKind::ARMV8MMainline:
@@ -260,6 +225,7 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     : TargetInfo(Triple), FPMath(FP_Default), IsAAPCS(true), LDREX(0),
       HW_FP(0) {
   bool IsFreeBSD = Triple.isOSFreeBSD();
+  bool IsFuchsia = Triple.isOSFuchsia();
   bool IsOpenBSD = Triple.isOSOpenBSD();
   bool IsNetBSD = Triple.isOSNetBSD();
   bool IsHaiku = Triple.isOSHaiku();
@@ -332,7 +298,7 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     default:
       if (IsNetBSD)
         setABI("apcs-gnu");
-      else if (IsFreeBSD || IsOpenBSD || IsHaiku || IsOHOS)
+      else if (IsFreeBSD || IsFuchsia || IsOpenBSD || IsHaiku || IsOHOS)
         setABI("aapcs-linux");
       else
         setABI("aapcs");
@@ -903,6 +869,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_4A:
   case llvm::ARM::ArchKind::ARMV9_5A:
   case llvm::ARM::ArchKind::ARMV9_6A:
+  case llvm::ARM::ArchKind::ARMV9_7A:
     // Filter __arm_cdp, __arm_ldcl, __arm_stcl in arm_acle.h
     FeatureCoprocBF = FEATURE_COPROC_B1 | FEATURE_COPROC_B3;
     break;
@@ -1073,6 +1040,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_4A:
   case llvm::ARM::ArchKind::ARMV9_5A:
   case llvm::ARM::ArchKind::ARMV9_6A:
+  case llvm::ARM::ArchKind::ARMV9_7A:
     getTargetDefinesARMV83A(Opts, Builder);
     break;
   }
@@ -1540,7 +1508,7 @@ CygwinARMTargetInfo::CygwinARMTargetInfo(const llvm::Triple &Triple,
   this->WCharType = TargetInfo::UnsignedShort;
   TLSSupported = false;
   DoubleAlign = LongLongAlign = 64;
-  resetDataLayout("e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64");
+  resetDataLayout();
 }
 
 void CygwinARMTargetInfo::getTargetDefines(const LangOptions &Opts,

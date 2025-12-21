@@ -30,7 +30,7 @@ is clear on usage, follow it.
   is pretty good and comes with lots of justifications for its rules.
 * Reasonable exceptions to these guidelines can be made.
 * Be aware of some workarounds for known issues in older C++ compilers that should
-  still be able to compile f18. They are listed at the end of this document.
+  still be able to compile Flang. They are listed at the end of this document.
 
 ## In particular:
 
@@ -261,7 +261,7 @@ move semantics, member access, and comparison for equality; suitable for use in
 `std::variant<>`.
 * `std::unique_ptr<>`: A nullable pointer with ownership, null by default,
 not copyable, reassignable.
-F18 has a helpful `Deleter<>` class template that makes `unique_ptr<>`
+Flang has a helpful `Deleter<>` class template that makes `unique_ptr<>`
 easier to use with forward-referenced data types.
 * `std::shared_ptr<>`: A nullable pointer with shared ownership via reference
 counting, null by default, shallowly copyable, reassignable, and slow.
@@ -312,9 +312,9 @@ Consistency is one of many aspects in the pursuit of clarity,
 but not an end in itself.
 
 ## C++ compiler bug workarounds
-Below is a list of workarounds for C++ compiler bugs met with f18 that, even
-if the bugs are fixed in latest C++ compiler versions, need to be applied so
-that all desired tool-chains can compile f18.
+Below is a list of workarounds for C++ compiler bugs encountered when building
+Flang. Even if the bugs are fixed in latest C++ compiler versions, these need to
+be applied so that all desired tool-chains can compile Flang.
 
 ### Explicitly move noncopyable local variable into optional results
 
@@ -338,7 +338,7 @@ std::optional<CantBeCopied> fooOK() {
 }
 ```
 The underlying bug is actually not specific to `std::optional` but this is the most common
-case in f18 where the issue may occur. The actual bug can be reproduced with any class `B`
+case in Flang where the issue may occur. The actual bug can be reproduced with any class `B`
 that has a perfect forwarding constructor taking `CantBeCopied` as argument:
 `template<typename CantBeCopied> B(CantBeCopied&& x) x_{std::forward<CantBeCopied>(x)} {}`.
 In such scenarios, Ubuntu 18.04 g++ fails to instantiate the move constructor

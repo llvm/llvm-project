@@ -34,7 +34,6 @@ private:
   }
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
-private:
   bool IgnoreMacros;
   bool StrictMode;
 };

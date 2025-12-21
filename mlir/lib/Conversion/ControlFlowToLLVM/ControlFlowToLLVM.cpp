@@ -137,8 +137,7 @@ static SmallVector<Value> flattenValues(ArrayRef<ValueRange> values) {
 /// op to llvm.br.
 struct BranchOpLowering : public ConvertOpToLLVMPattern<cf::BranchOp> {
   using ConvertOpToLLVMPattern<cf::BranchOp>::ConvertOpToLLVMPattern;
-  using Adaptor =
-      typename ConvertOpToLLVMPattern<cf::BranchOp>::OneToNOpAdaptor;
+  using Adaptor = ConvertOpToLLVMPattern<cf::BranchOp>::OneToNOpAdaptor;
 
   LogicalResult
   matchAndRewrite(cf::BranchOp op, Adaptor adaptor,
@@ -163,8 +162,7 @@ struct BranchOpLowering : public ConvertOpToLLVMPattern<cf::BranchOp> {
 /// branch op to llvm.cond_br.
 struct CondBranchOpLowering : public ConvertOpToLLVMPattern<cf::CondBranchOp> {
   using ConvertOpToLLVMPattern<cf::CondBranchOp>::ConvertOpToLLVMPattern;
-  using Adaptor =
-      typename ConvertOpToLLVMPattern<cf::CondBranchOp>::OneToNOpAdaptor;
+  using Adaptor = ConvertOpToLLVMPattern<cf::CondBranchOp>::OneToNOpAdaptor;
 
   LogicalResult
   matchAndRewrite(cf::CondBranchOp op, Adaptor adaptor,
@@ -204,7 +202,7 @@ struct SwitchOpLowering : public ConvertOpToLLVMPattern<cf::SwitchOp> {
   using ConvertOpToLLVMPattern<cf::SwitchOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(cf::SwitchOp op, typename cf::SwitchOp::Adaptor adaptor,
+  matchAndRewrite(cf::SwitchOp op, cf::SwitchOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Get or convert default block.
     FailureOr<Block *> convertedDefaultBlock = getConvertedBlock(

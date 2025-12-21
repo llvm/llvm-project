@@ -628,9 +628,17 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
               "extension is enabled");
   }
 
-  for (StringRef Input : {"rv32id_zcd1p0_zcmp1p0", "rv64id_zcd1p0_zcmp1p0"}) {
+  // RV32 + D + Zcd doesn't synthesize C (needs Zcf), so error mentions 'zcd'
+  for (StringRef Input : {"rv32id_zcd1p0_zcmp1p0"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "'zcmp' extension is incompatible with 'zcd' extension when 'd' "
+              "extension is enabled");
+  }
+
+  // RV64 + D + Zcd synthesizes C, so error mentions 'c'
+  for (StringRef Input : {"rv64id_zcd1p0_zcmp1p0"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zcmp' extension is incompatible with 'c' extension when 'd' "
               "extension is enabled");
   }
 
@@ -640,9 +648,17 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
               "extension is enabled");
   }
 
-  for (StringRef Input : {"rv32id_zcd1p0_zcmt1p0", "rv64id_zcd1p0_zcmt1p0"}) {
+  // RV32 + D + Zcd doesn't synthesize C (needs Zcf), so error mentions 'zcd'
+  for (StringRef Input : {"rv32id_zcd1p0_zcmt1p0"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "'zcmt' extension is incompatible with 'zcd' extension when 'd' "
+              "extension is enabled");
+  }
+
+  // RV64 + D + Zcd synthesizes C, so error mentions 'c'
+  for (StringRef Input : {"rv64id_zcd1p0_zcmt1p0"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zcmt' extension is incompatible with 'c' extension when 'd' "
               "extension is enabled");
   }
 
@@ -687,7 +703,8 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
         "rv64i_xqcics0p2", "rv64i_xqcicsr0p4", "rv64i_xqciint0p10",
         "rv64i_xqciio0p1", "rv64i_xqcilb0p2", "rv64i_xqcili0p2",
         "rv64i_xqcilia0p2", "rv64i_xqcilo0p3", "rv64i_xqcilsm0p6",
-        "rv64i_xqcisim0p2", "rv64i_xqcisls0p2", "rv64i_xqcisync0p3"}) {
+        "rv64i_xqcisim0p2", "rv64i_xqcisls0p2", "rv64i_xqcisync0p3",
+        "rv64i_xqci0p13"}) {
     EXPECT_THAT(
         toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
         ::testing::EndsWith(" is only supported for 'rv32'"));
@@ -695,7 +712,8 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
 
   for (StringRef Input :
        {"rv32idc_xqciac0p3", "rv32i_zcd_xqciac0p3", "rv32idc_xqcicm0p2",
-        "rv32i_zcd_xqcicm0p2", "rv32idc_xqccmp0p3", "rv32i_zcd_xqccmp0p3"}) {
+        "rv32i_zcd_xqcicm0p2", "rv32idc_xqccmp0p3", "rv32i_zcd_xqccmp0p3",
+        "rv32idc_xqci0p13", "rv32i_zcd_xqci0p13"}) {
     EXPECT_THAT(
         toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
         ::testing::EndsWith("extension when 'd' extension is enabled"));
@@ -730,6 +748,11 @@ TEST(ParseArchString, MissingDepency) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "");
   }
+
+  EXPECT_EQ(toString(RISCVISAInfo::parseArchString("rv64i_xsfvfbfexp16e", true)
+                         .takeError()),
+            "'xsfvfbfexp16e' requires 'zvfbfmin' or 'zvfbfa' extension to also "
+            "be specified");
 }
 
 TEST(ParseArchString, RejectsUnrecognizedProfileNames) {
@@ -863,11 +886,13 @@ TEST(OrderedExtensionMap, ExtensionsAreCorrectlyOrdered) {
 }
 
 TEST(ParseArchString, ZceImplication) {
+  // RV32 Zce without F/D: Zca implies C
   auto MaybeRV32IZce = RISCVISAInfo::parseArchString("rv32izce", true);
   ASSERT_THAT_EXPECTED(MaybeRV32IZce, Succeeded());
   const auto &ExtsRV32IZce = (*MaybeRV32IZce)->getExtensions();
-  EXPECT_EQ(ExtsRV32IZce.size(), 7UL);
+  EXPECT_EQ(ExtsRV32IZce.size(), 8UL);
   EXPECT_EQ(ExtsRV32IZce.count("i"), 1U);
+  EXPECT_EQ(ExtsRV32IZce.count("c"), 1U);
   EXPECT_EQ(ExtsRV32IZce.count("zicsr"), 1U);
   EXPECT_EQ(ExtsRV32IZce.count("zca"), 1U);
   EXPECT_EQ(ExtsRV32IZce.count("zcb"), 1U);
@@ -875,11 +900,13 @@ TEST(ParseArchString, ZceImplication) {
   EXPECT_EQ(ExtsRV32IZce.count("zcmp"), 1U);
   EXPECT_EQ(ExtsRV32IZce.count("zcmt"), 1U);
 
+  // RV32 Zce with F (no D): Zca + Zcf implies C
   auto MaybeRV32IFZce = RISCVISAInfo::parseArchString("rv32ifzce", true);
   ASSERT_THAT_EXPECTED(MaybeRV32IFZce, Succeeded());
   const auto &ExtsRV32IFZce = (*MaybeRV32IFZce)->getExtensions();
-  EXPECT_EQ(ExtsRV32IFZce.size(), 9UL);
+  EXPECT_EQ(ExtsRV32IFZce.size(), 10UL);
   EXPECT_EQ(ExtsRV32IFZce.count("i"), 1U);
+  EXPECT_EQ(ExtsRV32IFZce.count("c"), 1U);
   EXPECT_EQ(ExtsRV32IFZce.count("zicsr"), 1U);
   EXPECT_EQ(ExtsRV32IFZce.count("f"), 1U);
   EXPECT_EQ(ExtsRV32IFZce.count("zca"), 1U);
@@ -889,11 +916,13 @@ TEST(ParseArchString, ZceImplication) {
   EXPECT_EQ(ExtsRV32IFZce.count("zcmp"), 1U);
   EXPECT_EQ(ExtsRV32IFZce.count("zcmt"), 1U);
 
+  // RV32 Zce with D: has Zcf but not Zcd, so no C
   auto MaybeRV32IDZce = RISCVISAInfo::parseArchString("rv32idzce", true);
   ASSERT_THAT_EXPECTED(MaybeRV32IDZce, Succeeded());
   const auto &ExtsRV32IDZce = (*MaybeRV32IDZce)->getExtensions();
   EXPECT_EQ(ExtsRV32IDZce.size(), 10UL);
   EXPECT_EQ(ExtsRV32IDZce.count("i"), 1U);
+  EXPECT_EQ(ExtsRV32IDZce.count("c"), 0U);
   EXPECT_EQ(ExtsRV32IDZce.count("zicsr"), 1U);
   EXPECT_EQ(ExtsRV32IDZce.count("f"), 1U);
   EXPECT_EQ(ExtsRV32IDZce.count("d"), 1U);
@@ -904,11 +933,13 @@ TEST(ParseArchString, ZceImplication) {
   EXPECT_EQ(ExtsRV32IDZce.count("zcmp"), 1U);
   EXPECT_EQ(ExtsRV32IDZce.count("zcmt"), 1U);
 
+  // RV64 Zce without F/D: Zca implies C
   auto MaybeRV64IZce = RISCVISAInfo::parseArchString("rv64izce", true);
   ASSERT_THAT_EXPECTED(MaybeRV64IZce, Succeeded());
   const auto &ExtsRV64IZce = (*MaybeRV64IZce)->getExtensions();
-  EXPECT_EQ(ExtsRV64IZce.size(), 7UL);
+  EXPECT_EQ(ExtsRV64IZce.size(), 8UL);
   EXPECT_EQ(ExtsRV64IZce.count("i"), 1U);
+  EXPECT_EQ(ExtsRV64IZce.count("c"), 1U);
   EXPECT_EQ(ExtsRV64IZce.count("zicsr"), 1U);
   EXPECT_EQ(ExtsRV64IZce.count("zca"), 1U);
   EXPECT_EQ(ExtsRV64IZce.count("zcb"), 1U);
@@ -916,11 +947,13 @@ TEST(ParseArchString, ZceImplication) {
   EXPECT_EQ(ExtsRV64IZce.count("zcmp"), 1U);
   EXPECT_EQ(ExtsRV64IZce.count("zcmt"), 1U);
 
+  // RV64 Zce with F (no D): Zca implies C (Zcf not relevant on RV64)
   auto MaybeRV64IFZce = RISCVISAInfo::parseArchString("rv64ifzce", true);
   ASSERT_THAT_EXPECTED(MaybeRV64IFZce, Succeeded());
   const auto &ExtsRV64IFZce = (*MaybeRV64IFZce)->getExtensions();
-  EXPECT_EQ(ExtsRV64IFZce.size(), 8UL);
+  EXPECT_EQ(ExtsRV64IFZce.size(), 9UL);
   EXPECT_EQ(ExtsRV64IFZce.count("i"), 1U);
+  EXPECT_EQ(ExtsRV64IFZce.count("c"), 1U);
   EXPECT_EQ(ExtsRV64IFZce.count("zicsr"), 1U);
   EXPECT_EQ(ExtsRV64IFZce.count("f"), 1U);
   EXPECT_EQ(ExtsRV64IFZce.count("zca"), 1U);
@@ -929,17 +962,13 @@ TEST(ParseArchString, ZceImplication) {
   EXPECT_EQ(ExtsRV64IFZce.count("zcmp"), 1U);
   EXPECT_EQ(ExtsRV64IFZce.count("zcmt"), 1U);
 
-  EXPECT_EQ(ExtsRV64IFZce.count("zca"), 1U);
-  EXPECT_EQ(ExtsRV64IFZce.count("zcb"), 1U);
-  EXPECT_EQ(ExtsRV64IFZce.count("zce"), 1U);
-  EXPECT_EQ(ExtsRV64IFZce.count("zcmp"), 1U);
-  EXPECT_EQ(ExtsRV64IFZce.count("zcmt"), 1U);
-
+  // RV64 Zce with D: has no Zcd, so no C
   auto MaybeRV64IDZce = RISCVISAInfo::parseArchString("rv64idzce", true);
   ASSERT_THAT_EXPECTED(MaybeRV64IDZce, Succeeded());
   const auto &ExtsRV64IDZce = (*MaybeRV64IDZce)->getExtensions();
   EXPECT_EQ(ExtsRV64IDZce.size(), 9UL);
   EXPECT_EQ(ExtsRV64IDZce.count("i"), 1U);
+  EXPECT_EQ(ExtsRV64IDZce.count("c"), 0U);
   EXPECT_EQ(ExtsRV64IDZce.count("zicsr"), 1U);
   EXPECT_EQ(ExtsRV64IDZce.count("f"), 1U);
   EXPECT_EQ(ExtsRV64IDZce.count("d"), 1U);
@@ -948,6 +977,72 @@ TEST(ParseArchString, ZceImplication) {
   EXPECT_EQ(ExtsRV64IDZce.count("zce"), 1U);
   EXPECT_EQ(ExtsRV64IDZce.count("zcmp"), 1U);
   EXPECT_EQ(ExtsRV64IDZce.count("zcmt"), 1U);
+}
+
+TEST(ParseArchString, ZcaImpliesC) {
+  // Test Zca implies C behavior matching GCC PR119122
+
+  // RV32 Zca alone implies C
+  auto MaybeRV32IZca = RISCVISAInfo::parseArchString("rv32i_zca", true);
+  ASSERT_THAT_EXPECTED(MaybeRV32IZca, Succeeded());
+  const auto &ExtsRV32IZca = (*MaybeRV32IZca)->getExtensions();
+  EXPECT_EQ(ExtsRV32IZca.count("c"), 1U);
+  EXPECT_EQ(ExtsRV32IZca.count("zca"), 1U);
+
+  // RV32 with F: Zca + Zcf implies C
+  auto MaybeRV32IFZcaZcf =
+      RISCVISAInfo::parseArchString("rv32if_zca_zcf", true);
+  ASSERT_THAT_EXPECTED(MaybeRV32IFZcaZcf, Succeeded());
+  const auto &ExtsRV32IFZcaZcf = (*MaybeRV32IFZcaZcf)->getExtensions();
+  EXPECT_EQ(ExtsRV32IFZcaZcf.count("c"), 1U);
+  EXPECT_EQ(ExtsRV32IFZcaZcf.count("zca"), 1U);
+  EXPECT_EQ(ExtsRV32IFZcaZcf.count("zcf"), 1U);
+
+  // RV32 with F but no Zcf: no C
+  auto MaybeRV32IFZca = RISCVISAInfo::parseArchString("rv32if_zca", true);
+  ASSERT_THAT_EXPECTED(MaybeRV32IFZca, Succeeded());
+  const auto &ExtsRV32IFZca = (*MaybeRV32IFZca)->getExtensions();
+  EXPECT_EQ(ExtsRV32IFZca.count("c"), 0U);
+  EXPECT_EQ(ExtsRV32IFZca.count("zca"), 1U);
+
+  // RV32 with D: Zca + Zcf + Zcd implies C
+  auto MaybeRV32IDZcaZcfZcd =
+      RISCVISAInfo::parseArchString("rv32ifd_zca_zcf_zcd", true);
+  ASSERT_THAT_EXPECTED(MaybeRV32IDZcaZcfZcd, Succeeded());
+  const auto &ExtsRV32IDZcaZcfZcd = (*MaybeRV32IDZcaZcfZcd)->getExtensions();
+  EXPECT_EQ(ExtsRV32IDZcaZcfZcd.count("c"), 1U);
+  EXPECT_EQ(ExtsRV32IDZcaZcfZcd.count("zca"), 1U);
+  EXPECT_EQ(ExtsRV32IDZcaZcfZcd.count("zcf"), 1U);
+  EXPECT_EQ(ExtsRV32IDZcaZcfZcd.count("zcd"), 1U);
+
+  // RV32 with D but no Zcd: no C
+  auto MaybeRV32IDZcaZcf =
+      RISCVISAInfo::parseArchString("rv32ifd_zca_zcf", true);
+  ASSERT_THAT_EXPECTED(MaybeRV32IDZcaZcf, Succeeded());
+  const auto &ExtsRV32IDZcaZcf = (*MaybeRV32IDZcaZcf)->getExtensions();
+  EXPECT_EQ(ExtsRV32IDZcaZcf.count("c"), 0U);
+
+  // RV64 Zca alone implies C
+  auto MaybeRV64IZca = RISCVISAInfo::parseArchString("rv64i_zca", true);
+  ASSERT_THAT_EXPECTED(MaybeRV64IZca, Succeeded());
+  const auto &ExtsRV64IZca = (*MaybeRV64IZca)->getExtensions();
+  EXPECT_EQ(ExtsRV64IZca.count("c"), 1U);
+  EXPECT_EQ(ExtsRV64IZca.count("zca"), 1U);
+
+  // RV64 with D: Zca + Zcd implies C
+  auto MaybeRV64IDZcaZcd =
+      RISCVISAInfo::parseArchString("rv64ifd_zca_zcd", true);
+  ASSERT_THAT_EXPECTED(MaybeRV64IDZcaZcd, Succeeded());
+  const auto &ExtsRV64IDZcaZcd = (*MaybeRV64IDZcaZcd)->getExtensions();
+  EXPECT_EQ(ExtsRV64IDZcaZcd.count("c"), 1U);
+  EXPECT_EQ(ExtsRV64IDZcaZcd.count("zca"), 1U);
+  EXPECT_EQ(ExtsRV64IDZcaZcd.count("zcd"), 1U);
+
+  // RV64 with D but no Zcd: no C
+  auto MaybeRV64IDZca = RISCVISAInfo::parseArchString("rv64ifd_zca", true);
+  ASSERT_THAT_EXPECTED(MaybeRV64IDZca, Succeeded());
+  const auto &ExtsRV64IDZca = (*MaybeRV64IDZca)->getExtensions();
+  EXPECT_EQ(ExtsRV64IDZca.count("c"), 0U);
 }
 
 TEST(isSupportedExtensionWithVersion, AcceptsSingleExtensionWithVersion) {
@@ -1162,6 +1257,11 @@ R"(All available -march extensions for RISC-V
     xsfmm64t             0.6
     xsfmmbase            0.6
     xsfvcp               1.0
+    xsfvfbfexp16e        0.5
+    xsfvfexp16e          0.5
+    xsfvfexp32e          0.5
+    xsfvfexpa            0.2
+    xsfvfexpa64e         0.2
     xsfvfnrclipxfqf      1.0
     xsfvfwmaccqqq        1.0
     xsfvqmaccdod         1.0
@@ -1184,7 +1284,7 @@ R"(All available -march extensions for RISC-V
     xwchc                2.2
 
 Experimental extensions
-    p                    0.15
+    p                    0.18
     zibi                 0.1
     zicfilp              1.0       This is a long dummy description
     zicfiss              1.0
@@ -1194,8 +1294,10 @@ Experimental extensions
     zvfofp8min           0.2
     zvkgs                0.7
     zvqdotq              0.0
+    smpmpmt              0.6
     svukte               0.3
     xqccmp               0.3
+    xqci                 0.13
     xqcia                0.7
     xqciac               0.3
     xqcibi               0.2

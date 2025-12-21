@@ -248,6 +248,7 @@ add_header_library(
 add_header_library(
   atanf
   HDRS
+    atanf_float.h
     atanf.h
   DEPENDS
     .inv_trigf_utils
@@ -770,6 +771,24 @@ add_header_library(
 )
 
 add_header_library(
+  exp2m1f16
+  HDRS
+    exp2m1f16.h
+  DEPENDS
+    .expxf16_utils
+    libc.src.__support.common
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
   exp10
   HDRS
     exp10.h
@@ -853,6 +872,43 @@ add_header_library(
 )
 
 add_header_library(
+  expm1
+  HDRS
+    expm1.h
+  DEPENDS
+    .common_constants
+    .exp_constants
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.FPUtil.triple_double
+    libc.src.__support.integer_literals
+    libc.src.__support.macros.optimization
+    libc.src.errno.errno
+)
+
+add_header_library(
+  expm1f
+  HDRS
+    expm1f.h
+  DEPENDS
+    .common_constants
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+    libc.src.errno.errno
+)
+
+add_header_library(
   range_reduction_double
   HDRS
     range_reduction_double_common.h
@@ -926,6 +982,7 @@ add_header_library(
   sincosf_utils
   HDRS
     sincosf_utils.h
+    sincosf_float_eval.h
   DEPENDS
     .range_reduction
     libc.src.__support.FPUtil.fp_bits

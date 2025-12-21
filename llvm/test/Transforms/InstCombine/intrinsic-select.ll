@@ -222,8 +222,7 @@ declare i32 @llvm.vector.reduce.add.v2i32(<2 x i32>)
 
 define i32 @vec_to_scalar_select_scalar(i1 %b) {
 ; CHECK-LABEL: @vec_to_scalar_select_scalar(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], <2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>
-; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[S]])
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[B:%.*]], i32 3, i32 7
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %s = select i1 %b, <2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>
@@ -370,4 +369,60 @@ define float @test_fabs_select_multiuse_both_constant(i1 %cond, float %x) {
   call void @usef32(float %select)
   %fabs = call float @llvm.fabs.f32(float %select)
   ret float %fabs
+}
+
+; Negative test: Don't replace with select between vector mask and zeroinitializer.
+define <16 x i1> @test_select_of_active_lane_mask_bound(i64 %base, i64 %n, i1 %cond) {
+; CHECK-LABEL: @test_select_of_active_lane_mask_bound(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], i64 [[N:%.*]], i64 0
+; CHECK-NEXT:    [[MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 [[BASE:%.*]], i64 [[S]])
+; CHECK-NEXT:    ret <16 x i1> [[MASK]]
+;
+  %s = select i1 %cond, i64 %n, i64 0
+  %mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 %base, i64 %s)
+  ret <16 x i1> %mask
+}
+
+define <16 x i1> @test_select_of_active_lane_mask_bound_both_constant(i64 %base, i64 %n, i1 %cond) {
+; CHECK-LABEL: @test_select_of_active_lane_mask_bound_both_constant(
+; CHECK-NEXT:    [[MASK:%.*]] = select i1 [[COND:%.*]], <16 x i1> splat (i1 true), <16 x i1> zeroinitializer
+; CHECK-NEXT:    ret <16 x i1> [[MASK]]
+;
+  %s = select i1 %cond, i64 16, i64 0
+  %mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 0, i64 %s)
+  ret <16 x i1> %mask
+}
+
+define { i64, i1 } @test_select_of_overflow_intrinsic_operand(i64 %n, i1 %cond) {
+; CHECK-LABEL: @test_select_of_overflow_intrinsic_operand(
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[N:%.*]], i64 42)
+; CHECK-NEXT:    [[ADD_OVERFLOW:%.*]] = select i1 [[COND:%.*]], { i64, i1 } [[TMP1]], { i64, i1 } { i64 42, i1 false }
+; CHECK-NEXT:    ret { i64, i1 } [[ADD_OVERFLOW]]
+;
+  %s = select i1 %cond, i64 %n, i64 0
+  %add_overflow = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %s, i64 42)
+  ret { i64, i1 } %add_overflow
+}
+
+; Negative test: Can't fold struct-return into vector select.
+define { <4 x float>, <4 x float> } @test_vector_cond_select_of_sincos_intrinsic_operand(<4 x float> %v, <4 x i1> %cond) {
+; CHECK-LABEL: @test_vector_cond_select_of_sincos_intrinsic_operand(
+; CHECK-NEXT:    [[S:%.*]] = select <4 x i1> [[COND:%.*]], <4 x float> [[V:%.*]], <4 x float> zeroinitializer
+; CHECK-NEXT:    [[RESULT:%.*]] = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> [[S]])
+; CHECK-NEXT:    ret { <4 x float>, <4 x float> } [[RESULT]]
+;
+  %s = select <4 x i1> %cond, <4 x float> %v, <4 x float> zeroinitializer
+  %result = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> %s)
+  ret { <4 x float>, <4 x float> } %result
+}
+
+define { <4 x float>, <4 x float> } @test_select_of_sincos_intrinsic_operand(<4 x float> %v, i1 %cond) {
+; CHECK-LABEL: @test_select_of_sincos_intrinsic_operand(
+; CHECK-NEXT:    [[RESULT:%.*]] = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> [[S:%.*]])
+; CHECK-NEXT:    [[RESULT1:%.*]] = select i1 [[COND:%.*]], { <4 x float>, <4 x float> } [[RESULT]], { <4 x float>, <4 x float> } { <4 x float> zeroinitializer, <4 x float> splat (float 1.000000e+00) }
+; CHECK-NEXT:    ret { <4 x float>, <4 x float> } [[RESULT1]]
+;
+  %s = select i1 %cond, <4 x float> %v, <4 x float> zeroinitializer
+  %result = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> %s)
+  ret { <4 x float>, <4 x float> } %result
 }

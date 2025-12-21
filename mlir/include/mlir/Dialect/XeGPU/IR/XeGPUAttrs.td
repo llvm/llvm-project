@@ -223,17 +223,25 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
     InterfaceMethod<"Derive a new layout by dropping InstData",
                     "xegpu::DistributeLayoutAttr",
                     "dropInstData">,
-    InterfaceMethod<[{Delinearizes a linear subgroup ID into its multidimensional
-                      indices based on the effective subgroup layout.}],
+    InterfaceMethod<"Derive a new layout with sg_data, inst_data and lane_data set to 1 for the specified unit dims",
+                    "xegpu::DistributeLayoutAttr",
+                    "setUnitDimData",
+                    /*args=*/(ins "const llvm::SetVector<int64_t>": $unitDims)>,
+    InterfaceMethod<"Derive a new layout with sg_lane and lane_layout set to 1 for the specified unit dims",
+                    "xegpu::DistributeLayoutAttr",
+                    "setUnitDimLayout",
+                    /*args=*/(ins "const llvm::SetVector<int64_t>": $unitDims)>,
+    InterfaceMethod<[{Delinearizes a linear ID into its multidimensional
+                      indices based on the effective layout level.}],
                     "FailureOr<SmallVector<Value>>",
-                    "delinearizeSubgroupId",
+                    "delinearizeId",
                     (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId)>,
-    InterfaceMethod<[{Generates instructions to compute multidimensional offsets for blocks
-                      assigned to a subgroup identified by linearId. The shape parameter
-                      represents the workgroup-level problem size. Each subgroup may access
+    InterfaceMethod<[{Generates instructions to compute multidimensional coordinates for dist units
+                      assigned to a level identified by linearId. The shape parameter
+                      represents the higher-level problem size. Each level may access
                       multiple blocks according to round-robin distribution rules.}],
                     "FailureOr<SmallVector<SmallVector<Value>>>",
-                    "getOffsets",
+                    "computeDistributedCoords",
                     (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId, "ArrayRef<int64_t>":$shape)>,
     InterfaceMethod</*desc=*/[{Check if this layout can be achieved by applying a transpose
                      to some other layout according to given permutation of (0...n-1).}],
@@ -283,9 +291,14 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                       }
                       return true;
                     }]>,
-    InterfaceMethod</*desc=*/[{Check if this layout is a slice of some other layout.}],
+    InterfaceMethod</*desc=*/[{Check if this layout is a slice of another layout.}],
                     /*retTy=*/"bool",
                     /*methodName=*/"isSliceOf",
+                    /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other)>,
+
+    InterfaceMethod</*desc=*/[{Check if this layout is identical to another layout.}],
+                    /*retTy=*/"bool",
+                    /*methodName=*/"isEqualTo",
                     /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other)>
   ];
 }
@@ -379,6 +392,29 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
   );
 
   let builders = [
+    AttrBuilder<(ins "llvm::ArrayRef<int32_t>": $inst_data),
+      [{
+        auto sg_layout = DenseI32ArrayAttr();
+        auto sg_data = DenseI32ArrayAttr();
+        auto order = DenseI32ArrayAttr();
+        auto lane_layout = DenseI32ArrayAttr();
+        auto lane_data = DenseI32ArrayAttr();
+        return $_get($_ctxt, sg_layout, sg_data,
+                     DenseI32ArrayAttr::get($_ctxt, inst_data),
+                     lane_layout, lane_data, order);
+      }]>,
+    AttrBuilder<(ins "llvm::ArrayRef<int32_t>": $inst_data,
+                      "llvm::ArrayRef<int32_t>": $lane_layout,
+                     "llvm::ArrayRef<int32_t>": $lane_data),
+      [{
+        auto sg_layout = DenseI32ArrayAttr();
+        auto sg_data = DenseI32ArrayAttr();
+        auto order = DenseI32ArrayAttr();
+        return $_get($_ctxt, sg_layout, sg_data,
+                     DenseI32ArrayAttr::get($_ctxt, inst_data),
+                     DenseI32ArrayAttr::get($_ctxt, lane_layout),
+                     DenseI32ArrayAttr::get($_ctxt, lane_data), order);
+      }]>,
     AttrBuilder<(ins "llvm::ArrayRef<int32_t>": $lane_layout,
                      "llvm::ArrayRef<int32_t>": $lane_data),
       [{
@@ -389,18 +425,6 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
         return $_get($_ctxt, sg_layout, sg_data, inst_data,
                      DenseI32ArrayAttr::get($_ctxt, lane_layout),
                      DenseI32ArrayAttr::get($_ctxt, lane_data), order);
-      }]>,
-    AttrBuilder<(ins "llvm::ArrayRef<int32_t>": $lane_layout,
-                     "llvm::ArrayRef<int32_t>": $lane_data,
-                     "llvm::ArrayRef<int32_t>": $order),
-      [{
-        return $_get($_ctxt,
-                     /*sg_layout =*/ nullptr,
-                     /*sg_data   =*/ nullptr,
-                     /*inst_data =*/ nullptr,
-                     DenseI32ArrayAttr::get($_ctxt, lane_layout),
-                     DenseI32ArrayAttr::get($_ctxt, lane_data),
-                     DenseI32ArrayAttr::get($_ctxt, order));
       }]>,
     AttrBuilder<(ins "DenseI32ArrayAttr": $lane_layout,
                      "DenseI32ArrayAttr": $lane_data,
@@ -476,20 +500,29 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
       return {};
     }
 
-    /// Delinearizes a linear subgroup ID into its multidimensional indices
-    /// based on the effective subgroup layout.
-    FailureOr<SmallVector<Value>>
-    delinearizeSubgroupId(OpBuilder &builder, Location loc, Value linearId);
+    //set the layout for the sepcified unit dims: sg_data, inst_data and lane_data to 1
+    DistributeLayoutAttr setUnitDimData(SetVector<int64_t> unitDims);
 
-    /// Generates instructions to compute multidimensional offsets for blocks
-    /// assigned to a subgroup identified by linearId. The shape parameter
-    /// represents the workgroup-level problem size. Each subgroup may access
+    //set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
+    DistributeLayoutAttr setUnitDimLayout(SetVector<int64_t> unitDims);
+
+    /// Delinearizes a linear ID into its multidimensional indices
+    /// based on the effective level of the layout.
+    FailureOr<SmallVector<Value>>
+    delinearizeId(OpBuilder &builder, Location loc, Value linearId);
+
+    /// Generates instructions to compute multidimensional coordinates for dist units
+    /// assigned to a level identified by linearId. The shape parameter
+    /// represents the higher-level problem size. Each `level` may access
     /// multiple blocks according to round-robin distribution rules.
     FailureOr<SmallVector<SmallVector<Value>>>
-    getOffsets(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
+    computeDistributedCoords(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
 
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other) { return false; }
+    
+    /// Check if this is identical to some other layout.
+    bool isEqualTo(const xegpu::DistributeLayoutAttr &other); 
 
   }];
 
@@ -624,6 +657,8 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
       parent = parent.dropSgLayoutAndData();
+      if (!parent)
+        return nullptr;
       return SliceAttr::get(getContext(), parent, attr.getDims());
     }
 
@@ -631,8 +666,16 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
       parent = parent.dropInstData();
+      if (!parent)
+        return nullptr;
       return SliceAttr::get(getContext(), parent, attr.getDims());
     }
+
+    //set the layout for the sepcified unit dims: sg_data, inst_data and lane_data to 1
+    DistributeLayoutAttr setUnitDimData(SetVector<int64_t> unitDims);
+
+    //set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
+    DistributeLayoutAttr setUnitDimLayout(SetVector<int64_t> unitDims);
 
     /// flatten a nested SliceAttr, e.g., for 2-level nested SliceAttr
     /// #xegpu.slice<#xegpu.slice<#xegpu.layout<sg_layout = [4, 8, 12]>, dims = [0]>, dims = [0]>
@@ -643,18 +686,21 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     /// Delinearizes a linear subgroup ID into its multidimensional indices
     /// based on the effective subgroup layout.
     FailureOr<SmallVector<Value>>
-    delinearizeSubgroupId(OpBuilder &builder, Location loc, Value linearId);
+    delinearizeId(OpBuilder &builder, Location loc, Value linearId);
 
-    /// Generates instructions to compute multidimensional offsets for blocks
+    /// Generates instructions to compute multidimensional coordinates for blocks
     /// assigned to a subgroup identified by linearId. The shape parameter
     /// represents the workgroup-level problem size. Each subgroup may access
     /// multiple blocks according to round-robin distribution rules.
+
     FailureOr<SmallVector<SmallVector<Value>>>
-    getOffsets(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
+    computeDistributedCoords(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
 
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other);
-
+    
+    /// Check if this is identical to some other layout.
+    bool isEqualTo(const xegpu::DistributeLayoutAttr &other); 
   }];
 
   let assemblyFormat = "`<` qualified($parent) `,` `dims` `=` $dims `>`";
@@ -721,6 +767,32 @@ def XeGPU_MemLayoutAttr : XeGPUAttr<"MemLayout", "mem_layout"> {
     }
 
   }];
+
+}
+
+def AnchorLayoutInterface : OpInterface<"AnchorLayoutInterface"> {
+  let cppNamespace = "::mlir::xegpu";
+
+  let description = [{
+    An attribute interface for accessing anchor layout information.
+    This interface provides a method to set and retrieve the anchor layout
+    from operations that implement it.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/"Get the anchor layout attribute.",
+      /*retTy=*/"xegpu::DistributeLayoutAttr", 
+      /*methodName=*/"getAnchorLayout",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/"Set the anchor layout attribute.",
+      /*retTy=*/"void", 
+      /*methodName=*/"setAnchorLayout",
+      /*args=*/(ins "xegpu::DistributeLayoutAttr":$layout)
+    >,
+  ];
 
 }
 

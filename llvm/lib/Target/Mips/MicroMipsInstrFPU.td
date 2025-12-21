@@ -22,23 +22,25 @@ multiclass ADDS_MMM<string opstr, InstrItinClass Itin, bit IsComm,
   }
 }
 
-def FADD_S_MM : MMRel, ADDS_FT<"add.s", FGR32Opnd, II_ADD_S, 1, fadd>,
-                ADDS_FM_MM<0, 0x30>, ISA_MICROMIPS;
-def FDIV_S_MM : MMRel, ADDS_FT<"div.s", FGR32Opnd, II_DIV_S, 0, fdiv>,
-                ADDS_FM_MM<0, 0xf0>, ISA_MICROMIPS;
-def FMUL_S_MM : MMRel, ADDS_FT<"mul.s", FGR32Opnd, II_MUL_S, 1, fmul>,
-                ADDS_FM_MM<0, 0xb0>, ISA_MICROMIPS;
-def FSUB_S_MM : MMRel, ADDS_FT<"sub.s", FGR32Opnd, II_SUB_S, 0, fsub>,
-                ADDS_FM_MM<0, 0x70>, ISA_MICROMIPS;
+let mayRaiseFPException = 1, Uses = [FCR31] in {
+  def FADD_S_MM : MMRel, ADDS_FT<"add.s", FGR32Opnd, II_ADD_S, 1, fadd>,
+                  ADDS_FM_MM<0, 0x30>, ISA_MICROMIPS;
+  def FDIV_S_MM : MMRel, ADDS_FT<"div.s", FGR32Opnd, II_DIV_S, 0, fdiv>,
+                  ADDS_FM_MM<0, 0xf0>, ISA_MICROMIPS;
+  def FMUL_S_MM : MMRel, ADDS_FT<"mul.s", FGR32Opnd, II_MUL_S, 1, fmul>,
+                  ADDS_FM_MM<0, 0xb0>, ISA_MICROMIPS;
+  def FSUB_S_MM : MMRel, ADDS_FT<"sub.s", FGR32Opnd, II_SUB_S, 0, fsub>,
+                  ADDS_FM_MM<0, 0x70>, ISA_MICROMIPS;
 
-defm FADD : ADDS_MMM<"add.d", II_ADD_D, 1, fadd>,
-            ADDS_FM_MM<1, 0x30>, ISA_MICROMIPS;
-defm FDIV : ADDS_MMM<"div.d", II_DIV_D, 0, fdiv>,
-            ADDS_FM_MM<1, 0xf0>, ISA_MICROMIPS;
-defm FMUL : ADDS_MMM<"mul.d", II_MUL_D, 1, fmul>,
-            ADDS_FM_MM<1, 0xb0>, ISA_MICROMIPS;
-defm FSUB : ADDS_MMM<"sub.d", II_SUB_D, 0, fsub>,
-            ADDS_FM_MM<1, 0x70>, ISA_MICROMIPS;
+  defm FADD : ADDS_MMM<"add.d", II_ADD_D, 1, fadd>,
+              ADDS_FM_MM<1, 0x30>, ISA_MICROMIPS;
+  defm FDIV : ADDS_MMM<"div.d", II_DIV_D, 0, fdiv>,
+              ADDS_FM_MM<1, 0xf0>, ISA_MICROMIPS;
+  defm FMUL : ADDS_MMM<"mul.d", II_MUL_D, 1, fmul>,
+              ADDS_FM_MM<1, 0xb0>, ISA_MICROMIPS;
+  defm FSUB : ADDS_MMM<"sub.d", II_SUB_D, 0, fsub>,
+              ADDS_FM_MM<1, 0x70>, ISA_MICROMIPS;
+}
 
 let DecoderNamespace = "MicroMips" in {
   def LWXC1_MM : MMRel, LWXC1_FT<"lwxc1", FGR32Opnd, II_LWXC1, load>,
@@ -75,11 +77,13 @@ let DecoderNamespace = "MicroMips" in {
                 BC1F_FM_MM<0x1c>, ISA_MICROMIPS32_NOT_MIPS32R6;
   def BC1T_MM : MMRel, BC1F_FT<"bc1t", brtarget_mm, II_BC1T, MIPS_BRANCH_T>,
                 BC1F_FM_MM<0x1d>, ISA_MICROMIPS32_NOT_MIPS32R6;
+
+  let mayRaiseFPException = 1, Uses = [FCR31] in
   def CVT_W_S_MM   : MMRel, ABSS_FT<"cvt.w.s", FGR32Opnd, FGR32Opnd, II_CVT>,
                      ROUND_W_FM_MM<0, 0x24>, ISA_MICROMIPS;
 }
 
-let DecoderNamespace = "MicroMips" in {
+let DecoderNamespace = "MicroMips", mayRaiseFPException = 1 in {
   def ROUND_W_S_MM : MMRel, StdMMR6Rel, ABSS_FT<"round.w.s", FGR32Opnd,
                                                 FGR32Opnd, II_ROUND>,
                      ROUND_W_FM_MM<0, 0xec>, ISA_MICROMIPS;
@@ -94,15 +98,17 @@ let DecoderNamespace = "MicroMips" in {
   def TRUNC_W_MM : MMRel, ABSS_FT<"trunc.w.d", FGR32Opnd, AFGR64Opnd, II_TRUNC>,
                    ROUND_W_FM_MM<1, 0xac>, ISA_MICROMIPS, FGR_32;
 
-  def CVT_L_S_MM   : MMRel, ABSS_FT<"cvt.l.s", FGR64Opnd, FGR32Opnd, II_CVT>,
-                     ROUND_W_FM_MM<0, 0x4>, ISA_MICROMIPS, FGR_64;
-  def CVT_L_D64_MM : MMRel, ABSS_FT<"cvt.l.d", FGR64Opnd, FGR64Opnd, II_CVT>,
-                     ROUND_W_FM_MM<1, 0x4>, ISA_MICROMIPS, FGR_64;
+  let Uses = [FCR31] in {
+    def CVT_L_S_MM   : MMRel, ABSS_FT<"cvt.l.s", FGR64Opnd, FGR32Opnd, II_CVT>,
+                       ROUND_W_FM_MM<0, 0x4>, ISA_MICROMIPS, FGR_64;
+    def CVT_L_D64_MM : MMRel, ABSS_FT<"cvt.l.d", FGR64Opnd, FGR64Opnd, II_CVT>,
+                       ROUND_W_FM_MM<1, 0x4>, ISA_MICROMIPS, FGR_64;
 
-  def CVT_W_D32_MM : MMRel, ABSS_FT<"cvt.w.d", FGR32Opnd, AFGR64Opnd, II_CVT>,
-                     ROUND_W_FM_MM<1, 0x24>, ISA_MICROMIPS, FGR_32;
+    def CVT_W_D32_MM : MMRel, ABSS_FT<"cvt.w.d", FGR32Opnd, AFGR64Opnd, II_CVT>,
+                       ROUND_W_FM_MM<1, 0x24>, ISA_MICROMIPS, FGR_32;
+  }
 }
-let DecoderNamespace = "MicroMipsFP64" in {
+let DecoderNamespace = "MicroMipsFP64", mayRaiseFPException = 1, Uses = [FCR31] in {
   def CVT_W_D64_MM : ABSS_FT<"cvt.w.d", FGR32Opnd, FGR64Opnd, II_CVT>,
                      ROUND_W_FM_MM<1, 0x24>, ISA_MICROMIPS, FGR_64;
 }
@@ -119,6 +125,7 @@ multiclass ABSS_MMM<string opstr, InstrItinClass Itin,
   }
 }
 
+let mayRaiseFPException = 1, Uses = [FCR31] in
 defm FSQRT : ABSS_MMM<"sqrt.d", II_SQRT_D, fsqrt>, ROUND_W_FM_MM<1, 0x28>;
 defm FABS : ABSS_MMM<"abs.d", II_SQRT_D, fabs>, ABS_FM_MM<1, 0xd>;
 
@@ -134,14 +141,14 @@ def FMOV_S_MM : MMRel, ABSS_FT<"mov.s", FGR32Opnd, FGR32Opnd, II_MOV_S>,
 def FNEG_S_MM : MMRel, ABSS_FT<"neg.s", FGR32Opnd, FGR32Opnd, II_NEG, fneg>,
                 ABS_FM_MM<0, 0x2d>, ISA_MICROMIPS;
 
-let DecoderNamespace = "MicroMips" in {
+let DecoderNamespace = "MicroMips", mayRaiseFPException = 1, Uses = [FCR31] in {
   def CVT_D32_S_MM : MMRel, ABSS_FT<"cvt.d.s", AFGR64Opnd, FGR32Opnd, II_CVT>,
                      ABS_FM_MM<0, 0x4d>, ISA_MICROMIPS, FGR_32;
   def CVT_D32_W_MM : MMRel, ABSS_FT<"cvt.d.w", AFGR64Opnd, FGR32Opnd, II_CVT>,
                      ABS_FM_MM<1, 0x4d>, ISA_MICROMIPS, FGR_32;
 }
 
-let DecoderNamespace = "MicroMipsFP64" in {
+let DecoderNamespace = "MicroMipsFP64", mayRaiseFPException = 1, Uses = [FCR31] in {
   def CVT_D64_S_MM : ABSS_FT<"cvt.d.s", FGR64Opnd, FGR32Opnd, II_CVT>,
                      ABS_FM_MM<0, 0x4d>, ISA_MICROMIPS, FGR_64;
   def CVT_D64_W_MM : ABSS_FT<"cvt.d.w", FGR64Opnd, FGR32Opnd, II_CVT>,
@@ -150,7 +157,7 @@ let DecoderNamespace = "MicroMipsFP64" in {
                      ABS_FM_MM<0, 0x6d>, ISA_MICROMIPS, FGR_64;
 }
 
-let DecoderNamespace = "MicroMips" in {
+let DecoderNamespace = "MicroMips", mayRaiseFPException = 1, Uses = [FCR31] in {
   def CVT_S_D32_MM : MMRel, ABSS_FT<"cvt.s.d", FGR32Opnd, AFGR64Opnd, II_CVT>,
                      ABS_FM_MM<0, 0x6d>, ISA_MICROMIPS, FGR_32;
   def CVT_S_W_MM : MMRel, ABSS_FT<"cvt.s.w", FGR32Opnd, FGR32Opnd, II_CVT>,
@@ -194,41 +201,44 @@ let DecoderNamespace = "MicroMips" in {
   def MTC1_MM : MMRel, MTC1_FT<"mtc1", FGR32Opnd, GPR32Opnd,
                                II_MTC1, bitconvert>, MFC1_FM_MM<0xa0>,
                 ISA_MICROMIPS;
+  let mayRaiseFPException = 1, Uses = [FCR31] in {
+    def MADD_S_MM : MMRel, MADDS_FT<"madd.s", FGR32Opnd, II_MADD_S>,
+                    MADDS_FM_MM<0x1>, ISA_MICROMIPS32_NOT_MIPS32R6, MADD4;
+    def MSUB_S_MM : MMRel, MADDS_FT<"msub.s", FGR32Opnd, II_MSUB_S>,
+                    MADDS_FM_MM<0x21>, ISA_MICROMIPS32_NOT_MIPS32R6, MADD4;
+    def MADD_D32_MM  : MMRel, MADDS_FT<"madd.d", AFGR64Opnd, II_MADD_D>,
+                       MADDS_FM_MM<0x9>, ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32,
+                       MADD4;
+    def MSUB_D32_MM  : MMRel, MADDS_FT<"msub.d", AFGR64Opnd, II_MSUB_D>,
+                       MADDS_FM_MM<0x29>, ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32,
+                       MADD4;
 
-  def MADD_S_MM : MMRel, MADDS_FT<"madd.s", FGR32Opnd, II_MADD_S>,
-                  MADDS_FM_MM<0x1>, ISA_MICROMIPS32_NOT_MIPS32R6, MADD4;
-  def MSUB_S_MM : MMRel, MADDS_FT<"msub.s", FGR32Opnd, II_MSUB_S>,
-                  MADDS_FM_MM<0x21>, ISA_MICROMIPS32_NOT_MIPS32R6, MADD4;
-  let AdditionalPredicates = [NoNaNsFPMath, HasMadd4] in {
-    def NMADD_S_MM : MMRel, NMADDS_FT<"nmadd.s", FGR32Opnd, II_NMADD_S>,
-                     MADDS_FM_MM<0x2>, ISA_MICROMIPS32_NOT_MIPS32R6;
-    def NMSUB_S_MM : MMRel, NMADDS_FT<"nmsub.s", FGR32Opnd, II_NMSUB_S>,
-                     MADDS_FM_MM<0x22>, ISA_MICROMIPS32_NOT_MIPS32R6;
+    let AdditionalPredicates = [NoNaNsFPMath, HasMadd4] in {
+      def NMADD_S_MM : MMRel, NMADDS_FT<"nmadd.s", FGR32Opnd, II_NMADD_S>,
+                       MADDS_FM_MM<0x2>, ISA_MICROMIPS32_NOT_MIPS32R6;
+      def NMSUB_S_MM : MMRel, NMADDS_FT<"nmsub.s", FGR32Opnd, II_NMSUB_S>,
+                       MADDS_FM_MM<0x22>, ISA_MICROMIPS32_NOT_MIPS32R6;
+      def NMADD_D32_MM : MMRel, NMADDS_FT<"nmadd.d", AFGR64Opnd, II_NMADD_D>,
+                         MADDS_FM_MM<0xa>, ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
+      def NMSUB_D32_MM : MMRel, NMADDS_FT<"nmsub.d", AFGR64Opnd, II_NMSUB_D>,
+                         MADDS_FM_MM<0x2a>, ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
+    }
   }
-  def MADD_D32_MM  : MMRel, MADDS_FT<"madd.d", AFGR64Opnd, II_MADD_D>,
-                     MADDS_FM_MM<0x9>, ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32,
-                     MADD4;
-  def MSUB_D32_MM  : MMRel, MADDS_FT<"msub.d", AFGR64Opnd, II_MSUB_D>,
-                     MADDS_FM_MM<0x29>, ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32,
-                     MADD4;
-  let AdditionalPredicates = [NoNaNsFPMath, HasMadd4] in {
-    def NMADD_D32_MM : MMRel, NMADDS_FT<"nmadd.d", AFGR64Opnd, II_NMADD_D>,
-                       MADDS_FM_MM<0xa>, ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
-    def NMSUB_D32_MM : MMRel, NMADDS_FT<"nmsub.d", AFGR64Opnd, II_NMSUB_D>,
-                       MADDS_FM_MM<0x2a>, ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
+
+  let mayRaiseFPException = 1 in {
+    def FLOOR_W_S_MM : MMRel, ABSS_FT<"floor.w.s", FGR32Opnd, FGR32Opnd,
+                                      II_FLOOR>, ROUND_W_FM_MM<0, 0x2c>,
+                       ISA_MICROMIPS;
+    def TRUNC_W_S_MM : MMRel, StdMMR6Rel, ABSS_FT<"trunc.w.s", FGR32Opnd,
+                                                  FGR32Opnd, II_TRUNC>,
+                       ROUND_W_FM_MM<0, 0xac>, ISA_MICROMIPS;
+    def CEIL_W_S_MM  : MMRel, ABSS_FT<"ceil.w.s", FGR32Opnd, FGR32Opnd, II_CEIL>,
+                       ROUND_W_FM_MM<0, 0x6c>, ISA_MICROMIPS;
+    let Uses = [FCR31] in
+    def FSQRT_S_MM : MMRel, ABSS_FT<"sqrt.s", FGR32Opnd, FGR32Opnd, II_SQRT_S,
+                                   fsqrt>, ROUND_W_FM_MM<0, 0x28>, ISA_MICROMIPS;
   }
 
-  def FLOOR_W_S_MM : MMRel, ABSS_FT<"floor.w.s", FGR32Opnd, FGR32Opnd,
-                                    II_FLOOR>, ROUND_W_FM_MM<0, 0x2c>,
-                     ISA_MICROMIPS;
-  def TRUNC_W_S_MM : MMRel, StdMMR6Rel, ABSS_FT<"trunc.w.s", FGR32Opnd,
-                                                FGR32Opnd, II_TRUNC>,
-                     ROUND_W_FM_MM<0, 0xac>, ISA_MICROMIPS;
-  def CEIL_W_S_MM  : MMRel, ABSS_FT<"ceil.w.s", FGR32Opnd, FGR32Opnd, II_CEIL>,
-                     ROUND_W_FM_MM<0, 0x6c>, ISA_MICROMIPS;
-
-  def FSQRT_S_MM : MMRel, ABSS_FT<"sqrt.s", FGR32Opnd, FGR32Opnd, II_SQRT_S,
-                                  fsqrt>, ROUND_W_FM_MM<0, 0x28>, ISA_MICROMIPS;
 
   def MTHC1_D32_MM : MMRel,
                      MTC1_64_FT<"mthc1", AFGR64Opnd, GPR32Opnd, II_MTHC1>,
@@ -251,30 +261,33 @@ let DecoderNamespace = "MicroMips" in {
                 MFC1_FM_MM<0x40>, ISA_MICROMIPS;
   def CTC1_MM : MMRel, MTC1_FT<"ctc1", CCROpnd, GPR32Opnd, II_CTC1>,
                 MFC1_FM_MM<0x60>, ISA_MICROMIPS;
-  def RECIP_S_MM : MMRel, ABSS_FT<"recip.s", FGR32Opnd, FGR32Opnd,
+
+  let mayRaiseFPException = 1, Uses = [FCR31] in {
+    def RECIP_S_MM : MMRel, ABSS_FT<"recip.s", FGR32Opnd, FGR32Opnd,
+                                      II_RECIP_S>,
+                       ROUND_W_FM_MM<0b0, 0b01001000>, ISA_MICROMIPS;
+    def RECIP_D32_MM : MMRel, ABSS_FT<"recip.d", AFGR64Opnd, AFGR64Opnd,
+                                      II_RECIP_D>,
+                       ROUND_W_FM_MM<0b1, 0b01001000>, ISA_MICROMIPS, FGR_32 {
+      let BaseOpcode = "RECIP_D32";
+    }
+    let DecoderNamespace = "MicroMipsFP64" in
+      def RECIP_D64_MM : MMRel, ABSS_FT<"recip.d", FGR64Opnd, FGR64Opnd,
+                                        II_RECIP_D>,
+                       ROUND_W_FM_MM<0b1, 0b01001000>, ISA_MICROMIPS, FGR_64;
+    def RSQRT_S_MM : MMRel, ABSS_FT<"rsqrt.s", FGR32Opnd, FGR32Opnd,
                                     II_RECIP_S>,
-                     ROUND_W_FM_MM<0b0, 0b01001000>, ISA_MICROMIPS;
-  def RECIP_D32_MM : MMRel, ABSS_FT<"recip.d", AFGR64Opnd, AFGR64Opnd,
+                     ROUND_W_FM_MM<0b0, 0b00001000>, ISA_MICROMIPS;
+    def RSQRT_D32_MM : MMRel, ABSS_FT<"rsqrt.d", AFGR64Opnd, AFGR64Opnd,
                                     II_RECIP_D>,
-                     ROUND_W_FM_MM<0b1, 0b01001000>, ISA_MICROMIPS, FGR_32 {
-    let BaseOpcode = "RECIP_D32";
+                     ROUND_W_FM_MM<0b1, 0b00001000>, ISA_MICROMIPS, FGR_32 {
+      let BaseOpcode = "RSQRT_D32";
+    }
+    let DecoderNamespace = "MicroMipsFP64" in
+      def RSQRT_D64_MM : MMRel, ABSS_FT<"rsqrt.d", FGR64Opnd, FGR64Opnd,
+                                        II_RECIP_D>,
+                         ROUND_W_FM_MM<0b1, 0b00001000>, ISA_MICROMIPS, FGR_64;
   }
-  let DecoderNamespace = "MicroMipsFP64" in
-    def RECIP_D64_MM : MMRel, ABSS_FT<"recip.d", FGR64Opnd, FGR64Opnd,
-                                      II_RECIP_D>,
-                     ROUND_W_FM_MM<0b1, 0b01001000>, ISA_MICROMIPS, FGR_64;
-  def RSQRT_S_MM : MMRel, ABSS_FT<"rsqrt.s", FGR32Opnd, FGR32Opnd,
-                                  II_RECIP_S>,
-                   ROUND_W_FM_MM<0b0, 0b00001000>, ISA_MICROMIPS;
-  def RSQRT_D32_MM : MMRel, ABSS_FT<"rsqrt.d", AFGR64Opnd, AFGR64Opnd,
-                                  II_RECIP_D>,
-                   ROUND_W_FM_MM<0b1, 0b00001000>, ISA_MICROMIPS, FGR_32 {
-    let BaseOpcode = "RSQRT_D32";
-  }
-  let DecoderNamespace = "MicroMipsFP64" in
-    def RSQRT_D64_MM : MMRel, ABSS_FT<"rsqrt.d", FGR64Opnd, FGR64Opnd,
-                                      II_RECIP_D>,
-                       ROUND_W_FM_MM<0b1, 0b00001000>, ISA_MICROMIPS, FGR_64;
 }
 
 let DecoderNamespace = "MicroMips",  DecoderMethod = "DecodeFMemMMR2" in {
@@ -342,39 +355,41 @@ multiclass C_COND_MM<string TypeStr, RegisterOperand RC, bits<2> fmt,
                         C_COND_FM_MM<fmt, 7> {
     let BaseOpcode = "c.ule."#NAME;
   }
-  def C_SF_#NAME#_MM : MMRel, C_COND_FT<"sf", TypeStr, RC, itin>,
-                       C_COND_FM_MM<fmt, 8> {
-    let BaseOpcode = "c.sf."#NAME;
-    let isCommutable = 1;
-  }
-  def C_NGLE_#NAME#_MM : MMRel, C_COND_FT<"ngle", TypeStr, RC, itin>,
-                         C_COND_FM_MM<fmt, 9> {
-    let BaseOpcode = "c.ngle."#NAME;
-  }
-  def C_SEQ_#NAME#_MM : MMRel, C_COND_FT<"seq", TypeStr, RC, itin>,
-                        C_COND_FM_MM<fmt, 10> {
-    let BaseOpcode = "c.seq."#NAME;
-    let isCommutable = 1;
-  }
-  def C_NGL_#NAME#_MM : MMRel, C_COND_FT<"ngl", TypeStr, RC, itin>,
-                        C_COND_FM_MM<fmt, 11> {
-    let BaseOpcode = "c.ngl."#NAME;
-  }
-  def C_LT_#NAME#_MM : MMRel, C_COND_FT<"lt", TypeStr, RC, itin>,
-                       C_COND_FM_MM<fmt, 12> {
-    let BaseOpcode = "c.lt."#NAME;
-  }
-  def C_NGE_#NAME#_MM : MMRel, C_COND_FT<"nge", TypeStr, RC, itin>,
-                        C_COND_FM_MM<fmt, 13> {
-    let BaseOpcode = "c.nge."#NAME;
-  }
-  def C_LE_#NAME#_MM : MMRel, C_COND_FT<"le", TypeStr, RC, itin>,
-                       C_COND_FM_MM<fmt, 14> {
-    let BaseOpcode = "c.le."#NAME;
-  }
-  def C_NGT_#NAME#_MM : MMRel, C_COND_FT<"ngt", TypeStr, RC, itin>,
-                        C_COND_FM_MM<fmt, 15> {
-    let BaseOpcode = "c.ngt."#NAME;
+  let mayRaiseFPException = 1 in {
+    def C_SF_#NAME#_MM : MMRel, C_COND_FT<"sf", TypeStr, RC, itin>,
+                         C_COND_FM_MM<fmt, 8> {
+      let BaseOpcode = "c.sf."#NAME;
+      let isCommutable = 1;
+    }
+    def C_NGLE_#NAME#_MM : MMRel, C_COND_FT<"ngle", TypeStr, RC, itin>,
+                           C_COND_FM_MM<fmt, 9> {
+      let BaseOpcode = "c.ngle."#NAME;
+    }
+    def C_SEQ_#NAME#_MM : MMRel, C_COND_FT<"seq", TypeStr, RC, itin>,
+                          C_COND_FM_MM<fmt, 10> {
+      let BaseOpcode = "c.seq."#NAME;
+      let isCommutable = 1;
+    }
+    def C_NGL_#NAME#_MM : MMRel, C_COND_FT<"ngl", TypeStr, RC, itin>,
+                          C_COND_FM_MM<fmt, 11> {
+      let BaseOpcode = "c.ngl."#NAME;
+    }
+    def C_LT_#NAME#_MM : MMRel, C_COND_FT<"lt", TypeStr, RC, itin>,
+                         C_COND_FM_MM<fmt, 12> {
+      let BaseOpcode = "c.lt."#NAME;
+    }
+    def C_NGE_#NAME#_MM : MMRel, C_COND_FT<"nge", TypeStr, RC, itin>,
+                          C_COND_FM_MM<fmt, 13> {
+      let BaseOpcode = "c.nge."#NAME;
+    }
+    def C_LE_#NAME#_MM : MMRel, C_COND_FT<"le", TypeStr, RC, itin>,
+                         C_COND_FM_MM<fmt, 14> {
+      let BaseOpcode = "c.le."#NAME;
+    }
+    def C_NGT_#NAME#_MM : MMRel, C_COND_FT<"ngt", TypeStr, RC, itin>,
+                          C_COND_FM_MM<fmt, 15> {
+      let BaseOpcode = "c.ngt."#NAME;
+    }
   }
 }
 let DecoderNamespace = "MicroMips" in {
