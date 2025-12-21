@@ -1703,3 +1703,112 @@ void Run() {
 }
 
 } // namespace custom_invalidation
+
+void lambdaReinit() {
+  {
+    std::string s;
+    auto g = [&]() {
+      s = std::string();
+      return true;
+    };
+    for (int i = 0; i < 10; ++i) {
+      if (g()) {
+        if (!s.empty()) {
+          std::move(s);
+        }
+      }
+    }
+  }
+
+  {
+    std::string s;
+    auto g = [&]() {
+      s.clear();
+      return true;
+    };
+    for (int i = 0; i < 10; ++i) {
+      if (g()) {
+        if (!s.empty()) {
+          std::move(s);
+        }
+      }
+    }
+  }
+
+  {
+    std::string s;
+    auto g = [&]() {
+      s.assign(10, 'a');
+      return true;
+    };
+    for (int i = 0; i < 10; ++i) {
+      if (g()) {
+        if (!s.empty()) {
+          std::move(s);
+        }
+      }
+    }
+  }
+
+  {
+    std::string s;
+    auto g = [&]() {
+      return !s.empty();
+    };
+    for (int i = 0; i < 10; ++i) {
+      if (g()) {
+        std::move(s);
+        // CHECK-NOTES: [[@LINE-1]]:19: warning: 's' used after it was moved
+        // CHECK-NOTES: [[@LINE-2]]:9: note: move occurred here
+        // CHECK-NOTES: [[@LINE-3]]:19: note: the use happens in a later loop
+      }
+    }
+  }
+
+  {
+    std::string s;
+    auto g = [s]() mutable {
+      s = std::string();
+      return true;
+    };
+    for (int i = 0; i < 10; ++i) {
+      if (g()) {
+        std::move(s);
+        // CHECK-NOTES: [[@LINE-1]]:19: warning: 's' used after it was moved
+        // CHECK-NOTES: [[@LINE-2]]:9: note: move occurred here
+        // CHECK-NOTES: [[@LINE-3]]:19: note: the use happens in a later loop
+      }
+    }
+  }
+
+  {
+    std::string s;
+    while ([&]() { s = std::string(); return true; }()) {
+      // CHECK-NOTES: [[@LINE-1]]:13: warning: 's' used after it was moved
+      // CHECK-NOTES: [[@LINE+3]]:9: note: move occurred here
+      // CHECK-NOTES: [[@LINE-3]]:13: note: the use happens in a later loop
+      if (!s.empty()) {
+        std::move(s);
+      }
+    }
+  }
+}
+
+void lambdaReinitInDeadCode() {
+  // FIXME: This is a known False Negative. The check currently
+  // lacks the ability to do control flow analysis.
+  {
+    std::string s;
+    auto g = [&]() {
+      if (false) {
+        s = std::string();
+      }
+    };
+    std::move(s);
+
+    g();
+
+    s.clear();
+    // CHECK-NOTES-NOT: [[@LINE-2]]:5: warning: 's' used after it was moved
+  }
+}
