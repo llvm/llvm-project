@@ -372,6 +372,17 @@ namespace std::ranges {
     inline constexpr auto pairwise = adjacent<2>;
   }
 
+  // [range.adjacent.transform], adjacent transform view
+  template<forward_range V, move_constructible F, size_t N>
+    requires see below
+  class adjacent_transform_view;
+
+  namespace views {
+    template<size_t N>
+      constexpr unspecified adjacent_transform = unspecified;
+    inline constexpr auto pairwise_transform = adjacent_transform<2>;
+  }
+
   // [range.as.rvalue]
   template <view V>
     requires input_range<V>
@@ -467,6 +478,7 @@ namespace std {
 #  endif
 
 #  if _LIBCPP_STD_VER >= 23
+#    include <__ranges/adjacent_transform_view.h>
 #    include <__ranges/adjacent_view.h>
 #    include <__ranges/as_rvalue_view.h>
 #    include <__ranges/chunk_by_view.h>
