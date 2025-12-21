@@ -16631,14 +16631,13 @@ static SDValue reduceANDOfAtomicLoad(SDNode *N,
 static SDValue combineNarrowableShiftedLoad(SDNode *N, SelectionDAG &DAG) {
   // (and (shl (load ...), ShiftAmt), Mask)
   using namespace SDPatternMatch;
-  SDValue LoadNode, ShiftNode;
+  SDValue LoadNode;
   APInt MaskVal, ShiftVal;
   // (and (shl (load ...), ShiftAmt), Mask)
-  if (!sd_match(N,
-                m_And(m_OneUse(m_Shl(
-                          m_AllOf(m_Opc(ISD::LOAD), m_Value(LoadNode)),
-                          m_AllOf(m_ConstInt(ShiftVal), m_Value(ShiftNode)))),
-                      m_ConstInt(MaskVal)))) {
+  if (!sd_match(
+          N, m_And(m_OneUse(m_Shl(m_AllOf(m_Opc(ISD::LOAD), m_Value(LoadNode)),
+                                  m_ConstInt(ShiftVal))),
+                   m_ConstInt(MaskVal)))) {
     return SDValue();
   }
 
@@ -16661,7 +16660,8 @@ static SDValue combineNarrowableShiftedLoad(SDNode *N, SelectionDAG &DAG) {
   SDLoc DL(N);
   SDValue InnerAnd = DAG.getNode(ISD::AND, DL, VT, LoadNode,
                                  DAG.getConstant(InnerMask, DL, VT));
-  return DAG.getNode(ISD::SHL, DL, VT, InnerAnd, ShiftNode);
+  return DAG.getNode(ISD::SHL, DL, VT, InnerAnd,
+                     DAG.getShiftAmountConstant(ShiftAmt, VT, DL));
 }
 
 // Combines two comparison operation and logic operation to one selection
