@@ -5183,3 +5183,46 @@ define i64 @sh1add_large_mask(i64 %a, i64 %b) nounwind {
   %add = add i64 %and, %b
   ret i64 %add
 }
+
+; Check that negative masks which fit into the andi 12-bit signed immediate
+; are also supported.
+; TODO: Implement this.
+
+define i64 @sh1add_negative_mask(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: sh1add_negative_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    andi a0, a0, -16
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %shl = shl i64 %a, 1
+  %and = and i64 %shl, -16
+  %add = add i64 %and, %b
+  ret i64 %add
+}
+
+define i64 @sh2add_negative_mask(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: sh2add_negative_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    andi a0, a0, -32
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %shl = shl i64 %a, 2
+  %and = and i64 %shl, -32
+  %add = add i64 %and, %b
+  ret i64 %add
+}
+
+define i64 @sh3add_negative_mask(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: sh3add_negative_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srli a0, a0, 3
+; CHECK-NEXT:    slli a0, a0, 6
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %shl = shl i64 %a, 3
+  %and = and i64 %shl, -64
+  %add = add i64 %and, %b
+  ret i64 %add
+}
