@@ -1028,7 +1028,11 @@ static void processStubLibrariesPreLTO() {
       // If the symbol is not present at all (yet), or if it is present but
       // undefined, then mark the dependent symbols as used by a regular
       // object so they will be preserved and exported by the LTO process.
-      if (!sym || sym->isUndefined()) {
+      // If the symbol is defined and in bitcode, it can be DCE'd during LTO and
+      // become undefined, so mark the dependent symbols as used by a regular
+      // object as well.
+      if (!sym || sym->isUndefined() ||
+          (sym->isDefined() && isa_and_nonnull<BitcodeFile>(sym->getFile()))) {
         for (const auto dep : deps) {
           auto* needed = symtab->find(dep);
           if (needed ) {
