@@ -167,15 +167,14 @@ Expr *Expr::CloneIfIAmAStringLiteral(ASTContext &C) {
   else if (auto *GSE = dyn_cast<GenericSelectionExpr>(this)) {
     if (!GSE->isResultDependent()) {
       ArrayRef<Expr *> GSEAEs = GSE->getAssocExprs();
-      Expr **NewGSEAEs = new (C) Expr *[GSEAEs.size()];
-      std::copy(GSEAEs.begin(), GSEAEs.end(), NewGSEAEs);
+      SmallVector<Expr *> NewGSEAEs(GSEAEs);
       NewGSEAEs[GSE->getResultIndex()] =
           GSE->getResultExpr()->CloneIfIAmAStringLiteral(C);
 
       auto GSECreate = [&](auto *ExprOrTSI) -> Expr * {
         return GenericSelectionExpr::Create(
             C, GSE->getGenericLoc(), ExprOrTSI, GSE->getAssocTypeSourceInfos(),
-            ArrayRef<Expr *>(NewGSEAEs, GSEAEs.size()), GSE->getDefaultLoc(),
+            ArrayRef<Expr *>(NewGSEAEs), GSE->getDefaultLoc(),
             GSE->getRParenLoc(), GSE->containsUnexpandedParameterPack(),
             GSE->getResultIndex());
       };
