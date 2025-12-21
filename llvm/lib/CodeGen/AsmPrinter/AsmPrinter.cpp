@@ -1681,7 +1681,12 @@ void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
   const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
   uint64_t StackSize =
       FrameInfo.getStackSize() + FrameInfo.getUnsafeStackSize();
-
+  
+  // Increase the stack size for the return address on x86
+  if(MF.getTarget().getTargetTriple().isX86()){
+    StackSize += MF.getTarget().getAllocaPointerSize();
+  }
+  
   if (StackUsageStream == nullptr) {
     std::error_code EC;
     StackUsageStream =
