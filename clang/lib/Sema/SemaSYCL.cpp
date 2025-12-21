@@ -318,40 +318,40 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
     if (!MD->isStatic()) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-          << SKEPAttr << /*non-static member function*/ 0;
+          << SKEPAttr << diag::InvalidSKEPReason::NonStaticMemberFn;
       SKEPAttr->setInvalidAttr();
     }
   }
 
   if (FD->isVariadic()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-        << SKEPAttr << /*variadic function*/ 1;
+        << SKEPAttr << diag::InvalidSKEPReason::VariadicFn;
     SKEPAttr->setInvalidAttr();
   }
 
   if (FD->isDefaulted()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-        << SKEPAttr << /*defaulted function*/ 3;
+        << SKEPAttr << diag::InvalidSKEPReason::DefaultedFn;
     SKEPAttr->setInvalidAttr();
   } else if (FD->isDeleted()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-        << SKEPAttr << /*deleted function*/ 2;
+        << SKEPAttr << diag::InvalidSKEPReason::DeletedFn;
     SKEPAttr->setInvalidAttr();
   }
 
   if (FD->isConsteval()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-        << SKEPAttr << /*consteval function*/ 5;
+        << SKEPAttr << diag::InvalidSKEPReason::ConstevalFn;
     SKEPAttr->setInvalidAttr();
   } else if (FD->isConstexpr()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-        << SKEPAttr << /*constexpr function*/ 4;
+        << SKEPAttr << diag::InvalidSKEPReason::ConstexprFn;
     SKEPAttr->setInvalidAttr();
   }
 
   if (FD->isNoReturn()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-        << SKEPAttr << /*function declared with the 'noreturn' attribute*/ 6;
+        << SKEPAttr << diag::InvalidSKEPReason::NoreturnFn;
     SKEPAttr->setInvalidAttr();
   }
 
