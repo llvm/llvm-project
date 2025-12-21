@@ -40,6 +40,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
@@ -1818,6 +1819,8 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     return EmitUnaryOpLValue(cast<UnaryOperator>(E));
   case Expr::ArraySubscriptExprClass:
     return EmitArraySubscriptExpr(cast<ArraySubscriptExpr>(E));
+  case Expr::MatrixSingleSubscriptExprClass:
+    return EmitMatrixSingleSubscriptExpr(cast<MatrixSingleSubscriptExpr>(E));
   case Expr::MatrixSubscriptExprClass:
     return EmitMatrixSubscriptExpr(cast<MatrixSubscriptExpr>(E));
   case Expr::ArraySectionExprClass:
@@ -2462,6 +2465,34 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
         Builder.CreateLoad(LV.getMatrixAddress(), LV.isVolatileQualified());
     return RValue::get(Builder.CreateExtractElement(Load, Idx, "matrixext"));
   }
+  if (LV.isMatrixRow()) {
+    QualType MatTy = LV.getType();
+    const ConstantMatrixType *MT = MatTy->castAs<ConstantMatrixType>();
+
+    unsigned NumRows = MT->getNumRows();
+    unsigned NumCols = MT->getNumColumns();
+
+    llvm::Value *MatrixVec = EmitLoadOfScalar(LV, Loc);
+    llvm::Value *Row = LV.getMatrixRowIdx();
+    llvm::Type *ElemTy = ConvertType(MT->getElementType());
+    llvm::Type *RowTy = llvm::FixedVectorType::get(ElemTy, MT->getNumColumns());
+    llvm::Value *Result = llvm::PoisonValue::get(RowTy); // <NumCols x T>
+
+    llvm::MatrixBuilder MB(Builder);
+
+    for (unsigned Col = 0; Col < NumCols; ++Col) {
+      llvm::Value *ColIdx = llvm::ConstantInt::get(Row->getType(), Col);
+      bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
+                              LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+      llvm::Value *EltIndex =
+          MB.CreateIndex(Row, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
+      llvm::Value *Elt = Builder.CreateExtractElement(MatrixVec, EltIndex);
+      llvm::Value *Lane = llvm::ConstantInt::get(Builder.getInt32Ty(), Col);
+      Result = Builder.CreateInsertElement(Result, Elt, Lane);
+    }
+
+    return RValue::get(Result);
+  }
 
   assert(LV.isBitField() && "Unknown LValue type!");
   return EmitLoadOfBitfieldLValue(LV, Loc);
@@ -2687,6 +2718,34 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
       auto *I = Builder.CreateStore(Vec, Dst.getMatrixAddress(),
                                     Dst.isVolatileQualified());
       addInstToCurrentSourceAtom(I, Vec);
+      return;
+    }
+    if (Dst.isMatrixRow()) {
+      QualType MatTy = Dst.getType();
+      const ConstantMatrixType *MT = MatTy->castAs<ConstantMatrixType>();
+
+      unsigned NumRows = MT->getNumRows();
+      unsigned NumCols = MT->getNumColumns();
+
+      llvm::Value *MatrixVec =
+          Builder.CreateLoad(Dst.getAddress(), "matrix.load");
+
+      llvm::Value *Row = Dst.getMatrixRowIdx();
+      llvm::Value *RowVal = Src.getScalarVal(); // <NumCols x T>
+      llvm::MatrixBuilder MB(Builder);
+
+      for (unsigned Col = 0; Col < NumCols; ++Col) {
+        llvm::Value *ColIdx = llvm::ConstantInt::get(Row->getType(), Col);
+        bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
+                                LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+        llvm::Value *EltIndex =
+            MB.CreateIndex(Row, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
+        llvm::Value *Lane = llvm::ConstantInt::get(Builder.getInt32Ty(), Col);
+        llvm::Value *NewElt = Builder.CreateExtractElement(RowVal, Lane);
+        MatrixVec = Builder.CreateInsertElement(MatrixVec, NewElt, EltIndex);
+      }
+
+      Builder.CreateStore(MatrixVec, Dst.getAddress());
       return;
     }
 
@@ -4904,6 +4963,16 @@ llvm::Value *CodeGenFunction::EmitMatrixIndexExpr(const Expr *E) {
   return Builder.CreateIntCast(Idx, IntPtrTy, IsSigned);
 }
 
+LValue CodeGenFunction::EmitMatrixSingleSubscriptExpr(
+    const MatrixSingleSubscriptExpr *E) {
+  LValue Base = EmitLValue(E->getBase());
+  llvm::Value *RowIdx = EmitMatrixIndexExpr(E->getRowIdx());
+
+  return LValue::MakeMatrixRow(
+      MaybeConvertMatrixAddress(Base.getAddress(), *this), RowIdx,
+      E->getBase()->getType(), Base.getBaseInfo(), TBAAAccessInfo());
+}
+
 LValue CodeGenFunction::EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E) {
   assert(
       !E->isIncomplete() &&
@@ -4913,12 +4982,15 @@ LValue CodeGenFunction::EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E) {
   // Extend or truncate the index type to 32 or 64-bits if needed.
   llvm::Value *RowIdx = EmitMatrixIndexExpr(E->getRowIdx());
   llvm::Value *ColIdx = EmitMatrixIndexExpr(E->getColumnIdx());
-
-  llvm::Value *NumRows = Builder.getIntN(
-      RowIdx->getType()->getScalarSizeInBits(),
-      E->getBase()->getType()->castAs<ConstantMatrixType>()->getNumRows());
+  llvm::MatrixBuilder MB(Builder);
+  const auto *MatrixTy = E->getBase()->getType()->castAs<ConstantMatrixType>();
+  unsigned NumCols = MatrixTy->getNumColumns();
+  unsigned NumRows = MatrixTy->getNumRows();
+  bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
+                          LangOptions::MatrixMemoryLayout::MatrixRowMajor;
   llvm::Value *FinalIdx =
-      Builder.CreateAdd(Builder.CreateMul(ColIdx, NumRows), RowIdx);
+      MB.CreateIndex(RowIdx, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
+
   return LValue::MakeMatrixElt(
       MaybeConvertMatrixAddress(Base.getAddress(), *this), FinalIdx,
       E->getBase()->getType(), Base.getBaseInfo(), TBAAAccessInfo());
@@ -5176,6 +5248,9 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
     return LValue::MakeExtVectorElt(Base.getAddress(), CV, type,
                                     Base.getBaseInfo(), TBAAAccessInfo());
   }
+  if (Base.isMatrixRow())
+    return EmitUnsupportedLValue(E, "Matrix single index swizzle");
+
   assert(Base.isExtVectorElt() && "Can only subscript lvalue vec elts here!");
 
   llvm::Constant *BaseElts = Base.getExtVectorElts();
@@ -6550,9 +6625,11 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
 
   CGCallee Callee = OrigCallee;
 
+  bool CFIUnchecked = CalleeType->hasPointeeToCFIUncheckedCalleeFunctionType();
+
   if (SanOpts.has(SanitizerKind::Function) &&
       (!TargetDecl || !isa<FunctionDecl>(TargetDecl)) &&
-      !isa<FunctionNoProtoType>(PointeeType)) {
+      !isa<FunctionNoProtoType>(PointeeType) && !CFIUnchecked) {
     if (llvm::Constant *PrefixSig =
             CGM.getTargetCodeGenInfo().getUBSanFunctionSignature(CGM)) {
       auto CheckOrdinal = SanitizerKind::SO_Function;
@@ -6630,8 +6707,6 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
       FD && DeviceKernelAttr::isOpenCLSpelling(FD->getAttr<DeviceKernelAttr>()))
     CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FnType);
-
-  bool CFIUnchecked = CalleeType->hasPointeeToCFIUncheckedCalleeFunctionType();
 
   // If we are checking indirect calls and this call is indirect, check that the
   // function pointer is a member of the bit set for the function type.

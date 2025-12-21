@@ -387,7 +387,7 @@ def FeatureStdExtZca
                      "part of the C extension, excluding compressed "
                      "floating point loads/stores">,
       RISCVExtensionBitmask<1, 2>;
-// FIXME: Update this message - Zca always implies C.
+// Note: Zca conditionally implies C (see RISCVISAInfo::updateImplication).
 def HasStdExtZca
     : Predicate<"Subtarget->hasStdExtZca()">,
       AssemblerPredicate<(any_of FeatureStdExtZca),
@@ -1639,6 +1639,18 @@ def HasVendorXqcisync
     : Predicate<"Subtarget->hasVendorXqcisync()">,
       AssemblerPredicate<(all_of FeatureVendorXqcisync),
                          "'Xqcisync' (Qualcomm uC Sync Delay Extension)">;
+
+def FeatureVendorXqci
+    : RISCVExperimentalExtension<0, 13, "Qualcomm uC Extension",
+                                 [FeatureVendorXqcia, FeatureVendorXqciac,
+                                 FeatureVendorXqcibi, FeatureVendorXqcibm,
+                                 FeatureVendorXqcicli, FeatureVendorXqcicm,
+                                 FeatureVendorXqcics, FeatureVendorXqcicsr,
+                                 FeatureVendorXqciint, FeatureVendorXqciio,
+                                 FeatureVendorXqcilb, FeatureVendorXqcili,
+                                 FeatureVendorXqcilia, FeatureVendorXqcilo,
+                                 FeatureVendorXqcilsm, FeatureVendorXqcisim,
+                                 FeatureVendorXqcisls, FeatureVendorXqcisync]>;
 
 // Rivos Extension(s)
 

@@ -88,6 +88,78 @@ static auto getNameMatcher(llvm::ArrayRef<StringRef> InvalidationFunctions) {
                matchers::matchesAnyListedName(InvalidationFunctions));
 }
 
+static StatementMatcher
+makeReinitMatcher(const ValueDecl *MovedVariable,
+                  llvm::ArrayRef<StringRef> InvalidationFunctions,
+                  llvm::ArrayRef<StringRef> ReinitializationFunctions) {
+  const auto DeclRefMatcher =
+      declRefExpr(hasDeclaration(equalsNode(MovedVariable))).bind("declref");
+
+  const auto StandardContainerTypeMatcher = hasType(hasUnqualifiedDesugaredType(
+      recordType(hasDeclaration(cxxRecordDecl(hasAnyName(
+          "::std::basic_string", "::std::vector", "::std::deque",
+          "::std::forward_list", "::std::list", "::std::set", "::std::map",
+          "::std::multiset", "::std::multimap", "::std::unordered_set",
+          "::std::unordered_map", "::std::unordered_multiset",
+          "::std::unordered_multimap"))))));
+
+  const auto StandardResettableOwnerTypeMatcher = hasType(
+      hasUnqualifiedDesugaredType(recordType(hasDeclaration(cxxRecordDecl(
+          hasAnyName("::std::unique_ptr", "::std::shared_ptr",
+                     "::std::weak_ptr", "::std::optional", "::std::any"))))));
+
+  // Matches different types of reinitialization.
+  return stmt(
+             anyOf(
+                 // Assignment. In addition to the overloaded assignment
+                 // operator, test for built-in assignment as well, since
+                 // template functions may be instantiated to use std::move() on
+                 // built-in types.
+                 binaryOperation(hasOperatorName("="), hasLHS(DeclRefMatcher)),
+                 // Declaration. We treat this as a type of reinitialization
+                 // too, so we don't need to treat it separately.
+                 declStmt(hasDescendant(equalsNode(MovedVariable))),
+                 // clear() and assign() on standard containers.
+                 cxxMemberCallExpr(
+                     on(expr(DeclRefMatcher, StandardContainerTypeMatcher)),
+                     // To keep the matcher simple, we check for assign() calls
+                     // on all standard containers, even though only vector,
+                     // deque, forward_list and list have assign(). If assign()
+                     // is called on any of the other containers, this will be
+                     // flagged by a compile error anyway.
+                     callee(cxxMethodDecl(hasAnyName("clear", "assign")))),
+                 // reset() on standard smart pointers.
+                 cxxMemberCallExpr(on(expr(DeclRefMatcher,
+                                           StandardResettableOwnerTypeMatcher)),
+                                   callee(cxxMethodDecl(hasName("reset")))),
+                 // Methods that have the [[clang::reinitializes]] attribute.
+                 cxxMemberCallExpr(on(DeclRefMatcher),
+                                   callee(cxxMethodDecl(
+                                       hasAttr(clang::attr::Reinitializes)))),
+                 // Functions that are specified in ReinitializationFunctions
+                 // option.
+                 callExpr(callee(functionDecl(matchers::matchesAnyListedName(
+                              ReinitializationFunctions))),
+                          anyOf(cxxMemberCallExpr(on(DeclRefMatcher)),
+                                callExpr(unless(cxxMemberCallExpr()),
+                                         hasArgument(0, DeclRefMatcher)))),
+                 // Passing variable to a function as a non-const pointer.
+                 callExpr(forEachArgumentWithParam(
+                     unaryOperator(hasOperatorName("&"),
+                                   hasUnaryOperand(DeclRefMatcher)),
+                     unless(
+                         parmVarDecl(hasType(pointsTo(isConstQualified())))))),
+                 // Passing variable to a function as a non-const lvalue
+                 // reference (unless that function is std::move()).
+                 callExpr(forEachArgumentWithParam(
+                              traverse(TK_AsIs, DeclRefMatcher),
+                              unless(parmVarDecl(hasType(
+                                  references(qualType(isConstQualified())))))),
+                          unless(callee(functionDecl(
+                              getNameMatcher(InvalidationFunctions)))))))
+      .bind("reinit");
+}
+
 // Matches nodes that are
 // - Part of a decltype argument or class template argument (we check this by
 //   seeing if they are children of a TypeLoc), or
@@ -179,14 +251,12 @@ UseAfterMoveFinder::findInternal(const CFGBlock *Block, const Expr *MovingCall,
   // If `Reinit` is identical to `MovingCall`, we're looking at a move-to-self
   // (e.g. `a = std::move(a)`). Count these as reinitializations.
   llvm::SmallVector<const Stmt *, 1> ReinitsToDelete;
-  for (const Stmt *Reinit : Reinits) {
+  for (const Stmt *Reinit : Reinits)
     if (MovingCall && Reinit != MovingCall &&
         Sequence->potentiallyAfter(MovingCall, Reinit))
       ReinitsToDelete.push_back(Reinit);
-  }
-  for (const Stmt *Reinit : ReinitsToDelete) {
+  for (const Stmt *Reinit : ReinitsToDelete)
     Reinits.erase(Reinit);
-  }
 
   // Find all uses that potentially come after the move.
   for (const DeclRefExpr *Use : Uses) {
@@ -195,10 +265,9 @@ UseAfterMoveFinder::findInternal(const CFGBlock *Block, const Expr *MovingCall,
       // comes before the use, i.e. if there's no potential that the reinit is
       // after the use.
       bool HaveSavingReinit = false;
-      for (const Stmt *Reinit : Reinits) {
+      for (const Stmt *Reinit : Reinits)
         if (!Sequence->potentiallyAfter(Reinit, Use))
           HaveSavingReinit = true;
-      }
 
       if (!HaveSavingReinit) {
         UseAfterMove TheUseAfterMove;
@@ -222,9 +291,8 @@ UseAfterMoveFinder::findInternal(const CFGBlock *Block, const Expr *MovingCall,
   if (Reinits.empty()) {
     for (const auto &Succ : Block->succs()) {
       if (Succ) {
-        if (auto Found = findInternal(Succ, nullptr, MovedVariable)) {
+        if (auto Found = findInternal(Succ, nullptr, MovedVariable))
           return Found;
-        }
       }
     }
   }
@@ -244,10 +312,9 @@ void UseAfterMoveFinder::getUsesAndReinits(
 
   // All references to the variable that aren't reinitializations are uses.
   Uses->clear();
-  for (const DeclRefExpr *DeclRef : DeclRefs) {
+  for (const DeclRefExpr *DeclRef : DeclRefs)
     if (!ReinitDeclRefs.contains(DeclRef))
       Uses->push_back(DeclRef);
-  }
 
   // Sort the uses by their occurrence in the source code.
   llvm::sort(*Uses, [](const DeclRefExpr *D1, const DeclRefExpr *D2) {
@@ -292,9 +359,8 @@ void UseAfterMoveFinder::getDeclRefs(
         if (DeclRef && BlockMap->blockContainingStmt(DeclRef) == Block) {
           // Ignore uses of a standard smart pointer that don't dereference the
           // pointer.
-          if (Operator || !isStandardSmartPointer(DeclRef->getDecl())) {
+          if (Operator || !isStandardSmartPointer(DeclRef->getDecl()))
             DeclRefs->insert(DeclRef);
-          }
         }
       }
     };
@@ -317,70 +383,9 @@ void UseAfterMoveFinder::getReinits(
     const CFGBlock *Block, const ValueDecl *MovedVariable,
     llvm::SmallPtrSetImpl<const Stmt *> *Stmts,
     llvm::SmallPtrSetImpl<const DeclRefExpr *> *DeclRefs) {
-  auto DeclRefMatcher =
-      declRefExpr(hasDeclaration(equalsNode(MovedVariable))).bind("declref");
-
-  auto StandardContainerTypeMatcher = hasType(hasUnqualifiedDesugaredType(
-      recordType(hasDeclaration(cxxRecordDecl(hasAnyName(
-          "::std::basic_string", "::std::vector", "::std::deque",
-          "::std::forward_list", "::std::list", "::std::set", "::std::map",
-          "::std::multiset", "::std::multimap", "::std::unordered_set",
-          "::std::unordered_map", "::std::unordered_multiset",
-          "::std::unordered_multimap"))))));
-
-  auto StandardResettableOwnerTypeMatcher = hasType(
-      hasUnqualifiedDesugaredType(recordType(hasDeclaration(cxxRecordDecl(
-          hasAnyName("::std::unique_ptr", "::std::shared_ptr",
-                     "::std::weak_ptr", "::std::optional", "::std::any"))))));
-
-  // Matches different types of reinitialization.
-  auto ReinitMatcher =
-      stmt(anyOf(
-               // Assignment. In addition to the overloaded assignment operator,
-               // test for built-in assignment as well, since template functions
-               // may be instantiated to use std::move() on built-in types.
-               binaryOperation(hasOperatorName("="), hasLHS(DeclRefMatcher)),
-               // Declaration. We treat this as a type of reinitialization too,
-               // so we don't need to treat it separately.
-               declStmt(hasDescendant(equalsNode(MovedVariable))),
-               // clear() and assign() on standard containers.
-               cxxMemberCallExpr(
-                   on(expr(DeclRefMatcher, StandardContainerTypeMatcher)),
-                   // To keep the matcher simple, we check for assign() calls
-                   // on all standard containers, even though only vector,
-                   // deque, forward_list and list have assign(). If assign()
-                   // is called on any of the other containers, this will be
-                   // flagged by a compile error anyway.
-                   callee(cxxMethodDecl(hasAnyName("clear", "assign")))),
-               // reset() on standard smart pointers.
-               cxxMemberCallExpr(
-                   on(expr(DeclRefMatcher, StandardResettableOwnerTypeMatcher)),
-                   callee(cxxMethodDecl(hasName("reset")))),
-               // Methods that have the [[clang::reinitializes]] attribute.
-               cxxMemberCallExpr(
-                   on(DeclRefMatcher),
-                   callee(cxxMethodDecl(hasAttr(clang::attr::Reinitializes)))),
-               // Functions that are specified in ReinitializationFunctions
-               // option.
-               callExpr(callee(functionDecl(matchers::matchesAnyListedName(
-                            ReinitializationFunctions))),
-                        anyOf(cxxMemberCallExpr(on(DeclRefMatcher)),
-                              callExpr(unless(cxxMemberCallExpr()),
-                                       hasArgument(0, DeclRefMatcher)))),
-               // Passing variable to a function as a non-const pointer.
-               callExpr(forEachArgumentWithParam(
-                   unaryOperator(hasOperatorName("&"),
-                                 hasUnaryOperand(DeclRefMatcher)),
-                   unless(parmVarDecl(hasType(pointsTo(isConstQualified())))))),
-               // Passing variable to a function as a non-const lvalue reference
-               // (unless that function is std::move()).
-               callExpr(forEachArgumentWithParam(
-                            traverse(TK_AsIs, DeclRefMatcher),
-                            unless(parmVarDecl(hasType(
-                                references(qualType(isConstQualified())))))),
-                        unless(callee(functionDecl(
-                            getNameMatcher(InvalidationFunctions)))))))
-          .bind("reinit");
+  const auto ReinitMatcher =
+      makeReinitMatcher(MovedVariable, InvalidationFunctions,
+                        ReinitializationFunctions);
 
   Stmts->clear();
   DeclRefs->clear();
@@ -408,11 +413,15 @@ void UseAfterMoveFinder::getReinits(
   }
 }
 
+namespace {
+
 enum MoveType {
   Forward = 0,      // std::forward
   Move = 1,         // std::move
   Invalidation = 2, // other
 };
+
+} // namespace
 
 static MoveType determineMoveType(const FunctionDecl *FuncDecl) {
   if (FuncDecl->isInStdNamespace()) {

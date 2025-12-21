@@ -2632,6 +2632,22 @@ cc_library(
 )
 
 cc_library(
+    name = "X86VectorUtils",
+    srcs = glob(["lib/Dialect/X86Vector/Utils/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/X86Vector/Utils/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":LinalgDialect",
+        ":LinalgInterfaces",
+        ":Support",
+        ":VectorDialect",
+        ":X86VectorDialect",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "X86VectorTransforms",
     srcs = glob(["lib/Dialect/X86Vector/Transforms/*.cpp"]),
     hdrs = ["include/mlir/Dialect/X86Vector/Transforms.h"],
@@ -2643,11 +2659,14 @@ cc_library(
         ":LLVMDialect",
         ":LinalgDialect",
         ":LinalgInterfaces",
+        ":MemRefDialect",
+        ":MemRefUtils",
         ":Pass",
         ":TransformUtils",
         ":VectorDialect",
         ":VectorUtils",
         ":X86VectorDialect",
+        ":X86VectorUtils",
         "//llvm:Support",
     ],
 )
@@ -3794,6 +3813,17 @@ gentbl_cc_library(
     deps = [":XeGPUAttrTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "XeGPUOpInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/XeGPU/IR/XeGPUOpInterface.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Dialect/XeGPU/IR/XeGPUOpInterface.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/XeGPU/IR/XeGPUAttrs.td",
+    deps = [":XeGPUAttrTdFiles"],
+)
+
 cc_library(
     name = "XeGPUDialect",
     srcs = glob(["lib/Dialect/XeGPU/IR/*.cpp"]),
@@ -3815,6 +3845,7 @@ cc_library(
         ":XeGPUAttrInterfaceIncGen",
         ":XeGPUEnumsIncGen",
         ":XeGPUIncGen",
+        ":XeGPUOpInterfaceIncGen",
         ":XeGPUuArch",
         ":XeVMDialect",
         "//llvm:Support",
@@ -4291,8 +4322,8 @@ cc_library(
     deps = [
         ":AMDGPUToROCDL",
         ":AffineToStandard",
+        ":ArithAndMathToAPFloat",
         ":ArithToAMDGPU",
-        ":ArithToAPFloat",
         ":ArithToArmSME",
         ":ArithToEmitC",
         ":ArithToLLVM",
@@ -8501,9 +8532,14 @@ cc_library(
 )
 
 cc_library(
-    name = "ArithToAPFloat",
-    srcs = glob(["lib/Conversion/ArithToAPFloat/*.cpp"]),
-    hdrs = glob(["include/mlir/Conversion/ArithToAPFloat/*.h"]),
+    name = "ArithAndMathToAPFloat",
+    srcs = glob([
+        "lib/Conversion/ArithAndMathToAPFloat/*.cpp",
+        "lib/Conversion/ArithAndMathToAPFloat/*.h",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/ArithAndMathToAPFloat/*.h",
+    ]),
     includes = ["include"],
     deps = [
         ":ArithDialect",
@@ -8514,6 +8550,8 @@ cc_library(
         ":FuncDialect",
         ":FuncUtils",
         ":IR",
+        ":MathDialect",
+        ":MathTransforms",
         ":Pass",
         ":TransformUtils",
         ":VectorDialect",

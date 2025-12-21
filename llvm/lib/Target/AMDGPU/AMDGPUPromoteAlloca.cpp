@@ -42,6 +42,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 
@@ -159,7 +160,10 @@ private:
   void analyzePromoteToVector(AllocaAnalysis &AA) const;
   void promoteAllocaToVector(AllocaAnalysis &AA);
   void analyzePromoteToLDS(AllocaAnalysis &AA) const;
-  bool tryPromoteAllocaToLDS(AllocaAnalysis &AA, bool SufficientLDS);
+  bool tryPromoteAllocaToLDS(AllocaAnalysis &AA, bool SufficientLDS,
+                             SetVector<IntrinsicInst *> &DeferredIntrs);
+  void
+  finishDeferredAllocaToLDSPromotion(SetVector<IntrinsicInst *> &DeferredIntrs);
 
   void scoreAlloca(AllocaAnalysis &AA) const;
 
@@ -414,6 +418,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   // clang-format on
 
   bool Changed = false;
+  SetVector<IntrinsicInst *> DeferredIntrs;
   for (AllocaAnalysis &AA : Allocas) {
     if (AA.Vector.Ty) {
       const unsigned AllocaCost =
@@ -435,9 +440,11 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
       }
     }
 
-    if (AA.LDS.Enable && tryPromoteAllocaToLDS(AA, SufficientLDS))
+    if (AA.LDS.Enable &&
+        tryPromoteAllocaToLDS(AA, SufficientLDS, DeferredIntrs))
       Changed = true;
   }
+  finishDeferredAllocaToLDSPromotion(DeferredIntrs);
 
   // NOTE: tryPromoteAllocaToVector removes the alloca, so Allocas contains
   // dangling pointers. If we want to reuse it past this point, the loop above
@@ -643,6 +650,36 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       const unsigned NumLoadedElts = AccessSize / DL.getTypeStoreSize(VecEltTy);
       auto *SubVecTy = FixedVectorType::get(VecEltTy, NumLoadedElts);
       assert(DL.getTypeStoreSize(SubVecTy) == DL.getTypeStoreSize(AccessTy));
+
+      // If idx is dynamic, then sandwich load with bitcasts.
+      // ie. VectorTy                 SubVecTy  AccessTy
+      //     <64 x i8> ->             <16 x i8> <8 x i16>
+      //     <64 x i8> -> <4 x i128> -> i128 -> <8 x i16>
+      // Extracting subvector with dynamic index has very large expansion in
+      // the amdgpu backend. Limit to pow2.
+      FixedVectorType *VectorTy = AA.Vector.Ty;
+      TypeSize NumBits = DL.getTypeStoreSize(SubVecTy) * 8u;
+      uint64_t LoadAlign = cast<LoadInst>(Inst)->getAlign().value();
+      bool IsAlignedLoad = NumBits <= (LoadAlign * 8u);
+      unsigned TotalNumElts = VectorTy->getNumElements();
+      bool IsProperlyDivisible = TotalNumElts % NumLoadedElts == 0;
+      if (!isa<ConstantInt>(Index) &&
+          llvm::isPowerOf2_32(SubVecTy->getNumElements()) &&
+          IsProperlyDivisible && IsAlignedLoad) {
+        IntegerType *NewElemTy = Builder.getIntNTy(NumBits);
+        const unsigned NewNumElts =
+            DL.getTypeStoreSize(VectorTy) * 8u / NumBits;
+        const unsigned LShrAmt = llvm::Log2_32(SubVecTy->getNumElements());
+        FixedVectorType *BitCastTy =
+            FixedVectorType::get(NewElemTy, NewNumElts);
+        Value *BCVal = Builder.CreateBitCast(CurVal, BitCastTy);
+        Value *NewIdx = Builder.CreateLShr(
+            Index, ConstantInt::get(Index->getType(), LShrAmt));
+        Value *ExtVal = Builder.CreateExtractElement(BCVal, NewIdx);
+        Value *BCOut = Builder.CreateBitCast(ExtVal, AccessTy);
+        Inst->replaceAllUsesWith(BCOut);
+        return nullptr;
+      }
 
       Value *SubVec = PoisonValue::get(SubVecTy);
       for (unsigned K = 0; K < NumLoadedElts; ++K) {
@@ -1550,8 +1587,9 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
 }
 
 // FIXME: Should try to pick the most likely to be profitable allocas first.
-bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaAnalysis &AA,
-                                                    bool SufficientLDS) {
+bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
+    AllocaAnalysis &AA, bool SufficientLDS,
+    SetVector<IntrinsicInst *> &DeferredIntrs) {
   LLVM_DEBUG(dbgs() << "Trying to promote to LDS: " << *AA.Alloca << '\n');
 
   // Not likely to have sufficient local memory for promotion.
@@ -1620,8 +1658,6 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaAnalysis &AA,
   AA.Alloca->replaceAllUsesWith(Offset);
   AA.Alloca->eraseFromParent();
 
-  SmallVector<IntrinsicInst *> DeferredIntrs;
-
   PointerType *NewPtrTy = PointerType::get(Context, AMDGPUAS::LOCAL_ADDRESS);
 
   for (Value *V : AA.LDS.Worklist) {
@@ -1682,7 +1718,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaAnalysis &AA,
       // These have 2 pointer operands. In case if second pointer also needs
       // to be replaced we defer processing of these intrinsics until all
       // other values are processed.
-      DeferredIntrs.push_back(Intr);
+      DeferredIntrs.insert(Intr);
       continue;
     case Intrinsic::memset: {
       MemSetInst *MemSet = cast<MemSetInst>(Intr);
@@ -1730,7 +1766,14 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaAnalysis &AA,
     }
   }
 
+  return true;
+}
+
+void AMDGPUPromoteAllocaImpl::finishDeferredAllocaToLDSPromotion(
+    SetVector<IntrinsicInst *> &DeferredIntrs) {
+
   for (IntrinsicInst *Intr : DeferredIntrs) {
+    IRBuilder<> Builder(Intr);
     Builder.SetInsertPoint(Intr);
     Intrinsic::ID ID = Intr->getIntrinsicID();
     assert(ID == Intrinsic::memcpy || ID == Intrinsic::memmove);
@@ -1748,6 +1791,4 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaAnalysis &AA,
 
     Intr->eraseFromParent();
   }
-
-  return true;
 }
