@@ -358,7 +358,7 @@ bool SanitizerArgs::needsFuzzerInterceptors() const {
 bool SanitizerArgs::needsUbsanRt() const {
   // All of these include ubsan.
   if (needsAsanRt() || needsMsanRt() || needsNsanRt() || needsHwasanRt() ||
-      needsTsanRt() || needsDfsanRt() || needsLsanRt() ||
+      needsTsanRt() || needsDfsanRt() || needsLsanRt() || needsTysanRt() ||
       needsCfiCrossDsoDiagRt() || (needsScudoRt() && !requiresMinimalRuntime()))
     return false;
 

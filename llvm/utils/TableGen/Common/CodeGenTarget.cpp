@@ -173,8 +173,8 @@ const CodeGenRegister *CodeGenTarget::getRegisterByName(StringRef Name) const {
 }
 
 const CodeGenRegisterClass &
-CodeGenTarget::getRegisterClass(const Record *R) const {
-  return *getRegBank().getRegClass(R);
+CodeGenTarget::getRegisterClass(const Record *R, ArrayRef<SMLoc> Loc) const {
+  return *getRegBank().getRegClass(R, Loc);
 }
 
 std::vector<ValueTypeByHwMode>
@@ -227,12 +227,14 @@ const Record *CodeGenTarget::getInitValueAsRegClassLike(const Init *V) const {
   const DefInit *VDefInit = dyn_cast<DefInit>(V);
   if (!VDefInit)
     return nullptr;
+  return getAsRegClassLike(VDefInit->getDef());
+}
 
-  const Record *RegClass = VDefInit->getDef();
-  if (RegClass->isSubClassOf("RegisterOperand"))
-    return RegClass->getValueAsDef("RegClass");
+const Record *CodeGenTarget::getAsRegClassLike(const Record *Rec) const {
+  if (Rec->isSubClassOf("RegisterOperand"))
+    return Rec->getValueAsDef("RegClass");
 
-  return RegClass->isSubClassOf("RegisterClassLike") ? RegClass : nullptr;
+  return Rec->isSubClassOf("RegisterClassLike") ? Rec : nullptr;
 }
 
 CodeGenSchedModels &CodeGenTarget::getSchedModels() const {

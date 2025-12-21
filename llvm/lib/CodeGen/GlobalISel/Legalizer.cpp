@@ -348,7 +348,7 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
                                             *MIRBuilder, VT);
 
   if (Result.FailedOn) {
-    reportGISelFailure(MF, TPC, MORE, "gisel-legalize",
+    reportGISelFailure(MF, MORE, "gisel-legalize",
                        "unable to legalize instruction", *Result.FailedOn);
     return false;
   }
@@ -360,7 +360,7 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
     R << "lost "
       << ore::NV("NumLostDebugLocs", LocObserver.getNumLostDebugLocs())
       << " debug locations during pass";
-    reportGISelWarning(MF, TPC, MORE, R);
+    reportGISelWarning(MF, MORE, R);
     // Example remark:
     // --- !Missed
     // Pass:            gisel-legalize

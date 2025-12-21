@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -48,6 +47,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/SHA1.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
@@ -2289,13 +2289,13 @@ public:
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>
           &ResolvedODR) {
-
-    llvm::TimeTraceScope timeScope(
-        "Run ThinLTO backend thread (out-of-process)", J.ModuleID);
-
-    if (auto E = emitFiles(ImportList, J.ModuleID, J.ModuleID.str(),
-                           J.SummaryIndexPath, J.ImportsFiles))
-      return E;
+    {
+      TimeTraceScope TimeScope("Emit individual index for DTLTO",
+                               J.SummaryIndexPath);
+      if (auto E = emitFiles(ImportList, J.ModuleID, J.ModuleID.str(),
+                             J.SummaryIndexPath, J.ImportsFiles))
+        return E;
+    }
 
     if (!Cache.isValid() || !CombinedIndex.modulePaths().count(J.ModuleID) ||
         all_of(CombinedIndex.getModuleHash(J.ModuleID),
@@ -2304,6 +2304,7 @@ public:
       // no module hash.
       return Error::success();
 
+    TimeTraceScope TimeScope("Check cache for DTLTO", J.SummaryIndexPath);
     const GVSummaryMapTy &DefinedGlobals =
         ModuleToDefinedGVSummaries.find(J.ModuleID)->second;
 
@@ -2354,6 +2355,13 @@ public:
          nullptr,
          false};
 
+    // Cleanup per-job temporary files on abnormal process exit.
+    if (!SaveTemps) {
+      llvm::sys::RemoveFileOnSignal(J.NativeObjectPath);
+      if (!ShouldEmitIndexFiles)
+        llvm::sys::RemoveFileOnSignal(J.SummaryIndexPath);
+    }
+
     assert(ModuleToDefinedGVSummaries.count(ModulePath));
 
     // The BackendThreadPool is only used here to write the sharded index files
@@ -2363,6 +2371,10 @@ public:
             const FunctionImporter::ExportSetTy &ExportList,
             const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>
                 &ResolvedODR) {
+          if (LLVM_ENABLE_THREADS && Conf.TimeTraceEnabled)
+            timeTraceProfilerInitialize(
+                Conf.TimeTraceGranularity,
+                "Emit individual index and check cache for DTLTO");
           Error E =
               runThinLTOBackendThread(J, ImportList, ExportList, ResolvedODR);
           if (E) {
@@ -2372,6 +2384,8 @@ public:
             else
               Err = std::move(E);
           }
+          if (LLVM_ENABLE_THREADS && Conf.TimeTraceEnabled)
+            timeTraceProfilerFinishThread();
         },
         std::ref(J), std::ref(ImportList), std::ref(ExportList),
         std::ref(ResolvedODR));
@@ -2520,6 +2534,7 @@ public:
       return std::move(*Err);
 
     auto CleanPerJobFiles = llvm::make_scope_exit([&] {
+      llvm::TimeTraceScope TimeScope("Remove DTLTO temporary files");
       if (!SaveTemps)
         for (auto &Job : Jobs) {
           removeFile(Job.NativeObjectPath);
@@ -2533,76 +2548,90 @@ public:
     buildCommonRemoteCompilerOptions();
 
     SString JsonFile = sys::path::parent_path(LinkerOutputFile);
-    sys::path::append(JsonFile, sys::path::stem(LinkerOutputFile) + "." + UID +
-                                    ".dist-file.json");
-    if (!emitDistributorJson(JsonFile))
-      return make_error<StringError>(
-          BCError + "failed to generate distributor JSON script: " + JsonFile,
-          inconvertibleErrorCode());
+    {
+      llvm::TimeTraceScope TimeScope("Emit DTLTO JSON");
+      sys::path::append(JsonFile, sys::path::stem(LinkerOutputFile) + "." +
+                                      UID + ".dist-file.json");
+      // Cleanup DTLTO JSON file on abnormal process exit.
+      if (!SaveTemps)
+        llvm::sys::RemoveFileOnSignal(JsonFile);
+      if (!emitDistributorJson(JsonFile))
+        return make_error<StringError>(
+            BCError + "failed to generate distributor JSON script: " + JsonFile,
+            inconvertibleErrorCode());
+    }
     auto CleanJson = llvm::make_scope_exit([&] {
       if (!SaveTemps)
         removeFile(JsonFile);
     });
 
-    // Checks if we have any jobs that don't have corresponding cache entries.
-    if (CachedJobs.load() < Jobs.size()) {
-      SmallVector<StringRef, 3> Args = {DistributorPath};
-      llvm::append_range(Args, DistributorArgs);
-      Args.push_back(JsonFile);
-      std::string ErrMsg;
-      if (sys::ExecuteAndWait(Args[0], Args,
-                              /*Env=*/std::nullopt, /*Redirects=*/{},
-                              /*SecondsToWait=*/0, /*MemoryLimit=*/0,
-                              &ErrMsg)) {
-        return make_error<StringError>(
-            BCError + "distributor execution failed" +
-                (!ErrMsg.empty() ? ": " + ErrMsg + Twine(".") : Twine(".")),
-            inconvertibleErrorCode());
+    {
+      llvm::TimeTraceScope TimeScope("Execute DTLTO distributor",
+                                     DistributorPath);
+      // Checks if we have any jobs that don't have corresponding cache entries.
+      if (CachedJobs.load() < Jobs.size()) {
+        SmallVector<StringRef, 3> Args = {DistributorPath};
+        llvm::append_range(Args, DistributorArgs);
+        Args.push_back(JsonFile);
+        std::string ErrMsg;
+        if (sys::ExecuteAndWait(Args[0], Args,
+                                /*Env=*/std::nullopt, /*Redirects=*/{},
+                                /*SecondsToWait=*/0, /*MemoryLimit=*/0,
+                                &ErrMsg)) {
+          return make_error<StringError>(
+              BCError + "distributor execution failed" +
+                  (!ErrMsg.empty() ? ": " + ErrMsg + Twine(".") : Twine(".")),
+              inconvertibleErrorCode());
+        }
       }
     }
 
-    for (auto &Job : Jobs) {
-      if (!Job.CacheKey.empty() && Job.Cached) {
-        assert(Cache.isValid());
-        continue;
-      }
-      // Load the native object from a file into a memory buffer
-      // and store its contents in the output buffer.
-      auto ObjFileMbOrErr =
-          MemoryBuffer::getFile(Job.NativeObjectPath, /*IsText=*/false,
-                                /*RequiresNullTerminator=*/false);
-      if (std::error_code EC = ObjFileMbOrErr.getError())
-        return make_error<StringError>(
-            BCError + "cannot open native object file: " +
-                Job.NativeObjectPath + ": " + EC.message(),
-            inconvertibleErrorCode());
+    {
+      llvm::TimeTraceScope FilesScope("Add DTLTO files to the link");
+      for (auto &Job : Jobs) {
+        if (!Job.CacheKey.empty() && Job.Cached) {
+          assert(Cache.isValid());
+          continue;
+        }
+        // Load the native object from a file into a memory buffer
+        // and store its contents in the output buffer.
+        auto ObjFileMbOrErr =
+            MemoryBuffer::getFile(Job.NativeObjectPath, /*IsText=*/false,
+                                  /*RequiresNullTerminator=*/false);
+        if (std::error_code EC = ObjFileMbOrErr.getError())
+          return make_error<StringError>(
+              BCError + "cannot open native object file: " +
+                  Job.NativeObjectPath + ": " + EC.message(),
+              inconvertibleErrorCode());
 
-      MemoryBufferRef ObjFileMbRef = ObjFileMbOrErr->get()->getMemBufferRef();
-      if (Cache.isValid()) {
-        // Cache hits are taken care of earlier. At this point, we could only
-        // have cache misses.
-        assert(Job.CacheAddStream);
-        // Obtain a file stream for a storing a cache entry.
-        auto CachedFileStreamOrErr = Job.CacheAddStream(Job.Task, Job.ModuleID);
-        if (!CachedFileStreamOrErr)
-          return joinErrors(
-              CachedFileStreamOrErr.takeError(),
-              createStringError(inconvertibleErrorCode(),
-                                "Cannot get a cache file stream: %s",
-                                Job.NativeObjectPath.data()));
-        // Store a file buffer into the cache stream.
-        auto &CacheStream = *(CachedFileStreamOrErr->get());
-        *(CacheStream.OS) << ObjFileMbRef.getBuffer();
-        if (Error Err = CacheStream.commit())
-          return Err;
-      } else {
-        auto StreamOrErr = AddStream(Job.Task, Job.ModuleID);
-        if (Error Err = StreamOrErr.takeError())
-          report_fatal_error(std::move(Err));
-        auto &Stream = *StreamOrErr->get();
-        *Stream.OS << ObjFileMbRef.getBuffer();
-        if (Error Err = Stream.commit())
-          report_fatal_error(std::move(Err));
+        MemoryBufferRef ObjFileMbRef = ObjFileMbOrErr->get()->getMemBufferRef();
+        if (Cache.isValid()) {
+          // Cache hits are taken care of earlier. At this point, we could only
+          // have cache misses.
+          assert(Job.CacheAddStream);
+          // Obtain a file stream for a storing a cache entry.
+          auto CachedFileStreamOrErr =
+              Job.CacheAddStream(Job.Task, Job.ModuleID);
+          if (!CachedFileStreamOrErr)
+            return joinErrors(
+                CachedFileStreamOrErr.takeError(),
+                createStringError(inconvertibleErrorCode(),
+                                  "Cannot get a cache file stream: %s",
+                                  Job.NativeObjectPath.data()));
+          // Store a file buffer into the cache stream.
+          auto &CacheStream = *(CachedFileStreamOrErr->get());
+          *(CacheStream.OS) << ObjFileMbRef.getBuffer();
+          if (Error Err = CacheStream.commit())
+            return Err;
+        } else {
+          auto StreamOrErr = AddStream(Job.Task, Job.ModuleID);
+          if (Error Err = StreamOrErr.takeError())
+            report_fatal_error(std::move(Err));
+          auto &Stream = *StreamOrErr->get();
+          *Stream.OS << ObjFileMbRef.getBuffer();
+          if (Error Err = Stream.commit())
+            report_fatal_error(std::move(Err));
+        }
       }
     }
     return Error::success();

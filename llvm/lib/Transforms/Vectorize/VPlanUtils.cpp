@@ -13,9 +13,11 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
+using namespace llvm::SCEVPatternMatch;
 
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
   return all_of(Def->users(),
@@ -82,7 +84,8 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
 const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                                            ScalarEvolution &SE, const Loop *L) {
   if (V->isLiveIn()) {
-    if (Value *LiveIn = V->getLiveInIRValue())
+    Value *LiveIn = V->getLiveInIRValue();
+    if (LiveIn && SE.isSCEVable(LiveIn->getType()))
       return SE.getSCEV(LiveIn);
     return SE.getCouldNotCompute();
   }
@@ -150,6 +153,23 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
       .Default([&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
 }
 
+bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,
+                                   const Loop *L) {
+  // If address is an SCEVAddExpr, we require that all operands must be either
+  // be invariant or a (possibly sign-extend) affine AddRec.
+  if (auto *PtrAdd = dyn_cast<SCEVAddExpr>(Addr)) {
+    return all_of(PtrAdd->operands(), [&SE, L](const SCEV *Op) {
+      return SE.isLoopInvariant(Op, L) ||
+             match(Op, m_scev_SExt(m_scev_AffineAddRec(m_SCEV(), m_SCEV()))) ||
+             match(Op, m_scev_AffineAddRec(m_SCEV(), m_SCEV()));
+    });
+  }
+
+  // Otherwise, check if address is loop invariant or an affine add recurrence.
+  return SE.isLoopInvariant(Addr, L) ||
+         match(Addr, m_scev_AffineAddRec(m_SCEV(), m_SCEV()));
+}
+
 /// Returns true if \p Opcode preserves uniformity, i.e., if all operands are
 /// uniform, the result will also be uniform.
 static bool preservesUniformity(unsigned Opcode) {
@@ -197,7 +217,8 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
             all_of(VPI->operands(), isSingleScalar));
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
     return !RR->isPartialReduction();
-  if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe>(VPV))
+  if (isa<VPCanonicalIVPHIRecipe, VPVectorPointerRecipe,
+          VPVectorEndPointerRecipe>(VPV))
     return true;
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
     return Expr->isSingleScalar();

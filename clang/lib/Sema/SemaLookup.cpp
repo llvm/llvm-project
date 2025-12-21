@@ -3927,7 +3927,8 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
             break;
           }
 
-          if (!getLangOpts().CPlusPlusModules)
+          if (!D->getOwningModule() ||
+              !D->getOwningModule()->getTopLevelModule()->isNamedModule())
             continue;
 
           if (D->isInExportDeclContext()) {
@@ -3959,7 +3960,9 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
               break;
             }
           }
-        } else if (D->getFriendObjectKind()) {
+        }
+
+        if (D->getFriendObjectKind()) {
           auto *RD = cast<CXXRecordDecl>(D->getLexicalDeclContext());
           // [basic.lookup.argdep]p4:
           //   Argument-dependent lookup finds all declarations of functions and
