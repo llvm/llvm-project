@@ -493,6 +493,9 @@ Improvements to Clang's diagnostics
   carries messages like 'In file included from ...' or 'In module ...'.
   Now the include/import locations are written into `sarif.run.result.relatedLocations`.
 
+- Clang now generates a fix-it for C++20 designated initializers when the 
+  initializers do not match the declaration order in the structure. 
+
 Improvements to Clang's time-trace
 ----------------------------------
 
