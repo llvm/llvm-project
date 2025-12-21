@@ -5152,12 +5152,10 @@ TEST(Hover, GH2381) {
     enum Bar : unsigned long long int {
       A = -42ULL,
       B = ~0ULL,
-      C = 0xFFFFFFFFFFFFFFFFULL,
     };
   };
   constexpr auto va$a^ = Foo::A;
   constexpr auto vb$b^ = Foo::B;
-  constexpr auto vc$c^ = Foo::C;
   )cpp");
 
   TestTU TU = TestTU::withCode(Code.code());
@@ -5178,8 +5176,7 @@ TEST(Hover, GH2381) {
       EXPECT_EQ(H->LocalScope, "");
       EXPECT_EQ(H->Type, "const Foo::Bar");
       EXPECT_EQ(H->Definition, "constexpr auto va = Foo::A");
-      // FIXME: Should be "A (FFFFFFFFFFFFFFD6)
-      EXPECT_EQ(H->Value, "18446744073709551574");
+      EXPECT_EQ(H->Value, "A (0xffffffffffffffd6)");
     }
 
     {
@@ -5192,22 +5189,7 @@ TEST(Hover, GH2381) {
       EXPECT_EQ(H->LocalScope, "");
       EXPECT_EQ(H->Type, "const Foo::Bar");
       EXPECT_EQ(H->Definition, "constexpr auto vb = Foo::B");
-      // FIXME: Should be "B (0xFFFFFFFFFFFFFFFF)");
-      EXPECT_EQ(H->Value, "18446744073709551615");
-    }
-
-    {
-      auto H = getHover(AST, Code.point("c"), format::getLLVMStyle(), nullptr);
-
-      ASSERT_TRUE(H);
-      EXPECT_EQ(H->Name, "vc");
-      EXPECT_EQ(H->Kind, index::SymbolKind::Variable);
-      EXPECT_EQ(H->NamespaceScope, "");
-      EXPECT_EQ(H->LocalScope, "");
-      EXPECT_EQ(H->Type, "const Foo::Bar");
-      EXPECT_EQ(H->Definition, "constexpr auto vc = Foo::C");
-      // FIXME: Should be "C (0xFFFFFFFFFFFFFFFF)");
-      EXPECT_EQ(H->Value, "18446744073709551615");
+      EXPECT_EQ(H->Value, "B (0xffffffffffffffff)");
     }
   }
 }

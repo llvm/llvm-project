@@ -57,6 +57,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -453,15 +454,24 @@ std::optional<std::string> printExprValue(const Expr *E,
     return std::nullopt;
 
   // Show enums symbolically, not numerically like APValue::printPretty().
-  if (T->isEnumeralType() && Constant.Val.isInt() &&
-      Constant.Val.getInt().isRepresentableByInt64()) {
-    // Compare to int64_t to avoid bit-width match requirements.
-    int64_t Val = Constant.Val.getInt().getExtValue();
-    for (const EnumConstantDecl *ECD : T->castAsEnumDecl()->enumerators())
-      if (ECD->getInitVal() == Val)
-        return llvm::formatv("{0} ({1})", ECD->getNameAsString(),
-                             printHex(Constant.Val.getInt()))
-            .str();
+  if (T->isEnumeralType() && Constant.Val.isInt()) {
+    const llvm::APSInt &Val = Constant.Val.getInt();
+    if (Val.isRepresentableByInt64()) {
+      // Compare to int64_t to avoid bit-width match requirements.
+      int64_t Val = Constant.Val.getInt().getExtValue();
+      for (const EnumConstantDecl *ECD : T->castAsEnumDecl()->enumerators())
+        if (ECD->getInitVal() == Val)
+          return llvm::formatv("{0} ({1})", ECD->getNameAsString(),
+                               printHex(Constant.Val.getInt()))
+              .str();
+    } else if (const auto UVal = Constant.Val.getInt().tryZExtValue()) {
+      for (const EnumConstantDecl *ECD : T->castAsEnumDecl()->enumerators())
+        if (ECD->getInitVal().getZExtValue() == *UVal)
+          return llvm::formatv("{0} ({1})", ECD->getNameAsString(),
+                               printHex(Constant.Val.getInt()))
+              .str();
+    } else
+      llvm_unreachable("Unhandled branch in enum symbolic representation");
   }
   // Show hex value of integers if they're at least 10 (or negative!)
   if (T->isIntegralOrEnumerationType() && Constant.Val.isInt() &&
