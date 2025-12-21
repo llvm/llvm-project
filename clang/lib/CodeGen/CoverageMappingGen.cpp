@@ -15,6 +15,7 @@
 #include "CodeGenPGO.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -2223,12 +2224,8 @@ struct CounterCoverageMappingBuilder
   void cancelDecision(const BinaryOperator *E, unsigned Since, int NumTVs,
                       int MaxTVs) {
     auto &Diag = CVM.getCodeGenModule().getDiags();
-    unsigned DiagID =
-        Diag.getCustomDiagID(DiagnosticsEngine::Warning,
-                             "unsupported MC/DC boolean expression; "
-                             "number of test vectors (%0) exceeds max (%1). "
-                             "Expression will not be covered");
-    Diag.Report(E->getBeginLoc(), DiagID) << NumTVs << MaxTVs;
+    Diag.Report(E->getBeginLoc(), diag::warn_pgo_test_vector_limit)
+        << NumTVs << MaxTVs;
 
     // Restore MCDCBranch to Branch.
     for (auto &SR : MutableArrayRef(SourceRegions).slice(Since)) {
