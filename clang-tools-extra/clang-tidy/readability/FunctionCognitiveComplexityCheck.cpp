@@ -118,7 +118,7 @@ struct CognitiveComplexity final {
       } else
         llvm_unreachable("should not get to here.");
 
-      return std::make_pair(MsgId, Increment);
+      return {MsgId, Increment};
     }
   };
 
