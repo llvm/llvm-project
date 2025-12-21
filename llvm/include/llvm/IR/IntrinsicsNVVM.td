@@ -2303,8 +2303,8 @@ foreach vec = [TV_I8, TV_I16, TV_I32,
 //
 // Accessing special registers.
 //
-class PTXReadSRegIntrinsicNB_r32<list<IntrinsicProperty> properties = []>
-  : PureIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>] # properties>;
+class PTXReadSRegIntrinsicNB_r32<list<IntrinsicProperty> properties = [], string name = "">
+  : PureIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>] # properties, name>;
 
 class PTXReadSRegIntrinsic_r32<list<IntrinsicProperty> properties = []>
   : PTXReadSRegIntrinsicNB_r32<properties>, NVVMBuiltin;
@@ -2405,6 +2405,13 @@ defm int_nvvm_read_ptx_sreg_cluster_nctaid : PTXReadSRegIntrinsicNB_v4i32<MAX_GR
 
 def int_nvvm_read_ptx_sreg_cluster_ctarank : PTXReadSRegIntrinsicNB_r32;
 def int_nvvm_read_ptx_sreg_cluster_nctarank : PTXReadSRegIntrinsicNB_r32;
+
+def int_nvvm_read_ptx_sreg_total_smem_size :
+    PTXReadSRegIntrinsicNB_r32<[], "llvm.nvvm.read.ptx.sreg.total_smem_size">;
+def int_nvvm_read_ptx_sreg_aggr_smem_size  :
+    PTXReadSRegIntrinsicNB_r32<[], "llvm.nvvm.read.ptx.sreg.aggr_smem_size">;
+def int_nvvm_read_ptx_sreg_dynamic_smem_size :
+    PTXReadSRegIntrinsicNB_r32<[], "llvm.nvvm.read.ptx.sreg.dynamic_smem_size">;
 
 //
 // SHUFFLE
