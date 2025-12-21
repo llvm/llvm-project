@@ -86,11 +86,12 @@ AST_MATCHER_P(CXXRecordDecl, hasCaptureByReference, const ValueDecl *,
   if (!Node.isLambda())
     return false;
 
-  for (const auto &Capture : Node.captures()) {
-    if (Capture.capturesVariable() && Capture.getCaptureKind() == LCK_ByRef &&
-        Capture.getCapturedVar() == TargetDecl) {
-      return true;
-    }
+  if (llvm::any_of(Node.captures(), [&](const auto &Capture) {
+        return Capture.capturesVariable() &&
+               Capture.getCaptureKind() == LCK_ByRef &&
+               Capture.getCapturedVar() == TargetDecl;
+      })) {
+    return true;
   }
   return false;
 }
@@ -164,9 +165,10 @@ makeReinitMatcher(const ValueDecl *MovedVariable,
       .bind("reinit");
 }
 
-bool isVariableResetInLambda(const Stmt *Body, const ValueDecl *MovedVariable,
-                             ASTContext *Context,
-                             llvm::ArrayRef<StringRef> InvalidationFunctions) {
+static bool
+isVariableResetInLambda(const Stmt *Body, const ValueDecl *MovedVariable,
+                        ASTContext *Context,
+                        llvm::ArrayRef<StringRef> InvalidationFunctions) {
   if (!Body)
     return false;
 
