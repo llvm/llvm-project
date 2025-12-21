@@ -1850,6 +1850,15 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       HandleReloc(RelEntry);
     for (const WasmRelocationEntry &RelEntry : DataRelocations)
       HandleReloc(RelEntry);
+
+    // Update minimum size of `__indirect_function_table` table.
+    auto It = llvm::find_if(Imports, [](const wasm::WasmImport &I) {
+      return I.Field == "__indirect_function_table";
+    });
+
+    if (It != Imports.end()) {
+      It->Table.Limits.Minimum = TableElems.size();
+    }
   }
 
   // Translate .init_array section contents into start functions.
