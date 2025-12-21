@@ -214,7 +214,7 @@ public:
     }(make_index_sequence<rank()>()));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr size_type size() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr size_type size() const noexcept {
     // Could leave this as only checked in debug mode: semantically size() is never
     // guaranteed to be related to any accessible range
     _LIBCPP_ASSERT_UNCATEGORIZED(

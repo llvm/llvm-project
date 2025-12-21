@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // check that <algorithm> functions are marked [[nodiscard]]
 
 // clang-format off
@@ -188,11 +186,13 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::max(1, 2, std::greater<int>());
 
+#if TEST_STD_VER >= 11
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::max({1, 2, 3});
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::max({1, 2, 3}, std::greater<int>());
+#endif
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::min_element(std::begin(arr), std::end(arr));
@@ -206,11 +206,13 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::min(1, 2, std::greater<int>());
 
+#if TEST_STD_VER >= 11
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::min({1, 2, 3});
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::min({1, 2, 3}, std::greater<int>());
+#endif
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::minmax_element(std::begin(arr), std::end(arr));
@@ -224,11 +226,13 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::minmax(1, 2, std::greater<int>());
 
+#if TEST_STD_VER >= 11
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::minmax({1, 2, 3});
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::minmax({1, 2, 3}, std::greater<int>());
+#endif
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::mismatch(std::begin(arr), std::end(arr), std::begin(arr));

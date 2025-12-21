@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // check that <list> functions are marked [[nodiscard]]
 
 #include <list>
