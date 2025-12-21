@@ -52,23 +52,23 @@ constexpr bool test_bitmask_binary_operations() {
     if (!TEST_IS_CONSTANT_EVALUATED) {
       {
         auto e = E::none;
-        e |= elem;
+        assert(&(e |= elem) == &e);
         assert(e == elem);
       }
       {
         auto e = E::none;
-        e &= elem;
+        assert(&(e &= elem) == &e);
         assert(e == E::none);
       }
       {
         auto e = E::none;
-        e ^= elem;
+        assert(&(e ^= elem) == &e);
         assert(e == elem);
       }
 
       {
         auto e = elem;
-        elem |= elem;
+        assert(&(e |= elem) == &e);
         assert(e == elem);
       }
       {
