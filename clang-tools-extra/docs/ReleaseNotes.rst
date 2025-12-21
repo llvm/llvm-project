@@ -517,10 +517,6 @@ Changes in existing checks
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
 
-- Improved :doc:`misc-include-cleaner
-  <clang-tidy/checks/misc/include-cleaner>` check by avoiding warnings when a
-  standard library symbol is redefined within the codebase.
-
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` to not diagnose array types
   which are part of an implicit instantiation of a template.
@@ -659,10 +655,11 @@ Removed checks
 Miscellaneous
 ^^^^^^^^^^^^^
 
-Improvements to include-fixer
------------------------------
+Improvements to clang-include-cleaner
+-------------------------------------
 
-The improvements are...
+- Fixed a problem where macros in the codebase with names matching standard
+  library symbols were mistakenly identified as standard library symbols.
 
 Improvements to clang-include-fixer
 -----------------------------------
