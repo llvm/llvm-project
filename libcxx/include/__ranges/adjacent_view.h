@@ -141,10 +141,18 @@ public:
   }
 };
 
+struct __adjacent_view_iter_access {
+  template <class _Iter>
+  _LIBCPP_HIDE_FROM_ABI constexpr static auto& __get_current(_Iter& __it) noexcept {
+    return __it.__current_;
+  }
+};
+
 template <forward_range _View, size_t _Np>
   requires view<_View> && (_Np > 0)
 template <bool _Const>
 class adjacent_view<_View, _Np>::__iterator {
+  friend __adjacent_view_iter_access;
   friend adjacent_view;
   using _Base _LIBCPP_NODEBUG              = __maybe_const<_Const, _View>;
   array<iterator_t<_Base>, _Np> __current_ = array<iterator_t<_Base>, _Np>();

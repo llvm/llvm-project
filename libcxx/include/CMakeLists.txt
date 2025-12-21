@@ -702,6 +702,7 @@ set(files
   __random/uniform_real_distribution.h
   __random/weibull_distribution.h
   __ranges/access.h
+  __ranges/adjacent_transform_view.h
   __ranges/adjacent_view.h
   __ranges/all.h
   __ranges/as_rvalue_view.h
