@@ -91,8 +91,9 @@ static cl::opt<bool>
 static const unsigned ZvfbfaVPOps[] = {
     ISD::VP_FNEG, ISD::VP_FABS, ISD::VP_FCOPYSIGN};
 static const unsigned ZvfbfaOps[] = {
-    ISD::FNEG, ISD::FABS, ISD::FCOPYSIGN, ISD::SPLAT_VECTOR,
-    ISD::FADD, ISD::FSUB, ISD::FMUL};
+    ISD::FNEG,        ISD::FABS,        ISD::FCOPYSIGN, ISD::FADD,
+    ISD::FSUB,        ISD::FMUL,        ISD::FMINNUM,   ISD::FMAXNUM,
+    ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM, ISD::FMINIMUM,  ISD::FMAXIMUM};
 
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                          const RISCVSubtarget &STI)
@@ -287,7 +288,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   // fixed vector is stored in GPRs for P extension packed operations
-  if (Subtarget.enablePExtCodeGen()) {
+  if (Subtarget.enablePExtSIMDCodeGen()) {
     if (Subtarget.is64Bit()) {
       addRegisterClass(MVT::v2i32, &RISCV::GPRRegClass);
       addRegisterClass(MVT::v4i16, &RISCV::GPRRegClass);
@@ -502,7 +503,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::FTRUNC,       ISD::FRINT,         ISD::FROUND,
       ISD::FROUNDEVEN,   ISD::FCANONICALIZE};
 
-  if (Subtarget.enablePExtCodeGen()) {
+  if (Subtarget.enablePExtSIMDCodeGen()) {
     setTargetDAGCombine(ISD::TRUNCATE);
     setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
     setTruncStoreAction(MVT::v4i16, MVT::v4i8, Expand);
@@ -1098,11 +1099,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VECREDUCE_FMAXIMUM};
 
     // TODO: Make more of these ops legal.
-    static const unsigned ZvfbfaPromoteOps[] = {ISD::FMINNUM,
-                                                ISD::FMAXNUM,
-                                                ISD::FMINIMUMNUM,
-                                                ISD::FMAXIMUMNUM,
-                                                ISD::FDIV,
+    static const unsigned ZvfbfaPromoteOps[] = {ISD::FDIV,
                                                 ISD::FMA,
                                                 ISD::FSQRT,
                                                 ISD::FCEIL,
@@ -1114,8 +1111,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                                 ISD::FNEARBYINT,
                                                 ISD::IS_FPCLASS,
                                                 ISD::SETCC,
-                                                ISD::FMAXIMUM,
-                                                ISD::FMINIMUM,
                                                 ISD::STRICT_FADD,
                                                 ISD::STRICT_FSUB,
                                                 ISD::STRICT_FMUL,
@@ -1308,6 +1303,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                           ISD::VECTOR_INTERLEAVE, ISD::VECTOR_REVERSE,
                           ISD::VECTOR_SPLICE, ISD::VECTOR_COMPRESS},
                          VT, Custom);
+      setOperationAction(
+          {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMAXIMUMNUM, ISD::FMINIMUMNUM}, VT,
+          Legal);
+      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, VT, Custom);
       setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
       setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
 
@@ -1851,7 +1850,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
 TargetLoweringBase::LegalizeTypeAction
 RISCVTargetLowering::getPreferredVectorAction(MVT VT) const {
-  if (Subtarget.is64Bit() && Subtarget.enablePExtCodeGen())
+  if (Subtarget.is64Bit() && Subtarget.enablePExtSIMDCodeGen())
     if (VT == MVT::v2i16 || VT == MVT::v4i8)
       return TypeWidenVector;
 
@@ -4517,7 +4516,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
   SDLoc DL(Op);
 
-  if (Subtarget.isRV32() && Subtarget.enablePExtCodeGen()) {
+  if (Subtarget.isRV32() && Subtarget.enablePExtSIMDCodeGen()) {
     if (VT != MVT::v4i8)
       return SDValue();
 
@@ -4547,7 +4546,8 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   // Proper support for f16 requires Zvfh. bf16 always requires special
   // handling. We need to cast the scalar to integer and create an integer
   // build_vector.
-  if ((EltVT == MVT::f16 && !Subtarget.hasStdExtZvfh()) || EltVT == MVT::bf16) {
+  if ((EltVT == MVT::f16 && !Subtarget.hasStdExtZvfh()) ||
+      (EltVT == MVT::bf16 && !Subtarget.hasVInstructionsBF16())) {
     MVT IVT = VT.changeVectorElementType(MVT::i16);
     SmallVector<SDValue, 16> NewOps(Op.getNumOperands());
     for (const auto &[I, U] : enumerate(Op->ops())) {
@@ -7791,7 +7791,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return DAG.getNode(RISCVISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
     }
 
-    if (Subtarget.enablePExtCodeGen()) {
+    if (Subtarget.enablePExtSIMDCodeGen()) {
       bool Is32BitCast =
           (VT == MVT::i32 && (Op0VT == MVT::v4i8 || Op0VT == MVT::v2i16)) ||
           (Op0VT == MVT::i32 && (VT == MVT::v4i8 || VT == MVT::v2i16));
@@ -8426,6 +8426,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Lo.getValue(1),
                           Hi.getValue(1));
 
+      // For big-endian, swap the order of Lo and Hi.
+      if (!Subtarget.isLittleEndian())
+        std::swap(Lo, Hi);
+
       SDValue Pair = DAG.getNode(RISCVISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
       return DAG.getMergeValues({Pair, Chain}, DL);
     }
@@ -8476,7 +8480,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     auto *Store = cast<StoreSDNode>(Op);
     SDValue StoredVal = Store->getValue();
     EVT VT = StoredVal.getValueType();
-    if (Subtarget.enablePExtCodeGen()) {
+    if (Subtarget.enablePExtSIMDCodeGen()) {
       if (VT == MVT::v2i16 || VT == MVT::v4i8) {
         SDValue DL(Op);
         SDValue Cast = DAG.getBitcast(MVT::i32, StoredVal);
@@ -8498,15 +8502,21 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       SDValue Split = DAG.getNode(RISCVISD::SplitF64, DL,
                                   DAG.getVTList(MVT::i32, MVT::i32), StoredVal);
 
-      SDValue Lo = DAG.getStore(Chain, DL, Split.getValue(0), BasePtr,
-                                Store->getPointerInfo(), Store->getBaseAlign(),
-                                Store->getMemOperand()->getFlags());
+      SDValue Lo = Split.getValue(0);
+      SDValue Hi = Split.getValue(1);
+
+      // For big-endian, swap the order of Lo and Hi before storing.
+      if (!Subtarget.isLittleEndian())
+        std::swap(Lo, Hi);
+
+      SDValue LoStore = DAG.getStore(
+          Chain, DL, Lo, BasePtr, Store->getPointerInfo(),
+          Store->getBaseAlign(), Store->getMemOperand()->getFlags());
       BasePtr = DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::getFixed(4));
-      SDValue Hi = DAG.getStore(Chain, DL, Split.getValue(1), BasePtr,
-                                Store->getPointerInfo().getWithOffset(4),
-                                Store->getBaseAlign(),
-                                Store->getMemOperand()->getFlags());
-      return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Lo, Hi);
+      SDValue HiStore = DAG.getStore(
+          Chain, DL, Hi, BasePtr, Store->getPointerInfo().getWithOffset(4),
+          Store->getBaseAlign(), Store->getMemOperand()->getFlags());
+      return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, LoStore, HiStore);
     }
     if (VT == MVT::i64) {
       assert(Subtarget.hasStdExtZilsd() && !Subtarget.is64Bit() &&
@@ -8676,7 +8686,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SRL:
   case ISD::SRA:
     if (Op.getSimpleValueType().isFixedLengthVector()) {
-      if (Subtarget.enablePExtCodeGen()) {
+      if (Subtarget.enablePExtSIMDCodeGen()) {
         // We have patterns for scalar/immediate shift amount, so no lowering
         // needed.
         if (Op.getOperand(1)->getOpcode() == ISD::SPLAT_VECTOR)
@@ -10823,7 +10833,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
     return DAG.getNode(RISCVISD::FMV_H_X, DL, EltVT, IntExtract);
   }
 
-  if (Subtarget.enablePExtCodeGen() && VecVT.isFixedLengthVector()) {
+  if (Subtarget.enablePExtSIMDCodeGen() && VecVT.isFixedLengthVector()) {
     if (VecVT != MVT::v4i16 && VecVT != MVT::v2i16 && VecVT != MVT::v8i8 &&
         VecVT != MVT::v4i8 && VecVT != MVT::v2i32)
       return SDValue();
@@ -15231,8 +15241,12 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
                Subtarget.hasStdExtDOrZdinx()) {
       SDValue NewReg = DAG.getNode(RISCVISD::SplitF64, DL,
                                    DAG.getVTList(MVT::i32, MVT::i32), Op0);
-      SDValue RetReg = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64,
-                                   NewReg.getValue(0), NewReg.getValue(1));
+      SDValue Lo = NewReg.getValue(0);
+      SDValue Hi = NewReg.getValue(1);
+      // For big-endian, swap the order when building the i64 pair.
+      if (!Subtarget.isLittleEndian())
+        std::swap(Lo, Hi);
+      SDValue RetReg = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo, Hi);
       Results.push_back(RetReg);
     } else if (!VT.isVector() && Op0VT.isFixedLengthVector() &&
                isTypeLegal(Op0VT)) {
@@ -16489,7 +16503,7 @@ static SDValue performTRUNCATECombine(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
 
-  if (VT.isFixedLengthVector() && Subtarget.enablePExtCodeGen())
+  if (VT.isFixedLengthVector() && Subtarget.enablePExtSIMDCodeGen())
     return combinePExtTruncate(N, DAG, Subtarget);
 
   // Pre-promote (i1 (truncate (srl X, Y))) on RV64 with Zbs without zero
@@ -16648,6 +16662,46 @@ static SDValue reduceANDOfAtomicLoad(SDNode *N,
   return SDValue(N, 0);
 }
 
+// Sometimes a mask is applied after a shift. If that shift was fed by a
+// load, there is sometimes the opportunity to narrow the load, which is
+// hidden by the intermediate shift. Detect that case and commute the
+// shift/and in order to enable load narrowing.
+static SDValue combineNarrowableShiftedLoad(SDNode *N, SelectionDAG &DAG) {
+  // (and (shl (load ...), ShiftAmt), Mask)
+  using namespace SDPatternMatch;
+  SDValue LoadNode;
+  APInt MaskVal, ShiftVal;
+  // (and (shl (load ...), ShiftAmt), Mask)
+  if (!sd_match(
+          N, m_And(m_OneUse(m_Shl(m_AllOf(m_Opc(ISD::LOAD), m_Value(LoadNode)),
+                                  m_ConstInt(ShiftVal))),
+                   m_ConstInt(MaskVal)))) {
+    return SDValue();
+  }
+
+  EVT VT = N->getValueType(0);
+  uint64_t ShiftAmt = ShiftVal.getZExtValue();
+
+  if (ShiftAmt >= VT.getSizeInBits())
+    return SDValue();
+
+  // Calculate the appropriate mask if it were applied before the shift.
+  APInt InnerMask = MaskVal.lshr(ShiftAmt);
+  bool IsNarrowable =
+      InnerMask == 0xff || InnerMask == 0xffff || InnerMask == 0xffffffff;
+
+  if (!IsNarrowable)
+    return SDValue();
+
+  // AND the loaded value and change the shift appropriately, allowing
+  // the load to be narrowed.
+  SDLoc DL(N);
+  SDValue InnerAnd = DAG.getNode(ISD::AND, DL, VT, LoadNode,
+                                 DAG.getConstant(InnerMask, DL, VT));
+  return DAG.getNode(ISD::SHL, DL, VT, InnerAnd,
+                     DAG.getShiftAmountConstant(ShiftAmt, VT, DL));
+}
+
 // Combines two comparison operation and logic operation to one selection
 // operation(min, max) and logic operation. Returns new constructed Node if
 // conditions for optimization are satisfied.
@@ -16655,8 +16709,8 @@ static SDValue performANDCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const RISCVSubtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
-
   SDValue N0 = N->getOperand(0);
+
   // Pre-promote (i32 (and (srl X, Y), 1)) on RV64 with Zbs without zero
   // extending X. This is safe since we only need the LSB after the shift and
   // shift amounts larger than 31 would produce poison. If we wait until
@@ -16675,6 +16729,8 @@ static SDValue performANDCombine(SDNode *N,
     return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, And);
   }
 
+  if (SDValue V = combineNarrowableShiftedLoad(N, DAG))
+    return V;
   if (SDValue V = reverseZExtICmpCombine(N, DAG, Subtarget))
     return V;
   if (DCI.isAfterLegalizeDAG())
@@ -21891,10 +21947,17 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     unsigned Stride = SEW / 8 * NF;
     unsigned Offset = SEW / 8 * Idx;
 
+    SDValue Passthru = Tuple.getOperand(2);
+    if (Passthru.isUndef())
+      Passthru = DAG.getUNDEF(VT);
+    else
+      Passthru = DAG.getNode(RISCVISD::TUPLE_EXTRACT, DL, VT, Passthru,
+                             N->getOperand(1));
+
     SDValue Ops[] = {
         /*Chain=*/Tuple.getOperand(0),
         /*IntID=*/DAG.getTargetConstant(Intrinsic::riscv_vlse_mask, DL, XLenVT),
-        /*Passthru=*/Tuple.getOperand(2),
+        /*Passthru=*/Passthru,
         /*Ptr=*/
         DAG.getNode(ISD::ADD, DL, XLenVT, Tuple.getOperand(3),
                     DAG.getConstant(Offset, DL, XLenVT)),
@@ -21953,7 +22016,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (sd_match(Src, m_InsertSubvector(m_Undef(), m_Value(SubVec), m_Zero())))
       Src = SubVec;
 
-    SDValue SplatVal = DAG.getSplatValue(Src);
+    SDValue SplatVal = DAG.getSplatValue(Src, /*LegalTypes=*/true);
     if (!SplatVal)
       break;
     MVT VT = N->getSimpleValueType(0);
@@ -22669,6 +22732,11 @@ static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
       MF.getMachineMemOperand(MPI, MachineMemOperand::MOLoad, 4, Align(8));
   MachineMemOperand *MMOHi = MF.getMachineMemOperand(
       MPI.getWithOffset(4), MachineMemOperand::MOLoad, 4, Align(8));
+
+  // For big-endian, the high part is at offset 0 and the low part at offset 4.
+  if (!Subtarget.isLittleEndian())
+    std::swap(LoReg, HiReg);
+
   BuildMI(*BB, MI, DL, TII.get(RISCV::LW), LoReg)
       .addFrameIndex(FI)
       .addImm(0)
@@ -22693,6 +22761,8 @@ static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
   Register DstReg = MI.getOperand(0).getReg();
   Register LoReg = MI.getOperand(1).getReg();
   Register HiReg = MI.getOperand(2).getReg();
+  bool KillLo = MI.getOperand(1).isKill();
+  bool KillHi = MI.getOperand(2).isKill();
 
   const TargetRegisterClass *DstRC = &RISCV::FPR64RegClass;
   int FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF64FrameIndex(MF);
@@ -22702,13 +22772,21 @@ static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
       MF.getMachineMemOperand(MPI, MachineMemOperand::MOStore, 4, Align(8));
   MachineMemOperand *MMOHi = MF.getMachineMemOperand(
       MPI.getWithOffset(4), MachineMemOperand::MOStore, 4, Align(8));
+
+  // For big-endian, store the high part at offset 0 and the low part at
+  // offset 4.
+  if (!Subtarget.isLittleEndian()) {
+    std::swap(LoReg, HiReg);
+    std::swap(KillLo, KillHi);
+  }
+
   BuildMI(*BB, MI, DL, TII.get(RISCV::SW))
-      .addReg(LoReg, getKillRegState(MI.getOperand(1).isKill()))
+      .addReg(LoReg, getKillRegState(KillLo))
       .addFrameIndex(FI)
       .addImm(0)
       .addMemOperand(MMOLo);
   BuildMI(*BB, MI, DL, TII.get(RISCV::SW))
-      .addReg(HiReg, getKillRegState(MI.getOperand(2).isKill()))
+      .addReg(HiReg, getKillRegState(KillHi))
       .addFrameIndex(FI)
       .addImm(4)
       .addMemOperand(MMOHi);
@@ -23538,6 +23616,12 @@ static SDValue unpackF64OnRV32DSoftABI(SelectionDAG &DAG, SDValue Chain,
     RegInfo.addLiveIn(HiVA.getLocReg(), HiVReg);
     Hi = DAG.getCopyFromReg(Chain, DL, HiVReg, MVT::i32);
   }
+
+  // For big-endian, swap the order of Lo and Hi when building the pair.
+  const RISCVSubtarget &Subtarget = DAG.getSubtarget<RISCVSubtarget>();
+  if (!Subtarget.isLittleEndian())
+    std::swap(Lo, Hi);
+
   return DAG.getNode(RISCVISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
 }
 
@@ -23909,6 +23993,10 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
       SDValue Lo = SplitF64.getValue(0);
       SDValue Hi = SplitF64.getValue(1);
 
+      // For big-endian, swap the order of Lo and Hi when passing.
+      if (!Subtarget.isLittleEndian())
+        std::swap(Lo, Hi);
+
       Register RegLo = VA.getLocReg();
       RegsToPass.push_back(std::make_pair(RegLo, Lo));
 
@@ -24136,8 +24224,14 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
                                              MVT::i32, Glue);
       Chain = RetValue2.getValue(1);
       Glue = RetValue2.getValue(2);
-      RetValue = DAG.getNode(RISCVISD::BuildPairF64, DL, MVT::f64, RetValue,
-                             RetValue2);
+
+      // For big-endian, swap the order when building the pair.
+      SDValue Lo = RetValue;
+      SDValue Hi = RetValue2;
+      if (!Subtarget.isLittleEndian())
+        std::swap(Lo, Hi);
+
+      RetValue = DAG.getNode(RISCVISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
     } else
       RetValue = convertLocVTToValVT(DAG, RetValue, VA, DL, Subtarget);
 
@@ -24202,6 +24296,11 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                      DAG.getVTList(MVT::i32, MVT::i32), Val);
       SDValue Lo = SplitF64.getValue(0);
       SDValue Hi = SplitF64.getValue(1);
+
+      // For big-endian, swap the order of Lo and Hi when returning.
+      if (!Subtarget.isLittleEndian())
+        std::swap(Lo, Hi);
+
       Register RegLo = VA.getLocReg();
       Register RegHi = RVLocs[++i].getLocReg();
 

@@ -5308,6 +5308,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if (DenormMode.inputsAreZero() || DenormMode.outputsAreZero())
         Known.knownNot(fcSubnormal);
 
+      if (DenormMode == DenormalMode::getPreserveSign()) {
+        if (KnownSrc.isKnownNever(fcPosZero | fcPosSubnormal))
+          Known.knownNot(fcPosZero);
+        if (KnownSrc.isKnownNever(fcNegZero | fcNegSubnormal))
+          Known.knownNot(fcNegZero);
+        break;
+      }
+
       if (DenormMode.Input == DenormalMode::PositiveZero ||
           (DenormMode.Output == DenormalMode::PositiveZero &&
            DenormMode.Input == DenormalMode::IEEE))
@@ -5562,6 +5570,36 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       // TODO: Copy inf handling from instructions
       break;
+    case Intrinsic::amdgcn_rcp: {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+
+      Known.propagateNaN(KnownSrc);
+
+      Type *EltTy = II->getType()->getScalarType();
+
+      // f32 denormal always flushed.
+      if (EltTy->isFloatTy()) {
+        Known.knownNot(fcSubnormal);
+        KnownSrc.knownNot(fcSubnormal);
+      }
+
+      if (KnownSrc.isKnownNever(fcNegative))
+        Known.knownNot(fcNegative);
+      if (KnownSrc.isKnownNever(fcPositive))
+        Known.knownNot(fcPositive);
+
+      if (const Function *F = II->getFunction()) {
+        DenormalMode Mode = F->getDenormalMode(EltTy->getFltSemantics());
+        if (KnownSrc.isKnownNeverLogicalPosZero(Mode))
+          Known.knownNot(fcPosInf);
+        if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
+          Known.knownNot(fcNegInf);
+      }
+
+      break;
+    }
     case Intrinsic::amdgcn_rsq: {
       KnownFPClass KnownSrc;
       // The only negative value that can be returned is -inf for -0 inputs.
@@ -8156,6 +8194,8 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::roundeven:
   case Intrinsic::lrint:
   case Intrinsic::llrint:
+  case Intrinsic::fshl:
+  case Intrinsic::fshr:
     return true;
   default:
     return false;

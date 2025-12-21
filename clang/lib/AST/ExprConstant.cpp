@@ -2407,9 +2407,11 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
         return false;
 
       // A dllimport variable never acts like a constant, unless we're
-      // evaluating a value for use only in name mangling.
-      if (!isForManglingOnly(Kind) && Var->hasAttr<DLLImportAttr>())
-        // FIXME: Diagnostic!
+      // evaluating a value for use only in name mangling, and unless it's a
+      // static local. For the latter case, we'd still need to evaluate the
+      // constant expression in case we're inside a (inlined) function.
+      if (!isForManglingOnly(Kind) && Var->hasAttr<DLLImportAttr>() &&
+          !Var->isStaticLocal())
         return false;
 
       // In CUDA/HIP device compilation, only device side variables have
@@ -14384,6 +14386,32 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
 
     return Success(ResultElements, E);
+  }
+  case X86::BI__builtin_ia32_vperm2f128_pd256:
+  case X86::BI__builtin_ia32_vperm2f128_ps256:
+  case X86::BI__builtin_ia32_vperm2f128_si256:
+  case X86::BI__builtin_ia32_permti256: {
+    unsigned NumElements =
+        E->getArg(0)->getType()->getAs<VectorType>()->getNumElements();
+    unsigned PreservedBitsCnt = NumElements >> 2;
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [PreservedBitsCnt](unsigned DstIdx, unsigned ShuffleMask) {
+              unsigned ControlBitsCnt = DstIdx >> PreservedBitsCnt << 2;
+              unsigned ControlBits = ShuffleMask >> ControlBitsCnt;
+
+              if (ControlBits & 0b1000)
+                return std::make_pair(0u, -1);
+
+              unsigned SrcVecIdx = (ControlBits & 0b10) >> 1;
+              unsigned PreservedBitsMask = (1 << PreservedBitsCnt) - 1;
+              int SrcIdx = ((ControlBits & 0b1) << PreservedBitsCnt) |
+                           (DstIdx & PreservedBitsMask);
+              return std::make_pair(SrcVecIdx, SrcIdx);
+            }))
+      return false;
+    return Success(R, E);
   }
   }
 }
