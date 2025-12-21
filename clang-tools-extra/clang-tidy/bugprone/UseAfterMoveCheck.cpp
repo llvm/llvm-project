@@ -181,10 +181,44 @@ isVariableResetInLambda(const Stmt *Body, const ValueDecl *MovedVariable,
   if (match(VariableMentionMatcher, *Body, *Context).empty())
     return false;
 
+  CFG::BuildOptions Options;
+  Options.AddImplicitDtors = true;
+  Options.AddTemporaryDtors = true;
+  Options.PruneTriviallyFalseEdges = true;
+
+  std::unique_ptr<CFG> TheCFG =
+      CFG::buildCFG(nullptr, const_cast<Stmt *>(Body), Context, Options);
+  if (!TheCFG)
+    return false;
+
+  llvm::SmallPtrSet<const CFGBlock *, 8> VisitedBlocks;
+  llvm::SmallVector<const CFGBlock *, 8> Worklist;
+
+  Worklist.push_back(&TheCFG->getEntry());
+  VisitedBlocks.insert(&TheCFG->getEntry());
+
   const auto ReinitMatcher =
       makeReinitMatcher(MovedVariable, InvalidationFunctions);
 
-  return !match(findAll(ReinitMatcher), *Body, *Context).empty();
+  while (!Worklist.empty()) {
+    const CFGBlock *CurrentBlock = Worklist.pop_back_val();
+
+    // Check for reinitialization within reachable blocks.
+    for (const auto &Elem : *CurrentBlock) {
+      std::optional<CFGStmt> S = Elem.getAs<CFGStmt>();
+      if (!S)
+        continue;
+
+      if (!match(findAll(ReinitMatcher), *S->getStmt(), *Context).empty())
+        return true;
+    }
+
+    for (const auto &Succ : CurrentBlock->succs())
+      if (Succ && VisitedBlocks.insert(Succ).second)
+        Worklist.push_back(Succ);
+  }
+
+  return false;
 }
 
 // Matches nodes that are

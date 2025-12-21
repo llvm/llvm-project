@@ -1795,8 +1795,6 @@ void lambdaReinit() {
 }
 
 void lambdaReinitInDeadCode() {
-  // FIXME: This is a known False Negative. The check currently
-  // lacks the ability to do control flow analysis.
   {
     std::string s;
     auto g = [&]() {
@@ -1808,7 +1806,8 @@ void lambdaReinitInDeadCode() {
 
     g();
 
-    s.clear();
-    // CHECK-NOTES-NOT: [[@LINE-2]]:5: warning: 's' used after it was moved
+    s.empty();
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 's' used after it was moved
+    // CHECK-NOTES: [[@LINE-6]]:5: note: move occurred here
   }
 }
