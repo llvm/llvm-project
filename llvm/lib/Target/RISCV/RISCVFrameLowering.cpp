@@ -674,19 +674,18 @@ static void appendScalableVectorExpression(const TargetRegisterInfo &TRI,
                                            int FixedOffset, int ScalableOffset,
                                            llvm::raw_string_ostream &Comment) {
   unsigned DwarfVLenB = TRI.getDwarfRegNum(RISCV::VLENB, true);
-  uint8_t Buffer[16];
   if (FixedOffset) {
     Expr.push_back(dwarf::DW_OP_consts);
-    Expr.append(Buffer, Buffer + encodeSLEB128(FixedOffset, Buffer));
+    appendLEB128<LEB128Sign::Signed>(Expr, FixedOffset);
     Expr.push_back((uint8_t)dwarf::DW_OP_plus);
     Comment << (FixedOffset < 0 ? " - " : " + ") << std::abs(FixedOffset);
   }
 
   Expr.push_back((uint8_t)dwarf::DW_OP_consts);
-  Expr.append(Buffer, Buffer + encodeSLEB128(ScalableOffset, Buffer));
+  appendLEB128<LEB128Sign::Signed>(Expr, ScalableOffset);
 
   Expr.push_back((uint8_t)dwarf::DW_OP_bregx);
-  Expr.append(Buffer, Buffer + encodeULEB128(DwarfVLenB, Buffer));
+  appendLEB128<LEB128Sign::Unsigned>(Expr, DwarfVLenB);
   Expr.push_back(0);
 
   Expr.push_back((uint8_t)dwarf::DW_OP_mul);
@@ -717,9 +716,8 @@ static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
                                  Comment);
 
   SmallString<64> DefCfaExpr;
-  uint8_t Buffer[16];
   DefCfaExpr.push_back(dwarf::DW_CFA_def_cfa_expression);
-  DefCfaExpr.append(Buffer, Buffer + encodeULEB128(Expr.size(), Buffer));
+  appendLEB128<LEB128Sign::Unsigned>(DefCfaExpr, Expr.size());
   DefCfaExpr.append(Expr.str());
 
   return MCCFIInstruction::createEscape(nullptr, DefCfaExpr.str(), SMLoc(),
@@ -740,11 +738,10 @@ static MCCFIInstruction createDefCFAOffset(const TargetRegisterInfo &TRI,
                                  Comment);
 
   SmallString<64> DefCfaExpr;
-  uint8_t Buffer[16];
   unsigned DwarfReg = TRI.getDwarfRegNum(Reg, true);
   DefCfaExpr.push_back(dwarf::DW_CFA_expression);
-  DefCfaExpr.append(Buffer, Buffer + encodeULEB128(DwarfReg, Buffer));
-  DefCfaExpr.append(Buffer, Buffer + encodeULEB128(Expr.size(), Buffer));
+  appendLEB128<LEB128Sign::Unsigned>(DefCfaExpr, DwarfReg);
+  appendLEB128<LEB128Sign::Unsigned>(DefCfaExpr, Expr.size());
   DefCfaExpr.append(Expr.str());
 
   return MCCFIInstruction::createEscape(nullptr, DefCfaExpr.str(), SMLoc(),
