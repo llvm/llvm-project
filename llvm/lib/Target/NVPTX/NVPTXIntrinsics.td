@@ -4761,6 +4761,14 @@ def  INT_PTX_SREG_CLUSTER_NCTARANK:
                          int_nvvm_read_ptx_sreg_cluster_nctarank,
                          [hasSM<90>, hasPTX<78>]>;
 
+def INT_PTX_SREG_TOTAL_SMEM_SIZE :
+    PTX_READ_SREG_R32<"total_smem_size", int_nvvm_read_ptx_sreg_total_smem_size>;
+def INT_PTX_SREG_DYNAMIC_SMEM_SIZE :
+    PTX_READ_SREG_R32<"dynamic_smem_size", int_nvvm_read_ptx_sreg_dynamic_smem_size>;
+def INT_PTX_SREG_AGGR_SMEM_SIZE :
+    PTX_READ_SREG_R32<"aggr_smem_size",
+                      int_nvvm_read_ptx_sreg_aggr_smem_size,
+                      [hasSM<90>, hasPTX<81>]>;
 
 def SREG_LANEID : PTX_READ_SREG_R32<"laneid", int_nvvm_read_ptx_sreg_laneid>;
 def SREG_WARPID : PTX_READ_SREG_R32<"warpid", int_nvvm_read_ptx_sreg_warpid>;

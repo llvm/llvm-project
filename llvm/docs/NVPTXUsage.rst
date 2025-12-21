@@ -264,6 +264,36 @@ map in the following way to CUDA builtins:
    ``gridDim``  ``@llvm.nvvm.read.ptx.sreg.nctaid.*``
    ============ =====================================
 
+'``llvm.nvvm.read.ptx.sreg.*_smem_size``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.read.ptx.sreg.total_smem_size()
+    declare i32 @llvm.nvvm.read.ptx.sreg.aggr_smem_size()
+    declare i32 @llvm.nvvm.read.ptx.sreg.dynamic_smem_size()
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.read.ptx.sreg.total_smem_size``' intrinsic reads the
+PTX special register that holds the total amount of shared memory
+allocated per CTA for the kernel at launch.
+
+The reported value includes both statically allocated and dynamically
+requested shared memory, but excludes any shared memory reserved for
+system use. The size is expressed in units of the architecture-specific
+shared memory allocation granularity. For targets sm_8x and newer,
+this granularity is 128 bytes.
+
+The '``aggr_smem_size``' variant returns the aggregate shared memory size,
+including the portion reserved for system software use.
+
+The '``dynamic_smem_size``' variant returns the amount of dynamic shared
+memory allocated per CTA for the kernel at launch time.
 
 Barriers
 --------
