@@ -129,6 +129,10 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
+static cl::opt<bool> EnableTDMOptimization(
+    "amdgpu-enable-tdm-opt", cl::Hidden, cl::init(true),
+    cl::desc("Enable AMDGPU TDM descriptor optimization"));
+
 namespace {
 //===----------------------------------------------------------------------===//
 // AMDGPU CodeGen Pass Builder interface.
@@ -593,6 +597,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULowerModuleLDSLegacyPass(*PR);
   initializeAMDGPULowerBufferFatPointersPass(*PR);
   initializeAMDGPULowerIntrinsicsLegacyPass(*PR);
+  initializeAMDGPUTDMOptimizationPass(*PR);
   initializeAMDGPUReserveWWMRegsLegacyPass(*PR);
   initializeAMDGPURewriteAGPRCopyMFMALegacyPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
@@ -1412,6 +1417,12 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
 
   if (TM->getTargetTriple().isAMDGCN() && EnableLowerKernelArguments)
     addPass(createAMDGPULowerKernelArgumentsPass());
+
+  // Add TDM Descriptor Optimization + SROA sequence
+  if (EnableTDMOptimization) {
+    addPass(createAMDGPUTDMOptimizationPass()); // Create alloca patterns
+    addPass(createSROAPass());                  // Convert to INSERT_SUBREG
+  }
 
   TargetPassConfig::addCodeGenPrepare();
 
