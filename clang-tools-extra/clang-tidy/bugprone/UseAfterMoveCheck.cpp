@@ -383,9 +383,8 @@ void UseAfterMoveFinder::getReinits(
     const CFGBlock *Block, const ValueDecl *MovedVariable,
     llvm::SmallPtrSetImpl<const Stmt *> *Stmts,
     llvm::SmallPtrSetImpl<const DeclRefExpr *> *DeclRefs) {
-  const auto ReinitMatcher =
-      makeReinitMatcher(MovedVariable, InvalidationFunctions,
-                        ReinitializationFunctions);
+  const auto ReinitMatcher = makeReinitMatcher(
+      MovedVariable, InvalidationFunctions, ReinitializationFunctions);
 
   Stmts->clear();
   DeclRefs->clear();
