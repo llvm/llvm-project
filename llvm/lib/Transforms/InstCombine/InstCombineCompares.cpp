@@ -3093,7 +3093,7 @@ Instruction *InstCombinerImpl::foldICmpBinOpWithConstantViaTruthTable(
               m_Select(m_Value(A), m_Constant(C1), m_Constant(C2)))) ||
       !match(BO->getOperand(1),
              m_Select(m_Value(B), m_Constant(C3), m_Constant(C4))) ||
-      Cmp.getType() != A->getType())
+      Cmp.getType() != A->getType() || Cmp.getType() != B->getType())
     return nullptr;
 
   std::bitset<4> Table;
