@@ -367,10 +367,16 @@ public:
 
   constexpr Kind getKind() const { return Info; }
 
+  /// Returns a vector with the same number of elements but the new element
+  /// type. Must only be called on vector types.
+  constexpr LLT changeVectorElementType(LLT NewEltTy) const {
+    return LLT::vector(getElementCount(), NewEltTy);
+  }
+
   /// If this type is a vector, return a vector with the same number of elements
   /// but the new element type. Otherwise, return the new element type.
   constexpr LLT changeElementType(LLT NewEltTy) const {
-    return isVector() ? LLT::vector(getElementCount(), NewEltTy) : NewEltTy;
+    return isVector() ? changeVectorElementType(NewEltTy) : NewEltTy;
   }
 
   /// If this type is a vector, return a vector with the same number of elements
@@ -385,6 +391,14 @@ public:
                                                     : LLT::scalar(NewEltSize))
            : isInteger() ? LLT::integer(NewEltSize)
                          : LLT::scalar(NewEltSize);
+  }
+
+  /// Return a vector with the same element type and the new element count. Must
+  /// be called on vector types.
+  constexpr LLT changeVectorElementCount(ElementCount EC) const {
+    assert(isVector() &&
+           "cannot change vector element count of non-vector type");
+    return LLT::vector(EC, getElementType());
   }
 
   /// Return a vector or scalar with the same element type and the new element
