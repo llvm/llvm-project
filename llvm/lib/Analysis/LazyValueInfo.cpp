@@ -1353,6 +1353,9 @@ std::optional<ValueLatticeElement> LazyValueInfoImpl::getValueFromICmpCondition(
     return ValueLatticeElement::getOverdefined();
 
   unsigned BitWidth = Ty->getScalarSizeInBits();
+  if (auto Range = getRangeForNuwMulSquare(Val, LHS, RHS))
+    return ValueLatticeElement::getRange(*Range);
+
   APInt Offset(BitWidth, 0);
   if (matchICmpOperand(Offset, LHS, Val, EdgePred))
     return getValueFromSimpleICmpCondition(EdgePred, RHS, Offset, ICI,

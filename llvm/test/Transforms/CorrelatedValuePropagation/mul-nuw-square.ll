@@ -8,8 +8,7 @@ define i1 @assume_mul_nuw_square_i8(i8 %s) {
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i8 [[S:%.*]], [[S]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ule i8 [[MUL]], 120
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[S]], 16
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %mul = mul nuw i8 %s, %s
   %cond = icmp ule i8 %mul, 120
@@ -23,8 +22,7 @@ define i1 @assume_mul_nuw_square_i5(i5 %s) {
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i5 [[S:%.*]], [[S]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i5 [[MUL]], 15
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i5 [[S]], 8
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %mul = mul nuw i5 %s, %s
   %cond = icmp ult i5 %mul, 15
@@ -39,11 +37,9 @@ define i1 @branch_mul_nuw_square(i8 %s, i8 %num) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ule i8 [[MUL]], [[NUM:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[S]], 16
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       false:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i8 [[S]], 16
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ;
   %mul = mul nuw i8 %s, %s
   %cond = icmp ule i8 %mul, %num

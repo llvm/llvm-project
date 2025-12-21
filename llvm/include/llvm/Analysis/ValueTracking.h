@@ -663,6 +663,11 @@ LLVM_ABI bool isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
 /// based on the vscale_range function attribute.
 LLVM_ABI ConstantRange getVScaleRange(const Function *F, unsigned BitWidth);
 
+/// If \p LHS or \p RHS is `mul nuw V, V`, return the implied unsigned range for
+/// \p V: [0, 2^ceil(bitwidth(V)/2)).
+LLVM_ABI std::optional<ConstantRange>
+getRangeForNuwMulSquare(const Value *V, const Value *LHS, const Value *RHS);
+
 /// Determine the possible constant range of an integer or vector of integer
 /// value. This is intended as a cheap, non-recursive check.
 LLVM_ABI ConstantRange computeConstantRange(const Value *V, bool ForSigned,

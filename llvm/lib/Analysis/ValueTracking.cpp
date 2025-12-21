@@ -119,6 +119,25 @@ static const Instruction *safeCxtI(const Value *V, const Instruction *CxtI) {
   return nullptr;
 }
 
+std::optional<ConstantRange> llvm::getRangeForNuwMulSquare(const Value *V,
+                                                           const Value *LHS,
+                                                           const Value *RHS) {
+  if (!V->getType()->isIntegerTy())
+    return std::nullopt;
+
+  if (!match(LHS, m_NUWMul(m_Specific(V), m_Specific(V))) &&
+      !match(RHS, m_NUWMul(m_Specific(V), m_Specific(V))))
+    return std::nullopt;
+
+  unsigned BitWidth = V->getType()->getScalarSizeInBits();
+  unsigned LimitBits = (BitWidth + 1) / 2;
+  if (LimitBits >= BitWidth)
+    return std::nullopt;
+
+  APInt Upper = APInt::getOneBitSet(BitWidth, LimitBits);
+  return ConstantRange::getNonEmpty(APInt::getZero(BitWidth), Upper);
+}
+
 static bool getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
                                    const APInt &DemandedElts,
                                    APInt &DemandedLHS, APInt &DemandedRHS) {
@@ -975,6 +994,9 @@ static void computeKnownBitsFromICmpCond(const Value *V, ICmpInst *Cmp,
       Invert ? Cmp->getInversePredicate() : Cmp->getPredicate();
   Value *LHS = Cmp->getOperand(0);
   Value *RHS = Cmp->getOperand(1);
+
+  if (auto Range = getRangeForNuwMulSquare(V, LHS, RHS))
+    Known = Known.unionWith(Range->toKnownBits());
 
   // Handle icmp pred (trunc V), C
   if (match(LHS, m_Trunc(m_Specific(V)))) {
@@ -10383,7 +10405,16 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
       Value *Arg = I->getArgOperand(0);
       ICmpInst *Cmp = dyn_cast<ICmpInst>(Arg);
       // Currently we just use information from comparisons.
-      if (!Cmp || Cmp->getOperand(0) != V)
+      if (!Cmp)
+        continue;
+
+      if (auto Range = getRangeForNuwMulSquare(V, Cmp->getOperand(0),
+                                               Cmp->getOperand(1))) {
+        CR = CR.intersectWith(*Range);
+        continue;
+      }
+
+      if (Cmp->getOperand(0) != V)
         continue;
       // TODO: Set "ForSigned" parameter via Cmp->isSigned()?
       ConstantRange RHS =
@@ -10513,6 +10544,14 @@ void llvm::findValuesAffectedByCondition(
             InsertAffected(X);
         }
       }
+
+      auto AddNuwSquareOperand = [&AddAffected](Value *Op) {
+        Value *SquareOp = nullptr;
+        if (match(Op, m_NUWMul(m_Value(SquareOp), m_Deferred(SquareOp))))
+          AddAffected(SquareOp);
+      };
+      AddNuwSquareOperand(A);
+      AddNuwSquareOperand(B);
 
       if (HasRHSC && match(A, m_Intrinsic<Intrinsic::ctpop>(m_Value(X))))
         AddAffected(X);
