@@ -330,6 +330,8 @@ static StatementMatcher makePseudoArrayLoopMatcher() {
       .bind(LoopNamePseudoArray);
 }
 
+namespace {
+
 enum class IteratorCallKind {
   ICK_Member,
   ICK_ADL,
@@ -342,6 +344,8 @@ struct ContainerCall {
   bool IsArrow;
   IteratorCallKind CallKind;
 };
+
+} // namespace
 
 // Find the Expr likely initializing an iterator.
 //
@@ -641,9 +645,8 @@ void LoopConvertCheck::doConversion(
       VarNameOrStructuredBinding = "[";
 
       assert(!AliasDecompositionDecl->bindings().empty() && "No bindings");
-      for (const BindingDecl *Binding : AliasDecompositionDecl->bindings()) {
+      for (const BindingDecl *Binding : AliasDecompositionDecl->bindings())
         VarNameOrStructuredBinding += Binding->getName().str() + ", ";
-      }
 
       VarNameOrStructuredBinding.erase(VarNameOrStructuredBinding.size() - 2,
                                        2);
@@ -845,9 +848,8 @@ void LoopConvertCheck::getArrayLoopQualifiers(ASTContext *Context,
       continue;
     QualType Type = U.Expression->getType().getCanonicalType();
     if (U.Kind == Usage::UK_MemberThroughArrow) {
-      if (!Type->isPointerType()) {
+      if (!Type->isPointerType())
         continue;
-      }
       Type = Type->getPointeeType();
     }
     Descriptor.ElemType = Type;
@@ -872,27 +874,25 @@ void LoopConvertCheck::getIteratorLoopQualifiers(ASTContext *Context,
     // canonical const qualification of the init variable type.
     Descriptor.DerefByConstRef = CanonicalInitVarType.isConstQualified();
     Descriptor.ElemType = *DerefByValueType;
+  } else if (const auto *DerefType =
+                 Nodes.getNodeAs<QualType>(DerefByRefResultName)) {
+    // A node will only be bound with DerefByRefResultName if we're dealing
+    // with a user-defined iterator type. Test the const qualification of
+    // the reference type.
+    auto ValueType = DerefType->getNonReferenceType();
+
+    Descriptor.DerefByConstRef = ValueType.isConstQualified();
+    Descriptor.ElemType = ValueType;
   } else {
-    if (const auto *DerefType =
-            Nodes.getNodeAs<QualType>(DerefByRefResultName)) {
-      // A node will only be bound with DerefByRefResultName if we're dealing
-      // with a user-defined iterator type. Test the const qualification of
-      // the reference type.
-      auto ValueType = DerefType->getNonReferenceType();
+    // By nature of the matcher this case is triggered only for built-in
+    // iterator types (i.e. pointers).
+    assert(isa<PointerType>(CanonicalInitVarType) &&
+           "Non-class iterator type is not a pointer type");
 
-      Descriptor.DerefByConstRef = ValueType.isConstQualified();
-      Descriptor.ElemType = ValueType;
-    } else {
-      // By nature of the matcher this case is triggered only for built-in
-      // iterator types (i.e. pointers).
-      assert(isa<PointerType>(CanonicalInitVarType) &&
-             "Non-class iterator type is not a pointer type");
-
-      // We test for const qualification of the pointed-at type.
-      Descriptor.DerefByConstRef =
-          CanonicalInitVarType->getPointeeType().isConstQualified();
-      Descriptor.ElemType = CanonicalInitVarType->getPointeeType();
-    }
+    // We test for const qualification of the pointed-at type.
+    Descriptor.DerefByConstRef =
+        CanonicalInitVarType->getPointeeType().isConstQualified();
+    Descriptor.ElemType = CanonicalInitVarType->getPointeeType();
   }
 }
 
@@ -1086,9 +1086,8 @@ llvm::StringRef LoopConvertCheck::getReverseFunction() const {
 llvm::StringRef LoopConvertCheck::getReverseHeader() const {
   if (!ReverseHeader.empty())
     return ReverseHeader;
-  if (UseReverseRanges && ReverseFunction.empty()) {
+  if (UseReverseRanges && ReverseFunction.empty())
     return "<ranges>";
-  }
   return "";
 }
 
