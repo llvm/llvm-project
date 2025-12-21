@@ -158,6 +158,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
   for (auto &I : AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
     memtag::alignAndPadAlloca(Info, kTagGranuleSize);
+ 
     uint64_t Tag = NextTag;
     if (iswasm32) {
       Tag = static_cast<uint32_t>(Tag);
@@ -191,8 +192,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
       });
       TagPCall->setOperand(1, Info.AI);
       IntrinsicInst *Start = Info.LifetimeStart[0];
-      uint64_t Size =
-          cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
+      uint64_t Size = *Info.AI->getAllocationSize(*DL);
       Size = alignTo(Size, kTagGranuleSize);
 
       IRBuilder<> IRB2(Start->getNextNode());
