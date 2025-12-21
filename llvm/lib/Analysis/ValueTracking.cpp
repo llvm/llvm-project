@@ -5725,14 +5725,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     if (Op->getOperand(0) == Op->getOperand(1))
       Known.knownNot(fcNegative);
 
-    if ((InterestedClasses & fcNan) != fcNan)
-      break;
-
-    // fcSubnormal is only needed in case of DAZ.
-    const FPClassTest NeedForNan = fcNan | fcInf | fcZero | fcSubnormal;
-
     KnownFPClass KnownLHS, KnownRHS;
-    computeKnownFPClass(Op->getOperand(1), DemandedElts, NeedForNan, KnownRHS,
+    computeKnownFPClass(Op->getOperand(1), DemandedElts, fcAllFlags, KnownRHS,
                         Q, Depth + 1);
 
     const APFloat *CRHS;
@@ -5752,12 +5746,39 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known.knownNot(fcSubnormal);
     }
 
-    if (!KnownRHS.isKnownNeverNaN())
-      break;
-
-    computeKnownFPClass(Op->getOperand(0), DemandedElts, NeedForNan, KnownLHS,
+    computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
                         Q, Depth + 1);
-    if (!KnownLHS.isKnownNeverNaN())
+
+    // xor sign bit.
+    if ((KnownLHS.isKnownNever(fcNegative) &&
+         KnownRHS.isKnownNever(fcNegative)) ||
+        (KnownLHS.isKnownNever(fcPositive) &&
+         KnownRHS.isKnownNever(fcPositive)))
+      Known.knownNot(fcNegative);
+
+    if ((KnownLHS.isKnownAlways(fcNegative | fcNan) &&
+         KnownRHS.isKnownNever(fcNegative)) ||
+        (KnownLHS.isKnownNever(fcNegative) &&
+         KnownRHS.isKnownAlways(fcNegative | fcNan)))
+      Known.knownNot(fcPositive);
+
+    // inf * anything => inf or nan
+    if (KnownLHS.isKnownAlways(fcInf) || KnownRHS.isKnownAlways(fcInf))
+      Known.knownNot(fcNormal | fcSubnormal | fcZero);
+
+    // 0 * anything => 0 or nan
+    if (KnownRHS.isKnownAlways(fcZero | fcNan) ||
+        KnownLHS.isKnownAlways(fcZero | fcNan))
+      Known.knownNot(fcNormal | fcSubnormal | fcInf);
+
+    // +/-0 * +/-inf = nan
+    if ((KnownLHS.isKnownAlways(fcZero | fcNan) &&
+         KnownRHS.isKnownAlways(fcInf | fcNan)) ||
+        (KnownLHS.isKnownAlways(fcInf | fcNan) &&
+         KnownRHS.isKnownAlways(fcZero | fcNan)))
+      Known.knownNot(~fcNan);
+
+    if (!KnownLHS.isKnownNeverNaN() || !KnownRHS.isKnownNeverNaN())
       break;
 
     if (KnownLHS.SignBit && KnownRHS.SignBit) {
