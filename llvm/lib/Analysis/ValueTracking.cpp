@@ -5308,6 +5308,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if (DenormMode.inputsAreZero() || DenormMode.outputsAreZero())
         Known.knownNot(fcSubnormal);
 
+      if (DenormMode == DenormalMode::getPreserveSign()) {
+        if (KnownSrc.isKnownNever(fcPosZero | fcPosSubnormal))
+          Known.knownNot(fcPosZero);
+        if (KnownSrc.isKnownNever(fcNegZero | fcNegSubnormal))
+          Known.knownNot(fcNegZero);
+        break;
+      }
+
       if (DenormMode.Input == DenormalMode::PositiveZero ||
           (DenormMode.Output == DenormalMode::PositiveZero &&
            DenormMode.Input == DenormalMode::IEEE))
