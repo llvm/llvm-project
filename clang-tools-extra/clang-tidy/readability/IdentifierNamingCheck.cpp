@@ -70,6 +70,7 @@ namespace readability {
 
 // clang-format off
 #define NAMING_KEYS(m) \
+    m(Default) \
     m(Namespace) \
     m(InlineNamespace) \
     m(EnumConstant) \
@@ -1155,7 +1156,7 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     if (NamingStyles[SK_Constant])
       return SK_Constant;
 
-    return SK_Invalid;
+    return undefinedStyle(NamingStyles);
   }
 
   if (const auto *Decl = dyn_cast<RecordDecl>(D)) {
@@ -1187,7 +1188,7 @@ StyleKind IdentifierNamingCheck::findStyleKind(
         return SK_Enum;
     }
 
-    return SK_Invalid;
+    return undefinedStyle(NamingStyles);
   }
 
   if (const auto *Decl = dyn_cast<FieldDecl>(D)) {
@@ -1230,7 +1231,7 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     if (NamingStyles[SK_Parameter])
       return SK_Parameter;
 
-    return SK_Invalid;
+    return undefinedStyle(NamingStyles);
   }
 
   if (const auto *Decl = dyn_cast<VarDecl>(D))
@@ -1275,7 +1276,7 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     if (NamingStyles[SK_Function])
       return SK_Function;
 
-    return SK_Invalid;
+    return undefinedStyle(NamingStyles);
   }
 
   if (const auto *Decl = dyn_cast<FunctionDecl>(D)) {
@@ -1299,7 +1300,7 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     if (NamingStyles[SK_TemplateParameter])
       return SK_TemplateParameter;
 
-    return SK_Invalid;
+    return undefinedStyle(NamingStyles);
   }
 
   if (isa<NonTypeTemplateParmDecl>(D)) {
@@ -1309,7 +1310,7 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     if (NamingStyles[SK_TemplateParameter])
       return SK_TemplateParameter;
 
-    return SK_Invalid;
+    return undefinedStyle(NamingStyles);
   }
 
   if (isa<TemplateTemplateParmDecl>(D)) {
@@ -1319,13 +1320,13 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     if (NamingStyles[SK_TemplateParameter])
       return SK_TemplateParameter;
 
-    return SK_Invalid;
+    return undefinedStyle(NamingStyles);
   }
 
   if (isa<ConceptDecl>(D) && NamingStyles[SK_Concept])
     return SK_Concept;
 
-  return SK_Invalid;
+  return undefinedStyle(NamingStyles);
 }
 
 std::optional<RenamerClangTidyCheck::FailureInfo>
@@ -1346,8 +1347,10 @@ IdentifierNamingCheck::getFailureInfo(
     return std::nullopt;
 
   std::string KindName =
-      fixupWithCase(Type, StyleNames[SK], ND, Style, HNOption,
-                    IdentifierNamingCheck::CT_LowerCase);
+      SK == SK_Default
+          ? "identifier"
+          : fixupWithCase(Type, StyleNames[SK], ND, Style, HNOption,
+                          IdentifierNamingCheck::CT_LowerCase);
   llvm::replace(KindName, '_', ' ');
 
   std::string Fixup = fixupWithStyle(Type, Name, Style, HNOption, ND);
@@ -1392,9 +1395,14 @@ IdentifierNamingCheck::getMacroFailureInfo(const Token &MacroNameTok,
   if (!Style.isActive())
     return std::nullopt;
 
+  const auto &Styles = Style.getStyles();
+  const StyleKind UsedKind = !Styles[SK_MacroDefinition] && Styles[SK_Default]
+                                 ? SK_Default
+                                 : SK_MacroDefinition;
+
   return getFailureInfo("", MacroNameTok.getIdentifierInfo()->getName(),
                         nullptr, Loc, Style.getStyles(), Style.getHNOption(),
-                        SK_MacroDefinition, SM, IgnoreFailedSplit);
+                        UsedKind, SM, IgnoreFailedSplit);
 }
 
 RenamerClangTidyCheck::DiagInfo
@@ -1456,7 +1464,7 @@ StyleKind IdentifierNamingCheck::findStyleKindForAnonField(
   if (const auto *V = IFD->getVarDecl())
     return findStyleKindForVar(V, Type, NamingStyles);
 
-  return SK_Invalid;
+  return undefinedStyle(NamingStyles);
 }
 
 StyleKind IdentifierNamingCheck::findStyleKindForField(
@@ -1482,7 +1490,7 @@ StyleKind IdentifierNamingCheck::findStyleKindForField(
   if (NamingStyles[SK_Member])
     return SK_Member;
 
-  return SK_Invalid;
+  return undefinedStyle(NamingStyles);
 }
 
 StyleKind IdentifierNamingCheck::findStyleKindForVar(
@@ -1559,7 +1567,12 @@ StyleKind IdentifierNamingCheck::findStyleKindForVar(
   if (NamingStyles[SK_Variable])
     return SK_Variable;
 
-  return SK_Invalid;
+  return undefinedStyle(NamingStyles);
+}
+
+StyleKind IdentifierNamingCheck::undefinedStyle(
+    ArrayRef<std::optional<NamingStyle>> NamingStyles) const {
+  return NamingStyles[SK_Default] ? SK_Default : SK_Invalid;
 }
 
 } // namespace readability

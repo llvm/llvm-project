@@ -2451,6 +2451,12 @@ public:
   /// adding new predicates.
   LLVM_ABI const SCEV *getSCEV(Value *V);
 
+  /// Returns the rewritten SCEV for \p Expr in the context of the current SCEV
+  /// predicate. The order of transformations applied on the expression of \p
+  /// Expr returned by ScalarEvolution is guaranteed to be preserved, even when
+  /// adding new predicates.
+  LLVM_ABI const SCEV *getPredicatedSCEV(const SCEV *Expr);
+
   /// Get the (predicated) backedge count for the analyzed loop.
   LLVM_ABI const SCEV *getBackedgeTakenCount();
 

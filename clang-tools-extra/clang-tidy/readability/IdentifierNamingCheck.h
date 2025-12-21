@@ -220,6 +220,9 @@ private:
   findStyleKindForVar(const VarDecl *Var, QualType Type,
                       ArrayRef<std::optional<NamingStyle>> NamingStyles) const;
 
+  StyleKind
+  undefinedStyle(ArrayRef<std::optional<NamingStyle>> NamingStyles) const;
+
   /// Stores the style options as a vector, indexed by the specified \ref
   /// StyleKind, for a given directory.
   mutable llvm::StringMap<FileStyle> NamingStylesCache;
