@@ -1839,46 +1839,15 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:
   case X86::BI__builtin_ia32_cvtneps2bf16_512_mask: {
     mlir::Location loc = getLoc(expr->getExprLoc());
-    mlir::Type resTy = convertType(expr->getType());
-    if (!isa<cir::VectorType>(resTy)) {
-      return mlir::Value();
-    }
-    unsigned numElts = cast<cir::VectorType>(resTy).getSize();
-    bool isMaskZ = false;
-    if (auto *callExpr = llvm::dyn_cast<clang::CallExpr>(expr)) {
-      if (auto *vecInit =
-              llvm::dyn_cast<clang::InitListExpr>(callExpr->getArg(0))) {
-        isMaskZ =
-            vecInit->getNumInits() == numElts &&
-            llvm::all_of(llvm::seq<unsigned>(0, numElts), [&](unsigned i) {
-              auto *init = vecInit->getInit(i);
-              if (auto *intLit = llvm::dyn_cast<clang::IntegerLiteral>(init))
-                return intLit->getValue().isZero();
-              if (auto *floatLit = llvm::dyn_cast<clang::FloatingLiteral>(init))
-                return floatLit->getValue().isZero();
-              return false;
-            });
-      }
-    }
+    cir::VectorType resTy = cast<cir::VectorType>(convertType(expr->getType()));
+    unsigned numElts = resTy.getSize();
     StringRef intrinsicName;
-    StringRef cirFuncName;
     if (builtinID == X86::BI__builtin_ia32_cvtneps2bf16_128_mask)
-      intrinsicName = "x86.avx512bf16.cvtneps2bf16.128",
-      cirFuncName = isMaskZ ? "_mm_maskz_cvtneps_pbh" : "_mm_mask_cvtneps_pbh";
+      intrinsicName = "x86.avx512bf16.cvtneps2bf16.128";
     else if (builtinID == X86::BI__builtin_ia32_cvtneps2bf16_256_mask)
-      intrinsicName = "x86.avx512bf16.cvtneps2bf16.256",
-      cirFuncName =
-          isMaskZ ? "_mm256_maskz_cvtneps_pbh" : "_mm256_mask_cvtneps_pbh";
+      intrinsicName = "x86.avx512bf16.cvtneps2bf16.256";
     else
-      intrinsicName = "x86.avx512bf16.cvtneps2bf16.512",
-      cirFuncName =
-          isMaskZ ? "_mm512_maskz_cvtneps_pbh" : "_mm512_mask_cvtneps_pbh";
-    if (isMaskZ)
-      return builder
-          .createCallOp(
-              loc, mlir::SymbolRefAttr::get(builder.getContext(), cirFuncName),
-              resTy, {ops[2], ops[0]})
-          .getResult();
+      intrinsicName = "x86.avx512bf16.cvtneps2bf16.512";
     mlir::Value selectMask = getMaskVecValue(builder, loc, ops[2], numElts);
     mlir::Value intrinsicResult = emitIntrinsicCallOp(
         builder, loc, intrinsicName, resTy, mlir::ValueRange{ops[0]});
